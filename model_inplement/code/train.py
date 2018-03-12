@@ -1,8 +1,14 @@
-import gensim
-from gensim import models
-
 import os
 import pickle
+
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+
+import nltk
+import numpy as np
+import torch
+
+from model import *
             
 class SampleIter:
     def __init__(self, dirname):
@@ -32,35 +38,6 @@ def train_word_vec():
     model = models.Word2Vec(sentences=sents, size=200, sg=0, workers=4, min_count=5)
     model.save('yelp.word2vec')
 
-
-'''
-Train process
-'''
-import math
-import os
-import copy
-import pickle
-
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import numpy as np
-import json
-import nltk
-from gensim.models import Word2Vec
-import torch
-from torch.utils.data import DataLoader, Dataset
-
-from model import *
-
-net = HAN(input_size=200, output_size=5, 
-        word_hidden_size=50, word_num_layers=1, word_context_size=100,
-        sent_hidden_size=50, sent_num_layers=1, sent_context_size=100)
-
-optimizer = torch.optim.SGD(net.parameters(), lr=0.01)
-criterion = nn.NLLLoss()
-num_epoch = 1
-batch_size = 64
-
 class Embedding_layer:
     def __init__(self, wv, vector_size):
         self.wv = wv
@@ -73,10 +50,8 @@ class Embedding_layer:
             v = np.zeros(self.vector_size)
         return v
 
-embed_model = Word2Vec.load('yelp.word2vec')
-embedding = Embedding_layer(embed_model.wv, embed_model.wv.vector_size)
-del embed_model
 
+from torch.utils.data import DataLoader, Dataset
 class YelpDocSet(Dataset):
     def __init__(self, dirname, num_files, embedding):
         self.dirname = dirname
@@ -103,12 +78,28 @@ def collate(iterable):
         x_list.append(x)
     return x_list, torch.LongTensor(y_list)
 
-if __name__ == '__main__':
-    dirname = 'reviews'
-    dataloader = DataLoader(YelpDocSet(dirname, 238, embedding), batch_size=batch_size, collate_fn=collate)
-    running_loss = 0.0
-    print_size = 10
+def train(net, num_epoch, batch_size, print_size=10, use_cuda=False):
+    from gensim.models import Word2Vec
+    import torch
+    import gensim
+    from gensim import models
 
+    embed_model = Word2Vec.load('yelp.word2vec')
+    embedding = Embedding_layer(embed_model.wv, embed_model.wv.vector_size)
+    del embed_model
+
+    optimizer = torch.optim.SGD(net.parameters(), lr=0.01)
+    criterion = nn.NLLLoss()
+
+    dirname = 'reviews'
+    dataloader = DataLoader(YelpDocSet(dirname, 238, embedding), 
+                            batch_size=batch_size, 
+                            collate_fn=collate,
+                            num_workers=4)
+    running_loss = 0.0
+
+    if use_cuda:
+        net.cuda()
     for epoch in range(num_epoch):
         for i, batch_samples in enumerate(dataloader):
             x, y = batch_samples
@@ -119,11 +110,16 @@ if __name__ == '__main__':
                     sent_vec = []
                     for word in sent:
                         vec = embedding.get_vec(word)
-                        sent_vec.append(torch.Tensor(vec.reshape((1, -1))))
+                        vec = torch.Tensor(vec.reshape((1, -1)))
+                        if use_cuda:
+                            vec = vec.cuda()
+                        sent_vec.append(vec)
                     sent_vec = torch.cat(sent_vec, dim=0)
                     # print(sent_vec.size())
                     doc.append(Variable(sent_vec))
                 doc_list.append(doc)
+            if use_cuda:
+                y = y.cuda()
             y = Variable(y)
             predict = net(doc_list)
             loss = criterion(predict, y)
@@ -131,8 +127,21 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
             running_loss += loss.data[0]
-            print(loss.data[0])
             if i % print_size == print_size-1:
                 print(running_loss/print_size)
                 running_loss = 0.0
-        
+                torch.save(net.state_dict(), 'model.dict')
+    torch.save(net.state_dict(), 'model.dict')
+    
+
+if __name__ == '__main__':
+    '''
+    Train process
+    '''
+    
+
+    net = HAN(input_size=200, output_size=5, 
+            word_hidden_size=50, word_num_layers=1, word_context_size=100,
+            sent_hidden_size=50, sent_num_layers=1, sent_context_size=100)
+    
+    train(net, num_epoch=1, batch_size=64, use_cuda=True)
