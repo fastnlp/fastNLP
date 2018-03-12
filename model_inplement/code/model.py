@@ -20,16 +20,20 @@ class HAN(nn.Module):
                                     sent_num_layers, 
                                     sent_context_size)
         self.output_layer = nn.Linear(2* sent_hidden_size, output_size)
-        self.softmax = nn.Softmax()
+        self.softmax = nn.LogSoftmax(dim=1)
 
-    def forward(self, doc):
+    def forward(self, batch_doc):
         # input is a sequence of vector
         # if level == w, a seq of words (a sent); level == s, a seq of sents (a doc)
-        s_list = []
-        for sent in doc:
-            s_list.append(self.word_layer(sent))
-        s_vec = torch.cat(s_list, dim=1).t()
-        doc_vec = self.sent_layer(s_vec)
+        doc_vec_list = []
+        for doc in batch_doc:
+            s_list = []
+            for sent in doc:
+                s_list.append(self.word_layer(sent))
+            s_vec = torch.cat(s_list, dim=0)
+            vec = self.sent_layer(s_vec)
+            doc_vec_list.append(vec)
+        doc_vec = torch.cat(doc_vec_list, dim=0)
         output = self.softmax(self.output_layer(doc_vec))
         return output
 
@@ -51,7 +55,7 @@ class AttentionNet(nn.Module):
         # Attention
         self.fc = nn.Linear(2* gru_hidden_size, context_vec_size)
         self.tanh = nn.Tanh()
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(dim=0)
         # context vector
         self.context_vec = nn.Parameter(torch.Tensor(context_vec_size, 1))
         self.context_vec.data.uniform_(-0.1, 0.1)
@@ -63,47 +67,8 @@ class AttentionNet(nn.Module):
         h_t = torch.squeeze(h_t, 1)
         u = self.tanh(self.fc(h_t))
         alpha = self.softmax(torch.mm(u, self.context_vec))
-        output = torch.mm(h_t.t(), alpha)
-        # output's dim (2*hidden_size, 1)
+        output = torch.mm(h_t.t(), alpha).t()
+        # output's dim (1, 2*hidden_size)
         return output
 
-
-'''
-Train process
-'''
-import math
-import os
-import copy
-import pickle
-
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import numpy as np
-import json
-import nltk
-
-optimizer = torch.optim.SGD(lr=0.01)
-criterion = nn.NLLLoss()
-epoch = 1
-batch_size = 10
-
-net = HAN(input_size=100, output_size=5, 
-        word_hidden_size=50, word_num_layers=1, word_context_size=100,
-        sent_hidden_size=50, sent_num_layers=1, sent_context_size=100)
-
-def dataloader(filename):
-    samples = pickle.load(open(filename, 'rb'))
-    return samples
-
-def gen_doc(text):
-    pass
-
-class SampleDoc:
-    def __init__(self, doc, label):
-        self.doc = doc
-        self.label = label
-
-    def __iter__(self):
-        for sent in self.doc:
-            for word in sent:
 
