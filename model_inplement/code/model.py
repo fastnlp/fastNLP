@@ -55,6 +55,7 @@ class AttentionNet(nn.Module):
         self.gru_hidden_size = gru_hidden_size
         self.gru_num_layers = gru_num_layers
         self.context_vec_size = context_vec_size
+        self.last_alpha = None
 
         # Encoder
         self.gru = nn.GRU(input_size=input_size, 
@@ -76,6 +77,7 @@ class AttentionNet(nn.Module):
         u = self.tanh(self.fc(h_t))
         # u's dim (batch_size, seq_len, context_vec_size)
         alpha = self.softmax(torch.matmul(u, self.context_vec))
+        self.last_alpha = alpha.data
         # alpha's dim (batch_size, seq_len, 1)
         output = torch.bmm(torch.transpose(h_t, 1, 2), alpha)
         # output's dim (batch_size, 2*hidden_size, 1)

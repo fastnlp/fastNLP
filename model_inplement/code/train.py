@@ -78,6 +78,20 @@ class YelpDocSet(Dataset):
         self.embedding = embedding
         self._cache = [(-1, None) for i in range(5)]
 
+    def get_doc(self, n):
+        file_id = n // 5000
+        idx = file_id % 5
+        if self._cache[idx][0] != file_id:
+            print('load {} to {}'.format(file_id, idx))
+            with open(os.path.join(self.dirname, self._files[file_id]), 'rb') as f:
+                self._cache[idx] = (file_id, pickle.load(f))
+        y, x = self._cache[idx][1][n % 5000]
+        sents = []
+        for s_list in x:
+            sents.append(' '.join(s_list))
+        x = '\n'.join(sents)
+        return x, y-1
+
     def __len__(self):
         return len(self._files)*5000
 
@@ -166,7 +180,6 @@ if __name__ == '__main__':
     embed_model = Word2Vec.load('yelp.word2vec')
     embedding = Embedding_layer(embed_model.wv, embed_model.wv.vector_size)
     del embed_model
-    # for start_file in range(11, 24):
     start_file = 0
     dataset = YelpDocSet('reviews', start_file, 120-start_file, embedding)
     print('start_file %d'% start_file)
@@ -176,4 +189,4 @@ if __name__ == '__main__':
             sent_hidden_size=50, sent_num_layers=1, sent_context_size=100)
         
     net.load_state_dict(torch.load('model.dict'))
-    train(net, dataset, num_epoch=1, batch_size=64, use_cuda=True)
+    train(net, dataset, num_epoch=5, batch_size=64, use_cuda=True)
