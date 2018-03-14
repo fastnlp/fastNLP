@@ -136,7 +136,7 @@ def train(net, dataset, num_epoch, batch_size, print_size=10, use_cuda=False):
                     if use_cuda:
                         sent_vec = sent_vec.cuda()
                     doc.append(Variable(sent_vec))
-                doc_list.append(doc)
+                doc_list.append(pack_sequence(doc))
             if use_cuda:
                 y = y.cuda()
             y = Variable(y)
