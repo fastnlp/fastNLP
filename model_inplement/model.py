@@ -73,8 +73,10 @@ class AttentionNet(nn.Module):
 
     def forward(self, inputs):
         # inputs's dim (batch_size, seq_len,  word_dim)
+        # GRU part
         h_t, hidden = self.gru(inputs)
         u = self.tanh(self.fc(h_t))
+        # Attention part
         # u's dim (batch_size, seq_len, context_vec_size)
         alpha = self.softmax(torch.matmul(u, self.context_vec))
         self.last_alpha = alpha.data
@@ -85,6 +87,9 @@ class AttentionNet(nn.Module):
 
 
 if __name__ == '__main__':
+    '''
+    Test the model correctness
+    '''
     import numpy as np
     use_cuda = True
     net = HAN(input_size=200, output_size=5, 

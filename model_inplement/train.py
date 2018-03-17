@@ -10,37 +10,16 @@ import torch
 
 from model import *
 
-UNK_token = '/unk'
-            
-class SampleIter:
-    def __init__(self, dirname):
-        self.dirname = dirname
-    
-    def __iter__(self):
-        for f in os.listdir(self.dirname):
-            with open(os.path.join(self.dirname, f), 'rb') as f:
-                for y, x in pickle.load(f):
-                    yield x, y
-
 class SentIter:
-    def __init__(self, dirname, count, vocab=None):
+    def __init__(self, dirname, count):
         self.dirname = dirname
         self.count = int(count)
-        self.vocab = None
 
     def __iter__(self):
         for f in os.listdir(self.dirname)[:self.count]:
             with open(os.path.join(self.dirname, f), 'rb') as f:
                 for y, x in pickle.load(f):
                     for sent in x:
-                        if self.vocab is not None:
-                            _sent = []
-                            for w in sent:
-                                if w in self.vocab:
-                                    _sent.append(w)
-                                else:
-                                    _sent.append(UNK_token)
-                            sent = _sent
                         yield sent
 
 def train_word_vec():
@@ -50,7 +29,6 @@ def train_word_vec():
     # define model and train
     model = models.Word2Vec(size=200, sg=0, workers=4, min_count=5)
     model.build_vocab(sents)
-    sents.vocab = model.wv.vocab
     model.train(sents, total_examples=model.corpus_count, epochs=10)
     model.save('yelp.word2vec')
     print(model.wv.similarity('woman', 'man'))
@@ -82,7 +60,7 @@ class YelpDocSet(Dataset):
         file_id = n // 5000
         idx = file_id % 5
         if self._cache[idx][0] != file_id:
-            print('load {} to {}'.format(file_id, idx))
+            # print('load {} to {}'.format(file_id, idx))
             with open(os.path.join(self.dirname, self._files[file_id]), 'rb') as f:
                 self._cache[idx] = (file_id, pickle.load(f))
         y, x = self._cache[idx][1][n % 5000]
@@ -182,8 +160,7 @@ if __name__ == '__main__':
     del embed_model
     start_file = 0
     dataset = YelpDocSet('reviews', start_file, 120-start_file, embedding)
-    print('start_file %d'% start_file)
-    print(len(dataset))
+    print('training data size {}'.format(len(dataset)))
     net = HAN(input_size=200, output_size=5, 
             word_hidden_size=50, word_num_layers=1, word_context_size=100,
             sent_hidden_size=50, sent_num_layers=1, sent_context_size=100)

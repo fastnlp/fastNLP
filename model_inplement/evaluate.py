@@ -29,10 +29,10 @@ def evaluate(net, dataset, bactch_size=64, use_cuda=False):
         count += torch.sum(torch.eq(idx, y))
     return count
 
-def visualize_attention(doc, alpha_vec):
-    pass
-
 if __name__ == '__main__':
+    '''
+    Evaluate the performance of model
+    '''
     from gensim.models import Word2Vec
     import gensim
     from gensim import models
@@ -47,15 +47,3 @@ if __name__ == '__main__':
     test_dataset = YelpDocSet('reviews', 199, 4, embedding)
     correct = evaluate(net, test_dataset, True)
     print('accuracy {}'.format(correct/len(test_dataset)))
-    # data_idx = 121
-    # x, y = test_dataset[data_idx]
-    # doc = []
-    # for sent_vec in x:
-    #     doc.append(Variable(sent_vec, volatile=True))
-    # input_vec = [pack_sequence(doc)]
-    # predict = net(input_vec)
-    # p, idx = torch.max(predict, dim=1)
-    # print(net.word_layer.last_alpha.squeeze())
-    # print(net.sent_layer.last_alpha)
-    # print(test_dataset.get_doc(data_idx)[0])
-    # print('predict: {}, true: {}'.format(int(idx), y))
