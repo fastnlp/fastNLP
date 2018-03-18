@@ -55,7 +55,7 @@ According to the paper and experiment, I set:
 |20|\(h,300,100\)|0.5|0.0001|50|
 
 h = [3,4,5]
-If the accuracy is not improved, the learning rate will /*0.8.
+If the accuracy is not improved, the learning rate will \*0.8.
 
 ## Result
 I just tried one dataset : MR. (Other 6 dataset in paper SST-1, SST-2, TREC, CR, MPQA)
