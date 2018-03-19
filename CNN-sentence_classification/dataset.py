@@ -83,9 +83,9 @@ class MRDataset(Dataset):
 	    embedding_weights = np.random.uniform(-0.25, 0.25, (len(self.word2id_dict), 300))
 
 	    for word in word_dict:
-		word_id = word_dict[word]
-		if word in model.wv.vocab:
-		    embedding_weights[word_id, :] = model[word]
+            word_id = word_dict[word]
+            if word in model.wv.vocab:
+                embedding_weights[word_id, :] = model[word]
 
 	    return embedding_weights
 

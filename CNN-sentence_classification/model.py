@@ -5,28 +5,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from torch.utils.data import DataLoader, TensorDataset
 
 import dataset
 
-"""
-#some information 
-mode = "static"
-use_pretrained_embedding = "gensim.word2vec"
-print('MODE      = {}'.format(mode))
-print('EMBEDDING = {}\n'.format(use_pretrained_embeddings)
 
-embedding_weights = dataset.word_embedding_300()
-embed_num = len(embedding_weights)
-embed_dim = 300
-class_num = 2
-len_sentence = 64
-
-print('embedding size   = {}'.format(embed_num))
-print('embedding dimension = {}'.format(embed_dim))
-print('sentence len n   = {}'.format(len_sentence))
-print('num of classes   = {}'.format(class_num))
-"""
 
 class CNN_text(nn.Module):
     def __init__(self, kernel_h=[3,4,5], kernel_num=100, embed_num=1000, embed_dim=300, dropout=0.5, L2_constrain=3, batchsize=50, pretrained_embeddings=None):
