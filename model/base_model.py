@@ -18,3 +18,30 @@ class BaseModel(object):
 
     def loss(self, pred, truth):
         raise NotImplementedError
+
+
+class Vocabulary(object):
+    """
+        A collection of lookup tables.
+    """
+
+    def __init__(self):
+        self.word_set = None
+        self.word2idx = None
+        self.emb_matrix = None
+
+    def lookup(self, word):
+        if word in self.word_set:
+            return self.emb_matrix[self.word2idx[word]]
+        return LookupError("The key " + word + " does not exist.")
+
+
+class Document(object):
+    """
+        contains a sequence of tokens
+        each token is a character with linguistic attributes
+    """
+
+    def __init__(self):
+        # wrap pandas.dataframe
+        self.dataframe = None

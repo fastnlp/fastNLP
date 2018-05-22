@@ -14,6 +14,7 @@ class Tester(Action):
         self.test_args = test_args
         self.args_dict = {name: value for name, value in self.test_args.__dict__.iteritems()}
         self.mean_loss = None
+        self.output = None
 
     def test(self, network, data):
         # transform into network input and label
@@ -22,6 +23,7 @@ class Tester(Action):
         # split into batches by self.batch_size
         iterations, test_batch_generator = self.batchify(X, Y)
 
+        batch_output = list()
         loss_history = list()
         # turn on the testing mode of the network
         network.mode(test=True)
@@ -31,6 +33,7 @@ class Tester(Action):
 
             # forward pass from tests input to predicted output
             prediction = network.data_forward(batch_x)
+            batch_output.append(prediction)
 
             # get the loss
             loss = network.loss(batch_y, prediction)
@@ -39,7 +42,16 @@ class Tester(Action):
             self.log(self.make_log(step, loss))
 
         self.mean_loss = np.mean(np.array(loss_history))
+        self.output = self.make_output(batch_output)
 
     @property
     def loss(self):
         return self.mean_loss
+
+    @property
+    def result(self):
+        return self.output
+
+    def make_output(self, batch_output):
+        # construct full prediction with batch outputs
+        raise NotImplementedError
