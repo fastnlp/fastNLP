@@ -29,7 +29,7 @@ class Tester(Action):
         for step in range(iterations):
             batch_x, batch_y = test_batch_generator.__next__()
 
-            # forward pass from test input to predicted output
+            # forward pass from tests input to predicted output
             prediction = network.data_forward(batch_x)
 
             # get the loss

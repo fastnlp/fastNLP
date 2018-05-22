@@ -5,10 +5,10 @@ class BaseSaver(object):
         self.save_path = save_path
 
     def save_bytes(self):
-        pass
+        raise NotImplementedError
 
     def save_str(self):
-        pass
+        raise NotImplementedError
 
     def compress(self):
-        pass
+        raise NotImplementedError

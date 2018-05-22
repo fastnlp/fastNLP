@@ -11,4 +11,4 @@ class Trainer(Action):
         self.arg = arg
 
     def train(self, args):
-        pass
+        raise NotImplementedError

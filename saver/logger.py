@@ -8,4 +8,4 @@ class Logger(BaseSaver):
         super(Logger, self).__init__(save_path)
 
     def log(self, string):
-        pass
+        raise NotImplementedError

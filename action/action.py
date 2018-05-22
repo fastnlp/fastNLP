@@ -8,10 +8,10 @@ class Action(object):
         self.logger = None
 
     def load_config(self, args):
-        pass
+        raise NotImplementedError
 
     def load_dataset(self, args):
-        pass
+        raise NotImplementedError
 
     def log(self, args):
         self.logger.log(args)
@@ -22,7 +22,7 @@ class Action(object):
 
     def batchify(self, X, Y=None):
         # a generator
-        pass
+        raise NotImplementedError
 
     def make_log(self, *args):
-        pass
+        raise NotImplementedError

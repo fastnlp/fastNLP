@@ -1,4 +1,3 @@
-Some useful reference:
 SpaCy "Doc"
 https://github.com/explosion/spaCy/blob/75d2a05c2938f412f0fae44748374e4de19cc2be/spacy/tokens/doc.pyx#L80
 
