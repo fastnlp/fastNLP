@@ -1,5 +1,5 @@
-from action.action import Action
-from action.tester import Tester
+from .action import Action
+from .tester import Tester
 
 
 class Trainer(Action):
@@ -13,10 +13,10 @@ class Trainer(Action):
         """
         super(Trainer, self).__init__()
         self.train_args = train_args
-        self.args_dict = {name: value for name, value in self.train_args.__dict__.iteritems()}
+        # self.args_dict = {name: value for name, value in self.train_args.__dict__.iteritems()}
         self.n_epochs = self.train_args.epochs
-        self.validate = True
-        self.save_when_better = True
+        self.validate = self.train_args.validate
+        self.save_when_better = self.train_args.save_when_better
 
     def train(self, network, data, dev_data):
         X, Y = network.prepare_input(data)
@@ -51,10 +51,10 @@ class Trainer(Action):
         # finish training
 
     def make_log(self, *args):
-        raise NotImplementedError
+        print("logged")
 
     def make_valid_log(self, *args):
-        raise NotImplementedError
+        print("logged")
 
     def save_model(self, model):
-        raise NotImplementedError
+        print("model saved")

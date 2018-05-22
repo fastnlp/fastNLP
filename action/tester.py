@@ -12,7 +12,7 @@ class Tester(Action):
         """
         super(Tester, self).__init__()
         self.test_args = test_args
-        self.args_dict = {name: value for name, value in self.test_args.__dict__.iteritems()}
+        # self.args_dict = {name: value for name, value in self.test_args.__dict__.iteritems()}
         self.mean_loss = None
         self.output = None
 
@@ -54,4 +54,4 @@ class Tester(Action):
 
     def make_output(self, batch_output):
         # construct full prediction with batch outputs
-        raise NotImplementedError
+        return np.concatenate((batch_output[0], batch_output[1]), axis=0)

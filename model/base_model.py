@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class BaseModel(object):
     """base model for all models"""
 
@@ -5,6 +8,10 @@ class BaseModel(object):
         pass
 
     def prepare_input(self, data):
+        """
+        :param data: str, raw input vector(?)
+        :return (X, Y): tuple, input features and labels
+        """
         raise NotImplementedError
 
     def mode(self, test=False):
@@ -18,6 +25,33 @@ class BaseModel(object):
 
     def loss(self, pred, truth):
         raise NotImplementedError
+
+
+class ToyModel(BaseModel):
+    """This is for code testing."""
+
+    def __init__(self):
+        super(ToyModel, self).__init__()
+        self.test_mode = False
+        self.weight = np.random.rand(5, 1)
+        self.bias = np.random.rand()
+        self._loss = 0
+
+    def prepare_input(self, data):
+        return data[:, :-1], data[:, -1]
+
+    def mode(self, test=False):
+        self.test_mode = test
+
+    def data_forward(self, x):
+        return np.matmul(x, self.weight) + self.bias
+
+    def grad_backward(self):
+        print("loss gradient backward")
+
+    def loss(self, pred, truth):
+        self._loss = np.mean(np.square(pred - truth))
+        return self._loss
 
 
 class Vocabulary(object):
