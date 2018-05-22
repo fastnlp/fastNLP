@@ -1,15 +1,15 @@
-
-import torch
-from torch.autograd import Variable
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import numpy as np
 import os
-from model import charLM
-from utilities import *
 from collections import namedtuple
-from test import test
+
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.autograd import Variable
+
+from .model import charLM
+from .test import test
+from .utilities import *
 
 
 def preprocess():
@@ -43,7 +43,18 @@ def to_var(x):
 
 
 def train(net, data, opt):
-    
+    """
+    :param net: the pytorch model
+    :param data: numpy array
+    :param opt: named tuple
+    1. random seed
+    2. define local input
+    3. training settting: learning rate, loss, etc
+    4. main loop epoch
+    5. batchify
+    6. validation
+    7. save model
+    """
     torch.manual_seed(1024)
 
     train_input = torch.from_numpy(data.train_input)
