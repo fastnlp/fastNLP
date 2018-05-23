@@ -13,3 +13,19 @@ class BaseLoader(object):
         with open(self.data_path, "r", encoding="utf-8") as f:
             text = f.read()
         return text
+
+
+class ToyLoader0(BaseLoader):
+    """
+        For charLM
+    """
+
+    def __init__(self, name, path):
+        super(ToyLoader0, self).__init__(name, path)
+
+    def load(self):
+        with open(self.data_path, 'r') as f:
+            corpus = f.read().lower()
+        import re
+        corpus = re.sub(r"<unk>", "unk", corpus)
+        return corpus.split()

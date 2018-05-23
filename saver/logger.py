@@ -8,4 +8,5 @@ class Logger(BaseSaver):
         super(Logger, self).__init__(save_path)
 
     def log(self, string):
-        raise NotImplementedError
+        with open(self.save_path, "a") as f:
+            f.write(string)

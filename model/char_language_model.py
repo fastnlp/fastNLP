@@ -14,6 +14,8 @@ from model.base_model import BaseModel
 class CharLM(BaseModel):
     """
         Controller of the Character-level Neural Language Model
+        To do:
+        - where the data goes, call data savers.
     """
 
     def __init__(self):
@@ -28,12 +30,15 @@ class CharLM(BaseModel):
         self.lstm_batch_size = 20
         self.vocab_size = 100
         self.num_char = 150
+        self.max_word_len = 10
+        self.num_epoch = 10
+        self.old_PPL = 100000
+        self.best_PPL = 100000
 
         self.data = None  # named tuple to store all data set
         self.data_ready = False
         self.criterion = nn.CrossEntropyLoss()
         self.loss = None
-        self.optimizer = optim.SGD(self.parameters(), lr=learning_rate, momentum=0.85)
         self.use_gpu = False
         # word_emb_dim == hidden_size / num of hidden units
         self.hidden = (to_var(torch.zeros(2, self.lstm_batch_size, self.word_embed_dim)),
@@ -44,10 +49,17 @@ class CharLM(BaseModel):
                             self.vocab_size,
                             self.num_char,
                             use_gpu=self.use_gpu)
+        for param in self.model.parameters():
+            nn.init.uniform(param.data, -0.05, 0.05)
+
+        self.learning_rate = 0.1
+        self.optimizer = None
 
     def prepare_input(self, raw_text):
         """
-            Do some preparation jobs. Transform raw data into input vectors.
+        :param raw_text: raw input data
+        :return: torch.Tensor, torch.Tensor
+        feature matrix, label vector
         """
         if not self.data_ready:
             # To do: These need to be dropped out from here. (below)
@@ -82,10 +94,20 @@ class CharLM(BaseModel):
             DataTuple = namedtuple("DataTuple", ["feature", "label"])
             self.data = DataTuple(feature=input_vec, label=input_label)
 
-        return self.data.feature, self.data.label
+        feature_input = torch.from_numpy(self.data.feature)
+        label_input = torch.from_numpy(self.data.label)
+        num_seq = feature_input.size()[0] // self.lstm_seq_len
+        feature_input = feature_input[:num_seq * self.lstm_seq_len, :]
+        feature_input = feature_input.view(-1, self.lstm_seq_len, self.max_word_len + 2)
+        self.num_iter_per_epoch = feature_input.size()[0] // self.lstm_batch_size
+
+        return feature_input, label_input
 
     def mode(self, test=False):
-        raise NotImplementedError
+        if test:
+            self.model.eval()
+        else:
+            self.model.train()
 
     def data_forward(self, x):
         # detach hidden state of LSTM from last batch
@@ -102,6 +124,13 @@ class CharLM(BaseModel):
     def loss(self, predict, truth):
         self.loss = self.criterion(predict, to_var(truth))
         return self.loss
+
+    def define_optimizer(self):
+        # redefine optimizer for every new epoch
+        self.optimizer = optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.85)
+
+    def save(self):
+        torch.save(self.model, "cache/model.pkl")
 
     @staticmethod
     def preprocess():
@@ -121,23 +150,6 @@ class CharLM(BaseModel):
         }
         torch.save(objects, "cache/prep.pt")
         print("Preprocess done.")
-
-    def forward(self, x, hidden):
-        lstm_batch_size = x.size()[0]
-        lstm_seq_len = x.size()[1]
-        x = x.contiguous().view(-1, x.size()[2])
-        x = self.char_embed(x)
-        x = torch.transpose(x.view(x.size()[0], 1, x.size()[1], -1), 2, 3)
-        x = self.conv_layers(x)
-        x = self.batch_norm(x)
-        x = self.highway1(x)
-        x = self.highway2(x)
-        x = x.contiguous().view(lstm_batch_size, lstm_seq_len, -1)
-        x, hidden = self.lstm(x, hidden)
-        x = self.dropout(x)
-        x = x.contiguous().view(lstm_batch_size * lstm_seq_len, -1)
-        x = self.linear(x)
-        return x, hidden
 
 
 """
