@@ -135,9 +135,9 @@ def train(net, data, opt):
         ##################################################
         #################### Training ####################
         net.train()
-        optimizer  = optim.SGD(net.parameters(), 
-                               lr = learning_rate, 
-                               momentum=0.85)
+        optimizer = optim.SGD(net.parameters(),
+                              lr = learning_rate,
+                              momentum=0.85)
 
         # split the first dim
         input_generator = batch_generator(train_input, opt.lstm_batch_size)

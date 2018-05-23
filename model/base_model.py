@@ -2,7 +2,7 @@ import numpy as np
 
 
 class BaseModel(object):
-    """base model for all models"""
+    """PyTorch base model for all models"""
 
     def __init__(self):
         pass
@@ -17,7 +17,8 @@ class BaseModel(object):
     def mode(self, test=False):
         raise NotImplementedError
 
-    def data_forward(self, x):
+    def data_forward(self, *x):
+        # required by PyTorch nn
         raise NotImplementedError
 
     def grad_backward(self):

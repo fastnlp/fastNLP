@@ -19,9 +19,10 @@ class Trainer(Action):
         self.save_when_better = self.train_args.save_when_better
 
     def train(self, network, data, dev_data):
-        X, Y = network.prepare_input(data)
+        train_x, train_y = network.prepare_input(data.train_set, data.train_label)
+        valid_x, valid_y = network.prepare_input(dev_data.valid_set, dev_data.valid_label)
 
-        iterations, train_batch_generator = self.batchify(X, Y)
+        iterations, train_batch_generator = self.batchify(train_x, train_y)
         loss_history = list()
         network.mode(test=False)
 
@@ -33,15 +34,18 @@ class Trainer(Action):
 
             for step in range(iterations):
                 batch_x, batch_y = train_batch_generator.__next__()
+
                 prediction = network.data_forward(batch_x)
+
                 loss = network.loss(batch_y, prediction)
                 network.grad_backward()
                 loss_history.append(loss)
                 self.log(self.make_log(epoch, step, loss))
 
-            # evaluate over dev set
+            #################### evaluate over dev set  ###################
             if self.validate:
-                evaluator.test(network, dev_data)
+                evaluator.test(network, [valid_x, valid_y])
+
                 self.log(self.make_valid_log(epoch, evaluator.loss))
                 if evaluator.loss < best_loss:
                     best_loss = evaluator.loss
@@ -49,6 +53,10 @@ class Trainer(Action):
                         self.save_model(network)
 
         # finish training
+
+    @staticmethod
+    def prepare_training(network, data):
+        return network.prepare_training(data)
 
     def make_log(self, *args):
         print("logged")
