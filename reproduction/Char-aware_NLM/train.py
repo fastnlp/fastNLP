@@ -2,10 +2,7 @@ import os
 from collections import namedtuple
 
 import numpy as np
-import torch
-import torch.nn as nn
 import torch.optim as optim
-from torch.autograd import Variable
 
 from .model import charLM
 from .test import test
@@ -13,7 +10,7 @@ from .utilities import *
 
 
 def preprocess():
-    word_dict, char_dict = create_word_char_dict("valid.txt", "train.txt", "tests.txt")
+    word_dict, char_dict = create_word_char_dict("charlm.txt", "train.txt", "tests.txt")
     num_words = len(word_dict)
     num_char  = len(char_dict)
     char_dict["BOW"] = num_char+1
@@ -193,7 +190,7 @@ if __name__=="__main__":
 
     if os.path.exists("cache/data_sets.pt") is False:
         train_text = read_data("./train.txt")
-        valid_text = read_data("./valid.txt")
+        valid_text = read_data("./charlm.txt")
         test_text = read_data("./tests.txt")
 
         train_set = np.array(text2vec(train_text, char_dict, max_word_len))

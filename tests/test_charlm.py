@@ -10,8 +10,8 @@ def test_charlm():
     trainer = Trainer(train_config)
 
     model = CharLM()
-    train_data = ToyLoader0("load_train", "path_to_train_file").load()
-    valid_data = ToyLoader0("load_valid", "path_to_valid_file").load()
+    train_data = ToyLoader0("load_train", "./data_for_tests/charlm.txt").load()
+    valid_data = ToyLoader0("load_valid", "./data_for_tests/charlm.txt").load()
 
     trainer.train(model, train_data, valid_data)
 
@@ -21,7 +21,7 @@ def test_charlm():
                                     save_dev_input=True, save_loss=True, batch_size=16)
     tester = Tester(test_config)
 
-    test_data = ToyLoader0("load_test", "path_to_test").load()
+    test_data = ToyLoader0("load_test", "./data_for_tests/charlm.txt").load()
 
     tester.test(model, test_data)
 

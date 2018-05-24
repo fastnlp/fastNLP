@@ -12,28 +12,35 @@ from model.base_model import BaseModel
 
 
 class CharLM(BaseModel):
+
     """
         Controller of the Character-level Neural Language Model
         To do:
         - where the data goes, call data savers.
     """
+    DataTuple = namedtuple("DataTuple", ["feature", "label"])
 
     def __init__(self):
         super(CharLM, self).__init__()
         """
-            Settings
+            Settings: should come from config loader or pre-processing
         """
-        self.word_embed_dim = 300
+        self.word_embed_dim = 100
         self.char_embedding_dim = 15
-        self.cnn_batch_size = 700
-        self.lstm_seq_len = 35
-        self.lstm_batch_size = 20
-        self.vocab_size = 100
-        self.num_char = 150
-        self.max_word_len = 10
+        self.cnn_batch_size = 40
+        self.lstm_seq_len = 10
+        self.lstm_batch_size = 4
         self.num_epoch = 10
         self.old_PPL = 100000
         self.best_PPL = 100000
+
+        """
+            These parameters are set by pre-processing.
+        """
+        self.max_word_len = None
+        self.num_char = None
+        self.vocab_size = None
+        self.preprocess("./data_for_tests/charlm.txt")
 
         self.data = None  # named tuple to store all data set
         self.data_ready = False
@@ -60,46 +67,27 @@ class CharLM(BaseModel):
         :param raw_text: raw input data
         :return: torch.Tensor, torch.Tensor
         feature matrix, label vector
+        This function is only called once in Trainer.train, but may called multiple times in Tester.test
+        So Tester will save  test input for frequent calls.
         """
-        if not self.data_ready:
-            # To do: These need to be dropped out from here. (below)
-            if os.path.exists("cache/prep.pt") is False:
-                self.preprocess()
-            objects = torch.load("cache/prep.pt")
-            word_dict = objects["word_dict"]
-            char_dict = objects["char_dict"]
-            max_word_len = objects["max_word_len"]
-            self.data_ready = True
-            print("word/char dictionary built. Start making inputs.")
+        if os.path.exists("cache/prep.pt") is False:
+            self.preprocess("./data_for_tests/charlm.txt")  # To do: This is not good. Need to fix..
+        objects = torch.load("cache/prep.pt")
+        word_dict = objects["word_dict"]
+        char_dict = objects["char_dict"]
+        max_word_len = self.max_word_len
+        print("word/char dictionary built. Start making inputs.")
 
-            if os.path.exists("cache/data_sets.pt") is False:
-                train_text = read_data("./train.txt")
-                valid_text = read_data("./valid.txt")
-                test_text = read_data("./tests.txt")
+        input_vec = np.array(text2vec(raw_text, char_dict, max_word_len))
+        # Labels are next-word index in word_dict with the same length as inputs
+        input_label = np.array([word_dict[w] for w in raw_text[1:]] + [word_dict[raw_text[-1]]])
 
-                # To do: These need to be dropped out from here. (above)
-
-                input_vec = np.array(text2vec(raw_text, char_dict, max_word_len))
-
-                # Labels are next-word index in word_dict with the same length as inputs
-                input_label = np.array([word_dict[w] for w in raw_text[1:]] + [word_dict[raw_text[-1]]])
-
-                category = {"features": input_vec, "label": input_label}
-                torch.save(category, "cache/data_sets.pt")
-            else:
-                data_sets = torch.load("cache/data_sets.pt")
-                input_vec = data_sets["features"]
-                input_label = data_sets["label"]
-
-            DataTuple = namedtuple("DataTuple", ["feature", "label"])
-            self.data = DataTuple(feature=input_vec, label=input_label)
-
-        feature_input = torch.from_numpy(self.data.feature)
-        label_input = torch.from_numpy(self.data.label)
+        data = self.DataTuple(feature=input_vec, label=input_label)
+        feature_input = torch.from_numpy(data.feature)
+        label_input = torch.from_numpy(data.label)
         num_seq = feature_input.size()[0] // self.lstm_seq_len
         feature_input = feature_input[:num_seq * self.lstm_seq_len, :]
         feature_input = feature_input.view(-1, self.lstm_seq_len, self.max_word_len + 2)
-        self.num_iter_per_epoch = feature_input.size()[0] // self.lstm_batch_size
 
         return feature_input, label_input
 
@@ -130,23 +118,23 @@ class CharLM(BaseModel):
         self.optimizer = optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.85)
 
     def save(self):
-        torch.save(self.model, "cache/model.pkl")
+        print("network saved")
+        # torch.save(self.model, "cache/model.pkl")
 
-    @staticmethod
-    def preprocess():
-        word_dict, char_dict = create_word_char_dict("valid.txt", "train.txt", "tests.txt")
-        num_char = len(char_dict)
-        char_dict["BOW"] = num_char + 1
-        char_dict["EOW"] = num_char + 2
+    def preprocess(self, all_text_files):
+        word_dict, char_dict = create_word_char_dict(all_text_files)
+        self.num_char = len(char_dict)
+        self.vocab_size = len(word_dict)
+        char_dict["BOW"] = self.num_char + 1
+        char_dict["EOW"] = self.num_char + 2
         char_dict["PAD"] = 0
         #  dict of (int, string)
         reverse_word_dict = {value: key for key, value in word_dict.items()}
-        max_word_len = max([len(word) for word in word_dict])
+        self.max_word_len = max([len(word) for word in word_dict])
         objects = {
             "word_dict": word_dict,
             "char_dict": char_dict,
             "reverse_word_dict": reverse_word_dict,
-            "max_word_len": max_word_len
         }
         torch.save(objects, "cache/prep.pt")
         print("Preprocess done.")
@@ -209,6 +197,11 @@ def to_var(x):
     if torch.cuda.is_available():
         x = x.cuda()
     return Variable(x)
+
+
+"""
+    Neural Network
+"""
 
 
 class Highway(nn.Module):
