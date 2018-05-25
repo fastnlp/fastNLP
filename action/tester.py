@@ -27,17 +27,18 @@ class Tester(Action):
         self.batch_size = test_args.batch_size
 
     def test(self, network, data):
+        print("testing")
         network.mode(test=True)  # turn on the testing mode
-
-        if not self.save_dev_input:
-            # transform into network input and label
-            valid_x, valid_y = network.prepare_input(data)
-            if self.validate_in_training:
+        if self.save_dev_input:
+            if self.valid_x is None:
+                valid_x, valid_y = network.prepare_input(data)
                 self.valid_x = valid_x
                 self.valid_y = valid_y
+            else:
+                valid_x = self.valid_x
+                valid_y = self.valid_y
         else:
-            valid_x = self.valid_x
-            valid_y = self.valid_y
+            valid_x, valid_y = network.prepare_input(data)
 
         # split into batches by self.batch_size
         iterations, test_batch_generator = self.batchify(self.batch_size, valid_x, valid_y)
@@ -53,10 +54,10 @@ class Tester(Action):
             # forward pass from tests input to predicted output
             prediction = network.data_forward(batch_x)
 
-            loss = network.loss(batch_y, prediction)
+            loss = network.get_loss(prediction, batch_y)
 
             if self.save_output:
-                batch_output.append(prediction)
+                batch_output.append(prediction.data)
             if self.save_loss:
                 loss_history.append(loss)
                 self.log(self.make_log(step, loss))
@@ -74,9 +75,10 @@ class Tester(Action):
     def result(self):
         return self.output
 
-    def make_output(self, batch_output):
+    @staticmethod
+    def make_output(batch_outputs):
         # construct full prediction with batch outputs
-        return np.concatenate((batch_output[0], batch_output[1]), axis=0)
+        return np.concatenate(batch_outputs, axis=0)
 
     def load_config(self, args):
         raise NotImplementedError

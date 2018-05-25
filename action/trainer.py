@@ -8,7 +8,8 @@ class Trainer(Action):
     """
         Trainer for common training logic of all models
     """
-    TrainConfig = namedtuple("config", ["epochs", "validate", "save_when_better", "log_per_step", "log_validation"])
+    TrainConfig = namedtuple("config", ["epochs", "validate", "save_when_better",
+                                        "log_per_step", "log_validation", "batch_size"])
 
     def __init__(self, train_args):
         """
@@ -20,6 +21,7 @@ class Trainer(Action):
         self.save_when_better = train_args.save_when_better
         self.log_per_step = train_args.log_per_step
         self.log_validation = train_args.log_validation
+        self.batch_size = train_args.batch_size
 
     def train(self, network, train_data, dev_data):
         """
@@ -28,20 +30,19 @@ class Trainer(Action):
         :param dev_data: raw data for validation
         :return:
         """
-        train_x, train_y = network.prepare_input(train_data.train_set, train_data.train_label)
+        train_x, train_y = network.prepare_input(train_data)
 
-        network.mode(test=False)  # turn on the train mode
-
-        iterations, train_batch_generator = self.batchify(train_x, train_y)
+        iterations, train_batch_generator = self.batchify(self.batch_size, train_x, train_y)
 
         test_args = Tester.TestConfig(save_output=True, validate_in_training=True,
-                                      save_dev_input=True, save_loss=True, batch_size=16)
+                                      save_dev_input=True, save_loss=True, batch_size=self.batch_size)
         evaluator = Tester(test_args)
 
         best_loss = 1e10
         loss_history = list()
 
         for epoch in range(self.n_epochs):
+            network.mode(test=False)  # turn on the train mode
 
             network.define_optimizer()
             for step in range(iterations):
@@ -49,10 +50,11 @@ class Trainer(Action):
 
                 prediction = network.data_forward(batch_x)
 
-                loss = network.loss(batch_y, prediction)
+                loss = network.get_loss(prediction, batch_y)
                 network.grad_backward()
 
                 if step % self.log_per_step == 0:
+                    print("step ", step)
                     loss_history.append(loss)
                     self.log(self.make_log(epoch, step, loss))
 

@@ -24,7 +24,7 @@ class BaseModel(object):
     def grad_backward(self):
         raise NotImplementedError
 
-    def loss(self, pred, truth):
+    def get_loss(self, pred, truth):
         raise NotImplementedError
 
 
@@ -50,7 +50,7 @@ class ToyModel(BaseModel):
     def grad_backward(self):
         print("loss gradient backward")
 
-    def loss(self, pred, truth):
+    def get_loss(self, pred, truth):
         self._loss = np.mean(np.square(pred - truth))
         return self._loss
 

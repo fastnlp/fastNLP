@@ -10,6 +10,8 @@ from torch.autograd import Variable
 
 from model.base_model import BaseModel
 
+USE_GPU = True
+
 
 class CharLM(BaseModel):
 
@@ -20,16 +22,16 @@ class CharLM(BaseModel):
     """
     DataTuple = namedtuple("DataTuple", ["feature", "label"])
 
-    def __init__(self):
+    def __init__(self, lstm_batch_size, lstm_seq_len):
         super(CharLM, self).__init__()
         """
             Settings: should come from config loader or pre-processing
         """
-        self.word_embed_dim = 100
+        self.word_embed_dim = 300
         self.char_embedding_dim = 15
-        self.cnn_batch_size = 40
-        self.lstm_seq_len = 10
-        self.lstm_batch_size = 4
+        self.cnn_batch_size = lstm_batch_size * lstm_seq_len
+        self.lstm_seq_len = lstm_seq_len
+        self.lstm_batch_size = lstm_batch_size
         self.num_epoch = 10
         self.old_PPL = 100000
         self.best_PPL = 100000
@@ -45,8 +47,9 @@ class CharLM(BaseModel):
         self.data = None  # named tuple to store all data set
         self.data_ready = False
         self.criterion = nn.CrossEntropyLoss()
-        self.loss = None
-        self.use_gpu = False
+        self._loss = None
+        self.use_gpu = USE_GPU
+
         # word_emb_dim == hidden_size / num of hidden units
         self.hidden = (to_var(torch.zeros(2, self.lstm_batch_size, self.word_embed_dim)),
                        to_var(torch.zeros(2, self.lstm_batch_size, self.word_embed_dim)))
@@ -64,7 +67,7 @@ class CharLM(BaseModel):
 
     def prepare_input(self, raw_text):
         """
-        :param raw_text: raw input data
+        :param raw_text: raw input text consisting of words
         :return: torch.Tensor, torch.Tensor
         feature matrix, label vector
         This function is only called once in Trainer.train, but may called multiple times in Tester.test
@@ -78,17 +81,12 @@ class CharLM(BaseModel):
         max_word_len = self.max_word_len
         print("word/char dictionary built. Start making inputs.")
 
-        input_vec = np.array(text2vec(raw_text, char_dict, max_word_len))
+        words = raw_text
+        input_vec = np.array(text2vec(words, char_dict, max_word_len))
         # Labels are next-word index in word_dict with the same length as inputs
-        input_label = np.array([word_dict[w] for w in raw_text[1:]] + [word_dict[raw_text[-1]]])
-
-        data = self.DataTuple(feature=input_vec, label=input_label)
-        feature_input = torch.from_numpy(data.feature)
-        label_input = torch.from_numpy(data.label)
-        num_seq = feature_input.size()[0] // self.lstm_seq_len
-        feature_input = feature_input[:num_seq * self.lstm_seq_len, :]
-        feature_input = feature_input.view(-1, self.lstm_seq_len, self.max_word_len + 2)
-
+        input_label = np.array([word_dict[w] for w in words[1:]] + [word_dict[words[-1]]])
+        feature_input = torch.from_numpy(input_vec)
+        label_input = torch.from_numpy(input_label)
         return feature_input, label_input
 
     def mode(self, test=False):
@@ -98,6 +96,15 @@ class CharLM(BaseModel):
             self.model.train()
 
     def data_forward(self, x):
+        """
+        :param x: Tensor of size [lstm_batch_size, lstm_seq_len, max_word_len+2]
+        :return: Tensor of size [num_words, ?]
+        """
+        # additional processing of inputs after batching
+        num_seq = x.size()[0] // self.lstm_seq_len
+        x = x[:num_seq * self.lstm_seq_len, :]
+        x = x.view(-1, self.lstm_seq_len, self.max_word_len + 2)
+
         # detach hidden state of LSTM from last batch
         hidden = [state.detach() for state in self.hidden]
         output, self.hidden = self.model(to_var(x), hidden)
@@ -105,13 +112,13 @@ class CharLM(BaseModel):
 
     def grad_backward(self):
         self.model.zero_grad()
-        self.loss.backward()
+        self._loss.backward()
         torch.nn.utils.clip_grad_norm(self.model.parameters(), 5, norm_type=2)
         self.optimizer.step()
 
-    def loss(self, predict, truth):
-        self.loss = self.criterion(predict, to_var(truth))
-        return self.loss
+    def get_loss(self, predict, truth):
+        self._loss = self.criterion(predict, to_var(truth))
+        return self._loss.data  # No pytorch data structure exposed outsides
 
     def define_optimizer(self):
         # redefine optimizer for every new epoch
@@ -123,12 +130,13 @@ class CharLM(BaseModel):
 
     def preprocess(self, all_text_files):
         word_dict, char_dict = create_word_char_dict(all_text_files)
-        self.num_char = len(char_dict)
+        num_char = len(char_dict)
         self.vocab_size = len(word_dict)
-        char_dict["BOW"] = self.num_char + 1
-        char_dict["EOW"] = self.num_char + 2
+        char_dict["BOW"] = num_char + 1
+        char_dict["EOW"] = num_char + 2
         char_dict["PAD"] = 0
-        #  dict of (int, string)
+        self.num_char = num_char + 3
+        #  char_dict is a dict of (int, string), int counting from 0 to 47
         reverse_word_dict = {value: key for key, value in word_dict.items()}
         self.max_word_len = max([len(word) for word in word_dict])
         objects = {
@@ -194,7 +202,7 @@ def create_word_char_dict(*file_name):
 
 
 def to_var(x):
-    if torch.cuda.is_available():
+    if torch.cuda.is_available() and USE_GPU:
         x = x.cuda()
     return Variable(x)
 
@@ -246,7 +254,8 @@ class charLM(nn.Module):
         self.convolutions = []
 
         # list of tuples: (the number of filter, width)
-        self.filter_num_width = [(25, 1), (50, 2), (75, 3), (100, 4), (125, 5), (150, 6)]
+        # self.filter_num_width = [(25, 1), (50, 2), (75, 3), (100, 4), (125, 5), (150, 6)]
+        self.filter_num_width = [(25, 1), (50, 2), (75, 3)]
 
         for out_channel, filter_width in self.filter_num_width:
             self.convolutions.append(
@@ -304,7 +313,7 @@ class charLM(nn.Module):
         # [num_seq*seq_len, max_word_len+2, char_emb_dim]
 
         x = torch.transpose(x.view(x.size()[0], 1, x.size()[1], -1), 2, 3)
-        # [num_seq*seq_len, 1, max_word_len+2, char_emb_dim]
+        # [num_seq*seq_len, 1, char_emb_dim, max_word_len+2]
 
         x = self.conv_layers(x)
         # [num_seq*seq_len, total_num_filters]
