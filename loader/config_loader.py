@@ -10,5 +10,4 @@ class ConfigLoader(BaseLoader):
 
     @staticmethod
     def parse(string):
-        # To do
-        return string
+        raise NotImplementedError

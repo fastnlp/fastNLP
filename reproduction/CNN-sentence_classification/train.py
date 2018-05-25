@@ -1,16 +1,11 @@
 import os
-import torch 
+
+import
+import torch
 import torch.nn as nn
-import torchvision.datasets as dsets
-import torchvision.transforms as transforms
-import dataset as dst
-from model import CNN_text
+.dataset as dst
+from .model import CNN_text
 from torch.autograd import Variable
-
-from sklearn import cross_validation
-from sklearn import datasets
-
-
 
 # Hyper Parameters
 batch_size = 50
@@ -51,8 +46,7 @@ if cuda:
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(cnn.parameters(), lr=learning_rate)
 
-
-#train and test
+# train and tests
 best_acc = None
 
 for epoch in range(num_epochs):

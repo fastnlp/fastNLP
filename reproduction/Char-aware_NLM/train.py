@@ -1,20 +1,16 @@
-
-import torch
-from torch.autograd import Variable
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import numpy as np
 import os
-from model import charLM
-from utilities import *
 from collections import namedtuple
-from test import test
+
+import numpy as np
+import torch.optim as optim
+
+from .model import charLM
+from .test import test
+from .utilities import *
 
 
 def preprocess():
-    
-    word_dict, char_dict = create_word_char_dict("valid.txt", "train.txt", "test.txt")
+    word_dict, char_dict = create_word_char_dict("charlm.txt", "train.txt", "tests.txt")
     num_words = len(word_dict)
     num_char  = len(char_dict)
     char_dict["BOW"] = num_char+1
@@ -43,7 +39,18 @@ def to_var(x):
 
 
 def train(net, data, opt):
-    
+    """
+    :param net: the pytorch model
+    :param data: numpy array
+    :param opt: named tuple
+    1. random seed
+    2. define local input
+    3. training settting: learning rate, loss, etc
+    4. main loop epoch
+    5. batchify
+    6. validation
+    7. save model
+    """
     torch.manual_seed(1024)
 
     train_input = torch.from_numpy(data.train_input)
@@ -125,9 +132,9 @@ def train(net, data, opt):
         ##################################################
         #################### Training ####################
         net.train()
-        optimizer  = optim.SGD(net.parameters(), 
-                               lr = learning_rate, 
-                               momentum=0.85)
+        optimizer = optim.SGD(net.parameters(),
+                              lr = learning_rate,
+                              momentum=0.85)
 
         # split the first dim
         input_generator = batch_generator(train_input, opt.lstm_batch_size)
@@ -183,8 +190,8 @@ if __name__=="__main__":
 
     if os.path.exists("cache/data_sets.pt") is False:
         train_text = read_data("./train.txt")
-        valid_text = read_data("./valid.txt")
-        test_text  = read_data("./test.txt")
+        valid_text = read_data("./charlm.txt")
+        test_text = read_data("./tests.txt")
 
         train_set = np.array(text2vec(train_text, char_dict, max_word_len))
         valid_set = np.array(text2vec(valid_text, char_dict, max_word_len))
@@ -195,14 +202,14 @@ if __name__=="__main__":
         valid_label = np.array([word_dict[w] for w in valid_text[1:]] + [word_dict[valid_text[-1]]])
         test_label  = np.array([word_dict[w] for w in test_text[1:]] + [word_dict[test_text[-1]]])
 
-        category = {"tdata":train_set, "vdata":valid_set, "test": test_set, 
+        category = {"tdata": train_set, "vdata": valid_set, "tests": test_set,
                     "trlabel":train_label, "vlabel":valid_label, "tlabel":test_label}
         torch.save(category, "cache/data_sets.pt") 
     else:
         data_sets = torch.load("cache/data_sets.pt")
         train_set = data_sets["tdata"]
         valid_set = data_sets["vdata"]
-        test_set  = data_sets["test"]
+        test_set = data_sets["tests"]
         train_label = data_sets["trlabel"]
         valid_label = data_sets["vlabel"]
         test_label = data_sets["tlabel"]

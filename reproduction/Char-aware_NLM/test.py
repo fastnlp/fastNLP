@@ -1,12 +1,12 @@
 import os
-import torch
-from torch.autograd import Variable
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-from model import charLM
-from utilities import *
 from collections import namedtuple
+
+import numpy as np
+import torch
+import torch.nn as nn
+from torch.autograd import Variable
+from utilities import *
+
 
 def to_var(x):
     if torch.cuda.is_available():
@@ -76,18 +76,18 @@ if __name__ == "__main__":
 
 
     if os.path.exists("cache/data_sets.pt") is False:
-        
-        test_text  = read_data("./test.txt")
+
+        test_text = read_data("./tests.txt")
         test_set  = np.array(text2vec(test_text,  char_dict, max_word_len))
 
         # Labels are next-word index in word_dict with the same length as inputs
         test_label  = np.array([word_dict[w] for w in test_text[1:]] + [word_dict[test_text[-1]]])
 
-        category = {"test": test_set, "tlabel":test_label}
+        category = {"tests": test_set, "tlabel": test_label}
         torch.save(category, "cache/data_sets.pt") 
     else:
         data_sets = torch.load("cache/data_sets.pt")
-        test_set  = data_sets["test"]
+        test_set = data_sets["tests"]
         test_label = data_sets["tlabel"]
         train_set = data_sets["tdata"]
         train_label = data_sets["trlabel"]
