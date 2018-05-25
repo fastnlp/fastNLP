@@ -1,15 +1,11 @@
-import re
-import sys
-import itertools
-import numpy as np
-from torch.utils.data import Dataset, DataLoader
-
-import random
-import os
-import pickle
 import codecs
-from gensim import corpora
+import random
+import re
+
 import gensim
+import numpy as np
+from gensim import corpora
+from torch.utils.data import Dataset
 
 
 def clean_str(string):
@@ -37,7 +33,6 @@ def pad_sentences(sentence, padding_word=" <PAD/>"):
     sent = sentence.split()
     padded_sentence = sentence + padding_word * (sequence_length - len(sent))
     return padded_sentence
-
 
 
 #data loader
@@ -73,21 +68,20 @@ class MRDataset(Dataset):
                 np.array([self.word2id_dict[word] for word in sent[0].split()], dtype=np.int64), 
                 sent[1]
             ) for sent in self.MRDataset_frame]
-        
-    def word_embeddings(self, path = './GoogleNews-vectors-negative300.bin/GoogleNews-vectors-negative300.bin'):
-	    #establish from google
+
+    def word_embeddings(self, path="./GoogleNews-vectors-negative300.bin/GoogleNews-vectors-negative300.bin"):
+        # establish from google
 	    model = gensim.models.KeyedVectors.load_word2vec_format(path, binary=True)
-	    print('Please wait ... (it could take a while to load the file : {})'.format(path))
 
-	    word_dict = self.word2id_dict
-	    embedding_weights = np.random.uniform(-0.25, 0.25, (len(self.word2id_dict), 300))
+    print('Please wait ... (it could take a while to load the file : {})'.format(path))
+    word_dict = self.word2id_dict
+    embedding_weights = np.random.uniform(-0.25, 0.25, (len(self.word2id_dict), 300))
 
-	    for word in word_dict:
-            word_id = word_dict[word]
-            if word in model.wv.vocab:
-                embedding_weights[word_id, :] = model[word]
-
-	    return embedding_weights
+    for word in word_dict:
+        word_id = word_dict[word]
+        if word in model.wv.vocab:
+            embedding_weights[word_id, :] = model[word]
+    return embedding_weights
 
     def __len__(self):
 
