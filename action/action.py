@@ -27,7 +27,7 @@ class Action(object):
         :return iteration:int, the number of step in each epoch
                  generator:generator, to generate batch inputs
         """
-        n_samples = X.size()[0]
+        n_samples = X.shape[0]
         num_iter = n_samples // batch_size
         if Y is None:
             generator = self._batch_generate(batch_size, num_iter, X)

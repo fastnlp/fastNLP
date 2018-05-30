@@ -1,6 +1,7 @@
 import os
 
 import
+import
 import torch
 import torch.nn as nn
 .dataset as dst
@@ -54,10 +55,10 @@ for epoch in range(num_epochs):
     cnn.train()
     for i, (sents,labels) in enumerate(train_loader):
         sents = Variable(sents)
-        labels = Variable(labels)        
-	   if cuda:
-	       sents = sents.cuda()
-	       labels = labels.cuda()
+        labels = Variable(labels)
+        if cuda:
+            sents = sents.cuda()
+        labels = labels.cuda()
         optimizer.zero_grad()
         outputs = cnn(sents)
         loss = criterion(outputs, labels)

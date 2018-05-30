@@ -2,29 +2,64 @@ import numpy as np
 
 
 class BaseModel(object):
-    """PyTorch base model for all models"""
+    """The base class of all models.
+        This class and its subclasses are actually "wrappers" of the PyTorch models.
+        They act as an interface between Trainer and the deep learning networks.
+        This interface provides the following methods to be called by Trainer.
+        - prepare_input
+        - mode
+        - define_optimizer
+        - data_forward
+        - grad_backward
+        - get_loss
+    """
 
     def __init__(self):
         pass
 
     def prepare_input(self, data):
         """
-        :param data: str, raw input vector(?)
+        Perform data transformation from raw input to vector/matrix inputs.
+        :param data: raw inputs
         :return (X, Y): tuple, input features and labels
         """
         raise NotImplementedError
 
     def mode(self, test=False):
+        """
+        Tell the network to be trained or not, required by PyTorch.
+        :param test: bool
+        """
+        raise NotImplementedError
+
+    def define_optimizer(self):
+        """
+        Define PyTorch optimizer specified by the model.
+        """
         raise NotImplementedError
 
     def data_forward(self, *x):
+        """
+        Forward pass of the data.
+        :param x: input feature matrix and label vector
+        :return: output by the model
+        """
         # required by PyTorch nn
         raise NotImplementedError
 
     def grad_backward(self):
+        """
+        Perform gradient descent to update the model parameters.
+        """
         raise NotImplementedError
 
     def get_loss(self, pred, truth):
+        """
+        Compute loss given model prediction and ground truth. Loss function specified by the model.
+        :param pred: prediction label vector
+        :param truth: ground truth label vector
+        :return: a scalar
+        """
         raise NotImplementedError
 
 
@@ -54,29 +89,70 @@ class ToyModel(BaseModel):
         self._loss = np.mean(np.square(pred - truth))
         return self._loss
 
+    def define_optimizer(self):
+        pass
+
 
 class Vocabulary(object):
-    """
-        A collection of lookup tables.
+    """A look-up table that allows you to access `Lexeme` objects. The `Vocab`
+    instance also provides access to the `StringStore`, and owns underlying
+    data that is shared between `Doc` objects.
     """
 
     def __init__(self):
-        self.word_set = None
-        self.word2idx = None
-        self.emb_matrix = None
-
-    def lookup(self, word):
-        if word in self.word_set:
-            return self.emb_matrix[self.word2idx[word]]
-        return LookupError("The key " + word + " does not exist.")
+        """Create the vocabulary.
+        RETURNS (Vocab): The newly constructed object.
+        """
+        self.data_frame = None
 
 
 class Document(object):
-    """
-        contains a sequence of tokens
-        each token is a character with linguistic attributes
+    """A sequence of Token objects. Access sentences and named entities, export
+    annotations to numpy arrays, losslessly serialize to compressed binary
+    strings. The `Doc` object holds an array of `Token` objects. The
+    Python-level `Token` and `Span` objects are views of this array, i.e.
+    they don't own the data themselves. -- spacy
     """
 
-    def __init__(self):
-        # wrap pandas.dataframe
-        self.dataframe = None
+    def __init__(self, vocab, words=None, spaces=None):
+        """Create a Doc object.
+        vocab (Vocab): A vocabulary object, which must match any models you
+            want to use (e.g. tokenizer, parser, entity recognizer).
+        words (list or None): A list of unicode strings, to add to the document
+            as words. If `None`, defaults to empty list.
+        spaces (list or None): A list of boolean values, of the same length as
+            words. True means that the word is followed by a space, False means
+            it is not. If `None`, defaults to `[True]*len(words)`
+        user_data (dict or None): Optional extra data to attach to the Doc.
+        RETURNS (Doc): The newly constructed object.
+        """
+        self.vocab = vocab
+        self.spaces = spaces
+        self.words = words
+        if spaces is None:
+            self.spaces = [True] * len(self.words)
+        elif len(spaces) != len(self.words):
+            raise ValueError("dismatch spaces and words")
+
+    def get_chunker(self, vocab):
+        return None
+
+    def push_back(self, vocab):
+        pass
+
+
+class Token(object):
+    """An individual token – i.e. a word, punctuation symbol, whitespace,
+    etc.
+    """
+
+    def __init__(self, vocab, doc, offset):
+        """Construct a `Token` object.
+            vocab (Vocabulary): A storage container for lexical types.
+            doc (Document): The parent document.
+            offset (int): The index of the token within the document.
+        """
+        self.vocab = vocab
+        self.doc = doc
+        self.token = doc[offset]
+        self.i = offset

@@ -6,7 +6,7 @@ from .tester import Tester
 
 class Trainer(Action):
     """
-        Trainer for common training logic of all models
+        Trainer is a common training pipeline shared among all models.
     """
     TrainConfig = namedtuple("config", ["epochs", "validate", "save_when_better",
                                         "log_per_step", "log_validation", "batch_size"])
@@ -23,12 +23,12 @@ class Trainer(Action):
         self.log_validation = train_args.log_validation
         self.batch_size = train_args.batch_size
 
-    def train(self, network, train_data, dev_data):
+    def train(self, network, train_data, dev_data=None):
         """
         :param network: the model controller
         :param train_data: raw data for training
         :param dev_data: raw data for validation
-        :return:
+        This method will call all the base methods of network (implemented in model.base_model).
         """
         train_x, train_y = network.prepare_input(train_data)
 
@@ -60,6 +60,8 @@ class Trainer(Action):
 
             #################### evaluate over dev set  ###################
             if self.validate:
+                if dev_data is None:
+                    raise RuntimeError("No validation data provided.")
                 # give all controls to tester
                 evaluator.test(network, dev_data)
 

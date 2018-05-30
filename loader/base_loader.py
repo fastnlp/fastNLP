@@ -14,6 +14,11 @@ class BaseLoader(object):
             text = f.read()
         return text
 
+    def load_lines(self):
+        with open(self.data_path, "r", encoding="utf=8") as f:
+            text = f.readlines()
+        return text
+
 
 class ToyLoader0(BaseLoader):
     """
@@ -29,3 +34,4 @@ class ToyLoader0(BaseLoader):
         import re
         corpus = re.sub(r"<unk>", "unk", corpus)
         return corpus.split()
+
