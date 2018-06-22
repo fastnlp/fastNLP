@@ -38,11 +38,9 @@ class HAN(nn.Module):
     def forward(self, batch_doc):
         # input is a sequence of matrix
         doc_vec_list = []
-        for doc in batch_doc:
-            # doc's dim (num_sent, seq_len, word_dim)
-            sent_mat = self.word_layer(doc)
-            # sent_mat's dim (num_sent, vec_dim)
-            doc_vec_list.append(sent_mat)
+        for doc in batch_doc: 
+            sent_mat = self.word_layer(doc) # doc's dim (num_sent, seq_len, word_dim)
+            doc_vec_list.append(sent_mat) # sent_mat's dim (num_sent, vec_dim)
         doc_vec = self.sent_layer(pack_sequence(doc_vec_list))
         output = self.softmax(self.output_layer(doc_vec))
         return output
@@ -55,7 +53,6 @@ class AttentionNet(nn.Module):
         self.gru_hidden_size = gru_hidden_size
         self.gru_num_layers = gru_num_layers
         self.context_vec_size = context_vec_size
-        self.last_alpha = None
 
         # Encoder
         self.gru = nn.GRU(input_size=input_size, 
@@ -72,18 +69,13 @@ class AttentionNet(nn.Module):
         self.context_vec.data.uniform_(-0.1, 0.1)
 
     def forward(self, inputs):
-        # inputs's dim (batch_size, seq_len,  word_dim)
         # GRU part
-        h_t, hidden = self.gru(inputs)
+        h_t, hidden = self.gru(inputs) # inputs's dim (batch_size, seq_len,  word_dim)
         u = self.tanh(self.fc(h_t))
         # Attention part
-        # u's dim (batch_size, seq_len, context_vec_size)
-        alpha = self.softmax(torch.matmul(u, self.context_vec))
-        self.last_alpha = alpha.data
-        # alpha's dim (batch_size, seq_len, 1)
-        output = torch.bmm(torch.transpose(h_t, 1, 2), alpha)
-        # output's dim (batch_size, 2*hidden_size, 1)
-        return torch.squeeze(output, dim=2)
+        alpha = self.softmax(torch.matmul(u, self.context_vec)) # u's dim (batch_size, seq_len, context_vec_size)
+        output = torch.bmm(torch.transpose(h_t, 1, 2), alpha) # alpha's dim (batch_size, seq_len, 1)
+        return torch.squeeze(output, dim=2) # output's dim (batch_size, 2*hidden_size, 1)
 
 
 if __name__ == '__main__':

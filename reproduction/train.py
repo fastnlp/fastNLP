@@ -1,9 +1,6 @@
 import os
 import pickle
 
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-
 import nltk
 import numpy as np
 import torch
@@ -60,7 +57,6 @@ class YelpDocSet(Dataset):
         file_id = n // 5000
         idx = file_id % 5
         if self._cache[idx][0] != file_id:
-            # print('load {} to {}'.format(file_id, idx))
             with open(os.path.join(self.dirname, self._files[file_id]), 'rb') as f:
                 self._cache[idx] = (file_id, pickle.load(f))
         y, x = self._cache[idx][1][n % 5000]
@@ -90,7 +86,6 @@ class YelpDocSet(Dataset):
                 vec = self.embedding.get_vec(word)
                 sent_vec.append(vec.tolist())
             sent_vec = torch.Tensor(sent_vec)
-            # print(sent_vec.size())
             doc.append(sent_vec)
         if len(doc) == 0:
             doc = [torch.zeros(1,200)]
@@ -124,7 +119,6 @@ def train(net, dataset, num_epoch, batch_size, print_size=10, use_cuda=False):
             for sample in x:
                 doc = []
                 for sent_vec in sample:
-                    # print(sent_vec.size())
                     if use_cuda:
                         sent_vec = sent_vec.cuda()
                     doc.append(Variable(sent_vec))
