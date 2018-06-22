@@ -7,7 +7,7 @@ This is the implementation of [Hierarchical Attention Networks for Document Clas
 
 ## Requirement
 * python 3.6
-* pytorch >= 0.3.0
+* pytorch = 0.3.0
 * numpy
 * gensim
 * nltk
