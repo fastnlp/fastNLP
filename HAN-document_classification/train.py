@@ -147,7 +147,7 @@ if __name__ == '__main__':
     import gensim
     from gensim import models
 
-    # train_word_vec()
+    train_word_vec()
 
     embed_model = Word2Vec.load('yelp.word2vec')
     embedding = Embedding_layer(embed_model.wv, embed_model.wv.vector_size)
@@ -158,6 +158,10 @@ if __name__ == '__main__':
     net = HAN(input_size=200, output_size=5, 
             word_hidden_size=50, word_num_layers=1, word_context_size=100,
             sent_hidden_size=50, sent_num_layers=1, sent_context_size=100)
-        
-    net.load_state_dict(torch.load('model.dict'))
+    try:
+        net.load_state_dict(torch.load('model.dict'))
+        print("last time trained model has loaded")
+    except Exception:
+        print("cannot load model, train the inital model")
+    
     train(net, dataset, num_epoch=5, batch_size=64, use_cuda=True)
