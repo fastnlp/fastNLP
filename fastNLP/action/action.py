@@ -1,4 +1,3 @@
-from saver.logger import Logger
 
 
 class Action(object):
@@ -8,16 +7,6 @@ class Action(object):
 
     def __init__(self):
         super(Action, self).__init__()
-        self.logger = Logger("logger_output.txt")
-
-    def load_config(self, args):
-        raise NotImplementedError
-
-    def load_dataset(self, args):
-        raise NotImplementedError
-
-    def log(self, string):
-        self.logger.log(string)
 
     def batchify(self, batch_size, X, Y=None):
         """
