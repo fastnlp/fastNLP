@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.autograd import Variable
 
 class Selfattention(nn.Module):
     """
@@ -32,10 +33,8 @@ class Selfattention(nn.Module):
     def forward(self, x):
         inter = self.tanh(torch.matmul(self.W_s1, torch.transpose(x, 1, 2)))
         A = self.softmax(torch.matmul(self.W_s2, inter))
-        out = torch.matmul(A, H)
+        out = torch.matmul(A, x)
         out = out.view(out.size(0), -1)
         penalty = self.penalization(A)
         return out, penalty
 
-if __name__ == "__main__":
-    model = Selfattention(100, 10, 20)

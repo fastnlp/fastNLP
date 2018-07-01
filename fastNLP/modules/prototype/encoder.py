@@ -20,6 +20,3 @@ class Lstm(nn.Module):
     def forward(self, x):
         x, _ = self.lstm(x)
         return x
-
-if __name__ == "__main__":
-    model = Lstm(20, 30, 1, 0.5, False)

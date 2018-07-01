@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class MLP(nn.Module):
     """
@@ -15,7 +16,6 @@ class MLP(nn.Module):
         super(MLP,self).__init__()
         self.L1 = nn.Linear(input_size, hidden_size)
         self.L2 = nn.Linear(hidden_size, output_size)
-        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
         out = self.L2(F.relu(self.L1(x)))

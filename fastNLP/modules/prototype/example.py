@@ -8,13 +8,13 @@ import torch.optim as optim
 import time
 import dataloader
 
+WORD_NUM = 357361
 WORD_SIZE = 100
 HIDDEN_SIZE = 300
 D_A = 350
-R = 20
+R = 10
 MLP_HIDDEN = 2000 
 CLASSES_NUM = 5
-WORD_NUM = 357361
 
 class Net(nn.Module):
     """
@@ -32,7 +32,7 @@ class Net(nn.Module):
         x = self.encoder(x)
         x, penalty = self.aggregation(x)
         x = self.predict(x)
-        return r, x
+        return x, penalty
 
 def train(model_dict=None, using_cuda=True, learning_rate=0.06,\
     momentum=0.3, batch_size=32, epochs=5, coef=1.0, interval=10):
@@ -50,7 +50,7 @@ def train(model_dict=None, using_cuda=True, learning_rate=0.06,\
     the result will be saved with a form "model_dict_+current time", which could be used for further training
     """
     
-    if using_cuda == True:
+    if using_cuda:
         net = Net().cuda()
     else:
         net = Net()
@@ -60,7 +60,7 @@ def train(model_dict=None, using_cuda=True, learning_rate=0.06,\
 
     optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
     criterion = nn.CrossEntropyLoss()
-    dataset = dataloader.DataLoader("trainset.pkl", using_cuda=using_cuda)
+    dataset = dataloader.DataLoader("test_set.pkl", batch_size, using_cuda=using_cuda)
 
     #statistics
     loss_count = 0
@@ -69,6 +69,7 @@ def train(model_dict=None, using_cuda=True, learning_rate=0.06,\
     count = 0
 
     for epoch in range(epochs):
+        print("epoch: %d"%(epoch))
         for i, batch in enumerate(dataset):
             t1 = time.time()
             X = batch["feature"]
@@ -86,23 +87,43 @@ def train(model_dict=None, using_cuda=True, learning_rate=0.06,\
             loss_count += torch.sum(y_penl).data[0]
             prepare_time += (t2 - t1)
             run_time += (t3 - t2)
-            p, idx = torch.max(y_pred, dim=1)
-            idx = idx.data
-            count += torch.sum(torch.eq(idx.cpu(), y))
+            p, idx = torch.max(y_pred.data, dim=1)
+            count += torch.sum(torch.eq(idx.cpu(), y.data.cpu()))
 
-            if i % interval == 0:
-                print(i)      
-                print("loss count:" + str(loss_count / batch_size))
-                print("acuracy:" + str(count / batch_size))
+            if (i + 1) % interval == 0:
+                print("epoch : %d, iters: %d"%(epoch, i + 1))     
+                print("loss count:" + str(loss_count / (interval * batch_size)))
+                print("acuracy:" + str(count / (interval * batch_size)))
                 print("penalty:" + str(torch.sum(y_penl).data[0] / batch_size))
-                print("prepare time:" + str(prepare_time / batch_size))
-                print("run time:" + str(run_time / batch_size))
+                print("prepare time:" + str(prepare_time))
+                print("run time:" + str(run_time))
                 prepare_time = 0
                 run_time = 0
                 loss_count = 0
                 count = 0
-        torch.save(net.state_dict(), "model_dict_%s.pkl"%(str(time.time())))
+        string = time.strftime("%Y-%m-%d-%H:%M:%S", time.localtime())
+        torch.save(net.state_dict(), "model_dict_%s.dict"%(string))
+
+def test(model_dict, using_cuda=True):
+    if using_cuda:
+        net = Net().cuda()
+    else:
+        net = Net()
+    net.load_state_dict(torch.load(model_dict))
+    dataset = dataloader.DataLoader("test_set.pkl", batch_size=1, using_cuda=using_cuda)
+    count = 0
+    for i, batch in enumerate(dataset):
+        X = batch["feature"]
+        y = batch["class"]
+        y_pred, _ = net(X)
+        p, idx = torch.max(y_pred.data, dim=1)
+        count += torch.sum(torch.eq(idx.cpu(), y.data.cpu()))
+    print("accuracy: %f"%(count / dataset.num))
+        
 
 if __name__ == "__main__":
     train(using_cuda=torch.cuda.is_available())
+    
+    
+    
 

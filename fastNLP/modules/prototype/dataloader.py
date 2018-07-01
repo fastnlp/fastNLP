@@ -32,10 +32,10 @@ def pad(X, using_cuda):
             padlen = maxlen - x.size(0)
             if padlen > 0:
                 if using_cuda:
-                    paddings = torch.zeros(padlen).cuda()
+                    paddings = Variable(torch.zeros(padlen).long()).cuda()
                 else:
-                    paddings = torch.zeros(padlen)
-                x_ = torch.cat(x, paddings)
+                    paddings = Variable(torch.zeros(padlen).long())
+                x_ = torch.cat((x, paddings), 0)
                 Y.append(x_)
             else:
                 Y.append(x)
@@ -71,12 +71,11 @@ class DataLoader(object):
                 random.shuffle(self.data)
             raise StopIteration()
         else:
-            X = self.data[self.count * self.batch_size : (self.count + 1) * self.batch_size]
+            batch = self.data[self.count * self.batch_size : (self.count + 1) * self.batch_size]
             self.count += 1
-            X = [long_wrapper(x["sent"], using_cuda=self.using_cuda) for x in X]
+            X = [long_wrapper(x["sent"], using_cuda=self.using_cuda, requires_grad=False) for x in batch]
             X = pad(X, self.using_cuda)
-            y = [long_wrapper(x["class"], using_cuda=self.using_cuda) for x in X]
-            y = torch.stack(y)
+            y = long_wrapper([x["class"] for x in batch], using_cuda=self.using_cuda, requires_grad=False)
             return {"feature" : X, "class" : y}
             
 
