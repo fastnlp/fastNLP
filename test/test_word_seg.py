@@ -1,22 +1,19 @@
-from loader.base_loader import BaseLoader
-from model.word_seg_model import WordSegModel
+from fastNLP.action.tester import Tester
+from fastNLP.action.trainer import WordSegTrainer
+from fastNLP.loader.base_loader import BaseLoader
+from fastNLP.models.word_seg_model import WordSeg
 
-from fastNLP.action import Tester
-from fastNLP.action.trainer import Trainer
 
-
-def test_charlm():
-    train_config = Trainer.TrainConfig(epochs=5, validate=False, save_when_better=False,
+def test_wordseg():
+    train_config = WordSegTrainer.TrainConfig(epochs=5, validate=False, save_when_better=False,
                                        log_per_step=10, log_validation=False, batch_size=254)
-    trainer = Trainer(train_config)
+    trainer = WordSegTrainer(train_config)
 
-    model = WordSegModel()
+    model = WordSeg(100, 2, 1000)
 
     train_data = BaseLoader("load_train", "./data_for_tests/cws_train").load_lines()
 
     trainer.train(model, train_data)
-
-    trainer.save_model(model)
 
     test_config = Tester.TestConfig(save_output=False, validate_in_training=False,
                                     save_dev_input=False, save_loss=False, batch_size=254)
@@ -28,4 +25,4 @@ def test_charlm():
 
 
 if __name__ == "__main__":
-    test_charlm()
+    test_wordseg()

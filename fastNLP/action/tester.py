@@ -2,7 +2,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from fastNLP.action import Action
+from fastNLP.action.action import Action
 
 
 class Tester(Action):

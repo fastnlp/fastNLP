@@ -6,10 +6,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from model.base_model import BaseModel
 from torch.autograd import Variable
 
+from fastNLP.models.base_model import BaseModel
+
 USE_GPU = True
+
+"""
+    To be deprecated.
+"""
 
 
 class CharLM(BaseModel):

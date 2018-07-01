@@ -111,7 +111,7 @@ class BaseTrainer(Action):
         """
         raise NotImplementedError
 
-    def data_forward(self, network, *x):
+    def data_forward(self, network, x):
         """
         Forward pass of the data.
         :param network: a model
@@ -158,7 +158,7 @@ class ToyTrainer(BaseTrainer):
     def mode(self, test=False):
         self.model.mode(test)
 
-    def data_forward(self, network, *x):
+    def data_forward(self, network, x):
         return np.matmul(x, self.weight) + self.bias
 
     def grad_backward(self, loss):
@@ -173,6 +173,91 @@ class ToyTrainer(BaseTrainer):
 
     def update(self):
         self._optimizer.step()
+
+
+class WordSegTrainer(BaseTrainer):
+    """
+        reserve for changes
+    """
+
+    def __init__(self, train_args):
+        super(WordSegTrainer, self).__init__(train_args)
+        self.id2word = None
+        self.word2id = None
+        self.id2tag = None
+        self.tag2id = None
+
+        self.lstm_batch_size = 8
+        self.lstm_seq_len = 32  # Trainer batch_size == lstm_batch_size * lstm_seq_len
+        self.hidden_dim = 100
+        self.lstm_num_layers = 2
+        self.vocab_size = 100
+        self.word_emb_dim = 100
+
+        self.hidden = (self.to_var(torch.zeros(2, self.lstm_batch_size, self.word_emb_dim)),
+                       self.to_var(torch.zeros(2, self.lstm_batch_size, self.word_emb_dim)))
+
+        self.optimizer = None
+        self._loss = None
+
+        self.USE_GPU = False
+
+    def to_var(self, x):
+        if torch.cuda.is_available() and self.USE_GPU:
+            x = x.cuda()
+        return torch.autograd.Variable(x)
+
+    def prepare_input(self, data):
+        """
+            perform word indices lookup to convert strings into indices
+            :param data: list of string, each string contains word + space + [B, M, E, S]
+            :return
+        """
+        word_list = []
+        tag_list = []
+        for line in data:
+            if len(line) > 2:
+                tokens = line.split("#")
+                word_list.append(tokens[0])
+                tag_list.append(tokens[2][0])
+        self.id2word = list(set(word_list))
+        self.word2id = {word: idx for idx, word in enumerate(self.id2word)}
+        self.id2tag = list(set(tag_list))
+        self.tag2id = {tag: idx for idx, tag in enumerate(self.id2tag)}
+        words = np.array([self.word2id[w] for w in word_list]).reshape(-1, 1)
+        tags = np.array([self.tag2id[t] for t in tag_list]).reshape(-1, 1)
+        return words, tags
+
+    def mode(self, test=False):
+        if test:
+            self.model.eval()
+        else:
+            self.model.train()
+
+    def data_forward(self, network, x):
+        """
+        :param network: a PyTorch model
+        :param x: sequence of length [batch_size], word indices
+        :return:
+        """
+        x = x.reshape(self.lstm_batch_size, self.lstm_seq_len)
+        output, self.hidden = network(x, self.hidden)
+        return output
+
+    def define_optimizer(self):
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01, momentum=0.85)
+
+    def get_loss(self, predict, truth):
+        self._loss = torch.nn.CrossEntropyLoss(predict, truth)
+        return self._loss
+
+    def grad_backward(self, network):
+        self.model.zero_grad()
+        self._loss.backward()
+        torch.nn.utils.clip_grad_norm(self.model.parameters(), 5, norm_type=2)
+
+    def update(self):
+        self.optimizer.step()
 
 
 if __name__ == "__name__":
