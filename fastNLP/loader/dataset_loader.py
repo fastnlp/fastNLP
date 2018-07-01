@@ -1,5 +1,6 @@
-from fastNLP.loader.base_loader import BaseLoader
 import os
+
+from fastNLP.loader.base_loader import BaseLoader
 
 
 class DatasetLoader(BaseLoader):
@@ -15,7 +16,6 @@ class POSDatasetLoader(DatasetLoader):
     def __init__(self, data_name, data_path):
         super(POSDatasetLoader, self).__init__(data_name, data_path)
         #self.data_set = self.load()
-
 
     def load(self):
         assert os.path.exists(self.data_path)
@@ -42,11 +42,12 @@ class POSDatasetLoader(DatasetLoader):
             dataset.append(sentence)
         return dataset
 
-class ClassficationDatasetLoader(DatasetLoader):
+
+class ClassificationDatasetLoader(DatasetLoader):
     """loader for classfication data sets"""
 
     def __init__(self, data_name, data_path):
-        super(ClassficationDatasetLoader, data_name)
+        super(ClassificationDatasetLoader, data_name).__init__()
 
     def load(self):
         assert os.path.exists(self.data_path)
@@ -69,6 +70,7 @@ class ClassficationDatasetLoader(DatasetLoader):
             sentence = list([word, label])
             dataset.append(sentence)
         return dataset
+
 
 class ConllLoader(DatasetLoader):
     """loader for conll format files"""
