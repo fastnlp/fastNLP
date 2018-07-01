@@ -1,0 +1,82 @@
+import random
+import pickle
+import torch
+import numpy as np
+from torch.autograd import Variable
+
+def float_wrapper(x, requires_grad=True, using_cuda=True):
+    """
+    transform float type list to pytorch variable
+    """
+    if using_cuda==True:
+        return Variable(torch.FloatTensor(x).cuda(), requires_grad=requires_grad)
+    else:
+        return Variable(torch.FloatTensor(x), requires_grad=requires_grad)
+
+def long_wrapper(x, requires_grad=True, using_cuda=True):
+    """
+    transform long type list to pytorch variable
+    """
+    if using_cuda==True:
+        return Variable(torch.LongTensor(x).cuda(), requires_grad=requires_grad)
+    else:
+        return Variable(torch.LongTensor(x), requires_grad=requires_grad)
+    
+def pad(X, using_cuda):
+        """
+        zero-pad sequnces to same length then pack them together
+        """
+        maxlen = max([x.size(0) for x in X])
+        Y = []
+        for x in X:
+            padlen = maxlen - x.size(0)
+            if padlen > 0:
+                if using_cuda:
+                    paddings = torch.zeros(padlen).cuda()
+                else:
+                    paddings = torch.zeros(padlen)
+                x_ = torch.cat(x, paddings)
+                Y.append(x_)
+            else:
+                Y.append(x)
+        return torch.stack(Y)
+
+class DataLoader(object):
+    """
+    load data with form {"feature", "class"}
+
+    Args:
+    fdir : data file address
+    batch_size : batch_size
+    shuffle : if True, shuffle dataset every epoch
+    using_cuda : if True, return tensors on GPU
+    """
+    def __init__(self, fdir, batch_size, shuffle=True, using_cuda=True):
+        with open(fdir, "rb") as f:
+            self.data = pickle.load(f)
+        self.batch_size = batch_size
+        self.num = len(self.data)
+        self.count = 0
+        self.iters = int(self.num / batch_size)
+        self.shuffle = shuffle
+        self.using_cuda = using_cuda
+        
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.count == self.iters:
+            self.count = 0
+            if self.shuffle:
+                random.shuffle(self.data)
+            raise StopIteration()
+        else:
+            X = self.data[self.count * self.batch_size : (self.count + 1) * self.batch_size]
+            self.count += 1
+            X = [long_wrapper(x["sent"], using_cuda=self.using_cuda) for x in X]
+            X = pad(X, self.using_cuda)
+            y = [long_wrapper(x["class"], using_cuda=self.using_cuda) for x in X]
+            y = torch.stack(y)
+            return {"feature" : X, "class" : y}
+            
+
