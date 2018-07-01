@@ -1,11 +1,40 @@
 import numpy as np
+import torch
 
 
-class BaseModel(object):
-    """The base class of all models.
-        This class and its subclasses are actually "wrappers" of the PyTorch models.
-        They act as an interface between Trainer and the deep learning networks.
-        This interface provides the following methods to be called by Trainer.
+class BaseModel(torch.nn.Module):
+    """Base PyTorch model for all models.
+        Three network modules presented:
+            - embedding module
+            - aggregation module
+            - output module
+        Subclasses must implement these three modules with "components".
+    """
+
+    def __init__(self):
+        super(BaseModel, self).__init__()
+
+    def forward(self, *inputs):
+        x = self.encode(*inputs)
+        x = self.aggregation(x)
+        x = self.output(x)
+        return x
+
+    def encode(self, x):
+        raise NotImplementedError
+
+    def aggregation(self, x):
+        raise NotImplementedError
+
+    def output(self, x):
+        raise NotImplementedError
+
+
+class BaseController(object):
+    """Base Controller for all controllers.
+        This class and its subclasses are actually "controllers" of the PyTorch models.
+        They act as an interface between Trainer and the PyTorch models.
+        This controller provides the following methods to be called by Trainer.
         - prepare_input
         - mode
         - define_optimizer
@@ -15,6 +44,9 @@ class BaseModel(object):
     """
 
     def __init__(self):
+        """
+        Define PyTorch model parameters here.
+        """
         pass
 
     def prepare_input(self, data):
@@ -63,11 +95,11 @@ class BaseModel(object):
         raise NotImplementedError
 
 
-class ToyModel(BaseModel):
+class ToyController(BaseController):
     """This is for code testing."""
 
     def __init__(self):
-        super(ToyModel, self).__init__()
+        super(ToyController, self).__init__()
         self.test_mode = False
         self.weight = np.random.rand(5, 1)
         self.bias = np.random.rand()

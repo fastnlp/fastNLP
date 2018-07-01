@@ -2,8 +2,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from model.base_model import BaseModel
 from torch.autograd import Variable
+
+from fastNLP.models.base_model import BaseModel, BaseController
 
 USE_GPU = True
 
@@ -14,7 +15,7 @@ def to_var(x):
     return Variable(x)
 
 
-class WordSegModel(BaseModel):
+class WordSegModel(BaseController):
     """
         Model controller for WordSeg
     """
@@ -91,7 +92,7 @@ class WordSegModel(BaseModel):
         self.optimizer.step()
 
 
-class WordSeg(nn.Module):
+class WordSeg(BaseModel):
     """
         PyTorch Network for word segmentation
     """
