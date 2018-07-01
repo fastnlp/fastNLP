@@ -38,5 +38,5 @@ class ConfigLoader(BaseLoader):
                         (type(getattr(sections[s], attr)), type(val))
                     setattr(sections[s], attr, val)
                 except Exception as e:
-                    traceback.print_exc()
-                    raise ValueError('something wrong in "%s" entry' % attr)
+                    # attribute attr in section s did not been set, default val will be used
+                    pass
