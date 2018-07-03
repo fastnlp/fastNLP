@@ -11,25 +11,25 @@ class BasePreprocess(object):
             self.pickle_path = self.pickle_path + '/'
 
     def word2id(self):
-        pass
+        raise NotImplementedError
 
     def id2word(self):
-        pass
+        raise NotImplementedError
 
     def class2id(self):
-        pass
+        raise NotImplementedError
 
     def id2class(self):
-        pass
+        raise NotImplementedError
 
     def embedding(self):
-        pass
+        raise NotImplementedError
 
     def data_train(self):
-        pass
+        raise NotImplementedError
 
     def data_dev(self):
-        pass
+        raise NotImplementedError
 
     def data_test(self):
-        pass
+        raise NotImplementedError
