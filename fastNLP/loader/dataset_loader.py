@@ -30,7 +30,6 @@ class POSDatasetLoader(DatasetLoader):
         return lines
 
 
-
 class ClassificationDatasetLoader(DatasetLoader):
     """loader for classfication data sets"""
 

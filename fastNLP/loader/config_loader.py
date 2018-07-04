@@ -1,8 +1,7 @@
-from fastNLP.loader.base_loader import BaseLoader
-
 import configparser
-import traceback
 import json
+
+from fastNLP.loader.base_loader import BaseLoader
 
 
 class ConfigLoader(BaseLoader):
@@ -17,14 +16,14 @@ class ConfigLoader(BaseLoader):
         raise NotImplementedError
 
     @staticmethod
-    def loadConfig(filePath, sections):
+    def load_config(file_path, sections):
         """
-        :param filePath: the path of config file
+        :param file_path: the path of config file
         :param sections: the dict of sections
         :return:
         """
         cfg = configparser.ConfigParser()
-        cfg.read(filePath)
+        cfg.read(file_path)
         for s in sections:
             attr_list = [i for i in type(sections[s]).__dict__.keys() if
                          not callable(getattr(sections[s], i)) and not i.startswith("__")]
