@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 
 
@@ -29,100 +28,6 @@ class BaseModel(torch.nn.Module):
     def output(self, x):
         raise NotImplementedError
 
-
-class BaseController(object):
-    """Base Controller for all controllers.
-        This class and its subclasses are actually "controllers" of the PyTorch models.
-        They act as an interface between Trainer and the PyTorch models.
-        This controller provides the following methods to be called by Trainer.
-        - prepare_input
-        - mode
-        - define_optimizer
-        - data_forward
-        - grad_backward
-        - get_loss
-    """
-
-    def __init__(self):
-        """
-        Define PyTorch model parameters here.
-        """
-        pass
-
-    def prepare_input(self, data):
-        """
-        Perform data transformation from raw input to vector/matrix inputs.
-        :param data: raw inputs
-        :return (X, Y): tuple, input features and labels
-        """
-        raise NotImplementedError
-
-    def mode(self, test=False):
-        """
-        Tell the network to be trained or not, required by PyTorch.
-        :param test: bool
-        """
-        raise NotImplementedError
-
-    def define_optimizer(self):
-        """
-        Define PyTorch optimizer specified by the models.
-        """
-        raise NotImplementedError
-
-    def data_forward(self, *x):
-        """
-        Forward pass of the data.
-        :param x: input feature matrix and label vector
-        :return: output by the models
-        """
-        # required by PyTorch nn
-        raise NotImplementedError
-
-    def grad_backward(self):
-        """
-        Perform gradient descent to update the models parameters.
-        """
-        raise NotImplementedError
-
-    def get_loss(self, pred, truth):
-        """
-        Compute loss given models prediction and ground truth. Loss function specified by the models.
-        :param pred: prediction label vector
-        :param truth: ground truth label vector
-        :return: a scalar
-        """
-        raise NotImplementedError
-
-
-class ToyController(BaseController):
-    """This is for code testing."""
-
-    def __init__(self):
-        super(ToyController, self).__init__()
-        self.test_mode = False
-        self.weight = np.random.rand(5, 1)
-        self.bias = np.random.rand()
-        self._loss = 0
-
-    def prepare_input(self, data):
-        return data[:, :-1], data[:, -1]
-
-    def mode(self, test=False):
-        self.test_mode = test
-
-    def data_forward(self, x):
-        return np.matmul(x, self.weight) + self.bias
-
-    def grad_backward(self):
-        print("loss gradient backward")
-
-    def get_loss(self, pred, truth):
-        self._loss = np.mean(np.square(pred - truth))
-        return self._loss
-
-    def define_optimizer(self):
-        pass
 
 
 class Vocabulary(object):

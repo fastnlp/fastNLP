@@ -1,4 +1,4 @@
-from saver.logger import Logger
+import numpy as np
 
 
 class Action(object):
@@ -8,39 +8,64 @@ class Action(object):
 
     def __init__(self):
         super(Action, self).__init__()
-        self.logger = Logger("logger_output.txt")
 
-    def load_config(self, args):
+
+class BaseSampler(object):
+    """
+        Base class for all samplers.
+    """
+
+    def __init__(self, data_set):
+        self.data_set_length = len(data_set)
+
+    def __len__(self):
+        return self.data_set_length
+
+    def __iter__(self):
         raise NotImplementedError
 
-    def load_dataset(self, args):
-        raise NotImplementedError
 
-    def log(self, string):
-        self.logger.log(string)
+class SequentialSampler(BaseSampler):
+    """
+    Sample data in the original order.
+    """
 
-    def batchify(self, batch_size, X, Y=None):
-        """
-        :param batch_size: int
-        :param X: feature matrix of size [n_sample, m_feature]
-        :param Y: label vector of size [n_sample, 1] (optional)
-        :return iteration:int, the number of step in each epoch
-                 generator:generator, to generate batch inputs
-        """
-        n_samples = X.shape[0]
-        num_iter = n_samples // batch_size
-        if Y is None:
-            generator = self._batch_generate(batch_size, num_iter, X)
-        else:
-            generator = self._batch_generate(batch_size, num_iter, X, Y)
-        return num_iter, generator
+    def __init__(self, data_set):
+        super(SequentialSampler, self).__init__(data_set)
 
-    @staticmethod
-    def _batch_generate(batch_size, num_iter, *data):
-        for step in range(num_iter):
-            start = batch_size * step
-            end = batch_size * (step + 1)
-            yield tuple([x[start:end] for x in data])
+    def __iter__(self):
+        return iter(range(self.data_set_length))
 
-    def make_log(self, *args):
-        return "log"
+
+class RandomSampler(BaseSampler):
+    """
+    Sample data in random permutation order.
+    """
+
+    def __init__(self, data_set):
+        super(RandomSampler, self).__init__(data_set)
+
+    def __iter__(self):
+        return iter(np.random.permutation(self.data_set_length))
+
+
+class Batchifier(object):
+    """
+    Wrap random or sequential sampler to generate a mini-batch.
+    """
+
+    def __init__(self, sampler, batch_size, drop_last=True):
+        super(Batchifier, self).__init__()
+        self.sampler = sampler
+        self.batch_size = batch_size
+        self.drop_last = drop_last
+
+    def __iter__(self):
+        batch = []
+        for idx in self.sampler:
+            batch.append(idx)
+            if len(batch) == self.batch_size:
+                yield batch
+                batch = []
+        if len(batch) < self.batch_size and self.drop_last is False:
+            yield batch
