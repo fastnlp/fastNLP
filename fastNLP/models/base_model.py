@@ -4,9 +4,9 @@ import torch
 class BaseModel(torch.nn.Module):
     """Base PyTorch model for all models.
         Three network modules presented:
-            - embedding module
+            - encoder module
             - aggregation module
-            - output module
+            - decoder module
         Subclasses must implement these three modules with "components".
     """
 
@@ -15,19 +15,18 @@ class BaseModel(torch.nn.Module):
 
     def forward(self, *inputs):
         x = self.encode(*inputs)
-        x = self.aggregation(x)
-        x = self.output(x)
+        x = self.aggregate(x)
+        x = self.decode(x)
         return x
 
     def encode(self, x):
         raise NotImplementedError
 
-    def aggregation(self, x):
+    def aggregate(self, x):
         raise NotImplementedError
 
-    def output(self, x):
+    def decode(self, x):
         raise NotImplementedError
-
 
 
 class Vocabulary(object):
@@ -93,3 +92,4 @@ class Token(object):
         self.doc = doc
         self.token = doc[offset]
         self.i = offset
+

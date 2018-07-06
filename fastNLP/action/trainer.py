@@ -7,6 +7,7 @@ import torch
 from fastNLP.action.action import Action
 from fastNLP.action.action import RandomSampler, Batchifier
 from fastNLP.action.tester import Tester
+from fastNLP.modules.utils import seq_mask
 
 
 class BaseTrainer(Action):
@@ -28,6 +29,7 @@ class BaseTrainer(Action):
         training parameters
         """
         super(BaseTrainer, self).__init__()
+        self.train_args = train_args
         self.n_epochs = train_args.epochs
         self.validate = train_args.validate
         self.batch_size = train_args.batch_size
@@ -163,8 +165,8 @@ class BaseTrainer(Action):
         :param data: list. Each entry is a sample, which is also a list of features and label(s).
             E.g.
                 [
-                    [[feature_1, feature_2, feature_3], [label_1. label_2]],  # sample 1
-                    [[feature_1, feature_2, feature_3], [label_1. label_2]],  # sample 2
+                    [[word_11, word_12, word_13], [label_11. label_12]],  # sample 1
+                    [[word_21, word_22, word_23], [label_21. label_22]],  # sample 2
                     ...
                 ]
         :return batch_x: list. Each entry is a list of features of a sample.
@@ -311,6 +313,39 @@ class WordSegTrainer(BaseTrainer):
 
     def update(self):
         self.optimizer.step()
+
+
+class POSTrainer(BaseTrainer):
+    def __init__(self, train_args):
+        super(POSTrainer, self).__init__(train_args)
+        self.vocab_size = train_args.vocab_size
+        self.num_classes = train_args.num_classes
+        self.max_len = None
+        self.mask = None
+        self.batch_x = None
+
+    def prepare_input(self, data_path):
+        """
+            To do: Load pkl files of train/dev/test and embedding
+        """
+        data_train = _pickle.load(open(data_path + "data_train.pkl", "rb"))
+        data_dev = _pickle.load(open(data_path + "data_dev.pkl", "rb"))
+        return data_train, data_dev
+
+    def data_forward(self, network, x):
+        seq_len = [len(seq) for seq in x]
+        x = torch.LongTensor(x)
+        self.batch_size = x.size(0)
+        self.max_len = x.size(1)
+        self.mask = seq_mask(seq_len, self.max_len)
+        x = network(x)
+        self.batch_x = x
+        return x
+
+    def get_loss(self, predict, truth):
+        truth = torch.LongTensor(truth)
+        loss, prediction = self.loss_func(self.batch_x, predict, self.mask, self.batch_size, self.max_len)
+        return loss
 
 
 if __name__ == "__name__":
