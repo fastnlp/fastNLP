@@ -58,8 +58,8 @@ class SeqLabeling(BaseModel):
 
         x = self.embedding(x)
         x, hidden = self.encode(x)
-        x = self.aggregation(x)
-        x = self.output(x)
+        x = self.aggregate(x)
+        x = self.decode(x)
         return x
 
     def embedding(self, x):
@@ -84,6 +84,11 @@ class SeqLabeling(BaseModel):
         :return loss:
                 prediction:
         """
+        x = x.float()
+        y = y.long()
+        mask = mask.byte()
+        print(x.shape, y.shape, mask.shape)
+
         if self.use_crf:
             total_loss = self.crf(x, y, mask)
             tag_seq = self.crf.viterbi_decode(x, mask)

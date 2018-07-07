@@ -23,7 +23,7 @@ class POSDatasetLoader(DatasetLoader):
         return line
 
     def load_lines(self):
-        assert os.path.exists(self.data_path)
+        assert (os.path.exists(self.data_path))
         with open(self.data_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
         return lines

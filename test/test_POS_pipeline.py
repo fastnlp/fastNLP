@@ -1,11 +1,15 @@
+import sys
+
+sys.path.append("..")
+
 from fastNLP.action.trainer import POSTrainer
 from fastNLP.loader.dataset_loader import POSDatasetLoader
 from fastNLP.loader.preprocess import POSPreprocess
 from fastNLP.models.sequencce_modeling import SeqLabeling
 
-data_name = "people"
-data_path = "data/people.txt"
-pickle_path = "data"
+data_name = "people.txt"
+data_path = "data_for_tests/people.txt"
+pickle_path = "data_for_tests"
 
 if __name__ == "__main__":
     # Data Loader
@@ -27,3 +31,4 @@ if __name__ == "__main__":
 
     # Start training.
     trainer.train(model)
+
