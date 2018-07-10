@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     # Trainer
     train_args = {"epochs": 20, "batch_size": 1, "num_classes": num_classes,
-                  "vocab_size": vocab_size, "pickle_path": pickle_path, "validate": False}
+                  "vocab_size": vocab_size, "pickle_path": pickle_path, "validate": True}
     trainer = POSTrainer(train_args)
 
     # Model

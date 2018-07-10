@@ -5,7 +5,7 @@ import torch
 
 from fastNLP.action.action import Action
 from fastNLP.action.action import RandomSampler, Batchifier
-from fastNLP.action.tester import Tester
+from fastNLP.action.tester import POSTester
 from fastNLP.modules.utils import seq_mask
 
 
@@ -43,7 +43,7 @@ class BaseTrainer(Action):
         self.optimizer = None
 
     def train(self, network):
-        """General training loop.
+        """General Training Steps
         :param network: a model
 
         The method is framework independent.
@@ -57,23 +57,27 @@ class BaseTrainer(Action):
             - update
         Subclasses must implement these methods with a specific framework.
         """
+        # prepare model and data
         self.model = network
         data_train, data_dev, data_test, embedding = self.prepare_input(self.pickle_path)
 
-        test_args = Tester.TestConfig(save_output=True, validate_in_training=True,
-                                      save_dev_input=True, save_loss=True, batch_size=self.batch_size)
-        evaluator = Tester(test_args)
+        # define tester over dev data
+        valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
+                      "save_loss": True, "batch_size": self.batch_size, "pickle_path": self.pickle_path}
+        validator = POSTester(valid_args)
 
-        best_loss = 1e10
+        # main training epochs
         iterations = len(data_train) // self.batch_size
-
         for epoch in range(self.n_epochs):
+
+            # turn on network training mode; define optimizer; prepare batch iterator
             self.mode(test=False)
             self.define_optimizer()
             self.iterator = iter(Batchifier(RandomSampler(data_train), self.batch_size, drop_last=True))
 
+            # training iterations in one epoch
             for step in range(iterations):
-                batch_x, batch_y = self.batchify(self.batch_size, data_train)
+                batch_x, batch_y = self.batchify(data_train)
 
                 prediction = self.data_forward(network, batch_x)
 
@@ -84,9 +88,7 @@ class BaseTrainer(Action):
             if self.validate:
                 if data_dev is None:
                     raise RuntimeError("No validation data provided.")
-                evaluator.test(network, data_dev)
-                if evaluator.loss < best_loss:
-                    best_loss = evaluator.loss
+                validator.test(network)
 
         # finish training
 
@@ -162,11 +164,10 @@ class BaseTrainer(Action):
         """
         raise NotImplementedError
 
-    def batchify(self, batch_size, data):
+    def batchify(self, data):
         """
         1. Perform batching from data and produce a batch of training data.
         2. Add padding.
-        :param batch_size: int, the size of a batch
         :param data: list. Each entry is a sample, which is also a list of features and label(s).
             E.g.
                 [
@@ -200,7 +201,9 @@ class BaseTrainer(Action):
 
 
 class ToyTrainer(BaseTrainer):
-    """A simple trainer for a PyTorch model."""
+    """
+        deprecated
+    """
 
     def __init__(self, train_args):
         super(ToyTrainer, self).__init__(train_args)
@@ -235,7 +238,7 @@ class ToyTrainer(BaseTrainer):
 
 class WordSegTrainer(BaseTrainer):
     """
-        reserve for changes
+        deprecated
     """
 
     def __init__(self, train_args):
@@ -319,7 +322,6 @@ class WordSegTrainer(BaseTrainer):
         self.optimizer.step()
 
 
-
 class POSTrainer(BaseTrainer):
     """
     Trainer for Sequence Modeling
@@ -391,4 +393,4 @@ if __name__ == "__name__":
     train_args = {"epochs": 1, "validate": False, "batch_size": 3, "pickle_path": "./"}
     trainer = BaseTrainer(train_args)
     data_train = [[[1, 2, 3, 4], [0]] * 10] + [[[1, 3, 5, 2], [1]] * 10]
-    trainer.batchify(batch_size=3, data=data_train)
+    trainer.batchify(data=data_train)
