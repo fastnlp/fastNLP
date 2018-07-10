@@ -81,7 +81,7 @@ class SeqLabeling(BaseModel):
         x = x.float()
         y = y.long()
         mask = mask.byte()
-        print(x.shape, y.shape, mask.shape)
+        # print(x.shape, y.shape, mask.shape)
 
         if self.use_crf:
             total_loss = self.crf(x, y, mask)
