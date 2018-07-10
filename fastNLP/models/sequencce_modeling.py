@@ -12,7 +12,7 @@ class SeqLabeling(BaseModel):
     """
 
     def __init__(self, hidden_dim,
-                 rnn_num_layerd,
+                 rnn_num_layer,
                  num_classes,
                  vocab_size,
                  word_emb_dim=100,
@@ -29,7 +29,7 @@ class SeqLabeling(BaseModel):
 
         self.num_classes = num_classes
         self.input_dim = word_emb_dim
-        self.layers = rnn_num_layerd
+        self.layers = rnn_num_layer
         self.hidden_dim = hidden_dim
         self.bi_direction = bi_direction
         self.dropout = dropout
@@ -55,32 +55,26 @@ class SeqLabeling(BaseModel):
             self.crf = ContionalRandomField(num_classes)
 
     def forward(self, x):
-
-        x = self.embedding(x)
-        x, hidden = self.encode(x)
-        x = self.aggregate(x)
-        x = self.decode(x)
-        return x
-
-    def embedding(self, x):
-        return self.Emb(x)
-
-    def encode(self, x):
-        return self.rnn(x)
-
-    def aggregate(self, x):
-        return x
-
-    def decode(self, x):
-        x = self.linear(x)
-        return x
+        """
+        :param x: LongTensor, [batch_size, mex_len]
+        :return y: [batch_size, tag_size, tag_size]
+        """
+        x = self.Emb(x)
+        # [batch_size, max_len, word_emb_dim]
+        x, hidden = self.rnn(x)
+        # [batch_size, max_len, hidden_size * direction]
+        y = self.linear(x)
+        # [batch_size, max_len, num_classes]
+        return y
 
     def loss(self, x, y, mask, batch_size, max_len):
         """
         Negative log likelihood loss.
-        :param x:
-        :param y:
-        :param seq_len:
+        :param x: FloatTensor, [batch_size, tag_size, tag_size]
+        :param y: LongTensor, [batch_size, max_len]
+        :param mask: ByteTensor, [batch_size, max_len]
+        :param batch_size: int
+        :param max_len: int
         :return loss:
                 prediction:
         """
