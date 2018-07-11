@@ -89,6 +89,7 @@ class BaseTrainer(Action):
                 if data_dev is None:
                     raise RuntimeError("No validation data provided.")
                 validator.test(network)
+                print("[epoch {}] dev loss={:.2f}".format(epoch, validator.matrices()))
 
         # finish training
 
@@ -386,6 +387,7 @@ class POSTrainer(BaseTrainer):
             else:
                 self.define_loss()
         loss, prediction = self.loss_func(predict, truth, self.mask, self.batch_size, self.max_len)
+        # print("loss={:.2f}".format(loss.data))
         return loss
 
 
