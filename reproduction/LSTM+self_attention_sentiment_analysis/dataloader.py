@@ -1,8 +1,9 @@
-import random
 import pickle
+import random
+
 import torch
-import numpy as np
 from torch.autograd import Variable
+
 
 def float_wrapper(x, requires_grad=True, using_cuda=True):
     """

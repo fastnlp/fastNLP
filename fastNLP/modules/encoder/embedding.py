@@ -1,5 +1,5 @@
-import torch
 import torch.nn as nn
+
 
 class Lookuptable(nn.Module):
     """
@@ -18,6 +18,7 @@ class Lookuptable(nn.Module):
         
     def forward(self, x):
         return self.embed(x)
+
 
 if __name__ == "__main__":
     model = Lookuptable(10, 20)

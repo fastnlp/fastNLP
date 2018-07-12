@@ -1,5 +1,7 @@
 import pickle
+
 import Word2Idx
+
 
 def get_sets(m, n):
     """

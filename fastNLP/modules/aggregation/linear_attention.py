@@ -1,4 +1,4 @@
-from fastNLP.modules.attention.attention import Attention
+from fastNLP.modules.aggregation.attention import Attention
 
 
 class LinearAttention(Attention):
