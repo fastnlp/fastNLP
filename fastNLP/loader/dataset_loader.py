@@ -15,7 +15,6 @@ class POSDatasetLoader(DatasetLoader):
 
     def __init__(self, data_name, data_path):
         super(POSDatasetLoader, self).__init__(data_name, data_path)
-        #self.data_set = self.load()
 
     def load(self):
         assert os.path.exists(self.data_path)
@@ -24,7 +23,7 @@ class POSDatasetLoader(DatasetLoader):
         return line
 
     def load_lines(self):
-        assert os.path.exists(self.data_path)
+        assert (os.path.exists(self.data_path))
         with open(self.data_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
         return lines

@@ -82,7 +82,7 @@ class ContionalRandomField(nn.Module):
     def _glod_score(self, feats, tags, masks):
         """
         Compute the score for the gold path.
-        :param feats: FloatTensor, batch_size x tag_size x tag_size
+        :param feats: FloatTensor, batch_size x max_len x tag_size
         :param tags: LongTensor, batch_size x max_len
         :param masks: ByteTensor, batch_size x max_len
         :return:FloatTensor, batch_size
@@ -118,7 +118,7 @@ class ContionalRandomField(nn.Module):
     def forward(self, feats, tags, masks):
         """
         Calculate the neg log likelihood
-        :param feats:FloatTensor, batch_size x tag_size x tag_size
+        :param feats:FloatTensor, batch_size x max_len x tag_size
         :param tags:LongTensor, batch_size x max_len
         :param masks:ByteTensor batch_size x max_len
         :return:FloatTensor, batch_size

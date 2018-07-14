@@ -1,12 +1,13 @@
+import time
+
+import aggregation
+import dataloader
+import embedding
+import encoder
+import predict
 import torch
 import torch.nn as nn
-import encoder
-import aggregation
-import embedding
-import predict
 import torch.optim as optim
-import time
-import dataloader
 
 WORD_NUM = 357361
 WORD_SIZE = 100
@@ -15,6 +16,30 @@ D_A = 350
 R = 10
 MLP_HIDDEN = 2000 
 CLASSES_NUM = 5
+
+from fastNLP.models.base_model import BaseModel
+from fastNLP.action.trainer import BaseTrainer
+
+
+class MyNet(BaseModel):
+    def __init__(self):
+        super(MyNet, self).__init__()
+        self.embedding = embedding.Lookuptable(WORD_NUM, WORD_SIZE)
+        self.encoder = encoder.Lstm(WORD_SIZE, HIDDEN_SIZE, 1, 0.5, True)
+        self.aggregation = aggregation.Selfattention(2 * HIDDEN_SIZE, D_A, R)
+        self.predict = predict.MLP(R * HIDDEN_SIZE * 2, MLP_HIDDEN, CLASSES_NUM)
+        self.penalty = None
+
+    def encode(self, x):
+        return self.encode(self.embedding(x))
+
+    def aggregate(self, x):
+        x, self.penalty = self.aggregate(x)
+        return x
+
+    def decode(self, x):
+        return [self.predict(x), self.penalty]
+
 
 class Net(nn.Module):
     """
@@ -33,6 +58,19 @@ class Net(nn.Module):
         x, penalty = self.aggregation(x)
         x = self.predict(x)
         return x, penalty
+
+
+class MyTrainer(BaseTrainer):
+    def __init__(self, args):
+        super(MyTrainer, self).__init__(args)
+        self.optimizer = None
+
+    def define_optimizer(self):
+        self.optimizer = optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9)
+
+    def define_loss(self):
+        self.loss_func = nn.CrossEntropyLoss()
+
 
 def train(model_dict=None, using_cuda=True, learning_rate=0.06,\
     momentum=0.3, batch_size=32, epochs=5, coef=1.0, interval=10):
