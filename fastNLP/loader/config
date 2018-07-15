@@ -52,3 +52,14 @@ early_stopping = 70
 reg = 1e-05
 test = 5
 new_attr = 40
+
+[POStest]
+epochs = 20
+batch_size=1
+num_classes=10,
+vocab_size=vocab_size
+pickle_path=pickle_path
+validate=true
+
+
+
