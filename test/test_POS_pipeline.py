@@ -53,7 +53,7 @@ if __name__ == "__main__":
     test_args = ConfigSection()
     ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
 
-    #test_args = {"save_output": True, "validate_in_training": False, "save_dev_input": False,
+    # test_args = {"save_output": True, "validate_in_training": False, "save_dev_input": False,
     #             "save_loss": True, "batch_size": 1, "pickle_path": pickle_path}
     tester = POSTester(test_args)
     tester.test(model)

@@ -2,16 +2,17 @@
 This is borrowed from FudanParser. Not stable. Do not use !!!
 
 """
+import numpy
 import numpy as np
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import Parameter
-from .utils import orthogonal
-import torch
 import torch.utils.data
-import numpy
-from torch.autograd import Function, Variable
 from torch import optim
+from torch.autograd import Function, Variable
+from torch.nn import Parameter
+
+from .utils import orthogonal
 
 
 class GroupNorm(nn.Module):

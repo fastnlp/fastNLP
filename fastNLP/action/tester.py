@@ -158,8 +158,8 @@ class POSTester(BaseTester):
     def evaluate(self, predict, truth):
         truth = torch.Tensor(truth)
         loss, prediction = self.model.loss(predict, truth, self.mask, self.batch_size, self.max_len)
-        results = torch.Tensor(prediction[0][0]).view((-1, ))
-        accuracy = float(torch.sum(results == truth.view((-1, )))) / results.shape[0]
+        results = torch.Tensor(prediction[0][0]).view((-1,))
+        accuracy = float(torch.sum(results == truth.view((-1,)))) / results.shape[0]
         return [loss.data, accuracy]
 
     def matrices(self):
@@ -174,5 +174,3 @@ class POSTester(BaseTester):
         """
         loss, accuracy = self.matrices()
         return "dev loss={:.2f}, accuracy={:.2f}".format(loss, accuracy)
-
-
