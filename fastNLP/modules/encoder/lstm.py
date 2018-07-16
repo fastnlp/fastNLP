@@ -1,5 +1,5 @@
-import torch
 import torch.nn as nn
+
 
 class Lstm(nn.Module):
     """
@@ -14,8 +14,8 @@ class Lstm(nn.Module):
     """
     def __init__(self, input_size, hidden_size, num_layers, dropout, bidirectional):
         super(Lstm, self).__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, bias=True, batch_first=True,\
-         dropout=dropout, bidirectional=bidirectional)
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, bias=True, batch_first=True,
+                            dropout=dropout, bidirectional=bidirectional)
         
     def forward(self, x):
         x, _ = self.lstm(x)

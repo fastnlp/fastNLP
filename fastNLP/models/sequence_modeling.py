@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 from fastNLP.models.base_model import BaseModel
-from fastNLP.modules.CRF import ContionalRandomField
+from fastNLP.modules.decoder.CRF import ContionalRandomField
 
 
 class SeqLabeling(BaseModel):
