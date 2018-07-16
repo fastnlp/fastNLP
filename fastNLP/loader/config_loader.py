@@ -50,14 +50,38 @@ class ConfigLoader(BaseLoader):
                           % (attr, s))
                     pass
 
+class ConfigSection(object):
+
+    def __init__(self):
+        pass
+
+    def __getitem__(self, key):
+        """
+            if key not in self.__dict__.keys():
+                return self[key]
+            else:
+                raise AttributeError
+        """
+        if key in self.__dict__.keys():
+            return getattr(self, key)
+        raise AttributeError('don\'t have attr %s' % (key))
+
+    def __setitem__(self, key, value):
+        """
+            if key not in self.__dict__.keys():
+                self[key] will be added
+            else:
+                self[key] will be updated
+        """
+        if key in self.__dict__.keys():
+            if not type(value) == type(getattr(self, key)):
+                raise AttributeError('attr %s except %s but got %s' % \
+                                     (key, str(type(getattr(self, key))), str(type(value))))
+        setattr(self, key, value)
+
+
 if __name__ == "__name__":
     config = ConfigLoader('configLoader', 'there is no data')
-
-
-    class ConfigSection(object):
-        def __init__(self):
-            pass
-
 
     section = {'General': ConfigSection(), 'My': ConfigSection(), 'A': ConfigSection()}
     """
@@ -70,4 +94,9 @@ if __name__ == "__name__":
     for s in section:
         print(s)
         for attr in section[s].__dict__.keys():
-            print(s, attr, getattr(section[s], attr))
+            print(s, attr, getattr(section[s], attr), type(getattr(section[s], attr)))
+    se = section['General']
+    print(se["pre_trained"])
+    se["pre_trained"] = False
+    print(se["pre_trained"])
+    #se["pre_trained"] = 5 #this will raise AttributeError: attr pre_trained except <class 'bool'> but got <class 'int'>
