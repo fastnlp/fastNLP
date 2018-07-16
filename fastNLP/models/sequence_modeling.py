@@ -75,8 +75,8 @@ class SeqLabeling(BaseModel):
         :param mask: ByteTensor, [batch_size, max_len]
         :param batch_size: int
         :param max_len: int
-        :return loss:
-                prediction:
+        :return loss: a scalar Tensor
+                prediction: list of tuple of (decode path(list), best score)
         """
         x = x.float()
         y = y.long()

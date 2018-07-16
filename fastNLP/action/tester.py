@@ -13,7 +13,7 @@ class BaseTester(Action):
 
     def __init__(self, test_args):
         """
-        :param test_args: named tuple
+        :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
         """
         super(BaseTester, self).__init__()
         self.validate_in_training = test_args["validate_in_training"]
@@ -28,6 +28,7 @@ class BaseTester(Action):
 
         self.model = None
         self.eval_history = []
+        self.batch_output = []
 
     def test(self, network):
         # print("--------------testing----------------")
@@ -40,7 +41,6 @@ class BaseTester(Action):
 
         self.iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=True))
 
-        batch_output = list()
         num_iter = len(dev_data) // self.batch_size
 
         for step in range(num_iter):
@@ -50,7 +50,7 @@ class BaseTester(Action):
             eval_results = self.evaluate(prediction, batch_y)
 
             if self.save_output:
-                batch_output.append(prediction)
+                self.batch_output.append(prediction)
             if self.save_loss:
                 self.eval_history.append(eval_results)
 
@@ -118,6 +118,13 @@ class BaseTester(Action):
             model.train()
         self.eval_history.clear()
 
+    def show_matrices(self):
+        """
+        This is called by Trainer to print evaluation on dev set.
+        :return print_str: str
+        """
+        raise NotImplementedError
+
 
 class POSTester(BaseTester):
     """
@@ -125,6 +132,9 @@ class POSTester(BaseTester):
     """
 
     def __init__(self, test_args):
+        """
+        :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
+        """
         super(POSTester, self).__init__(test_args)
         self.max_len = None
         self.mask = None
@@ -148,7 +158,21 @@ class POSTester(BaseTester):
     def evaluate(self, predict, truth):
         truth = torch.Tensor(truth)
         loss, prediction = self.model.loss(predict, truth, self.mask, self.batch_size, self.max_len)
-        return loss.data
+        results = torch.Tensor(prediction[0][0]).view((-1, ))
+        accuracy = float(torch.sum(results == truth.view((-1, )))) / results.shape[0]
+        return [loss.data, accuracy]
 
     def matrices(self):
-        return np.mean(self.eval_history)
+        batch_loss = np.mean([x[0] for x in self.eval_history])
+        batch_accuracy = np.mean([x[1] for x in self.eval_history])
+        return batch_loss, batch_accuracy
+
+    def show_matrices(self):
+        """
+        This is called by Trainer to print evaluation on dev set.
+        :return print_str: str
+        """
+        loss, accuracy = self.matrices()
+        return "dev loss={:.2f}, accuracy={:.2f}".format(loss, accuracy)
+
+

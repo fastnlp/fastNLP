@@ -24,7 +24,7 @@ class BaseTrainer(Action):
 
     def __init__(self, train_args):
         """
-        :param train_args: dict of (key, value)
+        :param train_args: dict of (key, value), or dict-like object. key is str.
 
         The base trainer requires the following keys:
         - epochs: int, the number of epochs in training
@@ -89,7 +89,8 @@ class BaseTrainer(Action):
                 if data_dev is None:
                     raise RuntimeError("No validation data provided.")
                 validator.test(network)
-                print("[epoch {}] dev loss={:.2f}".format(epoch, validator.matrices()))
+                print("[epoch {}]".format(epoch), end=" ")
+                print(validator.show_matrices())
 
         # finish training
 

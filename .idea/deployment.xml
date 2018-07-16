@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="zyfeng@10.40.40.86:22">
+    <serverData>
+      <paths name="zyfeng@10.40.40.86:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/zyfeng/Desktop/fastNLP" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>

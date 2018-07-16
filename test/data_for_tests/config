@@ -58,3 +58,12 @@ epochs = 20
 batch_size = 1
 pickle_path = "./data_for_tests/"
 validate = true
+
+[POS_test]
+save_output = true
+validate_in_training = false
+save_dev_input = false
+save_loss = true
+batch_size = 1
+pickle_path = "./data_for_tests/"
+
