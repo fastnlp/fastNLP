@@ -70,7 +70,7 @@ class ConfigSection(object):
         """
         if key in self.__dict__.keys():
             return getattr(self, key)
-        raise AttributeError('don\'t have attr %s' % (key))
+        raise AttributeError("do NOT have attribute %s" % key)
 
     def __setitem__(self, key, value):
         """

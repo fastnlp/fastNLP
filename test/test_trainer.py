@@ -1,11 +1,3 @@
-from collections import namedtuple
-
-import numpy as np
-from model.base_model import ToyModel
-
-from fastNLP.action.trainer import Trainer
-
-
 def test_trainer():
     Config = namedtuple("config", ["epochs", "validate", "save_when_better"])
     train_config = Config(epochs=5, validate=True, save_when_better=True)

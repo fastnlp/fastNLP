@@ -1,5 +1,4 @@
 import os
-from collections import namedtuple
 
 import numpy as np
 import torch
@@ -23,8 +22,6 @@ class CharLM(BaseModel):
         To do:
         - where the data goes, call data savers.
     """
-    DataTuple = namedtuple("DataTuple", ["feature", "label"])
-
     def __init__(self, lstm_batch_size, lstm_seq_len):
         super(CharLM, self).__init__()
         """

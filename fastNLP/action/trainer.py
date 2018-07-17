@@ -7,6 +7,7 @@ from fastNLP.action.action import Action
 from fastNLP.action.action import RandomSampler, Batchifier
 from fastNLP.action.tester import POSTester
 from fastNLP.modules.utils import seq_mask
+from fastNLP.saver.model_saver import ModelSaver
 
 
 class BaseTrainer(Action):
@@ -34,9 +35,13 @@ class BaseTrainer(Action):
         """
         super(BaseTrainer, self).__init__()
         self.n_epochs = train_args["epochs"]
-        self.validate = train_args["validate"]
         self.batch_size = train_args["batch_size"]
         self.pickle_path = train_args["pickle_path"]
+
+        self.validate = train_args["validate"]
+        self.save_best_dev = train_args["save_best_dev"]
+        self.model_saved_path = train_args["model_saved_path"]
+
         self.model = None
         self.iterator = None
         self.loss_func = None
@@ -68,7 +73,7 @@ class BaseTrainer(Action):
 
         # main training epochs
         iterations = len(data_train) // self.batch_size
-        for epoch in range(self.n_epochs):
+        for epoch in range(1, self.n_epochs + 1):
 
             # turn on network training mode; define optimizer; prepare batch iterator
             self.mode(test=False)
@@ -89,6 +94,11 @@ class BaseTrainer(Action):
                 if data_dev is None:
                     raise RuntimeError("No validation data provided.")
                 validator.test(network)
+
+                if self.save_best_dev and self.best_eval_result(validator):
+                    self.save_model(network)
+                    print("saved better model selected by dev")
+
                 print("[epoch {}]".format(epoch), end=" ")
                 print(validator.show_matrices())
 
@@ -201,124 +211,49 @@ class BaseTrainer(Action):
                 batch[idx] = sample + [fill * (max_length - len(sample))]
         return batch
 
+    def best_eval_result(self, validator):
+        """
+        :param validator: a Tester instance
+        :return: bool, True means current results on dev set is the best.
+        """
+        raise NotImplementedError
+
+    def save_model(self, network):
+        """
+        :param network: the PyTorch model
+        model_best_dev.pkl may be overwritten by a better model in future epochs.
+        """
+        ModelSaver(self.model_saved_path + "model_best_dev.pkl").save_pytorch(network)
+
 
 class ToyTrainer(BaseTrainer):
     """
-        deprecated
+        An example to show the definition of Trainer.
     """
 
-    def __init__(self, train_args):
-        super(ToyTrainer, self).__init__(train_args)
-        self.test_mode = False
-        self.weight = np.random.rand(5, 1)
-        self.bias = np.random.rand()
-        self._loss = 0
-        self._optimizer = None
+    def __init__(self, training_args):
+        super(ToyTrainer, self).__init__(training_args)
 
-    def prepare_input(self, data):
-        return data[:, :-1], data[:, -1]
+    def prepare_input(self, data_path):
+        data_train = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
+        data_dev = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
+        return data_train, data_dev, 0, 1
 
     def mode(self, test=False):
         self.model.mode(test)
 
     def data_forward(self, network, x):
-        return np.matmul(x, self.weight) + self.bias
+        return network(x)
 
     def grad_backward(self, loss):
+        self.model.zero_grad()
         loss.backward()
 
     def get_loss(self, pred, truth):
-        self._loss = np.mean(np.square(pred - truth))
-        return self._loss
+        return np.mean(np.square(pred - truth))
 
     def define_optimizer(self):
-        self._optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01)
-
-    def update(self):
-        self._optimizer.step()
-
-
-class WordSegTrainer(BaseTrainer):
-    """
-        deprecated
-    """
-
-    def __init__(self, train_args):
-        super(WordSegTrainer, self).__init__(train_args)
-        self.id2word = None
-        self.word2id = None
-        self.id2tag = None
-        self.tag2id = None
-
-        self.lstm_batch_size = 8
-        self.lstm_seq_len = 32  # Trainer batch_size == lstm_batch_size * lstm_seq_len
-        self.hidden_dim = 100
-        self.lstm_num_layers = 2
-        self.vocab_size = 100
-        self.word_emb_dim = 100
-
-        self.hidden = (self.to_var(torch.zeros(2, self.lstm_batch_size, self.word_emb_dim)),
-                       self.to_var(torch.zeros(2, self.lstm_batch_size, self.word_emb_dim)))
-
-        self.optimizer = None
-        self._loss = None
-
-        self.USE_GPU = False
-
-    def to_var(self, x):
-        if torch.cuda.is_available() and self.USE_GPU:
-            x = x.cuda()
-        return torch.autograd.Variable(x)
-
-    def prepare_input(self, data):
-        """
-            perform word indices lookup to convert strings into indices
-            :param data: list of string, each string contains word + space + [B, M, E, S]
-            :return
-        """
-        word_list = []
-        tag_list = []
-        for line in data:
-            if len(line) > 2:
-                tokens = line.split("#")
-                word_list.append(tokens[0])
-                tag_list.append(tokens[2][0])
-        self.id2word = list(set(word_list))
-        self.word2id = {word: idx for idx, word in enumerate(self.id2word)}
-        self.id2tag = list(set(tag_list))
-        self.tag2id = {tag: idx for idx, tag in enumerate(self.id2tag)}
-        words = np.array([self.word2id[w] for w in word_list]).reshape(-1, 1)
-        tags = np.array([self.tag2id[t] for t in tag_list]).reshape(-1, 1)
-        return words, tags
-
-    def mode(self, test=False):
-        if test:
-            self.model.eval()
-        else:
-            self.model.train()
-
-    def data_forward(self, network, x):
-        """
-        :param network: a PyTorch model
-        :param x: sequence of length [batch_size], word indices
-        :return:
-        """
-        x = x.reshape(self.lstm_batch_size, self.lstm_seq_len)
-        output, self.hidden = network(x, self.hidden)
-        return output
-
-    def define_optimizer(self):
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01, momentum=0.85)
-
-    def get_loss(self, predict, truth):
-        truth = torch.Tensor(truth)
-        self._loss = torch.nn.CrossEntropyLoss(predict, truth)
-        return self._loss
-
-    def grad_backward(self, network):
-        self.model.zero_grad()
-        self._loss.backward()
-        torch.nn.utils.clip_grad_norm(self.model.parameters(), 5, norm_type=2)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01)
 
     def update(self):
         self.optimizer.step()
@@ -335,6 +270,7 @@ class POSTrainer(BaseTrainer):
         self.num_classes = train_args["num_classes"]
         self.max_len = None
         self.mask = None
+        self.best_accuracy = 0.0
 
     def prepare_input(self, data_path):
         """
@@ -390,6 +326,26 @@ class POSTrainer(BaseTrainer):
         loss, prediction = self.loss_func(predict, truth, self.mask, self.batch_size, self.max_len)
         # print("loss={:.2f}".format(loss.data))
         return loss
+
+    def best_eval_result(self, validator):
+        loss, accuracy = validator.matrices()
+        if accuracy > self.best_accuracy:
+            self.best_accuracy = accuracy
+            return True
+        else:
+            return False
+
+
+class LanguageModelTrainer(BaseTrainer):
+    """
+    Trainer for Language Model
+    """
+
+    def __init__(self, train_args):
+        super(LanguageModelTrainer, self).__init__(train_args)
+
+    def prepare_input(self, data_path):
+        pass
 
 
 if __name__ == "__name__":
