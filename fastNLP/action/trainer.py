@@ -3,12 +3,12 @@ import _pickle
 import numpy as np
 import torch
 
-from fastNLP.action.action import Action
-from fastNLP.action.action import RandomSampler, Batchifier
-from fastNLP.action.tester import POSTester
-from fastNLP.modules.utils import seq_mask
-
-
+from .action import Action
+from .action import RandomSampler, Batchifier
+from .tester import POSTester
+from ..modules.utils import seq_mask
+import os
+import random
 class BaseTrainer(Action):
     """Base trainer for all trainers.
         Trainer receives a model and data, and then performs training.
@@ -24,7 +24,7 @@ class BaseTrainer(Action):
 
     def __init__(self, train_args):
         """
-        :param train_args: dict of (key, value), or dict-like object. key is str.
+        :param train_args: dict of (key, value)
 
         The base trainer requires the following keys:
         - epochs: int, the number of epochs in training
@@ -37,12 +37,14 @@ class BaseTrainer(Action):
         self.validate = train_args["validate"]
         self.batch_size = train_args["batch_size"]
         self.pickle_path = train_args["pickle_path"]
+        self.use_gpu=train_args["use_gpu"]
         self.model = None
+
         self.iterator = None
         self.loss_func = None
         self.optimizer = None
 
-    def train(self, network):
+    def train(self, network,use_gpu=False,label_dict=None):
         """General Training Steps
         :param network: a model
 
@@ -58,51 +60,127 @@ class BaseTrainer(Action):
         Subclasses must implement these methods with a specific framework.
         """
         # prepare model and data
+
         self.model = network
-        data_train, data_dev, data_test, embedding = self.prepare_input(self.pickle_path)
+        self.model.load_state_dict(torch.load("save/model91.8.pkl"))
+        if use_gpu:
+            self.model=self.model.cuda()
+        data_train, data_dev= self.prepare_input(self.pickle_path)
 
         # define tester over dev data
         valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
                       "save_loss": True, "batch_size": self.batch_size, "pickle_path": self.pickle_path}
-        validator = POSTester(valid_args)
+        #validator = POSTester(valid_args)
 
         # main training epochs
         iterations = len(data_train) // self.batch_size
+        print("train number is",iterations)
+        optimizer = self.define_optimizer()
         for epoch in range(self.n_epochs):
 
             # turn on network training mode; define optimizer; prepare batch iterator
-            self.mode(test=False)
-            self.define_optimizer()
+            #self.mode(test=False)
+
             self.iterator = iter(Batchifier(RandomSampler(data_train), self.batch_size, drop_last=True))
 
             # training iterations in one epoch
             for step in range(iterations):
-                batch_x, batch_y = self.batchify(data_train)
-
+                batch_x, batch_y,seq_len = self.batchify(data_train)
+                # print(batch_x)
+                # print(batch_y)
+                batch_x=np.array(batch_x,np.int32)
+                batch_y=np.array(batch_y,np.int32)
+                seq_len=np.array(seq_len,np.int32)
                 prediction = self.data_forward(network, batch_x)
 
-                loss = self.get_loss(prediction, batch_y)
+                loss = self.get_loss(prediction, batch_y,seq_mask(seq_len,np.shape(batch_x)[1]))
+                if step%200==0:
+                    print("epoch :",epoch,"step {}/{}:".format(step,iterations),"loss :",loss)
+                optimizer.zero_grad()
                 self.grad_backward(loss)
-                self.update()
+                optimizer.step()
+                #self.update()
 
             if self.validate:
-                if data_dev is None:
-                    raise RuntimeError("No validation data provided.")
-                validator.test(network)
-                print("[epoch {}]".format(epoch), end=" ")
-                print(validator.show_matrices())
+                self.dev(data_dev,label_dict)
+                # if data_dev is None:
+                #     raise RuntimeError("No validation data provided.")
+                # validator.test(network)
+                # print("[epoch {}] dev loss={:.2f}".format(epoch, validator.matrices()))
 
         # finish training
+
+    def dev(self, data_dev,label_dict=None):
+
+        if data_dev is None:
+            raise RuntimeError("No validation data provided.")
+        best_acc = 0
+        iterations = len(data_dev) // self.batch_size
+        print("dev number is",iterations)
+        self.iterator = iter(Batchifier(RandomSampler(data_dev), self.batch_size, drop_last=True))
+        correct = 0
+        total = 0
+        per=0
+        la=0
+        real=0
+        for step in range(iterations):
+            batch_x, batch_y, seq_len = self.batchify(data_dev)
+            y=batch_y
+            s=seq_len
+            batch_x = np.array(batch_x, np.int32)
+            batch_y = np.array(batch_y, np.int32)
+            seq_len = np.array(seq_len, np.int32)
+            prediction = self.model.result(self.model(batch_x),seq_mask(seq_len,np.shape(batch_x)[1]))
+
+            # if not isinstance(prediction, list):
+            #     print(prediction)
+
+            for i in range(len(y)):
+
+
+                p=prediction[i]
+                for j in p:
+                    if label_dict[j][2:]=="ns" or label_dict[j][2:]=="nr" or label_dict[j][2:]=="t" or label_dict[j][2:]=="nz" or label_dict[j][2:]=="nt":
+                        per+=1
+
+                l=y[i][:s[i]]
+                for j in l:
+                    if label_dict[j][2:] == "ns" or label_dict[j][2:] == "nr" or label_dict[j][2:] == "t" or label_dict[j][2:] == "nz" or label_dict[j][2:] == "nt":
+                        la+=1
+
+                for j,k in zip(p,l):
+                    if label_dict[j][2:] == "ns" or label_dict[j][2:] == "nr" or label_dict[j][2:] == "t" or label_dict[j][2:] == "nz" or label_dict[j][2:] == "nt":
+                        if j==k:
+                            real+=1
+
+
+                total += len(p)
+                correct += np.sum(p==l)
+        percision=real/per
+        recall=real/la
+        f1=percision*recall*2/(percision+recall)
+        acc = correct * 100 / total
+        print("dev acc is: %3.2f%% , percision is: %3.2f%% , recall is: %3.2f%% , f1 is: %3.2f%%" % (acc,percision,recall,f1))
+        if f1 > best_acc:
+            best_acc = f1
+            torch.save(self.model.state_dict(),"save/model{}.pkl".format(round(acc,1)))
+            print("have saved")
+        return best_acc
 
     def prepare_input(self, data_path):
         """
             To do: Load pkl files of train/dev/test and embedding
         """
-        data_train = _pickle.load(open(data_path + "data_train.pkl", "rb"))
-        data_dev = _pickle.load(open(data_path + "data_dev.pkl", "rb"))
-        data_test = _pickle.load(open(data_path + "data_test.pkl", "rb"))
-        embedding = _pickle.load(open(data_path + "embedding.pkl", "rb"))
-        return data_train, data_dev, data_test, embedding
+        data_train = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
+        if os.path.exists(data_path + "/data_dev.pkl"):
+            data_dev = _pickle.load(open(data_path + "/data_dev.pkl", "rb"))
+        else:
+            random.shuffle(data_train)
+            data_dev=data_train[-int(len(data_train)*0.02):]
+            data_train=data_train[:-int(len(data_train)*0.02)]
+        #data_test = _pickle.load(open(data_path + "/data_test.pkl", "rb"))
+        #embedding = _pickle.load(open(data_path + "/embedding.pkl", "rb"))
+        return data_train, data_dev
 
     def mode(self, test=False):
         """
@@ -115,7 +193,7 @@ class BaseTrainer(Action):
         """
         Define framework-specific optimizer specified by the models.
         """
-        raise NotImplementedError
+        return torch.optim.SGD(self.model.parameters(), lr=0.0005, momentum=0.9)
 
     def update(self):
         """
@@ -134,7 +212,7 @@ class BaseTrainer(Action):
 
         For PyTorch, just do "network(*x)"
         """
-        raise NotImplementedError
+        return network(x)
 
     def grad_backward(self, loss):
         """
@@ -143,9 +221,9 @@ class BaseTrainer(Action):
 
         For PyTorch, just do "loss.backward()"
         """
-        raise NotImplementedError
+        return loss.backward()
 
-    def get_loss(self, predict, truth):
+    def get_loss(self, predict, truth , mask=None):
         """
         Compute loss given prediction and ground truth.
         :param predict: prediction label vector
@@ -157,7 +235,7 @@ class BaseTrainer(Action):
                 self.loss_func = self.model.loss
             else:
                 self.define_loss()
-        return self.loss_func(predict, truth)
+        return self.loss_func(predict, truth , mask)
 
     def define_loss(self):
         """
@@ -184,8 +262,10 @@ class BaseTrainer(Action):
         batch = [data[idx] for idx in indices]
         batch_x = [sample[0] for sample in batch]
         batch_y = [sample[1] for sample in batch]
+        seq_len = [len(sample[0]) for sample in batch]
         batch_x = self.pad(batch_x)
-        return batch_x, batch_y
+        batch_y = self.pad(batch_y)
+        return batch_x, batch_y,seq_len
 
     @staticmethod
     def pad(batch, fill=0):
@@ -196,10 +276,12 @@ class BaseTrainer(Action):
         :return: a padded batch
         """
         max_length = max([len(x) for x in batch])
+        batch_fill = np.zeros([len(batch),max_length],np.int32)*fill
         for idx, sample in enumerate(batch):
-            if len(sample) < max_length:
-                batch[idx] = sample + [fill * (max_length - len(sample))]
-        return batch
+            # if len(sample) < max_length:
+            #     batch[idx] = sample + [fill * (max_length - len(sample))]
+            batch_fill[idx][:len(sample)]=sample
+        return batch_fill
 
 
 class ToyTrainer(BaseTrainer):
