@@ -171,4 +171,4 @@ class ContionalRandomField(nn.Module):
                 path.append(index)
             final_paths.append(path[::-1])
 
-        return list(zip(final_paths, max_scroes.detach().cpu().numpy()))
+        return final_paths
