@@ -29,11 +29,11 @@ class POSDatasetLoader(DatasetLoader):
         return lines
 
 
-class ClassificationDatasetLoader(DatasetLoader):
-    """loader for classfication data sets"""
+class ClassDatasetLoader(DatasetLoader):
+    """Loader for classification data sets"""
 
     def __init__(self, data_name, data_path):
-        super(ClassificationDatasetLoader, data_name).__init__()
+        super(ClassDatasetLoader, self).__init__(data_name, data_path)
 
     def load(self):
         assert os.path.exists(self.data_path)
@@ -44,16 +44,21 @@ class ClassificationDatasetLoader(DatasetLoader):
     @staticmethod
     def parse(lines):
         """
-        :param lines: lines from dataset
-        :return: list(list(list())): the three level of lists are
+        Params
+            lines: lines from dataset
+        Return
+            list(list(list())): the three level of lists are
                 words, sentence, and dataset
         """
         dataset = list()
         for line in lines:
-            label = line.split(" ")[0]
-            words = line.split(" ")[1:]
-            word = list([w for w in words])
-            sentence = list([word, label])
+            line = line.strip().split()
+            label = line[0]
+            words = line[1:]
+            if len(words) <= 1:
+                continue
+
+            sentence = [words, label]
             dataset.append(sentence)
         return dataset
 
