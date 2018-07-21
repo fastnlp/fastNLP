@@ -58,12 +58,19 @@ epochs = 20
 batch_size = 1
 pickle_path = "./data_for_tests/"
 validate = true
+save_best_dev = true
+model_saved_path = "./"
+rnn_hidden_units = 100
+rnn_layers = 1
+rnn_bi_direction = true
+word_emb_dim = 100
+dropout = 0.5
+use_crf = true
 
 [POS_test]
 save_output = true
-validate_in_training = false
+validate_in_training = true
 save_dev_input = false
 save_loss = true
 batch_size = 1
 pickle_path = "./data_for_tests/"
-

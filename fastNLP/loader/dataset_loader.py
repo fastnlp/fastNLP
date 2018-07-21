@@ -100,3 +100,15 @@ class ConllLoader(DatasetLoader):
                 continue
             tokens.append(line.split())
         return sentences
+
+
+class LMDatasetLoader(DatasetLoader):
+    def __init__(self, data_name, data_path):
+        super(LMDatasetLoader, self).__init__(data_name, data_path)
+
+    def load(self):
+        if not os.path.exists(self.data_path):
+            raise FileNotFoundError("file {} not found.".format(self.data_path))
+        with open(self.data_path, "r", encoding="utf=8") as f:
+            text = " ".join(f.readlines())
+        return text.strip().split()
