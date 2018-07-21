@@ -67,5 +67,5 @@ class Batchifier(object):
             if len(batch) == self.batch_size:
                 yield batch
                 batch = []
-        if len(batch) < self.batch_size and self.drop_last is False:
+        if 0 < len(batch) < self.batch_size and self.drop_last is False:
             yield batch
