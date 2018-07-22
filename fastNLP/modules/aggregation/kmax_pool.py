@@ -9,7 +9,7 @@ import torch.nn as nn
 class KMaxPool(nn.Module):
     """K max-pooling module."""
 
-    def __init__(self, k):
+    def __init__(self, k=1):
         super(KMaxPool, self).__init__()
         self.k = k
 
