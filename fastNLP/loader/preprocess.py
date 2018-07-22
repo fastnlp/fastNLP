@@ -75,6 +75,7 @@ class POSPreprocess(BasePreprocess):
         else:
             with open(os.path.join(self.pickle_path, "class2id.pkl"), "wb") as f:
                 _pickle.dump(self.label2index, f)
+            #something will be wrong if word2id.pkl is found but class2id.pkl is not found
 
         if not self.pickle_exist("id2word.pkl"):
             index2word = self.build_reverse_dict(self.word2index)
