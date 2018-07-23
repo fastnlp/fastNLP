@@ -1,9 +1,7 @@
 import torch
-import torch.nn as nn
-from torch.nn import functional as F
 
 from fastNLP.models.base_model import BaseModel
-from fastNLP.modules.decoder.CRF import ContionalRandomField
+from fastNLP.modules import decoder, encoder, utils
 
 
 class SeqLabeling(BaseModel):
@@ -23,75 +21,61 @@ class SeqLabeling(BaseModel):
                  use_crf=True):
         super(SeqLabeling, self).__init__()
 
-        self.Emb = nn.Embedding(vocab_size, word_emb_dim)
-        if init_emb:
-            self.Emb.weight = nn.Parameter(init_emb)
-
-        self.num_classes = num_classes
-        self.input_dim = word_emb_dim
-        self.layers = rnn_num_layer
-        self.hidden_dim = hidden_dim
-        self.bi_direction = bi_direction
-        self.dropout = dropout
-        self.mode = rnn_mode
-
-        if self.mode == "lstm":
-            self.rnn = nn.LSTM(self.input_dim, self.hidden_dim, self.layers, batch_first=True,
-                               bidirectional=self.bi_direction, dropout=self.dropout)
-        elif self.mode == "gru":
-            self.rnn = nn.GRU(self.input_dim, self.hidden_dim, self.layers, batch_first=True,
-                              bidirectional=self.bi_direction, dropout=self.dropout)
-        elif self.mode == "rnn":
-            self.rnn = nn.RNN(self.input_dim, self.hidden_dim, self.layers, batch_first=True,
-                              bidirectional=self.bi_direction, dropout=self.dropout)
-        else:
-            raise Exception
-        if bi_direction:
-            self.linear = nn.Linear(self.hidden_dim * 2, self.num_classes)
-        else:
-            self.linear = nn.Linear(self.hidden_dim, self.num_classes)
-        self.use_crf = use_crf
-        if self.use_crf:
-            self.crf = ContionalRandomField(num_classes)
+        self.Embedding = encoder.embedding.Embedding(vocab_size, word_emb_dim)
+        self.Rnn = encoder.lstm.Lstm(word_emb_dim, hidden_dim)
+        self.Linear = encoder.linear.Linear(hidden_dim, num_classes)
+        self.Crf = decoder.CRF.ConditionalRandomField(num_classes)
 
     def forward(self, x):
         """
         :param x: LongTensor, [batch_size, mex_len]
         :return y: [batch_size, tag_size, tag_size]
         """
-        x = self.Emb(x)
+        x = self.Embedding(x)
         # [batch_size, max_len, word_emb_dim]
-        x, hidden = self.rnn(x)
+        x = self.Rnn(x)
         # [batch_size, max_len, hidden_size * direction]
-        y = self.linear(x)
+        x = self.Linear(x)
         # [batch_size, max_len, num_classes]
-        return y
+        return x
 
-    def loss(self, x, y, mask, batch_size, max_len):
+    def loss(self, x, y, seq_length):
         """
         Negative log likelihood loss.
-        :param x: FloatTensor, [batch_size, tag_size, tag_size]
+        :param x: FloatTensor, [batch_size, max_len, tag_size]
         :param y: LongTensor, [batch_size, max_len]
-        :param mask: ByteTensor, [batch_size, max_len]
-        :param batch_size: int
-        :param max_len: int
+        :param seq_length: list of int. [batch_size]
         :return loss: a scalar Tensor
-                prediction: list of tuple of (decode path(list), best score)
+
         """
         x = x.float()
         y = y.long()
-        mask = mask.byte()
-        # print(x.shape, y.shape, mask.shape)
 
-        if self.use_crf:
-            total_loss = self.crf(x, y, mask)
-            tag_seq = self.crf.viterbi_decode(x, mask)
-        else:
-            # error
-            loss_function = nn.NLLLoss(ignore_index=0, size_average=False)
-            x = x.view(batch_size * max_len, -1)
-            score = F.log_softmax(x)
-            total_loss = loss_function(score, y.view(batch_size * max_len))
-            _, tag_seq = torch.max(score)
-            tag_seq = tag_seq.view(batch_size, max_len)
-        return torch.mean(total_loss), tag_seq
+        batch_size = x.size(0)
+        max_len = x.size(1)
+
+        mask = utils.seq_mask(seq_length, max_len)
+        mask = mask.byte().view(batch_size, max_len)
+        # mask = x.new(batch_size, max_len)
+
+        total_loss = self.Crf(x, y, mask)
+
+        return torch.mean(total_loss)
+
+    def prediction(self, x, seq_length):
+        """
+        :param x: FloatTensor, [batch_size, tag_size, tag_size]
+        :param seq_length: int
+        :return prediction: list of tuple of (decode path(list), best score)
+        """
+        x = x.float()
+        batch_size = x.size(0)
+        max_len = x.size(1)
+
+        mask = utils.seq_mask(seq_length, max_len)
+        mask = mask.byte()
+        # mask = x.new(batch_size, max_len)
+
+        tag_seq = self.Crf.viterbi_decode(x, mask)
+
+        return tag_seq

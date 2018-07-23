@@ -1,12 +1,11 @@
 import _pickle
+import os
 
 import numpy as np
 import torch
-import os
 
 from fastNLP.action.action import Action
 from fastNLP.action.action import RandomSampler, Batchifier
-from fastNLP.modules.utils import seq_mask
 
 
 class BaseTester(Action):
@@ -148,18 +147,19 @@ class POSTester(BaseTester):
         :param x: list of list, [batch_size, max_len]
         :return y: [batch_size, num_classes]
         """
-        seq_len = [len(seq) for seq in x]
+        self.seq_len = [len(seq) for seq in x]
         x = torch.Tensor(x).long()
         self.batch_size = x.size(0)
         self.max_len = x.size(1)
-        self.mask = seq_mask(seq_len, self.max_len)
+        # self.mask = seq_mask(seq_len, self.max_len)
         y = network(x)
         return y
 
     def evaluate(self, predict, truth):
         truth = torch.Tensor(truth)
-        loss, prediction = self.model.loss(predict, truth, self.mask, self.batch_size, self.max_len)
-        results = torch.Tensor(prediction[0][0]).view((-1,))
+        loss = self.model.loss(predict, truth, self.seq_len)
+        prediction = self.model.prediction(predict, self.seq_len)
+        results = torch.Tensor(prediction).view(-1,)
         accuracy = float(torch.sum(results == truth.view((-1,)))) / results.shape[0]
         return [loss.data, accuracy]
 

@@ -10,7 +10,6 @@ import torch.nn as nn
 from fastNLP.action.action import Action
 from fastNLP.action.action import RandomSampler, Batchifier
 from fastNLP.action.tester import POSTester
-from fastNLP.modules.utils import seq_mask
 from fastNLP.saver.model_saver import ModelSaver
 
 
@@ -289,13 +288,13 @@ class POSTrainer(BaseTrainer):
         """
         :param network: the PyTorch model
         :param x: list of list, [batch_size, max_len]
-        :return y: [batch_size, num_classes]
+        :return y: [batch_size, max_len, tag_size]
         """
-        seq_len = [len(seq) for seq in x]
+        self.seq_len = [len(seq) for seq in x]
         x = torch.Tensor(x).long()
         self.batch_size = x.size(0)
         self.max_len = x.size(1)
-        self.mask = seq_mask(seq_len, self.max_len)
+        # self.mask = seq_mask(seq_len, self.max_len)
         y = network(x)
         return y
 
@@ -318,7 +317,7 @@ class POSTrainer(BaseTrainer):
     def get_loss(self, predict, truth):
         """
         Compute loss given prediction and ground truth.
-        :param predict: prediction label vector, [batch_size, num_classes]
+        :param predict: prediction label vector, [batch_size, tag_size, tag_size]
         :param truth: ground truth label vector, [batch_size, max_len]
         :return: a scalar
         """
@@ -328,7 +327,7 @@ class POSTrainer(BaseTrainer):
                 self.loss_func = self.model.loss
             else:
                 self.define_loss()
-        loss, prediction = self.loss_func(predict, truth, self.mask, self.batch_size, self.max_len)
+        loss = self.loss_func(predict, truth, self.seq_len)
         # print("loss={:.2f}".format(loss.data))
         return loss
 
