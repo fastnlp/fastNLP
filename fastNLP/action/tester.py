@@ -107,7 +107,7 @@ class BaseTester(Action):
         raise NotImplementedError
 
     @property
-    def matrices(self):
+    def metrics(self):
         raise NotImplementedError
 
     def mode(self, model, test=True):
@@ -163,7 +163,7 @@ class POSTester(BaseTester):
         accuracy = float(torch.sum(results == truth.view((-1,)))) / results.shape[0]
         return [loss.data, accuracy]
 
-    def matrices(self):
+    def metrics(self):
         batch_loss = np.mean([x[0] for x in self.eval_history])
         batch_accuracy = np.mean([x[1] for x in self.eval_history])
         return batch_loss, batch_accuracy
@@ -173,7 +173,7 @@ class POSTester(BaseTester):
         This is called by Trainer to print evaluation on dev set.
         :return print_str: str
         """
-        loss, accuracy = self.matrices()
+        loss, accuracy = self.metrics()
         return "dev loss={:.2f}, accuracy={:.2f}".format(loss, accuracy)
 
 
@@ -309,7 +309,7 @@ class ClassTester(BaseTester):
         y_prob = torch.nn.functional.softmax(y_logit, dim=-1)
         return [y_prob, y_true]
 
-    def matrices(self):
+    def metrics(self):
         """Compute accuracy."""
         y_prob, y_true = zip(*self.eval_history)
         y_prob = torch.cat(y_prob, dim=0)

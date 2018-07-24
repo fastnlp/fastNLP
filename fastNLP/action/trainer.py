@@ -180,7 +180,7 @@ class BaseTrainer(Action):
         """
         raise NotImplementedError
 
-    def batchify(self, data):
+    def batchify(self, data, output_length=True):
         """
         1. Perform batching from data and produce a batch of training data.
         2. Add padding.
@@ -193,13 +193,18 @@ class BaseTrainer(Action):
                 ]
         :return batch_x: list. Each entry is a list of features of a sample. [batch_size, max_len]
                  batch_y: list. Each entry is a list of labels of a sample.  [batch_size, num_labels]
+                 seq_len: list. The length of the pre-padded sequence, if output_length is True.
         """
         indices = next(self.iterator)
         batch = [data[idx] for idx in indices]
         batch_x = [sample[0] for sample in batch]
         batch_y = [sample[1] for sample in batch]
-        batch_x = self.pad(batch_x)
-        return batch_x, batch_y
+        batch_x_pad = self.pad(batch_x)
+        if output_length:
+            seq_len = [len(x) for x in batch_x]
+            return batch_x_pad, batch_y, seq_len
+        else:
+            return batch_x_pad, batch_y
 
     @staticmethod
     def pad(batch, fill=0):
@@ -244,7 +249,10 @@ class ToyTrainer(BaseTrainer):
         return data_train, data_dev, 0, 1
 
     def mode(self, test=False):
-        self.model.mode(test)
+        if test:
+            self.model.eval()
+        else:
+            self.model.train()
 
     def data_forward(self, network, x):
         return network(x)
@@ -332,7 +340,7 @@ class POSTrainer(BaseTrainer):
         return loss
 
     def best_eval_result(self, validator):
-        loss, accuracy = validator.matrices()
+        loss, accuracy = validator.metrics()
         if accuracy > self.best_accuracy:
             self.best_accuracy = accuracy
             return True

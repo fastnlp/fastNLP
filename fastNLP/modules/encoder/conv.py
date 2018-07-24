@@ -2,12 +2,14 @@
 # encoding: utf-8
 
 import torch.nn as nn
+from torch.nn.init import xavier_uniform
 # import torch.nn.functional as F
 
 
 class Conv(nn.Module):
     """
     Basic 1-d convolution module.
+    initialize with xavier_uniform
     """
 
     def __init__(self, in_channels, out_channels, kernel_size,
@@ -23,6 +25,7 @@ class Conv(nn.Module):
             dilation=dilation,
             groups=groups,
             bias=bias)
+        xavier_uniform(self.conv.weight)
 
     def forward(self, x):
         return self.conv(x)  # [N,C,L]
