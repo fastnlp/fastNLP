@@ -3,9 +3,6 @@ class Inference(object):
     This is an interface focusing on predicting output based on trained models.
     It does not care about evaluations of the model.
 
-    Possible improvements:
-        - use batch to make use of GPU
-
     """
 
     def __init__(self):
