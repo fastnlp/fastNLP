@@ -4,8 +4,8 @@ sys.path.append("..")
 
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.action.trainer import POSTrainer
-from fastNLP.loader.dataset_loader import POSDatasetLoader
-from fastNLP.loader.preprocess import POSPreprocess
+from fastNLP.loader.dataset_loader import POSDatasetLoader, BaseLoader
+from fastNLP.loader.preprocess import POSPreprocess, load_pickle
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.action.tester import POSTester
@@ -15,32 +15,49 @@ from fastNLP.action.inference import Inference
 data_name = "people.txt"
 data_path = "data_for_tests/people.txt"
 pickle_path = "data_for_tests"
+data_infer_path = "data_for_tests/people_infer.txt"
 
 
-def test_infer():
+def infer():
+    # Load infer configuration, the same as test
+    test_args = ConfigSection()
+    ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
+
+    # fetch dictinary size and number of labels from pickle files
+    word2index = load_pickle(pickle_path, "word2id.pkl")
+    test_args["vocab_size"] = len(word2index)
+    index2label = load_pickle(pickle_path, "id2class.pkl")
+    test_args["num_classes"] = len(index2label)
+
     # Define the same model
-    model = SeqLabeling(hidden_dim=train_args["rnn_hidden_units"], rnn_num_layer=train_args["rnn_layers"],
-                        num_classes=train_args["num_classes"], vocab_size=train_args["vocab_size"],
-                        word_emb_dim=train_args["word_emb_dim"], bi_direction=train_args["rnn_bi_direction"],
-                        rnn_mode="gru", dropout=train_args["dropout"], use_crf=train_args["use_crf"])
+    model = SeqLabeling(test_args)
 
     # Dump trained parameters into the model
-    ModelLoader("arbitrary_name", "./saved_model.pkl").load_pytorch(model)
+    ModelLoader.load_pytorch(model, "./saved_model.pkl")
     print("model loaded!")
 
     # Data Loader
-    pos_loader = POSDatasetLoader(data_name, data_path)
-    infer_data = pos_loader.load_lines()
-
-    # Preprocessor
-    POSPreprocess(infer_data, pickle_path)
+    raw_data_loader = BaseLoader(data_name, data_infer_path)
+    infer_data = raw_data_loader.load_lines()
+    """
+        Transform strings into list of list of strings. 
+        [
+            [word_11, word_12, ...],
+            [word_21, word_22, ...],
+            ...
+        ]
+        In this case, each line in "people_infer.txt" is already a sentence. So load_lines() just splits them.
+    """
 
     # Inference interface
-    infer = Inference()
+    infer = Inference(pickle_path)
     results = infer.predict(model, infer_data)
 
+    print(results)
+    print("Inference finished!")
 
-if __name__ == "__main__":
+
+def train_test():
     # Config Loader
     train_args = ConfigSection()
     ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS": train_args})
@@ -58,10 +75,7 @@ if __name__ == "__main__":
     trainer = POSTrainer(train_args)
 
     # Model
-    model = SeqLabeling(hidden_dim=train_args["rnn_hidden_units"], rnn_num_layer=train_args["rnn_layers"],
-                        num_classes=train_args["num_classes"], vocab_size=train_args["vocab_size"],
-                        word_emb_dim=train_args["word_emb_dim"], bi_direction=train_args["rnn_bi_direction"],
-                        rnn_mode="gru", dropout=train_args["dropout"], use_crf=train_args["use_crf"])
+    model = SeqLabeling(train_args)
 
     # Start training
     trainer.train(model)
@@ -75,13 +89,10 @@ if __name__ == "__main__":
     del model, trainer, pos_loader
 
     # Define the same model
-    model = SeqLabeling(hidden_dim=train_args["rnn_hidden_units"], rnn_num_layer=train_args["rnn_layers"],
-                        num_classes=train_args["num_classes"], vocab_size=train_args["vocab_size"],
-                        word_emb_dim=train_args["word_emb_dim"], bi_direction=train_args["rnn_bi_direction"],
-                        rnn_mode="gru", dropout=train_args["dropout"], use_crf=train_args["use_crf"])
+    model = SeqLabeling(train_args)
 
     # Dump trained parameters into the model
-    ModelLoader("arbitrary_name", "./saved_model.pkl").load_pytorch(model)
+    ModelLoader.load_pytorch(model, "./saved_model.pkl")
     print("model loaded!")
 
     # Load test configuration
@@ -97,3 +108,7 @@ if __name__ == "__main__":
     # print test results
     print(tester.show_matrices())
     print("model tested!")
+
+
+if __name__ == "__main__":
+    infer()

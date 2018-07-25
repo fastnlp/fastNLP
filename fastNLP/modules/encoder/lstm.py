@@ -13,7 +13,7 @@ class Lstm(nn.Module):
     bidirectional : If True, becomes a bidirectional RNN. Default: False.
     """
 
-    def __init__(self, input_size, hidden_size=100, num_layers=1, dropout=0.5, bidirectional=False):
+    def __init__(self, input_size, hidden_size=100, num_layers=1, dropout=0, bidirectional=False):
         super(Lstm, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, bias=True, batch_first=True,
                             dropout=dropout, bidirectional=bidirectional)

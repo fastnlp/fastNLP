@@ -9,17 +9,12 @@ class SeqLabeling(BaseModel):
     PyTorch Network for sequence labeling
     """
 
-    def __init__(self, hidden_dim,
-                 rnn_num_layer,
-                 num_classes,
-                 vocab_size,
-                 word_emb_dim=100,
-                 init_emb=None,
-                 rnn_mode="gru",
-                 bi_direction=False,
-                 dropout=0.5,
-                 use_crf=True):
+    def __init__(self, args):
         super(SeqLabeling, self).__init__()
+        vocab_size = args["vocab_size"]
+        word_emb_dim = args["word_emb_dim"]
+        hidden_dim = args["rnn_hidden_units"]
+        num_classes = args["num_classes"]
 
         self.Embedding = encoder.embedding.Embedding(vocab_size, word_emb_dim)
         self.Rnn = encoder.lstm.Lstm(word_emb_dim, hidden_dim)
@@ -29,7 +24,7 @@ class SeqLabeling(BaseModel):
     def forward(self, x):
         """
         :param x: LongTensor, [batch_size, mex_len]
-        :return y: [batch_size, tag_size, tag_size]
+        :return y: [batch_size, mex_len, tag_size]
         """
         x = self.Embedding(x)
         # [batch_size, max_len, word_emb_dim]
@@ -64,7 +59,7 @@ class SeqLabeling(BaseModel):
 
     def prediction(self, x, seq_length):
         """
-        :param x: FloatTensor, [batch_size, tag_size, tag_size]
+        :param x: FloatTensor, [batch_size, max_len, tag_size]
         :param seq_length: int
         :return prediction: list of tuple of (decode path(list), best score)
         """

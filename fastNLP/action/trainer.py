@@ -86,7 +86,7 @@ class BaseTrainer(Action):
 
             # training iterations in one epoch
             for step in range(iterations):
-                batch_x, batch_y = self.batchify(data_train)  # pad ?
+                batch_x, batch_y = self.make_batch(data_train)
 
                 prediction = self.data_forward(network, batch_x)
 
@@ -180,7 +180,7 @@ class BaseTrainer(Action):
         """
         raise NotImplementedError
 
-    def batchify(self, data, output_length=True):
+    def make_batch(self, data, output_length=True):
         """
         1. Perform batching from data and produce a batch of training data.
         2. Add padding.
@@ -191,9 +191,12 @@ class BaseTrainer(Action):
                     [[word_21, word_22, word_23], [label_21. label_22]],  # sample 2
                     ...
                 ]
-        :return batch_x: list. Each entry is a list of features of a sample. [batch_size, max_len]
+        :return (batch_x, seq_len): tuple of two elements, if output_length is true.
+                     batch_x: list. Each entry is a list of features of a sample. [batch_size, max_len]
+                     seq_len: list. The length of the pre-padded sequence, if output_length is True.
                  batch_y: list. Each entry is a list of labels of a sample.  [batch_size, num_labels]
-                 seq_len: list. The length of the pre-padded sequence, if output_length is True.
+
+                 return batch_x and batch_y, if output_length is False
         """
         indices = next(self.iterator)
         batch = [data[idx] for idx in indices]
@@ -202,7 +205,7 @@ class BaseTrainer(Action):
         batch_x_pad = self.pad(batch_x)
         if output_length:
             seq_len = [len(x) for x in batch_x]
-            return batch_x_pad, batch_y, seq_len
+            return (batch_x_pad, seq_len), batch_y
         else:
             return batch_x_pad, batch_y
 
@@ -292,17 +295,23 @@ class POSTrainer(BaseTrainer):
         data_dev = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
         return data_train, data_dev, 0, 1
 
-    def data_forward(self, network, x):
+    def data_forward(self, network, inputs):
         """
         :param network: the PyTorch model
-        :param x: list of list, [batch_size, max_len]
+        :param inputs: list of list, [batch_size, max_len],
+                        or tuple of (batch_x, seq_len), batch_x == [batch_size, max_len]
         :return y: [batch_size, max_len, tag_size]
         """
-        self.seq_len = [len(seq) for seq in x]
+        # unpack the returned value from make_batch
+        if isinstance(inputs, tuple):
+            x = inputs[0]
+            self.seq_len = inputs[1]
+        else:
+            x = inputs
         x = torch.Tensor(x).long()
         self.batch_size = x.size(0)
         self.max_len = x.size(1)
-        # self.mask = seq_mask(seq_len, self.max_len)
+
         y = network(x)
         return y
 
@@ -325,11 +334,12 @@ class POSTrainer(BaseTrainer):
     def get_loss(self, predict, truth):
         """
         Compute loss given prediction and ground truth.
-        :param predict: prediction label vector, [batch_size, tag_size, tag_size]
+        :param predict: prediction label vector, [batch_size, max_len, tag_size]
         :param truth: ground truth label vector, [batch_size, max_len]
         :return: a scalar
         """
         truth = torch.Tensor(truth)
+        assert truth.shape == (self.batch_size, self.max_len)
         if self.loss_func is None:
             if hasattr(self.model, "loss"):
                 self.loss_func = self.model.loss
@@ -346,6 +356,35 @@ class POSTrainer(BaseTrainer):
             return True
         else:
             return False
+
+    def make_batch(self, data, output_length=True):
+        """
+        1. Perform batching from data and produce a batch of training data.
+        2. Add padding.
+        :param data: list. Each entry is a sample, which is also a list of features and label(s).
+            E.g.
+                [
+                    [[word_11, word_12, word_13], [label_11. label_12]],  # sample 1
+                    [[word_21, word_22, word_23], [label_21. label_22]],  # sample 2
+                    ...
+                ]
+        :return (batch_x, seq_len): tuple of two elements, if output_length is true.
+                     batch_x: list. Each entry is a list of features of a sample. [batch_size, max_len]
+                     seq_len: list. The length of the pre-padded sequence, if output_length is True.
+                 batch_y: list. Each entry is a list of labels of a sample.  [batch_size, num_labels]
+
+                 return batch_x and batch_y, if output_length is False
+        """
+        indices = next(self.iterator)
+        batch = [data[idx] for idx in indices]
+        batch_x = [sample[0] for sample in batch]
+        batch_y = [sample[1] for sample in batch]
+        batch_x_pad = self.pad(batch_x)
+        if output_length:
+            seq_len = [len(x) for x in batch_x]
+            return (batch_x_pad, seq_len), batch_y
+        else:
+            return batch_x_pad, batch_y
 
 
 class LanguageModelTrainer(BaseTrainer):
@@ -438,7 +477,7 @@ class ClassTrainer(BaseTrainer):
 
             # training iterations in one epoch
             step = 0
-            for batch_x, batch_y in self.batchify(data_train):
+            for batch_x, batch_y in self.make_batch(data_train):
                 prediction = self.data_forward(network, batch_x)
 
                 loss = self.get_loss(prediction, batch_y)
@@ -533,7 +572,7 @@ class ClassTrainer(BaseTrainer):
         """Apply gradient."""
         self.optimizer.step()
 
-    def batchify(self, data):
+    def make_batch(self, data):
         """Batch and pad data."""
         for indices in self.iterator:
             batch = [data[idx] for idx in indices]
@@ -559,4 +598,4 @@ if __name__ == "__name__":
     train_args = {"epochs": 1, "validate": False, "batch_size": 3, "pickle_path": "./"}
     trainer = BaseTrainer(train_args)
     data_train = [[[1, 2, 3, 4], [0]] * 10] + [[[1, 3, 5, 2], [1]] * 10]
-    trainer.batchify(data=data_train)
+    trainer.make_batch(data=data_train)
