@@ -11,8 +11,24 @@ class DatasetLoader(BaseLoader):
 
 
 class POSDatasetLoader(DatasetLoader):
-    """loader for pos data sets"""
+    """Dataset Loader for POS Tag datasets.
 
+    In these datasets, each line are divided by '\t'
+    while the first Col is the vocabulary and the second
+    Col is the label.
+        Different sentence are divided by an empty line.
+        e.g:
+        Tom label1
+        and label2
+        Jerry   label1
+        .   label3
+        Hello   label4
+        world   label5
+        !   label3
+        In this file, there are two sentence "Tom and Jerry ."
+    and "Hello world !". Each word has its own label from label1
+    to label5.
+    """
     def __init__(self, data_name, data_path):
         super(POSDatasetLoader, self).__init__(data_name, data_path)
 
@@ -23,10 +39,42 @@ class POSDatasetLoader(DatasetLoader):
         return line
 
     def load_lines(self):
-        assert (os.path.exists(self.data_path))
+        """
+        :return data: three-level list
+            [
+                [ [word_11, word_12, ...], [label_1, label_1, ...] ],
+                [ [word_21, word_22, ...], [label_2, label_1, ...] ],
+                ...
+            ]
+        """
         with open(self.data_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        return lines
+        return self.parse(lines)
+
+    @staticmethod
+    def parse(lines):
+        data = []
+        sentence = []
+        for line in lines:
+            line = line.strip()
+            if len(line) > 1:
+                sentence.append(line.split('\t'))
+            else:
+                words = []
+                labels = []
+                for tokens in sentence:
+                    words.append(tokens[0])
+                    labels.append(tokens[1])
+                data.append([words, labels])
+                sentence = []
+        if len(sentence) != 0:
+            words = []
+            labels = []
+            for tokens in sentence:
+                words.append(tokens[0])
+                labels.append(tokens[1])
+            data.append([words, labels])
+        return data
 
 
 class ClassDatasetLoader(DatasetLoader):
@@ -112,3 +160,10 @@ class LMDatasetLoader(DatasetLoader):
         with open(self.data_path, "r", encoding="utf=8") as f:
             text = " ".join(f.readlines())
         return text.strip().split()
+
+
+if __name__ == "__main__":
+    data = POSDatasetLoader("xxx", "../../test/data_for_tests/people.txt").load_lines()
+    for example in data:
+        for w, l in zip(example[0], example[1]):
+            print(w, l)
