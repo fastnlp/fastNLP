@@ -10,7 +10,7 @@ To do:
 import numpy as np
 import torch
 import sklearn.metrics as M
-
+import warnings
 
 def _conver_numpy(x):
     '''
@@ -39,6 +39,7 @@ def _label_types(y):
     "multiclass"
     "multiclass-multioutput"
     "multilabel"
+    "unknown"
     '''
     # never squeeze the first dimension
     y = np.squeeze(y, list(range(1, len(y.shape))))
@@ -93,16 +94,44 @@ def accuracy_score(y_true, y_pred, normalize=True, sample_weight=None):
     return _weight_sum(count, normalize=normalize, sample_weight=sample_weight)
 
 
-def recall_score(y_true, y_pred, labels=None, pos_label=1, average='binary', sample_weight=None):
+def recall_score(y_true, y_pred, labels=None, pos_label=1, average='binary'):
+    y_type, y_true, y_pred = _check_data(y_true, y_pred)
+    if average == 'binary':
+        if y_type != 'binary':
+            raise ValueError("data type is {} but  use average type {}".format(y_type, average))
+        else:
+            pos = y_true == pos_label
+            tp = np.logical_and((y_true == y_pred), pos)
+            return tp.sum() / pos.sum()
+    elif average == None:
+        y_labels = set(list(np.unique(y_true)))
+        if labels is None:
+            labels = list(y_labels)
+        else:
+            for i in labels:
+                if i not in y_labels:
+                    warnings.warn('label {} is not contained in data'.format(i), UserWarning)
+        
+        if y_type in ['binary', 'multiclass']:
+            y_pred_right = y_true == y_pred
+            pos_list = [y_true == i for i in labels]
+            return [np.logical_and(y_pred_right, pos_i).sum() / pos_i.sum() if pos_i.sum() != 0 else 0 for pos_i in pos_list]
+        elif y_type == 'multilabel':
+            y_pred_right = y_true == y_pred
+            pos = y_true == pos_label
+            tp = np.logical_and(y_pred_right, pos)
+            return [tp[:,i].sum() / pos[:,i].sum() if pos[:,i].sum() != 0 else 0 for i in labels]
+        else:
+            raise ValueError('not support targets type {}'.format(y_type))
+    raise ValueError('not support for average type {}'.format(average))
+
+def precision_score(y_true, y_pred, labels=None, pos_label=1, average='binary'):
     raise NotImplementedError
 
-def precision_score(y_true, y_pred, labels=None, pos_label=1, average='binary', sample_weight=None):
+def f1_score(y_true, y_pred, labels=None, pos_label=1, average='binary'):
     raise NotImplementedError
 
-def f1_score(y_true, y_pred, labels=None, pos_label=1, average='binary', sample_weight=None):
-    raise NotImplementedError
-
-def classification_report(y_true, y_pred, labels=None, target_names=None, sample_weight=None, digits=2):
+def classification_report(y_true, y_pred, labels=None, target_names=None, digits=2):
     raise NotImplementedError
 
 if __name__ == '__main__':
