@@ -20,9 +20,13 @@ class ConfigLoader(BaseLoader):
     def load_config(file_path, sections):
         """
         :param file_path: the path of config file
-        :param sections: the dict of sections
+        :param sections: the dict of {section_name(string): Section instance}
+        Example:
+            test_args = ConfigSection()
+            ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
         :return:
         """
+        assert isinstance(sections, dict)
         cfg = configparser.ConfigParser()
         if not os.path.exists(file_path):
             raise FileNotFoundError("config file {} not found. ".format(file_path))

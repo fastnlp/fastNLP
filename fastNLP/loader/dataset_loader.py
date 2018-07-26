@@ -22,6 +22,7 @@ class POSDatasetLoader(DatasetLoader):
         and label2
         Jerry   label1
         .   label3
+        (separated by an empty line)
         Hello   label4
         world   label5
         !   label3
@@ -73,6 +74,51 @@ class POSDatasetLoader(DatasetLoader):
             for tokens in sentence:
                 words.append(tokens[0])
                 labels.append(tokens[1])
+            data.append([words, labels])
+        return data
+
+
+class TokenizeDatasetLoader(DatasetLoader):
+    """
+    Data set loader for tokenization data sets
+    """
+
+    def __init__(self, data_name, data_path):
+        super(TokenizeDatasetLoader, self).__init__(data_name, data_path)
+
+    def load_pku(self):
+        """
+        load pku dataset for Chinese word segmentation
+        CWS (Chinese Word Segmentation) pku training dataset format:
+            1. Each line is a sentence.
+            2. Each word in a sentence is separated by space.
+        This function convert the pku dataset into three-level lists with labels <BMES>.
+            B: beginning of a word
+            M: middle of a word
+            E: ending of a word
+            S: single character
+
+        :return: three-level lists
+        """
+        with open(self.data_path, "r", encoding="utf-8") as f:
+            sentences = f.readlines()
+        data = []
+        for sent in sentences:
+            words = []
+            labels = []
+            tokens = sent.strip().split()
+            for token in tokens:
+                if len(token) == 1:
+                    words.append(token)
+                    labels.append("S")
+                else:
+                    words.append(token[0])
+                    labels.append("B")
+                    for idx in range(1, len(token) - 1):
+                        words.append(token[idx])
+                        labels.append("M")
+                    words.append(token[-1])
+                    labels.append("E")
             data.append([words, labels])
         return data
 
@@ -163,7 +209,12 @@ class LMDatasetLoader(DatasetLoader):
 
 
 if __name__ == "__main__":
+    """
     data = POSDatasetLoader("xxx", "../../test/data_for_tests/people.txt").load_lines()
     for example in data:
         for w, l in zip(example[0], example[1]):
             print(w, l)
+    """
+
+    ans = TokenizeDatasetLoader("xxx", "/home/zyfeng/Desktop/data/icwb2-data/training/test").load_pku()
+    print(ans)

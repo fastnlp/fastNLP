@@ -38,7 +38,7 @@ class Inference(object):
         num_iter = len(data) // self.batch_size
 
         for step in range(num_iter):
-            batch_x = self.batchify(data)
+            batch_x = self.make_batch(data)
 
             prediction = self.data_forward(network, batch_x)
 
@@ -68,10 +68,11 @@ class Inference(object):
         results = torch.Tensor(prediction).view(-1, )
         return list(results.data)
 
-    def batchify(self, data):
+    def make_batch(self, data):
         indices = next(self.iterator)
         batch_x = [data[idx] for idx in indices]
-        batch_x = self.pad(batch_x)
+        if self.batch_size > 1:
+            batch_x = self.pad(batch_x)
         return batch_x
 
     @staticmethod
@@ -98,6 +99,7 @@ class Inference(object):
             ...
         ]
         """
+        assert isinstance(data, list)
         data_index = []
         default_unknown_index = self.word2index[DEFAULT_UNKNOWN_LABEL]
         for example in data:
@@ -107,7 +109,7 @@ class Inference(object):
     def prepare_output(self, batch_outputs):
         """
         Transform list of batch outputs into strings.
-        :param batch_outputs: list of list [num_batch, tag_seq_length]
+        :param batch_outputs: list of list, of shape [num_batch, tag_seq_length]. Element type is Tensor.
         :return:
         """
         results = []

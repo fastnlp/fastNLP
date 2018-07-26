@@ -54,8 +54,8 @@ test = 5
 new_attr = 40
 
 [POS]
-epochs = 20
-batch_size = 1
+epochs = 1
+batch_size = 32
 pickle_path = "./data_for_tests/"
 validate = true
 save_best_dev = true
@@ -80,3 +80,12 @@ rnn_bi_direction = true
 word_emb_dim = 100
 dropout = 0.5
 use_crf = true
+
+[POS_infer]
+pickle_path = "./data_for_tests/"
+rnn_hidden_units = 100
+rnn_layers = 1
+rnn_bi_direction = true
+word_emb_dim = 100
+vocab_size = 52
+num_classes = 22
