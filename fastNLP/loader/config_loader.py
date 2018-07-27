@@ -24,7 +24,7 @@ class ConfigLoader(BaseLoader):
         Example:
             test_args = ConfigSection()
             ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
-        :return:
+        :return: return nothing, but the value of attributes are saved in sessions
         """
         assert isinstance(sections, dict)
         cfg = configparser.ConfigParser()
