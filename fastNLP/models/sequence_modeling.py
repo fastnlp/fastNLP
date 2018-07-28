@@ -51,6 +51,10 @@ class SeqLabeling(BaseModel):
 
         mask = utils.seq_mask(seq_length, max_len)
         mask = mask.byte().view(batch_size, max_len)
+
+        # TODO: remove
+        if torch.cuda.is_available():
+            mask = mask.cuda()
         # mask = x.new(batch_size, max_len)
 
         total_loss = self.Crf(x, y, mask)
@@ -69,7 +73,10 @@ class SeqLabeling(BaseModel):
 
         mask = utils.seq_mask(seq_length, max_len)
         mask = mask.byte()
-        # mask = x.new(batch_size, max_len)
+
+        # TODO: remove
+        if torch.cuda.is_available():
+            mask = mask.cuda()
 
         tag_seq = self.Crf.viterbi_decode(x, mask)
 

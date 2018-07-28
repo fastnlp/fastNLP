@@ -1,6 +1,6 @@
 import torch
 
-from fastNLP.action.action import Batchifier, SequentialSampler
+from fastNLP.core.action import Batchifier, SequentialSampler
 from fastNLP.loader.preprocess import load_pickle, DEFAULT_UNKNOWN_LABEL
 
 
@@ -55,7 +55,7 @@ class Inference(object):
 
     def data_forward(self, network, x):
         """
-        This is only for sequence labeling with CRF decoder. To do: more general ?
+        This is only for sequence labeling with CRF decoder. TODO: more general ?
         :param network:
         :param x:
         :return:

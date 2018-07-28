@@ -66,6 +66,7 @@ rnn_bi_direction = true
 word_emb_dim = 100
 dropout = 0.5
 use_crf = true
+use_cuda = true
 
 [POS_test]
 save_output = true
@@ -80,6 +81,7 @@ rnn_bi_direction = true
 word_emb_dim = 100
 dropout = 0.5
 use_crf = true
+use_cuda = true
 
 [POS_infer]
 pickle_path = "./data_for_tests/"

@@ -3,14 +3,14 @@ import sys
 sys.path.append("..")
 
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.action.trainer import POSTrainer
+from fastNLP.core.trainer import POSTrainer
 from fastNLP.loader.dataset_loader import TokenizeDatasetLoader, BaseLoader
 from fastNLP.loader.preprocess import POSPreprocess, load_pickle
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
-from fastNLP.action.tester import POSTester
+from fastNLP.core.tester import POSTester
 from fastNLP.models.sequence_modeling import SeqLabeling
-from fastNLP.action.inference import Inference
+from fastNLP.core.inference import Inference
 
 data_name = "pku_training.utf8"
 cws_data_path = "/home/zyfeng/Desktop/data/pku_training.utf8"

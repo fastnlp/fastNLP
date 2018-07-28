@@ -110,8 +110,9 @@ class POSPreprocess(BasePreprocess):
         :return word2index: dict of {str, int}
                 label2index: dict of {str, int}
         """
-        label2index = {}
-        word2index = DEFAULT_WORD_TO_INDEX
+        # In seq labeling, both word seq and label seq need to be padded to the same length in a mini-batch.
+        label2index = DEFAULT_WORD_TO_INDEX.copy()
+        word2index = DEFAULT_WORD_TO_INDEX.copy()
         for example in data:
             for word, label in zip(example[0], example[1]):
                 if word not in word2index:

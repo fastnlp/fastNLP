@@ -7,9 +7,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from fastNLP.action.action import Action
-from fastNLP.action.action import RandomSampler, Batchifier
-from fastNLP.action.tester import POSTester
+from fastNLP.core.action import Action
+from fastNLP.core.action import RandomSampler, Batchifier
+from fastNLP.core.tester import POSTester
 from fastNLP.saver.model_saver import ModelSaver
 
 
@@ -44,6 +44,7 @@ class BaseTrainer(Action):
         self.validate = train_args["validate"]
         self.save_best_dev = train_args["save_best_dev"]
         self.model_saved_path = train_args["model_saved_path"]
+        self.use_cuda = train_args["use_cuda"]
 
         self.model = None
         self.iterator = None
@@ -65,13 +66,19 @@ class BaseTrainer(Action):
             - update
         Subclasses must implement these methods with a specific framework.
         """
-        # prepare model and data
-        self.model = network
+        # prepare model and data, transfer model to gpu if available
+        if torch.cuda.is_available() and self.use_cuda:
+            self.model = network.cuda()
+        else:
+            self.model = network
+
         data_train, data_dev, data_test, embedding = self.prepare_input(self.pickle_path)
 
         # define tester over dev data
+        # TODO: more flexible
         valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
-                      "save_loss": True, "batch_size": self.batch_size, "pickle_path": self.pickle_path}
+                      "save_loss": True, "batch_size": self.batch_size, "pickle_path": self.pickle_path,
+                      "use_cuda": self.use_cuda}
         validator = POSTester(valid_args)
 
         # main training epochs
@@ -109,9 +116,6 @@ class BaseTrainer(Action):
         # finish training
 
     def prepare_input(self, data_path):
-        """
-            To do: Load pkl files of train/dev/test and embedding
-        """
         data_train = _pickle.load(open(data_path + "data_train.pkl", "rb"))
         data_dev = _pickle.load(open(data_path + "data_dev.pkl", "rb"))
         data_test = _pickle.load(open(data_path + "data_test.pkl", "rb"))
@@ -203,11 +207,12 @@ class BaseTrainer(Action):
         batch_x = [sample[0] for sample in batch]
         batch_y = [sample[1] for sample in batch]
         batch_x_pad = self.pad(batch_x)
+        batch_y_pad = self.pad(batch_y)
         if output_length:
             seq_len = [len(x) for x in batch_x]
-            return (batch_x_pad, seq_len), batch_y
+            return (batch_x_pad, seq_len), batch_y_pad
         else:
-            return batch_x_pad, batch_y
+            return batch_x_pad, batch_y_pad
 
     @staticmethod
     def pad(batch, fill=0):
@@ -288,9 +293,7 @@ class POSTrainer(BaseTrainer):
         self.best_accuracy = 0.0
 
     def prepare_input(self, data_path):
-        """
-            To do: Load pkl files of train/dev/test and embedding
-        """
+
         data_train = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
         data_dev = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
         return data_train, data_dev, 0, 1
@@ -309,6 +312,8 @@ class POSTrainer(BaseTrainer):
         else:
             x = inputs
         x = torch.Tensor(x).long()
+        if torch.cuda.is_available() and self.use_cuda:
+            x = x.cuda()
         self.batch_size = x.size(0)
         self.max_len = x.size(1)
 
@@ -339,6 +344,8 @@ class POSTrainer(BaseTrainer):
         :return: a scalar
         """
         truth = torch.Tensor(truth)
+        if torch.cuda.is_available() and self.use_cuda:
+            truth = truth.cuda()
         assert truth.shape == (self.batch_size, self.max_len)
         if self.loss_func is None:
             if hasattr(self.model, "loss"):
@@ -380,11 +387,12 @@ class POSTrainer(BaseTrainer):
         batch_x = [sample[0] for sample in batch]
         batch_y = [sample[1] for sample in batch]
         batch_x_pad = self.pad(batch_x)
+        batch_y_pad = self.pad(batch_y)
         if output_length:
             seq_len = [len(x) for x in batch_x]
-            return (batch_x_pad, seq_len), batch_y
+            return (batch_x_pad, seq_len), batch_y_pad
         else:
-            return batch_x_pad, batch_y
+            return batch_x_pad, batch_y_pad
 
 
 class LanguageModelTrainer(BaseTrainer):
@@ -504,9 +512,6 @@ class ClassTrainer(BaseTrainer):
         # finish training
 
     def prepare_input(self, data_path):
-        """
-            To do: Load pkl files of train/dev/test and embedding
-        """
 
         names = [
             "data_train.pkl", "data_dev.pkl",

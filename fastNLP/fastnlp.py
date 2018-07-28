@@ -1,4 +1,4 @@
-from fastNLP.action.inference import Inference
+from fastNLP.core.inference import Inference
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.loader.model_loader import ModelLoader
 

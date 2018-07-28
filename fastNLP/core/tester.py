@@ -4,8 +4,8 @@ import os
 import numpy as np
 import torch
 
-from fastNLP.action.action import Action
-from fastNLP.action.action import RandomSampler, Batchifier
+from fastNLP.core.action import Action
+from fastNLP.core.action import RandomSampler, Batchifier
 
 
 class BaseTester(Action):
@@ -25,14 +25,17 @@ class BaseTester(Action):
         self.batch_size = test_args["batch_size"]
         self.pickle_path = test_args["pickle_path"]
         self.iterator = None
+        self.use_cuda = test_args["use_cuda"]
 
         self.model = None
         self.eval_history = []
         self.batch_output = []
 
     def test(self, network):
-        # print("--------------testing----------------")
-        self.model = network
+        if torch.cuda.is_available() and self.use_cuda:
+            self.model = network.cuda()
+        else:
+            self.model = network
 
         # turn on the testing mode; clean up the history
         self.mode(network, test=True)
@@ -44,7 +47,7 @@ class BaseTester(Action):
         num_iter = len(dev_data) // self.batch_size
 
         for step in range(num_iter):
-            batch_x, batch_y = self.batchify(dev_data)
+            batch_x, batch_y = self.make_batch(dev_data)
 
             prediction = self.data_forward(network, batch_x)
             eval_results = self.evaluate(prediction, batch_y)
@@ -65,7 +68,7 @@ class BaseTester(Action):
             self.save_dev_data = data_dev
         return self.save_dev_data
 
-    def batchify(self, data):
+    def make_batch(self, data, output_length=True):
         """
         1. Perform batching from data and produce a batch of training data.
         2. Add padding.
@@ -83,8 +86,13 @@ class BaseTester(Action):
         batch = [data[idx] for idx in indices]
         batch_x = [sample[0] for sample in batch]
         batch_y = [sample[1] for sample in batch]
-        batch_x = self.pad(batch_x)
-        return batch_x, batch_y
+        batch_x_pad = self.pad(batch_x)
+        batch_y_pad = self.pad(batch_y)
+        if output_length:
+            seq_len = [len(x) for x in batch_x]
+            return (batch_x_pad, seq_len), batch_y_pad
+        else:
+            return batch_x_pad, batch_y_pad
 
     @staticmethod
     def pad(batch, fill=0):
@@ -97,7 +105,7 @@ class BaseTester(Action):
         max_length = max([len(x) for x in batch])
         for idx, sample in enumerate(batch):
             if len(sample) < max_length:
-                batch[idx] = sample + [fill * (max_length - len(sample))]
+                batch[idx] = sample + ([fill] * (max_length - len(sample)))
         return batch
 
     def data_forward(self, network, data):
@@ -111,7 +119,7 @@ class BaseTester(Action):
         raise NotImplementedError
 
     def mode(self, model, test=True):
-        """To do: combine this function with Trainer ?? """
+        """TODO: combine this function with Trainer ?? """
         if test:
             model.eval()
         else:
@@ -140,26 +148,37 @@ class POSTester(BaseTester):
         self.mask = None
         self.batch_result = None
 
-    def data_forward(self, network, x):
-        """To Do: combine with Trainer
+    def data_forward(self, network, inputs):
+        """TODO: combine with Trainer
 
         :param network: the PyTorch model
         :param x: list of list, [batch_size, max_len]
         :return y: [batch_size, num_classes]
         """
-        self.seq_len = [len(seq) for seq in x]
+        # unpack the returned value from make_batch
+        if isinstance(inputs, tuple):
+            x = inputs[0]
+            self.seq_len = inputs[1]
+        else:
+            x = inputs
         x = torch.Tensor(x).long()
+        if torch.cuda.is_available() and self.use_cuda:
+            x = x.cuda()
         self.batch_size = x.size(0)
         self.max_len = x.size(1)
-        # self.mask = seq_mask(seq_len, self.max_len)
+
         y = network(x)
         return y
 
     def evaluate(self, predict, truth):
         truth = torch.Tensor(truth)
+        if torch.cuda.is_available() and self.use_cuda:
+            truth = truth.cuda()
         loss = self.model.loss(predict, truth, self.seq_len)
         prediction = self.model.prediction(predict, self.seq_len)
         results = torch.Tensor(prediction).view(-1,)
+        if torch.cuda.is_available() and self.use_cuda:
+            results = results.cuda()
         accuracy = float(torch.sum(results == truth.view((-1,)))) / results.shape[0]
         return [loss.data, accuracy]
 
@@ -256,7 +275,7 @@ class ClassTester(BaseTester):
         n_batches = len(data_test) // self.batch_size
         n_print = n_batches // 10
         step = 0
-        for batch_x, batch_y in self.batchify(data_test, max_len=self.max_len):
+        for batch_x, batch_y in self.make_batch(data_test, max_len=self.max_len):
             prediction = self.data_forward(network, batch_x)
             eval_results = self.evaluate(prediction, batch_y)
 
@@ -277,7 +296,7 @@ class ClassTester(BaseTester):
             data = _pickle.load(f)
         return data
 
-    def batchify(self, data, max_len=None):
+    def make_batch(self, data, max_len=None):
         """Batch and pad data."""
         for indices in self.iterator:
             # generate batch and pad
@@ -319,7 +338,7 @@ class ClassTester(BaseTester):
         return y_true.cpu().numpy(), y_prob.cpu().numpy(), acc
 
     def mode(self, model, test=True):
-        """To do: combine this function with Trainer ?? """
+        """TODO: combine this function with Trainer ?? """
         if test:
             model.eval()
         else:

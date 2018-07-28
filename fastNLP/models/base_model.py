@@ -3,7 +3,6 @@ import torch
 
 class BaseModel(torch.nn.Module):
     """Base PyTorch model for all models.
-        To do: add some useful common features
     """
 
     def __init__(self):
