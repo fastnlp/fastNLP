@@ -13,7 +13,8 @@ from fastNLP.models.sequence_modeling import SeqLabeling
 from fastNLP.core.inference import Inference
 
 data_name = "pku_training.utf8"
-cws_data_path = "/home/zyfeng/Desktop/data/pku_training.utf8"
+# cws_data_path = "/home/zyfeng/Desktop/data/pku_training.utf8"
+cws_data_path = "data_for_tests/cws_pku_utf_8"
 pickle_path = "data_for_tests"
 data_infer_path = "data_for_tests/people_infer.txt"
 
@@ -112,4 +113,4 @@ def train_test():
 
 if __name__ == "__main__":
     train_test()
-    # infer()
+    infer()

@@ -68,15 +68,11 @@ class SeqLabeling(BaseModel):
         :return prediction: list of tuple of (decode path(list), best score)
         """
         x = x.float()
-        batch_size = x.size(0)
         max_len = x.size(1)
 
         mask = utils.seq_mask(seq_length, max_len)
-        mask = mask.byte()
-
-        # TODO: remove
-        if torch.cuda.is_available():
-            mask = mask.cuda()
+        # hack: make sure mask has the same device as x
+        mask = mask.to(x).byte()
 
         tag_seq = self.Crf.viterbi_decode(x, mask)
 

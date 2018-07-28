@@ -10,7 +10,7 @@ pickle_path = "data_for_tests"
 
 
 def foo():
-    loader = TokenizeDatasetLoader(data_name, cws_data_path)
+    loader = TokenizeDatasetLoader(data_name, "./data_for_tests/cws_pku_utf_8")
     train_data = loader.load_pku()
 
     train_args = ConfigSection()
@@ -27,8 +27,10 @@ def foo():
                   "save_loss": True, "batch_size": 8, "pickle_path": "./data_for_tests/",
                   "use_cuda": True}
     validator = POSTester(valid_args)
+
+    print("start validation.")
     validator.test(model)
-    validator.show_matrices()
+    print(validator.show_matrices())
 
 
 if __name__ == "__main__":
