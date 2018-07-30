@@ -86,7 +86,7 @@ class TokenizeDatasetLoader(DatasetLoader):
     def __init__(self, data_name, data_path):
         super(TokenizeDatasetLoader, self).__init__(data_name, data_path)
 
-    def load_pku(self):
+    def load_pku(self, max_seq_len=64):
         """
         load pku dataset for Chinese word segmentation
         CWS (Chinese Word Segmentation) pku training dataset format:
@@ -98,8 +98,11 @@ class TokenizeDatasetLoader(DatasetLoader):
             E: ending of a word
             S: single character
 
+        :param max_seq_len: int, the maximum length of a sequence. If a sequence is longer than it, split it into
+                several sequences.
         :return: three-level lists
         """
+        assert isinstance(max_seq_len, int) and max_seq_len > 0
         with open(self.data_path, "r", encoding="utf-8") as f:
             sentences = f.readlines()
         data = []
@@ -107,7 +110,9 @@ class TokenizeDatasetLoader(DatasetLoader):
             words = []
             labels = []
             tokens = sent.strip().split()
-            for token in tokens:
+            for start in range(len(tokens) // max_seq_len):
+
+            for token in token_seq:
                 if len(token) == 1:
                     words.append(token)
                     labels.append("S")

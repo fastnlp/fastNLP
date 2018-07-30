@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 
 from fastNLP.core.action import Action
-from fastNLP.core.action import RandomSampler, Batchifier
+from fastNLP.core.action import RandomSampler, Batchifier, BucketSampler
 from fastNLP.core.tester import POSTester
 from fastNLP.saver.model_saver import ModelSaver
 
@@ -89,7 +89,7 @@ class BaseTrainer(Action):
 
             # turn on network training mode; define optimizer; prepare batch iterator
             self.mode(test=False)
-            self.iterator = iter(Batchifier(RandomSampler(data_train), self.batch_size, drop_last=True))
+            self.iterator = iter(Batchifier(BucketSampler(data_train), self.batch_size, drop_last=True))
 
             # training iterations in one epoch
             for step in range(iterations):
