@@ -18,13 +18,13 @@ def seq_len_to_byte_mask(seq_lens):
     return mask
 
 
-class ContionalRandomField(nn.Module):
+class ConditionalRandomField(nn.Module):
     def __init__(self, tag_size, include_start_end_trans=True):
         """
         :param tag_size: int, num of tags
         :param include_start_end_trans: bool, whether to include start/end tag
         """
-        super(ContionalRandomField, self).__init__()
+        super(ConditionalRandomField, self).__init__()
 
         self.include_start_end_trans = include_start_end_trans
         self.tag_size = tag_size
@@ -47,7 +47,6 @@ class ContionalRandomField(nn.Module):
         """
         Computes the (batch_size,) denominator term for the log-likelihood, which is the
         sum of the likelihoods across all possible state sequences.
-
         :param feats:FloatTensor, batch_size x max_len x tag_size
         :param masks:ByteTensor, batch_size x max_len
         :return:FloatTensor, batch_size
@@ -128,7 +127,7 @@ class ContionalRandomField(nn.Module):
 
         return all_path_score - gold_path_score
 
-    def viterbi_decode(self, feats, masks):
+    def viterbi_decode(self, feats, masks, get_score=False):
         """
         Given a feats matrix, return best decode path and best score.
         :param feats:
@@ -147,28 +146,28 @@ class ContionalRandomField(nn.Module):
             for t in range(self.tag_size):
                 pre_scores = self.transition_m[:, t].view(
                     1, self.tag_size) + alpha
-                max_scroe, indice = pre_scores.max(dim=1)
-                new_alpha[:, t] = max_scroe + feats[:, i, t]
-                paths[:, i - 1, t] = indice
-            alpha = new_alpha * \
-                    masks[:, i:i + 1].float() + alpha * \
-                    (1 - masks[:, i:i + 1].float())
+                max_score, indices = pre_scores.max(dim=1)
+                new_alpha[:, t] = max_score + feats[:, i, t]
+                paths[:, i - 1, t] = indices
+            alpha = new_alpha * masks[:, i:i + 1].float() + alpha * (1 - masks[:, i:i + 1].float())
 
         if self.include_start_end_trans:
             alpha += self.end_scores.view(1, -1)
 
-        max_scroes, indice = alpha.max(dim=1)
-        indice = indice.cpu().numpy()
+        max_scores, indices = alpha.max(dim=1)
+        indices = indices.cpu().numpy()
         final_paths = []
         paths = paths.cpu().numpy().astype(int)
 
         seq_lens = masks.cumsum(dim=1, dtype=torch.long)[:, -1]
 
         for b in range(batch_size):
-            path = [indice[b]]
+            path = [indices[b]]
             for i in range(seq_lens[b] - 2, -1, -1):
                 index = paths[b, i, path[-1]]
                 path.append(index)
             final_paths.append(path[::-1])
-
-        return list(zip(final_paths, max_scroes.detach().cpu().numpy()))
+        if get_score:
+            return list(zip(final_paths, max_scores.detach().cpu().numpy()))
+        else:
+            return final_paths
