@@ -23,6 +23,7 @@ def save_pickle(obj, pickle_path, file_name):
 def load_pickle(pickle_path, file_name):
     with open(os.path.join(pickle_path, file_name), "rb") as f:
         obj = _pickle.load(f)
+    print("{} loaded. ".format(file_name))
     return obj
 
 

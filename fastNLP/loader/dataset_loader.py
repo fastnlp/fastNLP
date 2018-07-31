@@ -30,6 +30,7 @@ class POSDatasetLoader(DatasetLoader):
     and "Hello world !". Each word has its own label from label1
     to label5.
     """
+
     def __init__(self, data_name, data_path):
         super(POSDatasetLoader, self).__init__(data_name, data_path)
 
@@ -86,7 +87,7 @@ class TokenizeDatasetLoader(DatasetLoader):
     def __init__(self, data_name, data_path):
         super(TokenizeDatasetLoader, self).__init__(data_name, data_path)
 
-    def load_pku(self, max_seq_len=64):
+    def load_pku(self, max_seq_len=32):
         """
         load pku dataset for Chinese word segmentation
         CWS (Chinese Word Segmentation) pku training dataset format:
@@ -107,12 +108,10 @@ class TokenizeDatasetLoader(DatasetLoader):
             sentences = f.readlines()
         data = []
         for sent in sentences:
+            tokens = sent.strip().split()
             words = []
             labels = []
-            tokens = sent.strip().split()
-            for start in range(len(tokens) // max_seq_len):
-
-            for token in token_seq:
+            for token in tokens:
                 if len(token) == 1:
                     words.append(token)
                     labels.append("S")
@@ -124,7 +123,15 @@ class TokenizeDatasetLoader(DatasetLoader):
                         labels.append("M")
                     words.append(token[-1])
                     labels.append("E")
-            data.append([words, labels])
+            num_samples = len(words) // max_seq_len
+            if len(words) % max_seq_len != 0:
+                num_samples += 1
+            for sample_idx in range(num_samples):
+                start = sample_idx * max_seq_len
+                end = (sample_idx + 1) * max_seq_len
+                seq_words = words[start:end]
+                seq_labels = labels[start:end]
+                data.append([seq_words, seq_labels])
         return data
 
 

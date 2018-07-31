@@ -101,6 +101,9 @@ class BaseTrainer(Action):
                 self.grad_backward(loss)
                 self.update()
 
+                if step % 10 == 0:
+                    print("[epoch {} step {}] train loss={:.2f}".format(epoch, step, loss.data))
+
             if self.validate:
                 if data_dev is None:
                     raise RuntimeError("No validation data provided.")

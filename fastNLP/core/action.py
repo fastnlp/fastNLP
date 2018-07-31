@@ -14,7 +14,7 @@ class Action(object):
 
 def k_means_1d(x, k, max_iter=100):
     """
-
+    Perform k-means on 1-D data.
     :param x: list of int, representing points in 1-D.
     :param k: the number of clusters required.
     :param max_iter: maximum iteration
@@ -117,12 +117,12 @@ class BucketSampler(BaseSampler):
 
     def __init__(self, data_set):
         super(BucketSampler, self).__init__(data_set)
-        BUCKETS = ([None] * 10)
+        BUCKETS = ([None] * 20)
         self.length_freq = dict(Counter([len(example) for example in data_set]))
         self.buckets = k_means_bucketing(data_set, BUCKETS)
 
     def __iter__(self):
-        bucket_samples = self.buckets[np.random.randint(0, len(self.buckets) + 1)]
+        bucket_samples = self.buckets[np.random.randint(0, len(self.buckets))]
         np.random.shuffle(bucket_samples)
         return iter(bucket_samples)
 
@@ -140,10 +140,11 @@ class Batchifier(object):
 
     def __iter__(self):
         batch = []
-        for idx in self.sampler:
-            batch.append(idx)
-            if len(batch) == self.batch_size:
+        while True:
+            for idx in self.sampler:
+                batch.append(idx)
+                if len(batch) == self.batch_size:
+                    yield batch
+                    batch = []
+            if 0 < len(batch) < self.batch_size and self.drop_last is False:
                 yield batch
-                batch = []
-        if 0 < len(batch) < self.batch_size and self.drop_last is False:
-            yield batch

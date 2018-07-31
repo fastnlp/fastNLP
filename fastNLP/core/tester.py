@@ -174,7 +174,7 @@ class POSTester(BaseTester):
         truth = torch.Tensor(truth)
         if torch.cuda.is_available() and self.use_cuda:
             truth = truth.cuda()
-        loss = self.model.loss(predict, truth, self.seq_len)
+        loss = self.model.loss(predict, truth, self.seq_len) / self.batch_size
         prediction = self.model.prediction(predict, self.seq_len)
         results = torch.Tensor(prediction).view(-1,)
         if torch.cuda.is_available() and self.use_cuda:
