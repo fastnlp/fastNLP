@@ -18,7 +18,7 @@ MLP_HIDDEN = 2000
 CLASSES_NUM = 5
 
 from fastNLP.models.base_model import BaseModel
-from fastNLP.action.trainer import BaseTrainer
+from fastNLP.core.trainer import BaseTrainer
 
 
 class MyNet(BaseModel):

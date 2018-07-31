@@ -19,8 +19,6 @@ USE_GPU = True
 class CharLM(BaseModel):
     """
         Controller of the Character-level Neural Language Model
-        To do:
-        - where the data goes, call data savers.
     """
     def __init__(self, lstm_batch_size, lstm_seq_len):
         super(CharLM, self).__init__()
