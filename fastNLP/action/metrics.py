@@ -57,6 +57,7 @@ def _check_data(y_true, y_pred):
     '''
     check if y_true and y_pred is same type of data e.g both binary or multiclass
     '''
+    y_true, y_pred = _conver_numpy(y_true), _conver_numpy(y_pred)
     if not _check_same_len(y_true, y_pred):
         raise ValueError('cannot accept data with different shape {0}, {1}'.format(y_true, y_pred))
     type_true, y_true = _label_types(y_true)
@@ -100,9 +101,10 @@ def recall_score(y_true, y_pred, labels=None, pos_label=1, average='binary'):
         if y_type != 'binary':
             raise ValueError("data type is {} but  use average type {}".format(y_type, average))
         else:
-            pos = y_true == pos_label
-            tp = np.logical_and((y_true == y_pred), pos)
-            return tp.sum() / pos.sum()
+            pos = (y_true == pos_label)
+            tp = np.logical_and((y_true == y_pred), pos).sum()
+            pos_sum = pos.sum()
+            return tp / pos_sum if pos_sum > 0 else 0
     elif average == None:
         y_labels = set(list(np.unique(y_true)))
         if labels is None:
@@ -111,25 +113,67 @@ def recall_score(y_true, y_pred, labels=None, pos_label=1, average='binary'):
             for i in labels:
                 if i not in y_labels:
                     warnings.warn('label {} is not contained in data'.format(i), UserWarning)
-        
+
         if y_type in ['binary', 'multiclass']:
             y_pred_right = y_true == y_pred
             pos_list = [y_true == i for i in labels]
-            return [np.logical_and(y_pred_right, pos_i).sum() / pos_i.sum() if pos_i.sum() != 0 else 0 for pos_i in pos_list]
+            pos_sum_list = [pos_i.sum() for pos_i in pos_list]
+            return np.array([np.logical_and(y_pred_right, pos_i).sum() / sum_i if sum_i > 0 else 0 \
+                    for pos_i, sum_i in zip(pos_list, pos_sum_list)])
         elif y_type == 'multilabel':
             y_pred_right = y_true == y_pred
-            pos = y_true == pos_label
-            tp = np.logical_and(y_pred_right, pos)
-            return [tp[:,i].sum() / pos[:,i].sum() if pos[:,i].sum() != 0 else 0 for i in labels]
+            pos = (y_true == pos_label)
+            tp = np.logical_and(y_pred_right, pos).sum(0)
+            pos_sum = pos.sum(0)
+            return np.array([tp[i] / pos_sum[i] if pos_sum[i] > 0 else 0 for i in labels])
         else:
             raise ValueError('not support targets type {}'.format(y_type))
     raise ValueError('not support for average type {}'.format(average))
 
 def precision_score(y_true, y_pred, labels=None, pos_label=1, average='binary'):
-    raise NotImplementedError
+    y_type, y_true, y_pred = _check_data(y_true, y_pred)
+    if average == 'binary':
+        if y_type != 'binary':
+            raise ValueError("data type is {} but  use average type {}".format(y_type, average))
+        else:
+            pos = (y_true == pos_label)
+            tp = np.logical_and((y_true == y_pred), pos).sum()
+            pos_pred = (y_pred == pos_label).sum()
+            return tp / pos_pred if pos_pred > 0 else 0
+    elif average == None:
+        y_labels = set(list(np.unique(y_true)))
+        if labels is None:
+            labels = list(y_labels)
+        else:
+            for i in labels:
+                if i not in y_labels:
+                    warnings.warn('label {} is not contained in data'.format(i), UserWarning)
+
+        if y_type in ['binary', 'multiclass']:
+            y_pred_right = y_true == y_pred
+            pos_list = [y_true == i for i in labels]
+            pos_sum_list = [(y_pred == i).sum() for i in labels]
+            return np.array([np.logical_and(y_pred_right, pos_i).sum() / sum_i if sum_i > 0 else 0 \
+                    for pos_i, sum_i in zip(pos_list, pos_sum_list)])
+        elif y_type == 'multilabel':
+            y_pred_right = y_true == y_pred
+            pos = (y_true == pos_label)
+            tp = np.logical_and(y_pred_right, pos).sum(0)
+            pos_sum = (y_pred == pos_label).sum(0)
+            return np.array([tp[i] / pos_sum[i] if pos_sum[i] > 0 else 0 for i in labels])
+        else:
+            raise ValueError('not support targets type {}'.format(y_type))
+    raise ValueError('not support for average type {}'.format(average))
 
 def f1_score(y_true, y_pred, labels=None, pos_label=1, average='binary'):
-    raise NotImplementedError
+    precision = precision_score(y_true, y_pred, labels=labels, pos_label=pos_label, average=average)
+    recall = recall_score(y_true, y_pred, labels=labels, pos_label=pos_label, average=average)
+    if isinstance(precision, np.ndarray):
+        res = 2 * precision * recall / (precision + recall)
+        res[(precision + recall) <= 0] = 0
+        return res
+    return 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+
 
 def classification_report(y_true, y_pred, labels=None, target_names=None, digits=2):
     raise NotImplementedError

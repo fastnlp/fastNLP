@@ -25,6 +25,7 @@ class TestMetrics(unittest.TestCase):
     
     def test_recall_score(self):
         for y_true, y_pred in self.fake_data:
+            # print(y_true.shape)
             labels = list(range(y_true.shape[1])) if len(y_true.shape) >= 2 else None
             ans = skmetrics.recall_score(y_true, y_pred,labels=labels, average=None)
             test = metrics.recall_score(y_true, y_pred, labels=labels, average=None)
@@ -34,7 +35,59 @@ class TestMetrics(unittest.TestCase):
             for a, b in zip(test, ans):
                 # print('{}, {}'.format(a, b))
                 self.assertAlmostEqual(a, b, delta=self.delta)
+        # test binary
+        y_true, y_pred = generate_fake_label(0, 2, 1000)
+        ans = skmetrics.recall_score(y_true, y_pred)
+        test = metrics.recall_score(y_true, y_pred)
+        self.assertAlmostEqual(ans, test, delta=self.delta)
 
+    def test_precision_score(self):
+        for y_true, y_pred in self.fake_data:
+            # print(y_true.shape)
+            labels = list(range(y_true.shape[1])) if len(y_true.shape) >= 2 else None
+            ans = skmetrics.precision_score(y_true, y_pred,labels=labels, average=None)
+            test = metrics.precision_score(y_true, y_pred, labels=labels, average=None)
+            ans, test = list(ans), list(test)
+            for a, b in zip(test, ans):
+                # print('{}, {}'.format(a, b))
+                self.assertAlmostEqual(a, b, delta=self.delta)
+        # test binary
+        y_true, y_pred = generate_fake_label(0, 2, 1000)
+        ans = skmetrics.precision_score(y_true, y_pred)
+        test = metrics.precision_score(y_true, y_pred)
+        self.assertAlmostEqual(ans, test, delta=self.delta)
+    
+    def test_precision_score(self):
+        for y_true, y_pred in self.fake_data:
+            # print(y_true.shape)
+            labels = list(range(y_true.shape[1])) if len(y_true.shape) >= 2 else None
+            ans = skmetrics.precision_score(y_true, y_pred,labels=labels, average=None)
+            test = metrics.precision_score(y_true, y_pred, labels=labels, average=None)
+            ans, test = list(ans), list(test)
+            for a, b in zip(test, ans):
+                # print('{}, {}'.format(a, b))
+                self.assertAlmostEqual(a, b, delta=self.delta)
+        # test binary
+        y_true, y_pred = generate_fake_label(0, 2, 1000)
+        ans = skmetrics.precision_score(y_true, y_pred)
+        test = metrics.precision_score(y_true, y_pred)
+        self.assertAlmostEqual(ans, test, delta=self.delta)
+
+    def test_f1_score(self):
+        for y_true, y_pred in self.fake_data:
+            # print(y_true.shape)
+            labels = list(range(y_true.shape[1])) if len(y_true.shape) >= 2 else None
+            ans = skmetrics.f1_score(y_true, y_pred,labels=labels, average=None)
+            test = metrics.f1_score(y_true, y_pred, labels=labels, average=None)
+            ans, test = list(ans), list(test)
+            for a, b in zip(test, ans):
+                # print('{}, {}'.format(a, b))
+                self.assertAlmostEqual(a, b, delta=self.delta)
+        # test binary
+        y_true, y_pred = generate_fake_label(0, 2, 1000)
+        ans = skmetrics.f1_score(y_true, y_pred)
+        test = metrics.f1_score(y_true, y_pred)
+        self.assertAlmostEqual(ans, test, delta=self.delta)
 
 if __name__ == '__main__':
     unittest.main()
