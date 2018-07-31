@@ -17,7 +17,7 @@ class BaseLoader(object):
     def load_lines(self):
         with open(self.data_path, "r", encoding="utf=8") as f:
             text = f.readlines()
-        return text
+        return [line.strip() for line in text]
 
 
 class ToyLoader0(BaseLoader):

@@ -1,58 +1,92 @@
 # FastNLP
 ```
 FastNLP
-│  LICENSE
-│  README.md
-│  requirements.txt
-│  setup.py
+├── docs
+│   └── quick_tutorial.md
+├── fastNLP
+│   ├── action
+│   │   ├── action.py
+│   │   ├── inference.py
+│   │   ├── __init__.py
+│   │   ├── metrics.py
+│   │   ├── optimizer.py
+│   │   ├── README.md
+│   │   ├── tester.py
+│   │   └── trainer.py
+│   ├── fastnlp.py
+│   ├── __init__.py
+│   ├── loader
+│   │   ├── base_loader.py
+│   │   ├── config_loader.py
+│   │   ├── dataset_loader.py
+│   │   ├── embed_loader.py
+│   │   ├── __init__.py
+│   │   ├── model_loader.py
+│   │   └── preprocess.py
+│   ├── models
+│   │   ├── base_model.py
+│   │   ├── char_language_model.py
+│   │   ├── cnn_text_classification.py
+│   │   ├── __init__.py
+│   │   └── sequence_modeling.py
+│   ├── modules
+│   │   ├── aggregation
+│   │   │   ├── attention.py
+│   │   │   ├── avg_pool.py
+│   │   │   ├── __init__.py
+│   │   │   ├── kmax_pool.py
+│   │   │   ├── max_pool.py
+│   │   │   └── self_attention.py
+│   │   ├── decoder
+│   │   │   ├── CRF.py
+│   │   │   └── __init__.py
+│   │   ├── encoder
+│   │   │   ├── char_embedding.py
+│   │   │   ├── conv_maxpool.py
+│   │   │   ├── conv.py
+│   │   │   ├── embedding.py
+│   │   │   ├── __init__.py
+│   │   │   ├── linear.py
+│   │   │   ├── lstm.py
+│   │   │   ├── masked_rnn.py
+│   │   │   └── variational_rnn.py
+│   │   ├── __init__.py
+│   │   ├── interaction
+│   │   │   └── __init__.py
+│   │   ├── other_modules.py
+│   │   └── utils.py
+│   └── saver
+│       ├── base_saver.py
+│       ├── __init__.py
+│       ├── logger.py
+│       └── model_saver.py
+├── LICENSE
+├── README.md
+├── reproduction
+│   ├── Char-aware_NLM
+│   │  
+│   ├── CNN-sentence_classification
+│   │  
+│   ├── HAN-document_classification
+│   │  
+│   └── LSTM+self_attention_sentiment_analysis
 |
-├─docs  (documentation)
-|
-└─tests  (unit tests, intergrating tests, system tests)
-|   │  test_charlm.py
-|   │  test_loader.py
-|   │  test_trainer.py
-|   │  test_word_seg.py
-|   │
-|   └─data_for_tests  (test data used by models)
-|            charlm.txt
-|            cws_test
-|            cws_train
-|
-└─fastNLP
-    ├─action      (model independent process)
-    │  │  action.py (base class)
-    │  │  README.md
-    │  │  tester.py (model testing, for deployment and validation)
-    │  │  trainer.py  (main logic for model training)
-    │  │  __init__.py
-    │  │
-    |
-    │
-    ├─loader    (file loader for all loading operations)
-    │   |  base_loader.py  (base class)
-    │   |  config_loader.py   (model-specific configuration/parameter loader)
-    │   |  dataset_loader.py  (data set loader, base class)
-    │   |  embed_loader.py    (embedding loader, base class)
-    │   |  __init__.py
-    │
-    ├─model  (definitions of PyTorch models)
-    │  │  base_model.py  (base class, abstract)
-    │  │  char_language_model.py  (derived class, to implement abstract methods)
-    │  │  word_seg_model.py  
-    │  │  __init__.py
-    │  │
-    │
-    ├─reproduction   (code library for paper reproduction)
-    │  ├─Char-aware_NLM
-    │  │
-    │  ├─CNN-sentence_classification
-    │  │
-    │  └─HAN-document_classification
-    │
-    ├─saver  (file saver for all saving operations)
-    │      base_saver.py
-    │      logger.py
-    │      model_saver.py
-    │
+├── requirements.txt
+├── setup.py
+└── test
+    ├── data_for_tests
+    │   ├── charlm.txt
+    │   ├── config
+    │   ├── cws_test
+    │   ├── cws_train
+    │   ├── people_infer.txt
+    │   └── people.txt
+    ├── test_charlm.py
+    ├── test_cws.py
+    ├── test_fastNLP.py
+    ├── test_loader.py
+    ├── test_seq_labeling.py
+    ├── test_tester.py
+    └── test_trainer.py
+
 ```

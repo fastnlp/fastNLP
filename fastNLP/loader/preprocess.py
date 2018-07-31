@@ -14,12 +14,39 @@ DEFAULT_WORD_TO_INDEX = {DEFAULT_PADDING_LABEL: 0, DEFAULT_UNKNOWN_LABEL: 1,
 
 # the first vocab in dict with the index = 5
 
+def save_pickle(obj, pickle_path, file_name):
+    with open(os.path.join(pickle_path, file_name), "wb") as f:
+        _pickle.dump(obj, f)
+    print("{} saved. ".format(file_name))
+
+
+def load_pickle(pickle_path, file_name):
+    with open(os.path.join(pickle_path, file_name), "rb") as f:
+        obj = _pickle.load(f)
+    print("{} loaded. ".format(file_name))
+    return obj
+
+
+def pickle_exist(pickle_path, pickle_name):
+    """
+    :param pickle_path: the directory of target pickle file
+    :param pickle_name: the filename of target pickle file
+    :return: True if file exists else False
+    """
+    if not os.path.exists(pickle_path):
+        os.makedirs(pickle_path)
+    file_name = os.path.join(pickle_path, pickle_name)
+    if os.path.exists(file_name):
+        return True
+    else:
+        return False
+
 
 class BasePreprocess(object):
 
     def __init__(self, data, pickle_path):
         super(BasePreprocess, self).__init__()
-        self.data = data
+        # self.data = data
         self.pickle_path = pickle_path
         if not self.pickle_path.endswith('/'):
             self.pickle_path = self.pickle_path + '/'
@@ -27,7 +54,7 @@ class BasePreprocess(object):
 
 class POSPreprocess(BasePreprocess):
     """
-        This class are used to preprocess the pos datasets.
+        This class are used to preprocess the POS Tag datasets.
 
     """
 
@@ -44,48 +71,33 @@ class POSPreprocess(BasePreprocess):
         :param pickle_path: str, the directory to the pickle files. Default: "./"
         :param train_dev_split: float in [0, 1]. The ratio of dev data split from training data. Default: 0.
 
-        To do:
-        1. simplify __init__
         """
         super(POSPreprocess, self).__init__(data, pickle_path)
 
         self.pickle_path = pickle_path
 
-        if self.pickle_exist("word2id.pkl"):
-            # load word2index because the construction of the following objects needs it
-            with open(os.path.join(self.pickle_path, "word2id.pkl"), "rb") as f:
-                self.word2index = _pickle.load(f)
+        if pickle_exist(pickle_path, "word2id.pkl") and pickle_exist(pickle_path, "class2id.pkl"):
+            self.word2index = load_pickle(self.pickle_path, "word2id.pkl")
+            self.label2index = load_pickle(self.pickle_path, "class2id.pkl")
         else:
             self.word2index, self.label2index = self.build_dict(data)
-            with open(os.path.join(self.pickle_path, "word2id.pkl"), "wb") as f:
-                _pickle.dump(self.word2index, f)
+            save_pickle(self.word2index, self.pickle_path, "word2id.pkl")
+            save_pickle(self.label2index, self.pickle_path, "class2id.pkl")
 
-        if self.pickle_exist("class2id.pkl"):
-            with open(os.path.join(self.pickle_path, "class2id.pkl"), "rb") as f:
-                self.label2index = _pickle.load(f)
-        else:
-            with open(os.path.join(self.pickle_path, "class2id.pkl"), "wb") as f:
-                _pickle.dump(self.label2index, f)
-            #something will be wrong if word2id.pkl is found but class2id.pkl is not found
-
-        if not self.pickle_exist("id2word.pkl"):
+        if not pickle_exist(pickle_path, "id2word.pkl"):
             index2word = self.build_reverse_dict(self.word2index)
-            with open(os.path.join(self.pickle_path, "id2word.pkl"), "wb") as f:
-                _pickle.dump(index2word, f)
+            save_pickle(index2word, self.pickle_path, "id2word.pkl")
 
-        if not self.pickle_exist("id2class.pkl"):
+        if not pickle_exist(pickle_path, "id2class.pkl"):
             index2label = self.build_reverse_dict(self.label2index)
-            with open(os.path.join(self.pickle_path, "word2id.pkl"), "wb") as f:
-                _pickle.dump(index2label, f)
+            save_pickle(index2label, self.pickle_path, "id2class.pkl")
 
-        if not self.pickle_exist("data_train.pkl"):
+        if not pickle_exist(pickle_path, "data_train.pkl"):
             data_train = self.to_index(data)
-            if train_dev_split > 0 and not self.pickle_exist("data_dev.pkl"):
+            if train_dev_split > 0 and not pickle_exist(pickle_path, "data_dev.pkl"):
                 data_dev = data_train[: int(len(data_train) * train_dev_split)]
-                with open(os.path.join(self.pickle_path, "data_dev.pkl"), "wb") as f:
-                    _pickle.dump(data_dev, f)
-            with open(os.path.join(self.pickle_path, "data_train.pkl"), "wb") as f:
-                _pickle.dump(data_train, f)
+                save_pickle(data_dev, self.pickle_path, "data_dev.pkl")
+            save_pickle(data_train, self.pickle_path, "data_train.pkl")
 
     def build_dict(self, data):
         """
@@ -99,8 +111,9 @@ class POSPreprocess(BasePreprocess):
         :return word2index: dict of {str, int}
                 label2index: dict of {str, int}
         """
-        label2index = {}
-        word2index = DEFAULT_WORD_TO_INDEX
+        # In seq labeling, both word seq and label seq need to be padded to the same length in a mini-batch.
+        label2index = DEFAULT_WORD_TO_INDEX.copy()
+        word2index = DEFAULT_WORD_TO_INDEX.copy()
         for example in data:
             for word, label in zip(example[0], example[1]):
                 if word not in word2index:
@@ -108,19 +121,6 @@ class POSPreprocess(BasePreprocess):
                 if label not in label2index:
                     label2index[label] = len(label2index)
         return word2index, label2index
-
-    def pickle_exist(self, pickle_name):
-        """
-        :param pickle_name: the filename of target pickle file
-        :return: True if file exists else False
-        """
-        if not os.path.exists(self.pickle_path):
-            os.makedirs(self.pickle_path)
-        file_name = os.path.join(self.pickle_path, pickle_name)
-        if os.path.exists(file_name):
-            return True
-        else:
-            return False
 
     def build_reverse_dict(self, word_dict):
         id2word = {word_dict[w]: w for w in word_dict}
@@ -344,3 +344,20 @@ class ClassPreprocess(BasePreprocess):
 class LMPreprocess(BasePreprocess):
     def __init__(self, data, pickle_path):
         super(LMPreprocess, self).__init__(data, pickle_path)
+
+
+def infer_preprocess(pickle_path, data):
+    """
+        Preprocess over inference data.
+        Transform three-level list of strings into that of index.
+        [
+            [word_11, word_12, ...],
+            [word_21, word_22, ...],
+            ...
+        ]
+    """
+    word2index = load_pickle(pickle_path, "word2id.pkl")
+    data_index = []
+    for example in data:
+        data_index.append([word2index.get(w, DEFAULT_UNKNOWN_LABEL) for w in example])
+    return data_index
