@@ -15,7 +15,7 @@ from fastNLP.core.inference import Inference
 data_name = "pku_training.utf8"
 cws_data_path = "/home/zyfeng/data/pku_training.utf8"
 pickle_path = "./save/"
-data_infer_path = "data_for_tests/people_infer.txt"
+data_infer_path = "/home/zyfeng/data/pku_test.utf8"
 
 
 def infer():
@@ -59,7 +59,7 @@ def train():
     train_data = loader.load_pku()
 
     # Preprocessor
-    p = POSPreprocess(train_data, pickle_path)
+    p = POSPreprocess(train_data, pickle_path, train_dev_split=0.3)
     train_args["vocab_size"] = p.vocab_size
     train_args["num_classes"] = p.num_classes
 

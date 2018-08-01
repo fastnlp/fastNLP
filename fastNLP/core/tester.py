@@ -64,7 +64,7 @@ class BaseTester(Action):
         :return save_dev_data: list. Each entry is a sample, which is also a list of features and label(s).
         """
         if self.save_dev_data is None:
-            data_dev = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
+            data_dev = _pickle.load(open(data_path + "/data_dev.pkl", "rb"))
             self.save_dev_data = data_dev
         return self.save_dev_data
 

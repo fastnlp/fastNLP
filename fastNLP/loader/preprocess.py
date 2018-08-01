@@ -95,8 +95,11 @@ class POSPreprocess(BasePreprocess):
         if not pickle_exist(pickle_path, "data_train.pkl"):
             data_train = self.to_index(data)
             if train_dev_split > 0 and not pickle_exist(pickle_path, "data_dev.pkl"):
-                data_dev = data_train[: int(len(data_train) * train_dev_split)]
+                split = int(len(data_train) * train_dev_split)
+                data_dev = data_train[: split]
+                data_train = data_train[split:]
                 save_pickle(data_dev, self.pickle_path, "data_dev.pkl")
+                print("{} of the training data is split for validation. ".format(train_dev_split))
             save_pickle(data_train, self.pickle_path, "data_train.pkl")
 
     def build_dict(self, data):
