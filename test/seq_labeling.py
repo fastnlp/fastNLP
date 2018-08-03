@@ -2,6 +2,7 @@ import sys
 
 sys.path.append("..")
 
+from fastNLP.core.action import SeqLabelAction
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.core.trainer import POSTrainer
 from fastNLP.loader.dataset_loader import POSDatasetLoader, BaseLoader
@@ -57,7 +58,7 @@ def infer():
     print("Inference finished!")
 
 
-def train_test():
+def train_and_test():
     # Config Loader
     train_args = ConfigSection()
     ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS": train_args})
@@ -67,12 +68,14 @@ def train_test():
     train_data = pos_loader.load_lines()
 
     # Preprocessor
-    p = POSPreprocess(train_data, pickle_path)
+    p = POSPreprocess(train_data, pickle_path, train_dev_split=0.5)
     train_args["vocab_size"] = p.vocab_size
     train_args["num_classes"] = p.num_classes
 
+    action = SeqLabelAction(train_args)
+
     # Trainer
-    trainer = POSTrainer(train_args)
+    trainer = POSTrainer(train_args, action)
 
     # Model
     model = SeqLabeling(train_args)
@@ -100,7 +103,7 @@ def train_test():
     ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
 
     # Tester
-    tester = POSTester(test_args)
+    tester = POSTester(test_args, action)
 
     # Start testing
     tester.test(model)
@@ -111,5 +114,5 @@ def train_test():
 
 
 if __name__ == "__main__":
-    train_test()
-    # infer()
+    train_and_test()
+

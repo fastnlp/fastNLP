@@ -11,11 +11,12 @@ from fastNLP.core.action import RandomSampler, Batchifier
 class BaseTester(Action):
     """docstring for Tester"""
 
-    def __init__(self, test_args):
+    def __init__(self, test_args, action):
         """
         :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
         """
         super(BaseTester, self).__init__()
+        self.action = action
         self.validate_in_training = test_args["validate_in_training"]
         self.save_dev_data = None
         self.save_output = test_args["save_output"]
@@ -38,18 +39,21 @@ class BaseTester(Action):
             self.model = network
 
         # turn on the testing mode; clean up the history
-        self.mode(network, test=True)
+        self.action.mode(network, test=True)
+        self.eval_history.clear()
+        self.batch_output.clear()
 
         dev_data = self.prepare_input(self.pickle_path)
 
-        self.iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=True))
+        iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=True))
 
         num_iter = len(dev_data) // self.batch_size
 
         for step in range(num_iter):
-            batch_x, batch_y = self.make_batch(dev_data)
+            batch_x, batch_y = self.action.make_batch(iterator, dev_data)
 
-            prediction = self.data_forward(network, batch_x)
+            prediction = self.action.data_forward(network, batch_x)
+
             eval_results = self.evaluate(prediction, batch_y)
 
             if self.save_output:
@@ -64,52 +68,9 @@ class BaseTester(Action):
         :return save_dev_data: list. Each entry is a sample, which is also a list of features and label(s).
         """
         if self.save_dev_data is None:
-            data_dev = _pickle.load(open(data_path + "/data_dev.pkl", "rb"))
+            data_dev = _pickle.load(open(data_path + "data_dev.pkl", "rb"))
             self.save_dev_data = data_dev
         return self.save_dev_data
-
-    def make_batch(self, data, output_length=True):
-        """
-        1. Perform batching from data and produce a batch of training data.
-        2. Add padding.
-        :param data: list. Each entry is a sample, which is also a list of features and label(s).
-            E.g.
-                [
-                    [[word_11, word_12, word_13], [label_11. label_12]],  # sample 1
-                    [[word_21, word_22, word_23], [label_21. label_22]],  # sample 2
-                    ...
-                ]
-        :return batch_x: list. Each entry is a list of features of a sample. [batch_size, max_len]
-                 batch_y: list. Each entry is a list of labels of a sample.  [batch_size, num_labels]
-        """
-        indices = next(self.iterator)
-        batch = [data[idx] for idx in indices]
-        batch_x = [sample[0] for sample in batch]
-        batch_y = [sample[1] for sample in batch]
-        batch_x_pad = self.pad(batch_x)
-        batch_y_pad = self.pad(batch_y)
-        if output_length:
-            seq_len = [len(x) for x in batch_x]
-            return (batch_x_pad, seq_len), batch_y_pad
-        else:
-            return batch_x_pad, batch_y_pad
-
-    @staticmethod
-    def pad(batch, fill=0):
-        """
-        Pad a batch of samples to maximum length.
-        :param batch: list of list
-        :param fill: word index to pad, default 0.
-        :return: a padded batch
-        """
-        max_length = max([len(x) for x in batch])
-        for idx, sample in enumerate(batch):
-            if len(sample) < max_length:
-                batch[idx] = sample + ([fill] * (max_length - len(sample)))
-        return batch
-
-    def data_forward(self, network, data):
-        raise NotImplementedError
 
     def evaluate(self, predict, truth):
         raise NotImplementedError
@@ -117,14 +78,6 @@ class BaseTester(Action):
     @property
     def metrics(self):
         raise NotImplementedError
-
-    def mode(self, model, test=True):
-        """TODO: combine this function with Trainer ?? """
-        if test:
-            model.eval()
-        else:
-            model.train()
-        self.eval_history.clear()
 
     def show_matrices(self):
         """
@@ -139,43 +92,21 @@ class POSTester(BaseTester):
     Tester for sequence labeling.
     """
 
-    def __init__(self, test_args):
+    def __init__(self, test_args, action):
         """
         :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
         """
-        super(POSTester, self).__init__(test_args)
+        super(POSTester, self).__init__(test_args, action)
         self.max_len = None
         self.mask = None
         self.batch_result = None
-
-    def data_forward(self, network, inputs):
-        """TODO: combine with Trainer
-
-        :param network: the PyTorch model
-        :param x: list of list, [batch_size, max_len]
-        :return y: [batch_size, num_classes]
-        """
-        # unpack the returned value from make_batch
-        if isinstance(inputs, tuple):
-            x = inputs[0]
-            self.seq_len = inputs[1]
-        else:
-            x = inputs
-        x = torch.Tensor(x).long()
-        if torch.cuda.is_available() and self.use_cuda:
-            x = x.cuda()
-        self.batch_size = x.size(0)
-        self.max_len = x.size(1)
-
-        y = network(x)
-        return y
 
     def evaluate(self, predict, truth):
         truth = torch.Tensor(truth)
         if torch.cuda.is_available() and self.use_cuda:
             truth = truth.cuda()
-        loss = self.model.loss(predict, truth, self.seq_len) / self.batch_size
-        prediction = self.model.prediction(predict, self.seq_len)
+        loss = self.model.loss(predict, truth, self.action.seq_len) / self.batch_size
+        prediction = self.model.prediction(predict, self.action.seq_len)
         results = torch.Tensor(prediction).view(-1,)
         if torch.cuda.is_available() and self.use_cuda:
             results = results.cuda()

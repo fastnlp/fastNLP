@@ -1,15 +1,128 @@
+"""
+    This file defines Action(s) and sample methods.
+
+"""
 from collections import Counter
 
+import torch
 import numpy as np
+import _pickle
 
 
 class Action(object):
     """
-        base class for Trainer and Tester
+        Operations shared by Trainer, Tester, and Inference.
+        This is designed for reducing replicate codes.
+            - prepare_input: data preparation before a forward pass.
+            - make_batch: produce a min-batch of data. @staticmethod
+            - pad: padding method used in sequence modeling. @staticmethod
+            - mode: change network mode for either train or test. (for PyTorch) @staticmethod
+            - data_forward: a forward pass of the network.
+        The base Action shall define operations shared by as much task-specific Actions as possible.
     """
 
     def __init__(self):
         super(Action, self).__init__()
+
+    @staticmethod
+    def make_batch(iterator, data, output_length=True):
+        """
+        1. Perform batching from data and produce a batch of training data.
+        2. Add padding.
+        :param iterator: an iterator, (object that implements __next__ method) which returns the next sample.
+        :param data: list. Each entry is a sample, which is also a list of features and label(s).
+            E.g.
+                [
+                    [[word_11, word_12, word_13], [label_11. label_12]],  # sample 1
+                    [[word_21, word_22, word_23], [label_21. label_22]],  # sample 2
+                    ...
+                ]
+        :param output_length: whether to output the original length of the sequence before padding.
+        :return (batch_x, seq_len): tuple of two elements, if output_length is true.
+                     batch_x: list. Each entry is a list of features of a sample. [batch_size, max_len]
+                     seq_len: list. The length of the pre-padded sequence, if output_length is True.
+                 batch_y: list. Each entry is a list of labels of a sample.  [batch_size, num_labels]
+
+                 return batch_x and batch_y, if output_length is False
+        """
+        indices = next(iterator)
+        batch = [data[idx] for idx in indices]
+        batch_x = [sample[0] for sample in batch]
+        batch_y = [sample[1] for sample in batch]
+        batch_x_pad = Action.pad(batch_x)
+        batch_y_pad = Action.pad(batch_y)
+        if output_length:
+            seq_len = [len(x) for x in batch_x]
+            return (batch_x_pad, seq_len), batch_y_pad
+        else:
+            return batch_x_pad, batch_y_pad
+
+    @staticmethod
+    def pad(batch, fill=0):
+        """
+        Pad a batch of samples to maximum length of this batch.
+        :param batch: list of list
+        :param fill: word index to pad, default 0.
+        :return: a padded batch
+        """
+        max_length = max([len(x) for x in batch])
+        for idx, sample in enumerate(batch):
+            if len(sample) < max_length:
+                batch[idx] = sample + ([fill] * (max_length - len(sample)))
+        return batch
+
+    @staticmethod
+    def mode(model, test=False):
+        """
+        Train mode or Test mode. This is for PyTorch currently.
+        :param model:
+        :param test:
+        """
+        if test:
+            model.eval()
+        else:
+            model.train()
+
+    def data_forward(self, network, x):
+        """
+        Forward pass of the data.
+        :param network: a model
+        :param x: input feature matrix and label vector
+        :return: output by the models
+
+        For PyTorch, just do "network(*x)"
+        """
+        raise NotImplementedError
+
+
+class SeqLabelAction(Action):
+    def __init__(self, action_args):
+        """
+        Define task-specific member variables.
+        :param action_args:
+        """
+        super(SeqLabelAction, self).__init__()
+        self.max_len = None
+        self.mask = None
+        self.best_accuracy = 0.0
+        self.use_cuda = action_args["use_cuda"]
+        self.seq_len = None
+        self.batch_size = None
+
+    def data_forward(self, network, inputs):
+        # unpack the returned value from make_batch
+        if isinstance(inputs, tuple):
+            x = inputs[0]
+            self.seq_len = inputs[1]
+        else:
+            x = inputs
+        x = torch.Tensor(x).long()
+        if torch.cuda.is_available() and self.use_cuda:
+            x = x.cuda()
+        self.batch_size = x.size(0)
+        self.max_len = x.size(1)
+        y = network(x)
+        return y
 
 
 def k_means_1d(x, k, max_iter=100):
