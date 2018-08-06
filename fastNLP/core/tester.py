@@ -6,17 +6,18 @@ import torch
 
 from fastNLP.core.action import Action
 from fastNLP.core.action import RandomSampler, Batchifier
+from fastNLP.modules import utils
 
 
 class BaseTester(Action):
     """docstring for Tester"""
 
-    def __init__(self, test_args, action):
+    def __init__(self, test_args, action=None):
         """
         :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
         """
         super(BaseTester, self).__init__()
-        self.action = action
+        self.action = action if action is not None else Action()
         self.validate_in_training = test_args["validate_in_training"]
         self.save_dev_data = None
         self.save_output = test_args["save_output"]
@@ -52,7 +53,7 @@ class BaseTester(Action):
         for step in range(num_iter):
             batch_x, batch_y = self.action.make_batch(iterator, dev_data)
 
-            prediction = self.action.data_forward(network, batch_x)
+            prediction = self.data_forward(network, batch_x)
 
             eval_results = self.evaluate(prediction, batch_y)
 
@@ -71,6 +72,9 @@ class BaseTester(Action):
             data_dev = _pickle.load(open(data_path + "data_dev.pkl", "rb"))
             self.save_dev_data = data_dev
         return self.save_dev_data
+
+    def data_forward(self, network, x):
+        raise NotImplementedError
 
     def evaluate(self, predict, truth):
         raise NotImplementedError
@@ -92,7 +96,7 @@ class POSTester(BaseTester):
     Tester for sequence labeling.
     """
 
-    def __init__(self, test_args, action):
+    def __init__(self, test_args, action=None):
         """
         :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
         """
@@ -101,17 +105,37 @@ class POSTester(BaseTester):
         self.mask = None
         self.batch_result = None
 
+    def data_forward(self, network, inputs):
+        if not isinstance(inputs, tuple):
+            raise RuntimeError("[fastnlp] output_length must be true for sequence modeling.")
+        # unpack the returned value from make_batch
+        x, seq_len = inputs[0], inputs[1]
+        x = torch.Tensor(x).long()
+        batch_size, max_len = x.size(0), x.size(1)
+        mask = utils.seq_mask(seq_len, max_len)
+        mask = mask.byte().view(batch_size, max_len)
+
+        if torch.cuda.is_available() and self.use_cuda:
+            x = x.cuda()
+            mask = mask.cuda()
+        self.mask = mask
+
+        y = network(x)
+        return y
+
     def evaluate(self, predict, truth):
         truth = torch.Tensor(truth)
         if torch.cuda.is_available() and self.use_cuda:
             truth = truth.cuda()
-        loss = self.model.loss(predict, truth, self.action.seq_len) / self.batch_size
-        prediction = self.model.prediction(predict, self.action.seq_len)
+        batch_size, max_len = predict.size(0), predict.size(1)
+        loss = self.model.loss(predict, truth, self.mask) / batch_size
+
+        prediction = self.model.prediction(predict, self.mask)
         results = torch.Tensor(prediction).view(-1,)
-        if torch.cuda.is_available() and self.use_cuda:
-            results = results.cuda()
-        accuracy = float(torch.sum(results == truth.view((-1,)))) / results.shape[0]
-        return [loss.data, accuracy]
+        # make sure "results" is in the same device as "truth"
+        results = results.to(truth)
+        accuracy = torch.sum(results == truth.view((-1,))) / results.shape[0]
+        return [loss.data, accuracy.data]
 
     def metrics(self):
         batch_loss = np.mean([x[0] for x in self.eval_history])

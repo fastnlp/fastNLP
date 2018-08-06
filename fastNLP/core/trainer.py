@@ -8,8 +8,9 @@ import torch
 import torch.nn as nn
 
 from fastNLP.core.action import Action
-from fastNLP.core.action import RandomSampler, Batchifier, BucketSampler
+from fastNLP.core.action import RandomSampler, Batchifier
 from fastNLP.core.tester import POSTester
+from fastNLP.modules import utils
 from fastNLP.saver.model_saver import ModelSaver
 
 
@@ -23,10 +24,10 @@ class BaseTrainer(Action):
         - get_loss
     """
 
-    def __init__(self, train_args, action):
+    def __init__(self, train_args, action=None):
         """
         :param train_args: dict of (key, value), or dict-like object. key is str.
-        :param action: an Action object that wrap most operations shared by Trainer, Tester, and Inference.
+        :param action: (optional) an Action object that wrap most operations shared by Trainer, Tester, and Inference.
 
         The base trainer requires the following keys:
         - epochs: int, the number of epochs in training
@@ -35,7 +36,7 @@ class BaseTrainer(Action):
         - pickle_path: str, the path to pickle files for pre-processing
         """
         super(BaseTrainer, self).__init__()
-        self.action = action
+        self.action = action if action is not None else Action()
         self.n_epochs = train_args["epochs"]
         self.batch_size = train_args["batch_size"]
         self.pickle_path = train_args["pickle_path"]
@@ -94,7 +95,7 @@ class BaseTrainer(Action):
             for step in range(iterations):
                 batch_x, batch_y = self.action.make_batch(iterator, data_train)
 
-                prediction = self.action.data_forward(network, batch_x)
+                prediction = self.data_forward(network, batch_x)
 
                 loss = self.get_loss(prediction, batch_y)
                 self.grad_backward(loss)
@@ -135,6 +136,9 @@ class BaseTrainer(Action):
 
         For PyTorch, just call optimizer to update.
         """
+        raise NotImplementedError
+
+    def data_forward(self, network, x):
         raise NotImplementedError
 
     def grad_backward(self, loss):
@@ -223,7 +227,8 @@ class POSTrainer(BaseTrainer):
     Trainer for Sequence Modeling
 
     """
-    def __init__(self, train_args, action):
+
+    def __init__(self, train_args, action=None):
         super(POSTrainer, self).__init__(train_args, action)
         self.vocab_size = train_args["vocab_size"]
         self.num_classes = train_args["num_classes"]
@@ -241,6 +246,24 @@ class POSTrainer(BaseTrainer):
     def update(self):
         self.optimizer.step()
 
+    def data_forward(self, network, inputs):
+        if not isinstance(inputs, tuple):
+            raise RuntimeError("[fastnlp] output_length must be true for sequence modeling.")
+        # unpack the returned value from make_batch
+        x, seq_len = inputs[0], inputs[1]
+        batch_size, max_len = x.size(0), x.size(1)
+        mask = utils.seq_mask(seq_len, max_len)
+        mask = mask.byte().view(batch_size, max_len)
+
+        x = torch.Tensor(x).long()
+        if torch.cuda.is_available() and self.use_cuda:
+            x = x.cuda()
+            mask = mask.cuda()
+        self.mask = mask
+
+        y = network(x)
+        return y
+
     def get_loss(self, predict, truth):
         """
         Compute loss given prediction and ground truth.
@@ -251,13 +274,10 @@ class POSTrainer(BaseTrainer):
         truth = torch.Tensor(truth)
         if torch.cuda.is_available() and self.use_cuda:
             truth = truth.cuda()
-        assert truth.shape == (self.batch_size, self.action.max_len)
-        if self.loss_func is None:
-            if hasattr(self.model, "loss"):
-                self.loss_func = self.model.loss
-            else:
-                self.define_loss()
-        loss = self.loss_func(predict, truth, self.action.seq_len)
+        batch_size, max_len = predict.size(0), predict.size(1)
+        assert truth.shape == (batch_size, max_len)
+
+        loss = self.model.loss(predict, truth, self.mask)
         return loss
 
     def best_eval_result(self, validator):

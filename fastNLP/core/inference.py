@@ -1,7 +1,9 @@
+import numpy as np
 import torch
 
 from fastNLP.core.action import Batchifier, SequentialSampler
 from fastNLP.loader.preprocess import load_pickle, DEFAULT_UNKNOWN_LABEL
+from fastNLP.modules import utils
 
 
 class Inference(object):
@@ -32,13 +34,14 @@ class Inference(object):
 
         # turn on the testing mode; clean up the history
         self.mode(network, test=True)
+        self.batch_output.clear()
 
-        self.iterator = iter(Batchifier(SequentialSampler(data), self.batch_size, drop_last=False))
+        iterator = iter(Batchifier(SequentialSampler(data), self.batch_size, drop_last=False))
 
         num_iter = len(data) // self.batch_size
 
         for step in range(num_iter):
-            batch_x = self.make_batch(data)
+            batch_x = self.make_batch(iterator, data)
 
             prediction = self.data_forward(network, batch_x)
 
@@ -54,26 +57,18 @@ class Inference(object):
         self.batch_output.clear()
 
     def data_forward(self, network, x):
-        """
-        This is only for sequence labeling with CRF decoder. TODO: more general ?
-        :param network:
-        :param x:
-        :return:
-        """
-        seq_len = [len(seq) for seq in x]
-        x = torch.Tensor(x).long()
-        y = network(x)
-        prediction = network.prediction(y, seq_len)
-        # To do: hide framework
-        results = torch.Tensor(prediction).view(-1, )
-        return list(results.data)
+        raise NotImplementedError
 
-    def make_batch(self, data):
-        indices = next(self.iterator)
+    @staticmethod
+    def make_batch(iterator, data, output_length=True):
+        indices = next(iterator)
         batch_x = [data[idx] for idx in indices]
-        if self.batch_size > 1:
-            batch_x = self.pad(batch_x)
-        return batch_x
+        batch_x_pad = Inference.pad(batch_x)
+        if output_length:
+            seq_len = [len(x) for x in batch_x]
+            return [batch_x_pad, seq_len]
+        else:
+            return batch_x_pad
 
     @staticmethod
     def pad(batch, fill=0):
@@ -86,7 +81,7 @@ class Inference(object):
         max_length = max([len(x) for x in batch])
         for idx, sample in enumerate(batch):
             if len(sample) < max_length:
-                batch[idx] = sample + [fill * (max_length - len(sample))]
+                batch[idx] = sample + ([fill] * (max_length - len(sample)))
         return batch
 
     def prepare_input(self, data):
@@ -109,10 +104,39 @@ class Inference(object):
     def prepare_output(self, batch_outputs):
         """
         Transform list of batch outputs into strings.
-        :param batch_outputs: list of list, of shape [num_batch, tag_seq_length]. Element type is Tensor.
+        :param batch_outputs: list of 2-D Tensor, of shape [num_batch, batch-size, tag_seq_length].
         :return:
         """
         results = []
         for batch in batch_outputs:
-            results.append([self.index2label[int(x.data)] for x in batch])
+            for example in np.array(batch):
+                results.append([self.index2label[int(x)] for x in example])
         return results
+
+
+class SeqLabelInfer(Inference):
+    """
+    Inference on sequence labeling models.
+    """
+
+    def __init__(self, pickle_path):
+        super(SeqLabelInfer, self).__init__(pickle_path)
+
+    def data_forward(self, network, inputs):
+        """
+        This is only for sequence labeling with CRF decoder.
+        :param network:
+        :param inputs:
+        :return: Tensor
+        """
+        if not isinstance(inputs[1], list) and isinstance(inputs[0], list):
+            raise RuntimeError("[fastnlp] output_length must be true for sequence modeling.")
+        # unpack the returned value from make_batch
+        x, seq_len = inputs[0], inputs[1]
+        x = torch.Tensor(x).long()
+        batch_size, max_len = x.size(0), x.size(1)
+        mask = utils.seq_mask(seq_len, max_len)
+        mask = mask.byte().view(batch_size, max_len)
+        y = network(x)
+        prediction = network.prediction(y, mask)
+        return torch.Tensor(prediction)

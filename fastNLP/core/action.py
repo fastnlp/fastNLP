@@ -4,20 +4,16 @@
 """
 from collections import Counter
 
-import torch
 import numpy as np
-import _pickle
 
 
 class Action(object):
     """
         Operations shared by Trainer, Tester, and Inference.
         This is designed for reducing replicate codes.
-            - prepare_input: data preparation before a forward pass.
             - make_batch: produce a min-batch of data. @staticmethod
             - pad: padding method used in sequence modeling. @staticmethod
             - mode: change network mode for either train or test. (for PyTorch) @staticmethod
-            - data_forward: a forward pass of the network.
         The base Action shall define operations shared by as much task-specific Actions as possible.
     """
 
@@ -82,47 +78,6 @@ class Action(object):
             model.eval()
         else:
             model.train()
-
-    def data_forward(self, network, x):
-        """
-        Forward pass of the data.
-        :param network: a model
-        :param x: input feature matrix and label vector
-        :return: output by the models
-
-        For PyTorch, just do "network(*x)"
-        """
-        raise NotImplementedError
-
-
-class SeqLabelAction(Action):
-    def __init__(self, action_args):
-        """
-        Define task-specific member variables.
-        :param action_args:
-        """
-        super(SeqLabelAction, self).__init__()
-        self.max_len = None
-        self.mask = None
-        self.best_accuracy = 0.0
-        self.use_cuda = action_args["use_cuda"]
-        self.seq_len = None
-        self.batch_size = None
-
-    def data_forward(self, network, inputs):
-        # unpack the returned value from make_batch
-        if isinstance(inputs, tuple):
-            x = inputs[0]
-            self.seq_len = inputs[1]
-        else:
-            x = inputs
-        x = torch.Tensor(x).long()
-        if torch.cuda.is_available() and self.use_cuda:
-            x = x.cuda()
-        self.batch_size = x.size(0)
-        self.max_len = x.size(1)
-        y = network(x)
-        return y
 
 
 def k_means_1d(x, k, max_iter=100):
