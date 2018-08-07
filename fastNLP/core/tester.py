@@ -48,10 +48,7 @@ class BaseTester(Action):
 
         iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=True))
 
-        num_iter = len(dev_data) // self.batch_size
-
-        for step in range(num_iter):
-            batch_x, batch_y = self.action.make_batch(iterator, dev_data)
+        for batch_x, batch_y in self.action.make_batch(iterator, dev_data):
 
             prediction = self.data_forward(network, batch_x)
 

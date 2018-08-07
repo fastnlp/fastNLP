@@ -22,9 +22,7 @@ class Action(object):
 
     @staticmethod
     def make_batch(iterator, data, output_length=True):
-        """
-        1. Perform batching from data and produce a batch of training data.
-        2. Add padding.
+        """Batch and Pad data.
         :param iterator: an iterator, (object that implements __next__ method) which returns the next sample.
         :param data: list. Each entry is a sample, which is also a list of features and label(s).
             E.g.
@@ -41,17 +39,17 @@ class Action(object):
 
                  return batch_x and batch_y, if output_length is False
         """
-        indices = next(iterator)
-        batch = [data[idx] for idx in indices]
-        batch_x = [sample[0] for sample in batch]
-        batch_y = [sample[1] for sample in batch]
-        batch_x_pad = Action.pad(batch_x)
-        batch_y_pad = Action.pad(batch_y)
-        if output_length:
-            seq_len = [len(x) for x in batch_x]
-            return (batch_x_pad, seq_len), batch_y_pad
-        else:
-            return batch_x_pad, batch_y_pad
+        for indices in iterator:
+            batch = [data[idx] for idx in indices]
+            batch_x = [sample[0] for sample in batch]
+            batch_y = [sample[1] for sample in batch]
+            batch_x_pad = Action.pad(batch_x)
+            batch_y_pad = Action.pad(batch_y)
+            if output_length:
+                seq_len = [len(x) for x in batch_x]
+                yield (batch_x_pad, seq_len), batch_y_pad
+            else:
+                yield batch_x_pad, batch_y_pad
 
     @staticmethod
     def pad(batch, fill=0):
@@ -208,11 +206,10 @@ class Batchifier(object):
 
     def __iter__(self):
         batch = []
-        while True:
-            for idx in self.sampler:
-                batch.append(idx)
-                if len(batch) == self.batch_size:
-                    yield batch
-                    batch = []
-            if 0 < len(batch) < self.batch_size and self.drop_last is False:
+        for idx in self.sampler:
+            batch.append(idx)
+            if len(batch) == self.batch_size:
                 yield batch
+                batch = []
+        if 0 < len(batch) < self.batch_size and self.drop_last is False:
+            yield batch

@@ -72,28 +72,32 @@ class BaseTrainer(Action):
         else:
             self.model = network
 
-        data_train = self.prepare_input(self.pickle_path)
+        data_train, data_dev, data_test, embedding = self.prepare_input(self.pickle_path)
 
         # define tester over dev data
-        # TODO: more flexible
-        default_valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
-                      "save_loss": True, "batch_size": self.batch_size, "pickle_path": self.pickle_path,
-                      "use_cuda": self.use_cuda}
-        validator = POSTester(default_valid_args, self.action)
+        if self.validate:
+            default_valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
+                                  "save_loss": True, "batch_size": self.batch_size, "pickle_path": self.pickle_path,
+                                  "use_cuda": self.use_cuda}
+            validator = POSTester(default_valid_args, self.action)
+
+        self.define_optimizer()
 
         # main training epochs
-        iterations = len(data_train) // self.batch_size
-        self.define_optimizer()
+        start = time()
+        n_samples = len(data_train)
+        n_batches = n_samples // self.batch_size
+        n_print = 1
 
         for epoch in range(1, self.n_epochs + 1):
 
-            # turn on network training mode; define optimizer; prepare batch iterator
-            self.action.mode(self.model, test=False)
-            iterator = iter(Batchifier(RandomSampler(data_train), self.batch_size, drop_last=True))
+            # turn on network training mode; prepare batch iterator
+            self.action.mode(network, test=False)
+            iterator = iter(Batchifier(RandomSampler(data_train), self.batch_size, drop_last=False))
 
             # training iterations in one epoch
-            for step in range(iterations):
-                batch_x, batch_y = self.action.make_batch(iterator, data_train)
+            step = 0
+            for batch_x, batch_y in self.action.make_batch(iterator, data_train, output_length=True):
 
                 prediction = self.data_forward(network, batch_x)
 
@@ -101,8 +105,12 @@ class BaseTrainer(Action):
                 self.grad_backward(loss)
                 self.update()
 
-                if step % 10 == 0:
-                    print("[epoch {} step {}] train loss={:.2f}".format(epoch, step, loss.data))
+                if step % n_print == 0:
+                    end = time()
+                    diff = timedelta(seconds=round(end - start))
+                    print("[epoch: {:>3} step: {:>4}] train loss: {:>4.2} time: {}".format(
+                        epoch, step, loss.data, diff))
+                step += 1
 
             if self.validate:
                 validator.test(network)
@@ -114,15 +122,25 @@ class BaseTrainer(Action):
                 print("[epoch {}]".format(epoch), end=" ")
                 print(validator.show_matrices())
 
-        # finish training
-
     def prepare_input(self, pickle_path):
         """
-        This is reserved for task-specific processing.
-        :param data_path:
-        :return:
+        For task-specific processing.
+        :param pickle_path:
+        :return data_train, data_dev, data_test, embedding:
         """
-        return _pickle.load(open(pickle_path + "/data_train.pkl", "rb"))
+        names = [
+            "data_train.pkl", "data_dev.pkl",
+            "data_test.pkl", "embedding.pkl"]
+        files = []
+        for name in names:
+            file_path = os.path.join(pickle_path, name)
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as f:
+                    data = _pickle.load(f)
+            else:
+                data = []
+            files.append(data)
+        return tuple(files)
 
     def define_optimizer(self):
         """
@@ -222,14 +240,14 @@ class ToyTrainer(BaseTrainer):
         self.optimizer.step()
 
 
-class POSTrainer(BaseTrainer):
+class SeqLabelTrainer(BaseTrainer):
     """
     Trainer for Sequence Modeling
 
     """
 
     def __init__(self, train_args, action=None):
-        super(POSTrainer, self).__init__(train_args, action)
+        super(SeqLabelTrainer, self).__init__(train_args, action)
         self.vocab_size = train_args["vocab_size"]
         self.num_classes = train_args["num_classes"]
         self.max_len = None
@@ -251,11 +269,12 @@ class POSTrainer(BaseTrainer):
             raise RuntimeError("[fastnlp] output_length must be true for sequence modeling.")
         # unpack the returned value from make_batch
         x, seq_len = inputs[0], inputs[1]
+        x = torch.Tensor(x).long()
+
         batch_size, max_len = x.size(0), x.size(1)
         mask = utils.seq_mask(seq_len, max_len)
         mask = mask.byte().view(batch_size, max_len)
 
-        x = torch.Tensor(x).long()
         if torch.cuda.is_available() and self.use_cuda:
             x = x.cuda()
             mask = mask.cuda()
@@ -304,8 +323,8 @@ class LanguageModelTrainer(BaseTrainer):
 class ClassTrainer(BaseTrainer):
     """Trainer for classification."""
 
-    def __init__(self, train_args):
-        # super(ClassTrainer, self).__init__(train_args)
+    def __init__(self, train_args, action=None):
+        super(ClassTrainer, self).__init__(train_args, action)
         self.n_epochs = train_args["epochs"]
         self.batch_size = train_args["batch_size"]
         self.pickle_path = train_args["pickle_path"]
@@ -332,117 +351,8 @@ class ClassTrainer(BaseTrainer):
         self.loss_func = None
         self.optimizer = None
 
-    def train(self, network):
-        """General Training Steps
-        :param network: a model
-
-        The method is framework independent.
-        Work by calling the following methods:
-            - prepare_input
-            - mode
-            - define_optimizer
-            - data_forward
-            - get_loss
-            - grad_backward
-            - update
-        Subclasses must implement these methods with a specific framework.
-        """
-        # prepare model and data, transfer model to gpu if available
-        if torch.cuda.is_available() and self.use_cuda:
-            self.model = network.cuda()
-        else:
-            self.model = network
-        data_train, data_dev, data_test, embedding = self.prepare_input(
-            self.pickle_path)
-
-        # define tester over dev data
-        # valid_args = {
-        #     "save_output": True, "validate_in_training": True,
-        #     "save_dev_input": True, "save_loss": True,
-        #     "batch_size": self.batch_size, "pickle_path": self.pickle_path}
-        # validator = POSTester(valid_args)
-
-        # urn on network training mode, define loss and optimizer
-        self.define_loss()
-        self.define_optimizer()
-        self.mode(test=False)
-
-        # main training epochs
-        start = time()
-        n_samples = len(data_train)
-        n_batches = n_samples // self.batch_size
-        n_print = n_batches // 10
-        for epoch in range(self.n_epochs):
-            # prepare batch iterator
-            self.iterator = iter(Batchifier(
-                RandomSampler(data_train), self.batch_size, drop_last=False))
-
-            # training iterations in one epoch
-            step = 0
-            for batch_x, batch_y in self.make_batch(data_train):
-                prediction = self.data_forward(network, batch_x)
-
-                loss = self.get_loss(prediction, batch_y)
-                self.grad_backward(loss)
-                self.update()
-
-                if step % n_print == 0:
-                    acc = self.get_acc(prediction, batch_y)
-                    end = time()
-                    diff = timedelta(seconds=round(end - start))
-                    print("epoch: {:>3} step: {:>4} loss: {:>4.2}"
-                          " train acc: {:>5.1%} time: {}".format(
-                              epoch, step, loss, acc, diff))
-
-                step += 1
-
-            # if self.validate:
-            #     if data_dev is None:
-            #         raise RuntimeError("No validation data provided.")
-            #     validator.test(network)
-            #     print("[epoch {}]".format(epoch), end=" ")
-            #     print(validator.show_matrices())
-
-        # finish training
-
-    def prepare_input(self, data_path):
-
-        names = [
-            "data_train.pkl", "data_dev.pkl",
-            "data_test.pkl", "embedding.pkl"]
-
-        files = []
-        for name in names:
-            file_path = os.path.join(data_path, name)
-            if os.path.exists(file_path):
-                with open(file_path, 'rb') as f:
-                    data = _pickle.load(f)
-            else:
-                data = []
-            files.append(data)
-
-        return tuple(files)
-
-    def mode(self, test=False):
-        """
-        Tell the network to be trained or not.
-        :param test: bool
-        """
-        if test:
-            self.model.eval()
-        else:
-            self.model.train()
-
     def define_loss(self):
-        """
-            Assign an instance of loss function to self.loss_func
-            E.g. self.loss_func = nn.CrossEntropyLoss()
-        """
-        if self.loss_func is None:
-            if hasattr(self.model, "loss"):
-                self.loss_func = self.model.loss
-            else:
-                self.loss_func = nn.CrossEntropyLoss()
+        self.loss_func = nn.CrossEntropyLoss()
 
     def define_optimizer(self):
         """
@@ -455,12 +365,11 @@ class ClassTrainer(BaseTrainer):
 
     def data_forward(self, network, x):
         """Forward through network."""
+        x = torch.Tensor(x).long()
+        if torch.cuda.is_available() and self.use_cuda:
+            x = x.cuda()
         logits = network(x)
         return logits
-
-    def get_loss(self, predict, truth):
-        """Calculate loss."""
-        return self.loss_func(predict, truth)
 
     def grad_backward(self, loss):
         """Compute gradient backward."""
@@ -471,21 +380,22 @@ class ClassTrainer(BaseTrainer):
         """Apply gradient."""
         self.optimizer.step()
 
+    """
     def make_batch(self, data):
-        """Batch and pad data."""
         for indices in self.iterator:
             batch = [data[idx] for idx in indices]
             batch_x = [sample[0] for sample in batch]
             batch_y = [sample[1] for sample in batch]
             batch_x = self.pad(batch_x)
 
-            batch_x = torch.tensor(batch_x, dtype=torch.long)
-            batch_y = torch.tensor(batch_y, dtype=torch.long)
+            batch_x = torch.Tensor(batch_x).long()
+            batch_y = torch.Tensor(batch_y).long()
             if torch.cuda.is_available() and self.use_cuda:
                 batch_x = batch_x.cuda()
                 batch_y = batch_y.cuda()
 
             yield batch_x, batch_y
+    """
 
     def get_acc(self, y_logit, y_true):
         """Compute accuracy."""

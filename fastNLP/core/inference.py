@@ -11,7 +11,7 @@ class Inference(object):
     This is an interface focusing on predicting output based on trained models.
     It does not care about evaluations of the model, which is different from Tester.
     This is a high-level model wrapper to be called by FastNLP.
-
+    This class does not share any operations with Trainer and Tester.
     """
 
     def __init__(self, pickle_path):

@@ -3,7 +3,7 @@ import sys
 sys.path.append("..")
 
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.core.trainer import POSTrainer
+from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.loader.dataset_loader import TokenizeDatasetLoader, BaseLoader
 from fastNLP.loader.preprocess import POSPreprocess, load_pickle
 from fastNLP.saver.model_saver import ModelSaver
@@ -64,7 +64,7 @@ def train():
     train_args["num_classes"] = p.num_classes
 
     # Trainer
-    trainer = POSTrainer(train_args)
+    trainer = SeqLabelTrainer(train_args)
 
     # Model
     model = SeqLabeling(train_args)
