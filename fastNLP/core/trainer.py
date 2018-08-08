@@ -9,12 +9,12 @@ import torch.nn as nn
 
 from fastNLP.core.action import Action
 from fastNLP.core.action import RandomSampler, Batchifier
-from fastNLP.core.tester import POSTester
+from fastNLP.core.tester import SeqLabelTester, ClassificationTester
 from fastNLP.modules import utils
 from fastNLP.saver.model_saver import ModelSaver
 
 
-class BaseTrainer(Action):
+class BaseTrainer(object):
     """Base trainer for all trainers.
         Trainer receives a model and data, and then performs training.
 
@@ -24,10 +24,9 @@ class BaseTrainer(Action):
         - get_loss
     """
 
-    def __init__(self, train_args, action=None):
+    def __init__(self, train_args):
         """
         :param train_args: dict of (key, value), or dict-like object. key is str.
-        :param action: (optional) an Action object that wrap most operations shared by Trainer, Tester, and Inference.
 
         The base trainer requires the following keys:
         - epochs: int, the number of epochs in training
@@ -36,7 +35,6 @@ class BaseTrainer(Action):
         - pickle_path: str, the path to pickle files for pre-processing
         """
         super(BaseTrainer, self).__init__()
-        self.action = action if action is not None else Action()
         self.n_epochs = train_args["epochs"]
         self.batch_size = train_args["batch_size"]
         self.pickle_path = train_args["pickle_path"]
@@ -79,7 +77,7 @@ class BaseTrainer(Action):
             default_valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
                                   "save_loss": True, "batch_size": self.batch_size, "pickle_path": self.pickle_path,
                                   "use_cuda": self.use_cuda}
-            validator = POSTester(default_valid_args, self.action)
+            validator = self._create_validator(default_valid_args)
 
         self.define_optimizer()
 
@@ -92,12 +90,12 @@ class BaseTrainer(Action):
         for epoch in range(1, self.n_epochs + 1):
 
             # turn on network training mode; prepare batch iterator
-            self.action.mode(network, test=False)
+            self.mode(network, test=False)
             iterator = iter(Batchifier(RandomSampler(data_train), self.batch_size, drop_last=False))
 
             # training iterations in one epoch
             step = 0
-            for batch_x, batch_y in self.action.make_batch(iterator, data_train, output_length=True):
+            for batch_x, batch_y in self.make_batch(iterator, data_train):
 
                 prediction = self.data_forward(network, batch_x)
 
@@ -141,6 +139,12 @@ class BaseTrainer(Action):
                 data = []
             files.append(data)
         return tuple(files)
+
+    def make_batch(self, iterator, data):
+        raise NotImplementedError
+
+    def mode(self, network, test):
+        Action.mode(network, test)
 
     def define_optimizer(self):
         """
@@ -203,6 +207,9 @@ class BaseTrainer(Action):
         """
         ModelSaver(self.model_saved_path + "model_best_dev.pkl").save_pytorch(network)
 
+    def _create_validator(self, valid_args):
+        raise NotImplementedError
+
 
 class ToyTrainer(BaseTrainer):
     """
@@ -216,12 +223,6 @@ class ToyTrainer(BaseTrainer):
         data_train = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
         data_dev = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
         return data_train, data_dev, 0, 1
-
-    def mode(self, test=False):
-        if test:
-            self.model.eval()
-        else:
-            self.model.train()
 
     def data_forward(self, network, x):
         return network(x)
@@ -246,8 +247,8 @@ class SeqLabelTrainer(BaseTrainer):
 
     """
 
-    def __init__(self, train_args, action=None):
-        super(SeqLabelTrainer, self).__init__(train_args, action)
+    def __init__(self, train_args):
+        super(SeqLabelTrainer, self).__init__(train_args)
         self.vocab_size = train_args["vocab_size"]
         self.num_classes = train_args["num_classes"]
         self.max_len = None
@@ -269,14 +270,12 @@ class SeqLabelTrainer(BaseTrainer):
             raise RuntimeError("[fastnlp] output_length must be true for sequence modeling.")
         # unpack the returned value from make_batch
         x, seq_len = inputs[0], inputs[1]
-        x = torch.Tensor(x).long()
 
         batch_size, max_len = x.size(0), x.size(1)
         mask = utils.seq_mask(seq_len, max_len)
         mask = mask.byte().view(batch_size, max_len)
 
         if torch.cuda.is_available() and self.use_cuda:
-            x = x.cuda()
             mask = mask.cuda()
         self.mask = mask
 
@@ -290,9 +289,6 @@ class SeqLabelTrainer(BaseTrainer):
         :param truth: ground truth label vector, [batch_size, max_len]
         :return: a scalar
         """
-        truth = torch.Tensor(truth)
-        if torch.cuda.is_available() and self.use_cuda:
-            truth = truth.cuda()
         batch_size, max_len = predict.size(0), predict.size(1)
         assert truth.shape == (batch_size, max_len)
 
@@ -307,32 +303,18 @@ class SeqLabelTrainer(BaseTrainer):
         else:
             return False
 
+    def make_batch(self, iterator, data):
+        return Action.make_batch(iterator, data, output_length=True, use_cuda=self.use_cuda)
 
-class LanguageModelTrainer(BaseTrainer):
-    """
-    Trainer for Language Model
-    """
-
-    def __init__(self, train_args):
-        super(LanguageModelTrainer, self).__init__(train_args)
-
-    def prepare_input(self, data_path):
-        pass
+    def _create_validator(self, valid_args):
+        return SeqLabelTester(valid_args)
 
 
-class ClassTrainer(BaseTrainer):
+class ClassificationTrainer(BaseTrainer):
     """Trainer for classification."""
 
-    def __init__(self, train_args, action=None):
-        super(ClassTrainer, self).__init__(train_args, action)
-        self.n_epochs = train_args["epochs"]
-        self.batch_size = train_args["batch_size"]
-        self.pickle_path = train_args["pickle_path"]
-
-        if "validate" in train_args:
-            self.validate = train_args["validate"]
-        else:
-            self.validate = False
+    def __init__(self, train_args):
+        super(ClassificationTrainer, self).__init__(train_args)
         if "learn_rate" in train_args:
             self.learn_rate = train_args["learn_rate"]
         else:
@@ -341,15 +323,11 @@ class ClassTrainer(BaseTrainer):
             self.momentum = train_args["momentum"]
         else:
             self.momentum = 0.9
-        if "use_cuda" in train_args:
-            self.use_cuda = train_args["use_cuda"]
-        else:
-            self.use_cuda = True
 
-        self.model = None
         self.iterator = None
         self.loss_func = None
         self.optimizer = None
+        self.best_accuracy = 0
 
     def define_loss(self):
         self.loss_func = nn.CrossEntropyLoss()
@@ -365,9 +343,6 @@ class ClassTrainer(BaseTrainer):
 
     def data_forward(self, network, x):
         """Forward through network."""
-        x = torch.Tensor(x).long()
-        if torch.cuda.is_available() and self.use_cuda:
-            x = x.cuda()
         logits = network(x)
         return logits
 
@@ -380,31 +355,21 @@ class ClassTrainer(BaseTrainer):
         """Apply gradient."""
         self.optimizer.step()
 
-    """
-    def make_batch(self, data):
-        for indices in self.iterator:
-            batch = [data[idx] for idx in indices]
-            batch_x = [sample[0] for sample in batch]
-            batch_y = [sample[1] for sample in batch]
-            batch_x = self.pad(batch_x)
-
-            batch_x = torch.Tensor(batch_x).long()
-            batch_y = torch.Tensor(batch_y).long()
-            if torch.cuda.is_available() and self.use_cuda:
-                batch_x = batch_x.cuda()
-                batch_y = batch_y.cuda()
-
-            yield batch_x, batch_y
-    """
+    def make_batch(self, iterator, data):
+        return Action.make_batch(iterator, data, output_length=False, use_cuda=self.use_cuda)
 
     def get_acc(self, y_logit, y_true):
         """Compute accuracy."""
         y_pred = torch.argmax(y_logit, dim=-1)
         return int(torch.sum(y_true == y_pred)) / len(y_true)
 
+    def best_eval_result(self, validator):
+        _, _, accuracy = validator.metrics()
+        if accuracy > self.best_accuracy:
+            self.best_accuracy = accuracy
+            return True
+        else:
+            return False
 
-if __name__ == "__name__":
-    train_args = {"epochs": 1, "validate": False, "batch_size": 3, "pickle_path": "./"}
-    trainer = BaseTrainer(train_args)
-    data_train = [[[1, 2, 3, 4], [0]] * 10] + [[[1, 3, 5, 2], [1]] * 10]
-    trainer.make_batch(data=data_train)
+    def _create_validator(self, valid_args):
+        return ClassificationTester(valid_args)

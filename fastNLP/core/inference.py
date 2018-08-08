@@ -2,8 +2,44 @@ import numpy as np
 import torch
 
 from fastNLP.core.action import Batchifier, SequentialSampler
+from fastNLP.core.action import convert_to_torch_tensor
 from fastNLP.loader.preprocess import load_pickle, DEFAULT_UNKNOWN_LABEL
 from fastNLP.modules import utils
+
+
+def make_batch(iterator, data, use_cuda, output_length=False, max_len=None, min_len=None):
+    for indices in iterator:
+        batch_x = [data[idx] for idx in indices]
+        batch_x = pad(batch_x)
+        # convert list to tensor
+        batch_x = convert_to_torch_tensor(batch_x, use_cuda)
+
+        # trim data to max_len
+        if max_len is not None and batch_x.size(1) > max_len:
+            batch_x = batch_x[:, :max_len]
+        if min_len is not None and batch_x.size(1) < min_len:
+            pad_tensor = torch.zeros(batch_x.size(0), min_len - batch_x.size(1)).to(batch_x)
+            batch_x = torch.cat((batch_x, pad_tensor), 1)
+
+        if output_length:
+            seq_len = [len(x) for x in batch_x]
+            yield tuple([batch_x, seq_len])
+        else:
+            yield batch_x
+
+
+def pad(batch, fill=0):
+    """
+    Pad a batch of samples to maximum length.
+    :param batch: list of list
+    :param fill: word index to pad, default 0.
+    :return: a padded batch
+    """
+    max_length = max([len(x) for x in batch])
+    for idx, sample in enumerate(batch):
+        if len(sample) < max_length:
+            batch[idx] = sample + ([fill] * (max_length - len(sample)))
+    return batch
 
 
 class Inference(object):
@@ -12,6 +48,7 @@ class Inference(object):
     It does not care about evaluations of the model, which is different from Tester.
     This is a high-level model wrapper to be called by FastNLP.
     This class does not share any operations with Trainer and Tester.
+    Currently, Inference does not support GPU.
     """
 
     def __init__(self, pickle_path):
@@ -38,10 +75,7 @@ class Inference(object):
 
         iterator = iter(Batchifier(SequentialSampler(data), self.batch_size, drop_last=False))
 
-        num_iter = len(data) // self.batch_size
-
-        for step in range(num_iter):
-            batch_x = self.make_batch(iterator, data)
+        for batch_x in self.make_batch(iterator, data, use_cuda=False):
 
             prediction = self.data_forward(network, batch_x)
 
@@ -54,35 +88,12 @@ class Inference(object):
             network.eval()
         else:
             network.train()
-        self.batch_output.clear()
 
     def data_forward(self, network, x):
         raise NotImplementedError
 
-    @staticmethod
-    def make_batch(iterator, data, output_length=True):
-        indices = next(iterator)
-        batch_x = [data[idx] for idx in indices]
-        batch_x_pad = Inference.pad(batch_x)
-        if output_length:
-            seq_len = [len(x) for x in batch_x]
-            return [batch_x_pad, seq_len]
-        else:
-            return batch_x_pad
-
-    @staticmethod
-    def pad(batch, fill=0):
-        """
-        Pad a batch of samples to maximum length.
-        :param batch: list of list
-        :param fill: word index to pad, default 0.
-        :return: a padded batch
-        """
-        max_length = max([len(x) for x in batch])
-        for idx, sample in enumerate(batch):
-            if len(sample) < max_length:
-                batch[idx] = sample + ([fill] * (max_length - len(sample)))
-        return batch
+    def make_batch(self, iterator, data, use_cuda):
+        raise NotImplementedError
 
     def prepare_input(self, data):
         """
@@ -101,17 +112,8 @@ class Inference(object):
             data_index.append([self.word2index.get(w, default_unknown_index) for w in example])
         return data_index
 
-    def prepare_output(self, batch_outputs):
-        """
-        Transform list of batch outputs into strings.
-        :param batch_outputs: list of 2-D Tensor, of shape [num_batch, batch-size, tag_seq_length].
-        :return:
-        """
-        results = []
-        for batch in batch_outputs:
-            for example in np.array(batch):
-                results.append([self.index2label[int(x)] for x in example])
-        return results
+    def prepare_output(self, data):
+        raise NotImplementedError
 
 
 class SeqLabelInfer(Inference):
@@ -133,10 +135,53 @@ class SeqLabelInfer(Inference):
             raise RuntimeError("[fastnlp] output_length must be true for sequence modeling.")
         # unpack the returned value from make_batch
         x, seq_len = inputs[0], inputs[1]
-        x = torch.Tensor(x).long()
         batch_size, max_len = x.size(0), x.size(1)
         mask = utils.seq_mask(seq_len, max_len)
         mask = mask.byte().view(batch_size, max_len)
         y = network(x)
         prediction = network.prediction(y, mask)
-        return torch.Tensor(prediction)
+        return torch.Tensor(prediction, required_grad=False)
+
+    def make_batch(self, iterator, data, use_cuda):
+        return make_batch(iterator, data, use_cuda, output_length=True)
+
+    def prepare_output(self, batch_outputs):
+        """
+        Transform list of batch outputs into strings.
+        :param batch_outputs: list of 2-D Tensor, of shape [num_batch, batch-size, tag_seq_length].
+        :return:
+        """
+        results = []
+        for batch in batch_outputs:
+            for example in np.array(batch):
+                results.append([self.index2label[int(x)] for x in example])
+        return results
+
+
+class ClassificationInfer(Inference):
+    """
+    Inference on Classification models.
+    """
+
+    def __init__(self, pickle_path):
+        super(ClassificationInfer, self).__init__(pickle_path)
+
+    def data_forward(self, network, x):
+        """Forward through network."""
+        logits = network(x)
+        return logits
+
+    def make_batch(self, iterator, data, use_cuda):
+        return make_batch(iterator, data, use_cuda, output_length=False, min_len=5)
+
+    def prepare_output(self, batch_outputs):
+        """
+        Transform list of batch outputs into strings.
+        :param batch_outputs: list of 2-D Tensor, of shape [num_batch, batch-size, num_classes].
+        :return:
+        """
+        results = []
+        for batch_out in batch_outputs:
+            idx = np.argmax(batch_out.detach().numpy())
+            results.append(self.index2label[idx])
+        return results

@@ -1,13 +1,14 @@
 # python: 3.6
 # encoding: utf-8
 
+import torch
 import torch.nn as nn
+
 # import torch.nn.functional as F
-from fastNLP.models.base_model import BaseModel
 from fastNLP.modules.encoder.conv_maxpool import ConvMaxpool
 
 
-class CNNText(BaseModel):
+class CNNText(torch.nn.Module):
     """
     Text classification model by character CNN, the implementation of paper
     'Yoon Kim. 2014. Convolution Neural Networks for Sentence

@@ -1,5 +1,4 @@
 import _pickle
-import os
 
 import numpy as np
 import torch
@@ -9,15 +8,14 @@ from fastNLP.core.action import RandomSampler, Batchifier
 from fastNLP.modules import utils
 
 
-class BaseTester(Action):
+class BaseTester(object):
     """docstring for Tester"""
 
-    def __init__(self, test_args, action=None):
+    def __init__(self, test_args):
         """
         :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
         """
         super(BaseTester, self).__init__()
-        self.action = action if action is not None else Action()
         self.validate_in_training = test_args["validate_in_training"]
         self.save_dev_data = None
         self.save_output = test_args["save_output"]
@@ -39,16 +37,23 @@ class BaseTester(Action):
         else:
             self.model = network
 
+        # no backward setting for model
+        for param in network.parameters():
+            param.requires_grad = False
+
         # turn on the testing mode; clean up the history
-        self.action.mode(network, test=True)
+        self.mode(network, test=True)
         self.eval_history.clear()
         self.batch_output.clear()
 
         dev_data = self.prepare_input(self.pickle_path)
 
         iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=True))
+        n_batches = len(dev_data) // self.batch_size
+        n_print = 1
+        step = 0
 
-        for batch_x, batch_y in self.action.make_batch(iterator, dev_data):
+        for batch_x, batch_y in self.make_batch(iterator, dev_data):
 
             prediction = self.data_forward(network, batch_x)
 
@@ -58,6 +63,7 @@ class BaseTester(Action):
                 self.batch_output.append(prediction)
             if self.save_loss:
                 self.eval_history.append(eval_results)
+            step += 1
 
     def prepare_input(self, data_path):
         """
@@ -69,6 +75,9 @@ class BaseTester(Action):
             data_dev = _pickle.load(open(data_path + "data_dev.pkl", "rb"))
             self.save_dev_data = data_dev
         return self.save_dev_data
+
+    def mode(self, model, test):
+        Action.mode(model, test)
 
     def data_forward(self, network, x):
         raise NotImplementedError
@@ -87,17 +96,20 @@ class BaseTester(Action):
         """
         raise NotImplementedError
 
+    def make_batch(self, iterator, data):
+        raise NotImplementedError
 
-class POSTester(BaseTester):
+
+class SeqLabelTester(BaseTester):
     """
     Tester for sequence labeling.
     """
 
-    def __init__(self, test_args, action=None):
+    def __init__(self, test_args):
         """
         :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
         """
-        super(POSTester, self).__init__(test_args, action)
+        super(SeqLabelTester, self).__init__(test_args)
         self.max_len = None
         self.mask = None
         self.batch_result = None
@@ -107,13 +119,10 @@ class POSTester(BaseTester):
             raise RuntimeError("[fastnlp] output_length must be true for sequence modeling.")
         # unpack the returned value from make_batch
         x, seq_len = inputs[0], inputs[1]
-        x = torch.Tensor(x).long()
         batch_size, max_len = x.size(0), x.size(1)
         mask = utils.seq_mask(seq_len, max_len)
         mask = mask.byte().view(batch_size, max_len)
-
         if torch.cuda.is_available() and self.use_cuda:
-            x = x.cuda()
             mask = mask.cuda()
         self.mask = mask
 
@@ -121,9 +130,6 @@ class POSTester(BaseTester):
         return y
 
     def evaluate(self, predict, truth):
-        truth = torch.Tensor(truth)
-        if torch.cuda.is_available() and self.use_cuda:
-            truth = truth.cuda()
         batch_size, max_len = predict.size(0), predict.size(1)
         loss = self.model.loss(predict, truth, self.mask) / batch_size
 
@@ -147,8 +153,11 @@ class POSTester(BaseTester):
         loss, accuracy = self.metrics()
         return "dev loss={:.2f}, accuracy={:.2f}".format(loss, accuracy)
 
+    def make_batch(self, iterator, data):
+        return Action.make_batch(iterator, data, use_cuda=self.use_cuda, output_length=True)
 
-class ClassTester(BaseTester):
+
+class ClassificationTester(BaseTester):
     """Tester for classification."""
 
     def __init__(self, test_args):
@@ -156,7 +165,7 @@ class ClassTester(BaseTester):
         :param test_args: a dict-like object that has __getitem__ method, \
             can be accessed by "test_args["key_str"]"
         """
-        # super(ClassTester, self).__init__()
+        super(ClassificationTester, self).__init__(test_args)
         self.pickle_path = test_args["pickle_path"]
 
         self.save_dev_data = None
@@ -164,111 +173,8 @@ class ClassTester(BaseTester):
         self.mean_loss = None
         self.iterator = None
 
-        if "test_name" in test_args:
-            self.test_name = test_args["test_name"]
-        else:
-            self.test_name = "data_test.pkl"
-
-        if "validate_in_training" in test_args:
-            self.validate_in_training = test_args["validate_in_training"]
-        else:
-            self.validate_in_training = False
-
-        if "save_output" in test_args:
-            self.save_output = test_args["save_output"]
-        else:
-            self.save_output = False
-
-        if "save_loss" in test_args:
-            self.save_loss = test_args["save_loss"]
-        else:
-            self.save_loss = True
-
-        if "batch_size" in test_args:
-            self.batch_size = test_args["batch_size"]
-        else:
-            self.batch_size = 50
-        if "use_cuda" in test_args:
-            self.use_cuda = test_args["use_cuda"]
-        else:
-            self.use_cuda = True
-
-        if "max_len" in test_args:
-            self.max_len = test_args["max_len"]
-        else:
-            self.max_len = None
-
-        self.model = None
-        self.eval_history = []
-        self.batch_output = []
-
-    def test(self, network):
-        # prepare model
-        if torch.cuda.is_available() and self.use_cuda:
-            self.model = network.cuda()
-        else:
-            self.model = network
-
-        # no backward setting for model
-        for param in self.model.parameters():
-            param.requires_grad = False
-
-        # turn on the testing mode; clean up the history
-        self.mode(network, test=True)
-
-        # prepare test data
-        data_test = self.prepare_input(self.pickle_path, self.test_name)
-
-        # data generator
-        self.iterator = iter(Batchifier(
-            RandomSampler(data_test), self.batch_size, drop_last=False))
-
-        # test
-        n_batches = len(data_test) // self.batch_size
-        n_print = n_batches // 10
-        step = 0
-        for batch_x, batch_y in self.make_batch(data_test, max_len=self.max_len):
-            prediction = self.data_forward(network, batch_x)
-            eval_results = self.evaluate(prediction, batch_y)
-
-            if self.save_output:
-                self.batch_output.append(prediction)
-            if self.save_loss:
-                self.eval_history.append(eval_results)
-
-            if step % n_print == 0:
-                print("step: {:>5}".format(step))
-
-            step += 1
-
-    def prepare_input(self, data_dir, file_name):
-        """Prepare data."""
-        file_path = os.path.join(data_dir, file_name)
-        with open(file_path, 'rb') as f:
-            data = _pickle.load(f)
-        return data
-
-    def make_batch(self, data, max_len=None):
-        """Batch and pad data."""
-        for indices in self.iterator:
-            # generate batch and pad
-            batch = [data[idx] for idx in indices]
-            batch_x = [sample[0] for sample in batch]
-            batch_y = [sample[1] for sample in batch]
-            batch_x = self.pad(batch_x)
-
-            # convert to tensor
-            batch_x = torch.tensor(batch_x, dtype=torch.long)
-            batch_y = torch.tensor(batch_y, dtype=torch.long)
-            if torch.cuda.is_available() and self.use_cuda:
-                batch_x = batch_x.cuda()
-                batch_y = batch_y.cuda()
-
-            # trim data to max_len
-            if max_len is not None and batch_x.size(1) > max_len:
-                batch_x = batch_x[:, :max_len]
-
-            yield batch_x, batch_y
+    def make_batch(self, iterator, data, max_len=None):
+        return Action.make_batch(iterator, data, use_cuda=self.use_cuda, max_len=max_len)
 
     def data_forward(self, network, x):
         """Forward through network."""
@@ -289,10 +195,3 @@ class ClassTester(BaseTester):
         acc = float(torch.sum(y_pred == y_true)) / len(y_true)
         return y_true.cpu().numpy(), y_prob.cpu().numpy(), acc
 
-    def mode(self, model, test=True):
-        """TODO: combine this function with Trainer ?? """
-        if test:
-            model.eval()
-        else:
-            model.train()
-        self.eval_history.clear()

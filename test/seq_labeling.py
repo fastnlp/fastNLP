@@ -8,7 +8,7 @@ from fastNLP.loader.dataset_loader import POSDatasetLoader, BaseLoader
 from fastNLP.loader.preprocess import POSPreprocess, load_pickle
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
-from fastNLP.core.tester import POSTester
+from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import SeqLabeling
 from fastNLP.core.inference import SeqLabelInfer
 
@@ -101,7 +101,7 @@ def train_and_test():
     ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
 
     # Tester
-    tester = POSTester(test_args)
+    tester = SeqLabelTester(test_args)
 
     # Start testing
     tester.test(model)
@@ -112,5 +112,5 @@ def train_and_test():
 
 
 if __name__ == "__main__":
-    train_and_test()
+    # train_and_test()
     infer()
