@@ -1,7 +1,7 @@
 import torch
 
 from fastNLP.models.base_model import BaseModel
-from fastNLP.modules import decoder, encoder, utils
+from fastNLP.modules import decoder, encoder
 
 
 class SeqLabeling(BaseModel):
@@ -34,46 +34,25 @@ class SeqLabeling(BaseModel):
         # [batch_size, max_len, num_classes]
         return x
 
-    def loss(self, x, y, seq_length):
+    def loss(self, x, y, mask):
         """
         Negative log likelihood loss.
-        :param x: FloatTensor, [batch_size, max_len, tag_size]
-        :param y: LongTensor, [batch_size, max_len]
-        :param seq_length: list of int. [batch_size]
+        :param x: Tensor, [batch_size, max_len, tag_size]
+        :param y: Tensor, [batch_size, max_len]
+        :param mask: ByteTensor, [batch_size, ,max_len]
         :return loss: a scalar Tensor
 
         """
         x = x.float()
         y = y.long()
-
-        batch_size = x.size(0)
-        max_len = x.size(1)
-
-        mask = utils.seq_mask(seq_length, max_len)
-        mask = mask.byte().view(batch_size, max_len)
-
-        # TODO: remove
-        if torch.cuda.is_available():
-            mask = mask.cuda()
-        # mask = x.new(batch_size, max_len)
-
         total_loss = self.Crf(x, y, mask)
-
         return torch.mean(total_loss)
 
-    def prediction(self, x, seq_length):
+    def prediction(self, x, mask):
         """
         :param x: FloatTensor, [batch_size, max_len, tag_size]
-        :param seq_length: int
-        :return prediction: list of tuple of (decode path(list), best score)
+        :param mask: ByteTensor, [batch_size, max_len]
+        :return prediction: list of [decode path(list)]
         """
-        x = x.float()
-        max_len = x.size(1)
-
-        mask = utils.seq_mask(seq_length, max_len)
-        # hack: make sure mask has the same device as x
-        mask = mask.to(x).byte()
-
         tag_seq = self.Crf.viterbi_decode(x, mask)
-
         return tag_seq

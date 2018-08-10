@@ -132,6 +132,7 @@ class ConditionalRandomField(nn.Module):
         Given a feats matrix, return best decode path and best score.
         :param feats:
         :param masks:
+        :param get_score: bool, whether to output the decode score.
         :return:List[Tuple(List, float)],
         """
         batch_size, max_len, tag_size = feats.size()

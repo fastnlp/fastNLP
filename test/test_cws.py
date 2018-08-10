@@ -3,12 +3,12 @@ import sys
 sys.path.append("..")
 
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.core.trainer import POSTrainer
+from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.loader.dataset_loader import TokenizeDatasetLoader, BaseLoader
 from fastNLP.loader.preprocess import POSPreprocess, load_pickle
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
-from fastNLP.core.tester import POSTester
+from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import SeqLabeling
 from fastNLP.core.inference import Inference
 
@@ -73,7 +73,7 @@ def train_test():
     train_args["num_classes"] = p.num_classes
 
     # Trainer
-    trainer = POSTrainer(train_args)
+    trainer = SeqLabelTrainer(train_args)
 
     # Model
     model = SeqLabeling(train_args)
@@ -101,7 +101,7 @@ def train_test():
     ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
 
     # Tester
-    tester = POSTester(test_args)
+    tester = SeqLabelTester(test_args)
 
     # Start testing
     tester.test(model)
@@ -113,4 +113,4 @@ def train_test():
 
 if __name__ == "__main__":
     train_test()
-    #infer()
+    infer()

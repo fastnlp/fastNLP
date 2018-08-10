@@ -1,4 +1,4 @@
-from fastNLP.core.tester import POSTester
+from fastNLP.core.tester import SeqLabelTester
 from fastNLP.loader.config_loader import ConfigSection, ConfigLoader
 from fastNLP.loader.dataset_loader import TokenizeDatasetLoader
 from fastNLP.loader.preprocess import POSPreprocess
@@ -26,7 +26,7 @@ def foo():
     valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
                   "save_loss": True, "batch_size": 8, "pickle_path": "./data_for_tests/",
                   "use_cuda": True}
-    validator = POSTester(valid_args)
+    validator = SeqLabelTester(valid_args)
 
     print("start validation.")
     validator.test(model)

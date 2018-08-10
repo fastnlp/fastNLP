@@ -3,14 +3,14 @@ import sys
 sys.path.append("..")
 
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.core.trainer import POSTrainer
+from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.loader.dataset_loader import POSDatasetLoader, BaseLoader
 from fastNLP.loader.preprocess import POSPreprocess, load_pickle
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
-from fastNLP.core.tester import POSTester
+from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import SeqLabeling
-from fastNLP.core.inference import Inference
+from fastNLP.core.inference import SeqLabelInfer
 
 data_name = "people.txt"
 data_path = "data_for_tests/people.txt"
@@ -50,14 +50,15 @@ def infer():
     """
 
     # Inference interface
-    infer = Inference(pickle_path)
+    infer = SeqLabelInfer(pickle_path)
     results = infer.predict(model, infer_data)
 
-    print(results)
+    for res in results:
+        print(res)
     print("Inference finished!")
 
 
-def train_test():
+def train_and_test():
     # Config Loader
     train_args = ConfigSection()
     ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS": train_args})
@@ -67,12 +68,12 @@ def train_test():
     train_data = pos_loader.load_lines()
 
     # Preprocessor
-    p = POSPreprocess(train_data, pickle_path)
+    p = POSPreprocess(train_data, pickle_path, train_dev_split=0.5)
     train_args["vocab_size"] = p.vocab_size
     train_args["num_classes"] = p.num_classes
 
     # Trainer
-    trainer = POSTrainer(train_args)
+    trainer = SeqLabelTrainer(train_args)
 
     # Model
     model = SeqLabeling(train_args)
@@ -100,7 +101,7 @@ def train_test():
     ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
 
     # Tester
-    tester = POSTester(test_args)
+    tester = SeqLabelTester(test_args)
 
     # Start testing
     tester.test(model)
@@ -111,5 +112,5 @@ def train_test():
 
 
 if __name__ == "__main__":
-    train_test()
-    # infer()
+    # train_and_test()
+    infer()
