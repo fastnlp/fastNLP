@@ -5,6 +5,7 @@ import os
 
 from fastNLP.core.inference import ClassificationInfer
 from fastNLP.core.trainer import ClassificationTrainer
+from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.loader.dataset_loader import ClassDatasetLoader
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.loader.preprocess import ClassPreprocess
@@ -29,9 +30,13 @@ def infer():
     print("vocabulary size:", vocab_size)
     print("number of classes:", n_classes)
 
+    model_args = ConfigSection()
+    ConfigLoader.load_config("data_for_tests/config", {"text_class_model": model_args})
+
     # construct model
     print("Building model...")
-    cnn = CNNText(class_num=n_classes, embed_num=vocab_size)
+    cnn = CNNText(model_args)
+
     # Dump trained parameters into the model
     ModelLoader.load_pytorch(cnn, "./data_for_tests/saved_model.pkl")
     print("model loaded!")
@@ -42,6 +47,9 @@ def infer():
 
 
 def train():
+    train_args, model_args = ConfigSection(), ConfigSection()
+    ConfigLoader.load_config("data_for_tests/config", {"text_class": train_args, "text_class_model": model_args})
+
     # load dataset
     print("Loading data...")
     ds_loader = ClassDatasetLoader("train", os.path.join(data_dir, train_file))
@@ -56,19 +64,11 @@ def train():
 
     # construct model
     print("Building model...")
-    cnn = CNNText(class_num=n_classes, embed_num=vocab_size)
+    cnn = CNNText(model_args)
 
     # train
     print("Training...")
-    train_args = {
-        "epochs": 1,
-        "batch_size": 10,
-        "pickle_path": data_dir,
-        "validate": False,
-        "save_best_dev": False,
-        "model_saved_path": "./data_for_tests/",
-        "use_cuda": True
-    }
+
     trainer = ClassificationTrainer(train_args)
     trainer.train(cnn)
 

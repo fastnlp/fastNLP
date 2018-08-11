@@ -149,7 +149,7 @@ class SeqLabelInfer(Inference):
         """
         Transform list of batch outputs into strings.
         :param batch_outputs: list of 2-D Tensor, of shape [num_batch, batch-size, tag_seq_length].
-        :return:
+        :return results: 2-D list of strings
         """
         results = []
         for batch in batch_outputs:
@@ -178,7 +178,7 @@ class ClassificationInfer(Inference):
         """
         Transform list of batch outputs into strings.
         :param batch_outputs: list of 2-D Tensor, of shape [num_batch, batch-size, num_classes].
-        :return:
+        :return results: list of strings
         """
         results = []
         for batch_out in batch_outputs:
