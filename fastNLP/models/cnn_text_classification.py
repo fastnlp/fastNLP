@@ -15,11 +15,16 @@ class CNNText(torch.nn.Module):
     Classification.'
     """
 
-    def __init__(self, class_num=9,
-                 kernel_nums=[100, 100, 100], kernel_sizes=[3, 4, 5],
-                 embed_num=1000, embed_dim=300, pretrained_embed=None,
-                 drop_prob=0.5):
+    def __init__(self, args):
         super(CNNText, self).__init__()
+
+        class_num = args["num_classes"]
+        kernel_nums = [100, 100, 100]
+        kernel_sizes = [3, 4, 5]
+        embed_num = args["vocab_size"]
+        embed_dim = 300
+        pretrained_embed = None
+        drop_prob = 0.5
 
         # no support for pre-trained embedding currently
         self.embed = nn.Embedding(embed_num, embed_dim, padding_idx=0)

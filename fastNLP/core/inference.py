@@ -63,7 +63,7 @@ class Inference(object):
         """
         Perform inference.
         :param network:
-        :param data: multi-level lists of strings
+        :param data: two-level lists of strings
         :return result: the model outputs
         """
         # transform strings into indices
@@ -97,7 +97,7 @@ class Inference(object):
 
     def prepare_input(self, data):
         """
-        Transform three-level list of strings into that of index.
+        Transform two-level list of strings into that of index.
         :param data:
         [
             [word_11, word_12, ...],
@@ -140,7 +140,7 @@ class SeqLabelInfer(Inference):
         mask = mask.byte().view(batch_size, max_len)
         y = network(x)
         prediction = network.prediction(y, mask)
-        return torch.Tensor(prediction, required_grad=False)
+        return torch.Tensor(prediction)
 
     def make_batch(self, iterator, data, use_cuda):
         return make_batch(iterator, data, use_cuda, output_length=True)
@@ -149,7 +149,7 @@ class SeqLabelInfer(Inference):
         """
         Transform list of batch outputs into strings.
         :param batch_outputs: list of 2-D Tensor, of shape [num_batch, batch-size, tag_seq_length].
-        :return:
+        :return results: 2-D list of strings
         """
         results = []
         for batch in batch_outputs:
@@ -178,7 +178,7 @@ class ClassificationInfer(Inference):
         """
         Transform list of batch outputs into strings.
         :param batch_outputs: list of 2-D Tensor, of shape [num_batch, batch-size, num_classes].
-        :return:
+        :return results: list of strings
         """
         results = []
         for batch_out in batch_outputs:

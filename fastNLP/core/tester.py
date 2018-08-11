@@ -37,10 +37,6 @@ class BaseTester(object):
         else:
             self.model = network
 
-        # no backward setting for model
-        for param in network.parameters():
-            param.requires_grad = False
-
         # turn on the testing mode; clean up the history
         self.mode(network, test=True)
         self.eval_history.clear()
@@ -112,6 +108,7 @@ class SeqLabelTester(BaseTester):
         super(SeqLabelTester, self).__init__(test_args)
         self.max_len = None
         self.mask = None
+        self.seq_len = None
         self.batch_result = None
 
     def data_forward(self, network, inputs):
@@ -125,7 +122,7 @@ class SeqLabelTester(BaseTester):
         if torch.cuda.is_available() and self.use_cuda:
             mask = mask.cuda()
         self.mask = mask
-
+        self.seq_len = seq_len
         y = network(x)
         return y
 

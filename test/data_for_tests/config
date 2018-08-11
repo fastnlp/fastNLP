@@ -89,5 +89,20 @@ rnn_hidden_units = 100
 rnn_layers = 1
 rnn_bi_direction = true
 word_emb_dim = 100
-vocab_size = 52
-num_classes = 22
+vocab_size = 53
+num_classes = 27
+
+[text_class]
+epochs = 1
+batch_size = 10
+pickle_path = "./data_for_tests/"
+validate = false
+save_best_dev = false
+model_saved_path = "./data_for_tests/"
+use_cuda = true
+learn_rate = 1e-3
+momentum = 0.9
+
+[text_class_model]
+vocab_size = 867
+num_classes = 18

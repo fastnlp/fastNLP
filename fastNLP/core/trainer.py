@@ -315,14 +315,8 @@ class ClassificationTrainer(BaseTrainer):
 
     def __init__(self, train_args):
         super(ClassificationTrainer, self).__init__(train_args)
-        if "learn_rate" in train_args:
-            self.learn_rate = train_args["learn_rate"]
-        else:
-            self.learn_rate = 1e-3
-        if "momentum" in train_args:
-            self.momentum = train_args["momentum"]
-        else:
-            self.momentum = 0.9
+        self.learn_rate = train_args["learn_rate"]
+        self.momentum = train_args["momentum"]
 
         self.iterator = None
         self.loss_func = None
