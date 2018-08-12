@@ -1,7 +1,7 @@
 import sys, os
 sys.path = [os.path.join(os.path.dirname(__file__), '..')] + sys.path
 
-from fastNLP.action import metrics
+from fastNLP.core import metrics
 from sklearn import metrics as skmetrics
 import unittest
 import numpy as np

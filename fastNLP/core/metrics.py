@@ -9,7 +9,6 @@ To do:
 """
 import numpy as np
 import torch
-import sklearn.metrics as M
 import warnings
 
 def _conver_numpy(x):
