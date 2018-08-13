@@ -76,8 +76,8 @@ class Inference(object):
         iterator = iter(Batchifier(SequentialSampler(data), self.batch_size, drop_last=False))
 
         for batch_x in self.make_batch(iterator, data, use_cuda=False):
-
-            prediction = self.data_forward(network, batch_x)
+            with torch.no_grad():
+                prediction = self.data_forward(network, batch_x)
 
             self.batch_output.append(prediction)
 

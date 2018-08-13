@@ -50,10 +50,9 @@ class BaseTester(object):
         step = 0
 
         for batch_x, batch_y in self.make_batch(iterator, dev_data):
-
-            prediction = self.data_forward(network, batch_x)
-
-            eval_results = self.evaluate(prediction, batch_y)
+            with torch.no_grad():
+                prediction = self.data_forward(network, batch_x)
+                eval_results = self.evaluate(prediction, batch_y)
 
             if self.save_output:
                 self.batch_output.append(prediction)
