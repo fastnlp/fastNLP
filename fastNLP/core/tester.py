@@ -9,7 +9,7 @@ from fastNLP.modules import utils
 
 
 class BaseTester(object):
-    """docstring for Tester"""
+    """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
 
     def __init__(self, test_args):
         """
@@ -62,8 +62,8 @@ class BaseTester(object):
             step += 1
 
     def prepare_input(self, data_path):
-        """
-        Save the dev data once it is loaded. Can return directly next time.
+        """Save the dev data once it is loaded. Can return directly next time.
+
         :param data_path: str, the path to the pickle data for dev
         :return save_dev_data: list. Each entry is a sample, which is also a list of features and label(s).
         """
@@ -73,21 +73,29 @@ class BaseTester(object):
         return self.save_dev_data
 
     def mode(self, model, test):
+        """Train mode or Test mode. This is for PyTorch currently.
+
+        :param model: a PyTorch model
+        :param test: bool, whether in test mode.
+        """
         Action.mode(model, test)
 
     def data_forward(self, network, x):
+        """A forward pass of the model. """
         raise NotImplementedError
 
     def evaluate(self, predict, truth):
+        """Compute evaluation metrics for the model. """
         raise NotImplementedError
 
     @property
     def metrics(self):
+        """Return a list of metrics. """
         raise NotImplementedError
 
     def show_matrices(self):
-        """
-        This is called by Trainer to print evaluation on dev set.
+        """This is called by Trainer to print evaluation results on dev set during training.
+
         :return print_str: str
         """
         raise NotImplementedError
@@ -112,8 +120,17 @@ class SeqLabelTester(BaseTester):
         self.batch_result = None
 
     def data_forward(self, network, inputs):
+        """This is only for sequence labeling with CRF decoder.
+
+        :param network: a PyTorch model
+        :param inputs: tuple of (x, seq_len)
+                        x: Tensor of shape [batch_size, max_len], where max_len is the maximum length of the mini-batch
+                            after padding.
+                        seq_len: list of int, the lengths of sequences before padding.
+        :return y: Tensor of shape [batch_size, max_len]
+        """
         if not isinstance(inputs, tuple):
-            raise RuntimeError("[fastnlp] output_length must be true for sequence modeling.")
+            raise RuntimeError("output_length must be true for sequence modeling.")
         # unpack the returned value from make_batch
         x, seq_len = inputs[0], inputs[1]
         batch_size, max_len = x.size(0), x.size(1)
@@ -127,6 +144,12 @@ class SeqLabelTester(BaseTester):
         return y
 
     def evaluate(self, predict, truth):
+        """Compute metrics (or loss).
+
+        :param predict: Tensor, [batch_size, max_len, tag_size]
+        :param truth: Tensor, [batch_size, max_len]
+        :return:
+        """
         batch_size, max_len = predict.size(0), predict.size(1)
         loss = self.model.loss(predict, truth, self.mask) / batch_size
 
@@ -151,7 +174,7 @@ class SeqLabelTester(BaseTester):
         return "dev loss={:.2f}, accuracy={:.2f}".format(loss, accuracy)
 
     def make_batch(self, iterator, data):
-        return Action.make_batch(iterator, data, use_cuda=self.use_cuda, output_length=True)
+        return Action.make_batch(iterator, use_cuda=self.use_cuda, output_length=True)
 
 
 class ClassificationTester(BaseTester):
@@ -171,7 +194,7 @@ class ClassificationTester(BaseTester):
         self.iterator = None
 
     def make_batch(self, iterator, data, max_len=None):
-        return Action.make_batch(iterator, data, use_cuda=self.use_cuda, max_len=max_len)
+        return Action.make_batch(iterator, use_cuda=self.use_cuda, max_len=max_len)
 
     def data_forward(self, network, x):
         """Forward through network."""

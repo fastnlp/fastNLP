@@ -7,9 +7,17 @@ from fastNLP.loader.preprocess import load_pickle, DEFAULT_UNKNOWN_LABEL
 from fastNLP.modules import utils
 
 
-def make_batch(iterator, data, use_cuda, output_length=False, max_len=None, min_len=None):
-    for indices in iterator:
-        batch_x = [data[idx] for idx in indices]
+def make_batch(iterator, use_cuda, output_length=False, max_len=None, min_len=None):
+    """Batch and Pad data, only for Inference.
+
+    :param iterator: An iterable object that returns a list of indices representing a mini-batch of samples.
+    :param use_cuda: bool, whether to use GPU
+    :param output_length: bool, whether to output the original length of the sequence before padding. (default: False)
+    :param max_len: int, maximum sequence length. Longer sequences will be clipped. (default: None)
+    :param min_len: int, minimum sequence length. Shorter sequences will be padded. (default: None)
+    :return:
+    """
+    for batch_x in iterator:
         batch_x = pad(batch_x)
         # convert list to tensor
         batch_x = convert_to_torch_tensor(batch_x, use_cuda)
@@ -29,11 +37,11 @@ def make_batch(iterator, data, use_cuda, output_length=False, max_len=None, min_
 
 
 def pad(batch, fill=0):
-    """
-    Pad a batch of samples to maximum length.
+    """ Pad a mini-batch of sequence samples to maximum length of this batch.
+
     :param batch: list of list
     :param fill: word index to pad, default 0.
-    :return: a padded batch
+    :return batch: a padded mini-batch
     """
     max_length = max([len(x) for x in batch])
     for idx, sample in enumerate(batch):
@@ -42,13 +50,13 @@ def pad(batch, fill=0):
     return batch
 
 
-class Inference(object):
-    """
-    This is an interface focusing on predicting output based on trained models.
+class Predictor(object):
+    """An interface for predicting outputs based on trained models.
+
     It does not care about evaluations of the model, which is different from Tester.
     This is a high-level model wrapper to be called by FastNLP.
     This class does not share any operations with Trainer and Tester.
-    Currently, Inference does not support GPU.
+    Currently, Predictor does not support GPU.
     """
 
     def __init__(self, pickle_path):
@@ -60,11 +68,11 @@ class Inference(object):
         self.word2index = load_pickle(self.pickle_path, "word2id.pkl")
 
     def predict(self, network, data):
-        """
-        Perform inference.
-        :param network:
-        :param data: two-level lists of strings
-        :return result: the model outputs
+        """Perform inference using the trained model.
+
+        :param network: a PyTorch model
+        :param data: list of list of strings
+        :return: list of list of strings, [num_examples, tag_seq_length]
         """
         # transform strings into indices
         data = self.prepare_input(data)
@@ -73,9 +81,9 @@ class Inference(object):
         self.mode(network, test=True)
         self.batch_output.clear()
 
-        iterator = iter(Batchifier(SequentialSampler(data), self.batch_size, drop_last=False))
+        data_iterator = iter(Batchifier(SequentialSampler(data), self.batch_size, drop_last=False))
 
-        for batch_x in self.make_batch(iterator, data, use_cuda=False):
+        for batch_x in self.make_batch(data_iterator, use_cuda=False):
 
             prediction = self.data_forward(network, batch_x)
 
@@ -90,20 +98,22 @@ class Inference(object):
             network.train()
 
     def data_forward(self, network, x):
+        """Forward through network."""
         raise NotImplementedError
 
-    def make_batch(self, iterator, data, use_cuda):
+    def make_batch(self, iterator, use_cuda):
         raise NotImplementedError
 
     def prepare_input(self, data):
-        """
-        Transform two-level list of strings into that of index.
+        """Transform two-level list of strings into that of index.
+
         :param data:
-        [
-            [word_11, word_12, ...],
-            [word_21, word_22, ...],
-            ...
-        ]
+                [
+                    [word_11, word_12, ...],
+                    [word_21, word_22, ...],
+                    ...
+                ]
+        :return data_index: list of list of int.
         """
         assert isinstance(data, list)
         data_index = []
@@ -113,10 +123,11 @@ class Inference(object):
         return data_index
 
     def prepare_output(self, data):
+        """Transform list of batch outputs into strings."""
         raise NotImplementedError
 
 
-class SeqLabelInfer(Inference):
+class SeqLabelInfer(Predictor):
     """
     Inference on sequence labeling models.
     """
@@ -127,12 +138,15 @@ class SeqLabelInfer(Inference):
     def data_forward(self, network, inputs):
         """
         This is only for sequence labeling with CRF decoder.
-        :param network:
-        :param inputs:
-        :return: Tensor
+        :param network: a PyTorch model
+        :param inputs: tuple of (x, seq_len)
+                        x: Tensor of shape [batch_size, max_len], where max_len is the maximum length of the mini-batch
+                            after padding.
+                        seq_len: list of int, the lengths of sequences before padding.
+        :return prediction: Tensor of shape [batch_size, max_len]
         """
         if not isinstance(inputs[1], list) and isinstance(inputs[0], list):
-            raise RuntimeError("[fastnlp] output_length must be true for sequence modeling.")
+            raise RuntimeError("output_length must be true for sequence modeling.")
         # unpack the returned value from make_batch
         x, seq_len = inputs[0], inputs[1]
         batch_size, max_len = x.size(0), x.size(1)
@@ -142,14 +156,14 @@ class SeqLabelInfer(Inference):
         prediction = network.prediction(y, mask)
         return torch.Tensor(prediction)
 
-    def make_batch(self, iterator, data, use_cuda):
-        return make_batch(iterator, data, use_cuda, output_length=True)
+    def make_batch(self, iterator, use_cuda):
+        return make_batch(iterator, use_cuda, output_length=True)
 
     def prepare_output(self, batch_outputs):
-        """
-        Transform list of batch outputs into strings.
-        :param batch_outputs: list of 2-D Tensor, of shape [num_batch, batch-size, tag_seq_length].
-        :return results: 2-D list of strings
+        """Transform list of batch outputs into strings.
+
+        :param batch_outputs: list of 2-D Tensor, shape [num_batch, batch-size, tag_seq_length].
+        :return results: 2-D list of strings, shape [num_examples, tag_seq_length]
         """
         results = []
         for batch in batch_outputs:
@@ -158,7 +172,7 @@ class SeqLabelInfer(Inference):
         return results
 
 
-class ClassificationInfer(Inference):
+class ClassificationInfer(Predictor):
     """
     Inference on Classification models.
     """
@@ -171,8 +185,8 @@ class ClassificationInfer(Inference):
         logits = network(x)
         return logits
 
-    def make_batch(self, iterator, data, use_cuda):
-        return make_batch(iterator, data, use_cuda, output_length=False, min_len=5)
+    def make_batch(self, iterator, use_cuda):
+        return make_batch(iterator, use_cuda, output_length=False, min_len=5)
 
     def prepare_output(self, batch_outputs):
         """

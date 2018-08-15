@@ -2,8 +2,10 @@
 # encoding: utf-8
 
 import os
+import sys
 
-from fastNLP.core.inference import ClassificationInfer
+sys.path.append("..")
+from fastNLP.core.predictor import ClassificationInfer
 from fastNLP.core.trainer import ClassificationTrainer
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.loader.dataset_loader import ClassDatasetLoader

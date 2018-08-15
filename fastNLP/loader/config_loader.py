@@ -91,6 +91,9 @@ class ConfigSection(object):
                                      (key, str(type(getattr(self, key))), str(type(value))))
         setattr(self, key, value)
 
+    def __contains__(self, item):
+        return item in self.__dict__.keys()
+
 
 if __name__ == "__main__":
     config = ConfigLoader('configLoader', 'there is no data')

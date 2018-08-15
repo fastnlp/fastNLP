@@ -10,7 +10,7 @@ import torch
 
 class Action(object):
     """
-        Operations shared by Trainer, Tester, and Inference.
+        Operations shared by Trainer, Tester, or Inference.
         This is designed for reducing replicate codes.
             - make_batch: produce a min-batch of data. @staticmethod
             - pad: padding method used in sequence modeling. @staticmethod
@@ -22,28 +22,24 @@ class Action(object):
         super(Action, self).__init__()
 
     @staticmethod
-    def make_batch(iterator, data, use_cuda, output_length=True, max_len=None):
+    def make_batch(iterator, use_cuda, output_length=True, max_len=None):
         """Batch and Pad data.
         :param iterator: an iterator, (object that implements __next__ method) which returns the next sample.
-        :param data: list. Each entry is a sample, which is also a list of features and label(s).
-            E.g.
-                [
-                    [[word_11, word_12, word_13], [label_11. label_12]],  # sample 1
-                    [[word_21, word_22, word_23], [label_21. label_22]],  # sample 2
-                    ...
-                ]
-        :param use_cuda: bool
-        :param output_length: whether to output the original length of the sequence before padding.
-        :param max_len: int, maximum sequence length
-        :return (batch_x, seq_len): tuple of two elements, if output_length is true.
+        :param use_cuda: bool, whether to use GPU
+        :param output_length: bool, whether to output the original length of the sequence before padding. (default: True)
+        :param max_len: int, maximum sequence length. Longer sequences will be clipped. (default: None)
+        :return
+        if output_length is True:
+            (batch_x, seq_len): tuple of two elements
                      batch_x: list. Each entry is a list of features of a sample. [batch_size, max_len]
                      seq_len: list. The length of the pre-padded sequence, if output_length is True.
-                 batch_y: list. Each entry is a list of labels of a sample.  [batch_size, num_labels]
+            batch_y: list. Each entry is a list of labels of a sample.  [batch_size, num_labels]
 
-                 return batch_x and batch_y, if output_length is False
+        if output_length is False:
+            batch_x: list. Each entry is a list of features of a sample. [batch_size, max_len]
+            batch_y: list. Each entry is a list of labels of a sample.  [batch_size, num_labels]
         """
-        for indices in iterator:
-            batch = [data[idx] for idx in indices]
+        for batch in iterator:
             batch_x = [sample[0] for sample in batch]
             batch_y = [sample[1] for sample in batch]
 
@@ -68,11 +64,11 @@ class Action(object):
 
     @staticmethod
     def pad(batch, fill=0):
-        """
-        Pad a batch of samples to maximum length of this batch.
+        """ Pad a mini-batch of sequence samples to maximum length of this batch.
+
         :param batch: list of list
         :param fill: word index to pad, default 0.
-        :return: a padded batch
+        :return batch: a padded mini-batch
         """
         max_length = max([len(x) for x in batch])
         for idx, sample in enumerate(batch):
@@ -95,11 +91,10 @@ class Action(object):
 
 def convert_to_torch_tensor(data_list, use_cuda):
     """
-    convert lists into (cuda) Tensors
+    convert lists into (cuda) Tensors.
     :param data_list: 2-level lists
-    :param use_cuda: bool
-    :param reqired_grad: bool
-    :return: PyTorch Tensor of shape [batch_size, max_seq_len]
+    :param use_cuda: bool, whether to use GPU or not
+    :return data_list: PyTorch Tensor of shape [batch_size, max_seq_len]
     """
     data_list = torch.Tensor(data_list).long()
     if torch.cuda.is_available() and use_cuda:
@@ -171,6 +166,7 @@ class BaseSampler(object):
 
     def __init__(self, data_set):
         self.data_set_length = len(data_set)
+        self.data = data_set
 
     def __len__(self):
         return self.data_set_length
@@ -188,7 +184,7 @@ class SequentialSampler(BaseSampler):
         super(SequentialSampler, self).__init__(data_set)
 
     def __iter__(self):
-        return iter(range(self.data_set_length))
+        return iter(self.data)
 
 
 class RandomSampler(BaseSampler):
@@ -198,28 +194,10 @@ class RandomSampler(BaseSampler):
 
     def __init__(self, data_set):
         super(RandomSampler, self).__init__(data_set)
+        self.order = np.random.permutation(self.data_set_length)
 
     def __iter__(self):
-        return iter(np.random.permutation(self.data_set_length))
-
-
-class BucketSampler(BaseSampler):
-    """
-    Partition all samples into multiple buckets, each of which contains sentences of approximately the same length.
-    In sampling, first random choose a bucket. Then sample data from it.
-    The number of buckets is decided dynamically by the variance of sentence lengths.
-    """
-
-    def __init__(self, data_set):
-        super(BucketSampler, self).__init__(data_set)
-        BUCKETS = ([None] * 20)
-        self.length_freq = dict(Counter([len(example) for example in data_set]))
-        self.buckets = k_means_bucketing(data_set, BUCKETS)
-
-    def __iter__(self):
-        bucket_samples = self.buckets[np.random.randint(0, len(self.buckets))]
-        np.random.shuffle(bucket_samples)
-        return iter(bucket_samples)
+        return iter((self.data[idx] for idx in self.order))
 
 
 class Batchifier(object):
@@ -235,10 +213,53 @@ class Batchifier(object):
 
     def __iter__(self):
         batch = []
-        for idx in self.sampler:
-            batch.append(idx)
+        for example in self.sampler:
+            batch.append(example)
             if len(batch) == self.batch_size:
                 yield batch
                 batch = []
         if 0 < len(batch) < self.batch_size and self.drop_last is False:
             yield batch
+
+
+class BucketBatchifier(Batchifier):
+    """
+    Partition all samples into multiple buckets, each of which contains sentences of approximately the same length.
+    In sampling, first random choose a bucket. Then sample data from it.
+    The number of buckets is decided dynamically by the variance of sentence lengths.
+    """
+
+    def __init__(self, data_set, batch_size, num_buckets, drop_last=True, sampler=None):
+        """
+
+        :param data_set: three-level list, shape [num_samples, 2]
+        :param batch_size: int
+        :param num_buckets: int, number of buckets for grouping these sequences.
+        :param drop_last: bool, useless currently.
+        :param sampler: Sampler, useless currently.
+        """
+        super(BucketBatchifier, self).__init__(sampler, batch_size, drop_last)
+        buckets = ([None] * num_buckets)
+        self.data = data_set
+        self.batch_size = batch_size
+        self.length_freq = dict(Counter([len(example) for example in data_set]))
+        self.buckets = k_means_bucketing(data_set, buckets)
+
+    def __iter__(self):
+        """Make a min-batch of data."""
+        for _ in range(len(self.data) // self.batch_size):
+            bucket_samples = self.buckets[np.random.randint(0, len(self.buckets))]
+            np.random.shuffle(bucket_samples)
+            yield [self.data[idx] for idx in bucket_samples[:batch_size]]
+
+
+if __name__ == "__main__":
+    import random
+
+    data = [[[y] * random.randint(0, 50), [y]] for y in range(500)]
+    batch_size = 8
+    iterator = iter(BucketBatchifier(data, batch_size, num_buckets=5))
+    for d in iterator:
+        print("\nbatch:")
+        for dd in d:
+            print(len(dd[0]), end=" ")
