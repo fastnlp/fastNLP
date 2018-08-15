@@ -41,7 +41,7 @@ def _label_types(y):
     "unknown"
     '''
     # never squeeze the first dimension
-    y = np.squeeze(y, list(range(1, len(y.shape))))
+    y = y.squeeze() if y.shape[0] > 1 else y.resize(1, -1)
     shape = y.shape
     if len(shape) < 1: 
         raise ValueError('cannot accept data: {}'.format(y))
@@ -110,7 +110,7 @@ def recall_score(y_true, y_pred, labels=None, pos_label=1, average='binary'):
             labels = list(y_labels)
         else:
             for i in labels:
-                if i not in y_labels:
+                if (i not in y_labels and y_type != 'multilabel') or (y_type == 'multilabel' and i >= y_true.shape[1]):
                     warnings.warn('label {} is not contained in data'.format(i), UserWarning)
 
         if y_type in ['binary', 'multiclass']:
@@ -145,7 +145,7 @@ def precision_score(y_true, y_pred, labels=None, pos_label=1, average='binary'):
             labels = list(y_labels)
         else:
             for i in labels:
-                if i not in y_labels:
+                if (i not in y_labels and y_type != 'multilabel') or (y_type == 'multilabel' and i >= y_true.shape[1]):
                     warnings.warn('label {} is not contained in data'.format(i), UserWarning)
 
         if y_type in ['binary', 'multiclass']:
