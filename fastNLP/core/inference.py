@@ -182,6 +182,6 @@ class ClassificationInfer(Inference):
         """
         results = []
         for batch_out in batch_outputs:
-            idx = np.argmax(batch_out.detach().numpy())
-            results.append(self.index2label[idx])
+            idx = np.argmax(batch_out.detach().numpy(), axis=-1)
+            results.extend([self.index2label[i] for i in idx])
         return results
