@@ -1,4 +1,4 @@
-from fastNLP.core.inference import SeqLabelInfer, ClassificationInfer
+from fastNLP.core.predictor import SeqLabelInfer, ClassificationInfer
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.loader.model_loader import ModelLoader
 

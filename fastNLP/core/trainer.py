@@ -1,5 +1,6 @@
 import _pickle
 import os
+import time
 from datetime import timedelta
 from time import time
 
@@ -13,10 +14,11 @@ from fastNLP.core.tester import SeqLabelTester, ClassificationTester
 from fastNLP.modules import utils
 from fastNLP.saver.model_saver import ModelSaver
 
+DEFAULT_QUEUE_SIZE = 300
+
 
 class BaseTrainer(object):
-    """Base trainer for all trainers.
-        Trainer receives a model and data, and then performs training.
+    """Operations to train a model, including data loading, SGD, and validation.
 
         Subclasses must implement the following abstract methods:
         - define_optimizer
@@ -70,7 +72,7 @@ class BaseTrainer(object):
         else:
             self.model = network
 
-        data_train, data_dev, data_test, embedding = self.prepare_input(self.pickle_path)
+        data_train = self.load_train_data(self.pickle_path)
 
         # define tester over dev data
         if self.validate:
@@ -82,33 +84,19 @@ class BaseTrainer(object):
         self.define_optimizer()
 
         # main training epochs
-        start = time()
+        start = time.time()
         n_samples = len(data_train)
         n_batches = n_samples // self.batch_size
         n_print = 1
 
         for epoch in range(1, self.n_epochs + 1):
 
-            # turn on network training mode; prepare batch iterator
+            # turn on network training mode
             self.mode(network, test=False)
-            iterator = iter(Batchifier(RandomSampler(data_train), self.batch_size, drop_last=False))
+            # prepare mini-batch iterator
+            data_iterator = iter(Batchifier(RandomSampler(data_train), self.batch_size, drop_last=False))
 
-            # training iterations in one epoch
-            step = 0
-            for batch_x, batch_y in self.make_batch(iterator, data_train):
-
-                prediction = self.data_forward(network, batch_x)
-
-                loss = self.get_loss(prediction, batch_y)
-                self.grad_backward(loss)
-                self.update()
-
-                if step % n_print == 0:
-                    end = time()
-                    diff = timedelta(seconds=round(end - start))
-                    print("[epoch: {:>3} step: {:>4}] train loss: {:>4.2} time: {}".format(
-                        epoch, step, loss.data, diff))
-                step += 1
+            self._train_step(data_iterator, network, start=start, n_print=n_print, epoch=epoch)
 
             if self.validate:
                 validator.test(network)
@@ -120,27 +108,39 @@ class BaseTrainer(object):
                 print("[epoch {}]".format(epoch), end=" ")
                 print(validator.show_matrices())
 
-    def prepare_input(self, pickle_path):
+    def _train_step(self, data_iterator, network, **kwargs):
+        """Training process in one epoch."""
+        step = 0
+        for batch_x, batch_y in self.make_batch(data_iterator):
+
+            prediction = self.data_forward(network, batch_x)
+
+            loss = self.get_loss(prediction, batch_y)
+            self.grad_backward(loss)
+            self.update()
+
+            if step % kwargs["n_print"] == 0:
+                end = time.time()
+                diff = timedelta(seconds=round(end - kwargs["start"]))
+                print("[epoch: {:>3} step: {:>4}] train loss: {:>4.2} time: {}".format(
+                    kwargs["epoch"], step, loss.data, diff))
+            step += 1
+
+    def load_train_data(self, pickle_path):
         """
         For task-specific processing.
         :param pickle_path:
-        :return data_train, data_dev, data_test, embedding:
+        :return data_train
         """
-        names = [
-            "data_train.pkl", "data_dev.pkl",
-            "data_test.pkl", "embedding.pkl"]
-        files = []
-        for name in names:
-            file_path = os.path.join(pickle_path, name)
-            if os.path.exists(file_path):
-                with open(file_path, 'rb') as f:
-                    data = _pickle.load(f)
-            else:
-                data = []
-            files.append(data)
-        return tuple(files)
+        file_path = os.path.join(pickle_path, "data_train.pkl")
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                data = _pickle.load(f)
+        else:
+            raise RuntimeError("cannot find training data {}".format(file_path))
+        return data
 
-    def make_batch(self, iterator, data):
+    def make_batch(self, iterator):
         raise NotImplementedError
 
     def mode(self, network, test):
@@ -219,7 +219,7 @@ class ToyTrainer(BaseTrainer):
     def __init__(self, training_args):
         super(ToyTrainer, self).__init__(training_args)
 
-    def prepare_input(self, data_path):
+    def load_train_data(self, data_path):
         data_train = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
         data_dev = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
         return data_train, data_dev, 0, 1
@@ -267,7 +267,7 @@ class SeqLabelTrainer(BaseTrainer):
 
     def data_forward(self, network, inputs):
         if not isinstance(inputs, tuple):
-            raise RuntimeError("[fastnlp] output_length must be true for sequence modeling.")
+            raise RuntimeError("output_length must be true for sequence modeling. Receive {}".format(type(inputs[0])))
         # unpack the returned value from make_batch
         x, seq_len = inputs[0], inputs[1]
 
@@ -303,8 +303,8 @@ class SeqLabelTrainer(BaseTrainer):
         else:
             return False
 
-    def make_batch(self, iterator, data):
-        return Action.make_batch(iterator, data, output_length=True, use_cuda=self.use_cuda)
+    def make_batch(self, iterator):
+        return Action.make_batch(iterator, output_length=True, use_cuda=self.use_cuda)
 
     def _create_validator(self, valid_args):
         return SeqLabelTester(valid_args)
@@ -349,8 +349,8 @@ class ClassificationTrainer(BaseTrainer):
         """Apply gradient."""
         self.optimizer.step()
 
-    def make_batch(self, iterator, data):
-        return Action.make_batch(iterator, data, output_length=False, use_cuda=self.use_cuda)
+    def make_batch(self, iterator):
+        return Action.make_batch(iterator, output_length=False, use_cuda=self.use_cuda)
 
     def get_acc(self, y_logit, y_true):
         """Compute accuracy."""
