@@ -6,6 +6,9 @@ import torch
 from fastNLP.core.action import Action
 from fastNLP.core.action import RandomSampler, Batchifier
 from fastNLP.modules import utils
+from fastNLP.saver.logger import create_logger
+
+logger = create_logger(__name__, "./train_test.log")
 
 
 class BaseTester(object):
@@ -43,10 +46,11 @@ class BaseTester(object):
         self.batch_output.clear()
 
         dev_data = self.prepare_input(self.pickle_path)
+        logger.info("validation data loaded")
 
         iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=True))
         n_batches = len(dev_data) // self.batch_size
-        n_print = 1
+        print_every_step = 1
         step = 0
 
         for batch_x, batch_y in self.make_batch(iterator, dev_data):
@@ -58,8 +62,11 @@ class BaseTester(object):
                 self.batch_output.append(prediction)
             if self.save_loss:
                 self.eval_history.append(eval_results)
-            if step % n_print == 0:
-                print('[test step: {:>4}]'.format(step))
+
+            print_output = "[test step {}] {}".format(step, eval_results)
+            logger.info(print_output)
+            if step % print_every_step == 0:
+                print(print_output)
             step += 1
 
     def prepare_input(self, data_path):
