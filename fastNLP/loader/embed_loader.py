@@ -1,4 +1,4 @@
-from loader.base_loader import BaseLoader
+from fastNLP.loader.base_loader import BaseLoader
 
 
 class EmbedLoader(BaseLoader):

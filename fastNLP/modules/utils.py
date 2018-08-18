@@ -1,3 +1,9 @@
+from collections import defaultdict
+
+import numpy as np
+import torch
+
+
 def mask_softmax(matrix, mask):
     if mask is None:
         result = torch.nn.functional.softmax(matrix, dim=-1)
@@ -15,10 +21,6 @@ def seq_mask(seq_len, max_len):
 """
     Codes from FudanParser. Not tested. Do not use !!!
 """
-from collections import defaultdict
-
-import numpy as np
-import torch
 
 
 def expand_gt(gt):

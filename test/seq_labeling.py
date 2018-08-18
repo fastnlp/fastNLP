@@ -10,7 +10,7 @@ from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import SeqLabeling
-from fastNLP.core.inference import SeqLabelInfer
+from fastNLP.core.predictor import SeqLabelInfer
 
 data_name = "people.txt"
 data_path = "data_for_tests/people.txt"
