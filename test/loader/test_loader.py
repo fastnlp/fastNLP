@@ -32,7 +32,7 @@ class TestConfigLoader(unittest.TestCase):
             return dict
 
         test_arg = ConfigSection()
-        ConfigLoader("config", "").load_config("config", {"test": test_arg})
+        ConfigLoader("config", "").load_config(os.path.join("./", "config"), {"test": test_arg})
 
         dict = read_section_from_config("config", "test")
 
