@@ -10,7 +10,7 @@ from fastNLP.core.trainer import ClassificationTrainer
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.loader.dataset_loader import ClassDatasetLoader
 from fastNLP.loader.model_loader import ModelLoader
-from fastNLP.loader.preprocess import ClassPreprocess
+from fastNLP.core.preprocess import ClassPreprocess
 from fastNLP.models.cnn_text_classification import CNNText
 from fastNLP.saver.model_saver import ModelSaver
 
@@ -59,28 +59,28 @@ def train():
     print(data[0])
 
     # pre-process data
-    pre = ClassPreprocess(data_dir)
-    vocab_size, n_classes = pre.process(data, "data_train.pkl")
-    print("vocabulary size:", vocab_size)
-    print("number of classes:", n_classes)
+    pre = ClassPreprocess()
+    data_train = pre.run(data, pickle_path=data_dir)
+    print("vocabulary size:", pre.vocab_size)
+    print("number of classes:", pre.num_classes)
 
     # construct model
     print("Building model...")
-    cnn = CNNText(model_args)
+    model = CNNText(model_args)
 
     # train
     print("Training...")
 
     trainer = ClassificationTrainer(train_args)
-    trainer.train(cnn)
+    trainer.train(model, data_train)
 
     print("Training finished!")
 
     saver = ModelSaver("./data_for_tests/saved_model.pkl")
-    saver.save_pytorch(cnn)
+    saver.save_pytorch(model)
     print("Model saved!")
 
 
 if __name__ == "__main__":
-    # train()
-    infer()
+    train()
+    # infer()

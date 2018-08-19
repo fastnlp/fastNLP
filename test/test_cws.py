@@ -5,7 +5,7 @@ sys.path.append("..")
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.loader.dataset_loader import TokenizeDatasetLoader, BaseLoader
-from fastNLP.loader.preprocess import POSPreprocess, load_pickle
+from fastNLP.core.preprocess import SeqLabelPreprocess, load_pickle
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
@@ -68,7 +68,8 @@ def train_test():
     train_data = loader.load_pku()
 
     # Preprocessor
-    p = POSPreprocess(train_data, pickle_path)
+    p = SeqLabelPreprocess()
+    data_train = p.run(train_data, pickle_path=pickle_path)
     train_args["vocab_size"] = p.vocab_size
     train_args["num_classes"] = p.num_classes
 
@@ -79,7 +80,7 @@ def train_test():
     model = SeqLabeling(train_args)
 
     # Start training
-    trainer.train(model)
+    trainer.train(model, data_train)
     print("Training finished!")
 
     # Saver
@@ -104,7 +105,7 @@ def train_test():
     tester = SeqLabelTester(test_args)
 
     # Start testing
-    tester.test(model)
+    tester.test(model, data_train)
 
     # print test results
     print(tester.show_matrices())

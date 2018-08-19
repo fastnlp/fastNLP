@@ -5,7 +5,7 @@ sys.path.append("..")
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.loader.dataset_loader import TokenizeDatasetLoader, BaseLoader
-from fastNLP.loader.preprocess import POSPreprocess, load_pickle
+from fastNLP.core.preprocess import SeqLabelPreprocess, load_pickle
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
@@ -48,7 +48,7 @@ def infer():
     print("Inference finished!")
 
 
-def train():
+def train_test():
     # Config Loader
     train_args = ConfigSection()
     test_args = ConfigSection()
@@ -59,9 +59,10 @@ def train():
     train_data = loader.load_pku()
 
     # Preprocessor
-    p = POSPreprocess(train_data, pickle_path, train_dev_split=0.3)
-    train_args["vocab_size"] = p.vocab_size
-    train_args["num_classes"] = p.num_classes
+    preprocess = SeqLabelPreprocess()
+    data_train, data_dev = preprocess.run(train_data, pickle_path=pickle_path, train_dev_split=0.3)
+    train_args["vocab_size"] = preprocess.vocab_size
+    train_args["num_classes"] = preprocess.num_classes
 
     # Trainer
     trainer = SeqLabelTrainer(train_args)
@@ -70,7 +71,7 @@ def train():
     model = SeqLabeling(train_args)
 
     # Start training
-    trainer.train(model)
+    trainer.train(model, data_train, data_dev)
     print("Training finished!")
 
     # Saver
@@ -78,8 +79,11 @@ def train():
     saver.save_pytorch(model)
     print("Model saved!")
 
+    # testing with validation set
+    test(data_dev)
 
-def test():
+
+def test(test_data):
     # Config Loader
     train_args = ConfigSection()
     ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS": train_args})
@@ -99,7 +103,7 @@ def test():
     tester = SeqLabelTester(test_args)
 
     # Start testing
-    tester.test(model)
+    tester.test(model, test_data)
 
     # print test results
     print(tester.show_matrices())
@@ -107,4 +111,4 @@ def test():
 
 
 if __name__ == "__main__":
-    train()
+    train_test()

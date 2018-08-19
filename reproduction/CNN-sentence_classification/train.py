@@ -1,12 +1,11 @@
 import os
 
-import
-import
 import torch
 import torch.nn as nn
-.dataset as dst
-from .model import CNN_text
 from torch.autograd import Variable
+
+from . import dataset as dst
+from .model import CNN_text
 
 # Hyper Parameters
 batch_size = 50

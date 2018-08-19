@@ -1,7 +1,7 @@
+from fastNLP.core.preprocess import SeqLabelPreprocess
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.loader.config_loader import ConfigSection, ConfigLoader
 from fastNLP.loader.dataset_loader import TokenizeDatasetLoader
-from fastNLP.loader.preprocess import POSPreprocess
 from fastNLP.models.sequence_modeling import SeqLabeling
 
 data_name = "pku_training.utf8"
@@ -17,7 +17,7 @@ def foo():
     ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS": train_args})
 
     # Preprocessor
-    p = POSPreprocess(train_data, pickle_path)
+    p = SeqLabelPreprocess(train_data, pickle_path)
     train_args["vocab_size"] = p.vocab_size
     train_args["num_classes"] = p.num_classes
 
