@@ -134,7 +134,10 @@ class BasePreprocess(object):
             results.append(data_dev)
         if test_data:
             results.append(data_test)
-        return tuple(results)
+        if len(results) == 1:
+            return results[0]
+        else:
+            return tuple(results)
 
     def build_dict(self, data):
         raise NotImplementedError
@@ -282,7 +285,8 @@ class ClassPreprocess(BasePreprocess):
         data_index = []
         for example in data:
             word_list = []
-            for word, label in zip(example[0]):
+            # example[0] is the word list, example[1] is the single label
+            for word in example[0]:
                 word_list.append(self.word2index.get(word, DEFAULT_WORD_TO_INDEX[DEFAULT_UNKNOWN_LABEL]))
             label_index = self.label2index.get(example[1], DEFAULT_WORD_TO_INDEX[DEFAULT_UNKNOWN_LABEL])
             data_index.append([word_list, label_index])

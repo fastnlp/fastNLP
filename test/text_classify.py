@@ -14,6 +14,7 @@ from fastNLP.core.preprocess import ClassPreprocess
 from fastNLP.models.cnn_text_classification import CNNText
 from fastNLP.saver.model_saver import ModelSaver
 
+save_path = "./test_classification/"
 data_dir = "./data_for_tests/"
 train_file = 'text_classify.txt'
 model_name = "model_class.pkl"
@@ -27,8 +28,8 @@ def infer():
     unlabeled_data = [x[0] for x in data]
 
     # pre-process data
-    pre = ClassPreprocess(data_dir)
-    vocab_size, n_classes = pre.process(data, "data_train.pkl")
+    pre = ClassPreprocess()
+    vocab_size, n_classes = pre.run(data, pickle_path=save_path)
     print("vocabulary size:", vocab_size)
     print("number of classes:", n_classes)
 
@@ -60,7 +61,7 @@ def train():
 
     # pre-process data
     pre = ClassPreprocess()
-    data_train = pre.run(data, pickle_path=data_dir)
+    data_train = pre.run(data, pickle_path=save_path)
     print("vocabulary size:", pre.vocab_size)
     print("number of classes:", pre.num_classes)
 
