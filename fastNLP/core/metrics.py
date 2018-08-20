@@ -173,6 +173,48 @@ def classification_report(y_true, y_pred, labels=None, target_names=None, digits
     raise NotImplementedError
 
 
+def accuracy_topk(y_true, y_prob, k=1):
+    """
+    Compute accuracy of y_true matching top-k probable
+    labels in y_prob.
+
+    Paras:
+        y_ture - ndarray, true label, [n_samples]
+        y_prob - ndarray, label probabilities, [n_samples, n_classes]
+        k - int, k in top-k
+    Returns:
+        accuracy of top-k
+    """
+
+    y_pred_topk = np.argsort(y_prob, axis=-1)[:, -1:-k - 1:-1]
+    y_true_tile = np.tile(np.expand_dims(y_true, axis=1), (1, k))
+    y_match = np.any(y_pred_topk == y_true_tile, axis=-1)
+    acc = np.sum(y_match) / y_match.shape[0]
+
+    return acc
+
+
+def pred_topk(y_prob, k=1):
+    """
+    Return top-k predicted labels and corresponding probabilities.
+
+    Args:
+        y_prob - ndarray, size [n_samples, n_classes], probabilities on labels
+        k - int, k of top-k
+    Returns:
+        y_pred_topk - ndarray, size [n_samples, k], predicted top-k labels
+        y_prob_topk - ndarray, size [n_samples, k], probabilities for
+            top-k labels
+    """
+
+    y_pred_topk = np.argsort(y_prob, axis=-1)[:, -1:-k - 1:-1]
+    x_axis_index = np.tile(
+        np.arange(len(y_prob))[:, np.newaxis],
+        (1, k))
+    y_prob_topk = y_prob[x_axis_index, y_pred_topk]
+    return y_pred_topk, y_prob_topk
+
+
 if __name__ == '__main__':
     y = np.array([1, 0, 1, 0, 1, 1])
     print(_label_types(y))
