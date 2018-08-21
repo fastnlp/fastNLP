@@ -5,7 +5,7 @@ sys.path.append("..")
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.loader.dataset_loader import POSDatasetLoader, BaseLoader
-from fastNLP.loader.preprocess import POSPreprocess, load_pickle
+from fastNLP.core.preprocess import SeqLabelPreprocess, load_pickle
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
@@ -14,7 +14,7 @@ from fastNLP.core.predictor import SeqLabelInfer
 
 data_name = "people.txt"
 data_path = "data_for_tests/people.txt"
-pickle_path = "data_for_tests"
+pickle_path = "seq_label/"
 data_infer_path = "data_for_tests/people_infer.txt"
 
 
@@ -33,21 +33,12 @@ def infer():
     model = SeqLabeling(test_args)
 
     # Dump trained parameters into the model
-    ModelLoader.load_pytorch(model, "./data_for_tests/saved_model.pkl")
+    ModelLoader.load_pytorch(model, pickle_path + "saved_model.pkl")
     print("model loaded!")
 
     # Data Loader
     raw_data_loader = BaseLoader(data_name, data_infer_path)
     infer_data = raw_data_loader.load_lines()
-    """
-        Transform strings into list of list of strings. 
-        [
-            [word_11, word_12, ...],
-            [word_21, word_22, ...],
-            ...
-        ]
-        In this case, each line in "people_infer.txt" is already a sentence. So load_lines() just splits them.
-    """
 
     # Inference interface
     infer = SeqLabelInfer(pickle_path)
@@ -68,7 +59,8 @@ def train_and_test():
     train_data = pos_loader.load_lines()
 
     # Preprocessor
-    p = POSPreprocess(train_data, pickle_path, train_dev_split=0.5)
+    p = SeqLabelPreprocess()
+    data_train, data_dev = p.run(train_data, pickle_path=pickle_path, train_dev_split=0.5)
     train_args["vocab_size"] = p.vocab_size
     train_args["num_classes"] = p.num_classes
 
@@ -79,11 +71,11 @@ def train_and_test():
     model = SeqLabeling(train_args)
 
     # Start training
-    trainer.train(model)
+    trainer.train(model, data_train, data_dev)
     print("Training finished!")
 
     # Saver
-    saver = ModelSaver("./data_for_tests/saved_model.pkl")
+    saver = ModelSaver(pickle_path + "saved_model.pkl")
     saver.save_pytorch(model)
     print("Model saved!")
 
@@ -93,7 +85,7 @@ def train_and_test():
     model = SeqLabeling(train_args)
 
     # Dump trained parameters into the model
-    ModelLoader.load_pytorch(model, "./data_for_tests/saved_model.pkl")
+    ModelLoader.load_pytorch(model, pickle_path + "saved_model.pkl")
     print("model loaded!")
 
     # Load test configuration
@@ -103,8 +95,8 @@ def train_and_test():
     # Tester
     tester = SeqLabelTester(test_args)
 
-    # Start testing
-    tester.test(model)
+    # Start testing with validation data
+    tester.test(model, data_dev)
 
     # print test results
     print(tester.show_matrices())

@@ -1,4 +1,5 @@
 import _pickle
+import copy
 import os
 import time
 from datetime import timedelta
@@ -52,9 +53,11 @@ class BaseTrainer(object):
         self.loss_func = None
         self.optimizer = None
 
-    def train(self, network):
+    def train(self, network, train_data, dev_data=None):
         """General Training Steps
         :param network: a model
+        :param train_data: three-level list, the training set.
+        :param dev_data: three-level list, the validation data (optional)
 
         The method is framework independent.
         Work by calling the following methods:
@@ -73,8 +76,8 @@ class BaseTrainer(object):
         else:
             self.model = network
 
-        data_train = self.load_train_data(self.pickle_path)
-        logger.info("training data loaded")
+        # train_data = self.load_train_data(self.pickle_path)
+        # logger.info("training data loaded")
 
         # define tester over dev data
         if self.validate:
@@ -88,8 +91,7 @@ class BaseTrainer(object):
         logger.info("optimizer defined as {}".format(str(self.optimizer)))
 
         # main training epochs
-
-        n_samples = len(data_train)
+        n_samples = len(train_data)
         n_batches = n_samples // self.batch_size
         n_print = 1
         start = time.time()
@@ -101,14 +103,14 @@ class BaseTrainer(object):
             # turn on network training mode
             self.mode(network, test=False)
             # prepare mini-batch iterator
-            data_iterator = iter(Batchifier(RandomSampler(data_train), self.batch_size, drop_last=False))
+            data_iterator = iter(Batchifier(RandomSampler(train_data), self.batch_size, drop_last=False))
             logger.info("prepared data iterator")
 
             self._train_step(data_iterator, network, start=start, n_print=n_print, epoch=epoch)
 
             if self.validate:
                 logger.info("validation started")
-                validator.test(network)
+                validator.test(network, dev_data)
 
                 if self.save_best_dev and self.best_eval_result(validator):
                     self.save_model(network)
@@ -138,6 +140,26 @@ class BaseTrainer(object):
                 print(print_output)
                 logger.info(print_output)
             step += 1
+
+    def cross_validate(self, network, train_data_cv, dev_data_cv):
+        """Training with cross validation.
+
+        :param network: the model
+        :param train_data_cv: four-level list, of shape [num_folds, num_examples, 2, ?]
+        :param dev_data_cv: four-level list, of shape [num_folds, num_examples, 2, ?]
+
+        """
+        if len(train_data_cv) != len(dev_data_cv):
+            logger.error("the number of folds in train and dev data unequals {}!={}".format(len(train_data_cv),
+                                                                                            len(dev_data_cv)))
+            raise RuntimeError("the number of folds in train and dev data unequals")
+        n_fold = len(train_data_cv)
+        logger.info("perform {} folds cross validation.".format(n_fold))
+        for i in range(n_fold):
+            print("CV:", i)
+            logger.info("running the {} of {} folds cross validation".format(i + 1, n_fold))
+            network_copy = copy.deepcopy(network)
+            self.train(network_copy, train_data_cv[i], dev_data_cv[i])
 
     def load_train_data(self, pickle_path):
         """

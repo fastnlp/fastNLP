@@ -3,7 +3,7 @@ import torch
 
 from fastNLP.core.action import Batchifier, SequentialSampler
 from fastNLP.core.action import convert_to_torch_tensor
-from fastNLP.loader.preprocess import load_pickle, DEFAULT_UNKNOWN_LABEL
+from fastNLP.core.preprocess import load_pickle, DEFAULT_UNKNOWN_LABEL
 from fastNLP.modules import utils
 
 

@@ -4,9 +4,9 @@ import os
 import numpy as np
 import torch
 
+from fastNLP.core.preprocess import SeqLabelPreprocess
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.core.trainer import SeqLabelTrainer
-from fastNLP.loader.preprocess import POSPreprocess
 from fastNLP.models.sequence_modeling import AdvSeqLabel
 
 
@@ -114,7 +114,8 @@ emb_path = "data_for_tests/emb50.txt"
 save_path = "data_for_tests/"
 if __name__ == "__main__":
     data = data_load(data_path)
-    p = POSPreprocess(data, pickle_path=pick_path, train_dev_split=0.3)
+    preprocess = SeqLabelPreprocess()
+    data_train, data_dev = preprocess.run(data, pickle_path=pick_path, train_dev_split=0.3)
     # emb = embedding_process(emb_path, p.word2index, 50, os.path.join(pick_path, "embedding.pkl"))
     emb = None
     args = {"epochs": 20,
@@ -125,13 +126,13 @@ if __name__ == "__main__":
             "model_saved_path": save_path,
             "use_cuda": True,
 
-            "vocab_size": p.vocab_size,
-            "num_classes": p.num_classes,
+            "vocab_size": preprocess.vocab_size,
+            "num_classes": preprocess.num_classes,
             "word_emb_dim": 50,
             "rnn_hidden_units": 100
             }
     # emb = torch.Tensor(emb).float().cuda()
     networks = AdvSeqLabel(args, emb)
     trainer = MyNERTrainer(args)
-    trainer.train(network=networks)
+    trainer.train(networks, data_train, data_dev)
     print("Training finished!")
