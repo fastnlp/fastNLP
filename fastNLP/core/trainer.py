@@ -22,9 +22,14 @@ class BaseTrainer(object):
     """Operations to train a model, including data loading, SGD, and validation.
 
         Subclasses must implement the following abstract methods:
-        - define_optimizer
         - grad_backward
+    
+        Subclasses can override the following methods:
+        - data_forward
         - get_loss
+        - load_train_data
+        - make_batch
+        etc
     """
 
     def __init__(self, train_args):
@@ -60,7 +65,6 @@ class BaseTrainer(object):
         Work by calling the following methods:
             - prepare_input
             - mode
-            - define_optimizer
             - data_forward
             - get_loss
             - grad_backward
@@ -73,6 +77,9 @@ class BaseTrainer(object):
         else:
             self.model = network
 
+        self.loss_func = network.loss
+        self.optimizer = network.optimizer
+
         data_train = self.load_train_data(self.pickle_path)
         logger.info("training data loaded")
 
@@ -84,7 +91,6 @@ class BaseTrainer(object):
             validator = self._create_validator(default_valid_args)
             logger.info("validator defined as {}".format(str(validator)))
 
-        self.define_optimizer()
         logger.info("optimizer defined as {}".format(str(self.optimizer)))
 
         # main training epochs
@@ -155,16 +161,10 @@ class BaseTrainer(object):
         return data
 
     def make_batch(self, iterator):
-        raise NotImplementedError
+        return Action.make_batch(iterator, use_cuda=self.use_cuda, output_length=False)
 
     def mode(self, network, test):
         Action.mode(network, test)
-
-    def define_optimizer(self):
-        """
-        Define framework-specific optimizer specified by the models.
-        """
-        raise NotImplementedError
 
     def update(self):
         """
@@ -172,10 +172,14 @@ class BaseTrainer(object):
 
         For PyTorch, just call optimizer to update.
         """
-        raise NotImplementedError
+        self.optimizer.step()
 
     def data_forward(self, network, x):
-        raise NotImplementedError
+        """
+        default foreard function, can be override in subclass
+        """
+        y = network(x)
+        return y
 
     def grad_backward(self, loss):
         """
@@ -184,7 +188,8 @@ class BaseTrainer(object):
 
         For PyTorch, just do "loss.backward()"
         """
-        raise NotImplementedError
+        self.model.zero_grad()
+        loss.backward()
 
     def get_loss(self, predict, truth):
         """
@@ -194,20 +199,8 @@ class BaseTrainer(object):
         :return: a scalar
         """
         if self.loss_func is None:
-            if hasattr(self.model, "loss"):
-                self.loss_func = self.model.loss
-                logger.info("The model has a loss function, use it.")
-            else:
-                logger.info("The model didn't define loss, use Trainer's loss.")
-                self.define_loss()
+            raise RuntimeError("The model didn't define loss.")
         return self.loss_func(predict, truth)
-
-    def define_loss(self):
-        """
-            Assign an instance of loss function to self.loss_func
-            E.g. self.loss_func = nn.CrossEntropyLoss()
-        """
-        raise NotImplementedError
 
     def best_eval_result(self, validator):
         """
@@ -240,21 +233,11 @@ class ToyTrainer(BaseTrainer):
         data_dev = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
         return data_train, data_dev, 0, 1
 
-    def data_forward(self, network, x):
-        return network(x)
-
-    def grad_backward(self, loss):
-        self.model.zero_grad()
-        loss.backward()
-
     def get_loss(self, pred, truth):
         return np.mean(np.square(pred - truth))
 
     def define_optimizer(self):
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01)
-
-    def update(self):
-        self.optimizer.step()
 
 
 class SeqLabelTrainer(BaseTrainer):
@@ -270,16 +253,6 @@ class SeqLabelTrainer(BaseTrainer):
         self.max_len = None
         self.mask = None
         self.best_accuracy = 0.0
-
-    def define_optimizer(self):
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9)
-
-    def grad_backward(self, loss):
-        self.model.zero_grad()
-        loss.backward()
-
-    def update(self):
-        self.optimizer.step()
 
     def data_forward(self, network, inputs):
         if not isinstance(inputs, tuple):
@@ -320,7 +293,7 @@ class SeqLabelTrainer(BaseTrainer):
             return False
 
     def make_batch(self, iterator):
-        return Action.make_batch(iterator, output_length=True, use_cuda=self.use_cuda)
+        return Action.make_batch(iterator, use_cuda=self.use_cuda, output_length=True)
 
     def _create_validator(self, valid_args):
         return SeqLabelTester(valid_args)
@@ -338,35 +311,6 @@ class ClassificationTrainer(BaseTrainer):
         self.loss_func = None
         self.optimizer = None
         self.best_accuracy = 0
-
-    def define_loss(self):
-        self.loss_func = nn.CrossEntropyLoss()
-
-    def define_optimizer(self):
-        """
-        Define framework-specific optimizer specified by the models.
-        """
-        self.optimizer = torch.optim.SGD(
-            self.model.parameters(),
-            lr=self.learn_rate,
-            momentum=self.momentum)
-
-    def data_forward(self, network, x):
-        """Forward through network."""
-        logits = network(x)
-        return logits
-
-    def grad_backward(self, loss):
-        """Compute gradient backward."""
-        self.model.zero_grad()
-        loss.backward()
-
-    def update(self):
-        """Apply gradient."""
-        self.optimizer.step()
-
-    def make_batch(self, iterator):
-        return Action.make_batch(iterator, output_length=False, use_cuda=self.use_cuda)
 
     def get_acc(self, y_logit, y_true):
         """Compute accuracy."""
