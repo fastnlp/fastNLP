@@ -3,7 +3,7 @@ import os
 
 import torch
 
-from fastNLP.core.inference import SeqLabelInfer
+from fastNLP.core.predictor import SeqLabelInfer
 from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.models.sequence_modeling import AdvSeqLabel

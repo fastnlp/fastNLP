@@ -10,7 +10,7 @@ from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import SeqLabeling
-from fastNLP.core.inference import Inference
+from fastNLP.core.predictor import Predictor
 
 data_name = "pku_training.utf8"
 # cws_data_path = "/home/zyfeng/Desktop/data/pku_training.utf8"
@@ -51,7 +51,7 @@ def infer():
     """
 
     # Inference interface
-    infer = Inference(pickle_path)
+    infer = Predictor(pickle_path)
     results = infer.predict(model, infer_data)
 
     print(results)

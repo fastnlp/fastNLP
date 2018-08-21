@@ -1,4 +1,5 @@
 import sys
+import argparse
 
 sys.path.append("..")
 
@@ -10,7 +11,7 @@ from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import SeqLabeling
-from fastNLP.core.inference import SeqLabelInfer
+from fastNLP.core.predictor import SeqLabelInfer
 
 data_name = "people.txt"
 data_path = "data_for_tests/people.txt"
@@ -111,6 +112,17 @@ def train_and_test():
     print("model tested!")
 
 
+def get_args():
+    argu = argparse.ArgumentParser(description='a model for sequence modelling')
+    argu.add_argument('--pickle_dir', type=str, default='./',
+                      help='the dir of pickle files')
+    argu.add_argument('--config_path', type=str, default='./config',
+                      help='the path of config file')
+    args = argu.parse_args()
+    return args
+
+
 if __name__ == "__main__":
+    args = get_args()
     train_and_test()
     # infer()
