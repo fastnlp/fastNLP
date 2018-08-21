@@ -1,4 +1,5 @@
 import sys
+import argparse
 
 sys.path.append("..")
 
@@ -111,6 +112,17 @@ def train_and_test():
     print("model tested!")
 
 
+def get_args():
+    argu = argparse.ArgumentParser(description='a model for sequence modelling')
+    argu.add_argument('--pickle_dir', type=str, default='./',
+                      help='the dir of pickle files')
+    argu.add_argument('--config_path', type=str, default='./config',
+                      help='the path of config file')
+    args = argu.parse_args()
+    return args
+
+
 if __name__ == "__main__":
+    args = get_args()
     train_and_test()
     # infer()
