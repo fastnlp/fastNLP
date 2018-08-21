@@ -7,6 +7,18 @@ class BaseModel(torch.nn.Module):
 
     def __init__(self):
         super(BaseModel, self).__init__()
+        self.loss = None
+        self.optimizer = None
+
+    def prepare_train(self, loss, optimizer):
+        """set the loss function and optimizer used when training.
+
+        # Arguments
+            loss: a Loss class, see fastNLP.modules.losses
+            optimizer: a Optimizer class, see fastNLP.core.optimizer
+        """
+        self.loss = loss
+        self.optimizer = optimizer
 
 
 class Vocabulary(object):
