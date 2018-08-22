@@ -34,7 +34,7 @@ class BaseTester(object):
         self.eval_history = []
         self.batch_output = []
 
-    def test(self, network):
+    def test(self, network, dev_data):
         if torch.cuda.is_available() and self.use_cuda:
             self.model = network.cuda()
         else:
@@ -45,8 +45,8 @@ class BaseTester(object):
         self.eval_history.clear()
         self.batch_output.clear()
 
-        dev_data = self.prepare_input(self.pickle_path)
-        logger.info("validation data loaded")
+        # dev_data = self.prepare_input(self.pickle_path)
+        # logger.info("validation data loaded")
 
         iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=True))
         n_batches = len(dev_data) // self.batch_size
