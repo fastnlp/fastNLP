@@ -6,10 +6,11 @@ from datetime import timedelta
 
 import numpy as np
 import torch
-import torch.nn as nn
 
 from fastNLP.core.action import Action
 from fastNLP.core.action import RandomSampler, Batchifier
+from fastNLP.core.loss import Loss
+from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.tester import SeqLabelTester, ClassificationTester
 from fastNLP.modules import utils
 from fastNLP.saver.logger import create_logger
@@ -23,14 +24,13 @@ class BaseTrainer(object):
     """Operations to train a model, including data loading, SGD, and validation.
 
         Subclasses must implement the following abstract methods:
-        - define_optimizer
         - grad_backward
         - get_loss
     """
 
-    def __init__(self, train_args):
+    def __init__(self, **kwargs):
         """
-        :param train_args: dict of (key, value), or dict-like object. key is str.
+        :param kwargs: dict of (key, value), or dict-like object. key is str.
 
         The base trainer requires the following keys:
         - epochs: int, the number of epochs in training
@@ -39,19 +39,58 @@ class BaseTrainer(object):
         - pickle_path: str, the path to pickle files for pre-processing
         """
         super(BaseTrainer, self).__init__()
-        self.n_epochs = train_args["epochs"]
-        self.batch_size = train_args["batch_size"]
-        self.pickle_path = train_args["pickle_path"]
 
-        self.validate = train_args["validate"]
-        self.save_best_dev = train_args["save_best_dev"]
-        self.model_saved_path = train_args["model_saved_path"]
-        self.use_cuda = train_args["use_cuda"]
+        """
+            "default_args" provides default value for important settings. 
+            The initialization arguments "kwargs" with the same key (name) will override the default value. 
+            "kwargs" must have the same type as "default_args" on corresponding keys. 
+            Otherwise, error will raise.
+        """
+        default_args = {"epochs": 3, "batch_size": 8, "validate": True, "use_cuda": True, "pickle_path": "./save/",
+                        "save_best_dev": True, "model_name": "default_model_name.pkl",
+                        "loss": Loss(None),
+                        "optimizer": Optimizer("Adam", lr=0.001, weight_decay=0)
+                        }
+        """
+            "required_args" is the collection of arguments that users must pass to Trainer explicitly. 
+            This is used to warn users of essential settings in the training. 
+            Obviously, "required_args" is the subset of "default_args". 
+            The value in "default_args" to the keys in "required_args" is simply for type check. 
+        """
+        # TODO: required arguments
+        required_args = {}
 
-        self.model = None
-        self.iterator = None
-        self.loss_func = None
-        self.optimizer = None
+        for req_key in required_args:
+            if req_key not in kwargs:
+                logger.error("Trainer lacks argument {}".format(req_key))
+                raise ValueError("Trainer lacks argument {}".format(req_key))
+
+        for key in default_args:
+            if key in kwargs:
+                if isinstance(kwargs[key], type(default_args[key])):
+                    default_args[key] = kwargs[key]
+                else:
+                    msg = "Argument %s type mismatch: expected %s while get %s" % (
+                        key, type(default_args[key]), type(kwargs[key]))
+                    logger.error(msg)
+                    raise ValueError(msg)
+            else:
+                # BaseTrainer doesn't care about extra arguments
+                pass
+        print(default_args)
+
+        self.n_epochs = default_args["epochs"]
+        self.batch_size = default_args["batch_size"]
+        self.pickle_path = default_args["pickle_path"]
+        self.validate = default_args["validate"]
+        self.save_best_dev = default_args["save_best_dev"]
+        self.use_cuda = default_args["use_cuda"]
+        self.model_name = default_args["model_name"]
+
+        self._model = None
+        self._loss_func = default_args["loss"].get()  # return a pytorch loss function or None
+        self._optimizer = None
+        self._optimizer_proto = default_args["optimizer"]
 
     def train(self, network, train_data, dev_data=None):
         """General Training Steps
@@ -72,12 +111,9 @@ class BaseTrainer(object):
         """
         # prepare model and data, transfer model to gpu if available
         if torch.cuda.is_available() and self.use_cuda:
-            self.model = network.cuda()
+            self._model = network.cuda()
         else:
-            self.model = network
-
-        # train_data = self.load_train_data(self.pickle_path)
-        # logger.info("training data loaded")
+            self._model = network
 
         # define tester over dev data
         if self.validate:
@@ -88,7 +124,9 @@ class BaseTrainer(object):
             logger.info("validator defined as {}".format(str(validator)))
 
         self.define_optimizer()
-        logger.info("optimizer defined as {}".format(str(self.optimizer)))
+        logger.info("optimizer defined as {}".format(str(self._optimizer)))
+        self.define_loss()
+        logger.info("loss function defined as {}".format(str(self._loss_func)))
 
         # main training epochs
         n_samples = len(train_data)
@@ -113,7 +151,7 @@ class BaseTrainer(object):
                 validator.test(network, dev_data)
 
                 if self.save_best_dev and self.best_eval_result(validator):
-                    self.save_model(network)
+                    self.save_model(network, self.model_name)
                     print("saved better model selected by dev")
                     logger.info("saved better model selected by dev")
 
@@ -153,6 +191,11 @@ class BaseTrainer(object):
             logger.error("the number of folds in train and dev data unequals {}!={}".format(len(train_data_cv),
                                                                                             len(dev_data_cv)))
             raise RuntimeError("the number of folds in train and dev data unequals")
+        if self.validate is False:
+            logger.warn("Cross validation requires self.validate to be True. Please turn it on. ")
+            print("[warning] Cross validation requires self.validate to be True. Please turn it on. ")
+            self.validate = True
+
         n_fold = len(train_data_cv)
         logger.info("perform {} folds cross validation.".format(n_fold))
         for i in range(n_fold):
@@ -186,7 +229,7 @@ class BaseTrainer(object):
         """
         Define framework-specific optimizer specified by the models.
         """
-        raise NotImplementedError
+        self._optimizer = self._optimizer_proto.construct_from_pytorch(self._model.parameters())
 
     def update(self):
         """
@@ -194,7 +237,7 @@ class BaseTrainer(object):
 
         For PyTorch, just call optimizer to update.
         """
-        raise NotImplementedError
+        self._optimizer.step()
 
     def data_forward(self, network, x):
         raise NotImplementedError
@@ -206,7 +249,8 @@ class BaseTrainer(object):
 
         For PyTorch, just do "loss.backward()"
         """
-        raise NotImplementedError
+        self._model.zero_grad()
+        loss.backward()
 
     def get_loss(self, predict, truth):
         """
@@ -215,21 +259,25 @@ class BaseTrainer(object):
         :param truth: ground truth label vector
         :return: a scalar
         """
-        if self.loss_func is None:
-            if hasattr(self.model, "loss"):
-                self.loss_func = self.model.loss
-                logger.info("The model has a loss function, use it.")
-            else:
-                logger.info("The model didn't define loss, use Trainer's loss.")
-                self.define_loss()
-        return self.loss_func(predict, truth)
+        return self._loss_func(predict, truth)
 
     def define_loss(self):
         """
-            Assign an instance of loss function to self.loss_func
-            E.g. self.loss_func = nn.CrossEntropyLoss()
+        if the model defines a loss, use model's loss.
+        Otherwise, Trainer must has a loss argument, use it as loss.
+        These two losses cannot be defined at the same time.
+        Trainer does not handle loss definition or choose default losses.
         """
-        raise NotImplementedError
+        if hasattr(self._model, "loss") and self._loss_func is not None:
+            raise ValueError("Both the model and Trainer define loss. Please take out your loss.")
+
+        if hasattr(self._model, "loss"):
+            self._loss_func = self._model.loss
+            logger.info("The model has a loss function, use it.")
+        else:
+            if self._loss_func is None:
+                raise ValueError("Please specify a loss function.")
+            logger.info("The model didn't define loss, use Trainer's loss.")
 
     def best_eval_result(self, validator):
         """
@@ -238,12 +286,15 @@ class BaseTrainer(object):
         """
         raise NotImplementedError
 
-    def save_model(self, network):
+    def save_model(self, network, model_name):
         """
         :param network: the PyTorch model
+        :param model_name: str
         model_best_dev.pkl may be overwritten by a better model in future epochs.
         """
-        ModelSaver(self.model_saved_path + "model_best_dev.pkl").save_pytorch(network)
+        if model_name[-4:] != ".pkl":
+            model_name += ".pkl"
+        ModelSaver(self.pickle_path + model_name).save_pytorch(network)
 
     def _create_validator(self, valid_args):
         raise NotImplementedError
@@ -266,17 +317,11 @@ class ToyTrainer(BaseTrainer):
         return network(x)
 
     def grad_backward(self, loss):
-        self.model.zero_grad()
+        self._model.zero_grad()
         loss.backward()
 
     def get_loss(self, pred, truth):
         return np.mean(np.square(pred - truth))
-
-    def define_optimizer(self):
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01)
-
-    def update(self):
-        self.optimizer.step()
 
 
 class SeqLabelTrainer(BaseTrainer):
@@ -285,23 +330,13 @@ class SeqLabelTrainer(BaseTrainer):
 
     """
 
-    def __init__(self, train_args):
-        super(SeqLabelTrainer, self).__init__(train_args)
-        self.vocab_size = train_args["vocab_size"]
-        self.num_classes = train_args["num_classes"]
+    def __init__(self, **kwargs):
+        super(SeqLabelTrainer, self).__init__(**kwargs)
+        # self.vocab_size = kwargs["vocab_size"]
+        # self.num_classes = kwargs["num_classes"]
         self.max_len = None
         self.mask = None
         self.best_accuracy = 0.0
-
-    def define_optimizer(self):
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9)
-
-    def grad_backward(self, loss):
-        self.model.zero_grad()
-        loss.backward()
-
-    def update(self):
-        self.optimizer.step()
 
     def data_forward(self, network, inputs):
         if not isinstance(inputs, tuple):
@@ -330,7 +365,7 @@ class SeqLabelTrainer(BaseTrainer):
         batch_size, max_len = predict.size(0), predict.size(1)
         assert truth.shape == (batch_size, max_len)
 
-        loss = self.model.loss(predict, truth, self.mask)
+        loss = self._model.loss(predict, truth, self.mask)
         return loss
 
     def best_eval_result(self, validator):
@@ -345,47 +380,24 @@ class SeqLabelTrainer(BaseTrainer):
         return Action.make_batch(iterator, output_length=True, use_cuda=self.use_cuda)
 
     def _create_validator(self, valid_args):
-        return SeqLabelTester(valid_args)
+        return SeqLabelTester(**valid_args)
 
 
 class ClassificationTrainer(BaseTrainer):
     """Trainer for classification."""
 
-    def __init__(self, train_args):
-        super(ClassificationTrainer, self).__init__(train_args)
-        self.learn_rate = train_args["learn_rate"]
-        self.momentum = train_args["momentum"]
+    def __init__(self, **train_args):
+        super(ClassificationTrainer, self).__init__(**train_args)
 
         self.iterator = None
         self.loss_func = None
         self.optimizer = None
         self.best_accuracy = 0
 
-    def define_loss(self):
-        self.loss_func = nn.CrossEntropyLoss()
-
-    def define_optimizer(self):
-        """
-        Define framework-specific optimizer specified by the models.
-        """
-        self.optimizer = torch.optim.SGD(
-            self.model.parameters(),
-            lr=self.learn_rate,
-            momentum=self.momentum)
-
     def data_forward(self, network, x):
         """Forward through network."""
         logits = network(x)
         return logits
-
-    def grad_backward(self, loss):
-        """Compute gradient backward."""
-        self.model.zero_grad()
-        loss.backward()
-
-    def update(self):
-        """Apply gradient."""
-        self.optimizer.step()
 
     def make_batch(self, iterator):
         return Action.make_batch(iterator, output_length=False, use_cuda=self.use_cuda)
@@ -404,4 +416,4 @@ class ClassificationTrainer(BaseTrainer):
             return False
 
     def _create_validator(self, valid_args):
-        return ClassificationTester(valid_args)
+        return ClassificationTester(**valid_args)

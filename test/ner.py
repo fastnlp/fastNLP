@@ -20,7 +20,7 @@ class MyNERTrainer(SeqLabelTrainer):
         override
         :return:
         """
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+        self.optimizer = torch.optim.Adam(self._model.parameters(), lr=0.001)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=3000, gamma=0.5)
 
     def update(self):

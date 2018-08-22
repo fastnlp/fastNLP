@@ -18,7 +18,6 @@ MLP_HIDDEN = 2000
 CLASSES_NUM = 5
 
 from fastNLP.models.base_model import BaseModel
-from fastNLP.core.trainer import BaseTrainer
 
 
 class MyNet(BaseModel):
@@ -58,18 +57,6 @@ class Net(nn.Module):
         x, penalty = self.aggregation(x)
         x = self.predict(x)
         return x, penalty
-
-
-class MyTrainer(BaseTrainer):
-    def __init__(self, args):
-        super(MyTrainer, self).__init__(args)
-        self.optimizer = None
-
-    def define_optimizer(self):
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9)
-
-    def define_loss(self):
-        self.loss_func = nn.CrossEntropyLoss()
 
 
 def train(model_dict=None, using_cuda=True, learning_rate=0.06,\

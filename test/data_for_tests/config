@@ -1,65 +1,11 @@
-[General]
-revision = "first"
-datapath = "./data/smallset/imdb/"
-embed_path = "./data/smallset/imdb/embedding.txt"
-optimizer = "adam"
-attn_mode = "rout"
-seq_encoder = "bilstm"
-out_caps_num = 5
-rout_iter = 3
-max_snt_num = 40
-max_wd_num = 40
-max_epochs = 50
-pre_trained = true
-batch_sz = 32
-batch_sz_min = 32
-bucket_sz = 5000
-partial_update_until_epoch = 2
-embed_size = 300
-hidden_size = 200
-dense_hidden = [300, 10]
-lr = 0.0002
-decay_steps = 1000
-decay_rate = 0.9
-dropout = 0.2
-early_stopping = 7
-reg = 1e-06
-
-[My]
-datapath = "./data/smallset/imdb/"
-embed_path = "./data/smallset/imdb/embedding.txt"
-optimizer = "adam"
-attn_mode = "rout"
-seq_encoder = "bilstm"
-out_caps_num = 5
-rout_iter = 3
-max_snt_num = 40
-max_wd_num = 40
-max_epochs = 50
-pre_trained = true
-batch_sz = 32
-batch_sz_min = 32
-bucket_sz = 5000
-partial_update_until_epoch = 2
-embed_size = 300
-hidden_size = 200
-dense_hidden = [300, 10]
-lr = 0.0002
-decay_steps = 1000
-decay_rate = 0.9
-dropout = 0.2
-early_stopping = 70
-reg = 1e-05
-test = 5
-new_attr = 40
-
-[POS]
+[test_seq_label_trainer]
 epochs = 1
 batch_size = 32
-pickle_path = "./data_for_tests/"
 validate = true
 save_best_dev = true
-model_saved_path = "./"
+use_cuda = true
+
+[test_seq_label_model]
 rnn_hidden_units = 100
 rnn_layers = 1
 rnn_bi_direction = true
@@ -68,13 +14,12 @@ dropout = 0.5
 use_crf = true
 use_cuda = true
 
-[POS_test]
+[test_seq_label_tester]
 save_output = true
 validate_in_training = true
 save_dev_input = false
 save_loss = true
 batch_size = 1
-pickle_path = "./data_for_tests/"
 rnn_hidden_units = 100
 rnn_layers = 1
 rnn_bi_direction = true
@@ -84,7 +29,6 @@ use_crf = true
 use_cuda = true
 
 [POS_infer]
-pickle_path = "./data_for_tests/"
 rnn_hidden_units = 100
 rnn_layers = 1
 rnn_bi_direction = true
@@ -95,14 +39,9 @@ num_classes = 27
 [text_class]
 epochs = 1
 batch_size = 10
-pickle_path = "./save_path/"
 validate = false
 save_best_dev = false
-model_saved_path = "./save_path/"
 use_cuda = true
 learn_rate = 1e-3
 momentum = 0.9
-
-[text_class_model]
-vocab_size = 867
-num_classes = 18
+model_name = "class_model.pkl"
