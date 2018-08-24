@@ -1,5 +1,3 @@
-import _pickle
-
 import numpy as np
 import torch
 
@@ -14,43 +12,78 @@ logger = create_logger(__name__, "./train_test.log")
 class BaseTester(object):
     """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
 
-    def __init__(self, test_args):
+    def __init__(self, **kwargs):
         """
-        :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
+        :param kwargs: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
         """
         super(BaseTester, self).__init__()
-        self.validate_in_training = test_args["validate_in_training"]
-        self.save_dev_data = None
-        self.save_output = test_args["save_output"]
-        self.output = None
-        self.save_loss = test_args["save_loss"]
-        self.mean_loss = None
-        self.batch_size = test_args["batch_size"]
-        self.pickle_path = test_args["pickle_path"]
-        self.iterator = None
-        self.use_cuda = test_args["use_cuda"]
+        """
+            "default_args" provides default value for important settings. 
+            The initialization arguments "kwargs" with the same key (name) will override the default value. 
+            "kwargs" must have the same type as "default_args" on corresponding keys. 
+            Otherwise, error will raise.
+        """
+        default_args = {"save_output": False,  # collect outputs of validation set
+                        "save_loss": False,  # collect losses in validation
+                        "save_best_dev": False,  # save best model during validation
+                        "batch_size": 8,
+                        "use_cuda": True,
+                        "pickle_path": "./save/",
+                        "model_name": "dev_best_model.pkl",
+                        "print_every_step": 1,
+                        }
+        """
+            "required_args" is the collection of arguments that users must pass to Trainer explicitly. 
+            This is used to warn users of essential settings in the training. 
+            Obviously, "required_args" is the subset of "default_args". 
+            The value in "default_args" to the keys in "required_args" is simply for type check. 
+        """
+        # TODO: required arguments
+        required_args = {}
 
-        self.model = None
+        for req_key in required_args:
+            if req_key not in kwargs:
+                logger.error("Tester lacks argument {}".format(req_key))
+                raise ValueError("Tester lacks argument {}".format(req_key))
+
+        for key in default_args:
+            if key in kwargs:
+                if isinstance(kwargs[key], type(default_args[key])):
+                    default_args[key] = kwargs[key]
+                else:
+                    msg = "Argument %s type mismatch: expected %s while get %s" % (
+                        key, type(default_args[key]), type(kwargs[key]))
+                    logger.error(msg)
+                    raise ValueError(msg)
+            else:
+                # BeseTester doesn't care about extra arguments
+                pass
+        print(default_args)
+
+        self.save_output = default_args["save_output"]
+        self.save_best_dev = default_args["save_best_dev"]
+        self.save_loss = default_args["save_loss"]
+        self.batch_size = default_args["batch_size"]
+        self.pickle_path = default_args["pickle_path"]
+        self.use_cuda = default_args["use_cuda"]
+        self.print_every_step = default_args["print_every_step"]
+
+        self._model = None
         self.eval_history = []
         self.batch_output = []
 
     def test(self, network, dev_data):
         if torch.cuda.is_available() and self.use_cuda:
-            self.model = network.cuda()
+            self._model = network.cuda()
         else:
-            self.model = network
+            self._model = network
 
         # turn on the testing mode; clean up the history
         self.mode(network, test=True)
         self.eval_history.clear()
         self.batch_output.clear()
 
-        # dev_data = self.prepare_input(self.pickle_path)
-        # logger.info("validation data loaded")
-
         iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=True))
-        n_batches = len(dev_data) // self.batch_size
-        print_every_step = 1
         step = 0
 
         for batch_x, batch_y in self.make_batch(iterator, dev_data):
@@ -65,20 +98,9 @@ class BaseTester(object):
 
             print_output = "[test step {}] {}".format(step, eval_results)
             logger.info(print_output)
-            if step % print_every_step == 0:
+            if step % self.print_every_step == 0:
                 print(print_output)
             step += 1
-
-    def prepare_input(self, data_path):
-        """Save the dev data once it is loaded. Can return directly next time.
-
-        :param data_path: str, the path to the pickle data for dev
-        :return save_dev_data: list. Each entry is a sample, which is also a list of features and label(s).
-        """
-        if self.save_dev_data is None:
-            data_dev = _pickle.load(open(data_path + "data_dev.pkl", "rb"))
-            self.save_dev_data = data_dev
-        return self.save_dev_data
 
     def mode(self, model, test):
         """Train mode or Test mode. This is for PyTorch currently.
@@ -117,15 +139,14 @@ class SeqLabelTester(BaseTester):
     Tester for sequence labeling.
     """
 
-    def __init__(self, test_args):
+    def __init__(self, **test_args):
         """
         :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
         """
-        super(SeqLabelTester, self).__init__(test_args)
+        super(SeqLabelTester, self).__init__(**test_args)
         self.max_len = None
         self.mask = None
         self.seq_len = None
-        self.batch_result = None
 
     def data_forward(self, network, inputs):
         """This is only for sequence labeling with CRF decoder.
@@ -159,10 +180,10 @@ class SeqLabelTester(BaseTester):
         :return:
         """
         batch_size, max_len = predict.size(0), predict.size(1)
-        loss = self.model.loss(predict, truth, self.mask) / batch_size
+        loss = self._model.loss(predict, truth, self.mask) / batch_size
 
-        prediction = self.model.prediction(predict, self.mask)
-        results = torch.Tensor(prediction).view(-1,)
+        prediction = self._model.prediction(predict, self.mask)
+        results = torch.Tensor(prediction).view(-1, )
         # make sure "results" is in the same device as "truth"
         results = results.to(truth)
         accuracy = torch.sum(results == truth.view((-1,))).to(torch.float) / results.shape[0]
@@ -184,21 +205,16 @@ class SeqLabelTester(BaseTester):
     def make_batch(self, iterator, data):
         return Action.make_batch(iterator, use_cuda=self.use_cuda, output_length=True)
 
+
 class ClassificationTester(BaseTester):
     """Tester for classification."""
 
-    def __init__(self, test_args):
+    def __init__(self, **test_args):
         """
         :param test_args: a dict-like object that has __getitem__ method, \
             can be accessed by "test_args["key_str"]"
         """
-        super(ClassificationTester, self).__init__(test_args)
-        self.pickle_path = test_args["pickle_path"]
-
-        self.save_dev_data = None
-        self.output = None
-        self.mean_loss = None
-        self.iterator = None
+        super(ClassificationTester, self).__init__(**test_args)
 
     def make_batch(self, iterator, data, max_len=None):
         return Action.make_batch(iterator, use_cuda=self.use_cuda, max_len=max_len)
@@ -221,4 +237,3 @@ class ClassificationTester(BaseTester):
         y_true = torch.cat(y_true, dim=0)
         acc = float(torch.sum(y_pred == y_true)) / len(y_true)
         return y_true.cpu().numpy(), y_prob.cpu().numpy(), acc
-
