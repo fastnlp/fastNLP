@@ -1,62 +1,48 @@
-fastNLP.core package
-====================
+fastNLP.core 
+=============
 
-Submodules
-----------
-
-fastNLP.core.action module
---------------------------
+fastNLP.core.action 
+--------------------
 
 .. automodule:: fastNLP.core.action
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.core.metrics module
----------------------------
+fastNLP.core.metrics 
+---------------------
 
 .. automodule:: fastNLP.core.metrics
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.core.optimizer module
------------------------------
+fastNLP.core.optimizer 
+-----------------------
 
 .. automodule:: fastNLP.core.optimizer
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.core.predictor module
------------------------------
+fastNLP.core.predictor 
+-----------------------
 
 .. automodule:: fastNLP.core.predictor
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.core.tester module
---------------------------
+fastNLP.core.preprocess 
+------------------------
+
+.. automodule:: fastNLP.core.preprocess
+    :members:
+
+fastNLP.core.tester 
+--------------------
 
 .. automodule:: fastNLP.core.tester
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.core.trainer module
----------------------------
+fastNLP.core.trainer 
+---------------------
 
 .. automodule:: fastNLP.core.trainer
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-
-Module contents
----------------
 
 .. automodule:: fastNLP.core
     :members:
-    :undoc-members:
-    :show-inheritance:

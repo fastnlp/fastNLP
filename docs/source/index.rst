@@ -3,14 +3,24 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to fastNLP's documentation!
-===================================
+fastNLP documentation
+=====================
+
+
+Introduction
+------------
+
+
+API Reference
+-------------
+
+If you are looking for information on a specific function, class or
+method, this part of the documentation is for you.
 
 .. toctree::
-   :maxdepth: 4
-   :caption: Contents:
+   :maxdepth: 2
    
-   fastNLP
+   fastNLP API <fastNLP>
 
 
 
