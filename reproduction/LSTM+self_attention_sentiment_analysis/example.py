@@ -1,9 +1,12 @@
 import time
 
-import aggregation
+import  fastNLP.modules.aggregation.self_attention as aggregation
+# import aggregation
 import dataloader
-import embedding
-import encoder
+# import embedding
+from fastNLP.modules.encoder import embedding
+from fastNLP.modules.encoder import lstm as encoder
+# import encoder
 import predict
 import torch
 import torch.nn as nn
@@ -46,9 +49,9 @@ class Net(nn.Module):
     """
     def __init__(self):
         super(Net, self).__init__()
-        self.embedding = embedding.Lookuptable(WORD_NUM, WORD_SIZE)
+        self.embedding = embedding.Embedding(WORD_NUM, WORD_SIZE)
         self.encoder = encoder.Lstm(WORD_SIZE, HIDDEN_SIZE, 1, 0.5, True)
-        self.aggregation = aggregation.Selfattention(2 * HIDDEN_SIZE, D_A, R)
+        self.aggregation = aggregation.SelfAttention(2 * HIDDEN_SIZE, D_A, R)
         self.predict = predict.MLP(R * HIDDEN_SIZE * 2, MLP_HIDDEN, CLASSES_NUM)
 
     def forward(self, x):
