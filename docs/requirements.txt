@@ -1,3 +1,4 @@
-sphinx
--e git://github.com/snide/sphinx_rtd_theme.git#egg=sphinx_rtd_theme
-sphinxcontrib.katex
+numpy>=1.14.2
+torch==0.4.0
+torchvision>=0.1.8
+sphinx-rtd-theme==0.4.1
