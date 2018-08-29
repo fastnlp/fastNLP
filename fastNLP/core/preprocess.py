@@ -97,7 +97,8 @@ class BasePreprocess(object):
                 save_pickle(data_train, pickle_path, "data_train.pkl")
             else:
                 data_train = load_pickle(pickle_path, "data_train.pkl")
-                data_dev = load_pickle(pickle_path, "data_dev.pkl")
+                if pickle_exist(pickle_path, "data_dev.pkl"):
+                    data_dev = load_pickle(pickle_path, "data_dev.pkl")
         else:
             # cross_val is True
             if not pickle_exist(pickle_path, "data_train_0.pkl"):
