@@ -33,12 +33,12 @@ class TestConfigLoader(unittest.TestCase):
             return dict
 
         test_arg = ConfigSection()
-        ConfigLoader("config", "").load_config(os.path.join("./loader", "config"), {"test": test_arg})
+        ConfigLoader("config", "").load_config(os.path.join("./test/loader", "config"), {"test": test_arg})
         #ConfigLoader("config", "").load_config("/home/ygxu/github/fastNLP_testing/fastNLP/test/loader/config",
         #                                       {"test": test_arg})
 
         #dict = read_section_from_config("/home/ygxu/github/fastNLP_testing/fastNLP/test/loader/config", "test")
-        dict = read_section_from_config(os.path.join("./loader", "config"), "test")
+        dict = read_section_from_config(os.path.join("./test/loader", "config"), "test")
 
         for sec in dict:
             if (sec not in test_arg) or (dict[sec] != test_arg[sec]):
@@ -58,18 +58,18 @@ class TestConfigLoader(unittest.TestCase):
 
 class TestDatasetLoader(unittest.TestCase):
     def test_case_TokenizeDatasetLoader(self):
-        loader = TokenizeDatasetLoader("cws_pku_utf_8", "./data_for_tests/cws_pku_utf_8")
+        loader = TokenizeDatasetLoader("cws_pku_utf_8", "./test/data_for_tests/cws_pku_utf_8")
         data = loader.load_pku(max_seq_len=32)
         print("pass TokenizeDatasetLoader test!")
 
     def test_case_POSDatasetLoader(self):
-        loader = POSDatasetLoader("people", "./data_for_tests/people.txt")
+        loader = POSDatasetLoader("people", "./test/data_for_tests/people.txt")
         data = loader.load()
         datas = loader.load_lines()
         print("pass POSDatasetLoader test!")
 
     def test_case_LMDatasetLoader(self):
-        loader = LMDatasetLoader("cws_pku_utf_8", "./data_for_tests/cws_pku_utf_8")
+        loader = LMDatasetLoader("cws_pku_utf_8", "./test/data_for_tests/cws_pku_utf_8")
         data = loader.load()
         datas = loader.load_lines()
         print("pass TokenizeDatasetLoader test!")
