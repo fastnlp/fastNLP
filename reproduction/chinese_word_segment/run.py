@@ -1,4 +1,5 @@
-import sys, os
+import os
+import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
@@ -11,7 +12,6 @@ from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import AdvSeqLabel
 from fastNLP.core.inference import SeqLabelInfer
-from fastNLP.core.optimizer import SGD
 
 # not in the file's dir
 if len(os.path.dirname(__file__)) != 0:
@@ -75,7 +75,7 @@ def train():
     train_args["num_classes"] = p.num_classes
 
     # Trainer
-    trainer = SeqLabelTrainer(train_args)
+    trainer = SeqLabelTrainer(**train_args.data)
 
     # Model
     model = AdvSeqLabel(train_args)

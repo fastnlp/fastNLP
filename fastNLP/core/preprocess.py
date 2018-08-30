@@ -19,13 +19,13 @@ DEFAULT_WORD_TO_INDEX = {DEFAULT_PADDING_LABEL: 0, DEFAULT_UNKNOWN_LABEL: 1,
 def save_pickle(obj, pickle_path, file_name):
     with open(os.path.join(pickle_path, file_name), "wb") as f:
         _pickle.dump(obj, f)
-    print("{} saved. ".format(file_name))
+    print("{} saved in {}.".format(file_name, pickle_path))
 
 
 def load_pickle(pickle_path, file_name):
     with open(os.path.join(pickle_path, file_name), "rb") as f:
         obj = _pickle.load(f)
-    print("{} loaded. ".format(file_name))
+    print("{} loaded from {}.".format(file_name, pickle_path))
     return obj
 
 
