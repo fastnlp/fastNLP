@@ -98,7 +98,7 @@ class BaseTester(object):
 
             print_output = "[test step {}] {}".format(step, eval_results)
             logger.info(print_output)
-            if step % self.print_every_step == 0:
+            if self.print_every_step > 0 and step % self.print_every_step == 0:
                 print(print_output)
             step += 1
 
@@ -187,7 +187,7 @@ class SeqLabelTester(BaseTester):
         # make sure "results" is in the same device as "truth"
         results = results.to(truth)
         accuracy = torch.sum(results == truth.view((-1,))).to(torch.float) / results.shape[0]
-        return [loss.data, accuracy.data]
+        return [float(loss), float(accuracy)]
 
     def metrics(self):
         batch_loss = np.mean([x[0] for x in self.eval_history])

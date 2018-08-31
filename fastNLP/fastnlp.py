@@ -1,4 +1,4 @@
-# from fastNLP.core.predictor import SeqLabelInfer, ClassificationInfer
+from fastNLP.core.predictor import SeqLabelInfer, ClassificationInfer
 from fastNLP.core.preprocess import load_pickle
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.loader.model_loader import ModelLoader
@@ -74,9 +74,11 @@ class FastNLP(object):
             self._download(model_name, FastNLP_MODEL_COLLECTION[model_name]["url"])
 
         model_class = self._get_model_class(FastNLP_MODEL_COLLECTION[model_name]["class"])
+        print("Restore model class {}".format(str(model_class)))
 
         model_args = ConfigSection()
         ConfigLoader.load_config(self.model_dir + config_file, {section_name: model_args})
+        print("Restore model hyper-parameters {}".format(str(model_args.data)))
 
         # fetch dictionary size and number of labels from pickle files
         word2index = load_pickle(self.model_dir, "word2id.pkl")
@@ -86,14 +88,16 @@ class FastNLP(object):
 
         # Construct the model
         model = model_class(model_args)
+        print("Model constructed.")
 
         # To do: framework independent
         ModelLoader.load_pytorch(model, self.model_dir + FastNLP_MODEL_COLLECTION[model_name]["pickle"])
+        print("Model weights loaded.")
 
         self.model = model
         self.infer_type = FastNLP_MODEL_COLLECTION[model_name]["type"]
 
-        print("Model loaded. ")
+        print("Inference ready.")
 
     def run(self, raw_input):
         """
@@ -168,10 +172,15 @@ class FastNLP(object):
         :param language: str, one of ('zh', 'en'), Chinese or English.
         :return data: list of list of string, each string is a token.
         """
+        assert language in ("zh", "en")
         data = []
-        delimiter = " " if language is "en" else ""
         for sent in text:
-            tokens = sent.strip().split(delimiter)
+            if language == "en":
+                tokens = sent.strip().split()
+            elif language == "zh":
+                tokens = [char for char in sent]
+            else:
+                raise RuntimeError("Unknown language {}".format(language))
             data.append(tokens)
         return data
 

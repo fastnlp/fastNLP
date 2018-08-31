@@ -4,7 +4,6 @@ import os
 import time
 from datetime import timedelta
 
-import numpy as np
 import torch
 
 from fastNLP.core.action import Action
@@ -47,7 +46,7 @@ class BaseTrainer(object):
             Otherwise, error will raise.
         """
         default_args = {"epochs": 3, "batch_size": 8, "validate": True, "use_cuda": True, "pickle_path": "./save/",
-                        "save_best_dev": True, "model_name": "default_model_name.pkl",
+                        "save_best_dev": True, "model_name": "default_model_name.pkl", "print_every_step": 1,
                         "loss": Loss(None),
                         "optimizer": Optimizer("Adam", lr=0.001, weight_decay=0)
                         }
@@ -86,6 +85,7 @@ class BaseTrainer(object):
         self.save_best_dev = default_args["save_best_dev"]
         self.use_cuda = default_args["use_cuda"]
         self.model_name = default_args["model_name"]
+        self.print_every_step = default_args["print_every_step"]
 
         self._model = None
         self._loss_func = default_args["loss"].get()  # return a pytorch loss function or None
@@ -93,48 +93,35 @@ class BaseTrainer(object):
         self._optimizer_proto = default_args["optimizer"]
 
     def train(self, network, train_data, dev_data=None):
-        """General Training Steps
+        """General Training Procedure
         :param network: a model
         :param train_data: three-level list, the training set.
         :param dev_data: three-level list, the validation data (optional)
-
-        The method is framework independent.
-        Work by calling the following methods:
-            - prepare_input
-            - mode
-            - define_optimizer
-            - data_forward
-            - get_loss
-            - grad_backward
-            - update
-        Subclasses must implement these methods with a specific framework.
         """
-        # prepare model and data, transfer model to gpu if available
+        # transfer model to gpu if available
         if torch.cuda.is_available() and self.use_cuda:
             self._model = network.cuda()
+            # self._model is used to access model-specific loss
         else:
             self._model = network
 
-        # define tester over dev data
+        # define Tester over dev data
         if self.validate:
             default_valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
                                   "save_loss": True, "batch_size": self.batch_size, "pickle_path": self.pickle_path,
-                                  "use_cuda": self.use_cuda}
+                                  "use_cuda": self.use_cuda, "print_every_step": 0}
             validator = self._create_validator(default_valid_args)
             logger.info("validator defined as {}".format(str(validator)))
 
+        # optimizer and loss
         self.define_optimizer()
         logger.info("optimizer defined as {}".format(str(self._optimizer)))
         self.define_loss()
         logger.info("loss function defined as {}".format(str(self._loss_func)))
 
-        # main training epochs
-        n_samples = len(train_data)
-        n_batches = n_samples // self.batch_size
-        n_print = 1
+        # main training procedure
         start = time.time()
         logger.info("training epochs started")
-
         for epoch in range(1, self.n_epochs + 1):
             logger.info("training epoch {}".format(epoch))
 
@@ -144,23 +131,30 @@ class BaseTrainer(object):
             data_iterator = iter(Batchifier(RandomSampler(train_data), self.batch_size, drop_last=False))
             logger.info("prepared data iterator")
 
-            self._train_step(data_iterator, network, start=start, n_print=n_print, epoch=epoch)
+            # one forward and backward pass
+            self._train_step(data_iterator, network, start=start, n_print=self.print_every_step, epoch=epoch)
 
+            # validation
             if self.validate:
                 logger.info("validation started")
                 validator.test(network, dev_data)
 
                 if self.save_best_dev and self.best_eval_result(validator):
                     self.save_model(network, self.model_name)
-                    print("saved better model selected by dev")
-                    logger.info("saved better model selected by dev")
+                    print("Saved better model selected by validation.")
+                    logger.info("Saved better model selected by validation.")
 
                 valid_results = validator.show_matrices()
                 print("[epoch {}] {}".format(epoch, valid_results))
                 logger.info("[epoch {}] {}".format(epoch, valid_results))
 
     def _train_step(self, data_iterator, network, **kwargs):
-        """Training process in one epoch."""
+        """Training process in one epoch.
+            kwargs should contain:
+                - n_print: int, print training information every n steps.
+                - start: time.time(), the starting time of this step.
+                - epoch: int,
+        """
         step = 0
         for batch_x, batch_y in self.make_batch(data_iterator):
 
@@ -287,10 +281,11 @@ class BaseTrainer(object):
         raise NotImplementedError
 
     def save_model(self, network, model_name):
-        """
+        """Save this model with such a name.
+        This method may be called multiple times by Trainer to overwritten a better model.
+
         :param network: the PyTorch model
         :param model_name: str
-        model_best_dev.pkl may be overwritten by a better model in future epochs.
         """
         if model_name[-4:] != ".pkl":
             model_name += ".pkl"
@@ -300,33 +295,9 @@ class BaseTrainer(object):
         raise NotImplementedError
 
 
-class ToyTrainer(BaseTrainer):
-    """
-        An example to show the definition of Trainer.
-    """
-
-    def __init__(self, training_args):
-        super(ToyTrainer, self).__init__(training_args)
-
-    def load_train_data(self, data_path):
-        data_train = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
-        data_dev = _pickle.load(open(data_path + "/data_train.pkl", "rb"))
-        return data_train, data_dev, 0, 1
-
-    def data_forward(self, network, x):
-        return network(x)
-
-    def grad_backward(self, loss):
-        self._model.zero_grad()
-        loss.backward()
-
-    def get_loss(self, pred, truth):
-        return np.mean(np.square(pred - truth))
-
-
 class SeqLabelTrainer(BaseTrainer):
     """
-    Trainer for Sequence Modeling
+    Trainer for Sequence Labeling
 
     """
 
@@ -384,7 +355,7 @@ class SeqLabelTrainer(BaseTrainer):
 
 
 class ClassificationTrainer(BaseTrainer):
-    """Trainer for classification."""
+    """Trainer for text classification."""
 
     def __init__(self, **train_args):
         super(ClassificationTrainer, self).__init__(**train_args)

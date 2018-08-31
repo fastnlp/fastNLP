@@ -3,7 +3,7 @@ import sys
 sys.path.append("..")
 from fastNLP.fastnlp import FastNLP
 
-PATH_TO_CWS_PICKLE_FILES = "/home/zyfeng/data/save/"
+PATH_TO_CWS_PICKLE_FILES = "/home/zyfeng/fastNLP/reproduction/chinese_word_segment/save/"
 
 def word_seg():
     nlp = FastNLP(model_dir=PATH_TO_CWS_PICKLE_FILES)
