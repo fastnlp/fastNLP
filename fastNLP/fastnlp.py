@@ -216,7 +216,7 @@ def make_seq_label_output(result, infer_input):
     """
     ret = []
     for example_x, example_y in zip(infer_input, result):
-        ret.append([tuple([x, y]) for x, y in zip(example_x, example_y)])
+        ret.append([(x, y) for x, y in zip(example_x, example_y)])
     return ret
 
 def make_class_output(result, infer_input):
@@ -229,35 +229,33 @@ def make_class_output(result, infer_input):
     return result
 
 
-def interpret_word_seg_results(infer_input, results):
+def interpret_word_seg_results(char_seq, label_seq):
     """Transform model output into user-friendly contents.
 
     Example: In CWS, convert <BMES> labeling into segmented text.
-    :param results: list of strings. (model output)
-    :param infer_input: 2-D list of string (model input)
-    :return output: list of strings
+    :param char_seq: list of string,
+    :param label_seq: list of string, the same length as char_seq
+            Each entry is one of ('B', 'M', 'E', 'S').
+    :return output: list of words
     """
-    outputs = []
-    for sent_char, sent_label in zip(infer_input, results):
-        words = []
-        word = ""
-        for char, label in zip(sent_char, sent_label):
-            if label[0] == "B":
-                if word != "":
-                    words.append(word)
-                word = char
-            elif label[0] == "M":
-                word += char
-            elif label[0] == "E":
-                word += char
+    words = []
+    word = ""
+    for char, label in zip(char_seq, label_seq):
+        if label[0] == "B":
+            if word != "":
                 words.append(word)
-                word = ""
-            elif label[0] == "S":
-                if word != "":
-                    words.append(word)
-                word = ""
-                words.append(char)
-            else:
-                raise ValueError("invalid label")
-        outputs.append(" ".join(words))
-    return outputs
+            word = char
+        elif label[0] == "M":
+            word += char
+        elif label[0] == "E":
+            word += char
+            words.append(word)
+            word = ""
+        elif label[0] == "S":
+            if word != "":
+                words.append(word)
+            word = ""
+            words.append(char)
+        else:
+            raise ValueError("invalid label {}".format(label[0]))
+    return words
