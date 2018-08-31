@@ -164,7 +164,7 @@ class BaseTrainer(object):
             self.grad_backward(loss)
             self.update()
 
-            if step % kwargs["n_print"] == 0:
+            if kwargs["n_print"] > 0 and step % kwargs["n_print"] == 0:
                 end = time.time()
                 diff = timedelta(seconds=round(end - kwargs["start"]))
                 print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.2} time: {}".format(
