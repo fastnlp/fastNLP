@@ -100,6 +100,10 @@ labels_pred = infer.predict(model, seqs)
 
 
 ## Installation
+Run the following commands to install fastNLP package.
+```shell
+pip install fastNLP
+```
 
 ### Cloning From GitHub
 
