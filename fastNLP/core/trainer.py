@@ -144,7 +144,7 @@ class BaseTrainer(object):
                     print("Saved better model selected by validation.")
                     logger.info("Saved better model selected by validation.")
 
-                valid_results = validator.show_matrices()
+                valid_results = validator.show_metrics()
                 print("[epoch {}] {}".format(epoch, valid_results))
                 logger.info("[epoch {}] {}".format(epoch, valid_results))
 

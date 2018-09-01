@@ -5,7 +5,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.core.trainer import SeqLabelTrainer
-from fastNLP.loader.dataset_loader import TokenizeDatasetLoader, BaseLoader
+from fastNLP.loader.dataset_loader import PeopleDailyCorpusLoader, BaseLoader
 from fastNLP.core.preprocess import SeqLabelPreprocess, load_pickle
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
@@ -17,12 +17,13 @@ from fastNLP.core.predictor import SeqLabelInfer
 if len(os.path.dirname(__file__)) != 0:
     os.chdir(os.path.dirname(__file__))
 datadir = "/home/zyfeng/data/"
-cfgfile = './cws.cfg'
-data_name = "pku_training.utf8"
+cfgfile = './pos_tag.cfg'
+data_name = "CWS_POS_TAG_NER_people_daily.txt"
 
-cws_data_path = os.path.join(datadir, "pku_training.utf8")
+pos_tag_data_path = os.path.join(datadir, data_name)
 pickle_path = "save"
 data_infer_path = os.path.join(datadir, "infer.utf8")
+
 
 def infer():
     # Config Loader
@@ -34,7 +35,6 @@ def infer():
     test_args["vocab_size"] = len(word2index)
     index2label = load_pickle(pickle_path, "id2class.pkl")
     test_args["num_classes"] = len(index2label)
-
 
     # Define the same model
     model = AdvSeqLabel(test_args)
@@ -66,8 +66,8 @@ def train():
     ConfigLoader("good_name", "good_path").load_config(cfgfile, {"train": train_args, "test": test_args})
 
     # Data Loader
-    loader = TokenizeDatasetLoader(data_name, cws_data_path)
-    train_data = loader.load_pku()
+    loader = PeopleDailyCorpusLoader(pos_tag_data_path)
+    train_data, _ = loader.load()
 
     # Preprocessor
     preprocessor = SeqLabelPreprocess()
@@ -86,7 +86,7 @@ def train():
     except Exception as e:
         print("No saved model. Continue.")
         pass
-        
+
     # Start training
     trainer.train(model, data_train, data_dev)
     print("Training finished!")
@@ -131,6 +131,7 @@ def test():
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description='Run a chinese word segmentation model')
     parser.add_argument('--mode', help='set the model\'s model', choices=['train', 'test', 'infer'])
     args = parser.parse_args()

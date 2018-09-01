@@ -108,7 +108,7 @@ def train_test():
     tester.test(model, data_train)
 
     # print test results
-    print(tester.show_matrices())
+    print(tester.show_metrics())
     print("model tested!")
 
 

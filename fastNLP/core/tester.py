@@ -86,7 +86,7 @@ class BaseTester(object):
         iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=True))
         step = 0
 
-        for batch_x, batch_y in self.make_batch(iterator, dev_data):
+        for batch_x, batch_y in self.make_batch(iterator):
             with torch.no_grad():
                 prediction = self.data_forward(network, batch_x)
                 eval_results = self.evaluate(prediction, batch_y)
@@ -123,14 +123,14 @@ class BaseTester(object):
         """Return a list of metrics. """
         raise NotImplementedError
 
-    def show_matrices(self):
+    def show_metrics(self):
         """This is called by Trainer to print evaluation results on dev set during training.
 
         :return print_str: str
         """
         raise NotImplementedError
 
-    def make_batch(self, iterator, data):
+    def make_batch(self, iterator):
         raise NotImplementedError
 
 
@@ -194,7 +194,7 @@ class SeqLabelTester(BaseTester):
         batch_accuracy = np.mean([x[1] for x in self.eval_history])
         return batch_loss, batch_accuracy
 
-    def show_matrices(self):
+    def show_metrics(self):
         """
         This is called by Trainer to print evaluation on dev set.
         :return print_str: str
@@ -202,7 +202,7 @@ class SeqLabelTester(BaseTester):
         loss, accuracy = self.metrics()
         return "dev loss={:.2f}, accuracy={:.2f}".format(loss, accuracy)
 
-    def make_batch(self, iterator, data):
+    def make_batch(self, iterator):
         return Action.make_batch(iterator, use_cuda=self.use_cuda, output_length=True)
 
 
@@ -216,7 +216,7 @@ class ClassificationTester(BaseTester):
         """
         super(ClassificationTester, self).__init__(**test_args)
 
-    def make_batch(self, iterator, data, max_len=None):
+    def make_batch(self, iterator, max_len=None):
         return Action.make_batch(iterator, use_cuda=self.use_cuda, max_len=max_len)
 
     def data_forward(self, network, x):

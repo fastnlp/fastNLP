@@ -68,7 +68,7 @@ class MyNERTester(SeqLabelTester):
     def metrics(self):
         return np.mean(self.eval_history)
 
-    def show_matrices(self):
+    def show_metrics(self):
         return "dev accuracy={:.2f}".format(float(self.metrics()))
 
 

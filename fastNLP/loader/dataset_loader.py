@@ -220,13 +220,57 @@ class LMDatasetLoader(DatasetLoader):
         return text.strip().split()
 
 
-if __name__ == "__main__":
+class PeopleDailyCorpusLoader(DatasetLoader):
     """
-    data = POSDatasetLoader("xxx", "../../test/data_for_tests/people.txt").load_lines()
-    for example in data:
-        for w, l in zip(example[0], example[1]):
-            print(w, l)
+        People Daily Corpus: Chinese word segmentation, POS tag, NER
     """
 
-    ans = TokenizeDatasetLoader("xxx", "/home/zyfeng/Desktop/data/icwb2-data/training/test").load_pku()
-    print(ans)
+    def __init__(self, data_path):
+        super(PeopleDailyCorpusLoader, self).__init__("people_daily_corpus", data_path)
+
+    def load(self):
+        with open(self.data_path, "r", encoding="utf-8") as f:
+            sents = f.readlines()
+
+        pos_tag_examples = []
+        ner_examples = []
+        for sent in sents:
+            inside_ne = False
+            sent_pos_tag = []
+            sent_words = []
+            sent_ner = []
+            words = sent.strip().split()[1:]
+            for word in words:
+                if "[" in word and "]" in word:
+                    ner_tag = "U"
+                    print(word)
+                elif "[" in word:
+                    inside_ne = True
+                    ner_tag = "B"
+                    word = word[1:]
+                elif "]" in word:
+                    ner_tag = "L"
+                    word = word[:word.index("]")]
+                    if inside_ne is True:
+                        inside_ne = False
+                    else:
+                        raise RuntimeError("only ] appears!")
+                else:
+                    if inside_ne is True:
+                        ner_tag = "I"
+                    else:
+                        ner_tag = "O"
+                tmp = word.split("/")
+                token, pos = tmp[0], tmp[1]
+                sent_ner.append(ner_tag)
+                sent_pos_tag.append(pos)
+                sent_words.append(token)
+            pos_tag_examples.append([sent_words, sent_pos_tag])
+            ner_examples.append([sent_words, sent_ner])
+        return pos_tag_examples, ner_examples
+
+if __name__ == "__main__":
+    loader = PeopleDailyCorpusLoader("/home/zyfeng/data/CWS_POS_TAG_NER_people_daily.txt")
+    pos, ner = loader.load()
+    print(pos[:10])
+    print(ner[:10])

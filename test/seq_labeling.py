@@ -134,7 +134,7 @@ def train_and_test():
     tester.test(model, data_dev)
 
     # print test results
-    print(tester.show_matrices())
+    print(tester.show_metrics())
     print("model tested!")
 
 
