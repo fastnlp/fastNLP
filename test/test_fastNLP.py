@@ -53,7 +53,7 @@ def test_interpret_cws_pos_results():
     print(interpret_cws_pos_results(chars, labels))
 
 
-def test_pos_tag():
+def pos_tag():
     nlp = FastNLP(model_dir=PATH_TO_POS_TAG_PICKLE_FILES)
     nlp.load("pos_tag_model", config_file="pos_tag.config", section_name="pos_tag_model")
     text = ["这是最好的基于深度学习的中文分词系统。",
@@ -71,4 +71,4 @@ def test_pos_tag():
 
 
 if __name__ == "__main__":
-    word_seg()
+    pos_tag()
