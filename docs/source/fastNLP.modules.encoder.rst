@@ -1,78 +1,54 @@
-fastNLP.modules.encoder package
-===============================
+fastNLP.modules.encoder 
+========================
 
-Submodules
-----------
-
-fastNLP.modules.encoder.char\_embedding module
-----------------------------------------------
+fastNLP.modules.encoder.char\_embedding 
+----------------------------------------
 
 .. automodule:: fastNLP.modules.encoder.char_embedding
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.modules.encoder.conv module
------------------------------------
+fastNLP.modules.encoder.conv 
+-----------------------------
 
 .. automodule:: fastNLP.modules.encoder.conv
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.modules.encoder.conv\_maxpool module
---------------------------------------------
+fastNLP.modules.encoder.conv\_maxpool 
+--------------------------------------
 
 .. automodule:: fastNLP.modules.encoder.conv_maxpool
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.modules.encoder.embedding module
-----------------------------------------
+fastNLP.modules.encoder.embedding 
+----------------------------------
 
 .. automodule:: fastNLP.modules.encoder.embedding
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.modules.encoder.linear module
--------------------------------------
+fastNLP.modules.encoder.linear 
+-------------------------------
 
 .. automodule:: fastNLP.modules.encoder.linear
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.modules.encoder.lstm module
------------------------------------
+fastNLP.modules.encoder.lstm 
+-----------------------------
 
 .. automodule:: fastNLP.modules.encoder.lstm
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.modules.encoder.masked\_rnn module
-------------------------------------------
+fastNLP.modules.encoder.masked\_rnn 
+------------------------------------
 
 .. automodule:: fastNLP.modules.encoder.masked_rnn
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.modules.encoder.variational\_rnn module
------------------------------------------------
+fastNLP.modules.encoder.variational\_rnn 
+-----------------------------------------
 
 .. automodule:: fastNLP.modules.encoder.variational_rnn
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-
-Module contents
----------------
 
 .. automodule:: fastNLP.modules.encoder
     :members:
-    :undoc-members:
-    :show-inheritance:
