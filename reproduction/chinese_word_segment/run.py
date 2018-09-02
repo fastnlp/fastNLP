@@ -1,26 +1,26 @@
-import sys, os
+import os
+import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.loader.dataset_loader import TokenizeDatasetLoader, BaseLoader
-from fastNLP.loader.preprocess import POSPreprocess, load_pickle
+from fastNLP.core.preprocess import SeqLabelPreprocess, load_pickle
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import AdvSeqLabel
-from fastNLP.core.inference import SeqLabelInfer
-from fastNLP.core.optimizer import SGD
+from fastNLP.core.predictor import SeqLabelInfer
 
 # not in the file's dir
 if len(os.path.dirname(__file__)) != 0:
     os.chdir(os.path.dirname(__file__))
-datadir = 'icwb2-data'
-cfgfile = 'cws.cfg'
+datadir = "/home/zyfeng/data/"
+cfgfile = './cws.cfg'
 data_name = "pku_training.utf8"
 
-cws_data_path = os.path.join(datadir, "training/pku_training.utf8")
+cws_data_path = os.path.join(datadir, "pku_training.utf8")
 pickle_path = "save"
 data_infer_path = os.path.join(datadir, "infer.utf8")
 
@@ -70,12 +70,13 @@ def train():
     train_data = loader.load_pku()
 
     # Preprocessor
-    p = POSPreprocess(train_data, pickle_path, train_dev_split=0.3)
-    train_args["vocab_size"] = p.vocab_size
-    train_args["num_classes"] = p.num_classes
+    preprocessor = SeqLabelPreprocess()
+    data_train, data_dev = preprocessor.run(train_data, pickle_path=pickle_path, train_dev_split=0.3)
+    train_args["vocab_size"] = preprocessor.vocab_size
+    train_args["num_classes"] = preprocessor.num_classes
 
     # Trainer
-    trainer = SeqLabelTrainer(train_args)
+    trainer = SeqLabelTrainer(**train_args.data)
 
     # Model
     model = AdvSeqLabel(train_args)
@@ -83,10 +84,11 @@ def train():
         ModelLoader.load_pytorch(model, "./save/saved_model.pkl")
         print('model parameter loaded!')
     except Exception as e:
+        print("No saved model. Continue.")
         pass
         
     # Start training
-    trainer.train(model)
+    trainer.train(model, data_train, data_dev)
     print("Training finished!")
 
     # Saver
@@ -106,6 +108,9 @@ def test():
     index2label = load_pickle(pickle_path, "id2class.pkl")
     test_args["num_classes"] = len(index2label)
 
+    # load dev data
+    dev_data = load_pickle(pickle_path, "data_dev.pkl")
+
     # Define the same model
     model = AdvSeqLabel(test_args)
 
@@ -114,10 +119,10 @@ def test():
     print("model loaded!")
 
     # Tester
-    tester = SeqLabelTester(test_args)
+    tester = SeqLabelTester(**test_args.data)
 
     # Start testing
-    tester.test(model)
+    tester.test(model, dev_data)
 
     # print test results
     print(tester.show_matrices())

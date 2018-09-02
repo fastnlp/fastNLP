@@ -273,7 +273,7 @@ class MaskedRNNBase(nn.Module):
                 hx = (hx, hx)
 
         func = AutogradMaskedStep(num_layers=self.num_layers,
-                                  dropout=self.dropout,
+                                  dropout=self.step_dropout,
                                   train=self.training,
                                   lstm=lstm)
 

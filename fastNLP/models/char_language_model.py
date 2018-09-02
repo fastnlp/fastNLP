@@ -142,6 +142,8 @@ class CharLM(BaseModel):
             "char_dict": char_dict,
             "reverse_word_dict": reverse_word_dict,
         }
+        if not os.path.exists("cache"):
+            os.mkdir("cache")
         torch.save(objects, "cache/prep.pt")
         print("Preprocess done.")
 
