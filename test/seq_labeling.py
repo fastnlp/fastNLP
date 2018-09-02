@@ -123,7 +123,7 @@ def train_and_test():
     tester = SeqLabelTester(save_output=False,
                             save_loss=False,
                             save_best_dev=False,
-                            batch_size=8,
+                            batch_size=4,
                             use_cuda=False,
                             pickle_path=pickle_path,
                             model_name="seq_label_in_test.pkl",
@@ -140,4 +140,4 @@ def train_and_test():
 
 if __name__ == "__main__":
     train_and_test()
-    infer()
+    # infer()
