@@ -36,7 +36,7 @@ data_dir = 'save/'  # directory to save data and model
 train_path = './data_for_tests/text_classify.txt'  # training set file
 
 # load dataset
-ds_loader = ClassDatasetLoader("train", train_path)
+ds_loader = ClassDatasetLoader(train_path)
 data = ds_loader.load()
 
 # pre-process dataset

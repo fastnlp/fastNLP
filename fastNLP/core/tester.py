@@ -38,7 +38,7 @@ class BaseTester(object):
             Obviously, "required_args" is the subset of "default_args". 
             The value in "default_args" to the keys in "required_args" is simply for type check. 
         """
-        # TODO: required arguments
+        # add required arguments here
         required_args = {}
 
         for req_key in required_args:
@@ -56,7 +56,7 @@ class BaseTester(object):
                     logger.error(msg)
                     raise ValueError(msg)
             else:
-                # BeseTester doesn't care about extra arguments
+                # BaseTester doesn't care about extra arguments
                 pass
         print(default_args)
 
@@ -69,8 +69,8 @@ class BaseTester(object):
         self.print_every_step = default_args["print_every_step"]
 
         self._model = None
-        self.eval_history = []
-        self.batch_output = []
+        self.eval_history = []  # evaluation results of all batches
+        self.batch_output = []  # outputs of all batches
 
     def test(self, network, dev_data):
         if torch.cuda.is_available() and self.use_cuda:
@@ -83,7 +83,7 @@ class BaseTester(object):
         self.eval_history.clear()
         self.batch_output.clear()
 
-        iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=True))
+        iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=False))
         step = 0
 
         for batch_x, batch_y in self.make_batch(iterator):
@@ -99,7 +99,7 @@ class BaseTester(object):
             print_output = "[test step {}] {}".format(step, eval_results)
             logger.info(print_output)
             if self.print_every_step > 0 and step % self.print_every_step == 0:
-                print(print_output)
+                print(self.make_eval_output(prediction, eval_results))
             step += 1
 
     def mode(self, model, test):
@@ -115,16 +115,28 @@ class BaseTester(object):
         raise NotImplementedError
 
     def evaluate(self, predict, truth):
-        """Compute evaluation metrics for the model. """
+        """Compute evaluation metrics.
+
+        :param predict: Tensor
+        :param truth: Tensor
+        :return eval_results: can be anything. It will be stored in self.eval_history
+        """
         raise NotImplementedError
 
     @property
     def metrics(self):
-        """Return a list of metrics. """
+        """Compute and return metrics.
+        Use self.eval_history to compute metrics over the whole dev set.
+        Please refer to metrics.py for common metric functions.
+
+        :return : variable number of outputs
+        """
         raise NotImplementedError
 
     def show_metrics(self):
-        """This is called by Trainer to print evaluation results on dev set during training.
+        """Customize evaluation outputs in Trainer.
+        Called by Trainer to print evaluation results on dev set during training.
+        Use self.metrics to fetch available metrics.
 
         :return print_str: str
         """
@@ -133,6 +145,14 @@ class BaseTester(object):
     def make_batch(self, iterator):
         raise NotImplementedError
 
+    def make_eval_output(self, predictions, eval_results):
+        """Customize Tester outputs.
+
+        :param predictions: Tensor
+        :param eval_results: Tensor
+        :return: str, to be printed.
+        """
+        raise NotImplementedError
 
 class SeqLabelTester(BaseTester):
     """
@@ -211,7 +231,7 @@ class ClassificationTester(BaseTester):
 
     def __init__(self, **test_args):
         """
-        :param test_args: a dict-like object that has __getitem__ method, \
+        :param test_args: a dict-like object that has __getitem__ method.
             can be accessed by "test_args["key_str"]"
         """
         super(ClassificationTester, self).__init__(**test_args)

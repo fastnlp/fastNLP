@@ -6,8 +6,8 @@ from fastNLP.loader.base_loader import BaseLoader
 class DatasetLoader(BaseLoader):
     """"loader for data sets"""
 
-    def __init__(self, data_name, data_path):
-        super(DatasetLoader, self).__init__(data_name, data_path)
+    def __init__(self, data_path):
+        super(DatasetLoader, self).__init__(data_path)
 
 
 class POSDatasetLoader(DatasetLoader):
@@ -31,8 +31,8 @@ class POSDatasetLoader(DatasetLoader):
     to label5.
     """
 
-    def __init__(self, data_name, data_path):
-        super(POSDatasetLoader, self).__init__(data_name, data_path)
+    def __init__(self, data_path):
+        super(POSDatasetLoader, self).__init__(data_path)
 
     def load(self):
         assert os.path.exists(self.data_path)
@@ -84,8 +84,8 @@ class TokenizeDatasetLoader(DatasetLoader):
     Data set loader for tokenization data sets
     """
 
-    def __init__(self, data_name, data_path):
-        super(TokenizeDatasetLoader, self).__init__(data_name, data_path)
+    def __init__(self, data_path):
+        super(TokenizeDatasetLoader, self).__init__(data_path)
 
     def load_pku(self, max_seq_len=32):
         """
@@ -138,8 +138,8 @@ class TokenizeDatasetLoader(DatasetLoader):
 class ClassDatasetLoader(DatasetLoader):
     """Loader for classification data sets"""
 
-    def __init__(self, data_name, data_path):
-        super(ClassDatasetLoader, self).__init__(data_name, data_path)
+    def __init__(self, data_path):
+        super(ClassDatasetLoader, self).__init__(data_path)
 
     def load(self):
         assert os.path.exists(self.data_path)
@@ -177,7 +177,7 @@ class ConllLoader(DatasetLoader):
         :param  str data_name: the name of the conll data set
         :param str data_path: the path to the conll data set
         """
-        super(ConllLoader, self).__init__(data_name, data_path)
+        super(ConllLoader, self).__init__(data_path)
         self.data_set = self.parse(self.load())
 
     def load(self):
@@ -209,8 +209,8 @@ class ConllLoader(DatasetLoader):
 
 
 class LMDatasetLoader(DatasetLoader):
-    def __init__(self, data_name, data_path):
-        super(LMDatasetLoader, self).__init__(data_name, data_path)
+    def __init__(self, data_path):
+        super(LMDatasetLoader, self).__init__(data_path)
 
     def load(self):
         if not os.path.exists(self.data_path):
@@ -226,7 +226,7 @@ class PeopleDailyCorpusLoader(DatasetLoader):
     """
 
     def __init__(self, data_path):
-        super(PeopleDailyCorpusLoader, self).__init__("people_daily_corpus", data_path)
+        super(PeopleDailyCorpusLoader, self).__init__(data_path)
 
     def load(self):
         with open(self.data_path, "r", encoding="utf-8") as f:
@@ -270,7 +270,7 @@ class PeopleDailyCorpusLoader(DatasetLoader):
         return pos_tag_examples, ner_examples
 
 if __name__ == "__main__":
-    loader = PeopleDailyCorpusLoader("/home/zyfeng/data/CWS_POS_TAG_NER_people_daily.txt")
+    loader = PeopleDailyCorpusLoader("./")
     pos, ner = loader.load()
     print(pos[:10])
     print(ner[:10])

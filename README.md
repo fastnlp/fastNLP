@@ -65,7 +65,7 @@ data_dir = 'save/'  # directory to save data and model
 train_path = './data_for_tests/text_classify.txt'  # training set file
 
 # load dataset
-ds_loader = ClassDatasetLoader("train", train_path)
+ds_loader = ClassDatasetLoader(train_path)
 data = ds_loader.load()
 
 # pre-process dataset
@@ -135,14 +135,15 @@ pip3 install torch torchvision
 ```
 FastNLP
 ├── docs
-│   └── quick_tutorial.md
 ├── fastNLP
-│   ├── action
+│   ├── core
 │   │   ├── action.py
-│   │   ├── inference.py
 │   │   ├── __init__.py
+│   │   ├── loss.py
 │   │   ├── metrics.py
 │   │   ├── optimizer.py
+│   │   ├── predictor.py
+│   │   ├── preprocess.py
 │   │   ├── README.md
 │   │   ├── tester.py
 │   │   └── trainer.py
@@ -154,71 +155,28 @@ FastNLP
 │   │   ├── dataset_loader.py
 │   │   ├── embed_loader.py
 │   │   ├── __init__.py
-│   │   ├── model_loader.py
-│   │   └── preprocess.py
+│   │   └── model_loader.py
 │   ├── models
-│   │   ├── base_model.py
-│   │   ├── char_language_model.py
-│   │   ├── cnn_text_classification.py
-│   │   ├── __init__.py
-│   │   └── sequence_modeling.py
 │   ├── modules
 │   │   ├── aggregation
-│   │   │   ├── attention.py
-│   │   │   ├── avg_pool.py
-│   │   │   ├── __init__.py
-│   │   │   ├── kmax_pool.py
-│   │   │   ├── max_pool.py
-│   │   │   └── self_attention.py
 │   │   ├── decoder
-│   │   │   ├── CRF.py
-│   │   │   └── __init__.py
 │   │   ├── encoder
-│   │   │   ├── char_embedding.py
-│   │   │   ├── conv_maxpool.py
-│   │   │   ├── conv.py
-│   │   │   ├── embedding.py
-│   │   │   ├── __init__.py
-│   │   │   ├── linear.py
-│   │   │   ├── lstm.py
-│   │   │   ├── masked_rnn.py
-│   │   │   └── variational_rnn.py
 │   │   ├── __init__.py
 │   │   ├── interaction
-│   │   │   └── __init__.py
 │   │   ├── other_modules.py
 │   │   └── utils.py
 │   └── saver
-│       ├── base_saver.py
-│       ├── __init__.py
-│       ├── logger.py
-│       └── model_saver.py
 ├── LICENSE
 ├── README.md
 ├── reproduction
-│   ├── Char-aware_NLM
-│   │  
-│   ├── CNN-sentence_classification
-│   │  
-│   ├── HAN-document_classification
-│   │  
-│   └── LSTM+self_attention_sentiment_analysis
-|
 ├── requirements.txt
 ├── setup.py
 └── test
+    ├── core
     ├── data_for_tests
-    │   ├── charlm.txt
-    │   ├── config
-    │   ├── cws_test
-    │   ├── cws_train
-    │   ├── people_infer.txt
-    │   └── people.txt
-    ├── test_charlm.py
-    ├── test_cws.py
-    ├── test_fastNLP.py
-    ├── test_loader.py
-    ├── test_seq_labeling.py
-    ├── test_tester.py
-    └── test_trainer.py
+    ├── __init__.py
+    ├── loader
+    ├── modules
+    └── readme_example.py
+
 ```

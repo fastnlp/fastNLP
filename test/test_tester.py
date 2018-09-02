@@ -9,15 +9,15 @@ pickle_path = "data_for_tests"
 
 
 def foo():
-    loader = TokenizeDatasetLoader(data_name, "./data_for_tests/cws_pku_utf_8")
+    loader = TokenizeDatasetLoader("./data_for_tests/cws_pku_utf_8")
     train_data = loader.load_pku()
 
     train_args = ConfigSection()
-    ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS": train_args})
+    ConfigLoader("config.cfg").load_config("./data_for_tests/config", {"POS": train_args})
 
     # Preprocessor
     p = SeqLabelPreprocess()
-    p.run(train_data)
+    train_data = p.run(train_data)
     train_args["vocab_size"] = p.vocab_size
     train_args["num_classes"] = p.num_classes
 
@@ -26,10 +26,10 @@ def foo():
     valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
                   "save_loss": True, "batch_size": 8, "pickle_path": "./data_for_tests/",
                   "use_cuda": True}
-    validator = SeqLabelTester(valid_args)
+    validator = SeqLabelTester(**valid_args)
 
     print("start validation.")
-    validator.test(model)
+    validator.test(model, train_data)
     print(validator.show_metrics())
 
 

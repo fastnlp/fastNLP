@@ -70,7 +70,7 @@ class Predictor(object):
     def predict(self, network, data):
         """Perform inference using the trained model.
 
-        :param network: a PyTorch model
+        :param network: a PyTorch model (cpu)
         :param data: list of list of strings
         :return: list of list of strings, [num_examples, tag_seq_length]
         """

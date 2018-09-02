@@ -28,7 +28,7 @@ data_infer_path = os.path.join(datadir, "infer.utf8")
 def infer():
     # Config Loader
     test_args = ConfigSection()
-    ConfigLoader("config", "").load_config(cfgfile, {"POS_test": test_args})
+    ConfigLoader("config").load_config(cfgfile, {"POS_test": test_args})
 
     # fetch dictionary size and number of labels from pickle files
     word2index = load_pickle(pickle_path, "word2id.pkl")
@@ -47,7 +47,7 @@ def infer():
         raise
 
     # Data Loader
-    raw_data_loader = BaseLoader(data_name, data_infer_path)
+    raw_data_loader = BaseLoader(data_infer_path)
     infer_data = raw_data_loader.load_lines()
     print('data loaded')
 
@@ -63,7 +63,7 @@ def train():
     # Config Loader
     train_args = ConfigSection()
     test_args = ConfigSection()
-    ConfigLoader("good_name", "good_path").load_config(cfgfile, {"train": train_args, "test": test_args})
+    ConfigLoader("good_name").load_config(cfgfile, {"train": train_args, "test": test_args})
 
     # Data Loader
     loader = PeopleDailyCorpusLoader(pos_tag_data_path)
@@ -100,7 +100,7 @@ def train():
 def test():
     # Config Loader
     test_args = ConfigSection()
-    ConfigLoader("config", "").load_config(cfgfile, {"POS_test": test_args})
+    ConfigLoader("config").load_config(cfgfile, {"POS_test": test_args})
 
     # fetch dictionary size and number of labels from pickle files
     word2index = load_pickle(pickle_path, "word2id.pkl")
