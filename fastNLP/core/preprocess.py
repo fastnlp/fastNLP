@@ -268,7 +268,7 @@ class ClassPreprocess(BasePreprocess):
 
             for word in sent:
                 if word not in word2index:
-                    word2index[word[0]] = len(word2index)
+                    word2index[word] = len(word2index)
         return word2index, label2index
 
     def to_index(self, data):
