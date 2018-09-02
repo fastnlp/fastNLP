@@ -7,6 +7,12 @@ fastNLP.core.action
 .. automodule:: fastNLP.core.action
     :members:
 
+fastNLP.core.loss 
+------------------
+
+.. automodule:: fastNLP.core.loss
+    :members:
+
 fastNLP.core.metrics 
 ---------------------
 
