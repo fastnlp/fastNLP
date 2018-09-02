@@ -94,6 +94,10 @@ class ConfigSection(object):
     def __contains__(self, item):
         return item in self.__dict__.keys()
 
+    @property
+    def data(self):
+        return self.__dict__
+
 
 if __name__ == "__main__":
     config = ConfigLoader('configLoader', 'there is no data')

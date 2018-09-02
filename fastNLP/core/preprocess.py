@@ -19,13 +19,13 @@ DEFAULT_WORD_TO_INDEX = {DEFAULT_PADDING_LABEL: 0, DEFAULT_UNKNOWN_LABEL: 1,
 def save_pickle(obj, pickle_path, file_name):
     with open(os.path.join(pickle_path, file_name), "wb") as f:
         _pickle.dump(obj, f)
-    print("{} saved. ".format(file_name))
+    print("{} saved in {}".format(file_name, pickle_path))
 
 
 def load_pickle(pickle_path, file_name):
     with open(os.path.join(pickle_path, file_name), "rb") as f:
         obj = _pickle.load(f)
-    print("{} loaded. ".format(file_name))
+    print("{} loaded from {}".format(file_name, pickle_path))
     return obj
 
 
@@ -59,7 +59,6 @@ class BasePreprocess(object):
 
     def run(self, train_dev_data, test_data=None, pickle_path="./", train_dev_split=0, cross_val=False, n_fold=10):
         """Main preprocessing pipeline.
-
         :param train_dev_data: three-level list, with either single label or multiple labels in a sample.
         :param test_data: three-level list, with either single label or multiple labels in a sample. (optional)
         :param pickle_path: str, the path to save the pickle files.
@@ -98,6 +97,8 @@ class BasePreprocess(object):
                 save_pickle(data_train, pickle_path, "data_train.pkl")
             else:
                 data_train = load_pickle(pickle_path, "data_train.pkl")
+                if pickle_exist(pickle_path, "data_dev.pkl"):
+                    data_dev = load_pickle(pickle_path, "data_dev.pkl")
         else:
             # cross_val is True
             if not pickle_exist(pickle_path, "data_train_0.pkl"):
