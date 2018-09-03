@@ -16,6 +16,7 @@ fastNLP is a modular Natural Language Processing system based on PyTorch, for fa
 - numpy>=1.14.2
 - torch==0.4.0
 - torchvision>=0.1.8
+- tensorboardX
 
 
 ## Resources
@@ -45,6 +46,11 @@ conda install pytorch torchvision -c pytorch
 pip3 install torch torchvision
 ```
 
+### TensorboardX Installation
+
+```shell
+pip3 install tensorboardX
+```
 
 ## Project Structure
 
