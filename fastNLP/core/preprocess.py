@@ -59,7 +59,6 @@ class BasePreprocess(object):
 
     def run(self, train_dev_data, test_data=None, pickle_path="./", train_dev_split=0, cross_val=False, n_fold=10):
         """Main preprocessing pipeline.
-
         :param train_dev_data: three-level list, with either single label or multiple labels in a sample.
         :param test_data: three-level list, with either single label or multiple labels in a sample. (optional)
         :param pickle_path: str, the path to save the pickle files.
@@ -98,6 +97,8 @@ class BasePreprocess(object):
                 save_pickle(data_train, pickle_path, "data_train.pkl")
             else:
                 data_train = load_pickle(pickle_path, "data_train.pkl")
+                if pickle_exist(pickle_path, "data_dev.pkl"):
+                    data_dev = load_pickle(pickle_path, "data_dev.pkl")
         else:
             # cross_val is True
             if not pickle_exist(pickle_path, "data_train_0.pkl"):
