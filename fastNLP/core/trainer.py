@@ -1,6 +1,4 @@
-import _pickle
 import copy
-import os
 import time
 from datetime import timedelta
 
@@ -15,16 +13,12 @@ from fastNLP.modules import utils
 from fastNLP.saver.logger import create_logger
 from fastNLP.saver.model_saver import ModelSaver
 
-DEFAULT_QUEUE_SIZE = 300
 logger = create_logger(__name__, "./train_test.log")
 
 
 class BaseTrainer(object):
-    """Operations to train a model, including data loading, SGD, and validation.
+    """Operations of training a model, including data loading, gradient descent, and validation.
 
-        Subclasses must implement the following abstract methods:
-        - grad_backward
-        - get_loss
     """
 
     def __init__(self, **kwargs):
@@ -47,7 +41,7 @@ class BaseTrainer(object):
         """
         default_args = {"epochs": 3, "batch_size": 8, "validate": True, "use_cuda": True, "pickle_path": "./save/",
                         "save_best_dev": True, "model_name": "default_model_name.pkl", "print_every_step": 1,
-                        "loss": Loss(None),
+                        "loss": Loss(None),  # used to pass type check
                         "optimizer": Optimizer("Adam", lr=0.001, weight_decay=0)
                         }
         """
@@ -56,7 +50,7 @@ class BaseTrainer(object):
             Obviously, "required_args" is the subset of "default_args". 
             The value in "default_args" to the keys in "required_args" is simply for type check. 
         """
-        # TODO: required arguments
+        # add required arguments here
         required_args = {}
 
         for req_key in required_args:
@@ -144,7 +138,7 @@ class BaseTrainer(object):
                     print("Saved better model selected by validation.")
                     logger.info("Saved better model selected by validation.")
 
-                valid_results = validator.show_matrices()
+                valid_results = validator.show_metrics()
                 print("[epoch {}] {}".format(epoch, valid_results))
                 logger.info("[epoch {}] {}".format(epoch, valid_results))
 
@@ -197,21 +191,6 @@ class BaseTrainer(object):
             logger.info("running the {} of {} folds cross validation".format(i + 1, n_fold))
             network_copy = copy.deepcopy(network)
             self.train(network_copy, train_data_cv[i], dev_data_cv[i])
-
-    def load_train_data(self, pickle_path):
-        """
-        For task-specific processing.
-        :param pickle_path:
-        :return data_train
-        """
-        file_path = os.path.join(pickle_path, "data_train.pkl")
-        if os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                data = _pickle.load(f)
-        else:
-            logger.error("cannot find training data {}. invalid input path for training data.".format(file_path))
-            raise RuntimeError("cannot find training data {}".format(file_path))
-        return data
 
     def make_batch(self, iterator):
         raise NotImplementedError

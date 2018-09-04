@@ -8,8 +8,8 @@ class ModelLoader(BaseLoader):
         Loader for models.
     """
 
-    def __init__(self, data_name, data_path):
-        super(ModelLoader, self).__init__(data_name, data_path)
+    def __init__(self, data_path):
+        super(ModelLoader, self).__init__(data_path)
 
     @staticmethod
     def load_pytorch(empty_model, model_path):

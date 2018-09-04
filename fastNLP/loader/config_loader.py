@@ -9,7 +9,7 @@ class ConfigLoader(BaseLoader):
     """loader for configuration files"""
 
     def __int__(self, data_name, data_path):
-        super(ConfigLoader, self).__init__(data_name, data_path)
+        super(ConfigLoader, self).__init__(data_path)
         self.config = self.parse(super(ConfigLoader, self).load())
 
     @staticmethod
@@ -100,7 +100,7 @@ class ConfigSection(object):
 
 
 if __name__ == "__main__":
-    config = ConfigLoader('configLoader', 'there is no data')
+    config = ConfigLoader('there is no data')
 
     section = {'General': ConfigSection(), 'My': ConfigSection(), 'A': ConfigSection()}
     """

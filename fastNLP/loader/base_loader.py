@@ -1,9 +1,8 @@
 class BaseLoader(object):
     """docstring for BaseLoader"""
 
-    def __init__(self, data_name, data_path):
+    def __init__(self, data_path):
         super(BaseLoader, self).__init__()
-        self.data_name = data_name
         self.data_path = data_path
 
     def load(self):
@@ -25,8 +24,8 @@ class ToyLoader0(BaseLoader):
         For charLM
     """
 
-    def __init__(self, name, path):
-        super(ToyLoader0, self).__init__(name, path)
+    def __init__(self, data_path):
+        super(ToyLoader0, self).__init__(data_path)
 
     def load(self):
         with open(self.data_path, 'r') as f:
