@@ -69,8 +69,11 @@ class BaseTester(object):
         self.print_every_step = default_args["print_every_step"]
 
         self._model = None
-        self.eval_history = []  # evaluation results of all batches
-        self.batch_output = []  # outputs of all batches
+        self.eval_score = 0  # evaluation score of all batches
+        self.batch_loss = []  # outputs of all loss
+        self.result = []
+        self.lable = []
+        self.all_mask = []
 
     def test(self, network, dev_data):
         if torch.cuda.is_available() and self.use_cuda:
@@ -80,31 +83,27 @@ class BaseTester(object):
 
         # turn on the testing mode; clean up the history
         self.mode(network, test=True)
-        self.eval_history.clear()
-        self.batch_output.clear()
+        self.eval_score = 0
+        self.batch_loss.clear()
+        self.result.clear()
+        self.lable.clear()
+        self.all_mask.clear()
 
         iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=False))
-        step = 0
+
 
         for batch_x, batch_y in self.make_batch(iterator):
             with torch.no_grad():
                 prediction = self.data_forward(network, batch_x)
-                eval_results = self.evaluate(prediction, batch_y)
-
-            if self.save_output:
-                self.batch_output.append(prediction)
-            if self.save_loss:
-                self.eval_history.append(eval_results)
-
-            print_output = "[test step {}] {}".format(step, eval_results)
-            logger.info(print_output)
-            if self.print_every_step > 0 and step % self.print_every_step == 0:
-                print(self.make_eval_output(prediction, eval_results))
-            step += 1
+                eval_result = self.evaluate(prediction,batch_y)
+                self.result.extend(eval_result[0])
+                self.lable.extend(eval_result[1])
+                if len(eval_result)==3:
+                    self.all_mask.extend(eval_result[2])#if have mask
+        self.make_eval_output()
 
     def mode(self, model, test):
         """Train mode or Test mode. This is for PyTorch currently.
-
         :param model: a PyTorch model
         :param test: bool, whether in test mode.
         """
@@ -116,43 +115,72 @@ class BaseTester(object):
 
     def evaluate(self, predict, truth):
         """Compute evaluation metrics.
-
         :param predict: Tensor
         :param truth: Tensor
-        :return eval_results: can be anything. It will be stored in self.eval_history
+        :return eval_results:list of numpy,  predicted tags and true tags
         """
         raise NotImplementedError
 
-    @property
     def metrics(self):
         """Compute and return metrics.
         Use self.eval_history to compute metrics over the whole dev set.
         Please refer to metrics.py for common metric functions.
-
         :return : variable number of outputs
         """
-        raise NotImplementedError
+        batch_loss = np.mean(self.batch_loss)
+        best_result = self.eval_score
+        return batch_loss, best_result
 
     def show_metrics(self):
         """Customize evaluation outputs in Trainer.
         Called by Trainer to print evaluation results on dev set during training.
         Use self.metrics to fetch available metrics.
-
         :return print_str: str
         """
-        raise NotImplementedError
+        loss, accuracy = self.metrics()
+        return "dev loss={:.2f}, accuracy={:.2f}".format(loss, accuracy)
 
     def make_batch(self, iterator):
         raise NotImplementedError
 
-    def make_eval_output(self, predictions, eval_results):
-        """Customize Tester outputs.
-
-        :param predictions: Tensor
-        :param eval_results: Tensor
-        :return: str, to be printed.
+    def make_eval_output(self,):
         """
-        raise NotImplementedError
+        Customize Tester outputs. you can overload to change the Evaluation standard
+        """
+        predictions=self.result
+        y_label=self.lable
+        if self.all_mask:
+            mask=self.all_mask
+        else:
+            mask=[None]*len(predictions)
+        Acc_num, All_num, Pred_num, Label_num, Pred_right_num = 0,0,0,0,0#Acc_num is the number of exact match right preds
+                                                                         #All_num is the sum number of samples
+                                                                         #Pred_num is the number of predicted nonzero labels
+                                                                         #Label_num is the number of nonzero labels
+                                                                         #Pred_right_num is the number of predicted right nonzero labels
+        for p,y,m in zip(predictions,y_label,mask):
+            acc_num,all_num, pred_num, label_num, pred_right_num=Action.get_real(p,y,m)#if only care about acc, ignore pred_num, label_num, pred_right_num.
+                                                                                     # if lable 0 is negtive sample, pred_num, label_num, pred_right_num work too.
+            Acc_num+=acc_num
+            All_num+=all_num
+            Pred_num+=pred_num
+            Label_num+=label_num
+            Pred_right_num+=pred_right_num
+
+        accuracy=Acc_num/All_num
+        precision=Pred_right_num/Pred_num
+        recall=Pred_right_num/Label_num
+        f1_score=2*precision*recall/(precision+recall)
+        self.print_output(accuracy,precision,recall,f1_score)
+
+    def print_output(self,accuracy,precision,recall,f1_score):
+        """
+        choose which score to print and evaluate
+        """
+        self.eval_score = accuracy
+        print_output = "accuracy:{:.3}, precision:{:.3}, recall:{:.3}, f1_score:{:.3}".format(accuracy,precision,recall,f1_score)
+        logger.info(print_output)
+        print(print_output)
 
 class SeqLabelTester(BaseTester):
     """
@@ -170,7 +198,6 @@ class SeqLabelTester(BaseTester):
 
     def data_forward(self, network, inputs):
         """This is only for sequence labeling with CRF decoder.
-
         :param network: a PyTorch model
         :param inputs: tuple of (x, seq_len)
                         x: Tensor of shape [batch_size, max_len], where max_len is the maximum length of the mini-batch
@@ -193,37 +220,68 @@ class SeqLabelTester(BaseTester):
         return y
 
     def evaluate(self, predict, truth):
-        """Compute metrics (or loss).
-
+        """Compute tags.
         :param predict: Tensor, [batch_size, max_len, tag_size]
         :param truth: Tensor, [batch_size, max_len]
         :return:
         """
-        batch_size, max_len = predict.size(0), predict.size(1)
-        loss = self._model.loss(predict, truth, self.mask) / batch_size
+        loss = self._model.loss(predict, truth, self.mask)
+        self.batch_loss.append(loss)
 
         prediction = self._model.prediction(predict, self.mask)
-        results = torch.Tensor(prediction).view(-1, )
-        # make sure "results" is in the same device as "truth"
-        results = results.to(truth)
-        accuracy = torch.sum(results == truth.view((-1,))).to(torch.float) / results.shape[0]
-        return [float(loss), float(accuracy)]
+        prediction = prediction.cpu().numpy()
+        truth = truth.cpu().numpy()
+        return [Action.cut_pad(prediction,self.seq_len),Action.cut_pad(truth,self.seq_len)]
 
-    def metrics(self):
-        batch_loss = np.mean([x[0] for x in self.eval_history])
-        batch_accuracy = np.mean([x[1] for x in self.eval_history])
-        return batch_loss, batch_accuracy
-
-    def show_metrics(self):
-        """
-        This is called by Trainer to print evaluation on dev set.
-        :return print_str: str
-        """
-        loss, accuracy = self.metrics()
-        return "dev loss={:.2f}, accuracy={:.2f}".format(loss, accuracy)
 
     def make_batch(self, iterator):
         return Action.make_batch(iterator, use_cuda=self.use_cuda, output_length=True)
+
+class AdvSeqLabelTester(BaseTester):
+    """
+        Tester for sequence labeling.(multi-feature)
+    """
+    def __init__(self, **test_args):
+        """
+        :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
+        """
+        super(AdvSeqLabelTester, self).__init__(**test_args)
+        self.max_len = None
+        self.mask = None
+        self.seq_len = None
+
+    def data_forward(self, network, inputs):
+        if not isinstance(inputs, tuple):
+            raise RuntimeError("output_length must be true for sequence modeling. Receive {}".format(type(inputs[0])))
+        # unpack the returned value from make_batch
+        x, seq_len, all_fea = inputs[0], inputs[1], inputs[2]
+
+        value_ph=all_fea[1]
+        entity=all_fea[0]
+        self.seq_len=seq_len
+
+        self.mask = entity.ge(1)#my task need this mask
+
+        y = network(x,entity,value_ph)
+        return y
+
+    def evaluate(self, predict, truth):
+        """Compute tags.
+        :param predict: Tensor, [batch_size, max_len, tag_size]
+        :param truth: Tensor, [batch_size, max_len]
+        :return:
+        """
+
+        loss = self._model.loss(predict, truth, self.mask)
+        self.batch_loss.append(loss)
+
+        prediction = self._model.prediction(predict, self.mask)
+        prediction = prediction.cpu().numpy()
+        truth = truth.cpu().numpy()
+        return [Action.cut_pad(prediction,self.seq_len),Action.cut_pad(truth,self.seq_len),Action.cut_pad(self.mask,self.seq_len)]
+
+    def make_batch(self, iterator):
+        return Action.adv_make_batch(iterator, output_length=True, use_cuda=self.use_cuda)
 
 
 class ClassificationTester(BaseTester):
@@ -246,14 +304,7 @@ class ClassificationTester(BaseTester):
 
     def evaluate(self, y_logit, y_true):
         """Return y_pred and y_true."""
-        y_prob = torch.nn.functional.softmax(y_logit, dim=-1)
+        loss = self._model.loss(y_logit, y_true)
+        self.batch_loss.append(loss)
+        y_prob = torch.argmax(y_logit,-1)
         return [y_prob, y_true]
-
-    def metrics(self):
-        """Compute accuracy."""
-        y_prob, y_true = zip(*self.eval_history)
-        y_prob = torch.cat(y_prob, dim=0)
-        y_pred = torch.argmax(y_prob, dim=-1)
-        y_true = torch.cat(y_true, dim=0)
-        acc = float(torch.sum(y_pred == y_true)) / len(y_true)
-        return y_true.cpu().numpy(), y_prob.cpu().numpy(), acc
