@@ -251,7 +251,12 @@ class BaseTrainer(object):
         :param validator: a Tester instance
         :return: bool, True means current results on dev set is the best.
         """
-        raise NotImplementedError
+        _, accuracy = validator.metrics()
+        if accuracy > self.best_accuracy:
+            self.best_accuracy = accuracy
+            return True
+        else:
+            return False
 
     def save_model(self, network, model_name):
         """Save this model with such a name.
@@ -309,14 +314,6 @@ class SeqLabelTrainer(BaseTrainer):
 
         loss = self._model.loss(predict, truth, self.mask)
         return loss
-
-    def best_eval_result(self, validator):
-        loss, accuracy = validator.metrics()
-        if accuracy > self.best_accuracy:
-            self.best_accuracy = accuracy
-            return True
-        else:
-            return False
 
     def make_batch(self, iterator):
         return Action.make_batch(iterator, output_length=True, use_cuda=self.use_cuda)
@@ -387,14 +384,6 @@ class AdvSeqLabelTrainer(BaseTrainer):
         loss = self._model.loss(predict, truth, self.mask)
         return loss
 
-    def best_eval_result(self, validator):
-        loss, accuracy = validator.metrics()
-        if accuracy > self.best_result:
-            self.best_result = accuracy
-            return True
-        else:
-            return False
-
     def make_batch(self, iterator):
         return Action.adv_make_batch(iterator, output_length=True, use_cuda=self.use_cuda)
 
@@ -422,19 +411,6 @@ class ClassificationTrainer(BaseTrainer):
 
     def make_batch(self, iterator):
         return Action.make_batch(iterator, output_length=False, use_cuda=self.use_cuda)
-
-    def get_acc(self, y_logit, y_true):
-        """Compute accuracy."""
-        y_pred = torch.argmax(y_logit, dim=-1)
-        return int(torch.sum(y_true == y_pred)) / len(y_true)
-
-    def best_eval_result(self, validator):
-        _, _, accuracy = validator.metrics()
-        if accuracy > self.best_accuracy:
-            self.best_accuracy = accuracy
-            return True
-        else:
-            return False
 
     def _create_validator(self, valid_args):
         return ClassificationTester(**valid_args)
