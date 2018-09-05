@@ -9,7 +9,7 @@ class Loss(object):
 
     def __init__(self, args):
         if args is None:
-            # this is useful when
+            # this is useful when Trainer.__init__ performs type check
             self._loss = None
         elif isinstance(args, str):
             self._loss = self._borrow_from_pytorch(args)

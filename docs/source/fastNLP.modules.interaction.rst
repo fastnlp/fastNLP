@@ -1,10 +1,5 @@
-fastNLP.modules.interaction package
-===================================
-
-Module contents
----------------
+fastNLP.modules.interaction 
+============================
 
 .. automodule:: fastNLP.modules.interaction
     :members:
-    :undoc-members:
-    :show-inheritance:
