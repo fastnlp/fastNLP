@@ -8,7 +8,7 @@ from fastNLP.core.action import Action
 from fastNLP.core.action import RandomSampler, Batchifier
 from fastNLP.core.loss import Loss
 from fastNLP.core.optimizer import Optimizer
-from fastNLP.core.tester import SeqLabelTester, ClassificationTester
+from fastNLP.core.tester import SeqLabelTester, ClassificationTester,AdvSeqLabelTester
 from fastNLP.modules import utils
 from fastNLP.saver.logger import create_logger
 from fastNLP.saver.model_saver import ModelSaver
@@ -18,13 +18,11 @@ logger = create_logger(__name__, "./train_test.log")
 
 class BaseTrainer(object):
     """Operations of training a model, including data loading, gradient descent, and validation.
-
     """
 
     def __init__(self, **kwargs):
         """
         :param kwargs: dict of (key, value), or dict-like object. key is str.
-
         The base trainer requires the following keys:
         - epochs: int, the number of epochs in training
         - validate: bool, whether or not to validate on dev set
@@ -50,7 +48,7 @@ class BaseTrainer(object):
             Obviously, "required_args" is the subset of "default_args". 
             The value in "default_args" to the keys in "required_args" is simply for type check. 
         """
-        # add required arguments here
+        #add required arguments here
         required_args = {}
 
         for req_key in required_args:
@@ -169,11 +167,9 @@ class BaseTrainer(object):
 
     def cross_validate(self, network, train_data_cv, dev_data_cv):
         """Training with cross validation.
-
         :param network: the model
         :param train_data_cv: four-level list, of shape [num_folds, num_examples, 2, ?]
         :param dev_data_cv: four-level list, of shape [num_folds, num_examples, 2, ?]
-
         """
         if len(train_data_cv) != len(dev_data_cv):
             logger.error("the number of folds in train and dev data unequals {}!={}".format(len(train_data_cv),
@@ -207,7 +203,6 @@ class BaseTrainer(object):
     def update(self):
         """
         Perform weight update on a model.
-
         For PyTorch, just call optimizer to update.
         """
         self._optimizer.step()
@@ -219,7 +214,6 @@ class BaseTrainer(object):
         """
         Compute gradient with link rules.
         :param loss: a scalar where back-prop starts
-
         For PyTorch, just do "loss.backward()"
         """
         self._model.zero_grad()
@@ -262,7 +256,6 @@ class BaseTrainer(object):
     def save_model(self, network, model_name):
         """Save this model with such a name.
         This method may be called multiple times by Trainer to overwritten a better model.
-
         :param network: the PyTorch model
         :param model_name: str
         """
@@ -277,7 +270,6 @@ class BaseTrainer(object):
 class SeqLabelTrainer(BaseTrainer):
     """
     Trainer for Sequence Labeling
-
     """
 
     def __init__(self, **kwargs):
@@ -331,6 +323,85 @@ class SeqLabelTrainer(BaseTrainer):
 
     def _create_validator(self, valid_args):
         return SeqLabelTester(**valid_args)
+
+
+class AdvSeqLabelTrainer(BaseTrainer):
+    """
+        Trainer for Sequence Labeling(multi-features)
+    """
+    def __init__(self,**kwargs):
+        super(AdvSeqLabelTrainer,self).__init__(**kwargs)
+        self.max_len = None
+        self.mask = None
+        self.best_result = 0.0 #The higher the result, the better
+
+    def define_optimizer(self,):
+        """
+        override
+        :return:
+        """
+        self._optimizer = torch.optim.Adam(self._model.parameters(), lr=0.05)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self._optimizer, step_size=100, gamma=0.2)
+
+    def update(self):
+        """
+        override
+        :return:
+        """
+        self._optimizer.step()
+        self.scheduler.step()
+
+    def data_forward(self, network, inputs):
+        """
+            this function must be overloaded, because number of features is not sure.
+        """
+        if not isinstance(inputs, tuple):
+            raise RuntimeError("output_length must be true for sequence modeling. Receive {}".format(type(inputs[0])))
+        # unpack the returned value from make_batch
+        x, seq_len, all_fea = inputs[0], inputs[1], inputs[2]
+
+        entity = all_fea[0]
+        value_ph=all_fea[1]
+
+        #batch_size, max_len = x.size(0), x.size(1)
+        # mask = utils.seq_mask(seq_len, max_len)
+        # mask = mask.byte().view(batch_size, max_len)
+        #
+        # if torch.cuda.is_available() and self.use_cuda:
+        #     mask = mask.cuda()
+        # self.mask = mask
+        self.mask = entity.ge(1)
+        y = network(x,entity,value_ph)
+        return y
+
+    def get_loss(self, predict, truth):
+        """
+        Compute loss given prediction and ground truth.
+        :param predict: prediction label vector, [batch_size, max_len, tag_size]
+        :param truth: ground truth label vector, [batch_size, max_len]
+        :return: a scalar
+        """
+        batch_size, max_len = predict.size(0), predict.size(1)
+        assert truth.shape == (batch_size, max_len)
+
+        loss = self._model.loss(predict, truth, self.mask)
+        return loss
+
+    def best_eval_result(self, validator):
+        loss, accuracy = validator.metrics()
+        if accuracy > self.best_result:
+            self.best_result = accuracy
+            return True
+        else:
+            return False
+
+    def make_batch(self, iterator):
+        return Action.adv_make_batch(iterator, output_length=True, use_cuda=self.use_cuda)
+
+    def _create_validator(self, valid_args):
+        return AdvSeqLabelTester(**valid_args)
+
+
 
 
 class ClassificationTrainer(BaseTrainer):
