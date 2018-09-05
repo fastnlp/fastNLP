@@ -236,6 +236,99 @@ class SeqLabelPreprocess(BasePreprocess):
             data_index.append([word_list, label_list])
         return data_index
 
+class MultiFeaSeqpreprocess(BasePreprocess):
+    def __init__(self):
+        super(MultiFeaSeqpreprocess,self).__init__()
+
+    def build_dict(self, data):
+
+        if not isinstance(data,list):
+            raise RuntimeError("the type of data is wrong")
+        sample=data[0]
+
+        dict_={}
+
+        for i,fea in enumerate(sample):
+            if isinstance(fea, list):
+                if i==0:
+                    dict_["sent"]={'<pad>':0,"<unk>":1}
+                else:
+                    dict_["fea_"+str(i)]={}
+        fea_num = len(dict_)
+        for example in data:
+            for fea in zip(*example[:fea_num]):
+                for i,dic_name in enumerate(dict_):
+                    if fea[i] not in dict_[dic_name]:
+                        dict_[dic_name][fea[i]]=len(dict_[dic_name])
+
+        return dict_
+
+    def run(self, train_dev_data, test_data=None, pickle_path="./", train_dev_split=0, cross_val=False, n_fold=10):
+        if pickle_exist(pickle_path, "all_dicts.pkl"):
+            self.all_dicts = load_pickle(pickle_path, "all_dicts.pkl")
+
+        else:
+            self.all_dicts = self.build_dict(train_dev_data)
+            save_pickle(self.all_dicts, pickle_path, "all_dicts.pkl")
+
+
+        if not pickle_exist(pickle_path, "rev_dicts.pkl"):
+            rev_dicts = self.build_reverse_dict(self.all_dicts)
+            save_pickle(rev_dicts, pickle_path, "rev_dicts.pkl")
+
+        data_train = []
+        data_dev = []
+
+        if pickle_exist(pickle_path, "data_train.pkl") and pickle_exist(pickle_path, "data_dev.pkl"):
+            data_train = load_pickle(pickle_path, "data_train.pkl")
+            data_dev = load_pickle(pickle_path, "data_dev.pkl")
+        else:
+            data_train.extend(self.to_index(train_dev_data))
+            if train_dev_split > 0 and not pickle_exist(pickle_path, "data_dev.pkl"):
+                split = int(len(data_train) * train_dev_split)
+                data_dev = data_train[: split]
+                data_train = data_train[split:]
+                save_pickle(data_dev, pickle_path, "data_dev.pkl")
+                print("{} of the training data is split for validation. ".format(train_dev_split))
+            save_pickle(data_train, pickle_path, "data_train.pkl")
+        results = [data_train]
+        if cross_val or train_dev_split > 0:
+            results.append(data_dev)
+
+        if len(results) == 1:
+            return results[0]
+        else:
+            return tuple(results)
+
+    def to_index(self, data):
+        # sample = data[0]
+        # fea_num=len(sample)
+        seq_fea_num=len(self.all_dicts)
+
+        data_index = []
+        for example in data:
+            single_fea=example[seq_fea_num:]
+            ex_list=[[] for i in range(seq_fea_num)]
+            for fea in zip(*example[:seq_fea_num]):
+                for i,char in enumerate(fea):
+                    if i==0:
+                        dic_=self.all_dicts["sent"]
+                    else:
+                        dic_ = self.all_dicts["fea_"+str(i)]
+                    if char in dic_:
+                        ex_list[i].append(dic_[char])
+                    else:
+                        ex_list[i].append(dic_["<unk>"])
+            data_index.append(ex_list)
+            data_index[-1].extend(single_fea)
+        return data_index
+
+    def build_reverse_dict(self, all_dict):
+        rev_dicts={}
+        for dic_name in all_dict:
+            rev_dicts[dic_name]={all_dict[dic_name][w]:w for w in all_dict[dic_name]}
+        return rev_dicts
+
 
 class ClassPreprocess(BasePreprocess):
     """ Preprocess pipeline for classification datasets.
