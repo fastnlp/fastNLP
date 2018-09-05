@@ -155,8 +155,8 @@ class BaseTester(object):
         raise NotImplementedError
 
 class SeqLabelTester(BaseTester):
-    """
-    Tester for sequence labeling.
+    """Tester for sequence labeling.
+
     """
 
     def __init__(self, **test_args):
@@ -215,8 +215,8 @@ class SeqLabelTester(BaseTester):
         return batch_loss, batch_accuracy
 
     def show_metrics(self):
-        """
-        This is called by Trainer to print evaluation on dev set.
+        """This is called by Trainer to print evaluation on dev set.
+
         :return print_str: str
         """
         loss, accuracy = self.metrics()

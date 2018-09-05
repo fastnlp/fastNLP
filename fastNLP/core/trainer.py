@@ -1,4 +1,5 @@
 import copy
+import os
 import time
 from datetime import timedelta
 
@@ -26,10 +27,10 @@ class BaseTrainer(object):
         :param kwargs: dict of (key, value), or dict-like object. key is str.
 
         The base trainer requires the following keys:
-        - epochs: int, the number of epochs in training
-        - validate: bool, whether or not to validate on dev set
-        - batch_size: int
-        - pickle_path: str, the path to pickle files for pre-processing
+            - epochs: int, the number of epochs in training
+            - validate: bool, whether or not to validate on dev set
+            - batch_size: int
+            - pickle_path: str, the path to pickle files for pre-processing
         """
         super(BaseTrainer, self).__init__()
 
@@ -88,6 +89,7 @@ class BaseTrainer(object):
 
     def train(self, network, train_data, dev_data=None):
         """General Training Procedure
+
         :param network: a model
         :param train_data: three-level list, the training set.
         :param dev_data: three-level list, the validation data (optional)
@@ -144,6 +146,7 @@ class BaseTrainer(object):
 
     def _train_step(self, data_iterator, network, **kwargs):
         """Training process in one epoch.
+
             kwargs should contain:
                 - n_print: int, print training information every n steps.
                 - start: time.time(), the starting time of this step.
@@ -199,14 +202,13 @@ class BaseTrainer(object):
         Action.mode(network, test)
 
     def define_optimizer(self):
-        """
-        Define framework-specific optimizer specified by the models.
+        """Define framework-specific optimizer specified by the models.
+
         """
         self._optimizer = self._optimizer_proto.construct_from_pytorch(self._model.parameters())
 
     def update(self):
-        """
-        Perform weight update on a model.
+        """Perform weight update on a model.
 
         For PyTorch, just call optimizer to update.
         """
@@ -216,8 +218,8 @@ class BaseTrainer(object):
         raise NotImplementedError
 
     def grad_backward(self, loss):
-        """
-        Compute gradient with link rules.
+        """Compute gradient with link rules.
+
         :param loss: a scalar where back-prop starts
 
         For PyTorch, just do "loss.backward()"
@@ -226,8 +228,8 @@ class BaseTrainer(object):
         loss.backward()
 
     def get_loss(self, predict, truth):
-        """
-        Compute loss given prediction and ground truth.
+        """Compute loss given prediction and ground truth.
+
         :param predict: prediction label vector
         :param truth: ground truth label vector
         :return: a scalar
@@ -235,8 +237,9 @@ class BaseTrainer(object):
         return self._loss_func(predict, truth)
 
     def define_loss(self):
-        """
-        if the model defines a loss, use model's loss.
+        """Define a loss for the trainer.
+
+        If the model defines a loss, use model's loss.
         Otherwise, Trainer must has a loss argument, use it as loss.
         These two losses cannot be defined at the same time.
         Trainer does not handle loss definition or choose default losses.
@@ -253,7 +256,8 @@ class BaseTrainer(object):
             logger.info("The model didn't define loss, use Trainer's loss.")
 
     def best_eval_result(self, validator):
-        """
+        """Check if the current epoch yields better validation results.
+
         :param validator: a Tester instance
         :return: bool, True means current results on dev set is the best.
         """
@@ -268,15 +272,14 @@ class BaseTrainer(object):
         """
         if model_name[-4:] != ".pkl":
             model_name += ".pkl"
-        ModelSaver(self.pickle_path + model_name).save_pytorch(network)
+        ModelSaver(os.path.join(self.pickle_path, model_name)).save_pytorch(network)
 
     def _create_validator(self, valid_args):
         raise NotImplementedError
 
 
 class SeqLabelTrainer(BaseTrainer):
-    """
-    Trainer for Sequence Labeling
+    """Trainer for Sequence Labeling
 
     """
 
@@ -306,11 +309,11 @@ class SeqLabelTrainer(BaseTrainer):
         return y
 
     def get_loss(self, predict, truth):
-        """
-        Compute loss given prediction and ground truth.
+        """Compute loss given prediction and ground truth.
+
         :param predict: prediction label vector, [batch_size, max_len, tag_size]
         :param truth: ground truth label vector, [batch_size, max_len]
-        :return: a scalar
+        :return loss: a scalar
         """
         batch_size, max_len = predict.size(0), predict.size(1)
         assert truth.shape == (batch_size, max_len)
