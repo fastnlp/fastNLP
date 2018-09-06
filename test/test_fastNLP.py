@@ -6,7 +6,7 @@ from fastNLP.fastnlp import interpret_word_seg_results, interpret_cws_pos_result
 
 PATH_TO_CWS_PICKLE_FILES = "/home/zyfeng/fastNLP/reproduction/chinese_word_segment/save/"
 PATH_TO_POS_TAG_PICKLE_FILES = "/home/zyfeng/data/crf_seg/"
-
+PATH_TO_TEXT_CLASSIFICATION_PICKLE_FILES = "/home/zyfeng/data/text_classify/"
 
 def word_seg():
     nlp = FastNLP(model_dir=PATH_TO_CWS_PICKLE_FILES)
@@ -68,7 +68,18 @@ def pos_tag():
         print(interpret_cws_pos_results(words, labels))
 
 
-
+def text_classify():
+    nlp = FastNLP(model_dir=PATH_TO_TEXT_CLASSIFICATION_PICKLE_FILES)
+    nlp.load("text_classify_model", config_file="text_classify.cfg", section_name="model")
+    text = [
+        "世界物联网大会明日在京召开龙头股启动在即",
+        "乌鲁木齐市新增一处城市中心旅游目的地",
+        "朱元璋的大明朝真的源于明教吗？——告诉你一个真实的“明教”"]
+    results = nlp.run(text)
+    print(results)
+    """
+    ['finance', 'travel', 'history']
+    """
 
 if __name__ == "__main__":
-    pos_tag()
+    text_classify()
