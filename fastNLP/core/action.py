@@ -57,7 +57,7 @@ class Action(object):
                 batch_x = batch_x[:, :max_len]
 
             if output_length:
-                seq_len = [len(x) for x in batch_x]
+                seq_len = [len(x[0]) for x in batch]
                 yield (batch_x, seq_len), batch_y
             else:
                 yield batch_x, batch_y
