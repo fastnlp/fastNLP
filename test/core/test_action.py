@@ -1,8 +1,7 @@
-import os
-
 import unittest
 
 from fastNLP.core.action import Action, Batchifier, SequentialSampler
+
 
 class TestAction(unittest.TestCase):
     def test_case_1(self):

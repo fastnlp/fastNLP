@@ -1,3 +1,5 @@
+import os
+
 from fastNLP.core.predictor import SeqLabelInfer, ClassificationInfer
 from fastNLP.core.preprocess import load_pickle
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
@@ -31,6 +33,22 @@ FastNLP_MODEL_COLLECTION = {
         "type": "seq_label",
         "config_file_name": "config",
         "config_section_name": "text_class_model"
+    },
+    "pos_tag_model": {
+        "url": "",
+        "class": "sequence_modeling.AdvSeqLabel",
+        "pickle": "pos_tag_model_v_0.pkl",
+        "type": "seq_label",
+        "config_file_name": "pos_tag.config",
+        "config_section_name": "pos_tag_model"
+    },
+    "text_classify_model": {
+        "url": "",
+        "class": "cnn_text_classification.CNNText",
+        "pickle": "text_class_model_v0.pkl",
+        "type": "text_class",
+        "config_file_name": "text_classify.cfg",
+        "config_section_name": "model"
     }
 }
 
@@ -77,7 +95,7 @@ class FastNLP(object):
         print("Restore model class {}".format(str(model_class)))
 
         model_args = ConfigSection()
-        ConfigLoader.load_config(self.model_dir + config_file, {section_name: model_args})
+        ConfigLoader.load_config(os.path.join(self.model_dir, config_file), {section_name: model_args})
         print("Restore model hyper-parameters {}".format(str(model_args.data)))
 
         # fetch dictionary size and number of labels from pickle files
@@ -91,7 +109,7 @@ class FastNLP(object):
         print("Model constructed.")
 
         # To do: framework independent
-        ModelLoader.load_pytorch(model, self.model_dir + FastNLP_MODEL_COLLECTION[model_name]["pickle"])
+        ModelLoader.load_pytorch(model, os.path.join(self.model_dir, FastNLP_MODEL_COLLECTION[model_name]["pickle"]))
         print("Model weights loaded.")
 
         self.model = model
@@ -259,3 +277,38 @@ def interpret_word_seg_results(char_seq, label_seq):
         else:
             raise ValueError("invalid label {}".format(label[0]))
     return words
+
+
+def interpret_cws_pos_results(char_seq, label_seq):
+    """Transform model output into user-friendly contents.
+
+    :param char_seq: list of string
+    :param label_seq: list of string, the same length as char_seq.
+    :return outputs: list of tuple (words, pos_tag):
+    """
+
+    def pos_tag_check(seq):
+        """check whether all entries are the same """
+        return len(set(seq)) <= 1
+
+    word = []
+    word_pos = []
+    outputs = []
+    for char, label in zip(char_seq, label_seq):
+        tmp = label.split("-")
+        cws_label, pos_tag = tmp[0], tmp[1]
+
+        if cws_label == "B" or cws_label == "M":
+            word.append(char)
+            word_pos.append(pos_tag)
+        elif cws_label == "E":
+            word.append(char)
+            word_pos.append(pos_tag)
+            if not pos_tag_check(word_pos):
+                raise RuntimeError("character-wise pos tags inconsistent. ")
+            outputs.append(("".join(word), word_pos[0]))
+            word.clear()
+            word_pos.clear()
+        elif cws_label == "S":
+            outputs.append((char, pos_tag))
+    return outputs

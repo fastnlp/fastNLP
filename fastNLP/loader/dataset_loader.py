@@ -6,8 +6,8 @@ from fastNLP.loader.base_loader import BaseLoader
 class DatasetLoader(BaseLoader):
     """"loader for data sets"""
 
-    def __init__(self, data_name, data_path):
-        super(DatasetLoader, self).__init__(data_name, data_path)
+    def __init__(self, data_path):
+        super(DatasetLoader, self).__init__(data_path)
 
 
 class POSDatasetLoader(DatasetLoader):
@@ -31,8 +31,8 @@ class POSDatasetLoader(DatasetLoader):
     to label5.
     """
 
-    def __init__(self, data_name, data_path):
-        super(POSDatasetLoader, self).__init__(data_name, data_path)
+    def __init__(self, data_path):
+        super(POSDatasetLoader, self).__init__(data_path)
 
     def load(self):
         assert os.path.exists(self.data_path)
@@ -84,8 +84,8 @@ class TokenizeDatasetLoader(DatasetLoader):
     Data set loader for tokenization data sets
     """
 
-    def __init__(self, data_name, data_path):
-        super(TokenizeDatasetLoader, self).__init__(data_name, data_path)
+    def __init__(self, data_path):
+        super(TokenizeDatasetLoader, self).__init__(data_path)
 
     def load_pku(self, max_seq_len=32):
         """
@@ -138,8 +138,8 @@ class TokenizeDatasetLoader(DatasetLoader):
 class ClassDatasetLoader(DatasetLoader):
     """Loader for classification data sets"""
 
-    def __init__(self, data_name, data_path):
-        super(ClassDatasetLoader, self).__init__(data_name, data_path)
+    def __init__(self, data_path):
+        super(ClassDatasetLoader, self).__init__(data_path)
 
     def load(self):
         assert os.path.exists(self.data_path)
@@ -177,7 +177,7 @@ class ConllLoader(DatasetLoader):
         :param  str data_name: the name of the conll data set
         :param str data_path: the path to the conll data set
         """
-        super(ConllLoader, self).__init__(data_name, data_path)
+        super(ConllLoader, self).__init__(data_path)
         self.data_set = self.parse(self.load())
 
     def load(self):
@@ -209,8 +209,8 @@ class ConllLoader(DatasetLoader):
 
 
 class LMDatasetLoader(DatasetLoader):
-    def __init__(self, data_name, data_path):
-        super(LMDatasetLoader, self).__init__(data_name, data_path)
+    def __init__(self, data_path):
+        super(LMDatasetLoader, self).__init__(data_path)
 
     def load(self):
         if not os.path.exists(self.data_path):
@@ -220,13 +220,57 @@ class LMDatasetLoader(DatasetLoader):
         return text.strip().split()
 
 
-if __name__ == "__main__":
+class PeopleDailyCorpusLoader(DatasetLoader):
     """
-    data = POSDatasetLoader("xxx", "../../test/data_for_tests/people.txt").load_lines()
-    for example in data:
-        for w, l in zip(example[0], example[1]):
-            print(w, l)
+        People Daily Corpus: Chinese word segmentation, POS tag, NER
     """
 
-    ans = TokenizeDatasetLoader("xxx", "/home/zyfeng/Desktop/data/icwb2-data/training/test").load_pku()
-    print(ans)
+    def __init__(self, data_path):
+        super(PeopleDailyCorpusLoader, self).__init__(data_path)
+
+    def load(self):
+        with open(self.data_path, "r", encoding="utf-8") as f:
+            sents = f.readlines()
+
+        pos_tag_examples = []
+        ner_examples = []
+        for sent in sents:
+            inside_ne = False
+            sent_pos_tag = []
+            sent_words = []
+            sent_ner = []
+            words = sent.strip().split()[1:]
+            for word in words:
+                if "[" in word and "]" in word:
+                    ner_tag = "U"
+                    print(word)
+                elif "[" in word:
+                    inside_ne = True
+                    ner_tag = "B"
+                    word = word[1:]
+                elif "]" in word:
+                    ner_tag = "L"
+                    word = word[:word.index("]")]
+                    if inside_ne is True:
+                        inside_ne = False
+                    else:
+                        raise RuntimeError("only ] appears!")
+                else:
+                    if inside_ne is True:
+                        ner_tag = "I"
+                    else:
+                        ner_tag = "O"
+                tmp = word.split("/")
+                token, pos = tmp[0], tmp[1]
+                sent_ner.append(ner_tag)
+                sent_pos_tag.append(pos)
+                sent_words.append(token)
+            pos_tag_examples.append([sent_words, sent_pos_tag])
+            ner_examples.append([sent_words, sent_ner])
+        return pos_tag_examples, ner_examples
+
+if __name__ == "__main__":
+    loader = PeopleDailyCorpusLoader("./")
+    pos, ner = loader.load()
+    print(pos[:10])
+    print(ner[:10])

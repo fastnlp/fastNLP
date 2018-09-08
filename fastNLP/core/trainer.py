@@ -1,10 +1,11 @@
-import _pickle
 import copy
 import os
 import time
 from datetime import timedelta
 
 import torch
+import tensorboardX
+from tensorboardX import SummaryWriter
 
 from fastNLP.core.action import Action
 from fastNLP.core.action import RandomSampler, Batchifier
@@ -15,16 +16,12 @@ from fastNLP.modules import utils
 from fastNLP.saver.logger import create_logger
 from fastNLP.saver.model_saver import ModelSaver
 
-DEFAULT_QUEUE_SIZE = 300
 logger = create_logger(__name__, "./train_test.log")
 
 
 class BaseTrainer(object):
-    """Operations to train a model, including data loading, SGD, and validation.
+    """Operations of training a model, including data loading, gradient descent, and validation.
 
-        Subclasses must implement the following abstract methods:
-        - grad_backward
-        - get_loss
     """
 
     def __init__(self, **kwargs):
@@ -32,10 +29,10 @@ class BaseTrainer(object):
         :param kwargs: dict of (key, value), or dict-like object. key is str.
 
         The base trainer requires the following keys:
-        - epochs: int, the number of epochs in training
-        - validate: bool, whether or not to validate on dev set
-        - batch_size: int
-        - pickle_path: str, the path to pickle files for pre-processing
+            - epochs: int, the number of epochs in training
+            - validate: bool, whether or not to validate on dev set
+            - batch_size: int
+            - pickle_path: str, the path to pickle files for pre-processing
         """
         super(BaseTrainer, self).__init__()
 
@@ -47,7 +44,7 @@ class BaseTrainer(object):
         """
         default_args = {"epochs": 3, "batch_size": 8, "validate": True, "use_cuda": True, "pickle_path": "./save/",
                         "save_best_dev": True, "model_name": "default_model_name.pkl", "print_every_step": 1,
-                        "loss": Loss(None),
+                        "loss": Loss(None),  # used to pass type check
                         "optimizer": Optimizer("Adam", lr=0.001, weight_decay=0)
                         }
         """
@@ -56,7 +53,7 @@ class BaseTrainer(object):
             Obviously, "required_args" is the subset of "default_args". 
             The value in "default_args" to the keys in "required_args" is simply for type check. 
         """
-        # TODO: required arguments
+        # add required arguments here
         required_args = {}
 
         for req_key in required_args:
@@ -91,9 +88,12 @@ class BaseTrainer(object):
         self._loss_func = default_args["loss"].get()  # return a pytorch loss function or None
         self._optimizer = None
         self._optimizer_proto = default_args["optimizer"]
+        self._summary_writer = SummaryWriter(self.pickle_path + 'tensorboard_logs')
+        self._graph_summaried = False
 
     def train(self, network, train_data, dev_data=None):
         """General Training Procedure
+
         :param network: a model
         :param train_data: three-level list, the training set.
         :param dev_data: three-level list, the validation data (optional)
@@ -144,12 +144,13 @@ class BaseTrainer(object):
                     print("Saved better model selected by validation.")
                     logger.info("Saved better model selected by validation.")
 
-                valid_results = validator.show_matrices()
+                valid_results = validator.show_metrics()
                 print("[epoch {}] {}".format(epoch, valid_results))
                 logger.info("[epoch {}] {}".format(epoch, valid_results))
 
     def _train_step(self, data_iterator, network, **kwargs):
         """Training process in one epoch.
+
             kwargs should contain:
                 - n_print: int, print training information every n steps.
                 - start: time.time(), the starting time of this step.
@@ -163,6 +164,11 @@ class BaseTrainer(object):
             loss = self.get_loss(prediction, batch_y)
             self.grad_backward(loss)
             self.update()
+            self._summary_writer.add_scalar("loss", loss.item(), global_step=step)
+
+            if not self._graph_summaried:
+                self._summary_writer.add_graph(network, batch_x)
+                self._graph_summaried = True
 
             if kwargs["n_print"] > 0 and step % kwargs["n_print"] == 0:
                 end = time.time()
@@ -198,21 +204,6 @@ class BaseTrainer(object):
             network_copy = copy.deepcopy(network)
             self.train(network_copy, train_data_cv[i], dev_data_cv[i])
 
-    def load_train_data(self, pickle_path):
-        """
-        For task-specific processing.
-        :param pickle_path:
-        :return data_train
-        """
-        file_path = os.path.join(pickle_path, "data_train.pkl")
-        if os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                data = _pickle.load(f)
-        else:
-            logger.error("cannot find training data {}. invalid input path for training data.".format(file_path))
-            raise RuntimeError("cannot find training data {}".format(file_path))
-        return data
-
     def make_batch(self, iterator):
         raise NotImplementedError
 
@@ -220,14 +211,13 @@ class BaseTrainer(object):
         Action.mode(network, test)
 
     def define_optimizer(self):
-        """
-        Define framework-specific optimizer specified by the models.
+        """Define framework-specific optimizer specified by the models.
+
         """
         self._optimizer = self._optimizer_proto.construct_from_pytorch(self._model.parameters())
 
     def update(self):
-        """
-        Perform weight update on a model.
+        """Perform weight update on a model.
 
         For PyTorch, just call optimizer to update.
         """
@@ -237,8 +227,8 @@ class BaseTrainer(object):
         raise NotImplementedError
 
     def grad_backward(self, loss):
-        """
-        Compute gradient with link rules.
+        """Compute gradient with link rules.
+
         :param loss: a scalar where back-prop starts
 
         For PyTorch, just do "loss.backward()"
@@ -247,8 +237,8 @@ class BaseTrainer(object):
         loss.backward()
 
     def get_loss(self, predict, truth):
-        """
-        Compute loss given prediction and ground truth.
+        """Compute loss given prediction and ground truth.
+
         :param predict: prediction label vector
         :param truth: ground truth label vector
         :return: a scalar
@@ -256,8 +246,9 @@ class BaseTrainer(object):
         return self._loss_func(predict, truth)
 
     def define_loss(self):
-        """
-        if the model defines a loss, use model's loss.
+        """Define a loss for the trainer.
+
+        If the model defines a loss, use model's loss.
         Otherwise, Trainer must has a loss argument, use it as loss.
         These two losses cannot be defined at the same time.
         Trainer does not handle loss definition or choose default losses.
@@ -274,7 +265,8 @@ class BaseTrainer(object):
             logger.info("The model didn't define loss, use Trainer's loss.")
 
     def best_eval_result(self, validator):
-        """
+        """Check if the current epoch yields better validation results.
+
         :param validator: a Tester instance
         :return: bool, True means current results on dev set is the best.
         """
@@ -289,15 +281,14 @@ class BaseTrainer(object):
         """
         if model_name[-4:] != ".pkl":
             model_name += ".pkl"
-        ModelSaver(self.pickle_path + model_name).save_pytorch(network)
+        ModelSaver(os.path.join(self.pickle_path, model_name)).save_pytorch(network)
 
     def _create_validator(self, valid_args):
         raise NotImplementedError
 
 
 class SeqLabelTrainer(BaseTrainer):
-    """
-    Trainer for Sequence Labeling
+    """Trainer for Sequence Labeling
 
     """
 
@@ -327,11 +318,11 @@ class SeqLabelTrainer(BaseTrainer):
         return y
 
     def get_loss(self, predict, truth):
-        """
-        Compute loss given prediction and ground truth.
+        """Compute loss given prediction and ground truth.
+
         :param predict: prediction label vector, [batch_size, max_len, tag_size]
         :param truth: ground truth label vector, [batch_size, max_len]
-        :return: a scalar
+        :return loss: a scalar
         """
         batch_size, max_len = predict.size(0), predict.size(1)
         assert truth.shape == (batch_size, max_len)

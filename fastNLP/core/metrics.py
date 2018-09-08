@@ -1,11 +1,12 @@
 import warnings
+
 import numpy as np
 import torch
 
 
 def _conver_numpy(x):
-    """
-    convert input data to numpy array
+    """convert input data to numpy array
+
     """
     if isinstance(x, np.ndarray):
         return x
@@ -17,21 +18,20 @@ def _conver_numpy(x):
 
 
 def _check_same_len(*arrays, axis=0):
-    """
-    check if input array list has same length for one dimension
+    """check if input array list has same length for one dimension
+
     """
     lens = set([x.shape[axis] for x in arrays if x is not None])
     return len(lens) == 1
 
 
 def _label_types(y):
-    """
-    determine the type
-    "binary"
-    "multiclass"
-    "multiclass-multioutput"
-    "multilabel"
-    "unknown"
+    """Determine the type
+        - "binary"
+        - "multiclass"
+        - "multiclass-multioutput"
+        - "multilabel"
+        - "unknown"
     """
     # never squeeze the first dimension
     y = y.squeeze() if y.shape[0] > 1 else y.resize(1, -1)
@@ -46,8 +46,8 @@ def _label_types(y):
 
 
 def _check_data(y_true, y_pred):
-    """
-    check if y_true and y_pred is same type of data e.g both binary or multiclass
+    """Check if y_true and y_pred is same type of data e.g both binary or multiclass
+
     """
     y_true, y_pred = _conver_numpy(y_true), _conver_numpy(y_pred)
     if not _check_same_len(y_true, y_pred):
@@ -174,16 +174,13 @@ def classification_report(y_true, y_pred, labels=None, target_names=None, digits
 
 
 def accuracy_topk(y_true, y_prob, k=1):
-    """
-    Compute accuracy of y_true matching top-k probable
+    """Compute accuracy of y_true matching top-k probable
     labels in y_prob.
 
-    Paras:
-        y_ture - ndarray, true label, [n_samples]
-        y_prob - ndarray, label probabilities, [n_samples, n_classes]
-        k - int, k in top-k
-    Returns:
-        accuracy of top-k
+        :param y_true: ndarray, true label, [n_samples]
+        :param y_prob: ndarray, label probabilities, [n_samples, n_classes]
+        :param k: int, k in top-k
+        :return :accuracy of top-k
     """
 
     y_pred_topk = np.argsort(y_prob, axis=-1)[:, -1:-k - 1:-1]
@@ -195,16 +192,14 @@ def accuracy_topk(y_true, y_prob, k=1):
 
 
 def pred_topk(y_prob, k=1):
-    """
-    Return top-k predicted labels and corresponding probabilities.
+    """Return top-k predicted labels and corresponding probabilities.
 
-    Args:
-        y_prob - ndarray, size [n_samples, n_classes], probabilities on labels
-        k - int, k of top-k
-    Returns:
-        y_pred_topk - ndarray, size [n_samples, k], predicted top-k labels
-        y_prob_topk - ndarray, size [n_samples, k], probabilities for
-            top-k labels
+
+        :param y_prob: ndarray, size [n_samples, n_classes], probabilities on labels
+        :param k: int, k of top-k
+    :returns
+        y_pred_topk: ndarray, size [n_samples, k], predicted top-k labels
+        y_prob_topk: ndarray, size [n_samples, k], probabilities for top-k labels
     """
 
     y_pred_topk = np.argsort(y_prob, axis=-1)[:, -1:-k - 1:-1]

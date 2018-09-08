@@ -22,7 +22,7 @@ data_infer_path = "data_for_tests/people_infer.txt"
 def infer():
     # Load infer configuration, the same as test
     test_args = ConfigSection()
-    ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
+    ConfigLoader("config.cfg").load_config("./data_for_tests/config", {"POS_test": test_args})
 
     # fetch dictionary size and number of labels from pickle files
     word2index = load_pickle(pickle_path, "word2id.pkl")
@@ -38,7 +38,7 @@ def infer():
     print("model loaded!")
 
     # Data Loader
-    raw_data_loader = BaseLoader(data_name, data_infer_path)
+    raw_data_loader = BaseLoader(data_infer_path)
     infer_data = raw_data_loader.load_lines()
     """
         Transform strings into list of list of strings. 
@@ -61,10 +61,10 @@ def infer():
 def train_test():
     # Config Loader
     train_args = ConfigSection()
-    ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS": train_args})
+    ConfigLoader("config.cfg").load_config("./data_for_tests/config", {"POS": train_args})
 
     # Data Loader
-    loader = TokenizeDatasetLoader(data_name, cws_data_path)
+    loader = TokenizeDatasetLoader(cws_data_path)
     train_data = loader.load_pku()
 
     # Preprocessor
@@ -74,7 +74,7 @@ def train_test():
     train_args["num_classes"] = p.num_classes
 
     # Trainer
-    trainer = SeqLabelTrainer(train_args)
+    trainer = SeqLabelTrainer(**train_args.data)
 
     # Model
     model = SeqLabeling(train_args)
@@ -99,16 +99,16 @@ def train_test():
 
     # Load test configuration
     test_args = ConfigSection()
-    ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
+    ConfigLoader("config.cfg").load_config("./data_for_tests/config", {"POS_test": test_args})
 
     # Tester
-    tester = SeqLabelTester(test_args)
+    tester = SeqLabelTester(**test_args.data)
 
     # Start testing
     tester.test(model, data_train)
 
     # print test results
-    print(tester.show_matrices())
+    print(tester.show_metrics())
     print("model tested!")
 
 
