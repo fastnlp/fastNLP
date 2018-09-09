@@ -1,8 +1,5 @@
-fastNLP.modules package
-=======================
-
-Subpackages
------------
+fastNLP.modules 
+================
 
 .. toctree::
 
@@ -11,30 +8,18 @@ Subpackages
     fastNLP.modules.encoder
     fastNLP.modules.interaction
 
-Submodules
-----------
-
-fastNLP.modules.other\_modules module
--------------------------------------
+fastNLP.modules.other\_modules 
+-------------------------------
 
 .. automodule:: fastNLP.modules.other_modules
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.modules.utils module
-----------------------------
+fastNLP.modules.utils 
+----------------------
 
 .. automodule:: fastNLP.modules.utils
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-
-Module contents
----------------
 
 .. automodule:: fastNLP.modules
     :members:
-    :undoc-members:
-    :show-inheritance:

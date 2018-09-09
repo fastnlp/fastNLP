@@ -33,7 +33,9 @@ class TestConfigLoader(unittest.TestCase):
 
         test_arg = ConfigSection()
         ConfigLoader("config").load_config(os.path.join("./test/loader", "config"), {"test": test_arg})
+
         section = read_section_from_config(os.path.join("./test/loader", "config"), "test")
+
 
         for sec in section:
             if (sec not in test_arg) or (section[sec] != test_arg[sec]):

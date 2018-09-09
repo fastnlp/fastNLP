@@ -33,7 +33,7 @@ data_infer_path = args.infer
 def infer():
     # Load infer configuration, the same as test
     test_args = ConfigSection()
-    ConfigLoader("config.cfg", "").load_config(config_dir, {"POS_infer": test_args})
+    ConfigLoader("config.cfg").load_config(config_dir, {"POS_infer": test_args})
 
     # fetch dictionary size and number of labels from pickle files
     word2index = load_pickle(pickle_path, "word2id.pkl")
@@ -49,7 +49,7 @@ def infer():
     print("model loaded!")
 
     # Data Loader
-    raw_data_loader = BaseLoader("xxx", data_infer_path)
+    raw_data_loader = BaseLoader(data_infer_path)
     infer_data = raw_data_loader.load_lines()
 
     # Inference interface
@@ -65,11 +65,11 @@ def train_and_test():
     # Config Loader
     trainer_args = ConfigSection()
     model_args = ConfigSection()
-    ConfigLoader("config.cfg", "").load_config(config_dir, {
+    ConfigLoader("config.cfg").load_config(config_dir, {
         "test_seq_label_trainer": trainer_args, "test_seq_label_model": model_args})
 
     # Data Loader
-    pos_loader = POSDatasetLoader("xxx", data_path)
+    pos_loader = POSDatasetLoader(data_path)
     train_data = pos_loader.load_lines()
 
     # Preprocessor
@@ -117,13 +117,13 @@ def train_and_test():
 
     # Load test configuration
     tester_args = ConfigSection()
-    ConfigLoader("config.cfg", "").load_config(config_dir, {"test_seq_label_tester": tester_args})
+    ConfigLoader("config.cfg").load_config(config_dir, {"test_seq_label_tester": tester_args})
 
     # Tester
     tester = SeqLabelTester(save_output=False,
                             save_loss=False,
                             save_best_dev=False,
-                            batch_size=8,
+                            batch_size=4,
                             use_cuda=False,
                             pickle_path=pickle_path,
                             model_name="seq_label_in_test.pkl",
@@ -134,10 +134,10 @@ def train_and_test():
     tester.test(model, data_dev)
 
     # print test results
-    print(tester.show_matrices())
+    print(tester.show_metrics())
     print("model tested!")
 
 
 if __name__ == "__main__":
-    train_and_test()
+    # train_and_test()
     infer()
