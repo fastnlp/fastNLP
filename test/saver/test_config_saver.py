@@ -10,7 +10,7 @@ from fastNLP.saver.config_saver import ConfigSaver
 
 class TestConfigSaver(unittest.TestCase):
     def test_case_1(self):
-        config_file_dir = "./../loader/"
+        config_file_dir = "./test/loader/"
         config_file_name = "config"
         config_file_path = os.path.join(config_file_dir, config_file_name)
 
