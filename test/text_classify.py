@@ -34,7 +34,7 @@ config_dir = args.config
 def infer():
     # load dataset
     print("Loading data...")
-    ds_loader = ClassDatasetLoader("train", train_data_dir)
+    ds_loader = ClassDatasetLoader(train_data_dir)
     data = ds_loader.load()
     unlabeled_data = [x[0] for x in data]
 
@@ -69,7 +69,7 @@ def train():
 
     # load dataset
     print("Loading data...")
-    ds_loader = ClassDatasetLoader("train", train_data_dir)
+    ds_loader = ClassDatasetLoader(train_data_dir)
     data = ds_loader.load()
     print(data[0])
 

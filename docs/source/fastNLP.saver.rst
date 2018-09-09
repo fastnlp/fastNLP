@@ -1,30 +1,18 @@
-fastNLP.saver package
-=====================
+fastNLP.saver 
+==============
 
-Submodules
-----------
-
-fastNLP.saver.logger module
----------------------------
+fastNLP.saver.logger 
+---------------------
 
 .. automodule:: fastNLP.saver.logger
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-fastNLP.saver.model\_saver module
----------------------------------
+fastNLP.saver.model\_saver 
+---------------------------
 
 .. automodule:: fastNLP.saver.model_saver
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-
-Module contents
----------------
 
 .. automodule:: fastNLP.saver
     :members:
-    :undoc-members:
-    :show-inheritance:

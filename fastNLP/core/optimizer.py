@@ -4,7 +4,6 @@ import torch
 class Optimizer(object):
     """Wrapper of optimizer from framework
 
-            names: arguments (type)
             1. Adam: lr (float), weight_decay (float)
             2. AdaGrad
             3. RMSProp
@@ -16,20 +15,29 @@ class Optimizer(object):
         """
         :param optimizer_name: str, the name of the optimizer
         :param kwargs: the arguments
+
         """
         self.optim_name = optimizer_name
         self.kwargs = kwargs
 
     @property
     def name(self):
+        """The name of the optimizer.
+
+        :return: str
+        """
         return self.optim_name
 
     @property
     def params(self):
+        """The arguments used to create the optimizer.
+
+        :return: dict of (str, *)
+        """
         return self.kwargs
 
     def construct_from_pytorch(self, model_params):
-        """construct a optimizer from framework over given model parameters"""
+        """Construct a optimizer from framework over given model parameters."""
 
         if self.optim_name in ["SGD", "sgd"]:
             if "lr" in self.kwargs:

@@ -17,20 +17,33 @@ DEFAULT_WORD_TO_INDEX = {DEFAULT_PADDING_LABEL: 0, DEFAULT_UNKNOWN_LABEL: 1,
 # the first vocab in dict with the index = 5
 
 def save_pickle(obj, pickle_path, file_name):
+    """Save an object into a pickle file.
+
+    :param obj: an object
+    :param pickle_path: str, the directory where the pickle file is to be saved
+    :param file_name: str, the name of the pickle file. In general, it should be ended by "pkl".
+    """
     with open(os.path.join(pickle_path, file_name), "wb") as f:
         _pickle.dump(obj, f)
-    print("{} saved. ".format(file_name))
+    print("{} saved in {}".format(file_name, pickle_path))
 
 
 def load_pickle(pickle_path, file_name):
+    """Load an object from a given pickle file.
+
+    :param pickle_path: str, the directory where the pickle file is.
+    :param file_name: str, the name of the pickle file.
+    :return obj: an object stored in the pickle
+    """
     with open(os.path.join(pickle_path, file_name), "rb") as f:
         obj = _pickle.load(f)
-    print("{} loaded. ".format(file_name))
+    print("{} loaded from {}".format(file_name, pickle_path))
     return obj
 
 
 def pickle_exist(pickle_path, pickle_name):
-    """
+    """Check if a given pickle file exists in the directory.
+
     :param pickle_path: the directory of target pickle file
     :param pickle_name: the filename of target pickle file
     :return: True if file exists else False
@@ -45,6 +58,19 @@ def pickle_exist(pickle_path, pickle_name):
 
 
 class BasePreprocess(object):
+    """Base class of all preprocessors.
+    Preprocessors are responsible for converting data of strings into data of indices.
+    During the pre-processing, the following pickle files will be built:
+
+        - "word2id.pkl", a mapping from words(tokens) to indices
+        - "id2word.pkl", a reversed dictionary
+        - "label2id.pkl", a dictionary on labels
+        - "id2label.pkl", a reversed dictionary on labels
+
+    These four pickle files are expected to be saved in the given pickle directory once they are constructed.
+    Preprocessors will check if those files are already in the directory and will reuse them in future calls.
+    """
+
     def __init__(self):
         self.word2index = None
         self.label2index = None
@@ -68,6 +94,7 @@ class BasePreprocess(object):
         :param n_fold: int, the number of folds of cross validation. Only useful when cross_val is True.
         :return results: a tuple of datasets after preprocessing.
         """
+
         if pickle_exist(pickle_path, "word2id.pkl") and pickle_exist(pickle_path, "class2id.pkl"):
             self.word2index = load_pickle(pickle_path, "word2id.pkl")
             self.label2index = load_pickle(pickle_path, "class2id.pkl")
@@ -98,6 +125,8 @@ class BasePreprocess(object):
                 save_pickle(data_train, pickle_path, "data_train.pkl")
             else:
                 data_train = load_pickle(pickle_path, "data_train.pkl")
+                if pickle_exist(pickle_path, "data_dev.pkl"):
+                    data_dev = load_pickle(pickle_path, "data_dev.pkl")
         else:
             # cross_val is True
             if not pickle_exist(pickle_path, "data_train_0.pkl"):
@@ -181,25 +210,31 @@ class SeqLabelPreprocess(BasePreprocess):
     """Preprocess pipeline, including building mapping from words to index, from index to words,
         from labels/classes to index, from index to labels/classes.
         data of three-level list which have multiple labels in each sample.
+        ::
+
             [
                 [ [word_11, word_12, ...], [label_1, label_1, ...] ],
                 [ [word_21, word_22, ...], [label_2, label_1, ...] ],
                 ...
             ]
+
     """
 
     def __init__(self):
         super(SeqLabelPreprocess, self).__init__()
 
     def build_dict(self, data):
-        """
-        Add new words with indices into self.word_dict, new labels with indices into self.label_dict.
+        """Add new words with indices into self.word_dict, new labels with indices into self.label_dict.
+
         :param data: three-level list
+            ::
+
             [
                 [ [word_11, word_12, ...], [label_1, label_1, ...] ],
                 [ [word_21, word_22, ...], [label_2, label_1, ...] ],
                 ...
             ]
+
         :return word2index: dict of {str, int}
                 label2index: dict of {str, int}
         """
@@ -215,14 +250,17 @@ class SeqLabelPreprocess(BasePreprocess):
         return word2index, label2index
 
     def to_index(self, data):
-        """
-        Convert word strings and label strings into indices.
+        """Convert word strings and label strings into indices.
+
         :param data: three-level list
+            ::
+
             [
                 [ [word_11, word_12, ...], [label_1, label_1, ...] ],
                 [ [word_21, word_22, ...], [label_2, label_1, ...] ],
                 ...
             ]
+
         :return data_index: the same shape as data, but each string is replaced by its corresponding index
         """
         data_index = []
@@ -241,11 +279,14 @@ class ClassPreprocess(BasePreprocess):
         Preprocess pipeline, including building mapping from words to index, from index to words,
         from labels/classes to index, from index to labels/classes.
         design for data of three-level list which has a single label in each sample.
+            ::
+
             [
                 [ [word_11, word_12, ...], label_1 ],
                 [ [word_21, word_22, ...], label_2 ],
                 ...
             ]
+
     """
 
     def __init__(self):
@@ -268,18 +309,21 @@ class ClassPreprocess(BasePreprocess):
 
             for word in sent:
                 if word not in word2index:
-                    word2index[word[0]] = len(word2index)
+                    word2index[word] = len(word2index)
         return word2index, label2index
 
     def to_index(self, data):
-        """
-        Convert word strings and label strings into indices.
+        """Convert word strings and label strings into indices.
+
         :param data: three-level list
+        ::
+
             [
                 [ [word_11, word_12, ...], label_1 ],
                 [ [word_21, word_22, ...], label_2 ],
                 ...
             ]
+
         :return data_index: the same shape as data, but each string is replaced by its corresponding index
         """
         data_index = []
@@ -294,14 +338,15 @@ class ClassPreprocess(BasePreprocess):
 
 
 def infer_preprocess(pickle_path, data):
-    """
-        Preprocess over inference data.
-        Transform three-level list of strings into that of index.
+    """Preprocess over inference data. Transform three-level list of strings into that of index.
+        ::
+
         [
             [word_11, word_12, ...],
             [word_21, word_22, ...],
             ...
         ]
+
     """
     word2index = load_pickle(pickle_path, "word2id.pkl")
     data_index = []

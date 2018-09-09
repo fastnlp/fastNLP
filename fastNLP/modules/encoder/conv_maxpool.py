@@ -4,6 +4,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.init import xavier_uniform_
 
 
 class ConvMaxpool(nn.Module):
@@ -21,6 +22,7 @@ class ConvMaxpool(nn.Module):
             if isinstance(kernel_sizes, int):
                 out_channels = [out_channels]
                 kernel_sizes = [kernel_sizes]
+
             self.convs = nn.ModuleList([nn.Conv1d(
                 in_channels=in_channels,
                 out_channels=oc,
@@ -31,6 +33,9 @@ class ConvMaxpool(nn.Module):
                 groups=groups,
                 bias=bias)
                 for oc, ks in zip(out_channels, kernel_sizes)])
+
+            for conv in self.convs:
+                xavier_uniform_(conv.weight)  # weight initialization
         else:
             raise Exception(
                 'Incorrect kernel sizes: should be list, tuple or int')

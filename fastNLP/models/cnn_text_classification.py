@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 # import torch.nn.functional as F
-from fastNLP.modules.encoder.conv_maxpool import ConvMaxpool
+import fastNLP.modules.encoder as encoder
 
 
 class CNNText(torch.nn.Module):
@@ -18,22 +18,22 @@ class CNNText(torch.nn.Module):
     def __init__(self, args):
         super(CNNText, self).__init__()
 
-        class_num = args["num_classes"]
+        num_classes = args["num_classes"]
         kernel_nums = [100, 100, 100]
         kernel_sizes = [3, 4, 5]
-        embed_num = args["vocab_size"]
+        vocab_size = args["vocab_size"]
         embed_dim = 300
         pretrained_embed = None
         drop_prob = 0.5
 
         # no support for pre-trained embedding currently
-        self.embed = nn.Embedding(embed_num, embed_dim, padding_idx=0)
-        self.conv_pool = ConvMaxpool(
+        self.embed = encoder.embedding.Embedding(vocab_size, embed_dim)
+        self.conv_pool = encoder.conv_maxpool.ConvMaxpool(
             in_channels=embed_dim,
             out_channels=kernel_nums,
             kernel_sizes=kernel_sizes)
         self.dropout = nn.Dropout(drop_prob)
-        self.fc = nn.Linear(sum(kernel_nums), class_num)
+        self.fc = encoder.linear.Linear(sum(kernel_nums), num_classes)
 
     def forward(self, x):
         x = self.embed(x)  # [N,L] -> [N,L,C]
