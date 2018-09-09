@@ -13,6 +13,7 @@ class ConfigSaver(object):
         if not os.path.exists(self.file_path):
             raise FileNotFoundError("file {} NOT found!".__format__(self.file_path))
 
+    """
     def save_section(self, section_name, section):
         cfg = configparser.ConfigParser()
         if not os.path.exists(self.file_path):
@@ -35,12 +36,13 @@ class ConfigSaver(object):
                     logger.warning("this is a warning #TODO")
             cfg.set(section_name,key, section[key])
         cfg.write(open(self.file_path, 'w'))
+    """
 
     def save_config_file(self, section_name, section):
 
         def get_section(file_path, sect_name):
             sect = ConfigSection()
-            ConfigLoader("", "").load_config(file_path, {sect_name: sect})
+            ConfigLoader(file_path).load_config(file_path, {sect_name: sect})
             return sect
 
         def read_section(file_path):
