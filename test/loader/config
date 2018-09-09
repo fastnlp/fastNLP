@@ -10,3 +10,9 @@ input = [1,2,3]
 text = "this is text"
 
 doubles = 0.5
+
+[t]
+x = "this is an test section"
+
+[test-case-2]
+double = 0.5
