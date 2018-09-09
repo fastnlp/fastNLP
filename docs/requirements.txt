@@ -2,4 +2,4 @@ numpy>=1.14.2
 http://download.pytorch.org/whl/cpu/torch-0.4.1-cp35-cp35m-linux_x86_64.whl
 torchvision>=0.1.8
 sphinx-rtd-theme==0.4.1
-tensorboardX
+tensorboardX>=1.4
