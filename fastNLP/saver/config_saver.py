@@ -1,10 +1,8 @@
 import os
 
-import json
-import configparser
-
 from fastNLP.loader.config_loader import ConfigSection, ConfigLoader
 from fastNLP.saver.logger import create_logger
+
 
 class ConfigSaver(object):
 
@@ -14,19 +12,21 @@ class ConfigSaver(object):
             raise FileNotFoundError("file {} NOT found!".__format__(self.file_path))
 
     def _get_section(self, sect_name):
-        """
-        :param sect_name: the name of section what wants to load
-        :return: the section
+        """This is the function to get the section with the section name.
+
+        :param sect_name: The name of section what wants to load.
+        :return: The section.
         """
         sect = ConfigSection()
         ConfigLoader(self.file_path).load_config(self.file_path, {sect_name: sect})
         return sect
 
     def _read_section(self):
-        """
+        """This is the function to read sections from the config file.
+
         :return: sect_list, sect_key_list
-            sect_list is a list of ConfigSection()
-            sect_key_list is a list of names in sect_list
+            sect_list: A list of ConfigSection().
+            sect_key_list: A list of names in sect_list.
         """
         sect_name = None
 
@@ -76,9 +76,10 @@ class ConfigSaver(object):
         return sect_list, sect_key_list
 
     def _write_section(self, sect_list, sect_key_list):
-        """
-        :param sect_list: a list of ConfigSection() need to be writen into file
-        :param sect_key_list: a list of name of sect_list
+        """This is the function to write config file with section list and name list.
+
+        :param sect_list: A list of ConfigSection() need to be writen into file.
+        :param sect_key_list: A list of name of sect_list.
         :return:
         """
         with open(self.file_path, 'w') as f:
@@ -96,9 +97,10 @@ class ConfigSaver(object):
                 f.write('\n')
 
     def save_config_file(self, section_name, section):
-        """
-        :param section_name: the name of section what needs to be changed and saved
-        :param section: the section with key and value what needs to be changed and saved
+        """This is the function to be called to change the config file with a single section and its name.
+
+        :param section_name: The name of section what needs to be changed and saved.
+        :param section: The section with key and value what needs to be changed and saved.
         :return:
         """
         section_file = self._get_section(section_name)
@@ -134,7 +136,8 @@ class ConfigSaver(object):
             sect, sect_key = sect_list[section_name]
             for k in section.__dict__.keys():
                 if k not in sect_key:
-                    sect_key.append('\n')
+                    if sect_key[-1] != '\n':
+                        sect_key.append('\n')
                     sect_key.append(k)
                 sect[k] = str(section[k])
                 if isinstance(section[k], str):
