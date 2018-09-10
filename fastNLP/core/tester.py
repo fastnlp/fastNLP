@@ -70,7 +70,6 @@ class BaseTester(object):
 
         self._model = None
         self.eval_score = 0  # evaluation score of all batches
-        self.batch_loss = []  # outputs of all loss
         self.result = []
         self.lable = []
         self.all_mask = []
@@ -84,7 +83,6 @@ class BaseTester(object):
         # turn on the testing mode; clean up the history
         self.mode(network, test=True)
         self.eval_score = 0
-        self.batch_loss.clear()
         self.result.clear()
         self.lable.clear()
         self.all_mask.clear()
@@ -127,9 +125,9 @@ class BaseTester(object):
         Please refer to metrics.py for common metric functions.
         :return : variable number of outputs
         """
-        batch_loss = np.mean(self.batch_loss)
+
         best_result = self.eval_score
-        return batch_loss, best_result
+        return best_result
 
     def show_metrics(self):
         """Customize evaluation outputs in Trainer.
@@ -225,8 +223,6 @@ class SeqLabelTester(BaseTester):
         :param truth: Tensor, [batch_size, max_len]
         :return:
         """
-        loss = self._model.loss(predict, truth, self.mask)
-        self.batch_loss.append(loss)
 
         prediction = self._model.prediction(predict, self.mask)
         prediction = prediction.cpu().numpy()
@@ -272,9 +268,6 @@ class AdvSeqLabelTester(BaseTester):
         :return:
         """
 
-        loss = self._model.loss(predict, truth, self.mask)
-        self.batch_loss.append(loss)
-
         prediction = self._model.prediction(predict, self.mask)
         prediction = prediction.cpu().numpy()
         truth = truth.cpu().numpy()
@@ -304,7 +297,5 @@ class ClassificationTester(BaseTester):
 
     def evaluate(self, y_logit, y_true):
         """Return y_pred and y_true."""
-        loss = self._model.loss(y_logit, y_true)
-        self.batch_loss.append(loss)
         y_prob = torch.argmax(y_logit,-1)
         return [y_prob, y_true]

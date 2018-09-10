@@ -251,7 +251,7 @@ class BaseTrainer(object):
         :param validator: a Tester instance
         :return: bool, True means current results on dev set is the best.
         """
-        _, accuracy = validator.metrics()
+        accuracy = validator.metrics()
         if accuracy > self.best_accuracy:
             self.best_accuracy = accuracy
             return True
