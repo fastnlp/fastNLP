@@ -181,8 +181,8 @@ class BaseTester(object):
         print(print_output)
 
 class SeqLabelTester(BaseTester):
-    """
-    Tester for sequence labeling.
+    """Tester for sequence labeling.
+
     """
 
     def __init__(self, **test_args):
@@ -229,10 +229,10 @@ class SeqLabelTester(BaseTester):
         truth = truth.cpu().numpy()
         return [Action.cut_pad(prediction,self.seq_len),Action.cut_pad(truth,self.seq_len)]
 
-
     def make_batch(self, iterator):
         return Action.make_batch(iterator, use_cuda=self.use_cuda, output_length=True)
 
+      
 class AdvSeqLabelTester(BaseTester):
     """
         Tester for sequence labeling.(multi-feature)
@@ -240,6 +240,7 @@ class AdvSeqLabelTester(BaseTester):
     def __init__(self, **test_args):
         """
         :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
+
         """
         super(AdvSeqLabelTester, self).__init__(**test_args)
         self.max_len = None
