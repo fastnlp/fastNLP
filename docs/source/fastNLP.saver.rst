@@ -1,6 +1,12 @@
 fastNLP.saver 
 ==============
 
+fastNLP.saver.config\_saver 
+----------------------------
+
+.. automodule:: fastNLP.saver.config_saver
+    :members:
+
 fastNLP.saver.logger 
 ---------------------
 

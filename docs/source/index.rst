@@ -12,13 +12,15 @@ fastNLP是一个基于PyTorch的模块化自然语言处理系统，用于快速
 而每个类别包含不同的实现模块。 
 
 大多数当前的NLP模型可以构建在这些模块上，这极大地简化了开发NLP模型的过程。 
-fastNLP的架构如下左图所示：
+fastNLP的架构如图所示：
 
-.. image:: figures/procedures_and_sequence_labeling.png
+.. image:: figures/procedures.PNG
 
-在constructing model部分，以序列标注（上右图）和文本分类（下图）为例进行说明：
+在constructing model部分，以序列标注和文本分类为例进行说明：
 
 .. image:: figures/text_classification.png
+.. image:: figures/sequence_labeling.PNG
+    :width: 400
 
 * encoder module：将输入编码为一些抽象表示，输入的是单词序列，输出向量序列。
 * interaction module：使表示中的信息相互交互，输入的是向量序列，输出的也是向量序列。
