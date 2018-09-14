@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_
-
+from fastNLP.modules.utils import initial_parameter
 
 class ConvMaxpool(nn.Module):
     """
@@ -14,7 +14,7 @@ class ConvMaxpool(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel_sizes,
                  stride=1, padding=0, dilation=1,
-                 groups=1, bias=True, activation='relu'):
+                 groups=1, bias=True, activation='relu',initial_method = None ):
         super(ConvMaxpool, self).__init__()
 
         # convolution
@@ -46,6 +46,8 @@ class ConvMaxpool(nn.Module):
         else:
             raise Exception(
                 "Undefined activation function: choose from: relu")
+
+        initial_parameter(self, initial_method)
 
     def forward(self, x):
         # [N,L,C] -> [N,C,L]

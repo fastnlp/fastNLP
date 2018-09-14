@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 
+from fastNLP.modules.utils import initial_parameter
 
 def log_sum_exp(x, dim=-1):
     max_value, _ = x.max(dim=dim, keepdim=True)
@@ -19,7 +20,7 @@ def seq_len_to_byte_mask(seq_lens):
 
 
 class ConditionalRandomField(nn.Module):
-    def __init__(self, tag_size, include_start_end_trans=True):
+    def __init__(self, tag_size, include_start_end_trans=True ,initial_method = None):
         """
         :param tag_size: int, num of tags
         :param include_start_end_trans: bool, whether to include start/end tag
@@ -35,8 +36,8 @@ class ConditionalRandomField(nn.Module):
             self.start_scores = nn.Parameter(torch.randn(tag_size))
             self.end_scores = nn.Parameter(torch.randn(tag_size))
 
-        self.reset_parameter()
-
+        # self.reset_parameter()
+        initial_parameter(self, initial_method)
     def reset_parameter(self):
         nn.init.xavier_normal_(self.transition_m)
         if self.include_start_end_trans:

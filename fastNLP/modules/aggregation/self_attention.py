@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-
+from fastNLP.modules.utils import initial_parameter
 class SelfAttention(nn.Module):
     """
     Self Attention Module.
@@ -13,13 +13,13 @@ class SelfAttention(nn.Module):
     num_vec: int, the number of encoded vectors
     """
 
-    def __init__(self, input_size, dim=10, num_vec=10):
+    def __init__(self, input_size, dim=10, num_vec=10 ,initial_method =None):
         super(SelfAttention, self).__init__()
         self.W_s1 = nn.Parameter(torch.randn(dim, input_size), requires_grad=True)
         self.W_s2 = nn.Parameter(torch.randn(num_vec, dim), requires_grad=True)
         self.softmax = nn.Softmax(dim=2)
         self.tanh = nn.Tanh()
-
+        initial_parameter(self, initial_method)
     def penalization(self, A):
         """
         compute the penalization term for attention module
