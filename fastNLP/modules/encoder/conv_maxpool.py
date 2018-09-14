@@ -4,7 +4,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from torch.nn.init import xavier_uniform_
+from fastNLP.modules.utils import initial_parameter
 
 class ConvMaxpool(nn.Module):
     """
@@ -13,7 +14,7 @@ class ConvMaxpool(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel_sizes,
                  stride=1, padding=0, dilation=1,
-                 groups=1, bias=True, activation='relu'):
+                 groups=1, bias=True, activation='relu',initial_method = None ):
         super(ConvMaxpool, self).__init__()
 
         # convolution
@@ -21,6 +22,7 @@ class ConvMaxpool(nn.Module):
             if isinstance(kernel_sizes, int):
                 out_channels = [out_channels]
                 kernel_sizes = [kernel_sizes]
+
             self.convs = nn.ModuleList([nn.Conv1d(
                 in_channels=in_channels,
                 out_channels=oc,
@@ -31,6 +33,9 @@ class ConvMaxpool(nn.Module):
                 groups=groups,
                 bias=bias)
                 for oc, ks in zip(out_channels, kernel_sizes)])
+
+            for conv in self.convs:
+                xavier_uniform_(conv.weight)  # weight initialization
         else:
             raise Exception(
                 'Incorrect kernel sizes: should be list, tuple or int')
@@ -41,6 +46,8 @@ class ConvMaxpool(nn.Module):
         else:
             raise Exception(
                 "Undefined activation function: choose from: relu")
+
+        initial_parameter(self, initial_method)
 
     def forward(self, x):
         # [N,L,C] -> [N,C,L]

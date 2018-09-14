@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-
+from fastNLP.modules.utils import initial_parameter
 class MLP(nn.Module):
-    def __init__(self, size_layer, num_class=2, activation='relu'):
+    def __init__(self, size_layer, num_class=2, activation='relu' , initial_method = None):
         """Multilayer Perceptrons as a decoder
 
         Args:
@@ -36,7 +36,7 @@ class MLP(nn.Module):
             self.hidden_active = activation
         else:
             raise ValueError("should set activation correctly: {}".format(activation))
-
+        initial_parameter(self, initial_method  )
     def forward(self, x):
         for layer in self.hiddens:
             x = self.hidden_active(layer(x))
