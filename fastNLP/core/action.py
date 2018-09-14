@@ -54,10 +54,76 @@ class Action(object):
                 batch_x = batch_x[:, :max_len]
 
             if output_length:
-                seq_len = [len(x) for x in batch_x]
+                seq_len = [len(x[0]) for x in batch]
                 yield (batch_x, seq_len), batch_y
             else:
                 yield batch_x, batch_y
+
+    @staticmethod
+    def adv_make_batch(iterator, use_cuda, output_length=True, max_len=None):
+        """Batch and Pad data.(multi-featuer)
+                :param iterator: an iterator, (object that implements __next__ method) which returns the next sample.
+                :param use_cuda: bool, whether to use GPU
+                :param output_length: bool, whether to output the original length of the sequence before padding. (default: True)
+                :param max_len: int, maximum sequence length. Longer sequences will be clipped. (default: None)
+                :return
+                if output_length is True:
+                    (batch_x,seq_len,all_fea): tuple of two elements
+                             batch_x: list. Each entry is a list of features of a sample. [batch_size, max_len]
+                             seq_len: list. The length of the pre-padded sequence, if output_length is True.[batch_size]
+                             all_fea: list. the len of all_fea is the number of features,
+                                            if Each entry of the feature is sequence like shape .[batch_size, max_len]
+                                            if Each entry of the feature is a single int. [batch_size]
+                                            the whole all_fea is [sequence_fea,...,single_fea,...], sequence_fea is always before single_fea.
+                    batch_y: list. Each entry is a list of labels of a sample.  [batch_size, max_len]
+
+                if output_length is False:
+                    batch_x: list. Each entry is a list of features of a sample. [batch_size, max_len]
+                    batch_y: list. Each entry is a list of labels of a sample.  [batch_size, max_len]
+        """
+        for batch_data in iterator:
+            batch_list = list(zip(*batch_data))
+
+            batch_x = batch_list[0]
+            batch_y = batch_list[1]
+            batch_x = Action.pad(batch_x)
+            # pad batch_y only if it is a 2-level list
+            if len(batch_y) > 0 and isinstance(batch_y[0], list):
+                batch_y = Action.pad(batch_y)
+
+            # convert list to tensor
+            batch_x = convert_to_torch_tensor(batch_x, use_cuda)
+            batch_y = convert_to_torch_tensor(batch_y, use_cuda)
+
+            # get features
+            all_fea = []
+
+            for batch_i in batch_list[2:]:
+                if isinstance(batch_i[0], list):
+                    batch_i = Action.pad(batch_i)
+                    # trim data to max_len
+                    if max_len is not None and batch_i.size(1) > max_len:
+                        batch_i = batch_i[:, :max_len]
+                all_fea.append(convert_to_torch_tensor(batch_i, use_cuda))
+
+            if output_length:
+                seq_len = [len(sample) for sample in batch_list[0]]
+                yield (batch_x, seq_len, all_fea), batch_y
+            else:
+                yield (batch_x, all_fea), batch_y
+
+    @staticmethod
+    def cut_pad(pad_seq, seq_len):
+        """
+        cut the padded sequence
+        :param pad_seq: [batch_size, max_len]
+        :param seq_len: [batch_size]
+        :return: list of seq
+        """
+        out_put = []
+        for p, s in zip(pad_seq, seq_len):
+            out_put.append(p[:s])
+        return out_put
 
     @staticmethod
     def pad(batch, fill=0):
@@ -68,10 +134,10 @@ class Action(object):
         :return batch: a padded mini-batch
         """
         max_length = max([len(x) for x in batch])
+        batch_pad = np.ones([len(batch), max_length], dtype=np.int32) * fill
         for idx, sample in enumerate(batch):
-            if len(sample) < max_length:
-                batch[idx] = sample + ([fill] * (max_length - len(sample)))
-        return batch
+            batch_pad[idx][:len(sample)] = sample
+        return batch_pad
 
     @staticmethod
     def mode(model, is_test=False):
@@ -84,6 +150,29 @@ class Action(object):
             model.eval()
         else:
             model.train()
+
+    @staticmethod
+    def get_real(p, y, mask=None):
+        """
+        get acc_num, all_num, pred_num, label_num, pred_right_num to compute scores
+        :param p: sample
+        :param y: lable
+        :param mask:
+        :return:
+        """
+        p = np.array(p)
+        y = np.array(y)
+        if mask is None:
+            mask = np.ones_like(p, dtype=np.bool)
+        elif not isinstance(mask,np.ndarray):
+            mask =mask.cpu().numpy()
+        mask=np.array(mask)
+        acc_num = np.sum(np.logical_and(p == y, mask))
+        all_num = np.sum(mask)
+        pred_num = np.sum(np.logical_and(p, mask))
+        label_num = np.sum(np.logical_and(y, mask))
+        pred_right_num = np.sum(np.logical_and(np.logical_and(p == y, y), mask))
+        return acc_num, all_num, pred_num, label_num, pred_right_num
 
 
 def convert_to_torch_tensor(data_list, use_cuda):
