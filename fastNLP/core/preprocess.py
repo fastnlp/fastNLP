@@ -239,7 +239,7 @@ class SeqLabelPreprocess(BasePreprocess):
                 label2index: dict of {str, int}
         """
         # In seq labeling, both word seq and label seq need to be padded to the same length in a mini-batch.
-        label2index = DEFAULT_WORD_TO_INDEX.copy()
+        label2index = {} # DEFAULT_WORD_TO_INDEX.copy()
         word2index = DEFAULT_WORD_TO_INDEX.copy()
         for example in data:
             for word, label in zip(example[0], example[1]):
@@ -297,7 +297,7 @@ class ClassPreprocess(BasePreprocess):
 
         # build vocabulary from scratch if nothing exists
         word2index = DEFAULT_WORD_TO_INDEX.copy()
-        label2index = DEFAULT_WORD_TO_INDEX.copy()
+        label2index = {} # DEFAULT_WORD_TO_INDEX.copy()
 
         # collect every word and label
         for sent, label in data:
