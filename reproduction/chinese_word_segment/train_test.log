@@ -1,0 +1,255 @@
+[2018-09-14 22:49:24,861 fastNLP.core.trainer INFO 12012 6140 trainer.py:114  ] validator defined as <fastNLP.core.tester.SeqLabelTester object at 0x0000019132BE96D8>
+[2018-09-14 22:49:24,862 fastNLP.core.trainer INFO 12012 6140 trainer.py:118  ] optimizer defined as Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    eps: 1e-08
+    lr: 0.001
+    weight_decay: 0
+)
+[2018-09-14 22:49:24,862 fastNLP.core.trainer INFO 12012 6140 trainer.py:261  ] The model has a loss function, use it.
+[2018-09-14 22:49:24,862 fastNLP.core.trainer INFO 12012 6140 trainer.py:120  ] loss function defined as <bound method SeqLabeling.loss of AdvSeqLabel(
+  (Embedding): Embedding(
+    (embed): Embedding(926, 100, padding_idx=0)
+    (dropout): Dropout(p=0.0)
+  )
+  (Rnn): Lstm(
+    (lstm): LSTM(100, 100, num_layers=3, batch_first=True, dropout=0.3, bidirectional=True)
+  )
+  (Linear): Linear(
+    (linear): Linear(in_features=100, out_features=9, bias=True)
+  )
+  (Crf): ConditionalRandomField()
+  (Linear1): Linear(
+    (linear): Linear(in_features=200, out_features=66, bias=True)
+  )
+  (batch_norm): BatchNorm1d(66, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (relu): ReLU()
+  (drop): Dropout(p=0.3)
+  (Linear2): Linear(
+    (linear): Linear(in_features=66, out_features=9, bias=True)
+  )
+)>
+[2018-09-14 22:49:24,863 fastNLP.core.trainer INFO 12012 6140 trainer.py:124  ] training epochs started
+[2018-09-14 22:49:24,863 fastNLP.core.trainer INFO 12012 6140 trainer.py:126  ] training epoch 1
+[2018-09-14 22:49:24,863 fastNLP.core.trainer INFO 12012 6140 trainer.py:132  ] prepared data iterator
+[2018-09-14 22:49:26,051 fastNLP.core.trainer INFO 12012 6140 trainer.py:179  ] [epoch:   1 step:    0] train loss: 8.4e+01 time: 0:00:01
+[2018-09-14 22:49:26,741 fastNLP.core.trainer INFO 12012 6140 trainer.py:179  ] [epoch:   1 step:    1] train loss: 8.2e+01 time: 0:00:02
+[2018-09-14 22:49:27,125 fastNLP.core.trainer INFO 12012 6140 trainer.py:179  ] [epoch:   1 step:    2] train loss: 7.7e+01 time: 0:00:02
+[2018-09-14 22:49:27,128 fastNLP.core.trainer INFO 12012 6140 trainer.py:139  ] validation started
+[2018-09-14 22:49:27,312 fastNLP.core.tester INFO 12012 6140 tester.py:100  ] [test step 0] [1.3595311641693115, 0.0]
+[2018-09-14 22:49:27,360 fastNLP.core.tester INFO 12012 6140 tester.py:100  ] [test step 1] [17.83609390258789, 0.0]
+[2018-09-14 22:49:27,360 fastNLP.core.trainer INFO 12012 6140 trainer.py:149  ] [epoch 1] dev loss=9.60, accuracy=0.00
+[2018-09-14 22:49:27,360 fastNLP.core.trainer INFO 12012 6140 trainer.py:126  ] training epoch 2
+[2018-09-14 22:49:27,360 fastNLP.core.trainer INFO 12012 6140 trainer.py:132  ] prepared data iterator
+[2018-09-14 22:49:28,071 fastNLP.core.trainer INFO 12012 6140 trainer.py:179  ] [epoch:   2 step:    0] train loss: 7.8e+01 time: 0:00:03
+[2018-09-14 22:49:28,800 fastNLP.core.trainer INFO 12012 6140 trainer.py:179  ] [epoch:   2 step:    1] train loss: 7.5e+01 time: 0:00:04
+[2018-09-14 22:49:29,163 fastNLP.core.trainer INFO 12012 6140 trainer.py:179  ] [epoch:   2 step:    2] train loss: 7.7e+01 time: 0:00:04
+[2018-09-14 22:49:29,166 fastNLP.core.trainer INFO 12012 6140 trainer.py:139  ] validation started
+[2018-09-14 22:49:29,337 fastNLP.core.tester INFO 12012 6140 tester.py:100  ] [test step 0] [1.307623267173767, 0.0]
+[2018-09-14 22:49:29,377 fastNLP.core.tester INFO 12012 6140 tester.py:100  ] [test step 1] [17.284555435180664, 0.0]
+[2018-09-14 22:49:29,377 fastNLP.core.trainer INFO 12012 6140 trainer.py:149  ] [epoch 2] dev loss=9.30, accuracy=0.00
+[2018-09-14 22:49:29,377 fastNLP.core.trainer INFO 12012 6140 trainer.py:126  ] training epoch 3
+[2018-09-14 22:49:29,377 fastNLP.core.trainer INFO 12012 6140 trainer.py:132  ] prepared data iterator
+[2018-09-14 22:49:30,040 fastNLP.core.trainer INFO 12012 6140 trainer.py:179  ] [epoch:   3 step:    0] train loss: 7.3e+01 time: 0:00:05
+[2018-09-14 22:50:06,704 fastNLP.core.trainer INFO 7044 13948 trainer.py:114  ] validator defined as <fastNLP.core.tester.SeqLabelTester object at 0x00000172A6FF8898>
+[2018-09-14 22:50:06,705 fastNLP.core.trainer INFO 7044 13948 trainer.py:118  ] optimizer defined as Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    eps: 1e-08
+    lr: 0.001
+    weight_decay: 0
+)
+[2018-09-14 22:50:06,705 fastNLP.core.trainer INFO 7044 13948 trainer.py:261  ] The model has a loss function, use it.
+[2018-09-14 22:50:06,705 fastNLP.core.trainer INFO 7044 13948 trainer.py:120  ] loss function defined as <bound method SeqLabeling.loss of AdvSeqLabel(
+  (Embedding): Embedding(
+    (embed): Embedding(926, 100, padding_idx=0)
+    (dropout): Dropout(p=0.0)
+  )
+  (Rnn): Lstm(
+    (lstm): LSTM(100, 100, num_layers=3, batch_first=True, dropout=0.3, bidirectional=True)
+  )
+  (Linear): Linear(
+    (linear): Linear(in_features=100, out_features=9, bias=True)
+  )
+  (Crf): ConditionalRandomField()
+  (Linear1): Linear(
+    (linear): Linear(in_features=200, out_features=66, bias=True)
+  )
+  (batch_norm): BatchNorm1d(66, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (relu): ReLU()
+  (drop): Dropout(p=0.3)
+  (Linear2): Linear(
+    (linear): Linear(in_features=66, out_features=9, bias=True)
+  )
+)>
+[2018-09-14 22:50:06,705 fastNLP.core.trainer INFO 7044 13948 trainer.py:124  ] training epochs started
+[2018-09-14 22:50:06,705 fastNLP.core.trainer INFO 7044 13948 trainer.py:126  ] training epoch 1
+[2018-09-14 22:50:06,706 fastNLP.core.trainer INFO 7044 13948 trainer.py:132  ] prepared data iterator
+[2018-09-14 22:50:07,869 fastNLP.core.trainer INFO 7044 13948 trainer.py:179  ] [epoch:   1 step:    0] train loss: 9.2e+01 time: 0:00:01
+[2018-09-14 22:50:08,640 fastNLP.core.trainer INFO 7044 13948 trainer.py:179  ] [epoch:   1 step:    1] train loss: 8.8e+01 time: 0:00:02
+[2018-09-14 22:50:09,368 fastNLP.core.trainer INFO 7044 13948 trainer.py:179  ] [epoch:   1 step:    2] train loss: 8.6e+01 time: 0:00:03
+[2018-09-14 22:50:09,372 fastNLP.core.trainer INFO 7044 13948 trainer.py:139  ] validation started
+[2018-09-14 22:50:09,568 fastNLP.core.tester INFO 7044 13948 tester.py:100  ] [test step 0] [1.3165520429611206, 0.2548828125]
+[2018-09-14 22:50:09,614 fastNLP.core.tester INFO 7044 13948 tester.py:100  ] [test step 1] [17.373342514038086, 0.3125]
+[2018-09-14 22:50:09,627 fastNLP.core.trainer INFO 7044 13948 trainer.py:145  ] Saved better model selected by validation.
+[2018-09-14 22:50:09,628 fastNLP.core.trainer INFO 7044 13948 trainer.py:149  ] [epoch 1] dev loss=9.34, accuracy=0.28
+[2018-09-14 22:50:09,628 fastNLP.core.trainer INFO 7044 13948 trainer.py:126  ] training epoch 2
+[2018-09-14 22:50:09,628 fastNLP.core.trainer INFO 7044 13948 trainer.py:132  ] prepared data iterator
+[2018-09-14 22:50:10,330 fastNLP.core.trainer INFO 7044 13948 trainer.py:179  ] [epoch:   2 step:    0] train loss: 8.6e+01 time: 0:00:04
+[2018-09-14 22:54:06,809 fastNLP.core.trainer INFO 2900 19720 trainer.py:114  ] validator defined as <fastNLP.core.tester.SeqLabelTester object at 0x000001D823B98898>
+[2018-09-14 22:54:06,809 fastNLP.core.trainer INFO 2900 19720 trainer.py:118  ] optimizer defined as Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    eps: 1e-08
+    lr: 0.001
+    weight_decay: 0
+)
+[2018-09-14 22:54:06,809 fastNLP.core.trainer INFO 2900 19720 trainer.py:261  ] The model has a loss function, use it.
+[2018-09-14 22:54:06,809 fastNLP.core.trainer INFO 2900 19720 trainer.py:120  ] loss function defined as <bound method SeqLabeling.loss of AdvSeqLabel(
+  (Embedding): Embedding(
+    (embed): Embedding(926, 100, padding_idx=0)
+    (dropout): Dropout(p=0.0)
+  )
+  (Rnn): Lstm(
+    (lstm): LSTM(100, 100, num_layers=3, batch_first=True, dropout=0.3, bidirectional=True)
+  )
+  (Linear): Linear(
+    (linear): Linear(in_features=100, out_features=9, bias=True)
+  )
+  (Crf): ConditionalRandomField()
+  (Linear1): Linear(
+    (linear): Linear(in_features=200, out_features=66, bias=True)
+  )
+  (batch_norm): BatchNorm1d(66, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (relu): ReLU()
+  (drop): Dropout(p=0.3)
+  (Linear2): Linear(
+    (linear): Linear(in_features=66, out_features=9, bias=True)
+  )
+)>
+[2018-09-14 22:54:06,809 fastNLP.core.trainer INFO 2900 19720 trainer.py:124  ] training epochs started
+[2018-09-14 22:54:06,809 fastNLP.core.trainer INFO 2900 19720 trainer.py:126  ] training epoch 1
+[2018-09-14 22:54:06,809 fastNLP.core.trainer INFO 2900 19720 trainer.py:132  ] prepared data iterator
+[2018-09-14 22:54:07,835 fastNLP.core.trainer INFO 2900 19720 trainer.py:179  ] [epoch:   1 step:    0] train loss: 9.4e+01 time: 0:00:01
+[2018-09-14 22:54:08,500 fastNLP.core.trainer INFO 2900 19720 trainer.py:179  ] [epoch:   1 step:    1] train loss: 9e+01 time: 0:00:02
+[2018-09-14 22:54:08,979 fastNLP.core.trainer INFO 2900 19720 trainer.py:179  ] [epoch:   1 step:    2] train loss: 9e+01 time: 0:00:02
+[2018-09-14 22:54:08,979 fastNLP.core.trainer INFO 2900 19720 trainer.py:139  ] validation started
+[2018-09-14 22:55:59,109 fastNLP.core.trainer INFO 2536 21672 trainer.py:114  ] validator defined as <fastNLP.core.tester.SeqLabelTester object at 0x0000019F493588D0>
+[2018-09-14 22:55:59,109 fastNLP.core.trainer INFO 2536 21672 trainer.py:118  ] optimizer defined as Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    eps: 1e-08
+    lr: 0.001
+    weight_decay: 0
+)
+[2018-09-14 22:55:59,109 fastNLP.core.trainer INFO 2536 21672 trainer.py:261  ] The model has a loss function, use it.
+[2018-09-14 22:55:59,110 fastNLP.core.trainer INFO 2536 21672 trainer.py:120  ] loss function defined as <bound method SeqLabeling.loss of AdvSeqLabel(
+  (Embedding): Embedding(
+    (embed): Embedding(926, 100, padding_idx=0)
+    (dropout): Dropout(p=0.0)
+  )
+  (Rnn): Lstm(
+    (lstm): LSTM(100, 100, num_layers=3, batch_first=True, dropout=0.3, bidirectional=True)
+  )
+  (Linear): Linear(
+    (linear): Linear(in_features=100, out_features=9, bias=True)
+  )
+  (Crf): ConditionalRandomField()
+  (Linear1): Linear(
+    (linear): Linear(in_features=200, out_features=66, bias=True)
+  )
+  (batch_norm): BatchNorm1d(66, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (relu): ReLU()
+  (drop): Dropout(p=0.3)
+  (Linear2): Linear(
+    (linear): Linear(in_features=66, out_features=9, bias=True)
+  )
+)>
+[2018-09-14 22:55:59,113 fastNLP.core.trainer INFO 2536 21672 trainer.py:124  ] training epochs started
+[2018-09-14 22:55:59,113 fastNLP.core.trainer INFO 2536 21672 trainer.py:126  ] training epoch 1
+[2018-09-14 22:55:59,114 fastNLP.core.trainer INFO 2536 21672 trainer.py:132  ] prepared data iterator
+[2018-09-14 22:56:38,450 fastNLP.core.trainer INFO 15560 20364 trainer.py:114  ] validator defined as <fastNLP.core.tester.SeqLabelTester object at 0x0000023ECE347828>
+[2018-09-14 22:56:38,450 fastNLP.core.trainer INFO 15560 20364 trainer.py:118  ] optimizer defined as Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    eps: 1e-08
+    lr: 0.001
+    weight_decay: 0
+)
+[2018-09-14 22:56:38,450 fastNLP.core.trainer INFO 15560 20364 trainer.py:261  ] The model has a loss function, use it.
+[2018-09-14 22:56:38,450 fastNLP.core.trainer INFO 15560 20364 trainer.py:120  ] loss function defined as <bound method SeqLabeling.loss of AdvSeqLabel(
+  (Embedding): Embedding(
+    (embed): Embedding(926, 100, padding_idx=0)
+    (dropout): Dropout(p=0.0)
+  )
+  (Rnn): Lstm(
+    (lstm): LSTM(100, 100, num_layers=3, batch_first=True, dropout=0.3, bidirectional=True)
+  )
+  (Linear): Linear(
+    (linear): Linear(in_features=100, out_features=9, bias=True)
+  )
+  (Crf): ConditionalRandomField()
+  (Linear1): Linear(
+    (linear): Linear(in_features=200, out_features=66, bias=True)
+  )
+  (batch_norm): BatchNorm1d(66, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (relu): ReLU()
+  (drop): Dropout(p=0.3)
+  (Linear2): Linear(
+    (linear): Linear(in_features=66, out_features=9, bias=True)
+  )
+)>
+[2018-09-14 22:56:38,465 fastNLP.core.trainer INFO 15560 20364 trainer.py:124  ] training epochs started
+[2018-09-14 22:56:38,465 fastNLP.core.trainer INFO 15560 20364 trainer.py:126  ] training epoch 1
+[2018-09-14 22:56:38,465 fastNLP.core.trainer INFO 15560 20364 trainer.py:132  ] prepared data iterator
+[2018-09-14 23:02:35,889 fastNLP.core.trainer INFO 21440 20608 trainer.py:114  ] validator defined as <fastNLP.core.tester.SeqLabelTester object at 0x0000024162E89898>
+[2018-09-14 23:02:35,889 fastNLP.core.trainer INFO 21440 20608 trainer.py:118  ] optimizer defined as Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    eps: 1e-08
+    lr: 0.001
+    weight_decay: 0
+)
+[2018-09-14 23:02:35,889 fastNLP.core.trainer INFO 21440 20608 trainer.py:261  ] The model has a loss function, use it.
+[2018-09-14 23:02:35,889 fastNLP.core.trainer INFO 21440 20608 trainer.py:120  ] loss function defined as <bound method SeqLabeling.loss of AdvSeqLabel(
+  (Embedding): Embedding(
+    (embed): Embedding(926, 100, padding_idx=0)
+    (dropout): Dropout(p=0.0)
+  )
+  (Rnn): Lstm(
+    (lstm): LSTM(100, 100, num_layers=3, batch_first=True, dropout=0.3, bidirectional=True)
+  )
+  (Linear): Linear(
+    (linear): Linear(in_features=100, out_features=9, bias=True)
+  )
+  (Crf): ConditionalRandomField()
+  (Linear1): Linear(
+    (linear): Linear(in_features=200, out_features=66, bias=True)
+  )
+  (batch_norm): BatchNorm1d(66, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (relu): ReLU()
+  (drop): Dropout(p=0.3)
+  (Linear2): Linear(
+    (linear): Linear(in_features=66, out_features=9, bias=True)
+  )
+)>
+[2018-09-14 23:02:35,889 fastNLP.core.trainer INFO 21440 20608 trainer.py:124  ] training epochs started
+[2018-09-14 23:02:35,889 fastNLP.core.trainer INFO 21440 20608 trainer.py:126  ] training epoch 1
+[2018-09-14 23:02:35,889 fastNLP.core.trainer INFO 21440 20608 trainer.py:132  ] prepared data iterator
+[2018-09-14 23:02:36,965 fastNLP.core.trainer INFO 21440 20608 trainer.py:179  ] [epoch:   1 step:    0] train loss: 8.1e+01 time: 0:00:01
+[2018-09-14 23:02:37,648 fastNLP.core.trainer INFO 21440 20608 trainer.py:179  ] [epoch:   1 step:    1] train loss: 8.2e+01 time: 0:00:02
+[2018-09-14 23:02:37,977 fastNLP.core.trainer INFO 21440 20608 trainer.py:179  ] [epoch:   1 step:    2] train loss: 7.5e+01 time: 0:00:02
+[2018-09-14 23:02:37,977 fastNLP.core.trainer INFO 21440 20608 trainer.py:139  ] validation started
+[2018-09-14 23:02:38,165 fastNLP.core.tester INFO 21440 20608 tester.py:100  ] [test step 0] [1.1802295446395874, 0.08544921875]
+[2018-09-14 23:02:38,212 fastNLP.core.tester INFO 21440 20608 tester.py:100  ] [test step 1] [15.630839347839355, 0.08124999701976776]
+[2018-09-14 23:02:38,227 fastNLP.core.trainer INFO 21440 20608 trainer.py:145  ] Saved better model selected by validation.
+[2018-09-14 23:02:38,227 fastNLP.core.trainer INFO 21440 20608 trainer.py:149  ] [epoch 1] dev loss=8.41, accuracy=0.08
+[2018-09-14 23:02:38,227 fastNLP.core.trainer INFO 21440 20608 trainer.py:126  ] training epoch 2
+[2018-09-14 23:02:38,227 fastNLP.core.trainer INFO 21440 20608 trainer.py:132  ] prepared data iterator
+[2018-09-14 23:02:38,906 fastNLP.core.trainer INFO 21440 20608 trainer.py:179  ] [epoch:   2 step:    0] train loss: 7.5e+01 time: 0:00:03

@@ -16,11 +16,16 @@ from fastNLP.core.predictor import SeqLabelInfer
 # not in the file's dir
 if len(os.path.dirname(__file__)) != 0:
     os.chdir(os.path.dirname(__file__))
-datadir = "/home/zyfeng/data/"
+#datadir = "/home/zyfeng/data/"
+datadir = './../../test/data_for_tests/'
+datadir = os.path.abspath(datadir)
+print(os.path.abspath(datadir), os.path.exists(datadir))
 cfgfile = './cws.cfg'
-data_name = "pku_training.utf8"
+#data_name = "pku_training.utf8"
+data_name = "cws_pku_utf_8"
+print(os.path.exists(os.path.join(datadir,data_name)))
 
-cws_data_path = os.path.join(datadir, "pku_training.utf8")
+cws_data_path = os.path.join(datadir, data_name)
 pickle_path = "save"
 data_infer_path = os.path.join(datadir, "infer.utf8")
 
@@ -97,7 +102,7 @@ def train():
     print("Model saved!")
 
 
-def test():
+def ttest():
     # Config Loader
     test_args = ConfigSection()
     ConfigLoader("config").load_config(cfgfile, {"POS_test": test_args})
@@ -132,7 +137,7 @@ def test():
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Run a chinese word segmentation model')
-    parser.add_argument('--mode', help='set the model\'s model', choices=['train', 'test', 'infer'])
+    parser.add_argument('--mode', help='set the model\'s model', choices=['train', 'test', 'infer'], default='train')
     args = parser.parse_args()
     if args.mode == 'train':
         train()
