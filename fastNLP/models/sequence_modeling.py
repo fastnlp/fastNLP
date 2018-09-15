@@ -104,17 +104,17 @@ class AdvSeqLabel(SeqLabeling):
 
         self.Crf = decoder.CRF.ConditionalRandomField(num_classes)
 
-    def forward(self, x, seq_len):
+    def forward(self, word_seq, word_seq_origin_len):
         """
-        :param x: LongTensor, [batch_size, mex_len]
-        :param seq_len: list of int.
+        :param word_seq: LongTensor, [batch_size, mex_len]
+        :param word_seq_origin_len: list of int.
         :return y: [batch_size, mex_len, tag_size]
         """
-        self.mask = self.make_mask(x, seq_len)
+        self.mask = self.make_mask(word_seq, word_seq_origin_len)
 
-        batch_size = x.size(0)
-        max_len = x.size(1)
-        x = self.Embedding(x)
+        batch_size = word_seq.size(0)
+        max_len = word_seq.size(1)
+        x = self.Embedding(word_seq)
         # [batch_size, max_len, word_emb_dim]
         x = self.Rnn(x)
         # [batch_size, max_len, hidden_size * direction]

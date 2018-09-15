@@ -122,15 +122,23 @@ class BaseTester(object):
         :param truth: Tensor
         :return eval_results: can be anything. It will be stored in self.eval_history
         """
-        batch_size, max_len = predict.size(0), predict.size(1)
         if "label_seq" in truth:
             truth = truth["label_seq"]
         elif "label" in truth:
             truth = truth["label"]
         else:
             raise NotImplementedError("Unknown key {} in batch_y.".format(truth.keys()))
-        loss = self._model.loss(predict, truth) / batch_size
 
+        if self._task == "seq_label":
+            return self._seq_label_evaluate(predict, truth)
+        elif self._task == "text_classify":
+            return self._text_classify_evaluate(predict, truth)
+        else:
+            raise NotImplementedError("Unknown task type {}.".format(self._task))
+
+    def _seq_label_evaluate(self, predict, truth):
+        batch_size, max_len = predict.size(0), predict.size(1)
+        loss = self._model.loss(predict, truth) / batch_size
         prediction = self._model.prediction(predict)
         # pad prediction to equal length
         for pred in prediction:
@@ -143,6 +151,10 @@ class BaseTester(object):
         accuracy = torch.sum(results == truth.view((-1,))).to(torch.float) / results.shape[0]
         return [float(loss), float(accuracy)]
 
+    def _text_classify_evaluate(self, y_logit, y_true):
+        y_prob = torch.nn.functional.softmax(y_logit, dim=-1)
+        return [y_prob, y_true]
+
     @property
     def metrics(self):
         """Compute and return metrics.
@@ -151,9 +163,27 @@ class BaseTester(object):
 
         :return : variable number of outputs
         """
+        if self._task == "seq_label":
+            return self._seq_label_metrics
+        elif self._task == "text_classify":
+            return self._text_classify_metrics
+        else:
+            raise NotImplementedError("Unknown task type {}.".format(self._task))
+
+    @property
+    def _seq_label_metrics(self):
         batch_loss = np.mean([x[0] for x in self.eval_history])
         batch_accuracy = np.mean([x[1] for x in self.eval_history])
         return batch_loss, batch_accuracy
+
+    @property
+    def _text_classify_metrics(self):
+        y_prob, y_true = zip(*self.eval_history)
+        y_prob = torch.cat(y_prob, dim=0)
+        y_pred = torch.argmax(y_prob, dim=-1)
+        y_true = torch.cat(y_true, dim=0)
+        acc = float(torch.sum(y_pred == y_true)) / len(y_true)
+        return y_true.cpu().numpy(), y_prob.cpu().numpy(), acc
 
     def show_metrics(self):
         """Customize evaluation outputs in Trainer.
@@ -176,13 +206,7 @@ class BaseTester(object):
 
 
 class SeqLabelTester(BaseTester):
-    """Tester for sequence labeling.
-
-    """
     def __init__(self, **test_args):
-        """
-        :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
-        """
         test_args.update({"task": "seq_label"})
         print(
             "[FastNLP Warning] SeqLabelTester will be deprecated. Please use Tester with argument 'task'='seq_label'.")
@@ -190,30 +214,8 @@ class SeqLabelTester(BaseTester):
 
 
 class ClassificationTester(BaseTester):
-    """Tester for classification."""
-
     def __init__(self, **test_args):
-        """
-        :param test_args: a dict-like object that has __getitem__ method.
-            can be accessed by "test_args["key_str"]"
-        """
+        test_args.update({"task": "seq_label"})
+        print(
+            "[FastNLP Warning] ClassificationTester will be deprecated. Please use Tester with argument 'task'='text_classify'.")
         super(ClassificationTester, self).__init__(**test_args)
-
-    def data_forward(self, network, x):
-        """Forward through network."""
-        logits = network(x)
-        return logits
-
-    def evaluate(self, y_logit, y_true):
-        """Return y_pred and y_true."""
-        y_prob = torch.nn.functional.softmax(y_logit, dim=-1)
-        return [y_prob, y_true]
-
-    def metrics(self):
-        """Compute accuracy."""
-        y_prob, y_true = zip(*self.eval_history)
-        y_prob = torch.cat(y_prob, dim=0)
-        y_pred = torch.argmax(y_prob, dim=-1)
-        y_true = torch.cat(y_true, dim=0)
-        acc = float(torch.sum(y_pred == y_true)) / len(y_true)
-        return y_true.cpu().numpy(), y_prob.cpu().numpy(), acc

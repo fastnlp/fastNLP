@@ -218,10 +218,18 @@ class BaseTrainer(object):
         self._optimizer.step()
 
     def data_forward(self, network, x):
-        y = network(**x)
+        if self._task == "seq_label":
+            y = network(x["word_seq"], x["word_seq_origin_len"])
+        elif self._task == "text_classify":
+            y = network(x["word_seq"])
+        else:
+            raise NotImplementedError("Unknown task type {}.".format(self._task))
+
         if not self._graph_summaried:
             if self._task == "seq_label":
                 self._summary_writer.add_graph(network, (x["word_seq"], x["word_seq_origin_len"]), verbose=False)
+            elif self._task == "text_classify":
+                self._summary_writer.add_graph(network, x["word_seq"], verbose=False)
             self._graph_summaried = True
         return y
 
@@ -246,6 +254,7 @@ class BaseTrainer(object):
             truth = truth["label_seq"]
         elif "label" in truth:
             truth = truth["label"]
+            truth = truth.view((-1,))
         else:
             raise NotImplementedError("Unknown key {} in batch_y.".format(truth.keys()))
         return self._loss_func(predict, truth)
@@ -315,30 +324,10 @@ class ClassificationTrainer(BaseTrainer):
     """Trainer for text classification."""
 
     def __init__(self, **train_args):
+        train_args.update({"task": "text_classify"})
+        print(
+            "[FastNLP Warning] ClassificationTrainer will be deprecated. Please use Trainer with argument 'task'='text_classify'.")
         super(ClassificationTrainer, self).__init__(**train_args)
-
-        self.iterator = None
-        self.loss_func = None
-        self.optimizer = None
-        self.best_accuracy = 0
-
-    def data_forward(self, network, x):
-        """Forward through network."""
-        logits = network(x)
-        return logits
-
-    def get_acc(self, y_logit, y_true):
-        """Compute accuracy."""
-        y_pred = torch.argmax(y_logit, dim=-1)
-        return int(torch.sum(y_true == y_pred)) / len(y_true)
-
-    def best_eval_result(self, validator):
-        _, _, accuracy = validator.metrics()
-        if accuracy > self.best_accuracy:
-            self.best_accuracy = accuracy
-            return True
-        else:
-            return False
 
     def _create_validator(self, valid_args):
         return ClassificationTester(**valid_args)

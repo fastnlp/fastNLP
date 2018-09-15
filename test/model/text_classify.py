@@ -19,9 +19,9 @@ from fastNLP.core.loss import Loss
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--save", type=str, default="./test_classification/", help="path to save pickle files")
-parser.add_argument("-t", "--train", type=str, default="./data_for_tests/text_classify.txt",
+parser.add_argument("-t", "--train", type=str, default="../data_for_tests/text_classify.txt",
                     help="path to the training data")
-parser.add_argument("-c", "--config", type=str, default="./data_for_tests/config", help="path to the config file")
+parser.add_argument("-c", "--config", type=str, default="../data_for_tests/config", help="path to the config file")
 parser.add_argument("-m", "--model_name", type=str, default="classify_model.pkl", help="the name of the model")
 
 args = parser.parse_args()

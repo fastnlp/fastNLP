@@ -251,6 +251,9 @@ class BasePreprocess(object):
         """
         use_word_seq = False
         use_label_seq = False
+        use_label_str = False
+
+        # construct a DataSet object and fill it with Instances
         data_set = DataSet()
         for example in data:
             words, label = example[0], example[1]
@@ -270,14 +273,19 @@ class BasePreprocess(object):
             elif isinstance(label, str):
                 y = LabelField(label, is_target=True)
                 instance.add_field("label", y)
+                use_label_str = True
             else:
                 raise NotImplementedError("label is a {}".format(type(label)))
-
             data_set.append(instance)
+
+        # convert strings to indices
         if use_word_seq:
             data_set.index_field("word_seq", vocab)
         if use_label_seq:
             data_set.index_field("label_seq", label_vocab)
+        if use_label_str:
+            data_set.index_field("label", label_vocab)
+
         return data_set
 
 

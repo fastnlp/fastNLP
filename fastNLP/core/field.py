@@ -73,13 +73,17 @@ class LabelField(Field):
     def index(self, vocab):
         if self._index is None:
             self._index = vocab[self.label]
-        else:
-            pass
         return self._index
 
     def to_tensor(self, padding_length):
         if self._index is None:
-            return torch.LongTensor([self.label])
+            if isinstance(self.label, int):
+                return torch.LongTensor([self.label])
+            elif isinstance(self.label, str):
+                raise RuntimeError("Field {} not indexed. Call index method.".format(self.label))
+            else:
+                raise RuntimeError(
+                    "Not support type for LabelField. Expect str or int, got {}.".format(type(self.label)))
         else:
             return torch.LongTensor([self._index])
 

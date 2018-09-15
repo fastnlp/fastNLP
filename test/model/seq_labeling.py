@@ -121,7 +121,7 @@ def train_and_test():
 
     # Tester
     tester = SeqLabelTester(save_output=False,
-                            save_loss=False,
+                            save_loss=True,
                             save_best_dev=False,
                             batch_size=4,
                             use_cuda=False,
