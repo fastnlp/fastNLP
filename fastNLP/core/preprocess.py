@@ -3,6 +3,10 @@ import os
 
 import numpy as np
 
+from fastNLP.core.dataset import DataSet
+from fastNLP.core.field import TextField, LabelField
+from fastNLP.core.instance import Instance
+
 DEFAULT_PADDING_LABEL = '<pad>'  # dict index = 0
 DEFAULT_UNKNOWN_LABEL = '<unk>'  # dict index = 1
 DEFAULT_RESERVED_LABEL = ['<reserved-2>',
@@ -84,7 +88,7 @@ class BasePreprocess(object):
         return len(self.label2index)
 
     def run(self, train_dev_data, test_data=None, pickle_path="./", train_dev_split=0, cross_val=False, n_fold=10):
-        """Main preprocessing pipeline.
+        """Main pre-processing pipeline.
 
         :param train_dev_data: three-level list, with either single label or multiple labels in a sample.
         :param test_data: three-level list, with either single label or multiple labels in a sample. (optional)
@@ -92,7 +96,9 @@ class BasePreprocess(object):
         :param train_dev_split: float, between [0, 1]. The ratio of training data used as validation set.
         :param cross_val: bool, whether to do cross validation.
         :param n_fold: int, the number of folds of cross validation. Only useful when cross_val is True.
-        :return results: a tuple of datasets after preprocessing.
+        :return results: multiple datasets after pre-processing. If test_data is provided, return one more dataset.
+                If train_dev_split > 0, return one more dataset - the dev set. If cross_val is True, each dataset
+                is a list of DataSet objects; Otherwise, each dataset is a DataSet object.
         """
 
         if pickle_exist(pickle_path, "word2id.pkl") and pickle_exist(pickle_path, "class2id.pkl"):
@@ -111,68 +117,87 @@ class BasePreprocess(object):
             index2label = self.build_reverse_dict(self.label2index)
             save_pickle(index2label, pickle_path, "id2class.pkl")
 
-        data_train = []
-        data_dev = []
+        train_set = []
+        dev_set = []
         if not cross_val:
             if not pickle_exist(pickle_path, "data_train.pkl"):
-                data_train.extend(self.to_index(train_dev_data))
                 if train_dev_split > 0 and not pickle_exist(pickle_path, "data_dev.pkl"):
-                    split = int(len(data_train) * train_dev_split)
-                    data_dev = data_train[: split]
-                    data_train = data_train[split:]
-                    save_pickle(data_dev, pickle_path, "data_dev.pkl")
+                    split = int(len(train_dev_data) * train_dev_split)
+                    data_dev = train_dev_data[: split]
+                    data_train = train_dev_data[split:]
+                    train_set = self.convert_to_dataset(data_train, self.word2index, self.label2index)
+                    dev_set = self.convert_to_dataset(data_dev, self.word2index, self.label2index)
+
+                    save_pickle(dev_set, pickle_path, "data_dev.pkl")
                     print("{} of the training data is split for validation. ".format(train_dev_split))
-                save_pickle(data_train, pickle_path, "data_train.pkl")
+                else:
+                    train_set = self.convert_to_dataset(train_dev_data, self.word2index, self.label2index)
+                save_pickle(train_set, pickle_path, "data_train.pkl")
             else:
-                data_train = load_pickle(pickle_path, "data_train.pkl")
+                train_set = load_pickle(pickle_path, "data_train.pkl")
                 if pickle_exist(pickle_path, "data_dev.pkl"):
-                    data_dev = load_pickle(pickle_path, "data_dev.pkl")
+                    dev_set = load_pickle(pickle_path, "data_dev.pkl")
         else:
             # cross_val is True
             if not pickle_exist(pickle_path, "data_train_0.pkl"):
                 # cross validation
-                data_idx = self.to_index(train_dev_data)
-                data_cv = self.cv_split(data_idx, n_fold)
+                data_cv = self.cv_split(train_dev_data, n_fold)
                 for i, (data_train_cv, data_dev_cv) in enumerate(data_cv):
+                    data_train_cv = self.convert_to_dataset(data_train_cv, self.word2index, self.label2index)
+                    data_dev_cv = self.convert_to_dataset(data_dev_cv, self.word2index, self.label2index)
                     save_pickle(
                         data_train_cv, pickle_path,
                         "data_train_{}.pkl".format(i))
                     save_pickle(
                         data_dev_cv, pickle_path,
                         "data_dev_{}.pkl".format(i))
-                    data_train.append(data_train_cv)
-                    data_dev.append(data_dev_cv)
+                    train_set.append(data_train_cv)
+                    dev_set.append(data_dev_cv)
                 print("{}-fold cross validation.".format(n_fold))
             else:
                 for i in range(n_fold):
                     data_train_cv = load_pickle(pickle_path, "data_train_{}.pkl".format(i))
                     data_dev_cv = load_pickle(pickle_path, "data_dev_{}.pkl".format(i))
-                    data_train.append(data_train_cv)
-                    data_dev.append(data_dev_cv)
+                    train_set.append(data_train_cv)
+                    dev_set.append(data_dev_cv)
 
         # prepare test data if provided
-        data_test = []
+        test_set = []
         if test_data is not None:
             if not pickle_exist(pickle_path, "data_test.pkl"):
-                data_test = self.to_index(test_data)
-                save_pickle(data_test, pickle_path, "data_test.pkl")
+                test_set = self.convert_to_dataset(test_data, self.word2index, self.label2index)
+                save_pickle(test_set, pickle_path, "data_test.pkl")
 
         # return preprocessed results
-        results = [data_train]
+        results = [train_set]
         if cross_val or train_dev_split > 0:
-            results.append(data_dev)
+            results.append(dev_set)
         if test_data:
-            results.append(data_test)
+            results.append(test_set)
         if len(results) == 1:
             return results[0]
         else:
             return tuple(results)
 
     def build_dict(self, data):
-        raise NotImplementedError
+        label2index = DEFAULT_WORD_TO_INDEX.copy()
+        word2index = DEFAULT_WORD_TO_INDEX.copy()
+        for example in data:
+            for word in example[0]:
+                if word not in word2index:
+                    word2index[word] = len(word2index)
+            label = example[1]
+            if isinstance(label, str):
+                # label is a string
+                if label not in label2index:
+                    label2index[label] = len(label2index)
+            elif isinstance(label, list):
+                # label is a list of strings
+                for single_label in label:
+                    if single_label not in label2index:
+                        label2index[single_label] = len(label2index)
+        return word2index, label2index
 
-    def to_index(self, data):
-        raise NotImplementedError
 
     def build_reverse_dict(self, word_dict):
         id2word = {word_dict[w]: w for w in word_dict}
@@ -186,11 +211,23 @@ class BasePreprocess(object):
         return data_train, data_dev
 
     def cv_split(self, data, n_fold):
-        """Split data for cross validation."""
+        """Split data for cross validation.
+
+        :param data: list of string
+        :param n_fold: int
+        :return data_cv:
+
+            ::
+            [
+                (data_train, data_dev),  # 1st fold
+                (data_train, data_dev),  # 2nd fold
+                ...
+            ]
+
+        """
         data_copy = data.copy()
         np.random.shuffle(data_copy)
         fold_size = round(len(data_copy) / n_fold)
-
         data_cv = []
         for i in range(n_fold - 1):
             start = i * fold_size
@@ -202,154 +239,62 @@ class BasePreprocess(object):
         data_dev = data_copy[start:]
         data_train = data_copy[:start]
         data_cv.append((data_train, data_dev))
-
         return data_cv
+
+    def convert_to_dataset(self, data, vocab, label_vocab):
+        """Convert list of indices into a DataSet object.
+
+        :param data: list. Entries are strings.
+        :param vocab: a dict, mapping string (token) to index (int).
+        :param label_vocab: a dict, mapping string (label) to index (int).
+        :return data_set: a DataSet object
+        """
+        use_word_seq = False
+        use_label_seq = False
+        data_set = DataSet()
+        for example in data:
+            words, label = example[0], example[1]
+            instance = Instance()
+
+            if isinstance(words, list):
+                x = TextField(words, is_target=False)
+                instance.add_field("word_seq", x)
+                use_word_seq = True
+            else:
+                raise NotImplementedError("words is a {}".format(type(words)))
+
+            if isinstance(label, list):
+                y = TextField(label, is_target=True)
+                instance.add_field("label_seq", y)
+                use_label_seq = True
+            elif isinstance(label, str):
+                y = LabelField(label, is_target=True)
+                instance.add_field("label", y)
+            else:
+                raise NotImplementedError("label is a {}".format(type(label)))
+
+            data_set.append(instance)
+        if use_word_seq:
+            data_set.index_field("word_seq", vocab)
+        if use_label_seq:
+            data_set.index_field("label_seq", label_vocab)
+        return data_set
 
 
 class SeqLabelPreprocess(BasePreprocess):
-    """Preprocess pipeline, including building mapping from words to index, from index to words,
-        from labels/classes to index, from index to labels/classes.
-        data of three-level list which have multiple labels in each sample.
-        ::
-
-            [
-                [ [word_11, word_12, ...], [label_1, label_1, ...] ],
-                [ [word_21, word_22, ...], [label_2, label_1, ...] ],
-                ...
-            ]
-
-    """
-
     def __init__(self):
         super(SeqLabelPreprocess, self).__init__()
 
-    def build_dict(self, data):
-        """Add new words with indices into self.word_dict, new labels with indices into self.label_dict.
-
-        :param data: three-level list
-            ::
-
-            [
-                [ [word_11, word_12, ...], [label_1, label_1, ...] ],
-                [ [word_21, word_22, ...], [label_2, label_1, ...] ],
-                ...
-            ]
-
-        :return word2index: dict of {str, int}
-                label2index: dict of {str, int}
-        """
-        # In seq labeling, both word seq and label seq need to be padded to the same length in a mini-batch.
-        label2index = DEFAULT_WORD_TO_INDEX.copy()
-        word2index = DEFAULT_WORD_TO_INDEX.copy()
-        for example in data:
-            for word, label in zip(example[0], example[1]):
-                if word not in word2index:
-                    word2index[word] = len(word2index)
-                if label not in label2index:
-                    label2index[label] = len(label2index)
-        return word2index, label2index
-
-    def to_index(self, data):
-        """Convert word strings and label strings into indices.
-
-        :param data: three-level list
-            ::
-
-            [
-                [ [word_11, word_12, ...], [label_1, label_1, ...] ],
-                [ [word_21, word_22, ...], [label_2, label_1, ...] ],
-                ...
-            ]
-
-        :return data_index: the same shape as data, but each string is replaced by its corresponding index
-        """
-        data_index = []
-        for example in data:
-            word_list = []
-            label_list = []
-            for word, label in zip(example[0], example[1]):
-                word_list.append(self.word2index.get(word, DEFAULT_WORD_TO_INDEX[DEFAULT_UNKNOWN_LABEL]))
-                label_list.append(self.label2index.get(label, DEFAULT_WORD_TO_INDEX[DEFAULT_UNKNOWN_LABEL]))
-            data_index.append([word_list, label_list])
-        return data_index
-
 
 class ClassPreprocess(BasePreprocess):
-    """ Preprocess pipeline for classification datasets.
-        Preprocess pipeline, including building mapping from words to index, from index to words,
-        from labels/classes to index, from index to labels/classes.
-        design for data of three-level list which has a single label in each sample.
-            ::
-
-            [
-                [ [word_11, word_12, ...], label_1 ],
-                [ [word_21, word_22, ...], label_2 ],
-                ...
-            ]
-
-    """
-
     def __init__(self):
         super(ClassPreprocess, self).__init__()
 
-    def build_dict(self, data):
-        """Build vocabulary."""
 
-        # build vocabulary from scratch if nothing exists
-        word2index = DEFAULT_WORD_TO_INDEX.copy()
-        label2index = DEFAULT_WORD_TO_INDEX.copy()
-
-        # collect every word and label
-        for sent, label in data:
-            if len(sent) <= 1:
-                continue
-
-            if label not in label2index:
-                label2index[label] = len(label2index)
-
-            for word in sent:
-                if word not in word2index:
-                    word2index[word] = len(word2index)
-        return word2index, label2index
-
-    def to_index(self, data):
-        """Convert word strings and label strings into indices.
-
-        :param data: three-level list
-        ::
-
-            [
-                [ [word_11, word_12, ...], label_1 ],
-                [ [word_21, word_22, ...], label_2 ],
-                ...
-            ]
-
-        :return data_index: the same shape as data, but each string is replaced by its corresponding index
-        """
-        data_index = []
-        for example in data:
-            word_list = []
-            # example[0] is the word list, example[1] is the single label
-            for word in example[0]:
-                word_list.append(self.word2index.get(word, DEFAULT_WORD_TO_INDEX[DEFAULT_UNKNOWN_LABEL]))
-            label_index = self.label2index.get(example[1], DEFAULT_WORD_TO_INDEX[DEFAULT_UNKNOWN_LABEL])
-            data_index.append([word_list, label_index])
-        return data_index
-
-
-def infer_preprocess(pickle_path, data):
-    """Preprocess over inference data. Transform three-level list of strings into that of index.
-        ::
-
-        [
-            [word_11, word_12, ...],
-            [word_21, word_22, ...],
-            ...
-        ]
-
-    """
-    word2index = load_pickle(pickle_path, "word2id.pkl")
-    data_index = []
-    for example in data:
-        data_index.append([word2index.get(w, DEFAULT_UNKNOWN_LABEL) for w in example])
-    return data_index
+if __name__ == "__main__":
+    p = BasePreprocess()
+    train_dev_data = [[["I", "am", "a", "good", "student", "."], "0"],
+                      [["You", "are", "pretty", "."], "1"]
+                      ]
+    training_set = p.run(train_dev_data)
+    print(training_set)

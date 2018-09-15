@@ -168,19 +168,7 @@ class BaseSampler(object):
 
     """
 
-    def __init__(self, data_set):
-        """
-
-        :param data_set: multi-level list, of shape [num_example, *]
-
-        """
-        self.data_set_length = len(data_set)
-        self.data = data_set
-
-    def __len__(self):
-        return self.data_set_length
-
-    def __iter__(self):
+    def __call__(self, *args, **kwargs):
         raise NotImplementedError
 
 
@@ -189,16 +177,8 @@ class SequentialSampler(BaseSampler):
 
     """
 
-    def __init__(self, data_set):
-        """
-
-        :param data_set: multi-level list
-
-        """
-        super(SequentialSampler, self).__init__(data_set)
-
-    def __iter__(self):
-        return iter(self.data)
+    def __call__(self, data_set):
+        return list(range(len(data_set)))
 
 
 class RandomSampler(BaseSampler):
@@ -206,17 +186,9 @@ class RandomSampler(BaseSampler):
 
     """
 
-    def __init__(self, data_set):
-        """
+    def __call__(self, data_set):
+        return list(np.random.permutation(len(data_set)))
 
-        :param data_set: multi-level list
-
-        """
-        super(RandomSampler, self).__init__(data_set)
-        self.order = np.random.permutation(self.data_set_length)
-
-    def __iter__(self):
-        return iter((self.data[idx] for idx in self.order))
 
 
 class Batchifier(object):

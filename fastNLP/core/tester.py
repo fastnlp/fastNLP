@@ -2,8 +2,8 @@ import numpy as np
 import torch
 
 from fastNLP.core.action import Action
-from fastNLP.core.action import RandomSampler, Batchifier
-from fastNLP.modules import utils
+from fastNLP.core.action import RandomSampler
+from fastNLP.core.batch import Batch
 from fastNLP.saver.logger import create_logger
 
 logger = create_logger(__name__, "./train_test.log")
@@ -35,16 +35,16 @@ class BaseTester(object):
         """
             "required_args" is the collection of arguments that users must pass to Trainer explicitly. 
             This is used to warn users of essential settings in the training. 
-            Obviously, "required_args" is the subset of "default_args". 
-            The value in "default_args" to the keys in "required_args" is simply for type check. 
+            Specially, "required_args" does not have default value, so they have nothing to do with "default_args".
         """
-        # add required arguments here
-        required_args = {}
+        required_args = {"task"  # one of ("seq_label", "text_classify")
+                         }
 
         for req_key in required_args:
             if req_key not in kwargs:
                 logger.error("Tester lacks argument {}".format(req_key))
                 raise ValueError("Tester lacks argument {}".format(req_key))
+        self._task = kwargs["task"]
 
         for key in default_args:
             if key in kwargs:
@@ -83,10 +83,10 @@ class BaseTester(object):
         self.eval_history.clear()
         self.batch_output.clear()
 
-        iterator = iter(Batchifier(RandomSampler(dev_data), self.batch_size, drop_last=False))
+        data_iterator = Batch(dev_data, self.batch_size, sampler=RandomSampler(), use_cuda=self.use_cuda)
         step = 0
 
-        for batch_x, batch_y in self.make_batch(iterator):
+        for batch_x, batch_y in data_iterator:
             with torch.no_grad():
                 prediction = self.data_forward(network, batch_x)
                 eval_results = self.evaluate(prediction, batch_y)
@@ -112,7 +112,8 @@ class BaseTester(object):
 
     def data_forward(self, network, x):
         """A forward pass of the model. """
-        raise NotImplementedError
+        y = network(**x)
+        return y
 
     def evaluate(self, predict, truth):
         """Compute evaluation metrics.
@@ -121,7 +122,26 @@ class BaseTester(object):
         :param truth: Tensor
         :return eval_results: can be anything. It will be stored in self.eval_history
         """
-        raise NotImplementedError
+        batch_size, max_len = predict.size(0), predict.size(1)
+        if "label_seq" in truth:
+            truth = truth["label_seq"]
+        elif "label" in truth:
+            truth = truth["label"]
+        else:
+            raise NotImplementedError("Unknown key {} in batch_y.".format(truth.keys()))
+        loss = self._model.loss(predict, truth) / batch_size
+
+        prediction = self._model.prediction(predict)
+        # pad prediction to equal length
+        for pred in prediction:
+            if len(pred) < max_len:
+                pred += [0] * (max_len - len(pred))
+        results = torch.Tensor(prediction).view(-1, )
+
+        # make sure "results" is in the same device as "truth"
+        results = results.to(truth)
+        accuracy = torch.sum(results == truth.view((-1,))).to(torch.float) / results.shape[0]
+        return [float(loss), float(accuracy)]
 
     @property
     def metrics(self):
@@ -131,7 +151,9 @@ class BaseTester(object):
 
         :return : variable number of outputs
         """
-        raise NotImplementedError
+        batch_loss = np.mean([x[0] for x in self.eval_history])
+        batch_accuracy = np.mean([x[1] for x in self.eval_history])
+        return batch_loss, batch_accuracy
 
     def show_metrics(self):
         """Customize evaluation outputs in Trainer.
@@ -140,10 +162,8 @@ class BaseTester(object):
 
         :return print_str: str
         """
-        raise NotImplementedError
-
-    def make_batch(self, iterator):
-        raise NotImplementedError
+        loss, accuracy = self.metrics
+        return "dev loss={:.2f}, accuracy={:.2f}".format(loss, accuracy)
 
     def make_eval_output(self, predictions, eval_results):
         """Customize Tester outputs.
@@ -152,78 +172,21 @@ class BaseTester(object):
         :param eval_results: Tensor
         :return: str, to be printed.
         """
-        raise NotImplementedError
+        return self.show_metrics()
+
 
 class SeqLabelTester(BaseTester):
     """Tester for sequence labeling.
 
     """
-
     def __init__(self, **test_args):
         """
         :param test_args: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
         """
+        test_args.update({"task": "seq_label"})
+        print(
+            "[FastNLP Warning] SeqLabelTester will be deprecated. Please use Tester with argument 'task'='seq_label'.")
         super(SeqLabelTester, self).__init__(**test_args)
-        self.max_len = None
-        self.mask = None
-        self.seq_len = None
-
-    def data_forward(self, network, inputs):
-        """This is only for sequence labeling with CRF decoder.
-
-        :param network: a PyTorch model
-        :param inputs: tuple of (x, seq_len)
-                        x: Tensor of shape [batch_size, max_len], where max_len is the maximum length of the mini-batch
-                            after padding.
-                        seq_len: list of int, the lengths of sequences before padding.
-        :return y: Tensor of shape [batch_size, max_len]
-        """
-        if not isinstance(inputs, tuple):
-            raise RuntimeError("output_length must be true for sequence modeling.")
-        # unpack the returned value from make_batch
-        x, seq_len = inputs[0], inputs[1]
-        batch_size, max_len = x.size(0), x.size(1)
-        mask = utils.seq_mask(seq_len, max_len)
-        mask = mask.byte().view(batch_size, max_len)
-        if torch.cuda.is_available() and self.use_cuda:
-            mask = mask.cuda()
-        self.mask = mask
-        self.seq_len = seq_len
-        y = network(x)
-        return y
-
-    def evaluate(self, predict, truth):
-        """Compute metrics (or loss).
-
-        :param predict: Tensor, [batch_size, max_len, tag_size]
-        :param truth: Tensor, [batch_size, max_len]
-        :return:
-        """
-        batch_size, max_len = predict.size(0), predict.size(1)
-        loss = self._model.loss(predict, truth, self.mask) / batch_size
-
-        prediction = self._model.prediction(predict, self.mask)
-        results = torch.Tensor(prediction).view(-1, )
-        # make sure "results" is in the same device as "truth"
-        results = results.to(truth)
-        accuracy = torch.sum(results == truth.view((-1,))).to(torch.float) / results.shape[0]
-        return [float(loss), float(accuracy)]
-
-    def metrics(self):
-        batch_loss = np.mean([x[0] for x in self.eval_history])
-        batch_accuracy = np.mean([x[1] for x in self.eval_history])
-        return batch_loss, batch_accuracy
-
-    def show_metrics(self):
-        """This is called by Trainer to print evaluation on dev set.
-
-        :return print_str: str
-        """
-        loss, accuracy = self.metrics()
-        return "dev loss={:.2f}, accuracy={:.2f}".format(loss, accuracy)
-
-    def make_batch(self, iterator):
-        return Action.make_batch(iterator, use_cuda=self.use_cuda, output_length=True)
 
 
 class ClassificationTester(BaseTester):
@@ -235,9 +198,6 @@ class ClassificationTester(BaseTester):
             can be accessed by "test_args["key_str"]"
         """
         super(ClassificationTester, self).__init__(**test_args)
-
-    def make_batch(self, iterator, max_len=None):
-        return Action.make_batch(iterator, use_cuda=self.use_cuda, max_len=max_len)
 
     def data_forward(self, network, x):
         """Forward through network."""
