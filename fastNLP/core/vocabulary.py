@@ -36,9 +36,10 @@ class Vocabulary(object):
                 self.update(w)
         else:
         # it's a word to be added
-            self.word2idx[word] = len(self)
-            if self.idx2word is not None:
-                self.idx2word = None
+            if word not in self.word2idx:
+                self.word2idx[word] = len(self)
+                if self.idx2word is not None:
+                    self.idx2word = None
 
     
     def __getitem__(self, w):
@@ -80,20 +81,5 @@ class Vocabulary(object):
         self.__dict__.update(state)
         self.idx2word = None
     
-if __name__ == '__main__':
-    import _pickle as pickle
-    vocab = Vocabulary()
-    filename = 'vocab'
-    vocab.update(filename)
-    vocab.update([filename, ['a'], [['b']], ['c']])
-    idx = vocab[filename]
-    print('{} {}'.format(vocab.to_word(idx), vocab[filename]))
 
-    with open(filename, 'wb') as f:
-        pickle.dump(vocab, f)
-    with open(filename, 'rb') as f:
-        vocab = pickle.load(f)
-    
-    print('{} {}'.format(vocab.to_word(idx), vocab[filename]))
-    print(vocab.word2idx)
     
