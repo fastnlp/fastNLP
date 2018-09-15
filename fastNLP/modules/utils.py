@@ -54,7 +54,7 @@ def initial_parameter(net ,initial_method =None):
                         init_method(w.data)  # weight
                     else:
                         init.normal_(w.data)  # bias
-                print("init else")
+                # print("init else")
     net.apply(weights_init)
 
 def seq_mask(seq_len, max_len):
