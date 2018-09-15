@@ -1,11 +1,12 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
+# from torch.nn.init import xavier_uniform
 
-
+from fastNLP.modules.utils import initial_parameter
 class ConvCharEmbedding(nn.Module):
 
-    def __init__(self, char_emb_size=50, feature_maps=(40, 30, 30), kernels=(3, 4, 5)):
+    def __init__(self, char_emb_size=50, feature_maps=(40, 30, 30), kernels=(3, 4, 5),initial_method = None):
         """
         Character Level Word Embedding
         :param char_emb_size: the size of character level embedding. Default: 50
@@ -19,6 +20,8 @@ class ConvCharEmbedding(nn.Module):
         self.convs = nn.ModuleList([
             nn.Conv2d(1, feature_maps[i], kernel_size=(char_emb_size, kernels[i]), bias=True, padding=(0, 4))
             for i in range(len(kernels))])
+
+        initial_parameter(self,initial_method)
 
     def forward(self, x):
         """
@@ -53,7 +56,7 @@ class LSTMCharEmbedding(nn.Module):
     :param hidden_size: int, the number of hidden units. Default:  equal to char_emb_size.
     """
 
-    def __init__(self, char_emb_size=50, hidden_size=None):
+    def __init__(self, char_emb_size=50, hidden_size=None , initial_method= None):
         super(LSTMCharEmbedding, self).__init__()
         self.hidden_size = char_emb_size if hidden_size is None else hidden_size
 
@@ -62,7 +65,7 @@ class LSTMCharEmbedding(nn.Module):
                             num_layers=1,
                             bias=True,
                             batch_first=True)
-
+        initial_parameter(self, initial_method)
     def forward(self, x):
         """
         :param x:[ n_batch*n_word, word_length, char_emb_size]
