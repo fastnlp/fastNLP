@@ -13,11 +13,11 @@ from fastNLP.saver.model_saver import ModelSaver
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--save", type=str, default="./seq_label/", help="path to save pickle files")
-parser.add_argument("-t", "--train", type=str, default="../data_for_tests/people.txt",
+parser.add_argument("-t", "--train", type=str, default="test/data_for_tests/people.txt",
                     help="path to the training data")
-parser.add_argument("-c", "--config", type=str, default="../data_for_tests/config", help="path to the config file")
+parser.add_argument("-c", "--config", type=str, default="test/data_for_tests/config", help="path to the config file")
 parser.add_argument("-m", "--model_name", type=str, default="seq_label_model.pkl", help="the name of the model")
-parser.add_argument("-i", "--infer", type=str, default="../data_for_tests/people_infer.txt",
+parser.add_argument("-i", "--infer", type=str, default="test/data_for_tests/people_infer.txt",
                     help="data used for inference")
 
 args = parser.parse_args()
@@ -32,7 +32,7 @@ def test_training():
     # Config Loader
     trainer_args = ConfigSection()
     model_args = ConfigSection()
-    ConfigLoader("config.cfg").load_config(config_dir, {
+    ConfigLoader("_").load_config(config_dir, {
         "test_seq_label_trainer": trainer_args, "test_seq_label_model": model_args})
 
     # Data Loader
