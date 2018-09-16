@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 
-from fastNLP.core.action import Action
 from fastNLP.core.action import RandomSampler
 from fastNLP.core.batch import Batch
 from fastNLP.saver.logger import create_logger
@@ -79,7 +78,7 @@ class BaseTester(object):
             self._model = network
 
         # turn on the testing mode; clean up the history
-        self.mode(network, test=True)
+        self.mode(network, is_test=True)
         self.eval_history.clear()
         self.batch_output.clear()
 
@@ -102,13 +101,17 @@ class BaseTester(object):
                 print(self.make_eval_output(prediction, eval_results))
             step += 1
 
-    def mode(self, model, test):
+    def mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.
 
         :param model: a PyTorch model
-        :param test: bool, whether in test mode.
+        :param is_test: bool, whether in test mode or not.
+
         """
-        Action.mode(model, test)
+        if is_test:
+            model.eval()
+        else:
+            model.train()
 
     def data_forward(self, network, x):
         """A forward pass of the model. """

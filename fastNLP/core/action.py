@@ -4,88 +4,6 @@ import numpy as np
 import torch
 
 
-class Action(object):
-    """Operations shared by Trainer, Tester, or Inference.
-
-        This is designed for reducing replicate codes.
-            - make_batch: produce a min-batch of data. @staticmethod
-            - pad: padding method used in sequence modeling. @staticmethod
-            - mode: change network mode for either train or test. (for PyTorch) @staticmethod
-    """
-
-    def __init__(self):
-        super(Action, self).__init__()
-
-    @staticmethod
-    def make_batch(iterator, use_cuda, output_length=True, max_len=None):
-        """Batch and Pad data.
-
-        :param iterator: an iterator, (object that implements __next__ method) which returns the next sample.
-        :param use_cuda: bool, whether to use GPU
-        :param output_length: bool, whether to output the original length of the sequence before padding. (default: True)
-        :param max_len: int, maximum sequence length. Longer sequences will be clipped. (default: None)
-        :return :
-
-        if output_length is True,
-            (batch_x, seq_len): tuple of two elements
-                     batch_x: list. Each entry is a list of features of a sample. [batch_size, max_len]
-                     seq_len: list. The length of the pre-padded sequence, if output_length is True.
-            batch_y: list. Each entry is a list of labels of a sample.  [batch_size, num_labels]
-
-        if output_length is False,
-            batch_x: list. Each entry is a list of features of a sample. [batch_size, max_len]
-            batch_y: list. Each entry is a list of labels of a sample.  [batch_size, num_labels]
-        """
-        for batch in iterator:
-            batch_x = [sample[0] for sample in batch]
-            batch_y = [sample[1] for sample in batch]
-
-            batch_x = Action.pad(batch_x)
-            # pad batch_y only if it is a 2-level list
-            if len(batch_y) > 0 and isinstance(batch_y[0], list):
-                batch_y = Action.pad(batch_y)
-
-            # convert list to tensor
-            batch_x = convert_to_torch_tensor(batch_x, use_cuda)
-            batch_y = convert_to_torch_tensor(batch_y, use_cuda)
-
-            # trim data to max_len
-            if max_len is not None and batch_x.size(1) > max_len:
-                batch_x = batch_x[:, :max_len]
-
-            if output_length:
-                seq_len = [len(x) for x in batch_x]
-                yield (batch_x, seq_len), batch_y
-            else:
-                yield batch_x, batch_y
-
-    @staticmethod
-    def pad(batch, fill=0):
-        """ Pad a mini-batch of sequence samples to maximum length of this batch.
-
-        :param batch: list of list
-        :param fill: word index to pad, default 0.
-        :return batch: a padded mini-batch
-        """
-        max_length = max([len(x) for x in batch])
-        for idx, sample in enumerate(batch):
-            if len(sample) < max_length:
-                batch[idx] = sample + ([fill] * (max_length - len(sample)))
-        return batch
-
-    @staticmethod
-    def mode(model, is_test=False):
-        """Train mode or Test mode. This is for PyTorch currently.
-
-        :param model: a PyTorch model
-        :param is_test: bool, whether in test mode or not.
-        """
-        if is_test:
-            model.eval()
-        else:
-            model.train()
-
-
 def convert_to_torch_tensor(data_list, use_cuda):
     """Convert lists into (cuda) Tensors.
 
@@ -224,6 +142,7 @@ class BucketBatchifier(Batchifier):
     """Partition all samples into multiple buckets, each of which contains sentences of approximately the same length.
     In sampling, first random choose a bucket. Then sample data from it.
     The number of buckets is decided dynamically by the variance of sentence lengths.
+    TODO: merge it into Batch
     """
 
     def __init__(self, data_set, batch_size, num_buckets, drop_last=True, sampler=None):

@@ -20,9 +20,10 @@ class Field(object):
 
 
 class TextField(Field):
-    def __init__(self, text: list, is_target):
+    def __init__(self, text, is_target):
         """
-        :param list text:
+        :param text: list of strings
+        :param is_target: bool
         """
         super(TextField, self).__init__(is_target)
         self.text = text
@@ -32,7 +33,7 @@ class TextField(Field):
         if self._index is None:
             self._index = [vocab[c] for c in self.text]
         else:
-            print('error')
+            raise RuntimeError("Replicate indexing of this field.")
         return self._index
 
     def get_length(self):

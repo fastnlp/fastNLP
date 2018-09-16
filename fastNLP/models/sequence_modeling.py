@@ -62,6 +62,8 @@ class SeqLabeling(BaseModel):
         """
         x = x.float()
         y = y.long()
+        assert x.shape[:2] == y.shape
+        assert y.shape == self.mask.shape
         total_loss = self.Crf(x, y, self.mask)
         return torch.mean(total_loss)
 

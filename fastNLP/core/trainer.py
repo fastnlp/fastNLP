@@ -6,7 +6,6 @@ from datetime import timedelta
 import torch
 from tensorboardX import SummaryWriter
 
-from fastNLP.core.action import Action
 from fastNLP.core.action import RandomSampler
 from fastNLP.core.batch import Batch
 from fastNLP.core.loss import Loss
@@ -126,7 +125,7 @@ class BaseTrainer(object):
             logger.info("training epoch {}".format(epoch))
 
             # turn on network training mode
-            self.mode(network, test=False)
+            self.mode(network, is_test=False)
             # prepare mini-batch iterator
             data_iterator = Batch(train_data, batch_size=self.batch_size, sampler=RandomSampler(),
                                   use_cuda=self.use_cuda)
@@ -201,8 +200,17 @@ class BaseTrainer(object):
             network_copy = copy.deepcopy(network)
             self.train(network_copy, train_data_cv[i], dev_data_cv[i])
 
-    def mode(self, network, test):
-        Action.mode(network, test)
+    def mode(self, model, is_test=False):
+        """Train mode or Test mode. This is for PyTorch currently.
+
+        :param model: a PyTorch model
+        :param is_test: bool, whether in test mode or not.
+
+        """
+        if is_test:
+            model.eval()
+        else:
+            model.train()
 
     def define_optimizer(self):
         """Define framework-specific optimizer specified by the models.
@@ -284,7 +292,7 @@ class BaseTrainer(object):
         :param validator: a Tester instance
         :return: bool, True means current results on dev set is the best.
         """
-        loss, accuracy = validator.metrics()
+        loss, accuracy = validator.metrics
         if accuracy > self._best_accuracy:
             self._best_accuracy = accuracy
             return True

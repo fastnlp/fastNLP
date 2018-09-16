@@ -41,7 +41,7 @@ class Instance(object):
         :param padding_length: dict of (str: int), which means (field name: padding_length of this field)
         :return tensor_x: dict of (str: torch.LongTensor), which means (field name: tensor of shape [padding_length, ])
                 tensor_y: dict of (str: torch.LongTensor), which means (field name: tensor of shape [padding_length, ])
-
+                        If is_target is False for all fields, tensor_y would be an empty dict.
         """
         tensor_x = {}
         tensor_y = {}
