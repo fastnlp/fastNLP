@@ -1,4 +1,3 @@
-import argparse
 import os
 
 from fastNLP.core.optimizer import Optimizer
@@ -11,21 +10,11 @@ from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.models.sequence_modeling import SeqLabeling
 from fastNLP.saver.model_saver import ModelSaver
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-s", "--save", type=str, default="./seq_label/", help="path to save pickle files")
-parser.add_argument("-t", "--train", type=str, default="test/data_for_tests/people.txt",
-                    help="path to the training data")
-parser.add_argument("-c", "--config", type=str, default="test/data_for_tests/config", help="path to the config file")
-parser.add_argument("-m", "--model_name", type=str, default="seq_label_model.pkl", help="the name of the model")
-parser.add_argument("-i", "--infer", type=str, default="test/data_for_tests/people_infer.txt",
-                    help="data used for inference")
-
-args = parser.parse_args()
-pickle_path = args.save
-model_name = args.model_name
-config_dir = args.config
-data_path = args.train
-data_infer_path = args.infer
+pickle_path = "./seq_label/"
+model_name = "seq_label_model.pkl"
+config_dir = "test/data_for_tests/config"
+data_path = "test/data_for_tests/people.txt"
+data_infer_path = "test/data_for_tests/people_infer.txt"
 
 
 def test_training():
