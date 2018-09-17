@@ -15,11 +15,11 @@ from fastNLP.core.optimizer import Optimizer
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--save", type=str, default="./seq_label/", help="path to save pickle files")
-parser.add_argument("-t", "--train", type=str, default="./data_for_tests/people.txt",
+parser.add_argument("-t", "--train", type=str, default="../data_for_tests/people.txt",
                     help="path to the training data")
-parser.add_argument("-c", "--config", type=str, default="./data_for_tests/config", help="path to the config file")
+parser.add_argument("-c", "--config", type=str, default="../data_for_tests/config", help="path to the config file")
 parser.add_argument("-m", "--model_name", type=str, default="seq_label_model.pkl", help="the name of the model")
-parser.add_argument("-i", "--infer", type=str, default="data_for_tests/people_infer.txt",
+parser.add_argument("-i", "--infer", type=str, default="../data_for_tests/people_infer.txt",
                     help="data used for inference")
 
 args = parser.parse_args()
@@ -86,7 +86,7 @@ def train_and_test():
     trainer = SeqLabelTrainer(
         epochs=trainer_args["epochs"],
         batch_size=trainer_args["batch_size"],
-        validate=trainer_args["validate"],
+        validate=False,
         use_cuda=trainer_args["use_cuda"],
         pickle_path=pickle_path,
         save_best_dev=trainer_args["save_best_dev"],
@@ -121,7 +121,7 @@ def train_and_test():
 
     # Tester
     tester = SeqLabelTester(save_output=False,
-                            save_loss=False,
+                            save_loss=True,
                             save_best_dev=False,
                             batch_size=4,
                             use_cuda=False,
@@ -139,5 +139,5 @@ def train_and_test():
 
 
 if __name__ == "__main__":
-    # train_and_test()
-    infer()
+    train_and_test()
+    # infer()
