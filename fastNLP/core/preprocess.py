@@ -291,7 +291,9 @@ class BasePreprocess(object):
 
 class SeqLabelPreprocess(BasePreprocess):
     def __init__(self):
+
         super(SeqLabelPreprocess, self).__init__()
+
 
 
 class ClassPreprocess(BasePreprocess):

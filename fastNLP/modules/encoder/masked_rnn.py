@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
+from fastNLP.modules.utils import initial_parameter
 def MaskedRecurrent(reverse=False):
     def forward(input, hidden, cell, mask, train=True, dropout=0):
         """
@@ -192,7 +192,7 @@ def AutogradMaskedStep(num_layers=1, dropout=0, train=True, lstm=False):
 class MaskedRNNBase(nn.Module):
     def __init__(self, Cell, input_size, hidden_size,
                  num_layers=1, bias=True, batch_first=False,
-                 layer_dropout=0, step_dropout=0, bidirectional=False, **kwargs):
+                 layer_dropout=0, step_dropout=0, bidirectional=False, initial_method = None  , **kwargs):
         """
         :param Cell:
         :param input_size:
@@ -226,7 +226,7 @@ class MaskedRNNBase(nn.Module):
                 cell = self.Cell(layer_input_size, hidden_size, self.bias, **kwargs)
                 self.all_cells.append(cell)
                 self.add_module('cell%d' % (layer * num_directions + direction), cell)  # Max的代码写得真好看
-
+        initial_parameter(self, initial_method)
     def reset_parameters(self):
         for cell in self.all_cells:
             cell.reset_parameters()
