@@ -4,15 +4,13 @@ import time
 from datetime import timedelta
 
 import torch
-import tensorboardX
 from tensorboardX import SummaryWriter
 
-from fastNLP.core.action import Action
-from fastNLP.core.action import RandomSampler, Batchifier
+from fastNLP.core.action import RandomSampler
+from fastNLP.core.batch import Batch
 from fastNLP.core.loss import Loss
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.tester import SeqLabelTester, ClassificationTester
-from fastNLP.modules import utils
 from fastNLP.saver.logger import create_logger
 from fastNLP.saver.model_saver import ModelSaver
 
@@ -50,16 +48,16 @@ class BaseTrainer(object):
         """
             "required_args" is the collection of arguments that users must pass to Trainer explicitly. 
             This is used to warn users of essential settings in the training. 
-            Obviously, "required_args" is the subset of "default_args". 
-            The value in "default_args" to the keys in "required_args" is simply for type check. 
+            Specially, "required_args" does not have default value, so they have nothing to do with "default_args".
         """
-        # add required arguments here
-        required_args = {}
+        required_args = {"task"  # one of ("seq_label", "text_classify")
+                         }
 
         for req_key in required_args:
             if req_key not in kwargs:
                 logger.error("Trainer lacks argument {}".format(req_key))
                 raise ValueError("Trainer lacks argument {}".format(req_key))
+        self._task = kwargs["task"]
 
         for key in default_args:
             if key in kwargs:
@@ -90,13 +88,14 @@ class BaseTrainer(object):
         self._optimizer_proto = default_args["optimizer"]
         self._summary_writer = SummaryWriter(self.pickle_path + 'tensorboard_logs')
         self._graph_summaried = False
+        self._best_accuracy = 0.0
 
     def train(self, network, train_data, dev_data=None):
         """General Training Procedure
 
         :param network: a model
-        :param train_data: three-level list, the training set.
-        :param dev_data: three-level list, the validation data (optional)
+        :param train_data: a DataSet instance, the training data
+        :param dev_data: a DataSet instance, the validation data (optional)
         """
         # transfer model to gpu if available
         if torch.cuda.is_available() and self.use_cuda:
@@ -126,9 +125,10 @@ class BaseTrainer(object):
             logger.info("training epoch {}".format(epoch))
 
             # turn on network training mode
-            self.mode(network, test=False)
+            self.mode(network, is_test=False)
             # prepare mini-batch iterator
-            data_iterator = iter(Batchifier(RandomSampler(train_data), self.batch_size, drop_last=False))
+            data_iterator = Batch(train_data, batch_size=self.batch_size, sampler=RandomSampler(),
+                                  use_cuda=self.use_cuda)
             logger.info("prepared data iterator")
 
             # one forward and backward pass
@@ -157,7 +157,7 @@ class BaseTrainer(object):
                 - epoch: int,
         """
         step = 0
-        for batch_x, batch_y in self.make_batch(data_iterator):
+        for batch_x, batch_y in data_iterator:
 
             prediction = self.data_forward(network, batch_x)
 
@@ -165,10 +165,6 @@ class BaseTrainer(object):
             self.grad_backward(loss)
             self.update()
             self._summary_writer.add_scalar("loss", loss.item(), global_step=step)
-
-            if not self._graph_summaried:
-                self._summary_writer.add_graph(network, batch_x)
-                self._graph_summaried = True
 
             if kwargs["n_print"] > 0 and step % kwargs["n_print"] == 0:
                 end = time.time()
@@ -204,11 +200,17 @@ class BaseTrainer(object):
             network_copy = copy.deepcopy(network)
             self.train(network_copy, train_data_cv[i], dev_data_cv[i])
 
-    def make_batch(self, iterator):
-        raise NotImplementedError
+    def mode(self, model, is_test=False):
+        """Train mode or Test mode. This is for PyTorch currently.
 
-    def mode(self, network, test):
-        Action.mode(network, test)
+        :param model: a PyTorch model
+        :param is_test: bool, whether in test mode or not.
+
+        """
+        if is_test:
+            model.eval()
+        else:
+            model.train()
 
     def define_optimizer(self):
         """Define framework-specific optimizer specified by the models.
@@ -224,7 +226,20 @@ class BaseTrainer(object):
         self._optimizer.step()
 
     def data_forward(self, network, x):
-        raise NotImplementedError
+        if self._task == "seq_label":
+            y = network(x["word_seq"], x["word_seq_origin_len"])
+        elif self._task == "text_classify":
+            y = network(x["word_seq"])
+        else:
+            raise NotImplementedError("Unknown task type {}.".format(self._task))
+
+        if not self._graph_summaried:
+            if self._task == "seq_label":
+                self._summary_writer.add_graph(network, (x["word_seq"], x["word_seq_origin_len"]), verbose=False)
+            elif self._task == "text_classify":
+                self._summary_writer.add_graph(network, x["word_seq"], verbose=False)
+            self._graph_summaried = True
+        return y
 
     def grad_backward(self, loss):
         """Compute gradient with link rules.
@@ -243,6 +258,13 @@ class BaseTrainer(object):
         :param truth: ground truth label vector
         :return: a scalar
         """
+        if "label_seq" in truth:
+            truth = truth["label_seq"]
+        elif "label" in truth:
+            truth = truth["label"]
+            truth = truth.view((-1,))
+        else:
+            raise NotImplementedError("Unknown key {} in batch_y.".format(truth.keys()))
         return self._loss_func(predict, truth)
 
     def define_loss(self):
@@ -270,7 +292,12 @@ class BaseTrainer(object):
         :param validator: a Tester instance
         :return: bool, True means current results on dev set is the best.
         """
-        raise NotImplementedError
+        loss, accuracy = validator.metrics
+        if accuracy > self._best_accuracy:
+            self._best_accuracy = accuracy
+            return True
+        else:
+            return False
 
     def save_model(self, network, model_name):
         """Save this model with such a name.
@@ -291,55 +318,11 @@ class SeqLabelTrainer(BaseTrainer):
     """Trainer for Sequence Labeling
 
     """
-
     def __init__(self, **kwargs):
+        kwargs.update({"task": "seq_label"})
+        print(
+            "[FastNLP Warning] SeqLabelTrainer will be deprecated. Please use Trainer with argument 'task'='seq_label'.")
         super(SeqLabelTrainer, self).__init__(**kwargs)
-        # self.vocab_size = kwargs["vocab_size"]
-        # self.num_classes = kwargs["num_classes"]
-        self.max_len = None
-        self.mask = None
-        self.best_accuracy = 0.0
-
-    def data_forward(self, network, inputs):
-        if not isinstance(inputs, tuple):
-            raise RuntimeError("output_length must be true for sequence modeling. Receive {}".format(type(inputs[0])))
-        # unpack the returned value from make_batch
-        x, seq_len = inputs[0], inputs[1]
-
-        batch_size, max_len = x.size(0), x.size(1)
-        mask = utils.seq_mask(seq_len, max_len)
-        mask = mask.byte().view(batch_size, max_len)
-
-        if torch.cuda.is_available() and self.use_cuda:
-            mask = mask.cuda()
-        self.mask = mask
-
-        y = network(x)
-        return y
-
-    def get_loss(self, predict, truth):
-        """Compute loss given prediction and ground truth.
-
-        :param predict: prediction label vector, [batch_size, max_len, tag_size]
-        :param truth: ground truth label vector, [batch_size, max_len]
-        :return loss: a scalar
-        """
-        batch_size, max_len = predict.size(0), predict.size(1)
-        assert truth.shape == (batch_size, max_len)
-
-        loss = self._model.loss(predict, truth, self.mask)
-        return loss
-
-    def best_eval_result(self, validator):
-        loss, accuracy = validator.metrics()
-        if accuracy > self.best_accuracy:
-            self.best_accuracy = accuracy
-            return True
-        else:
-            return False
-
-    def make_batch(self, iterator):
-        return Action.make_batch(iterator, output_length=True, use_cuda=self.use_cuda)
 
     def _create_validator(self, valid_args):
         return SeqLabelTester(**valid_args)
@@ -349,33 +332,10 @@ class ClassificationTrainer(BaseTrainer):
     """Trainer for text classification."""
 
     def __init__(self, **train_args):
+        train_args.update({"task": "text_classify"})
+        print(
+            "[FastNLP Warning] ClassificationTrainer will be deprecated. Please use Trainer with argument 'task'='text_classify'.")
         super(ClassificationTrainer, self).__init__(**train_args)
-
-        self.iterator = None
-        self.loss_func = None
-        self.optimizer = None
-        self.best_accuracy = 0
-
-    def data_forward(self, network, x):
-        """Forward through network."""
-        logits = network(x)
-        return logits
-
-    def make_batch(self, iterator):
-        return Action.make_batch(iterator, output_length=False, use_cuda=self.use_cuda)
-
-    def get_acc(self, y_logit, y_true):
-        """Compute accuracy."""
-        y_pred = torch.argmax(y_logit, dim=-1)
-        return int(torch.sum(y_true == y_pred)) / len(y_true)
-
-    def best_eval_result(self, validator):
-        _, _, accuracy = validator.metrics()
-        if accuracy > self.best_accuracy:
-            self.best_accuracy = accuracy
-            return True
-        else:
-            return False
 
     def _create_validator(self, valid_args):
         return ClassificationTester(**valid_args)

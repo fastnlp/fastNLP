@@ -35,8 +35,12 @@ class CNNText(torch.nn.Module):
         self.dropout = nn.Dropout(drop_prob)
         self.fc = encoder.linear.Linear(sum(kernel_nums), num_classes)
 
-    def forward(self, x):
-        x = self.embed(x)  # [N,L] -> [N,L,C]
+    def forward(self, word_seq):
+        """
+        :param word_seq: torch.LongTensor, [batch_size, seq_len]
+        :return x: torch.LongTensor, [batch_size, num_classes]
+        """
+        x = self.embed(word_seq)  # [N,L] -> [N,L,C]
         x = self.conv_pool(x)  # [N,L,C] -> [N,C]
         x = self.dropout(x)
         x = self.fc(x)  # [N,C] -> [N, N_class]

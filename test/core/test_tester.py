@@ -1,37 +1,55 @@
-from fastNLP.core.preprocess import SeqLabelPreprocess
+import os
+import unittest
+
+from fastNLP.core.dataset import DataSet
+from fastNLP.core.field import TextField
+from fastNLP.core.instance import Instance
 from fastNLP.core.tester import SeqLabelTester
-from fastNLP.loader.config_loader import ConfigSection, ConfigLoader
-from fastNLP.loader.dataset_loader import TokenizeDatasetLoader
 from fastNLP.models.sequence_modeling import SeqLabeling
 
 data_name = "pku_training.utf8"
 pickle_path = "data_for_tests"
 
 
-def foo():
-    loader = TokenizeDatasetLoader("./data_for_tests/cws_pku_utf_8")
-    train_data = loader.load_pku()
+class TestTester(unittest.TestCase):
+    def test_case_1(self):
+        model_args = {
+            "vocab_size": 10,
+            "word_emb_dim": 100,
+            "rnn_hidden_units": 100,
+            "num_classes": 5
+        }
+        valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
+                      "save_loss": True, "batch_size": 2, "pickle_path": "./save/",
+                      "use_cuda": False, "print_every_step": 1}
 
-    train_args = ConfigSection()
-    ConfigLoader("config.cfg").load_config("./data_for_tests/config", {"POS": train_args})
+        train_data = [
+            [['a', 'b', 'c', 'd', 'e'], ['a', '@', 'c', 'd', 'e']],
+            [['a', '@', 'c', 'd', 'e'], ['a', '@', 'c', 'd', 'e']],
+            [['a', 'b', '#', 'd', 'e'], ['a', '@', 'c', 'd', 'e']],
+            [['a', 'b', 'c', '?', 'e'], ['a', '@', 'c', 'd', 'e']],
+            [['a', 'b', 'c', 'd', '$'], ['a', '@', 'c', 'd', 'e']],
+            [['!', 'b', 'c', 'd', 'e'], ['a', '@', 'c', 'd', 'e']],
+        ]
+        vocab = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, '!': 5, '@': 6, '#': 7, '$': 8, '?': 9}
+        label_vocab = {'a': 0, '@': 1, 'c': 2, 'd': 3, 'e': 4}
 
-    # Preprocessor
-    p = SeqLabelPreprocess()
-    train_data = p.run(train_data)
-    train_args["vocab_size"] = p.vocab_size
-    train_args["num_classes"] = p.num_classes
+        data_set = DataSet()
+        for example in train_data:
+            text, label = example[0], example[1]
+            x = TextField(text, False)
+            y = TextField(label, is_target=True)
+            ins = Instance(word_seq=x, label_seq=y)
+            data_set.append(ins)
 
-    model = SeqLabeling(train_args)
+        data_set.index_field("word_seq", vocab)
+        data_set.index_field("label_seq", label_vocab)
 
-    valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
-                  "save_loss": True, "batch_size": 8, "pickle_path": "./data_for_tests/",
-                  "use_cuda": True}
-    validator = SeqLabelTester(**valid_args)
+        model = SeqLabeling(model_args)
 
-    print("start validation.")
-    validator.test(model, train_data)
-    print(validator.show_metrics())
+        tester = SeqLabelTester(**valid_args)
+        tester.test(network=model, dev_data=data_set)
+        # If this can run, everything is OK.
 
-
-if __name__ == "__main__":
-    foo()
+        os.system("rm -rf save")
+        print("pickle path deleted")
