@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from torch.nn._functions.thnn import rnnFusedPointwise as fusedBackend
 from torch.nn.parameter import Parameter
 
+from fastNLP.modules.utils import initial_parameter
 
 def default_initializer(hidden_size):
     stdv = 1.0 / math.sqrt(hidden_size)
@@ -172,7 +173,7 @@ def AutogradVarMaskedStep(num_layers=1, lstm=False):
 class VarMaskedRNNBase(nn.Module):
     def __init__(self, Cell, input_size, hidden_size,
                  num_layers=1, bias=True, batch_first=False,
-                 dropout=(0, 0), bidirectional=False, initializer=None, **kwargs):
+                 dropout=(0, 0), bidirectional=False, initializer=None,initial_method = None, **kwargs):
 
         super(VarMaskedRNNBase, self).__init__()
         self.Cell = Cell
@@ -193,7 +194,7 @@ class VarMaskedRNNBase(nn.Module):
                 cell = self.Cell(layer_input_size, hidden_size, self.bias, p=dropout, initializer=initializer, **kwargs)
                 self.all_cells.append(cell)
                 self.add_module('cell%d' % (layer * num_directions + direction), cell)
-
+        initial_parameter(self, initial_method)
     def reset_parameters(self):
         for cell in self.all_cells:
             cell.reset_parameters()
@@ -284,7 +285,7 @@ class VarFastLSTMCell(VarRNNCellBase):
         \end{array}
     """
 
-    def __init__(self, input_size, hidden_size, bias=True, p=(0.5, 0.5), initializer=None):
+    def __init__(self, input_size, hidden_size, bias=True, p=(0.5, 0.5), initializer=None,initial_method =None):
         super(VarFastLSTMCell, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -311,7 +312,7 @@ class VarFastLSTMCell(VarRNNCellBase):
         self.p_hidden = p_hidden
         self.noise_in = None
         self.noise_hidden = None
-
+        initial_parameter(self, initial_method)
     def reset_parameters(self):
         for weight in self.parameters():
             if weight.dim() == 1:

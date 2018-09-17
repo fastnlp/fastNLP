@@ -297,7 +297,7 @@ class ClassPreprocess(BasePreprocess):
 
         # build vocabulary from scratch if nothing exists
         word2index = DEFAULT_WORD_TO_INDEX.copy()
-        label2index = DEFAULT_WORD_TO_INDEX.copy()
+        label2index = {} # DEFAULT_WORD_TO_INDEX.copy()
 
         # collect every word and label
         for sent, label in data:
