@@ -7,6 +7,30 @@ fastNLP.core.action
 .. automodule:: fastNLP.core.action
     :members:
 
+fastNLP.core.batch 
+-------------------
+
+.. automodule:: fastNLP.core.batch
+    :members:
+
+fastNLP.core.dataset 
+---------------------
+
+.. automodule:: fastNLP.core.dataset
+    :members:
+
+fastNLP.core.field 
+-------------------
+
+.. automodule:: fastNLP.core.field
+    :members:
+
+fastNLP.core.instance 
+----------------------
+
+.. automodule:: fastNLP.core.instance
+    :members:
+
 fastNLP.core.loss 
 ------------------
 
