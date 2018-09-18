@@ -36,7 +36,7 @@ pre-processing data, constructing model and training model.
            self.enc = encoder.Conv(
                in_channels=300, out_channels=100, kernel_size=3)
            self.agg = aggregation.MaxPool()
-           self.dec = decoder.MLP(100, num_classes=num_classes)
+           self.dec = decoder.MLP([100, num_classes])
 
        def forward(self, x):
            x = self.emb(x)  # [N,L] -> [N,L,C]
