@@ -1,9 +1,5 @@
-import os
-import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
-
 import unittest
-from fastNLP.data.vocabulary import Vocabulary, DEFAULT_WORD_TO_INDEX
+from fastNLP.core.vocabulary import Vocabulary, DEFAULT_WORD_TO_INDEX
 
 class TestVocabulary(unittest.TestCase):
     def test_vocab(self):

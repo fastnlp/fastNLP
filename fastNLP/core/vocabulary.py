@@ -18,6 +18,16 @@ def isiterable(p_object):
     return True
 
 class Vocabulary(object):
+    """Use for word and index one to one mapping
+
+    Example::
+
+        vocab = Vocabulary()
+        word_list = "this is a word list".split()
+        vocab.update(word_list)
+        vocab["word"]
+        vocab.to_word(5)
+    """
     def __init__(self):
         self.word2idx = deepcopy(DEFAULT_WORD_TO_INDEX)
         self.padding_label = DEFAULT_PADDING_LABEL
@@ -29,6 +39,8 @@ class Vocabulary(object):
     
     def update(self, word):
         """add word or list of words into Vocabulary
+        
+        :param word: a list of str or str
         """
         if not isinstance(word, str) and isiterable(word):
         # it's a nested list
@@ -43,13 +55,22 @@ class Vocabulary(object):
 
     
     def __getitem__(self, w):
-        """ like to_index(w) function, turn a word to the index
-            if w is not in Vocabulary, return the unknown label
+        """To support usage like::
+
+            vocab[w]
         """
         if w in self.word2idx:
             return self.word2idx[w]
         else:
             return self.word2idx[DEFAULT_UNKNOWN_LABEL]
+
+    def to_index(self, w):
+        """ like to_index(w) function, turn a word to the index
+            if w is not in Vocabulary, return the unknown label
+        
+        :param str w:
+        """
+        return self[w]
     
     def unknown_idx(self):
         return self.word2idx[self.unknown_label]
@@ -58,10 +79,14 @@ class Vocabulary(object):
         return self.word2idx[self.padding_label]
 
     def build_reverse_vocab(self):
+        """build 'index to word' dict based on 'word to index' dict
+        """
         self.idx2word = {self.word2idx[w] : w for w in self.word2idx}
     
     def to_word(self, idx):
         """given a word's index, return the word itself
+
+        :param int idx:
         """
         if self.idx2word is None:
             self.build_reverse_vocab()
