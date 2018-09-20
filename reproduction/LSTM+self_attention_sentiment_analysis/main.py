@@ -53,7 +53,7 @@ class SELF_ATTENTION_YELP_CLASSIFICATION(BaseModel):
         self.embedding = Embedding(len(word2index) ,embeding_size , init_emb= None )
         self.lstm = Lstm(input_size = embeding_size,hidden_size = lstm_hidden_size ,bidirectional = True)
         self.attention = SelfAttention(lstm_hidden_size * 2 ,dim =attention_unit ,num_vec=attention_hops)
-        self.mlp = MLP(size_layer=[lstm_hidden_size * 2*attention_hops ,nfc ,class_num ] ,num_class=class_num  ,)
+        self.mlp = MLP(size_layer=[lstm_hidden_size * 2*attention_hops ,nfc ,class_num ])
     def forward(self,x):
         x_emb = self.embedding(x)
         output = self.lstm(x_emb)
