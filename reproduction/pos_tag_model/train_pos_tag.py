@@ -33,7 +33,7 @@ def infer():
     # fetch dictionary size and number of labels from pickle files
     word2index = load_pickle(pickle_path, "word2id.pkl")
     test_args["vocab_size"] = len(word2index)
-    index2label = load_pickle(pickle_path, "id2class.pkl")
+    index2label = load_pickle(pickle_path, "class2id.pkl")
     test_args["num_classes"] = len(index2label)
 
     # Define the same model
@@ -105,7 +105,7 @@ def test():
     # fetch dictionary size and number of labels from pickle files
     word2index = load_pickle(pickle_path, "word2id.pkl")
     test_args["vocab_size"] = len(word2index)
-    index2label = load_pickle(pickle_path, "id2class.pkl")
+    index2label = load_pickle(pickle_path, "class2id.pkl")
     test_args["num_classes"] = len(index2label)
 
     # load dev data
