@@ -31,7 +31,7 @@ FastNLP_MODEL_COLLECTION = {
         "class": "sequence_modeling.AdvSeqLabel",
         "pickle": "cws_basic_model_v_0.pkl",
         "type": "seq_label",
-        "config_file_name": "config",
+        "config_file_name": "cws.cfg",
         "config_section_name": "text_class_model"
     },
     "pos_tag_model": {
@@ -39,7 +39,7 @@ FastNLP_MODEL_COLLECTION = {
         "class": "sequence_modeling.AdvSeqLabel",
         "pickle": "pos_tag_model_v_0.pkl",
         "type": "seq_label",
-        "config_file_name": "pos_tag.config",
+        "config_file_name": "pos_tag.cfg",
         "config_section_name": "pos_tag_model"
     },
     "text_classify_model": {
@@ -56,21 +56,22 @@ FastNLP_MODEL_COLLECTION = {
 class FastNLP(object):
     """
     High-level interface for direct model inference.
-    Example Usage:
+    Example Usage
+    ::
         fastnlp = FastNLP()
         fastnlp.load("zh_pos_tag_model")
         text = "这是最好的基于深度学习的中文分词系统。"
         result = fastnlp.run(text)
         print(result)  # ["这", "是", "最好", "的", "基于", "深度学习", "的", "中文", "分词", "系统", "。"]
+
     """
 
     def __init__(self, model_dir="./"):
         """
         :param model_dir: this directory should contain the following files:
-            1. a pre-trained model
-            2. a config file
-            3. "class2id.pkl"
-            4. "word2id.pkl"
+            1. a trained model
+            2. a config file, which is a fastNLP's configuration.
+            3. a Vocab file, which is a pickle object of a Vocab instance.
         """
         self.model_dir = model_dir
         self.model = None

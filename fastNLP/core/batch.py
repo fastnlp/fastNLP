@@ -2,10 +2,6 @@ from collections import defaultdict
 
 import torch
 
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.field import TextField, LabelField
-from fastNLP.core.instance import Instance
-
 
 class Batch(object):
     """Batch is an iterable object which iterates over mini-batches.
@@ -16,6 +12,14 @@ class Batch(object):
     """
 
     def __init__(self, dataset, batch_size, sampler, use_cuda):
+        """
+
+        :param dataset: a DataSet object
+        :param batch_size: int, the size of the batch
+        :param sampler: a Sampler object
+        :param use_cuda: bool, whetjher to use GPU
+
+        """
         self.dataset = dataset
         self.batch_size = batch_size
         self.sampler = sampler
@@ -81,46 +85,3 @@ class Batch(object):
             self.curidx += endidx
             return batch_x, batch_y
 
-
-if __name__ == "__main__":
-    """simple running example
-    """
-    texts = ["i am a cat",
-             "this is a test of new batch",
-             "haha"
-             ]
-    labels = [0, 1, 0]
-
-    # prepare vocabulary
-    vocab = {}
-    for text in texts:
-        for tokens in text.split():
-            if tokens not in vocab:
-                vocab[tokens] = len(vocab)
-    print("vocabulary: ", vocab)
-
-    # prepare input dataset    
-    data = DataSet()
-    for text, label in zip(texts, labels):
-        x = TextField(text.split(), False)
-        y = LabelField(label, is_target=True)
-        ins = Instance(text=x, label=y)
-        data.append(ins)
-
-    # use vocabulary to index data
-    data.index_field("text", vocab)
-
-
-    # define naive sampler for batch class
-    class SeqSampler:
-        def __call__(self, dataset):
-            return list(range(len(dataset)))
-
-
-    # use batch to iterate dataset
-    data_iterator = Batch(data, 2, SeqSampler(), False)
-    for epoch in range(1):
-        for batch_x, batch_y in data_iterator:
-            print(batch_x)
-            print(batch_y)
-            # do stuff

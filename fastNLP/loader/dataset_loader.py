@@ -172,9 +172,8 @@ class ClassDatasetLoader(DatasetLoader):
 class ConllLoader(DatasetLoader):
     """loader for conll format files"""
 
-    def __int__(self, data_name, data_path):
+    def __int__(self, data_path):
         """
-        :param  str data_name: the name of the conll data set
         :param str data_path: the path to the conll data set
         """
         super(ConllLoader, self).__init__(data_path)
@@ -269,8 +268,3 @@ class PeopleDailyCorpusLoader(DatasetLoader):
             ner_examples.append([sent_words, sent_ner])
         return pos_tag_examples, ner_examples
 
-if __name__ == "__main__":
-    loader = PeopleDailyCorpusLoader("./")
-    pos, ner = loader.load()
-    print(pos[:10])
-    print(ner[:10])

@@ -1,7 +1,6 @@
-
+import unittest
 
 import torch
-import unittest
 
 from fastNLP.modules.other_modules import GroupNorm, LayerNormalization, BiLinear
 

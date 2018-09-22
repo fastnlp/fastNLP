@@ -52,21 +52,28 @@ def pickle_exist(pickle_path, pickle_name):
         return False
 
 
-class BasePreprocess(object):
-    """Base class of all preprocessors.
-    Preprocessors are responsible for converting data of strings into data of indices.
+class Preprocessor(object):
+    """Preprocessors are responsible for converting data of strings into data of indices.
     During the pre-processing, the following pickle files will be built:
 
-        - "word2id.pkl", a mapping from words(tokens) to indices
-        - "id2word.pkl", a reversed dictionary
+        - "word2id.pkl", a Vocabulary object, mapping words to indices.
+        - "class2id.pkl", a Vocabulary object, mapping labels to indices.
+        - "data_train.pkl", a DataSet object for training
+        - "data_dev.pkl", a DataSet object for validation, if train_dev_split > 0.
+        - "data_test.pkl", a DataSet object for testing, if test_data is not None.
 
     These four pickle files are expected to be saved in the given pickle directory once they are constructed.
     Preprocessors will check if those files are already in the directory and will reuse them in future calls.
     """
 
-    def __init__(self):
+    def __init__(self, label_is_seq=False):
+        """
+
+        :param label_is_seq: bool, whether label is a sequence. If True, label vocabulary will preserve
+                several special tokens for sequence processing.
+        """
         self.data_vocab = Vocabulary()
-        self.label_vocab = Vocabulary()
+        self.label_vocab = Vocabulary(need_default=label_is_seq)
 
     @property
     def vocab_size(self):
@@ -259,20 +266,20 @@ class BasePreprocess(object):
         return data_set
 
 
-class SeqLabelPreprocess(BasePreprocess):
+class SeqLabelPreprocess(Preprocessor):
     def __init__(self):
-
+        print("[FastNLP warning] SeqLabelPreprocess is about to deprecate. Please use Preprocess directly.")
         super(SeqLabelPreprocess, self).__init__()
 
 
-
-class ClassPreprocess(BasePreprocess):
+class ClassPreprocess(Preprocessor):
     def __init__(self):
+        print("[FastNLP warning] ClassPreprocess is about to deprecate. Please use Preprocess directly.")
         super(ClassPreprocess, self).__init__()
 
 
 if __name__ == "__main__":
-    p = BasePreprocess()
+    p = Preprocessor()
     train_dev_data = [[["I", "am", "a", "good", "student", "."], "0"],
                       [["You", "are", "pretty", "."], "1"]
                       ]
