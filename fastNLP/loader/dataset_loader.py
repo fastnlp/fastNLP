@@ -208,6 +208,12 @@ class ConllLoader(DatasetLoader):
 
 
 class LMDatasetLoader(DatasetLoader):
+    """Language Model Dataset Loader
+
+        This loader produces data for language model training in a supervised way.
+        That means it has X and Y.
+
+    """
     def __init__(self, data_path):
         super(LMDatasetLoader, self).__init__(data_path)
 
@@ -216,8 +222,20 @@ class LMDatasetLoader(DatasetLoader):
             raise FileNotFoundError("file {} not found.".format(self.data_path))
         with open(self.data_path, "r", encoding="utf=8") as f:
             text = " ".join(f.readlines())
-        return text.strip().split()
+        tokens = text.strip().split()
+        return self.sentence_cut(tokens)
 
+    def sentence_cut(self, tokens, sentence_length=15):
+        start_idx = 0
+        data_set = []
+        for idx in range(len(tokens) // sentence_length):
+            x = tokens[start_idx * idx: start_idx * idx + sentence_length]
+            y = tokens[start_idx * idx + 1: start_idx * idx + sentence_length + 1]
+            if start_idx * idx + sentence_length + 1 >= len(tokens):
+                # ad hoc
+                y.extend(["<unk>"])
+            data_set.append([x, y])
+        return data_set
 
 class PeopleDailyCorpusLoader(DatasetLoader):
     """

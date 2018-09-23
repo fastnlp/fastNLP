@@ -66,14 +66,26 @@ class Preprocessor(object):
     Preprocessors will check if those files are already in the directory and will reuse them in future calls.
     """
 
-    def __init__(self, label_is_seq=False):
+    def __init__(self, label_is_seq=False, share_vocab=False, add_char_field=False):
         """
 
         :param label_is_seq: bool, whether label is a sequence. If True, label vocabulary will preserve
                 several special tokens for sequence processing.
+        :param share_vocab: bool, whether word sequence and label sequence share the same vocabulary. Typically, this
+                is only available when label_is_seq is True. Default: False.
+        :param add_char_field: bool, whether to add character representations to all TextFields. Default: False.
         """
         self.data_vocab = Vocabulary()
-        self.label_vocab = Vocabulary(need_default=label_is_seq)
+        if label_is_seq is True:
+            if share_vocab is True:
+                self.label_vocab = self.data_vocab
+            else:
+                self.label_vocab = Vocabulary()
+        else:
+            self.label_vocab = Vocabulary(need_default=False)
+
+        self.character_vocab = Vocabulary(need_default=False)
+        self.add_char_field = add_char_field
 
     @property
     def vocab_size(self):
@@ -82,6 +94,12 @@ class Preprocessor(object):
     @property
     def num_classes(self):
         return len(self.label_vocab)
+
+    @property
+    def char_vocab_size(self):
+        if self.character_vocab is None:
+            self.build_char_dict()
+        return len(self.character_vocab)
 
     def run(self, train_dev_data, test_data=None, pickle_path="./", train_dev_split=0, cross_val=False, n_fold=10):
         """Main pre-processing pipeline.
@@ -175,6 +193,16 @@ class Preprocessor(object):
             self.data_vocab.update(word)
             self.label_vocab.update(label)
         return self.data_vocab, self.label_vocab
+
+    def build_char_dict(self):
+        char_collection = set()
+        for word in self.data_vocab.word2idx:
+            if len(word) == 0:
+                continue
+            for ch in word:
+                if ch not in char_collection:
+                    char_collection.add(ch)
+        self.character_vocab.update(list(char_collection))
 
     def build_reverse_dict(self):
         self.data_vocab.build_reverse_vocab()

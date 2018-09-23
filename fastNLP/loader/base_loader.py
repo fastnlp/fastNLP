@@ -21,7 +21,7 @@ class BaseLoader(object):
 
 class ToyLoader0(BaseLoader):
     """
-        For charLM
+        For CharLM
     """
 
     def __init__(self, data_path):

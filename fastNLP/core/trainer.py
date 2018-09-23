@@ -231,7 +231,7 @@ class Trainer(object):
     def data_forward(self, network, x):
         if self._task == "seq_label":
             y = network(x["word_seq"], x["word_seq_origin_len"])
-        elif self._task == "text_classify":
+        elif self._task == "text_classify" or self._task == "language_model":
             y = network(x["word_seq"])
         else:
             raise NotImplementedError("Unknown task type {}.".format(self._task))
@@ -239,7 +239,7 @@ class Trainer(object):
         if not self._graph_summaried:
             if self._task == "seq_label":
                 self._summary_writer.add_graph(network, (x["word_seq"], x["word_seq_origin_len"]), verbose=False)
-            elif self._task == "text_classify":
+            elif self._task == "text_classify" or self._task == "language_model":
                 self._summary_writer.add_graph(network, x["word_seq"], verbose=False)
             self._graph_summaried = True
         return y

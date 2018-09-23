@@ -31,7 +31,7 @@ class SeqLabeling(BaseModel):
         num_classes = args["num_classes"]
 
         self.Embedding = encoder.embedding.Embedding(vocab_size, word_emb_dim)
-        self.Rnn = encoder.lstm.Lstm(word_emb_dim, hidden_dim)
+        self.Rnn = encoder.lstm.LSTM(word_emb_dim, hidden_dim)
         self.Linear = encoder.linear.Linear(hidden_dim, num_classes)
         self.Crf = decoder.CRF.ConditionalRandomField(num_classes)
         self.mask = None
@@ -97,7 +97,7 @@ class AdvSeqLabel(SeqLabeling):
         num_classes = args["num_classes"]
 
         self.Embedding = encoder.embedding.Embedding(vocab_size, word_emb_dim, init_emb=emb)
-        self.Rnn = encoder.lstm.Lstm(word_emb_dim, hidden_dim, num_layers=3, dropout=0.3, bidirectional=True)
+        self.Rnn = encoder.lstm.LSTM(word_emb_dim, hidden_dim, num_layers=3, dropout=0.3, bidirectional=True)
         self.Linear1 = encoder.Linear(hidden_dim * 2, hidden_dim * 2 // 3)
         self.batch_norm = torch.nn.BatchNorm1d(hidden_dim * 2 // 3)
         self.relu = torch.nn.ReLU()

@@ -9,7 +9,7 @@ from fastNLP.models.base_model import BaseModel
 from fastNLP.modules.aggregator.self_attention import SelfAttention
 from fastNLP.modules.decoder.MLP import MLP
 from fastNLP.modules.encoder.embedding import Embedding as Embedding
-from fastNLP.modules.encoder.lstm import Lstm
+from fastNLP.modules.encoder.lstm import LSTM
 
 train_data_path =  'small_train_data.txt'
 dev_data_path = 'small_dev_data.txt'
@@ -43,7 +43,7 @@ class SELF_ATTENTION_YELP_CLASSIFICATION(BaseModel):
     def __init__(self, args=None):
         super(SELF_ATTENTION_YELP_CLASSIFICATION,self).__init__()
         self.embedding = Embedding(len(word2index) ,embeding_size , init_emb= None )
-        self.lstm = Lstm(input_size = embeding_size,hidden_size = lstm_hidden_size ,bidirectional = True)
+        self.lstm = LSTM(input_size=embeding_size, hidden_size=lstm_hidden_size, bidirectional=True)
         self.attention = SelfAttention(lstm_hidden_size * 2 ,dim =attention_unit ,num_vec=attention_hops)
         self.mlp = MLP(size_layer=[lstm_hidden_size * 2*attention_hops ,nfc ,class_num ])
     def forward(self,x):

@@ -10,12 +10,14 @@ DEFAULT_WORD_TO_INDEX = {DEFAULT_PADDING_LABEL: 0, DEFAULT_UNKNOWN_LABEL: 1,
                          DEFAULT_RESERVED_LABEL[0]: 2, DEFAULT_RESERVED_LABEL[1]: 3,
                          DEFAULT_RESERVED_LABEL[2]: 4}
 
+
 def isiterable(p_object):
     try:
         it = iter(p_object)
-    except TypeError: 
+    except TypeError:
         return False
     return True
+
 
 class Vocabulary(object):
     """Use for word and index one to one mapping
@@ -28,9 +30,11 @@ class Vocabulary(object):
         vocab["word"]
         vocab.to_word(5)
     """
+
     def __init__(self, need_default=True):
         """
-        :param bool need_default: set if the Vocabulary has default labels reserved.
+        :param bool need_default: set if the Vocabulary has default labels reserved for sequences. Default: True.
+
         """
         if need_default:
             self.word2idx = deepcopy(DEFAULT_WORD_TO_INDEX)
@@ -53,17 +57,16 @@ class Vocabulary(object):
         :param word: a list of str or str
         """
         if not isinstance(word, str) and isiterable(word):
-        # it's a nested list
+            # it's a nested list
             for w in word:
                 self.update(w)
         else:
-        # it's a word to be added
+            # it's a word to be added
             if word not in self.word2idx:
                 self.word2idx[word] = len(self)
                 if self.idx2word is not None:
                     self.idx2word = None
 
-    
     def __getitem__(self, w):
         """To support usage like::
 
@@ -81,12 +84,12 @@ class Vocabulary(object):
         :param str w:
         """
         return self[w]
-    
+
     def unknown_idx(self):
-        if self.unknown_label is None: 
+        if self.unknown_label is None:
             return None
         return self.word2idx[self.unknown_label]
-    
+
     def padding_idx(self):
         if self.padding_label is None:
             return None
@@ -95,8 +98,8 @@ class Vocabulary(object):
     def build_reverse_vocab(self):
         """build 'index to word' dict based on 'word to index' dict
         """
-        self.idx2word = {self.word2idx[w] : w for w in self.word2idx}
-    
+        self.idx2word = {self.word2idx[w]: w for w in self.word2idx}
+
     def to_word(self, idx):
         """given a word's index, return the word itself
 
@@ -105,7 +108,7 @@ class Vocabulary(object):
         if self.idx2word is None:
             self.build_reverse_vocab()
         return self.idx2word[idx]
-    
+
     def __getstate__(self):
         """use to prepare data for pickle
         """
@@ -113,12 +116,9 @@ class Vocabulary(object):
         # no need to pickle idx2word as it can be constructed from word2idx
         del state['idx2word']
         return state
-    
+
     def __setstate__(self, state):
         """use to restore state from pickle
         """
         self.__dict__.update(state)
         self.idx2word = None
-    
-
-    

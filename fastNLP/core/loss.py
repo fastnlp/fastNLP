@@ -33,6 +33,10 @@ class Loss(object):
         """Given a name of a loss function, return it from PyTorch.
 
         :param loss_name: str, the name of a loss function
+
+                - cross_entropy: combines log softmax and nll loss in a single function.
+                - nll: negative log likelihood
+
         :return loss: a PyTorch loss
         """
         if loss_name == "cross_entropy":
