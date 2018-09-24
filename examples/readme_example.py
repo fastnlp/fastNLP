@@ -5,7 +5,7 @@ from fastNLP.core.preprocess import ClassPreprocess
 from fastNLP.core.trainer import ClassificationTrainer
 from fastNLP.loader.dataset_loader import ClassDatasetLoader
 from fastNLP.models.base_model import BaseModel
-from fastNLP.modules import aggregation
+from fastNLP.modules import aggregator
 from fastNLP.modules import decoder
 from fastNLP.modules import encoder
 
@@ -21,7 +21,7 @@ class ClassificationModel(BaseModel):
         self.emb = encoder.Embedding(nums=vocab_size, dims=300)
         self.enc = encoder.Conv(
             in_channels=300, out_channels=100, kernel_size=3)
-        self.agg = aggregation.MaxPool()
+        self.agg = aggregator.MaxPool()
         self.dec = decoder.MLP(size_layer=[100, num_classes])
 
     def forward(self, x):

@@ -1,32 +1,32 @@
 import numpy as np
 import torch
 
-from fastNLP.core.action import RandomSampler
 from fastNLP.core.batch import Batch
+from fastNLP.core.sampler import RandomSampler
 from fastNLP.saver.logger import create_logger
 
 logger = create_logger(__name__, "./train_test.log")
 
 
-class BaseTester(object):
+class Tester(object):
     """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
 
     def __init__(self, **kwargs):
         """
         :param kwargs: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
         """
-        super(BaseTester, self).__init__()
+        super(Tester, self).__init__()
         """
             "default_args" provides default value for important settings. 
             The initialization arguments "kwargs" with the same key (name) will override the default value. 
             "kwargs" must have the same type as "default_args" on corresponding keys. 
             Otherwise, error will raise.
         """
-        default_args = {"save_output": False,  # collect outputs of validation set
-                        "save_loss": False,  # collect losses in validation
+        default_args = {"save_output": True,  # collect outputs of validation set
+                        "save_loss": True,  # collect losses in validation
                         "save_best_dev": False,  # save best model during validation
                         "batch_size": 8,
-                        "use_cuda": True,
+                        "use_cuda": False,
                         "pickle_path": "./save/",
                         "model_name": "dev_best_model.pkl",
                         "print_every_step": 1,
@@ -55,7 +55,7 @@ class BaseTester(object):
                     logger.error(msg)
                     raise ValueError(msg)
             else:
-                # BaseTester doesn't care about extra arguments
+                # Tester doesn't care about extra arguments
                 pass
         print(default_args)
 
@@ -208,7 +208,7 @@ class BaseTester(object):
         return self.show_metrics()
 
 
-class SeqLabelTester(BaseTester):
+class SeqLabelTester(Tester):
     def __init__(self, **test_args):
         test_args.update({"task": "seq_label"})
         print(
@@ -216,9 +216,9 @@ class SeqLabelTester(BaseTester):
         super(SeqLabelTester, self).__init__(**test_args)
 
 
-class ClassificationTester(BaseTester):
+class ClassificationTester(Tester):
     def __init__(self, **test_args):
-        test_args.update({"task": "seq_label"})
+        test_args.update({"task": "text_classify"})
         print(
             "[FastNLP Warning] ClassificationTester will be deprecated. Please use Tester with argument 'task'='text_classify'.")
         super(ClassificationTester, self).__init__(**test_args)

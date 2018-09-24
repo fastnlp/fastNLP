@@ -1,23 +1,15 @@
-
-import os
-
 import torch.nn.functional as F
 
-from fastNLP.loader.dataset_loader import ClassDatasetLoader as Dataset_loader
-from fastNLP.loader.embed_loader import EmbedLoader as EmbedLoader
-from fastNLP.loader.config_loader import ConfigSection
-from fastNLP.loader.config_loader import ConfigLoader
-
-from fastNLP.models.base_model import BaseModel
-
 from fastNLP.core.preprocess import ClassPreprocess as Preprocess
-from fastNLP.core.trainer   import ClassificationTrainer
-
+from fastNLP.core.trainer import ClassificationTrainer
+from fastNLP.loader.config_loader import ConfigLoader
+from fastNLP.loader.config_loader import ConfigSection
+from fastNLP.loader.dataset_loader import ClassDatasetLoader as Dataset_loader
+from fastNLP.models.base_model import BaseModel
+from fastNLP.modules.aggregator.self_attention import SelfAttention
+from fastNLP.modules.decoder.MLP import MLP
 from fastNLP.modules.encoder.embedding import Embedding as Embedding
 from fastNLP.modules.encoder.lstm import Lstm
-from fastNLP.modules.aggregation.self_attention import SelfAttention
-from fastNLP.modules.decoder.MLP import MLP
-
 
 train_data_path =  'small_train_data.txt'
 dev_data_path = 'small_dev_data.txt'

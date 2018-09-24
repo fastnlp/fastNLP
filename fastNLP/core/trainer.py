@@ -6,10 +6,10 @@ from datetime import timedelta
 import torch
 from tensorboardX import SummaryWriter
 
-from fastNLP.core.action import RandomSampler
 from fastNLP.core.batch import Batch
 from fastNLP.core.loss import Loss
 from fastNLP.core.optimizer import Optimizer
+from fastNLP.core.sampler import RandomSampler
 from fastNLP.core.tester import SeqLabelTester, ClassificationTester
 from fastNLP.saver.logger import create_logger
 from fastNLP.saver.model_saver import ModelSaver
@@ -17,7 +17,7 @@ from fastNLP.saver.model_saver import ModelSaver
 logger = create_logger(__name__, "./train_test.log")
 
 
-class BaseTrainer(object):
+class Trainer(object):
     """Operations of training a model, including data loading, gradient descent, and validation.
 
     """
@@ -32,7 +32,7 @@ class BaseTrainer(object):
             - batch_size: int
             - pickle_path: str, the path to pickle files for pre-processing
         """
-        super(BaseTrainer, self).__init__()
+        super(Trainer, self).__init__()
 
         """
             "default_args" provides default value for important settings. 
@@ -40,8 +40,8 @@ class BaseTrainer(object):
             "kwargs" must have the same type as "default_args" on corresponding keys. 
             Otherwise, error will raise.
         """
-        default_args = {"epochs": 3, "batch_size": 8, "validate": True, "use_cuda": True, "pickle_path": "./save/",
-                        "save_best_dev": True, "model_name": "default_model_name.pkl", "print_every_step": 1,
+        default_args = {"epochs": 1, "batch_size": 2, "validate": False, "use_cuda": False, "pickle_path": "./save/",
+                        "save_best_dev": False, "model_name": "default_model_name.pkl", "print_every_step": 1,
                         "loss": Loss(None),  # used to pass type check
                         "optimizer": Optimizer("Adam", lr=0.001, weight_decay=0)
                         }
@@ -69,7 +69,7 @@ class BaseTrainer(object):
                     logger.error(msg)
                     raise ValueError(msg)
             else:
-                # BaseTrainer doesn't care about extra arguments
+                # Trainer doesn't care about extra arguments
                 pass
         print(default_args)
 
@@ -136,6 +136,9 @@ class BaseTrainer(object):
 
             # validation
             if self.validate:
+                if dev_data is None:
+                    raise RuntimeError(
+                        "self.validate is True in trainer, but dev_data is None. Please provide the validation data.")
                 logger.info("validation started")
                 validator.test(network, dev_data)
 
@@ -314,7 +317,7 @@ class BaseTrainer(object):
         raise NotImplementedError
 
 
-class SeqLabelTrainer(BaseTrainer):
+class SeqLabelTrainer(Trainer):
     """Trainer for Sequence Labeling
 
     """
@@ -328,7 +331,7 @@ class SeqLabelTrainer(BaseTrainer):
         return SeqLabelTester(**valid_args)
 
 
-class ClassificationTrainer(BaseTrainer):
+class ClassificationTrainer(Trainer):
     """Trainer for text classification."""
 
     def __init__(self, **train_args):

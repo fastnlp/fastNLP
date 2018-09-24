@@ -1,10 +1,10 @@
 import numpy as np
 import torch
 
-from fastNLP.core.action import SequentialSampler
 from fastNLP.core.batch import Batch
 from fastNLP.core.dataset import create_dataset_from_lists
 from fastNLP.core.preprocess import load_pickle
+from fastNLP.core.sampler import SequentialSampler
 
 
 class Predictor(object):
@@ -62,9 +62,13 @@ class Predictor(object):
 
     def data_forward(self, network, x):
         """Forward through network."""
-        y = network(**x)
         if self._task == "seq_label":
+            y = network(x["word_seq"], x["word_seq_origin_len"])
             y = network.prediction(y)
+        elif self._task == "text_classify":
+            y = network(x["word_seq"])
+        else:
+            raise NotImplementedError("Unknown task type {}.".format(self._task))
         return y
 
     def prepare_input(self, data):
