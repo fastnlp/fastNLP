@@ -4,7 +4,6 @@ import os
 import unittest
 
 from fastNLP.loader.config_loader import ConfigSection, ConfigLoader
-from fastNLP.loader.dataset_loader import TokenizeDatasetLoader, POSDatasetLoader, LMDatasetLoader
 
 
 class TestConfigLoader(unittest.TestCase):
@@ -52,21 +51,3 @@ class TestConfigLoader(unittest.TestCase):
 
         print("pass config test!")
 
-
-class TestDatasetLoader(unittest.TestCase):
-    def test_case_TokenizeDatasetLoader(self):
-        loader = TokenizeDatasetLoader("./test/data_for_tests/cws_pku_utf_8")
-        data = loader.load_pku(max_seq_len=32)
-        print("pass TokenizeDatasetLoader test!")
-
-    def test_case_POSDatasetLoader(self):
-        loader = POSDatasetLoader("./test/data_for_tests/people.txt")
-        data = loader.load()
-        datas = loader.load_lines()
-        print("pass POSDatasetLoader test!")
-
-    def test_case_LMDatasetLoader(self):
-        loader = LMDatasetLoader("./test/data_for_tests/cws_pku_utf_8")
-        data = loader.load()
-        datas = loader.load_lines()
-        print("pass TokenizeDatasetLoader test!")

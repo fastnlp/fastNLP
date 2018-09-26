@@ -1,10 +1,10 @@
 import numpy as np
 import torch
 
-from fastNLP.core.action import SequentialSampler
 from fastNLP.core.batch import Batch
 from fastNLP.core.dataset import create_dataset_from_lists
 from fastNLP.core.preprocess import load_pickle
+from fastNLP.core.sampler import SequentialSampler
 
 
 class Predictor(object):
@@ -27,8 +27,8 @@ class Predictor(object):
         self.batch_output = []
         self.pickle_path = pickle_path
         self._task = task  # one of ("seq_label", "text_classify")
-        self.index2label = load_pickle(self.pickle_path, "id2class.pkl")
-        self.word2index = load_pickle(self.pickle_path, "word2id.pkl")
+        self.label_vocab = load_pickle(self.pickle_path, "class2id.pkl")
+        self.word_vocab = load_pickle(self.pickle_path, "word2id.pkl")
 
     def predict(self, network, data):
         """Perform inference using the trained model.
@@ -62,9 +62,13 @@ class Predictor(object):
 
     def data_forward(self, network, x):
         """Forward through network."""
-        y = network(**x)
         if self._task == "seq_label":
+            y = network(x["word_seq"], x["word_seq_origin_len"])
             y = network.prediction(y)
+        elif self._task == "text_classify":
+            y = network(x["word_seq"])
+        else:
+            raise NotImplementedError("Unknown task type {}.".format(self._task))
         return y
 
     def prepare_input(self, data):
@@ -82,7 +86,7 @@ class Predictor(object):
         :return data_set: a DataSet instance.
         """
         assert isinstance(data, list)
-        return create_dataset_from_lists(data, self.word2index, has_target=False)
+        return create_dataset_from_lists(data, self.word_vocab, has_target=False)
 
     def prepare_output(self, data):
         """Transform list of batch outputs into strings."""
@@ -97,14 +101,14 @@ class Predictor(object):
         results = []
         for batch in batch_outputs:
             for example in np.array(batch):
-                results.append([self.index2label[int(x)] for x in example])
+                results.append([self.label_vocab.to_word(int(x)) for x in example])
         return results
 
     def _text_classify_prepare_output(self, batch_outputs):
         results = []
         for batch_out in batch_outputs:
             idx = np.argmax(batch_out.detach().numpy(), axis=-1)
-            results.extend([self.index2label[i] for i in idx])
+            results.extend([self.label_vocab.to_word(i) for i in idx])
         return results
 
 
