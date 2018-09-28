@@ -82,6 +82,6 @@ class Batch(object):
                     batch_origin_length[name + "_origin_len"] = torch.LongTensor(origin_lengths[name])
             batch_x.update(batch_origin_length)
 
-            self.curidx += endidx
+            self.curidx = endidx
             return batch_x, batch_y
 
