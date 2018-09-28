@@ -114,7 +114,6 @@ class Preprocessor(object):
                 If train_dev_split > 0, return one more dataset - the dev set. If cross_val is True, each dataset
                 is a list of DataSet objects; Otherwise, each dataset is a DataSet object.
         """
-
         if pickle_exist(pickle_path, "word2id.pkl") and pickle_exist(pickle_path, "class2id.pkl"):
             self.data_vocab = load_pickle(pickle_path, "word2id.pkl")
             self.label_vocab = load_pickle(pickle_path, "class2id.pkl")

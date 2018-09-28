@@ -3,14 +3,17 @@ import os
 from fastNLP.loader.base_loader import BaseLoader
 
 
-class DatasetLoader(BaseLoader):
+class DataSetLoader(BaseLoader):
     """"loader for data sets"""
 
-    def __init__(self, data_path):
-        super(DatasetLoader, self).__init__(data_path)
+    def __init__(self):
+        super(DataSetLoader, self).__init__()
+
+    def load(self, path):
+        raise NotImplementedError
 
 
-class POSDatasetLoader(DatasetLoader):
+class POSDataSetLoader(DataSetLoader):
     """Dataset Loader for POS Tag datasets.
 
     In these datasets, each line are divided by '\t'
@@ -31,16 +34,10 @@ class POSDatasetLoader(DatasetLoader):
     to label5.
     """
 
-    def __init__(self, data_path):
-        super(POSDatasetLoader, self).__init__(data_path)
+    def __init__(self):
+        super(POSDataSetLoader, self).__init__()
 
-    def load(self):
-        assert os.path.exists(self.data_path)
-        with open(self.data_path, "r", encoding="utf-8") as f:
-            line = f.read()
-        return line
-
-    def load_lines(self):
+    def load(self, data_path):
         """
         :return data: three-level list
             [
@@ -49,7 +46,7 @@ class POSDatasetLoader(DatasetLoader):
                 ...
             ]
         """
-        with open(self.data_path, "r", encoding="utf-8") as f:
+        with open(data_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
         return self.parse(lines)
 
@@ -79,15 +76,15 @@ class POSDatasetLoader(DatasetLoader):
         return data
 
 
-class TokenizeDatasetLoader(DatasetLoader):
+class TokenizeDataSetLoader(DataSetLoader):
     """
     Data set loader for tokenization data sets
     """
 
-    def __init__(self, data_path):
-        super(TokenizeDatasetLoader, self).__init__(data_path)
+    def __init__(self):
+        super(TokenizeDataSetLoader, self).__init__()
 
-    def load_pku(self, max_seq_len=32):
+    def load(self, data_path, max_seq_len=32):
         """
         load pku dataset for Chinese word segmentation
         CWS (Chinese Word Segmentation) pku training dataset format:
@@ -104,7 +101,7 @@ class TokenizeDatasetLoader(DatasetLoader):
         :return: three-level lists
         """
         assert isinstance(max_seq_len, int) and max_seq_len > 0
-        with open(self.data_path, "r", encoding="utf-8") as f:
+        with open(data_path, "r", encoding="utf-8") as f:
             sentences = f.readlines()
         data = []
         for sent in sentences:
@@ -135,15 +132,15 @@ class TokenizeDatasetLoader(DatasetLoader):
         return data
 
 
-class ClassDatasetLoader(DatasetLoader):
+class ClassDataSetLoader(DataSetLoader):
     """Loader for classification data sets"""
 
-    def __init__(self, data_path):
-        super(ClassDatasetLoader, self).__init__(data_path)
+    def __init__(self):
+        super(ClassDataSetLoader, self).__init__()
 
-    def load(self):
-        assert os.path.exists(self.data_path)
-        with open(self.data_path, "r", encoding="utf-8") as f:
+    def load(self, data_path):
+        assert os.path.exists(data_path)
+        with open(data_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
         return self.parse(lines)
 
@@ -169,21 +166,21 @@ class ClassDatasetLoader(DatasetLoader):
         return dataset
 
 
-class ConllLoader(DatasetLoader):
+class ConllLoader(DataSetLoader):
     """loader for conll format files"""
 
     def __int__(self, data_path):
         """
         :param str data_path: the path to the conll data set
         """
-        super(ConllLoader, self).__init__(data_path)
-        self.data_set = self.parse(self.load())
+        super(ConllLoader, self).__init__()
+        self.data_set = self.parse(self.load(data_path))
 
-    def load(self):
+    def load(self, data_path):
         """
         :return: list lines: all lines in a conll file
         """
-        with open(self.data_path, "r", encoding="utf-8") as f:
+        with open(data_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
         return lines
 
@@ -207,20 +204,21 @@ class ConllLoader(DatasetLoader):
         return sentences
 
 
-class LMDatasetLoader(DatasetLoader):
+class LMDataSetLoader(DataSetLoader):
     """Language Model Dataset Loader
 
         This loader produces data for language model training in a supervised way.
         That means it has X and Y.
 
     """
-    def __init__(self, data_path):
-        super(LMDatasetLoader, self).__init__(data_path)
 
-    def load(self):
-        if not os.path.exists(self.data_path):
-            raise FileNotFoundError("file {} not found.".format(self.data_path))
-        with open(self.data_path, "r", encoding="utf=8") as f:
+    def __init__(self):
+        super(LMDataSetLoader, self).__init__()
+
+    def load(self, data_path):
+        if not os.path.exists(data_path):
+            raise FileNotFoundError("file {} not found.".format(data_path))
+        with open(data_path, "r", encoding="utf=8") as f:
             text = " ".join(f.readlines())
         tokens = text.strip().split()
         return self.sentence_cut(tokens)
@@ -237,16 +235,17 @@ class LMDatasetLoader(DatasetLoader):
             data_set.append([x, y])
         return data_set
 
-class PeopleDailyCorpusLoader(DatasetLoader):
+
+class PeopleDailyCorpusLoader(DataSetLoader):
     """
         People Daily Corpus: Chinese word segmentation, POS tag, NER
     """
 
-    def __init__(self, data_path):
-        super(PeopleDailyCorpusLoader, self).__init__(data_path)
+    def __init__(self):
+        super(PeopleDailyCorpusLoader, self).__init__()
 
-    def load(self):
-        with open(self.data_path, "r", encoding="utf-8") as f:
+    def load(self, data_path):
+        with open(data_path, "r", encoding="utf-8") as f:
             sents = f.readlines()
 
         pos_tag_examples = []

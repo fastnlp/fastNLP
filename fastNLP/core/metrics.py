@@ -4,6 +4,51 @@ import numpy as np
 import torch
 
 
+class Evaluator(object):
+    def __init__(self):
+        pass
+
+    def __call__(self, predict, truth):
+        """
+
+        :param predict: list of tensors, the network outputs from all batches.
+        :param truth: list of dict, the ground truths from all batch_y.
+        :return:
+        """
+        raise NotImplementedError
+
+
+class ClassifyEvaluator(Evaluator):
+    def __init__(self):
+        super(ClassifyEvaluator, self).__init__()
+
+    def __call__(self, predict, truth):
+        y_prob = [torch.nn.functional.softmax(y_logit, dim=-1) for y_logit in predict]
+        y_prob = torch.cat(y_prob, dim=0)
+        y_pred = torch.argmax(y_prob, dim=-1)
+        y_true = torch.cat(truth, dim=0)
+        acc = float(torch.sum(y_pred == y_true)) / len(y_true)
+        return {"accuracy": acc}
+
+
+class SeqLabelEvaluator(Evaluator):
+    def __init__(self):
+        super(SeqLabelEvaluator, self).__init__()
+
+    def __call__(self, predict, truth):
+        """
+
+        :param predict: list of tensors, the network outputs from all batches.
+        :param truth: list of dict, the ground truths from all batch_y.
+        :return accuracy:
+        """
+        truth = [item["truth"] for item in truth]
+        truth = torch.cat(truth).view(-1, )
+        results = torch.Tensor(predict).view(-1, )
+        accuracy = torch.sum(results.to(truth) == truth).to(torch.float) / results.shape[0]
+        return {"accuracy": float(accuracy)}
+
+
 def _conver_numpy(x):
     """convert input data to numpy array
 

@@ -46,8 +46,11 @@ class Instance(object):
         tensor_x = {}
         tensor_y = {}
         for name, field in self.fields.items():
-            if field.is_target:
+            if field.is_target is True:
                 tensor_y[name] = field.to_tensor(padding_length[name])
-            else:
+            elif field.is_target is False:
                 tensor_x[name] = field.to_tensor(padding_length[name])
+            else:
+                # is_target is None
+                continue
         return tensor_x, tensor_y

@@ -1,14 +1,14 @@
 from fastNLP.core.loss import Loss
 from fastNLP.core.preprocess import Preprocessor
 from fastNLP.core.trainer import Trainer
-from fastNLP.loader.dataset_loader import LMDatasetLoader
+from fastNLP.loader.dataset_loader import LMDataSetLoader
 from fastNLP.models.char_language_model import CharLM
 
 PICKLE = "./save/"
 
 
 def train():
-    loader = LMDatasetLoader("./train.txt")
+    loader = LMDataSetLoader()
     train_data = loader.load()
 
     pre = Preprocessor(label_is_seq=True, share_vocab=True)

@@ -54,7 +54,7 @@ class Vocabulary(object):
     def update(self, word):
         """add word or list of words into Vocabulary
         
-        :param word: a list of str or str
+        :param word: a list of string or a single string
         """
         if not isinstance(word, str) and isiterable(word):
             # it's a nested list

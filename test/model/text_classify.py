@@ -9,13 +9,14 @@ sys.path.append("..")
 from fastNLP.core.predictor import ClassificationInfer
 from fastNLP.core.trainer import ClassificationTrainer
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.loader.dataset_loader import ClassDatasetLoader
+from fastNLP.loader.dataset_loader import ClassDataSetLoader
 from fastNLP.loader.model_loader import ModelLoader
-from fastNLP.core.preprocess import ClassPreprocess
 from fastNLP.models.cnn_text_classification import CNNText
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.loss import Loss
+from fastNLP.core.dataset import TextClassifyDataSet
+from fastNLP.core.preprocess import save_pickle, load_pickle
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--save", type=str, default="./test_classification/", help="path to save pickle files")
@@ -34,21 +35,18 @@ config_dir = args.config
 def infer():
     # load dataset
     print("Loading data...")
-    ds_loader = ClassDatasetLoader(train_data_dir)
-    data = ds_loader.load()
-    unlabeled_data = [x[0] for x in data]
+    word_vocab = load_pickle(save_dir, "word2id.pkl")
+    label_vocab = load_pickle(save_dir, "label2id.pkl")
+    print("vocabulary size:", len(word_vocab))
+    print("number of classes:", len(label_vocab))
 
-    # pre-process data
-    pre = ClassPreprocess()
-    data = pre.run(data, pickle_path=save_dir)
-    print("vocabulary size:", pre.vocab_size)
-    print("number of classes:", pre.num_classes)
+    infer_data = TextClassifyDataSet(loader=ClassDataSetLoader())
+    infer_data.load(train_data_dir, vocabs={"word_vocab": word_vocab, "label_vocab": label_vocab})
 
     model_args = ConfigSection()
-    # TODO: load from config file
-    model_args["vocab_size"] = pre.vocab_size
-    model_args["num_classes"] = pre.num_classes
-    # ConfigLoader.load_config(config_dir, {"text_class_model": model_args})
+    model_args["vocab_size"] = len(word_vocab)
+    model_args["num_classes"] = len(label_vocab)
+    ConfigLoader.load_config(config_dir, {"text_class_model": model_args})
 
     # construct model
     print("Building model...")
@@ -59,7 +57,7 @@ def infer():
     print("model loaded!")
 
     infer = ClassificationInfer(pickle_path=save_dir)
-    results = infer.predict(cnn, unlabeled_data)
+    results = infer.predict(cnn, infer_data)
     print(results)
 
 
@@ -69,32 +67,23 @@ def train():
 
     # load dataset
     print("Loading data...")
-    ds_loader = ClassDatasetLoader(train_data_dir)
-    data = ds_loader.load()
-    print(data[0])
+    data = TextClassifyDataSet(loader=ClassDataSetLoader())
+    data.load(train_data_dir)
 
-    # pre-process data
-    pre = ClassPreprocess()
-    data_train = pre.run(data, pickle_path=save_dir)
-    print("vocabulary size:", pre.vocab_size)
-    print("number of classes:", pre.num_classes)
+    print("vocabulary size:", len(data.word_vocab))
+    print("number of classes:", len(data.label_vocab))
+    save_pickle(data.word_vocab, save_dir, "word2id.pkl")
+    save_pickle(data.label_vocab, save_dir, "label2id.pkl")
 
-    model_args["num_classes"] = pre.num_classes
-    model_args["vocab_size"] = pre.vocab_size
+    model_args["num_classes"] = len(data.label_vocab)
+    model_args["vocab_size"] = len(data.word_vocab)
 
     # construct model
     print("Building model...")
     model = CNNText(model_args)
 
-    # ConfigSaver().save_config(config_dir, {"text_class_model": model_args})
-
     # train
     print("Training...")
-
-    # 1
-    # trainer = ClassificationTrainer(train_args)
-
-    # 2
     trainer = ClassificationTrainer(epochs=train_args["epochs"],
                                     batch_size=train_args["batch_size"],
                                     validate=train_args["validate"],
@@ -104,7 +93,7 @@ def train():
                                     model_name=model_name,
                                     loss=Loss("cross_entropy"),
                                     optimizer=Optimizer("SGD", lr=0.001, momentum=0.9))
-    trainer.train(model, data_train)
+    trainer.train(model, data)
 
     print("Training finished!")
 
@@ -115,4 +104,4 @@ def train():
 
 if __name__ == "__main__":
     train()
-    # infer()
+    infer()

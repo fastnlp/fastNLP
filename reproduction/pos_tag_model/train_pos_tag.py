@@ -66,7 +66,7 @@ def train():
     ConfigLoader("good_name").load_config(cfgfile, {"train": train_args, "test": test_args})
 
     # Data Loader
-    loader = PeopleDailyCorpusLoader(pos_tag_data_path)
+    loader = PeopleDailyCorpusLoader()
     train_data, _ = loader.load()
 
     # Preprocessor

@@ -39,8 +39,19 @@ class Loss(object):
 
         :return loss: a PyTorch loss
         """
+
+        class InnerCrossEntropy:
+            """A simple wrapper to guarantee input shapes."""
+
+            def __init__(self):
+                self.f = torch.nn.CrossEntropyLoss()
+
+            def __call__(self, predict, truth):
+                truth = truth.view(-1, )
+                return self.f(predict, truth)
+
         if loss_name == "cross_entropy":
-            return torch.nn.CrossEntropyLoss()
+            return InnerCrossEntropy()
         elif loss_name == 'nll':
             return torch.nn.NLLLoss()
         else:

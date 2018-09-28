@@ -1,11 +1,13 @@
 import os
 
-from fastNLP.core.predictor import Predictor
-from fastNLP.core.preprocess import Preprocessor, load_pickle
+from fastNLP.core.dataset import SeqLabelDataSet, change_field_is_target
+from fastNLP.core.metrics import SeqLabelEvaluator
+from fastNLP.core.predictor import SeqLabelInfer
+from fastNLP.core.preprocess import save_pickle, load_pickle
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.loader.dataset_loader import TokenizeDatasetLoader, BaseLoader
+from fastNLP.loader.dataset_loader import TokenizeDataSetLoader, BaseLoader
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.models.sequence_modeling import SeqLabeling
 from fastNLP.saver.model_saver import ModelSaver
@@ -19,12 +21,12 @@ config_path = "test/data_for_tests/config"
 def infer():
     # Load infer configuration, the same as test
     test_args = ConfigSection()
-    ConfigLoader("config.cfg").load_config(config_path, {"POS_infer": test_args})
+    ConfigLoader().load_config(config_path, {"POS_infer": test_args})
 
     # fetch dictionary size and number of labels from pickle files
     word2index = load_pickle(pickle_path, "word2id.pkl")
     test_args["vocab_size"] = len(word2index)
-    index2label = load_pickle(pickle_path, "class2id.pkl")
+    index2label = load_pickle(pickle_path, "label2id.pkl")
     test_args["num_classes"] = len(index2label)
 
     # Define the same model
@@ -34,31 +36,29 @@ def infer():
     ModelLoader.load_pytorch(model, "./save/saved_model.pkl")
     print("model loaded!")
 
-    # Data Loader
-    raw_data_loader = BaseLoader(data_infer_path)
-    infer_data = raw_data_loader.load_lines()
+    # Load infer data
+    infer_data = SeqLabelDataSet(loader=BaseLoader())
+    infer_data.load(data_infer_path, vocabs={"word_vocab": word2index}, infer=True)
 
-    # Inference interface
-    infer = Predictor(pickle_path, "seq_label")
+    # inference
+    infer = SeqLabelInfer(pickle_path)
     results = infer.predict(model, infer_data)
-
     print(results)
 
 
 def train_test():
     # Config Loader
     train_args = ConfigSection()
-    ConfigLoader("config.cfg").load_config(config_path, {"POS_infer": train_args})
+    ConfigLoader().load_config(config_path, {"POS_infer": train_args})
 
-    # Data Loader
-    loader = TokenizeDatasetLoader(cws_data_path)
-    train_data = loader.load_pku()
+    # define dataset
+    data_train = SeqLabelDataSet(loader=TokenizeDataSetLoader())
+    data_train.load(cws_data_path)
+    train_args["vocab_size"] = len(data_train.word_vocab)
+    train_args["num_classes"] = len(data_train.label_vocab)
 
-    # Preprocessor
-    p = Preprocessor(label_is_seq=True)
-    data_train = p.run(train_data, pickle_path=pickle_path)
-    train_args["vocab_size"] = p.vocab_size
-    train_args["num_classes"] = p.num_classes
+    save_pickle(data_train.word_vocab, pickle_path, "word2id.pkl")
+    save_pickle(data_train.label_vocab, pickle_path, "label2id.pkl")
 
     # Trainer
     trainer = SeqLabelTrainer(**train_args.data)
@@ -73,7 +73,7 @@ def train_test():
     saver = ModelSaver("./save/saved_model.pkl")
     saver.save_pytorch(model)
 
-    del model, trainer, loader
+    del model, trainer
 
     # Define the same model
     model = SeqLabeling(train_args)
@@ -83,16 +83,15 @@ def train_test():
 
     # Load test configuration
     test_args = ConfigSection()
-    ConfigLoader("config.cfg").load_config(config_path, {"POS_infer": test_args})
+    ConfigLoader().load_config(config_path, {"POS_infer": test_args})
+    test_args["evaluator"] = SeqLabelEvaluator()
 
     # Tester
     tester = SeqLabelTester(**test_args.data)
 
     # Start testing
+    change_field_is_target(data_train, "truth", True)
     tester.test(model, data_train)
-
-    # print test results
-    print(tester.show_metrics())
 
 
 def test():
