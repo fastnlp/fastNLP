@@ -105,8 +105,6 @@ class Preprocessor(object):
             save_pickle(self.data_vocab, pickle_path, "word2id.pkl")
             save_pickle(self.label_vocab, pickle_path, "class2id.pkl")
 
-        self.build_reverse_dict()
-
         train_set = []
         dev_set = []
         if not cross_val:
