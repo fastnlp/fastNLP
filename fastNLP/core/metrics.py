@@ -4,6 +4,56 @@ import numpy as np
 import torch
 
 
+class Evaluator(object):
+    def __init__(self):
+        pass
+
+    def __call__(self, predict, truth):
+        """
+
+        :param predict: list of tensors, the network outputs from all batches.
+        :param truth: list of dict, the ground truths from all batch_y.
+        :return:
+        """
+        raise NotImplementedError
+
+
+class ClassifyEvaluator(Evaluator):
+    def __init__(self):
+        super(ClassifyEvaluator, self).__init__()
+
+    def __call__(self, predict, truth):
+        y_prob = [torch.nn.functional.softmax(y_logit, dim=-1) for y_logit in predict]
+        y_prob = torch.cat(y_prob, dim=0)
+        y_pred = torch.argmax(y_prob, dim=-1)
+        y_true = torch.cat(truth, dim=0)
+        acc = float(torch.sum(y_pred == y_true)) / len(y_true)
+        return {"accuracy": acc}
+
+
+class SeqLabelEvaluator(Evaluator):
+    def __init__(self):
+        super(SeqLabelEvaluator, self).__init__()
+
+    def __call__(self, predict, truth):
+        """
+
+        :param predict: list of List, the network outputs from all batches.
+        :param truth: list of dict, the ground truths from all batch_y.
+        :return accuracy:
+        """
+        truth = [item["truth"] for item in truth]
+        total_correct, total_count= 0., 0.
+        for x, y in zip(predict, truth):
+            mask = torch.Tensor(x).ge(1)
+            correct = torch.sum(torch.Tensor(x) * mask.float() == (y * mask.long()).float())
+            correct -= torch.sum(torch.Tensor(x).le(0))
+            total_correct += float(correct)
+            total_count += float(torch.sum(mask))
+        accuracy = total_correct / total_count
+        return {"accuracy": float(accuracy)}
+
+
 def _conver_numpy(x):
     """convert input data to numpy array
 

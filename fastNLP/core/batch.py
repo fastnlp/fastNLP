@@ -17,7 +17,7 @@ class Batch(object):
         :param dataset: a DataSet object
         :param batch_size: int, the size of the batch
         :param sampler: a Sampler object
-        :param use_cuda: bool, whetjher to use GPU
+        :param use_cuda: bool, whether to use GPU
 
         """
         self.dataset = dataset
@@ -37,15 +37,12 @@ class Batch(object):
         """
 
         :return batch_x: dict of (str: torch.LongTensor), which means (field name: tensor of shape [batch_size, padding_length])
-                         batch_x also contains an item (str: list of int) about origin lengths,
-                         which means ("field_name_origin_len": origin lengths).
                          E.g.
                          ::
                          {'text': tensor([[ 0,  1,  2,  3,  0,  0,  0], 4,  5,  2,  6,  7,  8,  9]]), 'text_origin_len': [4, 7]})
 
                 batch_y: dict of (str: torch.LongTensor), which means (field name: tensor of shape [batch_size, padding_length])
                 All tensors in both batch_x and batch_y will be cuda tensors if use_cuda is True.
-                The names of fields are defined in preprocessor's convert_to_dataset method.
 
         """
         if self.curidx >= len(self.idx_list):
@@ -54,10 +51,9 @@ class Batch(object):
             endidx = min(self.curidx + self.batch_size, len(self.idx_list))
             padding_length = {field_name: max(field_length[self.curidx: endidx])
                               for field_name, field_length in self.lengths.items()}
-            origin_lengths = {field_name: field_length[self.curidx: endidx]
-                              for field_name, field_length in self.lengths.items()}
-
             batch_x, batch_y = defaultdict(list), defaultdict(list)
+
+            # transform index to tensor and do padding for sequences
             for idx in range(self.curidx, endidx):
                 x, y = self.dataset.to_tensor(idx, padding_length)
                 for name, tensor in x.items():
@@ -65,8 +61,7 @@ class Batch(object):
                 for name, tensor in y.items():
                     batch_y[name].append(tensor)
 
-            batch_origin_length = {}
-            # combine instances into a batch
+            # combine instances to form a batch
             for batch in (batch_x, batch_y):
                 for name, tensor_list in batch.items():
                     if self.use_cuda:
@@ -74,14 +69,6 @@ class Batch(object):
                     else:
                         batch[name] = torch.stack(tensor_list, dim=0)
 
-            # add origin lengths in batch_x
-            for name, tensor in batch_x.items():
-                if self.use_cuda:
-                    batch_origin_length[name + "_origin_len"] = torch.LongTensor(origin_lengths[name]).cuda()
-                else:
-                    batch_origin_length[name + "_origin_len"] = torch.LongTensor(origin_lengths[name])
-            batch_x.update(batch_origin_length)
-
-            self.curidx += endidx
+            self.curidx = endidx
             return batch_x, batch_y
 

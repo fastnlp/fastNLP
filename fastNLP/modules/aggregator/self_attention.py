@@ -55,14 +55,13 @@ class SelfAttention(nn.Module):
         input = input.contiguous()
         size = input.size()  # [bsz, len, nhid]
 
-
         input_origin = input_origin.expand(self.attention_hops, -1, -1)  # [hops,baz, len]
-        input_origin = input_origin.transpose(0, 1).contiguous()         # [baz, hops,len]
+        input_origin = input_origin.transpose(0, 1).contiguous()  # [baz, hops,len]
 
-        y1 = self.tanh(self.ws1(self.drop(input)))                       # [baz,len,dim] -->[bsz,len, attention-unit]
-        attention = self.ws2(y1).transpose(1,2).contiguous()             # [bsz,len, attention-unit]--> [bsz, len, hop]--> [baz,hop,len]
+        y1 = self.tanh(self.ws1(self.drop(input)))  # [baz,len,dim] -->[bsz,len, attention-unit]
+        attention = self.ws2(y1).transpose(1,
+                                           2).contiguous()  # [bsz,len, attention-unit]--> [bsz, len, hop]--> [baz,hop,len]
 
         attention = attention + (-999999 * (input_origin == 0).float())  # remove the weight on padding token.
-        attention = F.softmax(attention,2)                               # [baz ,hop, len]
-        return torch.bmm(attention, input), self.penalization(attention) # output1 --> [baz ,hop ,nhid]
-
+        attention = F.softmax(attention, 2)  # [baz ,hop, len]
+        return torch.bmm(attention, input), self.penalization(attention)  # output1 --> [baz ,hop ,nhid]

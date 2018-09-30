@@ -8,6 +8,7 @@ from tensorboardX import SummaryWriter
 
 from fastNLP.core.batch import Batch
 from fastNLP.core.loss import Loss
+from fastNLP.core.metrics import Evaluator
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.sampler import RandomSampler
 from fastNLP.core.tester import SeqLabelTester, ClassificationTester
@@ -43,21 +44,20 @@ class Trainer(object):
         default_args = {"epochs": 1, "batch_size": 2, "validate": False, "use_cuda": False, "pickle_path": "./save/",
                         "save_best_dev": False, "model_name": "default_model_name.pkl", "print_every_step": 1,
                         "loss": Loss(None),  # used to pass type check
-                        "optimizer": Optimizer("Adam", lr=0.001, weight_decay=0)
+                        "optimizer": Optimizer("Adam", lr=0.001, weight_decay=0),
+                        "evaluator": Evaluator()
                         }
         """
             "required_args" is the collection of arguments that users must pass to Trainer explicitly. 
             This is used to warn users of essential settings in the training. 
             Specially, "required_args" does not have default value, so they have nothing to do with "default_args".
         """
-        required_args = {"task"  # one of ("seq_label", "text_classify")
-                         }
+        required_args = {}
 
         for req_key in required_args:
             if req_key not in kwargs:
                 logger.error("Trainer lacks argument {}".format(req_key))
                 raise ValueError("Trainer lacks argument {}".format(req_key))
-        self._task = kwargs["task"]
 
         for key in default_args:
             if key in kwargs:
@@ -86,6 +86,7 @@ class Trainer(object):
         self._loss_func = default_args["loss"].get()  # return a pytorch loss function or None
         self._optimizer = None
         self._optimizer_proto = default_args["optimizer"]
+        self._evaluator = default_args["evaluator"]
         self._summary_writer = SummaryWriter(self.pickle_path + 'tensorboard_logs')
         self._graph_summaried = False
         self._best_accuracy = 0.0
@@ -106,9 +107,8 @@ class Trainer(object):
 
         # define Tester over dev data
         if self.validate:
-            default_valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
-                                  "save_loss": True, "batch_size": self.batch_size, "pickle_path": self.pickle_path,
-                                  "use_cuda": self.use_cuda, "print_every_step": 0}
+            default_valid_args = {"batch_size": self.batch_size, "pickle_path": self.pickle_path,
+                                  "use_cuda": self.use_cuda, "evaluator": self._evaluator}
             validator = self._create_validator(default_valid_args)
             logger.info("validator defined as {}".format(str(validator)))
 
@@ -229,18 +229,9 @@ class Trainer(object):
         self._optimizer.step()
 
     def data_forward(self, network, x):
-        if self._task == "seq_label":
-            y = network(x["word_seq"], x["word_seq_origin_len"])
-        elif self._task == "text_classify":
-            y = network(x["word_seq"])
-        else:
-            raise NotImplementedError("Unknown task type {}.".format(self._task))
-
+        y = network(**x)
         if not self._graph_summaried:
-            if self._task == "seq_label":
-                self._summary_writer.add_graph(network, (x["word_seq"], x["word_seq_origin_len"]), verbose=False)
-            elif self._task == "text_classify":
-                self._summary_writer.add_graph(network, x["word_seq"], verbose=False)
+            # self._summary_writer.add_graph(network, x, verbose=False)
             self._graph_summaried = True
         return y
 
@@ -261,13 +252,9 @@ class Trainer(object):
         :param truth: ground truth label vector
         :return: a scalar
         """
-        if "label_seq" in truth:
-            truth = truth["label_seq"]
-        elif "label" in truth:
-            truth = truth["label"]
-            truth = truth.view((-1,))
-        else:
-            raise NotImplementedError("Unknown key {} in batch_y.".format(truth.keys()))
+        if len(truth) > 1:
+            raise NotImplementedError("Not ready to handle multi-labels.")
+        truth = list(truth.values())[0] if len(truth) > 0 else None
         return self._loss_func(predict, truth)
 
     def define_loss(self):
@@ -278,8 +265,8 @@ class Trainer(object):
         These two losses cannot be defined at the same time.
         Trainer does not handle loss definition or choose default losses.
         """
-        if hasattr(self._model, "loss") and self._loss_func is not None:
-            raise ValueError("Both the model and Trainer define loss. Please take out your loss.")
+        # if hasattr(self._model, "loss") and self._loss_func is not None:
+        #    raise ValueError("Both the model and Trainer define loss. Please take out your loss.")
 
         if hasattr(self._model, "loss"):
             self._loss_func = self._model.loss
@@ -322,9 +309,8 @@ class SeqLabelTrainer(Trainer):
 
     """
     def __init__(self, **kwargs):
-        kwargs.update({"task": "seq_label"})
         print(
-            "[FastNLP Warning] SeqLabelTrainer will be deprecated. Please use Trainer with argument 'task'='seq_label'.")
+            "[FastNLP Warning] SeqLabelTrainer will be deprecated. Please use Trainer directly.")
         super(SeqLabelTrainer, self).__init__(**kwargs)
 
     def _create_validator(self, valid_args):
@@ -335,9 +321,8 @@ class ClassificationTrainer(Trainer):
     """Trainer for text classification."""
 
     def __init__(self, **train_args):
-        train_args.update({"task": "text_classify"})
         print(
-            "[FastNLP Warning] ClassificationTrainer will be deprecated. Please use Trainer with argument 'task'='text_classify'.")
+            "[FastNLP Warning] ClassificationTrainer will be deprecated. Please use Trainer directly.")
         super(ClassificationTrainer, self).__init__(**train_args)
 
     def _create_validator(self, valid_args):

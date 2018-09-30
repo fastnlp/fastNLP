@@ -33,10 +33,25 @@ class Loss(object):
         """Given a name of a loss function, return it from PyTorch.
 
         :param loss_name: str, the name of a loss function
+
+                - cross_entropy: combines log softmax and nll loss in a single function.
+                - nll: negative log likelihood
+
         :return loss: a PyTorch loss
         """
+
+        class InnerCrossEntropy:
+            """A simple wrapper to guarantee input shapes."""
+
+            def __init__(self):
+                self.f = torch.nn.CrossEntropyLoss()
+
+            def __call__(self, predict, truth):
+                truth = truth.view(-1, )
+                return self.f(predict, truth)
+
         if loss_name == "cross_entropy":
-            return torch.nn.CrossEntropyLoss()
+            return InnerCrossEntropy()
         elif loss_name == 'nll':
             return torch.nn.NLLLoss()
         else:

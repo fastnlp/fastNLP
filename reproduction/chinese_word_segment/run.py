@@ -5,7 +5,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.core.trainer import SeqLabelTrainer
-from fastNLP.loader.dataset_loader import TokenizeDatasetLoader, BaseLoader
+from fastNLP.loader.dataset_loader import TokenizeDataSetLoader, BaseLoader
 from fastNLP.core.preprocess import SeqLabelPreprocess, load_pickle
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
@@ -66,8 +66,8 @@ def train():
     ConfigLoader("good_path").load_config(cfgfile, {"train": train_args, "test": test_args})
 
     # Data Loader
-    loader = TokenizeDatasetLoader(cws_data_path)
-    train_data = loader.load_pku()
+    loader = TokenizeDataSetLoader()
+    train_data = loader.load()
 
     # Preprocessor
     preprocessor = SeqLabelPreprocess()
