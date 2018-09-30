@@ -126,12 +126,14 @@ class Vocabulary(object):
         """
         return self[w]
 
+    @property
     @check_build_vocab
     def unknown_idx(self):
         if self.unknown_label is None:
             return None
         return self.word2idx[self.unknown_label]
 
+    @property
     @check_build_vocab
     def padding_idx(self):
         if self.padding_label is None:
