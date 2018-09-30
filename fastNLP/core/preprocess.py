@@ -18,6 +18,9 @@ def save_pickle(obj, pickle_path, file_name):
     :param pickle_path: str, the directory where the pickle file is to be saved
     :param file_name: str, the name of the pickle file. In general, it should be ended by "pkl".
     """
+    if not os.path.exists(pickle_path):
+        os.mkdir(pickle_path)
+        print("make dir {} before saving pickle file".format(pickle_path))
     with open(os.path.join(pickle_path, file_name), "wb") as f:
         _pickle.dump(obj, f)
     print("{} saved in {}".format(file_name, pickle_path))

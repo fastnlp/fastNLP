@@ -38,14 +38,19 @@ class SeqLabelEvaluator(Evaluator):
     def __call__(self, predict, truth):
         """
 
-        :param predict: list of tensors, the network outputs from all batches.
+        :param predict: list of List, the network outputs from all batches.
         :param truth: list of dict, the ground truths from all batch_y.
         :return accuracy:
         """
         truth = [item["truth"] for item in truth]
-        truth = torch.cat(truth).view(-1, )
-        results = torch.Tensor(predict).view(-1, )
-        accuracy = torch.sum(results.to(truth) == truth).to(torch.float) / results.shape[0]
+        total_correct, total_count= 0., 0.
+        for x, y in zip(predict, truth):
+            mask = torch.Tensor(x).ge(1)
+            correct = torch.sum(torch.Tensor(x) * mask.float() == (y * mask.long()).float())
+            correct -= torch.sum(torch.Tensor(x).le(0))
+            total_correct += float(correct)
+            total_count += float(torch.sum(mask))
+        accuracy = total_correct / total_count
         return {"accuracy": float(accuracy)}
 
 

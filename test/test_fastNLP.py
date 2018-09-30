@@ -54,7 +54,7 @@ def mock_cws():
     class2id = Vocabulary(need_default=False)
     label_list = ['B', 'M', 'E', 'S']
     class2id.update(label_list)
-    save_pickle(class2id, "./mock/", "class2id.pkl")
+    save_pickle(class2id, "./mock/", "label2id.pkl")
 
     model_args = {"vocab_size": len(word2id), "word_emb_dim": 50, "rnn_hidden_units": 50, "num_classes": len(class2id)}
     config_file = """
@@ -115,7 +115,7 @@ def mock_pos_tag():
     idx2label = Vocabulary(need_default=False)
     label_list = ['B-n', 'M-v', 'E-nv', 'S-adj', 'B-v', 'M-vn', 'S-adv']
     idx2label.update(label_list)
-    save_pickle(idx2label, "./mock/", "class2id.pkl")
+    save_pickle(idx2label, "./mock/", "label2id.pkl")
 
     model_args = {"vocab_size": len(vocab), "word_emb_dim": 50, "rnn_hidden_units": 50, "num_classes": len(idx2label)}
     config_file = """
@@ -163,7 +163,7 @@ def mock_text_classify():
     idx2label = Vocabulary(need_default=False)
     label_list = ['class_A', 'class_B', 'class_C', 'class_D', 'class_E', 'class_F']
     idx2label.update(label_list)
-    save_pickle(idx2label, "./mock/", "class2id.pkl")
+    save_pickle(idx2label, "./mock/", "label2id.pkl")
 
     model_args = {"vocab_size": len(vocab), "word_emb_dim": 50, "rnn_hidden_units": 50, "num_classes": len(idx2label)}
     config_file = """

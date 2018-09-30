@@ -69,6 +69,6 @@ class Batch(object):
                     else:
                         batch[name] = torch.stack(tensor_list, dim=0)
 
-            self.curidx += endidx
+            self.curidx = endidx
             return batch_x, batch_y
 

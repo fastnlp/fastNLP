@@ -43,8 +43,10 @@ class TestCase1(unittest.TestCase):
 
         # use batch to iterate dataset
         data_iterator = Batch(data, 2, SeqSampler(), False)
+        total_data = 0
         for batch_x, batch_y in data_iterator:
-            self.assertEqual(len(batch_x), 2)
+            total_data += batch_x["text"].size(0)
+            self.assertTrue(batch_x["text"].size(0) == 2 or total_data == len(raw_texts))
             self.assertTrue(isinstance(batch_x, dict))
             self.assertTrue(isinstance(batch_x["text"], torch.LongTensor))
             self.assertTrue(isinstance(batch_y, dict))

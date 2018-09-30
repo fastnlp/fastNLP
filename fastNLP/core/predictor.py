@@ -34,7 +34,7 @@ class Predictor(object):
         """Perform inference using the trained model.
 
         :param network: a PyTorch model (cpu)
-        :param data: list of list of strings, [num_examples, seq_len]
+        :param data: a DataSet object.
         :return: list of list of strings, [num_examples, tag_seq_length]
         """
         # transform strings into DataSet object

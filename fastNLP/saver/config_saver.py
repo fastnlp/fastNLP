@@ -18,7 +18,7 @@ class ConfigSaver(object):
         :return: The section.
         """
         sect = ConfigSection()
-        ConfigLoader(self.file_path).load_config(self.file_path, {sect_name: sect})
+        ConfigLoader().load_config(self.file_path, {sect_name: sect})
         return sect
 
     def _read_section(self):

@@ -144,6 +144,15 @@ class DataSet(list):
             else:
                 self.convert(raw_data)
 
+    def load_raw(self, raw_data, vocabs):
+        """
+
+        :param raw_data:
+        :param vocabs:
+        :return:
+        """
+        self.convert_for_infer(raw_data, vocabs)
+
     def split(self, ratio, shuffle=True):
         """Train/dev splitting
 

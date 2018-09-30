@@ -13,10 +13,10 @@ from fastNLP.models.sequence_modeling import SeqLabeling
 from fastNLP.saver.model_saver import ModelSaver
 
 data_name = "pku_training.utf8"
-cws_data_path = "test/data_for_tests/cws_pku_utf_8"
+cws_data_path = "./test/data_for_tests/cws_pku_utf_8"
 pickle_path = "./save/"
-data_infer_path = "test/data_for_tests/people_infer.txt"
-config_path = "test/data_for_tests/config"
+data_infer_path = "./test/data_for_tests/people_infer.txt"
+config_path = "./test/data_for_tests/config"
 
 def infer():
     # Load infer configuration, the same as test

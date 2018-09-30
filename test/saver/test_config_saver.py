@@ -21,7 +21,7 @@ class TestConfigSaver(unittest.TestCase):
 
         standard_section = ConfigSection()
         t_section = ConfigSection()
-        ConfigLoader(config_file_path).load_config(config_file_path, {"test": standard_section, "t": t_section})
+        ConfigLoader().load_config(config_file_path, {"test": standard_section, "t": t_section})
 
         config_saver = ConfigSaver(config_file_path)
 
@@ -48,11 +48,11 @@ class TestConfigSaver(unittest.TestCase):
         one_another_test_section = ConfigSection()
         a_test_case_2_section = ConfigSection()
 
-        ConfigLoader(config_file_path).load_config(config_file_path, {"test": test_section,
-                                                                      "another-test": another_test_section,
-                                                                      "t": at_section,
-                                                                      "one-another-test": one_another_test_section,
-                                                                      "test-case-2": a_test_case_2_section})
+        ConfigLoader().load_config(config_file_path, {"test": test_section,
+                                                      "another-test": another_test_section,
+                                                      "t": at_section,
+                                                      "one-another-test": one_another_test_section,
+                                                      "test-case-2": a_test_case_2_section})
 
         assert test_section == standard_section
         assert at_section == t_section
