@@ -3,12 +3,14 @@ class BaseLoader(object):
     def __init__(self):
         super(BaseLoader, self).__init__()
 
-    def load_lines(self, data_path):
+    @staticmethod
+    def load_lines(data_path):
         with open(data_path, "r", encoding="utf=8") as f:
             text = f.readlines()
         return [line.strip() for line in text]
 
-    def load(self, data_path):
+    @staticmethod
+    def load(data_path):
         with open(data_path, "r", encoding="utf-8") as f:
             text = f.readlines()
         return [[word for word in sent.strip()] for sent in text]

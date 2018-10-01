@@ -40,7 +40,7 @@ def infer():
     print("vocabulary size:", len(word_vocab))
     print("number of classes:", len(label_vocab))
 
-    infer_data = TextClassifyDataSet(loader=ClassDataSetLoader())
+    infer_data = TextClassifyDataSet(load_func=ClassDataSetLoader.load)
     infer_data.load(train_data_dir, vocabs={"word_vocab": word_vocab, "label_vocab": label_vocab})
 
     model_args = ConfigSection()
@@ -67,7 +67,7 @@ def train():
 
     # load dataset
     print("Loading data...")
-    data = TextClassifyDataSet(loader=ClassDataSetLoader())
+    data = TextClassifyDataSet(load_func=ClassDataSetLoader.load)
     data.load(train_data_dir)
 
     print("vocabulary size:", len(data.word_vocab))

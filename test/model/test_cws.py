@@ -37,7 +37,7 @@ def infer():
     print("model loaded!")
 
     # Load infer data
-    infer_data = SeqLabelDataSet(loader=BaseLoader())
+    infer_data = SeqLabelDataSet(load_func=BaseLoader.load)
     infer_data.load(data_infer_path, vocabs={"word_vocab": word2index}, infer=True)
 
     # inference
@@ -52,7 +52,7 @@ def train_test():
     ConfigLoader().load_config(config_path, {"POS_infer": train_args})
 
     # define dataset
-    data_train = SeqLabelDataSet(loader=TokenizeDataSetLoader())
+    data_train = SeqLabelDataSet(load_func=TokenizeDataSetLoader.load)
     data_train.load(cws_data_path)
     train_args["vocab_size"] = len(data_train.word_vocab)
     train_args["num_classes"] = len(data_train.label_vocab)

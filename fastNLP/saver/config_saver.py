@@ -104,7 +104,8 @@ class ConfigSaver(object):
         :return:
         """
         section_file = self._get_section(section_name)
-        if len(section_file.__dict__.keys()) == 0:#the section not in file before
+        if len(section_file.__dict__.keys()) == 0:  # the section not in the file before
+            # append this section to config file
             with open(self.file_path, 'a') as f:
                 f.write('[' + section_name + ']\n')
                 for k in section.__dict__.keys():
@@ -114,9 +115,11 @@ class ConfigSaver(object):
                     else:
                         f.write(str(section[k]) + '\n\n')
         else:
+            # the section exists
             change_file = False
             for k in section.__dict__.keys():
                 if k not in section_file:
+                    # find a new key in this section
                     change_file = True
                     break
                 if section_file[k] != section[k]:

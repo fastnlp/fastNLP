@@ -53,7 +53,7 @@ def infer():
     print("model loaded!")
 
     # Data Loader
-    infer_data = SeqLabelDataSet(loader=BaseLoader())
+    infer_data = SeqLabelDataSet(load_func=BaseLoader.load)
     infer_data.load(data_infer_path, vocabs={"word_vocab": word_vocab, "label_vocab": label_vocab}, infer=True)
     print("data set prepared")
 

@@ -84,7 +84,8 @@ class TokenizeDataSetLoader(DataSetLoader):
     def __init__(self):
         super(TokenizeDataSetLoader, self).__init__()
 
-    def load(self, data_path, max_seq_len=32):
+    @staticmethod
+    def load(data_path, max_seq_len=32):
         """
         load pku dataset for Chinese word segmentation
         CWS (Chinese Word Segmentation) pku training dataset format:

@@ -1,11 +1,10 @@
 import os
 
+from fastNLP.core.dataset import SeqLabelDataSet, TextClassifyDataSet
 from fastNLP.core.predictor import SeqLabelInfer, ClassificationInfer
 from fastNLP.core.preprocess import load_pickle
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.loader.model_loader import ModelLoader
-from fastNLP.core.dataset import SeqLabelDataSet, TextClassifyDataSet
-
 
 """
 mapping from model name to [URL, file_name.class_name, model_pickle_name]
@@ -73,7 +72,7 @@ class FastNLP(object):
         :param model_dir: this directory should contain the following files:
             1. a trained model
             2. a config file, which is a fastNLP's configuration.
-            3. a Vocab file, which is a pickle object of a Vocab instance.
+            3. two Vocab files, which are pickle objects of Vocab instances, representing feature and label vocabs.
         """
         self.model_dir = model_dir
         self.model = None
@@ -192,7 +191,7 @@ class FastNLP(object):
 
 
     def _load(self, model_dir, model_name):
-        # To do
+
         return 0
 
     def _download(self, model_name, url):
@@ -202,7 +201,7 @@ class FastNLP(object):
         :param url:
         """
         print("Downloading {} from {}".format(model_name, url))
-        # To do
+        # TODO: download model via url
 
     def model_exist(self, model_dir):
         """

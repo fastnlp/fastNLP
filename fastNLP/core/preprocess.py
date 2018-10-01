@@ -78,6 +78,7 @@ class Preprocessor(object):
                 is only available when label_is_seq is True. Default: False.
         :param add_char_field: bool, whether to add character representations to all TextFields. Default: False.
         """
+        print("Preprocessor is about to deprecate. Please use DataSet class.")
         self.data_vocab = Vocabulary()
         if label_is_seq is True:
             if share_vocab is True:
@@ -307,11 +308,3 @@ class ClassPreprocess(Preprocessor):
         print("[FastNLP warning] ClassPreprocess is about to deprecate. Please use Preprocess directly.")
         super(ClassPreprocess, self).__init__()
 
-
-if __name__ == "__main__":
-    p = Preprocessor()
-    train_dev_data = [[["I", "am", "a", "good", "student", "."], "0"],
-                      [["You", "are", "pretty", "."], "1"]
-                      ]
-    training_set = p.run(train_dev_data)
-    print(training_set)

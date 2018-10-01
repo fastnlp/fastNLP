@@ -196,30 +196,3 @@ class BiAffine(nn.Module):
             output = output * mask_d.unsqueeze(1).unsqueeze(3) * mask_e.unsqueeze(1).unsqueeze(2)
 
         return output
-
-
-class Transpose(nn.Module):
-    def __init__(self, x, y):
-        super(Transpose, self).__init__()
-        self.x = x
-        self.y = y
-
-    def forward(self, x):
-        return x.transpose(self.x, self.y)
-
-
-class WordDropout(nn.Module):
-    def __init__(self, dropout_rate, drop_to_token):
-        super(WordDropout, self).__init__()
-        self.dropout_rate = dropout_rate
-        self.drop_to_token = drop_to_token
-
-    def forward(self, word_idx):
-        if not self.training:
-            return word_idx
-        drop_mask = torch.rand(word_idx.shape) < self.dropout_rate
-        if word_idx.device.type == 'cuda':
-            drop_mask = drop_mask.cuda()
-        drop_mask = drop_mask.long()
-        output = drop_mask * self.drop_to_token + (1 - drop_mask) * word_idx
-        return output

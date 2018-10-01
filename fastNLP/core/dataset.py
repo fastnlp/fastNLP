@@ -70,18 +70,18 @@ class DataSet(list):
 
     """
 
-    def __init__(self, name="", instances=None, loader=None):
+    def __init__(self, name="", instances=None, load_func=None):
         """
 
         :param name: str, the name of the dataset. (default: "")
         :param instances: list of Instance objects. (default: None)
-
+        :param load_func: a function that takes the dataset path (string) as input and returns multi-level lists.
         """
         list.__init__([])
         self.name = name
         if instances is not None:
             self.extend(instances)
-        self.dataset_loader = loader
+        self.data_set_load_func = load_func
 
     def index_all(self, vocab):
         for ins in self:
@@ -117,15 +117,15 @@ class DataSet(list):
         return lengths
 
     def convert(self, data):
-        """Convert lists of strings into Instances with Fields"""
+        """Convert lists of strings into Instances with Fields, creating Vocabulary for labeled data. Used in Training."""
         raise NotImplementedError
 
     def convert_with_vocabs(self, data, vocabs):
-        """Convert lists of strings into Instances with Fields, using existing Vocabulary. Useful in predicting."""
+        """Convert lists of strings into Instances with Fields, using existing Vocabulary, with labels. Used in Testing."""
         raise NotImplementedError
 
     def convert_for_infer(self, data, vocabs):
-        """Convert lists of strings into Instances with Fields."""
+        """Convert lists of strings into Instances with Fields, using existing Vocabulary, without labels. Used in predicting."""
 
     def load(self, data_path, vocabs=None, infer=False):
         """Load data from the given files.
@@ -135,7 +135,7 @@ class DataSet(list):
         :param vocabs: dict of (name: Vocabulary object), used to index data. If not provided, a new vocabulary will be constructed.
 
         """
-        raw_data = self.dataset_loader.load(data_path)
+        raw_data = self.data_set_load_func(data_path)
         if infer is True:
             self.convert_for_infer(raw_data, vocabs)
         else:
@@ -145,7 +145,7 @@ class DataSet(list):
                 self.convert(raw_data)
 
     def load_raw(self, raw_data, vocabs):
-        """
+        """Load raw data without loader. Used in FastNLP class.
 
         :param raw_data:
         :param vocabs:
@@ -174,8 +174,8 @@ class DataSet(list):
 
 
 class SeqLabelDataSet(DataSet):
-    def __init__(self, instances=None, loader=POSDataSetLoader()):
-        super(SeqLabelDataSet, self).__init__(name="", instances=instances, loader=loader)
+    def __init__(self, instances=None, load_func=POSDataSetLoader().load):
+        super(SeqLabelDataSet, self).__init__(name="", instances=instances, load_func=load_func)
         self.word_vocab = Vocabulary()
         self.label_vocab = Vocabulary()
 
@@ -231,8 +231,8 @@ class SeqLabelDataSet(DataSet):
 
 
 class TextClassifyDataSet(DataSet):
-    def __init__(self, instances=None, loader=ClassDataSetLoader()):
-        super(TextClassifyDataSet, self).__init__(name="", instances=instances, loader=loader)
+    def __init__(self, instances=None, load_func=ClassDataSetLoader().load):
+        super(TextClassifyDataSet, self).__init__(name="", instances=instances, load_func=load_func)
         self.word_vocab = Vocabulary()
         self.label_vocab = Vocabulary(need_default=False)
 
@@ -285,10 +285,3 @@ def change_field_is_target(data_set, field_name, new_target):
     for inst in data_set:
         inst.fields[field_name].is_target = new_target
 
-
-if __name__ == "__main__":
-    data_set = SeqLabelDataSet()
-    data_set.load("../../test/data_for_tests/people.txt")
-    a, b = data_set.split(0.3)
-    print(type(data_set), type(a), type(b))
-    print(len(data_set), len(a), len(b))

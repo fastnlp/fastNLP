@@ -1,4 +1,3 @@
-import copy
 import os
 import time
 from datetime import timedelta
@@ -177,31 +176,6 @@ class Trainer(object):
                 print(print_output)
                 logger.info(print_output)
             step += 1
-
-    def cross_validate(self, network, train_data_cv, dev_data_cv):
-        """Training with cross validation.
-
-        :param network: the model
-        :param train_data_cv: four-level list, of shape [num_folds, num_examples, 2, ?]
-        :param dev_data_cv: four-level list, of shape [num_folds, num_examples, 2, ?]
-
-        """
-        if len(train_data_cv) != len(dev_data_cv):
-            logger.error("the number of folds in train and dev data unequals {}!={}".format(len(train_data_cv),
-                                                                                            len(dev_data_cv)))
-            raise RuntimeError("the number of folds in train and dev data unequals")
-        if self.validate is False:
-            logger.warn("Cross validation requires self.validate to be True. Please turn it on. ")
-            print("[warning] Cross validation requires self.validate to be True. Please turn it on. ")
-            self.validate = True
-
-        n_fold = len(train_data_cv)
-        logger.info("perform {} folds cross validation.".format(n_fold))
-        for i in range(n_fold):
-            print("CV:", i)
-            logger.info("running the {} of {} folds cross validation".format(i + 1, n_fold))
-            network_copy = copy.deepcopy(network)
-            self.train(network_copy, train_data_cv[i], dev_data_cv[i])
 
     def mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.

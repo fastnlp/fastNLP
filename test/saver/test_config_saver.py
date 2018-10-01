@@ -1,8 +1,5 @@
 import os
-
 import unittest
-import configparser
-import json
 
 from fastNLP.loader.config_loader import ConfigSection, ConfigLoader
 from fastNLP.saver.config_saver import ConfigSaver
@@ -10,7 +7,7 @@ from fastNLP.saver.config_saver import ConfigSaver
 
 class TestConfigSaver(unittest.TestCase):
     def test_case_1(self):
-        config_file_dir = "./test/loader/"
+        config_file_dir = "test/loader/"
         config_file_name = "config"
         config_file_path = os.path.join(config_file_dir, config_file_name)
 
@@ -80,3 +77,37 @@ class TestConfigSaver(unittest.TestCase):
             tmp_config_saver = ConfigSaver("file-NOT-exist")
         except Exception as e:
             pass
+
+    def test_case_2(self):
+        config = "[section_A]\n[section_B]\n"
+
+        with open("./test.cfg", "w", encoding="utf-8") as f:
+            f.write(config)
+        saver = ConfigSaver("./test.cfg")
+
+        section = ConfigSection()
+        section["doubles"] = 0.8
+        section["tt"] = [1, 2, 3]
+        section["test"] = 105
+        section["str"] = "this is a str"
+
+        saver.save_config_file("section_A", section)
+
+        os.system("rm ./test.cfg")
+
+    def test_case_3(self):
+        config = "[section_A]\ndoubles = 0.9\ntt = [1, 2, 3]\n[section_B]\n"
+
+        with open("./test.cfg", "w", encoding="utf-8") as f:
+            f.write(config)
+        saver = ConfigSaver("./test.cfg")
+
+        section = ConfigSection()
+        section["doubles"] = 0.8
+        section["tt"] = [1, 2, 3]
+        section["test"] = 105
+        section["str"] = "this is a str"
+
+        saver.save_config_file("section_A", section)
+
+        os.system("rm ./test.cfg")
