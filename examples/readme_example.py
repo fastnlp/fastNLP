@@ -3,7 +3,7 @@ from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.predictor import ClassificationInfer
 from fastNLP.core.preprocess import ClassPreprocess
 from fastNLP.core.trainer import ClassificationTrainer
-from fastNLP.loader.dataset_loader import ClassDatasetLoader
+from fastNLP.loader.dataset_loader import ClassDataSetLoader
 from fastNLP.models.base_model import BaseModel
 from fastNLP.modules import aggregator
 from fastNLP.modules import decoder
@@ -36,7 +36,7 @@ data_dir = 'save/'  # directory to save data and model
 train_path = './data_for_tests/text_classify.txt'  # training set file
 
 # load dataset
-ds_loader = ClassDatasetLoader(train_path)
+ds_loader = ClassDataSetLoader()
 data = ds_loader.load()
 
 # pre-process dataset

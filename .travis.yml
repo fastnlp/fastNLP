@@ -5,7 +5,6 @@ python:
 install:
   - pip install --quiet -r requirements.txt
   - pip install pytest pytest-cov
-  - pip install -U scikit-learn
 # command to run tests
 script:
   - pytest --cov=./

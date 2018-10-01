@@ -1,10 +1,13 @@
 import os
 import unittest
 
+from fastNLP.core.dataset import TextClassifyDataSet, SeqLabelDataSet
 from fastNLP.core.predictor import Predictor
 from fastNLP.core.preprocess import save_pickle
-from fastNLP.models.sequence_modeling import SeqLabeling
 from fastNLP.core.vocabulary import Vocabulary
+from fastNLP.loader.base_loader import BaseLoader
+from fastNLP.models.cnn_text_classification import CNNText
+from fastNLP.models.sequence_modeling import SeqLabeling
 
 
 class TestPredictor(unittest.TestCase):
@@ -28,23 +31,44 @@ class TestPredictor(unittest.TestCase):
         vocab = Vocabulary()
         vocab.word2idx = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, '!': 5, '@': 6, '#': 7, '$': 8, '?': 9}
         class_vocab = Vocabulary()
-        class_vocab.word2idx = {"0":0, "1":1, "2":2, "3":3, "4":4}
+        class_vocab.word2idx = {"0": 0, "1": 1, "2": 2, "3": 3, "4": 4}
 
         os.system("mkdir save")
-        save_pickle(class_vocab, "./save/", "class2id.pkl")
+        save_pickle(class_vocab, "./save/", "label2id.pkl")
         save_pickle(vocab, "./save/", "word2id.pkl")
 
-        model = SeqLabeling(model_args)
-        predictor = Predictor("./save/", task="seq_label")
+        model = CNNText(model_args)
+        import fastNLP.core.predictor as pre
+        predictor = Predictor("./save/", pre.text_classify_post_processor)
 
-        results = predictor.predict(network=model, data=infer_data)
+        # Load infer data
+        infer_data_set = TextClassifyDataSet(load_func=BaseLoader.load)
+        infer_data_set.convert_for_infer(infer_data, vocabs={"word_vocab": vocab.word2idx})
+
+        results = predictor.predict(network=model, data=infer_data_set)
 
         self.assertTrue(isinstance(results, list))
         self.assertGreater(len(results), 0)
+        self.assertEqual(len(results), len(infer_data))
         for res in results:
+            self.assertTrue(isinstance(res, str))
+            self.assertTrue(res in class_vocab.word2idx)
+
+        del model, predictor, infer_data_set
+
+        model = SeqLabeling(model_args)
+        predictor = Predictor("./save/", pre.seq_label_post_processor)
+
+        infer_data_set = SeqLabelDataSet(load_func=BaseLoader.load)
+        infer_data_set.convert_for_infer(infer_data, vocabs={"word_vocab": vocab.word2idx})
+
+        results = predictor.predict(network=model, data=infer_data_set)
+        self.assertTrue(isinstance(results, list))
+        self.assertEqual(len(results), len(infer_data))
+        for i in range(len(infer_data)):
+            res = results[i]
             self.assertTrue(isinstance(res, list))
-            self.assertEqual(len(res), 5)
-            self.assertTrue(isinstance(res[0], str))
+            self.assertEqual(len(res), len(infer_data[i]))
 
         os.system("rm -rf save")
         print("pickle path deleted")

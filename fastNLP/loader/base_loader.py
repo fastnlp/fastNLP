@@ -1,27 +1,24 @@
 class BaseLoader(object):
-    """docstring for BaseLoader"""
 
-    def __init__(self, data_path):
+    def __init__(self):
         super(BaseLoader, self).__init__()
-        self.data_path = data_path
 
-    def load(self):
-        """
-        :return: string
-        """
-        with open(self.data_path, "r", encoding="utf-8") as f:
-            text = f.read()
-        return text
-
-    def load_lines(self):
-        with open(self.data_path, "r", encoding="utf=8") as f:
+    @staticmethod
+    def load_lines(data_path):
+        with open(data_path, "r", encoding="utf=8") as f:
             text = f.readlines()
         return [line.strip() for line in text]
+
+    @staticmethod
+    def load(data_path):
+        with open(data_path, "r", encoding="utf-8") as f:
+            text = f.readlines()
+        return [[word for word in sent.strip()] for sent in text]
 
 
 class ToyLoader0(BaseLoader):
     """
-        For charLM
+        For CharLM
     """
 
     def __init__(self, data_path):

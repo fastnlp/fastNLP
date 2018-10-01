@@ -1,5 +1,6 @@
 import os
 
+from fastNLP.core.dataset import SeqLabelDataSet, TextClassifyDataSet
 from fastNLP.core.predictor import SeqLabelInfer, ClassificationInfer
 from fastNLP.core.preprocess import load_pickle
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
@@ -71,11 +72,13 @@ class FastNLP(object):
         :param model_dir: this directory should contain the following files:
             1. a trained model
             2. a config file, which is a fastNLP's configuration.
-            3. a Vocab file, which is a pickle object of a Vocab instance.
+            3. two Vocab files, which are pickle objects of Vocab instances, representing feature and label vocabs.
         """
         self.model_dir = model_dir
         self.model = None
         self.infer_type = None  # "seq_label"/"text_class"
+        self.word_vocab = None
+        self.label_vocab = None
 
     def load(self, model_name, config_file="config", section_name="model"):
         """
@@ -100,10 +103,10 @@ class FastNLP(object):
         print("Restore model hyper-parameters {}".format(str(model_args.data)))
 
         # fetch dictionary size and number of labels from pickle files
-        word_vocab = load_pickle(self.model_dir, "word2id.pkl")
-        model_args["vocab_size"] = len(word_vocab)
-        label_vocab = load_pickle(self.model_dir, "class2id.pkl")
-        model_args["num_classes"] = len(label_vocab)
+        self.word_vocab = load_pickle(self.model_dir, "word2id.pkl")
+        model_args["vocab_size"] = len(self.word_vocab)
+        self.label_vocab = load_pickle(self.model_dir, "label2id.pkl")
+        model_args["num_classes"] = len(self.label_vocab)
 
         # Construct the model
         model = model_class(model_args)
@@ -130,8 +133,11 @@ class FastNLP(object):
         # tokenize: list of string ---> 2-D list of string
         infer_input = self.tokenize(raw_input, language="zh")
 
-        # 2-D list of string ---> 2-D list of tags
-        results = infer.predict(self.model, infer_input)
+        # create DataSet: 2-D list of strings ----> DataSet
+        infer_data = self._create_data_set(infer_input)
+
+        # DataSet ---> 2-D list of tags
+        results = infer.predict(self.model, infer_data)
 
         # 2-D list of tags ---> list of final answers
         outputs = self._make_output(results, infer_input)
@@ -154,6 +160,11 @@ class FastNLP(object):
         return module
 
     def _create_inference(self, model_dir):
+        """Specify which task to perform.
+
+        :param model_dir:
+        :return:
+        """
         if self.infer_type == "seq_label":
             return SeqLabelInfer(model_dir)
         elif self.infer_type == "text_class":
@@ -161,8 +172,26 @@ class FastNLP(object):
         else:
             raise ValueError("fail to create inference instance")
 
+    def _create_data_set(self, infer_input):
+        """Create a DataSet object given the raw inputs.
+
+        :param infer_input: 2-D lists of strings
+        :return data_set: a DataSet object
+        """
+        if self.infer_type == "seq_label":
+            data_set = SeqLabelDataSet()
+            data_set.load_raw(infer_input, {"word_vocab": self.word_vocab})
+            return data_set
+        elif self.infer_type == "text_class":
+            data_set = TextClassifyDataSet()
+            data_set.load_raw(infer_input, {"word_vocab": self.word_vocab})
+            return data_set
+        else:
+            raise RuntimeError("fail to make outputs with infer type {}".format(self.infer_type))
+
+
     def _load(self, model_dir, model_name):
-        # To do
+
         return 0
 
     def _download(self, model_name, url):
@@ -172,7 +201,7 @@ class FastNLP(object):
         :param url:
         """
         print("Downloading {} from {}".format(model_name, url))
-        # To do
+        # TODO: download model via url
 
     def model_exist(self, model_dir):
         """

@@ -59,6 +59,9 @@ class TextField(Field):
 
 
 class LabelField(Field):
+    """The Field representing a single label. Can be a string or integer.
+
+    """
     def __init__(self, label, is_target=True):
         super(LabelField, self).__init__(is_target)
         self.label = label
@@ -73,13 +76,14 @@ class LabelField(Field):
 
     def index(self, vocab):
         if self._index is None:
-            self._index = vocab[self.label]
+            if isinstance(self.label, str):
+                self._index = vocab[self.label]
         return self._index
 
     def to_tensor(self, padding_length):
         if self._index is None:
             if isinstance(self.label, int):
-                return torch.LongTensor([self.label])
+                return torch.tensor(self.label)
             elif isinstance(self.label, str):
                 raise RuntimeError("Field {} not indexed. Call index method.".format(self.label))
             else:

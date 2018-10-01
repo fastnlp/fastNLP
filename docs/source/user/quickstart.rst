@@ -18,7 +18,7 @@ pre-processing data, constructing model and training model.
    from fastNLP.modules import aggregation
    from fastNLP.modules import decoder
 
-   from fastNLP.loader.dataset_loader import ClassDatasetLoader
+   from fastNLP.loader.dataset_loader import ClassDataSetLoader
    from fastNLP.loader.preprocess import ClassPreprocess
    from fastNLP.core.trainer import ClassificationTrainer
    from fastNLP.core.inference import ClassificationInfer
@@ -50,7 +50,7 @@ pre-processing data, constructing model and training model.
    train_path = 'test/data_for_tests/text_classify.txt'  # training set file
 
    # load dataset
-   ds_loader = ClassDatasetLoader("train", train_path)
+   ds_loader = ClassDataSetLoader("train", train_path)
    data = ds_loader.load()
 
    # pre-process dataset

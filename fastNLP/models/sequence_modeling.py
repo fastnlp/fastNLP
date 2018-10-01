@@ -31,16 +31,18 @@ class SeqLabeling(BaseModel):
         num_classes = args["num_classes"]
 
         self.Embedding = encoder.embedding.Embedding(vocab_size, word_emb_dim)
-        self.Rnn = encoder.lstm.Lstm(word_emb_dim, hidden_dim)
+        self.Rnn = encoder.lstm.LSTM(word_emb_dim, hidden_dim)
         self.Linear = encoder.linear.Linear(hidden_dim, num_classes)
         self.Crf = decoder.CRF.ConditionalRandomField(num_classes)
         self.mask = None
 
-    def forward(self, word_seq, word_seq_origin_len):
+    def forward(self, word_seq, word_seq_origin_len, truth=None):
         """
         :param word_seq: LongTensor, [batch_size, mex_len]
         :param word_seq_origin_len: LongTensor, [batch_size,], the origin lengths of the sequences.
-        :return y: [batch_size, mex_len, tag_size]
+        :param truth: LongTensor, [batch_size, max_len]
+        :return y: If truth is None, return list of [decode path(list)]. Used in testing and predicting.
+                    If truth is not None, return loss, a scalar. Used in training.
         """
         self.mask = self.make_mask(word_seq, word_seq_origin_len)
 
@@ -50,9 +52,16 @@ class SeqLabeling(BaseModel):
         # [batch_size, max_len, hidden_size * direction]
         x = self.Linear(x)
         # [batch_size, max_len, num_classes]
-        return x
+        if truth is not None:
+            return self._internal_loss(x, truth)
+        else:
+            return self.decode(x)
 
     def loss(self, x, y):
+        """ Since the loss has been computed in forward(), this function simply returns x."""
+        return x
+
+    def _internal_loss(self, x, y):
         """
         Negative log likelihood loss.
         :param x: Tensor, [batch_size, max_len, tag_size]
@@ -74,12 +83,19 @@ class SeqLabeling(BaseModel):
         mask = mask.to(x)
         return mask
 
-    def prediction(self, x):
+    def decode(self, x, pad=True):
         """
         :param x: FloatTensor, [batch_size, max_len, tag_size]
+        :param pad: pad the output sequence to equal lengths
         :return prediction: list of [decode path(list)]
         """
+        max_len = x.shape[1]
         tag_seq = self.Crf.viterbi_decode(x, self.mask)
+        # pad prediction to equal length
+        if pad is True:
+            for pred in tag_seq:
+                if len(pred) < max_len:
+                    pred += [0] * (max_len - len(pred))
         return tag_seq
 
 
@@ -97,7 +113,7 @@ class AdvSeqLabel(SeqLabeling):
         num_classes = args["num_classes"]
 
         self.Embedding = encoder.embedding.Embedding(vocab_size, word_emb_dim, init_emb=emb)
-        self.Rnn = encoder.lstm.Lstm(word_emb_dim, hidden_dim, num_layers=3, dropout=0.3, bidirectional=True)
+        self.Rnn = encoder.lstm.LSTM(word_emb_dim, hidden_dim, num_layers=3, dropout=0.3, bidirectional=True)
         self.Linear1 = encoder.Linear(hidden_dim * 2, hidden_dim * 2 // 3)
         self.batch_norm = torch.nn.BatchNorm1d(hidden_dim * 2 // 3)
         self.relu = torch.nn.ReLU()
@@ -106,11 +122,12 @@ class AdvSeqLabel(SeqLabeling):
 
         self.Crf = decoder.CRF.ConditionalRandomField(num_classes)
 
-    def forward(self, word_seq, word_seq_origin_len):
+    def forward(self, word_seq, word_seq_origin_len, truth=None):
         """
         :param word_seq: LongTensor, [batch_size, mex_len]
         :param word_seq_origin_len: list of int.
-        :return y: [batch_size, mex_len, tag_size]
+        :param truth: LongTensor, [batch_size, max_len]
+        :return y:
         """
         self.mask = self.make_mask(word_seq, word_seq_origin_len)
 
@@ -129,4 +146,7 @@ class AdvSeqLabel(SeqLabeling):
         x = self.Linear2(x)
         x = x.view(batch_size, max_len, -1)
         # [batch_size, max_len, num_classes]
-        return x
+        if truth is not None:
+            return self._internal_loss(x, truth)
+        else:
+            return self.decode(x)
