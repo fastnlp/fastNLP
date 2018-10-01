@@ -141,15 +141,6 @@ class Trainer(object):
                 logger.info("validation started")
                 validator.test(network, dev_data)
 
-                if self.save_best_dev and self.best_eval_result(validator):
-                    self.save_model(network, self.model_name)
-                    print("Saved better model selected by validation.")
-                    logger.info("Saved better model selected by validation.")
-
-                valid_results = validator.show_metrics()
-                print("[epoch {}] {}".format(epoch, valid_results))
-                logger.info("[epoch {}] {}".format(epoch, valid_results))
-
     def _train_step(self, data_iterator, network, **kwargs):
         """Training process in one epoch.
 

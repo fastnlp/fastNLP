@@ -1,4 +1,5 @@
 import random
+import sys
 from collections import defaultdict
 from copy import deepcopy
 
@@ -184,6 +185,7 @@ class SeqLabelDataSet(DataSet):
 
         :param data: 3-level lists. Entries are strings.
         """
+        bar = ProgressBar(total=len(data))
         for example in data:
             word_seq, label_seq = example[0], example[1]
             # list, list
@@ -197,6 +199,7 @@ class SeqLabelDataSet(DataSet):
             instance.add_field("truth", y)
             instance.add_field("word_seq_origin_len", x_len)
             self.append(instance)
+            bar.move()
         self.index_field("word_seq", self.word_vocab)
         self.index_field("truth", self.label_vocab)
         # no need to index "word_seq_origin_len"
@@ -285,3 +288,19 @@ def change_field_is_target(data_set, field_name, new_target):
     for inst in data_set:
         inst.fields[field_name].is_target = new_target
 
+
+class ProgressBar:
+
+    def __init__(self, count=0, total=0, width=100):
+        self.count = count
+        self.total = total
+        self.width = width
+
+    def move(self):
+        self.count += 1
+        progress = self.width * self.count // self.total
+        sys.stdout.write('{0:3}/{1:3}: '.format(self.count, self.total))
+        sys.stdout.write('#' * progress + '-' * (self.width - progress) + '\r')
+        if progress == self.width:
+            sys.stdout.write('\n')
+        sys.stdout.flush()
