@@ -8,9 +8,9 @@ from fastNLP.loader.base_loader import BaseLoader
 class ConfigLoader(BaseLoader):
     """loader for configuration files"""
 
-    def __int__(self, data_name, data_path):
-        super(ConfigLoader, self).__init__(data_path)
-        self.config = self.parse(super(ConfigLoader, self).load())
+    def __int__(self, data_path):
+        super(ConfigLoader, self).__init__()
+        self.config = self.parse(super(ConfigLoader, self).load(data_path))
 
     @staticmethod
     def parse(string):

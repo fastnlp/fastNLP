@@ -30,77 +30,36 @@ Run the following commands to install fastNLP package.
 pip install fastNLP
 ```
 
-### Cloning From GitHub
-
-If you just want to use fastNLP, use:
-```shell
-git clone https://github.com/fastnlp/fastNLP
-cd fastNLP
-```
-
-### PyTorch Installation
-
-Visit the [PyTorch official website] for installation instructions based on your system. In general, you could use:
-```shell
-# using conda
-conda install pytorch torchvision -c pytorch
-# or using pip
-pip3 install torch torchvision
-```
-
-### TensorboardX Installation
-
-```shell
-pip3 install tensorboardX
-```
 
 ## Project Structure
 
-```
-FastNLP
-├── docs
-├── fastNLP
-│   ├── core
-│   │   ├── action.py
-│   │   ├── __init__.py
-│   │   ├── loss.py
-│   │   ├── metrics.py
-│   │   ├── optimizer.py
-│   │   ├── predictor.py
-│   │   ├── preprocess.py
-│   │   ├── README.md
-│   │   ├── tester.py
-│   │   └── trainer.py
-│   ├── fastnlp.py
-│   ├── __init__.py
-│   ├── loader
-│   │   ├── base_loader.py
-│   │   ├── config_loader.py
-│   │   ├── dataset_loader.py
-│   │   ├── embed_loader.py
-│   │   ├── __init__.py
-│   │   └── model_loader.py
-│   ├── models
-│   ├── modules
-│   │   ├── aggregation
-│   │   ├── decoder
-│   │   ├── encoder
-│   │   ├── __init__.py
-│   │   ├── interaction
-│   │   ├── other_modules.py
-│   │   └── utils.py
-│   └── saver
-├── LICENSE
-├── README.md
-├── reproduction
-├── requirements.txt
-├── setup.py
-└── test
-    ├── core
-    ├── data_for_tests
-    ├── __init__.py
-    ├── loader
-    ├── modules
-    └── readme_example.py
-
-```
+<table>
+<tr>
+    <td><b> fastNLP </b></td>
+    <td> an open-source NLP library </td>
+</tr>
+<tr>
+    <td><b> fastNLP.core </b></td>
+    <td> trainer, tester, predictor </td>
+</tr>
+<tr>
+    <td><b> fastNLP.loader </b></td>
+    <td> all kinds of loaders/readers </td>
+</tr>
+<tr>
+    <td><b> fastNLP.models </b></td>
+    <td> a collection of NLP models </td>
+</tr>
+<tr>
+    <td><b> fastNLP.modules </b></td>
+    <td> a collection of PyTorch sub-models/components/wheels </td>
+</tr>
+<tr>
+    <td><b> fastNLP.saver </b></td>
+    <td> all kinds of savers/writers </td>
+</tr>
+<tr>
+    <td><b> fastNLP.fastnlp </b></td>
+    <td> a high-level interface for prediction </td>
+</tr>
+</table>

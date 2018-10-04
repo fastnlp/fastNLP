@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from fastNLP.modules.other_modules import GroupNorm, LayerNormalization, BiLinear
+from fastNLP.modules.other_modules import GroupNorm, LayerNormalization, BiLinear, BiAffine
 
 
 class TestGroupNorm(unittest.TestCase):
@@ -27,3 +27,25 @@ class TestBiLinear(unittest.TestCase):
         y = bl(x_left, x_right)
         print(bl)
         bl2 = BiLinear(n_left=15, n_right=15, n_out=10, bias=True)
+
+
+class TestBiAffine(unittest.TestCase):
+    def test_case_1(self):
+        batch_size = 16
+        encoder_length = 21
+        decoder_length = 32
+        layer = BiAffine(10, 10, 25, biaffine=True)
+        decoder_input = torch.randn((batch_size, encoder_length, 10))
+        encoder_input = torch.randn((batch_size, decoder_length, 10))
+        y = layer(decoder_input, encoder_input)
+        self.assertEqual(tuple(y.shape), (batch_size, 25, encoder_length, decoder_length))
+
+    def test_case_2(self):
+        batch_size = 16
+        encoder_length = 21
+        decoder_length = 32
+        layer = BiAffine(10, 10, 25, biaffine=False)
+        decoder_input = torch.randn((batch_size, encoder_length, 10))
+        encoder_input = torch.randn((batch_size, decoder_length, 10))
+        y = layer(decoder_input, encoder_input)
+        self.assertEqual(tuple(y.shape), (batch_size, 25, encoder_length, 1))

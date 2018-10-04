@@ -1,11 +1,12 @@
 import os
 
+from fastNLP.core.dataset import SeqLabelDataSet, change_field_is_target
+from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.optimizer import Optimizer
-from fastNLP.core.preprocess import SeqLabelPreprocess
+from fastNLP.core.preprocess import save_pickle
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.loader.dataset_loader import POSDatasetLoader
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.models.sequence_modeling import SeqLabeling
 from fastNLP.saver.model_saver import ModelSaver
@@ -21,18 +22,17 @@ def test_training():
     # Config Loader
     trainer_args = ConfigSection()
     model_args = ConfigSection()
-    ConfigLoader("_").load_config(config_dir, {
+    ConfigLoader().load_config(config_dir, {
         "test_seq_label_trainer": trainer_args, "test_seq_label_model": model_args})
 
-    # Data Loader
-    pos_loader = POSDatasetLoader(data_path)
-    train_data = pos_loader.load_lines()
+    data_set = SeqLabelDataSet()
+    data_set.load(data_path)
+    data_train, data_dev = data_set.split(0.3, shuffle=True)
+    model_args["vocab_size"] = len(data_set.word_vocab)
+    model_args["num_classes"] = len(data_set.label_vocab)
 
-    # Preprocessor
-    p = SeqLabelPreprocess()
-    data_train, data_dev = p.run(train_data, pickle_path=pickle_path, train_dev_split=0.5)
-    model_args["vocab_size"] = p.vocab_size
-    model_args["num_classes"] = p.num_classes
+    save_pickle(data_set.word_vocab, pickle_path, "word2id.pkl")
+    save_pickle(data_set.label_vocab, pickle_path, "label2id.pkl")
 
     trainer = SeqLabelTrainer(
         epochs=trainer_args["epochs"],
@@ -55,7 +55,7 @@ def test_training():
     saver = ModelSaver(os.path.join(pickle_path, model_name))
     saver.save_pytorch(model)
 
-    del model, trainer, pos_loader
+    del model, trainer
 
     # Define the same model
     model = SeqLabeling(model_args)
@@ -65,21 +65,16 @@ def test_training():
 
     # Load test configuration
     tester_args = ConfigSection()
-    ConfigLoader("config.cfg").load_config(config_dir, {"test_seq_label_tester": tester_args})
+    ConfigLoader().load_config(config_dir, {"test_seq_label_tester": tester_args})
 
     # Tester
-    tester = SeqLabelTester(save_output=False,
-                            save_loss=True,
-                            save_best_dev=False,
-                            batch_size=4,
+    tester = SeqLabelTester(batch_size=4,
                             use_cuda=False,
                             pickle_path=pickle_path,
                             model_name="seq_label_in_test.pkl",
-                            print_every_step=1
+                            evaluator=SeqLabelEvaluator()
                             )
 
     # Start testing with validation data
+    change_field_is_target(data_dev, "truth", True)
     tester.test(model, data_dev)
-
-    loss, accuracy = tester.metrics
-    assert 0 < accuracy < 1

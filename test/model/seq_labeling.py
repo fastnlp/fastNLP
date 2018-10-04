@@ -4,14 +4,16 @@ sys.path.append("..")
 import argparse
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.core.trainer import SeqLabelTrainer
-from fastNLP.loader.dataset_loader import POSDatasetLoader, BaseLoader
-from fastNLP.core.preprocess import SeqLabelPreprocess, load_pickle
+from fastNLP.loader.dataset_loader import BaseLoader
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import SeqLabeling
 from fastNLP.core.predictor import SeqLabelInfer
 from fastNLP.core.optimizer import Optimizer
+from fastNLP.core.dataset import SeqLabelDataSet, change_field_is_target
+from fastNLP.core.metrics import SeqLabelEvaluator
+from fastNLP.core.preprocess import save_pickle, load_pickle
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--save", type=str, default="./seq_label/", help="path to save pickle files")
@@ -33,24 +35,27 @@ data_infer_path = args.infer
 def infer():
     # Load infer configuration, the same as test
     test_args = ConfigSection()
-    ConfigLoader("config.cfg").load_config(config_dir, {"POS_infer": test_args})
+    ConfigLoader().load_config(config_dir, {"POS_infer": test_args})
 
     # fetch dictionary size and number of labels from pickle files
-    word2index = load_pickle(pickle_path, "word2id.pkl")
-    test_args["vocab_size"] = len(word2index)
-    index2label = load_pickle(pickle_path, "class2id.pkl")
-    test_args["num_classes"] = len(index2label)
+    word_vocab = load_pickle(pickle_path, "word2id.pkl")
+    label_vocab = load_pickle(pickle_path, "label2id.pkl")
+    test_args["vocab_size"] = len(word_vocab)
+    test_args["num_classes"] = len(label_vocab)
+    print("vocabularies loaded")
 
     # Define the same model
     model = SeqLabeling(test_args)
+    print("model defined")
 
     # Dump trained parameters into the model
     ModelLoader.load_pytorch(model, os.path.join(pickle_path, model_name))
     print("model loaded!")
 
     # Data Loader
-    raw_data_loader = BaseLoader(data_infer_path)
-    infer_data = raw_data_loader.load_lines()
+    infer_data = SeqLabelDataSet(load_func=BaseLoader.load)
+    infer_data.load(data_infer_path, vocabs={"word_vocab": word_vocab, "label_vocab": label_vocab}, infer=True)
+    print("data set prepared")
 
     # Inference interface
     infer = SeqLabelInfer(pickle_path)
@@ -65,24 +70,18 @@ def train_and_test():
     # Config Loader
     trainer_args = ConfigSection()
     model_args = ConfigSection()
-    ConfigLoader("config.cfg").load_config(config_dir, {
+    ConfigLoader().load_config(config_dir, {
         "test_seq_label_trainer": trainer_args, "test_seq_label_model": model_args})
 
-    # Data Loader
-    pos_loader = POSDatasetLoader(data_path)
-    train_data = pos_loader.load_lines()
+    data_set = SeqLabelDataSet()
+    data_set.load(data_path)
+    train_set, dev_set = data_set.split(0.3, shuffle=True)
+    model_args["vocab_size"] = len(data_set.word_vocab)
+    model_args["num_classes"] = len(data_set.label_vocab)
 
-    # Preprocessor
-    p = SeqLabelPreprocess()
-    data_train, data_dev = p.run(train_data, pickle_path=pickle_path, train_dev_split=0.5)
-    model_args["vocab_size"] = p.vocab_size
-    model_args["num_classes"] = p.num_classes
+    save_pickle(data_set.word_vocab, pickle_path, "word2id.pkl")
+    save_pickle(data_set.label_vocab, pickle_path, "label2id.pkl")
 
-    # Trainer: two definition styles
-    # 1
-    # trainer = SeqLabelTrainer(trainer_args.data)
-
-    # 2
     trainer = SeqLabelTrainer(
         epochs=trainer_args["epochs"],
         batch_size=trainer_args["batch_size"],
@@ -98,7 +97,7 @@ def train_and_test():
     model = SeqLabeling(model_args)
 
     # Start training
-    trainer.train(model, data_train, data_dev)
+    trainer.train(model, train_set, dev_set)
     print("Training finished!")
 
     # Saver
@@ -106,7 +105,9 @@ def train_and_test():
     saver.save_pytorch(model)
     print("Model saved!")
 
-    del model, trainer, pos_loader
+    del model, trainer
+
+    change_field_is_target(dev_set, "truth", True)
 
     # Define the same model
     model = SeqLabeling(model_args)
@@ -117,27 +118,21 @@ def train_and_test():
 
     # Load test configuration
     tester_args = ConfigSection()
-    ConfigLoader("config.cfg").load_config(config_dir, {"test_seq_label_tester": tester_args})
+    ConfigLoader().load_config(config_dir, {"test_seq_label_tester": tester_args})
 
     # Tester
-    tester = SeqLabelTester(save_output=False,
-                            save_loss=True,
-                            save_best_dev=False,
-                            batch_size=4,
+    tester = SeqLabelTester(batch_size=4,
                             use_cuda=False,
                             pickle_path=pickle_path,
                             model_name="seq_label_in_test.pkl",
-                            print_every_step=1
+                            evaluator=SeqLabelEvaluator()
                             )
 
     # Start testing with validation data
-    tester.test(model, data_dev)
-
-    # print test results
-    print(tester.show_metrics())
+    tester.test(model, dev_set)
     print("model tested!")
 
 
 if __name__ == "__main__":
     train_and_test()
-    # infer()
+    infer()
