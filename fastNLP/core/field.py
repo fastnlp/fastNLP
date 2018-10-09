@@ -98,7 +98,7 @@ class SeqLabelField(Field):
         super(SeqLabelField, self).__init__(is_target)
         self.label_seq = label_seq
         self._index = None
-    
+
     def get_length(self):
         return len(self.label_seq)
 
@@ -111,7 +111,7 @@ class SeqLabelField(Field):
         pads = [0] * (padding_length - self.get_length())
         if self._index is None:
             if self.get_length() == 0:
-                return pads
+                return torch.LongTensor(pads)
             elif isinstance(self.label_seq[0], int):
                 return torch.LongTensor(self.label_seq + pads)
             elif isinstance(self.label_seq[0], str):

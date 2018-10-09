@@ -8,7 +8,7 @@ from fastNLP.loader.base_loader import BaseLoader
 class ConfigLoader(BaseLoader):
     """loader for configuration files"""
 
-    def __int__(self, data_path):
+    def __init__(self, data_path):
         super(ConfigLoader, self).__init__()
         self.config = self.parse(super(ConfigLoader, self).load(data_path))
 
