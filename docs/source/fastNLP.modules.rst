@@ -3,10 +3,10 @@ fastNLP.modules
 
 .. toctree::
 
-    fastNLP.modules.aggregation
+    fastNLP.modules.aggregator
     fastNLP.modules.decoder
     fastNLP.modules.encoder
-    fastNLP.modules.interaction
+    fastNLP.modules.interactor
 
 fastNLP.modules.other\_modules 
 -------------------------------

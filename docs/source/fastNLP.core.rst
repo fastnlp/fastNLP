@@ -1,12 +1,6 @@
 fastNLP.core 
 =============
 
-fastNLP.core.action 
---------------------
-
-.. automodule:: fastNLP.core.action
-    :members:
-
 fastNLP.core.batch 
 -------------------
 
@@ -61,6 +55,12 @@ fastNLP.core.preprocess
 .. automodule:: fastNLP.core.preprocess
     :members:
 
+fastNLP.core.sampler 
+---------------------
+
+.. automodule:: fastNLP.core.sampler
+    :members:
+
 fastNLP.core.tester 
 --------------------
 
@@ -71,6 +71,12 @@ fastNLP.core.trainer
 ---------------------
 
 .. automodule:: fastNLP.core.trainer
+    :members:
+
+fastNLP.core.vocabulary 
+------------------------
+
+.. automodule:: fastNLP.core.vocabulary
     :members:
 
 
