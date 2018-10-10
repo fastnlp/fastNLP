@@ -103,7 +103,7 @@ class CharLM(nn.Module):
         x = x.contiguous().view(lstm_batch_size, lstm_seq_len, -1)
         # [num_seq, seq_len, total_num_filters]
 
-        x, hidden = self.lstm(x)
+        x = self.lstm(x)
         # [seq_len, num_seq, hidden_size]
 
         x = self.dropout(x)
