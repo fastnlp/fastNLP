@@ -1,11 +1,12 @@
 import os
 import unittest
 
-from fastNLP.core.dataset import TextClassifyDataSet, SeqLabelDataSet
+from fastNLP.core.dataset import DataSet
 from fastNLP.core.predictor import Predictor
 from fastNLP.core.preprocess import save_pickle
 from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.loader.base_loader import BaseLoader
+from fastNLP.loader.dataset_loader import convert_seq_dataset
 from fastNLP.models.cnn_text_classification import CNNText
 from fastNLP.models.sequence_modeling import SeqLabeling
 
@@ -42,8 +43,8 @@ class TestPredictor(unittest.TestCase):
         predictor = Predictor("./save/", pre.text_classify_post_processor)
 
         # Load infer data
-        infer_data_set = TextClassifyDataSet(load_func=BaseLoader.load)
-        infer_data_set.convert_for_infer(infer_data, vocabs={"word_vocab": vocab.word2idx})
+        infer_data_set = convert_seq_dataset(infer_data)
+        infer_data_set.index_field("word_seq", vocab)
 
         results = predictor.predict(network=model, data=infer_data_set)
 
@@ -54,13 +55,10 @@ class TestPredictor(unittest.TestCase):
             self.assertTrue(isinstance(res, str))
             self.assertTrue(res in class_vocab.word2idx)
 
-        del model, predictor, infer_data_set
+        del model, predictor
 
         model = SeqLabeling(model_args)
         predictor = Predictor("./save/", pre.seq_label_post_processor)
-
-        infer_data_set = SeqLabelDataSet(load_func=BaseLoader.load)
-        infer_data_set.convert_for_infer(infer_data, vocabs={"word_vocab": vocab.word2idx})
 
         results = predictor.predict(network=model, data=infer_data_set)
         self.assertTrue(isinstance(results, list))

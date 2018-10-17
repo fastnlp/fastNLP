@@ -2,9 +2,9 @@ import numpy as np
 import torch
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.dataset import create_dataset_from_lists
 from fastNLP.core.preprocess import load_pickle
 from fastNLP.core.sampler import SequentialSampler
+from fastNLP.loader.dataset_loader import convert_seq2seq_dataset, convert_seq2tag_dataset, convert_seq_dataset
 
 
 class Predictor(object):
@@ -79,7 +79,8 @@ class Predictor(object):
         :return data_set: a DataSet instance.
         """
         assert isinstance(data, list)
-        return create_dataset_from_lists(data, self.word_vocab, has_target=False)
+        data = convert_seq_dataset(data)
+        data.index_field("word_seq", self.word_vocab)
 
 
 class SeqLabelInfer(Predictor):

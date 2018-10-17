@@ -1,3 +1,5 @@
+import torch
+
 class Instance(object):
     """An instance which consists of Fields is an example in the DataSet.
 
@@ -10,6 +12,28 @@ class Instance(object):
 
     def add_field(self, field_name, field):
         self.fields[field_name] = field
+        return self
+
+    def rename_field(self, old_name, new_name):
+        if old_name in self.fields:
+            self.fields[new_name] = self.fields.pop(old_name)
+            if old_name in self.indexes:
+                self.indexes[new_name] = self.indexes.pop(old_name)
+        else:
+            print("error, no such field: {}".format(old_name))
+        return self
+
+    def set_target(self, **fields):
+        for name, val in fields.items():
+            if name in self.fields:
+                self.fields[name].is_target = val
+        return self
+
+    def __getitem__(self, name):
+        if name in self.fields:
+            return self.fields[name]
+        else:
+            raise KeyError("{} not found".format(name))
 
     def get_length(self):
         """Fetch the length of all fields in the instance.
@@ -24,6 +48,7 @@ class Instance(object):
         """use `vocab` to index certain field
         """
         self.indexes[field_name] = self.fields[field_name].index(vocab)
+        return self
 
     def index_all(self, vocab):
         """use `vocab` to index all fields
@@ -35,7 +60,7 @@ class Instance(object):
         self.indexes = indexes
         return indexes
 
-    def to_tensor(self, padding_length: dict):
+    def to_tensor(self, padding_length: dict, origin_len=None):
         """Convert instance to tensor.
 
         :param padding_length: dict of (str: int), which means (field name: padding_length of this field)
@@ -53,4 +78,7 @@ class Instance(object):
             else:
                 # is_target is None
                 continue
+        if origin_len is not None:
+            name, field_name = origin_len
+            tensor_x[name] = torch.LongTensor([self.fields[field_name].get_length()])
         return tensor_x, tensor_y

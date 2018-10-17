@@ -18,6 +18,8 @@ class Field(object):
     def to_tensor(self, padding_length):
         raise NotImplementedError
 
+    def contents(self):
+        raise NotImplementedError
 
 class TextField(Field):
     def __init__(self, text, is_target):
@@ -57,6 +59,8 @@ class TextField(Field):
             pads = [0] * (padding_length - self.get_length())
         return torch.LongTensor(self._index + pads)
 
+    def contents(self):
+        return self.text.copy()
 
 class LabelField(Field):
     """The Field representing a single label. Can be a string or integer.
@@ -92,6 +96,8 @@ class LabelField(Field):
         else:
             return torch.LongTensor([self._index])
 
+    def contents(self):
+        return [self.label]
 
 class SeqLabelField(Field):
     def __init__(self, label_seq, is_target=True):
@@ -122,6 +128,8 @@ class SeqLabelField(Field):
         else:
             return torch.LongTensor(self._index + pads)
 
+    def contents(self):
+        return self.label_seq.copy()
 
 if __name__ == "__main__":
     tf = TextField("test the code".split(), is_target=False)

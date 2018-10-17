@@ -1,6 +1,6 @@
 import os
 
-from fastNLP.core.dataset import SeqLabelDataSet, change_field_is_target
+from fastNLP.core.dataset import DataSet
 from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.preprocess import save_pickle
@@ -25,8 +25,8 @@ def test_training():
     ConfigLoader().load_config(config_dir, {
         "test_seq_label_trainer": trainer_args, "test_seq_label_model": model_args})
 
-    data_set = SeqLabelDataSet()
-    data_set.load(data_path)
+    data_set = DataSet()
+    word_vocab = V
     data_train, data_dev = data_set.split(0.3, shuffle=True)
     model_args["vocab_size"] = len(data_set.word_vocab)
     model_args["num_classes"] = len(data_set.label_vocab)
@@ -76,5 +76,5 @@ def test_training():
                             )
 
     # Start testing with validation data
-    change_field_is_target(data_dev, "truth", True)
+    data_dev.set_target(truth=True)
     tester.test(model, data_dev)
