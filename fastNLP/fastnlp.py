@@ -182,7 +182,8 @@ class FastNLP(object):
         if self.infer_type in ["seq_label", "text_class"]:
             data_set = convert_seq_dataset(infer_input)
             data_set.index_field("word_seq", self.word_vocab)
-            data_set.set_origin_len("word_seq")
+            if self.infer_type == "seq_label":
+                data_set.set_origin_len("word_seq")
             return data_set
         else:
             raise RuntimeError("fail to make outputs with infer type {}".format(self.infer_type))

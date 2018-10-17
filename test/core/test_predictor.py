@@ -56,6 +56,7 @@ class TestPredictor(unittest.TestCase):
             self.assertTrue(res in class_vocab.word2idx)
 
         del model, predictor
+        infer_data_set.set_origin_len("word_seq")
 
         model = SeqLabeling(model_args)
         predictor = Predictor("./save/", pre.seq_label_post_processor)

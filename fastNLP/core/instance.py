@@ -20,7 +20,7 @@ class Instance(object):
             if old_name in self.indexes:
                 self.indexes[new_name] = self.indexes.pop(old_name)
         else:
-            print("error, no such field: {}".format(old_name))
+            raise KeyError("error, no such field: {}".format(old_name))
         return self
 
     def set_target(self, **fields):

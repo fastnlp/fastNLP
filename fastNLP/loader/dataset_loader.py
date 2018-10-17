@@ -77,6 +77,19 @@ class DataSetLoader(BaseLoader):
     def load(self, path):
         raise NotImplementedError
 
+class RawDataSetLoader(DataSetLoader):
+    def __init__(self):
+        super(RawDataSetLoader, self).__init__()
+
+    def load(self, data_path, split=None):
+        with open(data_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        lines = lines if split is None else [l.split(split) for l in lines]
+        lines = list(filter(lambda x: len(x) > 0, lines))
+        return self.convert(lines)
+
+    def convert(self, data):
+        return convert_seq_dataset(data)
 
 class POSDataSetLoader(DataSetLoader):
     """Dataset Loader for POS Tag datasets.

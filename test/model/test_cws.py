@@ -8,7 +8,7 @@ from fastNLP.core.preprocess import save_pickle, load_pickle
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.loader.dataset_loader import TokenizeDataSetLoader, BaseLoader
+from fastNLP.loader.dataset_loader import TokenizeDataSetLoader, BaseLoader, RawDataSetLoader
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.models.sequence_modeling import SeqLabeling
 from fastNLP.saver.model_saver import ModelSaver
@@ -38,9 +38,9 @@ def infer():
     print("model loaded!")
 
     # Load infer data
-    infer_data = TokenizeDataSetLoader().load(data_infer_path)
+    infer_data = RawDataSetLoader().load(data_infer_path)
     infer_data.index_field("word_seq", word2index)
-
+    infer_data.set_origin_len("word_seq")
     # inference
     infer = SeqLabelInfer(pickle_path)
     results = infer.predict(model, infer_data)
@@ -57,6 +57,9 @@ def train_test():
     word_vocab = Vocabulary()
     label_vocab = Vocabulary()
     data_train.update_vocab(word_seq=word_vocab, label_seq=label_vocab)
+    data_train.index_field("word_seq", word_vocab).index_field("label_seq", label_vocab)
+    data_train.set_origin_len("word_seq")
+    data_train.rename_field("label_seq", "truth").set_target(truth=False)
     train_args["vocab_size"] = len(word_vocab)
     train_args["num_classes"] = len(label_vocab)
 
