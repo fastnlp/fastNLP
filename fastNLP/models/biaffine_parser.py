@@ -182,6 +182,12 @@ class LabelBilinear(nn.Module):
         output += self.lin(torch.cat([x1, x2], dim=2))
         return output
 
+def len2masks(origin_len, max_len):
+    if origin_len.dim() <= 1:
+        origin_len = origin_len.unsqueeze(1) # [batch_size, 1]
+    seq_range = torch.arange(start=0, end=max_len, dtype=torch.long, device=origin_len.device) # [max_len,]
+    seq_mask = torch.gt(origin_len, seq_range.unsqueeze(0)) # [batch_size, max_len]
+    return seq_mask
 
 class BiaffineParser(GraphParser):
     """Biaffine Dependency Parser implemantation.
@@ -238,7 +244,7 @@ class BiaffineParser(GraphParser):
         self.use_greedy_infer = use_greedy_infer
         initial_parameter(self)
 
-    def forward(self, word_seq, pos_seq, seq_mask, gold_heads=None, **_):
+    def forward(self, word_seq, pos_seq, word_seq_origin_len, gold_heads=None, **_):
         """
         :param word_seq: [batch_size, seq_len] sequence of word's indices
         :param pos_seq: [batch_size, seq_len] sequence of word's indices
@@ -256,7 +262,7 @@ class BiaffineParser(GraphParser):
         batch_range = torch.arange(start=0, end=batch_size, dtype=torch.long, device=word_seq.device).unsqueeze(1)
 
         # get sequence mask
-        seq_mask = seq_mask.long()
+        seq_mask = len2masks(word_seq_origin_len, seq_len).long()
 
         word = self.normal_dropout(self.word_embedding(word_seq)) # [N,L] -> [N,L,C_0]
         pos = self.normal_dropout(self.pos_embedding(pos_seq)) # [N,L] -> [N,L,C_1]

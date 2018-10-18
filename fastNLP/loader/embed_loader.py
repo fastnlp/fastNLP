@@ -17,8 +17,8 @@ class EmbedLoader(BaseLoader):
     def _load_glove(emb_file):
         """Read file as a glove embedding
 
-        file format: 
-            embeddings are split by line, 
+        file format:
+            embeddings are split by line,
             for one embedding, word and numbers split by space
         Example::
 
@@ -33,7 +33,7 @@ class EmbedLoader(BaseLoader):
                 if len(line) > 0:
                     emb[line[0]] = torch.Tensor(list(map(float, line[1:])))
         return emb
-    
+
     @staticmethod
     def _load_pretrain(emb_file, emb_type):
         """Read txt data from embedding file and convert to np.array as pre-trained embedding

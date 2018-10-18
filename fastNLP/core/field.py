@@ -21,6 +21,9 @@ class Field(object):
     def contents(self):
         raise NotImplementedError
 
+    def __repr__(self):
+        return self.contents().__repr__()
+
 class TextField(Field):
     def __init__(self, text, is_target):
         """

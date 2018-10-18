@@ -114,7 +114,7 @@ class Vocabulary(object):
         if w in self.word2idx:
             return self.word2idx[w]
         elif self.has_default:
-            return self.word2idx[DEFAULT_UNKNOWN_LABEL]
+            return self.word2idx[self.unknown_label]
         else:
             raise ValueError("word {} not in vocabulary".format(w))
 
@@ -133,6 +133,11 @@ class Vocabulary(object):
         if self.unknown_label is None:
             return None
         return self.word2idx[self.unknown_label]
+
+    def __setattr__(self, name, val):
+        if name in self.__dict__ and name in ["unknown_label", "padding_label"]:
+            self.word2idx[val] = self.word2idx.pop(self.__dict__[name])
+        self.__dict__[name] = val
 
     @property
     @check_build_vocab

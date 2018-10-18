@@ -82,3 +82,6 @@ class Instance(object):
             name, field_name = origin_len
             tensor_x[name] = torch.LongTensor([self.fields[field_name].get_length()])
         return tensor_x, tensor_y
+
+    def __repr__(self):
+        return self.fields.__repr__()
