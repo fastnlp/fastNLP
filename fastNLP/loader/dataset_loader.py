@@ -75,6 +75,13 @@ class DataSetLoader(BaseLoader):
         super(DataSetLoader, self).__init__()
 
     def load(self, path):
+        """ load data in `path` into a dataset
+        """
+        raise NotImplementedError
+
+    def convert(self, data):
+        """convert list of data into dataset
+        """
         raise NotImplementedError
 
 class RawDataSetLoader(DataSetLoader):
