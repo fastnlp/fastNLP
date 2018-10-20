@@ -8,8 +8,8 @@
 
 fastNLP is a modular Natural Language Processing system based on PyTorch, for fast development of NLP tools. It divides the NLP model based on deep learning into different modules. These modules fall into 4 categories: encoder, interaction, aggregation and decoder, while each category contains different implemented modules. Encoder modules encode the input into some abstract representation, interaction modules make the information in the representation interact with each other, aggregation modules aggregate and reduce information, and decoder modules decode the representation into the output. Most current NLP models could be built on these modules, which vastly simplifies the process of developing NLP models. The architecture of fastNLP is as the figure below:
 
-![](https://github.com/fastnlp/fastNLP/raw/master/fastnlp-architecture.jpg)
-
+![](https://github.com/fastnlp/fastNLP/raw/master/docs/source/figures/procedures.PNG)
+![](https://github.com/fastnlp/fastNLP/raw/master/docs/source/figures/text_classification.png)
 
 ## Requirements
 
