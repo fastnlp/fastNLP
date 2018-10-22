@@ -12,7 +12,7 @@ from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import AdvSeqLabel
 from fastNLP.core.predictor import SeqLabelInfer
-from fastNLP.core.dataset import SeqLabelDataSet, change_field_is_target
+from fastNLP.core.dataset import DataSet
 from fastNLP.core.preprocess import save_pickle
 from fastNLP.core.metrics import SeqLabelEvaluator
 
