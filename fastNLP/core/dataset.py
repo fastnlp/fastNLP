@@ -30,8 +30,18 @@ class DataSet(list):
         return self
 
     def index_field(self, field_name, vocab):
-        for ins in self:
-            ins.index_field(field_name, vocab)
+        if isinstance(field_name, str) and isinstance(vocab, Vocabulary):
+            field_list = [field_name]
+            vocab_list = [vocab]
+        else:
+            classes = (list, tuple)
+            assert isinstance(field_name, classes) and isinstance(vocab, classes) and len(field_name) == len(vocab)
+            field_list = field_name
+            vocab_list = vocab
+
+        for name, vocabs in zip(field_list, vocab_list):
+            for ins in self:
+                ins.index_field(name, vocabs)
         return self
 
     def to_tensor(self, idx: int, padding_length: dict):

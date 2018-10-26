@@ -45,3 +45,28 @@ use_cuda = true
 learn_rate = 1e-3
 momentum = 0.9
 model_name = "class_model.pkl"
+
+[snli_trainer]
+epochs = 5
+batch_size = 32
+validate = true
+save_best_dev = true
+use_cuda = true
+learn_rate = 1e-4
+loss = "cross_entropy"
+print_every_step = 1000
+
+[snli_tester]
+batch_size = 512
+use_cuda = true
+
+[snli_model]
+model_name = "snli_model.pkl"
+embed_dim = 300
+hidden_size = 300
+batch_first = true
+dropout = 0.5
+gpu = true
+embed_file = "./../data_for_tests/glove.840B.300d.txt"
+embed_pkl = "./snli/embed.pkl"
+examples = 0
