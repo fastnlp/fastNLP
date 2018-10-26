@@ -30,7 +30,7 @@ class DataSet(list):
         return self
 
     def index_field(self, field_name, vocab):
-        if isinstance(field_name, str) and isinstance(vocab, Vocabulary):
+        if isinstance(field_name, str):
             field_list = [field_name]
             vocab_list = [vocab]
         else:
