@@ -7,6 +7,8 @@ from fastNLP.core.field import TextField, LabelField
 from fastNLP.core.instance import Instance
 from fastNLP.core.vocabulary import Vocabulary
 
+_READERS = {}
+
 class DataSet(list):
     """A DataSet object is a list of Instance objects.
 
@@ -125,3 +127,24 @@ class DataSet(list):
             self.origin_len = (origin_field + "_origin_len", origin_field) \
                 if origin_len_name is None else (origin_len_name, origin_field)
         return self
+
+    def __getattribute__(self, name):
+        if name in _READERS:
+            # add read_*data() support
+            def _read(*args, **kwargs):
+                data = _READERS[name]().load(*args, **kwargs)
+                self.extend(data)
+                return self
+            return _read
+        else:
+            return object.__getattribute__(self, name)
+
+    @classmethod
+    def set_reader(cls, method_name):
+        """decorator to add dataloader support
+        """
+        assert isinstance(method_name, str)
+        def wrapper(read_cls):
+            _READERS[method_name] = read_cls
+            return read_cls
+        return wrapper

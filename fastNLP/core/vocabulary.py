@@ -69,6 +69,7 @@ class Vocabulary(object):
             else:
                 self.word_count[word] += 1
             self.word2idx = None
+        return self
 
 
     def build_vocab(self):
