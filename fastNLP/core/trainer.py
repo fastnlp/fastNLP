@@ -10,7 +10,7 @@ from fastNLP.core.loss import Loss
 from fastNLP.core.metrics import Evaluator
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.sampler import RandomSampler
-from fastNLP.core.tester import SeqLabelTester, ClassificationTester
+from fastNLP.core.tester import SeqLabelTester, ClassificationTester, SNLITester
 from fastNLP.saver.logger import create_logger
 from fastNLP.saver.model_saver import ModelSaver
 
@@ -162,7 +162,7 @@ class Trainer(object):
             if kwargs["n_print"] > 0 and step % kwargs["n_print"] == 0:
                 end = time.time()
                 diff = timedelta(seconds=round(end - kwargs["start"]))
-                print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.2} time: {}".format(
+                print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.6} time: {}".format(
                     kwargs["epoch"], step, loss.data, diff)
                 print(print_output)
                 logger.info(print_output)
@@ -292,3 +292,15 @@ class ClassificationTrainer(Trainer):
 
     def _create_validator(self, valid_args):
         return ClassificationTester(**valid_args)
+
+
+class SNLITrainer(Trainer):
+    """Trainer for text SNLI."""
+
+    def __init__(self, **train_args):
+        print(
+            "[FastNLP Warning] SNLITrainer will be deprecated. Please use Trainer directly.")
+        super(SNLITrainer, self).__init__(**train_args)
+
+    def _create_validator(self, valid_args):
+        return SNLITester(**valid_args)
