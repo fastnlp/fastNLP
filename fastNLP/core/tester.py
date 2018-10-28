@@ -83,6 +83,7 @@ class Tester(object):
             truth_list.append(batch_y)
         eval_results = self.evaluate(output_list, truth_list)
         print("[tester] {}".format(self.print_eval_results(eval_results)))
+        logger.info("[tester] {}".format(self.print_eval_results(eval_results)))
 
     def mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.
@@ -131,3 +132,10 @@ class ClassificationTester(Tester):
         print(
             "[FastNLP Warning] ClassificationTester will be deprecated. Please use Tester directly.")
         super(ClassificationTester, self).__init__(**test_args)
+
+
+class SNLITester(Tester):
+    def __init__(self, **test_args):
+        print(
+            "[FastNLP Warning] SNLITester will be deprecated. Please use Tester directly.")
+        super(SNLITester, self).__init__(**test_args)

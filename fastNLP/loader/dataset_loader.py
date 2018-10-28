@@ -5,6 +5,7 @@ from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
 from fastNLP.core.field import *
 
+
 def convert_seq_dataset(data):
     """Create an DataSet instance that contains no labels.
 
@@ -22,6 +23,7 @@ def convert_seq_dataset(data):
         x = TextField(word_seq, is_target=False)
         dataset.append(Instance(word_seq=x))
     return dataset
+
 
 def convert_seq2tag_dataset(data):
     """Convert list of data into DataSet
@@ -44,6 +46,7 @@ def convert_seq2tag_dataset(data):
             .add_field("label", LabelField(label, is_target=True))
         dataset.append(ins)
     return dataset
+
 
 def convert_seq2seq_dataset(data):
     """Convert list of data into DataSet
@@ -84,6 +87,7 @@ class DataSetLoader(BaseLoader):
         """
         raise NotImplementedError
 
+
 @DataSet.set_reader('read_raw')
 class RawDataSetLoader(DataSetLoader):
     def __init__(self):
@@ -98,6 +102,7 @@ class RawDataSetLoader(DataSetLoader):
 
     def convert(self, data):
         return convert_seq_dataset(data)
+
 
 @DataSet.set_reader('read_pos')
 class POSDataSetLoader(DataSetLoader):
@@ -168,6 +173,7 @@ class POSDataSetLoader(DataSetLoader):
         """
         return convert_seq2seq_dataset(data)
 
+
 @DataSet.set_reader('read_tokenize')
 class TokenizeDataSetLoader(DataSetLoader):
     """
@@ -227,6 +233,7 @@ class TokenizeDataSetLoader(DataSetLoader):
     def convert(self, data):
         return convert_seq2seq_dataset(data)
 
+
 @DataSet.set_reader('read_class')
 class ClassDataSetLoader(DataSetLoader):
     """Loader for classification data sets"""
@@ -264,6 +271,7 @@ class ClassDataSetLoader(DataSetLoader):
 
     def convert(self, data):
         return convert_seq2tag_dataset(data)
+
 
 @DataSet.set_reader('read_conll')
 class ConllLoader(DataSetLoader):
@@ -306,6 +314,7 @@ class ConllLoader(DataSetLoader):
     def convert(self, data):
         pass
 
+
 @DataSet.set_reader('read_lm')
 class LMDataSetLoader(DataSetLoader):
     """Language Model Dataset Loader
@@ -341,6 +350,7 @@ class LMDataSetLoader(DataSetLoader):
 
     def convert(self, data):
         pass
+
 
 @DataSet.set_reader('read_people_daily')
 class PeopleDailyCorpusLoader(DataSetLoader):
@@ -394,3 +404,72 @@ class PeopleDailyCorpusLoader(DataSetLoader):
 
     def convert(self, data):
         pass
+
+
+class SNLIDataSetLoader(DataSetLoader):
+    """A data set loader for SNLI data set.
+
+    """
+
+    def __init__(self):
+        super(SNLIDataSetLoader, self).__init__()
+
+    def load(self, path_list):
+        """
+
+        :param path_list: A list of file name, in the order of premise file, hypothesis file, and label file.
+        :return: data_set: A DataSet object.
+        """
+        assert len(path_list) == 3
+        line_set = []
+        for file in path_list:
+            if not os.path.exists(file):
+                raise FileNotFoundError("file {} NOT found".format(file))
+
+            with open(file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                line_set.append(lines)
+
+        premise_lines, hypothesis_lines, label_lines = line_set
+        assert len(premise_lines) == len(hypothesis_lines) and len(premise_lines) == len(label_lines)
+
+        data_set = []
+        for premise, hypothesis, label in zip(premise_lines, hypothesis_lines, label_lines):
+            p = premise.strip().split()
+            h = hypothesis.strip().split()
+            l = label.strip()
+            data_set.append([p, h, l])
+
+        return self.convert(data_set)
+
+    def convert(self, data):
+        """Convert a 3D list to a DataSet object.
+
+        :param data: A 3D tensor.
+            [
+                [ [premise_word_11, premise_word_12, ...], [hypothesis_word_11, hypothesis_word_12, ...], [label_1] ],
+                [ [premise_word_21, premise_word_22, ...], [hypothesis_word_21, hypothesis_word_22, ...], [label_2] ],
+                ...
+            ]
+        :return: data_set: A DataSet object.
+        """
+
+        data_set = DataSet()
+
+        for example in data:
+            p, h, l = example
+            # list, list, str
+            x1 = TextField(p, is_target=False)
+            x2 = TextField(h, is_target=False)
+            x1_len = TextField([1] * len(p), is_target=False)
+            x2_len = TextField([1] * len(h), is_target=False)
+            y = LabelField(l, is_target=True)
+            instance = Instance()
+            instance.add_field("premise", x1)
+            instance.add_field("hypothesis", x2)
+            instance.add_field("premise_len", x1_len)
+            instance.add_field("hypothesis_len", x2_len)
+            instance.add_field("truth", y)
+            data_set.append(instance)
+
+        return data_set

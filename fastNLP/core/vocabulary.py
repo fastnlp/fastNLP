@@ -18,6 +18,7 @@ def isiterable(p_object):
         return False
     return True
 
+
 def check_build_vocab(func):
     def _wrapper(self, *args, **kwargs):
         if self.word2idx is None:
@@ -27,6 +28,7 @@ def check_build_vocab(func):
             self.build_reverse_vocab()
         return func(self, *args, **kwargs)
     return _wrapper
+
 
 class Vocabulary(object):
     """Use for word and index one to one mapping
@@ -52,7 +54,6 @@ class Vocabulary(object):
         self.word2idx = None
         self.idx2word = None
 
-
     def update(self, word):
         """add word or list of words into Vocabulary
 
@@ -70,7 +71,6 @@ class Vocabulary(object):
                 self.word_count[word] += 1
             self.word2idx = None
         return self
-
 
     def build_vocab(self):
         """build 'word to index' dict, and filter the word using `max_size` and `min_freq`
@@ -164,3 +164,11 @@ class Vocabulary(object):
         """
         self.__dict__.update(state)
         self.idx2word = None
+
+    def __contains__(self, item):
+        """Check if a word in vocabulary.
+
+        :param item: the word
+        :return: True or False
+        """
+        return self.has_word(item)

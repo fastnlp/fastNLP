@@ -57,6 +57,20 @@ class SeqLabelEvaluator(Evaluator):
         return {"accuracy": float(accuracy)}
 
 
+class SNLIEvaluator(Evaluator):
+    def __init__(self):
+        super(SNLIEvaluator, self).__init__()
+
+    def __call__(self, predict, truth):
+        y_prob = [torch.nn.functional.softmax(y_logit, dim=-1) for y_logit in predict]
+        y_prob = torch.cat(y_prob, dim=0)
+        y_pred = torch.argmax(y_prob, dim=-1)
+        truth = [t['truth'] for t in truth]
+        y_true = torch.cat(truth, dim=0).view(-1)
+        acc = float(torch.sum(y_pred == y_true)) / y_true.size(0)
+        return {"accuracy": acc}
+
+
 def _conver_numpy(x):
     """convert input data to numpy array
 
