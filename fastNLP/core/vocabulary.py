@@ -70,6 +70,7 @@ class Vocabulary(object):
             else:
                 self.word_count[word] += 1
             self.word2idx = None
+        return self
 
     def build_vocab(self):
         """build 'word to index' dict, and filter the word using `max_size` and `min_freq`
