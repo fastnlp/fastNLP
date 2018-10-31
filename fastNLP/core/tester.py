@@ -17,9 +17,9 @@ class Tester(object):
         """
         super(Tester, self).__init__()
         """
-            "default_args" provides default value for important settings. 
-            The initialization arguments "kwargs" with the same key (name) will override the default value. 
-            "kwargs" must have the same type as "default_args" on corresponding keys. 
+            "default_args" provides default value for important settings.
+            The initialization arguments "kwargs" with the same key (name) will override the default value.
+            "kwargs" must have the same type as "default_args" on corresponding keys.
             Otherwise, error will raise.
         """
         default_args = {"batch_size": 8,
@@ -29,8 +29,8 @@ class Tester(object):
                         "evaluator": Evaluator()
                         }
         """
-            "required_args" is the collection of arguments that users must pass to Trainer explicitly. 
-            This is used to warn users of essential settings in the training. 
+            "required_args" is the collection of arguments that users must pass to Trainer explicitly.
+            This is used to warn users of essential settings in the training.
             Specially, "required_args" does not have default value, so they have nothing to do with "default_args".
         """
         required_args = {}
@@ -76,14 +76,17 @@ class Tester(object):
 
         data_iterator = Batch(dev_data, self.batch_size, sampler=RandomSampler(), use_cuda=self.use_cuda)
 
-        for batch_x, batch_y in data_iterator:
-            with torch.no_grad():
+        with torch.no_grad():
+            for batch_x, batch_y in data_iterator:
                 prediction = self.data_forward(network, batch_x)
-            output_list.append(prediction)
-            truth_list.append(batch_y)
-        eval_results = self.evaluate(output_list, truth_list)
+                output_list.append(prediction)
+                truth_list.append(batch_y)
+            eval_results = self.evaluate(output_list, truth_list)
         print("[tester] {}".format(self.print_eval_results(eval_results)))
         logger.info("[tester] {}".format(self.print_eval_results(eval_results)))
+        self.mode(network, is_test=False)
+        self.metrics = eval_results
+        return eval_results
 
     def mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.

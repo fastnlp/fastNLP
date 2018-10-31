@@ -8,12 +8,14 @@ import math
 import torch
 
 from fastNLP.core.trainer import Trainer
+from fastNLP.core.metrics import Evaluator
 from fastNLP.core.instance import Instance
 from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.batch import Batch
 from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.field import TextField, SeqLabelField
+from fastNLP.core.preprocess import load_pickle
 from fastNLP.core.tester import Tester
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.loader.model_loader import ModelLoader
@@ -111,9 +113,10 @@ class CTBDataLoader(object):
 # emb_file_name = '/home/yfshao/glove.6B.100d.txt'
 # loader = ConlluDataLoader()
 
-datadir = "/home/yfshao/parser-data"
+datadir = '/home/yfshao/workdir/parser-data/'
 train_data_name = "train_ctb5.txt"
 dev_data_name = "dev_ctb5.txt"
+test_data_name = "test_ctb5.txt"
 emb_file_name = "/home/yfshao/parser-data/word_OOVthr_30_100v.txt"
 loader = CTBDataLoader()
 
@@ -148,37 +151,33 @@ def load_data(dirpath):
             datas[name] = _pickle.load(f)
     return datas
 
-class MyTester(object):
-    def __init__(self, batch_size, use_cuda=False, **kwagrs):
-        self.batch_size = batch_size
-        self.use_cuda = use_cuda
+class ParserEvaluator(Evaluator):
+    def __init__(self):
+        super(ParserEvaluator, self).__init__()
 
-    def test(self, model, dataset):
-        self.model = model.cuda() if self.use_cuda else model
-        self.model.eval()
-        batchiter = Batch(dataset, self.batch_size, SequentialSampler(), self.use_cuda)
-        eval_res = defaultdict(list)
-        i = 0
-        for batch_x, batch_y in batchiter:
-            with torch.no_grad():
-                pred_y = self.model(**batch_x)
-                eval_one = self.model.evaluate(**pred_y, **batch_y)
-            i += self.batch_size
-            for eval_name, tensor in eval_one.items():
-                eval_res[eval_name].append(tensor)
-        tmp = {}
-        for eval_name, tensorlist in eval_res.items():
-            tmp[eval_name] = torch.cat(tensorlist, dim=0)
+    def __call__(self, predict_list, truth_list):
+        head_all, label_all, total_all = 0, 0, 0
+        for pred, truth in zip(predict_list, truth_list):
+            head, label, total = self.evaluate(**pred, **truth)
+            head_all += head
+            label_all += label
+            total_all += total
 
-        self.res = self.model.metrics(**tmp)
-        print(self.show_metrics())
+        return {'UAS': head_all*1.0 / total_all, 'LAS': label_all*1.0 / total_all}
 
-    def show_metrics(self):
-        s = ""
-        for name, val in self.res.items():
-            s += '{}: {:.2f}\t'.format(name, val)
-        return s
+    def evaluate(self, head_pred, label_pred, head_indices, head_labels, seq_mask, **_):
+        """
+        Evaluate the performance of prediction.
 
+        :return : performance results.
+            head_pred_corrct: number of correct predicted heads.
+            label_pred_correct: number of correct predicted labels.
+            total_tokens: number of predicted tokens
+        """
+        head_pred_correct = (head_pred == head_indices).long() * seq_mask
+        _, label_preds = torch.max(label_pred, dim=2)
+        label_pred_correct = (label_preds == head_labels).long() * head_pred_correct
+        return head_pred_correct.sum().item(), label_pred_correct.sum().item(), seq_mask.sum().item()
 
 try:
     data_dict = load_data(processed_datadir)
@@ -196,6 +195,7 @@ except Exception as _:
     tag_v = Vocabulary(need_default=False)
     train_data = loader.load(os.path.join(datadir, train_data_name))
     dev_data = loader.load(os.path.join(datadir, dev_data_name))
+    test_data = loader.load(os.path.join(datadir, test_data_name))
     train_data.update_vocab(word_seq=word_v, pos_seq=pos_v, head_labels=tag_v)
     save_data(processed_datadir, word_v=word_v, pos_v=pos_v, tag_v=tag_v, train_data=train_data, dev_data=dev_data)
 
@@ -207,8 +207,6 @@ dev_data.set_origin_len("word_seq")
 print(train_data[:3])
 print(len(train_data))
 print(len(dev_data))
-ep = train_args['epochs']
-train_args['epochs'] =  math.ceil(50000.0 / len(train_data) * train_args['batch_size']) if ep <= 0 else ep
 model_args['word_vocab_size'] = len(word_v)
 model_args['pos_vocab_size'] = len(pos_v)
 model_args['num_label'] = len(tag_v)
@@ -220,7 +218,7 @@ def train():
 
     def _define_optim(obj):
         obj._optimizer = torch.optim.Adam(obj._model.parameters(), **optim_args.data)
-        obj._scheduler = torch.optim.lr_scheduler.LambdaLR(obj._optimizer, lambda ep: .75 ** (ep / 5e4))
+        obj._scheduler = torch.optim.lr_scheduler.LambdaLR(obj._optimizer, lambda ep: max(.75 ** (ep / 5e4), 0.05))
 
     def _update(obj):
         obj._scheduler.step()
@@ -228,8 +226,7 @@ def train():
 
     trainer.define_optimizer = lambda: _define_optim(trainer)
     trainer.update = lambda: _update(trainer)
-    trainer.get_loss = lambda predict, truth: trainer._loss_func(**predict, **truth)
-    trainer._create_validator = lambda x: MyTester(**test_args.data)
+    trainer.set_validator(Tester(**test_args.data, evaluator=ParserEvaluator()))
 
     # Model
     model = BiaffineParser(**model_args.data)
@@ -238,6 +235,7 @@ def train():
     word_v.unknown_label = "<OOV>"
     embed, _ = EmbedLoader.load_embedding(model_args['word_emb_dim'], emb_file_name, 'glove', word_v, os.path.join(processed_datadir, 'word_emb.pkl'))
     model.word_embedding = torch.nn.Embedding.from_pretrained(embed, freeze=False)
+
     model.word_embedding.padding_idx = word_v.padding_idx
     model.word_embedding.weight.data[word_v.padding_idx].fill_(0)
     model.pos_embedding.padding_idx = pos_v.padding_idx
@@ -262,7 +260,7 @@ def train():
 
 def test():
     # Tester
-    tester = MyTester(**test_args.data)
+    tester = Tester(**test_args.data, evaluator=ParserEvaluator())
 
     # Model
     model = BiaffineParser(**model_args.data)
@@ -275,9 +273,10 @@ def test():
         raise
 
     # Start training
+    print("Testing Dev data")
     tester.test(model, dev_data)
-    print(tester.show_metrics())
-    print("Testing finished!")
+    print("Testing Test data")
+    tester.test(model, test_data)
 
 
 

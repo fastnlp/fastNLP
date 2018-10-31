@@ -243,6 +243,9 @@ class BiaffineParser(GraphParser):
         self.normal_dropout = nn.Dropout(p=dropout)
         self.use_greedy_infer = use_greedy_infer
         initial_parameter(self)
+        self.word_norm = nn.LayerNorm(word_emb_dim)
+        self.pos_norm = nn.LayerNorm(pos_emb_dim)
+        self.lstm_norm = nn.LayerNorm(rnn_out_size)
 
     def forward(self, word_seq, pos_seq, word_seq_origin_len, gold_heads=None, **_):
         """
@@ -266,10 +269,12 @@ class BiaffineParser(GraphParser):
 
         word = self.normal_dropout(self.word_embedding(word_seq)) # [N,L] -> [N,L,C_0]
         pos = self.normal_dropout(self.pos_embedding(pos_seq)) # [N,L] -> [N,L,C_1]
+        word, pos = self.word_norm(word), self.pos_norm(pos)
         x = torch.cat([word, pos], dim=2) # -> [N,L,C]
 
         # lstm, extract features
         feat, _ = self.lstm(x) # -> [N,L,C]
+        feat = self.lstm_norm(feat)
 
         # for arc biaffine
         # mlp, reduce dim
@@ -292,6 +297,7 @@ class BiaffineParser(GraphParser):
                 heads = self._mst_decoder(arc_pred, seq_mask)
             head_pred = heads
         else:
+            assert self.training # must be training mode
             head_pred = None
             heads = gold_heads
 
@@ -331,40 +337,4 @@ class BiaffineParser(GraphParser):
         label_nll = -(label_loss*float_mask).sum() / length
         return arc_nll + label_nll
 
-    def evaluate(self, arc_pred, label_pred, head_indices, head_labels, seq_mask, **kwargs):
-        """
-        Evaluate the performance of prediction.
-
-        :return dict: performance results.
-            head_pred_corrct: number of correct predicted heads.
-            label_pred_correct: number of correct predicted labels.
-            total_tokens: number of predicted tokens
-        """
-        if 'head_pred' in kwargs:
-            head_pred = kwargs['head_pred']
-        elif self.use_greedy_infer:
-            head_pred = self._greedy_decoder(arc_pred, seq_mask)
-        else:
-            head_pred = self._mst_decoder(arc_pred, seq_mask)
-
-        head_pred_correct = (head_pred == head_indices).long() * seq_mask
-        _, label_preds = torch.max(label_pred, dim=2)
-        label_pred_correct = (label_preds == head_labels).long() * head_pred_correct
-        return {"head_pred_correct": head_pred_correct.sum(dim=1),
-                "label_pred_correct": label_pred_correct.sum(dim=1),
-                "total_tokens": seq_mask.sum(dim=1)}
-
-    def metrics(self, head_pred_correct, label_pred_correct, total_tokens, **_):
-        """
-        Compute the metrics of model
-
-        :param head_pred_corrct: number of correct predicted heads.
-        :param label_pred_correct: number of correct predicted labels.
-        :param total_tokens: number of predicted tokens
-        :return dict: the metrics results
-            UAS: the head predicted accuracy
-            LAS: the label predicted accuracy
-        """
-        return {"UAS": head_pred_correct.sum().float() / total_tokens.sum().float() * 100,
-                "LAS": label_pred_correct.sum().float() / total_tokens.sum().float() * 100}
 
