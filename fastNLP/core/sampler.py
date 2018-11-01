@@ -48,8 +48,6 @@ def simple_sort_bucketing(lengths):
     """
 
     :param lengths: list of int, the lengths of all examples.
-    :param buckets: list of int. The length of the list is the number of buckets. Each integer is the maximum length
-        threshold for each bucket (This is usually None.).
     :return data: 2-level list
             ::
 
@@ -75,6 +73,7 @@ def k_means_1d(x, k, max_iter=100):
             assignment: numpy array, 1-D, the bucket id assigned to each example.
     """
     sorted_x = sorted(list(set(x)))
+    x = np.array(x)
     if len(sorted_x) < k:
         raise ValueError("too few buckets")
     gap = len(sorted_x) / k
@@ -119,34 +118,3 @@ def k_means_bucketing(lengths, buckets):
             bucket_data[bucket_id].append(idx)
     return bucket_data
 
-
-class BucketSampler(BaseSampler):
-    """Partition all samples into multiple buckets, each of which contains sentences of approximately the same length.
-    In sampling, first random choose a bucket. Then sample data from it.
-    The number of buckets is decided dynamically by the variance of sentence lengths.
-
-    """
-
-    def __call__(self, data_set, batch_size, num_buckets):
-        return self._process(data_set, batch_size, num_buckets)
-
-    def _process(self, data_set, batch_size, num_buckets, use_kmeans=False):
-        """
-
-        :param data_set: a DataSet object
-        :param batch_size: int
-        :param num_buckets: int, number of buckets for grouping these sequences.
-        :param use_kmeans: bool, whether to use k-means to create buckets.
-
-        """
-        buckets = ([None] * num_buckets)
-        if use_kmeans is True:
-            buckets = k_means_bucketing(data_set, buckets)
-        else:
-            buckets = simple_sort_bucketing(data_set)
-        index_list = []
-        for _ in range(len(data_set) // batch_size):
-            chosen_bucket = buckets[np.random.randint(0, len(buckets))]
-            np.random.shuffle(chosen_bucket)
-            index_list += [idx for idx in chosen_bucket[:batch_size]]
-        return index_list
