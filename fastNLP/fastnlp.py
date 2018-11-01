@@ -1,6 +1,7 @@
 import os
 
-from fastNLP.core.dataset import SeqLabelDataSet, TextClassifyDataSet
+from fastNLP.core.dataset import DataSet
+from fastNLP.loader.dataset_loader import convert_seq_dataset
 from fastNLP.core.predictor import SeqLabelInfer, ClassificationInfer
 from fastNLP.core.preprocess import load_pickle
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
@@ -178,13 +179,11 @@ class FastNLP(object):
         :param infer_input: 2-D lists of strings
         :return data_set: a DataSet object
         """
-        if self.infer_type == "seq_label":
-            data_set = SeqLabelDataSet()
-            data_set.load_raw(infer_input, {"word_vocab": self.word_vocab})
-            return data_set
-        elif self.infer_type == "text_class":
-            data_set = TextClassifyDataSet()
-            data_set.load_raw(infer_input, {"word_vocab": self.word_vocab})
+        if self.infer_type in ["seq_label", "text_class"]:
+            data_set = convert_seq_dataset(infer_input)
+            data_set.index_field("word_seq", self.word_vocab)
+            if self.infer_type == "seq_label":
+                data_set.set_origin_len("word_seq")
             return data_set
         else:
             raise RuntimeError("fail to make outputs with infer type {}".format(self.infer_type))

@@ -1,6 +1,74 @@
 import os
 
 from fastNLP.loader.base_loader import BaseLoader
+from fastNLP.core.dataset import DataSet
+from fastNLP.core.instance import Instance
+from fastNLP.core.field import *
+
+
+def convert_seq_dataset(data):
+    """Create an DataSet instance that contains no labels.
+
+    :param data: list of list of strings, [num_examples, *].
+            ::
+            [
+                [word_11, word_12, ...],
+                ...
+            ]
+
+    :return: a DataSet.
+    """
+    dataset = DataSet()
+    for word_seq in data:
+        x = TextField(word_seq, is_target=False)
+        dataset.append(Instance(word_seq=x))
+    return dataset
+
+
+def convert_seq2tag_dataset(data):
+    """Convert list of data into DataSet
+
+    :param data: list of list of strings, [num_examples, *].
+            ::
+            [
+                [ [word_11, word_12, ...], label_1 ],
+                [ [word_21, word_22, ...], label_2 ],
+                ...
+            ]
+
+    :return: a DataSet.
+    """
+    dataset = DataSet()
+    for sample in data:
+        word_seq, label = sample[0], sample[1]
+        ins = Instance()
+        ins.add_field("word_seq", TextField(word_seq, is_target=False)) \
+            .add_field("label", LabelField(label, is_target=True))
+        dataset.append(ins)
+    return dataset
+
+
+def convert_seq2seq_dataset(data):
+    """Convert list of data into DataSet
+
+    :param data: list of list of strings, [num_examples, *].
+            ::
+            [
+                [ [word_11, word_12, ...], [label_1, label_1, ...] ],
+                [ [word_21, word_22, ...], [label_2, label_1, ...] ],
+                ...
+            ]
+
+    :return: a DataSet.
+    """
+    dataset = DataSet()
+    for sample in data:
+        word_seq, label_seq = sample[0], sample[1]
+        ins = Instance()
+        ins.add_field("word_seq", TextField(word_seq, is_target=False)) \
+            .add_field("label_seq", TextField(label_seq, is_target=True))
+        dataset.append(ins)
+    return dataset
 
 
 class DataSetLoader(BaseLoader):
@@ -10,9 +78,33 @@ class DataSetLoader(BaseLoader):
         super(DataSetLoader, self).__init__()
 
     def load(self, path):
+        """ load data in `path` into a dataset
+        """
+        raise NotImplementedError
+
+    def convert(self, data):
+        """convert list of data into dataset
+        """
         raise NotImplementedError
 
 
+@DataSet.set_reader('read_raw')
+class RawDataSetLoader(DataSetLoader):
+    def __init__(self):
+        super(RawDataSetLoader, self).__init__()
+
+    def load(self, data_path, split=None):
+        with open(data_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        lines = lines if split is None else [l.split(split) for l in lines]
+        lines = list(filter(lambda x: len(x) > 0, lines))
+        return self.convert(lines)
+
+    def convert(self, data):
+        return convert_seq_dataset(data)
+
+
+@DataSet.set_reader('read_pos')
 class POSDataSetLoader(DataSetLoader):
     """Dataset Loader for POS Tag datasets.
 
@@ -48,7 +140,8 @@ class POSDataSetLoader(DataSetLoader):
         """
         with open(data_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        return self.parse(lines)
+        data = self.parse(lines)
+        return self.convert(data)
 
     @staticmethod
     def parse(lines):
@@ -75,7 +168,13 @@ class POSDataSetLoader(DataSetLoader):
             data.append([words, labels])
         return data
 
+    def convert(self, data):
+        """Convert lists of strings into Instances with Fields.
+        """
+        return convert_seq2seq_dataset(data)
 
+
+@DataSet.set_reader('read_tokenize')
 class TokenizeDataSetLoader(DataSetLoader):
     """
     Data set loader for tokenization data sets
@@ -84,8 +183,7 @@ class TokenizeDataSetLoader(DataSetLoader):
     def __init__(self):
         super(TokenizeDataSetLoader, self).__init__()
 
-    @staticmethod
-    def load(data_path, max_seq_len=32):
+    def load(self, data_path, max_seq_len=32):
         """
         load pku dataset for Chinese word segmentation
         CWS (Chinese Word Segmentation) pku training dataset format:
@@ -130,9 +228,13 @@ class TokenizeDataSetLoader(DataSetLoader):
                 seq_words = words[start:end]
                 seq_labels = labels[start:end]
                 data.append([seq_words, seq_labels])
-        return data
+        return self.convert(data)
+
+    def convert(self, data):
+        return convert_seq2seq_dataset(data)
 
 
+@DataSet.set_reader('read_class')
 class ClassDataSetLoader(DataSetLoader):
     """Loader for classification data sets"""
 
@@ -143,7 +245,8 @@ class ClassDataSetLoader(DataSetLoader):
         assert os.path.exists(data_path)
         with open(data_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        return self.parse(lines)
+        data = self.parse(lines)
+        return self.convert(data)
 
     @staticmethod
     def parse(lines):
@@ -166,16 +269,19 @@ class ClassDataSetLoader(DataSetLoader):
             dataset.append(sentence)
         return dataset
 
+    def convert(self, data):
+        return convert_seq2tag_dataset(data)
 
+
+@DataSet.set_reader('read_conll')
 class ConllLoader(DataSetLoader):
     """loader for conll format files"""
 
-    def __int__(self, data_path):
+    def __init__(self):
         """
         :param str data_path: the path to the conll data set
         """
         super(ConllLoader, self).__init__()
-        self.data_set = self.parse(self.load(data_path))
 
     def load(self, data_path):
         """
@@ -183,7 +289,8 @@ class ConllLoader(DataSetLoader):
         """
         with open(data_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        return lines
+        data = self.parse(lines)
+        return self.convert(data)
 
     @staticmethod
     def parse(lines):
@@ -204,7 +311,11 @@ class ConllLoader(DataSetLoader):
             tokens.append(line.split())
         return sentences
 
+    def convert(self, data):
+        pass
 
+
+@DataSet.set_reader('read_lm')
 class LMDataSetLoader(DataSetLoader):
     """Language Model Dataset Loader
 
@@ -222,7 +333,8 @@ class LMDataSetLoader(DataSetLoader):
         with open(data_path, "r", encoding="utf=8") as f:
             text = " ".join(f.readlines())
         tokens = text.strip().split()
-        return self.sentence_cut(tokens)
+        data = self.sentence_cut(tokens)
+        return self.convert(data)
 
     def sentence_cut(self, tokens, sentence_length=15):
         start_idx = 0
@@ -236,7 +348,11 @@ class LMDataSetLoader(DataSetLoader):
             data_set.append([x, y])
         return data_set
 
+    def convert(self, data):
+        pass
 
+
+@DataSet.set_reader('read_people_daily')
 class PeopleDailyCorpusLoader(DataSetLoader):
     """
         People Daily Corpus: Chinese word segmentation, POS tag, NER
@@ -286,3 +402,74 @@ class PeopleDailyCorpusLoader(DataSetLoader):
             ner_examples.append([sent_words, sent_ner])
         return pos_tag_examples, ner_examples
 
+    def convert(self, data):
+        pass
+
+
+class SNLIDataSetLoader(DataSetLoader):
+    """A data set loader for SNLI data set.
+
+    """
+
+    def __init__(self):
+        super(SNLIDataSetLoader, self).__init__()
+
+    def load(self, path_list):
+        """
+
+        :param path_list: A list of file name, in the order of premise file, hypothesis file, and label file.
+        :return: data_set: A DataSet object.
+        """
+        assert len(path_list) == 3
+        line_set = []
+        for file in path_list:
+            if not os.path.exists(file):
+                raise FileNotFoundError("file {} NOT found".format(file))
+
+            with open(file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                line_set.append(lines)
+
+        premise_lines, hypothesis_lines, label_lines = line_set
+        assert len(premise_lines) == len(hypothesis_lines) and len(premise_lines) == len(label_lines)
+
+        data_set = []
+        for premise, hypothesis, label in zip(premise_lines, hypothesis_lines, label_lines):
+            p = premise.strip().split()
+            h = hypothesis.strip().split()
+            l = label.strip()
+            data_set.append([p, h, l])
+
+        return self.convert(data_set)
+
+    def convert(self, data):
+        """Convert a 3D list to a DataSet object.
+
+        :param data: A 3D tensor.
+            [
+                [ [premise_word_11, premise_word_12, ...], [hypothesis_word_11, hypothesis_word_12, ...], [label_1] ],
+                [ [premise_word_21, premise_word_22, ...], [hypothesis_word_21, hypothesis_word_22, ...], [label_2] ],
+                ...
+            ]
+        :return: data_set: A DataSet object.
+        """
+
+        data_set = DataSet()
+
+        for example in data:
+            p, h, l = example
+            # list, list, str
+            x1 = TextField(p, is_target=False)
+            x2 = TextField(h, is_target=False)
+            x1_len = TextField([1] * len(p), is_target=False)
+            x2_len = TextField([1] * len(h), is_target=False)
+            y = LabelField(l, is_target=True)
+            instance = Instance()
+            instance.add_field("premise", x1)
+            instance.add_field("hypothesis", x2)
+            instance.add_field("premise_len", x1_len)
+            instance.add_field("hypothesis_len", x2_len)
+            instance.add_field("truth", y)
+            data_set.append(instance)
+
+        return data_set

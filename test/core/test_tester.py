@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from fastNLP.core.dataset import SeqLabelDataSet
+from fastNLP.core.dataset import DataSet
 from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.field import TextField, LabelField
 from fastNLP.core.instance import Instance
@@ -35,7 +35,7 @@ class TestTester(unittest.TestCase):
         vocab = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, '!': 5, '@': 6, '#': 7, '$': 8, '?': 9}
         label_vocab = {'a': 0, '@': 1, 'c': 2, 'd': 3, 'e': 4}
 
-        data_set = SeqLabelDataSet()
+        data_set = DataSet()
         for example in train_data:
             text, label = example[0], example[1]
             x = TextField(text, False)

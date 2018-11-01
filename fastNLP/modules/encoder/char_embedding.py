@@ -1,12 +1,14 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
-# from torch.nn.init import xavier_uniform
 
 from fastNLP.modules.utils import initial_parameter
+
+
+# from torch.nn.init import xavier_uniform
 class ConvCharEmbedding(nn.Module):
 
-    def __init__(self, char_emb_size=50, feature_maps=(40, 30, 30), kernels=(3, 4, 5),initial_method = None):
+    def __init__(self, char_emb_size=50, feature_maps=(40, 30, 30), kernels=(3, 4, 5), initial_method=None):
         """
         Character Level Word Embedding
         :param char_emb_size: the size of character level embedding. Default: 50
@@ -21,7 +23,7 @@ class ConvCharEmbedding(nn.Module):
             nn.Conv2d(1, feature_maps[i], kernel_size=(char_emb_size, kernels[i]), bias=True, padding=(0, 4))
             for i in range(len(kernels))])
 
-        initial_parameter(self,initial_method)
+        initial_parameter(self, initial_method)
 
     def forward(self, x):
         """
@@ -56,7 +58,7 @@ class LSTMCharEmbedding(nn.Module):
     :param hidden_size: int, the number of hidden units. Default:  equal to char_emb_size.
     """
 
-    def __init__(self, char_emb_size=50, hidden_size=None , initial_method= None):
+    def __init__(self, char_emb_size=50, hidden_size=None, initial_method=None):
         super(LSTMCharEmbedding, self).__init__()
         self.hidden_size = char_emb_size if hidden_size is None else hidden_size
 
@@ -66,6 +68,7 @@ class LSTMCharEmbedding(nn.Module):
                             bias=True,
                             batch_first=True)
         initial_parameter(self, initial_method)
+
     def forward(self, x):
         """
         :param x:[ n_batch*n_word, word_length, char_emb_size]
@@ -79,20 +82,3 @@ class LSTMCharEmbedding(nn.Module):
 
         _, hidden = self.lstm(x, (h0, c0))
         return hidden[0].squeeze().unsqueeze(2)
-
-
-if __name__ == "__main__":
-    batch_size = 128
-    char_emb = 100
-    word_length = 1
-    x = torch.Tensor(batch_size, char_emb, word_length)
-    x = x.transpose(1, 2)
-    cce = ConvCharEmbedding(char_emb)
-    y = cce(x)
-    print("CNN Char Emb input: ", x.shape)
-    print("CNN Char Emb output: ", y.shape)  # [128, 100]
-
-    lce = LSTMCharEmbedding(char_emb)
-    o = lce(x)
-    print("LSTM Char Emb input: ", x.shape)
-    print("LSTM Char Emb size: ", o.shape)

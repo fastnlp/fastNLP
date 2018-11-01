@@ -3,7 +3,7 @@ import unittest
 import torch
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.dataset import DataSet, create_dataset_from_lists
+from fastNLP.core.dataset import DataSet
 from fastNLP.core.field import TextField, LabelField
 from fastNLP.core.instance import Instance
 
@@ -51,14 +51,3 @@ class TestCase1(unittest.TestCase):
             self.assertTrue(isinstance(batch_x["text"], torch.LongTensor))
             self.assertTrue(isinstance(batch_y, dict))
             self.assertTrue(isinstance(batch_y["label"], torch.LongTensor))
-
-
-class TestCase2(unittest.TestCase):
-    def test(self):
-        data = DataSet()
-        for text in texts:
-            x = TextField(text, is_target=False)
-            ins = Instance(text=x)
-            data.append(ins)
-        data_set = create_dataset_from_lists(texts, vocab, has_target=False)
-        self.assertTrue(type(data) == type(data_set))
