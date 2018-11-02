@@ -42,7 +42,7 @@ def initial_parameter(net, initial_method=None):
     elif initial_method == 'normal':
         init_method = init.normal_
     elif initial_method == 'uniform':
-        initial_method = init.uniform_
+        init_method = init.uniform_
     else:
         init_method = init.xavier_normal_
 
