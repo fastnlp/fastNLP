@@ -2,8 +2,6 @@ import datetime
 import os
 import shutil
 
-from colorama import Fore
-
 
 class Singleton(type):
     _instances = {}
@@ -22,7 +20,7 @@ class WorkSpace(metaclass=Singleton):
     def _create_workspace(self, force=False, backup=False):
         save_path = "./save/"
         if os.path.exists("./save"):
-            print(Fore.RED + save_path + Fore.RESET + " already exists!")
+            print(save_path + " already exists!")
             if not force:
                 ans = input("Do you want to overwrite it? [y/N]:")
                 if ans in ('y', 'Y', 'yes', 'Yes'):
@@ -31,7 +29,7 @@ class WorkSpace(metaclass=Singleton):
                         tmp_path = "/tmp/{}-experiments/{}_{}".format(
                             getuser(), save_path, self.time_stamp)
                         print('move existing {} to {}'.format(
-                            save_path, Fore.RED + tmp_path + Fore.RESET))
+                            save_path, tmp_path))
                         shutil.copytree(save_path, tmp_path)
                     shutil.rmtree(save_path)
             else:
@@ -39,21 +37,21 @@ class WorkSpace(metaclass=Singleton):
                 shutil.rmtree(save_path)
         if not os.path.exists("./save"):
             os.makedirs(save_path)
-            print('create folder: ' + Fore.GREEN + save_path + Fore.RESET)
+            print('create folder: ' + save_path)
 
         if not os.path.exists("./model"):
             os.makedirs("./model")
-            print('create folder: ' + Fore.GREEN + "./model" + Fore.RESET)
+            print('create folder: ' + "./model")
         os.makedirs(os.path.join("./model/", self.time_stamp))
 
         if not os.path.exists("./debug"):
             os.makedirs("./debug")
-            print('create folder: ' + Fore.GREEN + "./debug" + Fore.RESET)
+            print('create folder: ' + "./debug")
         os.makedirs(os.path.join("./debug/", self.time_stamp))
 
         if not os.path.exists("./log"):
             os.makedirs("./log")
-            print('create folder: ' + Fore.GREEN + "./log" + Fore.RESET)
+            print('create folder: ' + "./log")
 
     @property
     def model_save_dir(self):

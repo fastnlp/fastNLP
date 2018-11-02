@@ -15,4 +15,4 @@ class TestWorkSpace(unittest.TestCase):
         self.assertTrue(os.path.exists("log"))
 
         os.system("cd ..")
-        os.rmdir("test")
+        os.system("rm -rf test")
