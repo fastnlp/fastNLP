@@ -32,9 +32,9 @@ def initial_parameter(net, initial_method=None):
     elif initial_method == 'xavier_normal':
         init_method = init.xavier_normal_
     elif initial_method == 'kaiming_normal' or initial_method == 'msra':
-        init_method = init.kaiming_normal
+        init_method = init.kaiming_normal_
     elif initial_method == 'kaiming_uniform':
-        init_method = init.kaiming_uniform
+        init_method = init.kaiming_uniform_
     elif initial_method == 'orthogonal':
         init_method = init.orthogonal_
     elif initial_method == 'sparse':
