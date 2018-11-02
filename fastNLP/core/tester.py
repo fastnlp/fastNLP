@@ -4,8 +4,9 @@ from fastNLP.core.batch import Batch
 from fastNLP.core.metrics import Evaluator
 from fastNLP.core.sampler import RandomSampler
 from fastNLP.saver.logger import create_logger
+from fastNLP.workspace import WorkSpace
 
-logger = create_logger(__name__, "./train_test.log")
+logger = create_logger(__name__, WorkSpace().log_file_name)
 
 
 class Tester(object):

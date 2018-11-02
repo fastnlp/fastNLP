@@ -1,9 +1,9 @@
 import os
 
-from fastNLP.loader.base_loader import BaseLoader
 from fastNLP.core.dataset import DataSet
-from fastNLP.core.instance import Instance
 from fastNLP.core.field import *
+from fastNLP.core.instance import Instance
+from fastNLP.loader.base_loader import BaseLoader
 
 
 def convert_seq_dataset(data):
@@ -355,13 +355,19 @@ class LMDataSetLoader(DataSetLoader):
 @DataSet.set_reader('read_people_daily')
 class PeopleDailyCorpusLoader(DataSetLoader):
     """
-        People Daily Corpus: Chinese word segmentation, POS tag, NER
+        People Daily Corpus: Chinese word segmentation, POS tag
     """
 
     def __init__(self):
         super(PeopleDailyCorpusLoader, self).__init__()
 
-    def load(self, data_path):
+    def parse(self, data_path):
+        """
+
+        :param data_path: str
+        :return pos_tag_examples: List[List[List[str], List[str]]]
+                ner_examples: List[List[List[str], List[str]]]
+        """
         with open(data_path, "r", encoding="utf-8") as f:
             sents = f.readlines()
 
@@ -403,7 +409,11 @@ class PeopleDailyCorpusLoader(DataSetLoader):
         return pos_tag_examples, ner_examples
 
     def convert(self, data):
-        pass
+        return convert_seq2seq_dataset(data)
+
+    def load(self, data_path):
+        pos_tag_data, _ = self.parse(data_path)
+        return self.convert(pos_tag_data)
 
 
 class SNLIDataSetLoader(DataSetLoader):

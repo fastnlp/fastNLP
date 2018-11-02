@@ -13,8 +13,9 @@ from fastNLP.core.sampler import RandomSampler
 from fastNLP.core.tester import SeqLabelTester, ClassificationTester, SNLITester
 from fastNLP.saver.logger import create_logger
 from fastNLP.saver.model_saver import ModelSaver
+from fastNLP.workspace import WorkSpace
 
-logger = create_logger(__name__, "./train_test.log")
+logger = create_logger(__name__, WorkSpace().log_file_name)
 
 
 class Trainer(object):

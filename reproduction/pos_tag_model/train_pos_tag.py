@@ -6,12 +6,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.loader.dataset_loader import PeopleDailyCorpusLoader, BaseLoader
-from fastNLP.core.preprocess import SeqLabelPreprocess, load_pickle
+from fastNLP.core.preprocess import load_pickle
 from fastNLP.saver.model_saver import ModelSaver
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import AdvSeqLabel
 from fastNLP.core.predictor import SeqLabelInfer
+from fastNLP.core.vocabulary import Vocabulary
 
 # not in the file's dir
 if len(os.path.dirname(__file__)) != 0:
@@ -63,17 +64,20 @@ def train():
     # Config Loader
     train_args = ConfigSection()
     test_args = ConfigSection()
-    ConfigLoader("good_name").load_config(cfgfile, {"train": train_args, "test": test_args})
+    ConfigLoader().load_config("./pos_tag.cfg", {"train": train_args, "test": test_args})
 
     # Data Loader
     loader = PeopleDailyCorpusLoader()
-    train_data, _ = loader.load()
-
-    # Preprocessor
-    preprocessor = SeqLabelPreprocess()
-    data_train, data_dev = preprocessor.run(train_data, pickle_path=pickle_path, train_dev_split=0.3)
-    train_args["vocab_size"] = preprocessor.vocab_size
-    train_args["num_classes"] = preprocessor.num_classes
+    data_set = loader.load(pos_tag_data_path)
+    word_vocab = Vocabulary()
+    label_vocab = Vocabulary()
+    data_set.update_vocab(word_seq=word_vocab, label_seq=label_vocab)
+    data_set.index_field("word_seq", word_vocab).index_field("label_seq", label_vocab)
+    data_set.set_origin_len("word_seq")
+    data_set.rename_field("label_seq", "truth").set_target(truth=False)
+    data_train, data_dev = data_set.split(0.3, shuffle=True)
+    train_args["vocab_size"] = len(word_vocab)
+    train_args["num_classes"] = len(label_vocab)
 
     # Trainer
     trainer = SeqLabelTrainer(**train_args.data)
