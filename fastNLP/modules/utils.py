@@ -34,7 +34,7 @@ def initial_parameter(net, initial_method=None):
     elif initial_method == 'kaiming_normal' or initial_method == 'msra':
         init_method = init.kaiming_normal
     elif initial_method == 'kaiming_uniform':
-        init_method = init.kaiming_normal
+        init_method = init.kaiming_uniform
     elif initial_method == 'orthogonal':
         init_method = init.orthogonal_
     elif initial_method == 'sparse':
