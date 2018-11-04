@@ -24,6 +24,9 @@ class Field(object):
     def __repr__(self):
         return self.contents().__repr__()
 
+    def new(self, *args, **kwargs):
+        return self.__class__(*args, **kwargs, is_target=self.is_target)
+
 class TextField(Field):
     def __init__(self, text, is_target):
         """

@@ -35,6 +35,9 @@ class Instance(object):
         else:
             raise KeyError("{} not found".format(name))
 
+    def __setitem__(self, name, field):
+        return self.add_field(name, field)
+
     def get_length(self):
         """Fetch the length of all fields in the instance.
 

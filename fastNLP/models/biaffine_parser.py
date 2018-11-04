@@ -199,6 +199,8 @@ class BiaffineParser(GraphParser):
                 word_emb_dim,
                 pos_vocab_size,
                 pos_emb_dim,
+                word_hid_dim,
+                pos_hid_dim,
                 rnn_layers,
                 rnn_hidden_size,
                 arc_mlp_size,
@@ -209,10 +211,15 @@ class BiaffineParser(GraphParser):
                 use_greedy_infer=False):
 
         super(BiaffineParser, self).__init__()
+        rnn_out_size = 2 * rnn_hidden_size
         self.word_embedding = nn.Embedding(num_embeddings=word_vocab_size, embedding_dim=word_emb_dim)
         self.pos_embedding = nn.Embedding(num_embeddings=pos_vocab_size, embedding_dim=pos_emb_dim)
+        self.word_fc = nn.Linear(word_emb_dim, word_hid_dim)
+        self.pos_fc = nn.Linear(pos_emb_dim, pos_hid_dim)
+        self.word_norm = nn.LayerNorm(word_hid_dim)
+        self.pos_norm = nn.LayerNorm(pos_hid_dim)
         if use_var_lstm:
-            self.lstm = VarLSTM(input_size=word_emb_dim + pos_emb_dim,
+            self.lstm = VarLSTM(input_size=word_hid_dim + pos_hid_dim,
                                 hidden_size=rnn_hidden_size,
                                 num_layers=rnn_layers,
                                 bias=True,
@@ -221,7 +228,7 @@ class BiaffineParser(GraphParser):
                                 hidden_dropout=dropout,
                                 bidirectional=True)
         else:
-            self.lstm = nn.LSTM(input_size=word_emb_dim + pos_emb_dim,
+            self.lstm = nn.LSTM(input_size=word_hid_dim + pos_hid_dim,
                                 hidden_size=rnn_hidden_size,
                                 num_layers=rnn_layers,
                                 bias=True,
@@ -229,12 +236,13 @@ class BiaffineParser(GraphParser):
                                 dropout=dropout,
                                 bidirectional=True)
 
-        rnn_out_size = 2 * rnn_hidden_size
         self.arc_head_mlp = nn.Sequential(nn.Linear(rnn_out_size, arc_mlp_size),
+                                          nn.LayerNorm(arc_mlp_size),
                                           nn.ELU(),
                                           TimestepDropout(p=dropout),)
         self.arc_dep_mlp = copy.deepcopy(self.arc_head_mlp)
         self.label_head_mlp = nn.Sequential(nn.Linear(rnn_out_size, label_mlp_size),
+                                            nn.LayerNorm(label_mlp_size),
                                             nn.ELU(),
                                             TimestepDropout(p=dropout),)
         self.label_dep_mlp = copy.deepcopy(self.label_head_mlp)
@@ -242,10 +250,18 @@ class BiaffineParser(GraphParser):
         self.label_predictor = LabelBilinear(label_mlp_size, label_mlp_size, num_label, bias=True)
         self.normal_dropout = nn.Dropout(p=dropout)
         self.use_greedy_infer = use_greedy_infer
-        initial_parameter(self)
-        self.word_norm = nn.LayerNorm(word_emb_dim)
-        self.pos_norm = nn.LayerNorm(pos_emb_dim)
-        self.lstm_norm = nn.LayerNorm(rnn_out_size)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for m in self.modules():
+            if isinstance(m, nn.Embedding):
+                continue
+            elif isinstance(m, nn.LayerNorm):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            else:
+                for p in m.parameters():
+                    nn.init.normal_(p, 0, 0.01)
 
     def forward(self, word_seq, pos_seq, word_seq_origin_len, gold_heads=None, **_):
         """
@@ -262,19 +278,21 @@ class BiaffineParser(GraphParser):
         # prepare embeddings
         batch_size, seq_len = word_seq.shape
         # print('forward {} {}'.format(batch_size, seq_len))
-        batch_range = torch.arange(start=0, end=batch_size, dtype=torch.long, device=word_seq.device).unsqueeze(1)
 
         # get sequence mask
         seq_mask = len2masks(word_seq_origin_len, seq_len).long()
 
         word = self.normal_dropout(self.word_embedding(word_seq)) # [N,L] -> [N,L,C_0]
         pos = self.normal_dropout(self.pos_embedding(pos_seq)) # [N,L] -> [N,L,C_1]
+        word, pos = self.word_fc(word), self.pos_fc(pos)
         word, pos = self.word_norm(word), self.pos_norm(pos)
         x = torch.cat([word, pos], dim=2) # -> [N,L,C]
+        del word, pos
 
         # lstm, extract features
+        x = nn.utils.rnn.pack_padded_sequence(x, word_seq_origin_len.squeeze(1), batch_first=True)
         feat, _ = self.lstm(x) # -> [N,L,C]
-        feat = self.lstm_norm(feat)
+        feat, _ = nn.utils.rnn.pad_packed_sequence(feat, batch_first=True)
 
         # for arc biaffine
         # mlp, reduce dim
@@ -282,6 +300,7 @@ class BiaffineParser(GraphParser):
         arc_head = self.arc_head_mlp(feat)
         label_dep = self.label_dep_mlp(feat)
         label_head = self.label_head_mlp(feat)
+        del feat
 
         # biaffine arc classifier
         arc_pred = self.arc_predictor(arc_head, arc_dep) # [N, L, L]
@@ -289,7 +308,7 @@ class BiaffineParser(GraphParser):
         arc_pred.masked_fill_(flip_mask.unsqueeze(1), -np.inf)
 
         # use gold or predicted arc to predict label
-        if gold_heads is None:
+        if gold_heads is None or not self.training:
             # use greedy decoding in training
             if self.training or self.use_greedy_infer:
                 heads = self._greedy_decoder(arc_pred, seq_mask)
@@ -301,6 +320,7 @@ class BiaffineParser(GraphParser):
             head_pred = None
             heads = gold_heads
 
+        batch_range = torch.arange(start=0, end=batch_size, dtype=torch.long, device=word_seq.device).unsqueeze(1)
         label_head = label_head[batch_range, heads].contiguous()
         label_pred = self.label_predictor(label_head, label_dep) # [N, L, num_label]
         res_dict = {'arc_pred': arc_pred, 'label_pred': label_pred, 'seq_mask': seq_mask}

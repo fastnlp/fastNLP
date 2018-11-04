@@ -6,6 +6,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 from collections import defaultdict
 import math
 import torch
+import re
 
 from fastNLP.core.trainer import Trainer
 from fastNLP.core.metrics import Evaluator
@@ -55,10 +56,10 @@ class ConlluDataLoader(object):
         return ds
 
     def get_one(self, sample):
-        text = ['<root>']
-        pos_tags = ['<root>']
-        heads = [0]
-        head_tags = ['root']
+        text = []
+        pos_tags = []
+        heads = []
+        head_tags = []
         for w in sample:
             t1, t2, t3, t4 = w[1], w[3], w[6], w[7]
             if t3 == '_':
@@ -96,12 +97,13 @@ class CTBDataLoader(object):
     def convert(self, data):
         dataset = DataSet()
         for sample in data:
-            word_seq = ["<ROOT>"] + sample[0]
-            pos_seq = ["<ROOT>"] + sample[1]
-            heads = [0] + list(map(int, sample[2]))
-            head_tags = ["ROOT"] + sample[3]
+            word_seq = ["<s>"] + sample[0] + ['</s>']
+            pos_seq = ["<s>"] + sample[1] + ['</s>']
+            heads = [0] + list(map(int, sample[2])) + [0]
+            head_tags = ["<s>"] + sample[3] + ['</s>']
             dataset.append(Instance(word_seq=TextField(word_seq, is_target=False),
                                     pos_seq=TextField(pos_seq, is_target=False),
+                                    gold_heads=SeqLabelField(heads, is_target=False),
                                     head_indices=SeqLabelField(heads, is_target=True),
                                     head_labels=TextField(head_tags, is_target=True)))
         return dataset
@@ -117,7 +119,8 @@ datadir = '/home/yfshao/workdir/parser-data/'
 train_data_name = "train_ctb5.txt"
 dev_data_name = "dev_ctb5.txt"
 test_data_name = "test_ctb5.txt"
-emb_file_name = "/home/yfshao/parser-data/word_OOVthr_30_100v.txt"
+emb_file_name = "/home/yfshao/workdir/parser-data/word_OOVthr_30_100v.txt"
+# emb_file_name = "/home/yfshao/workdir/word_vector/cc.zh.300.vec"
 loader = CTBDataLoader()
 
 cfgfile = './cfg.cfg'
@@ -129,6 +132,10 @@ test_args = ConfigSection()
 model_args = ConfigSection()
 optim_args = ConfigSection()
 ConfigLoader.load_config(cfgfile, {"train": train_args, "test": test_args, "model": model_args, "optim": optim_args})
+print('trainre Args:', train_args.data)
+print('test Args:', test_args.data)
+print('optim Args:', optim_args.data)
+
 
 # Pickle Loader
 def save_data(dirpath, **kwargs):
@@ -151,9 +158,31 @@ def load_data(dirpath):
             datas[name] = _pickle.load(f)
     return datas
 
+def P2(data, field, length):
+    ds = [ins for ins in data if ins[field].get_length() >= length]
+    data.clear()
+    data.extend(ds)
+    return ds
+
+def P1(data, field):
+    def reeng(w):
+        return w if w == '<s>' or w == '</s>' or re.search(r'^([a-zA-Z]+[\.\-]*)+$', w) is None else 'ENG'
+    def renum(w):
+        return w if re.search(r'^[0-9]+\.?[0-9]*$', w) is None else 'NUMBER'
+    for ins in data:
+        ori = ins[field].contents()
+        s = list(map(renum, map(reeng, ori)))
+        if s != ori:
+            # print(ori)
+            # print(s)
+            # print()
+            ins[field] = ins[field].new(s)
+    return data
+
 class ParserEvaluator(Evaluator):
-    def __init__(self):
+    def __init__(self, ignore_label):
         super(ParserEvaluator, self).__init__()
+        self.ignore = ignore_label
 
     def __call__(self, predict_list, truth_list):
         head_all, label_all, total_all = 0, 0, 0
@@ -174,6 +203,7 @@ class ParserEvaluator(Evaluator):
             label_pred_correct: number of correct predicted labels.
             total_tokens: number of predicted tokens
         """
+        seq_mask *= (head_labels != self.ignore).long()
         head_pred_correct = (head_pred == head_indices).long() * seq_mask
         _, label_preds = torch.max(label_pred, dim=2)
         label_pred_correct = (label_preds == head_labels).long() * head_pred_correct
@@ -181,72 +211,93 @@ class ParserEvaluator(Evaluator):
 
 try:
     data_dict = load_data(processed_datadir)
-    word_v = data_dict['word_v']
     pos_v = data_dict['pos_v']
     tag_v = data_dict['tag_v']
     train_data = data_dict['train_data']
     dev_data = data_dict['dev_data']
+    test_data = data_dict['test_datas']
     print('use saved pickles')
 
 except Exception as _:
     print('load raw data and preprocess')
-    word_v = Vocabulary(need_default=True, min_freq=2)
+    # use pretrain embedding
     pos_v = Vocabulary(need_default=True)
     tag_v = Vocabulary(need_default=False)
     train_data = loader.load(os.path.join(datadir, train_data_name))
     dev_data = loader.load(os.path.join(datadir, dev_data_name))
     test_data = loader.load(os.path.join(datadir, test_data_name))
-    train_data.update_vocab(word_seq=word_v, pos_seq=pos_v, head_labels=tag_v)
-    save_data(processed_datadir, word_v=word_v, pos_v=pos_v, tag_v=tag_v, train_data=train_data, dev_data=dev_data)
+    train_data.update_vocab(pos_seq=pos_v, head_labels=tag_v)
+    save_data(processed_datadir, pos_v=pos_v, tag_v=tag_v, train_data=train_data, dev_data=dev_data, test_data=test_data)
 
-train_data.index_field("word_seq", word_v).index_field("pos_seq", pos_v).index_field("head_labels", tag_v)
-dev_data.index_field("word_seq", word_v).index_field("pos_seq", pos_v).index_field("head_labels", tag_v)
-train_data.set_origin_len("word_seq")
-dev_data.set_origin_len("word_seq")
+embed, word_v = EmbedLoader.load_embedding(model_args['word_emb_dim'], emb_file_name, 'glove', None, os.path.join(processed_datadir, 'word_emb.pkl'))
+word_v.unknown_label = "<OOV>"
 
-print(train_data[:3])
-print(len(train_data))
-print(len(dev_data))
+# Model
 model_args['word_vocab_size'] = len(word_v)
 model_args['pos_vocab_size'] = len(pos_v)
 model_args['num_label'] = len(tag_v)
 
+model = BiaffineParser(**model_args.data)
+model.reset_parameters()
 
-def train():
+datasets = (train_data, dev_data, test_data)
+for ds in datasets:
+    # print('====='*30)
+    P1(ds, 'word_seq')
+    P2(ds, 'word_seq', 5)
+    ds.index_field("word_seq", word_v).index_field("pos_seq", pos_v).index_field("head_labels", tag_v)
+    ds.set_origin_len('word_seq')
+    if train_args['use_golden_train']:
+        ds.set_target(gold_heads=False)
+    else:
+        ds.set_target(gold_heads=None)
+train_args.data.pop('use_golden_train')
+ignore_label = pos_v['P']
+
+print(test_data[0])
+print(len(train_data))
+print(len(dev_data))
+print(len(test_data))
+
+
+
+def train(path):
     # Trainer
     trainer = Trainer(**train_args.data)
 
     def _define_optim(obj):
-        obj._optimizer = torch.optim.Adam(obj._model.parameters(), **optim_args.data)
+        lr = optim_args.data['lr']
+        embed_params = set(obj._model.word_embedding.parameters())
+        decay_params = set(obj._model.arc_predictor.parameters()) | set(obj._model.label_predictor.parameters())
+        params = [p for p in obj._model.parameters() if p not in decay_params and p not in embed_params]
+        obj._optimizer = torch.optim.Adam([
+            {'params': list(embed_params), 'lr':lr*0.1},
+            {'params': list(decay_params), **optim_args.data},
+            {'params': params}
+            ], lr=lr)
         obj._scheduler = torch.optim.lr_scheduler.LambdaLR(obj._optimizer, lambda ep: max(.75 ** (ep / 5e4), 0.05))
 
     def _update(obj):
+        # torch.nn.utils.clip_grad_norm_(obj._model.parameters(), 5.0)
         obj._scheduler.step()
         obj._optimizer.step()
 
     trainer.define_optimizer = lambda: _define_optim(trainer)
     trainer.update = lambda: _update(trainer)
-    trainer.set_validator(Tester(**test_args.data, evaluator=ParserEvaluator()))
+    trainer.set_validator(Tester(**test_args.data, evaluator=ParserEvaluator(ignore_label)))
 
-    # Model
-    model = BiaffineParser(**model_args.data)
-
-    # use pretrain embedding
-    word_v.unknown_label = "<OOV>"
-    embed, _ = EmbedLoader.load_embedding(model_args['word_emb_dim'], emb_file_name, 'glove', word_v, os.path.join(processed_datadir, 'word_emb.pkl'))
     model.word_embedding = torch.nn.Embedding.from_pretrained(embed, freeze=False)
-
     model.word_embedding.padding_idx = word_v.padding_idx
     model.word_embedding.weight.data[word_v.padding_idx].fill_(0)
     model.pos_embedding.padding_idx = pos_v.padding_idx
     model.pos_embedding.weight.data[pos_v.padding_idx].fill_(0)
 
-    try:
-        ModelLoader.load_pytorch(model, "./save/saved_model.pkl")
-        print('model parameter loaded!')
-    except Exception as _:
-        print("No saved model. Continue.")
-        pass
+    # try:
+    #     ModelLoader.load_pytorch(model, "./save/saved_model.pkl")
+    #     print('model parameter loaded!')
+    # except Exception as _:
+    #     print("No saved model. Continue.")
+    #     pass
 
     # Start training
     trainer.train(model, train_data, dev_data)
@@ -258,15 +309,15 @@ def train():
     print("Model saved!")
 
 
-def test():
+def test(path):
     # Tester
-    tester = Tester(**test_args.data, evaluator=ParserEvaluator())
+    tester = Tester(**test_args.data, evaluator=ParserEvaluator(ignore_label))
 
     # Model
     model = BiaffineParser(**model_args.data)
 
     try:
-        ModelLoader.load_pytorch(model, "./save/saved_model.pkl")
+        ModelLoader.load_pytorch(model, path)
         print('model parameter loaded!')
     except Exception as _:
         print("No saved model. Abort test.")
@@ -284,11 +335,12 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Run a chinese word segmentation model')
     parser.add_argument('--mode', help='set the model\'s model', choices=['train', 'test', 'infer'])
+    parser.add_argument('--path', type=str, default='')
     args = parser.parse_args()
     if args.mode == 'train':
-        train()
+        train(args.path)
     elif args.mode == 'test':
-        test()
+        test(args.path)
     elif args.mode == 'infer':
         infer()
     else:
