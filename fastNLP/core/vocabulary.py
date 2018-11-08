@@ -51,6 +51,12 @@ class Vocabulary(object):
         self.min_freq = min_freq
         self.word_count = {}
         self.has_default = need_default
+        if self.has_default:
+            self.padding_label = DEFAULT_PADDING_LABEL
+            self.unknown_label = DEFAULT_UNKNOWN_LABEL
+        else:
+            self.padding_label = None
+            self.unknown_label = None
         self.word2idx = None
         self.idx2word = None
 
@@ -77,12 +83,10 @@ class Vocabulary(object):
         """
         if self.has_default:
             self.word2idx = deepcopy(DEFAULT_WORD_TO_INDEX)
-            self.padding_label = DEFAULT_PADDING_LABEL
-            self.unknown_label = DEFAULT_UNKNOWN_LABEL
+            self.word2idx[self.unknown_label] = self.word2idx.pop(DEFAULT_UNKNOWN_LABEL)
+            self.word2idx[self.padding_label] = self.word2idx.pop(DEFAULT_PADDING_LABEL)
         else:
             self.word2idx = {}
-            self.padding_label = None
-            self.unknown_label = None
 
         words = sorted(self.word_count.items(), key=lambda kv: kv[1], reverse=True)
         if self.min_freq is not None:
@@ -135,9 +139,9 @@ class Vocabulary(object):
         return self.word2idx[self.unknown_label]
 
     def __setattr__(self, name, val):
-        if name in self.__dict__ and name in ["unknown_label", "padding_label"]:
-            self.word2idx[val] = self.word2idx.pop(self.__dict__[name])
         self.__dict__[name] = val
+        if name in self.__dict__ and name in ["unknown_label", "padding_label"]:
+            self.word2idx = None
 
     @property
     @check_build_vocab

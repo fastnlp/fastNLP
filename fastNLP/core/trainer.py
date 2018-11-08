@@ -134,8 +134,8 @@ class Trainer(object):
 
         # main training procedure
         start = time.time()
-        self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M'))
-
+        self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+        print("training epochs started " + self.start_time)
         logger.info("training epochs started " + self.start_time)
         epoch, iters = 1, 0
         while(1):

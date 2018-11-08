@@ -24,6 +24,12 @@ from fastNLP.loader.embed_loader import EmbedLoader
 from fastNLP.models.biaffine_parser import BiaffineParser
 from fastNLP.saver.model_saver import ModelSaver
 
+BOS = '<BOS>'
+EOS = '<EOS>'
+UNK = '<OOV>'
+NUM = '<NUM>'
+ENG = '<ENG>'
+
 # not in the file's dir
 if len(os.path.dirname(__file__)) != 0:
     os.chdir(os.path.dirname(__file__))
@@ -97,10 +103,10 @@ class CTBDataLoader(object):
     def convert(self, data):
         dataset = DataSet()
         for sample in data:
-            word_seq = ["<s>"] + sample[0] + ['</s>']
-            pos_seq = ["<s>"] + sample[1] + ['</s>']
+            word_seq = [BOS] + sample[0] + [EOS]
+            pos_seq = [BOS] + sample[1] + [EOS]
             heads = [0] + list(map(int, sample[2])) + [0]
-            head_tags = ["<s>"] + sample[3] + ['</s>']
+            head_tags = [BOS] + sample[3] + [EOS]
             dataset.append(Instance(word_seq=TextField(word_seq, is_target=False),
                                     pos_seq=TextField(pos_seq, is_target=False),
                                     gold_heads=SeqLabelField(heads, is_target=False),
@@ -166,9 +172,9 @@ def P2(data, field, length):
 
 def P1(data, field):
     def reeng(w):
-        return w if w == '<s>' or w == '</s>' or re.search(r'^([a-zA-Z]+[\.\-]*)+$', w) is None else 'ENG'
+        return w if w == BOS or w == EOS or re.search(r'^([a-zA-Z]+[\.\-]*)+$', w) is None else ENG
     def renum(w):
-        return w if re.search(r'^[0-9]+\.?[0-9]*$', w) is None else 'NUMBER'
+        return w if re.search(r'^[0-9]+\.?[0-9]*$', w) is None else NUM
     for ins in data:
         ori = ins[field].contents()
         s = list(map(renum, map(reeng, ori)))
@@ -211,26 +217,32 @@ class ParserEvaluator(Evaluator):
 
 try:
     data_dict = load_data(processed_datadir)
+    word_v = data_dict['word_v']
     pos_v = data_dict['pos_v']
     tag_v = data_dict['tag_v']
     train_data = data_dict['train_data']
     dev_data = data_dict['dev_data']
-    test_data = data_dict['test_datas']
+    test_data = data_dict['test_data']
     print('use saved pickles')
 
 except Exception as _:
     print('load raw data and preprocess')
     # use pretrain embedding
+    word_v = Vocabulary(need_default=True, min_freq=2)
+    word_v.unknown_label = UNK
     pos_v = Vocabulary(need_default=True)
     tag_v = Vocabulary(need_default=False)
     train_data = loader.load(os.path.join(datadir, train_data_name))
     dev_data = loader.load(os.path.join(datadir, dev_data_name))
     test_data = loader.load(os.path.join(datadir, test_data_name))
-    train_data.update_vocab(pos_seq=pos_v, head_labels=tag_v)
-    save_data(processed_datadir, pos_v=pos_v, tag_v=tag_v, train_data=train_data, dev_data=dev_data, test_data=test_data)
+    train_data.update_vocab(word_seq=word_v, pos_seq=pos_v, head_labels=tag_v)
+    datasets = (train_data, dev_data, test_data)
+    save_data(processed_datadir, word_v=word_v, pos_v=pos_v, tag_v=tag_v, train_data=train_data, dev_data=dev_data, test_data=test_data)
 
-embed, word_v = EmbedLoader.load_embedding(model_args['word_emb_dim'], emb_file_name, 'glove', None, os.path.join(processed_datadir, 'word_emb.pkl'))
-word_v.unknown_label = "<OOV>"
+embed, _ = EmbedLoader.load_embedding(model_args['word_emb_dim'], emb_file_name, 'glove', word_v, os.path.join(processed_datadir, 'word_emb.pkl'))
+
+print(len(word_v))
+print(embed.size())
 
 # Model
 model_args['word_vocab_size'] = len(word_v)
@@ -239,18 +251,14 @@ model_args['num_label'] = len(tag_v)
 
 model = BiaffineParser(**model_args.data)
 model.reset_parameters()
-
 datasets = (train_data, dev_data, test_data)
 for ds in datasets:
-    # print('====='*30)
-    P1(ds, 'word_seq')
-    P2(ds, 'word_seq', 5)
     ds.index_field("word_seq", word_v).index_field("pos_seq", pos_v).index_field("head_labels", tag_v)
     ds.set_origin_len('word_seq')
-    if train_args['use_golden_train']:
-        ds.set_target(gold_heads=False)
-    else:
-        ds.set_target(gold_heads=None)
+if train_args['use_golden_train']:
+    train_data.set_target(gold_heads=False)
+else:
+    train_data.set_target(gold_heads=None)
 train_args.data.pop('use_golden_train')
 ignore_label = pos_v['P']
 
@@ -274,7 +282,7 @@ def train(path):
             {'params': list(embed_params), 'lr':lr*0.1},
             {'params': list(decay_params), **optim_args.data},
             {'params': params}
-            ], lr=lr)
+            ], lr=lr, betas=(0.9, 0.9))
         obj._scheduler = torch.optim.lr_scheduler.LambdaLR(obj._optimizer, lambda ep: max(.75 ** (ep / 5e4), 0.05))
 
     def _update(obj):
@@ -315,7 +323,7 @@ def test(path):
 
     # Model
     model = BiaffineParser(**model_args.data)
-
+    model.eval()
     try:
         ModelLoader.load_pytorch(model, path)
         print('model parameter loaded!')
@@ -324,6 +332,8 @@ def test(path):
         raise
 
     # Start training
+    print("Testing Train data")
+    tester.test(model, train_data)
     print("Testing Dev data")
     tester.test(model, dev_data)
     print("Testing Test data")
