@@ -7,7 +7,7 @@ from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.core.dataset import DataSet
 
 from fastNLP.api.processor import Processor
-
+from reproduction.chinese_word_segment.process.span_converter import *
 
 _SPECIAL_TAG_PATTERN = '<[a-zA-Z]+>'
 

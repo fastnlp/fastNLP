@@ -33,7 +33,9 @@ class DataSet(object):
             return self.dataset[name][self.idx]
 
         def __setitem__(self, name, val):
-            # TODO check new field.
+            if name not in self.dataset:
+                new_fields = [None]*len(self.dataset)
+                self.dataset.add_field(name, new_fields)
             self.dataset[name][self.idx] = val
 
         def __repr__(self):
@@ -44,6 +46,9 @@ class DataSet(object):
         self.field_arrays = {}
         if instance is not None:
             self._convert_ins(instance)
+
+    def __contains__(self, item):
+        return item in self.field_arrays
 
     def __iter__(self):
         return self.DataSetIter(self)

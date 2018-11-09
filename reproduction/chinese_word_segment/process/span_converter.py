@@ -2,9 +2,9 @@
 import re
 
 
-class SpanConverterBase:
+class SpanConverter:
     def __init__(self, replace_tag, pattern):
-        super(SpanConverterBase, self).__init__()
+        super(SpanConverter, self).__init__()
 
         self.replace_tag = replace_tag
         self.pattern = pattern
@@ -33,7 +33,7 @@ class SpanConverterBase:
         return spans
 
 
-class AlphaSpanConverter(SpanConverterBase):
+class AlphaSpanConverter(SpanConverter):
     def __init__(self):
         replace_tag = '<ALPHA>'
         # 理想状态下仅处理纯为字母的情况, 但不处理<[a-zA-Z]+>(因为这应该是特殊的tag).
@@ -42,7 +42,7 @@ class AlphaSpanConverter(SpanConverterBase):
         super(AlphaSpanConverter, self).__init__(replace_tag, pattern)
 
 
-class DigitSpanConverter(SpanConverterBase):
+class DigitSpanConverter(SpanConverter):
     def __init__(self):
         replace_tag = '<NUM>'
         pattern = '\d[\d\\.]*(?=[\u4e00-\u9fff  ,%.!<-])'
@@ -71,7 +71,7 @@ class DigitSpanConverter(SpanConverterBase):
             return '<NUM>'
 
 
-class TimeConverter(SpanConverterBase):
+class TimeConverter(SpanConverter):
     def __init__(self):
         replace_tag = '<TOC>'
         pattern = '\d+[:：∶][\d:：∶]+(?=[\u4e00-\u9fff  ,%.!<-])'
@@ -80,7 +80,7 @@ class TimeConverter(SpanConverterBase):
 
 
 
-class MixNumAlphaConverter(SpanConverterBase):
+class MixNumAlphaConverter(SpanConverter):
     def __init__(self):
         replace_tag = '<MIX>'
         pattern = None
@@ -177,7 +177,7 @@ class MixNumAlphaConverter(SpanConverterBase):
 
 
 
-class EmailConverter(SpanConverterBase):
+class EmailConverter(SpanConverter):
     def __init__(self):
         replaced_tag = "<EML>"
         pattern = '[0-9a-zA-Z]+[@][.﹒0-9a-zA-Z@]+(?=[\u4e00-\u9fff  ,%.!<\\-"$])'
