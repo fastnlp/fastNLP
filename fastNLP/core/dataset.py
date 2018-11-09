@@ -14,17 +14,11 @@ class DataSet(list):
 
     """
 
-    def __init__(self, name="", instances=None):
+    def __init__(self, fields=None):
         """
 
-        :param name: str, the name of the dataset. (default: "")
-        :param instances: list of Instance objects. (default: None)
         """
-        list.__init__([])
-        self.name = name
-        self.origin_len = None
-        if instances is not None:
-            self.extend(instances)
+        pass
 
     def index_all(self, vocab):
         for ins in self:
