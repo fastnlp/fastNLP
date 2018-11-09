@@ -40,6 +40,13 @@ class DataSet(object):
                 assert name in self.field_arrays
                 self.field_arrays[name].append(field)
 
+    def get_fields(self):
+        return self.field_arrays
+
+    def __len__(self):
+        field = self.field_arrays.values()[0]
+        return len(field)
+
     def get_length(self):
         """Fetch lengths of all fields in all instances in a dataset.
 
