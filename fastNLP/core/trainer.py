@@ -1,6 +1,6 @@
 import os
 import time
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 import torch
 from tensorboardX import SummaryWriter
@@ -15,7 +15,7 @@ from fastNLP.saver.logger import create_logger
 from fastNLP.saver.model_saver import ModelSaver
 
 logger = create_logger(__name__, "./train_test.log")
-
+logger.disabled = True
 
 class Trainer(object):
     """Operations of training a model, including data loading, gradient descent, and validation.
@@ -35,20 +35,21 @@ class Trainer(object):
         super(Trainer, self).__init__()
 
         """
-            "default_args" provides default value for important settings. 
-            The initialization arguments "kwargs" with the same key (name) will override the default value. 
-            "kwargs" must have the same type as "default_args" on corresponding keys. 
+            "default_args" provides default value for important settings.
+            The initialization arguments "kwargs" with the same key (name) will override the default value.
+            "kwargs" must have the same type as "default_args" on corresponding keys.
             Otherwise, error will raise.
         """
         default_args = {"epochs": 1, "batch_size": 2, "validate": False, "use_cuda": False, "pickle_path": "./save/",
                         "save_best_dev": False, "model_name": "default_model_name.pkl", "print_every_step": 1,
+                        "valid_step": 500, "eval_sort_key": 'acc',
                         "loss": Loss(None),  # used to pass type check
                         "optimizer": Optimizer("Adam", lr=0.001, weight_decay=0),
                         "evaluator": Evaluator()
                         }
         """
-            "required_args" is the collection of arguments that users must pass to Trainer explicitly. 
-            This is used to warn users of essential settings in the training. 
+            "required_args" is the collection of arguments that users must pass to Trainer explicitly.
+            This is used to warn users of essential settings in the training.
             Specially, "required_args" does not have default value, so they have nothing to do with "default_args".
         """
         required_args = {}
@@ -70,16 +71,20 @@ class Trainer(object):
             else:
                 # Trainer doesn't care about extra arguments
                 pass
-        print(default_args)
+        print("Training Args {}".format(default_args))
+        logger.info("Training Args {}".format(default_args))
 
-        self.n_epochs = default_args["epochs"]
-        self.batch_size = default_args["batch_size"]
+        self.n_epochs = int(default_args["epochs"])
+        self.batch_size = int(default_args["batch_size"])
         self.pickle_path = default_args["pickle_path"]
         self.validate = default_args["validate"]
         self.save_best_dev = default_args["save_best_dev"]
         self.use_cuda = default_args["use_cuda"]
         self.model_name = default_args["model_name"]
-        self.print_every_step = default_args["print_every_step"]
+        self.print_every_step = int(default_args["print_every_step"])
+        self.valid_step = int(default_args["valid_step"])
+        if self.validate is not None:
+            assert self.valid_step > 0
 
         self._model = None
         self._loss_func = default_args["loss"].get()  # return a pytorch loss function or None
@@ -89,6 +94,8 @@ class Trainer(object):
         self._summary_writer = SummaryWriter(self.pickle_path + 'tensorboard_logs')
         self._graph_summaried = False
         self._best_accuracy = 0.0
+        self.eval_sort_key = default_args['eval_sort_key']
+        self.validator = None
 
     def train(self, network, train_data, dev_data=None):
         """General Training Procedure
@@ -104,12 +111,17 @@ class Trainer(object):
         else:
             self._model = network
 
+        print(self._model)
+
         # define Tester over dev data
+        self.dev_data = None
         if self.validate:
             default_valid_args = {"batch_size": self.batch_size, "pickle_path": self.pickle_path,
                                   "use_cuda": self.use_cuda, "evaluator": self._evaluator}
-            validator = self._create_validator(default_valid_args)
-            logger.info("validator defined as {}".format(str(validator)))
+            if self.validator is None:
+                self.validator = self._create_validator(default_valid_args)
+            logger.info("validator defined as {}".format(str(self.validator)))
+            self.dev_data = dev_data
 
         # optimizer and loss
         self.define_optimizer()
@@ -117,29 +129,33 @@ class Trainer(object):
         self.define_loss()
         logger.info("loss function defined as {}".format(str(self._loss_func)))
 
+        # turn on network training mode
+        self.mode(network, is_test=False)
+
         # main training procedure
         start = time.time()
-        logger.info("training epochs started")
-        for epoch in range(1, self.n_epochs + 1):
+        self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+        print("training epochs started " + self.start_time)
+        logger.info("training epochs started " + self.start_time)
+        epoch, iters = 1, 0
+        while(1):
+            if self.n_epochs != -1 and epoch > self.n_epochs:
+                break
             logger.info("training epoch {}".format(epoch))
 
-            # turn on network training mode
-            self.mode(network, is_test=False)
             # prepare mini-batch iterator
             data_iterator = Batch(train_data, batch_size=self.batch_size, sampler=RandomSampler(),
-                                  use_cuda=self.use_cuda)
+                                  use_cuda=self.use_cuda, sort_in_batch=True, sort_key='word_seq')
             logger.info("prepared data iterator")
 
             # one forward and backward pass
-            self._train_step(data_iterator, network, start=start, n_print=self.print_every_step, epoch=epoch)
+            iters = self._train_step(data_iterator, network, start=start, n_print=self.print_every_step, epoch=epoch, step=iters, dev_data=dev_data)
 
             # validation
             if self.validate:
-                if dev_data is None:
-                    raise RuntimeError(
-                        "self.validate is True in trainer, but dev_data is None. Please provide the validation data.")
-                logger.info("validation started")
-                validator.test(network, dev_data)
+                self.valid_model()
+            self.save_model(self._model, 'training_model_'+self.start_time)
+            epoch += 1
 
     def _train_step(self, data_iterator, network, **kwargs):
         """Training process in one epoch.
@@ -149,13 +165,17 @@ class Trainer(object):
                 - start: time.time(), the starting time of this step.
                 - epoch: int,
         """
-        step = 0
+        step = kwargs['step']
         for batch_x, batch_y in data_iterator:
-
             prediction = self.data_forward(network, batch_x)
 
             loss = self.get_loss(prediction, batch_y)
             self.grad_backward(loss)
+            # if torch.rand(1).item() < 0.001:
+            #     print('[grads at epoch: {:>3} step: {:>4}]'.format(kwargs['epoch'], step))
+            #     for name, p in self._model.named_parameters():
+            #         if p.requires_grad:
+            #             print('\t{} {} {}'.format(name, tuple(p.size()), torch.sum(p.grad).item()))
             self.update()
             self._summary_writer.add_scalar("loss", loss.item(), global_step=step)
 
@@ -166,7 +186,22 @@ class Trainer(object):
                     kwargs["epoch"], step, loss.data, diff)
                 print(print_output)
                 logger.info(print_output)
+            if self.validate and self.valid_step > 0 and step > 0 and step % self.valid_step == 0:
+                self.valid_model()
             step += 1
+        return step
+
+    def valid_model(self):
+        if self.dev_data is None:
+                raise RuntimeError(
+                    "self.validate is True in trainer, but dev_data is None. Please provide the validation data.")
+        logger.info("validation started")
+        res = self.validator.test(self._model, self.dev_data)
+        if self.save_best_dev and self.best_eval_result(res):
+            logger.info('save best result! {}'.format(res))
+            print('save best result! {}'.format(res))
+            self.save_model(self._model, 'best_model_'+self.start_time)
+        return res
 
     def mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.
@@ -180,11 +215,17 @@ class Trainer(object):
         else:
             model.train()
 
-    def define_optimizer(self):
+    def define_optimizer(self, optim=None):
         """Define framework-specific optimizer specified by the models.
 
         """
-        self._optimizer = self._optimizer_proto.construct_from_pytorch(self._model.parameters())
+        if optim is not None:
+            # optimizer constructed by user
+            self._optimizer = optim
+        elif self._optimizer is None:
+            # optimizer constructed by proto
+            self._optimizer = self._optimizer_proto.construct_from_pytorch(self._model.parameters())
+        return self._optimizer
 
     def update(self):
         """Perform weight update on a model.
@@ -217,6 +258,8 @@ class Trainer(object):
         :param truth: ground truth label vector
         :return: a scalar
         """
+        if isinstance(predict, dict) and isinstance(truth, dict):
+            return self._loss_func(**predict, **truth)
         if len(truth) > 1:
             raise NotImplementedError("Not ready to handle multi-labels.")
         truth = list(truth.values())[0] if len(truth) > 0 else None
@@ -241,13 +284,23 @@ class Trainer(object):
                 raise ValueError("Please specify a loss function.")
             logger.info("The model didn't define loss, use Trainer's loss.")
 
-    def best_eval_result(self, validator):
+    def best_eval_result(self, metrics):
         """Check if the current epoch yields better validation results.
 
         :param validator: a Tester instance
         :return: bool, True means current results on dev set is the best.
         """
-        loss, accuracy = validator.metrics
+        if isinstance(metrics, tuple):
+            loss, metrics = metrics
+
+        if isinstance(metrics, dict):
+            if len(metrics) == 1:
+                accuracy = list(metrics.values())[0]
+            else:
+                accuracy = metrics[self.eval_sort_key]
+        else:
+            accuracy = metrics
+
         if accuracy > self._best_accuracy:
             self._best_accuracy = accuracy
             return True
@@ -268,6 +321,8 @@ class Trainer(object):
     def _create_validator(self, valid_args):
         raise NotImplementedError
 
+    def set_validator(self, validor):
+        self.validator = validor
 
 class SeqLabelTrainer(Trainer):
     """Trainer for Sequence Labeling

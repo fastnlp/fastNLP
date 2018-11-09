@@ -101,14 +101,14 @@ class VarRNNBase(nn.Module):
 
         mask_x = input.new_ones((batch_size, self.input_size))
         mask_out = input.new_ones((batch_size, self.hidden_size * self.num_directions))
-        mask_h = input.new_ones((batch_size, self.hidden_size))
+        mask_h_ones = input.new_ones((batch_size, self.hidden_size))
         nn.functional.dropout(mask_x, p=self.input_dropout, training=self.training, inplace=True)
         nn.functional.dropout(mask_out, p=self.hidden_dropout, training=self.training, inplace=True)
-        nn.functional.dropout(mask_h, p=self.hidden_dropout, training=self.training, inplace=True)
 
         hidden_list = []
         for layer in range(self.num_layers):
             output_list = []
+            mask_h = nn.functional.dropout(mask_h_ones, p=self.hidden_dropout, training=self.training, inplace=False)
             for direction in range(self.num_directions):
                 input_x = input if direction == 0 else flip(input, [0])
                 idx = self.num_directions * layer + direction
