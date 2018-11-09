@@ -14,7 +14,7 @@ fastNLP is a modular Natural Language Processing system based on PyTorch, for fa
 ## Requirements
 
 - numpy>=1.14.2
-- torch==0.4.0
+- torch>=0.4.0
 - torchvision>=0.1.8
 - tensorboardX
 
