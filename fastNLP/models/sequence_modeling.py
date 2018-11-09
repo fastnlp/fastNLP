@@ -127,7 +127,8 @@ class AdvSeqLabel(SeqLabeling):
         :param word_seq: LongTensor, [batch_size, mex_len]
         :param word_seq_origin_len: list of int.
         :param truth: LongTensor, [batch_size, max_len]
-        :return y:
+        :return y: If truth is None, return list of [decode path(list)]. Used in testing and predicting.
+                   If truth is not None, return loss, a scalar. Used in training.
         """
         self.mask = self.make_mask(word_seq, word_seq_origin_len)
 

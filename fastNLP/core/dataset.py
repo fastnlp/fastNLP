@@ -2,10 +2,12 @@ import random
 import sys
 from collections import defaultdict
 from copy import deepcopy
+import numpy as np
 
 from fastNLP.core.field import TextField, LabelField
 from fastNLP.core.instance import Instance
 from fastNLP.core.vocabulary import Vocabulary
+from fastNLP.core.fieldarray import FieldArray
 
 _READERS = {}
 
@@ -14,43 +16,36 @@ class DataSet(object):
 
     """
 
-    def __init__(self, fields=None):
-        """
-
-        """
-        pass
-
-    def index_all(self, vocab):
-        for ins in self:
-            ins.index_all(vocab)
-        return self
-
-    def index_field(self, field_name, vocab):
-        if isinstance(field_name, str):
-            field_list = [field_name]
-            vocab_list = [vocab]
+    def __init__(self, instance=None):
+        if instance is not None:
+            self._convert_ins(instance)
         else:
-            classes = (list, tuple)
-            assert isinstance(field_name, classes) and isinstance(vocab, classes) and len(field_name) == len(vocab)
-            field_list = field_name
-            vocab_list = vocab
+            self.field_arrays = {}
 
-        for name, vocabs in zip(field_list, vocab_list):
-            for ins in self:
-                ins.index_field(name, vocabs)
-        return self
+    def _convert_ins(self, ins_list):
+        if isinstance(ins_list, list):
+            for ins in ins_list:
+                self.append(ins)
+        else:
+            self.append(ins)
 
-    def to_tensor(self, idx: int, padding_length: dict):
-        """Convert an instance in a dataset to tensor.
+    def append(self, ins):
+        # no field
+        if len(self.field_arrays) == 0:
+            for name, field in ins.field.items():
+                self.field_arrays[name] = FieldArray(name, [field])
+        else:
+            assert len(self.field_arrays) == len(ins.field)
+            for name, field in ins.field.items():
+                assert name in self.field_arrays
+                self.field_arrays[name].append(field)
 
-        :param idx: int, the index of the instance in the dataset.
-        :param padding_length: int
-        :return tensor_x: dict of (str: torch.LongTensor), which means (field name: tensor of shape [padding_length, ])
-                tensor_y: dict of (str: torch.LongTensor), which means (field name: tensor of shape [padding_length, ])
+    def get_fields(self):
+        return self.field_arrays
 
-        """
-        ins = self[idx]
-        return ins.to_tensor(padding_length, self.origin_len)
+    def __len__(self):
+        field = self.field_arrays.values()[0]
+        return len(field)
 
     def get_length(self):
         """Fetch lengths of all fields in all instances in a dataset.
@@ -59,15 +54,10 @@ class DataSet(object):
                 The list contains lengths of this field in all instances.
 
         """
-        lengths = defaultdict(list)
-        for ins in self:
-            for field_name, field_length in ins.get_length().items():
-                lengths[field_name].append(field_length)
-        return lengths
+        pass
 
     def shuffle(self):
-        random.shuffle(self)
-        return self
+        pass
 
     def split(self, ratio, shuffle=True):
         """Train/dev splitting
@@ -78,58 +68,37 @@ class DataSet(object):
                 dev_set: a DataSet object, representing the validation set
 
         """
-        assert 0 < ratio < 1
-        if shuffle:
-            self.shuffle()
-        split_idx = int(len(self) * ratio)
-        dev_set = deepcopy(self)
-        train_set = deepcopy(self)
-        del train_set[:split_idx]
-        del dev_set[split_idx:]
-        return train_set, dev_set
+        pass
 
     def rename_field(self, old_name, new_name):
         """rename a field
         """
-        for ins in self:
-            ins.rename_field(old_name, new_name)
+        if old_name in self.field_arrays:
+            self.field_arrays[new_name] = self.field_arrays.pop(old_name)
+        else:
+            raise KeyError
         return self
 
-    def set_target(self, **fields):
+    def set_is_target(self, **fields):
         """Change the flag of `is_target` for all instance. For fields not set here, leave their `is_target` unchanged.
 
-        :param key-value pairs for field-name and `is_target` value(True, False or None).
+        :param key-value pairs for field-name and `is_target` value(True, False).
         """
-        for ins in self:
-            ins.set_target(**fields)
+        for name, val in fields.items():
+            if name in self.field_arrays:
+                assert isinstance(val, bool)
+                self.field_arrays[name].is_target = val
+            else:
+                raise KeyError
         return self
 
-    def update_vocab(self, **name_vocab):
-        """using certain field data to update vocabulary.
-
-        e.g. ::
-
-            # update word vocab and label vocab seperately
-            dataset.update_vocab(word_seq=word_vocab, label_seq=label_vocab)
-        """
-        for field_name, vocab in name_vocab.items():
-            for ins in self:
-                vocab.update(ins[field_name].contents())
-        return self
-
-    def set_origin_len(self, origin_field, origin_len_name=None):
-        """make dataset tensor output contain origin_len field.
-
-        e.g. ::
-
-            # output "word_seq_origin_len", lengths based on "word_seq" field
-            dataset.set_origin_len("word_seq")
-        """
-        if origin_field is None:
-            self.origin_len = None
-        else:
-            self.origin_len = (origin_field + "_origin_len", origin_field) \
-                if origin_len_name is None else (origin_len_name, origin_field)
+    def set_need_tensor(self, **kwargs):
+        for name, val in kwargs.items():
+            if name in self.field_arrays:
+                assert isinstance(val, bool)
+                self.field_arrays[name].need_tensor = val
+            else:
+                raise KeyError
         return self
 
     def __getattribute__(self, name):
