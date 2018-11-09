@@ -59,42 +59,37 @@ def infer():
     print("Inference finished!")
 
 
-def train():
-    # Config Loader
-    train_args = ConfigSection()
-    test_args = ConfigSection()
-    ConfigLoader("good_name").load_config(cfgfile, {"train": train_args, "test": test_args})
+def train(): 
+    # load config
+    trainer_args = ConfigSection()
+    model_args = ConfigSection()
+    ConfigLoader().load_config(cfgfile, {"train": train_args, "test": test_args})
 
     # Data Loader
     loader = PeopleDailyCorpusLoader()
     train_data, _ = loader.load()
 
-    # Preprocessor
-    preprocessor = SeqLabelPreprocess()
-    data_train, data_dev = preprocessor.run(train_data, pickle_path=pickle_path, train_dev_split=0.3)
-    train_args["vocab_size"] = preprocessor.vocab_size
-    train_args["num_classes"] = preprocessor.num_classes
+    # TODO: define processors
+    
+    # define pipeline
+    pp = Pipeline()
+    # TODO: pp.add_processor()
 
-    # Trainer
-    trainer = SeqLabelTrainer(**train_args.data)
+    # run the pipeline, get data_set
+    train_data = pp(train_data)
 
-    # Model
+    # define a model
     model = AdvSeqLabel(train_args)
-    try:
-        ModelLoader.load_pytorch(model, "./save/saved_model.pkl")
-        print('model parameter loaded!')
-    except Exception as e:
-        print("No saved model. Continue.")
-        pass
 
-    # Start training
+    # call trainer to train
+    trainer = SeqLabelTrainer(train_args)
     trainer.train(model, data_train, data_dev)
-    print("Training finished!")
 
-    # Saver
-    saver = ModelSaver("./save/saved_model.pkl")
-    saver.save_pytorch(model)
-    print("Model saved!")
+    # save model
+    ModelSaver("./saved_model.pkl").save_pytorch(model, param_only=False)
+
+    # TODO:save pipeline
+
 
 
 def test():

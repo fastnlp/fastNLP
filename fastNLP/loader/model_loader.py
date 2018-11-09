@@ -8,8 +8,8 @@ class ModelLoader(BaseLoader):
         Loader for models.
     """
 
-    def __init__(self, data_path):
-        super(ModelLoader, self).__init__(data_path)
+    def __init__(self):
+        super(ModelLoader, self).__init__()
 
     @staticmethod
     def load_pytorch(empty_model, model_path):
@@ -19,3 +19,10 @@ class ModelLoader(BaseLoader):
         :param model_path: str, the path to the saved model.
         """
         empty_model.load_state_dict(torch.load(model_path))
+        
+    @staticmethod
+    def load_pytorch(model_path):
+        """Load the entire model.
+
+        """
+        return torch.load(model_path)

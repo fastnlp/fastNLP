@@ -15,10 +15,14 @@ class ModelSaver(object):
         """
         self.save_path = save_path
 
-    def save_pytorch(self, model):
+    def save_pytorch(self, model, param_only=True):
         """Save a pytorch model into .pkl file.
 
         :param model: a PyTorch model
+        :param param_only: bool, whether only to save the model parameters or the entire model.
 
         """
-        torch.save(model.state_dict(), self.save_path)
+        if param_only is True:
+            torch.save(model.state_dict(), self.save_path)
+        else:
+            torch.save(model, self.save_path)
