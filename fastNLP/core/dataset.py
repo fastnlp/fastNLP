@@ -27,7 +27,7 @@ class DataSet(object):
             for ins in ins_list:
                 self.append(ins)
         else:
-            self.append(ins)
+            self.append(ins_list)
 
     def append(self, ins):
         # no field
@@ -39,6 +39,10 @@ class DataSet(object):
             for name, field in ins.field.items():
                 assert name in self.field_arrays
                 self.field_arrays[name].append(field)
+
+    def add_field(self, name, fields):
+        assert len(self) == len(fields)
+        self.field_arrays[name] = fields
 
     def get_fields(self):
         return self.field_arrays

@@ -39,35 +39,6 @@ class TextField(Field):
         super(TextField, self).__init__(text, is_target)
 
 
-class IndexField(Field):
-    def __init__(self, name, content, vocab, is_target):
-        super(IndexField, self).__init__(name, is_target)
-        self.content = []
-        self.padding_idx = vocab.padding_idx
-        for sent in content:
-            idx = vocab.index_sent(sent)
-            if isinstance(idx, list):
-                idx = torch.Tensor(idx)
-            elif isinstance(idx, np.array):
-                idx = torch.from_numpy(idx)
-            elif not isinstance(idx, torch.Tensor):
-                raise ValueError
-            self.content.append(idx)
-
-    def to_tensor(self, id_list, sort_within_batch=False):
-        max_len = max(id_list)
-        batch_size = len(id_list)
-        tensor = torch.full((batch_size, max_len), self.padding_idx, dtype=torch.long)
-        len_list = [(i, self.content[i].size(0)) for i in id_list]
-        if sort_within_batch:
-            len_list = sorted(len_list, key=lambda x: x[1], reverse=True)
-        for i, (idx, length) in enumerate(len_list):
-            if length == max_len:
-                tensor[i] = self.content[idx]
-            else:
-                tensor[i][:length] = self.content[idx]
-        return tensor
-
 class LabelField(Field):
     """The Field representing a single label. Can be a string or integer.
 
