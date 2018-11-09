@@ -9,7 +9,7 @@ from fastNLP.core.vocabulary import Vocabulary
 
 _READERS = {}
 
-class DataSet(list):
+class DataSet(object):
     """A DataSet object is a list of Instance objects.
 
     """
