@@ -8,7 +8,6 @@ class Pipeline:
 
     def add_processor(self, processor):
         assert isinstance(processor, Processor), "Must be a Processor, not {}.".format(type(processor))
-        processor_name = type(processor)
         self.pipeline.append(processor)
 
     def process(self, dataset):
