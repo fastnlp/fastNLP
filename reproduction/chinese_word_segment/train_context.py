@@ -19,7 +19,7 @@ from reproduction.chinese_word_segment.models.cws_model import CWSBiLSTMSegApp
 
 from reproduction.chinese_word_segment.utils import calculate_pre_rec_f1
 
-ds_name = 'pku'
+ds_name = 'msr'
 tr_filename = '/hdd/fudanNLP/CWS/Multi_Criterion/all_data/{}/middle_files/{}_train.txt'.format(ds_name, ds_name)
 dev_filename = '/hdd/fudanNLP/CWS/Multi_Criterion/all_data/{}/middle_files/{}_dev.txt'.format(ds_name, ds_name)
 
@@ -196,6 +196,11 @@ print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1 * 100,
                                                  rec * 100))
 
 # TODO 这里貌似需要区分test pipeline与dev pipeline
+
+test_context_dict = {'pipeline': pp,
+                     'model': cws_model}
+torch.save(test_context_dict, 'models/test_context.pkl')
+
 
 # TODO 还需要考虑如何替换回原文的问题？
 # 1. 不需要将特殊tag替换
