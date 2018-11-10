@@ -2,6 +2,8 @@ from fastNLP.core.dataset import DataSet
 from fastNLP.core.vocabulary import Vocabulary
 
 
+import re
+
 class Processor:
     def __init__(self, field_name, new_added_field_name):
         self.field_name = field_name
@@ -78,6 +80,37 @@ class FullSpaceToHalfSpaceProcessor(Processor):
                     char = self.convert_map[char]
                 new_sentence[idx] = char
             ins[self.field_name] = ''.join(new_sentence)
+        return dataset
+
+
+class MapFieldProcessor(Processor):
+    def __init__(self, func, field_name, new_added_field_name=None):
+        super(MapFieldProcessor, self).__init__(field_name, new_added_field_name)
+        self.func = func
+
+    def process(self, dataset):
+        for ins in dataset:
+            s = ins[self.field_name]
+            new_s = self.func(s)
+            ins[self.new_added_field_name] = new_s
+        return  dataset
+
+
+class Num2TagProcessor(Processor):
+    def __init__(self, tag, field_name, new_added_field_name=None):
+        super(Num2TagProcessor, self).__init__(field_name, new_added_field_name)
+        self.tag = tag
+        self.pattern = r'[-+]?([0-9]+[.]?[0-9]*)+[/eE]?[-+]?([0-9]+[.]?[0-9]*)'
+
+    def process(self, dataset):
+        for ins in dataset:
+            s = ins[self.field_name]
+            new_s = [None] * len(s)
+            for i, w in enumerate(s):
+                if re.search(self.pattern, w) is not None:
+                    w = self.tag
+                new_s[i] = w
+            ins[self.new_added_field_name] = new_s
         return dataset
 
 

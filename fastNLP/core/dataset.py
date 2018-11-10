@@ -89,6 +89,8 @@ class DataSet(object):
         return self.field_arrays[name]
 
     def __len__(self):
+        if len(self.field_arrays) == 0:
+            return 0
         field = iter(self.field_arrays.values()).__next__()
         return len(field)
 
