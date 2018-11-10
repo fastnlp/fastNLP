@@ -28,11 +28,15 @@ class FieldArray(object):
             return self.content[idxes]
         assert self.need_tensor is True
         batch_size = len(idxes)
-        max_len = max([len(self.content[i]) for i in idxes])
-        array = np.full((batch_size, max_len), self.padding_val, dtype=np.int32)
+        # TODO 当这个fieldArray是seq_length这种只有一位的内容时，不需要padding，需要再讨论一下
+        if isinstance(self.content[0], int) or isinstance(self.content[0], float):
+            array = np.array([self.content[i] for i in idxes], dtype=type(self.content[0]))
+        else:
+            max_len = max([len(self.content[i]) for i in idxes])
+            array = np.full((batch_size, max_len), self.padding_val, dtype=np.int32)
 
-        for i, idx in enumerate(idxes):
-            array[i][:len(self.content[idx])] = self.content[idx]
+            for i, idx in enumerate(idxes):
+                array[i][:len(self.content[idx])] = self.content[idx]
         return array
 
     def __len__(self):

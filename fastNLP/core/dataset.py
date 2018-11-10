@@ -72,7 +72,8 @@ class DataSet(object):
                 self.field_arrays[name].append(field)
 
     def add_field(self, name, fields):
-        assert len(self) == len(fields)
+        if len(self.field_arrays)!=0:
+            assert len(self) == len(fields)
         self.field_arrays[name] = FieldArray(name, fields)
 
     def delete_field(self, name):

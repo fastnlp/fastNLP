@@ -68,7 +68,6 @@ class CWSBiLSTMEncoder(BaseModel):
         if not bigrams is None:
             bigram_tensor = self.bigram_embedding(bigrams).view(batch_size, max_len, -1)
             x_tensor = torch.cat([x_tensor, bigram_tensor], dim=2)
-
         sorted_lens, sorted_indices = torch.sort(seq_lens, descending=True)
         packed_x = nn.utils.rnn.pack_padded_sequence(x_tensor[sorted_indices], sorted_lens, batch_first=True)
 
@@ -97,36 +96,22 @@ class CWSBiLSTMSegApp(BaseModel):
 
     def forward(self, batch_dict):
         device = self.parameters().__next__().device
-        chars = batch_dict['indexed_chars_list'].to(device)
-        if 'bigram' in batch_dict:
-            bigrams = batch_dict['indexed_chars_list'].to(device)
+        chars = batch_dict['indexed_chars_list'].to(device).long()
+        if 'indexed_bigrams_list' in batch_dict:
+            bigrams = batch_dict['indexed_bigrams_list'].to(device).long()
         else:
             bigrams = None
-        seq_lens = batch_dict['seq_lens'].to(device)
+        seq_lens = batch_dict['seq_lens'].to(device).long()
 
         feats = self.encoder_model(chars, bigrams, seq_lens)
         probs = self.decoder_model(feats)
 
         pred_dict = {}
         pred_dict['seq_lens'] = seq_lens
-        pred_dict['pred_prob'] = probs
+        pred_dict['pred_probs'] = probs
 
         return pred_dict
 
     def predict(self, batch_dict):
         pass
 
-
-    def loss_fn(self, pred_dict, true_dict):
-        seq_lens = pred_dict['seq_lens']
-        masks = seq_lens_to_mask(seq_lens).float()
-
-        pred_prob = pred_dict['pred_prob']
-        true_y = true_dict['tags']
-
-        # TODO 当前把loss写死了
-        loss = F.cross_entropy(pred_prob.view(-1, self.tag_size),
-                               true_y.view(-1), reduction='none')*masks.view(-1)/torch.sum(masks)
-
-
-        return loss

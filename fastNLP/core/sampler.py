@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-
+from itertools import chain
 
 def convert_to_torch_tensor(data_list, use_cuda):
     """Convert lists into (cuda) Tensors.
@@ -42,6 +42,47 @@ class RandomSampler(BaseSampler):
 
     def __call__(self, data_set):
         return list(np.random.permutation(len(data_set)))
+
+class BucketSampler(BaseSampler):
+
+    def __init__(self, num_buckets=10, batch_size=32):
+        self.num_buckets = num_buckets
+        self.batch_size = batch_size
+
+    def __call__(self, data_set):
+        assert 'seq_lens' in data_set, "BuckectSampler only support data_set with seq_lens right now."
+
+        seq_lens = data_set['seq_lens'].content
+        total_sample_num = len(seq_lens)
+
+        bucket_indexes = []
+        num_sample_per_bucket = total_sample_num//self.num_buckets
+        for i in range(self.num_buckets):
+            bucket_indexes.append([num_sample_per_bucket*i, num_sample_per_bucket*(i+1)])
+        bucket_indexes[-1][1] = total_sample_num
+
+        sorted_seq_lens = list(sorted([(idx, seq_len) for
+                                       idx, seq_len in zip(range(total_sample_num), seq_lens)],
+                                      key=lambda x:x[1]))
+
+        batchs = []
+
+        left_init_indexes = []
+        for b_idx in range(self.num_buckets):
+            start_idx = bucket_indexes[b_idx][0]
+            end_idx = bucket_indexes[b_idx][1]
+            sorted_bucket_seq_lens = sorted_seq_lens[start_idx:end_idx]
+            left_init_indexes.extend([tup[0] for tup in sorted_bucket_seq_lens])
+            num_batch_per_bucket = len(left_init_indexes)//self.batch_size
+            np.random.shuffle(left_init_indexes)
+            for i in range(num_batch_per_bucket):
+                batchs.append(left_init_indexes[i*self.batch_size:(i+1)*self.batch_size])
+            left_init_indexes = left_init_indexes[num_batch_per_bucket*self.batch_size:]
+
+        np.random.shuffle(batchs)
+
+        return list(chain(*batchs))
+
 
 
 def simple_sort_bucketing(lengths):

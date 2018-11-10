@@ -110,9 +110,9 @@ class CWSTagProcessor(Processor):
         for ins in dataset:
             sentence = ins[self.field_name]
             tag_list = self._generate_tag(sentence)
-            new_tag_field = SeqLabelField(tag_list)
-            ins[self.new_added_field_name] = new_tag_field
+            ins[self.new_added_field_name] = tag_list
         dataset.set_is_target(**{self.new_added_field_name:True})
+        dataset.set_need_tensor(**{self.new_added_field_name:True})
         return dataset
 
     def _tags_from_word_len(self, word_len):

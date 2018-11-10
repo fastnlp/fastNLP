@@ -1,6 +1,4 @@
 
-from fastNLP.core.instance import Instance
-from fastNLP.core.dataset import DataSet
 from fastNLP.api.pipeline import Pipeline
 from fastNLP.api.processor import FullSpaceToHalfSpaceProcessor
 from fastNLP.api.processor import IndexerProcessor
@@ -143,7 +141,7 @@ def decode_iterator(model, batcher):
 from reproduction.chinese_word_segment.utils import FocalLoss
 from reproduction.chinese_word_segment.utils import seq_lens_to_mask
 from fastNLP.core.batch import Batch
-from fastNLP.core.sampler import RandomSampler
+from fastNLP.core.sampler import BucketSampler
 from fastNLP.core.sampler import SequentialSampler
 
 import torch
@@ -159,6 +157,7 @@ cws_model = CWSBiLSTMSegApp(char_vocab_proc.get_vocab_size(), embed_dim=100,
                             bigram_embed_dim=100, num_bigram_per_char=8,
                             hidden_size=200, bidirectional=True, embed_drop_p=None,
                             num_layers=1, tag_size=tag_size)
+cws_model.cuda()
 
 num_epochs = 3
 loss_fn = FocalLoss(class_num=tag_size)
@@ -167,7 +166,7 @@ optimizer = optim.Adagrad(cws_model.parameters(), lr=0.01)
 
 print_every = 50
 batch_size = 32
-tr_batcher = Batch(tr_dataset, batch_size, RandomSampler(), use_cuda=False)
+tr_batcher = Batch(tr_dataset, batch_size, BucketSampler(batch_size=batch_size), use_cuda=False)
 dev_batcher = Batch(dev_dataset, batch_size, SequentialSampler(), use_cuda=False)
 num_batch_per_epoch = len(tr_dataset) // batch_size
 best_f1 = 0
@@ -181,10 +180,12 @@ for num_epoch in range(num_epochs):
         cws_model.train()
         for batch_idx, (batch_x, batch_y) in enumerate(tr_batcher, 1):
             pred_dict = cws_model(batch_x)  # B x L x tag_size
-            seq_lens = batch_x['seq_lens']
-            masks = seq_lens_to_mask(seq_lens)
-            tags = batch_y['tags']
-            loss = torch.sum(loss_fn(pred_dict['pred_prob'].view(-1, tag_size),
+
+            seq_lens = pred_dict['seq_lens']
+            masks = seq_lens_to_mask(seq_lens).float()
+            tags = batch_y['tags'].long().to(seq_lens.device)
+
+            loss = torch.sum(loss_fn(pred_dict['pred_probs'].view(-1, tag_size),
                                      tags.view(-1)) * masks.view(-1)) / torch.sum(masks)
             # loss = torch.mean(F.cross_entropy(probs.view(-1, 2), tags.view(-1)) * masks.float())
 
@@ -201,20 +202,20 @@ for num_epoch in range(num_epochs):
                 pbar.set_postfix_str('batch=%d, avg_loss=%.5f' % (batch_idx, avg_loss / print_every))
                 avg_loss = 0
                 pbar.update(print_every)
-
-            # 验证集
-            pre, rec, f1 = calculate_pre_rec_f1(cws_model, dev_batcher)
-            print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1*100,
-                                                                 pre*100,
-                                                                 rec*100))
-            if best_f1<f1:
-                best_f1 = f1
-                # 缓存最佳的parameter，可能之后会用于保存
-                best_state_dict = {
-                        key:value.clone() for key, value in
-                            cws_model.state_dict().items()
-                    }
-                best_epoch = num_epoch
+    tr_batcher = Batch(tr_dataset, batch_size, BucketSampler(batch_size=batch_size), use_cuda=False)
+    # 验证集
+    pre, rec, f1 = calculate_pre_rec_f1(cws_model, dev_batcher)
+    print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1*100,
+                                                         pre*100,
+                                                         rec*100))
+    if best_f1<f1:
+        best_f1 = f1
+        # 缓存最佳的parameter，可能之后会用于保存
+        best_state_dict = {
+                key:value.clone() for key, value in
+                    cws_model.state_dict().items()
+            }
+        best_epoch = num_epoch
 
 
 # 4. 组装需要存下的内容
@@ -225,3 +226,5 @@ pp.add_processor(char_proc)
 pp.add_processor(bigram_proc)
 pp.add_processor(char_index_proc)
 pp.add_processor(bigram_index_proc)
+pp.add_processor(seq_len_proc)
+
