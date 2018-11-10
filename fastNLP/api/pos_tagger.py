@@ -5,9 +5,10 @@ import numpy as np
 from fastNLP.core.dataset import DataSet
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.core.predictor import Predictor
+from fastNLP.api.api import API
 
 
-class POS_tagger:
+class POS_tagger(API):
     def __init__(self):
         pass
 

@@ -20,3 +20,6 @@ class Pipeline:
 
     def __call__(self, *args, **kwargs):
         return self.process(*args, **kwargs)
+
+    def __getitem__(self, item):
+        return self.pipeline[item]

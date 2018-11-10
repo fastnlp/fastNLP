@@ -352,7 +352,7 @@ if __name__ == "__main__":
     elif args.mode == 'test':
         test(args.path)
     elif args.mode == 'infer':
-        infer()
+        pass
     else:
         print('no mode specified for model!')
         parser.print_help()
