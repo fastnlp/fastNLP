@@ -14,3 +14,8 @@ class API:
         _dict = torch.load(name)
         self.pipeline = _dict['pipeline']
         self.model = _dict['model']
+
+    def save(self, path):
+        _dict = {'pipeline': self.pipeline,
+                 'model': self.model}
+        torch.save(_dict, path)
