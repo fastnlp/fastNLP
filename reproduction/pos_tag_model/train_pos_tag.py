@@ -6,6 +6,7 @@ from fastNLP.api.pipeline import Pipeline
 from fastNLP.api.processor import VocabProcessor, IndexerProcessor, SeqLenProcessor
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
+from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.trainer import Trainer
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.loader.dataset_loader import PeopleDailyCorpusLoader
@@ -63,7 +64,11 @@ def train():
     model = AdvSeqLabel(model_param)
 
     # call trainer to train
-    trainer = Trainer(**train_param.data)
+    trainer = Trainer(epochs=train_param["epochs"],
+                      batch_size=train_param["batch_size"],
+                      validate=False,
+                      optimizer=Optimizer("SGD", lr=0.01, momentum=0.9),
+                      )
     trainer.train(model, dataset)
 
     # save model & pipeline

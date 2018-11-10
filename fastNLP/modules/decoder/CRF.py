@@ -3,6 +3,7 @@ from torch import nn
 
 from fastNLP.modules.utils import initial_parameter
 
+
 def log_sum_exp(x, dim=-1):
     max_value, _ = x.max(dim=dim, keepdim=True)
     res = torch.log(torch.sum(torch.exp(x - max_value), dim=dim, keepdim=True)) + max_value
@@ -91,7 +92,6 @@ class ConditionalRandomField(nn.Module):
             st_scores = self.start_scores.view(1, -1).repeat(batch_size, 1)[batch_idx, tags[0]]
             last_idx = mask.long().sum(0) - 1
             ed_scores = self.end_scores.view(1, -1).repeat(batch_size, 1)[batch_idx, tags[last_idx, batch_idx]]
-            print(score.size(), st_scores.size(), ed_scores.size())
             score += st_scores + ed_scores
         # return [B,]
         return score
