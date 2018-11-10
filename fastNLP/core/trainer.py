@@ -11,6 +11,7 @@ from fastNLP.core.metrics import Evaluator
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.sampler import RandomSampler
 from fastNLP.core.tester import SeqLabelTester, ClassificationTester, SNLITester
+from fastNLP.core.tester import Tester
 from fastNLP.saver.logger import create_logger
 from fastNLP.saver.model_saver import ModelSaver
 
@@ -144,7 +145,7 @@ class Trainer(object):
 
             # prepare mini-batch iterator
             data_iterator = Batch(train_data, batch_size=self.batch_size, sampler=RandomSampler(),
-                                  use_cuda=self.use_cuda, sort_in_batch=True, sort_key='word_seq')
+                                  use_cuda=self.use_cuda)
             logger.info("prepared data iterator")
 
             # one forward and backward pass
@@ -230,7 +231,6 @@ class Trainer(object):
     def update(self):
         """Perform weight update on a model.
 
-        For PyTorch, just call optimizer to update.
         """
         self._optimizer.step()
 
@@ -319,7 +319,7 @@ class Trainer(object):
         ModelSaver(os.path.join(self.pickle_path, model_name)).save_pytorch(network)
 
     def _create_validator(self, valid_args):
-        raise NotImplementedError
+        return Tester(**valid_args)
 
     def set_validator(self, validor):
         self.validator = validor

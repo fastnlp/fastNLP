@@ -74,7 +74,7 @@ class Tester(object):
         output_list = []
         truth_list = []
 
-        data_iterator = Batch(dev_data, self.batch_size, sampler=RandomSampler(), use_cuda=self.use_cuda, sort_in_batch=True, sort_key='word_seq')
+        data_iterator = Batch(dev_data, self.batch_size, sampler=RandomSampler(), use_cuda=self.use_cuda)
 
         with torch.no_grad():
             for batch_x, batch_y in data_iterator:

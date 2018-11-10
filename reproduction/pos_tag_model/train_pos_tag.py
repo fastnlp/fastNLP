@@ -1,3 +1,4 @@
+import copy
 import os
 
 import torch
@@ -6,6 +7,7 @@ from fastNLP.api.pipeline import Pipeline
 from fastNLP.api.processor import VocabProcessor, IndexerProcessor, SeqLenProcessor
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
+from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.trainer import Trainer
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
@@ -13,8 +15,11 @@ from fastNLP.loader.dataset_loader import PeopleDailyCorpusLoader
 from fastNLP.models.sequence_modeling import AdvSeqLabel
 
 cfgfile = './pos_tag.cfg'
+# datadir = "/home/zyfeng/data/"
+# data_name = "POS_PD_1998.txt"
 datadir = "/home/zyfeng/fastnlp_0.2.0/test/data_for_tests/"
 data_name = "people_daily_raw.txt"
+
 
 pos_tag_data_path = os.path.join(datadir, data_name)
 pickle_path = "save"
@@ -54,6 +59,9 @@ def train():
     seq_len_proc = SeqLenProcessor("word_seq", "word_seq_origin_len")
     seq_len_proc(dataset)
 
+    dev_set = copy.deepcopy(dataset)
+    dev_set.set_is_target(truth=True)
+
     print("processors defined")
     # dataset.set_is_target(tag_ids=True)
     model_param["vocab_size"] = len(word_vocab_proc.get_vocab())
@@ -66,14 +74,15 @@ def train():
     # call trainer to train
     trainer = Trainer(epochs=train_param["epochs"],
                       batch_size=train_param["batch_size"],
-                      validate=False,
+                      validate=True,
                       optimizer=Optimizer("SGD", lr=0.01, momentum=0.9),
+                      evaluator=SeqLabelEvaluator()
                       )
-    trainer.train(model, dataset)
+    trainer.train(model, dataset, dev_set)
 
     # save model & pipeline
-    pp = Pipeline([word_vocab_proc, word_indexer, seq_len_proc])
-    save_dict = {"pipeline": pp, "model": model}
+    pp = Pipeline([word_indexer, seq_len_proc])
+    save_dict = {"pipeline": pp, "model": model, "tag_vocab": tag_vocab_proc.get_vocab()}
     torch.save(save_dict, "model_pp.pkl")
 
 

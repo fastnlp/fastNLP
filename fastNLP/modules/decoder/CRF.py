@@ -128,7 +128,7 @@ class ConditionalRandomField(nn.Module):
         vpath = data.new_zeros((seq_len, batch_size, n_tags), dtype=torch.long)
         vscore = data[0]
         if self.include_start_end_trans:
-            vscore += self.start_scores.view(1. -1)
+            vscore += self.start_scores.view(1, -1)
         for i in range(1, seq_len):
             prev_score = vscore.view(batch_size, n_tags, 1)
             cur_score = data[i].view(batch_size, 1, n_tags)
