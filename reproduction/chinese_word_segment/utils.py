@@ -12,27 +12,68 @@ def seq_lens_to_mask(seq_lens):
     return masks
 
 
-def cut_long_training_sentences(sentences, max_sample_length=200):
-    cutted_sentence = []
-    for sent in sentences:
-        sent_no_space = sent.replace(' ', '')
-        if len(sent_no_space) > max_sample_length:
-            parts = sent.strip().split()
-            new_line = ''
-            length = 0
-            for part in parts:
-                length += len(part)
-                new_line += part + ' '
-                if length > max_sample_length:
-                    new_line = new_line[:-1]
-                    cutted_sentence.append(new_line)
-                    length = 0
-                    new_line = ''
-            if new_line != '':
-                cutted_sentence.append(new_line[:-1])
-        else:
-            cutted_sentence.append(sent)
-    return cutted_sentence
+from itertools import chain
+
+def refine_ys_on_seq_len(ys, seq_lens):
+    refined_ys = []
+    for b_idx, length in enumerate(seq_lens):
+        refined_ys.append(list(ys[b_idx][:length]))
+
+    return refined_ys
+
+def flat_nested_list(nested_list):
+    return list(chain(*nested_list))
+
+def calculate_pre_rec_f1(model, batcher):
+    true_ys, pred_ys = decode_iterator(model, batcher)
+
+    true_ys = flat_nested_list(true_ys)
+    pred_ys = flat_nested_list(pred_ys)
+
+    cor_num = 0
+    yp_wordnum = pred_ys.count(1)
+    yt_wordnum = true_ys.count(1)
+    start = 0
+    for i in range(len(true_ys)):
+        if true_ys[i] == 1:
+            flag = True
+            for j in range(start, i + 1):
+                if true_ys[j] != pred_ys[j]:
+                    flag = False
+                    break
+            if flag:
+                cor_num += 1
+            start = i + 1
+    P = cor_num / (float(yp_wordnum) + 1e-6)
+    R = cor_num / (float(yt_wordnum) + 1e-6)
+    F = 2 * P * R / (P + R + 1e-6)
+    return P, R, F
+
+
+def decode_iterator(model, batcher):
+    true_ys = []
+    pred_ys = []
+    seq_lens = []
+    with torch.no_grad():
+        model.eval()
+        for batch_x, batch_y in batcher:
+            pred_dict = model(batch_x)
+            seq_len = pred_dict['seq_lens'].cpu().numpy()
+            probs = pred_dict['pred_probs']
+            _, pred_y = probs.max(dim=-1)
+            true_y = batch_y['tags']
+            pred_y = pred_y.cpu().numpy()
+            true_y = true_y.cpu().numpy()
+
+            true_ys.extend(list(true_y))
+            pred_ys.extend(list(pred_y))
+            seq_lens.extend(list(seq_len))
+        model.train()
+
+    true_ys = refine_ys_on_seq_len(true_ys, seq_lens)
+    pred_ys = refine_ys_on_seq_len(pred_ys, seq_lens)
+
+    return true_ys, pred_ys
 
 
 from torch import nn

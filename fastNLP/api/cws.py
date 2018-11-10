@@ -30,3 +30,4 @@ class CWS(API):
         # 4. TODO 这里应该要交给一个iterator一样的东西预测这个结果
 
         # 5. TODO 得到结果，需要考虑是否需要反转回去, 及post_process的操作
+        
