@@ -13,7 +13,7 @@ class Pipeline:
     def process(self, dataset):
         assert len(self.pipeline)!=0, "You need to add some processor first."
 
-        for proc_name, proc in self.pipeline:
+        for proc in self.pipeline:
             dataset = proc(dataset)
 
         return dataset

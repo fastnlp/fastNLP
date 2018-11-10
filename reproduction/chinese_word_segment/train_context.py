@@ -223,8 +223,21 @@ pp = Pipeline()
 pp.add_processor(fs2hs_proc)
 pp.add_processor(sp_proc)
 pp.add_processor(char_proc)
+pp.add_processor(tag_proc)
 pp.add_processor(bigram_proc)
 pp.add_processor(char_index_proc)
 pp.add_processor(bigram_index_proc)
 pp.add_processor(seq_len_proc)
+
+te_filename = '/hdd/fudanNLP/CWS/Multi_Criterion/all_data/pku/middle_files/pku_test.txt'
+te_dataset = reader.load(te_filename)
+pp(te_dataset)
+
+batch_size = 64
+te_batcher = Batch(te_dataset, batch_size, SequentialSampler(), use_cuda=False)
+pre, rec, f1 = calculate_pre_rec_f1(cws_model, te_batcher)
+print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1 * 100,
+                                                 pre * 100,
+                                                 rec * 100))
+
 
