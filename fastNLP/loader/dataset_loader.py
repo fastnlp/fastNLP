@@ -1,9 +1,9 @@
 import os
 
-from fastNLP.loader.base_loader import BaseLoader
 from fastNLP.core.dataset import DataSet
-from fastNLP.core.instance import Instance
 from fastNLP.core.field import *
+from fastNLP.core.instance import Instance
+from fastNLP.loader.base_loader import BaseLoader
 
 
 def convert_seq_dataset(data):
@@ -393,6 +393,7 @@ class PeopleDailyCorpusLoader(DataSetLoader):
                 sent_words.append(token)
             pos_tag_examples.append([sent_words, sent_pos_tag])
             ner_examples.append([sent_words, sent_ner])
+        # List[List[List[str], List[str]]]
         return pos_tag_examples, ner_examples
 
     def convert(self, data):

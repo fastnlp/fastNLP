@@ -1,6 +1,6 @@
-
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.vocabulary import Vocabulary
+
 
 class Processor:
     def __init__(self, field_name, new_added_field_name):
@@ -10,15 +10,18 @@ class Processor:
         else:
             self.new_added_field_name = new_added_field_name
 
-    def process(self):
+    def process(self, *args, **kwargs):
         pass
 
     def __call__(self, *args, **kwargs):
         return self.process(*args, **kwargs)
 
 
-
 class FullSpaceToHalfSpaceProcessor(Processor):
+    """全角转半角，以字符为处理单元
+
+    """
+
     def __init__(self, field_name, change_alpha=True, change_digit=True, change_punctuation=True,
                  change_space=True):
         super(FullSpaceToHalfSpaceProcessor, self).__init__(field_name, None)
@@ -64,11 +67,12 @@ class FullSpaceToHalfSpaceProcessor(Processor):
         if self.change_space:
             FHs += FH_SPACE
         self.convert_map = {k: v for k, v in FHs}
+
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
         for ins in dataset:
             sentence = ins[self.field_name]
-            new_sentence = [None]*len(sentence)
+            new_sentence = [None] * len(sentence)
             for idx, char in enumerate(sentence):
                 if char in self.convert_map:
                     char = self.convert_map[char]
@@ -98,7 +102,7 @@ class IndexerProcessor(Processor):
             index = [self.vocab.to_index(token) for token in tokens]
             ins[self.new_added_field_name] = index
 
-        dataset.set_need_tensor(**{self.new_added_field_name:True})
+        dataset.set_need_tensor(**{self.new_added_field_name: True})
 
         if self.delete_old_field:
             dataset.delete_field(self.field_name)
@@ -122,3 +126,16 @@ class VocabProcessor(Processor):
     def get_vocab(self):
         self.vocab.build_vocab()
         return self.vocab
+
+
+class SeqLenProcessor(Processor):
+    def __init__(self, field_name, new_added_field_name='seq_lens'):
+        super(SeqLenProcessor, self).__init__(field_name, new_added_field_name)
+
+    def process(self, dataset):
+        assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
+        for ins in dataset:
+            length = len(ins[self.field_name])
+            ins[self.new_added_field_name] = length
+        dataset.set_need_tensor(**{self.new_added_field_name: True})
+        return dataset

@@ -44,6 +44,9 @@ class SeqLabeling(BaseModel):
         :return y: If truth is None, return list of [decode path(list)]. Used in testing and predicting.
                     If truth is not None, return loss, a scalar. Used in training.
         """
+        assert word_seq.shape[0] == word_seq_origin_len.shape[0]
+        if truth is not None:
+            assert truth.shape == word_seq.shape
         self.mask = self.make_mask(word_seq, word_seq_origin_len)
 
         x = self.Embedding(word_seq)
@@ -80,7 +83,7 @@ class SeqLabeling(BaseModel):
         batch_size, max_len = x.size(0), x.size(1)
         mask = seq_mask(seq_len, max_len)
         mask = mask.byte().view(batch_size, max_len)
-        mask = mask.to(x)
+        mask = mask.to(x).float()
         return mask
 
     def decode(self, x, pad=True):
@@ -130,6 +133,9 @@ class AdvSeqLabel(SeqLabeling):
         :return y: If truth is None, return list of [decode path(list)]. Used in testing and predicting.
                    If truth is not None, return loss, a scalar. Used in training.
         """
+        word_seq = word_seq.long()
+        word_seq_origin_len = word_seq_origin_len.long()
+        truth = truth.long()
         self.mask = self.make_mask(word_seq, word_seq_origin_len)
 
         batch_size = word_seq.size(0)
