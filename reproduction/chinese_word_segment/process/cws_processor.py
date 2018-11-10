@@ -21,7 +21,7 @@ class SpeicalSpanProcessor(Processor):
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
         for ins in dataset:
-            sentence = ins[self.field_name].text
+            sentence = ins[self.field_name]
             for span_converter in self.span_converters:
                 sentence = span_converter.find_certain_span_and_replace(sentence)
             ins[self.new_added_field_name] = sentence
@@ -42,10 +42,9 @@ class CWSCharSegProcessor(Processor):
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
         for ins in dataset:
-            sentence = ins[self.field_name].text
+            sentence = ins[self.field_name]
             chars = self._split_sent_into_chars(sentence)
-            new_token_field = TokenListFiled(chars, is_target=False)
-            ins[self.new_added_field_name] = new_token_field
+            ins[self.new_added_field_name] = chars
 
         return dataset
 
@@ -109,10 +108,11 @@ class CWSTagProcessor(Processor):
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
         for ins in dataset:
-            sentence = ins[self.field_name].text
+            sentence = ins[self.field_name]
             tag_list = self._generate_tag(sentence)
             new_tag_field = SeqLabelField(tag_list)
             ins[self.new_added_field_name] = new_tag_field
+        dataset.set_is_target(**{self.new_added_field_name:True})
         return dataset
 
     def _tags_from_word_len(self, word_len):
@@ -122,6 +122,8 @@ class CWSTagProcessor(Processor):
 class CWSSegAppTagProcessor(CWSTagProcessor):
     def __init__(self, field_name, new_added_field_name=None):
         super(CWSSegAppTagProcessor, self).__init__(field_name, new_added_field_name)
+
+        self.tag_size = 2
 
     def _tags_from_word_len(self, word_len):
         tag_list = []
@@ -140,10 +142,9 @@ class BigramProcessor(Processor):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
 
         for ins in dataset:
-            characters = ins[self.field_name].content
+            characters = ins[self.field_name]
             bigrams = self._generate_bigram(characters)
-            new_token_field = TokenListFiled(bigrams)
-            ins[self.new_added_field_name] = new_token_field
+            ins[self.new_added_field_name] = bigrams
 
         return dataset
 
@@ -190,9 +191,26 @@ class VocabProcessor(Processor):
         for dataset in datasets:
             assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
             for ins in dataset:
-                tokens = ins[self.field_name].content
+                tokens = ins[self.field_name]
                 self.vocab.update(tokens)
 
     def get_vocab(self):
         self.vocab.build_vocab()
         return self.vocab
+
+    def get_vocab_size(self):
+        return len(self.vocab)
+
+
+class SeqLenProcessor(Processor):
+    def __init__(self, field_name, new_added_field_name='seq_lens'):
+
+        super(SeqLenProcessor, self).__init__(field_name, new_added_field_name)
+
+    def process(self, dataset):
+        assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
+        for ins in dataset:
+            length = len(ins[self.field_name])
+            ins[self.new_added_field_name] = length
+        dataset.set_need_tensor(**{self.new_added_field_name:True})
+        return dataset

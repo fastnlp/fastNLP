@@ -55,14 +55,15 @@ class Batch(object):
 
             indices = self.idx_list[self.curidx:endidx]
 
-            for field_name, field in self.dataset.get_fields():
-                batch = torch.from_numpy(field.get(indices))
-                if not field.need_tensor: #TODO 修改
-                    pass
-                elif field.is_target:
-                    batch_y[field_name] = batch
-                else:
-                    batch_x[field_name] = batch
+            for field_name, field in self.dataset.get_fields().items():
+                if field.need_tensor:
+                    batch = torch.from_numpy(field.get(indices))
+                    if not field.need_tensor:
+                        pass
+                    elif field.is_target:
+                        batch_y[field_name] = batch
+                    else:
+                        batch_x[field_name] = batch
 
             self.curidx = endidx
 

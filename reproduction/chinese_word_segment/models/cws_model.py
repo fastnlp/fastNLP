@@ -35,13 +35,6 @@ class CWSBiLSTMEncoder(BaseModel):
             self.bigram_embedding = nn.Embedding(num_embeddings=bigram_vocab_num, embedding_dim=bigram_embed_dim)
             self.input_size += self.num_bigram_per_char*bigram_embed_dim
 
-        if self.num_criterion!=None:
-            if bidirectional:
-                self.backward_criterion_embedding = nn.Embedding(num_embeddings=self.num_criterion,
-                                                    embedding_dim=self.hidden_size)
-            self.forward_criterion_embedding = nn.Embedding(num_embeddings=self.num_criterion,
-                                                                embedding_dim=self.hidden_size)
-
         if not self.embed_drop_p is None:
             self.embedding_drop = nn.Dropout(p=self.embed_drop_p)
 
@@ -102,13 +95,14 @@ class CWSBiLSTMSegApp(BaseModel):
         self.decoder_model = MLP(size_layer)
 
 
-    def forward(self, **kwargs):
-        chars = kwargs['chars']
-        if 'bigram' in kwargs:
-            bigrams = kwargs['bigrams']
+    def forward(self, batch_dict):
+        device = self.parameters().__next__().device
+        chars = batch_dict['indexed_chars_list'].to(device)
+        if 'bigram' in batch_dict:
+            bigrams = batch_dict['indexed_chars_list'].to(device)
         else:
             bigrams = None
-        seq_lens = kwargs['seq_lens']
+        seq_lens = batch_dict['seq_lens'].to(device)
 
         feats = self.encoder_model(chars, bigrams, seq_lens)
         probs = self.decoder_model(feats)
@@ -118,6 +112,10 @@ class CWSBiLSTMSegApp(BaseModel):
         pred_dict['pred_prob'] = probs
 
         return pred_dict
+
+    def predict(self, batch_dict):
+        pass
+
 
     def loss_fn(self, pred_dict, true_dict):
         seq_lens = pred_dict['seq_lens']
@@ -132,4 +130,3 @@ class CWSBiLSTMSegApp(BaseModel):
 
 
         return loss
-

@@ -67,7 +67,7 @@ class FullSpaceToHalfSpaceProcessor(Processor):
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
         for ins in dataset:
-            sentence = ins[self.field_name].text
+            sentence = ins[self.field_name]
             new_sentence = [None]*len(sentence)
             for idx, char in enumerate(sentence):
                 if char in self.convert_map:
@@ -78,12 +78,13 @@ class FullSpaceToHalfSpaceProcessor(Processor):
 
 
 class IndexerProcessor(Processor):
-    def __init__(self, vocab, field_name, new_added_field_name):
+    def __init__(self, vocab, field_name, new_added_field_name, delete_old_field=False):
 
         assert isinstance(vocab, Vocabulary), "Only Vocabulary class is allowed, not {}.".format(type(vocab))
 
         super(IndexerProcessor, self).__init__(field_name, new_added_field_name)
         self.vocab = vocab
+        self.delete_old_field = delete_old_field
 
     def set_vocab(self, vocab):
         assert isinstance(vocab, Vocabulary), "Only Vocabulary class is allowed, not {}.".format(type(vocab))
@@ -96,6 +97,11 @@ class IndexerProcessor(Processor):
             tokens = ins[self.field_name]
             index = [self.vocab.to_index(token) for token in tokens]
             ins[self.new_added_field_name] = index
+
+        dataset.set_need_tensor(**{self.new_added_field_name:True})
+
+        if self.delete_old_field:
+            dataset.delete_field(self.field_name)
 
         return dataset
 

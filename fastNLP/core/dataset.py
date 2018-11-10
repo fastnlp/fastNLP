@@ -75,11 +75,13 @@ class DataSet(object):
         assert len(self) == len(fields)
         self.field_arrays[name] = FieldArray(name, fields)
 
+    def delete_field(self, name):
+        self.field_arrays.pop(name)
+
     def get_fields(self):
         return self.field_arrays
 
     def __getitem__(self, name):
-        assert name in self.field_arrays
         return self.field_arrays[name]
 
     def __len__(self):
