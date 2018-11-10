@@ -119,7 +119,7 @@ class DataSet(object):
                 assert isinstance(val, bool)
                 self.field_arrays[name].is_target = val
             else:
-                raise KeyError
+                raise KeyError("{} is not a valid field name.".format(name))
         return self
 
     def set_need_tensor(self, **kwargs):

@@ -11,7 +11,7 @@ class Pipeline:
         self.pipeline = []
         if isinstance(processors, list):
             for proc in processors:
-                assert isinstance(proc, Processor), "Must be a Processor, not {}.".format(type(processor))
+                assert isinstance(proc, Processor), "Must be a Processor, not {}.".format(type(proc))
             self.pipeline = processors
 
     def add_processor(self, processor):

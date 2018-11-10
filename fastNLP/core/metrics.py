@@ -43,12 +43,11 @@ class SeqLabelEvaluator(Evaluator):
         :return accuracy:
         """
         truth = [item["truth"] for item in truth]
-        total_correct, total_count= 0., 0.
+        total_correct, total_count = 0., 0.
         for x, y in zip(predict, truth):
-            x = torch.Tensor(x)
+            x = torch.tensor(x)
             y = y.to(x)  # make sure they are in the same device
-            mask = x.ge(1).float()
-            # correct = torch.sum(x * mask.float() == (y * mask.long()).float())
+            mask = x.ge(1).long()
             correct = torch.sum(x * mask == y * mask)
             correct -= torch.sum(x.le(0))
             total_correct += float(correct)

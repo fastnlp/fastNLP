@@ -9,7 +9,7 @@ class Batch(object):
 
     """
 
-    def __init__(self, dataset, batch_size, sampler, use_cuda, sort_in_batch=False, sort_key=None):
+    def __init__(self, dataset, batch_size, sampler, use_cuda):
         """
 
         :param dataset: a DataSet object
@@ -22,8 +22,6 @@ class Batch(object):
         self.batch_size = batch_size
         self.sampler = sampler
         self.use_cuda = use_cuda
-        self.sort_in_batch = sort_in_batch
-        self.sort_key = sort_key if sort_key is not None else 'word_seq'
         self.idx_list = None
         self.curidx = 0
 
