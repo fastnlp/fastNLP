@@ -1,4 +1,4 @@
-import torch
+
 
 class Instance(object):
     """An instance which consists of Fields is an example in the DataSet.

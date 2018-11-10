@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 import torch
 
 
@@ -68,4 +66,3 @@ class Batch(object):
             self.curidx = endidx
 
             return batch_x, batch_y
-

@@ -1,23 +1,27 @@
-import random
-import sys, os
-sys.path.append('../..')
-sys.path = [os.path.join(os.path.dirname(__file__), '../..')] + sys.path
-
-from collections import defaultdict
-from copy import deepcopy
-import numpy as np
-
-from fastNLP.core.field import TextField, LabelField
-from fastNLP.core.instance import Instance
-from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.core.fieldarray import FieldArray
 
 _READERS = {}
+
+
+def construct_dataset(sentences):
+    """Construct a data set from a list of sentences.
+
+    :param sentences: list of str
+    :return dataset: a DataSet object
+    """
+    dataset = DataSet()
+    for sentence in sentences:
+        instance = Instance()
+        instance['raw_sentence'] = sentence
+        dataset.append(instance)
+    return dataset
+
 
 class DataSet(object):
     """A DataSet object is a list of Instance objects.
 
     """
+
     class DataSetIter(object):
         def __init__(self, dataset):
             self.dataset = dataset
@@ -34,13 +38,12 @@ class DataSet(object):
 
         def __setitem__(self, name, val):
             if name not in self.dataset:
-                new_fields = [None]*len(self.dataset)
+                new_fields = [None] * len(self.dataset)
                 self.dataset.add_field(name, new_fields)
             self.dataset[name][self.idx] = val
 
         def __repr__(self):
-            # TODO
-            pass
+            return " ".join([repr(self.dataset[name][self.idx]) for name in self.dataset])
 
     def __init__(self, instance=None):
         self.field_arrays = {}
@@ -72,7 +75,7 @@ class DataSet(object):
                 self.field_arrays[name].append(field)
 
     def add_field(self, name, fields):
-        if len(self.field_arrays)!=0:
+        if len(self.field_arrays) != 0:
             assert len(self) == len(fields)
         self.field_arrays[name] = FieldArray(name, fields)
 
@@ -92,27 +95,10 @@ class DataSet(object):
         return len(field)
 
     def get_length(self):
-        """Fetch lengths of all fields in all instances in a dataset.
-
-        :return lengths: dict of (str: list). The str is the field name.
-                The list contains lengths of this field in all instances.
+        """The same as __len__
 
         """
-        pass
-
-    def shuffle(self):
-        pass
-
-    def split(self, ratio, shuffle=True):
-        """Train/dev splitting
-
-        :param ratio: float, between 0 and 1. The ratio of development set in origin data set.
-        :param shuffle: bool, whether shuffle the data set before splitting. Default: True.
-        :return train_set: a DataSet object, representing the training set
-                dev_set: a DataSet object, representing the validation set
-
-        """
-        pass
+        return len(self)
 
     def rename_field(self, old_name, new_name):
         """rename a field
@@ -120,7 +106,7 @@ class DataSet(object):
         if old_name in self.field_arrays:
             self.field_arrays[new_name] = self.field_arrays.pop(old_name)
         else:
-            raise KeyError
+            raise KeyError("{} is not a valid name. ".format(old_name))
         return self
 
     def set_is_target(self, **fields):
@@ -152,6 +138,7 @@ class DataSet(object):
                 data = _READERS[name]().load(*args, **kwargs)
                 self.extend(data)
                 return self
+
             return _read
         else:
             return object.__getattribute__(self, name)
@@ -161,14 +148,17 @@ class DataSet(object):
         """decorator to add dataloader support
         """
         assert isinstance(method_name, str)
+
         def wrapper(read_cls):
             _READERS[method_name] = read_cls
             return read_cls
+
         return wrapper
 
 
 if __name__ == '__main__':
     from fastNLP.core.instance import Instance
+
     ins = Instance(test='test0')
     dataset = DataSet([ins])
     for _iter in dataset:
