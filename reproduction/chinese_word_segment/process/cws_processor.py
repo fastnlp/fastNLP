@@ -5,9 +5,8 @@ import re
 from fastNLP.core.field import SeqLabelField
 from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.core.dataset import DataSet
-
 from fastNLP.api.processor import Processor
-from reproduction.chinese_word_segment.process.span_converter import *
+from reproduction.chinese_word_segment.process.span_converter import SpanConverter
 
 _SPECIAL_TAG_PATTERN = '<[a-zA-Z]+>'
 
@@ -25,11 +24,7 @@ class SpeicalSpanProcessor(Processor):
             sentence = ins[self.field_name].text
             for span_converter in self.span_converters:
                 sentence = span_converter.find_certain_span_and_replace(sentence)
-            if self.new_added_field_name!=self.field_name:
-                new_text_field = TextField(sentence, is_target=False)
-                ins[self.new_added_field_name] = new_text_field
-            else:
-                ins[self.field_name].text = sentence
+            ins[self.new_added_field_name] = sentence
 
         return dataset
 

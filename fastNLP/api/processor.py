@@ -73,16 +73,16 @@ class FullSpaceToHalfSpaceProcessor(Processor):
                 if char in self.convert_map:
                     char = self.convert_map[char]
                 new_sentence[idx] = char
-            ins[self.field_name].text = ''.join(new_sentence)
+            ins[self.field_name] = ''.join(new_sentence)
         return dataset
 
 
 class IndexerProcessor(Processor):
-    def __init__(self, vocab, field_name):
+    def __init__(self, vocab, field_name, new_added_field_name):
 
         assert isinstance(vocab, Vocabulary), "Only Vocabulary class is allowed, not {}.".format(type(vocab))
 
-        super(IndexerProcessor, self).__init__(field_name, None)
+        super(IndexerProcessor, self).__init__(field_name, new_added_field_name)
         self.vocab = vocab
 
     def set_vocab(self, vocab):
@@ -93,9 +93,9 @@ class IndexerProcessor(Processor):
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
         for ins in dataset:
-            tokens = ins[self.field_name].content
+            tokens = ins[self.field_name]
             index = [self.vocab.to_index(token) for token in tokens]
-            ins[self.field_name]._index = index
+            ins[self.new_added_field_name] = index
 
         return dataset
 
@@ -110,7 +110,7 @@ class VocabProcessor(Processor):
         for dataset in datasets:
             assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
             for ins in dataset:
-                tokens = ins[self.field_name].content
+                tokens = ins[self.field_name]
                 self.vocab.update(tokens)
 
     def get_vocab(self):

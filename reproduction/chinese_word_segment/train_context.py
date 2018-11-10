@@ -1,13 +1,12 @@
 
 from fastNLP.core.instance import Instance
 from fastNLP.core.dataset import DataSet
-
-
 from fastNLP.api.pipeline import Pipeline
+from fastNLP.api.processor import FullSpaceToHalfSpaceProcessor
+
 from reproduction.chinese_word_segment.process.cws_processor import *
-from reproduction.chinese_word_segment.utils import cut_long_training_sentences
-from reproduction.chinese_word_segment.process.span_converter import *
-from reproduction.chinese_word_segment.io import NaiveCWSReader
+from reproduction.chinese_word_segment.process.span_converter import AlphaSpanConverter, DigitSpanConverter
+from reproduction.chinese_word_segment.io.cws_reader import NaiveCWSReader
 
 
 tr_filename = ''
@@ -15,9 +14,8 @@ dev_filename = ''
 
 reader = NaiveCWSReader()
 
-tr_dataset = reader.load(tr_filename, cut=True)
-de_dataset = reader.load(dev_filename)
-
+tr_sentences = reader.load(tr_filename, cut_long_sent=True)
+dev_sentences = reader.load(dev_filename)
 
 
 # TODO 如何组建成为一个Dataset
@@ -32,7 +30,7 @@ def construct_dataset(sentences):
 
 
 tr_dataset = construct_dataset(tr_sentences)
-dev_dataset = construct_dataset(dev_sentence)
+dev_dataset = construct_dataset(dev_sentences)
 
 # 1. 准备processor
 fs2hs_proc = FullSpaceToHalfSpaceProcessor('raw_sentence')
