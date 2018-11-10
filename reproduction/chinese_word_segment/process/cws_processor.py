@@ -182,10 +182,10 @@ class Pre2Post2BigramProcessor(BigramProcessor):
 #   Processor了
 
 class VocabProcessor(Processor):
-    def __init__(self, field_name):
+    def __init__(self, field_name, min_count=1, max_vocab_size=None):
 
         super(VocabProcessor, self).__init__(field_name, None)
-        self.vocab = Vocabulary()
+        self.vocab = Vocabulary(min_freq=min_count, max_size=max_vocab_size)
 
     def process(self, *datasets):
         for dataset in datasets:

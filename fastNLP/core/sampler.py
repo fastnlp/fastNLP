@@ -78,7 +78,8 @@ class BucketSampler(BaseSampler):
             for i in range(num_batch_per_bucket):
                 batchs.append(left_init_indexes[i*self.batch_size:(i+1)*self.batch_size])
             left_init_indexes = left_init_indexes[num_batch_per_bucket*self.batch_size:]
-
+        if (left_init_indexes)!=0:
+            batchs.append(left_init_indexes)
         np.random.shuffle(batchs)
 
         return list(chain(*batchs))
