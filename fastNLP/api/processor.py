@@ -97,7 +97,7 @@ class Num2TagProcessor(Processor):
     def __init__(self, tag, field_name, new_added_field_name=None):
         super(Num2TagProcessor, self).__init__(field_name, new_added_field_name)
         self.tag = tag
-        self.pattern = r'[-+]?[0-9]+[\./e]+[-+]?[0-9]*'
+        self.pattern = r'[-+]?([0-9]+[.]?[0-9]*)+[/eE]?[-+]?([0-9]+[.]?[0-9]*)'
 
     def process(self, dataset):
         for ins in dataset:
