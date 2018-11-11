@@ -214,3 +214,27 @@ class SeqLenProcessor(Processor):
             ins[self.new_added_field_name] = length
         dataset.set_need_tensor(**{self.new_added_field_name:True})
         return dataset
+
+class SegApp2OutputProcessor(Processor):
+    def __init__(self, chars_field_name='chars', tag_field_name='pred_tags', new_added_field_name='output'):
+        super(SegApp2OutputProcessor, self).__init__(None, None)
+
+        self.chars_field_name = chars_field_name
+        self.tag_field_name = tag_field_name
+
+        self.new_added_field_name = new_added_field_name
+
+    def process(self, dataset):
+        assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
+        for ins in dataset:
+            pred_tags = ins[self.tag_field_name]
+            chars = ins[self.chars_field_name]
+            words = []
+            start_idx = 0
+            for idx, tag in enumerate(pred_tags):
+                if tag==1:
+                    # 当前没有考虑将原文替换回去
+                    words.append(''.join(chars[start_idx:idx+1]))
+                    start_idx = idx
+            ins[self.new_added_field_name] = ' '.join(words)
+

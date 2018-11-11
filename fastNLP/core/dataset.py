@@ -74,10 +74,12 @@ class DataSet(object):
                 assert name in self.field_arrays
                 self.field_arrays[name].append(field)
 
-    def add_field(self, name, fields):
+    def add_field(self, name, fields, need_tensor=False, is_target=False):
         if len(self.field_arrays) != 0:
             assert len(self) == len(fields)
-        self.field_arrays[name] = FieldArray(name, fields)
+        self.field_arrays[name] = FieldArray(name, fields,
+                                             need_tensor=need_tensor,
+                                             is_target=is_target)
 
     def delete_field(self, name):
         self.field_arrays.pop(name)

@@ -61,11 +61,11 @@ bigram_proc(tr_dataset)
 char_vocab_proc(tr_dataset)
 bigram_vocab_proc(tr_dataset)
 
-char_index_proc = IndexerProcessor(char_vocab_proc.get_vocab(), 'chars_list', 'indexed_chars_list',
-                                   delete_old_field=True)
-bigram_index_proc = IndexerProcessor(bigram_vocab_proc.get_vocab(), 'bigrams_list','indexed_bigrams_list',
+char_index_proc = IndexerProcessor(char_vocab_proc.get_vocab(), 'chars_list', 'chars',
+                                   delete_old_field=False)
+bigram_index_proc = IndexerProcessor(bigram_vocab_proc.get_vocab(), 'bigrams_list','bigrams',
                                       delete_old_field=True)
-seq_len_proc = SeqLenProcessor('indexed_chars_list')
+seq_len_proc = SeqLenProcessor('chars')
 
 char_index_proc(tr_dataset)
 bigram_index_proc(tr_dataset)
@@ -184,6 +184,9 @@ pp.add_processor(char_index_proc)
 pp.add_processor(bigram_index_proc)
 pp.add_processor(seq_len_proc)
 
+
+
+
 te_filename = '/hdd/fudanNLP/CWS/Multi_Criterion/all_data/{}/middle_files/{}_test.txt'.format(ds_name, ds_name)
 te_dataset = reader.load(te_filename)
 pp(te_dataset)
@@ -195,7 +198,47 @@ print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1 * 100,
                                                  pre * 100,
                                                  rec * 100))
 
-# TODO 这里貌似需要区分test pipeline与dev pipeline
+# TODO 这里貌似需要区分test pipeline与infer pipeline
+
+test_context_dict = {'pipeline': pp,
+                     'model': cws_model}
+torch.save(test_context_dict, 'models/test_context.pkl')
+
+
+# 5. dev的pp
+# 4. 组装需要存下的内容
+
+from fastNLP.api.processor import ModelProcessor
+
+model_proc = ModelProcessor(cws_model)
+index2word_proc =
+
+pp = Pipeline()
+pp.add_processor(fs2hs_proc)
+pp.add_processor(sp_proc)
+pp.add_processor(char_proc)
+pp.add_processor(bigram_proc)
+pp.add_processor(char_index_proc)
+pp.add_processor(bigram_index_proc)
+pp.add_processor(seq_len_proc)
+
+
+pp.add_processor()
+
+
+
+te_filename = '/hdd/fudanNLP/CWS/Multi_Criterion/all_data/{}/middle_files/{}_test.txt'.format(ds_name, ds_name)
+te_dataset = reader.load(te_filename)
+pp(te_dataset)
+
+batch_size = 64
+te_batcher = Batch(te_dataset, batch_size, SequentialSampler(), use_cuda=False)
+pre, rec, f1 = calculate_pre_rec_f1(cws_model, te_batcher)
+print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1 * 100,
+                                                 pre * 100,
+                                                 rec * 100))
+
+# TODO 这里貌似需要区分test pipeline与infer pipeline
 
 test_context_dict = {'pipeline': pp,
                      'model': cws_model}

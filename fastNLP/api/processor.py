@@ -172,3 +172,53 @@ class SeqLenProcessor(Processor):
             ins[self.new_added_field_name] = length
         dataset.set_need_tensor(**{self.new_added_field_name: True})
         return dataset
+
+
+from fastNLP.core.batch import Batch
+from fastNLP.core.sampler import SequentialSampler
+import torch
+from collections import defaultdict
+
+class ModelProcessor(Processor):
+    def __init__(self, model, seq_len_field_name='seq_lens', batch_size=32):
+        """
+        迭代模型并将结果的padding drop掉
+
+        :param seq_len_field_name:
+        :param batch_size:
+        """
+        super(ModelProcessor, self).__init__(None, None)
+
+        self.batch_size = batch_size
+        self.seq_len_field_name = seq_len_field_name
+        self.model = model
+
+    def process(self, dataset):
+        assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
+        data_iterator = Batch(dataset, batch_size=self.batch_size, sampler=SequentialSampler(), use_cuda=False)
+
+        batch_output = defaultdict(list)
+        with torch.no_grad():
+            for batch_x, _ in data_iterator:
+                prediction = self.model.predict(**batch_x)
+                seq_lens = batch_x[self.seq_len_field_name].cpu().numpy().tolist()
+
+                for key, value in prediction.items():
+                    tmp_batch = []
+                    value = value.cpu().numpy()
+                    for idx, seq_len in enumerate(seq_lens):
+                        tmp_batch.append(value[idx, :seq_len])
+                    batch_output[key].extend(tmp_batch)
+
+                batch_output[self.seq_len_field_name].extend(seq_lens)
+
+        # TODO 当前的实现会导致之后的processor需要知道model输出的output的key是什么
+        for field_name, fields in batch_output.items():
+            dataset.add_field(field_name, fields, need_tensor=False, is_target=False)
+
+        return dataset
+
+    def set_model(self, model):
+        self.model = model
+
+

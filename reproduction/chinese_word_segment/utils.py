@@ -57,16 +57,17 @@ def decode_iterator(model, batcher):
     with torch.no_grad():
         model.eval()
         for batch_x, batch_y in batcher:
-            pred_dict = model(batch_x)
-            seq_len = pred_dict['seq_lens'].cpu().numpy()
-            probs = pred_dict['pred_probs']
-            _, pred_y = probs.max(dim=-1)
+            pred_dict = model.predict(**batch_x)
+            seq_len = batch_x['seq_lens'].cpu().numpy()
+
+            pred_y = pred_dict['pred_tags']
             true_y = batch_y['tags']
+
             pred_y = pred_y.cpu().numpy()
             true_y = true_y.cpu().numpy()
 
-            true_ys.extend(list(true_y))
-            pred_ys.extend(list(pred_y))
+            true_ys.extend(true_y.tolist())
+            pred_ys.extend(pred_y.tolist())
             seq_lens.extend(list(seq_len))
         model.train()
 

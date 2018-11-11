@@ -94,14 +94,14 @@ class CWSBiLSTMSegApp(BaseModel):
         self.decoder_model = MLP(size_layer)
 
 
-    def forward(self, batch_dict):
+    def forward(self, chars, seq_lens, bigrams=None):
         device = self.parameters().__next__().device
-        chars = batch_dict['indexed_chars_list'].to(device).long()
-        if 'indexed_bigrams_list' in batch_dict:
-            bigrams = batch_dict['indexed_bigrams_list'].to(device).long()
+        chars = chars.to(device).long()
+        if not bigrams is None:
+            bigrams = bigrams.to(device).long()
         else:
             bigrams = None
-        seq_lens = batch_dict['seq_lens'].to(device).long()
+        seq_lens = seq_lens.to(device).long()
 
         feats = self.encoder_model(chars, bigrams, seq_lens)
         probs = self.decoder_model(feats)
@@ -112,6 +112,8 @@ class CWSBiLSTMSegApp(BaseModel):
 
         return pred_dict
 
-    def predict(self, batch_dict):
-        pass
-
+    def predict(self, chars, seq_lens, bigrams=None):
+        pred_dict = self.forward(chars, seq_lens, bigrams)
+        pred_probs = pred_dict['pred_probs']
+        _, pred_tags = pred_probs.max(dim=-1)
+        return {'pred_tags': pred_tags}
