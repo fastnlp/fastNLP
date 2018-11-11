@@ -1,8 +1,12 @@
+import torch
+from collections import defaultdict
+import re
+
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.vocabulary import Vocabulary
+from fastNLP.core.batch import Batch
+from fastNLP.core.sampler import SequentialSampler
 
-
-import re
 
 class Processor:
     def __init__(self, field_name, new_added_field_name):
@@ -172,12 +176,6 @@ class SeqLenProcessor(Processor):
         dataset.set_need_tensor(**{self.new_added_field_name: True})
         return dataset
 
-
-from fastNLP.core.batch import Batch
-from fastNLP.core.sampler import SequentialSampler
-import torch
-from collections import defaultdict
-
 class ModelProcessor(Processor):
     def __init__(self, model, seq_len_field_name='seq_lens', batch_size=32):
         """
@@ -205,9 +203,12 @@ class ModelProcessor(Processor):
                 for key, value in prediction.items():
                     tmp_batch = []
                     value = value.cpu().numpy()
-                    for idx, seq_len in enumerate(seq_lens):
-                        tmp_batch.append(value[idx, :seq_len])
-                    batch_output[key].extend(tmp_batch)
+                    if len(value.shape) == 1 or (len(value.shape)==2 and value.shape[1]==1):
+                        for idx, seq_len in enumerate(seq_lens):
+                            tmp_batch.append(value[idx, :seq_len])
+                        batch_output[key].extend(tmp_batch)
+                    else:
+                        batch_output[key].extend(value.tolist())
 
                 batch_output[self.seq_len_field_name].extend(seq_lens)
 

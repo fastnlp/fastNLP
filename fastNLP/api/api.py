@@ -17,12 +17,7 @@ class API:
     def load(self, name):
         _dict = torch.load(name)
         self.pipeline = _dict['pipeline']
-        self.model = _dict['model']
 
-    def save(self, path):
-        _dict = {'pipeline': self.pipeline,
-                 'model': self.model}
-        torch.save(_dict, path)
 
 
 class POS_tagger(API):
@@ -62,6 +57,38 @@ class POS_tagger(API):
         self.pipeline = _dict['pipeline']
         self.model = _dict['model']
         self.tag_vocab = _dict["tag_vocab"]
+
+
+
+class CWS(API):
+    def __init__(self, model_path='xxx'):
+        super(CWS, self).__init__()
+        self.load(model_path)
+
+    def predict(self, sentence, pretrain=False):
+
+        if hasattr(self, 'pipeline'):
+            raise ValueError("You have to load model first. Or specify pretrain=True.")
+
+        sentence_list = []
+        # 1. 检查sentence的类型
+        if isinstance(sentence, str):
+            sentence_list.append(sentence)
+        elif isinstance(sentence, list):
+            sentence_list = sentence
+
+        # 2. 组建dataset
+        dataset = DataSet()
+        dataset.add_field('raw_sentence', sentence_list)
+
+        # 3. 使用pipeline
+        self.pipeline(dataset)
+
+        output = dataset['output']
+        if isinstance(sentence, str):
+            return output[0]
+        elif isinstance(sentence, list):
+            return output
 
 
 if __name__ == "__main__":

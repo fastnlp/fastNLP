@@ -20,8 +20,10 @@ from reproduction.chinese_word_segment.models.cws_model import CWSBiLSTMSegApp
 from reproduction.chinese_word_segment.utils import calculate_pre_rec_f1
 
 ds_name = 'msr'
-tr_filename = '/hdd/fudanNLP/CWS/Multi_Criterion/all_data/{}/middle_files/{}_train.txt'.format(ds_name, ds_name)
-dev_filename = '/hdd/fudanNLP/CWS/Multi_Criterion/all_data/{}/middle_files/{}_dev.txt'.format(ds_name, ds_name)
+tr_filename = '/home/hyan/CWS/Mutil_Criterion/all_data/{}/middle_files/{}_train.txt'.format(ds_name,
+                                                                                            ds_name)
+dev_filename = '/home/hyan/CWS/Mutil_Criterion/all_data/{}/middle_files/{}_dev.txt'.format(ds_name,
+                                                                                           ds_name)
 
 reader = NaiveCWSReader()
 
@@ -32,17 +34,17 @@ dev_dataset = reader.load(dev_filename)
 # 1. 准备processor
 fs2hs_proc = FullSpaceToHalfSpaceProcessor('raw_sentence')
 
-sp_proc = SpeicalSpanProcessor('raw_sentence', 'sentence')
+# sp_proc = SpeicalSpanProcessor('raw_sentence', 'sentence')
 # sp_proc.add_span_converter(EmailConverter())
 # sp_proc.add_span_converter(MixNumAlphaConverter())
-sp_proc.add_span_converter(AlphaSpanConverter())
-sp_proc.add_span_converter(DigitSpanConverter())
+# sp_proc.add_span_converter(AlphaSpanConverter())
+# sp_proc.add_span_converter(DigitSpanConverter())
 # sp_proc.add_span_converter(TimeConverter())
 
 
-char_proc = CWSCharSegProcessor('sentence', 'chars_list')
+char_proc = CWSCharSegProcessor('raw_sentence', 'chars_list')
 
-tag_proc = CWSSegAppTagProcessor('sentence', 'tags')
+tag_proc = CWSSegAppTagProcessor('raw_sentence', 'tags')
 
 bigram_proc = Pre2Post2BigramProcessor('chars_list', 'bigrams_list')
 
@@ -52,7 +54,7 @@ bigram_vocab_proc = VocabProcessor('bigrams_list', min_count=4)
 # 2. 使用processor
 fs2hs_proc(tr_dataset)
 
-sp_proc(tr_dataset)
+# sp_proc(tr_dataset)
 
 char_proc(tr_dataset)
 tag_proc(tr_dataset)
@@ -73,7 +75,7 @@ seq_len_proc(tr_dataset)
 
 # 2.1 处理dev_dataset
 fs2hs_proc(dev_dataset)
-sp_proc(dev_dataset)
+# sp_proc(dev_dataset)
 
 char_proc(dev_dataset)
 tag_proc(dev_dataset)
@@ -133,7 +135,7 @@ for num_epoch in range(num_epochs):
         for batch_idx, (batch_x, batch_y) in enumerate(tr_batcher, 1):
             optimizer.zero_grad()
 
-            pred_dict = cws_model(batch_x)  # B x L x tag_size
+            pred_dict = cws_model(**batch_x)  # B x L x tag_size
 
             seq_lens = pred_dict['seq_lens']
             masks = seq_lens_to_mask(seq_lens).float()
@@ -176,7 +178,7 @@ cws_model.load_state_dict(best_state_dict)
 # 4. 组装需要存下的内容
 pp = Pipeline()
 pp.add_processor(fs2hs_proc)
-pp.add_processor(sp_proc)
+# pp.add_processor(sp_proc)
 pp.add_processor(char_proc)
 pp.add_processor(tag_proc)
 pp.add_processor(bigram_proc)
@@ -187,7 +189,7 @@ pp.add_processor(seq_len_proc)
 
 
 
-te_filename = '/hdd/fudanNLP/CWS/Multi_Criterion/all_data/{}/middle_files/{}_test.txt'.format(ds_name, ds_name)
+te_filename = '/home/hyan/CWS/Mutil_Criterion/all_data/{}/middle_files/{}_test.txt'.format(ds_name, ds_name)
 te_dataset = reader.load(te_filename)
 pp(te_dataset)
 
@@ -216,7 +218,7 @@ output_proc = SegApp2OutputProcessor()
 
 pp = Pipeline()
 pp.add_processor(fs2hs_proc)
-pp.add_processor(sp_proc)
+# pp.add_processor(sp_proc)
 pp.add_processor(char_proc)
 pp.add_processor(bigram_proc)
 pp.add_processor(char_index_proc)

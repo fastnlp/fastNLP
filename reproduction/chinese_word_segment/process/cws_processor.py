@@ -216,7 +216,7 @@ class SeqLenProcessor(Processor):
         return dataset
 
 class SegApp2OutputProcessor(Processor):
-    def __init__(self, chars_field_name='chars', tag_field_name='pred_tags', new_added_field_name='output'):
+    def __init__(self, chars_field_name='chars_list', tag_field_name='pred_tags', new_added_field_name='output'):
         super(SegApp2OutputProcessor, self).__init__(None, None)
 
         self.chars_field_name = chars_field_name
@@ -235,6 +235,6 @@ class SegApp2OutputProcessor(Processor):
                 if tag==1:
                     # 当前没有考虑将原文替换回去
                     words.append(''.join(chars[start_idx:idx+1]))
-                    start_idx = idx
+                    start_idx = idx + 1
             ins[self.new_added_field_name] = ' '.join(words)
 
