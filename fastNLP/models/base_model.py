@@ -14,5 +14,5 @@ class BaseModel(torch.nn.Module):
         trainer = Trainer(**train_args)
         trainer.train(self, train_data, dev_data)
 
-    def predict(self):
-        pass
+    def predict(self, *args, **kwargs):
+        raise NotImplementedError

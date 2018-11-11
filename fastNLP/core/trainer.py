@@ -9,7 +9,7 @@ from fastNLP.core.batch import Batch
 from fastNLP.core.loss import Loss
 from fastNLP.core.metrics import Evaluator
 from fastNLP.core.optimizer import Optimizer
-from fastNLP.core.sampler import RandomSampler
+from fastNLP.core.sampler import BucketSampler
 from fastNLP.core.tester import SeqLabelTester, ClassificationTester, SNLITester
 from fastNLP.core.tester import Tester
 from fastNLP.saver.logger import create_logger
@@ -144,7 +144,8 @@ class Trainer(object):
             logger.info("training epoch {}".format(epoch))
 
             # prepare mini-batch iterator
-            data_iterator = Batch(train_data, batch_size=self.batch_size, sampler=RandomSampler(),
+            data_iterator = Batch(train_data, batch_size=self.batch_size,
+                                  sampler=BucketSampler(10, self.batch_size, "word_seq_origin_len"),
                                   use_cuda=self.use_cuda)
             logger.info("prepared data iterator")
 
@@ -170,15 +171,19 @@ class Trainer(object):
         for batch_x, batch_y in data_iterator:
             prediction = self.data_forward(network, batch_x)
 
-            loss = self.get_loss(prediction, batch_y)
+            # TODO: refactor self.get_loss
+            loss = prediction["loss"] if "loss" in prediction else self.get_loss(prediction, batch_y)
+            # acc = self._evaluator([{"predict": prediction["predict"]}], [{"truth": batch_x["truth"]}])
+
             self.grad_backward(loss)
             self.update()
             self._summary_writer.add_scalar("loss", loss.item(), global_step=step)
             for name, param in self._model.named_parameters():
                 if param.requires_grad:
-                    self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=step)
-                    self._summary_writer.add_scalar(name + "_std", param.std(), global_step=step)
-                    self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=step)
+                    # self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=step)
+                    # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=step)
+                    # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=step)
+                    pass
 
             if kwargs["n_print"] > 0 and step % kwargs["n_print"] == 0:
                 end = time.time()

@@ -1,22 +1,22 @@
 import os
 
-from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.loader.dataset_loader import TokenizeDataSetLoader
 from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.preprocess import save_pickle
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.core.trainer import SeqLabelTrainer
+from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
+from fastNLP.loader.dataset_loader import TokenizeDataSetLoader
 from fastNLP.loader.model_loader import ModelLoader
 from fastNLP.models.sequence_modeling import SeqLabeling
 from fastNLP.saver.model_saver import ModelSaver
 
 pickle_path = "./seq_label/"
 model_name = "seq_label_model.pkl"
-config_dir = "test/data_for_tests/config"
-data_path = "test/data_for_tests/people.txt"
-data_infer_path = "test/data_for_tests/people_infer.txt"
+config_dir = "../data_for_tests/config"
+data_path = "../data_for_tests/people.txt"
+data_infer_path = "../data_for_tests/people_infer.txt"
 
 
 def test_training():
@@ -84,3 +84,7 @@ def test_training():
     # Start testing with validation data
     data_dev.set_target(truth=True)
     tester.test(model, data_dev)
+
+
+if __name__ == "__main__":
+    test_training()

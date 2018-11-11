@@ -361,10 +361,11 @@ class PeopleDailyCorpusLoader(DataSetLoader):
         pos_tag_examples = []
         ner_examples = []
         for sent in sents:
+            if len(sent) <= 2:
+                continue
             inside_ne = False
             sent_pos_tag = []
             sent_words = []
-            sent_word = []
             sent_ner = []
             words = sent.strip().split()[1:]
             for word in words:
@@ -389,23 +390,10 @@ class PeopleDailyCorpusLoader(DataSetLoader):
                         ner_tag = "O"
                 tmp = word.split("/")
                 token, pos = tmp[0], tmp[1]
-
-                pos_tag = []
-                for single_token in token:
-                    if len(token) == 1:
-                        single_pos = "S-" + pos
-                    else:
-                        single_pos = "M-" + pos
-                    pos_tag.append(single_pos)
-                    sent_word.append(single_token)
-                if len(token) > 1:
-                    pos_tag[0] = "B-" + pos
-                    pos_tag[-1] = "E-" + pos
-                sent_pos_tag += pos_tag
-
                 sent_ner.append(ner_tag)
+                sent_pos_tag.append(pos)
                 sent_words.append(token)
-            pos_tag_examples.append([sent_word, sent_pos_tag])
+            pos_tag_examples.append([sent_words, sent_pos_tag])
             ner_examples.append([sent_words, sent_ner])
         # List[List[List[str], List[str]]]
         return pos_tag_examples, ner_examples

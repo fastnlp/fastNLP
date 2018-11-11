@@ -1,11 +1,7 @@
-
 import torch
 
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
-from fastNLP.core.predictor import Predictor
-
-from fastNLP.api.model_zoo import load_url
 
 model_urls = {
     'cws': "",
@@ -48,23 +44,13 @@ class POS_tagger(API):
         for example in query:
             data.append(Instance(words=example))
 
-        data = self.pipeline(data)
+        out = self.pipeline(data)
 
-        predictor = Predictor()
-        outputs = predictor.predict(self.model, data)
-
-        answers = []
-        for out in outputs:
-            out = out.numpy()
-            for sent in out:
-                answers.append([self.tag_vocab.to_word(tag) for tag in sent])
-        return answers
+        return [x["outputs"] for x in out]
 
     def load(self, name):
         _dict = torch.load(name)
         self.pipeline = _dict['pipeline']
-        self.model = _dict['model']
-        self.tag_vocab = _dict["tag_vocab"]
 
 
 

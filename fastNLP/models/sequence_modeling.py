@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 from fastNLP.models.base_model import BaseModel
@@ -55,10 +56,8 @@ class SeqLabeling(BaseModel):
         # [batch_size, max_len, hidden_size * direction]
         x = self.Linear(x)
         # [batch_size, max_len, num_classes]
-        if truth is not None:
-            return self._internal_loss(x, truth)
-        else:
-            return self.decode(x)
+        return {"loss": self._internal_loss(x, truth) if truth is not None else None,
+                "predict": self.decode(x)}
 
     def loss(self, x, y):
         """ Since the loss has been computed in forward(), this function simply returns x."""
@@ -116,7 +115,7 @@ class AdvSeqLabel(SeqLabeling):
         num_classes = args["num_classes"]
 
         self.Embedding = encoder.embedding.Embedding(vocab_size, word_emb_dim, init_emb=emb)
-        self.Rnn = encoder.lstm.LSTM(word_emb_dim, hidden_dim, num_layers=3, dropout=0.5, bidirectional=True)
+        self.Rnn = encoder.lstm.LSTM(word_emb_dim, hidden_dim, num_layers=1, dropout=0.5, bidirectional=True)
         self.Linear1 = encoder.Linear(hidden_dim * 2, hidden_dim * 2 // 3)
         self.batch_norm = torch.nn.BatchNorm1d(hidden_dim * 2 // 3)
         self.relu = torch.nn.ReLU()
@@ -128,32 +127,56 @@ class AdvSeqLabel(SeqLabeling):
     def forward(self, word_seq, word_seq_origin_len, truth=None):
         """
         :param word_seq: LongTensor, [batch_size, mex_len]
-        :param word_seq_origin_len: list of int.
+        :param word_seq_origin_len: LongTensor, [batch_size, ]
         :param truth: LongTensor, [batch_size, max_len]
         :return y: If truth is None, return list of [decode path(list)]. Used in testing and predicting.
                    If truth is not None, return loss, a scalar. Used in training.
         """
+
         word_seq = word_seq.long()
-        word_seq_origin_len = word_seq_origin_len.long()
-        truth = truth.long() if truth is not None else None
         self.mask = self.make_mask(word_seq, word_seq_origin_len)
+        word_seq_origin_len = word_seq_origin_len.cpu().numpy()
+        sent_len, idx_sort = np.sort(word_seq_origin_len)[::-1], np.argsort(-word_seq_origin_len)
+        idx_unsort = np.argsort(idx_sort)
+        idx_sort = torch.from_numpy(idx_sort)
+        idx_unsort = torch.from_numpy(idx_unsort)
+
+        # word_seq_origin_len = word_seq_origin_len.long()
+        truth = truth.long() if truth is not None else None
 
         batch_size = word_seq.size(0)
         max_len = word_seq.size(1)
+        if next(self.parameters()).is_cuda:
+            word_seq = word_seq.cuda()
+            idx_sort = idx_sort.cuda()
+            idx_unsort = idx_unsort.cuda()
+            self.mask = self.mask.cuda()
+            truth = truth.cuda() if truth is not None else None
+
         x = self.Embedding(word_seq)
         # [batch_size, max_len, word_emb_dim]
-        x = self.Rnn(x)
+
+        sent_variable = x.index_select(0, idx_sort)
+        sent_packed = torch.nn.utils.rnn.pack_padded_sequence(sent_variable, sent_len, batch_first=True)
+
+        x = self.Rnn(sent_packed)
         # [batch_size, max_len, hidden_size * direction]
+
+        sent_output = torch.nn.utils.rnn.pad_packed_sequence(x, batch_first=True)[0]
+        x = sent_output.index_select(0, idx_unsort)
+
         x = x.contiguous()
         x = x.view(batch_size * max_len, -1)
         x = self.Linear1(x)
-        x = self.batch_norm(x)
+        # x = self.batch_norm(x)
         x = self.relu(x)
         x = self.drop(x)
         x = self.Linear2(x)
         x = x.view(batch_size, max_len, -1)
         # [batch_size, max_len, num_classes]
-        if truth is not None:
-            return self._internal_loss(x, truth)
-        else:
-            return self.decode(x)
+        return {"loss": self._internal_loss(x, truth) if truth is not None else None,
+                "predict": self.decode(x)}
+
+    def predict(self, **x):
+        out = self.forward(**x)
+        return {"predict": out["predict"]}

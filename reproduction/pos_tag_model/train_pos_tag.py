@@ -1,11 +1,14 @@
 import copy
 import os
+import sys
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+print(sys.path)
 import torch
 
-from fastNLP.api.pipeline import Pipeline
-from fastNLP.api.processor import VocabProcessor, IndexerProcessor, SeqLenProcessor
 from fastNLP.core.dataset import DataSet
+from fastNLP.api.pipeline import Pipeline
+from fastNLP.api.processor import VocabProcessor, IndexerProcessor, SeqLenProcessor, ModelProcessor, Index2WordProcessor
 from fastNLP.core.instance import Instance
 from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.optimizer import Optimizer
@@ -14,11 +17,12 @@ from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
 from fastNLP.loader.dataset_loader import PeopleDailyCorpusLoader
 from fastNLP.models.sequence_modeling import AdvSeqLabel
 
+
 cfgfile = './pos_tag.cfg'
-# datadir = "/home/zyfeng/data/"
-# data_name = "POS_PD_1998.txt"
-datadir = "/home/zyfeng/fastnlp_0.2.0/test/data_for_tests/"
-data_name = "people_daily_raw.txt"
+datadir = "/home/zyfeng/data/"
+data_name = "CWS_POS_TAG_NER_people_daily.txt"
+# datadir = "/home/zyfeng/env/fastnlp_v_2/test/data_for_tests"
+# data_name = "people_daily_raw.txt"
 
 
 pos_tag_data_path = os.path.join(datadir, data_name)
@@ -58,6 +62,7 @@ def train():
     tag_indexer(dataset)
     seq_len_proc = SeqLenProcessor("word_seq", "word_seq_origin_len")
     seq_len_proc(dataset)
+    #torch.save(dataset, "data_set.pkl")
 
     dev_set = copy.deepcopy(dataset)
     dev_set.set_is_target(truth=True)
@@ -75,14 +80,21 @@ def train():
     trainer = Trainer(epochs=train_param["epochs"],
                       batch_size=train_param["batch_size"],
                       validate=True,
-                      optimizer=Optimizer("SGD", lr=0.01, momentum=0.9),
-                      evaluator=SeqLabelEvaluator()
+                      optimizer=Optimizer("Adam", lr=0.01, weight_decay=0.9),
+                      evaluator=SeqLabelEvaluator(),
+                      use_cuda=True
                       )
     trainer.train(model, dataset, dev_set)
 
+    model_proc = ModelProcessor(model, "word_seq_origin_len")
+    dataset.set_is_target(truth=True)
+    res = model_proc.process(dataset)
+
+    decoder = Index2WordProcessor(tag_vocab_proc.get_vocab(), "predict", "outputs")
+
     # save model & pipeline
-    pp = Pipeline([word_indexer, seq_len_proc])
-    save_dict = {"pipeline": pp, "model": model, "tag_vocab": tag_vocab_proc.get_vocab()}
+    pp = Pipeline([word_indexer, seq_len_proc, model_proc, decoder])
+    save_dict = {"pipeline": pp}
     torch.save(save_dict, "model_pp.pkl")
 
 
