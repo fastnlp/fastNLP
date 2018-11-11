@@ -30,11 +30,13 @@ class TestCase1(unittest.TestCase):
         for text, label in zip(texts, labels):
             x = TextField(text, is_target=False)
             y = LabelField(label, is_target=True)
-            ins = Instance(text=x, label=y)
+            ins = Instance(raw_text=x, label=y)
             data.append(ins)
 
         # use vocabulary to index data
-        data.index_field("text", vocab)
+        # data.index_field("text", vocab)
+        for ins in data:
+            ins['text'] = [vocab.to_index(w) for w in ins['raw_text']]
 
         # define naive sampler for batch class
         class SeqSampler:

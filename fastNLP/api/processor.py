@@ -145,7 +145,6 @@ class IndexerProcessor(Processor):
 
 class VocabProcessor(Processor):
     def __init__(self, field_name):
-
         super(VocabProcessor, self).__init__(field_name, None)
         self.vocab = Vocabulary()
 
@@ -172,3 +171,15 @@ class SeqLenProcessor(Processor):
             ins[self.new_added_field_name] = length
         dataset.set_need_tensor(**{self.new_added_field_name: True})
         return dataset
+
+class Index2WordProcessor(Processor):
+    def __init__(self, vocab, field_name, new_added_field_name):
+        super(Index2WordProcessor, self).__init__(field_name, new_added_field_name)
+        self.vocab = vocab
+
+    def process(self, dataset):
+        for ins in dataset:
+            new_sent = [self.vocab.to_word(w) for w in ins[self.field_name]]
+            ins[self.new_added_field_name] = new_sent
+        return dataset
+
