@@ -9,6 +9,7 @@ from torch.nn import functional as F
 from fastNLP.modules.utils import initial_parameter
 from fastNLP.modules.encoder.variational_rnn import VarLSTM
 from fastNLP.modules.dropout import TimestepDropout
+from fastNLP.models.base_model import BaseModel
 
 def mst(scores):
     """
@@ -113,7 +114,7 @@ def _find_cycle(vertices, edges):
     return [SCC for SCC in _SCCs if len(SCC) > 1]
 
 
-class GraphParser(nn.Module):
+class GraphParser(BaseModel):
     """Graph based Parser helper class, support greedy decoding and MST(Maximum Spanning Tree) decoding
     """
     def __init__(self):
@@ -370,4 +371,20 @@ class BiaffineParser(GraphParser):
         label_nll = -(label_loss*float_mask).mean()
         return arc_nll + label_nll
 
+    def predict(self, word_seq, pos_seq, word_seq_origin_len):
+        """
 
+        :param word_seq:
+        :param pos_seq:
+        :param word_seq_origin_len:
+        :return: head_pred: [B, L]
+                 label_pred: [B, L]
+                 seq_len: [B,]
+        """
+        res = self(word_seq, pos_seq, word_seq_origin_len)
+        output = {}
+        output['head_pred'] = res.pop('head_pred')
+        _, label_pred = res.pop('label_pred').max(2)
+        output['label_pred'] = label_pred
+        output['seq_len'] = word_seq_origin_len
+        return output
