@@ -21,7 +21,7 @@ def seq_len_to_byte_mask(seq_lens):
 
 
 class ConditionalRandomField(nn.Module):
-    def __init__(self, tag_size, include_start_end_trans=True ,initial_method = None):
+    def __init__(self, tag_size, include_start_end_trans=False ,initial_method = None):
         """
         :param tag_size: int, num of tags
         :param include_start_end_trans: bool, whether to include start/end tag
@@ -87,7 +87,7 @@ class ConditionalRandomField(nn.Module):
         emit_score = logits[seq_idx.view(-1,1), batch_idx.view(1,-1), tags] * mask
         # score [L-1, B]
         score = trans_score + emit_score[:seq_len-1, :]
-        score = score.sum(0) + emit_score[-1]
+        score = score.sum(0) + emit_score[-1] * mask[-1]
         if self.include_start_end_trans:
             st_scores = self.start_scores.view(1, -1).repeat(batch_size, 1)[batch_idx, tags[0]]
             last_idx = mask.long().sum(0) - 1

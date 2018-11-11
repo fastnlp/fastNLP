@@ -87,17 +87,30 @@ class FullSpaceToHalfSpaceProcessor(Processor):
         return dataset
 
 
-class MapFieldProcessor(Processor):
-    def __init__(self, func, field_name, new_added_field_name=None):
-        super(MapFieldProcessor, self).__init__(field_name, new_added_field_name)
-        self.func = func
+class PreAppendProcessor(Processor):
+    def __init__(self, data, field_name, new_added_field_name=None):
+        super(PreAppendProcessor, self).__init__(field_name, new_added_field_name)
+        self.data = data
 
     def process(self, dataset):
         for ins in dataset:
-            s = ins[self.field_name]
-            new_s = self.func(s)
-            ins[self.new_added_field_name] = new_s
-        return  dataset
+            sent = ins[self.field_name]
+            ins[self.new_added_field_name] = [self.data] + sent
+        return dataset
+
+
+class SliceProcessor(Processor):
+    def __init__(self, start, end, step, field_name, new_added_field_name=None):
+        super(SliceProcessor, self).__init__(field_name, new_added_field_name)
+        for o in (start, end, step):
+            assert isinstance(o, int) or o is None
+        self.slice = slice(start, end, step)
+
+    def process(self, dataset):
+        for ins in dataset:
+            sent = ins[self.field_name]
+            ins[self.new_added_field_name] = sent[self.slice]
+        return dataset
 
 
 class Num2TagProcessor(Processor):
@@ -230,4 +243,17 @@ class Index2WordProcessor(Processor):
         for ins in dataset:
             new_sent = [self.vocab.to_word(w) for w in ins[self.field_name]]
             ins[self.new_added_field_name] = new_sent
+        return dataset
+
+
+class SetTensorProcessor(Processor):
+    def __init__(self, field_dict, default=False):
+        super(SetTensorProcessor, self).__init__(None, None)
+        self.field_dict = field_dict
+        self.default = default
+
+    def process(self, dataset):
+        set_dict = {name: self.default for name in dataset.get_fields().keys()}
+        set_dict.update(self.field_dict)
+        dataset.set_need_tensor(**set_dict)
         return dataset

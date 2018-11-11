@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import numpy as np
 
 from fastNLP.models.base_model import BaseModel
 from fastNLP.modules import decoder, encoder
@@ -160,6 +161,7 @@ class AdvSeqLabel(SeqLabeling):
         sent_packed = torch.nn.utils.rnn.pack_padded_sequence(sent_variable, sent_len, batch_first=True)
 
         x = self.Rnn(sent_packed)
+        # print(x)
         # [batch_size, max_len, hidden_size * direction]
 
         sent_output = torch.nn.utils.rnn.pad_packed_sequence(x, batch_first=True)[0]
@@ -180,3 +182,42 @@ class AdvSeqLabel(SeqLabeling):
     def predict(self, **x):
         out = self.forward(**x)
         return {"predict": out["predict"]}
+
+
+args = {
+    'vocab_size': 20,
+    'word_emb_dim': 100,
+    'rnn_hidden_units': 100,
+    'num_classes': 10,
+}
+model = AdvSeqLabel(args)
+data = []
+for i in range(20):
+    word_seq = torch.randint(20, (15,)).long()
+    word_seq_len = torch.LongTensor([15])
+    truth = torch.randint(10, (15,)).long()
+    data.append((word_seq, word_seq_len, truth))
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+print(model)
+curidx = 0
+for i in range(1000):
+    endidx = min(len(data), curidx + 5)
+    b_word, b_len, b_truth = [], [], []
+    for word_seq, word_seq_len, truth in data[curidx: endidx]:
+        b_word.append(word_seq)
+        b_len.append(word_seq_len)
+        b_truth.append(truth)
+    word_seq = torch.stack(b_word, dim=0)
+    word_seq_len = torch.cat(b_len, dim=0)
+    truth = torch.stack(b_truth, dim=0)
+    res = model(word_seq, word_seq_len, truth)
+    loss = res['loss']
+    pred = res['predict']
+    print('loss: {} acc {}'.format(loss.item(), ((pred.data == truth).long().sum().float() / word_seq_len.sum().float())))
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    curidx = endidx
+    if curidx == len(data):
+        curidx = 0
+

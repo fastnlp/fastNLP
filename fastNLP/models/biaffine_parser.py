@@ -286,6 +286,10 @@ class BiaffineParser(GraphParser):
             head_pred: [batch_size, seq_len] if gold_heads is not provided, predicting the heads
         """
         # prepare embeddings
+        device = self.parameters().__next__().device
+        word_seq = word_seq.long().to(device)
+        pos_seq = pos_seq.long().to(device)
+        word_seq_origin_len = word_seq_origin_len.long().to(device).view(-1)
         batch_size, seq_len = word_seq.shape
         # print('forward {} {}'.format(batch_size, seq_len))
 
@@ -300,9 +304,13 @@ class BiaffineParser(GraphParser):
         del word, pos
 
         # lstm, extract features
-        x = nn.utils.rnn.pack_padded_sequence(x, word_seq_origin_len.squeeze(1), batch_first=True)
+        sort_lens, sort_idx = torch.sort(word_seq_origin_len, dim=0, descending=True)
+        x = x[sort_idx]
+        x = nn.utils.rnn.pack_padded_sequence(x, sort_lens, batch_first=True)
         feat, _ = self.lstm(x) # -> [N,L,C]
         feat, _ = nn.utils.rnn.pad_packed_sequence(feat, batch_first=True)
+        _, unsort_idx = torch.sort(sort_idx, dim=0, descending=False)
+        feat = feat[unsort_idx]
 
         # for arc biaffine
         # mlp, reduce dim
@@ -386,5 +394,4 @@ class BiaffineParser(GraphParser):
         output['head_pred'] = res.pop('head_pred')
         _, label_pred = res.pop('label_pred').max(2)
         output['label_pred'] = label_pred
-        output['seq_len'] = word_seq_origin_len
         return output

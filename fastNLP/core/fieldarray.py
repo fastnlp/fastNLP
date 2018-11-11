@@ -33,7 +33,7 @@ class FieldArray(object):
             array = np.array([self.content[i] for i in idxes], dtype=type(self.content[0]))
         else:
             max_len = max([len(self.content[i]) for i in idxes])
-            array = np.full((batch_size, max_len), self.padding_val, dtype=np.int32)
+            array = np.full((batch_size, max_len), self.padding_val, dtype=np.int64)
 
             for i, idx in enumerate(idxes):
                 array[i][:len(self.content[idx])] = self.content[idx]

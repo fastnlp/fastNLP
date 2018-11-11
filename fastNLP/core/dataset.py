@@ -23,9 +23,9 @@ class DataSet(object):
     """
 
     class DataSetIter(object):
-        def __init__(self, dataset):
+        def __init__(self, dataset, idx=-1):
             self.dataset = dataset
-            self.idx = -1
+            self.idx = idx
 
         def __next__(self):
             self.idx += 1
@@ -88,7 +88,12 @@ class DataSet(object):
         return self.field_arrays
 
     def __getitem__(self, name):
-        return self.field_arrays[name]
+        if isinstance(name, int):
+            return self.DataSetIter(self, idx=name)
+        elif isinstance(name, str):
+            return self.field_arrays[name]
+        else:
+            raise KeyError
 
     def __len__(self):
         if len(self.field_arrays) == 0:
