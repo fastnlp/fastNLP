@@ -5,17 +5,25 @@ from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
 from fastNLP.core.predictor import Predictor
 
+from fastNLP.api.model_zoo import load_url
+
+model_urls = {
+    'cws': "",
+
+}
+
 
 class API:
     def __init__(self):
         self.pipeline = None
-        self.model = None
 
     def predict(self, *args, **kwargs):
         raise NotImplementedError
 
-    def load(self, name):
-        _dict = torch.load(name)
+    def load(self, path):
+
+
+        _dict = torch.load(path)
         self.pipeline = _dict['pipeline']
 
 
@@ -61,8 +69,13 @@ class POS_tagger(API):
 
 
 class CWS(API):
-    def __init__(self, model_path='xxx'):
+    def __init__(self, model_path=None, pretrain=True):
         super(CWS, self).__init__()
+        # 1. 这里修改为检查
+        if model_path is None:
+            model_path = model_urls['cws']
+
+
         self.load(model_path)
 
     def predict(self, sentence, pretrain=False):
@@ -94,3 +107,6 @@ class CWS(API):
 if __name__ == "__main__":
     tagger = POS_tagger()
     print(tagger.predict([["我", "是", "学生", "。"], ["我", "是", "学生", "。"]]))
+
+    from torchvision import models
+    models.resnet18()

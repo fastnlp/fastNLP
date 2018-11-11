@@ -45,14 +45,14 @@ class RandomSampler(BaseSampler):
 
 class BucketSampler(BaseSampler):
 
-    def __init__(self, num_buckets=10, batch_size=32):
+    def __init__(self, num_buckets=10, batch_size=32, seq_lens_field_name='seq_lens'):
         self.num_buckets = num_buckets
         self.batch_size = batch_size
+        self.seq_lens_field_name = seq_lens_field_name
 
     def __call__(self, data_set):
-        assert 'seq_lens' in data_set, "BuckectSampler only support data_set with seq_lens right now."
 
-        seq_lens = data_set['seq_lens'].content
+        seq_lens = data_set[self.seq_lens_field_name].content
         total_sample_num = len(seq_lens)
 
         bucket_indexes = []
