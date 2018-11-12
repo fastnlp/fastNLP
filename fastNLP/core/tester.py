@@ -1,4 +1,5 @@
 import torch
+from collections import defaultdict
 
 from fastNLP.core.batch import Batch
 from fastNLP.core.metrics import Evaluator
@@ -71,17 +72,18 @@ class Tester(object):
         # turn on the testing mode; clean up the history
         self.mode(network, is_test=True)
         self.eval_history.clear()
-        output_list = []
-        truth_list = []
-
+        output, truths = defaultdict(list), defaultdict(list)
         data_iterator = Batch(dev_data, self.batch_size, sampler=RandomSampler(), use_cuda=self.use_cuda)
 
         with torch.no_grad():
             for batch_x, batch_y in data_iterator:
                 prediction = self.data_forward(network, batch_x)
-                output_list.append(prediction)
-                truth_list.append(batch_y)
-            eval_results = self.evaluate(output_list, truth_list)
+                assert isinstance(prediction, dict)
+                for k, v in prediction.items():
+                    output[k].append(v)
+                for k, v in batch_y.items():
+                    truths[k].append(v)
+            eval_results = self.evaluate(**output, **truths)
         print("[tester] {}".format(self.print_eval_results(eval_results)))
         logger.info("[tester] {}".format(self.print_eval_results(eval_results)))
         self.mode(network, is_test=False)
@@ -105,14 +107,10 @@ class Tester(object):
         y = network(**x)
         return y
 
-    def evaluate(self, predict, truth):
+    def evaluate(self, **kwargs):
         """Compute evaluation metrics.
-
-        :param predict: list of Tensor
-        :param truth: list of dict
-        :return eval_results: can be anything. It will be stored in self.eval_history
         """
-        return self._evaluator(predict, truth)
+        return self._evaluator(**kwargs)
 
     def print_eval_results(self, results):
         """Override this method to support more print formats.

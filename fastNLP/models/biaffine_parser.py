@@ -10,6 +10,7 @@ from fastNLP.modules.utils import initial_parameter
 from fastNLP.modules.encoder.variational_rnn import VarLSTM
 from fastNLP.modules.dropout import TimestepDropout
 from fastNLP.models.base_model import BaseModel
+from fastNLP.modules.utils import seq_mask
 
 def mst(scores):
     """
@@ -123,31 +124,31 @@ class GraphParser(BaseModel):
     def forward(self, x):
         raise NotImplementedError
 
-    def _greedy_decoder(self, arc_matrix, seq_mask=None):
+    def _greedy_decoder(self, arc_matrix, mask=None):
         _, seq_len, _ = arc_matrix.shape
         matrix = arc_matrix + torch.diag(arc_matrix.new(seq_len).fill_(-np.inf))
-        flip_mask = (seq_mask == 0).byte()
+        flip_mask = (mask == 0).byte()
         matrix.masked_fill_(flip_mask.unsqueeze(1), -np.inf)
         _, heads = torch.max(matrix, dim=2)
-        if seq_mask is not None:
-            heads *= seq_mask.long()
+        if mask is not None:
+            heads *= mask.long()
         return heads
 
-    def _mst_decoder(self, arc_matrix, seq_mask=None):
+    def _mst_decoder(self, arc_matrix, mask=None):
         batch_size, seq_len, _ = arc_matrix.shape
         matrix = torch.zeros_like(arc_matrix).copy_(arc_matrix)
         ans = matrix.new_zeros(batch_size, seq_len).long()
-        lens = (seq_mask.long()).sum(1) if seq_mask is not None else torch.zeros(batch_size) + seq_len
+        lens = (mask.long()).sum(1) if mask is not None else torch.zeros(batch_size) + seq_len
         batch_idx = torch.arange(batch_size, dtype=torch.long, device=lens.device)
-        seq_mask[batch_idx, lens-1] = 0
+        mask[batch_idx, lens-1] = 0
         for i, graph in enumerate(matrix):
             len_i = lens[i]
             if len_i == seq_len:
                 ans[i] = torch.as_tensor(mst(graph.cpu().numpy()), device=ans.device)
             else:
                 ans[i, :len_i] = torch.as_tensor(mst(graph[:len_i, :len_i].cpu().numpy()), device=ans.device)
-        if seq_mask is not None:
-            ans *= seq_mask.long()
+        if mask is not None:
+            ans *= mask.long()
         return ans
 
 
@@ -190,13 +191,6 @@ class LabelBilinear(nn.Module):
         output = self.bilinear(x1, x2)
         output += self.lin(torch.cat([x1, x2], dim=2))
         return output
-
-def len2masks(origin_len, max_len):
-    if origin_len.dim() <= 1:
-        origin_len = origin_len.unsqueeze(1) # [batch_size, 1]
-    seq_range = torch.arange(start=0, end=max_len, dtype=torch.long, device=origin_len.device) # [max_len,]
-    seq_mask = torch.gt(origin_len, seq_range.unsqueeze(0)) # [batch_size, max_len]
-    return seq_mask
 
 class BiaffineParser(GraphParser):
     """Biaffine Dependency Parser implemantation.
@@ -277,12 +271,12 @@ class BiaffineParser(GraphParser):
         """
         :param word_seq: [batch_size, seq_len] sequence of word's indices
         :param pos_seq: [batch_size, seq_len] sequence of word's indices
-        :param seq_mask: [batch_size, seq_len] sequence of length masks
+        :param word_seq_origin_len: [batch_size, seq_len] sequence of length masks
         :param gold_heads: [batch_size, seq_len] sequence of golden heads
         :return dict: parsing results
             arc_pred: [batch_size, seq_len, seq_len]
             label_pred: [batch_size, seq_len, seq_len]
-            seq_mask: [batch_size, seq_len]
+            mask: [batch_size, seq_len]
             head_pred: [batch_size, seq_len] if gold_heads is not provided, predicting the heads
         """
         # prepare embeddings
@@ -294,7 +288,7 @@ class BiaffineParser(GraphParser):
         # print('forward {} {}'.format(batch_size, seq_len))
 
         # get sequence mask
-        seq_mask = len2masks(word_seq_origin_len, seq_len).long()
+        mask = seq_mask(word_seq_origin_len, seq_len).long()
 
         word = self.normal_dropout(self.word_embedding(word_seq)) # [N,L] -> [N,L,C_0]
         pos = self.normal_dropout(self.pos_embedding(pos_seq)) # [N,L] -> [N,L,C_1]
@@ -327,14 +321,14 @@ class BiaffineParser(GraphParser):
         if gold_heads is None or not self.training:
             # use greedy decoding in training
             if self.training or self.use_greedy_infer:
-                heads = self._greedy_decoder(arc_pred, seq_mask)
+                heads = self._greedy_decoder(arc_pred, mask)
             else:
-                heads = self._mst_decoder(arc_pred, seq_mask)
+                heads = self._mst_decoder(arc_pred, mask)
             head_pred = heads
         else:
             assert self.training # must be training mode
             if torch.rand(1).item() < self.explore_p:
-                heads = self._greedy_decoder(arc_pred, seq_mask)
+                heads = self._greedy_decoder(arc_pred, mask)
                 head_pred = heads
             else:
                 head_pred = None
@@ -343,12 +337,12 @@ class BiaffineParser(GraphParser):
         batch_range = torch.arange(start=0, end=batch_size, dtype=torch.long, device=word_seq.device).unsqueeze(1)
         label_head = label_head[batch_range, heads].contiguous()
         label_pred = self.label_predictor(label_head, label_dep) # [N, L, num_label]
-        res_dict = {'arc_pred': arc_pred, 'label_pred': label_pred, 'seq_mask': seq_mask}
+        res_dict = {'arc_pred': arc_pred, 'label_pred': label_pred, 'mask': mask}
         if head_pred is not None:
             res_dict['head_pred'] = head_pred
         return res_dict
 
-    def loss(self, arc_pred, label_pred, head_indices, head_labels, seq_mask, **_):
+    def loss(self, arc_pred, label_pred, head_indices, head_labels, mask, **_):
         """
         Compute loss.
 
@@ -356,12 +350,12 @@ class BiaffineParser(GraphParser):
         :param label_pred: [batch_size, seq_len, n_tags]
         :param head_indices: [batch_size, seq_len]
         :param head_labels: [batch_size, seq_len]
-        :param seq_mask: [batch_size, seq_len]
+        :param mask: [batch_size, seq_len]
         :return: loss value
         """
 
         batch_size, seq_len, _ = arc_pred.shape
-        flip_mask = (seq_mask == 0)
+        flip_mask = (mask == 0)
         _arc_pred = arc_pred.new_empty((batch_size, seq_len, seq_len)).copy_(arc_pred)
         _arc_pred.masked_fill_(flip_mask.unsqueeze(1), -np.inf)
         arc_logits = F.log_softmax(_arc_pred, dim=2)
@@ -374,7 +368,7 @@ class BiaffineParser(GraphParser):
         arc_loss = arc_loss[:, 1:]
         label_loss = label_loss[:, 1:]
 
-        float_mask = seq_mask[:, 1:].float()
+        float_mask = mask[:, 1:].float()
         arc_nll = -(arc_loss*float_mask).mean()
         label_nll = -(label_loss*float_mask).mean()
         return arc_nll + label_nll

@@ -47,7 +47,8 @@ class Trainer(object):
                         "valid_step": 500, "eval_sort_key": 'acc',
                         "loss": Loss(None),  # used to pass type check
                         "optimizer": Optimizer("Adam", lr=0.001, weight_decay=0),
-                        "evaluator": Evaluator()
+                        "eval_batch_size": 64,
+                        "evaluator": Evaluator(),
                         }
         """
             "required_args" is the collection of arguments that users must pass to Trainer explicitly.
@@ -78,6 +79,7 @@ class Trainer(object):
 
         self.n_epochs = int(default_args["epochs"])
         self.batch_size = int(default_args["batch_size"])
+        self.eval_batch_size = int(default_args['eval_batch_size'])
         self.pickle_path = default_args["pickle_path"]
         self.validate = default_args["validate"]
         self.save_best_dev = default_args["save_best_dev"]
@@ -98,6 +100,8 @@ class Trainer(object):
         self._best_accuracy = 0.0
         self.eval_sort_key = default_args['eval_sort_key']
         self.validator = None
+        self.epoch = 0
+        self.step = 0
 
     def train(self, network, train_data, dev_data=None):
         """General Training Procedure
@@ -118,7 +122,7 @@ class Trainer(object):
         # define Tester over dev data
         self.dev_data = None
         if self.validate:
-            default_valid_args = {"batch_size": self.batch_size, "pickle_path": self.pickle_path,
+            default_valid_args = {"batch_size": self.eval_batch_size, "pickle_path": self.pickle_path,
                                   "use_cuda": self.use_cuda, "evaluator": self._evaluator}
             if self.validator is None:
                 self.validator = self._create_validator(default_valid_args)
@@ -139,9 +143,9 @@ class Trainer(object):
         self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
         print("training epochs started " + self.start_time)
         logger.info("training epochs started " + self.start_time)
-        epoch, iters = 1, 0
-        while epoch <= self.n_epochs:
-            logger.info("training epoch {}".format(epoch))
+        self.epoch, self.step = 1, 0
+        while self.epoch <= self.n_epochs:
+            logger.info("training epoch {}".format(self.epoch))
 
             # prepare mini-batch iterator
             data_iterator = Batch(train_data, batch_size=self.batch_size,
@@ -150,14 +154,13 @@ class Trainer(object):
             logger.info("prepared data iterator")
 
             # one forward and backward pass
-            iters = self._train_step(data_iterator, network, start=start, n_print=self.print_every_step, epoch=epoch,
-                                     step=iters, dev_data=dev_data)
+            self._train_step(data_iterator, network, start=start, n_print=self.print_every_step, dev_data=dev_data)
 
             # validation
             if self.validate:
                 self.valid_model()
             self.save_model(self._model, 'training_model_' + self.start_time)
-            epoch += 1
+            self.epoch += 1
 
     def _train_step(self, data_iterator, network, **kwargs):
         """Training process in one epoch.
@@ -167,7 +170,6 @@ class Trainer(object):
                 - start: time.time(), the starting time of this step.
                 - epoch: int,
         """
-        step = kwargs['step']
         for batch_x, batch_y in data_iterator:
             prediction = self.data_forward(network, batch_x)
 
@@ -177,25 +179,31 @@ class Trainer(object):
 
             self.grad_backward(loss)
             self.update()
-            self._summary_writer.add_scalar("loss", loss.item(), global_step=step)
+            self._summary_writer.add_scalar("loss", loss.item(), global_step=self.step)
             for name, param in self._model.named_parameters():
                 if param.requires_grad:
+<<<<<<< HEAD
                     # self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=step)
                     # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=step)
                     # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=step)
                     pass
 
             if kwargs["n_print"] > 0 and step % kwargs["n_print"] == 0:
+=======
+                    self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.step)
+                    # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
+                    # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
+            if kwargs["n_print"] > 0 and self.step % kwargs["n_print"] == 0:
+>>>>>>> 5924fe0... fix and update tester, trainer, seq_model, add parser pipeline builder
                 end = time.time()
                 diff = timedelta(seconds=round(end - kwargs["start"]))
                 print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.6} time: {}".format(
-                    kwargs["epoch"], step, loss.data, diff)
+                    self.epoch, self.step, loss.data, diff)
                 print(print_output)
                 logger.info(print_output)
-            if self.validate and self.valid_step > 0 and step > 0 and step % self.valid_step == 0:
+            if self.validate and self.valid_step > 0 and self.step > 0 and self.step % self.valid_step == 0:
                 self.valid_model()
-            step += 1
-        return step
+            self.step += 1
 
     def valid_model(self):
         if self.dev_data is None:
@@ -203,6 +211,8 @@ class Trainer(object):
                 "self.validate is True in trainer, but dev_data is None. Please provide the validation data.")
         logger.info("validation started")
         res = self.validator.test(self._model, self.dev_data)
+        for name, num in res.items():
+            self._summary_writer.add_scalar("valid_{}".format(name), num, global_step=self.step)
         if self.save_best_dev and self.best_eval_result(res):
             logger.info('save best result! {}'.format(res))
             print('save best result! {}'.format(res))
