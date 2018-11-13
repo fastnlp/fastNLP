@@ -66,7 +66,7 @@ class PosOutputStrProcessor(Processor):
 
         self.word_field_name = word_field_name
         self.pos_field_name = pos_field_name
-        self.pos = '_'
+        self.sep = '_'
 
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
