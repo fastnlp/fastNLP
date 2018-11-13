@@ -60,6 +60,30 @@ class CombineWordAndPosProcessor(Processor):
 
         return dataset
 
+class PosOutputStrProcessor(Processor):
+    def __init__(self, word_field_name, pos_field_name):
+        super(PosOutputStrProcessor, self).__init__(None, None)
+
+        self.word_field_name = word_field_name
+        self.pos_field_name = pos_field_name
+        self.pos = '_'
+
+    def process(self, dataset):
+        assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
+
+        for ins in dataset:
+            word_list = ins[self.word_field_name]
+            pos_list = ins[self.pos_field_name]
+
+            word_pos_list = []
+            for word, pos in zip(word_list, pos_list):
+                word_pos_list.append(word + self.sep + pos)
+
+            ins['word_pos_output'] = '  '.join(word_pos_list)
+
+        return dataset
+
+
 if __name__ == '__main__':
     chars = ['迈', '向', '充', '满', '希', '望', '的', '新', '世', '纪', '—', '—', '一', '九', '九', '八', '年', '新', '年', '讲', '话', '（', '附', '图', '片', '１', '张', '）']
     bmes_pos = ['B-v', 'E-v', 'B-v', 'E-v', 'B-n', 'E-n', 'S-u', 'S-a', 'B-n', 'E-n', 'B-w', 'E-w', 'B-t', 'M-t', 'M-t', 'M-t', 'E-t', 'B-t', 'E-t', 'B-n', 'E-n', 'S-w', 'S-v', 'B-n', 'E-n', 'S-m', 'S-q', 'S-w']
