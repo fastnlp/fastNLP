@@ -34,19 +34,27 @@ def calculate_pre_rec_f1(model, batcher):
     yp_wordnum = pred_ys.count(1)
     yt_wordnum = true_ys.count(1)
     start = 0
-    for i in range(len(true_ys)):
+    if true_ys[0]==1 and pred_ys[0]==1:
+        cor_num += 1
+        start = 1
+
+    for i in range(1, len(true_ys)):
         if true_ys[i] == 1:
             flag = True
-            for j in range(start, i + 1):
-                if true_ys[j] != pred_ys[j]:
-                    flag = False
-                    break
+            if true_ys[start-1] != pred_ys[start-1]:
+                flag = False
+            else:
+                for j in range(start, i + 1):
+                    if true_ys[j] != pred_ys[j]:
+                        flag = False
+                        break
             if flag:
                 cor_num += 1
             start = i + 1
     P = cor_num / (float(yp_wordnum) + 1e-6)
     R = cor_num / (float(yt_wordnum) + 1e-6)
     F = 2 * P * R / (P + R + 1e-6)
+    print(cor_num, yt_wordnum, yp_wordnum)
     return P, R, F
 
 

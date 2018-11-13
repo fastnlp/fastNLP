@@ -19,10 +19,15 @@ from reproduction.chinese_word_segment.models.cws_model import CWSBiLSTMSegApp
 
 from reproduction.chinese_word_segment.utils import calculate_pre_rec_f1
 
-ds_name = 'msr'
-tr_filename = '/home/hyan/CWS/Mutil_Criterion/all_data/{}/middle_files/{}_train.txt'.format(ds_name,
+ds_name = 'pku'
+# tr_filename = '/home/hyan/CWS/Mutil_Criterion/all_data/{}/middle_files/{}_train.txt'.format(ds_name,
+#                                                                                             ds_name)
+# dev_filename = '/home/hyan/CWS/Mutil_Criterion/all_data/{}/middle_files/{}_dev.txt'.format(ds_name,
+#                                                                                            ds_name)
+
+tr_filename = '/hdd/fudanNLP/CWS/CWS_semiCRF/all_data/{}/middle_files/{}_train.txt'.format(ds_name,
                                                                                             ds_name)
-dev_filename = '/home/hyan/CWS/Mutil_Criterion/all_data/{}/middle_files/{}_dev.txt'.format(ds_name,
+dev_filename = '/hdd/fudanNLP/CWS/CWS_semiCRF/all_data/{}/middle_files/{}_dev.txt'.format(ds_name,
                                                                                            ds_name)
 
 reader = NaiveCWSReader()
@@ -189,7 +194,7 @@ pp.add_processor(seq_len_proc)
 
 
 
-te_filename = '/home/hyan/CWS/Mutil_Criterion/all_data/{}/middle_files/{}_test.txt'.format(ds_name, ds_name)
+te_filename = '/hdd/fudanNLP/CWS/CWS_semiCRF/all_data/{}/middle_files/{}_test.txt'.format(ds_name, ds_name)
 te_dataset = reader.load(te_filename)
 pp(te_dataset)
 
@@ -231,9 +236,8 @@ pp.add_processor(output_proc)
 
 # TODO 这里貌似需要区分test pipeline与infer pipeline
 
-infer_context_dict = {'pipeline': pp,
-                     'model': cws_model}
-torch.save(infer_context_dict, 'models/infer_context.pkl')
+infer_context_dict = {'pipeline': pp}
+torch.save(infer_context_dict, 'models/infer_cws.pkl')
 
 
 # TODO 还需要考虑如何替换回原文的问题？

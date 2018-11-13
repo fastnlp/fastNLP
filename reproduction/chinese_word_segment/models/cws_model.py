@@ -90,7 +90,7 @@ class CWSBiLSTMSegApp(BaseModel):
         self.encoder_model = CWSBiLSTMEncoder(vocab_num, embed_dim, bigram_vocab_num, bigram_embed_dim, num_bigram_per_char,
                  hidden_size, bidirectional, embed_drop_p, num_layers)
 
-        size_layer = [hidden_size, 100, tag_size]
+        size_layer = [hidden_size, 200, tag_size]
         self.decoder_model = MLP(size_layer)
 
 

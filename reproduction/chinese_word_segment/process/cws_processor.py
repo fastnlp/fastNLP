@@ -194,6 +194,7 @@ class VocabProcessor(Processor):
                 tokens = ins[self.field_name]
                 self.vocab.update(tokens)
 
+
     def get_vocab(self):
         self.vocab.build_vocab()
         return self.vocab
