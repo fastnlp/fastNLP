@@ -234,6 +234,10 @@ class ModelProcessor(Processor):
     def set_model(self, model):
         self.model = model
 
+    def set_model_device(self, device):
+        device = torch.device(device)
+        self.model.to(device)
+
 class Index2WordProcessor(Processor):
     def __init__(self, vocab, field_name, new_added_field_name):
         super(Index2WordProcessor, self).__init__(field_name, new_added_field_name)

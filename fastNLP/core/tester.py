@@ -53,7 +53,7 @@ class Tester(object):
             else:
                 # Tester doesn't care about extra arguments
                 pass
-        print(default_args)
+        # print(default_args)
 
         self.batch_size = default_args["batch_size"]
         self.pickle_path = default_args["pickle_path"]
@@ -84,8 +84,8 @@ class Tester(object):
                 for k, v in batch_y.items():
                     truths[k].append(v)
             eval_results = self.evaluate(**output, **truths)
-        print("[tester] {}".format(self.print_eval_results(eval_results)))
-        logger.info("[tester] {}".format(self.print_eval_results(eval_results)))
+        # print("[tester] {}".format(self.print_eval_results(eval_results)))
+        # logger.info("[tester] {}".format(self.print_eval_results(eval_results)))
         self.mode(network, is_test=False)
         self.metrics = eval_results
         return eval_results
