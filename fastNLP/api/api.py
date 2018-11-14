@@ -8,6 +8,8 @@ from fastNLP.api.model_zoo import load_url
 from fastNLP.api.processor import ModelProcessor
 from reproduction.chinese_word_segment.cws_io.cws_reader import ConlluCWSReader
 from reproduction.pos_tag_model.pos_io.pos_reader import ConlluPOSReader
+from reproduction.Biaffine_parser.util import ConllxDataLoader, add_seg_tag
+from fastNLP.core.instance import Instance
 from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.batch import Batch
 from reproduction.chinese_word_segment.utils import calculate_pre_rec_f1
@@ -179,6 +181,72 @@ class CWS(API):
 
         return f1, pre, rec
 
+
+class Parser(API):
+    def __init__(self, model_path=None, device='cpu'):
+        super(Parser, self).__init__()
+        if model_path is None:
+            model_path = model_urls['parser']
+
+        self.load(model_path, device)
+
+    def predict(self, content):
+        if not hasattr(self, 'pipeline'):
+            raise ValueError("You have to load model first.")
+
+        sentence_list = []
+        # 1. 检查sentence的类型
+        if isinstance(content, str):
+            sentence_list.append(content)
+        elif isinstance(content, list):
+            sentence_list = content
+
+        # 2. 组建dataset
+        dataset = DataSet()
+        dataset.add_field('words', sentence_list)
+        # dataset.add_field('tag', sentence_list)
+
+        # 3. 使用pipeline
+        self.pipeline(dataset)
+        for ins in dataset:
+            ins['heads'] = ins['heads'].tolist()
+
+        return dataset['heads'], dataset['labels']
+
+    def test(self, filepath):
+        data = ConllxDataLoader().load(filepath)
+        ds = DataSet()
+        for ins1, ins2 in zip(add_seg_tag(data), data):
+            ds.append(Instance(words=ins1[0], tag=ins1[1],
+                               gold_words=ins2[0], gold_pos=ins2[1],
+                               gold_heads=ins2[2], gold_head_tags=ins2[3]))
+
+        pp = self.pipeline
+        for p in pp:
+            if p.field_name == 'word_list':
+                p.field_name = 'gold_words'
+            elif p.field_name == 'pos_list':
+                p.field_name = 'gold_pos'
+        pp(ds)
+        head_cor, label_cor, total = 0,0,0
+        for ins in ds:
+            head_gold = ins['gold_heads']
+            head_pred = ins['heads']
+            length = len(head_gold)
+            total += length
+            for i in range(length):
+                head_cor += 1 if head_pred[i] == head_gold[i] else 0
+        uas = head_cor/total
+        print('uas:{:.2f}'.format(uas))
+
+        for p in pp:
+            if p.field_name == 'gold_words':
+                p.field_name = 'word_list'
+            elif p.field_name == 'gold_pos':
+                p.field_name = 'pos_list'
+
+        return uas
+
 if __name__ == "__main__":
     # pos_model_path = '../../reproduction/pos_tag_model/pos_crf.pkl'
     pos = POS(device='cpu')
@@ -195,4 +263,9 @@ if __name__ == "__main__":
          '那么这款无人机到底有多厉害？']
     print(cws.test('../../reproduction/chinese_word_segment/new-clean.txt.conll'))
     cws.predict(s)
-
+    parser = Parser(device='cuda:0')
+    print(parser.test('../../reproduction/Biaffine_parser/test.conll'))
+    s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
+         '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
+         '那么这款无人机到底有多厉害？']
+    print(parser.predict(s))

@@ -43,7 +43,7 @@ class DataSet(object):
             self.dataset[name][self.idx] = val
 
         def __repr__(self):
-            return " ".join([repr(self.dataset[name][self.idx]) for name in self.dataset])
+            return "\n".join(['{}: {}'.format(name, repr(self.dataset[name][self.idx])) for name in self.dataset.get_fields().keys()])
 
     def __init__(self, instance=None):
         self.field_arrays = {}

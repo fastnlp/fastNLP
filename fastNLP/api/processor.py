@@ -198,12 +198,12 @@ class ModelProcessor(Processor):
         :param batch_size:
         """
         super(ModelProcessor, self).__init__(None, None)
-
         self.batch_size = batch_size
         self.seq_len_field_name = seq_len_field_name
         self.model = model
 
     def process(self, dataset):
+        self.model.eval()
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
         data_iterator = Batch(dataset, batch_size=self.batch_size, sampler=SequentialSampler(), use_cuda=False)
 
@@ -260,4 +260,17 @@ class SetTensorProcessor(Processor):
         set_dict = {name: self.default for name in dataset.get_fields().keys()}
         set_dict.update(self.field_dict)
         dataset.set_need_tensor(**set_dict)
+        return dataset
+
+
+class SetIsTargetProcessor(Processor):
+    def __init__(self, field_dict, default=False):
+        super(SetIsTargetProcessor, self).__init__(None, None)
+        self.field_dict = field_dict
+        self.default = default
+
+    def process(self, dataset):
+        set_dict = {name: self.default for name in dataset.get_fields().keys()}
+        set_dict.update(self.field_dict)
+        dataset.set_is_target(**set_dict)
         return dataset

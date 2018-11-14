@@ -30,7 +30,7 @@ class EmbedLoader(BaseLoader):
         with open(emb_file, 'r', encoding='utf-8') as f:
             for line in f:
                 line = list(filter(lambda w: len(w)>0, line.strip().split(' ')))
-                if len(line) > 0:
+                if len(line) > 2:
                     emb[line[0]] = torch.Tensor(list(map(float, line[1:])))
         return emb
 
@@ -61,10 +61,10 @@ class EmbedLoader(BaseLoader):
         TODO: fragile code
         """
         # If the embedding pickle exists, load it and return.
-        if os.path.exists(emb_pkl):
-            with open(emb_pkl, "rb") as f:
-                embedding_tensor, vocab = _pickle.load(f)
-            return embedding_tensor, vocab
+        # if os.path.exists(emb_pkl):
+        #     with open(emb_pkl, "rb") as f:
+        #         embedding_tensor, vocab = _pickle.load(f)
+        #     return embedding_tensor, vocab
         # Otherwise, load the pre-trained embedding.
         pretrain = EmbedLoader._load_pretrain(emb_file, emb_type)
         if vocab is None:
@@ -80,6 +80,6 @@ class EmbedLoader(BaseLoader):
                 embedding_tensor[vocab[w]] = v
 
         # save and return the result
-        with open(emb_pkl, "wb") as f:
-            _pickle.dump((embedding_tensor, vocab), f)
+        # with open(emb_pkl, "wb") as f:
+        #     _pickle.dump((embedding_tensor, vocab), f)
         return embedding_tensor, vocab

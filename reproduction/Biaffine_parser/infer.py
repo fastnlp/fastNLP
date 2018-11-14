@@ -24,6 +24,7 @@ def _load_all(src):
     word_v = _load(src+'/word_v.pkl')
     pos_v = _load(src+'/pos_v.pkl')
     tag_v = _load(src+'/tag_v.pkl')
+    pos_pp = torch.load(src+'/pos_pp.pkl')['pipeline']
 
     model_args = ConfigSection()
     ConfigLoader.load_config('cfg.cfg', {'model': model_args})
@@ -38,6 +39,7 @@ def _load_all(src):
         'pos_v': pos_v,
         'tag_v': tag_v,
         'model': model,
+        'pos_pp':pos_pp,
     }
 
 def build(load_path, save_path):
@@ -47,19 +49,22 @@ def build(load_path, save_path):
     word_vocab = _dict['word_v']
     pos_vocab = _dict['pos_v']
     tag_vocab = _dict['tag_v']
+    pos_pp = _dict['pos_pp']
     model = _dict['model']
     print('load model from {}'.format(load_path))
     word_seq = 'raw_word_seq'
     pos_seq = 'raw_pos_seq'
 
     # build pipeline
-    pipe = Pipeline()
-    pipe.add_processor(Num2TagProcessor(NUM, 'sentence', word_seq))
+    # input
+    pipe = pos_pp
+    pipe.pipeline.pop(-1)
+    pipe.add_processor(Num2TagProcessor(NUM, 'word_list', word_seq))
     pipe.add_processor(PreAppendProcessor(BOS, word_seq))
-    pipe.add_processor(PreAppendProcessor(BOS, 'sent_pos', pos_seq))
+    pipe.add_processor(PreAppendProcessor(BOS, 'pos_list', pos_seq))
     pipe.add_processor(IndexerProcessor(word_vocab, word_seq, 'word_seq'))
     pipe.add_processor(IndexerProcessor(pos_vocab, pos_seq, 'pos_seq'))
-    pipe.add_processor(SeqLenProcessor(word_seq, 'word_seq_origin_len'))
+    pipe.add_processor(SeqLenProcessor('word_seq', 'word_seq_origin_len'))
     pipe.add_processor(SetTensorProcessor({'word_seq':True, 'pos_seq':True, 'word_seq_origin_len':True}, default=False))
     pipe.add_processor(ModelProcessor(model, 'word_seq_origin_len'))
     pipe.add_processor(SliceProcessor(1, None, None, 'head_pred', 'heads'))
@@ -68,7 +73,7 @@ def build(load_path, save_path):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     with open(save_path+'/pipeline.pkl', 'wb') as f:
-        torch.save(pipe, f)
+        torch.save({'pipeline': pipe}, f)
     print('save pipeline in {}'.format(save_path))
 
 
