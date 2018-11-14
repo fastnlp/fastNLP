@@ -118,6 +118,23 @@ class CWSTagProcessor(Processor):
     def _tags_from_word_len(self, word_len):
         raise NotImplementedError
 
+class CWSBMESTagProcessor(CWSTagProcessor):
+    def __init__(self, field_name, new_added_field_name=None):
+        super(CWSBMESTagProcessor, self).__init__(field_name, new_added_field_name)
+
+        self.tag_size = 4
+
+    def _tags_from_word_len(self, word_len):
+        tag_list = []
+        if word_len == 1:
+            tag_list.append(3)
+        else:
+            tag_list.append(0)
+            for _ in range(word_len-2):
+                tag_list.append(1)
+            tag_list.append(2)
+
+        return tag_list
 
 class CWSSegAppTagProcessor(CWSTagProcessor):
     def __init__(self, field_name, new_added_field_name=None):
@@ -239,3 +256,29 @@ class SegApp2OutputProcessor(Processor):
                     start_idx = idx + 1
             ins[self.new_added_field_name] = ' '.join(words)
 
+
+class BMES2OutputProcessor(Processor):
+    def __init__(self, chars_field_name='chars_list', tag_field_name='pred_tags', new_added_field_name='output'):
+        super(BMES2OutputProcessor, self).__init__(None, None)
+
+        self.chars_field_name = chars_field_name
+        self.tag_field_name = tag_field_name
+
+        self.new_added_field_name = new_added_field_name
+
+    def process(self, dataset):
+        assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
+        for ins in dataset:
+            pred_tags = ins[self.tag_field_name]
+            chars = ins[self.chars_field_name]
+            words = []
+            start_idx = 0
+            for idx, tag in enumerate(pred_tags):
+                if tag==3:
+                    # 当前没有考虑将原文替换回去
+                    words.extend(chars[start_idx:idx+1])
+                    start_idx = idx + 1
+                elif tag==2:
+                    words.append(''.join(chars[start_idx:idx+1]))
+                    start_idx = idx + 1
+            ins[self.new_added_field_name] = ' '.join(words)

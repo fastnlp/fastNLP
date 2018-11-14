@@ -117,3 +117,56 @@ class CWSBiLSTMSegApp(BaseModel):
         pred_probs = pred_dict['pred_probs']
         _, pred_tags = pred_probs.max(dim=-1)
         return {'pred_tags': pred_tags}
+
+
+from fastNLP.modules.decoder.CRF import ConditionalRandomField
+
+class CWSBiLSTMCRF(BaseModel):
+    def __init__(self, vocab_num, embed_dim=100, bigram_vocab_num=None, bigram_embed_dim=100, num_bigram_per_char=None,
+                 hidden_size=200, bidirectional=True, embed_drop_p=None, num_layers=1, tag_size=4):
+        super(CWSBiLSTMCRF, self).__init__()
+
+        self.tag_size = tag_size
+
+        self.encoder_model = CWSBiLSTMEncoder(vocab_num, embed_dim, bigram_vocab_num, bigram_embed_dim, num_bigram_per_char,
+                 hidden_size, bidirectional, embed_drop_p, num_layers)
+
+        size_layer = [hidden_size, 200, tag_size]
+        self.decoder_model = MLP(size_layer)
+        self.crf = ConditionalRandomField(tag_size=tag_size, include_start_end_trans=False)
+
+
+    def forward(self, chars, tags, seq_lens, bigrams=None):
+        device = self.parameters().__next__().device
+        chars = chars.to(device).long()
+        if not bigrams is None:
+            bigrams = bigrams.to(device).long()
+        else:
+            bigrams = None
+        seq_lens = seq_lens.to(device).long()
+        masks = seq_lens_to_mask(seq_lens)
+        feats = self.encoder_model(chars, bigrams, seq_lens)
+        feats = self.decoder_model(feats)
+        losses = self.crf(feats, tags, masks)
+
+        pred_dict = {}
+        pred_dict['seq_lens'] = seq_lens
+        pred_dict['loss'] = torch.mean(losses)
+
+        return pred_dict
+
+    def predict(self, chars, seq_lens, bigrams=None):
+        device = self.parameters().__next__().device
+        chars = chars.to(device).long()
+        if not bigrams is None:
+            bigrams = bigrams.to(device).long()
+        else:
+            bigrams = None
+        seq_lens = seq_lens.to(device).long()
+        masks = seq_lens_to_mask(seq_lens)
+        feats = self.encoder_model(chars, bigrams, seq_lens)
+        feats = self.decoder_model(feats)
+        probs = self.crf.viterbi_decode(feats, masks, get_score=False)
+
+        return {'pred_tags': probs}
+

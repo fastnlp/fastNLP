@@ -111,7 +111,7 @@ class POSCWSReader(DataSetLoader):
                         continue
                     line = ' '.join(words)
                     if cut_long_sent:
-                        sents = cut_long_sent(line)
+                        sents = cut_long_sentence(line)
                     else:
                         sents = [line]
                     for sent in sents:
@@ -126,4 +126,51 @@ class POSCWSReader(DataSetLoader):
                         words.append(line.split(in_word_splitter)[0])
         return dataset
 
+
+class ConlluCWSReader(object):
+    # 返回的Dataset包含words(list of list, 里层的list是character), tag两个field(list of str, str是标有BMES的tag)。
+    def __init__(self):
+        pass
+
+    def load(self, path, cut_long_sent=False):
+        datalist = []
+        with open(path, 'r', encoding='utf-8') as f:
+            sample = []
+            for line in f:
+                if line.startswith('\n'):
+                    datalist.append(sample)
+                    sample = []
+                elif line.startswith('#'):
+                    continue
+                else:
+                    sample.append(line.split('\t'))
+            if len(sample) > 0:
+                datalist.append(sample)
+
+        ds = DataSet()
+        for sample in datalist:
+            # print(sample)
+            res = self.get_one(sample)
+            if res is None:
+                continue
+            line = '  '.join(res)
+            if cut_long_sent:
+                sents = cut_long_sentence(line)
+            else:
+                sents = [line]
+            for raw_sentence in sents:
+                ds.append(Instance(raw_sentence=raw_sentence))
+
+        return ds
+
+    def get_one(self, sample):
+        if len(sample)==0:
+            return None
+        text = []
+        for w in sample:
+            t1, t2, t3, t4 = w[1], w[3], w[6], w[7]
+            if t3 == '_':
+                return None
+            text.append(t1)
+        return text
 

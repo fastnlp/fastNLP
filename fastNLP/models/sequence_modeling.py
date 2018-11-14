@@ -167,8 +167,10 @@ class AdvSeqLabel(SeqLabeling):
         x = self.Linear2(x)
         # x = x.view(batch_size, max_len, -1)
         # [batch_size, max_len, num_classes]
+        # TODO seq_lens的key这样做不合理
         return {"loss": self._internal_loss(x, truth) if truth is not None else None,
-                "predict": self.decode(x)}
+                "predict": self.decode(x),
+                'word_seq_origin_len': word_seq_origin_len}
 
     def predict(self, **x):
         out = self.forward(**x)

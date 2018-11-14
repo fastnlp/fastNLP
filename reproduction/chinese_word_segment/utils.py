@@ -24,37 +24,52 @@ def refine_ys_on_seq_len(ys, seq_lens):
 def flat_nested_list(nested_list):
     return list(chain(*nested_list))
 
-def calculate_pre_rec_f1(model, batcher):
+def calculate_pre_rec_f1(model, batcher, type='segapp'):
     true_ys, pred_ys = decode_iterator(model, batcher)
 
     true_ys = flat_nested_list(true_ys)
     pred_ys = flat_nested_list(pred_ys)
 
     cor_num = 0
-    yp_wordnum = pred_ys.count(1)
-    yt_wordnum = true_ys.count(1)
     start = 0
-    if true_ys[0]==1 and pred_ys[0]==1:
-        cor_num += 1
-        start = 1
+    if type=='segapp':
+        yp_wordnum = pred_ys.count(1)
+        yt_wordnum = true_ys.count(1)
 
-    for i in range(1, len(true_ys)):
-        if true_ys[i] == 1:
-            flag = True
-            if true_ys[start-1] != pred_ys[start-1]:
-                flag = False
-            else:
+        if true_ys[0]==1 and pred_ys[0]==1:
+            cor_num += 1
+            start = 1
+
+        for i in range(1, len(true_ys)):
+            if true_ys[i] == 1:
+                flag = True
+                if true_ys[start-1] != pred_ys[start-1]:
+                    flag = False
+                else:
+                    for j in range(start, i + 1):
+                        if true_ys[j] != pred_ys[j]:
+                            flag = False
+                            break
+                if flag:
+                    cor_num += 1
+                start = i + 1
+    elif type=='bmes':
+        yp_wordnum = pred_ys.count(2) + pred_ys.count(3)
+        yt_wordnum = true_ys.count(2) + true_ys.count(3)
+        for i in range(len(true_ys)):
+            if true_ys[i] == 2 or true_ys[i] == 3:
+                flag = True
                 for j in range(start, i + 1):
                     if true_ys[j] != pred_ys[j]:
                         flag = False
                         break
-            if flag:
-                cor_num += 1
-            start = i + 1
+                if flag:
+                    cor_num += 1
+                start = i + 1
     P = cor_num / (float(yp_wordnum) + 1e-6)
     R = cor_num / (float(yt_wordnum) + 1e-6)
     F = 2 * P * R / (P + R + 1e-6)
-    print(cor_num, yt_wordnum, yp_wordnum)
+    # print(cor_num, yt_wordnum, yp_wordnum)
     return P, R, F
 
 

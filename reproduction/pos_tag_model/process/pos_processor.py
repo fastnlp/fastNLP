@@ -78,7 +78,7 @@ class PosOutputStrProcessor(Processor):
             word_pos_list = []
             for word, pos in zip(word_list, pos_list):
                 word_pos_list.append(word + self.sep + pos)
-
+            #TODO 应该可以定制
             ins['word_pos_output'] = '  '.join(word_pos_list)
 
         return dataset

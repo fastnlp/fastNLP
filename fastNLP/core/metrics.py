@@ -53,6 +53,54 @@ class SeqLabelEvaluator(Evaluator):
         accuracy = total_correct / total_count
         return {"accuracy": float(accuracy)}
 
+class SeqLabelEvaluator2(Evaluator):
+    # 上面的evaluator应该是错误的
+    def __init__(self, seq_lens_field_name='word_seq_origin_len'):
+        super(SeqLabelEvaluator2, self).__init__()
+        self.end_tagidx_set = set()
+        self.seq_lens_field_name = seq_lens_field_name
+
+    def __call__(self, predict, truth, **_):
+        """
+
+        :param predict: list of batch, the network outputs from all batches.
+        :param truth: list of dict, the ground truths from all batch_y.
+        :return accuracy:
+        """
+        seq_lens = _[self.seq_lens_field_name]
+        corr_count = 0
+        pred_count = 0
+        truth_count = 0
+        for x, y, seq_len in zip(predict, truth, seq_lens):
+            x = x.cpu().numpy()
+            y = y.cpu().numpy()
+            for idx, s_l in enumerate(seq_len):
+                x_ = x[idx]
+                y_ = y[idx]
+                x_ = x_[:s_l]
+                y_ = y_[:s_l]
+                flag = True
+                start = 0
+                for idx_i, (x_i, y_i) in enumerate(zip(x_, y_)):
+                    if x_i in self.end_tagidx_set:
+                        truth_count += 1
+                        for j in range(start, idx_i + 1):
+                            if y_[j]!=x_[j]:
+                                flag = False
+                                break
+                        if flag:
+                            corr_count += 1
+                        flag = True
+                        start = idx_i + 1
+                    if y_i in self.end_tagidx_set:
+                        pred_count += 1
+        P = corr_count / (float(pred_count) + 1e-6)
+        R = corr_count / (float(truth_count) + 1e-6)
+        F = 2 * P * R / (P + R + 1e-6)
+
+        return {"P": P, 'R':R, 'F': F}
+
+
 
 class SNLIEvaluator(Evaluator):
     def __init__(self):

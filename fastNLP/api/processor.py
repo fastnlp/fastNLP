@@ -217,11 +217,11 @@ class ModelProcessor(Processor):
                     tmp_batch = []
                     value = value.cpu().numpy()
                     if len(value.shape) == 1 or (len(value.shape)==2 and value.shape[1]==1):
+                        batch_output[key].extend(value.tolist())
+                    else:
                         for idx, seq_len in enumerate(seq_lens):
                             tmp_batch.append(value[idx, :seq_len])
                         batch_output[key].extend(tmp_batch)
-                    else:
-                        batch_output[key].extend(value.tolist())
 
                 batch_output[self.seq_len_field_name].extend(seq_lens)
 
