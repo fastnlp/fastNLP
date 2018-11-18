@@ -3,8 +3,6 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
-from collections import defaultdict
-import math
 import torch
 import re
 
@@ -13,16 +11,13 @@ from fastNLP.core.metrics import Evaluator
 from fastNLP.core.instance import Instance
 from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.core.dataset import DataSet
-from fastNLP.core.batch import Batch
-from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.field import TextField, SeqLabelField
-from fastNLP.core.preprocess import load_pickle
 from fastNLP.core.tester import Tester
-from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.loader.model_loader import ModelLoader
-from fastNLP.loader.embed_loader import EmbedLoader
+from fastNLP.io.config_loader import ConfigLoader, ConfigSection
+from fastNLP.io.model_loader import ModelLoader
+from fastNLP.io.embed_loader import EmbedLoader
 from fastNLP.models.biaffine_parser import BiaffineParser
-from fastNLP.saver.model_saver import ModelSaver
+from fastNLP.io.model_saver import ModelSaver
 
 BOS = '<BOS>'
 EOS = '<EOS>'

@@ -1,9 +1,9 @@
-import os
 import unittest
 
-from fastNLP.loader.dataset_loader import POSDataSetLoader, LMDataSetLoader, TokenizeDataSetLoader, \
-    PeopleDailyCorpusLoader, ConllLoader
 from fastNLP.core.dataset import DataSet
+from fastNLP.io.dataset_loader import POSDataSetLoader, LMDataSetLoader, TokenizeDataSetLoader, \
+    PeopleDailyCorpusLoader, ConllLoader
+
 
 class TestDatasetLoader(unittest.TestCase):
     def test_case_1(self):

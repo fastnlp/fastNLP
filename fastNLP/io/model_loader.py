@@ -1,6 +1,6 @@
 import torch
 
-from fastNLP.loader.base_loader import BaseLoader
+from fastNLP.io.base_loader import BaseLoader
 
 
 class ModelLoader(BaseLoader):
@@ -19,9 +19,9 @@ class ModelLoader(BaseLoader):
         :param model_path: str, the path to the saved model.
         """
         empty_model.load_state_dict(torch.load(model_path))
-        
+
     @staticmethod
-    def load_pytorch(model_path):
+    def load_pytorch_model(model_path):
         """Load the entire model.
 
         """

@@ -1,8 +1,8 @@
 
 
-from fastNLP.loader.dataset_loader import DataSetLoader
-from fastNLP.core.instance import Instance
 from fastNLP.core.dataset import DataSet
+from fastNLP.core.instance import Instance
+from fastNLP.io.dataset_loader import DataSetLoader
 
 
 def cut_long_sentence(sent, max_sample_length=200):

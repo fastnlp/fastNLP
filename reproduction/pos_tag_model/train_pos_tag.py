@@ -13,8 +13,8 @@ from fastNLP.core.instance import Instance
 from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.trainer import Trainer
-from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.loader.dataset_loader import PeopleDailyCorpusLoader
+from fastNLP.io.config_loader import ConfigLoader, ConfigSection
+from fastNLP.io.dataset_loader import PeopleDailyCorpusLoader
 from fastNLP.models.sequence_modeling import AdvSeqLabel
 
 

@@ -1,6 +1,8 @@
+from itertools import chain
+
 import numpy as np
 import torch
-from itertools import chain
+
 
 def convert_to_torch_tensor(data_list, use_cuda):
     """Convert lists into (cuda) Tensors.
@@ -43,6 +45,7 @@ class RandomSampler(BaseSampler):
     def __call__(self, data_set):
         return list(np.random.permutation(len(data_set)))
 
+
 class BucketSampler(BaseSampler):
 
     def __init__(self, num_buckets=10, batch_size=32, seq_lens_field_name='seq_lens'):
@@ -56,14 +59,14 @@ class BucketSampler(BaseSampler):
         total_sample_num = len(seq_lens)
 
         bucket_indexes = []
-        num_sample_per_bucket = total_sample_num//self.num_buckets
+        num_sample_per_bucket = total_sample_num // self.num_buckets
         for i in range(self.num_buckets):
-            bucket_indexes.append([num_sample_per_bucket*i, num_sample_per_bucket*(i+1)])
+            bucket_indexes.append([num_sample_per_bucket * i, num_sample_per_bucket * (i + 1)])
         bucket_indexes[-1][1] = total_sample_num
 
         sorted_seq_lens = list(sorted([(idx, seq_len) for
                                        idx, seq_len in zip(range(total_sample_num), seq_lens)],
-                                      key=lambda x:x[1]))
+                                      key=lambda x: x[1]))
 
         batchs = []
 
@@ -73,17 +76,16 @@ class BucketSampler(BaseSampler):
             end_idx = bucket_indexes[b_idx][1]
             sorted_bucket_seq_lens = sorted_seq_lens[start_idx:end_idx]
             left_init_indexes.extend([tup[0] for tup in sorted_bucket_seq_lens])
-            num_batch_per_bucket = len(left_init_indexes)//self.batch_size
+            num_batch_per_bucket = len(left_init_indexes) // self.batch_size
             np.random.shuffle(left_init_indexes)
             for i in range(num_batch_per_bucket):
-                batchs.append(left_init_indexes[i*self.batch_size:(i+1)*self.batch_size])
-            left_init_indexes = left_init_indexes[num_batch_per_bucket*self.batch_size:]
-        if (left_init_indexes)!=0:
+                batchs.append(left_init_indexes[i * self.batch_size:(i + 1) * self.batch_size])
+            left_init_indexes = left_init_indexes[num_batch_per_bucket * self.batch_size:]
+        if (left_init_indexes) != 0:
             batchs.append(left_init_indexes)
         np.random.shuffle(batchs)
 
         return list(chain(*batchs))
-
 
 
 def simple_sort_bucketing(lengths):
@@ -104,6 +106,7 @@ def simple_sort_bucketing(lengths):
     sorted_lengths = sorted(lengths_mapping, key=lambda x: x[1])
     # TODO: need to return buckets
     return [idx for idx, _ in sorted_lengths]
+
 
 def k_means_1d(x, k, max_iter=100):
     """Perform k-means on 1-D data.
@@ -159,4 +162,3 @@ def k_means_bucketing(lengths, buckets):
         if buckets[bucket_id] is None or lengths[idx] <= buckets[bucket_id]:
             bucket_data[bucket_id].append(idx)
     return bucket_data
-

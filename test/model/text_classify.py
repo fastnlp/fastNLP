@@ -8,15 +8,15 @@ import sys
 sys.path.append("..")
 from fastNLP.core.predictor import ClassificationInfer
 from fastNLP.core.trainer import ClassificationTrainer
-from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.loader.dataset_loader import ClassDataSetLoader
-from fastNLP.loader.model_loader import ModelLoader
+from fastNLP.io.config_loader import ConfigLoader, ConfigSection
+from fastNLP.io.dataset_loader import ClassDataSetLoader
+from fastNLP.io.model_loader import ModelLoader
 from fastNLP.models.cnn_text_classification import CNNText
-from fastNLP.saver.model_saver import ModelSaver
+from fastNLP.io.model_saver import ModelSaver
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.loss import Loss
 from fastNLP.core.dataset import TextClassifyDataSet
-from fastNLP.core.preprocess import save_pickle, load_pickle
+from fastNLP.core.utils import save_pickle, load_pickle
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--save", type=str, default="./test_classification/", help="path to save pickle files")

@@ -3,7 +3,7 @@ import os
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.field import *
 from fastNLP.core.instance import Instance
-from fastNLP.loader.base_loader import BaseLoader
+from fastNLP.io.base_loader import BaseLoader
 
 
 def convert_seq_dataset(data):

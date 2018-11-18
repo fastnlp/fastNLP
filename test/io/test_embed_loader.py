@@ -1,10 +1,8 @@
-import unittest
 import os
+import unittest
 
-import torch
-
-from fastNLP.loader.embed_loader import EmbedLoader
 from fastNLP.core.vocabulary import Vocabulary
+from fastNLP.io.embed_loader import EmbedLoader
 
 
 class TestEmbedLoader(unittest.TestCase):

@@ -3,17 +3,16 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
-from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
+from fastNLP.io.config_loader import ConfigLoader, ConfigSection
 from fastNLP.core.trainer import SeqLabelTrainer
-from fastNLP.loader.dataset_loader import BaseLoader, TokenizeDataSetLoader
-from fastNLP.core.preprocess import load_pickle
-from fastNLP.saver.model_saver import ModelSaver
-from fastNLP.loader.model_loader import ModelLoader
+from fastNLP.io.dataset_loader import BaseLoader, TokenizeDataSetLoader
+from fastNLP.core.utils import load_pickle
+from fastNLP.io.model_saver import ModelSaver
+from fastNLP.io.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import AdvSeqLabel
 from fastNLP.core.predictor import SeqLabelInfer
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.preprocess import save_pickle
+from fastNLP.core.utils import save_pickle
 from fastNLP.core.metrics import SeqLabelEvaluator
 
 # not in the file's dir

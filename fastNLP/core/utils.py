@@ -2,8 +2,6 @@ import _pickle
 import os
 
 
-# the first vocab in dict with the index = 5
-
 def save_pickle(obj, pickle_path, file_name):
     """Save an object into a pickle file.
 

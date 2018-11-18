@@ -1,5 +1,7 @@
-import torch
 import warnings
+
+import torch
+
 warnings.filterwarnings('ignore')
 import os
 
@@ -16,7 +18,6 @@ from reproduction.chinese_word_segment.utils import calculate_pre_rec_f1
 from fastNLP.api.pipeline import Pipeline
 from fastNLP.core.metrics import SeqLabelEvaluator2
 from fastNLP.core.tester import Tester
-
 
 model_urls = {
 }
@@ -228,7 +229,7 @@ class Parser(API):
             elif p.field_name == 'pos_list':
                 p.field_name = 'gold_pos'
         pp(ds)
-        head_cor, label_cor, total = 0,0,0
+        head_cor, label_cor, total = 0, 0, 0
         for ins in ds:
             head_gold = ins['gold_heads']
             head_pred = ins['heads']
@@ -236,7 +237,7 @@ class Parser(API):
             total += length
             for i in range(length):
                 head_cor += 1 if head_pred[i] == head_gold[i] else 0
-        uas = head_cor/total
+        uas = head_cor / total
         print('uas:{:.2f}'.format(uas))
 
         for p in pp:
@@ -247,25 +248,34 @@ class Parser(API):
 
         return uas
 
-if __name__ == "__main__":
-    # pos_model_path = '../../reproduction/pos_tag_model/pos_crf.pkl'
-    pos = POS(device='cpu')
-    s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。' ,
-        '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
-         '那么这款无人机到底有多厉害？']
-    print(pos.test('../../reproduction/chinese_word_segment/new-clean.txt.conll'))
-    print(pos.predict(s))
 
-    # cws_model_path = '../../reproduction/chinese_word_segment/models/cws_crf.pkl'
-    cws = CWS(device='cuda:0')
-    s = ['本品是一个抗酸抗胆汁的胃黏膜保护剂' ,
-        '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
+if __name__ == "__main__":
+    # 以下路径在102
+    """
+    pos_model_path = '/home/hyan/fastNLP_models/upload-demo/upload/pos_crf-5e26d3b0.pkl'
+    pos = POS(model_path=pos_model_path, device='cpu')
+    s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
+         '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
          '那么这款无人机到底有多厉害？']
-    print(cws.test('../../reproduction/chinese_word_segment/new-clean.txt.conll'))
+    #print(pos.test('../../reproduction/chinese_word_segment/new-clean.txt.conll'))
+    print(pos.predict(s))
+    """
+
+    """
+    cws_model_path = '/home/hyan/fastNLP_models/upload-demo/upload/cws_crf-5a8a3e66.pkl'
+    cws = CWS(model_path=cws_model_path, device='cuda:0')
+    s = ['本品是一个抗酸抗胆汁的胃黏膜保护剂',
+         '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
+         '那么这款无人机到底有多厉害？']
+    #print(cws.test('../../reproduction/chinese_word_segment/new-clean.txt.conll'))
     cws.predict(s)
-    parser = Parser(device='cuda:0')
-    print(parser.test('../../reproduction/Biaffine_parser/test.conll'))
+    """
+
+    parser_model_path = "/home/hyan/fastNLP_models/upload-demo/upload/parser-d57cd5fc.pkl"
+    parser = Parser(model_path=parser_model_path, device='cuda:0')
+    # print(parser.test('../../reproduction/Biaffine_parser/test.conll'))
     s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
          '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
          '那么这款无人机到底有多厉害？']
     print(parser.predict(s))
+

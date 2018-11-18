@@ -50,20 +50,6 @@ class Predictor(object):
         return y
 
 
-class SeqLabelInfer(Predictor):
-    def __init__(self, pickle_path):
-        print(
-            "[FastNLP Warning] SeqLabelInfer will be deprecated. Please use Predictor directly.")
-        super(SeqLabelInfer, self).__init__()
-
-
-class ClassificationInfer(Predictor):
-    def __init__(self, pickle_path):
-        print(
-            "[FastNLP Warning] ClassificationInfer will be deprecated. Please use Predictor directly.")
-        super(ClassificationInfer, self).__init__()
-
-
 def seq_label_post_processor(batch_outputs, label_vocab):
     results = []
     for batch in batch_outputs:

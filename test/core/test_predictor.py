@@ -1,12 +1,10 @@
 import os
 import unittest
 
-from fastNLP.core.dataset import DataSet
 from fastNLP.core.predictor import Predictor
-from fastNLP.core.preprocess import save_pickle
+from fastNLP.core.utils import save_pickle
 from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.loader.base_loader import BaseLoader
-from fastNLP.loader.dataset_loader import convert_seq_dataset
+from fastNLP.io.dataset_loader import convert_seq_dataset
 from fastNLP.models.cnn_text_classification import CNNText
 from fastNLP.models.sequence_modeling import SeqLabeling
 

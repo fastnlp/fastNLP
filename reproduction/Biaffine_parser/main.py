@@ -1,11 +1,9 @@
 import sys
-import os
 
 sys.path.extend(['/home/yfshao/workdir/dev_fastnlp'])
 
 import torch
 import argparse
-import numpy as np
 
 from reproduction.Biaffine_parser.util import ConllxDataLoader, add_seg_tag
 from fastNLP.core.dataset import DataSet

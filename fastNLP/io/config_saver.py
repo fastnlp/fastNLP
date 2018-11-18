@@ -1,7 +1,7 @@
 import os
 
-from fastNLP.loader.config_loader import ConfigSection, ConfigLoader
-from fastNLP.saver.logger import create_logger
+from fastNLP.io.config_loader import ConfigSection, ConfigLoader
+from fastNLP.io.logger import create_logger
 
 
 class ConfigSaver(object):

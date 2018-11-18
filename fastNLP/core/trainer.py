@@ -9,11 +9,10 @@ from fastNLP.core.batch import Batch
 from fastNLP.core.loss import Loss
 from fastNLP.core.metrics import Evaluator
 from fastNLP.core.optimizer import Optimizer
-from fastNLP.core.sampler import BucketSampler
-from fastNLP.core.tester import SeqLabelTester, ClassificationTester, SNLITester
+from fastNLP.core.sampler import RandomSampler
 from fastNLP.core.tester import Tester
-from fastNLP.saver.logger import create_logger
-from fastNLP.saver.model_saver import ModelSaver
+from fastNLP.io.logger import create_logger
+from fastNLP.io.model_saver import ModelSaver
 
 logger = create_logger(__name__, "./train_test.log")
 logger.disabled = True
@@ -182,19 +181,10 @@ class Trainer(object):
             self._summary_writer.add_scalar("loss", loss.item(), global_step=self.step)
             for name, param in self._model.named_parameters():
                 if param.requires_grad:
-<<<<<<< HEAD
-                    # self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=step)
-                    # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=step)
-                    # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=step)
-                    pass
-
-            if kwargs["n_print"] > 0 and step % kwargs["n_print"] == 0:
-=======
                     self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.step)
                     # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
                     # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
             if kwargs["n_print"] > 0 and self.step % kwargs["n_print"] == 0:
->>>>>>> 5924fe0... fix and update tester, trainer, seq_model, add parser pipeline builder
                 end = time.time()
                 diff = timedelta(seconds=round(end - kwargs["start"]))
                 print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.6} time: {}".format(
@@ -339,40 +329,3 @@ class Trainer(object):
     def set_validator(self, validor):
         self.validator = validor
 
-
-class SeqLabelTrainer(Trainer):
-    """Trainer for Sequence Labeling
-
-    """
-
-    def __init__(self, **kwargs):
-        print(
-            "[FastNLP Warning] SeqLabelTrainer will be deprecated. Please use Trainer directly.")
-        super(SeqLabelTrainer, self).__init__(**kwargs)
-
-    def _create_validator(self, valid_args):
-        return SeqLabelTester(**valid_args)
-
-
-class ClassificationTrainer(Trainer):
-    """Trainer for text classification."""
-
-    def __init__(self, **train_args):
-        print(
-            "[FastNLP Warning] ClassificationTrainer will be deprecated. Please use Trainer directly.")
-        super(ClassificationTrainer, self).__init__(**train_args)
-
-    def _create_validator(self, valid_args):
-        return ClassificationTester(**valid_args)
-
-
-class SNLITrainer(Trainer):
-    """Trainer for text SNLI."""
-
-    def __init__(self, **train_args):
-        print(
-            "[FastNLP Warning] SNLITrainer will be deprecated. Please use Trainer directly.")
-        super(SNLITrainer, self).__init__(**train_args)
-
-    def _create_validator(self, valid_args):
-        return SNLITester(**valid_args)

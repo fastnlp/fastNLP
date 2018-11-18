@@ -3,7 +3,7 @@ import json
 import os
 import unittest
 
-from fastNLP.loader.config_loader import ConfigSection, ConfigLoader
+from fastNLP.io.config_loader import ConfigSection, ConfigLoader
 
 
 class TestConfigLoader(unittest.TestCase):

@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 
 
 class Field(object):
@@ -30,6 +29,7 @@ class Field(object):
     def __repr__(self):
         return self.content.__repr__()
 
+
 class TextField(Field):
     def __init__(self, text, is_target):
         """
@@ -43,6 +43,7 @@ class LabelField(Field):
     """The Field representing a single label. Can be a string or integer.
 
     """
+
     def __init__(self, label, is_target=True):
         super(LabelField, self).__init__(label, is_target)
 

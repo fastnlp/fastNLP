@@ -1,10 +1,11 @@
-import torch
 from collections import defaultdict
+
+import torch
 
 from fastNLP.core.batch import Batch
 from fastNLP.core.metrics import Evaluator
 from fastNLP.core.sampler import RandomSampler
-from fastNLP.saver.logger import create_logger
+from fastNLP.io.logger import create_logger
 
 logger = create_logger(__name__, "./train_test.log")
 
@@ -119,24 +120,3 @@ class Tester(object):
 
         """
         return ", ".join([str(key) + "=" + str(value) for key, value in results.items()])
-
-
-class SeqLabelTester(Tester):
-    def __init__(self, **test_args):
-        print(
-            "[FastNLP Warning] SeqLabelTester will be deprecated. Please use Tester directly.")
-        super(SeqLabelTester, self).__init__(**test_args)
-
-
-class ClassificationTester(Tester):
-    def __init__(self, **test_args):
-        print(
-            "[FastNLP Warning] ClassificationTester will be deprecated. Please use Tester directly.")
-        super(ClassificationTester, self).__init__(**test_args)
-
-
-class SNLITester(Tester):
-    def __init__(self, **test_args):
-        print(
-            "[FastNLP Warning] SNLITester will be deprecated. Please use Tester directly.")
-        super(SNLITester, self).__init__(**test_args)

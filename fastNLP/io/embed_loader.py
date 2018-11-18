@@ -1,10 +1,7 @@
-import _pickle
-import os
-
 import torch
 
-from fastNLP.loader.base_loader import BaseLoader
 from fastNLP.core.vocabulary import Vocabulary
+from fastNLP.io.base_loader import BaseLoader
 
 
 class EmbedLoader(BaseLoader):

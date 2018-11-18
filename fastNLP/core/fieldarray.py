@@ -1,5 +1,5 @@
-import torch
 import numpy as np
+
 
 class FieldArray(object):
     def __init__(self, name, content, padding_val=0, is_target=False, need_tensor=False):
@@ -10,7 +10,7 @@ class FieldArray(object):
         self.need_tensor = need_tensor
 
     def __repr__(self):
-        #TODO
+        # TODO
         return '{}: {}'.format(self.name, self.content.__repr__())
 
     def append(self, val):

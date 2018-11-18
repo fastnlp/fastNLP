@@ -3,17 +3,17 @@ import sys
 
 sys.path.append("..")
 import argparse
-from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.loader.dataset_loader import BaseLoader
-from fastNLP.saver.model_saver import ModelSaver
-from fastNLP.loader.model_loader import ModelLoader
+from fastNLP.io.config_loader import ConfigLoader, ConfigSection
+from fastNLP.io.dataset_loader import BaseLoader
+from fastNLP.io.model_saver import ModelSaver
+from fastNLP.io.model_loader import ModelLoader
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import SeqLabeling
 from fastNLP.core.predictor import SeqLabelInfer
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.dataset import SeqLabelDataSet, change_field_is_target
 from fastNLP.core.metrics import SeqLabelEvaluator
-from fastNLP.core.preprocess import save_pickle, load_pickle
+from fastNLP.core.utils import save_pickle, load_pickle
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--save", type=str, default="./seq_label/", help="path to save pickle files")

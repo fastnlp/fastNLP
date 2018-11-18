@@ -13,7 +13,7 @@ DEFAULT_WORD_TO_INDEX = {DEFAULT_PADDING_LABEL: 0, DEFAULT_UNKNOWN_LABEL: 1,
 
 def isiterable(p_object):
     try:
-        it = iter(p_object)
+        _ = iter(p_object)
     except TypeError:
         return False
     return True

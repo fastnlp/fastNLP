@@ -1,6 +1,6 @@
 import unittest
 
-from fastNLP.loader.dataset_loader import convert_seq2seq_dataset, convert_seq_dataset
+from fastNLP.io.dataset_loader import convert_seq2seq_dataset, convert_seq_dataset
 
 
 class TestDataSet(unittest.TestCase):

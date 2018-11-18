@@ -1,13 +1,11 @@
-import sys
 import os
+import sys
 
 sys.path.extend(['/home/yfshao/workdir/dev_fastnlp'])
 
 from fastNLP.api.processor import *
-from fastNLP.api.pipeline import Pipeline
-from fastNLP.core.dataset import DataSet
 from fastNLP.models.biaffine_parser import BiaffineParser
-from fastNLP.loader.config_loader import ConfigSection, ConfigLoader
+from fastNLP.io.config_loader import ConfigSection, ConfigLoader
 
 import _pickle as pickle
 import torch

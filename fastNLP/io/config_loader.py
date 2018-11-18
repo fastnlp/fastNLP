@@ -2,7 +2,7 @@ import configparser
 import json
 import os
 
-from fastNLP.loader.base_loader import BaseLoader
+from fastNLP.io.base_loader import BaseLoader
 
 
 class ConfigLoader(BaseLoader):

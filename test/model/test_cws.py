@@ -1,17 +1,16 @@
 import os
 
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.predictor import SeqLabelInfer
-from fastNLP.core.preprocess import save_pickle, load_pickle
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.core.trainer import SeqLabelTrainer
-from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.loader.dataset_loader import TokenizeDataSetLoader, BaseLoader, RawDataSetLoader
-from fastNLP.loader.model_loader import ModelLoader
+from fastNLP.core.utils import save_pickle, load_pickle
+from fastNLP.core.vocabulary import Vocabulary
+from fastNLP.io.config_loader import ConfigLoader, ConfigSection
+from fastNLP.io.dataset_loader import TokenizeDataSetLoader, RawDataSetLoader
+from fastNLP.io.model_loader import ModelLoader
+from fastNLP.io.model_saver import ModelSaver
 from fastNLP.models.sequence_modeling import SeqLabeling
-from fastNLP.saver.model_saver import ModelSaver
 
 data_name = "pku_training.utf8"
 cws_data_path = "./test/data_for_tests/cws_pku_utf_8"

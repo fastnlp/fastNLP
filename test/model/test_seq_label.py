@@ -2,15 +2,15 @@ import os
 
 from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.optimizer import Optimizer
-from fastNLP.core.preprocess import save_pickle
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.core.trainer import SeqLabelTrainer
+from fastNLP.core.utils import save_pickle
 from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.loader.config_loader import ConfigLoader, ConfigSection
-from fastNLP.loader.dataset_loader import TokenizeDataSetLoader
-from fastNLP.loader.model_loader import ModelLoader
+from fastNLP.io.config_loader import ConfigLoader, ConfigSection
+from fastNLP.io.dataset_loader import TokenizeDataSetLoader
+from fastNLP.io.model_loader import ModelLoader
+from fastNLP.io.model_saver import ModelSaver
 from fastNLP.models.sequence_modeling import SeqLabeling
-from fastNLP.saver.model_saver import ModelSaver
 
 pickle_path = "./seq_label/"
 model_name = "seq_label_model.pkl"
