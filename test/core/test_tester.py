@@ -2,10 +2,10 @@ import os
 import unittest
 
 from fastNLP.core.dataset import DataSet
-from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.field import TextField, LabelField
 from fastNLP.core.instance import Instance
-from fastNLP.core.tester import SeqLabelTester
+from fastNLP.core.metrics import SeqLabelEvaluator
+from fastNLP.core.tester import Tester
 from fastNLP.models.sequence_modeling import SeqLabeling
 
 data_name = "pku_training.utf8"
@@ -49,7 +49,7 @@ class TestTester(unittest.TestCase):
 
         model = SeqLabeling(model_args)
 
-        tester = SeqLabelTester(**valid_args)
+        tester = Tester(**valid_args)
         tester.test(network=model, dev_data=data_set)
         # If this can run, everything is OK.
 

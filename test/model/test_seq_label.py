@@ -2,8 +2,8 @@ import os
 
 from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.optimizer import Optimizer
-from fastNLP.core.tester import SeqLabelTester
-from fastNLP.core.trainer import SeqLabelTrainer
+from fastNLP.core.tester import Tester
+from fastNLP.core.trainer import Trainer
 from fastNLP.core.utils import save_pickle
 from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.io.config_loader import ConfigLoader, ConfigSection
@@ -40,7 +40,7 @@ def test_training():
     save_pickle(word_vocab, pickle_path, "word2id.pkl")
     save_pickle(label_vocab, pickle_path, "label2id.pkl")
 
-    trainer = SeqLabelTrainer(
+    trainer = Trainer(
         epochs=trainer_args["epochs"],
         batch_size=trainer_args["batch_size"],
         validate=False,
@@ -74,12 +74,12 @@ def test_training():
     ConfigLoader().load_config(config_dir, {"test_seq_label_tester": tester_args})
 
     # Tester
-    tester = SeqLabelTester(batch_size=4,
-                            use_cuda=False,
-                            pickle_path=pickle_path,
-                            model_name="seq_label_in_test.pkl",
-                            evaluator=SeqLabelEvaluator()
-                            )
+    tester = Tester(batch_size=4,
+                    use_cuda=False,
+                    pickle_path=pickle_path,
+                    model_name="seq_label_in_test.pkl",
+                    evaluator=SeqLabelEvaluator()
+                    )
 
     # Start testing with validation data
     data_dev.set_target(truth=True)

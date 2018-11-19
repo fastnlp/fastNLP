@@ -14,8 +14,7 @@ class SpanConverter:
         for match in re.finditer(self.pattern, sentence):
             start, end = match.span()
             span = sentence[start:end]
-            replaced_sentence += sentence[prev_end:start] + \
-                                 self.span_to_special_tag(span)
+            replaced_sentence += sentence[prev_end:start] + self.span_to_special_tag(span)
             prev_end = end
         replaced_sentence += sentence[prev_end:]
 
@@ -56,8 +55,8 @@ class DigitSpanConverter(SpanConverter):
         for idx, char in enumerate(span):
             if char == '.' or char == '﹒' or char == '·':
                 decimal_point_count += 1
-        if span[-1] == '.' or span[-1] == '﹒' or span[
-            -1] == '·':  # last digit being decimal point means this is not a number
+        if span[-1] == '.' or span[-1] == '﹒' or span[-1] == '·':
+            # last digit being decimal point means this is not a number
             if decimal_point_count == 1:
                 return span
             else:

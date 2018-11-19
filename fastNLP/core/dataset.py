@@ -53,7 +53,7 @@ class DataSet(object):
                 length_set = set()
                 for key, value in data.items():
                     length_set.add(len(value))
-                assert len(length_set)==1, "Arrays must all be same length."
+                assert len(length_set) == 1, "Arrays must all be same length."
                 for key, value in data.items():
                     self.add_field(name=key, fields=value)
             elif isinstance(data, list):
@@ -191,10 +191,11 @@ class DataSet(object):
         else:
             return results
 
+
 if __name__ == '__main__':
     from fastNLP.core.instance import Instance
 
     d = DataSet({'a': list('abc')})
-    d.a
+    _ = d.a
     d.apply(lambda x: x['a'])
     print(d[1])

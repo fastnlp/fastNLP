@@ -2,12 +2,12 @@ import os
 import unittest
 
 from fastNLP.core.dataset import DataSet
-from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.field import TextField, LabelField
 from fastNLP.core.instance import Instance
 from fastNLP.core.loss import Loss
+from fastNLP.core.metrics import SeqLabelEvaluator
 from fastNLP.core.optimizer import Optimizer
-from fastNLP.core.trainer import SeqLabelTrainer
+from fastNLP.core.trainer import Trainer
 from fastNLP.models.sequence_modeling import SeqLabeling
 
 
@@ -23,7 +23,7 @@ class TestTrainer(unittest.TestCase):
                 "num_classes": 5,
                 "evaluator": SeqLabelEvaluator()
                 }
-        trainer = SeqLabelTrainer(**args)
+        trainer = Trainer(**args)
 
         train_data = [
             [['a', 'b', 'c', 'd', 'e'], ['a', '@', 'c', 'd', 'e']],

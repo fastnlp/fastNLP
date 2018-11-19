@@ -182,6 +182,75 @@ class CWS(API):
         return f1, pre, rec
 
 
+<<<<<<< HEAD
+=======
+class Parser(API):
+    def __init__(self, model_path=None, device='cpu'):
+        super(Parser, self).__init__()
+        if model_path is None:
+            model_path = model_urls['parser']
+
+        self.load(model_path, device)
+
+    def predict(self, content):
+        if not hasattr(self, 'pipeline'):
+            raise ValueError("You have to load model first.")
+
+        sentence_list = []
+        # 1. 检查sentence的类型
+        if isinstance(content, str):
+            sentence_list.append(content)
+        elif isinstance(content, list):
+            sentence_list = content
+
+        # 2. 组建dataset
+        dataset = DataSet()
+        dataset.add_field('words', sentence_list)
+        # dataset.add_field('tag', sentence_list)
+
+        # 3. 使用pipeline
+        self.pipeline(dataset)
+        for ins in dataset:
+            ins['heads'] = ins['heads'].tolist()
+
+        return dataset['heads'], dataset['labels']
+
+    def test(self, filepath):
+        data = ConllxDataLoader().load(filepath)
+        ds = DataSet()
+        for ins1, ins2 in zip(add_seg_tag(data), data):
+            ds.append(Instance(words=ins1[0], tag=ins1[1],
+                               gold_words=ins2[0], gold_pos=ins2[1],
+                               gold_heads=ins2[2], gold_head_tags=ins2[3]))
+
+        pp = self.pipeline
+        for p in pp:
+            if p.field_name == 'word_list':
+                p.field_name = 'gold_words'
+            elif p.field_name == 'pos_list':
+                p.field_name = 'gold_pos'
+        pp(ds)
+        head_cor, label_cor, total = 0, 0, 0
+        for ins in ds:
+            head_gold = ins['gold_heads']
+            head_pred = ins['heads']
+            length = len(head_gold)
+            total += length
+            for i in range(length):
+                head_cor += 1 if head_pred[i] == head_gold[i] else 0
+        uas = head_cor / total
+        print('uas:{:.2f}'.format(uas))
+
+        for p in pp:
+            if p.field_name == 'gold_words':
+                p.field_name = 'word_list'
+            elif p.field_name == 'gold_pos':
+                p.field_name = 'pos_list'
+
+        return uas
+
+
+>>>>>>> b182b39... * fixing unit tests
 class Analyzer:
     def __init__(self, seg=True, pos=True, parser=True, device='cpu'):
 
@@ -196,7 +265,13 @@ class Analyzer:
         if parser:
             self.parser = None
 
+<<<<<<< HEAD
     def predict(self, content):
+=======
+    def predict(self, content, seg=False, pos=False, parser=False):
+        if seg is False and pos is False and parser is False:
+            seg = True
+>>>>>>> b182b39... * fixing unit tests
         output_dict = {}
         if self.seg:
             seg_output = self.cws.predict(content)
@@ -235,9 +310,23 @@ if __name__ == "__main__":
     # print(pos.predict(s))
 
     # cws_model_path = '../../reproduction/chinese_word_segment/models/cws_crf.pkl'
+<<<<<<< HEAD
     cws = CWS(device='cpu')
     s = ['本品是一个抗酸抗胆汁的胃黏膜保护剂' ,
         '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
+=======
+    # cws = CWS(device='cpu')
+    # s = ['本品是一个抗酸抗胆汁的胃黏膜保护剂' ,
+    #     '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
+    #      '那么这款无人机到底有多厉害？']
+    # print(cws.test('/Users/yh/Desktop/test_data/cws_test.conll'))
+    # print(cws.predict(s))
+
+    parser = Parser(device='cpu')
+    # print(parser.test('/Users/yh/Desktop/test_data/parser_test2.conll'))
+    s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
+         '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
+>>>>>>> b182b39... * fixing unit tests
          '那么这款无人机到底有多厉害？']
     print(cws.test('/Users/yh/Desktop/test_data/small_test.conll'))
     print(cws.predict(s))

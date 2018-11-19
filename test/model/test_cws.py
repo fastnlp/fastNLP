@@ -1,9 +1,9 @@
 import os
 
 from fastNLP.core.metrics import SeqLabelEvaluator
-from fastNLP.core.predictor import SeqLabelInfer
-from fastNLP.core.tester import SeqLabelTester
-from fastNLP.core.trainer import SeqLabelTrainer
+from fastNLP.core.predictor import Predictor
+from fastNLP.core.tester import Tester
+from fastNLP.core.trainer import Trainer
 from fastNLP.core.utils import save_pickle, load_pickle
 from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.io.config_loader import ConfigLoader, ConfigSection
@@ -41,7 +41,7 @@ def infer():
     infer_data.index_field("word_seq", word2index)
     infer_data.set_origin_len("word_seq")
     # inference
-    infer = SeqLabelInfer(pickle_path)
+    infer = Predictor(pickle_path)
     results = infer.predict(model, infer_data)
     print(results)
 
@@ -66,7 +66,7 @@ def train_test():
     save_pickle(label_vocab, pickle_path, "label2id.pkl")
 
     # Trainer
-    trainer = SeqLabelTrainer(**train_args.data)
+    trainer = Trainer(**train_args.data)
 
     # Model
     model = SeqLabeling(train_args)
@@ -92,7 +92,7 @@ def train_test():
     test_args["evaluator"] = SeqLabelEvaluator()
 
     # Tester
-    tester = SeqLabelTester(**test_args.data)
+    tester = Tester(**test_args.data)
 
     # Start testing
     data_train.set_target(truth=True)
