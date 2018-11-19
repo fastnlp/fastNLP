@@ -8,6 +8,7 @@ class FieldArray(object):
         self.padding_val = padding_val
         self.is_target = is_target
         self.need_tensor = need_tensor
+        self.dtype = None
 
     def __repr__(self):
         # TODO
@@ -30,10 +31,14 @@ class FieldArray(object):
         batch_size = len(idxes)
         # TODO 当这个fieldArray是seq_length这种只有一位的内容时，不需要padding，需要再讨论一下
         if isinstance(self.content[0], int) or isinstance(self.content[0], float):
-            array = np.array([self.content[i] for i in idxes], dtype=type(self.content[0]))
+            if self.dtype is None:
+                self.dtype = np.int64 if isinstance(self.content[0], int) else np.double
+            array = np.array([self.content[i] for i in idxes], dtype=self.dtype)
         else:
+            if self.dtype is None:
+                self.dtype = np.int64
             max_len = max([len(self.content[i]) for i in idxes])
-            array = np.full((batch_size, max_len), self.padding_val, dtype=np.int64)
+            array = np.full((batch_size, max_len), self.padding_val, dtype=self.dtype)
 
             for i, idx in enumerate(idxes):
                 array[i][:len(self.content[idx])] = self.content[idx]

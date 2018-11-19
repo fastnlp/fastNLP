@@ -21,6 +21,7 @@ class Attention(torch.nn.Module):
 
 class DotAtte(nn.Module):
     def __init__(self, key_size, value_size):
+        # TODO never test
         super(DotAtte, self).__init__()
         self.key_size = key_size
         self.value_size = value_size
@@ -42,6 +43,8 @@ class DotAtte(nn.Module):
 
 class MultiHeadAtte(nn.Module):
     def __init__(self, input_size, output_size, key_size, value_size, num_atte):
+        raise NotImplementedError
+        # TODO never test
         super(MultiHeadAtte, self).__init__()
         self.in_linear = nn.ModuleList()
         for i in range(num_atte * 3):
