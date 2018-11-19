@@ -188,7 +188,8 @@ class DataSet(object):
             results.append(func(ins))
         if new_field_name is not None:
             self.add_field(new_field_name, results)
-        return results
+        else:
+            return results
 
 if __name__ == '__main__':
     from fastNLP.core.instance import Instance
