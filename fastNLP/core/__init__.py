@@ -7,4 +7,5 @@ from .sampler import SequentialSampler, BucketSampler, RandomSampler, BaseSample
 from .tester import Tester
 from .trainer import Trainer
 from .vocabulary import Vocabulary
-
+from .optimizer import Optimizer
+from .loss import Loss

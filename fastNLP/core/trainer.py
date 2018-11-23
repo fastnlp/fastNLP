@@ -100,9 +100,9 @@ class Trainer(object):
             for name, param in self.model.named_parameters():
                 if param.requires_grad:
                     self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.step)
-                    self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
-                    self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
-            if n_print > 0 and self.step % n_print == 0:
+                    # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
+                    # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
+            if kwargs["n_print"] > 0 and self.step % kwargs["n_print"] == 0:
                 end = time.time()
                 diff = timedelta(seconds=round(end - kwargs["start"]))
                 print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.6} time: {}".format(
