@@ -117,22 +117,20 @@ class DataSet(object):
                 assert name in self.field_arrays
                 self.field_arrays[name].append(field)
 
-    def add_field(self, name, fields, padding_val=0, need_tensor=False, is_target=False):
+    def add_field(self, name, fields, padding_val=0, is_input=False, is_target=False):
         """
         
-        :param name:
+        :param str name:
         :param fields:
-        :param padding_val:
-        :param need_tensor:
-        :param is_target:
+        :param int padding_val:
+        :param bool is_input:
+        :param bool is_target:
         :return:
         """
         if len(self.field_arrays) != 0:
             assert len(self) == len(fields)
-        self.field_arrays[name] = FieldArray(name, fields,
-                                             padding_val=padding_val,
-                                             need_tensor=need_tensor,
-                                             is_target=is_target)
+        self.field_arrays[name] = FieldArray(name, fields, padding_val=padding_val, is_target=is_target,
+                                             is_input=is_input)
 
     def delete_field(self, name):
         self.field_arrays.pop(name)

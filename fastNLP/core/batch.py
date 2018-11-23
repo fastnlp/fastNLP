@@ -5,7 +5,8 @@ class Batch(object):
     """Batch is an iterable object which iterates over mini-batches.
 
     ::
-        for batch_x, batch_y in Batch(data_set):
+        for batch_x, batch_y in Batch(data_set, batch_size=16, sampler=SequentialSampler()):
+
 
     """
 
@@ -15,6 +16,8 @@ class Batch(object):
         :param dataset: a DataSet object
         :param batch_size: int, the size of the batch
         :param sampler: a Sampler object
+        :param as_numpy: bool. If True, return Numpy array. Otherwise, return torch tensors.
+
         """
         self.dataset = dataset
         self.batch_size = batch_size
@@ -30,17 +33,6 @@ class Batch(object):
         return self
 
     def __next__(self):
-        """
-
-        :return batch_x: dict of (str: torch.LongTensor), which means (field name: tensor of shape [batch_size, padding_length])
-                         E.g.
-                         ::
-                         {'text': tensor([[ 0,  1,  2,  3,  0,  0,  0], 4,  5,  2,  6,  7,  8,  9]]), 'text_origin_len': [4, 7]})
-
-                batch_y: dict of (str: torch.LongTensor), which means (field name: tensor of shape [batch_size, padding_length])
-                All tensors in both batch_x and batch_y will be cuda tensors if use_cuda is True.
-
-        """
         if self.curidx >= len(self.idx_list):
             raise StopIteration
         else:

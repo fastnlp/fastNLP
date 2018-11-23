@@ -1,5 +1,5 @@
-from copy import deepcopy
 from collections import Counter
+from copy import deepcopy
 
 DEFAULT_PADDING_LABEL = '<pad>'  # dict index = 0
 DEFAULT_UNKNOWN_LABEL = '<unk>'  # dict index = 1
@@ -20,6 +20,7 @@ def check_build_vocab(func):
         if self.word2idx is None:
             self.build_vocab()
         return func(self, *args, **kwargs)
+
     return _wrapper
 
 
@@ -34,6 +35,7 @@ class Vocabulary(object):
         vocab["word"]
         vocab.to_word(5)
     """
+
     def __init__(self, need_default=True, max_size=None, min_freq=None):
         """
         :param bool need_default: set if the Vocabulary has default labels reserved for sequences. Default: True.
@@ -54,24 +56,36 @@ class Vocabulary(object):
         self.idx2word = None
 
     def update(self, word_lst):
-        """add word or list of words into Vocabulary
+        """Add a list of words into the vocabulary.
 
-        :param word: a list of string or a single string
+        :param list word_lst: a list of strings
         """
         self.word_count.update(word_lst)
 
     def add(self, word):
+        """Add a single word into the vocabulary.
+
+        :param str word: a word or token.
+        """
         self.word_count[word] += 1
 
     def add_word(self, word):
+        """Add a single word into the vocabulary.
+
+        :param str word: a word or token.
+        """
         self.add(word)
 
     def add_word_lst(self, word_lst):
+        """Add a list of words into the vocabulary.
+
+        :param list word_lst: a list of strings
+        """
         self.update(word_lst)
 
-
     def build_vocab(self):
-        """build 'word to index' dict, and filter the word using `max_size` and `min_freq`
+        """Build 'word to index' dict, and filter the word using `max_size` and `min_freq`.
+
         """
         if self.has_default:
             self.word2idx = deepcopy(DEFAULT_WORD_TO_INDEX)
@@ -85,17 +99,27 @@ class Vocabulary(object):
         if self.min_freq is not None:
             words = filter(lambda kv: kv[1] >= self.min_freq, words)
         start_idx = len(self.word2idx)
-        self.word2idx.update({w:i+start_idx for i, (w,_) in enumerate(words)})
+        self.word2idx.update({w: i + start_idx for i, (w, _) in enumerate(words)})
         self.build_reverse_vocab()
 
     def build_reverse_vocab(self):
-        """build 'index to word' dict based on 'word to index' dict
+        """Build 'index to word' dict based on 'word to index' dict.
+
         """
         self.idx2word = {i: w for w, i in self.word2idx.items()}
 
     @check_build_vocab
     def __len__(self):
         return len(self.word2idx)
+
+    @check_build_vocab
+    def __contains__(self, item):
+        """Check if a word in vocabulary.
+
+        :param item: the word
+        :return: True or False
+        """
+        return item in self.word2idx
 
     def has_word(self, w):
         return self.__contains__(w)
@@ -114,8 +138,8 @@ class Vocabulary(object):
             raise ValueError("word {} not in vocabulary".format(w))
 
     def to_index(self, w):
-        """ like to_index(w) function, turn a word to the index
-            if w is not in Vocabulary, return the unknown label
+        """ Turn a word to an index.
+            If w is not in Vocabulary, return the unknown label.
 
         :param str w:
         """
@@ -144,12 +168,14 @@ class Vocabulary(object):
     def to_word(self, idx):
         """given a word's index, return the word itself
 
-        :param int idx:
+        :param int idx: the index
+        :return str word: the indexed word
         """
         return self.idx2word[idx]
 
     def __getstate__(self):
-        """use to prepare data for pickle
+        """Use to prepare data for pickle.
+
         """
         state = self.__dict__.copy()
         # no need to pickle idx2word as it can be constructed from word2idx
@@ -157,16 +183,9 @@ class Vocabulary(object):
         return state
 
     def __setstate__(self, state):
-        """use to restore state from pickle
+        """Use to restore state from pickle.
+
         """
         self.__dict__.update(state)
         self.build_reverse_vocab()
 
-    @check_build_vocab
-    def __contains__(self, item):
-        """Check if a word in vocabulary.
-
-        :param item: the word
-        :return: True or False
-        """
-        return item in self.word2idx

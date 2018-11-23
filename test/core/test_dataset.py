@@ -1,20 +1,20 @@
 import unittest
 
+from fastNLP.core.dataset import DataSet
+
 
 class TestDataSet(unittest.TestCase):
-    labeled_data_list = [
-        [["a", "b", "e", "d"], ["1", "2", "3", "4"]],
-        [["a", "b", "e", "d"], ["1", "2", "3", "4"]],
-        [["a", "b", "e", "d"], ["1", "2", "3", "4"]],
-    ]
-    unlabeled_data_list = [
-        ["a", "b", "e", "d"],
-        ["a", "b", "e", "d"],
-        ["a", "b", "e", "d"]
-    ]
-    word_vocab = {"a": 0, "b": 1, "e": 2, "d": 3}
-    label_vocab = {"1": 1, "2": 2, "3": 3, "4": 4}
 
     def test_case_1(self):
-        # TODO:
-        pass
+        ds = DataSet()
+        ds.add_field(name="xx", fields=["a", "b", "e", "d"])
+
+        self.assertTrue("xx" in ds.field_arrays)
+        self.assertEqual(len(ds.field_arrays["xx"]), 4)
+        self.assertEqual(ds.get_length(), 4)
+        self.assertEqual(ds.get_fields(), ds.field_arrays)
+
+        try:
+            ds.add_field(name="yy", fields=["x", "y", "z", "w", "f"])
+        except BaseException as e:
+            self.assertTrue(isinstance(e, AssertionError))
