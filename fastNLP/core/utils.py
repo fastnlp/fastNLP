@@ -55,7 +55,15 @@ def build_args(func, kwargs):
     if spect.varkw is not None:
         output.update(kwargs)
 
-    # check miss args
 
+# check miss args
+def check_arg_dict(func, arg_dict):
+    pass
+
+def check_arg_dict_list(func, arg_dict_list):
+    pass
+
+def check_code():
+    pass
 
 
