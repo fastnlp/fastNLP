@@ -55,8 +55,10 @@ class DataSet(object):
                 raise AttributeError('{} does not exist.'.format(item))
 
         def __setattr__(self, key, value):
-            self.__setitem__(key, value)
-
+            if hasattr(self, 'fields'):
+                self.__setitem__(key, value)
+            else:
+                super().__setattr__(self, key, value)
 
         def __repr__(self):
             return "\n".join(['{}: {}'.format(name, repr(self.dataset[name][self.idx])) for name

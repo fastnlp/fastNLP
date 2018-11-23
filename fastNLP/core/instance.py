@@ -22,13 +22,16 @@ class Instance(object):
         return self.add_field(name, field)
 
     def __getattr__(self, item):
-        if item in self.fields:
+        if hasattr(self, 'fields') and item in self.fields:
             return self.fields[item]
         else:
             raise AttributeError('{} does not exist.'.format(item))
 
     def __setattr__(self, key, value):
-        self.__setitem__(key, value)
+        if hasattr(self, 'fields'):
+            self.__setitem__(key, value)
+        else:
+            super().__setattr__(key, value)
 
     def __repr__(self):
         return self.fields.__repr__()
