@@ -60,7 +60,6 @@ class Vocabulary(object):
         """
         self.word_count.update(word_lst)
 
-
     def add(self, word):
         self.word_count[word] += 1
 

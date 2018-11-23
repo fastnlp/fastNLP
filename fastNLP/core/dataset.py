@@ -189,26 +189,15 @@ class DataSet(object):
                 self.field_arrays[name].is_target = val
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
-        self._set_need_tensor(**fields)
         return self
 
     def set_input(self, **fields):
         for name, val in fields.items():
             if name in self.field_arrays:
                 assert isinstance(val, bool)
-                self.field_arrays[name].is_target = not val
+                self.field_arrays[name].is_input = val
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
-        self._set_need_tensor(**fields)
-        return self
-
-    def _set_need_tensor(self, **kwargs):
-        for name, val in kwargs.items():
-            if name in self.field_arrays:
-                assert isinstance(val, bool)
-                self.field_arrays[name].need_tensor = val
-            else:
-                raise KeyError
         return self
 
     def __getattr__(self, item):

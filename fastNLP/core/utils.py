@@ -1,6 +1,11 @@
 import _pickle
 import os
 import inspect
+from collections import namedtuple
+from collections import Counter
+
+CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated'], verbose=True)
+
 
 def save_pickle(obj, pickle_path, file_name):
     """Save an object into a pickle file.
@@ -45,7 +50,7 @@ def pickle_exist(pickle_path, pickle_name):
     else:
         return False
 
-def build_args(func, **kwargs):
+def _build_args(func, **kwargs):
     spect = inspect.getfullargspec(func)
     if spect.varkw is not None:
         return kwargs
@@ -55,11 +60,9 @@ def build_args(func, **kwargs):
     output.update({name: val for name, val in kwargs.items() if name in needed_args})
     return output
 
-from collections import namedtuple, Counter
-CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated'], verbose=True)
 
 # check args
-def check_arg_dict_list(func, args):
+def _check_arg_dict_list(func, args):
     if isinstance(args, dict):
         arg_dict_list = [args]
     else:

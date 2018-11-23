@@ -2,12 +2,12 @@ import numpy as np
 
 
 class FieldArray(object):
-    def __init__(self, name, content, padding_val=0, is_target=False, need_tensor=False):
+    def __init__(self, name, content, padding_val=0, is_target=False, is_input=False):
         self.name = name
         self.content = content
         self.padding_val = padding_val
         self.is_target = is_target
-        self.need_tensor = need_tensor
+        self.is_input = is_input
         self.dtype = None
 
     def __repr__(self):
@@ -27,7 +27,7 @@ class FieldArray(object):
     def get(self, idxes):
         if isinstance(idxes, int):
             return self.content[idxes]
-        assert self.need_tensor is True
+        assert self.is_input is True or self.is_target is True
         batch_size = len(idxes)
         # TODO 当这个fieldArray是seq_length这种只有一位的内容时，不需要padding，需要再讨论一下
         if isinstance(self.content[0], int) or isinstance(self.content[0], float):

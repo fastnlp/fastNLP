@@ -9,20 +9,17 @@ class Batch(object):
 
     """
 
-    def __init__(self, dataset, batch_size, sampler, as_numpy=False, use_cuda=False):
+    def __init__(self, dataset, batch_size, sampler, as_numpy=False,):
         """
 
         :param dataset: a DataSet object
         :param batch_size: int, the size of the batch
         :param sampler: a Sampler object
-        :param use_cuda: bool, whether to use GPU
-
         """
         self.dataset = dataset
         self.batch_size = batch_size
         self.sampler = sampler
         self.as_numpy = as_numpy
-        self.use_cuda = use_cuda
         self.idx_list = None
         self.curidx = 0
 
@@ -53,15 +50,13 @@ class Batch(object):
             indices = self.idx_list[self.curidx:endidx]
 
             for field_name, field in self.dataset.get_fields().items():
-                if field.need_tensor:
+                if field.is_target or field.is_input:
                     batch = field.get(indices)
                     if not self.as_numpy:
                         batch = torch.from_numpy(batch)
-                    if self.use_cuda:
-                        batch = batch.cuda()
                     if field.is_target:
                         batch_y[field_name] = batch
-                    else:
+                    if field.is_input:
                         batch_x[field_name] = batch
 
             self.curidx = endidx

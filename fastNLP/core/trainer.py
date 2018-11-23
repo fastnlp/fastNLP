@@ -9,6 +9,7 @@ from fastNLP.core.loss import Loss
 from fastNLP.core.metrics import Evaluator
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.sampler import RandomSampler
+from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.tester import Tester
 
 
@@ -194,3 +195,77 @@ def best_eval_result(self, metrics):
         return True
     else:
         return False
+
+
+from fastNLP.core.utils import _check_arg_dict_list
+from fastNLP.core.utils import _build_args
+
+DEFAULT_CHECK_BATCH_SIZE = 2
+DEFAULT_CHECK_NUM_BATCH = 2
+
+IGNORE_CHECK_LEVEL=0
+WARNING_CHECK_LEVEL=1
+STRICT_CHECK_LEVEL=2
+
+
+def _check_code(dataset, model, batch_size=DEFAULT_CHECK_BATCH_SIZE, dev_data=None, check_level=WARNING_CHECK_LEVEL):
+    # check loss 方法
+    if not hasattr(model, 'get_loss'):
+        raise AttributeError("{} has to have a 'get_loss' function.".format(type(model)))
+
+    batch_size = min(DEFAULT_CHECK_BATCH_SIZE, batch_size)
+    batch = Batch(dataset=dataset, batch_size=batch_size, sampler=SequentialSampler())
+    for batch_count, (batch_x, batch_y) in enumerate(batch):
+        if batch_count==0:
+            check_res = _check_arg_dict_list(model.forward, batch_x)
+            _info_str = ''
+            if len(check_res.missing)>0:
+                if check_level == WARNING_CHECK_LEVEL:
+                    for field_name in check_res.missing:
+                        if hasattr(dataset, field_name):
+                            _info_str += "{} "
+                    _info_str += "Missing argument: [{}] needed by '{}.forward' is not presented in the input.\n"
+                    _info_str += ""
+                    print("")
+            if len(check_res.unused)>0:
+                if check_level == WARNING_CHECK_LEVEL:
+                    _info_str += ""
+
+        refined_batch_x = _build_args(model.forward, **batch_x)
+        output = model(**refined_batch_x)
+        if batch_count == 0:
+            _dict = _check_arg_dict_list(model.loss, [output, batch_y])
+            if len(_dict)!=0:
+                pass
+        loss_input = _build_args(model.loss, **output, **batch_y)
+        loss = model.loss(**loss_input)
+        if batch_count == 0:
+            if isinstance(loss, torch.Tensor):
+                pass
+
+        loss.backward()
+
+        if batch_count+1>=DEFAULT_CHECK_BATCH_SIZE:
+            break
+
+    dev_batch = Batch(dataset=dataset, batch_size=batch_size, sampler=SequentialSampler())
+    if dev_data is not None:
+        if not hasattr(model, 'evaluate'):
+            raise AttributeError("If {} wants to do evaluation, {} has to have a 'evaluate' function. Or you can set"
+                                 "dev_data to 'None'."
+                                 .format(type(model), type(model)))
+
+        for batch_count, (batch_x, batch_y) in enumerate(dev_batch):
+            if batch_count == 0:
+                _dict = _check_arg_dict_list(model.evaluate, [output, batch_y])
+
+                if len(_dict)!=0:
+                    pass
+            refined_batch_x = _build_args(model.forward, **batch_x)
+            output = model(**refined_batch_x)
+
+
+
+
+
+
