@@ -1,3 +1,5 @@
+import numpy as np
+
 from fastNLP.core.fieldarray import FieldArray
 
 _READERS = {}
@@ -6,7 +8,7 @@ _READERS = {}
 def construct_dataset(sentences):
     """Construct a data set from a list of sentences.
 
-    :param sentences: list of str
+    :param sentences: list of list of str
     :return dataset: a DataSet object
     """
     dataset = DataSet()
@@ -18,7 +20,9 @@ def construct_dataset(sentences):
 
 
 class DataSet(object):
-    """A DataSet object is a list of Instance objects.
+    """DataSet is the collection of examples.
+    DataSet provides instance-level interface. You can append and access an instance of the DataSet.
+    However, it stores data in a different way: Field-first, Instance-second.
 
     """
 
@@ -47,6 +51,11 @@ class DataSet(object):
                               in self.dataset.get_fields().keys()])
 
     def __init__(self, data=None):
+        """
+
+        :param data: a dict or a list. If it is a dict, the key is the name of a field and the value is the field.
+                If it is a list, it must be a list of Instance objects.
+        """
         self.field_arrays = {}
         if data is not None:
             if isinstance(data, dict):
@@ -78,8 +87,14 @@ class DataSet(object):
             self.append(ins_list)
 
     def append(self, ins):
-        # no field
+        """Add an instance to the DataSet.
+        If the DataSet is not empty, the instance must have the same field names as the rest instances in the DataSet.
+
+        :param ins: an Instance object
+
+        """
         if len(self.field_arrays) == 0:
+            # DataSet has no field yet
             for name, field in ins.fields.items():
                 self.field_arrays[name] = FieldArray(name, [field])
         else:
@@ -89,6 +104,15 @@ class DataSet(object):
                 self.field_arrays[name].append(field)
 
     def add_field(self, name, fields, padding_val=0, need_tensor=False, is_target=False):
+        """
+        
+        :param name:
+        :param fields:
+        :param padding_val:
+        :param need_tensor:
+        :param is_target:
+        :return:
+        """
         if len(self.field_arrays) != 0:
             assert len(self) == len(fields)
         self.field_arrays[name] = FieldArray(name, fields,
@@ -209,6 +233,20 @@ class DataSet(object):
                 self.add_field(new_field_name, results)
         else:
             return results
+
+    def split(self, test_ratio):
+        assert isinstance(test_ratio, float)
+        all_indices = [_ for _ in range(len(self))]
+        np.random.shuffle(all_indices)
+        test_indices = all_indices[:int(test_ratio)]
+        train_indices = all_indices[int(test_ratio):]
+        test_set = DataSet()
+        train_set = DataSet()
+        for idx in test_indices:
+            test_set.append(self[idx])
+        for idx in train_indices:
+            train_set.append(self[idx])
+        return train_set, test_set
 
 
 if __name__ == '__main__':

@@ -1,7 +1,6 @@
 import os
 
 from fastNLP.io.config_loader import ConfigSection, ConfigLoader
-from fastNLP.io.logger import create_logger
 
 
 class ConfigSaver(object):
@@ -61,8 +60,8 @@ class ConfigSaver(object):
                 continue
 
             if '=' not in line:
-                log = create_logger(__name__, './config_saver.log')
-                log.error("can NOT load config file [%s]" % self.file_path)
+                # log = create_logger(__name__, './config_saver.log')
+                # log.error("can NOT load config file [%s]" % self.file_path)
                 raise RuntimeError("can NOT load config file {}".__format__(self.file_path))
 
             key = line.split('=', maxsplit=1)[0].strip()
@@ -123,10 +122,10 @@ class ConfigSaver(object):
                     change_file = True
                     break
                 if section_file[k] != section[k]:
-                    logger = create_logger(__name__, "./config_loader.log")
-                    logger.warning("section [%s] in config file [%s] has been changed" % (
-                        section_name, self.file_path
-                    ))
+                    # logger = create_logger(__name__, "./config_loader.log")
+                    # logger.warning("section [%s] in config file [%s] has been changed" % (
+                    #    section_name, self.file_path
+                    #))
                     change_file = True
                     break
             if not change_file:

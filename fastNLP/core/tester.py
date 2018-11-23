@@ -5,9 +5,9 @@ import torch
 from fastNLP.core.batch import Batch
 from fastNLP.core.metrics import Evaluator
 from fastNLP.core.sampler import RandomSampler
-from fastNLP.io.logger import create_logger
 
-logger = create_logger(__name__, "./train_test.log")
+
+# logger = create_logger(__name__, "./train_test.log")
 
 
 class Tester(object):
