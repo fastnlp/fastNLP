@@ -109,7 +109,7 @@ class POS(API):
                               "use_cuda": True, "evaluator": evaluator}
 
         pp(te_dataset)
-        te_dataset.set_is_target(truth=True)
+        te_dataset.set_target(truth=True)
 
         tester = Tester(**default_valid_args)
 

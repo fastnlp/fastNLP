@@ -152,7 +152,7 @@ class IndexerProcessor(Processor):
             index = [self.vocab.to_index(token) for token in tokens]
             ins[self.new_added_field_name] = index
 
-        dataset.set_need_tensor(**{self.new_added_field_name: True})
+        dataset._set_need_tensor(**{self.new_added_field_name: True})
 
         if self.delete_old_field:
             dataset.delete_field(self.field_name)
@@ -186,7 +186,7 @@ class SeqLenProcessor(Processor):
         for ins in dataset:
             length = len(ins[self.field_name])
             ins[self.new_added_field_name] = length
-        dataset.set_need_tensor(**{self.new_added_field_name: True})
+        dataset._set_need_tensor(**{self.new_added_field_name: True})
         return dataset
 
 class ModelProcessor(Processor):
@@ -259,7 +259,7 @@ class SetTensorProcessor(Processor):
     def process(self, dataset):
         set_dict = {name: self.default for name in dataset.get_fields().keys()}
         set_dict.update(self.field_dict)
-        dataset.set_need_tensor(**set_dict)
+        dataset._set_need_tensor(**set_dict)
         return dataset
 
 
@@ -272,5 +272,5 @@ class SetIsTargetProcessor(Processor):
     def process(self, dataset):
         set_dict = {name: self.default for name in dataset.get_fields().keys()}
         set_dict.update(self.field_dict)
-        dataset.set_is_target(**set_dict)
+        dataset.set_target(**set_dict)
         return dataset

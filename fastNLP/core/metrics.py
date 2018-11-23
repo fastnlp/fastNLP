@@ -320,8 +320,3 @@ def pred_topk(y_prob, k=1):
         (1, k))
     y_prob_topk = y_prob[x_axis_index, y_pred_topk]
     return y_pred_topk, y_prob_topk
-
-
-if __name__ == '__main__':
-    y = np.array([1, 0, 1, 0, 1, 1])
-    print(_label_types(y))

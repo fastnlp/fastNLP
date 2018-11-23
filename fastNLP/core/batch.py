@@ -9,7 +9,7 @@ class Batch(object):
 
     """
 
-    def __init__(self, dataset, batch_size, sampler, use_cuda=False):
+    def __init__(self, dataset, batch_size, sampler, as_numpy=False, use_cuda=False):
         """
 
         :param dataset: a DataSet object
@@ -21,6 +21,7 @@ class Batch(object):
         self.dataset = dataset
         self.batch_size = batch_size
         self.sampler = sampler
+        self.as_numpy = as_numpy
         self.use_cuda = use_cuda
         self.idx_list = None
         self.curidx = 0
@@ -53,7 +54,9 @@ class Batch(object):
 
             for field_name, field in self.dataset.get_fields().items():
                 if field.need_tensor:
-                    batch = torch.from_numpy(field.get(indices))
+                    batch = field.get(indices)
+                    if not self.as_numpy:
+                        batch = torch.from_numpy(batch)
                     if self.use_cuda:
                         batch = batch.cuda()
                     if field.is_target:

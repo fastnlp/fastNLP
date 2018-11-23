@@ -1,6 +1,6 @@
 import _pickle
 import os
-
+import inspect
 
 def save_pickle(obj, pickle_path, file_name):
     """Save an object into a pickle file.
@@ -44,3 +44,18 @@ def pickle_exist(pickle_path, pickle_name):
         return True
     else:
         return False
+
+def build_args(func, kwargs):
+    assert isinstance(func, function) and isinstance(kwargs, dict)
+    spect = inspect.getfullargspec(func)
+    assert spect.varargs is None, 'Positional Arguments({}) are not supported.'.format(spect.varargs)
+    needed_args = set(spect.args)
+    output = {name: default for name, default in zip(reversed(spect.args), reversed(spect.defaults))}
+    output.update({name: val for name, val in kwargs.items() if name in needed_args})
+    if spect.varkw is not None:
+        output.update(kwargs)
+
+    # check miss args
+
+
+

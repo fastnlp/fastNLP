@@ -111,8 +111,8 @@ class CWSTagProcessor(Processor):
             sentence = ins[self.field_name]
             tag_list = self._generate_tag(sentence)
             ins[self.new_added_field_name] = tag_list
-        dataset.set_is_target(**{self.new_added_field_name:True})
-        dataset.set_need_tensor(**{self.new_added_field_name:True})
+        dataset.set_target(**{self.new_added_field_name:True})
+        dataset._set_need_tensor(**{self.new_added_field_name:True})
         return dataset
 
     def _tags_from_word_len(self, word_len):
@@ -230,7 +230,7 @@ class SeqLenProcessor(Processor):
         for ins in dataset:
             length = len(ins[self.field_name])
             ins[self.new_added_field_name] = length
-        dataset.set_need_tensor(**{self.new_added_field_name:True})
+        dataset._set_need_tensor(**{self.new_added_field_name:True})
         return dataset
 
 class SegApp2OutputProcessor(Processor):
