@@ -4,7 +4,7 @@ import inspect
 from collections import namedtuple
 from collections import Counter
 
-CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated'], verbose=True)
+CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed'], verbose=True)
 
 
 def save_pickle(obj, pickle_path, file_name):
@@ -82,4 +82,8 @@ def _check_arg_dict_list(func, args):
     input_args = set(input_arg_count.keys())
     missing = list(require_args - input_args)
     unused = list(input_args - all_args)
-    return CheckRes(missing=missing, unused=unused, duplicated=duplicated)
+    return CheckRes(missing=missing,
+                    unused=unused,
+                    duplicated=duplicated,
+                    required=list(require_args),
+                    all_needed=list(all_args))

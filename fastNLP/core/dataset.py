@@ -200,6 +200,12 @@ class DataSet(object):
                 raise KeyError("{} is not a valid field name.".format(name))
         return self
 
+    def get_input_name(self):
+        return [name for name, field in self.field_arrays.items() if field.is_input]
+
+    def get_target_name(self):
+        return [name for name, field in self.field_arrays.items() if field.is_target]
+
     def __getattr__(self, item):
         if item in self.field_arrays:
             return self.field_arrays[item]
