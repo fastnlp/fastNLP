@@ -15,25 +15,25 @@ class CNNText(torch.nn.Module):
     Classification.'
     """
 
-    def __init__(self, args):
+    def __init__(self, embed_num,
+                 embed_dim,
+                 num_classes,
+                 kernel_nums=(3,4,5),
+                 kernel_sizes=(3,4,5),
+                 padding=0,
+                 dropout=0.5):
         super(CNNText, self).__init__()
 
-        num_classes = args["num_classes"]
-        kernel_nums = [100, 100, 100]
-        kernel_sizes = [3, 4, 5]
-        vocab_size = args["vocab_size"]
-        embed_dim = 300
-        pretrained_embed = None
-        drop_prob = 0.5
-
         # no support for pre-trained embedding currently
-        self.embed = encoder.embedding.Embedding(vocab_size, embed_dim)
-        self.conv_pool = encoder.conv_maxpool.ConvMaxpool(
+        self.embed = encoder.Embedding(embed_num, embed_dim)
+        self.conv_pool = encoder.ConvMaxpool(
             in_channels=embed_dim,
             out_channels=kernel_nums,
-            kernel_sizes=kernel_sizes)
-        self.dropout = nn.Dropout(drop_prob)
-        self.fc = encoder.linear.Linear(sum(kernel_nums), num_classes)
+            kernel_sizes=kernel_sizes,
+            padding=padding)
+        self.dropout = nn.Dropout(dropout)
+        self.fc = encoder.Linear(sum(kernel_nums), num_classes)
+        self._loss = nn.CrossEntropyLoss()
 
     def forward(self, word_seq):
         """
@@ -44,4 +44,7 @@ class CNNText(torch.nn.Module):
         x = self.conv_pool(x)  # [N,L,C] -> [N,C]
         x = self.dropout(x)
         x = self.fc(x)  # [N,C] -> [N, N_class]
-        return x
+        return {'output':x}
+
+    def loss(self, output, label_seq):
+        return self._loss(output, label_seq)

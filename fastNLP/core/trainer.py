@@ -1,10 +1,6 @@
 import time
-from datetime import timedelta
-from datetime import datetime
-
-import warnings
-from collections import defaultdict
-
+rom datetime import timedelta, datetime
+import os
 import torch
 from tensorboardX import SummaryWriter
 
@@ -28,7 +24,7 @@ class Trainer(object):
 
     """
 
-    def __init__(self, train_data, model, n_epochs=1, batch_size=32, print_every=-1,
+   def __init__(self, train_data, model, n_epochs, batch_size, n_print=1,
                  dev_data=None, use_cuda=False, loss=Loss(None), save_path="./save",
                  optimizer=Optimizer("Adam", lr=0.001, weight_decay=0),
                  evaluator=Evaluator(),
@@ -56,7 +52,7 @@ class Trainer(object):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-        self._summary_writer = SummaryWriter(self.save_path + 'tensorboard_logs')
+        self._summary_writer = SummaryWriter(os.path.join(self.save_path, 'tensorboard_logs'))
         self._graph_summaried = False
         self.step = 0
         self.start_time = None  # start timestamp
@@ -112,9 +108,9 @@ class Trainer(object):
                     self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.step)
                     # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
                     # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
-            if self.print_every > 0 and self.step % self.print_every == 0:
+           if n_print > 0 and self.step % n_print == 0:
                 end = time.time()
-                diff = timedelta(seconds=round(end - kwargs["start"]))
+                diff = timedelta(seconds=round(end - start))
                 print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.6} time: {}".format(
                     epoch, self.step, loss.data, diff)
                 print(print_output)
@@ -177,6 +173,7 @@ class Trainer(object):
         return self.loss_func(predict, truth)
 
     def save_model(self, model, model_name, only_param=False):
+        model_name = os.path.join(self.save_path, model_name)
         if only_param:
             torch.save(model.state_dict(), model_name)
         else:

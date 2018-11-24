@@ -254,19 +254,18 @@ class DataSet(object):
         :param str new_field_name: If not None, results of the function will be stored as a new field.
         :return results: returned values of the function over all instances.
         """
-        results = []
-        for ins in self:
-            results.append(func(ins))
+        results = [func(ins) for ins in self]
         if new_field_name is not None:
             if new_field_name in self.field_arrays:
                 # overwrite the field, keep same attributes
                 old_field = self.field_arrays[new_field_name]
-                padding_val = old_field.padding_val
-                need_tensor = old_field.need_tensor
-                is_target = old_field.is_target
-                self.add_field(new_field_name, results, padding_val, need_tensor, is_target)
+                self.add_field(name=new_field_name,
+                               fields=results,
+                               padding_val=old_field.padding_val,
+                               is_input=old_field.is_input,
+                               is_target=old_field.is_target)
             else:
-                self.add_field(new_field_name, results)
+                self.add_field(name=new_field_name, fields=results)
         else:
             return results
 
