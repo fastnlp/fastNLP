@@ -3,61 +3,19 @@ from collections import defaultdict
 import torch
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.metrics import Evaluator
 from fastNLP.core.sampler import RandomSampler
-
-
-# logger = create_logger(__name__, "./train_test.log")
 
 
 class Tester(object):
     """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
 
-    def __init__(self, **kwargs):
-        """
-        :param kwargs: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
-        """
+    def __init__(self, batch_size, evaluator, use_cuda, save_path="./save/", **kwargs):
         super(Tester, self).__init__()
-        """
-            "default_args" provides default value for important settings.
-            The initialization arguments "kwargs" with the same key (name) will override the default value.
-            "kwargs" must have the same type as "default_args" on corresponding keys.
-            Otherwise, error will raise.
-        """
-        default_args = {"batch_size": 8,
-                        "use_cuda": False,
-                        "pickle_path": "./save/",
-                        "model_name": "dev_best_model.pkl",
-                        "evaluator": Evaluator()
-                        }
-        """
-            "required_args" is the collection of arguments that users must pass to Trainer explicitly.
-            This is used to warn users of essential settings in the training.
-            Specially, "required_args" does not have default value, so they have nothing to do with "default_args".
-        """
-        required_args = {}
 
-        for req_key in required_args:
-            if req_key not in kwargs:
-                raise ValueError("Tester lacks argument {}".format(req_key))
-
-        for key in default_args:
-            if key in kwargs:
-                if isinstance(kwargs[key], type(default_args[key])):
-                    default_args[key] = kwargs[key]
-                else:
-                    msg = "Argument %s type mismatch: expected %s while get %s" % (
-                        key, type(default_args[key]), type(kwargs[key]))
-                    raise ValueError(msg)
-            else:
-                # Tester doesn't care about extra arguments
-                pass
-        # print(default_args)
-
-        self.batch_size = default_args["batch_size"]
-        self.pickle_path = default_args["pickle_path"]
-        self.use_cuda = default_args["use_cuda"]
-        self._evaluator = default_args["evaluator"]
+        self.batch_size = batch_size
+        self.pickle_path = save_path
+        self.use_cuda = use_cuda
+        self._evaluator = evaluator
 
         self._model = None
         self.eval_history = []  # evaluation results of all batches
@@ -72,7 +30,7 @@ class Tester(object):
         self.mode(network, is_test=True)
         self.eval_history.clear()
         output, truths = defaultdict(list), defaultdict(list)
-        data_iterator = Batch(dev_data, self.batch_size, sampler=RandomSampler(), use_cuda=self.use_cuda)
+        data_iterator = Batch(dev_data, self.batch_size, sampler=RandomSampler(), as_numpy=False)
 
         with torch.no_grad():
             for batch_x, batch_y in data_iterator:

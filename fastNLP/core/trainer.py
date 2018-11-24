@@ -15,6 +15,8 @@ from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.sampler import RandomSampler
 from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.tester import Tester
+from fastNLP.core.utils import _build_args
+from fastNLP.core.utils import _check_arg_dict_list
 
 from fastNLP.core.utils import _check_arg_dict_list
 from fastNLP.core.utils import _build_args
@@ -78,7 +80,7 @@ class Trainer(object):
         epoch = 1
         while epoch <= self.n_epochs:
 
-            data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=RandomSampler())
+            data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=RandomSampler(), as_numpy=False)
 
             self._train_epoch(data_iterator, self.model, epoch, self.dev_data, start)
 
@@ -207,9 +209,9 @@ def best_eval_result(self, metrics):
 DEFAULT_CHECK_BATCH_SIZE = 2
 DEFAULT_CHECK_NUM_BATCH = 2
 
-IGNORE_CHECK_LEVEL=0
-WARNING_CHECK_LEVEL=1
-STRICT_CHECK_LEVEL=2
+IGNORE_CHECK_LEVEL = 0
+WARNING_CHECK_LEVEL = 1
+STRICT_CHECK_LEVEL = 2
 
 def _check_code(dataset, model, batch_size=DEFAULT_CHECK_BATCH_SIZE, dev_data=None, check_level=1):
     # check get_loss 方法
@@ -220,11 +222,20 @@ def _check_code(dataset, model, batch_size=DEFAULT_CHECK_BATCH_SIZE, dev_data=No
     batch_size = min(DEFAULT_CHECK_BATCH_SIZE, batch_size)
     batch = Batch(dataset=dataset, batch_size=batch_size, sampler=SequentialSampler())
     for batch_count, (batch_x, batch_y) in enumerate(batch):
-        _syn_model_data(model, batch_x, batch_y)
-        # forward check
-        if batch_count==0:
-            _check_forward_error(model=model, model_func=model.forward, check_level=check_level,
-                                 batch_x=batch_x)
+        if batch_count == 0:
+            check_res = _check_arg_dict_list(model.forward, batch_x)
+            _info_str = ''
+            if len(check_res.missing) > 0:
+                if check_level == WARNING_CHECK_LEVEL:
+                    for field_name in check_res.missing:
+                        if hasattr(dataset, field_name):
+                            _info_str += "{} "
+                    _info_str += "Missing argument: [{}] needed by '{}.forward' is not presented in the input.\n"
+                    _info_str += ""
+                    print("")
+            if len(check_res.unused) > 0:
+                if check_level == WARNING_CHECK_LEVEL:
+                    _info_str += ""
 
         refined_batch_x = _build_args(model.forward, **batch_x)
         output = model(**refined_batch_x)
@@ -233,10 +244,14 @@ def _check_code(dataset, model, batch_size=DEFAULT_CHECK_BATCH_SIZE, dev_data=No
 
         # loss check
         if batch_count == 0:
-            _check_loss_evaluate(model=model, model_func=model.get_loss, check_level=check_level,
-                                 output=output, batch_y=batch_y)
-        loss_input = _build_args(model.get_loss, **output, **batch_y)
-        loss = model.get_loss(**loss_input)
+           _dict = _check_arg_dict_list(model.loss, [output, batch_y])
+            if len(_dict) != 0:
+                pass
+        loss_input = _build_args(model.loss, **output, **batch_y)
+        loss = model.loss(**loss_input)
+        if batch_count == 0:
+            if isinstance(loss, torch.Tensor):
+                pass
 
         # check loss output
         if batch_count == 0:
@@ -248,8 +263,7 @@ def _check_code(dataset, model, batch_size=DEFAULT_CHECK_BATCH_SIZE, dev_data=No
                     model_name, loss.size()
                 ))
         loss.backward()
-        model.zero_grad()
-        if batch_count+1>=DEFAULT_CHECK_NUM_BATCH:
+        if batch_count + 1 >= DEFAULT_CHECK_BATCH_SIZE:
             break
     if check_level > IGNORE_CHECK_LEVEL:
         print('Finish checking training process.', flush=True)
@@ -407,14 +421,7 @@ if __name__ == '__main__':
 
     # trainer = Trainer(dataset, model)
 
-    _check_code(dataset=dataset, model=model, dev_data=dataset, check_level=2)
-
-    # _check_forward_error(model=model, model_func=model.forward, check_level=1,
-    #                     batch_x=fake_data_dict)
-
-    # import inspect
-    # print(inspect.getfullargspec(model.forward))
-
-
-
-
+               if len(_dict) != 0:
+                    pass
+            refined_batch_x = _build_args(model.forward, **batch_x)
+            output = model(**refined_batch_x)

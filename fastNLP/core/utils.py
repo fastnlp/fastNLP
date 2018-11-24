@@ -1,8 +1,8 @@
 import _pickle
-import os
 import inspect
-from collections import namedtuple
+import os
 from collections import Counter
+from collections import namedtuple
 
 CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed'], verbose=False)
 

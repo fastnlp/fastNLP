@@ -10,7 +10,7 @@ class Batch(object):
 
     """
 
-    def __init__(self, dataset, batch_size, sampler, as_numpy=False,):
+    def __init__(self, dataset, batch_size, sampler, as_numpy=False):
         """
 
         :param dataset: a DataSet object

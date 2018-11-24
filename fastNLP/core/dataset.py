@@ -1,6 +1,7 @@
 import numpy as np
 
 from fastNLP.core.fieldarray import FieldArray
+from fastNLP.core.instance import Instance
 
 _READERS = {}
 
@@ -27,16 +28,24 @@ class DataSet(object):
     """
 
     class Instance(object):
-        def __init__(self, dataset, idx=-1):
+        def __init__(self, dataset, idx=-1, **fields):
             self.dataset = dataset
             self.idx = idx
-            self.fields = None
+            self.fields = fields
 
         def __next__(self):
             self.idx += 1
             if self.idx >= len(self.dataset):
                 raise StopIteration
             return self
+
+        def add_field(self, field_name, field):
+            """Add a new field to the instance.
+
+            :param field_name: str, the name of the field.
+            :param field:
+            """
+            self.fields[field_name] = field
 
         def __getitem__(self, name):
             return self.dataset[name][self.idx]
@@ -46,13 +55,6 @@ class DataSet(object):
                 new_fields = [None] * len(self.dataset)
                 self.dataset.add_field(name, new_fields)
             self.dataset[name][self.idx] = val
-
-        def __getattr__(self, item):
-            if item == 'fields':
-                self.fields = {name: field[self.idx] for name, field in self.dataset.get_fields().items()}
-                return self.fields
-            else:
-                raise AttributeError('{} does not exist.'.format(item))
 
         def __repr__(self):
             return "\n".join(['{}: {}'.format(name, repr(self.dataset[name][self.idx])) for name
@@ -112,14 +114,13 @@ class DataSet(object):
                 self.field_arrays[name].append(field)
 
     def add_field(self, name, fields, padding_val=0, is_input=False, is_target=False):
-        """
+        """Add a new field to the DataSet.
         
-        :param str name:
-        :param fields:
-        :param int padding_val:
-        :param bool is_input:
-        :param bool is_target:
-        :return:
+        :param str name: the name of the field.
+        :param fields: a list of int, float, or other objects.
+        :param int padding_val: integer for padding.
+        :param bool is_input: whether this field is model input.
+        :param bool is_target: whether this field is label or target.
         """
         if len(self.field_arrays) != 0:
             assert len(self) == len(fields)
@@ -127,28 +128,43 @@ class DataSet(object):
                                              is_input=is_input)
 
     def delete_field(self, name):
+        """Delete a field based on the field name.
+
+        :param str name: the name of the field to be deleted.
+        """
         self.field_arrays.pop(name)
 
     def get_fields(self):
+        """Return all the fields with their names.
+
+        :return dict field_arrays: the internal data structure of DataSet.
+        """
         return self.field_arrays
 
-    def __getitem__(self, name):
-        if isinstance(name, int):
-            return self.Instance(self, idx=name)
-        elif isinstance(name, slice):
-            ds = DataSet()
-            for field in self.field_arrays.values():
-                ds.add_field(name=field.name,
-                             fields=field.content[name],
-                             padding_val=field.padding_val,
-                             need_tensor=field.need_tensor,
-                             is_target=field.is_target)
-            return ds
+    def __getitem__(self, idx):
+        """
 
-        elif isinstance(name, str):
-            return self.field_arrays[name]
+        :param idx: can be int, slice, or str.
+        :return: If `idx` is int, return an Instance object.
+                If `idx` is slice, return a DataSet object.
+                If `idx` is str, it must be a field name, return the field.
+
+        """
+        if isinstance(idx, int):
+            return self.Instance(self, idx, **{name: self.field_arrays[name][idx] for name in self.field_arrays})
+        elif isinstance(idx, slice):
+            data_set = DataSet()
+            for field in self.field_arrays.values():
+                data_set.add_field(name=field.name,
+                                   fields=field.content[idx],
+                                   padding_val=field.padding_val,
+                                   is_input=field.is_input,
+                                   is_target=field.is_target)
+            return data_set
+        elif isinstance(idx, str):
+            return self.field_arrays[idx]
         else:
-            raise KeyError
+            raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
 
     def __len__(self):
         if len(self.field_arrays) == 0:
@@ -208,6 +224,7 @@ class DataSet(object):
             pass
         try:
             reader_cls = _READERS[item]
+
             # add read_*data() support
             def _read(*args, **kwargs):
                 data = reader_cls().load(*args, **kwargs)
@@ -231,6 +248,12 @@ class DataSet(object):
         return wrapper
 
     def apply(self, func, new_field_name=None):
+        """Apply a function to every instance of the DataSet.
+
+        :param func: a function that takes an instance as input.
+        :param str new_field_name: If not None, results of the function will be stored as a new field.
+        :return results: returned values of the function over all instances.
+        """
         results = []
         for ins in self:
             results.append(func(ins))
@@ -247,28 +270,24 @@ class DataSet(object):
         else:
             return results
 
-    def split(self, test_ratio):
-        assert isinstance(test_ratio, float)
+    def split(self, dev_ratio):
+        """Split the dataset into training and development(validation) set.
+
+        :param float dev_ratio: the ratio of test set in all data.
+        :return DataSet train_set: the training set
+                DataSet dev_set: the development set
+        """
+        assert isinstance(dev_ratio, float)
+        assert 0 < dev_ratio < 1
         all_indices = [_ for _ in range(len(self))]
         np.random.shuffle(all_indices)
-        test_indices = all_indices[:int(test_ratio)]
-        train_indices = all_indices[int(test_ratio):]
-        test_set = DataSet()
+        split = int(dev_ratio * len(self))
+        dev_indices = all_indices[:split]
+        train_indices = all_indices[split:]
+        dev_set = DataSet()
         train_set = DataSet()
-        for idx in test_indices:
-            test_set.append(self[idx])
+        for idx in dev_indices:
+            dev_set.append(self[idx])
         for idx in train_indices:
             train_set.append(self[idx])
-        return train_set, test_set
-
-
-if __name__ == '__main__':
-    from fastNLP.core.instance import Instance
-
-    d = DataSet({'a': list('abc')})
-    _ = d.a
-    d.apply(lambda x: x['a'])
-    print(d[1])
-    import copy
-    dd = copy.deepcopy(d)
-    print(dd.a)
+        return train_set, dev_set
