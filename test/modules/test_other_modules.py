@@ -14,7 +14,7 @@ class TestGroupNorm(unittest.TestCase):
 
 class TestLayerNormalization(unittest.TestCase):
     def test_case_1(self):
-        ln = LayerNormalization(d_hid=5, eps=2e-3)
+        ln = LayerNormalization(layer_size=5, eps=2e-3)
         x = torch.randn((20, 50, 5))
         y = ln(x)
 

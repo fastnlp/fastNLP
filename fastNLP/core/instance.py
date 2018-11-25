@@ -11,7 +11,7 @@ class Instance(object):
     def __init__(self, **fields):
         """
 
-        :param fields: a dict of (field name: field)
+        :param fields: a dict of (str: list).
         """
         self.fields = fields
 

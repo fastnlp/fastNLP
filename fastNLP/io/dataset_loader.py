@@ -1,7 +1,6 @@
 import os
 
 from fastNLP.core.dataset import DataSet
-from fastNLP.core.field import *
 from fastNLP.core.instance import Instance
 from fastNLP.io.base_loader import BaseLoader
 
@@ -87,6 +86,7 @@ class DataSetLoader(BaseLoader):
         """
         raise NotImplementedError
 
+
 @DataSet.set_reader('read_raw')
 class RawDataSetLoader(DataSetLoader):
     def __init__(self):
@@ -101,6 +101,7 @@ class RawDataSetLoader(DataSetLoader):
 
     def convert(self, data):
         return convert_seq_dataset(data)
+
 
 @DataSet.set_reader('read_pos')
 class POSDataSetLoader(DataSetLoader):
@@ -171,6 +172,7 @@ class POSDataSetLoader(DataSetLoader):
         """
         return convert_seq2seq_dataset(data)
 
+
 @DataSet.set_reader('read_tokenize')
 class TokenizeDataSetLoader(DataSetLoader):
     """
@@ -230,6 +232,7 @@ class TokenizeDataSetLoader(DataSetLoader):
     def convert(self, data):
         return convert_seq2seq_dataset(data)
 
+
 @DataSet.set_reader('read_class')
 class ClassDataSetLoader(DataSetLoader):
     """Loader for classification data sets"""
@@ -267,6 +270,7 @@ class ClassDataSetLoader(DataSetLoader):
 
     def convert(self, data):
         return convert_seq2tag_dataset(data)
+
 
 @DataSet.set_reader('read_conll')
 class ConllLoader(DataSetLoader):
@@ -309,6 +313,7 @@ class ConllLoader(DataSetLoader):
     def convert(self, data):
         pass
 
+
 @DataSet.set_reader('read_lm')
 class LMDataSetLoader(DataSetLoader):
     """Language Model Dataset Loader
@@ -344,6 +349,7 @@ class LMDataSetLoader(DataSetLoader):
 
     def convert(self, data):
         pass
+
 
 @DataSet.set_reader('read_people_daily')
 class PeopleDailyCorpusLoader(DataSetLoader):

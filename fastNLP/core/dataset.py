@@ -64,6 +64,7 @@ class DataSet(object):
         """
 
         :param data: a dict or a list. If it is a dict, the key is the name of a field and the value is the field.
+                All values must be of the same length.
                 If it is a list, it must be a list of Instance objects.
         """
         self.field_arrays = {}

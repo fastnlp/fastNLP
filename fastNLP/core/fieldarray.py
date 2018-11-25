@@ -23,8 +23,7 @@ class FieldArray(object):
         self.dtype = None
 
     def __repr__(self):
-        # TODO
-        return '{}: {}'.format(self.name, self.content.__repr__())
+        return "FieldArray {}: {}".format(self.name, self.content.__repr__())
 
     def append(self, val):
         self.content.append(val)

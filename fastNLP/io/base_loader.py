@@ -1,5 +1,6 @@
-import os
 import _pickle as pickle
+import os
+
 
 class BaseLoader(object):
 
