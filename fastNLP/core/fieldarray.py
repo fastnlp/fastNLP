@@ -47,7 +47,7 @@ class FieldArray(object):
         assert self.is_input is True or self.is_target is True
         batch_size = len(indices)
         # TODO 当这个fieldArray是seq_length这种只有一位的内容时，不需要padding，需要再讨论一下
-        if isinstance(self.content[0], int) or isinstance(self.content[0], float):
+        if not isiterable(self.content[0]):
             if self.dtype is None:
                 self.dtype = np.int64 if isinstance(self.content[0], int) else np.double
             array = np.array([self.content[i] for i in indices], dtype=self.dtype)
@@ -63,3 +63,10 @@ class FieldArray(object):
 
     def __len__(self):
         return len(self.content)
+
+def isiterable(content):
+    try:
+        _ = (e for e in content)
+    except TypeError:
+        return False
+    return True

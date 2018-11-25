@@ -4,7 +4,7 @@ import inspect
 from collections import namedtuple
 from collections import Counter
 
-CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed'], verbose=True)
+CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed'], verbose=False)
 
 
 def save_pickle(obj, pickle_path, file_name):
@@ -55,8 +55,11 @@ def _build_args(func, **kwargs):
     if spect.varkw is not None:
         return kwargs
     needed_args = set(spect.args)
-    start_idx = len(spect.args) - len(spect.defaults)
-    output = {name: default for name, default in zip(spect.args[start_idx:], spect.defaults)}
+    defaults = []
+    if spect.defaults is not None:
+        defaults = [arg for arg in spect.defaults]
+    start_idx = len(spect.args) - len(defaults)
+    output = {name: default for name, default in zip(spect.args[start_idx:], defaults)}
     output.update({name: val for name, val in kwargs.items() if name in needed_args})
     return output
 
@@ -71,8 +74,11 @@ def _check_arg_dict_list(func, args):
     assert len(arg_dict_list) > 0 and isinstance(arg_dict_list[0], dict)
     spect = inspect.getfullargspec(func)
     assert spect.varargs is None, 'Positional Arguments({}) are not supported.'.format(spect.varargs)
-    all_args = set(spect.args)
-    start_idx = len(spect.args) - len(spect.defaults)
+    all_args = set([arg for arg in spect.args if arg!='self'])
+    defaults = []
+    if spect.defaults is not None:
+        defaults = [arg for arg in spect.defaults]
+    start_idx = len(spect.args) - len(defaults)
     default_args = set(spect.args[start_idx:])
     require_args = all_args - default_args
     input_arg_count = Counter()
@@ -87,3 +93,23 @@ def _check_arg_dict_list(func, args):
                     duplicated=duplicated,
                     required=list(require_args),
                     all_needed=list(all_args))
+
+def get_func_signature(func):
+    # function signature, does not include self.
+    signature = inspect.signature(func)
+    signature_str = str(signature)
+    return signature_str
+
+
+# move data to model's device
+import torch
+def _syn_model_data(model, *args):
+    assert len(model.state_dict())!=0, "This model has no parameter."
+    device = model.parameters().__next__().device
+    for arg in args:
+        if isinstance(arg, dict):
+            for key, value in arg.items():
+                if isinstance(value, torch.Tensor):
+                    arg[key] = value.to(device)
+        else:
+            raise ValueError("Only support dict type right now.")
