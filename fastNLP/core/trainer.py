@@ -287,7 +287,8 @@ def _check_code(dataset, model, batch_size=DEFAULT_CHECK_BATCH_SIZE, dev_data=No
                     break
             _check_loss_evaluate(model=model, model_func=model.evaluate, check_level=check_level,
                                  output=outputs, batch_y=truths)
-        print("Finish checking evaluate process.", flush=True)
+        if check_level > IGNORE_CHECK_LEVEL:
+            print("Finish checking evaluate process.", flush=True)
 
 
 def _check_forward_error(model, model_func, check_level, batch_x):
@@ -318,7 +319,7 @@ def _check_forward_error(model, model_func, check_level, batch_x):
             # TODO 这里可能需要自定义一些Error类型
             raise ValueError(_unused)
         elif check_level == WARNING_CHECK_LEVEL:
-            warnings.warn(message=_unused, )
+            warnings.warn(message=_unused)
 
 def _check_loss_evaluate(model, model_func, check_level, output, batch_y):
     check_res = _check_arg_dict_list(model_func, [output, batch_y])
@@ -327,7 +328,8 @@ def _check_loss_evaluate(model, model_func, check_level, output, batch_y):
     _duplicated = ''
     signature_str = get_func_signature(model_func)
     func_signature = "{}.{}(self, {})".format(model.__class__.__name__, model_func.__name__, signature_str[1:-1])
-    forward_func_signature = "{}.forward(self, {})".format(model.__class__.__name__, signature_str[1:-1])
+    forward_signature_str = get_func_signature(model.forward)
+    forward_func_signature = "{}.forward(self, {})".format(model.__class__.__name__, forward_signature_str[1:-1])
     model_name = model.__class__.__name__
     if len(check_res.missing)>0:
         _missing = "Function {} misses argument {}, only provided with {}(from {}) and " \
@@ -343,13 +345,13 @@ def _check_loss_evaluate(model, model_func, check_level, output, batch_y):
         _unused += "in function {}.\n".format(func_signature)
     if len(check_res.duplicated)>0:
         if len(check_res.duplicated) > 1:
-            _duplicated = "Duplicated keys: {} are detected in function {}. Don't set {} as target and output " \
+            _duplicated = "Duplicated keys {} are detected when calling function {}. \nDon't set {} as target and output " \
                           "them in {} at the same time.\n".format(check_res.duplicated,
                                                                             func_signature,
                                                                             check_res.duplicated,
                                                                   forward_func_signature)
         else:
-            _duplicated = "Duplicated key: {} is detected in function {}. Don't set {} as target and output " \
+            _duplicated = "Duplicated key {} is detected when calling function {}. \nDon't set {} as target and output " \
                           "it in {} at the same time.\n".format(check_res.duplicated,
                                                                 func_signature,
                                                                 check_res.duplicated,
@@ -391,7 +393,7 @@ if __name__ == '__main__':
         def __init__(self):
             super().__init__()
 
-            self. fc1 = nn.Linear(10, 2)
+            self.fc1 = nn.Linear(10, 2)
 
         def forward(self, words, chars):
             output = {}
@@ -418,7 +420,13 @@ if __name__ == '__main__':
 
     # trainer = Trainer(dataset, model)
 
-               if len(_dict) != 0:
-                    pass
-            refined_batch_x = _build_args(model.forward, **batch_x)
-            output = model(**refined_batch_x)
+   _check_code(dataset=dataset, model=model, dev_data=dataset, check_level=1)
+
+    # _check_forward_error(model=model, model_func=model.forward, check_level=1,
+    #                     batch_x=fake_data_dict)
+
+    # import inspect
+    # print(inspect.getfullargspec(model.forward))
+
+
+
