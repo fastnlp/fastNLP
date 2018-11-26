@@ -1,4 +1,5 @@
 import numpy as np
+from copy import copy
 
 from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.instance import Instance
@@ -37,7 +38,7 @@ class DataSet(object):
             self.idx += 1
             if self.idx >= len(self.dataset):
                 raise StopIteration
-            return self
+            return copy(self)
 
         def add_field(self, field_name, field):
             """Add a new field to the instance.
@@ -269,6 +270,12 @@ class DataSet(object):
                 self.add_field(name=new_field_name, fields=results)
         else:
             return results
+
+    def drop(self, func):
+        results = [ins for ins in self if not func(ins)]
+        for name, old_field in self.field_arrays.items():
+            self.field_arrays[name].content = [ins[name] for ins in results]
+            # print(self.field_arrays[name])
 
     def split(self, dev_ratio):
         """Split the dataset into training and development(validation) set.

@@ -34,8 +34,6 @@ class ConvMaxpool(nn.Module):
                 bias=bias)
                 for oc, ks in zip(out_channels, kernel_sizes)])
 
-            for conv in self.convs:
-                xavier_uniform_(conv.weight)  # weight initialization
         else:
             raise Exception(
                 'Incorrect kernel sizes: should be list, tuple or int')
