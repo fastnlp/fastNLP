@@ -95,10 +95,22 @@ def _check_arg_dict_list(func, args):
                     all_needed=list(all_args))
 
 def get_func_signature(func):
-    # function signature, does not include self.
-    signature = inspect.signature(func)
-    signature_str = str(signature)
-    return signature_str
+    # can only be used in function or class method
+    if inspect.ismethod(func):
+        class_name = func.__self__.__class__.__name__
+        signature = inspect.signature(func)
+        signature_str = str(signature)
+        if len(signature_str)>2:
+            _self = '(self, '
+        else:
+            _self = '(self'
+        signature_str = class_name + '.' + func.__name__ + _self + signature_str[1:]
+        return signature_str
+    elif inspect.isfunction(func):
+        signature = inspect.signature(func)
+        signature_str = str(signature)
+        signature_str = func.__name__ + signature_str
+        return signature_str
 
 
 # move data to model's device
