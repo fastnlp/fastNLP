@@ -1,10 +1,11 @@
+import itertools
 from collections import defaultdict
 
 import torch
 
 from fastNLP.core.batch import Batch
 from fastNLP.core.sampler import RandomSampler
-
+from fastNLP.core.utils import _build_args
 
 class Tester(object):
     """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
@@ -40,7 +41,12 @@ class Tester(object):
                     output[k].append(v)
                 for k, v in batch_y.items():
                     truths[k].append(v)
-            eval_results = self.evaluate(**output, **truths)
+            for k, v in output.items():
+                output[k] = itertools.chain(*v)
+            for k, v in truths.items():
+                truths[k] = itertools.chain(*v)
+            args = _build_args(self._evaluator, **output, **truths)
+            eval_results = self._evaluator(**args)
         print("[tester] {}".format(self.print_eval_results(eval_results)))
         self.mode(network, is_test=False)
         self.metrics = eval_results
@@ -60,13 +66,9 @@ class Tester(object):
 
     def data_forward(self, network, x):
         """A forward pass of the model. """
+        x = _build_args(network.forward, **x)
         y = network(**x)
         return y
-
-    def evaluate(self, **kwargs):
-        """Compute evaluation metrics.
-        """
-        return self._evaluator(**kwargs)
 
     def print_eval_results(self, results):
         """Override this method to support more print formats.
