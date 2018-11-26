@@ -293,7 +293,7 @@ class DataSet(object):
         return train_set, dev_set
 
     @classmethod
-    def read_csv(cls, csv_path, headers=None, sep='\t'):
+    def read_csv(cls, csv_path, headers=None, sep='\t', dropna=True):
         with open(csv_path, 'r') as f:
             start_idx = 0
             if headers is None:
@@ -307,8 +307,13 @@ class DataSet(object):
                 _dict[col] = []
             for line_idx, line in enumerate(f, start_idx):
                 contents = line.split(sep)
-                assert len(contents)==len(headers), "Line {} has {} parts, while header has {}."\
-                    .format(line_idx, len(contents), len(headers))
+                if len(contents)!=len(headers):
+                    if dropna:
+                        continue
+                    else:
+                        #TODO change error type
+                        raise ValueError("Line {} has {} parts, while header has {} parts."\
+                            .format(line_idx, len(contents), len(headers)))
                 for header, content in zip(headers, contents):
                     _dict[header].append(content)
         return cls(_dict)
