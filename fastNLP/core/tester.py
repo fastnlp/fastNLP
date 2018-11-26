@@ -10,12 +10,11 @@ from fastNLP.core.utils import _build_args
 class Tester(object):
     """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
 
-    def __init__(self, data, model, batch_size, use_cuda, save_path="./save/", **kwargs):
+    def __init__(self, data, model, batch_size=16, use_cuda=False):
         super(Tester, self).__init__()
         self.use_cuda = use_cuda
         self.data = data
         self.batch_size = batch_size
-        self.pickle_path = save_path
         if torch.cuda.is_available() and self.use_cuda:
             self._model = model.cuda()
         else:
@@ -53,7 +52,6 @@ class Tester(object):
             eval_results = self._evaluator(**args)
         print("[tester] {}".format(self.print_eval_results(eval_results)))
         self.mode(network, is_test=False)
-        self.metrics = eval_results
         return eval_results
 
     def mode(self, model, is_test=False):
