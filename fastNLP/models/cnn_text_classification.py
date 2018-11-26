@@ -48,16 +48,16 @@ class CNNText(torch.nn.Module):
 
     def predict(self, word_seq):
         output = self(word_seq)
-        _, predict = output.max(dim=1)
+        _, predict = output['output'].max(dim=1)
         return {'predict': predict}
 
     def get_loss(self, output, label_seq):
         return self._loss(output, label_seq)
 
     def evaluate(self, predict, label_seq):
-        predict, label_seq = torch.stack(predict, dim=0), torch.stack(label_seq, dim=0)
+        predict, label_seq = torch.stack(tuple(predict), dim=0), torch.stack(tuple(label_seq), dim=0)
         predict, label_seq = predict.squeeze(), label_seq.squeeze()
         correct = (predict == label_seq).long().sum().item()
         total = label_seq.size(0)
-        return 1.0 * correct / total
+        return {'acc': 1.0 * correct / total}
 

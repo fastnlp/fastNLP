@@ -10,28 +10,32 @@ from fastNLP.core.utils import _build_args
 class Tester(object):
     """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
 
-    def __init__(self, batch_size, evaluator, use_cuda, save_path="./save/", **kwargs):
+    def __init__(self, data, model, batch_size, use_cuda, save_path="./save/", **kwargs):
         super(Tester, self).__init__()
-
+        self.use_cuda = use_cuda
+        self.data = data
         self.batch_size = batch_size
         self.pickle_path = save_path
-        self.use_cuda = use_cuda
-        self._evaluator = evaluator
-
-        self._model = None
+        if torch.cuda.is_available() and self.use_cuda:
+            self._model = model.cuda()
+        else:
+            self._model = model
+        if hasattr(self._model, 'predict'):
+            assert callable(self._model.predict)
+            self._predict_func = self._model.predict
+        else:
+            self._predict_func = self._model
+        assert hasattr(model, 'evaluate')
+        self._evaluator = model.evaluate
         self.eval_history = []  # evaluation results of all batches
 
-    def test(self, network, dev_data):
-        if torch.cuda.is_available() and self.use_cuda:
-            self._model = network.cuda()
-        else:
-            self._model = network
-
+    def test(self):
         # turn on the testing mode; clean up the history
+        network = self._model
         self.mode(network, is_test=True)
         self.eval_history.clear()
         output, truths = defaultdict(list), defaultdict(list)
-        data_iterator = Batch(dev_data, self.batch_size, sampler=RandomSampler(), as_numpy=False)
+        data_iterator = Batch(self.data, self.batch_size, sampler=RandomSampler(), as_numpy=False)
 
         with torch.no_grad():
             for batch_x, batch_y in data_iterator:
@@ -67,7 +71,7 @@ class Tester(object):
     def data_forward(self, network, x):
         """A forward pass of the model. """
         x = _build_args(network.forward, **x)
-        y = network(**x)
+        y = self._predict_func(**x)
         return y
 
     def print_eval_results(self, results):
