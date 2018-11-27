@@ -19,7 +19,9 @@ from fastNLP.api.pipeline import Pipeline
 from fastNLP.core.metrics import SeqLabelEvaluator2
 from fastNLP.core.tester import Tester
 
+# TODO add pretrain urls
 model_urls = {
+
 }
 
 
@@ -182,8 +184,6 @@ class CWS(API):
         return f1, pre, rec
 
 
-<<<<<<< HEAD
-=======
 class Parser(API):
     def __init__(self, model_path=None, device='cpu'):
         super(Parser, self).__init__()
@@ -250,7 +250,6 @@ class Parser(API):
         return uas
 
 
->>>>>>> b182b39... * fixing unit tests
 class Analyzer:
     def __init__(self, seg=True, pos=True, parser=True, device='cpu'):
 
@@ -265,13 +264,9 @@ class Analyzer:
         if parser:
             self.parser = None
 
-<<<<<<< HEAD
-    def predict(self, content):
-=======
     def predict(self, content, seg=False, pos=False, parser=False):
         if seg is False and pos is False and parser is False:
             seg = True
->>>>>>> b182b39... * fixing unit tests
         output_dict = {}
         if self.seg:
             seg_output = self.cws.predict(content)
@@ -310,11 +305,6 @@ if __name__ == "__main__":
     # print(pos.predict(s))
 
     # cws_model_path = '../../reproduction/chinese_word_segment/models/cws_crf.pkl'
-<<<<<<< HEAD
-    cws = CWS(device='cpu')
-    s = ['本品是一个抗酸抗胆汁的胃黏膜保护剂' ,
-        '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
-=======
     # cws = CWS(device='cpu')
     # s = ['本品是一个抗酸抗胆汁的胃黏膜保护剂' ,
     #     '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
@@ -326,7 +316,6 @@ if __name__ == "__main__":
     # print(parser.test('/Users/yh/Desktop/test_data/parser_test2.conll'))
     s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
          '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
->>>>>>> b182b39... * fixing unit tests
          '那么这款无人机到底有多厉害？']
     print(cws.test('/Users/yh/Desktop/test_data/small_test.conll'))
     print(cws.predict(s))
