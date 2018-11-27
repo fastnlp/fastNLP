@@ -4,6 +4,7 @@ from datetime import datetime
 import warnings
 from collections import defaultdict
 import os
+import itertools
 import shutil
 
 from tensorboardX import SummaryWriter
@@ -121,10 +122,7 @@ class Trainer(object):
         for batch_x, batch_y in data_iterator:
             prediction = self.data_forward(model, batch_x)
 
-            # TODO: refactor self.get_loss
-            loss = prediction["loss"] if "loss" in prediction else self.get_loss(prediction, batch_y)
-            # acc = self._evaluator([{"predict": prediction["predict"]}], [{"truth": batch_x["truth"]}])
-
+            loss = self.get_loss(prediction, batch_y)
             self.grad_backward(loss)
             self.update()
             self._summary_writer.add_scalar("loss", loss.item(), global_step=self.step)
@@ -133,7 +131,7 @@ class Trainer(object):
                     self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.step)
                     # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
                     # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
-           if n_print > 0 and self.step % n_print == 0:
+            if self.print_every > 0 and self.step % self.print_every == 0:
                 end = time.time()
                 diff = timedelta(seconds=round(end - start))
                 print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.6} time:  {}".format(
@@ -241,7 +239,7 @@ def _check_code(dataset, model, batch_size=DEFAULT_CHECK_BATCH_SIZE, dev_data=No
 
     batch = Batch(dataset=dataset, batch_size=batch_size, sampler=SequentialSampler())
     for batch_count, (batch_x, batch_y) in enumerate(batch):
-       _syn_model_data(model, batch_x, batch_y)
+        _syn_model_data(model, batch_x, batch_y)
         # forward check
         if batch_count==0:
             _check_forward_error(model_func=model.forward, check_level=check_level,
@@ -269,7 +267,8 @@ def _check_code(dataset, model, batch_size=DEFAULT_CHECK_BATCH_SIZE, dev_data=No
                     model_name, loss.size()
                 ))
         loss.backward()
-        if batch_count + 1 >= DEFAULT_CHECK_BATCH_SIZE:
+        model.zero_grad()
+        if batch_count+1>=DEFAULT_CHECK_NUM_BATCH:
             break
 
     if dev_data is not None:

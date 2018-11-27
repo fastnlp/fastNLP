@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import numpy as np
 
@@ -141,7 +140,6 @@ class AdvSeqLabel(SeqLabeling):
             idx_sort = idx_sort.cuda()
             idx_unsort = idx_unsort.cuda()
             self.mask = self.mask.cuda()
-            truth = truth.cuda() if truth is not None else None
 
         x = self.Embedding(word_seq)
         x = self.norm1(x)

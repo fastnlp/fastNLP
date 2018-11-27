@@ -313,9 +313,14 @@ class DataSet(object):
             for col in headers:
                 _dict[col] = []
             for line_idx, line in enumerate(f, start_idx):
-                contents = line.rstrip('\r\n').split(sep)
-                assert len(contents)==len(headers), "Line {} has {} parts, while header has {}."\
-                    .format(line_idx, len(contents), len(headers))
+                contents = line.split(sep)
+                if len(contents)!=len(headers):
+                    if dropna:
+                        continue
+                    else:
+                        #TODO change error type
+                        raise ValueError("Line {} has {} parts, while header has {} parts."\
+                            .format(line_idx, len(contents), len(headers)))
                 for header, content in zip(headers, contents):
                     _dict[header].append(content)
         return cls(_dict)

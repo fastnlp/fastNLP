@@ -6,6 +6,7 @@ warnings.filterwarnings('ignore')
 import os
 
 from fastNLP.core.dataset import DataSet
+
 from fastNLP.api.model_zoo import load_url
 from fastNLP.api.processor import ModelProcessor
 from reproduction.chinese_word_segment.cws_io.cws_reader import ConlluCWSReader
@@ -120,7 +121,7 @@ class POS(API):
         f1 = round(test_result['F'] * 100, 2)
         pre = round(test_result['P'] * 100, 2)
         rec = round(test_result['R'] * 100, 2)
-        print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1, pre, rec))
+        # print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1, pre, rec))
 
         return f1, pre, rec
 
@@ -179,7 +180,7 @@ class CWS(API):
         f1 = round(f1 * 100, 2)
         pre = round(pre * 100, 2)
         rec = round(rec * 100, 2)
-        print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1, pre, rec))
+        # print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1, pre, rec))
 
         return f1, pre, rec
 
@@ -251,30 +252,23 @@ class Parser(API):
 
 
 class Analyzer:
-    def __init__(self, seg=True, pos=True, parser=True, device='cpu'):
+    def __init__(self, device='cpu'):
 
-        self.seg = seg
-        self.pos = pos
-        self.parser = parser
-
-        if self.seg:
-            self.cws = CWS(device=device)
-        if self.pos:
-            self.pos = POS(device=device)
-        if parser:
-            self.parser = None
+        self.cws = CWS(device=device)
+        self.pos = POS(device=device)
+        self.parser = Parser(device=device)
 
     def predict(self, content, seg=False, pos=False, parser=False):
         if seg is False and pos is False and parser is False:
             seg = True
         output_dict = {}
-        if self.seg:
+        if seg:
             seg_output = self.cws.predict(content)
             output_dict['seg'] = seg_output
-        if self.pos:
+        if pos:
             pos_output = self.pos.predict(content)
             output_dict['pos'] = pos_output
-        if self.parser:
+        if parser:
             parser_output = self.parser.predict(content)
             output_dict['parser'] = parser_output
 
@@ -301,7 +295,7 @@ if __name__ == "__main__":
     # s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。' ,
     #     '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
     #      '那么这款无人机到底有多厉害？']
-    # print(pos.test('/Users/yh/Desktop/test_data/small_test.conll'))
+    # print(pos.test('/Users/yh/Desktop/test_data/pos_test.conll'))
     # print(pos.predict(s))
 
     # cws_model_path = '../../reproduction/chinese_word_segment/models/cws_crf.pkl'
@@ -317,7 +311,4 @@ if __name__ == "__main__":
     s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
          '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
          '那么这款无人机到底有多厉害？']
-    print(cws.test('/Users/yh/Desktop/test_data/small_test.conll'))
-    print(cws.predict(s))
-
-
+    print(parser.predict(s))
