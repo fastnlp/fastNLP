@@ -1,13 +1,4 @@
-import os
 import unittest
-
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.metrics import SeqLabelEvaluator
-from fastNLP.core.field import TextField, LabelField
-from fastNLP.core.instance import Instance
-from fastNLP.core.optimizer import Optimizer
-from fastNLP.core.trainer import SeqLabelTrainer
-from fastNLP.models.sequence_modeling import SeqLabeling
 
 import fastNLP.core.loss as loss
 import math
