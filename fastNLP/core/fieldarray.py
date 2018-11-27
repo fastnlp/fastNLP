@@ -20,6 +20,7 @@ class FieldArray(object):
         self.padding_val = padding_val
         self.is_target = is_target
         self.is_input = is_input
+        # TODO: auto detect dtype
         self.dtype = None
 
     def __repr__(self):
