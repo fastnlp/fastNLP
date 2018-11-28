@@ -13,7 +13,7 @@ with open('requirements.txt', encoding='utf-8') as f:
 
 setup(
     name='fastNLP',
-    version='0.1.0',
+    version='0.1.1',
     description='fastNLP: Deep Learning Toolkit for NLP, developed by Fudan FastNLP Team',
     long_description=readme,
     license=license,

@@ -31,12 +31,12 @@ class GroupNorm(nn.Module):
 class LayerNormalization(nn.Module):
     """ Layer normalization module """
 
-    def __init__(self, d_hid, eps=1e-3):
+    def __init__(self, layer_size, eps=1e-3):
         super(LayerNormalization, self).__init__()
 
         self.eps = eps
-        self.a_2 = nn.Parameter(torch.ones(d_hid), requires_grad=True)
-        self.b_2 = nn.Parameter(torch.zeros(d_hid), requires_grad=True)
+        self.a_2 = nn.Parameter(torch.ones(1, layer_size, requires_grad=True))
+        self.b_2 = nn.Parameter(torch.zeros(1, layer_size, requires_grad=True))
 
     def forward(self, z):
         if z.size(1) == 1:
@@ -44,9 +44,8 @@ class LayerNormalization(nn.Module):
 
         mu = torch.mean(z, keepdim=True, dim=-1)
         sigma = torch.std(z, keepdim=True, dim=-1)
-        ln_out = (z - mu.expand_as(z)) / (sigma.expand_as(z) + self.eps)
-        ln_out = ln_out * self.a_2.expand_as(ln_out) + self.b_2.expand_as(ln_out)
-
+        ln_out = (z - mu) / (sigma + self.eps)
+        ln_out = ln_out * self.a_2 + self.b_2
         return ln_out
 
 

@@ -1,160 +1,326 @@
-import random
-import sys
-from collections import defaultdict
-from copy import deepcopy
+import numpy as np
+from copy import copy
 
-from fastNLP.core.field import TextField, LabelField
+from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.instance import Instance
-from fastNLP.core.vocabulary import Vocabulary
 
 _READERS = {}
 
-class DataSet(list):
-    """A DataSet object is a list of Instance objects.
+
+def construct_dataset(sentences):
+    """Construct a data set from a list of sentences.
+
+    :param sentences: list of list of str
+    :return dataset: a DataSet object
+    """
+    dataset = DataSet()
+    for sentence in sentences:
+        instance = Instance()
+        instance['raw_sentence'] = sentence
+        dataset.append(instance)
+    return dataset
+
+
+class DataSet(object):
+    """DataSet is the collection of examples.
+    DataSet provides instance-level interface. You can append and access an instance of the DataSet.
+    However, it stores data in a different way: Field-first, Instance-second.
 
     """
 
-    def __init__(self, name="", instances=None):
+    class Instance(object):
+        def __init__(self, dataset, idx=-1, **fields):
+            self.dataset = dataset
+            self.idx = idx
+            self.fields = fields
+
+        def __next__(self):
+            self.idx += 1
+            if self.idx >= len(self.dataset):
+                raise StopIteration
+            return copy(self)
+
+        def add_field(self, field_name, field):
+            """Add a new field to the instance.
+
+            :param field_name: str, the name of the field.
+            :param field:
+            """
+            self.fields[field_name] = field
+
+        def __getitem__(self, name):
+            return self.dataset[name][self.idx]
+
+        def __setitem__(self, name, val):
+            if name not in self.dataset:
+                new_fields = [None] * len(self.dataset)
+                self.dataset.add_field(name, new_fields)
+            self.dataset[name][self.idx] = val
+
+        def __repr__(self):
+            return "\n".join(['{}: {}'.format(name, repr(self.dataset[name][self.idx])) for name
+                              in self.dataset.get_fields().keys()])
+
+    def __init__(self, data=None):
         """
 
-        :param name: str, the name of the dataset. (default: "")
-        :param instances: list of Instance objects. (default: None)
+        :param data: a dict or a list. If it is a dict, the key is the name of a field and the value is the field.
+                All values must be of the same length.
+                If it is a list, it must be a list of Instance objects.
         """
-        list.__init__([])
-        self.name = name
-        self.origin_len = None
-        if instances is not None:
-            self.extend(instances)
+        self.field_arrays = {}
+        if data is not None:
+            if isinstance(data, dict):
+                length_set = set()
+                for key, value in data.items():
+                    length_set.add(len(value))
+                assert len(length_set) == 1, "Arrays must all be same length."
+                for key, value in data.items():
+                    self.add_field(name=key, fields=value)
+            elif isinstance(data, list):
+                for ins in data:
+                    assert isinstance(ins, Instance), "Must be Instance type, not {}.".format(type(ins))
+                    self.append(ins)
 
-    def index_all(self, vocab):
-        for ins in self:
-            ins.index_all(vocab)
-        return self
+            else:
+                raise ValueError("data only be dict or list type.")
 
-    def index_field(self, field_name, vocab):
-        if isinstance(field_name, str):
-            field_list = [field_name]
-            vocab_list = [vocab]
+    def __contains__(self, item):
+        return item in self.field_arrays
+
+    def __iter__(self):
+        return self.Instance(self)
+
+    def _convert_ins(self, ins_list):
+        if isinstance(ins_list, list):
+            for ins in ins_list:
+                self.append(ins)
         else:
-            classes = (list, tuple)
-            assert isinstance(field_name, classes) and isinstance(vocab, classes) and len(field_name) == len(vocab)
-            field_list = field_name
-            vocab_list = vocab
+            self.append(ins_list)
 
-        for name, vocabs in zip(field_list, vocab_list):
-            for ins in self:
-                ins.index_field(name, vocabs)
-        return self
+    def append(self, ins):
+        """Add an instance to the DataSet.
+        If the DataSet is not empty, the instance must have the same field names as the rest instances in the DataSet.
 
-    def to_tensor(self, idx: int, padding_length: dict):
-        """Convert an instance in a dataset to tensor.
-
-        :param idx: int, the index of the instance in the dataset.
-        :param padding_length: int
-        :return tensor_x: dict of (str: torch.LongTensor), which means (field name: tensor of shape [padding_length, ])
-                tensor_y: dict of (str: torch.LongTensor), which means (field name: tensor of shape [padding_length, ])
+        :param ins: an Instance object
 
         """
-        ins = self[idx]
-        return ins.to_tensor(padding_length, self.origin_len)
+        if len(self.field_arrays) == 0:
+            # DataSet has no field yet
+            for name, field in ins.fields.items():
+                self.field_arrays[name] = FieldArray(name, [field])
+        else:
+            assert len(self.field_arrays) == len(ins.fields)
+            for name, field in ins.fields.items():
+                assert name in self.field_arrays
+                self.field_arrays[name].append(field)
+
+    def add_field(self, name, fields, padding_val=0, is_input=False, is_target=False):
+        """Add a new field to the DataSet.
+        
+        :param str name: the name of the field.
+        :param fields: a list of int, float, or other objects.
+        :param int padding_val: integer for padding.
+        :param bool is_input: whether this field is model input.
+        :param bool is_target: whether this field is label or target.
+        """
+        if len(self.field_arrays) != 0:
+            assert len(self) == len(fields)
+        self.field_arrays[name] = FieldArray(name, fields, padding_val=padding_val, is_target=is_target,
+                                             is_input=is_input)
+
+    def delete_field(self, name):
+        """Delete a field based on the field name.
+
+        :param str name: the name of the field to be deleted.
+        """
+        self.field_arrays.pop(name)
+
+    def get_fields(self):
+        """Return all the fields with their names.
+
+        :return dict field_arrays: the internal data structure of DataSet.
+        """
+        return self.field_arrays
+
+    def __getitem__(self, idx):
+        """
+
+        :param idx: can be int, slice, or str.
+        :return: If `idx` is int, return an Instance object.
+                If `idx` is slice, return a DataSet object.
+                If `idx` is str, it must be a field name, return the field.
+
+        """
+        if isinstance(idx, int):
+            return self.Instance(self, idx, **{name: self.field_arrays[name][idx] for name in self.field_arrays})
+        elif isinstance(idx, slice):
+            data_set = DataSet()
+            for field in self.field_arrays.values():
+                data_set.add_field(name=field.name,
+                                   fields=field.content[idx],
+                                   padding_val=field.padding_val,
+                                   is_input=field.is_input,
+                                   is_target=field.is_target)
+            return data_set
+        elif isinstance(idx, str):
+            return self.field_arrays[idx]
+        else:
+            raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
+
+    def __len__(self):
+        if len(self.field_arrays) == 0:
+            return 0
+        field = iter(self.field_arrays.values()).__next__()
+        return len(field)
 
     def get_length(self):
-        """Fetch lengths of all fields in all instances in a dataset.
-
-        :return lengths: dict of (str: list). The str is the field name.
-                The list contains lengths of this field in all instances.
+        """The same as __len__
 
         """
-        lengths = defaultdict(list)
-        for ins in self:
-            for field_name, field_length in ins.get_length().items():
-                lengths[field_name].append(field_length)
-        return lengths
-
-    def shuffle(self):
-        random.shuffle(self)
-        return self
-
-    def split(self, ratio, shuffle=True):
-        """Train/dev splitting
-
-        :param ratio: float, between 0 and 1. The ratio of development set in origin data set.
-        :param shuffle: bool, whether shuffle the data set before splitting. Default: True.
-        :return train_set: a DataSet object, representing the training set
-                dev_set: a DataSet object, representing the validation set
-
-        """
-        assert 0 < ratio < 1
-        if shuffle:
-            self.shuffle()
-        split_idx = int(len(self) * ratio)
-        dev_set = deepcopy(self)
-        train_set = deepcopy(self)
-        del train_set[:split_idx]
-        del dev_set[split_idx:]
-        return train_set, dev_set
+        return len(self)
 
     def rename_field(self, old_name, new_name):
         """rename a field
         """
-        for ins in self:
-            ins.rename_field(old_name, new_name)
-        return self
+        if old_name in self.field_arrays:
+            self.field_arrays[new_name] = self.field_arrays.pop(old_name)
+        else:
+            raise KeyError("{} is not a valid name. ".format(old_name))
 
     def set_target(self, **fields):
         """Change the flag of `is_target` for all instance. For fields not set here, leave their `is_target` unchanged.
 
-        :param key-value pairs for field-name and `is_target` value(True, False or None).
+        :param key-value pairs for field-name and `is_target` value(True, False).
         """
-        for ins in self:
-            ins.set_target(**fields)
+        for name, val in fields.items():
+            if name in self.field_arrays:
+                assert isinstance(val, bool)
+                self.field_arrays[name].is_target = val
+            else:
+                raise KeyError("{} is not a valid field name.".format(name))
         return self
 
-    def update_vocab(self, **name_vocab):
-        """using certain field data to update vocabulary.
-
-        e.g. ::
-
-            # update word vocab and label vocab seperately
-            dataset.update_vocab(word_seq=word_vocab, label_seq=label_vocab)
-        """
-        for field_name, vocab in name_vocab.items():
-            for ins in self:
-                vocab.update(ins[field_name].contents())
+    def set_input(self, **fields):
+        for name, val in fields.items():
+            if name in self.field_arrays:
+                assert isinstance(val, bool)
+                self.field_arrays[name].is_input = val
+            else:
+                raise KeyError("{} is not a valid field name.".format(name))
         return self
 
-    def set_origin_len(self, origin_field, origin_len_name=None):
-        """make dataset tensor output contain origin_len field.
+    def get_input_name(self):
+        return [name for name, field in self.field_arrays.items() if field.is_input]
 
-        e.g. ::
+    def get_target_name(self):
+        return [name for name, field in self.field_arrays.items() if field.is_target]
 
-            # output "word_seq_origin_len", lengths based on "word_seq" field
-            dataset.set_origin_len("word_seq")
-        """
-        if origin_field is None:
-            self.origin_len = None
-        else:
-            self.origin_len = (origin_field + "_origin_len", origin_field) \
-                if origin_len_name is None else (origin_len_name, origin_field)
-        return self
+    def __getattr__(self, item):
+        # block infinite recursion for copy, pickle
+        if item == '__setstate__':
+            raise AttributeError(item)
+        try:
+            return self.field_arrays.__getitem__(item)
+        except KeyError:
+            pass
+        try:
+            reader_cls = _READERS[item]
 
-    def __getattribute__(self, name):
-        if name in _READERS:
             # add read_*data() support
             def _read(*args, **kwargs):
-                data = _READERS[name]().load(*args, **kwargs)
+                data = reader_cls().load(*args, **kwargs)
                 self.extend(data)
                 return self
+
             return _read
-        else:
-            return object.__getattribute__(self, name)
+        except KeyError:
+            raise AttributeError('{} does not exist.'.format(item))
 
     @classmethod
     def set_reader(cls, method_name):
         """decorator to add dataloader support
         """
         assert isinstance(method_name, str)
+
         def wrapper(read_cls):
             _READERS[method_name] = read_cls
             return read_cls
+
         return wrapper
+
+    def apply(self, func, new_field_name=None):
+        """Apply a function to every instance of the DataSet.
+
+        :param func: a function that takes an instance as input.
+        :param str new_field_name: If not None, results of the function will be stored as a new field.
+        :return results: returned values of the function over all instances.
+        """
+        results = [func(ins) for ins in self]
+        if new_field_name is not None:
+            if new_field_name in self.field_arrays:
+                # overwrite the field, keep same attributes
+                old_field = self.field_arrays[new_field_name]
+                self.add_field(name=new_field_name,
+                               fields=results,
+                               padding_val=old_field.padding_val,
+                               is_input=old_field.is_input,
+                               is_target=old_field.is_target)
+            else:
+                self.add_field(name=new_field_name, fields=results)
+        else:
+            return results
+
+    def drop(self, func):
+        results = [ins for ins in self if not func(ins)]
+        for name, old_field in self.field_arrays.items():
+            self.field_arrays[name].content = [ins[name] for ins in results]
+            # print(self.field_arrays[name])
+
+    def split(self, dev_ratio):
+        """Split the dataset into training and development(validation) set.
+
+        :param float dev_ratio: the ratio of test set in all data.
+        :return DataSet train_set: the training set
+                DataSet dev_set: the development set
+        """
+        assert isinstance(dev_ratio, float)
+        assert 0 < dev_ratio < 1
+        all_indices = [_ for _ in range(len(self))]
+        np.random.shuffle(all_indices)
+        split = int(dev_ratio * len(self))
+        dev_indices = all_indices[:split]
+        train_indices = all_indices[split:]
+        dev_set = DataSet()
+        train_set = DataSet()
+        for idx in dev_indices:
+            dev_set.append(self[idx])
+        for idx in train_indices:
+            train_set.append(self[idx])
+        return train_set, dev_set
+
+    @classmethod
+    def read_csv(cls, csv_path, headers=None, sep='\t', dropna=True):
+        with open(csv_path, 'r') as f:
+            start_idx = 0
+            if headers is None:
+                headers = f.readline().rstrip('\r\n')
+                headers = headers.split(sep)
+                start_idx += 1
+            else:
+                assert isinstance(headers, (list, tuple)), "headers should be list or tuple, not {}.".format(type(headers))
+            _dict = {}
+            for col in headers:
+                _dict[col] = []
+            for line_idx, line in enumerate(f, start_idx):
+                contents = line.split(sep)
+                if len(contents)!=len(headers):
+                    if dropna:
+                        continue
+                    else:
+                        #TODO change error type
+                        raise ValueError("Line {} has {} parts, while header has {} parts."\
+                            .format(line_idx, len(contents), len(headers)))
+                for header, content in zip(headers, contents):
+                    _dict[header].append(content)
+        return cls(_dict)

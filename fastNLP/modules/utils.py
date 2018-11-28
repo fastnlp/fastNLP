@@ -77,11 +77,13 @@ def initial_parameter(net, initial_method=None):
 def seq_mask(seq_len, max_len):
     """Create sequence mask.
 
-    :param seq_len: list of int, the lengths of sequences in a batch.
+    :param seq_len: list or torch.Tensor, the lengths of sequences in a batch.
     :param max_len: int, the maximum sequence length in a batch.
     :return mask: torch.LongTensor, [batch_size, max_len]
 
     """
-    mask = [torch.ge(torch.LongTensor(seq_len), i + 1) for i in range(max_len)]
-    mask = torch.stack(mask, 1)
-    return mask
+    if not isinstance(seq_len, torch.Tensor):
+        seq_len = torch.LongTensor(seq_len)
+    seq_len = seq_len.view(-1, 1).long()   # [batch_size, 1]
+    seq_range = torch.arange(start=0, end=max_len, dtype=torch.long, device=seq_len.device).view(1, -1) # [1, max_len]
+    return torch.gt(seq_len, seq_range) # [batch_size, max_len]

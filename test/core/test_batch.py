@@ -1,53 +1,33 @@
 import unittest
 
-import torch
+import numpy as np
 
 from fastNLP.core.batch import Batch
 from fastNLP.core.dataset import DataSet
-from fastNLP.core.field import TextField, LabelField
-from fastNLP.core.instance import Instance
-
-raw_texts = ["i am a cat",
-             "this is a test of new batch",
-             "ha ha",
-             "I am a good boy .",
-             "This is the most beautiful girl ."
-             ]
-texts = [text.strip().split() for text in raw_texts]
-labels = [0, 1, 0, 0, 1]
-
-# prepare vocabulary
-vocab = {}
-for text in texts:
-    for tokens in text:
-        if tokens not in vocab:
-            vocab[tokens] = len(vocab)
+from fastNLP.core.dataset import construct_dataset
+from fastNLP.core.sampler import SequentialSampler
 
 
 class TestCase1(unittest.TestCase):
-    def test(self):
-        data = DataSet()
-        for text, label in zip(texts, labels):
-            x = TextField(text, is_target=False)
-            y = LabelField(label, is_target=True)
-            ins = Instance(text=x, label=y)
-            data.append(ins)
+    def test_simple(self):
+        dataset = construct_dataset(
+            [["FastNLP", "is", "the", "most", "beautiful", "tool", "in", "the", "world"] for _ in range(40)])
+        dataset.set_target()
+        batch = Batch(dataset, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
 
-        # use vocabulary to index data
-        data.index_field("text", vocab)
+        cnt = 0
+        for _, _ in batch:
+            cnt += 1
+        self.assertEqual(cnt, 10)
 
-        # define naive sampler for batch class
-        class SeqSampler:
-            def __call__(self, dataset):
-                return list(range(len(dataset)))
-
-        # use batch to iterate dataset
-        data_iterator = Batch(data, 2, SeqSampler(), False)
-        total_data = 0
-        for batch_x, batch_y in data_iterator:
-            total_data += batch_x["text"].size(0)
-            self.assertTrue(batch_x["text"].size(0) == 2 or total_data == len(raw_texts))
-            self.assertTrue(isinstance(batch_x, dict))
-            self.assertTrue(isinstance(batch_x["text"], torch.LongTensor))
-            self.assertTrue(isinstance(batch_y, dict))
-            self.assertTrue(isinstance(batch_y["label"], torch.LongTensor))
+    def test_dataset_batching(self):
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
+        ds.set_input(x=True)
+        ds.set_target(y=True)
+        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
+        for x, y in iter:
+            self.assertTrue(isinstance(x["x"], np.ndarray) and isinstance(y["y"], np.ndarray))
+            self.assertEqual(len(x["x"]), 4)
+            self.assertEqual(len(y["y"]), 4)
+            self.assertListEqual(list(x["x"][-1]), [1, 2, 3, 4])
+            self.assertListEqual(list(y["y"][-1]), [5, 6])

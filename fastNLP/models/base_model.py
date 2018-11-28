@@ -13,3 +13,6 @@ class BaseModel(torch.nn.Module):
     def fit(self, train_data, dev_data=None, **train_args):
         trainer = Trainer(**train_args)
         trainer.train(self, train_data, dev_data)
+
+    def predict(self, *args, **kwargs):
+        raise NotImplementedError

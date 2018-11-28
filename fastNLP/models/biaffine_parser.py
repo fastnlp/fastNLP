@@ -9,6 +9,8 @@ from torch.nn import functional as F
 from fastNLP.modules.utils import initial_parameter
 from fastNLP.modules.encoder.variational_rnn import VarLSTM
 from fastNLP.modules.dropout import TimestepDropout
+from fastNLP.models.base_model import BaseModel
+from fastNLP.modules.utils import seq_mask
 
 def mst(scores):
     """
@@ -16,10 +18,9 @@ def mst(scores):
     https://github.com/tdozat/Parser/blob/0739216129cd39d69997d28cbc4133b360ea3934/lib/models/nn.py#L692
     """
     length = scores.shape[0]
-    min_score = -np.inf
-    mask = np.zeros((length, length))
-    np.fill_diagonal(mask, -np.inf)
-    scores = scores + mask
+    min_score = scores.min() - 1
+    eye = np.eye(length)
+    scores = scores * (1 - eye) + min_score * eye
     heads = np.argmax(scores, axis=1)
     heads[0] = 0
     tokens = np.arange(1, length)
@@ -114,7 +115,7 @@ def _find_cycle(vertices, edges):
     return [SCC for SCC in _SCCs if len(SCC) > 1]
 
 
-class GraphParser(nn.Module):
+class GraphParser(BaseModel):
     """Graph based Parser helper class, support greedy decoding and MST(Maximum Spanning Tree) decoding
     """
     def __init__(self):
@@ -123,22 +124,31 @@ class GraphParser(nn.Module):
     def forward(self, x):
         raise NotImplementedError
 
-    def _greedy_decoder(self, arc_matrix, seq_mask=None):
+    def _greedy_decoder(self, arc_matrix, mask=None):
         _, seq_len, _ = arc_matrix.shape
         matrix = arc_matrix + torch.diag(arc_matrix.new(seq_len).fill_(-np.inf))
+        flip_mask = (mask == 0).byte()
+        matrix.masked_fill_(flip_mask.unsqueeze(1), -np.inf)
         _, heads = torch.max(matrix, dim=2)
-        if seq_mask is not None:
-            heads *= seq_mask.long()
+        if mask is not None:
+            heads *= mask.long()
         return heads
 
-    def _mst_decoder(self, arc_matrix, seq_mask=None):
+    def _mst_decoder(self, arc_matrix, mask=None):
         batch_size, seq_len, _ = arc_matrix.shape
         matrix = torch.zeros_like(arc_matrix).copy_(arc_matrix)
         ans = matrix.new_zeros(batch_size, seq_len).long()
+        lens = (mask.long()).sum(1) if mask is not None else torch.zeros(batch_size) + seq_len
+        batch_idx = torch.arange(batch_size, dtype=torch.long, device=lens.device)
+        mask[batch_idx, lens-1] = 0
         for i, graph in enumerate(matrix):
-            ans[i] = torch.as_tensor(mst(graph.cpu().numpy()), device=ans.device)
-        if seq_mask is not None:
-            ans *= seq_mask.long()
+            len_i = lens[i]
+            if len_i == seq_len:
+                ans[i] = torch.as_tensor(mst(graph.cpu().numpy()), device=ans.device)
+            else:
+                ans[i, :len_i] = torch.as_tensor(mst(graph[:len_i, :len_i].cpu().numpy()), device=ans.device)
+        if mask is not None:
+            ans *= mask.long()
         return ans
 
 
@@ -175,14 +185,12 @@ class LabelBilinear(nn.Module):
     def __init__(self, in1_features, in2_features, num_label, bias=True):
         super(LabelBilinear, self).__init__()
         self.bilinear = nn.Bilinear(in1_features, in2_features, num_label, bias=bias)
-        self.lin1 = nn.Linear(in1_features, num_label, bias=False)
-        self.lin2 = nn.Linear(in2_features, num_label, bias=False)
+        self.lin = nn.Linear(in1_features + in2_features, num_label, bias=False)
 
     def forward(self, x1, x2):
         output = self.bilinear(x1, x2)
-        output += self.lin1(x1) + self.lin2(x2)
+        output += self.lin(torch.cat([x1, x2], dim=2))
         return output
-
 
 class BiaffineParser(GraphParser):
     """Biaffine Dependency Parser implemantation.
@@ -194,6 +202,8 @@ class BiaffineParser(GraphParser):
                 word_emb_dim,
                 pos_vocab_size,
                 pos_emb_dim,
+                word_hid_dim,
+                pos_hid_dim,
                 rnn_layers,
                 rnn_hidden_size,
                 arc_mlp_size,
@@ -204,10 +214,15 @@ class BiaffineParser(GraphParser):
                 use_greedy_infer=False):
 
         super(BiaffineParser, self).__init__()
+        rnn_out_size = 2 * rnn_hidden_size
         self.word_embedding = nn.Embedding(num_embeddings=word_vocab_size, embedding_dim=word_emb_dim)
         self.pos_embedding = nn.Embedding(num_embeddings=pos_vocab_size, embedding_dim=pos_emb_dim)
+        self.word_fc = nn.Linear(word_emb_dim, word_hid_dim)
+        self.pos_fc = nn.Linear(pos_emb_dim, pos_hid_dim)
+        self.word_norm = nn.LayerNorm(word_hid_dim)
+        self.pos_norm = nn.LayerNorm(pos_hid_dim)
         if use_var_lstm:
-            self.lstm = VarLSTM(input_size=word_emb_dim + pos_emb_dim,
+            self.lstm = VarLSTM(input_size=word_hid_dim + pos_hid_dim,
                                 hidden_size=rnn_hidden_size,
                                 num_layers=rnn_layers,
                                 bias=True,
@@ -216,7 +231,7 @@ class BiaffineParser(GraphParser):
                                 hidden_dropout=dropout,
                                 bidirectional=True)
         else:
-            self.lstm = nn.LSTM(input_size=word_emb_dim + pos_emb_dim,
+            self.lstm = nn.LSTM(input_size=word_hid_dim + pos_hid_dim,
                                 hidden_size=rnn_hidden_size,
                                 num_layers=rnn_layers,
                                 bias=True,
@@ -224,141 +239,153 @@ class BiaffineParser(GraphParser):
                                 dropout=dropout,
                                 bidirectional=True)
 
-        rnn_out_size = 2 * rnn_hidden_size
         self.arc_head_mlp = nn.Sequential(nn.Linear(rnn_out_size, arc_mlp_size),
-                                          nn.ELU())
+                                          nn.LayerNorm(arc_mlp_size),
+                                          nn.ELU(),
+                                          TimestepDropout(p=dropout),)
         self.arc_dep_mlp = copy.deepcopy(self.arc_head_mlp)
         self.label_head_mlp = nn.Sequential(nn.Linear(rnn_out_size, label_mlp_size),
-                                            nn.ELU())
+                                            nn.LayerNorm(label_mlp_size),
+                                            nn.ELU(),
+                                            TimestepDropout(p=dropout),)
         self.label_dep_mlp = copy.deepcopy(self.label_head_mlp)
         self.arc_predictor = ArcBiaffine(arc_mlp_size, bias=True)
         self.label_predictor = LabelBilinear(label_mlp_size, label_mlp_size, num_label, bias=True)
         self.normal_dropout = nn.Dropout(p=dropout)
-        self.timestep_dropout = TimestepDropout(p=dropout)
         self.use_greedy_infer = use_greedy_infer
-        initial_parameter(self)
+        self.reset_parameters()
+        self.explore_p = 0.2
 
-    def forward(self, word_seq, pos_seq, seq_mask, gold_heads=None, **_):
+    def reset_parameters(self):
+        for m in self.modules():
+            if isinstance(m, nn.Embedding):
+                continue
+            elif isinstance(m, nn.LayerNorm):
+                nn.init.constant_(m.weight, 0.1)
+                nn.init.constant_(m.bias, 0)
+            else:
+                for p in m.parameters():
+                    nn.init.normal_(p, 0, 0.1)
+
+    def forward(self, word_seq, pos_seq, word_seq_origin_len, gold_heads=None, **_):
         """
         :param word_seq: [batch_size, seq_len] sequence of word's indices
         :param pos_seq: [batch_size, seq_len] sequence of word's indices
-        :param seq_mask: [batch_size, seq_len] sequence of length masks
+        :param word_seq_origin_len: [batch_size, seq_len] sequence of length masks
         :param gold_heads: [batch_size, seq_len] sequence of golden heads
         :return dict: parsing results
             arc_pred: [batch_size, seq_len, seq_len]
             label_pred: [batch_size, seq_len, seq_len]
-            seq_mask: [batch_size, seq_len]
+            mask: [batch_size, seq_len]
             head_pred: [batch_size, seq_len] if gold_heads is not provided, predicting the heads
         """
         # prepare embeddings
+        device = self.parameters().__next__().device
+        word_seq = word_seq.long().to(device)
+        pos_seq = pos_seq.long().to(device)
+        word_seq_origin_len = word_seq_origin_len.long().to(device).view(-1)
         batch_size, seq_len = word_seq.shape
         # print('forward {} {}'.format(batch_size, seq_len))
-        batch_range = torch.arange(start=0, end=batch_size, dtype=torch.long, device=word_seq.device).unsqueeze(1)
 
         # get sequence mask
-        seq_mask = seq_mask.long()
+        mask = seq_mask(word_seq_origin_len, seq_len).long()
 
         word = self.normal_dropout(self.word_embedding(word_seq)) # [N,L] -> [N,L,C_0]
         pos = self.normal_dropout(self.pos_embedding(pos_seq)) # [N,L] -> [N,L,C_1]
+        word, pos = self.word_fc(word), self.pos_fc(pos)
+        word, pos = self.word_norm(word), self.pos_norm(pos)
         x = torch.cat([word, pos], dim=2) # -> [N,L,C]
+        del word, pos
 
         # lstm, extract features
+        sort_lens, sort_idx = torch.sort(word_seq_origin_len, dim=0, descending=True)
+        x = x[sort_idx]
+        x = nn.utils.rnn.pack_padded_sequence(x, sort_lens, batch_first=True)
         feat, _ = self.lstm(x) # -> [N,L,C]
+        feat, _ = nn.utils.rnn.pad_packed_sequence(feat, batch_first=True)
+        _, unsort_idx = torch.sort(sort_idx, dim=0, descending=False)
+        feat = feat[unsort_idx]
 
         # for arc biaffine
         # mlp, reduce dim
-        arc_dep = self.timestep_dropout(self.arc_dep_mlp(feat))
-        arc_head = self.timestep_dropout(self.arc_head_mlp(feat))
-        label_dep = self.timestep_dropout(self.label_dep_mlp(feat))
-        label_head = self.timestep_dropout(self.label_head_mlp(feat))
+        arc_dep = self.arc_dep_mlp(feat)
+        arc_head = self.arc_head_mlp(feat)
+        label_dep = self.label_dep_mlp(feat)
+        label_head = self.label_head_mlp(feat)
+        del feat
 
         # biaffine arc classifier
         arc_pred = self.arc_predictor(arc_head, arc_dep) # [N, L, L]
-        flip_mask = (seq_mask == 0)
-        arc_pred.masked_fill_(flip_mask.unsqueeze(1), -np.inf)
 
         # use gold or predicted arc to predict label
-        if gold_heads is None:
+        if gold_heads is None or not self.training:
             # use greedy decoding in training
             if self.training or self.use_greedy_infer:
-                heads = self._greedy_decoder(arc_pred, seq_mask)
+                heads = self._greedy_decoder(arc_pred, mask)
             else:
-                heads = self._mst_decoder(arc_pred, seq_mask)
+                heads = self._mst_decoder(arc_pred, mask)
             head_pred = heads
         else:
-            head_pred = None
-            heads = gold_heads
+            assert self.training # must be training mode
+            if torch.rand(1).item() < self.explore_p:
+                heads = self._greedy_decoder(arc_pred, mask)
+                head_pred = heads
+            else:
+                head_pred = None
+                heads = gold_heads
 
+        batch_range = torch.arange(start=0, end=batch_size, dtype=torch.long, device=word_seq.device).unsqueeze(1)
         label_head = label_head[batch_range, heads].contiguous()
         label_pred = self.label_predictor(label_head, label_dep) # [N, L, num_label]
-        res_dict = {'arc_pred': arc_pred, 'label_pred': label_pred, 'seq_mask': seq_mask}
+        res_dict = {'arc_pred': arc_pred, 'label_pred': label_pred, 'mask': mask}
         if head_pred is not None:
             res_dict['head_pred'] = head_pred
         return res_dict
 
-    def loss(self, arc_pred, label_pred, head_indices, head_labels, seq_mask, **_):
+    def loss(self, arc_pred, label_pred, head_indices, head_labels, mask, **_):
         """
         Compute loss.
 
         :param arc_pred: [batch_size, seq_len, seq_len]
-        :param label_pred: [batch_size, seq_len, seq_len]
+        :param label_pred: [batch_size, seq_len, n_tags]
         :param head_indices: [batch_size, seq_len]
         :param head_labels: [batch_size, seq_len]
-        :param seq_mask: [batch_size, seq_len]
+        :param mask: [batch_size, seq_len]
         :return: loss value
         """
 
         batch_size, seq_len, _ = arc_pred.shape
-        arc_logits = F.log_softmax(arc_pred, dim=2)
+        flip_mask = (mask == 0)
+        _arc_pred = arc_pred.new_empty((batch_size, seq_len, seq_len)).copy_(arc_pred)
+        _arc_pred.masked_fill_(flip_mask.unsqueeze(1), -np.inf)
+        arc_logits = F.log_softmax(_arc_pred, dim=2)
         label_logits = F.log_softmax(label_pred, dim=2)
-        batch_index = torch.arange(start=0, end=batch_size, device=arc_logits.device).long().unsqueeze(1)
-        child_index = torch.arange(start=0, end=seq_len, device=arc_logits.device).long().unsqueeze(0)
+        batch_index = torch.arange(batch_size, device=arc_logits.device, dtype=torch.long).unsqueeze(1)
+        child_index = torch.arange(seq_len, device=arc_logits.device, dtype=torch.long).unsqueeze(0)
         arc_loss = arc_logits[batch_index, child_index, head_indices]
         label_loss = label_logits[batch_index, child_index, head_labels]
 
         arc_loss = arc_loss[:, 1:]
         label_loss = label_loss[:, 1:]
 
-        float_mask = seq_mask[:, 1:].float()
-        length = (seq_mask.sum() - batch_size).float()
-        arc_nll = -(arc_loss*float_mask).sum() / length
-        label_nll = -(label_loss*float_mask).sum() / length
+        float_mask = mask[:, 1:].float()
+        arc_nll = -(arc_loss*float_mask).mean()
+        label_nll = -(label_loss*float_mask).mean()
         return arc_nll + label_nll
 
-    def evaluate(self, arc_pred, label_pred, head_indices, head_labels, seq_mask, **kwargs):
+    def predict(self, word_seq, pos_seq, word_seq_origin_len):
         """
-        Evaluate the performance of prediction.
 
-        :return dict: performance results.
-            head_pred_corrct: number of correct predicted heads.
-            label_pred_correct: number of correct predicted labels.
-            total_tokens: number of predicted tokens
+        :param word_seq:
+        :param pos_seq:
+        :param word_seq_origin_len:
+        :return: head_pred: [B, L]
+                 label_pred: [B, L]
+                 seq_len: [B,]
         """
-        if 'head_pred' in kwargs:
-            head_pred = kwargs['head_pred']
-        elif self.use_greedy_infer:
-            head_pred = self._greedy_decoder(arc_pred, seq_mask)
-        else:
-            head_pred = self._mst_decoder(arc_pred, seq_mask)
-
-        head_pred_correct = (head_pred == head_indices).long() * seq_mask
-        _, label_preds = torch.max(label_pred, dim=2)
-        label_pred_correct = (label_preds == head_labels).long() * head_pred_correct
-        return {"head_pred_correct": head_pred_correct.sum(dim=1),
-                "label_pred_correct": label_pred_correct.sum(dim=1),
-                "total_tokens": seq_mask.sum(dim=1)}
-
-    def metrics(self, head_pred_correct, label_pred_correct, total_tokens, **_):
-        """
-        Compute the metrics of model
-
-        :param head_pred_corrct: number of correct predicted heads.
-        :param label_pred_correct: number of correct predicted labels.
-        :param total_tokens: number of predicted tokens
-        :return dict: the metrics results
-            UAS: the head predicted accuracy
-            LAS: the label predicted accuracy
-        """
-        return {"UAS": head_pred_correct.sum().float() / total_tokens.sum().float() * 100,
-                "LAS": label_pred_correct.sum().float() / total_tokens.sum().float() * 100}
-
+        res = self(word_seq, pos_seq, word_seq_origin_len)
+        output = {}
+        output['head_pred'] = res.pop('head_pred')
+        _, label_pred = res.pop('label_pred').max(2)
+        output['label_pred'] = label_pred
+        return output
