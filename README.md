@@ -6,16 +6,39 @@
 ![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)
 [![Documentation Status](https://readthedocs.org/projects/fastnlp/badge/?version=latest)](http://fastnlp.readthedocs.io/?badge=latest)
 
-fastNLP is a modular Natural Language Processing system based on PyTorch, for fast development of NLP tools. It divides the NLP model based on deep learning into different modules. These modules fall into 4 categories: encoder, interaction, aggregation and decoder, while each category contains different implemented modules. Encoder modules encode the input into some abstract representation, interaction modules make the information in the representation interact with each other, aggregation modules aggregate and reduce information, and decoder modules decode the representation into the output. Most current NLP models could be built on these modules, which vastly simplifies the process of developing NLP models. The architecture of fastNLP is as the figure below:
+FastNLP is a modular Natural Language Processing system based on PyTorch, built for fast development of NLP models. 
 
-![](https://github.com/fastnlp/fastNLP/raw/master/docs/source/figures/procedures.PNG)
-![](https://github.com/fastnlp/fastNLP/raw/master/docs/source/figures/text_classification.png)
+A deep learning NLP model is the composition of three types of modules:
+<table>
+<tr>
+    <td><b> module type </b></td>
+    <td><b> functionality </b></td>
+    <td><b> example </b></td>
+</tr>
+<tr>
+    <td> encoder </td>
+    <td> encode the input into some abstract representation </td>
+    <td> embedding, RNN, CNN, transformer
+</tr>
+<tr>
+    <td> aggregator </td>
+    <td> aggregate and reduce information </td>
+    <td> self-attention, max-pooling </td>
+</tr>
+<tr>
+    <td> decoder </td>
+    <td> decode the representation into the output </td>
+    <td> MLP, CRF </td>
+</tr>
+
+For example:
+
+![](docs/source/figures/text_classification.png)
 
 ## Requirements
 
 - numpy>=1.14.2
 - torch>=0.4.0
-- torchvision>=0.1.8
 - tensorboardX
 
 
@@ -39,12 +62,12 @@ pip install fastNLP
     <td> an open-source NLP library </td>
 </tr>
 <tr>
-    <td><b> fastNLP.core </b></td>
-    <td> trainer, tester, predictor </td>
+    <td><b> fastNLP.api </b></td>
+    <td> APIs for end-to-end prediction </td>
 </tr>
 <tr>
-    <td><b> fastNLP.loader </b></td>
-    <td> all kinds of loaders/readers </td>
+    <td><b> fastNLP.core </b></td>
+    <td> data representation & train/test presedure </td>
 </tr>
 <tr>
     <td><b> fastNLP.models </b></td>
@@ -55,11 +78,7 @@ pip install fastNLP
     <td> a collection of PyTorch sub-models/components/wheels </td>
 </tr>
 <tr>
-    <td><b> fastNLP.saver </b></td>
-    <td> all kinds of savers/writers </td>
-</tr>
-<tr>
-    <td><b> fastNLP.fastnlp </b></td>
-    <td> a high-level interface for prediction </td>
+    <td><b> fastNLP.io </b></td>
+    <td> readers & savers </td>
 </tr>
 </table>
