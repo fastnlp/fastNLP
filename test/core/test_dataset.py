@@ -55,7 +55,7 @@ class TestDataSet(unittest.TestCase):
     def test_getitem(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
         ins_1, ins_0 = ds[0], ds[1]
-        self.assertTrue(isinstance(ins_1, DataSet.Instance) and isinstance(ins_0, DataSet.Instance))
+        self.assertTrue(isinstance(ins_1, Instance) and isinstance(ins_0, Instance))
         self.assertEqual(ins_1["x"], [1, 2, 3, 4])
         self.assertEqual(ins_1["y"], [5, 6])
         self.assertEqual(ins_0["x"], [1, 2, 3, 4])
@@ -64,9 +64,6 @@ class TestDataSet(unittest.TestCase):
         sub_ds = ds[:10]
         self.assertTrue(isinstance(sub_ds, DataSet))
         self.assertEqual(len(sub_ds), 10)
-
-        field = ds["x"]
-        self.assertEqual(field, ds.field_arrays["x"])
 
     def test_apply(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
