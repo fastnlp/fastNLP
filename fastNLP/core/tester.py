@@ -6,33 +6,34 @@ import torch
 from fastNLP.core.batch import Batch
 from fastNLP.core.sampler import RandomSampler
 from fastNLP.core.utils import _build_args
+from fastNLP.core.utils import get_func_signature
 
 class Tester(object):
     """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
 
-    def __init__(self, data, model, batch_size=16, use_cuda=False):
+    def __init__(self, data, model, metrics, batch_size=16, use_cuda=False, verbose=0):
         super(Tester, self).__init__()
         self.use_cuda = use_cuda
         self.data = data
         self.batch_size = batch_size
+        self.verbose = verbose
         if torch.cuda.is_available() and self.use_cuda:
             self._model = model.cuda()
         else:
             self._model = model
         if hasattr(self._model, 'predict'):
-            assert callable(self._model.predict)
+            if not callable(self._model.predict):
+                raise TypeError(f"{get_func_signature(model.predict)} must be callable to be used "
+                                f"for evaluation.")
             self._predict_func = self._model.predict
         else:
             self._predict_func = self._model
-        assert hasattr(model, 'evaluate')
-        self._evaluator = model.evaluate
-        self.eval_history = []  # evaluation results of all batches
+
 
     def test(self):
         # turn on the testing mode; clean up the history
         network = self._model
         self.mode(network, is_test=True)
-        self.eval_history.clear()
         output, truths = defaultdict(list), defaultdict(list)
         data_iterator = Batch(self.data, self.batch_size, sampler=RandomSampler(), as_numpy=False)
 
@@ -48,9 +49,10 @@ class Tester(object):
                 output[k] = itertools.chain(*v)
             for k, v in truths.items():
                 truths[k] = itertools.chain(*v)
-            args = _build_args(self._evaluator, **output, **truths)
+            # args = _build_args(self._evaluator, **output, **truths)
             eval_results = self._evaluator(**args)
-        print("[tester] {}".format(self.print_eval_results(eval_results)))
+        if self.verbose >= 0:
+            print("[tester] {}".format(self.print_eval_results(eval_results)))
         self.mode(network, is_test=False)
         return eval_results
 

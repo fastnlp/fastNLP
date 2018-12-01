@@ -3,6 +3,7 @@ import inspect
 import os
 from collections import Counter
 from collections import namedtuple
+import torch
 
 CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed'], verbose=False)
 
@@ -95,7 +96,24 @@ def _check_arg_dict_list(func, args):
                     all_needed=list(all_args))
 
 def get_func_signature(func):
-    # can only be used in function or class method
+    """
+
+    Given a function or method, return its signature.
+    For example:
+    (1) function
+        def func(a, b='a', *args):
+            xxxx
+        get_func_signature(func) # 'func(a, b='a', *args)'
+    (2) method
+        class Demo:
+            def __init__(self):
+                xxx
+            def forward(self, a, b='a', **args)
+        demo = Demo()
+        get_func_signature(demo.forward) # 'Demo.forward(self, a, b='a', **args)'
+    :param func: a function or a method
+    :return: str or None
+    """
     if inspect.ismethod(func):
         class_name = func.__self__.__class__.__name__
         signature = inspect.signature(func)
@@ -113,10 +131,16 @@ def get_func_signature(func):
         return signature_str
 
 
-# move data to model's device
-import torch
 def _syn_model_data(model, *args):
-    assert len(model.state_dict())!=0, "This model has no parameter."
+    """
+
+    move data to model's device, element in *args should be dict. This is a inplace change.
+    :param model:
+    :param args:
+    :return:
+    """
+    if len(model.state_dict())==0:
+        raise ValueError("model has no parameter.")
     device = model.parameters().__next__().device
     for arg in args:
         if isinstance(arg, dict):
@@ -124,4 +148,33 @@ def _syn_model_data(model, *args):
                 if isinstance(value, torch.Tensor):
                     arg[key] = value.to(device)
         else:
-            raise ValueError("Only support dict type right now.")
+            raise TypeError("Only support `dict` type right now.")
+
+def _prepare_metrics(metrics):
+    """
+
+    Prepare list of Metric based on input
+    :param metrics:
+    :return:
+    """
+    _metrics = []
+    if metrics:
+        if isinstance(metrics, list):
+            for metric in metrics:
+                if isinstance(metric, type):
+                    metric = metric()
+                if isinstance(metric, None):
+                    _metrics.append(metric)
+                else:
+                    raise TypeError("The type of metric in metrics must be xxxx, not {}.".format(
+                        type(), type(metric)
+                    ))
+        elif isinstance(metrics, None):
+            _metrics = [metrics]
+        else:
+            raise TypeError("The type of metrics should be `list[xxx]` or `xxx`, got {}.".format(
+                type(metrics)
+            ))
+
+    return _metrics
+
