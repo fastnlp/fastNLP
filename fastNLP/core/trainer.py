@@ -1,26 +1,24 @@
+import itertools
+import os
 import time
-from datetime import timedelta
-from datetime import datetime
 import warnings
 from collections import defaultdict
-import os
-import itertools
-import shutil
+from datetime import datetime
+from datetime import timedelta
 
-from tensorboardX import SummaryWriter
 import torch
+from tensorboardX import SummaryWriter
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.loss import Loss
-from fastNLP.core.metrics import Evaluator
 from fastNLP.core.optimizer import Optimizer
 from fastNLP.core.sampler import RandomSampler
 from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.tester import Tester
-from fastNLP.core.utils import _check_arg_dict_list
 from fastNLP.core.utils import _build_args
+from fastNLP.core.utils import _check_arg_dict_list
 from fastNLP.core.utils import _syn_model_data
 from fastNLP.core.utils import get_func_signature
+
 
 class Trainer(object):
     """Main Training Loop

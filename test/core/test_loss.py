@@ -1,9 +1,10 @@
+import math
 import unittest
 
-import fastNLP.core.loss as loss
-import math
 import torch as tc
-import pdb
+
+import fastNLP.core.losses as loss
+
 
 class TestLoss(unittest.TestCase):
 
