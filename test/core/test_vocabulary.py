@@ -59,3 +59,30 @@ class TestIndexing(unittest.TestCase):
         vocab = Vocabulary(need_default=True, max_size=None, min_freq=None)
         vocab.update(text)
         self.assertEqual(text, [vocab.to_word(idx) for idx in [vocab[w] for w in text]])
+
+
+class TestOther(unittest.TestCase):
+    def test_additional_update(self):
+        vocab = Vocabulary(need_default=True, max_size=None, min_freq=None)
+        vocab.update(text)
+
+        _ = vocab["well"]
+        self.assertEqual(vocab.rebuild, False)
+
+        vocab.add("hahaha")
+        self.assertEqual(vocab.rebuild, True)
+
+        _ = vocab["hahaha"]
+        self.assertEqual(vocab.rebuild, False)
+        self.assertTrue("hahaha" in vocab)
+
+    def test_warning(self):
+        vocab = Vocabulary(need_default=True, max_size=len(set(text)), min_freq=None)
+        vocab.update(text)
+        self.assertEqual(vocab.rebuild, True)
+        print(len(vocab))
+        self.assertEqual(vocab.rebuild, False)
+
+        vocab.update(["hahahha", "hhh", "vvvv", "ass", "asss", "jfweiong", "eqgfeg", "feqfw"])
+        # this will print a warning
+        self.assertEqual(vocab.rebuild, True)
