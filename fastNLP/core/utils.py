@@ -3,9 +3,8 @@ import inspect
 import os
 from collections import Counter
 from collections import namedtuple
-
-CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed'], verbose=False)
-
+from collections import defaultdict
+import torch
 
 def save_pickle(obj, pickle_path, file_name):
     """Save an object into a pickle file.
@@ -121,14 +120,35 @@ def _check_arg_dict_list(func, args):
     input_args = set(input_arg_count.keys())
     missing = list(require_args - input_args)
     unused = list(input_args - all_args)
-    return CheckRes(missing=missing,
-                    unused=unused,
-                    duplicated=duplicated,
-                    required=list(require_args),
-                    all_needed=list(all_args))
+
+    check_res = {}
+    check_res['missing'] = missing
+    check_res['unused'] = unused
+    check_res['duplicated'] = duplicated
+    check_res['required'] = list(require_args)
+    check_res['all_needed'] = list(all_args)
+
+    return check_res
 
 def get_func_signature(func):
-    # can only be used in function or class method
+    """
+
+    Given a function or method, return its signature.
+    For example:
+    (1) function
+        def func(a, b='a', *args):
+            xxxx
+        get_func_signature(func) # 'func(a, b='a', *args)'
+    (2) method
+        class Demo:
+            def __init__(self):
+                xxx
+            def forward(self, a, b='a', **args)
+        demo = Demo()
+        get_func_signature(demo.forward) # 'Demo.forward(self, a, b='a', **args)'
+    :param func: a function or a method
+    :return: str or None
+    """
     if inspect.ismethod(func):
         class_name = func.__self__.__class__.__name__
         signature = inspect.signature(func)
@@ -146,10 +166,16 @@ def get_func_signature(func):
         return signature_str
 
 
-# move data to model's device
-import torch
 def _syn_model_data(model, *args):
-    assert len(model.state_dict())!=0, "This model has no parameter."
+    """
+
+    move data to model's device, element in *args should be dict. This is a inplace change.
+    :param model:
+    :param args:
+    :return:
+    """
+    if len(model.state_dict())==0:
+        raise ValueError("model has no parameter.")
     device = model.parameters().__next__().device
     for arg in args:
         if isinstance(arg, dict):
@@ -157,4 +183,24 @@ def _syn_model_data(model, *args):
                 if isinstance(value, torch.Tensor):
                     arg[key] = value.to(device)
         else:
-            raise ValueError("Only support dict type right now.")
+            raise TypeError("Only support `dict` type right now.")
+
+def _move_dict_value_to_device(device, *args):
+    """
+
+    move data to model's device, element in *args should be dict. This is a inplace change.
+    :param device: torch.device
+    :param args:
+    :return:
+    """
+    if not isinstance(device, torch.device):
+        raise TypeError(f"device must be `torch.device`, got `{type(device)}`")
+
+    for arg in args:
+        if isinstance(arg, dict):
+            for key, value in arg.items():
+                if isinstance(value, torch.Tensor):
+                    arg[key] = value.to(device)
+        else:
+            raise TypeError("Only support `dict` type right now.")
+

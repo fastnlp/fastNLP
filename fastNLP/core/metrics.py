@@ -1,7 +1,135 @@
+
 import warnings
+import inspect
 
 import numpy as np
 import torch
+
+from fastNLP.core.utils import get_func_signature
+from fastNLP.core.utils import _check_arg_dict_list
+from fastNLP.core.utils import _build_args
+
+class MetricBase(object):
+    def __init__(self):
+        self.param_map = {} # key is param in function, value is input param.
+        self._checked = False
+
+    def evaluate(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def _init_param_map(self, key_map, **kwargs):
+        self.param_map = {}
+        for key, value in key_map.items():
+            if isinstance(key, str):
+                raise TypeError(f"key in key_map must be `str`, not `{type(key)}`.")
+            if isinstance(value, str):
+                raise TypeError(f"value in key_map must be `str`, not `{type(value)}`.")
+            self.param_map[key] = value
+        for key, value in kwargs.items():
+            if isinstance(value, str):
+                raise TypeError(f"in {key}={value}, value must be `str`, not `{type(value)}`.")
+            self.param_map[key] = value
+            
+    def __call__(self, output_dict, target_dict, force_check=False):
+        """
+        :param output_dict:
+        :param target_dict:
+        :return:
+        """
+        if not callable(self.evaluate):
+            raise TypeError(f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}.")
+
+        if not self._checked:
+            # 1. check consistence between signature and param_map
+            func_spect = inspect.getfullargspec(self.evaluate)
+            func_args = func_spect.args
+            for func_param, input_param in self.param_map.items():
+                if func_param not in func_args:
+                    raise NameError(f"{func_param} not in {get_func_signature(self.evaluate)}.")
+            # 2. only part of the param_map are passed, left are not
+            for arg in func_args:
+                if arg not in self.param_map:
+                    self.param_map[arg] = arg #This param does not need mapping.
+            self._evaluate_args = func_args
+
+        # need to wrap inputs in dict.
+        mapped_output_dict = {}
+        mapped_target_dict = {}
+        for func_arg in self._evaluate_args:
+            input_arg = self.param_map[func_arg]
+            if input_arg in output_dict:
+                mapped_output_dict[func_arg] = output_dict[input_arg]
+            if input_arg in target_dict:
+                mapped_target_dict[func_arg] = target_dict[input_arg]
+
+        # check duplicated, unused, missing
+        if force_check or not self._checked:
+            check_res = _check_arg_dict_list(self.evaluate, [mapped_output_dict, mapped_output_dict])
+            self._reverse_param_map = {value:key for key, value in check_res.items()}
+            for key, value in check_res.items():
+                new_value = value.copy()
+                for idx, func_param in enumerate(value):
+                    if func_param in self._reverse_param_map:
+                        new_value[idx] = self._reverse_param_map[func_param]
+            if check_res.missing or check_res.duplicated:
+                raise CheckError(check_res=check_res)
+        refined_args = _build_args(self.evaluate, **mapped_output_dict, **mapped_target_dict)
+
+        metrics = self.evaluate(**refined_args)
+
+        if not isinstance(metrics, dict):
+            raise TypeError(f"The return value of {get_func_signature(self.evaluate)} must be `dict`, "
+                            f"got {type(metrics)}.")
+        self._checked = True
+
+        return metrics
+
+
+
+
+
+class CheckError(Exception):
+    def __init__(self, check_res):
+
+        err = ''
+        if check_res.missing:
+            err += f'Missing: {check_res.missing}\n'
+        if check_res.duplicated:
+            err += f'Duplicated: {check_res.duplicated}\n'
+        self.check_res = check_res
+
+    def __str__(self):
+        pass
+
+
+class Metric(MetricBase):
+    def __init__(self, func, key_map, **kwargs):
+        super().__init__()
+        pass
+
+def _prepare_metrics(metrics):
+    """
+
+    Prepare list of Metric based on input
+    :param metrics:
+    :return: List[fastNLP.MetricBase]
+    """
+    _metrics = []
+    if metrics:
+        if isinstance(metrics, list):
+            for metric in metrics:
+                if isinstance(metric, type):
+                    metric = metric()
+                if isinstance(metric, MetricBase):
+                    _metrics.append(metric)
+                else:
+                    raise TypeError(f"The type of metric in metrics must be `fastNLP.MetricBase`, not `{type(metric)}`.")
+        elif isinstance(metrics, MetricBase):
+            _metrics = [metrics]
+        else:
+            raise TypeError("The type of metrics should be `list[fastNLP.MetricBase]` or `fastNLP.MetricBase`, got {}."
+                .format(type(metrics)))
+    return _metrics
 
 
 class Evaluator(object):
@@ -16,7 +144,6 @@ class Evaluator(object):
         :return:
         """
         raise NotImplementedError
-
 
 class ClassifyEvaluator(Evaluator):
     def __init__(self):
