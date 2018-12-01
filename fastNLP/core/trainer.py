@@ -17,9 +17,14 @@ from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.tester import Tester
 from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import _check_arg_dict_list
-from fastNLP.core.utils import _syn_model_data
+from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.utils import get_func_signature
 from fastNLP.core.dataset import DataSet
+
+from fastNLP.core.losses import LossBase
+from fastNLP.core.metrics import MetricBase
+from fastNLP.core.losses import _prepare_losser
+from fastNLP.core.metrics import _prepare_metrics
 
 
 class Trainer(object):
@@ -31,6 +36,25 @@ class Trainer(object):
                  optimizer=Optimizer("Adam", lr=0.01, weight_decay=0), need_check_code=True,
                  **kwargs):
         super(Trainer, self).__init__()
+
+        if not isinstance(train_data, DataSet):
+            raise TypeError(f"The type of train_data must be fastNLP.DataSet, got {type(train_data)}.")
+        if not isinstance(model, nn.Module):
+            raise TypeError(f"The type of model must be torch.nn.Module, got {type(model)}.")
+
+        # check metrics and dev_data
+        if (not metrics) and dev_data is not None:
+            raise ValueError("No metric for dev_data evaluation.")
+        if metrics and (dev_data is None):
+            raise ValueError("No dev_data for evaluations, pass dev_data or set metrics to None. ")
+
+        # prepare evaluate
+        metrics = _prepare_metrics(metrics)
+        # prepare loss
+        losser = _prepare_losser(losser)
+
+        if need_check_code:
+            _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data)
 
         self.train_data = train_data
         self.dev_data = dev_data  # If None, No validation.
@@ -45,10 +69,7 @@ class Trainer(object):
         self.validate_every = int(validate_every)
         self._best_accuracy = 0
 
-
-        # TODO check loss与metrics的类型
-
-
+        self._model_device = model.parameters().__next__().device
 
         # TODO self._best_accuracy不能表现出当前的metric多种的情况
 
@@ -71,38 +92,6 @@ class Trainer(object):
         self.start_time = None  # start timestamp
 
         # print(self.__dict__)
-
-    def _check_params(self, train_data, model, losser, metrics=[], n_epochs=3, batch_size=32, print_every=-1,
-                      validate_every=-1, dev_data=None, use_cuda=False, save_path="./save",
-                      optimizer=Optimizer("Adam", lr=0.01, weight_decay=0), need_check_code=True,
-                    **kwargs):
-        if not isinstance(train_data, DataSet):
-            raise TypeError("The type of train_data must be fastNLP.DataSet, got {}.".\
-                format(type(train_data)))
-        if not isinstance(model, nn.Module):
-            raise TypeError("The type of model must be torch.nn.Module, got {}.".\
-            format(type(model)))
-        if losser is not None:
-            # TODO change
-            if not isinstance(losser, None):
-                raise TypeError("The type of losser must be xxx, got {}.".\
-                    format(type(losser)))
-
-        # check metrics and dev_data
-        if (not metrics) and dev_data is not None:
-            raise ValueError("No metric for dev_data evaluation.")
-        if metrics and (dev_data is None):
-            raise ValueError("No dev_data for evaluations, pass dev_data or set metrics to None. ")
-
-        # check loss
-        if isinstance(losser, type):
-            self.losser = losser()
-        if not isinstance(self.losser, None):
-            raise TypeError(f'The type of losser must be `{}`, got {type(self.losser)}.')
-
-        if need_check_code:
-            _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data)
-
 
     def train(self):
         """Start Training.
@@ -153,8 +142,9 @@ class Trainer(object):
                 - epoch: int,
         """
         for batch_x, batch_y in data_iterator:
+            # TODO 这里可能会遇到问题，万一用户在model内部修改了prediction的device就会有问题
+            _move_dict_value_to_device(self._model_device, batch_x, batch_y)
             prediction = self.data_forward(model, batch_x)
-
             loss = self.get_loss(prediction, batch_y)
             self.grad_backward(loss)
             self.update()
@@ -205,7 +195,6 @@ class Trainer(object):
         x = _build_args(network.forward, **x)
         y = network(**x)
         if not isinstance(y, dict):
-
             raise TypeError(f"The return value of {get_func_signature(network.forward)} should be dict, got {type(y)}.")
         return y
 
@@ -299,7 +288,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
         # check loss output
         if batch_count == 0:
             if not isinstance(loss, torch.Tensor):
-                raise ValueError("The return value of {} should be torch.Tensor, but got {}.".
+                raise ValueError("The return value of {} should be `torch.Tensor`, but got `{}`.".
                                  format(type(losser), type(loss)))
             if len(loss.size())!=0:
                 raise ValueError("The size of return value of {} is {}, should be torch.size([])".format(
@@ -314,7 +303,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
         outputs, truths = defaultdict(list), defaultdict(list)
         dev_batch = Batch(dataset=dataset, batch_size=batch_size, sampler=SequentialSampler())
         # TODO 这里修改为使用tester
-
+        tester = Tester(data=dataset, model=model, metrics=metrics, batch_size=batch_size, )
 
         with torch.no_grad():
             for batch_count, (batch_x, batch_y) in enumerate(dev_batch):

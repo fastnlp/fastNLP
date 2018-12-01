@@ -17,6 +17,29 @@ class Loss(LossBase):
         pass
 
 
+class LossInForward(LossBase):
+    def __init__(self, loss_key='loss'):
+        super().__init__()
+
+        self.loss_key = loss_key
+
+    def get_loss(self, *args, **kwargs):
+        pass
+
+    def __call__(self, output_dict, predict_dict):
+        pass
+
+
+def _prepare_losser(losser):
+    if losser is None:
+        losser = LossInForward()
+        return losser
+    elif isinstance(losser, LossBase):
+        return losser
+    else:
+        raise TypeError(f"Type of losser should be `fastNLP.LossBase`, got {type(losser)}")
+
+
 def squash(predict, truth, **kwargs):
     '''To reshape tensors in order to fit Loss functions in pytorch
 
