@@ -2,6 +2,7 @@ import math
 import unittest
 
 import torch as tc
+import torch.nn.functional as F
 
 import fastNLP.core.losses as loss
 
@@ -13,7 +14,11 @@ class TestLoss(unittest.TestCase):
 
 		print (".----------------------------------")
 
-		loss_func = loss.Loss("nll")
+		# loss_func = loss.Loss("nll")
+		print(callable(tc.nn.NLLLoss))
+		loss_func = loss.NewLoss(F.nll_loss)
+
+		nll_loss = loss.NLLLoss()
 
 		#pdb.set_trace()
 
@@ -35,16 +40,18 @@ class TestLoss(unittest.TestCase):
 
 
 		y = tc.log(y)
-		los = loss_func(y , gy)
+		los = loss_func({'input': y}, {'target': gy})
+		losses = nll_loss({'input': y}, {'target': gy})
 
 		r = -math.log(.3) - math.log(.3) - math.log(.1)
 		r /= 3
 		print ("loss = %f" % (los))
 		print ("r = %f" % (r))
+		print ("nll_loss = %f" % (losses))
 
 		self.assertEqual(int(los * 1000), int(r * 1000))
 
-	def test_case_2(self):
+	def _test_case_2(self):
 		#验证squash()的正确性
 		print ("----------------------------------")
 
@@ -74,7 +81,8 @@ class TestLoss(unittest.TestCase):
 		#pdb.set_trace()
 
 		y = tc.log(y)
-		los = loss_func(y , gy)
+		#los = loss_func({'input': y}, {'target': gy})
+		los = loss_func(y, gy)
 		print ("loss = %f" % (los))
 
 		r = -log(.3) - log(.3) - log(.1) - log(.3) - log(.7) - log(.1)
@@ -89,7 +97,8 @@ class TestLoss(unittest.TestCase):
 
 		log = math.log
 
-		loss_func = loss.Loss("nll")
+		#loss_func = loss.Loss("nll")
+		loss_func = loss.NLLLoss()
 
 		#pdb.set_trace()
 
@@ -117,7 +126,7 @@ class TestLoss(unittest.TestCase):
 
 		yy = tc.nn.utils.rnn.pack_padded_sequence(y , lens , batch_first = True).data
 		gyy = tc.nn.utils.rnn.pack_padded_sequence(gy , lens , batch_first = True).data
-		los = loss_func(yy , gyy)
+		los = loss_func({'input': yy}, {'target': gyy})
 		print ("loss = %f" % (los))
 
 
@@ -302,6 +311,59 @@ class TestLoss(unittest.TestCase):
 		r /= 3
 		print ("r = %f" % (r))
 		self.assertEqual(int(los * 1000), int(r * 1000))
+
+	def test_case_8(self):
+		def func(a, b):
+			import torch.nn.functional as F
+			return F.cross_entropy(a, b)
+
+		def func2(a, truth):
+			return func(a, truth)
+
+		def func3(predict, truth):
+			return func(predict, truth)
+
+		def func4(a, b, c=2):
+			return (a + b) * c
+
+		def func6(a, b, **kwargs):
+			c = kwargs['c']
+			return (a + b) * c
+
+		import torch
+		from fastNLP.core.losses import LossBase, NewLoss
+
+		get_loss = NewLoss(func, {'a': 'predict', 'b': 'truth'})
+		predict = torch.randn(5, 3)
+		truth = torch.LongTensor([1, 0, 1, 2, 1])
+		loss1 = get_loss({'predict': predict}, {'truth': truth})
+		get_loss_2 = NewLoss(func2, {'a': 'predict'})
+		loss2 = get_loss_2({'predict': predict}, {'truth': truth})
+		get_loss_3 = NewLoss(func3)
+		loss3 = get_loss_3({'predict': predict}, {'truth': truth})
+		print(loss1, loss2, loss3)
+		assert loss1 == loss2 and loss1 == loss3
+
+		get_loss_4 = NewLoss(func4)
+		loss4 = get_loss_4({'a': 1, 'b': 3}, {})
+		print(loss4)
+		assert loss4 == (1 + 3) * 2
+
+		get_loss_5 = NewLoss(func4)
+		loss5 = get_loss_5({'a': 1, 'b': 3}, {'c': 4})
+		print(loss5)
+		assert loss5 == (1 + 3) * 4
+
+		get_loss_6 = NewLoss(func6)
+		loss6 = get_loss_6({'a': 1, 'b': 3}, {'c': 4})
+		print(loss6)
+		assert loss6 == (1 + 3) * 4
+
+		get_loss_7 = NewLoss(func6, c='cc')
+		loss7 = get_loss_7({'a': 1, 'b': 3}, {'cc': 4})
+		print(loss7)
+		assert loss7 == (1 + 3) * 4
+
 
 if __name__ == "__main__":
 	unittest.main()
