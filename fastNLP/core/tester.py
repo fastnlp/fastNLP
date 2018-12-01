@@ -5,12 +5,13 @@ import torch
 from torch import nn
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.sampler import RandomSampler
+from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import get_func_signature
 from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.metrics import _prepare_metrics
+from fastNLP.core.utils import CheckError
 
 class Tester(object):
     """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
@@ -33,7 +34,7 @@ class Tester(object):
                 raise TypeError(f"`{_model_name}.predict` must be callable to be used "
                                 f"for evaluation, not `{type(self._predict_func)}`.")
         else:
-            self._predict_func = self._model
+            self._predict_func = self._model.forward
 
         self.data = data
         if torch.cuda.is_available() and self.use_cuda:
@@ -50,14 +51,14 @@ class Tester(object):
     def test(self):
         # turn on the testing mode; clean up the history
         network = self._model
-        self.mode(network, is_test=True)
+        self._mode(network, is_test=True)
         output, truths = defaultdict(list), defaultdict(list)
-        data_iterator = Batch(self.data, self.batch_size, sampler=RandomSampler(), as_numpy=False)
+        data_iterator = Batch(self.data, self.batch_size, sampler=SequentialSampler(), as_numpy=False)
 
         with torch.no_grad():
             for batch_x, batch_y in data_iterator:
                 _move_dict_value_to_device(self._model_device, batch_x, batch_y)
-                prediction = self.data_forward(network, batch_x)
+                prediction = self._data_forward(self._predict_func, batch_x)
                 assert isinstance(prediction, dict)
                 for k, v in prediction.items():
                     output[k].append(v)
@@ -68,16 +69,21 @@ class Tester(object):
             for k, v in truths.items():
                 truths[k] = itertools.chain(*v)
             eval_results = {}
+        try:
             for metric in self.metrics:
                 eval_result = metric(output, truths)
                 metric_name = metric.__class__.__name__
                 eval_results[metric_name] = eval_result
+        except CheckError as e:
+            pass
+
+
         if self.verbose >= 0:
-            print("[tester] \n{}".format(self.format_eval_results(eval_results)))
-        self.mode(network, is_test=False)
+            print("[tester] \n{}".format(self._format_eval_results(eval_results)))
+        self._mode(network, is_test=False)
         return eval_results
 
-    def mode(self, model, is_test=False):
+    def _mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.
 
         :param model: a PyTorch model
@@ -89,13 +95,13 @@ class Tester(object):
         else:
             model.train()
 
-    def data_forward(self, network, x):
+    def _data_forward(self, func, x):
         """A forward pass of the model. """
-        x = _build_args(network.forward, **x)
-        y = self._predict_func(**x)
+        x = _build_args(func, **x)
+        y = func(**x)
         return y
 
-    def format_eval_results(self, results):
+    def _format_eval_results(self, results):
         """Override this method to support more print formats.
 
         :param results: dict, (str: float) is (metrics name: value)

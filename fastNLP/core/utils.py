@@ -220,13 +220,16 @@ class CheckError(Exception):
 
     CheckError. Used in losses.LossBase, metrics.MetricBase.
     """
-    def __init__(self, check_res):
+    def __init__(self, check_res:CheckRes, func_signature:str):
         err = ''
-        if check_res['missing']:
-            err += f"Missing: {check_res['missing']}\n"
-        if check_res['duplicated']:
-            err += f"Duplicated: {check_res['duplicated']}\n"
-        if check_res['unused']:
-            err += f"Unused: {check_res['unused']}\n"
+        if check_res.missing:
+            err += f"Missing: {check_res.missing}\n"
+        if check_res.duplicated:
+            err += f"Duplicated: {check_res.duplicated}\n"
+        if check_res.unused:
+            err += f"Unused: {check_res.unused}\n"
+
         Exception.__init__(self, err)
+
         self.check_res = check_res
+        self.func_signature = func_signature

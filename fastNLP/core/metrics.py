@@ -8,6 +8,8 @@ import torch
 from fastNLP.core.utils import get_func_signature
 from fastNLP.core.utils import _check_arg_dict_list
 from fastNLP.core.utils import _build_args
+from fastNLP.core.utils import CheckError
+
 
 class MetricBase(object):
     def __init__(self):
@@ -29,7 +31,7 @@ class MetricBase(object):
             if isinstance(value, str):
                 raise TypeError(f"in {key}={value}, value must be `str`, not `{type(value)}`.")
             self.param_map[key] = value
-            
+
     def __call__(self, output_dict, target_dict, force_check=False):
         """
         :param output_dict:
@@ -67,7 +69,7 @@ class MetricBase(object):
             check_res = _check_arg_dict_list(self.evaluate, [mapped_output_dict, mapped_output_dict])
             self._reverse_param_map = {value:key for key, value in check_res.items()}
             for key, value in check_res.items():
-                new_value = value.copy()
+                new_value = list(value)
                 for idx, func_param in enumerate(value):
                     if func_param in self._reverse_param_map:
                         new_value[idx] = self._reverse_param_map[func_param]
@@ -85,27 +87,11 @@ class MetricBase(object):
         return metrics
 
 
-
-
-
-class CheckError(Exception):
-    def __init__(self, check_res):
-
-        err = ''
-        if check_res.missing:
-            err += f'Missing: {check_res.missing}\n'
-        if check_res.duplicated:
-            err += f'Duplicated: {check_res.duplicated}\n'
-        self.check_res = check_res
-
-    def __str__(self):
-        pass
-
-
 class Metric(MetricBase):
     def __init__(self, func, key_map, **kwargs):
         super().__init__()
         pass
+
 
 def _prepare_metrics(metrics):
     """
@@ -127,8 +113,8 @@ def _prepare_metrics(metrics):
         elif isinstance(metrics, MetricBase):
             _metrics = [metrics]
         else:
-            raise TypeError("The type of metrics should be `list[fastNLP.MetricBase]` or `fastNLP.MetricBase`, got {}."
-                .format(type(metrics)))
+            raise TypeError(f"The type of metrics should be `list[fastNLP.MetricBase]` or `fastNLP.MetricBase`, "
+                            f"got {type(metrics)}.")
     return _metrics
 
 

@@ -25,7 +25,7 @@ from fastNLP.core.losses import LossBase
 from fastNLP.core.metrics import MetricBase
 from fastNLP.core.losses import _prepare_losser
 from fastNLP.core.metrics import _prepare_metrics
-
+from fastNLP.core.utils import CheckError
 
 class Trainer(object):
     """Main Training Loop
@@ -211,13 +211,11 @@ class Trainer(object):
     def get_loss(self, predict, truth):
         """Compute loss given prediction and ground truth.
 
-        :param predict: prediction label vector
-        :param truth: ground truth label vector
+        :param predict: prediction dict, produced by model.forward
+        :param truth: ground truth dict, produced by batch_y
         :return: a scalar
         """
-        assert isinstance(predict, dict) and isinstance(truth, dict)
-        args = _build_args(self.loss_func, **predict, **truth)
-        return self.loss_func(**args)
+        return self.losser(predict, truth)
 
     def save_model(self, model, model_name, only_param=False):
         model_name = os.path.join(self.save_path, model_name)
@@ -260,11 +258,11 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
                 dev_data=None,
                 check_level=WARNING_CHECK_LEVEL):
     # check get_loss 方法
-    model_name = model.__class__.__name__
+    model_devcie = model.parameters().__next__().device
 
     batch = Batch(dataset=dataset, batch_size=batch_size, sampler=SequentialSampler())
     for batch_count, (batch_x, batch_y) in enumerate(batch):
-        _syn_model_data(model, batch_x, batch_y)
+        _move_dict_value_to_device(model_devcie, batch_x, batch_y)
         # forward check
         if batch_count==0:
             _check_forward_error(model_func=model.forward, check_level=check_level,
@@ -277,68 +275,29 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
             raise TypeError(f"The return value of {func_signature} should be `dict`, not `{type(output)}`.")
 
         # loss check
-        if isinstance(losser, type): # 这种情况，用户传的是losser.CE这种未初始化的loss
-            # 需要保证output与batch_y是无歧义的？
-            # (1) output和batch_y长度为1
-            # (2) output和batch_y的key是和losser接受的完全一致
-            pass
-
-        loss = losser(output, batch_y)
-
+        try:
+            loss = losser(output, batch_y)
+        except CheckError as e:
+            _check_loss_evaluate(prev_func=model.forward, func=e.func_signature,
+                                 check_res=e.check_res, output=output, batch_y=batch_y,
+                                 check_level=check_level)
         # check loss output
         if batch_count == 0:
             if not isinstance(loss, torch.Tensor):
-                raise ValueError("The return value of {} should be `torch.Tensor`, but got `{}`.".
-                                 format(type(losser), type(loss)))
+                raise TypeError(f"The return value of {get_func_signature(losser.__call__)} should be `torch.Tensor`, "
+                                 f"but got `{type(loss)}`.")
             if len(loss.size())!=0:
-                raise ValueError("The size of return value of {} is {}, should be torch.size([])".format(
-                    type(losser), loss.size()
-                ))
+                raise ValueError(f"The size of return value of {get_func_signature(losser.__call__)} is {loss.size()}, "
+                                 f"should be torch.size([])")
         loss.backward()
         model.zero_grad()
         if batch_count+1>=DEFAULT_CHECK_NUM_BATCH:
             break
 
     if dev_data is not None:
-        outputs, truths = defaultdict(list), defaultdict(list)
-        dev_batch = Batch(dataset=dataset, batch_size=batch_size, sampler=SequentialSampler())
-        # TODO 这里修改为使用tester
-        tester = Tester(data=dataset, model=model, metrics=metrics, batch_size=batch_size, )
-
-        with torch.no_grad():
-            for batch_count, (batch_x, batch_y) in enumerate(dev_batch):
-                _syn_model_data(model, batch_x, batch_y)
-
-                if hasattr(model, 'predict'):
-                    if not callable(model.predict):
-                        raise TypeError(f"{get_func_signature(model.predict)} must be callable to be used "
-                                        f"for evaluation.")
-                    refined_batch_x = _build_args(model.predict, **batch_x)
-                    prev_func = model.predict
-                    output = prev_func(**refined_batch_x)
-                else:
-                    refined_batch_x = _build_args(model.forward, **batch_x)
-                    prev_func = model.forward
-                    output = prev_func(**refined_batch_x)
-                func_signature = get_func_signature(prev_func)
-                if not isinstance(output, dict):
-                    raise TypeError(f"The return value of {func_signature} should be `dict`, not `{type(output)}`")
-                for k, v in output.items():
-                    outputs[k].append(v)
-                for k, v in batch_y.items():
-                    truths[k].append(v)
-                if batch_count+1>DEFAULT_CHECK_NUM_BATCH:
-                    break
-            for k, v in outputs.items():
-                outputs[k] = tuple(itertools.chain(*v))
-            for k, v in truths.items():
-                truths[k] = tuple(itertools.chain(*v))
-        #TODO 这里需要根据新版的metrics做修改，另外这里需要捕获来自metric的报错，因为需要指导用户debug
-
-
-
-
-
+        tester = Tester(data=dataset[:batch_size*DEFAULT_CHECK_NUM_BATCH], model=model, metrics=metrics,
+                        batch_size=batch_size, verbose=-1)
+        tester.test()
 
 
 def _check_forward_error(model_func, check_level, batch_x):
@@ -346,11 +305,11 @@ def _check_forward_error(model_func, check_level, batch_x):
     _missing = ''
     _unused = ''
     func_signature = get_func_signature(model_func)
-    if len(check_res.missing)!=0:
+    if len(check_res['missing'])!=0:
         _missing = "Function {} misses {}, only provided with {}, " \
                    ".\n".format(func_signature, check_res.missing,
                                              list(batch_x.keys()))
-    if len(check_res.unused)!=0:
+    if len(check_res['unused'])!=0:
         if len(check_res.unused) > 1:
             _unused = "{} are not used ".format(check_res.unused)
         else:
@@ -370,9 +329,7 @@ def _check_forward_error(model_func, check_level, batch_x):
         elif check_level == WARNING_CHECK_LEVEL:
             warnings.warn(message=_unused)
 
-def _check_loss_evaluate(prev_func, func, check_level, output, batch_y):
-
-    check_res = _check_arg_dict_list(func, [output, batch_y])
+def _check_loss_evaluate(prev_func, func, check_res, output, batch_y, check_level):
     _missing = ''
     _unused = ''
     _duplicated = ''
