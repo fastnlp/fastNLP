@@ -12,7 +12,7 @@ from fastNLP.core.batch import Batch
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.losses import _prepare_losser
 from fastNLP.core.metrics import _prepare_metrics
-from fastNLP.core.optimizer import Optimizer
+from fastNLP.core.optimizer import Adam
 from fastNLP.core.sampler import RandomSampler
 from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.tester import Tester
@@ -31,7 +31,7 @@ class Trainer(object):
     def __init__(self, train_data, model, losser=None, metrics=None, n_epochs=3, batch_size=32, print_every=-1,
                  validate_every=-1,
                  dev_data=None, use_cuda=False, save_path="./save",
-                 optimizer=Optimizer("Adam", lr=0.01, weight_decay=0), need_check_code=True,
+                 optimizer=Adam(lr=0.01, weight_decay=0), need_check_code=True,
                  metric_key=None,
                  **kwargs):
         super(Trainer, self).__init__()
@@ -178,7 +178,7 @@ class Trainer(object):
         for name, num in res.items():
             self._summary_writer.add_scalar("valid_{}".format(name), num, global_step=self.step)
         if self.save_path is not None and self._better_eval_result(res):
-            self.save_model(self.model,
+            self._save_model(self.model,
                             "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time]))
 
     def _mode(self, model, is_test=False):
@@ -225,7 +225,7 @@ class Trainer(object):
         """
         return self.losser(predict, truth)
 
-    def save_model(self, model, model_name, only_param=False):
+    def _save_model(self, model, model_name, only_param=False):
         model_name = os.path.join(self.save_path, model_name)
         if only_param:
             torch.save(model.state_dict(), model_name)
