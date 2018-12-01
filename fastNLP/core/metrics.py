@@ -1,6 +1,7 @@
 
 import warnings
 import inspect
+from collections import defaultdict
 
 import numpy as np
 import torch
@@ -21,6 +22,7 @@ class MetricBase(object):
 
     def _init_param_map(self, key_map, **kwargs):
         self.param_map = {}
+        value_counter = defaultdict(0)
         for key, value in key_map.items():
             if isinstance(key, str):
                 raise TypeError(f"key in key_map must be `str`, not `{type(key)}`.")
@@ -32,16 +34,19 @@ class MetricBase(object):
                 raise TypeError(f"in {key}={value}, value must be `str`, not `{type(value)}`.")
             self.param_map[key] = value
 
-    def __call__(self, output_dict, target_dict, force_check=False):
+    def __call__(self, output_dict, target_dict, check=False):
         """
         :param output_dict:
         :param target_dict:
+        :param check: boolean,
         :return:
         """
         if not callable(self.evaluate):
             raise TypeError(f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}.")
 
         if not self._checked:
+            # 0. check param_map does not have same value
+
             # 1. check consistence between signature and param_map
             func_spect = inspect.getfullargspec(self.evaluate)
             func_args = func_spect.args
@@ -65,7 +70,7 @@ class MetricBase(object):
                 mapped_target_dict[func_arg] = target_dict[input_arg]
 
         # check duplicated, unused, missing
-        if force_check or not self._checked:
+        if check or not self._checked:
             check_res = _check_arg_dict_list(self.evaluate, [mapped_output_dict, mapped_output_dict])
             self._reverse_param_map = {value:key for key, value in check_res.items()}
             for key, value in check_res.items():
@@ -73,8 +78,9 @@ class MetricBase(object):
                 for idx, func_param in enumerate(value):
                     if func_param in self._reverse_param_map:
                         new_value[idx] = self._reverse_param_map[func_param]
-            if check_res.missing or check_res.duplicated:
-                raise CheckError(check_res=check_res)
+            if check_res.missing or check_res.duplicated or check_res.varargs:
+                raise CheckError(check_res=check_res,
+                                 func_signature=get_func_signature(self.evaluate))
         refined_args = _build_args(self.evaluate, **mapped_output_dict, **mapped_target_dict)
 
         metrics = self.evaluate(**refined_args)
@@ -91,7 +97,6 @@ class Metric(MetricBase):
     def __init__(self, func, key_map, **kwargs):
         super().__init__()
         pass
-
 
 def _prepare_metrics(metrics):
     """

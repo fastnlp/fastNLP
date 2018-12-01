@@ -20,12 +20,11 @@ from fastNLP.core.utils import _check_arg_dict_list
 from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.utils import get_func_signature
 from fastNLP.core.dataset import DataSet
-
-from fastNLP.core.losses import LossBase
-from fastNLP.core.metrics import MetricBase
 from fastNLP.core.losses import _prepare_losser
 from fastNLP.core.metrics import _prepare_metrics
 from fastNLP.core.utils import CheckError
+from fastNLP.core.utils import _check_loss_evaluate
+from fastNLP.core.utils import _check_forward_error
 
 class Trainer(object):
     """Main Training Loop
@@ -33,7 +32,7 @@ class Trainer(object):
     """
     def __init__(self, train_data, model, losser=None, metrics=None, n_epochs=3, batch_size=32, print_every=-1, validate_every=-1,
                  dev_data=None, use_cuda=False, save_path="./save",
-                 optimizer=Optimizer("Adam", lr=0.01, weight_decay=0), need_check_code=True,
+                 optimizer=Optimizer("Adam", lr=0.01, weight_decay=0), check_code_level=0,
                  **kwargs):
         super(Trainer, self).__init__()
 
@@ -53,8 +52,9 @@ class Trainer(object):
         # prepare loss
         losser = _prepare_losser(losser)
 
-        if need_check_code:
-            _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data)
+        if check_code_level>-1:
+            _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data,
+                        check_level=check_code_level)
 
         self.train_data = train_data
         self.dev_data = dev_data  # If None, No validation.
@@ -250,13 +250,9 @@ class Trainer(object):
 DEFAULT_CHECK_BATCH_SIZE = 2
 DEFAULT_CHECK_NUM_BATCH = 2
 
-IGNORE_CHECK_LEVEL = 0
-WARNING_CHECK_LEVEL = 1
-STRICT_CHECK_LEVEL = 2
-
 def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_SIZE,
                 dev_data=None,
-                check_level=WARNING_CHECK_LEVEL):
+                check_level=0):
     # check get_loss 方法
     model_devcie = model.parameters().__next__().device
 
@@ -265,7 +261,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
         _move_dict_value_to_device(model_devcie, batch_x, batch_y)
         # forward check
         if batch_count==0:
-            _check_forward_error(model_func=model.forward, check_level=check_level,
+            _check_forward_error(forward_func=model.forward, check_level=check_level,
                                  batch_x=batch_x)
 
         refined_batch_x = _build_args(model.forward, **batch_x)
@@ -277,19 +273,21 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
         # loss check
         try:
             loss = losser(output, batch_y)
+            # check loss output
+            if batch_count == 0:
+                if not isinstance(loss, torch.Tensor):
+                    raise TypeError(
+                        f"The return value of {get_func_signature(losser.get_loss)} should be `torch.Tensor`, "
+                        f"but got `{type(loss)}`.")
+                if len(loss.size()) != 0:
+                    raise ValueError(
+                        f"The size of return value of {get_func_signature(losser.get_loss)} is {loss.size()}, "
+                        f"should be torch.size([])")
+            loss.backward()
         except CheckError as e:
             _check_loss_evaluate(prev_func=model.forward, func=e.func_signature,
                                  check_res=e.check_res, output=output, batch_y=batch_y,
                                  check_level=check_level)
-        # check loss output
-        if batch_count == 0:
-            if not isinstance(loss, torch.Tensor):
-                raise TypeError(f"The return value of {get_func_signature(losser.__call__)} should be `torch.Tensor`, "
-                                 f"but got `{type(loss)}`.")
-            if len(loss.size())!=0:
-                raise ValueError(f"The size of return value of {get_func_signature(losser.__call__)} is {loss.size()}, "
-                                 f"should be torch.size([])")
-        loss.backward()
         model.zero_grad()
         if batch_count+1>=DEFAULT_CHECK_NUM_BATCH:
             break
@@ -300,93 +298,5 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
         tester.test()
 
 
-def _check_forward_error(model_func, check_level, batch_x):
-    check_res = _check_arg_dict_list(model_func, batch_x)
-    _missing = ''
-    _unused = ''
-    func_signature = get_func_signature(model_func)
-    if len(check_res['missing'])!=0:
-        _missing = "Function {} misses {}, only provided with {}, " \
-                   ".\n".format(func_signature, check_res.missing,
-                                             list(batch_x.keys()))
-    if len(check_res['unused'])!=0:
-        if len(check_res.unused) > 1:
-            _unused = "{} are not used ".format(check_res.unused)
-        else:
-            _unused = "{} is not used ".format(check_res.unused)
-        _unused += "in function {}.\n".format(func_signature)
-    if _missing:
-        if len(_unused)>0 and STRICT_CHECK_LEVEL:
-            _error_str = "(1).{}\n(2).{}".format(_missing, _unused)
-        else:
-            _error_str = _missing
-        # TODO 这里可能需要自定义一些Error类型
-        raise TypeError(_error_str)
-    if _unused:
-        if check_level == STRICT_CHECK_LEVEL:
-            # TODO 这里可能需要自定义一些Error类型
-            raise ValueError(_unused)
-        elif check_level == WARNING_CHECK_LEVEL:
-            warnings.warn(message=_unused)
 
-def _check_loss_evaluate(prev_func, func, check_res, output, batch_y, check_level):
-    _missing = ''
-    _unused = ''
-    _duplicated = ''
-    func_signature = get_func_signature(func)
-    prev_func_signature = get_func_signature(prev_func)
-    if len(check_res.missing)>0:
-        _missing = "function {} misses argument {}, \n\t only provided with {}(from {}) and " \
-                   "{}(from target in Dataset)." \
-                   .format(func_signature, check_res.missing,
-                            list(output.keys()), prev_func_signature,
-                           list(batch_y.keys()))
-    if len(check_res.unused)>0:
-        if len(check_res.unused) > 1:
-            _unused = "{} are not used ".format(check_res.unused)
-        else:
-            _unused = "{} is not used ".format(check_res.unused)
-        _unused += "in function {}.\n".format(func_signature)
-    if len(check_res.duplicated)>0:
-        if len(check_res.duplicated) > 1:
-            _duplicated = "duplicated keys {} are detected when calling function {}. \n\tDon't set {} as target and output " \
-                          "them in {} at the same time.".format(check_res.duplicated,
-                                                                            func_signature,
-                                                                            check_res.duplicated,
-                                                                  prev_func_signature)
-        else:
-            _duplicated = "duplicated key {} is detected when calling function {}. \n\tDon't set {} as target and output " \
-                          "it in {} at the same time.".format(check_res.duplicated,
-                                                                func_signature,
-                                                                check_res.duplicated,
-                                                                prev_func_signature)
-    _number_errs = int(len(_missing)!=0) + int(len(_duplicated)!=0) + int(len(_unused)!=0)
-    if _number_errs > 0:
-        _error_strs = []
-        if _number_errs > 1:
-            count = 0
-            order_words = ['Firstly', 'Secondly', 'Thirdly']
-            if _missing:
-                _error_strs.append('{}, {}'.format(order_words[count], _missing))
-                count += 1
-            if _duplicated:
-                _error_strs.append('{}, {}'.format(order_words[count], _duplicated))
-                count += 1
-            if _unused and check_level == STRICT_CHECK_LEVEL:
-                _error_strs.append('{}, {}'.format(order_words[count], _unused))
-        else:
-            if _unused:
-                if check_level == STRICT_CHECK_LEVEL:
-                    # TODO 这里可能需要自定义一些Error类型
-                    _error_strs.append(_unused)
-                elif check_level == WARNING_CHECK_LEVEL:
-                    _unused = _unused.strip()
-                    warnings.warn(_unused)
-            else:
-                if _missing:
-                    _error_strs.append(_missing)
-                if _duplicated:
-                    _error_strs.append(_duplicated)
 
-        if _error_strs:
-            raise ValueError('\n' + '\n'.join(_error_strs))

@@ -12,6 +12,7 @@ from fastNLP.core.utils import get_func_signature
 from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.metrics import _prepare_metrics
 from fastNLP.core.utils import CheckError
+from fastNLP.core.utils import _check_loss_evaluate
 
 class Tester(object):
     """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
@@ -47,7 +48,6 @@ class Tester(object):
 
         self._model_device = model.parameters().__next__().device
 
-
     def test(self):
         # turn on the testing mode; clean up the history
         network = self._model
@@ -75,7 +75,9 @@ class Tester(object):
                 metric_name = metric.__class__.__name__
                 eval_results[metric_name] = eval_result
         except CheckError as e:
-            pass
+            prev_func_signature = get_func_signature(self._predict_func)
+            _check_loss_evaluate(prev_func_signature=prev_func_signature, func_signature=e.func_signature,
+                                 check_res=e.check_res, output=output, batch_y=truths)
 
 
         if self.verbose >= 0:

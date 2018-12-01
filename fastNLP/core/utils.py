@@ -1,11 +1,14 @@
 import _pickle
 import inspect
 import os
+import warnings
 from collections import Counter
 from collections import namedtuple
 import torch
 
-CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed'], verbose=False)
+
+CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
+                                   'varargs'], verbose=False)
 def save_pickle(obj, pickle_path, file_name):
     """Save an object into a pickle file.
 
@@ -105,7 +108,6 @@ def _check_arg_dict_list(func, args):
     assert callable(func) and isinstance(arg_dict_list, (list, tuple))
     assert len(arg_dict_list) > 0 and isinstance(arg_dict_list[0], dict)
     spect = inspect.getfullargspec(func)
-    assert spect.varargs is None, 'Positional Arguments({}) are not supported.'.format(spect.varargs)
     all_args = set([arg for arg in spect.args if arg!='self'])
     defaults = []
     if spect.defaults is not None:
@@ -125,7 +127,8 @@ def _check_arg_dict_list(func, args):
                     unused=unused,
                     duplicated=duplicated,
                     required=list(require_args),
-                    all_needed=list(all_args))
+                    all_needed=list(all_args),
+                    varargs=[arg for arg in spect.varargs])
 
 def get_func_signature(func):
     """
@@ -221,15 +224,73 @@ class CheckError(Exception):
     CheckError. Used in losses.LossBase, metrics.MetricBase.
     """
     def __init__(self, check_res:CheckRes, func_signature:str):
-        err = ''
-        if check_res.missing:
-            err += f"Missing: {check_res.missing}\n"
-        if check_res.duplicated:
-            err += f"Duplicated: {check_res.duplicated}\n"
-        if check_res.unused:
-            err += f"Unused: {check_res.unused}\n"
+        errs = [f'The following problems occurred when calling {func_signature}']
 
-        Exception.__init__(self, err)
+        if check_res.varargs:
+            errs.append(f"\tvarargs: {check_res.varargs}(Does not support pass positional arguments, please delete it)")
+        if check_res.missing:
+            errs.append(f"\tmissing param: {check_res.missing}")
+        if check_res.duplicated:
+            errs.append(f"\tduplicated param: {check_res.duplicated}")
+        if check_res.unused:
+            errs.append(f"\tunused param: {check_res.unused}")
+
+        Exception.__init__(self, '\n'.join(errs))
 
         self.check_res = check_res
         self.func_signature = func_signature
+
+IGNORE_CHECK_LEVEL = 0
+WARNING_CHECK_LEVEL = 1
+STRICT_CHECK_LEVEL = 2
+
+def _check_loss_evaluate(prev_func_signature:str, func_signature:str, check_res:CheckRes,
+                         output:dict, batch_y:dict, check_level=0):
+    errs = []
+    _unused = []
+    if check_res.varargs:
+        errs.append(f"\tvarargs: {check_res.varargs}(Does not support pass positional arguments, "
+                           f"please delete it.)")
+    if check_res.missing:
+        errs.append(f"\tmissing param: {check_res.missing}, only provided with {list(output.keys())}"
+                   f"(from {prev_func_signature}) and {list(batch_y.keys())}(from targets in Dataset).")
+    if check_res.duplicated:
+        errs.append(f"\tduplicated param: {check_res.duplicated}, delete {check_res.duplicated} in the output of "
+                    f"{check_res.duplicated} or do not set {check_res.duplicated} as targets. ")
+    if check_res.unused:
+        _unused = [f"\tunused param: {check_res.unused}"]
+        if check_level == STRICT_CHECK_LEVEL:
+            errs.extend(_unused)
+
+    if len(errs)>0:
+        errs.insert(0, f'The following problems occurred when calling {func_signature}')
+        raise NameError('\n'.join(errs))
+    if _unused:
+        if check_level == WARNING_CHECK_LEVEL:
+            _unused_warn = _unused[0] + f' in {func_signature}.'
+            warnings.warn(message=_unused_warn)
+
+
+def _check_forward_error(forward_func, batch_x, check_level):
+    check_res = _check_arg_dict_list(forward_func, batch_x)
+    func_signature = get_func_signature(forward_func)
+
+    errs = []
+    _unused = []
+
+    if check_res.varargs:
+        errs.append(f"\tvarargs: {check_res.varargs}(Does not support pass positional arguments, please delete it)")
+    if check_res.missing:
+        errs.append(f"\tmissing param: {check_res.missing}, only provided with {list(batch_x.keys())}.")
+    if check_res.unused:
+        _unused = [f"\tunused param: {check_res.unused}"]
+        if check_level == STRICT_CHECK_LEVEL:
+            errs.extend(_unused)
+
+    if len(errs)>0:
+        errs.insert(0, f'The following problems occurred when calling {func_signature}')
+        raise NameError('\n'.join(errs))
+    if _unused:
+        if check_level == WARNING_CHECK_LEVEL:
+            _unused_warn = _unused[0] + f' in {func_signature}.'
+            warnings.warn(message=_unused_warn)
