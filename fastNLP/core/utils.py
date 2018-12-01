@@ -64,6 +64,39 @@ def _build_args(func, **kwargs):
     return output
 
 
+def _map_args(maps: dict, **kwargs):
+    # maps: key=old name, value= new name
+    output = {}
+    for name, val in kwargs.items():
+        if name in maps:
+            assert isinstance(maps[name], str)
+            output.update({maps[name]: val})
+        else:
+            output.update({name: val})
+    for keys in maps.keys():
+        if keys not in output.keys():
+            # TODO: add UNUSED warning.
+            pass
+    return output
+
+
+def _get_arg_list(func):
+    assert callable(func)
+    spect = inspect.getfullargspec(func)
+    if spect.defaults is not None:
+        args = spect.args[: -len(spect.defaults)]
+        defaults = spect.args[-len(spect.defaults):]
+        defaults_val = spect.defaults
+    else:
+        args = spect.args
+        defaults = None
+        defaults_val = None
+    varargs = spect.varargs
+    kwargs = spect.varkw
+    return args, defaults, defaults_val, varargs, kwargs
+
+
+
 # check args
 def _check_arg_dict_list(func, args):
     if isinstance(args, dict):
