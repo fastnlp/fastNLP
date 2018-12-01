@@ -20,3 +20,23 @@ class TestFieldArray(unittest.TestCase):
         self.assertEqual(fa.get(0), 1)
         self.assertTrue(isinstance(fa.get([0, 1, 2]), np.ndarray))
         self.assertListEqual(list(fa.get([0, 1, 2])), [1, 2, 3])
+
+    def test_type_conversion(self):
+        fa = FieldArray("x", [1.2, 2.2, 3, 4, 5], is_input=True)
+        self.assertEqual(fa.pytype, float)
+        self.assertEqual(fa.dtype, np.double)
+
+        fa = FieldArray("x", [1, 2, 3, 4, 5], is_input=True)
+        fa.append(1.3333)
+        self.assertEqual(fa.pytype, float)
+        self.assertEqual(fa.dtype, np.double)
+
+        fa = FieldArray("y", [1.1, 2.2, 3.3, 4.4, 5.5], is_input=False)
+        fa.append(10)
+        self.assertEqual(fa.pytype, float)
+        self.assertEqual(fa.dtype, np.double)
+
+        fa = FieldArray("y", ["a", "b", "c", "d"], is_input=False)
+        fa.append("e")
+        self.assertEqual(fa.dtype, np.str)
+        self.assertEqual(fa.pytype, str)
