@@ -51,7 +51,7 @@ class LossBase(object):
 
         for keys in args:
             if param_map[keys] not in param_val_dict.keys():
-                raise RuntimeError("missing param {} in function {}".format(keys, self.get_loss))
+                raise RuntimeError(f"missing param {keys} in function {get_func_signature(self.get_loss)}")
 
         param_map_val = _map_args(reversed_param_map, **param_val_dict)
         param_value = _build_args(**param_map_val)
