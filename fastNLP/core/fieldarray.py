@@ -39,7 +39,7 @@ class FieldArray(object):
 
     @staticmethod
     def _map_to_np_type(basic_type):
-        type_mapping = {int: np.int64, float: np.double, str: np.str}
+        type_mapping = {int: np.int64, float: np.float64, str: np.str}
         return type_mapping[basic_type]
 
     def __repr__(self):

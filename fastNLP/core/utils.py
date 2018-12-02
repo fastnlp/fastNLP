@@ -122,13 +122,13 @@ def _check_arg_dict_list(func, args):
     input_args = set(input_arg_count.keys())
     missing = list(require_args - input_args)
     unused = list(input_args - all_args)
-
+    varargs = [] if spect.varargs else [arg for arg in spect.varargs]
     return CheckRes(missing=missing,
                     unused=unused,
                     duplicated=duplicated,
                     required=list(require_args),
                     all_needed=list(all_args),
-                    varargs=[arg for arg in spect.varargs])
+                    varargs=varargs)
 
 def get_func_signature(func):
     """
@@ -165,6 +165,7 @@ def get_func_signature(func):
         signature_str = func.__name__ + signature_str
         return signature_str
 
+
 def _is_function_or_method(func):
     """
 
@@ -179,26 +180,8 @@ def _check_function_or_method(func):
     if not _is_function_or_method(func):
         raise TypeError(f"{type(func)} is not a method or function.")
 
-def _syn_model_data(model, *args):
-    """
 
-    move data to model's device, element in *args should be dict. This is a inplace change.
-    :param model:
-    :param args:
-    :return:
-    """
-    if len(model.state_dict())==0:
-        raise ValueError("model has no parameter.")
-    device = model.parameters().__next__().device
-    for arg in args:
-        if isinstance(arg, dict):
-            for key, value in arg.items():
-                if isinstance(value, torch.Tensor):
-                    arg[key] = value.to(device)
-        else:
-            raise TypeError("Only support `dict` type right now.")
-
-def _move_dict_value_to_device(device, *args):
+def _move_dict_value_to_device(*args, device:torch.device):
     """
 
     move data to model's device, element in *args should be dict. This is a inplace change.
@@ -240,6 +223,7 @@ class CheckError(Exception):
         self.check_res = check_res
         self.func_signature = func_signature
 
+
 IGNORE_CHECK_LEVEL = 0
 WARNING_CHECK_LEVEL = 1
 STRICT_CHECK_LEVEL = 2
@@ -252,8 +236,8 @@ def _check_loss_evaluate(prev_func_signature:str, func_signature:str, check_res:
         errs.append(f"\tvarargs: {check_res.varargs}(Does not support pass positional arguments, "
                            f"please delete it.)")
     if check_res.missing:
-        errs.append(f"\tmissing param: {check_res.missing}, only provided with {list(output.keys())}"
-                   f"(from {prev_func_signature}) and {list(batch_y.keys())}(from targets in Dataset).")
+        errs.append(f"\tmissing param: `{check_res.missing}`, provided with `{list(output.keys())}`"
+                   f"(from output of `{prev_func_signature}`) and `{list(batch_y.keys())}`(from targets in Dataset).")
     if check_res.duplicated:
         errs.append(f"\tduplicated param: {check_res.duplicated}, delete {check_res.duplicated} in the output of "
                     f"{check_res.duplicated} or do not set {check_res.duplicated} as targets. ")
@@ -281,7 +265,7 @@ def _check_forward_error(forward_func, batch_x, check_level):
     if check_res.varargs:
         errs.append(f"\tvarargs: {check_res.varargs}(Does not support pass positional arguments, please delete it)")
     if check_res.missing:
-        errs.append(f"\tmissing param: {check_res.missing}, only provided with {list(batch_x.keys())}.")
+        errs.append(f"\tmissing param: {check_res.missing}, provided with {list(batch_x.keys())}.")
     if check_res.unused:
         _unused = [f"\tunused param: {check_res.unused}"]
         if check_level == STRICT_CHECK_LEVEL:

@@ -1,6 +1,5 @@
 import os
 import time
-import warnings
 from datetime import datetime
 from datetime import timedelta
 
@@ -9,24 +8,19 @@ from tensorboardX import SummaryWriter
 from torch import nn
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.losses import _prepare_losser
-from fastNLP.core.metrics import _prepare_metrics
 from fastNLP.core.optimizer import Adam
 from fastNLP.core.sampler import RandomSampler
 from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.tester import Tester
-from fastNLP.core.utils import CheckError
-from fastNLP.core.utils import _build_args
-from fastNLP.core.utils import _check_arg_dict_list
-from fastNLP.core.utils import _move_dict_value_to_device
-from fastNLP.core.utils import get_func_signature
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.losses import _prepare_losser
 from fastNLP.core.metrics import _prepare_metrics
 from fastNLP.core.utils import CheckError
 from fastNLP.core.utils import _check_loss_evaluate
 from fastNLP.core.utils import _check_forward_error
+from fastNLP.core.utils import _build_args
+from fastNLP.core.utils import _move_dict_value_to_device
+from fastNLP.core.utils import get_func_signature
 
 class Trainer(object):
     """Main Training Loop
@@ -52,6 +46,9 @@ class Trainer(object):
         if metrics and (dev_data is None):
             raise ValueError("No dev_data for evaluations, pass dev_data or set metrics to None. ")
 
+        # check save_path
+        if not (save_path is None or isinstance(save_path, str)):
+            raise ValueError("save_path can only be None or `str`.")
         # prepare evaluate
         metrics = _prepare_metrics(metrics)
 
@@ -156,7 +153,7 @@ class Trainer(object):
         """
         for batch_x, batch_y in data_iterator:
             # TODO 这里可能会遇到问题，万一用户在model内部修改了prediction的device就会有问题
-            _move_dict_value_to_device(self._model_device, batch_x, batch_y)
+            _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
             prediction = self._data_forward(model, batch_x)
             loss = self._compute_loss(prediction, batch_y)
             self._grad_backward(loss)
@@ -232,11 +229,12 @@ class Trainer(object):
         return self.losser(predict, truth)
 
     def _save_model(self, model, model_name, only_param=False):
-        model_name = os.path.join(self.save_path, model_name)
-        if only_param:
-            torch.save(model.state_dict(), model_name)
-        else:
-            torch.save(model, model_name)
+        if self.save_path is not None:
+            model_name = os.path.join(self.save_path, model_name)
+            if only_param:
+                torch.save(model.state_dict(), model_name)
+            else:
+                torch.save(model, model_name)
 
     def _better_eval_result(self, metrics):
         """Check if the current epoch yields better validation results.
@@ -297,7 +295,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
 
     batch = Batch(dataset=dataset, batch_size=batch_size, sampler=SequentialSampler())
     for batch_count, (batch_x, batch_y) in enumerate(batch):
-        _move_dict_value_to_device(model_devcie, batch_x, batch_y)
+        _move_dict_value_to_device(batch_x, batch_y, device=model_devcie)
         # forward check
         if batch_count==0:
             _check_forward_error(forward_func=model.forward, check_level=check_level,
@@ -335,6 +333,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
     if dev_data is not None:
         tester = Tester(data=dataset[:batch_size * DEFAULT_CHECK_NUM_BATCH], model=model, metrics=metrics,
                         batch_size=batch_size, verbose=-1)
-        tester.test()
+        evaluate_results = tester.test()
+        # TODO 这里需要检查是否返回来的值是否是合理的
 
 

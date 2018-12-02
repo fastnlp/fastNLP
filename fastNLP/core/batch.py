@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 
 class Batch(object):
@@ -45,7 +46,7 @@ class Batch(object):
                 if field.is_target or field.is_input:
                     batch = field.get(indices)
                     if not self.as_numpy:
-                        batch = torch.from_numpy(batch)
+                        batch = to_tensor(batch, field.dtype)
                     if field.is_target:
                         batch_y[field_name] = batch
                     if field.is_input:
@@ -54,3 +55,10 @@ class Batch(object):
             self.curidx = endidx
 
             return batch_x, batch_y
+
+def to_tensor(batch, dtype):
+    if dtype in (np.int8, np.int16, np.int32, np.int64):
+        batch = torch.LongTensor(batch)
+    if dtype in (np.float32, np.float64):
+        batch = torch.FloatTensor(batch)
+    return batch

@@ -126,15 +126,30 @@ class NLLLoss(LossBase):
 class LossInForward(LossBase):
     def __init__(self, loss_key='loss'):
         super().__init__()
+        if not isinstance(loss_key, str):
+            raise TypeError(f"Only str allowed for loss_key, got {type(loss_key)}.")
         self.loss_key = loss_key
 
     def get_loss(self, **kwargs):
         if self.loss_key not in kwargs:
-            pass
+            check_res = CheckRes(missing=[self.loss_key],
+                                 unused=[],
+                                 duplicated=[],
+                                 required=[],
+                                 all_needed=[],
+                                 varargs=[])
+            raise CheckError(check_res=check_res, func_signature=get_func_signature(self.get_loss))
 
-    def __call__(self, output_dict, predict_dict):
+    def __call__(self, output_dict, predict_dict, force_check=False):
 
-        return self.get_loss(**output_dict)
+        loss = self.get_loss(**output_dict)
+
+        if not (isinstance(loss, torch.Tensor) and len(loss.size()) == 0):
+            if not isinstance(loss, torch.Tensor):
+                raise TypeError(f"loss ERROR: loss except a torch.Tensor but got {type(loss)}")
+            raise RuntimeError(f"loss ERROR: the size of loss except torch.Size([]) but got {loss.size}")
+
+        return loss
 
 
 def _prepare_losser(losser):

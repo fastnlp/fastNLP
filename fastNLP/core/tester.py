@@ -7,11 +7,11 @@ from torch import nn
 from fastNLP.core.batch import Batch
 from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.dataset import DataSet
+from fastNLP.core.utils import CheckError
 from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import get_func_signature
 from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.metrics import _prepare_metrics
-from fastNLP.core.utils import CheckError
 from fastNLP.core.utils import _check_loss_evaluate
 
 class Tester(object):
@@ -57,7 +57,7 @@ class Tester(object):
 
         with torch.no_grad():
             for batch_x, batch_y in data_iterator:
-                _move_dict_value_to_device(self._model_device, batch_x, batch_y)
+                _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
                 prediction = self._data_forward(self._predict_func, batch_x)
                 assert isinstance(prediction, dict)
                 for k, v in prediction.items():
@@ -77,7 +77,7 @@ class Tester(object):
         except CheckError as e:
             prev_func_signature = get_func_signature(self._predict_func)
             _check_loss_evaluate(prev_func_signature=prev_func_signature, func_signature=e.func_signature,
-                                 check_res=e.check_res, output=output, batch_y=truths)
+                                 check_res=e.check_res, output=output, batch_y=truths, check_level=0)
 
 
         if self.verbose >= 0:

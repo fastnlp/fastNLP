@@ -10,7 +10,7 @@ from fastNLP.core.utils import get_func_signature
 from fastNLP.core.utils import _check_arg_dict_list
 from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import CheckError
-
+from fastNLP.core.utils import _check_function_or_method
 
 class MetricBase(object):
     def __init__(self):
@@ -20,19 +20,32 @@ class MetricBase(object):
     def evaluate(self, *args, **kwargs):
         raise NotImplementedError
 
-    def _init_param_map(self, key_map, **kwargs):
-        self.param_map = {}
-        value_counter = defaultdict(0)
-        for key, value in key_map.items():
-            if isinstance(key, str):
-                raise TypeError(f"key in key_map must be `str`, not `{type(key)}`.")
-            if isinstance(value, str):
-                raise TypeError(f"value in key_map must be `str`, not `{type(value)}`.")
-            self.param_map[key] = value
+    def _init_param_map(self, key_map=None, **kwargs):
+        value_counter = defaultdict(set)
+        if key_map is not None:
+            if not isinstance(key_map, dict):
+                raise TypeError("key_map must be `dict`, got {}.".format(type(key_map)))
+            for key, value in key_map.items():
+                if value is None:
+                    self.param_map[key] = key
+                    continue
+                if isinstance(key, str):
+                    raise TypeError(f"key in key_map must be `str`, not `{type(key)}`.")
+                if isinstance(value, str):
+                    raise TypeError(f"value in key_map must be `str`, not `{type(value)}`.")
+                self.param_map[key] = value
+                value_counter[value].add(key)
         for key, value in kwargs.items():
+            if value is None:
+                self.param_map[key] = key
+                continue
             if isinstance(value, str):
                 raise TypeError(f"in {key}={value}, value must be `str`, not `{type(value)}`.")
             self.param_map[key] = value
+            value_counter[value].add(key)
+        for value, key_set in value_counter.items():
+            if len(key_set)>1:
+                raise ValueError(f"Several params:{key_set} are provided with one output {value}.")
 
     def __call__(self, output_dict, target_dict, check=False):
         """
@@ -45,8 +58,6 @@ class MetricBase(object):
             raise TypeError(f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}.")
 
         if not self._checked:
-            # 0. check param_map does not have same value
-
             # 1. check consistence between signature and param_map
             func_spect = inspect.getfullargspec(self.evaluate)
             func_args = func_spect.args
@@ -58,26 +69,32 @@ class MetricBase(object):
                 if arg not in self.param_map:
                     self.param_map[arg] = arg #This param does not need mapping.
             self._evaluate_args = func_args
+            self._reverse_param_map = {value: key for key, value in self.param_map.items()}
 
         # need to wrap inputs in dict.
         mapped_output_dict = {}
         mapped_target_dict = {}
         for func_arg in self._evaluate_args:
             input_arg = self.param_map[func_arg]
+            if input_arg in self._reverse_param_map:
+                mapped_arg = func_arg
+            else:
+                mapped_arg = input_arg
             if input_arg in output_dict:
-                mapped_output_dict[func_arg] = output_dict[input_arg]
+                mapped_output_dict[mapped_arg] = output_dict[input_arg]
             if input_arg in target_dict:
-                mapped_target_dict[func_arg] = target_dict[input_arg]
+                mapped_target_dict[mapped_arg] = target_dict[input_arg]
 
         # check duplicated, unused, missing
         if check or not self._checked:
             check_res = _check_arg_dict_list(self.evaluate, [mapped_output_dict, mapped_output_dict])
-            self._reverse_param_map = {value:key for key, value in check_res.items()}
             for key, value in check_res.items():
                 new_value = list(value)
                 for idx, func_param in enumerate(value):
                     if func_param in self._reverse_param_map:
-                        new_value[idx] = self._reverse_param_map[func_param]
+                        new_value[idx] = self._reverse_param_map[func_param] + f'(assign to {func_param})'
+                    else:
+                        new_value[idx] = func_param
             if check_res.missing or check_res.duplicated or check_res.varargs:
                 raise CheckError(check_res=check_res,
                                  func_signature=get_func_signature(self.evaluate))
@@ -93,10 +110,54 @@ class MetricBase(object):
         return metrics
 
 
-class Metric(MetricBase):
+class FuncMetric(MetricBase):
     def __init__(self, func, key_map, **kwargs):
         super().__init__()
+
+        _check_function_or_method(func=func)
+        self._init_param_map(key_map=key_map, **kwargs)
+
+        self.evaluate = func
+
+
+class AccuracyMetric(MetricBase):
+    def __init__(self, predictions=None, targets=None, masks=None, seq_lens=None):
+        super().__init__()
+
+        self._init_param_map(predictions=predictions, targets=targets,
+                             masks=masks, seq_lens=seq_lens)
+
+    def evaluate(self, predictions, targets, masks=None, seq_lens=None):
+        """
+
+        :param predictions: List of (torch.Tensor, or numpy.ndarray). Element's shape can be:
+                torch.Size([]), torch.Size([n_classes,]), torch.Size([max_len,]), torch.Size([max_len, n_classes])
+        :param targets: List of (torch.Tensor, or numpy.ndarray). Element's can be:
+                torch.Size([]), torch.Size([]), torch.Size([max_len,]), torch.Size([max_len, ])
+        :param masks: List of (torch.Tensor, or numpy.ndarray). Element's can be:
+                None, None, torch.Size([max_len,], torch.Size([max_len, ])
+        :param seq_lens: List of (torch.Tensor, or numpy.ndarray). Element's can be:
+                None, None, torch.Size([1], torch.Size([1])
+        :return: dict({'acc': float})
+        """
         pass
+
+    def _check_evaluate_param(self, predictions, targets, masks=None, seq_lens=None):
+        # check the validity of self.evaluate param
+        prediction = predictions[0]
+        target = targets[0]
+
+        if len(np.shape(prediction))==len(target):
+            pass
+
+        if masks is not None:
+            mask = masks[0]
+        if seq_lens is not None:
+            seq_len = seq_lens[0]
+
+
+
+
 
 def _prepare_metrics(metrics):
     """
