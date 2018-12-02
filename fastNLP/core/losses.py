@@ -1,3 +1,6 @@
+import inspect
+from collections import defaultdict
+
 import torch
 import torch.nn.functional as F
 
@@ -18,6 +21,54 @@ class LossBase(object):
 
     def get_loss(self, *args, **kwargs):
         raise NotImplementedError
+
+    def _init_param_map(self, key_map=None, **kwargs):
+        """Check the validity of key_map and other param map. Add these into self.param_map
+
+        :param key_map: dict
+        :param kwargs:
+        :return: None
+        """
+        value_counter = defaultdict(set)
+        if key_map is not None:
+            if not isinstance(key_map, dict):
+                raise TypeError("key_map must be `dict`, got {}.".format(type(key_map)))
+            for key, value in key_map.items():
+                if value is None:
+                    self.param_map[key] = key
+                    continue
+                if not isinstance(key, str):
+                    raise TypeError(f"key in key_map must be `str`, not `{type(key)}`.")
+                if not isinstance(value, str):
+                    raise TypeError(f"value in key_map must be `str`, not `{type(value)}`.")
+                self.param_map[key] = value
+                value_counter[value].add(key)
+        for key, value in kwargs.items():
+            if value is None:
+                self.param_map[key] = key
+                continue
+            if not isinstance(value, str):
+                raise TypeError(f"in {key}={value}, value must be `str`, not `{type(value)}`.")
+            self.param_map[key] = value
+            value_counter[value].add(key)
+        for value, key_set in value_counter.items():
+            if len(key_set) > 1:
+                raise ValueError(f"Several parameters:{key_set} are provided with one output {value}.")
+
+        # check consistence between signature and param_map
+        func_spect = inspect.getfullargspec(self.get_loss)
+        func_args = [arg for arg in func_spect.args if arg != 'self']
+        for func_param, input_param in self.param_map.items():
+            if func_param not in func_args:
+                raise NameError(
+                    f"Parameter `{func_param}` is not in {get_func_signature(self.get_loss)}. Please check the "
+                    f"initialization parameters, or change the signature of"
+                    f" {get_func_signature(self.get_loss)}.")
+
+        # evaluate should not have varargs.
+        if func_spect.varargs:
+            raise NameError(f"Delete `*{func_spect.varargs}` in {get_func_signature(self.get_loss)}(Do not use "
+                            f"positional argument.).")
 
     def __call__(self, output_dict, target_dict, force_check=False):
         """
@@ -106,6 +157,13 @@ class LossFunc(LossBase):
         self.get_loss = func
 
 
+class CrossEntropyLoss(LossBase):
+    def __init__(self, input=None, target=None):
+        super(CrossEntropyLoss, self).__init__()
+        self.get_loss = F.cross_entropy
+        self._init_param_map(input=input, target=target)
+
+
 class L1Loss(LossBase):
     def __init__(self):
         super(L1Loss, self).__init__()
@@ -116,6 +174,7 @@ class BCELoss(LossBase):
     def __init__(self, input=None, target=None):
         super(BCELoss, self).__init__()
         self.get_loss = F.binary_cross_entropy
+        self._init_param_map(input=input, target=target)
 
 
 class NLLLoss(LossBase):
@@ -287,11 +346,12 @@ loss_function_name = {
 
 
 class Loss(object):
-    '''a Loss object is a callable object represents loss functions
-    '''
+    """a Loss object is a callable object represents loss functions
+
+    """
 
     def __init__(self, loss_name, pre_pro=[squash], **kwargs):
-        '''
+        """
 
         :param loss_name: str or None , the name of loss function
         :param pre_pro 	: list of function or str, methods to reform parameters before calculating loss
@@ -303,7 +363,7 @@ class Loss(object):
             kwargs is the extra parameters passed-in when calling loss function
         pre_pro functions should return two objects, respectively predict and truth that after processed
 
-        '''
+        """
 
         if loss_name is None:
             # this is useful when Trainer.__init__ performs type check

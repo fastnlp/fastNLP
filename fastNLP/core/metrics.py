@@ -15,16 +15,15 @@ from fastNLP.core.utils import seq_lens_to_masks
 
 class MetricBase(object):
     def __init__(self):
-        self.param_map = {} # key is param in function, value is input param.
+        self.param_map = {}  # key is param in function, value is input param.
         self._checked = False
 
     def evaluate(self, *args, **kwargs):
         raise NotImplementedError
 
     def _init_param_map(self, key_map=None, **kwargs):
-        """
+        """Check the validity of key_map and other param map. Add these into self.param_map
 
-        check the validity of key_map and other param map. Add these into self.param_map
         :param key_map: dict
         :param kwargs:
         :return: None
@@ -37,9 +36,9 @@ class MetricBase(object):
                 if value is None:
                     self.param_map[key] = key
                     continue
-                if isinstance(key, str):
+                if not isinstance(key, str):
                     raise TypeError(f"key in key_map must be `str`, not `{type(key)}`.")
-                if isinstance(value, str):
+                if not isinstance(value, str):
                     raise TypeError(f"value in key_map must be `str`, not `{type(value)}`.")
                 self.param_map[key] = value
                 value_counter[value].add(key)
@@ -52,12 +51,12 @@ class MetricBase(object):
             self.param_map[key] = value
             value_counter[value].add(key)
         for value, key_set in value_counter.items():
-            if len(key_set)>1:
+            if len(key_set) > 1:
                 raise ValueError(f"Several parameters:{key_set} are provided with one output {value}.")
 
         # check consistence between signature and param_map
         func_spect = inspect.getfullargspec(self.evaluate)
-        func_args = [arg for arg in func_spect.args if arg!='self']
+        func_args = [arg for arg in func_spect.args if arg != 'self']
         for func_param, input_param in self.param_map.items():
             if func_param not in func_args:
                 raise NameError(f"Parameter `{func_param}` is not in {get_func_signature(self.evaluate)}. Please check the "
@@ -76,7 +75,7 @@ class MetricBase(object):
         """
 
         This method will call self.evaluate method.
-        Before calling self.evaluate, it will first check the validity ofoutput_dict, target_dict
+        Before calling self.evaluate, it will first check the validity of output_dict, target_dict
             (1) whether self.evaluate has varargs, which is not supported.
             (2) whether params needed by self.evaluate is not included in output_dict,target_dict.
             (3) whether params needed by self.evaluate duplicate in output_dict, target_dict
