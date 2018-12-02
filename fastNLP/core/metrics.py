@@ -10,7 +10,7 @@ from fastNLP.core.utils import get_func_signature
 from fastNLP.core.utils import _check_arg_dict_list
 from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import CheckError
-from fastNLP.core.utils import _check_function_or_method
+from fastNLP.core.utils import seq_lens_to_masks
 
 class MetricBase(object):
     def __init__(self):
@@ -21,6 +21,13 @@ class MetricBase(object):
         raise NotImplementedError
 
     def _init_param_map(self, key_map=None, **kwargs):
+        """
+
+        check the validity of key_map and other param map. Add these into self.param_map
+        :param key_map: dict
+        :param kwargs:
+        :return: None
+        """
         value_counter = defaultdict(set)
         if key_map is not None:
             if not isinstance(key_map, dict):
@@ -46,6 +53,9 @@ class MetricBase(object):
         for value, key_set in value_counter.items():
             if len(key_set)>1:
                 raise ValueError(f"Several params:{key_set} are provided with one output {value}.")
+
+    def get_metric(self, reset=True):
+        raise NotImplemented
 
     def __call__(self, output_dict, target_dict, check=False):
         """
@@ -100,24 +110,8 @@ class MetricBase(object):
                                  func_signature=get_func_signature(self.evaluate))
         refined_args = _build_args(self.evaluate, **mapped_output_dict, **mapped_target_dict)
 
-        metrics = self.evaluate(**refined_args)
-
-        if not isinstance(metrics, dict):
-            raise TypeError(f"The return value of {get_func_signature(self.evaluate)} must be `dict`, "
-                            f"got {type(metrics)}.")
+        self.evaluate(**refined_args)
         self._checked = True
-
-        return metrics
-
-
-class FuncMetric(MetricBase):
-    def __init__(self, func, key_map, **kwargs):
-        super().__init__()
-
-        _check_function_or_method(func=func)
-        self._init_param_map(key_map=key_map, **kwargs)
-
-        self.evaluate = func
 
 
 class AccuracyMetric(MetricBase):
@@ -127,35 +121,61 @@ class AccuracyMetric(MetricBase):
         self._init_param_map(predictions=predictions, targets=targets,
                              masks=masks, seq_lens=seq_lens)
 
+        self.total = 0
+        self.acc_count = 0
+
     def evaluate(self, predictions, targets, masks=None, seq_lens=None):
         """
 
         :param predictions: List of (torch.Tensor, or numpy.ndarray). Element's shape can be:
-                torch.Size([]), torch.Size([n_classes,]), torch.Size([max_len,]), torch.Size([max_len, n_classes])
+                torch.Size([B,]), torch.Size([B, n_classes]), torch.Size([B, max_len]), torch.Size([B, max_len, n_classes])
         :param targets: List of (torch.Tensor, or numpy.ndarray). Element's can be:
-                torch.Size([]), torch.Size([]), torch.Size([max_len,]), torch.Size([max_len, ])
+                torch.Size([B,]), torch.Size([B, n_classes]), torch.Size([B, max_len]), torch.Size([B, max_len])
         :param masks: List of (torch.Tensor, or numpy.ndarray). Element's can be:
-                None, None, torch.Size([max_len,], torch.Size([max_len, ])
+                None, None, torch.Size([B, max_len], torch.Size([B, max_len])
         :param seq_lens: List of (torch.Tensor, or numpy.ndarray). Element's can be:
-                None, None, torch.Size([1], torch.Size([1])
+                None, None, torch.Size([B], torch.Size([B]). ignored if masks are provided.
         :return: dict({'acc': float})
         """
-        pass
+        if not isinstance(predictions, torch.Tensor):
+            raise NameError(f"`predictions` in {get_func_signature(self.evaluate())} expects torch.Tensor,"
+                            f"got {type(predictions)}.")
+        if not isinstance(targets, torch.Tensor):
+            raise NameError(f"`targets` in {get_func_signature(self.evaluate())} expects torch.Tensor,"
+                            f"got {type(targets)}.")
 
-    def _check_evaluate_param(self, predictions, targets, masks=None, seq_lens=None):
-        # check the validity of self.evaluate param
-        prediction = predictions[0]
-        target = targets[0]
+        if masks is not None and not isinstance(masks, torch.Tensor):
+            raise NameError(f"`masks` in {get_func_signature(self.evaluate())} expects torch.Tensor,"
+                            f"got {type(masks)}.")
+        elif seq_lens is not None and not isinstance(seq_lens, torch.Tensor):
+            raise NameError(f"`seq_lens` in {get_func_signature(self.evaluate())} expects torch.Tensor,"
+                                f"got {type(seq_lens)}.")
 
-        if len(np.shape(prediction))==len(target):
+        if masks is None and seq_lens is not None:
+            masks = seq_lens_to_masks(seq_lens=seq_lens, float=True)
+
+        if predictions.size()==targets.size():
             pass
+        elif len(predictions.size())==len(targets.size())+1:
+            predictions = predictions.argmax(dim=-1)
+        else:
+            raise RuntimeError(f"In {get_func_signature(self.evaluate())}, when predictions with "
+                               f"size:{predictions.size()}, targets should with size: {predictions.size()} or "
+                               f"{predictions.size()[:-1]}, got {targets.size()}.")
 
         if masks is not None:
-            mask = masks[0]
-        if seq_lens is not None:
-            seq_len = seq_lens[0]
+            self.acc_count += torch.sum(torch.eq(predictions, targets).float() * masks.float()).item()
+            self.total += torch.sum(masks.float()).item()
+        else:
+            self.acc_count +=  torch.sum(torch.eq(predictions, targets).float()).item()
+            self.total += np.prod(list(torch.size(predictions)))
 
-
+    def get_metric(self, reset=True):
+        evaluate_result = {'acc': self.acc_count/self.total}
+        if reset:
+            self.acc_count = 0
+            self.total = 0
+        return evaluate_result
 
 
 

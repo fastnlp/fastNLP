@@ -4,7 +4,9 @@ import os
 import warnings
 from collections import Counter
 from collections import namedtuple
+
 import torch
+import numpy as np
 
 
 CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
@@ -96,7 +98,6 @@ def _get_arg_list(func):
     varargs = spect.varargs
     kwargs = spect.varkw
     return args, defaults, defaults_val, varargs, kwargs
-
 
 
 # check args
@@ -278,3 +279,33 @@ def _check_forward_error(forward_func, batch_x, check_level):
         if check_level == WARNING_CHECK_LEVEL:
             _unused_warn = _unused[0] + f' in {func_signature}.'
             warnings.warn(message=_unused_warn)
+
+
+def seq_lens_to_masks(seq_lens, float=True):
+    """
+
+    Convert seq_lens to masks.
+    :param seq_lens: list, np.ndarray, or torch.LongTensor, shape should all be (B,)
+    :param float: if True, the return masks is in float type, otherwise it is byte.
+    :return: list, np.ndarray or torch.Tensor, shape will be (B, max_length)
+    """
+    if isinstance(seq_lens, np.ndarray):
+        assert len(np.shape(seq_lens))==1, f"seq_lens can only have one dimension, got {len(np.shape(seq_lens))}."
+        assert seq_lens.dtype in (int, np.int32, np.int64), f"seq_lens can only be integer, not {seq_lens.dtype}."
+        raise NotImplemented
+    elif isinstance(seq_lens, torch.LongTensor):
+        assert len(seq_lens.size())==1, f"seq_lens can only have one dimension, got {len(seq_lens.size())==1}."
+        batch_size = seq_lens.size(0)
+        max_len = seq_lens.max()
+        indexes = torch.arange(max_len).view(1, -1).repeat(batch_size, 1).to(seq_lens.device)
+        masks = indexes.lt(seq_lens.unsqueeze(1))
+
+        if float:
+            masks = masks.float()
+
+        return masks
+    elif isinstance(seq_lens, list):
+        raise NotImplemented
+    else:
+        raise NotImplemented
+

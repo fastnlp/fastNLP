@@ -54,31 +54,28 @@ class Tester(object):
         self._mode(network, is_test=True)
         output, truths = defaultdict(list), defaultdict(list)
         data_iterator = Batch(self.data, self.batch_size, sampler=SequentialSampler(), as_numpy=False)
-
-        with torch.no_grad():
-            for batch_x, batch_y in data_iterator:
-                _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
-                prediction = self._data_forward(self._predict_func, batch_x)
-                assert isinstance(prediction, dict)
-                for k, v in prediction.items():
-                    output[k].append(v)
-                for k, v in batch_y.items():
-                    truths[k].append(v)
-            for k, v in output.items():
-                output[k] = itertools.chain(*v)
-            for k, v in truths.items():
-                truths[k] = itertools.chain(*v)
-            eval_results = {}
+        eval_results = {}
         try:
-            for metric in self.metrics:
-                eval_result = metric(output, truths)
-                metric_name = metric.__class__.__name__
-                eval_results[metric_name] = eval_result
+            with torch.no_grad():
+                for batch_x, batch_y in data_iterator:
+                    _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
+                    prediction = self._data_forward(self._predict_func, batch_x)
+                    if not isinstance(prediction, dict):
+                        raise TypeError(f"The return value of {get_func_signature(self._predict_func)} " 
+                                                         f"must be `dict`, got {type(prediction)}.")
+                    for metric in self.metrics:
+                        metric(prediction, batch_y)
+                for metric in self.metrics:
+                    eval_result = metric.get_metric()
+                    if not isinstance(eval_result, dict):
+                        raise TypeError(f"The return value of {get_func_signature(metric.get_metric)} must be "
+                                        f"`dict`, got {type(eval_result)}")
+                    metric_name = metric.__class__.__name__
+                    eval_results[metric_name] = eval_result
         except CheckError as e:
             prev_func_signature = get_func_signature(self._predict_func)
             _check_loss_evaluate(prev_func_signature=prev_func_signature, func_signature=e.func_signature,
                                  check_res=e.check_res, output=output, batch_y=truths, check_level=0)
-
 
         if self.verbose >= 0:
             print("[tester] \n{}".format(self._format_eval_results(eval_results)))
