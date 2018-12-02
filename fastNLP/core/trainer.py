@@ -56,7 +56,10 @@ class Trainer(object):
         # increase_better is True. It means the exp result gets better if the indicator increases.
         # It is true by default.
         self.increase_better = False if metric_key[0] == "-" else True
-        self.metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
+        if metric_key is not None:
+            self.metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
+        else:
+            self.metric_key = None
 
         # prepare loss
         losser = _prepare_losser(losser)
@@ -144,12 +147,13 @@ class Trainer(object):
             del self._summary_writer
 
     def _train_epoch(self, data_iterator, model, epoch, start):
-        """Training process in one epoch.
+        """
 
-            kwargs should contain:
-                - n_print: int, print training information every n steps.
-                - start: time.time(), the starting time of this step.
-                - epoch: int,
+        :param data_iterator:
+        :param model:
+        :param epoch:
+        :param start:
+        :return:
         """
         for batch_x, batch_y in data_iterator:
             # TODO 这里可能会遇到问题，万一用户在model内部修改了prediction的device就会有问题
@@ -188,7 +192,7 @@ class Trainer(object):
         """Train mode or Test mode. This is for PyTorch currently.
 
         :param model: a PyTorch model
-        :param is_test: bool, whether in test mode or not.
+        :param bool is_test: whether in test mode or not.
 
         """
         if is_test:
@@ -263,7 +267,7 @@ class Trainer(object):
             else:
                 # metric_key is set
                 if self.metric_key not in metric_dict:
-                    raise RuntimeError(f"matric key {self.metric_key} not found in {metric_dict}")
+                    raise RuntimeError(f"metric key {self.metric_key} not found in {metric_dict}")
                 indicator_val = metric_dict[self.metric_key]
 
             is_better = True
