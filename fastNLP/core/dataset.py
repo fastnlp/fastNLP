@@ -260,6 +260,12 @@ class DataSet(object):
             dev_set.append(self[idx])
         for idx in train_indices:
             train_set.append(self[idx])
+        for field_name in self.field_arrays:
+            train_set.field_arrays[field_name].is_input = self.field_arrays[field_name].is_input
+            train_set.field_arrays[field_name].is_target = self.field_arrays[field_name].is_target
+            dev_set.field_arrays[field_name].is_input = self.field_arrays[field_name].is_input
+            dev_set.field_arrays[field_name].is_target = self.field_arrays[field_name].is_target
+
         return train_set, dev_set
 
     @classmethod

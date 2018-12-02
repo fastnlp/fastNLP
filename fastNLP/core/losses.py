@@ -3,11 +3,11 @@ import torch.nn.functional as F
 
 from fastNLP.core.utils import CheckError
 from fastNLP.core.utils import CheckRes
+from fastNLP.core.utils import _build_args
+from fastNLP.core.utils import _check_function_or_method
 from fastNLP.core.utils import _get_arg_list
 from fastNLP.core.utils import _map_args
 from fastNLP.core.utils import get_func_signature
-from fastNLP.core.utils import _build_args
-from fastNLP.core.utils import _check_function_or_method
 
 
 class LossBase(object):
@@ -71,7 +71,8 @@ class LossBase(object):
 
         if len(duplicated) > 0 or len(missing) > 0:
             raise CheckError(
-                CheckRes(missing=missing, unused=[], duplicated=duplicated, required=[], all_needed=[]),
+                CheckRes(missing=missing, unused=[], duplicated=duplicated, required=[], all_needed=[],
+                         varargs=varargs),
                 func_signature=get_func_signature(self.get_loss)
             )
 
@@ -90,9 +91,9 @@ class LossBase(object):
         return loss
 
 
-class NewLoss(LossBase):
+class LossFunc(LossBase):
     def __init__(self, func, key_map=None, **kwargs):
-        super(NewLoss, self).__init__()
+        super(LossFunc, self).__init__()
         _check_function_or_method(func)
         if key_map is not None:
             if not isinstance(key_map, dict):

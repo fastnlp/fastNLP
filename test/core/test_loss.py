@@ -16,7 +16,8 @@ class TestLoss(unittest.TestCase):
 
 		# loss_func = loss.Loss("nll")
 		print(callable(tc.nn.NLLLoss))
-		loss_func = loss.NewLoss(F.nll_loss)
+
+	loss_func = loss.LossFunc(F.nll_loss)
 
 		nll_loss = loss.NLLLoss()
 
@@ -330,36 +331,36 @@ class TestLoss(unittest.TestCase):
 			c = kwargs['c']
 			return (a + b) * c
 
-		import torch
-		from fastNLP.core.losses import LossBase, NewLoss
 
-		get_loss = NewLoss(func, {'a': 'predict', 'b': 'truth'})
+from fastNLP.core.losses import LossFunc
+
+get_loss = LossFunc(func, {'a': 'predict', 'b': 'truth'})
 		predict = torch.randn(5, 3)
 		truth = torch.LongTensor([1, 0, 1, 2, 1])
 		loss1 = get_loss({'predict': predict}, {'truth': truth})
-		get_loss_2 = NewLoss(func2, {'a': 'predict'})
+get_loss_2 = LossFunc(func2, {'a': 'predict'})
 		loss2 = get_loss_2({'predict': predict}, {'truth': truth})
-		get_loss_3 = NewLoss(func3)
+get_loss_3 = LossFunc(func3)
 		loss3 = get_loss_3({'predict': predict}, {'truth': truth})
 		print(loss1, loss2, loss3)
 		assert loss1 == loss2 and loss1 == loss3
 
-		get_loss_4 = NewLoss(func4)
+get_loss_4 = LossFunc(func4)
 		loss4 = get_loss_4({'a': 1, 'b': 3}, {})
 		print(loss4)
 		assert loss4 == (1 + 3) * 2
 
-		get_loss_5 = NewLoss(func4)
+get_loss_5 = LossFunc(func4)
 		loss5 = get_loss_5({'a': 1, 'b': 3}, {'c': 4})
 		print(loss5)
 		assert loss5 == (1 + 3) * 4
 
-		get_loss_6 = NewLoss(func6)
+get_loss_6 = LossFunc(func6)
 		loss6 = get_loss_6({'a': 1, 'b': 3}, {'c': 4})
 		print(loss6)
 		assert loss6 == (1 + 3) * 4
 
-		get_loss_7 = NewLoss(func6, c='cc')
+get_loss_7 = LossFunc(func6, c='cc')
 		loss7 = get_loss_7({'a': 1, 'b': 3}, {'cc': 4})
 		print(loss7)
 		assert loss7 == (1 + 3) * 4

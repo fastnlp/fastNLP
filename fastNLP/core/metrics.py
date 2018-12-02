@@ -1,16 +1,17 @@
 
-import warnings
 import inspect
+import warnings
 from collections import defaultdict
 
 import numpy as np
 import torch
 
-from fastNLP.core.utils import get_func_signature
-from fastNLP.core.utils import _check_arg_dict_list
-from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import CheckError
+from fastNLP.core.utils import _build_args
+from fastNLP.core.utils import _check_arg_dict_list
+from fastNLP.core.utils import get_func_signature
 from fastNLP.core.utils import seq_lens_to_masks
+
 
 class MetricBase(object):
     def __init__(self):

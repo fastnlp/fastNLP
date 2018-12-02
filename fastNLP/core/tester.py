@@ -1,18 +1,18 @@
-import itertools
 from collections import defaultdict
 
 import torch
 from torch import nn
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.dataset import DataSet
+from fastNLP.core.metrics import _prepare_metrics
+from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.utils import CheckError
 from fastNLP.core.utils import _build_args
-from fastNLP.core.utils import get_func_signature
-from fastNLP.core.utils import _move_dict_value_to_device
-from fastNLP.core.metrics import _prepare_metrics
 from fastNLP.core.utils import _check_loss_evaluate
+from fastNLP.core.utils import _move_dict_value_to_device
+from fastNLP.core.utils import get_func_signature
+
 
 class Tester(object):
     """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
@@ -27,6 +27,16 @@ class Tester(object):
 
         self.metrics = _prepare_metrics(metrics)
 
+        self.data = data
+        if torch.cuda.is_available() and self.use_cuda:
+            self._model = model.cuda()
+        else:
+            self._model = model
+        self.use_cuda = use_cuda
+        self.batch_size = batch_size
+        self.verbose = verbose
+        self._model_device = model.parameters().__next__().device
+
         # check predict
         if hasattr(self._model, 'predict'):
             self._predict_func = self._model.predict
@@ -36,17 +46,6 @@ class Tester(object):
                                 f"for evaluation, not `{type(self._predict_func)}`.")
         else:
             self._predict_func = self._model.forward
-
-        self.data = data
-        if torch.cuda.is_available() and self.use_cuda:
-            self._model = model.cuda()
-        else:
-            self._model = model
-        self.use_cuda = use_cuda
-        self.batch_size = batch_size
-        self.verbose = verbose
-
-        self._model_device = model.parameters().__next__().device
 
     def test(self):
         # turn on the testing mode; clean up the history

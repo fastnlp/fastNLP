@@ -5,9 +5,8 @@ import warnings
 from collections import Counter
 from collections import namedtuple
 
-import torch
 import numpy as np
-
+import torch
 
 CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                    'varargs'], verbose=False)
@@ -266,7 +265,8 @@ def _check_forward_error(forward_func, batch_x, check_level):
     if check_res.varargs:
         errs.append(f"\tvarargs: {check_res.varargs}(Does not support pass positional arguments, please delete it)")
     if check_res.missing:
-        errs.append(f"\tmissing param: {check_res.missing}, provided with {list(batch_x.keys())}.")
+        errs.append(f"\tmissing param: {check_res.missing}, provided with {list(batch_x.keys())}. "
+                    f"Please set {check_res.missing} as input.")
     if check_res.unused:
         _unused = [f"\tunused param: {check_res.unused}"]
         if check_level == STRICT_CHECK_LEVEL:
