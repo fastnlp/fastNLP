@@ -87,6 +87,8 @@ class DataSet(object):
         if isinstance(idx, int):
             return Instance(**{name: self.field_arrays[name][idx] for name in self.field_arrays})
         elif isinstance(idx, slice):
+            if idx.start is not None and (idx.start >= len(self) or idx.start <= -len(self)):
+                raise RuntimeError(f"Start index {idx.start} out of range 0-{len(self)-1}")
             data_set = DataSet()
             for field in self.field_arrays.values():
                 data_set.add_field(name=field.name,
@@ -135,7 +137,9 @@ class DataSet(object):
         :param bool is_target: whether this field is label or target.
         """
         if len(self.field_arrays) != 0:
-            assert len(self) == len(fields)
+            if len(self) != len(fields):
+                raise RuntimeError(f"The field to append must have the same size as dataset. "
+                                   f"Dataset size {len(self)} != field size {len(fields)}")
         self.field_arrays[name] = FieldArray(name, fields, padding_val=padding_val, is_target=is_target,
                                              is_input=is_input)
 
@@ -168,6 +172,7 @@ class DataSet(object):
         """
         if old_name in self.field_arrays:
             self.field_arrays[new_name] = self.field_arrays.pop(old_name)
+            self.field_arrays[new_name].name = new_name
         else:
             raise KeyError("{} is not a valid name. ".format(old_name))
 

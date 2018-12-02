@@ -42,8 +42,10 @@ class SGD(Optimizer):
 
     def construct_from_pytorch(self, model_params):
         if self.model_params is None:
-            self.model_params = model_params
-        return torch.optim.SGD(self.model_params, **self.settings)
+            # careful! generator cannot be assigned.
+            return torch.optim.SGD(model_params, **self.settings)
+        else:
+            return torch.optim.SGD(self.model_params, **self.settings)
 
 
 class Adam(Optimizer):
@@ -75,5 +77,7 @@ class Adam(Optimizer):
 
     def construct_from_pytorch(self, model_params):
         if self.model_params is None:
-            self.model_params = model_params
-        return torch.optim.Adam(self.model_params, **self.settings)
+            # careful! generator cannot be assigned.
+            return torch.optim.Adam(model_params, **self.settings)
+        else:
+            return torch.optim.Adam(self.model_params, **self.settings)

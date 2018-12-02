@@ -33,7 +33,10 @@ class FieldArray(object):
             type_set = set([type(item) for item in content[0]])
         else:
             # 1-D list
+            if len(content) == 0:
+                raise RuntimeError("Cannot create FieldArray with an empty list.")
             type_set = set([type(item) for item in content])
+
         if len(type_set) == 1 and any(basic_type in type_set for basic_type in (str, int, float)):
             return type_set.pop()
         elif len(type_set) == 2 and float in type_set and int in type_set:
