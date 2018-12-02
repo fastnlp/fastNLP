@@ -46,7 +46,7 @@ class MetricBase(object):
             if value is None:
                 self.param_map[key] = key
                 continue
-            if isinstance(value, str):
+            if not isinstance(value, str):
                 raise TypeError(f"in {key}={value}, value must be `str`, not `{type(value)}`.")
             self.param_map[key] = value
             value_counter[value].add(key)
@@ -56,17 +56,22 @@ class MetricBase(object):
 
         # check consistence between signature and param_map
         func_spect = inspect.getfullargspec(self.evaluate)
-        func_args = func_spect.args
+        func_args = [arg for arg in func_spect.args if arg!='self']
         for func_param, input_param in self.param_map.items():
             if func_param not in func_args:
                 raise NameError(f"Parameter `{func_param}` is not in {get_func_signature(self.evaluate)}. Please check the "
                                 f"initialization parameters, or change the signature of"
                                 f" {get_func_signature(self.evaluate)}.")
 
+        # evaluate should not have varargs.
+        if func_spect.varargs:
+            raise NameError(f"Delete `*{func_spect.varargs}` in {get_func_signature(self.evaluate)}(Do not use "
+                            f"positional argument.).")
+
     def get_metric(self, reset=True):
         raise NotImplemented
 
-    def __call__(self, output_dict, target_dict, check=False):
+    def __call__(self, pred_dict, target_dict, check=False):
         """
 
         This method will call self.evaluate method.
@@ -78,7 +83,7 @@ class MetricBase(object):
         Besides, before passing params into self.evaluate, this function will filter out params from output_dict and
             target_dict which are not used in self.evaluate. (but if **kwargs presented in self.evaluate, no filtering
             will be conducted)
-        :param output_dict: usually the output of forward or prediction function
+        :param pred_dict: usually the output of forward or prediction function
         :param target_dict: usually features set as target..
         :param check: boolean, if check is True, it will force check `varargs, missing, unsed, duplicated`.
         :return:
@@ -89,46 +94,47 @@ class MetricBase(object):
         if not self._checked:
             # 1. check consistence between signature and param_map
             func_spect = inspect.getfullargspec(self.evaluate)
-            func_args = func_spect.args
-            for func_param, input_param in self.param_map.items():
-                if func_param not in func_args:
-                    raise NameError(f"`{func_param}` not in {get_func_signature(self.evaluate)}.")
+            func_args = set([arg for arg in func_spect.args if arg!='self'])
+            for func_arg, input_arg in self.param_map.items():
+                if func_arg not in func_args:
+                    raise NameError(f"`{func_arg}` not in {get_func_signature(self.evaluate)}.")
+
             # 2. only part of the param_map are passed, left are not
             for arg in func_args:
                 if arg not in self.param_map:
                     self.param_map[arg] = arg #This param does not need mapping.
             self._evaluate_args = func_args
-            self._reverse_param_map = {value: key for key, value in self.param_map.items()}
+            self._reverse_param_map = {input_arg: func_arg for func_arg, input_arg in self.param_map.items()}
 
         # need to wrap inputs in dict.
-        mapped_output_dict = {}
+        mapped_pred_dict = {}
         mapped_target_dict = {}
-        for func_arg in self._evaluate_args:
-            input_arg = self.param_map[func_arg]
+        for input_arg in set(list(pred_dict.keys()) + list(target_dict.keys())):
             if input_arg in self._reverse_param_map:
-                mapped_arg = func_arg
+                mapped_arg = self._reverse_param_map[input_arg]
             else:
                 mapped_arg = input_arg
-            if input_arg in output_dict:
-                mapped_output_dict[mapped_arg] = output_dict[input_arg]
+            if input_arg in pred_dict:
+                mapped_pred_dict[mapped_arg] = pred_dict[input_arg]
             if input_arg in target_dict:
                 mapped_target_dict[mapped_arg] = target_dict[input_arg]
 
         # check duplicated, unused, missing
         if check or not self._checked:
-            check_res = _check_arg_dict_list(self.evaluate, [mapped_output_dict, mapped_target_dict])
+            check_res = _check_arg_dict_list(self.evaluate, [mapped_pred_dict, mapped_target_dict])
             for key in check_res._fields:
                 value = getattr(check_res, key)
                 new_value = list(value)
-                for idx, func_param in enumerate(value):
-                    if func_param in self._reverse_param_map:
-                        new_value[idx] = self._reverse_param_map[func_param] + f'(assign to {func_param})'
+                # TODO 这里报错的逻辑应该是怎样的？
+                for idx, func_arg in enumerate(value):
+                    if func_arg in self.param_map:
+                        new_value[idx] = self.param_map[func_arg] + f'(try to get value from {self.param_map[func_arg]})'
                     else:
-                        new_value[idx] = func_param
+                        new_value[idx] = func_arg
             if check_res.missing or check_res.duplicated or check_res.varargs:
                 raise CheckError(check_res=check_res,
                                  func_signature=get_func_signature(self.evaluate))
-        refined_args = _build_args(self.evaluate, **mapped_output_dict, **mapped_target_dict)
+        refined_args = _build_args(self.evaluate, **mapped_pred_dict, **mapped_target_dict)
 
         self.evaluate(**refined_args)
         self._checked = True
