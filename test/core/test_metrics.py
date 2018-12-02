@@ -12,7 +12,7 @@ class TestAccuracyMetric(unittest.TestCase):
     #     target_dict = {'target': torch.zeros(4)}
     #     metric = AccuracyMetric()
     #
-    #     metric(pred_dict=pred_dict, target_dict=target_dict)
+    #     metric(pred_dict=pred_dict, target_dict=target_dict, check=True)
     #     print(metric.get_metric())
     #
     # def test_AccuracyMetric2(self):
@@ -22,7 +22,7 @@ class TestAccuracyMetric(unittest.TestCase):
     #         target_dict = {'target': torch.zeros(4)}
     #         metric = AccuracyMetric()
     #
-    #         metric(pred_dict=pred_dict, target_dict=target_dict)
+    #         metric(pred_dict=pred_dict, target_dict=target_dict, check=True)
     #         print(metric.get_metric())
     #     except Exception as e:
     #         print(e)
@@ -35,11 +35,11 @@ class TestAccuracyMetric(unittest.TestCase):
     #         metric = AccuracyMetric()
     #         pred_dict = {"pred": torch.zeros(4, 3, 2)}
     #         target_dict = {'target': torch.zeros(4, 3)}
-    #         metric(pred_dict=pred_dict, target_dict=target_dict)
+    #         metric(pred_dict=pred_dict, target_dict=target_dict, check=True)
     #
     #         pred_dict = {"pred": torch.zeros(4, 3, 2)}
     #         target_dict = {'target': torch.zeros(4)}
-    #         metric(pred_dict=pred_dict, target_dict=target_dict)
+    #         metric(pred_dict=pred_dict, target_dict=target_dict, check=True)
     #
     #         print(metric.get_metric())
     #     except Exception as e:
@@ -76,7 +76,7 @@ class TestAccuracyMetric(unittest.TestCase):
     #
     #     pred_dict = {"pred": torch.zeros(4, 3, 2)}
     #     target_dict = {'target': torch.zeros(4, 3)+1}
-    #     metric(pred_dict=pred_dict, target_dict=target_dict)
+    #     metric(pred_dict=pred_dict, target_dict=target_dict, check=True)
     #     self.assertDictEqual(metric.get_metric(), {'acc':0})
     #
     # def test_AccuaryMetric6(self):
@@ -85,7 +85,7 @@ class TestAccuracyMetric(unittest.TestCase):
     #         metric = AccuracyMetric()
     #         pred_dict = {"pred": np.zeros((4, 3, 2))}
     #         target_dict = {'target': np.zeros((4, 3))}
-    #         metric(pred_dict=pred_dict, target_dict=target_dict)
+    #         metric(pred_dict=pred_dict, target_dict=target_dict, check=True)
     #         self.assertDictEqual(metric.get_metric(), {'acc': 1})
     #     except Exception as e:
     #         print(e)
@@ -97,7 +97,7 @@ class TestAccuracyMetric(unittest.TestCase):
     #     metric = AccuracyMetric(pred='predictions', target='targets')
     #     pred_dict = {"predictions": torch.zeros(4, 3, 2)}
     #     target_dict = {'targets': torch.zeros(4, 3)}
-    #     metric(pred_dict=pred_dict, target_dict=target_dict)
+    #     metric(pred_dict=pred_dict, target_dict=target_dict, check=True)
     #     self.assertDictEqual(metric.get_metric(), {'acc': 1})
     #
     # def test_AccuaryMetric8(self):
@@ -106,6 +106,19 @@ class TestAccuracyMetric(unittest.TestCase):
     #         metric = AccuracyMetric(pred='predictions', target='targets')
     #         pred_dict = {"prediction": torch.zeros(4, 3, 2)}
     #         target_dict = {'targets': torch.zeros(4, 3)}
+    #         metric(pred_dict=pred_dict, target_dict=target_dict, check=True)
+    #         self.assertDictEqual(metric.get_metric(), {'acc': 1})
+    #     except Exception as e:
+    #         print(e)
+    #         return
+    #     self.assertTrue(True, False), "No exception catches."
+
+    # def test_AccuaryMetric9(self):
+    #     # (9) check map, include unused
+    #     try:
+    #         metric = AccuracyMetric(pred='predictions', target='targets')
+    #         pred_dict = {"prediction": torch.zeros(4, 3, 2), 'unused':1}
+    #         target_dict = {'targets': torch.zeros(4, 3)}
     #         metric(pred_dict=pred_dict, target_dict=target_dict)
     #         self.assertDictEqual(metric.get_metric(), {'acc': 1})
     #     except Exception as e:
@@ -113,11 +126,11 @@ class TestAccuracyMetric(unittest.TestCase):
     #         return
     #     self.assertTrue(True, False), "No exception catches."
 
-    def test_AccuaryMetric9(self):
-        # (9) check map, include unused
+    def test_AccuaryMetric10(self):
+        # (10) check _fast_metric
         try:
-            metric = AccuracyMetric(pred='predictions', target='targets')
-            pred_dict = {"prediction": torch.zeros(4, 3, 2), 'unused':1}
+            metric = AccuracyMetric()
+            pred_dict = {"predictions": torch.zeros(4, 3, 2)}
             target_dict = {'targets': torch.zeros(4, 3)}
             metric(pred_dict=pred_dict, target_dict=target_dict)
             self.assertDictEqual(metric.get_metric(), {'acc': 1})
@@ -125,4 +138,3 @@ class TestAccuracyMetric(unittest.TestCase):
             print(e)
             return
         self.assertTrue(True, False), "No exception catches."
-
