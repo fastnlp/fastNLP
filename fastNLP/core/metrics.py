@@ -1,16 +1,17 @@
 
-import warnings
 import inspect
+import warnings
 from collections import defaultdict
 
 import numpy as np
 import torch
 
-from fastNLP.core.utils import get_func_signature
-from fastNLP.core.utils import _check_arg_dict_list
-from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import CheckError
+from fastNLP.core.utils import _build_args
+from fastNLP.core.utils import _check_arg_dict_list
+from fastNLP.core.utils import get_func_signature
 from fastNLP.core.utils import seq_lens_to_masks
+
 
 class MetricBase(object):
     def __init__(self):
@@ -46,7 +47,7 @@ class MetricBase(object):
             if value is None:
                 self.param_map[key] = key
                 continue
-            if isinstance(value, str):
+            if not isinstance(value, str):
                 raise TypeError(f"in {key}={value}, value must be `str`, not `{type(value)}`.")
             self.param_map[key] = value
             value_counter[value].add(key)

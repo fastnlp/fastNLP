@@ -11,7 +11,7 @@ class FieldArray(object):
         """
 
         :param str name: the name of the FieldArray
-        :param list content: a list of int, float, or other objects.
+        :param list content: a list of int, float, or a list of list.
         :param int padding_val: the integer for padding. Default: 0.
         :param bool is_target: If True, this FieldArray is used to compute loss.
         :param bool is_input: If True, this FieldArray is used to the model input.
@@ -26,7 +26,14 @@ class FieldArray(object):
 
     @staticmethod
     def _type_detection(content):
-        type_set = set([type(item) for item in content])
+
+        if isinstance(content, list) and len(content) > 0 and isinstance(content[0], list):
+            # 2-D list
+            # TODO: refactor
+            type_set = set([type(item) for item in content[0]])
+        else:
+            # 1-D list
+            type_set = set([type(item) for item in content])
         if len(type_set) == 1 and any(basic_type in type_set for basic_type in (str, int, float)):
             return type_set.pop()
         elif len(type_set) == 2 and float in type_set and int in type_set:
@@ -48,7 +55,7 @@ class FieldArray(object):
     def append(self, val):
         """Add a new item to the tail of FieldArray.
 
-        :param val: int, float, or str.
+        :param val: int, float, str, or a list of them.
         """
         val_type = type(val)
         if val_type is int and self.pytype is float:
@@ -60,9 +67,17 @@ class FieldArray(object):
                 self.content[idx] = float(self.content[idx])
             self.pytype = float
             self.dtype = self._map_to_np_type(self.pytype)
-
+        elif val_type is list:
+            if len(val) == 0:
+                raise ValueError("Cannot append an empty list.")
+            else:
+                if type(val[0]) != self.pytype:
+                    raise ValueError(
+                        "Cannot append a list of {}-type value into a {}-tpye FieldArray.".
+                            format(type(val[0]), self.pytype))
         elif val_type != self.pytype:
             raise ValueError("Cannot append a {}-type value into a {}-tpye FieldArray.".format(val_type, self.pytype))
+
         self.content.append(val)
 
     def __getitem__(self, indices):

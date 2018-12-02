@@ -80,8 +80,9 @@ class Trainer(object):
         # parse metric_key
         # increase_better is True. It means the exp result gets better if the indicator increases.
         # It is true by default.
-        self.increase_better = False if metric_key[0] == "-" else True
+        self.increase_better = True
         if metric_key is not None:
+            self.increase_better = False if metric_key[0] == "-" else True
             self.metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
         else:
             self.metric_key = None
@@ -208,10 +209,12 @@ class Trainer(object):
     def _do_validation(self):
         res = self.tester.test()
         for name, num in res.items():
-            self._summary_writer.add_scalar("valid_{}".format(name), num, global_step=self.step)
+            pass
+            # self._summary_writer.add_scalar("valid_{}".format(name), num, global_step=self.step)
         if self.save_path is not None and self._better_eval_result(res):
+            metric_key = self.metric_key if self.metric_key is not None else "None"
             self._save_model(self.model,
-                            "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time]))
+                             "best_" + "_".join([self.model.__class__.__name__, metric_key, self.start_time]))
 
     def _mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.
