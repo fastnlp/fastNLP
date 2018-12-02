@@ -1,15 +1,14 @@
 import unittest
 
 import numpy as np
-import torch
 
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
-from fastNLP.core.losses import LossFunc
+from fastNLP.core.losses import BCELoss
 from fastNLP.core.metrics import AccuracyMetric
 from fastNLP.core.optimizer import SGD
 from fastNLP.core.trainer import Trainer
-from fastNLP.models.base_model import LinearClassifier
+from fastNLP.models.base_model import NaiveClassifier
 
 
 class TrainerTestGround(unittest.TestCase):
@@ -30,18 +29,17 @@ class TrainerTestGround(unittest.TestCase):
 
         train_set, dev_set = data_set.split(0.3)
 
-        model = LinearClassifier(2, 1)
+        model = NaiveClassifier(2, 1)
 
         trainer = Trainer(train_set, model,
-                          losser=LossFunc(torch.nn.functional.binary_cross_entropy,
-                                          key_map={"target": "y", "input": "predict"}),
+                          losser=BCELoss(input="predict", target="y"),
                           metrics=AccuracyMetric(pred="predict", target="y"),
                           n_epochs=10,
                           batch_size=32,
                           print_every=10,
                           validate_every=-1,
                           dev_data=dev_set,
-                          optimizer=SGD(0.001),
+                          optimizer=SGD(0.1),
                           check_code_level=2
                           )
         trainer.train()
