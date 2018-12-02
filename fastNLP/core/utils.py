@@ -123,7 +123,7 @@ def _check_arg_dict_list(func, args):
     input_args = set(input_arg_count.keys())
     missing = list(require_args - input_args)
     unused = list(input_args - all_args)
-    varargs = [] if spect.varargs else [arg for arg in spect.varargs]
+    varargs = [] if not spect.varargs else [arg for arg in spect.varargs]
     return CheckRes(missing=missing,
                     unused=unused,
                     duplicated=duplicated,
