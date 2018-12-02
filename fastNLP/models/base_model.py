@@ -20,11 +20,10 @@ class BaseModel(torch.nn.Module):
 class NaiveClassifier(BaseModel):
     def __init__(self, in_feature_dim, out_feature_dim):
         super(NaiveClassifier, self).__init__()
-        self.mlp = MLP([in_feature_dim, in_feature_dim, out_feature_dim, out_feature_dim])
-        self.softmax = torch.nn.Softmax(dim=0)
+        self.mlp = MLP([in_feature_dim, in_feature_dim, out_feature_dim])
 
     def forward(self, x):
-        return {"predict": self.softmax(self.mlp(x))}
+        return {"predict": torch.sigmoid(self.mlp(x))}
 
     def predict(self, x):
-        return {"predict": self.softmax(self.mlp(x))}
+        return {"predict": torch.sigmoid(self.mlp(x)) > 0.5}
