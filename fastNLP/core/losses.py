@@ -112,7 +112,7 @@ class L1Loss(LossBase):
 
 
 class BCELoss(LossBase):
-    def __init__(self):
+    def __init__(self, input=None, target=None):
         super(BCELoss, self).__init__()
         self.get_loss = F.binary_cross_entropy
 
