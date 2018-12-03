@@ -18,8 +18,8 @@ class CNNText(torch.nn.Module):
     def __init__(self, embed_num,
                  embed_dim,
                  num_classes,
-                 kernel_nums=(3,4,5),
-                 kernel_sizes=(3,4,5),
+                 kernel_nums=(3, 4, 5),
+                 kernel_sizes=(3, 4, 5),
                  padding=0,
                  dropout=0.5):
         super(CNNText, self).__init__()
@@ -45,7 +45,7 @@ class CNNText(torch.nn.Module):
         x = self.conv_pool(x)  # [N,L,C] -> [N,C]
         x = self.dropout(x)
         x = self.fc(x)  # [N,C] -> [N, N_class]
-        return {'output':x}
+        return {'output': x}
 
     def predict(self, word_seq):
         """
@@ -78,4 +78,3 @@ class CNNText(torch.nn.Module):
         correct = (predict == label_seq).long().sum().item()
         total = label_seq.size(0)
         return {'acc': 1.0 * correct / total}
-
