@@ -311,14 +311,14 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
                                  batch_x=batch_x, check_level=check_level)
 
         refined_batch_x = _build_args(model.forward, **batch_x)
-        output = model(**refined_batch_x)
+        pred_dict = model(**refined_batch_x)
         func_signature = get_func_signature(model.forward)
-        if not isinstance(output, dict):
-            raise TypeError(f"The return value of {func_signature} should be `dict`, not `{type(output)}`.")
+        if not isinstance(pred_dict, dict):
+            raise TypeError(f"The return value of {func_signature} should be `dict`, not `{type(pred_dict)}`.")
 
         # loss check
         try:
-            loss = losser(output, batch_y)
+            loss = losser(pred_dict, batch_y)
             # check loss output
             if batch_count == 0:
                 if not isinstance(loss, torch.Tensor):
@@ -333,8 +333,8 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
         except CheckError as e:
             pre_func_signature = get_func_signature(model.forward)
             _check_loss_evaluate(prev_func_signature=pre_func_signature, func_signature=e.func_signature,
-                                 check_res=e.check_res, output=output, batch_y=batch_y,
-                                 check_level=check_level)
+                                 check_res=e.check_res, pred_dict=pred_dict, target_dict=batch_y,
+                                 dataset=dataset, check_level=check_level)
         model.zero_grad()
         if batch_count + 1 >= DEFAULT_CHECK_NUM_BATCH:
             break

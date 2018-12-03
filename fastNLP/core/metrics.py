@@ -96,7 +96,7 @@ class MetricBase(object):
             will be conducted)
         :param pred_dict: usually the output of forward or prediction function
         :param target_dict: usually features set as target..
-        :param check: boolean, if check is True, it will force check `varargs, missing, unsed, duplicated`.
+        :param check: boolean, if check is True, it will force check `varargs, missing, unused, duplicated`.
         :return:
         """
         if not callable(self.evaluate):
@@ -148,8 +148,8 @@ class MetricBase(object):
             missing = check_res.missing
             replaced_missing = list(missing)
             for idx, func_arg in enumerate(missing):
-                replaced_missing[idx] = f"`{self.param_map[func_arg]}`" + f"(assign to `{func_arg}` " \
-                                                                   f"in `{get_func_signature(self.evaluate)}`)"
+                replaced_missing[idx] = f"{self.param_map[func_arg]}" + f"(assign to `{func_arg}` " \
+                                                                   f"in `{self.__class__.__name__}`)"
 
             check_res = CheckRes(missing=replaced_missing,
                                 unused=check_res.unused,

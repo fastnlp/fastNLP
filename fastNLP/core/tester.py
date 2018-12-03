@@ -51,19 +51,18 @@ class Tester(object):
         # turn on the testing mode; clean up the history
         network = self._model
         self._mode(network, is_test=True)
-        output, truths = defaultdict(list), defaultdict(list)
         data_iterator = Batch(self.data, self.batch_size, sampler=SequentialSampler(), as_numpy=False)
         eval_results = {}
         try:
             with torch.no_grad():
                 for batch_x, batch_y in data_iterator:
                     _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
-                    prediction = self._data_forward(self._predict_func, batch_x)
-                    if not isinstance(prediction, dict):
+                    pred_dict = self._data_forward(self._predict_func, batch_x)
+                    if not isinstance(pred_dict, dict):
                         raise TypeError(f"The return value of {get_func_signature(self._predict_func)} " 
-                                                         f"must be `dict`, got {type(prediction)}.")
+                                                         f"must be `dict`, got {type(pred_dict)}.")
                     for metric in self.metrics:
-                        metric(prediction, batch_y)
+                        metric(pred_dict, batch_y)
                 for metric in self.metrics:
                     eval_result = metric.get_metric()
                     if not isinstance(eval_result, dict):
@@ -74,7 +73,8 @@ class Tester(object):
         except CheckError as e:
             prev_func_signature = get_func_signature(self._predict_func)
             _check_loss_evaluate(prev_func_signature=prev_func_signature, func_signature=e.func_signature,
-                                 check_res=e.check_res, output=output, batch_y=truths, check_level=0)
+                                 check_res=e.check_res, pred_dict=pred_dict, target_dict=batch_y,
+                                 dataset=self.data, check_level=0)
 
         if self.verbose >= 1:
             print("[tester] \n{}".format(self._format_eval_results(eval_results)))
