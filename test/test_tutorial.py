@@ -72,7 +72,7 @@ class TestTutorial(unittest.TestCase):
         # 实例化Trainer，传入模型和数据，进行训练
         copy_model = deepcopy(model)
         overfit_trainer = Trainer(model=copy_model, train_data=test_data, dev_data=test_data,
-                                  losser=CrossEntropyLoss(input="output", target="label_seq"),
+                                  losser=CrossEntropyLoss(pred="output", target="label_seq"),
                                   metrics=AccuracyMetric(pred="predict", target="label_seq"),
                                   save_path="./save",
                                   batch_size=4,
@@ -80,7 +80,7 @@ class TestTutorial(unittest.TestCase):
         overfit_trainer.train()
 
         trainer = Trainer(model=model, train_data=train_data, dev_data=test_data,
-                          losser=CrossEntropyLoss(input="output", target="label_seq"),
+                          losser=CrossEntropyLoss(pred="output", target="label_seq"),
                           metrics=AccuracyMetric(pred="predict", target="label_seq"),
                           save_path="./save",
                           batch_size=4,

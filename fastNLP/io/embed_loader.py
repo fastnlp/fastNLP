@@ -105,9 +105,9 @@ class EmbedLoader(BaseLoader):
 
         if np.sum(hit_flags) < len(vocab):
             # some words from vocab are missing in pre-trained embedding
-            # we normally sample them
+            # we normally sample each dimension
             vocab_embed = embedding_matrix[np.where(hit_flags)]
-            mean, cov = vocab_embed.mean(axis=0), np.cov(vocab_embed.T)
-            sampled_vectors = np.random.multivariate_normal(mean, cov, size=(len(vocab) - np.sum(hit_flags),))
+            sampled_vectors = np.random.normal(vocab_embed.mean(axis=0), vocab_embed.std(axis=0),
+                                               size=(len(vocab) - np.sum(hit_flags), emb_dim))
             embedding_matrix[np.where(1 - hit_flags)] = sampled_vectors
         return embedding_matrix

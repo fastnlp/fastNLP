@@ -271,40 +271,32 @@ class TestLoss(unittest.TestCase):
         loss3 = get_loss_3({'predict': predict}, {'truth': truth})
         assert loss1 == loss2 and loss1 == loss3
 
-        """
-        get_loss_4 = LossFunc(func4)
-        loss4 = get_loss_4({'a': 1, 'b': 3}, {})
-        print(loss4)
-        assert loss4 == (1 + 3) * 2
-
-        get_loss_5 = LossFunc(func4)
-        loss5 = get_loss_5({'a': 1, 'b': 3}, {'c': 4})
-        print(loss5)
-        assert loss5 == (1 + 3) * 4
-
-        get_loss_6 = LossFunc(func6)
-        loss6 = get_loss_6({'a': 1, 'b': 3}, {'c': 4})
-        print(loss6)
-        assert loss6 == (1 + 3) * 4
-
-        get_loss_7 = LossFunc(func6, c='cc')
-        loss7 = get_loss_7({'a': 1, 'b': 3}, {'cc': 4})
-        print(loss7)
-        assert loss7 == (1 + 3) * 4
-        """
-
 
 class TestLoss_v2(unittest.TestCase):
     def test_CrossEntropyLoss(self):
-        ce = loss.CrossEntropyLoss(input="my_predict", target="my_truth")
+        ce = loss.CrossEntropyLoss(pred="my_predict", target="my_truth")
         a = torch.randn(3, 5, requires_grad=False)
         b = torch.empty(3, dtype=torch.long).random_(5)
         ans = ce({"my_predict": a}, {"my_truth": b})
         self.assertEqual(ans, torch.nn.functional.cross_entropy(a, b))
 
     def test_BCELoss(self):
-        bce = loss.BCELoss(input="my_predict", target="my_truth")
+        bce = loss.BCELoss(pred="my_predict", target="my_truth")
         a = torch.sigmoid(torch.randn((3, 5), requires_grad=False))
         b = torch.randn((3, 5), requires_grad=False)
         ans = bce({"my_predict": a}, {"my_truth": b})
         self.assertEqual(ans, torch.nn.functional.binary_cross_entropy(a, b))
+
+    def test_L1Loss(self):
+        l1 = loss.L1Loss(pred="my_predict", target="my_truth")
+        a = torch.randn(3, 5, requires_grad=False)
+        b = torch.randn(3, 5)
+        ans = l1({"my_predict": a}, {"my_truth": b})
+        self.assertEqual(ans, torch.nn.functional.l1_loss(a, b))
+
+    def test_NLLLoss(self):
+        l1 = loss.NLLLoss(pred="my_predict", target="my_truth")
+        a = F.log_softmax(torch.randn(3, 5, requires_grad=False), dim=0)
+        b = torch.tensor([1, 0, 4])
+        ans = l1({"my_predict": a}, {"my_truth": b})
+        self.assertEqual(ans, torch.nn.functional.nll_loss(a, b))
