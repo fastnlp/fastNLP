@@ -71,7 +71,7 @@ class MetricBase(object):
     def get_metric(self, reset=True):
         raise NotImplemented
 
-    def _fast_call_evaluate(self, pred_dict, target_dict):
+    def _fast_param_map(self, pred_dict, target_dict):
         """
 
         Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
@@ -80,7 +80,9 @@ class MetricBase(object):
         :param target_dict:
         :return: boolean, whether to go on codes in self.__call__(). When False, don't go on.
         """
-        return False
+        if len(self.param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
+            return pred_dict.values[0] and target_dict.values[0]
+        return None
 
     def __call__(self, pred_dict, target_dict, check=False):
         """
@@ -103,7 +105,9 @@ class MetricBase(object):
             raise TypeError(f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}.")
 
         if not check:
-            if self._fast_call_evaluate(pred_dict=pred_dict, target_dict=target_dict):
+            fast_param = self._fast_param_map(pred_dict=pred_dict, target_dict=target_dict)
+            if fast_param is not None:
+                self.evaluate(*fast_param)
                 return
 
         if not self._checked:
