@@ -248,7 +248,7 @@ def _check_loss_evaluate(prev_func_signature:str, func_signature:str, check_res:
         if _unused_field:
             unuseds.append([f"\tunused field: {_unused_field}"])
         if _unused_param:
-            unuseds.append([f"\tunused param: {_unused_param}"])
+            unuseds.append([f"\tunused param: {_unused_param}"]) # output from predict or forward
 
     if check_res.missing:
         errs.append(f"\tmissing param: {check_res.missing}")

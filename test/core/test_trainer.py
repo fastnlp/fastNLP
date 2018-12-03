@@ -36,7 +36,7 @@ class TrainerTestGround(unittest.TestCase):
                           metrics=AccuracyMetric(pred="predict", target="y"),
                           n_epochs=10,
                           batch_size=32,
-                          print_every=10,
+                          update_every=1,
                           validate_every=-1,
                           dev_data=dev_set,
                           optimizer=SGD(0.1),

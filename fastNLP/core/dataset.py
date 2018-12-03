@@ -216,25 +216,36 @@ class DataSet(object):
 
         return wrapper
 
-    def apply(self, func, new_field_name=None, is_input=False, is_target=False):
+    def apply(self, func, new_field_name=None, **kwargs):
         """Apply a function to every instance of the DataSet.
 
         :param func: a function that takes an instance as input.
         :param str new_field_name: If not None, results of the function will be stored as a new field.
+        :param **kwargs: Accept parameters will be
+            (1) is_input: boolean, will be ignored if new_field is None. If True, the new field will be as input.
+            (2) is_target: boolean, will be ignored if new_field is None. If True, the new field will be as target.
         :return results: if new_field_name is not passed, returned values of the function over all instances.
         """
         results = [func(ins) for ins in self]
+        extra_param = {}
+        if 'is_input' in kwargs:
+            extra_param['is_input'] = kwargs['is_input']
+        if 'is_target' in kwargs:
+            extra_param['is_target'] = kwargs['is_target']
         if new_field_name is not None:
             if new_field_name in self.field_arrays:
                 # overwrite the field, keep same attributes
                 old_field = self.field_arrays[new_field_name]
+                if 'is_input' not in extra_param:
+                    extra_param['is_input'] = old_field.is_input
+                if 'is_target' not in extra_param:
+                    extra_param['is_target'] = old_field.is_target
                 self.add_field(name=new_field_name,
                                fields=results,
                                padding_val=old_field.padding_val,
-                               is_input=old_field.is_input,
-                               is_target=old_field.is_target)
+                               **extra_param)
             else:
-                self.add_field(name=new_field_name, fields=results, is_input=is_input, is_target=is_target)
+                self.add_field(name=new_field_name, fields=results, **extra_param)
         else:
             return results
 
@@ -295,7 +306,7 @@ class DataSet(object):
             for col in headers:
                 _dict[col] = []
             for line_idx, line in enumerate(f, start_idx):
-                contents = line.split(sep)
+                contents = line.rstrip('\r\n').split(sep)
                 if len(contents) != len(headers):
                     if dropna:
                         continue
