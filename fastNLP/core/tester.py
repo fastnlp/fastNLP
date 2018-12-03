@@ -17,7 +17,7 @@ from fastNLP.core.utils import get_func_signature
 class Tester(object):
     """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
 
-    def __init__(self, data, model, metrics, batch_size=16, use_cuda=False, verbose=0):
+    def __init__(self, data, model, metrics, batch_size=16, use_cuda=False, verbose=1):
         super(Tester, self).__init__()
 
         if not isinstance(data, DataSet):
@@ -76,7 +76,7 @@ class Tester(object):
             _check_loss_evaluate(prev_func_signature=prev_func_signature, func_signature=e.func_signature,
                                  check_res=e.check_res, output=output, batch_y=truths, check_level=0)
 
-        if self.verbose >= 0:
+        if self.verbose >= 1:
             print("[tester] \n{}".format(self._format_eval_results(eval_results)))
         self._mode(network, is_test=False)
         return eval_results
@@ -107,7 +107,7 @@ class Tester(object):
         """
         _str = ''
         for metric_name, metric_result in results.items():
-            _str += metric_name + '\n\t'
-            _str += ", ".join([str(key) + "=" + str(value) for key, value in results.items()])
-        _str += '\n'
-        return _str
+            _str += metric_name + ': '
+            _str += ", ".join([str(key) + "=" + str(value) for key, value in metric_result.items()])
+            _str += '\n'
+        return _str[:-1]

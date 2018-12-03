@@ -245,7 +245,7 @@ class AccuracyMetric(MetricBase):
             self.total += np.prod(list(pred.size()))
 
     def get_metric(self, reset=True):
-        evaluate_result = {'acc': self.acc_count/self.total}
+        evaluate_result = {'acc': round(self.acc_count/self.total, 6)}
         if reset:
             self.acc_count = 0
             self.total = 0

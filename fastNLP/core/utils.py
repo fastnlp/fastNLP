@@ -207,7 +207,7 @@ class CheckError(Exception):
     CheckError. Used in losses.LossBase, metrics.MetricBase.
     """
     def __init__(self, check_res:CheckRes, func_signature:str):
-        errs = [f'The following problems occurred when calling {func_signature}']
+        errs = [f'The following problems occurred when calling `{func_signature}`']
 
         if check_res.varargs:
             errs.append(f"\tvarargs: {check_res.varargs}(Does not support pass positional arguments, please delete it)")
@@ -255,7 +255,7 @@ def _check_loss_evaluate(prev_func_signature:str, func_signature:str, check_res:
             warnings.warn(message=_unused_warn)
 
 
-def _check_forward_error(forward_func, batch_x, check_level):
+def _check_forward_error(forward_func, batch_x, dataset, check_level):
     check_res = _check_arg_dict_list(forward_func, batch_x)
     func_signature = get_func_signature(forward_func)
 

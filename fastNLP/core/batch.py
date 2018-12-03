@@ -26,6 +26,7 @@ class Batch(object):
         self.as_numpy = as_numpy
         self.idx_list = None
         self.curidx = 0
+        self.num_batches = len(dataset)//batch_size + int(len(dataset)%batch_size!=0)
 
     def __iter__(self):
         self.idx_list = self.sampler(self.dataset)
@@ -55,6 +56,9 @@ class Batch(object):
             self.curidx = endidx
 
             return batch_x, batch_y
+
+    def __len__(self):
+        return self.num_batches
 
 def to_tensor(batch, dtype):
     if dtype in (np.int8, np.int16, np.int32, np.int64):

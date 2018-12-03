@@ -28,9 +28,9 @@ class Trainer(object):
 
     """
 
-    def __init__(self, train_data, model, losser=None, metrics=None, n_epochs=3, batch_size=32, print_every=-1,
+    def __init__(self, train_data, model, losser=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
                  validate_every=-1,
-                 dev_data=None, use_cuda=False, save_path="./save",
+                 dev_data=None, use_cuda=False, save_path=None,
                  optimizer=Adam(lr=0.01, weight_decay=0), check_code_level=0,
                  metric_key=None,
                  **kwargs):
@@ -307,8 +307,8 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
         _move_dict_value_to_device(batch_x, batch_y, device=model_devcie)
         # forward check
         if batch_count==0:
-            _check_forward_error(forward_func=model.forward, check_level=check_level,
-                                 batch_x=batch_x)
+            _check_forward_error(forward_func=model.forward, dataset=dataset,
+                                 batch_x=batch_x, check_level=check_level)
 
         refined_batch_x = _build_args(model.forward, **batch_x)
         output = model(**refined_batch_x)

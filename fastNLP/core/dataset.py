@@ -168,6 +168,7 @@ class DataSet(object):
         """
         if old_name in self.field_arrays:
             self.field_arrays[new_name] = self.field_arrays.pop(old_name)
+            self.field_arrays[new_name].name = new_name
         else:
             raise KeyError("{} is not a valid name. ".format(old_name))
 
@@ -213,12 +214,12 @@ class DataSet(object):
 
         return wrapper
 
-    def apply(self, func, new_field_name=None):
+    def apply(self, func, new_field_name=None, is_input=False, is_target=False):
         """Apply a function to every instance of the DataSet.
 
         :param func: a function that takes an instance as input.
         :param str new_field_name: If not None, results of the function will be stored as a new field.
-        :return results: returned values of the function over all instances.
+        :return results: if new_field_name is not passed, returned values of the function over all instances.
         """
         results = [func(ins) for ins in self]
         if new_field_name is not None:
@@ -231,7 +232,7 @@ class DataSet(object):
                                is_input=old_field.is_input,
                                is_target=old_field.is_target)
             else:
-                self.add_field(name=new_field_name, fields=results)
+                self.add_field(name=new_field_name, fields=results, is_input=is_input, is_target=is_target)
         else:
             return results
 
