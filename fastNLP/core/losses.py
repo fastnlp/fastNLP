@@ -72,9 +72,8 @@ class LossBase(object):
 
     def _fast_param_map(self, pred_dict, target_dict):
         if len(self.param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
-            return pred_dict.values[0], target_dict.values[0]
+            return tuple(pred_dict.values())[0], tuple(target_dict.values())[0]
         return None
-
 
     def __call__(self, pred_dict, target_dict, check=False):
         """

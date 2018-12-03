@@ -1,4 +1,3 @@
-
 import inspect
 import warnings
 from collections import defaultdict
@@ -7,11 +6,12 @@ import numpy as np
 import torch
 
 from fastNLP.core.utils import CheckError
+from fastNLP.core.utils import CheckRes
 from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import _check_arg_dict_list
 from fastNLP.core.utils import get_func_signature
 from fastNLP.core.utils import seq_lens_to_masks
-from fastNLP.core.utils import CheckRes
+
 
 class MetricBase(object):
     def __init__(self):
@@ -59,9 +59,10 @@ class MetricBase(object):
         func_args = [arg for arg in func_spect.args if arg != 'self']
         for func_param, input_param in self.param_map.items():
             if func_param not in func_args:
-                raise NameError(f"Parameter `{func_param}` is not in {get_func_signature(self.evaluate)}. Please check the "
-                                f"initialization parameters, or change the signature of"
-                                f" {get_func_signature(self.evaluate)}.")
+                raise NameError(
+                    f"Parameter `{func_param}` is not in {get_func_signature(self.evaluate)}. Please check the "
+                    f"initialization parameters, or change the signature of"
+                    f" {get_func_signature(self.evaluate)}.")
 
         # evaluate should not have varargs.
         if func_spect.varargs:
@@ -113,7 +114,7 @@ class MetricBase(object):
         if not self._checked:
             # 1. check consistence between signature and param_map
             func_spect = inspect.getfullargspec(self.evaluate)
-            func_args = set([arg for arg in func_spect.args if arg!='self'])
+            func_args = set([arg for arg in func_spect.args if arg != 'self'])
             for func_arg, input_arg in self.param_map.items():
                 if func_arg not in func_args:
                     raise NameError(f"`{func_arg}` not in {get_func_signature(self.evaluate)}.")
@@ -121,7 +122,7 @@ class MetricBase(object):
             # 2. only part of the param_map are passed, left are not
             for arg in func_args:
                 if arg not in self.param_map:
-                    self.param_map[arg] = arg #This param does not need mapping.
+                    self.param_map[arg] = arg  # This param does not need mapping.
             self._evaluate_args = func_args
             self._reverse_param_map = {input_arg: func_arg for func_arg, input_arg in self.param_map.items()}
 
@@ -153,14 +154,14 @@ class MetricBase(object):
             replaced_missing = list(missing)
             for idx, func_arg in enumerate(missing):
                 replaced_missing[idx] = f"{self.param_map[func_arg]}" + f"(assign to `{func_arg}` " \
-                                                                   f"in `{self.__class__.__name__}`)"
+                                                                        f"in `{self.__class__.__name__}`)"
 
             check_res = CheckRes(missing=replaced_missing,
-                                unused=check_res.unused,
-                                duplicated=duplicated,
-                                required=check_res.required,
-                                all_needed=check_res.all_needed,
-                                varargs=check_res.varargs)
+                                 unused=check_res.unused,
+                                 duplicated=duplicated,
+                                 required=check_res.required,
+                                 all_needed=check_res.all_needed,
+                                 varargs=check_res.varargs)
 
             if check_res.missing or check_res.duplicated or check_res.varargs:
                 raise CheckError(check_res=check_res,
@@ -171,6 +172,7 @@ class MetricBase(object):
         self._checked = True
 
         return
+
 
 class AccuracyMetric(MetricBase):
     def __init__(self, pred=None, target=None, masks=None, seq_lens=None):
@@ -191,7 +193,7 @@ class AccuracyMetric(MetricBase):
         :param target_dict:
         :return: boolean, whether to go on codes in self.__call__(). When False, don't go on.
         """
-        if len(pred_dict)==1 and len(target_dict)==1:
+        if len(pred_dict) == 1 and len(target_dict) == 1:
             pred = list(pred_dict.values())[0]
             target = list(target_dict.values())[0]
             self.evaluate(pred=pred, target=target)
@@ -211,7 +213,7 @@ class AccuracyMetric(MetricBase):
                 None, None, torch.Size([B], torch.Size([B]). ignored if masks are provided.
         :return: dict({'acc': float})
         """
-        #TODO 这里报错需要更改，因为pred是啥用户并不知道。需要告知用户真实的value
+        # TODO 这里报错需要更改，因为pred是啥用户并不知道。需要告知用户真实的value
         if not isinstance(pred, torch.Tensor):
             raise TypeError(f"`pred` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(pred)}.")
@@ -224,14 +226,14 @@ class AccuracyMetric(MetricBase):
                             f"got {type(masks)}.")
         elif seq_lens is not None and not isinstance(seq_lens, torch.Tensor):
             raise TypeError(f"`seq_lens` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
-                                f"got {type(seq_lens)}.")
+                            f"got {type(seq_lens)}.")
 
         if masks is None and seq_lens is not None:
             masks = seq_lens_to_masks(seq_lens=seq_lens, float=True)
 
-        if pred.size()==target.size():
+        if pred.size() == target.size():
             pass
-        elif len(pred.size())==len(target.size())+1:
+        elif len(pred.size()) == len(target.size()) + 1:
             pred = pred.argmax(dim=-1)
         else:
             raise RuntimeError(f"In {get_func_signature(self.evaluate)}, when pred have "
@@ -245,16 +247,15 @@ class AccuracyMetric(MetricBase):
             self.acc_count += torch.sum(torch.eq(pred, target).float() * masks.float()).item()
             self.total += torch.sum(masks.float()).item()
         else:
-            self.acc_count +=  torch.sum(torch.eq(pred, target).float()).item()
+            self.acc_count += torch.sum(torch.eq(pred, target).float()).item()
             self.total += np.prod(list(pred.size()))
 
     def get_metric(self, reset=True):
-        evaluate_result = {'acc': round(self.acc_count/self.total, 6)}
+        evaluate_result = {'acc': round(self.acc_count / self.total, 6)}
         if reset:
             self.acc_count = 0
             self.total = 0
         return evaluate_result
-
 
 
 def _prepare_metrics(metrics):
@@ -278,7 +279,8 @@ def _prepare_metrics(metrics):
                         raise TypeError(f"{metric_name}.get_metric must be callable, got {type(metric.get_metric)}.")
                     _metrics.append(metric)
                 else:
-                    raise TypeError(f"The type of metric in metrics must be `fastNLP.MetricBase`, not `{type(metric)}`.")
+                    raise TypeError(
+                        f"The type of metric in metrics must be `fastNLP.MetricBase`, not `{type(metric)}`.")
         elif isinstance(metrics, MetricBase):
             _metrics = [metrics]
         else:
@@ -299,6 +301,7 @@ class Evaluator(object):
         :return:
         """
         raise NotImplementedError
+
 
 class ClassifyEvaluator(Evaluator):
     def __init__(self):
@@ -335,6 +338,7 @@ class SeqLabelEvaluator(Evaluator):
         accuracy = total_correct / total_count
         return {"accuracy": float(accuracy)}
 
+
 class SeqLabelEvaluator2(Evaluator):
     # 上面的evaluator应该是错误的
     def __init__(self, seq_lens_field_name='word_seq_origin_len'):
@@ -367,7 +371,7 @@ class SeqLabelEvaluator2(Evaluator):
                     if x_i in self.end_tagidx_set:
                         truth_count += 1
                         for j in range(start, idx_i + 1):
-                            if y_[j]!=x_[j]:
+                            if y_[j] != x_[j]:
                                 flag = False
                                 break
                         if flag:
@@ -380,8 +384,7 @@ class SeqLabelEvaluator2(Evaluator):
         R = corr_count / (float(truth_count) + 1e-6)
         F = 2 * P * R / (P + R + 1e-6)
 
-        return {"P": P, 'R':R, 'F': F}
-
+        return {"P": P, 'R': R, 'F': F}
 
 
 class SNLIEvaluator(Evaluator):
@@ -561,10 +564,6 @@ def f1_score(y_true, y_pred, labels=None, pos_label=1, average='binary'):
         res[(precision + recall) <= 0] = 0
         return res
     return 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
-
-
-def classification_report(y_true, y_pred, labels=None, target_names=None, digits=2):
-    raise NotImplementedError
 
 
 def accuracy_topk(y_true, y_prob, k=1):

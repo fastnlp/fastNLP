@@ -28,11 +28,9 @@ class Trainer(object):
 
     """
 
-    def __init__(self, train_data, model, losser=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
-                 validate_every=-1,
-                 dev_data=None, use_cuda=False, save_path=None,
-                 optimizer=Adam(lr=0.01, weight_decay=0), check_code_level=0,
-                 metric_key=None):
+    def __init__(self, train_data, model, losser=None, metrics=None, optimizer=Adam(lr=0.01, weight_decay=0),
+                 sampler=RandomSampler(), n_epochs=3, batch_size=32, print_every=50, validate_every=-1, dev_data=None,
+                 use_cuda=False, metric_key=None, save_path=None, check_code_level=0):
         """
 
         :param DataSet train_data: the training data
@@ -54,7 +52,6 @@ class Trainer(object):
                 ::
                     metric_key="-PPL"   # language model gets better as perplexity gets smaller
 
-        :param kwargs:
 
         """
         super(Trainer, self).__init__()
@@ -105,6 +102,7 @@ class Trainer(object):
         self.print_every = int(print_every)
         self.validate_every = int(validate_every)
         self.best_metric_indicator = None
+        self.sampler = sampler
 
         self._model_device = model.parameters().__next__().device
 
@@ -120,13 +118,8 @@ class Trainer(object):
                                  batch_size=self.batch_size,
                                  use_cuda=self.use_cuda)
 
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-
         self.step = 0
         self.start_time = None  # start timestamp
-
-        # print(self.__dict__)
 
     def train(self):
         """Start Training.
@@ -158,7 +151,7 @@ class Trainer(object):
             epoch = 1
             while epoch <= self.n_epochs:
 
-                data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=RandomSampler(),
+                data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
                                       as_numpy=False)
 
                 self._train_epoch(data_iterator, self.model, epoch, start)
