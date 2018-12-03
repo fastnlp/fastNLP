@@ -382,3 +382,19 @@ def seq_lens_to_masks(seq_lens, float=True):
         raise NotImplemented
     else:
         raise NotImplemented
+
+
+def seq_mask(seq_len, max_len):
+    """Create sequence mask.
+
+    :param seq_len: list or torch.Tensor, the lengths of sequences in a batch.
+    :param max_len: int, the maximum sequence length in a batch.
+    :return mask: torch.LongTensor, [batch_size, max_len]
+
+    """
+    if not isinstance(seq_len, torch.Tensor):
+        seq_len = torch.LongTensor(seq_len)
+    seq_len = seq_len.view(-1, 1).long()   # [batch_size, 1]
+    seq_range = torch.arange(start=0, end=max_len, dtype=torch.long, device=seq_len.device).view(1, -1) # [1, max_len]
+    return torch.gt(seq_len, seq_range) # [batch_size, max_len]
+

@@ -26,24 +26,6 @@ class DataSet(object):
     However, it stores data in a different way: Field-first, Instance-second.
 
     """
-
-    class DataSetIter(object):
-        def __init__(self, data_set, idx=-1, **fields):
-            self.data_set = data_set
-            self.idx = idx
-            self.fields = fields
-
-        def __next__(self):
-            self.idx += 1
-            if self.idx >= len(self.data_set):
-                raise StopIteration
-            # this returns a copy
-            return self.data_set[self.idx]
-
-        def __repr__(self):
-            return "\n".join(['{}: {}'.format(name, repr(self.data_set[name][self.idx])) for name
-                              in self.data_set.get_fields().keys()])
-
     def __init__(self, data=None):
         """
 
@@ -72,7 +54,27 @@ class DataSet(object):
         return item in self.field_arrays
 
     def __iter__(self):
-        return self.DataSetIter(self)
+        def iter_func():
+            for idx in range(len(self)):
+                yield self[idx]
+        return iter_func()
+
+    def _inner_iter(self):
+        class Iter_ptr:
+            def __init__(self, dataset, idx):
+                self.dataset = dataset
+                self.idx = idx
+            def __getitem__(self, item):
+                assert self.idx < len(self.dataset), "index:{} out of range".format(self.idx)
+                assert item in self.dataset.field_arrays, "no such field:{} in instance {}".format(item, self.dataset[self.idx])
+                return self.dataset.field_arrays[item][self.idx]
+            def __repr__(self):
+                return self.dataset[self.idx].__repr__()
+
+        def inner_iter_func():
+            for idx in range(len(self)):
+                yield Iter_ptr(self, idx)
+        return inner_iter_func()
 
     def __getitem__(self, idx):
         """Fetch Instance(s) at the `idx` position(s) in the dataset.
@@ -232,7 +234,7 @@ class DataSet(object):
         :param str new_field_name: If not None, results of the function will be stored as a new field.
         :return results: if new_field_name is not passed, returned values of the function over all instances.
         """
-        results = [func(ins) for ins in self]
+        results = [func(ins) for ins in self._inner_iter()]
         if new_field_name is not None:
             if new_field_name in self.field_arrays:
                 # overwrite the field, keep same attributes
@@ -248,7 +250,7 @@ class DataSet(object):
             return results
 
     def drop(self, func):
-        results = [ins for ins in self if not func(ins)]
+        results = [ins for ins in self._inner_iter() if not func(ins)]
         for name, old_field in self.field_arrays.items():
             self.field_arrays[name].content = [ins[name] for ins in results]
 

@@ -130,4 +130,4 @@ class TestDataSetIter(unittest.TestCase):
     def test__repr__(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
         for iter in ds:
-            self.assertEqual(iter.__repr__(), "{'x': [1, 2, 3, 4], 'y': [5, 6]}")
+            self.assertEqual(iter.__repr__(), "{'x': [1, 2, 3, 4],\n'y': [5, 6]}")
