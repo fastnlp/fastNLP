@@ -1,5 +1,3 @@
-
-
 class Instance(object):
     """An Instance is an example of data. It is the collection of Fields.
 
@@ -33,4 +31,5 @@ class Instance(object):
         return self.add_field(name, field)
 
     def __repr__(self):
-        return self.fields.__repr__()
+        return "{" + ",\n".join(
+            "\'" + field_name + "\': " + str(self.fields[field_name]) for field_name in self.fields) + "}"

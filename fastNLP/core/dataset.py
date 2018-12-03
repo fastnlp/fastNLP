@@ -110,6 +110,15 @@ class DataSet(object):
         field = iter(self.field_arrays.values()).__next__()
         return len(field)
 
+    def __inner_repr__(self):
+        if len(self) < 20:
+            return ",\n".join([ins.__repr__() for ins in self])
+        else:
+            return self[:5].__inner_repr__() + "\n...\n" + self[-5:].__inner_repr__()
+
+    def __repr__(self):
+        return "DataSet(" + self.__inner_repr__() + ")"
+
     def append(self, ins):
         """Add an instance to the DataSet.
         If the DataSet is not empty, the instance must have the same field names as the rest instances in the DataSet.

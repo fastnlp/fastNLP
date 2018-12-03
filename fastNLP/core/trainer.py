@@ -32,8 +32,7 @@ class Trainer(object):
                  validate_every=-1,
                  dev_data=None, use_cuda=False, save_path=None,
                  optimizer=Adam(lr=0.01, weight_decay=0), check_code_level=0,
-                 metric_key=None,
-                 **kwargs):
+                 metric_key=None):
         """
 
         :param DataSet train_data: the training data
