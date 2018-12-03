@@ -1,5 +1,5 @@
-import torch
 import numpy as np
+import torch
 
 
 class Batch(object):
@@ -59,6 +59,7 @@ class Batch(object):
 
     def __len__(self):
         return self.num_batches
+
 
 def to_tensor(batch, dtype):
     if dtype in (np.int8, np.int16, np.int32, np.int64):

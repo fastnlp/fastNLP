@@ -12,7 +12,8 @@ from fastNLP.models import CNNText
 class TestTutorial(unittest.TestCase):
     def test_tutorial(self):
         # 从csv读取数据到DataSet
-        dataset = DataSet.read_csv("./data_for_tests/tutorial_sample_dataset.csv", headers=('raw_sentence', 'label'),
+        sample_path = "test/data_for_tests/tutorial_sample_dataset.csv"
+        dataset = DataSet.read_csv(sample_path, headers=('raw_sentence', 'label'),
                                    sep='\t')
         print(len(dataset))
         print(dataset[0])
@@ -88,7 +89,6 @@ class TestTutorial(unittest.TestCase):
         print('Train finished!')
 
         # 使用fastNLP的Tester测试脚本
-
         tester = Tester(data=test_data, model=model, metrics=AccuracyMetric(pred="predict", target="label_seq"),
                         batch_size=4)
         acc = tester.test()
