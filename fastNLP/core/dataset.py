@@ -1,7 +1,9 @@
+import _pickle as pickle
 import numpy as np
 
 from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.instance import Instance
+from fastNLP.core.utils import get_func_signature
 
 _READERS = {}
 
@@ -26,24 +28,6 @@ class DataSet(object):
     However, it stores data in a different way: Field-first, Instance-second.
 
     """
-
-    class DataSetIter(object):
-        def __init__(self, data_set, idx=-1, **fields):
-            self.data_set = data_set
-            self.idx = idx
-            self.fields = fields
-
-        def __next__(self):
-            self.idx += 1
-            if self.idx >= len(self.data_set):
-                raise StopIteration
-            # this returns a copy
-            return self.data_set[self.idx]
-
-        def __repr__(self):
-            return "\n".join(['{}: {}'.format(name, repr(self.data_set[name][self.idx])) for name
-                              in self.data_set.get_fields().keys()])
-
     def __init__(self, data=None):
         """
 
@@ -72,7 +56,27 @@ class DataSet(object):
         return item in self.field_arrays
 
     def __iter__(self):
-        return self.DataSetIter(self)
+        def iter_func():
+            for idx in range(len(self)):
+                yield self[idx]
+        return iter_func()
+
+    def _inner_iter(self):
+        class Iter_ptr:
+            def __init__(self, dataset, idx):
+                self.dataset = dataset
+                self.idx = idx
+            def __getitem__(self, item):
+                assert self.idx < len(self.dataset), "index:{} out of range".format(self.idx)
+                assert item in self.dataset.field_arrays, "no such field:{} in instance {}".format(item, self.dataset[self.idx])
+                return self.dataset.field_arrays[item][self.idx]
+            def __repr__(self):
+                return self.dataset[self.idx].__repr__()
+
+        def inner_iter_func():
+            for idx in range(len(self)):
+                yield Iter_ptr(self, idx)
+        return inner_iter_func()
 
     def __getitem__(self, idx):
         """Fetch Instance(s) at the `idx` position(s) in the dataset.
@@ -109,6 +113,15 @@ class DataSet(object):
             return 0
         field = iter(self.field_arrays.values()).__next__()
         return len(field)
+
+    def __inner_repr__(self):
+        if len(self) < 20:
+            return ",\n".join([ins.__repr__() for ins in self])
+        else:
+            return self[:5].__inner_repr__() + "\n...\n" + self[-5:].__inner_repr__()
+
+    def __repr__(self):
+        return "DataSet(" + self.__inner_repr__() + ")"
 
     def append(self, ins):
         """Add an instance to the DataSet.
@@ -226,7 +239,10 @@ class DataSet(object):
             (2) is_target: boolean, will be ignored if new_field is None. If True, the new field will be as target.
         :return results: if new_field_name is not passed, returned values of the function over all instances.
         """
-        results = [func(ins) for ins in self]
+        results = [func(ins) for ins in self._inner_iter()]
+        if len(list(filter(lambda x: x is not None, results)))==0: # all None
+            raise ValueError("{} always return None.".format(get_func_signature(func=func)))
+
         extra_param = {}
         if 'is_input' in kwargs:
             extra_param['is_input'] = kwargs['is_input']
@@ -250,7 +266,7 @@ class DataSet(object):
             return results
 
     def drop(self, func):
-        results = [ins for ins in self if not func(ins)]
+        results = [ins for ins in self._inner_iter() if not func(ins)]
         for name, old_field in self.field_arrays.items():
             self.field_arrays[name].content = [ins[name] for ins in results]
 
@@ -317,3 +333,12 @@ class DataSet(object):
                 for header, content in zip(headers, contents):
                     _dict[header].append(content)
         return cls(_dict)
+
+    def save(self, path):
+        with open(path, 'wb') as f:
+            pickle.dump(self, f)
+
+    @staticmethod
+    def load(self, path):
+        with open(path, 'rb') as f:
+            return pickle.load(f)

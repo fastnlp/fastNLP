@@ -1,6 +1,7 @@
 import os
 import time
 from datetime import datetime
+from datetime import timedelta
 from tqdm import tqdm
 
 import torch
@@ -22,17 +23,16 @@ from fastNLP.core.utils import _check_forward_error
 from fastNLP.core.utils import _check_loss_evaluate
 from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.utils import get_func_signature
-
+from fastNLP.core.utils import _relocate_pbar
 
 class Trainer(object):
     """Main Training Loop
 
     """
-
     def __init__(self, train_data, model, losser=None, metrics=None, n_epochs=3, batch_size=32, update_every=50,
                  validate_every=-1, dev_data=None, use_cuda=False, save_path=None,
                  optimizer=Adam(lr=0.01, weight_decay=0), check_code_level=0,
-                 metric_key=None, sampler=RandomSampler()):
+                 metric_key=None, sampler=RandomSampler(), use_tqdm=True):
         """
 
         :param DataSet train_data: the training data
@@ -54,6 +54,7 @@ class Trainer(object):
                 ::
                     metric_key="-PPL"   # language model gets better as perplexity gets smaller
         :param sampler: method used to generate batch data.
+        :param use_tqdm: boolean, use tqdm to show train progress.
 
         """
         super(Trainer, self).__init__()
@@ -117,18 +118,22 @@ class Trainer(object):
         else:
             self.optimizer = optimizer.construct_from_pytorch(self.model.parameters())
 
+        self.use_tqdm = use_tqdm
+        if self.use_tqdm:
+            tester_verbose = 0
+        else:
+            tester_verbose = 1
+
         if self.dev_data is not None:
             self.tester = Tester(model=self.model,
                                  data=self.dev_data,
                                  metrics=self.metrics,
                                  batch_size=self.batch_size,
                                  use_cuda=self.use_cuda,
-                                 verbose=0)
+                                 verbose=tester_verbose)
 
         self.step = 0
         self.start_time = None  # start timestamp
-
-        # print(self.__dict__)
 
     def train(self):
         """Start Training.
@@ -155,8 +160,10 @@ class Trainer(object):
             else:
                 path = os.path.join(self.save_path, 'tensorboard_logs_{}'.format(self.start_time))
                 self._summary_writer = SummaryWriter(path)
-
-            self._tqdm_train()
+            if self.use_tqdm:
+                self._tqdm_train()
+            else:
+                self._print_train()
 
         finally:
             self._summary_writer.close()
@@ -196,31 +203,67 @@ class Trainer(object):
                         eval_res = self._do_validation()
                         eval_str = "Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step, total_steps) + \
                                    self.tester._format_eval_results(eval_res)
-                        pbar = self._relocate_pbar(pbar, print_str=eval_str, total=total_steps, initial=self.step)
-                    time.sleep(0.1)
+                        pbar = _relocate_pbar(pbar, print_str=eval_str)
                 if self.validate_every < 0 and self.dev_data:
                     eval_res = self._do_validation()
                     eval_str = "Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step, total_steps) + \
                                self.tester._format_eval_results(eval_res)
-                    pbar = self._relocate_pbar(pbar, print_str=eval_str, total=total_steps, initial=self.step)
+                    pbar = _relocate_pbar(pbar, print_str=eval_str)
                 if epoch!=self.n_epochs:
                     data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
                                           as_numpy=False)
             pbar.close()
 
-    def _relocate_pbar(self, pbar, total, initial, print_str=None):
-        postfix = pbar.postfix
-        desc = pbar.desc
-        pbar.close()
-        avg_time = pbar.avg_time
-        start_t = pbar.start_t
-        if print_str:
-            print(print_str)
-        pbar = tqdm(total=total, postfix=postfix, desc=desc, leave=False, initial=initial, dynamic_ncols=True)
-        pbar.start_t = start_t
-        pbar.avg_time = avg_time
-        pbar.sp(pbar.__repr__())
-        return pbar
+
+    def _print_train(self):
+        """
+
+        :param data_iterator:
+        :param model:
+        :param epoch:
+        :param start:
+        :return:
+        """
+        epoch = 1
+        start = time.time()
+        while epoch <= self.n_epochs:
+
+            data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
+                                  as_numpy=False)
+
+            for batch_x, batch_y in data_iterator:
+                # TODO 这里可能会遇到问题，万一用户在model内部修改了prediction的device就会有问题
+                _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
+                prediction = self._data_forward(self.model, batch_x)
+                loss = self._compute_loss(prediction, batch_y)
+                self._grad_backward(loss)
+                self._update()
+                self._summary_writer.add_scalar("loss", loss.item(), global_step=self.step)
+                for name, param in self.model.named_parameters():
+                    if param.requires_grad:
+                        self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.step)
+                        # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
+                        # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
+                if self.print_every > 0 and self.step % self.print_every == 0:
+                    end = time.time()
+                    diff = timedelta(seconds=round(end - start))
+                    print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.6} time:  {}".format(
+                        epoch, self.step, loss.data, diff)
+                    print(print_output)
+
+                if (self.validate_every > 0 and self.step % self.validate_every == 0 and
+                        self.dev_data is not None):
+                    self._do_validation()
+
+                self.step += 1
+
+            # validate_every override validation at end of epochs
+            if self.dev_data and self.validate_every <= 0:
+                self._do_validation()
+            epoch += 1
+
+
+
 
     def _do_validation(self):
         res = self.tester.test()

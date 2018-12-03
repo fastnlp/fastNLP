@@ -32,14 +32,14 @@ class TrainerTestGround(unittest.TestCase):
         model = NaiveClassifier(2, 1)
 
         trainer = Trainer(train_set, model,
-                          losser=BCELoss(input="predict", target="y"),
+                          losser=BCELoss(pred="predict", target="y"),
                           metrics=AccuracyMetric(pred="predict", target="y"),
                           n_epochs=10,
                           batch_size=32,
                           update_every=1,
-                          validate_every=-1,
+                          validate_every=10,
                           dev_data=dev_set,
-                          optimizer=SGD(0.1),
-                          check_code_level=2
-                          )
+                          optimizer=SGD(lr=0.1),
+                          check_code_level=2,
+                          use_tqdm=True)
         trainer.train()

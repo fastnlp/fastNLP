@@ -70,13 +70,23 @@ class LossBase(object):
             raise NameError(f"Delete `*{func_spect.varargs}` in {get_func_signature(self.get_loss)}(Do not use "
                             f"positional argument.).")
 
-    def __call__(self, output_dict, target_dict, force_check=False):
+    def _fast_param_map(self, pred_dict, target_dict):
+        if len(self.param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
+            return tuple(pred_dict.values())[0], tuple(target_dict.values())[0]
+        return None
+
+    def __call__(self, pred_dict, target_dict, check=False):
         """
-        :param output_dict: A dict from forward function of the network.
+        :param pred_dict: A dict from forward function of the network.
         :param target_dict: A dict from DataSet.batch_y.
-        :param force_check: Boolean. Force to check the mapping functions when it is running.
+        :param check: Boolean. Force to check the mapping functions when it is running.
         :return:
         """
+        fast_param = self._fast_param_map(pred_dict, target_dict)
+        if fast_param is not None:
+            loss = self.get_loss(*fast_param)
+            return loss
+
         args, defaults, defaults_val, varargs, kwargs = _get_arg_list(self.get_loss)
         if varargs is not None:
             raise RuntimeError(
@@ -88,7 +98,8 @@ class LossBase(object):
             raise RuntimeError(
                 f"There is not any param in function{get_func_signature(self.get_loss)}"
             )
-        self._checked = self._checked and not force_check
+
+        self._checked = self._checked and not check
         if not self._checked:
             for keys in args:
                 if keys not in param_map:
@@ -105,12 +116,12 @@ class LossBase(object):
         duplicated = []
         missing = []
         if not self._checked:
-            for keys, val in output_dict.items():
+            for keys, val in pred_dict.items():
                 if keys in target_dict.keys():
                     duplicated.append(keys)
 
         param_val_dict = {}
-        for keys, val in output_dict.items():
+        for keys, val in pred_dict.items():
             param_val_dict.update({keys: val})
         for keys, val in target_dict.items():
             param_val_dict.update({keys: val})
@@ -131,7 +142,6 @@ class LossBase(object):
 
         param_map_val = _map_args(reversed_param_map, **param_val_dict)
         param_value = _build_args(self.get_loss, **param_map_val)
-
         loss = self.get_loss(**param_value)
 
         if not (isinstance(loss, torch.Tensor) and len(loss.size()) == 0):
@@ -158,29 +168,31 @@ class LossFunc(LossBase):
 
 
 class CrossEntropyLoss(LossBase):
-    def __init__(self, input=None, target=None):
+    def __init__(self, pred=None, target=None):
         super(CrossEntropyLoss, self).__init__()
         self.get_loss = F.cross_entropy
-        self._init_param_map(input=input, target=target)
+        self._init_param_map(input=pred, target=target)
 
 
 class L1Loss(LossBase):
-    def __init__(self):
+    def __init__(self, pred=None, target=None):
         super(L1Loss, self).__init__()
         self.get_loss = F.l1_loss
+        self._init_param_map(input=pred, target=target)
 
 
 class BCELoss(LossBase):
-    def __init__(self, input=None, target=None):
+    def __init__(self, pred=None, target=None):
         super(BCELoss, self).__init__()
         self.get_loss = F.binary_cross_entropy
-        self._init_param_map(input=input, target=target)
+        self._init_param_map(input=pred, target=target)
 
 
 class NLLLoss(LossBase):
-    def __init__(self):
+    def __init__(self, pred=None, target=None):
         super(NLLLoss, self).__init__()
         self.get_loss = F.nll_loss
+        self._init_param_map(input=pred, target=target)
 
 
 class LossInForward(LossBase):
@@ -199,10 +211,11 @@ class LossInForward(LossBase):
                                  all_needed=[],
                                  varargs=[])
             raise CheckError(check_res=check_res, func_signature=get_func_signature(self.get_loss))
+        return kwargs[self.loss_key]
 
-    def __call__(self, output_dict, predict_dict, force_check=False):
+    def __call__(self, pred_dict, target_dict, check=False):
 
-        loss = self.get_loss(**output_dict)
+        loss = self.get_loss(**pred_dict)
 
         if not (isinstance(loss, torch.Tensor) and len(loss.size()) == 0):
             if not isinstance(loss, torch.Tensor):

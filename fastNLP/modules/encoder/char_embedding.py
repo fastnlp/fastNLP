@@ -43,7 +43,7 @@ class ConvCharEmbedding(nn.Module):
             # [batch_size*sent_length, feature_maps[i], 1, width - kernels[i] + 1]
             y = torch.squeeze(y, 2)
             # [batch_size*sent_length, feature_maps[i], width - kernels[i] + 1]
-            y = F.tanh(y)
+            y = torch.tanh(y)
             y, __ = torch.max(y, 2)
             # [batch_size*sent_length, feature_maps[i]]
             feats.append(y)

@@ -7,9 +7,12 @@ from collections import namedtuple
 
 import numpy as np
 import torch
+from tqdm import tqdm
 
 CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                    'varargs'], verbose=False)
+
+
 def save_pickle(obj, pickle_path, file_name):
     """Save an object into a pickle file.
 
@@ -52,6 +55,7 @@ def pickle_exist(pickle_path, pickle_name):
         return True
     else:
         return False
+
 
 def _build_args(func, **kwargs):
     spect = inspect.getfullargspec(func)
@@ -108,7 +112,7 @@ def _check_arg_dict_list(func, args):
     assert callable(func) and isinstance(arg_dict_list, (list, tuple))
     assert len(arg_dict_list) > 0 and isinstance(arg_dict_list[0], dict)
     spect = inspect.getfullargspec(func)
-    all_args = set([arg for arg in spect.args if arg!='self'])
+    all_args = set([arg for arg in spect.args if arg != 'self'])
     defaults = []
     if spect.defaults is not None:
         defaults = [arg for arg in spect.defaults]
@@ -129,6 +133,7 @@ def _check_arg_dict_list(func, args):
                     required=list(require_args),
                     all_needed=list(all_args),
                     varargs=varargs)
+
 
 def get_func_signature(func):
     """
@@ -153,7 +158,7 @@ def get_func_signature(func):
         class_name = func.__self__.__class__.__name__
         signature = inspect.signature(func)
         signature_str = str(signature)
-        if len(signature_str)>2:
+        if len(signature_str) > 2:
             _self = '(self, '
         else:
             _self = '(self'
@@ -176,12 +181,13 @@ def _is_function_or_method(func):
         return False
     return True
 
+
 def _check_function_or_method(func):
     if not _is_function_or_method(func):
         raise TypeError(f"{type(func)} is not a method or function.")
 
 
-def _move_dict_value_to_device(*args, device:torch.device):
+def _move_dict_value_to_device(*args, device: torch.device):
     """
 
     move data to model's device, element in *args should be dict. This is a inplace change.
@@ -206,7 +212,8 @@ class CheckError(Exception):
 
     CheckError. Used in losses.LossBase, metrics.MetricBase.
     """
-    def __init__(self, check_res:CheckRes, func_signature:str):
+
+    def __init__(self, check_res: CheckRes, func_signature: str):
         errs = [f'The following problems occurred when calling `{func_signature}`']
 
         if check_res.varargs:
@@ -228,8 +235,9 @@ IGNORE_CHECK_LEVEL = 0
 WARNING_CHECK_LEVEL = 1
 STRICT_CHECK_LEVEL = 2
 
-def _check_loss_evaluate(prev_func_signature:str, func_signature:str, check_res:CheckRes,
-                         pred_dict:dict, target_dict:dict, dataset, check_level=0):
+
+def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_res: CheckRes,
+                         pred_dict: dict, target_dict: dict, dataset, check_level=0):
     errs = []
     unuseds = []
     _unused_field = []
@@ -268,8 +276,8 @@ def _check_loss_evaluate(prev_func_signature:str, func_signature:str, check_res:
                                f"target is {list(target_dict.keys())}).")
         if _miss_out_dataset:
             _tmp = (f"You might need to provide {_miss_out_dataset} in DataSet and set it as target(Right now "
-                               f"target is {list(target_dict.keys())}) or output it "
-                               f"in {prev_func_signature}(Right now it outputs {list(pred_dict.keys())}).")
+                    f"target is {list(target_dict.keys())}) or output it "
+                    f"in {prev_func_signature}(Right now it outputs {list(pred_dict.keys())}).")
             if _unused_field:
                 _tmp += f"You can use DataSet.rename_field() to rename the field in `unused field:`. "
             suggestions.append(_tmp)
@@ -277,15 +285,15 @@ def _check_loss_evaluate(prev_func_signature:str, func_signature:str, check_res:
     if check_res.duplicated:
         errs.append(f"\tduplicated param: {check_res.duplicated}.")
         suggestions.append(f"Delete {check_res.duplicated} in the output of "
-                    f"{prev_func_signature} or do not set {check_res.duplicated} as targets. ")
+                           f"{prev_func_signature} or do not set {check_res.duplicated} as targets. ")
 
     if check_level == STRICT_CHECK_LEVEL:
         errs.extend(unuseds)
 
-    if len(errs)>0:
+    if len(errs) > 0:
         errs.insert(0, f'The following problems occurred when calling {func_signature}')
         sugg_str = ""
-        if len(suggestions)>1:
+        if len(suggestions) > 1:
             for idx, sugg in enumerate(suggestions):
                 sugg_str += f'({idx+1}). {sugg}'
         else:
@@ -332,10 +340,10 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
         if check_level == STRICT_CHECK_LEVEL:
             errs.extend(_unused)
 
-    if len(errs)>0:
+    if len(errs) > 0:
         errs.insert(0, f'The following problems occurred when calling {func_signature}')
         sugg_str = ""
-        if len(suggestions)>1:
+        if len(suggestions) > 1:
             for idx, sugg in enumerate(suggestions):
                 sugg_str += f'({idx+1}). {sugg}'
         else:
@@ -357,11 +365,11 @@ def seq_lens_to_masks(seq_lens, float=True):
     :return: list, np.ndarray or torch.Tensor, shape will be (B, max_length)
     """
     if isinstance(seq_lens, np.ndarray):
-        assert len(np.shape(seq_lens))==1, f"seq_lens can only have one dimension, got {len(np.shape(seq_lens))}."
+        assert len(np.shape(seq_lens)) == 1, f"seq_lens can only have one dimension, got {len(np.shape(seq_lens))}."
         assert seq_lens.dtype in (int, np.int32, np.int64), f"seq_lens can only be integer, not {seq_lens.dtype}."
         raise NotImplemented
     elif isinstance(seq_lens, torch.LongTensor):
-        assert len(seq_lens.size())==1, f"seq_lens can only have one dimension, got {len(seq_lens.size())==1}."
+        assert len(seq_lens.size()) == 1, f"seq_lens can only have one dimension, got {len(seq_lens.size())==1}."
         batch_size = seq_lens.size(0)
         max_len = seq_lens.max()
         indexes = torch.arange(max_len).view(1, -1).repeat(batch_size, 1).to(seq_lens.device)
@@ -376,3 +384,54 @@ def seq_lens_to_masks(seq_lens, float=True):
     else:
         raise NotImplemented
 
+
+def seq_mask(seq_len, max_len):
+    """Create sequence mask.
+
+    :param seq_len: list or torch.Tensor, the lengths of sequences in a batch.
+    :param max_len: int, the maximum sequence length in a batch.
+    :return mask: torch.LongTensor, [batch_size, max_len]
+
+    """
+    if not isinstance(seq_len, torch.Tensor):
+        seq_len = torch.LongTensor(seq_len)
+    seq_len = seq_len.view(-1, 1).long()   # [batch_size, 1]
+    seq_range = torch.arange(start=0, end=max_len, dtype=torch.long, device=seq_len.device).view(1, -1) # [1, max_len]
+    return torch.gt(seq_len, seq_range) # [batch_size, max_len]
+
+
+def _relocate_pbar(pbar:tqdm, print_str:str):
+    """
+
+    When using tqdm, you cannot print. If you print, the tqdm will duplicate. By using this function, print_str will
+        show above tqdm.
+    :param pbar: tqdm
+    :param print_str:
+    :return:
+    """
+
+    params = ['desc', 'total', 'leave', 'file', 'ncols', 'mininterval', 'maxinterval', 'miniters', 'ascii', 'disable',
+     'unit', 'unit_scale', 'dynamic_ncols', 'smoothing', 'bar_format', 'initial', 'position', 'postfix', 'unit_divisor',
+     'gui']
+
+    attr_map = {'file': 'fp', 'initial':'n', 'position':'pos'}
+
+    param_dict = {}
+    for param in params:
+        attr_name = param
+        if param in attr_map:
+            attr_name = attr_map[param]
+        value = getattr(pbar, attr_name)
+        if attr_name == 'pos':
+            value = abs(value)
+        param_dict[param] = value
+
+    pbar.close()
+    avg_time = pbar.avg_time
+    start_t = pbar.start_t
+    print(print_str)
+    pbar = tqdm(**param_dict)
+    pbar.start_t = start_t
+    pbar.avg_time = avg_time
+    pbar.sp(pbar.__repr__())
+    return pbar
