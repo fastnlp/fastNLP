@@ -28,14 +28,15 @@ class Tester(object):
         self.metrics = _prepare_metrics(metrics)
 
         self.data = data
-        if torch.cuda.is_available() and self.use_cuda:
-            self._model = model.cuda()
-        else:
-            self._model = model
         self.use_cuda = use_cuda
         self.batch_size = batch_size
         self.verbose = verbose
         self._model_device = model.parameters().__next__().device
+
+        if torch.cuda.is_available() and self.use_cuda:
+            self._model = model.cuda()
+        else:
+            self._model = model
 
         # check predict
         if hasattr(self._model, 'predict'):

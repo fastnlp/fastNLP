@@ -174,7 +174,7 @@ class DataSet(object):
             self.field_arrays[new_name] = self.field_arrays.pop(old_name)
             self.field_arrays[new_name].name = new_name
         else:
-            raise KeyError("{} is not a valid name. ".format(old_name))
+            raise KeyError("DataSet has no field named {}.".format(old_name))
 
     def set_target(self, *field_names, flag=True):
         """Change the target flag of these fields.
@@ -208,8 +208,6 @@ class DataSet(object):
 
     @classmethod
     def set_reader(cls, method_name):
-        """decorator to add dataloader support
-        """
         assert isinstance(method_name, str)
 
         def wrapper(read_cls):
@@ -275,6 +273,15 @@ class DataSet(object):
 
     @classmethod
     def read_csv(cls, csv_path, headers=None, sep=",", dropna=True):
+        """Load data from a CSV file and return a DataSet object.
+
+        :param str csv_path: path to the CSV file
+        :param List[str] or Tuple[str] headers: headers of the CSV file
+        :param str sep: delimiter in CSV file. Default: ","
+        :param bool dropna: If True, drop rows that have less entries than headers.
+        :return DataSet dataset:
+
+        """
         with open(csv_path, "r") as f:
             start_idx = 0
             if headers is None:

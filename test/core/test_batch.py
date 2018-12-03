@@ -22,8 +22,8 @@ class TestCase1(unittest.TestCase):
 
     def test_dataset_batching(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
-        ds.set_input(x=True)
-        ds.set_target(y=True)
+        ds.set_input("x")
+        ds.set_target("y")
         iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
         for x, y in iter:
             self.assertTrue(isinstance(x["x"], np.ndarray) and isinstance(y["y"], np.ndarray))
