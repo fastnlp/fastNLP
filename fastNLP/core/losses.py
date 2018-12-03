@@ -212,6 +212,7 @@ class LossInForward(LossBase):
                                  all_needed=[],
                                  varargs=[])
             raise CheckError(check_res=check_res, func_signature=get_func_signature(self.get_loss))
+        return kwargs[self.loss_key]
 
     def __call__(self, pred_dict, target_dict, check=False):
 

@@ -27,3 +27,9 @@ class TestCase(unittest.TestCase):
         self.assertEqual(ins["x"], [1, 2, 3])
         self.assertEqual(ins["y"], [4, 5, 6])
         self.assertEqual(ins["z"], [1, 1, 1])
+
+    def test_repr(self):
+        fields = {"x": [1, 2, 3], "y": [4, 5, 6], "z": [1, 1, 1]}
+        ins = Instance(**fields)
+        # simple print, that is enough.
+        print(ins)
