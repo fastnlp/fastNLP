@@ -147,7 +147,7 @@ class LossBase(object):
         if not (isinstance(loss, torch.Tensor) and len(loss.size()) == 0):
             if not isinstance(loss, torch.Tensor):
                 raise RuntimeError(f"loss ERROR: loss except a torch.Tensor but get {type(loss)}")
-            raise RuntimeError(f"loss ERROR: the size of loss except torch.Size([]) but got {loss.size}")
+            raise RuntimeError(f"loss ERROR: the size of loss except torch.Size([]) but got {loss.size()}")
 
         return loss
 
@@ -219,8 +219,8 @@ class LossInForward(LossBase):
 
         if not (isinstance(loss, torch.Tensor) and len(loss.size()) == 0):
             if not isinstance(loss, torch.Tensor):
-                raise TypeError(f"loss ERROR: loss except a torch.Tensor but got {type(loss)}")
-            raise RuntimeError(f"loss ERROR: the size of loss except torch.Size([]) but got {loss.size}")
+                raise TypeError(f"loss excepts to be a torch.Tensor, got {type(loss)}")
+            raise RuntimeError(f"The size of loss excepts to be torch.Size([]), got {loss.size()}")
 
         return loss
 

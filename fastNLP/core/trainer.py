@@ -48,6 +48,8 @@ class Trainer(object):
         :param str save_path: file path to save models
         :param Optimizer optimizer: an optimizer object
         :param int check_code_level: level of FastNLP code checker. -1: don't check, 0: ignore. 1: warning. 2: strict.
+            `ignore` will not check unused field; `warning` when warn if some field are not used; `strict` means
+            it will raise error if some field are not used.
         :param str metric_key: a single indicator used to decide the best model based on metric results. It must be one
             of the keys returned by the FIRST metric in `metrics`. If the overall result gets better if the indicator gets
             smaller, add a `-` character in front of the string. For example

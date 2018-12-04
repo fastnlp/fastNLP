@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
 from fastNLP.core.losses import BCELoss
+from fastNLP.core.losses import LossInForward
 from fastNLP.core.metrics import AccuracyMetric
 from fastNLP.core.optimizer import SGD
 from fastNLP.core.trainer import Trainer
@@ -141,6 +142,84 @@ class TrainerTestGround(unittest.TestCase):
         """
         # 应该正确运行
         """
+
+    def test_trainer_suggestion4(self):
+        # 检查报错提示能否正确提醒用户
+        # 这里传入forward需要的数据，是否可以正确提示unused
+        dataset = prepare_fake_dataset2('x1', 'x_unused')
+        dataset.set_input('x1', 'x_unused', 'y', flag=True)
+        class Model(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fc = nn.Linear(5, 4)
+            def forward(self, x1, x2, y):
+                x1 = self.fc(x1)
+                x2 = self.fc(x2)
+                x = x1 + x2
+                loss = F.cross_entropy(x, y)
+                return {'loss': loss}
+
+        model = Model()
+        trainer = Trainer(
+            train_data=dataset,
+            model=model,
+            use_tqdm=False,
+            print_every=2
+        )
+
+    def test_trainer_suggestion5(self):
+        # 检查报错提示能否正确提醒用户
+        # 这里传入多余参数，让其duplicate, 但这里因为y不会被调用，所以其实不会报错
+        dataset = prepare_fake_dataset2('x1', 'x_unused')
+        dataset.rename_field('x_unused', 'x2')
+        dataset.set_input('x1', 'x2', 'y')
+        dataset.set_target('y')
+        class Model(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fc = nn.Linear(5, 4)
+            def forward(self, x1, x2, y):
+                x1 = self.fc(x1)
+                x2 = self.fc(x2)
+                x = x1 + x2
+                loss = F.cross_entropy(x, y)
+                return {'loss': loss}
+
+        model = Model()
+        trainer = Trainer(
+            train_data=dataset,
+            model=model,
+            use_tqdm=False,
+            print_every=2
+        )
+
+    def test_trainer_suggestion6(self):
+        # 检查报错提示能否正确提醒用户
+        # 这里传入多余参数，让其duplicate
+        dataset = prepare_fake_dataset2('x1', 'x_unused')
+        dataset.rename_field('x_unused', 'x2')
+        dataset.set_input('x1', 'x2', 'y')
+        dataset.set_target('x1')
+        class Model(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fc = nn.Linear(5, 4)
+            def forward(self, x1, x2, y):
+                x1 = self.fc(x1)
+                x2 = self.fc(x2)
+                x = x1 + x2
+                loss = F.cross_entropy(x, y)
+                return {'pred': x}
+
+        model = Model()
+        trainer = Trainer(
+            train_data=dataset,
+            model=model,
+            dev_data=dataset,
+            metrics=AccuracyMetric(),
+            use_tqdm=False,
+            print_every=2
+        )
 
 
     def test_case2(self):

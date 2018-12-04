@@ -202,12 +202,20 @@ class AccuracyMetric(MetricBase):
                 pred2 = list(pred_dict.values())[1]
                 if not (isinstance(pred1, torch.Tensor) and isinstance(pred2, torch.Tensor)):
                     return fast_param
-                if len(pred1.size())>len(pred2.size()):
-                    fast_param['pred'] = pred1
-                    fast_param['seq_lens'] = pred2
+                if len(pred1.size())<len(pred2.size()) and len(pred1.size())==1:
+                    seq_lens = pred1
+                    pred = pred2
+                elif len(pred1.size())>len(pred2.size()) and len(pred2.size())==1:
+                    seq_lens = pred2
+                    pred = pred1
+                else:
+                    return fast_param
+                fast_param['pred'] = pred
+                fast_param['seq_lens'] = seq_lens
             else:
                 return fast_param
             fast_param['target'] = targets[0]
+        # TODO need to make sure they all have same batch_size
         return fast_param
 
     def evaluate(self, pred, target, seq_lens=None):

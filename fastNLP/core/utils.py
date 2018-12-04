@@ -254,9 +254,9 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
             else:
                 _unused_param.append(_unused)
         if _unused_field:
-            unuseds.append([f"\tunused field: {_unused_field}"])
+            unuseds.append(f"\tunused field: {_unused_field}")
         if _unused_param:
-            unuseds.append([f"\tunused param: {_unused_param}"]) # output from predict or forward
+            unuseds.append(f"\tunused param: {_unused_param}") # output from predict or forward
 
     if check_res.missing:
         errs.append(f"\tmissing param: {check_res.missing}")
@@ -278,8 +278,8 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
             _tmp = (f"You might need to provide {_miss_out_dataset} in DataSet and set it as target(Right now "
                     f"target has {list(target_dict.keys())}) or output it "
                     f"in {prev_func_signature}(Right now output has {list(pred_dict.keys())}).")
-            if _unused_field:
-                _tmp += f"You can use DataSet.rename_field() to rename the field in `unused field:`. "
+            # if _unused_field:
+            #     _tmp += f"You can use DataSet.rename_field() to rename the field in `unused field:`. "
             suggestions.append(_tmp)
 
     if check_res.duplicated:
@@ -287,7 +287,9 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
         suggestions.append(f"Delete {check_res.duplicated} in the output of "
                            f"{prev_func_signature} or do not set {check_res.duplicated} as targets. ")
 
-    if check_level == STRICT_CHECK_LEVEL:
+    if len(errs)>0:
+        errs.extend(unuseds)
+    elif check_level == STRICT_CHECK_LEVEL:
         errs.extend(unuseds)
 
     if len(errs) > 0:
@@ -330,14 +332,16 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
             suggestions.append(f"You might need to set {_miss_in_dataset} as input. ")
         if _miss_out_dataset:
             _tmp = f"You need to provide {_miss_out_dataset} in DataSet and set it as input. "
-            if check_res.unused:
-                _tmp += f"Or you might find it is in `unused field:`, you can use DataSet.rename_field() to " \
-                        f"rename the field in `unused field:`."
+            # if check_res.unused:
+            #     _tmp += f"Or you might find it in `unused field:`, you can use DataSet.rename_field() to " \
+            #             f"rename the field in `unused field:`."
             suggestions.append(_tmp)
 
     if check_res.unused:
         _unused = [f"\tunused field: {check_res.unused}"]
-        if check_level == STRICT_CHECK_LEVEL:
+        if len(errs)>0:
+            errs.extend(_unused)
+        elif check_level == STRICT_CHECK_LEVEL:
             errs.extend(_unused)
 
     if len(errs) > 0:
