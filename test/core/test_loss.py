@@ -319,3 +319,12 @@ class TestLosserError(unittest.TestCase):
 
         print(los(pred_dict=pred_dict, target_dict=target_dict))
 
+    def test_check_error(self):
+        l1 = loss.NLLLoss(pred="my_predict", target="my_truth")
+        a = F.log_softmax(torch.randn(3, 5, requires_grad=False), dim=0)
+        b = torch.tensor([1, 0, 4])
+        with self.assertRaises(Exception):
+            ans = l1({"wrong_predict": a, "my": b}, {"my_truth": b})
+
+        with self.assertRaises(Exception):
+            ans = l1({"my_predict": a}, {"truth": b, "my": a})
