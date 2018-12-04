@@ -304,118 +304,6 @@ def _prepare_metrics(metrics):
     return _metrics
 
 
-class Evaluator(object):
-    def __init__(self):
-        pass
-
-    def __call__(self, predict, truth):
-        """
-
-        :param predict: list of tensors, the network outputs from all batches.
-        :param truth: list of dict, the ground truths from all batch_y.
-        :return:
-        """
-        raise NotImplementedError
-
-
-class ClassifyEvaluator(Evaluator):
-    def __init__(self):
-        super(ClassifyEvaluator, self).__init__()
-
-    def __call__(self, predict, truth):
-        y_prob = [torch.nn.functional.softmax(y_logit, dim=-1) for y_logit in predict]
-        y_prob = torch.cat(y_prob, dim=0)
-        y_pred = torch.argmax(y_prob, dim=-1)
-        y_true = torch.cat(truth, dim=0)
-        acc = float(torch.sum(y_pred == y_true)) / len(y_true)
-        return {"accuracy": acc}
-
-
-class SeqLabelEvaluator(Evaluator):
-    def __init__(self):
-        super(SeqLabelEvaluator, self).__init__()
-
-    def __call__(self, predict, truth, **_):
-        """
-
-        :param predict: list of List, the network outputs from all batches.
-        :param truth: list of dict, the ground truths from all batch_y.
-        :return accuracy:
-        """
-        total_correct, total_count = 0., 0.
-        for x, y in zip(predict, truth):
-            x = torch.tensor(x)
-            y = y.to(x)  # make sure they are in the same device
-            mask = (y > 0)
-            correct = torch.sum(((x == y) * mask).long())
-            total_correct += float(correct)
-            total_count += float(torch.sum(mask.long()))
-        accuracy = total_correct / total_count
-        return {"accuracy": float(accuracy)}
-
-
-class SeqLabelEvaluator2(Evaluator):
-    # 上面的evaluator应该是错误的
-    def __init__(self, seq_lens_field_name='word_seq_origin_len'):
-        super(SeqLabelEvaluator2, self).__init__()
-        self.end_tagidx_set = set()
-        self.seq_lens_field_name = seq_lens_field_name
-
-    def __call__(self, predict, truth, **_):
-        """
-
-        :param predict: list of batch, the network outputs from all batches.
-        :param truth: list of dict, the ground truths from all batch_y.
-        :return accuracy:
-        """
-        seq_lens = _[self.seq_lens_field_name]
-        corr_count = 0
-        pred_count = 0
-        truth_count = 0
-        for x, y, seq_len in zip(predict, truth, seq_lens):
-            x = x.cpu().numpy()
-            y = y.cpu().numpy()
-            for idx, s_l in enumerate(seq_len):
-                x_ = x[idx]
-                y_ = y[idx]
-                x_ = x_[:s_l]
-                y_ = y_[:s_l]
-                flag = True
-                start = 0
-                for idx_i, (x_i, y_i) in enumerate(zip(x_, y_)):
-                    if x_i in self.end_tagidx_set:
-                        truth_count += 1
-                        for j in range(start, idx_i + 1):
-                            if y_[j] != x_[j]:
-                                flag = False
-                                break
-                        if flag:
-                            corr_count += 1
-                        flag = True
-                        start = idx_i + 1
-                    if y_i in self.end_tagidx_set:
-                        pred_count += 1
-        P = corr_count / (float(pred_count) + 1e-6)
-        R = corr_count / (float(truth_count) + 1e-6)
-        F = 2 * P * R / (P + R + 1e-6)
-
-        return {"P": P, 'R': R, 'F': F}
-
-
-class SNLIEvaluator(Evaluator):
-    def __init__(self):
-        super(SNLIEvaluator, self).__init__()
-
-    def __call__(self, predict, truth):
-        y_prob = [torch.nn.functional.softmax(y_logit, dim=-1) for y_logit in predict]
-        y_prob = torch.cat(y_prob, dim=0)
-        y_pred = torch.argmax(y_prob, dim=-1)
-        truth = [t['truth'] for t in truth]
-        y_true = torch.cat(truth, dim=0).view(-1)
-        acc = float(torch.sum(y_pred == y_true)) / y_true.size(0)
-        return {"accuracy": acc}
-
-
 def _conver_numpy(x):
     """convert input data to numpy array
 
@@ -467,11 +355,11 @@ def _check_data(y_true, y_pred):
     type_true, y_true = _label_types(y_true)
     type_pred, y_pred = _label_types(y_pred)
 
-    type_set = set(['binary', 'multiclass'])
+    type_set = {'binary', 'multiclass'}
     if type_true in type_set and type_pred in type_set:
         return type_true if type_true == type_pred else 'multiclass', y_true, y_pred
 
-    type_set = set(['multiclass-multioutput', 'multilabel'])
+    type_set = {'multiclass-multioutput', 'multilabel'}
     if type_true in type_set and type_pred in type_set:
         return type_true if type_true == type_pred else 'multiclass-multioutput', y_true, y_pred
 

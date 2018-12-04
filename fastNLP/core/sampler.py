@@ -55,7 +55,7 @@ class BucketSampler(BaseSampler):
 
     def __call__(self, data_set):
 
-        seq_lens = data_set[self.seq_lens_field_name].content
+        seq_lens = data_set.get_fields()[self.seq_lens_field_name].content
         total_sample_num = len(seq_lens)
 
         bucket_indexes = []

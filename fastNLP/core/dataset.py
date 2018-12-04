@@ -1,4 +1,5 @@
 import _pickle as pickle
+
 import numpy as np
 
 from fastNLP.core.fieldarray import FieldArray
@@ -66,10 +67,12 @@ class DataSet(object):
             def __init__(self, dataset, idx):
                 self.dataset = dataset
                 self.idx = idx
+
             def __getitem__(self, item):
                 assert item in self.dataset.field_arrays, "no such field:{} in instance {}".format(item, self.dataset[self.idx])
                 assert self.idx < len(self.dataset.field_arrays[item]), "index:{} out of range".format(self.idx)
                 return self.dataset.field_arrays[item][self.idx]
+
             def __repr__(self):
                 return self.dataset[self.idx].__repr__()
 
@@ -339,6 +342,6 @@ class DataSet(object):
             pickle.dump(self, f)
 
     @staticmethod
-    def load(self, path):
+    def load(path):
         with open(path, 'rb') as f:
             return pickle.load(f)

@@ -23,13 +23,13 @@ class Predictor(object):
 
         :param network: a PyTorch model (cpu)
         :param data: a DataSet object.
-        :return: list of list of strings, [num_examples, tag_seq_length]
+        :return: list of batch outputs
         """
         # turn on the testing mode; clean up the history
         self.mode(network, test=True)
         batch_output = []
 
-        data_iterator = Batch(data, batch_size=self.batch_size, sampler=SequentialSampler(), use_cuda=False)
+        data_iterator = Batch(data, batch_size=self.batch_size, sampler=SequentialSampler(), as_numpy=False)
 
         for batch_x, _ in data_iterator:
             with torch.no_grad():
