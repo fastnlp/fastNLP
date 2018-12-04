@@ -322,7 +322,7 @@ class TestLosserError(unittest.TestCase):
     def test_losser3(self):
         # (2) with corrupted size
         pred_dict = {"pred": torch.zeros(16, 3), 'stop_fast_param':0}
-        target_dict = {'target': torch.zeros(16, 3).long()}
+        target_dict = {'target': torch.zeros(16).long()}
         los = loss.CrossEntropyLoss()
 
         print(los(pred_dict=pred_dict, target_dict=target_dict))

@@ -8,7 +8,7 @@ from fastNLP.core.utils import CheckError
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
 from fastNLP.core.losses import BCELoss
-from fastNLP.core.losses import LossInForward
+from fastNLP.core.losses import CrossEntropyLoss
 from fastNLP.core.metrics import AccuracyMetric
 from fastNLP.core.optimizer import SGD
 from fastNLP.core.trainer import Trainer
@@ -222,7 +222,7 @@ class TrainerTestGround(unittest.TestCase):
                 x1 = self.fc(x1)
                 x2 = self.fc(x2)
                 x = x1 + x2
-                loss = F.cross_entropy(x, y)
+                # loss = F.cross_entropy(x, y)
                 return {'pred': x}
 
         model = Model()
@@ -231,10 +231,10 @@ class TrainerTestGround(unittest.TestCase):
                 train_data=dataset,
                 model=model,
                 dev_data=dataset,
+                losser=CrossEntropyLoss(),
                 metrics=AccuracyMetric(),
                 use_tqdm=False,
-                print_every=2
-            )
+                print_every=2)
 
     def test_case2(self):
         # check metrics Wrong
