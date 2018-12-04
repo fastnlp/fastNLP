@@ -83,12 +83,12 @@ class FieldArray(object):
                 raise RuntimeError("Cannot append a list into a 1-D FieldArray. Please provide an element.")
             if len(val) == 0:
                 raise RuntimeError("Cannot append an empty list.")
-            val_list_type = [type(_) for _ in val]  # type check
+            val_list_type = set([type(_) for _ in val])  # type check
             if len(val_list_type) == 2 and int in val_list_type and float in val_list_type:
                 # up-cast int to float
                 val_type = float
             elif len(val_list_type) == 1:
-                val_type = val_list_type[0]
+                val_type = val_list_type.pop()
             else:
                 raise RuntimeError("Cannot append a list of {}".format(val_list_type))
         else:
