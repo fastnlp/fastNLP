@@ -126,6 +126,7 @@ class LossBase(object):
         for keys, val in target_dict.items():
             param_val_dict.update({keys: val})
 
+        # TODO: use the origin key to raise error
         if not self._checked:
             for keys in args:
                 if param_map[keys] not in param_val_dict.keys():
