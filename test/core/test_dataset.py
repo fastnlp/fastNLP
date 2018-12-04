@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from fastNLP.core.dataset import DataSet
@@ -90,6 +91,18 @@ class TestDataSet(unittest.TestCase):
         self.assertTrue("rx" in ds.field_arrays)
         self.assertEqual(ds.field_arrays["rx"].content[0], [4, 3, 2, 1])
 
+        ds.apply(lambda ins: len(ins["y"]), new_field_name="y")
+        self.assertEqual(ds.field_arrays["y"].content[0], 2)
+
+        res = ds.apply(lambda ins: len(ins["x"]))
+        self.assertTrue(isinstance(res, list) and len(res) > 0)
+        self.assertTrue(res[0], 4)
+
+    def test_drop(self):
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6], [7, 8, 9, 0]] * 20})
+        ds.drop(lambda ins: len(ins["y"]) < 3)
+        self.assertEqual(len(ds), 20)
+
     def test_contains(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
         self.assertTrue("x" in ds)
@@ -132,9 +145,17 @@ class TestDataSet(unittest.TestCase):
         dataset.apply(split_sent, new_field_name='words')
         # print(dataset)
 
+    def test_save_load(self):
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
+        ds.save("./my_ds.pkl")
+        self.assertTrue(os.path.exists("./my_ds.pkl"))
+
+        ds_1 = DataSet.load("./my_ds.pkl")
+        os.remove("my_ds.pkl")
 
 class TestDataSetIter(unittest.TestCase):
     def test__repr__(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
         for iter in ds:
             self.assertEqual(iter.__repr__(), "{'x': [1, 2, 3, 4],\n'y': [5, 6]}")
+

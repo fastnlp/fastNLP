@@ -75,3 +75,25 @@ class TestFieldArray(unittest.TestCase):
         indices = [0, 1, 3, 4, 6]
         for a, b in zip(fa[indices], x[indices]):
             self.assertListEqual(a.tolist(), b.tolist())
+
+    def test_append(self):
+        with self.assertRaises(Exception):
+            fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1, 2, 3, 4, 5]], is_input=True)
+            fa.append(0)
+
+        with self.assertRaises(Exception):
+            fa = FieldArray("y", [1.1, 2.2, 3.3, 4.4, 5.5], is_input=True)
+            fa.append([1, 2, 3, 4, 5])
+
+        with self.assertRaises(Exception):
+            fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1, 2, 3, 4, 5]], is_input=True)
+            fa.append([])
+
+        with self.assertRaises(Exception):
+            fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1, 2, 3, 4, 5]], is_input=True)
+            fa.append(["str", 0, 0, 0, 1.89])
+
+        fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1, 2, 3, 4, 5]], is_input=True)
+        fa.append([1.2, 2.3, 3.4, 4.5, 5.6])
+        self.assertEqual(len(fa), 3)
+        self.assertEqual(fa[2], [1.2, 2.3, 3.4, 4.5, 5.6])

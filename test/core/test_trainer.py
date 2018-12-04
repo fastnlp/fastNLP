@@ -30,7 +30,7 @@ def prepare_fake_dataset():
 
 
 def prepare_fake_dataset2(*args, size=100):
-    ys = np.random.randint(4, size=100)
+    ys = np.random.randint(4, size=100, dtype=np.int64)
     data = {'y': ys}
     for arg in args:
         data[arg] = np.random.randn(size, 5)
@@ -213,12 +213,12 @@ class TrainerTestGround(unittest.TestCase):
         dataset = prepare_fake_dataset2('x1', 'x_unused')
         dataset.rename_field('x_unused', 'x2')
         dataset.set_input('x1', 'x2', 'y')
-        dataset.set_target('x1')
+        dataset.set_target('x1', 'x2')
         class Model(nn.Module):
             def __init__(self):
                 super().__init__()
                 self.fc = nn.Linear(5, 4)
-            def forward(self, x1, x2, y):
+            def forward(self, x1, x2):
                 x1 = self.fc(x1)
                 x2 = self.fc(x2)
                 x = x1 + x2
@@ -226,15 +226,14 @@ class TrainerTestGround(unittest.TestCase):
                 return {'pred': x}
 
         model = Model()
-        with self.assertRaises(NameError):
-            trainer = Trainer(
-                train_data=dataset,
-                model=model,
-                dev_data=dataset,
-                losser=CrossEntropyLoss(),
-                metrics=AccuracyMetric(),
-                use_tqdm=False,
-                print_every=2)
+        trainer = Trainer(
+            train_data=dataset,
+            model=model,
+            dev_data=dataset,
+            losser=CrossEntropyLoss(),
+            metrics=AccuracyMetric(),
+            use_tqdm=False,
+            print_every=2)
 
     def test_case2(self):
         # check metrics Wrong

@@ -62,8 +62,8 @@ class Batch(object):
 
 
 def to_tensor(batch, dtype):
-    if dtype in (np.int8, np.int16, np.int32, np.int64):
+    if dtype in (int, np.int8, np.int16, np.int32, np.int64):
         batch = torch.LongTensor(batch)
-    if dtype in (np.float32, np.float64):
+    if dtype in (float, np.float32, np.float64):
         batch = torch.FloatTensor(batch)
     return batch

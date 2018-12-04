@@ -1,9 +1,11 @@
+import random
 import unittest
 
 import torch
 
+from fastNLP.core.dataset import DataSet
 from fastNLP.core.sampler import convert_to_torch_tensor, SequentialSampler, RandomSampler, \
-    k_means_1d, k_means_bucketing, simple_sort_bucketing
+    k_means_1d, k_means_bucketing, simple_sort_bucketing, BucketSampler
 
 
 class TestSampler(unittest.TestCase):
@@ -40,3 +42,11 @@ class TestSampler(unittest.TestCase):
     def test_simple_sort_bucketing(self):
         _ = simple_sort_bucketing([21, 3, 25, 7, 9, 22, 4, 6, 28, 10])
         assert len(_) == 10
+
+    def test_BucketSampler(self):
+        sampler = BucketSampler(num_buckets=3, batch_size=16, seq_lens_field_name="seq_len")
+        data_set = DataSet({"x": [[0] * random.randint(1, 10)] * 10, "y": [[5, 6]] * 10})
+        data_set.apply(lambda ins: len(ins["x"]), new_field_name="seq_len")
+        indices = sampler(data_set)
+        self.assertEqual(len(indices), 10)
+        # 跑通即可，不验证效果

@@ -1,12 +1,5 @@
 from collections import Counter
 
-def isiterable(p_object):
-    try:
-        _ = iter(p_object)
-    except TypeError:
-        return False
-    return True
-
 
 def check_build_vocab(func):
     """A decorator to make sure the indexing is built before used.

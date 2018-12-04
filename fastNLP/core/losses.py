@@ -69,9 +69,20 @@ class LossBase(object):
                             f"positional argument.).")
 
     def _fast_param_map(self, pred_dict, target_dict):
+        """
+
+        Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
+            such as pred_dict has one element, target_dict has one element
+        :param pred_dict:
+        :param target_dict:
+        :return: dict, if dict is not {}, pass it to self.evaluate. Otherwise do mapping.
+        """
+        fast_param = {}
         if len(self.param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
-            return tuple(pred_dict.values())[0], tuple(target_dict.values())[0]
-        return None
+            fast_param['pred'] = list(pred_dict.values())[0]
+            fast_param['target'] = list(pred_dict.values())[0]
+            return fast_param
+        return fast_param
 
     def __call__(self, pred_dict, target_dict, check=False):
         """
@@ -81,8 +92,8 @@ class LossBase(object):
         :return:
         """
         fast_param = self._fast_param_map(pred_dict, target_dict)
-        if fast_param is not None:
-            loss = self.get_loss(*fast_param)
+        if fast_param:
+            loss = self.get_loss(**fast_param)
             return loss
 
         if not self._checked:

@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 from fastNLP.core.metrics import AccuracyMetric
+from fastNLP.core.metrics import accuracy_score, recall_score, precision_score, f1_score
 
 
 class TestAccuracyMetric(unittest.TestCase):
@@ -132,3 +133,15 @@ class TestAccuracyMetric(unittest.TestCase):
             print(e)
             return
         self.assertTrue(True, False), "No exception catches."
+
+
+class TestUsefulFunctions(unittest.TestCase):
+    # 测试metrics.py中一些看上去挺有用的函数
+    def test_case_1(self):
+        # multi-class
+        _ = accuracy_score(np.random.randint(0, 3, size=(10, 1)), np.random.randint(0, 3, size=(10, 1)))
+        _ = precision_score(np.random.randint(0, 3, size=(10, 1)), np.random.randint(0, 3, size=(10, 1)), average=None)
+        _ = recall_score(np.random.randint(0, 3, size=(10, 1)), np.random.randint(0, 3, size=(10, 1)), average=None)
+        _ = f1_score(np.random.randint(0, 3, size=(10, 1)), np.random.randint(0, 3, size=(10, 1)), average=None)
+
+        # 跑通即可
