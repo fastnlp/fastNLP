@@ -67,8 +67,8 @@ class DataSet(object):
                 self.dataset = dataset
                 self.idx = idx
             def __getitem__(self, item):
-                assert self.idx < len(self.dataset), "index:{} out of range".format(self.idx)
                 assert item in self.dataset.field_arrays, "no such field:{} in instance {}".format(item, self.dataset[self.idx])
+                assert self.idx < len(self.dataset.field_arrays[item]), "index:{} out of range".format(self.idx)
                 return self.dataset.field_arrays[item][self.idx]
             def __repr__(self):
                 return self.dataset[self.idx].__repr__()
