@@ -125,6 +125,13 @@ class TestDataSet(unittest.TestCase):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
         self.assertEqual(ds.get_target_name(), [_ for _ in ds.field_arrays if ds.field_arrays[_].is_target])
 
+    def test_apply2(self):
+        def split_sent(ins):
+            return ins['raw_sentence'].split()
+        dataset = DataSet.read_csv('../../sentence.csv', headers=('raw_sentence', 'label'), sep='\t')
+        dataset.apply(split_sent, new_field_name='words')
+        # print(dataset)
+
 
 class TestDataSetIter(unittest.TestCase):
     def test__repr__(self):
