@@ -61,8 +61,7 @@ class MetricBase(object):
             if func_param not in func_args:
                 raise NameError(
                     f"Parameter `{func_param}` is not in {get_func_signature(self.evaluate)}. Please check the "
-                    f"initialization parameters, or change the signature of"
-                    f" {get_func_signature(self.evaluate)}.")
+                    f"initialization parameters, or change its signature.")
 
         # evaluate should not have varargs.
         if func_spect.varargs:
@@ -79,13 +78,14 @@ class MetricBase(object):
             such as pred_dict has one element, target_dict has one element
         :param pred_dict:
         :param target_dict:
-        :return: boolean, whether to go on codes in self.__call__(). When False, don't go on.
+        :return: dict, if dict is not {}, pass it to self.evaluate. Otherwise do mapping.
         """
+        fast_param = {}
         if len(self.param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
             return pred_dict.values[0] and target_dict.values[0]
-        return None
+        return fast_param
 
-    def __call__(self, pred_dict, target_dict, check=False):
+    def __call__(self, pred_dict, target_dict):
         """
 
         This method will call self.evaluate method.
@@ -96,20 +96,19 @@ class MetricBase(object):
             (4) whether params in output_dict, target_dict are not used by evaluate.(Might cause warning)
         Besides, before passing params into self.evaluate, this function will filter out params from output_dict and
             target_dict which are not used in self.evaluate. (but if **kwargs presented in self.evaluate, no filtering
-            will be conducted)
+            will be conducted.)
+        This function also support _fast_param_map.
         :param pred_dict: usually the output of forward or prediction function
         :param target_dict: usually features set as target..
-        :param check: boolean, if check is True, it will force check `varargs, missing, unused, duplicated`.
         :return:
         """
         if not callable(self.evaluate):
             raise TypeError(f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}.")
 
-        if not check:
-            fast_param = self._fast_param_map(pred_dict=pred_dict, target_dict=target_dict)
-            if fast_param is not None:
-                self.evaluate(*fast_param)
-                return
+        fast_param = self._fast_param_map(pred_dict=pred_dict, target_dict=target_dict)
+        if fast_param:
+            self.evaluate(**fast_param)
+            return
 
         if not self._checked:
             # 1. check consistence between signature and param_map
@@ -147,7 +146,7 @@ class MetricBase(object):
                 duplicated.append(input_arg)
 
         # missing
-        if check or not self._checked:
+        if not self._checked:
             check_res = _check_arg_dict_list(self.evaluate, [mapped_pred_dict, mapped_target_dict])
             # only check missing.
             missing = check_res.missing
@@ -175,40 +174,49 @@ class MetricBase(object):
 
 
 class AccuracyMetric(MetricBase):
-    def __init__(self, pred=None, target=None, masks=None, seq_lens=None):
+    def __init__(self, pred=None, target=None, seq_lens=None):
         super().__init__()
 
-        self._init_param_map(pred=pred, target=target,
-                             masks=masks, seq_lens=seq_lens)
+        self._init_param_map(pred=pred, target=target, seq_lens=seq_lens)
 
         self.total = 0
         self.acc_count = 0
 
-    def _fast_call_evaluate(self, pred_dict, target_dict):
+    def _fast_param_map(self, pred_dict, target_dict):
         """
 
         Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
             such as pred_dict has one element, target_dict has one element
         :param pred_dict:
         :param target_dict:
-        :return: boolean, whether to go on codes in self.__call__(). When False, don't go on.
+        :return: dict, if dict is not None, pass it to self.evaluate. Otherwise do mapping.
         """
-        if len(pred_dict) == 1 and len(target_dict) == 1:
-            pred = list(pred_dict.values())[0]
-            target = list(target_dict.values())[0]
-            self.evaluate(pred=pred, target=target)
-            return True
-        return False
+        fast_param = {}
+        targets = list(target_dict.values())
+        if len(targets)==1 and isinstance(targets[0], torch.Tensor):
+            if len(pred_dict)==1:
+                pred = list(pred_dict.values())[0]
+                fast_param['pred'] = pred
+            elif len(pred_dict)==2:
+                pred1 = list(pred_dict.values())[0]
+                pred2 = list(pred_dict.values())[1]
+                if not (isinstance(pred1, torch.Tensor) and isinstance(pred2, torch.Tensor)):
+                    return fast_param
+                if len(pred1.size())>len(pred2.size()):
+                    fast_param['pred'] = pred1
+                    fast_param['seq_lens'] = pred2
+            else:
+                return fast_param
+            fast_param['target'] = targets[0]
+        return fast_param
 
-    def evaluate(self, pred, target, masks=None, seq_lens=None):
+    def evaluate(self, pred, target, seq_lens=None):
         """
 
         :param pred: List of (torch.Tensor, or numpy.ndarray). Element's shape can be:
                 torch.Size([B,]), torch.Size([B, n_classes]), torch.Size([B, max_len]), torch.Size([B, max_len, n_classes])
         :param target: List of (torch.Tensor, or numpy.ndarray). Element's can be:
                 torch.Size([B,]), torch.Size([B,]), torch.Size([B, max_len]), torch.Size([B, max_len])
-        :param masks: List of (torch.Tensor, or numpy.ndarray). Element's can be:
-                None, None, torch.Size([B, max_len], torch.Size([B, max_len])
         :param seq_lens: List of (torch.Tensor, or numpy.ndarray). Element's can be:
                 None, None, torch.Size([B], torch.Size([B]). ignored if masks are provided.
         :return: dict({'acc': float})
@@ -221,15 +229,14 @@ class AccuracyMetric(MetricBase):
             raise TypeError(f"`target` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(target)}.")
 
-        if masks is not None and not isinstance(masks, torch.Tensor):
-            raise TypeError(f"`masks` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
-                            f"got {type(masks)}.")
-        elif seq_lens is not None and not isinstance(seq_lens, torch.Tensor):
+        if seq_lens is not None and not isinstance(seq_lens, torch.Tensor):
             raise TypeError(f"`seq_lens` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(seq_lens)}.")
 
-        if masks is None and seq_lens is not None:
+        if seq_lens is not None:
             masks = seq_lens_to_masks(seq_lens=seq_lens, float=True)
+        else:
+            masks = None
 
         if pred.size() == target.size():
             pass

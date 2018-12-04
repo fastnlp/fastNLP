@@ -17,6 +17,12 @@ class FieldArray(object):
         :param bool is_input: If True, this FieldArray is used to the model input.
         """
         self.name = name
+        if isinstance(content, list):
+            content = content
+        elif isinstance(content, np.ndarray):
+            content = content.tolist()
+        else:
+            raise TypeError("content in FieldArray can only be list or numpy.ndarray, got {}.".format(type(content)))
         self.content = content
         self.padding_val = padding_val
         self.is_target = is_target

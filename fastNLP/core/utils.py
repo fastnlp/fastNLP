@@ -214,7 +214,7 @@ class CheckError(Exception):
     """
 
     def __init__(self, check_res: CheckRes, func_signature: str):
-        errs = [f'The following problems occurred when calling `{func_signature}`']
+        errs = [f'Problems occurred when calling `{func_signature}`']
 
         if check_res.varargs:
             errs.append(f"\tvarargs: {check_res.varargs}(Does not support pass positional arguments, please delete it)")
@@ -276,8 +276,8 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
                                f"target is {list(target_dict.keys())}).")
         if _miss_out_dataset:
             _tmp = (f"You might need to provide {_miss_out_dataset} in DataSet and set it as target(Right now "
-                    f"target is {list(target_dict.keys())}) or output it "
-                    f"in {prev_func_signature}(Right now it outputs {list(pred_dict.keys())}).")
+                    f"target has {list(target_dict.keys())}) or output it "
+                    f"in {prev_func_signature}(Right now output has {list(pred_dict.keys())}).")
             if _unused_field:
                 _tmp += f"You can use DataSet.rename_field() to rename the field in `unused field:`. "
             suggestions.append(_tmp)
@@ -291,7 +291,7 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
         errs.extend(unuseds)
 
     if len(errs) > 0:
-        errs.insert(0, f'The following problems occurred when calling {func_signature}')
+        errs.insert(0, f'Problems occurred when calling {func_signature}')
         sugg_str = ""
         if len(suggestions) > 1:
             for idx, sugg in enumerate(suggestions):
@@ -341,7 +341,7 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
             errs.extend(_unused)
 
     if len(errs) > 0:
-        errs.insert(0, f'The following problems occurred when calling {func_signature}')
+        errs.insert(0, f'Problems occurred when calling {func_signature}')
         sugg_str = ""
         if len(suggestions) > 1:
             for idx, sugg in enumerate(suggestions):
@@ -356,7 +356,7 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
             warnings.warn(message=_unused_warn)
 
 
-def seq_lens_to_masks(seq_lens, float=True):
+def seq_lens_to_masks(seq_lens, float=False):
     """
 
     Convert seq_lens to masks.

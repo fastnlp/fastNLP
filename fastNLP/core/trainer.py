@@ -29,7 +29,7 @@ class Trainer(object):
     """Main Training Loop
 
     """
-    def __init__(self, train_data, model, losser=None, metrics=None, n_epochs=3, batch_size=32, update_every=50,
+    def __init__(self, train_data, model, losser=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
                  validate_every=-1, dev_data=None, use_cuda=False, save_path=None,
                  optimizer=Adam(lr=0.01, weight_decay=0), check_code_level=0,
                  metric_key=None, sampler=RandomSampler(), use_tqdm=True):
@@ -41,7 +41,7 @@ class Trainer(object):
         :param MetricBase or List[MetricBase] metrics: a metric object or a list of metrics
         :param int n_epochs: the number of training epochs
         :param int batch_size: batch size for training and validation
-        :param int update_every: step interval to print next training information. Default: -1(no print).
+        :param int print_every: step interval to print next training information. Default: -1(no print).
         :param int validate_every: step interval to do next validation. Default: -1(validate every epoch).
         :param DataSet dev_data: the validation data
         :param use_cuda:
@@ -106,7 +106,7 @@ class Trainer(object):
         self.batch_size = int(batch_size)
         self.use_cuda = bool(use_cuda)
         self.save_path = save_path
-        self.print_every = int(update_every)
+        self.print_every = int(print_every)
         self.validate_every = int(validate_every)
         self.best_metric_indicator = None
         self.sampler = sampler
