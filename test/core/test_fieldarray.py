@@ -44,11 +44,34 @@ class TestFieldArray(unittest.TestCase):
     def test_support_np_array(self):
         fa = FieldArray("y", [np.array([1.1, 2.2, 3.3, 4.4, 5.5])], is_input=False)
         self.assertEqual(fa.dtype, np.ndarray)
+        self.assertEqual(fa.pytype, np.ndarray)
 
         fa.append(np.array([1.1, 2.2, 3.3, 4.4, 5.5]))
+        self.assertEqual(fa.dtype, np.ndarray)
         self.assertEqual(fa.pytype, np.ndarray)
+
+        fa = FieldArray("my_field", np.random.rand(3, 5), is_input=False)
+        # in this case, pytype is actually a float. We do not care about it.
+        self.assertEqual(fa.dtype, np.float64)
 
     def test_nested_list(self):
         fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1.1, 2.2, 3.3, 4.4, 5.5]], is_input=False)
         self.assertEqual(fa.pytype, float)
         self.assertEqual(fa.dtype, np.float64)
+
+    def test_getitem_v1(self):
+        fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1, 2, 3, 4, 5]], is_input=True)
+        self.assertEqual(fa[0], [1.1, 2.2, 3.3, 4.4, 5.5])
+        ans = fa[[0, 1]]
+        self.assertTrue(isinstance(ans, np.ndarray))
+        self.assertTrue(isinstance(ans[0], np.ndarray))
+        self.assertEqual(ans[0].tolist(), [1.1, 2.2, 3.3, 4.4, 5.5])
+        self.assertEqual(ans[1].tolist(), [1, 2, 3, 4, 5])
+        self.assertEqual(ans.dtype, np.float64)
+
+    def test_getitem_v2(self):
+        x = np.random.rand(10, 5)
+        fa = FieldArray("my_field", x, is_input=True)
+        indices = [0, 1, 3, 4, 6]
+        for a, b in zip(fa[indices], x[indices]):
+            self.assertListEqual(a.tolist(), b.tolist())
