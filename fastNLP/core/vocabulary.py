@@ -1,11 +1,4 @@
 from collections import Counter
-from copy import deepcopy
-
-DEFAULT_PADDING_LABEL = '<pad>'  # dict index = 0
-DEFAULT_UNKNOWN_LABEL = '<unk>'  # dict index = 1
-
-DEFAULT_WORD_TO_INDEX = {DEFAULT_PADDING_LABEL: 0, DEFAULT_UNKNOWN_LABEL: 1}
-
 
 def isiterable(p_object):
     try:
@@ -57,22 +50,16 @@ class Vocabulary(object):
         vocab.to_word(5)
     """
 
-    def __init__(self, need_default=True, max_size=None, min_freq=None):
+    def __init__(self, max_size=None, min_freq=None, unknown='<unk>', padding='<pad>'):
         """
-        :param bool need_default: set if the Vocabulary has default labels reserved for sequences. Default: True.
         :param int max_size: set the max number of words in Vocabulary. Default: None
         :param int min_freq: set the min occur frequency of words in Vocabulary. Default: None
         """
         self.max_size = max_size
         self.min_freq = min_freq
         self.word_count = Counter()
-        self.has_default = need_default
-        if self.has_default:
-            self.padding_label = DEFAULT_PADDING_LABEL
-            self.unknown_label = DEFAULT_UNKNOWN_LABEL
-        else:
-            self.padding_label = None
-            self.unknown_label = None
+        self.unknown = unknown
+        self.padding = padding
         self.word2idx = None
         self.idx2word = None
         self.rebuild = True
@@ -113,17 +100,18 @@ class Vocabulary(object):
         """Build 'word to index' dict, and filter the word using `max_size` and `min_freq`.
 
         """
-        if self.has_default:
-            self.word2idx = deepcopy(DEFAULT_WORD_TO_INDEX)
-            self.word2idx[self.unknown_label] = self.word2idx.pop(DEFAULT_UNKNOWN_LABEL)
-            self.word2idx[self.padding_label] = self.word2idx.pop(DEFAULT_PADDING_LABEL)
-        else:
-            self.word2idx = {}
+        self.word2idx = {}
+        if self.padding is not None:
+            self.word2idx[self.padding] = 0
+        if self.unknown is not None:
+            self.word2idx[self.unknown] = 1
 
         max_size = min(self.max_size, len(self.word_count)) if self.max_size else None
         words = self.word_count.most_common(max_size)
         if self.min_freq is not None:
             words = filter(lambda kv: kv[1] >= self.min_freq, words)
+        if self.word2idx is not None:
+            words = filter(lambda kv: kv[0] not in self.word2idx, words)
         start_idx = len(self.word2idx)
         self.word2idx.update({w: i + start_idx for i, (w, _) in enumerate(words)})
         self.build_reverse_vocab()
@@ -159,8 +147,8 @@ class Vocabulary(object):
         """
         if w in self.word2idx:
             return self.word2idx[w]
-        elif self.has_default:
-            return self.word2idx[self.unknown_label]
+        if self.unknown is not None:
+            return self.word2idx[self.unknown]
         else:
             raise ValueError("word {} not in vocabulary".format(w))
 
@@ -175,21 +163,16 @@ class Vocabulary(object):
     @property
     @check_build_vocab
     def unknown_idx(self):
-        if self.unknown_label is None:
+        if self.unknown is None:
             return None
-        return self.word2idx[self.unknown_label]
-
-    def __setattr__(self, name, val):
-        self.__dict__[name] = val
-        if name in ["unknown_label", "padding_label"]:
-            self.word2idx = None
+        return self.word2idx[self.unknown]
 
     @property
     @check_build_vocab
     def padding_idx(self):
-        if self.padding_label is None:
+        if self.padding is None:
             return None
-        return self.word2idx[self.padding_label]
+        return self.word2idx[self.padding]
 
     @check_build_vocab
     def to_word(self, idx):

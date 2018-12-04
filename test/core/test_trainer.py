@@ -4,6 +4,7 @@ import numpy as np
 import torch.nn.functional as F
 from torch import nn
 
+from fastNLP.core.utils import CheckError
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
 from fastNLP.core.losses import BCELoss
@@ -56,7 +57,8 @@ class TrainerTestGround(unittest.TestCase):
                           dev_data=dev_set,
                           optimizer=SGD(lr=0.1),
                           check_code_level=2,
-                          use_tqdm=True)
+                          use_tqdm=True,
+                          save_path=None)
         trainer.train()
         """
         # 应该正确运行
@@ -145,16 +147,14 @@ class TrainerTestGround(unittest.TestCase):
                 return {'wrong_loss_key': loss}
 
         model = Model()
-        trainer = Trainer(
-            train_data=dataset,
-            model=model,
-            use_tqdm=False,
-            print_every=2
-        )
-        trainer.train()
-        """
-        # 应该正确运行
-        """
+        with self.assertRaises(NameError):
+            trainer = Trainer(
+                train_data=dataset,
+                model=model,
+                use_tqdm=False,
+                print_every=2
+            )
+            trainer.train()
 
     def test_trainer_suggestion4(self):
         # 检查报错提示能否正确提醒用户
@@ -173,12 +173,13 @@ class TrainerTestGround(unittest.TestCase):
                 return {'loss': loss}
 
         model = Model()
-        trainer = Trainer(
-            train_data=dataset,
-            model=model,
-            use_tqdm=False,
-            print_every=2
-        )
+        with self.assertRaises(NameError):
+            trainer = Trainer(
+                train_data=dataset,
+                model=model,
+                use_tqdm=False,
+                print_every=2
+            )
 
     def test_trainer_suggestion5(self):
         # 检查报错提示能否正确提醒用户
@@ -225,14 +226,15 @@ class TrainerTestGround(unittest.TestCase):
                 return {'pred': x}
 
         model = Model()
-        trainer = Trainer(
-            train_data=dataset,
-            model=model,
-            dev_data=dataset,
-            metrics=AccuracyMetric(),
-            use_tqdm=False,
-            print_every=2
-        )
+        with self.assertRaises(NameError):
+            trainer = Trainer(
+                train_data=dataset,
+                model=model,
+                dev_data=dataset,
+                metrics=AccuracyMetric(),
+                use_tqdm=False,
+                print_every=2
+            )
 
     def test_case2(self):
         # check metrics Wrong
