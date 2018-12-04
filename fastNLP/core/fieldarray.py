@@ -45,8 +45,9 @@ class FieldArray(object):
 
     @is_input.setter
     def is_input(self, value):
-        self.pytype = self._type_detection(self.content)
-        self.dtype = self._map_to_np_type(self.pytype)
+        if value is True:
+            self.pytype = self._type_detection(self.content)
+            self.dtype = self._map_to_np_type(self.pytype)
         self._is_input = value
 
     @property
@@ -55,8 +56,9 @@ class FieldArray(object):
 
     @is_target.setter
     def is_target(self, value):
-        self.pytype = self._type_detection(self.content)
-        self.dtype = self._map_to_np_type(self.pytype)
+        if value is True:
+            self.pytype = self._type_detection(self.content)
+            self.dtype = self._map_to_np_type(self.pytype)
         self._is_target = value
 
     def _type_detection(self, content):
