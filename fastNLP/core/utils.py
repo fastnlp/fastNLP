@@ -7,7 +7,6 @@ from collections import namedtuple
 
 import numpy as np
 import torch
-from tqdm import tqdm
 
 CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                    'varargs'], verbose=False)

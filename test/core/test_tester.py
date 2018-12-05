@@ -42,7 +42,6 @@ def prepare_fake_dataset2(*args, size=100):
 class TestTester(unittest.TestCase):
     def test_case_1(self):
         # 检查报错提示能否正确提醒用户
-        # 这里传入多余参数，让其duplicate
         dataset = prepare_fake_dataset2('x1', 'x_unused')
         dataset.rename_field('x_unused', 'x2')
         dataset.set_input('x1', 'x2')
@@ -60,8 +59,9 @@ class TestTester(unittest.TestCase):
                 return {'preds': x}
 
         model = Model()
-        tester = Tester(
-            data=dataset,
-            model=model,
-            metrics=AccuracyMetric())
-        tester.test()
+        with self.assertRaises(NameError):
+            tester = Tester(
+                data=dataset,
+                model=model,
+                metrics=AccuracyMetric())
+            tester.test()
