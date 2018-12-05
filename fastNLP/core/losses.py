@@ -80,7 +80,7 @@ class LossBase(object):
         fast_param = {}
         if len(self.param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
             fast_param['pred'] = list(pred_dict.values())[0]
-            fast_param['target'] = list(pred_dict.values())[0]
+            fast_param['target'] = list(target_dict.values())[0]
             return fast_param
         return fast_param
 
@@ -134,10 +134,11 @@ class LossBase(object):
         # missing
         if not self._checked:
             check_res = _check_arg_dict_list(self.get_loss, [mapped_pred_dict, mapped_target_dict])
-            # only check missing.
+            # replace missing.
             missing = check_res.missing
             replaced_missing = list(missing)
             for idx, func_arg in enumerate(missing):
+                # Don't delete `` in this information, nor add ``
                 replaced_missing[idx] = f"{self.param_map[func_arg]}" + f"(assign to `{func_arg}` " \
                                                                         f"in `{self.__class__.__name__}`)"
 
@@ -188,7 +189,7 @@ class CrossEntropyLoss(LossBase):
 class L1Loss(LossBase):
     def __init__(self, pred=None, target=None):
         super(L1Loss, self).__init__()
-        self._init_param_map(input=pred, target=target)
+        self._init_param_map(pred=pred, target=target)
 
     def get_loss(self, pred, target):
         return F.l1_loss(input=pred, target=target)
@@ -197,7 +198,7 @@ class L1Loss(LossBase):
 class BCELoss(LossBase):
     def __init__(self, pred=None, target=None):
         super(BCELoss, self).__init__()
-        self._init_param_map(input=pred, target=target)
+        self._init_param_map(pred=pred, target=target)
 
     def get_loss(self, pred, target):
         return F.binary_cross_entropy(input=pred, target=target)
@@ -205,7 +206,7 @@ class BCELoss(LossBase):
 class NLLLoss(LossBase):
     def __init__(self, pred=None, target=None):
         super(NLLLoss, self).__init__()
-        self._init_param_map(input=pred, target=target)
+        self._init_param_map(pred=pred, target=target)
 
     def get_loss(self, pred, target):
         return F.nll_loss(input=pred, target=target)

@@ -258,29 +258,48 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
         if _unused_param:
             unuseds.append(f"\tunused param: {_unused_param}") # output from predict or forward
 
+    module_name = ''
     if check_res.missing:
         errs.append(f"\tmissing param: {check_res.missing}")
-        _miss_in_dataset = []
-        _miss_out_dataset = []
+        import re
+        mapped_missing = []
+        unmapped_missing = []
+        input_func_map = {}
         for _miss in check_res.missing:
+            fun_arg, module_name = re.findall("(?<=`)[a-zA-Z0-9]*?(?=`)", _miss)
             if '(' in _miss:
                 # if they are like 'SomeParam(assign to xxx)'
                 _miss = _miss.split('(')[0]
-            if _miss in dataset:
-                _miss_in_dataset.append(_miss)
+            input_func_map[_miss] = fun_arg
+            if fun_arg == _miss:
+                unmapped_missing.append(_miss)
             else:
-                _miss_out_dataset.append(_miss)
+                mapped_missing.append(_miss)
 
-        if _miss_in_dataset:
-            suggestions.append(f"You might need to set {_miss_in_dataset} as target(Right now "
-                               f"target is {list(target_dict.keys())}).")
-        if _miss_out_dataset:
-            _tmp = (f"You might need to provide {_miss_out_dataset} in DataSet and set it as target(Right now "
-                    f"target has {list(target_dict.keys())}) or output it "
-                    f"in {prev_func_signature}(Right now output has {list(pred_dict.keys())}).")
-            # if _unused_field:
-            #     _tmp += f"You can use DataSet.rename_field() to rename the field in `unused field:`. "
-            suggestions.append(_tmp)
+        for _miss in mapped_missing:
+            if _miss in dataset:
+                suggestions.append(f"Set {_miss} as target.")
+            else:
+                _tmp = ''
+                if check_res.unused:
+                    _tmp = f"Check key assignment for `{input_func_map[_miss]}` when initialize {module_name}."
+                if _tmp:
+                    _tmp += f' Or provide {_miss} in DataSet or output of {prev_func_signature}.'
+                else:
+                    _tmp = f'Provide {_miss} in DataSet or output of {prev_func_signature}.'
+                suggestions.append(_tmp)
+        for _miss in unmapped_missing:
+            if _miss in dataset:
+                suggestions.append(f"Set {_miss} as target.")
+            else:
+                _tmp = ''
+                if check_res.unused:
+                    _tmp = f"Specify your assignment for `{input_func_map[_miss]}` when initialize {module_name}."
+                if _tmp:
+                    _tmp += f' Or provide {_miss} in DataSet or output of {prev_func_signature}.'
+                else:
+                    _tmp = f'Provide {_miss} in DataSet or output of {prev_func_signature}.'
+                suggestions.append(_tmp)
 
     if check_res.duplicated:
         errs.append(f"\tduplicated param: {check_res.duplicated}.")
@@ -297,16 +316,22 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
         sugg_str = ""
         if len(suggestions) > 1:
             for idx, sugg in enumerate(suggestions):
-                sugg_str += f'({idx+1}). {sugg}'
+                if idx>0:
+                    sugg_str += '\t\t\t'
+                sugg_str += f'({idx+1}). {sugg}\n'
+            sugg_str = sugg_str[:-1]
         else:
             sugg_str += suggestions[0]
+        errs.append(f'\ttarget field: {list(target_dict.keys())}')
+        errs.append(f'\tparam from {prev_func_signature}: {list(pred_dict.keys())}')
         err_str = '\n' + '\n'.join(errs) + '\n\tSuggestion: ' + sugg_str
         raise NameError(err_str)
     if check_res.unused:
         if check_level == WARNING_CHECK_LEVEL:
-            _unused_warn = f'{check_res.unused} is not used by {func_signature}.'
+            if not module_name:
+                module_name = func_signature.split('.')[0]
+            _unused_warn = f'{check_res.unused} is not used by {module_name}.'
             warnings.warn(message=_unused_warn)
-
 
 def _check_forward_error(forward_func, batch_x, dataset, check_level):
     check_res = _check_arg_dict_list(forward_func, batch_x)
@@ -402,40 +427,3 @@ def seq_mask(seq_len, max_len):
     seq_len = seq_len.view(-1, 1).long()   # [batch_size, 1]
     seq_range = torch.arange(start=0, end=max_len, dtype=torch.long, device=seq_len.device).view(1, -1) # [1, max_len]
     return torch.gt(seq_len, seq_range) # [batch_size, max_len]
-
-
-def _relocate_pbar(pbar:tqdm, print_str:str):
-    """
-
-    When using tqdm, you cannot print. If you print, the tqdm will duplicate. By using this function, print_str will
-        show above tqdm.
-    :param pbar: tqdm
-    :param print_str:
-    :return:
-    """
-
-    params = ['desc', 'total', 'leave', 'file', 'ncols', 'mininterval', 'maxinterval', 'miniters', 'ascii', 'disable',
-     'unit', 'unit_scale', 'dynamic_ncols', 'smoothing', 'bar_format', 'initial', 'position', 'postfix', 'unit_divisor',
-     'gui']
-
-    attr_map = {'file': 'fp', 'initial':'n', 'position':'pos'}
-
-    param_dict = {}
-    for param in params:
-        attr_name = param
-        if param in attr_map:
-            attr_name = attr_map[param]
-        value = getattr(pbar, attr_name)
-        if attr_name == 'pos':
-            value = abs(value)
-        param_dict[param] = value
-
-    pbar.close()
-    avg_time = pbar.avg_time
-    start_t = pbar.start_t
-    print(print_str)
-    pbar = tqdm(**param_dict)
-    pbar.start_t = start_t
-    pbar.avg_time = avg_time
-    pbar.sp(pbar.__repr__())
-    return pbar

@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import torch.nn.functional as F
 from torch import nn
-
+import time
 from fastNLP.core.utils import CheckError
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
@@ -212,8 +212,8 @@ class TrainerTestGround(unittest.TestCase):
         # 这里传入多余参数，让其duplicate
         dataset = prepare_fake_dataset2('x1', 'x_unused')
         dataset.rename_field('x_unused', 'x2')
-        dataset.set_input('x1', 'x2', 'y')
-        dataset.set_target('x1', 'x2')
+        dataset.set_input('x1', 'x2')
+        dataset.set_target('y', 'x1')
         class Model(nn.Module):
             def __init__(self):
                 super().__init__()
@@ -222,8 +222,9 @@ class TrainerTestGround(unittest.TestCase):
                 x1 = self.fc(x1)
                 x2 = self.fc(x2)
                 x = x1 + x2
+                time.sleep(0.1)
                 # loss = F.cross_entropy(x, y)
-                return {'pred': x}
+                return {'preds': x}
 
         model = Model()
         trainer = Trainer(

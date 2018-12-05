@@ -83,7 +83,8 @@ class FieldArray(object):
         elif isinstance(content, list):
             # content is a 1-D list
             if len(content) == 0:
-                raise RuntimeError("Cannot create FieldArray with an empty list.")
+                # the old error is not informative enough.
+                raise RuntimeError("Cannot create FieldArray with an empty list. Or one element in the list is empty.")
             type_set = set([type(item) for item in content])
 
             if len(type_set) == 1 and tuple(type_set)[0] in self.BASIC_TYPES:
@@ -164,11 +165,13 @@ class FieldArray(object):
         # TODO 当这个fieldArray是seq_length这种只有一位的内容时，不需要padding，需要再讨论一下
         if not is_iterable(self.content[0]):
             array = np.array([self.content[i] for i in indices], dtype=self.dtype)
-        else:
+        elif self.dtype in (np.int64, np.float64):
             max_len = max([len(self.content[i]) for i in indices])
             array = np.full((batch_size, max_len), self.padding_val, dtype=self.dtype)
             for i, idx in enumerate(indices):
                 array[i][:len(self.content[idx])] = self.content[idx]
+        else: # should only be str
+            array = np.array([self.content[i] for i in indices])
         return array
 
     def __len__(self):

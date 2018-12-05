@@ -151,9 +151,11 @@ class MetricBase(object):
         if not self._checked:
             check_res = _check_arg_dict_list(self.evaluate, [mapped_pred_dict, mapped_target_dict])
             # only check missing.
+            # replace missing.
             missing = check_res.missing
             replaced_missing = list(missing)
             for idx, func_arg in enumerate(missing):
+                # Don't delete `` in this information, nor add ``
                 replaced_missing[idx] = f"{self.param_map[func_arg]}" + f"(assign to `{func_arg}` " \
                                                                         f"in `{self.__class__.__name__}`)"
 

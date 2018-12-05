@@ -142,8 +142,15 @@ class TestDataSet(unittest.TestCase):
         def split_sent(ins):
             return ins['raw_sentence'].split()
         dataset = DataSet.read_csv('../../sentence.csv', headers=('raw_sentence', 'label'), sep='\t')
-        dataset.apply(split_sent, new_field_name='words')
+        dataset.drop(lambda x:len(x['raw_sentence'].split())==0)
+        dataset.apply(split_sent, new_field_name='words', is_input=True)
         # print(dataset)
+
+    def test_add_field(self):
+        ds = DataSet({"x": [3, 4]})
+        ds.add_field('y', [['hello', 'world'], ['this', 'is', 'a', 'test']], is_input=True, is_target=True)
+        # ds.apply(lambda x:[x['x']]*3, is_input=True, is_target=True, new_field_name='y')
+        print(ds)
 
     def test_save_load(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})

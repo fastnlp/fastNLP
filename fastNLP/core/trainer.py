@@ -2,7 +2,7 @@ import os
 import time
 from datetime import datetime
 from datetime import timedelta
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 
 import torch
 from tensorboardX import SummaryWriter
@@ -23,7 +23,6 @@ from fastNLP.core.utils import _check_forward_error
 from fastNLP.core.utils import _check_loss_evaluate
 from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.utils import get_func_signature
-from fastNLP.core.utils import _relocate_pbar
 
 class Trainer(object):
     """Main Training Loop
@@ -45,7 +44,7 @@ class Trainer(object):
         :param int validate_every: step interval to do next validation. Default: -1(validate every epoch).
         :param DataSet dev_data: the validation data
         :param use_cuda:
-        :param str save_path: file path to save models
+        :param save_path: file path to save models
         :param Optimizer optimizer: an optimizer object
         :param int check_code_level: level of FastNLP code checker. -1: don't check, 0: ignore. 1: warning. 2: strict.
             `ignore` will not check unused field; `warning` when warn if some field are not used; `strict` means
@@ -149,7 +148,7 @@ class Trainer(object):
             self._mode(self.model, is_test=False)
 
             self.start_time = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-            print("training epochs started " + self.start_time)
+            print("training epochs started " + self.start_time, flush=True)
             if self.save_path is None:
                 class psudoSW:
                     def __getattr__(self, item):
@@ -172,12 +171,12 @@ class Trainer(object):
             del self._summary_writer
 
     def _tqdm_train(self):
+        self.step = 0
         data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
                               as_numpy=False)
         total_steps = data_iterator.num_batches*self.n_epochs
         epoch = 1
-        with tqdm(total=total_steps, postfix='loss:{0:<6.5f}', desc="Epoch {}/{}"
-                .format(epoch, self.n_epochs), leave=False, dynamic_ncols=True) as pbar:
+        with tqdm(total=total_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
             ava_loss = 0
             for epoch in range(1, self.n_epochs+1):
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
@@ -195,27 +194,25 @@ class Trainer(object):
                             # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
                             # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
                     if (self.step+1) % self.print_every == 0:
-                        pbar.update(self.print_every)
-                        pbar.set_postfix_str("loss:{0:<6.5f}".format(ava_loss/self.print_every))
+                        pbar.set_postfix_str("loss:{0:<6.5f}".format(ava_loss / self.print_every))
                         ava_loss = 0
-
+                    pbar.update(1)
                     self.step += 1
                     if self.validate_every > 0 and self.step % self.validate_every == 0 \
                             and self.dev_data is not None:
                         eval_res = self._do_validation()
                         eval_str = "Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step, total_steps) + \
                                    self.tester._format_eval_results(eval_res)
-                        pbar = _relocate_pbar(pbar, print_str=eval_str)
+                        pbar.write(eval_str)
                 if self.validate_every < 0 and self.dev_data:
                     eval_res = self._do_validation()
                     eval_str = "Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step, total_steps) + \
                                self.tester._format_eval_results(eval_res)
-                    pbar = _relocate_pbar(pbar, print_str=eval_str)
+                    pbar.write(eval_str)
                 if epoch!=self.n_epochs:
                     data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
                                           as_numpy=False)
             pbar.close()
-
 
     def _print_train(self):
         """
@@ -263,9 +260,6 @@ class Trainer(object):
             if self.dev_data and self.validate_every <= 0:
                 self._do_validation()
             epoch += 1
-
-
-
 
     def _do_validation(self):
         res = self.tester.test()
