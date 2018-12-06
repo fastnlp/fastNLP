@@ -257,7 +257,7 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
         if _unused_param:
             unuseds.append(f"\tunused param: {_unused_param}") # output from predict or forward
 
-    module_name = ''
+    module_name = func_signature.split('.')[0]
     if check_res.missing:
         errs.append(f"\tmissing param: {check_res.missing}")
         import re
@@ -265,15 +265,19 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
         unmapped_missing = []
         input_func_map = {}
         for _miss in check_res.missing:
-            fun_arg, module_name = re.findall("(?<=`)[a-zA-Z0-9]*?(?=`)", _miss)
             if '(' in _miss:
                 # if they are like 'SomeParam(assign to xxx)'
                 _miss = _miss.split('(')[0]
-            input_func_map[_miss] = fun_arg
-            if fun_arg == _miss:
-                unmapped_missing.append(_miss)
+            matches = re.findall("(?<=`)[a-zA-Z0-9]*?(?=`)", _miss)
+            if len(matches) == 2:
+                fun_arg, module_name = matches
+                input_func_map[_miss] = fun_arg
+                if fun_arg == _miss:
+                    unmapped_missing.append(_miss)
+                else:
+                    mapped_missing.append(_miss)
             else:
-                mapped_missing.append(_miss)
+                unmapped_missing.append(_miss)
 
         for _miss in mapped_missing:
             if _miss in dataset:
@@ -281,7 +285,7 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
             else:
                 _tmp = ''
                 if check_res.unused:
-                    _tmp = f"Check key assignment for `{input_func_map[_miss]}` when initialize {module_name}."
+                    _tmp = f"Check key assignment for `{input_func_map.get(_miss, _miss)}` when initialize {module_name}."
                 if _tmp:
                     _tmp += f' Or provide {_miss} in DataSet or output of {prev_func_signature}.'
                 else:
@@ -293,11 +297,11 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
             else:
                 _tmp = ''
                 if check_res.unused:
-                    _tmp = f"Specify your assignment for `{input_func_map[_miss]}` when initialize {module_name}."
+                    _tmp = f"Specify your assignment for `{input_func_map.get(_miss, _miss)}` when initialize {module_name}."
                 if _tmp:
                     _tmp += f' Or provide {_miss} in DataSet or output of {prev_func_signature}.'
                 else:
-                    _tmp = f'Provide {_miss} in DataSet or output of {prev_func_signature}.'
+                    _tmp = f'Provide {_miss} in output of {prev_func_signature} or DataSet.'
                 suggestions.append(_tmp)
 
     if check_res.duplicated:

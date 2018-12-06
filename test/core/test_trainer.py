@@ -159,8 +159,8 @@ class TrainerTestGround(unittest.TestCase):
     def test_trainer_suggestion4(self):
         # 检查报错提示能否正确提醒用户
         # 这里传入forward需要的数据，是否可以正确提示unused
-        dataset = prepare_fake_dataset2('x1', 'x_unused')
-        dataset.set_input('x1', 'x_unused', 'y', flag=True)
+        dataset = prepare_fake_dataset2('x1', 'x2')
+        dataset.set_input('x1', 'x2', 'y', flag=True)
         class Model(nn.Module):
             def __init__(self):
                 super().__init__()
@@ -170,7 +170,7 @@ class TrainerTestGround(unittest.TestCase):
                 x2 = self.fc(x2)
                 x = x1 + x2
                 loss = F.cross_entropy(x, y)
-                return {'loss': loss}
+                return {'losses': loss}
 
         model = Model()
         with self.assertRaises(NameError):

@@ -221,7 +221,8 @@ class LossInForward(LossBase):
 
     def get_loss(self, **kwargs):
         if self.loss_key not in kwargs:
-            check_res = CheckRes(missing=[self.loss_key],
+            check_res = CheckRes(missing=[self.loss_key + f"(assign to `{self.loss_key}` " \
+                                                                        f"in `{self.__class__.__name__}`"],
                                  unused=[],
                                  duplicated=[],
                                  required=[],
