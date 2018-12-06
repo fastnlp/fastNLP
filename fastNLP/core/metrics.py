@@ -467,7 +467,7 @@ def f1_score(y_true, y_pred, labels=None, pos_label=1, average='binary'):
     precision = precision_score(y_true, y_pred, labels=labels, pos_label=pos_label, average=average)
     recall = recall_score(y_true, y_pred, labels=labels, pos_label=pos_label, average=average)
     if isinstance(precision, np.ndarray):
-        res = 2 * precision * recall / (precision + recall)
+        res = 2 * precision * recall / (precision + recall + 1e-10)
         res[(precision + recall) <= 0] = 0
         return res
     return 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0

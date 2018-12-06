@@ -2,11 +2,11 @@ import os
 import time
 from datetime import datetime
 from datetime import timedelta
-from tqdm.autonotebook import tqdm
 
 import torch
 from tensorboardX import SummaryWriter
 from torch import nn
+from tqdm.autonotebook import tqdm
 
 from fastNLP.core.batch import Batch
 from fastNLP.core.dataset import DataSet
@@ -23,6 +23,7 @@ from fastNLP.core.utils import _check_forward_error
 from fastNLP.core.utils import _check_loss_evaluate
 from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.utils import get_func_signature
+
 
 class Trainer(object):
     """Main Training Loop
@@ -263,8 +264,10 @@ class Trainer(object):
 
     def _do_validation(self):
         res = self.tester.test()
-        for name, num in res.items():
-            self._summary_writer.add_scalar("valid_{}".format(name), num, global_step=self.step)
+        for name, metric in res.items():
+            for metric_key, metric_val in metric.items():
+                self._summary_writer.add_scalar("valid_{}_{}".format(name, metric_key), metric_val,
+                                                global_step=self.step)
         if self.save_path is not None and self._better_eval_result(res):
             metric_key = self.metric_key if self.metric_key is not None else "None"
             self._save_model(self.model,
@@ -386,6 +389,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
                         f"should be torch.size([])")
             loss.backward()
         except CheckError as e:
+            # TODO: another error raised if CheckError caught
             pre_func_signature = get_func_signature(model.forward)
             _check_loss_evaluate(prev_func_signature=pre_func_signature, func_signature=e.func_signature,
                                  check_res=e.check_res, pred_dict=pred_dict, target_dict=batch_y,

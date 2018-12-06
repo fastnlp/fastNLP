@@ -162,7 +162,7 @@ class FieldArray(object):
         if self.is_input is False and self.is_target is False:
             raise RuntimeError("Please specify either is_input or is_target is True for {}".format(self.name))
         batch_size = len(indices)
-        # TODO 当这个fieldArray是seq_length这种只有一位的内容时，不需要padding，需要再讨论一下
+
         if not is_iterable(self.content[0]):
             array = np.array([self.content[i] for i in indices], dtype=self.dtype)
         elif self.dtype in (np.int64, np.float64):
@@ -170,7 +170,7 @@ class FieldArray(object):
             array = np.full((batch_size, max_len), self.padding_val, dtype=self.dtype)
             for i, idx in enumerate(indices):
                 array[i][:len(self.content[idx])] = self.content[idx]
-        else: # should only be str
+        else:  # should only be str
             array = np.array([self.content[i] for i in indices])
         return array
 

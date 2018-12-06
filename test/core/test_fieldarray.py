@@ -31,18 +31,18 @@ class TestFieldArray(unittest.TestCase):
         self.assertEqual(fa.pytype, float)
         self.assertEqual(fa.dtype, np.float64)
 
-        fa = FieldArray("y", [1.1, 2.2, 3.3, 4.4, 5.5], is_input=False)
+        fa = FieldArray("y", [1.1, 2.2, 3.3, 4.4, 5.5], is_input=True)
         fa.append(10)
         self.assertEqual(fa.pytype, float)
         self.assertEqual(fa.dtype, np.float64)
 
-        fa = FieldArray("y", ["a", "b", "c", "d"], is_input=False)
+        fa = FieldArray("y", ["a", "b", "c", "d"], is_input=True)
         fa.append("e")
         self.assertEqual(fa.dtype, np.str)
         self.assertEqual(fa.pytype, str)
 
     def test_support_np_array(self):
-        fa = FieldArray("y", [np.array([1.1, 2.2, 3.3, 4.4, 5.5])], is_input=False)
+        fa = FieldArray("y", [np.array([1.1, 2.2, 3.3, 4.4, 5.5])], is_input=True)
         self.assertEqual(fa.dtype, np.ndarray)
         self.assertEqual(fa.pytype, np.ndarray)
 
@@ -50,12 +50,12 @@ class TestFieldArray(unittest.TestCase):
         self.assertEqual(fa.dtype, np.ndarray)
         self.assertEqual(fa.pytype, np.ndarray)
 
-        fa = FieldArray("my_field", np.random.rand(3, 5), is_input=False)
+        fa = FieldArray("my_field", np.random.rand(3, 5), is_input=True)
         # in this case, pytype is actually a float. We do not care about it.
         self.assertEqual(fa.dtype, np.float64)
 
     def test_nested_list(self):
-        fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1.1, 2.2, 3.3, 4.4, 5.5]], is_input=False)
+        fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1.1, 2.2, 3.3, 4.4, 5.5]], is_input=True)
         self.assertEqual(fa.pytype, float)
         self.assertEqual(fa.dtype, np.float64)
 

@@ -10,9 +10,13 @@ class TestOptim(unittest.TestCase):
         optim = SGD(torch.nn.Linear(10, 3).parameters())
         self.assertTrue("lr" in optim.__dict__["settings"])
         self.assertTrue("momentum" in optim.__dict__["settings"])
+        res = optim.construct_from_pytorch(torch.nn.Linear(10, 3).parameters())
+        self.assertTrue(isinstance(res, torch.optim.SGD))
 
         optim = SGD(lr=0.001)
         self.assertEqual(optim.__dict__["settings"]["lr"], 0.001)
+        res = optim.construct_from_pytorch(torch.nn.Linear(10, 3).parameters())
+        self.assertTrue(isinstance(res, torch.optim.SGD))
 
         optim = SGD(lr=0.002, momentum=0.989)
         self.assertEqual(optim.__dict__["settings"]["lr"], 0.002)
@@ -27,9 +31,13 @@ class TestOptim(unittest.TestCase):
         optim = Adam(torch.nn.Linear(10, 3).parameters())
         self.assertTrue("lr" in optim.__dict__["settings"])
         self.assertTrue("weight_decay" in optim.__dict__["settings"])
+        res = optim.construct_from_pytorch(torch.nn.Linear(10, 3).parameters())
+        self.assertTrue(isinstance(res, torch.optim.Adam))
 
         optim = Adam(lr=0.001)
         self.assertEqual(optim.__dict__["settings"]["lr"], 0.001)
+        res = optim.construct_from_pytorch(torch.nn.Linear(10, 3).parameters())
+        self.assertTrue(isinstance(res, torch.optim.Adam))
 
         optim = Adam(lr=0.002, weight_decay=0.989)
         self.assertEqual(optim.__dict__["settings"]["lr"], 0.002)
