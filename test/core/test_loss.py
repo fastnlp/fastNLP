@@ -6,7 +6,6 @@ import torch as tc
 import torch.nn.functional as F
 
 import fastNLP.core.losses as loss
-from fastNLP.core.losses import LossFunc
 
 
 class TestLoss(unittest.TestCase):
@@ -245,31 +244,7 @@ class TestLoss(unittest.TestCase):
         self.assertEqual(int(los * 1000), int(r * 1000))
 
     def test_case_8(self):
-        def func(a, b):
-            return F.cross_entropy(a, b)
-
-        def func2(a, truth):
-            return func(a, truth)
-
-        def func3(predict, truth):
-            return func(predict, truth)
-
-        def func4(a, b, c=2):
-            return (a + b) * c
-
-        def func6(a, b, **kwargs):
-            c = kwargs['c']
-            return (a + b) * c
-
-        get_loss = LossFunc(func, {'a': 'predict', 'b': 'truth'})
-        predict = torch.randn(5, 3)
-        truth = torch.LongTensor([1, 0, 1, 2, 1])
-        loss1 = get_loss({'predict': predict}, {'truth': truth})
-        get_loss_2 = LossFunc(func2, {'a': 'predict'})
-        loss2 = get_loss_2({'predict': predict}, {'truth': truth})
-        get_loss_3 = LossFunc(func3)
-        loss3 = get_loss_3({'predict': predict}, {'truth': truth})
-        assert loss1 == loss2 and loss1 == loss3
+        pass
 
 
 class TestLoss_v2(unittest.TestCase):
@@ -317,7 +292,7 @@ class TestLosserError(unittest.TestCase):
         target_dict = {'target': torch.zeros(16, 3).long()}
         los = loss.CrossEntropyLoss()
 
-        print(los(pred_dict=pred_dict, target_dict=target_dict))
+        # print(los(pred_dict=pred_dict, target_dict=target_dict))
 
     def test_losser3(self):
         # (2) with corrupted size

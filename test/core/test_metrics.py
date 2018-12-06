@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from fastNLP.core.metrics import AccuracyMetric
-from fastNLP.core.metrics import accuracy_score, recall_score, precision_score, f1_score
+from fastNLP.core.metrics import accuracy_score, recall_score, precision_score, f1_score, pred_topk, accuracy_topk
 
 
 class TestAccuracyMetric(unittest.TestCase):
@@ -143,5 +143,7 @@ class TestUsefulFunctions(unittest.TestCase):
         _ = precision_score(np.random.randint(0, 3, size=(10, 1)), np.random.randint(0, 3, size=(10, 1)), average=None)
         _ = recall_score(np.random.randint(0, 3, size=(10, 1)), np.random.randint(0, 3, size=(10, 1)), average=None)
         _ = f1_score(np.random.randint(0, 3, size=(10, 1)), np.random.randint(0, 3, size=(10, 1)), average=None)
+        _ = accuracy_topk(np.random.randint(0, 3, size=(10, 1)), np.random.randint(0, 3, size=(10, 1)), k=3)
+        _ = pred_topk(np.random.randint(0, 3, size=(10, 1)))
 
         # 跑通即可

@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 
 from fastNLP.core.batch import Batch
@@ -48,19 +47,3 @@ class Predictor(object):
         """Forward through network."""
         y = network(**x)
         return y
-
-
-def seq_label_post_processor(batch_outputs, label_vocab):
-    results = []
-    for batch in batch_outputs:
-        for example in np.array(batch):
-            results.append([label_vocab.to_word(int(x)) for x in example])
-    return results
-
-
-def text_classify_post_processor(batch_outputs, label_vocab):
-    results = []
-    for batch_out in batch_outputs:
-        idx = np.argmax(batch_out.detach().numpy(), axis=-1)
-        results.extend([label_vocab.to_word(i) for i in idx])
-    return results

@@ -141,8 +141,10 @@ class TestDataSet(unittest.TestCase):
     def test_apply2(self):
         def split_sent(ins):
             return ins['raw_sentence'].split()
-        dataset = DataSet.read_csv('../../sentence.csv', headers=('raw_sentence', 'label'), sep='\t')
-        dataset.drop(lambda x:len(x['raw_sentence'].split())==0)
+
+        dataset = DataSet.read_csv('test/data_for_tests/tutorial_sample_dataset.csv', headers=('raw_sentence', 'label'),
+                                   sep='\t')
+        dataset.drop(lambda x: len(x['raw_sentence'].split()) == 0)
         dataset.apply(split_sent, new_field_name='words', is_input=True)
         # print(dataset)
 
@@ -160,9 +162,9 @@ class TestDataSet(unittest.TestCase):
         ds_1 = DataSet.load("./my_ds.pkl")
         os.remove("my_ds.pkl")
 
+
 class TestDataSetIter(unittest.TestCase):
     def test__repr__(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
         for iter in ds:
             self.assertEqual(iter.__repr__(), "{'x': [1, 2, 3, 4],\n'y': [5, 6]}")
-
