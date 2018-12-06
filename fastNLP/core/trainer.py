@@ -140,7 +140,6 @@ class Trainer(object):
     def train(self):
         """Start Training.
 
-        :return:
         """
         try:
             if torch.cuda.is_available() and self.use_cuda:
@@ -216,14 +215,6 @@ class Trainer(object):
             pbar.close()
 
     def _print_train(self):
-        """
-
-        :param data_iterator:
-        :param model:
-        :param epoch:
-        :param start:
-        :return:
-        """
         epoch = 1
         start = time.time()
         while epoch <= self.n_epochs:

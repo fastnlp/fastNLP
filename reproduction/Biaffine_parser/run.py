@@ -13,11 +13,10 @@ from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.field import TextField, SeqLabelField
 from fastNLP.core.tester import Tester
-from fastNLP.io.config_loader import ConfigLoader, ConfigSection
-from fastNLP.io.model_loader import ModelLoader
+from fastNLP.io.config_io import ConfigLoader, ConfigSection
+from fastNLP.io.model_io import ModelLoader, ModelSaver
 from fastNLP.io.embed_loader import EmbedLoader
 from fastNLP.models.biaffine_parser import BiaffineParser
-from fastNLP.io.model_saver import ModelSaver
 
 BOS = '<BOS>'
 EOS = '<EOS>'

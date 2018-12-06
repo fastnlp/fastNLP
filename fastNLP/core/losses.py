@@ -7,14 +7,13 @@ import torch.nn.functional as F
 from fastNLP.core.utils import CheckError
 from fastNLP.core.utils import CheckRes
 from fastNLP.core.utils import _build_args
-from fastNLP.core.utils import _check_function_or_method
 from fastNLP.core.utils import _check_arg_dict_list
+from fastNLP.core.utils import _check_function_or_method
 from fastNLP.core.utils import get_func_signature
 
 
 class LossBase(object):
     def __init__(self):
-        # key: name in target function; value: name in output function
         self.param_map = {}
         self._checked = False
 
@@ -159,8 +158,18 @@ class LossBase(object):
 
         return loss
 
+
 class LossFunc(LossBase):
+    """A wrapper of user-provided loss function.
+
+    """
     def __init__(self, func, key_map=None, **kwargs):
+        """
+
+        :param func: a callable object, such as a function.
+        :param dict key_map:
+        :param kwargs:
+        """
         super(LossFunc, self).__init__()
         _check_function_or_method(func)
         if key_map is not None:
@@ -254,19 +263,19 @@ def _prepare_losser(losser):
 
 
 def squash(predict, truth, **kwargs):
-    '''To reshape tensors in order to fit Loss functions in pytorch
+    """To reshape tensors in order to fit loss functions in pytorch
 
     :param predict	: Tensor, model output
     :param truth	: Tensor, truth from dataset
     :param **kwargs : extra arguments
 
     :return predict , truth: predict & truth after processing
-    '''
+    """
     return predict.view(-1, predict.size()[-1]), truth.view(-1, )
 
 
 def unpad(predict, truth, **kwargs):
-    '''To process padded sequence output to get true loss
+    """To process padded sequence output to get true loss
     Using pack_padded_sequence() method
     This method contains squash()
 
@@ -277,7 +286,7 @@ def unpad(predict, truth, **kwargs):
                       the i-th element is true lengths of i-th sequence
 
     :return predict , truth: predict & truth after processing
-    '''
+    """
     if kwargs.get("lens") is None:
         return predict, truth
     lens = torch.LongTensor(kwargs["lens"])
@@ -288,7 +297,7 @@ def unpad(predict, truth, **kwargs):
 
 
 def unpad_mask(predict, truth, **kwargs):
-    '''To process padded sequence output to get true loss
+    """To process padded sequence output to get true loss
     Using mask() method
     This method contains squash()
 
@@ -299,7 +308,7 @@ def unpad_mask(predict, truth, **kwargs):
                       the i-th element is true lengths of i-th sequence
 
     :return predict , truth: predict & truth after processing
-    '''
+    """
     if kwargs.get("lens") is None:
         return predict, truth
     mas = make_mask(kwargs["lens"], truth.size()[1])
@@ -307,7 +316,7 @@ def unpad_mask(predict, truth, **kwargs):
 
 
 def mask(predict, truth, **kwargs):
-    '''To select specific elements from Tensor
+    """To select specific elements from Tensor
     This method contains squash()
 
     :param predict	: Tensor, [batch_size , max_len , tag_size]
@@ -317,7 +326,7 @@ def mask(predict, truth, **kwargs):
                       the mask Tensor , the position that is 1 will be selected
 
     :return predict , truth: predict & truth after processing
-    '''
+    """
     if kwargs.get("mask") is None:
         return predict, truth
     mask = kwargs["mask"]
@@ -332,14 +341,14 @@ def mask(predict, truth, **kwargs):
 
 
 def make_mask(lens, tar_len):
-    '''to generate a mask that select [:lens[i]] for i-th element
+    """to generate a mask that select [:lens[i]] for i-th element
     embezzle from fastNLP.models.sequence_modeling.seq_mask
 
     :param lens		: list or LongTensor, [batch_size]
     :param tar_len	: int
 
     :return mask 	: ByteTensor
-    '''
+    """
     lens = torch.LongTensor(lens)
     mask = [torch.ge(lens, i + 1) for i in range(tar_len)]
     mask = torch.stack(mask, 1)
@@ -376,9 +385,11 @@ loss_function_name = {
 }
 
 
-class Loss(object):
-    """a Loss object is a callable object represents loss functions
+class LossFromTorch(object):
+    """a LossFromTorch object is a callable object represents loss functions
 
+        This class only helps you with loss functions from PyTorch.
+        It has nothing to do with Trainer.
     """
 
     def __init__(self, loss_name, pre_pro=[squash], **kwargs):
@@ -408,11 +419,11 @@ class Loss(object):
         self.pre_pro = [f if callable(f) else method_dict.get(f) for f in pre_pro]
 
     def add_pre_pro(self, func):
-        '''add a pre_pro function
+        """add a pre_pro function
 
         :param func: a function or str, methods to reform parameters before calculating loss
             the strings will be auto translated to pre-defined functions
-        '''
+        """
         if not callable(func):
             func = method_dict.get(func)
             if func is None:
@@ -421,12 +432,12 @@ class Loss(object):
 
     @staticmethod
     def _get_loss(loss_name, **kwargs):
-        '''Get loss function from torch
+        """Get loss function from torch
 
         :param loss_name: str, the name of loss function
         :param **kwargs: kwargs for torch loss function
         :return: A callable loss function object
-        '''
+        """
         loss_name = loss_name.strip().lower()
         loss_name = "".join(loss_name.split("_"))
 
@@ -435,19 +446,19 @@ class Loss(object):
         return loss_function_name[loss_name](**kwargs)
 
     def get(self):
-        '''This method exists just for make some existing codes run error-freely
-        '''
+        """This method exists just for make some existing codes run error-freely
+        """
         return self
 
     def __call__(self, predict, truth, **kwargs):
-        '''call a loss function
+        """Call a loss function
         predict and truth will be processed by pre_pro methods in order of addition
 
         :param predict	: Tensor, model output
         :param truth 	: Tensor, truth from dataset
         :param **kwargs : extra arguments, pass to pre_pro functions
             for example, if used unpad_mask() in pre_pro, there should be a kwarg named lens
-        '''
+        """
         for f in self.pre_pro:
             if f is None:
                 continue

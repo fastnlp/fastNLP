@@ -308,6 +308,13 @@ def _prepare_metrics(metrics):
     return _metrics
 
 
+"""
+   Attention:  Codes below are not used in current FastNLP. 
+   However, it is useful. 
+
+"""
+
+
 def _conver_numpy(x):
     """convert input data to numpy array
 

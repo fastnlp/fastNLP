@@ -1,4 +1,3 @@
-#TODO: need fix for current DataSet
 import os
 
 from fastNLP.core.dataset import DataSet
@@ -20,8 +19,7 @@ def convert_seq_dataset(data):
     """
     dataset = DataSet()
     for word_seq in data:
-        x = TextField(word_seq, is_target=False)
-        dataset.append(Instance(word_seq=x))
+        dataset.append(Instance(word_seq=word_seq))
     return dataset
 
 
@@ -40,11 +38,7 @@ def convert_seq2tag_dataset(data):
     """
     dataset = DataSet()
     for sample in data:
-        word_seq, label = sample[0], sample[1]
-        ins = Instance()
-        ins.add_field("word_seq", TextField(word_seq, is_target=False)) \
-            .add_field("label", LabelField(label, is_target=True))
-        dataset.append(ins)
+        dataset.append(Instance(word_seq=sample[0], label=sample[1]))
     return dataset
 
 
@@ -63,11 +57,7 @@ def convert_seq2seq_dataset(data):
     """
     dataset = DataSet()
     for sample in data:
-        word_seq, label_seq = sample[0], sample[1]
-        ins = Instance()
-        ins.add_field("word_seq", TextField(word_seq, is_target=False)) \
-            .add_field("label_seq", TextField(label_seq, is_target=True))
-        dataset.append(ins)
+        dataset.append(Instance(word_seq=sample[0], label_seq=sample[1]))
     return dataset
 
 
@@ -273,85 +263,6 @@ class ClassDataSetLoader(DataSetLoader):
         return convert_seq2tag_dataset(data)
 
 
-@DataSet.set_reader('read_conll')
-class ConllLoader(DataSetLoader):
-    """loader for conll format files"""
-
-    def __init__(self):
-        """
-        :param str data_path: the path to the conll data set
-        """
-        super(ConllLoader, self).__init__()
-
-    def load(self, data_path):
-        """
-        :return: list lines: all lines in a conll file
-        """
-        with open(data_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-        data = self.parse(lines)
-        return self.convert(data)
-
-    @staticmethod
-    def parse(lines):
-        """
-        :param list lines:a list containing all lines in a conll file.
-        :return: a 3D list
-        """
-        sentences = list()
-        tokens = list()
-        for line in lines:
-            if line[0] == "#":
-                # skip the comments
-                continue
-            if line == "\n":
-                sentences.append(tokens)
-                tokens = []
-                continue
-            tokens.append(line.split())
-        return sentences
-
-    def convert(self, data):
-        pass
-
-
-@DataSet.set_reader('read_lm')
-class LMDataSetLoader(DataSetLoader):
-    """Language Model Dataset Loader
-
-        This loader produces data for language model training in a supervised way.
-        That means it has X and Y.
-
-    """
-
-    def __init__(self):
-        super(LMDataSetLoader, self).__init__()
-
-    def load(self, data_path):
-        if not os.path.exists(data_path):
-            raise FileNotFoundError("file {} not found.".format(data_path))
-        with open(data_path, "r", encoding="utf=8") as f:
-            text = " ".join(f.readlines())
-        tokens = text.strip().split()
-        data = self.sentence_cut(tokens)
-        return self.convert(data)
-
-    def sentence_cut(self, tokens, sentence_length=15):
-        start_idx = 0
-        data_set = []
-        for idx in range(len(tokens) // sentence_length):
-            x = tokens[start_idx * idx: start_idx * idx + sentence_length]
-            y = tokens[start_idx * idx + 1: start_idx * idx + sentence_length + 1]
-            if start_idx * idx + sentence_length + 1 >= len(tokens):
-                # ad hoc
-                y.extend(["<unk>"])
-            data_set.append([x, y])
-        return data_set
-
-    def convert(self, data):
-        pass
-
-
 @DataSet.set_reader('read_people_daily')
 class PeopleDailyCorpusLoader(DataSetLoader):
     """
@@ -403,10 +314,19 @@ class PeopleDailyCorpusLoader(DataSetLoader):
             pos_tag_examples.append([sent_words, sent_pos_tag])
             ner_examples.append([sent_words, sent_ner])
         # List[List[List[str], List[str]]]
-        return pos_tag_examples, ner_examples
+        # ner_examples not used
+        return self.convert(pos_tag_examples)
 
     def convert(self, data):
-        pass
+        data_set = DataSet()
+        for item in data:
+            sent_words, sent_pos_tag = item[0], item[1]
+            data_set.append(Instance(words=sent_words, tags=sent_pos_tag))
+        data_set.apply(lambda ins: len(ins), new_field_name="seq_len")
+        data_set.set_target("tags")
+        data_set.set_input("sent_words")
+        data_set.set_input("seq_len")
+        return data_set
 
 
 class SNLIDataSetLoader(DataSetLoader):
@@ -462,17 +382,13 @@ class SNLIDataSetLoader(DataSetLoader):
         for example in data:
             p, h, l = example
             # list, list, str
-            x1 = TextField(p, is_target=False)
-            x2 = TextField(h, is_target=False)
-            x1_len = TextField([1] * len(p), is_target=False)
-            x2_len = TextField([1] * len(h), is_target=False)
-            y = LabelField(l, is_target=True)
             instance = Instance()
-            instance.add_field("premise", x1)
-            instance.add_field("hypothesis", x2)
-            instance.add_field("premise_len", x1_len)
-            instance.add_field("hypothesis_len", x2_len)
-            instance.add_field("truth", y)
+            instance.add_field("premise", p)
+            instance.add_field("hypothesis", h)
+            instance.add_field("truth", l)
             data_set.append(instance)
-
+        data_set.apply(lambda ins: len(ins["premise"]), new_field_name="premise_len")
+        data_set.apply(lambda ins: len(ins["hypothesis"]), new_field_name="hypothesis_len")
+        data_set.set_input("premise", "hypothesis", "premise_len", "hypothesis_len")
+        data_set.set_target("truth")
         return data_set

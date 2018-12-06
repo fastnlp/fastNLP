@@ -1,8 +1,7 @@
 import os
 import unittest
 
-from fastNLP.io.config_loader import ConfigSection, ConfigLoader
-from fastNLP.io.config_saver import ConfigSaver
+from fastNLP.io.config_io import ConfigSection, ConfigLoader, ConfigSaver
 
 
 class TestConfigSaver(unittest.TestCase):

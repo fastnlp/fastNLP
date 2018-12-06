@@ -45,7 +45,7 @@ class TestLoss(unittest.TestCase):
         # 验证squash()的正确性
 
         log = math.log
-        loss_func = loss.Loss("nll")
+        loss_func = loss.LossFromTorch("nll")
 
         y = tc.Tensor(
             [
@@ -129,7 +129,7 @@ class TestLoss(unittest.TestCase):
         lens = [4, 2, 1]
         y = tc.log(y)
 
-        loss_func = loss.Loss("nll", pre_pro=["unpad"])
+        loss_func = loss.LossFromTorch("nll", pre_pro=["unpad"])
         los = loss_func(y, gy, lens=lens)
 
         r = -log(.1) - log(.3) - log(.5) - log(.5) - log(.3) - log(.7) - log(.1)
@@ -169,7 +169,7 @@ class TestLoss(unittest.TestCase):
 
         lens = [2, 4, 2]
 
-        loss_func = loss.Loss("nll", pre_pro=["mask"])
+        loss_func = loss.LossFromTorch("nll", pre_pro=["mask"])
         los = loss_func(y, gy, mask=mask)
 
         los2 = loss_func(y, gy, mask=loss.make_mask(lens, gy.size()[-1]))
@@ -205,7 +205,7 @@ class TestLoss(unittest.TestCase):
 
         y = tc.log(y)
 
-        loss_func = loss.Loss("nll", pre_pro=["unpad_mask"])
+        loss_func = loss.LossFromTorch("nll", pre_pro=["unpad_mask"])
         los = loss_func(y, gy, lens=lens)
 
         r = -log(.1) - log(.3) - log(.5) - log(.5) - log(.3) - log(.7) - log(.1)
@@ -235,7 +235,7 @@ class TestLoss(unittest.TestCase):
         lens = [4, 2, 1]
         y = tc.log(y)
 
-        loss_func = loss.Loss("nll", pre_pro=[], weight=tc.Tensor([1, 1, 0]))
+        loss_func = loss.LossFromTorch("nll", pre_pro=[], weight=tc.Tensor([1, 1, 0]))
         loss_func.add_pre_pro("unpad_mask")
         los = loss_func(y, gy, lens=lens)
 

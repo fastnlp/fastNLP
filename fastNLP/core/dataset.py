@@ -9,32 +9,20 @@ from fastNLP.core.utils import get_func_signature
 _READERS = {}
 
 
-def construct_dataset(sentences):
-    """Construct a data set from a list of sentences.
-
-    :param sentences: list of list of str
-    :return dataset: a DataSet object
-    """
-    dataset = DataSet()
-    for sentence in sentences:
-        instance = Instance()
-        instance['raw_sentence'] = sentence
-        dataset.append(instance)
-    return dataset
-
-
 class DataSet(object):
     """DataSet is the collection of examples.
     DataSet provides instance-level interface. You can append and access an instance of the DataSet.
     However, it stores data in a different way: Field-first, Instance-second.
 
     """
+
     def __init__(self, data=None):
         """
 
-        :param data: a dict or a list. If it is a dict, the key is the name of a field and the value is the field.
-                All values must be of the same length.
-                If it is a list, it must be a list of Instance objects.
+        :param data: a dict or a list.
+                If `data` is a dict, the key is the name of a FieldArray and the value is the FieldArray. All values
+                must be of the same length.
+                If `data` is a list, it must be a list of Instance objects.
         """
         self.field_arrays = {}
         if data is not None:
@@ -60,6 +48,7 @@ class DataSet(object):
         def iter_func():
             for idx in range(len(self)):
                 yield self[idx]
+
         return iter_func()
 
     def _inner_iter(self):
@@ -69,7 +58,8 @@ class DataSet(object):
                 self.idx = idx
 
             def __getitem__(self, item):
-                assert item in self.dataset.field_arrays, "no such field:{} in Instance {}".format(item, self.dataset[self.idx])
+                assert item in self.dataset.field_arrays, "no such field:{} in Instance {}".format(item, self.dataset[
+                    self.idx])
                 assert self.idx < len(self.dataset.field_arrays[item]), "index:{} out of range".format(self.idx)
                 return self.dataset.field_arrays[item][self.idx]
 
@@ -79,6 +69,7 @@ class DataSet(object):
         def inner_iter_func():
             for idx in range(len(self)):
                 yield Iter_ptr(self, idx)
+
         return inner_iter_func()
 
     def __getitem__(self, idx):
@@ -217,9 +208,17 @@ class DataSet(object):
                 raise KeyError("{} is not a valid field name.".format(name))
 
     def get_input_name(self):
+        """Get all field names with `is_input` as True.
+
+        :return list field_names: a list of str
+        """
         return [name for name, field in self.field_arrays.items() if field.is_input]
 
     def get_target_name(self):
+        """Get all field names with `is_target` as True.
+
+        :return list field_names: a list of str
+        """
         return [name for name, field in self.field_arrays.items() if field.is_target]
 
     @classmethod
@@ -243,7 +242,7 @@ class DataSet(object):
         :return results: if new_field_name is not passed, returned values of the function over all instances.
         """
         results = [func(ins) for ins in self._inner_iter()]
-        if len(list(filter(lambda x: x is not None, results)))==0: # all None
+        if len(list(filter(lambda x: x is not None, results))) == 0:  # all None
             raise ValueError("{} always return None.".format(get_func_signature(func=func)))
 
         extra_param = {}
@@ -269,6 +268,12 @@ class DataSet(object):
             return results
 
     def drop(self, func):
+        """Drop instances if a condition holds.
+
+        :param func: a function that takes an Instance object as input, and returns bool.
+            The instance will be dropped if the function returns True.
+
+        """
         results = [ins for ins in self._inner_iter() if not func(ins)]
         for name, old_field in self.field_arrays.items():
             self.field_arrays[name].content = [ins[name] for ins in results]
@@ -338,10 +343,33 @@ class DataSet(object):
         return cls(_dict)
 
     def save(self, path):
+        """Save the DataSet object as pickle.
+
+        :param str path: the path to the pickle
+        """
         with open(path, 'wb') as f:
             pickle.dump(self, f)
 
     @staticmethod
     def load(path):
+        """Load a DataSet object from pickle.
+
+        :param str path: the path to the pickle
+        :return DataSet data_set:
+        """
         with open(path, 'rb') as f:
             return pickle.load(f)
+
+
+def construct_dataset(sentences):
+    """Construct a data set from a list of sentences.
+
+    :param sentences: list of list of str
+    :return dataset: a DataSet object
+    """
+    dataset = DataSet()
+    for sentence in sentences:
+        instance = Instance()
+        instance['raw_sentence'] = sentence
+        dataset.append(instance)
+    return dataset
