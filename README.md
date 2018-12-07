@@ -38,6 +38,7 @@ For example:
 
 ## Requirements
 
+- Python>=3.6
 - numpy>=1.14.2
 - torch>=0.4.0
 - tensorboardX
