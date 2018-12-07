@@ -30,6 +30,7 @@ A deep learning NLP model is the composition of three types of modules:
     <td> decode the representation into the output </td>
     <td> MLP, CRF </td>
 </tr>
+</table>
 
 For example:
 
