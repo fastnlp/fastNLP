@@ -85,7 +85,7 @@ class Trainer(object):
         if metric_key is not None:
             self.increase_better = False if metric_key[0] == "-" else True
             self.metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
-        elif metrics is not None:
+        elif len(metrics) > 0:
             self.metric_key = metrics[0].__class__.__name__.lower().strip('metric')
 
         # prepare loss

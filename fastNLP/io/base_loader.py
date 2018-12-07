@@ -31,22 +31,6 @@ class BaseLoader(object):
             return obj
 
 
-class ToyLoader0(BaseLoader):
-    """
-        For CharLM
-    """
-
-    def __init__(self, data_path):
-        super(ToyLoader0, self).__init__(data_path)
-
-    def load(self):
-        with open(self.data_path, 'r') as f:
-            corpus = f.read().lower()
-        import re
-        corpus = re.sub(r"<unk>", "unk", corpus)
-        return corpus.split()
-
-
 class DataLoaderRegister:
     """"register for data sets"""
     _readers = {}

@@ -75,7 +75,6 @@ class DataSetLoader:
         raise NotImplementedError
 
 
-@DataSet.set_reader("read_naive")
 class NativeDataSetLoader(DataSetLoader):
     def __init__(self):
         super(NativeDataSetLoader, self).__init__()
@@ -87,7 +86,9 @@ class NativeDataSetLoader(DataSetLoader):
         return ds
 
 
-@DataSet.set_reader('read_raw')
+DataLoaderRegister.set_reader(NativeDataSetLoader, 'read_naive')
+
+
 class RawDataSetLoader(DataSetLoader):
     def __init__(self):
         super(RawDataSetLoader, self).__init__()
@@ -101,6 +102,8 @@ class RawDataSetLoader(DataSetLoader):
 
     def convert(self, data):
         return convert_seq_dataset(data)
+
+
 DataLoaderRegister.set_reader(RawDataSetLoader, 'read_rawdata')
 
 
@@ -171,6 +174,8 @@ class POSDataSetLoader(DataSetLoader):
         """Convert lists of strings into Instances with Fields.
         """
         return convert_seq2seq_dataset(data)
+
+
 DataLoaderRegister.set_reader(POSDataSetLoader, 'read_pos')
 
 
@@ -348,7 +353,6 @@ class LMDataSetLoader(DataSetLoader):
         pass
 
 
-@DataSet.set_reader('read_people_daily')
 class PeopleDailyCorpusLoader(DataSetLoader):
     """
         People Daily Corpus: Chinese word segmentation, POS tag, NER

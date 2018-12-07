@@ -98,10 +98,10 @@ class DataSet(object):
             raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
 
     def __getattr__(self, item):
+        # Not tested. Don't use !!
         if item == "field_arrays":
             raise AttributeError
-        # TODO dataset.x
-        if item in self.field_arrays:
+        if isinstance(item, str) and item in self.field_arrays:
             return self.field_arrays[item]
         try:
             reader = DataLoaderRegister.get_reader(item)
