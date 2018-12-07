@@ -78,6 +78,18 @@ class DataSetLoader(BaseLoader):
         raise NotImplementedError
 
 
+@DataSet.set_reader("read_naive")
+class NativeDataSetLoader(DataSetLoader):
+    def __init__(self):
+        super(NativeDataSetLoader, self).__init__()
+
+    def load(self, path):
+        ds = DataSet.read_csv(path, headers=("raw_sentence", "label"), sep="\t")
+        ds.set_input("raw_sentence")
+        ds.set_target("label")
+        return ds
+
+
 @DataSet.set_reader('read_raw')
 class RawDataSetLoader(DataSetLoader):
     def __init__(self):

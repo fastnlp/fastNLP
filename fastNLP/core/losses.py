@@ -195,6 +195,7 @@ class CrossEntropyLoss(LossBase):
         return F.cross_entropy(input=pred, target=target,
                                 ignore_index=self.padding_idx)
 
+
 class L1Loss(LossBase):
     def __init__(self, pred=None, target=None):
         super(L1Loss, self).__init__()
@@ -211,6 +212,7 @@ class BCELoss(LossBase):
 
     def get_loss(self, pred, target):
         return F.binary_cross_entropy(input=pred, target=target)
+
 
 class NLLLoss(LossBase):
     def __init__(self, pred=None, target=None):
@@ -259,7 +261,7 @@ def _prepare_losser(losser):
     elif isinstance(losser, LossBase):
         return losser
     else:
-        raise TypeError(f"Type of losser should be `fastNLP.LossBase`, got {type(losser)}")
+        raise TypeError(f"Type of loss should be `fastNLP.LossBase`, got {type(losser)}")
 
 
 def squash(predict, truth, **kwargs):
@@ -354,114 +356,3 @@ def make_mask(lens, tar_len):
     mask = torch.stack(mask, 1)
     return mask
 
-
-# map string to function. Just for more elegant using
-method_dict = {
-    "squash": squash,
-    "unpad": unpad,
-    "unpad_mask": unpad_mask,
-    "mask": mask,
-}
-
-loss_function_name = {
-    "L1Loss".lower(): torch.nn.L1Loss,
-    "BCELoss".lower(): torch.nn.BCELoss,
-    "MSELoss".lower(): torch.nn.MSELoss,
-    "NLLLoss".lower(): torch.nn.NLLLoss,
-    "KLDivLoss".lower(): torch.nn.KLDivLoss,
-    "NLLLoss2dLoss".lower(): torch.nn.NLLLoss2d,  # every name should end with "loss"
-    "SmoothL1Loss".lower(): torch.nn.SmoothL1Loss,
-    "SoftMarginLoss".lower(): torch.nn.SoftMarginLoss,
-    "PoissonNLLLoss".lower(): torch.nn.PoissonNLLLoss,
-    "MultiMarginLoss".lower(): torch.nn.MultiMarginLoss,
-    "CrossEntropyLoss".lower(): torch.nn.CrossEntropyLoss,
-    "BCEWithLogitsLoss".lower(): torch.nn.BCEWithLogitsLoss,
-    "MarginRankingLoss".lower(): torch.nn.MarginRankingLoss,
-    "TripletMarginLoss".lower(): torch.nn.TripletMarginLoss,
-    "HingeEmbeddingLoss".lower(): torch.nn.HingeEmbeddingLoss,
-    "CosineEmbeddingLoss".lower(): torch.nn.CosineEmbeddingLoss,
-    "MultiLabelMarginLoss".lower(): torch.nn.MultiLabelMarginLoss,
-    "MultiLabelSoftMarginLoss".lower(): torch.nn.MultiLabelSoftMarginLoss,
-}
-
-
-class LossFromTorch(object):
-    """a LossFromTorch object is a callable object represents loss functions
-
-        This class only helps you with loss functions from PyTorch.
-        It has nothing to do with Trainer.
-    """
-
-    def __init__(self, loss_name, pre_pro=[squash], **kwargs):
-        """
-
-        :param loss_name: str or None , the name of loss function
-        :param pre_pro 	: list of function or str, methods to reform parameters before calculating loss
-            the strings will be auto translated to pre-defined functions
-        :param **kwargs: kwargs for torch loss function
-
-        pre_pro funcsions should have three arguments: predict, truth, **arg
-            predict and truth is the necessary parameters in loss function
-            kwargs is the extra parameters passed-in when calling loss function
-        pre_pro functions should return two objects, respectively predict and truth that after processed
-
-        """
-
-        if loss_name is None:
-            # this is useful when Trainer.__init__ performs type check
-            self._loss = None
-        else:
-            if not isinstance(loss_name, str):
-                raise NotImplementedError
-            else:
-                self._loss = self._get_loss(loss_name, **kwargs)
-
-        self.pre_pro = [f if callable(f) else method_dict.get(f) for f in pre_pro]
-
-    def add_pre_pro(self, func):
-        """add a pre_pro function
-
-        :param func: a function or str, methods to reform parameters before calculating loss
-            the strings will be auto translated to pre-defined functions
-        """
-        if not callable(func):
-            func = method_dict.get(func)
-            if func is None:
-                return
-        self.pre_pro.append(func)
-
-    @staticmethod
-    def _get_loss(loss_name, **kwargs):
-        """Get loss function from torch
-
-        :param loss_name: str, the name of loss function
-        :param **kwargs: kwargs for torch loss function
-        :return: A callable loss function object
-        """
-        loss_name = loss_name.strip().lower()
-        loss_name = "".join(loss_name.split("_"))
-
-        if len(loss_name) < 4 or loss_name[-4:] != "loss":
-            loss_name += "loss"
-        return loss_function_name[loss_name](**kwargs)
-
-    def get(self):
-        """This method exists just for make some existing codes run error-freely
-        """
-        return self
-
-    def __call__(self, predict, truth, **kwargs):
-        """Call a loss function
-        predict and truth will be processed by pre_pro methods in order of addition
-
-        :param predict	: Tensor, model output
-        :param truth 	: Tensor, truth from dataset
-        :param **kwargs : extra arguments, pass to pre_pro functions
-            for example, if used unpad_mask() in pre_pro, there should be a kwarg named lens
-        """
-        for f in self.pre_pro:
-            if f is None:
-                continue
-            predict, truth = f(predict, truth, **kwargs)
-
-        return self._loss(predict, truth)
