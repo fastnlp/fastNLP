@@ -5,8 +5,7 @@ import numpy as np
 from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.instance import Instance
 from fastNLP.core.utils import get_func_signature
-
-_READERS = {}
+from fastNLP.io.base_loader import DataLoaderRegister
 
 
 class DataSet(object):
@@ -97,6 +96,24 @@ class DataSet(object):
             return data_set
         else:
             raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
+
+    def __getattr__(self, item):
+        if item == "field_arrays":
+            raise AttributeError
+        # TODO dataset.x
+        if item in self.field_arrays:
+            return self.field_arrays[item]
+        try:
+            reader = DataLoaderRegister.get_reader(item)
+            return reader
+        except AttributeError:
+            raise
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+
+    def __getstate__(self):
+        return self.__dict__
 
     def __len__(self):
         """Fetch the length of the dataset.
@@ -226,16 +243,6 @@ class DataSet(object):
         """
         return [name for name, field in self.field_arrays.items() if field.is_target]
 
-    @classmethod
-    def set_reader(cls, method_name):
-        assert isinstance(method_name, str)
-
-        def wrapper(read_cls):
-            _READERS[method_name] = read_cls
-            return read_cls
-
-        return wrapper
-
     def apply(self, func, new_field_name=None, **kwargs):
         """Apply a function to every instance of the DataSet.
 
@@ -346,6 +353,9 @@ class DataSet(object):
                 for header, content in zip(headers, contents):
                     _dict[header].append(content)
         return cls(_dict)
+
+    # def read_pos(self):
+    #     return DataLoaderRegister.get_reader('read_pos')
 
     def save(self, path):
         """Save the DataSet object as pickle.

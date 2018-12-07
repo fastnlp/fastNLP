@@ -85,8 +85,8 @@ class Trainer(object):
         if metric_key is not None:
             self.increase_better = False if metric_key[0] == "-" else True
             self.metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
-        else:
-            self.metric_key = None
+        elif metrics is not None:
+            self.metric_key = metrics[0].__class__.__name__.lower().strip('metric')
 
         # prepare loss
         losser = _prepare_losser(loss)
@@ -147,7 +147,7 @@ class Trainer(object):
 
             self._mode(self.model, is_test=False)
 
-            self.start_time = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            self.start_time = str(datetime.now().strftime('%Y-%m-%d %H-%M-%S'))
             print("training epochs started " + self.start_time, flush=True)
             if self.save_path is None:
                 class psudoSW:
@@ -260,7 +260,7 @@ class Trainer(object):
                 self._summary_writer.add_scalar("valid_{}_{}".format(name, metric_key), metric_val,
                                                 global_step=self.step)
         if self.save_path is not None and self._better_eval_result(res):
-            metric_key = self.metric_key if self.metric_key is not None else "None"
+            metric_key = self.metric_key if self.metric_key is not None else ""
             self._save_model(self.model,
                              "best_" + "_".join([self.model.__class__.__name__, metric_key, self.start_time]))
         return res

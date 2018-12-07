@@ -29,3 +29,39 @@ class BaseLoader(object):
             with open(cache_path, 'wb') as f:
                 pickle.dump(obj, f)
             return obj
+
+
+class ToyLoader0(BaseLoader):
+    """
+        For CharLM
+    """
+
+    def __init__(self, data_path):
+        super(ToyLoader0, self).__init__(data_path)
+
+    def load(self):
+        with open(self.data_path, 'r') as f:
+            corpus = f.read().lower()
+        import re
+        corpus = re.sub(r"<unk>", "unk", corpus)
+        return corpus.split()
+
+
+class DataLoaderRegister:
+    """"register for data sets"""
+    _readers = {}
+
+    @classmethod
+    def set_reader(cls, reader_cls, read_fn_name):
+        # def wrapper(reader_cls):
+        if read_fn_name in cls._readers:
+            raise KeyError('duplicate reader: {} and {} for read_func: {}'.format(cls._readers[read_fn_name], reader_cls, read_fn_name))
+        if hasattr(reader_cls, 'load'):
+            cls._readers[read_fn_name] = reader_cls().load
+        return reader_cls
+
+    @classmethod
+    def get_reader(cls, read_fn_name):
+        if read_fn_name in cls._readers:
+            return cls._readers[read_fn_name]
+        raise AttributeError('no read function: {}'.format(read_fn_name))

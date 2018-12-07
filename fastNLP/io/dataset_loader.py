@@ -2,7 +2,7 @@ import os
 
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
-from fastNLP.io.base_loader import BaseLoader
+from fastNLP.io.base_loader import DataLoaderRegister
 
 
 def convert_seq_dataset(data):
@@ -61,11 +61,8 @@ def convert_seq2seq_dataset(data):
     return dataset
 
 
-class DataSetLoader(BaseLoader):
+class DataSetLoader:
     """"loader for data sets"""
-
-    def __init__(self):
-        super(DataSetLoader, self).__init__()
 
     def load(self, path):
         """ load data in `path` into a dataset
@@ -104,9 +101,9 @@ class RawDataSetLoader(DataSetLoader):
 
     def convert(self, data):
         return convert_seq_dataset(data)
+DataLoaderRegister.set_reader(RawDataSetLoader, 'read_rawdata')
 
 
-@DataSet.set_reader('read_pos')
 class POSDataSetLoader(DataSetLoader):
     """Dataset Loader for POS Tag datasets.
 
@@ -174,9 +171,9 @@ class POSDataSetLoader(DataSetLoader):
         """Convert lists of strings into Instances with Fields.
         """
         return convert_seq2seq_dataset(data)
+DataLoaderRegister.set_reader(POSDataSetLoader, 'read_pos')
 
 
-@DataSet.set_reader('read_tokenize')
 class TokenizeDataSetLoader(DataSetLoader):
     """
     Data set loader for tokenization data sets
@@ -236,7 +233,6 @@ class TokenizeDataSetLoader(DataSetLoader):
         return convert_seq2seq_dataset(data)
 
 
-@DataSet.set_reader('read_class')
 class ClassDataSetLoader(DataSetLoader):
     """Loader for classification data sets"""
 
@@ -273,6 +269,83 @@ class ClassDataSetLoader(DataSetLoader):
 
     def convert(self, data):
         return convert_seq2tag_dataset(data)
+
+
+class ConllLoader(DataSetLoader):
+    """loader for conll format files"""
+
+    def __init__(self):
+        """
+        :param str data_path: the path to the conll data set
+        """
+        super(ConllLoader, self).__init__()
+
+    def load(self, data_path):
+        """
+        :return: list lines: all lines in a conll file
+        """
+        with open(data_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        data = self.parse(lines)
+        return self.convert(data)
+
+    @staticmethod
+    def parse(lines):
+        """
+        :param list lines:a list containing all lines in a conll file.
+        :return: a 3D list
+        """
+        sentences = list()
+        tokens = list()
+        for line in lines:
+            if line[0] == "#":
+                # skip the comments
+                continue
+            if line == "\n":
+                sentences.append(tokens)
+                tokens = []
+                continue
+            tokens.append(line.split())
+        return sentences
+
+    def convert(self, data):
+        pass
+
+
+class LMDataSetLoader(DataSetLoader):
+    """Language Model Dataset Loader
+
+        This loader produces data for language model training in a supervised way.
+        That means it has X and Y.
+
+    """
+
+    def __init__(self):
+        super(LMDataSetLoader, self).__init__()
+
+    def load(self, data_path):
+        if not os.path.exists(data_path):
+            raise FileNotFoundError("file {} not found.".format(data_path))
+        with open(data_path, "r", encoding="utf=8") as f:
+            text = " ".join(f.readlines())
+        tokens = text.strip().split()
+        data = self.sentence_cut(tokens)
+        return self.convert(data)
+
+    def sentence_cut(self, tokens, sentence_length=15):
+        start_idx = 0
+        data_set = []
+        for idx in range(len(tokens) // sentence_length):
+            x = tokens[start_idx * idx: start_idx * idx + sentence_length]
+            y = tokens[start_idx * idx + 1: start_idx * idx + sentence_length + 1]
+            if start_idx * idx + sentence_length + 1 >= len(tokens):
+                # ad hoc
+                y.extend(["<unk>"])
+            data_set.append([x, y])
+        return data_set
+
+    def convert(self, data):
+        pass
 
 
 @DataSet.set_reader('read_people_daily')
