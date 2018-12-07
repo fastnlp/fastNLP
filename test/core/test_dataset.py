@@ -2,6 +2,7 @@ import os
 import unittest
 
 from fastNLP.core.dataset import DataSet
+from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.instance import Instance
 
 
@@ -161,6 +162,21 @@ class TestDataSet(unittest.TestCase):
 
         ds_1 = DataSet.load("./my_ds.pkl")
         os.remove("my_ds.pkl")
+
+    def test_get_all_fields(self):
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
+        ans = ds.get_all_fields()
+        self.assertEqual(ans["x"].content, [[1, 2, 3, 4]] * 10)
+        self.assertEqual(ans["y"].content, [[5, 6]] * 10)
+
+    def test_get_field(self):
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
+        ans = ds.get_field("x")
+        self.assertTrue(isinstance(ans, FieldArray))
+        self.assertEqual(ans.content, [[1, 2, 3, 4]] * 10)
+        ans = ds.get_field("y")
+        self.assertTrue(isinstance(ans, FieldArray))
+        self.assertEqual(ans.content, [[5, 6]] * 10)
 
 
 class TestDataSetIter(unittest.TestCase):

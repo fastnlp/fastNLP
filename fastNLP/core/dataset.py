@@ -157,7 +157,12 @@ class DataSet(object):
         """
         self.field_arrays.pop(name)
 
-    def get_fields(self):
+    def get_field(self, field_name):
+        if field_name not in self.field_arrays:
+            raise KeyError("Field name {} not found in DataSet".format(field_name))
+        return self.field_arrays[field_name]
+
+    def get_all_fields(self):
         """Return all the fields with their names.
 
         :return dict field_arrays: the internal data structure of DataSet.

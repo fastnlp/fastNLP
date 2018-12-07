@@ -43,7 +43,7 @@ class Batch(object):
 
             indices = self.idx_list[self.curidx:endidx]
 
-            for field_name, field in self.dataset.get_fields().items():
+            for field_name, field in self.dataset.get_all_fields().items():
                 if field.is_target or field.is_input:
                     batch = field.get(indices)
                     if not self.as_numpy:

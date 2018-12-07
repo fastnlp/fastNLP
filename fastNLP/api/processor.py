@@ -268,7 +268,7 @@ class SetTensorProcessor(Processor):
         self.default = default
 
     def process(self, dataset):
-        set_dict = {name: self.default for name in dataset.get_fields().keys()}
+        set_dict = {name: self.default for name in dataset.get_all_fields().keys()}
         set_dict.update(self.field_dict)
         dataset._set_need_tensor(**set_dict)
         return dataset
@@ -282,7 +282,7 @@ class SetIsTargetProcessor(Processor):
         self.default = default
 
     def process(self, dataset):
-        set_dict = {name: self.default for name in dataset.get_fields().keys()}
+        set_dict = {name: self.default for name in dataset.get_all_fields().keys()}
         set_dict.update(self.field_dict)
         dataset.set_target(**set_dict)
         return dataset

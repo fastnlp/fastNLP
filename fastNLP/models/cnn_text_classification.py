@@ -44,7 +44,7 @@ class CNNText(torch.nn.Module):
         x = self.conv_pool(x)  # [N,L,C] -> [N,C]
         x = self.dropout(x)
         x = self.fc(x)  # [N,C] -> [N, N_class]
-        return {'output': x}
+        return {'pred': x}
 
     def predict(self, word_seq):
         """
@@ -53,5 +53,5 @@ class CNNText(torch.nn.Module):
         :return predict: dict of torch.LongTensor, [batch_size, seq_len]
         """
         output = self(word_seq)
-        _, predict = output['output'].max(dim=1)
-        return {'predict': predict}
+        _, predict = output['pred'].max(dim=1)
+        return {'pred': predict}
