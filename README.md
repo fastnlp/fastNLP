@@ -40,6 +40,7 @@ For example:
 - numpy>=1.14.2
 - torch>=0.4.0
 - tensorboardX
+- tqdm>=4.28.1
 
 
 ## Resources
