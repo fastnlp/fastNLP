@@ -1,24 +1,11 @@
+import _pickle as pickle
+
 import numpy as np
-from copy import copy
 
 from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.instance import Instance
-
-_READERS = {}
-
-
-def construct_dataset(sentences):
-    """Construct a data set from a list of sentences.
-
-    :param sentences: list of list of str
-    :return dataset: a DataSet object
-    """
-    dataset = DataSet()
-    for sentence in sentences:
-        instance = Instance()
-        instance['raw_sentence'] = sentence
-        dataset.append(instance)
-    return dataset
+from fastNLP.core.utils import get_func_signature
+from fastNLP.io.base_loader import DataLoaderRegister
 
 
 class DataSet(object):
@@ -28,45 +15,13 @@ class DataSet(object):
 
     """
 
-    class Instance(object):
-        def __init__(self, dataset, idx=-1, **fields):
-            self.dataset = dataset
-            self.idx = idx
-            self.fields = fields
-
-        def __next__(self):
-            self.idx += 1
-            if self.idx >= len(self.dataset):
-                raise StopIteration
-            return copy(self)
-
-        def add_field(self, field_name, field):
-            """Add a new field to the instance.
-
-            :param field_name: str, the name of the field.
-            :param field:
-            """
-            self.fields[field_name] = field
-
-        def __getitem__(self, name):
-            return self.dataset[name][self.idx]
-
-        def __setitem__(self, name, val):
-            if name not in self.dataset:
-                new_fields = [None] * len(self.dataset)
-                self.dataset.add_field(name, new_fields)
-            self.dataset[name][self.idx] = val
-
-        def __repr__(self):
-            return "\n".join(['{}: {}'.format(name, repr(self.dataset[name][self.idx])) for name
-                              in self.dataset.get_fields().keys()])
-
     def __init__(self, data=None):
         """
 
-        :param data: a dict or a list. If it is a dict, the key is the name of a field and the value is the field.
-                All values must be of the same length.
-                If it is a list, it must be a list of Instance objects.
+        :param data: a dict or a list.
+                If `data` is a dict, the key is the name of a FieldArray and the value is the FieldArray. All values
+                must be of the same length.
+                If `data` is a list, it must be a list of Instance objects.
         """
         self.field_arrays = {}
         if data is not None:
@@ -89,14 +44,95 @@ class DataSet(object):
         return item in self.field_arrays
 
     def __iter__(self):
-        return self.Instance(self)
+        def iter_func():
+            for idx in range(len(self)):
+                yield self[idx]
 
-    def _convert_ins(self, ins_list):
-        if isinstance(ins_list, list):
-            for ins in ins_list:
-                self.append(ins)
+        return iter_func()
+
+    def _inner_iter(self):
+        class Iter_ptr:
+            def __init__(self, dataset, idx):
+                self.dataset = dataset
+                self.idx = idx
+
+            def __getitem__(self, item):
+                assert item in self.dataset.field_arrays, "no such field:{} in Instance {}".format(item, self.dataset[
+                    self.idx])
+                assert self.idx < len(self.dataset.field_arrays[item]), "index:{} out of range".format(self.idx)
+                return self.dataset.field_arrays[item][self.idx]
+
+            def __repr__(self):
+                return self.dataset[self.idx].__repr__()
+
+        def inner_iter_func():
+            for idx in range(len(self)):
+                yield Iter_ptr(self, idx)
+
+        return inner_iter_func()
+
+    def __getitem__(self, idx):
+        """Fetch Instance(s) at the `idx` position(s) in the dataset.
+        Notice: This method returns a copy of the actual instance(s). Any change to the returned value would not modify
+        the origin instance(s) of the DataSet.
+        If you want to make in-place changes to all Instances, use `apply` method.
+
+        :param idx: can be int or slice.
+        :return: If `idx` is int, return an Instance object.
+                If `idx` is slice, return a DataSet object.
+        """
+        if isinstance(idx, int):
+            return Instance(**{name: self.field_arrays[name][idx] for name in self.field_arrays})
+        elif isinstance(idx, slice):
+            if idx.start is not None and (idx.start >= len(self) or idx.start <= -len(self)):
+                raise RuntimeError(f"Start index {idx.start} out of range 0-{len(self)-1}")
+            data_set = DataSet()
+            for field in self.field_arrays.values():
+                data_set.add_field(name=field.name,
+                                   fields=field.content[idx],
+                                   padding_val=field.padding_val,
+                                   is_input=field.is_input,
+                                   is_target=field.is_target)
+            return data_set
         else:
-            self.append(ins_list)
+            raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
+
+    def __getattr__(self, item):
+        # Not tested. Don't use !!
+        if item == "field_arrays":
+            raise AttributeError
+        if isinstance(item, str) and item in self.field_arrays:
+            return self.field_arrays[item]
+        try:
+            reader = DataLoaderRegister.get_reader(item)
+            return reader
+        except AttributeError:
+            raise
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+
+    def __getstate__(self):
+        return self.__dict__
+
+    def __len__(self):
+        """Fetch the length of the dataset.
+
+        :return int length:
+        """
+        if len(self.field_arrays) == 0:
+            return 0
+        field = iter(self.field_arrays.values()).__next__()
+        return len(field)
+
+    def __inner_repr__(self):
+        if len(self) < 20:
+            return ",\n".join([ins.__repr__() for ins in self])
+        else:
+            return self[:5].__inner_repr__() + "\n...\n" + self[-5:].__inner_repr__()
+
+    def __repr__(self):
+        return "DataSet(" + self.__inner_repr__() + ")"
 
     def append(self, ins):
         """Add an instance to the DataSet.
@@ -125,7 +161,9 @@ class DataSet(object):
         :param bool is_target: whether this field is label or target.
         """
         if len(self.field_arrays) != 0:
-            assert len(self) == len(fields)
+            if len(self) != len(fields):
+                raise RuntimeError(f"The field to append must have the same size as dataset. "
+                                   f"Dataset size {len(self)} != field size {len(fields)}")
         self.field_arrays[name] = FieldArray(name, fields, padding_val=padding_val, is_target=is_target,
                                              is_input=is_input)
 
@@ -136,146 +174,121 @@ class DataSet(object):
         """
         self.field_arrays.pop(name)
 
-    def get_fields(self):
+    def get_field(self, field_name):
+        if field_name not in self.field_arrays:
+            raise KeyError("Field name {} not found in DataSet".format(field_name))
+        return self.field_arrays[field_name]
+
+    def get_all_fields(self):
         """Return all the fields with their names.
 
         :return dict field_arrays: the internal data structure of DataSet.
         """
         return self.field_arrays
 
-    def __getitem__(self, idx):
-        """
-
-        :param idx: can be int, slice, or str.
-        :return: If `idx` is int, return an Instance object.
-                If `idx` is slice, return a DataSet object.
-                If `idx` is str, it must be a field name, return the field.
-
-        """
-        if isinstance(idx, int):
-            return self.Instance(self, idx, **{name: self.field_arrays[name][idx] for name in self.field_arrays})
-        elif isinstance(idx, slice):
-            data_set = DataSet()
-            for field in self.field_arrays.values():
-                data_set.add_field(name=field.name,
-                                   fields=field.content[idx],
-                                   padding_val=field.padding_val,
-                                   is_input=field.is_input,
-                                   is_target=field.is_target)
-            return data_set
-        elif isinstance(idx, str):
-            return self.field_arrays[idx]
-        else:
-            raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
-
-    def __len__(self):
-        if len(self.field_arrays) == 0:
-            return 0
-        field = iter(self.field_arrays.values()).__next__()
-        return len(field)
-
     def get_length(self):
-        """The same as __len__
+        """Fetch the length of the dataset.
 
+        :return int length:
         """
         return len(self)
 
     def rename_field(self, old_name, new_name):
-        """rename a field
+        """Rename a field.
+
+        :param str old_name:
+        :param str new_name:
         """
         if old_name in self.field_arrays:
             self.field_arrays[new_name] = self.field_arrays.pop(old_name)
+            self.field_arrays[new_name].name = new_name
         else:
-            raise KeyError("{} is not a valid name. ".format(old_name))
+            raise KeyError("DataSet has no field named {}.".format(old_name))
 
-    def set_target(self, **fields):
-        """Change the flag of `is_target` for all instance. For fields not set here, leave their `is_target` unchanged.
+    def set_target(self, *field_names, flag=True):
+        """Change the target flag of these fields.
 
-        :param key-value pairs for field-name and `is_target` value(True, False).
+        :param field_names: a sequence of str, indicating field names
+        :param bool flag: Set these fields as target if True. Unset them if False.
         """
-        for name, val in fields.items():
+        for name in field_names:
             if name in self.field_arrays:
-                assert isinstance(val, bool)
-                self.field_arrays[name].is_target = val
+                self.field_arrays[name].is_target = flag
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
-        return self
 
-    def set_input(self, **fields):
-        for name, val in fields.items():
+    def set_input(self, *field_name, flag=True):
+        """Set the input flag of these fields.
+
+        :param field_name: a sequence of str, indicating field names.
+        :param bool flag: Set these fields as input if True. Unset them if False.
+        """
+        for name in field_name:
             if name in self.field_arrays:
-                assert isinstance(val, bool)
-                self.field_arrays[name].is_input = val
+                self.field_arrays[name].is_input = flag
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
-        return self
 
     def get_input_name(self):
+        """Get all field names with `is_input` as True.
+
+        :return list field_names: a list of str
+        """
         return [name for name, field in self.field_arrays.items() if field.is_input]
 
     def get_target_name(self):
+        """Get all field names with `is_target` as True.
+
+        :return list field_names: a list of str
+        """
         return [name for name, field in self.field_arrays.items() if field.is_target]
 
-    def __getattr__(self, item):
-        # block infinite recursion for copy, pickle
-        if item == '__setstate__':
-            raise AttributeError(item)
-        try:
-            return self.field_arrays.__getitem__(item)
-        except KeyError:
-            pass
-        try:
-            reader_cls = _READERS[item]
-
-            # add read_*data() support
-            def _read(*args, **kwargs):
-                data = reader_cls().load(*args, **kwargs)
-                self.extend(data)
-                return self
-
-            return _read
-        except KeyError:
-            raise AttributeError('{} does not exist.'.format(item))
-
-    @classmethod
-    def set_reader(cls, method_name):
-        """decorator to add dataloader support
-        """
-        assert isinstance(method_name, str)
-
-        def wrapper(read_cls):
-            _READERS[method_name] = read_cls
-            return read_cls
-
-        return wrapper
-
-    def apply(self, func, new_field_name=None):
+    def apply(self, func, new_field_name=None, **kwargs):
         """Apply a function to every instance of the DataSet.
 
         :param func: a function that takes an instance as input.
         :param str new_field_name: If not None, results of the function will be stored as a new field.
-        :return results: returned values of the function over all instances.
+        :param **kwargs: Accept parameters will be
+            (1) is_input: boolean, will be ignored if new_field is None. If True, the new field will be as input.
+            (2) is_target: boolean, will be ignored if new_field is None. If True, the new field will be as target.
+        :return results: if new_field_name is not passed, returned values of the function over all instances.
         """
-        results = [func(ins) for ins in self]
+        results = [func(ins) for ins in self._inner_iter()]
+        if len(list(filter(lambda x: x is not None, results))) == 0:  # all None
+            raise ValueError("{} always return None.".format(get_func_signature(func=func)))
+
+        extra_param = {}
+        if 'is_input' in kwargs:
+            extra_param['is_input'] = kwargs['is_input']
+        if 'is_target' in kwargs:
+            extra_param['is_target'] = kwargs['is_target']
         if new_field_name is not None:
             if new_field_name in self.field_arrays:
                 # overwrite the field, keep same attributes
                 old_field = self.field_arrays[new_field_name]
+                if 'is_input' not in extra_param:
+                    extra_param['is_input'] = old_field.is_input
+                if 'is_target' not in extra_param:
+                    extra_param['is_target'] = old_field.is_target
                 self.add_field(name=new_field_name,
                                fields=results,
                                padding_val=old_field.padding_val,
-                               is_input=old_field.is_input,
-                               is_target=old_field.is_target)
+                               **extra_param)
             else:
-                self.add_field(name=new_field_name, fields=results)
+                self.add_field(name=new_field_name, fields=results, **extra_param)
         else:
             return results
 
     def drop(self, func):
-        results = [ins for ins in self if not func(ins)]
+        """Drop instances if a condition holds.
+
+        :param func: a function that takes an Instance object as input, and returns bool.
+            The instance will be dropped if the function returns True.
+
+        """
+        results = [ins for ins in self._inner_iter() if not func(ins)]
         for name, old_field in self.field_arrays.items():
             self.field_arrays[name].content = [ins[name] for ins in results]
-            # print(self.field_arrays[name])
 
     def split(self, dev_ratio):
         """Split the dataset into training and development(validation) set.
@@ -297,30 +310,81 @@ class DataSet(object):
             dev_set.append(self[idx])
         for idx in train_indices:
             train_set.append(self[idx])
+        for field_name in self.field_arrays:
+            train_set.field_arrays[field_name].is_input = self.field_arrays[field_name].is_input
+            train_set.field_arrays[field_name].is_target = self.field_arrays[field_name].is_target
+            dev_set.field_arrays[field_name].is_input = self.field_arrays[field_name].is_input
+            dev_set.field_arrays[field_name].is_target = self.field_arrays[field_name].is_target
+
         return train_set, dev_set
 
     @classmethod
-    def read_csv(cls, csv_path, headers=None, sep='\t', dropna=True):
-        with open(csv_path, 'r') as f:
+    def read_csv(cls, csv_path, headers=None, sep=",", dropna=True):
+        """Load data from a CSV file and return a DataSet object.
+
+        :param str csv_path: path to the CSV file
+        :param List[str] or Tuple[str] headers: headers of the CSV file
+        :param str sep: delimiter in CSV file. Default: ","
+        :param bool dropna: If True, drop rows that have less entries than headers.
+        :return DataSet dataset:
+
+        """
+        with open(csv_path, "r") as f:
             start_idx = 0
             if headers is None:
                 headers = f.readline().rstrip('\r\n')
                 headers = headers.split(sep)
                 start_idx += 1
             else:
-                assert isinstance(headers, (list, tuple)), "headers should be list or tuple, not {}.".format(type(headers))
+                assert isinstance(headers, (list, tuple)), "headers should be list or tuple, not {}.".format(
+                    type(headers))
             _dict = {}
             for col in headers:
                 _dict[col] = []
             for line_idx, line in enumerate(f, start_idx):
-                contents = line.split(sep)
-                if len(contents)!=len(headers):
+                contents = line.rstrip('\r\n').split(sep)
+                if len(contents) != len(headers):
                     if dropna:
                         continue
                     else:
-                        #TODO change error type
-                        raise ValueError("Line {} has {} parts, while header has {} parts."\
-                            .format(line_idx, len(contents), len(headers)))
+                        # TODO change error type
+                        raise ValueError("Line {} has {} parts, while header has {} parts." \
+                                         .format(line_idx, len(contents), len(headers)))
                 for header, content in zip(headers, contents):
                     _dict[header].append(content)
         return cls(_dict)
+
+    # def read_pos(self):
+    #     return DataLoaderRegister.get_reader('read_pos')
+
+    def save(self, path):
+        """Save the DataSet object as pickle.
+
+        :param str path: the path to the pickle
+        """
+        with open(path, 'wb') as f:
+            pickle.dump(self, f)
+
+    @staticmethod
+    def load(path):
+        """Load a DataSet object from pickle.
+
+        :param str path: the path to the pickle
+        :return DataSet data_set:
+        """
+        with open(path, 'rb') as f:
+            return pickle.load(f)
+
+
+def construct_dataset(sentences):
+    """Construct a data set from a list of sentences.
+
+    :param sentences: list of list of str
+    :return dataset: a DataSet object
+    """
+    dataset = DataSet()
+    for sentence in sentences:
+        instance = Instance()
+        instance['raw_sentence'] = sentence
+        dataset.append(instance)
+    return dataset

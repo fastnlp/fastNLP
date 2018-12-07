@@ -1,14 +1,15 @@
-import torch
-from collections import defaultdict
 import re
+from collections import defaultdict
 
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.vocabulary import Vocabulary
+import torch
+
 from fastNLP.core.batch import Batch
+from fastNLP.core.dataset import DataSet
 from fastNLP.core.sampler import SequentialSampler
+from fastNLP.core.vocabulary import Vocabulary
 
 
-class Processor:
+class Processor(object):
     def __init__(self, field_name, new_added_field_name):
         self.field_name = field_name
         if new_added_field_name is None:
@@ -17,7 +18,7 @@ class Processor:
             self.new_added_field_name = new_added_field_name
 
     def process(self, *args, **kwargs):
-        pass
+        raise NotImplementedError
 
     def __call__(self, *args, **kwargs):
         return self.process(*args, **kwargs)
@@ -132,13 +133,14 @@ class Num2TagProcessor(Processor):
 
 
 class IndexerProcessor(Processor):
-    def __init__(self, vocab, field_name, new_added_field_name, delete_old_field=False):
+    def __init__(self, vocab, field_name, new_added_field_name, delete_old_field=False, is_input=True):
 
         assert isinstance(vocab, Vocabulary), "Only Vocabulary class is allowed, not {}.".format(type(vocab))
 
         super(IndexerProcessor, self).__init__(field_name, new_added_field_name)
         self.vocab = vocab
         self.delete_old_field = delete_old_field
+        self.is_input = is_input
 
     def set_vocab(self, vocab):
         assert isinstance(vocab, Vocabulary), "Only Vocabulary class is allowed, not {}.".format(type(vocab))
@@ -146,13 +148,14 @@ class IndexerProcessor(Processor):
         self.vocab = vocab
 
     def process(self, dataset):
-        assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
+        assert isinstance(dataset, DataSet), "Only DataSet class is allowed, not {}.".format(type(dataset))
         for ins in dataset:
             tokens = ins[self.field_name]
             index = [self.vocab.to_index(token) for token in tokens]
             ins[self.new_added_field_name] = index
 
-        dataset._set_need_tensor(**{self.new_added_field_name: True})
+        if self.is_input:
+            dataset.set_input(self.new_added_field_name)
 
         if self.delete_old_field:
             dataset.delete_field(self.field_name)
@@ -161,6 +164,9 @@ class IndexerProcessor(Processor):
 
 
 class VocabProcessor(Processor):
+    """Build vocabulary with a field in the data set.
+
+    """
     def __init__(self, field_name):
         super(VocabProcessor, self).__init__(field_name, None)
         self.vocab = Vocabulary()
@@ -178,16 +184,19 @@ class VocabProcessor(Processor):
 
 
 class SeqLenProcessor(Processor):
-    def __init__(self, field_name, new_added_field_name='seq_lens'):
+    def __init__(self, field_name, new_added_field_name='seq_lens', is_input=True):
         super(SeqLenProcessor, self).__init__(field_name, new_added_field_name)
+        self.is_input = is_input
 
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
         for ins in dataset:
             length = len(ins[self.field_name])
             ins[self.new_added_field_name] = length
-        dataset._set_need_tensor(**{self.new_added_field_name: True})
+        if self.is_input:
+            dataset.set_input(self.new_added_field_name)
         return dataset
+
 
 class ModelProcessor(Processor):
     def __init__(self, model, seq_len_field_name='seq_lens', batch_size=32):
@@ -238,6 +247,7 @@ class ModelProcessor(Processor):
         device = torch.device(device)
         self.model.to(device)
 
+
 class Index2WordProcessor(Processor):
     def __init__(self, vocab, field_name, new_added_field_name):
         super(Index2WordProcessor, self).__init__(field_name, new_added_field_name)
@@ -251,26 +261,28 @@ class Index2WordProcessor(Processor):
 
 
 class SetTensorProcessor(Processor):
+    # TODO: remove it. It is strange.
     def __init__(self, field_dict, default=False):
         super(SetTensorProcessor, self).__init__(None, None)
         self.field_dict = field_dict
         self.default = default
 
     def process(self, dataset):
-        set_dict = {name: self.default for name in dataset.get_fields().keys()}
+        set_dict = {name: self.default for name in dataset.get_all_fields().keys()}
         set_dict.update(self.field_dict)
         dataset._set_need_tensor(**set_dict)
         return dataset
 
 
 class SetIsTargetProcessor(Processor):
+    # TODO; remove it.
     def __init__(self, field_dict, default=False):
         super(SetIsTargetProcessor, self).__init__(None, None)
         self.field_dict = field_dict
         self.default = default
 
     def process(self, dataset):
-        set_dict = {name: self.default for name in dataset.get_fields().keys()}
+        set_dict = {name: self.default for name in dataset.get_all_fields().keys()}
         set_dict.update(self.field_dict)
         dataset.set_target(**set_dict)
         return dataset

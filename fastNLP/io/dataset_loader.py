@@ -1,9 +1,8 @@
-#TODO: need fix for current DataSet
 import os
 
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
-from fastNLP.io.base_loader import BaseLoader
+from fastNLP.io.base_loader import DataLoaderRegister
 
 
 def convert_seq_dataset(data):
@@ -20,8 +19,7 @@ def convert_seq_dataset(data):
     """
     dataset = DataSet()
     for word_seq in data:
-        x = TextField(word_seq, is_target=False)
-        dataset.append(Instance(word_seq=x))
+        dataset.append(Instance(word_seq=word_seq))
     return dataset
 
 
@@ -40,11 +38,7 @@ def convert_seq2tag_dataset(data):
     """
     dataset = DataSet()
     for sample in data:
-        word_seq, label = sample[0], sample[1]
-        ins = Instance()
-        ins.add_field("word_seq", TextField(word_seq, is_target=False)) \
-            .add_field("label", LabelField(label, is_target=True))
-        dataset.append(ins)
+        dataset.append(Instance(word_seq=sample[0], label=sample[1]))
     return dataset
 
 
@@ -63,19 +57,12 @@ def convert_seq2seq_dataset(data):
     """
     dataset = DataSet()
     for sample in data:
-        word_seq, label_seq = sample[0], sample[1]
-        ins = Instance()
-        ins.add_field("word_seq", TextField(word_seq, is_target=False)) \
-            .add_field("label_seq", TextField(label_seq, is_target=True))
-        dataset.append(ins)
+        dataset.append(Instance(word_seq=sample[0], label_seq=sample[1]))
     return dataset
 
 
-class DataSetLoader(BaseLoader):
+class DataSetLoader:
     """"loader for data sets"""
-
-    def __init__(self):
-        super(DataSetLoader, self).__init__()
 
     def load(self, path):
         """ load data in `path` into a dataset
@@ -88,7 +75,20 @@ class DataSetLoader(BaseLoader):
         raise NotImplementedError
 
 
-@DataSet.set_reader('read_raw')
+class NativeDataSetLoader(DataSetLoader):
+    def __init__(self):
+        super(NativeDataSetLoader, self).__init__()
+
+    def load(self, path):
+        ds = DataSet.read_csv(path, headers=("raw_sentence", "label"), sep="\t")
+        ds.set_input("raw_sentence")
+        ds.set_target("label")
+        return ds
+
+
+DataLoaderRegister.set_reader(NativeDataSetLoader, 'read_naive')
+
+
 class RawDataSetLoader(DataSetLoader):
     def __init__(self):
         super(RawDataSetLoader, self).__init__()
@@ -104,7 +104,9 @@ class RawDataSetLoader(DataSetLoader):
         return convert_seq_dataset(data)
 
 
-@DataSet.set_reader('read_pos')
+DataLoaderRegister.set_reader(RawDataSetLoader, 'read_rawdata')
+
+
 class POSDataSetLoader(DataSetLoader):
     """Dataset Loader for POS Tag datasets.
 
@@ -174,7 +176,9 @@ class POSDataSetLoader(DataSetLoader):
         return convert_seq2seq_dataset(data)
 
 
-@DataSet.set_reader('read_tokenize')
+DataLoaderRegister.set_reader(POSDataSetLoader, 'read_pos')
+
+
 class TokenizeDataSetLoader(DataSetLoader):
     """
     Data set loader for tokenization data sets
@@ -234,7 +238,6 @@ class TokenizeDataSetLoader(DataSetLoader):
         return convert_seq2seq_dataset(data)
 
 
-@DataSet.set_reader('read_class')
 class ClassDataSetLoader(DataSetLoader):
     """Loader for classification data sets"""
 
@@ -273,7 +276,6 @@ class ClassDataSetLoader(DataSetLoader):
         return convert_seq2tag_dataset(data)
 
 
-@DataSet.set_reader('read_conll')
 class ConllLoader(DataSetLoader):
     """loader for conll format files"""
 
@@ -315,7 +317,6 @@ class ConllLoader(DataSetLoader):
         pass
 
 
-@DataSet.set_reader('read_lm')
 class LMDataSetLoader(DataSetLoader):
     """Language Model Dataset Loader
 
@@ -352,7 +353,6 @@ class LMDataSetLoader(DataSetLoader):
         pass
 
 
-@DataSet.set_reader('read_people_daily')
 class PeopleDailyCorpusLoader(DataSetLoader):
     """
         People Daily Corpus: Chinese word segmentation, POS tag, NER
@@ -403,10 +403,19 @@ class PeopleDailyCorpusLoader(DataSetLoader):
             pos_tag_examples.append([sent_words, sent_pos_tag])
             ner_examples.append([sent_words, sent_ner])
         # List[List[List[str], List[str]]]
-        return pos_tag_examples, ner_examples
+        # ner_examples not used
+        return self.convert(pos_tag_examples)
 
     def convert(self, data):
-        pass
+        data_set = DataSet()
+        for item in data:
+            sent_words, sent_pos_tag = item[0], item[1]
+            data_set.append(Instance(words=sent_words, tags=sent_pos_tag))
+        data_set.apply(lambda ins: len(ins), new_field_name="seq_len")
+        data_set.set_target("tags")
+        data_set.set_input("sent_words")
+        data_set.set_input("seq_len")
+        return data_set
 
 
 class SNLIDataSetLoader(DataSetLoader):
@@ -462,17 +471,13 @@ class SNLIDataSetLoader(DataSetLoader):
         for example in data:
             p, h, l = example
             # list, list, str
-            x1 = TextField(p, is_target=False)
-            x2 = TextField(h, is_target=False)
-            x1_len = TextField([1] * len(p), is_target=False)
-            x2_len = TextField([1] * len(h), is_target=False)
-            y = LabelField(l, is_target=True)
             instance = Instance()
-            instance.add_field("premise", x1)
-            instance.add_field("hypothesis", x2)
-            instance.add_field("premise_len", x1_len)
-            instance.add_field("hypothesis_len", x2_len)
-            instance.add_field("truth", y)
+            instance.add_field("premise", p)
+            instance.add_field("hypothesis", h)
+            instance.add_field("truth", l)
             data_set.append(instance)
-
+        data_set.apply(lambda ins: len(ins["premise"]), new_field_name="premise_len")
+        data_set.apply(lambda ins: len(ins["hypothesis"]), new_field_name="hypothesis_len")
+        data_set.set_input("premise", "hypothesis", "premise_len", "hypothesis_len")
+        data_set.set_target("truth")
         return data_set

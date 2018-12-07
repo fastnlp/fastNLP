@@ -3,12 +3,11 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
-from fastNLP.io.config_loader import ConfigLoader, ConfigSection
+from fastNLP.io.config_io import ConfigLoader, ConfigSection
 from fastNLP.core.trainer import SeqLabelTrainer
 from fastNLP.io.dataset_loader import BaseLoader, TokenizeDataSetLoader
 from fastNLP.core.utils import load_pickle
-from fastNLP.io.model_saver import ModelSaver
-from fastNLP.io.model_loader import ModelLoader
+from fastNLP.io.model_io import ModelLoader, ModelSaver
 from fastNLP.core.tester import SeqLabelTester
 from fastNLP.models.sequence_modeling import AdvSeqLabel
 from fastNLP.core.predictor import SeqLabelInfer

@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 
@@ -25,6 +26,7 @@ class Batch(object):
         self.as_numpy = as_numpy
         self.idx_list = None
         self.curidx = 0
+        self.num_batches = len(dataset)//batch_size + int(len(dataset)%batch_size!=0)
 
     def __iter__(self):
         self.idx_list = self.sampler(self.dataset)
@@ -41,11 +43,11 @@ class Batch(object):
 
             indices = self.idx_list[self.curidx:endidx]
 
-            for field_name, field in self.dataset.get_fields().items():
+            for field_name, field in self.dataset.get_all_fields().items():
                 if field.is_target or field.is_input:
                     batch = field.get(indices)
                     if not self.as_numpy:
-                        batch = torch.from_numpy(batch)
+                        batch = to_tensor(batch, field.dtype)
                     if field.is_target:
                         batch_y[field_name] = batch
                     if field.is_input:
@@ -54,3 +56,14 @@ class Batch(object):
             self.curidx = endidx
 
             return batch_x, batch_y
+
+    def __len__(self):
+        return self.num_batches
+
+
+def to_tensor(batch, dtype):
+    if dtype in (int, np.int8, np.int16, np.int32, np.int64):
+        batch = torch.LongTensor(batch)
+    if dtype in (float, np.float32, np.float64):
+        batch = torch.FloatTensor(batch)
+    return batch

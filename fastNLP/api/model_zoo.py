@@ -1,11 +1,11 @@
-import torch
-
 import hashlib
 import os
 import re
 import shutil
 import sys
 import tempfile
+
+import torch
 
 try:
     from requests.utils import urlparse
@@ -132,7 +132,3 @@ if tqdm is None:
 
             sys.stderr.write('\n')
 
-
-if __name__ == '__main__':
-    pipeline = load_url('http://10.141.208.102:5000/file/download/infer_context-4e86fd93.pkl', model_dir='.')
-    print(type(pipeline))

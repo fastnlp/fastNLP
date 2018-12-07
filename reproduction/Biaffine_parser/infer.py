@@ -5,7 +5,7 @@ sys.path.extend(['/home/yfshao/workdir/dev_fastnlp'])
 
 from fastNLP.api.processor import *
 from fastNLP.models.biaffine_parser import BiaffineParser
-from fastNLP.io.config_loader import ConfigSection, ConfigLoader
+from fastNLP.io.config_io import ConfigSection, ConfigLoader
 
 import _pickle as pickle
 import torch
