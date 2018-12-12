@@ -1,5 +1,4 @@
-from collections import defaultdict
-
+import numpy as np
 import torch
 
 
@@ -7,25 +6,27 @@ class Batch(object):
     """Batch is an iterable object which iterates over mini-batches.
 
     ::
-        for batch_x, batch_y in Batch(data_set):
+        for batch_x, batch_y in Batch(data_set, batch_size=16, sampler=SequentialSampler()):
+
 
     """
 
-    def __init__(self, dataset, batch_size, sampler, use_cuda):
+    def __init__(self, dataset, batch_size, sampler, as_numpy=False):
         """
 
         :param dataset: a DataSet object
         :param batch_size: int, the size of the batch
         :param sampler: a Sampler object
-        :param use_cuda: bool, whether to use GPU
+        :param as_numpy: bool. If True, return Numpy array. Otherwise, return torch tensors.
 
         """
         self.dataset = dataset
         self.batch_size = batch_size
         self.sampler = sampler
-        self.use_cuda = use_cuda
+        self.as_numpy = as_numpy
         self.idx_list = None
         self.curidx = 0
+        self.num_batches = len(dataset)//batch_size + int(len(dataset)%batch_size!=0)
 
     def __iter__(self):
         self.idx_list = self.sampler(self.dataset)
@@ -34,41 +35,35 @@ class Batch(object):
         return self
 
     def __next__(self):
-        """
-
-        :return batch_x: dict of (str: torch.LongTensor), which means (field name: tensor of shape [batch_size, padding_length])
-                         E.g.
-                         ::
-                         {'text': tensor([[ 0,  1,  2,  3,  0,  0,  0], 4,  5,  2,  6,  7,  8,  9]]), 'text_origin_len': [4, 7]})
-
-                batch_y: dict of (str: torch.LongTensor), which means (field name: tensor of shape [batch_size, padding_length])
-                All tensors in both batch_x and batch_y will be cuda tensors if use_cuda is True.
-
-        """
         if self.curidx >= len(self.idx_list):
             raise StopIteration
         else:
             endidx = min(self.curidx + self.batch_size, len(self.idx_list))
-            padding_length = {field_name: max(field_length[self.curidx: endidx])
-                              for field_name, field_length in self.lengths.items()}
-            batch_x, batch_y = defaultdict(list), defaultdict(list)
+            batch_x, batch_y = {}, {}
 
-            # transform index to tensor and do padding for sequences
-            for idx in range(self.curidx, endidx):
-                x, y = self.dataset.to_tensor(idx, padding_length)
-                for name, tensor in x.items():
-                    batch_x[name].append(tensor)
-                for name, tensor in y.items():
-                    batch_y[name].append(tensor)
+            indices = self.idx_list[self.curidx:endidx]
 
-            # combine instances to form a batch
-            for batch in (batch_x, batch_y):
-                for name, tensor_list in batch.items():
-                    if self.use_cuda:
-                        batch[name] = torch.stack(tensor_list, dim=0).cuda()
-                    else:
-                        batch[name] = torch.stack(tensor_list, dim=0)
+            for field_name, field in self.dataset.get_all_fields().items():
+                if field.is_target or field.is_input:
+                    batch = field.get(indices)
+                    if not self.as_numpy:
+                        batch = to_tensor(batch, field.dtype)
+                    if field.is_target:
+                        batch_y[field_name] = batch
+                    if field.is_input:
+                        batch_x[field_name] = batch
 
             self.curidx = endidx
+
             return batch_x, batch_y
 
+    def __len__(self):
+        return self.num_batches
+
+
+def to_tensor(batch, dtype):
+    if dtype in (int, np.int8, np.int16, np.int32, np.int64):
+        batch = torch.LongTensor(batch)
+    if dtype in (float, np.float32, np.float64):
+        batch = torch.FloatTensor(batch)
+    return batch

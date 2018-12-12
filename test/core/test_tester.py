@@ -1,57 +1,67 @@
-import os
 import unittest
-
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.metrics import SeqLabelEvaluator
-from fastNLP.core.field import TextField, LabelField
-from fastNLP.core.instance import Instance
-from fastNLP.core.tester import SeqLabelTester
-from fastNLP.models.sequence_modeling import SeqLabeling
 
 data_name = "pku_training.utf8"
 pickle_path = "data_for_tests"
 
 
+import numpy as np
+import torch.nn.functional as F
+from torch import nn
+import time
+from fastNLP.core.utils import CheckError
+from fastNLP.core.dataset import DataSet
+from fastNLP.core.instance import Instance
+from fastNLP.core.losses import BCELoss
+from fastNLP.core.losses import CrossEntropyLoss
+from fastNLP.core.metrics import AccuracyMetric
+from fastNLP.core.optimizer import SGD
+from fastNLP.core.tester import Tester
+from fastNLP.models.base_model import NaiveClassifier
+
+def prepare_fake_dataset():
+    mean = np.array([-3, -3])
+    cov = np.array([[1, 0], [0, 1]])
+    class_A = np.random.multivariate_normal(mean, cov, size=(1000,))
+
+    mean = np.array([3, 3])
+    cov = np.array([[1, 0], [0, 1]])
+    class_B = np.random.multivariate_normal(mean, cov, size=(1000,))
+
+    data_set = DataSet([Instance(x=[float(item[0]), float(item[1])], y=[0.0]) for item in class_A] +
+                       [Instance(x=[float(item[0]), float(item[1])], y=[1.0]) for item in class_B])
+    return data_set
+
+
+def prepare_fake_dataset2(*args, size=100):
+    ys = np.random.randint(4, size=100, dtype=np.int64)
+    data = {'y': ys}
+    for arg in args:
+        data[arg] = np.random.randn(size, 5)
+    return DataSet(data=data)
+
 class TestTester(unittest.TestCase):
     def test_case_1(self):
-        model_args = {
-            "vocab_size": 10,
-            "word_emb_dim": 100,
-            "rnn_hidden_units": 100,
-            "num_classes": 5
-        }
-        valid_args = {"save_output": True, "validate_in_training": True, "save_dev_input": True,
-                      "save_loss": True, "batch_size": 2, "pickle_path": "./save/",
-                      "use_cuda": False, "print_every_step": 1, "evaluator": SeqLabelEvaluator()}
+        # 检查报错提示能否正确提醒用户
+        dataset = prepare_fake_dataset2('x1', 'x_unused')
+        dataset.rename_field('x_unused', 'x2')
+        dataset.set_input('x1', 'x2')
+        dataset.set_target('y', 'x1')
+        class Model(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fc = nn.Linear(5, 4)
+            def forward(self, x1, x2):
+                x1 = self.fc(x1)
+                x2 = self.fc(x2)
+                x = x1 + x2
+                time.sleep(0.1)
+                # loss = F.cross_entropy(x, y)
+                return {'preds': x}
 
-        train_data = [
-            [['a', 'b', 'c', 'd', 'e'], ['a', '@', 'c', 'd', 'e']],
-            [['a', '@', 'c', 'd', 'e'], ['a', '@', 'c', 'd', 'e']],
-            [['a', 'b', '#', 'd', 'e'], ['a', '@', 'c', 'd', 'e']],
-            [['a', 'b', 'c', '?', 'e'], ['a', '@', 'c', 'd', 'e']],
-            [['a', 'b', 'c', 'd', '$'], ['a', '@', 'c', 'd', 'e']],
-            [['!', 'b', 'c', 'd', 'e'], ['a', '@', 'c', 'd', 'e']],
-        ]
-        vocab = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, '!': 5, '@': 6, '#': 7, '$': 8, '?': 9}
-        label_vocab = {'a': 0, '@': 1, 'c': 2, 'd': 3, 'e': 4}
-
-        data_set = DataSet()
-        for example in train_data:
-            text, label = example[0], example[1]
-            x = TextField(text, False)
-            x_len = LabelField(len(text), is_target=False)
-            y = TextField(label, is_target=True)
-            ins = Instance(word_seq=x, truth=y, word_seq_origin_len=x_len)
-            data_set.append(ins)
-
-        data_set.index_field("word_seq", vocab)
-        data_set.index_field("truth", label_vocab)
-
-        model = SeqLabeling(model_args)
-
-        tester = SeqLabelTester(**valid_args)
-        tester.test(network=model, dev_data=data_set)
-        # If this can run, everything is OK.
-
-        os.system("rm -rf save")
-        print("pickle path deleted")
+        model = Model()
+        with self.assertRaises(NameError):
+            tester = Tester(
+                data=dataset,
+                model=model,
+                metrics=AccuracyMetric())
+            tester.test()

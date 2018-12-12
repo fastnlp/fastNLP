@@ -1,10 +1,7 @@
-import numpy as np
 import torch
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.preprocess import load_pickle
 from fastNLP.core.sampler import SequentialSampler
-from fastNLP.loader.dataset_loader import convert_seq2seq_dataset, convert_seq2tag_dataset, convert_seq_dataset
 
 
 class Predictor(object):
@@ -16,42 +13,29 @@ class Predictor(object):
     Currently, Predictor does not support GPU.
     """
 
-    def __init__(self, pickle_path, post_processor):
-        """
-
-        :param pickle_path: str, the path to the pickle files.
-        :param post_processor: a function or callable object, that takes list of batch outputs as input
-
-        """
+    def __init__(self):
         self.batch_size = 1
         self.batch_output = []
-        self.pickle_path = pickle_path
-        self._post_processor = post_processor
-        self.label_vocab = load_pickle(self.pickle_path, "label2id.pkl")
-        self.word_vocab = load_pickle(self.pickle_path, "word2id.pkl")
 
     def predict(self, network, data):
         """Perform inference using the trained model.
 
         :param network: a PyTorch model (cpu)
         :param data: a DataSet object.
-        :return: list of list of strings, [num_examples, tag_seq_length]
+        :return: list of batch outputs
         """
-        # transform strings into DataSet object
-        # data = self.prepare_input(data)
-
         # turn on the testing mode; clean up the history
         self.mode(network, test=True)
         batch_output = []
 
-        data_iterator = Batch(data, batch_size=self.batch_size, sampler=SequentialSampler(), use_cuda=False)
+        data_iterator = Batch(data, batch_size=self.batch_size, sampler=SequentialSampler(), as_numpy=False)
 
         for batch_x, _ in data_iterator:
             with torch.no_grad():
                 prediction = self.data_forward(network, batch_x)
             batch_output.append(prediction)
 
-        return self._post_processor(batch_output, self.label_vocab)
+        return batch_output
 
     def mode(self, network, test=True):
         if test:
@@ -63,51 +47,3 @@ class Predictor(object):
         """Forward through network."""
         y = network(**x)
         return y
-
-    def prepare_input(self, data):
-        """Transform two-level list of strings into an DataSet object.
-        In the training pipeline, this is done by Preprocessor. But in inference time, we do not call Preprocessor.
-
-        :param data: list of list of strings.
-                ::
-                [
-                    [word_11, word_12, ...],
-                    [word_21, word_22, ...],
-                    ...
-                ]
-
-        :return data_set: a DataSet instance.
-        """
-        assert isinstance(data, list)
-        data = convert_seq_dataset(data)
-        data.index_field("word_seq", self.word_vocab)
-
-
-class SeqLabelInfer(Predictor):
-    def __init__(self, pickle_path):
-        print(
-            "[FastNLP Warning] SeqLabelInfer will be deprecated. Please use Predictor directly.")
-        super(SeqLabelInfer, self).__init__(pickle_path, seq_label_post_processor)
-
-
-class ClassificationInfer(Predictor):
-    def __init__(self, pickle_path):
-        print(
-            "[FastNLP Warning] ClassificationInfer will be deprecated. Please use Predictor directly.")
-        super(ClassificationInfer, self).__init__(pickle_path, text_classify_post_processor)
-
-
-def seq_label_post_processor(batch_outputs, label_vocab):
-    results = []
-    for batch in batch_outputs:
-        for example in np.array(batch):
-            results.append([label_vocab.to_word(int(x)) for x in example])
-    return results
-
-
-def text_classify_post_processor(batch_outputs, label_vocab):
-    results = []
-    for batch_out in batch_outputs:
-        idx = np.argmax(batch_out.detach().numpy(), axis=-1)
-        results.extend([label_vocab.to_word(i) for i in idx])
-    return results

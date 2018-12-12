@@ -4,12 +4,13 @@ from fastNLP.modules.utils import initial_parameter
 
 
 class MLP(nn.Module):
-    def __init__(self, size_layer, activation='relu', initial_method=None):
+    def __init__(self, size_layer, activation='relu', initial_method=None, dropout=0.0):
         """Multilayer Perceptrons as a decoder
 
         :param size_layer: list of int, define the size of MLP layers.
         :param activation: str or function, the activation function for hidden layers.
         :param initial_method: str, the name of init method.
+        :param dropout: float, the probability of dropout.
 
         .. note::
             There is no activation function applying on output layer.
@@ -23,6 +24,8 @@ class MLP(nn.Module):
                 self.output = nn.Linear(size_layer[i-1], size_layer[i])
             else:
                 self.hiddens.append(nn.Linear(size_layer[i-1], size_layer[i]))
+
+        self.dropout = nn.Dropout(p=dropout)
 
         actives = {
             'relu': nn.ReLU(),
@@ -38,8 +41,8 @@ class MLP(nn.Module):
 
     def forward(self, x):
         for layer in self.hiddens:
-            x = self.hidden_active(layer(x))
-        x = self.output(x)
+            x = self.dropout(self.hidden_active(layer(x)))
+        x = self.dropout(self.output(x))
         return x
 
 

@@ -1,91 +1,88 @@
+from collections import defaultdict
+
 import torch
+from torch import nn
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.metrics import Evaluator
-from fastNLP.core.sampler import RandomSampler
-from fastNLP.saver.logger import create_logger
-
-logger = create_logger(__name__, "./train_test.log")
+from fastNLP.core.dataset import DataSet
+from fastNLP.core.metrics import _prepare_metrics
+from fastNLP.core.sampler import SequentialSampler
+from fastNLP.core.utils import CheckError
+from fastNLP.core.utils import _build_args
+from fastNLP.core.utils import _check_loss_evaluate
+from fastNLP.core.utils import _move_dict_value_to_device
+from fastNLP.core.utils import get_func_signature
 
 
 class Tester(object):
     """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
 
-    def __init__(self, **kwargs):
-        """
-        :param kwargs: a dict-like object that has __getitem__ method, can be accessed by "test_args["key_str"]"
-        """
+    def __init__(self, data, model, metrics, batch_size=16, use_cuda=False, verbose=1):
         super(Tester, self).__init__()
-        """
-            "default_args" provides default value for important settings. 
-            The initialization arguments "kwargs" with the same key (name) will override the default value. 
-            "kwargs" must have the same type as "default_args" on corresponding keys. 
-            Otherwise, error will raise.
-        """
-        default_args = {"batch_size": 8,
-                        "use_cuda": False,
-                        "pickle_path": "./save/",
-                        "model_name": "dev_best_model.pkl",
-                        "evaluator": Evaluator()
-                        }
-        """
-            "required_args" is the collection of arguments that users must pass to Trainer explicitly. 
-            This is used to warn users of essential settings in the training. 
-            Specially, "required_args" does not have default value, so they have nothing to do with "default_args".
-        """
-        required_args = {}
 
-        for req_key in required_args:
-            if req_key not in kwargs:
-                logger.error("Tester lacks argument {}".format(req_key))
-                raise ValueError("Tester lacks argument {}".format(req_key))
+        if not isinstance(data, DataSet):
+            raise TypeError(f"The type of data must be `fastNLP.DataSet`, got `{type(data)}`.")
+        if not isinstance(model, nn.Module):
+            raise TypeError(f"The type of model must be `torch.nn.Module`, got `{type(model)}`.")
 
-        for key in default_args:
-            if key in kwargs:
-                if isinstance(kwargs[key], type(default_args[key])):
-                    default_args[key] = kwargs[key]
-                else:
-                    msg = "Argument %s type mismatch: expected %s while get %s" % (
-                        key, type(default_args[key]), type(kwargs[key]))
-                    logger.error(msg)
-                    raise ValueError(msg)
-            else:
-                # Tester doesn't care about extra arguments
-                pass
-        print(default_args)
+        self.metrics = _prepare_metrics(metrics)
 
-        self.batch_size = default_args["batch_size"]
-        self.pickle_path = default_args["pickle_path"]
-        self.use_cuda = default_args["use_cuda"]
-        self._evaluator = default_args["evaluator"]
+        self.data = data
+        self.use_cuda = use_cuda
+        self.batch_size = batch_size
+        self.verbose = verbose
+        self._model_device = model.parameters().__next__().device
 
-        self._model = None
-        self.eval_history = []  # evaluation results of all batches
-
-    def test(self, network, dev_data):
         if torch.cuda.is_available() and self.use_cuda:
-            self._model = network.cuda()
+            self._model = model.cuda()
         else:
-            self._model = network
+            self._model = model
 
+        # check predict
+        if hasattr(self._model, 'predict'):
+            self._predict_func = self._model.predict
+            if not callable(self._predict_func):
+                _model_name = model.__class__.__name__
+                raise TypeError(f"`{_model_name}.predict` must be callable to be used "
+                                f"for evaluation, not `{type(self._predict_func)}`.")
+        else:
+            self._predict_func = self._model.forward
+
+    def test(self):
         # turn on the testing mode; clean up the history
-        self.mode(network, is_test=True)
-        self.eval_history.clear()
-        output_list = []
-        truth_list = []
-
-        data_iterator = Batch(dev_data, self.batch_size, sampler=RandomSampler(), use_cuda=self.use_cuda)
-
-        for batch_x, batch_y in data_iterator:
+        network = self._model
+        self._mode(network, is_test=True)
+        data_iterator = Batch(self.data, self.batch_size, sampler=SequentialSampler(), as_numpy=False)
+        eval_results = {}
+        try:
             with torch.no_grad():
-                prediction = self.data_forward(network, batch_x)
-            output_list.append(prediction)
-            truth_list.append(batch_y)
-        eval_results = self.evaluate(output_list, truth_list)
-        print("[tester] {}".format(self.print_eval_results(eval_results)))
-        logger.info("[tester] {}".format(self.print_eval_results(eval_results)))
+                for batch_x, batch_y in data_iterator:
+                    _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
+                    pred_dict = self._data_forward(self._predict_func, batch_x)
+                    if not isinstance(pred_dict, dict):
+                        raise TypeError(f"The return value of {get_func_signature(self._predict_func)} " 
+                                                         f"must be `dict`, got {type(pred_dict)}.")
+                    for metric in self.metrics:
+                        metric(pred_dict, batch_y)
+                for metric in self.metrics:
+                    eval_result = metric.get_metric()
+                    if not isinstance(eval_result, dict):
+                        raise TypeError(f"The return value of {get_func_signature(metric.get_metric)} must be "
+                                        f"`dict`, got {type(eval_result)}")
+                    metric_name = metric.__class__.__name__
+                    eval_results[metric_name] = eval_result
+        except CheckError as e:
+            prev_func_signature = get_func_signature(self._predict_func)
+            _check_loss_evaluate(prev_func_signature=prev_func_signature, func_signature=e.func_signature,
+                                 check_res=e.check_res, pred_dict=pred_dict, target_dict=batch_y,
+                                 dataset=self.data, check_level=0)
 
-    def mode(self, model, is_test=False):
+        if self.verbose >= 1:
+            print("[tester] \n{}".format(self._format_eval_results(eval_results)))
+        self._mode(network, is_test=False)
+        return eval_results
+
+    def _mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.
 
         :param model: a PyTorch model
@@ -97,45 +94,21 @@ class Tester(object):
         else:
             model.train()
 
-    def data_forward(self, network, x):
+    def _data_forward(self, func, x):
         """A forward pass of the model. """
-        y = network(**x)
+        x = _build_args(func, **x)
+        y = func(**x)
         return y
 
-    def evaluate(self, predict, truth):
-        """Compute evaluation metrics.
-
-        :param predict: list of Tensor
-        :param truth: list of dict
-        :return eval_results: can be anything. It will be stored in self.eval_history
-        """
-        return self._evaluator(predict, truth)
-
-    def print_eval_results(self, results):
+    def _format_eval_results(self, results):
         """Override this method to support more print formats.
 
         :param results: dict, (str: float) is (metrics name: value)
 
         """
-        return ", ".join([str(key) + "=" + str(value) for key, value in results.items()])
-
-
-class SeqLabelTester(Tester):
-    def __init__(self, **test_args):
-        print(
-            "[FastNLP Warning] SeqLabelTester will be deprecated. Please use Tester directly.")
-        super(SeqLabelTester, self).__init__(**test_args)
-
-
-class ClassificationTester(Tester):
-    def __init__(self, **test_args):
-        print(
-            "[FastNLP Warning] ClassificationTester will be deprecated. Please use Tester directly.")
-        super(ClassificationTester, self).__init__(**test_args)
-
-
-class SNLITester(Tester):
-    def __init__(self, **test_args):
-        print(
-            "[FastNLP Warning] SNLITester will be deprecated. Please use Tester directly.")
-        super(SNLITester, self).__init__(**test_args)
+        _str = ''
+        for metric_name, metric_result in results.items():
+            _str += metric_name + ': '
+            _str += ", ".join([str(key) + "=" + str(value) for key, value in metric_result.items()])
+            _str += '\n'
+        return _str[:-1]

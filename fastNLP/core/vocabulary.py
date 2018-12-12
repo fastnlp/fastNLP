@@ -1,32 +1,33 @@
-from copy import deepcopy
-
-DEFAULT_PADDING_LABEL = '<pad>'  # dict index = 0
-DEFAULT_UNKNOWN_LABEL = '<unk>'  # dict index = 1
-DEFAULT_RESERVED_LABEL = ['<reserved-2>',
-                          '<reserved-3>',
-                          '<reserved-4>']  # dict index = 2~4
-
-DEFAULT_WORD_TO_INDEX = {DEFAULT_PADDING_LABEL: 0, DEFAULT_UNKNOWN_LABEL: 1,
-                         DEFAULT_RESERVED_LABEL[0]: 2, DEFAULT_RESERVED_LABEL[1]: 3,
-                         DEFAULT_RESERVED_LABEL[2]: 4}
-
-
-def isiterable(p_object):
-    try:
-        it = iter(p_object)
-    except TypeError:
-        return False
-    return True
+from collections import Counter
 
 
 def check_build_vocab(func):
+    """A decorator to make sure the indexing is built before used.
+
+    """
+
     def _wrapper(self, *args, **kwargs):
-        if self.word2idx is None:
+        if self.word2idx is None or self.rebuild is True:
             self.build_vocab()
-            self.build_reverse_vocab()
-        elif self.idx2word is None:
-            self.build_reverse_vocab()
         return func(self, *args, **kwargs)
+
+    return _wrapper
+
+
+def check_build_status(func):
+    """A decorator to check whether the vocabulary updates after the last build.
+
+    """
+
+    def _wrapper(self, *args, **kwargs):
+        if self.rebuild is False:
+            self.rebuild = True
+            if self.max_size is not None and len(self.word_count) >= self.max_size:
+                print("[Warning] Vocabulary has reached the max size {} when calling {} method. "
+                      "Adding more words may cause unexpected behaviour of Vocabulary. ".format(
+                    self.max_size, func.__name__))
+        return func(self, *args, **kwargs)
+
     return _wrapper
 
 
@@ -41,69 +42,95 @@ class Vocabulary(object):
         vocab["word"]
         vocab.to_word(5)
     """
-    def __init__(self, need_default=True, max_size=None, min_freq=None):
+
+    def __init__(self, max_size=None, min_freq=None, unknown='<unk>', padding='<pad>'):
         """
-        :param bool need_default: set if the Vocabulary has default labels reserved for sequences. Default: True.
         :param int max_size: set the max number of words in Vocabulary. Default: None
         :param int min_freq: set the min occur frequency of words in Vocabulary. Default: None
         """
         self.max_size = max_size
         self.min_freq = min_freq
-        self.word_count = {}
-        self.has_default = need_default
+        self.word_count = Counter()
+        self.unknown = unknown
+        self.padding = padding
         self.word2idx = None
         self.idx2word = None
+        self.rebuild = True
 
-    def update(self, word):
-        """add word or list of words into Vocabulary
+    @check_build_status
+    def update(self, word_lst):
+        """Add a list of words into the vocabulary.
 
-        :param word: a list of string or a single string
+        :param list word_lst: a list of strings
         """
-        if not isinstance(word, str) and isiterable(word):
-            # it's a nested list
-            for w in word:
-                self.update(w)
-        else:
-        # it's a word to be added
-            if word not in self.word_count:
-                self.word_count[word] = 1
-            else:
-                self.word_count[word] += 1
-            self.word2idx = None
-        return self
+        self.word_count.update(word_lst)
+
+    @check_build_status
+    def add(self, word):
+        """Add a single word into the vocabulary.
+
+        :param str word: a word or token.
+        """
+        self.word_count[word] += 1
+
+    @check_build_status
+    def add_word(self, word):
+        """Add a single word into the vocabulary.
+
+        :param str word: a word or token.
+        """
+        self.add(word)
+
+    @check_build_status
+    def add_word_lst(self, word_lst):
+        """Add a list of words into the vocabulary.
+
+        :param list word_lst: a list of strings
+        """
+        self.update(word_lst)
 
     def build_vocab(self):
-        """build 'word to index' dict, and filter the word using `max_size` and `min_freq`
-        """
-        if self.has_default:
-            self.word2idx = deepcopy(DEFAULT_WORD_TO_INDEX)
-            self.padding_label = DEFAULT_PADDING_LABEL
-            self.unknown_label = DEFAULT_UNKNOWN_LABEL
-        else:
-            self.word2idx = {}
-            self.padding_label = None
-            self.unknown_label = None
+        """Build 'word to index' dict, and filter the word using `max_size` and `min_freq`.
 
-        words = sorted(self.word_count.items(), key=lambda kv: kv[1], reverse=True)
+        """
+        self.word2idx = {}
+        if self.padding is not None:
+            self.word2idx[self.padding] = 0
+        if self.unknown is not None:
+            self.word2idx[self.unknown] = 1
+
+        max_size = min(self.max_size, len(self.word_count)) if self.max_size else None
+        words = self.word_count.most_common(max_size)
         if self.min_freq is not None:
-            words = list(filter(lambda kv: kv[1] >= self.min_freq, words))
-        if self.max_size is not None and len(words) > self.max_size:
-            words = words[:self.max_size]
-        for w, _ in words:
-            self.word2idx[w] = len(self.word2idx)
+            words = filter(lambda kv: kv[1] >= self.min_freq, words)
+        if self.word2idx is not None:
+            words = filter(lambda kv: kv[0] not in self.word2idx, words)
+        start_idx = len(self.word2idx)
+        self.word2idx.update({w: i + start_idx for i, (w, _) in enumerate(words)})
+        self.build_reverse_vocab()
+        self.rebuild = False
 
     def build_reverse_vocab(self):
-        """build 'index to word' dict based on 'word to index' dict
+        """Build 'index to word' dict based on 'word to index' dict.
+
         """
-        self.idx2word = {self.word2idx[w] : w for w in self.word2idx}
+        self.idx2word = {i: w for w, i in self.word2idx.items()}
 
     @check_build_vocab
     def __len__(self):
         return len(self.word2idx)
 
     @check_build_vocab
+    def __contains__(self, item):
+        """Check if a word in vocabulary.
+
+        :param item: the word
+        :return: True or False
+        """
+        return item in self.word2idx
+
     def has_word(self, w):
-        return w in self.word2idx
+        return self.__contains__(w)
 
     @check_build_vocab
     def __getitem__(self, w):
@@ -113,46 +140,45 @@ class Vocabulary(object):
         """
         if w in self.word2idx:
             return self.word2idx[w]
-        elif self.has_default:
-            return self.word2idx[DEFAULT_UNKNOWN_LABEL]
+        if self.unknown is not None:
+            return self.word2idx[self.unknown]
         else:
             raise ValueError("word {} not in vocabulary".format(w))
 
-    @check_build_vocab
     def to_index(self, w):
-        """ like to_index(w) function, turn a word to the index
-            if w is not in Vocabulary, return the unknown label
+        """ Turn a word to an index.
+            If w is not in Vocabulary, return the unknown label.
 
         :param str w:
         """
-        return self[w]
+        return self.__getitem__(w)
 
     @property
     @check_build_vocab
     def unknown_idx(self):
-        if self.unknown_label is None:
+        if self.unknown is None:
             return None
-        return self.word2idx[self.unknown_label]
+        return self.word2idx[self.unknown]
 
     @property
     @check_build_vocab
     def padding_idx(self):
-        if self.padding_label is None:
+        if self.padding is None:
             return None
-        return self.word2idx[self.padding_label]
+        return self.word2idx[self.padding]
 
     @check_build_vocab
     def to_word(self, idx):
         """given a word's index, return the word itself
 
-        :param int idx:
+        :param int idx: the index
+        :return str word: the indexed word
         """
-        if self.idx2word is None:
-            self.build_reverse_vocab()
         return self.idx2word[idx]
 
     def __getstate__(self):
-        """use to prepare data for pickle
+        """Use to prepare data for pickle.
+
         """
         state = self.__dict__.copy()
         # no need to pickle idx2word as it can be constructed from word2idx
@@ -160,15 +186,8 @@ class Vocabulary(object):
         return state
 
     def __setstate__(self, state):
-        """use to restore state from pickle
+        """Use to restore state from pickle.
+
         """
         self.__dict__.update(state)
-        self.idx2word = None
-
-    def __contains__(self, item):
-        """Check if a word in vocabulary.
-
-        :param item: the word
-        :return: True or False
-        """
-        return self.has_word(item)
+        self.build_reverse_vocab()

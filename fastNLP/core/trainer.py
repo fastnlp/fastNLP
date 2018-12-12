@@ -1,178 +1,275 @@
 import os
 import time
+from datetime import datetime
 from datetime import timedelta
 
 import torch
 from tensorboardX import SummaryWriter
+from torch import nn
+from tqdm.autonotebook import tqdm
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.loss import Loss
-from fastNLP.core.metrics import Evaluator
-from fastNLP.core.optimizer import Optimizer
+from fastNLP.core.dataset import DataSet
+from fastNLP.core.losses import _prepare_losser
+from fastNLP.core.metrics import _prepare_metrics
+from fastNLP.core.optimizer import Adam
+from fastNLP.core.sampler import BaseSampler
 from fastNLP.core.sampler import RandomSampler
-from fastNLP.core.tester import SeqLabelTester, ClassificationTester, SNLITester
-from fastNLP.saver.logger import create_logger
-from fastNLP.saver.model_saver import ModelSaver
-
-logger = create_logger(__name__, "./train_test.log")
+from fastNLP.core.sampler import SequentialSampler
+from fastNLP.core.tester import Tester
+from fastNLP.core.utils import CheckError
+from fastNLP.core.utils import _build_args
+from fastNLP.core.utils import _check_forward_error
+from fastNLP.core.utils import _check_loss_evaluate
+from fastNLP.core.utils import _move_dict_value_to_device
+from fastNLP.core.utils import get_func_signature
 
 
 class Trainer(object):
-    """Operations of training a model, including data loading, gradient descent, and validation.
+    """Main Training Loop
 
     """
-
-    def __init__(self, **kwargs):
+    def __init__(self, train_data, model, loss=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
+                 validate_every=-1, dev_data=None, use_cuda=False, save_path=None,
+                 optimizer=Adam(lr=0.01, weight_decay=0), check_code_level=0,
+                 metric_key=None, sampler=RandomSampler(), use_tqdm=True):
         """
-        :param kwargs: dict of (key, value), or dict-like object. key is str.
 
-        The base trainer requires the following keys:
-            - epochs: int, the number of epochs in training
-            - validate: bool, whether or not to validate on dev set
-            - batch_size: int
-            - pickle_path: str, the path to pickle files for pre-processing
+        :param DataSet train_data: the training data
+        :param torch.nn.modules.module model: a PyTorch model
+        :param LossBase loss: a loss object
+        :param MetricBase or List[MetricBase] metrics: a metric object or a list of metrics
+        :param int n_epochs: the number of training epochs
+        :param int batch_size: batch size for training and validation
+        :param int print_every: step interval to print next training information. Default: -1(no print).
+        :param int validate_every: step interval to do next validation. Default: -1(validate every epoch).
+        :param DataSet dev_data: the validation data
+        :param use_cuda:
+        :param save_path: file path to save models
+        :param Optimizer optimizer: an optimizer object
+        :param int check_code_level: level of FastNLP code checker. -1: don't check, 0: ignore. 1: warning. 2: strict.
+            `ignore` will not check unused field; `warning` when warn if some field are not used; `strict` means
+            it will raise error if some field are not used.
+        :param str metric_key: a single indicator used to decide the best model based on metric results. It must be one
+            of the keys returned by the FIRST metric in `metrics`. If the overall result gets better if the indicator gets
+            smaller, add a `-` character in front of the string. For example
+                ::
+                    metric_key="-PPL"   # language model gets better as perplexity gets smaller
+        :param sampler: method used to generate batch data.
+        :param use_tqdm: boolean, use tqdm to show train progress.
+
         """
         super(Trainer, self).__init__()
 
-        """
-            "default_args" provides default value for important settings. 
-            The initialization arguments "kwargs" with the same key (name) will override the default value. 
-            "kwargs" must have the same type as "default_args" on corresponding keys. 
-            Otherwise, error will raise.
-        """
-        default_args = {"epochs": 1, "batch_size": 2, "validate": False, "use_cuda": False, "pickle_path": "./save/",
-                        "save_best_dev": False, "model_name": "default_model_name.pkl", "print_every_step": 1,
-                        "loss": Loss(None),  # used to pass type check
-                        "optimizer": Optimizer("Adam", lr=0.001, weight_decay=0),
-                        "evaluator": Evaluator()
-                        }
-        """
-            "required_args" is the collection of arguments that users must pass to Trainer explicitly. 
-            This is used to warn users of essential settings in the training. 
-            Specially, "required_args" does not have default value, so they have nothing to do with "default_args".
-        """
-        required_args = {}
+        if not isinstance(train_data, DataSet):
+            raise TypeError(f"The type of train_data must be fastNLP.DataSet, got {type(train_data)}.")
+        if not isinstance(model, nn.Module):
+            raise TypeError(f"The type of model must be torch.nn.Module, got {type(model)}.")
 
-        for req_key in required_args:
-            if req_key not in kwargs:
-                logger.error("Trainer lacks argument {}".format(req_key))
-                raise ValueError("Trainer lacks argument {}".format(req_key))
+        # check metrics and dev_data
+        if (not metrics) and dev_data is not None:
+            raise ValueError("No metric for dev_data evaluation.")
+        if metrics and (dev_data is None):
+            raise ValueError("No dev_data for evaluations, pass dev_data or set metrics to None. ")
 
-        for key in default_args:
-            if key in kwargs:
-                if isinstance(kwargs[key], type(default_args[key])):
-                    default_args[key] = kwargs[key]
-                else:
-                    msg = "Argument %s type mismatch: expected %s while get %s" % (
-                        key, type(default_args[key]), type(kwargs[key]))
-                    logger.error(msg)
-                    raise ValueError(msg)
-            else:
-                # Trainer doesn't care about extra arguments
-                pass
-        print(default_args)
+        # check save_path
+        if not (save_path is None or isinstance(save_path, str)):
+            raise ValueError("save_path can only be None or `str`.")
+        # prepare evaluate
+        metrics = _prepare_metrics(metrics)
 
-        self.n_epochs = default_args["epochs"]
-        self.batch_size = default_args["batch_size"]
-        self.pickle_path = default_args["pickle_path"]
-        self.validate = default_args["validate"]
-        self.save_best_dev = default_args["save_best_dev"]
-        self.use_cuda = default_args["use_cuda"]
-        self.model_name = default_args["model_name"]
-        self.print_every_step = default_args["print_every_step"]
+        # parse metric_key
+        # increase_better is True. It means the exp result gets better if the indicator increases.
+        # It is true by default.
+        self.increase_better = True
+        if metric_key is not None:
+            self.increase_better = False if metric_key[0] == "-" else True
+            self.metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
+        elif len(metrics) > 0:
+            self.metric_key = metrics[0].__class__.__name__.lower().strip('metric')
 
-        self._model = None
-        self._loss_func = default_args["loss"].get()  # return a pytorch loss function or None
-        self._optimizer = None
-        self._optimizer_proto = default_args["optimizer"]
-        self._evaluator = default_args["evaluator"]
-        self._summary_writer = SummaryWriter(self.pickle_path + 'tensorboard_logs')
-        self._graph_summaried = False
-        self._best_accuracy = 0.0
+        # prepare loss
+        losser = _prepare_losser(loss)
 
-    def train(self, network, train_data, dev_data=None):
-        """General Training Procedure
+        # sampler check
+        if not isinstance(sampler, BaseSampler):
+            raise ValueError("The type of sampler should be fastNLP.BaseSampler, got {}.".format(type(sampler)))
 
-        :param network: a model
-        :param train_data: a DataSet instance, the training data
-        :param dev_data: a DataSet instance, the validation data (optional)
-        """
-        # transfer model to gpu if available
-        if torch.cuda.is_available() and self.use_cuda:
-            self._model = network.cuda()
-            # self._model is used to access model-specific loss
+        if check_code_level > -1:
+            _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data,
+                        metric_key=metric_key, check_level=check_code_level)
+
+        self.train_data = train_data
+        self.dev_data = dev_data  # If None, No validation.
+        self.model = model
+        self.losser = losser
+        self.metrics = metrics
+        self.n_epochs = int(n_epochs)
+        self.batch_size = int(batch_size)
+        self.use_cuda = bool(use_cuda)
+        self.save_path = save_path
+        self.print_every = int(print_every)
+        self.validate_every = int(validate_every)
+        self.best_metric_indicator = None
+        self.sampler = sampler
+
+        self._model_device = model.parameters().__next__().device
+
+        if isinstance(optimizer, torch.optim.Optimizer):
+            self.optimizer = optimizer
         else:
-            self._model = network
+            self.optimizer = optimizer.construct_from_pytorch(self.model.parameters())
 
-        # define Tester over dev data
-        if self.validate:
-            default_valid_args = {"batch_size": self.batch_size, "pickle_path": self.pickle_path,
-                                  "use_cuda": self.use_cuda, "evaluator": self._evaluator}
-            validator = self._create_validator(default_valid_args)
-            logger.info("validator defined as {}".format(str(validator)))
+        self.use_tqdm = use_tqdm
+        if self.use_tqdm:
+            tester_verbose = 0
+        else:
+            tester_verbose = 1
 
-        # optimizer and loss
-        self.define_optimizer()
-        logger.info("optimizer defined as {}".format(str(self._optimizer)))
-        self.define_loss()
-        logger.info("loss function defined as {}".format(str(self._loss_func)))
+        if self.dev_data is not None:
+            self.tester = Tester(model=self.model,
+                                 data=self.dev_data,
+                                 metrics=self.metrics,
+                                 batch_size=self.batch_size,
+                                 use_cuda=self.use_cuda,
+                                 verbose=tester_verbose)
 
-        # main training procedure
-        start = time.time()
-        logger.info("training epochs started")
-        for epoch in range(1, self.n_epochs + 1):
-            logger.info("training epoch {}".format(epoch))
+        self.step = 0
+        self.start_time = None  # start timestamp
 
-            # turn on network training mode
-            self.mode(network, is_test=False)
-            # prepare mini-batch iterator
-            data_iterator = Batch(train_data, batch_size=self.batch_size, sampler=RandomSampler(),
-                                  use_cuda=self.use_cuda)
-            logger.info("prepared data iterator")
+    def train(self):
+        """Start Training.
 
-            # one forward and backward pass
-            self._train_step(data_iterator, network, start=start, n_print=self.print_every_step, epoch=epoch)
-
-            # validation
-            if self.validate:
-                if dev_data is None:
-                    raise RuntimeError(
-                        "self.validate is True in trainer, but dev_data is None. Please provide the validation data.")
-                logger.info("validation started")
-                validator.test(network, dev_data)
-
-    def _train_step(self, data_iterator, network, **kwargs):
-        """Training process in one epoch.
-
-            kwargs should contain:
-                - n_print: int, print training information every n steps.
-                - start: time.time(), the starting time of this step.
-                - epoch: int,
         """
-        step = 0
-        for batch_x, batch_y in data_iterator:
+        try:
+            if torch.cuda.is_available() and self.use_cuda:
+                self.model = self.model.cuda()
 
-            prediction = self.data_forward(network, batch_x)
+            self._mode(self.model, is_test=False)
 
-            loss = self.get_loss(prediction, batch_y)
-            self.grad_backward(loss)
-            self.update()
-            self._summary_writer.add_scalar("loss", loss.item(), global_step=step)
+            self.start_time = str(datetime.now().strftime('%Y-%m-%d %H-%M-%S'))
+            print("training epochs started " + self.start_time, flush=True)
+            if self.save_path is None:
+                class psudoSW:
+                    def __getattr__(self, item):
+                        def pass_func(*args, **kwargs):
+                            pass
 
-            if kwargs["n_print"] > 0 and step % kwargs["n_print"] == 0:
-                end = time.time()
-                diff = timedelta(seconds=round(end - kwargs["start"]))
-                print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.6} time: {}".format(
-                    kwargs["epoch"], step, loss.data, diff)
-                print(print_output)
-                logger.info(print_output)
-            step += 1
+                        return pass_func
 
-    def mode(self, model, is_test=False):
+                self._summary_writer = psudoSW()
+            else:
+                path = os.path.join(self.save_path, 'tensorboard_logs_{}'.format(self.start_time))
+                self._summary_writer = SummaryWriter(path)
+            if self.use_tqdm:
+                self._tqdm_train()
+            else:
+                self._print_train()
+
+        finally:
+            self._summary_writer.close()
+            del self._summary_writer
+
+    def _tqdm_train(self):
+        self.step = 0
+        data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
+                              as_numpy=False)
+        total_steps = data_iterator.num_batches*self.n_epochs
+        epoch = 1
+        with tqdm(total=total_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
+            ava_loss = 0
+            for epoch in range(1, self.n_epochs+1):
+                pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
+                for batch_x, batch_y in data_iterator:
+                    _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
+                    prediction = self._data_forward(self.model, batch_x)
+                    loss = self._compute_loss(prediction, batch_y)
+                    ava_loss += loss.item()
+                    self._grad_backward(loss)
+                    self._update()
+                    self._summary_writer.add_scalar("loss", loss.item(), global_step=self.step)
+                    for name, param in self.model.named_parameters():
+                        if param.requires_grad:
+                            self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.step)
+                            # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
+                            # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
+                    if (self.step+1) % self.print_every == 0:
+                        pbar.set_postfix_str("loss:{0:<6.5f}".format(ava_loss / self.print_every))
+                        ava_loss = 0
+                    pbar.update(1)
+                    self.step += 1
+                    if self.validate_every > 0 and self.step % self.validate_every == 0 \
+                            and self.dev_data is not None:
+                        eval_res = self._do_validation()
+                        eval_str = "Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step, total_steps) + \
+                                   self.tester._format_eval_results(eval_res)
+                        pbar.write(eval_str)
+                if self.validate_every < 0 and self.dev_data:
+                    eval_res = self._do_validation()
+                    eval_str = "Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step, total_steps) + \
+                               self.tester._format_eval_results(eval_res)
+                    pbar.write(eval_str)
+                if epoch!=self.n_epochs:
+                    data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
+                                          as_numpy=False)
+            pbar.close()
+
+    def _print_train(self):
+        epoch = 1
+        start = time.time()
+        while epoch <= self.n_epochs:
+
+            data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
+                                  as_numpy=False)
+
+            for batch_x, batch_y in data_iterator:
+                # TODO 这里可能会遇到问题，万一用户在model内部修改了prediction的device就会有问题
+                _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
+                prediction = self._data_forward(self.model, batch_x)
+                loss = self._compute_loss(prediction, batch_y)
+                self._grad_backward(loss)
+                self._update()
+                self._summary_writer.add_scalar("loss", loss.item(), global_step=self.step)
+                for name, param in self.model.named_parameters():
+                    if param.requires_grad:
+                        self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.step)
+                        # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
+                        # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
+                if self.print_every > 0 and self.step % self.print_every == 0:
+                    end = time.time()
+                    diff = timedelta(seconds=round(end - start))
+                    print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.6} time:  {}".format(
+                        epoch, self.step, loss.data, diff)
+                    print(print_output)
+
+                if (self.validate_every > 0 and self.step % self.validate_every == 0 and
+                        self.dev_data is not None):
+                    self._do_validation()
+
+                self.step += 1
+
+            # validate_every override validation at end of epochs
+            if self.dev_data and self.validate_every <= 0:
+                self._do_validation()
+            epoch += 1
+
+    def _do_validation(self):
+        res = self.tester.test()
+        for name, metric in res.items():
+            for metric_key, metric_val in metric.items():
+                self._summary_writer.add_scalar("valid_{}_{}".format(name, metric_key), metric_val,
+                                                global_step=self.step)
+        if self.save_path is not None and self._better_eval_result(res):
+            metric_key = self.metric_key if self.metric_key is not None else ""
+            self._save_model(self.model,
+                             "best_" + "_".join([self.model.__class__.__name__, metric_key, self.start_time]))
+        return res
+
+    def _mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.
 
         :param model: a PyTorch model
-        :param is_test: bool, whether in test mode or not.
+        :param bool is_test: whether in test mode or not.
 
         """
         if is_test:
@@ -180,127 +277,153 @@ class Trainer(object):
         else:
             model.train()
 
-    def define_optimizer(self):
-        """Define framework-specific optimizer specified by the models.
-
-        """
-        self._optimizer = self._optimizer_proto.construct_from_pytorch(self._model.parameters())
-
-    def update(self):
+    def _update(self):
         """Perform weight update on a model.
 
-        For PyTorch, just call optimizer to update.
         """
-        self._optimizer.step()
+        self.optimizer.step()
 
-    def data_forward(self, network, x):
+    def _data_forward(self, network, x):
+        x = _build_args(network.forward, **x)
         y = network(**x)
-        if not self._graph_summaried:
-            # self._summary_writer.add_graph(network, x, verbose=False)
-            self._graph_summaried = True
+        if not isinstance(y, dict):
+            raise TypeError(f"The return value of {get_func_signature(network.forward)} should be dict, got {type(y)}.")
         return y
 
-    def grad_backward(self, loss):
+    def _grad_backward(self, loss):
         """Compute gradient with link rules.
 
         :param loss: a scalar where back-prop starts
 
         For PyTorch, just do "loss.backward()"
         """
-        self._model.zero_grad()
+        self.model.zero_grad()
         loss.backward()
 
-    def get_loss(self, predict, truth):
+    def _compute_loss(self, predict, truth):
         """Compute loss given prediction and ground truth.
 
-        :param predict: prediction label vector
-        :param truth: ground truth label vector
+        :param predict: prediction dict, produced by model.forward
+        :param truth: ground truth dict, produced by batch_y
         :return: a scalar
         """
-        if len(truth) > 1:
-            raise NotImplementedError("Not ready to handle multi-labels.")
-        truth = list(truth.values())[0] if len(truth) > 0 else None
-        return self._loss_func(predict, truth)
+        return self.losser(predict, truth)
 
-    def define_loss(self):
-        """Define a loss for the trainer.
+    def _save_model(self, model, model_name, only_param=False):
+        if self.save_path is not None:
+            model_name = os.path.join(self.save_path, model_name)
+            if only_param:
+                torch.save(model.state_dict(), model_name)
+            else:
+                torch.save(model, model_name)
 
-        If the model defines a loss, use model's loss.
-        Otherwise, Trainer must has a loss argument, use it as loss.
-        These two losses cannot be defined at the same time.
-        Trainer does not handle loss definition or choose default losses.
-        """
-        # if hasattr(self._model, "loss") and self._loss_func is not None:
-        #    raise ValueError("Both the model and Trainer define loss. Please take out your loss.")
-
-        if hasattr(self._model, "loss"):
-            self._loss_func = self._model.loss
-            logger.info("The model has a loss function, use it.")
-        else:
-            if self._loss_func is None:
-                raise ValueError("Please specify a loss function.")
-            logger.info("The model didn't define loss, use Trainer's loss.")
-
-    def best_eval_result(self, validator):
+    def _better_eval_result(self, metrics):
         """Check if the current epoch yields better validation results.
 
-        :param validator: a Tester instance
-        :return: bool, True means current results on dev set is the best.
+        :return bool value: True means current results on dev set is the best.
         """
-        loss, accuracy = validator.metrics
-        if accuracy > self._best_accuracy:
-            self._best_accuracy = accuracy
-            return True
+        indicator_val = _check_eval_results(metrics, self.metric_key, self.metrics)
+        is_better = True
+        if self.best_metric_indicator is None:
+            # first-time validation
+            self.best_metric_indicator = indicator_val
         else:
-            return False
-
-    def save_model(self, network, model_name):
-        """Save this model with such a name.
-        This method may be called multiple times by Trainer to overwritten a better model.
-
-        :param network: the PyTorch model
-        :param model_name: str
-        """
-        if model_name[-4:] != ".pkl":
-            model_name += ".pkl"
-        ModelSaver(os.path.join(self.pickle_path, model_name)).save_pytorch(network)
-
-    def _create_validator(self, valid_args):
-        raise NotImplementedError
+            if self.increase_better is True:
+                if indicator_val > self.best_metric_indicator:
+                    self.best_metric_indicator = indicator_val
+                else:
+                    is_better = False
+            else:
+                if indicator_val < self.best_metric_indicator:
+                    self.best_metric_indicator = indicator_val
+                else:
+                    is_better = False
+        return is_better
 
 
-class SeqLabelTrainer(Trainer):
-    """Trainer for Sequence Labeling
-
-    """
-    def __init__(self, **kwargs):
-        print(
-            "[FastNLP Warning] SeqLabelTrainer will be deprecated. Please use Trainer directly.")
-        super(SeqLabelTrainer, self).__init__(**kwargs)
-
-    def _create_validator(self, valid_args):
-        return SeqLabelTester(**valid_args)
+DEFAULT_CHECK_BATCH_SIZE = 2
+DEFAULT_CHECK_NUM_BATCH = 2
 
 
-class ClassificationTrainer(Trainer):
-    """Trainer for text classification."""
+def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_SIZE,
+                dev_data=None, metric_key=None,
+                check_level=0):
+    # check get_loss 方法
+    model_devcie = model.parameters().__next__().device
 
-    def __init__(self, **train_args):
-        print(
-            "[FastNLP Warning] ClassificationTrainer will be deprecated. Please use Trainer directly.")
-        super(ClassificationTrainer, self).__init__(**train_args)
+    batch = Batch(dataset=dataset, batch_size=batch_size, sampler=SequentialSampler())
+    for batch_count, (batch_x, batch_y) in enumerate(batch):
+        _move_dict_value_to_device(batch_x, batch_y, device=model_devcie)
+        # forward check
+        if batch_count==0:
+            _check_forward_error(forward_func=model.forward, dataset=dataset,
+                                 batch_x=batch_x, check_level=check_level)
 
-    def _create_validator(self, valid_args):
-        return ClassificationTester(**valid_args)
+        refined_batch_x = _build_args(model.forward, **batch_x)
+        pred_dict = model(**refined_batch_x)
+        func_signature = get_func_signature(model.forward)
+        if not isinstance(pred_dict, dict):
+            raise TypeError(f"The return value of {func_signature} should be `dict`, not `{type(pred_dict)}`.")
+
+        # loss check
+        try:
+            loss = losser(pred_dict, batch_y)
+            # check loss output
+            if batch_count == 0:
+                if not isinstance(loss, torch.Tensor):
+                    raise TypeError(
+                        f"The return value of {get_func_signature(losser.get_loss)} should be `torch.Tensor`, "
+                        f"but got `{type(loss)}`.")
+                if len(loss.size()) != 0:
+                    raise ValueError(
+                        f"The size of return value of {get_func_signature(losser.get_loss)} is {loss.size()}, "
+                        f"should be torch.size([])")
+            loss.backward()
+        except CheckError as e:
+            # TODO: another error raised if CheckError caught
+            pre_func_signature = get_func_signature(model.forward)
+            _check_loss_evaluate(prev_func_signature=pre_func_signature, func_signature=e.func_signature,
+                                 check_res=e.check_res, pred_dict=pred_dict, target_dict=batch_y,
+                                 dataset=dataset, check_level=check_level)
+        model.zero_grad()
+        if batch_count + 1 >= DEFAULT_CHECK_NUM_BATCH:
+            break
+
+    if dev_data is not None:
+        tester = Tester(data=dataset[:batch_size * DEFAULT_CHECK_NUM_BATCH], model=model, metrics=metrics,
+                        batch_size=batch_size, verbose=-1)
+        evaluate_results = tester.test()
+        _check_eval_results(metrics=evaluate_results, metric_key=metric_key, metric_list=metrics)
 
 
-class SNLITrainer(Trainer):
-    """Trainer for text SNLI."""
+def _check_eval_results(metrics, metric_key, metric_list):
+    # metrics: tester返回的结果
+    # metric_key: 一个用来做筛选的指标，来自Trainer的初始化
+    # metric_list: 多个用来做评价的指标，来自Trainer的初始化
+    if isinstance(metrics, tuple):
+        loss, metrics = metrics
 
-    def __init__(self, **train_args):
-        print(
-            "[FastNLP Warning] SNLITrainer will be deprecated. Please use Trainer directly.")
-        super(SNLITrainer, self).__init__(**train_args)
+    if isinstance(metrics, dict):
+        if len(metrics) == 1:
+            # only single metric, just use it
+            metric_dict = list(metrics.values())[0]
+            metrics_name = list(metrics.keys())[0]
+        else:
+            metrics_name = metric_list[0].__class__.__name__
+            if metrics_name not in metrics:
+                raise RuntimeError(f"{metrics_name} is chosen to do validation, but got {metrics}")
+            metric_dict = metrics[metrics_name]
 
-    def _create_validator(self, valid_args):
-        return SNLITester(**valid_args)
+        if len(metric_dict) == 1:
+            indicator_val, indicator = list(metric_dict.values())[0], list(metric_dict.keys())[0]
+        elif len(metric_dict) > 1 and metric_key is None:
+            raise RuntimeError(
+                f"Got multiple metric keys: {metric_dict}, but metric_key is not set. Which one to use?")
+        else:
+            # metric_key is set
+            if metric_key not in metric_dict:
+                raise RuntimeError(f"metric key {metric_key} not found in {metric_dict}")
+            indicator_val = metric_dict[metric_key]
+    else:
+        raise RuntimeError("Invalid metrics type. Expect {}, got {}".format((tuple, dict), type(metrics)))
+    return indicator_val

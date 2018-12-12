@@ -1,3 +1,5 @@
+from itertools import chain
+
 import numpy as np
 import torch
 
@@ -44,12 +46,52 @@ class RandomSampler(BaseSampler):
         return list(np.random.permutation(len(data_set)))
 
 
+class BucketSampler(BaseSampler):
+
+    def __init__(self, num_buckets=10, batch_size=32, seq_lens_field_name='seq_lens'):
+        self.num_buckets = num_buckets
+        self.batch_size = batch_size
+        self.seq_lens_field_name = seq_lens_field_name
+
+    def __call__(self, data_set):
+
+        seq_lens = data_set.get_all_fields()[self.seq_lens_field_name].content
+        total_sample_num = len(seq_lens)
+
+        bucket_indexes = []
+        num_sample_per_bucket = total_sample_num // self.num_buckets
+        for i in range(self.num_buckets):
+            bucket_indexes.append([num_sample_per_bucket * i, num_sample_per_bucket * (i + 1)])
+        bucket_indexes[-1][1] = total_sample_num
+
+        sorted_seq_lens = list(sorted([(idx, seq_len) for
+                                       idx, seq_len in zip(range(total_sample_num), seq_lens)],
+                                      key=lambda x: x[1]))
+
+        batchs = []
+
+        left_init_indexes = []
+        for b_idx in range(self.num_buckets):
+            start_idx = bucket_indexes[b_idx][0]
+            end_idx = bucket_indexes[b_idx][1]
+            sorted_bucket_seq_lens = sorted_seq_lens[start_idx:end_idx]
+            left_init_indexes.extend([tup[0] for tup in sorted_bucket_seq_lens])
+            num_batch_per_bucket = len(left_init_indexes) // self.batch_size
+            np.random.shuffle(left_init_indexes)
+            for i in range(num_batch_per_bucket):
+                batchs.append(left_init_indexes[i * self.batch_size:(i + 1) * self.batch_size])
+            left_init_indexes = left_init_indexes[num_batch_per_bucket * self.batch_size:]
+        if (left_init_indexes) != 0:
+            batchs.append(left_init_indexes)
+        np.random.shuffle(batchs)
+
+        return list(chain(*batchs))
+
+
 def simple_sort_bucketing(lengths):
     """
 
     :param lengths: list of int, the lengths of all examples.
-    :param buckets: list of int. The length of the list is the number of buckets. Each integer is the maximum length
-        threshold for each bucket (This is usually None.).
     :return data: 2-level list
             ::
 
@@ -65,6 +107,7 @@ def simple_sort_bucketing(lengths):
     # TODO: need to return buckets
     return [idx for idx, _ in sorted_lengths]
 
+
 def k_means_1d(x, k, max_iter=100):
     """Perform k-means on 1-D data.
 
@@ -75,6 +118,7 @@ def k_means_1d(x, k, max_iter=100):
             assignment: numpy array, 1-D, the bucket id assigned to each example.
     """
     sorted_x = sorted(list(set(x)))
+    x = np.array(x)
     if len(sorted_x) < k:
         raise ValueError("too few buckets")
     gap = len(sorted_x) / k
@@ -118,35 +162,3 @@ def k_means_bucketing(lengths, buckets):
         if buckets[bucket_id] is None or lengths[idx] <= buckets[bucket_id]:
             bucket_data[bucket_id].append(idx)
     return bucket_data
-
-
-class BucketSampler(BaseSampler):
-    """Partition all samples into multiple buckets, each of which contains sentences of approximately the same length.
-    In sampling, first random choose a bucket. Then sample data from it.
-    The number of buckets is decided dynamically by the variance of sentence lengths.
-
-    """
-
-    def __call__(self, data_set, batch_size, num_buckets):
-        return self._process(data_set, batch_size, num_buckets)
-
-    def _process(self, data_set, batch_size, num_buckets, use_kmeans=False):
-        """
-
-        :param data_set: a DataSet object
-        :param batch_size: int
-        :param num_buckets: int, number of buckets for grouping these sequences.
-        :param use_kmeans: bool, whether to use k-means to create buckets.
-
-        """
-        buckets = ([None] * num_buckets)
-        if use_kmeans is True:
-            buckets = k_means_bucketing(data_set, buckets)
-        else:
-            buckets = simple_sort_bucketing(data_set)
-        index_list = []
-        for _ in range(len(data_set) // batch_size):
-            chosen_bucket = buckets[np.random.randint(0, len(buckets))]
-            np.random.shuffle(chosen_bucket)
-            index_list += [idx for idx in chosen_bucket[:batch_size]]
-        return index_list

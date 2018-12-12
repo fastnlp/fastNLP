@@ -1,100 +1,145 @@
-import os
-import sys
-
-sys.path = [os.path.join(os.path.dirname(__file__), '..')] + sys.path
-
-from fastNLP.core import metrics
-# from sklearn import metrics as skmetrics
 import unittest
-from numpy import random
-from fastNLP.core.metrics import SeqLabelEvaluator
+
+import numpy as np
 import torch
 
-
-def generate_fake_label(low, high, size):
-    return random.randint(low, high, size), random.randint(low, high, size)
-
-
-class TestEvaluator(unittest.TestCase):
-    def test_a(self):
-        evaluator = SeqLabelEvaluator()
-        pred = [[1, 2, 3, 4, 5], [1, 2, 3, 4, 5]]
-        truth = [{"truth": torch.LongTensor([1, 2, 3, 3, 3])}, {"truth": torch.LongTensor([1, 2, 3, 3, 4])}]
-        ans = evaluator(pred, truth)
-        print(ans)
-
-    def test_b(self):
-        evaluator = SeqLabelEvaluator()
-        pred = [[1, 2, 3, 4, 5, 0, 0], [1, 2, 3, 4, 5, 0, 0]]
-        truth = [{"truth": torch.LongTensor([1, 2, 3, 3, 3, 0, 0])}, {"truth": torch.LongTensor([1, 2, 3, 3, 4, 0, 0])}]
-        ans = evaluator(pred, truth)
-        print(ans)
+from fastNLP.core.metrics import AccuracyMetric
+from fastNLP.core.metrics import pred_topk, accuracy_topk
 
 
-class TestMetrics(unittest.TestCase):
-    delta = 1e-5
-    # test for binary, multiclass, multilabel
-    data_types = [((1000,), 2), ((1000,), 10), ((1000, 10), 2)]
-    fake_data = [generate_fake_label(0, high, shape) for shape, high in data_types]
+class TestAccuracyMetric(unittest.TestCase):
+    def test_AccuracyMetric1(self):
+        # (1) only input, targets passed
+        pred_dict = {"pred": torch.zeros(4, 3)}
+        target_dict = {'target': torch.zeros(4)}
+        metric = AccuracyMetric()
 
-    def test_accuracy_score(self):
-        for y_true, y_pred in self.fake_data:
-            for normalize in [True, False]:
-                for sample_weight in [None, random.rand(y_true.shape[0])]:
-                    test = metrics.accuracy_score(y_true, y_pred, normalize=normalize, sample_weight=sample_weight)
-                    # ans = skmetrics.accuracy_score(y_true, y_pred, normalize=normalize, sample_weight=sample_weight)
-                    # self.assertAlmostEqual(test, ans, delta=self.delta)
+        metric(pred_dict=pred_dict, target_dict=target_dict, )
+        print(metric.get_metric())
 
-    def test_recall_score(self):
-        for y_true, y_pred in self.fake_data:
-            # print(y_true.shape)
-            labels = list(range(y_true.shape[1])) if len(y_true.shape) >= 2 else None
-            test = metrics.recall_score(y_true, y_pred, labels=labels, average=None)
-            if not isinstance(test, list):
-                test = list(test)
-            # ans = skmetrics.recall_score(y_true, y_pred,labels=labels, average=None)
-            # ans = list(ans)
-            # for a, b in zip(test, ans):
-            #     # print('{}, {}'.format(a, b))
-            #     self.assertAlmostEqual(a, b, delta=self.delta)
-        # test binary
-        y_true, y_pred = generate_fake_label(0, 2, 1000)
-        test = metrics.recall_score(y_true, y_pred)
-        # ans = skmetrics.recall_score(y_true, y_pred)
-        # self.assertAlmostEqual(ans, test, delta=self.delta)
+    def test_AccuracyMetric2(self):
+        # (2) with corrupted size
+        try:
+            pred_dict = {"pred": torch.zeros(4, 3, 2)}
+            target_dict = {'target': torch.zeros(4)}
+            metric = AccuracyMetric()
 
-    def test_precision_score(self):
-        for y_true, y_pred in self.fake_data:
-            # print(y_true.shape)
-            labels = list(range(y_true.shape[1])) if len(y_true.shape) >= 2 else None
-            test = metrics.precision_score(y_true, y_pred, labels=labels, average=None)
-            # ans = skmetrics.precision_score(y_true, y_pred,labels=labels, average=None)
-            # ans, test = list(ans), list(test)
-            # for a, b in zip(test, ans):
-            #     # print('{}, {}'.format(a, b))
-            #     self.assertAlmostEqual(a, b, delta=self.delta)
-        # test binary
-        y_true, y_pred = generate_fake_label(0, 2, 1000)
-        test = metrics.precision_score(y_true, y_pred)
-        # ans = skmetrics.precision_score(y_true, y_pred)
-        # self.assertAlmostEqual(ans, test, delta=self.delta)
+            metric(pred_dict=pred_dict, target_dict=target_dict, )
+            print(metric.get_metric())
+        except Exception as e:
+            print(e)
+            return
+        self.assertTrue(True, False), "No exception catches."
 
-    def test_f1_score(self):
-        for y_true, y_pred in self.fake_data:
-            # print(y_true.shape)
-            labels = list(range(y_true.shape[1])) if len(y_true.shape) >= 2 else None
-            test = metrics.f1_score(y_true, y_pred, labels=labels, average=None)
-            # ans = skmetrics.f1_score(y_true, y_pred,labels=labels, average=None)
-            # ans, test = list(ans), list(test)
-            # for a, b in zip(test, ans):
-            #     # print('{}, {}'.format(a, b))
-            #     self.assertAlmostEqual(a, b, delta=self.delta)
-        # test binary
-        y_true, y_pred = generate_fake_label(0, 2, 1000)
-        test = metrics.f1_score(y_true, y_pred)
-        # ans = skmetrics.f1_score(y_true, y_pred)
-        # self.assertAlmostEqual(ans, test, delta=self.delta)
+    def test_AccuracyMetric3(self):
+        # (3) the second batch is corrupted size
+        try:
+            metric = AccuracyMetric()
+            pred_dict = {"pred": torch.zeros(4, 3, 2)}
+            target_dict = {'target': torch.zeros(4, 3)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+
+            pred_dict = {"pred": torch.zeros(4, 3, 2)}
+            target_dict = {'target': torch.zeros(4)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+
+            print(metric.get_metric())
+        except Exception as e:
+            print(e)
+            return
+        self.assertTrue(True, False), "No exception catches."
+
+    def test_AccuaryMetric4(self):
+        # (5) check reset
+        metric = AccuracyMetric()
+        pred_dict = {"pred": torch.zeros(4, 3, 2)}
+        target_dict = {'target': torch.zeros(4, 3)}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        self.assertDictEqual(metric.get_metric(), {'acc': 1})
+
+        pred_dict = {"pred": torch.zeros(4, 3, 2)}
+        target_dict = {'target': torch.zeros(4, 3) + 1}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        self.assertDictEqual(metric.get_metric(), {'acc': 0})
+
+    def test_AccuaryMetric5(self):
+        # (5) check reset
+        metric = AccuracyMetric()
+        pred_dict = {"pred": torch.zeros(4, 3, 2)}
+        target_dict = {'target': torch.zeros(4, 3)}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        self.assertDictEqual(metric.get_metric(reset=False), {'acc': 1})
+
+        pred_dict = {"pred": torch.zeros(4, 3, 2)}
+        target_dict = {'target': torch.zeros(4, 3) + 1}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        self.assertDictEqual(metric.get_metric(), {'acc': 0.5})
+
+    def test_AccuaryMetric6(self):
+        # (6) check numpy array is not acceptable
+        try:
+            metric = AccuracyMetric()
+            pred_dict = {"pred": np.zeros((4, 3, 2))}
+            target_dict = {'target': np.zeros((4, 3))}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+        except Exception as e:
+            print(e)
+            return
+        self.assertTrue(True, False), "No exception catches."
+
+    def test_AccuaryMetric7(self):
+        # (7) check map, match
+        metric = AccuracyMetric(pred='predictions', target='targets')
+        pred_dict = {"predictions": torch.zeros(4, 3, 2)}
+        target_dict = {'targets': torch.zeros(4, 3)}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        self.assertDictEqual(metric.get_metric(), {'acc': 1})
+
+    def test_AccuaryMetric8(self):
+        # (8) check map, does not match. use stop_fast_param to stop fast param map
+        try:
+            metric = AccuracyMetric(pred='predictions', target='targets')
+            pred_dict = {"prediction": torch.zeros(4, 3, 2), "stop_fast_param": 1}
+            target_dict = {'targets': torch.zeros(4, 3)}
+            metric(pred_dict=pred_dict, target_dict=target_dict, )
+            self.assertDictEqual(metric.get_metric(), {'acc': 1})
+        except Exception as e:
+            print(e)
+            return
+        self.assertTrue(True, False), "No exception catches."
+
+    def test_AccuaryMetric9(self):
+        # (9) check map, include unused
+        try:
+            metric = AccuracyMetric(pred='prediction', target='targets')
+            pred_dict = {"prediction": torch.zeros(4, 3, 2), 'unused': 1}
+            target_dict = {'targets': torch.zeros(4, 3)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+            self.assertDictEqual(metric.get_metric(), {'acc': 1})
+        except Exception as e:
+            print(e)
+            return
+        self.assertTrue(True, False), "No exception catches."
+
+    def test_AccuaryMetric10(self):
+        # (10) check _fast_metric
+        try:
+            metric = AccuracyMetric()
+            pred_dict = {"predictions": torch.zeros(4, 3, 2), "masks": torch.zeros(4, 3)}
+            target_dict = {'targets': torch.zeros(4, 3)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+            self.assertDictEqual(metric.get_metric(), {'acc': 1})
+        except Exception as e:
+            print(e)
+            return
+        self.assertTrue(True, False), "No exception catches."
 
 
-if __name__ == '__main__':
-    unittest.main()
+class TestUsefulFunctions(unittest.TestCase):
+    # 测试metrics.py中一些看上去挺有用的函数
+    def test_case_1(self):
+        # multi-class
+        _ = accuracy_topk(np.random.randint(0, 3, size=(10, 1)), np.random.randint(0, 3, size=(10, 1)), k=3)
+        _ = pred_topk(np.random.randint(0, 3, size=(10, 1)))
+
+        # 跑通即可
