@@ -13,10 +13,10 @@ fastNLP.core.dataset
 .. automodule:: fastNLP.core.dataset
     :members:
 
-fastNLP.core.field 
--------------------
+fastNLP.core.fieldarray 
+------------------------
 
-.. automodule:: fastNLP.core.field
+.. automodule:: fastNLP.core.fieldarray
     :members:
 
 fastNLP.core.instance 
@@ -25,10 +25,10 @@ fastNLP.core.instance
 .. automodule:: fastNLP.core.instance
     :members:
 
-fastNLP.core.loss 
-------------------
+fastNLP.core.losses 
+--------------------
 
-.. automodule:: fastNLP.core.loss
+.. automodule:: fastNLP.core.losses
     :members:
 
 fastNLP.core.metrics 
@@ -49,12 +49,6 @@ fastNLP.core.predictor
 .. automodule:: fastNLP.core.predictor
     :members:
 
-fastNLP.core.preprocess 
-------------------------
-
-.. automodule:: fastNLP.core.preprocess
-    :members:
-
 fastNLP.core.sampler 
 ---------------------
 
@@ -71,6 +65,12 @@ fastNLP.core.trainer
 ---------------------
 
 .. automodule:: fastNLP.core.trainer
+    :members:
+
+fastNLP.core.utils 
+-------------------
+
+.. automodule:: fastNLP.core.utils
     :members:
 
 fastNLP.core.vocabulary 
