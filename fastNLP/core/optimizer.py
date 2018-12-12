@@ -10,7 +10,7 @@ class Optimizer(object):
 
 
 class SGD(Optimizer):
-    def __init__(self, lr=0.01, momentum=0, model_params=None):
+    def __init__(self, lr=0.001, momentum=0, model_params=None):
         """
 
         :param float lr: learning rate. Default: 0.01
@@ -30,7 +30,7 @@ class SGD(Optimizer):
 
 
 class Adam(Optimizer):
-    def __init__(self, lr=0.01, weight_decay=0, model_params=None):
+    def __init__(self, lr=0.001, weight_decay=0, betas=(0.9, 0.999), eps=1e-8, amsgrad=False, model_params=None):
         """
 
         :param float lr: learning rate
@@ -39,7 +39,8 @@ class Adam(Optimizer):
         """
         if not isinstance(lr, float):
             raise TypeError("learning rate has to be float.")
-        super(Adam, self).__init__(model_params, lr=lr, weight_decay=weight_decay)
+        super(Adam, self).__init__(model_params, lr=lr, betas=betas, eps=eps, amsgrad=amsgrad,
+                                   weight_decay=weight_decay)
 
     def construct_from_pytorch(self, model_params):
         if self.model_params is None:
