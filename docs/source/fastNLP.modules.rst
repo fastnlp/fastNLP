@@ -6,7 +6,12 @@ fastNLP.modules
     fastNLP.modules.aggregator
     fastNLP.modules.decoder
     fastNLP.modules.encoder
-    fastNLP.modules.interactor
+
+fastNLP.modules.dropout 
+------------------------
+
+.. automodule:: fastNLP.modules.dropout
+    :members:
 
 fastNLP.modules.other\_modules 
 -------------------------------

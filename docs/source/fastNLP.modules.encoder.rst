@@ -43,6 +43,12 @@ fastNLP.modules.encoder.masked\_rnn
 .. automodule:: fastNLP.modules.encoder.masked_rnn
     :members:
 
+fastNLP.modules.encoder.transformer 
+------------------------------------
+
+.. automodule:: fastNLP.modules.encoder.transformer
+    :members:
+
 fastNLP.modules.encoder.variational\_rnn 
 -----------------------------------------
 
