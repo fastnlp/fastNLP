@@ -77,14 +77,17 @@ class FullSpaceToHalfSpaceProcessor(Processor):
 
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
-        for ins in dataset:
+
+        def inner_proc(ins):
             sentence = ins[self.field_name]
-            new_sentence = [None] * len(sentence)
+            new_sentence = [""] * len(sentence)
             for idx, char in enumerate(sentence):
                 if char in self.convert_map:
                     char = self.convert_map[char]
                 new_sentence[idx] = char
-            ins[self.field_name] = ''.join(new_sentence)
+            return "".join(new_sentence)
+
+        dataset.apply(inner_proc, new_field_name=self.field_name)
         return dataset
 
 
@@ -94,9 +97,7 @@ class PreAppendProcessor(Processor):
         self.data = data
 
     def process(self, dataset):
-        for ins in dataset:
-            sent = ins[self.field_name]
-            ins[self.new_added_field_name] = [self.data] + sent
+        dataset.apply(lambda ins: [self.data] + ins[self.field_name], new_field_name=self.new_added_field_name)
         return dataset
 
 
@@ -108,9 +109,7 @@ class SliceProcessor(Processor):
         self.slice = slice(start, end, step)
 
     def process(self, dataset):
-        for ins in dataset:
-            sent = ins[self.field_name]
-            ins[self.new_added_field_name] = sent[self.slice]
+        dataset.apply(lambda ins: ins[self.field_name][self.slice], new_field_name=self.new_added_field_name)
         return dataset
 
 
@@ -121,14 +120,17 @@ class Num2TagProcessor(Processor):
         self.pattern = r'[-+]?([0-9]+[.]?[0-9]*)+[/eE]?[-+]?([0-9]+[.]?[0-9]*)'
 
     def process(self, dataset):
-        for ins in dataset:
+
+        def inner_proc(ins):
             s = ins[self.field_name]
             new_s = [None] * len(s)
             for i, w in enumerate(s):
                 if re.search(self.pattern, w) is not None:
                     w = self.tag
                 new_s[i] = w
-            ins[self.new_added_field_name] = new_s
+            return new_s
+
+        dataset.apply(inner_proc, new_field_name=self.new_added_field_name)
         return dataset
 
 
@@ -149,11 +151,8 @@ class IndexerProcessor(Processor):
 
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only DataSet class is allowed, not {}.".format(type(dataset))
-        for ins in dataset:
-            tokens = ins[self.field_name]
-            index = [self.vocab.to_index(token) for token in tokens]
-            ins[self.new_added_field_name] = index
-
+        dataset.apply(lambda ins: [self.vocab.to_index(token) for token in ins[self.field_name]],
+                      new_field_name=self.new_added_field_name)
         if self.is_input:
             dataset.set_input(self.new_added_field_name)
 
@@ -167,6 +166,7 @@ class VocabProcessor(Processor):
     """Build vocabulary with a field in the data set.
 
     """
+
     def __init__(self, field_name):
         super(VocabProcessor, self).__init__(field_name, None)
         self.vocab = Vocabulary()
@@ -175,8 +175,7 @@ class VocabProcessor(Processor):
         for dataset in datasets:
             assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
             for ins in dataset:
-                tokens = ins[self.field_name]
-                self.vocab.update(tokens)
+                self.vocab.update(ins[self.field_name])
 
     def get_vocab(self):
         self.vocab.build_vocab()
@@ -190,9 +189,7 @@ class SeqLenProcessor(Processor):
 
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
-        for ins in dataset:
-            length = len(ins[self.field_name])
-            ins[self.new_added_field_name] = length
+        dataset.apply(lambda ins: len(ins[self.field_name]), new_field_name=self.new_added_field_name)
         if self.is_input:
             dataset.set_input(self.new_added_field_name)
         return dataset
@@ -225,7 +222,7 @@ class ModelProcessor(Processor):
                 for key, value in prediction.items():
                     tmp_batch = []
                     value = value.cpu().numpy()
-                    if len(value.shape) == 1 or (len(value.shape)==2 and value.shape[1]==1):
+                    if len(value.shape) == 1 or (len(value.shape) == 2 and value.shape[1] == 1):
                         batch_output[key].extend(value.tolist())
                     else:
                         for idx, seq_len in enumerate(seq_lens):
@@ -236,7 +233,7 @@ class ModelProcessor(Processor):
 
         # TODO 当前的实现会导致之后的processor需要知道model输出的output的key是什么
         for field_name, fields in batch_output.items():
-            dataset.add_field(field_name, fields, need_tensor=False, is_target=False)
+            dataset.add_field(field_name, fields, is_input=True, is_target=False)
 
         return dataset
 
@@ -254,23 +251,8 @@ class Index2WordProcessor(Processor):
         self.vocab = vocab
 
     def process(self, dataset):
-        for ins in dataset:
-            new_sent = [self.vocab.to_word(w) for w in ins[self.field_name]]
-            ins[self.new_added_field_name] = new_sent
-        return dataset
-
-
-class SetTensorProcessor(Processor):
-    # TODO: remove it. It is strange.
-    def __init__(self, field_dict, default=False):
-        super(SetTensorProcessor, self).__init__(None, None)
-        self.field_dict = field_dict
-        self.default = default
-
-    def process(self, dataset):
-        set_dict = {name: self.default for name in dataset.get_all_fields().keys()}
-        set_dict.update(self.field_dict)
-        dataset._set_need_tensor(**set_dict)
+        dataset.apply(lambda ins: [self.vocab.to_word(w) for w in ins[self.field_name]],
+                      new_field_name=self.new_added_field_name)
         return dataset
 
 

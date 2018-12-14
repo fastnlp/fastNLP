@@ -3,11 +3,11 @@ import time
 from datetime import datetime
 from datetime import timedelta
 
+import numpy as np
 import torch
 from tensorboardX import SummaryWriter
 from torch import nn
 from tqdm.autonotebook import tqdm
-import numpy as np
 
 from fastNLP.core.batch import Batch
 from fastNLP.core.dataset import DataSet
@@ -201,7 +201,7 @@ class Trainer(object):
                 results['best_step'] = self.best_dev_step
                 if load_best_model:
                     model_name = "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time])
-                    self._load_model(self.model, model_name)
+                    # self._load_model(self.model, model_name)
                     print("Reloaded the best model.")
         finally:
             self._summary_writer.close()
@@ -361,6 +361,7 @@ class Trainer(object):
                 torch.save(model, model_name)
 
     def _load_model(self, model, model_name, only_param=False):
+        # TODO: 这个是不是有问题？
         if self.save_path is not None:
             model_name = os.path.join(self.save_path, model_name)
             if only_param:
