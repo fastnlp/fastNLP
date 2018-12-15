@@ -1,10 +1,10 @@
+import time
 import unittest
 
 import numpy as np
 import torch.nn.functional as F
 from torch import nn
-import time
-from fastNLP.core.utils import CheckError
+
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
 from fastNLP.core.losses import BCELoss
@@ -83,7 +83,7 @@ class TrainerTestGround(unittest.TestCase):
 
         model = Model()
 
-        with self.assertRaises(NameError):
+        with self.assertRaises(RuntimeError):
             trainer = Trainer(
                 train_data=dataset,
                 model=model

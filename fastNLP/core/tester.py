@@ -31,12 +31,12 @@ class Tester(object):
         self.use_cuda = use_cuda
         self.batch_size = batch_size
         self.verbose = verbose
-        self._model_device = model.parameters().__next__().device
 
         if torch.cuda.is_available() and self.use_cuda:
             self._model = model.cuda()
         else:
             self._model = model
+        self._model_device = model.parameters().__next__().device
 
         # check predict
         if hasattr(self._model, 'predict'):
