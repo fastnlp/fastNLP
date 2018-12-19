@@ -63,9 +63,9 @@ class MetricBase(object):
                     f"initialization parameters, or change its signature.")
 
         # evaluate should not have varargs.
-        if func_spect.varargs:
-            raise NameError(f"Delete `*{func_spect.varargs}` in {get_func_signature(self.evaluate)}(Do not use "
-                            f"positional argument.).")
+        # if func_spect.varargs:
+        #     raise NameError(f"Delete `*{func_spect.varargs}` in {get_func_signature(self.evaluate)}(Do not use "
+        #                     f"positional argument.).")
 
     def get_metric(self, reset=True):
         raise NotImplemented
@@ -165,7 +165,7 @@ class MetricBase(object):
                                  all_needed=check_res.all_needed,
                                  varargs=check_res.varargs)
 
-            if check_res.missing or check_res.duplicated or check_res.varargs:
+            if check_res.missing or check_res.duplicated:
                 raise CheckError(check_res=check_res,
                                  func_signature=get_func_signature(self.evaluate))
         refined_args = _build_args(self.evaluate, **mapped_pred_dict, **mapped_target_dict)
