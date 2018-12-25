@@ -363,11 +363,11 @@ class Trainer(object):
     def _load_model(self, model, model_name, only_param=False):
         # TODO: 这个是不是有问题？
         if self.save_path is not None:
-            model_name = os.path.join(self.save_path, model_name)
+            model_path = os.path.join(self.save_path, model_name)
             if only_param:
-                states = torch.save(model.state_dict(), model_name)
+                states = torch.load(model_path)
             else:
-                states = torch.save(model, model_name).state_dict()
+                states = torch.load(model_path).state_dict()
             model.load_state_dict(states)
 
     def _better_eval_result(self, metrics):

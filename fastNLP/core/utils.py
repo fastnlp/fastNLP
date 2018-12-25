@@ -242,9 +242,9 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
     _unused_field = []
     _unused_param = []
     suggestions = []
-    if check_res.varargs:
-        errs.append(f"\tvarargs: *{check_res.varargs}")
-        suggestions.append(f"Does not support pass positional arguments, please delete *{check_res.varargs}.")
+    # if check_res.varargs:
+    #     errs.append(f"\tvarargs: *{check_res.varargs}")
+    #     suggestions.append(f"Does not support pass positional arguments, please delete *{check_res.varargs}.")
 
     if check_res.unused:
         for _unused in check_res.unused:
@@ -344,9 +344,9 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
     suggestions = []
     _unused = []
 
-    if check_res.varargs:
-        errs.append(f"\tvarargs: {check_res.varargs}")
-        suggestions.append(f"Does not support pass positional arguments, please delete *{check_res.varargs}.")
+    # if check_res.varargs:
+    #     errs.append(f"\tvarargs: {check_res.varargs}")
+    #     suggestions.append(f"Does not support pass positional arguments, please delete *{check_res.varargs}.")
     if check_res.missing:
         errs.append(f"\tmissing param: {check_res.missing}")
         _miss_in_dataset = []
