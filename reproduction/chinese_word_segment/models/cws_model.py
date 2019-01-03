@@ -9,7 +9,7 @@ from reproduction.chinese_word_segment.utils import seq_lens_to_mask
 
 class CWSBiLSTMEncoder(BaseModel):
     def __init__(self, vocab_num, embed_dim=100, bigram_vocab_num=None, bigram_embed_dim=100, num_bigram_per_char=None,
-                 hidden_size=200, bidirectional=True, embed_drop_p=None, num_layers=1):
+                 hidden_size=200, bidirectional=True, embed_drop_p=0.2, num_layers=1):
         super().__init__()
 
         self.input_size = 0
@@ -68,6 +68,7 @@ class CWSBiLSTMEncoder(BaseModel):
         if not bigrams is None:
             bigram_tensor = self.bigram_embedding(bigrams).view(batch_size, max_len, -1)
             x_tensor = torch.cat([x_tensor, bigram_tensor], dim=2)
+        x_tensor = self.embedding_drop(x_tensor)
         sorted_lens, sorted_indices = torch.sort(seq_lens, descending=True)
         packed_x = nn.utils.rnn.pack_padded_sequence(x_tensor[sorted_indices], sorted_lens, batch_first=True)
 
@@ -120,10 +121,24 @@ class CWSBiLSTMSegApp(BaseModel):
 
 
 from fastNLP.modules.decoder.CRF import ConditionalRandomField
+from fastNLP.modules.decoder.CRF import allowed_transitions
 
 class CWSBiLSTMCRF(BaseModel):
     def __init__(self, vocab_num, embed_dim=100, bigram_vocab_num=None, bigram_embed_dim=100, num_bigram_per_char=None,
-                 hidden_size=200, bidirectional=True, embed_drop_p=None, num_layers=1, tag_size=4):
+                 hidden_size=200, bidirectional=True, embed_drop_p=0.2, num_layers=1, tag_size=4):
+        """
+        默认使用BMES的标注方式
+        :param vocab_num:
+        :param embed_dim:
+        :param bigram_vocab_num:
+        :param bigram_embed_dim:
+        :param num_bigram_per_char:
+        :param hidden_size:
+        :param bidirectional:
+        :param embed_drop_p:
+        :param num_layers:
+        :param tag_size:
+        """
         super(CWSBiLSTMCRF, self).__init__()
 
         self.tag_size = tag_size
@@ -133,10 +148,12 @@ class CWSBiLSTMCRF(BaseModel):
 
         size_layer = [hidden_size, 200, tag_size]
         self.decoder_model = MLP(size_layer)
-        self.crf = ConditionalRandomField(tag_size=tag_size, include_start_end_trans=False)
+        allowed_trans = allowed_transitions({0:'b', 1:'m', 2:'e', 3:'s'}, encoding_type='bmes')
+        self.crf = ConditionalRandomField(num_tags=tag_size, include_start_end_trans=False,
+                                          allowed_transitions=allowed_trans)
 
 
-    def forward(self, chars, tags, seq_lens, bigrams=None):
+    def forward(self, chars, target, seq_lens, bigrams=None):
         device = self.parameters().__next__().device
         chars = chars.to(device).long()
         if not bigrams is None:
@@ -147,7 +164,7 @@ class CWSBiLSTMCRF(BaseModel):
         masks = seq_lens_to_mask(seq_lens)
         feats = self.encoder_model(chars, bigrams, seq_lens)
         feats = self.decoder_model(feats)
-        losses = self.crf(feats, tags, masks)
+        losses = self.crf(feats, target, masks)
 
         pred_dict = {}
         pred_dict['seq_lens'] = seq_lens
@@ -168,5 +185,5 @@ class CWSBiLSTMCRF(BaseModel):
         feats = self.decoder_model(feats)
         probs = self.crf.viterbi_decode(feats, masks, get_score=False)
 
-        return {'pred_tags': probs}
+        return {'pred': probs}
 

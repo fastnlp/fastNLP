@@ -31,9 +31,8 @@ class Trainer(object):
 
     """
     def __init__(self, train_data, model, loss=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
-                 validate_every=-1, dev_data=None, use_cuda=False, save_path=None,
-                 optimizer=Adam(lr=0.01, weight_decay=0), check_code_level=0,
-                 metric_key=None, sampler=RandomSampler(), use_tqdm=True):
+                 validate_every=-1, dev_data=None, save_path=None, optimizer=Adam(lr=0.01, weight_decay=0),
+                 check_code_level=0, metric_key=None, sampler=RandomSampler(), use_tqdm=True, use_cuda=False):
         """
 
         :param DataSet train_data: the training data

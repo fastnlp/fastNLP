@@ -254,7 +254,7 @@ class DataSet(object):
         :return results: if new_field_name is not passed, returned values of the function over all instances.
         """
         results = [func(ins) for ins in self._inner_iter()]
-        if len(list(filter(lambda x: x is not None, results))) == 0:  # all None
+        if len(list(filter(lambda x: x is not None, results))) == 0 and not (new_field_name is None):  # all None
             raise ValueError("{} always return None.".format(get_func_signature(func=func)))
 
         extra_param = {}

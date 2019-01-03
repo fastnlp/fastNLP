@@ -9,8 +9,8 @@ from fastNLP.core.dataset import DataSet
 
 from fastNLP.api.model_zoo import load_url
 from fastNLP.api.processor import ModelProcessor
-from reproduction.chinese_word_segment.cws_io.cws_reader import ConlluCWSReader
-from reproduction.pos_tag_model.pos_io.pos_reader import ConlluPOSReader
+from reproduction.chinese_word_segment.cws_io.cws_reader import ConllCWSReader
+from reproduction.pos_tag_model.pos_io.pos_reader import ConllPOSReader
 from reproduction.Biaffine_parser.util import ConllxDataLoader, add_seg_tag
 from fastNLP.core.instance import Instance
 from fastNLP.core.sampler import SequentialSampler
@@ -95,7 +95,7 @@ class POS(API):
         pipeline.append(tag_proc)
         pp = Pipeline(pipeline)
 
-        reader = ConlluPOSReader()
+        reader = ConllPOSReader()
         te_dataset = reader.load(filepath)
 
         evaluator = SeqLabelEvaluator2('word_seq_origin_len')
@@ -168,7 +168,7 @@ class CWS(API):
         pipeline.insert(1, tag_proc)
         pp = Pipeline(pipeline)
 
-        reader = ConlluCWSReader()
+        reader = ConllCWSReader()
 
         # te_filename = '/home/hyan/ctb3/test.conllx'
         te_dataset = reader.load(filepath)

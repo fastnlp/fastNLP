@@ -2,7 +2,6 @@
 import re
 
 
-from fastNLP.core.field import SeqLabelField
 from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.core.dataset import DataSet
 from fastNLP.api.processor import Processor
@@ -11,7 +10,10 @@ from reproduction.chinese_word_segment.process.span_converter import SpanConvert
 _SPECIAL_TAG_PATTERN = '<[a-zA-Z]+>'
 
 class SpeicalSpanProcessor(Processor):
-    # 这个类会将句子中的special span转换为对应的内容。
+    """
+    将DataSet中field_name使用span_converter替换掉。
+
+    """
     def __init__(self, field_name, new_added_field_name=None):
         super(SpeicalSpanProcessor, self).__init__(field_name, new_added_field_name)
 
@@ -20,11 +22,12 @@ class SpeicalSpanProcessor(Processor):
 
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
-        for ins in dataset:
+        def inner_proc(ins):
             sentence = ins[self.field_name]
             for span_converter in self.span_converters:
                 sentence = span_converter.find_certain_span_and_replace(sentence)
-            ins[self.new_added_field_name] = sentence
+            return sentence
+        dataset.apply(func=inner_proc, new_field_name=self.new_added_field_name)
 
         return dataset
 
@@ -34,17 +37,22 @@ class SpeicalSpanProcessor(Processor):
         self.span_converters.append(converter)
 
 
-
 class CWSCharSegProcessor(Processor):
+    """
+    将DataSet中field_name这个field分成一个个的汉字，即原来可能为"复旦大学 fudan", 分成['复', '旦', '大', '学',
+        ' ', 'f', 'u', ...]
+
+    """
     def __init__(self, field_name, new_added_field_name):
         super(CWSCharSegProcessor, self).__init__(field_name, new_added_field_name)
 
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
-        for ins in dataset:
+        def inner_proc(ins):
             sentence = ins[self.field_name]
             chars = self._split_sent_into_chars(sentence)
-            ins[self.new_added_field_name] = chars
+            return chars
+        dataset.apply(func=inner_proc, new_field_name=self.new_added_field_name)
 
         return dataset
 
@@ -73,6 +81,10 @@ class CWSCharSegProcessor(Processor):
 
 
 class CWSTagProcessor(Processor):
+    """
+    为分词生成tag。该class为Base class。
+
+    """
     def __init__(self, field_name, new_added_field_name=None):
         super(CWSTagProcessor, self).__init__(field_name, new_added_field_name)
 
@@ -107,18 +119,22 @@ class CWSTagProcessor(Processor):
 
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
-        for ins in dataset:
+        def inner_proc(ins):
             sentence = ins[self.field_name]
             tag_list = self._generate_tag(sentence)
-            ins[self.new_added_field_name] = tag_list
-        dataset.set_target(**{self.new_added_field_name:True})
-        dataset._set_need_tensor(**{self.new_added_field_name:True})
+            return tag_list
+        dataset.apply(func=inner_proc, new_field_name=self.new_added_field_name)
+        dataset.set_target(self.new_added_field_name)
         return dataset
 
     def _tags_from_word_len(self, word_len):
         raise NotImplementedError
 
 class CWSBMESTagProcessor(CWSTagProcessor):
+    """
+    通过DataSet中的field_name这个field生成相应的BMES的tag。
+
+    """
     def __init__(self, field_name, new_added_field_name=None):
         super(CWSBMESTagProcessor, self).__init__(field_name, new_added_field_name)
 
@@ -137,6 +153,10 @@ class CWSBMESTagProcessor(CWSTagProcessor):
         return tag_list
 
 class CWSSegAppTagProcessor(CWSTagProcessor):
+    """
+    通过DataSet中的field_name这个field生成相应的SegApp的tag。
+
+    """
     def __init__(self, field_name, new_added_field_name=None):
         super(CWSSegAppTagProcessor, self).__init__(field_name, new_added_field_name)
 
@@ -151,6 +171,10 @@ class CWSSegAppTagProcessor(CWSTagProcessor):
 
 
 class BigramProcessor(Processor):
+    """
+    这是生成bigram的基类。
+
+    """
     def __init__(self, field_name, new_added_fielf_name=None):
 
         super(BigramProcessor, self).__init__(field_name, new_added_fielf_name)
@@ -158,22 +182,31 @@ class BigramProcessor(Processor):
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
 
-        for ins in dataset:
+        def inner_proc(ins):
             characters = ins[self.field_name]
             bigrams = self._generate_bigram(characters)
-            ins[self.new_added_field_name] = bigrams
+            return bigrams
+        dataset.apply(func=inner_proc, new_field_name=self.new_added_field_name)
 
         return dataset
-
 
     def _generate_bigram(self, characters):
         pass
 
 
 class Pre2Post2BigramProcessor(BigramProcessor):
-    def __init__(self, field_name, new_added_fielf_name=None):
+    """
+    该bigram processor生成bigram的方式如下
+    原汉字list为l = ['a', 'b', 'c']，会被padding为L=['SOS', 'SOS', 'a', 'b', 'c', 'EOS', 'EOS']，生成bigram list为
+        [L[idx-2], L[idx-1], L[idx+1], L[idx+2], L[idx-2]L[idx], L[idx-1]L[idx], L[idx]L[idx+1], L[idx]L[idx+2], ....]
+    即每个汉字，会有八个bigram, 对于上例中'a'的bigram为
+        ['SOS', 'SOS', 'b', 'c', 'SOSa', 'SOSa', 'ab', 'ac']
+    返回的bigram是一个list，但其实每8个元素是一个汉字的bigram信息。
 
-        super(BigramProcessor, self).__init__(field_name, new_added_fielf_name)
+    """
+    def __init__(self, field_name, new_added_field_name=None):
+
+        super(BigramProcessor, self).__init__(field_name, new_added_field_name)
 
     def _generate_bigram(self, characters):
         bigrams = []
@@ -197,20 +230,102 @@ class Pre2Post2BigramProcessor(BigramProcessor):
 # 这里需要建立vocabulary了，但是遇到了以下的问题
 # (1) 如果使用Processor的方式的话，但是在这种情况返回的不是dataset。所以建立vocabulary的工作用另外的方式实现，不借用
 #   Processor了
+# TODO 如何将建立vocab和index这两步统一了？
+
+class VocabIndexerProcessor(Processor):
+    """
+    根据DataSet创建Vocabulary，并将其用数字index。新生成的index的field会被放在new_added_filed_name, 如果没有提供
+        new_added_field_name, 则覆盖原有的field_name.
+
+    """
+    def __init__(self, field_name, new_added_filed_name=None, min_freq=1, max_size=None,
+                  verbose=1):
+        """
+
+        :param field_name: 从哪个field_name创建词表，以及对哪个field_name进行index操作
+        :param new_added_filed_name: index时，生成的index field的名称，如果不传入，则覆盖field_name.
+        :param min_freq: 创建的Vocabulary允许的单词最少出现次数.
+        :param max_size: 创建的Vocabulary允许的最大的单词数量
+        :param verbose: 0, 不输出任何信息；1，输出信息
+        """
+        super(VocabIndexerProcessor, self).__init__(field_name, new_added_filed_name)
+        self.min_freq = min_freq
+        self.max_size = max_size
+
+        self.verbose =verbose
+
+    def construct_vocab(self, *datasets):
+        """
+        使用传入的DataSet创建vocabulary
+
+        :param datasets: DataSet类型的数据，用于构建vocabulary
+        :return:
+        """
+        self.vocab = Vocabulary(min_freq=self.min_freq, max_size=self.max_size)
+        for dataset in datasets:
+            assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
+            dataset.apply(lambda ins: self.vocab.update(ins[self.field_name]))
+        self.vocab.build_vocab()
+        if self.verbose:
+            print("Vocabulary Constructed, has {} items.".format(len(self.vocab)))
+
+    def process(self, *datasets, only_index_dataset=None):
+        """
+        若还未建立Vocabulary，则使用dataset中的DataSet建立vocabulary；若已经有了vocabulary则使用已有的vocabulary。得到vocabulary
+            后，则会index datasets与only_index_dataset。
+
+        :param datasets: DataSet类型的数据
+        :param only_index_dataset: DataSet, or list of DataSet. 该参数中的内容只会被用于index，不会被用于生成vocabulary。
+        :return:
+        """
+        if len(datasets)==0 and not hasattr(self,'vocab'):
+            raise RuntimeError("You have to construct vocabulary first. Or you have to pass datasets to construct it.")
+        if not hasattr(self, 'vocab'):
+            self.construct_vocab(*datasets)
+        else:
+            if self.verbose:
+                print("Using constructed vocabulary with {} items.".format(len(self.vocab)))
+        to_index_datasets = []
+        if len(datasets)!=0:
+            for dataset in datasets:
+                assert isinstance(dataset, DataSet), "Only DataSet class is allowed, not {}.".format(type(dataset))
+                to_index_datasets.append(dataset)
+
+        if not (only_index_dataset is None):
+            if isinstance(only_index_dataset, list):
+                for dataset in only_index_dataset:
+                    assert isinstance(dataset, DataSet), "Only DataSet class is allowed, not {}.".format(type(dataset))
+                    to_index_datasets.append(dataset)
+            elif isinstance(only_index_dataset, DataSet):
+                to_index_datasets.append(only_index_dataset)
+            else:
+                raise TypeError('Only DataSet or list of DataSet is allowed, not {}.'.format(type(only_index_dataset)))
+
+        for dataset in to_index_datasets:
+            assert isinstance(dataset, DataSet), "Only DataSet class is allowed, not {}.".format(type(dataset))
+            dataset.apply(lambda ins: [self.vocab.to_index(token) for token in ins[self.field_name]],
+                          new_field_name=self.new_added_field_name)
+
+    def set_vocab(self, vocab):
+        assert isinstance(vocab, Vocabulary), "Only fastNLP.core.Vocabulary is allowed, not {}.".format(type(vocab))
+        self.vocab = vocab
+
+    def delete_vocab(self):
+        del self.vocab
+
+    def get_vocab_size(self):
+        return len(self.vocab)
 
 class VocabProcessor(Processor):
-    def __init__(self, field_name, min_count=1, max_vocab_size=None):
+    def __init__(self, field_name, min_freq=1, max_size=None):
 
         super(VocabProcessor, self).__init__(field_name, None)
-        self.vocab = Vocabulary(min_freq=min_count, max_size=max_vocab_size)
+        self.vocab = Vocabulary(min_freq=min_freq, max_size=max_size)
 
     def process(self, *datasets):
         for dataset in datasets:
             assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
-            for ins in dataset:
-                tokens = ins[self.field_name]
-                self.vocab.update(tokens)
-
+            dataset.apply(lambda ins: self.vocab.update(ins[self.field_name]))
 
     def get_vocab(self):
         self.vocab.build_vocab()
@@ -219,19 +334,6 @@ class VocabProcessor(Processor):
     def get_vocab_size(self):
         return len(self.vocab)
 
-
-class SeqLenProcessor(Processor):
-    def __init__(self, field_name, new_added_field_name='seq_lens'):
-
-        super(SeqLenProcessor, self).__init__(field_name, new_added_field_name)
-
-    def process(self, dataset):
-        assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
-        for ins in dataset:
-            length = len(ins[self.field_name])
-            ins[self.new_added_field_name] = length
-        dataset._set_need_tensor(**{self.new_added_field_name:True})
-        return dataset
 
 class SegApp2OutputProcessor(Processor):
     def __init__(self, chars_field_name='chars_list', tag_field_name='pred_tags', new_added_field_name='output'):
@@ -258,7 +360,32 @@ class SegApp2OutputProcessor(Processor):
 
 
 class BMES2OutputProcessor(Processor):
-    def __init__(self, chars_field_name='chars_list', tag_field_name='pred_tags', new_added_field_name='output'):
+    """
+        按照BMES标注方式推测生成的tag。由于可能存在非法tag，比如"BS"，所以需要用以下的表格做转换，cur_B意思是当前tag是B，
+        next_B意思是后一个tag是B。则cur_B=S，即将当前被predict是B的tag标为S；next_M=B, 即将后一个被predict是M的tag标为B
+        |       |  next_B |  next_M  |  next_E  |  next_S |   end   |
+        |:-----:|:-------:|:--------:|:--------:|:-------:|:-------:|
+        | start |   合法  | next_M=B | next_E=S |   合法  |    -    |
+        | cur_B | cur_B=S |   合法   |   合法   | cur_B=S | cur_B=S |
+        | cur_M | cur_M=E |   合法   |   合法   | cur_M=E | cur_M=E |
+        | cur_E |   合法  | next_M=B | next_E=S |   合法  |   合法  |
+        | cur_S |   合法  | next_M=B | next_E=S |   合法  |   合法  |
+    举例：
+        prediction为BSEMS，会被认为是SSSSS.
+
+    """
+    def __init__(self, chars_field_name='chars_list', tag_field_name='pred_tags', new_added_field_name='output',
+            b_idx = 0, m_idx = 1, e_idx = 2, s_idx = 3):
+        """
+
+        :param chars_field_name: character所对应的field
+        :param tag_field_name: 预测对应的field
+        :param new_added_field_name: 转换后的内容所在field
+        :param b_idx: int, Begin标签所对应的tag idx.
+        :param m_idx: int, Middle标签所对应的tag idx.
+        :param e_idx: int, End标签所对应的tag idx.
+        :param s_idx: int, Single标签所对应的tag idx
+        """
         super(BMES2OutputProcessor, self).__init__(None, None)
 
         self.chars_field_name = chars_field_name
@@ -266,19 +393,55 @@ class BMES2OutputProcessor(Processor):
 
         self.new_added_field_name = new_added_field_name
 
+        self.b_idx = b_idx
+        self.m_idx = m_idx
+        self.e_idx = e_idx
+        self.s_idx = s_idx
+        # 还原init处介绍的矩阵
+        self._valida_matrix = {
+            -1: [(-1, -1), (1, self.b_idx), (1, self.s_idx), (-1, -1)], # magic start idx
+            self.b_idx:[(0, self.s_idx), (-1, -1), (-1, -1), (0, self.s_idx), (0, self.s_idx)],
+            self.m_idx:[(0, self.e_idx), (-1, -1), (-1, -1), (0, self.e_idx), (0, self.e_idx)],
+            self.e_idx:[(-1, -1), (1, self.b_idx), (1, self.s_idx), (-1, -1), (-1, -1)],
+            self.s_idx:[(-1, -1), (1, self.b_idx), (1, self.s_idx), (-1, -1), (-1, -1)],
+        }
+
+    def _validate_tags(self, tags):
+        """
+        给定一个tag的List，返回合法tag
+
+        :param tags: Tensor, shape: (seq_len, )
+        :return: 返回修改为合法tag的list
+        """
+        assert len(tags)!=0
+        padded_tags = [-1, *tags, -1]
+        for idx in range(len(padded_tags)-1):
+            cur_tag = padded_tags[idx]
+            if cur_tag not in self._valida_matrix:
+                cur_tag = self.s_idx
+            if padded_tags[idx+1] not in self._valida_matrix:
+                padded_tags[idx+1] = self.s_idx
+            next_tag = padded_tags[idx+1]
+            shift_tag = self._valida_matrix[cur_tag][next_tag]
+            if shift_tag[0]!=-1:
+                padded_tags[idx+shift_tag[0]] = shift_tag[1]
+
+        return padded_tags[1:-1]
+
     def process(self, dataset):
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
-        for ins in dataset:
+        def inner_proc(ins):
             pred_tags = ins[self.tag_field_name]
+            pred_tags = self._validate_tags(pred_tags)
             chars = ins[self.chars_field_name]
             words = []
             start_idx = 0
             for idx, tag in enumerate(pred_tags):
-                if tag==3:
-                    # 当前没有考虑将原文替换回去
+                if tag==self.s_idx:
                     words.extend(chars[start_idx:idx+1])
                     start_idx = idx + 1
-                elif tag==2:
+                elif tag==self.e_idx:
                     words.append(''.join(chars[start_idx:idx+1]))
                     start_idx = idx + 1
-            ins[self.new_added_field_name] = ' '.join(words)
+            return ' '.join(words)
+        dataset.apply(func=inner_proc, new_field_name=self.new_added_field_name)
