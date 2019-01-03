@@ -41,13 +41,13 @@ class Vocabulary(object):
         vocab.update(word_list)
         vocab["word"]
         vocab.to_word(5)
+
+    :param int max_size: set the max number of words in Vocabulary. Default: None
+    :param int min_freq: set the min occur frequency of words in Vocabulary. Default: None
+
     """
 
     def __init__(self, max_size=None, min_freq=None, unknown='<unk>', padding='<pad>'):
-        """
-        :param int max_size: set the max number of words in Vocabulary. Default: None
-        :param int min_freq: set the min occur frequency of words in Vocabulary. Default: None
-        """
         self.max_size = max_size
         self.min_freq = min_freq
         self.word_count = Counter()
@@ -78,6 +78,7 @@ class Vocabulary(object):
         """Add a single word into the vocabulary.
 
         :param str word: a word or token.
+
         """
         self.add(word)
 
@@ -86,11 +87,12 @@ class Vocabulary(object):
         """Add a list of words into the vocabulary.
 
         :param list word_lst: a list of strings
+
         """
         self.update(word_lst)
 
     def build_vocab(self):
-        """Build 'word to index' dict, and filter the word using `max_size` and `min_freq`.
+        """Build a mapping from word to index, and filter the word using ``max_size`` and ``min_freq``.
 
         """
         self.word2idx = {}
@@ -111,7 +113,7 @@ class Vocabulary(object):
         self.rebuild = False
 
     def build_reverse_vocab(self):
-        """Build 'index to word' dict based on 'word to index' dict.
+        """Build "index to word" dict based on "word to index" dict.
 
         """
         self.idx2word = {i: w for w, i in self.word2idx.items()}
@@ -146,10 +148,9 @@ class Vocabulary(object):
             raise ValueError("word {} not in vocabulary".format(w))
 
     def to_index(self, w):
-        """ Turn a word to an index.
-            If w is not in Vocabulary, return the unknown label.
+        """ Turn a word to an index. If w is not in Vocabulary, return the unknown label.
 
-        :param str w:
+        :param str w: a word
         """
         return self.__getitem__(w)
 

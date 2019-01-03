@@ -30,6 +30,7 @@ A deep learning NLP model is the composition of three types of modules:
     <td> decode the representation into the output </td>
     <td> MLP, CRF </td>
 </tr>
+</table>
 
 For example:
 
@@ -37,9 +38,11 @@ For example:
 
 ## Requirements
 
+- Python>=3.6
 - numpy>=1.14.2
 - torch>=0.4.0
 - tensorboardX
+- tqdm>=4.28.1
 
 
 ## Resources

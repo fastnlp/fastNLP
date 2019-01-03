@@ -27,36 +27,32 @@ from fastNLP.core.utils import get_func_signature
 
 
 class Trainer(object):
-    """Main Training Loop
-
-    """
     def __init__(self, train_data, model, loss=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
                  validate_every=-1, dev_data=None, save_path=None, optimizer=Adam(lr=0.01, weight_decay=0),
                  check_code_level=0, metric_key=None, sampler=RandomSampler(), use_tqdm=True, use_cuda=False):
         """
-
         :param DataSet train_data: the training data
         :param torch.nn.modules.module model: a PyTorch model
         :param LossBase loss: a loss object
-        :param MetricBase or List[MetricBase] metrics: a metric object or a list of metrics
+        :param MetricBase metrics: a metric object or a list of metrics (List[MetricBase])
         :param int n_epochs: the number of training epochs
         :param int batch_size: batch size for training and validation
         :param int print_every: step interval to print next training information. Default: -1(no print).
         :param int validate_every: step interval to do next validation. Default: -1(validate every epoch).
         :param DataSet dev_data: the validation data
-        :param use_cuda:
-        :param save_path: file path to save models
+        :param bool use_cuda: whether to use CUDA in training.
+        :param str save_path: file path to save models
         :param Optimizer optimizer: an optimizer object
-        :param int check_code_level: level of FastNLP code checker. -1: don't check, 0: ignore. 1: warning. 2: strict.
+        :param int check_code_level: level of FastNLP code checker. -1: don't check, 0: ignore. 1: warning. 2: strict.\\
             `ignore` will not check unused field; `warning` when warn if some field are not used; `strict` means
             it will raise error if some field are not used.
         :param str metric_key: a single indicator used to decide the best model based on metric results. It must be one
             of the keys returned by the FIRST metric in `metrics`. If the overall result gets better if the indicator gets
-            smaller, add a `-` character in front of the string. For example
-                ::
+            smaller, add "-" in front of the string. For example::
+
                     metric_key="-PPL"   # language model gets better as perplexity gets smaller
-        :param sampler: method used to generate batch data.
-        :param use_tqdm: boolean, use tqdm to show train progress.
+        :param BaseSampler sampler: method used to generate batch data.
+        :param bool use_tqdm: whether to use tqdm to show train progress.
 
         """
         super(Trainer, self).__init__()
@@ -140,30 +136,30 @@ class Trainer(object):
     def train(self, load_best_model=True):
         """
 
-        开始训练过程。主要有以下几个步骤
-        for epoch in range(num_epochs):
-            (1) 使用Batch从DataSet中按批取出数据，并自动对DataSet中dtype为float, int的fields进行padding。并转换为Tensor。非
-                    float，int类型的参数将不会被转换为Tensor，且不进行padding
-            for batch_x, batch_y in Batch(DataSet):
-                # batch_x中为设置为input的field
-                # batch_y中为设置为target的field
-                (2) 将batch_x的数据送入到model.forward函数中，并获取结果
-                (3) 将batch_y与model.forward的结果一并送入loss中计算loss
-                (4) 获取到loss之后，进行反向求导并更新梯度
-        if dev_data is not None:
-            根据metrics进行evaluation，并根据是否提供了save_path判断是否存储模型
+        开始训练过程。主要有以下几个步骤::
 
-        :param load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现最好的
+            对于每次循环
+                1. 使用Batch从DataSet中按批取出数据，并自动对DataSet中dtype为float, int的fields进行padding。并转换为Tensor。
+                非float，int类型的参数将不会被转换为Tensor，且不进行padding。
+                for batch_x, batch_y in Batch(DataSet)
+                    # batch_x中为设置为input的field
+                    # batch_y中为设置为target的field
+                    2. 将batch_x的数据送入到model.forward函数中，并获取结果
+                    3. 将batch_y与model.forward的结果一并送入loss中计算loss
+                    4. 获取到loss之后，进行反向求导并更新梯度
+            如果测试集不为空
+                根据metrics进行evaluation，并根据是否提供了save_path判断是否存储模型
+
+        :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现最好的
             模型参数。
+        :return results: 返回一个字典类型的数据, 内含以下内容::
 
-        将会返回一个字典类型的数据, 内含以下内容：
             seconds: float, 表示训练时长
             以下三个内容只有在提供了dev_data的情况下会有。
             best_eval: Dict of Dict, 表示evaluation的结果
             best_epoch: int，在第几个epoch取得的最佳值
             best_step: int, 在第几个step(batch)更新取得的最佳值
 
-        return dict:
         """
         results = {}
         try:

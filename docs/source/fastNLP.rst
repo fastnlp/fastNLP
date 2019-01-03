@@ -3,18 +3,11 @@ fastNLP
 
 .. toctree::
 
+    fastNLP.api
     fastNLP.core
-    fastNLP.loader
+    fastNLP.io
     fastNLP.models
     fastNLP.modules
-    fastNLP.saver
-
-fastNLP.fastnlp 
-----------------
-
-.. automodule:: fastNLP.fastnlp
-    :members:
-
 
 .. automodule:: fastNLP
     :members:
