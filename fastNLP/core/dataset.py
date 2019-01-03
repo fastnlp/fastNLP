@@ -118,7 +118,7 @@ class DataSet(object):
     def __len__(self):
         """Fetch the length of the dataset.
 
-        :return int length:
+        :return length:
         """
         if len(self.field_arrays) == 0:
             return 0
@@ -170,7 +170,7 @@ class DataSet(object):
     def delete_field(self, name):
         """Delete a field based on the field name.
 
-        :param str name: the name of the field to be deleted.
+        :param name: the name of the field to be deleted.
         """
         self.field_arrays.pop(name)
 
@@ -182,14 +182,14 @@ class DataSet(object):
     def get_all_fields(self):
         """Return all the fields with their names.
 
-        :return dict field_arrays: the internal data structure of DataSet.
+        :return field_arrays: the internal data structure of DataSet.
         """
         return self.field_arrays
 
     def get_length(self):
         """Fetch the length of the dataset.
 
-        :return int length:
+        :return length:
         """
         return len(self)
 
@@ -232,14 +232,14 @@ class DataSet(object):
     def get_input_name(self):
         """Get all field names with `is_input` as True.
 
-        :return list field_names: a list of str
+        :return field_names: a list of str
         """
         return [name for name, field in self.field_arrays.items() if field.is_input]
 
     def get_target_name(self):
         """Get all field names with `is_target` as True.
 
-        :return list field_names: a list of str
+        :return field_names: a list of str
         """
         return [name for name, field in self.field_arrays.items() if field.is_target]
 
@@ -294,8 +294,9 @@ class DataSet(object):
         """Split the dataset into training and development(validation) set.
 
         :param float dev_ratio: the ratio of test set in all data.
-        :return DataSet train_set: the training set
-                DataSet dev_set: the development set
+        :return (train_set, dev_set):
+                train_set: the training set
+                dev_set: the development set
         """
         assert isinstance(dev_ratio, float)
         assert 0 < dev_ratio < 1
@@ -326,7 +327,7 @@ class DataSet(object):
         :param List[str] or Tuple[str] headers: headers of the CSV file
         :param str sep: delimiter in CSV file. Default: ","
         :param bool dropna: If True, drop rows that have less entries than headers.
-        :return DataSet dataset:
+        :return dataset: the read data set
 
         """
         with open(csv_path, "r") as f:
@@ -370,7 +371,7 @@ class DataSet(object):
         """Load a DataSet object from pickle.
 
         :param str path: the path to the pickle
-        :return DataSet data_set:
+        :return data_set:
         """
         with open(path, 'rb') as f:
             return pickle.load(f)

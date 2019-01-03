@@ -20,8 +20,8 @@ def convert_to_torch_tensor(data_list, use_cuda):
 class BaseSampler(object):
     """The base class of all samplers.
 
-        Sub-classes must implement the __call__ method.
-        __call__ takes a DataSet object and returns a list of int - the sampling indices.
+        Sub-classes must implement the ``__call__`` method.
+        ``__call__`` takes a DataSet object and returns a list of int - the sampling indices.
     """
 
     def __call__(self, *args, **kwargs):
@@ -32,8 +32,12 @@ class SequentialSampler(BaseSampler):
     """Sample data in the original order.
 
     """
-
     def __call__(self, data_set):
+        """
+
+        :param DataSet data_set:
+        :return result: a list of integers.
+        """
         return list(range(len(data_set)))
 
 
@@ -41,13 +45,23 @@ class RandomSampler(BaseSampler):
     """Sample data in random permutation order.
 
     """
-
     def __call__(self, data_set):
+        """
+
+            :param DataSet data_set:
+            :return result: a list of integers.
+        """
         return list(np.random.permutation(len(data_set)))
 
 
 class BucketSampler(BaseSampler):
+    """
 
+        :param int num_buckets: the number of buckets to use.
+        :param int batch_size: batch size per epoch.
+        :param str seq_lens_field_name: the field name indicating the field about sequence length.
+
+    """
     def __init__(self, num_buckets=10, batch_size=32, seq_lens_field_name='seq_lens'):
         self.num_buckets = num_buckets
         self.batch_size = batch_size

@@ -2,20 +2,18 @@ import numpy as np
 
 
 class FieldArray(object):
-    """FieldArray is the collection of Instances of the same Field.
-    It is the basic element of DataSet class.
+    """``FieldArray`` is the collection of ``Instance``s of the same field.
+    It is the basic element of ``DataSet`` class.
+
+    :param str name: the name of the FieldArray
+    :param list content: a list of int, float, str or np.ndarray, or a list of list of one, or a np.ndarray.
+    :param int padding_val: the integer for padding. Default: 0.
+    :param bool is_target: If True, this FieldArray is used to compute loss.
+    :param bool is_input: If True, this FieldArray is used to the model input.
 
     """
 
     def __init__(self, name, content, padding_val=0, is_target=None, is_input=None):
-        """
-
-        :param str name: the name of the FieldArray
-        :param list content: a list of int, float, str or np.ndarray, or a list of list of one, or a np.ndarray.
-        :param int padding_val: the integer for padding. Default: 0.
-        :param bool is_target: If True, this FieldArray is used to compute loss.
-        :param bool is_input: If True, this FieldArray is used to the model input.
-        """
         self.name = name
         if isinstance(content, list):
             content = content

@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 import torch
 from torch import nn
 
@@ -15,7 +13,16 @@ from fastNLP.core.utils import get_func_signature
 
 
 class Tester(object):
-    """An collection of model inference and evaluation of performance, used over validation/dev set and test set. """
+    """An collection of model inference and evaluation of performance, used over validation/dev set and test set.
+
+        :param DataSet data: a validation/development set
+        :param torch.nn.modules.module model: a PyTorch model
+        :param MetricBase metrics: a metric object or a list of metrics (List[MetricBase])
+        :param int batch_size: batch size for validation
+        :param bool use_cuda: whether to use CUDA in validation.
+        :param int verbose: the number of steps after which an information is printed.
+
+    """
 
     def __init__(self, data, model, metrics, batch_size=16, use_cuda=False, verbose=1):
         super(Tester, self).__init__()
@@ -49,6 +56,11 @@ class Tester(object):
             self._predict_func = self._model.forward
 
     def test(self):
+        """Start test or validation.
+
+        :return eval_results: a dictionary whose keys are the class name of metrics to use, values are the evaluation results of these metrics.
+
+        """
         # turn on the testing mode; clean up the history
         network = self._model
         self._mode(network, is_test=True)
@@ -60,8 +72,8 @@ class Tester(object):
                     _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
                     pred_dict = self._data_forward(self._predict_func, batch_x)
                     if not isinstance(pred_dict, dict):
-                        raise TypeError(f"The return value of {get_func_signature(self._predict_func)} " 
-                                                         f"must be `dict`, got {type(pred_dict)}.")
+                        raise TypeError(f"The return value of {get_func_signature(self._predict_func)} "
+                                        f"must be `dict`, got {type(pred_dict)}.")
                     for metric in self.metrics:
                         metric(pred_dict, batch_y)
                 for metric in self.metrics:
