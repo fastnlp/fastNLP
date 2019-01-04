@@ -9,11 +9,12 @@ def convert_seq_dataset(data):
     """Create an DataSet instance that contains no labels.
 
     :param data: list of list of strings, [num_examples, *].
-            ::
-            [
-                [word_11, word_12, ...],
-                ...
-            ]
+            Example::
+
+                [
+                    [word_11, word_12, ...],
+                    ...
+                ]
 
     :return: a DataSet.
     """
@@ -24,15 +25,16 @@ def convert_seq_dataset(data):
 
 
 def convert_seq2tag_dataset(data):
-    """Convert list of data into DataSet
+    """Convert list of data into DataSet.
 
     :param data: list of list of strings, [num_examples, *].
-            ::
-            [
-                [ [word_11, word_12, ...], label_1 ],
-                [ [word_21, word_22, ...], label_2 ],
-                ...
-            ]
+            Example::
+
+                [
+                    [ [word_11, word_12, ...], label_1 ],
+                    [ [word_21, word_22, ...], label_2 ],
+                    ...
+                ]
 
     :return: a DataSet.
     """
@@ -43,15 +45,16 @@ def convert_seq2tag_dataset(data):
 
 
 def convert_seq2seq_dataset(data):
-    """Convert list of data into DataSet
+    """Convert list of data into DataSet.
 
     :param data: list of list of strings, [num_examples, *].
-            ::
-            [
-                [ [word_11, word_12, ...], [label_1, label_1, ...] ],
-                [ [word_21, word_22, ...], [label_2, label_1, ...] ],
-                ...
-            ]
+            Example::
+
+                [
+                    [ [word_11, word_12, ...], [label_1, label_1, ...] ],
+                    [ [word_21, word_22, ...], [label_2, label_1, ...] ],
+                    ...
+                ]
 
     :return: a DataSet.
     """
@@ -62,20 +65,31 @@ def convert_seq2seq_dataset(data):
 
 
 class DataSetLoader:
-    """"loader for data sets"""
+    """Interface for all DataSetLoaders.
+
+    """
 
     def load(self, path):
-        """ load data in `path` into a dataset
+        """Load data from a given file.
+
+        :param str path: file path
+        :return: a DataSet object
         """
         raise NotImplementedError
 
     def convert(self, data):
-        """convert list of data into dataset
+        """Optional operation to build a DataSet.
+
+        :param data: inner data structure (user-defined) to represent the data.
+        :return: a DataSet object
         """
         raise NotImplementedError
 
 
 class NativeDataSetLoader(DataSetLoader):
+    """A simple example of DataSetLoader
+
+    """
     def __init__(self):
         super(NativeDataSetLoader, self).__init__()
 
@@ -90,6 +104,9 @@ DataLoaderRegister.set_reader(NativeDataSetLoader, 'read_naive')
 
 
 class RawDataSetLoader(DataSetLoader):
+    """A simple example of raw data reader
+
+    """
     def __init__(self):
         super(RawDataSetLoader, self).__init__()
 
@@ -108,37 +125,35 @@ DataLoaderRegister.set_reader(RawDataSetLoader, 'read_rawdata')
 
 
 class POSDataSetLoader(DataSetLoader):
-    """Dataset Loader for POS Tag datasets.
+    """Dataset Loader for a POS Tag dataset.
 
-    In these datasets, each line are divided by '\t'
-    while the first Col is the vocabulary and the second
-    Col is the label.
-        Different sentence are divided by an empty line.
-        e.g:
-        Tom label1
-        and label2
-        Jerry   label1
-        .   label3
-        (separated by an empty line)
-        Hello   label4
-        world   label5
-        !   label3
-        In this file, there are two sentence "Tom and Jerry ."
-    and "Hello world !". Each word has its own label from label1
-    to label5.
+    In these datasets, each line are divided by "\t". The first Col is the vocabulary and the second
+    Col is the label. Different sentence are divided by an empty line.
+        E.g::
+
+            Tom label1
+            and label2
+            Jerry   label1
+            .   label3
+            (separated by an empty line)
+            Hello   label4
+            world   label5
+            !   label3
+
+    In this example, there are two sentences "Tom and Jerry ." and "Hello world !". Each word has its own label.
     """
-
     def __init__(self):
         super(POSDataSetLoader, self).__init__()
 
     def load(self, data_path):
         """
         :return data: three-level list
-            [
-                [ [word_11, word_12, ...], [label_1, label_1, ...] ],
-                [ [word_21, word_22, ...], [label_2, label_1, ...] ],
-                ...
-            ]
+            Example::
+                [
+                    [ [word_11, word_12, ...], [label_1, label_1, ...] ],
+                    [ [word_21, word_22, ...], [label_2, label_1, ...] ],
+                    ...
+                ]
         """
         with open(data_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
@@ -188,17 +203,17 @@ class TokenizeDataSetLoader(DataSetLoader):
         super(TokenizeDataSetLoader, self).__init__()
 
     def load(self, data_path, max_seq_len=32):
-        """
-        load pku dataset for Chinese word segmentation
+        """Load pku dataset for Chinese word segmentation.
         CWS (Chinese Word Segmentation) pku training dataset format:
-            1. Each line is a sentence.
-            2. Each word in a sentence is separated by space.
+        1. Each line is a sentence.
+        2. Each word in a sentence is separated by space.
         This function convert the pku dataset into three-level lists with labels <BMES>.
-            B: beginning of a word
-            M: middle of a word
-            E: ending of a word
-            S: single character
+        B: beginning of a word
+        M: middle of a word
+        E: ending of a word
+        S: single character
 
+        :param str data_path: path to the data set.
         :param max_seq_len: int, the maximum length of a sequence. If a sequence is longer than it, split it into
                 several sequences.
         :return: three-level lists
@@ -254,11 +269,9 @@ class ClassDataSetLoader(DataSetLoader):
     @staticmethod
     def parse(lines):
         """
-        Params
-            lines: lines from dataset
-        Return
-            list(list(list())): the three level of lists are
-                words, sentence, and dataset
+
+        :param lines: lines from dataset
+        :return: list(list(list())): the three level of lists are words, sentence, and dataset
         """
         dataset = list()
         for line in lines:
@@ -280,15 +293,9 @@ class ConllLoader(DataSetLoader):
     """loader for conll format files"""
 
     def __init__(self):
-        """
-        :param str data_path: the path to the conll data set
-        """
         super(ConllLoader, self).__init__()
 
     def load(self, data_path):
-        """
-        :return: list lines: all lines in a conll file
-        """
         with open(data_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
         data = self.parse(lines)
@@ -320,8 +327,8 @@ class ConllLoader(DataSetLoader):
 class LMDataSetLoader(DataSetLoader):
     """Language Model Dataset Loader
 
-        This loader produces data for language model training in a supervised way.
-        That means it has X and Y.
+    This loader produces data for language model training in a supervised way.
+    That means it has X and Y.
 
     """
 
@@ -467,6 +474,7 @@ class Conll2003Loader(DataSetLoader):
 
         return dataset
 
+
 class SNLIDataSetLoader(DataSetLoader):
     """A data set loader for SNLI data set.
 
@@ -478,8 +486,8 @@ class SNLIDataSetLoader(DataSetLoader):
     def load(self, path_list):
         """
 
-        :param path_list: A list of file name, in the order of premise file, hypothesis file, and label file.
-        :return: data_set: A DataSet object.
+        :param list path_list: A list of file name, in the order of premise file, hypothesis file, and label file.
+        :return: A DataSet object.
         """
         assert len(path_list) == 3
         line_set = []
@@ -507,12 +515,14 @@ class SNLIDataSetLoader(DataSetLoader):
         """Convert a 3D list to a DataSet object.
 
         :param data: A 3D tensor.
-            [
-                [ [premise_word_11, premise_word_12, ...], [hypothesis_word_11, hypothesis_word_12, ...], [label_1] ],
-                [ [premise_word_21, premise_word_22, ...], [hypothesis_word_21, hypothesis_word_22, ...], [label_2] ],
-                ...
-            ]
-        :return: data_set: A DataSet object.
+            Example::
+                [
+                    [ [premise_word_11, premise_word_12, ...], [hypothesis_word_11, hypothesis_word_12, ...], [label_1] ],
+                    [ [premise_word_21, premise_word_22, ...], [hypothesis_word_21, hypothesis_word_22, ...], [label_2] ],
+                    ...
+                ]
+
+        :return: A DataSet object.
         """
 
         data_set = DataSet()

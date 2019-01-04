@@ -3,15 +3,16 @@ import os
 
 
 def create_logger(logger_name, log_path, log_format=None, log_level=logging.INFO):
-    """Return a logger.
+    """Create a logger.
 
-    :param logger_name: str
-    :param log_path: str
+    :param str logger_name:
+    :param str log_path:
     :param log_format:
     :param log_level:
     :return: logger
 
-    to use a logger:
+    To use a logger::
+
         logger.debug("this is a debug message")
         logger.info("this is a info message")
         logger.warning("this is a warning message")
