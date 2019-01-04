@@ -13,6 +13,24 @@ from fastNLP.core.utils import seq_lens_to_masks
 
 
 class MetricBase(object):
+    """Base class for all metrics.
+
+    ``MetricBase`` handles validity check of its input dictionaries - ``pred_dict`` and ``target_dict``.
+    ``pred_dict`` is the output of ``forward()`` or prediction function of a model.
+    ``target_dict`` is the ground truth from DataSet where ``is_target`` is set ``True``.
+    ``MetricBase`` will do the following type checks:
+
+        1. whether self.evaluate has varargs, which is not supported.
+        2. whether params needed by self.evaluate is not included in ``pred_dict``, ``target_dict``.
+        3. whether params needed by self.evaluate duplicate in ``pred_dict``, ``target_dict``.
+        4. whether params in ``pred_dict``, ``target_dict`` are not used by evaluate.(Might cause warning)
+
+    Besides, before passing params into self.evaluate, this function will filter out params from output_dict and
+    target_dict which are not used in self.evaluate. (but if **kwargs presented in self.evaluate, no filtering
+    will be conducted.)
+    However, in some cases where type check is not necessary, ``_fast_param_map`` will be used.
+
+    """
     def __init__(self):
         self.param_map = {}  # key is param in function, value is input param.
         self._checked = False
@@ -71,10 +89,9 @@ class MetricBase(object):
         raise NotImplemented
 
     def _fast_param_map(self, pred_dict, target_dict):
-        """
-
-        Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
+        """Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
             such as pred_dict has one element, target_dict has one element
+
         :param pred_dict:
         :param target_dict:
         :return: dict, if dict is not {}, pass it to self.evaluate. Otherwise do mapping.
@@ -177,6 +194,9 @@ class MetricBase(object):
 
 
 class AccuracyMetric(MetricBase):
+    """Accuracy Metric
+
+    """
     def __init__(self, pred=None, target=None, seq_lens=None):
         super().__init__()
 
@@ -186,10 +206,9 @@ class AccuracyMetric(MetricBase):
         self.acc_count = 0
 
     def _fast_param_map(self, pred_dict, target_dict):
-        """
-
-        Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
+        """Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
             such as pred_dict has one element, target_dict has one element
+
         :param pred_dict:
         :param target_dict:
         :return: dict, if dict is not None, pass it to self.evaluate. Otherwise do mapping.
@@ -230,7 +249,7 @@ class AccuracyMetric(MetricBase):
                 torch.Size([B,]), torch.Size([B,]), torch.Size([B, max_len]), torch.Size([B, max_len])
         :param seq_lens: List of (torch.Tensor, or numpy.ndarray). Element's can be:
                 None, None, torch.Size([B], torch.Size([B]). ignored if masks are provided.
-        :return: dict({'acc': float})
+
         """
         # TODO 这里报错需要更改，因为pred是啥用户并不知道。需要告知用户真实的value
         if not isinstance(pred, torch.Tensor):
@@ -269,6 +288,11 @@ class AccuracyMetric(MetricBase):
             self.total += np.prod(list(pred.size()))
 
     def get_metric(self, reset=True):
+        """Returns computed metric.
+
+        :param bool reset: whether to recount next time.
+        :return evaluate_result: {"acc": float}
+        """
         evaluate_result = {'acc': round(self.acc_count / self.total, 6)}
         if reset:
             self.acc_count = 0
@@ -308,34 +332,31 @@ def _prepare_metrics(metrics):
 
 
 def accuracy_topk(y_true, y_prob, k=1):
-    """Compute accuracy of y_true matching top-k probable
-    labels in y_prob.
+    """Compute accuracy of y_true matching top-k probable labels in y_prob.
 
-        :param y_true: ndarray, true label, [n_samples]
-        :param y_prob: ndarray, label probabilities, [n_samples, n_classes]
-        :param k: int, k in top-k
-        :return :accuracy of top-k
+    :param y_true: ndarray, true label, [n_samples]
+    :param y_prob: ndarray, label probabilities, [n_samples, n_classes]
+    :param k: int, k in top-k
+    :returns acc: accuracy of top-k
+
     """
-
     y_pred_topk = np.argsort(y_prob, axis=-1)[:, -1:-k - 1:-1]
     y_true_tile = np.tile(np.expand_dims(y_true, axis=1), (1, k))
     y_match = np.any(y_pred_topk == y_true_tile, axis=-1)
     acc = np.sum(y_match) / y_match.shape[0]
-
     return acc
 
 
 def pred_topk(y_prob, k=1):
     """Return top-k predicted labels and corresponding probabilities.
 
-
-        :param y_prob: ndarray, size [n_samples, n_classes], probabilities on labels
-        :param k: int, k of top-k
-    :returns
+    :param y_prob: ndarray, size [n_samples, n_classes], probabilities on labels
+    :param k: int, k of top-k
+    :returns (y_pred_topk, y_prob_topk):
         y_pred_topk: ndarray, size [n_samples, k], predicted top-k labels
         y_prob_topk: ndarray, size [n_samples, k], probabilities for top-k labels
-    """
 
+    """
     y_pred_topk = np.argsort(y_prob, axis=-1)[:, -1:-k - 1:-1]
     x_axis_index = np.tile(
         np.arange(len(y_prob))[:, np.newaxis],

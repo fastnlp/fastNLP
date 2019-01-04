@@ -16,8 +16,6 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../../'))
 
-import sphinx_rtd_theme
-
 # -- Project information -----------------------------------------------------
 
 project = 'fastNLP'
@@ -25,9 +23,9 @@ copyright = '2018, xpqiu'
 author = 'xpqiu'
 
 # The short X.Y version
-version = ''
+version = '0.2'
 # The full version, including alpha/beta/rc tags
-release = '1.0'
+release = '0.2'
 
 
 # -- General configuration ---------------------------------------------------

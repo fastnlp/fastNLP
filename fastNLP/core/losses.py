@@ -13,6 +13,9 @@ from fastNLP.core.utils import get_func_signature
 
 
 class LossBase(object):
+    """Base class for all losses.
+
+    """
     def __init__(self):
         self.param_map = {}
         self._checked = False
@@ -68,10 +71,9 @@ class LossBase(object):
         #                     f"positional argument.).")
 
     def _fast_param_map(self, pred_dict, target_dict):
-        """
-
-        Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
+        """Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
             such as pred_dict has one element, target_dict has one element
+
         :param pred_dict:
         :param target_dict:
         :return: dict, if dict is not {}, pass it to self.evaluate. Otherwise do mapping.
@@ -265,27 +267,22 @@ def _prepare_losser(losser):
 
 
 def squash(predict, truth, **kwargs):
-    """To reshape tensors in order to fit loss functions in pytorch
+    """To reshape tensors in order to fit loss functions in PyTorch.
 
-    :param predict	: Tensor, model output
-    :param truth	: Tensor, truth from dataset
-    :param **kwargs : extra arguments
-
+    :param predict: Tensor, model output
+    :param truth: Tensor, truth from dataset
+    :param **kwargs: extra arguments
     :return predict , truth: predict & truth after processing
     """
     return predict.view(-1, predict.size()[-1]), truth.view(-1, )
 
 
 def unpad(predict, truth, **kwargs):
-    """To process padded sequence output to get true loss
-    Using pack_padded_sequence() method
-    This method contains squash()
+    """To process padded sequence output to get true loss.
 
-    :param predict	: Tensor, [batch_size , max_len , tag_size]
-    :param truth	: Tensor, [batch_size , max_len]
-    :param **kwargs : extra arguments, kwargs["lens"] is expected to be exsist
-        kwargs["lens"] : list or LongTensor, [batch_size]
-                      the i-th element is true lengths of i-th sequence
+    :param predict: Tensor, [batch_size , max_len , tag_size]
+    :param truth: Tensor, [batch_size , max_len]
+    :param kwargs: kwargs["lens"] is a list or LongTensor, with size [batch_size]. The i-th element is true lengths of i-th sequence.
 
     :return predict , truth: predict & truth after processing
     """
@@ -299,15 +296,11 @@ def unpad(predict, truth, **kwargs):
 
 
 def unpad_mask(predict, truth, **kwargs):
-    """To process padded sequence output to get true loss
-    Using mask() method
-    This method contains squash()
+    """To process padded sequence output to get true loss.
 
-    :param predict	: Tensor, [batch_size , max_len , tag_size]
-    :param truth	: Tensor, [batch_size , max_len]
-    :param **kwargs : extra arguments, kwargs["lens"] is expected to be exsist
-        kwargs["lens"] : list or LongTensor, [batch_size]
-                      the i-th element is true lengths of i-th sequence
+    :param predict: Tensor, [batch_size , max_len , tag_size]
+    :param truth: Tensor, [batch_size , max_len]
+    :param kwargs: kwargs["lens"] is a list or LongTensor, with size [batch_size]. The i-th element is true lengths of i-th sequence.
 
     :return predict , truth: predict & truth after processing
     """
@@ -318,14 +311,11 @@ def unpad_mask(predict, truth, **kwargs):
 
 
 def mask(predict, truth, **kwargs):
-    """To select specific elements from Tensor
-    This method contains squash()
+    """To select specific elements from Tensor. This method calls ``squash()``.
 
-    :param predict	: Tensor, [batch_size , max_len , tag_size]
-    :param truth	: Tensor, [batch_size , max_len]
-    :param **kwargs : extra arguments, kwargs["mask"] is expected to be exsist
-        kwargs["mask"] : ByteTensor, [batch_size , max_len]
-                      the mask Tensor , the position that is 1 will be selected
+    :param predict: Tensor, [batch_size , max_len , tag_size]
+    :param truth: Tensor, [batch_size , max_len]
+    :param **kwargs: extra arguments, kwargs["mask"]: ByteTensor, [batch_size , max_len], the mask Tensor. The position that is 1 will be selected.
 
     :return predict , truth: predict & truth after processing
     """
@@ -343,13 +333,11 @@ def mask(predict, truth, **kwargs):
 
 
 def make_mask(lens, tar_len):
-    """to generate a mask that select [:lens[i]] for i-th element
-    embezzle from fastNLP.models.sequence_modeling.seq_mask
+    """To generate a mask over a sequence.
 
-    :param lens		: list or LongTensor, [batch_size]
-    :param tar_len	: int
-
-    :return mask 	: ByteTensor
+    :param lens: list or LongTensor, [batch_size]
+    :param tar_len: int
+    :return mask: ByteTensor
     """
     lens = torch.LongTensor(lens)
     mask = [torch.ge(lens, i + 1) for i in range(tar_len)]

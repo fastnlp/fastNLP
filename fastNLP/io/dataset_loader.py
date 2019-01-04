@@ -417,7 +417,7 @@ class PeopleDailyCorpusLoader(DataSetLoader):
         data_set.set_input("seq_len")
         return data_set
 
-    
+
 class Conll2003Loader(DataSetLoader):
     """Self-defined loader of conll2003 dataset
     
@@ -425,14 +425,14 @@ class Conll2003Loader(DataSetLoader):
         https://sites.google.com/site/ermasoftware/getting-started/ne-tagging-conll2003-data 
     
     """
-    
+
     def __init__(self):
         super(Conll2003Loader, self).__init__()
-        
+
     def load(self, dataset_path):
         with open(dataset_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        
+
         ##Parse the dataset line by line
         parsed_data = []
         sentence = []
@@ -444,13 +444,13 @@ class Conll2003Loader(DataSetLoader):
                     sentence = []
                     tokens = []
                 continue
-                
+
             temp = line.strip().split(" ")
-            sentence.append(temp[0]) 
+            sentence.append(temp[0])
             tokens.append(temp[1:4])
-                           
+
         return self.convert(parsed_data)
-            
+
     def convert(self, parsed_data):
         dataset = DataSet()
         for sample in parsed_data:
@@ -460,11 +460,11 @@ class Conll2003Loader(DataSetLoader):
                 lambda labels: labels[1], sample[1]))
             label2_list = list(map(
                 lambda labels: labels[2], sample[1]))
-            dataset.append(Instance(token_list=sample[0], 
-                                    label0_list=label0_list, 
+            dataset.append(Instance(token_list=sample[0],
+                                    label0_list=label0_list,
                                     label1_list=label1_list,
                                     label2_list=label2_list))
-            
+
         return dataset
 
 class SNLIDataSetLoader(DataSetLoader):

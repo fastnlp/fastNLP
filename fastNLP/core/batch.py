@@ -5,21 +5,19 @@ import torch
 class Batch(object):
     """Batch is an iterable object which iterates over mini-batches.
 
-    ::
-        for batch_x, batch_y in Batch(data_set, batch_size=16, sampler=SequentialSampler()):
+        Example::
 
+            for batch_x, batch_y in Batch(data_set, batch_size=16, sampler=SequentialSampler()):
+                # ...
+
+    :param dataset: a DataSet object
+    :param batch_size: int, the size of the batch
+    :param sampler: a Sampler object
+    :param as_numpy: bool. If True, return Numpy array. Otherwise, return torch tensors.
 
     """
 
     def __init__(self, dataset, batch_size, sampler, as_numpy=False):
-        """
-
-        :param dataset: a DataSet object
-        :param batch_size: int, the size of the batch
-        :param sampler: a Sampler object
-        :param as_numpy: bool. If True, return Numpy array. Otherwise, return torch tensors.
-
-        """
         self.dataset = dataset
         self.batch_size = batch_size
         self.sampler = sampler
