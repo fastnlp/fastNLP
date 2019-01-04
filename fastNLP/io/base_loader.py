@@ -3,7 +3,9 @@ import os
 
 
 class BaseLoader(object):
+    """Base loader for all loaders.
 
+    """
     def __init__(self):
         super(BaseLoader, self).__init__()
 
@@ -32,7 +34,9 @@ class BaseLoader(object):
 
 
 class DataLoaderRegister:
-    """"register for data sets"""
+    """Register for all data sets.
+
+    """
     _readers = {}
 
     @classmethod
