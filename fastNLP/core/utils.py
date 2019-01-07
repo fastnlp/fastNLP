@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
-                                   'varargs'], verbose=False)
+                                   'varargs'])
 
 
 def save_pickle(obj, pickle_path, file_name):
