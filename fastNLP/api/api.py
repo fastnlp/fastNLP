@@ -17,8 +17,7 @@ from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.batch import Batch
 from reproduction.chinese_word_segment.utils import calculate_pre_rec_f1
 from fastNLP.api.pipeline import Pipeline
-from fastNLP.core.metrics import SeqLabelEvaluator2
-from fastNLP.core.tester import Tester
+
 
 # TODO add pretrain urls
 model_urls = {
@@ -29,6 +28,7 @@ model_urls = {
 class API:
     def __init__(self):
         self.pipeline = None
+        self._dict = None
 
     def predict(self, *args, **kwargs):
         raise NotImplementedError
@@ -38,8 +38,8 @@ class API:
             _dict = torch.load(path, map_location='cpu')
         else:
             _dict = load_url(path, map_location='cpu')
-        self.pipeline = _dict['pipeline']
         self._dict = _dict
+        self.pipeline = _dict['pipeline']
         for processor in self.pipeline.pipeline:
             if isinstance(processor, ModelProcessor):
                 processor.set_model_device(device)
@@ -48,8 +48,10 @@ class API:
 class POS(API):
     """FastNLP API for Part-Of-Speech tagging.
 
-    """
+    :param str model_path: the path to the model.
+    :param str device: device name such as "cpu" or "cuda:0". Use the same notation as PyTorch.
 
+    """
     def __init__(self, model_path=None, device='cpu'):
         super(POS, self).__init__()
         if model_path is None:
@@ -75,12 +77,28 @@ class POS(API):
 
         # 2. 组建dataset
         dataset = DataSet()
-        dataset.add_field('words', sentence_list)
+        dataset.add_field("words", sentence_list)
 
         # 3. 使用pipeline
         self.pipeline(dataset)
 
-        output = dataset['word_pos_output'].content
+        def decode_tags(ins):
+            pred_tags = ins["tag"]
+            chars = ins["words"]
+            words = []
+            start_idx = 0
+            for idx, tag in enumerate(pred_tags):
+                if tag[0] == "S":
+                    words.append(chars[start_idx:idx + 1] + "/" + tag[2:])
+                    start_idx = idx + 1
+                elif tag[0] == "E":
+                    words.append("".join(chars[start_idx:idx + 1]) + "/" + tag[2:])
+                    start_idx = idx + 1
+            return words
+
+        dataset.apply(decode_tags, new_field_name="tag_output")
+
+        output = dataset.field_arrays["tag_output"].content
         if isinstance(content, str):
             return output[0]
         elif isinstance(content, list):
@@ -98,6 +116,7 @@ class POS(API):
         reader = ConllPOSReader()
         te_dataset = reader.load(filepath)
 
+        """
         evaluator = SeqLabelEvaluator2('word_seq_origin_len')
         end_tagidx_set = set()
         tag_proc.vocab.build_vocab()
@@ -108,15 +127,16 @@ class POS(API):
                 end_tagidx_set.add(value)
         evaluator.end_tagidx_set = end_tagidx_set
 
-        default_valid_args = {"batch_size": 64,
-                              "use_cuda": True, "evaluator": evaluator}
-
         pp(te_dataset)
         te_dataset.set_target(truth=True)
 
+        default_valid_args = {"batch_size": 64,
+                              "use_cuda": True, "evaluator": evaluator,
+                              "model": model, "data": te_dataset}
+
         tester = Tester(**default_valid_args)
 
-        test_result = tester.test(model, te_dataset)
+        test_result = tester.test()
 
         f1 = round(test_result['F'] * 100, 2)
         pre = round(test_result['P'] * 100, 2)
@@ -124,6 +144,7 @@ class POS(API):
         # print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1, pre, rec))
 
         return f1, pre, rec
+        """
 
 
 class CWS(API):
@@ -290,13 +311,13 @@ class Analyzer:
 
 
 if __name__ == "__main__":
-    # pos_model_path = '../../reproduction/pos_tag_model/pos_crf.pkl'
-    # pos = POS(device='cpu')
-    # s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。' ,
-    #     '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
-    #      '那么这款无人机到底有多厉害？']
+    pos_model_path = '/home/zyfeng/fastnlp/reproduction/pos_tag_model/model_pp.pkl'
+    pos = POS(pos_model_path, device='cpu')
+    s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
+         '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
+         '那么这款无人机到底有多厉害？']
     # print(pos.test('/Users/yh/Desktop/test_data/pos_test.conll'))
-    # print(pos.predict(s))
+    print(pos.predict(s))
 
     # cws_model_path = '../../reproduction/chinese_word_segment/models/cws_crf.pkl'
     # cws = CWS(device='cpu')
@@ -306,9 +327,9 @@ if __name__ == "__main__":
     # print(cws.test('/Users/yh/Desktop/test_data/cws_test.conll'))
     # print(cws.predict(s))
 
-    parser = Parser(device='cpu')
+    # parser = Parser(device='cpu')
     # print(parser.test('/Users/yh/Desktop/test_data/parser_test2.conll'))
     s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
          '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
          '那么这款无人机到底有多厉害？']
-    print(parser.predict(s))
+    # print(parser.predict(s))

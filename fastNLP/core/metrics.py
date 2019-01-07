@@ -503,9 +503,9 @@ class SpanFPreRecMetric(MetricBase):
             f, pre, rec = self._compute_f_pre_rec(sum(self._true_positives.values()),
                                                   sum(self._false_negatives.values()),
                                                   sum(self._false_positives.values()))
-            evaluate_result['f'] = f
-            evaluate_result['pre'] = pre
-            evaluate_result['rec'] = rec
+            evaluate_result['f'] = round(f, 6)
+            evaluate_result['pre'] = round(pre, 6)
+            evaluate_result['rec'] = round(rec, 6)
 
         if reset:
             self._true_positives = defaultdict(int)

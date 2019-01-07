@@ -1,4 +1,11 @@
+import os
+import sys
+
 import torch
+
+# in order to run fastNLP without installation
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+
 
 from fastNLP.api.pipeline import Pipeline
 from fastNLP.api.processor import SeqLenProcessor
@@ -8,6 +15,7 @@ from fastNLP.io.config_io import ConfigLoader, ConfigSection
 from fastNLP.models.sequence_modeling import AdvSeqLabel
 from reproduction.chinese_word_segment.process.cws_processor import VocabIndexerProcessor
 from reproduction.pos_tag_model.pos_reader import ZhConllPOSReader
+from fastNLP.api.processor import ModelProcessor, Index2WordProcessor
 
 cfgfile = './pos_tag.cfg'
 pickle_path = "save"
@@ -25,16 +33,16 @@ def train():
     print(dataset)
     print("dataset transformed")
 
-    vocab_proc = VocabIndexerProcessor("words")
-    tag_proc = VocabIndexerProcessor("tag")
-    seq_len_proc = SeqLenProcessor(field_name="words", new_added_field_name="word_seq_origin_len")
+    dataset.rename_field("tag", "truth")
+
+    vocab_proc = VocabIndexerProcessor("words", new_added_filed_name="word_seq")
+    tag_proc = VocabIndexerProcessor("truth")
+    seq_len_proc = SeqLenProcessor(field_name="word_seq", new_added_field_name="word_seq_origin_len", is_input=True)
 
     vocab_proc(dataset)
     tag_proc(dataset)
     seq_len_proc(dataset)
 
-    dataset.rename_field("words", "word_seq")
-    dataset.rename_field("tag", "truth")
     dataset.set_input("word_seq", "word_seq_origin_len", "truth")
     dataset.set_target("truth", "word_seq_origin_len")
 
@@ -53,11 +61,14 @@ def train():
                                                                            target="truth",
                                                                            seq_lens="word_seq_origin_len"),
                       dev_data=dataset, metric_key="f",
-                      use_tqdm=False, use_cuda=True, print_every=20)
+                      use_tqdm=False, use_cuda=True, print_every=20, n_epochs=1, save_path="./save")
     trainer.train()
 
     # save model & pipeline
-    pp = Pipeline([vocab_proc, seq_len_proc])
+    model_proc = ModelProcessor(model, seq_len_field_name="word_seq_origin_len")
+    id2tag = Index2WordProcessor(tag_proc.vocab, "predict", "tag")
+
+    pp = Pipeline([vocab_proc, seq_len_proc, model_proc, id2tag])
     save_dict = {"pipeline": pp, "model": model, "tag_vocab": tag_proc.vocab}
     torch.save(save_dict, "model_pp.pkl")
     print("pipeline saved")

@@ -1,10 +1,9 @@
 
 import re
 
-
-from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.core.dataset import DataSet
 from fastNLP.api.processor import Processor
+from fastNLP.core.dataset import DataSet
+from fastNLP.core.vocabulary import Vocabulary
 from reproduction.chinese_word_segment.process.span_converter import SpanConverter
 
 _SPECIAL_TAG_PATTERN = '<[a-zA-Z]+>'
@@ -239,7 +238,7 @@ class VocabIndexerProcessor(Processor):
 
     """
     def __init__(self, field_name, new_added_filed_name=None, min_freq=1, max_size=None,
-                  verbose=1):
+                 verbose=1, is_input=True):
         """
 
         :param field_name: 从哪个field_name创建词表，以及对哪个field_name进行index操作
@@ -247,12 +246,14 @@ class VocabIndexerProcessor(Processor):
         :param min_freq: 创建的Vocabulary允许的单词最少出现次数.
         :param max_size: 创建的Vocabulary允许的最大的单词数量
         :param verbose: 0, 不输出任何信息；1，输出信息
+        :param bool is_input:
         """
         super(VocabIndexerProcessor, self).__init__(field_name, new_added_filed_name)
         self.min_freq = min_freq
         self.max_size = max_size
 
         self.verbose =verbose
+        self.is_input = is_input
 
     def construct_vocab(self, *datasets):
         """
@@ -304,7 +305,10 @@ class VocabIndexerProcessor(Processor):
         for dataset in to_index_datasets:
             assert isinstance(dataset, DataSet), "Only DataSet class is allowed, not {}.".format(type(dataset))
             dataset.apply(lambda ins: [self.vocab.to_index(token) for token in ins[self.field_name]],
-                          new_field_name=self.new_added_field_name)
+                          new_field_name=self.new_added_field_name, is_input=self.is_input)
+        # 只返回一个，infer时为了跟其他processor保持一致
+        if len(to_index_datasets) == 1:
+            return to_index_datasets[0]
 
     def set_vocab(self, vocab):
         assert isinstance(vocab, Vocabulary), "Only fastNLP.core.Vocabulary is allowed, not {}.".format(type(vocab))
