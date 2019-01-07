@@ -27,7 +27,10 @@ from fastNLP.core.utils import get_func_signature
 
 
 class Trainer(object):
-    """
+    def __init__(self, train_data, model, loss=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
+                 validate_every=-1, dev_data=None, save_path=None, optimizer=Adam(lr=0.01, weight_decay=0),
+                 check_code_level=0, metric_key=None, sampler=RandomSampler(), use_tqdm=True, use_cuda=False):
+        """
         :param DataSet train_data: the training data
         :param torch.nn.modules.module model: a PyTorch model
         :param LossBase loss: a loss object
@@ -48,16 +51,10 @@ class Trainer(object):
             smaller, add "-" in front of the string. For example::
 
                     metric_key="-PPL"   # language model gets better as perplexity gets smaller
-
         :param BaseSampler sampler: method used to generate batch data.
         :param bool use_tqdm: whether to use tqdm to show train progress.
 
-    """
-
-    def __init__(self, train_data, model, loss=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
-                 validate_every=-1, dev_data=None, use_cuda=False, save_path=None,
-                 optimizer=Adam(lr=0.01, weight_decay=0), check_code_level=0,
-                 metric_key=None, sampler=RandomSampler(), use_tqdm=True):
+        """
         super(Trainer, self).__init__()
 
         if not isinstance(train_data, DataSet):

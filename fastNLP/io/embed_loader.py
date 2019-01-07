@@ -38,7 +38,7 @@ class EmbedLoader(BaseLoader):
 
         :param str emb_file: the pre-trained embedding file path
         :param str emb_type: the pre-trained embedding data format
-        :return dict embedding: `{str: np.array}`
+        :return: a dict of ``{str: np.array}``
         """
         if emb_type == 'glove':
             return EmbedLoader._load_glove(emb_file)
@@ -53,8 +53,9 @@ class EmbedLoader(BaseLoader):
         :param str emb_file: the pre-trained embedding file path.
         :param str emb_type: the pre-trained embedding format, support glove now
         :param Vocabulary vocab: a mapping from word to index, can be provided by user or built from pre-trained embedding
-        :return embedding_tensor: Tensor of shape (len(word_dict), emb_dim)
-                vocab: input vocab or vocab built by pre-train
+        :return (embedding_tensor, vocab):
+                embedding_tensor - Tensor of shape (len(word_dict), emb_dim);
+                vocab - input vocab or vocab built by pre-train
 
         """
         pretrain = EmbedLoader._load_pretrain(emb_file, emb_type)
@@ -95,7 +96,7 @@ class EmbedLoader(BaseLoader):
         :param int emb_dim: the dimension of the embedding. Should be the same as pre-trained embedding.
         :param str emb_file: the pre-trained embedding file path.
         :param Vocabulary vocab: a mapping from word to index, can be provided by user or built from pre-trained embedding
-        :return numpy.ndarray embedding_matrix:
+        :return embedding_matrix: numpy.ndarray
 
         """
         if vocab is None:

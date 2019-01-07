@@ -1,8 +1,8 @@
 import torch
-import numpy as np
 
 from fastNLP.models.base_model import BaseModel
 from fastNLP.modules import decoder, encoder
+from fastNLP.modules.decoder.CRF import allowed_transitions
 from fastNLP.modules.utils import seq_mask
 
 
@@ -93,7 +93,7 @@ class AdvSeqLabel(SeqLabeling):
     Advanced Sequence Labeling Model
     """
 
-    def __init__(self, args, emb=None):
+    def __init__(self, args, emb=None, id2words=None):
         super(AdvSeqLabel, self).__init__(args)
 
         vocab_size = args["vocab_size"]
@@ -105,7 +105,8 @@ class AdvSeqLabel(SeqLabeling):
         self.Embedding = encoder.embedding.Embedding(vocab_size, word_emb_dim, init_emb=emb)
         self.norm1 = torch.nn.LayerNorm(word_emb_dim)
         # self.Rnn = encoder.lstm.LSTM(word_emb_dim, hidden_dim, num_layers=2, dropout=dropout, bidirectional=True)
-        self.Rnn = torch.nn.LSTM(input_size=word_emb_dim, hidden_size=hidden_dim, num_layers=2, dropout=dropout, bidirectional=True, batch_first=True)
+        self.Rnn = torch.nn.LSTM(input_size=word_emb_dim, hidden_size=hidden_dim, num_layers=2, dropout=dropout,
+                                 bidirectional=True, batch_first=True)
         self.Linear1 = encoder.Linear(hidden_dim * 2, hidden_dim * 2 // 3)
         self.norm2 = torch.nn.LayerNorm(hidden_dim * 2 // 3)
         # self.batch_norm = torch.nn.BatchNorm1d(hidden_dim * 2 // 3)
@@ -113,7 +114,12 @@ class AdvSeqLabel(SeqLabeling):
         self.drop = torch.nn.Dropout(dropout)
         self.Linear2 = encoder.Linear(hidden_dim * 2 // 3, num_classes)
 
-        self.Crf = decoder.CRF.ConditionalRandomField(num_classes, include_start_end_trans=False)
+        if id2words is None:
+            self.Crf = decoder.CRF.ConditionalRandomField(num_classes, include_start_end_trans=False)
+        else:
+            self.Crf = decoder.CRF.ConditionalRandomField(num_classes, include_start_end_trans=False,
+                                                          allowed_transitions=allowed_transitions(id2words,
+                                                                                                  encoding_type="bmes"))
 
     def forward(self, word_seq, word_seq_origin_len, truth=None):
         """
@@ -178,6 +184,7 @@ class AdvSeqLabel(SeqLabeling):
         assert 'loss' in kwargs
         return kwargs['loss']
 
+
 if __name__ == '__main__':
     args = {
         'vocab_size': 20,
@@ -208,11 +215,11 @@ if __name__ == '__main__':
         res = model(word_seq, word_seq_len, truth)
         loss = res['loss']
         pred = res['predict']
-        print('loss: {} acc {}'.format(loss.item(), ((pred.data == truth).long().sum().float() / word_seq_len.sum().float())))
+        print('loss: {} acc {}'.format(loss.item(),
+                                       ((pred.data == truth).long().sum().float() / word_seq_len.sum().float())))
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         curidx = endidx
         if curidx == len(data):
             curidx = 0
-

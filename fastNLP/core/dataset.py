@@ -254,6 +254,8 @@ class DataSet(object):
         :return results: if new_field_name is not passed, returned values of the function over all instances.
         """
         results = [func(ins) for ins in self._inner_iter()]
+        if len(list(filter(lambda x: x is not None, results))) == 0 and not (new_field_name is None):  # all None
+            raise ValueError("{} always return None.".format(get_func_signature(func=func)))
 
         extra_param = {}
         if 'is_input' in kwargs:
@@ -261,8 +263,6 @@ class DataSet(object):
         if 'is_target' in kwargs:
             extra_param['is_target'] = kwargs['is_target']
         if new_field_name is not None:
-            if len(list(filter(lambda x: x is not None, results))) == 0:  # all None
-                raise ValueError("{} always return None.".format(get_func_signature(func=func)))
             if new_field_name in self.field_arrays:
                 # overwrite the field, keep same attributes
                 old_field = self.field_arrays[new_field_name]

@@ -4,6 +4,7 @@ from collections import Counter
 from fastNLP.api.processor import Processor
 from fastNLP.core.dataset import DataSet
 
+
 class CombineWordAndPosProcessor(Processor):
     def __init__(self, word_field_name, pos_field_name):
         super(CombineWordAndPosProcessor, self).__init__(None, None)
@@ -59,6 +60,7 @@ class CombineWordAndPosProcessor(Processor):
             ins['pos_list'] = pos_list
 
         return dataset
+
 
 class PosOutputStrProcessor(Processor):
     def __init__(self, word_field_name, pos_field_name):
