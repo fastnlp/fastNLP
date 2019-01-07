@@ -436,15 +436,14 @@ class SpanFPreRecMetric(MetricBase):
             raise TypeError(f"`seq_lens` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(seq_lens)}.")
 
-        num_classes = pred.size(-1)
-        if (target >= num_classes).any():
-            raise ValueError("A gold label passed to SpanBasedF1Metric contains an "
-                                     "id >= {}, the number of classes.".format(num_classes))
-
         if pred.size() == target.size() and len(target.size()) == 2:
             pass
         elif len(pred.size()) == len(target.size()) + 1 and len(target.size()) == 2:
             pred = pred.argmax(dim=-1)
+            num_classes = pred.size(-1)
+            if (target >= num_classes).any():
+                raise ValueError("A gold label passed to SpanBasedF1Metric contains an "
+                                 "id >= {}, the number of classes.".format(num_classes))
         else:
             raise RuntimeError(f"In {get_func_signature(self.evaluate)}, when pred have "
                                f"size:{pred.size()}, target should have size: {pred.size()} or "

@@ -10,7 +10,7 @@ from fastNLP.core.dataset import DataSet
 from fastNLP.api.model_zoo import load_url
 from fastNLP.api.processor import ModelProcessor
 from reproduction.chinese_word_segment.cws_io.cws_reader import ConllCWSReader
-from reproduction.pos_tag_model.pos_io.pos_reader import ConllPOSReader
+from reproduction.pos_tag_model.pos_reader import ConllPOSReader
 from reproduction.Biaffine_parser.util import ConllxDataLoader, add_seg_tag
 from fastNLP.core.instance import Instance
 from fastNLP.core.sampler import SequentialSampler
