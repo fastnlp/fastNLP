@@ -33,7 +33,7 @@ class MLP(nn.Module):
         }
         if activation in actives:
             self.hidden_active = actives[activation]
-        elif isinstance(activation, callable):
+        elif callable(activation):
             self.hidden_active = activation
         else:
             raise ValueError("should set activation correctly: {}".format(activation))
