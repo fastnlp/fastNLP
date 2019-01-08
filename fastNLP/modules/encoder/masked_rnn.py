@@ -5,6 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from fastNLP.modules.utils import initial_parameter
+
+
 def MaskedRecurrent(reverse=False):
     def forward(input, hidden, cell, mask, train=True, dropout=0):
         """
@@ -254,16 +256,16 @@ class MaskedRNNBase(nn.Module):
         return output, hidden
 
     def step(self, input, hx=None, mask=None):
-        '''
-        execute one step forward (only for one-directional RNN).
-        Args:
-            input (batch, input_size): input tensor of this step.
-            hx (num_layers, batch, hidden_size): the hidden state of last step.
-            mask (batch): the mask tensor of this step.
-        Returns:
-            output (batch, hidden_size): tensor containing the output of this step from the last layer of RNN.
-            hn (num_layers, batch, hidden_size): tensor containing the hidden state of this step
-        '''
+        """Execute one step forward (only for one-directional RNN).
+
+        :param Tensor input: input tensor of this step. (batch, input_size)
+        :param Tensor hx: the hidden state of last step. (num_layers, batch, hidden_size)
+        :param Tensor mask: the mask tensor of this step. (batch, )
+        :returns:
+            **output** (batch, hidden_size), tensor containing the output of this step from the last layer of RNN.
+            **hn** (num_layers, batch, hidden_size), tensor containing the hidden state of this step
+
+        """
         assert not self.bidirectional, "step only cannot be applied to bidirectional RNN."  # aha, typo!
         batch_size = input.size(0)
         lstm = self.Cell is nn.LSTMCell
@@ -285,25 +287,23 @@ class MaskedRNN(MaskedRNNBase):
     r"""Applies a multi-layer Elman RNN with costomized non-linearity to an
     input sequence.
     For each element in the input sequence, each layer computes the following
-    function:
-    .. math::
-        h_t = \tanh(w_{ih} * x_t + b_{ih}  +  w_{hh} * h_{(t-1)} + b_{hh})
+    function. :math:`h_t = \tanh(w_{ih} * x_t + b_{ih}  +  w_{hh} * h_{(t-1)} + b_{hh})`
+
     where :math:`h_t` is the hidden state at time `t`, and :math:`x_t` is
     the hidden state of the previous layer at time `t` or :math:`input_t`
     for the first layer. If nonlinearity='relu', then `ReLU` is used instead
     of `tanh`.
-    Args:
-        input_size: The number of expected features in the input x
-        hidden_size: The number of features in the hidden state h
-        num_layers: Number of recurrent layers.
-        nonlinearity: The non-linearity to use ['tanh'|'relu']. Default: 'tanh'
-        bias: If False, then the layer does not use bias weights b_ih and b_hh.
-            Default: True
-        batch_first: If True, then the input and output tensors are provided
-            as (batch, seq, feature)
-        dropout: If non-zero, introduces a dropout layer on the outputs of each
-            RNN layer except the last layer
-        bidirectional: If True, becomes a bidirectional RNN. Default: False
+
+
+    :param int input_size: The number of expected features in the input x
+    :param int hidden_size: The number of features in the hidden state h
+    :param int num_layers: Number of recurrent layers.
+    :param str nonlinearity: The non-linearity to use ['tanh'|'relu']. Default: 'tanh'
+    :param bool bias: If False, then the layer does not use bias weights b_ih and b_hh. Default: True
+    :param bool batch_first: If True, then the input and output tensors are provided as (batch, seq, feature)
+    :param float dropout: If non-zero, introduces a dropout layer on the outputs of each RNN layer except the last layer
+    :param bool bidirectional: If True, becomes a bidirectional RNN. Default: False
+
     Inputs: input, mask, h_0
         - **input** (seq_len, batch, input_size): tensor containing the features
           of the input sequence.
@@ -327,32 +327,33 @@ class MaskedLSTM(MaskedRNNBase):
     r"""Applies a multi-layer long short-term memory (LSTM) RNN to an input
     sequence.
     For each element in the input sequence, each layer computes the following
-    function:
+    function.
+
     .. math::
-            \begin{array}{ll}
-            i_t = \mathrm{sigmoid}(W_{ii} x_t + b_{ii} + W_{hi} h_{(t-1)} + b_{hi}) \\
-            f_t = \mathrm{sigmoid}(W_{if} x_t + b_{if} + W_{hf} h_{(t-1)} + b_{hf}) \\
-            g_t = \tanh(W_{ig} x_t + b_{ig} + W_{hc} h_{(t-1)} + b_{hg}) \\
-            o_t = \mathrm{sigmoid}(W_{io} x_t + b_{io} + W_{ho} h_{(t-1)} + b_{ho}) \\
-            c_t = f_t * c_{(t-1)} + i_t * g_t \\
-            h_t = o_t * \tanh(c_t)
-            \end{array}
+
+        \begin{array}{ll}
+        i_t = \mathrm{sigmoid}(W_{ii} x_t + b_{ii} + W_{hi} h_{(t-1)} + b_{hi}) \\
+        f_t = \mathrm{sigmoid}(W_{if} x_t + b_{if} + W_{hf} h_{(t-1)} + b_{hf}) \\
+        g_t = \tanh(W_{ig} x_t + b_{ig} + W_{hc} h_{(t-1)} + b_{hg}) \\
+        o_t = \mathrm{sigmoid}(W_{io} x_t + b_{io} + W_{ho} h_{(t-1)} + b_{ho}) \\
+        c_t = f_t * c_{(t-1)} + i_t * g_t \\
+        h_t = o_t * \tanh(c_t)
+        \end{array}
+
     where :math:`h_t` is the hidden state at time `t`, :math:`c_t` is the cell
     state at time `t`, :math:`x_t` is the hidden state of the previous layer at
     time `t` or :math:`input_t` for the first layer, and :math:`i_t`,
     :math:`f_t`, :math:`g_t`, :math:`o_t` are the input, forget, cell,
     and out gates, respectively.
-    Args:
-        input_size: The number of expected features in the input x
-        hidden_size: The number of features in the hidden state h
-        num_layers: Number of recurrent layers.
-        bias: If False, then the layer does not use bias weights b_ih and b_hh.
-            Default: True
-        batch_first: If True, then the input and output tensors are provided
-            as (batch, seq, feature)
-        dropout: If non-zero, introduces a dropout layer on the outputs of each
-            RNN layer except the last layer
-        bidirectional: If True, becomes a bidirectional RNN. Default: False
+
+    :param int input_size: The number of expected features in the input x
+    :param int hidden_size: The number of features in the hidden state h
+    :param int num_layers: Number of recurrent layers.
+    :param bool bias: If False, then the layer does not use bias weights b_ih and b_hh. Default: True
+    :param bool batch_first: If True, then the input and output tensors are provided as (batch, seq, feature)
+    :param bool dropout: If non-zero, introduces a dropout layer on the outputs of each RNN layer except the last layer
+    :param bool bidirectional: If True, becomes a bidirectional RNN. Default: False
+
     Inputs: input, mask, (h_0, c_0)
         - **input** (seq_len, batch, input_size): tensor containing the features
           of the input sequence.
@@ -380,29 +381,30 @@ class MaskedGRU(MaskedRNNBase):
     r"""Applies a multi-layer gated recurrent unit (GRU) RNN to an input sequence.
     For each element in the input sequence, each layer computes the following
     function:
+
     .. math::
+
             \begin{array}{ll}
             r_t = \mathrm{sigmoid}(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
             z_t = \mathrm{sigmoid}(W_{iz} x_t + b_{iz} + W_{hz} h_{(t-1)} + b_{hz}) \\
             n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
             h_t = (1 - z_t) * n_t + z_t * h_{(t-1)} \\
             \end{array}
+
     where :math:`h_t` is the hidden state at time `t`, :math:`x_t` is the hidden
     state of the previous layer at time `t` or :math:`input_t` for the first
     layer, and :math:`r_t`, :math:`z_t`, :math:`n_t` are the reset, input,
     and new gates, respectively.
-    Args:
-        input_size: The number of expected features in the input x
-        hidden_size: The number of features in the hidden state h
-        num_layers: Number of recurrent layers.
-        nonlinearity: The non-linearity to use ['tanh'|'relu']. Default: 'tanh'
-        bias: If False, then the layer does not use bias weights b_ih and b_hh.
-            Default: True
-        batch_first: If True, then the input and output tensors are provided
-            as (batch, seq, feature)
-        dropout: If non-zero, introduces a dropout layer on the outputs of each
-            RNN layer except the last layer
-        bidirectional: If True, becomes a bidirectional RNN. Default: False
+
+    :param int input_size: The number of expected features in the input x
+    :param int hidden_size: The number of features in the hidden state h
+    :param int num_layers: Number of recurrent layers.
+    :param str nonlinearity: The non-linearity to use ['tanh'|'relu']. Default: 'tanh'
+    :param bool bias: If False, then the layer does not use bias weights b_ih and b_hh. Default: True
+    :param bool batch_first: If True, then the input and output tensors are provided as (batch, seq, feature)
+    :param bool dropout: If non-zero, introduces a dropout layer on the outputs of each RNN layer except the last layer
+    :param bool bidirectional: If True, becomes a bidirectional RNN. Default: False
+
     Inputs: input, mask, h_0
         - **input** (seq_len, batch, input_size): tensor containing the features
           of the input sequence.

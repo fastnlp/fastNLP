@@ -88,7 +88,7 @@ class EmbedLoader(BaseLoader):
         :param int emb_dim: the dimension of the embedding. Should be the same as pre-trained embedding.
         :param str emb_file: the pre-trained embedding file path.
         :param Vocabulary vocab: a mapping from word to index, can be provided by user or built from pre-trained embedding
-        :return embedding_matrix: numpy.ndarray
+        :return: the embedding matrix, numpy.ndarray
 
         """
         if vocab is None:

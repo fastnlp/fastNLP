@@ -3,20 +3,30 @@
 
 import torch
 import torch.nn as nn
-from torch.nn.init import xavier_uniform_
-# import torch.nn.functional as F
 
 from fastNLP.modules.utils import initial_parameter
 
-class Conv(nn.Module):
-    """
-    Basic 1-d convolution module.
-    initialize with xavier_uniform
-    """
 
+# import torch.nn.functional as F
+
+
+class Conv(nn.Module):
+    """Basic 1-d convolution module, initialized with xavier_uniform.
+
+    :param int in_channels:
+    :param int out_channels:
+    :param tuple kernel_size:
+    :param int stride:
+    :param int padding:
+    :param int dilation:
+    :param int groups:
+    :param bool bias:
+    :param str activation:
+    :param str initial_method:
+    """
     def __init__(self, in_channels, out_channels, kernel_size,
                  stride=1, padding=0, dilation=1,
-                 groups=1, bias=True, activation='relu',initial_method = None ):
+                 groups=1, bias=True, activation='relu', initial_method=None):
         super(Conv, self).__init__()
         self.conv = nn.Conv1d(
             in_channels=in_channels,

@@ -4,17 +4,27 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.init import xavier_uniform_
+
 from fastNLP.modules.utils import initial_parameter
 
-class ConvMaxpool(nn.Module):
-    """
-    Convolution and max-pooling module with multiple kernel sizes.
-    """
 
+class ConvMaxpool(nn.Module):
+    """Convolution and max-pooling module with multiple kernel sizes.
+
+    :param int in_channels:
+    :param int out_channels:
+    :param tuple kernel_sizes:
+    :param int stride:
+    :param int padding:
+    :param int dilation:
+    :param int groups:
+    :param bool bias:
+    :param str activation:
+    :param str initial_method:
+    """
     def __init__(self, in_channels, out_channels, kernel_sizes,
                  stride=1, padding=0, dilation=1,
-                 groups=1, bias=True, activation='relu',initial_method = None ):
+                 groups=1, bias=True, activation="relu", initial_method=None):
         super(ConvMaxpool, self).__init__()
 
         # convolution
