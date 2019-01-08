@@ -451,8 +451,8 @@ class SpanFPreRecMetric(MetricBase):
 
         batch_size = pred.size(0)
         for i in range(batch_size):
-            pred_tags = pred[i, :seq_lens[i]].tolist()
-            gold_tags = target[i, :seq_lens[i]].tolist()
+            pred_tags = pred[i, :int(seq_lens[i])].tolist()
+            gold_tags = target[i, :int(seq_lens[i])].tolist()
 
             pred_str_tags = [self.tag_vocab.to_word(tag) for tag in pred_tags]
             gold_str_tags = [self.tag_vocab.to_word(tag) for tag in gold_tags]
