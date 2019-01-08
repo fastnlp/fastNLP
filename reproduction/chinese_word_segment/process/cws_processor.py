@@ -449,3 +449,32 @@ class BMES2OutputProcessor(Processor):
                     start_idx = idx + 1
             return ' '.join(words)
         dataset.apply(func=inner_proc, new_field_name=self.new_added_field_name)
+
+
+class InputTargetProcessor(Processor):
+    def __init__(self, input_fields, target_fields):
+        """
+        对DataSet操作，将input_fields中的field设置为input，target_fields的中field设置为target
+
+        :param input_fields: List[str], 设置为input_field的field_name。如果为None，则不将任何field设置为target。
+        :param target_fields: List[str], 设置为target_field的field_name。 如果为None，则不将任何field设置为target。
+        """
+        super(InputTargetProcessor, self).__init__(None, None)
+
+        if input_fields is not None and not isinstance(input_fields, list):
+            raise TypeError("input_fields should be List[str], not {}.".format(type(input_fields)))
+        else:
+            self.input_fields = input_fields
+        if target_fields is not None and not isinstance(target_fields, list):
+            raise TypeError("target_fiels should be List[str], not{}.".format(type(target_fields)))
+        else:
+            self.target_fields = target_fields
+
+    def process(self, dataset):
+        assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
+        if self.input_fields is not None:
+            for field in self.input_fields:
+                dataset.set_input(field)
+        if self.target_fields is not None:
+            for field in self.target_fields:
+                dataset.set_target(field)

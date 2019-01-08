@@ -138,20 +138,30 @@ class Trainer(object):
 
         开始训练过程。主要有以下几个步骤::
 
-            对于每次循环
-                1. 使用Batch从DataSet中按批取出数据，并自动对DataSet中dtype为float, int的fields进行padding。并转换为Tensor。
+            for epoch in range(num_epochs):
+                # 使用Batch从DataSet中按批取出数据，并自动对DataSet中dtype为(float, int)的fields进行padding。并转换为Tensor。
                 非float，int类型的参数将不会被转换为Tensor，且不进行padding。
                 for batch_x, batch_y in Batch(DataSet)
-                    # batch_x中为设置为input的field
-                    # batch_y中为设置为target的field
-                    2. 将batch_x的数据送入到model.forward函数中，并获取结果
-                    3. 将batch_y与model.forward的结果一并送入loss中计算loss
+                    # batch_x是一个dict, 被设为input的field会出现在这个dict中，
+                        key为DataSet中的field_name, value为该field的value
+                    # batch_y也是一个dict，被设为target的field会出现在这个dict中，
+                        key为DataSet中的field_name, value为该field的value
+                    2. 将batch_x的数据送入到model.forward函数中，并获取结果。这里我们就是通过匹配batch_x中的key与forward函数的形
+                        参完成参数传递。例如，
+                            forward(self, x, seq_lens) # fastNLP会在batch_x中找到key为"x"的value传递给x，key为"seq_lens"的
+                                value传递给seq_lens。若在batch_x中没有找到所有必须要传递的参数，就会报错。如果forward存在默认参数
+                                而且默认参数这个key没有在batch_x中，则使用默认参数。
+                    3. 将batch_y与model.forward的结果一并送入loss中计算loss。loss计算时一般都涉及到pred与target。但是在不同情况
+                        中，可能pred称为output或prediction, target称为y或label。fastNLP通过初始化loss时传入的映射找到pred或
+                        target。比如在初始化Trainer时初始化loss为CrossEntropyLoss(pred='output', target='y'), 那么fastNLP计
+                        算loss时，就会使用"output"在batch_y与forward的结果中找到pred;使用"y"在batch_y与forward的结果中找target
+                        , 并完成loss的计算。
                     4. 获取到loss之后，进行反向求导并更新梯度
-            如果测试集不为空
-                根据metrics进行evaluation，并根据是否提供了save_path判断是否存储模型
+                    根据需要适时进行验证机测试
+                        根据metrics进行evaluation，并根据是否提供了save_path判断是否存储模型
 
-        :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现最好的
-            模型参数。
+        :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现
+            最好的模型参数。
         :return results: 返回一个字典类型的数据, 内含以下内容::
 
             seconds: float, 表示训练时长
@@ -196,8 +206,11 @@ class Trainer(object):
                 results['best_step'] = self.best_dev_step
                 if load_best_model:
                     model_name = "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time])
-                    # self._load_model(self.model, model_name)
-                    print("Reloaded the best model.")
+                    load_succeed = self._load_model(self.model, model_name)
+                    if load_succeed:
+                        print("Reloaded the best model.")
+                    else:
+                        print("Fail to reload best model.")
         finally:
             self._summary_writer.close()
             del self._summary_writer
@@ -208,7 +221,7 @@ class Trainer(object):
     def _tqdm_train(self):
         self.step = 0
         data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
-                              as_numpy=False)
+                                as_numpy=False)
         total_steps = data_iterator.num_batches*self.n_epochs
         with tqdm(total=total_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
             avg_loss = 0
@@ -297,7 +310,8 @@ class Trainer(object):
             if self.save_path is not None:
                 self._save_model(self.model,
                              "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time]))
-
+            else:
+                self._best_model_states = {name:param.cpu().clone() for name, param in self.model.named_parameters()}
             self.best_dev_perf = res
             self.best_dev_epoch = epoch
             self.best_dev_step = step
@@ -356,7 +370,7 @@ class Trainer(object):
                 torch.save(model, model_name)
 
     def _load_model(self, model, model_name, only_param=False):
-        # TODO: 这个是不是有问题？
+        # 返回bool值指示是否成功reload模型
         if self.save_path is not None:
             model_path = os.path.join(self.save_path, model_name)
             if only_param:
@@ -364,6 +378,11 @@ class Trainer(object):
             else:
                 states = torch.load(model_path).state_dict()
             model.load_state_dict(states)
+        elif hasattr(self, "_best_model_states"):
+            model.load_state_dict(self._best_model_states)
+        else:
+            return False
+        return True
 
     def _better_eval_result(self, metrics):
         """Check if the current epoch yields better validation results.
@@ -469,7 +488,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
             break
 
     if dev_data is not None:
-        tester = Tester(data=dataset[:batch_size * DEFAULT_CHECK_NUM_BATCH], model=model, metrics=metrics,
+        tester = Tester(data=dev_data[:batch_size * DEFAULT_CHECK_NUM_BATCH], model=model, metrics=metrics,
                         batch_size=batch_size, verbose=-1)
         evaluate_results = tester.test()
         _check_eval_results(metrics=evaluate_results, metric_key=metric_key, metric_list=metrics)
