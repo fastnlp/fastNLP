@@ -195,7 +195,7 @@ class CrossEntropyLoss(LossBase):
 
     def get_loss(self, pred, target):
         return F.cross_entropy(input=pred, target=target,
-                                ignore_index=self.padding_idx)
+                               ignore_index=self.padding_idx)
 
 
 class L1Loss(LossBase):

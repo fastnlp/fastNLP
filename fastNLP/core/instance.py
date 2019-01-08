@@ -30,5 +30,7 @@ class Instance(object):
         return self.add_field(name, field)
 
     def __repr__(self):
+        s = '\''
         return "{" + ",\n".join(
-            "\'" + field_name + "\': " + str(self.fields[field_name]) for field_name in self.fields) + "}"
+            "\'" + field_name + "\': " + str(self.fields[field_name]) +\
+            f" type={(str(type(self.fields[field_name]))).split(s)[1]}" for field_name in self.fields) + "}"
