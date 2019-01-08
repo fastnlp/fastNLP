@@ -75,10 +75,18 @@ class EmbedLoader(BaseLoader):
 
     @staticmethod
     def parse_glove_line(line):
-        line = list(filter(lambda w: len(w) > 0, line.strip().split(" ")))
+        line = line.split()
         if len(line) <= 2:
             raise RuntimeError("something goes wrong in parsing glove embedding")
-        return line[0], torch.Tensor(list(map(float, line[1:])))
+        return line[0], line[1:]
+
+    @staticmethod
+    def str_list_2_vec(line):
+        try:
+            return torch.Tensor(list(map(float, line)))
+        except Exception:
+            raise RuntimeError("something goes wrong in parsing glove embedding")
+
 
     @staticmethod
     def fast_load_embedding(emb_dim, emb_file, vocab):
@@ -99,6 +107,7 @@ class EmbedLoader(BaseLoader):
             for line in f:
                 word, vector = EmbedLoader.parse_glove_line(line)
                 if word in vocab:
+                    vector = EmbedLoader.str_list_2_vec(vector)
                     if len(vector.shape) > 1 or emb_dim != vector.shape[0]:
                         raise ValueError("Pre-trained embedding dim is {}. Expect {}.".format(vector.shape, (emb_dim,)))
                     embedding_matrix[vocab[word]] = vector
