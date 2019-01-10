@@ -31,9 +31,10 @@ parser.add_argument('--cont', nargs='?', type=str,
                     help='Whether continue from the saved model or from scratch', default="")
 parser.add_argument('--mode', nargs='?', type=str, 
                     help="Choose the mode: train&test", default="train")
-
+parser.add_argument('--device', nargs='?', type=int,
+                    help="Choose the free device", default=0)
 args = parser.parse_args()
-
+torch.cuda.set_device(args.device)
 
 if args.mode != 'train' and args.mode != 'test':
     print ("Please choose the mode train & test")
@@ -44,9 +45,9 @@ if args.mode != 'train' and args.mode != 'test':
 def prepare_data():
     ## load the data from the textfile
     datasets = load_data(Conll2003Loader(), [\
-                    "/remote-home/nndl/data/CONLL2003/train.txt",
-                    "/remote-home/nndl/data/CONLL2003/valid.txt",
-                    "/remote-home/nndl/data/CONLL2003/test.txt"
+                    "./data/conll2003/train.txt",
+                    "./data/conll2003/valid.txt",
+                    "./data/conll2003/test.txt"
                   ])
     train_data = datasets[0]
     valid_data = datasets[1]
@@ -88,8 +89,8 @@ def workflow():
     ## Build the model
     config = {
         "vocab_size": len(vocab),
-        "word_emb_dim": 200, 
-        "rnn_hidden_units": 600,
+        "word_emb_dim": args.word_emb, 
+        "rnn_hidden_units": args.rnn_hidden,
         "num_classes": len(speech_vocab),
         "bi_direction": args.bilstm
     }

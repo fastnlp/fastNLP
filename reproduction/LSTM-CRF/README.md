@@ -1,7 +1,9 @@
 # BiLSTM-CRF
+This project is based on idad of paper https://arxiv.org/pdf/1508.01991.pdf on EMNLP'16, and with the assistance of the fastNLP, (https://github.com/fastnlp/fastNLP), which can facilitate the development of deep learning project based on NLP. 
+
 
 ## Requirement
-(https://github.com/fastnlp/fastNLP)
+
 ```pip install fastNLP```
 
 ## Usage
@@ -30,7 +32,9 @@ optional arguments:
 
 ## Pretrained Model
 The pretrained model is saved at the save/ directory, you can use it by:
-```python main.py --continue="save/```
+```python main.py --cont="save/```
 
+## Jupyter Tutorial
+The jupyter file will walk you through the whole process step by step
 
 
