@@ -7,13 +7,14 @@ from fastNLP.modules.utils import initial_parameter
 
 
 class SelfAttention(nn.Module):
-    """
-    Self Attention Module.
+    """Self Attention Module.
 
-    Args:
-    input_size: int, the size for the input vector
-    dim: int, the width of weight matrix.
-    num_vec: int, the number of encoded vectors
+    :param int input_size:
+    :param int attention_unit:
+    :param int attention_hops:
+    :param float drop:
+    :param str initial_method:
+    :param bool use_cuda:
     """
 
     def __init__(self, input_size, attention_unit=350, attention_hops=10, drop=0.5, initial_method=None,
@@ -48,7 +49,7 @@ class SelfAttention(nn.Module):
     def forward(self, input, input_origin):
         """
         :param input:  the matrix to do attention.              [baz, senLen, h_dim]
-        :param inp:  then token index include pad token( 0 )   [baz , senLen]
+        :param inp: then token index include pad token( 0 )   [baz , senLen]
         :return output1: the input matrix after attention operation   [baz, multi-head , h_dim]
         :return output2: the attention penalty term, a scalar  [1]
         """
@@ -59,8 +60,8 @@ class SelfAttention(nn.Module):
         input_origin = input_origin.transpose(0, 1).contiguous()  # [baz, hops,len]
 
         y1 = self.tanh(self.ws1(self.drop(input)))  # [baz,len,dim] -->[bsz,len, attention-unit]
-        attention = self.ws2(y1).transpose(1,
-                                           2).contiguous()  # [bsz,len, attention-unit]--> [bsz, len, hop]--> [baz,hop,len]
+        attention = self.ws2(y1).transpose(1, 2).contiguous()
+        # [bsz,len, attention-unit]--> [bsz, len, hop]--> [baz,hop,len]
 
         attention = attention + (-999999 * (input_origin == 0).float())  # remove the weight on padding token.
         attention = F.softmax(attention, 2)  # [baz ,hop, len]

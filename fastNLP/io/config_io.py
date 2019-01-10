@@ -6,7 +6,11 @@ from fastNLP.io.base_loader import BaseLoader
 
 
 class ConfigLoader(BaseLoader):
-    """loader for configuration files"""
+    """Loader for configuration.
+
+    :param str data_path: path to the config
+
+    """
 
     def __init__(self, data_path=None):
         super(ConfigLoader, self).__init__()
@@ -19,13 +23,15 @@ class ConfigLoader(BaseLoader):
 
     @staticmethod
     def load_config(file_path, sections):
-        """
-        :param file_path: the path of config file
-        :param sections: the dict of {section_name(string): Section instance}
-        Example:
+        """Load section(s) of configuration into the ``sections`` provided. No returns.
+
+        :param str file_path: the path of config file
+        :param dict sections: the dict of ``{section_name(string): ConfigSection object}``
+        Example::
+
             test_args = ConfigSection()
             ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
-        :return: return nothing, but the value of attributes are saved in sessions
+
         """
         assert isinstance(sections, dict)
         cfg = configparser.ConfigParser()
@@ -60,9 +66,12 @@ class ConfigLoader(BaseLoader):
 
 
 class ConfigSection(object):
+    """ConfigSection is the data structure storing all key-value pairs in one section in a config file.
+
+    """
 
     def __init__(self):
-        pass
+        super(ConfigSection, self).__init__()
 
     def __getitem__(self, key):
         """
@@ -132,25 +141,12 @@ class ConfigSection(object):
         return self.__dict__
 
 
-if __name__ == "__main__":
-    config = ConfigLoader('there is no data')
-
-    section = {'General': ConfigSection(), 'My': ConfigSection(), 'A': ConfigSection()}
-    """
-            General and My can be found in config file, so the attr and
-        value will be updated
-            A cannot be found in config file, so nothing will be done
-    """
-
-    config.load_config("../../test/data_for_tests/config", section)
-    for s in section:
-        print(s)
-        for attr in section[s].__dict__.keys():
-            print(s, attr, getattr(section[s], attr), type(getattr(section[s], attr)))
-
-
 class ConfigSaver(object):
+    """ConfigSaver is used to save config file and solve related conflicts.
 
+    :param str file_path: path to the config file
+
+    """
     def __init__(self, file_path):
         self.file_path = file_path
         if not os.path.exists(self.file_path):
@@ -244,9 +240,8 @@ class ConfigSaver(object):
     def save_config_file(self, section_name, section):
         """This is the function to be called to change the config file with a single section and its name.
 
-        :param section_name: The name of section what needs to be changed and saved.
-        :param section: The section with key and value what needs to be changed and saved.
-        :return:
+        :param str section_name: The name of section what needs to be changed and saved.
+        :param ConfigSection section: The section with key and value what needs to be changed and saved.
         """
         section_file = self._get_section(section_name)
         if len(section_file.__dict__.keys()) == 0:  # the section not in the file before

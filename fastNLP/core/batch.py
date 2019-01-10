@@ -10,10 +10,10 @@ class Batch(object):
             for batch_x, batch_y in Batch(data_set, batch_size=16, sampler=SequentialSampler()):
                 # ...
 
-    :param dataset: a DataSet object
-    :param batch_size: int, the size of the batch
-    :param sampler: a Sampler object
-    :param as_numpy: bool. If True, return Numpy array. Otherwise, return torch tensors.
+    :param DataSet dataset: a DataSet object
+    :param int batch_size: the size of the batch
+    :param Sampler sampler: a Sampler object
+    :param bool as_numpy: If True, return Numpy array. Otherwise, return torch tensors.
 
     """
 

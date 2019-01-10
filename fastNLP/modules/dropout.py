@@ -2,8 +2,8 @@ import torch
 
 
 class TimestepDropout(torch.nn.Dropout):
-    """This module accepts a `[batch_size, num_timesteps, embedding_dim)]` and use a single
-    dropout mask of shape `(batch_size, embedding_dim)` to apply on every time step.
+    """This module accepts a ``[batch_size, num_timesteps, embedding_dim)]`` and use a single
+    dropout mask of shape ``(batch_size, embedding_dim)`` to apply on every time step.
     """
 
     def forward(self, x):

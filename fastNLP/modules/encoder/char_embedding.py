@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 from torch import nn
 
 from fastNLP.modules.utils import initial_parameter
@@ -7,17 +6,17 @@ from fastNLP.modules.utils import initial_parameter
 
 # from torch.nn.init import xavier_uniform
 class ConvCharEmbedding(nn.Module):
+    """Character-level Embedding with CNN.
+
+    :param int char_emb_size: the size of character level embedding. Default: 50
+        say 26 characters, each embedded to 50 dim vector, then the input_size is 50.
+    :param tuple feature_maps: tuple of int. The length of the tuple is the number of convolution operations
+        over characters. The i-th integer is the number of filters (dim of out channels) for the i-th
+        convolution.
+    :param tuple kernels: tuple of int. The width of each kernel.
+    """
 
     def __init__(self, char_emb_size=50, feature_maps=(40, 30, 30), kernels=(3, 4, 5), initial_method=None):
-        """
-        Character Level Word Embedding
-        :param char_emb_size: the size of character level embedding. Default: 50
-            say 26 characters, each embedded to 50 dim vector, then the input_size is 50.
-        :param feature_maps: tuple of int. The length of the tuple is the number of convolution operations
-            over characters. The i-th integer is the number of filters (dim of out channels) for the i-th
-            convolution.
-        :param kernels: tuple of int. The width of each kernel.
-        """
         super(ConvCharEmbedding, self).__init__()
         self.convs = nn.ModuleList([
             nn.Conv2d(1, feature_maps[i], kernel_size=(char_emb_size, kernels[i]), bias=True, padding=(0, 4))
@@ -27,8 +26,8 @@ class ConvCharEmbedding(nn.Module):
 
     def forward(self, x):
         """
-        :param x: [batch_size * sent_length, word_length, char_emb_size]
-        :return: [batch_size * sent_length, sum(feature_maps), 1]
+        :param x: ``[batch_size * sent_length, word_length, char_emb_size]``
+        :return: feature map of shape [batch_size * sent_length, sum(feature_maps), 1]
         """
         x = x.contiguous().view(x.size(0), 1, x.size(1), x.size(2))
         # [batch_size*sent_length, channel, width, height]
@@ -51,13 +50,12 @@ class ConvCharEmbedding(nn.Module):
 
 
 class LSTMCharEmbedding(nn.Module):
-    """
-    Character Level Word Embedding with LSTM with a single layer.
-    :param char_emb_size: int, the size of character level embedding. Default: 50
-        say 26 characters, each embedded to 50 dim vector, then the input_size is 50.
-    :param hidden_size: int, the number of hidden units. Default:  equal to char_emb_size.
-    """
+    """Character-level Embedding with LSTM.
 
+    :param int char_emb_size: the size of character level embedding. Default: 50
+        say 26 characters, each embedded to 50 dim vector, then the input_size is 50.
+    :param int hidden_size: the number of hidden units. Default:  equal to char_emb_size.
+    """
     def __init__(self, char_emb_size=50, hidden_size=None, initial_method=None):
         super(LSTMCharEmbedding, self).__init__()
         self.hidden_size = char_emb_size if hidden_size is None else hidden_size
@@ -71,7 +69,7 @@ class LSTMCharEmbedding(nn.Module):
 
     def forward(self, x):
         """
-        :param x:[ n_batch*n_word, word_length, char_emb_size]
+        :param x: ``[ n_batch*n_word, word_length, char_emb_size]``
         :return: [ n_batch*n_word, char_emb_size]
         """
         batch_size = x.shape[0]

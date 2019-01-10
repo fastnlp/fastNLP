@@ -15,7 +15,7 @@ def initial_parameter(net, initial_method=None):
     """A method used to initialize the weights of PyTorch models.
 
     :param net: a PyTorch model
-    :param initial_method: str, one of the following initializations
+    :param str initial_method: one of the following initializations.
 
             - xavier_uniform
             - xavier_normal (default)
@@ -79,7 +79,7 @@ def seq_mask(seq_len, max_len):
 
     :param seq_len: list or torch.Tensor, the lengths of sequences in a batch.
     :param max_len: int, the maximum sequence length in a batch.
-    :return mask: torch.LongTensor, [batch_size, max_len]
+    :return: mask, torch.LongTensor, [batch_size, max_len]
 
     """
     if not isinstance(seq_len, torch.Tensor):

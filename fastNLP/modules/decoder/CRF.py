@@ -21,11 +21,13 @@ def seq_len_to_byte_mask(seq_lens):
 
 
 class ConditionalRandomField(nn.Module):
-    def __init__(self, tag_size, include_start_end_trans=False ,initial_method = None):
-        """
-        :param tag_size: int, num of tags
-        :param include_start_end_trans: bool, whether to include start/end tag
-        """
+    """
+        :param int tag_size: num of tags
+        :param bool include_start_end_trans: whether to include start/end tag
+        :param str initial_method: method for initialization
+    """
+
+    def __init__(self, tag_size, include_start_end_trans=False, initial_method=None):
         super(ConditionalRandomField, self).__init__()
 
         self.include_start_end_trans = include_start_end_trans
@@ -39,6 +41,7 @@ class ConditionalRandomField(nn.Module):
 
         # self.reset_parameter()
         initial_parameter(self, initial_method)
+
     def reset_parameter(self):
         nn.init.xavier_normal_(self.trans_m)
         if self.include_start_end_trans:
@@ -46,12 +49,12 @@ class ConditionalRandomField(nn.Module):
             nn.init.normal_(self.end_scores)
 
     def _normalizer_likelihood(self, logits, mask):
-        """
-        Computes the (batch_size,) denominator term for the log-likelihood, which is the
+        """Computes the (batch_size,) denominator term for the log-likelihood, which is the
         sum of the likelihoods across all possible state sequences.
-        :param logits:FloatTensor, max_len x batch_size x tag_size
-        :param mask:ByteTensor, max_len x batch_size
-        :return:FloatTensor, batch_size
+
+        :param FloatTensor logits: [max_len, batch_size, tag_size]
+        :param ByteTensor mask: [max_len, batch_size]
+        :return: FloatTensor, [batch_size,]
         """
         seq_len, batch_size, n_tags = logits.size()
         alpha = logits[0]
@@ -70,8 +73,8 @@ class ConditionalRandomField(nn.Module):
         return log_sum_exp(alpha, 1)
 
     def _glod_score(self, logits, tags, mask):
-        """
-        Compute the score for the gold path.
+        """Compute the score for the gold path.
+
         :param logits: FloatTensor, max_len x batch_size x tag_size
         :param tags: LongTensor, max_len x batch_size
         :param mask: ByteTensor, max_len x batch_size
@@ -97,12 +100,12 @@ class ConditionalRandomField(nn.Module):
         return score
 
     def forward(self, feats, tags, mask):
-        """
-        Calculate the neg log likelihood
-        :param feats:FloatTensor, batch_size x max_len x tag_size
-        :param tags:LongTensor, batch_size x max_len
-        :param mask:ByteTensor batch_size x max_len
-        :return:FloatTensor, batch_size
+        """Calculate the neg log likelihood
+
+        :param FloatTensor feats: [batch_size, max_len, tag_size]
+        :param LongTensor tags: [batch_size, max_len]
+        :param ByteTensor mask: [batch_size, max_len]
+        :return: FloatTensor, [batch_size,]
         """
         feats = feats.transpose(0, 1)
         tags = tags.transpose(0, 1).long()
@@ -113,11 +116,11 @@ class ConditionalRandomField(nn.Module):
         return all_path_score - gold_path_score
 
     def viterbi_decode(self, data, mask, get_score=False):
-        """
-        Given a feats matrix, return best decode path and best score.
-        :param data:FloatTensor, batch_size x max_len x tag_size
-        :param mask:ByteTensor batch_size x max_len
-        :param get_score: bool, whether to output the decode score.
+        """Given a feats matrix, return best decode path and best score.
+
+        :param FloatTensor data: [batch_size, max_len, tag_size]
+        :param ByteTensor mask: [batch_size, max_len]
+        :param bool get_score: whether to output the decode score.
         :return: scores, paths
         """
         batch_size, seq_len, n_tags = data.size()

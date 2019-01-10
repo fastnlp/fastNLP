@@ -29,8 +29,11 @@ class GroupNorm(nn.Module):
 
 
 class LayerNormalization(nn.Module):
-    """ Layer normalization module """
+    """
 
+    :param int layer_size:
+    :param float eps: default=1e-3
+    """
     def __init__(self, layer_size, eps=1e-3):
         super(LayerNormalization, self).__init__()
 
@@ -52,12 +55,11 @@ class LayerNormalization(nn.Module):
 class BiLinear(nn.Module):
     def __init__(self, n_left, n_right, n_out, bias=True):
         """
-        Args:
-            n_left: size of left input
-            n_right: size of right input
-            n_out: size of output
-            bias: If set to False, the layer will not learn an additive bias.
-                Default: True
+
+        :param int n_left: size of left input
+        :param int n_right: size of right input
+        :param int n_out: size of output
+        :param bool bias: If set to False, the layer will not learn an additive bias. Default: True
         """
         super(BiLinear, self).__init__()
         self.n_left = n_left
@@ -83,12 +85,9 @@ class BiLinear(nn.Module):
 
     def forward(self, input_left, input_right):
         """
-        Args:
-            input_left: Tensor
-                the left input tensor with shape = [batch1, batch2, ..., left_features]
-            input_right: Tensor
-                the right input tensor with shape = [batch1, batch2, ..., right_features]
-        Returns:
+        :param Tensor input_left: the left input tensor with shape = [batch1, batch2, ..., left_features]
+        :param Tensor input_right: the right input tensor with shape = [batch1, batch2, ..., right_features]
+
         """
         left_size = input_left.size()
         right_size = input_right.size()
@@ -118,16 +117,11 @@ class BiLinear(nn.Module):
 class BiAffine(nn.Module):
     def __init__(self, n_enc, n_dec, n_labels, biaffine=True, **kwargs):
         """
-        Args:
-            n_enc: int
-                the dimension of the encoder input.
-            n_dec: int
-                the dimension of the decoder input.
-            n_labels: int
-                the number of labels of the crf layer
-            biaffine: bool
-                if apply bi-affine parameter.
-            **kwargs:
+
+        :param int n_enc: the dimension of the encoder input.
+        :param int n_dec: the dimension of the decoder input.
+        :param int n_labels: the number of labels of the crf layer
+        :param bool biaffine: if apply bi-affine parameter.
         """
         super(BiAffine, self).__init__()
         self.n_enc = n_enc
@@ -154,17 +148,12 @@ class BiAffine(nn.Module):
 
     def forward(self, input_d, input_e, mask_d=None, mask_e=None):
         """
-        Args:
-            input_d: Tensor
-                the decoder input tensor with shape = [batch, length_decoder, input_size]
-            input_e: Tensor
-                the child input tensor with shape = [batch, length_encoder, input_size]
-            mask_d: Tensor or None
-                the mask tensor for decoder with shape = [batch, length_decoder]
-            mask_e: Tensor or None
-                the mask tensor for encoder with shape = [batch, length_encoder]
-        Returns: Tensor
-            the energy tensor with shape = [batch, num_label, length, length]
+
+        :param Tensor input_d: the decoder input tensor with shape = [batch, length_decoder, input_size]
+        :param Tensor input_e: the child input tensor with shape = [batch, length_encoder, input_size]
+        :param mask_d: Tensor or None, the mask tensor for decoder with shape = [batch, length_decoder]
+        :param mask_e: Tensor or None, the mask tensor for encoder with shape = [batch, length_encoder]
+        :returns: Tensor, the energy tensor with shape = [batch, num_label, length, length]
         """
         assert input_d.size(0) == input_e.size(0), 'batch sizes of encoder and decoder are requires to be equal.'
         batch, length_decoder, _ = input_d.size()
