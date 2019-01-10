@@ -15,19 +15,30 @@ usage: main.py [-h]
 
 CRF-LSTM Model
 
-positional arguments:
-  rnn_hidden  The hidden dimension of the LSTM
-  epoch       The epoch times of training
-  word_emb    The embedding size of vocab
-  batch_size  The batch_size of trainer
-  op          The optimizer for trainer, 0 for Adam, 1 for SGD
-  lr          The learning rate of optimizer
-  cuda        Whether use cuda
-  bilstm      bilstm or lstm
-  continue    Whether continue from the saved model or from scratch
+python main.py -h
+usage: main.py [-h] [--epoch [EPOCH]] [--rnn_hidden [RNN_HIDDEN]]
+               [--word_emb [WORD_EMB]] [--batch_size [BATCH_SIZE]] [--op [OP]]
+               [--lr [LR]] [--cuda [CUDA]] [--bilstm [BILSTM]] [--cont [CONT]]
+               [--mode [MODE]] [--device [DEVICE]]
+
+CRF-LSTM Model
 
 optional arguments:
-  -h, --help  show this help message and exit
+  -h, --help            show this help message and exit
+  --epoch [EPOCH]       The epoch times of training
+  --rnn_hidden [RNN_HIDDEN]
+                        The hidden dimension of the LSTM
+  --word_emb [WORD_EMB]
+                        The embedding size of vocab
+  --batch_size [BATCH_SIZE]
+                        The batch_size of trainer
+  --op [OP]             The optimizer for trainer, 0 for Adam, 1 for SGD
+  --lr [LR]             The learning rate of optimizer
+  --cuda [CUDA]         Whether use cuda
+  --bilstm [BILSTM]     bilstm or lstm
+  --cont [CONT]         Whether continue from the saved model or from scratch
+  --mode [MODE]         Choose the mode: train&test
+  --device [DEVICE]     Choose the free device
 ```
 
 ## Pretrained Model
