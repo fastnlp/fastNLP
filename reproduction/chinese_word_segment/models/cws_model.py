@@ -65,7 +65,7 @@ class CWSBiLSTMEncoder(BaseModel):
 
         x_tensor = self.char_embedding(chars)
 
-        if not bigrams is None:
+        if hasattr(self, 'bigram_embedding'):
             bigram_tensor = self.bigram_embedding(bigrams).view(batch_size, max_len, -1)
             x_tensor = torch.cat([x_tensor, bigram_tensor], dim=2)
         x_tensor = self.embedding_drop(x_tensor)
@@ -185,5 +185,5 @@ class CWSBiLSTMCRF(BaseModel):
         feats = self.decoder_model(feats)
         probs = self.crf.viterbi_decode(feats, masks, get_score=False)
 
-        return {'pred': probs}
+        return {'pred': probs, 'seq_lens':seq_lens}
 

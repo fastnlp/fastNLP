@@ -378,7 +378,7 @@ class BMES2OutputProcessor(Processor):
         prediction为BSEMS，会被认为是SSSSS.
 
     """
-    def __init__(self, chars_field_name='chars_list', tag_field_name='pred_tags', new_added_field_name='output',
+    def __init__(self, chars_field_name='chars_list', tag_field_name='pred', new_added_field_name='output',
             b_idx = 0, m_idx = 1, e_idx = 2, s_idx = 3):
         """
 
