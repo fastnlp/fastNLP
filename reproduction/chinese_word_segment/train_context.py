@@ -139,14 +139,16 @@ from fastNLP.api.processor import ModelProcessor
 from reproduction.chinese_word_segment.process.cws_processor import BMES2OutputProcessor
 
 model_proc = ModelProcessor(cws_model)
-output_proc = BMES2OutputProcessor(tag_field_name='pred')
+output_proc = BMES2OutputProcessor(chars_field_name='chars_lst', tag_field_name='pred')
 
 pp = Pipeline()
 pp.add_processor(fs2hs_proc)
 # pp.add_processor(sp_proc)
 pp.add_processor(char_proc)
 pp.add_processor(bigram_proc)
+char_vocab_proc.set_verbose(0)
 pp.add_processor(char_vocab_proc)
+bigram_vocab_proc.set_verbose(0)
 pp.add_processor(bigram_vocab_proc)
 pp.add_processor(seq_len_proc)
 

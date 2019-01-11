@@ -270,8 +270,8 @@ class ModelProcessor(Processor):
                         for idx, seq_len in enumerate(seq_lens):
                             tmp_batch.append(value[idx, :seq_len])
                         batch_output[key].extend(tmp_batch)
-
-                batch_output[self.seq_len_field_name].extend(seq_lens)
+                if not self.seq_len_field_name in prediction:
+                    batch_output[self.seq_len_field_name].extend(seq_lens)
 
         # TODO 当前的实现会导致之后的processor需要知道model输出的output的key是什么
         for field_name, fields in batch_output.items():

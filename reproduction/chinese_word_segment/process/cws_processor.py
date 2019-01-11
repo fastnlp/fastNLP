@@ -238,7 +238,7 @@ class VocabIndexerProcessor(Processor):
 
     """
     def __init__(self, field_name, new_added_filed_name=None, min_freq=1, max_size=None,
-                 verbose=1, is_input=True):
+                 verbose=0, is_input=True):
         """
 
         :param field_name: 从哪个field_name创建词表，以及对哪个field_name进行index操作
@@ -319,6 +319,15 @@ class VocabIndexerProcessor(Processor):
 
     def get_vocab_size(self):
         return len(self.vocab)
+
+    def set_verbose(self, verbose):
+        """
+        设置processor verbose状态。
+
+        :param verbose: int, 0，不输出任何信息；1，输出vocab 信息。
+        :return:
+        """
+        self.verbose = verbose
 
 class VocabProcessor(Processor):
     def __init__(self, field_name, min_freq=1, max_size=None):
