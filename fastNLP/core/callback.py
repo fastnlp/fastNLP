@@ -8,35 +8,35 @@ class Callback(object):
     def __init__(self):
         super(Callback, self).__init__()
 
-    def before_train(self):
+    def before_train(self, *args):
         # before the main training loop
         pass
 
-    def before_epoch(self):
+    def before_epoch(self, *args):
         # at the beginning of each epoch
         pass
 
-    def before_batch(self):
+    def before_batch(self, *args):
         # at the beginning of each step/mini-batch
         pass
 
-    def before_loss(self):
+    def before_loss(self, *args):
         # after data_forward, and before loss computation
         pass
 
-    def before_backward(self):
+    def before_backward(self, *args):
         # after loss computation, and before gradient backward
         pass
 
-    def after_batch(self):
+    def after_batch(self, *args):
         # at the end of each step/mini-batch
         pass
 
-    def after_epoch(self):
+    def after_epoch(self, *args):
         # at the end of each epoch
         pass
 
-    def after_train(self):
+    def after_train(self, *args):
         # after training loop
         pass
 
@@ -48,12 +48,12 @@ def transfer(func):
     :return:
     """
 
-    def wrapper(manager):
+    def wrapper(manager, *arg):
         returns = []
         for callback in manager.callbacks:
             for env_name, env_value in manager.env.items():
                 setattr(callback, env_name, env_value)
-            returns.append(getattr(callback, func.__name__)())
+            returns.append(getattr(callback, func.__name__)(*arg))
         return returns
 
     return wrapper
@@ -91,19 +91,27 @@ class CallbackManager(Callback):
         pass
 
     @transfer
-    def before_epoch(self):
+    def before_epoch(self, cur_epoch, total_epoch):
         pass
 
     @transfer
-    def before_batch(self):
+    def before_batch(self, batch_x, batch_y, indices):
         pass
 
     @transfer
-    def before_loss(self):
+    def before_loss(self, batch_y, predict_y):
         pass
 
     @transfer
-    def before_backward(self):
+    def before_backward(self, loss, model):
+        pass
+
+    @transfer
+    def after_backward(self, model):
+        pass
+
+    @transfer
+    def after_step(self):
         pass
 
     @transfer
@@ -111,18 +119,25 @@ class CallbackManager(Callback):
         pass
 
     @transfer
-    def after_epoch(self):
+    def after_valid(self, eval_result, metric_key, optimizer):
         pass
 
     @transfer
-    def after_train(self):
+    def after_epoch(self, cur_epoch, n_epoch, optimizer):
+        pass
+
+    @transfer
+    def after_train(self, model):
+        pass
+
+    @transfer
+    def on_exception(self, exception, model, indices):
         pass
 
 
 class DummyCallback(Callback):
-    def before_train(self):
-        print("before train!!!")
-        print(self.n_epoch)
+    def before_train(self, *arg):
+        print(arg)
 
     def after_epoch(self):
         print("after epoch!!!")
@@ -157,5 +172,5 @@ class EchoCallback(Callback):
 
 if __name__ == "__main__":
     manager = CallbackManager(env={"n_epoch": 3}, callbacks=[DummyCallback(), DummyCallback()])
-    manager.before_train()
-    print(manager.after_epoch())
+    manager.before_train(10, 11, 12)
+    # print(manager.after_epoch())
