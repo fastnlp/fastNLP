@@ -257,7 +257,7 @@ class Trainer(object):
 
                     self._update()
                     # lr scheduler; lr_finder; one_cycle
-                    self.callback_manager.after_step()
+                    self.callback_manager.after_step(self.optimizer)
 
                     self._summary_writer.add_scalar("loss", loss.item(), global_step=self.step)
                     for name, param in self.model.named_parameters():

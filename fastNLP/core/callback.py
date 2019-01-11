@@ -190,9 +190,6 @@ class EchoCallback(Callback):
 
     def before_batch(self, batch_x, batch_y, indices):
         print("before_batch")
-        print("batch_x:", batch_x)
-        print("batch_y:", batch_y)
-        print("indices: ", indices)
 
     def before_loss(self, batch_y, predict_y):
         print("before_loss")

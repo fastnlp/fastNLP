@@ -360,7 +360,8 @@ class TestBMESF1PreRecMetric(unittest.TestCase):
 
         metric = BMESF1PreRecMetric()
         metric(pred_dict, target_dict)
-        self.assertDictEqual(metric.get_metric(), {'f1': 0.999999, 'precision': 1.0, 'recall': 1.0})
+        self.assertDictEqual(metric.get_metric(), {'f': 1.0, 'pre': 1.0, 'rec': 1.0})
+
 
 class TestUsefulFunctions(unittest.TestCase):
     # 测试metrics.py中一些看上去挺有用的函数
