@@ -296,23 +296,26 @@ class Trainer(object):
         epoch = 1
         start = time.time()
         while epoch <= self.n_epochs:
-            self.callback_manager.before_epoch()
+            self.callback_manager.before_epoch(epoch, self.n_epochs)
 
             data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
                                   as_numpy=False)
 
             for batch_x, batch_y in data_iterator:
-                self.callback_manager.before_batch()
+                self.callback_manager.before_batch(batch_x, batch_y, data_iterator.get_batch_indices())
                 # TODO 这里可能会遇到问题，万一用户在model内部修改了prediction的device就会有问题
                 _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
                 prediction = self._data_forward(self.model, batch_x)
 
-                self.callback_manager.before_loss()
+                self.callback_manager.before_loss(batch_y, prediction)
                 loss = self._compute_loss(prediction, batch_y)
 
-                self.callback_manager.before_backward()
+                self.callback_manager.before_backward(loss, self.model)
                 self._grad_backward(loss)
+
+                self.callback_manager.after_backward(self.model)
                 self._update()
+                self.callback_manager.after_step()
 
                 self._summary_writer.add_scalar("loss", loss.item(), global_step=self.step)
                 for name, param in self.model.named_parameters():
@@ -338,7 +341,7 @@ class Trainer(object):
             if self.dev_data and self.validate_every <= 0:
                 self._do_validation(epoch=epoch, step=self.step)
             epoch += 1
-            self.callback_manager.after_epoch()
+            self.callback_manager.after_epoch(epoch, self.n_epochs, self.optimizer)
 
     def _do_validation(self, epoch, step):
         res = self.tester.test()
