@@ -161,7 +161,6 @@ class ConditionalRandomField(nn.Module):
 
         # self.reset_parameter()
         initial_parameter(self, initial_method)
-
     def reset_parameter(self):
         nn.init.xavier_normal_(self.trans_m)
         if self.include_start_end_trans:
@@ -169,9 +168,9 @@ class ConditionalRandomField(nn.Module):
             nn.init.normal_(self.end_scores)
 
     def _normalizer_likelihood(self, logits, mask):
-        """
-        Computes the (batch_size,) denominator term for the log-likelihood, which is the
+        """Computes the (batch_size,) denominator term for the log-likelihood, which is the
         sum of the likelihoods across all possible state sequences.
+
         :param logits:FloatTensor, max_len x batch_size x num_tags
         :param mask:ByteTensor, max_len x batch_size
         :return:FloatTensor, batch_size

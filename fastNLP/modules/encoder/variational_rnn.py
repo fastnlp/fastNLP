@@ -1,5 +1,3 @@
-import math
-
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import PackedSequence
@@ -9,15 +7,17 @@ from fastNLP.modules.utils import initial_parameter
 try:
     from torch import flip
 except ImportError:
-   def flip(x, dims):
+    def flip(x, dims):
         indices = [slice(None)] * x.dim()
         for dim in dims:
             indices[dim] = torch.arange(x.size(dim) - 1, -1, -1, dtype=torch.long, device=x.device)
         return x[tuple(indices)]
 
+
 class VarRnnCellWrapper(nn.Module):
     """Wrapper for normal RNN Cells, make it support variational dropout
     """
+
     def __init__(self, cell, hidden_size, input_p, hidden_p):
         super(VarRnnCellWrapper, self).__init__()
         self.cell = cell
@@ -32,9 +32,9 @@ class VarRnnCellWrapper(nn.Module):
                        for other RNN, h_0, [batch_size, hidden_size]
         :param mask_x: [batch_size, input_size] dropout mask for input
         :param mask_h: [batch_size, hidden_size] dropout mask for hidden
-        :return output: [seq_len, bacth_size, hidden_size]
-                hidden: for LSTM, tuple of (h_n, c_n), [batch_size, hidden_size]
-                        for other RNN, h_n, [batch_size, hidden_size]
+        :return: (output, hidden)
+            **output**: [seq_len, bacth_size, hidden_size].
+            **hidden**: for LSTM, tuple of (h_n, c_n), [batch_size, hidden_size]; For other RNN, h_n, [batch_size, hidden_size].
         """
         is_lstm = isinstance(hidden, tuple)
         input = input * mask_x.unsqueeze(0) if mask_x is not None else input
@@ -56,6 +56,7 @@ class VarRNNBase(nn.Module):
     refer to `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016)
     https://arxiv.org/abs/1512.05287`.
     """
+
     def __init__(self, mode, Cell, input_size, hidden_size, num_layers=1,
                  bias=True, batch_first=False,
                  input_dropout=0, hidden_dropout=0, bidirectional=False):
@@ -138,17 +139,22 @@ class VarRNNBase(nn.Module):
 class VarLSTM(VarRNNBase):
     """Variational Dropout LSTM.
     """
+
     def __init__(self, *args, **kwargs):
         super(VarLSTM, self).__init__(mode="LSTM", Cell=nn.LSTMCell, *args, **kwargs)
+
 
 class VarRNN(VarRNNBase):
     """Variational Dropout RNN.
     """
+
     def __init__(self, *args, **kwargs):
         super(VarRNN, self).__init__(mode="RNN", Cell=nn.RNNCell, *args, **kwargs)
+
 
 class VarGRU(VarRNNBase):
     """Variational Dropout GRU.
     """
+
     def __init__(self, *args, **kwargs):
         super(VarGRU, self).__init__(mode="GRU", Cell=nn.GRUCell, *args, **kwargs)
