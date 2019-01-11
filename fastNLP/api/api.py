@@ -23,7 +23,7 @@ from fastNLP.api.processor import IndexerProcessor
 
 # TODO add pretrain urls
 model_urls = {
-
+    'cws': "http://123.206.98.91:8888/download/cws_crf-69e357c9.pkl"
 }
 
 
@@ -139,6 +139,12 @@ class POS(API):
 
 class CWS(API):
     def __init__(self, model_path=None, device='cpu'):
+        """
+        中文分词高级接口。
+
+        :param model_path: 当model_path为None，使用默认位置的model。如果默认位置不存在，则自动下载模型
+        :param device: str，可以为'cpu', 'cuda'或'cuda:0'等。会将模型load到相应device进行推断。
+        """
         super(CWS, self).__init__()
         if model_path is None:
             model_path = model_urls['cws']
@@ -146,7 +152,13 @@ class CWS(API):
         self.load(model_path, device)
 
     def predict(self, content):
+        """
+        分词接口。
 
+        :param content: str或List[str], 例如: "中文分词很重要！"， 返回的结果是"中文 分词 很 重要 !"。 如果传入的为List[str]，比如
+            [ "中文分词很重要！", ...], 返回的结果["中文 分词 很 重要 !", ...]。
+        :return: str或List[str], 根据输入的的类型决定。
+        """
         if not hasattr(self, 'pipeline'):
             raise ValueError("You have to load model first.")
 
@@ -162,7 +174,10 @@ class CWS(API):
         dataset.add_field('raw_sentence', sentence_list)
 
         # 3. 使用pipeline
-        self.pipeline(dataset)
+        pipeline = self.pipeline.pipeline[:-3] + self.pipeline.pipeline[-2:]
+        pp = Pipeline(pipeline)
+        pp(dataset)
+        # self.pipeline(dataset)
 
         output = dataset['output'].content
         if isinstance(content, str):
@@ -171,10 +186,28 @@ class CWS(API):
             return output
 
     def test(self, filepath):
+        """
+        传入一个分词文件路径，返回该数据集上分词f1, precision, recall。
+        分词文件应该为:
+            1	编者按	编者按	NN	O	11	nmod:topic
+            2	：	：	PU	O	11	punct
+            3	7月	7月	NT	DATE	4	compound:nn
+            4	12日	12日	NT	DATE	11	nmod:tmod
+            5	，	，	PU	O	11	punct
 
-        tag_proc = self._dict['tag_indexer']
+            1	这	这	DT	O	3	det
+            2	款	款	M	O	1	mark:clf
+            3	飞行	飞行	NN	O	8	nsubj
+            4	从	从	P	O	5	case
+            5	外型	外型	NN	O	8	nmod:prep
+        以空行分割两个句子，有内容的每行有7列。
+
+        :param filepath: str, 文件路径路径。
+        :return: float, float, float. 分别f1, precision, recall.
+        """
+        tag_proc = self._dict['tag_proc']
         cws_model = self.pipeline.pipeline[-2].model
-        pipeline = self.pipeline.pipeline[:5]
+        pipeline = self.pipeline.pipeline[:-2]
 
         pipeline.insert(1, tag_proc)
         pp = Pipeline(pipeline)
@@ -185,12 +218,16 @@ class CWS(API):
         te_dataset = reader.load(filepath)
         pp(te_dataset)
 
-        batch_size = 64
-        te_batcher = Batch(te_dataset, batch_size, SequentialSampler(), use_cuda=False)
-        pre, rec, f1 = calculate_pre_rec_f1(cws_model, te_batcher, type='bmes')
-        f1 = round(f1 * 100, 2)
-        pre = round(pre * 100, 2)
-        rec = round(rec * 100, 2)
+        from fastNLP.core.tester import Tester
+        from fastNLP.core.metrics import BMESF1PreRecMetric
+
+        tester = Tester(data=te_dataset, model=cws_model, metrics=BMESF1PreRecMetric(target='target'), batch_size=64,
+                        verbose=0)
+        eval_res = tester.test()
+
+        f1 = eval_res['BMESF1PreRecMetric']['f']
+        pre = eval_res['BMESF1PreRecMetric']['pre']
+        rec = eval_res['BMESF1PreRecMetric']['rec']
         # print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1, pre, rec))
 
         return f1, pre, rec
@@ -301,25 +338,25 @@ class Analyzer:
 
 
 if __name__ == "__main__":
-    pos_model_path = '/home/zyfeng/fastnlp/reproduction/pos_tag_model/model_pp.pkl'
-    pos = POS(pos_model_path, device='cpu')
-    s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
-         '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
-         '那么这款无人机到底有多厉害？']
-    print(pos.test("/home/zyfeng/data/sample.conllx"))
+    # pos_model_path = '/home/zyfeng/fastnlp/reproduction/pos_tag_model/model_pp.pkl'
+    # pos = POS(pos_model_path, device='cpu')
+    # s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
+    #      '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
+    #      '那么这款无人机到底有多厉害？']
+    # print(pos.test("/home/zyfeng/data/sample.conllx"))
     # print(pos.predict(s))
 
-    # cws_model_path = '../../reproduction/chinese_word_segment/models/cws_crf.pkl'
-    # cws = CWS(device='cpu')
-    # s = ['本品是一个抗酸抗胆汁的胃黏膜保护剂' ,
-    #     '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
-    #      '那么这款无人机到底有多厉害？']
-    # print(cws.test('/Users/yh/Desktop/test_data/cws_test.conll'))
-    # print(cws.predict(s))
+    cws_model_path = '../../reproduction/chinese_word_segment/models/cws_crf.pkl'
+    cws = CWS(model_path=cws_model_path, device='cuda:0')
+    s = ['本品是一个抗酸抗胆汁的胃黏膜保护剂' ,
+        '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
+         '那么这款无人机到底有多厉害？']
+    # print(cws.test('/home/hyan/ctb3/test.conllx'))
+    print(cws.predict(s))
 
     # parser = Parser(device='cpu')
     # print(parser.test('/Users/yh/Desktop/test_data/parser_test2.conll'))
-    s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
-         '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
-         '那么这款无人机到底有多厉害？']
+    # s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
+    #      '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
+    #      '那么这款无人机到底有多厉害？']
     # print(parser.predict(s))

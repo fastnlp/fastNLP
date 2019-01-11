@@ -430,3 +430,30 @@ def seq_mask(seq_len, max_len):
     seq_len = seq_len.view(-1, 1).long()   # [batch_size, 1]
     seq_range = torch.arange(start=0, end=max_len, dtype=torch.long, device=seq_len.device).view(1, -1) # [1, max_len]
     return torch.gt(seq_len, seq_range) # [batch_size, max_len]
+
+
+class pseudo_tqdm:
+    """
+    当无法引入tqdm，或者Trainer中设置use_tqdm为false的时候，用该方法打印数据
+    """
+
+    def __init__(self, **kwargs):
+        pass
+
+    def write(self, info):
+        print(info)
+
+    def set_postfix_str(self, info):
+        print(info)
+
+    def __getattr__(self, item):
+        def pass_func(*args, **kwargs):
+            pass
+
+        return pass_func
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del self
