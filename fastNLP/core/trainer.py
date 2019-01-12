@@ -97,7 +97,7 @@ class Trainer(object):
         if check_code_level > -1:
             _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data,
                         metric_key=metric_key, check_level=check_code_level,
-                        batch_size=min(batch_size, DEFAULT_CHECK_BATCH_SIZE))
+                        batch_size=batch_size)
 
         self.train_data = train_data
         self.dev_data = dev_data  # If None, No validation.
@@ -392,7 +392,6 @@ class Trainer(object):
         return is_better
 
 
-DEFAULT_CHECK_BATCH_SIZE = 2
 DEFAULT_CHECK_NUM_BATCH = 2
 
 def _get_value_info(_dict):
@@ -411,7 +410,7 @@ def _get_value_info(_dict):
         strs.append(_str)
     return strs
 
-def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_SIZE,
+def _check_code(dataset, model, losser, metrics, batch_size,
                 dev_data=None, metric_key=None,
                 check_level=0):
     # check get_loss 方法
