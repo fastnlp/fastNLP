@@ -238,7 +238,7 @@ class VocabIndexerProcessor(Processor):
 
     """
     def __init__(self, field_name, new_added_filed_name=None, min_freq=1, max_size=None,
-                 verbose=1, is_input=True):
+                 verbose=0, is_input=True):
         """
 
         :param field_name: 从哪个field_name创建词表，以及对哪个field_name进行index操作
@@ -320,6 +320,15 @@ class VocabIndexerProcessor(Processor):
     def get_vocab_size(self):
         return len(self.vocab)
 
+    def set_verbose(self, verbose):
+        """
+        设置processor verbose状态。
+
+        :param verbose: int, 0，不输出任何信息；1，输出vocab 信息。
+        :return:
+        """
+        self.verbose = verbose
+
 class VocabProcessor(Processor):
     def __init__(self, field_name, min_freq=1, max_size=None):
 
@@ -378,7 +387,7 @@ class BMES2OutputProcessor(Processor):
         prediction为BSEMS，会被认为是SSSSS.
 
     """
-    def __init__(self, chars_field_name='chars_list', tag_field_name='pred_tags', new_added_field_name='output',
+    def __init__(self, chars_field_name='chars_list', tag_field_name='pred', new_added_field_name='output',
             b_idx = 0, m_idx = 1, e_idx = 2, s_idx = 3):
         """
 

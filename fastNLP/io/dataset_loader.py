@@ -254,7 +254,7 @@ class TokenizeDataSetLoader(DataSetLoader):
 
 
 class ClassDataSetLoader(DataSetLoader):
-    """Loader for classification data sets"""
+    """Loader for a dummy classification data set"""
 
     def __init__(self):
         super(ClassDataSetLoader, self).__init__()
@@ -304,7 +304,7 @@ class ConllLoader(DataSetLoader):
     @staticmethod
     def parse(lines):
         """
-        :param list lines:a list containing all lines in a conll file.
+        :param list lines: a list containing all lines in a conll file.
         :return: a 3D list
         """
         sentences = list()

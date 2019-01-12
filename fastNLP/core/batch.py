@@ -26,7 +26,8 @@ class Batch(object):
         self.as_numpy = as_numpy
         self.idx_list = None
         self.curidx = 0
-        self.num_batches = len(dataset)//batch_size + int(len(dataset)%batch_size!=0)
+        self.num_batches = len(dataset) // batch_size + int(len(dataset) % batch_size != 0)
+        self.cur_batch_indices = None
 
     def __iter__(self):
         self.idx_list = self.sampler(self.dataset)
@@ -42,6 +43,7 @@ class Batch(object):
             batch_x, batch_y = {}, {}
 
             indices = self.idx_list[self.curidx:endidx]
+            self.cur_batch_indices = indices
 
             for field_name, field in self.dataset.get_all_fields().items():
                 if field.is_target or field.is_input:
@@ -59,6 +61,9 @@ class Batch(object):
 
     def __len__(self):
         return self.num_batches
+
+    def get_batch_indices(self):
+        return self.cur_batch_indices
 
 
 def to_tensor(batch, dtype):

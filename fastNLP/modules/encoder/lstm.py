@@ -6,14 +6,16 @@ from fastNLP.modules.utils import initial_parameter
 class LSTM(nn.Module):
     """Long Short Term Memory
 
-    Args:
-    input_size : input size
-    hidden_size : hidden size
-    num_layers : number of hidden layers. Default: 1
-    dropout : dropout rate. Default: 0.5
-    bidirectional : If True, becomes a bidirectional RNN. Default: False.
+    :param int input_size:
+    :param int hidden_size:
+    :param int num_layers:
+    :param float dropout:
+    :param bool batch_first:
+    :param bool bidirectional:
+    :param bool bias:
+    :param str initial_method:
+    :param bool get_hidden:
     """
-
     def __init__(self, input_size, hidden_size=100, num_layers=1, dropout=0.0, batch_first=True,
                  bidirectional=False, bias=True, initial_method=None, get_hidden=False):
         super(LSTM, self).__init__()

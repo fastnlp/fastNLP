@@ -11,7 +11,6 @@ from reproduction.chinese_word_segment.process.cws_processor import InputTargetP
 from reproduction.chinese_word_segment.cws_io.cws_reader import ConllCWSReader
 from reproduction.chinese_word_segment.models.cws_model import CWSBiLSTMCRF
 
-from reproduction.chinese_word_segment.utils import calculate_pre_rec_f1
 
 ds_name = 'msr'
 
@@ -39,8 +38,6 @@ bigram_vocab_proc = VocabIndexerProcessor('bigrams_lst', new_added_filed_name='b
 
 seq_len_proc = SeqLenProcessor('chars')
 
-input_target_proc = InputTargetProcessor(input_fields=['chars', 'bigrams', 'seq_lens', "target"],
-                                         target_fields=['target', 'seq_lens'])
 # 2. 使用processor
 fs2hs_proc(tr_dataset)
 
@@ -63,15 +60,15 @@ char_vocab_proc(dev_dataset)
 bigram_vocab_proc(dev_dataset)
 seq_len_proc(dev_dataset)
 
-input_target_proc(tr_dataset)
-input_target_proc(dev_dataset)
+dev_dataset.set_input('target')
+tr_dataset.set_input('target')
+
 
 print("Finish preparing data.")
 
 # 3. 得到数据集可以用于训练了
 # TODO pretrain的embedding是怎么解决的？
 
-import torch
 from torch import optim
 
 
@@ -79,8 +76,8 @@ tag_size = tag_proc.tag_size
 
 cws_model = CWSBiLSTMCRF(char_vocab_proc.get_vocab_size(), embed_dim=100,
                             bigram_vocab_num=bigram_vocab_proc.get_vocab_size(),
-                            bigram_embed_dim=100, num_bigram_per_char=8,
-                            hidden_size=200, bidirectional=True, embed_drop_p=0.2,
+                            bigram_embed_dim=30, num_bigram_per_char=8,
+                            hidden_size=200, bidirectional=True, embed_drop_p=0.3,
                             num_layers=1, tag_size=tag_size)
 cws_model.cuda()
 
@@ -108,7 +105,7 @@ pp.add_processor(bigram_proc)
 pp.add_processor(char_vocab_proc)
 pp.add_processor(bigram_vocab_proc)
 pp.add_processor(seq_len_proc)
-pp.add_processor(input_target_proc)
+# pp.add_processor(input_target_proc)
 
 # te_filename = '/hdd/fudanNLP/CWS/CWS_semiCRF/all_data/{}/middle_files/{}_test.txt'.format(ds_name, ds_name)
 te_filename = '/home/hyan/ctb3/test.conllx'
@@ -142,14 +139,16 @@ from fastNLP.api.processor import ModelProcessor
 from reproduction.chinese_word_segment.process.cws_processor import BMES2OutputProcessor
 
 model_proc = ModelProcessor(cws_model)
-output_proc = BMES2OutputProcessor()
+output_proc = BMES2OutputProcessor(chars_field_name='chars_lst', tag_field_name='pred')
 
 pp = Pipeline()
 pp.add_processor(fs2hs_proc)
 # pp.add_processor(sp_proc)
 pp.add_processor(char_proc)
 pp.add_processor(bigram_proc)
+char_vocab_proc.set_verbose(0)
 pp.add_processor(char_vocab_proc)
+bigram_vocab_proc.set_verbose(0)
 pp.add_processor(bigram_vocab_proc)
 pp.add_processor(seq_len_proc)
 
@@ -158,9 +157,11 @@ pp.add_processor(output_proc)
 
 
 # TODO 这里貌似需要区分test pipeline与infer pipeline
-
-infer_context_dict = {'pipeline': pp}
-# torch.save(infer_context_dict, 'models/cws_crf.pkl')
+import torch
+import datetime
+now = datetime.datetime.now()
+infer_context_dict = {'pipeline': pp, 'tag_proc': tag_proc}
+torch.save(infer_context_dict, 'models/cws_crf_{}_{}.pkl'.format(now.month, now.day))
 
 
 # TODO 还需要考虑如何替换回原文的问题？

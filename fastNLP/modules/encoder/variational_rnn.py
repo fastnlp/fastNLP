@@ -1,5 +1,3 @@
-import math
-
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
@@ -8,15 +6,17 @@ from fastNLP.modules.utils import initial_parameter
 try:
     from torch import flip
 except ImportError:
-   def flip(x, dims):
+    def flip(x, dims):
         indices = [slice(None)] * x.dim()
         for dim in dims:
             indices[dim] = torch.arange(x.size(dim) - 1, -1, -1, dtype=torch.long, device=x.device)
         return x[tuple(indices)]
 
+
 class VarRnnCellWrapper(nn.Module):
     """Wrapper for normal RNN Cells, make it support variational dropout
     """
+
     def __init__(self, cell, hidden_size, input_p, hidden_p):
         super(VarRnnCellWrapper, self).__init__()
         self.cell = cell
@@ -88,6 +88,7 @@ class VarRNNBase(nn.Module):
     refer to `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016)
     https://arxiv.org/abs/1512.05287`.
     """
+
     def __init__(self, mode, Cell, input_size, hidden_size, num_layers=1,
                  bias=True, batch_first=False,
                  input_dropout=0, hidden_dropout=0, bidirectional=False):
@@ -177,18 +178,23 @@ class VarRNNBase(nn.Module):
 class VarLSTM(VarRNNBase):
     """Variational Dropout LSTM.
     """
+
     def __init__(self, *args, **kwargs):
         super(VarLSTM, self).__init__(mode="LSTM", Cell=nn.LSTMCell, *args, **kwargs)
+
 
 class VarRNN(VarRNNBase):
     """Variational Dropout RNN.
     """
+
     def __init__(self, *args, **kwargs):
         super(VarRNN, self).__init__(mode="RNN", Cell=nn.RNNCell, *args, **kwargs)
+
 
 class VarGRU(VarRNNBase):
     """Variational Dropout GRU.
     """
+
     def __init__(self, *args, **kwargs):
         super(VarGRU, self).__init__(mode="GRU", Cell=nn.GRUCell, *args, **kwargs)
 

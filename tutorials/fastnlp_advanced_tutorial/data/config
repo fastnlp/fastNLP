@@ -1,0 +1,8 @@
+[esim_model]
+embed_dim = 300
+hidden_size = 300
+batch_first = true
+dropout = 0.3
+num_classes = 3
+gpu = true
+batch_size = 32
