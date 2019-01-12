@@ -400,7 +400,7 @@ def seq_lens_to_masks(seq_lens, float=False):
         assert len(np.shape(seq_lens)) == 1, f"seq_lens can only have one dimension, got {len(np.shape(seq_lens))}."
         assert seq_lens.dtype in (int, np.int32, np.int64), f"seq_lens can only be integer, not {seq_lens.dtype}."
         raise NotImplemented
-    elif isinstance(seq_lens, torch.LongTensor):
+    elif isinstance(seq_lens, torch.Tensor):
         assert len(seq_lens.size()) == 1, f"seq_lens can only have one dimension, got {len(seq_lens.size())==1}."
         batch_size = seq_lens.size(0)
         max_len = seq_lens.max()

@@ -202,30 +202,30 @@ class Parser(API):
         if model_path is None:
             model_path = model_urls['parser']
 
+        self.pos_tagger = POS(device=device)
         self.load(model_path, device)
 
     def predict(self, content):
         if not hasattr(self, 'pipeline'):
             raise ValueError("You have to load model first.")
 
-        sentence_list = []
-        # 1. 检查sentence的类型
-        if isinstance(content, str):
-            sentence_list.append(content)
-        elif isinstance(content, list):
-            sentence_list = content
+        # 1. 利用POS得到分词和pos tagging结果
+        pos_out = self.pos_tagger.predict(content)
+        # pos_out = ['这里/NN 是/VB 分词/NN 结果/NN'.split()]
 
         # 2. 组建dataset
         dataset = DataSet()
-        dataset.add_field('words', sentence_list)
-        # dataset.add_field('tag', sentence_list)
+        dataset.add_field('wp', pos_out)
+        dataset.apply(lambda x: ['<BOS>']+[w.split('/')[0] for w in x['wp']], new_field_name='words')
+        dataset.apply(lambda x: ['<BOS>']+[w.split('/')[1] for w in x['wp']], new_field_name='pos')
 
         # 3. 使用pipeline
         self.pipeline(dataset)
-        for ins in dataset:
-            ins['heads'] = ins['heads'].tolist()
-
-        return dataset['heads'], dataset['labels']
+        dataset.apply(lambda x: [str(arc) for arc in x['arc_pred']], new_field_name='arc_pred')
+        dataset.apply(lambda x: [arc + '/' + label for arc, label in
+                                 zip(x['arc_pred'], x['label_pred_seq'])][1:], new_field_name='output')
+        # output like: [['2/top', '0/root', '4/nn', '2/dep']]
+        return dataset.field_arrays['output'].content
 
     def test(self, filepath):
         data = ConllxDataLoader().load(filepath)
@@ -301,12 +301,12 @@ class Analyzer:
 
 
 if __name__ == "__main__":
-    pos_model_path = '/home/zyfeng/fastnlp/reproduction/pos_tag_model/model_pp.pkl'
-    pos = POS(pos_model_path, device='cpu')
-    s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
-         '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
-         '那么这款无人机到底有多厉害？']
-    print(pos.test("/home/zyfeng/data/sample.conllx"))
+    # pos_model_path = '/home/zyfeng/fastnlp/reproduction/pos_tag_model/model_pp.pkl'
+    # pos = POS(pos_model_path, device='cpu')
+    # s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
+    #      '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
+    #      '那么这款无人机到底有多厉害？']
+    # print(pos.test("/home/zyfeng/data/sample.conllx"))
     # print(pos.predict(s))
 
     # cws_model_path = '../../reproduction/chinese_word_segment/models/cws_crf.pkl'
@@ -317,9 +317,10 @@ if __name__ == "__main__":
     # print(cws.test('/Users/yh/Desktop/test_data/cws_test.conll'))
     # print(cws.predict(s))
 
-    # parser = Parser(device='cpu')
+    parser_path = '/home/yfshao/workdir/fastnlp/reproduction/Biaffine_parser/pipe.pkl'
+    parser = Parser(parser_path, device='cpu')
     # print(parser.test('/Users/yh/Desktop/test_data/parser_test2.conll'))
     s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
          '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
          '那么这款无人机到底有多厉害？']
-    # print(parser.predict(s))
+    print(parser.predict(s))

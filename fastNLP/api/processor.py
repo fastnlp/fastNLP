@@ -302,15 +302,23 @@ class Index2WordProcessor(Processor):
         return dataset
 
 
-class SetIsTargetProcessor(Processor):
+class SetTargetProcessor(Processor):
     # TODO; remove it.
-    def __init__(self, field_dict, default=False):
-        super(SetIsTargetProcessor, self).__init__(None, None)
-        self.field_dict = field_dict
-        self.default = default
+    def __init__(self, *fields, flag=True):
+        super(SetTargetProcessor, self).__init__(None, None)
+        self.fields = fields
+        self.flag = flag
 
     def process(self, dataset):
-        set_dict = {name: self.default for name in dataset.get_all_fields().keys()}
-        set_dict.update(self.field_dict)
-        dataset.set_target(*set_dict.keys())
+        dataset.set_target(*self.fields, flag=self.flag)
+        return dataset
+
+class SetInputProcessor(Processor):
+    def __init__(self, *fields, flag=True):
+        super(SetInputProcessor, self).__init__(None, None)
+        self.fields = fields
+        self.flag = flag
+
+    def process(self, dataset):
+        dataset.set_input(*self.fields, flag=self.flag)
         return dataset
