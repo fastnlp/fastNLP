@@ -7,7 +7,7 @@ import os
 
 from fastNLP.core.dataset import DataSet
 
-from fastNLP.api.model_zoo import load_url
+from fastNLP.api.utils import load_url
 from fastNLP.api.processor import ModelProcessor
 from reproduction.chinese_word_segment.cws_io.cws_reader import ConllCWSReader
 from reproduction.pos_tag_model.pos_reader import ZhConllPOSReader
@@ -17,11 +17,13 @@ from fastNLP.api.pipeline import Pipeline
 from fastNLP.core.metrics import SpanFPreRecMetric
 from fastNLP.api.processor import IndexerProcessor
 
-
 # TODO add pretrain urls
 model_urls = {
-    'cws': "http://123.206.98.91:8888/download/cws_crf_1_11-457fc899.pkl"
+    "cws": "http://123.206.98.91:8888/download/cws_crf_1_11-457fc899.pkl",
+    "pos": "http://123.206.98.91:8888/download/pos_tag_model_20190108-f3c60ee5.pkl",
+    "parser": "http://123.206.98.91:8888/download/biaffine_parser-3a2f052c.pkl"
 }
+
 
 class API:
     def __init__(self):
@@ -50,6 +52,7 @@ class POS(API):
     :param str device: device name such as "cpu" or "cuda:0". Use the same notation as PyTorch.
 
     """
+
     def __init__(self, model_path=None, device='cpu'):
         super(POS, self).__init__()
         if model_path is None:
@@ -246,8 +249,8 @@ class Parser(API):
         # 2. 组建dataset
         dataset = DataSet()
         dataset.add_field('wp', pos_out)
-        dataset.apply(lambda x: ['<BOS>']+[w.split('/')[0] for w in x['wp']], new_field_name='words')
-        dataset.apply(lambda x: ['<BOS>']+[w.split('/')[1] for w in x['wp']], new_field_name='pos')
+        dataset.apply(lambda x: ['<BOS>'] + [w.split('/')[0] for w in x['wp']], new_field_name='words')
+        dataset.apply(lambda x: ['<BOS>'] + [w.split('/')[1] for w in x['wp']], new_field_name='pos')
 
         # 3. 使用pipeline
         self.pipeline(dataset)
@@ -328,35 +331,3 @@ class Analyzer:
             output_dict['parser'] = parser_output
 
         return output_dict
-
-
-if __name__ == "__main__":
-    # pos_model_path = '/home/zyfeng/fastnlp/reproduction/pos_tag_model/model_pp.pkl'
-    # pos = POS(pos_model_path, device='cpu')
-    # s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
-    #      '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
-    #      '那么这款无人机到底有多厉害？']
-    # print(pos.test("/home/zyfeng/data/sample.conllx"))
-    # print(pos.predict(s))
-
-    # cws_model_path = '../../reproduction/chinese_word_segment/models/cws_crf_1_11.pkl'
-    cws = CWS(device='cpu')
-    s = ['本品是一个抗酸抗胆汁的胃黏膜保护剂' ,
-        '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
-    parser_path = '/home/yfshao/workdir/fastnlp/reproduction/Biaffine_parser/pipe.pkl'
-    parser = Parser(parser_path, device='cpu')
-    # print(parser.test('/Users/yh/Desktop/test_data/parser_test2.conll'))
-    s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
-         '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
-         '那么这款无人机到底有多厉害？']
-    print(cws.test('/home/hyan/ctb3/test.conllx'))
-    print(cws.predict(s))
-    print(cws.predict('本品是一个抗酸抗胆汁的胃黏膜保护剂'))
-
-    # parser = Parser(device='cpu')
-    # print(parser.test('/Users/yh/Desktop/test_data/parser_test2.conll'))
-    # s = ['编者按：7月12日，英国航空航天系统公司公布了该公司研制的第一款高科技隐形无人机雷电之神。',
-    #      '这款飞行从外型上来看酷似电影中的太空飞行器，据英国方面介绍，可以实现洲际远程打击。',
-    #      '那么这款无人机到底有多厉害？']
-    # print(parser.predict(s))
-    print(parser.predict(s))
