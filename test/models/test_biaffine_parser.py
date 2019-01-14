@@ -10,6 +10,8 @@ data_file = """
 4       will    _       AUX     MD      _       6       aux     _       _
 5       be      _       VERB    VB      _       6       cop     _       _
 6       payable _       ADJ     JJ      _       0       root    _       _
+7       mask    _       ADJ     JJ      _       6       punct    _       _
+8       mask    _       ADJ     JJ      _       6       punct    _       _
 9       cents   _       NOUN    NNS     _       4       nmod    _       _
 10      from    _       ADP     IN      _       12      case    _       _
 11      seven   _       NUM     CD      _       12      nummod  _       _
@@ -58,13 +60,13 @@ def init_data():
             data.append(line)
 
     for name in ['word_seq', 'pos_seq', 'label_true']:
-        ds.apply(lambda x: ['<st>']+list(x[name])+['<ed>'], new_field_name=name)
+        ds.apply(lambda x: ['<st>']+list(x[name]), new_field_name=name)
         ds.apply(lambda x: v[name].add_word_lst(x[name]))
 
     for name in ['word_seq', 'pos_seq', 'label_true']:
         ds.apply(lambda x: [v[name].to_index(w) for w in x[name]], new_field_name=name)
 
-    ds.apply(lambda x: [0]+list(map(int, x['arc_true']))+[1], new_field_name='arc_true')
+    ds.apply(lambda x: [0]+list(map(int, x['arc_true'])), new_field_name='arc_true')
     ds.apply(lambda x: len(x['word_seq']), new_field_name='seq_lens')
     ds.set_input('word_seq', 'pos_seq', 'seq_lens', flag=True)
     ds.set_target('arc_true', 'label_true', 'seq_lens', flag=True)
@@ -75,8 +77,11 @@ class TestBiaffineParser(unittest.TestCase):
         ds, v1, v2, v3 = init_data()
         model = BiaffineParser(word_vocab_size=len(v1), word_emb_dim=30,
                                pos_vocab_size=len(v2), pos_emb_dim=30,
-                               num_label=len(v3))
+                               num_label=len(v3), use_var_lstm=True)
         trainer = fastNLP.Trainer(model=model, train_data=ds, dev_data=ds,
                                   loss=ParserLoss(), metrics=ParserMetric(), metric_key='UAS',
                                   n_epochs=10, use_cuda=False, use_tqdm=False)
         trainer.train(load_best_model=False)
+
+if __name__ == '__main__':
+    unittest.main()

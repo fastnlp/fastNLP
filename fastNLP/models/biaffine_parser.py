@@ -134,17 +134,13 @@ class GraphParser(BaseModel):
 
     def _mst_decoder(self, arc_matrix, mask=None):
         batch_size, seq_len, _ = arc_matrix.shape
-        matrix = torch.zeros_like(arc_matrix).copy_(arc_matrix)
+        matrix = arc_matrix.clone()
         ans = matrix.new_zeros(batch_size, seq_len).long()
         lens = (mask.long()).sum(1) if mask is not None else torch.zeros(batch_size) + seq_len
         batch_idx = torch.arange(batch_size, dtype=torch.long, device=lens.device)
-        mask[batch_idx, lens-1] = 0
         for i, graph in enumerate(matrix):
             len_i = lens[i]
-            if len_i == seq_len:
-                ans[i] = torch.as_tensor(mst(graph.cpu().numpy()), device=ans.device)
-            else:
-                ans[i, :len_i] = torch.as_tensor(mst(graph[:len_i, :len_i].cpu().numpy()), device=ans.device)
+            ans[i, :len_i] = torch.as_tensor(mst(graph.detach()[:len_i, :len_i].cpu().numpy()), device=ans.device)
         if mask is not None:
             ans *= mask.long()
         return ans
@@ -219,6 +215,7 @@ class BiaffineParser(GraphParser):
         self.pos_fc = nn.Linear(pos_emb_dim, pos_hid_dim)
         self.word_norm = nn.LayerNorm(word_hid_dim)
         self.pos_norm = nn.LayerNorm(pos_hid_dim)
+        self.use_var_lstm = use_var_lstm
         if use_var_lstm:
             self.lstm = VarLSTM(input_size=word_hid_dim + pos_hid_dim,
                                 hidden_size=rnn_hidden_size,
@@ -249,10 +246,9 @@ class BiaffineParser(GraphParser):
         self.label_dep_mlp = copy.deepcopy(self.label_head_mlp)
         self.arc_predictor = ArcBiaffine(arc_mlp_size, bias=True)
         self.label_predictor = LabelBilinear(label_mlp_size, label_mlp_size, num_label, bias=True)
-        self.normal_dropout = nn.Dropout(p=dropout)
         self.use_greedy_infer = use_greedy_infer
         self.reset_parameters()
-        self.explore_p = 0.2
+        self.dropout = dropout
 
     def reset_parameters(self):
         for m in self.modules():
@@ -278,18 +274,15 @@ class BiaffineParser(GraphParser):
             head_pred: [batch_size, seq_len] if gold_heads is not provided, predicting the heads
         """
         # prepare embeddings
-        device = self.parameters().__next__().device
-        word_seq = word_seq.long().to(device)
-        pos_seq = pos_seq.long().to(device)
-        seq_lens = seq_lens.long().to(device).view(-1)
         batch_size, seq_len = word_seq.shape
         # print('forward {} {}'.format(batch_size, seq_len))
 
         # get sequence mask
         mask = seq_mask(seq_lens, seq_len).long()
 
-        word = self.normal_dropout(self.word_embedding(word_seq)) # [N,L] -> [N,L,C_0]
-        pos = self.normal_dropout(self.pos_embedding(pos_seq)) # [N,L] -> [N,L,C_1]
+        word = self.word_embedding(word_seq) # [N,L] -> [N,L,C_0]
+        pos = self.pos_embedding(pos_seq) # [N,L] -> [N,L,C_1]
+
         word, pos = self.word_fc(word), self.pos_fc(pos)
         word, pos = self.word_norm(word), self.pos_norm(pos)
         x = torch.cat([word, pos], dim=2) # -> [N,L,C]
@@ -325,7 +318,7 @@ class BiaffineParser(GraphParser):
             head_pred = heads
         else:
             assert self.training # must be training mode
-            if torch.rand(1).item() < self.explore_p:
+            if gold_heads is None:
                 heads = self._greedy_decoder(arc_pred, mask)
                 head_pred = heads
             else:
@@ -355,7 +348,7 @@ class BiaffineParser(GraphParser):
 
         batch_size, seq_len, _ = arc_pred.shape
         flip_mask = (mask == 0)
-        _arc_pred = arc_pred.new_empty((batch_size, seq_len, seq_len)).copy_(arc_pred)
+        _arc_pred = arc_pred.clone()
         _arc_pred.masked_fill_(flip_mask.unsqueeze(1), -np.inf)
         arc_logits = F.log_softmax(_arc_pred, dim=2)
         label_logits = F.log_softmax(label_pred, dim=2)
@@ -421,7 +414,9 @@ class ParserMetric(MetricBase):
         if seq_lens is None:
             seq_mask = arc_pred.new_ones(arc_pred.size(), dtype=torch.long)
         else:
-            seq_mask = seq_lens_to_masks(seq_lens, float=False).long()
+            seq_mask = seq_lens_to_masks(seq_lens.long(), float=False).long()
+        # mask out <root> tag
+        seq_mask[:,0] = 0
         head_pred_correct = (arc_pred == arc_true).long() * seq_mask
         label_pred_correct = (label_pred == label_true).long() * head_pred_correct
         self.num_arc += head_pred_correct.sum().item()

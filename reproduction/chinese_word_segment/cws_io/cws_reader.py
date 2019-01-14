@@ -6,6 +6,13 @@ from fastNLP.io.dataset_loader import DataSetLoader
 
 
 def cut_long_sentence(sent, max_sample_length=200):
+    """
+    将长于max_sample_length的sentence截成多段，只会在有空格的地方发生截断。所以截取的句子可能长于或者短于max_sample_length
+
+    :param sent: str.
+    :param max_sample_length: int.
+    :return: list of str.
+    """
     sent_no_space = sent.replace(' ', '')
     cutted_sentence = []
     if len(sent_no_space) > max_sample_length:
@@ -127,12 +134,26 @@ class POSCWSReader(DataSetLoader):
         return dataset
 
 
-class ConlluCWSReader(object):
-    # 返回的Dataset包含words(list of list, 里层的list是character), tag两个field(list of str, str是标有BMES的tag)。
+class ConllCWSReader(object):
     def __init__(self):
         pass
 
     def load(self, path, cut_long_sent=False):
+        """
+        返回的DataSet只包含raw_sentence这个field，内容为str。
+        假定了输入为conll的格式，以空行隔开两个句子，每行共7列，即
+            1	编者按	编者按	NN	O	11	nmod:topic
+            2	：	：	PU	O	11	punct
+            3	7月	7月	NT	DATE	4	compound:nn
+            4	12日	12日	NT	DATE	11	nmod:tmod
+            5	，	，	PU	O	11	punct
+
+            1	这	这	DT	O	3	det
+            2	款	款	M	O	1	mark:clf
+            3	飞行	飞行	NN	O	8	nsubj
+            4	从	从	P	O	5	case
+            5	外型	外型	NN	O	8	nmod:prep
+        """
         datalist = []
         with open(path, 'r', encoding='utf-8') as f:
             sample = []
@@ -150,10 +171,10 @@ class ConlluCWSReader(object):
         ds = DataSet()
         for sample in datalist:
             # print(sample)
-            res = self.get_one(sample)
+            res = self.get_char_lst(sample)
             if res is None:
                 continue
-            line = '  '.join(res)
+            line = ' '.join(res)
             if cut_long_sent:
                 sents = cut_long_sentence(line)
             else:
@@ -163,7 +184,7 @@ class ConlluCWSReader(object):
 
         return ds
 
-    def get_one(self, sample):
+    def get_char_lst(self, sample):
         if len(sample)==0:
             return None
         text = []

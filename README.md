@@ -48,7 +48,9 @@ For example:
 ## Resources
 
 - [Documentation](https://fastnlp.readthedocs.io/en/latest/)
+- [Tutorials](https://github.com/fastnlp/fastNLP/tutorials)
 - [Source Code](https://github.com/fastnlp/fastNLP)
+
 
 ## Installation
 Run the following commands to install fastNLP package.
@@ -70,7 +72,7 @@ pip install fastNLP
 </tr>
 <tr>
     <td><b> fastNLP.core </b></td>
-    <td> data representation & train/test presedure </td>
+    <td> data representation & train/test procedure </td>
 </tr>
 <tr>
     <td><b> fastNLP.models </b></td>

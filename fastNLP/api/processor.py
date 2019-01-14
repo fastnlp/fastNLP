@@ -11,6 +11,11 @@ from fastNLP.core.vocabulary import Vocabulary
 
 class Processor(object):
     def __init__(self, field_name, new_added_field_name):
+        """
+
+        :param field_name: 处理哪个field
+        :param new_added_field_name: 如果为None，则认为是field_name，即覆盖原有的field
+        """
         self.field_name = field_name
         if new_added_field_name is None:
             self.new_added_field_name = field_name
@@ -92,6 +97,11 @@ class FullSpaceToHalfSpaceProcessor(Processor):
 
 
 class PreAppendProcessor(Processor):
+    """
+    向某个field的起始增加data(应该为str类型)。该field需要为list类型。即新增的field为
+        [data] + instance[field_name]
+
+    """
     def __init__(self, data, field_name, new_added_field_name=None):
         super(PreAppendProcessor, self).__init__(field_name, new_added_field_name)
         self.data = data
@@ -102,6 +112,10 @@ class PreAppendProcessor(Processor):
 
 
 class SliceProcessor(Processor):
+    """
+    从某个field中只取部分内容。等价于instance[field_name][start:end:step]
+
+    """
     def __init__(self, start, end, step, field_name, new_added_field_name=None):
         super(SliceProcessor, self).__init__(field_name, new_added_field_name)
         for o in (start, end, step):
@@ -114,7 +128,17 @@ class SliceProcessor(Processor):
 
 
 class Num2TagProcessor(Processor):
+    """
+    将一句话中的数字转换为某个tag。
+
+    """
     def __init__(self, tag, field_name, new_added_field_name=None):
+        """
+
+        :param tag: str, 将数字转换为该tag
+        :param field_name:
+        :param new_added_field_name:
+        """
         super(Num2TagProcessor, self).__init__(field_name, new_added_field_name)
         self.tag = tag
         self.pattern = r'[-+]?([0-9]+[.]?[0-9]*)+[/eE]?[-+]?([0-9]+[.]?[0-9]*)'
@@ -135,6 +159,10 @@ class Num2TagProcessor(Processor):
 
 
 class IndexerProcessor(Processor):
+    """
+    给定一个vocabulary , 将指定field转换为index形式。指定field应该是一维的list，比如
+        ['我', '是', xxx]
+    """
     def __init__(self, vocab, field_name, new_added_field_name, delete_old_field=False, is_input=True):
 
         assert isinstance(vocab, Vocabulary), "Only Vocabulary class is allowed, not {}.".format(type(vocab))
@@ -163,19 +191,19 @@ class IndexerProcessor(Processor):
 
 
 class VocabProcessor(Processor):
-    """Build vocabulary with a field in the data set.
+    """
+    传入若干个DataSet以建立vocabulary。
 
     """
 
-    def __init__(self, field_name):
+    def __init__(self, field_name, min_freq=1, max_size=None):
         super(VocabProcessor, self).__init__(field_name, None)
-        self.vocab = Vocabulary()
+        self.vocab = Vocabulary(min_freq=min_freq, max_size=max_size)
 
     def process(self, *datasets):
         for dataset in datasets:
             assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
-            for ins in dataset:
-                self.vocab.update(ins[self.field_name])
+            dataset.apply(lambda ins: self.vocab.update(ins[self.field_name]))
 
     def get_vocab(self):
         self.vocab.build_vocab()
@@ -183,6 +211,10 @@ class VocabProcessor(Processor):
 
 
 class SeqLenProcessor(Processor):
+    """
+    根据某个field新增一个sequence length的field。取该field的第一维
+
+    """
     def __init__(self, field_name, new_added_field_name='seq_lens', is_input=True):
         super(SeqLenProcessor, self).__init__(field_name, new_added_field_name)
         self.is_input = is_input
@@ -195,10 +227,15 @@ class SeqLenProcessor(Processor):
         return dataset
 
 
+from fastNLP.core.utils import _build_args
+
 class ModelProcessor(Processor):
     def __init__(self, model, seq_len_field_name='seq_lens', batch_size=32):
         """
-        迭代模型并将结果的padding drop掉
+        传入一个model，在process()时传入一个dataset，该processor会通过Batch将DataSet的内容输出给model.predict或者model.forward.
+            model输出的内容会被增加到dataset中，field_name由model输出决定。如果生成的内容维度不是(Batch_size, )与
+            (Batch_size, 1)，则使用seqence  length这个field进行unpad
+        TODO 这个类需要删除对seq_lens的依赖。
 
         :param seq_len_field_name:
         :param batch_size:
@@ -211,13 +248,18 @@ class ModelProcessor(Processor):
     def process(self, dataset):
         self.model.eval()
         assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
-        data_iterator = Batch(dataset, batch_size=self.batch_size, sampler=SequentialSampler(), use_cuda=False)
+        data_iterator = Batch(dataset, batch_size=self.batch_size, sampler=SequentialSampler())
 
         batch_output = defaultdict(list)
+        if hasattr(self.model, "predict"):
+            predict_func = self.model.predict
+        else:
+            predict_func = self.model.forward
         with torch.no_grad():
             for batch_x, _ in data_iterator:
-                prediction = self.model.predict(**batch_x)
-                seq_lens = batch_x[self.seq_len_field_name].cpu().numpy().tolist()
+                refined_batch_x = _build_args(predict_func, **batch_x)
+                prediction = predict_func(**refined_batch_x)
+                seq_lens = batch_x[self.seq_len_field_name].tolist()
 
                 for key, value in prediction.items():
                     tmp_batch = []
@@ -228,8 +270,8 @@ class ModelProcessor(Processor):
                         for idx, seq_len in enumerate(seq_lens):
                             tmp_batch.append(value[idx, :seq_len])
                         batch_output[key].extend(tmp_batch)
-
-                batch_output[self.seq_len_field_name].extend(seq_lens)
+                if not self.seq_len_field_name in prediction:
+                    batch_output[self.seq_len_field_name].extend(seq_lens)
 
         # TODO 当前的实现会导致之后的processor需要知道model输出的output的key是什么
         for field_name, fields in batch_output.items():
@@ -246,6 +288,10 @@ class ModelProcessor(Processor):
 
 
 class Index2WordProcessor(Processor):
+    """
+    将DataSet中某个为index的field根据vocab转换为str
+
+    """
     def __init__(self, vocab, field_name, new_added_field_name):
         super(Index2WordProcessor, self).__init__(field_name, new_added_field_name)
         self.vocab = vocab
@@ -256,15 +302,23 @@ class Index2WordProcessor(Processor):
         return dataset
 
 
-class SetIsTargetProcessor(Processor):
+class SetTargetProcessor(Processor):
     # TODO; remove it.
-    def __init__(self, field_dict, default=False):
-        super(SetIsTargetProcessor, self).__init__(None, None)
-        self.field_dict = field_dict
-        self.default = default
+    def __init__(self, *fields, flag=True):
+        super(SetTargetProcessor, self).__init__(None, None)
+        self.fields = fields
+        self.flag = flag
 
     def process(self, dataset):
-        set_dict = {name: self.default for name in dataset.get_all_fields().keys()}
-        set_dict.update(self.field_dict)
-        dataset.set_target(**set_dict)
+        dataset.set_target(*self.fields, flag=self.flag)
+        return dataset
+
+class SetInputProcessor(Processor):
+    def __init__(self, *fields, flag=True):
+        super(SetInputProcessor, self).__init__(None, None)
+        self.fields = fields
+        self.flag = flag
+
+    def process(self, dataset):
+        dataset.set_input(*self.fields, flag=self.flag)
         return dataset

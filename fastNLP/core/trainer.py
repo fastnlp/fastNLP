@@ -7,9 +7,14 @@ import numpy as np
 import torch
 from tensorboardX import SummaryWriter
 from torch import nn
-from tqdm.autonotebook import tqdm
+
+try:
+    from tqdm.autonotebook import tqdm
+except:
+    from fastNLP.core.utils import pseudo_tqdm as tqdm
 
 from fastNLP.core.batch import Batch
+from fastNLP.core.callback import CallbackManager
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.losses import _prepare_losser
 from fastNLP.core.metrics import _prepare_metrics
@@ -27,7 +32,11 @@ from fastNLP.core.utils import get_func_signature
 
 
 class Trainer(object):
-    """
+    def __init__(self, train_data, model, loss=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
+                 validate_every=-1, dev_data=None, save_path=None, optimizer=Adam(lr=0.01, weight_decay=0),
+                 check_code_level=0, metric_key=None, sampler=RandomSampler(), use_tqdm=True, use_cuda=False,
+                 callbacks=None):
+        """
         :param DataSet train_data: the training data
         :param torch.nn.modules.module model: a PyTorch model
         :param LossBase loss: a loss object
@@ -48,16 +57,10 @@ class Trainer(object):
             smaller, add "-" in front of the string. For example::
 
                     metric_key="-PPL"   # language model gets better as perplexity gets smaller
-
         :param BaseSampler sampler: method used to generate batch data.
         :param bool use_tqdm: whether to use tqdm to show train progress.
 
-    """
-
-    def __init__(self, train_data, model, loss=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
-                 validate_every=-1, dev_data=None, use_cuda=False, save_path=None,
-                 optimizer=Adam(lr=0.01, weight_decay=0), check_code_level=0,
-                 metric_key=None, sampler=RandomSampler(), use_tqdm=True):
+        """
         super(Trainer, self).__init__()
 
         if not isinstance(train_data, DataSet):
@@ -109,9 +112,10 @@ class Trainer(object):
         self.use_cuda = bool(use_cuda)
         self.save_path = save_path
         self.print_every = int(print_every)
-        self.validate_every = int(validate_every)
+        self.validate_every = int(validate_every) if validate_every!=0 else -1
         self.best_metric_indicator = None
         self.sampler = sampler
+        self.callback_manager = CallbackManager(env={"trainer": self}, callbacks=callbacks)
 
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
@@ -119,11 +123,7 @@ class Trainer(object):
             self.optimizer = optimizer.construct_from_pytorch(self.model.parameters())
 
         self.use_tqdm = use_tqdm
-        if self.use_tqdm:
-            tester_verbose = 0
-            self.print_every = abs(self.print_every)
-        else:
-            tester_verbose = 1
+        self.print_every = abs(self.print_every)
 
         if self.dev_data is not None:
             self.tester = Tester(model=self.model,
@@ -131,7 +131,7 @@ class Trainer(object):
                                  metrics=self.metrics,
                                  batch_size=self.batch_size,
                                  use_cuda=self.use_cuda,
-                                 verbose=tester_verbose)
+                                 verbose=0)
 
         self.step = 0
         self.start_time = None  # start timestamp
@@ -141,20 +141,30 @@ class Trainer(object):
 
         开始训练过程。主要有以下几个步骤::
 
-            对于每次循环
-                1. 使用Batch从DataSet中按批取出数据，并自动对DataSet中dtype为float, int的fields进行padding。并转换为Tensor。
+            for epoch in range(num_epochs):
+                # 使用Batch从DataSet中按批取出数据，并自动对DataSet中dtype为(float, int)的fields进行padding。并转换为Tensor。
                 非float，int类型的参数将不会被转换为Tensor，且不进行padding。
                 for batch_x, batch_y in Batch(DataSet)
-                    # batch_x中为设置为input的field
-                    # batch_y中为设置为target的field
-                    2. 将batch_x的数据送入到model.forward函数中，并获取结果
-                    3. 将batch_y与model.forward的结果一并送入loss中计算loss
+                    # batch_x是一个dict, 被设为input的field会出现在这个dict中，
+                        key为DataSet中的field_name, value为该field的value
+                    # batch_y也是一个dict，被设为target的field会出现在这个dict中，
+                        key为DataSet中的field_name, value为该field的value
+                    2. 将batch_x的数据送入到model.forward函数中，并获取结果。这里我们就是通过匹配batch_x中的key与forward函数的形
+                        参完成参数传递。例如，
+                            forward(self, x, seq_lens) # fastNLP会在batch_x中找到key为"x"的value传递给x，key为"seq_lens"的
+                                value传递给seq_lens。若在batch_x中没有找到所有必须要传递的参数，就会报错。如果forward存在默认参数
+                                而且默认参数这个key没有在batch_x中，则使用默认参数。
+                    3. 将batch_y与model.forward的结果一并送入loss中计算loss。loss计算时一般都涉及到pred与target。但是在不同情况
+                        中，可能pred称为output或prediction, target称为y或label。fastNLP通过初始化loss时传入的映射找到pred或
+                        target。比如在初始化Trainer时初始化loss为CrossEntropyLoss(pred='output', target='y'), 那么fastNLP计
+                        算loss时，就会使用"output"在batch_y与forward的结果中找到pred;使用"y"在batch_y与forward的结果中找target
+                        , 并完成loss的计算。
                     4. 获取到loss之后，进行反向求导并更新梯度
-            如果测试集不为空
-                根据metrics进行evaluation，并根据是否提供了save_path判断是否存储模型
+                    根据需要适时进行验证机测试
+                        根据metrics进行evaluation，并根据是否提供了save_path判断是否存储模型
 
-        :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现最好的
-            模型参数。
+        :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现
+            最好的模型参数。
         :return results: 返回一个字典类型的数据, 内含以下内容::
 
             seconds: float, 表示训练时长
@@ -187,10 +197,11 @@ class Trainer(object):
             else:
                 path = os.path.join(self.save_path, 'tensorboard_logs_{}'.format(self.start_time))
                 self._summary_writer = SummaryWriter(path)
-            if self.use_tqdm:
-                self._tqdm_train()
-            else:
-                self._print_train()
+
+            self.callback_manager.before_train()
+            self._train()
+            self.callback_manager.after_train(self.model)
+
             if self.dev_data is not None:
                 print("\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
                       self.tester._format_eval_results(self.best_dev_perf),)
@@ -199,8 +210,11 @@ class Trainer(object):
                 results['best_step'] = self.best_dev_step
                 if load_best_model:
                     model_name = "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time])
-                    # self._load_model(self.model, model_name)
-                    print("Reloaded the best model.")
+                    load_succeed = self._load_model(self.model, model_name)
+                    if load_succeed:
+                        print("Reloaded the best model.")
+                    else:
+                        print("Fail to reload best model.")
         finally:
             self._summary_writer.close()
             del self._summary_writer
@@ -208,22 +222,43 @@ class Trainer(object):
 
         return results
 
-    def _tqdm_train(self):
+    def _train(self):
+        if not self.use_tqdm:
+            from fastNLP.core.utils import pseudo_tqdm as inner_tqdm
+        else:
+            inner_tqdm = tqdm
         self.step = 0
-        data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
-                              as_numpy=False)
-        total_steps = data_iterator.num_batches*self.n_epochs
-        with tqdm(total=total_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
+        start = time.time()
+        data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False)
+        total_steps = data_iterator.num_batches * self.n_epochs
+        with inner_tqdm(total=total_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
             avg_loss = 0
             for epoch in range(1, self.n_epochs+1):
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
+                # early stopping
+                self.callback_manager.before_epoch(epoch, self.n_epochs)
                 for batch_x, batch_y in data_iterator:
+                    indices = data_iterator.get_batch_indices()
+                    # negative sampling; replace unknown; re-weight batch_y
+                    self.callback_manager.before_batch(batch_x, batch_y, indices)
                     _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
                     prediction = self._data_forward(self.model, batch_x)
+
+                    # edit prediction
+                    self.callback_manager.before_loss(batch_y, prediction)
                     loss = self._compute_loss(prediction, batch_y)
                     avg_loss += loss.item()
+
+                    # Is loss NaN or inf? requires_grad = False
+                    self.callback_manager.before_backward(loss, self.model)
                     self._grad_backward(loss)
+                    # gradient clipping
+                    self.callback_manager.after_backward(self.model)
+
                     self._update()
+                    # lr scheduler; lr_finder; one_cycle
+                    self.callback_manager.after_step(self.optimizer)
+
                     self._summary_writer.add_scalar("loss", loss.item(), global_step=self.step)
                     for name, param in self.model.named_parameters():
                         if param.requires_grad:
@@ -231,64 +266,40 @@ class Trainer(object):
                             # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
                             # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
                     if (self.step+1) % self.print_every == 0:
-                        pbar.set_postfix_str("loss:{0:<6.5f}".format(avg_loss / self.print_every))
+                        if self.use_tqdm:
+                            print_output = "loss:{0:<6.5f}".format(avg_loss / self.print_every)
+                            pbar.update(self.print_every)
+                        else:
+                            end = time.time()
+                            diff = timedelta(seconds=round(end - start))
+                            print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.6} time: {}".format(
+                                epoch, self.step, avg_loss, diff)
+                        pbar.set_postfix_str(print_output)
                         avg_loss = 0
-                        pbar.update(self.print_every)
                     self.step += 1
-                    if self.validate_every > 0 and self.step % self.validate_every == 0 \
+                    # do nothing
+                    self.callback_manager.after_batch()
+
+                    if ((self.validate_every > 0 and self.step % self.validate_every == 0) or
+                        (self.validate_every < 0 and self.step % len(data_iterator)) == 0) \
                             and self.dev_data is not None:
                         eval_res = self._do_validation(epoch=epoch, step=self.step)
-                        eval_str = "Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step, total_steps) + \
+                        eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
+                                                                                    total_steps) + \
                                    self.tester._format_eval_results(eval_res)
                         pbar.write(eval_str)
-                if self.validate_every < 0 and self.dev_data:
-                    eval_res = self._do_validation(epoch=epoch, step=self.step)
-                    eval_str = "Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step, total_steps) + \
-                               self.tester._format_eval_results(eval_res)
-                    pbar.write(eval_str)
-                if epoch!=self.n_epochs:
+
+                # if self.validate_every < 0 and self.dev_data:
+                #     eval_res = self._do_validation(epoch=epoch, step=self.step)
+                #     eval_str = "Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step, total_steps) + \
+                #                self.tester._format_eval_results(eval_res)
+                #     pbar.write(eval_str)
+                if epoch != self.n_epochs:
                     data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
                                           as_numpy=False)
+                # lr decay; early stopping
+                self.callback_manager.after_epoch(epoch, self.n_epochs, self.optimizer)
             pbar.close()
-
-    def _print_train(self):
-        epoch = 1
-        start = time.time()
-        while epoch <= self.n_epochs:
-
-            data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
-                                  as_numpy=False)
-
-            for batch_x, batch_y in data_iterator:
-                # TODO 这里可能会遇到问题，万一用户在model内部修改了prediction的device就会有问题
-                _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
-                prediction = self._data_forward(self.model, batch_x)
-                loss = self._compute_loss(prediction, batch_y)
-                self._grad_backward(loss)
-                self._update()
-                self._summary_writer.add_scalar("loss", loss.item(), global_step=self.step)
-                for name, param in self.model.named_parameters():
-                    if param.requires_grad:
-                        self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.step)
-                        # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
-                        # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
-                if self.print_every > 0 and self.step % self.print_every == 0:
-                    end = time.time()
-                    diff = timedelta(seconds=round(end - start))
-                    print_output = "[epoch: {:>3} step: {:>4}] train loss: {:>4.6} time:  {}".format(
-                        epoch, self.step, loss.data, diff)
-                    print(print_output)
-
-                if (self.validate_every > 0 and self.step % self.validate_every == 0 and
-                        self.dev_data is not None):
-                    self._do_validation(epoch=epoch, step=self.step)
-
-                self.step += 1
-
-            # validate_every override validation at end of epochs
-            if self.dev_data and self.validate_every <= 0:
-                self._do_validation(epoch=epoch, step=self.step)
-            epoch += 1
 
     def _do_validation(self, epoch, step):
         res = self.tester.test()
@@ -300,10 +311,13 @@ class Trainer(object):
             if self.save_path is not None:
                 self._save_model(self.model,
                              "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time]))
-
+            else:
+                self._best_model_states = {name:param.cpu().clone() for name, param in self.model.named_parameters()}
             self.best_dev_perf = res
             self.best_dev_epoch = epoch
             self.best_dev_step = step
+        # get validation results; adjust optimizer
+        self.callback_manager.after_valid(res, self.metric_key, self.optimizer)
         return res
 
     def _mode(self, model, is_test=False):
@@ -359,7 +373,7 @@ class Trainer(object):
                 torch.save(model, model_name)
 
     def _load_model(self, model, model_name, only_param=False):
-        # TODO: 这个是不是有问题？
+        # 返回bool值指示是否成功reload模型
         if self.save_path is not None:
             model_path = os.path.join(self.save_path, model_name)
             if only_param:
@@ -367,6 +381,11 @@ class Trainer(object):
             else:
                 states = torch.load(model_path).state_dict()
             model.load_state_dict(states)
+        elif hasattr(self, "_best_model_states"):
+            model.load_state_dict(self._best_model_states)
+        else:
+            return False
+        return True
 
     def _better_eval_result(self, metrics):
         """Check if the current epoch yields better validation results.
@@ -472,7 +491,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
             break
 
     if dev_data is not None:
-        tester = Tester(data=dataset[:batch_size * DEFAULT_CHECK_NUM_BATCH], model=model, metrics=metrics,
+        tester = Tester(data=dev_data[:batch_size * DEFAULT_CHECK_NUM_BATCH], model=model, metrics=metrics,
                         batch_size=batch_size, verbose=-1)
         evaluate_results = tester.test()
         _check_eval_results(metrics=evaluate_results, metric_key=metric_key, metric_list=metrics)

@@ -270,8 +270,8 @@ class ClassDataSetLoader(DataSetLoader):
     def parse(lines):
         """
 
-        :param list lines: lines from dataset
-        :return: a 3-D list, indicating words, sentence, and dataset respectively.
+        :param lines: lines from dataset
+        :return: list(list(list())): the three level of lists are words, sentence, and dataset
         """
         dataset = list()
         for line in lines:
