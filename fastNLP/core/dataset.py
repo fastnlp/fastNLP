@@ -320,11 +320,13 @@ class DataSet(object):
         return train_set, dev_set
 
     @classmethod
-    def read_csv(cls, csv_path, headers=None, sep=",", dropna=True):
+    def read_csv(cls, csv_path, headers='infer', sep=",", dropna=True):
         """Load data from a CSV file and return a DataSet object.
 
         :param str csv_path: path to the CSV file
-        :param List[str] or Tuple[str] headers: headers of the CSV file
+        :param List[str] or Tuple[str] headers: Set the header for the dataset.
+            Default:"infer", field names are inferred from the first line of the file
+
         :param str sep: delimiter in CSV file. Default: ","
         :param bool dropna: If True, drop rows that have less entries than headers.
         :return dataset: the read data set
@@ -332,7 +334,7 @@ class DataSet(object):
         """
         with open(csv_path, "r") as f:
             start_idx = 0
-            if headers is None:
+            if headers == 'infer':
                 headers = f.readline().rstrip('\r\n')
                 headers = headers.split(sep)
                 start_idx += 1
