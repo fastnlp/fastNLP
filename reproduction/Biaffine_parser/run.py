@@ -141,7 +141,7 @@ model_args['pos_vocab_size'] = len(pos_v)
 model_args['num_label'] = len(tag_v)
 
 model = BiaffineParser(**model_args.data)
-model.reset_parameters()
+print(model)
 
 word_idxp = IndexerProcessor(word_v, 'words', 'word_seq')
 pos_idxp = IndexerProcessor(pos_v, 'pos', 'pos_seq')
@@ -209,7 +209,8 @@ def save_pipe(path):
     pipe = Pipeline(processors=[num_p, word_idxp, pos_idxp, seq_p, set_input_p])
     pipe.add_processor(ModelProcessor(model=model, batch_size=32))
     pipe.add_processor(label_toword_p)
-    torch.save(pipe, os.path.join(path, 'pipe.pkl'))
+    os.makedirs(path, exist_ok=True)
+    torch.save({'pipeline': pipe}, os.path.join(path, 'pipe.pkl'))
 
 
 def test(path):
