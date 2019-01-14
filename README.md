@@ -47,8 +47,8 @@ For example:
 
 ## Resources
 
+- [Tutorials](https://github.com/fastnlp/fastNLP/tree/master/tutorials)
 - [Documentation](https://fastnlp.readthedocs.io/en/latest/)
-- [Tutorials](https://github.com/fastnlp/fastNLP/tutorials)
 - [Source Code](https://github.com/fastnlp/fastNLP)
 
 
