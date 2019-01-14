@@ -12,7 +12,7 @@ class EmbedLoader(BaseLoader):
         super(EmbedLoader, self).__init__()
 
     @staticmethod
-    def _load_glove(emb_file):
+    def _load_glove(emb_dim, emb_file):
         """Read file as a glove embedding
 
         file format:
@@ -26,14 +26,19 @@ class EmbedLoader(BaseLoader):
         """
         emb = {}
         with open(emb_file, 'r', encoding='utf-8') as f:
+            i = 0
             for line in f:
                 line = list(filter(lambda w: len(w) > 0, line.strip().split(' ')))
-                if len(line) > 2:
+                if len(line) == emb_dim + 1:
                     emb[line[0]] = torch.Tensor(list(map(float, line[1:])))
+                if i % 100000 == 0:
+                    print(i, 'glove lines parsing finished.')
+                i += 1
+
         return emb
 
     @staticmethod
-    def _load_pretrain(emb_file, emb_type):
+    def _load_pretrain(emb_dim, emb_file, emb_type):
         """Read txt data from embedding file and convert to np.array as pre-trained embedding
 
         :param str emb_file: the pre-trained embedding file path
@@ -41,7 +46,8 @@ class EmbedLoader(BaseLoader):
         :return: a dict of ``{str: np.array}``
         """
         if emb_type == 'glove':
-            return EmbedLoader._load_glove(emb_file)
+            return EmbedLoader._load_glove(emb_dim, emb_file)
+            # return EmbedLoader._load_glove(emb_file)
         else:
             raise Exception("embedding type {} not support yet".format(emb_type))
 
@@ -58,7 +64,7 @@ class EmbedLoader(BaseLoader):
                 vocab - input vocab or vocab built by pre-train
 
         """
-        pretrain = EmbedLoader._load_pretrain(emb_file, emb_type)
+        pretrain = EmbedLoader._load_pretrain(emb_dim, emb_file, emb_type)
         if vocab is None:
             # build vocabulary from pre-trained embedding
             vocab = Vocabulary()
