@@ -118,11 +118,12 @@ class TestPadder(unittest.TestCase):
         self.assertListEqual([[1,2], [3, 0], [4, 0]],
                               padder(content, None, np.int64).tolist())
 
-        contents = [
+        content = [
                         [[1, 2, 3], [4, 5], [7,8,9,10]],
                         [[1]]
                     ]
-        print(padder(contents, None, np.int64))
+        self.assertListEqual(content,
+                             padder(content, None, np.int64).tolist())
 
     def test02(self):
         """
