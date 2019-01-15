@@ -10,13 +10,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 
 from fastNLP.api.pipeline import Pipeline
-from fastNLP.api.processor import SeqLenProcessor
+from fastNLP.api.processor import SeqLenProcessor, VocabIndexerProcessor
 from fastNLP.core.metrics import SpanFPreRecMetric
 from fastNLP.core.trainer import Trainer
 from fastNLP.io.config_io import ConfigLoader, ConfigSection
 from fastNLP.models.sequence_modeling import AdvSeqLabel
-from reproduction.chinese_word_segment.process.cws_processor import VocabIndexerProcessor
-from reproduction.pos_tag_model.pos_reader import ZhConllPOSReader
+from fastNLP.io.dataset_loader import ZhConllPOSReader
 from fastNLP.api.processor import ModelProcessor, Index2WordProcessor
 
 cfgfile = './pos_tag.cfg'

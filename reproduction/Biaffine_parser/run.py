@@ -4,20 +4,15 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 import fastNLP
-import torch
 
 from fastNLP.core.trainer import Trainer
 from fastNLP.core.instance import Instance
 from fastNLP.api.pipeline import Pipeline
 from fastNLP.models.biaffine_parser import BiaffineParser, ParserMetric, ParserLoss
-from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.core.dataset import DataSet
 from fastNLP.core.tester import Tester
 from fastNLP.io.config_io import ConfigLoader, ConfigSection
 from fastNLP.io.model_io import ModelLoader
-from fastNLP.io.embed_loader import EmbedLoader
-from fastNLP.io.model_io import ModelSaver
-from reproduction.Biaffine_parser.util import ConllxDataLoader, MyDataloader
+from fastNLP.io.dataset_loader import ConllxDataLoader
 from fastNLP.api.processor import *
 
 BOS = '<BOS>'
