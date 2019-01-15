@@ -48,7 +48,7 @@ class Batch(object):
             for field_name, field in self.dataset.get_all_fields().items():
                 if field.is_target or field.is_input:
                     batch = field.get(indices)
-                    if not self.as_numpy:
+                    if not self.as_numpy and field.padder is not None:
                         batch = to_tensor(batch, field.dtype)
                     if field.is_target:
                         batch_y[field_name] = batch
@@ -67,8 +67,11 @@ class Batch(object):
 
 
 def to_tensor(batch, dtype):
-    if dtype in (int, np.int8, np.int16, np.int32, np.int64):
-        batch = torch.LongTensor(batch)
-    if dtype in (float, np.float32, np.float64):
-        batch = torch.FloatTensor(batch)
+    try:
+        if dtype in (int, np.int8, np.int16, np.int32, np.int64):
+            batch = torch.LongTensor(batch)
+        if dtype in (float, np.float32, np.float64):
+            batch = torch.FloatTensor(batch)
+    except:
+        pass
     return batch

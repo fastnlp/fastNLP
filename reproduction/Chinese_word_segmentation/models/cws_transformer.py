@@ -39,7 +39,6 @@ class TransformerCWS(nn.Module):
                                           allowed_transitions=allowed_trans)
 
     def forward(self, chars, target, seq_lens, bigrams=None):
-        seq_lens = seq_lens
         masks = seq_len_to_byte_mask(seq_lens).float()
         x = self.embedding(chars)
         batch_size = x.size(0)
@@ -59,8 +58,59 @@ class TransformerCWS(nn.Module):
 
         return pred_dict
 
+    def predict(self, chars, seq_lens, bigrams=None):
+        masks = seq_len_to_byte_mask(seq_lens).float()
+
+        x = self.embedding(chars)
+        batch_size = x.size(0)
+        length = x.size(1)
+        if hasattr(self, 'bigram_embedding'):
+            bigrams = self.bigram_embedding(bigrams) # batch_size x seq_lens x per_char x embed_size
+            x = torch.cat([x, bigrams.view(batch_size, length, -1)], dim=-1)
+        self.drop(x)
+        x = self.fc1(x)
+        feats = self.transformer(x, masks)
+        feats = self.fc2(feats)
+
+        probs = self.crf.viterbi_decode(feats, masks, get_score=False)
+
+        return {'pred': probs, 'seq_lens':seq_lens}
+
+
+class NoamOpt(torch.optim.Optimizer):
+    "Optim wrapper that implements rate."
+
+    def __init__(self, model_size, factor, warmup, optimizer):
+        super().__init__([torch.nn.Parameter(torch.ones(1))], {})
+
+        self.optimizer = optimizer
+        self._step = 0
+        self.warmup = warmup
+        self.factor = factor
+        self.model_size = model_size
+        self._rate = 0
+
+    def step(self, **kwargs):
+        "Update parameters and rate"
+        self._step += 1
+        rate = self.rate()
+        for p in self.optimizer.param_groups:
+            p['lr'] = rate
+        self._rate = rate
+        self.optimizer.step()
+
+    def rate(self, step=None):
+        "Implement `lrate` above"
+        if step is None:
+            step = self._step
+        return self.factor * \
+               (self.model_size ** (-0.5) *
+                min(step ** (-0.5), step * self.warmup ** (-1.5)))
+
 
 if __name__ == '__main__':
+
+
     transformer = TransformerCWS(10, embed_dim=100, bigram_vocab_num=10, bigram_embed_dim=100, num_bigram_per_char=8,
                  hidden_size=200, embed_drop_p=0.3, num_layers=1, num_heads=8, tag_size=4)
     chars = torch.randint(10, size=(4, 7)).long()
@@ -69,3 +119,7 @@ if __name__ == '__main__':
     target = torch.randint(4, size=(4, 7))
 
     print(transformer(chars, target, seq_lens, bigrams))
+
+    optimizer = torch.optim.Adam(transformer.parameters())
+
+    opt = NoamOpt(10 ,1, 400, optimizer)

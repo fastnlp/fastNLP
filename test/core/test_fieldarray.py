@@ -97,3 +97,64 @@ class TestFieldArray(unittest.TestCase):
         fa.append([1.2, 2.3, 3.4, 4.5, 5.6])
         self.assertEqual(len(fa), 3)
         self.assertEqual(fa[2], [1.2, 2.3, 3.4, 4.5, 5.6])
+
+
+class TestPadder(unittest.TestCase):
+
+    def test01(self):
+        """
+        测试AutoPadder能否正常工作
+        :return:
+        """
+        from fastNLP.core.fieldarray import AutoPadder
+        padder = AutoPadder()
+        content = ['This is a str', 'this is another str']
+        self.assertListEqual(content, padder(content, None, np.str).tolist())
+
+        content = [1, 2]
+        self.assertListEqual(content, padder(content, None, np.int64).tolist())
+
+        content = [[1,2], [3], [4]]
+        self.assertListEqual([[1,2], [3, 0], [4, 0]],
+                              padder(content, None, np.int64).tolist())
+
+        contents = [
+                        [[1, 2, 3], [4, 5], [7,8,9,10]],
+                        [[1]]
+                    ]
+        print(padder(contents, None, np.int64))
+
+    def test02(self):
+        """
+        测试EngChar2DPadder能不能正确使用
+        :return:
+        """
+        from fastNLP.core.fieldarray import EngChar2DPadder
+        padder = EngChar2DPadder(pad_length=0)
+
+        contents = [1, 2]
+        # 不能是1维
+        with self.assertRaises(ValueError):
+            padder(contents, None, np.int64)
+        contents = [[1, 2]]
+        # 不能是2维
+        with self.assertRaises(ValueError):
+            padder(contents, None, np.int64)
+        contents = [[[[1, 2]]]]
+        # 不能是3维以上
+        with self.assertRaises(ValueError):
+            padder(contents, None, np.int64)
+
+        contents = [
+                        [[1, 2, 3], [4, 5], [7,8,9,10]],
+                        [[1]]
+                    ]
+        self.assertListEqual([[[1, 2, 3, 0], [4, 5, 0, 0], [7, 8, 9, 10]], [[1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]],
+                             padder(contents, None, np.int64).tolist())
+
+        padder = EngChar2DPadder(pad_length=5, pad_val=-100)
+        self.assertListEqual(
+            [[[1, 2, 3, -100, -100], [4, 5, -100, -100, -100], [7, 8, 9, 10, -100]],
+             [[1, -100, -100, -100, -100], [-100, -100, -100, -100, -100], [-100, -100, -100, -100, -100]]],
+            padder(contents, None, np.int64).tolist()
+        )
