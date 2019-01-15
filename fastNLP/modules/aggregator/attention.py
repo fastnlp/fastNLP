@@ -46,6 +46,21 @@ class DotAtte(nn.Module):
 
 class MultiHeadAtte(nn.Module):
     def __init__(self, input_size, output_size, key_size, value_size, num_atte):
+        """
+        实现的是以下内容
+        QW1: (batch_size, seq_len, input_size) * (input_size, key_size)
+        KW2: (batch_size, seq_len, input_size) * (input_size, key_size)
+        VW3: (batch_size, seq_len, input_size) * (input_size, value_size)
+
+        softmax(QK^T/sqrt(scale))*V: (batch_size, seq_len, value_size) 多个head(num_atten指定)的结果为
+            (batch_size, seq_len, value_size*num_atte)
+        最终结果将上式过一个（value_size*num_atte, output_size)的线性层，output为(batch_size, seq_len, output_size)
+        :param input_size: int, 输入的维度
+        :param output_size: int, 输出特征的维度
+        :param key_size: int, query和key映射到该维度
+        :param value_size: int, value映射到该维度
+        :param num_atte:
+        """
         super(MultiHeadAtte, self).__init__()
         self.in_linear = nn.ModuleList()
         for i in range(num_atte * 3):

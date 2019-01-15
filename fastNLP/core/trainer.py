@@ -51,7 +51,9 @@ class Trainer(object):
         :param Optimizer optimizer: an optimizer object
         :param int check_code_level: level of FastNLP code checker. -1: don't check, 0: ignore. 1: warning. 2: strict.\\
             `ignore` will not check unused field; `warning` when warn if some field are not used; `strict` means
-            it will raise error if some field are not used.
+            it will raise error if some field are not used. 检查的原理是通过使用很小的batch(默认两个sample)来检查代码是否能够
+            运行，但是这个过程理论上不会修改任何参数，只是会检查能否运行。但如果(1)模型中存在将batch_size写为某个固定值的情况，；(2)
+             模型中存在累加前向计算次数的，可能会多计算几次。建议将check_code_level设置为-1
         :param str metric_key: a single indicator used to decide the best model based on metric results. It must be one
             of the keys returned by the FIRST metric in `metrics`. If the overall result gets better if the indicator gets
             smaller, add "-" in front of the string. For example::
