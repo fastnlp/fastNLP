@@ -320,7 +320,7 @@ class DataSet(object):
         return train_set, dev_set
 
     @classmethod
-    def read_csv(cls, csv_path, headers='None', sep=",", dropna=True):
+    def read_csv(cls, csv_path, headers=None, sep=",", dropna=True):
         """Load data from a CSV file and return a DataSet object.
 
         :param str csv_path: path to the CSV file
