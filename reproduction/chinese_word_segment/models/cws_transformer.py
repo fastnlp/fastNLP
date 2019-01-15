@@ -28,8 +28,9 @@ class TransformerCWS(nn.Module):
         self.fc1 = nn.Linear(input_size, hidden_size)
 
         value_size = hidden_size//num_heads
-        self.transformer = TransformerEncoder(num_layers, input_size=input_size, output_size=hidden_size,
-                                              key_size=value_size, value_size=value_size, num_atte=num_heads)
+        self.transformer = TransformerEncoder(num_layers, model_size=hidden_size, inner_size=hidden_size,
+                                              key_size=value_size,
+                                              value_size=value_size, num_head=num_heads)
 
         self.fc2 = nn.Linear(hidden_size, tag_size)
 
@@ -39,7 +40,7 @@ class TransformerCWS(nn.Module):
 
     def forward(self, chars, target, seq_lens, bigrams=None):
         seq_lens = seq_lens
-        masks = seq_len_to_byte_mask(seq_lens)
+        masks = seq_len_to_byte_mask(seq_lens).float()
         x = self.embedding(chars)
         batch_size = x.size(0)
         length = x.size(1)

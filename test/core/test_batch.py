@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import torch
 
 from fastNLP.core.batch import Batch
 from fastNLP.core.dataset import DataSet
@@ -31,3 +32,47 @@ class TestCase1(unittest.TestCase):
             self.assertEqual(len(y["y"]), 4)
             self.assertListEqual(list(x["x"][-1]), [1, 2, 3, 4])
             self.assertListEqual(list(y["y"][-1]), [5, 6])
+
+    def test_list_padding(self):
+        ds = DataSet({"x": [[1], [1, 2], [1, 2, 3], [1, 2, 3, 4]] * 10,
+                      "y": [[4, 3, 2, 1], [3, 2, 1], [2, 1], [1]] * 10})
+        ds.set_input("x")
+        ds.set_target("y")
+        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
+        for x, y in iter:
+            self.assertEqual(x["x"].shape, (4, 4))
+            self.assertEqual(y["y"].shape, (4, 4))
+
+    def test_numpy_padding(self):
+        ds = DataSet({"x": np.array([[1], [1, 2], [1, 2, 3], [1, 2, 3, 4]] * 10),
+                      "y": np.array([[4, 3, 2, 1], [3, 2, 1], [2, 1], [1]] * 10)})
+        ds.set_input("x")
+        ds.set_target("y")
+        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
+        for x, y in iter:
+            self.assertEqual(x["x"].shape, (4, 4))
+            self.assertEqual(y["y"].shape, (4, 4))
+
+    def test_list_to_tensor(self):
+        ds = DataSet({"x": [[1], [1, 2], [1, 2, 3], [1, 2, 3, 4]] * 10,
+                      "y": [[4, 3, 2, 1], [3, 2, 1], [2, 1], [1]] * 10})
+        ds.set_input("x")
+        ds.set_target("y")
+        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=False)
+        for x, y in iter:
+            self.assertTrue(isinstance(x["x"], torch.Tensor))
+            self.assertEqual(tuple(x["x"].shape), (4, 4))
+            self.assertTrue(isinstance(y["y"], torch.Tensor))
+            self.assertEqual(tuple(y["y"].shape), (4, 4))
+
+    def test_numpy_to_tensor(self):
+        ds = DataSet({"x": np.array([[1], [1, 2], [1, 2, 3], [1, 2, 3, 4]] * 10),
+                      "y": np.array([[4, 3, 2, 1], [3, 2, 1], [2, 1], [1]] * 10)})
+        ds.set_input("x")
+        ds.set_target("y")
+        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=False)
+        for x, y in iter:
+            self.assertTrue(isinstance(x["x"], torch.Tensor))
+            self.assertEqual(tuple(x["x"].shape), (4, 4))
+            self.assertTrue(isinstance(y["y"], torch.Tensor))
+            self.assertEqual(tuple(y["y"].shape), (4, 4))

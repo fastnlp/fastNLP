@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch import nn
 
 from fastNLP.modules.utils import mask_softmax
+from fastNLP.modules.dropout import TimestepDropout
 
 
 class Attention(torch.nn.Module):
@@ -23,62 +24,89 @@ class Attention(torch.nn.Module):
 
 
 class DotAtte(nn.Module):
-    def __init__(self, key_size, value_size):
+    def __init__(self, key_size, value_size, dropout=0.1):
         super(DotAtte, self).__init__()
         self.key_size = key_size
         self.value_size = value_size
         self.scale = math.sqrt(key_size)
+        self.drop = nn.Dropout(dropout)
+        self.softmax = nn.Softmax(dim=2)
 
-    def forward(self, Q, K, V, seq_mask=None):
+    def forward(self, Q, K, V, mask_out=None):
         """
 
         :param Q: [batch, seq_len, key_size]
         :param K: [batch, seq_len, key_size]
         :param V: [batch, seq_len, value_size]
-        :param seq_mask: [batch, seq_len]
+        :param mask_out: [batch, seq_len]
         """
         output = torch.matmul(Q, K.transpose(1, 2)) / self.scale
-        if seq_mask is not None:
-            output.masked_fill_(seq_mask.lt(1), -float('inf'))
-        output = nn.functional.softmax(output, dim=2)
+        if mask_out is not None:
+            output.masked_fill_(mask_out, -float('inf'))
+        output = self.softmax(output)
+        output = self.drop(output)
         return torch.matmul(output, V)
 
 
 class MultiHeadAtte(nn.Module):
-    def __init__(self, input_size, output_size, key_size, value_size, num_atte):
+    def __init__(self, model_size, key_size, value_size, num_head, dropout=0.1):
         """
-        实现的是以下内容
-        QW1: (batch_size, seq_len, input_size) * (input_size, key_size)
-        KW2: (batch_size, seq_len, input_size) * (input_size, key_size)
-        VW3: (batch_size, seq_len, input_size) * (input_size, value_size)
 
-        softmax(QK^T/sqrt(scale))*V: (batch_size, seq_len, value_size) 多个head(num_atten指定)的结果为
-            (batch_size, seq_len, value_size*num_atte)
-        最终结果将上式过一个（value_size*num_atte, output_size)的线性层，output为(batch_size, seq_len, output_size)
-        :param input_size: int, 输入的维度
-        :param output_size: int, 输出特征的维度
-        :param key_size: int, query和key映射到该维度
-        :param value_size: int, value映射到该维度
-        :param num_atte:
+        :param model_size: int, 输入维度的大小。同时也是输出维度的大小。
+        :param key_size: int, 每个head的维度大小。
+        :param value_size: int，每个head中value的维度。
+        :param num_head: int，head的数量。
+        :param dropout: float。
         """
         super(MultiHeadAtte, self).__init__()
-        self.in_linear = nn.ModuleList()
-        for i in range(num_atte * 3):
-            out_feat = key_size if (i % 3) != 2 else value_size
-            self.in_linear.append(nn.Linear(input_size, out_feat))
-        self.attes = nn.ModuleList([DotAtte(key_size, value_size) for _ in range(num_atte)])
-        self.out_linear = nn.Linear(value_size * num_atte, output_size)
+        self.input_size = model_size
+        self.key_size = key_size
+        self.value_size = value_size
+        self.num_head = num_head
 
-    def forward(self, Q, K, V, seq_mask=None):
-        heads = []
-        for i in range(len(self.attes)):
-            j = i * 3
-            qi, ki, vi = self.in_linear[j](Q), self.in_linear[j+1](K), self.in_linear[j+2](V)
-            headi = self.attes[i](qi, ki, vi, seq_mask)
-            heads.append(headi)
-        output = torch.cat(heads, dim=2)
-        return self.out_linear(output)
+        in_size = key_size * num_head
+        self.q_in = nn.Linear(model_size, in_size)
+        self.k_in = nn.Linear(model_size, in_size)
+        self.v_in = nn.Linear(model_size, in_size)
+        self.attention = DotAtte(key_size=key_size, value_size=value_size)
+        self.out = nn.Linear(value_size * num_head, model_size)
+        self.drop = TimestepDropout(dropout)
+        self.reset_parameters()
 
+    def reset_parameters(self):
+        sqrt = math.sqrt
+        nn.init.normal_(self.q_in.weight, mean=0, std=sqrt(2.0 / (self.input_size + self.key_size)))
+        nn.init.normal_(self.k_in.weight, mean=0, std=sqrt(2.0 / (self.input_size + self.key_size)))
+        nn.init.normal_(self.v_in.weight, mean=0, std=sqrt(2.0 / (self.input_size + self.value_size)))
+        nn.init.xavier_normal_(self.out.weight)
+
+    def forward(self, Q, K, V, atte_mask_out=None):
+        """
+
+        :param Q: [batch, seq_len, model_size]
+        :param K: [batch, seq_len, model_size]
+        :param V: [batch, seq_len, model_size]
+        :param seq_mask: [batch, seq_len]
+        """
+        batch, seq_len, _ = Q.size()
+        d_k, d_v, n_head = self.key_size, self.value_size, self.num_head
+        # input linear
+        q = self.q_in(Q).view(batch, seq_len, n_head, d_k)
+        k = self.k_in(K).view(batch, seq_len, n_head, d_k)
+        v = self.v_in(V).view(batch, seq_len, n_head, d_k)
+
+        # transpose q, k and v to do batch attention
+        q = q.permute(2, 0, 1, 3).contiguous().view(-1, seq_len, d_k)
+        k = k.permute(2, 0, 1, 3).contiguous().view(-1, seq_len, d_k)
+        v = v.permute(2, 0, 1, 3).contiguous().view(-1, seq_len, d_v)
+        if atte_mask_out is not None:
+            atte_mask_out = atte_mask_out.repeat(n_head, 1, 1)
+        atte = self.attention(q, k, v, atte_mask_out).view(n_head, batch, seq_len, d_v)
+
+        # concat all heads, do output linear
+        atte = atte.permute(1, 2, 0, 3).contiguous().view(batch, seq_len, -1)
+        output = self.drop(self.out(atte))
+        return output
 
 class Bi_Attention(nn.Module):
     def __init__(self):

@@ -4,20 +4,15 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 import fastNLP
-import torch
 
 from fastNLP.core.trainer import Trainer
 from fastNLP.core.instance import Instance
 from fastNLP.api.pipeline import Pipeline
 from fastNLP.models.biaffine_parser import BiaffineParser, ParserMetric, ParserLoss
-from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.core.dataset import DataSet
 from fastNLP.core.tester import Tester
 from fastNLP.io.config_io import ConfigLoader, ConfigSection
 from fastNLP.io.model_io import ModelLoader
-from fastNLP.io.embed_loader import EmbedLoader
-from fastNLP.io.model_io import ModelSaver
-from reproduction.Biaffine_parser.util import ConllxDataLoader, MyDataloader
+from fastNLP.io.dataset_loader import ConllxDataLoader
 from fastNLP.api.processor import *
 
 BOS = '<BOS>'
@@ -141,7 +136,7 @@ model_args['pos_vocab_size'] = len(pos_v)
 model_args['num_label'] = len(tag_v)
 
 model = BiaffineParser(**model_args.data)
-model.reset_parameters()
+print(model)
 
 word_idxp = IndexerProcessor(word_v, 'words', 'word_seq')
 pos_idxp = IndexerProcessor(pos_v, 'pos', 'pos_seq')
@@ -209,7 +204,8 @@ def save_pipe(path):
     pipe = Pipeline(processors=[num_p, word_idxp, pos_idxp, seq_p, set_input_p])
     pipe.add_processor(ModelProcessor(model=model, batch_size=32))
     pipe.add_processor(label_toword_p)
-    torch.save(pipe, os.path.join(path, 'pipe.pkl'))
+    os.makedirs(path, exist_ok=True)
+    torch.save({'pipeline': pipe}, os.path.join(path, 'pipe.pkl'))
 
 
 def test(path):

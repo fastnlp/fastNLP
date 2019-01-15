@@ -9,9 +9,7 @@ from fastNLP.core.dataset import DataSet
 
 from fastNLP.api.utils import load_url
 from fastNLP.api.processor import ModelProcessor
-from reproduction.chinese_word_segment.cws_io.cws_reader import ConllCWSReader
-from reproduction.pos_tag_model.pos_reader import ZhConllPOSReader
-from reproduction.Biaffine_parser.util import ConllxDataLoader, add_seg_tag
+from fastNLP.io.dataset_loader import ConllCWSReader, ZhConllPOSReader, ConllxDataLoader, add_seg_tag
 from fastNLP.core.instance import Instance
 from fastNLP.api.pipeline import Pipeline
 from fastNLP.core.metrics import SpanFPreRecMetric
@@ -31,6 +29,16 @@ class API:
         self._dict = None
 
     def predict(self, *args, **kwargs):
+        """Do prediction for the given input.
+        """
+        raise NotImplementedError
+
+    def test(self, file_path):
+        """Test performance over the given data set.
+
+        :param str file_path:
+        :return: a dictionary of metric values
+        """
         raise NotImplementedError
 
     def load(self, path, device):
