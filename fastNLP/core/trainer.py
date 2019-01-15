@@ -181,7 +181,6 @@ class Trainer(object):
             if torch.cuda.is_available() and self.use_cuda:
                 self.model = self.model.cuda()
             self._model_device = self.model.parameters().__next__().device
-
             self._mode(self.model, is_test=False)
 
             self.start_time = str(datetime.now().strftime('%Y-%m-%d %H-%M-%S'))
@@ -200,9 +199,12 @@ class Trainer(object):
                 path = os.path.join(self.save_path, 'tensorboard_logs_{}'.format(self.start_time))
                 self._summary_writer = SummaryWriter(path)
 
-            self.callback_manager.before_train()
-            self._train()
-            self.callback_manager.after_train(self.model)
+            try:
+                self.callback_manager.before_train()
+                self._train()
+                self.callback_manager.after_train(self.model)
+            except BaseException as e:
+                self.callback_manager.on_exception(e, self.model)
 
             if self.dev_data is not None:
                 print("\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
@@ -231,10 +233,11 @@ class Trainer(object):
             inner_tqdm = tqdm
         self.step = 0
         start = time.time()
-        data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False)
-        total_steps = data_iterator.num_batches * self.n_epochs
+        total_steps = (len(self.train_data) // self.batch_size + int(
+            len(self.train_data) % self.batch_size != 0)) * self.n_epochs
         with inner_tqdm(total=total_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
             avg_loss = 0
+            data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False)
             for epoch in range(1, self.n_epochs+1):
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
                 # early stopping
@@ -291,17 +294,13 @@ class Trainer(object):
                                    self.tester._format_eval_results(eval_res)
                         pbar.write(eval_str)
 
-                # if self.validate_every < 0 and self.dev_data:
-                #     eval_res = self._do_validation(epoch=epoch, step=self.step)
-                #     eval_str = "Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step, total_steps) + \
-                #                self.tester._format_eval_results(eval_res)
-                #     pbar.write(eval_str)
-                if epoch != self.n_epochs:
-                    data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
-                                          as_numpy=False)
+                # ================= mini-batch end ==================== #
+
                 # lr decay; early stopping
                 self.callback_manager.after_epoch(epoch, self.n_epochs, self.optimizer)
+            # =============== epochs end =================== #
             pbar.close()
+        # ============ tqdm end ============== #
 
     def _do_validation(self, epoch, step):
         res = self.tester.test()
@@ -314,7 +313,7 @@ class Trainer(object):
                 self._save_model(self.model,
                              "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time]))
             else:
-                self._best_model_states = {name:param.cpu().clone() for name, param in self.model.named_parameters()}
+                self._best_model_states = {name: param.cpu().clone() for name, param in self.model.named_parameters()}
             self.best_dev_perf = res
             self.best_dev_epoch = epoch
             self.best_dev_step = step

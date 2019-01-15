@@ -69,15 +69,15 @@ class Callback(object):
         """
         pass
 
-    def on_exception(self, exception, model, indices):
+    def on_exception(self, exception, model):
         """
         当训练过程出现异常，会触发该方法
         :param exception: 某种类型的Exception，比如KeyboardInterrupt等
         :param model: 传入Trainer的模型
-        :param indices: 当前batch的index
         :return:
         """
         pass
+
 
 def transfer(func):
     """装饰器，将对CallbackManager的调用转发到各个Callback子类.
@@ -206,10 +206,10 @@ class EchoCallback(Callback):
     def after_train(self, model):
         print("after_train")
 
+
 class GradientClipCallback(Callback):
     def __init__(self, parameters=None, clip_value=1, clip_type='norm'):
-        """
-        每次backward前，将parameter的gradient clip到某个范围。
+        """每次backward前，将parameter的gradient clip到某个范围。
 
         :param parameters: None, torch.Tensor或List[torch.Tensor], 一般通过model.parameters()获得。如果为None则默认对Trainer
             的model中所有参数进行clip
@@ -234,6 +234,38 @@ class GradientClipCallback(Callback):
     def after_backward(self, model):
         self.clip_fun(model.parameters(), self.clip_value)
 
+
+class EarlyStopError(BaseException):
+    def __init__(self, msg):
+        super(EarlyStopError, self).__init__(msg)
+
+
+class EarlyStopCallback(Callback):
+    def __init__(self, patience):
+        """
+
+        :param int patience: 停止之前等待的epoch数
+        """
+        super(EarlyStopCallback, self).__init__()
+        self.trainer = None  # override by CallbackManager
+        self.patience = patience
+        self.wait = 0
+        self.epoch = 0
+
+    def after_valid(self, eval_result, metric_key, optimizer):
+        self.epoch += 1
+        if not self.trainer._better_eval_result(eval_result):
+            # current result is getting worse
+            if self.wait == self.patience:
+                raise EarlyStopError("Early stopping raised.")
+            else:
+                self.wait += 1
+        else:
+            self.wait = 0
+
+    def on_exception(self, exception, model):
+        if isinstance(exception, EarlyStopError):
+            print("Early Stopping triggered in epoch {}!".format(self.epoch))
 
 
 if __name__ == "__main__":

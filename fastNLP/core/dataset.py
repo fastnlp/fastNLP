@@ -144,7 +144,10 @@ class DataSet(object):
             for name, field in ins.fields.items():
                 self.field_arrays[name] = FieldArray(name, [field])
         else:
-            assert len(self.field_arrays) == len(ins.fields)
+            if len(self.field_arrays) != len(ins.fields):
+                raise ValueError(
+                    "DataSet object has {} fields, but attempt to append an Instance object with {} fields."
+                        .format(len(self.field_arrays), len(ins.fields)))
             for name, field in ins.fields.items():
                 assert name in self.field_arrays
                 self.field_arrays[name].append(field)
