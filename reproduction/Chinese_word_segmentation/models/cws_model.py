@@ -1,11 +1,11 @@
 
-from torch import nn
 import torch
-import torch.nn.functional as F
+from torch import nn
 
-from fastNLP.modules.decoder.MLP import MLP
 from fastNLP.models.base_model import BaseModel
-from reproduction.chinese_word_segment.utils import seq_lens_to_mask
+from fastNLP.modules.decoder.MLP import MLP
+from reproduction.Chinese_word_segmentation.utils import seq_lens_to_mask
+
 
 class CWSBiLSTMEncoder(BaseModel):
     def __init__(self, vocab_num, embed_dim=100, bigram_vocab_num=None, bigram_embed_dim=100, num_bigram_per_char=None,
