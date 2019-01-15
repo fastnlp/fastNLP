@@ -26,15 +26,10 @@ class EmbedLoader(BaseLoader):
         """
         emb = {}
         with open(emb_file, 'r', encoding='utf-8') as f:
-            i = 0
             for line in f:
                 line = list(filter(lambda w: len(w) > 0, line.strip().split(' ')))
                 if len(line) == emb_dim + 1:
                     emb[line[0]] = torch.Tensor(list(map(float, line[1:])))
-                if i % 100000 == 0:
-                    print(i, 'glove lines parsing finished.')
-                i += 1
-
         return emb
 
     @staticmethod
