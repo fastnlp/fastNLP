@@ -858,8 +858,21 @@ class ConllPOSReader(object):
 
             ds.append(Instance(words=char_seq,
                                tag=pos_seq))
-
         return ds
+
+    def get_one(self, sample):
+        if len(sample) == 0:
+            return None
+        text = []
+        pos_tags = []
+        for w in sample:
+            t1, t2, t3, t4 = w[1], w[3], w[6], w[7]
+            if t3 == '_':
+                return None
+            text.append(t1)
+            pos_tags.append(t2)
+        return text, pos_tags
+
 
 
 class ConllxDataLoader(object):
@@ -879,7 +892,12 @@ class ConllxDataLoader(object):
                 datalist.append(sample)
 
         data = [self.get_one(sample) for sample in datalist]
-        return list(filter(lambda x: x is not None, data))
+        data_list = list(filter(lambda x: x is not None, data))
+
+        ds = DataSet()
+        for example in data_list:
+            ds.append(Instance(words=example[0], tag=example[1]))
+        return ds
 
     def get_one(self, sample):
         sample = list(map(list, zip(*sample)))

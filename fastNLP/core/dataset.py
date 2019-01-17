@@ -2,8 +2,8 @@ import _pickle as pickle
 
 import numpy as np
 
-from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.fieldarray import AutoPadder
+from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.instance import Instance
 from fastNLP.core.utils import get_func_signature
 from fastNLP.io.base_loader import DataLoaderRegister
@@ -142,7 +142,8 @@ class DataSet(object):
         if len(self.field_arrays) == 0:
             # DataSet has no field yet
             for name, field in ins.fields.items():
-                self.field_arrays[name] = FieldArray(name, [field])
+                field = field.tolist() if isinstance(field, np.ndarray) else field
+                self.field_arrays[name] = FieldArray(name, [field])  # 第一个样本，必须用list包装起来
         else:
             if len(self.field_arrays) != len(ins.fields):
                 raise ValueError(
@@ -290,9 +291,11 @@ class DataSet(object):
                     extra_param['is_input'] = old_field.is_input
                 if 'is_target' not in extra_param:
                     extra_param['is_target'] = old_field.is_target
-                self.add_field(name=new_field_name, fields=results)
+                self.add_field(name=new_field_name, fields=results, is_input=extra_param["is_input"],
+                               is_target=extra_param["is_target"])
             else:
-                self.add_field(name=new_field_name, fields=results)
+                self.add_field(name=new_field_name, fields=results, is_input=extra_param.get("is_input", None),
+                               is_target=extra_param.get("is_target", None))
         else:
             return results
 
@@ -334,13 +337,14 @@ class DataSet(object):
             train_set.field_arrays[field_name].padder = self.field_arrays[field_name].padder
             train_set.field_arrays[field_name].dtype = self.field_arrays[field_name].dtype
             train_set.field_arrays[field_name].pytype = self.field_arrays[field_name].pytype
-            train_set.field_arrays[field_name].is_2d_list = self.field_arrays[field_name].is_2d_list
+            train_set.field_arrays[field_name].content_dim = self.field_arrays[field_name].content_dim
+
             dev_set.field_arrays[field_name].is_input = self.field_arrays[field_name].is_input
             dev_set.field_arrays[field_name].is_target = self.field_arrays[field_name].is_target
             dev_set.field_arrays[field_name].padder = self.field_arrays[field_name].padder
             dev_set.field_arrays[field_name].dtype = self.field_arrays[field_name].dtype
             dev_set.field_arrays[field_name].pytype = self.field_arrays[field_name].pytype
-            dev_set.field_arrays[field_name].is_2d_list = self.field_arrays[field_name].is_2d_list
+            dev_set.field_arrays[field_name].content_dim = self.field_arrays[field_name].content_dim
 
         return train_set, dev_set
 

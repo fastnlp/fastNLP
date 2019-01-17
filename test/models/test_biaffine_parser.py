@@ -1,7 +1,7 @@
-from fastNLP.models.biaffine_parser import BiaffineParser, ParserLoss, ParserMetric
-import fastNLP
-
 import unittest
+
+import fastNLP
+from fastNLP.models.biaffine_parser import BiaffineParser, ParserLoss, ParserMetric
 
 data_file = """
 1       The     _       DET     DT      _       3       det     _       _
@@ -41,6 +41,7 @@ data_file = """
 
 """
 
+
 def init_data():
     ds = fastNLP.DataSet()
     v = {'word_seq': fastNLP.Vocabulary(),
@@ -60,17 +61,18 @@ def init_data():
             data.append(line)
 
     for name in ['word_seq', 'pos_seq', 'label_true']:
-        ds.apply(lambda x: ['<st>']+list(x[name]), new_field_name=name)
+        ds.apply(lambda x: ['<st>'] + list(x[name]), new_field_name=name)
         ds.apply(lambda x: v[name].add_word_lst(x[name]))
 
     for name in ['word_seq', 'pos_seq', 'label_true']:
         ds.apply(lambda x: [v[name].to_index(w) for w in x[name]], new_field_name=name)
 
-    ds.apply(lambda x: [0]+list(map(int, x['arc_true'])), new_field_name='arc_true')
+    ds.apply(lambda x: [0] + list(map(int, x['arc_true'])), new_field_name='arc_true')
     ds.apply(lambda x: len(x['word_seq']), new_field_name='seq_lens')
     ds.set_input('word_seq', 'pos_seq', 'seq_lens', flag=True)
     ds.set_target('arc_true', 'label_true', 'seq_lens', flag=True)
     return ds, v['word_seq'], v['pos_seq'], v['label_true']
+
 
 class TestBiaffineParser(unittest.TestCase):
     def test_train(self):
@@ -83,6 +85,7 @@ class TestBiaffineParser(unittest.TestCase):
                                   batch_size=1, validate_every=10,
                                   n_epochs=10, use_cuda=False, use_tqdm=False)
         trainer.train(load_best_model=False)
+
 
 if __name__ == '__main__':
     unittest.main()

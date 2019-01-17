@@ -42,13 +42,13 @@ class TestFieldArray(unittest.TestCase):
         self.assertEqual(fa.pytype, str)
 
     def test_support_np_array(self):
-        fa = FieldArray("y", [np.array([1.1, 2.2, 3.3, 4.4, 5.5])], is_input=True)
-        self.assertEqual(fa.dtype, np.ndarray)
-        self.assertEqual(fa.pytype, np.ndarray)
+        fa = FieldArray("y", np.array([[1.1, 2.2, 3.3, 4.4, 5.5]]), is_input=True)
+        self.assertEqual(fa.dtype, np.float64)
+        self.assertEqual(fa.pytype, float)
 
         fa.append(np.array([1.1, 2.2, 3.3, 4.4, 5.5]))
-        self.assertEqual(fa.dtype, np.ndarray)
-        self.assertEqual(fa.pytype, np.ndarray)
+        self.assertEqual(fa.dtype, np.float64)
+        self.assertEqual(fa.pytype, float)
 
         fa = FieldArray("my_field", np.random.rand(3, 5), is_input=True)
         # in this case, pytype is actually a float. We do not care about it.

@@ -89,3 +89,12 @@ class TestCase1(unittest.TestCase):
             self.assertEqual(tuple(x["x"].shape), (4, 4))
             self.assertTrue(isinstance(y["y"], torch.Tensor))
             self.assertEqual(tuple(y["y"].shape), (4, 4))
+
+    def test_list_of_numpy_to_tensor(self):
+        ds = DataSet([Instance(x=np.array([1, 2]), y=np.array([3, 4])) for _ in range(2)] +
+                     [Instance(x=np.array([1, 2, 3, 4]), y=np.array([3, 4, 5, 6])) for _ in range(2)])
+        ds.set_input("x")
+        ds.set_target("y")
+        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=False)
+        for x, y in iter:
+            print(x, y)
