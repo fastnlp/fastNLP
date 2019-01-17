@@ -144,6 +144,7 @@ if __name__ == "__main__":
     parser.add_argument("--train", type=str, help="training conll file", default="/home/zyfeng/data/sample.conllx")
     parser.add_argument("--dev", type=str, help="dev conll file", default="/home/zyfeng/data/sample.conllx")
     parser.add_argument("--test", type=str, help="test conll file", default=None)
+    parser.add_argument("--save", type=str, help="path to save", default=None)
 
     parser.add_argument("-c", "--restart", action="store_true", help="whether to continue training")
     parser.add_argument("-cp", "--checkpoint", type=str, help="checkpoint of the trained model")

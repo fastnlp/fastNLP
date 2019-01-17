@@ -112,13 +112,17 @@ class FieldArray(object):
                 2.3) 二维list  DataSet([Instance(x=[[1, 2], [3, 4]])])
                 2.4) 二维array  DataSet([Instance(x=np.array([[1, 2], [3, 4]]))])
 
-            注意：np.array必须仅在最外层，即np.array([np.array, np.array]) 和 list of np.array不考虑
             类型检查(dtype check)发生在当该field被设置为is_input或者is_target时。
 
         """
         self.name = name
         if isinstance(content, list):
-            content = content
+            # 如果DataSet使用dict初始化, content 可能是二维list/二维array/三维list
+            # 如果DataSet使用list of Instance 初始化, content可能是 [list]/[array]/[2D list]
+            if len(content) == 1 and isinstance(content[0], np.ndarray):
+                # 这是使用list of Instance 初始化时第一个样本：FieldArray(name, [field])
+                # 将[np.array] 转化为 list of list
+                content[0] = content[0].tolist()
         elif isinstance(content, np.ndarray):
             content = content.tolist()  # convert np.ndarray into 2-D list
         else:
