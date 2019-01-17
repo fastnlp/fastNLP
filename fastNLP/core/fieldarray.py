@@ -105,6 +105,7 @@ class FieldArray(object):
                 1.1) 二维list  DataSet({"x": [[1, 2], [3, 4]]})
                 1.2) 二维array  DataSet({"x": np.array([[1, 2], [3, 4]])})
                 1.3) 三维list  DataSet({"x": [[[1, 2], [3, 4]], [[1, 2], [3, 4]]]})
+                1.4) list of array: DataSet({"x": [np.array([1,2,3]), np.array([1,2,3])]})
             2） 如果DataSet使用list of Instance 初始化,那么在append中会先对第一个样本初始化FieldArray；
             然后后面的样本使用FieldArray.append进行添加。
                 2.1) 一维list DataSet([Instance(x=[1, 2, 3, 4])])
@@ -119,10 +120,12 @@ class FieldArray(object):
         if isinstance(content, list):
             # 如果DataSet使用dict初始化, content 可能是二维list/二维array/三维list
             # 如果DataSet使用list of Instance 初始化, content可能是 [list]/[array]/[2D list]
-            if len(content) == 1 and isinstance(content[0], np.ndarray):
+            for idx, item in enumerate(content):
                 # 这是使用list of Instance 初始化时第一个样本：FieldArray(name, [field])
                 # 将[np.array] 转化为 list of list
-                content[0] = content[0].tolist()
+                # 也可以支持[array, array, array]的情况
+                if isinstance(item, np.ndarray):
+                    content[idx] = content[idx].tolist()
         elif isinstance(content, np.ndarray):
             content = content.tolist()  # convert np.ndarray into 2-D list
         else:

@@ -31,6 +31,12 @@ class TestFieldArrayInit(unittest.TestCase):
         # 三维list
         fa = FieldArray("x", [[[1, 2], [3, 4]], [[1, 2], [3, 4]]], is_input=True)
 
+    def test_init_v7(self):
+        # list of array
+        fa = FieldArray("x", [np.array([[1, 2], [3, 4]]), np.array([[1, 2], [3, 4]])], is_input=True)
+        self.assertEqual(fa.pytype, int)
+        self.assertEqual(fa.dtype, np.int)
+
     def test_init_v4(self):
         # 一维list
         val = [1, 2, 3, 4]

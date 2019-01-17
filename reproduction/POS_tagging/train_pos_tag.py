@@ -93,7 +93,7 @@ def train(train_data_path, dev_data_path, checkpoint=None):
                                                                            target="truth",
                                                                            seq_lens="word_seq_origin_len"),
                       dev_data=dev_data, metric_key="f",
-                      use_tqdm=True, use_cuda=True, print_every=5, n_epochs=6, save_path="./save_0")
+                      use_tqdm=True, use_cuda=True, print_every=10, n_epochs=20, save_path="./save_0117")
     trainer.train(load_best_model=True)
 
     # save model & pipeline
@@ -102,14 +102,14 @@ def train(train_data_path, dev_data_path, checkpoint=None):
 
     pp = Pipeline([vocab_proc, seq_len_proc, set_input_proc, model_proc, id2tag])
     save_dict = {"pipeline": pp, "model": model, "tag_vocab": tag_proc.vocab}
-    torch.save(save_dict, "model_pp.pkl")
+    torch.save(save_dict, "model_pp_0117.pkl")
     print("pipeline saved")
 
 
 def run_test(test_path):
     test_data = ZhConllPOSReader().load(test_path)
 
-    with open("model_pp.pkl", "rb") as f:
+    with open("model_pp_0117.pkl", "rb") as f:
         save_dict = torch.load(f)
     tag_vocab = save_dict["tag_vocab"]
     pipeline = save_dict["pipeline"]
