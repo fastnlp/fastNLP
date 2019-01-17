@@ -1,6 +1,12 @@
 from collections import Counter
-
-
+import os
+# 问题：fastNLP虽然已经提供了split函数，可以将数据集划分成训练集和测试机，但一般网上用作训练的标准集都已经提前划分好了训练集和测试机，
+# 而使用split将数据集进行随机划分还引来了一个问题：
+#       因为每次都是随机划分，导致每次的字典都不一样，保存好模型下次再载入进行测试时，因为字典不同导致结果差异非常大。
+#
+# 解决方法：在Vocabulary增加一个字典保存函数和一个字典读取函数，而不是每次都生成一个新字典，同时减少下次运行的成本，第一次使用save_vocab()
+# 生成字典后，下次可以直接使用load_vocab()载入的字典。
+#测试：在test文件夹下有test_vocabulary进行测试
 def check_build_vocab(func):
     """A decorator to make sure the indexing is built before used.
 
@@ -41,13 +47,13 @@ class Vocabulary(object):
         vocab.update(word_list)
         vocab["word"]
         vocab.to_word(5)
-
-    :param int max_size: set the max number of words in Vocabulary. Default: None
-    :param int min_freq: set the min occur frequency of words in Vocabulary. Default: None
-
     """
 
-    def __init__(self, max_size=None, min_freq=None, unknown='<unk>', padding='<pad>'):
+    def __init__(self, max_size=None, min_freq=None, unknown='<unk>', padding='<pad>',write_path='vocabulary',write_voc=True):
+        """
+        :param int max_size: set the max number of words in Vocabulary. Default: None
+        :param int min_freq: set the min occur frequency of words in Vocabulary. Default: None
+        """
         self.max_size = max_size
         self.min_freq = min_freq
         self.word_count = Counter()
@@ -56,6 +62,8 @@ class Vocabulary(object):
         self.word2idx = None
         self.idx2word = None
         self.rebuild = True
+        self.write_path=write_path
+        self.write_voc=write_voc
 
     @check_build_status
     def update(self, word_lst):
@@ -78,7 +86,6 @@ class Vocabulary(object):
         """Add a single word into the vocabulary.
 
         :param str word: a word or token.
-
         """
         self.add(word)
 
@@ -87,14 +94,14 @@ class Vocabulary(object):
         """Add a list of words into the vocabulary.
 
         :param list word_lst: a list of strings
-
         """
         self.update(word_lst)
 
     def build_vocab(self):
-        """Build a mapping from word to index, and filter the word using ``max_size`` and ``min_freq``.
+        """Build 'word to index' dict, and filter the word using `max_size` and `min_freq`.
 
         """
+
         self.word2idx = {}
         if self.padding is not None:
             self.word2idx[self.padding] = 0
@@ -111,9 +118,34 @@ class Vocabulary(object):
         self.word2idx.update({w: i + start_idx for i, (w, _) in enumerate(words)})
         self.build_reverse_vocab()
         self.rebuild = False
+        print('self.word2idx', self.word2idx)
+
+
+    #新增功能，保存字典
+    def save_vocab(self):
+        if self.write_voc:
+            # 保存已经处理好的字典
+            file = os.path.join(self.write_path, 'vocab.data')
+            with open(file, 'w', encoding='utf8') as f:
+                for key in self.word2idx:
+                    f.write(key + ';;' + str(self.word2idx[key]) + '\n')
+        print('sucessfully save!')
+    # 新增功能，载入字典
+    def load_vocab(self):
+        #载入已经处理好的字典
+        file = os.path.join(self.write_path, 'vocab.data')
+        with open(file, 'r', encoding='utf8') as f:
+            context = f.readlines()
+        word2id = {}
+        for ix, vocab in enumerate(context):
+            word2id[vocab.split(';;')[0]] = ix + 2
+        self.word2idx=word2id
+        print('sucessfully load!')
+        return word2id
+
 
     def build_reverse_vocab(self):
-        """Build "index to word" dict based on "word to index" dict.
+        """Build 'index to word' dict based on 'word to index' dict.
 
         """
         self.idx2word = {i: w for w, i in self.word2idx.items()}
@@ -148,9 +180,10 @@ class Vocabulary(object):
             raise ValueError("word {} not in vocabulary".format(w))
 
     def to_index(self, w):
-        """ Turn a word to an index. If w is not in Vocabulary, return the unknown label.
+        """ Turn a word to an index.
+            If w is not in Vocabulary, return the unknown label.
 
-        :param str w: a word
+        :param str w:
         """
         return self.__getitem__(w)
 
