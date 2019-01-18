@@ -8,7 +8,35 @@ from fastNLP.core.dataset import DataSet
 from fastNLP.core.dataset import construct_dataset
 from fastNLP.core.instance import Instance
 from fastNLP.core.sampler import SequentialSampler
+import time
 
+def generate_fake_dataset(num_samples=1000):
+    """
+    产生的DataSet包含以下的field {'1':[], '2':[], '3': [], '4':[]}
+    :param num_samples: sample的数量
+    :return:
+    """
+
+    max_len = 50
+    min_len = 10
+    num_features = 4
+
+    data_dict = {}
+    for i in range(num_features):
+        data = []
+        lengths = np.random.randint(min_len, max_len, size=(num_samples))
+        for length in lengths:
+            data.append(np.random.randint(100, size=length))
+        data_dict[str(i)] = data
+
+    dataset = DataSet(data_dict)
+
+    for i in range(num_features):
+        if np.random.randint(2) == 0:
+            dataset.set_input(str(i))
+        else:
+            dataset.set_target(str(i))
+    return dataset
 
 class TestCase1(unittest.TestCase):
     def test_simple(self):
@@ -98,3 +126,47 @@ class TestCase1(unittest.TestCase):
         iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=False)
         for x, y in iter:
             print(x, y)
+
+    def test_sequential_batch(self):
+        batch_size = 32
+        pause_seconds = 0.01
+        num_samples = 1000
+        dataset = generate_fake_dataset(num_samples)
+
+        batch = Batch(dataset, batch_size=batch_size, sampler=SequentialSampler())
+        for batch_x, batch_y in batch:
+            time.sleep(pause_seconds)
+
+    def test_multi_workers_batch(self):
+        batch_size = 32
+        pause_seconds = 0.01
+        num_samples = 1000
+        dataset = generate_fake_dataset(num_samples)
+
+        num_workers = 1
+        batch = Batch(dataset, batch_size=batch_size, sampler=SequentialSampler(), num_workers=num_workers)
+        for batch_x, batch_y in batch:
+            time.sleep(pause_seconds)
+
+        num_workers = 2
+        batch = Batch(dataset, batch_size=batch_size, sampler=SequentialSampler(), num_workers=num_workers)
+        end1 = time.time()
+        for batch_x, batch_y in batch:
+            time.sleep(pause_seconds)
+
+    def test_pin_memory(self):
+        batch_size = 32
+        pause_seconds = 0.01
+        num_samples = 1000
+        dataset = generate_fake_dataset(num_samples)
+
+        batch = Batch(dataset, batch_size=batch_size, sampler=SequentialSampler(), pin_memory=True)
+        for batch_x, batch_y in batch:
+            time.sleep(pause_seconds)
+
+        num_workers = 2
+        batch = Batch(dataset, batch_size=batch_size, sampler=SequentialSampler(), num_workers=num_workers,
+                      pin_memory=True)
+        for batch_x, batch_y in batch:
+            time.sleep(pause_seconds)
+

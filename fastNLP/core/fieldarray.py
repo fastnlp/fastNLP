@@ -408,7 +408,7 @@ class EngChar2DPadder(PadderBase):
         except:
             raise ValueError("Field:{} only has one dimension.".format(field_name))
         try:
-            value = value[1]
+            value = value[0]
         except:
             raise ValueError("Field:{} only has two dimensions.".format(field_name))
 

@@ -34,8 +34,8 @@ from fastNLP.core.utils import get_func_signature
 class Trainer(object):
     def __init__(self, train_data, model, loss=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
                  validate_every=-1, dev_data=None, save_path=None, optimizer=Adam(lr=0.01, weight_decay=0),
-                 check_code_level=0, metric_key=None, sampler=RandomSampler(), use_tqdm=True, use_cuda=False,
-                 callbacks=None):
+                 check_code_level=0, metric_key=None, sampler=RandomSampler(), num_workers=0, pin_memory=False,
+                 timeout=0, use_tqdm=True, use_cuda=False, callbacks=None):
         """
         :param DataSet train_data: the training data
         :param torch.nn.modules.module model: a PyTorch model
@@ -46,22 +46,27 @@ class Trainer(object):
         :param int print_every: step interval to print next training information. Default: -1(no print).
         :param int validate_every: step interval to do next validation. Default: -1(validate every epoch).
         :param DataSet dev_data: the validation data
-        :param bool use_cuda: whether to use CUDA in training.
         :param str save_path: file path to save models
         :param Optimizer optimizer: an optimizer object
         :param int check_code_level: level of FastNLP code checker. -1: don't check, 0: ignore. 1: warning. 2: strict.\\
             `ignore` will not check unused field; `warning` when warn if some field are not used; `strict` means
-            it will raise error if some field are not used. 检查的原理是通过使用很小的batch(默认两个sample)来检查代码是否能够
-            运行，但是这个过程理论上不会修改任何参数，只是会检查能否运行。但如果(1)模型中存在将batch_size写为某个固定值的情况，；(2)
-             模型中存在累加前向计算次数的，可能会多计算几次。建议将check_code_level设置为-1
+            it will raise error if some field are not used. 检查的原理是通过使用很小的batch(默认两个sample)来检查代码是
+            否能够运行，但是这个过程理论上不会修改任何参数，只是会检查能否运行。但如果(1)模型中存在将batch_size写为某个
+            固定值的情况；(2)模型中存在累加前向计算次数的，可能会多计算几次。以上情况建议将check_code_level设置为-1
         :param str metric_key: a single indicator used to decide the best model based on metric results. It must be one
             of the keys returned by the FIRST metric in `metrics`. If the overall result gets better if the indicator gets
             smaller, add "-" in front of the string. For example::
 
                     metric_key="-PPL"   # language model gets better as perplexity gets smaller
         :param BaseSampler sampler: method used to generate batch data.
+        :param num_workers: int, 使用多少个进程来准备数据。默认为0, 即使用主线程生成数据。 特性处于实验阶段，谨慎使用。
+            如果DataSet较大，且每个batch的准备时间很短，使用多进程可能并不能提速。
+        :param pin_memory: bool, 默认为False. 设置为True时，有可能可以节省tensor从cpu移动到gpu的阻塞时间。
+        :param timeout: float, 大于0的数，只有在num_workers>0时才有用。超过该时间仍然没有获取到一个batch则报错，可以用于
+            检测是否出现了batch产生阻塞的情况。
         :param bool use_tqdm: whether to use tqdm to show train progress.
-
+        :param callbacks: List[Callback]. 用于在train过程中起调节作用的回调函数。比如early stop，negative sampling等可以
+            通过callback机制实现。
         """
         super(Trainer, self).__init__()
 
@@ -117,6 +122,9 @@ class Trainer(object):
         self.validate_every = int(validate_every) if validate_every!=0 else -1
         self.best_metric_indicator = None
         self.sampler = sampler
+        self.num_workers = num_workers
+        self.pin_memory = pin_memory
+        self.timeout = timeout
         self.callback_manager = CallbackManager(env={"trainer": self}, callbacks=callbacks)
 
         if isinstance(optimizer, torch.optim.Optimizer):
@@ -237,7 +245,8 @@ class Trainer(object):
             len(self.train_data) % self.batch_size != 0)) * self.n_epochs
         with inner_tqdm(total=total_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
             avg_loss = 0
-            data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False)
+            data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False,
+                                  num_workers=self.num_workers, pin_memory=self.pin_memory, timeout=self.timeout)
             for epoch in range(1, self.n_epochs+1):
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
                 # early stopping
