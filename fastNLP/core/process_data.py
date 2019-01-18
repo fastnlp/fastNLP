@@ -1,7 +1,5 @@
 import os
 import pandas as pd
-from collections import defaultdict
-import numpy as np
 #功能：将特定的数据集格式处理成fastNLP能够读取的格式并保存
 # 问题：fastNLP虽然已经提供了split函数，可以将数据集划分成训练集和测试机，但一般网上用作训练的标准集都已经提前划分好了训练集和测试机，
 # 而使用split将数据集进行随机划分还引来了一个问题：

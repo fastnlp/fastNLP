@@ -1,5 +1,3 @@
-import sys
-from fastNLP import Instance
 from fastNLP import Vocabulary
 from fastNLP import DataSet
 
