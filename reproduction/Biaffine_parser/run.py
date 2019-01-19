@@ -4,6 +4,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 import fastNLP
+import torch
 
 from fastNLP.core.trainer import Trainer
 from fastNLP.core.instance import Instance
@@ -14,10 +15,13 @@ from fastNLP.io.config_io import ConfigLoader, ConfigSection
 from fastNLP.io.model_io import ModelLoader
 from fastNLP.io.dataset_loader import ConllxDataLoader
 from fastNLP.api.processor import *
+from fastNLP.io.embed_loader import EmbedLoader
+from fastNLP.core.callback import Callback
 
 BOS = '<BOS>'
 EOS = '<EOS>'
 UNK = '<UNK>'
+PAD = '<PAD>'
 NUM = '<NUM>'
 ENG = '<ENG>'
 
@@ -28,11 +32,11 @@ if len(os.path.dirname(__file__)) != 0:
 def convert(data):
     dataset = DataSet()
     for sample in data:
-        word_seq = [BOS] + sample[0]
-        pos_seq = [BOS] + sample[1]
-        heads = [0] + list(map(int, sample[2]))
-        head_tags = [BOS] + sample[3]
-        dataset.append(Instance(words=word_seq,
+        word_seq = [BOS] + sample['words']
+        pos_seq = [BOS] + sample['pos_tags']
+        heads = [0] + sample['heads']
+        head_tags = [BOS] + sample['labels']
+        dataset.append(Instance(raw_words=word_seq,
                                 pos=pos_seq,
                                 gold_heads=heads,
                                 arc_true=heads,
@@ -45,24 +49,11 @@ def load(path):
     return convert(data)
 
 
-# datadir = "/mnt/c/Me/Dev/release-2.2-st-train-dev-data/ud-treebanks-v2.2/UD_English-EWT"
-# datadir = "/home/yfshao/UD_English-EWT"
-# train_data_name = "en_ewt-ud-train.conllu"
-# dev_data_name = "en_ewt-ud-dev.conllu"
-# emb_file_name = '/home/yfshao/glove.6B.100d.txt'
-# loader = ConlluDataLoader()
-
-# datadir = '/home/yfshao/workdir/parser-data/'
-# train_data_name = "train_ctb5.txt"
-# dev_data_name = "dev_ctb5.txt"
-# test_data_name = "test_ctb5.txt"
-
-datadir = "/home/yfshao/workdir/ctb7.0/"
+datadir = "/remote-home/yfshao/workdir/ctb9.0/"
 train_data_name = "train.conllx"
 dev_data_name = "dev.conllx"
 test_data_name = "test.conllx"
-# emb_file_name = "/home/yfshao/workdir/parser-data/word_OOVthr_30_100v.txt"
-emb_file_name = "/home/yfshao/workdir/word_vector/cc.zh.300.vec"
+emb_file_name = "/remote-home/yfshao/workdir/word_vector/cc.zh.300.vec"
 
 cfgfile = './cfg.cfg'
 processed_datadir = './save'
@@ -108,27 +99,23 @@ def update_v(vocab, data, field):
     data.apply(lambda x: vocab.add_word_lst(x[field]), new_field_name=None)
 
 
-print('load raw data and preprocess')
 # use pretrain embedding
-word_v = Vocabulary()
-word_v.unknown_label = UNK
-pos_v = Vocabulary()
+word_v = Vocabulary(unknown=UNK, padding=PAD)
+pos_v = Vocabulary(unknown=None, padding=PAD)
 tag_v = Vocabulary(unknown=None, padding=None)
 train_data = load(os.path.join(datadir, train_data_name))
 dev_data = load(os.path.join(datadir, dev_data_name))
 test_data = load(os.path.join(datadir, test_data_name))
-print(train_data[0])
-num_p = Num2TagProcessor('words', 'words')
+print('load raw data and preprocess')
+
+num_p = Num2TagProcessor(tag=NUM, field_name='raw_words', new_added_field_name='words')
 for ds in (train_data, dev_data, test_data):
     num_p(ds)
-
 update_v(word_v, train_data, 'words')
 update_v(pos_v, train_data, 'pos')
 update_v(tag_v, train_data, 'tags')
 
 print('vocab build success {}, {}, {}'.format(len(word_v), len(pos_v), len(tag_v)))
-# embed, _ = EmbedLoader.fast_load_embedding(model_args['word_emb_dim'], emb_file_name, word_v)
-# print(embed.size())
 
 # Model
 model_args['word_vocab_size'] = len(word_v)
@@ -159,7 +146,6 @@ for ds in (train_data, dev_data, test_data):
 if train_args['use_golden_train']:
     train_data.set_input('gold_heads', flag=True)
 train_args.data.pop('use_golden_train')
-ignore_label = pos_v['punct']
 
 print(test_data[0])
 print('train len {}'.format(len(train_data)))
@@ -167,45 +153,60 @@ print('dev len {}'.format(len(dev_data)))
 print('test len {}'.format(len(test_data)))
 
 
-
 def train(path):
     # test saving pipeline
     save_pipe(path)
+
+    # embed = EmbedLoader.fast_load_embedding(emb_dim=model_args['word_emb_dim'], emb_file=emb_file_name, vocab=word_v)
+    # embed = torch.tensor(embed, dtype=torch.float32)
+    # model.word_embedding = torch.nn.Embedding.from_pretrained(embed, freeze=True)
+    model.word_embedding.padding_idx = word_v.padding_idx
+    model.word_embedding.weight.data[word_v.padding_idx].fill_(0)
+    model.pos_embedding.padding_idx = pos_v.padding_idx
+    model.pos_embedding.weight.data[pos_v.padding_idx].fill_(0)
+
+    class MyCallback(Callback):
+        def after_step(self, optimizer):
+            step = self.trainer.step
+            # learning rate decay
+            if step > 0 and step % 1000 == 0:
+                for pg in optimizer.param_groups:
+                    pg['lr'] *= 0.93
+                print('decay lr to {}'.format([pg['lr'] for pg in optimizer.param_groups]))
+
+            if step == 3000:
+                # start training embedding
+                print('start training embedding at {}'.format(step))
+                model = self.trainer.model
+                for m in model.modules():
+                    if isinstance(m, torch.nn.Embedding):
+                        m.weight.requires_grad = True
 
     # Trainer
     trainer = Trainer(model=model, train_data=train_data, dev_data=dev_data,
                       loss=ParserLoss(), metrics=ParserMetric(), metric_key='UAS',
                       **train_args.data,
                       optimizer=fastNLP.Adam(**optim_args.data),
-                      save_path=path)
-
-    # model.word_embedding = torch.nn.Embedding.from_pretrained(embed, freeze=False)
-    model.word_embedding.padding_idx = word_v.padding_idx
-    model.word_embedding.weight.data[word_v.padding_idx].fill_(0)
-    model.pos_embedding.padding_idx = pos_v.padding_idx
-    model.pos_embedding.weight.data[pos_v.padding_idx].fill_(0)
-
-    # try:
-    #     ModelLoader.load_pytorch(model, "./save/saved_model.pkl")
-    #     print('model parameter loaded!')
-    # except Exception as _:
-    #     print("No saved model. Continue.")
-    #     pass
+                      save_path=path,
+                      callbacks=[MyCallback()])
 
     # Start training
-    trainer.train()
-    print("Training finished!")
-
-    # save pipeline
-    save_pipe(path)
-    print('pipe saved')
+    try:
+        trainer.train()
+        print("Training finished!")
+    finally:
+        # save pipeline
+        save_pipe(path)
+        print('pipe saved')
 
 def save_pipe(path):
     pipe = Pipeline(processors=[num_p, word_idxp, pos_idxp, seq_p, set_input_p])
     pipe.add_processor(ModelProcessor(model=model, batch_size=32))
     pipe.add_processor(label_toword_p)
     os.makedirs(path, exist_ok=True)
-    torch.save({'pipeline': pipe}, os.path.join(path, 'pipe.pkl'))
+    torch.save({'pipeline': pipe,
+                'names':['num word_idx pos_idx seq set_input model tag_to_word'.split()],
+                }, os.path.join(path, 'pipe.pkl'))
 
 
 def test(path):
@@ -230,16 +231,11 @@ def test(path):
     print("Testing Test data")
     tester.test(model, test_data)
 
-def build_pipe(parser_pipe_path):
-    parser_pipe = torch.load(parser_pipe_path)
-
-
-
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Run a chinese word segmentation model')
-    parser.add_argument('--mode', help='set the model\'s model', choices=['train', 'test', 'infer', 'save'])
+    parser.add_argument('--mode', help='set the model\'s model', choices=['train', 'test', 'infer'])
     parser.add_argument('--path', type=str, default='')
     # parser.add_argument('--dst', type=str, default='')
     args = parser.parse_args()
@@ -249,12 +245,6 @@ if __name__ == "__main__":
         test(args.path)
     elif args.mode == 'infer':
         pass
-    # elif args.mode == 'save':
-    #     print(f'save model from {args.path} to {args.dst}')
-    #     save_model(args.path, args.dst)
-    #     load_path = os.path.dirname(args.dst)
-    #     print(f'save pipeline in {load_path}')
-    #     build(load_path)
     else:
         print('no mode specified for model!')
         parser.print_help()

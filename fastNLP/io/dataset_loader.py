@@ -897,7 +897,10 @@ class ConllxDataLoader(object):
         if return_dataset is True:
             ds = DataSet()
             for example in data_list:
-                ds.append(Instance(words=example[0], tag=example[1]))
+                ds.append(Instance(words=example[0],
+                                   pos_tags=example[1],
+                                   heads=example[2],
+                                   labels=example[3]))
             data_list = ds
         return data_list
 

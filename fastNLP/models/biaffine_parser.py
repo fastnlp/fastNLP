@@ -216,6 +216,7 @@ class BiaffineParser(GraphParser):
         self.word_norm = nn.LayerNorm(word_hid_dim)
         self.pos_norm = nn.LayerNorm(pos_hid_dim)
         self.encoder_name = encoder
+        self.max_len = 512
         if encoder == 'var-lstm':
             self.encoder = VarLSTM(input_size=word_hid_dim + pos_hid_dim,
                                    hidden_size=rnn_hidden_size,
@@ -233,6 +234,20 @@ class BiaffineParser(GraphParser):
                                    batch_first=True,
                                    dropout=dropout,
                                    bidirectional=True)
+        elif encoder == 'transformer':
+            n_head = 16
+            d_k = d_v = int(rnn_out_size / n_head)
+            if (d_k * n_head) != rnn_out_size:
+                raise ValueError('unsupported rnn_out_size: {} for transformer'.format(rnn_out_size))
+            self.position_emb = nn.Embedding(num_embeddings=self.max_len,
+                                             embedding_dim=rnn_out_size,)
+            self.encoder = TransformerEncoder(num_layers=rnn_layers,
+                                              model_size=rnn_out_size,
+                                              inner_size=1024,
+                                              key_size=d_k,
+                                              value_size=d_v,
+                                              num_head=n_head,
+                                              dropout=dropout,)
         else:
             raise ValueError('unsupported encoder type: {}'.format(encoder))
 
@@ -285,13 +300,18 @@ class BiaffineParser(GraphParser):
         x = torch.cat([word, pos], dim=2) # -> [N,L,C]
 
         # encoder, extract features
-        sort_lens, sort_idx = torch.sort(seq_lens, dim=0, descending=True)
-        x = x[sort_idx]
-        x = nn.utils.rnn.pack_padded_sequence(x, sort_lens, batch_first=True)
-        feat, _ = self.encoder(x) # -> [N,L,C]
-        feat, _ = nn.utils.rnn.pad_packed_sequence(feat, batch_first=True)
-        _, unsort_idx = torch.sort(sort_idx, dim=0, descending=False)
-        feat = feat[unsort_idx]
+        if self.encoder_name.endswith('lstm'):
+            sort_lens, sort_idx = torch.sort(seq_lens, dim=0, descending=True)
+            x = x[sort_idx]
+            x = nn.utils.rnn.pack_padded_sequence(x, sort_lens, batch_first=True)
+            feat, _ = self.encoder(x) # -> [N,L,C]
+            feat, _ = nn.utils.rnn.pad_packed_sequence(feat, batch_first=True)
+            _, unsort_idx = torch.sort(sort_idx, dim=0, descending=False)
+            feat = feat[unsort_idx]
+        else:
+            seq_range = torch.arange(seq_len, dtype=torch.long, device=x.device)[None,:]
+            x = x + self.position_emb(seq_range)
+            feat = self.encoder(x, mask.float())
 
         # for arc biaffine
         # mlp, reduce dim
