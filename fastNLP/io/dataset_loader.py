@@ -876,7 +876,7 @@ class ConllPOSReader(object):
 
 
 class ConllxDataLoader(object):
-    def load(self, path, return_dataset=False):
+    def load(self, path):
         datalist = []
         with open(path, 'r', encoding='utf-8') as f:
             sample = []
@@ -894,15 +894,13 @@ class ConllxDataLoader(object):
         data = [self.get_one(sample) for sample in datalist]
         data_list = list(filter(lambda x: x is not None, data))
 
-        if return_dataset is True:
-            ds = DataSet()
-            for example in data_list:
-                ds.append(Instance(words=example[0],
-                                   pos_tags=example[1],
-                                   heads=example[2],
-                                   labels=example[3]))
-            data_list = ds
-        return data_list
+        ds = DataSet()
+        for example in data_list:
+            ds.append(Instance(words=example[0],
+                               pos_tags=example[1],
+                               heads=example[2],
+                               labels=example[3]))
+        return ds
 
     def get_one(self, sample):
         sample = list(map(list, zip(*sample)))

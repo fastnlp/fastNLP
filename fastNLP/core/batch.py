@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from fastNLP.core.sampler import RandomSampler
-
+import torch.multiprocessing as mp
 
 class Batch(object):
     """Batch is an iterable object which iterates over mini-batches.
@@ -29,15 +29,9 @@ class Batch(object):
         self.num_batches = len(dataset) // batch_size + int(len(dataset) % batch_size != 0)
         self.cur_batch_indices = None
 
-    def __iter__(self):
-        self.idx_list = self.sampler(self.dataset)
-        self.curidx = 0
-        self.lengths = self.dataset.get_length()
-        return self
-
-    def __next__(self):
+    def fetch_one(self):
         if self.curidx >= len(self.idx_list):
-            raise StopIteration
+            return None
         else:
             endidx = min(self.curidx + self.batch_size, len(self.idx_list))
             batch_x, batch_y = {}, {}
@@ -56,8 +50,14 @@ class Batch(object):
                         batch_x[field_name] = batch
 
             self.curidx = endidx
-
             return batch_x, batch_y
+
+    def __iter__(self):
+        """
+        Iterate on dataset, fetch batch data. Fetch process don't block the iterate process
+        :return:
+        """
+        return run_batch_iter(self)
 
     def __len__(self):
         return self.num_batches
@@ -75,3 +75,38 @@ def to_tensor(batch, dtype):
     except:
         pass
     return batch
+
+
+def run_fetch(batch, q):
+    batch.idx_list = batch.sampler(batch.dataset)
+    batch.curidx = 0
+    batch.lengths = batch.dataset.get_length()
+    # print('start fetch')
+    while 1:
+        res = batch.fetch_one()
+        # print('fetch one')
+        q.put(res)
+        if res is None:
+            # print('fetch done, waiting processing')
+            q.join()
+            break
+    # print('fetch exit')
+
+
+def run_batch_iter(batch):
+    q = mp.JoinableQueue(maxsize=10)
+    fetch_p = mp.Process(target=run_fetch, args=(batch, q))
+    fetch_p.daemon = True
+    fetch_p.start()
+    # print('fork fetch process')
+    while 1:
+        res = q.get()
+        q.task_done()
+        # print('get fetched')
+        if res is None:
+            break
+        yield res
+    fetch_p.terminate()
+    fetch_p.join()
+    # print('iter done')
+
