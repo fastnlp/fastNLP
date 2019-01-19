@@ -16,6 +16,10 @@ def chinese_word_segmentation():
 
 
 def pos_tagging():
+    # 输入已分词序列
+    text = ['编者 按： 7月 12日 ， 英国 航空 航天 系统 公司 公布 了 该 公司 研制 的 第一款 高科技 隐形 无人机 雷电之神 。']
+    text = [text[0].split()]
+    print(text)
     pos = POS(device='cpu')
     print(pos.predict(text))
 
@@ -26,4 +30,4 @@ def syntactic_parsing():
 
 
 if __name__ == "__main__":
-    syntactic_parsing()
+    pos_tagging()

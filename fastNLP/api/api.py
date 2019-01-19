@@ -18,7 +18,7 @@ from fastNLP.api.processor import IndexerProcessor
 # TODO add pretrain urls
 model_urls = {
     "cws": "http://123.206.98.91:8888/download/cws_crf_1_11-457fc899.pkl",
-    "pos": "http://123.206.98.91:8888/download/pos_tag_model_20190108-f3c60ee5.pkl",
+    "pos": "http://123.206.98.91:8888/download/pos_tag_model_20190119-43f8b435.pkl",
     "parser": "http://123.206.98.91:8888/download/biaffine_parser-3a2f052c.pkl"
 }
 
