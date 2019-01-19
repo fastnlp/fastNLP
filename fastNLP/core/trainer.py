@@ -14,7 +14,7 @@ except:
     from fastNLP.core.utils import pseudo_tqdm as tqdm
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.callback import CallbackManager
+from fastNLP.core.callback import CallbackManager, CallbackException
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.losses import _prepare_losser
 from fastNLP.core.metrics import _prepare_metrics
@@ -122,6 +122,9 @@ class Trainer(object):
         self.print_every = int(print_every)
         self.validate_every = int(validate_every) if validate_every!=0 else -1
         self.best_metric_indicator = None
+        self.best_dev_epoch = None
+        self.best_dev_step = None
+        self.best_dev_perf = None
         self.sampler = sampler
         self.num_workers = num_workers
         self.pin_memory = pin_memory
@@ -212,7 +215,7 @@ class Trainer(object):
                 self.callback_manager.before_train()
                 self._train()
                 self.callback_manager.after_train(self.model)
-            except BaseException as e:
+            except (CallbackException, KeyboardInterrupt) as e:
                 self.callback_manager.on_exception(e, self.model)
 
             if self.dev_data is not None:

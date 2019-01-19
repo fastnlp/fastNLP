@@ -9,7 +9,7 @@ from fastNLP.core.dataset import DataSet
 
 from fastNLP.api.utils import load_url
 from fastNLP.api.processor import ModelProcessor
-from fastNLP.io.dataset_loader import ConllCWSReader, ZhConllPOSReader, ConllxDataLoader, add_seg_tag
+from fastNLP.io.dataset_loader import ConllCWSReader, ConllxDataLoader, add_seg_tag
 from fastNLP.core.instance import Instance
 from fastNLP.api.pipeline import Pipeline
 from fastNLP.core.metrics import SpanFPreRecMetric
@@ -77,12 +77,11 @@ class POS(API):
         if not hasattr(self, "pipeline"):
             raise ValueError("You have to load model first.")
 
-        sentence_list = []
+        sentence_list = content
         # 1. 检查sentence的类型
-        if isinstance(content, str):
-            sentence_list.append(content)
-        elif isinstance(content, list):
-            sentence_list = content
+        for sentence in sentence_list:
+            if not all((type(obj) == str for obj in sentence)):
+                raise ValueError("Input must be list of list of string.")
 
         # 2. 组建dataset
         dataset = DataSet()
@@ -91,33 +90,35 @@ class POS(API):
         # 3. 使用pipeline
         self.pipeline(dataset)
 
-        def decode_tags(ins):
-            pred_tags = ins["tag"]
-            chars = ins["words"]
-            words = []
-            start_idx = 0
-            for idx, tag in enumerate(pred_tags):
-                if tag[0] == "S":
-                    words.append(chars[start_idx:idx + 1] + "/" + tag[2:])
-                    start_idx = idx + 1
-                elif tag[0] == "E":
-                    words.append("".join(chars[start_idx:idx + 1]) + "/" + tag[2:])
-                    start_idx = idx + 1
-            return words
+        # def decode_tags(ins):
+        #     pred_tags = ins["tag"]
+        #     chars = ins["words"]
+        #     words = []
+        #     start_idx = 0
+        #     for idx, tag in enumerate(pred_tags):
+        #         if tag[0] == "S":
+        #             words.append(chars[start_idx:idx + 1] + "/" + tag[2:])
+        #             start_idx = idx + 1
+        #         elif tag[0] == "E":
+        #             words.append("".join(chars[start_idx:idx + 1]) + "/" + tag[2:])
+        #             start_idx = idx + 1
+        #     return words
+        #
+        # dataset.apply(decode_tags, new_field_name="tag_output")
 
-        dataset.apply(decode_tags, new_field_name="tag_output")
-
-        output = dataset.field_arrays["tag_output"].content
+        output = dataset.field_arrays["tag"].content
         if isinstance(content, str):
             return output[0]
         elif isinstance(content, list):
             return output
 
     def test(self, file_path):
-        test_data = ZhConllPOSReader().load(file_path)
+        test_data = ConllxDataLoader().load(file_path)
 
-        tag_vocab = self._dict["tag_vocab"]
-        pipeline = self._dict["pipeline"]
+        with open("model_pp_0117.pkl", "rb") as f:
+            save_dict = torch.load(f)
+        tag_vocab = save_dict["tag_vocab"]
+        pipeline = save_dict["pipeline"]
         index_tag = IndexerProcessor(vocab=tag_vocab, field_name="tag", new_added_field_name="truth", is_input=False)
         pipeline.pipeline = [index_tag] + pipeline.pipeline
 

@@ -1,8 +1,9 @@
 import unittest
 
 import numpy as np
+import torch
 
-from fastNLP.core.callback import EchoCallback, EarlyStopCallback, GradientClipCallback
+from fastNLP.core.callback import EchoCallback, EarlyStopCallback, GradientClipCallback, LRScheduler, ControlC
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
 from fastNLP.core.losses import BCELoss
@@ -75,4 +76,33 @@ class TestCallback(unittest.TestCase):
                           dev_data=data_set,
                           metrics=AccuracyMetric(pred="predict", target="y"),
                           callbacks=[EarlyStopCallback(5)])
+        trainer.train()
+
+    def test_lr_scheduler(self):
+        data_set, model = prepare_env()
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+        trainer = Trainer(data_set, model,
+                          loss=BCELoss(pred="predict", target="y"),
+                          n_epochs=50,
+                          batch_size=32,
+                          print_every=50,
+                          optimizer=optimizer,
+                          check_code_level=2,
+                          use_tqdm=False,
+                          dev_data=data_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"),
+                          callbacks=[LRScheduler(torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1))])
+        trainer.train()
+
+    def test_KeyBoardInterrupt(self):
+        data_set, model = prepare_env()
+        trainer = Trainer(data_set, model,
+                          loss=BCELoss(pred="predict", target="y"),
+                          n_epochs=50,
+                          batch_size=32,
+                          print_every=50,
+                          optimizer=SGD(lr=0.1),
+                          check_code_level=2,
+                          use_tqdm=False,
+                          callbacks=[ControlC(False)])
         trainer.train()

@@ -169,7 +169,7 @@ class CallbackManager(Callback):
         pass
 
     @transfer
-    def on_exception(self, exception, model, indices):
+    def on_exception(self, exception, model):
         pass
 
 
@@ -235,7 +235,12 @@ class GradientClipCallback(Callback):
         self.clip_fun(model.parameters(), self.clip_value)
 
 
-class EarlyStopError(BaseException):
+class CallbackException(BaseException):
+    def __init__(self, msg):
+        super(CallbackException, self).__init__(msg)
+
+
+class EarlyStopError(CallbackException):
     def __init__(self, msg):
         super(EarlyStopError, self).__init__(msg)
 
@@ -266,6 +271,48 @@ class EarlyStopCallback(Callback):
     def on_exception(self, exception, model):
         if isinstance(exception, EarlyStopError):
             print("Early Stopping triggered in epoch {}!".format(self.epoch))
+        else:
+            raise exception  # 抛出陌生Error
+
+
+class LRScheduler(Callback):
+    def __init__(self, lr_scheduler):
+        """对PyTorch LR Scheduler的包装
+
+        :param lr_scheduler: PyTorch的lr_scheduler
+        """
+        super(LRScheduler, self).__init__()
+        import torch.optim
+        if isinstance(lr_scheduler, torch.optim.lr_scheduler._LRScheduler):
+            self.scheduler = lr_scheduler
+        else:
+            raise ValueError(f"Expect torch.optim.lr_scheduler for LRScheduler. Got {type(lr_scheduler)}.")
+
+    def before_epoch(self, cur_epoch, total_epoch):
+        self.scheduler.step()
+        print("scheduler step ", "lr=", self.trainer.optimizer.param_groups[0]["lr"])
+
+
+class ControlC(Callback):
+    def __init__(self, quit_all):
+        """
+
+        :param quit_all: 若为True,则检测到control+C 直接退出程序；否则只退出Trainer
+        """
+        super(ControlC, self).__init__()
+        if type(quit_all) != bool:
+            raise ValueError("In KeyBoardInterrupt, quit_all arguemnt must be a bool.")
+        self.quit_all = quit_all
+
+    def on_exception(self, exception, model):
+        if isinstance(exception, KeyboardInterrupt):
+            if self.quit_all is True:
+                import sys
+                sys.exit(0)  # 直接退出程序
+            else:
+                pass
+        else:
+            raise exception  # 抛出陌生Error
 
 
 if __name__ == "__main__":
