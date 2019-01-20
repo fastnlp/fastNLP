@@ -5,7 +5,6 @@ from datetime import timedelta
 
 import numpy as np
 import torch
-from tensorboardX import SummaryWriter
 from torch import nn
 
 try:
@@ -195,21 +194,9 @@ class Trainer(object):
             self._model_device = self.model.parameters().__next__().device
             self._mode(self.model, is_test=False)
 
-            self.start_time = str(datetime.now().strftime('%Y-%m-%d %H-%M-%S'))
+            self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
             start_time = time.time()
             print("training epochs started " + self.start_time, flush=True)
-            if self.save_path is None:
-                class psudoSW:
-                    def __getattr__(self, item):
-                        def pass_func(*args, **kwargs):
-                            pass
-
-                        return pass_func
-
-                self._summary_writer = psudoSW()
-            else:
-                path = os.path.join(self.save_path, 'tensorboard_logs_{}'.format(self.start_time))
-                self._summary_writer = SummaryWriter(path)
 
             try:
                 self.callback_manager.before_train()
@@ -232,8 +219,7 @@ class Trainer(object):
                     else:
                         print("Fail to reload best model.")
         finally:
-            self._summary_writer.close()
-            del self._summary_writer
+            pass
         results['seconds'] = round(time.time() - start_time, 2)
 
         return results
@@ -261,7 +247,7 @@ class Trainer(object):
                     # negative sampling; replace unknown; re-weight batch_y
                     self.callback_manager.before_batch(batch_x, batch_y, indices)
                     _move_dict_value_to_device(batch_x, batch_y, device=self._model_device,
-                                               non_blocking=self.pin_memory) # pin_memory, use non_blockling.
+                                               non_blocking=self.pin_memory)  # pin_memory, use non_blocking.
                     prediction = self._data_forward(self.model, batch_x)
 
                     # edit prediction
@@ -279,12 +265,6 @@ class Trainer(object):
                     # lr scheduler; lr_finder; one_cycle
                     self.callback_manager.after_step(self.optimizer)
 
-                    self._summary_writer.add_scalar("loss", loss.item(), global_step=self.step)
-                    for name, param in self.model.named_parameters():
-                        if param.requires_grad:
-                            self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.step)
-                            # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
-                            # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
                     if (self.step+1) % self.print_every == 0:
                         if self.use_tqdm:
                             print_output = "loss:{0:<6.5f}".format(avg_loss / self.print_every)
@@ -319,10 +299,7 @@ class Trainer(object):
 
     def _do_validation(self, epoch, step):
         res = self.tester.test()
-        for name, metric in res.items():
-            for metric_key, metric_val in metric.items():
-                self._summary_writer.add_scalar("valid_{}_{}".format(name, metric_key), metric_val,
-                                                global_step=self.step)
+
         if self._better_eval_result(res):
             if self.save_path is not None:
                 self._save_model(self.model,

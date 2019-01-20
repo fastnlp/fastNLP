@@ -1,4 +1,7 @@
+import os
+
 import torch
+from tensorboardX import SummaryWriter
 
 from fastNLP.io.model_io import ModelSaver, ModelLoader
 
@@ -12,6 +15,7 @@ class Callback(object):
 
     def __init__(self):
         super(Callback, self).__init__()
+        self.trainer = None  # 在Trainer内部被重新赋值
 
     def before_train(self):
         # before the main training loop
@@ -333,8 +337,6 @@ class SmoothValue(object):
 
 
 class LRFinder(Callback):
-    """fastai lr_finder"""
-
     def __init__(self, n_batch, start_lr=1e-6, end_lr=10):
         """用第一个 epoch 找最佳的学习率，从第二个epoch开始应用它
 
@@ -393,6 +395,71 @@ class LRFinder(Callback):
             # reset model
             ModelLoader().load_pytorch(self.trainer.model, "tmp")
             print("Model reset. \nFind best lr={}".format(self.best_lr))
+
+
+class TensorboardCallback(Callback):
+    """
+        接受以下一个或多个字符串作为参数：
+        - "model"
+        - "loss"
+        - "metric"
+    """
+
+    def __init__(self, *options):
+        super(TensorboardCallback, self).__init__()
+        args = {"model", "loss", "metric"}
+        for opt in options:
+            if opt not in args:
+                raise ValueError("Unrecognized argument {}. Expect one of {}".format(opt, args))
+        self.options = options
+        self._summary_writer = None
+        self.graph_added = False
+
+    def before_train(self):
+        save_dir = self.trainer.save_path
+        if save_dir is None:
+            path = os.path.join("./", 'tensorboard_logs_{}'.format(self.trainer.start_time))
+        else:
+            path = os.path.join(save_dir, 'tensorboard_logs_{}'.format(self.trainer.start_time))
+        self._summary_writer = SummaryWriter(path)
+
+    def before_batch(self, batch_x, batch_y, indices):
+        if "model" in self.options and self.graph_added is False:
+            # tesorboardX 这里有大bug，暂时没法画模型图
+            # from fastNLP.core.utils import _build_args
+            # inputs = _build_args(self.trainer.model, **batch_x)
+            # args = tuple([value for value in inputs.values()])
+            # args = args[0] if len(args) == 1 else args
+            # self._summary_writer.add_graph(self.trainer.model, torch.zeros(32, 2))
+            self.graph_added = True
+
+    def before_backward(self, loss, model):
+        if "loss" in self.options:
+            self._summary_writer.add_scalar("loss", loss.item(), global_step=self.trainer.step)
+
+        if "model" in self.options:
+            for name, param in self.trainer.model.named_parameters():
+                if param.requires_grad:
+                    self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.trainer.step)
+                    # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.trainer.step)
+                    self._summary_writer.add_scalar(name + "_grad_mean", param.grad.mean(),
+                                                    global_step=self.trainer.step)
+
+    def after_valid(self, eval_result, metric_key, optimizer):
+        if "metric" in self.options:
+            for name, metric in eval_result.items():
+                for metric_key, metric_val in metric.items():
+                    self._summary_writer.add_scalar("valid_{}_{}".format(name, metric_key), metric_val,
+                                                    global_step=self.trainer.step)
+
+    def after_train(self, model):
+        self._summary_writer.close()
+        del self._summary_writer
+
+    def on_exception(self, exception, model):
+        if hasattr(self, "_summary_writer"):
+            self._summary_writer.close()
+            del self._summary_writer
 
 
 if __name__ == "__main__":
