@@ -229,12 +229,13 @@ class Trainer(object):
         with inner_tqdm(total=total_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
             avg_loss = 0
             data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False,
-                                  prefetch=self.prefetch, device=self._model_device)
+                                  prefetch=self.prefetch)
             for epoch in range(1, self.n_epochs+1):
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
                 # early stopping
                 self.callback_manager.before_epoch(epoch, self.n_epochs)
                 for batch_x, batch_y in data_iterator:
+                    _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
                     indices = data_iterator.get_batch_indices()
                     # negative sampling; replace unknown; re-weight batch_y
                     self.callback_manager.before_batch(batch_x, batch_y, indices)
