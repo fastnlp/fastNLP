@@ -3,7 +3,9 @@ import unittest
 import numpy as np
 import torch
 
-from fastNLP.core.callback import EchoCallback, EarlyStopCallback, GradientClipCallback, LRScheduler, ControlC
+from fastNLP.core.callback import EchoCallback, EarlyStopCallback, GradientClipCallback, LRScheduler, ControlC, \
+    LRFinder, \
+    TensorboardCallback
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
 from fastNLP.core.losses import BCELoss
@@ -52,7 +54,7 @@ class TestCallback(unittest.TestCase):
         data_set, model = prepare_env()
         trainer = Trainer(data_set, model,
                           loss=BCELoss(pred="predict", target="y"),
-                          n_epochs=30,
+                          n_epochs=20,
                           batch_size=32,
                           print_every=50,
                           optimizer=SGD(lr=0.1),
@@ -67,7 +69,7 @@ class TestCallback(unittest.TestCase):
         data_set, model = prepare_env()
         trainer = Trainer(data_set, model,
                           loss=BCELoss(pred="predict", target="y"),
-                          n_epochs=50,
+                          n_epochs=20,
                           batch_size=32,
                           print_every=50,
                           optimizer=SGD(lr=0.01),
@@ -83,7 +85,7 @@ class TestCallback(unittest.TestCase):
         optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
         trainer = Trainer(data_set, model,
                           loss=BCELoss(pred="predict", target="y"),
-                          n_epochs=50,
+                          n_epochs=5,
                           batch_size=32,
                           print_every=50,
                           optimizer=optimizer,
@@ -98,11 +100,39 @@ class TestCallback(unittest.TestCase):
         data_set, model = prepare_env()
         trainer = Trainer(data_set, model,
                           loss=BCELoss(pred="predict", target="y"),
-                          n_epochs=50,
+                          n_epochs=5,
                           batch_size=32,
                           print_every=50,
                           optimizer=SGD(lr=0.1),
                           check_code_level=2,
                           use_tqdm=False,
                           callbacks=[ControlC(False)])
+        trainer.train()
+
+    def test_LRFinder(self):
+        data_set, model = prepare_env()
+        trainer = Trainer(data_set, model,
+                          loss=BCELoss(pred="predict", target="y"),
+                          n_epochs=5,
+                          batch_size=32,
+                          print_every=50,
+                          optimizer=SGD(lr=0.1),
+                          check_code_level=2,
+                          use_tqdm=False,
+                          callbacks=[LRFinder(len(data_set) // 32)])
+        trainer.train()
+
+    def test_TensorboardCallback(self):
+        data_set, model = prepare_env()
+        trainer = Trainer(data_set, model,
+                          loss=BCELoss(pred="predict", target="y"),
+                          n_epochs=5,
+                          batch_size=32,
+                          print_every=50,
+                          optimizer=SGD(lr=0.1),
+                          check_code_level=2,
+                          use_tqdm=False,
+                          dev_data=data_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"),
+                          callbacks=[TensorboardCallback("loss", "metric")])
         trainer.train()

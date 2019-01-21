@@ -1,3 +1,4 @@
+import time
 import unittest
 
 import numpy as np
@@ -8,7 +9,7 @@ from fastNLP.core.dataset import DataSet
 from fastNLP.core.dataset import construct_dataset
 from fastNLP.core.instance import Instance
 from fastNLP.core.sampler import SequentialSampler
-import time
+
 
 def generate_fake_dataset(num_samples=1000):
     """
@@ -161,12 +162,13 @@ class TestCase1(unittest.TestCase):
         dataset = generate_fake_dataset(num_samples)
 
         batch = Batch(dataset, batch_size=batch_size, sampler=SequentialSampler(), pin_memory=True)
-        for batch_x, batch_y in batch:
-            time.sleep(pause_seconds)
+        # 这里发生OOM
+        # for batch_x, batch_y in batch:
+        #     time.sleep(pause_seconds)
 
         num_workers = 2
         batch = Batch(dataset, batch_size=batch_size, sampler=SequentialSampler(), num_workers=num_workers,
                       pin_memory=True)
-        for batch_x, batch_y in batch:
-            time.sleep(pause_seconds)
-
+        # 这里发生OOM
+        # for batch_x, batch_y in batch:
+        #     time.sleep(pause_seconds)
