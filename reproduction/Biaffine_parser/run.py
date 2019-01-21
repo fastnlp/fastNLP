@@ -10,9 +10,13 @@ from fastNLP.core.trainer import Trainer
 from fastNLP.core.instance import Instance
 from fastNLP.api.pipeline import Pipeline
 from fastNLP.models.biaffine_parser import BiaffineParser, ParserMetric, ParserLoss
+from fastNLP.core.vocabulary import Vocabulary
+from fastNLP.core.dataset import DataSet
 from fastNLP.core.tester import Tester
 from fastNLP.io.config_io import ConfigLoader, ConfigSection
 from fastNLP.io.model_io import ModelLoader
+from fastNLP.io.embed_loader import EmbedLoader
+from fastNLP.io.model_io import ModelSaver
 from fastNLP.io.dataset_loader import ConllxDataLoader
 from fastNLP.api.processor import *
 from fastNLP.io.embed_loader import EmbedLoader
@@ -156,6 +160,8 @@ print('test len {}'.format(len(test_data)))
 def train(path):
     # test saving pipeline
     save_pipe(path)
+    embed = EmbedLoader.fast_load_embedding(model_args['word_emb_dim'], emb_file_name, word_v)
+    embed = torch.tensor(embed, dtype=torch.float32)
 
     # embed = EmbedLoader.fast_load_embedding(emb_dim=model_args['word_emb_dim'], emb_file=emb_file_name, vocab=word_v)
     # embed = torch.tensor(embed, dtype=torch.float32)
