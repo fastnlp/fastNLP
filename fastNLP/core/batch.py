@@ -16,10 +16,12 @@ class Batch(object):
     :param int batch_size: the size of the batch
     :param Sampler sampler: a Sampler object
     :param bool as_numpy: If True, return Numpy array. Otherwise, return torch tensors.
-
+    :param bool prefetch: If True, use multiprocessing to fetch next batch when training.
+    :param str or torch.device device: the batch's device, if as_numpy is True, device is ignored.
     """
 
-    def __init__(self, dataset, batch_size, sampler=RandomSampler(), as_numpy=False):
+    def __init__(self, dataset, batch_size, sampler=RandomSampler(), as_numpy=False, prefetch=False,
+                 device='cpu'):
         self.dataset = dataset
         self.batch_size = batch_size
         self.sampler = sampler
@@ -28,6 +30,10 @@ class Batch(object):
         self.curidx = 0
         self.num_batches = len(dataset) // batch_size + int(len(dataset) % batch_size != 0)
         self.cur_batch_indices = None
+        self.prefetch = prefetch
+        self.lengths = 0
+        if not as_numpy:
+            self.device = device if isinstance(device, torch.device) else torch.device(device)
 
     def fetch_one(self):
         if self.curidx >= len(self.idx_list):
@@ -44,6 +50,7 @@ class Batch(object):
                     batch = field.get(indices)
                     if not self.as_numpy and field.padder is not None:
                         batch = to_tensor(batch, field.dtype)
+                        batch = batch.to(self.device)
                     if field.is_target:
                         batch_y[field_name] = batch
                     if field.is_input:
@@ -57,7 +64,21 @@ class Batch(object):
         Iterate on dataset, fetch batch data. Fetch process don't block the iterate process
         :return:
         """
-        return run_batch_iter(self)
+        if self.prefetch:
+            return run_batch_iter(self)
+        def batch_iter():
+            self.init_iter()
+            while 1:
+                res = self.fetch_one()
+                if res is None:
+                    break
+                yield res
+        return batch_iter()
+
+    def init_iter(self):
+        self.idx_list = self.sampler(self.dataset)
+        self.curidx = 0
+        self.lengths = self.dataset.get_length()
 
     def __len__(self):
         return self.num_batches
@@ -78,9 +99,7 @@ def to_tensor(batch, dtype):
 
 
 def run_fetch(batch, q):
-    batch.idx_list = batch.sampler(batch.dataset)
-    batch.curidx = 0
-    batch.lengths = batch.dataset.get_length()
+    batch.init_iter()
     # print('start fetch')
     while 1:
         res = batch.fetch_one()
