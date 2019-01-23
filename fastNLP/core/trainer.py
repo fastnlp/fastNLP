@@ -181,6 +181,10 @@ class Trainer(object):
 
         """
         results = {}
+        if self.n_epochs <= 0:
+            print(f"training epoch is {self.n_epochs}, nothing was done.")
+            results['seconds'] = 0.
+            return results
         try:
             if torch.cuda.is_available() and self.use_cuda:
                 self.model = self.model.cuda()
