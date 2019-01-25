@@ -1,4 +1,5 @@
 import unittest
+from collections import defaultdict
 
 import numpy as np
 import torch
@@ -23,12 +24,26 @@ def prepare_fake_dataset():
     return data_set
 
 
+class LinearModel(torch.nn.Module):
+    def __init__(self):
+        super(LinearModel, self).__init__()
+        self.linear = Linear(2, 1)
+
+    def forward(self, x):
+        return {"predict": self.linear(x)}
+
+
 class TestPredictor(unittest.TestCase):
-    def test(self):
-        predictor = Predictor()
-        model = Linear(2, 1)
+    def test_simple(self):
+        model = LinearModel()
+        predictor = Predictor(model)
         data = prepare_fake_dataset()
         data.set_input("x")
-        ans = predictor.predict(model, data)
-        self.assertEqual(len(ans), 2000)
-        self.assertTrue(isinstance(ans[0], torch.Tensor))
+        ans = predictor.predict(data)
+        self.assertTrue(isinstance(ans, defaultdict))
+        self.assertTrue("predict" in ans)
+        self.assertTrue(isinstance(ans["predict"], list))
+
+    def test_sequence(self):
+        # test sequence input/output
+        pass

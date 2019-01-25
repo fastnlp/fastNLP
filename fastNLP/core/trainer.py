@@ -196,9 +196,9 @@ class Trainer(object):
             print("training epochs started " + self.start_time, flush=True)
 
             try:
-                self.callback_manager.before_train()
+                self.callback_manager.on_train_begin()
                 self._train()
-                self.callback_manager.after_train(self.model)
+                self.callback_manager.on_train_end(self.model)
             except (CallbackException, KeyboardInterrupt) as e:
                 self.callback_manager.on_exception(e, self.model)
 
@@ -237,28 +237,26 @@ class Trainer(object):
             for epoch in range(1, self.n_epochs+1):
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
                 # early stopping
-                self.callback_manager.before_epoch(epoch, self.n_epochs)
+                self.callback_manager.on_epoch_begin(epoch, self.n_epochs)
                 for batch_x, batch_y in data_iterator:
                     _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
                     indices = data_iterator.get_batch_indices()
                     # negative sampling; replace unknown; re-weight batch_y
-                    self.callback_manager.before_batch(batch_x, batch_y, indices)
+                    self.callback_manager.on_batch_begin(batch_x, batch_y, indices)
                     prediction = self._data_forward(self.model, batch_x)
 
                     # edit prediction
-                    self.callback_manager.before_loss(batch_y, prediction)
+                    self.callback_manager.on_loss_begin(batch_y, prediction)
                     loss = self._compute_loss(prediction, batch_y)
                     avg_loss += loss.item()
 
                     # Is loss NaN or inf? requires_grad = False
-                    self.callback_manager.before_backward(loss, self.model)
+                    self.callback_manager.on_backward_begin(loss, self.model)
                     self._grad_backward(loss)
-                    # gradient clipping
-                    self.callback_manager.after_backward(self.model)
+                    self.callback_manager.on_backward_end(self.model)
 
                     self._update()
-                    # lr scheduler; lr_finder; one_cycle
-                    self.callback_manager.after_step(self.optimizer)
+                    self.callback_manager.on_step_end(self.optimizer)
 
                     if (self.step+1) % self.print_every == 0:
                         if self.use_tqdm:
@@ -272,8 +270,7 @@ class Trainer(object):
                         pbar.set_postfix_str(print_output)
                         avg_loss = 0
                     self.step += 1
-                    # do nothing
-                    self.callback_manager.after_batch()
+                    self.callback_manager.on_batch_end()
 
                     if ((self.validate_every > 0 and self.step % self.validate_every == 0) or
                         (self.validate_every < 0 and self.step % len(data_iterator) == 0)) \
@@ -287,12 +284,13 @@ class Trainer(object):
                 # ================= mini-batch end ==================== #
 
                 # lr decay; early stopping
-                self.callback_manager.after_epoch(epoch, self.n_epochs, self.optimizer)
+                self.callback_manager.on_epoch_end(epoch, self.n_epochs, self.optimizer)
             # =============== epochs end =================== #
             pbar.close()
         # ============ tqdm end ============== #
 
     def _do_validation(self, epoch, step):
+        self.callback_manager.on_valid_begin()
         res = self.tester.test()
 
         if self._better_eval_result(res):
@@ -305,7 +303,7 @@ class Trainer(object):
             self.best_dev_epoch = epoch
             self.best_dev_step = step
         # get validation results; adjust optimizer
-        self.callback_manager.after_valid(res, self.metric_key, self.optimizer)
+        self.callback_manager.on_valid_end(res, self.metric_key, self.optimizer)
         return res
 
     def _mode(self, model, is_test=False):
