@@ -4,8 +4,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from fastNLP.modules.utils import mask_softmax
 from fastNLP.modules.dropout import TimestepDropout
+from fastNLP.modules.utils import mask_softmax
 
 
 class Attention(torch.nn.Module):
@@ -49,27 +49,27 @@ class DotAtte(nn.Module):
 
 
 class MultiHeadAtte(nn.Module):
-    def __init__(self, model_size, key_size, value_size, num_head, dropout=0.1):
+    def __init__(self, input_size, key_size, value_size, num_head, dropout=0.1):
         """
 
-        :param model_size: int, 输入维度的大小。同时也是输出维度的大小。
+        :param input_size: int, 输入维度的大小。同时也是输出维度的大小。
         :param key_size: int, 每个head的维度大小。
         :param value_size: int，每个head中value的维度。
         :param num_head: int，head的数量。
         :param dropout: float。
         """
         super(MultiHeadAtte, self).__init__()
-        self.input_size = model_size
+        self.input_size = input_size
         self.key_size = key_size
         self.value_size = value_size
         self.num_head = num_head
 
         in_size = key_size * num_head
-        self.q_in = nn.Linear(model_size, in_size)
-        self.k_in = nn.Linear(model_size, in_size)
-        self.v_in = nn.Linear(model_size, in_size)
+        self.q_in = nn.Linear(input_size, in_size)
+        self.k_in = nn.Linear(input_size, in_size)
+        self.v_in = nn.Linear(input_size, in_size)
         self.attention = DotAtte(key_size=key_size, value_size=value_size)
-        self.out = nn.Linear(value_size * num_head, model_size)
+        self.out = nn.Linear(value_size * num_head, input_size)
         self.drop = TimestepDropout(dropout)
         self.reset_parameters()
 
@@ -107,6 +107,7 @@ class MultiHeadAtte(nn.Module):
         atte = atte.permute(1, 2, 0, 3).contiguous().view(batch, seq_len, -1)
         output = self.drop(self.out(atte))
         return output
+
 
 class Bi_Attention(nn.Module):
     def __init__(self):
