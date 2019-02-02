@@ -138,6 +138,7 @@ class TestCase1(unittest.TestCase):
         for batch_x, batch_y in batch:
             time.sleep(pause_seconds)
 
+    """
     def test_multi_workers_batch(self):
         batch_size = 32
         pause_seconds = 0.01
@@ -154,7 +155,8 @@ class TestCase1(unittest.TestCase):
         end1 = time.time()
         for batch_x, batch_y in batch:
             time.sleep(pause_seconds)
-
+    """
+    """
     def test_pin_memory(self):
         batch_size = 32
         pause_seconds = 0.01
@@ -172,3 +174,4 @@ class TestCase1(unittest.TestCase):
         # 这里发生OOM
         # for batch_x, batch_y in batch:
         #     time.sleep(pause_seconds)
+    """
