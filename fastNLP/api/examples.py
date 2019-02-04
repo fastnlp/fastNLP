@@ -22,8 +22,9 @@ def chinese_word_segmentation_test():
 
 def pos_tagging():
     # 输入已分词序列
-    text = ['编者 按： 7月 12日 ， 英国 航空 航天 系统 公司 公布 了 该 公司 研制 的 第一款 高科技 隐形 无人机 雷电之神 。']
-    text = [text[0].split()]
+    text = [['编者', '按：', '7月', '12日', '，', '英国', '航空', '航天', '系统', '公司', '公布', '了', '该', '公司',
+             '研制', '的', '第一款', '高科技', '隐形', '无人机', '雷电之神', '。'],
+            ['那么', '这', '款', '无人机', '到底', '有', '多', '厉害', '？']]
     pos = POS(device='cpu')
     print(pos.predict(text))
 
@@ -34,8 +35,9 @@ def pos_tagging_test():
 
 
 def syntactic_parsing():
-    text = ['编者 按： 7月 12日 ， 英国 航空 航天 系统 公司 公布 了 该 公司 研制 的 第一款 高科技 隐形 无人机 雷电之神 。']
-    text = [text[0].split()]
+    text = [['编者', '按：', '7月', '12日', '，', '英国', '航空', '航天', '系统', '公司', '公布', '了', '该', '公司',
+             '研制', '的', '第一款', '高科技', '隐形', '无人机', '雷电之神', '。'],
+            ['那么', '这', '款', '无人机', '到底', '有', '多', '厉害', '？']]
     parser = Parser(device='cpu')
     print(parser.predict(text))
 
@@ -46,9 +48,9 @@ def syntactic_parsing_test():
 
 
 if __name__ == "__main__":
-    chinese_word_segmentation()
-    chinese_word_segmentation_test()
-    pos_tagging()
-    pos_tagging_test()
+    # chinese_word_segmentation()
+    # chinese_word_segmentation_test()
+    # pos_tagging()
+    # pos_tagging_test()
     syntactic_parsing()
-    syntactic_parsing_test()
+    # syntactic_parsing_test()
