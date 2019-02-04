@@ -2,6 +2,8 @@
 FastNLP 1分钟上手教程
 =====================
 
+教程原文见 https://github.com/fastnlp/fastNLP/blob/master/tutorials/fastnlp_1min_tutorial.ipynb
+
 step 1
 ------
 

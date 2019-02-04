@@ -1,9 +1,12 @@
 import random
 import unittest
 
-from fastNLP import Vocabulary
+import numpy as np
+
+from fastNLP import Vocabulary, Instance
 from fastNLP.api.processor import FullSpaceToHalfSpaceProcessor, PreAppendProcessor, SliceProcessor, Num2TagProcessor, \
-    IndexerProcessor, VocabProcessor, SeqLenProcessor
+    IndexerProcessor, VocabProcessor, SeqLenProcessor, ModelProcessor, Index2WordProcessor, SetTargetProcessor, \
+    SetInputProcessor, VocabIndexerProcessor
 from fastNLP.core.dataset import DataSet
 
 
@@ -53,3 +56,46 @@ class TestProcessor(unittest.TestCase):
         ds = proc(ds)
         for data in ds.field_arrays["len"].content:
             self.assertEqual(data, 30)
+
+    def test_ModelProcessor(self):
+        from fastNLP.models.cnn_text_classification import CNNText
+        model = CNNText(100, 100, 5)
+        ins_list = []
+        for _ in range(64):
+            seq_len = np.random.randint(5, 30)
+            ins_list.append(Instance(word_seq=[np.random.randint(0, 100) for _ in range(seq_len)], seq_lens=seq_len))
+        data_set = DataSet(ins_list)
+        data_set.set_input("word_seq", "seq_lens")
+        proc = ModelProcessor(model)
+        data_set = proc(data_set)
+        self.assertTrue("pred" in data_set)
+
+    def test_Index2WordProcessor(self):
+        vocab = Vocabulary()
+        vocab.add_word_lst(["a", "b", "c", "d", "e"])
+        proc = Index2WordProcessor(vocab, "tag_id", "tag")
+        data_set = DataSet([Instance(tag_id=[np.random.randint(0, 7) for _ in range(32)])])
+        data_set = proc(data_set)
+        self.assertTrue("tag" in data_set)
+
+    def test_SetTargetProcessor(self):
+        proc = SetTargetProcessor("a", "b", "c")
+        data_set = DataSet({"a": [1, 2, 3], "b": [1, 2, 3], "c": [1, 2, 3]})
+        data_set = proc(data_set)
+        self.assertTrue(data_set["a"].is_target)
+        self.assertTrue(data_set["b"].is_target)
+        self.assertTrue(data_set["c"].is_target)
+
+    def test_SetInputProcessor(self):
+        proc = SetInputProcessor("a", "b", "c")
+        data_set = DataSet({"a": [1, 2, 3], "b": [1, 2, 3], "c": [1, 2, 3]})
+        data_set = proc(data_set)
+        self.assertTrue(data_set["a"].is_input)
+        self.assertTrue(data_set["b"].is_input)
+        self.assertTrue(data_set["c"].is_input)
+
+    def test_VocabIndexerProcessor(self):
+        proc = VocabIndexerProcessor("word_seq", "word_ids")
+        data_set = DataSet([Instance(word_seq=["a", "b", "c", "d", "e"])])
+        data_set = proc(data_set)
+        self.assertTrue("word_ids" in data_set)

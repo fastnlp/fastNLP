@@ -1,3 +1,7 @@
+"""
+bert.py is modified from huggingface/pytorch-pretrained-BERT, which is licensed under the Apache License 2.0.
+
+"""
 import copy
 import json
 import math
@@ -220,7 +224,23 @@ class BertPooler(nn.Module):
 
 
 class BertModel(nn.Module):
-    """BERT model ("Bidirectional Embedding Representations from a Transformer").
+    """Bidirectional Embedding Representations from Transformers.
+
+    If you want to use pre-trained weights, please download from the following sources provided by pytorch-pretrained-BERT.
+    sources::
+
+    'bert-base-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased.tar.gz",
+    'bert-large-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased.tar.gz",
+    'bert-base-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-cased.tar.gz",
+    'bert-large-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-cased.tar.gz",
+    'bert-base-multilingual-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-multilingual-uncased.tar.gz",
+    'bert-base-multilingual-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-multilingual-cased.tar.gz",
+    'bert-base-chinese': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-chinese.tar.gz",
+
+
+    Construct a BERT model with pre-trained weights::
+
+        model = BertModel.from_pretrained("path/to/weights/directory")
 
     """
 

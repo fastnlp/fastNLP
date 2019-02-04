@@ -102,6 +102,7 @@ class PreAppendProcessor(Processor):
         [data] + instance[field_name]
 
     """
+
     def __init__(self, data, field_name, new_added_field_name=None):
         super(PreAppendProcessor, self).__init__(field_name, new_added_field_name)
         self.data = data
@@ -116,6 +117,7 @@ class SliceProcessor(Processor):
     从某个field中只取部分内容。等价于instance[field_name][start:end:step]
 
     """
+
     def __init__(self, start, end, step, field_name, new_added_field_name=None):
         super(SliceProcessor, self).__init__(field_name, new_added_field_name)
         for o in (start, end, step):
@@ -132,6 +134,7 @@ class Num2TagProcessor(Processor):
     将一句话中的数字转换为某个tag。
 
     """
+
     def __init__(self, tag, field_name, new_added_field_name=None):
         """
 
@@ -163,6 +166,7 @@ class IndexerProcessor(Processor):
     给定一个vocabulary , 将指定field转换为index形式。指定field应该是一维的list，比如
         ['我', '是', xxx]
     """
+
     def __init__(self, vocab, field_name, new_added_field_name, delete_old_field=False, is_input=True):
 
         assert isinstance(vocab, Vocabulary), "Only Vocabulary class is allowed, not {}.".format(type(vocab))
@@ -215,6 +219,7 @@ class SeqLenProcessor(Processor):
     根据某个field新增一个sequence length的field。取该field的第一维
 
     """
+
     def __init__(self, field_name, new_added_field_name='seq_lens', is_input=True):
         super(SeqLenProcessor, self).__init__(field_name, new_added_field_name)
         self.is_input = is_input
@@ -228,6 +233,7 @@ class SeqLenProcessor(Processor):
 
 
 from fastNLP.core.utils import _build_args
+
 
 class ModelProcessor(Processor):
     def __init__(self, model, seq_len_field_name='seq_lens', batch_size=32):
@@ -292,6 +298,7 @@ class Index2WordProcessor(Processor):
     将DataSet中某个为index的field根据vocab转换为str
 
     """
+
     def __init__(self, vocab, field_name, new_added_field_name):
         super(Index2WordProcessor, self).__init__(field_name, new_added_field_name)
         self.vocab = vocab
@@ -303,7 +310,6 @@ class Index2WordProcessor(Processor):
 
 
 class SetTargetProcessor(Processor):
-    # TODO; remove it.
     def __init__(self, *fields, flag=True):
         super(SetTargetProcessor, self).__init__(None, None)
         self.fields = fields
@@ -312,6 +318,7 @@ class SetTargetProcessor(Processor):
     def process(self, dataset):
         dataset.set_target(*self.fields, flag=self.flag)
         return dataset
+
 
 class SetInputProcessor(Processor):
     def __init__(self, *fields, flag=True):
