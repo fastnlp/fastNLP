@@ -25,7 +25,7 @@ def allowed_transitions(id2label, encoding_type='bio'):
 
     :param dict id2label: key是label的indices，value是str类型的tag或tag-label。value可以是只有tag的, 比如"B", "M"; 也可以是
         "B-NN", "M-NN", tag和label之间一定要用"-"隔开。一般可以通过Vocabulary.get_id2word()id2label。
-    :param encoding_type: str, 支持"bio", "bmes"。
+    :param encoding_type: str, 支持"bio", "bmes", "bmeso"。
     :return: List[Tuple(int, int)]], 内部的Tuple是(from_tag_id, to_tag_id)。 返回的结果考虑了start和end，比如"BIO"中，B、O可以
         位于序列的开端，而I不行。所以返回的结果中会包含(start_idx, B_idx), (start_idx, O_idx), 但是不包含(start_idx, I_idx).
         start_idx=len(id2label), end_idx=len(id2label)+1。
@@ -62,7 +62,7 @@ def allowed_transitions(id2label, encoding_type='bio'):
 def is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label):
     """
 
-    :param encoding_type: str, 支持"BIO", "BMES"。
+    :param encoding_type: str, 支持"BIO", "BMES", "BEMSO"。
     :param from_tag: str, 比如"B", "M"之类的标注tag. 还包括start, end等两种特殊tag
     :param from_label: str, 比如"PER", "LOC"等label
     :param to_tag: str, 比如"B", "M"之类的标注tag. 还包括start, end等两种特殊tag
@@ -127,6 +127,18 @@ def is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label)
             return to_tag in ['b', 's', 'end']
         else:
             raise ValueError("Unexpect tag type {}. Expect only 'B', 'M', 'E', 'S'.".format(from_tag))
+    elif encoding_type == 'bmeso':
+        if from_tag == 'start':
+            return to_tag in ['b', 's', 'o']
+        elif from_tag == 'b':
+            return to_tag in ['m', 'e'] and from_label==to_label
+        elif from_tag == 'm':
+            return to_tag in ['m', 'e'] and from_label==to_label
+        elif from_tag in ['e', 's', 'o']:
+            return to_tag in ['b', 's', 'end', 'o']
+        else:
+            raise ValueError("Unexpect tag type {}. Expect only 'B', 'M', 'E', 'S', 'O'.".format(from_tag))
+
     else:
         raise ValueError("Only support BIO, BMES encoding type, got {}.".format(encoding_type))
 

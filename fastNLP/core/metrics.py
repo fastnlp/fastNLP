@@ -296,6 +296,8 @@ class AccuracyMetric(MetricBase):
 
 def bmes_tag_to_spans(tags, ignore_labels=None):
     """
+    给定一个tags的lis，比如['S', 'B-singer', 'M-singer', 'E-singer', 'S', 'S']。
+    返回[('', (0, 1)), ('singer', (1, 2)), ('singer', (2, 3)), ('singer', (3, 4)), ('', (4, 5)), ('', (5, 6))]
 
     :param tags: List[str],
     :param ignore_labels: List[str], 在该list中的label将被忽略
@@ -315,13 +317,45 @@ def bmes_tag_to_spans(tags, ignore_labels=None):
         else:
             spans.append((label, [idx, idx]))
         prev_bmes_tag = bmes_tag
-    return [(span[0], (span[1][0], span[1][1]))
+    return [(span[0], (span[1][0], span[1][1]+1))
+                    for span in spans
+                        if span[0] not in ignore_labels
+            ]
+
+def bmeso_tag_to_spans(tags, ignore_labels=None):
+    """
+    给定一个tags的lis，比如['O', 'B-singer', 'M-singer', 'E-singer', 'O', 'O']。
+    返回[('singer', (1, 2)), ('singer', (2, 3)), ('singer', (3, 4))]
+
+    :param tags: List[str],
+    :param ignore_labels: List[str], 在该list中的label将被忽略
+    :return: List[Tuple[str, List[int, int]]]. [(label，[start, end])]
+    """
+    ignore_labels = set(ignore_labels) if ignore_labels else set()
+
+    spans = []
+    prev_bmes_tag = None
+    for idx, tag in enumerate(tags):
+        tag = tag.lower()
+        bmes_tag, label = tag[:1], tag[2:]
+        if bmes_tag in ('b', 's'):
+            spans.append((label, [idx, idx]))
+        elif bmes_tag in ('m', 'e') and prev_bmes_tag in ('b', 'm') and label==spans[-1][0]:
+            spans[-1][1][1] = idx
+        elif bmes_tag == 'o':
+            pass
+        else:
+            spans.append((label, [idx, idx]))
+        prev_bmes_tag = bmes_tag
+    return [(span[0], (span[1][0], span[1][1]+1))
                     for span in spans
                         if span[0] not in ignore_labels
             ]
 
 def bio_tag_to_spans(tags, ignore_labels=None):
     """
+    给定一个tags的lis，比如['O', 'B-singer', 'I-singer', 'I-singer', 'O', 'O']。
+        返回[('singer', (1, 4))] (特别注意这是左闭右开区间)
 
     :param tags: List[str],
     :param ignore_labels: List[str], 在该list中的label将被忽略
@@ -343,7 +377,7 @@ def bio_tag_to_spans(tags, ignore_labels=None):
         else:
             spans.append((label, [idx, idx]))
         prev_bio_tag = bio_tag
-    return [(span[0], (span[1][0], span[1][1]))
+    return [(span[0], (span[1][0], span[1][1]+1))
                     for span in spans
                         if span[0] not in ignore_labels
             ]
@@ -390,8 +424,7 @@ class SpanFPreRecMetric(MetricBase):
             则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
         """
         encoding_type = encoding_type.lower()
-        if encoding_type not in ('bio', 'bmes'):
-            raise ValueError("Only support 'bio' or 'bmes' type.")
+
         if not isinstance(tag_vocab, Vocabulary):
             raise TypeError("tag_vocab can only be fastNLP.Vocabulary, not {}.".format(type(tag_vocab)))
         if f_type not in ('micro', 'macro'):
@@ -402,6 +435,11 @@ class SpanFPreRecMetric(MetricBase):
             self.tag_to_span_func = bmes_tag_to_spans
         elif self.encoding_type == 'bio':
             self.tag_to_span_func = bio_tag_to_spans
+        elif self.encoding_type == 'bmeso':
+            self.tag_to_span_func = bmeso_tag_to_spans
+        else:
+            raise ValueError("Only support 'bio', 'bmes', 'bmeso' type.")
+
         self.ignore_labels = ignore_labels
         self.f_type = f_type
         self.beta = beta

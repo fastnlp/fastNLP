@@ -877,6 +877,14 @@ class ConllPOSReader(object):
 
 class ConllxDataLoader(object):
     def load(self, path):
+        """
+
+        :param path: str，存储数据的路径
+        :return: DataSet。内含field有'words', 'pos_tags', 'heads', 'labels'(parser的label)
+            类似于拥有以下结构, 一行为一个instance(sample)
+            words           pos_tags        heads       labels
+            ['some', ..]    ['NN', ...]     [2, 3...]   ['nn', 'nn'...]
+        """
         datalist = []
         with open(path, 'r', encoding='utf-8') as f:
             sample = []
