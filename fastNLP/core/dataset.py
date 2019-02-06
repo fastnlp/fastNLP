@@ -92,6 +92,10 @@ class DataSet(object):
                 data_set.add_field(name=field.name, fields=field.content[idx], padder=field.padder,
                                    is_input=field.is_input, is_target=field.is_target)
             return data_set
+        elif isinstance(idx, str):
+            if idx not in self:
+                raise KeyError("No such field called {} in DataSet.".format(idx))
+            return self.field_arrays[idx]
         else:
             raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
 

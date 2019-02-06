@@ -1,18 +1,20 @@
-import copy
+from collections import defaultdict
+
 import numpy as np
 import torch
-from collections import defaultdict
 from torch import nn
 from torch.nn import functional as F
-from fastNLP.modules.utils import initial_parameter
-from fastNLP.modules.encoder.variational_rnn import VarLSTM
-from fastNLP.modules.encoder.transformer import TransformerEncoder
-from fastNLP.modules.dropout import TimestepDropout
-from fastNLP.models.base_model import BaseModel
-from fastNLP.modules.utils import seq_mask
+
 from fastNLP.core.losses import LossFunc
 from fastNLP.core.metrics import MetricBase
 from fastNLP.core.utils import seq_lens_to_masks
+from fastNLP.models.base_model import BaseModel
+from fastNLP.modules.dropout import TimestepDropout
+from fastNLP.modules.encoder.transformer import TransformerEncoder
+from fastNLP.modules.encoder.variational_rnn import VarLSTM
+from fastNLP.modules.utils import initial_parameter
+from fastNLP.modules.utils import seq_mask
+
 
 def mst(scores):
     """

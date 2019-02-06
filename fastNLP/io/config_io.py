@@ -11,7 +11,6 @@ class ConfigLoader(BaseLoader):
     :param str data_path: path to the config
 
     """
-
     def __init__(self, data_path=None):
         super(ConfigLoader, self).__init__()
         if data_path is not None:
@@ -30,7 +29,7 @@ class ConfigLoader(BaseLoader):
         Example::
 
             test_args = ConfigSection()
-            ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
+            ConfigLoader("config.cfg").load_config("./data_for_tests/config", {"POS_test": test_args})
 
         """
         assert isinstance(sections, dict)
@@ -202,8 +201,6 @@ class ConfigSaver(object):
                 continue
 
             if '=' not in line:
-                # log = create_logger(__name__, './config_saver.log')
-                # log.error("can NOT load config file [%s]" % self.file_path)
                 raise RuntimeError("can NOT load config file {}".__format__(self.file_path))
 
             key = line.split('=', maxsplit=1)[0].strip()
@@ -263,10 +260,6 @@ class ConfigSaver(object):
                     change_file = True
                     break
                 if section_file[k] != section[k]:
-                    # logger = create_logger(__name__, "./config_loader.log")
-                    # logger.warning("section [%s] in config file [%s] has been changed" % (
-                    #    section_name, self.file_path
-                    # ))
                     change_file = True
                     break
             if not change_file:

@@ -15,19 +15,42 @@ def chinese_word_segmentation():
     print(cws.predict(text))
 
 
+def chinese_word_segmentation_test():
+    cws = CWS(device='cpu')
+    print(cws.test("../../test/data_for_tests/zh_sample.conllx"))
+
+
 def pos_tagging():
     # 输入已分词序列
-    text = ['编者 按： 7月 12日 ， 英国 航空 航天 系统 公司 公布 了 该 公司 研制 的 第一款 高科技 隐形 无人机 雷电之神 。']
-    text = [text[0].split()]
-    print(text)
+    text = [['编者', '按：', '7月', '12日', '，', '英国', '航空', '航天', '系统', '公司', '公布', '了', '该', '公司',
+             '研制', '的', '第一款', '高科技', '隐形', '无人机', '雷电之神', '。'],
+            ['那么', '这', '款', '无人机', '到底', '有', '多', '厉害', '？']]
     pos = POS(device='cpu')
     print(pos.predict(text))
 
 
+def pos_tagging_test():
+    pos = POS(device='cpu')
+    print(pos.test("../../test/data_for_tests/zh_sample.conllx"))
+
+
 def syntactic_parsing():
+    text = [['编者', '按：', '7月', '12日', '，', '英国', '航空', '航天', '系统', '公司', '公布', '了', '该', '公司',
+             '研制', '的', '第一款', '高科技', '隐形', '无人机', '雷电之神', '。'],
+            ['那么', '这', '款', '无人机', '到底', '有', '多', '厉害', '？']]
     parser = Parser(device='cpu')
     print(parser.predict(text))
 
 
+def syntactic_parsing_test():
+    parser = Parser(device='cpu')
+    print(parser.test("../../test/data_for_tests/zh_sample.conllx"))
+
+
 if __name__ == "__main__":
-    pos_tagging()
+    # chinese_word_segmentation()
+    # chinese_word_segmentation_test()
+    # pos_tagging()
+    # pos_tagging_test()
+    syntactic_parsing()
+    # syntactic_parsing_test()
