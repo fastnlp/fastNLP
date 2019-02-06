@@ -11,6 +11,10 @@ class Instance(object):
     """
 
     def __init__(self, **fields):
+        """
+
+        :param fields: 可能是一维或者二维的 list or np.array
+        """
         self.fields = fields
 
     def add_field(self, field_name, field):
@@ -32,5 +36,5 @@ class Instance(object):
     def __repr__(self):
         s = '\''
         return "{" + ",\n".join(
-            "\'" + field_name + "\': " + str(self.fields[field_name]) +\
+            "\'" + field_name + "\': " + str(self.fields[field_name]) + \
             f" type={(str(type(self.fields[field_name]))).split(s)[1]}" for field_name in self.fields) + "}"

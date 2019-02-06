@@ -237,6 +237,32 @@ class TrainerTestGround(unittest.TestCase):
                 use_tqdm=False,
                 print_every=2)
 
-    def test_case2(self):
-        # check metrics Wrong
-        data_set = prepare_fake_dataset2('x1', 'x2')
+    """
+    def test_trainer_multiprocess(self):
+        dataset = prepare_fake_dataset2('x1', 'x2')
+        dataset.set_input('x1', 'x2', 'y', flag=True)
+
+        class Model(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fc = nn.Linear(5, 4)
+
+            def forward(self, x1, x2, y):
+                x1 = self.fc(x1)
+                x2 = self.fc(x2)
+                x = x1 + x2
+                loss = F.cross_entropy(x, y)
+                return {'loss': loss}
+
+        model = Model()
+        trainer = Trainer(
+            train_data=dataset,
+            model=model,
+            use_tqdm=True,
+            print_every=2,
+            num_workers=2,
+            pin_memory=False,
+            timeout=0,
+        )
+        trainer.train()
+    """

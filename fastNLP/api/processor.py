@@ -102,6 +102,7 @@ class PreAppendProcessor(Processor):
         [data] + instance[field_name]
 
     """
+
     def __init__(self, data, field_name, new_added_field_name=None):
         super(PreAppendProcessor, self).__init__(field_name, new_added_field_name)
         self.data = data
@@ -116,6 +117,7 @@ class SliceProcessor(Processor):
     从某个field中只取部分内容。等价于instance[field_name][start:end:step]
 
     """
+
     def __init__(self, start, end, step, field_name, new_added_field_name=None):
         super(SliceProcessor, self).__init__(field_name, new_added_field_name)
         for o in (start, end, step):
@@ -132,6 +134,7 @@ class Num2TagProcessor(Processor):
     将一句话中的数字转换为某个tag。
 
     """
+
     def __init__(self, tag, field_name, new_added_field_name=None):
         """
 
@@ -163,6 +166,7 @@ class IndexerProcessor(Processor):
     给定一个vocabulary , 将指定field转换为index形式。指定field应该是一维的list，比如
         ['我', '是', xxx]
     """
+
     def __init__(self, vocab, field_name, new_added_field_name, delete_old_field=False, is_input=True):
 
         assert isinstance(vocab, Vocabulary), "Only Vocabulary class is allowed, not {}.".format(type(vocab))
@@ -215,6 +219,7 @@ class SeqLenProcessor(Processor):
     根据某个field新增一个sequence length的field。取该field的第一维
 
     """
+
     def __init__(self, field_name, new_added_field_name='seq_lens', is_input=True):
         super(SeqLenProcessor, self).__init__(field_name, new_added_field_name)
         self.is_input = is_input
@@ -228,6 +233,7 @@ class SeqLenProcessor(Processor):
 
 
 from fastNLP.core.utils import _build_args
+
 
 class ModelProcessor(Processor):
     def __init__(self, model, seq_len_field_name='seq_lens', batch_size=32):
@@ -292,6 +298,7 @@ class Index2WordProcessor(Processor):
     将DataSet中某个为index的field根据vocab转换为str
 
     """
+
     def __init__(self, vocab, field_name, new_added_field_name):
         super(Index2WordProcessor, self).__init__(field_name, new_added_field_name)
         self.vocab = vocab
@@ -303,7 +310,6 @@ class Index2WordProcessor(Processor):
 
 
 class SetTargetProcessor(Processor):
-    # TODO; remove it.
     def __init__(self, *fields, flag=True):
         super(SetTargetProcessor, self).__init__(None, None)
         self.fields = fields
@@ -312,6 +318,7 @@ class SetTargetProcessor(Processor):
     def process(self, dataset):
         dataset.set_target(*self.fields, flag=self.flag)
         return dataset
+
 
 class SetInputProcessor(Processor):
     def __init__(self, *fields, flag=True):
@@ -322,3 +329,103 @@ class SetInputProcessor(Processor):
     def process(self, dataset):
         dataset.set_input(*self.fields, flag=self.flag)
         return dataset
+
+
+class VocabIndexerProcessor(Processor):
+    """
+    根据DataSet创建Vocabulary，并将其用数字index。新生成的index的field会被放在new_added_filed_name, 如果没有提供
+        new_added_field_name, 则覆盖原有的field_name.
+
+    """
+
+    def __init__(self, field_name, new_added_filed_name=None, min_freq=1, max_size=None,
+                 verbose=0, is_input=True):
+        """
+
+        :param field_name: 从哪个field_name创建词表，以及对哪个field_name进行index操作
+        :param new_added_filed_name: index时，生成的index field的名称，如果不传入，则覆盖field_name.
+        :param min_freq: 创建的Vocabulary允许的单词最少出现次数.
+        :param max_size: 创建的Vocabulary允许的最大的单词数量
+        :param verbose: 0, 不输出任何信息；1，输出信息
+        :param bool is_input:
+        """
+        super(VocabIndexerProcessor, self).__init__(field_name, new_added_filed_name)
+        self.min_freq = min_freq
+        self.max_size = max_size
+
+        self.verbose = verbose
+        self.is_input = is_input
+
+    def construct_vocab(self, *datasets):
+        """
+        使用传入的DataSet创建vocabulary
+
+        :param datasets: DataSet类型的数据，用于构建vocabulary
+        :return:
+        """
+        self.vocab = Vocabulary(min_freq=self.min_freq, max_size=self.max_size)
+        for dataset in datasets:
+            assert isinstance(dataset, DataSet), "Only Dataset class is allowed, not {}.".format(type(dataset))
+            dataset.apply(lambda ins: self.vocab.update(ins[self.field_name]))
+        self.vocab.build_vocab()
+        if self.verbose:
+            print("Vocabulary Constructed, has {} items.".format(len(self.vocab)))
+
+    def process(self, *datasets, only_index_dataset=None):
+        """
+        若还未建立Vocabulary，则使用dataset中的DataSet建立vocabulary；若已经有了vocabulary则使用已有的vocabulary。得到vocabulary
+            后，则会index datasets与only_index_dataset。
+
+        :param datasets: DataSet类型的数据
+        :param only_index_dataset: DataSet, or list of DataSet. 该参数中的内容只会被用于index，不会被用于生成vocabulary。
+        :return:
+        """
+        if len(datasets) == 0 and not hasattr(self, 'vocab'):
+            raise RuntimeError("You have to construct vocabulary first. Or you have to pass datasets to construct it.")
+        if not hasattr(self, 'vocab'):
+            self.construct_vocab(*datasets)
+        else:
+            if self.verbose:
+                print("Using constructed vocabulary with {} items.".format(len(self.vocab)))
+        to_index_datasets = []
+        if len(datasets) != 0:
+            for dataset in datasets:
+                assert isinstance(dataset, DataSet), "Only DataSet class is allowed, not {}.".format(type(dataset))
+                to_index_datasets.append(dataset)
+
+        if not (only_index_dataset is None):
+            if isinstance(only_index_dataset, list):
+                for dataset in only_index_dataset:
+                    assert isinstance(dataset, DataSet), "Only DataSet class is allowed, not {}.".format(type(dataset))
+                    to_index_datasets.append(dataset)
+            elif isinstance(only_index_dataset, DataSet):
+                to_index_datasets.append(only_index_dataset)
+            else:
+                raise TypeError('Only DataSet or list of DataSet is allowed, not {}.'.format(type(only_index_dataset)))
+
+        for dataset in to_index_datasets:
+            assert isinstance(dataset, DataSet), "Only DataSet class is allowed, not {}.".format(type(dataset))
+            dataset.apply(lambda ins: [self.vocab.to_index(token) for token in ins[self.field_name]],
+                          new_field_name=self.new_added_field_name, is_input=self.is_input)
+        # 只返回一个，infer时为了跟其他processor保持一致
+        if len(to_index_datasets) == 1:
+            return to_index_datasets[0]
+
+    def set_vocab(self, vocab):
+        assert isinstance(vocab, Vocabulary), "Only fastNLP.core.Vocabulary is allowed, not {}.".format(type(vocab))
+        self.vocab = vocab
+
+    def delete_vocab(self):
+        del self.vocab
+
+    def get_vocab_size(self):
+        return len(self.vocab)
+
+    def set_verbose(self, verbose):
+        """
+        设置processor verbose状态。
+
+        :param verbose: int, 0，不输出任何信息；1，输出vocab 信息。
+        :return:
+        """
+        self.verbose = verbose

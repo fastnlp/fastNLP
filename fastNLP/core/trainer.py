@@ -5,7 +5,6 @@ from datetime import timedelta
 
 import numpy as np
 import torch
-from tensorboardX import SummaryWriter
 from torch import nn
 
 try:
@@ -14,7 +13,7 @@ except:
     from fastNLP.core.utils import pseudo_tqdm as tqdm
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.callback import CallbackManager
+from fastNLP.core.callback import CallbackManager, CallbackException
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.losses import _prepare_losser
 from fastNLP.core.metrics import _prepare_metrics
@@ -34,8 +33,8 @@ from fastNLP.core.utils import get_func_signature
 class Trainer(object):
     def __init__(self, train_data, model, loss=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
                  validate_every=-1, dev_data=None, save_path=None, optimizer=Adam(lr=0.01, weight_decay=0),
-                 check_code_level=0, metric_key=None, sampler=RandomSampler(), use_tqdm=True, use_cuda=False,
-                 callbacks=None):
+                 check_code_level=0, metric_key=None, sampler=RandomSampler(), prefetch=False, use_tqdm=True,
+                 use_cuda=False, callbacks=None):
         """
         :param DataSet train_data: the training data
         :param torch.nn.modules.module model: a PyTorch model
@@ -46,20 +45,23 @@ class Trainer(object):
         :param int print_every: step interval to print next training information. Default: -1(no print).
         :param int validate_every: step interval to do next validation. Default: -1(validate every epoch).
         :param DataSet dev_data: the validation data
-        :param bool use_cuda: whether to use CUDA in training.
         :param str save_path: file path to save models
         :param Optimizer optimizer: an optimizer object
         :param int check_code_level: level of FastNLP code checker. -1: don't check, 0: ignore. 1: warning. 2: strict.\\
             `ignore` will not check unused field; `warning` when warn if some field are not used; `strict` means
-            it will raise error if some field are not used.
+            it will raise error if some field are not used. 检查的原理是通过使用很小的batch(默认两个sample)来检查代码是
+            否能够运行，但是这个过程理论上不会修改任何参数，只是会检查能否运行。但如果(1)模型中存在将batch_size写为某个
+            固定值的情况；(2)模型中存在累加前向计算次数的，可能会多计算几次。以上情况建议将check_code_level设置为-1
         :param str metric_key: a single indicator used to decide the best model based on metric results. It must be one
             of the keys returned by the FIRST metric in `metrics`. If the overall result gets better if the indicator gets
             smaller, add "-" in front of the string. For example::
 
                     metric_key="-PPL"   # language model gets better as perplexity gets smaller
         :param BaseSampler sampler: method used to generate batch data.
+        :param prefetch: bool, 是否使用额外的进程对产生batch数据。
         :param bool use_tqdm: whether to use tqdm to show train progress.
-
+        :param callbacks: List[Callback]. 用于在train过程中起调节作用的回调函数。比如early stop，negative sampling等可以
+            通过callback机制实现。
         """
         super(Trainer, self).__init__()
 
@@ -114,7 +116,11 @@ class Trainer(object):
         self.print_every = int(print_every)
         self.validate_every = int(validate_every) if validate_every!=0 else -1
         self.best_metric_indicator = None
+        self.best_dev_epoch = None
+        self.best_dev_step = None
+        self.best_dev_perf = None
         self.sampler = sampler
+        self.prefetch = prefetch
         self.callback_manager = CallbackManager(env={"trainer": self}, callbacks=callbacks)
 
         if isinstance(optimizer, torch.optim.Optimizer):
@@ -175,32 +181,26 @@ class Trainer(object):
 
         """
         results = {}
+        if self.n_epochs <= 0:
+            print(f"training epoch is {self.n_epochs}, nothing was done.")
+            results['seconds'] = 0.
+            return results
         try:
             if torch.cuda.is_available() and self.use_cuda:
                 self.model = self.model.cuda()
             self._model_device = self.model.parameters().__next__().device
-
             self._mode(self.model, is_test=False)
 
-            self.start_time = str(datetime.now().strftime('%Y-%m-%d %H-%M-%S'))
+            self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
             start_time = time.time()
             print("training epochs started " + self.start_time, flush=True)
-            if self.save_path is None:
-                class psudoSW:
-                    def __getattr__(self, item):
-                        def pass_func(*args, **kwargs):
-                            pass
 
-                        return pass_func
-
-                self._summary_writer = psudoSW()
-            else:
-                path = os.path.join(self.save_path, 'tensorboard_logs_{}'.format(self.start_time))
-                self._summary_writer = SummaryWriter(path)
-
-            self.callback_manager.before_train()
-            self._train()
-            self.callback_manager.after_train(self.model)
+            try:
+                self.callback_manager.on_train_begin()
+                self._train()
+                self.callback_manager.on_train_end(self.model)
+            except (CallbackException, KeyboardInterrupt) as e:
+                self.callback_manager.on_exception(e, self.model)
 
             if self.dev_data is not None:
                 print("\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
@@ -216,8 +216,7 @@ class Trainer(object):
                     else:
                         print("Fail to reload best model.")
         finally:
-            self._summary_writer.close()
-            del self._summary_writer
+            pass
         results['seconds'] = round(time.time() - start_time, 2)
 
         return results
@@ -229,42 +228,36 @@ class Trainer(object):
             inner_tqdm = tqdm
         self.step = 0
         start = time.time()
-        data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False)
-        total_steps = data_iterator.num_batches * self.n_epochs
+        total_steps = (len(self.train_data) // self.batch_size + int(
+            len(self.train_data) % self.batch_size != 0)) * self.n_epochs
         with inner_tqdm(total=total_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
             avg_loss = 0
+            data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False,
+                                  prefetch=self.prefetch)
             for epoch in range(1, self.n_epochs+1):
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
                 # early stopping
-                self.callback_manager.before_epoch(epoch, self.n_epochs)
+                self.callback_manager.on_epoch_begin(epoch, self.n_epochs)
                 for batch_x, batch_y in data_iterator:
+                    _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
                     indices = data_iterator.get_batch_indices()
                     # negative sampling; replace unknown; re-weight batch_y
-                    self.callback_manager.before_batch(batch_x, batch_y, indices)
-                    _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
+                    self.callback_manager.on_batch_begin(batch_x, batch_y, indices)
                     prediction = self._data_forward(self.model, batch_x)
 
                     # edit prediction
-                    self.callback_manager.before_loss(batch_y, prediction)
+                    self.callback_manager.on_loss_begin(batch_y, prediction)
                     loss = self._compute_loss(prediction, batch_y)
                     avg_loss += loss.item()
 
                     # Is loss NaN or inf? requires_grad = False
-                    self.callback_manager.before_backward(loss, self.model)
+                    self.callback_manager.on_backward_begin(loss, self.model)
                     self._grad_backward(loss)
-                    # gradient clipping
-                    self.callback_manager.after_backward(self.model)
+                    self.callback_manager.on_backward_end(self.model)
 
                     self._update()
-                    # lr scheduler; lr_finder; one_cycle
-                    self.callback_manager.after_step(self.optimizer)
+                    self.callback_manager.on_step_end(self.optimizer)
 
-                    self._summary_writer.add_scalar("loss", loss.item(), global_step=self.step)
-                    for name, param in self.model.named_parameters():
-                        if param.requires_grad:
-                            self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.step)
-                            # self._summary_writer.add_scalar(name + "_std", param.std(), global_step=self.step)
-                            # self._summary_writer.add_scalar(name + "_grad_sum", param.sum(), global_step=self.step)
                     if (self.step+1) % self.print_every == 0:
                         if self.use_tqdm:
                             print_output = "loss:{0:<6.5f}".format(avg_loss / self.print_every)
@@ -277,11 +270,10 @@ class Trainer(object):
                         pbar.set_postfix_str(print_output)
                         avg_loss = 0
                     self.step += 1
-                    # do nothing
-                    self.callback_manager.after_batch()
+                    self.callback_manager.on_batch_end()
 
                     if ((self.validate_every > 0 and self.step % self.validate_every == 0) or
-                        (self.validate_every < 0 and self.step % len(data_iterator)) == 0) \
+                        (self.validate_every < 0 and self.step % len(data_iterator) == 0)) \
                             and self.dev_data is not None:
                         eval_res = self._do_validation(epoch=epoch, step=self.step)
                         eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
@@ -289,35 +281,29 @@ class Trainer(object):
                                    self.tester._format_eval_results(eval_res)
                         pbar.write(eval_str)
 
-                # if self.validate_every < 0 and self.dev_data:
-                #     eval_res = self._do_validation(epoch=epoch, step=self.step)
-                #     eval_str = "Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step, total_steps) + \
-                #                self.tester._format_eval_results(eval_res)
-                #     pbar.write(eval_str)
-                if epoch != self.n_epochs:
-                    data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler,
-                                          as_numpy=False)
+                # ================= mini-batch end ==================== #
+
                 # lr decay; early stopping
-                self.callback_manager.after_epoch(epoch, self.n_epochs, self.optimizer)
+                self.callback_manager.on_epoch_end(epoch, self.n_epochs, self.optimizer)
+            # =============== epochs end =================== #
             pbar.close()
+        # ============ tqdm end ============== #
 
     def _do_validation(self, epoch, step):
+        self.callback_manager.on_valid_begin()
         res = self.tester.test()
-        for name, metric in res.items():
-            for metric_key, metric_val in metric.items():
-                self._summary_writer.add_scalar("valid_{}_{}".format(name, metric_key), metric_val,
-                                                global_step=self.step)
+
         if self._better_eval_result(res):
             if self.save_path is not None:
                 self._save_model(self.model,
                              "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time]))
             else:
-                self._best_model_states = {name:param.cpu().clone() for name, param in self.model.named_parameters()}
+                self._best_model_states = {name: param.cpu().clone() for name, param in self.model.named_parameters()}
             self.best_dev_perf = res
             self.best_dev_epoch = epoch
             self.best_dev_step = step
         # get validation results; adjust optimizer
-        self.callback_manager.after_valid(res, self.metric_key, self.optimizer)
+        self.callback_manager.on_valid_end(res, self.metric_key, self.optimizer)
         return res
 
     def _mode(self, model, is_test=False):
@@ -365,12 +351,23 @@ class Trainer(object):
         return self.losser(predict, truth)
 
     def _save_model(self, model, model_name, only_param=False):
+        """ 存储不含有显卡信息的state_dict或model
+        :param model:
+        :param model_name:
+        :param only_param:
+        :return:
+        """
         if self.save_path is not None:
-            model_name = os.path.join(self.save_path, model_name)
+            model_path = os.path.join(self.save_path, model_name)
             if only_param:
-                torch.save(model.state_dict(), model_name)
+                state_dict = model.state_dict()
+                for key in state_dict:
+                    state_dict[key] = state_dict[key].cpu()
+                torch.save(state_dict, model_path)
             else:
-                torch.save(model, model_name)
+                model.cpu()
+                torch.save(model, model_path)
+                model.cuda()
 
     def _load_model(self, model, model_name, only_param=False):
         # 返回bool值指示是否成功reload模型

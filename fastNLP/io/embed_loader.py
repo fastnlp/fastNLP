@@ -101,9 +101,12 @@ class EmbedLoader(BaseLoader):
         """
         if vocab is None:
             raise RuntimeError("You must provide a vocabulary.")
-        embedding_matrix = np.zeros(shape=(len(vocab), emb_dim))
+        embedding_matrix = np.zeros(shape=(len(vocab), emb_dim), dtype=np.float32)
         hit_flags = np.zeros(shape=(len(vocab),), dtype=int)
         with open(emb_file, "r", encoding="utf-8") as f:
+            startline = f.readline()
+            if len(startline.split()) > 2:
+                f.seek(0)
             for line in f:
                 word, vector = EmbedLoader.parse_glove_line(line)
                 if word in vocab:

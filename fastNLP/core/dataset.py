@@ -2,6 +2,7 @@ import _pickle as pickle
 
 import numpy as np
 
+from fastNLP.core.fieldarray import AutoPadder
 from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.instance import Instance
 from fastNLP.core.utils import get_func_signature
@@ -88,12 +89,13 @@ class DataSet(object):
                 raise RuntimeError(f"Start index {idx.start} out of range 0-{len(self)-1}")
             data_set = DataSet()
             for field in self.field_arrays.values():
-                data_set.add_field(name=field.name,
-                                   fields=field.content[idx],
-                                   padding_val=field.padding_val,
-                                   is_input=field.is_input,
-                                   is_target=field.is_target)
+                data_set.add_field(name=field.name, fields=field.content[idx], padder=field.padder,
+                                   is_input=field.is_input, is_target=field.is_target)
             return data_set
+        elif isinstance(idx, str):
+            if idx not in self:
+                raise KeyError("No such field called {} in DataSet.".format(idx))
+            return self.field_arrays[idx]
         else:
             raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
 
@@ -144,19 +146,23 @@ class DataSet(object):
         if len(self.field_arrays) == 0:
             # DataSet has no field yet
             for name, field in ins.fields.items():
-                self.field_arrays[name] = FieldArray(name, [field])
+                field = field.tolist() if isinstance(field, np.ndarray) else field
+                self.field_arrays[name] = FieldArray(name, [field])  # 第一个样本，必须用list包装起来
         else:
-            assert len(self.field_arrays) == len(ins.fields)
+            if len(self.field_arrays) != len(ins.fields):
+                raise ValueError(
+                    "DataSet object has {} fields, but attempt to append an Instance object with {} fields."
+                        .format(len(self.field_arrays), len(ins.fields)))
             for name, field in ins.fields.items():
                 assert name in self.field_arrays
                 self.field_arrays[name].append(field)
 
-    def add_field(self, name, fields, padding_val=0, is_input=False, is_target=False):
+    def add_field(self, name, fields, padder=AutoPadder(pad_val=0), is_input=False, is_target=False):
         """Add a new field to the DataSet.
         
         :param str name: the name of the field.
         :param fields: a list of int, float, or other objects.
-        :param int padding_val: integer for padding.
+        :param int padder: PadBase对象，如何对该Field进行padding。大部分情况使用默认值即可
         :param bool is_input: whether this field is model input.
         :param bool is_target: whether this field is label or target.
         """
@@ -164,8 +170,8 @@ class DataSet(object):
             if len(self) != len(fields):
                 raise RuntimeError(f"The field to append must have the same size as dataset. "
                                    f"Dataset size {len(self)} != field size {len(fields)}")
-        self.field_arrays[name] = FieldArray(name, fields, padding_val=padding_val, is_target=is_target,
-                                             is_input=is_input)
+        self.field_arrays[name] = FieldArray(name, fields, is_target=is_target, is_input=is_input,
+                                             padder=padder)
 
     def delete_field(self, name):
         """Delete a field based on the field name.
@@ -229,6 +235,25 @@ class DataSet(object):
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
 
+    def set_padder(self, field_name, padder):
+        """
+        为field_name设置padder
+        :param field_name: str, 设置field的padding方式为padder
+        :param padder: PadderBase类型或None. 设置为None即删除padder。即对该field不进行padding操作.
+        :return:
+        """
+        self.field_arrays[field_name].set_padder(padder)
+
+    def set_pad_val(self, field_name, pad_val):
+        """
+        为某个
+
+        :param field_name: str，修改该field的pad_val
+        :param pad_val: int，该field的padder会以pad_val作为padding index
+        :return:
+        """
+        self.field_arrays[field_name].set_pad_val(pad_val)
+
     def get_input_name(self):
         """Get all field names with `is_input` as True.
 
@@ -254,7 +279,7 @@ class DataSet(object):
         :return results: if new_field_name is not passed, returned values of the function over all instances.
         """
         results = [func(ins) for ins in self._inner_iter()]
-        if len(list(filter(lambda x: x is not None, results))) == 0 and not (new_field_name is None):  # all None
+        if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
             raise ValueError("{} always return None.".format(get_func_signature(func=func)))
 
         extra_param = {}
@@ -270,12 +295,11 @@ class DataSet(object):
                     extra_param['is_input'] = old_field.is_input
                 if 'is_target' not in extra_param:
                     extra_param['is_target'] = old_field.is_target
-                self.add_field(name=new_field_name,
-                               fields=results,
-                               padding_val=old_field.padding_val,
-                               **extra_param)
+                self.add_field(name=new_field_name, fields=results, is_input=extra_param["is_input"],
+                               is_target=extra_param["is_target"])
             else:
-                self.add_field(name=new_field_name, fields=results, **extra_param)
+                self.add_field(name=new_field_name, fields=results, is_input=extra_param.get("is_input", None),
+                               is_target=extra_param.get("is_target", None))
         else:
             return results
 
@@ -314,8 +338,17 @@ class DataSet(object):
         for field_name in self.field_arrays:
             train_set.field_arrays[field_name].is_input = self.field_arrays[field_name].is_input
             train_set.field_arrays[field_name].is_target = self.field_arrays[field_name].is_target
+            train_set.field_arrays[field_name].padder = self.field_arrays[field_name].padder
+            train_set.field_arrays[field_name].dtype = self.field_arrays[field_name].dtype
+            train_set.field_arrays[field_name].pytype = self.field_arrays[field_name].pytype
+            train_set.field_arrays[field_name].content_dim = self.field_arrays[field_name].content_dim
+
             dev_set.field_arrays[field_name].is_input = self.field_arrays[field_name].is_input
             dev_set.field_arrays[field_name].is_target = self.field_arrays[field_name].is_target
+            dev_set.field_arrays[field_name].padder = self.field_arrays[field_name].padder
+            dev_set.field_arrays[field_name].dtype = self.field_arrays[field_name].dtype
+            dev_set.field_arrays[field_name].pytype = self.field_arrays[field_name].pytype
+            dev_set.field_arrays[field_name].content_dim = self.field_arrays[field_name].content_dim
 
         return train_set, dev_set
 

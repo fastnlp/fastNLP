@@ -6,15 +6,29 @@ from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.instance import Instance
 
 
-class TestDataSet(unittest.TestCase):
+class TestDataSetInit(unittest.TestCase):
+    """初始化DataSet的办法有以下几种：
+    1) 用dict:
+        1.1) 二维list  DataSet({"x": [[1, 2], [3, 4]]})
+        1.2) 二维array  DataSet({"x": np.array([[1, 2], [3, 4]])})
+        1.3) 三维list  DataSet({"x": [[[1, 2], [3, 4]], [[1, 2], [3, 4]]]})
+    2) 用list of Instance:
+        2.1) 一维list DataSet([Instance(x=[1, 2, 3, 4])])
+        2.2) 一维array DataSet([Instance(x=np.array([1, 2, 3, 4]))])
+        2.3) 二维list  DataSet([Instance(x=[[1, 2], [3, 4]])])
+        2.4) 二维array  DataSet([Instance(x=np.array([[1, 2], [3, 4]]))])
 
+    只接受纯list或者最外层ndarray
+    """
     def test_init_v1(self):
+        # 一维list
         ds = DataSet([Instance(x=[1, 2, 3, 4], y=[5, 6])] * 40)
         self.assertTrue("x" in ds.field_arrays and "y" in ds.field_arrays)
         self.assertEqual(ds.field_arrays["x"].content, [[1, 2, 3, 4], ] * 40)
         self.assertEqual(ds.field_arrays["y"].content, [[5, 6], ] * 40)
 
     def test_init_v2(self):
+        # 用dict
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
         self.assertTrue("x" in ds.field_arrays and "y" in ds.field_arrays)
         self.assertEqual(ds.field_arrays["x"].content, [[1, 2, 3, 4], ] * 40)
@@ -28,6 +42,8 @@ class TestDataSet(unittest.TestCase):
         with self.assertRaises(ValueError):
             _ = DataSet(0.00001)
 
+
+class TestDataSetMethods(unittest.TestCase):
     def test_append(self):
         dd = DataSet()
         for _ in range(3):
