@@ -5,7 +5,7 @@ sys.path.extend(['/home/yfshao/workdir/dev_fastnlp'])
 import torch
 import argparse
 
-from reproduction.Biaffine_parser.util import ConllxDataLoader, add_seg_tag
+from fastNLP.io.dataset_loader import ConllxDataLoader, add_seg_tag
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
 

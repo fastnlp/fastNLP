@@ -1,6 +1,7 @@
-
-fastNLP上手教程
+fastNLP 10分钟上手教程
 ===============
+
+教程原文见 https://github.com/fastnlp/fastNLP/blob/master/tutorials/fastnlp_10min_tutorial.ipynb
 
 fastNLP提供方便的数据预处理，训练和测试模型的功能
 

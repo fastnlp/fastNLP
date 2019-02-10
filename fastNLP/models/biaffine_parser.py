@@ -1,17 +1,20 @@
-import copy
+from collections import defaultdict
+
 import numpy as np
 import torch
-from collections import defaultdict
 from torch import nn
 from torch.nn import functional as F
-from fastNLP.modules.utils import initial_parameter
-from fastNLP.modules.encoder.variational_rnn import VarLSTM
-from fastNLP.modules.dropout import TimestepDropout
-from fastNLP.models.base_model import BaseModel
-from fastNLP.modules.utils import seq_mask
+
 from fastNLP.core.losses import LossFunc
 from fastNLP.core.metrics import MetricBase
 from fastNLP.core.utils import seq_lens_to_masks
+from fastNLP.models.base_model import BaseModel
+from fastNLP.modules.dropout import TimestepDropout
+from fastNLP.modules.encoder.transformer import TransformerEncoder
+from fastNLP.modules.encoder.variational_rnn import VarLSTM
+from fastNLP.modules.utils import initial_parameter
+from fastNLP.modules.utils import seq_mask
+
 
 def mst(scores):
     """
@@ -197,53 +200,64 @@ class BiaffineParser(GraphParser):
                 pos_vocab_size,
                 pos_emb_dim,
                 num_label,
-                word_hid_dim=100,
-                pos_hid_dim=100,
                 rnn_layers=1,
                 rnn_hidden_size=200,
                 arc_mlp_size=100,
                 label_mlp_size=100,
                 dropout=0.3,
-                use_var_lstm=False,
+                encoder='lstm',
                 use_greedy_infer=False):
 
         super(BiaffineParser, self).__init__()
         rnn_out_size = 2 * rnn_hidden_size
+        word_hid_dim = pos_hid_dim = rnn_hidden_size
         self.word_embedding = nn.Embedding(num_embeddings=word_vocab_size, embedding_dim=word_emb_dim)
         self.pos_embedding = nn.Embedding(num_embeddings=pos_vocab_size, embedding_dim=pos_emb_dim)
         self.word_fc = nn.Linear(word_emb_dim, word_hid_dim)
         self.pos_fc = nn.Linear(pos_emb_dim, pos_hid_dim)
         self.word_norm = nn.LayerNorm(word_hid_dim)
         self.pos_norm = nn.LayerNorm(pos_hid_dim)
-        self.use_var_lstm = use_var_lstm
-        if use_var_lstm:
-            self.lstm = VarLSTM(input_size=word_hid_dim + pos_hid_dim,
-                                hidden_size=rnn_hidden_size,
-                                num_layers=rnn_layers,
-                                bias=True,
-                                batch_first=True,
-                                input_dropout=dropout,
-                                hidden_dropout=dropout,
-                                bidirectional=True)
+        self.encoder_name = encoder
+        self.max_len = 512
+        if encoder == 'var-lstm':
+            self.encoder = VarLSTM(input_size=word_hid_dim + pos_hid_dim,
+                                   hidden_size=rnn_hidden_size,
+                                   num_layers=rnn_layers,
+                                   bias=True,
+                                   batch_first=True,
+                                   input_dropout=dropout,
+                                   hidden_dropout=dropout,
+                                   bidirectional=True)
+        elif encoder == 'lstm':
+            self.encoder = nn.LSTM(input_size=word_hid_dim + pos_hid_dim,
+                                   hidden_size=rnn_hidden_size,
+                                   num_layers=rnn_layers,
+                                   bias=True,
+                                   batch_first=True,
+                                   dropout=dropout,
+                                   bidirectional=True)
+        elif encoder == 'transformer':
+            n_head = 16
+            d_k = d_v = int(rnn_out_size / n_head)
+            if (d_k * n_head) != rnn_out_size:
+                raise ValueError('unsupported rnn_out_size: {} for transformer'.format(rnn_out_size))
+            self.position_emb = nn.Embedding(num_embeddings=self.max_len,
+                                             embedding_dim=rnn_out_size,)
+            self.encoder = TransformerEncoder(num_layers=rnn_layers,
+                                              model_size=rnn_out_size,
+                                              inner_size=1024,
+                                              key_size=d_k,
+                                              value_size=d_v,
+                                              num_head=n_head,
+                                              dropout=dropout,)
         else:
-            self.lstm = nn.LSTM(input_size=word_hid_dim + pos_hid_dim,
-                                hidden_size=rnn_hidden_size,
-                                num_layers=rnn_layers,
-                                bias=True,
-                                batch_first=True,
-                                dropout=dropout,
-                                bidirectional=True)
+            raise ValueError('unsupported encoder type: {}'.format(encoder))
 
-        self.arc_head_mlp = nn.Sequential(nn.Linear(rnn_out_size, arc_mlp_size),
-                                          nn.LayerNorm(arc_mlp_size),
+        self.mlp = nn.Sequential(nn.Linear(rnn_out_size, arc_mlp_size * 2 + label_mlp_size * 2),
                                           nn.ELU(),
                                           TimestepDropout(p=dropout),)
-        self.arc_dep_mlp = copy.deepcopy(self.arc_head_mlp)
-        self.label_head_mlp = nn.Sequential(nn.Linear(rnn_out_size, label_mlp_size),
-                                            nn.LayerNorm(label_mlp_size),
-                                            nn.ELU(),
-                                            TimestepDropout(p=dropout),)
-        self.label_dep_mlp = copy.deepcopy(self.label_head_mlp)
+        self.arc_mlp_size = arc_mlp_size
+        self.label_mlp_size = label_mlp_size
         self.arc_predictor = ArcBiaffine(arc_mlp_size, bias=True)
         self.label_predictor = LabelBilinear(label_mlp_size, label_mlp_size, num_label, bias=True)
         self.use_greedy_infer = use_greedy_infer
@@ -286,24 +300,27 @@ class BiaffineParser(GraphParser):
         word, pos = self.word_fc(word), self.pos_fc(pos)
         word, pos = self.word_norm(word), self.pos_norm(pos)
         x = torch.cat([word, pos], dim=2) # -> [N,L,C]
-        del word, pos
 
-        # lstm, extract features
-        sort_lens, sort_idx = torch.sort(seq_lens, dim=0, descending=True)
-        x = x[sort_idx]
-        x = nn.utils.rnn.pack_padded_sequence(x, sort_lens, batch_first=True)
-        feat, _ = self.lstm(x) # -> [N,L,C]
-        feat, _ = nn.utils.rnn.pad_packed_sequence(feat, batch_first=True)
-        _, unsort_idx = torch.sort(sort_idx, dim=0, descending=False)
-        feat = feat[unsort_idx]
+        # encoder, extract features
+        if self.encoder_name.endswith('lstm'):
+            sort_lens, sort_idx = torch.sort(seq_lens, dim=0, descending=True)
+            x = x[sort_idx]
+            x = nn.utils.rnn.pack_padded_sequence(x, sort_lens, batch_first=True)
+            feat, _ = self.encoder(x) # -> [N,L,C]
+            feat, _ = nn.utils.rnn.pad_packed_sequence(feat, batch_first=True)
+            _, unsort_idx = torch.sort(sort_idx, dim=0, descending=False)
+            feat = feat[unsort_idx]
+        else:
+            seq_range = torch.arange(seq_len, dtype=torch.long, device=x.device)[None,:]
+            x = x + self.position_emb(seq_range)
+            feat = self.encoder(x, mask.float())
 
         # for arc biaffine
         # mlp, reduce dim
-        arc_dep = self.arc_dep_mlp(feat)
-        arc_head = self.arc_head_mlp(feat)
-        label_dep = self.label_dep_mlp(feat)
-        label_head = self.label_head_mlp(feat)
-        del feat
+        feat = self.mlp(feat)
+        arc_sz, label_sz = self.arc_mlp_size, self.label_mlp_size
+        arc_dep, arc_head = feat[:,:,:arc_sz], feat[:,:,arc_sz:2*arc_sz]
+        label_dep, label_head = feat[:,:,2*arc_sz:2*arc_sz+label_sz], feat[:,:,2*arc_sz+label_sz:]
 
         # biaffine arc classifier
         arc_pred = self.arc_predictor(arc_head, arc_dep) # [N, L, L]
@@ -349,7 +366,7 @@ class BiaffineParser(GraphParser):
         batch_size, seq_len, _ = arc_pred.shape
         flip_mask = (mask == 0)
         _arc_pred = arc_pred.clone()
-        _arc_pred.masked_fill_(flip_mask.unsqueeze(1), -np.inf)
+        _arc_pred.masked_fill_(flip_mask.unsqueeze(1), -float('inf'))
         arc_logits = F.log_softmax(_arc_pred, dim=2)
         label_logits = F.log_softmax(label_pred, dim=2)
         batch_index = torch.arange(batch_size, device=arc_logits.device, dtype=torch.long).unsqueeze(1)
@@ -357,12 +374,11 @@ class BiaffineParser(GraphParser):
         arc_loss = arc_logits[batch_index, child_index, arc_true]
         label_loss = label_logits[batch_index, child_index, label_true]
 
-        arc_loss = arc_loss[:, 1:]
-        label_loss = label_loss[:, 1:]
-
-        float_mask = mask[:, 1:].float()
-        arc_nll = -(arc_loss*float_mask).mean()
-        label_nll = -(label_loss*float_mask).mean()
+        byte_mask = flip_mask.byte()
+        arc_loss.masked_fill_(byte_mask, 0)
+        label_loss.masked_fill_(byte_mask, 0)
+        arc_nll = -arc_loss.mean()
+        label_nll = -label_loss.mean()
         return arc_nll + label_nll
 
     def predict(self, word_seq, pos_seq, seq_lens):

@@ -11,18 +11,24 @@ class BaseLoader(object):
 
     @staticmethod
     def load_lines(data_path):
+        """按行读取，舍弃每行两侧空白字符，返回list of str
+        """
         with open(data_path, "r", encoding="utf=8") as f:
             text = f.readlines()
         return [line.strip() for line in text]
 
     @classmethod
     def load(cls, data_path):
+        """先按行读取，去除一行两侧空白，再提取每行的字符。返回list of list of str
+        """
         with open(data_path, "r", encoding="utf-8") as f:
             text = f.readlines()
         return [[word for word in sent.strip()] for sent in text]
 
     @classmethod
     def load_with_cache(cls, data_path, cache_path):
+        """缓存版的load
+        """
         if os.path.isfile(cache_path) and os.path.getmtime(data_path) < os.path.getmtime(cache_path):
             with open(cache_path, 'rb') as f:
                 return pickle.load(f)

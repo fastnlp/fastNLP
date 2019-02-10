@@ -9,9 +9,7 @@ from fastNLP.core.dataset import DataSet
 
 from fastNLP.api.utils import load_url
 from fastNLP.api.processor import ModelProcessor
-from reproduction.chinese_word_segment.cws_io.cws_reader import ConllCWSReader
-from reproduction.pos_tag_model.pos_reader import ZhConllPOSReader
-from reproduction.Biaffine_parser.util import ConllxDataLoader, add_seg_tag
+from fastNLP.io.dataset_loader import ConllCWSReader, ConllxDataLoader
 from fastNLP.core.instance import Instance
 from fastNLP.api.pipeline import Pipeline
 from fastNLP.core.metrics import SpanFPreRecMetric
@@ -19,9 +17,9 @@ from fastNLP.api.processor import IndexerProcessor
 
 # TODO add pretrain urls
 model_urls = {
-    "cws": "http://123.206.98.91:8888/download/cws_crf_1_11-457fc899.pkl",
-    "pos": "http://123.206.98.91:8888/download/pos_tag_model_20190108-f3c60ee5.pkl",
-    "parser": "http://123.206.98.91:8888/download/biaffine_parser-3a2f052c.pkl"
+    "cws": "http://123.206.98.91:8888/download/cws_lstm_ctb9_1_20-09908656.pkl",
+    "pos": "http://123.206.98.91:8888/download/pos_tag_model_20190119-43f8b435.pkl",
+    "parser": "http://123.206.98.91:8888/download/parser_20190204-c72ca5c0.pkl"
 }
 
 
@@ -31,6 +29,16 @@ class API:
         self._dict = None
 
     def predict(self, *args, **kwargs):
+        """Do prediction for the given input.
+        """
+        raise NotImplementedError
+
+    def test(self, file_path):
+        """Test performance over the given data set.
+
+        :param str file_path:
+        :return: a dictionary of metric values
+        """
         raise NotImplementedError
 
     def load(self, path, device):
@@ -69,12 +77,11 @@ class POS(API):
         if not hasattr(self, "pipeline"):
             raise ValueError("You have to load model first.")
 
-        sentence_list = []
+        sentence_list = content
         # 1. 检查sentence的类型
-        if isinstance(content, str):
-            sentence_list.append(content)
-        elif isinstance(content, list):
-            sentence_list = content
+        for sentence in sentence_list:
+            if not all((type(obj) == str for obj in sentence)):
+                raise ValueError("Input must be list of list of string.")
 
         # 2. 组建dataset
         dataset = DataSet()
@@ -83,36 +90,28 @@ class POS(API):
         # 3. 使用pipeline
         self.pipeline(dataset)
 
-        def decode_tags(ins):
-            pred_tags = ins["tag"]
-            chars = ins["words"]
-            words = []
-            start_idx = 0
-            for idx, tag in enumerate(pred_tags):
-                if tag[0] == "S":
-                    words.append(chars[start_idx:idx + 1] + "/" + tag[2:])
-                    start_idx = idx + 1
-                elif tag[0] == "E":
-                    words.append("".join(chars[start_idx:idx + 1]) + "/" + tag[2:])
-                    start_idx = idx + 1
-            return words
+        def merge_tag(words_list, tags_list):
+            rtn = []
+            for words, tags in zip(words_list, tags_list):
+                rtn.append([w + "/" + t for w, t in zip(words, tags)])
+            return rtn
 
-        dataset.apply(decode_tags, new_field_name="tag_output")
-
-        output = dataset.field_arrays["tag_output"].content
+        output = dataset.field_arrays["tag"].content
         if isinstance(content, str):
             return output[0]
         elif isinstance(content, list):
-            return output
+            return merge_tag(content, output)
 
     def test(self, file_path):
-        test_data = ZhConllPOSReader().load(file_path)
+        test_data = ConllxDataLoader().load(file_path)
 
-        tag_vocab = self._dict["tag_vocab"]
-        pipeline = self._dict["pipeline"]
+        save_dict = self._dict
+        tag_vocab = save_dict["tag_vocab"]
+        pipeline = save_dict["pipeline"]
         index_tag = IndexerProcessor(vocab=tag_vocab, field_name="tag", new_added_field_name="truth", is_input=False)
         pipeline.pipeline = [index_tag] + pipeline.pipeline
 
+        test_data.rename_field("pos_tags", "tag")
         pipeline(test_data)
         test_data.set_target("truth")
         prediction = test_data.field_arrays["predict"].content
@@ -226,7 +225,7 @@ class CWS(API):
         rec = eval_res['BMESF1PreRecMetric']['rec']
         # print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1, pre, rec))
 
-        return f1, pre, rec
+        return {"F1": f1, "precision": pre, "recall": rec}
 
 
 class Parser(API):
@@ -251,6 +250,7 @@ class Parser(API):
         dataset.add_field('wp', pos_out)
         dataset.apply(lambda x: ['<BOS>'] + [w.split('/')[0] for w in x['wp']], new_field_name='words')
         dataset.apply(lambda x: ['<BOS>'] + [w.split('/')[1] for w in x['wp']], new_field_name='pos')
+        dataset.rename_field("words", "raw_words")
 
         # 3. 使用pipeline
         self.pipeline(dataset)
@@ -260,31 +260,74 @@ class Parser(API):
         # output like: [['2/top', '0/root', '4/nn', '2/dep']]
         return dataset.field_arrays['output'].content
 
-    def test(self, filepath):
-        data = ConllxDataLoader().load(filepath)
-        ds = DataSet()
-        for ins1, ins2 in zip(add_seg_tag(data), data):
-            ds.append(Instance(words=ins1[0], tag=ins1[1],
-                               gold_words=ins2[0], gold_pos=ins2[1],
-                               gold_heads=ins2[2], gold_head_tags=ins2[3]))
+    def load_test_file(self, path):
+        def get_one(sample):
+            sample = list(map(list, zip(*sample)))
+            if len(sample) == 0:
+                return None
+            for w in sample[7]:
+                if w == '_':
+                    print('Error Sample {}'.format(sample))
+                    return None
+            # return word_seq, pos_seq, head_seq, head_tag_seq
+            return sample[1], sample[3], list(map(int, sample[6])), sample[7]
 
+        datalist = []
+        with open(path, 'r', encoding='utf-8') as f:
+            sample = []
+            for line in f:
+                if line.startswith('\n'):
+                    datalist.append(sample)
+                    sample = []
+                elif line.startswith('#'):
+                    continue
+                else:
+                    sample.append(line.split('\t'))
+            if len(sample) > 0:
+                datalist.append(sample)
+
+        data = [get_one(sample) for sample in datalist]
+        data_list = list(filter(lambda x: x is not None, data))
+        return data_list
+
+    def test(self, filepath):
+        data = self.load_test_file(filepath)
+
+        def convert(data):
+            BOS = '<BOS>'
+            dataset = DataSet()
+            for sample in data:
+                word_seq = [BOS] + sample[0]
+                pos_seq = [BOS] + sample[1]
+                heads = [0] + sample[2]
+                head_tags = [BOS] + sample[3]
+                dataset.append(Instance(raw_words=word_seq,
+                                        pos=pos_seq,
+                                        gold_heads=heads,
+                                        arc_true=heads,
+                                        tags=head_tags))
+            return dataset
+
+        ds = convert(data)
         pp = self.pipeline
         for p in pp:
             if p.field_name == 'word_list':
                 p.field_name = 'gold_words'
             elif p.field_name == 'pos_list':
                 p.field_name = 'gold_pos'
+        # ds.rename_field("words", "raw_words")
+        # ds.rename_field("tag", "pos")
         pp(ds)
         head_cor, label_cor, total = 0, 0, 0
         for ins in ds:
             head_gold = ins['gold_heads']
-            head_pred = ins['heads']
+            head_pred = ins['arc_pred']
             length = len(head_gold)
             total += length
             for i in range(length):
                 head_cor += 1 if head_pred[i] == head_gold[i] else 0
         uas = head_cor / total
-        print('uas:{:.2f}'.format(uas))
+        # print('uas:{:.2f}'.format(uas))
 
         for p in pp:
             if p.field_name == 'gold_words':
@@ -292,7 +335,7 @@ class Parser(API):
             elif p.field_name == 'gold_pos':
                 p.field_name = 'pos_list'
 
-        return uas
+        return {"USA": round(uas, 5)}
 
 
 class Analyzer:

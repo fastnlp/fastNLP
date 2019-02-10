@@ -4,7 +4,7 @@ from fastNLP.core.trainer import ClassificationTrainer
 from fastNLP.core.utils import ClassPreprocess as Preprocess
 from fastNLP.io.config_io import ConfigLoader
 from fastNLP.io.config_io import ConfigSection
-from fastNLP.io.dataset_loader import ClassDataSetLoader as Dataset_loader
+from fastNLP.io.dataset_loader import DummyClassificationReader as Dataset_loader
 from fastNLP.models.base_model import BaseModel
 from fastNLP.modules.aggregator.self_attention import SelfAttention
 from fastNLP.modules.decoder.MLP import MLP

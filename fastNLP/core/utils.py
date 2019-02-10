@@ -186,11 +186,12 @@ def _check_function_or_method(func):
         raise TypeError(f"{type(func)} is not a method or function.")
 
 
-def _move_dict_value_to_device(*args, device: torch.device):
+def _move_dict_value_to_device(*args, device: torch.device, non_blocking=False):
     """
 
     move data to model's device, element in *args should be dict. This is a inplace change.
     :param device: torch.device
+    :param non_blocking: bool, 是否异步将数据转移到cpu, 需要tensor使用pin_memory()
     :param args:
     :return:
     """
@@ -201,7 +202,7 @@ def _move_dict_value_to_device(*args, device: torch.device):
         if isinstance(arg, dict):
             for key, value in arg.items():
                 if isinstance(value, torch.Tensor):
-                    arg[key] = value.to(device)
+                    arg[key] = value.to(device, non_blocking=non_blocking)
         else:
             raise TypeError("Only support `dict` type right now.")
 
