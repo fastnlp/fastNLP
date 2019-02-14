@@ -7,7 +7,7 @@ from fastNLP.modules.utils import initial_parameter
 class MLP(nn.Module):
     """Multilayer Perceptrons as a decoder
 
-    :param list size_layer: list of int, define the size of MLP layers.
+    :param list size_layer: list of int, define the size of MLP layers. layer的层数为(len(size_layer)-1)//2 + 1
     :param str activation: str or function, the activation function for hidden layers.
     :param str initial_method: the name of initialization method.
     :param float dropout: the probability of dropout.
