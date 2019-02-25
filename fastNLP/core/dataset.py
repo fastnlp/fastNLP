@@ -288,6 +288,8 @@ class DataSet(object):
             extra_param['is_input'] = kwargs['is_input']
         if 'is_target' in kwargs:
             extra_param['is_target'] = kwargs['is_target']
+        if 'ignore_type' in kwargs:
+            extra_param['ignore_type'] = kwargs['ignore_type']
         if new_field_name is not None:
             if new_field_name in self.field_arrays:
                 # overwrite the field, keep same attributes
@@ -296,11 +298,14 @@ class DataSet(object):
                     extra_param['is_input'] = old_field.is_input
                 if 'is_target' not in extra_param:
                     extra_param['is_target'] = old_field.is_target
+                if 'ignore_type' not in extra_param:
+                    extra_param['ignore_type'] = old_field.ignore_type
                 self.add_field(name=new_field_name, fields=results, is_input=extra_param["is_input"],
-                               is_target=extra_param["is_target"])
+                               is_target=extra_param["is_target"], ignore_type=extra_param['ignore_type'])
             else:
                 self.add_field(name=new_field_name, fields=results, is_input=extra_param.get("is_input", None),
-                               is_target=extra_param.get("is_target", None))
+                               is_target=extra_param.get("is_target", None),
+                               ignore_type=extra_param.get("ignore_type", False))
         else:
             return results
 

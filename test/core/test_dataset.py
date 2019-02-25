@@ -120,6 +120,9 @@ class TestDataSetMethods(unittest.TestCase):
         self.assertTrue(isinstance(res, list) and len(res) > 0)
         self.assertTrue(res[0], 4)
 
+        ds.apply(lambda ins: (len(ins["x"]), "hahaha"), new_field_name="k", ignore_type=True)
+        # expect no exception raised
+
     def test_drop(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6], [7, 8, 9, 0]] * 20})
         ds.drop(lambda ins: len(ins["y"]) < 3)
@@ -170,7 +173,7 @@ class TestDataSetMethods(unittest.TestCase):
         dataset.apply(split_sent, new_field_name='words', is_input=True)
         # print(dataset)
 
-    def test_add_field(self):
+    def test_add_field_v2(self):
         ds = DataSet({"x": [3, 4]})
         ds.add_field('y', [['hello', 'world'], ['this', 'is', 'a', 'test']], is_input=True, is_target=True)
         # ds.apply(lambda x:[x['x']]*3, is_input=True, is_target=True, new_field_name='y')

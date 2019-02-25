@@ -83,6 +83,8 @@ class AutoPadder(PadderBase):
             array = np.full((len(contents), max_len), self.pad_val, dtype=field_ele_dtype)
             for i, content in enumerate(contents):
                 array[i][:len(content)] = content
+        elif field_ele_dtype is None:
+            array = contents  # 当ignore_type=True时，直接返回contents
         else:  # should only be str
             array = np.array([content for content in contents])
         return array
