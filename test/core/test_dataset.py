@@ -52,7 +52,7 @@ class TestDataSetMethods(unittest.TestCase):
         self.assertEqual(dd.field_arrays["x"].content, [[1, 2, 3, 4]] * 3)
         self.assertEqual(dd.field_arrays["y"].content, [[5, 6]] * 3)
 
-    def test_add_append(self):
+    def test_add_field(self):
         dd = DataSet()
         dd.add_field("x", [[1, 2, 3]] * 10)
         dd.add_field("y", [[1, 2, 3, 4]] * 10)
@@ -64,6 +64,11 @@ class TestDataSetMethods(unittest.TestCase):
 
         with self.assertRaises(RuntimeError):
             dd.add_field("??", [[1, 2]] * 40)
+
+    def test_add_field_ignore_type(self):
+        dd = DataSet()
+        dd.add_field("x", [(1, "1"), (2, "2"), (3, "3"), (4, "4")], ignore_type=True, is_target=True)
+        dd.add_field("y", [{1, "1"}, {2, "2"}, {3, "3"}, {4, "4"}], ignore_type=True, is_target=True)
 
     def test_delete_field(self):
         dd = DataSet()

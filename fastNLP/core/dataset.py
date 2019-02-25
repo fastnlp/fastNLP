@@ -157,7 +157,7 @@ class DataSet(object):
                 assert name in self.field_arrays
                 self.field_arrays[name].append(field)
 
-    def add_field(self, name, fields, padder=AutoPadder(pad_val=0), is_input=False, is_target=False):
+    def add_field(self, name, fields, padder=AutoPadder(pad_val=0), is_input=False, is_target=False, ignore_type=False):
         """Add a new field to the DataSet.
         
         :param str name: the name of the field.
@@ -165,13 +165,14 @@ class DataSet(object):
         :param int padder: PadBase对象，如何对该Field进行padding。大部分情况使用默认值即可
         :param bool is_input: whether this field is model input.
         :param bool is_target: whether this field is label or target.
+        :param bool ignore_type: If True, do not perform type check. (Default: False)
         """
         if len(self.field_arrays) != 0:
             if len(self) != len(fields):
                 raise RuntimeError(f"The field to append must have the same size as dataset. "
                                    f"Dataset size {len(self)} != field size {len(fields)}")
         self.field_arrays[name] = FieldArray(name, fields, is_target=is_target, is_input=is_input,
-                                             padder=padder)
+                                             padder=padder, ignore_type=ignore_type)
 
     def delete_field(self, name):
         """Delete a field based on the field name.
