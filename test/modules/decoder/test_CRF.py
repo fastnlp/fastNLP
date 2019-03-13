@@ -66,7 +66,7 @@ class TestCRF(unittest.TestCase):
         # from fastNLP.modules.decoder.CRF import ConditionalRandomField, allowed_transitions
         # fast_CRF = ConditionalRandomField(num_tags=num_tags, allowed_transitions=allowed_transitions(id2label))
         # fast_CRF.trans_m = trans_m
-        # fast_res = fast_CRF.viterbi_decode(logits, mask, get_score=True)
+        # fast_res = fast_CRF.viterbi_decode(logits, mask, get_score=True, unpad=True)
         # # score equal
         # self.assertListEqual([score for _, score in allen_res], fast_res[1])
         # # seq equal
@@ -95,7 +95,7 @@ class TestCRF(unittest.TestCase):
         # fast_CRF = ConditionalRandomField(num_tags=num_tags, allowed_transitions=allowed_transitions(id2label,
         #                                                                                              encoding_type='BMES'))
         # fast_CRF.trans_m = trans_m
-        # fast_res = fast_CRF.viterbi_decode(logits, mask, get_score=True)
+        # fast_res = fast_CRF.viterbi_decode(logits, mask, get_score=True, unpad=True)
         # # score equal
         # self.assertListEqual([score for _, score in allen_res], fast_res[1])
         # # seq equal
