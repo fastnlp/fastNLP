@@ -367,6 +367,8 @@ class Trainer(object):
         """
         if self.save_path is not None:
             model_path = os.path.join(self.save_path, model_name)
+            if not os.path.exists(self.save_path):
+                os.makedirs(self.save_path, exist_ok=True)
             if only_param:
                 state_dict = model.state_dict()
                 for key in state_dict:

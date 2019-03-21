@@ -1,14 +1,12 @@
 # Code Modified from https://github.com/carpedm20/ENAS-pytorch
 
-import os
+import math
 import time
 from datetime import datetime
 from datetime import timedelta
 
 import numpy as np
 import torch
-import math
-from torch import nn
 
 try:
     from tqdm.autonotebook import tqdm
@@ -16,12 +14,11 @@ except:
     from fastNLP.core.utils import pseudo_tqdm as tqdm
 
 from fastNLP.core.batch import Batch
-from fastNLP.core.callback import CallbackManager, CallbackException
+from fastNLP.core.callback import CallbackException
 from fastNLP.core.dataset import DataSet
-from fastNLP.core.utils import CheckError
 from fastNLP.core.utils import _move_dict_value_to_device
 import fastNLP
-import fastNLP.models.enas_utils as utils
+import fastNLP.automl.enas_utils as utils
 from fastNLP.core.utils import _build_args
 
 from torch.optim import Adam

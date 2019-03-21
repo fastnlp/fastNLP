@@ -2,16 +2,13 @@
 
 from __future__ import print_function
 
-from collections import defaultdict
 import collections
-from datetime import datetime
-import os
-import json
+from collections import defaultdict
 
 import numpy as np
-
 import torch
 from torch.autograd import Variable
+
 
 def detach(h):
     if type(h) == Variable:

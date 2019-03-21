@@ -60,7 +60,8 @@ def initial_parameter(net, initial_method=None):
                     init_method(w.data)  # weight
                 else:
                     init.normal_(w.data)  # bias
-        elif hasattr(m, 'weight') and m.weight.requires_grad:
+        elif m is not None and hasattr(m, 'weight') and \
+                hasattr(m.weight, "requires_grad"):
             init_method(m.weight.data)
         else:
             for w in m.parameters():

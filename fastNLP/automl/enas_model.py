@@ -1,17 +1,17 @@
 # Code Modified from https://github.com/carpedm20/ENAS-pytorch
 
 """Module containing the shared RNN model."""
-import numpy as np
 import collections
 
+import numpy as np
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 from torch.autograd import Variable
 
-import fastNLP.models.enas_utils as utils
+import fastNLP.automl.enas_utils as utils
 from fastNLP.models.base_model import BaseModel
-import fastNLP.modules.encoder as encoder
+
 
 def _get_dropped_weights(w_raw, dropout_p, is_training):
     """Drops out weights to implement DropConnect.

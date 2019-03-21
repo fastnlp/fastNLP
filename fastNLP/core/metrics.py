@@ -157,7 +157,7 @@ class MetricBase(object):
         fast_param = {}
         if len(self.param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
             fast_param['pred'] = list(pred_dict.values())[0]
-            fast_param['target'] = list(pred_dict.values())[0]
+            fast_param['target'] = list(target_dict.values())[0]
             return fast_param
         return fast_param
 
