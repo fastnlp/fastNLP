@@ -121,7 +121,6 @@ class Trainer(object):
         self.best_dev_perf = None
         self.sampler = sampler if sampler is not None else RandomSampler()
         self.prefetch = prefetch
-        self.callback_manager = CallbackManager(env={"trainer": self}, callbacks=callbacks)
 
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
@@ -143,6 +142,12 @@ class Trainer(object):
 
         self.step = 0
         self.start_time = None  # start timestamp
+
+        self.callback_manager = CallbackManager(env={"trainer": self},
+                                                attr={"n_epochs": self.n_epochs, "n_steps": self.step,
+                                                      "batch_size": self.batch_size, "model": self.model,
+                                                      "optimizer": self.optimizer},
+                                                callbacks=callbacks)
 
     def train(self, load_best_model=True):
         """
@@ -236,6 +241,7 @@ class Trainer(object):
             avg_loss = 0
             data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False,
                                   prefetch=self.prefetch)
+            self.callback_manager.set_property(pbar=pbar)
             for epoch in range(1, self.n_epochs+1):
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
                 # early stopping
@@ -361,6 +367,8 @@ class Trainer(object):
         """
         if self.save_path is not None:
             model_path = os.path.join(self.save_path, model_name)
+            if not os.path.exists(self.save_path):
+                os.makedirs(self.save_path, exist_ok=True)
             if only_param:
                 state_dict = model.state_dict()
                 for key in state_dict:

@@ -69,13 +69,12 @@ class TestENAS(unittest.TestCase):
             print("batch_y has: ", batch_y)
             break
 
-        from fastNLP.models.enas_model import ENASModel
-        from fastNLP.models.enas_controller import Controller
+        from fastNLP.automl.enas_model import ENASModel
+        from fastNLP.automl.enas_controller import Controller
         model = ENASModel(embed_num=len(vocab), num_classes=5)
         controller = Controller()
 
-        from fastNLP.models.enas_trainer import ENASTrainer
-        from copy import deepcopy
+        from fastNLP.automl.enas_trainer import ENASTrainer
 
         # 更改DataSet中对应field的名称，要以模型的forward等参数名一致
         train_data.rename_field('words', 'word_seq')  # input field 与 forward 参数一致

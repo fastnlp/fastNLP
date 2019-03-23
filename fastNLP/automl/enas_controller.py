@@ -5,9 +5,9 @@ import os
 
 import torch
 import torch.nn.functional as F
-import fastNLP
-import fastNLP.models.enas_utils as utils
-from fastNLP.models.enas_utils import Node
+
+import fastNLP.automl.enas_utils as utils
+from fastNLP.automl.enas_utils import Node
 
 
 def _construct_dags(prev_nodes, activations, func_names, num_blocks):

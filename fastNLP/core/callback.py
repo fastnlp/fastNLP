@@ -17,6 +17,38 @@ class Callback(object):
         super(Callback, self).__init__()
         self.trainer = None  # 在Trainer内部被重新赋值
 
+        # callback只读属性
+        self._n_epochs = None
+        self._n_steps = None
+        self._batch_size = None
+        self._model = None
+        self._pbar = None
+        self._optimizer = None
+
+    @property
+    def n_epochs(self):
+        return self._n_epochs
+
+    @property
+    def n_steps(self):
+        return self._n_steps
+
+    @property
+    def batch_size(self):
+        return self._batch_size
+
+    @property
+    def model(self):
+        return self._model
+
+    @property
+    def pbar(self):
+        return self._pbar
+
+    @property
+    def optimizer(self):
+        return self._optimizer
+
     def on_train_begin(self):
         # before the main training loop
         pass
@@ -101,8 +133,6 @@ def transfer(func):
     def wrapper(manager, *arg):
         returns = []
         for callback in manager.callbacks:
-            for env_name, env_value in manager.env.items():
-                setattr(callback, env_name, env_value)
             returns.append(getattr(callback, func.__name__)(*arg))
         return returns
 
@@ -115,15 +145,15 @@ class CallbackManager(Callback):
 
     """
 
-    def __init__(self, env, callbacks=None):
+    def __init__(self, env, attr, callbacks=None):
         """
 
         :param dict env: The key is the name of the Trainer attribute(str). The value is the attribute itself.
+        :param dict attr: read-only attributes for all callbacks
         :param Callback callbacks:
         """
         super(CallbackManager, self).__init__()
         # set attribute of trainer environment
-        self.env = env
 
         self.callbacks = []
         if callbacks is not None:
@@ -135,6 +165,23 @@ class CallbackManager(Callback):
                     raise TypeError(f"Expect sub-classes of Callback. Got {type(obj)}")
             else:
                 raise TypeError(f"Expect callbacks in CallbackManager(callbacks) to be list. Got {type(callbacks)}.")
+
+        for env_name, env_val in env.items():
+            for callback in self.callbacks:
+                setattr(callback, env_name, env_val)  # Callback.trainer
+
+        self.set_property(**attr)
+
+    def set_property(self, **kwargs):
+        """设置所有callback的只读属性
+
+        :param kwargs:
+        :return:
+        """
+        for callback in self.callbacks:
+            for k, v in kwargs.items():
+                setattr(callback, "_" + k, v)
+
 
     @transfer
     def on_train_begin(self):
