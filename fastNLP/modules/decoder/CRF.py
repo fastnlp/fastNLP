@@ -192,7 +192,7 @@ class ConditionalRandomField(nn.Module):
         seq_len, batch_size, n_tags = logits.size()
         alpha = logits[0]
         if self.include_start_end_trans:
-            alpha += self.start_scores.view(1, -1)
+            alpha = alpha + self.start_scores.view(1, -1)
 
         flip_mask = mask.eq(0)
 
@@ -204,7 +204,7 @@ class ConditionalRandomField(nn.Module):
                     alpha.masked_fill(mask[i].byte().view(batch_size, 1), 0)
 
         if self.include_start_end_trans:
-            alpha += self.end_scores.view(1, -1)
+            alpha = alpha + self.end_scores.view(1, -1)
 
         return log_sum_exp(alpha, 1)
 
@@ -233,7 +233,7 @@ class ConditionalRandomField(nn.Module):
             st_scores = self.start_scores.view(1, -1).repeat(batch_size, 1)[batch_idx, tags[0]]
             last_idx = mask.long().sum(0) - 1
             ed_scores = self.end_scores.view(1, -1).repeat(batch_size, 1)[batch_idx, tags[last_idx, batch_idx]]
-            score += st_scores + ed_scores
+            score = score + st_scores + ed_scores
         # return [B,]
         return score
 

@@ -216,6 +216,11 @@ class TestDataSetMethods(unittest.TestCase):
         self.assertTrue(isinstance(ds, DataSet))
         self.assertTrue(len(ds) > 0)
 
+    def test_add_null(self):
+        ds = DataSet()
+        ds.add_field('test', [])
+        ds.set_target('test')
+
 
 class TestDataSetIter(unittest.TestCase):
     def test__repr__(self):

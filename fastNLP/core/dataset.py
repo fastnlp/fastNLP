@@ -243,6 +243,8 @@ class DataSet(object):
         :param padder: PadderBase类型或None. 设置为None即删除padder。即对该field不进行padding操作.
         :return:
         """
+        if field_name not in self.field_arrays:
+            raise KeyError("There is no field named {}.".format(field_name))
         self.field_arrays[field_name].set_padder(padder)
 
     def set_pad_val(self, field_name, pad_val):
@@ -253,6 +255,8 @@ class DataSet(object):
         :param pad_val: int，该field的padder会以pad_val作为padding index
         :return:
         """
+        if field_name not in self.field_arrays:
+            raise KeyError("There is no field named {}.".format(field_name))
         self.field_arrays[field_name].set_pad_val(pad_val)
 
     def get_input_name(self):

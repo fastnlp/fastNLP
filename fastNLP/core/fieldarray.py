@@ -206,7 +206,7 @@ class FieldArray(object):
         if list in type_set:
             if len(type_set) > 1:
                 # list 跟 非list 混在一起
-                raise RuntimeError("Mixed data types in Field {}: {}".format(self.name, type_set))
+                raise RuntimeError("Mixed data types in Field {}: {}".format(self.name, list(type_set)))
             # >1维list
             inner_type_set = set()
             for l in content:
@@ -229,7 +229,7 @@ class FieldArray(object):
                     return self._basic_type_detection(inner_inner_type_set)
                 else:
                     # list 跟 非list 混在一起
-                    raise RuntimeError("Mixed data types in Field {}: {}".format(self.name, inner_type_set))
+                    raise RuntimeError("Mixed data types in Field {}: {}".format(self.name, list(inner_type_set)))
         else:
             # 一维list
             for content_type in type_set:
@@ -253,17 +253,17 @@ class FieldArray(object):
                 return float
             else:
                 # str 跟 int 或者 float 混在一起
-                raise RuntimeError("Mixed data types in Field {}: {}".format(self.name, type_set))
+                raise RuntimeError("Mixed data types in Field {}: {}".format(self.name, list(type_set)))
         else:
             # str, int, float混在一起
-            raise RuntimeError("Mixed data types in Field {}: {}".format(self.name, type_set))
+            raise RuntimeError("Mixed data types in Field {}: {}".format(self.name, list(type_set)))
 
     def _1d_list_check(self, val):
         """如果不是1D list就报错
         """
         type_set = set((type(obj) for obj in val))
         if any(obj not in self.BASIC_TYPES for obj in type_set):
-            raise ValueError("Mixed data types in Field {}: {}".format(self.name, type_set))
+            raise ValueError("Mixed data types in Field {}: {}".format(self.name, list(type_set)))
         self._basic_type_detection(type_set)
         # otherwise: _basic_type_detection will raise error
         return True

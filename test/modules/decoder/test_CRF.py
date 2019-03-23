@@ -101,4 +101,28 @@ class TestCRF(unittest.TestCase):
         # # seq equal
         # self.assertListEqual([_ for _, score in allen_res], fast_res[0])
 
+    def test_case3(self):
+        # 测试crf的loss不会出现负数
+        import torch
+        from fastNLP.modules.decoder.CRF import ConditionalRandomField
+        from fastNLP.core.utils import seq_lens_to_masks
+        from torch import optim
+        from torch import nn
 
+        num_tags, include_start_end_trans = 4, True
+        num_samples = 4
+        lengths = torch.randint(3, 50, size=(num_samples, )).long()
+        max_len = lengths.max()
+        tags = torch.randint(num_tags, size=(num_samples, max_len))
+        masks = seq_lens_to_masks(lengths)
+        feats = nn.Parameter(torch.randn(num_samples, max_len, num_tags))
+        crf = ConditionalRandomField(num_tags, include_start_end_trans)
+        optimizer = optim.SGD([param for param in crf.parameters() if param.requires_grad] + [feats], lr=0.1)
+        for _ in range(10000):
+            loss = crf(feats, tags, masks).mean()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            if _%1000==0:
+                print(loss)
+            assert loss.item()>0, "CRF loss cannot be less than 0."
