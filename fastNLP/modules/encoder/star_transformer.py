@@ -7,7 +7,6 @@ import numpy as NP
 class StarTransformer(nn.Module):
     """Star-Transformer Encoder part。
     paper: https://arxiv.org/abs/1902.09113
-
     :param hidden_size: int, 输入维度的大小。同时也是输出维度的大小。
     :param num_layers: int, star-transformer的层数
     :param num_head: int，head的数量。
@@ -137,11 +136,10 @@ class MSA2(nn.Module):
 
         q = q.view(B, nhead, 1, head_dim)  # B, H, 1, 1 -> B, N, 1, h
         k = k.view(B, nhead, head_dim, L)  # B, H, L, 1 -> B, N, h, L
-        v = k.view(B, nhead, head_dim, L).permute(0, 1, 3, 2)  # B, H, L, 1 -> B, N, L, h
+        v = v.view(B, nhead, head_dim, L).permute(0, 1, 3, 2)  # B, H, L, 1 -> B, N, L, h
         pre_a = torch.matmul(q, k) / NP.sqrt(head_dim)
         if mask is not None:
             pre_a = pre_a.masked_fill(mask[:, None, None, :], -float('inf'))
         alphas = self.drop(F.softmax(pre_a, 3))  # B, N, 1, L
         att = torch.matmul(alphas, v).view(B, -1, 1, 1)  # B, N, 1, h -> B, N*h, 1, 1
         return self.WO(att)
-
