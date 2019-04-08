@@ -8,6 +8,8 @@
 
 FastNLP is a modular Natural Language Processing system based on PyTorch, built for fast development of NLP models. 
 
+*Very sad day for all of us.  @FengZiYjun  is no more with us.  May his soul rest in peace. We will miss you very very much!*
+
 A deep learning NLP model is the composition of three types of modules:
 <table>
 <tr>
