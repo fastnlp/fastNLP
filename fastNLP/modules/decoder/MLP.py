@@ -36,6 +36,7 @@ class MLP(nn.Module):
         actives = {
             'relu': nn.ReLU(),
             'tanh': nn.Tanh(),
+            'sigmoid': nn.Sigmoid(),
         }
         if not isinstance(activation, list):
             activation = [activation] * (len(size_layer) - 2)
