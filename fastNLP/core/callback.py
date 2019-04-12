@@ -249,6 +249,11 @@ class GradientClipCallback(Callback):
         self.parameters = parameters
         self.clip_value = clip_value
 
+    def on_backward_end(self, model):
+        if self.parameters is None:
+            self.clip_fun(model.parameters(), self.clip_value)
+        else:
+            self.clip_fun(self.parameters, self.clip_value)
     def on_backward_end(self):
         self.clip_fun(self.model.parameters(), self.clip_value)
 
@@ -305,7 +310,6 @@ class LRScheduler(Callback):
 
     def on_epoch_begin(self):
         self.scheduler.step()
-        print("scheduler step ", "lr=", self.optimizer.param_groups[0]["lr"])
 
 
 class ControlC(Callback):

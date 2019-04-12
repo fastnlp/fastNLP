@@ -205,7 +205,7 @@ class Trainer(object):
             except (CallbackException, KeyboardInterrupt) as e:
                 self.callback_manager.on_exception(e)
 
-            if self.dev_data is not None:
+            if self.dev_data is not None and hasattr(self, 'best_dev_perf'):
                 print("\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
                       self.tester._format_eval_results(self.best_dev_perf),)
                 results['best_eval'] = self.best_dev_perf
@@ -373,7 +373,7 @@ class Trainer(object):
             else:
                 model.cpu()
                 torch.save(model, model_path)
-                model.cuda()
+                model.to(self._model_device)
 
     def _load_model(self, model, model_name, only_param=False):
         # 返回bool值指示是否成功reload模型

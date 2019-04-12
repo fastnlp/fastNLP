@@ -44,10 +44,14 @@ class Vocabulary(object):
 
     :param int max_size: set the max number of words in Vocabulary. Default: None
     :param int min_freq: set the min occur frequency of words in Vocabulary. Default: None
+    :param padding: str, padding的字符，默认为<pad>。如果设置为None，则vocabulary中不考虑padding，为None的情况多在为label建立
+        Vocabulary的情况。
+    :param unknown: str, unknown的字符，默认为<unk>。如果设置为None，则vocabulary中不考虑unknown，为None的情况多在为label建立
+        Vocabulary的情况。
 
     """
 
-    def __init__(self, max_size=None, min_freq=None, unknown='<unk>', padding='<pad>'):
+    def __init__(self, max_size=None, min_freq=None, padding='<pad>', unknown='<unk>'):
         self.max_size = max_size
         self.min_freq = min_freq
         self.word_count = Counter()
@@ -97,9 +101,9 @@ class Vocabulary(object):
         """
         self.word2idx = {}
         if self.padding is not None:
-            self.word2idx[self.padding] = 0
+            self.word2idx[self.padding] = len(self.word2idx)
         if self.unknown is not None:
-            self.word2idx[self.unknown] = 1
+            self.word2idx[self.unknown] = len(self.word2idx)
 
         max_size = min(self.max_size, len(self.word_count)) if self.max_size else None
         words = self.word_count.most_common(max_size)
