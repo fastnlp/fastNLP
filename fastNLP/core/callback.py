@@ -29,7 +29,7 @@ class Callback(object):
     @property
     def n_steps(self):
         """total number of steps for training"""
-        return self.n_steps
+        return self._trainer.n_steps
 
     @property
     def batch_size(self):
@@ -124,6 +124,21 @@ class Callback(object):
         pass
 
 
+def transfer(func):
+    """装饰器，将对CallbackManager的调用转发到各个Callback子类.
+    :param func:
+    :return:
+    """
+
+    def wrapper(manager, *arg):
+        returns = []
+        for callback in manager.callbacks:
+            returns.append(getattr(callback, func.__name__)(*arg))
+        return returns
+
+    return wrapper
+
+
 class CallbackManager(Callback):
     """A manager for all callbacks passed into Trainer.
     It collects resources inside Trainer and raise callbacks.
@@ -150,42 +165,59 @@ class CallbackManager(Callback):
             else:
                 raise TypeError(f"Expect callbacks in CallbackManager(callbacks) to be list. Got {type(callbacks)}.")
 
+        for env_name, env_val in env.items():
+            for callback in self.callbacks:
+                setattr(callback, '_'+env_name, env_val)  # Callback.trainer
+
+    @transfer
     def on_train_begin(self):
         pass
 
+    @transfer
     def on_epoch_begin(self):
         pass
 
+    @transfer
     def on_batch_begin(self, batch_x, batch_y, indices):
         pass
 
+    @transfer
     def on_loss_begin(self, batch_y, predict_y):
         pass
 
+    @transfer
     def on_backward_begin(self, loss):
         pass
 
+    @transfer
     def on_backward_end(self):
         pass
 
+    @transfer
     def on_step_end(self):
         pass
 
+    @transfer
     def on_batch_end(self):
         pass
 
+    @transfer
     def on_valid_begin(self):
         pass
 
+    @transfer
     def on_valid_end(self, eval_result, metric_key):
         pass
 
+    @transfer
     def on_epoch_end(self):
         pass
 
+    @transfer
     def on_train_end(self):
         pass
 
+    @transfer
     def on_exception(self, exception):
         pass
 
