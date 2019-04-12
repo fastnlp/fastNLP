@@ -15,13 +15,57 @@ class Callback(object):
 
     def __init__(self):
         super(Callback, self).__init__()
-        self.trainer = None  # 在Trainer内部被重新赋值
+        self._trainer = None  # 在Trainer内部被重新赋值
+
+    @property
+    def trainer(self):
+        return self._trainer
+
+    @property
+    def step(self):
+        """current step number, in range(1, self.n_steps+1)"""
+        return self._trainer.step
+
+    @property
+    def n_steps(self):
+        """total number of steps for training"""
+        return self.n_steps
+
+    @property
+    def batch_size(self):
+        """batch size for training"""
+        return self._trainer.batch_size
+
+    @property
+    def epoch(self):
+        """current epoch number,  in range(1, self.n_epochs+1)"""
+        return self._trainer.epoch
+
+    @property
+    def n_epochs(self):
+        """total number of epochs"""
+        return self._trainer.n_epochs
+
+    @property
+    def optimizer(self):
+        """torch.optim.Optimizer for current model"""
+        return self._trainer.optimizer
+
+    @property
+    def model(self):
+        """training model"""
+        return self._trainer.model
+
+    @property
+    def pbar(self):
+        """If use_tqdm, return trainer's tqdm print bar, else return None."""
+        return self._trainer.pbar
 
     def on_train_begin(self):
         # before the main training loop
         pass
 
-    def on_epoch_begin(self, cur_epoch, total_epoch):
+    def on_epoch_begin(self):
         # at the beginning of each epoch
         pass
 
@@ -33,14 +77,14 @@ class Callback(object):
         # after data_forward, and before loss computation
         pass
 
-    def on_backward_begin(self, loss, model):
+    def on_backward_begin(self, loss):
         # after loss computation, and before gradient backward
         pass
 
-    def on_backward_end(self, model):
+    def on_backward_end(self):
         pass
 
-    def on_step_end(self, optimizer):
+    def on_step_end(self):
         pass
 
     def on_batch_end(self, *args):
@@ -50,63 +94,34 @@ class Callback(object):
     def on_valid_begin(self):
         pass
 
-    def on_valid_end(self, eval_result, metric_key, optimizer):
+    def on_valid_end(self, eval_result, metric_key):
         """
         每次执行验证机的evaluation后会调用。传入eval_result
 
         :param eval_result: Dict[str: Dict[str: float]], evaluation的结果
         :param metric_key: str
-        :param optimizer:
         :return:
         """
         pass
 
-    def on_epoch_end(self, cur_epoch, n_epoch, optimizer):
+    def on_epoch_end(self):
         """
         每个epoch结束将会调用该方法
-
-        :param cur_epoch: int, 当前的batch。从1开始。
-        :param n_epoch: int, 总的batch数
-        :param optimizer: 传入Trainer的optimizer。
-        :return:
         """
         pass
 
-    def on_train_end(self, model):
+    def on_train_end(self):
         """
         训练结束，调用该方法
-
-        :param model: nn.Module, 传入Trainer的模型
-        :return:
         """
         pass
 
-    def on_exception(self, exception, model):
+    def on_exception(self, exception):
         """
         当训练过程出现异常，会触发该方法
         :param exception: 某种类型的Exception，比如KeyboardInterrupt等
-        :param model: 传入Trainer的模型
-        :return:
         """
         pass
-
-
-def transfer(func):
-    """装饰器，将对CallbackManager的调用转发到各个Callback子类.
-
-    :param func:
-    :return:
-    """
-
-    def wrapper(manager, *arg):
-        returns = []
-        for callback in manager.callbacks:
-            for env_name, env_value in manager.env.items():
-                setattr(callback, env_name, env_value)
-            returns.append(getattr(callback, func.__name__)(*arg))
-        return returns
-
-    return wrapper
 
 
 class CallbackManager(Callback):
@@ -119,7 +134,7 @@ class CallbackManager(Callback):
         """
 
         :param dict env: The key is the name of the Trainer attribute(str). The value is the attribute itself.
-        :param Callback callbacks:
+        :param List[Callback] callbacks:
         """
         super(CallbackManager, self).__init__()
         # set attribute of trainer environment
@@ -136,56 +151,43 @@ class CallbackManager(Callback):
             else:
                 raise TypeError(f"Expect callbacks in CallbackManager(callbacks) to be list. Got {type(callbacks)}.")
 
-    @transfer
     def on_train_begin(self):
         pass
 
-    @transfer
-    def on_epoch_begin(self, cur_epoch, total_epoch):
+    def on_epoch_begin(self):
         pass
 
-    @transfer
     def on_batch_begin(self, batch_x, batch_y, indices):
         pass
 
-    @transfer
     def on_loss_begin(self, batch_y, predict_y):
         pass
 
-    @transfer
-    def on_backward_begin(self, loss, model):
+    def on_backward_begin(self, loss):
         pass
 
-    @transfer
-    def on_backward_end(self, model):
+    def on_backward_end(self):
         pass
 
-    @transfer
-    def on_step_end(self, optimizer):
+    def on_step_end(self):
         pass
 
-    @transfer
     def on_batch_end(self):
         pass
 
-    @transfer
     def on_valid_begin(self):
         pass
 
-    @transfer
-    def on_valid_end(self, eval_result, metric_key, optimizer):
+    def on_valid_end(self, eval_result, metric_key):
         pass
 
-    @transfer
-    def on_epoch_end(self, cur_epoch, n_epoch, optimizer):
+    def on_epoch_end(self):
         pass
 
-    @transfer
-    def on_train_end(self, model):
+    def on_train_end(self):
         pass
 
-    @transfer
-    def on_exception(self, exception, model):
+    def on_exception(self, exception):
         pass
 
 
@@ -193,15 +195,15 @@ class DummyCallback(Callback):
     def on_train_begin(self, *arg):
         print(arg)
 
-    def on_epoch_end(self, cur_epoch, n_epoch, optimizer):
-        print(cur_epoch, n_epoch, optimizer)
+    def on_epoch_end(self):
+        print(self.epoch, self.n_epochs)
 
 
 class EchoCallback(Callback):
     def on_train_begin(self):
         print("before_train")
 
-    def on_epoch_begin(self, cur_epoch, total_epoch):
+    def on_epoch_begin(self):
         print("before_epoch")
 
     def on_batch_begin(self, batch_x, batch_y, indices):
@@ -210,16 +212,16 @@ class EchoCallback(Callback):
     def on_loss_begin(self, batch_y, predict_y):
         print("before_loss")
 
-    def on_backward_begin(self, loss, model):
+    def on_backward_begin(self, loss):
         print("before_backward")
 
     def on_batch_end(self):
         print("after_batch")
 
-    def on_epoch_end(self, cur_epoch, n_epoch, optimizer):
+    def on_epoch_end(self):
         print("after_epoch")
 
-    def on_train_end(self, model):
+    def on_train_end(self):
         print("after_train")
 
 
@@ -247,8 +249,8 @@ class GradientClipCallback(Callback):
         self.parameters = parameters
         self.clip_value = clip_value
 
-    def on_backward_end(self, model):
-        self.clip_fun(model.parameters(), self.clip_value)
+    def on_backward_end(self):
+        self.clip_fun(self.model.parameters(), self.clip_value)
 
 
 class CallbackException(BaseException):
@@ -268,13 +270,10 @@ class EarlyStopCallback(Callback):
         :param int patience: 停止之前等待的epoch数
         """
         super(EarlyStopCallback, self).__init__()
-        self.trainer = None  # override by CallbackManager
         self.patience = patience
         self.wait = 0
-        self.epoch = 0
 
-    def on_valid_end(self, eval_result, metric_key, optimizer):
-        self.epoch += 1
+    def on_valid_end(self, eval_result, metric_key):
         if not self.trainer._better_eval_result(eval_result):
             # current result is getting worse
             if self.wait == self.patience:
@@ -284,7 +283,7 @@ class EarlyStopCallback(Callback):
         else:
             self.wait = 0
 
-    def on_exception(self, exception, model):
+    def on_exception(self, exception):
         if isinstance(exception, EarlyStopError):
             print("Early Stopping triggered in epoch {}!".format(self.epoch))
         else:
@@ -304,9 +303,9 @@ class LRScheduler(Callback):
         else:
             raise ValueError(f"Expect torch.optim.lr_scheduler for LRScheduler. Got {type(lr_scheduler)}.")
 
-    def on_epoch_begin(self, cur_epoch, total_epoch):
+    def on_epoch_begin(self):
         self.scheduler.step()
-        print("scheduler step ", "lr=", self.trainer.optimizer.param_groups[0]["lr"])
+        print("scheduler step ", "lr=", self.optimizer.param_groups[0]["lr"])
 
 
 class ControlC(Callback):
@@ -320,7 +319,7 @@ class ControlC(Callback):
             raise ValueError("In KeyBoardInterrupt, quit_all arguemnt must be a bool.")
         self.quit_all = quit_all
 
-    def on_exception(self, exception, model):
+    def on_exception(self, exception):
         if isinstance(exception, KeyboardInterrupt):
             if self.quit_all is True:
                 import sys
@@ -366,15 +365,15 @@ class LRFinder(Callback):
         self.find = None
         self.loader = ModelLoader()
 
-    def on_epoch_begin(self, cur_epoch, total_epoch):
-        if cur_epoch == 1:
+    def on_epoch_begin(self):
+        if self.epoch == 1: # first epoch
             self.opt = self.trainer.optimizer  # pytorch optimizer
             self.opt.param_groups[0]["lr"] = self.start_lr
             # save model
             ModelSaver("tmp").save_pytorch(self.trainer.model, param_only=True)
             self.find = True
 
-    def on_backward_begin(self, loss, model):
+    def on_backward_begin(self, loss):
         if self.find:
             if torch.isnan(loss) or self.stop is True:
                 self.stop = True
@@ -395,8 +394,8 @@ class LRFinder(Callback):
             self.opt.param_groups[0]["lr"] = lr
             # self.loader.load_pytorch(self.trainer.model, "tmp")
 
-    def on_epoch_end(self, cur_epoch, n_epoch, optimizer):
-        if cur_epoch == 1:
+    def on_epoch_end(self):
+        if self.epoch == 1: # first epoch
             self.opt.param_groups[0]["lr"] = self.best_lr
             self.find = False
             # reset model
@@ -440,7 +439,7 @@ class TensorboardCallback(Callback):
             # self._summary_writer.add_graph(self.trainer.model, torch.zeros(32, 2))
             self.graph_added = True
 
-    def on_backward_begin(self, loss, model):
+    def on_backward_begin(self, loss):
         if "loss" in self.options:
             self._summary_writer.add_scalar("loss", loss.item(), global_step=self.trainer.step)
 
@@ -452,18 +451,18 @@ class TensorboardCallback(Callback):
                     self._summary_writer.add_scalar(name + "_grad_mean", param.grad.mean(),
                                                     global_step=self.trainer.step)
 
-    def on_valid_end(self, eval_result, metric_key, optimizer):
+    def on_valid_end(self, eval_result, metric_key):
         if "metric" in self.options:
             for name, metric in eval_result.items():
                 for metric_key, metric_val in metric.items():
                     self._summary_writer.add_scalar("valid_{}_{}".format(name, metric_key), metric_val,
                                                     global_step=self.trainer.step)
 
-    def on_train_end(self, model):
+    def on_train_end(self):
         self._summary_writer.close()
         del self._summary_writer
 
-    def on_exception(self, exception, model):
+    def on_exception(self, exception):
         if hasattr(self, "_summary_writer"):
             self._summary_writer.close()
             del self._summary_writer
@@ -471,5 +470,5 @@ class TensorboardCallback(Callback):
 
 if __name__ == "__main__":
     manager = CallbackManager(env={"n_epoch": 3}, callbacks=[DummyCallback(), DummyCallback()])
-    manager.on_train_begin(10, 11, 12)
+    manager.on_train_begin()
     # print(manager.after_epoch())

@@ -353,7 +353,7 @@ class TestTutorial(unittest.TestCase):
         train_data[-1], dev_data[-1], test_data[-1]
 
         # 读入vocab文件
-        with open('vocab.txt') as f:
+        with open('vocab.txt', encoding='utf-8') as f:
             lines = f.readlines()
         vocabs = []
         for line in lines:

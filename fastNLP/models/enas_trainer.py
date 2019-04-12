@@ -92,9 +92,9 @@ class ENASTrainer(fastNLP.Trainer):
             try:
                 self.callback_manager.on_train_begin()
                 self._train()
-                self.callback_manager.on_train_end(self.model)
+                self.callback_manager.on_train_end()
             except (CallbackException, KeyboardInterrupt) as e:
-                self.callback_manager.on_exception(e, self.model)
+                self.callback_manager.on_exception(e)
 
             if self.dev_data is not None:
                 print("\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
@@ -134,7 +134,7 @@ class ENASTrainer(fastNLP.Trainer):
                 if epoch == self.n_epochs + 1 - self.final_epochs:
                     print('Entering the final stage. (Only train the selected structure)')
                 # early stopping
-                self.callback_manager.on_epoch_begin(epoch, self.n_epochs)
+                self.callback_manager.on_epoch_begin()
 
                 # 1. Training the shared parameters omega of the child models
                 self.train_shared(pbar)
@@ -155,7 +155,7 @@ class ENASTrainer(fastNLP.Trainer):
                     pbar.write(eval_str)
 
                 # lr decay; early stopping
-                self.callback_manager.on_epoch_end(epoch, self.n_epochs, self.optimizer)
+                self.callback_manager.on_epoch_end()
             # =============== epochs end =================== #
             pbar.close()
         # ============ tqdm end ============== #
@@ -234,12 +234,12 @@ class ENASTrainer(fastNLP.Trainer):
             avg_loss += loss.item()
 
             # Is loss NaN or inf? requires_grad = False
-            self.callback_manager.on_backward_begin(loss, self.model)
+            self.callback_manager.on_backward_begin(loss)
             self._grad_backward(loss)
-            self.callback_manager.on_backward_end(self.model)
+            self.callback_manager.on_backward_end()
 
             self._update()
-            self.callback_manager.on_step_end(self.optimizer)
+            self.callback_manager.on_step_end()
 
             if (self.step+1) % self.print_every == 0:
                 if self.use_tqdm:

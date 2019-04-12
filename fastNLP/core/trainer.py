@@ -122,6 +122,8 @@ class Trainer(object):
         self.sampler = sampler
         self.prefetch = prefetch
         self.callback_manager = CallbackManager(env={"trainer": self}, callbacks=callbacks)
+        self.n_steps = (len(self.train_data) // self.batch_size + int(
+                        len(self.train_data) % self.batch_size != 0)) * self.n_epochs
 
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
@@ -129,6 +131,7 @@ class Trainer(object):
             self.optimizer = optimizer.construct_from_pytorch(self.model.parameters())
 
         self.use_tqdm = use_tqdm
+        self.pbar = None
         self.print_every = abs(self.print_every)
 
         if self.dev_data is not None:
@@ -198,9 +201,9 @@ class Trainer(object):
             try:
                 self.callback_manager.on_train_begin()
                 self._train()
-                self.callback_manager.on_train_end(self.model)
+                self.callback_manager.on_train_end()
             except (CallbackException, KeyboardInterrupt) as e:
-                self.callback_manager.on_exception(e, self.model)
+                self.callback_manager.on_exception(e)
 
             if self.dev_data is not None:
                 print("\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
@@ -227,18 +230,21 @@ class Trainer(object):
         else:
             inner_tqdm = tqdm
         self.step = 0
+        self.epoch = 0
         start = time.time()
-        total_steps = (len(self.train_data) // self.batch_size + int(
-            len(self.train_data) % self.batch_size != 0)) * self.n_epochs
-        with inner_tqdm(total=total_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
+
+        with inner_tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
+            self.pbar = pbar if isinstance(pbar, tqdm) else None
             avg_loss = 0
             data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False,
                                   prefetch=self.prefetch)
             for epoch in range(1, self.n_epochs+1):
+                self.epoch = epoch
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
                 # early stopping
-                self.callback_manager.on_epoch_begin(epoch, self.n_epochs)
+                self.callback_manager.on_epoch_begin()
                 for batch_x, batch_y in data_iterator:
+                    self.step += 1
                     _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
                     indices = data_iterator.get_batch_indices()
                     # negative sampling; replace unknown; re-weight batch_y
@@ -251,14 +257,14 @@ class Trainer(object):
                     avg_loss += loss.item()
 
                     # Is loss NaN or inf? requires_grad = False
-                    self.callback_manager.on_backward_begin(loss, self.model)
+                    self.callback_manager.on_backward_begin(loss)
                     self._grad_backward(loss)
-                    self.callback_manager.on_backward_end(self.model)
+                    self.callback_manager.on_backward_end()
 
                     self._update()
-                    self.callback_manager.on_step_end(self.optimizer)
+                    self.callback_manager.on_step_end()
 
-                    if (self.step+1) % self.print_every == 0:
+                    if self.step % self.print_every == 0:
                         if self.use_tqdm:
                             print_output = "loss:{0:<6.5f}".format(avg_loss / self.print_every)
                             pbar.update(self.print_every)
@@ -269,7 +275,6 @@ class Trainer(object):
                                 epoch, self.step, avg_loss, diff)
                         pbar.set_postfix_str(print_output)
                         avg_loss = 0
-                    self.step += 1
                     self.callback_manager.on_batch_end()
 
                     if ((self.validate_every > 0 and self.step % self.validate_every == 0) or
@@ -277,16 +282,17 @@ class Trainer(object):
                             and self.dev_data is not None:
                         eval_res = self._do_validation(epoch=epoch, step=self.step)
                         eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
-                                                                                    total_steps) + \
+                                                                                    self.n_steps) + \
                                    self.tester._format_eval_results(eval_res)
                         pbar.write(eval_str)
 
                 # ================= mini-batch end ==================== #
 
                 # lr decay; early stopping
-                self.callback_manager.on_epoch_end(epoch, self.n_epochs, self.optimizer)
+                self.callback_manager.on_epoch_end()
             # =============== epochs end =================== #
             pbar.close()
+            self.pbar = None
         # ============ tqdm end ============== #
 
     def _do_validation(self, epoch, step):
@@ -303,7 +309,7 @@ class Trainer(object):
             self.best_dev_epoch = epoch
             self.best_dev_step = step
         # get validation results; adjust optimizer
-        self.callback_manager.on_valid_end(res, self.metric_key, self.optimizer)
+        self.callback_manager.on_valid_end(res, self.metric_key)
         return res
 
     def _mode(self, model, is_test=False):
