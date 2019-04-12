@@ -249,13 +249,11 @@ class GradientClipCallback(Callback):
         self.parameters = parameters
         self.clip_value = clip_value
 
-    def on_backward_end(self, model):
+    def on_backward_end(self):
         if self.parameters is None:
-            self.clip_fun(model.parameters(), self.clip_value)
+            self.clip_fun(self.model.parameters(), self.clip_value)
         else:
             self.clip_fun(self.parameters, self.clip_value)
-    def on_backward_end(self):
-        self.clip_fun(self.model.parameters(), self.clip_value)
 
 
 class CallbackException(BaseException):
