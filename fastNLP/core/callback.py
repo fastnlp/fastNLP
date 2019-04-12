@@ -138,7 +138,6 @@ class CallbackManager(Callback):
         """
         super(CallbackManager, self).__init__()
         # set attribute of trainer environment
-        self.env = env
 
         self.callbacks = []
         if callbacks is not None:

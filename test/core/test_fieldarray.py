@@ -155,6 +155,13 @@ class TestFieldArray(unittest.TestCase):
         self.assertEqual(len(fa), 3)
         self.assertEqual(fa[2], [1.2, 2.3, 3.4, 4.5, 5.6])
 
+    def test_ignore_type(self):
+        # 测试新添加的参数ignore_type，用来跳过类型检查
+        fa = FieldArray("y", [[1.1, 2.2, "jin", {}, "hahah"], [int, 2, "$", 4, 5]], is_input=True, ignore_type=True)
+        fa.append([1.2, 2.3, str, 4.5, print])
+
+        fa = FieldArray("y", [(1, "1"), (2, "2"), (3, "3"), (4, "4")], is_target=True, ignore_type=True)
+
 
 class TestPadder(unittest.TestCase):
 
@@ -216,3 +223,13 @@ class TestPadder(unittest.TestCase):
              [[1, -100, -100, -100, -100], [-100, -100, -100, -100, -100], [-100, -100, -100, -100, -100]]],
             padder(contents, None, np.int64).tolist()
         )
+
+    def test_None_dtype(self):
+        from fastNLP.core.fieldarray import AutoPadder
+        padder = AutoPadder()
+        content = [
+            [[1, 2, 3], [4, 5], [7, 8, 9, 10]],
+            [[1]]
+        ]
+        ans = padder(content, None, None)
+        self.assertListEqual(content, ans)

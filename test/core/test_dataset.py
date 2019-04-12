@@ -52,7 +52,7 @@ class TestDataSetMethods(unittest.TestCase):
         self.assertEqual(dd.field_arrays["x"].content, [[1, 2, 3, 4]] * 3)
         self.assertEqual(dd.field_arrays["y"].content, [[5, 6]] * 3)
 
-    def test_add_append(self):
+    def test_add_field(self):
         dd = DataSet()
         dd.add_field("x", [[1, 2, 3]] * 10)
         dd.add_field("y", [[1, 2, 3, 4]] * 10)
@@ -64,6 +64,11 @@ class TestDataSetMethods(unittest.TestCase):
 
         with self.assertRaises(RuntimeError):
             dd.add_field("??", [[1, 2]] * 40)
+
+    def test_add_field_ignore_type(self):
+        dd = DataSet()
+        dd.add_field("x", [(1, "1"), (2, "2"), (3, "3"), (4, "4")], ignore_type=True, is_target=True)
+        dd.add_field("y", [{1, "1"}, {2, "2"}, {3, "3"}, {4, "4"}], ignore_type=True, is_target=True)
 
     def test_delete_field(self):
         dd = DataSet()
@@ -115,6 +120,9 @@ class TestDataSetMethods(unittest.TestCase):
         self.assertTrue(isinstance(res, list) and len(res) > 0)
         self.assertTrue(res[0], 4)
 
+        ds.apply(lambda ins: (len(ins["x"]), "hahaha"), new_field_name="k", ignore_type=True)
+        # expect no exception raised
+
     def test_drop(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6], [7, 8, 9, 0]] * 20})
         ds.drop(lambda ins: len(ins["y"]) < 3)
@@ -165,7 +173,7 @@ class TestDataSetMethods(unittest.TestCase):
         dataset.apply(split_sent, new_field_name='words', is_input=True)
         # print(dataset)
 
-    def test_add_field(self):
+    def test_add_field_v2(self):
         ds = DataSet({"x": [3, 4]})
         ds.add_field('y', [['hello', 'world'], ['this', 'is', 'a', 'test']], is_input=True, is_target=True)
         # ds.apply(lambda x:[x['x']]*3, is_input=True, is_target=True, new_field_name='y')
@@ -207,6 +215,11 @@ class TestDataSetMethods(unittest.TestCase):
         ds = DataSet().read_pos("test/data_for_tests/people.txt")
         self.assertTrue(isinstance(ds, DataSet))
         self.assertTrue(len(ds) > 0)
+
+    def test_add_null(self):
+        ds = DataSet()
+        ds.add_field('test', [])
+        ds.set_target('test')
 
 
 class TestDataSetIter(unittest.TestCase):

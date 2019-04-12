@@ -157,7 +157,7 @@ class DataSet(object):
                 assert name in self.field_arrays
                 self.field_arrays[name].append(field)
 
-    def add_field(self, name, fields, padder=AutoPadder(pad_val=0), is_input=False, is_target=False):
+    def add_field(self, name, fields, padder=AutoPadder(pad_val=0), is_input=False, is_target=False, ignore_type=False):
         """Add a new field to the DataSet.
         
         :param str name: the name of the field.
@@ -165,13 +165,14 @@ class DataSet(object):
         :param int padder: PadBase对象，如何对该Field进行padding。大部分情况使用默认值即可
         :param bool is_input: whether this field is model input.
         :param bool is_target: whether this field is label or target.
+        :param bool ignore_type: If True, do not perform type check. (Default: False)
         """
         if len(self.field_arrays) != 0:
             if len(self) != len(fields):
                 raise RuntimeError(f"The field to append must have the same size as dataset. "
                                    f"Dataset size {len(self)} != field size {len(fields)}")
         self.field_arrays[name] = FieldArray(name, fields, is_target=is_target, is_input=is_input,
-                                             padder=padder)
+                                             padder=padder, ignore_type=ignore_type)
 
     def delete_field(self, name):
         """Delete a field based on the field name.
@@ -242,6 +243,8 @@ class DataSet(object):
         :param padder: PadderBase类型或None. 设置为None即删除padder。即对该field不进行padding操作.
         :return:
         """
+        if field_name not in self.field_arrays:
+            raise KeyError("There is no field named {}.".format(field_name))
         self.field_arrays[field_name].set_padder(padder)
 
     def set_pad_val(self, field_name, pad_val):
@@ -252,6 +255,8 @@ class DataSet(object):
         :param pad_val: int，该field的padder会以pad_val作为padding index
         :return:
         """
+        if field_name not in self.field_arrays:
+            raise KeyError("There is no field named {}.".format(field_name))
         self.field_arrays[field_name].set_pad_val(pad_val)
 
     def get_input_name(self):
@@ -287,6 +292,8 @@ class DataSet(object):
             extra_param['is_input'] = kwargs['is_input']
         if 'is_target' in kwargs:
             extra_param['is_target'] = kwargs['is_target']
+        if 'ignore_type' in kwargs:
+            extra_param['ignore_type'] = kwargs['ignore_type']
         if new_field_name is not None:
             if new_field_name in self.field_arrays:
                 # overwrite the field, keep same attributes
@@ -295,11 +302,14 @@ class DataSet(object):
                     extra_param['is_input'] = old_field.is_input
                 if 'is_target' not in extra_param:
                     extra_param['is_target'] = old_field.is_target
+                if 'ignore_type' not in extra_param:
+                    extra_param['ignore_type'] = old_field.ignore_type
                 self.add_field(name=new_field_name, fields=results, is_input=extra_param["is_input"],
-                               is_target=extra_param["is_target"])
+                               is_target=extra_param["is_target"], ignore_type=extra_param['ignore_type'])
             else:
                 self.add_field(name=new_field_name, fields=results, is_input=extra_param.get("is_input", None),
-                               is_target=extra_param.get("is_target", None))
+                               is_target=extra_param.get("is_target", None),
+                               ignore_type=extra_param.get("ignore_type", False))
         else:
             return results
 

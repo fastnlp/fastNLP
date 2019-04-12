@@ -136,3 +136,28 @@ class TestCallback(unittest.TestCase):
                           metrics=AccuracyMetric(pred="predict", target="y"),
                           callbacks=[TensorboardCallback("loss", "metric")])
         trainer.train()
+
+    def test_readonly_property(self):
+        from fastNLP.core.callback import Callback
+        class MyCallback(Callback):
+            def __init__(self):
+                super(MyCallback, self).__init__()
+
+            def on_epoch_begin(self, cur_epoch, total_epoch):
+                print(self.n_epochs, self.n_steps, self.batch_size)
+                print(self.model)
+                print(self.optimizer)
+
+        data_set, model = prepare_env()
+        trainer = Trainer(data_set, model,
+                          loss=BCELoss(pred="predict", target="y"),
+                          n_epochs=5,
+                          batch_size=32,
+                          print_every=50,
+                          optimizer=SGD(lr=0.1),
+                          check_code_level=2,
+                          use_tqdm=False,
+                          dev_data=data_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"),
+                          callbacks=[MyCallback()])
+        trainer.train()

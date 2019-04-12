@@ -196,3 +196,9 @@ class Vocabulary(object):
         """
         self.__dict__.update(state)
         self.build_reverse_vocab()
+
+    def __repr__(self):
+        return "Vocabulary({}...)".format(list(self.word_count.keys())[:5])
+
+    def __iter__(self):
+        return iter(list(self.word_count.keys()))
