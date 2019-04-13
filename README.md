@@ -63,8 +63,8 @@ fastNLP implements different models for variant NLP tasks.
 Each model has been trained and tested carefully.
 
 Check out models' performance, usage and source code here.
-- [Documentation](https://github.com/fastnlp/fastNLP/tree/master/reproduction)
-- [Source Code](https://github.com/fastnlp/fastNLP/tree/master/fastNLP/models)
+- [Documentation](reproduction/)
+- [Source Code](fastNLP/models/)
 
 ## Project Structure
 
