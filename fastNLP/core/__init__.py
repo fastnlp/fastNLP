@@ -10,4 +10,4 @@ from .tester import Tester
 from .trainer import Trainer
 from .vocabulary import Vocabulary
 from ..io.dataset_loader import DataSet
-
+from .callback import Callback

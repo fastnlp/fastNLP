@@ -217,6 +217,7 @@ class TestDataSetMethods(unittest.TestCase):
         self.assertTrue(len(ds) > 0)
 
     def test_add_null(self):
+        # TODO test failed because 'fastNLP\core\fieldarray.py:143: RuntimeError'
         ds = DataSet()
         ds.add_field('test', [])
         ds.set_target('test')

@@ -6,7 +6,7 @@
 ![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)
 [![Documentation Status](https://readthedocs.org/projects/fastnlp/badge/?version=latest)](http://fastnlp.readthedocs.io/?badge=latest)
 
-FastNLP is a modular Natural Language Processing system based on PyTorch, built for fast development of NLP models. 
+FastNLP is a modular Natural Language Processing system based on PyTorch, built for fast development of NLP models.
 
 A deep learning NLP model is the composition of three types of modules:
 <table>
@@ -58,6 +58,13 @@ Run the following commands to install fastNLP package.
 pip install fastNLP
 ```
 
+## Models
+fastNLP implements different models for variant NLP tasks.
+Each model has been trained and tested carefully.
+
+Check out models' performance, usage and source code here.
+- [Documentation](reproduction/)
+- [Source Code](fastNLP/models/)
 
 ## Project Structure
 

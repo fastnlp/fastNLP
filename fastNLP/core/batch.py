@@ -1,8 +1,15 @@
 import numpy as np
 import torch
+import atexit
 
 from fastNLP.core.sampler import RandomSampler
 import torch.multiprocessing as mp
+
+_python_is_exit = False
+def _set_python_is_exit():
+    global _python_is_exit
+    _python_is_exit = True
+atexit.register(_set_python_is_exit)
 
 class Batch(object):
     """Batch is an iterable object which iterates over mini-batches.
@@ -97,12 +104,19 @@ def to_tensor(batch, dtype):
 
 
 def run_fetch(batch, q):
+    global _python_is_exit
     batch.init_iter()
     # print('start fetch')
     while 1:
         res = batch.fetch_one()
         # print('fetch one')
-        q.put(res)
+        while 1:
+            try:
+                q.put(res, timeout=3)
+                break
+            except Exception as e:
+                if _python_is_exit:
+                    return
         if res is None:
             # print('fetch done, waiting processing')
             q.join()

@@ -139,11 +139,14 @@ class TestCallback(unittest.TestCase):
 
     def test_readonly_property(self):
         from fastNLP.core.callback import Callback
+        passed_epochs = []
+        total_epochs = 5
         class MyCallback(Callback):
             def __init__(self):
                 super(MyCallback, self).__init__()
 
-            def on_epoch_begin(self, cur_epoch, total_epoch):
+            def on_epoch_begin(self):
+                passed_epochs.append(self.epoch)
                 print(self.n_epochs, self.n_steps, self.batch_size)
                 print(self.model)
                 print(self.optimizer)
@@ -151,7 +154,7 @@ class TestCallback(unittest.TestCase):
         data_set, model = prepare_env()
         trainer = Trainer(data_set, model,
                           loss=BCELoss(pred="predict", target="y"),
-                          n_epochs=5,
+                          n_epochs=total_epochs,
                           batch_size=32,
                           print_every=50,
                           optimizer=SGD(lr=0.1),
@@ -161,3 +164,4 @@ class TestCallback(unittest.TestCase):
                           metrics=AccuracyMetric(pred="predict", target="y"),
                           callbacks=[MyCallback()])
         trainer.train()
+        assert passed_epochs == list(range(1, total_epochs+1))

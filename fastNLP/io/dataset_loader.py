@@ -1,4 +1,5 @@
 import os
+import json
 
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
@@ -62,6 +63,53 @@ def convert_seq2seq_dataset(data):
     for sample in data:
         dataset.append(Instance(word_seq=sample[0], label_seq=sample[1]))
     return dataset
+
+
+def download_from_url(url, path):
+    from tqdm import tqdm
+    import requests
+
+    """Download file"""
+    r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, stream=True)
+    chunk_size = 16 * 1024
+    total_size = int(r.headers.get('Content-length', 0))
+    with open(path, "wb") as file ,\
+        tqdm(total=total_size, unit='B', unit_scale=1, desc=path.split('/')[-1]) as t:
+        for chunk in r.iter_content(chunk_size):
+            if chunk:
+                file.write(chunk)
+                t.update(len(chunk))
+    return
+
+def uncompress(src, dst):
+    import zipfile, gzip, tarfile, os
+
+    def unzip(src, dst):
+        with zipfile.ZipFile(src, 'r') as f:
+            f.extractall(dst)
+
+    def ungz(src, dst):
+        with gzip.open(src, 'rb') as f, open(dst, 'wb') as uf:
+            length = 16 * 1024 # 16KB
+            buf = f.read(length)
+            while buf:
+                uf.write(buf)
+                buf = f.read(length)
+
+    def untar(src, dst):
+        with tarfile.open(src, 'r:gz') as f:
+            f.extractall(dst)
+
+    fn, ext = os.path.splitext(src)
+    _, ext_2 = os.path.splitext(fn)
+    if ext == '.zip':
+        unzip(src, dst)
+    elif ext == '.gz' and ext_2 != '.tar':
+        ungz(src, dst)
+    elif (ext == '.gz' and ext_2 == '.tar') or ext_2 == '.tgz':
+        untar(src, dst)
+    else:
+        raise ValueError('unsupported file {}'.format(src))
 
 
 class DataSetLoader:
@@ -290,41 +338,6 @@ class DummyClassificationReader(DataSetLoader):
         return convert_seq2tag_dataset(data)
 
 
-class ConllLoader(DataSetLoader):
-    """loader for conll format files"""
-
-    def __init__(self):
-        super(ConllLoader, self).__init__()
-
-    def load(self, data_path):
-        with open(data_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-        data = self.parse(lines)
-        return self.convert(data)
-
-    @staticmethod
-    def parse(lines):
-        """
-        :param list lines: a list containing all lines in a conll file.
-        :return: a 3D list
-        """
-        sentences = list()
-        tokens = list()
-        for line in lines:
-            if line[0] == "#":
-                # skip the comments
-                continue
-            if line == "\n":
-                sentences.append(tokens)
-                tokens = []
-                continue
-            tokens.append(line.split())
-        return sentences
-
-    def convert(self, data):
-        pass
-
-
 class DummyLMReader(DataSetLoader):
     """A Dummy Language Model Dataset Reader
     """
@@ -434,51 +447,67 @@ class PeopleDailyCorpusLoader(DataSetLoader):
         return data_set
 
 
-class Conll2003Loader(DataSetLoader):
+class ConllLoader:
+    def __init__(self, headers, indexs=None):
+        self.headers = headers
+        if indexs is None:
+            self.indexs = list(range(len(self.headers)))
+        else:
+            if len(indexs) != len(headers):
+                raise ValueError
+            self.indexs = indexs
+
+    def load(self, path):
+        datalist = []
+        with open(path, 'r', encoding='utf-8') as f:
+            sample = []
+            start = next(f)
+            if '-DOCSTART-' not in start:
+                sample.append(start.split())
+            for line in f:
+                if line.startswith('\n'):
+                    if len(sample):
+                        datalist.append(sample)
+                    sample = []
+                elif line.startswith('#'):
+                    continue
+                else:
+                    sample.append(line.split())
+            if len(sample) > 0:
+                datalist.append(sample)
+
+        data = [self.get_one(sample) for sample in datalist]
+        data = filter(lambda x: x is not None, data)
+
+        ds = DataSet()
+        for sample in data:
+            ins = Instance()
+            for name, idx in zip(self.headers, self.indexs):
+                ins.add_field(field_name=name, field=sample[idx])
+            ds.append(ins)
+        return ds
+
+    def get_one(self, sample):
+        sample = list(map(list, zip(*sample)))
+        for field in sample:
+            if len(field) <= 0:
+                return None
+        return sample
+
+
+class Conll2003Loader(ConllLoader):
     """Loader for conll2003 dataset
     
         More information about the given dataset cound be found on 
         https://sites.google.com/site/ermasoftware/getting-started/ne-tagging-conll2003-data 
-    
+
+        Deprecated. Use ConllLoader for all types of conll-format files.
     """
     def __init__(self):
-        super(Conll2003Loader, self).__init__()
-
-    def load(self, dataset_path):
-        with open(dataset_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-        parsed_data = []
-        sentence = []
-        tokens = []
-        for line in lines:
-            if '-DOCSTART- -X- -X- O' in line or line == '\n':
-                if sentence != []:
-                    parsed_data.append((sentence, tokens))
-                    sentence = []
-                    tokens = []
-                continue
-
-            temp = line.strip().split(" ")
-            sentence.append(temp[0])
-            tokens.append(temp[1:4])
-
-        return self.convert(parsed_data)
-
-    def convert(self, parsed_data):
-        dataset = DataSet()
-        for sample in parsed_data:
-            label0_list = list(map(
-                lambda labels: labels[0], sample[1]))
-            label1_list = list(map(
-                lambda labels: labels[1], sample[1]))
-            label2_list = list(map(
-                lambda labels: labels[2], sample[1]))
-            dataset.append(Instance(tokens=sample[0],
-                                    pos=label0_list,
-                                    chucks=label1_list,
-                                    ner=label2_list))
-
-        return dataset
+        headers = [
+            'tokens', 'pos', 'chunks', 'ner',
+        ]
+        super(Conll2003Loader, self).__init__(headers=headers)
 
 
 class SNLIDataSetReader(DataSetLoader):
@@ -548,6 +577,7 @@ class SNLIDataSetReader(DataSetLoader):
 
 
 class ConllCWSReader(object):
+    """Deprecated. Use ConllLoader for all types of conll-format files."""
     def __init__(self):
         pass
 
@@ -700,6 +730,7 @@ def cut_long_sentence(sent, max_sample_length=200):
 class ZhConllPOSReader(object):
     """读取中文Conll格式。返回“字级别”的标签，使用BMES记号扩展原来的词级别标签。
 
+        Deprecated. Use ConllLoader for all types of conll-format files.
     """
     def __init__(self):
         pass
@@ -778,10 +809,35 @@ class ZhConllPOSReader(object):
         return text, pos_tags
 
 
-class ConllxDataLoader(object):
+class ConllxDataLoader(ConllLoader):
     """返回“词级别”的标签信息，包括词、词性、（句法）头依赖、（句法）边标签。跟``ZhConllPOSReader``完全不同。
 
+        Deprecated. Use ConllLoader for all types of conll-format files.
     """
+    def __init__(self):
+        headers = [
+            'words', 'pos_tags', 'heads', 'labels',
+        ]
+        indexs = [
+            1, 3, 6, 7,
+        ]
+        super(ConllxDataLoader, self).__init__(headers=headers, indexs=indexs)
+
+
+class SSTLoader(DataSetLoader):
+    """load SST data in PTB tree format
+        data source: https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip
+    """
+    def __init__(self, subtree=False, fine_grained=False):
+        self.subtree = subtree
+
+        tag_v = {'0':'very negative', '1':'negative', '2':'neutral',
+                 '3':'positive', '4':'very positive'}
+        if not fine_grained:
+            tag_v['0'] = tag_v['1']
+            tag_v['4'] = tag_v['3']
+        self.tag_v = tag_v
+
     def load(self, path):
         """
 
@@ -793,39 +849,46 @@ class ConllxDataLoader(object):
         """
         datalist = []
         with open(path, 'r', encoding='utf-8') as f:
-            sample = []
-            for line in f:
-                if line.startswith('\n'):
-                    datalist.append(sample)
-                    sample = []
-                elif line.startswith('#'):
-                    continue
-                else:
-                    sample.append(line.split('\t'))
-            if len(sample) > 0:
-                datalist.append(sample)
-
-        data = [self.get_one(sample) for sample in datalist]
-        data_list = list(filter(lambda x: x is not None, data))
-
+            datas = []
+            for l in f:
+                datas.extend([(s, self.tag_v[t])
+                              for s, t in self.get_one(l, self.subtree)])
         ds = DataSet()
-        for example in data_list:
-            ds.append(Instance(words=example[0],
-                               pos_tags=example[1],
-                               heads=example[2],
-                               labels=example[3]))
+        for words, tag in datas:
+            ds.append(Instance(words=words, raw_tag=tag))
         return ds
 
-    def get_one(self, sample):
-        sample = list(map(list, zip(*sample)))
-        if len(sample) == 0:
-            return None
-        for w in sample[7]:
-            if w == '_':
-                print('Error Sample {}'.format(sample))
-                return None
-        # return word_seq, pos_seq, head_seq, head_tag_seq
-        return sample[1], sample[3], list(map(int, sample[6])), sample[7]
+    @staticmethod
+    def get_one(data, subtree):
+        from nltk.tree import Tree
+        tree = Tree.fromstring(data)
+        if subtree:
+            return [(t.leaves(), t.label()) for t in tree.subtrees()]
+        return [(tree.leaves(), tree.label())]
+
+
+class JsonLoader(DataSetLoader):
+    """Load json-format data,
+        every line contains a json obj, like a dict
+        fields is the dict key that need to be load
+    """
+    def __init__(self, **fields):
+        super(JsonLoader, self).__init__()
+        self.fields = {}
+        for k, v in fields.items():
+            self.fields[k] = k if v is None else v
+
+    def load(self, path):
+        with open(path, 'r', encoding='utf-8') as f:
+            datas = [json.loads(l) for l in f]
+        ds = DataSet()
+        for d in datas:
+            ins = Instance()
+            for k, v in d.items():
+                if k in self.fields:
+                    ins.add_field(self.fields[k], v)
+            ds.append(ins)
+        return ds
 
 
 def add_seg_tag(data):
@@ -848,3 +911,4 @@ def add_seg_tag(data):
                 new_sample.append((word[-1], 'E-' + pos))
         _processed.append(list(map(list, zip(*new_sample))))
     return _processed
+
