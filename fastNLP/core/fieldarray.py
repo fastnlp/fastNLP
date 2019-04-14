@@ -383,6 +383,23 @@ class FieldArray(object):
         """
         return len(self.content)
 
+    def to(self, other):
+        """
+        将other的属性复制给本fieldarray(必须通过fieldarray类型). 包含 is_input, is_target, padder, dtype, pytype, content_dim
+            ignore_type
+
+        :param other: FieldArray
+        :return:
+        """
+        assert isinstance(other, FieldArray), "Only support FieldArray type, not {}.".format(type(other))
+
+        self.is_input = other.is_input
+        self.is_target = other.is_target
+        self.padder = other.padder
+        self.dtype = other.dtype
+        self.pytype = other.pytype
+        self.content_dim = other.content_dim
+        self.ignore_type = other.ignore_type
 
 def is_iterable(content):
     try:

@@ -91,7 +91,6 @@ class MetricBase(object):
     Besides, before passing params into self.evaluate, this function will filter out params from output_dict and
     target_dict which are not used in self.evaluate. (but if **kwargs presented in self.evaluate, no filtering
     will be conducted.)
-    However, in some cases where type check is not necessary, ``_fast_param_map`` will be used.
 
     """
     def __init__(self):
@@ -146,21 +145,6 @@ class MetricBase(object):
     def get_metric(self, reset=True):
         raise NotImplemented
 
-    def _fast_param_map(self, pred_dict, target_dict):
-        """Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
-            such as pred_dict has one element, target_dict has one element
-
-        :param pred_dict:
-        :param target_dict:
-        :return: dict, if dict is not {}, pass it to self.evaluate. Otherwise do mapping.
-        """
-        fast_param = {}
-        if len(self.param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
-            fast_param['pred'] = list(pred_dict.values())[0]
-            fast_param['target'] = list(target_dict.values())[0]
-            return fast_param
-        return fast_param
-
     def __call__(self, pred_dict, target_dict):
         """
 
@@ -172,18 +156,12 @@ class MetricBase(object):
         Besides, before passing params into self.evaluate, this function will filter out params from output_dict and
             target_dict which are not used in self.evaluate. (but if **kwargs presented in self.evaluate, no filtering
             will be conducted.)
-        This function also support _fast_param_map.
         :param pred_dict: usually the output of forward or prediction function
         :param target_dict: usually features set as target..
         :return:
         """
         if not callable(self.evaluate):
             raise TypeError(f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}.")
-
-        fast_param = self._fast_param_map(pred_dict=pred_dict, target_dict=target_dict)
-        if fast_param:
-            self.evaluate(**fast_param)
-            return
 
         if not self._checked:
             # 1. check consistence between signature and param_map
@@ -262,41 +240,6 @@ class AccuracyMetric(MetricBase):
         self.total = 0
         self.acc_count = 0
 
-    def _fast_param_map(self, pred_dict, target_dict):
-        """Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
-            such as pred_dict has one element, target_dict has one element
-
-        :param pred_dict:
-        :param target_dict:
-        :return: dict, if dict is not None, pass it to self.evaluate. Otherwise do mapping.
-        """
-        fast_param = {}
-        targets = list(target_dict.values())
-        if len(targets) == 1 and isinstance(targets[0], torch.Tensor):
-            if len(pred_dict) == 1:
-                pred = list(pred_dict.values())[0]
-                fast_param['pred'] = pred
-            elif len(pred_dict) == 2:
-                pred1 = list(pred_dict.values())[0]
-                pred2 = list(pred_dict.values())[1]
-                if not (isinstance(pred1, torch.Tensor) and isinstance(pred2, torch.Tensor)):
-                    return fast_param
-                if len(pred1.size()) < len(pred2.size()) and len(pred1.size()) == 1:
-                    seq_lens = pred1
-                    pred = pred2
-                elif len(pred1.size()) > len(pred2.size()) and len(pred2.size()) == 1:
-                    seq_lens = pred2
-                    pred = pred1
-                else:
-                    return fast_param
-                fast_param['pred'] = pred
-                fast_param['seq_lens'] = seq_lens
-            else:
-                return fast_param
-            fast_param['target'] = targets[0]
-        # TODO need to make sure they all have same batch_size
-        return fast_param
-
     def evaluate(self, pred, target, seq_lens=None):
         """
 
@@ -321,7 +264,7 @@ class AccuracyMetric(MetricBase):
                             f"got {type(seq_lens)}.")
 
         if seq_lens is not None:
-            masks = seq_lens_to_masks(seq_lens=seq_lens, float=True)
+            masks = seq_lens_to_masks(seq_lens=seq_lens).long()
         else:
             masks = None
 
@@ -334,14 +277,12 @@ class AccuracyMetric(MetricBase):
                                f"size:{pred.size()}, target should have size: {pred.size()} or "
                                f"{pred.size()[:-1]}, got {target.size()}.")
 
-        pred = pred.float()
-        target = target.float()
 
         if masks is not None:
-            self.acc_count += torch.sum(torch.eq(pred, target).float() * masks.float()).item()
-            self.total += torch.sum(masks.float()).item()
+            self.acc_count += torch.sum(torch.eq(pred, target) * masks).item()
+            self.total += torch.sum(masks).item()
         else:
-            self.acc_count += torch.sum(torch.eq(pred, target).float()).item()
+            self.acc_count += torch.sum(torch.eq(pred, target)).item()
             self.total += np.prod(list(pred.size()))
 
     def get_metric(self, reset=True):
@@ -350,7 +291,7 @@ class AccuracyMetric(MetricBase):
         :param bool reset: whether to recount next time.
         :return evaluate_result: {"acc": float}
         """
-        evaluate_result = {'acc': round(self.acc_count / self.total, 6)}
+        evaluate_result = {'acc': round(float(self.acc_count) / (self.total + 1e-12), 6)}
         if reset:
             self.acc_count = 0
             self.total = 0
@@ -441,8 +382,7 @@ def bio_tag_to_spans(tags, ignore_labels=None):
         prev_bio_tag = bio_tag
     return [(span[0], (span[1][0], span[1][1]+1))
                     for span in spans
-                        if span[0] not in ignore_labels
-            ]
+                        if span[0] not in ignore_labels]
 
 
 class SpanFPreRecMetric(MetricBase):

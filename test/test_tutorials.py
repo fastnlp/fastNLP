@@ -35,7 +35,7 @@ class TestTutorial(unittest.TestCase):
         print(dataset[0])
 
         # DataSet.drop(func)筛除数据
-        dataset.drop(lambda x: x['seq_len'] <= 3)
+        dataset.drop(lambda x: x['seq_len'] <= 3, inplace=True)
         print(len(dataset))
 
         # 设置DataSet中，哪些field要转为tensor
@@ -296,7 +296,7 @@ class TestTutorial(unittest.TestCase):
 
         # 筛选数据
         origin_data_set_len = len(data_set)
-        data_set.drop(lambda x: len(x['premise']) <= 6)
+        data_set.drop(lambda x: len(x['premise']) <= 6, inplace=True)
         origin_data_set_len, len(data_set)
 
         # In[17]:

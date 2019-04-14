@@ -17,37 +17,37 @@ class Callback(object):
         super(Callback, self).__init__()
         self.trainer = None  # 在Trainer内部被重新赋值
 
-        # callback只读属性
-        self._n_epochs = None
-        self._n_steps = None
-        self._batch_size = None
-        self._model = None
-        self._pbar = None
-        self._optimizer = None
-
     @property
     def n_epochs(self):
-        return self._n_epochs
+        return self.trainer.n_epochs
+
+    @property
+    def epoch(self):
+        return self.trainer.epoch
 
     @property
     def n_steps(self):
-        return self._n_steps
+        return self.trainer.n_steps
+
+    @property
+    def step(self):
+        return self.trainer.step
 
     @property
     def batch_size(self):
-        return self._batch_size
+        return self.trainer.batch_size
 
     @property
     def model(self):
-        return self._model
+        return self.trainer.model
 
     @property
     def pbar(self):
-        return self._pbar
+        return self.trainer.pbar
 
     @property
     def optimizer(self):
-        return self._optimizer
+        return self.trainer.optimizer
 
     def on_train_begin(self):
         # before the main training loop
@@ -82,13 +82,14 @@ class Callback(object):
     def on_valid_begin(self):
         pass
 
-    def on_valid_end(self, eval_result, metric_key, optimizer):
+    def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
         """
         每次执行验证机的evaluation后会调用。传入eval_result
 
         :param eval_result: Dict[str: Dict[str: float]], evaluation的结果
         :param metric_key: str
-        :param optimizer:
+        :param optimizer: optimizer passed to trainer
+        :param is_better_eval: bool, 当前dev结果是否比之前的好
         :return:
         """
         pass
@@ -145,11 +146,10 @@ class CallbackManager(Callback):
 
     """
 
-    def __init__(self, env, attr, callbacks=None):
+    def __init__(self, env, callbacks=None):
         """
 
         :param dict env: The key is the name of the Trainer attribute(str). The value is the attribute itself.
-        :param dict attr: read-only attributes for all callbacks
         :param Callback callbacks:
         """
         super(CallbackManager, self).__init__()
@@ -169,19 +169,6 @@ class CallbackManager(Callback):
         for env_name, env_val in env.items():
             for callback in self.callbacks:
                 setattr(callback, env_name, env_val)  # Callback.trainer
-
-        self.set_property(**attr)
-
-    def set_property(self, **kwargs):
-        """设置所有callback的只读属性
-
-        :param kwargs:
-        :return:
-        """
-        for callback in self.callbacks:
-            for k, v in kwargs.items():
-                setattr(callback, "_" + k, v)
-
 
     @transfer
     def on_train_begin(self):
@@ -220,7 +207,7 @@ class CallbackManager(Callback):
         pass
 
     @transfer
-    def on_valid_end(self, eval_result, metric_key, optimizer):
+    def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
         pass
 
     @transfer
