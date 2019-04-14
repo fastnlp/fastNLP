@@ -34,7 +34,7 @@ class Trainer(object):
     def __init__(self, train_data, model, loss=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
                  validate_every=-1, dev_data=None, save_path=None, optimizer=None,
                  check_code_level=0, metric_key=None, sampler=None, prefetch=False, use_tqdm=True,
-                 use_cuda=False, callbacks=None):
+                 use_cuda=False, callbacks=None, update_every=1):
         """
         :param DataSet train_data: the training data
         :param torch.nn.modules.module model: a PyTorch model
@@ -62,6 +62,8 @@ class Trainer(object):
         :param bool use_tqdm: whether to use tqdm to show train progress.
         :param callbacks: List[Callback]. 用于在train过程中起调节作用的回调函数。比如early stop，negative sampling等可以
             通过callback机制实现。
+        :param update_every: int, 多少步更新一次梯度。用于希望累计梯度的场景，比如需要128的batch_size, 但是直接设为128会导致内存
+            不足，通过设置batch_size=32, update_every=4达到目的
         """
         super(Trainer, self).__init__()
 
@@ -75,6 +77,10 @@ class Trainer(object):
             raise ValueError("No metric for dev_data evaluation.")
         if metrics and (dev_data is None):
             raise ValueError("No dev_data for evaluations, pass dev_data or set metrics to None. ")
+
+        # check update every
+        assert update_every>=1, "update_every must be no less than 1."
+        self.update_every = int(update_every)
 
         # check save_path
         if not (save_path is None or isinstance(save_path, str)):
@@ -121,6 +127,9 @@ class Trainer(object):
         self.best_dev_perf = None
         self.sampler = sampler if sampler is not None else RandomSampler()
         self.prefetch = prefetch
+        self.callback_manager = CallbackManager(env={"trainer": self}, callbacks=callbacks)
+        self.n_steps = (len(self.train_data) // self.batch_size + int(
+                        len(self.train_data) % self.batch_size != 0)) * self.n_epochs
 
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
@@ -130,6 +139,7 @@ class Trainer(object):
             self.optimizer = optimizer.construct_from_pytorch(self.model.parameters())
 
         self.use_tqdm = use_tqdm
+        self.pbar = None
         self.print_every = abs(self.print_every)
 
         if self.dev_data is not None:
@@ -144,10 +154,8 @@ class Trainer(object):
         self.start_time = None  # start timestamp
 
         self.callback_manager = CallbackManager(env={"trainer": self},
-                                                attr={"n_epochs": self.n_epochs, "n_steps": self.step,
-                                                      "batch_size": self.batch_size, "model": self.model,
-                                                      "optimizer": self.optimizer},
                                                 callbacks=callbacks)
+
 
     def train(self, load_best_model=True):
         """
@@ -205,9 +213,9 @@ class Trainer(object):
             try:
                 self.callback_manager.on_train_begin()
                 self._train()
-                self.callback_manager.on_train_end(self.model)
+                self.callback_manager.on_train_end()
             except (CallbackException, KeyboardInterrupt) as e:
-                self.callback_manager.on_exception(e, self.model)
+                self.callback_manager.on_exception(e)
 
             if self.dev_data is not None and hasattr(self, 'best_dev_perf'):
                 print("\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
@@ -234,19 +242,21 @@ class Trainer(object):
         else:
             inner_tqdm = tqdm
         self.step = 0
+        self.epoch = 0
         start = time.time()
-        total_steps = (len(self.train_data) // self.batch_size + int(
-            len(self.train_data) % self.batch_size != 0)) * self.n_epochs
-        with inner_tqdm(total=total_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
+
+        with inner_tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
+            self.pbar = pbar if isinstance(pbar, tqdm) else None
             avg_loss = 0
             data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False,
                                   prefetch=self.prefetch)
-            self.callback_manager.set_property(pbar=pbar)
             for epoch in range(1, self.n_epochs+1):
+                self.epoch = epoch
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
                 # early stopping
-                self.callback_manager.on_epoch_begin(epoch, self.n_epochs)
+                self.callback_manager.on_epoch_begin()
                 for batch_x, batch_y in data_iterator:
+                    self.step += 1
                     _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
                     indices = data_iterator.get_batch_indices()
                     # negative sampling; replace unknown; re-weight batch_y
@@ -257,18 +267,20 @@ class Trainer(object):
                     self.callback_manager.on_loss_begin(batch_y, prediction)
                     loss = self._compute_loss(prediction, batch_y)
                     avg_loss += loss.item()
+                    loss = loss/self.update_every
 
                     # Is loss NaN or inf? requires_grad = False
-                    self.callback_manager.on_backward_begin(loss, self.model)
+                    self.callback_manager.on_backward_begin(loss)
                     self._grad_backward(loss)
-                    self.callback_manager.on_backward_end(self.model)
+                    self.callback_manager.on_backward_end()
 
                     self._update()
-                    self.callback_manager.on_step_end(self.optimizer)
+                    self.callback_manager.on_step_end()
 
                     if (self.step+1) % self.print_every == 0:
+                        avg_loss = avg_loss / self.print_every
                         if self.use_tqdm:
-                            print_output = "loss:{0:<6.5f}".format(avg_loss / self.print_every)
+                            print_output = "loss:{0:<6.5f}".format(avg_loss)
                             pbar.update(self.print_every)
                         else:
                             end = time.time()
@@ -277,7 +289,6 @@ class Trainer(object):
                                 epoch, self.step, avg_loss, diff)
                         pbar.set_postfix_str(print_output)
                         avg_loss = 0
-                    self.step += 1
                     self.callback_manager.on_batch_end()
 
                     if ((self.validate_every > 0 and self.step % self.validate_every == 0) or
@@ -285,22 +296,24 @@ class Trainer(object):
                             and self.dev_data is not None:
                         eval_res = self._do_validation(epoch=epoch, step=self.step)
                         eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
-                                                                                    total_steps) + \
-                                   self.tester._format_eval_results(eval_res)
-                        pbar.write(eval_str)
+                                                                                    self.n_steps) + \
+                                            self.tester._format_eval_results(eval_res)
+                        pbar.write(eval_str + '\n')
 
                 # ================= mini-batch end ==================== #
 
                 # lr decay; early stopping
-                self.callback_manager.on_epoch_end(epoch, self.n_epochs, self.optimizer)
+                self.callback_manager.on_epoch_end()
             # =============== epochs end =================== #
             pbar.close()
+            self.pbar = None
         # ============ tqdm end ============== #
 
     def _do_validation(self, epoch, step):
         self.callback_manager.on_valid_begin()
         res = self.tester.test()
 
+        is_better_eval = False
         if self._better_eval_result(res):
             if self.save_path is not None:
                 self._save_model(self.model,
@@ -310,8 +323,9 @@ class Trainer(object):
             self.best_dev_perf = res
             self.best_dev_epoch = epoch
             self.best_dev_step = step
+            is_better_eval = True
         # get validation results; adjust optimizer
-        self.callback_manager.on_valid_end(res, self.metric_key, self.optimizer)
+        self.callback_manager.on_valid_end(res, self.metric_key, self.optimizer, is_better_eval)
         return res
 
     def _mode(self, model, is_test=False):
@@ -330,7 +344,8 @@ class Trainer(object):
         """Perform weight update on a model.
 
         """
-        self.optimizer.step()
+        if (self.step+1)%self.update_every==0:
+            self.optimizer.step()
 
     def _data_forward(self, network, x):
         x = _build_args(network.forward, **x)
@@ -346,7 +361,8 @@ class Trainer(object):
 
         For PyTorch, just do "loss.backward()"
         """
-        self.model.zero_grad()
+        if self.step%self.update_every==0:
+            self.model.zero_grad()
         loss.backward()
 
     def _compute_loss(self, predict, truth):

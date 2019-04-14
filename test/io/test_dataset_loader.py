@@ -17,11 +17,3 @@ class TestDatasetLoader(unittest.TestCase):
     def test_PeopleDailyCorpusLoader(self):
         data_set = PeopleDailyCorpusLoader().load("test/data_for_tests/people_daily_raw.txt")
 
-    def test_ConllCWSReader(self):
-        dataset = ConllCWSReader().load("test/data_for_tests/conll_example.txt")
-
-    def test_ZhConllPOSReader(self):
-        dataset = ZhConllPOSReader().load("test/data_for_tests/zh_sample.conllx")
-
-    def test_ConllxDataLoader(self):
-        dataset = ConllxDataLoader().load("test/data_for_tests/zh_sample.conllx")

@@ -90,7 +90,7 @@ class DataSet(object):
             data_set = DataSet()
             for field in self.field_arrays.values():
                 data_set.add_field(name=field.name, fields=field.content[idx], padder=field.padder,
-                                   is_input=field.is_input, is_target=field.is_target)
+                                   is_input=field.is_input, is_target=field.is_target, ignore_type=field.ignore_type)
             return data_set
         elif isinstance(idx, str):
             if idx not in self:
@@ -313,16 +313,23 @@ class DataSet(object):
         else:
             return results
 
-    def drop(self, func):
+    def drop(self, func, inplace=True):
         """Drop instances if a condition holds.
 
         :param func: a function that takes an Instance object as input, and returns bool.
             The instance will be dropped if the function returns True.
+        :param inplace: bool, whether to drop inpalce. Otherwise a new dataset will be returned.
 
         """
-        results = [ins for ins in self._inner_iter() if not func(ins)]
-        for name, old_field in self.field_arrays.items():
-            self.field_arrays[name].content = [ins[name] for ins in results]
+        if inplace:
+            results = [ins for ins in self._inner_iter() if not func(ins)]
+            for name, old_field in self.field_arrays.items():
+                self.field_arrays[name].content = [ins[name] for ins in results]
+        else:
+            results = [ins for ins in self if not func(ins)]
+            data = DataSet(results)
+            for field_name, field in self.field_arrays.items():
+                data.field_arrays[field_name].to(field)
 
     def split(self, dev_ratio):
         """Split the dataset into training and development(validation) set.
@@ -346,19 +353,8 @@ class DataSet(object):
         for idx in train_indices:
             train_set.append(self[idx])
         for field_name in self.field_arrays:
-            train_set.field_arrays[field_name].is_input = self.field_arrays[field_name].is_input
-            train_set.field_arrays[field_name].is_target = self.field_arrays[field_name].is_target
-            train_set.field_arrays[field_name].padder = self.field_arrays[field_name].padder
-            train_set.field_arrays[field_name].dtype = self.field_arrays[field_name].dtype
-            train_set.field_arrays[field_name].pytype = self.field_arrays[field_name].pytype
-            train_set.field_arrays[field_name].content_dim = self.field_arrays[field_name].content_dim
-
-            dev_set.field_arrays[field_name].is_input = self.field_arrays[field_name].is_input
-            dev_set.field_arrays[field_name].is_target = self.field_arrays[field_name].is_target
-            dev_set.field_arrays[field_name].padder = self.field_arrays[field_name].padder
-            dev_set.field_arrays[field_name].dtype = self.field_arrays[field_name].dtype
-            dev_set.field_arrays[field_name].pytype = self.field_arrays[field_name].pytype
-            dev_set.field_arrays[field_name].content_dim = self.field_arrays[field_name].content_dim
+            train_set.field_arrays[field_name].to(self.field_arrays[field_name])
+            dev_set.field_arrays[field_name].to(self.field_arrays[field_name])
 
         return train_set, dev_set
 

@@ -1,8 +1,15 @@
 import numpy as np
 import torch
+import atexit
 
 from fastNLP.core.sampler import RandomSampler
 import torch.multiprocessing as mp
+
+_python_is_exit = False
+def _set_python_is_exit():
+    global _python_is_exit
+    _python_is_exit = True
+atexit.register(_set_python_is_exit)
 
 class Batch(object):
     """Batch is an iterable object which iterates over mini-batches.
@@ -14,15 +21,17 @@ class Batch(object):
 
     :param DataSet dataset: a DataSet object
     :param int batch_size: the size of the batch
-    :param Sampler sampler: a Sampler object
+    :param Sampler sampler: a Sampler object. If None, use fastNLP.sampler.RandomSampler
     :param bool as_numpy: If True, return Numpy array. Otherwise, return torch tensors.
     :param bool prefetch: If True, use multiprocessing to fetch next batch when training.
     :param str or torch.device device: the batch's device, if as_numpy is True, device is ignored.
     """
 
-    def __init__(self, dataset, batch_size, sampler=RandomSampler(), as_numpy=False, prefetch=False):
+    def __init__(self, dataset, batch_size, sampler=None, as_numpy=False, prefetch=False):
         self.dataset = dataset
         self.batch_size = batch_size
+        if sampler is None:
+            sampler = RandomSampler()
         self.sampler = sampler
         self.as_numpy = as_numpy
         self.idx_list = None
@@ -95,12 +104,19 @@ def to_tensor(batch, dtype):
 
 
 def run_fetch(batch, q):
+    global _python_is_exit
     batch.init_iter()
     # print('start fetch')
     while 1:
         res = batch.fetch_one()
         # print('fetch one')
-        q.put(res)
+        while 1:
+            try:
+                q.put(res, timeout=3)
+                break
+            except Exception as e:
+                if _python_is_exit:
+                    return
         if res is None:
             # print('fetch done, waiting processing')
             q.join()
