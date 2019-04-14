@@ -118,7 +118,7 @@ class TestCRF(unittest.TestCase):
         feats = nn.Parameter(torch.randn(num_samples, max_len, num_tags))
         crf = ConditionalRandomField(num_tags, include_start_end_trans)
         optimizer = optim.SGD([param for param in crf.parameters() if param.requires_grad] + [feats], lr=0.1)
-        for _ in range(10000):
+        for _ in range(10):
             loss = crf(feats, tags, masks).mean()
             optimizer.zero_grad()
             loss.backward()

@@ -152,7 +152,7 @@ class TestTutorial(unittest.TestCase):
                           train_data=train_data,
                           dev_data=dev_data,
                           loss=CrossEntropyLoss(),
-                          metrics=AccuracyMetric()
+                          metrics=AccuracyMetric(target='label_seq')
                           )
         trainer.train()
         print('Train finished!')
@@ -407,7 +407,7 @@ class TestTutorial(unittest.TestCase):
             train_data=train_data,
             model=model,
             loss=CrossEntropyLoss(pred='pred', target='label'),
-            metrics=AccuracyMetric(),
+            metrics=AccuracyMetric(target='label'),
             n_epochs=3,
             batch_size=16,
             print_every=-1,
@@ -424,7 +424,7 @@ class TestTutorial(unittest.TestCase):
         tester = Tester(
             data=test_data,
             model=model,
-            metrics=AccuracyMetric(),
+            metrics=AccuracyMetric(target='label'),
             batch_size=args["batch_size"],
         )
         tester.test()
