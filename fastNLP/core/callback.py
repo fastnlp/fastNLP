@@ -61,6 +61,10 @@ class Callback(object):
         """If use_tqdm, return trainer's tqdm print bar, else return None."""
         return self._trainer.pbar
 
+    @property
+    def update_every(self):
+        """The model in trainer will update parameters every `update_every` batches."""
+        return self._trainer.update_every
     def on_train_begin(self):
         # before the main training loop
         pass

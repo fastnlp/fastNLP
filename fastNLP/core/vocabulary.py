@@ -1,5 +1,5 @@
 from collections import Counter
-
+from fastNLP.core.dataset import DataSet
 
 def check_build_vocab(func):
     """A decorator to make sure the indexing is built before used.
@@ -150,6 +150,68 @@ class Vocabulary(object):
             return self.word2idx[self.unknown]
         else:
             raise ValueError("word {} not in vocabulary".format(w))
+
+    @check_build_vocab
+    def index_dataset(self, *datasets, field_name, new_field_name=None):
+        """
+        example:
+            # remember to use `field_name`
+            vocab.index_dataset(tr_data, dev_data, te_data, field_name='words')
+
+        :param datasets: fastNLP Dataset type. you can pass multiple datasets
+        :param field_name: str, what field to index. Only support 0,1,2 dimension.
+        :param new_field_name: str. What the indexed field should be named, default is to overwrite field_name
+        :return:
+        """
+        def index_instance(ins):
+            """
+            有几种情况, str, 1d-list, 2d-list
+            :param ins:
+            :return:
+            """
+            field = ins[field_name]
+            if isinstance(field, str):
+                return self.to_index(field)
+            elif isinstance(field, list):
+                if not isinstance(field[0], list):
+                    return [self.to_index(w) for w in field]
+                else:
+                    if isinstance(field[0][0], list):
+                        raise RuntimeError("Only support field with 2 dimensions.")
+                    return[[self.to_index(c) for c in w] for w in field]
+
+        if new_field_name is None:
+            new_field_name = field_name
+        for dataset in datasets:
+            if isinstance(dataset, DataSet):
+                dataset.apply(index_instance, new_field_name=new_field_name)
+            else:
+                raise RuntimeError("Only DataSet type is allowed.")
+
+    def from_dataset(self, *datasets, field_name):
+        """
+        Construct vocab from dataset.
+
+        :param datasets: DataSet.
+        :param field_name: str, what field is used to construct dataset.
+        :return:
+        """
+        def construct_vocab(ins):
+            field = ins[field_name]
+            if isinstance(field, str):
+                self.add_word(field)
+            elif isinstance(field, list):
+                if not isinstance(field[0], list):
+                    self.add_word_lst(field)
+                else:
+                    if isinstance(field[0][0], list):
+                        raise RuntimeError("Only support field with 2 dimensions.")
+                    [self.add_word_lst(w) for w in field]
+        for dataset in datasets:
+            if isinstance(dataset, DataSet):
+                dataset.apply(construct_vocab)
+            else:
+                raise RuntimeError("Only DataSet type is allowed.")
 
     def to_index(self, w):
         """ Turn a word to an index. If w is not in Vocabulary, return the unknown label.

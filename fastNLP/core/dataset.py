@@ -6,7 +6,6 @@ from fastNLP.core.fieldarray import AutoPadder
 from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.instance import Instance
 from fastNLP.core.utils import get_func_signature
-from fastNLP.io.base_loader import DataLoaderRegister
 
 
 class DataSet(object):
@@ -105,11 +104,6 @@ class DataSet(object):
             raise AttributeError
         if isinstance(item, str) and item in self.field_arrays:
             return self.field_arrays[item]
-        try:
-            reader = DataLoaderRegister.get_reader(item)
-            return reader
-        except AttributeError:
-            raise
 
     def __setstate__(self, state):
         self.__dict__ = state
@@ -369,7 +363,7 @@ class DataSet(object):
         :return dataset: the read data set
 
         """
-        with open(csv_path, "r") as f:
+        with open(csv_path, "r", encoding='utf-8') as f:
             start_idx = 0
             if headers is None:
                 headers = f.readline().rstrip('\r\n')
