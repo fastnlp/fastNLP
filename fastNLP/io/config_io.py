@@ -26,10 +26,10 @@ class ConfigLoader(BaseLoader):
 
         :param str file_path: the path of config file
         :param dict sections: the dict of ``{section_name(string): ConfigSection object}``
-        Example::
-
-            test_args = ConfigSection()
-            ConfigLoader("config.cfg").load_config("./data_for_tests/config", {"POS_test": test_args})
+            Example::
+    
+                test_args = ConfigSection()
+                ConfigLoader("config.cfg").load_config("./data_for_tests/config", {"POS_test": test_args})
 
         """
         assert isinstance(sections, dict)

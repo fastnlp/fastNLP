@@ -132,7 +132,7 @@ class EmbedLoader(BaseLoader):
     def load_with_vocab(embed_filepath, vocab, dtype=np.float32, normalize=True, error='ignore'):
         """
         load pretraining embedding in {embed_file} based on words in vocab. Words in vocab but not in the pretraining
-            embedding are initialized from a normal distribution which has the mean and std of the found words vectors.
+        embedding are initialized from a normal distribution which has the mean and std of the found words vectors.
         The embedding type is determined automatically, support glove and word2vec(the first line only has two elements).
 
         :param embed_filepath: str, where to read pretrain embedding
