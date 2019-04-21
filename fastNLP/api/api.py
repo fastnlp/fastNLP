@@ -9,7 +9,7 @@ from fastNLP.core.dataset import DataSet
 
 from fastNLP.api.utils import load_url
 from fastNLP.api.processor import ModelProcessor
-from fastNLP.io.dataset_loader import ConllCWSReader, ConllxDataLoader
+from fastNLP.io.dataset_loader import cut_long_sentence, ConllLoader
 from fastNLP.core.instance import Instance
 from fastNLP.api.pipeline import Pipeline
 from fastNLP.core.metrics import SpanFPreRecMetric
@@ -21,6 +21,85 @@ model_urls = {
     "pos": "http://123.206.98.91:8888/download/pos_tag_model_20190119-43f8b435.pkl",
     "parser": "http://123.206.98.91:8888/download/parser_20190204-c72ca5c0.pkl"
 }
+
+
+class ConllCWSReader(object):
+    """Deprecated. Use ConllLoader for all types of conll-format files."""
+    def __init__(self):
+        pass
+
+    def load(self, path, cut_long_sent=False):
+        """
+        返回的DataSet只包含raw_sentence这个field，内容为str。
+        假定了输入为conll的格式，以空行隔开两个句子，每行共7列，即
+        ::
+
+            1	编者按	编者按	NN	O	11	nmod:topic
+            2	：	：	PU	O	11	punct
+            3	7月	7月	NT	DATE	4	compound:nn
+            4	12日	12日	NT	DATE	11	nmod:tmod
+            5	，	，	PU	O	11	punct
+
+            1	这	这	DT	O	3	det
+            2	款	款	M	O	1	mark:clf
+            3	飞行	飞行	NN	O	8	nsubj
+            4	从	从	P	O	5	case
+            5	外型	外型	NN	O	8	nmod:prep
+
+        """
+        datalist = []
+        with open(path, 'r', encoding='utf-8') as f:
+            sample = []
+            for line in f:
+                if line.startswith('\n'):
+                    datalist.append(sample)
+                    sample = []
+                elif line.startswith('#'):
+                    continue
+                else:
+                    sample.append(line.strip().split())
+            if len(sample) > 0:
+                datalist.append(sample)
+
+        ds = DataSet()
+        for sample in datalist:
+            # print(sample)
+            res = self.get_char_lst(sample)
+            if res is None:
+                continue
+            line = ' '.join(res)
+            if cut_long_sent:
+                sents = cut_long_sentence(line)
+            else:
+                sents = [line]
+            for raw_sentence in sents:
+                ds.append(Instance(raw_sentence=raw_sentence))
+        return ds
+
+    def get_char_lst(self, sample):
+        if len(sample) == 0:
+            return None
+        text = []
+        for w in sample:
+            t1, t2, t3, t4 = w[1], w[3], w[6], w[7]
+            if t3 == '_':
+                return None
+            text.append(t1)
+        return text
+
+class ConllxDataLoader(ConllLoader):
+    """返回“词级别”的标签信息，包括词、词性、（句法）头依赖、（句法）边标签。跟``ZhConllPOSReader``完全不同。
+
+        Deprecated. Use ConllLoader for all types of conll-format files.
+    """
+    def __init__(self):
+        headers = [
+            'words', 'pos_tags', 'heads', 'labels',
+        ]
+        indexs = [
+            1, 3, 6, 7,
+        ]
+        super(ConllxDataLoader, self).__init__(headers=headers, indexs=indexs)
 
 
 class API:

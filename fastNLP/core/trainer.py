@@ -268,8 +268,9 @@ class Trainer(object):
                     self.callback_manager.on_step_end()
 
                     if self.step % self.print_every == 0:
+                        avg_loss = float(avg_loss) / self.print_every
                         if self.use_tqdm:
-                            print_output = "loss:{0:<6.5f}".format(avg_loss / self.print_every)
+                            print_output = "loss:{0:<6.5f}".format(avg_loss)
                             pbar.update(self.print_every)
                         else:
                             end = time.time()

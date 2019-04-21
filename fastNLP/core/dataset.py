@@ -373,6 +373,9 @@ class DataSet(object):
         :return dataset: the read data set
 
         """
+        import warnings
+        warnings.warn('read_csv is deprecated, use CSVLoader instead',
+                      category=DeprecationWarning)
         with open(csv_path, "r") as f:
             start_idx = 0
             if headers is None:
@@ -397,9 +400,6 @@ class DataSet(object):
                 for header, content in zip(headers, contents):
                     _dict[header].append(content)
         return cls(_dict)
-
-    # def read_pos(self):
-    #     return DataLoaderRegister.get_reader('read_pos')
 
     def save(self, path):
         """Save the DataSet object as pickle.
