@@ -20,16 +20,23 @@ class Highway(nn.Module):
 
 class CharLM(nn.Module):
     """CNN + highway network + LSTM
-    # Input:
+    
+    # Input::
+    
         4D tensor with shape [batch_size, in_channel, height, width]
-    # Output:
+    
+    # Output::
+    
         2D Tensor with shape [batch_size, vocab_size]
-    # Arguments:
+    
+    # Arguments::
+    
         char_emb_dim: the size of each character's attention
         word_emb_dim: the size of each word's attention
         vocab_size: num of unique words
         num_char: num of characters
         use_gpu: True or False
+        
     """
 
     def __init__(self, char_emb_dim, word_emb_dim,

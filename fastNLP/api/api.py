@@ -1,3 +1,7 @@
+"""
+API.API 的文档
+
+"""
 import warnings
 
 import torch
@@ -184,17 +188,17 @@ class CWS(API):
         """
         传入一个分词文件路径，返回该数据集上分词f1, precision, recall。
         分词文件应该为:
-            1	编者按	编者按	NN	O	11	nmod:topic
-            2	：	：	PU	O	11	punct
-            3	7月	7月	NT	DATE	4	compound:nn
-            4	12日	12日	NT	DATE	11	nmod:tmod
-            5	，	，	PU	O	11	punct
+        1	编者按	编者按	NN	O	11	nmod:topic
+        2	：	：	PU	O	11	punct
+        3	7月	7月	NT	DATE	4	compound:nn
+        4	12日	12日	NT	DATE	11	nmod:tmod
+        5	，	，	PU	O	11	punct
 
-            1	这	这	DT	O	3	det
-            2	款	款	M	O	1	mark:clf
-            3	飞行	飞行	NN	O	8	nsubj
-            4	从	从	P	O	5	case
-            5	外型	外型	NN	O	8	nmod:prep
+        1	这	这	DT	O	3	det
+        2	款	款	M	O	1	mark:clf
+        3	飞行	飞行	NN	O	8	nsubj
+        4	从	从	P	O	5	case
+        5	外型	外型	NN	O	8	nmod:prep
         以空行分割两个句子，有内容的每行有7列。
 
         :param filepath: str, 文件路径路径。

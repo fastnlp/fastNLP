@@ -272,7 +272,7 @@ class DataSet(object):
 
         :param func: a function that takes an instance as input.
         :param str new_field_name: If not None, results of the function will be stored as a new field.
-        :param **kwargs: Accept parameters will be
+        :param kwargs: Accept parameters will be
             (1) is_input: boolean, will be ignored if new_field is None. If True, the new field will be as input.
             (2) is_target: boolean, will be ignored if new_field is None. If True, the new field will be as target.
         :return results: if new_field_name is not passed, returned values of the function over all instances.

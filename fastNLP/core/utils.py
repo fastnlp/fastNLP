@@ -197,17 +197,22 @@ def get_func_signature(func):
 
     Given a function or method, return its signature.
     For example:
-    (1) function
+    
+    1 function::
+    
         def func(a, b='a', *args):
             xxxx
         get_func_signature(func) # 'func(a, b='a', *args)'
-    (2) method
+        
+    2 method::
+    
         class Demo:
             def __init__(self):
                 xxx
             def forward(self, a, b='a', **args)
         demo = Demo()
         get_func_signature(demo.forward) # 'Demo.forward(self, a, b='a', **args)'
+        
     :param func: a function or a method
     :return: str or None
     """
