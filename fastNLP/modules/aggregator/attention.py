@@ -23,9 +23,9 @@ class Attention(torch.nn.Module):
         raise NotImplementedError
 
 
-class DotAtte(nn.Module):
+class DotAttention(nn.Module):
     def __init__(self, key_size, value_size, dropout=0.1):
-        super(DotAtte, self).__init__()
+        super(DotAttention, self).__init__()
         self.key_size = key_size
         self.value_size = value_size
         self.scale = math.sqrt(key_size)
@@ -48,7 +48,7 @@ class DotAtte(nn.Module):
         return torch.matmul(output, V)
 
 
-class MultiHeadAtte(nn.Module):
+class MultiHeadAttention(nn.Module):
     def __init__(self, input_size, key_size, value_size, num_head, dropout=0.1):
         """
 
@@ -58,7 +58,7 @@ class MultiHeadAtte(nn.Module):
         :param num_head: int，head的数量。
         :param dropout: float。
         """
-        super(MultiHeadAtte, self).__init__()
+        super(MultiHeadAttention, self).__init__()
         self.input_size = input_size
         self.key_size = key_size
         self.value_size = value_size
@@ -68,7 +68,7 @@ class MultiHeadAtte(nn.Module):
         self.q_in = nn.Linear(input_size, in_size)
         self.k_in = nn.Linear(input_size, in_size)
         self.v_in = nn.Linear(input_size, in_size)
-        self.attention = DotAtte(key_size=key_size, value_size=value_size)
+        self.attention = DotAttention(key_size=key_size, value_size=value_size)
         self.out = nn.Linear(value_size * num_head, input_size)
         self.drop = TimestepDropout(dropout)
         self.reset_parameters()
@@ -109,16 +109,30 @@ class MultiHeadAtte(nn.Module):
         return output
 
 
-class Bi_Attention(nn.Module):
+class BiAttention(nn.Module):
+    """Bi Attention module
+    Calculate Bi Attention matrix `e`
+    .. math::
+        \begin{array}{ll} \\
+            e_ij = {a}^{\mathbf{T}}_{i}{b}_{j} \\
+            a_i =
+            b_j =
+        \end{array}
+    """
+
     def __init__(self):
-        super(Bi_Attention, self).__init__()
+        super(BiAttention, self).__init__()
         self.inf = 10e12
 
     def forward(self, in_x1, in_x2, x1_len, x2_len):
-        # in_x1: [batch_size, x1_seq_len, hidden_size]
-        # in_x2: [batch_size, x2_seq_len, hidden_size]
-        # x1_len: [batch_size, x1_seq_len]
-        # x2_len: [batch_size, x2_seq_len]
+        """
+        :param torch.Tensor in_x1: [batch_size, x1_seq_len, hidden_size] 第一句的特征表示
+        :param torch.Tensor in_x2: [batch_size, x2_seq_len, hidden_size] 第二句的特征表示
+        :param torch.Tensor x1_len: [batch_size, x1_seq_len] 第一句的0/1mask矩阵
+        :param torch.Tensor x2_len: [batch_size, x2_seq_len] 第二句的0/1mask矩阵
+        :return: torch.Tensor out_x1: [batch_size, x1_seq_len, hidden_size] 第一句attend到的特征表示
+        torch.Tensor out_x2: [batch_size, x2_seq_len, hidden_size] 第一句attend到的特征表示
+        """
 
         assert in_x1.size()[0] == in_x2.size()[0]
         assert in_x1.size()[2] == in_x2.size()[2]
