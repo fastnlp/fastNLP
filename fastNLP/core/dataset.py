@@ -277,7 +277,17 @@ class DataSet(object):
             (2) is_target: boolean, will be ignored if new_field is None. If True, the new field will be as target.
         :return results: if new_field_name is not passed, returned values of the function over all instances.
         """
-        results = [func(ins) for ins in self._inner_iter()]
+        assert len(self)!=0, "Null dataset cannot use .apply()."
+        results = []
+        idx = -1
+        try:
+            for idx, ins in enumerate(self._inner_iter()):
+                results.append(func(ins))
+        except Exception as e:
+            if idx!=-1:
+                print("Exception happens at the `{}`th instance.".format(idx))
+            raise e
+        # results = [func(ins) for ins in self._inner_iter()]
         if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
             raise ValueError("{} always return None.".format(get_func_signature(func=func)))
 

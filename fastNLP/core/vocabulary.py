@@ -182,9 +182,13 @@ class Vocabulary(object):
 
         if new_field_name is None:
             new_field_name = field_name
-        for dataset in datasets:
+        for idx, dataset in enumerate(datasets):
             if isinstance(dataset, DataSet):
-                dataset.apply(index_instance, new_field_name=new_field_name)
+                try:
+                    dataset.apply(index_instance, new_field_name=new_field_name)
+                except Exception as e:
+                    print("When processing the `{}` dataset, the following error occurred.".format(idx))
+                    raise e
             else:
                 raise RuntimeError("Only DataSet type is allowed.")
 
@@ -207,11 +211,16 @@ class Vocabulary(object):
                     if isinstance(field[0][0], list):
                         raise RuntimeError("Only support field with 2 dimensions.")
                     [self.add_word_lst(w) for w in field]
-        for dataset in datasets:
+        for idx, dataset in enumerate(datasets):
             if isinstance(dataset, DataSet):
-                dataset.apply(construct_vocab)
+                try:
+                    dataset.apply(construct_vocab)
+                except Exception as e:
+                    print("When processing the `{}` dataset, the following error occurred.".format(idx))
+                    raise e
             else:
                 raise RuntimeError("Only DataSet type is allowed.")
+        return self
 
     def to_index(self, w):
         """ Turn a word to an index. If w is not in Vocabulary, return the unknown label.

@@ -17,11 +17,12 @@ class TestEmbedLoader(unittest.TestCase):
         glove = "test/data_for_tests/glove.6B.50d_test.txt"
         word2vec = "test/data_for_tests/word2vec_test.txt"
         vocab.add_word('the')
+        vocab.add_word('none')
         g_m = EmbedLoader.load_with_vocab(glove, vocab)
-        self.assertEqual(g_m.shape, (3, 50))
+        self.assertEqual(g_m.shape, (4, 50))
         w_m = EmbedLoader.load_with_vocab(word2vec, vocab, normalize=True)
-        self.assertEqual(w_m.shape, (3, 50))
-        self.assertAlmostEqual(np.linalg.norm(w_m, axis=1).sum(), 3)
+        self.assertEqual(w_m.shape, (4, 50))
+        self.assertAlmostEqual(np.linalg.norm(w_m, axis=1).sum(), 4)
 
     def test_load_without_vocab(self):
         words = ['the', 'of', 'in', 'a', 'to', 'and']
