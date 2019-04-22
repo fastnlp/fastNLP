@@ -1,3 +1,6 @@
+
+
+
 import numpy as np
 from copy import deepcopy
 
@@ -10,13 +13,14 @@ class FieldArray(object):
     :param list content: a list of int, float, str or np.ndarray, or a list of list of one, or a np.ndarray.
     :param bool is_target: If True, this FieldArray is used to compute loss.
     :param bool is_input: If True, this FieldArray is used to the model input.
-    :param PadderBase padder: PadderBase类型。赋值给fieldarray的padder的对象会被deepcopy一份，需要修改padder参数必须通过
+    :param Padder padder: PadderBase类型。赋值给fieldarray的padder的对象会被deepcopy一份，需要修改padder参数必须通过
         fieldarray.set_pad_val()。
         默认为None，（1）如果某个field是scalar，则不进行任何padding；（2）如果为一维list， 且fieldarray的dtype为float或int类型
         则会进行padding；(3)其它情况不进行padder。
         假设需要对English word中character进行padding，则需要使用其他的padder。
         或ignore_type为True但是需要进行padding。
-    :param bool ignore_type: whether to ignore type. If True, no type detection will rise for this FieldArray. (default: False)
+    :param bool ignore_type: whether to ignore type. If True, no type detection will rise for this FieldArray.
+                           (default: False)
     """
 
     def __init__(self, name, content, is_target=None, is_input=None, padder=None, ignore_type=False):
@@ -59,7 +63,7 @@ class FieldArray(object):
         if padder is None:
             padder = AutoPadder(pad_val=0)
         else:
-            assert isinstance(padder, PadderBase), "padder must be of type PadderBase."
+            assert isinstance(padder, Padder), "padder must be of type Padder."
             padder = deepcopy(padder)
         self.set_padder(padder)
         self.ignore_type = ignore_type
@@ -272,11 +276,11 @@ class FieldArray(object):
         """
         设置padder，在这个field进行pad的时候用这个padder进行pad，如果为None则不进行pad。
 
-        :param padder: (None, PadderBase). 设置为None即删除padder.
+        :param padder: (None, Padder). 设置为None即删除padder.
         :return:
         """
         if padder is not None:
-            assert isinstance(padder, PadderBase), "padder must be of type PadderBase."
+            assert isinstance(padder, Padder), "padder must be of type Padder."
             self.padder = deepcopy(padder)
         else:
             self.padder = None
@@ -323,7 +327,7 @@ def is_iterable(content):
     return True
 
 
-class PadderBase:
+class Padder:
     """
         所有padder都需要继承这个类，并覆盖__call__()方法。
         用于对batch进行padding操作。传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前deepcopy一份。
@@ -378,7 +382,7 @@ class PadderBase:
         raise NotImplementedError
 
 
-class AutoPadder(PadderBase):
+class AutoPadder(Padder):
     """
     根据contents的数据自动判定是否需要做padding。
 
@@ -428,7 +432,7 @@ class AutoPadder(PadderBase):
         return array
 
 
-class EngChar2DPadder(PadderBase):
+class EngChar2DPadder(Padder):
     """
     用于为英语执行character级别的2D padding操作。对应的field内容应该类似[['T', 'h', 'i', 's'], ['a'], ['d', 'e', 'm', 'o']]，
     但这个Padder只能处理index为int的情况。

@@ -36,6 +36,14 @@ fastNLP.io.embed\_loader module
     :undoc-members:
     :show-inheritance:
 
+fastNLP.io.file\_reader module
+------------------------------
+
+.. automodule:: fastNLP.io.file_reader
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 fastNLP.io.model\_io module
 ---------------------------
 

@@ -163,6 +163,11 @@ class TestDataSetMethods(unittest.TestCase):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
         self.assertEqual(ds.get_target_name(), [_ for _ in ds.field_arrays if ds.field_arrays[_].is_target])
 
+    def test_split(self):
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
+        d1, d2 = ds.split(0.1)
+
+
     def test_apply2(self):
         def split_sent(ins):
             return ins['raw_sentence'].split()

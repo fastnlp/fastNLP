@@ -20,6 +20,14 @@ fastNLP.modules.decoder.MLP module
     :undoc-members:
     :show-inheritance:
 
+fastNLP.modules.decoder.utils module
+------------------------------------
+
+.. automodule:: fastNLP.modules.decoder.utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------
