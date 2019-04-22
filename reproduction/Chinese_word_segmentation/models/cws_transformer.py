@@ -72,9 +72,9 @@ class TransformerCWS(nn.Module):
         feats = self.transformer(x, masks)
         feats = self.fc2(feats)
 
-        probs = self.crf.viterbi_decode(feats, masks, get_score=False)
+        paths, _ = self.crf.viterbi_decode(feats, masks)
 
-        return {'pred': probs, 'seq_lens':seq_lens}
+        return {'pred': paths, 'seq_lens':seq_lens}
 
 
 class NoamOpt(torch.optim.Optimizer):

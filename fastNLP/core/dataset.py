@@ -151,16 +151,19 @@ class DataSet(object):
                 assert name in self.field_arrays
                 self.field_arrays[name].append(field)
 
-    def add_field(self, name, fields, padder=AutoPadder(pad_val=0), is_input=False, is_target=False, ignore_type=False):
+    def add_field(self, name, fields, padder=None, is_input=False, is_target=False, ignore_type=False):
         """Add a new field to the DataSet.
         
         :param str name: the name of the field.
         :param fields: a list of int, float, or other objects.
-        :param int padder: PadBase对象，如何对该Field进行padding。大部分情况使用默认值即可
+        :param padder: PadBase对象，如何对该Field进行padding。如果为None则使用
         :param bool is_input: whether this field is model input.
         :param bool is_target: whether this field is label or target.
         :param bool ignore_type: If True, do not perform type check. (Default: False)
         """
+        if padder is None:
+            padder = AutoPadder(pad_val=0)
+
         if len(self.field_arrays) != 0:
             if len(self) != len(fields):
                 raise RuntimeError(f"The field to append must have the same size as dataset. "
@@ -231,8 +234,8 @@ class DataSet(object):
                 raise KeyError("{} is not a valid field name.".format(name))
 
     def set_padder(self, field_name, padder):
-        """
-        为field_name设置padder
+        """为field_name设置padder
+
         :param field_name: str, 设置field的padding方式为padder
         :param padder: PadderBase类型或None. 设置为None即删除padder。即对该field不进行padding操作.
         :return:
@@ -242,8 +245,7 @@ class DataSet(object):
         self.field_arrays[field_name].set_padder(padder)
 
     def set_pad_val(self, field_name, pad_val):
-        """
-        为某个
+        """为某个field设置对应的pad_val.
 
         :param field_name: str，修改该field的pad_val
         :param pad_val: int，该field的padder会以pad_val作为padding index
@@ -254,33 +256,99 @@ class DataSet(object):
         self.field_arrays[field_name].set_pad_val(pad_val)
 
     def get_input_name(self):
-        """Get all field names with `is_input` as True.
+        """返回所有is_input被设置为True的field名称
 
-        :return field_names: a list of str
+        :return list, 里面的元素为被设置为input的field名称
         """
         return [name for name, field in self.field_arrays.items() if field.is_input]
 
     def get_target_name(self):
-        """Get all field names with `is_target` as True.
+        """返回所有is_target被设置为True的field名称
 
-        :return field_names: a list of str
+        :return list, 里面的元素为被设置为target的field名称
         """
         return [name for name, field in self.field_arrays.items() if field.is_target]
 
-    def apply(self, func, new_field_name=None, **kwargs):
-        """Apply a function to every instance of the DataSet.
+    def apply_field(self, func, field_name, new_field_name=None, **kwargs):
+        """将DataSet中的每个instance中的`field_name`这个field传给func，并获取它的返回值.
 
-        :param func: a function that takes an instance as input.
-        :param str new_field_name: If not None, results of the function will be stored as a new field.
-        :param **kwargs: Accept parameters will be
-            (1) is_input: boolean, will be ignored if new_field is None. If True, the new field will be as input.
-            (2) is_target: boolean, will be ignored if new_field is None. If True, the new field will be as target.
-        :return results: if new_field_name is not passed, returned values of the function over all instances.
+        :param func: Callable, input是instance的`field_name`这个field.
+        :param field_name: str, 传入func的是哪个field.
+        :param new_field_name: (str, None). 如果不是None，将func的返回值放入这个名为`new_field_name`的新field中，如果名称与已有
+                               的field相同，则覆盖之前的field.
+        :param **kwargs: 合法的参数有以下三个
+                        (1) is_input: bool, 如果为True则将`new_field_name`这个field设置为input
+                        (2) is_target: bool, 如果为True则将`new_field_name`这个field设置为target
+                        (3) ignore_type: bool, 如果为True则将`new_field_name`这个field的ignore_type设置为true, 忽略其类型
+        :return: List[], 里面的元素为func的返回值，所以list长度为DataSet的长度
         """
-        assert len(self)!=0, "Null dataset cannot use .apply()."
+        assert len(self)!=0, "Null DataSet cannot use apply()."
+        if field_name not in self:
+            raise KeyError("DataSet has no field named `{}`.".format(field_name))
         results = []
         idx = -1
         try:
+            for idx, ins in enumerate(self._inner_iter()):
+                results.append(func(ins[field_name]))
+        except Exception as e:
+            if idx!=-1:
+                print("Exception happens at the `{}`th instance.".format(idx))
+            raise e
+        if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
+            raise ValueError("{} always return None.".format(get_func_signature(func=func)))
+
+        if new_field_name is not None:
+            self._add_apply_field(results, new_field_name, kwargs)
+
+        return results
+
+    def _add_apply_field(self, results, new_field_name, kwargs):
+        """将results作为加入到新的field中，field名称为new_field_name
+
+        :param results: List[], 一般是apply*()之后的结果
+        :param new_field_name: str, 新加入的field的名称
+        :param kwargs: dict, 用户apply*()时传入的自定义参数
+        :return:
+        """
+        extra_param = {}
+        if 'is_input' in kwargs:
+            extra_param['is_input'] = kwargs['is_input']
+        if 'is_target' in kwargs:
+            extra_param['is_target'] = kwargs['is_target']
+        if 'ignore_type' in kwargs:
+            extra_param['ignore_type'] = kwargs['ignore_type']
+        if new_field_name in self.field_arrays:
+            # overwrite the field, keep same attributes
+            old_field = self.field_arrays[new_field_name]
+            if 'is_input' not in extra_param:
+                extra_param['is_input'] = old_field.is_input
+            if 'is_target' not in extra_param:
+                extra_param['is_target'] = old_field.is_target
+            if 'ignore_type' not in extra_param:
+                extra_param['ignore_type'] = old_field.ignore_type
+            self.add_field(name=new_field_name, fields=results, is_input=extra_param["is_input"],
+                           is_target=extra_param["is_target"], ignore_type=extra_param['ignore_type'])
+        else:
+            self.add_field(name=new_field_name, fields=results, is_input=extra_param.get("is_input", None),
+                           is_target=extra_param.get("is_target", None),
+                           ignore_type=extra_param.get("ignore_type", False))
+
+    def apply(self, func, new_field_name=None, **kwargs):
+        """将DataSet中每个instance传入到func中，并获取它的返回值.
+
+        :param func: Callable, 参数是DataSet中的instance
+        :param new_field_name: (None, str). (1) None, 不创建新的field; (2) str，将func的返回值放入这个名为
+                              `new_field_name`的新field中，如果名称与已有的field相同，则覆盖之前的field;
+        :param kwargs: 合法的参数有以下三个
+                        (1) is_input: bool, 如果为True则将`new_field_name`的field设置为input
+                        (2) is_target: bool, 如果为True则将`new_field_name`的field设置为target
+                        (3) ignore_type: bool, 如果为True则将`new_field_name`的field的ignore_type设置为true, 忽略其类型
+        :return: List[], 里面的元素为func的返回值，所以list长度为DataSet的长度
+        """
+        assert len(self)!=0, "Null DataSet cannot use apply()."
+        idx = -1
+        try:
+            results = []
             for idx, ins in enumerate(self._inner_iter()):
                 results.append(func(ins))
         except Exception as e:
@@ -291,63 +359,42 @@ class DataSet(object):
         if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
             raise ValueError("{} always return None.".format(get_func_signature(func=func)))
 
-        extra_param = {}
-        if 'is_input' in kwargs:
-            extra_param['is_input'] = kwargs['is_input']
-        if 'is_target' in kwargs:
-            extra_param['is_target'] = kwargs['is_target']
-        if 'ignore_type' in kwargs:
-            extra_param['ignore_type'] = kwargs['ignore_type']
         if new_field_name is not None:
-            if new_field_name in self.field_arrays:
-                # overwrite the field, keep same attributes
-                old_field = self.field_arrays[new_field_name]
-                if 'is_input' not in extra_param:
-                    extra_param['is_input'] = old_field.is_input
-                if 'is_target' not in extra_param:
-                    extra_param['is_target'] = old_field.is_target
-                if 'ignore_type' not in extra_param:
-                    extra_param['ignore_type'] = old_field.ignore_type
-                self.add_field(name=new_field_name, fields=results, is_input=extra_param["is_input"],
-                               is_target=extra_param["is_target"], ignore_type=extra_param['ignore_type'])
-            else:
-                self.add_field(name=new_field_name, fields=results, is_input=extra_param.get("is_input", None),
-                               is_target=extra_param.get("is_target", None),
-                               ignore_type=extra_param.get("ignore_type", False))
-        else:
-            return results
+            self._add_apply_field(results, new_field_name, kwargs)
+
+        return results
 
     def drop(self, func, inplace=True):
-        """Drop instances if a condition holds.
+        """func接受一个instance，返回bool值，返回值为True时，该instance会被删除。
 
-        :param func: a function that takes an Instance object as input, and returns bool.
-            The instance will be dropped if the function returns True.
-        :param inplace: bool, whether to drop inpalce. Otherwise a new dataset will be returned.
+        :param func: Callable, 接受一个instance作为参数，返回bool值。为True时删除该instance
+        :param inplace: bool, 是否在当前DataSet中直接删除instance。如果为False，返回值为一个删除了相应instance的新的DataSet
 
+        :return: DataSet.
         """
         if inplace:
             results = [ins for ins in self._inner_iter() if not func(ins)]
             for name, old_field in self.field_arrays.items():
                 self.field_arrays[name].content = [ins[name] for ins in results]
+            return self
         else:
             results = [ins for ins in self if not func(ins)]
             data = DataSet(results)
             for field_name, field in self.field_arrays.items():
                 data.field_arrays[field_name].to(field)
+            return data
 
-    def split(self, dev_ratio):
-        """Split the dataset into training and development(validation) set.
+    def split(self, ratio):
+        """将DataSet按照ratio的比例拆分，返回两个DataSet
 
-        :param float dev_ratio: the ratio of test set in all data.
-        :return (train_set, dev_set):
-                train_set: the training set
-                dev_set: the development set
+        :param ratio: float, 0<ratio<1, 返回的第一个DataSet拥有ratio这么多数据，第二个DataSet拥有(1-ratio)这么多数据
+        :return (DataSet, DataSet)
         """
-        assert isinstance(dev_ratio, float)
-        assert 0 < dev_ratio < 1
+        assert isinstance(ratio, float)
+        assert 0 < ratio < 1
         all_indices = [_ for _ in range(len(self))]
         np.random.shuffle(all_indices)
-        split = int(dev_ratio * len(self))
+        split = int(ratio * len(self))
         dev_indices = all_indices[:split]
         train_indices = all_indices[split:]
         dev_set = DataSet()
@@ -398,26 +445,25 @@ class DataSet(object):
                     _dict[header].append(content)
         return cls(_dict)
 
-    # def read_pos(self):
-    #     return DataLoaderRegister.get_reader('read_pos')
-
     def save(self, path):
-        """Save the DataSet object as pickle.
+        """保存DataSet.
 
-        :param str path: the path to the pickle
+        :param path: str, 将DataSet存在哪个路径
         """
         with open(path, 'wb') as f:
             pickle.dump(self, f)
 
     @staticmethod
     def load(path):
-        """Load a DataSet object from pickle.
+        """从保存的DataSet pickle路径中读取DataSet
 
-        :param str path: the path to the pickle
-        :return data_set:
+        :param path: str, 读取路径
+        :return  DataSet:
         """
         with open(path, 'rb') as f:
-            return pickle.load(f)
+            d = pickle.load(f)
+            assert isinstance(d, DataSet), "The object is not DataSet, but {}.".format(type(d))
+        return d
 
 
 def construct_dataset(sentences):

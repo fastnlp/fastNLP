@@ -79,7 +79,7 @@ class SeqLabeling(BaseModel):
         :return prediction: list of [decode path(list)]
         """
         max_len = x.shape[1]
-        tag_seq = self.Crf.viterbi_decode(x, self.mask)
+        tag_seq, _ = self.Crf.viterbi_decode(x, self.mask)
         # pad prediction to equal length
         if pad is True:
             for pred in tag_seq:

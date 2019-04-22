@@ -2,12 +2,7 @@ import torch
 from torch import nn
 
 from fastNLP.modules.utils import initial_parameter
-
-
-def log_sum_exp(x, dim=-1):
-    max_value, _ = x.max(dim=dim, keepdim=True)
-    res = torch.log(torch.sum(torch.exp(x - max_value), dim=dim, keepdim=True)) + max_value
-    return res.squeeze(dim)
+from fastNLP.modules.decoder.utils import log_sum_exp
 
 
 def seq_len_to_byte_mask(seq_lens):
@@ -20,22 +15,27 @@ def seq_len_to_byte_mask(seq_lens):
     return mask
 
 
-def allowed_transitions(id2label, encoding_type='bio'):
+def allowed_transitions(id2label, encoding_type='bio', include_start_end=True):
     """
+    给定一个id到label的映射表，返回所有可以跳转的(from_tag_id, to_tag_id)列表。
 
-    :param dict id2label: key是label的indices，value是str类型的tag或tag-label。value可以是只有tag的, 比如"B", "M"; 也可以是
-        "B-NN", "M-NN", tag和label之间一定要用"-"隔开。一般可以通过Vocabulary.get_id2word()id2label。
+    :param id2label: Dict, key是label的indices，value是str类型的tag或tag-label。value可以是只有tag的, 比如"B", "M"; 也可以是
+        "B-NN", "M-NN", tag和label之间一定要用"-"隔开。一般可以通过Vocabulary.get_id2word()得到id2label。
     :param encoding_type: str, 支持"bio", "bmes", "bmeso"。
-    :return: List[Tuple(int, int)]], 内部的Tuple是(from_tag_id, to_tag_id)。 返回的结果考虑了start和end，比如"BIO"中，B、O可以
-        位于序列的开端，而I不行。所以返回的结果中会包含(start_idx, B_idx), (start_idx, O_idx), 但是不包含(start_idx, I_idx).
-        start_idx=len(id2label), end_idx=len(id2label)+1。
+    :param include_start_end: bool, 是否包含开始与结尾的转换。比如在bio中，b/o可以在开头，但是i不能在开头；
+        为True，返回的结果中会包含(start_idx, b_idx), (start_idx, o_idx), 但是不包含(start_idx, i_idx);
+            start_idx=len(id2label), end_idx=len(id2label)+1。
+        为False, 返回的结果中不含与开始结尾相关的内容
+    :return: List[Tuple(int, int)]], 内部的Tuple是可以进行跳转的(from_tag_id, to_tag_id)。
     """
     num_tags = len(id2label)
     start_idx = num_tags
     end_idx = num_tags + 1
     encoding_type = encoding_type.lower()
     allowed_trans = []
-    id_label_lst = list(id2label.items()) + [(start_idx, 'start'), (end_idx, 'end')]
+    id_label_lst = list(id2label.items())
+    if include_start_end:
+        id_label_lst += [(start_idx, 'start'), (end_idx, 'end')]
     def split_tag_label(from_label):
         from_label = from_label.lower()
         if from_label in ['start', 'end']:
@@ -54,12 +54,12 @@ def allowed_transitions(id2label, encoding_type='bio'):
             if to_label in ['<pad>', '<unk>']:
                 continue
             to_tag, to_label = split_tag_label(to_label)
-            if is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label):
+            if _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label):
                 allowed_trans.append((from_id, to_id))
     return allowed_trans
 
 
-def is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label):
+def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label):
     """
 
     :param encoding_type: str, 支持"BIO", "BMES", "BEMSO"。
@@ -140,20 +140,22 @@ def is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label)
             raise ValueError("Unexpect tag type {}. Expect only 'B', 'M', 'E', 'S', 'O'.".format(from_tag))
 
     else:
-        raise ValueError("Only support BIO, BMES encoding type, got {}.".format(encoding_type))
+        raise ValueError("Only support BIO, BMES, BMESO encoding type, got {}.".format(encoding_type))
 
 
 class ConditionalRandomField(nn.Module):
-    """
+    def __init__(self, num_tags, include_start_end_trans=False, allowed_transitions=None,
+                 initial_method=None):
+        """条件随机场。
+        提供forward()以及viterbi_decode()两个方法，分别用于训练与inference。
 
-    :param int num_tags: 标签的数量。
-    :param bool include_start_end_trans: 是否包含起始tag
-    :param list allowed_transitions: ``List[Tuple[from_tag_id(int), to_tag_id(int)]]``. 允许的跃迁，可以通过allowed_transitions()得到。
-        如果为None，则所有跃迁均为合法
-    :param str initial_method:
-    """
-
-    def __init__(self, num_tags, include_start_end_trans=False, allowed_transitions=None, initial_method=None):
+        :param num_tags: int, 标签的数量
+        :param include_start_end_trans: bool, 是否考虑各个tag作为开始以及结尾的分数。
+        :param allowed_transitions: List[Tuple[from_tag_id(int), to_tag_id(int)]], 内部的Tuple[from_tag_id(int),
+                                   to_tag_id(int)]视为允许发生的跃迁，其他没有包含的跃迁认为是禁止跃迁，可以通过
+                                   allowed_transitions()函数得到；如果为None，则所有跃迁均为合法
+        :param initial_method: str, 初始化方法。见initial_parameter
+        """
         super(ConditionalRandomField, self).__init__()
 
         self.include_start_end_trans = include_start_end_trans
@@ -168,18 +170,12 @@ class ConditionalRandomField(nn.Module):
         if allowed_transitions is None:
             constrain = torch.zeros(num_tags + 2, num_tags + 2)
         else:
-            constrain = torch.ones(num_tags + 2, num_tags + 2) * -1000
+            constrain = torch.new_full((num_tags+2, num_tags+2), fill_value=-10000.0, dtype=torch.float)
             for from_tag_id, to_tag_id in allowed_transitions:
                 constrain[from_tag_id, to_tag_id] = 0
         self._constrain = nn.Parameter(constrain, requires_grad=False)
 
-        # self.reset_parameter()
         initial_parameter(self, initial_method)
-    def reset_parameter(self):
-        nn.init.xavier_normal_(self.trans_m)
-        if self.include_start_end_trans:
-            nn.init.normal_(self.start_scores)
-            nn.init.normal_(self.end_scores)
 
     def _normalizer_likelihood(self, logits, mask):
         """Computes the (batch_size,) denominator term for the log-likelihood, which is the
@@ -239,10 +235,11 @@ class ConditionalRandomField(nn.Module):
 
     def forward(self, feats, tags, mask):
         """
-        Calculate the neg log likelihood
-        :param feats:FloatTensor, batch_size x max_len x num_tags
-        :param tags:LongTensor, batch_size x max_len
-        :param mask:ByteTensor batch_size x max_len
+        用于计算CRF的前向loss，返回值为一个batch_size的FloatTensor，可能需要mean()求得loss。
+
+        :param feats:FloatTensor, batch_size x max_len x num_tags，特征矩阵。
+        :param tags:LongTensor, batch_size x max_len，标签矩阵。
+        :param mask:ByteTensor batch_size x max_len，为0的位置认为是padding。
         :return:FloatTensor, batch_size
         """
         feats = feats.transpose(0, 1)
@@ -253,28 +250,27 @@ class ConditionalRandomField(nn.Module):
 
         return all_path_score - gold_path_score
 
-    def viterbi_decode(self, data, mask, get_score=False, unpad=False):
-        """Given a feats matrix, return best decode path and best score.
+    def viterbi_decode(self, feats, mask, unpad=False):
+        """给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
 
-        :param data:FloatTensor, batch_size x max_len x num_tags
-        :param mask:ByteTensor batch_size x max_len
-        :param get_score: bool, whether to output the decode score.
-        :param unpad: bool, 是否将结果unpad,
-                            如果False, 返回的是batch_size x max_len的tensor，
-                            如果True，返回的是List[List[int]], List[int]为每个sequence的label，已经unpadding了，即每个
-                                List[int]的长度是这个sample的有效长度
-        :return: 如果get_score为False，返回结果根据unpadding变动
-                 如果get_score为True, 返回 (paths, List[float], )。第一个仍然是解码后的路径(根据unpad变化)，第二个List[Float]
-                    为每个seqence的解码分数。
+        :param feats: FloatTensor, batch_size x max_len x num_tags，特征矩阵。
+        :param mask: ByteTensor, batch_size x max_len, 为0的位置认为是pad；如果为None，则认为没有padding。
+        :param unpad: bool, 是否将结果删去padding,
+                        False, 返回的是batch_size x max_len的tensor，
+                        True，返回的是List[List[int]], 内部的List[int]为每个sequence的label，已经除去pad部分，即每个List[int]
+                            的长度是这个sample的有效长度。
+        :return: 返回 (paths, scores)。
+                    paths: 是解码后的路径, 其值参照unpad参数.
+                    scores: torch.FloatTensor, size为(batch_size,), 对应每个最优路径的分数。
 
         """
-        batch_size, seq_len, n_tags = data.size()
-        data = data.transpose(0, 1).data # L, B, H
+        batch_size, seq_len, n_tags = feats.size()
+        feats = feats.transpose(0, 1).data # L, B, H
         mask = mask.transpose(0, 1).data.byte() # L, B
 
         # dp
-        vpath = data.new_zeros((seq_len, batch_size, n_tags), dtype=torch.long)
-        vscore = data[0]
+        vpath = feats.new_zeros((seq_len, batch_size, n_tags), dtype=torch.long)
+        vscore = feats[0]
         transitions = self._constrain.data.clone()
         transitions[:n_tags, :n_tags] += self.trans_m.data
         if self.include_start_end_trans:
@@ -285,23 +281,24 @@ class ConditionalRandomField(nn.Module):
         trans_score = transitions[:n_tags, :n_tags].view(1, n_tags, n_tags).data
         for i in range(1, seq_len):
             prev_score = vscore.view(batch_size, n_tags, 1)
-            cur_score = data[i].view(batch_size, 1, n_tags)
+            cur_score = feats[i].view(batch_size, 1, n_tags)
             score = prev_score + trans_score + cur_score
             best_score, best_dst = score.max(1)
             vpath[i] = best_dst
             vscore = best_score.masked_fill(mask[i].eq(0).view(batch_size, 1), 0) + \
                                 vscore.masked_fill(mask[i].view(batch_size, 1), 0)
 
-        vscore += transitions[:n_tags, n_tags+1].view(1, -1)
+        if self.include_start_end_trans:
+            vscore += transitions[:n_tags, n_tags+1].view(1, -1)
 
         # backtrace
-        batch_idx = torch.arange(batch_size, dtype=torch.long, device=data.device)
-        seq_idx = torch.arange(seq_len, dtype=torch.long, device=data.device)
+        batch_idx = torch.arange(batch_size, dtype=torch.long, device=feats.device)
+        seq_idx = torch.arange(seq_len, dtype=torch.long, device=feats.device)
         lens = (mask.long().sum(0) - 1)
         # idxes [L, B], batched idx from seq_len-1 to 0
         idxes = (lens.view(1,-1) - seq_idx.view(-1,1)) % seq_len
 
-        ans = data.new_empty((seq_len, batch_size), dtype=torch.long)
+        ans = feats.new_empty((seq_len, batch_size), dtype=torch.long)
         ans_score, last_tags = vscore.max(1)
         ans[idxes[0], batch_idx] = last_tags
         for i in range(seq_len - 1):

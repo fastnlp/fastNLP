@@ -84,7 +84,7 @@ class AutoPadder(PadderBase):
             for i, content in enumerate(contents):
                 array[i][:len(content)] = content
         elif field_ele_dtype is None:
-            array = contents  # 当ignore_type=True时，直接返回contents
+            array = np.array(contents)  # 当ignore_type=True时，直接返回contents
         else:  # should only be str
             array = np.array([content for content in contents])
         return array
@@ -290,9 +290,10 @@ class FieldArray(object):
         return "FieldArray {}: {}".format(self.name, self.content.__repr__())
 
     def append(self, val):
-        """Add a new item to the tail of FieldArray.
+        """将val增加到FieldArray中，若该field的ignore_type为True则直接append到这个field中；若ignore_type为False，且当前field为
+        input或者target，则会检查传入的content是否与之前的内容在dimension, 元素的类型上是匹配的。
 
-        :param val: int, float, str, or a list of one.
+        :param val: Any.
         """
         if self.ignore_type is False:
             if isinstance(val, list):
@@ -367,13 +368,14 @@ class FieldArray(object):
         self.padder = deepcopy(padder)
 
     def set_pad_val(self, pad_val):
-        """
-        修改padder的pad_val.
-        :param pad_val: int。
+        """修改padder的pad_val.
+
+        :param pad_val: int。将该field的pad值设置为该值
         :return:
         """
         if self.padder is not None:
             self.padder.set_pad_val(pad_val)
+        return self
 
 
     def __len__(self):
@@ -385,8 +387,7 @@ class FieldArray(object):
 
     def to(self, other):
         """
-        将other的属性复制给本fieldarray(必须通过fieldarray类型). 包含 is_input, is_target, padder, dtype, pytype, content_dim
-            ignore_type
+        将other的属性复制给本FieldArray(other必须为FieldArray类型). 包含 is_input, is_target, padder, ignore_type
 
         :param other: FieldArray
         :return:
@@ -396,10 +397,9 @@ class FieldArray(object):
         self.is_input = other.is_input
         self.is_target = other.is_target
         self.padder = other.padder
-        self.dtype = other.dtype
-        self.pytype = other.pytype
-        self.content_dim = other.content_dim
         self.ignore_type = other.ignore_type
+
+        return self
 
 def is_iterable(content):
     try:

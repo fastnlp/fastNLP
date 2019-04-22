@@ -24,7 +24,7 @@ def _prepare_cache_filepath(filepath):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
-
+#  TODO 可以保存下缓存时的参数，如果load的时候发现参数不一致，发出警告。
 def cache_results(cache_filepath, refresh=False, verbose=1):
     def wrapper_(func):
         signature = inspect.signature(func)
