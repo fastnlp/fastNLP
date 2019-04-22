@@ -449,6 +449,9 @@ class DataSet(object):
         :return dataset: the read data set
 
         """
+        import warnings
+        warnings.warn('read_csv is deprecated, use CSVLoader instead',
+                      category=DeprecationWarning)
         with open(csv_path, "r", encoding='utf-8') as f:
             start_idx = 0
             if headers is None:

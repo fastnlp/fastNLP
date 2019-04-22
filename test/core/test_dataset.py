@@ -202,20 +202,6 @@ class TestDataSetMethods(unittest.TestCase):
         self.assertTrue(isinstance(ans, FieldArray))
         self.assertEqual(ans.content, [[5, 6]] * 10)
 
-    def test_reader(self):
-        # 跑通即可
-        ds = DataSet().read_naive("test/data_for_tests/tutorial_sample_dataset.csv")
-        self.assertTrue(isinstance(ds, DataSet))
-        self.assertTrue(len(ds) > 0)
-
-        ds = DataSet().read_rawdata("test/data_for_tests/people_daily_raw.txt")
-        self.assertTrue(isinstance(ds, DataSet))
-        self.assertTrue(len(ds) > 0)
-
-        ds = DataSet().read_pos("test/data_for_tests/people.txt")
-        self.assertTrue(isinstance(ds, DataSet))
-        self.assertTrue(len(ds) > 0)
-
     def test_add_null(self):
         # TODO test failed because 'fastNLP\core\fieldarray.py:143: RuntimeError'
         ds = DataSet()
