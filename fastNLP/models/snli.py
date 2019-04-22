@@ -110,5 +110,5 @@ class ESIM(BaseModel):
 
     def predict(self, words1, words2, seq_len1, seq_len2):
         prediction = self.forward(words1, words2, seq_len1, seq_len2)['pred']
-        return torch.argmax(prediction, dim=-1)
+        return {'pred': torch.argmax(prediction, dim=-1)}
 
