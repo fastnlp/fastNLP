@@ -170,6 +170,7 @@ class EmbedLoader(BaseLoader):
                     if error == 'ignore':
                         warnings.warn("Error occurred at the {} line.".format(idx))
                     else:
+                        print("Error occurred at the {} line.".format(idx))
                         raise e
             total_hits = sum(hit_flags)
             print("Found {} out of {} words in the pre-training embedding.".format(total_hits, len(vocab)))
@@ -234,11 +235,11 @@ class EmbedLoader(BaseLoader):
                         warnings.warn("Error occurred at the {} line.".format(idx))
                         pass
                     else:
+                        print("Error occurred at the {} line.".format(idx))
                         raise e
             if dim==-1:
                 raise RuntimeError("{} is an empty file.".format(embed_filepath))
             matrix = np.random.randn(len(vocab), dim).astype(dtype)
-            # TODO 需要保证unk其它数据同分布的吗？
             if (unknown is not None and not found_unknown) or (padding is not None and not found_pad):
                 start_idx = 0
                 if padding is not None:
