@@ -112,12 +112,15 @@ class MultiHeadAttention(nn.Module):
 class BiAttention(nn.Module):
     """Bi Attention module
     Calculate Bi Attention matrix `e`
+    
     .. math::
+    
         \begin{array}{ll} \\
             e_ij = {a}^{\mathbf{T}}_{i}{b}_{j} \\
             a_i =
             b_j =
         \end{array}
+        
     """
 
     def __init__(self):
@@ -131,7 +134,8 @@ class BiAttention(nn.Module):
         :param torch.Tensor x1_len: [batch_size, x1_seq_len] 第一句的0/1mask矩阵
         :param torch.Tensor x2_len: [batch_size, x2_seq_len] 第二句的0/1mask矩阵
         :return: torch.Tensor out_x1: [batch_size, x1_seq_len, hidden_size] 第一句attend到的特征表示
-        torch.Tensor out_x2: [batch_size, x2_seq_len, hidden_size] 第一句attend到的特征表示
+            torch.Tensor out_x2: [batch_size, x2_seq_len, hidden_size] 第一句attend到的特征表示
+        
         """
 
         assert in_x1.size()[0] == in_x2.size()[0]
