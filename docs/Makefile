@@ -16,6 +16,9 @@ help:
 apidoc:
 	@$(SPHINXAPIDOC) -f -o source ../fastNLP
 
+server:
+	cd build/html && python -m http.server
+
 .PHONY: help Makefile
 
 # Catch-all target: route all unknown targets to Sphinx using the new
