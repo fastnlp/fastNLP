@@ -183,7 +183,7 @@ class CWSBiLSTMCRF(BaseModel):
         masks = seq_lens_to_mask(seq_lens)
         feats = self.encoder_model(chars, bigrams, seq_lens)
         feats = self.decoder_model(feats)
-        probs = self.crf.viterbi_decode(feats, masks, get_score=False)
+        paths, _ = self.crf.viterbi_decode(feats, masks)
 
-        return {'pred': probs, 'seq_lens':seq_lens}
+        return {'pred': paths, 'seq_lens':seq_lens}
 

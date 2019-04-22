@@ -79,7 +79,7 @@ class Trainer(object):
             raise ValueError("No dev_data for evaluations, pass dev_data or set metrics to None. ")
 
         # check update every
-        assert update_every>=1, "update_every must be no less than 1."
+        assert update_every >= 1, "update_every must be no less than 1."
         self.update_every = int(update_every)
 
         # check save_path
@@ -120,7 +120,7 @@ class Trainer(object):
         self.use_cuda = bool(use_cuda)
         self.save_path = save_path
         self.print_every = int(print_every)
-        self.validate_every = int(validate_every) if validate_every!=0 else -1
+        self.validate_every = int(validate_every) if validate_every != 0 else -1
         self.best_metric_indicator = None
         self.best_dev_epoch = None
         self.best_dev_step = None
@@ -129,7 +129,7 @@ class Trainer(object):
         self.prefetch = prefetch
         self.callback_manager = CallbackManager(env={"trainer": self}, callbacks=callbacks)
         self.n_steps = (len(self.train_data) // self.batch_size + int(
-                        len(self.train_data) % self.batch_size != 0)) * self.n_epochs
+            len(self.train_data) % self.batch_size != 0)) * self.n_epochs
 
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
@@ -155,7 +155,6 @@ class Trainer(object):
 
         self.callback_manager = CallbackManager(env={"trainer": self},
                                                 callbacks=callbacks)
-
 
     def train(self, load_best_model=True):
         """
@@ -185,14 +184,15 @@ class Trainer(object):
                         根据metrics进行evaluation，并根据是否提供了save_path判断是否存储模型
 
         :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现
-            最好的模型参数。
-        :return results: 返回一个字典类型的数据, 内含以下内容::
+                最好的模型参数。
+        :return results: 返回一个字典类型的数据,
+                内含以下内容::
 
-            seconds: float, 表示训练时长
-            以下三个内容只有在提供了dev_data的情况下会有。
-            best_eval: Dict of Dict, 表示evaluation的结果
-            best_epoch: int，在第几个epoch取得的最佳值
-            best_step: int, 在第几个step(batch)更新取得的最佳值
+                    seconds: float, 表示训练时长
+                    以下三个内容只有在提供了dev_data的情况下会有。
+                    best_eval: Dict of Dict, 表示evaluation的结果
+                    best_epoch: int，在第几个epoch取得的最佳值
+                    best_step: int, 在第几个step(batch)更新取得的最佳值
 
         """
         results = {}
@@ -218,8 +218,9 @@ class Trainer(object):
                 self.callback_manager.on_exception(e)
 
             if self.dev_data is not None and hasattr(self, 'best_dev_perf'):
-                print("\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
-                      self.tester._format_eval_results(self.best_dev_perf),)
+                print(
+                    "\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
+                    self.tester._format_eval_results(self.best_dev_perf), )
                 results['best_eval'] = self.best_dev_perf
                 results['best_epoch'] = self.best_dev_epoch
                 results['best_step'] = self.best_dev_step
@@ -250,7 +251,7 @@ class Trainer(object):
             avg_loss = 0
             data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False,
                                   prefetch=self.prefetch)
-            for epoch in range(1, self.n_epochs+1):
+            for epoch in range(1, self.n_epochs + 1):
                 self.epoch = epoch
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
                 # early stopping
@@ -267,7 +268,7 @@ class Trainer(object):
                     self.callback_manager.on_loss_begin(batch_y, prediction)
                     loss = self._compute_loss(prediction, batch_y).mean()
                     avg_loss += loss.item()
-                    loss = loss/self.update_every
+                    loss = loss / self.update_every
 
                     # Is loss NaN or inf? requires_grad = False
                     self.callback_manager.on_backward_begin(loss)
@@ -277,8 +278,8 @@ class Trainer(object):
                     self._update()
                     self.callback_manager.on_step_end()
 
-                    if (self.step+1) % self.print_every == 0:
-                        avg_loss = avg_loss / self.print_every
+                    if self.step % self.print_every == 0:
+                        avg_loss = float(avg_loss) / self.print_every
                         if self.use_tqdm:
                             print_output = "loss:{0:<6.5f}".format(avg_loss)
                             pbar.update(self.print_every)
@@ -297,7 +298,7 @@ class Trainer(object):
                         eval_res = self._do_validation(epoch=epoch, step=self.step)
                         eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
                                                                                     self.n_steps) + \
-                                            self.tester._format_eval_results(eval_res)
+                                   self.tester._format_eval_results(eval_res)
                         pbar.write(eval_str + '\n')
 
                 # ================= mini-batch end ==================== #
@@ -317,7 +318,7 @@ class Trainer(object):
         if self._better_eval_result(res):
             if self.save_path is not None:
                 self._save_model(self.model,
-                             "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time]))
+                                 "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time]))
             else:
                 self._best_model_states = {name: param.cpu().clone() for name, param in self.model.named_parameters()}
             self.best_dev_perf = res
@@ -344,7 +345,7 @@ class Trainer(object):
         """Perform weight update on a model.
 
         """
-        if (self.step+1)%self.update_every==0:
+        if (self.step + 1) % self.update_every == 0:
             self.optimizer.step()
 
     def _data_forward(self, network, x):
@@ -361,7 +362,7 @@ class Trainer(object):
 
         For PyTorch, just do "loss.backward()"
         """
-        if self.step%self.update_every==0:
+        if self.step % self.update_every == 0:
             self.model.zero_grad()
         loss.backward()
 
@@ -437,6 +438,7 @@ class Trainer(object):
 DEFAULT_CHECK_BATCH_SIZE = 2
 DEFAULT_CHECK_NUM_BATCH = 2
 
+
 def _get_value_info(_dict):
     # given a dict value, return information about this dict's value. Return list of str
     strs = []
@@ -453,6 +455,7 @@ def _get_value_info(_dict):
         strs.append(_str)
     return strs
 
+
 def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_SIZE,
                 dev_data=None, metric_key=None,
                 check_level=0):
@@ -463,17 +466,17 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
     for batch_count, (batch_x, batch_y) in enumerate(batch):
         _move_dict_value_to_device(batch_x, batch_y, device=model_devcie)
         # forward check
-        if batch_count==0:
+        if batch_count == 0:
             info_str = ""
             input_fields = _get_value_info(batch_x)
             target_fields = _get_value_info(batch_y)
-            if len(input_fields)>0:
+            if len(input_fields) > 0:
                 info_str += "input fields after batch(if batch size is {}):\n".format(batch_size)
                 info_str += "\n".join(input_fields)
                 info_str += '\n'
             else:
                 raise RuntimeError("There is no input field.")
-            if len(target_fields)>0:
+            if len(target_fields) > 0:
                 info_str += "target fields after batch(if batch size is {}):\n".format(batch_size)
                 info_str += "\n".join(target_fields)
                 info_str += '\n'
@@ -481,7 +484,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
                 info_str += 'There is no target field.'
             print(info_str)
             _check_forward_error(forward_func=model.forward, dataset=dataset,
-                                    batch_x=batch_x, check_level=check_level)
+                                 batch_x=batch_x, check_level=check_level)
 
         refined_batch_x = _build_args(model.forward, **batch_x)
         pred_dict = model(**refined_batch_x)

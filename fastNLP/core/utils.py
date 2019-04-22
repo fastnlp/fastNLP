@@ -24,7 +24,7 @@ def _prepare_cache_filepath(filepath):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
-
+#  TODO 可以保存下缓存时的参数，如果load的时候发现参数不一致，发出警告。
 def cache_results(cache_filepath, refresh=False, verbose=1):
     def wrapper_(func):
         signature = inspect.signature(func)
@@ -197,17 +197,22 @@ def get_func_signature(func):
 
     Given a function or method, return its signature.
     For example:
-    (1) function
+    
+    1 function::
+    
         def func(a, b='a', *args):
             xxxx
         get_func_signature(func) # 'func(a, b='a', *args)'
-    (2) method
+        
+    2 method::
+    
         class Demo:
             def __init__(self):
                 xxx
             def forward(self, a, b='a', **args)
         demo = Demo()
         get_func_signature(demo.forward) # 'Demo.forward(self, a, b='a', **args)'
+        
     :param func: a function or a method
     :return: str or None
     """

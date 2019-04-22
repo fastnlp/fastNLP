@@ -1,3 +1,41 @@
+"""
+api.api的介绍文档
+    直接缩进会把上面的文字变成标题
+
+空行缩进的写法比较合理
+
+    比较合理
+    
+*这里是斜体内容*
+
+**这里是粗体内容**
+
+数学公式块
+
+.. math::
+    E = mc^2
+    
+.. note::
+    注解型提示。
+    
+.. warning::
+   警告型提示。
+
+.. seealso::
+    `参考与超链接 <https://willqvq.github.io/doc_guide/%E6%B3%A8%E9%87%8A%E6%8C%87%E5%AF%BC>`_
+
+普通代码块需要空一行, Example::
+
+    from fitlog import fitlog
+    fitlog.commit()
+ 
+普通下标和上标:
+
+H\ :sub:`2`\ O
+
+E = mc\ :sup:`2`
+
+"""
 import warnings
 
 import torch
@@ -9,7 +47,7 @@ from fastNLP.core.dataset import DataSet
 
 from fastNLP.api.utils import load_url
 from fastNLP.api.processor import ModelProcessor
-from fastNLP.io.dataset_loader import ConllCWSReader, ConllxDataLoader
+from fastNLP.io.dataset_loader import cut_long_sentence, ConllLoader
 from fastNLP.core.instance import Instance
 from fastNLP.api.pipeline import Pipeline
 from fastNLP.core.metrics import SpanFPreRecMetric
@@ -23,7 +61,89 @@ model_urls = {
 }
 
 
+class ConllCWSReader(object):
+    """Deprecated. Use ConllLoader for all types of conll-format files."""
+    def __init__(self):
+        pass
+
+    def load(self, path, cut_long_sent=False):
+        """
+        返回的DataSet只包含raw_sentence这个field，内容为str。
+        假定了输入为conll的格式，以空行隔开两个句子，每行共7列，即
+        ::
+
+            1	编者按	编者按	NN	O	11	nmod:topic
+            2	：	：	PU	O	11	punct
+            3	7月	7月	NT	DATE	4	compound:nn
+            4	12日	12日	NT	DATE	11	nmod:tmod
+            5	，	，	PU	O	11	punct
+
+            1	这	这	DT	O	3	det
+            2	款	款	M	O	1	mark:clf
+            3	飞行	飞行	NN	O	8	nsubj
+            4	从	从	P	O	5	case
+            5	外型	外型	NN	O	8	nmod:prep
+
+        """
+        datalist = []
+        with open(path, 'r', encoding='utf-8') as f:
+            sample = []
+            for line in f:
+                if line.startswith('\n'):
+                    datalist.append(sample)
+                    sample = []
+                elif line.startswith('#'):
+                    continue
+                else:
+                    sample.append(line.strip().split())
+            if len(sample) > 0:
+                datalist.append(sample)
+
+        ds = DataSet()
+        for sample in datalist:
+            # print(sample)
+            res = self.get_char_lst(sample)
+            if res is None:
+                continue
+            line = ' '.join(res)
+            if cut_long_sent:
+                sents = cut_long_sentence(line)
+            else:
+                sents = [line]
+            for raw_sentence in sents:
+                ds.append(Instance(raw_sentence=raw_sentence))
+        return ds
+
+    def get_char_lst(self, sample):
+        if len(sample) == 0:
+            return None
+        text = []
+        for w in sample:
+            t1, t2, t3, t4 = w[1], w[3], w[6], w[7]
+            if t3 == '_':
+                return None
+            text.append(t1)
+        return text
+
+class ConllxDataLoader(ConllLoader):
+    """返回“词级别”的标签信息，包括词、词性、（句法）头依赖、（句法）边标签。跟``ZhConllPOSReader``完全不同。
+
+        Deprecated. Use ConllLoader for all types of conll-format files.
+    """
+    def __init__(self):
+        headers = [
+            'words', 'pos_tags', 'heads', 'labels',
+        ]
+        indexs = [
+            1, 3, 6, 7,
+        ]
+        super(ConllxDataLoader, self).__init__(headers=headers, indexs=indexs)
+
+
 class API:
+    """
+        这是 API 类的文档
+    """
     def __init__(self):
         self.pipeline = None
         self._dict = None
@@ -69,8 +189,9 @@ class POS(API):
         self.load(model_path, device)
 
     def predict(self, content):
-        """
-
+        """predict函数的介绍，
+        函数介绍的第二句，这句话不会换行
+        
         :param content: list of list of str. Each string is a token(word).
         :return answer: list of list of str. Each string is a tag.
         """
@@ -136,13 +257,14 @@ class POS(API):
 
 
 class CWS(API):
-    def __init__(self, model_path=None, device='cpu'):
-        """
-        中文分词高级接口。
+    """
+    中文分词高级接口。
 
-        :param model_path: 当model_path为None，使用默认位置的model。如果默认位置不存在，则自动下载模型
-        :param device: str，可以为'cpu', 'cuda'或'cuda:0'等。会将模型load到相应device进行推断。
-        """
+    :param model_path: 当model_path为None，使用默认位置的model。如果默认位置不存在，则自动下载模型
+    :param device: str，可以为'cpu', 'cuda'或'cuda:0'等。会将模型load到相应device进行推断。
+    """
+    def __init__(self, model_path=None, device='cpu'):
+        
         super(CWS, self).__init__()
         if model_path is None:
             model_path = model_urls['cws']
@@ -183,18 +305,20 @@ class CWS(API):
     def test(self, filepath):
         """
         传入一个分词文件路径，返回该数据集上分词f1, precision, recall。
-        分词文件应该为:
+        分词文件应该为::
+        
             1	编者按	编者按	NN	O	11	nmod:topic
             2	：	：	PU	O	11	punct
             3	7月	7月	NT	DATE	4	compound:nn
             4	12日	12日	NT	DATE	11	nmod:tmod
             5	，	，	PU	O	11	punct
-
+    
             1	这	这	DT	O	3	det
             2	款	款	M	O	1	mark:clf
             3	飞行	飞行	NN	O	8	nsubj
             4	从	从	P	O	5	case
             5	外型	外型	NN	O	8	nmod:prep
+            
         以空行分割两个句子，有内容的每行有7列。
 
         :param filepath: str, 文件路径路径。

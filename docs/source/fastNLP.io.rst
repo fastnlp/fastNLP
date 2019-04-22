@@ -1,42 +1,62 @@
-fastNLP.io 
-===========
+fastNLP.io package
+==================
 
-fastNLP.io.base\_loader 
-------------------------
+Submodules
+----------
+
+fastNLP.io.base\_loader module
+------------------------------
 
 .. automodule:: fastNLP.io.base_loader
     :members:
+    :undoc-members:
+    :show-inheritance:
 
-fastNLP.io.config\_io 
-----------------------
+fastNLP.io.config\_io module
+----------------------------
 
 .. automodule:: fastNLP.io.config_io
     :members:
+    :undoc-members:
+    :show-inheritance:
 
-fastNLP.io.dataset\_loader 
----------------------------
+fastNLP.io.dataset\_loader module
+---------------------------------
 
 .. automodule:: fastNLP.io.dataset_loader
     :members:
+    :undoc-members:
+    :show-inheritance:
 
-fastNLP.io.embed\_loader 
--------------------------
+fastNLP.io.embed\_loader module
+-------------------------------
 
 .. automodule:: fastNLP.io.embed_loader
     :members:
+    :undoc-members:
+    :show-inheritance:
 
-fastNLP.io.logger 
-------------------
+fastNLP.io.file\_reader module
+------------------------------
 
-.. automodule:: fastNLP.io.logger
+.. automodule:: fastNLP.io.file_reader
     :members:
+    :undoc-members:
+    :show-inheritance:
 
-fastNLP.io.model\_io 
----------------------
+fastNLP.io.model\_io module
+---------------------------
 
 .. automodule:: fastNLP.io.model_io
     :members:
+    :undoc-members:
+    :show-inheritance:
 
+
+Module contents
+---------------
 
 .. automodule:: fastNLP.io
     :members:
+    :undoc-members:
+    :show-inheritance:

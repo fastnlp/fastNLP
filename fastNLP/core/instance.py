@@ -1,13 +1,12 @@
 class Instance(object):
     """An Instance is an example of data.
-        Example::
-            ins = Instance(field_1=[1, 1, 1], field_2=[2, 2, 2])
-            ins["field_1"]
-            >>[1, 1, 1]
-            ins.add_field("field_3", [3, 3, 3])
-
-        :param fields: a dict of (str: list).
-
+    Example::
+    
+        ins = Instance(field_1=[1, 1, 1], field_2=[2, 2, 2])
+        ins["field_1"]
+        >>[1, 1, 1]
+        ins.add_field("field_3", [3, 3, 3])
+    
     """
 
     def __init__(self, **fields):

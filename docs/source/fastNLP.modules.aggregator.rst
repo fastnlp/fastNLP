@@ -1,36 +1,54 @@
-fastNLP.modules.aggregator 
-===========================
+fastNLP.modules.aggregator package
+==================================
 
-fastNLP.modules.aggregator.attention 
--------------------------------------
+Submodules
+----------
+
+fastNLP.modules.aggregator.attention module
+-------------------------------------------
 
 .. automodule:: fastNLP.modules.aggregator.attention
     :members:
+    :undoc-members:
+    :show-inheritance:
 
-fastNLP.modules.aggregator.avg\_pool 
--------------------------------------
+fastNLP.modules.aggregator.avg\_pool module
+-------------------------------------------
 
 .. automodule:: fastNLP.modules.aggregator.avg_pool
     :members:
+    :undoc-members:
+    :show-inheritance:
 
-fastNLP.modules.aggregator.kmax\_pool 
---------------------------------------
+fastNLP.modules.aggregator.kmax\_pool module
+--------------------------------------------
 
 .. automodule:: fastNLP.modules.aggregator.kmax_pool
     :members:
+    :undoc-members:
+    :show-inheritance:
 
-fastNLP.modules.aggregator.max\_pool 
--------------------------------------
+fastNLP.modules.aggregator.max\_pool module
+-------------------------------------------
 
 .. automodule:: fastNLP.modules.aggregator.max_pool
     :members:
+    :undoc-members:
+    :show-inheritance:
 
-fastNLP.modules.aggregator.self\_attention 
--------------------------------------------
+fastNLP.modules.aggregator.self\_attention module
+-------------------------------------------------
 
 .. automodule:: fastNLP.modules.aggregator.self_attention
     :members:
+    :undoc-members:
+    :show-inheritance:
 
+
+Module contents
+---------------
 
 .. automodule:: fastNLP.modules.aggregator
     :members:
+    :undoc-members:
+    :show-inheritance:
