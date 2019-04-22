@@ -15,7 +15,7 @@ class TestAccuracyMetric(unittest.TestCase):
         target_dict = {'target': torch.zeros(4)}
         metric = AccuracyMetric()
 
-        metric(pred_dict=pred_dict, target_dict=target_dict, )
+        metric(pred_dict=pred_dict, target_dict=target_dict)
         print(metric.get_metric())
 
     def test_AccuracyMetric2(self):
@@ -30,7 +30,7 @@ class TestAccuracyMetric(unittest.TestCase):
         except Exception as e:
             print(e)
             return
-        self.assertTrue(True, False), "No exception catches."
+        print("No exception catches.")
 
     def test_AccuracyMetric3(self):
         # (3) the second batch is corrupted size
@@ -95,10 +95,9 @@ class TestAccuracyMetric(unittest.TestCase):
         self.assertAlmostEqual(res["acc"], float(ans), places=4)
 
     def test_AccuaryMetric8(self):
-        # (8) check map, does not match. use stop_fast_param to stop fast param map
         try:
             metric = AccuracyMetric(pred='predictions', target='targets')
-            pred_dict = {"prediction": torch.zeros(4, 3, 2), "stop_fast_param": 1}
+            pred_dict = {"prediction": torch.zeros(4, 3, 2)}
             target_dict = {'targets': torch.zeros(4, 3)}
             metric(pred_dict=pred_dict, target_dict=target_dict, )
             self.assertDictEqual(metric.get_metric(), {'acc': 1})

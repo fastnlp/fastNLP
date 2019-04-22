@@ -48,12 +48,16 @@ class PadderBase:
 class AutoPadder(PadderBase):
     """
     根据contents的数据自动判定是否需要做padding。
-    (1) 如果元素类型(元素类型是指field中最里层List的元素的数据类型, 可以通过FieldArray.dtype查看，比如['This', 'is', ...]的元素类
-        型为np.str, [[1,2], ...]的元素类型为np.int64)的数据不为(np.int64, np.float64)则不会进行padding
-    (2) 如果元素类型为(np.int64, np.float64),
-        (2.1) 如果该field的内容只有一个，比如为sequence_length, 则不进行padding
-        (2.2) 如果该field的内容为List, 那么会将Batch中的List pad为一样长。若该List下还有里层的List需要padding，请使用其它padder。
-            如果某个instance中field为[1, 2, 3]，则可以pad； 若为[[1,2], [3,4, ...]]则不能进行pad
+    
+    1 如果元素类型(元素类型是指field中最里层List的元素的数据类型, 可以通过FieldArray.dtype查看，比如['This', 'is', ...]的元素类
+    型为np.str, [[1,2], ...]的元素类型为np.int64)的数据不为(np.int64, np.float64)则不会进行padding
+    
+    2 如果元素类型为(np.int64, np.float64),
+    
+    2.1 如果该field的内容只有一个，比如为sequence_length, 则不进行padding
+    
+    2.2 如果该field的内容为List, 那么会将Batch中的List pad为一样长。若该List下还有里层的List需要padding，请使用其它padder。
+    如果某个instance中field为[1, 2, 3]，则可以pad； 若为[[1,2], [3,4, ...]]则不能进行pad
     """
     def __init__(self, pad_val=0):
         """
@@ -383,6 +387,23 @@ class FieldArray(object):
         """
         return len(self.content)
 
+    def to(self, other):
+        """
+        将other的属性复制给本fieldarray(必须通过fieldarray类型). 包含 is_input, is_target, padder, dtype, pytype, content_dim
+            ignore_type
+
+        :param other: FieldArray
+        :return:
+        """
+        assert isinstance(other, FieldArray), "Only support FieldArray type, not {}.".format(type(other))
+
+        self.is_input = other.is_input
+        self.is_target = other.is_target
+        self.padder = other.padder
+        self.dtype = other.dtype
+        self.pytype = other.pytype
+        self.content_dim = other.content_dim
+        self.ignore_type = other.ignore_type
 
 def is_iterable(content):
     try:

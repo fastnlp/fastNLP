@@ -8,7 +8,7 @@
 
 ## Star-Transformer
 [reference](https://arxiv.org/abs/1902.09113)
-### Performance
+### Performance (still in progress)
 |任务| 数据集 | SOTA | 模型表现 |
 |------|------| ------| ------|
 |Pos Tagging|CTB 9.0|-|ACC 92.31|

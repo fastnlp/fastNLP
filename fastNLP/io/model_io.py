@@ -31,16 +31,18 @@ class ModelLoader(BaseLoader):
 
 class ModelSaver(object):
     """Save a model
+    Example::
 
-        :param str save_path: the path to the saving directory.
-        Example::
-
-            saver = ModelSaver("./save/model_ckpt_100.pkl")
-            saver.save_pytorch(model)
+        saver = ModelSaver("./save/model_ckpt_100.pkl")
+        saver.save_pytorch(model)
 
     """
 
     def __init__(self, save_path):
+        """
+
+        :param save_path: the path to the saving directory.
+        """
         self.save_path = save_path
 
     def save_pytorch(self, model, param_only=True):

@@ -34,7 +34,7 @@ class Trainer(object):
     def __init__(self, train_data, model, loss=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
                  validate_every=-1, dev_data=None, save_path=None, optimizer=None,
                  check_code_level=0, metric_key=None, sampler=None, prefetch=False, use_tqdm=True,
-                 use_cuda=False, callbacks=None):
+                 use_cuda=False, callbacks=None, update_every=1):
         """
         :param DataSet train_data: the training data
         :param torch.nn.modules.module model: a PyTorch model
@@ -62,6 +62,8 @@ class Trainer(object):
         :param bool use_tqdm: whether to use tqdm to show train progress.
         :param callbacks: List[Callback]. 用于在train过程中起调节作用的回调函数。比如early stop，negative sampling等可以
             通过callback机制实现。
+        :param update_every: int, 多少步更新一次梯度。用于希望累计梯度的场景，比如需要128的batch_size, 但是直接设为128会导致内存
+            不足，通过设置batch_size=32, update_every=4达到目的
         """
         super(Trainer, self).__init__()
 
@@ -75,6 +77,10 @@ class Trainer(object):
             raise ValueError("No metric for dev_data evaluation.")
         if metrics and (dev_data is None):
             raise ValueError("No dev_data for evaluations, pass dev_data or set metrics to None. ")
+
+        # check update every
+        assert update_every >= 1, "update_every must be no less than 1."
+        self.update_every = int(update_every)
 
         # check save_path
         if not (save_path is None or isinstance(save_path, str)):
@@ -114,7 +120,7 @@ class Trainer(object):
         self.use_cuda = bool(use_cuda)
         self.save_path = save_path
         self.print_every = int(print_every)
-        self.validate_every = int(validate_every) if validate_every!=0 else -1
+        self.validate_every = int(validate_every) if validate_every != 0 else -1
         self.best_metric_indicator = None
         self.best_dev_epoch = None
         self.best_dev_step = None
@@ -123,7 +129,7 @@ class Trainer(object):
         self.prefetch = prefetch
         self.callback_manager = CallbackManager(env={"trainer": self}, callbacks=callbacks)
         self.n_steps = (len(self.train_data) // self.batch_size + int(
-                        len(self.train_data) % self.batch_size != 0)) * self.n_epochs
+            len(self.train_data) % self.batch_size != 0)) * self.n_epochs
 
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
@@ -147,6 +153,8 @@ class Trainer(object):
         self.step = 0
         self.start_time = None  # start timestamp
 
+        self.callback_manager = CallbackManager(env={"trainer": self},
+                                                callbacks=callbacks)
 
     def train(self, load_best_model=True):
         """
@@ -176,14 +184,15 @@ class Trainer(object):
                         根据metrics进行evaluation，并根据是否提供了save_path判断是否存储模型
 
         :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现
-            最好的模型参数。
-        :return results: 返回一个字典类型的数据, 内含以下内容::
+                最好的模型参数。
+        :return results: 返回一个字典类型的数据,
+                内含以下内容::
 
-            seconds: float, 表示训练时长
-            以下三个内容只有在提供了dev_data的情况下会有。
-            best_eval: Dict of Dict, 表示evaluation的结果
-            best_epoch: int，在第几个epoch取得的最佳值
-            best_step: int, 在第几个step(batch)更新取得的最佳值
+                    seconds: float, 表示训练时长
+                    以下三个内容只有在提供了dev_data的情况下会有。
+                    best_eval: Dict of Dict, 表示evaluation的结果
+                    best_epoch: int，在第几个epoch取得的最佳值
+                    best_step: int, 在第几个step(batch)更新取得的最佳值
 
         """
         results = {}
@@ -209,8 +218,9 @@ class Trainer(object):
                 self.callback_manager.on_exception(e)
 
             if self.dev_data is not None and hasattr(self, 'best_dev_perf'):
-                print("\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
-                      self.tester._format_eval_results(self.best_dev_perf),)
+                print(
+                    "\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
+                    self.tester._format_eval_results(self.best_dev_perf), )
                 results['best_eval'] = self.best_dev_perf
                 results['best_epoch'] = self.best_dev_epoch
                 results['best_step'] = self.best_dev_step
@@ -241,7 +251,7 @@ class Trainer(object):
             avg_loss = 0
             data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False,
                                   prefetch=self.prefetch)
-            for epoch in range(1, self.n_epochs+1):
+            for epoch in range(1, self.n_epochs + 1):
                 self.epoch = epoch
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
                 # early stopping
@@ -256,8 +266,9 @@ class Trainer(object):
 
                     # edit prediction
                     self.callback_manager.on_loss_begin(batch_y, prediction)
-                    loss = self._compute_loss(prediction, batch_y)
+                    loss = self._compute_loss(prediction, batch_y).mean()
                     avg_loss += loss.item()
+                    loss = loss / self.update_every
 
                     # Is loss NaN or inf? requires_grad = False
                     self.callback_manager.on_backward_begin(loss)
@@ -288,7 +299,7 @@ class Trainer(object):
                         eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
                                                                                     self.n_steps) + \
                                    self.tester._format_eval_results(eval_res)
-                        pbar.write(eval_str)
+                        pbar.write(eval_str + '\n')
 
                 # ================= mini-batch end ==================== #
 
@@ -303,17 +314,19 @@ class Trainer(object):
         self.callback_manager.on_valid_begin()
         res = self.tester.test()
 
+        is_better_eval = False
         if self._better_eval_result(res):
             if self.save_path is not None:
                 self._save_model(self.model,
-                             "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time]))
+                                 "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time]))
             else:
                 self._best_model_states = {name: param.cpu().clone() for name, param in self.model.named_parameters()}
             self.best_dev_perf = res
             self.best_dev_epoch = epoch
             self.best_dev_step = step
+            is_better_eval = True
         # get validation results; adjust optimizer
-        self.callback_manager.on_valid_end(res, self.metric_key)
+        self.callback_manager.on_valid_end(res, self.metric_key, self.optimizer, is_better_eval)
         return res
 
     def _mode(self, model, is_test=False):
@@ -332,7 +345,8 @@ class Trainer(object):
         """Perform weight update on a model.
 
         """
-        self.optimizer.step()
+        if (self.step + 1) % self.update_every == 0:
+            self.optimizer.step()
 
     def _data_forward(self, network, x):
         x = _build_args(network.forward, **x)
@@ -348,7 +362,8 @@ class Trainer(object):
 
         For PyTorch, just do "loss.backward()"
         """
-        self.model.zero_grad()
+        if self.step % self.update_every == 0:
+            self.model.zero_grad()
         loss.backward()
 
     def _compute_loss(self, predict, truth):
@@ -423,6 +438,7 @@ class Trainer(object):
 DEFAULT_CHECK_BATCH_SIZE = 2
 DEFAULT_CHECK_NUM_BATCH = 2
 
+
 def _get_value_info(_dict):
     # given a dict value, return information about this dict's value. Return list of str
     strs = []
@@ -439,6 +455,7 @@ def _get_value_info(_dict):
         strs.append(_str)
     return strs
 
+
 def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_SIZE,
                 dev_data=None, metric_key=None,
                 check_level=0):
@@ -449,17 +466,17 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
     for batch_count, (batch_x, batch_y) in enumerate(batch):
         _move_dict_value_to_device(batch_x, batch_y, device=model_devcie)
         # forward check
-        if batch_count==0:
+        if batch_count == 0:
             info_str = ""
             input_fields = _get_value_info(batch_x)
             target_fields = _get_value_info(batch_y)
-            if len(input_fields)>0:
+            if len(input_fields) > 0:
                 info_str += "input fields after batch(if batch size is {}):\n".format(batch_size)
                 info_str += "\n".join(input_fields)
                 info_str += '\n'
             else:
                 raise RuntimeError("There is no input field.")
-            if len(target_fields)>0:
+            if len(target_fields) > 0:
                 info_str += "target fields after batch(if batch size is {}):\n".format(batch_size)
                 info_str += "\n".join(target_fields)
                 info_str += '\n'
@@ -467,7 +484,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
                 info_str += 'There is no target field.'
             print(info_str)
             _check_forward_error(forward_func=model.forward, dataset=dataset,
-                                    batch_x=batch_x, check_level=check_level)
+                                 batch_x=batch_x, check_level=check_level)
 
         refined_batch_x = _build_args(model.forward, **batch_x)
         pred_dict = model(**refined_batch_x)

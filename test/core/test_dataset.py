@@ -125,7 +125,7 @@ class TestDataSetMethods(unittest.TestCase):
 
     def test_drop(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6], [7, 8, 9, 0]] * 20})
-        ds.drop(lambda ins: len(ins["y"]) < 3)
+        ds.drop(lambda ins: len(ins["y"]) < 3, inplace=True)
         self.assertEqual(len(ds), 20)
 
     def test_contains(self):
@@ -169,7 +169,7 @@ class TestDataSetMethods(unittest.TestCase):
 
         dataset = DataSet.read_csv('test/data_for_tests/tutorial_sample_dataset.csv', headers=('raw_sentence', 'label'),
                                    sep='\t')
-        dataset.drop(lambda x: len(x['raw_sentence'].split()) == 0)
+        dataset.drop(lambda x: len(x['raw_sentence'].split()) == 0, inplace=True)
         dataset.apply(split_sent, new_field_name='words', is_input=True)
         # print(dataset)
 
@@ -202,11 +202,11 @@ class TestDataSetMethods(unittest.TestCase):
         self.assertTrue(isinstance(ans, FieldArray))
         self.assertEqual(ans.content, [[5, 6]] * 10)
 
-    # def test_add_null(self):
-    #     # TODO test failed because 'fastNLP\core\fieldarray.py:143: RuntimeError'
-    #     ds = DataSet()
-    #     ds.add_field('test', [])
-    #     ds.set_target('test')
+    def test_add_null(self):
+        # TODO test failed because 'fastNLP\core\fieldarray.py:143: RuntimeError'
+        ds = DataSet()
+        with self.assertRaises(RuntimeError) as RE:
+            ds.add_field('test', [])
 
 
 class TestDataSetIter(unittest.TestCase):

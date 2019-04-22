@@ -6,7 +6,7 @@ from fastNLP.io.config_io import ConfigSection, ConfigLoader, ConfigSaver
 
 class TestConfigSaver(unittest.TestCase):
     def test_case_1(self):
-        config_file_dir = "test/io/"
+        config_file_dir = "test/io"
         config_file_name = "config"
         config_file_path = os.path.join(config_file_dir, config_file_name)
 

@@ -35,7 +35,7 @@ class TestENAS(unittest.TestCase):
         print(dataset[0])
 
         # DataSet.drop(func)筛除数据
-        dataset.drop(lambda x: x['seq_len'] <= 3)
+        dataset.drop(lambda x: x['seq_len'] <= 3, inplace=True)
         print(len(dataset))
 
         # 设置DataSet中，哪些field要转为tensor

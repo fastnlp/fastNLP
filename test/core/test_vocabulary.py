@@ -2,6 +2,8 @@ import unittest
 from collections import Counter
 
 from fastNLP.core.vocabulary import Vocabulary
+from fastNLP.core.dataset import DataSet
+from fastNLP.core.instance import Instance
 
 text = ["FastNLP", "works", "well", "in", "most", "cases", "and", "scales", "well", "in",
         "works", "well", "in", "most", "cases", "scales", "well"]
@@ -31,6 +33,42 @@ class TestAdd(unittest.TestCase):
         vocab.update(text)
         self.assertEqual(vocab.word_count, counter)
 
+    def test_from_dataset(self):
+        start_char = 65
+        num_samples = 10
+
+        # 0 dim
+        dataset = DataSet()
+        for i in range(num_samples):
+            ins = Instance(char=chr(start_char+i))
+            dataset.append(ins)
+        vocab = Vocabulary()
+        vocab.from_dataset(dataset, field_name='char')
+        for i in range(num_samples):
+            self.assertEqual(vocab.to_index(chr(start_char+i)), i+2)
+        vocab.index_dataset(dataset, field_name='char')
+
+        # 1 dim
+        dataset = DataSet()
+        for i in range(num_samples):
+            ins = Instance(char=[chr(start_char+i)]*6)
+            dataset.append(ins)
+        vocab = Vocabulary()
+        vocab.from_dataset(dataset, field_name='char')
+        for i in range(num_samples):
+            self.assertEqual(vocab.to_index(chr(start_char+i)), i+2)
+        vocab.index_dataset(dataset, field_name='char')
+
+        # 2 dim
+        dataset = DataSet()
+        for i in range(num_samples):
+            ins = Instance(char=[[chr(start_char+i) for _ in range(6)] for _ in range(6)])
+            dataset.append(ins)
+        vocab = Vocabulary()
+        vocab.from_dataset(dataset, field_name='char')
+        for i in range(num_samples):
+            self.assertEqual(vocab.to_index(chr(start_char+i)), i+2)
+        vocab.index_dataset(dataset, field_name='char')
 
 class TestIndexing(unittest.TestCase):
     def test_len(self):

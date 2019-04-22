@@ -61,6 +61,10 @@ class Callback(object):
         """If use_tqdm, return trainer's tqdm print bar, else return None."""
         return self._trainer.pbar
 
+    @property
+    def update_every(self):
+        """The model in trainer will update parameters every `update_every` batches."""
+        return self._trainer.update_every
     def on_train_begin(self):
         # before the main training loop
         pass
@@ -94,12 +98,14 @@ class Callback(object):
     def on_valid_begin(self):
         pass
 
-    def on_valid_end(self, eval_result, metric_key):
+    def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
         """
         每次执行验证机的evaluation后会调用。传入eval_result
 
         :param eval_result: Dict[str: Dict[str: float]], evaluation的结果
         :param metric_key: str
+        :param optimizer: optimizer passed to trainer
+        :param is_better_eval: bool, 当前dev结果是否比之前的好
         :return:
         """
         pass
@@ -206,7 +212,7 @@ class CallbackManager(Callback):
         pass
 
     @transfer
-    def on_valid_end(self, eval_result, metric_key):
+    def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
         pass
 
     @transfer
@@ -307,8 +313,8 @@ class EarlyStopCallback(Callback):
         self.patience = patience
         self.wait = 0
 
-    def on_valid_end(self, eval_result, metric_key):
-        if not self.trainer._better_eval_result(eval_result):
+    def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
+        if not is_better_eval:
             # current result is getting worse
             if self.wait == self.patience:
                 raise EarlyStopError("Early stopping raised.")
@@ -484,7 +490,7 @@ class TensorboardCallback(Callback):
                     self._summary_writer.add_scalar(name + "_grad_mean", param.grad.mean(),
                                                     global_step=self.trainer.step)
 
-    def on_valid_end(self, eval_result, metric_key):
+    def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
         if "metric" in self.options:
             for name, metric in eval_result.items():
                 for metric_key, metric_val in metric.items():
