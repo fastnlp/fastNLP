@@ -281,6 +281,7 @@ class DataSet(object):
                         (2) is_target: bool, 如果为True则将`new_field_name`这个field设置为target
                         (3) ignore_type: bool, 如果为True则将`new_field_name`这个field的ignore_type设置为true, 忽略其类型
         :return: List[], 里面的元素为func的返回值，所以list长度为DataSet的长度
+
         """
         assert len(self)!=0, "Null DataSet cannot use apply()."
         if field_name not in self:

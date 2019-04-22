@@ -1,6 +1,6 @@
 from torch import nn
 
-from ..aggregator.attention import MultiHeadAtte
+from ..aggregator.attention import MultiHeadAttention
 from ..dropout import TimestepDropout
 
 
@@ -18,7 +18,7 @@ class TransformerEncoder(nn.Module):
     class SubLayer(nn.Module):
         def __init__(self, model_size, inner_size, key_size, value_size, num_head, dropout=0.1):
             super(TransformerEncoder.SubLayer, self).__init__()
-            self.atte = MultiHeadAtte(model_size, key_size, value_size, num_head, dropout)
+            self.atte = MultiHeadAttention(model_size, key_size, value_size, num_head, dropout)
             self.norm1 = nn.LayerNorm(model_size)
             self.ffn = nn.Sequential(nn.Linear(model_size, inner_size),
                                      nn.ReLU(),

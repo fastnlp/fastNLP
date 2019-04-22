@@ -17,66 +17,72 @@ class MetricBase(object):
     """Base class for all metrics.
 
     所有的传入到Trainer, Tester的Metric需要继承自该对象。需要覆盖写入evaluate(), get_metric()方法。
+    
         evaluate(xxx)中传入的是一个batch的数据。
+        
         get_metric(xxx)当所有数据处理完毕，调用该方法得到最终的metric值
+        
     以分类问题中，Accuracy计算为例
-    假设model的forward返回dict中包含'pred'这个key, 并且该key需要用于Accuracy
-    class Model(nn.Module):
-        def __init__(xxx):
-            # do something
-        def forward(self, xxx):
-            # do something
-            return {'pred': pred, 'other_keys':xxx} # pred's shape: batch_size x num_classes
+    假设model的forward返回dict中包含'pred'这个key, 并且该key需要用于Accuracy::
+    
+        class Model(nn.Module):
+            def __init__(xxx):
+                # do something
+            def forward(self, xxx):
+                # do something
+                return {'pred': pred, 'other_keys':xxx} # pred's shape: batch_size x num_classes
+                
     假设dataset中'label'这个field是需要预测的值，并且该field被设置为了target
-    对应的AccMetric可以按如下的定义
-    # version1, 只使用这一次
-    class AccMetric(MetricBase):
-        def __init__(self):
-            super().__init__()
-
-            # 根据你的情况自定义指标
-            self.corr_num = 0
-            self.total = 0
-
-        def evaluate(self, label, pred): # 这里的名称需要和dataset中target field与model返回的key是一样的，不然找不到对应的value
-            # dev或test时，每个batch结束会调用一次该方法，需要实现如何根据每个batch累加metric
-            self.total += label.size(0)
-            self.corr_num += label.eq(pred).sum().item()
-
-        def get_metric(self, reset=True): # 在这里定义如何计算metric
-            acc = self.corr_num/self.total
-            if reset: # 是否清零以便重新计算
+    对应的AccMetric可以按如下的定义, version1, 只使用这一次::
+    
+        class AccMetric(MetricBase):
+            def __init__(self):
+                super().__init__()
+    
+                # 根据你的情况自定义指标
                 self.corr_num = 0
                 self.total = 0
-            return {'acc': acc} # 需要返回一个dict，key为该metric的名称，该名称会显示到Trainer的progress bar中
+    
+            def evaluate(self, label, pred): # 这里的名称需要和dataset中target field与model返回的key是一样的，不然找不到对应的value
+                # dev或test时，每个batch结束会调用一次该方法，需要实现如何根据每个batch累加metric
+                self.total += label.size(0)
+                self.corr_num += label.eq(pred).sum().item()
+    
+            def get_metric(self, reset=True): # 在这里定义如何计算metric
+                acc = self.corr_num/self.total
+                if reset: # 是否清零以便重新计算
+                    self.corr_num = 0
+                    self.total = 0
+                return {'acc': acc} # 需要返回一个dict，key为该metric的名称，该名称会显示到Trainer的progress bar中
 
 
-    # version2，如果需要复用Metric，比如下一次使用AccMetric时，dataset中目标field不叫label而叫y，或者model的输出不是pred
-    class AccMetric(MetricBase):
-        def __init__(self, label=None, pred=None):
-            # 假设在另一场景使用时，目标field叫y，model给出的key为pred_y。则只需要在初始化AccMetric时，
-            #   acc_metric = AccMetric(label='y', pred='pred_y')即可。
-            # 当初始化为acc_metric = AccMetric()，即label=None, pred=None, fastNLP会直接使用'label', 'pred'作为key去索取对
-            #   应的的值
-            super().__init__()
-            self._init_param_map(label=label, pred=pred) # 该方法会注册label和pred. 仅需要注册evaluate()方法会用到的参数名即可
-            # 如果没有注册该则效果与version1就是一样的
-
-            # 根据你的情况自定义指标
-            self.corr_num = 0
-            self.total = 0
-
-        def evaluate(self, label, pred): # 这里的参数名称需要和self._init_param_map()注册时一致。
-            # dev或test时，每个batch结束会调用一次该方法，需要实现如何根据每个batch累加metric
-            self.total += label.size(0)
-            self.corr_num += label.eq(pred).sum().item()
-
-        def get_metric(self, reset=True): # 在这里定义如何计算metric
-            acc = self.corr_num/self.total
-            if reset: # 是否清零以便重新计算
+    version2，如果需要复用Metric，比如下一次使用AccMetric时，dataset中目标field不叫label而叫y，或者model的输出不是pred::
+    
+        class AccMetric(MetricBase):
+            def __init__(self, label=None, pred=None):
+                # 假设在另一场景使用时，目标field叫y，model给出的key为pred_y。则只需要在初始化AccMetric时，
+                #   acc_metric = AccMetric(label='y', pred='pred_y')即可。
+                # 当初始化为acc_metric = AccMetric()，即label=None, pred=None, fastNLP会直接使用'label', 'pred'作为key去索取对
+                #   应的的值
+                super().__init__()
+                self._init_param_map(label=label, pred=pred) # 该方法会注册label和pred. 仅需要注册evaluate()方法会用到的参数名即可
+                # 如果没有注册该则效果与version1就是一样的
+    
+                # 根据你的情况自定义指标
                 self.corr_num = 0
                 self.total = 0
-            return {'acc': acc} # 需要返回一个dict，key为该metric的名称，该名称会显示到Trainer的progress bar中
+    
+            def evaluate(self, label, pred): # 这里的参数名称需要和self._init_param_map()注册时一致。
+                # dev或test时，每个batch结束会调用一次该方法，需要实现如何根据每个batch累加metric
+                self.total += label.size(0)
+                self.corr_num += label.eq(pred).sum().item()
+    
+            def get_metric(self, reset=True): # 在这里定义如何计算metric
+                acc = self.corr_num/self.total
+                if reset: # 是否清零以便重新计算
+                    self.corr_num = 0
+                    self.total = 0
+                return {'acc': acc} # 需要返回一个dict，key为该metric的名称，该名称会显示到Trainer的progress bar中
 
 
     ``MetricBase`` handles validity check of its input dictionaries - ``pred_dict`` and ``target_dict``.
@@ -84,12 +90,12 @@ class MetricBase(object):
     ``target_dict`` is the ground truth from DataSet where ``is_target`` is set ``True``.
     ``MetricBase`` will do the following type checks:
 
-        1. whether self.evaluate has varargs, which is not supported.
-        2. whether params needed by self.evaluate is not included in ``pred_dict``, ``target_dict``.
-        3. whether params needed by self.evaluate duplicate in ``pred_dict``, ``target_dict``.
+    1. whether self.evaluate has varargs, which is not supported.
+    2. whether params needed by self.evaluate is not included in ``pred_dict``, ``target_dict``.
+    3. whether params needed by self.evaluate duplicate in ``pred_dict``, ``target_dict``.
 
     Besides, before passing params into self.evaluate, this function will filter out params from output_dict and
-    target_dict which are not used in self.evaluate. (but if **kwargs presented in self.evaluate, no filtering
+    target_dict which are not used in self.evaluate. (but if kwargs presented in self.evaluate, no filtering
     will be conducted.)
 
     """
@@ -388,23 +394,26 @@ class SpanFPreRecMetric(MetricBase):
     """
     在序列标注问题中，以span的方式计算F, pre, rec.
     比如中文Part of speech中，会以character的方式进行标注，句子'中国在亚洲'对应的POS可能为(以BMES为例)
-        ['B-NN', 'E-NN', 'S-DET', 'B-NN', 'E-NN']。该metric就是为类似情况下的F1计算。
-    最后得到的metric结果为
-    {
-        'f': xxx, # 这里使用f考虑以后可以计算f_beta值
-        'pre': xxx,
-        'rec':xxx
-    }
-    若only_gross=False, 即还会返回各个label的metric统计值
+    ['B-NN', 'E-NN', 'S-DET', 'B-NN', 'E-NN']。该metric就是为类似情况下的F1计算。
+    最后得到的metric结果为::
+    
         {
-        'f': xxx,
-        'pre': xxx,
-        'rec':xxx,
-        'f-label': xxx,
-        'pre-label': xxx,
-        'rec-label':xxx,
-        ...
-    }
+            'f': xxx, # 这里使用f考虑以后可以计算f_beta值
+            'pre': xxx,
+            'rec':xxx
+        }
+    
+    若only_gross=False, 即还会返回各个label的metric统计值::
+    
+        {
+            'f': xxx,
+            'pre': xxx,
+            'rec':xxx,
+            'f-label': xxx,
+            'pre-label': xxx,
+            'rec-label':xxx,
+            ...
+        }
 
     """
     def __init__(self, tag_vocab, pred=None, target=None, seq_lens=None, encoding_type='bio', ignore_labels=None,
@@ -573,13 +582,21 @@ class BMESF1PreRecMetric(MetricBase):
     """
     按照BMES标注方式计算f1, precision, recall。由于可能存在非法tag，比如"BS"，所以需要用以下的表格做转换，cur_B意思是当前tag是B，
         next_B意思是后一个tag是B。则cur_B=S，即将当前被predict是B的tag标为S；next_M=B, 即将后一个被predict是M的tag标为B
+        
+        +-------+---------+----------+----------+---------+---------+
         |       |  next_B |  next_M  |  next_E  |  next_S |   end   |
-        |:-----:|:-------:|:--------:|:--------:|:-------:|:-------:|
-        | start |   合法  | next_M=B | next_E=S |   合法  |    -    |
+        +=======+=========+==========+==========+=========+=========+
+        | start |   合法  | next_M=B | next_E=S |   合法  |    --   |
+        +-------+---------+----------+----------+---------+---------+
         | cur_B | cur_B=S |   合法   |   合法   | cur_B=S | cur_B=S |
+        +-------+---------+----------+----------+---------+---------+
         | cur_M | cur_M=E |   合法   |   合法   | cur_M=E | cur_M=E |
+        +-------+---------+----------+----------+---------+---------+
         | cur_E |   合法  | next_M=B | next_E=S |   合法  |   合法  |
+        +-------+---------+----------+----------+---------+---------+
         | cur_S |   合法  | next_M=B | next_E=S |   合法  |   合法  |
+        +-------+---------+----------+----------+---------+---------+
+        
     举例：
         prediction为BSEMS，会被认为是SSSSS.
 

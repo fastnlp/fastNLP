@@ -9,7 +9,7 @@ from fastNLP.io.base_loader import DataLoaderRegister
 def convert_seq_dataset(data):
     """Create an DataSet instance that contains no labels.
 
-    :param data: list of list of strings, [num_examples, *].
+    :param data: list of list of strings, [num_examples, \*].
             Example::
 
                 [
@@ -28,7 +28,7 @@ def convert_seq_dataset(data):
 def convert_seq2tag_dataset(data):
     """Convert list of data into DataSet.
 
-    :param data: list of list of strings, [num_examples, *].
+    :param data: list of list of strings, [num_examples, \*].
             Example::
 
                 [
@@ -48,7 +48,7 @@ def convert_seq2tag_dataset(data):
 def convert_seq2seq_dataset(data):
     """Convert list of data into DataSet.
 
-    :param data: list of list of strings, [num_examples, *].
+    :param data: list of list of strings, [num_examples, \*].
             Example::
 
                 [
@@ -177,18 +177,18 @@ DataLoaderRegister.set_reader(RawDataSetLoader, 'read_rawdata')
 class DummyPOSReader(DataSetLoader):
     """A simple reader for a dummy POS tagging dataset.
 
-    In these datasets, each line are divided by "\t". The first Col is the vocabulary and the second
+    In these datasets, each line are divided by "\\\\t". The first Col is the vocabulary and the second
     Col is the label. Different sentence are divided by an empty line.
-        E.g::
+    E.g::
 
-            Tom label1
-            and label2
-            Jerry   label1
-            .   label3
-            (separated by an empty line)
-            Hello   label4
-            world   label5
-            !   label3
+        Tom label1
+        and label2
+        Jerry   label1
+        .   label3
+        (separated by an empty line)
+        Hello   label4
+        world   label5
+        !   label3
 
     In this example, there are two sentences "Tom and Jerry ." and "Hello world !". Each word has its own label.
     """
@@ -200,11 +200,13 @@ class DummyPOSReader(DataSetLoader):
         """
         :return data: three-level list
             Example::
+                
                 [
                     [ [word_11, word_12, ...], [label_1, label_1, ...] ],
                     [ [word_21, word_22, ...], [label_2, label_1, ...] ],
                     ...
                 ]
+                
         """
         with open(data_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
@@ -550,6 +552,7 @@ class SNLIDataSetReader(DataSetLoader):
 
         :param data: A 3D tensor.
             Example::
+            
                 [
                     [ [premise_word_11, premise_word_12, ...], [hypothesis_word_11, hypothesis_word_12, ...], [label_1] ],
                     [ [premise_word_21, premise_word_22, ...], [hypothesis_word_21, hypothesis_word_22, ...], [label_2] ],
@@ -647,7 +650,7 @@ class NaiveCWSReader(DataSetLoader):
     例如::
 
         这是 fastNLP , 一个 非常 good 的 包 .
-
+    
     或者,即每个part后面还有一个pos tag
     例如::
 
@@ -661,12 +664,15 @@ class NaiveCWSReader(DataSetLoader):
 
     def load(self, filepath, in_word_splitter=None, cut_long_sent=False):
         """
-        允许使用的情况有(默认以\t或空格作为seg)
+        允许使用的情况有(默认以\\\\t或空格作为seg)::
+        
             这是 fastNLP , 一个 非常 good 的 包 .
-        和
+            
+        和::
+        
             也/D  在/P  團員/Na  之中/Ng  ，/COMMACATEGORY
+            
         如果splitter不为None则认为是第二种情况, 且我们会按splitter分割"也/D", 然后取第一部分. 例如"也/D".split('/')[0]
-
         :param filepath:
         :param in_word_splitter:
         :param cut_long_sent:
@@ -737,11 +743,12 @@ class ZhConllPOSReader(object):
 
     def load(self, path):
         """
-        返回的DataSet, 包含以下的field
+        返回的DataSet, 包含以下的field::
+        
             words：list of str,
             tag: list of str, 被加入了BMES tag, 比如原来的序列为['VP', 'NN', 'NN', ..]，会被认为是["S-VP", "B-NN", "M-NN",..]
-        假定了输入为conll的格式，以空行隔开两个句子，每行共7列，即
-        ::
+            
+        假定了输入为conll的格式，以空行隔开两个句子，每行共7列，即::
 
             1	编者按	编者按	NN	O	11	nmod:topic
             2	：	：	PU	O	11	punct
