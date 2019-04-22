@@ -210,34 +210,62 @@ class DataSet(object):
             raise KeyError("DataSet has no field named {}.".format(old_name))
 
     def set_target(self, *field_names, flag=True):
-        """Change the target flag of these fields.
+        """将field_names的target设置为flag状态
+        Example::
 
-        :param field_names: a sequence of str, indicating field names
-        :param bool flag: Set these fields as target if True. Unset them if False.
+            dataset.set_target('labels', 'seq_len')  # 将labels和seq_len这两个field的target属性设置为True
+            dataset.set_target('labels', 'seq_lens', flag=False) # 将labels和seq_len的target属性设置为False
+
+        :param field_names: str, field的名称
+        :param flag: bool, 将field_name的target状态设置为flag
         """
+        assert isinstance(flag, bool), "Only bool type supported."
         for name in field_names:
             if name in self.field_arrays:
                 self.field_arrays[name].is_target = flag
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
 
-    def set_input(self, *field_name, flag=True):
-        """Set the input flag of these fields.
+    def set_input(self, *field_names, flag=True):
+        """将field_name的input设置为flag状态
+        Example::
 
-        :param field_name: a sequence of str, indicating field names.
-        :param bool flag: Set these fields as input if True. Unset them if False.
+            dataset.set_input('words', 'seq_len')   # 将words和seq_len这两个field的input属性设置为True
+            dataset.set_input('words', flag=False)  # 将words这个field的input属性设置为False
+
+        :param field_names: str, field的名称
+        :param flag: bool, 将field_name的input状态设置为flag
         """
-        for name in field_name:
+        for name in field_names:
             if name in self.field_arrays:
                 self.field_arrays[name].is_input = flag
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
 
+    def set_ignore_type(self, *field_names, flag=True):
+        """将field_names的ignore_type设置为flag状态
+
+        :param field_names: str, field的名称
+        :param flag: bool,
+        :return:
+        """
+        assert isinstance(flag, bool), "Only bool type supported."
+        for name in field_names:
+            if name in self.field_arrays:
+                self.field_arrays[name].ignore_type = flag
+            else:
+                raise KeyError("{} is not a valid field name.".format(name))
+
     def set_padder(self, field_name, padder):
         """为field_name设置padder
+        Example::
+
+            from fastNLP import EngChar2DPadder
+            padder = EngChar2DPadder()
+            dataset.set_padder('chars', padder)  # 则chars这个field会使用EngChar2DPadder进行pad操作
 
         :param field_name: str, 设置field的padding方式为padder
-        :param padder: PadderBase类型或None. 设置为None即删除padder。即对该field不进行padding操作.
+        :param padder: (None, PadderBase). 设置为None即删除padder, 即对该field不进行padding操作.
         :return:
         """
         if field_name not in self.field_arrays:
