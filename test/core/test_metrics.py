@@ -5,7 +5,7 @@ import torch
 
 from fastNLP.core.metrics import AccuracyMetric
 from fastNLP.core.metrics import BMESF1PreRecMetric
-from fastNLP.core.metrics import pred_topk, accuracy_topk
+from fastNLP.core.metrics import _pred_topk, _accuracy_topk
 
 
 class TestAccuracyMetric(unittest.TestCase):
@@ -134,8 +134,8 @@ class TestAccuracyMetric(unittest.TestCase):
 
 class SpanF1PreRecMetric(unittest.TestCase):
     def test_case1(self):
-        from fastNLP.core.metrics import bmes_tag_to_spans
-        from fastNLP.core.metrics import bio_tag_to_spans
+        from fastNLP.core.metrics import _bmes_tag_to_spans
+        from fastNLP.core.metrics import _bio_tag_to_spans
 
         bmes_lst = ['M-8', 'S-2', 'S-0', 'B-9', 'B-6', 'E-5', 'B-7', 'S-2', 'E-7', 'S-8']
         bio_lst = ['O-8', 'O-2', 'B-0', 'O-9', 'I-6', 'I-5', 'I-7', 'I-2', 'I-7', 'O-8']
@@ -145,8 +145,8 @@ class SpanF1PreRecMetric(unittest.TestCase):
         expect_bio_res = set()
         expect_bio_res.update([('7', (8, 9)), ('0', (2, 3)), ('2', (7, 8)), ('5', (5, 6)),
                                        ('6', (4, 5)), ('7', (6, 7))])
-        self.assertSetEqual(expect_bmes_res,set(bmes_tag_to_spans(bmes_lst)))
-        self.assertSetEqual(expect_bio_res, set(bio_tag_to_spans(bio_lst)))
+        self.assertSetEqual(expect_bmes_res,set(_bmes_tag_to_spans(bmes_lst)))
+        self.assertSetEqual(expect_bio_res, set(_bio_tag_to_spans(bio_lst)))
         # 已与allennlp对应函数做过验证，但由于测试不能依赖allennlp，所以这里只是截取上面的例子做固定测试
         # from allennlp.data.dataset_readers.dataset_utils import bio_tags_to_spans as allen_bio_tags_to_spans
         # from allennlp.data.dataset_readers.dataset_utils import bmes_tags_to_spans as allen_bmes_tags_to_spans
@@ -161,8 +161,8 @@ class SpanF1PreRecMetric(unittest.TestCase):
 
     def test_case2(self):
         # 测试不带label的
-        from fastNLP.core.metrics import bmes_tag_to_spans
-        from fastNLP.core.metrics import bio_tag_to_spans
+        from fastNLP.core.metrics import _bmes_tag_to_spans
+        from fastNLP.core.metrics import _bio_tag_to_spans
 
         bmes_lst = ['B', 'E', 'B', 'S', 'B', 'M', 'E', 'M', 'B', 'E']
         bio_lst = ['I', 'B', 'O', 'O', 'I', 'O', 'I', 'B', 'O', 'O']
@@ -170,8 +170,8 @@ class SpanF1PreRecMetric(unittest.TestCase):
         expect_bmes_res.update([('', (0, 2)), ('', (2, 3)), ('', (3, 4)), ('', (4, 7)), ('', (7, 8)), ('', (8, 10))])
         expect_bio_res = set()
         expect_bio_res.update([('', (7, 8)), ('', (6, 7)), ('', (4, 5)), ('', (0, 1)), ('', (1, 2))])
-        self.assertSetEqual(expect_bmes_res,set(bmes_tag_to_spans(bmes_lst)))
-        self.assertSetEqual(expect_bio_res, set(bio_tag_to_spans(bio_lst)))
+        self.assertSetEqual(expect_bmes_res,set(_bmes_tag_to_spans(bmes_lst)))
+        self.assertSetEqual(expect_bio_res, set(_bio_tag_to_spans(bio_lst)))
         # 已与allennlp对应函数做过验证，但由于测试不能依赖allennlp，所以这里只是截取上面的例子做固定测试
         # from allennlp.data.dataset_readers.dataset_utils import bio_tags_to_spans as allen_bio_tags_to_spans
         # from allennlp.data.dataset_readers.dataset_utils import bmes_tags_to_spans as allen_bmes_tags_to_spans
@@ -366,7 +366,7 @@ class TestUsefulFunctions(unittest.TestCase):
     # 测试metrics.py中一些看上去挺有用的函数
     def test_case_1(self):
         # multi-class
-        _ = accuracy_topk(np.random.randint(0, 3, size=(10, 1)), np.random.randint(0, 3, size=(10, 1)), k=3)
-        _ = pred_topk(np.random.randint(0, 3, size=(10, 1)))
+        _ = _accuracy_topk(np.random.randint(0, 3, size=(10, 1)), np.random.randint(0, 3, size=(10, 1)), k=3)
+        _ = _pred_topk(np.random.randint(0, 3, size=(10, 1)))
 
         # 跑通即可
