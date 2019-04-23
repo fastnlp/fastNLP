@@ -4,7 +4,7 @@ from nltk.tree import Tree
 
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
-from fastNLP.io.file_reader import read_csv, read_json, read_conll
+from fastNLP.io.file_reader import _read_csv, _read_json, _read_conll
 
 
 def _download_from_url(url, path):
@@ -55,12 +55,12 @@ def _uncompress(src, dst):
 
 
 class DataSetLoader:
-    """Interface for all DataSetLoaders.
+    """所有`DataSetLoader`的接口
 
     """
 
     def load(self, path):
-        """Load data from a given file.
+        """从指定 ``path`` 的文件中读取数据,返回DataSet
 
         :param str path: file path
         :return: a DataSet object
@@ -68,7 +68,7 @@ class DataSetLoader:
         raise NotImplementedError
 
     def convert(self, data):
-        """Optional operation to build a DataSet.
+        """用Python数据对象创建DataSet
 
         :param data: inner data structure (user-defined) to represent the data.
         :return: a DataSet object
@@ -77,7 +77,7 @@ class DataSetLoader:
 
 
 class PeopleDailyCorpusLoader(DataSetLoader):
-    """人民日报数据集
+    """读取人民日报数据集
     """
     def __init__(self):
         super(PeopleDailyCorpusLoader, self).__init__()
@@ -154,8 +154,35 @@ class PeopleDailyCorpusLoader(DataSetLoader):
         return data_set
 
 
-class ConllLoader:
+class ConllLoader(DataSetLoader):
+    """
+    读取Conll格式的数据. 数据格式详见 http://conll.cemantix.org/2012/data.html
+
+    列号从0开始, 每列对应内容为::
+
+        Column  Type
+        0       Document ID
+        1       Part number
+        2       Word number
+        3       Word itself
+        4       Part-of-Speech
+        5       Parse bit
+        6       Predicate lemma
+        7       Predicate Frameset ID
+        8       Word sense
+        9       Speaker/Author
+        10      Named Entities
+        11:N    Predicate Arguments
+        N       Coreference
+
+    :param headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexs`` 一一对应
+    :param indexs: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
+    :param dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
+    """
     def __init__(self, headers, indexs=None, dropna=True):
+        super(ConllLoader, self).__init__()
+        if not isinstance(headers, (list, tuple)):
+            raise TypeError('invalid headers: {}, should be list of strings'.format(headers))
         self.headers = headers
         self.dropna = dropna
         if indexs is None:
@@ -167,24 +194,17 @@ class ConllLoader:
 
     def load(self, path):
         ds = DataSet()
-        for idx, data in read_conll(path, indexes=self.indexs, dropna=self.dropna):
-            ins = {h:data[idx] for h, idx in zip(self.headers, self.indexs)}
+        for idx, data in _read_conll(path, indexes=self.indexs, dropna=self.dropna):
+            ins = {h:data[i] for i, h in enumerate(self.headers)}
             ds.append(Instance(**ins))
         return ds
 
-    def get_one(self, sample):
-        sample = list(map(list, zip(*sample)))
-        for field in sample:
-            if len(field) <= 0:
-                return None
-        return sample
-
 
 class Conll2003Loader(ConllLoader):
-    """Loader for conll2003 dataset
+    """读取Conll2003数据
     
-        More information about the given dataset cound be found on 
-        https://sites.google.com/site/ermasoftware/getting-started/ne-tagging-conll2003-data
+    关于数据集的更多信息,参考:
+    https://sites.google.com/site/ermasoftware/getting-started/ne-tagging-conll2003-data
     """
     def __init__(self):
         headers = [
@@ -193,9 +213,10 @@ class Conll2003Loader(ConllLoader):
         super(Conll2003Loader, self).__init__(headers=headers)
 
 
-def cut_long_sentence(sent, max_sample_length=200):
+def _cut_long_sentence(sent, max_sample_length=200):
     """
-    将长于max_sample_length的sentence截成多段，只会在有空格的地方发生截断。所以截取的句子可能长于或者短于max_sample_length
+    将长于max_sample_length的sentence截成多段，只会在有空格的地方发生截断。
+    所以截取的句子可能长于或者短于max_sample_length
 
     :param sent: str.
     :param max_sample_length: int.
@@ -223,8 +244,15 @@ def cut_long_sentence(sent, max_sample_length=200):
 
 
 class SSTLoader(DataSetLoader):
-    """load SST data in PTB tree format
-        data source: https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip
+    """读取SST数据集, DataSet包含fields::
+
+        words: list(str) 需要分类的文本
+        target: str 文本的标签
+
+    数据来源: https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip
+
+    :param subtree: 是否将数据展开为子树，扩充数据量. Default: ``False``
+    :param fine_grained: 是否使用SST-5标准，若 ``False`` , 使用SST-2。Default: ``False``
     """
     def __init__(self, subtree=False, fine_grained=False):
         self.subtree = subtree
@@ -247,14 +275,14 @@ class SSTLoader(DataSetLoader):
             datas = []
             for l in f:
                 datas.extend([(s, self.tag_v[t])
-                              for s, t in self.get_one(l, self.subtree)])
+                              for s, t in self._get_one(l, self.subtree)])
         ds = DataSet()
         for words, tag in datas:
-            ds.append(Instance(words=words, raw_tag=tag))
+            ds.append(Instance(words=words, target=tag))
         return ds
 
     @staticmethod
-    def get_one(data, subtree):
+    def _get_one(data, subtree):
         tree = Tree.fromstring(data)
         if subtree:
             return [(t.leaves(), t.label()) for t in tree.subtrees()]
@@ -262,11 +290,17 @@ class SSTLoader(DataSetLoader):
 
 
 class JsonLoader(DataSetLoader):
-    """Load json-format data,
-        every line contains a json obj, like a dict
-        fields is the dict key that need to be load
     """
-    def __init__(self, dropna=False, fields=None):
+    读取json格式数据.数据必须按行存储,每行是一个包含各类属性的json对象
+
+    :param dict fields: 需要读入的json属性名称, 和读入后在DataSet中存储的field_name
+        ``fields`` 的`key`必须是json对象的属性名. ``fields`` 的`value`为读入后在DataSet存储的`field_name`,
+        `value`也可为 ``None`` , 这时读入后的`field_name`与json对象对应属性同名
+        ``fields`` 可为 ``None`` , 这时,json对象所有属性都保存在DataSet中. Default: ``None``
+    :param bool dropna: 是否忽略非法数据,若 ``True`` 则忽略,若 ``False`` ,在遇到非法数据时,抛出 ``ValueError`` .
+        Default: ``True``
+    """
+    def __init__(self, fields=None, dropna=False):
         super(JsonLoader, self).__init__()
         self.dropna = dropna
         self.fields = None
@@ -279,7 +313,7 @@ class JsonLoader(DataSetLoader):
 
     def load(self, path):
         ds = DataSet()
-        for idx, d in read_json(path, fields=self.fields_list, dropna=self.dropna):
+        for idx, d in _read_json(path, fields=self.fields_list, dropna=self.dropna):
             ins = {self.fields[k]:v for k,v in d.items()}
             ds.append(Instance(**ins))
         return ds
@@ -287,7 +321,13 @@ class JsonLoader(DataSetLoader):
 
 class SNLILoader(JsonLoader):
     """
-    data source: https://nlp.stanford.edu/projects/snli/snli_1.0.zip
+    读取SNLI数据集，读取的DataSet包含fields::
+
+        words1: list(str)，第一句文本, premise
+        words2: list(str), 第二句文本, hypothesis
+        target: str, 真实标签
+
+    数据来源: https://nlp.stanford.edu/projects/snli/snli_1.0.zip
     """
     def __init__(self):
         fields = {
@@ -309,14 +349,14 @@ class SNLILoader(JsonLoader):
 
 
 class CSVLoader(DataSetLoader):
-    """Load data from a CSV file and return a DataSet object.
+    """
+    读取CSV格式的数据集。返回 ``DataSet``
 
-            :param str csv_path: path to the CSV file
-            :param List[str] or Tuple[str] headers: headers of the CSV file
-            :param str sep: delimiter in CSV file. Default: ","
-            :param bool dropna: If True, drop rows that have less entries than headers.
-            :return dataset: the read data set
-
+    :param List[str] headers: CSV文件的文件头.定义每一列的属性名称,即返回的DataSet中`field`的名称
+        若为 ``None`` ,则将读入文件的第一行视作 ``headers`` . Default: ``None``
+    :param str sep: CSV文件中列与列之间的分隔符. Default: ","
+    :param bool dropna: 是否忽略非法数据,若 ``True`` 则忽略,若 ``False`` ,在遇到非法数据时,抛出 ``ValueError`` .
+        Default: ``True``
     """
     def __init__(self, headers=None, sep=",", dropna=True):
         self.headers = headers
@@ -325,8 +365,8 @@ class CSVLoader(DataSetLoader):
 
     def load(self, path):
         ds = DataSet()
-        for idx, data in read_csv(path, headers=self.headers,
-                                  sep=self.sep, dropna=self.dropna):
+        for idx, data in _read_csv(path, headers=self.headers,
+                                   sep=self.sep, dropna=self.dropna):
             ds.append(Instance(**data))
         return ds
 

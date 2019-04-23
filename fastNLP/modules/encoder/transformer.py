@@ -7,13 +7,13 @@ from ..dropout import TimestepDropout
 class TransformerEncoder(nn.Module):
     """transformer的encoder模块，不包含embedding层
 
-    :param num_layers: int, transformer的层数
-    :param model_size: int, 输入维度的大小。同时也是输出维度的大小。
-    :param inner_size: int, FFN层的hidden大小
-    :param key_size: int, 每个head的维度大小。
-    :param value_size: int，每个head中value的维度。
-    :param num_head: int，head的数量。
-    :param dropout: float。
+    :param int num_layers: transformer的层数
+    :param int model_size: 输入维度的大小。同时也是输出维度的大小。
+    :param int inner_size: FFN层的hidden大小
+    :param int key_size: 每个head的维度大小。
+    :param int value_size: 每个head中value的维度。
+    :param int num_head: head的数量。
+    :param float dropout: dropout概率. Default: 0.1
     """
     class SubLayer(nn.Module):
         def __init__(self, model_size, inner_size, key_size, value_size, num_head, dropout=0.1):
@@ -48,7 +48,8 @@ class TransformerEncoder(nn.Module):
     def forward(self, x, seq_mask=None):
         """
         :param x: [batch, seq_len, model_size] 输入序列
-        :param seq_mask: [batch, seq_len] 输入序列的padding mask
+        :param seq_mask: [batch, seq_len] 输入序列的padding mask, 若为 ``None`` , 生成全1向量.
+            Default: ``None``
         :return: [batch, seq_len, model_size] 输出序列
         """
         output = x

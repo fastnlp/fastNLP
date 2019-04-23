@@ -598,7 +598,7 @@ class DataSet(object):
 
         """
         import warnings
-        warnings.warn('read_csv is deprecated, use CSVLoader instead',
+        warnings.warn('DataSet.read_csv is deprecated, use CSVLoader instead',
                       category=DeprecationWarning)
         with open(csv_path, "r", encoding='utf-8') as f:
             start_idx = 0

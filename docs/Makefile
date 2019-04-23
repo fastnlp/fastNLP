@@ -14,7 +14,7 @@ help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 apidoc:
-	@$(SPHINXAPIDOC) -f -o source ../fastNLP
+	@$(SPHINXAPIDOC) -fM -o source ../fastNLP
 
 server:
 	cd build/html && python -m http.server

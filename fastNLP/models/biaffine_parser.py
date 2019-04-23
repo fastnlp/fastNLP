@@ -16,7 +16,7 @@ from fastNLP.modules.utils import initial_parameter
 from fastNLP.modules.utils import seq_mask
 
 
-def mst(scores):
+def _mst(scores):
     """
     with some modification to support parser output for MST decoding
     https://github.com/tdozat/Parser/blob/0739216129cd39d69997d28cbc4133b360ea3934/lib/models/nn.py#L692
@@ -120,12 +120,22 @@ def _find_cycle(vertices, edges):
 
 
 class GraphParser(BaseModel):
-    """Graph based Parser helper class, support greedy decoding and MST(Maximum Spanning Tree) decoding
+    """
+    基于图的parser base class, 支持贪婪解码和最大生成树解码
     """
     def __init__(self):
         super(GraphParser, self).__init__()
 
-    def _greedy_decoder(self, arc_matrix, mask=None):
+    @staticmethod
+    def greedy_decoder(arc_matrix, mask=None):
+        """
+        贪心解码方式, 输入图, 输出贪心解码的parsing结果, 不保证合法的构成树
+
+        :param arc_matrix: [batch, seq_len, seq_len] 输入图矩阵
+        :param mask: [batch, seq_len] 输入图的padding mask, 有内容的部分为 1, 否则为 0.
+            若为 ``None`` 时, 默认为全1向量. Default: ``None``
+        :return heads: [batch, seq_len] 每个元素在树中对应的head(parent)预测结果
+        """
         _, seq_len, _ = arc_matrix.shape
         matrix = arc_matrix + torch.diag(arc_matrix.new(seq_len).fill_(-np.inf))
         flip_mask = (mask == 0).byte()
@@ -135,22 +145,34 @@ class GraphParser(BaseModel):
             heads *= mask.long()
         return heads
 
-    def _mst_decoder(self, arc_matrix, mask=None):
+    @staticmethod
+    def mst_decoder(arc_matrix, mask=None):
+        """
+        用最大生成树算法, 计算parsing结果, 保证输出合法的树结构
+
+        :param arc_matrix: [batch, seq_len, seq_len] 输入图矩阵
+        :param mask: [batch, seq_len] 输入图的padding mask, 有内容的部分为 1, 否则为 0.
+            若为 ``None`` 时, 默认为全1向量. Default: ``None``
+        :return heads: [batch, seq_len] 每个元素在树中对应的head(parent)预测结果
+        """
         batch_size, seq_len, _ = arc_matrix.shape
         matrix = arc_matrix.clone()
         ans = matrix.new_zeros(batch_size, seq_len).long()
         lens = (mask.long()).sum(1) if mask is not None else torch.zeros(batch_size) + seq_len
-        batch_idx = torch.arange(batch_size, dtype=torch.long, device=lens.device)
         for i, graph in enumerate(matrix):
             len_i = lens[i]
-            ans[i, :len_i] = torch.as_tensor(mst(graph.detach()[:len_i, :len_i].cpu().numpy()), device=ans.device)
+            ans[i, :len_i] = torch.as_tensor(_mst(graph.detach()[:len_i, :len_i].cpu().numpy()), device=ans.device)
         if mask is not None:
             ans *= mask.long()
         return ans
 
 
 class ArcBiaffine(nn.Module):
-    """helper module for Biaffine Dependency Parser predicting arc
+    """
+    Biaffine Dependency Parser 的子模块, 用于构建预测边的图
+
+    :param hidden_size: 输入的特征维度
+    :param bias: 是否使用bias. Default: ``True``
     """
     def __init__(self, hidden_size, bias=True):
         super(ArcBiaffine, self).__init__()
@@ -164,10 +186,10 @@ class ArcBiaffine(nn.Module):
 
     def forward(self, head, dep):
         """
-        :param head arc-head tensor = [batch, length, emb_dim]
-        :param dep arc-dependent tensor = [batch, length, emb_dim]
 
-        :return output tensor = [bacth, length, length]
+        :param head: arc-head tensor [batch, length, hidden]
+        :param dep: arc-dependent tensor [batch, length, hidden]
+        :return output: tensor [bacth, length, length]
         """
         output = dep.matmul(self.U)
         output = output.bmm(head.transpose(-1, -2))
@@ -177,7 +199,13 @@ class ArcBiaffine(nn.Module):
 
 
 class LabelBilinear(nn.Module):
-    """helper module for Biaffine Dependency Parser predicting label
+    """
+    Biaffine Dependency Parser 的子模块, 用于构建预测边类别的图
+
+    :param in1_features: 输入的特征1维度
+    :param in2_features: 输入的特征2维度
+    :param num_label: 边类别的个数
+    :param bias: 是否使用bias. Default: ``True``
     """
     def __init__(self, in1_features, in2_features, num_label, bias=True):
         super(LabelBilinear, self).__init__()
@@ -185,14 +213,34 @@ class LabelBilinear(nn.Module):
         self.lin = nn.Linear(in1_features + in2_features, num_label, bias=False)
 
     def forward(self, x1, x2):
+        """
+
+        :param x1: [batch, seq_len, hidden] 输入特征1, 即label-head
+        :param x2: [batch, seq_len, hidden] 输入特征2, 即label-dep
+        :return output: [batch, seq_len, num_cls] 每个元素对应类别的概率图
+        """
         output = self.bilinear(x1, x2)
         output += self.lin(torch.cat([x1, x2], dim=2))
         return output
 
 class BiaffineParser(GraphParser):
-    """Biaffine Dependency Parser implemantation.
-    refer to ` Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016)
+    """Biaffine Dependency Parser 实现.
+    论文参考 ` Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016)
     <https://arxiv.org/abs/1611.01734>`_ .
+
+    :param word_vocab_size: 单词词典大小
+    :param word_emb_dim: 单词词嵌入向量的维度
+    :param pos_vocab_size: part-of-speech 词典大小
+    :param pos_emb_dim: part-of-speech 向量维度
+    :param num_label: 边的类别个数
+    :param rnn_layers: rnn encoder的层数
+    :param rnn_hidden_size: rnn encoder 的隐状态维度
+    :param arc_mlp_size: 边预测的MLP维度
+    :param label_mlp_size: 类别预测的MLP维度
+    :param dropout: dropout概率.
+    :param encoder: encoder类别, 可选 ('lstm', 'var-lstm', 'transformer'). Default: lstm
+    :param use_greedy_infer: 是否在inference时使用贪心算法.
+        若 ``False`` , 使用更加精确但相对缓慢的MST算法. Default: ``False``
     """
     def __init__(self,
                 word_vocab_size,
@@ -207,7 +255,6 @@ class BiaffineParser(GraphParser):
                 dropout=0.3,
                 encoder='lstm',
                 use_greedy_infer=False):
-
         super(BiaffineParser, self).__init__()
         rnn_out_size = 2 * rnn_hidden_size
         word_hid_dim = pos_hid_dim = rnn_hidden_size
@@ -275,27 +322,31 @@ class BiaffineParser(GraphParser):
                 for p in m.parameters():
                     nn.init.normal_(p, 0, 0.1)
 
-    def forward(self, word_seq, pos_seq, seq_lens, gold_heads=None):
-        """
-        :param word_seq: [batch_size, seq_len] sequence of word's indices
-        :param pos_seq: [batch_size, seq_len] sequence of word's indices
-        :param seq_lens: [batch_size, seq_len] sequence of length masks
-        :param gold_heads: [batch_size, seq_len] sequence of golden heads
-        :return dict: parsing results
-            arc_pred: [batch_size, seq_len, seq_len]
-            label_pred: [batch_size, seq_len, seq_len]
-            mask: [batch_size, seq_len]
-            head_pred: [batch_size, seq_len] if gold_heads is not provided, predicting the heads
+    def forward(self, words1, words2, seq_len, gold_heads=None):
+        """模型forward阶段
+
+        :param words1: [batch_size, seq_len] 输入word序列
+        :param words2: [batch_size, seq_len] 输入pos序列
+        :param seq_len: [batch_size, seq_len] 输入序列长度
+        :param gold_heads: [batch_size, seq_len] 输入真实标注的heads, 仅在训练阶段有效,
+            用于训练label分类器. 若为 ``None`` , 使用预测的heads输入到label分类器
+            Default: ``None``
+        :return dict: parsing结果::
+
+            arc_pred: [batch_size, seq_len, seq_len] 边预测logits
+            label_pred: [batch_size, seq_len, num_label] label预测logits
+            mask: [batch_size, seq_len] 预测结果的mask
+            head_pred: [batch_size, seq_len] heads的预测结果, 在 ``gold_heads=None`` 时预测
         """
         # prepare embeddings
-        batch_size, seq_len = word_seq.shape
+        batch_size, length = words1.shape
         # print('forward {} {}'.format(batch_size, seq_len))
 
         # get sequence mask
-        mask = seq_mask(seq_lens, seq_len).long()
+        mask = seq_mask(seq_len, length).long()
 
-        word = self.word_embedding(word_seq) # [N,L] -> [N,L,C_0]
-        pos = self.pos_embedding(pos_seq) # [N,L] -> [N,L,C_1]
+        word = self.word_embedding(words1) # [N,L] -> [N,L,C_0]
+        pos = self.pos_embedding(words2) # [N,L] -> [N,L,C_1]
 
         word, pos = self.word_fc(word), self.pos_fc(pos)
         word, pos = self.word_norm(word), self.pos_norm(pos)
@@ -303,7 +354,7 @@ class BiaffineParser(GraphParser):
 
         # encoder, extract features
         if self.encoder_name.endswith('lstm'):
-            sort_lens, sort_idx = torch.sort(seq_lens, dim=0, descending=True)
+            sort_lens, sort_idx = torch.sort(seq_len, dim=0, descending=True)
             x = x[sort_idx]
             x = nn.utils.rnn.pack_padded_sequence(x, sort_lens, batch_first=True)
             feat, _ = self.encoder(x) # -> [N,L,C]
@@ -329,20 +380,20 @@ class BiaffineParser(GraphParser):
         if gold_heads is None or not self.training:
             # use greedy decoding in training
             if self.training or self.use_greedy_infer:
-                heads = self._greedy_decoder(arc_pred, mask)
+                heads = self.greedy_decoder(arc_pred, mask)
             else:
-                heads = self._mst_decoder(arc_pred, mask)
+                heads = self.mst_decoder(arc_pred, mask)
             head_pred = heads
         else:
             assert self.training # must be training mode
             if gold_heads is None:
-                heads = self._greedy_decoder(arc_pred, mask)
+                heads = self.greedy_decoder(arc_pred, mask)
                 head_pred = heads
             else:
                 head_pred = None
                 heads = gold_heads
 
-        batch_range = torch.arange(start=0, end=batch_size, dtype=torch.long, device=word_seq.device).unsqueeze(1)
+        batch_range = torch.arange(start=0, end=batch_size, dtype=torch.long, device=words1.device).unsqueeze(1)
         label_head = label_head[batch_range, heads].contiguous()
         label_pred = self.label_predictor(label_head, label_dep) # [N, L, num_label]
         res_dict = {'arc_pred': arc_pred, 'label_pred': label_pred, 'mask': mask}
@@ -355,11 +406,11 @@ class BiaffineParser(GraphParser):
         """
         Compute loss.
 
-        :param arc_pred: [batch_size, seq_len, seq_len]
-        :param label_pred: [batch_size, seq_len, n_tags]
-        :param arc_true: [batch_size, seq_len]
-        :param label_true: [batch_size, seq_len]
-        :param mask: [batch_size, seq_len]
+        :param arc_pred: [batch_size, seq_len, seq_len] 边预测logits
+        :param label_pred: [batch_size, seq_len, num_label] label预测logits
+        :param arc_true: [batch_size, seq_len] 真实边的标注
+        :param label_true: [batch_size, seq_len] 真实类别的标注
+        :param mask: [batch_size, seq_len] 预测结果的mask
         :return: loss value
         """
 
@@ -381,16 +432,23 @@ class BiaffineParser(GraphParser):
         label_nll = -label_loss.mean()
         return arc_nll + label_nll
 
-    def predict(self, word_seq, pos_seq, seq_lens):
-        """
+    def predict(self, words1, words2, seq_len):
+        """模型预测API
 
-        :param word_seq:
-        :param pos_seq:
-        :param seq_lens:
-        :return: arc_pred: [B, L]
-                 label_pred: [B, L]
+        :param words1: [batch_size, seq_len] 输入word序列
+        :param words2: [batch_size, seq_len] 输入pos序列
+        :param seq_len: [batch_size, seq_len] 输入序列长度
+        :param gold_heads: [batch_size, seq_len] 输入真实标注的heads, 仅在训练阶段有效,
+            用于训练label分类器. 若为 ``None`` , 使用预测的heads输入到label分类器
+            Default: ``None``
+        :return dict: parsing结果::
+
+            arc_pred: [batch_size, seq_len, seq_len] 边预测logits
+            label_pred: [batch_size, seq_len, num_label] label预测logits
+            mask: [batch_size, seq_len] 预测结果的mask
+            head_pred: [batch_size, seq_len] heads的预测结果, 在 ``gold_heads=None`` 时预测
         """
-        res = self(word_seq, pos_seq, seq_lens)
+        res = self(words1, words2, seq_len)
         output = {}
         output['arc_pred'] = res.pop('head_pred')
         _, label_pred = res.pop('label_pred').max(2)
@@ -399,6 +457,16 @@ class BiaffineParser(GraphParser):
 
 
 class ParserLoss(LossFunc):
+    """
+    计算parser的loss
+
+    :param arc_pred: [batch_size, seq_len, seq_len] 边预测logits
+    :param label_pred: [batch_size, seq_len, num_label] label预测logits
+    :param arc_true: [batch_size, seq_len] 真实边的标注
+    :param label_true: [batch_size, seq_len] 真实类别的标注
+    :param mask: [batch_size, seq_len] 预测结果的mask
+    :return loss: scalar
+    """
     def __init__(self, arc_pred=None, label_pred=None, arc_true=None, label_true=None):
         super(ParserLoss, self).__init__(BiaffineParser.loss,
                                                  arc_pred=arc_pred,
@@ -408,12 +476,26 @@ class ParserLoss(LossFunc):
 
 
 class ParserMetric(MetricBase):
+    """
+    评估parser的性能
+
+    :param arc_pred: 边预测logits
+    :param label_pred: label预测logits
+    :param arc_true: 真实边的标注
+    :param label_true: 真实类别的标注
+    :param seq_len: 序列长度
+    :return dict: 评估结果::
+
+        UAS: 不带label时, 边预测的准确率
+        LAS: 同时预测边和label的准确率
+    """
     def __init__(self, arc_pred=None, label_pred=None,
-                       arc_true=None, label_true=None, seq_lens=None):
+                 arc_true=None, label_true=None, seq_len=None):
+
         super().__init__()
         self._init_param_map(arc_pred=arc_pred, label_pred=label_pred,
                              arc_true=arc_true, label_true=label_true,
-                             seq_lens=seq_lens)
+                             seq_len=seq_len)
         self.num_arc = 0
         self.num_label = 0
         self.num_sample = 0
@@ -424,13 +506,13 @@ class ParserMetric(MetricBase):
             self.num_sample = self.num_label = self.num_arc = 0
         return res
 
-    def evaluate(self, arc_pred, label_pred, arc_true, label_true, seq_lens=None):
+    def evaluate(self, arc_pred, label_pred, arc_true, label_true, seq_len=None):
         """Evaluate the performance of prediction.
         """
-        if seq_lens is None:
+        if seq_len is None:
             seq_mask = arc_pred.new_ones(arc_pred.size(), dtype=torch.long)
         else:
-            seq_mask = seq_lens_to_masks(seq_lens.long(), float=False).long()
+            seq_mask = seq_lens_to_masks(seq_len.long(), float=False).long()
         # mask out <root> tag
         seq_mask[:,0] = 0
         head_pred_correct = (arc_pred == arc_true).long() * seq_mask

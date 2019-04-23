@@ -5,16 +5,19 @@ import numpy as NP
 
 
 class StarTransformer(nn.Module):
-    """Star-Transformer Encoder part。
+    """
+    Star-Transformer 的encoder部分。 输入3d的文本输入, 返回相同长度的文本编码
+
     paper: https://arxiv.org/abs/1902.09113
-    :param hidden_size: int, 输入维度的大小。同时也是输出维度的大小。
-    :param num_layers: int, star-transformer的层数
-    :param num_head: int，head的数量。
-    :param head_dim: int, 每个head的维度大小。
-    :param dropout: float dropout 概率
-    :param max_len: int or None, 如果为int，输入序列的最大长度，
-                    模型会为属于序列加上position embedding。
-                    若为None，忽略加上position embedding的步骤
+
+    :param int hidden_size: 输入维度的大小。同时也是输出维度的大小。
+    :param int num_layers: star-transformer的层数
+    :param int num_head: head的数量。
+    :param int head_dim: 每个head的维度大小。
+    :param float dropout: dropout 概率. Default: 0.1
+    :param int max_len: int or None, 如果为int，输入序列的最大长度，
+        模型会为输入序列加上position embedding。
+        若为`None`，忽略加上position embedding的步骤. Default: `None`
     """
     def __init__(self, hidden_size, num_layers, num_head, head_dim, dropout=0.1, max_len=None):
         super(StarTransformer, self).__init__()
@@ -22,11 +25,11 @@ class StarTransformer(nn.Module):
 
         self.norm = nn.ModuleList([nn.LayerNorm(hidden_size) for _ in range(self.iters)])
         self.ring_att = nn.ModuleList(
-            [MSA1(hidden_size, nhead=num_head, head_dim=head_dim, dropout=dropout)
-                for _ in range(self.iters)])
+            [_MSA1(hidden_size, nhead=num_head, head_dim=head_dim, dropout=dropout)
+             for _ in range(self.iters)])
         self.star_att = nn.ModuleList(
-            [MSA2(hidden_size, nhead=num_head, head_dim=head_dim, dropout=dropout)
-                for _ in range(self.iters)])
+            [_MSA2(hidden_size, nhead=num_head, head_dim=head_dim, dropout=dropout)
+             for _ in range(self.iters)])
 
         if max_len is not None:
             self.pos_emb = self.pos_emb = nn.Embedding(max_len, hidden_size)
@@ -35,10 +38,12 @@ class StarTransformer(nn.Module):
 
     def forward(self, data, mask):
         """
-        :param FloatTensor data: [batch, length, hidden] the input sequence
-        :param ByteTensor mask: [batch, length] the padding mask for input, in which padding pos is 0
-        :return: [batch, length, hidden] the output sequence
-                 [batch, hidden] the global relay node
+        :param FloatTensor data: [batch, length, hidden] 输入的序列
+        :param ByteTensor mask: [batch, length] 输入序列的padding mask, 在没有内容(padding 部分) 为 0,
+            否则为 1
+        :return: [batch, length, hidden] 编码后的输出序列
+
+                [batch, hidden] 全局 relay 节点, 详见论文
         """
         def norm_func(f, x):
             # B, H, L, 1
@@ -70,9 +75,9 @@ class StarTransformer(nn.Module):
         return nodes, relay.view(B, H)
 
 
-class MSA1(nn.Module):
+class _MSA1(nn.Module):
     def __init__(self, nhid, nhead=10, head_dim=10, dropout=0.1):
-        super(MSA1, self).__init__()
+        super(_MSA1, self).__init__()
         # Multi-head Self Attention Case 1, doing self-attention for small regions
         # Due to the architecture of GPU, using hadamard production and summation are faster than dot production when unfold_size is very small
         self.WQ = nn.Conv2d(nhid, nhead * head_dim, 1)
@@ -113,10 +118,10 @@ class MSA1(nn.Module):
         return ret
 
 
-class MSA2(nn.Module):
+class _MSA2(nn.Module):
     def __init__(self, nhid, nhead=10, head_dim=10, dropout=0.1):
         # Multi-head Self Attention Case 2, a broadcastable query for a sequence key and value
-        super(MSA2, self).__init__()
+        super(_MSA2, self).__init__()
         self.WQ = nn.Conv2d(nhid, nhead * head_dim, 1)
         self.WK = nn.Conv2d(nhid, nhead * head_dim, 1)
         self.WV = nn.Conv2d(nhid, nhead * head_dim, 1)

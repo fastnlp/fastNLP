@@ -437,4 +437,10 @@ class TestTutorial(unittest.TestCase):
         )
         tester.test()
 
-        os.chdir("../..")
+    def setUp(self):
+        import os
+        self._init_wd = os.path.abspath(os.curdir)
+
+    def tearDown(self):
+        import os
+        os.chdir(self._init_wd)
