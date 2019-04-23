@@ -63,8 +63,8 @@ class MaxPoolWithMask(nn.Module):
 
     def forward(self, tensor, mask, dim=1):
         """
-        :param torch.Tensor tensor: [batch_size, seq_len, channels] 初始tensor
-        :param torch.Tensor mask: [batch_size, seq_len] 0/1的mask矩阵
+        :param torch.FloatTensor tensor: [batch_size, seq_len, channels] 初始tensor
+        :param torch.LongTensor mask: [batch_size, seq_len] 0/1的mask矩阵
         :param int dim: 需要进行max pooling的维度
         :return:
         """
@@ -120,13 +120,13 @@ class MeanPoolWithMask(nn.Module):
 
     def forward(self, tensor, mask, dim=1):
         """
-        :param torch.Tensor tensor: [batch_size, seq_len, channels] 初始tensor
-        :param torch.Tensor mask: [batch_size, seq_len] 0/1的mask矩阵
+        :param torch.FloatTensor tensor: [batch_size, seq_len, channels] 初始tensor
+        :param torch.LongTensor mask: [batch_size, seq_len] 0/1的mask矩阵
         :param int dim: 需要进行max pooling的维度
         :return:
         """
         masks = mask.view(mask.size(0), mask.size(1), -1).float()
-        return torch.sum(tensor * masks, dim=dim) / torch.sum(masks, dim=1)
+        return torch.sum(tensor * masks.float(), dim=dim) / torch.sum(masks.float(), dim=1)
 
 
 
