@@ -47,7 +47,7 @@ from fastNLP.core.dataset import DataSet
 
 from fastNLP.api.utils import load_url
 from fastNLP.api.processor import ModelProcessor
-from fastNLP.io.dataset_loader import cut_long_sentence, ConllLoader
+from fastNLP.io.dataset_loader import _cut_long_sentence, ConllLoader
 from fastNLP.core.instance import Instance
 from fastNLP.api.pipeline import Pipeline
 from fastNLP.core.metrics import SpanFPreRecMetric
@@ -107,7 +107,7 @@ class ConllCWSReader(object):
                 continue
             line = ' '.join(res)
             if cut_long_sent:
-                sents = cut_long_sentence(line)
+                sents = _cut_long_sentence(line)
             else:
                 sents = [line]
             for raw_sentence in sents:

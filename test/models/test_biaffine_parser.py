@@ -44,34 +44,34 @@ data_file = """
 
 def init_data():
     ds = fastNLP.DataSet()
-    v = {'word_seq': fastNLP.Vocabulary(),
-         'pos_seq': fastNLP.Vocabulary(),
+    v = {'words1': fastNLP.Vocabulary(),
+         'words2': fastNLP.Vocabulary(),
          'label_true': fastNLP.Vocabulary()}
     data = []
     for line in data_file.split('\n'):
         line = line.split()
         if len(line) == 0 and len(data) > 0:
             data = list(zip(*data))
-            ds.append(fastNLP.Instance(word_seq=data[1],
-                                       pos_seq=data[4],
+            ds.append(fastNLP.Instance(words1=data[1],
+                                       words2=data[4],
                                        arc_true=data[6],
                                        label_true=data[7]))
             data = []
         elif len(line) > 0:
             data.append(line)
 
-    for name in ['word_seq', 'pos_seq', 'label_true']:
+    for name in ['words1', 'words2', 'label_true']:
         ds.apply(lambda x: ['<st>'] + list(x[name]), new_field_name=name)
         ds.apply(lambda x: v[name].add_word_lst(x[name]))
 
-    for name in ['word_seq', 'pos_seq', 'label_true']:
+    for name in ['words1', 'words2', 'label_true']:
         ds.apply(lambda x: [v[name].to_index(w) for w in x[name]], new_field_name=name)
 
     ds.apply(lambda x: [0] + list(map(int, x['arc_true'])), new_field_name='arc_true')
-    ds.apply(lambda x: len(x['word_seq']), new_field_name='seq_lens')
-    ds.set_input('word_seq', 'pos_seq', 'seq_lens', flag=True)
-    ds.set_target('arc_true', 'label_true', 'seq_lens', flag=True)
-    return ds, v['word_seq'], v['pos_seq'], v['label_true']
+    ds.apply(lambda x: len(x['words1']), new_field_name='seq_len')
+    ds.set_input('words1', 'words2', 'seq_len', flag=True)
+    ds.set_target('arc_true', 'label_true', 'seq_len', flag=True)
+    return ds, v['words1'], v['words2'], v['label_true']
 
 
 class TestBiaffineParser(unittest.TestCase):

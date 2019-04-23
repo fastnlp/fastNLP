@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import atexit
 
-from fastNLP.core.sampler import RandomSampler
+from fastNLP.core.sampler import RandomSampler, Sampler
 import torch.multiprocessing as mp
 
 _python_is_exit = False
@@ -12,19 +12,25 @@ def _set_python_is_exit():
 atexit.register(_set_python_is_exit)
 
 class Batch(object):
-    """Batch is an iterable object which iterates over mini-batches.
+    """
+    Batch 用于从 `DataSet` 中按一定的顺序, 依次按 ``batch_size`` 的大小将数据取出.
+    组成 `x` 和 `y`
 
-        Example::
+    Example::
 
-            for batch_x, batch_y in Batch(data_set, batch_size=16, sampler=SequentialSampler()):
-                # ...
+        batch = Batch(data_set, batch_size=16, sampler=SequentialSampler())
+        num_batch = len(batch)
+        for batch_x, batch_y in batch:
+            # do stuff ...
 
-    :param DataSet dataset: a DataSet object
-    :param int batch_size: the size of the batch
-    :param Sampler sampler: a Sampler object. If None, use fastNLP.sampler.RandomSampler
-    :param bool as_numpy: If True, return Numpy array. Otherwise, return torch tensors.
-    :param bool prefetch: If True, use multiprocessing to fetch next batch when training.
-    :param str or torch.device device: the batch's device, if as_numpy is True, device is ignored.
+    :param DataSet dataset: `DataSet` 对象, 数据集
+    :param int batch_size: 取出的batch大小
+    :param Sampler sampler: 规定使用的 Sample 方式. 若为 ``None`` , 使用 RandomSampler.
+        Default: ``None``
+    :param bool as_numpy: 若为 ``True`` , 输出batch为 numpy.array. 否则为 torch.Tensor.
+        Default: ``False``
+    :param bool prefetch: 若为 ``True`` 使用多进程预先取出下一batch.
+        Default: ``False``
     """
 
     def __init__(self, dataset, batch_size, sampler=None, as_numpy=False, prefetch=False):
@@ -41,7 +47,7 @@ class Batch(object):
         self.prefetch = prefetch
         self.lengths = 0
 
-    def fetch_one(self):
+    def _fetch_one(self):
         if self.curidx >= len(self.idx_list):
             return None
         else:
@@ -55,7 +61,7 @@ class Batch(object):
                 if field.is_target or field.is_input:
                     batch = field.get(indices)
                     if not self.as_numpy and field.padder is not None:
-                        batch = to_tensor(batch, field.dtype)
+                        batch = _to_tensor(batch, field.dtype)
                     if field.is_target:
                         batch_y[field_name] = batch
                     if field.is_input:
@@ -70,17 +76,17 @@ class Batch(object):
         :return:
         """
         if self.prefetch:
-            return run_batch_iter(self)
+            return _run_batch_iter(self)
         def batch_iter():
-            self.init_iter()
+            self._init_iter()
             while 1:
-                res = self.fetch_one()
+                res = self._fetch_one()
                 if res is None:
                     break
                 yield res
         return batch_iter()
 
-    def init_iter(self):
+    def _init_iter(self):
         self.idx_list = self.sampler(self.dataset)
         self.curidx = 0
         self.lengths = self.dataset.get_length()
@@ -89,10 +95,14 @@ class Batch(object):
         return self.num_batches
 
     def get_batch_indices(self):
+        """取得当前batch在DataSet中所在的index下标序列
+
+        :return list(int) indexes: 下标序列
+        """
         return self.cur_batch_indices
 
 
-def to_tensor(batch, dtype):
+def _to_tensor(batch, dtype):
     try:
         if dtype in (int, np.int8, np.int16, np.int32, np.int64):
             batch = torch.LongTensor(batch)
@@ -103,12 +113,12 @@ def to_tensor(batch, dtype):
     return batch
 
 
-def run_fetch(batch, q):
+def _run_fetch(batch, q):
     global _python_is_exit
-    batch.init_iter()
+    batch._init_iter()
     # print('start fetch')
     while 1:
-        res = batch.fetch_one()
+        res = batch._fetch_one()
         # print('fetch one')
         while 1:
             try:
@@ -124,9 +134,9 @@ def run_fetch(batch, q):
     # print('fetch exit')
 
 
-def run_batch_iter(batch):
+def _run_batch_iter(batch):
     q = mp.JoinableQueue(maxsize=10)
-    fetch_p = mp.Process(target=run_fetch, args=(batch, q))
+    fetch_p = mp.Process(target=_run_fetch, args=(batch, q))
     fetch_p.daemon = True
     fetch_p.start()
     # print('fork fetch process')

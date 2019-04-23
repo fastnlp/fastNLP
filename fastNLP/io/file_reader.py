@@ -1,15 +1,16 @@
 import json
 
 
-def read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
+def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
     """
-    Construct a generator to read csv items
+    Construct a generator to read csv items.
+
     :param path: file path
     :param encoding: file's encoding, default: utf-8
     :param headers: file's headers, if None, make file's first line as headers. default: None
     :param sep: separator for each column. default: ','
     :param dropna: weather to ignore and drop invalid data,
-            if False, raise ValueError when reading invalid data. default: True
+            :if False, raise ValueError when reading invalid data. default: True
     :return: generator, every time yield (line number, csv item)
     """
     with open(path, 'r', encoding=encoding) as f:
@@ -35,14 +36,15 @@ def read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
             yield line_idx, _dict
 
 
-def read_json(path, encoding='utf-8', fields=None, dropna=True):
+def _read_json(path, encoding='utf-8', fields=None, dropna=True):
     """
-    Construct a generator to read json items
+    Construct a generator to read json items.
+
     :param path: file path
     :param encoding: file's encoding, default: utf-8
     :param fields: json object's fields that needed, if None, all fields are needed. default: None
     :param dropna: weather to ignore and drop invalid data,
-            if False, raise ValueError when reading invalid data. default: True
+            :if False, raise ValueError when reading invalid data. default: True
     :return: generator, every time yield (line number, json item)
     """
     if fields:
@@ -65,14 +67,15 @@ def read_json(path, encoding='utf-8', fields=None, dropna=True):
             yield line_idx, _res
 
 
-def read_conll(path, encoding='utf-8', indexes=None, dropna=True):
+def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
     """
-    Construct a generator to read conll items
+    Construct a generator to read conll items.
+
     :param path: file path
     :param encoding: file's encoding, default: utf-8
     :param indexes: conll object's column indexes that needed, if None, all columns are needed. default: None
     :param dropna: weather to ignore and drop invalid data,
-            if False, raise ValueError when reading invalid data. default: True
+            :if False, raise ValueError when reading invalid data. default: True
     :return: generator, every time yield (line number, conll item)
     """
     def parse_conll(sample):

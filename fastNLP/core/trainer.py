@@ -18,7 +18,7 @@ from fastNLP.core.dataset import DataSet
 from fastNLP.core.losses import _prepare_losser
 from fastNLP.core.metrics import _prepare_metrics
 from fastNLP.core.optimizer import Adam
-from fastNLP.core.sampler import BaseSampler
+from fastNLP.core.sampler import Sampler
 from fastNLP.core.sampler import RandomSampler
 from fastNLP.core.sampler import SequentialSampler
 from fastNLP.core.tester import Tester
@@ -57,7 +57,7 @@ class Trainer(object):
             smaller, add "-" in front of the string. For example::
 
                     metric_key="-PPL"   # language model gets better as perplexity gets smaller
-        :param BaseSampler sampler: method used to generate batch data.
+        :param Sampler sampler: method used to generate batch data.
         :param prefetch: bool, 是否使用额外的进程对产生batch数据。
         :param bool use_tqdm: whether to use tqdm to show train progress.
         :param callbacks: List[Callback]. 用于在train过程中起调节作用的回调函数。比如early stop，negative sampling等可以
@@ -102,7 +102,7 @@ class Trainer(object):
         losser = _prepare_losser(loss)
 
         # sampler check
-        if sampler is not None and not isinstance(sampler, BaseSampler):
+        if sampler is not None and not isinstance(sampler, Sampler):
             raise ValueError("The type of sampler should be fastNLP.BaseSampler, got {}.".format(type(sampler)))
 
         if check_code_level > -1:

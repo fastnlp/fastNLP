@@ -28,11 +28,11 @@ class VarRnnCellWrapper(nn.Module):
         """
         :param PackedSequence input_x: [seq_len, batch_size, input_size]
         :param hidden: for LSTM, tuple of (h_0, c_0), [batch_size, hidden_size]
-                       for other RNN, h_0, [batch_size, hidden_size]
+            :for other RNN, h_0, [batch_size, hidden_size]
         :param mask_x: [batch_size, input_size] dropout mask for input
         :param mask_h: [batch_size, hidden_size] dropout mask for hidden
         :return PackedSequence output: [seq_len, bacth_size, hidden_size]
-                hidden: for LSTM, tuple of (h_n, c_n), [batch_size, hidden_size]
+                :hidden: for LSTM, tuple of (h_n, c_n), [batch_size, hidden_size]
                         for other RNN, h_n, [batch_size, hidden_size]
         """
         def get_hi(hi, h0, size):
@@ -84,9 +84,21 @@ class VarRnnCellWrapper(nn.Module):
 
 
 class VarRNNBase(nn.Module):
-    """Implementation of Variational Dropout RNN network.
-    refer to `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016)
+    """Variational Dropout RNN 实现.
+    论文参考: `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016)
     https://arxiv.org/abs/1512.05287`.
+
+    :param mode: rnn 模式, (lstm or not)
+    :param Cell: rnn cell 类型, (lstm, gru, etc)
+    :param input_size:  输入 `x` 的特征维度
+    :param hidden_size: 隐状态 `h` 的特征维度
+    :param num_layers: rnn的层数. Default: 1
+    :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
+    :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
+        :(batch, seq, feature). Default: ``False``
+    :param input_dropout: 对输入的dropout概率. Default: 0
+    :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
+    :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``
     """
 
     def __init__(self, mode, Cell, input_size, hidden_size, num_layers=1,
@@ -120,36 +132,43 @@ class VarRNNBase(nn.Module):
         output_x, hidden_x = cell(input, hi, mask_x, mask_h, is_reversed=(n_direction == 1))
         return output_x, hidden_x
 
-    def forward(self, input, hx=None):
+    def forward(self, x, hx=None):
+        """
+
+        :param x: [batch, seq_len, input_size] 输入序列
+        :param hx: [batch, hidden_size] 初始隐状态, 若为 ``None`` , 设为全1向量. Default: ``None``
+        :return (output, ht): [batch, seq_len, hidden_size*num_direction] 输出序列
+            :和 [batch, hidden_size*num_direction] 最后时刻隐状态
+        """
         is_lstm = self.is_lstm
-        is_packed = isinstance(input, PackedSequence)
+        is_packed = isinstance(x, PackedSequence)
         if not is_packed:
-            seq_len = input.size(1) if self.batch_first else input.size(0)
-            max_batch_size = input.size(0) if self.batch_first else input.size(1)
+            seq_len = x.size(1) if self.batch_first else x.size(0)
+            max_batch_size = x.size(0) if self.batch_first else x.size(1)
             seq_lens = torch.LongTensor([seq_len for _ in range(max_batch_size)])
-            input, batch_sizes = pack_padded_sequence(input, seq_lens, batch_first=self.batch_first)
+            x, batch_sizes = pack_padded_sequence(x, seq_lens, batch_first=self.batch_first)
         else:
-            max_batch_size = int(input.batch_sizes[0])
-            input, batch_sizes = input
+            max_batch_size = int(x.batch_sizes[0])
+            x, batch_sizes = x
 
         if hx is None:
-            hx = input.new_zeros(self.num_layers * self.num_directions,
-                                 max_batch_size, self.hidden_size, requires_grad=True)
+            hx = x.new_zeros(self.num_layers * self.num_directions,
+                             max_batch_size, self.hidden_size, requires_grad=True)
             if is_lstm:
                 hx = (hx, hx.new_zeros(hx.size(), requires_grad=True))
 
-        mask_x = input.new_ones((max_batch_size, self.input_size))
-        mask_out = input.new_ones((max_batch_size, self.hidden_size * self.num_directions))
-        mask_h_ones = input.new_ones((max_batch_size, self.hidden_size))
+        mask_x = x.new_ones((max_batch_size, self.input_size))
+        mask_out = x.new_ones((max_batch_size, self.hidden_size * self.num_directions))
+        mask_h_ones = x.new_ones((max_batch_size, self.hidden_size))
         nn.functional.dropout(mask_x, p=self.input_dropout, training=self.training, inplace=True)
         nn.functional.dropout(mask_out, p=self.hidden_dropout, training=self.training, inplace=True)
 
-        hidden = input.new_zeros((self.num_layers*self.num_directions, max_batch_size, self.hidden_size))
+        hidden = x.new_zeros((self.num_layers * self.num_directions, max_batch_size, self.hidden_size))
         if is_lstm:
-            cellstate = input.new_zeros((self.num_layers*self.num_directions, max_batch_size, self.hidden_size))
+            cellstate = x.new_zeros((self.num_layers * self.num_directions, max_batch_size, self.hidden_size))
         for layer in range(self.num_layers):
             output_list = []
-            input_seq = PackedSequence(input, batch_sizes)
+            input_seq = PackedSequence(x, batch_sizes)
             mask_h = nn.functional.dropout(mask_h_ones, p=self.hidden_dropout, training=self.training, inplace=False)
             for direction in range(self.num_directions):
                 output_x, hidden_x = self._forward_one(layer, direction, input_seq, hx,
@@ -161,22 +180,32 @@ class VarRNNBase(nn.Module):
                     cellstate[idx] = hidden_x[1]
                 else:
                     hidden[idx] = hidden_x
-            input = torch.cat(output_list, dim=-1)
+            x = torch.cat(output_list, dim=-1)
 
         if is_lstm:
             hidden = (hidden, cellstate)
 
         if is_packed:
-            output = PackedSequence(input, batch_sizes)
+            output = PackedSequence(x, batch_sizes)
         else:
-            input = PackedSequence(input, batch_sizes)
-            output, _ = pad_packed_sequence(input, batch_first=self.batch_first)
+            x = PackedSequence(x, batch_sizes)
+            output, _ = pad_packed_sequence(x, batch_first=self.batch_first)
 
         return output, hidden
 
 
 class VarLSTM(VarRNNBase):
     """Variational Dropout LSTM.
+
+    :param input_size:  输入 `x` 的特征维度
+    :param hidden_size: 隐状态  `h`  的特征维度
+    :param num_layers: rnn的层数. Default: 1
+    :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
+    :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
+        :(batch, seq, feature). Default: ``False``
+    :param input_dropout: 对输入的dropout概率. Default: 0
+    :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
+    :param bidirectional: 若为 ``True``, 使用双向的LSTM. Default: ``False``
     """
 
     def __init__(self, *args, **kwargs):
@@ -185,6 +214,16 @@ class VarLSTM(VarRNNBase):
 
 class VarRNN(VarRNNBase):
     """Variational Dropout RNN.
+
+    :param input_size:  输入 `x` 的特征维度
+    :param hidden_size: 隐状态 `h` 的特征维度
+    :param num_layers: rnn的层数. Default: 1
+    :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
+    :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
+        :(batch, seq, feature). Default: ``False``
+    :param input_dropout: 对输入的dropout概率. Default: 0
+    :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
+    :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``
     """
 
     def __init__(self, *args, **kwargs):
@@ -193,6 +232,16 @@ class VarRNN(VarRNNBase):
 
 class VarGRU(VarRNNBase):
     """Variational Dropout GRU.
+
+    :param input_size:  输入 `x` 的特征维度
+    :param hidden_size: 隐状态 `h` 的特征维度
+    :param num_layers: rnn的层数. Default: 1
+    :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
+    :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
+        :(batch, seq, feature). Default: ``False``
+    :param input_dropout: 对输入的dropout概率. Default: 0
+    :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
+    :param bidirectional: 若为 ``True``, 使用双向的GRU. Default: ``False``
     """
 
     def __init__(self, *args, **kwargs):
