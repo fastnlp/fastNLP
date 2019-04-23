@@ -6,5 +6,5 @@ from .pooling import KMaxPool
 
 from .attention import Attention
 from .attention import BiAttention
-from .self_attention import SelfAttention
+from .attention import SelfAttention
 
