@@ -7,17 +7,33 @@ from fastNLP.modules.utils import initial_parameter
 class MLP(nn.Module):
     """Multilayer Perceptrons as a decoder
 
-    :param list size_layer: list of int, define the size of MLP layers. layer的层数为 len(size_layer) - 1
-    :param str or list activation: str or function or a list, the activation function for hidden layers.
-    :param str or function output_activation : str or function, the activation function for output layer
-    :param str initial_method: the name of initialization method.
-    :param float dropout: the probability of dropout.
+    :param list size_layer: 一个int的列表，用来定义MLP的层数，列表中的数字为每一层是hidden数目。MLP的层数为 len(size_layer) - 1
+    :param str or list activation:
+        一个字符串或者函数或者字符串跟函数的列表，用来定义每一个隐层的激活函数，字符串包括relu，tanh和sigmoid，默认值为relu
+    :param str or function output_activation : 字符串或者函数，用来定义输出层的激活函数，默认值为None，表示输出层没有激活函数
+    :param str initial_method: 参数初始化方式
+    :param float dropout: dropout概率，默认值为0
 
     .. note::
         隐藏层的激活函数通过activation定义。一个str/function或者一个str/function的list可以被传入activation。
         如果只传入了一个str/function，那么所有隐藏层的激活函数都由这个str/function定义；
         如果传入了一个str/function的list，那么每一个隐藏层的激活函数由这个list中对应的元素定义，其中list的长度为隐藏层数。
         输出层的激活函数由output_activation定义，默认值为None，此时输出层没有激活函数。
+        
+    Examples::
+
+        >>> net1 = MLP([5, 10, 5])
+        >>> net2 = MLP([5, 10, 5], 'tanh')
+        >>> net3 = MLP([5, 6, 7, 8, 5], 'tanh')
+        >>> net4 = MLP([5, 6, 7, 8, 5], 'relu', output_activation='tanh')
+        >>> net5 = MLP([5, 6, 7, 8, 5], ['tanh', 'relu', 'tanh'], 'tanh')
+        >>> for net in [net1, net2, net3, net4, net5]:
+        >>>     x = torch.randn(5, 5)
+        >>>     y = net(x)
+        >>>     print(x)
+        >>>     print(y)
+        >>>
+
     """
 
     def __init__(self, size_layer, activation='relu', output_activation=None, initial_method=None, dropout=0.0):
@@ -63,6 +79,10 @@ class MLP(nn.Module):
         initial_parameter(self, initial_method)
 
     def forward(self, x):
+        """
+        :param torch.Tensor x: MLP接受的输入
+        :return: torch.Tensor : MLP的输出结果
+        """
         for layer, func in zip(self.hiddens, self.hidden_active):
             x = self.dropout(func(layer(x)))
         x = self.output(x)
