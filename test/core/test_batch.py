@@ -6,7 +6,6 @@ import torch
 
 from fastNLP.core.batch import Batch
 from fastNLP.core.dataset import DataSet
-from fastNLP.core.dataset import construct_dataset
 from fastNLP.core.instance import Instance
 from fastNLP.core.sampler import SequentialSampler
 
@@ -37,6 +36,19 @@ def generate_fake_dataset(num_samples=1000):
             dataset.set_input(str(i))
         else:
             dataset.set_target(str(i))
+    return dataset
+
+def construct_dataset(sentences):
+    """Construct a data set from a list of sentences.
+
+    :param sentences: list of list of str
+    :return dataset: a DataSet object
+    """
+    dataset = DataSet()
+    for sentence in sentences:
+        instance = Instance()
+        instance['raw_sentence'] = sentence
+        dataset.append(instance)
     return dataset
 
 class TestCase1(unittest.TestCase):

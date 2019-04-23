@@ -13,6 +13,9 @@ atexit.register(_set_python_is_exit)
 
 class Batch(object):
     """
+
+     .. _Batch:
+
     Batch 用于从 `DataSet` 中按一定的顺序, 依次按 ``batch_size`` 的大小将数据取出.
     组成 `x` 和 `y`
 

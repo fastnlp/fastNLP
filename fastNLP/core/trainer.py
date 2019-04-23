@@ -1,3 +1,13 @@
+"""
+Trainer的说明文档
+
+ .. _Trainer:
+
+
+"""
+
+
+
 import os
 import time
 from datetime import datetime

@@ -8,10 +8,10 @@ def log_sum_exp(x, dim=-1):
     return res.squeeze(dim)
 
 
-def viterbi_decode(feats, transitions, mask=None, unpad=False):
+def viterbi_decode(logits, transitions, mask=None, unpad=False):
     """给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
 
-    :param feats: FloatTensor, batch_size x max_len x num_tags，特征矩阵。
+    :param logits: FloatTensor, batch_size x max_len x num_tags，特征矩阵。
     :param transitions: FloatTensor, n_tags x n_tags。[i, j]位置的值认为是从tag i到tag j的转换。
     :param mask: ByteTensor, batch_size x max_len, 为0的位置认为是pad；如果为None，则认为没有padding。
     :param unpad: bool, 是否将结果删去padding,
@@ -23,23 +23,23 @@ def viterbi_decode(feats, transitions, mask=None, unpad=False):
                 scores: torch.FloatTensor, size为(batch_size,), 对应每个最优路径的分数。
 
     """
-    batch_size, seq_len, n_tags = feats.size()
+    batch_size, seq_len, n_tags = logits.size()
     assert n_tags==transitions.size(0) and n_tags==transitions.size(1), "The shapes of transitions and feats are not " \
                                                                         "compatible."
-    feats = feats.transpose(0, 1).data  # L, B, H
+    logits = logits.transpose(0, 1).data  # L, B, H
     if mask is not None:
         mask = mask.transpose(0, 1).data.byte()  # L, B
     else:
-        mask = feats.new_ones((seq_len, batch_size), dtype=torch.uint8)
+        mask = logits.new_ones((seq_len, batch_size), dtype=torch.uint8)
 
     # dp
-    vpath = feats.new_zeros((seq_len, batch_size, n_tags), dtype=torch.long)
-    vscore = feats[0]
+    vpath = logits.new_zeros((seq_len, batch_size, n_tags), dtype=torch.long)
+    vscore = logits[0]
 
     trans_score = transitions.view(1, n_tags, n_tags).data
     for i in range(1, seq_len):
         prev_score = vscore.view(batch_size, n_tags, 1)
-        cur_score = feats[i].view(batch_size, 1, n_tags)
+        cur_score = logits[i].view(batch_size, 1, n_tags)
         score = prev_score + trans_score + cur_score
         best_score, best_dst = score.max(1)
         vpath[i] = best_dst
@@ -47,13 +47,13 @@ def viterbi_decode(feats, transitions, mask=None, unpad=False):
                  vscore.masked_fill(mask[i].view(batch_size, 1), 0)
 
     # backtrace
-    batch_idx = torch.arange(batch_size, dtype=torch.long, device=feats.device)
-    seq_idx = torch.arange(seq_len, dtype=torch.long, device=feats.device)
+    batch_idx = torch.arange(batch_size, dtype=torch.long, device=logits.device)
+    seq_idx = torch.arange(seq_len, dtype=torch.long, device=logits.device)
     lens = (mask.long().sum(0) - 1)
     # idxes [L, B], batched idx from seq_len-1 to 0
     idxes = (lens.view(1, -1) - seq_idx.view(-1, 1)) % seq_len
 
-    ans = feats.new_empty((seq_len, batch_size), dtype=torch.long)
+    ans = logits.new_empty((seq_len, batch_size), dtype=torch.long)
     ans_score, last_tags = vscore.max(1)
     ans[idxes[0], batch_idx] = last_tags
     for i in range(seq_len - 1):

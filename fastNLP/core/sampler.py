@@ -20,6 +20,8 @@ class Sampler(object):
 class SequentialSampler(Sampler):
     """顺序取出元素的 `Sampler`
 
+        .. _SequentialSampler:
+
     """
     def __call__(self, data_set):
         return list(range(len(data_set)))
