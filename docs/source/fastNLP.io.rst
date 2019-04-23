@@ -4,48 +4,48 @@ fastNLP.io package
 Submodules
 ----------
 
-fastNLP.io.base\_loader module
-------------------------------
+fastNLP.io.base_loader module
+-----------------------------
 
 .. automodule:: fastNLP.io.base_loader
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.io.config\_io module
-----------------------------
+fastNLP.io.config_io module
+---------------------------
 
 .. automodule:: fastNLP.io.config_io
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.io.dataset\_loader module
----------------------------------
+fastNLP.io.dataset_loader module
+--------------------------------
 
 .. automodule:: fastNLP.io.dataset_loader
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.io.embed\_loader module
--------------------------------
+fastNLP.io.embed_loader module
+------------------------------
 
 .. automodule:: fastNLP.io.embed_loader
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.io.file\_reader module
-------------------------------
+fastNLP.io.file_reader module
+-----------------------------
 
 .. automodule:: fastNLP.io.file_reader
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.io.model\_io module
----------------------------
+fastNLP.io.model_io module
+--------------------------
 
 .. automodule:: fastNLP.io.model_io
     :members:

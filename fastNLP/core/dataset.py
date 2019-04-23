@@ -1,14 +1,114 @@
 """
-fastNLP.core.DataSet的介绍文档
+DataSet是fastNLP中用于承载数据的容器。可以将DataSet看做是一个表格，每一行是一个sample(在fastNLP中被称为Instance)，每一列是一个feature(在fastNLP中称为field)。
 
-DataSet是fastNLP中用于承载数据的容器。可以将DataSet看做是一个表格，每一行是一个instance(或sample)，每一列是一个feature。
+ .. _DataSet:
 
-csv-table::
-:header: "Field1", "Field2", "Field3"
-:widths:20, 10, 10
+.. csv-table:: Following is a demo layout of DataSet
+   :header: "sentence", "words", "seq_len"
 
-"This is the first instance", ['This', 'is', 'the', 'first', 'instance'], 5
-"Second instance", ['Second', 'instance'], 2
+   "This is the first instance .", "[This, is, the, first, instance, .]", 6
+   "Second instance .", "[Second, instance, .]", 3
+   "Third instance .", "[Third, instance, .]", 3
+   "...", "[...]", "..."
+
+在fastNLP内部每一行是一个 Instance_ 对象； 每一列是一个 FieldArray_ 对象。
+
+1. DataSet的创建
+
+    创建DataSet主要有以下的3种方式
+
+    1. 传入dict
+
+      Example::
+
+        from fastNLP import DataSet
+        data = {'sentence':["This is the first instance .", "Second instance .", "Third instance ."],
+                'words': [['this', 'is', 'the', 'first', 'instance', '.'], ['Second', 'instance', '.'], ['Third', 'instance', '.'],
+                'seq_len': [6, 3, 3]}
+        dataset = DataSet(data)
+        # 传入的dict的每个key的value应该为具有相同长度的list
+
+    2. 通过构建Instance
+
+      Example::
+
+        from fastNLP import DataSet
+        from fastNLP import Instance
+        dataset = DataSet()
+        instance = Instance(sentence="This is the first instance",
+                            words=['this', 'is', 'the', 'first', 'instance', '.'],
+                            seq_len=6)
+        dataset.append(instance)
+        # 可以继续append更多内容，但是append的instance应该和第一个instance拥有完全相同的field
+
+    3. 通过list(Instance)
+
+       Example::
+
+        from fastNLP import DataSet
+        from fastNLP import Instance
+        instances = []
+        instances.append(Instance(sentence="This is the first instance",
+                            words=['this', 'is', 'the', 'first', 'instance', '.'],
+                            seq_len=6))
+        instances.append(Instance(sentence="Second instance .",
+                            words=['Second', 'instance', '.'],
+                            seq_len=3))
+        dataset = DataSet(instances)
+
+2. DataSet的基本使用
+    1. 从某个文本文件读取内容 # TODO 引用DataLoader
+
+        Example::
+
+            from fastNLP import DataSet
+            from fastNLP import Instance
+            dataset = DataSet()
+            filepath='some/text/file'
+            # 假设文件中每行内容如下(sentence  label):
+            #    This is a fantastic day    positive
+            #    The bad weather    negative
+            #    .....
+            with open(filepath, 'r') as f:
+                for line in f:
+                    sent, label = line.strip().split('\t')
+                    dataset.append(Instance(sentence=sent, label=label))
+
+    2. index, 返回结果为对DataSet对象的浅拷贝
+
+        Example::
+
+            import numpy as np
+            from fastNLP import DataSet
+            dataset = DataSet({'a': np.arange(10), 'b': [[_] for _ in range(10)]})
+            d[0]  # 使用一个下标获取一个instance
+            >>{'a': 0 type=int,'b': [2] type=list} # 得到一个instance
+            d[1:3]  # 使用slice获取一个新的DataSet
+            >>DataSet({'a': 1 type=int, 'b': [2] type=list}, {'a': 2 type=int, 'b': [2] type=list})
+
+    3. 对DataSet中的内容处理
+
+        Example::
+
+            from fastNLP import DataSet
+            data = {'sentence':["This is the first instance .", "Second instance .", "Third instance ."]}
+            dataset = DataSet(data)
+            # 将句子分成单词形式, 详见DataSet.apply()方法
+            dataset.apply(lambda ins: ins['sentence'].split(), new_field_name='words')
+            # 或使用DataSet.apply_field()
+            dataset.apply(lambda sent:sent.split(), field_name='sentence', new_field_name='words')
+
+    4. 删除DataSet的内容
+
+        Example::
+
+            from fastNLP import DataSet
+            dataset = DataSet({'a': list(range(-5, 5))})
+            # 返回满足条件的instance,并放入DataSet中
+            dropped_dataset = dataset.drop(lambda ins:ins['a']<0, inplace=False)
+            # 在dataset中删除满足条件的instance
+            dataset.drop(lambda ins:ins['a']<0)  # dataset的instance数量减少
+
 
 """
 
@@ -21,7 +121,6 @@ from fastNLP.core.fieldarray import AutoPadder
 from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.instance import Instance
 from fastNLP.core.utils import get_func_signature
-
 
 class DataSet(object):
     """DataSet is the collection of examples.
@@ -87,10 +186,7 @@ class DataSet(object):
         return inner_iter_func()
 
     def __getitem__(self, idx):
-        """Fetch Instance(s) at the `idx` position(s) in the dataset.
-        Notice: This method returns a copy of the actual instance(s). Any change to the returned value would not modify
-        the origin instance(s) of the DataSet.
-        If you want to make in-place changes to all Instances, use `apply` method.
+        """给定int的index，返回一个Instance; 给定slice，返回包含这个slice内容的新的DataSet。
 
         :param idx: can be int or slice.
         :return: If `idx` is int, return an Instance object.
@@ -145,33 +241,48 @@ class DataSet(object):
     def __repr__(self):
         return "DataSet(" + self.__inner_repr__() + ")"
 
-    def append(self, ins):
+    def append(self, instance):
         """将一个instance对象append到DataSet后面。
         If the DataSet is not empty, the instance must have the same field names as the rest instances in the DataSet.
 
-        :param ins: an Instance object
+        :param instance: an Instance object
 
         """
         if len(self.field_arrays) == 0:
             # DataSet has no field yet
-            for name, field in ins.fields.items():
+            for name, field in instance.fields.items():
                 field = field.tolist() if isinstance(field, np.ndarray) else field
                 self.field_arrays[name] = FieldArray(name, [field])  # 第一个样本，必须用list包装起来
         else:
-            if len(self.field_arrays) != len(ins.fields):
+            if len(self.field_arrays) != len(instance.fields):
                 raise ValueError(
                     "DataSet object has {} fields, but attempt to append an Instance object with {} fields."
-                        .format(len(self.field_arrays), len(ins.fields)))
-            for name, field in ins.fields.items():
+                        .format(len(self.field_arrays), len(instance.fields)))
+            for name, field in instance.fields.items():
                 assert name in self.field_arrays
                 self.field_arrays[name].append(field)
+
+    def add_fieldarray(self, field_name, fieldarray):
+        """将fieldarray添加到DataSet中.
+
+        :param str field_name: 新加入的field的名称
+        :param FieldArray fieldarray: 需要加入DataSet的field的内容
+        :return:
+        """
+        if not isinstance(fieldarray, FieldArray):
+            raise TypeError("Only fastNLP.FieldArray supported.")
+        if len(self) != len(fieldarray):
+            raise RuntimeError(f"The field to add must have the same size as dataset. "
+                               f"Dataset size {len(self)} != field size {len(fieldarray)}")
+        self.field_arrays[field_name] = fieldarray
+
 
     def add_field(self, field_name, fields, padder=AutoPadder(), is_input=False, is_target=False, ignore_type=False):
         """新增一个field
         
         :param str field_name: 新增的field的名称
         :param list fields: 需要新增的field的内容
-        :param None, Padder padder: 如果为None,则不进行pad。
+        :param None,Padder padder: 如果为None,则不进行pad。
         :param bool is_input: 新加入的field是否是input
         :param bool is_target: 新加入的field是否是target
         :param bool ignore_type: 是否忽略对新加入的field的类型检查
@@ -179,17 +290,27 @@ class DataSet(object):
 
         if len(self.field_arrays) != 0:
             if len(self) != len(fields):
-                raise RuntimeError(f"The field to append must have the same size as dataset. "
+                raise RuntimeError(f"The field to add must have the same size as dataset. "
                                    f"Dataset size {len(self)} != field size {len(fields)}")
         self.field_arrays[field_name] = FieldArray(field_name, fields, is_target=is_target, is_input=is_input,
                                                    padder=padder, ignore_type=ignore_type)
 
     def delete_field(self, field_name):
-        """删除field
+        """删除名为field_name的field
 
         :param str field_name: 需要删除的field的名称.
         """
         self.field_arrays.pop(field_name)
+
+    def has_field(self, field_name):
+        """判断DataSet中是否有field_name这个field
+
+        :param str field_name: field的名称
+        :return: bool
+        """
+        if isinstance(field_name, str):
+            return field_name in self.field_arrays
+        return False
 
     def get_field(self, field_name):
         """获取field_name这个field
@@ -318,25 +439,21 @@ class DataSet(object):
     def apply_field(self, func, field_name, new_field_name=None, **kwargs):
         """将DataSet中的每个instance中的`field_name`这个field传给func，并获取它的返回值.
 
-        :param callable func: input是instance的`field_name`这个field.
-        :param str field_name: 传入func的是哪个field.
-        :param str, None new_field_name: 将func返回的内容放入到什么field中
+        :param callable func: input是instance的`field_name`这个field的内容。
+        :param str field_name: 传入func的是哪个field。
+        :param None,str new_field_name: 将func返回的内容放入到new_field_name这个field中，如果名称与已有的field相同，则覆
+         :盖之前的field。如果为None则不创建新的field。
+        :param optional kwargs: 支持输入is_input,is_target,ignore_type
 
-                                       1. str, 将func的返回值放入这个名为`new_field_name`的新field中，如果名称与已有的field相
-                                        同，则覆盖之前的field
+            1. is_input: bool, 如果为True则将`new_field_name`的field设置为input
 
-                                       2. None, 不创建新的field
-        :param kwargs: 合法的参数有以下三个
+            2. is_target: bool, 如果为True则将`new_field_name`的field设置为target
 
-                     1. is_input: bool, 如果为True则将`new_field_name`的field设置为input
-
-                     2. is_target: bool, 如果为True则将`new_field_name`的field设置为target
-
-                     3. ignore_type: bool, 如果为True则将`new_field_name`的field的ignore_type设置为true, 忽略其类型
+            3. ignore_type: bool, 如果为True则将`new_field_name`的field的ignore_type设置为true, 忽略其类型
         :return: list(Any), 里面的元素为func的返回值，所以list长度为DataSet的长度
 
         """
-        assert len(self)!=0, "Null DataSet cannot use apply()."
+        assert len(self)!=0, "Null DataSet cannot use apply_field()."
         if field_name not in self:
             raise KeyError("DataSet has no field named `{}`.".format(field_name))
         results = []
@@ -388,23 +505,19 @@ class DataSet(object):
                            ignore_type=extra_param.get("ignore_type", False))
 
     def apply(self, func, new_field_name=None, **kwargs):
-        """将DataSet中每个instance传入到func中，并获取它的返回值.
+        """ 将DataSet中每个instance传入到func中，并获取它的返回值.
 
-        :param callable func: 参数是DataSet中的instance
-        :param str, None new_field_name: 将func返回的内容放入到什么field中
+        :param callable func: 参数是DataSet中的Instance
+        :param None,str new_field_name: 将func返回的内容放入到new_field_name这个field中，如果名称与已有的field相同，则覆
+            :盖之前的field。如果为None则不创建新的field。
+        :param optional kwargs: 支持输入is_input,is_target,ignore_type
 
-                                       1. str, 将func的返回值放入这个名为`new_field_name`的新field中，如果名称与已有的field相
-                                        同，则覆盖之前的field
+            1. is_input: bool, 如果为True则将`new_field_name`的field设置为input
 
-                                       2. None, 不创建新的field
-        :param kwargs: 合法的参数有以下三个
+            2. is_target: bool, 如果为True则将`new_field_name`的field设置为target
 
-                     1. is_input: bool, 如果为True则将`new_field_name`的field设置为input
-
-                     2. is_target: bool, 如果为True则将`new_field_name`的field设置为target
-
-                     3. ignore_type: bool, 如果为True则将`new_field_name`的field的ignore_type设置为true, 忽略其类型
-        :return: List[], 里面的元素为func的返回值，所以list长度为DataSet的长度
+            3. ignore_type: bool, 如果为True则将`new_field_name`的field的ignore_type设置为true, 忽略其类型
+        :return: list(Any), 里面的元素为func的返回值，所以list长度为DataSet的长度
         """
         assert len(self)!=0, "Null DataSet cannot use apply()."
         idx = -1
@@ -426,10 +539,10 @@ class DataSet(object):
         return results
 
     def drop(self, func, inplace=True):
-        """func接受一个instance，返回bool值，返回值为True时，该instance会被删除。
+        """func接受一个instance，返回bool值，返回值为True时，该instance会被移除或者加入到返回的DataSet中。
 
         :param callable func: 接受一个instance作为参数，返回bool值。为True时删除该instance
-        :param bool inplace: 是否在当前DataSet中直接删除instance。如果为False，返回值为一个删除了相应instance的新的DataSet
+        :param bool inplace: 是否在当前DataSet中直接删除instance。如果为False，返回值被删除的instance的组成的新DataSet
 
         :return: DataSet
         """
@@ -440,10 +553,13 @@ class DataSet(object):
             return self
         else:
             results = [ins for ins in self if not func(ins)]
-            dataset = DataSet(results)
-            for field_name, field in self.field_arrays.items():
-                dataset.field_arrays[field_name].to(field)
-            return dataset
+            if len(results)!=0:
+                dataset = DataSet(results)
+                for field_name, field in self.field_arrays.items():
+                    dataset.field_arrays[field_name].to(field)
+                return dataset
+            else:
+                return DataSet()
 
     def split(self, ratio):
         """将DataSet按照ratio的比例拆分，返回两个DataSet

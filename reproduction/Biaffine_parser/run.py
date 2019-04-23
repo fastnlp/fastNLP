@@ -155,7 +155,7 @@ print('test len {}'.format(len(test_data)))
 def train(path):
     # test saving pipeline
     save_pipe(path)
-    embed = EmbedLoader.fast_load_embedding(model_args['word_emb_dim'], emb_file_name, word_v)
+    embed = EmbedLoader.load_with_vocab(emb_file_name, word_v)
     embed = torch.tensor(embed, dtype=torch.float32)
 
     # embed = EmbedLoader.fast_load_embedding(emb_dim=model_args['word_emb_dim'], emb_file=emb_file_name, vocab=word_v)

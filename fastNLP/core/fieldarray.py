@@ -1,4 +1,9 @@
+"""
+FieldArray是  DataSet_ 中一列的存储方式
 
+ .. _FieldArray:
+
+"""
 
 
 import numpy as np

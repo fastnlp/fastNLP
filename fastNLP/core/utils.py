@@ -24,47 +24,50 @@ def _prepare_cache_filepath(filepath):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
+
 #  TODO 可以保存下缓存时的参数，如果load的时候发现参数不一致，发出警告。
-def cache_results(cache_filepath, refresh=False, verbose=1):
+def cache_results(_cache_fp, _refresh=False, _verbose=1):
     def wrapper_(func):
         signature = inspect.signature(func)
         for key, _ in signature.parameters.items():
             if key in ('cache_filepath', 'refresh', 'verbose'):
                 raise RuntimeError("The function decorated by cache_results cannot have keyword `{}`.".format(key))
         def wrapper(*args, **kwargs):
-            if 'cache_filepath' in kwargs:
-                _cache_filepath = kwargs.pop('cache_filepath')
-                assert isinstance(_cache_filepath, str), "cache_filepath can only be str."
+            if '_cache_fp' in kwargs:
+                cache_filepath = kwargs.pop('_cache_fp')
+                assert isinstance(cache_filepath, str), "_cache_fp can only be str."
             else:
-                _cache_filepath = cache_filepath
-            if 'refresh' in kwargs:
-                _refresh  = kwargs.pop('refresh')
-                assert isinstance(_refresh, bool), "refresh can only be bool."
+                cache_filepath = _cache_fp
+            if '_refresh' in kwargs:
+                refresh  = kwargs.pop('_refresh')
+                assert isinstance(refresh, bool), "_refresh can only be bool."
             else:
-                _refresh = refresh
-            if 'verbose' in kwargs:
-                _verbose = kwargs.pop('verbose')
-                assert isinstance(_verbose, int), "verbose can only be integer."
+                refresh = _refresh
+            if '_verbose' in kwargs:
+                verbose = kwargs.pop('_verbose')
+                assert isinstance(verbose, int), "_verbose can only be integer."
+            else:
+                verbose = _verbose
             refresh_flag = True
 
-            if _cache_filepath is not None and _refresh is False:
+            if cache_filepath is not None and refresh is False:
                 # load data
-                if os.path.exists(_cache_filepath):
-                    with open(_cache_filepath, 'rb') as f:
+                if os.path.exists(cache_filepath):
+                    with open(cache_filepath, 'rb') as f:
                         results = _pickle.load(f)
                     if verbose==1:
-                        print("Read cache from {}.".format(_cache_filepath))
+                        print("Read cache from {}.".format(cache_filepath))
                     refresh_flag = False
 
             if refresh_flag:
                 results = func(*args, **kwargs)
-                if _cache_filepath is not None:
+                if cache_filepath is not None:
                     if results is None:
                         raise RuntimeError("The return value is None. Delete the decorator.")
-                    _prepare_cache_filepath(_cache_filepath)
-                    with open(_cache_filepath, 'wb') as f:
+                    _prepare_cache_filepath(cache_filepath)
+                    with open(cache_filepath, 'wb') as f:
                         _pickle.dump(results, f)
-                    print("Save cache to {}.".format(_cache_filepath))
+                    print("Save cache to {}.".format(cache_filepath))
 
             return results
         return wrapper

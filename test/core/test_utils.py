@@ -89,17 +89,17 @@ class TestCache(unittest.TestCase):
     def test_duplicate_keyword(self):
         with self.assertRaises(RuntimeError):
             @cache_results(None)
-            def func_verbose(a, verbose):
+            def func_verbose(a, _verbose):
                 pass
             func_verbose(0, 1)
         with self.assertRaises(RuntimeError):
             @cache_results(None)
-            def func_cache(a, cache_filepath):
+            def func_cache(a, _cache_fp):
                 pass
             func_cache(1, 2)
         with self.assertRaises(RuntimeError):
             @cache_results(None)
-            def func_refresh(a, refresh):
+            def func_refresh(a, _refresh):
                 pass
             func_refresh(1, 2)
 

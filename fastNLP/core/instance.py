@@ -1,3 +1,14 @@
+"""
+Instance文档
+
+ .. _Instance:
+
+测试
+
+"""
+
+
+
 class Instance(object):
     """An Instance is an example of data.
     Example::

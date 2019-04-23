@@ -36,8 +36,7 @@ def viterbi_decode(feats, transitions, mask=None, unpad=False):
     vpath = feats.new_zeros((seq_len, batch_size, n_tags), dtype=torch.long)
     vscore = feats[0]
 
-    vscore += transitions[n_tags, :n_tags]
-    trans_score = transitions[:n_tags, :n_tags].view(1, n_tags, n_tags).data
+    trans_score = transitions.view(1, n_tags, n_tags).data
     for i in range(1, seq_len):
         prev_score = vscore.view(batch_size, n_tags, 1)
         cur_score = feats[i].view(batch_size, 1, n_tags)

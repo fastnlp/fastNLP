@@ -21,8 +21,8 @@ fastNLP.modules.dropout module
     :undoc-members:
     :show-inheritance:
 
-fastNLP.modules.other\_modules module
--------------------------------------
+fastNLP.modules.other_modules module
+------------------------------------
 
 .. automodule:: fastNLP.modules.other_modules
     :members:

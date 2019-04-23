@@ -4,8 +4,8 @@ fastNLP.models package
 Submodules
 ----------
 
-fastNLP.models.base\_model module
----------------------------------
+fastNLP.models.base_model module
+--------------------------------
 
 .. automodule:: fastNLP.models.base_model
     :members:
@@ -20,64 +20,64 @@ fastNLP.models.bert module
     :undoc-members:
     :show-inheritance:
 
-fastNLP.models.biaffine\_parser module
---------------------------------------
+fastNLP.models.biaffine_parser module
+-------------------------------------
 
 .. automodule:: fastNLP.models.biaffine_parser
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.models.char\_language\_model module
--------------------------------------------
+fastNLP.models.char_language_model module
+-----------------------------------------
 
 .. automodule:: fastNLP.models.char_language_model
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.models.cnn\_text\_classification module
------------------------------------------------
+fastNLP.models.cnn_text_classification module
+---------------------------------------------
 
 .. automodule:: fastNLP.models.cnn_text_classification
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.models.enas\_controller module
---------------------------------------
+fastNLP.models.enas_controller module
+-------------------------------------
 
 .. automodule:: fastNLP.models.enas_controller
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.models.enas\_model module
----------------------------------
+fastNLP.models.enas_model module
+--------------------------------
 
 .. automodule:: fastNLP.models.enas_model
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.models.enas\_trainer module
------------------------------------
+fastNLP.models.enas_trainer module
+----------------------------------
 
 .. automodule:: fastNLP.models.enas_trainer
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.models.enas\_utils module
----------------------------------
+fastNLP.models.enas_utils module
+--------------------------------
 
 .. automodule:: fastNLP.models.enas_utils
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.models.sequence\_modeling module
-----------------------------------------
+fastNLP.models.sequence_modeling module
+---------------------------------------
 
 .. automodule:: fastNLP.models.sequence_modeling
     :members:
@@ -92,8 +92,8 @@ fastNLP.models.snli module
     :undoc-members:
     :show-inheritance:
 
-fastNLP.models.star\_transformer module
----------------------------------------
+fastNLP.models.star_transformer module
+--------------------------------------
 
 .. automodule:: fastNLP.models.star_transformer
     :members:

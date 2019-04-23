@@ -4,8 +4,8 @@ fastNLP.modules.encoder package
 Submodules
 ----------
 
-fastNLP.modules.encoder.char\_embedding module
-----------------------------------------------
+fastNLP.modules.encoder.char_embedding module
+---------------------------------------------
 
 .. automodule:: fastNLP.modules.encoder.char_embedding
     :members:
@@ -20,8 +20,8 @@ fastNLP.modules.encoder.conv module
     :undoc-members:
     :show-inheritance:
 
-fastNLP.modules.encoder.conv\_maxpool module
---------------------------------------------
+fastNLP.modules.encoder.conv_maxpool module
+-------------------------------------------
 
 .. automodule:: fastNLP.modules.encoder.conv_maxpool
     :members:
@@ -52,16 +52,16 @@ fastNLP.modules.encoder.lstm module
     :undoc-members:
     :show-inheritance:
 
-fastNLP.modules.encoder.masked\_rnn module
-------------------------------------------
+fastNLP.modules.encoder.masked_rnn module
+-----------------------------------------
 
 .. automodule:: fastNLP.modules.encoder.masked_rnn
     :members:
     :undoc-members:
     :show-inheritance:
 
-fastNLP.modules.encoder.star\_transformer module
-------------------------------------------------
+fastNLP.modules.encoder.star_transformer module
+-----------------------------------------------
 
 .. automodule:: fastNLP.modules.encoder.star_transformer
     :members:
@@ -76,8 +76,8 @@ fastNLP.modules.encoder.transformer module
     :undoc-members:
     :show-inheritance:
 
-fastNLP.modules.encoder.variational\_rnn module
------------------------------------------------
+fastNLP.modules.encoder.variational_rnn module
+----------------------------------------------
 
 .. automodule:: fastNLP.modules.encoder.variational_rnn
     :members:
