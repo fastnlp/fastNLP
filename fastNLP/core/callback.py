@@ -2,21 +2,21 @@
 
  .. _Callback:
 
+Callback是fastNLP中被设计用于增强 Trainer_ 的类。如果Callback被传递给了 Trainer_ , 则 Trainer_ 会在对应的阶段调用Callback
+的函数，具体调用时机可以通过 Trainer_ 查看。
+
 """
 
-
 import os
-
 import torch
-from tensorboardX import SummaryWriter
-
 from fastNLP.io.model_io import ModelSaver, ModelLoader
-
+try:
+    from tensorboardX import SummaryWriter
+except:
+    pass
 
 class Callback(object):
-    """An Interface for all callbacks.
-
-    Any customized callback should implement at least one of the following methods.
+    """这是Callback的基类，所有的callback必须继承自这个类。
 
     """
 
@@ -26,93 +26,150 @@ class Callback(object):
 
     @property
     def trainer(self):
+        """
+        该属性可以通过self.trainer获取到，一般情况下不需要使用这个属性。
+        :return:
+        """
         return self._trainer
 
     @property
     def step(self):
-        """current step number, in range(1, self.n_steps+1)"""
+        """当前运行到的step, 范围为[1, self.n_steps+1)"""
         return self._trainer.step
 
     @property
     def n_steps(self):
-        """total number of steps for training"""
+        """Trainer一共会运行多少步"""
         return self._trainer.n_steps
 
     @property
     def batch_size(self):
-        """batch size for training"""
+        """train和evaluate时的batch_size为多大"""
         return self._trainer.batch_size
 
     @property
     def epoch(self):
-        """current epoch number,  in range(1, self.n_epochs+1)"""
+        """当前运行的epoch数，范围是[1, self.n_epochs+1)"""
         return self._trainer.epoch
 
     @property
     def n_epochs(self):
-        """total number of epochs"""
+        """一共会运行多少个epoch"""
         return self._trainer.n_epochs
 
     @property
     def optimizer(self):
-        """torch.optim.Optimizer for current model"""
+        """初始化Trainer时传递的Optimizer"""
         return self._trainer.optimizer
 
     @property
     def model(self):
-        """training model"""
+        """正在被Trainer训练的模型"""
         return self._trainer.model
 
     @property
     def pbar(self):
-        """If use_tqdm, return trainer's tqdm print bar, else return None."""
+        """如果在Callback中需要打印内容，请使用self.pbar.write(str)。否则可能出现命令行显示效果不太好的问题。"""
         return self._trainer.pbar
 
     @property
     def update_every(self):
-        """The model in trainer will update parameters every `update_every` batches."""
+        """Trainer中的模型多少次反向传播才进行一次梯度更新，在Trainer初始化时传入的。"""
         return self._trainer.update_every
+
+    @property
+    def batch_per_epoch(self):
+        """每个epoch一共有多少个batch，只有在on_epoch_begin之后才能调用该属性。"""
+        return self._trainer.batch_per_epoch
+
     def on_train_begin(self):
-        # before the main training loop
+        """
+        在Train过程开始之前调用。
+
+        :return:
+        """
         pass
 
     def on_epoch_begin(self):
-        # at the beginning of each epoch
+        """
+        在每个epoch开始之前调用一次
+
+        :return:
+        """
         pass
 
     def on_batch_begin(self, batch_x, batch_y, indices):
-        # at the beginning of each step/mini-batch
+        """
+        每次采集到一个batch的数据则调用一次。这里对batch_x或batch_y删除添加内容是可以影响到Trainer中内容的。所以在这一步
+        可以进行一些负采样之类的操作
+
+        :param dict batch_x: DataSet中被设置为input的field的batch。
+        :param dict batch_y: DataSet中被设置为target的field的batch。
+        :param list(int) indices: 这次采样使用到的indices，可以通过DataSet[indices]获取出这个batch采出的Instance，在一些
+            情况下可以帮助定位是哪个Sample导致了错误。
+        :return:
+        """
         pass
 
     def on_loss_begin(self, batch_y, predict_y):
-        # after data_forward, and before loss computation
+        """
+        在计算loss前调用，即这里修改batch_y或predict_y的值是可以影响到loss计算的。
+
+        :param dict batch_y: 在DataSet中被设置为target的field的batch集合。
+        :param dict predict_y: 模型的forward()返回的结果。
+        :return:
+        """
         pass
 
     def on_backward_begin(self, loss):
-        # after loss computation, and before gradient backward
+        """
+        在loss得到之后，但在反向传播之前。可能可以进行loss是否为NaN的检查。
+
+        :param torch.Tensor loss: 计算得到的loss值
+        :return:
+        """
         pass
 
     def on_backward_end(self):
+        """
+        反向梯度传播已完成，但由于update_every的设置，可能并不是每一次调用都有梯度。到这一步，还没有更新参数。
+
+        :return:
+        """
         pass
 
     def on_step_end(self):
+        """
+        到这里模型的参数已经按照梯度更新。但可能受update_every影响，并不是每次都更新了。
+
+        :return:
+        """
         pass
 
-    def on_batch_end(self, *args):
-        # at the end of each step/mini-batch
+    def on_batch_end(self):
+        """
+        这一步与on_step_end是紧接着的。只是为了对称性加上了这一步。
+
+        """
         pass
 
     def on_valid_begin(self):
+        """
+        如果Trainer中设置了验证，则发生验证前会调用该函数
+
+        :return:
+        """
         pass
 
     def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
         """
-        每次执行验证机的evaluation后会调用。传入eval_result
+        每次执行验证集的evaluation后会调用。
 
-        :param eval_result: Dict[str: Dict[str: float]], evaluation的结果
-        :param metric_key: str
-        :param optimizer: optimizer passed to trainer
-        :param is_better_eval: bool, 当前dev结果是否比之前的好
+        :param Dict[str: Dict[str: float]] eval_result: , evaluation的结果。一个例子为{'AccuracyMetric':{'acc':1.0}}，即
+            传入的dict是有两层，第一层是metric的名称，第二层是metric的具体指标。
+        :param str metric_key: 初始化Trainer时传入的metric_key。
+        :param torch.Optimizer optimizer: Trainer中使用的优化器。
+        :param bool is_better_eval: 当前dev结果是否比之前的好。
         :return:
         """
         pass
@@ -137,7 +194,7 @@ class Callback(object):
         pass
 
 
-def transfer(func):
+def _transfer(func):
     """装饰器，将对CallbackManager的调用转发到各个Callback子类.
     :param func:
     :return:
@@ -153,9 +210,7 @@ def transfer(func):
 
 
 class CallbackManager(Callback):
-    """A manager for all callbacks passed into Trainer.
-    It collects resources inside Trainer and raise callbacks.
-
+    """内部使用的Callback管理类
     """
 
     def __init__(self, env, callbacks=None):
@@ -182,104 +237,70 @@ class CallbackManager(Callback):
             for callback in self.callbacks:
                 setattr(callback, '_'+env_name, env_val)  # Callback.trainer
 
-    @transfer
+    @_transfer
     def on_train_begin(self):
         pass
 
-    @transfer
+    @_transfer
     def on_epoch_begin(self):
         pass
 
-    @transfer
+    @_transfer
     def on_batch_begin(self, batch_x, batch_y, indices):
         pass
 
-    @transfer
+    @_transfer
     def on_loss_begin(self, batch_y, predict_y):
         pass
 
-    @transfer
+    @_transfer
     def on_backward_begin(self, loss):
         pass
 
-    @transfer
+    @_transfer
     def on_backward_end(self):
         pass
 
-    @transfer
+    @_transfer
     def on_step_end(self):
         pass
 
-    @transfer
+    @_transfer
     def on_batch_end(self):
         pass
 
-    @transfer
+    @_transfer
     def on_valid_begin(self):
         pass
 
-    @transfer
+    @_transfer
     def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
         pass
 
-    @transfer
+    @_transfer
     def on_epoch_end(self):
         pass
 
-    @transfer
+    @_transfer
     def on_train_end(self):
         pass
 
-    @transfer
+    @_transfer
     def on_exception(self, exception):
         pass
-
-
-class DummyCallback(Callback):
-    def on_train_begin(self, *arg):
-        print(arg)
-
-    def on_epoch_end(self):
-        print(self.epoch, self.n_epochs)
-
-
-class EchoCallback(Callback):
-    def on_train_begin(self):
-        print("before_train")
-
-    def on_epoch_begin(self):
-        print("before_epoch")
-
-    def on_batch_begin(self, batch_x, batch_y, indices):
-        print("before_batch")
-
-    def on_loss_begin(self, batch_y, predict_y):
-        print("before_loss")
-
-    def on_backward_begin(self, loss):
-        print("before_backward")
-
-    def on_batch_end(self):
-        print("after_batch")
-
-    def on_epoch_end(self):
-        print("after_epoch")
-
-    def on_train_end(self):
-        print("after_train")
 
 
 class GradientClipCallback(Callback):
     def __init__(self, parameters=None, clip_value=1, clip_type='norm'):
         """每次backward前，将parameter的gradient clip到某个范围。
 
-        :param parameters: None, torch.Tensor或List[torch.Tensor], 一般通过model.parameters()获得。如果为None则默认对Trainer
+        :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。如果为None则默认对Trainer
             的model中所有参数进行clip
-        :param clip_value: float, 将gradient 限制到[-clip_value, clip_value]。clip_value应该为正数
-        :param clip_type: str, 支持'norm', 'value'两种。
-            (1) 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
-            (2) 'value', 将gradient限制在[-clip_value, clip_value], 小于-clip_value的gradient被赋值为-clip_value; 大于
-                clip_value的gradient被赋值为clip_value.
+        :param float clip_value: 将gradient 限制到[-clip_value, clip_value]。clip_value应该为正数
+        :param str clip_type: 支持'norm', 'value'两种。
+            1. 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
+            2. 'value', 将gradient限制在[-clip_value, clip_value], 小于-clip_value的gradient被赋值为-clip_value; 大于
+            clip_value的gradient被赋值为clip_value.
         """
         super().__init__()
 
@@ -314,7 +335,7 @@ class EarlyStopCallback(Callback):
     def __init__(self, patience):
         """
 
-        :param int patience: 停止之前等待的epoch数
+        :param int patience: 多少个epoch没有变好就停止训练
         """
         super(EarlyStopCallback, self).__init__()
         self.patience = patience
@@ -341,7 +362,7 @@ class LRScheduler(Callback):
     def __init__(self, lr_scheduler):
         """对PyTorch LR Scheduler的包装
 
-        :param lr_scheduler: PyTorch的lr_scheduler
+        :param torch.optim.lr_scheduler._LRScheduler lr_scheduler: PyTorch的lr_scheduler
         """
         super(LRScheduler, self).__init__()
         import torch.optim
@@ -358,7 +379,7 @@ class ControlC(Callback):
     def __init__(self, quit_all):
         """
 
-        :param quit_all: 若为True,则检测到control+C 直接退出程序；否则只退出Trainer
+        :param bool quit_all: 若为True,则检测到control+C 直接退出程序；否则只退出Trainer
         """
         super(ControlC, self).__init__()
         if type(quit_all) != bool:
@@ -389,16 +410,16 @@ class SmoothValue(object):
 
 
 class LRFinder(Callback):
-    def __init__(self, n_batch, start_lr=1e-6, end_lr=10):
+    def __init__(self, start_lr=1e-6, end_lr=10):
         """用第一个 epoch 找最佳的学习率，从第二个epoch开始应用它
 
-        :param n_batch: 一个epoch内的iteration数
-        :param start_lr: 学习率下界
-        :param end_lr: 学习率上界
+        :param int n_batch: 一个epoch内的iteration数
+        :param float start_lr: 学习率下界
+        :param float end_lr: 学习率上界
         """
         super(LRFinder, self).__init__()
         self.start_lr, self.end_lr = start_lr, end_lr
-        self.num_it = n_batch
+        self.num_it = self.batch_per_epoch
         self.stop = False
         self.best_loss = 0.
         self.best_lr = None
@@ -514,7 +535,3 @@ class TensorboardCallback(Callback):
             del self._summary_writer
 
 
-if __name__ == "__main__":
-    manager = CallbackManager(env={"n_epoch": 3}, callbacks=[DummyCallback(), DummyCallback()])
-    manager.on_train_begin()
-    # print(manager.after_epoch())

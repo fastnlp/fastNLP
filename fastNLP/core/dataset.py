@@ -277,7 +277,7 @@ import warnings
 from fastNLP.core.fieldarray import AutoPadder
 from fastNLP.core.fieldarray import FieldArray
 from fastNLP.core.instance import Instance
-from fastNLP.core.utils import get_func_signature
+from fastNLP.core.utils import _get_func_signature
 
 class DataSet(object):
     """fastNLP的数据容器
@@ -642,7 +642,7 @@ class DataSet(object):
                 print("Exception happens at the `{}`th instance.".format(idx))
             raise e
         if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
-            raise ValueError("{} always return None.".format(get_func_signature(func=func)))
+            raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
 
         if new_field_name is not None:
             self._add_apply_field(results, new_field_name, kwargs)
@@ -707,7 +707,7 @@ class DataSet(object):
             raise e
         # results = [func(ins) for ins in self._inner_iter()]
         if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
-            raise ValueError("{} always return None.".format(get_func_signature(func=func)))
+            raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
 
         if new_field_name is not None:
             self._add_apply_field(results, new_field_name, kwargs)

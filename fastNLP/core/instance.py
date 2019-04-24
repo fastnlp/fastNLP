@@ -3,34 +3,33 @@ Instance文档
 
  .. _Instance:
 
-测试
+Instance是fastNLP中对应于一个sample的类。一个sample可以认为是fastNLP中的一个Instance对象。一个具像化的表示类似与 DataSet_
+出那个表中所展示的一行。
 
 """
 
 
 
 class Instance(object):
-    """An Instance is an example of data.
-    Example::
-    
-        ins = Instance(field_1=[1, 1, 1], field_2=[2, 2, 2])
-        ins["field_1"]
-        >>[1, 1, 1]
-        ins.add_field("field_3", [3, 3, 3])
-    
-    """
-
     def __init__(self, **fields):
-        """
+        """Instance的初始化如下面的Example所示
 
-        :param fields: 可能是一维或者二维的 list or np.array
+        Example::
+
+            ins = Instance(field_1=[1, 1, 1], field_2=[2, 2, 2])
+            ins["field_1"]
+            >>[1, 1, 1]
+            ins.add_field("field_3", [3, 3, 3])
+
+            ins = Instance(**{'x1': 1, 'x2':np.zeros((3, 4))})
         """
         self.fields = fields
 
     def add_field(self, field_name, field):
-        """Add a new field to the instance.
+        """向Instance中增加一个field
 
-        :param field_name: str, the name of the field.
+        :param str field_name: 新增field的名称
+        :param Any field: 新增field的内容
         """
         self.fields[field_name] = field
 

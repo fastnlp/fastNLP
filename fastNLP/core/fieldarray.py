@@ -1,5 +1,5 @@
 """
-FieldArray是  DataSet_ 中一列的存储方式
+FieldArray是  DataSet_ 中一列的存储方式，原理部分请参考 DataSet_ 处
 
  .. _FieldArray:
 
@@ -11,41 +11,19 @@ from copy import deepcopy
 
 
 class FieldArray(object):
-    """``FieldArray`` is the collection of ``Instance``s of the same field.
-    It is the basic element of ``DataSet`` class.
-
-    :param str name: the name of the FieldArray
-    :param list content: a list of int, float, str or np.ndarray, or a list of list of one, or a np.ndarray.
-    :param bool is_target: If True, this FieldArray is used to compute loss.
-    :param bool is_input: If True, this FieldArray is used to the model input.
-    :param Padder padder: PadderBase类型。赋值给fieldarray的padder的对象会被deepcopy一份，需要修改padder参数必须通过
-        fieldarray.set_pad_val()。
-        默认为None，（1）如果某个field是scalar，则不进行任何padding；（2）如果为一维list， 且fieldarray的dtype为float或int类型
-        则会进行padding；(3)其它情况不进行padder。
-        假设需要对English word中character进行padding，则需要使用其他的padder。
-        或ignore_type为True但是需要进行padding。
-    :param bool ignore_type: whether to ignore type. If True, no type detection will rise for this FieldArray.
-                           (default: False)
-    """
-
     def __init__(self, name, content, is_target=None, is_input=None, padder=None, ignore_type=False):
-        """DataSet在初始化时会有两类方法对FieldArray操作：
-            1） 如果DataSet使用dict初始化，那么在add_field中会构造FieldArray：
-                1.1) 二维list  DataSet({"x": [[1, 2], [3, 4]]})
-                1.2) 二维array  DataSet({"x": np.array([[1, 2], [3, 4]])})
-                1.3) 三维list  DataSet({"x": [[[1, 2], [3, 4]], [[1, 2], [3, 4]]]})
-                1.4) list of array: DataSet({"x": [np.array([1,2,3]), np.array([1,2,3])]})
-            2） 如果DataSet使用list of Instance 初始化,那么在append中会先对第一个样本初始化FieldArray；
-            然后后面的样本使用FieldArray.append进行添加。
-                2.1) 一维list DataSet([Instance(x=[1, 2, 3, 4])])
-                2.2) 一维array DataSet([Instance(x=np.array([1, 2, 3, 4]))])
-                2.3) 二维list  DataSet([Instance(x=[[1, 2], [3, 4]])])
-                2.4) 二维array  DataSet([Instance(x=np.array([[1, 2], [3, 4]]))])
+        """FieldArray是用于保存 DataSet_ 中一个field的实体。
 
-            类型检查(dtype check)发生在当该field被设置为is_input或者is_target时。
-            ignore_type用来控制是否进行类型检查，如果为True，则不检查。
-
+        :param str name: FieldArray的名称
+        :param list,numpy.ndarray content: 列表的元素可以为list，int，float，
+        :param bool is_target: 这个field是否是一个target field。
+        :param bool is_input: 这个field是否是一个input field。
+        :param Padder padder: PadderBase类型。赋值给fieldarray的padder的对象会被deepcopy一份，需要修改padder参数必须通过
+            fieldarray.set_pad_val()。默认为None，即使用 AutoPadder_ 。
+        :param bool ignore_type: 是否忽略该field的type，一般如果这个field不需要转为torch.FloatTensor或torch.LongTensor, 就
+            可以设置为True。具体意义请参考 DataSet_ 。
         """
+
         self.name = name
         if isinstance(content, list):
             # 如果DataSet使用dict初始化, content 可能是二维list/二维array/三维list
@@ -211,10 +189,10 @@ class FieldArray(object):
         return "FieldArray {}: {}".format(self.name, self.content.__repr__())
 
     def append(self, val):
-        """将val增加到FieldArray中，若该field的ignore_type为True则直接append到这个field中；若ignore_type为False，且当前field为
-        input或者target，则会检查传入的content是否与之前的内容在dimension, 元素的类型上是匹配的。
+        """将val append到这个field的尾部。如果这个field已经被设置为input或者target，则在append之前会检查该类型是否与已有
+        的内容是匹配的。
 
-        :param val: Any.
+        :param Any val: 需要append的值。
         """
         if self.ignore_type is False:
             if isinstance(val, list):
@@ -262,8 +240,8 @@ class FieldArray(object):
     def get(self, indices, pad=True):
         """根据给定的indices返回内容
 
-        :param indices: (int, List[int]), 获取indices对应的内容。
-        :param pad: bool, 是否对返回的结果进行padding。仅对indices为List[int]时有效
+        :param  int,list(int) indices:, 获取indices对应的内容。
+        :param bool pad: , 是否对返回的结果进行padding。仅对indices为List[int]时有效
         :return: (single, List)
         """
         if isinstance(indices, int):
@@ -281,7 +259,7 @@ class FieldArray(object):
         """
         设置padder，在这个field进行pad的时候用这个padder进行pad，如果为None则不进行pad。
 
-        :param padder: (None, Padder). 设置为None即删除padder.
+        :param None,Padder padder:. 设置为None即删除padder。
         :return:
         """
         if padder is not None:
@@ -293,7 +271,7 @@ class FieldArray(object):
     def set_pad_val(self, pad_val):
         """修改padder的pad_val.
 
-        :param pad_val: int。将该field的pad值设置为该值
+        :param int pad_val: 该field的pad值设置为该值。
         :return:
         """
         if self.padder is not None:
@@ -312,8 +290,8 @@ class FieldArray(object):
         """
         将other的属性复制给本FieldArray(other必须为FieldArray类型).属性包括 is_input, is_target, padder, ignore_type
 
-        :param other: FieldArray
-        :return:
+        :param FieldArray other: 从哪个field拷贝属性
+        :return: FieldArray
         """
         assert isinstance(other, FieldArray), "Only support FieldArray type, not {}.".format(type(other))
 
@@ -324,7 +302,7 @@ class FieldArray(object):
 
         return self
 
-def is_iterable(content):
+def _is_iterable(content):
     try:
         _ = (e for e in content)
     except TypeError:
@@ -350,11 +328,10 @@ class Padder:
         """
         传入的是List内容。假设有以下的DataSet。
 
-        :param contents: List[element]。传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前
+        :param list(Any) contents: 传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前
             deepcopy一份。
-        :param field_name: str, field的名称。
-        :param field_ele_dtype: (np.int64, np.float64, np.str, None), 该field的内层元素的类型。如果该field的ignore_type
-                               为True，该这个值为None。
+        :param str, field_name: field的名称。
+        :param np.int64,np.float64,np.str,None, field_ele_dtype: 该field的内层元素的类型。如果该field的ignore_type为True，该这个值为None。
         :return: np.array([padded_element])
 
         Example::
@@ -400,10 +377,10 @@ class AutoPadder(Padder):
 
     2 如果元素类型为(np.int64, np.float64),
 
-    2.1 如果该field的内容为(np.int64, np.float64)，比如为seq_len, 则不进行padding
+        2.1 如果该field的内容为(np.int64, np.float64)，比如为seq_len, 则不进行padding
 
-    2.2 如果该field的内容为List, 那么会将Batch中的List pad为一样长。若该List下还有里层的List需要padding，请使用其它padder。
-    如果某个instance中field为[1, 2, 3]，则可以pad；若为[[1,2], [3,4, ...]]则不能进行pad
+        2.2 如果该field的内容为List, 那么会将Batch中的List pad为一样长。若该List下还有里层的List需要padding，请使用其它padder。
+        即如果Instance中field形如[1, 2, 3, ...]，则可以pad；若为[[1,2], [3,4, ...]]则不能进行pad
     """
 
     def __init__(self, pad_val=0):
@@ -427,7 +404,7 @@ class AutoPadder(Padder):
         return False
 
     def __call__(self, contents, field_name, field_ele_dtype):
-        if not is_iterable(contents[0]):
+        if not _is_iterable(contents[0]):
             array = np.array([content for content in contents], dtype=field_ele_dtype)
         elif field_ele_dtype in (np.int64, np.float64) and self._is_two_dimension(contents):
             max_len = max([len(content) for content in contents])
@@ -454,7 +431,7 @@ class EngChar2DPadder(Padder):
     Example::
 
         from fastNLP import DataSet
-        from fastNLP import EnChar2DPadder
+        from fastNLP import EngChar2DPadder
         from fastNLP import Vocabulary
         dataset = DataSet({'sent': ['This is the first demo', 'This is the second demo']})
         dataset.apply(lambda ins:[list(word) for word in ins['sent'].split()], new_field_name='chars')
@@ -462,14 +439,15 @@ class EngChar2DPadder(Padder):
         vocab.from_dataset(dataset, field_name='chars')
         vocab.index_dataset(dataset, field_name='chars')
         dataset.set_input('chars')
-        padder = EnChar2DPadder()
+        padder = EngChar2DPadder()
         dataset.set_padder('chars', padder)  # chars这个field的设置为了EnChar2DPadder
+
     """
     def __init__(self, pad_val=0, pad_length=0):
         """
         :param pad_val: int, pad的位置使用该index
-        :param pad_length: int, 如果为0则取一个batch中最大的单词长度作为padding长度。如果为大于0的数，则将所有单词的长度都pad或截
-            取到该长度.
+        :param pad_length: int, 如果为0则取一个batch中最大的单词长度作为padding长度。如果为大于0的数，则将所有单词的长度
+            都pad或截取到该长度.
         """
         super().__init__(pad_val=pad_val)
 
@@ -494,7 +472,7 @@ class EngChar2DPadder(Padder):
         except:
             raise ValueError("Field:{} only has two dimensions.".format(field_name))
 
-        if is_iterable(value):
+        if _is_iterable(value):
             raise ValueError("Field:{} has more than 3 dimension.".format(field_name))
 
     def __call__(self, contents, field_name, field_ele_dtype):

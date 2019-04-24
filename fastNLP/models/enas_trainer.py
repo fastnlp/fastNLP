@@ -13,12 +13,12 @@ from torch import nn
 try:
     from tqdm.autonotebook import tqdm
 except:
-    from fastNLP.core.utils import pseudo_tqdm as tqdm
+    from fastNLP.core.utils import _pseudo_tqdm as tqdm
 
 from fastNLP.core.batch import Batch
 from fastNLP.core.callback import CallbackManager, CallbackException
 from fastNLP.core.dataset import DataSet
-from fastNLP.core.utils import CheckError
+from fastNLP.core.utils import _CheckError
 from fastNLP.core.utils import _move_dict_value_to_device
 import fastNLP
 import fastNLP.models.enas_utils as utils
@@ -118,7 +118,7 @@ class ENASTrainer(fastNLP.Trainer):
 
     def _train(self):
         if not self.use_tqdm:
-            from fastNLP.core.utils import pseudo_tqdm as inner_tqdm
+            from fastNLP.core.utils import _pseudo_tqdm as inner_tqdm
         else:
             inner_tqdm = tqdm
         self.step = 0

@@ -13,11 +13,11 @@ from collections import defaultdict
 import numpy as np
 import torch
 
-from fastNLP.core.utils import CheckError
-from fastNLP.core.utils import CheckRes
+from fastNLP.core.utils import _CheckError
+from fastNLP.core.utils import _CheckRes
 from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import _check_arg_dict_list
-from fastNLP.core.utils import get_func_signature
+from fastNLP.core.utils import _get_func_signature
 from fastNLP.core.utils import seq_lens_to_masks
 from fastNLP.core.vocabulary import Vocabulary
 
@@ -161,7 +161,7 @@ class MetricBase(object):
         for func_param, input_param in self.param_map.items():
             if func_param not in func_args:
                 raise NameError(
-                    f"Parameter `{func_param}` is not in {get_func_signature(self.evaluate)}. Please check the "
+                    f"Parameter `{func_param}` is not in {_get_func_signature(self.evaluate)}. Please check the "
                     f"initialization parameters, or change its signature.")
 
     def _fast_param_map(self, pred_dict, target_dict):
@@ -207,7 +207,7 @@ class MetricBase(object):
             func_args = set([arg for arg in func_spect.args if arg != 'self'])
             for func_arg, input_arg in self.param_map.items():
                 if func_arg not in func_args:
-                    raise NameError(f"`{func_arg}` not in {get_func_signature(self.evaluate)}.")
+                    raise NameError(f"`{func_arg}` not in {_get_func_signature(self.evaluate)}.")
 
             # 2. only part of the param_map are passed, left are not
             for arg in func_args:
@@ -248,16 +248,16 @@ class MetricBase(object):
                 replaced_missing[idx] = f"{self.param_map[func_arg]}" + f"(assign to `{func_arg}` " \
                                                                         f"in `{self.__class__.__name__}`)"
 
-            check_res = CheckRes(missing=replaced_missing,
-                                 unused=check_res.unused,
-                                 duplicated=duplicated,
-                                 required=check_res.required,
-                                 all_needed=check_res.all_needed,
-                                 varargs=check_res.varargs)
+            check_res = _CheckRes(missing=replaced_missing,
+                                  unused=check_res.unused,
+                                  duplicated=duplicated,
+                                  required=check_res.required,
+                                  all_needed=check_res.all_needed,
+                                  varargs=check_res.varargs)
 
             if check_res.missing or check_res.duplicated:
-                raise CheckError(check_res=check_res,
-                                 func_signature=get_func_signature(self.evaluate))
+                raise _CheckError(check_res=check_res,
+                                  func_signature=_get_func_signature(self.evaluate))
         refined_args = _build_args(self.evaluate, **mapped_pred_dict, **mapped_target_dict)
 
         self.evaluate(**refined_args)
@@ -294,14 +294,14 @@ class AccuracyMetric(MetricBase):
         """
         # TODO 这里报错需要更改，因为pred是啥用户并不知道。需要告知用户真实的value
         if not isinstance(pred, torch.Tensor):
-            raise TypeError(f"`pred` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
+            raise TypeError(f"`pred` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(pred)}.")
         if not isinstance(target, torch.Tensor):
-            raise TypeError(f"`target` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
+            raise TypeError(f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(target)}.")
 
         if seq_len is not None and not isinstance(seq_len, torch.Tensor):
-            raise TypeError(f"`seq_lens` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
+            raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(seq_lens)}.")
 
         if seq_len is not None:
@@ -314,7 +314,7 @@ class AccuracyMetric(MetricBase):
         elif len(pred.size()) == len(target.size()) + 1:
             pred = pred.argmax(dim=-1)
         else:
-            raise RuntimeError(f"In {get_func_signature(self.evaluate)}, when pred have "
+            raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
                                f"size:{pred.size()}, target should have size: {pred.size()} or "
                                f"{pred.size()[:-1]}, got {target.size()}.")
 
@@ -516,14 +516,14 @@ class SpanFPreRecMetric(MetricBase):
         :return:
         """
         if not isinstance(pred, torch.Tensor):
-            raise TypeError(f"`pred` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
+            raise TypeError(f"`pred` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(pred)}.")
         if not isinstance(target, torch.Tensor):
-            raise TypeError(f"`target` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
+            raise TypeError(f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(target)}.")
 
         if not isinstance(seq_len, torch.Tensor):
-            raise TypeError(f"`seq_lens` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
+            raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(seq_len)}.")
 
         if pred.size() == target.size() and len(target.size()) == 2:
@@ -535,7 +535,7 @@ class SpanFPreRecMetric(MetricBase):
                 raise ValueError("A gold label passed to SpanBasedF1Metric contains an "
                                  "id >= {}, the number of classes.".format(num_classes))
         else:
-            raise RuntimeError(f"In {get_func_signature(self.evaluate)}, when pred have "
+            raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
                                f"size:{pred.size()}, target should have size: {pred.size()} or "
                                f"{pred.size()[:-1]}, got {target.size()}.")
 
@@ -714,14 +714,14 @@ class BMESF1PreRecMetric(MetricBase):
         :return:
         """
         if not isinstance(pred, torch.Tensor):
-            raise TypeError(f"`pred` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
+            raise TypeError(f"`pred` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(pred)}.")
         if not isinstance(target, torch.Tensor):
-            raise TypeError(f"`target` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
+            raise TypeError(f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(target)}.")
 
         if not isinstance(seq_len, torch.Tensor):
-            raise TypeError(f"`seq_lens` in {get_func_signature(self.evaluate)} must be torch.Tensor,"
+            raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(seq_len)}.")
 
         if pred.size() == target.size() and len(target.size()) == 2:
@@ -729,7 +729,7 @@ class BMESF1PreRecMetric(MetricBase):
         elif len(pred.size()) == len(target.size()) + 1 and len(target.size()) == 2:
             pred = pred.argmax(dim=-1)
         else:
-            raise RuntimeError(f"In {get_func_signature(self.evaluate)}, when pred have "
+            raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
                                f"size:{pred.size()}, target should have size: {pred.size()} or "
                                f"{pred.size()[:-1]}, got {target.size()}.")
 

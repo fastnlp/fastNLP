@@ -12,12 +12,12 @@ from collections import defaultdict
 import torch
 import torch.nn.functional as F
 
-from fastNLP.core.utils import CheckError
-from fastNLP.core.utils import CheckRes
+from fastNLP.core.utils import _CheckError
+from fastNLP.core.utils import _CheckRes
 from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import _check_arg_dict_list
 from fastNLP.core.utils import _check_function_or_method
-from fastNLP.core.utils import get_func_signature
+from fastNLP.core.utils import _get_func_signature
 
 
 class LossBase(object):
@@ -70,7 +70,7 @@ class LossBase(object):
         for func_param, input_param in self.param_map.items():
             if func_param not in func_args:
                 raise NameError(
-                    f"Parameter `{func_param}` is not in {get_func_signature(self.get_loss)}. Please check the "
+                    f"Parameter `{func_param}` is not in {_get_func_signature(self.get_loss)}. Please check the "
                     f"initialization parameters, or change its signature.")
 
         # evaluate should not have varargs.
@@ -111,7 +111,7 @@ class LossBase(object):
             func_args = set([arg for arg in func_spect.args if arg != 'self'])
             for func_arg, input_arg in self.param_map.items():
                 if func_arg not in func_args:
-                    raise NameError(f"`{func_arg}` not in {get_func_signature(self.get_loss)}.")
+                    raise NameError(f"`{func_arg}` not in {_get_func_signature(self.get_loss)}.")
 
             # 2. only part of the param_map are passed, left are not
             for arg in func_args:
@@ -151,16 +151,16 @@ class LossBase(object):
                 replaced_missing[idx] = f"{self.param_map[func_arg]}" + f"(assign to `{func_arg}` " \
                                                                         f"in `{self.__class__.__name__}`)"
 
-            check_res = CheckRes(missing=replaced_missing,
-                                 unused=check_res.unused,
-                                 duplicated=duplicated,
-                                 required=check_res.required,
-                                 all_needed=check_res.all_needed,
-                                 varargs=check_res.varargs)
+            check_res = _CheckRes(missing=replaced_missing,
+                                  unused=check_res.unused,
+                                  duplicated=duplicated,
+                                  required=check_res.required,
+                                  all_needed=check_res.all_needed,
+                                  varargs=check_res.varargs)
 
             if check_res.missing or check_res.duplicated:
-                raise CheckError(check_res=check_res,
-                                 func_signature=get_func_signature(self.get_loss))
+                raise _CheckError(check_res=check_res,
+                                  func_signature=_get_func_signature(self.get_loss))
         refined_args = _build_args(self.get_loss, **mapped_pred_dict, **mapped_target_dict)
 
         loss = self.get_loss(**refined_args)
@@ -289,14 +289,14 @@ class LossInForward(LossBase):
 
     def get_loss(self, **kwargs):
         if self.loss_key not in kwargs:
-            check_res = CheckRes(
+            check_res = _CheckRes(
                 missing=[self.loss_key + f"(assign to `{self.loss_key}` in `{self.__class__.__name__}`"],
                 unused=[],
                 duplicated=[],
                 required=[],
                 all_needed=[],
                 varargs=[])
-            raise CheckError(check_res=check_res, func_signature=get_func_signature(self.get_loss))
+            raise _CheckError(check_res=check_res, func_signature=_get_func_signature(self.get_loss))
         return kwargs[self.loss_key]
 
     def __call__(self, pred_dict, target_dict, check=False):

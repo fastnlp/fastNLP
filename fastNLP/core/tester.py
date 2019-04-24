@@ -5,11 +5,11 @@ from fastNLP.core.batch import Batch
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.metrics import _prepare_metrics
 from fastNLP.core.sampler import SequentialSampler
-from fastNLP.core.utils import CheckError
+from fastNLP.core.utils import _CheckError
 from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import _check_loss_evaluate
 from fastNLP.core.utils import _move_dict_value_to_device
-from fastNLP.core.utils import get_func_signature
+from fastNLP.core.utils import _get_func_signature
 from fastNLP.core.utils import _get_device
 
 
@@ -75,19 +75,19 @@ class Tester(object):
                     _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
                     pred_dict = self._data_forward(self._predict_func, batch_x)
                     if not isinstance(pred_dict, dict):
-                        raise TypeError(f"The return value of {get_func_signature(self._predict_func)} "
+                        raise TypeError(f"The return value of {_get_func_signature(self._predict_func)} "
                                         f"must be `dict`, got {type(pred_dict)}.")
                     for metric in self.metrics:
                         metric(pred_dict, batch_y)
                 for metric in self.metrics:
                     eval_result = metric.get_metric()
                     if not isinstance(eval_result, dict):
-                        raise TypeError(f"The return value of {get_func_signature(metric.get_metric)} must be "
+                        raise TypeError(f"The return value of {_get_func_signature(metric.get_metric)} must be "
                                         f"`dict`, got {type(eval_result)}")
                     metric_name = metric.__class__.__name__
                     eval_results[metric_name] = eval_result
-        except CheckError as e:
-            prev_func_signature = get_func_signature(self._predict_func)
+        except _CheckError as e:
+            prev_func_signature = _get_func_signature(self._predict_func)
             _check_loss_evaluate(prev_func_signature=prev_func_signature, func_signature=e.func_signature,
                                  check_res=e.check_res, pred_dict=pred_dict, target_dict=batch_y,
                                  dataset=self.data, check_level=0)

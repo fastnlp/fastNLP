@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from torch import nn
 
-CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
+_CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                    'varargs'])
 
 def _prepare_cache_filepath(filepath):
@@ -28,6 +28,57 @@ def _prepare_cache_filepath(filepath):
 
 #  TODO 可以保存下缓存时的参数，如果load的时候发现参数不一致，发出警告。
 def cache_results(_cache_fp, _refresh=False, _verbose=1):
+    """
+    cache_results是fastNLP中用于cache数据的装饰器。通过下面的例子看一下如何使用
+
+    Example::
+
+        import time
+        import numpy as np
+        from fastNLP import cache_results
+
+        @cache_results('cache.pkl')
+        def process_data():
+            # 一些比较耗时的工作，比如读取数据，预处理数据等，这里用time.sleep()代替耗时
+            time.sleep(1)
+            return np.random.randint(5, size=(10, 20))
+
+        start_time = time.time()
+        process_data()
+        print(time.time() - start_time)
+
+        start_time = time.time()
+        process_data()
+        print(time.time() - start_time)
+
+        # 输出内容如下
+        #     Save cache to cache.pkl.
+        #     1.0015439987182617
+        #     Read cache from cache.pkl.
+        #     0.00013065338134765625
+
+    可以看到第二次运行的时候，只用了0.0001s左右，是由于第二次运行将直接从cache.pkl这个文件读取数据，而不会经过再次预处理
+
+    Example::
+
+        # 还是以上面的例子为例，如果需要重新生成另一个cache，比如另一个数据集的内容，通过如下的方式调用即可
+        process_data(_cache_fp='cache2.pkl')  # 完全不影响之前的‘cache.pkl'
+
+    上面的_cache_fp是cache_results会识别的参数，它将从'cache2.pkl'这里缓存/读取数据，即这里的'cache2.pkl'覆盖默认的
+    'cache.pkl'。如果在你的函数前面加上了@cache_results()则你的函数会增加三个参数[_cache_fp, _refresh, _verbose]。
+    上面的例子即为使用_cache_fp的情况，这三个参数不会传入到你的函数中，当然你写的函数参数名也不可能包含这三个名称。
+
+    Example::
+
+        process_data(_cache_fp='cache2.pkl', _refresh=True)  # 这里强制重新生成一份对预处理的cache。
+        #  _verbose是用于控制输出信息的，如果为0,则不输出任何内容;如果为1,则会提醒当前步骤是读取的cache还是生成了新的cache
+
+    :param str _cache_fp: 将返回结果缓存到什么位置;或从什么位置读取缓存。如果为None，cache_results没有任何效用，除非在
+        函数调用的时候传入_cache_fp这个参数。
+    :param bool _refresh: 是否重新生成cache。
+    :param int _verbose: 是否打印cache的信息。
+    :return:
+    """
     def wrapper_(func):
         signature = inspect.signature(func)
         for key, _ in signature.parameters.items():
@@ -74,48 +125,48 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
         return wrapper
     return wrapper_
 
-def save_pickle(obj, pickle_path, file_name):
-    """Save an object into a pickle file.
-
-    :param obj: an object
-    :param pickle_path: str, the directory where the pickle file is to be saved
-    :param file_name: str, the name of the pickle file. In general, it should be ended by "pkl".
-    """
-    if not os.path.exists(pickle_path):
-        os.mkdir(pickle_path)
-        print("make dir {} before saving pickle file".format(pickle_path))
-    with open(os.path.join(pickle_path, file_name), "wb") as f:
-        _pickle.dump(obj, f)
-    print("{} saved in {}".format(file_name, pickle_path))
-
-
-def load_pickle(pickle_path, file_name):
-    """Load an object from a given pickle file.
-
-    :param pickle_path: str, the directory where the pickle file is.
-    :param file_name: str, the name of the pickle file.
-    :return obj: an object stored in the pickle
-    """
-    with open(os.path.join(pickle_path, file_name), "rb") as f:
-        obj = _pickle.load(f)
-    print("{} loaded from {}".format(file_name, pickle_path))
-    return obj
-
-
-def pickle_exist(pickle_path, pickle_name):
-    """Check if a given pickle file exists in the directory.
-
-    :param pickle_path: the directory of target pickle file
-    :param pickle_name: the filename of target pickle file
-    :return: True if file exists else False
-    """
-    if not os.path.exists(pickle_path):
-        os.makedirs(pickle_path)
-    file_name = os.path.join(pickle_path, pickle_name)
-    if os.path.exists(file_name):
-        return True
-    else:
-        return False
+# def save_pickle(obj, pickle_path, file_name):
+#     """Save an object into a pickle file.
+#
+#     :param obj: an object
+#     :param pickle_path: str, the directory where the pickle file is to be saved
+#     :param file_name: str, the name of the pickle file. In general, it should be ended by "pkl".
+#     """
+#     if not os.path.exists(pickle_path):
+#         os.mkdir(pickle_path)
+#         print("make dir {} before saving pickle file".format(pickle_path))
+#     with open(os.path.join(pickle_path, file_name), "wb") as f:
+#         _pickle.dump(obj, f)
+#     print("{} saved in {}".format(file_name, pickle_path))
+#
+#
+# def load_pickle(pickle_path, file_name):
+#     """Load an object from a given pickle file.
+#
+#     :param pickle_path: str, the directory where the pickle file is.
+#     :param file_name: str, the name of the pickle file.
+#     :return obj: an object stored in the pickle
+#     """
+#     with open(os.path.join(pickle_path, file_name), "rb") as f:
+#         obj = _pickle.load(f)
+#     print("{} loaded from {}".format(file_name, pickle_path))
+#     return obj
+#
+#
+# def pickle_exist(pickle_path, pickle_name):
+#     """Check if a given pickle file exists in the directory.
+#
+#     :param pickle_path: the directory of target pickle file
+#     :param pickle_name: the filename of target pickle file
+#     :return: True if file exists else False
+#     """
+#     if not os.path.exists(pickle_path):
+#         os.makedirs(pickle_path)
+#     file_name = os.path.join(pickle_path, pickle_name)
+#     if os.path.exists(file_name):
+#         return True
+#     else:
+#         return False
 
 def _get_device(device, check_exist=False):
     """
@@ -232,15 +283,15 @@ def _check_arg_dict_list(func, args):
     missing = list(require_args - input_args)
     unused = list(input_args - all_args)
     varargs = [] if not spect.varargs else [spect.varargs]
-    return CheckRes(missing=missing,
-                    unused=unused,
-                    duplicated=duplicated,
-                    required=list(require_args),
-                    all_needed=list(all_args),
-                    varargs=varargs)
+    return _CheckRes(missing=missing,
+                     unused=unused,
+                     duplicated=duplicated,
+                     required=list(require_args),
+                     all_needed=list(all_args),
+                     varargs=varargs)
 
 
-def get_func_signature(func):
+def _get_func_signature(func):
     """
 
     Given a function or method, return its signature.
@@ -318,13 +369,13 @@ def _move_dict_value_to_device(*args, device: torch.device, non_blocking=False):
             raise TypeError("Only support `dict` type right now.")
 
 
-class CheckError(Exception):
+class _CheckError(Exception):
     """
 
-    CheckError. Used in losses.LossBase, metrics.MetricBase.
+    _CheckError. Used in losses.LossBase, metrics.MetricBase.
     """
 
-    def __init__(self, check_res: CheckRes, func_signature: str):
+    def __init__(self, check_res: _CheckRes, func_signature: str):
         errs = [f'Problems occurred when calling `{func_signature}`']
 
         if check_res.varargs:
@@ -347,7 +398,7 @@ WARNING_CHECK_LEVEL = 1
 STRICT_CHECK_LEVEL = 2
 
 
-def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_res: CheckRes,
+def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_res: _CheckRes,
                          pred_dict: dict, target_dict: dict, dataset, check_level=0):
     errs = []
     unuseds = []
@@ -449,7 +500,7 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
 
 def _check_forward_error(forward_func, batch_x, dataset, check_level):
     check_res = _check_arg_dict_list(forward_func, batch_x)
-    func_signature = get_func_signature(forward_func)
+    func_signature = _get_func_signature(forward_func)
 
     errs = []
     suggestions = []
@@ -543,7 +594,7 @@ def seq_mask(seq_len, max_len):
     return torch.gt(seq_len, seq_range) # [batch_size, max_len]
 
 
-class pseudo_tqdm:
+class _pseudo_tqdm:
     """
     当无法引入tqdm，或者Trainer中设置use_tqdm为false的时候，用该方法打印数据
     """

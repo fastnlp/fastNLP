@@ -2,7 +2,7 @@ from functools import wraps
 from collections import Counter
 from fastNLP.core.dataset import DataSet
 
-def check_build_vocab(func):
+def _check_build_vocab(func):
     """A decorator to make sure the indexing is built before used.
 
     """
@@ -15,7 +15,7 @@ def check_build_vocab(func):
     return _wrapper
 
 
-def check_build_status(func):
+def _check_build_status(func):
     """A decorator to check whether the vocabulary updates after the last build.
 
     """
@@ -67,7 +67,7 @@ class Vocabulary(object):
         self.idx2word = None
         self.rebuild = True
 
-    @check_build_status
+    @_check_build_status
     def update(self, word_lst):
         """依次增加序列中词在词典中的出现频率
 
@@ -75,7 +75,7 @@ class Vocabulary(object):
         """
         self.word_count.update(word_lst)
 
-    @check_build_status
+    @_check_build_status
     def add(self, word):
         """
         增加一个新词在词典中的出现频率
@@ -84,7 +84,7 @@ class Vocabulary(object):
         """
         self.word_count[word] += 1
 
-    @check_build_status
+    @_check_build_status
     def add_word(self, word):
         """
         增加一个新词在词典中的出现频率
@@ -93,7 +93,7 @@ class Vocabulary(object):
         """
         self.add(word)
 
-    @check_build_status
+    @_check_build_status
     def add_word_lst(self, word_lst):
         """
         依次增加序列中词在词典中的出现频率
@@ -132,11 +132,11 @@ class Vocabulary(object):
         """
         self.idx2word = {i: w for w, i in self.word2idx.items()}
 
-    @check_build_vocab
+    @_check_build_vocab
     def __len__(self):
         return len(self.word2idx)
 
-    @check_build_vocab
+    @_check_build_vocab
     def __contains__(self, item):
         """
         检查词是否被记录
@@ -161,7 +161,7 @@ class Vocabulary(object):
         """
         return self.__contains__(w)
 
-    @check_build_vocab
+    @_check_build_vocab
     def __getitem__(self, w):
         """
         To support usage like::
@@ -175,7 +175,7 @@ class Vocabulary(object):
         else:
             raise ValueError("word {} not in vocabulary".format(w))
 
-    @check_build_vocab
+    @_check_build_vocab
     def index_dataset(self, *datasets, field_name, new_field_name=None):
         """
         将DataSet中对应field的词转为数字.
@@ -275,7 +275,7 @@ class Vocabulary(object):
         return self.__getitem__(w)
 
     @property
-    @check_build_vocab
+    @_check_build_vocab
     def unknown_idx(self):
         """
         unknown 对应的数字.
@@ -285,7 +285,7 @@ class Vocabulary(object):
         return self.word2idx[self.unknown]
 
     @property
-    @check_build_vocab
+    @_check_build_vocab
     def padding_idx(self):
         """
         padding 对应的数字
@@ -294,7 +294,7 @@ class Vocabulary(object):
             return None
         return self.word2idx[self.padding]
 
-    @check_build_vocab
+    @_check_build_vocab
     def to_word(self, idx):
         """
         给定一个数字, 将其转为对应的词.

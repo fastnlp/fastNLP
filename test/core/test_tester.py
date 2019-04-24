@@ -8,7 +8,7 @@ import numpy as np
 import torch.nn.functional as F
 from torch import nn
 import time
-from fastNLP.core.utils import CheckError
+from fastNLP.core.utils import _CheckError
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
 from fastNLP.core.losses import BCELoss
