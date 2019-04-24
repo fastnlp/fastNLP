@@ -3,6 +3,88 @@ Trainer的说明文档
 
  .. _Trainer:
 
+Trainer在fastNLP中用于组织单任务的训练过程，可以避免用户在不同训练任务中重复撰写 (1) epoch循环; (2) 将数据分成不同的Batch; (3)
+对Batch进行pad; (4) 每个epoch结束或一定step后进行验证集验证; (5) 保存获得更好验证性能的模型等。
+
+1. Trainer的基本使用
+    下面的例子是使用神经网络来进行预测一个序列中是否有偶数个1。
+
+    Example::
+
+        import numpy as np
+        from torch import nn
+        import torch
+        import torch.nn.functional as F
+        from torch.optim import SGD
+
+        from fastNLP import DataSet
+        from fastNLP import Trainer
+        from fastNLP.core.losses import CrossEntropyLoss
+        from fastNLP.core.metrics import AccuracyMetric
+        from fastNLP.modules.decoder import MLP
+
+        # 模型
+        class Model(nn.Module):
+            def __init__(self, input_num):
+                super().__init__()
+                self.fcs = MLP([input_num, 40, 40, 2], 'relu')
+
+            def forward(self, x):
+                x = self.fcs(x)
+                return {'pred': x}
+        model = Model(10)
+
+        # 生成数据
+        def generate_psedo_dataset(num_samples):
+            dataset = DataSet()
+            data = np.random.randint(2, size=(num_samples, 10))
+            label = np.sum(data, axis=1)%2
+            dataset = DataSet({'x':data.astype(float), 'label': label})
+            dataset.set_input('x')
+            dataset.set_target('label')
+            return dataset
+        tr_dataset = generate_psedo_dataset(1000)
+        dev_data = generate_psedo_dataset(100)
+
+        # 训练
+        trainer = Trainer(tr_dataset, model, loss=CrossEntropyLoss(target='label'),
+                           optimizer=SGD(model.parameters(), lr=0.1),n_epochs=1000,
+                           dev_data = dev_data, metrics=AccuracyMetric(target='label'))
+        trainer.train()
+
+    由上面的例子可以看出通过使用Trainer，可以使得训练部分的代码大幅减少。
+    使用Trainer需要满足以下几个条件
+
+    1. 模型
+
+        1. 模型的forward()的参数名需要与DataSet中的名字对应。实际上fastNLP在将DataSet中的数据传递给模型forward()时，是
+        通过匹配名称实现的。所以上例中，如果Model的forward函数修改为forward(self, data), 则DataSet中的'x'这个field就应该
+        改名为'data'。
+        2. 传递给forward()的参数是DataSet中被设置为input的那些field。但如果forward()中没有对应的参数，则不会将数据传递
+        给forward()。例如，DataSet中'x1', 'x2'都是input，但是模型的函数为forward(self, x1), 那么'x2'不会传递给forward()。
+        3. 模型的forward()返回值需要为一个dict。
+
+    2. Loss与Metric
+    fastNLP中的为了不限制forward函数的返回内容数量，以及对多Metric等的支持等， Loss_ 与 Metric_ 都使用了通过名称来匹配相
+    应内容。如上面的例子中
+
+        Example::
+
+            trainer = Trainer(tr_dataset, model, loss=CrossEntropyLoss(target='label'),
+                       optimizer=SGD(model.parameters(), lr=0.1),n_epochs=1000,
+                       dev_data = dev_data, metrics=AccuracyMetric(target='label'))
+
+        loss被设置为了 CrossEntropyLoss_ , 但在初始化的时候传入了一个target='label'这个参数， CrossEntropyLoss_ 的初始化
+        参数为(pred=None, target=None, padding_idx=-100)。这里的两个参数分别为计算CrossEntropy时需要使用到的模型的预测值
+        与ground truth的label。其中'pred'一般是模型forward()返回结果的内容，'target'一般是来自于DataSet中被设置为target的
+        field。
+
+2. Trainer与callback
+
+
+3. Trainer的代码检查
+
+
 
 """
 
@@ -16,7 +98,7 @@ from datetime import timedelta
 import numpy as np
 import torch
 from torch import nn
-
+import warnings
 try:
     from tqdm.autonotebook import tqdm
 except:
@@ -27,7 +109,6 @@ from fastNLP.core.callback import CallbackManager, CallbackException
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.losses import _prepare_losser
 from fastNLP.core.metrics import _prepare_metrics
-from fastNLP.core.optimizer import Adam
 from fastNLP.core.sampler import Sampler
 from fastNLP.core.sampler import RandomSampler
 from fastNLP.core.sampler import SequentialSampler
@@ -38,42 +119,52 @@ from fastNLP.core.utils import _check_forward_error
 from fastNLP.core.utils import _check_loss_evaluate
 from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.utils import get_func_signature
+from fastNLP.core.utils import _get_device
 
 
 class Trainer(object):
-    def __init__(self, train_data, model, loss=None, metrics=None, n_epochs=3, batch_size=32, print_every=50,
-                 validate_every=-1, dev_data=None, save_path=None, optimizer=None,
-                 check_code_level=0, metric_key=None, sampler=None, prefetch=False, use_tqdm=True,
-                 use_cuda=False, callbacks=None, update_every=1):
+    def __init__(self, train_data, model, loss, optimizer,
+                 batch_size=32, sampler=None, update_every=1,
+                 n_epochs=10, print_every=5,
+                 dev_data=None, metrics=None, metric_key=None,
+                 validate_every=-1, save_path=None,
+                 prefetch=False, use_tqdm=True, device=None,
+                 callbacks=None,
+                 check_code_level=0):
         """
-        :param DataSet train_data: the training data
-        :param torch.nn.modules.module model: a PyTorch model
-        :param LossBase loss: a loss object
-        :param MetricBase metrics: a metric object or a list of metrics (List[MetricBase])
-        :param int n_epochs: the number of training epochs
-        :param int batch_size: batch size for training and validation
-        :param int print_every: step interval to print next training information. Default: -1(no print).
-        :param int validate_every: step interval to do next validation. Default: -1(validate every epoch).
-        :param DataSet dev_data: the validation data
-        :param str save_path: file path to save models
-        :param Optimizer optimizer: an optimizer object
-        :param int check_code_level: level of FastNLP code checker. -1: don't check, 0: ignore. 1: warning. 2: strict.\\
-            `ignore` will not check unused field; `warning` when warn if some field are not used; `strict` means
-            it will raise error if some field are not used. 检查的原理是通过使用很小的batch(默认两个sample)来检查代码是
-            否能够运行，但是这个过程理论上不会修改任何参数，只是会检查能否运行。但如果(1)模型中存在将batch_size写为某个
-            固定值的情况；(2)模型中存在累加前向计算次数的，可能会多计算几次。以上情况建议将check_code_level设置为-1
-        :param str metric_key: a single indicator used to decide the best model based on metric results. It must be one
-            of the keys returned by the FIRST metric in `metrics`. If the overall result gets better if the indicator gets
-            smaller, add "-" in front of the string. For example::
-
-                    metric_key="-PPL"   # language model gets better as perplexity gets smaller
-        :param Sampler sampler: method used to generate batch data.
-        :param prefetch: bool, 是否使用额外的进程对产生batch数据。
-        :param bool use_tqdm: whether to use tqdm to show train progress.
-        :param callbacks: List[Callback]. 用于在train过程中起调节作用的回调函数。比如early stop，negative sampling等可以
-            通过callback机制实现。
-        :param update_every: int, 多少步更新一次梯度。用于希望累计梯度的场景，比如需要128的batch_size, 但是直接设为128会导致内存
-            不足，通过设置batch_size=32, update_every=4达到目的
+        :param DataSet train_data: 训练集
+        :param nn.modules model: 待训练的模型
+        :param Optimizer,None optimizer: 优化器，pytorch的torch.optim.Optimizer类型。如果为None，则Trainer不会更新模型，
+            请确保已在callback中进行了更新
+        :param LossBase loss: 使用的Loss对象。 详见 LossBase_ 。
+        :param int batch_size: 训练和验证的时候的batch大小。
+        :param Sampler sampler: Batch数据生成的顺序。详见 Sampler_ 。如果为None，默认使用 RandomSampler_ 。
+        :param update_every: int, 多少步更新一次梯度。用于希望累计梯度的场景，比如需要128的batch_size, 但是直接设为128
+            会导致内存不足，通过设置batch_size=32, update_every=4达到目的。当optimizer为None时，该参数无效。
+        :param int n_epochs: 需要优化迭代多少次。
+        :param int print_every: 多少次反向传播更新tqdm显示的loss; 如果use_tqdm=False, 则多少次反向传播打印loss。
+        :param DataSet dev_data: 用于做验证的DataSet。
+        :param MetricBase,list(MetricBase) metrics: 验证的评估函数。可以只使用一个Metric，也可以使用多个Metric，通过
+            列表传入。如验证时取得了更好的验证结果(如果有多个Metric，以列表中第一个Metric为准)，且save_path不为None，
+            则保存当前模型。Metric种类详见 Metric_ 。仅在传入dev_data时有效。
+        :param str,None metric_key:  Metric_ 有时会有多个指标，比如 SpanFPreRecMetric_ 中包含了'f', 'pre', 'rec'。此时需
+            要指定以哪个指标为准。另外有些指标是越小效果越好，比如语言模型的困惑度，这种情况下，在key前面增加一个'-'来表
+            明验证时，值越小越好(比如: "-ppl")。仅在传入dev_data时有效。
+        :param int validate_every: 多少个step在验证集上验证一次; 如果为-1，则每个epoch结束验证一次。仅在传入dev_data时有
+            效。
+        :param str,None save_path: 将模型保存路径。如果为None，则不保存模型。如果dev_data为None，则保存最后一次迭代的模
+            型。保存的时候不仅保存了参数，还保存了模型结构。
+        :param prefetch: bool, 是否使用额外的进程对产生batch数据。理论上会使得Batch迭代更快。
+        :param bool use_tqdm: 是否使用tqdm来显示训练进度; 如果为False，则将loss打印在终端中。
+        :param str,torch.device,None device: 将模型load到哪个设备。默认为None，即Trainer不对模型的计算位置进行管理。支持
+            以下的输入str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中,
+            可见的第二个GPU中; torch.device，将模型装载到torch.device上。
+        :param list(callbacks) callbacks: 用于在train过程中起调节作用的回调函数。比如early stop，negative sampling等可以
+            通过callback机制实现。 可使用的callback参见 Callback_ 。
+        :param int check_code_level: 模型检查等级. -1: 不进行检查; 0: 仅出现错误时停止; 1: 如果有field没有被使用，
+            报告警告信息; 2: 有任何field没有被使用都报错. 检查的原理是通过使用很小的batch(默认2个sample)来运行代码，但是
+            这个过程理论上不会修改任何参数，只是会检查能否运行。但如果(1)模型中存在将batch_size写为某个固定值的情况；
+            (2)模型中存在累加前向计算次数的，可能会多计算1次。以上情况建议将check_code_level设置为-1。
         """
         super(Trainer, self).__init__()
 
@@ -127,7 +218,6 @@ class Trainer(object):
         self.metrics = metrics
         self.n_epochs = int(n_epochs)
         self.batch_size = int(batch_size)
-        self.use_cuda = bool(use_cuda)
         self.save_path = save_path
         self.print_every = int(print_every)
         self.validate_every = int(validate_every) if validate_every != 0 else -1
@@ -141,12 +231,17 @@ class Trainer(object):
         self.n_steps = (len(self.train_data) // self.batch_size + int(
             len(self.train_data) % self.batch_size != 0)) * self.n_epochs
 
+        check_exist = check_code_level>-1
+        self.device = _get_device(device, check_exist=check_exist)
+
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
+        elif optimizer is None:
+            warnings.warn("The optimizer is set to None, Trainer will update your model. Make sure you update the model"
+                          " in the callback.")
+            self.optimizer = None
         else:
-            if optimizer is None:
-                optimizer = Adam(lr=0.01, weight_decay=0)
-            self.optimizer = optimizer.construct_from_pytorch(self.model.parameters())
+            raise TypeError("optimizer can only be torch.optim.Optimizer type, not {}.".format(type(optimizer)))
 
         self.use_tqdm = use_tqdm
         self.pbar = None
@@ -157,7 +252,7 @@ class Trainer(object):
                                  data=self.dev_data,
                                  metrics=self.metrics,
                                  batch_size=self.batch_size,
-                                 use_cuda=self.use_cuda,
+                                 device=self.device,
                                  verbose=0)
 
         self.step = 0
@@ -200,7 +295,7 @@ class Trainer(object):
 
                     seconds: float, 表示训练时长
                     以下三个内容只有在提供了dev_data的情况下会有。
-                    best_eval: Dict of Dict, 表示evaluation的结果
+                    best_eval: Dict of Dict, 表示evaluation的结果。第一层的key为Metric的名称，第二层的key为具体的Metric
                     best_epoch: int，在第几个epoch取得的最佳值
                     best_step: int, 在第几个step(batch)更新取得的最佳值
 
@@ -211,8 +306,8 @@ class Trainer(object):
             results['seconds'] = 0.
             return results
         try:
-            if torch.cuda.is_available() and self.use_cuda:
-                self.model = self.model.cuda()
+            if self.device is not None:
+                self.model = self.model.to(self.device)
             self._model_device = self.model.parameters().__next__().device
             self._mode(self.model, is_test=False)
 
@@ -355,7 +450,7 @@ class Trainer(object):
         """Perform weight update on a model.
 
         """
-        if (self.step + 1) % self.update_every == 0:
+        if self.optimizer is not None and (self.step + 1) % self.update_every == 0:
             self.optimizer.step()
 
     def _data_forward(self, network, x):

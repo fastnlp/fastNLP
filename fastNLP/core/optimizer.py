@@ -13,6 +13,13 @@ class Optimizer(object):
         self.model_params = model_params
         self.settings = kwargs
 
+    def _get_require_grads_param(self, params):
+        """
+        将params中不需要gradient的删除
+        :param iterable params: parameters
+        :return: list(nn.Parameters)
+        """
+        return [param for param in params if param.requires_grad]
 
 class SGD(Optimizer):
     """
@@ -30,9 +37,9 @@ class SGD(Optimizer):
     def construct_from_pytorch(self, model_params):
         if self.model_params is None:
             # careful! generator cannot be assigned.
-            return torch.optim.SGD(model_params, **self.settings)
+            return torch.optim.SGD(self._get_require_grads_param(model_params), **self.settings)
         else:
-            return torch.optim.SGD(self.model_params, **self.settings)
+            return torch.optim.SGD(self._get_require_grads_param(self.model_params), **self.settings)
 
 
 class Adam(Optimizer):
@@ -52,6 +59,6 @@ class Adam(Optimizer):
     def construct_from_pytorch(self, model_params):
         if self.model_params is None:
             # careful! generator cannot be assigned.
-            return torch.optim.Adam(model_params, **self.settings)
+            return torch.optim.Adam(self._get_require_grads_param(model_params), **self.settings)
         else:
-            return torch.optim.Adam(self.model_params, **self.settings)
+            return torch.optim.Adam(self._get_require_grads_param(self.model_params), **self.settings)

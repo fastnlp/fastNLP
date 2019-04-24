@@ -1,3 +1,11 @@
+"""
+
+ .. _LossBase:
+
+ .. _Loss:
+
+"""
+
 import inspect
 from collections import defaultdict
 
@@ -196,7 +204,10 @@ class LossFunc(LossBase):
 
 
 class CrossEntropyLoss(LossBase):
-    """交叉熵损失函数"""
+    """
+     .. _CrossEntropyLoss:
+
+    交叉熵损失函数"""
     def __init__(self, pred=None, target=None, padding_idx=-100):
         """
         :param pred: 参数映射表中`pred`的映射关系，None表示映射关系为`pred`->`pred`
@@ -261,10 +272,15 @@ class NLLLoss(LossBase):
 
 
 class LossInForward(LossBase):
-    """Forward函数中计算得到的损失函数结果"""
+    """
+
+     .. _LossInForward:
+
+    从forward()函数返回结果中获取loss
+    """
     def __init__(self, loss_key='loss'):
         """
-        :param str loss_key: 在forward函数中取得loss的键名，默认为loss
+        :param str loss_key: 在forward函数中loss的键名，默认为loss
         """
         super().__init__()
         if not isinstance(loss_key, str):
@@ -279,8 +295,7 @@ class LossInForward(LossBase):
                 duplicated=[],
                 required=[],
                 all_needed=[],
-                varargs=[]
-            )
+                varargs=[])
             raise CheckError(check_res=check_res, func_signature=get_func_signature(self.get_loss))
         return kwargs[self.loss_key]
 

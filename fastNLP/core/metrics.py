@@ -1,3 +1,12 @@
+"""
+
+ .. _Metric:
+
+"""
+
+
+
+
 import inspect
 from collections import defaultdict
 
@@ -392,6 +401,9 @@ def bio_tag_to_spans(tags, ignore_labels=None):
 
 class SpanFPreRecMetric(MetricBase):
     """
+
+     .. _SpanFPreRecMetric:
+
     在序列标注问题中，以span的方式计算F, pre, rec.
     比如中文Part of speech中，会以character的方式进行标注，句子'中国在亚洲'对应的POS可能为(以BMES为例)
     ['B-NN', 'E-NN', 'S-DET', 'B-NN', 'E-NN']。该metric就是为类似情况下的F1计算。

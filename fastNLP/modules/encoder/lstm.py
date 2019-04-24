@@ -43,7 +43,6 @@ class LSTM(nn.Module):
         else:
             hx = None
         if seq_len is not None and not isinstance(x, rnn.PackedSequence):
-            print('padding')
             sort_lens, sort_idx = torch.sort(seq_len, dim=0, descending=True)
             if self.batch_first:
                 x = x[sort_idx]

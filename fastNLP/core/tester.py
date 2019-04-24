@@ -10,6 +10,7 @@ from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import _check_loss_evaluate
 from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.utils import get_func_signature
+from fastNLP.core.utils import _get_device
 
 
 class Tester(object):
@@ -19,12 +20,14 @@ class Tester(object):
         :param torch.nn.modules.module model: a PyTorch model
         :param MetricBase metrics: a metric object or a list of metrics (List[MetricBase])
         :param int batch_size: batch size for validation
-        :param bool use_cuda: whether to use CUDA in validation.
+        :param str,torch.device,None device: 将模型load到哪个设备。默认为None，即Trainer不对模型的计算位置进行管理。支持
+            以下的输入str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中,
+            可见的第二个GPU中; torch.device，将模型装载到torch.device上。
         :param int verbose: the number of steps after which an information is printed.
 
     """
 
-    def __init__(self, data, model, metrics, batch_size=16, use_cuda=False, verbose=1):
+    def __init__(self, data, model, metrics, batch_size=16, device=None, verbose=1):
         super(Tester, self).__init__()
 
         if not isinstance(data, DataSet):
@@ -35,12 +38,12 @@ class Tester(object):
         self.metrics = _prepare_metrics(metrics)
 
         self.data = data
-        self.use_cuda = use_cuda
+        self.device = _get_device(device, check_exist=False)
         self.batch_size = batch_size
         self.verbose = verbose
 
-        if torch.cuda.is_available() and self.use_cuda:
-            self._model = model.cuda()
+        if self.device is not None:
+            self._model = model.to(self.device)
         else:
             self._model = model
         self._model_device = model.parameters().__next__().device

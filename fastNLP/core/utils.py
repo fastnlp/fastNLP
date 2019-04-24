@@ -7,6 +7,7 @@ from collections import namedtuple
 
 import numpy as np
 import torch
+from torch import nn
 
 CheckRes = namedtuple('CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                    'varargs'])
@@ -115,6 +116,50 @@ def pickle_exist(pickle_path, pickle_name):
         return True
     else:
         return False
+
+def _get_device(device, check_exist=False):
+    """
+    传入一个device，返回None或者torch.device。当不为None时，且被设置为使用gpu, 但机器没有gpu时，会返回torch.device('cpu')
+
+    :param str,None,torch.device device: str, None或者torch.device。
+    :param bool check_exist: 检查该device是否存在，不存在的话报错
+    :return: None,torch.device
+    """
+    if device is not None:
+        if isinstance(device, str):
+            device = torch.device(device)
+        elif isinstance(device, torch.device):
+            device = device
+        else:
+            raise ValueError("device does not support {} type.".format(type(device)))
+
+        if device.type=='cuda' and not torch.cuda.is_available():
+            device = torch.device('cpu')
+
+        if check_exist:
+            tensor = torch.zeros(0).to(device)
+            tensor = tensor.to('cpu')
+            del tensor
+    else:
+        device = None
+
+    return device
+
+
+def _get_model_device(model):
+    """
+    传入一个nn.Module的模型，获取它所在的device
+
+    :param model: nn.Module
+    :return: torch.device,None 如果返回值为None，说明这个模型没有任何参数。
+    """
+    assert isinstance(model, nn.Module)
+
+    parameters = list(model.parameters())
+    if len(parameters)==0:
+        return None
+    else:
+        return parameters[0].device
 
 
 def _build_args(func, **kwargs):

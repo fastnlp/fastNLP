@@ -1,3 +1,11 @@
+"""
+
+  .. _Sampler:
+
+"""
+
+
+
 from itertools import chain
 
 import numpy as np
@@ -28,7 +36,11 @@ class SequentialSampler(Sampler):
 
 
 class RandomSampler(Sampler):
-    """随机化取元素的 `Sampler`
+    """
+
+      .. _RandomSampler:
+
+    随机化取元素的 `Sampler`
 
     """
     def __call__(self, data_set):
