@@ -1,3 +1,5 @@
+"""Star-Transformer 的 一个 Pytorch 实现.
+"""
 from fastNLP.modules.encoder.star_transformer import StarTransformer
 from fastNLP.core.utils import seq_lens_to_masks
 

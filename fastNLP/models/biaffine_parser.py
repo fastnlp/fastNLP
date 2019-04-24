@@ -1,3 +1,5 @@
+"""Biaffine Dependency Parser 的 Pytorch 实现.
+"""
 from collections import defaultdict
 
 import numpy as np

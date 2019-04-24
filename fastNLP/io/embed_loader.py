@@ -1,3 +1,8 @@
+"""
+.. _embed-loader:
+
+用于读取预训练的embedding, 读取结果可直接载入为模型参数
+"""
 import os
 
 import numpy as np

@@ -1,3 +1,5 @@
+"""Star-Transformer 的encoder部分的 Pytorch 实现
+"""
 import torch
 from torch import nn
 from torch.nn import functional as F

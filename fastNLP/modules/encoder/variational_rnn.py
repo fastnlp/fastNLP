@@ -1,3 +1,5 @@
+"""Variational RNN 的 Pytorch 实现
+"""
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
@@ -28,11 +30,11 @@ class VarRnnCellWrapper(nn.Module):
         """
         :param PackedSequence input_x: [seq_len, batch_size, input_size]
         :param hidden: for LSTM, tuple of (h_0, c_0), [batch_size, hidden_size]
-            :for other RNN, h_0, [batch_size, hidden_size]
+            for other RNN, h_0, [batch_size, hidden_size]
         :param mask_x: [batch_size, input_size] dropout mask for input
         :param mask_h: [batch_size, hidden_size] dropout mask for hidden
         :return PackedSequence output: [seq_len, bacth_size, hidden_size]
-                :hidden: for LSTM, tuple of (h_n, c_n), [batch_size, hidden_size]
+                hidden: for LSTM, tuple of (h_n, c_n), [batch_size, hidden_size]
                         for other RNN, h_n, [batch_size, hidden_size]
         """
         def get_hi(hi, h0, size):
@@ -95,7 +97,7 @@ class VarRNNBase(nn.Module):
     :param num_layers: rnn的层数. Default: 1
     :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
     :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
-        :(batch, seq, feature). Default: ``False``
+        (batch, seq, feature). Default: ``False``
     :param input_dropout: 对输入的dropout概率. Default: 0
     :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
     :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``
@@ -138,7 +140,7 @@ class VarRNNBase(nn.Module):
         :param x: [batch, seq_len, input_size] 输入序列
         :param hx: [batch, hidden_size] 初始隐状态, 若为 ``None`` , 设为全1向量. Default: ``None``
         :return (output, ht): [batch, seq_len, hidden_size*num_direction] 输出序列
-            :和 [batch, hidden_size*num_direction] 最后时刻隐状态
+            和 [batch, hidden_size*num_direction] 最后时刻隐状态
         """
         is_lstm = self.is_lstm
         is_packed = isinstance(x, PackedSequence)
@@ -193,7 +195,6 @@ class VarRNNBase(nn.Module):
 
         return output, hidden
 
-
 class VarLSTM(VarRNNBase):
     """Variational Dropout LSTM.
 
@@ -202,7 +203,7 @@ class VarLSTM(VarRNNBase):
     :param num_layers: rnn的层数. Default: 1
     :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
     :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
-        :(batch, seq, feature). Default: ``False``
+        (batch, seq, feature). Default: ``False``
     :param input_dropout: 对输入的dropout概率. Default: 0
     :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
     :param bidirectional: 若为 ``True``, 使用双向的LSTM. Default: ``False``
@@ -210,6 +211,9 @@ class VarLSTM(VarRNNBase):
 
     def __init__(self, *args, **kwargs):
         super(VarLSTM, self).__init__(mode="LSTM", Cell=nn.LSTMCell, *args, **kwargs)
+
+    def forward(self, x, hx=None):
+        return super(VarLSTM, self).forward(x, hx)
 
 
 class VarRNN(VarRNNBase):
@@ -220,7 +224,7 @@ class VarRNN(VarRNNBase):
     :param num_layers: rnn的层数. Default: 1
     :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
     :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
-        :(batch, seq, feature). Default: ``False``
+        (batch, seq, feature). Default: ``False``
     :param input_dropout: 对输入的dropout概率. Default: 0
     :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
     :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``
@@ -229,6 +233,8 @@ class VarRNN(VarRNNBase):
     def __init__(self, *args, **kwargs):
         super(VarRNN, self).__init__(mode="RNN", Cell=nn.RNNCell, *args, **kwargs)
 
+    def forward(self, x, hx=None):
+        return super(VarRNN, self).forward(x, hx)
 
 class VarGRU(VarRNNBase):
     """Variational Dropout GRU.
@@ -238,7 +244,7 @@ class VarGRU(VarRNNBase):
     :param num_layers: rnn的层数. Default: 1
     :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
     :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
-        :(batch, seq, feature). Default: ``False``
+        (batch, seq, feature). Default: ``False``
     :param input_dropout: 对输入的dropout概率. Default: 0
     :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
     :param bidirectional: 若为 ``True``, 使用双向的GRU. Default: ``False``
@@ -246,6 +252,9 @@ class VarGRU(VarRNNBase):
 
     def __init__(self, *args, **kwargs):
         super(VarGRU, self).__init__(mode="GRU", Cell=nn.GRUCell, *args, **kwargs)
+
+    def forward(self, x, hx=None):
+        return super(VarGRU, self).forward(x, hx)
 
 # if __name__ == '__main__':
 #     x = torch.Tensor([[1,2,3], [4,5,0], [6,0,0]])[:,:,None] * 0.1
