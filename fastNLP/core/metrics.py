@@ -119,6 +119,9 @@ class MetricBase(object):
     def evaluate(self, *args, **kwargs):
         raise NotImplementedError
 
+    def get_metric(self, reset=True):
+        raise NotImplemented
+
     def _init_param_map(self, key_map=None, **kwargs):
         """检查key_map和其他参数map，并将这些映射关系添加到self.param_map
 
@@ -161,8 +164,20 @@ class MetricBase(object):
                     f"Parameter `{func_param}` is not in {get_func_signature(self.evaluate)}. Please check the "
                     f"initialization parameters, or change its signature.")
 
-    def get_metric(self, reset=True):
-        raise NotImplemented
+    def _fast_param_map(self, pred_dict, target_dict):
+        """Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
+            such as pred_dict has one element, target_dict has one element
+
+        :param pred_dict:
+        :param target_dict:
+        :return: dict, if dict is not {}, pass it to self.evaluate. Otherwise do mapping.
+        """
+        fast_param = {}
+        if len(self.param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
+            fast_param['pred'] = list(pred_dict.values())[0]
+            fast_param['target'] = list(target_dict.values())[0]
+            return fast_param
+        return fast_param
 
     def __call__(self, pred_dict, target_dict):
         """
@@ -178,10 +193,15 @@ class MetricBase(object):
         :param target_dict: DataSet.batch_y里的键-值对所组成的dict(即is_target=True的fields的内容)
         :return:
         """
-        if not callable(self.evaluate):
-            raise TypeError(f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}.")
+
+        fast_param = self._fast_param_map(pred_dict, target_dict)
+        if fast_param:
+            self.evaluate(**fast_param)
+            return
 
         if not self._checked:
+            if not callable(self.evaluate):
+                raise TypeError(f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}.")
             # 1. check consistence between signature and param_map
             func_spect = inspect.getfullargspec(self.evaluate)
             func_args = set([arg for arg in func_spect.args if arg != 'self'])

@@ -373,14 +373,13 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
     if check_res.missing:
         errs.append(f"\tmissing param: {check_res.missing}")
         import re
-        mapped_missing = []
-        unmapped_missing = []
+        mapped_missing = []  # 提供了映射的参数
+        unmapped_missing = []  # 没有指定映射的参数
         input_func_map = {}
-        for _miss in check_res.missing:
-            if '(' in _miss:
-                # if they are like 'SomeParam(assign to xxx)'
-                _miss = _miss.split('(')[0]
-            matches = re.findall("(?<=`)[a-zA-Z0-9]*?(?=`)", _miss)
+        for _miss_ in check_res.missing:
+            # they shoudl like 'SomeParam(assign to xxx)'
+            _miss = _miss_.split('(')[0]
+            matches = re.findall("(?<=`)[a-zA-Z0-9]*?(?=`)", _miss_)
             if len(matches) == 2:
                 fun_arg, module_name = matches
                 input_func_map[_miss] = fun_arg
@@ -391,30 +390,30 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
             else:
                 unmapped_missing.append(_miss)
 
-        for _miss in mapped_missing:
+        for _miss in mapped_missing + unmapped_missing:
             if _miss in dataset:
-                suggestions.append(f"Set {_miss} as target.")
+                suggestions.append(f"Set `{_miss}` as target.")
             else:
                 _tmp = ''
                 if check_res.unused:
                     _tmp = f"Check key assignment for `{input_func_map.get(_miss, _miss)}` when initialize {module_name}."
                 if _tmp:
-                    _tmp += f' Or provide {_miss} in DataSet or output of {prev_func_signature}.'
+                    _tmp += f' Or provide `{_miss}` in DataSet or output of {prev_func_signature}.'
                 else:
-                    _tmp = f'Provide {_miss} in DataSet or output of {prev_func_signature}.'
+                    _tmp = f'Provide `{_miss}` in DataSet or output of {prev_func_signature}.'
                 suggestions.append(_tmp)
-        for _miss in unmapped_missing:
-            if _miss in dataset:
-                suggestions.append(f"Set {_miss} as target.")
-            else:
-                _tmp = ''
-                if check_res.unused:
-                    _tmp = f"Specify your assignment for `{input_func_map.get(_miss, _miss)}` when initialize {module_name}."
-                if _tmp:
-                    _tmp += f' Or provide {_miss} in DataSet or output of {prev_func_signature}.'
-                else:
-                    _tmp = f'Provide {_miss} in output of {prev_func_signature} or DataSet.'
-                suggestions.append(_tmp)
+        # for _miss in unmapped_missing:
+        #     if _miss in dataset:
+        #         suggestions.append(f"Set `{_miss}` as target.")
+        #     else:
+        #         _tmp = ''
+        #         if check_res.unused:
+        #             _tmp = f"Specify your assignment for `{input_func_map.get(_miss, _miss)}` when initialize {module_name}."
+        #         if _tmp:
+        #             _tmp += f' Or provide `{_miss}` in DataSet or output of {prev_func_signature}.'
+        #         else:
+        #             _tmp = f'Provide `{_miss}` in output of {prev_func_signature} or DataSet.'
+        #         suggestions.append(_tmp)
 
     if check_res.duplicated:
         errs.append(f"\tduplicated param: {check_res.duplicated}.")
