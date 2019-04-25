@@ -2,6 +2,7 @@
 """
 from fastNLP.modules.encoder.star_transformer import StarTransformer
 from fastNLP.core.utils import seq_lens_to_masks
+from ..modules.utils import get_embeddings
 
 import torch
 from torch import nn
@@ -12,8 +13,9 @@ class StarTransEnc(nn.Module):
     """
     带word embedding的Star-Transformer Encoder
 
-    :param vocab_size: 词嵌入的词典大小
-    :param emb_dim: 每个词嵌入的特征维度
+    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+        embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
+        此时就以传入的对象作为embedding
     :param num_cls: 输出类别个数
     :param hidden_size: 模型中特征维度.
     :param num_layers: 模型层数.
@@ -24,7 +26,7 @@ class StarTransEnc(nn.Module):
     :param emb_dropout: 词嵌入的dropout概率.
     :param dropout: 模型除词嵌入外的dropout概率.
     """
-    def __init__(self, vocab_size, emb_dim,
+    def __init__(self, init_embed,
                  hidden_size,
                  num_layers,
                  num_head,
@@ -33,9 +35,10 @@ class StarTransEnc(nn.Module):
                  emb_dropout,
                  dropout):
         super(StarTransEnc, self).__init__()
+        self.embedding = get_embeddings(init_embed)
+        emb_dim = self.embedding.embedding_dim
         self.emb_fc = nn.Linear(emb_dim, hidden_size)
         self.emb_drop = nn.Dropout(emb_dropout)
-        self.embedding = nn.Embedding(vocab_size, emb_dim)
         self.encoder = StarTransformer(hidden_size=hidden_size,
                                        num_layers=num_layers,
                                        num_head=num_head,

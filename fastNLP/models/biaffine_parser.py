@@ -16,7 +16,7 @@ from fastNLP.modules.encoder.transformer import TransformerEncoder
 from fastNLP.modules.encoder.variational_rnn import VarLSTM
 from fastNLP.modules.utils import initial_parameter
 from fastNLP.modules.utils import seq_mask
-
+from fastNLP.modules.utils import get_embeddings
 
 def _mst(scores):
     """
@@ -230,8 +230,9 @@ class BiaffineParser(GraphParser):
     论文参考 ` Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016)
     <https://arxiv.org/abs/1611.01734>`_ .
 
-    :param word_vocab_size: 单词词典大小
-    :param word_emb_dim: 单词词嵌入向量的维度
+    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+        embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
+        此时就以传入的对象作为embedding
     :param pos_vocab_size: part-of-speech 词典大小
     :param pos_emb_dim: part-of-speech 向量维度
     :param num_label: 边的类别个数
@@ -245,8 +246,7 @@ class BiaffineParser(GraphParser):
         若 ``False`` , 使用更加精确但相对缓慢的MST算法. Default: ``False``
     """
     def __init__(self,
-                word_vocab_size,
-                word_emb_dim,
+                init_embed,
                 pos_vocab_size,
                 pos_emb_dim,
                 num_label,
@@ -260,7 +260,8 @@ class BiaffineParser(GraphParser):
         super(BiaffineParser, self).__init__()
         rnn_out_size = 2 * rnn_hidden_size
         word_hid_dim = pos_hid_dim = rnn_hidden_size
-        self.word_embedding = nn.Embedding(num_embeddings=word_vocab_size, embedding_dim=word_emb_dim)
+        self.word_embedding = get_embeddings(init_embed)
+        word_emb_dim = self.word_embedding.embedding_dim
         self.pos_embedding = nn.Embedding(num_embeddings=pos_vocab_size, embedding_dim=pos_emb_dim)
         self.word_fc = nn.Linear(word_emb_dim, word_hid_dim)
         self.pos_fc = nn.Linear(pos_emb_dim, pos_hid_dim)
