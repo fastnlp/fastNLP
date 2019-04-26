@@ -213,7 +213,7 @@ Trainer在fastNLP中用于组织单任务的训练过程，可以避免用户在
             from torch.optim import SGD
             from fastNLP import Trainer
             from fastNLP import DataSet
-            from fastNLP.core.metrics import AccuracyMetric
+            from fastNLP import AccuracyMetric
             import torch
 
             class Model(nn.Module):
@@ -322,7 +322,7 @@ from fastNLP.core.utils import _check_loss_evaluate
 from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.utils import _get_func_signature
 from fastNLP.core.utils import _get_device
-
+from fastNLP.core.optimizer import Optimizer
 
 class Trainer(object):
     def __init__(self, train_data, model, optimizer, loss=None,
@@ -336,8 +336,7 @@ class Trainer(object):
         """
         :param DataSet train_data: 训练集
         :param nn.modules model: 待训练的模型
-        :param Optimizer,None optimizer: 优化器，pytorch的torch.optim.Optimizer类型。如果为None，则Trainer不会更新模型，
-            请确保已在callback中进行了更新。
+        :param torch.optim.Optimizer,None optimizer: 优化器。如果为None，则Trainer不会更新模型，请确保已在callback中进行了更新。
         :param int batch_size: 训练和验证的时候的batch大小。
         :param LossBase loss: 使用的Loss对象。 详见 LossBase_ 。当loss为None时，默认使用 LossInForward_ 。
         :param Sampler sampler: Batch数据生成的顺序。详见 Sampler_ 。如果为None，默认使用 RandomSampler_ 。
@@ -438,6 +437,8 @@ class Trainer(object):
 
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
+        elif isinstance(optimizer, Optimizer):
+            self.optimizer = optimizer.construct_from_pytorch(model.parameters())
         elif optimizer is None:
             warnings.warn("The optimizer is set to None, Trainer will update your model. Make sure you update the model"
                           " in the callback.")

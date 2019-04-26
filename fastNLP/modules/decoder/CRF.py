@@ -19,10 +19,10 @@ def allowed_transitions(id2label, encoding_type='bio', include_start_end=True):
     """
     给定一个id到label的映射表，返回所有可以跳转的(from_tag_id, to_tag_id)列表。
 
-    :param id2label: Dict, key是label的indices，value是str类型的tag或tag-label。value可以是只有tag的, 比如"B", "M"; 也可以是
+    :param dict id2label: key是label的indices，value是str类型的tag或tag-label。value可以是只有tag的, 比如"B", "M"; 也可以是
         "B-NN", "M-NN", tag和label之间一定要用"-"隔开。一般可以通过Vocabulary.get_id2word()得到id2label。
-    :param encoding_type: str, 支持"bio", "bmes", "bmeso"。
-    :param include_start_end: bool, 是否包含开始与结尾的转换。比如在bio中，b/o可以在开头，但是i不能在开头；
+    :param str encoding_type: 支持"bio", "bmes", "bmeso"。
+    :param bool include_start_end: 是否包含开始与结尾的转换。比如在bio中，b/o可以在开头，但是i不能在开头；
         为True，返回的结果中会包含(start_idx, b_idx), (start_idx, o_idx), 但是不包含(start_idx, i_idx);
             start_idx=len(id2label), end_idx=len(id2label)+1。
         为False, 返回的结果中不含与开始结尾相关的内容
@@ -62,11 +62,11 @@ def allowed_transitions(id2label, encoding_type='bio', include_start_end=True):
 def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label):
     """
 
-    :param encoding_type: str, 支持"BIO", "BMES", "BEMSO"。
-    :param from_tag: str, 比如"B", "M"之类的标注tag. 还包括start, end等两种特殊tag
-    :param from_label: str, 比如"PER", "LOC"等label
-    :param to_tag: str, 比如"B", "M"之类的标注tag. 还包括start, end等两种特殊tag
-    :param to_label: str, 比如"PER", "LOC"等label
+    :param str encoding_type: 支持"BIO", "BMES", "BEMSO"。
+    :param str from_tag: 比如"B", "M"之类的标注tag. 还包括start, end等两种特殊tag
+    :param str from_label: 比如"PER", "LOC"等label
+    :param str to_tag: 比如"B", "M"之类的标注tag. 还包括start, end等两种特殊tag
+    :param str to_label: 比如"PER", "LOC"等label
     :return: bool，能否跃迁
     """
     if to_tag=='start' or from_tag=='end':
@@ -149,12 +149,12 @@ class ConditionalRandomField(nn.Module):
         """条件随机场。
         提供forward()以及viterbi_decode()两个方法，分别用于训练与inference。
 
-        :param num_tags: int, 标签的数量
-        :param include_start_end_trans: bool, 是否考虑各个tag作为开始以及结尾的分数。
-        :param allowed_transitions: List[Tuple[from_tag_id(int), to_tag_id(int)]], 内部的Tuple[from_tag_id(int),
+        :param int num_tags: 标签的数量
+        :param bool include_start_end_trans: 是否考虑各个tag作为开始以及结尾的分数。
+        :param List[Tuple[from_tag_id(int), to_tag_id(int)]] allowed_transitions: 内部的Tuple[from_tag_id(int),
                                    to_tag_id(int)]视为允许发生的跃迁，其他没有包含的跃迁认为是禁止跃迁，可以通过
                                    allowed_transitions()函数得到；如果为None，则所有跃迁均为合法
-        :param initial_method: str, 初始化方法。见initial_parameter
+        :param str initial_method: 初始化方法。见initial_parameter
         """
         super(ConditionalRandomField, self).__init__()
 
@@ -237,10 +237,10 @@ class ConditionalRandomField(nn.Module):
         """
         用于计算CRF的前向loss，返回值为一个batch_size的FloatTensor，可能需要mean()求得loss。
 
-        :param feats:FloatTensor, batch_size x max_len x num_tags，特征矩阵。
-        :param tags:LongTensor, batch_size x max_len，标签矩阵。
-        :param mask:ByteTensor batch_size x max_len，为0的位置认为是padding。
-        :return:FloatTensor, batch_size
+        :param torch.FloatTensor feats:batch_size x max_len x num_tags，特征矩阵。
+        :param torch.LongTensor tags: batch_size x max_len，标签矩阵。
+        :param torch.ByteTensor mask: batch_size x max_len，为0的位置认为是padding。
+        :return:torch.FloatTensor, (batch_size,)
         """
         feats = feats.transpose(0, 1)
         tags = tags.transpose(0, 1).long()
@@ -250,27 +250,26 @@ class ConditionalRandomField(nn.Module):
 
         return all_path_score - gold_path_score
 
-    def viterbi_decode(self, feats, mask, unpad=False):
+    def viterbi_decode(self, logits, mask, unpad=False):
         """给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
 
-        :param feats: FloatTensor, batch_size x max_len x num_tags，特征矩阵。
-        :param mask: ByteTensor, batch_size x max_len, 为0的位置认为是pad；如果为None，则认为没有padding。
-        :param unpad: bool, 是否将结果删去padding,
-                        False, 返回的是batch_size x max_len的tensor，
-                        True，返回的是List[List[int]], 内部的List[int]为每个sequence的label，已经除去pad部分，即每个List[int]
-                            的长度是这个sample的有效长度。
+        :param torch.FloatTensor logits: batch_size x max_len x num_tags，特征矩阵。
+        :param torch.ByteTensor mask: batch_size x max_len, 为0的位置认为是pad；如果为None，则认为没有padding。
+        :param bool unpad: 是否将结果删去padding。False, 返回的是batch_size x max_len的tensor; True，返回的是
+            List[List[int]], 内部的List[int]为每个sequence的label，已经除去pad部分，即每个List[int]的长度是这
+            个sample的有效长度。
         :return: 返回 (paths, scores)。
                     paths: 是解码后的路径, 其值参照unpad参数.
                     scores: torch.FloatTensor, size为(batch_size,), 对应每个最优路径的分数。
 
         """
-        batch_size, seq_len, n_tags = feats.size()
-        feats = feats.transpose(0, 1).data # L, B, H
+        batch_size, seq_len, n_tags = logits.size()
+        logits = logits.transpose(0, 1).data # L, B, H
         mask = mask.transpose(0, 1).data.byte() # L, B
 
         # dp
-        vpath = feats.new_zeros((seq_len, batch_size, n_tags), dtype=torch.long)
-        vscore = feats[0]
+        vpath = logits.new_zeros((seq_len, batch_size, n_tags), dtype=torch.long)
+        vscore = logits[0]
         transitions = self._constrain.data.clone()
         transitions[:n_tags, :n_tags] += self.trans_m.data
         if self.include_start_end_trans:
@@ -281,7 +280,7 @@ class ConditionalRandomField(nn.Module):
         trans_score = transitions[:n_tags, :n_tags].view(1, n_tags, n_tags).data
         for i in range(1, seq_len):
             prev_score = vscore.view(batch_size, n_tags, 1)
-            cur_score = feats[i].view(batch_size, 1, n_tags)
+            cur_score = logits[i].view(batch_size, 1, n_tags)
             score = prev_score + trans_score + cur_score
             best_score, best_dst = score.max(1)
             vpath[i] = best_dst
@@ -292,13 +291,13 @@ class ConditionalRandomField(nn.Module):
             vscore += transitions[:n_tags, n_tags+1].view(1, -1)
 
         # backtrace
-        batch_idx = torch.arange(batch_size, dtype=torch.long, device=feats.device)
-        seq_idx = torch.arange(seq_len, dtype=torch.long, device=feats.device)
+        batch_idx = torch.arange(batch_size, dtype=torch.long, device=logits.device)
+        seq_idx = torch.arange(seq_len, dtype=torch.long, device=logits.device)
         lens = (mask.long().sum(0) - 1)
         # idxes [L, B], batched idx from seq_len-1 to 0
         idxes = (lens.view(1,-1) - seq_idx.view(-1,1)) % seq_len
 
-        ans = feats.new_empty((seq_len, batch_size), dtype=torch.long)
+        ans = logits.new_empty((seq_len, batch_size), dtype=torch.long)
         ans_score, last_tags = vscore.max(1)
         ans[idxes[0], batch_idx] = last_tags
         for i in range(seq_len - 1):
@@ -311,6 +310,5 @@ class ConditionalRandomField(nn.Module):
                 paths.append(ans[idx, :seq_len+1].tolist())
         else:
             paths = ans
-        if get_score:
-            return paths, ans_score.tolist()
-        return paths
+        return paths, ans_score
+

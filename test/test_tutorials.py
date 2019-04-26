@@ -70,7 +70,7 @@ class TestTutorial(unittest.TestCase):
             break
 
         from fastNLP.models import CNNText
-        model = CNNText(embed_num=len(vocab), embed_dim=50, num_classes=5, padding=2, dropout=0.1)
+        model = CNNText(vocab_size=len(vocab), embed_dim=50, num_classes=5, padding=2, dropout=0.1)
 
         from fastNLP import Trainer
         from copy import deepcopy
@@ -145,7 +145,7 @@ class TestTutorial(unittest.TestCase):
                        is_input=True)
 
         from fastNLP.models import CNNText
-        model = CNNText(embed_num=len(vocab), embed_dim=50, num_classes=5, padding=2, dropout=0.1)
+        model = CNNText(vocab_size=len(vocab), embed_dim=50, num_classes=5, padding=2, dropout=0.1)
 
         from fastNLP import Trainer, CrossEntropyLoss, AccuracyMetric
         trainer = Trainer(model=model,
@@ -405,7 +405,7 @@ class TestTutorial(unittest.TestCase):
 
         # 另一个例子：加载CNN文本分类模型
         from fastNLP.models import CNNText
-        cnn_text_model = CNNText(embed_num=len(vocab), embed_dim=50, num_classes=5, padding=2, dropout=0.1)
+        cnn_text_model = CNNText(vocab_size=len(vocab), embed_dim=50, num_classes=5, padding=2, dropout=0.1)
         cnn_text_model
 
         from fastNLP import CrossEntropyLoss

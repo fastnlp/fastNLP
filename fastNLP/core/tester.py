@@ -14,20 +14,56 @@ from fastNLP.core.utils import _get_device
 
 
 class Tester(object):
-    """An collection of model inference and evaluation of performance, used over validation/dev set and test set.
+    """
+    Tester是在提供数据，模型以及metric的情况下进行性能测试的类
 
-        :param DataSet data: a validation/development set
-        :param torch.nn.modules.module model: a PyTorch model
-        :param MetricBase metrics: a metric object or a list of metrics (List[MetricBase])
-        :param int batch_size: batch size for validation
-        :param str,torch.device,None device: 将模型load到哪个设备。默认为None，即Trainer不对模型的计算位置进行管理。支持
-            以下的输入str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中,
-            可见的第二个GPU中; torch.device，将模型装载到torch.device上。
-        :param int verbose: the number of steps after which an information is printed.
+    Example::
+
+        import numpy as np
+        import torch
+        from torch import nn
+        from fastNLP import Tester
+        from fastNLP import DataSet
+        from fastNLP import AccuracyMetric
+
+
+        class Model(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fc = nn.Linear(1, 1)
+            def forward(self, a):
+                return {'pred': self.fc(a.unsqueeze(1)).squeeze(1)}
+
+        model = Model()
+
+        dataset = DataSet({'a': np.arange(10, dtype=float), 'b':np.arange(10, dtype=float)*2})
+
+        dataset.set_input('a')
+        dataset.set_target('b')
+
+        tester = Tester(dataset, model, metrics=AccuracyMetric())
+        eval_results = tester.test()
+
+    这里Metric的映射规律是和 Trainer_ 中一致的，请参考 Trainer_ 使用metrics。
+
+
 
     """
 
     def __init__(self, data, model, metrics, batch_size=16, device=None, verbose=1):
+        """传入模型，数据以及metric进行验证。
+
+            :param DataSet data: 需要测试的数据集
+            :param torch.nn.module model: 使用的模型
+            :param MetricBase metrics: 一个Metric或者一个列表的metric对象
+            :param int batch_size: evaluation时使用的batch_size有多大。
+            :param str,torch.device,None device: 将模型load到哪个设备。默认为None，即Trainer不对模型的计算位置进行管理。支持
+                以下的输入str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中,
+                可见的第二个GPU中; torch.device，将模型装载到torch.device上。
+            :param int verbose: 如果为0不输出任何信息; 如果为1，打印出验证结果。
+
+        """
+
         super(Tester, self).__init__()
 
         if not isinstance(data, DataSet):
@@ -59,10 +95,10 @@ class Tester(object):
             self._predict_func = self._model.forward
 
     def test(self):
-        """Start test or validation.
+        """开始进行验证，并返回验证结果。
 
-        :return eval_results: a dictionary whose keys are the class name of metrics to use, values are the evaluation results of these metrics.
-
+        :return dict(dict) eval_results: dict为二层嵌套结构，dict的第一层是metric的名称; 第二层是这个metric的指标。
+            一个AccuracyMetric的例子为{'AccuracyMetric': {'acc': 1.0}}。
         """
         # turn on the testing mode; clean up the history
         network = self._model

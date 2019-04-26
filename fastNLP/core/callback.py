@@ -1,4 +1,5 @@
 """
+Callback的说明文档
 
  .. _Callback:
 
@@ -28,7 +29,6 @@ class Callback(object):
     def trainer(self):
         """
         该属性可以通过self.trainer获取到，一般情况下不需要使用这个属性。
-        :return:
         """
         return self._trainer
 
@@ -323,11 +323,16 @@ class GradientClipCallback(Callback):
 
 class CallbackException(BaseException):
     def __init__(self, msg):
+        """
+        当需要通过callback跳出训练的时候可以通过抛出CallbackException并在on_exception中捕获这个值。
+        :param str msg: Exception的信息。
+        """
         super(CallbackException, self).__init__(msg)
 
 
 class EarlyStopError(CallbackException):
     def __init__(self, msg):
+        """用于EarlyStop时从Trainer训练循环中跳出。"""
         super(EarlyStopError, self).__init__(msg)
 
 
@@ -360,7 +365,13 @@ class EarlyStopCallback(Callback):
 
 class LRScheduler(Callback):
     def __init__(self, lr_scheduler):
-        """对PyTorch LR Scheduler的包装
+        """对PyTorch LR Scheduler的包装以使得其可以被Trainer所使用
+
+        Example::
+
+            from fastNLP import LRScheduler
+
+
 
         :param torch.optim.lr_scheduler._LRScheduler lr_scheduler: PyTorch的lr_scheduler
         """

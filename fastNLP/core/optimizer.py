@@ -13,6 +13,9 @@ class Optimizer(object):
         self.model_params = model_params
         self.settings = kwargs
 
+    def construct_from_pytorch(self, model_params):
+        raise NotImplementedError
+
     def _get_require_grads_param(self, params):
         """
         将params中不需要gradient的删除

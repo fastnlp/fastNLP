@@ -11,13 +11,12 @@ def log_sum_exp(x, dim=-1):
 def viterbi_decode(logits, transitions, mask=None, unpad=False):
     """给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
 
-    :param logits: FloatTensor, batch_size x max_len x num_tags，特征矩阵。
-    :param transitions: FloatTensor, n_tags x n_tags。[i, j]位置的值认为是从tag i到tag j的转换。
-    :param mask: ByteTensor, batch_size x max_len, 为0的位置认为是pad；如果为None，则认为没有padding。
-    :param unpad: bool, 是否将结果删去padding,
-                False, 返回的是batch_size x max_len的tensor，
-                True，返回的是List[List[int]], 内部的List[int]为每个sequence的label，已经除去pad部分，即每个List[int]的长度是
-                    这个sample的有效长度。
+    :param torch.FloatTensor logits: batch_size x max_len x num_tags，特征矩阵。
+    :param torch.FloatTensor transitions:  n_tags x n_tags。[i, j]位置的值认为是从tag i到tag j的转换。
+    :param torch.ByteTensor mask: batch_size x max_len, 为0的位置认为是pad；如果为None，则认为没有padding。
+    :param bool unpad: 是否将结果删去padding。False, 返回的是batch_size x max_len的tensor; True，返回的是
+        List[List[int]], 内部的List[int]为每个sequence的label，已经除去pad部分，即每个List[int]的长度是这
+        个sample的有效长度。
     :return: 返回 (paths, scores)。
                 paths: 是解码后的路径, 其值参照unpad参数.
                 scores: torch.FloatTensor, size为(batch_size,), 对应每个最优路径的分数。
