@@ -1,6 +1,11 @@
 fastNLP.modules.decoder package
 ===============================
 
+.. automodule:: fastNLP.modules.decoder
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -29,10 +34,3 @@ fastNLP.modules.decoder.utils module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: fastNLP.modules.decoder
-    :members:
-    :undoc-members:
-    :show-inheritance:

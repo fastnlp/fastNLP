@@ -1,6 +1,11 @@
 fastNLP.modules package
 =======================
 
+.. automodule:: fastNLP.modules
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Subpackages
 -----------
 
@@ -21,8 +26,8 @@ fastNLP.modules.dropout module
     :undoc-members:
     :show-inheritance:
 
-fastNLP.modules.other_modules module
-------------------------------------
+fastNLP.modules.other\_modules module
+-------------------------------------
 
 .. automodule:: fastNLP.modules.other_modules
     :members:
@@ -38,10 +43,3 @@ fastNLP.modules.utils module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: fastNLP.modules
-    :members:
-    :undoc-members:
-    :show-inheritance:

@@ -1,6 +1,11 @@
 fastNLP.core package
 ====================
 
+.. automodule:: fastNLP.core
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -117,10 +122,3 @@ fastNLP.core.vocabulary module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: fastNLP.core
-    :members:
-    :undoc-members:
-    :show-inheritance:
