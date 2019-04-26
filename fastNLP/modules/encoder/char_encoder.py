@@ -5,19 +5,18 @@ from fastNLP.modules.utils import initial_parameter
 
 
 # from torch.nn.init import xavier_uniform
-class ConvCharEmbedding(nn.Module):
-    """Character-level Embedding with CNN.
-
-    :param int char_emb_size: the size of character level embedding. Default: 50
-        say 26 characters, each embedded to 50 dim vector, then the input_size is 50.
-    :param tuple feature_maps: tuple of int. The length of the tuple is the number of convolution operations
-        over characters. The i-th integer is the number of filters (dim of out channels) for the i-th
-        convolution.
-    :param tuple kernels: tuple of int. The width of each kernel.
-    """
+class ConvolutionCharEncoder(nn.Module):
+    """char级别的卷积编码器."""
 
     def __init__(self, char_emb_size=50, feature_maps=(40, 30, 30), kernels=(3, 4, 5), initial_method=None):
-        super(ConvCharEmbedding, self).__init__()
+        """
+        :param int char_emb_size: char级别embedding的维度. Default: 50
+                例: 有26个字符, 每一个的embedding是一个50维的向量, 所以输入的向量维度为50.
+        :param tuple feature_maps: 一个由int组成的tuple. tuple的长度是char级别卷积操作的数目, 第`i`个int表示第`i`个卷积操作的filter.
+        :param tuple kernels: 一个由int组成的tuple. tuple的长度是char级别卷积操作的数目, 第`i`个int表示第`i`个卷积操作的卷积核.
+        :param initial_method: 初始化参数的方式, 默认为`xavier normal`
+        """
+        super(ConvolutionCharEncoder, self).__init__()
         self.convs = nn.ModuleList([
             nn.Conv2d(1, feature_maps[i], kernel_size=(char_emb_size, kernels[i]), bias=True, padding=(0, 4))
             for i in range(len(kernels))])
@@ -26,16 +25,16 @@ class ConvCharEmbedding(nn.Module):
 
     def forward(self, x):
         """
-        :param x: ``[batch_size * sent_length, word_length, char_emb_size]``
-        :return: feature map of shape [batch_size * sent_length, sum(feature_maps), 1]
+        :param torch.Tensor x: ``[batch_size * sent_length, word_length, char_emb_size]`` 输入字符的embedding
+        :return: torch.Tensor : 卷积计算的结果, 维度为[batch_size * sent_length, sum(feature_maps), 1]
         """
         x = x.contiguous().view(x.size(0), 1, x.size(1), x.size(2))
         # [batch_size*sent_length, channel, width, height]
         x = x.transpose(2, 3)
         # [batch_size*sent_length, channel, height, width]
-        return self.convolute(x).unsqueeze(2)
+        return self._convolute(x).unsqueeze(2)
 
-    def convolute(self, x):
+    def _convolute(self, x):
         feats = []
         for conv in self.convs:
             y = conv(x)
@@ -49,15 +48,16 @@ class ConvCharEmbedding(nn.Module):
         return torch.cat(feats, 1)  # [batch_size*sent_length, sum(feature_maps)]
 
 
-class LSTMCharEmbedding(nn.Module):
-    """Character-level Embedding with LSTM.
-
-    :param int char_emb_size: the size of character level embedding. Default: 50
-        say 26 characters, each embedded to 50 dim vector, then the input_size is 50.
-    :param int hidden_size: the number of hidden units. Default:  equal to char_emb_size.
-    """
+class LSTMCharEncoder(nn.Module):
+    """char级别基于LSTM的encoder."""
     def __init__(self, char_emb_size=50, hidden_size=None, initial_method=None):
-        super(LSTMCharEmbedding, self).__init__()
+        """
+        :param int char_emb_size: char级别embedding的维度. Default: 50
+                例: 有26个字符, 每一个的embedding是一个50维的向量, 所以输入的向量维度为50.
+        :param int hidden_size: LSTM隐层的大小, 默认为char的embedding维度
+        :param initial_method: 初始化参数的方式, 默认为`xavier normal`
+        """
+        super(LSTMCharEncoder, self).__init__()
         self.hidden_size = char_emb_size if hidden_size is None else hidden_size
 
         self.lstm = nn.LSTM(input_size=char_emb_size,
@@ -69,8 +69,8 @@ class LSTMCharEmbedding(nn.Module):
 
     def forward(self, x):
         """
-        :param x: ``[ n_batch*n_word, word_length, char_emb_size]``
-        :return: [ n_batch*n_word, char_emb_size]
+        :param torch.Tensor x: ``[ n_batch*n_word, word_length, char_emb_size]`` 输入字符的embedding
+        :return: torch.Tensor : [ n_batch*n_word, char_emb_size]经过LSTM编码的结果
         """
         batch_size = x.shape[0]
         h0 = torch.empty(1, batch_size, self.hidden_size)

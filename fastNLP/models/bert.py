@@ -280,7 +280,7 @@ class BertForQuestionAnswering(BaseModel):
             start_loss = loss_fct(start_logits, start_positions)
             end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
-            return {"loss": total_loss}
+            return {"pred1": start_logits, "pred2": end_logits, "loss": total_loss}
         else:
             return {"pred1": start_logits, "pred2": end_logits}
 
