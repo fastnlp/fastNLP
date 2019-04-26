@@ -10,7 +10,8 @@ from fastNLP.core.utils import _build_args
 from fastNLP.core.utils import _check_loss_evaluate
 from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.utils import _get_func_signature
-from fastNLP.core.utils import _get_device
+from fastNLP.core.utils import _get_model_device
+from fastNLP.core.utils import _move_model_to_device
 
 
 class Tester(object):
@@ -57,9 +58,20 @@ class Tester(object):
             :param torch.nn.module model: 使用的模型
             :param MetricBase metrics: 一个Metric或者一个列表的metric对象
             :param int batch_size: evaluation时使用的batch_size有多大。
-            :param str,torch.device,None device: 将模型load到哪个设备。默认为None，即Trainer不对模型的计算位置进行管理。支持
-                以下的输入str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中,
-                可见的第二个GPU中; torch.device，将模型装载到torch.device上。
+            :param str,int,torch.device,list(int) device: 将模型load到哪个设备。默认为None，即Trainer不对模型
+                的计算位置进行管理。支持以下的输入:
+
+                1. str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中,
+                可见的第二个GPU中;
+
+                2. torch.device：将模型装载到torch.device上。
+
+                3. int: 将使用device_id为该值的gpu进行训练
+
+                4. list(int)：如果多于1个device，将使用torch.nn.DataParallel包裹model, 并使用传入的device。
+
+                5. None. 为None则不对模型进行任何处理，如果传入的model为torch.nn.DataParallel该值必须为None。
+
             :param int verbose: 如果为0不输出任何信息; 如果为1，打印出验证结果。
 
         """
@@ -74,15 +86,9 @@ class Tester(object):
         self.metrics = _prepare_metrics(metrics)
 
         self.data = data
-        self.device = _get_device(device, check_exist=False)
+        self._model = _move_model_to_device(model, device=device)
         self.batch_size = batch_size
         self.verbose = verbose
-
-        if self.device is not None:
-            self._model = model.to(self.device)
-        else:
-            self._model = model
-        self._model_device = model.parameters().__next__().device
 
         # check predict
         if hasattr(self._model, 'predict'):
@@ -101,6 +107,7 @@ class Tester(object):
             一个AccuracyMetric的例子为{'AccuracyMetric': {'acc': 1.0}}。
         """
         # turn on the testing mode; clean up the history
+        self._model_device = _get_model_device(self._model)
         network = self._model
         self._mode(network, is_test=True)
         data_iterator = Batch(self.data, self.batch_size, sampler=SequentialSampler(), as_numpy=False)

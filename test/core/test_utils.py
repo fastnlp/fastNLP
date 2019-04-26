@@ -7,6 +7,94 @@ from fastNLP import DataSet
 from fastNLP import Instance
 import time
 import os
+import torch
+from torch import nn
+from fastNLP.core.utils import _move_model_to_device, _get_model_device
+
+class Model(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.param = nn.Parameter(torch.zeros(0))
+
+class TestMoveModelDeivce(unittest.TestCase):
+    def test_case1(self):
+        # 测试str
+        model = Model()
+        model = _move_model_to_device(model, 'cpu')
+        assert model.param.device == torch.device('cpu')
+        # 测试不存在的device报错
+        with self.assertRaises(Exception):
+            _move_model_to_device(model, 'cpuu')
+        # 测试gpu
+        if torch.cuda.is_available():
+            model = _move_model_to_device(model, 'cuda')
+            assert model.param.is_cuda
+            model = _move_model_to_device(model, 'cuda:0')
+            assert model.param.device == torch.device('cuda:0')
+            with self.assertRaises(Exception):
+                _move_model_to_device(model, 'cuda:1000')
+
+    def test_case2(self):
+        # 测试使用int初始化
+        model = Model()
+        if torch.cuda.is_available():
+            model = _move_model_to_device(model, 0)
+            assert model.param.device == torch.device('cuda:0')
+            assert model.param.device==torch.device('cuda:0'), "The model should be in "
+            with self.assertRaises(Exception):
+                _move_model_to_device(model, 100)
+            with self.assertRaises(Exception):
+                _move_model_to_device(model, -1)
+
+    def test_case3(self):
+        # 测试None
+        model = Model()
+        device = _get_model_device(model)
+        model = _move_model_to_device(model, None)
+        assert device==_get_model_device(model), "The device should not change."
+        if torch.cuda.is_available():
+            model.cuda()
+            device = _get_model_device(model)
+            model = _move_model_to_device(model, None)
+            assert device==_get_model_device(model), "The device should not change."
+
+            model = nn.DataParallel(model, device_ids=[0])
+            _move_model_to_device(model, None)
+            with self.assertRaises(Exception):
+                _move_model_to_device(model, 'cpu')
+
+    def test_case4(self):
+        # 测试传入list的内容
+        model = Model()
+        device = ['cpu']
+        with self.assertRaises(Exception):
+            _move_model_to_device(model, device)
+        if torch.cuda.is_available():
+            device = [0]
+            _model = _move_model_to_device(model, device)
+            assert isinstance(_model, nn.DataParallel)
+            device = [torch.device('cuda:0'), torch.device('cuda:0')]
+            with self.assertRaises(Exception):
+                _model = _move_model_to_device(model, device)
+            if torch.cuda.device_count()>1:
+                device = [0, 1]
+                _model = _move_model_to_device(model, device)
+                assert isinstance(_model, nn.DataParallel)
+                device = ['cuda', 'cuda:1']
+                with self.assertRaises(Exception):
+                    _move_model_to_device(model, device)
+
+    def test_case5(self):
+        # torch.device()
+        device = torch.device('cpu')
+        model = Model()
+        _move_model_to_device(model, device)
+        device = torch.device('cuda')
+        model = _move_model_to_device(model, device)
+        assert model.param.device == torch.device('cuda:0')
+        with self.assertRaises(Exception):
+            _move_model_to_device(model, torch.device('cuda:100'))
+
 
 @cache_results('test/demo1.pkl')
 def process_data_1(embed_file, cws_train):
@@ -19,7 +107,6 @@ def process_data_1(embed_file, cws_train):
             if len(line)>0:
                 d.append(Instance(raw=line))
     return embed, vocab, d
-
 
 class TestCache(unittest.TestCase):
     def test_cache_save(self):

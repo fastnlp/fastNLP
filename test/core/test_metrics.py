@@ -123,7 +123,7 @@ class TestAccuracyMetric(unittest.TestCase):
         # (10) check _fast_metric
         try:
             metric = AccuracyMetric()
-            pred_dict = {"predictions": torch.zeros(4, 3, 2), "masks": torch.zeros(4, 3)}
+            pred_dict = {"predictions": torch.zeros(4, 3, 2), "seq_len": torch.ones(3)*3}
             target_dict = {'targets': torch.zeros(4, 3)}
             metric(pred_dict=pred_dict, target_dict=target_dict)
             self.assertDictEqual(metric.get_metric(), {'acc': 1})

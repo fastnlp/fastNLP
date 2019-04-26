@@ -108,8 +108,8 @@ class MetricBase(object):
     如果kwargs是self.evaluate的参数，则不会检测
 
 
-    self.evaluate将计算一个批次(batch)的评价指标，并累计
-    self.get_metric将统计当前的评价指标并返回评价结果
+    self.evaluate将计算一个批次(batch)的评价指标，并累计。 没有返回值
+    self.get_metric将统计当前的评价指标并返回评价结果, 返回值需要是一个dict, key是指标名称，value是指标的值
 
     """
     def __init__(self):
@@ -302,7 +302,7 @@ class AccuracyMetric(MetricBase):
 
         if seq_len is not None and not isinstance(seq_len, torch.Tensor):
             raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
-                            f"got {type(seq_lens)}.")
+                            f"got {type(seq_len)}.")
 
         if seq_len is not None:
             masks = seq_lens_to_masks(seq_lens=seq_len)
@@ -320,7 +320,7 @@ class AccuracyMetric(MetricBase):
 
         target = target.to(pred)
         if masks is not None:
-            self.acc_count += torch.sum(torch.eq(pred, target).masked_fill(masks, 0)).item()
+            self.acc_count += torch.sum(torch.eq(pred, target).masked_fill(masks.eq(0), 0)).item()
             self.total += torch.sum(masks).item()
         else:
             self.acc_count += torch.sum(torch.eq(pred, target)).item()

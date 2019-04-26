@@ -321,11 +321,12 @@ from fastNLP.core.utils import _check_forward_error
 from fastNLP.core.utils import _check_loss_evaluate
 from fastNLP.core.utils import _move_dict_value_to_device
 from fastNLP.core.utils import _get_func_signature
-from fastNLP.core.utils import _get_device
+from fastNLP.core.utils import _get_model_device
 from fastNLP.core.optimizer import Optimizer
+from fastNLP.core.utils import _move_model_to_device
 
 class Trainer(object):
-    def __init__(self, train_data, model, optimizer, loss=None,
+    def __init__(self, train_data, model, optimizer=None, loss=None,
                  batch_size=32, sampler=None, update_every=1,
                  n_epochs=10, print_every=5,
                  dev_data=None, metrics=None, metric_key=None,
@@ -336,7 +337,7 @@ class Trainer(object):
         """
         :param DataSet train_data: 训练集
         :param nn.modules model: 待训练的模型
-        :param torch.optim.Optimizer,None optimizer: 优化器。如果为None，则Trainer不会更新模型，请确保已在callback中进行了更新。
+        :param torch.optim.Optimizer,None optimizer: 优化器。如果为None，则Trainer使用默认的Adam(model.parameters(), lr=4e-3)这个优化器
         :param int batch_size: 训练和验证的时候的batch大小。
         :param LossBase loss: 使用的Loss对象。 详见 LossBase_ 。当loss为None时，默认使用 LossInForward_ 。
         :param Sampler sampler: Batch数据生成的顺序。详见 Sampler_ 。如果为None，默认使用 RandomSampler_ 。
@@ -354,12 +355,23 @@ class Trainer(object):
         :param int validate_every: 多少个step在验证集上验证一次; 如果为-1，则每个epoch结束验证一次。仅在传入dev_data时有
             效。
         :param str,None save_path: 将模型保存路径。如果为None，则不保存模型。如果dev_data为None，则保存最后一次迭代的模
-            型。保存的时候不仅保存了参数，还保存了模型结构。
+            型。保存的时候不仅保存了参数，还保存了模型结构。即便使用DataParallel，这里也只保存模型。
         :param prefetch: bool, 是否使用额外的进程对产生batch数据。理论上会使得Batch迭代更快。
         :param bool use_tqdm: 是否使用tqdm来显示训练进度; 如果为False，则将loss打印在终端中。
-        :param str,torch.device,None device: 将模型load到哪个设备。默认为None，即Trainer不对模型的计算位置进行管理。支持
-            以下的输入str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中,
-            可见的第二个GPU中; torch.device，将模型装载到torch.device上。
+        :param str,int,torch.device,list(int) device: 将模型load到哪个设备。默认为None，即Trainer不对模型
+            的计算位置进行管理。支持以下的输入:
+
+            1. str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中,
+            可见的第二个GPU中;
+
+            2. torch.device：将模型装载到torch.device上。
+
+            3. int: 将使用device_id为该值的gpu进行训练
+
+            4. list(int)：如果多于1个device，将使用torch.nn.DataParallel包裹model, 并使用传入的device。
+
+            5. None. 为None则不对模型进行任何处理，如果传入的model为torch.nn.DataParallel该值必须为None。
+
         :param list(callbacks) callbacks: 用于在train过程中起调节作用的回调函数。比如early stop，negative sampling等可以
             通过callback机制实现。 可使用的callback参见 Callback_ 。
         :param int check_code_level: 模型检查等级. -1: 不进行检查; 0: 仅出现错误时停止; 1: 如果有field没有被使用，
@@ -432,17 +444,15 @@ class Trainer(object):
         self.n_steps = (len(self.train_data) // self.batch_size + int(
             len(self.train_data) % self.batch_size != 0)) * self.n_epochs
 
-        check_exist = check_code_level>-1
-        self.device = _get_device(device, check_exist=check_exist)
+        # 是否一开始就是DataParallel的。
+        self.model = _move_model_to_device(self.model, device=device)
 
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
         elif isinstance(optimizer, Optimizer):
             self.optimizer = optimizer.construct_from_pytorch(model.parameters())
         elif optimizer is None:
-            warnings.warn("The optimizer is set to None, Trainer will update your model. Make sure you update the model"
-                          " in the callback.")
-            self.optimizer = None
+            self.optimizer = torch.optim.Adam(model.parameters(), lr=4e-3)
         else:
             raise TypeError("optimizer can only be torch.optim.Optimizer type, not {}.".format(type(optimizer)))
 
@@ -455,7 +465,7 @@ class Trainer(object):
                                  data=self.dev_data,
                                  metrics=self.metrics,
                                  batch_size=self.batch_size,
-                                 device=self.device,
+                                 device=None,  # 由上面的部分处理device
                                  verbose=0)
 
         self.step = 0
@@ -486,11 +496,9 @@ class Trainer(object):
             results['seconds'] = 0.
             return results
         try:
-            if self.device is not None:
-                self.model = self.model.to(self.device)
-            self._model_device = self.model.parameters().__next__().device
+            self._model_device = _get_model_device(self.model)
             self._mode(self.model, is_test=False)
-
+            self._load_best_model = load_best_model
             self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
             start_time = time.time()
             print("training epochs started " + self.start_time, flush=True)
@@ -605,7 +613,7 @@ class Trainer(object):
             if self.save_path is not None:
                 self._save_model(self.model,
                                  "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time]))
-            else:
+            elif self._load_best_model:
                 self._best_model_states = {name: param.cpu().clone() for name, param in self.model.named_parameters()}
             self.best_dev_perf = res
             self.best_dev_epoch = epoch
@@ -672,6 +680,8 @@ class Trainer(object):
             model_path = os.path.join(self.save_path, model_name)
             if not os.path.exists(self.save_path):
                 os.makedirs(self.save_path, exist_ok=True)
+            if isinstance(model, nn.DataParallel):
+                model = model.module
             if only_param:
                 state_dict = model.state_dict()
                 for key in state_dict:
@@ -690,7 +700,10 @@ class Trainer(object):
                 states = torch.load(model_path)
             else:
                 states = torch.load(model_path).state_dict()
-            model.load_state_dict(states)
+            if isinstance(model, nn.DataParallel):
+                model.module.load_state_dict(states)
+            else:
+                model.load_state_dict(states)
         elif hasattr(self, "_best_model_states"):
             model.load_state_dict(self._best_model_states)
         else:

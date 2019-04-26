@@ -168,33 +168,73 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
 #     else:
 #         return False
 
-def _get_device(device, check_exist=False):
+def _move_model_to_device(model, device):
     """
-    传入一个device，返回None或者torch.device。当不为None时，且被设置为使用gpu, 但机器没有gpu时，会返回torch.device('cpu')
+    将model移动到device
 
-    :param str,None,torch.device device: str, None或者torch.device。
-    :param bool check_exist: 检查该device是否存在，不存在的话报错
-    :return: None,torch.device
+    :param model: torch.nn.DataParallel or torch.nn.Module. 当为torch.nn.DataParallel, 则只是调用一次cuda。device必须为
+        None。
+    :param str,int,torch.device,list(int),list(torch.device) device: 将模型load到哪个设备。默认为None，即Trainer不对模型
+        的计算位置进行管理。支持以下的输入:
+
+        1. str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中,
+        可见的第二个GPU中;
+
+        2. torch.device：将模型装载到torch.device上。
+
+        3. int: 将使用device_id为该值的gpu进行训练
+
+        4. list(int)：如果多于1个device，将使用torch.nn.DataParallel包裹model, 并使用传入的device。
+
+        5. None. 为None则不对模型进行任何处理，如果传入的model为torch.nn.DataParallel该值必须为None。
+
+    :return: torch.nn.DataParallel or torch.nn.Module
     """
-    if device is not None:
-        if isinstance(device, str):
-            device = torch.device(device)
-        elif isinstance(device, torch.device):
-            device = device
-        else:
-            raise ValueError("device does not support {} type.".format(type(device)))
+    if isinstance(model, torch.nn.parallel.DistributedDataParallel):
+        raise RuntimeError("model of `torch.nn.parallel.DistributedDataParallel` is not supported right now.")
 
-        if device.type=='cuda' and not torch.cuda.is_available():
-            device = torch.device('cpu')
+    if not torch.cuda.is_available() and (device!='cpu' or (isinstance(device, torch.device) and device.type!='cpu')):
+        raise ValueError("There is no usable gpu. set `device` as `cpu`.")
 
-        if check_exist:
-            tensor = torch.zeros(0).to(device)
-            tensor = tensor.to('cpu')
-            del tensor
+    if device is None:
+        if isinstance(model, torch.nn.DataParallel):
+            model.cuda()
+        return model
+
+    if isinstance(model, torch.nn.DataParallel):
+        raise RuntimeError("When model is `torch.nn.DataParallel`, the device has to be `None`.")
+
+    if isinstance(device, int):
+        assert device>-1, "device can only be positive integer"
+        assert torch.cuda.device_count()>device, "Only has {} gpus, cannot use device {}.".format(torch.cuda.device_count(),
+                                                                                                  device)
+        device = torch.device('cuda:{}'.format(device))
+    elif isinstance(device, str):
+        device = torch.device(device)
+        if device.type == 'cuda' and device.index is not None:
+            assert device.index<torch.cuda.device_count(), "Only has {} gpus, cannot use device cuda:{}.".format(
+                                                                                            torch.cuda.device_count(),
+                                                                                                  device)
+    elif isinstance(device, torch.device):
+        if device.type == 'cuda' and device.index is not None:
+            assert device.index<torch.cuda.device_count(), "Only has {} gpus, cannot use device cuda:{}.".format(
+                                                                                            torch.cuda.device_count(),
+                                                                                                  device)
+    elif isinstance(device, list):
+        types = set([type(d) for d in device])
+        assert len(types)==1, "Mixed type in device, only `int` allowed."
+        assert list(types)[0] == int, "Only int supported for multiple devices."
+        assert len(set(device))==len(device), "Duplicated device id found in device."
+        for d in device:
+            assert d>-1, "Only positive device id allowed."
+        if len(device)>1:
+            output_device = device[0]
+            model = nn.DataParallel(model, device_ids=device, output_device=output_device)
+        device = torch.device(device[0])
     else:
-        device = None
-
-    return device
+        raise TypeError("Unsupported device type.")
+    model = model.to(device)
+    return model
 
 
 def _get_model_device(model):
