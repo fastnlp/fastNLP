@@ -1,3 +1,8 @@
+"""
+.. _config-io:
+
+用于读入和处理和保存 config 文件
+"""
 import configparser
 import json
 import os

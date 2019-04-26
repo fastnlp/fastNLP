@@ -35,8 +35,7 @@ class ESIM(BaseModel):
         self.drop = nn.Dropout(self.dropout)
 
         self.embedding = Encoder.Embedding(
-            self.vocab_size, self.embed_dim, dropout=self.dropout,
-            init_emb=init_embedding,
+            (self.vocab_size, self.embed_dim), dropout=self.dropout,
         )
 
         self.embedding_layer = Encoder.Linear(self.embed_dim, self.hidden_size)

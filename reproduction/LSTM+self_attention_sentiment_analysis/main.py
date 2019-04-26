@@ -42,7 +42,7 @@ train_data, dev_data = preprocess.run(train_data, dev_data)
 class SELF_ATTENTION_YELP_CLASSIFICATION(BaseModel):
     def __init__(self, args=None):
         super(SELF_ATTENTION_YELP_CLASSIFICATION,self).__init__()
-        self.embedding = Embedding(len(word2index) ,embeding_size , init_emb= None )
+        self.embedding = Embedding((len(word2index) ,embeding_size))
         self.lstm = LSTM(input_size=embeding_size, hidden_size=lstm_hidden_size, bidirectional=True)
         self.attention = SelfAttention(lstm_hidden_size * 2 ,dim =attention_unit ,num_vec=attention_hops)
         self.mlp = MLP(size_layer=[lstm_hidden_size * 2*attention_hops ,nfc ,class_num ])

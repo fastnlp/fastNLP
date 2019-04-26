@@ -11,19 +11,19 @@ class SeqLabeling(BaseModel):
     一个基础的Sequence labeling的模型
     """
 
-    def __init__(self, vocab_size, embed_dim, hidden_size, num_classes):
+    def __init__(self, init_embed, hidden_size, num_classes):
         """
         用于做sequence labeling的基础类。结构包含一层Embedding，一层LSTM(单向，一层)，一层FC，以及一层CRF。
 
-        :param int vocab_size: 词表大小。
-        :param int embed_dim: embedding的维度
+       :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: Embedding的大小(传入tuple(int, int),
+            第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, Embedding, ndarray等则直接使用该值初始化Embedding
         :param int hidden_size: LSTM隐藏层的大小
         :param int num_classes: 一共有多少类
         """
         super(SeqLabeling, self).__init__()
 
-        self.Embedding = encoder.embedding.Embedding(vocab_size, embed_dim)
-        self.Rnn = encoder.lstm.LSTM(embed_dim, hidden_size)
+        self.Embedding = encoder.embedding.Embedding(init_embed)
+        self.Rnn = encoder.lstm.LSTM(self.Embedding.embedding_dim, hidden_size)
         self.Linear = encoder.linear.Linear(hidden_size, num_classes)
         self.Crf = decoder.CRF.ConditionalRandomField(num_classes)
         self.mask = None
@@ -103,24 +103,22 @@ class AdvSeqLabel:
     更复杂的Sequence Labelling模型。结构为Embedding, LayerNorm, 双向LSTM(两层)，FC，LayerNorm，DropOut，FC，CRF。
     """
 
-    def __init__(self, vocab_size, embed_dim, hidden_size, num_classes, dropout=0.3, embedding=None,
-                 id2words=None, encoding_type='bmes'):
+    def __init__(self, init_embed, hidden_size, num_classes, dropout=0.3, id2words=None, encoding_type='bmes'):
         """
 
-        :param int vocab_size: 词表的大小
-        :param int embed_dim: embedding的维度
+        :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: Embedding的大小(传入tuple(int, int),
+            第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, Embedding, ndarray等则直接使用该值初始化Embedding
         :param int hidden_size: LSTM的隐层大小
         :param int num_classes: 有多少个类
         :param float dropout: LSTM中以及DropOut层的drop概率
-        :param numpy.ndarray embedding: 预训练的embedding，需要与指定的词表大小等一致
         :param dict id2words: tag id转为其tag word的表。用于在CRF解码时防止解出非法的顺序，比如'BMES'这个标签规范中，'S'
             不能出现在'B'之后。这里也支持类似与'B-NN'，即'-'前为标签类型的指示，后面为具体的tag的情况。这里不但会保证
             'B-NN'后面不为'S-NN'还会保证'B-NN'后面不会出现'M-xx'(任何非'M-NN'和'E-NN'的情况。)
         :param str encoding_type: 支持"BIO", "BMES", "BEMSO"。
         """
-        self.Embedding = encoder.embedding.Embedding(vocab_size, embed_dim, init_emb=embedding)
-        self.norm1 = torch.nn.LayerNorm(embed_dim)
-        self.Rnn = torch.nn.LSTM(input_size=embed_dim, hidden_size=hidden_size, num_layers=2, dropout=dropout,
+        self.Embedding = encoder.embedding.Embedding(init_embed)
+        self.norm1 = torch.nn.LayerNorm(self.Embedding.embedding_dim)
+        self.Rnn = torch.nn.LSTM(input_size=self.Embedding.embedding_dim, hidden_size=hidden_size, num_layers=2, dropout=dropout,
                                  bidirectional=True, batch_first=True)
         self.Linear1 = encoder.Linear(hidden_size * 2, hidden_size * 2 // 3)
         self.norm2 = torch.nn.LayerNorm(hidden_size * 2 // 3)

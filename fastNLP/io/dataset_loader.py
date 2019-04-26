@@ -1,3 +1,18 @@
+"""
+.. _dataset-loader:
+
+DataSetLoader 的 API, 用于读取不同格式的数据, 并返回 `DataSet` ,
+得到的 `DataSet` 对象可以直接传入 `Trainer`, `Tester`, 用于模型的训练和测试
+
+Example::
+
+    loader = SNLILoader()
+    train_ds = loader.load('path/to/train')
+    dev_ds = loader.load('path/to/dev')
+    test_ds = loader.load('path/to/test')
+
+    # ... do stuff
+"""
 import os
 import json
 from nltk.tree import Tree
@@ -55,8 +70,9 @@ def _uncompress(src, dst):
 
 
 class DataSetLoader:
-    """所有`DataSetLoader`的接口
+    """
 
+    所有`DataSetLoader`的接口
     """
 
     def load(self, path):

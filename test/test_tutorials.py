@@ -70,7 +70,7 @@ class TestTutorial(unittest.TestCase):
             break
 
         from fastNLP.models import CNNText
-        model = CNNText(vocab_size=len(vocab), embed_dim=50, num_classes=5, padding=2, dropout=0.1)
+        model = CNNText((len(vocab), 50), num_classes=5, padding=2, dropout=0.1)
 
         from fastNLP import Trainer
         from copy import deepcopy
@@ -145,13 +145,15 @@ class TestTutorial(unittest.TestCase):
                        is_input=True)
 
         from fastNLP.models import CNNText
-        model = CNNText(vocab_size=len(vocab), embed_dim=50, num_classes=5, padding=2, dropout=0.1)
+        model = CNNText((len(vocab), 50), num_classes=5, padding=2, dropout=0.1)
 
-        from fastNLP import Trainer, CrossEntropyLoss, AccuracyMetric
+        from fastNLP import Trainer, CrossEntropyLoss, AccuracyMetric, Adam
+
         trainer = Trainer(model=model,
                           train_data=train_data,
                           dev_data=dev_data,
                           loss=CrossEntropyLoss(),
+                          optimizer= Adam(),
                           metrics=AccuracyMetric(target='label_seq')
                           )
         trainer.train()
@@ -405,8 +407,7 @@ class TestTutorial(unittest.TestCase):
 
         # 另一个例子：加载CNN文本分类模型
         from fastNLP.models import CNNText
-        cnn_text_model = CNNText(vocab_size=len(vocab), embed_dim=50, num_classes=5, padding=2, dropout=0.1)
-        cnn_text_model
+        cnn_text_model = CNNText((len(vocab), 50), num_classes=5, padding=2, dropout=0.1)
 
         from fastNLP import CrossEntropyLoss
         from fastNLP import Adam
@@ -421,7 +422,6 @@ class TestTutorial(unittest.TestCase):
             print_every=-1,
             validate_every=-1,
             dev_data=dev_data,
-            use_cuda=False,
             optimizer=Adam(lr=1e-3, weight_decay=0),
             check_code_level=-1,
             metric_key='acc',

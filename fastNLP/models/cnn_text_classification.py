@@ -14,8 +14,7 @@ class CNNText(torch.nn.Module):
     'Yoon Kim. 2014. Convolution Neural Networks for Sentence Classification.'
     """
 
-    def __init__(self, vocab_size,
-                 embed_dim,
+    def __init__(self, init_embed,
                  num_classes,
                  kernel_nums=(3, 4, 5),
                  kernel_sizes=(3, 4, 5),
@@ -23,8 +22,8 @@ class CNNText(torch.nn.Module):
                  dropout=0.5):
         """
 
-        :param int vocab_size: 词表的大小
-        :param int embed_dim: 词embedding的维度大小
+        :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: Embedding的大小(传入tuple(int, int),
+            第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, Embedding, ndarray等则直接使用该值初始化Embedding
         :param int num_classes: 一共有多少类
         :param int,tuple(int) out_channels: 输出channel的数量。如果为list，则需要与kernel_sizes的数量保持一致
         :param int,tuple(int) kernel_sizes: 输出channel的kernel大小。
@@ -34,9 +33,9 @@ class CNNText(torch.nn.Module):
         super(CNNText, self).__init__()
 
         # no support for pre-trained embedding currently
-        self.embed = encoder.Embedding(vocab_size, embed_dim)
+        self.embed = encoder.Embedding(init_embed)
         self.conv_pool = encoder.ConvMaxpool(
-            in_channels=embed_dim,
+            in_channels=self.embed.embedding_dim,
             out_channels=kernel_nums,
             kernel_sizes=kernel_sizes,
             padding=padding)

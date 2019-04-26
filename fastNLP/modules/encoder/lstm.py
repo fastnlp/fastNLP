@@ -1,3 +1,6 @@
+"""轻量封装的 Pytorch LSTM 模块.
+可在 forward 时传入序列的长度, 自动对padding做合适的处理.
+"""
 import torch
 import torch.nn as nn
 import torch.nn.utils.rnn as rnn
@@ -35,8 +38,8 @@ class LSTM(nn.Module):
         :param h0: [batch, hidden_size] 初始隐状态, 若为 ``None`` , 设为全1向量. Default: ``None``
         :param c0: [batch, hidden_size] 初始Cell状态, 若为 ``None`` , 设为全1向量. Default: ``None``
         :return (output, ht) 或 output: 若 ``get_hidden=True`` [batch, seq_len, hidden_size*num_direction] 输出序列
-            :和 [batch, hidden_size*num_direction] 最后时刻隐状态.
-            :若 ``get_hidden=False`` 仅返回输出序列.
+            和 [batch, hidden_size*num_direction] 最后时刻隐状态.
+            若 ``get_hidden=False`` 仅返回输出序列.
         """
         if h0 is not None and c0 is not None:
             hx = (h0, c0)

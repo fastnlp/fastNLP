@@ -59,7 +59,7 @@ class TestProcessor(unittest.TestCase):
 
     def test_ModelProcessor(self):
         from fastNLP.models.cnn_text_classification import CNNText
-        model = CNNText(100, 100, 5)
+        model = CNNText((100, 100), 5)
         ins_list = []
         for _ in range(64):
             seq_len = np.random.randint(5, 30)

@@ -1,20 +1,30 @@
 import torch.nn as nn
+from fastNLP.modules.utils import get_embeddings
 
+class Embedding(nn.Embedding):
+    """Embedding组件. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度"""
 
-class Embedding(nn.Module):
-    """Embedding组件."""
-
-    def __init__(self, vocab_size, embed_dim, padding_idx=0, sparse=False, init_emb=None, dropout=0.0):
+    def __init__(self, init_embed, padding_idx=None, dropout=0.0, sparse=False, max_norm=None, norm_type=2,
+                  scale_grad_by_freq=False):
         """
-        :param int vocab_size: 词表大小.
-        :param int embed_dim: embedding维度.
-        :param int padding_idx: 如果碰到padding_idx则自动补0.
-        :param bool sparse: 如果为`True`则权重矩阵是一个sparse的矩阵.
-        :param torch.Tensor init_emb: 初始的embedding矩阵.
-        :param float dropout: dropout概率.
+
+        :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: Embedding的大小(传入tuple(int, int),
+            第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, Embedding, ndarray等则直接使用该值初始化Embedding
+        :param None,int padding_idx: 该index的Embedding将一直为0.
+        :param float dropout: 对Embedding的输出的dropout。
+        :param bool sparse: 如果为True，则对Embedding的梯度将是sparse的，参考Pytorch Embedding获取更多信息。
+        :param None,float max_norm: 每个vector最大的norm能为多大
+        :param int norm_type: norm的类型
+        :param bool scale_grad_by_freq: 如果为True，将会把梯度除以这个词出现的次数.
         """
-        super(Embedding, self).__init__()
-        self.embed = nn.Embedding(vocab_size, embed_dim, padding_idx, sparse=sparse, _weight=init_emb)
+        embed = get_embeddings(init_embed)
+        num_embeddings, embedding_dim = embed.weight.size()
+
+        super().__init__(num_embeddings, embedding_dim, padding_idx=padding_idx,
+                 max_norm=max_norm, norm_type=norm_type, scale_grad_by_freq=scale_grad_by_freq,
+                 sparse=sparse, _weight=embed.weight.data)
+        del embed
+
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
@@ -22,5 +32,5 @@ class Embedding(nn.Module):
         :param torch.LongTensor x: [batch, seq_len]
         :return: torch.Tensor : [batch, seq_len, embed_dim]
         """
-        x = self.embed(x)
+        x = super().forward(x)
         return self.dropout(x)

@@ -231,22 +231,29 @@ class Vocabulary(object):
             vocab.from_dataset(train_data1, train_data2, field_name='words')
 
         :param DataSet datasets: 需要转index的 DataSet, 支持一个或多个.
-        :param str field_name: 构建词典所使用的 field.
-            若有多个 DataSet, 每个DataSet都必须有此 field.
-            目前仅支持 ``str`` , ``list(str)`` , ``list(list(str))``
+        :param field_name: 可为 ``str`` 或 ``list(str)`` .
+            构建词典所使用的 field(s), 支持一个或多个field
+            若有多个 DataSet, 每个DataSet都必须有这些field.
+            目前仅支持的field结构: ``str`` , ``list(str)`` , ``list(list(str))``
         :return self:
         """
+        if isinstance(field_name, str):
+            field_name = [field_name]
+        elif not isinstance(field_name, list):
+            raise TypeError('invalid argument field_name: {}'.format(field_name))
+
         def construct_vocab(ins):
-            field = ins[field_name]
-            if isinstance(field, str):
-                self.add_word(field)
-            elif isinstance(field, list):
-                if not isinstance(field[0], list):
-                    self.add_word_lst(field)
-                else:
-                    if isinstance(field[0][0], list):
-                        raise RuntimeError("Only support field with 2 dimensions.")
-                    [self.add_word_lst(w) for w in field]
+            for fn in field_name:
+                field = ins[fn]
+                if isinstance(field, str):
+                    self.add_word(field)
+                elif isinstance(field, list):
+                    if not isinstance(field[0], list):
+                        self.add_word_lst(field)
+                    else:
+                        if isinstance(field[0][0], list):
+                            raise RuntimeError("Only support field with 2 dimensions.")
+                        [self.add_word_lst(w) for w in field]
         for idx, dataset in enumerate(datasets):
             if isinstance(dataset, DataSet):
                 try:
