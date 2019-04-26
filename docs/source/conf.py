@@ -14,6 +14,7 @@
 #
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information -----------------------------------------------------
@@ -26,7 +27,6 @@ author = 'xpqiu'
 version = '0.4'
 # The full version, including alpha/beta/rc tags
 release = '0.4'
-
 
 # -- General configuration ---------------------------------------------------
 
@@ -42,8 +42,14 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.autosummary',
     'sphinx.ext.mathjax',
-
+    'sphinx.ext.todo'
 ]
+
+autodoc_default_options = {
+    'member-order': 'bysource',
+    'special-members': '__init__',
+    'undoc-members': True,
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -71,7 +77,6 @@ exclude_patterns = ['modules.rst']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
-
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -107,22 +112,21 @@ html_static_path = ['_static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'fastNLPdoc'
 
-
 # -- Options for LaTeX output ------------------------------------------------
 
 latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
-
+    
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
-
+    
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
-
+    
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -136,7 +140,6 @@ latex_documents = [
      'xpqiu', 'manual'),
 ]
 
-
 # -- Options for manual page output ------------------------------------------
 
 # One entry per manual page. List of tuples
@@ -145,7 +148,6 @@ man_pages = [
     (master_doc, 'fastnlp', 'fastNLP Documentation',
      [author], 1)
 ]
-
 
 # -- Options for Texinfo output ----------------------------------------------
 
@@ -160,3 +162,13 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+def maybe_skip_member(app, what, name, obj, skip, options):
+    if name.startswith("_"):
+        return True
+    if obj.__doc__ is None:
+        return True
+    return False
+
+
+def setup(app):
+    app.connect('autodoc-skip-member', maybe_skip_member)

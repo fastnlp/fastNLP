@@ -1,6 +1,11 @@
 fastNLP.api package
 ===================
 
+.. automodule:: fastNLP.api
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -53,10 +58,3 @@ fastNLP.api.utils module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: fastNLP.api
-    :members:
-    :undoc-members:
-    :show-inheritance:
