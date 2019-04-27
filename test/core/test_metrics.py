@@ -132,6 +132,19 @@ class TestAccuracyMetric(unittest.TestCase):
             return
         self.assertTrue(True, False), "No exception catches."
 
+    def test_seq_len(self):
+        N = 256
+        seq_len = torch.zeros(N).long()
+        seq_len[0] = 2
+        pred = {'pred': torch.ones(N, 2)}
+        target = {'target': torch.ones(N, 2), 'seq_len': seq_len}
+        metric = AccuracyMetric()
+        metric(pred_dict=pred, target_dict=target)
+        self.assertDictEqual(metric.get_metric(), {'acc': 1.})
+        seq_len[1:] = 1
+        metric(pred_dict=pred, target_dict=target)
+        self.assertDictEqual(metric.get_metric(), {'acc': 1.})
+
 class SpanF1PreRecMetric(unittest.TestCase):
     def test_case1(self):
         from fastNLP.core.metrics import _bmes_tag_to_spans

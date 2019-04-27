@@ -142,13 +142,12 @@ class TestCase1(unittest.TestCase):
 
     def test_sequential_batch(self):
         batch_size = 32
-        pause_seconds = 0.01
         num_samples = 1000
         dataset = generate_fake_dataset(num_samples)
 
         batch = Batch(dataset, batch_size=batch_size, sampler=SequentialSampler())
         for batch_x, batch_y in batch:
-            time.sleep(pause_seconds)
+            pass
 
     """
     def test_multi_workers_batch(self):

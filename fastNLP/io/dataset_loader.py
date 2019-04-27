@@ -330,7 +330,10 @@ class JsonLoader(DataSetLoader):
     def load(self, path):
         ds = DataSet()
         for idx, d in _read_json(path, fields=self.fields_list, dropna=self.dropna):
-            ins = {self.fields[k]:v for k,v in d.items()}
+            if self.fields:
+                ins = {self.fields[k]:v for k,v in d.items()}
+            else:
+                ins = d
             ds.append(Instance(**ins))
         return ds
 
