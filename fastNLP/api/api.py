@@ -1,40 +1,5 @@
 """
 api.api的介绍文档
-    直接缩进会把上面的文字变成标题
-
-空行缩进的写法比较合理
-
-    比较合理
-    
-*这里是斜体内容*
-
-**这里是粗体内容**
-
-数学公式块
-
-.. math::
-    E = mc^2
-    
-.. note::
-    注解型提示。
-    
-.. warning::
-   警告型提示。
-
-.. seealso::
-    `参考与超链接 <https://willqvq.github.io/doc_guide/%E6%B3%A8%E9%87%8A%E6%8C%87%E5%AF%BC>`_
-
-普通代码块需要空一行, Example::
-
-    from fitlog import fitlog
-    fitlog.commit()
- 
-普通下标和上标:
-
-H\ :sub:`2`\ O
-
-E = mc\ :sup:`2`
-
 """
 import warnings
 
