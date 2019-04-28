@@ -501,6 +501,14 @@ class DataSet(object):
         """
         return self.field_arrays
 
+
+    def get_field_names(self)->list:
+        """返回一个list，包含所有 field 的名字
+
+        :return: list:
+        """
+        return sorted(self.field_arrays.keys())
+    
     def get_length(self):
         """获取DataSet的元素数量
 
