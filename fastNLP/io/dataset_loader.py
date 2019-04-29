@@ -193,9 +193,9 @@ class ConllLoader(DataSetLoader):
 
     :param headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexs`` 一一对应
     :param indexs: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
-    :param dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
+    :param dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``False``
     """
-    def __init__(self, headers, indexs=None, dropna=True):
+    def __init__(self, headers, indexs=None, dropna=False):
         super(ConllLoader, self).__init__()
         if not isinstance(headers, (list, tuple)):
             raise TypeError('invalid headers: {}, should be list of strings'.format(headers))
@@ -314,7 +314,7 @@ class JsonLoader(DataSetLoader):
         `value`也可为 ``None`` , 这时读入后的`field_name`与json对象对应属性同名
         ``fields`` 可为 ``None`` , 这时,json对象所有属性都保存在DataSet中. Default: ``None``
     :param bool dropna: 是否忽略非法数据,若 ``True`` 则忽略,若 ``False`` ,在遇到非法数据时,抛出 ``ValueError`` .
-        Default: ``True``
+        Default: ``False``
     """
     def __init__(self, fields=None, dropna=False):
         super(JsonLoader, self).__init__()
@@ -375,9 +375,9 @@ class CSVLoader(DataSetLoader):
         若为 ``None`` ,则将读入文件的第一行视作 ``headers`` . Default: ``None``
     :param str sep: CSV文件中列与列之间的分隔符. Default: ","
     :param bool dropna: 是否忽略非法数据,若 ``True`` 则忽略,若 ``False`` ,在遇到非法数据时,抛出 ``ValueError`` .
-        Default: ``True``
+        Default: ``False``
     """
-    def __init__(self, headers=None, sep=",", dropna=True):
+    def __init__(self, headers=None, sep=",", dropna=False):
         self.headers = headers
         self.sep = sep
         self.dropna = dropna
