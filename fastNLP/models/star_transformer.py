@@ -108,7 +108,7 @@ class STSeqLabel(nn.Module):
     :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
-    def __init__(self, vocab_size, emb_dim, num_cls,
+    def __init__(self, init_embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
                  num_head=8,
@@ -118,8 +118,7 @@ class STSeqLabel(nn.Module):
                  emb_dropout=0.1,
                  dropout=0.1,):
         super(STSeqLabel, self).__init__()
-        self.enc = StarTransEnc(vocab_size=vocab_size,
-                                emb_dim=emb_dim,
+        self.enc = StarTransEnc(init_embed=init_embed,
                                 hidden_size=hidden_size,
                                 num_layers=num_layers,
                                 num_head=num_head,
@@ -170,7 +169,7 @@ class STSeqCls(nn.Module):
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
 
-    def __init__(self, vocab_size, emb_dim, num_cls,
+    def __init__(self, init_embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
                  num_head=8,
@@ -180,8 +179,7 @@ class STSeqCls(nn.Module):
                  emb_dropout=0.1,
                  dropout=0.1,):
         super(STSeqCls, self).__init__()
-        self.enc = StarTransEnc(vocab_size=vocab_size,
-                                emb_dim=emb_dim,
+        self.enc = StarTransEnc(init_embed=init_embed,
                                 hidden_size=hidden_size,
                                 num_layers=num_layers,
                                 num_head=num_head,
@@ -232,7 +230,7 @@ class STNLICls(nn.Module):
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
 
-    def __init__(self, vocab_size, emb_dim, num_cls,
+    def __init__(self, init_embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
                  num_head=8,
@@ -242,8 +240,7 @@ class STNLICls(nn.Module):
                  emb_dropout=0.1,
                  dropout=0.1,):
         super(STNLICls, self).__init__()
-        self.enc = StarTransEnc(vocab_size=vocab_size,
-                                emb_dim=emb_dim,
+        self.enc = StarTransEnc(init_embed=init_embed,
                                 hidden_size=hidden_size,
                                 num_layers=num_layers,
                                 num_head=num_head,
