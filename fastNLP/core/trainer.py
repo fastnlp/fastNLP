@@ -444,7 +444,6 @@ class Trainer(object):
         self.n_steps = (len(self.train_data) // self.batch_size + int(
             len(self.train_data) % self.batch_size != 0)) * self.n_epochs
 
-        # 是否一开始就是DataParallel的。
         self.model = _move_model_to_device(self.model, device=device)
 
         if isinstance(optimizer, torch.optim.Optimizer):
