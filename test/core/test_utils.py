@@ -33,6 +33,8 @@ class TestMoveModelDeivce(unittest.TestCase):
             assert model.param.device == torch.device('cuda:0')
             with self.assertRaises(Exception):
                 _move_model_to_device(model, 'cuda:1000')
+        # 测试None
+        model = _move_model_to_device(model, None)
 
     def test_case2(self):
         # 测试使用int初始化

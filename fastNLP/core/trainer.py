@@ -355,7 +355,7 @@ class Trainer(object):
         :param int validate_every: 多少个step在验证集上验证一次; 如果为-1，则每个epoch结束验证一次。仅在传入dev_data时有
             效。
         :param str,None save_path: 将模型保存路径。如果为None，则不保存模型。如果dev_data为None，则保存最后一次迭代的模
-            型。保存的时候不仅保存了参数，还保存了模型结构。即便使用DataParallel，这里也只保存模型。
+            型。保存的时候不仅保存了参数，还保存了模型结构。即便使用了nn.DataParallel，这里也只保存模型。
         :param prefetch: bool, 是否使用额外的进程对产生batch数据。理论上会使得Batch迭代更快。
         :param bool use_tqdm: 是否使用tqdm来显示训练进度; 如果为False，则将loss打印在终端中。
         :param str,int,torch.device,list(int) device: 将模型load到哪个设备。默认为None，即Trainer不对模型
@@ -366,7 +366,7 @@ class Trainer(object):
 
             2. torch.device：将模型装载到torch.device上。
 
-            3. int: 将使用device_id为该值的gpu进行训练
+            3. int: 将使用该gpu进行训练
 
             4. list(int)：如果多于1个device，将使用torch.nn.DataParallel包裹model, 并使用传入的device。
 
