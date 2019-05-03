@@ -89,5 +89,4 @@ pip install fastNLP
 </table>
 
 
-In memory of @FengZiYjun.  May his soul rest in peace. We will miss you very very much!*
-
+*In memory of @FengZiYjun.  May his soul rest in peace. We will miss you very very much!*
