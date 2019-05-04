@@ -14,7 +14,7 @@ help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 apidoc:
-	$(SPHINXAPIDOC) -fM -o source ../$(SPHINXPROJ)
+	$(SPHINXAPIDOC) -efM -o source ../$(SPHINXPROJ)
 
 server:
 	cd build/html && python -m http.server
