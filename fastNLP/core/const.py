@@ -1,4 +1,4 @@
-class Const():
+class Const:
     """fastNLP中field命名常量。
     具体列表::
 

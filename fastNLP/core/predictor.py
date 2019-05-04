@@ -2,10 +2,10 @@ from collections import defaultdict
 
 import torch
 
-from fastNLP.core import Batch
-from fastNLP.core import DataSet
-from fastNLP.core import SequentialSampler
-from fastNLP.core.utils import _build_args
+from . import Batch
+from . import DataSet
+from . import SequentialSampler
+from .utils import _build_args
 
 
 class Predictor(object):

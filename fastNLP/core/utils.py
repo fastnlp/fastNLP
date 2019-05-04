@@ -1,3 +1,7 @@
+"""
+utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户可以使用的是 :func:`cache_results` 修饰器。
+"""
+__all__ = ["cache_results"]
 import _pickle
 import inspect
 import os
@@ -29,6 +33,8 @@ def _prepare_cache_filepath(filepath):
 #  TODO 可以保存下缓存时的参数，如果load的时候发现参数不一致，发出警告。
 def cache_results(_cache_fp, _refresh=False, _verbose=1):
     """
+    别名：:class:`fastNLP.cache_results` :class:`fastNLP.core.uitls.cache_results`
+
     cache_results是fastNLP中用于cache数据的装饰器。通过下面的例子看一下如何使用
 
     Example::

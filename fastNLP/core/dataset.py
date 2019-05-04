@@ -1,5 +1,5 @@
 """
-DataSet是fastNLP中用于承载数据的容器。可以将DataSet看做是一个表格，
+:class:`~fastNLP.core.dataset.DataSet` 是fastNLP中用于承载数据的容器。可以将DataSet看做是一个表格，
 每一行是一个sample (在fastNLP中被称为 :mod:`~.instance` )，
 每一列是一个feature (在fastNLP中称为 :mod:`.field` )。
 
@@ -294,7 +294,8 @@ class DataSet(object):
     fastNLP的数据容器，详细的使用方法见文档  :doc:`fastNLP.core.dataset`
     
     :param data: 如果为dict类型，则每个key的value应该为等长的list; 如果为list，
-    每个元素应该为具有相同field的 :class:`~fastNLP.Instance` 。
+        每个元素应该为具有相同field的 :class:`~fastNLP.Instance` 。
+
     """
     
     def __init__(self, data=None):
