@@ -9,7 +9,7 @@ import torch
 import math
 
 try:
-    from tqdm.autonotebook import tqdm
+    from tqdm.auto import tqdm
 except:
     from ..core.utils import _pseudo_tqdm as tqdm
 

@@ -20,7 +20,10 @@ from .file_reader import _read_csv, _read_json, _read_conll
 
 
 def _download_from_url(url, path):
-    from tqdm import tqdm
+    try:
+        from tqdm.auto import tqdm
+    except:
+        from ..core.utils import _pseudo_tqdm as tqdm
     import requests
     
     """Download file"""

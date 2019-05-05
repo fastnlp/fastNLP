@@ -311,7 +311,7 @@ import torch
 from torch import nn
 
 try:
-    from tqdm.autonotebook import tqdm
+    from tqdm.auto import tqdm
 except:
     from .utils import _pseudo_tqdm as tqdm
 
