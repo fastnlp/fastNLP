@@ -59,16 +59,16 @@ class BucketSampler(Sampler):
 
     :param int num_buckets: bucket的数量
     :param int batch_size: batch的大小
-    :param str seq_lens_field_name: 对应序列长度的 `field` 的名字
+    :param str seq_len_field_name: 对应序列长度的 `field` 的名字
     """
     
-    def __init__(self, num_buckets=10, batch_size=32, seq_lens_field_name='seq_len'):
+    def __init__(self, num_buckets=10, batch_size=32, seq_len_field_name='seq_len'):
         self.num_buckets = num_buckets
         self.batch_size = batch_size
-        self.seq_lens_field_name = seq_lens_field_name
+        self.seq_len_field_name = seq_len_field_name
     
     def __call__(self, data_set):
-        seq_lens = data_set.get_all_fields()[self.seq_lens_field_name].content
+        seq_lens = data_set.get_all_fields()[self.seq_len_field_name].content
         total_sample_num = len(seq_lens)
         
         bucket_indexes = []
