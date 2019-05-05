@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.utils.rnn as rnn
 
-from fastNLP.modules.utils import initial_parameter
+from ..utils import initial_parameter
 
 
 class LSTM(nn.Module):

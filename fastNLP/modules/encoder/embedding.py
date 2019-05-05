@@ -1,5 +1,5 @@
 import torch.nn as nn
-from fastNLP.modules.utils import get_embeddings
+from ..utils import get_embeddings
 
 class Embedding(nn.Embedding):
     """Embedding组件. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度"""

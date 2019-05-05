@@ -7,7 +7,6 @@ from ..core.const import Const
 
 import torch
 from torch import nn
-import torch.nn.functional as F
 
 
 class StarTransEnc(nn.Module):

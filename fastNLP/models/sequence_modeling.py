@@ -1,9 +1,9 @@
 import torch
 
-from fastNLP.models.base_model import BaseModel
-from fastNLP.modules import decoder, encoder
-from fastNLP.modules.decoder.CRF import allowed_transitions
-from fastNLP.modules.utils import seq_mask
+from .base_model import BaseModel
+from ..modules import decoder, encoder
+from ..modules.decoder.CRF import allowed_transitions
+from ..modules.utils import seq_mask
 
 
 class SeqLabeling(BaseModel):
