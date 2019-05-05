@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
-from fastNLP.modules.utils import initial_parameter
+from ..utils import initial_parameter
 
 try:
     from torch import flip

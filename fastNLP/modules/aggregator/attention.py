@@ -4,10 +4,10 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from fastNLP.modules.dropout import TimestepDropout
-from fastNLP.modules.utils import mask_softmax
+from ..dropout import TimestepDropout
+from ..utils import mask_softmax
 
-from fastNLP.modules.utils import initial_parameter
+from ..utils import initial_parameter
 
 
 class Attention(torch.nn.Module):

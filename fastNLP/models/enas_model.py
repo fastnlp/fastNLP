@@ -9,9 +9,8 @@ from torch import nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-import fastNLP.models.enas_utils as utils
-from fastNLP.models.base_model import BaseModel
-import fastNLP.modules.encoder as encoder
+from . import enas_utils as utils
+from .base_model import BaseModel
 
 def _get_dropped_weights(w_raw, dropout_p, is_training):
     """Drops out weights to implement DropConnect.

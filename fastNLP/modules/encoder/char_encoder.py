@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from fastNLP.modules.utils import initial_parameter
+from ..utils import initial_parameter
 
 
 # from torch.nn.init import xavier_uniform

@@ -1,81 +1,81 @@
+"""
+tester模块实现了 fastNLP 所需的Tester类，能在提供数据、模型以及metric的情况下进行性能测试。
+
+Example::
+
+    import numpy as np
+    import torch
+    from torch import nn
+    from fastNLP import Tester
+    from fastNLP import DataSet
+    from fastNLP import AccuracyMetric
+
+    class Model(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.fc = nn.Linear(1, 1)
+        def forward(self, a):
+            return {'pred': self.fc(a.unsqueeze(1)).squeeze(1)}
+
+    model = Model()
+
+    dataset = DataSet({'a': np.arange(10, dtype=float), 'b':np.arange(10, dtype=float)*2})
+
+    dataset.set_input('a')
+    dataset.set_target('b')
+
+    tester = Tester(dataset, model, metrics=AccuracyMetric())
+    eval_results = tester.test()
+
+这里Metric的映射规律是和 :class:`fastNLP.Trainer` 中一致的，具体使用请参考 :doc:`trainer 模块<fastNLP.core.trainer>` 的1.3部分
+
+
+
+"""
 import torch
 from torch import nn
 
-from fastNLP.core.batch import Batch
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.metrics import _prepare_metrics
-from fastNLP.core.sampler import SequentialSampler
-from fastNLP.core.utils import _CheckError
-from fastNLP.core.utils import _build_args
-from fastNLP.core.utils import _check_loss_evaluate
-from fastNLP.core.utils import _move_dict_value_to_device
-from fastNLP.core.utils import _get_func_signature
-from fastNLP.core.utils import _get_model_device
-from fastNLP.core.utils import _move_model_to_device
+from .batch import Batch
+from .dataset import DataSet
+from .metrics import _prepare_metrics
+from .sampler import SequentialSampler
+from .utils import _CheckError
+from .utils import _build_args
+from .utils import _check_loss_evaluate
+from .utils import _move_dict_value_to_device
+from .utils import _get_func_signature
+from .utils import _get_model_device
+from .utils import _move_model_to_device
 
 
 class Tester(object):
     """
-    Tester是在提供数据，模型以及metric的情况下进行性能测试的类
+    别名：:class:`fastNLP.Tester` :class:`fastNLP.core.tester.Tester`
 
-    Example::
+    Tester是在提供数据，模型以及metric的情况下进行性能测试的类。需要传入模型，数据以及metric进行验证。
 
-        import numpy as np
-        import torch
-        from torch import nn
-        from fastNLP import Tester
-        from fastNLP import DataSet
-        from fastNLP import AccuracyMetric
+    :param data: 需要测试的数据集， :class:`~fastNLP.DataSet` 类型
+    :param torch.nn.module model: 使用的模型
+    :param metrics: :class:`~fastNLP.core.metrics.MetricBase` 或者一个列表的 :class:`~fastNLP.core.metrics.MetricBase`
+    :param int batch_size: evaluation时使用的batch_size有多大。
+    :param str,int,torch.device,list(int) device: 将模型load到哪个设备。默认为None，即Trainer不对模型
+        的计算位置进行管理。支持以下的输入:
 
+        1. str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中,
+        可见的第二个GPU中;
 
-        class Model(nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.fc = nn.Linear(1, 1)
-            def forward(self, a):
-                return {'pred': self.fc(a.unsqueeze(1)).squeeze(1)}
+        2. torch.device：将模型装载到torch.device上。
 
-        model = Model()
+        3. int: 将使用device_id为该值的gpu进行训练
 
-        dataset = DataSet({'a': np.arange(10, dtype=float), 'b':np.arange(10, dtype=float)*2})
+        4. list(int)：如果多于1个device，将使用torch.nn.DataParallel包裹model, 并使用传入的device。
 
-        dataset.set_input('a')
-        dataset.set_target('b')
+        5. None. 为None则不对模型进行任何处理，如果传入的model为torch.nn.DataParallel该值必须为None。
 
-        tester = Tester(dataset, model, metrics=AccuracyMetric())
-        eval_results = tester.test()
-
-    这里Metric的映射规律是和 Trainer_ 中一致的，请参考 Trainer_ 使用metrics。
-
-
-
+    :param int verbose: 如果为0不输出任何信息; 如果为1，打印出验证结果。
     """
 
     def __init__(self, data, model, metrics, batch_size=16, device=None, verbose=1):
-        """传入模型，数据以及metric进行验证。
-
-            :param DataSet data: 需要测试的数据集
-            :param torch.nn.module model: 使用的模型
-            :param MetricBase metrics: 一个Metric或者一个列表的metric对象
-            :param int batch_size: evaluation时使用的batch_size有多大。
-            :param str,int,torch.device,list(int) device: 将模型load到哪个设备。默认为None，即Trainer不对模型
-                的计算位置进行管理。支持以下的输入:
-
-                1. str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中,
-                可见的第二个GPU中;
-
-                2. torch.device：将模型装载到torch.device上。
-
-                3. int: 将使用device_id为该值的gpu进行训练
-
-                4. list(int)：如果多于1个device，将使用torch.nn.DataParallel包裹model, 并使用传入的device。
-
-                5. None. 为None则不对模型进行任何处理，如果传入的model为torch.nn.DataParallel该值必须为None。
-
-            :param int verbose: 如果为0不输出任何信息; 如果为1，打印出验证结果。
-
-        """
-
         super(Tester, self).__init__()
 
         if not isinstance(data, DataSet):
@@ -103,7 +103,7 @@ class Tester(object):
     def test(self):
         """开始进行验证，并返回验证结果。
 
-        :return dict(dict) eval_results: dict为二层嵌套结构，dict的第一层是metric的名称; 第二层是这个metric的指标。
+        :return Dict[Dict] : dict的二层嵌套结构，dict的第一层是metric的名称; 第二层是这个metric的指标。
             一个AccuracyMetric的例子为{'AccuracyMetric': {'acc': 1.0}}。
         """
         # turn on the testing mode; clean up the history

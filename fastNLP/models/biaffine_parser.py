@@ -7,16 +7,17 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from fastNLP.core.losses import LossFunc
-from fastNLP.core.metrics import MetricBase
-from fastNLP.core.utils import seq_lens_to_masks
-from fastNLP.models.base_model import BaseModel
-from fastNLP.modules.dropout import TimestepDropout
-from fastNLP.modules.encoder.transformer import TransformerEncoder
-from fastNLP.modules.encoder.variational_rnn import VarLSTM
-from fastNLP.modules.utils import initial_parameter
-from fastNLP.modules.utils import seq_mask
-from fastNLP.modules.utils import get_embeddings
+from ..core.const import Const as C
+from ..core.losses import LossFunc
+from ..core.metrics import MetricBase
+from ..core.utils import seq_lens_to_masks
+from ..modules.dropout import TimestepDropout
+from ..modules.encoder.transformer import TransformerEncoder
+from ..modules.encoder.variational_rnn import VarLSTM
+from ..modules.utils import initial_parameter
+from ..modules.utils import seq_mask
+from ..modules.utils import get_embeddings
+from .base_model import BaseModel
 
 def _mst(scores):
     """
@@ -325,21 +326,20 @@ class BiaffineParser(GraphParser):
                 for p in m.parameters():
                     nn.init.normal_(p, 0, 0.1)
 
-    def forward(self, words1, words2, seq_len, gold_heads=None):
+    def forward(self, words1, words2, seq_len, target1=None):
         """模型forward阶段
 
         :param words1: [batch_size, seq_len] 输入word序列
         :param words2: [batch_size, seq_len] 输入pos序列
         :param seq_len: [batch_size, seq_len] 输入序列长度
-        :param gold_heads: [batch_size, seq_len] 输入真实标注的heads, 仅在训练阶段有效,
+        :param target1: [batch_size, seq_len] 输入真实标注的heads, 仅在训练阶段有效,
             用于训练label分类器. 若为 ``None`` , 使用预测的heads输入到label分类器
             Default: ``None``
         :return dict: parsing结果::
 
-            arc_pred: [batch_size, seq_len, seq_len] 边预测logits
-            label_pred: [batch_size, seq_len, num_label] label预测logits
-            mask: [batch_size, seq_len] 预测结果的mask
-            head_pred: [batch_size, seq_len] heads的预测结果, 在 ``gold_heads=None`` 时预测
+            pred1: [batch_size, seq_len, seq_len] 边预测logits
+            pred2: [batch_size, seq_len, num_label] label预测logits
+            pred3: [batch_size, seq_len] heads的预测结果, 在 ``target1=None`` 时预测
         """
         # prepare embeddings
         batch_size, length = words1.shape
@@ -365,7 +365,7 @@ class BiaffineParser(GraphParser):
             _, unsort_idx = torch.sort(sort_idx, dim=0, descending=False)
             feat = feat[unsort_idx]
         else:
-            seq_range = torch.arange(seq_len, dtype=torch.long, device=x.device)[None,:]
+            seq_range = torch.arange(length, dtype=torch.long, device=x.device)[None,:]
             x = x + self.position_emb(seq_range)
             feat = self.encoder(x, mask.float())
 
@@ -380,7 +380,7 @@ class BiaffineParser(GraphParser):
         arc_pred = self.arc_predictor(arc_head, arc_dep) # [N, L, L]
 
         # use gold or predicted arc to predict label
-        if gold_heads is None or not self.training:
+        if target1 is None or not self.training:
             # use greedy decoding in training
             if self.training or self.use_greedy_infer:
                 heads = self.greedy_decoder(arc_pred, mask)
@@ -389,44 +389,45 @@ class BiaffineParser(GraphParser):
             head_pred = heads
         else:
             assert self.training # must be training mode
-            if gold_heads is None:
+            if target1 is None:
                 heads = self.greedy_decoder(arc_pred, mask)
                 head_pred = heads
             else:
                 head_pred = None
-                heads = gold_heads
+                heads = target1
 
         batch_range = torch.arange(start=0, end=batch_size, dtype=torch.long, device=words1.device).unsqueeze(1)
         label_head = label_head[batch_range, heads].contiguous()
         label_pred = self.label_predictor(label_head, label_dep) # [N, L, num_label]
-        res_dict = {'arc_pred': arc_pred, 'label_pred': label_pred, 'mask': mask}
+        res_dict = {C.OUTPUTS(0): arc_pred, C.OUTPUTS(1): label_pred}
         if head_pred is not None:
-            res_dict['head_pred'] = head_pred
+            res_dict[C.OUTPUTS(2)] = head_pred
         return res_dict
 
     @staticmethod
-    def loss(arc_pred, label_pred, arc_true, label_true, mask):
+    def loss(pred1, pred2, target1, target2, seq_len):
         """
-        Compute loss.
+        计算parser的loss
 
-        :param arc_pred: [batch_size, seq_len, seq_len] 边预测logits
-        :param label_pred: [batch_size, seq_len, num_label] label预测logits
-        :param arc_true: [batch_size, seq_len] 真实边的标注
-        :param label_true: [batch_size, seq_len] 真实类别的标注
-        :param mask: [batch_size, seq_len] 预测结果的mask
-        :return: loss value
+        :param pred1: [batch_size, seq_len, seq_len] 边预测logits
+        :param pred2: [batch_size, seq_len, num_label] label预测logits
+        :param target1: [batch_size, seq_len] 真实边的标注
+        :param target2: [batch_size, seq_len] 真实类别的标注
+        :param seq_len: [batch_size, seq_len] 真实目标的长度
+        :return loss: scalar
         """
 
-        batch_size, seq_len, _ = arc_pred.shape
+        batch_size, length, _ = pred1.shape
+        mask = seq_mask(seq_len, length)
         flip_mask = (mask == 0)
-        _arc_pred = arc_pred.clone()
+        _arc_pred = pred1.clone()
         _arc_pred.masked_fill_(flip_mask.unsqueeze(1), -float('inf'))
         arc_logits = F.log_softmax(_arc_pred, dim=2)
-        label_logits = F.log_softmax(label_pred, dim=2)
+        label_logits = F.log_softmax(pred2, dim=2)
         batch_index = torch.arange(batch_size, device=arc_logits.device, dtype=torch.long).unsqueeze(1)
-        child_index = torch.arange(seq_len, device=arc_logits.device, dtype=torch.long).unsqueeze(0)
-        arc_loss = arc_logits[batch_index, child_index, arc_true]
-        label_loss = label_logits[batch_index, child_index, label_true]
+        child_index = torch.arange(length, device=arc_logits.device, dtype=torch.long).unsqueeze(0)
+        arc_loss = arc_logits[batch_index, child_index, target1]
+        label_loss = label_logits[batch_index, child_index, target2]
 
         byte_mask = flip_mask.byte()
         arc_loss.masked_fill_(byte_mask, 0)
@@ -441,21 +442,16 @@ class BiaffineParser(GraphParser):
         :param words1: [batch_size, seq_len] 输入word序列
         :param words2: [batch_size, seq_len] 输入pos序列
         :param seq_len: [batch_size, seq_len] 输入序列长度
-        :param gold_heads: [batch_size, seq_len] 输入真实标注的heads, 仅在训练阶段有效,
-            用于训练label分类器. 若为 ``None`` , 使用预测的heads输入到label分类器
-            Default: ``None``
         :return dict: parsing结果::
 
-            arc_pred: [batch_size, seq_len, seq_len] 边预测logits
-            label_pred: [batch_size, seq_len, num_label] label预测logits
-            mask: [batch_size, seq_len] 预测结果的mask
-            head_pred: [batch_size, seq_len] heads的预测结果, 在 ``gold_heads=None`` 时预测
+            pred1: [batch_size, seq_len] heads的预测结果
+            pred2: [batch_size, seq_len, num_label] label预测logits
         """
         res = self(words1, words2, seq_len)
         output = {}
-        output['arc_pred'] = res.pop('head_pred')
-        _, label_pred = res.pop('label_pred').max(2)
-        output['label_pred'] = label_pred
+        output[C.OUTPUTS(0)] = res.pop(C.OUTPUTS(2))
+        _, label_pred = res.pop(C.OUTPUTS(1)).max(2)
+        output[C.OUTPUTS(1)] = label_pred
         return output
 
 
@@ -463,41 +459,44 @@ class ParserLoss(LossFunc):
     """
     计算parser的loss
 
-    :param arc_pred: [batch_size, seq_len, seq_len] 边预测logits
-    :param label_pred: [batch_size, seq_len, num_label] label预测logits
-    :param arc_true: [batch_size, seq_len] 真实边的标注
-    :param label_true: [batch_size, seq_len] 真实类别的标注
-    :param mask: [batch_size, seq_len] 预测结果的mask
+    :param pred1: [batch_size, seq_len, seq_len] 边预测logits
+    :param pred2: [batch_size, seq_len, num_label] label预测logits
+    :param target1: [batch_size, seq_len] 真实边的标注
+    :param target2: [batch_size, seq_len] 真实类别的标注
+    :param seq_len: [batch_size, seq_len] 真实目标的长度
     :return loss: scalar
     """
-    def __init__(self, arc_pred=None, label_pred=None, arc_true=None, label_true=None):
+    def __init__(self, pred1=None, pred2=None,
+                 target1=None, target2=None,
+                 seq_len=None):
         super(ParserLoss, self).__init__(BiaffineParser.loss,
-                                                 arc_pred=arc_pred,
-                                                 label_pred=label_pred,
-                                                 arc_true=arc_true,
-                                                 label_true=label_true)
+                                         pred1=pred1,
+                                         pred2=pred2,
+                                         target1=target1,
+                                         target2=target2,
+                                         seq_len=seq_len)
 
 
 class ParserMetric(MetricBase):
     """
     评估parser的性能
 
-    :param arc_pred: 边预测logits
-    :param label_pred: label预测logits
-    :param arc_true: 真实边的标注
-    :param label_true: 真实类别的标注
+    :param pred1: 边预测logits
+    :param pred2: label预测logits
+    :param target1: 真实边的标注
+    :param target2: 真实类别的标注
     :param seq_len: 序列长度
     :return dict: 评估结果::
 
         UAS: 不带label时, 边预测的准确率
         LAS: 同时预测边和label的准确率
     """
-    def __init__(self, arc_pred=None, label_pred=None,
-                 arc_true=None, label_true=None, seq_len=None):
+    def __init__(self, pred1=None, pred2=None,
+                 target1=None, target2=None, seq_len=None):
 
         super().__init__()
-        self._init_param_map(arc_pred=arc_pred, label_pred=label_pred,
-                             arc_true=arc_true, label_true=label_true,
+        self._init_param_map(pred1=pred1, pred2=pred2,
+                             target1=target1, target2=target2,
                              seq_len=seq_len)
         self.num_arc = 0
         self.num_label = 0
@@ -509,17 +508,17 @@ class ParserMetric(MetricBase):
             self.num_sample = self.num_label = self.num_arc = 0
         return res
 
-    def evaluate(self, arc_pred, label_pred, arc_true, label_true, seq_len=None):
+    def evaluate(self, pred1, pred2, target1, target2, seq_len=None):
         """Evaluate the performance of prediction.
         """
         if seq_len is None:
-            seq_mask = arc_pred.new_ones(arc_pred.size(), dtype=torch.long)
+            seq_mask = pred1.new_ones(pred1.size(), dtype=torch.long)
         else:
             seq_mask = seq_lens_to_masks(seq_len.long(), float=False).long()
         # mask out <root> tag
         seq_mask[:,0] = 0
-        head_pred_correct = (arc_pred == arc_true).long() * seq_mask
-        label_pred_correct = (label_pred == label_true).long() * head_pred_correct
+        head_pred_correct = (pred1 == target1).long() * seq_mask
+        label_pred_correct = (pred2 == target2).long() * head_pred_correct
         self.num_arc += head_pred_correct.sum().item()
         self.num_label += label_pred_correct.sum().item()
         self.num_sample += seq_mask.sum().item()

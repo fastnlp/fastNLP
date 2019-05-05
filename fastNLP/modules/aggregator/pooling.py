@@ -1,17 +1,12 @@
-# python: 3.6
-# encoding: utf-8
-
 import torch
 import torch.nn as nn
 
 
 class MaxPool(nn.Module):
     """Max-pooling模块。"""
-
-    def __init__(
-            self, stride=None, padding=0, dilation=1, dimension=1, kernel_size=None,
-            return_indices=False, ceil_mode=False
-    ):
+    
+    def __init__(self, stride=None, padding=0, dilation=1, dimension=1, kernel_size=None,
+                 return_indices=False, ceil_mode=False):
         """
         :param stride: 窗口移动大小，默认为kernel_size
         :param padding: padding的内容，默认为0
@@ -30,7 +25,7 @@ class MaxPool(nn.Module):
         self.kernel_size = kernel_size
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
-
+    
     def forward(self, x):
         if self.dimension == 1:
             pooling = nn.MaxPool1d(
@@ -57,10 +52,11 @@ class MaxPool(nn.Module):
 
 class MaxPoolWithMask(nn.Module):
     """带mask矩阵的1维max pooling"""
+    
     def __init__(self):
         super(MaxPoolWithMask, self).__init__()
         self.inf = 10e12
-
+    
     def forward(self, tensor, mask, dim=1):
         """
         :param torch.FloatTensor tensor: [batch_size, seq_len, channels] 初始tensor
@@ -75,11 +71,11 @@ class MaxPoolWithMask(nn.Module):
 
 class KMaxPool(nn.Module):
     """K max-pooling module."""
-
+    
     def __init__(self, k=1):
         super(KMaxPool, self).__init__()
         self.k = k
-
+    
     def forward(self, x):
         """
         :param torch.Tensor x: [N, C, L] 初始tensor
@@ -92,12 +88,12 @@ class KMaxPool(nn.Module):
 
 class AvgPool(nn.Module):
     """1-d average pooling module."""
-
+    
     def __init__(self, stride=None, padding=0):
         super(AvgPool, self).__init__()
         self.stride = stride
         self.padding = padding
-
+    
     def forward(self, x):
         """
         :param torch.Tensor x: [N, C, L] 初始tensor
@@ -117,7 +113,7 @@ class MeanPoolWithMask(nn.Module):
     def __init__(self):
         super(MeanPoolWithMask, self).__init__()
         self.inf = 10e12
-
+    
     def forward(self, tensor, mask, dim=1):
         """
         :param torch.FloatTensor tensor: [batch_size, seq_len, channels] 初始tensor
@@ -127,7 +123,3 @@ class MeanPoolWithMask(nn.Module):
         """
         masks = mask.view(mask.size(0), mask.size(1), -1).float()
         return torch.sum(tensor * masks.float(), dim=dim) / torch.sum(masks.float(), dim=1)
-
-
-
-

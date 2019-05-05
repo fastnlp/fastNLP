@@ -1,11 +1,16 @@
+"""
+optimizer 模块定义了 fastNLP 中所需的各种优化器，一般做为 :class:`~fastNLP.Trainer` 的参数使用。
+
+"""
 import torch
 
 
 class Optimizer(object):
     """
+    别名：:class:`fastNLP.Optimizer` :class:`fastNLP.core.optimizer.Optimizer`
 
-        :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
-        :param kwargs: additional parameters.
+    :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
+    :param kwargs: additional parameters.
     """
     def __init__(self, model_params, **kwargs):
         if model_params is not None and not hasattr(model_params, "__next__"):
@@ -26,10 +31,11 @@ class Optimizer(object):
 
 class SGD(Optimizer):
     """
+    别名：:class:`fastNLP.SGD` :class:`fastNLP.core.optimizer.SGD`
 
-        :param float lr: learning rate. Default: 0.01
-        :param float momentum: momentum. Default: 0
-        :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
+    :param float lr: learning rate. Default: 0.01
+    :param float momentum: momentum. Default: 0
+    :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
     """
 
     def __init__(self, lr=0.001, momentum=0, model_params=None):
@@ -47,10 +53,11 @@ class SGD(Optimizer):
 
 class Adam(Optimizer):
     """
+    别名：:class:`fastNLP.Adam` :class:`fastNLP.core.optimizer.Adam`
 
-        :param float lr: learning rate
-        :param float weight_decay:
-        :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
+    :param float lr: learning rate
+    :param float weight_decay:
+    :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
     """
 
     def __init__(self, lr=0.001, weight_decay=0, betas=(0.9, 0.999), eps=1e-8, amsgrad=False, model_params=None):

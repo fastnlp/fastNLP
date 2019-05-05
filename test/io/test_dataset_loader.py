@@ -1,7 +1,7 @@
 import unittest
 
 from fastNLP.io.dataset_loader import Conll2003Loader, PeopleDailyCorpusLoader, \
-    CSVLoader, SNLILoader
+    CSVLoader, SNLILoader, JsonLoader
 
 class TestDatasetLoader(unittest.TestCase):
 
@@ -24,3 +24,8 @@ class TestDatasetLoader(unittest.TestCase):
     def test_SNLILoader(self):
         ds = SNLILoader().load('test/data_for_tests/sample_snli.jsonl')
         assert len(ds) == 3
+
+    def test_JsonLoader(self):
+        ds = JsonLoader().load('test/data_for_tests/sample_snli.jsonl')
+        assert len(ds) == 3
+

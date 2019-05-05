@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
 
-from fastNLP.models.base_model import BaseModel
-from fastNLP.modules import decoder as Decoder
-from fastNLP.modules import encoder as Encoder
-from fastNLP.modules import aggregator as Aggregator
-from fastNLP.modules.utils import seq_mask
+from .base_model import BaseModel
+from ..modules import decoder as Decoder
+from ..modules import encoder as Encoder
+from ..modules import aggregator as Aggregator
+from ..modules.utils import seq_mask
 
 
 my_inf = 10e12

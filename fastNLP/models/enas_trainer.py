@@ -1,6 +1,5 @@
 # Code Modified from https://github.com/carpedm20/ENAS-pytorch
 
-import os
 import time
 from datetime import datetime
 from datetime import timedelta
@@ -8,21 +7,19 @@ from datetime import timedelta
 import numpy as np
 import torch
 import math
-from torch import nn
 
 try:
     from tqdm.autonotebook import tqdm
 except:
-    from fastNLP.core.utils import _pseudo_tqdm as tqdm
+    from ..core.utils import _pseudo_tqdm as tqdm
 
-from fastNLP.core.batch import Batch
-from fastNLP.core.callback import CallbackManager, CallbackException
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.utils import _CheckError
-from fastNLP.core.utils import _move_dict_value_to_device
-import fastNLP
-import fastNLP.models.enas_utils as utils
-from fastNLP.core.utils import _build_args
+from ..core.trainer import Trainer
+from ..core.batch import Batch
+from ..core.callback import CallbackManager, CallbackException
+from ..core.dataset import DataSet
+from ..core.utils import _move_dict_value_to_device
+from . import enas_utils as utils
+from ..core.utils import _build_args
 
 from torch.optim import Adam
 
@@ -34,7 +31,7 @@ def _get_no_grad_ctx_mgr():
     return torch.no_grad()
 
 
-class ENASTrainer(fastNLP.Trainer):
+class ENASTrainer(Trainer):
     """A class to wrap training code."""
     def __init__(self, train_data, model, controller, **kwargs):
         """Constructor for training algorithm.

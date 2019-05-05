@@ -6,7 +6,7 @@ import torch
 from torch import nn
 
 from .base_model import BaseModel
-from fastNLP.modules.encoder import BertModel
+from ..modules.encoder import BertModel
 
 
 class BertForSequenceClassification(BaseModel):

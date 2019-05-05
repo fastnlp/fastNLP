@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from fastNLP.modules.encoder.lstm import LSTM
+from ..modules.encoder.lstm import LSTM
 
 
 class Highway(nn.Module):

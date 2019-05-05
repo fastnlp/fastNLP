@@ -1,3 +1,7 @@
+"""
+utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户可以使用的是 :func:`cache_results` 修饰器。
+"""
+__all__ = ["cache_results"]
 import _pickle
 import inspect
 import os
@@ -29,6 +33,8 @@ def _prepare_cache_filepath(filepath):
 #  TODO 可以保存下缓存时的参数，如果load的时候发现参数不一致，发出警告。
 def cache_results(_cache_fp, _refresh=False, _verbose=1):
     """
+    别名：:class:`fastNLP.cache_results` :class:`fastNLP.core.uitls.cache_results`
+
     cache_results是fastNLP中用于cache数据的装饰器。通过下面的例子看一下如何使用
 
     Example::
@@ -193,13 +199,14 @@ def _move_model_to_device(model, device):
     if isinstance(model, torch.nn.parallel.DistributedDataParallel):
         raise RuntimeError("model of `torch.nn.parallel.DistributedDataParallel` is not supported right now.")
 
-    if not torch.cuda.is_available() and (device!='cpu' or (isinstance(device, torch.device) and device.type!='cpu')):
-        raise ValueError("There is no usable gpu. set `device` as `cpu`.")
-
     if device is None:
         if isinstance(model, torch.nn.DataParallel):
             model.cuda()
         return model
+    else:
+        if not torch.cuda.is_available() and (
+                device != 'cpu' or (isinstance(device, torch.device) and device.type != 'cpu')):
+            raise ValueError("There is no usable gpu. set `device` as `cpu`.")
 
     if isinstance(model, torch.nn.DataParallel):
         raise RuntimeError("When model is `torch.nn.DataParallel`, the device has to be `None`.")
