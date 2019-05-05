@@ -1,6 +1,6 @@
 from functools import wraps
 from collections import Counter
-from fastNLP.core.dataset import DataSet
+from .dataset import DataSet
 
 def _check_build_vocab(func):
     """A decorator to make sure the indexing is built before used.

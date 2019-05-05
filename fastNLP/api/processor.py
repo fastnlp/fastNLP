@@ -232,7 +232,7 @@ class SeqLenProcessor(Processor):
         return dataset
 
 
-from fastNLP.core.utils import _build_args
+from ..core.utils import _build_args
 
 
 class ModelProcessor(Processor):

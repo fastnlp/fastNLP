@@ -299,8 +299,8 @@ class CWS(API):
         te_dataset = reader.load(filepath)
         pp(te_dataset)
         
-        from fastNLP.core.tester import Tester
-        from fastNLP.core.metrics import BMESF1PreRecMetric
+        from ..core.tester import Tester
+        from ..core.metrics import BMESF1PreRecMetric
         
         tester = Tester(data=te_dataset, model=cws_model, metrics=BMESF1PreRecMetric(target='target'), batch_size=64,
                         verbose=0)
