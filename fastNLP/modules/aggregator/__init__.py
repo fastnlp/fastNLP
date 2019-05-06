@@ -1,3 +1,5 @@
+__all__ = ["MaxPool", "MaxPoolWithMask", "AvgPool", "MeanPoolWithMask", "KMaxPool", "Attention", "BiAttention",
+           "SelfAttention"]
 from .pooling import MaxPool
 from .pooling import MaxPoolWithMask
 from .pooling import AvgPool
@@ -7,4 +9,3 @@ from .pooling import KMaxPool
 from .attention import Attention
 from .attention import BiAttention
 from .attention import SelfAttention
-

@@ -117,11 +117,11 @@ class BiAttention(nn.Module):
     
     .. math::
     
-        \begin{array}{ll} \\
-            e_ij = {a}^{\mathbf{T}}_{i}{b}_{j} \\
+        \\begin{array}{ll} \\\\
+            e_ij = {a}^{\\mathbf{T}}_{i}{b}_{j} \\\\
             a_i =
             b_j =
-        \end{array}
+        \\end{array}
         
     """
 
