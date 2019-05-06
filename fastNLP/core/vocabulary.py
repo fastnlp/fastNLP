@@ -110,7 +110,8 @@ class Vocabulary(object):
         但已经记录在词典中的词, 不会改变对应的 `int`
 
         """
-        self.word2idx = {}
+        if self.word2idx is None:
+            self.word2idx = {}
         if self.padding is not None:
             self.word2idx[self.padding] = len(self.word2idx)
         if self.unknown is not None:
@@ -316,6 +317,7 @@ class Vocabulary(object):
         """Use to prepare data for pickle.
 
         """
+        len(self) # make sure vocab has been built
         state = self.__dict__.copy()
         # no need to pickle idx2word as it can be constructed from word2idx
         del state['idx2word']
