@@ -9,7 +9,6 @@ fastNLP 依赖如下包::
 
     torch>=0.4.0
     numpy
-    tensorboardX
     tqdm
     nltk
 
@@ -18,4 +17,4 @@ fastNLP 依赖如下包::
 
 ..  code:: shell
 
-   >>> pip install fitlog
+   >>> pip install fastNLP

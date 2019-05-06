@@ -1,5 +1,4 @@
 numpy
 torch>=0.4.0
-tensorboardX
 tqdm
 nltk

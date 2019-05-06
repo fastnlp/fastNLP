@@ -4,14 +4,6 @@ import torch.nn as nn
 import torch.nn.init as init
 
 
-def mask_softmax(matrix, mask):
-    if mask is None:
-        result = torch.nn.functional.softmax(matrix, dim=-1)
-    else:
-        raise NotImplementedError
-    return result
-
-
 def initial_parameter(net, initial_method=None):
     """A method used to initialize the weights of PyTorch models.
 
@@ -77,7 +69,8 @@ def initial_parameter(net, initial_method=None):
 
 
 def seq_mask(seq_len, max_len):
-    """Create sequence mask.
+    """
+    Create sequence mask.
 
     :param seq_len: list or torch.Tensor, the lengths of sequences in a batch.
     :param max_len: int, the maximum sequence length in a batch.
@@ -92,7 +85,8 @@ def seq_mask(seq_len, max_len):
 
 
 def get_embeddings(init_embed):
-    """得到词嵌入
+    """
+    得到词嵌入 TODO
 
     :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
         embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,

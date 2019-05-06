@@ -12,8 +12,8 @@ from . import decoder
 from . import encoder
 from .aggregator import *
 from .decoder import *
-from .other_modules import *
 from .dropout import TimestepDropout
 from .encoder import *
+from .utils import get_embeddings
 
 __version__ = '0.0.0'

@@ -1,3 +1,4 @@
+__all__ =["MultiHeadAttention"]
 import math
 
 import torch
@@ -5,27 +6,14 @@ import torch.nn.functional as F
 from torch import nn
 
 from ..dropout import TimestepDropout
-from ..utils import mask_softmax
 
 from ..utils import initial_parameter
 
 
-class Attention(torch.nn.Module):
-    def __init__(self, normalize=False):
-        super(Attention, self).__init__()
-        self.normalize = normalize
-
-    def forward(self, query, memory, mask):
-        similarities = self._atten_forward(query, memory)
-        if self.normalize:
-            return mask_softmax(similarities, mask)
-        return similarities
-
-    def _atten_forward(self, query, memory):
-        raise NotImplementedError
-
-
 class DotAttention(nn.Module):
+    """
+    TODO
+    """
     def __init__(self, key_size, value_size, dropout=0.1):
         super(DotAttention, self).__init__()
         self.key_size = key_size
@@ -51,15 +39,15 @@ class DotAttention(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, input_size, key_size, value_size, num_head, dropout=0.1):
-        """
+    """
 
-        :param input_size: int, 输入维度的大小。同时也是输出维度的大小。
-        :param key_size: int, 每个head的维度大小。
-        :param value_size: int，每个head中value的维度。
-        :param num_head: int，head的数量。
-        :param dropout: float。
-        """
+    :param input_size: int, 输入维度的大小。同时也是输出维度的大小。
+    :param key_size: int, 每个head的维度大小。
+    :param value_size: int，每个head中value的维度。
+    :param num_head: int，head的数量。
+    :param dropout: float。
+    """
+    def __init__(self, input_size, key_size, value_size, num_head, dropout=0.1):
         super(MultiHeadAttention, self).__init__()
         self.input_size = input_size
         self.key_size = key_size
@@ -112,16 +100,16 @@ class MultiHeadAttention(nn.Module):
 
 
 class BiAttention(nn.Module):
-    """Bi Attention module
+    r"""Bi Attention module
     Calculate Bi Attention matrix `e`
     
     .. math::
     
-        \\begin{array}{ll} \\\\
-            e_ij = {a}^{\\mathbf{T}}_{i}{b}_{j} \\\\
+        \begin{array}{ll} \\
+            e_ij = {a}^{\mathbf{T}}_{i}{b}_{j} \\
             a_i =
             b_j =
-        \\end{array}
+        \end{array}
         
     """
 
@@ -171,8 +159,11 @@ class BiAttention(nn.Module):
 
         return out_x1, out_x2
 
+
 class SelfAttention(nn.Module):
-    """Self Attention Module.
+    """
+    Self Attention Module.
+    
     :param int input_size: 输入tensor的hidden维度
     :param int attention_unit: 输出tensor的hidden维度
     :param int attention_hops:

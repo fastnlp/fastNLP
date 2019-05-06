@@ -12,19 +12,21 @@ my_inf = 10e12
 
 
 class ESIM(BaseModel):
-    """ESIM模型的一个PyTorch实现。
+    """
+    ESIM模型的一个PyTorch实现。
+    
     ESIM模型的论文: Enhanced LSTM for Natural Language Inference (arXiv: 1609.06038)
+
+    :param int vocab_size: 词表大小
+    :param int embed_dim: 词嵌入维度
+    :param int hidden_size: LSTM隐层大小
+    :param float dropout: dropout大小，默认为0
+    :param int num_classes: 标签数目，默认为3
+    :param numpy.array init_embedding: 初始词嵌入矩阵，形状为(vocab_size, embed_dim)，默认为None，即随机初始化词嵌入矩阵
     """
 
     def __init__(self, vocab_size, embed_dim, hidden_size, dropout=0.0, num_classes=3, init_embedding=None):
-        """
-        :param int vocab_size: 词表大小
-        :param int embed_dim: 词嵌入维度
-        :param int hidden_size: LSTM隐层大小
-        :param float dropout: dropout大小，默认为0
-        :param int num_classes: 标签数目，默认为3
-        :param numpy.array init_embedding: 初始词嵌入矩阵，形状为(vocab_size, embed_dim)，默认为None，即随机初始化词嵌入矩阵
-        """
+        
         super(ESIM, self).__init__()
         self.vocab_size = vocab_size
         self.embed_dim = embed_dim

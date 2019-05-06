@@ -1,15 +1,15 @@
 import unittest
 import numpy as np
 
-from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.io.embed_loader import EmbedLoader
+from fastNLP import Vocabulary
+from fastNLP.io import EmbedLoader
 
 
 class TestEmbedLoader(unittest.TestCase):
     def test_load_with_vocab(self):
         vocab = Vocabulary()
-        glove = "test/data_for_tests/glove.6B.50d_test.txt"
-        word2vec = "test/data_for_tests/word2vec_test.txt"
+        glove = "../data_for_tests/glove.6B.50d_test.txt"
+        word2vec = "../data_for_tests/word2vec_test.txt"
         vocab.add_word('the')
         vocab.add_word('none')
         g_m = EmbedLoader.load_with_vocab(glove, vocab)
@@ -20,8 +20,8 @@ class TestEmbedLoader(unittest.TestCase):
 
     def test_load_without_vocab(self):
         words = ['the', 'of', 'in', 'a', 'to', 'and']
-        glove = "test/data_for_tests/glove.6B.50d_test.txt"
-        word2vec = "test/data_for_tests/word2vec_test.txt"
+        glove = "../data_for_tests/glove.6B.50d_test.txt"
+        word2vec = "../data_for_tests/word2vec_test.txt"
         g_m, vocab = EmbedLoader.load_without_vocab(glove)
         self.assertEqual(g_m.shape, (8, 50))
         for word in words:

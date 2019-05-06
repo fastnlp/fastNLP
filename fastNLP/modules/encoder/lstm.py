@@ -19,15 +19,13 @@ class LSTM(nn.Module):
     :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
         :(batch, seq, feature). Default: ``False``
     :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
-    :param get_hidden: 是否返回隐状态 `h` . Default: ``False``
     """
     def __init__(self, input_size, hidden_size=100, num_layers=1, dropout=0.0, batch_first=True,
-                 bidirectional=False, bias=True, initial_method=None, get_hidden=False):
+                 bidirectional=False, bias=True, initial_method=None):
         super(LSTM, self).__init__()
         self.batch_first = batch_first
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, bias=bias, batch_first=batch_first,
                             dropout=dropout, bidirectional=bidirectional)
-        self.get_hidden = get_hidden
         initial_parameter(self, initial_method)
 
     def forward(self, x, seq_len=None, h0=None, c0=None):
@@ -39,7 +37,6 @@ class LSTM(nn.Module):
         :param c0: [batch, hidden_size] 初始Cell状态, 若为 ``None`` , 设为全1向量. Default: ``None``
         :return (output, ht) 或 output: 若 ``get_hidden=True`` [batch, seq_len, hidden_size*num_direction] 输出序列
             和 [batch, hidden_size*num_direction] 最后时刻隐状态.
-            若 ``get_hidden=False`` 仅返回输出序列.
         """
         if h0 is not None and c0 is not None:
             hx = (h0, c0)
@@ -61,16 +58,4 @@ class LSTM(nn.Module):
                 output = output[:, unsort_idx]
         else:
             output, hx = self.lstm(x, hx)
-        if self.get_hidden:
-            return output, hx
-        return output
-
-
-if __name__ == "__main__":
-    lstm = LSTM(input_size=2, hidden_size=2, get_hidden=False)
-    x = torch.randn((3, 5, 2))
-    seq_lens = torch.tensor([5,1,2])
-    y = lstm(x, seq_lens)
-    print(x)
-    print(y)
-    print(x.size(), y.size(), )
+        return output, hx
