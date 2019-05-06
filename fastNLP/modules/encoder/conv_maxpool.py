@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from fastNLP.modules.utils import initial_parameter
+from ..utils import initial_parameter
 
 
 class ConvMaxpool(nn.Module):

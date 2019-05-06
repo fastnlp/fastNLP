@@ -9,17 +9,17 @@ import numpy as np
 import torch
 
 try:
-    from tqdm.autonotebook import tqdm
+    from tqdm.auto import tqdm
 except:
-    from fastNLP.core.utils import _pseudo_tqdm as tqdm
+    from ..core.utils import _pseudo_tqdm as tqdm
 
-from fastNLP.core.batch import Batch
-from fastNLP.core.callback import CallbackException
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.utils import _move_dict_value_to_device
+from ..core.batch import Batch
+from ..core.callback import CallbackException
+from ..core.dataset import DataSet
+from ..core.utils import _move_dict_value_to_device
 import fastNLP
-import fastNLP.automl.enas_utils as utils
-from fastNLP.core.utils import _build_args
+from . import enas_utils as utils
+from ..core.utils import _build_args
 
 from torch.optim import Adam
 

@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from fastNLP.modules.utils import initial_parameter
+from ..utils import initial_parameter
 
 
 class Linear(nn.Module):

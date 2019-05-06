@@ -3,7 +3,8 @@ import os
 
 
 class BaseLoader(object):
-    """Base loader for all loaders.
+    """
+    各个 Loader 的基类，提供了 API 的参考。
 
     """
     def __init__(self):
@@ -11,7 +12,10 @@ class BaseLoader(object):
 
     @staticmethod
     def load_lines(data_path):
-        """按行读取，舍弃每行两侧空白字符，返回list of str
+        """
+        按行读取，舍弃每行两侧空白字符，返回list of str
+
+        :param data_path: 读取数据的路径
         """
         with open(data_path, "r", encoding="utf=8") as f:
             text = f.readlines()
@@ -19,7 +23,10 @@ class BaseLoader(object):
 
     @classmethod
     def load(cls, data_path):
-        """先按行读取，去除一行两侧空白，再提取每行的字符。返回list of list of str
+        """
+        先按行读取，去除一行两侧空白，再提取每行的字符。返回list of list of str
+        
+        :param data_path:
         """
         with open(data_path, "r", encoding="utf-8") as f:
             text = f.readlines()
@@ -40,9 +47,7 @@ class BaseLoader(object):
 
 
 class DataLoaderRegister:
-    """Register for all data sets.
-
-    """
+    # TODO 这个类使用在何处？
     _readers = {}
 
     @classmethod

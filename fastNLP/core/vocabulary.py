@@ -1,6 +1,6 @@
 from functools import wraps
 from collections import Counter
-from fastNLP.core.dataset import DataSet
+from .dataset import DataSet
 
 def _check_build_vocab(func):
     """A decorator to make sure the indexing is built before used.
@@ -34,6 +34,8 @@ def _check_build_status(func):
 
 class Vocabulary(object):
     """
+    别名：:class:`fastNLP.Vocabulary` :class:`fastNLP.core.vocabulary.Vocabulary`
+    
     用于构建, 存储和使用 `str` 到 `int` 的一一映射
 
     Example::
@@ -98,7 +100,7 @@ class Vocabulary(object):
         """
         依次增加序列中词在词典中的出现频率
 
-        :param list(str) word_lst: 词的序列
+        :param list[str] word_lst: 词的序列
         """
         self.update(word_lst)
 
@@ -108,7 +110,8 @@ class Vocabulary(object):
         但已经记录在词典中的词, 不会改变对应的 `int`
 
         """
-        self.word2idx = {}
+        if self.word2idx is None:
+            self.word2idx = {}
         if self.padding is not None:
             self.word2idx[self.padding] = len(self.word2idx)
         if self.unknown is not None:
@@ -185,12 +188,11 @@ class Vocabulary(object):
             # remember to use `field_name`
             vocab.index_dataset(train_data, dev_data, test_data, field_name='words')
 
-        :param DataSet datasets: 需要转index的 DataSet, 支持一个或多个
+        :param datasets: 需要转index的 class:`~fastNLP.DataSet` , 支持一个或多个（list）
         :param str field_name: 需要转index的field, 若有多个 DataSet, 每个DataSet都必须有此 field.
             目前仅支持 ``str`` , ``list(str)`` , ``list(list(str))``
         :param str new_field_name: 保存结果的field_name. 若为 ``None`` , 将覆盖原field.
             Default: ``None``
-        :return self:
         """
         def index_instance(ins):
             """
@@ -230,7 +232,7 @@ class Vocabulary(object):
             # remember to use `field_name`
             vocab.from_dataset(train_data1, train_data2, field_name='words')
 
-        :param DataSet datasets: 需要转index的 DataSet, 支持一个或多个.
+        :param datasets: 需要转index的 class:`~fastNLP.DataSet` , 支持一个或多个（list）
         :param field_name: 可为 ``str`` 或 ``list(str)`` .
             构建词典所使用的 field(s), 支持一个或多个field
             若有多个 DataSet, 每个DataSet都必须有这些field.
@@ -315,6 +317,7 @@ class Vocabulary(object):
         """Use to prepare data for pickle.
 
         """
+        len(self) # make sure vocab has been built
         state = self.__dict__.copy()
         # no need to pickle idx2word as it can be constructed from word2idx
         del state['idx2word']

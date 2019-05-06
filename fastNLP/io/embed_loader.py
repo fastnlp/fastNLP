@@ -7,13 +7,17 @@ import os
 
 import numpy as np
 
-from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.io.base_loader import BaseLoader
+from ..core.vocabulary import Vocabulary
+from .base_loader import BaseLoader
 
 import warnings
 
 class EmbedLoader(BaseLoader):
-    """这个类用于从预训练的Embedding中load数据。"""
+    """
+    别名：:class:`fastNLP.io.EmbedLoader` :class:`fastNLP.io.embed_loader.EmbedLoader`
+
+    这个类用于从预训练的Embedding中load数据。
+    """
 
     def __init__(self):
         super(EmbedLoader, self).__init__()
@@ -25,13 +29,13 @@ class EmbedLoader(BaseLoader):
         word2vec(第一行只有两个元素)还是glove格式的数据。
 
         :param str embed_filepath: 预训练的embedding的路径。
-        :param Vocabulary vocab: 词表，读取出现在vocab中的词的embedding。没有出现在vocab中的词的embedding将通过找到的词的
-            embedding的正态分布采样出来，以使得整个Embedding是同分布的。
+        :param vocab: 词表 :class:`~fastNLP.Vocabulary` 类型，读取出现在vocab中的词的embedding。
+            没有出现在vocab中的词的embedding将通过找到的词的embedding的正态分布采样出来，以使得整个Embedding是同分布的。
         :param dtype: 读出的embedding的类型
         :param bool normalize: 是否将每个vector归一化到norm为1
-        :param str error: 'ignore', 'strict'; 如果'ignore'，错误将自动跳过; 如果strict, 错误将抛出。这里主要可能出错的地
-            方在于词表有空行或者词表出现了维度不一致。
-        :return: numpy.ndarray, shape为 [len(vocab), dimension], dimension由pretrain的embedding决定。
+        :param str error: `ignore` , `strict` ; 如果 `ignore` ，错误将自动跳过; 如果 `strict` , 错误将抛出。
+            这里主要可能出错的地方在于词表有空行或者词表出现了维度不一致。
+        :return numpy.ndarray:  shape为 [len(vocab), dimension], dimension由pretrain的embedding决定。
         """
         assert isinstance(vocab, Vocabulary), "Only fastNLP.Vocabulary is supported."
         if not os.path.exists(embed_filepath):
@@ -87,11 +91,11 @@ class EmbedLoader(BaseLoader):
         :param str padding: the padding tag for vocabulary.
         :param str unknown: the unknown tag for vocabulary.
         :param bool normalize: 是否将每个vector归一化到norm为1
-        :param str error: 'ignore', 'strict'; 如果'ignore'，错误将自动跳过; 如果strict, 错误将抛出。这里主要可能出错的地
+        :param str error: `ignore` , `strict` ; 如果 `ignore` ，错误将自动跳过; 如果 `strict` , 错误将抛出。这里主要可能出错的地
             方在于词表有空行或者词表出现了维度不一致。
-        :return: numpy.ndarray, shape为 [len(vocab), dimension], dimension由pretrain的embedding决定。
-        :return: numpy.ndarray,Vocabulary embedding的shape是[词表大小+x, 词表维度], "词表大小+x"是由于最终的大小还取决与
-            是否使用padding, 以及unknown有没有在词表中找到对应的词。Vocabulary中的词的顺序与Embedding的顺序是一一对应的。
+        :return numpy.ndarray: shape为 [len(vocab), dimension], dimension由pretrain的embedding决定。
+        :return numpy.ndarray: Vocabulary Embedding的shape是[词表大小+x, 词表维度], "词表大小+x"是由于最终的大小还取决与
+            是否使用padding, 以及unknown有没有在词表中找到对应的词。 Vocabulary中的词的顺序与Embedding的顺序是一一对应的。
         """
         vocab = Vocabulary(padding=padding, unknown=unknown)
         vec_dict = {}

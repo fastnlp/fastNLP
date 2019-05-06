@@ -1,7 +1,6 @@
 """
-FieldArray是  DataSet_ 中一列的存储方式，原理部分请参考 DataSet_ 处
-
- .. _FieldArray:
+field模块实现了 FieldArray 和若干 Padder。 FieldArray 是  :class:`~fastNLP.DataSet` 中一列的存储方式，
+原理部分请参考 :doc:`fastNLP.core.dataset`
 
 """
 
@@ -11,19 +10,21 @@ from copy import deepcopy
 
 
 class FieldArray(object):
+    """
+    别名：:class:`fastNLP.FieldArray` :class:`fastNLP.core.field.FieldArray`
+
+    FieldArray 是用于保存 :class:`~fastNLP.DataSet` 中一个field的类型。
+    
+    :param str name: FieldArray的名称
+    :param list,numpy.ndarray content: 列表的元素可以为list，int，float，
+    :param bool is_target: 这个field是否是一个target field。
+    :param bool is_input: 这个field是否是一个input field。
+    :param padder: :class:`~fastNLP.Padder` 类型。赋值给fieldarray的padder的对象会被deepcopy一份，需要修改padder参数必须通过
+       fieldarray.set_pad_val()。默认为None，即使用 :class:`~fastNLP.AutoPadder`  。
+    :param bool ignore_type: 是否忽略该field的type，一般如果这个field不需要转为torch.FloatTensor或torch.LongTensor,
+        就可以设置为True。具体意义请参考 :class:`~fastNLP.DataSet` 。
+    """
     def __init__(self, name, content, is_target=None, is_input=None, padder=None, ignore_type=False):
-        """FieldArray是用于保存 DataSet_ 中一个field的实体。
-
-        :param str name: FieldArray的名称
-        :param list,numpy.ndarray content: 列表的元素可以为list，int，float，
-        :param bool is_target: 这个field是否是一个target field。
-        :param bool is_input: 这个field是否是一个input field。
-        :param Padder padder: PadderBase类型。赋值给fieldarray的padder的对象会被deepcopy一份，需要修改padder参数必须通过
-            fieldarray.set_pad_val()。默认为None，即使用 AutoPadder_ 。
-        :param bool ignore_type: 是否忽略该field的type，一般如果这个field不需要转为torch.FloatTensor或torch.LongTensor, 就
-            可以设置为True。具体意义请参考 DataSet_ 。
-        """
-
         self.name = name
         if isinstance(content, list):
             # 如果DataSet使用dict初始化, content 可能是二维list/二维array/三维list
@@ -87,14 +88,15 @@ class FieldArray(object):
     @is_target.setter
     def is_target(self, value):
         """
-            当 field_array.is_target = True / False 时被调用
+        当 field_array.is_target = True / False 时被调用
         """
         if value is True:
             self._set_dtype()
         self._is_target = value
 
     def _type_detection(self, content):
-        """当该field被设置为is_input或者is_target时被调用
+        """
+        当该field被设置为is_input或者is_target时被调用
 
         """
         if len(content) == 0:
@@ -238,11 +240,12 @@ class FieldArray(object):
         self.content[idx] = val
 
     def get(self, indices, pad=True):
-        """根据给定的indices返回内容
+        """
+        根据给定的indices返回内容
 
-        :param  int,list(int) indices:, 获取indices对应的内容。
-        :param bool pad: , 是否对返回的结果进行padding。仅对indices为List[int]时有效
-        :return: (single, List)
+        :param int,List[int] indices: 获取indices对应的内容。
+        :param bool pad:  是否对返回的结果进行padding。仅对indices为List[int]时有效
+        :return: 根据给定的indices返回的内容，可能是单个值或List
         """
         if isinstance(indices, int):
             return self.content[indices]
@@ -259,8 +262,7 @@ class FieldArray(object):
         """
         设置padder，在这个field进行pad的时候用这个padder进行pad，如果为None则不进行pad。
 
-        :param None,Padder padder:. 设置为None即删除padder。
-        :return:
+        :param padder: :class:`~fastNLP.Padder` 类型，设置为None即删除padder。
         """
         if padder is not None:
             assert isinstance(padder, Padder), "padder must be of type Padder."
@@ -269,10 +271,10 @@ class FieldArray(object):
             self.padder = None
 
     def set_pad_val(self, pad_val):
-        """修改padder的pad_val.
+        """
+        修改padder的pad_val.
 
         :param int pad_val: 该field的pad值设置为该值。
-        :return:
         """
         if self.padder is not None:
             self.padder.set_pad_val(pad_val)
@@ -280,7 +282,8 @@ class FieldArray(object):
 
 
     def __len__(self):
-        """Returns the size of FieldArray.
+        """
+        Returns the size of FieldArray.
 
         :return int length:
         """
@@ -288,10 +291,11 @@ class FieldArray(object):
 
     def to(self, other):
         """
-        将other的属性复制给本FieldArray(other必须为FieldArray类型).属性包括 is_input, is_target, padder, ignore_type
+        将other的属性复制给本FieldArray(other必须为FieldArray类型).
+        属性包括 is_input, is_target, padder, ignore_type
 
-        :param FieldArray other: 从哪个field拷贝属性
-        :return: FieldArray
+        :param  other: :class:`~fastNLP.FieldArray` 从哪个field拷贝属性
+        :return: :class:`~fastNLP.FieldArray`
         """
         assert isinstance(other, FieldArray), "Only support FieldArray type, not {}.".format(type(other))
 
@@ -312,10 +316,20 @@ def _is_iterable(content):
 
 class Padder:
     """
-         .. _Padder:
+    别名：:class:`fastNLP.Padder` :class:`fastNLP.core.field.Padder`
 
-        所有padder都需要继承这个类，并覆盖__call__()方法。
-        用于对batch进行padding操作。传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前deepcopy一份。
+    所有padder都需要继承这个类，并覆盖__call__方法。
+    用于对batch进行padding操作。传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前deepcopy一份。
+    
+    .. py:function:: __call__(self, contents, field_name, field_ele_dtype):
+        传入的是List内容。假设有以下的DataSet。
+        
+        :param list(Any) contents: 传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前
+            deepcopy一份。
+        :param str, field_name: field的名称。
+        :param np.int64,np.float64,np.str,None, field_ele_dtype: 该field的内层元素的类型。如果该field的ignore_type为True，该这个值为None。
+        :return: np.array([padded_element])
+    
     """
 
     def __init__(self, pad_val=0, **kwargs):
@@ -368,7 +382,7 @@ class Padder:
 
 class AutoPadder(Padder):
     """
-     .. _AutoPadder:
+    别名：:class:`fastNLP.AutoPadder` :class:`fastNLP.core.field.AutoPadder`
 
     根据contents的数据自动判定是否需要做padding。
 
@@ -420,7 +434,7 @@ class AutoPadder(Padder):
 
 class EngChar2DPadder(Padder):
     """
-        .. _EngChar2DPadder:
+    别名：:class:`fastNLP.EngChar2DPadder` :class:`fastNLP.core.field.EngChar2DPadder`
 
     用于为英语执行character级别的2D padding操作。对应的field内容应该类似[['T', 'h', 'i', 's'], ['a'], ['d', 'e', 'm', 'o']]，
     但这个Padder只能处理index为int的情况。

@@ -1,4 +1,4 @@
-from fastNLP.api.processor import Processor
+from ..api.processor import Processor
 
 
 class Pipeline:

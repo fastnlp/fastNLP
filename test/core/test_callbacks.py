@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import torch
 
-from fastNLP.core.callback import EchoCallback, EarlyStopCallback, GradientClipCallback, LRScheduler, ControlC, \
+from fastNLP.core.callback import EarlyStopCallback, GradientClipCallback, LRScheduler, ControlC, \
     LRFinder, \
     TensorboardCallback
 from fastNLP.core.dataset import DataSet

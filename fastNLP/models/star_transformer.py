@@ -1,12 +1,12 @@
 """Star-Transformer 的 一个 Pytorch 实现.
 """
-from fastNLP.modules.encoder.star_transformer import StarTransformer
-from fastNLP.core.utils import seq_lens_to_masks
+from ..modules.encoder.star_transformer import StarTransformer
+from ..core.utils import seq_lens_to_masks
 from ..modules.utils import get_embeddings
+from ..core.const import Const
 
 import torch
 from torch import nn
-import torch.nn.functional as F
 
 
 class StarTransEnc(nn.Module):
@@ -107,7 +107,7 @@ class STSeqLabel(nn.Module):
     :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
-    def __init__(self, vocab_size, emb_dim, num_cls,
+    def __init__(self, init_embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
                  num_head=8,
@@ -117,8 +117,7 @@ class STSeqLabel(nn.Module):
                  emb_dropout=0.1,
                  dropout=0.1,):
         super(STSeqLabel, self).__init__()
-        self.enc = StarTransEnc(vocab_size=vocab_size,
-                                emb_dim=emb_dim,
+        self.enc = StarTransEnc(init_embed=init_embed,
                                 hidden_size=hidden_size,
                                 num_layers=num_layers,
                                 num_head=num_head,
@@ -139,7 +138,7 @@ class STSeqLabel(nn.Module):
         nodes, _ = self.enc(words, mask)
         output = self.cls(nodes)
         output = output.transpose(1,2) # make hidden to be dim 1
-        return {'output': output} # [bsz, n_cls, seq_len]
+        return {Const.OUTPUT: output} # [bsz, n_cls, seq_len]
 
     def predict(self, words, seq_len):
         """
@@ -149,8 +148,8 @@ class STSeqLabel(nn.Module):
         :return output: [batch, seq_len] 输出序列中每个元素的分类
         """
         y = self.forward(words, seq_len)
-        _, pred = y['output'].max(1)
-        return {'output': pred}
+        _, pred = y[Const.OUTPUT].max(1)
+        return {Const.OUTPUT: pred}
 
 
 class STSeqCls(nn.Module):
@@ -169,7 +168,7 @@ class STSeqCls(nn.Module):
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
 
-    def __init__(self, vocab_size, emb_dim, num_cls,
+    def __init__(self, init_embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
                  num_head=8,
@@ -179,8 +178,7 @@ class STSeqCls(nn.Module):
                  emb_dropout=0.1,
                  dropout=0.1,):
         super(STSeqCls, self).__init__()
-        self.enc = StarTransEnc(vocab_size=vocab_size,
-                                emb_dim=emb_dim,
+        self.enc = StarTransEnc(init_embed=init_embed,
                                 hidden_size=hidden_size,
                                 num_layers=num_layers,
                                 num_head=num_head,
@@ -201,7 +199,7 @@ class STSeqCls(nn.Module):
         nodes, relay = self.enc(words, mask)
         y = 0.5 * (relay + nodes.max(1)[0])
         output = self.cls(y) # [bsz, n_cls]
-        return {'output': output}
+        return {Const.OUTPUT: output}
 
     def predict(self, words, seq_len):
         """
@@ -211,8 +209,8 @@ class STSeqCls(nn.Module):
         :return output: [batch, num_cls] 输出序列的分类
         """
         y = self.forward(words, seq_len)
-        _, pred = y['output'].max(1)
-        return {'output': pred}
+        _, pred = y[Const.OUTPUT].max(1)
+        return {Const.OUTPUT: pred}
 
 
 class STNLICls(nn.Module):
@@ -231,7 +229,7 @@ class STNLICls(nn.Module):
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
 
-    def __init__(self, vocab_size, emb_dim, num_cls,
+    def __init__(self, init_embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
                  num_head=8,
@@ -241,8 +239,7 @@ class STNLICls(nn.Module):
                  emb_dropout=0.1,
                  dropout=0.1,):
         super(STNLICls, self).__init__()
-        self.enc = StarTransEnc(vocab_size=vocab_size,
-                                emb_dim=emb_dim,
+        self.enc = StarTransEnc(init_embed=init_embed,
                                 hidden_size=hidden_size,
                                 num_layers=num_layers,
                                 num_head=num_head,
@@ -269,7 +266,7 @@ class STNLICls(nn.Module):
         y1 = enc(words1, mask1)
         y2 = enc(words2, mask2)
         output = self.cls(y1, y2) # [bsz, n_cls]
-        return {'output': output}
+        return {Const.OUTPUT: output}
 
     def predict(self, words1, words2, seq_len1, seq_len2):
         """
@@ -281,5 +278,5 @@ class STNLICls(nn.Module):
         :return output: [batch, num_cls] 输出分类的概率
         """
         y = self.forward(words1, words2, seq_len1, seq_len2)
-        _, pred = y['output'].max(1)
-        return {'output': pred}
+        _, pred = y[Const.OUTPUT].max(1)
+        return {Const.OUTPUT: pred}

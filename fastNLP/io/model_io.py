@@ -1,16 +1,16 @@
 """
-.. _model-io:
-
 用于载入和保存模型
 """
 import torch
 
-from fastNLP.io.base_loader import BaseLoader
+from .base_loader import BaseLoader
 
 
 class ModelLoader(BaseLoader):
     """
-        Loader for models.
+    别名：:class:`fastNLP.io.ModelLoader` :class:`fastNLP.io.model_io.ModelLoader`
+
+    用于读取模型
     """
 
     def __init__(self):
@@ -18,24 +18,30 @@ class ModelLoader(BaseLoader):
 
     @staticmethod
     def load_pytorch(empty_model, model_path):
-        """Load model parameters from ".pkl" files into the empty PyTorch model.
+        """
+        从 ".pkl" 文件读取 PyTorch 模型
 
-        :param empty_model: a PyTorch model with initialized parameters.
-        :param str model_path: the path to the saved model.
+        :param empty_model: 初始化参数的 PyTorch 模型
+        :param str model_path: 模型保存的路径
         """
         empty_model.load_state_dict(torch.load(model_path))
 
     @staticmethod
     def load_pytorch_model(model_path):
-        """Load the entire model.
+        """
+        读取整个模型
 
-        :param str model_path: the path to the saved model.
+        :param str model_path: 模型保存的路径
         """
         return torch.load(model_path)
 
 
 class ModelSaver(object):
-    """Save a model
+    """
+    别名：:class:`fastNLP.io.ModelSaver` :class:`fastNLP.io.model_io.ModelSaver`
+
+    用于保存模型
+    
     Example::
 
         saver = ModelSaver("./save/model_ckpt_100.pkl")
@@ -46,15 +52,16 @@ class ModelSaver(object):
     def __init__(self, save_path):
         """
 
-        :param save_path: the path to the saving directory.
+        :param save_path: 模型保存的路径
         """
         self.save_path = save_path
 
     def save_pytorch(self, model, param_only=True):
-        """Save a pytorch model into ".pkl" file.
+        """
+        把 PyTorch 模型存入 ".pkl" 文件
 
-        :param model: a PyTorch model
-        :param bool param_only: whether only to save the model parameters or the entire model.
+        :param model: PyTorch 模型
+        :param bool param_only: 是否只保存模型的参数（否则保存整个模型）
 
         """
         if param_only is True:

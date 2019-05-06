@@ -1,31 +1,25 @@
 """
-
- .. _Metric:
+metrics 模块实现了 fastNLP 所需的各种常用衡量指标，一般做为 :class:`~fastNLP.Trainer` 的参数使用。
 
 """
-
-
-
-
 import inspect
 from collections import defaultdict
 
 import numpy as np
 import torch
 
-from fastNLP.core.utils import _CheckError
-from fastNLP.core.utils import _CheckRes
-from fastNLP.core.utils import _build_args
-from fastNLP.core.utils import _check_arg_dict_list
-from fastNLP.core.utils import _get_func_signature
-from fastNLP.core.utils import seq_lens_to_masks
-from fastNLP.core.vocabulary import Vocabulary
+from .utils import _CheckError
+from .utils import _CheckRes
+from .utils import _build_args
+from .utils import _check_arg_dict_list
+from .utils import _get_func_signature
+from .utils import seq_lens_to_masks
+from .vocabulary import Vocabulary
 
 
 class MetricBase(object):
-    """所有metrics的基类
-
-    所有的传入到Trainer, Tester的Metric需要继承自该对象。需要覆盖写入evaluate(), get_metric()方法。
+    """
+    所有metrics的基类,，所有的传入到Trainer, Tester的Metric需要继承自该对象，需要覆盖写入evaluate(), get_metric()方法。
     
         evaluate(xxx)中传入的是一个batch的数据。
         
@@ -94,17 +88,17 @@ class MetricBase(object):
                 return {'acc': acc} # 需要返回一个dict，key为该metric的名称，该名称会显示到Trainer的progress bar中
 
 
-    ``MetricBase`` 将会在输入的字典``pred_dict``和``target_dict``中进行检查.
-    ``pred_dict`` 是模型当中``forward()``函数或者``predict()``函数的返回值.
-    ``target_dict`` 是DataSet当中的ground truth, 判定ground truth的条件是field的``is_target``被设置为True.
+    ``MetricBase`` 将会在输入的字典 ``pred_dict`` 和 ``target_dict`` 中进行检查.
+    ``pred_dict`` 是模型当中 ``forward()`` 函数或者 ``predict()`` 函数的返回值.
+    ``target_dict`` 是DataSet当中的ground truth, 判定ground truth的条件是field的 ``is_target`` 被设置为True.
 
     ``MetricBase`` 会进行以下的类型检测:
 
     1. self.evaluate当中是否有varargs, 这是不支持的.
-    2. self.evaluate当中所需要的参数是否既不在``pred_dict``也不在``target_dict``.
-    3. self.evaluate当中所需要的参数是否既在``pred_dict``也在``target_dict``.
+    2. self.evaluate当中所需要的参数是否既不在 ``pred_dict`` 也不在 ``target_dict`` .
+    3. self.evaluate当中所需要的参数是否既在 ``pred_dict`` 也在 ``target_dict`` .
 
-    除此以外，在参数被传入self.evaluate以前，这个函数会检测``pred_dict``和``target_dict``当中没有被用到的参数
+    除此以外，在参数被传入self.evaluate以前，这个函数会检测 ``pred_dict`` 和 ``target_dict`` 当中没有被用到的参数
     如果kwargs是self.evaluate的参数，则不会检测
 
 
@@ -267,13 +261,18 @@ class MetricBase(object):
 
 
 class AccuracyMetric(MetricBase):
-    """准确率Metric"""
+    """
+    
+    别名：:class:`fastNLP.AccuracyMetric` :class:`fastNLP.core.metrics.AccuracyMetric`
+
+    准确率Metric（其它的Metric参见 :doc:`fastNLP.core.metrics` ）
+    
+    :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+    :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
+    :param seq_len: 参数映射表中 `seq_len` 的映射关系，None表示映射关系为 `seq_len` -> `seq_len`
+    """
     def __init__(self, pred=None, target=None, seq_len=None):
-        """
-        :param pred: 参数映射表中`pred`的映射关系，None表示映射关系为`pred`->`pred`
-        :param target: 参数映射表中`target`的映射关系，None表示映射关系为`target`->`target`
-        :param seq_len: 参数映射表中`seq_lens`的映射关系，None表示映射关系为`seq_len`->`seq_len`
-        """
+        
         super().__init__()
 
         self._init_param_map(pred=pred, target=target, seq_len=seq_len)
@@ -282,7 +281,8 @@ class AccuracyMetric(MetricBase):
         self.acc_count = 0
 
     def evaluate(self, pred, target, seq_len=None):
-        """evaluate函数将针对一个批次的预测结果做评价指标的累计
+        """
+        evaluate函数将针对一个批次的预测结果做评价指标的累计
 
         :param torch.Tensor pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
                 torch.Size([B, max_len]), 或者torch.Size([B, max_len, n_classes])
@@ -327,7 +327,8 @@ class AccuracyMetric(MetricBase):
             self.total += np.prod(list(pred.size()))
 
     def get_metric(self, reset=True):
-        """get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果.
+        """
+        get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果.
 
         :param bool reset: 在调用完get_metric后是否清空评价指标统计量.
         :return dict evaluate_result: {"acc": float}
@@ -430,8 +431,6 @@ def _bio_tag_to_spans(tags, ignore_labels=None):
 class SpanFPreRecMetric(MetricBase):
     """
 
-     .. _SpanFPreRecMetric:
-
     在序列标注问题中，以span的方式计算F, pre, rec.
     比如中文Part of speech中，会以character的方式进行标注，句子'中国在亚洲'对应的POS可能为(以BMES为例)
     ['B-NN', 'E-NN', 'S-DET', 'B-NN', 'E-NN']。该metric就是为类似情况下的F1计算。
@@ -455,26 +454,24 @@ class SpanFPreRecMetric(MetricBase):
             ...
         }
 
+    :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` 。支持的标签为"B"(没有label)；或"B-xxx"(xxx为某种label，比如POS中的NN)，
+        在解码时，会将相同xxx的认为是同一个label，比如['B-NN', 'E-NN']会被合并为一个'NN'.
+    :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用'pred'取数据
+    :param str target: 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用'target'取数据
+    :param str seq_len: 用该key在evaluate()时从传入dict中取出sequence length数据。为None，则使用'seq_len'取数据。
+    :param str encoding_type: 目前支持bio, bmes
+    :param list ignore_labels: str 组成的list. 这个list中的class不会被用于计算。例如在POS tagging时传入['NN']，则不会计算'NN'这
+        个label
+    :param bool only_gross: 是否只计算总的f1, precision, recall的值；如果为False，不仅返回总的f1, pre, rec, 还会返回每个
+        label的f1, pre, rec
+    :param str f_type: 'micro'或'macro'. 'micro':通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; 'macro':
+        分布计算每个类别的f, precision, recall，然后做平均（各类别f的权重相同）
+    :param float beta: f_beta分数，f_beta = (1 + beta^2)*(pre*rec)/(beta^2*pre + rec). 常用为beta=0.5, 1, 2. 若为0.5
+        则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
     """
     def __init__(self, tag_vocab, pred=None, target=None, seq_len=None, encoding_type='bio', ignore_labels=None,
                   only_gross=True, f_type='micro', beta=1):
-        """
-
-        :param Vocabulary tag_vocab: 标签的vocabulary。支持的标签为"B"(没有label)；或"B-xxx"(xxx为某种label，比如POS中的NN)，
-            在解码时，会将相同xxx的认为是同一个label，比如['B-NN', 'E-NN']会被合并为一个'NN'.
-        :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用'pred'取数据
-        :param str target: 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用'target'取数据
-        :param str seq_len: 用该key在evaluate()时从传入dict中取出sequence length数据。为None，则使用'seq_lens'取数据。
-        :param str encoding_type: 目前支持bio, bmes
-        :param list ignore_labels: str 组成的list. 这个list中的class不会被用于计算。例如在POS tagging时传入['NN']，则不会计算'NN'这
-            个label
-        :param bool only_gross: 是否只计算总的f1, precision, recall的值；如果为False，不仅返回总的f1, pre, rec, 还会返回每个
-            label的f1, pre, rec
-        :param str f_type: 'micro'或'macro'. 'micro':通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; 'macro':
-            分布计算每个类别的f, precision, recall，然后做平均（各类别f的权重相同）
-        :param float beta: f_beta分数，f_beta = (1 + beta^2)*(pre*rec)/(beta^2*pre + rec). 常用为beta=0.5, 1, 2. 若为0.5
-            则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
-        """
+        
         encoding_type = encoding_type.lower()
 
         if not isinstance(tag_vocab, Vocabulary):
@@ -647,20 +644,18 @@ class BMESF1PreRecMetric(MetricBase):
         target形状为 (batch_size, max_len)
         seq_lens形状为 (batch_size, )
 
+    需要申明BMES这四种tag中，各种tag对应的idx。所有不为b_idx, m_idx, e_idx, s_idx的数字都认为是s_idx。
+
+    :param b_idx: int, Begin标签所对应的tag idx.
+    :param m_idx: int, Middle标签所对应的tag idx.
+    :param e_idx: int, End标签所对应的tag idx.
+    :param s_idx: int, Single标签所对应的tag idx
+    :param pred: str, 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用'pred'取数据
+    :param target: str, 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用'target'取数据
+    :param seq_len: str, 用该key在evaluate()时从传入dict中取出seqence length数据。为None，则使用'seq_len'取数据。
     """
-
+    
     def __init__(self, b_idx=0, m_idx=1, e_idx=2, s_idx=3, pred=None, target=None, seq_len=None):
-        """
-        需要申明BMES这四种tag中，各种tag对应的idx。所有不为b_idx, m_idx, e_idx, s_idx的数字都认为是s_idx。
-
-        :param b_idx: int, Begin标签所对应的tag idx.
-        :param m_idx: int, Middle标签所对应的tag idx.
-        :param e_idx: int, End标签所对应的tag idx.
-        :param s_idx: int, Single标签所对应的tag idx
-        :param pred: str, 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用'pred'取数据
-        :param target: str, 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用'target'取数据
-        :param seq_len: str, 用该key在evaluate()时从传入dict中取出seqence length数据。为None，则使用'seq_len'取数据。
-        """
         super().__init__()
 
         self._init_param_map(pred=pred, target=target, seq_len=seq_len)
@@ -734,9 +729,8 @@ class BMESF1PreRecMetric(MetricBase):
                                f"{pred.size()[:-1]}, got {target.size()}.")
 
         for idx in range(len(pred)):
-            seq_len = seq_len[idx]
-            target_tags = target[idx][:seq_len].tolist()
-            pred_tags = pred[idx][:seq_len]
+            target_tags = target[idx][:seq_len[idx]].tolist()
+            pred_tags = pred[idx][:seq_len[idx]]
             pred_tags = self._validate_tags(pred_tags)
             start_idx = 0
             for t_idx, (t_tag, p_tag) in enumerate(zip(target_tags, pred_tags)):
@@ -831,21 +825,23 @@ def _pred_topk(y_prob, k=1):
 
 
 class SQuADMetric(MetricBase):
-    """SQuAD数据集metric
+    """
+    SQuAD数据集metric
+    
+    :param pred1: 参数映射表中`pred1`的映射关系，None表示映射关系为`pred1`->`pred1`
+    :param pred2: 参数映射表中`pred2`的映射关系，None表示映射关系为`pred2`->`pred2`
+    :param target1: 参数映射表中`target1`的映射关系，None表示映射关系为`target1`->`target1`
+    :param target2: 参数映射表中`target2`的映射关系，None表示映射关系为`target2`->`target2`
+    :param float beta: f_beta分数，f_beta = (1 + beta^2)*(pre*rec)/(beta^2*pre + rec). 常用为beta=0.5, 1, 2. 若为0.5
+        则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
+    :param bool right_open: right_open为true表示start跟end指针指向一个左闭右开区间，为false表示指向一个左闭右闭区间。
+    :param bool print_predict_stat: True则输出预测答案是否为空与正确答案是否为空的统计信息, False则不输出
+    
     """
 
     def __init__(self, pred1=None, pred2=None, target1=None, target2=None,
                  beta=1, right_open=True, print_predict_stat=False):
-        """
-        :param pred1: 参数映射表中`pred1`的映射关系，None表示映射关系为`pred1`->`pred1`
-        :param pred2: 参数映射表中`pred2`的映射关系，None表示映射关系为`pred2`->`pred2`
-        :param target1: 参数映射表中`target1`的映射关系，None表示映射关系为`target1`->`target1`
-        :param target2: 参数映射表中`target2`的映射关系，None表示映射关系为`target2`->`target2`
-        :param float beta: f_beta分数，f_beta = (1 + beta^2)*(pre*rec)/(beta^2*pre + rec). 常用为beta=0.5, 1, 2. 若为0.5
-            则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
-        :param bool right_open: right_open为true表示start跟end指针指向一个左闭右开区间，为false表示指向一个左闭右闭区间。
-        :param bool print_predict_stat: True则输出预测答案是否为空与正确答案是否为空的统计信息, False则不输出
-        """
+        
         super(SQuADMetric, self).__init__()
 
         self._init_param_map(pred1=pred1, pred2=pred2, target1=target1, target2=target2)

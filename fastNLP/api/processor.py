@@ -3,10 +3,10 @@ from collections import defaultdict
 
 import torch
 
-from fastNLP.core.batch import Batch
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.sampler import SequentialSampler
-from fastNLP.core.vocabulary import Vocabulary
+from ..core.batch import Batch
+from ..core.dataset import DataSet
+from ..core.sampler import SequentialSampler
+from ..core.vocabulary import Vocabulary
 
 
 class Processor(object):
@@ -232,7 +232,7 @@ class SeqLenProcessor(Processor):
         return dataset
 
 
-from fastNLP.core.utils import _build_args
+from ..core.utils import _build_args
 
 
 class ModelProcessor(Processor):

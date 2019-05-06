@@ -1,19 +1,22 @@
 """
-.. _config-io:
 
 用于读入和处理和保存 config 文件
 """
+__all__ = ["ConfigLoader","ConfigSection","ConfigSaver"]
 import configparser
 import json
 import os
 
-from fastNLP.io.base_loader import BaseLoader
+from .base_loader import BaseLoader
 
 
 class ConfigLoader(BaseLoader):
-    """Loader for configuration.
+    """
+    别名：:class:`fastNLP.io.ConfigLoader` :class:`fastNLP.io.config_io.ConfigLoader`
 
-    :param str data_path: path to the config
+    读取配置文件的Loader
+
+    :param str data_path: 配置文件的路径
 
     """
     def __init__(self, data_path=None):
@@ -27,14 +30,16 @@ class ConfigLoader(BaseLoader):
 
     @staticmethod
     def load_config(file_path, sections):
-        """Load section(s) of configuration into the ``sections`` provided. No returns.
+        """
+        把配置文件的section 存入提供的 ``sections`` 中
 
-        :param str file_path: the path of config file
-        :param dict sections: the dict of ``{section_name(string): ConfigSection object}``
-            Example::
-    
-                test_args = ConfigSection()
-                ConfigLoader("config.cfg").load_config("./data_for_tests/config", {"POS_test": test_args})
+        :param str file_path: 配置文件的路径
+        :param dict sections:  符合如下键值对组成的字典 `section_name(string)` : :class:`~fastNLP.io.ConfigSection`
+            
+        Example::
+
+            test_args = ConfigSection()
+            ConfigLoader("config.cfg").load_config("./data_for_tests/config", {"POS_test": test_args})
 
         """
         assert isinstance(sections, dict)
@@ -70,7 +75,10 @@ class ConfigLoader(BaseLoader):
 
 
 class ConfigSection(object):
-    """ConfigSection is the data structure storing all key-value pairs in one section in a config file.
+    """
+    别名：:class:`fastNLP.io.ConfigSection` :class:`fastNLP.io.config_io.ConfigSection`
+
+    ConfigSection是一个存储了一个section中所有键值对的数据结构，推荐使用此类的实例来配合 :meth:`ConfigLoader.load_config` 使用
 
     """
 
@@ -146,9 +154,12 @@ class ConfigSection(object):
 
 
 class ConfigSaver(object):
-    """ConfigSaver is used to save config file and solve related conflicts.
+    """
+    别名：:class:`fastNLP.io.ConfigSaver` :class:`fastNLP.io.config_io.ConfigSaver`
 
-    :param str file_path: path to the config file
+    ConfigSaver 是用来存储配置文件并解决相关冲突的类
+
+    :param str file_path: 配置文件的路径
 
     """
     def __init__(self, file_path):
@@ -157,7 +168,8 @@ class ConfigSaver(object):
             raise FileNotFoundError("file {} NOT found!".__format__(self.file_path))
 
     def _get_section(self, sect_name):
-        """This is the function to get the section with the section name.
+        """
+        This is the function to get the section with the section name.
 
         :param sect_name: The name of section what wants to load.
         :return: The section.
@@ -167,7 +179,8 @@ class ConfigSaver(object):
         return sect
 
     def _read_section(self):
-        """This is the function to read sections from the config file.
+        """
+        This is the function to read sections from the config file.
 
         :return: sect_list, sect_key_list
             sect_list: A list of ConfigSection().
@@ -219,7 +232,8 @@ class ConfigSaver(object):
         return sect_list, sect_key_list
 
     def _write_section(self, sect_list, sect_key_list):
-        """This is the function to write config file with section list and name list.
+        """
+        This is the function to write config file with section list and name list.
 
         :param sect_list: A list of ConfigSection() need to be writen into file.
         :param sect_key_list: A list of name of sect_list.
@@ -240,10 +254,11 @@ class ConfigSaver(object):
                 f.write('\n')
 
     def save_config_file(self, section_name, section):
-        """This is the function to be called to change the config file with a single section and its name.
+        """
+        这个方法可以用来修改并保存配置文件中单独的一个 section
 
-        :param str section_name: The name of section what needs to be changed and saved.
-        :param ConfigSection section: The section with key and value what needs to be changed and saved.
+        :param str section_name: 需要保存的 section 的名字.
+        :param section: 你需要修改并保存的 section， :class:`~fastNLP.io.ConfigSaver` 类型
         """
         section_file = self._get_section(section_name)
         if len(section_file.__dict__.keys()) == 0:  # the section not in the file before

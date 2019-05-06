@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 
-from fastNLP.modules.utils import initial_parameter
-from fastNLP.modules.decoder.utils import log_sum_exp
+from ..utils import initial_parameter
+from ..decoder.utils import log_sum_exp
 
 
 def seq_len_to_byte_mask(seq_lens):

@@ -20,10 +20,10 @@ except ImportError:
         from urllib.request import urlopen
         from urllib.parse import urlparse
 try:
-    from tqdm import tqdm
-except ImportError:
-    tqdm = None  # defined below
-
+    from tqdm.auto import tqdm
+except:
+    from ..core.utils import _pseudo_tqdm as tqdm
+    
 # matches bfd8deac from resnet18-bfd8deac.pth
 HASH_REGEX = re.compile(r'-([a-f0-9]*)\.')
 

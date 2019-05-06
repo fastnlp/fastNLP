@@ -38,7 +38,7 @@ class TestSampler(unittest.TestCase):
         assert len(_) == 10
 
     def test_BucketSampler(self):
-        sampler = BucketSampler(num_buckets=3, batch_size=16, seq_lens_field_name="seq_len")
+        sampler = BucketSampler(num_buckets=3, batch_size=16, seq_len_field_name="seq_len")
         data_set = DataSet({"x": [[0] * random.randint(1, 10)] * 10, "y": [[5, 6]] * 10})
         data_set.apply(lambda ins: len(ins["x"]), new_field_name="seq_len")
         indices = sampler(data_set)
