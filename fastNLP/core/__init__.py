@@ -13,6 +13,8 @@ core 模块里实现了 fastNLP 的核心框架，常用的组件都可以从 fa
 
 """
 from .batch import Batch
+from .callback import Callback
+from .const import Const
 from .dataset import DataSet
 from .field import FieldArray, Padder, AutoPadder, EngChar2DPadder
 from .instance import Instance
@@ -22,6 +24,5 @@ from .optimizer import Optimizer, SGD, Adam
 from .sampler import SequentialSampler, BucketSampler, RandomSampler, Sampler
 from .tester import Tester
 from .trainer import Trainer
-from .vocabulary import Vocabulary
-from .callback import Callback
 from .utils import cache_results
+from .vocabulary import Vocabulary

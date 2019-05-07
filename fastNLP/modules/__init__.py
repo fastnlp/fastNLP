@@ -16,4 +16,3 @@ from .dropout import TimestepDropout
 from .encoder import *
 from .utils import get_embeddings
 
-__version__ = '0.0.0'
