@@ -293,7 +293,8 @@ class CallbackManager(Callback):
 
 
 class GradientClipCallback(Callback):
-    """每次backward前，将parameter的gradient clip到某个范围。
+    """
+    每次backward前，将parameter的gradient clip到某个范围。
 
     :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。如果为None则默认对Trainer
         的model中所有参数进行clip
@@ -304,6 +305,7 @@ class GradientClipCallback(Callback):
         
             2 'value', 将gradient限制在[-clip_value, clip_value], 小于-clip_value的gradient被赋值为-clip_value;
             大于clip_value的gradient被赋值为clip_value.
+
     """
     
     def __init__(self, parameters=None, clip_value=1, clip_type='norm'):
