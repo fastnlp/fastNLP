@@ -462,7 +462,6 @@ class Trainer(object):
         self.best_dev_perf = None
         self.sampler = sampler if sampler is not None else RandomSampler()
         self.prefetch = prefetch
-        self.callback_manager = CallbackManager(env={"trainer": self}, callbacks=callbacks)
         self.n_steps = (len(self.train_data) // self.batch_size + int(
             len(self.train_data) % self.batch_size != 0)) * self.n_epochs
         
@@ -492,7 +491,6 @@ class Trainer(object):
         self.step = 0
         self.start_time = None  # start timestamp
         
-        print("callback_manager")
         self.callback_manager = CallbackManager(env={"trainer": self},
                                                 callbacks=callbacks)
     

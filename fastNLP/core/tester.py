@@ -27,11 +27,13 @@ Example::
     tester = Tester(dataset, model, metrics=AccuracyMetric())
     eval_results = tester.test()
 
-这里Metric的映射规律是和 :class:`fastNLP.Trainer` 中一致的，具体使用请参考 :doc:`trainer 模块<fastNLP.core.trainer>` 的1.3部分
-
+这里Metric的映射规律是和 :class:`fastNLP.Trainer` 中一致的，具体使用请参考 :doc:`trainer 模块<fastNLP.core.trainer>` 的1.3部分。
+Tester在验证进行之前会调用model.eval()提示当前进入了evaluation阶段，即会关闭nn.Dropout()等，在验证结束之后会调用model.train()恢复到训练状态。
 
 
 """
+import warnings
+
 import torch
 from torch import nn
 
@@ -72,6 +74,7 @@ class Tester(object):
 
         5. None. 为None则不对模型进行任何处理，如果传入的model为torch.nn.DataParallel该值必须为None。
 
+        如果模型是通过predict()进行预测的话，那么将不能使用多卡(DataParallel)进行验证，只会使用第一张卡上的模型。
     :param int verbose: 如果为0不输出任何信息; 如果为1，打印出验证结果。
     """
 
@@ -89,6 +92,13 @@ class Tester(object):
         self._model = _move_model_to_device(model, device=device)
         self.batch_size = batch_size
         self.verbose = verbose
+
+        #  如果是DataParallel将没有办法使用predict方法
+        if isinstance(self._model, nn.DataParallel):
+            if hasattr(self._model.module, 'predict') and not hasattr(self._model, 'predict'):
+                warnings.warn("Cannot use DataParallel to test your model, because your model offer predict() function,"
+                              " while DataParallel has no predict() function.")
+                self._model = self._model.module
 
         # check predict
         if hasattr(self._model, 'predict'):

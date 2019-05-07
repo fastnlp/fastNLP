@@ -4,7 +4,8 @@ from .base_model import BaseModel
 from ..modules import decoder, encoder
 from ..modules.decoder.CRF import allowed_transitions
 from ..modules.utils import seq_mask
-
+from ..core.const import Const as C
+from torch import nn
 
 class SeqLabeling(BaseModel):
     """
@@ -24,7 +25,7 @@ class SeqLabeling(BaseModel):
 
         self.Embedding = encoder.embedding.Embedding(init_embed)
         self.Rnn = encoder.lstm.LSTM(self.Embedding.embedding_dim, hidden_size)
-        self.Linear = encoder.linear.Linear(hidden_size, num_classes)
+        self.Linear = nn.Linear(hidden_size, num_classes)
         self.Crf = decoder.CRF.ConditionalRandomField(num_classes)
         self.mask = None
 
@@ -46,7 +47,7 @@ class SeqLabeling(BaseModel):
         # [batch_size, max_len, hidden_size * direction]
         x = self.Linear(x)
         # [batch_size, max_len, num_classes]
-        return {"loss": self._internal_loss(x, target)}
+        return {C.LOSS: self._internal_loss(x, target)}
 
     def predict(self, words, seq_len):
         """
@@ -65,7 +66,7 @@ class SeqLabeling(BaseModel):
         x = self.Linear(x)
         # [batch_size, max_len, num_classes]
         pred = self._decode(x)
-        return {'pred': pred}
+        return {C.OUTPUT: pred}
 
     def _internal_loss(self, x, y):
         """

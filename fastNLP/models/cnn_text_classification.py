@@ -3,9 +3,9 @@
 
 import torch
 import torch.nn as nn
-import numpy as np
+from ..core.const import Const as C
 
-import fastNLP.modules.encoder as encoder
+from ..modules import encoder
 
 
 class CNNText(torch.nn.Module):
@@ -18,7 +18,7 @@ class CNNText(torch.nn.Module):
     :param int num_classes: 一共有多少类
     :param int,tuple(int) out_channels: 输出channel的数量。如果为list，则需要与kernel_sizes的数量保持一致
     :param int,tuple(int) kernel_sizes: 输出channel的kernel大小。
-    :param int padding:
+    :param int padding: 对句子前后的pad的大小, 用0填充。
     :param float dropout: Dropout的大小
     """
 
@@ -38,17 +38,7 @@ class CNNText(torch.nn.Module):
             kernel_sizes=kernel_sizes,
             padding=padding)
         self.dropout = nn.Dropout(dropout)
-        self.fc = encoder.Linear(sum(kernel_nums), num_classes)
-
-    def init_embed(self, embed):
-        """
-        加载预训练的模型
-        :param numpy.ndarray embed: vocab_size x embed_dim的embedding
-        :return:
-        """
-        assert isinstance(embed, np.ndarray)
-        assert embed.shape == self.embed.embed.weight.shape
-        self.embed.embed.weight.data = torch.from_numpy(embed)
+        self.fc = nn.Linear(sum(kernel_nums), num_classes)
 
     def forward(self, words, seq_len=None):
         """
@@ -61,7 +51,7 @@ class CNNText(torch.nn.Module):
         x = self.conv_pool(x)  # [N,L,C] -> [N,C]
         x = self.dropout(x)
         x = self.fc(x)  # [N,C] -> [N, N_class]
-        return {'pred': x}
+        return {C.OUTPUT: x}
 
     def predict(self, words, seq_len=None):
         """
@@ -71,5 +61,5 @@ class CNNText(torch.nn.Module):
         :return predict: dict of torch.LongTensor, [batch_size, ]
         """
         output = self(words, seq_len)
-        _, predict = output['pred'].max(dim=1)
-        return {'pred': predict}
+        _, predict = output[C.OUTPUT].max(dim=1)
+        return {C.OUTPUT: predict}
