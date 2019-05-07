@@ -3,9 +3,9 @@ import unittest
 
 import torch
 
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.sampler import SequentialSampler, RandomSampler, \
-    k_means_1d, k_means_bucketing, simple_sort_bucketing, BucketSampler
+from fastNLP import DataSet
+from fastNLP import SequentialSampler, RandomSampler, BucketSampler
+from fastNLP.core.sampler import k_means_1d, k_means_bucketing, simple_sort_bucketing
 
 
 class TestSampler(unittest.TestCase):

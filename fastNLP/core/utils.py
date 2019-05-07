@@ -616,7 +616,7 @@ def seq_lens_to_masks(seq_lens, float=False):
         assert len(seq_lens.size()) == 1, f"seq_lens can only have one dimension, got {len(seq_lens.size())==1}."
         batch_size = seq_lens.size(0)
         max_len = seq_lens.max()
-        indexes = torch.arange(max_len).view(1, -1).repeat(batch_size, 1).to(seq_lens.device)
+        indexes = torch.arange(max_len).view(1, -1).repeat(batch_size, 1).to(seq_lens.device).long()
         masks = indexes.lt(seq_lens.unsqueeze(1))
 
         if float:

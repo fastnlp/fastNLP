@@ -236,6 +236,7 @@ class CallbackManager(Callback):
         
         for env_name, env_val in env.items():
             for callback in self.callbacks:
+                print(callback, env_name, env_val )
                 setattr(callback, '_' + env_name, env_val)  # Callback.trainer
     
     @_transfer
@@ -425,18 +426,24 @@ class LRFinder(Callback):
         
         super(LRFinder, self).__init__()
         self.start_lr, self.end_lr = start_lr, end_lr
-        self.num_it = self.batch_per_epoch
+        
         self.stop = False
         self.best_loss = 0.
         self.best_lr = None
         self.loss_history = []
         self.smooth_value = SmoothValue(0.8)
         self.opt = None
-        scale = (self.end_lr - self.start_lr) / self.num_it
-        
-        self.lr_gen = (self.start_lr + scale * (step + 1) for step in range(self.num_it))
         self.find = None
         self.loader = ModelLoader()
+    
+    @property
+    def lr_gen(self):
+        scale = (self.end_lr - self.start_lr) / self.batch_per_epoch
+        return (self.start_lr + scale * (step + 1) for step in range(self.batch_per_epoch))
+        
+    @property
+    def num_it(self):
+        return self.batch_per_epoch
     
     def on_epoch_begin(self):
         if self.epoch == 1:  # first epoch

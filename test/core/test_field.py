@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from fastNLP.core.fieldarray import FieldArray
+from fastNLP import FieldArray
 
 
 class TestFieldArrayInit(unittest.TestCase):
@@ -170,7 +170,7 @@ class TestPadder(unittest.TestCase):
         测试AutoPadder能否正常工作
         :return:
         """
-        from fastNLP.core.fieldarray import AutoPadder
+        from fastNLP import AutoPadder
         padder = AutoPadder()
         content = ['This is a str', 'this is another str']
         self.assertListEqual(content, padder(content, None, np.str).tolist())
@@ -194,7 +194,7 @@ class TestPadder(unittest.TestCase):
         测试EngChar2DPadder能不能正确使用
         :return:
         """
-        from fastNLP.core.fieldarray import EngChar2DPadder
+        from fastNLP import EngChar2DPadder
         padder = EngChar2DPadder(pad_length=0)
 
         contents = [1, 2]
@@ -225,11 +225,11 @@ class TestPadder(unittest.TestCase):
         )
 
     def test_None_dtype(self):
-        from fastNLP.core.fieldarray import AutoPadder
+        from fastNLP import AutoPadder
         padder = AutoPadder()
         content = [
             [[1, 2, 3], [4, 5], [7, 8, 9, 10]],
             [[1]]
         ]
-        ans = padder(content, None, None)
+        ans = padder(content, None, None).tolist()
         self.assertListEqual(content, ans)

@@ -1,8 +1,7 @@
-
 import unittest
 import _pickle
 from fastNLP import cache_results
-from fastNLP.io.embed_loader import EmbedLoader
+from fastNLP.io import EmbedLoader
 from fastNLP import DataSet
 from fastNLP import Instance
 import time
@@ -11,10 +10,12 @@ import torch
 from torch import nn
 from fastNLP.core.utils import _move_model_to_device, _get_model_device
 
+
 class Model(nn.Module):
     def __init__(self):
         super().__init__()
         self.param = nn.Parameter(torch.zeros(0))
+
 
 class TestMoveModelDeivce(unittest.TestCase):
     def test_case1(self):
@@ -35,36 +36,36 @@ class TestMoveModelDeivce(unittest.TestCase):
                 _move_model_to_device(model, 'cuda:1000')
         # 测试None
         model = _move_model_to_device(model, None)
-
+    
     def test_case2(self):
         # 测试使用int初始化
         model = Model()
         if torch.cuda.is_available():
             model = _move_model_to_device(model, 0)
             assert model.param.device == torch.device('cuda:0')
-            assert model.param.device==torch.device('cuda:0'), "The model should be in "
+            assert model.param.device == torch.device('cuda:0'), "The model should be in "
             with self.assertRaises(Exception):
                 _move_model_to_device(model, 100)
             with self.assertRaises(Exception):
                 _move_model_to_device(model, -1)
-
+    
     def test_case3(self):
         # 测试None
         model = Model()
         device = _get_model_device(model)
         model = _move_model_to_device(model, None)
-        assert device==_get_model_device(model), "The device should not change."
+        assert device == _get_model_device(model), "The device should not change."
         if torch.cuda.is_available():
             model.cuda()
             device = _get_model_device(model)
             model = _move_model_to_device(model, None)
-            assert device==_get_model_device(model), "The device should not change."
-
+            assert device == _get_model_device(model), "The device should not change."
+            
             model = nn.DataParallel(model, device_ids=[0])
             _move_model_to_device(model, None)
             with self.assertRaises(Exception):
                 _move_model_to_device(model, 'cpu')
-
+    
     def test_case4(self):
         # 测试传入list的内容
         model = Model()
@@ -78,15 +79,17 @@ class TestMoveModelDeivce(unittest.TestCase):
             device = [torch.device('cuda:0'), torch.device('cuda:0')]
             with self.assertRaises(Exception):
                 _model = _move_model_to_device(model, device)
-            if torch.cuda.device_count()>1:
+            if torch.cuda.device_count() > 1:
                 device = [0, 1]
                 _model = _move_model_to_device(model, device)
                 assert isinstance(_model, nn.DataParallel)
                 device = ['cuda', 'cuda:1']
                 with self.assertRaises(Exception):
                     _move_model_to_device(model, device)
-
+    
     def test_case5(self):
+        if not torch.cuda.is_available():
+            return
         # torch.device()
         device = torch.device('cpu')
         model = Model()
@@ -106,9 +109,10 @@ def process_data_1(embed_file, cws_train):
         d = DataSet()
         for line in f:
             line = line.strip()
-            if len(line)>0:
+            if len(line) > 0:
                 d.append(Instance(raw=line))
     return embed, vocab, d
+
 
 class TestCache(unittest.TestCase):
     def test_cache_save(self):
@@ -127,10 +131,10 @@ class TestCache(unittest.TestCase):
             end_time = time.time()
             read_time = end_time - start_time
             print("Read using {:.3f}, while prepare using:{:.3f}".format(read_time, pre_time))
-            self.assertGreater(pre_time-0.5, read_time)
+            self.assertGreater(pre_time - 0.5, read_time)
         finally:
             os.remove('test/demo1.pkl')
-
+    
     def test_cache_save_overwrite_path(self):
         try:
             start_time = time.time()
@@ -149,10 +153,10 @@ class TestCache(unittest.TestCase):
             end_time = time.time()
             read_time = end_time - start_time
             print("Read using {:.3f}, while prepare using:{:.3f}".format(read_time, pre_time))
-            self.assertGreater(pre_time-0.5, read_time)
+            self.assertGreater(pre_time - 0.5, read_time)
         finally:
             os.remove('test/demo_overwrite.pkl')
-
+    
     def test_cache_refresh(self):
         try:
             start_time = time.time()
@@ -171,31 +175,35 @@ class TestCache(unittest.TestCase):
             end_time = time.time()
             read_time = end_time - start_time
             print("Read using {:.3f}, while prepare using:{:.3f}".format(read_time, pre_time))
-            self.assertGreater(0.1, pre_time-read_time)
+            self.assertGreater(0.1, pre_time - read_time)
         finally:
             os.remove('test/demo1.pkl')
-
+    
     def test_duplicate_keyword(self):
         with self.assertRaises(RuntimeError):
             @cache_results(None)
             def func_verbose(a, _verbose):
                 pass
+            
             func_verbose(0, 1)
         with self.assertRaises(RuntimeError):
             @cache_results(None)
             def func_cache(a, _cache_fp):
                 pass
+            
             func_cache(1, 2)
         with self.assertRaises(RuntimeError):
             @cache_results(None)
             def func_refresh(a, _refresh):
                 pass
+            
             func_refresh(1, 2)
-
+    
     def test_create_cache_dir(self):
         @cache_results('test/demo1/demo.pkl')
         def cache():
             return 1, 2
+        
         try:
             results = cache()
             print(results)

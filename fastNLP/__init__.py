@@ -13,7 +13,8 @@ fastNLP 中最常用的组件可以直接从 fastNLP 包中 import ，他们的�
 __all__ = ["Instance", "FieldArray", "Batch", "Vocabulary", "DataSet",
            "Trainer", "Tester", "Callback",
            "Padder", "AutoPadder", "EngChar2DPadder",
-           "AccuracyMetric", "Optimizer", "SGD", "Adam",
+           "AccuracyMetric", "BMESF1PreRecMetric", "SpanFPreRecMetric", "SQuADMetric",
+           "Optimizer", "SGD", "Adam",
            "Sampler", "SequentialSampler", "BucketSampler", "RandomSampler",
            "LossFunc", "CrossEntropyLoss", "L1Loss", "BCELoss", "NLLLoss", "LossInForward",
            "cache_results"]

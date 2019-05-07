@@ -430,6 +430,7 @@ def _bio_tag_to_spans(tags, ignore_labels=None):
 
 class SpanFPreRecMetric(MetricBase):
     """
+    别名：:class:`fastNLP.SpanFPreRecMetric` :class:`fastNLP.core.metrics.SpanFPreRecMetric`
 
     在序列标注问题中，以span的方式计算F, pre, rec.
     比如中文Part of speech中，会以character的方式进行标注，句子'中国在亚洲'对应的POS可能为(以BMES为例)
@@ -619,6 +620,8 @@ class SpanFPreRecMetric(MetricBase):
 
 class BMESF1PreRecMetric(MetricBase):
     """
+    别名：:class:`fastNLP.BMESF1PreRecMetric` :class:`fastNLP.core.metrics.BMESF1PreRecMetric`
+
     按照BMES标注方式计算f1, precision, recall。由于可能存在非法tag，比如"BS"，所以需要用以下的表格做转换，cur_B意思是当前tag是B，
         next_B意思是后一个tag是B。则cur_B=S，即将当前被predict是B的tag标为S；next_M=B, 即将后一个被predict是M的tag标为B
         
@@ -826,6 +829,8 @@ def _pred_topk(y_prob, k=1):
 
 class SQuADMetric(MetricBase):
     """
+    别名：:class:`fastNLP.SQuADMetric` :class:`fastNLP.core.metrics.SQuADMetric`
+
     SQuAD数据集metric
     
     :param pred1: 参数映射表中`pred1`的映射关系，None表示映射关系为`pred1`->`pred1`

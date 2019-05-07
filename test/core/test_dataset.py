@@ -1,9 +1,10 @@
 import os
 import unittest
 
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.fieldarray import FieldArray
-from fastNLP.core.instance import Instance
+from fastNLP import DataSet
+from fastNLP import FieldArray
+from fastNLP import Instance
+from fastNLP.io import CSVLoader
 
 
 class TestDataSetInit(unittest.TestCase):
@@ -167,13 +168,11 @@ class TestDataSetMethods(unittest.TestCase):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
         d1, d2 = ds.split(0.1)
 
-
     def test_apply2(self):
         def split_sent(ins):
             return ins['raw_sentence'].split()
-
-        dataset = DataSet.read_csv('test/data_for_tests/tutorial_sample_dataset.csv', headers=('raw_sentence', 'label'),
-                                   sep='\t')
+        csv_loader = CSVLoader(headers=['raw_sentence', 'label'],sep='\t')
+        dataset = csv_loader.load('../data_for_tests/tutorial_sample_dataset.csv')
         dataset.drop(lambda x: len(x['raw_sentence'].split()) == 0, inplace=True)
         dataset.apply(split_sent, new_field_name='words', is_input=True)
         # print(dataset)
@@ -208,7 +207,7 @@ class TestDataSetMethods(unittest.TestCase):
         self.assertEqual(ans.content, [[5, 6]] * 10)
 
     def test_add_null(self):
-        # TODO test failed because 'fastNLP\core\fieldarray.py:143: RuntimeError'
+        # TODO test failed because 'fastNLP\core\field.py:143: RuntimeError'
         ds = DataSet()
         with self.assertRaises(RuntimeError) as RE:
             ds.add_field('test', [])

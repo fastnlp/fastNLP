@@ -350,7 +350,7 @@ class Trainer(object):
     
     :param train_data: 训练集， :class:`~fastNLP.DataSet` 类型。
     :param nn.modules model: 待训练的模型
-    :param torch.optim.Optimizer optimizer: 优化器。如果为None，则Trainer使用默认的Adam(model.parameters(), lr=4e-3)这个优化器
+    :param optimizer: `torch.optim.Optimizer` 优化器。如果为None，则Trainer使用默认的Adam(model.parameters(), lr=4e-3)这个优化器
     :param int batch_size: 训练和验证的时候的batch大小。
     :param loss: 使用的 :class:`~fastNLP.core.losses.LossBase` 对象。当为None时，默认使用 :class:`~fastNLP.LossInForward`
     :param sampler: Batch数据生成的顺序， :class:`~fastNLP.Sampler` 类型。如果为None，默认使用 :class:`~fastNLP.RandomSampler`
@@ -403,7 +403,6 @@ class Trainer(object):
                  callbacks=None,
                  check_code_level=0):
         super(Trainer, self).__init__()
-        
         if not isinstance(train_data, DataSet):
             raise TypeError(f"The type of train_data must be fastNLP.DataSet, got {type(train_data)}.")
         if not isinstance(model, nn.Module):
@@ -468,7 +467,7 @@ class Trainer(object):
             len(self.train_data) % self.batch_size != 0)) * self.n_epochs
         
         self.model = _move_model_to_device(self.model, device=device)
-        
+
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
         elif isinstance(optimizer, Optimizer):
@@ -493,6 +492,7 @@ class Trainer(object):
         self.step = 0
         self.start_time = None  # start timestamp
         
+        print("callback_manager")
         self.callback_manager = CallbackManager(env={"trainer": self},
                                                 callbacks=callbacks)
     

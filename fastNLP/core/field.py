@@ -418,6 +418,7 @@ class AutoPadder(Padder):
         return False
 
     def __call__(self, contents, field_name, field_ele_dtype):
+        
         if not _is_iterable(contents[0]):
             array = np.array([content for content in contents], dtype=field_ele_dtype)
         elif field_ele_dtype in (np.int64, np.float64) and self._is_two_dimension(contents):
