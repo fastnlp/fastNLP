@@ -7,6 +7,7 @@ class Const:
         INPUT_LEN   序列长度           seq_len（复数seq_len1，seq_len2）
         OUTPUT      模型输出           pred（复数pred1， pred2）
         TARGET      真实目标           target（复数target1，target2）
+        LOSS        损失函数           loss （复数loss1，loss2）
 
     """
     INPUT = 'words'
@@ -14,6 +15,7 @@ class Const:
     INPUT_LEN = 'seq_len'
     OUTPUT = 'pred'
     TARGET = 'target'
+    LOSS = 'loss'
 
     @staticmethod
     def INPUTS(i):
@@ -44,3 +46,9 @@ class Const:
         """得到第 i 个 ``TARGET`` 的命名"""
         i = int(i) + 1
         return Const.TARGET + str(i)
+
+    @staticmethod
+    def LOSSES(i):
+        """得到第 i 个 ``LOSS`` 的命名"""
+        i = int(i) + 1
+        return Const.LOSS + str(i)
