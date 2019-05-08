@@ -24,7 +24,7 @@ Example::
     RUNNER.run_model(model, data=get_mydata(),
      loss=Myloss(), metrics=Mymetric())
 """
-from fastNLP import Trainer, Tester, DataSet
+from fastNLP import Trainer, Tester, DataSet, Callback
 from fastNLP import AccuracyMetric
 from fastNLP import CrossEntropyLoss
 from fastNLP.core.const import Const as C
@@ -42,6 +42,10 @@ POS_TAGGING = 'pos_tagging'
 NLI = 'nli'
 
 class ModelRunner():
+    class Checker(Callback):
+        def on_backward_begin(self, loss):
+            assert loss.to('cpu').numpy().isfinate()
+
     def gen_seq(self, length, vocab_size):
         """generate fake sequence indexes with given length"""
         # reserve 0 for padding
