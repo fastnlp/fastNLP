@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from fastNLP.modules.other_modules import GroupNorm, LayerNormalization, BiLinear, BiAffine
+# from fastNLP.modules.other_modules import GroupNorm, LayerNormalization, BiLinear, BiAffine
 from fastNLP.modules.encoder.star_transformer import StarTransformer
 
 

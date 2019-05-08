@@ -7,7 +7,6 @@ import torch
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.instance import Instance
 from fastNLP.core.predictor import Predictor
-from fastNLP.modules.encoder.linear import Linear
 
 
 def prepare_fake_dataset():
@@ -27,7 +26,7 @@ def prepare_fake_dataset():
 class LinearModel(torch.nn.Module):
     def __init__(self):
         super(LinearModel, self).__init__()
-        self.linear = Linear(2, 1)
+        self.linear = torch.nn.Linear(2, 1)
 
     def forward(self, x):
         return {"predict": self.linear(x)}

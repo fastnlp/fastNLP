@@ -97,7 +97,7 @@
         # 将句子分成单词形式, 详见DataSet.apply()方法
         dataset.apply(lambda ins: ins['sentence'].split(), new_field_name='words')
         # 或使用DataSet.apply_field()
-        dataset.apply(lambda sent:sent.split(), field_name='sentence', new_field_name='words')
+        dataset.apply_field(lambda sent:sent.split(), field_name='sentence', new_field_name='words')
         # 除了匿名函数，也可以定义函数传递进去
         def get_words(instance):
             sentence = instance['sentence']
