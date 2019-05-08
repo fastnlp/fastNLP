@@ -43,7 +43,7 @@ class SeqLabeling(BaseModel):
 
         x = self.Embedding(words)
         # [batch_size, max_len, word_emb_dim]
-        x = self.Rnn(x)
+        x,_ = self.Rnn(x, seq_len)
         # [batch_size, max_len, hidden_size * direction]
         x = self.Linear(x)
         # [batch_size, max_len, num_classes]
@@ -55,13 +55,13 @@ class SeqLabeling(BaseModel):
 
         :param torch.LongTensor words: [batch_size, max_len]
         :param torch.LongTensor seq_len: [batch_size,]
-        :return:
+        :return: {'pred': xx}, [batch_size, max_len]
         """
         self.mask = self._make_mask(words, seq_len)
 
         x = self.Embedding(words)
         # [batch_size, max_len, word_emb_dim]
-        x = self.Rnn(x)
+        x, _ = self.Rnn(x, seq_len)
         # [batch_size, max_len, hidden_size * direction]
         x = self.Linear(x)
         # [batch_size, max_len, num_classes]
@@ -93,13 +93,13 @@ class SeqLabeling(BaseModel):
     def _decode(self, x):
         """
         :param torch.FloatTensor x: [batch_size, max_len, tag_size]
-        :return prediction: list of [decode path(list)]
+        :return prediction: [batch_size, max_len]
         """
-        tag_seq, _ = self.Crf.viterbi_decode(x, self.mask, unpad=True)
+        tag_seq, _ = self.Crf.viterbi_decode(x, self.mask)
         return tag_seq
 
 
-class AdvSeqLabel:
+class AdvSeqLabel(nn.Module):
     """
     更复杂的Sequence Labelling模型。结构为Embedding, LayerNorm, 双向LSTM(两层)，FC，LayerNorm，DropOut，FC，CRF。
     """
@@ -115,17 +115,19 @@ class AdvSeqLabel:
         :param dict id2words: tag id转为其tag word的表。用于在CRF解码时防止解出非法的顺序，比如'BMES'这个标签规范中，'S'
             不能出现在'B'之后。这里也支持类似与'B-NN'，即'-'前为标签类型的指示，后面为具体的tag的情况。这里不但会保证
             'B-NN'后面不为'S-NN'还会保证'B-NN'后面不会出现'M-xx'(任何非'M-NN'和'E-NN'的情况。)
-        :param str encoding_type: 支持"BIO", "BMES", "BEMSO"。
+        :param str encoding_type: 支持"BIO", "BMES", "BEMSO", 只有在id2words不为None的情况游泳。
         """
+        super().__init__()
+
         self.Embedding = encoder.embedding.Embedding(init_embed)
         self.norm1 = torch.nn.LayerNorm(self.Embedding.embedding_dim)
-        self.Rnn = torch.nn.LSTM(input_size=self.Embedding.embedding_dim, hidden_size=hidden_size, num_layers=2, dropout=dropout,
+        self.Rnn = encoder.LSTM(input_size=self.Embedding.embedding_dim, hidden_size=hidden_size, num_layers=2, dropout=dropout,
                                  bidirectional=True, batch_first=True)
-        self.Linear1 = encoder.Linear(hidden_size * 2, hidden_size * 2 // 3)
+        self.Linear1 = nn.Linear(hidden_size * 2, hidden_size * 2 // 3)
         self.norm2 = torch.nn.LayerNorm(hidden_size * 2 // 3)
         self.relu = torch.nn.LeakyReLU()
         self.drop = torch.nn.Dropout(dropout)
-        self.Linear2 = encoder.Linear(hidden_size * 2 // 3, num_classes)
+        self.Linear2 = nn.Linear(hidden_size * 2 // 3, num_classes)
 
         if id2words is None:
             self.Crf = decoder.CRF.ConditionalRandomField(num_classes, include_start_end_trans=False)
@@ -137,9 +139,9 @@ class AdvSeqLabel:
     def _decode(self, x):
         """
         :param torch.FloatTensor x: [batch_size, max_len, tag_size]
-        :return prediction: list of [decode path(list)]
+        :return torch.LongTensor, [batch_size, max_len]
         """
-        tag_seq, _ = self.Crf.viterbi_decode(x, self.mask, unpad=True)
+        tag_seq, _ = self.Crf.viterbi_decode(x, self.mask)
         return tag_seq
 
     def _internal_loss(self, x, y):
@@ -176,31 +178,20 @@ class AdvSeqLabel:
         words = words.long()
         seq_len = seq_len.long()
         self.mask = self._make_mask(words, seq_len)
-        sent_len, idx_sort = torch.sort(seq_len, descending=True)
-        _, idx_unsort = torch.sort(idx_sort, descending=False)
 
         # seq_len = seq_len.long()
         target = target.long() if target is not None else None
 
         if next(self.parameters()).is_cuda:
             words = words.cuda()
-            idx_sort = idx_sort.cuda()
-            idx_unsort = idx_unsort.cuda()
             self.mask = self.mask.cuda()
 
         x = self.Embedding(words)
         x = self.norm1(x)
         # [batch_size, max_len, word_emb_dim]
 
-        sent_variable = x[idx_sort]
-        sent_packed = torch.nn.utils.rnn.pack_padded_sequence(sent_variable, sent_len, batch_first=True)
+        x, _ = self.Rnn(x, seq_len=seq_len)
 
-        x, _ = self.Rnn(sent_packed)
-
-        sent_output = torch.nn.utils.rnn.pad_packed_sequence(x, batch_first=True)[0]
-        x = sent_output[idx_unsort]
-
-        x = x.contiguous()
         x = self.Linear1(x)
         x = self.norm2(x)
         x = self.relu(x)
@@ -225,6 +216,7 @@ class AdvSeqLabel:
 
         :param torch.LongTensor words: [batch_size, mex_len]
         :param torch.LongTensor seq_len:[batch_size, ]
-        :return: [list1, list2, ...], 内部每个list为一个路径，已经unpad了。
+        :return {'pred':}, value是torch.LongTensor, [batch_size, max_len]
+
         """
-        return self._forward(words, seq_len, )
+        return self._forward(words, seq_len)

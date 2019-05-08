@@ -13,7 +13,7 @@ from fastNLP.api.processor import SeqLenProcessor, VocabIndexerProcessor, SetInp
 from fastNLP.core.metrics import SpanFPreRecMetric
 from fastNLP.core.trainer import Trainer
 from fastNLP.io.config_io import ConfigLoader, ConfigSection
-from fastNLP.models.sequence_modeling import AdvSeqLabel
+from fastNLP.models.sequence_labeling import AdvSeqLabel
 from fastNLP.io.dataset_loader import ConllxDataLoader
 from fastNLP.api.processor import ModelProcessor, Index2WordProcessor
 

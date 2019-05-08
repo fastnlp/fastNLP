@@ -1,7 +1,7 @@
 
 import unittest
 
-from test.models.model_runner import *
+from .model_runner import *
 from fastNLP.models.cnn_text_classification import CNNText
 
 
@@ -16,7 +16,3 @@ class TestCNNText(unittest.TestCase):
                         padding=0,
                         dropout=0.5)
         RUNNER.run_model_with_task(TEXT_CLS, model)
-
-
-if __name__ == '__main__':
-    TestCNNText().test_case1()

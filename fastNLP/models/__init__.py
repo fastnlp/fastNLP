@@ -8,6 +8,6 @@ from .bert import BertForMultipleChoice, BertForQuestionAnswering, BertForSequen
     BertForTokenClassification
 from .biaffine_parser import BiaffineParser, GraphParser
 from .cnn_text_classification import CNNText
-from .sequence_modeling import SeqLabeling, AdvSeqLabel
+from .sequence_labeling import SeqLabeling, AdvSeqLabel
 from .snli import ESIM
 from .star_transformer import STSeqCls, STNLICls, STSeqLabel
