@@ -60,8 +60,8 @@ TODO
 
     安装指南 <user/installation>
     快速入门 <user/quickstart>
-    使用 fastNLP 分类 <user/task1>
-    使用 fastNLP 分词 <user/task2>
+    详细指南 <user/tutorials>
+    科研向导 <user/with_fitlog>
 
 
 API 文档
