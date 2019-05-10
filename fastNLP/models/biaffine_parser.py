@@ -10,14 +10,13 @@ from torch.nn import functional as F
 from ..core.const import Const as C
 from ..core.losses import LossFunc
 from ..core.metrics import MetricBase
-from ..core.utils import seq_lens_to_masks
 from ..modules.dropout import TimestepDropout
 from ..modules.encoder.transformer import TransformerEncoder
 from ..modules.encoder.variational_rnn import VarLSTM
 from ..modules.utils import initial_parameter
-from ..modules.utils import seq_mask
 from ..modules.utils import get_embeddings
 from .base_model import BaseModel
+from ..core.utils import seq_len_to_mask
 
 def _mst(scores):
     """
@@ -346,7 +345,7 @@ class BiaffineParser(GraphParser):
         # print('forward {} {}'.format(batch_size, seq_len))
 
         # get sequence mask
-        mask = seq_mask(seq_len, length).long()
+        mask = seq_len_to_mask(seq_len).long()
 
         word = self.word_embedding(words1) # [N,L] -> [N,L,C_0]
         pos = self.pos_embedding(words2) # [N,L] -> [N,L,C_1]
@@ -418,7 +417,7 @@ class BiaffineParser(GraphParser):
         """
 
         batch_size, length, _ = pred1.shape
-        mask = seq_mask(seq_len, length)
+        mask = seq_len_to_mask(seq_len)
         flip_mask = (mask == 0)
         _arc_pred = pred1.clone()
         _arc_pred.masked_fill_(flip_mask.unsqueeze(1), -float('inf'))
@@ -514,7 +513,7 @@ class ParserMetric(MetricBase):
         if seq_len is None:
             seq_mask = pred1.new_ones(pred1.size(), dtype=torch.long)
         else:
-            seq_mask = seq_lens_to_masks(seq_len.long(), float=False).long()
+            seq_mask = seq_len_to_mask(seq_len.long()).long()
         # mask out <root> tag
         seq_mask[:,0] = 0
         head_pred_correct = (pred1 == target1).long() * seq_mask

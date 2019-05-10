@@ -6,7 +6,7 @@ from ..core.const import Const
 from ..modules import decoder as Decoder
 from ..modules import encoder as Encoder
 from ..modules import aggregator as Aggregator
-from ..modules.utils import seq_mask
+from ..core.utils import seq_len_to_mask
 
 
 my_inf = 10e12
@@ -75,12 +75,12 @@ class ESIM(BaseModel):
         hypothesis0 = self.embedding_layer(self.embedding(words2))
 
         if seq_len1 is not None:
-            seq_len1 = seq_mask(seq_len1, premise0.size(1))
+            seq_len1 = seq_len_to_mask(seq_len1)
         else:
             seq_len1 = torch.ones(premise0.size(0), premise0.size(1))
             seq_len1 = (seq_len1.long()).to(device=premise0.device)
         if seq_len2 is not None:
-            seq_len2 = seq_mask(seq_len2, hypothesis0.size(1))
+            seq_len2 = seq_len_to_mask(seq_len2)
         else:
             seq_len2 = torch.ones(hypothesis0.size(0), hypothesis0.size(1))
             seq_len2 = (seq_len2.long()).to(device=hypothesis0.device)

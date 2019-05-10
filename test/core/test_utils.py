@@ -9,7 +9,8 @@ import os
 import torch
 from torch import nn
 from fastNLP.core.utils import _move_model_to_device, _get_model_device
-
+import numpy as np
+from fastNLP.core.utils import seq_len_to_mask
 
 class Model(nn.Module):
     def __init__(self):
@@ -210,3 +211,42 @@ class TestCache(unittest.TestCase):
         finally:
             os.remove('test/demo1/demo.pkl')
             os.rmdir('test/demo1')
+
+
+class TestSeqLenToMask(unittest.TestCase):
+
+    def evaluate_mask_seq_len(self, seq_len, mask):
+        max_len = int(max(seq_len))
+        for i in range(len(seq_len)):
+            length = seq_len[i]
+            mask_i = mask[i]
+            for j in range(max_len):
+                self.assertEqual(mask_i[j], j<length)
+
+    def test_numpy_seq_len(self):
+        # 测试能否转换numpy类型的seq_len
+        # 1. 随机测试
+        seq_len = np.random.randint(1, 10, size=(10, ))
+        mask = seq_len_to_mask(seq_len)
+        max_len = seq_len.max()
+        self.assertEqual(max_len, mask.shape[1])
+        self.evaluate_mask_seq_len(seq_len, mask)
+
+        # 2. 异常检测
+        seq_len = np.random.randint(10, size=(10, 1))
+        with self.assertRaises(AssertionError):
+            mask = seq_len_to_mask(seq_len)
+
+
+    def test_pytorch_seq_len(self):
+        # 1. 随机测试
+        seq_len = torch.randint(1, 10, size=(10, ))
+        max_len = seq_len.max()
+        mask = seq_len_to_mask(seq_len)
+        self.assertEqual(max_len, mask.shape[1])
+        self.evaluate_mask_seq_len(seq_len.tolist(), mask)
+
+        # 2. 异常检测
+        seq_len = torch.randn(3, 4)
+        with self.assertRaises(AssertionError):
+            mask = seq_len_to_mask(seq_len)

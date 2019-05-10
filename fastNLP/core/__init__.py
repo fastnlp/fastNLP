@@ -24,5 +24,5 @@ from .optimizer import Optimizer, SGD, Adam
 from .sampler import SequentialSampler, BucketSampler, RandomSampler, Sampler
 from .tester import Tester
 from .trainer import Trainer
-from .utils import cache_results
+from .utils import cache_results, seq_len_to_mask
 from .vocabulary import Vocabulary

@@ -3,7 +3,7 @@ import torch
 from .base_model import BaseModel
 from ..modules import decoder, encoder
 from ..modules.decoder.CRF import allowed_transitions
-from ..modules.utils import seq_mask
+from ..core.utils import seq_len_to_mask
 from ..core.const import Const as C
 from torch import nn
 
@@ -84,7 +84,7 @@ class SeqLabeling(BaseModel):
     
     def _make_mask(self, x, seq_len):
         batch_size, max_len = x.size(0), x.size(1)
-        mask = seq_mask(seq_len, max_len)
+        mask = seq_len_to_mask(seq_len)
         mask = mask.view(batch_size, max_len)
         mask = mask.to(x).float()
         return mask
@@ -160,7 +160,7 @@ class AdvSeqLabel(nn.Module):
     
     def _make_mask(self, x, seq_len):
         batch_size, max_len = x.size(0), x.size(1)
-        mask = seq_mask(seq_len, max_len)
+        mask = seq_len_to_mask(seq_len)
         mask = mask.view(batch_size, max_len)
         mask = mask.to(x).float()
         return mask

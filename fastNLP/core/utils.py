@@ -1,7 +1,7 @@
 """
 utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户可以使用的是 :func:`cache_results` 修饰器。
 """
-__all__ = ["cache_results"]
+__all__ = ["cache_results", "seq_len_to_mask"]
 import _pickle
 import inspect
 import os
@@ -600,48 +600,41 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
             warnings.warn(message=_unused_warn)
 
 
-def seq_lens_to_masks(seq_lens, float=False):
+def seq_len_to_mask(seq_len):
     """
 
-    Convert seq_lens to masks.
-    :param seq_lens: list, np.ndarray, or torch.LongTensor, shape should all be (B,)
-    :param float: if True, the return masks is in float type, otherwise it is byte.
-    :return: list, np.ndarray or torch.Tensor, shape will be (B, max_length)
+    将一个表示sequence length的一维数组转换为二维的mask，不包含的位置为0。
+    转变 1-d seq_len到2-d mask.
+
+    Example::
+        >>> seq_len = torch.arange(2, 16)
+        >>> mask = seq_len_to_mask(seq_len)
+        >>> print(mask.size())
+        torch.Size([14, 15])
+        >>> seq_len = np.arange(2, 16)
+        >>> mask = seq_len_to_mask(seq_len)
+        >>> print(mask.shape)
+        (14, 15)
+
+    :param np.ndarray,torch.LongTensor seq_len: shape将是(B,)
+    :return: np.ndarray or torch.Tensor, shape将是(B, max_length)。 元素类似为bool或torch.uint8
     """
-    if isinstance(seq_lens, np.ndarray):
-        assert len(np.shape(seq_lens)) == 1, f"seq_lens can only have one dimension, got {len(np.shape(seq_lens))}."
-        assert seq_lens.dtype in (int, np.int32, np.int64), f"seq_lens can only be integer, not {seq_lens.dtype}."
-        raise NotImplemented
-    elif isinstance(seq_lens, torch.Tensor):
-        assert len(seq_lens.size()) == 1, f"seq_lens can only have one dimension, got {len(seq_lens.size())==1}."
-        batch_size = seq_lens.size(0)
-        max_len = seq_lens.max()
-        indexes = torch.arange(max_len).view(1, -1).repeat(batch_size, 1).to(seq_lens.device).long()
-        masks = indexes.lt(seq_lens.unsqueeze(1))
+    if isinstance(seq_len, np.ndarray):
+        assert len(np.shape(seq_len)) == 1, f"seq_len can only have one dimension, got {len(np.shape(seq_len))}."
+        max_len = int(seq_len.max())
+        broad_cast_seq_len = np.tile(np.arange(max_len), (len(seq_len), 1))
+        mask = broad_cast_seq_len<seq_len.reshape(-1, 1)
 
-        if float:
-            masks = masks.float()
-
-        return masks
-    elif isinstance(seq_lens, list):
-        raise NotImplemented
+    elif isinstance(seq_len, torch.Tensor):
+        assert seq_len.dim() == 1, f"seq_len can only have one dimension, got {seq_len.dim() == 1}."
+        batch_size = seq_len.size(0)
+        max_len = seq_len.max().long()
+        broad_cast_seq_len = torch.arange(max_len).expand(batch_size, -1).to(seq_len)
+        mask = broad_cast_seq_len.lt(seq_len.unsqueeze(1))
     else:
-        raise NotImplemented
+        raise TypeError("Only support 1-d numpy.ndarray or 1-d torch.Tensor.")
 
-
-def seq_mask(seq_len, max_len):
-    """Create sequence mask.
-
-    :param seq_len: list or torch.Tensor, the lengths of sequences in a batch.
-    :param max_len: int, the maximum sequence length in a batch.
-    :return mask: torch.LongTensor, [batch_size, max_len]
-
-    """
-    if not isinstance(seq_len, torch.Tensor):
-        seq_len = torch.LongTensor(seq_len)
-    seq_len = seq_len.view(-1, 1).long()   # [batch_size, 1]
-    seq_range = torch.arange(start=0, end=max_len, dtype=torch.long, device=seq_len.device).view(1, -1) # [1, max_len]
-    return torch.gt(seq_len, seq_range) # [batch_size, max_len]
+    return mask
 
 
 class _pseudo_tqdm:

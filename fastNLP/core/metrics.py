@@ -13,7 +13,7 @@ from .utils import _CheckRes
 from .utils import _build_args
 from .utils import _check_arg_dict_list
 from .utils import _get_func_signature
-from .utils import seq_lens_to_masks
+from .utils import seq_len_to_mask
 from .vocabulary import Vocabulary
 
 
@@ -305,7 +305,7 @@ class AccuracyMetric(MetricBase):
                             f"got {type(seq_len)}.")
 
         if seq_len is not None:
-            masks = seq_lens_to_masks(seq_lens=seq_len)
+            masks = seq_len_to_mask(seq_len=seq_len)
         else:
             masks = None
 

@@ -1,7 +1,7 @@
 """Star-Transformer 的 一个 Pytorch 实现.
 """
 from ..modules.encoder.star_transformer import StarTransformer
-from ..core.utils import seq_lens_to_masks
+from ..core.utils import seq_len_to_mask
 from ..modules.utils import get_embeddings
 from ..core.const import Const
 
@@ -134,7 +134,7 @@ class STSeqLabel(nn.Module):
         :param seq_len: [batch,] 输入序列的长度
         :return output: [batch, num_cls, seq_len] 输出序列中每个元素的分类的概率
         """
-        mask = seq_lens_to_masks(seq_len)
+        mask = seq_len_to_mask(seq_len)
         nodes, _ = self.enc(words, mask)
         output = self.cls(nodes)
         output = output.transpose(1,2) # make hidden to be dim 1
@@ -195,7 +195,7 @@ class STSeqCls(nn.Module):
         :param seq_len: [batch,] 输入序列的长度
         :return output: [batch, num_cls] 输出序列的分类的概率
         """
-        mask = seq_lens_to_masks(seq_len)
+        mask = seq_len_to_mask(seq_len)
         nodes, relay = self.enc(words, mask)
         y = 0.5 * (relay + nodes.max(1)[0])
         output = self.cls(y) # [bsz, n_cls]
@@ -258,8 +258,8 @@ class STNLICls(nn.Module):
         :param seq_len2: [batch,] 输入序列2的长度
         :return output: [batch, num_cls] 输出分类的概率
         """
-        mask1 = seq_lens_to_masks(seq_len1)
-        mask2 = seq_lens_to_masks(seq_len2)
+        mask1 = seq_len_to_mask(seq_len1)
+        mask2 = seq_len_to_mask(seq_len2)
         def enc(seq, mask):
             nodes, relay = self.enc(seq, mask)
             return 0.5 * (relay + nodes.max(1)[0])

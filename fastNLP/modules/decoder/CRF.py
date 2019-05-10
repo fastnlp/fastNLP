@@ -2,17 +2,6 @@ import torch
 from torch import nn
 
 from ..utils import initial_parameter
-from ..decoder.utils import log_sum_exp
-
-
-def seq_len_to_byte_mask(seq_lens):
-    # usually seq_lens: LongTensor, batch_size
-    # return value: ByteTensor, batch_size x max_len
-    batch_size = seq_lens.size(0)
-    max_len = seq_lens.max()
-    broadcast_arange = torch.arange(max_len).view(1, -1).repeat(batch_size, 1).to(seq_lens.device)
-    mask = broadcast_arange.float().lt(seq_lens.float().view(-1, 1))
-    return mask
 
 
 def allowed_transitions(id2label, encoding_type='bio', include_start_end=True):
@@ -197,13 +186,13 @@ class ConditionalRandomField(nn.Module):
             emit_score = logits[i].view(batch_size, 1, n_tags)
             trans_score = self.trans_m.view(1, n_tags, n_tags)
             tmp = alpha.view(batch_size, n_tags, 1) + emit_score + trans_score
-            alpha = log_sum_exp(tmp, 1).masked_fill(flip_mask[i].view(batch_size, 1), 0) + \
+            alpha = torch.logsumexp(tmp, 1).masked_fill(flip_mask[i].view(batch_size, 1), 0) + \
                     alpha.masked_fill(mask[i].byte().view(batch_size, 1), 0)
 
         if self.include_start_end_trans:
             alpha = alpha + self.end_scores.view(1, -1)
 
-        return log_sum_exp(alpha, 1)
+        return torch.logsumexp(alpha, 1)
 
     def _gold_score(self, logits, tags, mask):
         """

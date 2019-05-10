@@ -2,12 +2,6 @@ __all__ = ["viterbi_decode"]
 import torch
 
 
-def log_sum_exp(x, dim=-1):
-    max_value, _ = x.max(dim=dim, keepdim=True)
-    res = torch.log(torch.sum(torch.exp(x - max_value), dim=dim, keepdim=True)) + max_value
-    return res.squeeze(dim)
-
-
 def viterbi_decode(logits, transitions, mask=None, unpad=False):
     """给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
 
