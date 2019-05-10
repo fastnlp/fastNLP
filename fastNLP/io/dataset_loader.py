@@ -11,7 +11,16 @@ Example::
 
     # ... do stuff
 """
-
+__all__ = [
+    'DataSetLoader',
+    'CSVLoader',
+    'JsonLoader',
+    'ConllLoader',
+    'SNLILoader',
+    'SSTLoader',
+    'PeopleDailyCorpusLoader',
+    'Conll2003Loader',
+]
 from nltk.tree import Tree
 
 from ..core.dataset import DataSet
