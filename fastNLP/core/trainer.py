@@ -445,6 +445,7 @@ class Trainer(object):
             _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data,
                         metric_key=metric_key, check_level=check_code_level,
                         batch_size=min(batch_size, DEFAULT_CHECK_BATCH_SIZE))
+            # _check_code 是 fastNLP 帮助你检查代码是否正确的方法 。如果你在错误栈中看到这行注释，请认真检查你的代码
         
         self.train_data = train_data
         self.dev_data = dev_data  # If None, No validation.
