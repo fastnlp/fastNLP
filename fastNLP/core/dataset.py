@@ -798,7 +798,10 @@ class DataSet(object):
     @classmethod
     def read_csv(cls, csv_path, headers=None, sep=",", dropna=True):
         """
-        从csv_path路径下以csv的格式读取数据.
+        .. warning::
+            此方法会在下个版本移除，请使用 :class:`fastNLP.io.CSVLoader`
+        
+        从csv_path路径下以csv的格式读取数据。
 
         :param str csv_path: 从哪里读取csv文件
         :param list[str] headers: 如果为None，则使用csv文件的第一行作为header; 如果传入list(str), 则元素的个数必须
