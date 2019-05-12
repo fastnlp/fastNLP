@@ -291,7 +291,6 @@ class CallbackManager(Callback):
         
         for env_name, env_val in env.items():
             for callback in self.callbacks:
-                print(callback, env_name, env_val)
                 setattr(callback, '_' + env_name, env_val)  # Callback.trainer
     
     @_transfer
