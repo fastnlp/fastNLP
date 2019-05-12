@@ -1,5 +1,5 @@
-fastNLP.core 模块
-====================
+fastNLP.core
+============
 
 .. automodule:: fastNLP.core
     :members:
