@@ -1,5 +1,5 @@
-fastNLP.core.vocabulary module
-==============================
+fastNLP.core.vocabulary
+=======================
 
 .. automodule:: fastNLP.core.vocabulary
     :members:

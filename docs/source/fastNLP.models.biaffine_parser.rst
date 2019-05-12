@@ -1,5 +1,5 @@
-fastNLP.models.biaffine\_parser module
-======================================
+fastNLP.models.biaffine\_parser
+===============================
 
 .. automodule:: fastNLP.models.biaffine_parser
     :members:

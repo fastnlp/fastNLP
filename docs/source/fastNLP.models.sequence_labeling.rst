@@ -1,5 +1,5 @@
-fastNLP.models.sequence\_labeling module
-========================================
+fastNLP.models.sequence\_labeling
+=================================
 
 .. automodule:: fastNLP.models.sequence_labeling
     :members:

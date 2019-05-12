@@ -1,5 +1,5 @@
-fastNLP.modules.encoder.embedding module
-========================================
+fastNLP.modules.encoder.embedding
+=================================
 
 .. automodule:: fastNLP.modules.encoder.embedding
     :members:

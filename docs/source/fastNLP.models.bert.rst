@@ -1,5 +1,5 @@
-fastNLP.models.bert module
-==========================
+fastNLP.models.bert
+===================
 
 .. automodule:: fastNLP.models.bert
     :members:

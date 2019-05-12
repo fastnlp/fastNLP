@@ -1,5 +1,5 @@
-fastNLP.io.model\_io module
-===========================
+fastNLP.io.model\_io
+====================
 
 .. automodule:: fastNLP.io.model_io
     :members:

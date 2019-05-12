@@ -1,5 +1,5 @@
-fastNLP.core.metrics module
-===========================
+fastNLP.core.metrics
+====================
 
 .. automodule:: fastNLP.core.metrics
     :members:

@@ -1,4 +1,4 @@
-fastNLP.models package
+fastNLP.models 模块
 ======================
 
 .. automodule:: fastNLP.models
@@ -6,7 +6,7 @@ fastNLP.models package
     :undoc-members:
     :show-inheritance:
 
-Submodules
+子模块
 ----------
 
 .. toctree::

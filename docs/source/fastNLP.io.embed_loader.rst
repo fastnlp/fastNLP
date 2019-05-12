@@ -1,5 +1,5 @@
-fastNLP.io.embed\_loader module
-===============================
+fastNLP.io.embed\_loader
+========================
 
 .. automodule:: fastNLP.io.embed_loader
     :members:

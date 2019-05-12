@@ -1,4 +1,4 @@
-fastNLP package
+用户 API
 ===============
 
 .. automodule:: fastNLP
@@ -6,14 +6,14 @@ fastNLP package
     :undoc-members:
     :show-inheritance:
 
-Subpackages
+内部模块
 -----------
 
 .. toctree::
+    :maxdepth: 3
 
-    fastNLP.component
     fastNLP.core
     fastNLP.io
-    fastNLP.models
     fastNLP.modules
+    fastNLP.models
 

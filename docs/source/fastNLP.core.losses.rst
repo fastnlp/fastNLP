@@ -1,5 +1,5 @@
-fastNLP.core.losses module
-==========================
+fastNLP.core.losses
+===================
 
 .. automodule:: fastNLP.core.losses
     :members:

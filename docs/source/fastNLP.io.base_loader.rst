@@ -1,5 +1,5 @@
-fastNLP.io.base\_loader module
-==============================
+fastNLP.io.base\_loader
+=======================
 
 .. automodule:: fastNLP.io.base_loader
     :members:

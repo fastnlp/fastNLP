@@ -1,5 +1,5 @@
-fastNLP.modules.encoder.lstm module
-===================================
+fastNLP.modules.encoder.lstm
+============================
 
 .. automodule:: fastNLP.modules.encoder.lstm
     :members:

@@ -1,5 +1,5 @@
-fastNLP.modules.encoder.transformer module
-==========================================
+fastNLP.modules.encoder.transformer
+===================================
 
 .. automodule:: fastNLP.modules.encoder.transformer
     :members:

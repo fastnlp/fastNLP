@@ -1,5 +1,5 @@
-fastNLP.models.star\_transformer module
-=======================================
+fastNLP.models.star\_transformer
+================================
 
 .. automodule:: fastNLP.models.star_transformer
     :members:

@@ -46,11 +46,6 @@ For example:
 
 （TODO）
 
-快速入门
--------------
-
-TODO
-
 
 用户手册
 ---------------
@@ -60,7 +55,7 @@ TODO
 
     安装指南 <user/installation>
     快速入门 <user/quickstart>
-    详细指南 <user/tutorials>
+    详细指南 <user/tutorial_one>
     科研向导 <user/with_fitlog>
 
 

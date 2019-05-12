@@ -1,5 +1,5 @@
-fastNLP.modules.aggregator.attention module
-===========================================
+fastNLP.modules.aggregator.attention
+====================================
 
 .. automodule:: fastNLP.modules.aggregator.attention
     :members:

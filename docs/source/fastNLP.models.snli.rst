@@ -1,5 +1,5 @@
-fastNLP.models.snli module
-==========================
+fastNLP.models.snli
+===================
 
 .. automodule:: fastNLP.models.snli
     :members:

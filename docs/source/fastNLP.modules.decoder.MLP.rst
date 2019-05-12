@@ -1,5 +1,5 @@
-fastNLP.modules.decoder.MLP module
-==================================
+fastNLP.modules.decoder.MLP
+===========================
 
 .. automodule:: fastNLP.modules.decoder.MLP
     :members:
