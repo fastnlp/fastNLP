@@ -1,4 +1,4 @@
-"""
+r"""
 Trainer在fastNLP中用于组织单任务的训练过程，可以避免用户在不同训练任务中重复撰以下步骤的代码
 
     (1) epoch循环;
@@ -93,7 +93,10 @@ Trainer在fastNLP中用于组织单任务的训练过程，可以避免用户在
     尽管fastNLP使用了映射机制来使得loss的计算变得比较灵活，但有些情况下loss必须在模型中进行计算，比如使用了CRF的模型。
     fastNLP中提供了 :class:`~fastNLP.LossInForward` 这个loss。
     这个loss的原理是直接在forward()的返回结果中找到loss_key(默认寻找'loss')指定的那个tensor，并使用它作为loss。
-    如果Trainer初始化没有提供loss则默认使用 :class:`~fastNLP.LossInForward` 。TODO 补充一个例子  详细例子可以参照
+    如果Trainer初始化没有提供loss则默认使用 :class:`~fastNLP.LossInForward` 。
+    
+    .. todo::
+        补充一个例子  详细例子可以参照
 
 1.3 Metric
     :mod:`Metric<fastNLP.core.metrics>` 使用了与上述Loss一样的策略，即使用名称进行匹配。
@@ -102,7 +105,10 @@ Trainer在fastNLP中用于组织单任务的训练过程，可以避免用户在
     在进行验证时，可能用到的计算与forward()中不太一致，没有办法直接从forward()的结果中得到预测值，这时模型可以提供一个predict()方法，
     如果提供的模型具有predict方法，则在模型验证时将调用predict()方法获取预测结果，
     传入到predict()的参数也是从DataSet中被设置为input的field中选择出来的;
-    与forward()一样，返回值需要为一个dict。 TODO 补充一个例子 具体例子可以参考
+    与forward()一样，返回值需要为一个dict。
+    
+    .. todo::
+        补充一个例子 具体例子可以参考
 
 2 Trainer的代码检查
     由于在fastNLP中采取了映射的机制，所以难免可能存在对应出错的情况。Trainer提供一种映射检查机制，可以通过check_code_level来进行控制
@@ -267,37 +273,26 @@ Example2.3
     虽然Trainer本身已经集成了一些功能，但仍然不足以囊括训练过程中可能需要到的功能，比如负采样，learning rate decay, Early Stop等。
     为了解决这个问题fastNLP引入了callback的机制，:class:`~fastNLP.Callback` 是一种在Trainer训练过程中特定阶段会运行的函数集合，
     所有的 :class:`~fastNLP.Callback` 都具有on_*(比如on_train_start, on_backward_begin)等函数。
-    如果 Callback 实现了该函数，则Trainer运行至对应阶段，会进行调用。
+    如果 Callback 实现了该函数，则Trainer运行至对应阶段，会进行调用，例如::
+    
+        from fastNLP import Callback, EarlyStopCallback, Trainer, CrossEntropyLoss, AccuracyMetric
+        from fastNLP.models import CNNText
 
-    我们将Train.train()这个函数内部分为以下的阶段，在对应阶段会触发相应的调用。
-
-    Example::
-
-        callback.on_train_begin()  # 开始进行训练
-        for i in range(1, n_epochs+1):
-            callback.on_epoch_begin()  # 开始新的epoch
-            for batch_x, batch_y in Batch:
-                callback.on_batch_begin(batch_x, batch_y, indices) # batch_x是设置为input的field，batch_y是设置为target的field
-                获取模型输出
-                callback.on_loss_begin()
-                计算loss
-                callback.on_backward_begin() # 可以进行一些检查，比如loss是否为None
-                反向梯度回传
-                callback.on_backward_end() # 进行梯度截断等
-                进行参数更新
-                callback.on_step_end()
-                callback.on_batch_end()
-                # 根据设置进行evaluation，比如这是本epoch最后一个batch或者达到一定step
-                if do evaluation:
-                    callback.on_valid_begin()
-                    进行dev data上的验证
-                    callback.on_valid_end()  # 可以进行在其它数据集上进行验证
-            callback.on_epoch_end()  # epoch结束调用
-        callback.on_train_end() # 训练结束
-        callback.on_exception() # 这是一个特殊的步骤，在训练过程中遭遇exception会跳转到这里
-
-    fastNLP已经自带了很多callback函数供使用，可以参考 :class:`~fastNLP.Callback` 。
-    TODO callback的例子 一些关于callback的例子，请参考
+        start_time = time.time()
+        
+        class MyCallback(Callback):
+            def on_epoch_end(self):
+                print('{:d}ms\n\n'.format(round((time.time()-start_time)*1000)))
+        
+        model = CNNText((len(vocab),50), num_classes=5, padding=2, dropout=0.1)
+        trainer = Trainer(model=model, train_data=train_data, dev_data=dev_data, loss=CrossEntropyLoss(),
+                          metrics=AccuracyMetric(), callbacks=[MyCallback(),EarlyStopCallback(10)])
+        trainer.train()
+        
+    这里，我们通过继承 :class:`~fastNLP.Callback` 类定义了自己的 callback 的，并和内置的 :class:`~fastNLP.EarlyStopCallback`
+    一起传给了 :class:`~fastNLP.Trainer` ，增强了 :class:`~fastNLP.Trainer` 的功能
+    
+    fastNLP已经自带了很多callback函数供使用，可以参考 :doc:`fastNLP.core.callback` 。
 
 """
 
