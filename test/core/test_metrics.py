@@ -351,31 +351,6 @@ class SpanF1PreRecMetric(unittest.TestCase):
         #                      fastnlp_bmes_metric.get_metric())
 
 
-class TestBMESF1PreRecMetric(unittest.TestCase):
-    def test_case1(self):
-        seq_lens = torch.LongTensor([4, 2])
-        pred = torch.randn(2, 4, 4)
-        target = torch.LongTensor([[0, 1, 2, 3],
-                                   [3, 3, 0, 0]])
-        pred_dict = {'pred': pred}
-        target_dict = {'target': target, 'seq_len': seq_lens}
-        
-        metric = BMESF1PreRecMetric()
-        metric(pred_dict, target_dict)
-        metric.get_metric()
-    
-    def test_case2(self):
-        # 测试相同两个seqence，应该给出{f1: 1, precision:1, recall:1}
-        seq_lens = torch.LongTensor([4, 2])
-        target = torch.LongTensor([[0, 1, 2, 3],
-                                   [3, 3, 0, 0]])
-        pred_dict = {'pred': target}
-        target_dict = {'target': target, 'seq_len': seq_lens}
-        
-        metric = BMESF1PreRecMetric()
-        metric(pred_dict, target_dict)
-        self.assertDictEqual(metric.get_metric(), {'f': 1.0, 'pre': 1.0, 'rec': 1.0})
-
 
 class TestUsefulFunctions(unittest.TestCase):
     # 测试metrics.py中一些看上去挺有用的函数

@@ -4,12 +4,12 @@ from torch import nn
 from ..utils import initial_parameter
 
 
-def allowed_transitions(id2label, encoding_type='bio', include_start_end=True):
+def allowed_transitions(id2target, encoding_type='bio', include_start_end=True):
     """
     给定一个id到label的映射表，返回所有可以跳转的(from_tag_id, to_tag_id)列表。
 
-    :param dict id2label: key是label的indices，value是str类型的tag或tag-label。value可以是只有tag的, 比如"B", "M"; 也可以是
-        "B-NN", "M-NN", tag和label之间一定要用"-"隔开。一般可以通过Vocabulary.get_id2word()得到id2label。
+    :param dict id2target: key是label的indices，value是str类型的tag或tag-label。value可以是只有tag的, 比如"B", "M"; 也可以是
+        "B-NN", "M-NN", tag和label之间一定要用"-"隔开。一般可以通过Vocabulary.idx2word得到id2label。
     :param str encoding_type: 支持"bio", "bmes", "bmeso"。
     :param bool include_start_end: 是否包含开始与结尾的转换。比如在bio中，b/o可以在开头，但是i不能在开头；
         为True，返回的结果中会包含(start_idx, b_idx), (start_idx, o_idx), 但是不包含(start_idx, i_idx);
@@ -17,12 +17,12 @@ def allowed_transitions(id2label, encoding_type='bio', include_start_end=True):
         为False, 返回的结果中不含与开始结尾相关的内容
     :return: List[Tuple(int, int)]], 内部的Tuple是可以进行跳转的(from_tag_id, to_tag_id)。
     """
-    num_tags = len(id2label)
+    num_tags = len(id2target)
     start_idx = num_tags
     end_idx = num_tags + 1
     encoding_type = encoding_type.lower()
     allowed_trans = []
-    id_label_lst = list(id2label.items())
+    id_label_lst = list(id2target.items())
     if include_start_end:
         id_label_lst += [(start_idx, 'start'), (end_idx, 'end')]
     def split_tag_label(from_label):
@@ -160,7 +160,7 @@ class ConditionalRandomField(nn.Module):
         if allowed_transitions is None:
             constrain = torch.zeros(num_tags + 2, num_tags + 2)
         else:
-            constrain = torch.new_full((num_tags+2, num_tags+2), fill_value=-10000.0, dtype=torch.float)
+            constrain = torch.full((num_tags+2, num_tags+2), fill_value=-10000.0, dtype=torch.float)
             for from_tag_id, to_tag_id in allowed_transitions:
                 constrain[from_tag_id, to_tag_id] = 0
         self._constrain = nn.Parameter(constrain, requires_grad=False)

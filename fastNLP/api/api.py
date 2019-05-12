@@ -206,7 +206,7 @@ class POS(API):
             prediction[idx] = list(prediction[idx]) + ([0] * (max_length - len(prediction[idx])))
             truth[idx] = list(truth[idx]) + ([0] * (max_length - len(truth[idx])))
         evaluator = SpanFPreRecMetric(tag_vocab=tag_vocab, pred="predict", target="truth",
-                                      seq_lens="word_seq_origin_len")
+                                      seq_len="word_seq_origin_len")
         evaluator({"predict": torch.Tensor(prediction), "word_seq_origin_len": torch.Tensor(seq_len)},
                   {"truth": torch.Tensor(truth)})
         test_result = evaluator.get_metric()
@@ -300,15 +300,15 @@ class CWS(API):
         pp(te_dataset)
         
         from ..core.tester import Tester
-        from ..core.metrics import BMESF1PreRecMetric
+        from ..core.metrics import SpanFPreRecMetric
         
-        tester = Tester(data=te_dataset, model=cws_model, metrics=BMESF1PreRecMetric(target='target'), batch_size=64,
+        tester = Tester(data=te_dataset, model=cws_model, metrics=SpanFPreRecMetric(tag_proc.get_vocab()), batch_size=64,
                         verbose=0)
         eval_res = tester.test()
         
-        f1 = eval_res['BMESF1PreRecMetric']['f']
-        pre = eval_res['BMESF1PreRecMetric']['pre']
-        rec = eval_res['BMESF1PreRecMetric']['rec']
+        f1 = eval_res['SpanFPreRecMetric']['f']
+        pre = eval_res['SpanFPreRecMetric']['pre']
+        rec = eval_res['SpanFPreRecMetric']['rec']
         # print("f1:{:.2f}, pre:{:.2f}, rec:{:.2f}".format(f1, pre, rec))
         
         return {"F1": f1, "precision": pre, "recall": rec}
