@@ -4,12 +4,13 @@ fastNLP 中文文档
 fastNLP 是一款轻量级的 NLP 处理套件。你既可以使用它快速地完成一个命名实体识别（NER）、中文分词或文本分类任务；
 也可以使用他构建许多复杂的网络模型，进行科研。它具有如下的特性:
 
-- 代码简洁易懂，有着详尽的中文文档以供查阅；
-- 深度学习的各个阶段划分明确，配合 fitlog 使用让科研更轻松；
-- 内置多种常见模型 （TODO）；
-- 基于 PyTorch ，方便从原生 PyTorch 代码迁入，并能使用 PyTorch 中的各种组件；
-- 便于 seq2seq；
-- 便于 fine-tune
+- 统一的Tabular式数据容器，让数据预处理过程简洁明了。内置多种数据集的DataSet Loader，省去预处理代码。
+- 各种方便的NLP工具，例如预处理embedding加载; 中间数据cache等;
+- 详尽的中文文档以供查阅；
+- 提供诸多高级模块，例如Variational LSTM, Transformer, CRF等;
+- 封装CNNText，Biaffine等模型可供直接使用;
+- 便捷且具有扩展性的训练器; 提供多种内置callback函数，方便实验记录、异常捕获等。
+
 
 内置的模块
 ------------
@@ -17,21 +18,20 @@ fastNLP 是一款轻量级的 NLP 处理套件。你既可以使用它快速地�
 （TODO）
 
 
-A deep learning NLP model is the composition of three types of modules:
+主要包含了以下的三大模块:
 
 +-----------------------+-----------------------+-----------------------+
 | module type           | functionality         | example               |
 +=======================+=======================+=======================+
-| encoder               | encode the input into | embedding, RNN, CNN,  |
-|                       | some abstract         | transformer           |
-|                       | representation        |                       |
+| encoder               | 将输入编码为具有具    | embedding, RNN, CNN,  |
+|                       |   有表示能力的向量    | transformer           |
 +-----------------------+-----------------------+-----------------------+
-| aggregator            | aggregate and reduce  | self-attention,       |
-|                       | information           | max-pooling           |
+| aggregator            | 从多个向量中聚合信息  | self-attention,       |
+|                       |                       | max-pooling           |
 +-----------------------+-----------------------+-----------------------+
-| decoder               | decode the            | MLP, CRF              |
-|                       | representation into   |                       |
-|                       | the output            |                       |
+| decoder               | 将具有某种表示意义的  | MLP, CRF              |
+|                       | 向量解码为需要的输出  |                       |
+|                       | 形式                  |                       |
 +-----------------------+-----------------------+-----------------------+
 
 
