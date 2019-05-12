@@ -12,13 +12,14 @@ fastNLP 是一款轻量级的 NLP 处理套件。你既可以使用它快速地�
 - 便捷且具有扩展性的训练器; 提供多种内置callback函数，方便实验记录、异常捕获等。
 
 
-内置的模块
+内置组件
 ------------
 
-（TODO）
+大部分用于的 NLP 任务神经网络都可以看做由编码（encoder）、聚合（aggregator）、解码（decoder）三个阶段组成。
 
+.. image:: figures/text_classification.png
 
-主要包含了以下的三大模块:
+三大模块功能和例子如下:
 
 +-----------------------+-----------------------+-----------------------+
 | module type           | functionality         | example               |
@@ -34,17 +35,17 @@ fastNLP 是一款轻量级的 NLP 处理套件。你既可以使用它快速地�
 |                       | 形式                  |                       |
 +-----------------------+-----------------------+-----------------------+
 
+fastNLP 在 :mod:`~fastNLP.module` 模块中内置了大量的组件，可以帮助用户快速搭建自己所需的网络
 
-For example:
 
-.. image:: figures/text_classification.png
-
-.. todo::
-    各个任务上的结果
-
-内置的模型
+内置模型
 ----------------
 
+fastNLP 在 :mod:`~fastNLP.models` 模块中内置了如 :class:`~fastNLP.models.CNNText` 、
+:class:`~fastNLP.models.SeqLabeling` 等完整的模型，以供用户直接使用。
+
+.. todo::
+    这些模型的介绍如下表所示：（模型名称 + 介绍 + 任务上的结果）
 
 用户手册
 ----------------
