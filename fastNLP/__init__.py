@@ -33,7 +33,6 @@ __all__ = [
     "EngChar2DPadder",
     
     "AccuracyMetric",
-    "BMESF1PreRecMetric",
     "SpanFPreRecMetric",
     "SQuADMetric",
     

@@ -3,6 +3,7 @@
 TODO 详细介绍的表格，与主页相对应
 
 """
+__all__ = ["CNNText", "SeqLabeling", "ESIM", "STSeqLabel", "AdvSeqLabel", "STNLICls", "STSeqCls"]
 from .base_model import BaseModel
 from .bert import BertForMultipleChoice, BertForQuestionAnswering, BertForSequenceClassification, \
     BertForTokenClassification

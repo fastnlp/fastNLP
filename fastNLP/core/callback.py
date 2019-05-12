@@ -1,5 +1,10 @@
 r"""
-callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:`~fastNLP.Trainer` 类，
+callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:`~fastNLP.Trainer` 类。
+
+虽然Trainer本身已经集成了一些功能，但仍然不足以囊括训练过程中可能需要到的功能，
+比如负采样，learning rate decay, Early Stop等。
+为了解决这个问题fastNLP引入了callback的机制，Callback 是一种在Trainer训练过程中特定阶段会运行的函数集合。
+关于Trainer的详细文档，请参见 :doc:`trainer 模块<fastNLP.core.trainer>`
 
 我们将 :meth:`~fastNLP.Train.train` 这个函数内部分为以下的阶段，在对应阶段会触发相应的调用::
 
@@ -25,8 +30,6 @@ callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:
         callback.on_epoch_end()  # epoch结束调用
     callback.on_train_end() # 训练结束
     callback.on_exception() # 这是一个特殊的步骤，在训练过程中遭遇exception会跳转到这里
-
-关于Trainer的详细文档，请参见 :doc:`trainer 模块<fastNLP.core.trainer>`
 
 如下面的例子所示，我们可以使用内置的 callback 类，或者继承 :class:`~fastNLP.core.callback.Callback`
 定义自己的 callback 类::

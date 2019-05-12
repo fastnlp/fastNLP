@@ -1,5 +1,10 @@
 class Const:
-    """fastNLP中field命名常量。
+    """
+    fastNLP中field命名常量。
+    
+    .. todo::
+        把下面这段改成表格
+        
     具体列表::
 
         INPUT       模型的序列输入      words（复数words1, words2）
