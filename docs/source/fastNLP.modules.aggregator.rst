@@ -10,6 +10,7 @@ fastNLP.modules.aggregator
 ----------
 
 .. toctree::
+   :titlesonly:
 
    fastNLP.modules.aggregator.attention
    fastNLP.modules.aggregator.pooling

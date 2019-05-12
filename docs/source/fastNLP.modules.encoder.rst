@@ -10,6 +10,7 @@ fastNLP.modules.encoder
 ----------
 
 .. toctree::
+   :titlesonly:
 
    fastNLP.modules.encoder.bert
    fastNLP.modules.encoder.char_encoder

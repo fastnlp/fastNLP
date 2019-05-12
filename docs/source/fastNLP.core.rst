@@ -10,6 +10,7 @@ fastNLP.core 模块
 ----------
 
 .. toctree::
+   :titlesonly:
 
    fastNLP.core.batch
    fastNLP.core.callback

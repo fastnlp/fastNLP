@@ -10,6 +10,7 @@ fastNLP.models 模块
 ----------
 
 .. toctree::
+   :titlesonly:
 
    fastNLP.models.base_model
    fastNLP.models.bert

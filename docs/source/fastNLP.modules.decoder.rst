@@ -10,6 +10,7 @@ fastNLP.modules.decoder
 ----------
 
 .. toctree::
+   :titlesonly:
 
    fastNLP.modules.decoder.CRF
    fastNLP.modules.decoder.MLP

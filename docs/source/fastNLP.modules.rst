@@ -10,6 +10,7 @@ fastNLP.modules 模块
 -----------
 
 .. toctree::
+    :titlesonly:
 
     fastNLP.modules.aggregator
     fastNLP.modules.decoder

@@ -10,6 +10,7 @@
 -----------
 
 .. toctree::
+    :titlesonly:
     :maxdepth: 3
 
     fastNLP.core

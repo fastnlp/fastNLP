@@ -10,6 +10,7 @@ fastNLP.io 模块
 ----------
 
 .. toctree::
+   :titlesonly:
 
    fastNLP.io.base_loader
    fastNLP.io.dataset_loader
