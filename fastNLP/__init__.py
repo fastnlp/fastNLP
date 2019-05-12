@@ -10,14 +10,50 @@ fastNLP 由 :mod:`~fastNLP.core` 、 :mod:`~fastNLP.io` 、:mod:`~fastNLP.module
 
 fastNLP 中最常用的组件可以直接从 fastNLP 包中 import ，他们的文档如下：
 """
-__all__ = ["Instance", "FieldArray", "Batch", "Vocabulary", "DataSet", "Const",
-           "Trainer", "Tester", "Callback",
-           "Padder", "AutoPadder", "EngChar2DPadder",
-           "AccuracyMetric", "BMESF1PreRecMetric", "SpanFPreRecMetric", "SQuADMetric",
-           "Optimizer", "SGD", "Adam",
-           "Sampler", "SequentialSampler", "BucketSampler", "RandomSampler",
-           "LossFunc", "CrossEntropyLoss", "L1Loss", "BCELoss", "NLLLoss", "LossInForward",
-           "cache_results"]
+__all__ = [
+    "Instance",
+    "FieldArray",
+    "Batch",
+    "Vocabulary",
+    "DataSet",
+    "Const",
+    
+    "Trainer",
+    "Tester",
+    
+    "Callback",
+    "GradientClipCallback",
+    "EarlyStopCallback",
+    "TensorboardCallback",
+    "LRScheduler",
+    "ControlC",
+    
+    "Padder",
+    "AutoPadder",
+    "EngChar2DPadder",
+    
+    "AccuracyMetric",
+    "BMESF1PreRecMetric",
+    "SpanFPreRecMetric",
+    "SQuADMetric",
+    
+    "Optimizer",
+    "SGD",
+    "Adam",
+    
+    "Sampler",
+    "SequentialSampler",
+    "BucketSampler",
+    "RandomSampler",
+    
+    "LossFunc",
+    "CrossEntropyLoss",
+    "L1Loss", "BCELoss",
+    "NLLLoss",
+    "LossInForward",
+    
+    "cache_results"
+]
 from .core import *
 from . import models
 from . import modules

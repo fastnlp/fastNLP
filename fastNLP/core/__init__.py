@@ -10,10 +10,11 @@ core 模块里实现了 fastNLP 的核心框架，常用的组件都可以从 fa
 
 对于常用的功能，你只需要在 :doc:`fastNLP` 中查看即可。如果想了解各个子模块的分工，您可以阅读以下文档：
 
+    TODO 向导
 
 """
 from .batch import Batch
-from .callback import Callback
+from .callback import Callback, GradientClipCallback, EarlyStopCallback, TensorboardCallback, LRScheduler, ControlC
 from .const import Const
 from .dataset import DataSet
 from .field import FieldArray, Padder, AutoPadder, EngChar2DPadder
