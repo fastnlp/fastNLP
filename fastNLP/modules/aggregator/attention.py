@@ -12,7 +12,8 @@ from ..utils import initial_parameter
 
 class DotAttention(nn.Module):
     """
-    TODO
+    .. todo::
+        补上文档
     """
     def __init__(self, key_size, value_size, dropout=0):
         super(DotAttention, self).__init__()

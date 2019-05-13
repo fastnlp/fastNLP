@@ -47,7 +47,6 @@ class BaseLoader(object):
 
 
 class DataLoaderRegister:
-    # TODO 这个类使用在何处？
     _readers = {}
 
     @classmethod
@@ -64,3 +63,5 @@ class DataLoaderRegister:
         if read_fn_name in cls._readers:
             return cls._readers[read_fn_name]
         raise AttributeError('no read function: {}'.format(read_fn_name))
+    
+    # TODO 这个类使用在何处？
