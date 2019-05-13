@@ -1,6 +1,10 @@
 """
-使用 fastNLP 实现的一系列常见模型，具体有：
-TODO 详细介绍的表格，与主页相对应
+fastNLP 在 :mod:`~fastNLP.models` 模块中内置了如 :class:`~fastNLP.models.CNNText` 、
+:class:`~fastNLP.models.SeqLabeling` 等完整的模型，以供用户直接使用。
+
+.. todo::
+    这些模型的介绍（与主页一致）
+
 
 """
 __all__ = ["CNNText", "SeqLabeling", "ESIM", "STSeqLabel", "AdvSeqLabel", "STNLICls", "STSeqCls"]

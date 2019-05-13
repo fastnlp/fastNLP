@@ -15,12 +15,12 @@ fastNLP 是一款轻量级的 NLP 处理套件。你既可以使用它快速地�
 内置组件
 ------------
 
-大部分用于的 NLP 任务神经网络都可以看做由编码（encoder）、聚合（aggregator）、解码（decoder）三中模块组成。
+大部分用于的 NLP 任务神经网络都可以看做由编码（encoder）、聚合（aggregator）、解码（decoder）三种模块组成。
 
 .. image:: figures/text_classification.png
 
-fastNLP 在 :mod:`~fastNLP.modules` 模块中内置了三个模块的诸多组件，可以帮助用户快速搭建自己所需的网络。
-三个模块的功能和常见组件如下:
+fastNLP 在 :mod:`~fastNLP.modules` 模块中内置了三种模块的诸多组件，可以帮助用户快速搭建自己所需的网络。
+三种模块的功能和常见组件如下:
 
 +-----------------------+-----------------------+-----------------------+
 | module type           | functionality         | example               |
