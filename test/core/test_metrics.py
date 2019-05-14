@@ -4,7 +4,6 @@ import numpy as np
 import torch
 
 from fastNLP import AccuracyMetric
-from fastNLP import BMESF1PreRecMetric
 from fastNLP.core.metrics import _pred_topk, _accuracy_topk
 
 
