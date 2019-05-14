@@ -66,8 +66,9 @@ from ..io.model_io import ModelSaver, ModelLoader
 
 try:
     from tensorboardX import SummaryWriter
+    tensorboardX_flag = True
 except:
-    pass
+    tensorboardX_flag = False
 
 
 class Callback(object):
@@ -581,7 +582,8 @@ class TensorboardCallback(Callback):
             path = os.path.join("./", 'tensorboard_logs_{}'.format(self.trainer.start_time))
         else:
             path = os.path.join(save_dir, 'tensorboard_logs_{}'.format(self.trainer.start_time))
-        self._summary_writer = SummaryWriter(path)
+        if tensorboardX_flag:
+            self._summary_writer = SummaryWriter(path)
     
     def on_batch_begin(self, batch_x, batch_y, indices):
         if "model" in self.options and self.graph_added is False:

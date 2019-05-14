@@ -78,7 +78,7 @@ class ENASTrainer(Trainer):
             results['seconds'] = 0.
             return results
         try:
-            if torch.cuda.is_available() and self.use_cuda:
+            if torch.cuda.is_available() and "cuda" in self.device:
                 self.model = self.model.cuda()
             self._model_device = self.model.parameters().__next__().device
             self._mode(self.model, is_test=False)
@@ -337,7 +337,7 @@ class ENASTrainer(Trainer):
 
             # policy loss
             loss = -log_probs*utils.get_variable(adv,
-                                                 self.use_cuda,
+                                                 'cuda' in self.device,
                                                  requires_grad=False)
 
             loss = loss.sum()  # or loss.mean()
