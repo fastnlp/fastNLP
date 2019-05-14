@@ -584,7 +584,9 @@ class TensorboardCallback(Callback):
             path = os.path.join(save_dir, 'tensorboard_logs_{}'.format(self.trainer.start_time))
         if tensorboardX_flag:
             self._summary_writer = SummaryWriter(path)
-    
+        else:
+            self._summary_writer = None
+            
     def on_batch_begin(self, batch_x, batch_y, indices):
         if "model" in self.options and self.graph_added is False:
             # tesorboardX 这里有大bug，暂时没法画模型图
@@ -596,10 +598,10 @@ class TensorboardCallback(Callback):
             self.graph_added = True
     
     def on_backward_begin(self, loss):
-        if "loss" in self.options:
+        if "loss" in self.options and self._summary_writer:
             self._summary_writer.add_scalar("loss", loss.item(), global_step=self.trainer.step)
         
-        if "model" in self.options:
+        if "model" in self.options and self._summary_writer:
             for name, param in self.trainer.model.named_parameters():
                 if param.requires_grad:
                     self._summary_writer.add_scalar(name + "_mean", param.mean(), global_step=self.trainer.step)
@@ -608,15 +610,16 @@ class TensorboardCallback(Callback):
                                                     global_step=self.trainer.step)
     
     def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
-        if "metric" in self.options:
+        if "metric" in self.options and self._summary_writer:
             for name, metric in eval_result.items():
                 for metric_key, metric_val in metric.items():
                     self._summary_writer.add_scalar("valid_{}_{}".format(name, metric_key), metric_val,
                                                     global_step=self.trainer.step)
     
     def on_train_end(self):
-        self._summary_writer.close()
-        del self._summary_writer
+        if self._summary_writer:
+            self._summary_writer.close()
+            del self._summary_writer
     
     def on_exception(self, exception):
         if hasattr(self, "_summary_writer"):

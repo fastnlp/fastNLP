@@ -10,7 +10,7 @@ from fastNLP.core.metrics import AccuracyMetric
 class TestTutorial(unittest.TestCase):
     def test_fastnlp_10min_tutorial(self):
         # 从csv读取数据到DataSet
-        sample_path = "data_for_tests/tutorial_sample_dataset.csv"
+        sample_path = "test/data_for_tests/tutorial_sample_dataset.csv"
         dataset = DataSet.read_csv(sample_path, headers=('raw_sentence', 'label'),
                                    sep='\t')
         print(len(dataset))
@@ -113,14 +113,14 @@ class TestTutorial(unittest.TestCase):
 
     def test_fastnlp_1min_tutorial(self):
         # tutorials/fastnlp_1min_tutorial.ipynb
-        data_path = "tutorials/sample_data/tutorial_sample_dataset.csv"
+        data_path = "test/data_for_tests/tutorial_sample_dataset.csv"
         ds = DataSet.read_csv(data_path, headers=('raw_sentence', 'label'), sep='\t')
         print(ds[1])
 
         # 将所有数字转为小写
         ds.apply(lambda x: x['raw_sentence'].lower(), new_field_name='raw_sentence')
         # label转int
-        ds.apply(lambda x: int(x['label']), new_field_name='label_seq', is_target=True)
+        ds.apply(lambda x: int(x['label']), new_field_name='target', is_target=True)
 
         def split_sent(ins):
             return ins['raw_sentence'].split()
@@ -137,9 +137,9 @@ class TestTutorial(unittest.TestCase):
         train_data.apply(lambda x: [vocab.add(word) for word in x['words']])
 
         # index句子, Vocabulary.to_index(word)
-        train_data.apply(lambda x: [vocab.to_index(word) for word in x['words']], new_field_name='word_seq',
+        train_data.apply(lambda x: [vocab.to_index(word) for word in x['words']], new_field_name='words',
                          is_input=True)
-        dev_data.apply(lambda x: [vocab.to_index(word) for word in x['words']], new_field_name='word_seq',
+        dev_data.apply(lambda x: [vocab.to_index(word) for word in x['words']], new_field_name='words',
                        is_input=True)
 
         from fastNLP.models import CNNText
@@ -152,14 +152,14 @@ class TestTutorial(unittest.TestCase):
                           dev_data=dev_data,
                           loss=CrossEntropyLoss(),
                           optimizer= Adam(),
-                          metrics=AccuracyMetric(target='label_seq')
+                          metrics=AccuracyMetric(target='target')
                           )
         trainer.train()
         print('Train finished!')
 
     def test_fastnlp_advanced_tutorial(self):
         import os
-        os.chdir("tutorials/fastnlp_advanced_tutorial")
+        os.chdir("test/tutorials/fastnlp_advanced_tutorial")
 
         from fastNLP import DataSet
         from fastNLP import Instance
