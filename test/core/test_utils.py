@@ -140,7 +140,7 @@ class TestCache(unittest.TestCase):
         try:
             start_time = time.time()
             embed, vocab, d = process_data_1('test/data_for_tests/word2vec_test.txt', 'test/data_for_tests/cws_train',
-                                             cache_filepath='test/demo_overwrite.pkl')
+                                             _cache_fp='test/demo_overwrite.pkl')
             end_time = time.time()
             pre_time = end_time - start_time
             with open('test/demo_overwrite.pkl', 'rb') as f:
@@ -150,7 +150,7 @@ class TestCache(unittest.TestCase):
                 self.assertListEqual(embed[i].tolist(), _embed[i].tolist())
             start_time = time.time()
             embed, vocab, d = process_data_1('test/data_for_tests/word2vec_test.txt', 'test/data_for_tests/cws_train',
-                                             cache_filepath='test/demo_overwrite.pkl')
+                                             _cache_fp='test/demo_overwrite.pkl')
             end_time = time.time()
             read_time = end_time - start_time
             print("Read using {:.3f}, while prepare using:{:.3f}".format(read_time, pre_time))
@@ -162,7 +162,7 @@ class TestCache(unittest.TestCase):
         try:
             start_time = time.time()
             embed, vocab, d = process_data_1('test/data_for_tests/word2vec_test.txt', 'test/data_for_tests/cws_train',
-                                             refresh=True)
+                                             _refresh=True)
             end_time = time.time()
             pre_time = end_time - start_time
             with open('test/demo1.pkl', 'rb') as f:
@@ -172,7 +172,7 @@ class TestCache(unittest.TestCase):
                 self.assertListEqual(embed[i].tolist(), _embed[i].tolist())
             start_time = time.time()
             embed, vocab, d = process_data_1('test/data_for_tests/word2vec_test.txt', 'test/data_for_tests/cws_train',
-                                             refresh=True)
+                                             _refresh=True)
             end_time = time.time()
             read_time = end_time - start_time
             print("Read using {:.3f}, while prepare using:{:.3f}".format(read_time, pre_time))
