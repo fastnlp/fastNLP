@@ -381,6 +381,8 @@ class Trainer(object):
 
         5. None. 为None则不对模型进行任何处理，如果传入的model为torch.nn.DataParallel该值必须为None。
 
+        已知可能会出现的问题：Adagrad优化器可能无法正常使用这个参数，请手动管理模型位置。
+
     :param list(callbacks) callbacks: 用于在train过程中起调节作用的回调函数。比如early stop，negative sampling等可以
         通过callback机制实现。 可使用的callback参见 :doc:`callback模块 <fastNLP.core.callback>`
     :param int check_code_level: 模型检查等级. -1: 不进行检查; 0: 仅出现错误时停止; 1: 如果有field没有被使用，

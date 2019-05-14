@@ -88,7 +88,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
     def wrapper_(func):
         signature = inspect.signature(func)
         for key, _ in signature.parameters.items():
-            if key in ('cache_filepath', 'refresh', 'verbose'):
+            if key in ('_cache_fp', '_refresh', '_verbose'):
                 raise RuntimeError("The function decorated by cache_results cannot have keyword `{}`.".format(key))
         def wrapper(*args, **kwargs):
             if '_cache_fp' in kwargs:
