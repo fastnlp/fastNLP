@@ -212,39 +212,33 @@
     target和input，这种情况下，fastNLP默认不进行pad。另外，当某个field已经被设置为了target或者input后，之后append的
     instance对应的field必须要和前面已有的内容一致，否则会报错。
 
-    可以查看field的dtype
-
-        Example::
+    可以查看field的dtype::
         
-            from fastNLP import DataSet
+        from fastNLP import DataSet
 
-            d = DataSet({'a': [0, 1, 3], 'b':[[1.0, 2.0], [0.1, 0.2], [3]]})
-            d.set_input('a', 'b')
-            d.a.dtype
-            >> numpy.int64
-            d.b.dtype
-            >> numpy.float64
-            # 默认情况下'a'这个field将被转换为torch.LongTensor，但如果需要其为torch.FloatTensor可以手动修改dtype
-            d.a.dtype = float  #  请确保该field的确可以全部转换为float。
+        d = DataSet({'a': [0, 1, 3], 'b':[[1.0, 2.0], [0.1, 0.2], [3]]})
+        d.set_input('a', 'b')
+        d.a.dtype
+        >> numpy.int64
+        d.b.dtype
+        >> numpy.float64
+        # 默认情况下'a'这个field将被转换为torch.LongTensor，但如果需要其为torch.FloatTensor可以手动修改dtype
+        d.a.dtype = float  #  请确保该field的确可以全部转换为float。
 
     如果某个field中出现了多种类型混合(比如一部分为str，一部分为int)的情况，fastNLP无法判断该field的类型，会报如下的
-    错误:
+    错误::
 
-        Example::
+        from fastNLP import DataSet
+        d = DataSet({'data': [1, 'a']})
+        d.set_input('data')
+        >> RuntimeError: Mixed data types in Field data: [<class 'str'>, <class 'int'>]
 
-            from fastNLP import DataSet
-            d = DataSet({'data': [1, 'a']})
-            d.set_input('data')
-            >> RuntimeError: Mixed data types in Field data: [<class 'str'>, <class 'int'>]
+    可以通过设置以忽略对该field进行类型检查::
 
-    可以通过设置以忽略对该field进行类型检查
-
-        Example::
-
-            from fastNLP import DataSet
-            d = DataSet({'data': [1, 'a']})
-            d.set_ignore_type('data')
-            d.set_input('data')
+        from fastNLP import DataSet
+        d = DataSet({'data': [1, 'a']})
+        d.set_ignore_type('data')
+        d.set_input('data')
 
     当某个field被设置为忽略type之后，fastNLP将不对其进行pad。
 
