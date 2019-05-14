@@ -1,5 +1,5 @@
-fastNLP.core.dataset module
-===========================
+fastNLP.core.dataset
+====================
 
 .. automodule:: fastNLP.core.dataset
     :members:

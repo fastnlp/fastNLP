@@ -1,5 +1,5 @@
-fastNLP.models.base\_model module
-=================================
+fastNLP.models.base\_model
+==========================
 
 .. automodule:: fastNLP.models.base_model
     :members:

@@ -1,5 +1,5 @@
-fastNLP.core.instance module
-============================
+fastNLP.core.instance
+=====================
 
 .. automodule:: fastNLP.core.instance
     :members:

@@ -172,7 +172,7 @@ class TestDataSetMethods(unittest.TestCase):
         def split_sent(ins):
             return ins['raw_sentence'].split()
         csv_loader = CSVLoader(headers=['raw_sentence', 'label'],sep='\t')
-        dataset = csv_loader.load('../data_for_tests/tutorial_sample_dataset.csv')
+        dataset = csv_loader.load('test/data_for_tests/tutorial_sample_dataset.csv')
         dataset.drop(lambda x: len(x['raw_sentence'].split()) == 0, inplace=True)
         dataset.apply(split_sent, new_field_name='words', is_input=True)
         # print(dataset)

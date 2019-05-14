@@ -1,15 +1,16 @@
-fastNLP.core package
-====================
+fastNLP.core
+============
 
 .. automodule:: fastNLP.core
     :members:
     :undoc-members:
     :show-inheritance:
 
-Submodules
+子模块
 ----------
 
 .. toctree::
+   :titlesonly:
 
    fastNLP.core.batch
    fastNLP.core.callback

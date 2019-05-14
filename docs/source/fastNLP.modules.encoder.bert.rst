@@ -1,5 +1,5 @@
-fastNLP.modules.encoder.bert module
-===================================
+fastNLP.modules.encoder.bert
+============================
 
 .. automodule:: fastNLP.modules.encoder.bert
     :members:

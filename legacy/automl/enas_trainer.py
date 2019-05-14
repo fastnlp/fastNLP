@@ -11,15 +11,15 @@ import torch
 try:
     from tqdm.auto import tqdm
 except:
-    from ..core.utils import _pseudo_tqdm as tqdm
+    from fastNLP.core.utils import _pseudo_tqdm as tqdm
 
-from ..core.batch import Batch
-from ..core.callback import CallbackException
-from ..core.dataset import DataSet
-from ..core.utils import _move_dict_value_to_device
+from fastNLP.core.batch import Batch
+from fastNLP.core.callback import CallbackException
+from fastNLP.core.dataset import DataSet
+from fastNLP.core.utils import _move_dict_value_to_device
 import fastNLP
 from . import enas_utils as utils
-from ..core.utils import _build_args
+from fastNLP.core.utils import _build_args
 
 from torch.optim import Adam
 

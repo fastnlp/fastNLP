@@ -1,5 +1,5 @@
-fastNLP.core.batch module
-=========================
+fastNLP.core.batch
+==================
 
 .. automodule:: fastNLP.core.batch
     :members:

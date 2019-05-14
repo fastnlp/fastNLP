@@ -1,5 +1,5 @@
-fastNLP.modules.aggregator.pooling module
-=========================================
+fastNLP.modules.aggregator.pooling
+==================================
 
 .. automodule:: fastNLP.modules.aggregator.pooling
     :members:

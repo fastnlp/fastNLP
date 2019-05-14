@@ -1,5 +1,5 @@
-fastNLP.core.trainer module
-===========================
+fastNLP.core.trainer
+====================
 
 .. automodule:: fastNLP.core.trainer
     :members:

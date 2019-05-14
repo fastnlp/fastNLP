@@ -22,7 +22,7 @@ except ImportError:
 try:
     from tqdm.auto import tqdm
 except:
-    from ..core.utils import _pseudo_tqdm as tqdm
+    from fastNLP.core.utils import _pseudo_tqdm as tqdm
     
 # matches bfd8deac from resnet18-bfd8deac.pth
 HASH_REGEX = re.compile(r'-([a-f0-9]*)\.')

@@ -1,5 +1,5 @@
-fastNLP.core.field module
-=========================
+fastNLP.core.field
+==================
 
 .. automodule:: fastNLP.core.field
     :members:

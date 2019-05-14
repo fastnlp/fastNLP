@@ -1,5 +1,5 @@
-fastNLP.models.enas\_model module
-=================================
+fastNLP.models.enas\_model
+==========================
 
 .. automodule:: fastNLP.models.enas_model
     :members:

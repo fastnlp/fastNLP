@@ -1,8 +1,3 @@
-"""
-.. _embed-loader:
-
-用于读取预训练的embedding, 读取结果可直接载入为模型参数
-"""
 import os
 
 import numpy as np
@@ -16,7 +11,7 @@ class EmbedLoader(BaseLoader):
     """
     别名：:class:`fastNLP.io.EmbedLoader` :class:`fastNLP.io.embed_loader.EmbedLoader`
 
-    这个类用于从预训练的Embedding中load数据。
+    用于读取预训练的embedding, 读取结果可直接载入为模型参数。
     """
 
     def __init__(self):

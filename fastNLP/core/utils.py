@@ -35,9 +35,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
     """
     别名：:class:`fastNLP.cache_results` :class:`fastNLP.core.uitls.cache_results`
 
-    cache_results是fastNLP中用于cache数据的装饰器。通过下面的例子看一下如何使用
-
-    Example::
+    cache_results是fastNLP中用于cache数据的装饰器。通过下面的例子看一下如何使用::
 
         import time
         import numpy as np
@@ -607,6 +605,7 @@ def seq_len_to_mask(seq_len):
     转变 1-d seq_len到2-d mask.
 
     Example::
+    
         >>> seq_len = torch.arange(2, 16)
         >>> mask = seq_len_to_mask(seq_len)
         >>> print(mask.size())

@@ -1,5 +1,5 @@
-fastNLP.core.callback module
-============================
+fastNLP.core.callback
+=====================
 
 .. automodule:: fastNLP.core.callback
     :members:

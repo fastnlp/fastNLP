@@ -1,5 +1,5 @@
-fastNLP.core.optimizer module
-=============================
+fastNLP.core.optimizer
+======================
 
 .. automodule:: fastNLP.core.optimizer
     :members:

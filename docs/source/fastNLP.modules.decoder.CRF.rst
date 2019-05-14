@@ -1,5 +1,5 @@
-fastNLP.modules.decoder.CRF module
-==================================
+fastNLP.modules.decoder.CRF
+===========================
 
 .. automodule:: fastNLP.modules.decoder.CRF
     :members:

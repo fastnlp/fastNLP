@@ -5,13 +5,13 @@ import torch
 warnings.filterwarnings('ignore')
 import os
 
-from ..core.dataset import DataSet
+from fastNLP.core.dataset import DataSet
 from .utils import load_url
 from .processor import ModelProcessor
-from ..io.dataset_loader import _cut_long_sentence, ConllLoader
-from ..core.instance import Instance
+from fastNLP.io.dataset_loader import _cut_long_sentence, ConllLoader
+from fastNLP.core.instance import Instance
 from ..api.pipeline import Pipeline
-from ..core.metrics import SpanFPreRecMetric
+from fastNLP.core.metrics import SpanFPreRecMetric
 from .processor import IndexerProcessor
 
 # TODO add pretrain urls

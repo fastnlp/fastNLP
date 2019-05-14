@@ -1,5 +1,5 @@
-fastNLP.io.dataset\_loader module
-=================================
+fastNLP.io.dataset\_loader
+==========================
 
 .. automodule:: fastNLP.io.dataset_loader
     :members:

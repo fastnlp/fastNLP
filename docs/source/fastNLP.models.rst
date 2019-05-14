@@ -1,15 +1,16 @@
-fastNLP.models package
-======================
+fastNLP.models
+==============
 
 .. automodule:: fastNLP.models
     :members:
     :undoc-members:
     :show-inheritance:
 
-Submodules
+子模块
 ----------
 
 .. toctree::
+   :titlesonly:
 
    fastNLP.models.base_model
    fastNLP.models.bert

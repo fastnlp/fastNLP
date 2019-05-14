@@ -1,5 +1,5 @@
-fastNLP.core.const module
-=========================
+fastNLP.core.const
+==================
 
 .. automodule:: fastNLP.core.const
     :members:

@@ -12,19 +12,21 @@ fastNLP 是一款轻量级的 NLP 处理套件。你既可以使用它快速地�
 - 便捷且具有扩展性的训练器; 提供多种内置callback函数，方便实验记录、异常捕获等。
 
 
-内置的模块
+内置组件
 ------------
 
-（TODO）
+大部分用于的 NLP 任务神经网络都可以看做由编码（encoder）、聚合（aggregator）、解码（decoder）三种模块组成。
 
+.. image:: figures/text_classification.png
 
-主要包含了以下的三大模块:
+fastNLP 在 :mod:`~fastNLP.modules` 模块中内置了三种模块的诸多组件，可以帮助用户快速搭建自己所需的网络。
+三种模块的功能和常见组件如下:
 
 +-----------------------+-----------------------+-----------------------+
 | module type           | functionality         | example               |
 +=======================+=======================+=======================+
 | encoder               | 将输入编码为具有具    | embedding, RNN, CNN,  |
-|                       |   有表示能力的向量    | transformer           |
+|                       | 有表示能力的向量      | transformer           |
 +-----------------------+-----------------------+-----------------------+
 | aggregator            | 从多个向量中聚合信息  | self-attention,       |
 |                       |                       | max-pooling           |
@@ -35,32 +37,24 @@ fastNLP 是一款轻量级的 NLP 处理套件。你既可以使用它快速地�
 +-----------------------+-----------------------+-----------------------+
 
 
-For example:
+内置模型
+----------------
 
-.. image:: figures/text_classification.png
+fastNLP 在 :mod:`~fastNLP.models` 模块中内置了如 :class:`~fastNLP.models.CNNText` 、
+:class:`~fastNLP.models.SeqLabeling` 等完整的模型，以供用户直接使用。
 
-
-
-各个任务上的结果
------------------------
-
-（TODO）
-
-快速入门
--------------
-
-TODO
-
+.. todo::
+    这些模型的介绍如下表所示：（模型名称 + 介绍 + 任务上的结果）
 
 用户手册
----------------
+----------------
 
 .. toctree::
    :maxdepth: 1
 
     安装指南 <user/installation>
     快速入门 <user/quickstart>
-    详细指南 <user/tutorials>
+    详细指南 <user/tutorial_one>
     科研向导 <user/with_fitlog>
 
 
@@ -70,7 +64,7 @@ API 文档
 除了用户手册之外，你还可以通过查阅 API 文档来找到你所需要的工具。
 
 .. toctree::
-   :maxdepth: 2
+   :titlesonly:
    
    fastNLP
 

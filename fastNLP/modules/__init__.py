@@ -1,10 +1,25 @@
 """
-modules 模块是 fastNLP 的重要组成部分，它实现了神经网络构建中常见的组件，
-具体包括 TODO
+大部分用于的 NLP 任务神经网络都可以看做由编码 :mod:`~fastNLP.modules.encoder` 、
+聚合 :mod:`~fastNLP.modules.aggregator` 、解码 :mod:`~fastNLP.modules.decoder` 三种模块组成。
 
-可以和 PyTorch 结合使用？TODO
+.. image:: figures/text_classification.png
 
-TODO __all__ 里面多暴露一些
+:mod:`~fastNLP.modules` 中实现了 fastNLP 提供的诸多模块组件，可以帮助用户快速搭建自己所需的网络。
+三种模块的功能和常见组件如下:
+
++-----------------------+-----------------------+-----------------------+
+| module type           | functionality         | example               |
++=======================+=======================+=======================+
+| encoder               | 将输入编码为具有具    | embedding, RNN, CNN,  |
+|                       | 有表示能力的向量      | transformer           |
++-----------------------+-----------------------+-----------------------+
+| aggregator            | 从多个向量中聚合信息  | self-attention,       |
+|                       |                       | max-pooling           |
++-----------------------+-----------------------+-----------------------+
+| decoder               | 将具有某种表示意义的  | MLP, CRF              |
+|                       | 向量解码为需要的输出  |                       |
+|                       | 形式                  |                       |
++-----------------------+-----------------------+-----------------------+
 
 """
 from . import aggregator
@@ -16,3 +31,20 @@ from .dropout import TimestepDropout
 from .encoder import *
 from .utils import get_embeddings
 
+__all__ = [
+    "LSTM",
+    "Embedding",
+    "ConvMaxpool",
+    "BertModel",
+    
+    "MaxPool",
+    "MaxPoolWithMask",
+    "AvgPool",
+    "MultiHeadAttention",
+    "BiAttention",
+
+    "MLP",
+    "ConditionalRandomField",
+    "viterbi_decode",
+    "allowed_transitions",
+]
