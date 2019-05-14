@@ -76,7 +76,7 @@ class TestMoveModelDeivce(unittest.TestCase):
         if torch.cuda.is_available():
             device = [0]
             _model = _move_model_to_device(model, device)
-            assert isinstance(_model, nn.DataParallel)
+            assert not isinstance(_model, nn.DataParallel)
             device = [torch.device('cuda:0'), torch.device('cuda:0')]
             with self.assertRaises(Exception):
                 _model = _move_model_to_device(model, device)
