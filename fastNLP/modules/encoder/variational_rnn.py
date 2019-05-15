@@ -43,7 +43,7 @@ class VarRnnCellWrapper(nn.Module):
                 return torch.cat([hi, h0[:h0_size]], dim=0)
             return hi[:size]
         is_lstm = isinstance(hidden, tuple)
-        input, batch_sizes = input_x
+        input, batch_sizes = input_x.data, input_x.batch_sizes
         output = []
         cell = self.cell
         if is_reversed:
@@ -148,10 +148,11 @@ class VarRNNBase(nn.Module):
             seq_len = x.size(1) if self.batch_first else x.size(0)
             max_batch_size = x.size(0) if self.batch_first else x.size(1)
             seq_lens = torch.LongTensor([seq_len for _ in range(max_batch_size)])
-            x, batch_sizes = pack_padded_sequence(x, seq_lens, batch_first=self.batch_first)
+            _tmp = pack_padded_sequence(x, seq_lens, batch_first=self.batch_first)
+            x, batch_sizes = _tmp.data, _tmp.batch_sizes
         else:
             max_batch_size = int(x.batch_sizes[0])
-            x, batch_sizes = x
+            x, batch_sizes = x.data, x.batch_sizes
 
         if hx is None:
             hx = x.new_zeros(self.num_layers * self.num_directions,

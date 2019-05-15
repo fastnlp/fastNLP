@@ -558,7 +558,7 @@ class Trainer(object):
         start = time.time()
         
         with inner_tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
-            self.pbar = pbar if isinstance(pbar, tqdm) else None
+            self.pbar = pbar
             avg_loss = 0
             data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False,
                                   prefetch=self.prefetch)
