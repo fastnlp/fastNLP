@@ -342,8 +342,8 @@ class AccuracyMetric(MetricBase):
 
 def _bmes_tag_to_spans(tags, ignore_labels=None):
     """
-    给定一个tags的lis，比如['S', 'B-singer', 'M-singer', 'E-singer', 'S', 'S']。
-    返回[('', (0, 1)), ('singer', (1, 4)), ('', (4, 5)), ('', (5, 6))] (左闭右开区间)
+    给定一个tags的lis，比如['S-song', 'B-singer', 'M-singer', 'E-singer', 'S-moive', 'S-actor']。
+    返回[('song', (0, 1)), ('singer', (1, 4)), ('moive', (4, 5)), ('actor', (5, 6))] (左闭右开区间)
 
     :param tags: List[str],
     :param ignore_labels: List[str], 在该list中的label将被忽略
@@ -527,8 +527,8 @@ class SpanFPreRecMetric(MetricBase):
         if pred.size() == target.size() and len(target.size()) == 2:
             pass
         elif len(pred.size()) == len(target.size()) + 1 and len(target.size()) == 2:
-            pred = pred.argmax(dim=-1)
             num_classes = pred.size(-1)
+            pred = pred.argmax(dim=-1)
             if (target >= num_classes).any():
                 raise ValueError("A gold label passed to SpanBasedF1Metric contains an "
                                  "id >= {}, the number of classes.".format(num_classes))
@@ -538,9 +538,11 @@ class SpanFPreRecMetric(MetricBase):
                                f"{pred.size()[:-1]}, got {target.size()}.")
 
         batch_size = pred.size(0)
+        pred = pred.tolist()
+        target = target.tolist()
         for i in range(batch_size):
-            pred_tags = pred[i, :int(seq_len[i])].tolist()
-            gold_tags = target[i, :int(seq_len[i])].tolist()
+            pred_tags = pred[i][:int(seq_len[i])]
+            gold_tags = target[i][:int(seq_len[i])]
 
             pred_str_tags = [self.tag_vocab.to_word(tag) for tag in pred_tags]
             gold_str_tags = [self.tag_vocab.to_word(tag) for tag in gold_tags]
@@ -592,14 +594,17 @@ class SpanFPreRecMetric(MetricBase):
             f, pre, rec = self._compute_f_pre_rec(sum(self._true_positives.values()),
                                                   sum(self._false_negatives.values()),
                                                   sum(self._false_positives.values()))
-            evaluate_result['f'] = round(f, 6)
-            evaluate_result['pre'] = round(pre, 6)
-            evaluate_result['rec'] = round(rec, 6)
+            evaluate_result['f'] = f
+            evaluate_result['pre'] = pre
+            evaluate_result['rec'] = rec
 
         if reset:
             self._true_positives = defaultdict(int)
             self._false_positives = defaultdict(int)
             self._false_negatives = defaultdict(int)
+
+        for key, value in evaluate_result.items():
+            evaluate_result[key] = round(value, 6)
 
         return evaluate_result
 
