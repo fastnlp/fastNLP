@@ -49,6 +49,18 @@ callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:
     trainer.train()
 
 """
+import os
+import torch
+
+try:
+    from tensorboardX import SummaryWriter
+    
+    tensorboardX_flag = True
+except:
+    tensorboardX_flag = False
+
+from ..io.model_io import ModelSaver, ModelLoader
+
 __all__ = [
     "Callback",
     "GradientClipCallback",
@@ -60,15 +72,6 @@ __all__ = [
     "CallbackException",
     "EarlyStopError"
 ]
-import os
-import torch
-from ..io.model_io import ModelSaver, ModelLoader
-
-try:
-    from tensorboardX import SummaryWriter
-    tensorboardX_flag = True
-except:
-    tensorboardX_flag = False
 
 
 class Callback(object):
@@ -587,7 +590,7 @@ class TensorboardCallback(Callback):
             self._summary_writer = SummaryWriter(path)
         else:
             self._summary_writer = None
-            
+    
     def on_batch_begin(self, batch_x, batch_y, indices):
         if "model" in self.options and self.graph_added is False:
             # tesorboardX 这里有大bug，暂时没法画模型图

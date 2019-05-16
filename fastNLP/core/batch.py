@@ -2,14 +2,18 @@
 batch 模块实现了 fastNLP 所需的 Batch 类。
 
 """
-__all__ = ["Batch"]
+import atexit
 import numpy as np
 import torch
-import atexit
-
-from .sampler import RandomSampler, Sampler
 import torch.multiprocessing as mp
+
 from queue import Empty, Full
+
+from .sampler import RandomSampler
+
+__all__ = [
+    "Batch"
+]
 
 _python_is_exit = False
 
@@ -120,7 +124,7 @@ class Batch(object):
         :return list(int) indexes: 下标序列
         """
         return self.cur_batch_indices
-
+    
     @staticmethod
     def _run_fetch(batch, q):
         try:
@@ -145,7 +149,7 @@ class Batch(object):
             q.put(e)
         finally:
             q.join()
-
+    
     @staticmethod
     def _run_batch_iter(batch):
         q = mp.JoinableQueue(maxsize=10)
@@ -182,4 +186,3 @@ def _to_tensor(batch, dtype):
     except:
         pass
     return batch
-

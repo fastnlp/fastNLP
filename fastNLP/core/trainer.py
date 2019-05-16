@@ -297,13 +297,12 @@ Example2.3
 """
 
 import os
-import time
-from datetime import datetime
-from datetime import timedelta
-
 import numpy as np
+import time
 import torch
-from torch import nn
+import torch.nn as nn
+
+from datetime import datetime, timedelta
 
 try:
     from tqdm.auto import tqdm
@@ -315,6 +314,7 @@ from .callback import CallbackManager, CallbackException
 from .dataset import DataSet
 from .losses import _prepare_losser
 from .metrics import _prepare_metrics
+from .optimizer import Optimizer
 from .sampler import Sampler
 from .sampler import RandomSampler
 from .sampler import SequentialSampler
@@ -326,7 +326,6 @@ from .utils import _check_loss_evaluate
 from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
 from .utils import _get_model_device
-from .optimizer import Optimizer
 from .utils import _move_model_to_device
 
 
@@ -464,7 +463,7 @@ class Trainer(object):
             len(self.train_data) % self.batch_size != 0)) * self.n_epochs
         
         self.model = _move_model_to_device(self.model, device=device)
-
+        
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
         elif isinstance(optimizer, Optimizer):

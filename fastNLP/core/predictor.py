@@ -1,6 +1,10 @@
-from collections import defaultdict
-
+"""
+    ..todo::
+        检查这个类是否需要
+"""
 import torch
+
+from collections import defaultdict
 
 from . import Batch
 from . import DataSet
@@ -9,7 +13,8 @@ from .utils import _build_args
 
 
 class Predictor(object):
-    """An interface for predicting outputs based on trained models.
+    """
+    An interface for predicting outputs based on trained models.
 
     It does not care about evaluations of the model, which is different from Tester.
     This is a high-level model wrapper to be called by FastNLP.

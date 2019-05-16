@@ -1,6 +1,11 @@
 from functools import wraps
 from collections import Counter
+
 from .dataset import DataSet
+
+__all__ = [
+    "Vocabulary"
+]
 
 
 def _check_build_vocab(func):
