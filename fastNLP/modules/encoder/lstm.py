@@ -10,7 +10,7 @@ from ..utils import initial_parameter
 
 class LSTM(nn.Module):
     """
-    别名：:class:`fastNLP.modules.encoder.LSTM`  :class:`fastNLP.modules.encoder.lstm.LSTM`
+    别名：:class:`fastNLP.modules.LSTM`  :class:`fastNLP.modules.encoder.lstm.LSTM`
 
     LSTM 模块, 轻量封装的Pytorch LSTM
 

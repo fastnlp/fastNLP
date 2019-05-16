@@ -8,7 +8,7 @@ import numpy as NP
 
 class StarTransformer(nn.Module):
     """
-    别名：:class:`fastNLP.modules.encoder.StarTransformer`  :class:`fastNLP.modules.encoder.star_transformer.StarTransformer`
+    别名：:class:`fastNLP.modules.StarTransformer`  :class:`fastNLP.modules.encoder.star_transformer.StarTransformer`
 
 
     Star-Transformer 的encoder部分。 输入3d的文本输入, 返回相同长度的文本编码

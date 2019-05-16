@@ -5,7 +5,7 @@ import torch.nn as nn
 
 class MaxPool(nn.Module):
     """
-    别名：:class:`fastNLP.modules.aggregator.MaxPool`  :class:`fastNLP.modules.aggregator.pooling.MaxPool`
+    别名：:class:`fastNLP.modules.MaxPool`  :class:`fastNLP.modules.aggregator.pooling.MaxPool`
 
     Max-pooling模块。
     
@@ -53,7 +53,7 @@ class MaxPool(nn.Module):
 
 class MaxPoolWithMask(nn.Module):
     """
-    别名：:class:`fastNLP.modules.aggregator.MaxPoolWithMask`  :class:`fastNLP.modules.aggregator.pooling.MaxPoolWithMask`
+    别名：:class:`fastNLP.modules.MaxPoolWithMask`  :class:`fastNLP.modules.aggregator.pooling.MaxPoolWithMask`
 
     带mask矩阵的max pooling。在做max-pooling的时候不会考虑mask值为0的位置。
     """
@@ -93,7 +93,7 @@ class KMaxPool(nn.Module):
 
 class AvgPool(nn.Module):
     """
-    别名：:class:`fastNLP.modules.aggregator.AvgPool`  :class:`fastNLP.modules.aggregator.pooling.AvgPool`
+    别名：:class:`fastNLP.modules.AvgPool`  :class:`fastNLP.modules.aggregator.pooling.AvgPool`
 
     给定形如[batch_size, max_len, hidden_size]的输入，在最后一维进行avg pooling. 输出为[batch_size, hidden_size]
     """
@@ -120,7 +120,7 @@ class AvgPool(nn.Module):
 
 class AvgPoolWithMask(nn.Module):
     """
-    别名：:class:`fastNLP.modules.aggregator.AvgPoolWithMask`  :class:`fastNLP.modules.aggregator.pooling.AvgPoolWithMask`
+    别名：:class:`fastNLP.modules.AvgPoolWithMask`  :class:`fastNLP.modules.aggregator.pooling.AvgPoolWithMask`
 
     给定形如[batch_size, max_len, hidden_size]的输入，在最后一维进行avg pooling. 输出为[batch_size, hidden_size], pooling
     的时候只会考虑mask为1的位置

@@ -197,7 +197,7 @@ class VarRNNBase(nn.Module):
 
 class VarLSTM(VarRNNBase):
     """
-    别名：:class:`fastNLP.modules.encoder.VarLSTM`  :class:`fastNLP.modules.encoder.variational_rnn.VarLSTM`
+    别名：:class:`fastNLP.modules.VarLSTM`  :class:`fastNLP.modules.encoder.variational_rnn.VarLSTM`
 
     Variational Dropout LSTM.
 
@@ -221,7 +221,7 @@ class VarLSTM(VarRNNBase):
 
 class VarRNN(VarRNNBase):
     """
-    别名：:class:`fastNLP.modules.encoder.VarRNN`  :class:`fastNLP.modules.encoder.variational_rnn.VarRNN`
+    别名：:class:`fastNLP.modules.VarRNN`  :class:`fastNLP.modules.encoder.variational_rnn.VarRNN`
 
     Variational Dropout RNN.
 
@@ -244,7 +244,7 @@ class VarRNN(VarRNNBase):
 
 class VarGRU(VarRNNBase):
     """
-    别名：:class:`fastNLP.modules.encoder.VarGRU`  :class:`fastNLP.modules.encoder.variational_rnn.VarGRU`
+    别名：:class:`fastNLP.modules.VarGRU`  :class:`fastNLP.modules.encoder.variational_rnn.VarGRU`
 
     Variational Dropout GRU.
 

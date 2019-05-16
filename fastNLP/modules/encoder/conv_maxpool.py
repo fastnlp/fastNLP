@@ -10,7 +10,7 @@ from ..utils import initial_parameter
 
 class ConvMaxpool(nn.Module):
     """
-    别名：:class:`fastNLP.modules.encoder.ConvMaxpool`   :class:`fastNLP.modules.encoder.conv_maxpool.ConvMaxpool`
+    别名：:class:`fastNLP.modules.ConvMaxpool`   :class:`fastNLP.modules.encoder.conv_maxpool.ConvMaxpool`
 
     集合了Convolution和Max-Pooling于一体的层。给定一个batch_size x max_len x input_size的输入，返回batch_size x
     sum(output_channels) 大小的matrix。在内部，是先使用CNN给输入做卷积，然后经过activation激活层，在通过在长度(max_len)

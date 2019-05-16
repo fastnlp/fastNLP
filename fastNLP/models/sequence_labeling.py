@@ -10,7 +10,7 @@ from torch import nn
 
 class SeqLabeling(BaseModel):
     """
-    别名：:class:`fastNLP.models.SeqLabeling`  :class:`fastNLP.modules.aggregator.sequence_labeling.SeqLabeling`
+    别名：:class:`fastNLP.models.SeqLabeling`  :class:`fastNLP.models.sequence_labeling.SeqLabeling`
 
     一个基础的Sequence labeling的模型。
     用于做sequence labeling的基础类。结构包含一层Embedding，一层LSTM(单向，一层)，一层FC，以及一层CRF。
@@ -102,7 +102,7 @@ class SeqLabeling(BaseModel):
 
 class AdvSeqLabel(nn.Module):
     """
-    别名：:class:`fastNLP.models.AdvSeqLabel`  :class:`fastNLP.modules.aggregator.sequence_labeling.AdvSeqLabel`
+    别名：:class:`fastNLP.models.AdvSeqLabel`  :class:`fastNLP.models.sequence_labeling.AdvSeqLabel`
 
     更复杂的Sequence Labelling模型。结构为Embedding, LayerNorm, 双向LSTM(两层)，FC，LayerNorm，DropOut，FC，CRF。
     

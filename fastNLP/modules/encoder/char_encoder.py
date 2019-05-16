@@ -7,7 +7,7 @@ from ..utils import initial_parameter
 # from torch.nn.init import xavier_uniform
 class ConvolutionCharEncoder(nn.Module):
     """
-    别名：:class:`fastNLP.modules.encoder.ConvolutionCharEncoder`   :class:`fastNLP.modules.encoder.char_encoder.ConvolutionCharEncoder`
+    别名：:class:`fastNLP.modules.ConvolutionCharEncoder`   :class:`fastNLP.modules.encoder.char_encoder.ConvolutionCharEncoder`
 
     char级别的卷积编码器.
     :param int char_emb_size: char级别embedding的维度. Default: 50

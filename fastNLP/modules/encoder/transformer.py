@@ -6,7 +6,7 @@ from ..dropout import TimestepDropout
 
 class TransformerEncoder(nn.Module):
     """
-    别名：:class:`fastNLP.modules.encoder.TransformerEncoder`  :class:`fastNLP.modules.encoder.transformer.TransformerEncoder`
+    别名：:class:`fastNLP.modules.TransformerEncoder`  :class:`fastNLP.modules.encoder.transformer.TransformerEncoder`
 
 
     transformer的encoder模块，不包含embedding层

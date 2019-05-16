@@ -4,7 +4,7 @@ import torch
 
 def viterbi_decode(logits, transitions, mask=None, unpad=False):
     """
-    别名：:class:`fastNLP.modules.decoder.viterbi_decode`  :class:`fastNLP.modules.decoder.utils.viterbi_decode
+    别名：:class:`fastNLP.modules.viterbi_decode`  :class:`fastNLP.modules.decoder.utils.viterbi_decode
 
     给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
 
