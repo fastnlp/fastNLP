@@ -1,9 +1,14 @@
-"""Star-Transformer 的encoder部分的 Pytorch 实现
 """
+Star-Transformer 的encoder部分的 Pytorch 实现
+"""
+import numpy as NP
 import torch
 from torch import nn
 from torch.nn import functional as F
-import numpy as NP
+
+__all__ = [
+    "StarTransformer"
+]
 
 
 class StarTransformer(nn.Module):
@@ -24,10 +29,11 @@ class StarTransformer(nn.Module):
         模型会为输入序列加上position embedding。
         若为`None`，忽略加上position embedding的步骤. Default: `None`
     """
+    
     def __init__(self, hidden_size, num_layers, num_head, head_dim, dropout=0.1, max_len=None):
         super(StarTransformer, self).__init__()
         self.iters = num_layers
-
+        
         self.norm = nn.ModuleList([nn.LayerNorm(hidden_size) for _ in range(self.iters)])
         self.ring_att = nn.ModuleList(
             [_MSA1(hidden_size, nhead=num_head, head_dim=head_dim, dropout=dropout)
@@ -35,12 +41,12 @@ class StarTransformer(nn.Module):
         self.star_att = nn.ModuleList(
             [_MSA2(hidden_size, nhead=num_head, head_dim=head_dim, dropout=dropout)
              for _ in range(self.iters)])
-
+        
         if max_len is not None:
             self.pos_emb = self.pos_emb = nn.Embedding(max_len, hidden_size)
         else:
             self.pos_emb = None
-
+    
     def forward(self, data, mask):
         """
         :param FloatTensor data: [batch, length, hidden] 输入的序列
@@ -50,20 +56,21 @@ class StarTransformer(nn.Module):
 
                 [batch, hidden] 全局 relay 节点, 详见论文
         """
+        
         def norm_func(f, x):
             # B, H, L, 1
             return f(x.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
-
+        
         B, L, H = data.size()
-        mask = (mask == 0) # flip the mask for masked_fill_
+        mask = (mask == 0)  # flip the mask for masked_fill_
         smask = torch.cat([torch.zeros(B, 1, ).byte().to(mask), mask], 1)
-
-        embs = data.permute(0, 2, 1)[:,:,:,None] # B H L 1
+        
+        embs = data.permute(0, 2, 1)[:, :, :, None]  # B H L 1
         if self.pos_emb:
-            P = self.pos_emb(torch.arange(L, dtype=torch.long, device=embs.device)\
-                    .view(1, L)).permute(0, 2, 1).contiguous()[:, :, :, None]  # 1 H L 1
+            P = self.pos_emb(torch.arange(L, dtype=torch.long, device=embs.device) \
+                             .view(1, L)).permute(0, 2, 1).contiguous()[:, :, :, None]  # 1 H L 1
             embs = embs + P
-
+        
         nodes = embs
         relay = embs.mean(2, keepdim=True)
         ex_mask = mask[:, None, :, None].expand(B, H, L, 1)
@@ -72,11 +79,11 @@ class StarTransformer(nn.Module):
             ax = torch.cat([r_embs, relay.expand(B, H, 1, L)], 2)
             nodes = nodes + F.leaky_relu(self.ring_att[i](norm_func(self.norm[i], nodes), ax=ax))
             relay = F.leaky_relu(self.star_att[i](relay, torch.cat([relay, nodes], 2), smask))
-
+            
             nodes = nodes.masked_fill_(ex_mask, 0)
-
+        
         nodes = nodes.view(B, H, L).permute(0, 2, 1)
-
+        
         return nodes, relay.view(B, H)
 
 
@@ -89,37 +96,37 @@ class _MSA1(nn.Module):
         self.WK = nn.Conv2d(nhid, nhead * head_dim, 1)
         self.WV = nn.Conv2d(nhid, nhead * head_dim, 1)
         self.WO = nn.Conv2d(nhead * head_dim, nhid, 1)
-
+        
         self.drop = nn.Dropout(dropout)
-
+        
         # print('NUM_HEAD', nhead, 'DIM_HEAD', head_dim)
         self.nhid, self.nhead, self.head_dim, self.unfold_size = nhid, nhead, head_dim, 3
-
+    
     def forward(self, x, ax=None):
         # x: B, H, L, 1, ax : B, H, X, L append features
         nhid, nhead, head_dim, unfold_size = self.nhid, self.nhead, self.head_dim, self.unfold_size
         B, H, L, _ = x.shape
-
+        
         q, k, v = self.WQ(x), self.WK(x), self.WV(x)  # x: (B,H,L,1)
-
+        
         if ax is not None:
             aL = ax.shape[2]
             ak = self.WK(ax).view(B, nhead, head_dim, aL, L)
             av = self.WV(ax).view(B, nhead, head_dim, aL, L)
         q = q.view(B, nhead, head_dim, 1, L)
-        k = F.unfold(k.view(B, nhead * head_dim, L, 1), (unfold_size, 1), padding=(unfold_size // 2, 0))\
-                .view(B, nhead, head_dim, unfold_size, L)
-        v = F.unfold(v.view(B, nhead * head_dim, L, 1), (unfold_size, 1), padding=(unfold_size // 2, 0))\
-                .view(B, nhead, head_dim, unfold_size, L)
+        k = F.unfold(k.view(B, nhead * head_dim, L, 1), (unfold_size, 1), padding=(unfold_size // 2, 0)) \
+            .view(B, nhead, head_dim, unfold_size, L)
+        v = F.unfold(v.view(B, nhead * head_dim, L, 1), (unfold_size, 1), padding=(unfold_size // 2, 0)) \
+            .view(B, nhead, head_dim, unfold_size, L)
         if ax is not None:
             k = torch.cat([k, ak], 3)
             v = torch.cat([v, av], 3)
-
+        
         alphas = self.drop(F.softmax((q * k).sum(2, keepdim=True) / NP.sqrt(head_dim), 3))  # B N L 1 U
         att = (alphas * v).sum(3).view(B, nhead * head_dim, L, 1)
-
+        
         ret = self.WO(att)
-
+        
         return ret
 
 
@@ -131,19 +138,19 @@ class _MSA2(nn.Module):
         self.WK = nn.Conv2d(nhid, nhead * head_dim, 1)
         self.WV = nn.Conv2d(nhid, nhead * head_dim, 1)
         self.WO = nn.Conv2d(nhead * head_dim, nhid, 1)
-
+        
         self.drop = nn.Dropout(dropout)
-
+        
         # print('NUM_HEAD', nhead, 'DIM_HEAD', head_dim)
         self.nhid, self.nhead, self.head_dim, self.unfold_size = nhid, nhead, head_dim, 3
-
+    
     def forward(self, x, y, mask=None):
         # x: B, H, 1, 1, 1 y: B H L 1
         nhid, nhead, head_dim, unfold_size = self.nhid, self.nhead, self.head_dim, self.unfold_size
         B, H, L, _ = y.shape
-
+        
         q, k, v = self.WQ(x), self.WK(y), self.WV(y)
-
+        
         q = q.view(B, nhead, 1, head_dim)  # B, H, 1, 1 -> B, N, 1, h
         k = k.view(B, nhead, head_dim, L)  # B, H, L, 1 -> B, N, h, L
         v = v.view(B, nhead, head_dim, L).permute(0, 1, 3, 2)  # B, H, L, 1 -> B, N, L, h

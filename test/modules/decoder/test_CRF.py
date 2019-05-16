@@ -5,7 +5,7 @@ import unittest
 class TestCRF(unittest.TestCase):
     def test_case1(self):
         # 检查allowed_transitions()能否正确使用
-        from fastNLP.modules.decoder.CRF import allowed_transitions
+        from fastNLP.modules.decoder.crf import allowed_transitions
 
         id2label = {0: 'B', 1: 'I', 2:'O'}
         expected_res = {(0, 0), (0, 1), (0, 2), (0, 4), (1, 0), (1, 1), (1, 2), (1, 4), (2, 0), (2, 2),
@@ -43,7 +43,7 @@ class TestCRF(unittest.TestCase):
         # 测试CRF能否避免解码出非法跃迁, 使用allennlp做了验证。
         pass
         # import torch
-        # from fastNLP.modules.decoder.CRF import seq_len_to_byte_mask
+        # from fastNLP.modules.decoder.crf import seq_len_to_byte_mask
         #
         # labels = ['O']
         # for label in ['X', 'Y']:
@@ -63,7 +63,7 @@ class TestCRF(unittest.TestCase):
         # mask = seq_len_to_byte_mask(seq_lens)
         # allen_res = allen_CRF.viterbi_tags(logits, mask)
         #
-        # from fastNLP.modules.decoder.CRF import ConditionalRandomField, allowed_transitions
+        # from fastNLP.modules.decoder.crf import ConditionalRandomField, allowed_transitions
         # fast_CRF = ConditionalRandomField(num_tags=num_tags, allowed_transitions=allowed_transitions(id2label))
         # fast_CRF.trans_m = trans_m
         # fast_res = fast_CRF.viterbi_decode(logits, mask, get_score=True, unpad=True)
@@ -91,7 +91,7 @@ class TestCRF(unittest.TestCase):
         # mask = seq_len_to_byte_mask(seq_lens)
         # allen_res = allen_CRF.viterbi_tags(logits, mask)
         #
-        # from fastNLP.modules.decoder.CRF import ConditionalRandomField, allowed_transitions
+        # from fastNLP.modules.decoder.crf import ConditionalRandomField, allowed_transitions
         # fast_CRF = ConditionalRandomField(num_tags=num_tags, allowed_transitions=allowed_transitions(id2label,
         #                                                                                              encoding_type='BMES'))
         # fast_CRF.trans_m = trans_m
@@ -104,7 +104,7 @@ class TestCRF(unittest.TestCase):
     def test_case3(self):
         # 测试crf的loss不会出现负数
         import torch
-        from fastNLP.modules.decoder.CRF import ConditionalRandomField
+        from fastNLP.modules.decoder.crf import ConditionalRandomField
         from fastNLP.core.utils import seq_len_to_mask
         from torch import optim
         from torch import nn

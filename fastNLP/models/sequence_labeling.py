@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from .base_model import BaseModel
 from ..modules import decoder, encoder
-from ..modules.decoder.CRF import allowed_transitions
+from ..modules.decoder.crf import allowed_transitions
 from ..core.utils import seq_len_to_mask
 from ..core.const import Const as C
 
@@ -35,7 +35,7 @@ class SeqLabeling(BaseModel):
         self.Embedding = encoder.embedding.Embedding(init_embed)
         self.Rnn = encoder.lstm.LSTM(self.Embedding.embedding_dim, hidden_size)
         self.Linear = nn.Linear(hidden_size, num_classes)
-        self.Crf = decoder.CRF.ConditionalRandomField(num_classes)
+        self.Crf = decoder.crf.ConditionalRandomField(num_classes)
         self.mask = None
     
     def forward(self, words, seq_len, target):
@@ -141,9 +141,9 @@ class AdvSeqLabel(nn.Module):
         self.Linear2 = nn.Linear(hidden_size * 2 // 3, num_classes)
         
         if id2words is None:
-            self.Crf = decoder.CRF.ConditionalRandomField(num_classes, include_start_end_trans=False)
+            self.Crf = decoder.crf.ConditionalRandomField(num_classes, include_start_end_trans=False)
         else:
-            self.Crf = decoder.CRF.ConditionalRandomField(num_classes, include_start_end_trans=False,
+            self.Crf = decoder.crf.ConditionalRandomField(num_classes, include_start_end_trans=False,
                                                           allowed_transitions=allowed_transitions(id2words,
                                                                                                   encoding_type=encoding_type))
     

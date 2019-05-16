@@ -1,14 +1,19 @@
 import torch.nn as nn
 from ..utils import get_embeddings
 
+__all__ = [
+    "Embedding"
+]
+
+
 class Embedding(nn.Embedding):
     """
     别名：:class:`fastNLP.modules.Embedding`   :class:`fastNLP.modules.encoder.embedding.Embedding`
 
     Embedding组件. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度"""
-
+    
     def __init__(self, init_embed, padding_idx=None, dropout=0.0, sparse=False, max_norm=None, norm_type=2,
-                  scale_grad_by_freq=False):
+                 scale_grad_by_freq=False):
         """
 
         :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: Embedding的大小(传入tuple(int, int),
@@ -22,14 +27,14 @@ class Embedding(nn.Embedding):
         """
         embed = get_embeddings(init_embed)
         num_embeddings, embedding_dim = embed.weight.size()
-
+        
         super().__init__(num_embeddings, embedding_dim, padding_idx=padding_idx,
-                 max_norm=max_norm, norm_type=norm_type, scale_grad_by_freq=scale_grad_by_freq,
-                 sparse=sparse, _weight=embed.weight.data)
+                         max_norm=max_norm, norm_type=norm_type, scale_grad_by_freq=scale_grad_by_freq,
+                         sparse=sparse, _weight=embed.weight.data)
         del embed
-
+        
         self.dropout = nn.Dropout(dropout)
-
+    
     def forward(self, x):
         """
         :param torch.LongTensor x: [batch, seq_len]

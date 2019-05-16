@@ -1,7 +1,7 @@
-from .CRF import ConditionalRandomField
-from .MLP import MLP
+from .crf import ConditionalRandomField
+from .mlp import MLP
 from .utils import viterbi_decode
-from .CRF import allowed_transitions
+from .crf import allowed_transitions
 
 __all__ = [
     "MLP",

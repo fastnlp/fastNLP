@@ -1,11 +1,29 @@
+from .bert import BertModel
+from .char_encoder import ConvolutionCharEncoder, LSTMCharEncoder
 from .conv_maxpool import ConvMaxpool
 from .embedding import Embedding
 from .lstm import LSTM
-from .bert import BertModel
+from .star_transformer import StarTransformer
+from .transformer import TransformerEncoder
+from .variational_rnn import VarRNN, VarLSTM, VarGRU
 
 __all__ = [
-    "LSTM",
-    "Embedding",
+    # "BertModel",
+    
+    "ConvolutionCharEncoder",
+    "LSTMCharEncoder",
+    
     "ConvMaxpool",
-    "BertModel"
+    
+    "Embedding",
+    
+    "LSTM",
+    
+    "StarTransformer",
+    
+    "TransformerEncoder",
+    
+    "VarRNN",
+    "VarLSTM",
+    "VarGRU"
 ]

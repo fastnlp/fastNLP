@@ -1,6 +1,6 @@
 import torch
 
-from ..modules.decoder.MLP import MLP
+from ..modules.decoder.mlp import MLP
 
 
 class BaseModel(torch.nn.Module):

@@ -32,17 +32,23 @@ from .encoder import *
 from .utils import get_embeddings
 
 __all__ = [
-    "LSTM",
-    "Embedding",
+    # "BertModel",
+    "ConvolutionCharEncoder",
+    "LSTMCharEncoder",
     "ConvMaxpool",
-    "BertModel",
+    "Embedding",
+    "LSTM",
+    "StarTransformer",
+    "TransformerEncoder",
+    "VarRNN",
+    "VarLSTM",
+    "VarGRU",
     
     "MaxPool",
     "MaxPoolWithMask",
     "AvgPool",
     "MultiHeadAttention",
-    "BiAttention",
-
+    
     "MLP",
     "ConditionalRandomField",
     "viterbi_decode",
