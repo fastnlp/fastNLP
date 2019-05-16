@@ -3,10 +3,10 @@ metrics 模块实现了 fastNLP 所需的各种常用衡量指标，一般做为
 
 """
 import inspect
+from collections import defaultdict
+
 import numpy as np
 import torch
-
-from collections import defaultdict
 
 from .utils import _CheckError
 from .utils import _CheckRes

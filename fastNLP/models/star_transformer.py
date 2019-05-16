@@ -1,17 +1,25 @@
-"""Star-Transformer 的 一个 Pytorch 实现.
 """
+Star-Transformer 的 Pytorch 实现。
+"""
+import torch
+from torch import nn
+
 from ..modules.encoder.star_transformer import StarTransformer
 from ..core.utils import seq_len_to_mask
 from ..modules.utils import get_embeddings
 from ..core.const import Const
 
-import torch
-from torch import nn
+__all__ = [
+    "StarTransEnc",
+    "STNLICls",
+    "STSeqCls",
+    "STSeqLabel",
+]
 
 
 class StarTransEnc(nn.Module):
     """
-    别名：:class:`fastNLP.models.StarTransEnc`  :class:`fastNLP.models.start_transformer.StarTransEnc`
+    别名：:class:`fastNLP.models.StarTransEnc`  :class:`fastNLP.models.star_transformer.StarTransEnc`
 
     带word embedding的Star-Transformer Encoder
 
@@ -28,6 +36,7 @@ class StarTransEnc(nn.Module):
     :param emb_dropout: 词嵌入的dropout概率.
     :param dropout: 模型除词嵌入外的dropout概率.
     """
+    
     def __init__(self, init_embed,
                  hidden_size,
                  num_layers,
@@ -47,7 +56,7 @@ class StarTransEnc(nn.Module):
                                        head_dim=head_dim,
                                        dropout=dropout,
                                        max_len=max_len)
-
+    
     def forward(self, x, mask):
         """
         :param FloatTensor data: [batch, length, hidden] 输入的序列
@@ -72,7 +81,7 @@ class _Cls(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(hid_dim, num_cls),
         )
-
+    
     def forward(self, x):
         h = self.fc(x)
         return h
@@ -83,20 +92,21 @@ class _NLICls(nn.Module):
         super(_NLICls, self).__init__()
         self.fc = nn.Sequential(
             nn.Dropout(dropout),
-            nn.Linear(in_dim*4, hid_dim),  #4
+            nn.Linear(in_dim * 4, hid_dim),  # 4
             nn.LeakyReLU(),
             nn.Dropout(dropout),
             nn.Linear(hid_dim, num_cls),
         )
-
+    
     def forward(self, x1, x2):
-        x = torch.cat([x1, x2, torch.abs(x1-x2), x1*x2], 1)
+        x = torch.cat([x1, x2, torch.abs(x1 - x2), x1 * x2], 1)
         h = self.fc(x)
         return h
 
+
 class STSeqLabel(nn.Module):
     """
-    别名：:class:`fastNLP.models.STSeqLabel`  :class:`fastNLP.models.start_transformer.STSeqLabel`
+    别名：:class:`fastNLP.models.STSeqLabel`  :class:`fastNLP.models.star_transformer.STSeqLabel`
 
     用于序列标注的Star-Transformer模型
 
@@ -112,6 +122,7 @@ class STSeqLabel(nn.Module):
     :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
+    
     def __init__(self, init_embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
@@ -120,7 +131,7 @@ class STSeqLabel(nn.Module):
                  max_len=512,
                  cls_hidden_size=600,
                  emb_dropout=0.1,
-                 dropout=0.1,):
+                 dropout=0.1, ):
         super(STSeqLabel, self).__init__()
         self.enc = StarTransEnc(init_embed=init_embed,
                                 hidden_size=hidden_size,
@@ -131,7 +142,7 @@ class STSeqLabel(nn.Module):
                                 emb_dropout=emb_dropout,
                                 dropout=dropout)
         self.cls = _Cls(hidden_size, num_cls, cls_hidden_size)
-
+    
     def forward(self, words, seq_len):
         """
 
@@ -142,9 +153,9 @@ class STSeqLabel(nn.Module):
         mask = seq_len_to_mask(seq_len)
         nodes, _ = self.enc(words, mask)
         output = self.cls(nodes)
-        output = output.transpose(1,2) # make hidden to be dim 1
-        return {Const.OUTPUT: output} # [bsz, n_cls, seq_len]
-
+        output = output.transpose(1, 2)  # make hidden to be dim 1
+        return {Const.OUTPUT: output}  # [bsz, n_cls, seq_len]
+    
     def predict(self, words, seq_len):
         """
 
@@ -159,7 +170,7 @@ class STSeqLabel(nn.Module):
 
 class STSeqCls(nn.Module):
     """
-    别名：:class:`fastNLP.models.STSeqCls`  :class:`fastNLP.models.start_transformer.STSeqCls`
+    别名：:class:`fastNLP.models.STSeqCls`  :class:`fastNLP.models.star_transformer.STSeqCls`
 
     用于分类任务的Star-Transformer
 
@@ -175,7 +186,7 @@ class STSeqCls(nn.Module):
     :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
-
+    
     def __init__(self, init_embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
@@ -184,7 +195,7 @@ class STSeqCls(nn.Module):
                  max_len=512,
                  cls_hidden_size=600,
                  emb_dropout=0.1,
-                 dropout=0.1,):
+                 dropout=0.1, ):
         super(STSeqCls, self).__init__()
         self.enc = StarTransEnc(init_embed=init_embed,
                                 hidden_size=hidden_size,
@@ -195,7 +206,7 @@ class STSeqCls(nn.Module):
                                 emb_dropout=emb_dropout,
                                 dropout=dropout)
         self.cls = _Cls(hidden_size, num_cls, cls_hidden_size)
-
+    
     def forward(self, words, seq_len):
         """
 
@@ -206,9 +217,9 @@ class STSeqCls(nn.Module):
         mask = seq_len_to_mask(seq_len)
         nodes, relay = self.enc(words, mask)
         y = 0.5 * (relay + nodes.max(1)[0])
-        output = self.cls(y) # [bsz, n_cls]
+        output = self.cls(y)  # [bsz, n_cls]
         return {Const.OUTPUT: output}
-
+    
     def predict(self, words, seq_len):
         """
 
@@ -223,7 +234,7 @@ class STSeqCls(nn.Module):
 
 class STNLICls(nn.Module):
     """
-    别名：:class:`fastNLP.models.STNLICls`  :class:`fastNLP.models.start_transformer.STNLICls`
+    别名：:class:`fastNLP.models.STNLICls`  :class:`fastNLP.models.star_transformer.STNLICls`
     
     用于自然语言推断(NLI)的Star-Transformer
 
@@ -239,7 +250,7 @@ class STNLICls(nn.Module):
     :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
-
+    
     def __init__(self, init_embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
@@ -248,7 +259,7 @@ class STNLICls(nn.Module):
                  max_len=512,
                  cls_hidden_size=600,
                  emb_dropout=0.1,
-                 dropout=0.1,):
+                 dropout=0.1, ):
         super(STNLICls, self).__init__()
         self.enc = StarTransEnc(init_embed=init_embed,
                                 hidden_size=hidden_size,
@@ -259,7 +270,7 @@ class STNLICls(nn.Module):
                                 emb_dropout=emb_dropout,
                                 dropout=dropout)
         self.cls = _NLICls(hidden_size, num_cls, cls_hidden_size)
-
+    
     def forward(self, words1, words2, seq_len1, seq_len2):
         """
 
@@ -271,14 +282,16 @@ class STNLICls(nn.Module):
         """
         mask1 = seq_len_to_mask(seq_len1)
         mask2 = seq_len_to_mask(seq_len2)
+        
         def enc(seq, mask):
             nodes, relay = self.enc(seq, mask)
             return 0.5 * (relay + nodes.max(1)[0])
+        
         y1 = enc(words1, mask1)
         y2 = enc(words2, mask2)
-        output = self.cls(y1, y2) # [bsz, n_cls]
+        output = self.cls(y1, y2)  # [bsz, n_cls]
         return {Const.OUTPUT: output}
-
+    
     def predict(self, words1, words2, seq_len1, seq_len2):
         """
 

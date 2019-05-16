@@ -297,12 +297,12 @@ Example2.3
 """
 
 import os
-import numpy as np
 import time
+from datetime import datetime, timedelta
+
+import numpy as np
 import torch
 import torch.nn as nn
-
-from datetime import datetime, timedelta
 
 try:
     from tqdm.auto import tqdm

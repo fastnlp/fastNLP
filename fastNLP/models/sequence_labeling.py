@@ -1,11 +1,19 @@
+"""
+    本模块实现了两种序列标注模型
+"""
 import torch
+import torch.nn as nn
 
 from .base_model import BaseModel
 from ..modules import decoder, encoder
 from ..modules.decoder.CRF import allowed_transitions
 from ..core.utils import seq_len_to_mask
 from ..core.const import Const as C
-from torch import nn
+
+__all__ = [
+    "SeqLabeling",
+    "AdvSeqLabel"
+]
 
 
 class SeqLabeling(BaseModel):

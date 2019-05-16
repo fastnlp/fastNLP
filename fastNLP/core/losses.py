@@ -3,10 +3,10 @@ losses 模块定义了 fastNLP 中所需的各种损失函数，一般做为 :cl
 
 """
 import inspect
+from collections import defaultdict
+
 import torch
 import torch.nn.functional as F
-
-from collections import defaultdict
 
 from .utils import _CheckError
 from .utils import _CheckRes

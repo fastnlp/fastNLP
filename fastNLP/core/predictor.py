@@ -2,9 +2,9 @@
     ..todo::
         检查这个类是否需要
 """
-import torch
-
 from collections import defaultdict
+
+import torch
 
 from . import Batch
 from . import DataSet

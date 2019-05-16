@@ -10,6 +10,12 @@ dataset_loader模块实现了许多 DataSetLoader, 用于读取不同格式的�
 
     # ... do stuff
 """
+from nltk.tree import Tree
+
+from ..core.dataset import DataSet
+from ..core.instance import Instance
+from .file_reader import _read_csv, _read_json, _read_conll
+
 __all__ = [
     'DataSetLoader',
     'CSVLoader',
@@ -20,11 +26,6 @@ __all__ = [
     'PeopleDailyCorpusLoader',
     'Conll2003Loader',
 ]
-from nltk.tree import Tree
-
-from ..core.dataset import DataSet
-from ..core.instance import Instance
-from .file_reader import _read_csv, _read_json, _read_conll
 
 
 def _download_from_url(url, path):

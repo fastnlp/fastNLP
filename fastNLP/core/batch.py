@@ -3,11 +3,11 @@ batch 模块实现了 fastNLP 所需的 Batch 类。
 
 """
 import atexit
+from queue import Empty, Full
+
 import numpy as np
 import torch
 import torch.multiprocessing as mp
-
-from queue import Empty, Full
 
 from .sampler import RandomSampler
 

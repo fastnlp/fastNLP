@@ -9,6 +9,11 @@
 
 这些类的使用方法如下:
 """
+from .embed_loader import EmbedLoader
+from .dataset_loader import DataSetLoader, CSVLoader, JsonLoader, ConllLoader, SNLILoader, SSTLoader, \
+    PeopleDailyCorpusLoader, Conll2003Loader
+from .model_io import ModelLoader, ModelSaver
+
 __all__ = [
     'EmbedLoader',
     
@@ -24,7 +29,3 @@ __all__ = [
     'ModelLoader',
     'ModelSaver',
 ]
-from .embed_loader import EmbedLoader
-from .dataset_loader import DataSetLoader, CSVLoader, JsonLoader, ConllLoader, SNLILoader, SSTLoader, \
-    PeopleDailyCorpusLoader, Conll2003Loader
-from .model_io import ModelLoader as ModelLoader, ModelSaver as ModelSaver

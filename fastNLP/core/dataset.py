@@ -273,8 +273,9 @@
 
 """
 import _pickle as pickle
-import numpy as np
 import warnings
+
+import numpy as np
 
 from .field import AutoPadder
 from .field import FieldArray

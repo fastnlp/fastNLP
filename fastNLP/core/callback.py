@@ -50,6 +50,7 @@ callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:
 
 """
 import os
+
 import torch
 
 try:

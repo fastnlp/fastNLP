@@ -3,14 +3,13 @@ utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户
 """
 import _pickle
 import inspect
-import numpy as np
 import os
+import warnings
+from collections import Counter, namedtuple
+
+import numpy as np
 import torch
 import torch.nn as nn
-import warnings
-
-from collections import Counter
-from collections import namedtuple
 
 __all__ = [
     "cache_results",
