@@ -5,7 +5,11 @@ from ..dropout import TimestepDropout
 
 
 class TransformerEncoder(nn.Module):
-    """transformer的encoder模块，不包含embedding层
+    """
+    别名：:class:`fastNLP.modules.encoder.TransformerEncoder`  :class:`fastNLP.modules.encoder.transformer.TransformerEncoder`
+
+
+    transformer的encoder模块，不包含embedding层
 
     :param int num_layers: transformer的层数
     :param int model_size: 输入维度的大小。同时也是输出维度的大小。

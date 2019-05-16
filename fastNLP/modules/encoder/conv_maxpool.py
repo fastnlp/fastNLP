@@ -9,10 +9,12 @@ from ..utils import initial_parameter
 
 
 class ConvMaxpool(nn.Module):
-    """集合了Convolution和Max-Pooling于一体的层。
-    给定一个batch_size x max_len x input_size的输入，返回batch_size x sum(output_channels) 大小的matrix。在内部，是先使用
-    CNN给输入做卷积，然后经过activation激活层，在通过在长度(max_len)这一维进行max_pooling。最后得到每个sample的一个vector
-    表示。
+    """
+    别名：:class:`fastNLP.modules.encoder.ConvMaxpool`   :class:`fastNLP.modules.encoder.conv_maxpool.ConvMaxpool`
+
+    集合了Convolution和Max-Pooling于一体的层。给定一个batch_size x max_len x input_size的输入，返回batch_size x
+    sum(output_channels) 大小的matrix。在内部，是先使用CNN给输入做卷积，然后经过activation激活层，在通过在长度(max_len)
+    这一维进行max_pooling。最后得到每个sample的一个向量表示。
 
     :param int in_channels: 输入channel的大小，一般是embedding的维度; 或encoder的output维度
     :param int,tuple(int) out_channels: 输出channel的数量。如果为list，则需要与kernel_sizes的数量保持一致

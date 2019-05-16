@@ -6,6 +6,8 @@ from ..utils import initial_parameter
 
 def allowed_transitions(id2target, encoding_type='bio', include_start_end=True):
     """
+    别名：:class:`fastNLP.modules.decoder.allowed_transitions`  :class:`fastNLP.modules.decoder.CRF.allowed_transitions`
+
     给定一个id到label的映射表，返回所有可以跳转的(from_tag_id, to_tag_id)列表。
 
     :param dict id2target: key是label的indices，value是str类型的tag或tag-label。value可以是只有tag的, 比如"B", "M"; 也可以是
@@ -133,7 +135,10 @@ def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label
 
 
 class ConditionalRandomField(nn.Module):
-    """条件随机场。
+    """
+    别名：:class:`fastNLP.modules.decoder.ConditionalRandomField`  :class:`fastNLP.modules.decoder.CRF.ConditionalRandomField`
+
+    条件随机场。
     提供forward()以及viterbi_decode()两个方法，分别用于训练与inference。
 
     :param int num_tags: 标签的数量

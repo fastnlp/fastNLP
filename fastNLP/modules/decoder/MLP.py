@@ -5,7 +5,10 @@ from ..utils import initial_parameter
 
 
 class MLP(nn.Module):
-    """Multilayer Perceptrons as a decoder
+    """
+    别名：:class:`fastNLP.modules.MLP`  :class:`fastNLP.modules.decoder.MLP.MLP`
+
+    多层感知器
 
     :param list size_layer: 一个int的列表，用来定义MLP的层数，列表中的数字为每一层是hidden数目。MLP的层数为 len(size_layer) - 1
     :param str or list activation:

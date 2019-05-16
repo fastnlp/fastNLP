@@ -10,6 +10,8 @@ from ..modules import encoder
 
 class CNNText(torch.nn.Module):
     """
+    别名：:class:`fastNLP.models.CNNText`  :class:`fastNLP.modules.aggregator.cnn_text_classification.CNNText`
+
     使用CNN进行文本分类的模型
     'Yoon Kim. 2014. Convolution Neural Networks for Sentence Classification.'
     

@@ -11,6 +11,8 @@ from torch import nn
 
 class StarTransEnc(nn.Module):
     """
+    别名：:class:`fastNLP.models.StarTransEnc`  :class:`fastNLP.models.start_transformer.StarTransEnc`
+
     带word embedding的Star-Transformer Encoder
 
     :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
@@ -93,7 +95,10 @@ class _NLICls(nn.Module):
         return h
 
 class STSeqLabel(nn.Module):
-    """用于序列标注的Star-Transformer模型
+    """
+    别名：:class:`fastNLP.models.STSeqLabel`  :class:`fastNLP.models.start_transformer.STSeqLabel`
+
+    用于序列标注的Star-Transformer模型
 
     :param vocab_size: 词嵌入的词典大小
     :param emb_dim: 每个词嵌入的特征维度
@@ -153,7 +158,10 @@ class STSeqLabel(nn.Module):
 
 
 class STSeqCls(nn.Module):
-    """用于分类任务的Star-Transformer
+    """
+    别名：:class:`fastNLP.models.STSeqCls`  :class:`fastNLP.models.start_transformer.STSeqCls`
+
+    用于分类任务的Star-Transformer
 
     :param vocab_size: 词嵌入的词典大小
     :param emb_dim: 每个词嵌入的特征维度
@@ -214,7 +222,10 @@ class STSeqCls(nn.Module):
 
 
 class STNLICls(nn.Module):
-    """用于自然语言推断(NLI)的Star-Transformer
+    """
+    别名：:class:`fastNLP.models.STNLICls`  :class:`fastNLP.models.start_transformer.STNLICls`
+    
+    用于自然语言推断(NLI)的Star-Transformer
 
     :param vocab_size: 词嵌入的词典大小
     :param emb_dim: 每个词嵌入的特征维度

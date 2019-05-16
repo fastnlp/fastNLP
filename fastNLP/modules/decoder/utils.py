@@ -3,7 +3,10 @@ import torch
 
 
 def viterbi_decode(logits, transitions, mask=None, unpad=False):
-    """给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
+    """
+    别名：:class:`fastNLP.modules.decoder.viterbi_decode`  :class:`fastNLP.modules.decoder.utils.viterbi_decode
+
+    给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
 
     :param torch.FloatTensor logits: batch_size x max_len x num_tags，特征矩阵。
     :param torch.FloatTensor transitions:  n_tags x n_tags。[i, j]位置的值认为是从tag i到tag j的转换。

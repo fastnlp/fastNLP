@@ -70,10 +70,7 @@ def initial_parameter(net, initial_method=None):
 
 def get_embeddings(init_embed):
     """
-    得到词嵌入
-    
-    .. todo::
-        补上文档
+    根据输入的init_embed生成nn.Embedding对象。
 
     :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
         embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,

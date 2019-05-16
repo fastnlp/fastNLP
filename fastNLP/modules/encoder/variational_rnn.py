@@ -197,7 +197,10 @@ class VarRNNBase(nn.Module):
         return output, hidden
 
 class VarLSTM(VarRNNBase):
-    """Variational Dropout LSTM.
+    """
+    别名：:class:`fastNLP.modules.encoder.VarLSTM`  :class:`fastNLP.modules.encoder.variational_rnn.VarLSTM`
+
+    Variational Dropout LSTM.
 
     :param input_size:  输入 `x` 的特征维度
     :param hidden_size: 隐状态  `h`  的特征维度
@@ -218,7 +221,10 @@ class VarLSTM(VarRNNBase):
 
 
 class VarRNN(VarRNNBase):
-    """Variational Dropout RNN.
+    """
+    别名：:class:`fastNLP.modules.encoder.VarRNN`  :class:`fastNLP.modules.encoder.variational_rnn.VarRNN`
+
+    Variational Dropout RNN.
 
     :param input_size:  输入 `x` 的特征维度
     :param hidden_size: 隐状态 `h` 的特征维度
@@ -238,7 +244,10 @@ class VarRNN(VarRNNBase):
         return super(VarRNN, self).forward(x, hx)
 
 class VarGRU(VarRNNBase):
-    """Variational Dropout GRU.
+    """
+    别名：:class:`fastNLP.modules.encoder.VarGRU`  :class:`fastNLP.modules.encoder.variational_rnn.VarGRU`
+
+    Variational Dropout GRU.
 
     :param input_size:  输入 `x` 的特征维度
     :param hidden_size: 隐状态 `h` 的特征维度
@@ -257,35 +266,3 @@ class VarGRU(VarRNNBase):
     def forward(self, x, hx=None):
         return super(VarGRU, self).forward(x, hx)
 
-# if __name__ == '__main__':
-#     x = torch.Tensor([[1,2,3], [4,5,0], [6,0,0]])[:,:,None] * 0.1
-#     mask = (x != 0).float().view(3, -1)
-#     seq_lens = torch.LongTensor([3,2,1])
-#     y = torch.Tensor([[0,1,1], [1,1,0], [0,0,0]])
-#     # rev = _reverse_packed_sequence(pack)
-#     # # print(rev)
-#     lstm = VarLSTM(input_size=1, num_layers=2, hidden_size=2,
-#                    batch_first=True, bidirectional=True,
-#                    input_dropout=0.0, hidden_dropout=0.0,)
-#     # lstm = nn.LSTM(input_size=1, num_layers=2, hidden_size=2,
-#     #                batch_first=True, bidirectional=True,)
-#     loss = nn.BCELoss()
-#     m = nn.Sigmoid()
-#     optim = torch.optim.SGD(lstm.parameters(), lr=1e-3)
-#     for i in range(2000):
-#         optim.zero_grad()
-#         pack = pack_padded_sequence(x, seq_lens, batch_first=True)
-#         out, hidden = lstm(pack)
-#         out, lens = pad_packed_sequence(out, batch_first=True)
-#         # print(lens)
-#         # print(out)
-#         # print(hidden[0])
-#         # print(hidden[0].size())
-#         # print(hidden[1])
-#         out = out.sum(-1)
-#         out = m(out) * mask
-#         l = loss(out, y)
-#         l.backward()
-#         optim.step()
-#         if i % 50 == 0:
-#             print(out)

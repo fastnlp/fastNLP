@@ -9,7 +9,10 @@ from ..utils import initial_parameter
 
 
 class LSTM(nn.Module):
-    """LSTM 模块, 轻量封装的Pytorch LSTM
+    """
+    别名：:class:`fastNLP.modules.encoder.LSTM`  :class:`fastNLP.modules.encoder.lstm.LSTM`
+
+    LSTM 模块, 轻量封装的Pytorch LSTM
 
     :param input_size:  输入 `x` 的特征维度
     :param hidden_size: 隐状态 `h` 的特征维度

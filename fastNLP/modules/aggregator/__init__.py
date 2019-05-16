@@ -1,7 +1,7 @@
 from .pooling import MaxPool
 from .pooling import MaxPoolWithMask
 from .pooling import AvgPool
-from .pooling import MeanPoolWithMask
+from .pooling import AvgPoolWithMask
 
 from .attention import MultiHeadAttention, BiAttention
 __all__ = [

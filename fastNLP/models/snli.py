@@ -14,8 +14,9 @@ my_inf = 10e12
 
 class ESIM(BaseModel):
     """
+    别名：:class:`fastNLP.models.ESIM`  :class:`fastNLP.models.snli.ESIM`
+
     ESIM模型的一个PyTorch实现。
-    
     ESIM模型的论文: Enhanced LSTM for Natural Language Inference (arXiv: 1609.06038)
 
     :param int vocab_size: 词表大小
@@ -49,7 +50,7 @@ class ESIM(BaseModel):
         )
 
         self.bi_attention = Aggregator.BiAttention()
-        self.mean_pooling = Aggregator.MeanPoolWithMask()
+        self.mean_pooling = Aggregator.AvgPoolWithMask()
         self.max_pooling = Aggregator.MaxPoolWithMask()
 
         self.inference_layer = nn.Linear(self.hidden_size * 4, self.hidden_size)

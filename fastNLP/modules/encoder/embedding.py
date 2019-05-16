@@ -2,7 +2,10 @@ import torch.nn as nn
 from ..utils import get_embeddings
 
 class Embedding(nn.Embedding):
-    """Embedding组件. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度"""
+    """
+    别名：:class:`fastNLP.modules.Embedding`   :class:`fastNLP.modules.encoder.embedding.Embedding`
+
+    Embedding组件. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度"""
 
     def __init__(self, init_embed, padding_idx=None, dropout=0.0, sparse=False, max_norm=None, norm_type=2,
                   scale_grad_by_freq=False):
