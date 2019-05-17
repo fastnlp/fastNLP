@@ -322,7 +322,18 @@ class Vocabulary(object):
         :return str word: the word
         """
         return self.idx2word[idx]
-    
+
+    def clear(self):
+        """
+        删除Vocabulary中的词表数据。相当于重新初始化一下。
+
+        :return:
+        """
+        self.word_count.clear()
+        self.word2idx = None
+        self.idx2word = None
+        self.rebuild = True
+
     def __getstate__(self):
         """Use to prepare data for pickle.
 
