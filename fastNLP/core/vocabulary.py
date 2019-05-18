@@ -1,11 +1,11 @@
+__all__ = [
+    "Vocabulary"
+]
+
 from functools import wraps
 from collections import Counter
 
 from .dataset import DataSet
-
-__all__ = [
-    "Vocabulary"
-]
 
 
 def _check_build_vocab(func):
@@ -322,7 +322,7 @@ class Vocabulary(object):
         :return str word: the word
         """
         return self.idx2word[idx]
-
+    
     def clear(self):
         """
         删除Vocabulary中的词表数据。相当于重新初始化一下。
@@ -333,7 +333,7 @@ class Vocabulary(object):
         self.word2idx = None
         self.idx2word = None
         self.rebuild = True
-
+    
     def __getstate__(self):
         """Use to prepare data for pickle.
 

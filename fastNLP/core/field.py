@@ -3,16 +3,16 @@ field模块实现了 FieldArray 和若干 Padder。 FieldArray 是  :class:`~fas
 原理部分请参考 :doc:`fastNLP.core.dataset`
 
 """
-from copy import deepcopy
-
-import numpy as np
-
 __all__ = [
     "FieldArray",
     "Padder",
     "AutoPadder",
     "EngChar2DPadder"
 ]
+
+from copy import deepcopy
+
+import numpy as np
 
 
 class FieldArray(object):

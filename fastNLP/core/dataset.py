@@ -272,6 +272,10 @@
 
 
 """
+__all__ = [
+    "DataSet"
+]
+
 import _pickle as pickle
 import warnings
 
@@ -281,10 +285,6 @@ from .field import AutoPadder
 from .field import FieldArray
 from .instance import Instance
 from .utils import _get_func_signature
-
-__all__ = [
-    "DataSet"
-]
 
 
 class DataSet(object):

@@ -2,13 +2,13 @@
 optimizer 模块定义了 fastNLP 中所需的各种优化器，一般做为 :class:`~fastNLP.Trainer` 的参数使用。
 
 """
-import torch
-
 __all__ = [
     "Optimizer",
     "SGD",
     "Adam"
 ]
+
+import torch
 
 
 class Optimizer(object):

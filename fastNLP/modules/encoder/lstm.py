@@ -2,15 +2,15 @@
 轻量封装的 Pytorch LSTM 模块.
 可在 forward 时传入序列的长度, 自动对padding做合适的处理.
 """
+__all__ = [
+    "LSTM"
+]
+
 import torch
 import torch.nn as nn
 import torch.nn.utils.rnn as rnn
 
 from ..utils import initial_parameter
-
-__all__ = [
-    "LSTM"
-]
 
 
 class LSTM(nn.Module):

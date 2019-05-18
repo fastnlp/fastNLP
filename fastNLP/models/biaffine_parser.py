@@ -1,6 +1,11 @@
 """
 Biaffine Dependency Parser 的 Pytorch 实现.
 """
+__all__ = [
+    "BiaffineParser",
+    "GraphParser"
+]
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -18,11 +23,6 @@ from ..modules.utils import initial_parameter
 from ..modules.utils import get_embeddings
 from .base_model import BaseModel
 from ..core.utils import seq_len_to_mask
-
-__all__ = [
-    "BiaffineParser",
-    "GraphParser"
-]
 
 
 def _mst(scores):

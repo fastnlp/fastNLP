@@ -1,11 +1,10 @@
+__all__ = [
+    "TransformerEncoder"
+]
 from torch import nn
 
 from ..aggregator.attention import MultiHeadAttention
 from ..dropout import TimestepDropout
-
-__all__ = [
-    "TransformerEncoder"
-]
 
 
 class TransformerEncoder(nn.Module):

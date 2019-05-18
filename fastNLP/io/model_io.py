@@ -1,14 +1,14 @@
 """
 用于载入和保存模型
 """
-import torch
-
-from .base_loader import BaseLoader
-
 __all__ = [
     "ModelLoader",
     "ModelSaver"
 ]
+
+import torch
+
+from .base_loader import BaseLoader
 
 
 class ModelLoader(BaseLoader):

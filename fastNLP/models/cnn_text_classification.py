@@ -1,12 +1,12 @@
+__all__ = [
+    "CNNText"
+]
+
 import torch
 import torch.nn as nn
 
 from ..core.const import Const as C
 from ..modules import encoder
-
-__all__ = [
-    "CNNText"
-]
 
 
 class CNNText(torch.nn.Module):

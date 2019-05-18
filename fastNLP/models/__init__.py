@@ -7,15 +7,6 @@ fastNLP 在 :mod:`~fastNLP.models` 模块中内置了如 :class:`~fastNLP.models
 
 
 """
-from .base_model import BaseModel
-from .bert import BertForMultipleChoice, BertForQuestionAnswering, BertForSequenceClassification, \
-    BertForTokenClassification
-from .biaffine_parser import BiaffineParser, GraphParser
-from .cnn_text_classification import CNNText
-from .sequence_labeling import SeqLabeling, AdvSeqLabel
-from .snli import ESIM
-from .star_transformer import StarTransEnc, STSeqCls, STNLICls, STSeqLabel
-
 __all__ = [
     "CNNText",
     
@@ -32,3 +23,12 @@ __all__ = [
     "BiaffineParser",
     "GraphParser"
 ]
+
+from .base_model import BaseModel
+from .bert import BertForMultipleChoice, BertForQuestionAnswering, BertForSequenceClassification, \
+    BertForTokenClassification
+from .biaffine_parser import BiaffineParser, GraphParser
+from .cnn_text_classification import CNNText
+from .sequence_labeling import SeqLabeling, AdvSeqLabel
+from .snli import ESIM
+from .star_transformer import StarTransEnc, STSeqCls, STNLICls, STSeqLabel

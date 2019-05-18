@@ -1,6 +1,11 @@
 """
 utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户可以使用的是 :func:`cache_results` 修饰器。
 """
+__all__ = [
+    "cache_results",
+    "seq_len_to_mask"
+]
+
 import _pickle
 import inspect
 import os
@@ -11,10 +16,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-__all__ = [
-    "cache_results",
-    "seq_len_to_mask"
-]
 
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])

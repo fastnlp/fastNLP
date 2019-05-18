@@ -2,6 +2,10 @@
 batch 模块实现了 fastNLP 所需的 Batch 类。
 
 """
+__all__ = [
+    "Batch"
+]
+
 import atexit
 from queue import Empty, Full
 
@@ -10,10 +14,6 @@ import torch
 import torch.multiprocessing as mp
 
 from .sampler import RandomSampler
-
-__all__ = [
-    "Batch"
-]
 
 _python_is_exit = False
 

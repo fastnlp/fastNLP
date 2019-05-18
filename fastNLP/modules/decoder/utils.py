@@ -1,8 +1,7 @@
-import torch
-
 __all__ = [
     "viterbi_decode"
 ]
+import torch
 
 
 def viterbi_decode(logits, transitions, mask=None, unpad=False):

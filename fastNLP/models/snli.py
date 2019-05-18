@@ -1,3 +1,7 @@
+__all__ = [
+    "ESIM"
+]
+
 import torch
 import torch.nn as nn
 
@@ -7,10 +11,6 @@ from ..modules import decoder as Decoder
 from ..modules import encoder as Encoder
 from ..modules import aggregator as Aggregator
 from ..core.utils import seq_len_to_mask
-
-__all__ = [
-    "ESIM"
-]
 
 my_inf = 10e12
 

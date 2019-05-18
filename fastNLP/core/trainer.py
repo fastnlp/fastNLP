@@ -295,6 +295,9 @@ Example2.3
     fastNLP已经自带了很多callback函数供使用，可以参考 :doc:`fastNLP.core.callback` 。
 
 """
+__all__ = [
+    "Trainer"
+]
 
 import os
 import time

@@ -2,6 +2,18 @@
 losses 模块定义了 fastNLP 中所需的各种损失函数，一般做为 :class:`~fastNLP.Trainer` 的参数使用。
 
 """
+__all__ = [
+    "LossBase",
+    
+    "LossFunc",
+    "LossInForward",
+    
+    "CrossEntropyLoss",
+    "BCELoss",
+    "L1Loss",
+    "NLLLoss"
+]
+
 import inspect
 from collections import defaultdict
 
@@ -14,18 +26,6 @@ from .utils import _build_args
 from .utils import _check_arg_dict_list
 from .utils import _check_function_or_method
 from .utils import _get_func_signature
-
-__all__ = [
-    "LossBase",
-    
-    "LossFunc",
-    "LossInForward",
-    
-    "CrossEntropyLoss",
-    "BCELoss",
-    "L1Loss",
-    "NLLLoss"
-]
 
 
 class LossBase(object):

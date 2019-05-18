@@ -1,3 +1,7 @@
+__all__ = [
+    "MultiHeadAttention"
+]
+
 import math
 
 import torch
@@ -7,10 +11,6 @@ from torch import nn
 from ..dropout import TimestepDropout
 
 from ..utils import initial_parameter
-
-__all__ = [
-    "MultiHeadAttention"
-]
 
 
 class DotAttention(nn.Module):

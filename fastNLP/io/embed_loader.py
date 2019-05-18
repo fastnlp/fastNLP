@@ -1,3 +1,7 @@
+__all__ = [
+    "EmbedLoader"
+]
+
 import os
 import warnings
 
@@ -5,10 +9,6 @@ import numpy as np
 
 from ..core.vocabulary import Vocabulary
 from .base_loader import BaseLoader
-
-__all__ = [
-    "EmbedLoader"
-]
 
 
 class EmbedLoader(BaseLoader):

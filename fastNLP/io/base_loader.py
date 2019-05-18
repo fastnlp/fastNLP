@@ -1,9 +1,9 @@
-import _pickle as pickle
-import os
-
 __all__ = [
     "BaseLoader"
 ]
+
+import _pickle as pickle
+import os
 
 
 class BaseLoader(object):

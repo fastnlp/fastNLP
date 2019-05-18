@@ -1,14 +1,14 @@
 """
 Star-Transformer 的encoder部分的 Pytorch 实现
 """
+__all__ = [
+    "StarTransformer"
+]
+
 import numpy as NP
 import torch
 from torch import nn
 from torch.nn import functional as F
-
-__all__ = [
-    "StarTransformer"
-]
 
 
 class StarTransformer(nn.Module):

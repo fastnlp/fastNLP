@@ -49,6 +49,18 @@ callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:
     trainer.train()
 
 """
+__all__ = [
+    "Callback",
+    "GradientClipCallback",
+    "EarlyStopCallback",
+    "TensorboardCallback",
+    "LRScheduler",
+    "ControlC",
+    
+    "CallbackException",
+    "EarlyStopError"
+]
+
 import os
 
 import torch
@@ -61,18 +73,6 @@ except:
     tensorboardX_flag = False
 
 from ..io.model_io import ModelSaver, ModelLoader
-
-__all__ = [
-    "Callback",
-    "GradientClipCallback",
-    "EarlyStopCallback",
-    "TensorboardCallback",
-    "LRScheduler",
-    "ControlC",
-    
-    "CallbackException",
-    "EarlyStopError"
-]
 
 
 class Callback(object):

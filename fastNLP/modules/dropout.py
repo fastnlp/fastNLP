@@ -1,5 +1,7 @@
-import torch
 __all__ = []
+
+import torch
+
 
 class TimestepDropout(torch.nn.Dropout):
     """
@@ -8,7 +10,7 @@ class TimestepDropout(torch.nn.Dropout):
     接受的参数shape为``[batch_size, num_timesteps, embedding_dim)]`` 使用同一个mask(shape为``(batch_size, embedding_dim)``)
      在每个timestamp上做dropout。
     """
-
+    
     def forward(self, x):
         dropout_mask = x.new_ones(x.shape[0], x.shape[-1])
         torch.nn.functional.dropout(dropout_mask, self.p, self.training, inplace=True)

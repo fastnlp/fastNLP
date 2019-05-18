@@ -1,12 +1,11 @@
-import torch
-import torch.nn as nn
-
-from ..utils import initial_parameter
-
 __all__ = [
     "ConvolutionCharEncoder",
     "LSTMCharEncoder"
 ]
+import torch
+import torch.nn as nn
+
+from ..utils import initial_parameter
 
 
 # from torch.nn.init import xavier_uniform

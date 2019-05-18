@@ -1,12 +1,11 @@
+__all__ = [
+    "ConvMaxpool"
+]
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from ..utils import initial_parameter
-
-__all__ = [
-    "ConvMaxpool"
-]
 
 
 class ConvMaxpool(nn.Module):

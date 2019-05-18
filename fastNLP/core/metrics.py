@@ -2,6 +2,13 @@
 metrics 模块实现了 fastNLP 所需的各种常用衡量指标，一般做为 :class:`~fastNLP.Trainer` 的参数使用。
 
 """
+__all__ = [
+    "MetricBase",
+    "AccuracyMetric",
+    "SpanFPreRecMetric",
+    "SQuADMetric"
+]
+
 import inspect
 from collections import defaultdict
 
@@ -15,13 +22,6 @@ from .utils import _check_arg_dict_list
 from .utils import _get_func_signature
 from .utils import seq_len_to_mask
 from .vocabulary import Vocabulary
-
-__all__ = [
-    "MetricBase",
-    "AccuracyMetric",
-    "SpanFPreRecMetric",
-    "SQuADMetric"
-]
 
 
 class MetricBase(object):

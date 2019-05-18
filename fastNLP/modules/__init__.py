@@ -22,15 +22,6 @@
 +-----------------------+-----------------------+-----------------------+
 
 """
-from . import aggregator
-from . import decoder
-from . import encoder
-from .aggregator import *
-from .decoder import *
-from .dropout import TimestepDropout
-from .encoder import *
-from .utils import get_embeddings
-
 __all__ = [
     # "BertModel",
     "ConvolutionCharEncoder",
@@ -54,3 +45,12 @@ __all__ = [
     "viterbi_decode",
     "allowed_transitions",
 ]
+
+from . import aggregator
+from . import decoder
+from . import encoder
+from .aggregator import *
+from .decoder import *
+from .dropout import TimestepDropout
+from .encoder import *
+from .utils import get_embeddings

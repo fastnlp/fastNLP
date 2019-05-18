@@ -1,11 +1,11 @@
+__all__ = [
+    "MLP"
+]
+
 import torch
 import torch.nn as nn
 
 from ..utils import initial_parameter
-
-__all__ = [
-    "MLP"
-]
 
 
 class MLP(nn.Module):

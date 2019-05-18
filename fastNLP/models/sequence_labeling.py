@@ -1,6 +1,11 @@
 """
     本模块实现了两种序列标注模型
 """
+__all__ = [
+    "SeqLabeling",
+    "AdvSeqLabel"
+]
+
 import torch
 import torch.nn as nn
 
@@ -9,11 +14,6 @@ from ..modules import decoder, encoder
 from ..modules.decoder.crf import allowed_transitions
 from ..core.utils import seq_len_to_mask
 from ..core.const import Const as C
-
-__all__ = [
-    "SeqLabeling",
-    "AdvSeqLabel"
-]
 
 
 class SeqLabeling(BaseModel):

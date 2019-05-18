@@ -1,6 +1,5 @@
 # Code Modified from https://github.com/carpedm20/ENAS-pytorch
 
-from __future__ import print_function
 from collections import defaultdict
 import collections
 

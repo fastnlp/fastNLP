@@ -1,9 +1,8 @@
-import torch.nn as nn
-from ..utils import get_embeddings
-
 __all__ = [
     "Embedding"
 ]
+import torch.nn as nn
+from ..utils import get_embeddings
 
 
 class Embedding(nn.Embedding):
