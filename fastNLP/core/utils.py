@@ -45,26 +45,28 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
         import time
         import numpy as np
         from fastNLP import cache_results
-
+        
         @cache_results('cache.pkl')
         def process_data():
             # 一些比较耗时的工作，比如读取数据，预处理数据等，这里用time.sleep()代替耗时
             time.sleep(1)
-            return np.random.randint(5, size=(10, 20))
-
+            return np.random.randint(10, size=(5,))
+        
         start_time = time.time()
-        process_data()
+        print("res =",process_data())
         print(time.time() - start_time)
-
+        
         start_time = time.time()
-        process_data()
+        print("res =",process_data())
         print(time.time() - start_time)
-
-        # 输出内容如下
-        #     Save cache to cache.pkl.
-        #     1.0015439987182617
-        #     Read cache from cache.pkl.
-        #     0.00013065338134765625
+        
+        # 输出内容如下，可以看到两次结果相同，且第二次几乎没有花费时间
+        # Save cache to cache.pkl.
+        # res = [5 4 9 1 8]
+        # 1.0042750835418701
+        # Read cache from cache.pkl.
+        # res = [5 4 9 1 8]
+        # 0.0040721893310546875
 
     可以看到第二次运行的时候，只用了0.0001s左右，是由于第二次运行将直接从cache.pkl这个文件读取数据，而不会经过再次预处理
 
