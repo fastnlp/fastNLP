@@ -168,7 +168,7 @@ class Callback(object):
         :param dict batch_x: DataSet中被设置为input的field的batch。
         :param dict batch_y: DataSet中被设置为target的field的batch。
         :param list(int) indices: 这次采样使用到的indices，可以通过DataSet[indices]获取出这个batch采出的Instance，在一些
-            情况下可以帮助定位是哪个Sample导致了错误。
+            情况下可以帮助定位是哪个Sample导致了错误。仅在Trainer的prefetch为False时可用。
         :return:
         """
         pass
