@@ -272,11 +272,14 @@
 
 
 """
-__all__ = ["DataSet"]
+__all__ = [
+    "DataSet"
+]
+
 import _pickle as pickle
+import warnings
 
 import numpy as np
-import warnings
 
 from .field import AutoPadder
 from .field import FieldArray

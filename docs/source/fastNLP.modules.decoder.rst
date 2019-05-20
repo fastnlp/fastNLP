@@ -12,7 +12,7 @@ fastNLP.modules.decoder
 .. toctree::
    :titlesonly:
 
-   fastNLP.modules.decoder.CRF
-   fastNLP.modules.decoder.MLP
+   fastNLP.modules.decoder.crf
+   fastNLP.modules.decoder.mlp
    fastNLP.modules.decoder.utils
 

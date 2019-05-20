@@ -22,6 +22,30 @@
 +-----------------------+-----------------------+-----------------------+
 
 """
+__all__ = [
+    # "BertModel",
+    "ConvolutionCharEncoder",
+    "LSTMCharEncoder",
+    "ConvMaxpool",
+    "Embedding",
+    "LSTM",
+    "StarTransformer",
+    "TransformerEncoder",
+    "VarRNN",
+    "VarLSTM",
+    "VarGRU",
+    
+    "MaxPool",
+    "MaxPoolWithMask",
+    "AvgPool",
+    "MultiHeadAttention",
+    
+    "MLP",
+    "ConditionalRandomField",
+    "viterbi_decode",
+    "allowed_transitions",
+]
+
 from . import aggregator
 from . import decoder
 from . import encoder
@@ -30,21 +54,3 @@ from .decoder import *
 from .dropout import TimestepDropout
 from .encoder import *
 from .utils import get_embeddings
-
-__all__ = [
-    "LSTM",
-    "Embedding",
-    "ConvMaxpool",
-    "BertModel",
-    
-    "MaxPool",
-    "MaxPoolWithMask",
-    "AvgPool",
-    "MultiHeadAttention",
-    "BiAttention",
-
-    "MLP",
-    "ConditionalRandomField",
-    "viterbi_decode",
-    "allowed_transitions",
-]

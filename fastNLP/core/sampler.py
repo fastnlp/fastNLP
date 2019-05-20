@@ -1,9 +1,13 @@
 """
 sampler 子类实现了 fastNLP 所需的各种采样器。
-
-
 """
-__all__ = ["Sampler", "BucketSampler", "SequentialSampler", "RandomSampler"]
+__all__ = [
+    "Sampler",
+    "BucketSampler",
+    "SequentialSampler",
+    "RandomSampler"
+]
+
 from itertools import chain
 
 import numpy as np

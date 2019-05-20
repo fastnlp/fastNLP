@@ -35,7 +35,7 @@ Tester在验证进行之前会调用model.eval()提示当前进入了evaluation�
 import warnings
 
 import torch
-from torch import nn
+import torch.nn as nn
 
 from .batch import Batch
 from .dataset import DataSet
@@ -48,6 +48,10 @@ from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
+
+__all__ = [
+    "Tester"
+]
 
 
 class Tester(object):
@@ -77,29 +81,29 @@ class Tester(object):
         如果模型是通过predict()进行预测的话，那么将不能使用多卡(DataParallel)进行验证，只会使用第一张卡上的模型。
     :param int verbose: 如果为0不输出任何信息; 如果为1，打印出验证结果。
     """
-
+    
     def __init__(self, data, model, metrics, batch_size=16, device=None, verbose=1):
         super(Tester, self).__init__()
-
+        
         if not isinstance(data, DataSet):
             raise TypeError(f"The type of data must be `fastNLP.DataSet`, got `{type(data)}`.")
         if not isinstance(model, nn.Module):
             raise TypeError(f"The type of model must be `torch.nn.Module`, got `{type(model)}`.")
-
+        
         self.metrics = _prepare_metrics(metrics)
-
+        
         self.data = data
         self._model = _move_model_to_device(model, device=device)
         self.batch_size = batch_size
         self.verbose = verbose
-
+        
         #  如果是DataParallel将没有办法使用predict方法
         if isinstance(self._model, nn.DataParallel):
             if hasattr(self._model.module, 'predict') and not hasattr(self._model, 'predict'):
                 warnings.warn("Cannot use DataParallel to test your model, because your model offer predict() function,"
                               " while DataParallel has no predict() function.")
                 self._model = self._model.module
-
+        
         # check predict
         if hasattr(self._model, 'predict'):
             self._predict_func = self._model.predict
@@ -109,7 +113,7 @@ class Tester(object):
                                 f"for evaluation, not `{type(self._predict_func)}`.")
         else:
             self._predict_func = self._model.forward
-
+    
     def test(self):
         """开始进行验证，并返回验证结果。
 
@@ -144,12 +148,12 @@ class Tester(object):
             _check_loss_evaluate(prev_func_signature=prev_func_signature, func_signature=e.func_signature,
                                  check_res=e.check_res, pred_dict=pred_dict, target_dict=batch_y,
                                  dataset=self.data, check_level=0)
-
+        
         if self.verbose >= 1:
             print("[tester] \n{}".format(self._format_eval_results(eval_results)))
         self._mode(network, is_test=False)
         return eval_results
-
+    
     def _mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.
 
@@ -161,13 +165,13 @@ class Tester(object):
             model.eval()
         else:
             model.train()
-
+    
     def _data_forward(self, func, x):
         """A forward pass of the model. """
         x = _build_args(func, **x)
         y = func(**x)
         return y
-
+    
     def _format_eval_results(self, results):
         """Override this method to support more print formats.
 

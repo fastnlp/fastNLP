@@ -1,3 +1,6 @@
+__all__ = [
+    "TransformerEncoder"
+]
 from torch import nn
 
 from ..aggregator.attention import MultiHeadAttention
@@ -19,6 +22,7 @@ class TransformerEncoder(nn.Module):
     :param int num_head: head的数量。
     :param float dropout: dropout概率. Default: 0.1
     """
+    
     class SubLayer(nn.Module):
         def __init__(self, model_size, inner_size, key_size, value_size, num_head, dropout=0.1):
             super(TransformerEncoder.SubLayer, self).__init__()
@@ -27,9 +31,9 @@ class TransformerEncoder(nn.Module):
             self.ffn = nn.Sequential(nn.Linear(model_size, inner_size),
                                      nn.ReLU(),
                                      nn.Linear(inner_size, model_size),
-                                     TimestepDropout(dropout),)
+                                     TimestepDropout(dropout), )
             self.norm2 = nn.LayerNorm(model_size)
-
+        
         def forward(self, input, seq_mask=None, atte_mask_out=None):
             """
 
@@ -44,11 +48,11 @@ class TransformerEncoder(nn.Module):
             output = self.norm2(output + norm_atte)
             output *= seq_mask
             return output
-
+    
     def __init__(self, num_layers, **kargs):
         super(TransformerEncoder, self).__init__()
         self.layers = nn.ModuleList([self.SubLayer(**kargs) for _ in range(num_layers)])
-
+    
     def forward(self, x, seq_mask=None):
         """
         :param x: [batch, seq_len, model_size] 输入序列
@@ -60,8 +64,8 @@ class TransformerEncoder(nn.Module):
         if seq_mask is None:
             atte_mask_out = None
         else:
-            atte_mask_out = (seq_mask < 1)[:,None,:]
-            seq_mask = seq_mask[:,:,None]
+            atte_mask_out = (seq_mask < 1)[:, None, :]
+            seq_mask = seq_mask[:, :, None]
         for layer in self.layers:
             output = layer(output, seq_mask, atte_mask_out)
         return output

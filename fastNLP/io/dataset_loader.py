@@ -20,6 +20,7 @@ __all__ = [
     'PeopleDailyCorpusLoader',
     'Conll2003Loader',
 ]
+
 from nltk.tree import Tree
 
 from ..core.dataset import DataSet

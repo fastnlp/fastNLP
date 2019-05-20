@@ -2,6 +2,13 @@
 metrics 模块实现了 fastNLP 所需的各种常用衡量指标，一般做为 :class:`~fastNLP.Trainer` 的参数使用。
 
 """
+__all__ = [
+    "MetricBase",
+    "AccuracyMetric",
+    "SpanFPreRecMetric",
+    "SQuADMetric"
+]
+
 import inspect
 from collections import defaultdict
 
@@ -106,16 +113,17 @@ class MetricBase(object):
     self.get_metric将统计当前的评价指标并返回评价结果, 返回值需要是一个dict, key是指标名称，value是指标的值
 
     """
+    
     def __init__(self):
         self.param_map = {}  # key is param in function, value is input param.
         self._checked = False
-
+    
     def evaluate(self, *args, **kwargs):
         raise NotImplementedError
-
+    
     def get_metric(self, reset=True):
         raise NotImplemented
-
+    
     def _init_param_map(self, key_map=None, **kwargs):
         """检查key_map和其他参数map，并将这些映射关系添加到self.param_map
 
@@ -148,7 +156,7 @@ class MetricBase(object):
         for value, key_set in value_counter.items():
             if len(key_set) > 1:
                 raise ValueError(f"Several parameters:{key_set} are provided with one output {value}.")
-
+        
         # check consistence between signature and param_map
         func_spect = inspect.getfullargspec(self.evaluate)
         func_args = [arg for arg in func_spect.args if arg != 'self']
@@ -157,7 +165,7 @@ class MetricBase(object):
                 raise NameError(
                     f"Parameter `{func_param}` is not in {_get_func_signature(self.evaluate)}. Please check the "
                     f"initialization parameters, or change its signature.")
-
+    
     def _fast_param_map(self, pred_dict, target_dict):
         """Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
             such as pred_dict has one element, target_dict has one element
@@ -172,7 +180,7 @@ class MetricBase(object):
             fast_param['target'] = list(target_dict.values())[0]
             return fast_param
         return fast_param
-
+    
     def __call__(self, pred_dict, target_dict):
         """
         这个方法会调用self.evaluate 方法.
@@ -187,12 +195,12 @@ class MetricBase(object):
         :param target_dict: DataSet.batch_y里的键-值对所组成的dict(即is_target=True的fields的内容)
         :return:
         """
-
+        
         fast_param = self._fast_param_map(pred_dict, target_dict)
         if fast_param:
             self.evaluate(**fast_param)
             return
-
+        
         if not self._checked:
             if not callable(self.evaluate):
                 raise TypeError(f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}.")
@@ -202,14 +210,14 @@ class MetricBase(object):
             for func_arg, input_arg in self.param_map.items():
                 if func_arg not in func_args:
                     raise NameError(f"`{func_arg}` not in {_get_func_signature(self.evaluate)}.")
-
+            
             # 2. only part of the param_map are passed, left are not
             for arg in func_args:
                 if arg not in self.param_map:
                     self.param_map[arg] = arg  # This param does not need mapping.
             self._evaluate_args = func_args
             self._reverse_param_map = {input_arg: func_arg for func_arg, input_arg in self.param_map.items()}
-
+        
         # need to wrap inputs in dict.
         mapped_pred_dict = {}
         mapped_target_dict = {}
@@ -229,7 +237,7 @@ class MetricBase(object):
                 not_duplicate_flag += 1
             if not_duplicate_flag == 3:
                 duplicated.append(input_arg)
-
+        
         # missing
         if not self._checked:
             check_res = _check_arg_dict_list(self.evaluate, [mapped_pred_dict, mapped_target_dict])
@@ -240,23 +248,23 @@ class MetricBase(object):
             for idx, func_arg in enumerate(missing):
                 # Don't delete `` in this information, nor add ``
                 replaced_missing[idx] = f"{self.param_map[func_arg]}" + f"(assign to `{func_arg}` " \
-                                                                        f"in `{self.__class__.__name__}`)"
-
+                    f"in `{self.__class__.__name__}`)"
+            
             check_res = _CheckRes(missing=replaced_missing,
                                   unused=check_res.unused,
                                   duplicated=duplicated,
                                   required=check_res.required,
                                   all_needed=check_res.all_needed,
                                   varargs=check_res.varargs)
-
+            
             if check_res.missing or check_res.duplicated:
                 raise _CheckError(check_res=check_res,
                                   func_signature=_get_func_signature(self.evaluate))
         refined_args = _build_args(self.evaluate, **mapped_pred_dict, **mapped_target_dict)
-
+        
         self.evaluate(**refined_args)
         self._checked = True
-
+        
         return
 
 
@@ -271,15 +279,16 @@ class AccuracyMetric(MetricBase):
     :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
     :param seq_len: 参数映射表中 `seq_len` 的映射关系，None表示映射关系为 `seq_len` -> `seq_len`
     """
+    
     def __init__(self, pred=None, target=None, seq_len=None):
         
         super().__init__()
-
+        
         self._init_param_map(pred=pred, target=target, seq_len=seq_len)
-
+        
         self.total = 0
         self.acc_count = 0
-
+    
     def evaluate(self, pred, target, seq_len=None):
         """
         evaluate函数将针对一个批次的预测结果做评价指标的累计
@@ -299,16 +308,16 @@ class AccuracyMetric(MetricBase):
         if not isinstance(target, torch.Tensor):
             raise TypeError(f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(target)}.")
-
+        
         if seq_len is not None and not isinstance(seq_len, torch.Tensor):
             raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(seq_len)}.")
-
+        
         if seq_len is not None:
             masks = seq_len_to_mask(seq_len=seq_len)
         else:
             masks = None
-
+        
         if pred.size() == target.size():
             pass
         elif len(pred.size()) == len(target.size()) + 1:
@@ -317,7 +326,7 @@ class AccuracyMetric(MetricBase):
             raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
                                f"size:{pred.size()}, target should have size: {pred.size()} or "
                                f"{pred.size()[:-1]}, got {target.size()}.")
-
+        
         target = target.to(pred)
         if masks is not None:
             self.acc_count += torch.sum(torch.eq(pred, target).masked_fill(masks.eq(0), 0)).item()
@@ -325,7 +334,7 @@ class AccuracyMetric(MetricBase):
         else:
             self.acc_count += torch.sum(torch.eq(pred, target)).item()
             self.total += np.prod(list(pred.size()))
-
+    
     def get_metric(self, reset=True):
         """
         get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果.
@@ -350,7 +359,7 @@ def _bmes_tag_to_spans(tags, ignore_labels=None):
     :return: List[Tuple[str, List[int, int]]]. [(label，[start, end])]
     """
     ignore_labels = set(ignore_labels) if ignore_labels else set()
-
+    
     spans = []
     prev_bmes_tag = None
     for idx, tag in enumerate(tags):
@@ -358,14 +367,14 @@ def _bmes_tag_to_spans(tags, ignore_labels=None):
         bmes_tag, label = tag[:1], tag[2:]
         if bmes_tag in ('b', 's'):
             spans.append((label, [idx, idx]))
-        elif bmes_tag in ('m', 'e') and prev_bmes_tag in ('b', 'm') and label==spans[-1][0]:
+        elif bmes_tag in ('m', 'e') and prev_bmes_tag in ('b', 'm') and label == spans[-1][0]:
             spans[-1][1][1] = idx
         else:
             spans.append((label, [idx, idx]))
         prev_bmes_tag = bmes_tag
-    return [(span[0], (span[1][0], span[1][1]+1))
-                    for span in spans
-                        if span[0] not in ignore_labels
+    return [(span[0], (span[1][0], span[1][1] + 1))
+            for span in spans
+            if span[0] not in ignore_labels
             ]
 
 
@@ -379,7 +388,7 @@ def _bmeso_tag_to_spans(tags, ignore_labels=None):
     :return: List[Tuple[str, List[int, int]]]. [(label，[start, end])]
     """
     ignore_labels = set(ignore_labels) if ignore_labels else set()
-
+    
     spans = []
     prev_bmes_tag = None
     for idx, tag in enumerate(tags):
@@ -387,16 +396,16 @@ def _bmeso_tag_to_spans(tags, ignore_labels=None):
         bmes_tag, label = tag[:1], tag[2:]
         if bmes_tag in ('b', 's'):
             spans.append((label, [idx, idx]))
-        elif bmes_tag in ('m', 'e') and prev_bmes_tag in ('b', 'm') and label==spans[-1][0]:
+        elif bmes_tag in ('m', 'e') and prev_bmes_tag in ('b', 'm') and label == spans[-1][0]:
             spans[-1][1][1] = idx
         elif bmes_tag == 'o':
             pass
         else:
             spans.append((label, [idx, idx]))
         prev_bmes_tag = bmes_tag
-    return [(span[0], (span[1][0], span[1][1]+1))
-                    for span in spans
-                        if span[0] not in ignore_labels
+    return [(span[0], (span[1][0], span[1][1] + 1))
+            for span in spans
+            if span[0] not in ignore_labels
             ]
 
 
@@ -410,7 +419,7 @@ def _bio_tag_to_spans(tags, ignore_labels=None):
     :return: List[Tuple[str, List[int, int]]]. [(label，[start, end])]
     """
     ignore_labels = set(ignore_labels) if ignore_labels else set()
-
+    
     spans = []
     prev_bio_tag = None
     for idx, tag in enumerate(tags):
@@ -418,14 +427,14 @@ def _bio_tag_to_spans(tags, ignore_labels=None):
         bio_tag, label = tag[:1], tag[2:]
         if bio_tag == 'b':
             spans.append((label, [idx, idx]))
-        elif bio_tag == 'i' and prev_bio_tag in ('b', 'i') and label==spans[-1][0]:
+        elif bio_tag == 'i' and prev_bio_tag in ('b', 'i') and label == spans[-1][0]:
             spans[-1][1][1] = idx
-        elif bio_tag == 'o': # o tag does not count
+        elif bio_tag == 'o':  # o tag does not count
             pass
         else:
             spans.append((label, [idx, idx]))
         prev_bio_tag = bio_tag
-    return [(span[0], (span[1][0], span[1][1]+1)) for span in spans if span[0] not in ignore_labels]
+    return [(span[0], (span[1][0], span[1][1] + 1)) for span in spans if span[0] not in ignore_labels]
 
 
 class SpanFPreRecMetric(MetricBase):
@@ -470,16 +479,17 @@ class SpanFPreRecMetric(MetricBase):
     :param float beta: f_beta分数，f_beta = (1 + beta^2)*(pre*rec)/(beta^2*pre + rec). 常用为beta=0.5, 1, 2. 若为0.5
         则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
     """
+    
     def __init__(self, tag_vocab, pred=None, target=None, seq_len=None, encoding_type='bio', ignore_labels=None,
-                  only_gross=True, f_type='micro', beta=1):
+                 only_gross=True, f_type='micro', beta=1):
         
         encoding_type = encoding_type.lower()
-
+        
         if not isinstance(tag_vocab, Vocabulary):
             raise TypeError("tag_vocab can only be fastNLP.Vocabulary, not {}.".format(type(tag_vocab)))
         if f_type not in ('micro', 'macro'):
             raise ValueError("f_type only supports `micro` or `macro`', got {}.".format(f_type))
-
+        
         self.encoding_type = encoding_type
         if self.encoding_type == 'bmes':
             self.tag_to_span_func = _bmes_tag_to_spans
@@ -489,22 +499,22 @@ class SpanFPreRecMetric(MetricBase):
             self.tag_to_span_func = _bmeso_tag_to_spans
         else:
             raise ValueError("Only support 'bio', 'bmes', 'bmeso' type.")
-
+        
         self.ignore_labels = ignore_labels
         self.f_type = f_type
         self.beta = beta
-        self.beta_square = self.beta**2
+        self.beta_square = self.beta ** 2
         self.only_gross = only_gross
-
+        
         super().__init__()
         self._init_param_map(pred=pred, target=target, seq_len=seq_len)
-
+        
         self.tag_vocab = tag_vocab
-
+        
         self._true_positives = defaultdict(int)
         self._false_positives = defaultdict(int)
         self._false_negatives = defaultdict(int)
-
+    
     def evaluate(self, pred, target, seq_len):
         """evaluate函数将针对一个批次的预测结果做评价指标的累计
 
@@ -519,11 +529,11 @@ class SpanFPreRecMetric(MetricBase):
         if not isinstance(target, torch.Tensor):
             raise TypeError(f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(target)}.")
-
+        
         if not isinstance(seq_len, torch.Tensor):
             raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(seq_len)}.")
-
+        
         if pred.size() == target.size() and len(target.size()) == 2:
             pass
         elif len(pred.size()) == len(target.size()) + 1 and len(target.size()) == 2:
@@ -536,20 +546,20 @@ class SpanFPreRecMetric(MetricBase):
             raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
                                f"size:{pred.size()}, target should have size: {pred.size()} or "
                                f"{pred.size()[:-1]}, got {target.size()}.")
-
+        
         batch_size = pred.size(0)
         pred = pred.tolist()
         target = target.tolist()
         for i in range(batch_size):
             pred_tags = pred[i][:int(seq_len[i])]
             gold_tags = target[i][:int(seq_len[i])]
-
+            
             pred_str_tags = [self.tag_vocab.to_word(tag) for tag in pred_tags]
             gold_str_tags = [self.tag_vocab.to_word(tag) for tag in gold_tags]
-
+            
             pred_spans = self.tag_to_span_func(pred_str_tags, ignore_labels=self.ignore_labels)
             gold_spans = self.tag_to_span_func(gold_str_tags, ignore_labels=self.ignore_labels)
-
+            
             for span in pred_spans:
                 if span in gold_spans:
                     self._true_positives[span[0]] += 1
@@ -558,7 +568,7 @@ class SpanFPreRecMetric(MetricBase):
                     self._false_positives[span[0]] += 1
             for span in gold_spans:
                 self._false_negatives[span[0]] += 1
-
+    
     def get_metric(self, reset=True):
         """get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果."""
         evaluate_result = {}
@@ -577,19 +587,19 @@ class SpanFPreRecMetric(MetricBase):
                 f_sum += f
                 pre_sum += pre
                 rec_sum + rec
-                if not self.only_gross and tag!='': # tag!=''防止无tag的情况
+                if not self.only_gross and tag != '':  # tag!=''防止无tag的情况
                     f_key = 'f-{}'.format(tag)
                     pre_key = 'pre-{}'.format(tag)
                     rec_key = 'rec-{}'.format(tag)
                     evaluate_result[f_key] = f
                     evaluate_result[pre_key] = pre
                     evaluate_result[rec_key] = rec
-
+            
             if self.f_type == 'macro':
-                evaluate_result['f'] = f_sum/len(tags)
-                evaluate_result['pre'] = pre_sum/len(tags)
-                evaluate_result['rec'] = rec_sum/len(tags)
-
+                evaluate_result['f'] = f_sum / len(tags)
+                evaluate_result['pre'] = pre_sum / len(tags)
+                evaluate_result['rec'] = rec_sum / len(tags)
+        
         if self.f_type == 'micro':
             f, pre, rec = self._compute_f_pre_rec(sum(self._true_positives.values()),
                                                   sum(self._false_negatives.values()),
@@ -597,17 +607,17 @@ class SpanFPreRecMetric(MetricBase):
             evaluate_result['f'] = f
             evaluate_result['pre'] = pre
             evaluate_result['rec'] = rec
-
+        
         if reset:
             self._true_positives = defaultdict(int)
             self._false_positives = defaultdict(int)
             self._false_negatives = defaultdict(int)
-
+        
         for key, value in evaluate_result.items():
             evaluate_result[key] = round(value, 6)
-
+        
         return evaluate_result
-
+    
     def _compute_f_pre_rec(self, tp, fn, fp):
         """
 
@@ -619,9 +629,8 @@ class SpanFPreRecMetric(MetricBase):
         pre = tp / (fp + tp + 1e-13)
         rec = tp / (fn + tp + 1e-13)
         f = (1 + self.beta_square) * pre * rec / (self.beta_square * pre + rec + 1e-13)
-
+        
         return f, pre, rec
-
 
 
 def _prepare_metrics(metrics):
@@ -705,33 +714,33 @@ class SQuADMetric(MetricBase):
     :param bool print_predict_stat: True则输出预测答案是否为空与正确答案是否为空的统计信息, False则不输出
     
     """
-
+    
     def __init__(self, pred1=None, pred2=None, target1=None, target2=None,
                  beta=1, right_open=True, print_predict_stat=False):
         
         super(SQuADMetric, self).__init__()
-
+        
         self._init_param_map(pred1=pred1, pred2=pred2, target1=target1, target2=target2)
-
+        
         self.print_predict_stat = print_predict_stat
-
+        
         self.no_ans_correct = 0
         self.no_ans_wrong = 0
-
+        
         self.has_ans_correct = 0
         self.has_ans_wrong = 0
-
+        
         self.has_ans_f = 0.
-
+        
         self.no2no = 0
         self.no2yes = 0
         self.yes2no = 0
         self.yes2yes = 0
-
+        
         self.f_beta = beta
-
+        
         self.right_open = right_open
-
+    
     def evaluate(self, pred1, pred2, target1, target2):
         """evaluate函数将针对一个批次的预测结果做评价指标的累计
 
@@ -745,7 +754,7 @@ class SQuADMetric(MetricBase):
         pred_end = pred2
         target_start = target1
         target_end = target2
-
+        
         if len(pred_start.size()) == 2:
             start_inference = pred_start.max(dim=-1)[1].cpu().tolist()
         else:
@@ -754,12 +763,12 @@ class SQuADMetric(MetricBase):
             end_inference = pred_end.max(dim=-1)[1].cpu().tolist()
         else:
             end_inference = pred_end.cpu().tolist()
-
+        
         start, end = [], []
         max_len = pred_start.size(1)
         t_start = target_start.cpu().tolist()
         t_end = target_end.cpu().tolist()
-
+        
         for s, e in zip(start_inference, end_inference):
             start.append(min(s, e))
             end.append(max(s, e))
@@ -779,7 +788,7 @@ class SQuADMetric(MetricBase):
                     self.yes2no += 1
                 else:
                     self.yes2yes += 1
-
+                
                 if s == ts and e == te:
                     self.has_ans_correct += 1
                 else:
@@ -787,29 +796,29 @@ class SQuADMetric(MetricBase):
                 a = [0] * s + [1] * (e - s) + [0] * (max_len - e)
                 b = [0] * ts + [1] * (te - ts) + [0] * (max_len - te)
                 a, b = torch.tensor(a), torch.tensor(b)
-
+                
                 TP = int(torch.sum(a * b))
                 pre = TP / int(torch.sum(a)) if int(torch.sum(a)) > 0 else 0
                 rec = TP / int(torch.sum(b)) if int(torch.sum(b)) > 0 else 0
-
+                
                 if pre + rec > 0:
-                    f = (1 + (self.f_beta**2)) * pre * rec / ((self.f_beta**2) * pre + rec)
+                    f = (1 + (self.f_beta ** 2)) * pre * rec / ((self.f_beta ** 2) * pre + rec)
                 else:
                     f = 0
                 self.has_ans_f += f
-
+    
     def get_metric(self, reset=True):
         """get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果."""
         evaluate_result = {}
-
+        
         if self.no_ans_correct + self.no_ans_wrong + self.has_ans_correct + self.no_ans_wrong <= 0:
             return evaluate_result
-
+        
         evaluate_result['EM'] = 0
         evaluate_result[f'f_{self.f_beta}'] = 0
-
+        
         flag = 0
-
+        
         if self.no_ans_correct + self.no_ans_wrong > 0:
             evaluate_result[f'noAns-f_{self.f_beta}'] = \
                 round(100 * self.no_ans_correct / (self.no_ans_correct + self.no_ans_wrong), 3)
@@ -818,7 +827,7 @@ class SQuADMetric(MetricBase):
             evaluate_result[f'f_{self.f_beta}'] += evaluate_result[f'noAns-f_{self.f_beta}']
             evaluate_result['EM'] += evaluate_result['noAns-EM']
             flag += 1
-
+        
         if self.has_ans_correct + self.has_ans_wrong > 0:
             evaluate_result[f'hasAns-f_{self.f_beta}'] = \
                 round(100 * self.has_ans_f / (self.has_ans_correct + self.has_ans_wrong), 3)
@@ -827,32 +836,31 @@ class SQuADMetric(MetricBase):
             evaluate_result[f'f_{self.f_beta}'] += evaluate_result[f'hasAns-f_{self.f_beta}']
             evaluate_result['EM'] += evaluate_result['hasAns-EM']
             flag += 1
-
+        
         if self.print_predict_stat:
             evaluate_result['no2no'] = self.no2no
             evaluate_result['no2yes'] = self.no2yes
             evaluate_result['yes2no'] = self.yes2no
             evaluate_result['yes2yes'] = self.yes2yes
-
+        
         if flag <= 0:
             return evaluate_result
-
+        
         evaluate_result[f'f_{self.f_beta}'] = round(evaluate_result[f'f_{self.f_beta}'] / flag, 3)
         evaluate_result['EM'] = round(evaluate_result['EM'] / flag, 3)
-
+        
         if reset:
             self.no_ans_correct = 0
             self.no_ans_wrong = 0
-
+            
             self.has_ans_correct = 0
             self.has_ans_wrong = 0
-
+            
             self.has_ans_f = 0.
-
+            
             self.no2no = 0
             self.no2yes = 0
             self.yes2no = 0
             self.yes2yes = 0
-
+        
         return evaluate_result
-

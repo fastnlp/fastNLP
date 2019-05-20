@@ -52,8 +52,8 @@ __all__ = [
     
     "cache_results"
 ]
+__version__ = '0.4.0'
+
 from .core import *
 from . import models
 from . import modules
-
-__version__ = '0.4.0'

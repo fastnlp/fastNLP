@@ -1,4 +1,8 @@
-__all__ = ["MaxPool", "MaxPoolWithMask", "AvgPool"]
+__all__ = [
+    "MaxPool",
+    "MaxPoolWithMask",
+    "AvgPool"
+]
 import torch
 import torch.nn as nn
 
@@ -16,6 +20,7 @@ class MaxPool(nn.Module):
     :param kernel_size: max pooling的窗口大小，默认为tensor最后k维，其中k为dimension
     :param ceil_mode:
     """
+    
     def __init__(self, stride=None, padding=0, dilation=1, dimension=1, kernel_size=None, ceil_mode=False):
         
         super(MaxPool, self).__init__()
@@ -125,7 +130,7 @@ class AvgPoolWithMask(nn.Module):
     给定形如[batch_size, max_len, hidden_size]的输入，在最后一维进行avg pooling. 输出为[batch_size, hidden_size], pooling
     的时候只会考虑mask为1的位置
     """
-
+    
     def __init__(self):
         super(AvgPoolWithMask, self).__init__()
         self.inf = 10e12

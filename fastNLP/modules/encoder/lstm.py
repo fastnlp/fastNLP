@@ -1,6 +1,11 @@
-"""轻量封装的 Pytorch LSTM 模块.
+"""
+轻量封装的 Pytorch LSTM 模块.
 可在 forward 时传入序列的长度, 自动对padding做合适的处理.
 """
+__all__ = [
+    "LSTM"
+]
+
 import torch
 import torch.nn as nn
 import torch.nn.utils.rnn as rnn
@@ -23,6 +28,7 @@ class LSTM(nn.Module):
         :(batch, seq, feature). Default: ``False``
     :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
     """
+    
     def __init__(self, input_size, hidden_size=100, num_layers=1, dropout=0.0, batch_first=True,
                  bidirectional=False, bias=True, initial_method=None):
         super(LSTM, self).__init__()
@@ -30,7 +36,7 @@ class LSTM(nn.Module):
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, bias=bias, batch_first=batch_first,
                             dropout=dropout, bidirectional=bidirectional)
         initial_parameter(self, initial_method)
-
+    
     def forward(self, x, seq_len=None, h0=None, c0=None):
         """
 

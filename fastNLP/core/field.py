@@ -3,10 +3,16 @@ field模块实现了 FieldArray 和若干 Padder。 FieldArray 是  :class:`~fas
 原理部分请参考 :doc:`fastNLP.core.dataset`
 
 """
+__all__ = [
+    "FieldArray",
+    "Padder",
+    "AutoPadder",
+    "EngChar2DPadder"
+]
 
+from copy import deepcopy
 
 import numpy as np
-from copy import deepcopy
 
 
 class FieldArray(object):
@@ -24,6 +30,7 @@ class FieldArray(object):
     :param bool ignore_type: 是否忽略该field的type，一般如果这个field不需要转为torch.FloatTensor或torch.LongTensor,
         就可以设置为True。具体意义请参考 :class:`~fastNLP.DataSet` 。
     """
+    
     def __init__(self, name, content, is_target=None, is_input=None, padder=None, ignore_type=False):
         self.name = name
         if isinstance(content, list):
@@ -41,7 +48,7 @@ class FieldArray(object):
             raise TypeError("content in FieldArray can only be list or numpy.ndarray, got {}.".format(type(content)))
         if len(content) == 0:
             raise RuntimeError("Cannot initialize FieldArray with empty list.")
-
+        
         self.content = content  # 1维 或 2维 或 3维 list, 形状可能不对齐
         self.content_dim = None  # 表示content是多少维的list
         if padder is None:
@@ -51,27 +58,27 @@ class FieldArray(object):
             padder = deepcopy(padder)
         self.set_padder(padder)
         self.ignore_type = ignore_type
-
+        
         self.BASIC_TYPES = (int, float, str)  # content中可接受的Python基本类型，这里没有np.array
-
+        
         self.pytype = None
         self.dtype = None
         self._is_input = None
         self._is_target = None
-
+        
         if is_input is not None or is_target is not None:
             self.is_input = is_input
             self.is_target = is_target
-
+    
     def _set_dtype(self):
         if self.ignore_type is False:
             self.pytype = self._type_detection(self.content)
             self.dtype = self._map_to_np_type(self.pytype)
-
+    
     @property
     def is_input(self):
         return self._is_input
-
+    
     @is_input.setter
     def is_input(self, value):
         """
@@ -80,11 +87,11 @@ class FieldArray(object):
         if value is True:
             self._set_dtype()
         self._is_input = value
-
+    
     @property
     def is_target(self):
         return self._is_target
-
+    
     @is_target.setter
     def is_target(self, value):
         """
@@ -93,7 +100,7 @@ class FieldArray(object):
         if value is True:
             self._set_dtype()
         self._is_target = value
-
+    
     def _type_detection(self, content):
         """
         当该field被设置为is_input或者is_target时被调用
@@ -101,9 +108,9 @@ class FieldArray(object):
         """
         if len(content) == 0:
             raise RuntimeError("Empty list in Field {}.".format(self.name))
-
+        
         type_set = set([type(item) for item in content])
-
+        
         if list in type_set:
             if len(type_set) > 1:
                 # list 跟 非list 混在一起
@@ -139,7 +146,7 @@ class FieldArray(object):
                         self.name, self.BASIC_TYPES, content_type))
             self.content_dim = 1
             return self._basic_type_detection(type_set)
-
+    
     def _basic_type_detection(self, type_set):
         """
         :param type_set: a set of Python types
@@ -158,7 +165,7 @@ class FieldArray(object):
         else:
             # str, int, float混在一起
             raise RuntimeError("Mixed data types in Field {}: {}".format(self.name, list(type_set)))
-
+    
     def _1d_list_check(self, val):
         """如果不是1D list就报错
         """
@@ -168,7 +175,7 @@ class FieldArray(object):
         self._basic_type_detection(type_set)
         # otherwise: _basic_type_detection will raise error
         return True
-
+    
     def _2d_list_check(self, val):
         """如果不是2D list 就报错
         """
@@ -181,15 +188,15 @@ class FieldArray(object):
                 inner_type_set.add(type(obj))
         self._basic_type_detection(inner_type_set)
         return True
-
+    
     @staticmethod
     def _map_to_np_type(basic_type):
         type_mapping = {int: np.int64, float: np.float64, str: np.str, np.ndarray: np.ndarray}
         return type_mapping[basic_type]
-
+    
     def __repr__(self):
         return "FieldArray {}: {}".format(self.name, self.content.__repr__())
-
+    
     def append(self, val):
         """将val append到这个field的尾部。如果这个field已经被设置为input或者target，则在append之前会检查该类型是否与已有
         的内容是匹配的。
@@ -208,7 +215,7 @@ class FieldArray(object):
             else:
                 raise RuntimeError(
                     "Unexpected data type {}. Should be list, np.array, or {}".format(type(val), self.BASIC_TYPES))
-
+            
             if self.is_input is True or self.is_target is True:
                 if type(val) == list:
                     if len(val) == 0:
@@ -231,14 +238,14 @@ class FieldArray(object):
                     raise RuntimeError(
                         "Unexpected data type {}. Should be list, np.array, or {}".format(type(val), self.BASIC_TYPES))
         self.content.append(val)
-
+    
     def __getitem__(self, indices):
         return self.get(indices, pad=False)
-
+    
     def __setitem__(self, idx, val):
         assert isinstance(idx, int)
         self.content[idx] = val
-
+    
     def get(self, indices, pad=True):
         """
         根据给定的indices返回内容
@@ -251,13 +258,13 @@ class FieldArray(object):
             return self.content[indices]
         if self.is_input is False and self.is_target is False:
             raise RuntimeError("Please specify either is_input or is_target is True for {}".format(self.name))
-
+        
         contents = [self.content[i] for i in indices]
         if self.padder is None or pad is False:
             return np.array(contents)
         else:
             return self.padder(contents, field_name=self.name, field_ele_dtype=self.dtype)
-
+    
     def set_padder(self, padder):
         """
         设置padder，在这个field进行pad的时候用这个padder进行pad，如果为None则不进行pad。
@@ -269,7 +276,7 @@ class FieldArray(object):
             self.padder = deepcopy(padder)
         else:
             self.padder = None
-
+    
     def set_pad_val(self, pad_val):
         """
         修改padder的pad_val.
@@ -279,8 +286,7 @@ class FieldArray(object):
         if self.padder is not None:
             self.padder.set_pad_val(pad_val)
         return self
-
-
+    
     def __len__(self):
         """
         Returns the size of FieldArray.
@@ -288,7 +294,7 @@ class FieldArray(object):
         :return int length:
         """
         return len(self.content)
-
+    
     def to(self, other):
         """
         将other的属性复制给本FieldArray(other必须为FieldArray类型).
@@ -298,13 +304,14 @@ class FieldArray(object):
         :return: :class:`~fastNLP.FieldArray`
         """
         assert isinstance(other, FieldArray), "Only support FieldArray type, not {}.".format(type(other))
-
+        
         self.is_input = other.is_input
         self.is_target = other.is_target
         self.padder = other.padder
         self.ignore_type = other.ignore_type
-
+        
         return self
+
 
 def _is_iterable(content):
     try:
@@ -331,13 +338,13 @@ class Padder:
         :return: np.array([padded_element])
     
     """
-
+    
     def __init__(self, pad_val=0, **kwargs):
         self.pad_val = pad_val
-
+    
     def set_pad_val(self, pad_val):
         self.pad_val = pad_val
-
+    
     def __call__(self, contents, field_name, field_ele_dtype):
         """
         传入的是List内容。假设有以下的DataSet。
@@ -396,13 +403,13 @@ class AutoPadder(Padder):
         2.2 如果该field的内容为List, 那么会将Batch中的List pad为一样长。若该List下还有里层的List需要padding，请使用其它padder。
         即如果Instance中field形如[1, 2, 3, ...]，则可以pad；若为[[1,2], [3,4, ...]]则不能进行pad
     """
-
+    
     def __init__(self, pad_val=0):
         """
         :param pad_val: int, padding的位置使用该index
         """
         super().__init__(pad_val=pad_val)
-
+    
     def _is_two_dimension(self, contents):
         """
         判断contents是不是只有两个维度。[[1,2], [3]]是两个维度. [[[1,2], [3, 4, 5]], [[4,5]]]有三个维度
@@ -416,7 +423,7 @@ class AutoPadder(Padder):
                 return False
             return True
         return False
-
+    
     def __call__(self, contents, field_name, field_ele_dtype):
         
         if not _is_iterable(contents[0]):
@@ -458,6 +465,7 @@ class EngChar2DPadder(Padder):
         dataset.set_padder('chars', padder)  # chars这个field的设置为了EnChar2DPadder
 
     """
+    
     def __init__(self, pad_val=0, pad_length=0):
         """
         :param pad_val: int, pad的位置使用该index
@@ -465,9 +473,9 @@ class EngChar2DPadder(Padder):
             都pad或截取到该长度.
         """
         super().__init__(pad_val=pad_val)
-
+        
         self.pad_length = pad_length
-
+    
     def _exactly_three_dims(self, contents, field_name):
         """
         检查传入的contents是否刚好是3维，如果不是3维就报错。理论上，第一个维度是batch，第二个维度是word，第三个维度是character
@@ -486,10 +494,10 @@ class EngChar2DPadder(Padder):
             value = value[0]
         except:
             raise ValueError("Field:{} only has two dimensions.".format(field_name))
-
+        
         if _is_iterable(value):
             raise ValueError("Field:{} has more than 3 dimension.".format(field_name))
-
+    
     def __call__(self, contents, field_name, field_ele_dtype):
         """
         期望输入类似于
@@ -516,12 +524,12 @@ class EngChar2DPadder(Padder):
         max_sent_length = max(len(word_lst) for word_lst in contents)
         batch_size = len(contents)
         dtype = type(contents[0][0][0])
-
+        
         padded_array = np.full((batch_size, max_sent_length, max_char_length), fill_value=self.pad_val,
-                                        dtype=dtype)
+                               dtype=dtype)
         for b_idx, word_lst in enumerate(contents):
             for c_idx, char_lst in enumerate(word_lst):
                 chars = char_lst[:max_char_length]
                 padded_array[b_idx, c_idx, :len(chars)] = chars
-
+        
         return padded_array

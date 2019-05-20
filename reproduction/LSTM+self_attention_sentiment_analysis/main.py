@@ -7,7 +7,7 @@ from fastNLP.io.config_io import ConfigSection
 from fastNLP.io.dataset_loader import DummyClassificationReader as Dataset_loader
 from fastNLP.models.base_model import BaseModel
 from fastNLP.modules.aggregator.self_attention import SelfAttention
-from fastNLP.modules.decoder.MLP import MLP
+from fastNLP.modules.decoder.mlp import MLP
 from fastNLP.modules.encoder.embedding import Embedding as Embedding
 from fastNLP.modules.encoder.lstm import LSTM
 

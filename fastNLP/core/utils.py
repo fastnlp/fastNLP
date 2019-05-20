@@ -1,20 +1,25 @@
 """
 utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户可以使用的是 :func:`cache_results` 修饰器。
 """
-__all__ = ["cache_results", "seq_len_to_mask"]
+__all__ = [
+    "cache_results",
+    "seq_len_to_mask"
+]
+
 import _pickle
 import inspect
 import os
 import warnings
-from collections import Counter
-from collections import namedtuple
+from collections import Counter, namedtuple
 
 import numpy as np
 import torch
-from torch import nn
+import torch.nn as nn
+
 
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
-                                   'varargs'])
+                                     'varargs'])
+
 
 def _prepare_cache_filepath(filepath):
     """
@@ -40,26 +45,28 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
         import time
         import numpy as np
         from fastNLP import cache_results
-
+        
         @cache_results('cache.pkl')
         def process_data():
             # 一些比较耗时的工作，比如读取数据，预处理数据等，这里用time.sleep()代替耗时
             time.sleep(1)
-            return np.random.randint(5, size=(10, 20))
-
+            return np.random.randint(10, size=(5,))
+        
         start_time = time.time()
-        process_data()
+        print("res =",process_data())
         print(time.time() - start_time)
-
+        
         start_time = time.time()
-        process_data()
+        print("res =",process_data())
         print(time.time() - start_time)
-
-        # 输出内容如下
-        #     Save cache to cache.pkl.
-        #     1.0015439987182617
-        #     Read cache from cache.pkl.
-        #     0.00013065338134765625
+        
+        # 输出内容如下，可以看到两次结果相同，且第二次几乎没有花费时间
+        # Save cache to cache.pkl.
+        # res = [5 4 9 1 8]
+        # 1.0042750835418701
+        # Read cache from cache.pkl.
+        # res = [5 4 9 1 8]
+        # 0.0040721893310546875
 
     可以看到第二次运行的时候，只用了0.0001s左右，是由于第二次运行将直接从cache.pkl这个文件读取数据，而不会经过再次预处理
 
@@ -83,11 +90,13 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
     :param int _verbose: 是否打印cache的信息。
     :return:
     """
+    
     def wrapper_(func):
         signature = inspect.signature(func)
         for key, _ in signature.parameters.items():
             if key in ('_cache_fp', '_refresh', '_verbose'):
                 raise RuntimeError("The function decorated by cache_results cannot have keyword `{}`.".format(key))
+        
         def wrapper(*args, **kwargs):
             if '_cache_fp' in kwargs:
                 cache_filepath = kwargs.pop('_cache_fp')
@@ -95,7 +104,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
             else:
                 cache_filepath = _cache_fp
             if '_refresh' in kwargs:
-                refresh  = kwargs.pop('_refresh')
+                refresh = kwargs.pop('_refresh')
                 assert isinstance(refresh, bool), "_refresh can only be bool."
             else:
                 refresh = _refresh
@@ -105,16 +114,16 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
             else:
                 verbose = _verbose
             refresh_flag = True
-
+            
             if cache_filepath is not None and refresh is False:
                 # load data
                 if os.path.exists(cache_filepath):
                     with open(cache_filepath, 'rb') as f:
                         results = _pickle.load(f)
-                    if verbose==1:
+                    if verbose == 1:
                         print("Read cache from {}.".format(cache_filepath))
                     refresh_flag = False
-
+            
             if refresh_flag:
                 results = func(*args, **kwargs)
                 if cache_filepath is not None:
@@ -124,10 +133,13 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
                     with open(cache_filepath, 'wb') as f:
                         _pickle.dump(results, f)
                     print("Save cache to {}.".format(cache_filepath))
-
+            
             return results
+        
         return wrapper
+    
     return wrapper_
+
 
 # def save_pickle(obj, pickle_path, file_name):
 #     """Save an object into a pickle file.
@@ -196,7 +208,7 @@ def _move_model_to_device(model, device):
     """
     if isinstance(model, torch.nn.parallel.DistributedDataParallel):
         raise RuntimeError("model of `torch.nn.parallel.DistributedDataParallel` is not supported right now.")
-
+    
     if device is None:
         if isinstance(model, torch.nn.DataParallel):
             model.cuda()
@@ -205,34 +217,35 @@ def _move_model_to_device(model, device):
         if not torch.cuda.is_available() and (
                 device != 'cpu' or (isinstance(device, torch.device) and device.type != 'cpu')):
             raise ValueError("There is no usable gpu. set `device` as `cpu` or `None`.")
-
+    
     if isinstance(model, torch.nn.DataParallel):
         raise RuntimeError("When model is `torch.nn.DataParallel`, the device has to be `None`.")
-
+    
     if isinstance(device, int):
-        assert device>-1, "device can only be non-negative integer"
-        assert torch.cuda.device_count()>device, "Only has {} gpus, cannot use device {}.".format(torch.cuda.device_count(),
-                                                                                                  device)
+        assert device > -1, "device can only be non-negative integer"
+        assert torch.cuda.device_count() > device, "Only has {} gpus, cannot use device {}.".format(
+            torch.cuda.device_count(),
+            device)
         device = torch.device('cuda:{}'.format(device))
     elif isinstance(device, str):
         device = torch.device(device)
         if device.type == 'cuda' and device.index is not None:
-            assert device.index<torch.cuda.device_count(), "Only has {} gpus, cannot use device cuda:{}.".format(
-                                                                                            torch.cuda.device_count(),
-                                                                                                  device)
+            assert device.index < torch.cuda.device_count(), "Only has {} gpus, cannot use device cuda:{}.".format(
+                torch.cuda.device_count(),
+                device)
     elif isinstance(device, torch.device):
         if device.type == 'cuda' and device.index is not None:
-            assert device.index<torch.cuda.device_count(), "Only has {} gpus, cannot use device cuda:{}.".format(
-                                                                                            torch.cuda.device_count(),
-                                                                                                  device)
+            assert device.index < torch.cuda.device_count(), "Only has {} gpus, cannot use device cuda:{}.".format(
+                torch.cuda.device_count(),
+                device)
     elif isinstance(device, list):
         types = set([type(d) for d in device])
-        assert len(types)==1, "Mixed type in device, only `int` allowed."
+        assert len(types) == 1, "Mixed type in device, only `int` allowed."
         assert list(types)[0] == int, "Only int supported for multiple devices."
-        assert len(set(device))==len(device), "Duplicated device id found in device."
+        assert len(set(device)) == len(device), "Duplicated device id found in device."
         for d in device:
-            assert d>-1, "Only non-negative device id allowed."
-        if len(device)>1:
+            assert d > -1, "Only non-negative device id allowed."
+        if len(device) > 1:
             output_device = device[0]
             model = nn.DataParallel(model, device_ids=device, output_device=output_device)
         device = torch.device(device[0])
@@ -250,9 +263,9 @@ def _get_model_device(model):
     :return: torch.device,None 如果返回值为None，说明这个模型没有任何参数。
     """
     assert isinstance(model, nn.Module)
-
+    
     parameters = list(model.parameters())
-    if len(parameters)==0:
+    if len(parameters) == 0:
         return None
     else:
         return parameters[0].device
@@ -407,7 +420,7 @@ def _move_dict_value_to_device(*args, device: torch.device, non_blocking=False):
     
     if not isinstance(device, torch.device):
         raise TypeError(f"device must be `torch.device`, got `{type(device)}`")
-
+    
     for arg in args:
         if isinstance(arg, dict):
             for key, value in arg.items():
@@ -422,10 +435,10 @@ class _CheckError(Exception):
 
     _CheckError. Used in losses.LossBase, metrics.MetricBase.
     """
-
+    
     def __init__(self, check_res: _CheckRes, func_signature: str):
         errs = [f'Problems occurred when calling `{func_signature}`']
-
+        
         if check_res.varargs:
             errs.append(f"\tvarargs: {check_res.varargs}(Does not support pass positional arguments, please delete it)")
         if check_res.missing:
@@ -434,9 +447,9 @@ class _CheckError(Exception):
             errs.append(f"\tduplicated param: {check_res.duplicated}")
         if check_res.unused:
             errs.append(f"\tunused param: {check_res.unused}")
-
+        
         Exception.__init__(self, '\n'.join(errs))
-
+        
         self.check_res = check_res
         self.func_signature = func_signature
 
@@ -456,7 +469,7 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
     # if check_res.varargs:
     #     errs.append(f"\tvarargs: *{check_res.varargs}")
     #     suggestions.append(f"Does not support pass positional arguments, please delete *{check_res.varargs}.")
-
+    
     if check_res.unused:
         for _unused in check_res.unused:
             if _unused in target_dict:
@@ -466,8 +479,8 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
         if _unused_field:
             unuseds.append(f"\tunused field: {_unused_field}")
         if _unused_param:
-            unuseds.append(f"\tunused param: {_unused_param}") # output from predict or forward
-
+            unuseds.append(f"\tunused param: {_unused_param}")  # output from predict or forward
+    
     module_name = func_signature.split('.')[0]
     if check_res.missing:
         errs.append(f"\tmissing param: {check_res.missing}")
@@ -488,14 +501,14 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
                     mapped_missing.append(_miss)
             else:
                 unmapped_missing.append(_miss)
-
+        
         for _miss in mapped_missing + unmapped_missing:
             if _miss in dataset:
                 suggestions.append(f"Set `{_miss}` as target.")
             else:
                 _tmp = ''
                 if check_res.unused:
-                    _tmp = f"Check key assignment for `{input_func_map.get(_miss, _miss)}` when initialize {module_name}."
+                    _tmp = f"Check key assignment for `{input_func_map.get(_miss,_miss)}` when initialize {module_name}."
                 if _tmp:
                     _tmp += f' Or provide `{_miss}` in DataSet or output of {prev_func_signature}.'
                 else:
@@ -513,25 +526,25 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
         #         else:
         #             _tmp = f'Provide `{_miss}` in output of {prev_func_signature} or DataSet.'
         #         suggestions.append(_tmp)
-
+    
     if check_res.duplicated:
         errs.append(f"\tduplicated param: {check_res.duplicated}.")
         suggestions.append(f"Delete {check_res.duplicated} in the output of "
                            f"{prev_func_signature} or do not set {check_res.duplicated} as targets. ")
-
-    if len(errs)>0:
+    
+    if len(errs) > 0:
         errs.extend(unuseds)
     elif check_level == STRICT_CHECK_LEVEL:
         errs.extend(unuseds)
-
+    
     if len(errs) > 0:
         errs.insert(0, f'Problems occurred when calling {func_signature}')
         sugg_str = ""
         if len(suggestions) > 1:
             for idx, sugg in enumerate(suggestions):
-                if idx>0:
+                if idx > 0:
                     sugg_str += '\t\t\t'
-                sugg_str += f'({idx+1}). {sugg}\n'
+                sugg_str += f'({idx + 1}). {sugg}\n'
             sugg_str = sugg_str[:-1]
         else:
             sugg_str += suggestions[0]
@@ -546,14 +559,15 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
             _unused_warn = f'{check_res.unused} is not used by {module_name}.'
             warnings.warn(message=_unused_warn)
 
+
 def _check_forward_error(forward_func, batch_x, dataset, check_level):
     check_res = _check_arg_dict_list(forward_func, batch_x)
     func_signature = _get_func_signature(forward_func)
-
+    
     errs = []
     suggestions = []
     _unused = []
-
+    
     # if check_res.varargs:
     #     errs.append(f"\tvarargs: {check_res.varargs}")
     #     suggestions.append(f"Does not support pass positional arguments, please delete *{check_res.varargs}.")
@@ -574,20 +588,20 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
             #     _tmp += f"Or you might find it in `unused field:`, you can use DataSet.rename_field() to " \
             #             f"rename the field in `unused field:`."
             suggestions.append(_tmp)
-
+    
     if check_res.unused:
         _unused = [f"\tunused field: {check_res.unused}"]
-        if len(errs)>0:
+        if len(errs) > 0:
             errs.extend(_unused)
         elif check_level == STRICT_CHECK_LEVEL:
             errs.extend(_unused)
-
+    
     if len(errs) > 0:
         errs.insert(0, f'Problems occurred when calling {func_signature}')
         sugg_str = ""
         if len(suggestions) > 1:
             for idx, sugg in enumerate(suggestions):
-                sugg_str += f'({idx+1}). {sugg}'
+                sugg_str += f'({idx + 1}). {sugg}'
         else:
             sugg_str += suggestions[0]
         err_str = '\n' + '\n'.join(errs) + '\n\tSuggestion: ' + sugg_str
@@ -622,8 +636,8 @@ def seq_len_to_mask(seq_len):
         assert len(np.shape(seq_len)) == 1, f"seq_len can only have one dimension, got {len(np.shape(seq_len))}."
         max_len = int(seq_len.max())
         broad_cast_seq_len = np.tile(np.arange(max_len), (len(seq_len), 1))
-        mask = broad_cast_seq_len<seq_len.reshape(-1, 1)
-
+        mask = broad_cast_seq_len < seq_len.reshape(-1, 1)
+    
     elif isinstance(seq_len, torch.Tensor):
         assert seq_len.dim() == 1, f"seq_len can only have one dimension, got {seq_len.dim() == 1}."
         batch_size = seq_len.size(0)
@@ -632,7 +646,7 @@ def seq_len_to_mask(seq_len):
         mask = broad_cast_seq_len.lt(seq_len.unsqueeze(1))
     else:
         raise TypeError("Only support 1-d numpy.ndarray or 1-d torch.Tensor.")
-
+    
     return mask
 
 
@@ -640,24 +654,24 @@ class _pseudo_tqdm:
     """
     当无法引入tqdm，或者Trainer中设置use_tqdm为false的时候，用该方法打印数据
     """
-
+    
     def __init__(self, **kwargs):
         pass
-
+    
     def write(self, info):
         print(info)
-
+    
     def set_postfix_str(self, info):
         print(info)
-
+    
     def __getattr__(self, item):
         def pass_func(*args, **kwargs):
             pass
-
+        
         return pass_func
-
+    
     def __enter__(self):
         return self
-
+    
     def __exit__(self, exc_type, exc_val, exc_tb):
         del self

@@ -60,15 +60,19 @@ __all__ = [
     "CallbackException",
     "EarlyStopError"
 ]
+
 import os
+
 import torch
-from ..io.model_io import ModelSaver, ModelLoader
 
 try:
     from tensorboardX import SummaryWriter
+    
     tensorboardX_flag = True
 except:
     tensorboardX_flag = False
+
+from ..io.model_io import ModelSaver, ModelLoader
 
 
 class Callback(object):
@@ -587,7 +591,7 @@ class TensorboardCallback(Callback):
             self._summary_writer = SummaryWriter(path)
         else:
             self._summary_writer = None
-            
+    
     def on_batch_begin(self, batch_x, batch_y, indices):
         if "model" in self.options and self.graph_added is False:
             # tesorboardX 这里有大bug，暂时没法画模型图
