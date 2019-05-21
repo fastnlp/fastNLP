@@ -443,7 +443,7 @@ class FitlogCallback(Callback):
     :param DataSet,dict(DataSet) data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
         DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。若tester不为None时，data需要通过
         dict的方式传入。如果仅传入DataSet, 则被命名为test
-    :param Tester tester: Tester对象，将在on_valid_end时调用。tester中的会被命名为test
+    :param Tester tester: Tester对象，将在on_valid_end时调用。tester中的DataSet会被称为为`test`
     :param int verbose: 是否在终端打印内容，0不打印
     :param bool log_exception: fitlog是否记录发生的exception信息
     """
