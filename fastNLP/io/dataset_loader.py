@@ -214,27 +214,27 @@ class ConllLoader(DataSetLoader):
         11:N    Predicate Arguments
         N       Coreference
 
-    :param headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexs`` 一一对应
-    :param indexs: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
+    :param headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
+    :param indexes: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
     :param dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``False``
     """
     
-    def __init__(self, headers, indexs=None, dropna=False):
+    def __init__(self, headers, indexes=None, dropna=False):
         super(ConllLoader, self).__init__()
         if not isinstance(headers, (list, tuple)):
             raise TypeError('invalid headers: {}, should be list of strings'.format(headers))
         self.headers = headers
         self.dropna = dropna
-        if indexs is None:
-            self.indexs = list(range(len(self.headers)))
+        if indexes is None:
+            self.indexes = list(range(len(self.headers)))
         else:
-            if len(indexs) != len(headers):
+            if len(indexes) != len(headers):
                 raise ValueError
-            self.indexs = indexs
+            self.indexes = indexes
     
     def load(self, path):
         ds = DataSet()
-        for idx, data in _read_conll(path, indexes=self.indexs, dropna=self.dropna):
+        for idx, data in _read_conll(path, indexes=self.indexes, dropna=self.dropna):
             ins = {h: data[i] for i, h in enumerate(self.headers)}
             ds.append(Instance(**ins))
         return ds

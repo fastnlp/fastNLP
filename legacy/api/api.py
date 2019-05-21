@@ -101,7 +101,7 @@ class ConllxDataLoader(ConllLoader):
         indexs = [
             1, 3, 6, 7,
         ]
-        super(ConllxDataLoader, self).__init__(headers=headers, indexs=indexs)
+        super(ConllxDataLoader, self).__init__(headers=headers, indexes=indexs)
 
 
 class API:
