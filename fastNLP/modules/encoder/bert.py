@@ -224,9 +224,9 @@ class BertPooler(nn.Module):
 
 
 class BertModel(nn.Module):
-    """Bidirectional Embedding Representations from Transformers.
+    """BERT(Bidirectional Embedding Representations from Transformers).
 
-    If you want to use pre-trained weights, please download from the following sources provided by pytorch-pretrained-BERT.
+    如果你想使用预训练好的权重矩阵，请在以下网址下载.
     sources::
 
     'bert-base-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased.tar.gz",
@@ -238,13 +238,28 @@ class BertModel(nn.Module):
     'bert-base-chinese': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-chinese.tar.gz",
 
 
-    Construct a BERT model with pre-trained weights::
+    用预训练权重矩阵来建立BERT模型::
 
         model = BertModel.from_pretrained("path/to/weights/directory")
 
+    用随机初始化权重矩阵来建立BERT模型::
+
+        model = BertModel()
+
+    :param int vocab_size: 词表大小
+    :param int hidden_size: 隐层大小
+    :param int num_hidden_layers: 隐藏层数
+    :param int num_attention_heads: 多头注意力头数
+    :param int intermediate_size: FFN隐藏层大小
+    :param str hidden_act: FFN隐藏层激活函数
+    :param float hidden_dropout_prob: FFN隐藏层dropout
+    :param float attention_probs_dropout_prob: Attention层的dropout
+    :param int max_position_embeddings: 最大的序列长度
+    :param int type_vocab_size: 最大segment数量
+    :param int initializer_range: 初始化权重范围
     """
 
-    def __init__(self, vocab_size,
+    def __init__(self, vocab_size=30522,
                  hidden_size=768,
                  num_hidden_layers=12,
                  num_attention_heads=12,
