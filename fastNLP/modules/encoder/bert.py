@@ -246,17 +246,17 @@ class BertModel(nn.Module):
 
         model = BertModel()
 
-    :param int vocab_size: 词表大小
-    :param int hidden_size: 隐层大小
-    :param int num_hidden_layers: 隐藏层数
-    :param int num_attention_heads: 多头注意力头数
-    :param int intermediate_size: FFN隐藏层大小
-    :param str hidden_act: FFN隐藏层激活函数
-    :param float hidden_dropout_prob: FFN隐藏层dropout
-    :param float attention_probs_dropout_prob: Attention层的dropout
-    :param int max_position_embeddings: 最大的序列长度
-    :param int type_vocab_size: 最大segment数量
-    :param int initializer_range: 初始化权重范围
+    :param int vocab_size: 词表大小，默认值为30522，为BERT English uncase版本的词表大小
+    :param int hidden_size: 隐层大小，默认值为768，为BERT base的版本
+    :param int num_hidden_layers: 隐藏层数，默认值为12，为BERT base的版本
+    :param int num_attention_heads: 多头注意力头数，默认值为12，为BERT base的版本
+    :param int intermediate_size: FFN隐藏层大小，默认值是3072，为BERT base的版本
+    :param str hidden_act: FFN隐藏层激活函数，默认值为``gelu``
+    :param float hidden_dropout_prob: FFN隐藏层dropout，默认值为0.1
+    :param float attention_probs_dropout_prob: Attention层的dropout，默认值为0.1
+    :param int max_position_embeddings: 最大的序列长度，默认值为512，
+    :param int type_vocab_size: 最大segment数量，默认值为2
+    :param int initializer_range: 初始化权重范围，默认值为0.02
     """
 
     def __init__(self, vocab_size=30522,
