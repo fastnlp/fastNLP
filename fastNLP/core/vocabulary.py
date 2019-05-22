@@ -44,9 +44,7 @@ class Vocabulary(object):
     """
     别名：:class:`fastNLP.Vocabulary` :class:`fastNLP.core.vocabulary.Vocabulary`
     
-    用于构建, 存储和使用 `str` 到 `int` 的一一映射
-
-    Example::
+    用于构建, 存储和使用 `str` 到 `int` 的一一映射::
 
         vocab = Vocabulary()
         word_list = "this is a word list".split()
@@ -159,9 +157,7 @@ class Vocabulary(object):
     
     def has_word(self, w):
         """
-        检查词是否被记录
-
-        Example::
+        检查词是否被记录::
 
             has_abc = vocab.has_word('abc')
             # equals to
@@ -189,9 +185,7 @@ class Vocabulary(object):
     @_check_build_vocab
     def index_dataset(self, *datasets, field_name, new_field_name=None):
         """
-        将DataSet中对应field的词转为数字.
-
-        Example::
+        将DataSet中对应field的词转为数字，Example::
 
             # remember to use `field_name`
             vocab.index_dataset(train_data, dev_data, test_data, field_name='words')
@@ -234,9 +228,7 @@ class Vocabulary(object):
     
     def from_dataset(self, *datasets, field_name):
         """
-        使用dataset的对应field中词构建词典
-
-         Example::
+        使用dataset的对应field中词构建词典::
 
             # remember to use `field_name`
             vocab.from_dataset(train_data1, train_data2, field_name='words')
@@ -280,9 +272,7 @@ class Vocabulary(object):
     def to_index(self, w):
         """
         将词转为数字. 若词不再词典中被记录, 将视为 unknown, 若 ``unknown=None`` , 将抛出
-        ``ValueError``
-
-        Example::
+        ``ValueError``::
 
             index = vocab.to_index('abc')
             # equals to

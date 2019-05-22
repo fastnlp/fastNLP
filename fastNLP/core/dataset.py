@@ -571,9 +571,7 @@ class DataSet(object):
     
     def set_input(self, *field_names, flag=True):
         """
-        将field_names的field设置为input
-
-        Example::
+        将field_names的field设置为input::
 
             dataset.set_input('words', 'seq_len')   # 将words和seq_len这两个field的input属性设置为True
             dataset.set_input('words', flag=False)  # 将words这个field的input属性设置为False
@@ -605,9 +603,7 @@ class DataSet(object):
     
     def set_padder(self, field_name, padder):
         """
-        为field_name设置padder
-
-        Example::
+        为field_name设置padder::
 
             from fastNLP import EngChar2DPadder
             padder = EngChar2DPadder()

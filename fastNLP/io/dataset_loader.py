@@ -106,7 +106,7 @@ class DataSetLoader:
     """
     别名：:class:`fastNLP.io.DataSetLoader` :class:`fastNLP.io.dataset_loader.DataSetLoader`
 
-    定义了各种 DataSetLoader 所需的API 接口，开发者应该继承它实现各种的 DataSetLoader。
+    定义了各种 DataSetLoader (针对特定数据上的特定任务) 所需的API 接口，开发者应该继承它实现各种的 DataSetLoader。
     
     开发者至少应该编写如下内容:
     

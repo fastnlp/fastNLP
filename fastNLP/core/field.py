@@ -448,9 +448,7 @@ class EngChar2DPadder(Padder):
     但这个Padder只能处理index为int的情况。
 
     padded过后的batch内容，形状为(batch_size, max_sentence_length, max_word_length). max_sentence_length为这个batch中最大句
-    子长度；max_word_length为这个batch中最长的word的长度
-
-    Example::
+    子长度；max_word_length为这个batch中最长的word的长度::
 
         from fastNLP import DataSet
         from fastNLP import EngChar2DPadder
