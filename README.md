@@ -32,6 +32,11 @@ fastNLP 依赖如下包:
 pip install fastNLP
 ```
 
+## 参考资源
+
+- [文档](https://fastnlp.readthedocs.io/zh/latest/)
+- [源码](https://github.com/fastnlp/fastNLP)
+
 
 ## 内置组件
 
@@ -101,12 +106,6 @@ fastNLP的大致工作流程如上图所示，而项目结构如下：
     <td> 实现了读写功能，包括数据读入，模型读写等 </td>
 </tr>
 </table>
-
-## 参考资源
-
-- [教程](https://github.com/fastnlp/fastNLP/tree/master/tutorials)
-- [文档](https://fastnlp.readthedocs.io/en/latest/)
-- [源码](https://github.com/fastnlp/fastNLP)
 
 
 
