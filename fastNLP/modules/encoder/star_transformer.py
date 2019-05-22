@@ -43,7 +43,7 @@ class StarTransformer(nn.Module):
              for _ in range(self.iters)])
         
         if max_len is not None:
-            self.pos_emb = self.pos_emb = nn.Embedding(max_len, hidden_size)
+            self.pos_emb = nn.Embedding(max_len, hidden_size)
         else:
             self.pos_emb = None
     

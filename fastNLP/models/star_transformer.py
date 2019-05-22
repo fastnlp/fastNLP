@@ -26,13 +26,11 @@ class StarTransEnc(nn.Module):
     :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
         embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
         此时就以传入的对象作为embedding
-    :param num_cls: 输出类别个数
     :param hidden_size: 模型中特征维度.
     :param num_layers: 模型层数.
     :param num_head: 模型中multi-head的head个数.
     :param head_dim: 模型中multi-head中每个head特征维度.
     :param max_len: 模型能接受的最大输入长度.
-    :param cls_hidden_size: 分类器隐层维度.
     :param emb_dropout: 词嵌入的dropout概率.
     :param dropout: 模型除词嵌入外的dropout概率.
     """
@@ -59,7 +57,7 @@ class StarTransEnc(nn.Module):
     
     def forward(self, x, mask):
         """
-        :param FloatTensor data: [batch, length, hidden] 输入的序列
+        :param FloatTensor x: [batch, length, hidden] 输入的序列
         :param ByteTensor mask: [batch, length] 输入序列的padding mask, 在没有内容(padding 部分) 为 0,
             否则为 1
         :return: [batch, length, hidden] 编码后的输出序列
@@ -110,8 +108,9 @@ class STSeqLabel(nn.Module):
 
     用于序列标注的Star-Transformer模型
 
-    :param vocab_size: 词嵌入的词典大小
-    :param emb_dim: 每个词嵌入的特征维度
+    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+        embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
+        此时就以传入的对象作为embedding
     :param num_cls: 输出类别个数
     :param hidden_size: 模型中特征维度. Default: 300
     :param num_layers: 模型层数. Default: 4
@@ -174,8 +173,9 @@ class STSeqCls(nn.Module):
 
     用于分类任务的Star-Transformer
 
-    :param vocab_size: 词嵌入的词典大小
-    :param emb_dim: 每个词嵌入的特征维度
+    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+        embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
+        此时就以传入的对象作为embedding
     :param num_cls: 输出类别个数
     :param hidden_size: 模型中特征维度. Default: 300
     :param num_layers: 模型层数. Default: 4
@@ -238,8 +238,9 @@ class STNLICls(nn.Module):
     
     用于自然语言推断(NLI)的Star-Transformer
 
-    :param vocab_size: 词嵌入的词典大小
-    :param emb_dim: 每个词嵌入的特征维度
+    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+        embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
+        此时就以传入的对象作为embedding
     :param num_cls: 输出类别个数
     :param hidden_size: 模型中特征维度. Default: 300
     :param num_layers: 模型层数. Default: 4
