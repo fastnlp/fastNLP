@@ -3,7 +3,7 @@ import torch
 from torch import nn
 
 from fastNLP.models.base_model import BaseModel
-from fastNLP.modules.decoder.MLP import MLP
+from fastNLP.modules.decoder.mlp import MLP
 from reproduction.Chinese_word_segmentation.utils import seq_lens_to_mask
 
 
@@ -120,8 +120,8 @@ class CWSBiLSTMSegApp(BaseModel):
         return {'pred_tags': pred_tags}
 
 
-from fastNLP.modules.decoder.CRF import ConditionalRandomField
-from fastNLP.modules.decoder.CRF import allowed_transitions
+from fastNLP.modules.decoder.crf import ConditionalRandomField
+from fastNLP.modules.decoder.crf import allowed_transitions
 
 class CWSBiLSTMCRF(BaseModel):
     def __init__(self, vocab_num, embed_dim=100, bigram_vocab_num=None, bigram_embed_dim=100, num_bigram_per_char=None,
@@ -183,7 +183,7 @@ class CWSBiLSTMCRF(BaseModel):
         masks = seq_lens_to_mask(seq_lens)
         feats = self.encoder_model(chars, bigrams, seq_lens)
         feats = self.decoder_model(feats)
-        probs = self.crf.viterbi_decode(feats, masks, get_score=False)
+        paths, _ = self.crf.viterbi_decode(feats, masks)
 
-        return {'pred': probs, 'seq_lens':seq_lens}
+        return {'pred': paths, 'seq_lens':seq_lens}
 

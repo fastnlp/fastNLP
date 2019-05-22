@@ -1,42 +1,19 @@
-fastNLP.io 
-===========
-
-fastNLP.io.base\_loader 
-------------------------
-
-.. automodule:: fastNLP.io.base_loader
-    :members:
-
-fastNLP.io.config\_io 
-----------------------
-
-.. automodule:: fastNLP.io.config_io
-    :members:
-
-fastNLP.io.dataset\_loader 
----------------------------
-
-.. automodule:: fastNLP.io.dataset_loader
-    :members:
-
-fastNLP.io.embed\_loader 
--------------------------
-
-.. automodule:: fastNLP.io.embed_loader
-    :members:
-
-fastNLP.io.logger 
-------------------
-
-.. automodule:: fastNLP.io.logger
-    :members:
-
-fastNLP.io.model\_io 
----------------------
-
-.. automodule:: fastNLP.io.model_io
-    :members:
-
+fastNLP.io
+==========
 
 .. automodule:: fastNLP.io
     :members:
+    :undoc-members:
+    :show-inheritance:
+
+子模块
+----------
+
+.. toctree::
+   :titlesonly:
+
+   fastNLP.io.base_loader
+   fastNLP.io.dataset_loader
+   fastNLP.io.embed_loader
+   fastNLP.io.model_io
+

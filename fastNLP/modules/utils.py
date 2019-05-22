@@ -1,14 +1,9 @@
+from functools import reduce
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-
-
-def mask_softmax(matrix, mask):
-    if mask is None:
-        result = torch.nn.functional.softmax(matrix, dim=-1)
-    else:
-        raise NotImplementedError
-    return result
 
 
 def initial_parameter(net, initial_method=None):
@@ -60,7 +55,8 @@ def initial_parameter(net, initial_method=None):
                     init_method(w.data)  # weight
                 else:
                     init.normal_(w.data)  # bias
-        elif hasattr(m, 'weight') and m.weight.requires_grad:
+        elif m is not None and hasattr(m, 'weight') and \
+                hasattr(m.weight, "requires_grad"):
             init_method(m.weight.data)
         else:
             for w in m.parameters():
@@ -74,16 +70,63 @@ def initial_parameter(net, initial_method=None):
     net.apply(weights_init)
 
 
-def seq_mask(seq_len, max_len):
-    """Create sequence mask.
-
-    :param seq_len: list or torch.Tensor, the lengths of sequences in a batch.
-    :param max_len: int, the maximum sequence length in a batch.
-    :return: mask, torch.LongTensor, [batch_size, max_len]
-
+def get_embeddings(init_embed):
     """
-    if not isinstance(seq_len, torch.Tensor):
-        seq_len = torch.LongTensor(seq_len)
-    seq_len = seq_len.view(-1, 1).long()   # [batch_size, 1]
-    seq_range = torch.arange(start=0, end=max_len, dtype=torch.long, device=seq_len.device).view(1, -1) # [1, max_len]
-    return torch.gt(seq_len, seq_range) # [batch_size, max_len]
+    根据输入的init_embed生成nn.Embedding对象。
+
+    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+        embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
+        此时就以传入的对象作为embedding
+    :return nn.Embedding embeddings:
+    """
+    if isinstance(init_embed, tuple):
+        res = nn.Embedding(
+            num_embeddings=init_embed[0], embedding_dim=init_embed[1])
+    elif isinstance(init_embed, nn.Embedding):
+        res = init_embed
+    elif isinstance(init_embed, torch.Tensor):
+        res = nn.Embedding.from_pretrained(init_embed, freeze=False)
+    elif isinstance(init_embed, np.ndarray):
+        init_embed = torch.tensor(init_embed, dtype=torch.float32)
+        res = nn.Embedding.from_pretrained(init_embed, freeze=False)
+    else:
+        raise TypeError(
+            'invalid init_embed type: {}'.format((type(init_embed))))
+    return res
+
+
+def summary(model: nn.Module):
+    """
+    得到模型的总参数量
+
+    :params model: Pytorch 模型
+    :return tuple: 包含总参数量，可训练参数量，不可训练参数量
+    """
+    train = []
+    nontrain = []
+
+    def layer_summary(module: nn.Module):
+        def count_size(sizes):
+            return reduce(lambda x, y: x*y, sizes)
+
+        for p in module.parameters(recurse=False):
+            if p.requires_grad:
+                train.append(count_size(p.shape))
+            else:
+                nontrain.append(count_size(p.shape))
+        for subm in module.children():
+            layer_summary(subm)
+
+    layer_summary(model)
+    total_train = sum(train)
+    total_nontrain = sum(nontrain)
+    total = total_train + total_nontrain
+    strings = []
+    strings.append('Total params: {:,}'.format(total))
+    strings.append('Trainable params: {:,}'.format(total_train))
+    strings.append('Non-trainable params: {:,}'.format(total_nontrain))
+    max_len = len(max(strings, key=len))
+    bar = '-'*(max_len + 3)
+    strings = [bar] + strings + [bar]
+    print('\n'.join(strings))
+    return total, total_train, total_nontrain

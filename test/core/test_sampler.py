@@ -3,18 +3,12 @@ import unittest
 
 import torch
 
-from fastNLP.core.dataset import DataSet
-from fastNLP.core.sampler import convert_to_torch_tensor, SequentialSampler, RandomSampler, \
-    k_means_1d, k_means_bucketing, simple_sort_bucketing, BucketSampler
+from fastNLP import DataSet
+from fastNLP import SequentialSampler, RandomSampler, BucketSampler
+from fastNLP.core.sampler import k_means_1d, k_means_bucketing, simple_sort_bucketing
 
 
 class TestSampler(unittest.TestCase):
-    def test_convert_to_torch_tensor(self):
-        data = [[1, 2, 3, 4, 5], [5, 4, 3, 2, 1], [1, 3, 4, 5, 2]]
-        ans = convert_to_torch_tensor(data, False)
-        assert isinstance(ans, torch.Tensor)
-        assert tuple(ans.shape) == (3, 5)
-
     def test_sequential_sampler(self):
         sampler = SequentialSampler()
         data = [1, 3, 5, 7, 9, 2, 4, 6, 8, 10]
@@ -44,7 +38,7 @@ class TestSampler(unittest.TestCase):
         assert len(_) == 10
 
     def test_BucketSampler(self):
-        sampler = BucketSampler(num_buckets=3, batch_size=16, seq_lens_field_name="seq_len")
+        sampler = BucketSampler(num_buckets=3, batch_size=16, seq_len_field_name="seq_len")
         data_set = DataSet({"x": [[0] * random.randint(1, 10)] * 10, "y": [[5, 6]] * 10})
         data_set.apply(lambda ins: len(ins["x"]), new_field_name="seq_len")
         indices = sampler(data_set)

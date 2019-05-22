@@ -1,15 +1,20 @@
+"""
+    ..todo::
+        检查这个类是否需要
+"""
 from collections import defaultdict
 
 import torch
 
-from fastNLP.core import Batch
-from fastNLP.core import DataSet
-from fastNLP.core import SequentialSampler
-from fastNLP.core.utils import _build_args
+from . import Batch
+from . import DataSet
+from . import SequentialSampler
+from .utils import _build_args
 
 
 class Predictor(object):
-    """An interface for predicting outputs based on trained models.
+    """
+    An interface for predicting outputs based on trained models.
 
     It does not care about evaluations of the model, which is different from Tester.
     This is a high-level model wrapper to be called by FastNLP.

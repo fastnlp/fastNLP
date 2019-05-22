@@ -14,6 +14,7 @@
 #
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information -----------------------------------------------------
@@ -23,10 +24,9 @@ copyright = '2018, xpqiu'
 author = 'xpqiu'
 
 # The short X.Y version
-version = '0.2'
+version = '0.4'
 # The full version, including alpha/beta/rc tags
-release = '0.2'
-
+release = '0.4'
 
 # -- General configuration ---------------------------------------------------
 
@@ -42,8 +42,14 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.autosummary',
     'sphinx.ext.mathjax',
-
+    'sphinx.ext.todo'
 ]
+
+autodoc_default_options = {
+    'member-order': 'bysource',
+    'special-members': '__init__',
+    'undoc-members': True,
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -62,16 +68,15 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "zh_CN"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = []
+exclude_patterns = ['modules.rst']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
-
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -84,7 +89,10 @@ html_theme = 'sphinx_rtd_theme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'collapse_navigation': False,
+    'titles_only': True
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -107,22 +115,21 @@ html_static_path = ['_static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'fastNLPdoc'
 
-
 # -- Options for LaTeX output ------------------------------------------------
 
 latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
-
+    
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
-
+    
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
-
+    
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -136,7 +143,6 @@ latex_documents = [
      'xpqiu', 'manual'),
 ]
 
-
 # -- Options for manual page output ------------------------------------------
 
 # One entry per manual page. List of tuples
@@ -145,7 +151,6 @@ man_pages = [
     (master_doc, 'fastnlp', 'fastNLP Documentation',
      [author], 1)
 ]
-
 
 # -- Options for Texinfo output ----------------------------------------------
 
@@ -160,3 +165,13 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+def maybe_skip_member(app, what, name, obj, skip, options):
+    if name.startswith("_"):
+        return True
+    if obj.__doc__ is None:
+        return True
+    return False
+
+
+def setup(app):
+    app.connect('autodoc-skip-member', maybe_skip_member)
