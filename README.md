@@ -33,6 +33,13 @@ pip install fastNLP
 ```
 
 
+## 参考资源
+
+- [文档](https://fastnlp.readthedocs.io/zh/latest/)
+- [源码](https://github.com/fastnlp/fastNLP)
+
+
+
 ## 内置组件
 
 大部分用于的 NLP 任务神经网络都可以看做由编码（encoder）、聚合（aggregator）、解码（decoder）三种模块组成。
@@ -102,11 +109,6 @@ fastNLP的大致工作流程如上图所示，而项目结构如下：
 </tr>
 </table>
 
-## 参考资源
-
-- [教程](https://github.com/fastnlp/fastNLP/tree/master/tutorials)
-- [文档](https://fastnlp.readthedocs.io/en/latest/)
-- [源码](https://github.com/fastnlp/fastNLP)
 
 
 

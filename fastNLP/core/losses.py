@@ -227,7 +227,7 @@ class CrossEntropyLoss(LossBase):
 
     Example::
 
-        >>> loss = CrossEntropyLoss(pred='pred', target='label', padding_idx=0)
+        loss = CrossEntropyLoss(pred='pred', target='label', padding_idx=0)
         
     """
     
