@@ -55,8 +55,6 @@ fastNLP 在 :mod:`~fastNLP.models` 模块中内置了如 :class:`~fastNLP.models
     安装指南 <user/installation>
     快速入门 <user/quickstart>
     详细指南 <user/tutorial_one>
-    科研向导 <user/with_fitlog>
-
 
 API 文档
 -------------
@@ -65,9 +63,15 @@ API 文档
 
 .. toctree::
    :titlesonly:
+   :maxdepth: 2
    
    fastNLP
 
+fitlog
+------
+
+用户可以 `点此 <https://fitlog.readthedocs.io/zh/latest/>`_  查看fitlog的文档。
+fitlog 是由我们团队开发，用于帮助用户记录日志并管理代码的工具
 
 索引与搜索
 ==================
