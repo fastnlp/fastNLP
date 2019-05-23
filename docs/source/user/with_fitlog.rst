@@ -2,9 +2,9 @@
 科研向导
 =================
 
-本文介绍使用 fastNLP 和 fitlog 结合进行科研的方法。
+本文介绍结合使用 fastNLP 和 fitlog 进行科研的方法。
 
-首先，我们需要安装 `fitlog <https://fitlog.readthedocs.io/>`_ 。你需要确认你的电脑中没有其它名为为 `fitlog` 的命令。
+首先，我们需要安装 `fitlog <https://fitlog.readthedocs.io/>`_ 。你需要确认你的电脑中没有其它名为 `fitlog` 的命令。
 
 我们从命令行中进入到一个文件夹，现在我们要在文件夹中创建我们的 fastNLP 项目。你可以在命令行输入 `fitlog init test1` ，
 然后你会看到如下提示::
@@ -18,7 +18,7 @@
 可以参考文档 `命令行工具 <https://fitlog.readthedocs.io/zh/latest/user/command_line.html>`_
 
 现在我们进入你创建的项目文件夹 test1 中，可以看到有一个名为 logs 的文件夹，后面我们将会在里面存放你的实验记录。
-同时也有一个名为 main.py 的文件，是我们推荐你使用的入口文件。文件的内容如下::
+同时也有一个名为 main.py 的文件，这是我们推荐你使用的训练入口文件。文件的内容如下::
 
     import fitlog
 
