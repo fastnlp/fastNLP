@@ -498,14 +498,15 @@ class Trainer(object):
         """
         使用该函数使Trainer开始训练。
 
-        :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现
-                最好的模型参数。
+        :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，
+                如果True, trainer将在返回之前重新加载dev表现最好的模型参数。
         :return dict: 返回一个字典类型的数据,
                 内含以下内容::
 
                     seconds: float, 表示训练时长
                     以下三个内容只有在提供了dev_data的情况下会有。
-                    best_eval: Dict of Dict, 表示evaluation的结果。第一层的key为Metric的名称，第二层的key为具体的Metric
+                    best_eval: Dict of Dict, 表示evaluation的结果。第一层的key为Metric的名称，
+                                第二层的key为具体的Metric
                     best_epoch: int，在第几个epoch取得的最佳值
                     best_step: int, 在第几个step(batch)更新取得的最佳值
 

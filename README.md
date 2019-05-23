@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/fastnlp/fastNLP.svg?branch=master)](https://travis-ci.org/fastnlp/fastNLP)
 [![codecov](https://codecov.io/gh/fastnlp/fastNLP/branch/master/graph/badge.svg)](https://codecov.io/gh/fastnlp/fastNLP)
-[![PyPI version](https://badge.fury.io/py/fastNLP.svg)](https://badge.fury.io/py/fastNLP)
+[![Pypi](https://img.shields.io/pypi/v/fastNLP.svg)](https://pypi.org/project/fastNLP)
 ![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)
 [![Documentation Status](https://readthedocs.org/projects/fastnlp/badge/?version=latest)](http://fastnlp.readthedocs.io/?badge=latest)
 
@@ -32,10 +32,12 @@ fastNLP 依赖如下包:
 pip install fastNLP
 ```
 
+
 ## 参考资源
 
 - [文档](https://fastnlp.readthedocs.io/zh/latest/)
 - [源码](https://github.com/fastnlp/fastNLP)
+
 
 
 ## 内置组件
@@ -108,5 +110,6 @@ fastNLP的大致工作流程如上图所示，而项目结构如下：
 </table>
 
 
+<hr>
 
 *In memory of @FengZiYjun.  May his soul rest in peace. We will miss you very very much!*

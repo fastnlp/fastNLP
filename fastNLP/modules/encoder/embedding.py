@@ -41,3 +41,10 @@ class Embedding(nn.Embedding):
         """
         x = super().forward(x)
         return self.dropout(x)
+
+    def size(self):
+        """
+        Embedding的大小
+        :return: torch.Size()
+        """
+        return self.weight.size()

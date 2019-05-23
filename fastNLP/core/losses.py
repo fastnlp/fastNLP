@@ -190,10 +190,10 @@ class LossFunc(LossBase):
                          找到相对应的参数名为value的参数，并传入func中作为参数名为key的参数
     :param kwargs: 除了参数映射表以外可以用key word args的方式设置参数映射关系
 
-    Example::
+    使用方法::
 
-        >>> func = torch.nn.CrossEntropyLoss()
-        >>> loss_func = LossFunc(func, input="pred", target="label")
+        func = torch.nn.CrossEntropyLoss()
+        loss_func = LossFunc(func, input="pred", target="label")
         # 这表示构建了一个损失函数类，由func计算损失函数，其中将从模型返回值或者DataSet的target=True的field
         # 当中找到一个参数名为`pred`的参数传入func一个参数名为`input`的参数；找到一个参数名为`label`的参数
         # 传入func作为一个名为`target`的参数
@@ -227,7 +227,7 @@ class CrossEntropyLoss(LossBase):
 
     Example::
 
-        >>> loss = CrossEntropyLoss(pred='pred', target='label', padding_idx=0)
+        loss = CrossEntropyLoss(pred='pred', target='label', padding_idx=0)
         
     """
     

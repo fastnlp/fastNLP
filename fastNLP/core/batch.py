@@ -30,11 +30,8 @@ class Batch(object):
     """
     别名：:class:`fastNLP.Batch` :class:`fastNLP.core.batch.Batch`
 
-    Batch 用于从 `DataSet` 中按一定的顺序, 依次按 ``batch_size`` 的大小将数据取出.
-    组成 `x` 和 `y`
-
-
-    Example::
+    Batch 用于从 `DataSet` 中按一定的顺序, 依次按 ``batch_size`` 的大小将数据取出，
+    组成 `x` 和 `y`::
 
         batch = Batch(data_set, batch_size=16, sampler=SequentialSampler())
         num_batch = len(batch)

@@ -13,9 +13,7 @@ class Instance(object):
     别名：:class:`fastNLP.Instance` :class:`fastNLP.core.instance.Instance`
 
     Instance是fastNLP中对应一个sample的类。每个sample在fastNLP中是一个Instance对象。
-    Instance一般与 :class:`~fastNLP.DataSet` 一起使用, Instance的初始化如下面的Example所示
-
-    Example::
+    Instance一般与 :class:`~fastNLP.DataSet` 一起使用, Instance的初始化如下面的Example所示::
     
         >>>from fastNLP import Instance
         >>>ins = Instance(field_1=[1, 1, 1], field_2=[2, 2, 2])
