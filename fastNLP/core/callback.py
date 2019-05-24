@@ -54,6 +54,7 @@ __all__ = [
     "GradientClipCallback",
     "EarlyStopCallback",
     "TensorboardCallback",
+    "FitlogCallback",
     "LRScheduler",
     "ControlC",
     
@@ -65,6 +66,7 @@ import os
 
 import torch
 from copy import deepcopy
+
 try:
     from tensorboardX import SummaryWriter
     
@@ -80,6 +82,7 @@ try:
     import fitlog
 except:
     pass
+
 
 class Callback(object):
     """
@@ -367,16 +370,17 @@ class GradientClipCallback(Callback):
 
     每次backward前，将parameter的gradient clip到某个范围。
 
-    :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。如果为None则默认对Trainer
-        的model中所有参数进行clip
+    :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。
+        如果为None则默认对Trainer的model中所有参数进行clip
     :param float clip_value: 将gradient 限制到[-clip_value, clip_value]。clip_value应该为正数
     :param str clip_type: 支持'norm', 'value'
         两种::
 
             1 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
         
-            2 'value', 将gradient限制在[-clip_value, clip_value], 小于-clip_value的gradient被赋值为-clip_value;
-            大于clip_value的gradient被赋值为clip_value.
+            2 'value', 将gradient限制在[-clip_value, clip_value],
+                小于-clip_value的gradient被赋值为-clip_value;
+                大于clip_value的gradient被赋值为clip_value.
 
     """
     
@@ -431,6 +435,7 @@ class EarlyStopCallback(Callback):
         else:
             raise exception  # 抛出陌生Error
 
+
 class FitlogCallback(Callback):
     """
     别名: :class:`fastNLP.FitlogCallback` :class:`fastNLP.core.callback.FitlogCallback`
@@ -463,7 +468,7 @@ class FitlogCallback(Callback):
                 assert 'test' not in data, "Cannot use `test` as DataSet key, when tester is passed."
             setattr(tester, 'verbose', 0)
             self.testers['test'] = tester
-
+        
         if isinstance(data, dict):
             for key, value in data.items():
                 assert isinstance(value, DataSet), f"Only DataSet object is allowed, not {type(value)}."
@@ -473,22 +478,22 @@ class FitlogCallback(Callback):
             self.datasets['test'] = data
         else:
             raise TypeError("data receives dict[DataSet] or DataSet object.")
-
+        
         self.verbose = verbose
         self._log_loss_every = log_loss_every
         self._avg_loss = 0
 
     def on_train_begin(self):
-        if (len(self.datasets)>0 or len(self.testers)>0 ) and self.trainer.dev_data is None:
+        if (len(self.datasets) > 0 or len(self.testers) > 0) and self.trainer.dev_data is None:
             raise RuntimeError("Trainer has no dev data, you cannot pass extra data to do evaluation.")
-
-        if len(self.datasets)>0:
+        
+        if len(self.datasets) > 0:
             for key, data in self.datasets.items():
                 tester = Tester(data=data, model=self.model, batch_size=self.batch_size, metrics=self.trainer.metrics,
                                 verbose=0)
                 self.testers[key] = tester
         fitlog.add_progress(total_steps=self.n_steps)
-
+    
     def on_backward_begin(self, loss):
         if self._log_loss_every>0:
             self._avg_loss += loss.item()
@@ -503,11 +508,11 @@ class FitlogCallback(Callback):
             eval_result['epoch'] = self.epoch
             fitlog.add_best_metric(eval_result)
         fitlog.add_metric(eval_result, step=self.step, epoch=self.epoch)
-        if len(self.testers)>0:
+        if len(self.testers) > 0:
             for key, tester in self.testers.items():
                 try:
                     eval_result = tester.test()
-                    if self.verbose!=0:
+                    if self.verbose != 0:
                         self.pbar.write("Evaluation on DataSet {}:".format(key))
                         self.pbar.write(tester._format_eval_results(eval_result))
                     fitlog.add_metric(eval_result, name=key, step=self.step, epoch=self.epoch)
@@ -515,10 +520,10 @@ class FitlogCallback(Callback):
                         fitlog.add_best_metric(eval_result, name=key)
                 except Exception:
                     self.pbar.write("Exception happens when evaluate on DataSet named `{}`.".format(key))
-
+    
     def on_train_end(self):
         fitlog.finish()
-
+    
     def on_exception(self, exception):
         fitlog.finish(status=1)
         if self._log_exception:

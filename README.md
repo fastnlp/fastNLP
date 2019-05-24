@@ -110,6 +110,6 @@ fastNLP的大致工作流程如上图所示，而项目结构如下：
 </table>
 
 
-
+<hr>
 
 *In memory of @FengZiYjun.  May his soul rest in peace. We will miss you very very much!*

@@ -55,6 +55,7 @@ fastNLP 在 :mod:`~fastNLP.models` 模块中内置了如 :class:`~fastNLP.models
     安装指南 <user/installation>
     快速入门 <user/quickstart>
     详细指南 <user/tutorial_one>
+    科研指南 <user/with_fitlog>
 
 API 文档
 -------------

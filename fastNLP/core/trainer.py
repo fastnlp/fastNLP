@@ -507,7 +507,8 @@ class Trainer(object):
 
                     seconds: float, 表示训练时长
                     以下三个内容只有在提供了dev_data的情况下会有。
-                    best_eval: Dict of Dict, 表示evaluation的结果。第一层的key为Metric的名称，第二层的key为具体的Metric
+                    best_eval: Dict of Dict, 表示evaluation的结果。第一层的key为Metric的名称，
+                                第二层的key为具体的Metric
                     best_epoch: int，在第几个epoch取得的最佳值
                     best_step: int, 在第几个step(batch)更新取得的最佳值
 
