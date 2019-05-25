@@ -516,7 +516,7 @@ class EngChar2DPadder(Padder):
             ))
         self._exactly_three_dims(contents, field_name)
         if self.pad_length < 1:
-            max_char_length = max(max([[len(char_lst) for char_lst in word_lst] for word_lst in contents]))
+            max_char_length = max([max(len(char_lst) for char_lst in word_lst) for word_lst in contents])
         else:
             max_char_length = self.pad_length
         max_sent_length = max(len(word_lst) for word_lst in contents)
