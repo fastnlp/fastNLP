@@ -13,12 +13,13 @@ with open('requirements.txt', encoding='utf-8') as f:
 
 setup(
     name='FastNLP',
-    version='0.1.1',
+    version='0.4.0',
     description='fastNLP: Deep Learning Toolkit for NLP, developed by Fudan FastNLP Team',
     long_description=readme,
-    license=license,
+    long_description_content_type='text/markdown',
+    license='Apache License',
     author='FudanNLP',
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     packages=find_packages(),
     install_requires=reqs.strip().split('\n'),
 )

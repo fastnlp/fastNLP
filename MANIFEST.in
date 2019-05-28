@@ -1,0 +1,7 @@
+include requirements.txt
+include LICENSE
+include README.md
+prune test/
+prune reproduction/
+prune fastNLP/api
+prune fastNLP/automl

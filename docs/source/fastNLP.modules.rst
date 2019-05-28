@@ -1,30 +1,17 @@
-fastNLP.modules 
-================
+fastNLP.modules
+===============
+
+.. automodule:: fastNLP.modules
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+子模块
+-----------
 
 .. toctree::
+    :titlesonly:
 
     fastNLP.modules.aggregator
     fastNLP.modules.decoder
     fastNLP.modules.encoder
-
-fastNLP.modules.dropout 
-------------------------
-
-.. automodule:: fastNLP.modules.dropout
-    :members:
-
-fastNLP.modules.other\_modules 
--------------------------------
-
-.. automodule:: fastNLP.modules.other_modules
-    :members:
-
-fastNLP.modules.utils 
-----------------------
-
-.. automodule:: fastNLP.modules.utils
-    :members:
-
-
-.. automodule:: fastNLP.modules
-    :members:

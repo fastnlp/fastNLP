@@ -1,60 +1,23 @@
-fastNLP.modules.encoder 
-========================
-
-fastNLP.modules.encoder.char\_embedding 
-----------------------------------------
-
-.. automodule:: fastNLP.modules.encoder.char_embedding
-    :members:
-
-fastNLP.modules.encoder.conv 
------------------------------
-
-.. automodule:: fastNLP.modules.encoder.conv
-    :members:
-
-fastNLP.modules.encoder.conv\_maxpool 
---------------------------------------
-
-.. automodule:: fastNLP.modules.encoder.conv_maxpool
-    :members:
-
-fastNLP.modules.encoder.embedding 
-----------------------------------
-
-.. automodule:: fastNLP.modules.encoder.embedding
-    :members:
-
-fastNLP.modules.encoder.linear 
--------------------------------
-
-.. automodule:: fastNLP.modules.encoder.linear
-    :members:
-
-fastNLP.modules.encoder.lstm 
------------------------------
-
-.. automodule:: fastNLP.modules.encoder.lstm
-    :members:
-
-fastNLP.modules.encoder.masked\_rnn 
-------------------------------------
-
-.. automodule:: fastNLP.modules.encoder.masked_rnn
-    :members:
-
-fastNLP.modules.encoder.transformer 
-------------------------------------
-
-.. automodule:: fastNLP.modules.encoder.transformer
-    :members:
-
-fastNLP.modules.encoder.variational\_rnn 
------------------------------------------
-
-.. automodule:: fastNLP.modules.encoder.variational_rnn
-    :members:
-
+fastNLP.modules.encoder
+=======================
 
 .. automodule:: fastNLP.modules.encoder
     :members:
+    :undoc-members:
+    :show-inheritance:
+
+子模块
+----------
+
+.. toctree::
+   :titlesonly:
+
+   fastNLP.modules.encoder.bert
+   fastNLP.modules.encoder.char_encoder
+   fastNLP.modules.encoder.conv_maxpool
+   fastNLP.modules.encoder.embedding
+   fastNLP.modules.encoder.lstm
+   fastNLP.modules.encoder.star_transformer
+   fastNLP.modules.encoder.transformer
+   fastNLP.modules.encoder.variational_rnn
+

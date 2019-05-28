@@ -1,36 +1,52 @@
+"""
+用于读入和处理和保存 config 文件
+ .. todo::
+    这个模块中的类可能被抛弃？
+"""
+__all__ = [
+    "ConfigLoader",
+    "ConfigSection",
+    "ConfigSaver"
+]
+
 import configparser
 import json
 import os
 
-from fastNLP.io.base_loader import BaseLoader
+from .base_loader import BaseLoader
 
 
 class ConfigLoader(BaseLoader):
-    """Loader for configuration.
+    """
+    别名：:class:`fastNLP.io.ConfigLoader` :class:`fastNLP.io.config_io.ConfigLoader`
 
-    :param str data_path: path to the config
+    读取配置文件的Loader
+
+    :param str data_path: 配置文件的路径
 
     """
-
+    
     def __init__(self, data_path=None):
         super(ConfigLoader, self).__init__()
         if data_path is not None:
             self.config = self.parse(super(ConfigLoader, self).load(data_path))
-
+    
     @staticmethod
     def parse(string):
         raise NotImplementedError
-
+    
     @staticmethod
     def load_config(file_path, sections):
-        """Load section(s) of configuration into the ``sections`` provided. No returns.
+        """
+        把配置文件的section 存入提供的 ``sections`` 中
 
-        :param str file_path: the path of config file
-        :param dict sections: the dict of ``{section_name(string): ConfigSection object}``
+        :param str file_path: 配置文件的路径
+        :param dict sections:  符合如下键值对组成的字典 `section_name(string)` : :class:`~fastNLP.io.ConfigSection`
+            
         Example::
 
             test_args = ConfigSection()
-            ConfigLoader("config.cfg", "").load_config("./data_for_tests/config", {"POS_test": test_args})
+            ConfigLoader("config.cfg").load_config("./data_for_tests/config", {"POS_test": test_args})
 
         """
         assert isinstance(sections, dict)
@@ -66,13 +82,16 @@ class ConfigLoader(BaseLoader):
 
 
 class ConfigSection(object):
-    """ConfigSection is the data structure storing all key-value pairs in one section in a config file.
+    """
+    别名：:class:`fastNLP.io.ConfigSection` :class:`fastNLP.io.config_io.ConfigSection`
+
+    ConfigSection是一个存储了一个section中所有键值对的数据结构，推荐使用此类的实例来配合 :meth:`ConfigLoader.load_config` 使用
 
     """
-
+    
     def __init__(self):
         super(ConfigSection, self).__init__()
-
+    
     def __getitem__(self, key):
         """
         :param key: str, the name of the attribute
@@ -85,7 +104,7 @@ class ConfigSection(object):
         if key in self.__dict__.keys():
             return getattr(self, key)
         raise AttributeError("do NOT have attribute %s" % key)
-
+    
     def __setitem__(self, key, value):
         """
         :param key: str, the name of the attribute
@@ -100,14 +119,14 @@ class ConfigSection(object):
                 raise AttributeError("attr %s except %s but got %s" %
                                      (key, str(type(getattr(self, key))), str(type(value))))
         setattr(self, key, value)
-
+    
     def __contains__(self, item):
         """
         :param item: The key of item.
         :return: True if the key in self.__dict__.keys() else False.
         """
         return item in self.__dict__.keys()
-
+    
     def __eq__(self, other):
         """Overwrite the == operator
 
@@ -119,15 +138,15 @@ class ConfigSection(object):
                 return False
             if getattr(self, k) != getattr(self, k):
                 return False
-
+        
         for k in other.__dict__.keys():
             if k not in self.__dict__.keys():
                 return False
             if getattr(self, k) != getattr(self, k):
                 return False
-
+        
         return True
-
+    
     def __ne__(self, other):
         """Overwrite the != operator
 
@@ -135,25 +154,30 @@ class ConfigSection(object):
         :return:
         """
         return not self.__eq__(other)
-
+    
     @property
     def data(self):
         return self.__dict__
 
 
 class ConfigSaver(object):
-    """ConfigSaver is used to save config file and solve related conflicts.
+    """
+    别名：:class:`fastNLP.io.ConfigSaver` :class:`fastNLP.io.config_io.ConfigSaver`
 
-    :param str file_path: path to the config file
+    ConfigSaver 是用来存储配置文件并解决相关冲突的类
+
+    :param str file_path: 配置文件的路径
 
     """
+    
     def __init__(self, file_path):
         self.file_path = file_path
         if not os.path.exists(self.file_path):
             raise FileNotFoundError("file {} NOT found!".__format__(self.file_path))
-
+    
     def _get_section(self, sect_name):
-        """This is the function to get the section with the section name.
+        """
+        This is the function to get the section with the section name.
 
         :param sect_name: The name of section what wants to load.
         :return: The section.
@@ -161,25 +185,26 @@ class ConfigSaver(object):
         sect = ConfigSection()
         ConfigLoader().load_config(self.file_path, {sect_name: sect})
         return sect
-
+    
     def _read_section(self):
-        """This is the function to read sections from the config file.
+        """
+        This is the function to read sections from the config file.
 
         :return: sect_list, sect_key_list
             sect_list: A list of ConfigSection().
             sect_key_list: A list of names in sect_list.
         """
         sect_name = None
-
+        
         sect_list = {}
         sect_key_list = []
-
+        
         single_section = {}
         single_section_key = []
-
+        
         with open(self.file_path, 'r') as f:
             lines = f.readlines()
-
+        
         for line in lines:
             if line.startswith('[') and line.endswith(']\n'):
                 if sect_name is None:
@@ -191,33 +216,32 @@ class ConfigSaver(object):
                     sect_key_list.append(sect_name)
                 sect_name = line[1: -2]
                 continue
-
+            
             if line.startswith('#'):
                 single_section[line] = '#'
                 single_section_key.append(line)
                 continue
-
+            
             if line.startswith('\n'):
                 single_section_key.append('\n')
                 continue
-
+            
             if '=' not in line:
-                # log = create_logger(__name__, './config_saver.log')
-                # log.error("can NOT load config file [%s]" % self.file_path)
                 raise RuntimeError("can NOT load config file {}".__format__(self.file_path))
-
+            
             key = line.split('=', maxsplit=1)[0].strip()
             value = line.split('=', maxsplit=1)[1].strip() + '\n'
             single_section[key] = value
             single_section_key.append(key)
-
+        
         if sect_name is not None:
             sect_list[sect_name] = single_section, single_section_key
             sect_key_list.append(sect_name)
         return sect_list, sect_key_list
-
+    
     def _write_section(self, sect_list, sect_key_list):
-        """This is the function to write config file with section list and name list.
+        """
+        This is the function to write config file with section list and name list.
 
         :param sect_list: A list of ConfigSection() need to be writen into file.
         :param sect_key_list: A list of name of sect_list.
@@ -236,12 +260,13 @@ class ConfigSaver(object):
                         continue
                     f.write(key + ' = ' + single_section[key])
                 f.write('\n')
-
+    
     def save_config_file(self, section_name, section):
-        """This is the function to be called to change the config file with a single section and its name.
+        """
+        这个方法可以用来修改并保存配置文件中单独的一个 section
 
-        :param str section_name: The name of section what needs to be changed and saved.
-        :param ConfigSection section: The section with key and value what needs to be changed and saved.
+        :param str section_name: 需要保存的 section 的名字.
+        :param section: 你需要修改并保存的 section， :class:`~fastNLP.io.ConfigSaver` 类型
         """
         section_file = self._get_section(section_name)
         if len(section_file.__dict__.keys()) == 0:  # the section not in the file before
@@ -263,19 +288,15 @@ class ConfigSaver(object):
                     change_file = True
                     break
                 if section_file[k] != section[k]:
-                    # logger = create_logger(__name__, "./config_loader.log")
-                    # logger.warning("section [%s] in config file [%s] has been changed" % (
-                    #    section_name, self.file_path
-                    # ))
                     change_file = True
                     break
             if not change_file:
                 return
-
+            
             sect_list, sect_key_list = self._read_section()
             if section_name not in sect_key_list:
                 raise AttributeError()
-
+            
             sect, sect_key = sect_list[section_name]
             for k in section.__dict__.keys():
                 if k not in sect_key:

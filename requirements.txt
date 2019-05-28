@@ -1,4 +1,4 @@
-numpy>=1.14.2
+numpy
 torch>=0.4.0
-tensorboardX
-tqdm>=4.28.1
+tqdm
+nltk
