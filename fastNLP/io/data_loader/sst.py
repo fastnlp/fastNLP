@@ -64,7 +64,8 @@ class SSTLoader(DataSetLoader):
                 src_embed_op: EmbeddingOption = None):
         input_name, target_name = 'words', 'target'
         src_vocab = Vocabulary() if src_vocab_op is None else Vocabulary(**src_vocab_op)
-        tgt_vocab = Vocabulary() if tgt_vocab_op is None else Vocabulary(**tgt_vocab_op)
+        tgt_vocab = Vocabulary(unknown=None, padding=None) \
+            if tgt_vocab_op is None else Vocabulary(**tgt_vocab_op)
 
         info = DataInfo(datasets=self.load(paths))
         _train_ds = [info.datasets[name]
