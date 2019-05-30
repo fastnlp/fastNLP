@@ -1,11 +1,26 @@
 __all__ = [
-    "Vocabulary"
+    "Vocabulary",
+    "VocabularyOption",
 ]
 
 from functools import wraps
 from collections import Counter
-
 from .dataset import DataSet
+from .utils import Example
+
+
+class VocabularyOption(Example):
+    def __init__(self,
+                 max_size=None,
+                 min_freq=None,
+                 padding='<pad>',
+                 unknown='<unk>'):
+        super().__init__(
+            max_size=max_size,
+            min_freq=min_freq,
+            padding=padding,
+            unknown=unknown
+        )
 
 
 def _check_build_vocab(func):

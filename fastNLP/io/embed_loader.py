@@ -1,5 +1,6 @@
 __all__ = [
-    "EmbedLoader"
+    "EmbedLoader",
+    "EmbeddingOption",
 ]
 
 import os
@@ -9,7 +10,21 @@ import numpy as np
 
 from ..core.vocabulary import Vocabulary
 from .base_loader import BaseLoader
+from ..core.utils import Example
 
+
+class EmbeddingOption(Example):
+    def __init__(self,
+                 embed_filepath=None,
+                 dtype=np.float32,
+                 normalize=True,
+                 error='ignore'):
+        super().__init__(
+            embed_filepath=embed_filepath,
+            dtype=dtype,
+            normalize=normalize,
+            error=error
+        )
 
 class EmbedLoader(BaseLoader):
     """
