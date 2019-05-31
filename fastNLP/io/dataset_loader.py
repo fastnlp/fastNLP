@@ -19,6 +19,7 @@ __all__ = [
     'JsonLoader',
     'ConllLoader',
     'SNLILoader',
+    'SummarizationLoader',
     'SSTLoader',
     'PeopleDailyCorpusLoader',
     'Conll2003Loader',
@@ -28,6 +29,7 @@ from nltk.tree import Tree
 
 from ..core.dataset import DataSet
 from ..core.instance import Instance
+from ..core.vocabulary import Vocabulary
 from .file_reader import _read_csv, _read_json, _read_conll
 from typing import Union, Dict
 import os
@@ -474,6 +476,78 @@ class SNLILoader(JsonLoader):
             ins['words2']), new_field_name='words2')
         ds.drop(lambda x: x['target'] == '-')
         return ds
+
+
+class SummarizationLoader(JsonLoader):
+    """
+    别名：:class:`fastNLP.io.SummarizationLoader` :class:`fastNLP.io.dataset_loader.SummarizationLoader`
+
+    读取summarization数据集，读取的DataSet包含fields::
+
+        text: list(str)，document
+        summary: list(str), summary
+        domain: str, optional
+        tag: list(str), optional
+        labels: list(int), optional
+
+    数据来源: CNN_DailyMail Newsroom DUC
+    """
+
+    def __init__(self):
+        super(SummarizationLoader, self).__init__()
+
+    def _load(self, path):
+        ds = super(SummarizationLoader, self)._load(path)
+
+        return ds
+
+    def process(self, paths, vocab_size=50000, domain=False, tag=False):
+        """
+        :param paths: dict  path for each dataset
+        :param vocab_size: int  max_size for vocab
+        :param domain: bool  build vocab for publication, use 'X' for unknown
+        :param tag: bool  build vocab for tag, use 'X' for unknown
+        :return: DataInfo
+            datasets: dict  keys correspond to the paths dict
+            vocabs: dict  key: vocab(if "train" in paths), domain(if domain=True), tag(if tag=True)
+            embeddings: optional
+        """
+
+        datasets = {}
+        train_ds = None
+        for key, value in paths.items():
+            datasets[key] = self.load(value)
+            if "train" in key:
+                train_ds = datasets[key]
+
+        def split_list(text_list):
+            return [text.split() for text in text_list]
+
+        if train_ds != None:
+            train_ds.apply(lambda ins: split_list(ins['text']), new_field_name='text_wd')
+            train_ds.apply(lambda ins: split_list(ins['summary']), new_field_name='summary_wd')
+
+            vocab_dict = {}
+            vocabs = Vocabulary(max_size=vocab_size, padding='[PAD]', unknown='[UNK]')
+            vocabs.from_dataset(train_ds, field_name=["text_wd","summary_wd"])
+            vocab_dict["vocab"] = vocabs
+
+            train_ds.delete_field("text_wd")
+            train_ds.delete_field("summary_wd")
+
+            if domain == True:
+                domaindict = Vocabulary(padding=None, unknown='X')
+                domaindict.from_dataset(train_ds, field_name="publication")
+                vocab_dict["domain"] = domaindict
+            if tag == True:
+                tagdict = Vocabulary(padding=None, unknown='X')
+                tagdict.from_dataset(train_ds, field_name="tag")
+                vocab_dict["tag"] = tagdict
+        else:
+            return DataInfo(datasets=datasets)
+
+        return DataInfo(vocabs=vocab_dict, datasets=datasets)
+
 
 
 class CSVLoader(DataSetLoader):
