@@ -8,6 +8,9 @@ from ..embed_loader import EmbeddingOption, EmbedLoader
 
 
 class SSTLoader(DataSetLoader):
+    URL = 'https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip'
+    DATA_DIR = 'sst/'
+
     """
     别名：:class:`fastNLP.io.SSTLoader` :class:`fastNLP.io.dataset_loader.SSTLoader`
 
