@@ -494,12 +494,14 @@ class Trainer(object):
         self.callback_manager = CallbackManager(env={"trainer": self},
                                                 callbacks=callbacks)
     
-    def train(self, load_best_model=True):
+    def train(self, load_best_model=True, on_exception='ignore'):
         """
         使用该函数使Trainer开始训练。
 
-        :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，
-                如果True, trainer将在返回之前重新加载dev表现最好的模型参数。
+        :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现
+                最好的模型参数。
+        :param str on_exception: 在训练过程遭遇exception，并被 :py:class:Callback 的on_exception()处理后，是否继续抛出异常。
+                支持'ignore'与'raise': 'ignore'将捕获异常，写在Trainer.train()后面的代码将继续运行; 'raise'将异常抛出。
         :return dict: 返回一个字典类型的数据,
                 内含以下内容::
 
@@ -528,8 +530,10 @@ class Trainer(object):
                 self.callback_manager.on_train_begin()
                 self._train()
                 self.callback_manager.on_train_end()
-            except (CallbackException, KeyboardInterrupt) as e:
+            except (CallbackException, KeyboardInterrupt, Exception) as e:
                 self.callback_manager.on_exception(e)
+                if on_exception=='raise':
+                    raise e
             
             if self.dev_data is not None and hasattr(self, 'best_dev_perf'):
                 print(
