@@ -28,6 +28,8 @@ from ..core.instance import Instance
 from .file_reader import _read_csv, _read_json, _read_conll
 from .base_loader import DataSetLoader
 from .data_loader.sst import SSTLoader
+from ..core.const import Const
+
 
 class PeopleDailyCorpusLoader(DataSetLoader):
     """
@@ -257,9 +259,9 @@ class SNLILoader(JsonLoader):
 
     def __init__(self):
         fields = {
-            'sentence1_parse': 'words1',
-            'sentence2_parse': 'words2',
-            'gold_label': 'target',
+            'sentence1_parse': Const.INPUTS(0),
+            'sentence2_parse': Const.INPUTS(1),
+            'gold_label': Const.TARGET,
         }
         super(SNLILoader, self).__init__(fields=fields)
 
@@ -271,10 +273,10 @@ class SNLILoader(JsonLoader):
             return t.leaves()
 
         ds.apply(lambda ins: parse_tree(
-            ins['words1']), new_field_name='words1')
+            ins[Const.INPUTS(0)]), new_field_name=Const.INPUTS(0))
         ds.apply(lambda ins: parse_tree(
-            ins['words2']), new_field_name='words2')
-        ds.drop(lambda x: x['target'] == '-')
+            ins[Const.INPUTS(1)]), new_field_name=Const.INPUTS(1))
+        ds.drop(lambda x: x[Const.TARGET] == '-')
         return ds
 
 
