@@ -22,7 +22,7 @@ _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'require
                                      'varargs'])
 
 
-class Example(dict):
+class Option(dict):
     """a dict can treat keys as attributes"""
     def __getattr__(self, item):
         try:
