@@ -6,10 +6,10 @@ __all__ = [
 from functools import wraps
 from collections import Counter
 from .dataset import DataSet
-from .utils import Example
+from .utils import Option
 
 
-class VocabularyOption(Example):
+class VocabularyOption(Option):
     def __init__(self,
                  max_size=None,
                  min_freq=None,

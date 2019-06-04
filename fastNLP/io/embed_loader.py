@@ -10,10 +10,10 @@ import numpy as np
 
 from ..core.vocabulary import Vocabulary
 from .base_loader import BaseLoader
-from ..core.utils import Example
+from ..core.utils import Option
 
 
-class EmbeddingOption(Example):
+class EmbeddingOption(Option):
     def __init__(self,
                  embed_filepath=None,
                  dtype=np.float32,

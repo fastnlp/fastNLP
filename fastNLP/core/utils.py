@@ -4,7 +4,7 @@ utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户
 __all__ = [
     "cache_results",
     "seq_len_to_mask",
-    "Example",
+    "Option",
 ]
 
 import _pickle
