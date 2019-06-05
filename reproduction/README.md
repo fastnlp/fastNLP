@@ -2,7 +2,7 @@
 这里复现了在fastNLP中实现的模型，旨在达到与论文中相符的性能。
 
 复现的模型有:
-- [Star-Transformer](Star-transformer/)
+- [Star-Transformer](Star_transformer/)
 - ...
 
 # 任务复现
