@@ -1,7 +1,7 @@
 
 
 import unittest
-from reproduction.seqence_labelling.cws.data.CWSDataLoader import SigHanLoader
+from ..data.CWSDataLoader import SigHanLoader
 from fastNLP.core.vocabulary import VocabularyOption
 
 

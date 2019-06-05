@@ -1,6 +1,6 @@
 import unittest
-from reproduction.matching.data import SNLIDataLoader
-from fastNLP.core.vocabulary import VocabularyOption
+from ..data import SNLIDataLoader
+from fastNLP.core.vocabulary import Vocabulary
 
 
 class TestCWSDataLoader(unittest.TestCase):
