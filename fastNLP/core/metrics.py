@@ -476,7 +476,7 @@ class SpanFPreRecMetric(MetricBase):
         label的f1, pre, rec
     :param str f_type: 'micro'或'macro'. 'micro':通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; 'macro':
         分布计算每个类别的f, precision, recall，然后做平均（各类别f的权重相同）
-    :param float beta: f_beta分数，:math:`f_beta = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}`.
+    :param float beta: f_beta分数， :math:`f_beta = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
         常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
     """
     
@@ -708,7 +708,7 @@ class SQuADMetric(MetricBase):
     :param pred2: 参数映射表中`pred2`的映射关系，None表示映射关系为`pred2`->`pred2`
     :param target1: 参数映射表中`target1`的映射关系，None表示映射关系为`target1`->`target1`
     :param target2: 参数映射表中`target2`的映射关系，None表示映射关系为`target2`->`target2`
-    :param float beta: f_beta分数，:math:`f_beta = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}`.
+    :param float beta: f_beta分数， :math:`f_beta = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
         常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
     :param bool right_open: right_open为true表示start跟end指针指向一个左闭右开区间，为false表示指向一个左闭右闭区间。
     :param bool print_predict_stat: True则输出预测答案是否为空与正确答案是否为空的统计信息, False则不输出
