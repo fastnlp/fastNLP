@@ -532,7 +532,7 @@ class Trainer(object):
                 self._train()
                 self.callback_manager.on_train_end()
 
-            except Exception as e:
+            except BaseException as e:
                 self.callback_manager.on_exception(e)
                 if on_exception == 'auto':
                     if not isinstance(e, (CallbackException, KeyboardInterrupt)):
