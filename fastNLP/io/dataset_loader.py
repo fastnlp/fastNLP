@@ -29,6 +29,7 @@ from .file_reader import _read_csv, _read_json, _read_conll
 from .base_loader import DataSetLoader
 from .data_loader.sst import SSTLoader
 from ..core.const import Const
+import ast
 
 
 class PeopleDailyCorpusLoader(DataSetLoader):
@@ -239,7 +240,7 @@ class JsonLoader(DataSetLoader):
             if self.fields:
                 ins = {self.fields[k]: v for k, v in d.items()}
             else:
-                ins = d
+                ins = ast.literal_eval(d)
             ds.append(Instance(**ins))
         return ds
 
