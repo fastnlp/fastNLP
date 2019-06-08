@@ -92,7 +92,7 @@ http://docutils.sf.net/ 孤立的网址会自动生成链接
 各种连接
 ===========
 
-:doc:`/user/with_fitlog.rst`
+:doc:`/user/with_fitlog`
 
 :mod:`~fastNLP.core.batch`
 

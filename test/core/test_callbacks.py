@@ -12,6 +12,7 @@ from fastNLP import AccuracyMetric
 from fastNLP import SGD
 from fastNLP import Trainer
 from fastNLP.models.base_model import NaiveClassifier
+from fastNLP.core.callback import EarlyStopError
 
 
 def prepare_env():

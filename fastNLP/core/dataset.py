@@ -285,7 +285,8 @@ from .field import AutoPadder
 from .field import FieldArray
 from .instance import Instance
 from .utils import _get_func_signature
-
+from .field import AppendToTargetOrInputException
+from .field import SetInputOrTargetException
 
 class DataSet(object):
     """
@@ -422,7 +423,7 @@ class DataSet(object):
         if len(self.field_arrays) == 0:
             # DataSet has no field yet
             for name, field in instance.fields.items():
-                field = field.tolist() if isinstance(field, np.ndarray) else field
+                # field = field.tolist() if isinstance(field, np.ndarray) else field
                 self.field_arrays[name] = FieldArray(name, [field])  # 第一个样本，必须用list包装起来
         else:
             if len(self.field_arrays) != len(instance.fields):
@@ -431,7 +432,11 @@ class DataSet(object):
                         .format(len(self.field_arrays), len(instance.fields)))
             for name, field in instance.fields.items():
                 assert name in self.field_arrays
-                self.field_arrays[name].append(field)
+                try:
+                    self.field_arrays[name].append(field)
+                except AppendToTargetOrInputException as e:
+                    print(f"Cannot append to field:{name}.")
+                    raise e
     
     def add_fieldarray(self, field_name, fieldarray):
         """
@@ -565,7 +570,11 @@ class DataSet(object):
         assert isinstance(flag, bool), "Only bool type supported."
         for name in field_names:
             if name in self.field_arrays:
-                self.field_arrays[name].is_target = flag
+                try:
+                    self.field_arrays[name].is_target = flag
+                except SetInputOrTargetException as e:
+                    print(f"Cannot set field:{name} as target.")
+                    raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
     
@@ -581,7 +590,11 @@ class DataSet(object):
         """
         for name in field_names:
             if name in self.field_arrays:
-                self.field_arrays[name].is_input = flag
+                try:
+                    self.field_arrays[name].is_input = flag
+                except SetInputOrTargetException as e:
+                    print(f"Cannot set field:{name} as input.")
+                    raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
     
