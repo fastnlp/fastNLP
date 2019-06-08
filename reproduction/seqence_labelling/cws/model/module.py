@@ -1,11 +1,10 @@
 from torch import nn
 import torch
-from fastNLP.modules import Embedding
 import numpy as np
 
 class SemiCRFShiftRelay(nn.Module):
     """
-    该模块是一个decoder，但
+    该模块是一个decoder，但当前不支持含有tag的decode。
 
     """
     def __init__(self, L):
