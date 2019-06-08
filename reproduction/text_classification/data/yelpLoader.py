@@ -13,8 +13,8 @@ from reproduction.utils import check_dataloader_paths
 class yelpLoader(JsonLoader):
     
     """
-        读取Yelp数据集, DataSet包含fields:
-        
+    读取Yelp数据集, DataSet包含fields:
+    
         review_id: str, 22 character unique review id
         user_id: str, 22 character unique user id
         business_id: str, 22 character business id
@@ -24,11 +24,11 @@ class yelpLoader(JsonLoader):
         date: str, date formatted YYYY-MM-DD
         words: list(str), 需要分类的文本
         target: str, 文本的标签
-        
-        数据来源: https://www.yelp.com/dataset/download
-        
-        :param fine_grained: 是否使用SST-5标准，若 ``False`` , 使用SST-2。Default: ``False``
-        """
+    
+    数据来源: https://www.yelp.com/dataset/download
+    
+    :param fine_grained: 是否使用SST-5标准，若 ``False`` , 使用SST-2。Default: ``False``
+    """
     
     def __init__(self, fine_grained=False):
         super(yelpLoader, self).__init__()
