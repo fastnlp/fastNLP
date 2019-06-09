@@ -61,8 +61,3 @@ class TestDatasetLoader(unittest.TestCase):
         print(info.vocabs)
         print(info.datasets)
         os.remove(train), os.remove(test)
-
-    def test_yelp(self):
-        ds = yelpLoader().load('test/data_for_tests/yelp_sample.json')
-        assert len(ds) == 20
-
