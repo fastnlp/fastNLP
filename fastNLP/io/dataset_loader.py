@@ -29,7 +29,6 @@ from .file_reader import _read_csv, _read_json, _read_conll
 from .base_loader import DataSetLoader
 from .data_loader.sst import SSTLoader
 from ..core.const import Const
-import ast
 
 
 class PeopleDailyCorpusLoader(DataSetLoader):
