@@ -240,7 +240,7 @@ class JsonLoader(DataSetLoader):
             if self.fields:
                 ins = {self.fields[k]: v for k, v in d.items()}
             else:
-                ins = ast.literal_eval(d)
+                ins = d
             ds.append(Instance(**ins))
         return ds
 

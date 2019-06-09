@@ -2,6 +2,8 @@ import unittest
 import os
 from fastNLP.io import Conll2003Loader, PeopleDailyCorpusLoader, CSVLoader, SNLILoader, JsonLoader
 from fastNLP.io.dataset_loader import SSTLoader
+from reproduction.text_classification.data.yelpLoader import yelpLoader
+
 
 class TestDatasetLoader(unittest.TestCase):
     
@@ -59,3 +61,8 @@ class TestDatasetLoader(unittest.TestCase):
         print(info.vocabs)
         print(info.datasets)
         os.remove(train), os.remove(test)
+
+    def test_yelp(self):
+        ds = yelpLoader().load('test/data_for_tests/yelp_sample.json')
+        assert len(ds) == 20
+
