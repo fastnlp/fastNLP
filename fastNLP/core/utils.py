@@ -3,7 +3,8 @@ utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户
 """
 __all__ = [
     "cache_results",
-    "seq_len_to_mask"
+    "seq_len_to_mask",
+    "Option",
 ]
 
 import _pickle
@@ -19,6 +20,32 @@ import torch.nn as nn
 
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])
+
+
+class Option(dict):
+    """a dict can treat keys as attributes"""
+    def __getattr__(self, item):
+        try:
+            return self.__getitem__(item)
+        except KeyError:
+            raise AttributeError(item)
+
+    def __setattr__(self, key, value):
+        if key.startswith('__') and key.endswith('__'):
+            raise AttributeError(key)
+        self.__setitem__(key, value)
+
+    def __delattr__(self, item):
+        try:
+            self.pop(item)
+        except KeyError:
+            raise AttributeError(item)
+
+    def __getstate__(self):
+        return self
+
+    def __setstate__(self, state):
+        self.update(state)
 
 
 def _prepare_cache_filepath(filepath):

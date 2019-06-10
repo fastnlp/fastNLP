@@ -1,5 +1,6 @@
 __all__ = [
-    "EmbedLoader"
+    "EmbedLoader",
+    "EmbeddingOption",
 ]
 
 import os
@@ -9,7 +10,21 @@ import numpy as np
 
 from ..core.vocabulary import Vocabulary
 from .base_loader import BaseLoader
+from ..core.utils import Option
 
+
+class EmbeddingOption(Option):
+    def __init__(self,
+                 embed_filepath=None,
+                 dtype=np.float32,
+                 normalize=True,
+                 error='ignore'):
+        super().__init__(
+            embed_filepath=embed_filepath,
+            dtype=dtype,
+            normalize=normalize,
+            error=error
+        )
 
 class EmbedLoader(BaseLoader):
     """
@@ -92,9 +107,9 @@ class EmbedLoader(BaseLoader):
         :param bool normalize: 是否将每个vector归一化到norm为1
         :param str error: `ignore` , `strict` ; 如果 `ignore` ，错误将自动跳过; 如果 `strict` , 错误将抛出。这里主要可能出错的地
             方在于词表有空行或者词表出现了维度不一致。
-        :return numpy.ndarray: shape为 [len(vocab), dimension], dimension由pretrain的embedding决定。
-        :return numpy.ndarray: Vocabulary Embedding的shape是[词表大小+x, 词表维度], "词表大小+x"是由于最终的大小还取决与
+        :return (numpy.ndarray, Vocabulary): Embedding的shape是[词表大小+x, 词表维度], "词表大小+x"是由于最终的大小还取决与
             是否使用padding, 以及unknown有没有在词表中找到对应的词。 Vocabulary中的词的顺序与Embedding的顺序是一一对应的。
+
         """
         vocab = Vocabulary(padding=padding, unknown=unknown)
         vec_dict = {}

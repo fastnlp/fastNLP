@@ -438,7 +438,7 @@ def _bio_tag_to_spans(tags, ignore_labels=None):
 
 
 class SpanFPreRecMetric(MetricBase):
-    """
+    r"""
     别名：:class:`fastNLP.SpanFPreRecMetric` :class:`fastNLP.core.metrics.SpanFPreRecMetric`
 
     在序列标注问题中，以span的方式计算F, pre, rec.
@@ -476,8 +476,8 @@ class SpanFPreRecMetric(MetricBase):
         label的f1, pre, rec
     :param str f_type: 'micro'或'macro'. 'micro':通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; 'macro':
         分布计算每个类别的f, precision, recall，然后做平均（各类别f的权重相同）
-    :param float beta: f_beta分数，f_beta = (1 + beta^2)*(pre*rec)/(beta^2*pre + rec). 常用为beta=0.5, 1, 2. 若为0.5
-        则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
+    :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
+        常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
     """
     
     def __init__(self, tag_vocab, pred=None, target=None, seq_len=None, encoding_type='bio', ignore_labels=None,
@@ -699,17 +699,17 @@ def _pred_topk(y_prob, k=1):
 
 
 class SQuADMetric(MetricBase):
-    """
+    r"""
     别名：:class:`fastNLP.SQuADMetric` :class:`fastNLP.core.metrics.SQuADMetric`
 
     SQuAD数据集metric
     
-    :param pred1: 参数映射表中`pred1`的映射关系，None表示映射关系为`pred1`->`pred1`
-    :param pred2: 参数映射表中`pred2`的映射关系，None表示映射关系为`pred2`->`pred2`
-    :param target1: 参数映射表中`target1`的映射关系，None表示映射关系为`target1`->`target1`
-    :param target2: 参数映射表中`target2`的映射关系，None表示映射关系为`target2`->`target2`
-    :param float beta: f_beta分数，f_beta = (1 + beta^2)*(pre*rec)/(beta^2*pre + rec). 常用为beta=0.5, 1, 2. 若为0.5
-        则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
+    :param pred1: 参数映射表中 `pred1` 的映射关系，None表示映射关系为 `pred1` -> `pred1`
+    :param pred2: 参数映射表中 `pred2` 的映射关系，None表示映射关系为 `pred2` -> `pred2`
+    :param target1: 参数映射表中 `target1` 的映射关系，None表示映射关系为 `target1` -> `target1`
+    :param target2: 参数映射表中 `target2` 的映射关系，None表示映射关系为 `target2` -> `target2`
+    :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
+        常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
     :param bool right_open: right_open为true表示start跟end指针指向一个左闭右开区间，为false表示指向一个左闭右闭区间。
     :param bool print_predict_stat: True则输出预测答案是否为空与正确答案是否为空的统计信息, False则不输出
     

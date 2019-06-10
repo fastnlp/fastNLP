@@ -494,12 +494,15 @@ class Trainer(object):
         self.callback_manager = CallbackManager(env={"trainer": self},
                                                 callbacks=callbacks)
     
-    def train(self, load_best_model=True):
+    def train(self, load_best_model=True, on_exception='auto'):
         """
         使用该函数使Trainer开始训练。
 
-        :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，
-                如果True, trainer将在返回之前重新加载dev表现最好的模型参数。
+        :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现
+                最好的模型参数。
+        :param str on_exception: 在训练过程遭遇exception，并被 :py:class:Callback 的on_exception()处理后，是否继续抛出异常。
+                支持'ignore','raise', 'auto': 'ignore'将捕获异常，写在Trainer.train()后面的代码将继续运行; 'raise'将异常抛出;
+                'auto'将ignore以下两种Exception: CallbackException与KeyboardInterrupt, raise其它exception.
         :return dict: 返回一个字典类型的数据,
                 内含以下内容::
 
@@ -528,10 +531,16 @@ class Trainer(object):
                 self.callback_manager.on_train_begin()
                 self._train()
                 self.callback_manager.on_train_end()
-            except (CallbackException, KeyboardInterrupt) as e:
+
+            except BaseException as e:
                 self.callback_manager.on_exception(e)
+                if on_exception == 'auto':
+                    if not isinstance(e, (CallbackException, KeyboardInterrupt)):
+                        raise e
+                elif on_exception == 'raise':
+                    raise e
             
-            if self.dev_data is not None and hasattr(self, 'best_dev_perf'):
+            if self.dev_data is not None and self.best_dev_perf is not None:
                 print(
                     "\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
                     self.tester._format_eval_results(self.best_dev_perf), )

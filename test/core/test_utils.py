@@ -18,7 +18,7 @@ class Model(nn.Module):
         self.param = nn.Parameter(torch.zeros(0))
 
 
-class TestMoveModelDeivce(unittest.TestCase):
+class TestMoveModelDevice(unittest.TestCase):
     def test_case1(self):
         # 测试str
         model = Model()
