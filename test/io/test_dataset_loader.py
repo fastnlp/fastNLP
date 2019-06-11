@@ -2,6 +2,8 @@ import unittest
 import os
 from fastNLP.io import Conll2003Loader, PeopleDailyCorpusLoader, CSVLoader, SNLILoader, JsonLoader
 from fastNLP.io.dataset_loader import SSTLoader
+from reproduction.text_classification.data.yelpLoader import yelpLoader
+
 
 class TestDatasetLoader(unittest.TestCase):
     
