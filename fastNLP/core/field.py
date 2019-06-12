@@ -62,6 +62,7 @@ class FieldArray:
         if value:
             self._cell_ndim = None
             self.dtype = None
+        self._ignore_type = value
 
     @property
     def is_input(self):
