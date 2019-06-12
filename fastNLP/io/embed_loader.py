@@ -35,9 +35,9 @@ class EmbedLoader(BaseLoader):
     
     def __init__(self):
         super(EmbedLoader, self).__init__()
-    
+
     @staticmethod
-    def load_with_vocab(embed_filepath, vocab, dtype=np.float32, normalize=True, error='ignore'):
+    def load_with_vocab(embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True, error='ignore'):
         """
         从embed_filepath这个预训练的词向量中抽取出vocab这个词表的词的embedding。EmbedLoader将自动判断embed_filepath是
         word2vec(第一行只有两个元素)还是glove格式的数据。
@@ -46,6 +46,8 @@ class EmbedLoader(BaseLoader):
         :param vocab: 词表 :class:`~fastNLP.Vocabulary` 类型，读取出现在vocab中的词的embedding。
             没有出现在vocab中的词的embedding将通过找到的词的embedding的正态分布采样出来，以使得整个Embedding是同分布的。
         :param dtype: 读出的embedding的类型
+        :param str padding: 词表中padding的token
+        :param str unknown: 词表中unknown的token
         :param bool normalize: 是否将每个vector归一化到norm为1
         :param str error: `ignore` , `strict` ; 如果 `ignore` ，错误将自动跳过; 如果 `strict` , 错误将抛出。
             这里主要可能出错的地方在于词表有空行或者词表出现了维度不一致。
@@ -69,8 +71,14 @@ class EmbedLoader(BaseLoader):
             for idx, line in enumerate(f, start_idx):
                 try:
                     parts = line.strip().split()
-                    if parts[0] in vocab:
-                        index = vocab.to_index(parts[0])
+                    word = parts[0]
+                    # 对齐unk与pad
+                    if word==padding and vocab.padding is not None:
+                        word = vocab.padding
+                    elif word==unknown and vocab.unknown is not None:
+                        word = vocab.unknown
+                    if word in vocab:
+                        index = vocab.to_index(word)
                         matrix[index] = np.fromstring(' '.join(parts[1:]), sep=' ', dtype=dtype, count=dim)
                         hit_flags[index] = True
                 except Exception as e:
@@ -102,8 +110,8 @@ class EmbedLoader(BaseLoader):
 
         :param str embed_filepath: 预训练的embedding的路径。
         :param dtype: 读出的embedding的类型
-        :param str padding: the padding tag for vocabulary.
-        :param str unknown: the unknown tag for vocabulary.
+        :param str padding: 词表中的padding的token. 并以此用做vocab的padding。
+        :param str unknown: 词表中的unknown的token. 并以此用做vocab的unknown。
         :param bool normalize: 是否将每个vector归一化到norm为1
         :param str error: `ignore` , `strict` ; 如果 `ignore` ，错误将自动跳过; 如果 `strict` , 错误将抛出。这里主要可能出错的地
             方在于词表有空行或者词表出现了维度不一致。
@@ -134,7 +142,7 @@ class EmbedLoader(BaseLoader):
                     vocab.add_word(word)
                     if unknown is not None and unknown == word:
                         found_unknown = True
-                    if found_pad is not None and padding == word:
+                    if padding is not None and padding == word:
                         found_pad = True
                 except Exception as e:
                     if error == 'ignore':

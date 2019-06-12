@@ -7,6 +7,7 @@ import torch.nn as nn
 
 from ..core.const import Const as C
 from ..modules import encoder
+from fastNLP import seq_len_to_mask
 
 
 class CNNText(torch.nn.Module):
@@ -21,15 +22,13 @@ class CNNText(torch.nn.Module):
     :param int num_classes: 一共有多少类
     :param int,tuple(int) out_channels: 输出channel的数量。如果为list，则需要与kernel_sizes的数量保持一致
     :param int,tuple(int) kernel_sizes: 输出channel的kernel大小。
-    :param int padding: 对句子前后的pad的大小, 用0填充。
     :param float dropout: Dropout的大小
     """
     
     def __init__(self, init_embed,
                  num_classes,
-                 kernel_nums=(3, 4, 5),
-                 kernel_sizes=(3, 4, 5),
-                 padding=0,
+                 kernel_nums=(30, 40, 50),
+                 kernel_sizes=(1, 3, 5),
                  dropout=0.5):
         super(CNNText, self).__init__()
         
@@ -38,8 +37,7 @@ class CNNText(torch.nn.Module):
         self.conv_pool = encoder.ConvMaxpool(
             in_channels=self.embed.embedding_dim,
             out_channels=kernel_nums,
-            kernel_sizes=kernel_sizes,
-            padding=padding)
+            kernel_sizes=kernel_sizes)
         self.dropout = nn.Dropout(dropout)
         self.fc = nn.Linear(sum(kernel_nums), num_classes)
     
@@ -51,7 +49,11 @@ class CNNText(torch.nn.Module):
         :return output: dict of torch.LongTensor, [batch_size, num_classes]
         """
         x = self.embed(words)  # [N,L] -> [N,L,C]
-        x = self.conv_pool(x)  # [N,L,C] -> [N,C]
+        if seq_len is not None:
+            mask = seq_len_to_mask(seq_len)
+            x = self.conv_pool(x, mask)
+        else:
+            x = self.conv_pool(x)  # [N,L,C] -> [N,C]
         x = self.dropout(x)
         x = self.fc(x)  # [N,C] -> [N, N_class]
         return {C.OUTPUT: x}
