@@ -26,6 +26,7 @@ class EmbeddingOption(Option):
             error=error
         )
 
+
 class EmbedLoader(BaseLoader):
     """
     别名：:class:`fastNLP.io.EmbedLoader` :class:`fastNLP.io.embed_loader.EmbedLoader`
