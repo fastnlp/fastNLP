@@ -49,7 +49,7 @@
 .. code-block:: python
 
     from fastNLP.models import CNNText
-    model = CNNText((len(vocab),50), num_classes=5, padding=2, dropout=0.1)
+    model = CNNText((len(vocab),50), num_classes=5, dropout=0.1)
 
 :class:`~fastNLP.models.CNNText` 的网络结构如下::
 
