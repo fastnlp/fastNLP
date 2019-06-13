@@ -148,7 +148,7 @@ class Vocabulary(object):
         self.word2idx.update({w: i + start_idx for i, (w, _) in enumerate(words)})
         self.build_reverse_vocab()
         self.rebuild = False
-    
+
     def build_reverse_vocab(self):
         """
         基于 "word to index" dict, 构建 "index to word" dict.
@@ -359,5 +359,7 @@ class Vocabulary(object):
     def __repr__(self):
         return "Vocabulary({}...)".format(list(self.word_count.keys())[:5])
     
+    @_check_build_vocab
     def __iter__(self):
-        return iter(list(self.word_count.keys()))
+        for word, index in self.word2idx.items():
+            yield word, index

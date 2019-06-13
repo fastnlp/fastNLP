@@ -82,7 +82,7 @@ def get_embeddings(init_embed):
     if isinstance(init_embed, tuple):
         res = nn.Embedding(
             num_embeddings=init_embed[0], embedding_dim=init_embed[1])
-    elif isinstance(init_embed, nn.Embedding):
+    elif isinstance(init_embed, nn.Module):
         res = init_embed
     elif isinstance(init_embed, torch.Tensor):
         res = nn.Embedding.from_pretrained(init_embed, freeze=False)
@@ -130,3 +130,17 @@ def summary(model: nn.Module):
     strings = [bar] + strings + [bar]
     print('\n'.join(strings))
     return total, total_train, total_nontrain
+
+
+def get_dropout_mask(drop_p: float, tensor: torch.Tensor):
+    """
+    根据tensor的形状，生成一个mask
+
+    :param drop_p: float, 以多大的概率置为0。
+    :param tensor:torch.Tensor
+    :return: torch.FloatTensor. 与tensor一样的shape
+    """
+    mask_x = torch.ones_like(tensor)
+    nn.functional.dropout(mask_x, p=drop_p,
+                          training=False, inplace=True)
+    return mask_x

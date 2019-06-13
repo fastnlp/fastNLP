@@ -285,6 +285,7 @@ def _get_model_device(model):
     :param model: nn.Module
     :return: torch.device,None 如果返回值为None，说明这个模型没有任何参数。
     """
+    # TODO 这个函数存在一定的风险，因为同一个模型可能存在某些parameter不在显卡中，比如BertEmbedding
     assert isinstance(model, nn.Module)
     
     parameters = list(model.parameters())
@@ -295,6 +296,13 @@ def _get_model_device(model):
 
 
 def _build_args(func, **kwargs):
+    """
+    根据func的初始化参数，从kwargs中选择func需要的参数
+
+    :param func: callable
+    :param kwargs: 参数
+    :return:dict. func中用到的参数
+    """
     spect = inspect.getfullargspec(func)
     if spect.varkw is not None:
         return kwargs

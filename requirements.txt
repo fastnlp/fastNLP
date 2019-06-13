@@ -2,3 +2,4 @@ numpy
 torch>=0.4.0
 tqdm
 nltk
+requests

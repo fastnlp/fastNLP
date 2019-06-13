@@ -13,6 +13,7 @@ import numpy as np
 import torch
 import torch.multiprocessing as mp
 import torch.utils.data
+from numbers import Number
 
 from .sampler import RandomSampler
 from .dataset import DataSet
@@ -150,8 +151,10 @@ class Batch1(object):
             for field_name, field in self.dataset.get_all_fields().items():
                 if field.is_target or field.is_input:
                     batch = field.get(indices)
-                    if not self.as_numpy and field.padder is not None:
-                        batch = _to_tensor(batch, field.dtype)
+                    if not self.as_numpy and \
+                            field.dtype is not None and \
+                                issubclass(field.dtype, Number) and not isinstance(batch, torch.Tensor):
+                        batch = _to_tensor(batch)
                     if field.is_target:
                         batch_y[field_name] = batch
                     if field.is_input:
@@ -246,12 +249,12 @@ class Batch1(object):
         # print('iter done')
 
 
-def _to_tensor(batch, dtype):
+def _to_tensor(batch):
     try:
-        if dtype in (int, np.int8, np.int16, np.int32, np.int64):
-            batch = torch.LongTensor(batch)
-        if dtype in (float, np.float32, np.float64):
-            batch = torch.FloatTensor(batch)
+        if issubclass(batch.dtype.type, np.floating):
+            batch = torch.as_tensor(batch).float()  # 默认使用float32
+        else:
+            batch = torch.as_tensor(batch)  # 复用内存地址，避免复制
     except:
         pass
     return batch

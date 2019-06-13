@@ -20,7 +20,7 @@ class LSTM(nn.Module):
     LSTM 模块, 轻量封装的Pytorch LSTM
 
     :param input_size:  输入 `x` 的特征维度
-    :param hidden_size: 隐状态 `h` 的特征维度
+    :param hidden_size: 隐状态 `h` 的特征维度.
     :param num_layers: rnn的层数. Default: 1
     :param dropout: 层间dropout概率. Default: 0
     :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``

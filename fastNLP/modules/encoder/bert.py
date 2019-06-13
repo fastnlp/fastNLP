@@ -269,8 +269,9 @@ class BertModel(nn.Module):
                  attention_probs_dropout_prob=0.1,
                  max_position_embeddings=512,
                  type_vocab_size=2,
-                 initializer_range=0.02, **kwargs):
+                 initializer_range=0.02):
         super(BertModel, self).__init__()
+        self.hidden_size = hidden_size
         self.embeddings = BertEmbeddings(vocab_size, hidden_size, max_position_embeddings,
                                          type_vocab_size, hidden_dropout_prob)
         self.encoder = BertEncoder(num_hidden_layers, hidden_size, num_attention_heads,
