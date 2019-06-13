@@ -100,13 +100,14 @@ class TestIndexing(unittest.TestCase):
         self.assertEqual(text, [vocab.to_word(idx) for idx in [vocab[w] for w in text]])
     
     def test_iteration(self):
-        vocab = Vocabulary()
+        vocab = Vocabulary(padding=None, unknown=None)
         text = ["FastNLP", "works", "well", "in", "most", "cases", "and", "scales", "well", "in",
                 "works", "well", "in", "most", "cases", "scales", "well"]
         vocab.update(text)
         text = set(text)
-        for word in vocab:
+        for word, idx in vocab:
             self.assertTrue(word in text)
+            self.assertTrue(idx < len(vocab))
 
 
 class TestOther(unittest.TestCase):

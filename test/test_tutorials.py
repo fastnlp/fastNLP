@@ -70,7 +70,7 @@ class TestTutorial(unittest.TestCase):
             break
 
         from fastNLP.models import CNNText
-        model = CNNText((len(vocab), 50), num_classes=5, padding=2, dropout=0.1)
+        model = CNNText((len(vocab), 50), num_classes=5, dropout=0.1)
 
         from fastNLP import Trainer
         from copy import deepcopy
@@ -143,7 +143,7 @@ class TestTutorial(unittest.TestCase):
                        is_input=True)
 
         from fastNLP.models import CNNText
-        model = CNNText((len(vocab), 50), num_classes=5, padding=2, dropout=0.1)
+        model = CNNText((len(vocab), 50), num_classes=5, dropout=0.1)
 
         from fastNLP import Trainer, CrossEntropyLoss, AccuracyMetric, Adam
 
