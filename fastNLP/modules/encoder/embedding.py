@@ -52,6 +52,13 @@ class Embedding(nn.Module):
         return self.dropout(x)
 
     @property
+    def num_embedding(self)->int:
+        return len(self)
+
+    def __len__(self):
+        return len(self.embed)
+
+    @property
     def embed_size(self) -> int:
         return self._embed_size
 
@@ -109,9 +116,8 @@ class TokenEmbedding(nn.Module):
         for param in self.parameters():
             param.requires_grad = value
 
-    @abstractmethod
-    def get_original_vocab(self):
-        pass
+    def __len__(self):
+        return len(self._word_vocab)
 
     @property
     def embed_size(self) -> int:
@@ -505,7 +511,7 @@ class CNNCharEmbedding(TokenEmbedding):
     :param embed_size: 该word embedding的大小，默认值为50.
     :param char_emb_size: character的embed的大小。character是从vocab中生成的。默认值为50.
     :param filter_nums: filter的数量. 长度需要和kernels一致。默认值为[40, 30, 20].
-    :param kernels: kernel的大小. 默认值为[5, 3, 1].
+    :param kernel_sizes: kernel的大小. 默认值为[5, 3, 1].
     :param pool_method: character的表示在合成一个表示时所使用的pool方法，支持'avg', 'max'.
     :param activation: CNN之后使用的激活方法，支持'relu', 'sigmoid', 'tanh' 或者自定义函数.
     :param min_char_freq: character的最少出现次数。默认值为2.

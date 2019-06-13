@@ -805,7 +805,7 @@ class DataSet(object):
         """
         将DataSet按照ratio的比例拆分，返回两个DataSet
 
-        :param float ratio: 0<ratio<1, 返回的第一个DataSet拥有 `ratio` 这么多数据，第二个DataSet拥有 `(1-ratio)` 这么多数据
+        :param float ratio: 0<ratio<1, 返回的第一个DataSet拥有 `(1-ratio)` 这么多数据，第二个DataSet拥有`ratio`这么多数据
         :return: [DataSet, DataSet]
         """
         assert isinstance(ratio, float)
