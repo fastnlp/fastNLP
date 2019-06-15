@@ -351,6 +351,8 @@ class Trainer(object):
     :param int batch_size: 训练和验证的时候的batch大小。
     :param loss: 使用的 :class:`~fastNLP.core.losses.LossBase` 对象。当为None时，默认使用 :class:`~fastNLP.LossInForward`
     :param sampler: Batch数据生成的顺序， :class:`~fastNLP.Sampler` 类型。如果为None，默认使用 :class:`~fastNLP.RandomSampler`
+    :param drop_last: 如果最后一个batch没有正好为batch_size这么多数据，就扔掉最后一个batch
+    :param num_workers: int, 有多少个线程来进行数据pad处理。
     :param update_every: int, 多少步更新一次梯度。用于希望累计梯度的场景，比如需要128的batch_size, 但是直接设为128
         会导致内存不足，通过设置batch_size=32, update_every=4达到目的。当optimizer为None时，该参数无效。
     :param int n_epochs: 需要优化迭代多少次。
@@ -367,7 +369,6 @@ class Trainer(object):
     :param int validate_every: 多少个step在验证集上验证一次; 如果为-1，则每个epoch结束验证一次。仅在传入dev_data时有效。
     :param str,None save_path: 将模型保存路径。如果为None，则不保存模型。如果dev_data为None，则保存最后一次迭代的模型。
         保存的时候不仅保存了参数，还保存了模型结构。即便使用DataParallel，这里也只保存模型。
-    :param prefetch: bool, 是否使用额外的进程对产生batch数据。理论上会使得Batch迭代更快。
     :param bool use_tqdm: 是否使用tqdm来显示训练进度; 如果为False，则将loss打印在终端中。
     :param str,int,torch.device,list(int) device: 将模型load到哪个设备。默认为None，即Trainer不对模型
         的计算位置进行管理。支持以下的输入:
@@ -394,16 +395,12 @@ class Trainer(object):
     """
     
     def __init__(self, train_data, model, optimizer=None, loss=None,
-                 batch_size=32, sampler=None, update_every=1, num_workers=0,
-                 n_epochs=10, print_every=5,
+                 batch_size=32, sampler=None, drop_last=False,update_every=1,
+                 num_workers=0, n_epochs=10, print_every=5,
                  dev_data=None, metrics=None, metric_key=None,
-                 validate_every=-1, save_path=None,
-                 prefetch=False, use_tqdm=True, device=None,
-                 callbacks=None,
-                 check_code_level=0):
+                 validate_every=-1, save_path=None, use_tqdm=True, device=None,
+                 callbacks=None, check_code_level=0):
         super(Trainer, self).__init__()
-        if not isinstance(train_data, DataSet):
-            raise TypeError(f"The type of train_data must be fastNLP.DataSet, got {type(train_data)}.")
         if not isinstance(model, nn.Module):
             raise TypeError(f"The type of model must be torch.nn.Module, got {type(model)}.")
         
@@ -440,9 +437,12 @@ class Trainer(object):
         if sampler is not None and not isinstance(sampler, Sampler):
             raise ValueError("The type of sampler should be fastNLP.BaseSampler, got {}.".format(type(sampler)))
 
+        if sampler is None:
+            sampler = RandomSampler()
+
         if isinstance(train_data, DataSet):
             self.data_iterator = DataSetIter(
-                dataset=train_data, batch_size=batch_size, num_workers=num_workers)
+                dataset=train_data, batch_size=batch_size, num_workers=num_workers, sampler=sampler, drop_last=drop_last)
         elif isinstance(train_data, BatchIter):
             self.data_iterator = train_data
         else:
@@ -470,8 +470,6 @@ class Trainer(object):
         self.best_dev_epoch = None
         self.best_dev_step = None
         self.best_dev_perf = None
-        self.sampler = sampler if sampler is not None else RandomSampler()
-        self.prefetch = prefetch
         self.n_steps = (len(self.train_data) // self.batch_size + int(
             len(self.train_data) % self.batch_size != 0)) * self.n_epochs
         

@@ -130,11 +130,8 @@ class ModelRunner():
         tester = Tester(data=data, model=model, metrics=metrics,
                         batch_size=BATCH_SIZE, verbose=0)
         before_train = tester.test()
-        trainer = Trainer(model=model, train_data=data, dev_data=None,
-                          n_epochs=N_EPOCHS, batch_size=BATCH_SIZE,
-                          loss=loss,
-                          save_path=None,
-                          use_tqdm=False)
+        trainer = Trainer(train_data=data, model=model, loss=loss, batch_size=BATCH_SIZE, n_epochs=N_EPOCHS,
+                          dev_data=None, save_path=None, use_tqdm=False)
         trainer.train(load_best_model=False)
         after_train = tester.test()
         for metric_name, v1 in before_train.items():
