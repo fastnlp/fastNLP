@@ -176,7 +176,12 @@ class FieldArray:
         if self.padder is None or pad is False:
             return np.array(contents)
         else:
-            return self.padder(contents, field_name=self.name, field_ele_dtype=self.dtype, dim=self._cell_ndim)
+            return self.pad(contents)
+
+    def pad(self, contents):
+        if self.padder is None:
+            raise RuntimeError
+        return self.padder(contents, field_name=self.name, field_ele_dtype=self.dtype, dim=self._cell_ndim)
 
     def set_padder(self, padder):
         """

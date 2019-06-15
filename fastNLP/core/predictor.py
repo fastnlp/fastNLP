@@ -6,7 +6,7 @@ from collections import defaultdict
 
 import torch
 
-from . import Batch
+from . import DataSetIter
 from . import DataSet
 from . import SequentialSampler
 from .utils import _build_args
@@ -44,8 +44,7 @@ class Predictor(object):
 
         self.network.eval()
         batch_output = defaultdict(list)
-        data_iterator = Batch(data, batch_size=self.batch_size, sampler=SequentialSampler(), as_numpy=False,
-                              prefetch=False)
+        data_iterator = DataSetIter(data, batch_size=self.batch_size, sampler=SequentialSampler(), as_numpy=False)
 
         if hasattr(self.network, "predict"):
             predict_func = self.network.predict

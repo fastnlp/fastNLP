@@ -312,7 +312,7 @@ try:
 except:
     from .utils import _pseudo_tqdm as tqdm
 
-from .batch import Batch
+from .batch import DataSetIter, BatchIter
 from .callback import CallbackManager, CallbackException
 from .dataset import DataSet
 from .losses import _prepare_losser
@@ -394,7 +394,7 @@ class Trainer(object):
     """
     
     def __init__(self, train_data, model, optimizer=None, loss=None,
-                 batch_size=32, sampler=None, update_every=1,
+                 batch_size=32, sampler=None, update_every=1, num_workers=0,
                  n_epochs=10, print_every=5,
                  dev_data=None, metrics=None, metric_key=None,
                  validate_every=-1, save_path=None,
@@ -439,9 +439,19 @@ class Trainer(object):
         # sampler check
         if sampler is not None and not isinstance(sampler, Sampler):
             raise ValueError("The type of sampler should be fastNLP.BaseSampler, got {}.".format(type(sampler)))
+
+        if isinstance(train_data, DataSet):
+            self.data_iterator = DataSetIter(
+                dataset=train_data, batch_size=batch_size, num_workers=num_workers)
+        elif isinstance(train_data, BatchIter):
+            self.data_iterator = train_data
+        else:
+            raise TypeError("train_data type {} not support".format(type(train_data)))
         
-        if check_code_level > -1:
-            _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data,
+        if check_code_level > -1 and isinstance(self.data_iterator, DataSetIter):
+            # TODO 考虑不同的dataset类型怎么check
+            _check_code(data_iterator=self.data_iterator,
+                        model=model, losser=losser, metrics=metrics, dev_data=dev_data,
                         metric_key=metric_key, check_level=check_code_level,
                         batch_size=min(batch_size, DEFAULT_CHECK_BATCH_SIZE))
             # _check_code 是 fastNLP 帮助你检查代码是否正确的方法 。如果你在错误栈中看到这行注释，请认真检查你的代码
@@ -493,7 +503,7 @@ class Trainer(object):
         
         self.callback_manager = CallbackManager(env={"trainer": self},
                                                 callbacks=callbacks)
-    
+
     def train(self, load_best_model=True, on_exception='auto'):
         """
         使用该函数使Trainer开始训练。
@@ -572,8 +582,7 @@ class Trainer(object):
         with inner_tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
             self.pbar = pbar
             avg_loss = 0
-            data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False,
-                                  prefetch=self.prefetch)
+            data_iterator = self.data_iterator
             self.batch_per_epoch = data_iterator.num_batches
             for epoch in range(1, self.n_epochs + 1):
                 self.epoch = epoch
@@ -786,13 +795,14 @@ def _get_value_info(_dict):
     return strs
 
 
-def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_SIZE,
+def _check_code(data_iterator, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_SIZE,
                 dev_data=None, metric_key=None,
                 check_level=0):
     # check get_loss 方法
     model_devcie = model.parameters().__next__().device
     
-    batch = Batch(dataset=dataset, batch_size=batch_size, sampler=SequentialSampler())
+    batch = data_iterator
+    dataset = data_iterator.dataset
     for batch_count, (batch_x, batch_y) in enumerate(batch):
         _move_dict_value_to_device(batch_x, batch_y, device=model_devcie)
         # forward check
