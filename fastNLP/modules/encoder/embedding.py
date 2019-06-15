@@ -157,7 +157,9 @@ class StaticEmbedding(TokenEmbedding):
             'en-glove-840b-300': 'glove.840B.300d-cc1ad5e1.tar.gz',
             'en-glove-6b-50': "glove.6B.50d-a6028c70.tar.gz",
             'en-word2vec-300': "GoogleNews-vectors-negative300-be166d9d.tar.gz",
-            'cn': "tencent_cn-dab24577.tar.gz"
+            'en-fasttext': "cc.en.300.vec-d53187b2.gz",
+            'cn': "tencent_cn-dab24577.tar.gz",
+            'cn-fasttext': "cc.zh.300.vec-d68a9bcf.gz",
         }
 
         # 得到cache_path
