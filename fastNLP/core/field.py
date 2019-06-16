@@ -6,6 +6,7 @@ import numpy as np
 from typing import Any
 from abc import abstractmethod
 from copy import deepcopy
+from collections import Counter
 
 class SetInputOrTargetException(Exception):
     def __init__(self, msg, index=None, field_name=None):
@@ -61,6 +62,7 @@ class FieldArray:
         if value:
             self._cell_ndim = None
             self.dtype = None
+        self._ignore_type = value
 
     @property
     def is_input(self):
@@ -223,6 +225,155 @@ class FieldArray:
 
         return self
 
+    def split(self, sep:str=None, inplace:bool=True):
+        """
+        依次对自身的元素使用.split()方法，应该只有当本field的元素为str时，该方法才有用。将返回值
+
+        :param sep: 分割符，如果为None则直接调用str.split()。
+        :param inplace: 如果为True，则将新生成值替换本field。否则返回list。
+        :return: List[List[str]] or self
+        """
+        new_contents = []
+        for index, cell in enumerate(self.content):
+            try:
+                new_contents.append(cell.split(sep))
+            except Exception as e:
+                print(f"Exception happens when process value in index {index}.")
+                print(e)
+        return self._after_process(new_contents, inplace=inplace)
+
+    def int(self, inplace:bool=True):
+        """
+        将本field中的值调用int(cell). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
+            (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
+
+        :param inplace: 如果为True，则将新生成值替换本field。否则返回list。
+        :return: List[int], List[List[int]], self
+        """
+        new_contents = []
+        for index, cell in enumerate(self.content):
+            try:
+                if isinstance(cell, list):
+                    new_contents.append([int(value) for value in cell])
+                else:
+                    new_contents.append(int(cell))
+            except Exception as e:
+                print(f"Exception happens when process value in index {index}.")
+                print(e)
+        return self._after_process(new_contents, inplace=inplace)
+
+    def float(self, inplace=True):
+        """
+        将本field中的值调用float(cell). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
+            (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
+
+        :param inplace: 如果为True，则将新生成值替换本field。否则返回list。
+        :return:
+        """
+        new_contents = []
+        for index, cell in enumerate(self.content):
+            try:
+                if isinstance(cell, list):
+                    new_contents.append([float(value) for value in cell])
+                else:
+                    new_contents.append(float(cell))
+            except Exception as e:
+                print(f"Exception happens when process value in index {index}.")
+                print(e)
+        return self._after_process(new_contents, inplace=inplace)
+
+    def bool(self, inplace=True):
+        """
+        将本field中的值调用bool(cell). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
+            (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
+
+        :param inplace: 如果为True，则将新生成值替换本field。否则返回list。
+        :return:
+        """
+        new_contents = []
+        for index, cell in enumerate(self.content):
+            try:
+                if isinstance(cell, list):
+                    new_contents.append([bool(value) for value in cell])
+                else:
+                    new_contents.append(bool(cell))
+            except Exception as e:
+                print(f"Exception happens when process value in index {index}.")
+                print(e)
+
+        return self._after_process(new_contents, inplace=inplace)
+
+    def lower(self, inplace=True):
+        """
+        将本field中的值调用cell.lower(). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
+            (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
+
+        :param inplace: 如果为True，则将新生成值替换本field。否则返回list。
+        :return: List[int], List[List[int]], self
+        """
+        new_contents = []
+        for index, cell in enumerate(self.content):
+            try:
+                if isinstance(cell, list):
+                    new_contents.append([value.lower() for value in cell])
+                else:
+                    new_contents.append(cell.lower())
+            except Exception as e:
+                print(f"Exception happens when process value in index {index}.")
+                print(e)
+        return self._after_process(new_contents, inplace=inplace)
+
+    def upper(self, inplace=True):
+        """
+        将本field中的值调用cell.lower(). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
+            (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
+
+        :param inplace: 如果为True，则将新生成值替换本field。否则返回list。
+        :return: List[int], List[List[int]], self
+        """
+        new_contents = []
+        for index, cell in enumerate(self.content):
+            try:
+                if isinstance(cell, list):
+                    new_contents.append([value.upper() for value in cell])
+                else:
+                    new_contents.append(cell.upper())
+            except Exception as e:
+                print(f"Exception happens when process value in index {index}.")
+                print(e)
+        return self._after_process(new_contents, inplace=inplace)
+
+    def value_count(self):
+        """
+        返回该field下不同value的数量。多用于统计label数量
+
+        :return: Counter, key是label，value是出现次数
+        """
+        count = Counter()
+        for cell in self.content:
+            count[cell] += 1
+        return count
+
+    def _after_process(self, new_contents, inplace):
+        """
+        当调用处理函数之后，决定是否要替换field。
+
+        :param new_contents:
+        :param inplace:
+        :return: self或者生成的content
+        """
+        if inplace:
+            self.content = new_contents
+            try:
+                self.is_input = self.is_input
+                self.is_target = self.is_input
+            except SetInputOrTargetException as e:
+                print("The newly generated field cannot be set as input or target.")
+                raise e
+            return self
+        else:
+            return new_contents
+
 
 def _get_ele_type_and_dim(cell:Any, dim=0):
     """
@@ -242,6 +393,8 @@ def _get_ele_type_and_dim(cell:Any, dim=0):
         dims = set([j for i,j in res])
         if len(types)>1:
             raise SetInputOrTargetException("Mixed types detected: {}.".format(list(types)))
+        elif len(types)==0:
+            raise SetInputOrTargetException("Empty value encountered.")
         if len(dims)>1:
             raise SetInputOrTargetException("Mixed dimension detected: {}.".format(list(dims)))
         return types.pop(), dims.pop()
@@ -257,6 +410,8 @@ def _get_ele_type_and_dim(cell:Any, dim=0):
         dims = set([j for i,j in res])
         if len(types)>1:
             raise SetInputOrTargetException("Mixed types detected: {}.".format(list(types)))
+        elif len(types)==0:
+            raise SetInputOrTargetException("Empty value encountered.")
         if len(dims)>1:
             raise SetInputOrTargetException("Mixed dimension detected: {}.".format(list(dims)))
         return types.pop(), dims.pop()

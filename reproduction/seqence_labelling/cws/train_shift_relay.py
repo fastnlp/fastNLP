@@ -32,11 +32,11 @@ lr = 0.02
 #########hyper
 device = 0
 
-# !!!!这里前往不要放完全路径，因为这样会暴露你们在服务器上的用户名，比较危险。所以一定要使用相对路径，最好把数据放到
+# !!!!这里千万不要放完全路径，因为这样会暴露你们在服务器上的用户名，比较危险。所以一定要使用相对路径，最好把数据放到
 #   你们的reproduction路径下，然后设置.gitignore
-file_dir = '/path/to/pku'
-char_embed_path = '/path/to/1grams_t3_m50_corpus.txt'
-bigram_embed_path = 'path/to/2grams_t3_m50_corpus.txt'
+file_dir = '/path/to/'
+char_embed_path = '/pretrain/vectors/1grams_t3_m50_corpus.txt'
+bigram_embed_path = '/pretrain/vectors/2grams_t3_m50_corpus.txt'
 bigram_vocab_opt = VocabularyOption(min_freq=3)
 char_embed_opt = EmbeddingOption(embed_filepath=char_embed_path)
 bigram_embed_opt = EmbeddingOption(embed_filepath=bigram_embed_path)
@@ -44,7 +44,7 @@ bigram_embed_opt = EmbeddingOption(embed_filepath=bigram_embed_path)
 data_name = os.path.basename(file_dir)
 cache_fp = 'caches/{}.pkl'.format(data_name)
 
-data = prepare_data(_cache_fp=cache_fp, _refresh=False)
+data = prepare_data(_cache_fp=cache_fp, _refresh=True)
 
 model = ShiftRelayCWSModel(char_embed=data.embeddings['chars'], bigram_embed=data.embeddings['bigrams'],
                            hidden_size=hidden_size, num_layers=num_layers,

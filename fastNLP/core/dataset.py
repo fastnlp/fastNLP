@@ -554,6 +554,7 @@ class DataSet(object):
             self.field_arrays[new_name].name = new_name
         else:
             raise KeyError("DataSet has no field named {}.".format(old_name))
+        return self
     
     def set_target(self, *field_names, flag=True):
         """
@@ -593,7 +594,7 @@ class DataSet(object):
                 try:
                     self.field_arrays[name].is_input = flag
                 except SetInputOrTargetException as e:
-                    print(f"Cannot set field:{name} as input.")
+                    print(f"Cannot set field:{name} as input, exception happens at the {e.index} value.")
                     raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
@@ -761,7 +762,20 @@ class DataSet(object):
             self._add_apply_field(results, new_field_name, kwargs)
         
         return results
-    
+
+    def add_seq_len(self, field_name:str, new_field_name='seq_len'):
+        """
+        将使用len()直接对field_name中每个元素作用，将其结果作为seqence length, 并放入seq_len这个field。
+
+        :param field_name: str.
+        :return:
+        """
+        if self.has_field(field_name=field_name):
+            self.apply_field(len, field_name, new_field_name=new_field_name)
+        else:
+            raise KeyError(f"Field:{field_name} not found.")
+        return self
+
     def drop(self, func, inplace=True):
         """
         func接受一个Instance，返回bool值。返回值为True时，该Instance会被移除或者加入到返回的DataSet中。
