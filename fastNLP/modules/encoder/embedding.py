@@ -326,7 +326,6 @@ class ElmoEmbedding(ContextualEmbedding):
 
         # 根据model_dir_or_name检查是否存在并下载
         PRETRAIN_URL = _get_base_url('elmo')
-        # TODO 把baidu云上的加上去
         PRETRAINED_ELMO_MODEL_DIR = {'en': 'elmo_en-d39843fe.tar.gz',
                                      'cn': 'elmo_cn-5e9b34e2.tar.gz'}
 

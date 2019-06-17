@@ -80,7 +80,7 @@ class TestTutorial(unittest.TestCase):
         test_data.rename_field('label', 'label_seq')
 
         loss = CrossEntropyLoss(pred="output", target="label_seq")
-        metric = AccuracyMetric(pred="predict", target="label_seq")
+        metric = AccuracyMetric(target="label_seq")
 
         # 实例化Trainer，传入模型和数据，进行训练
         # 先在test_data拟合（确保模型的实现是正确的）
@@ -96,7 +96,7 @@ class TestTutorial(unittest.TestCase):
         # 用train_data训练，在test_data验证
         trainer = Trainer(model=model, train_data=train_data, dev_data=test_data,
                           loss=CrossEntropyLoss(pred="output", target="label_seq"),
-                          metrics=AccuracyMetric(pred="predict", target="label_seq"),
+                          metrics=AccuracyMetric(target="label_seq"),
                           save_path=None,
                           batch_size=32,
                           n_epochs=5)
@@ -106,7 +106,7 @@ class TestTutorial(unittest.TestCase):
         # 调用Tester在test_data上评价效果
         from fastNLP import Tester
 
-        tester = Tester(data=test_data, model=model, metrics=AccuracyMetric(pred="predict", target="label_seq"),
+        tester = Tester(data=test_data, model=model, metrics=AccuracyMetric(target="label_seq"),
                         batch_size=4)
         acc = tester.test()
         print(acc)
