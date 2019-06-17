@@ -115,7 +115,8 @@ class ConllLoader(DataSetLoader):
     """
     别名：:class:`fastNLP.io.ConllLoader` :class:`fastNLP.io.dataset_loader.ConllLoader`
 
-    读取Conll格式的数据. 数据格式详见 http://conll.cemantix.org/2012/data.html
+    读取Conll格式的数据. 数据格式详见 http://conll.cemantix.org/2012/data.html. 数据中以"-DOCSTART-"开头的行将被忽略，因为
+        该符号在conll 2003中被用为文档分割符。
 
     列号从0开始, 每列对应内容为::
 

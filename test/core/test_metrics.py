@@ -161,7 +161,15 @@ class TestAccuracyMetric(unittest.TestCase):
             print(e)
             return
         self.assertTrue(True, False), "No exception catches."
-    
+
+    def test_duplicate(self):
+        # 0.4.1的潜在bug，不能出现形参重复的情况
+        metric = AccuracyMetric(pred='predictions', target='targets')
+        pred_dict = {"predictions": torch.zeros(4, 3, 2), "seq_len": torch.ones(4) * 3, 'pred':0}
+        target_dict = {'targets':torch.zeros(4, 3), 'target': 0}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+
+
     def test_seq_len(self):
         N = 256
         seq_len = torch.zeros(N).long()

@@ -60,10 +60,10 @@ class TestTutorial(unittest.TestCase):
         print(test_data[0])
 
         # 如果你们需要做强化学习或者GAN之类的项目，你们也可以使用这些数据预处理的工具
-        from fastNLP.core.batch import Batch
+        from fastNLP.core.batch import DataSetIter
         from fastNLP.core.sampler import RandomSampler
 
-        batch_iterator = Batch(dataset=train_data, batch_size=2, sampler=RandomSampler())
+        batch_iterator = DataSetIter(dataset=train_data, batch_size=2, sampler=RandomSampler())
         for batch_x, batch_y in batch_iterator:
             print("batch_x has: ", batch_x)
             print("batch_y has: ", batch_y)
@@ -85,12 +85,8 @@ class TestTutorial(unittest.TestCase):
         # 实例化Trainer，传入模型和数据，进行训练
         # 先在test_data拟合（确保模型的实现是正确的）
         copy_model = deepcopy(model)
-        overfit_trainer = Trainer(model=copy_model, train_data=test_data, dev_data=test_data,
-                                  loss=loss,
-                                  metrics=metric,
-                                  save_path=None,
-                                  batch_size=32,
-                                  n_epochs=5)
+        overfit_trainer = Trainer(train_data=test_data, model=copy_model, loss=loss, batch_size=32, n_epochs=5,
+                                  dev_data=test_data, metrics=metric, save_path=None)
         overfit_trainer.train()
 
         # 用train_data训练，在test_data验证
@@ -147,13 +143,8 @@ class TestTutorial(unittest.TestCase):
 
         from fastNLP import Trainer, CrossEntropyLoss, AccuracyMetric, Adam
 
-        trainer = Trainer(model=model,
-                          train_data=train_data,
-                          dev_data=dev_data,
-                          loss=CrossEntropyLoss(),
-                          optimizer= Adam(),
-                          metrics=AccuracyMetric(target='target')
-                          )
+        trainer = Trainer(train_data=train_data, model=model, optimizer=Adam(), loss=CrossEntropyLoss(),
+                          dev_data=dev_data, metrics=AccuracyMetric(target='target'))
         trainer.train()
         print('Train finished!')
 

@@ -37,7 +37,7 @@ import warnings
 import torch
 import torch.nn as nn
 
-from .batch import Batch
+from .batch import BatchIter, DataSetIter
 from .dataset import DataSet
 from .metrics import _prepare_metrics
 from .sampler import SequentialSampler
@@ -82,7 +82,7 @@ class Tester(object):
     :param int verbose: 如果为0不输出任何信息; 如果为1，打印出验证结果。
     """
     
-    def __init__(self, data, model, metrics, batch_size=16, device=None, verbose=1):
+    def __init__(self, data, model, metrics, batch_size=16, num_workers=0, device=None, verbose=1):
         super(Tester, self).__init__()
         
         if not isinstance(data, DataSet):
@@ -96,6 +96,14 @@ class Tester(object):
         self._model = _move_model_to_device(model, device=device)
         self.batch_size = batch_size
         self.verbose = verbose
+
+        if isinstance(data, DataSet):
+            self.data_iterator = DataSetIter(
+                dataset=data, batch_size=batch_size, num_workers=num_workers)
+        elif isinstance(data, BatchIter):
+            self.data_iterator = data
+        else:
+            raise TypeError("data type {} not support".format(type(data)))
         
         #  如果是DataParallel将没有办法使用predict方法
         if isinstance(self._model, nn.DataParallel):
@@ -124,7 +132,7 @@ class Tester(object):
         self._model_device = _get_model_device(self._model)
         network = self._model
         self._mode(network, is_test=True)
-        data_iterator = Batch(self.data, self.batch_size, sampler=SequentialSampler(), as_numpy=False)
+        data_iterator = self.data_iterator
         eval_results = {}
         try:
             with torch.no_grad():

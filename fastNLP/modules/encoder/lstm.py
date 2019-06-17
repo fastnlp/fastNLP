@@ -35,8 +35,18 @@ class LSTM(nn.Module):
         self.batch_first = batch_first
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, bias=bias, batch_first=batch_first,
                             dropout=dropout, bidirectional=bidirectional)
+        self.init_param()
         initial_parameter(self, initial_method)
-    
+
+    def init_param(self):
+        for name, param in self.named_parameters():
+            if 'bias_i' in name:
+                param.data.fill_(1)
+            elif 'bias_h' in name:
+                param.data.fill_(0)
+            else:
+                nn.init.xavier_normal_(param)
+
     def forward(self, x, seq_len=None, h0=None, c0=None):
         """
 

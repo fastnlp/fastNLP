@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import torch
 
-from fastNLP import Batch
+from fastNLP import DataSetIter
 from fastNLP import DataSet
 from fastNLP import Instance
 from fastNLP import SequentialSampler
@@ -57,7 +57,7 @@ class TestCase1(unittest.TestCase):
         dataset = construct_dataset(
             [["FastNLP", "is", "the", "most", "beautiful", "tool", "in", "the", "world"] for _ in range(40)])
         dataset.set_target()
-        batch = Batch(dataset, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
+        batch = DataSetIter(dataset, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
         
         cnt = 0
         for _, _ in batch:
@@ -68,7 +68,7 @@ class TestCase1(unittest.TestCase):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
         ds.set_input("x")
         ds.set_target("y")
-        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
+        iter = DataSetIter(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
         for x, y in iter:
             self.assertTrue(isinstance(x["x"], np.ndarray) and isinstance(y["y"], np.ndarray))
             self.assertEqual(len(x["x"]), 4)
@@ -81,7 +81,7 @@ class TestCase1(unittest.TestCase):
                       "y": [[4, 3, 2, 1], [3, 2, 1], [2, 1], [1]] * 10})
         ds.set_input("x")
         ds.set_target("y")
-        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
+        iter = DataSetIter(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
         for x, y in iter:
             self.assertEqual(x["x"].shape, (4, 4))
             self.assertEqual(y["y"].shape, (4, 4))
@@ -91,7 +91,7 @@ class TestCase1(unittest.TestCase):
                       "y": np.array([[4, 3, 2, 1], [3, 2, 1], [2, 1], [1]] * 10)})
         ds.set_input("x")
         ds.set_target("y")
-        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
+        iter = DataSetIter(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=True)
         for x, y in iter:
             self.assertEqual(x["x"].shape, (4, 4))
             self.assertEqual(y["y"].shape, (4, 4))
@@ -101,7 +101,7 @@ class TestCase1(unittest.TestCase):
                       "y": [[4, 3, 2, 1], [3, 2, 1], [2, 1], [1]] * 10})
         ds.set_input("x")
         ds.set_target("y")
-        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=False)
+        iter = DataSetIter(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=False)
         for x, y in iter:
             self.assertTrue(isinstance(x["x"], torch.Tensor))
             self.assertEqual(tuple(x["x"].shape), (4, 4))
@@ -113,7 +113,7 @@ class TestCase1(unittest.TestCase):
                       "y": np.array([[4, 3, 2, 1], [3, 2, 1], [2, 1], [1]] * 10)})
         ds.set_input("x")
         ds.set_target("y")
-        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=False)
+        iter = DataSetIter(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=False)
         for x, y in iter:
             self.assertTrue(isinstance(x["x"], torch.Tensor))
             self.assertEqual(tuple(x["x"].shape), (4, 4))
@@ -125,7 +125,7 @@ class TestCase1(unittest.TestCase):
                      [Instance(x=[1, 2, 3, 4], y=[3, 4, 5, 6]) for _ in range(2)])
         ds.set_input("x")
         ds.set_target("y")
-        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=False)
+        iter = DataSetIter(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=False)
         for x, y in iter:
             self.assertTrue(isinstance(x["x"], torch.Tensor))
             self.assertEqual(tuple(x["x"].shape), (4, 4))
@@ -137,7 +137,7 @@ class TestCase1(unittest.TestCase):
                      [Instance(x=np.array([1, 2, 3, 4]), y=np.array([3, 4, 5, 6])) for _ in range(2)])
         ds.set_input("x")
         ds.set_target("y")
-        iter = Batch(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=False)
+        iter = DataSetIter(ds, batch_size=4, sampler=SequentialSampler(), as_numpy=False)
         for x, y in iter:
             print(x, y)
     
@@ -146,7 +146,7 @@ class TestCase1(unittest.TestCase):
         num_samples = 1000
         dataset = generate_fake_dataset(num_samples)
         
-        batch = Batch(dataset, batch_size=batch_size, sampler=SequentialSampler())
+        batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler())
         for batch_x, batch_y in batch:
             pass
     

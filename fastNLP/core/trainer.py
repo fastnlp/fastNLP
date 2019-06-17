@@ -311,8 +311,9 @@ try:
     from tqdm.auto import tqdm
 except:
     from .utils import _pseudo_tqdm as tqdm
+import warnings
 
-from .batch import Batch
+from .batch import DataSetIter, BatchIter
 from .callback import CallbackManager, CallbackException
 from .dataset import DataSet
 from .losses import _prepare_losser
@@ -320,7 +321,6 @@ from .metrics import _prepare_metrics
 from .optimizer import Optimizer
 from .sampler import Sampler
 from .sampler import RandomSampler
-from .sampler import SequentialSampler
 from .tester import Tester
 from .utils import _CheckError
 from .utils import _build_args
@@ -351,6 +351,8 @@ class Trainer(object):
     :param int batch_size: 训练和验证的时候的batch大小。
     :param loss: 使用的 :class:`~fastNLP.core.losses.LossBase` 对象。当为None时，默认使用 :class:`~fastNLP.LossInForward`
     :param sampler: Batch数据生成的顺序， :class:`~fastNLP.Sampler` 类型。如果为None，默认使用 :class:`~fastNLP.RandomSampler`
+    :param drop_last: 如果最后一个batch没有正好为batch_size这么多数据，就扔掉最后一个batch
+    :param num_workers: int, 有多少个线程来进行数据pad处理。
     :param update_every: int, 多少步更新一次梯度。用于希望累计梯度的场景，比如需要128的batch_size, 但是直接设为128
         会导致内存不足，通过设置batch_size=32, update_every=4达到目的。当optimizer为None时，该参数无效。
     :param int n_epochs: 需要优化迭代多少次。
@@ -367,7 +369,6 @@ class Trainer(object):
     :param int validate_every: 多少个step在验证集上验证一次; 如果为-1，则每个epoch结束验证一次。仅在传入dev_data时有效。
     :param str,None save_path: 将模型保存路径。如果为None，则不保存模型。如果dev_data为None，则保存最后一次迭代的模型。
         保存的时候不仅保存了参数，还保存了模型结构。即便使用DataParallel，这里也只保存模型。
-    :param prefetch: bool, 是否使用额外的进程对产生batch数据。理论上会使得Batch迭代更快。
     :param bool use_tqdm: 是否使用tqdm来显示训练进度; 如果为False，则将loss打印在终端中。
     :param str,int,torch.device,list(int) device: 将模型load到哪个设备。默认为None，即Trainer不对模型
         的计算位置进行管理。支持以下的输入:
@@ -394,16 +395,17 @@ class Trainer(object):
     """
     
     def __init__(self, train_data, model, optimizer=None, loss=None,
-                 batch_size=32, sampler=None, update_every=1,
-                 n_epochs=10, print_every=5,
+                 batch_size=32, sampler=None, drop_last=False, update_every=1,
+                 num_workers=0, n_epochs=10, print_every=5,
                  dev_data=None, metrics=None, metric_key=None,
-                 validate_every=-1, save_path=None,
-                 prefetch=False, use_tqdm=True, device=None,
-                 callbacks=None,
-                 check_code_level=0):
+                 validate_every=-1, save_path=None, use_tqdm=True, device=None, prefetch=False,
+                 callbacks=None, check_code_level=0):
+        if prefetch and num_workers==0:
+            num_workers = 1
+        if prefetch:
+            warnings.warn("prefetch is deprecated, will be removed in version 0.5.0, please use num_workers instead.")
+
         super(Trainer, self).__init__()
-        if not isinstance(train_data, DataSet):
-            raise TypeError(f"The type of train_data must be fastNLP.DataSet, got {type(train_data)}.")
         if not isinstance(model, nn.Module):
             raise TypeError(f"The type of model must be torch.nn.Module, got {type(model)}.")
         
@@ -430,17 +432,27 @@ class Trainer(object):
         if metric_key is not None:
             self.increase_better = False if metric_key[0] == "-" else True
             self.metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
-        elif len(metrics) > 0:
-            self.metric_key = metrics[0].__class__.__name__.lower().strip('metric')
-        
+        else:
+            self.metric_key = None
         # prepare loss
         losser = _prepare_losser(loss)
         
         # sampler check
         if sampler is not None and not isinstance(sampler, Sampler):
             raise ValueError("The type of sampler should be fastNLP.BaseSampler, got {}.".format(type(sampler)))
+
+        if sampler is None:
+            sampler = RandomSampler()
+
+        if isinstance(train_data, DataSet):
+            self.data_iterator = DataSetIter(
+                dataset=train_data, batch_size=batch_size, num_workers=num_workers, sampler=sampler, drop_last=drop_last)
+        elif isinstance(train_data, BatchIter):
+            self.data_iterator = train_data
+        else:
+            raise TypeError("train_data type {} not support".format(type(train_data)))
         
-        if check_code_level > -1:
+        if check_code_level > -1 and isinstance(self.data_iterator, DataSetIter):
             _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data,
                         metric_key=metric_key, check_level=check_code_level,
                         batch_size=min(batch_size, DEFAULT_CHECK_BATCH_SIZE))
@@ -460,8 +472,6 @@ class Trainer(object):
         self.best_dev_epoch = None
         self.best_dev_step = None
         self.best_dev_perf = None
-        self.sampler = sampler if sampler is not None else RandomSampler()
-        self.prefetch = prefetch
         self.n_steps = (len(self.train_data) // self.batch_size + int(
             len(self.train_data) % self.batch_size != 0)) * self.n_epochs
         
@@ -493,7 +503,7 @@ class Trainer(object):
         
         self.callback_manager = CallbackManager(env={"trainer": self},
                                                 callbacks=callbacks)
-    
+
     def train(self, load_best_model=True, on_exception='auto'):
         """
         使用该函数使Trainer开始训练。
@@ -572,8 +582,7 @@ class Trainer(object):
         with inner_tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
             self.pbar = pbar
             avg_loss = 0
-            data_iterator = Batch(self.train_data, batch_size=self.batch_size, sampler=self.sampler, as_numpy=False,
-                                  prefetch=self.prefetch)
+            data_iterator = self.data_iterator
             self.batch_per_epoch = data_iterator.num_batches
             for epoch in range(1, self.n_epochs + 1):
                 self.epoch = epoch
@@ -746,7 +755,9 @@ class Trainer(object):
 
         :return bool value: True means current results on dev set is the best.
         """
-        indicator_val = _check_eval_results(metrics, self.metric_key, self.metrics)
+        indicator, indicator_val = _check_eval_results(metrics, self.metric_key, self.metrics)
+        if self.metric_key is None:
+            self.metric_key = indicator
         is_better = True
         if self.best_metric_indicator is None:
             # first-time validation
@@ -785,15 +796,34 @@ def _get_value_info(_dict):
         strs.append(_str)
     return strs
 
-
+from numbers import Number
+from .batch import _to_tensor
 def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_SIZE,
                 dev_data=None, metric_key=None,
                 check_level=0):
     # check get_loss 方法
-    model_devcie = model.parameters().__next__().device
+    model_devcie = _get_model_device(model=model)
     
-    batch = Batch(dataset=dataset, batch_size=batch_size, sampler=SequentialSampler())
-    for batch_count, (batch_x, batch_y) in enumerate(batch):
+    def _iter():
+        start_idx = 0
+        while start_idx<len(dataset):
+            batch_x = {}
+            batch_y = {}
+            for field_name, field in dataset.get_all_fields().items():
+                indices = list(range(start_idx, min(start_idx+batch_size, len(dataset))))
+                if field.is_target or field.is_input:
+                    batch = field.get(indices)
+                    if field.dtype is not None and \
+                            issubclass(field.dtype, Number) and not isinstance(batch, torch.Tensor):
+                        batch, _ = _to_tensor(batch, field.dtype)
+                    if field.is_target:
+                        batch_y[field_name] = batch
+                    if field.is_input:
+                        batch_x[field_name] = batch
+            yield (batch_x, batch_y)
+            start_idx += batch_size
+
+    for batch_count, (batch_x, batch_y) in enumerate(_iter()):
         _move_dict_value_to_device(batch_x, batch_y, device=model_devcie)
         # forward check
         if batch_count == 0:
@@ -861,26 +891,16 @@ def _check_eval_results(metrics, metric_key, metric_list):
         loss, metrics = metrics
     
     if isinstance(metrics, dict):
-        if len(metrics) == 1:
-            # only single metric, just use it
-            metric_dict = list(metrics.values())[0]
-            metrics_name = list(metrics.keys())[0]
-        else:
-            metrics_name = metric_list[0].__class__.__name__
-            if metrics_name not in metrics:
-                raise RuntimeError(f"{metrics_name} is chosen to do validation, but got {metrics}")
-            metric_dict = metrics[metrics_name]
+        metric_dict = list(metrics.values())[0]  # 取第一个metric
         
-        if len(metric_dict) == 1:
+        if metric_key is None:
             indicator_val, indicator = list(metric_dict.values())[0], list(metric_dict.keys())[0]
-        elif len(metric_dict) > 1 and metric_key is None:
-            raise RuntimeError(
-                f"Got multiple metric keys: {metric_dict}, but metric_key is not set. Which one to use?")
         else:
             # metric_key is set
             if metric_key not in metric_dict:
                 raise RuntimeError(f"metric key {metric_key} not found in {metric_dict}")
             indicator_val = metric_dict[metric_key]
+            indicator = metric_key
     else:
         raise RuntimeError("Invalid metrics type. Expect {}, got {}".format((tuple, dict), type(metrics)))
-    return indicator_val
+    return indicator, indicator_val

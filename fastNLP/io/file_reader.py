@@ -90,11 +90,12 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
         return sample
     with open(path, 'r', encoding=encoding) as f:
         sample = []
-        start = next(f)
-        if '-DOCSTART-' not in start:
+        start = next(f).strip()
+        if '-DOCSTART-' not in start and start!='':
             sample.append(start.split())
         for line_idx, line in enumerate(f, 1):
-            if line.startswith('\n'):
+            line = line.strip()
+            if line=='':
                 if len(sample):
                     try:
                         res = parse_conll(sample)
@@ -107,7 +108,8 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
             elif line.startswith('#'):
                 continue
             else:
-                sample.append(line.split())
+                if not line.startswith('-DOCSTART-'):
+                    sample.append(line.split())
         if len(sample) > 0:
             try:
                 res = parse_conll(sample)
@@ -115,4 +117,5 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
             except Exception as e:
                 if dropna:
                     return
-                raise ValueError('invalid instance at line: {}'.format(line_idx))
+                print('invalid instance at line: {}'.format(line_idx))
+                raise e
