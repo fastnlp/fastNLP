@@ -1,10 +1,16 @@
 __all__ = [
-    "Embedding"
+    "Embedding",
+    "StaticEmbedding",
+    "ElmoEmbedding",
+    "BertEmbedding",
+    "StackEmbedding",
+    "LSTMCharEmbedding",
+    "CNNCharEmbedding",
 ]
 import torch.nn as nn
 from ..utils import get_embeddings
 from .lstm import LSTM
-from ... import Vocabulary
+from ...core.vocabulary import Vocabulary
 from abc import abstractmethod
 import torch
 from ...io import EmbedLoader
@@ -15,7 +21,9 @@ from ...io.file_utils import cached_path, _get_base_url
 from ._bert import _WordBertModel
 from typing import List
 
-from ... import DataSet, DataSetIter, SequentialSampler
+from ...core.dataset import DataSet
+from ...core.batch import DataSetIter
+from ...core.sampler import SequentialSampler
 from ...core.utils import _move_model_to_device, _get_model_device
 
 

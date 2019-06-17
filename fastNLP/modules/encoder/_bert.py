@@ -9,7 +9,7 @@
 import torch
 from torch import nn
 
-from ... import Vocabulary
+from ...core.vocabulary import Vocabulary
 import collections
 
 import os
