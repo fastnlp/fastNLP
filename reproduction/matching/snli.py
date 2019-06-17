@@ -70,19 +70,10 @@ test_data = preprocess_data(test_data, bert_dirs)
 
 model = BertForNLI(bert_dir=bert_dirs)
 
-trainer = Trainer(
-    train_data=train_data,
-    model=model,
-    optimizer=Adam(lr=2e-5, model_params=model.parameters()),
-    batch_size=torch.cuda.device_count() * 12,
-    n_epochs=4,
-    print_every=-1,
-    dev_data=dev_data,
-    metrics=AccuracyMetric(),
-    metric_key='acc',
-    device=[i for i in range(torch.cuda.device_count())],
-    check_code_level=-1
-)
+trainer = Trainer(train_data=train_data, model=model, optimizer=Adam(lr=2e-5, model_params=model.parameters()),
+                  batch_size=torch.cuda.device_count() * 12, n_epochs=4, print_every=-1, dev_data=dev_data,
+                  metrics=AccuracyMetric(), metric_key='acc', device=[i for i in range(torch.cuda.device_count())],
+                  check_code_level=-1)
 trainer.train(load_best_model=True)
 
 tester = Tester(

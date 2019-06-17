@@ -14,7 +14,7 @@ core 模块里实现了 fastNLP 的核心框架，常用的功能都可以从 fa
     介绍core 的子模块的分工，好像必要性不大
     
 """
-from .batch import Batch
+from .batch import DataSetIter, BatchIter, TorchLoaderIter
 from .callback import Callback, GradientClipCallback, EarlyStopCallback, TensorboardCallback, LRScheduler, ControlC
 from .const import Const
 from .dataset import DataSet

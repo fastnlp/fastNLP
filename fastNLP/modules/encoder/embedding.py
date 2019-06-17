@@ -15,7 +15,7 @@ from ...io.file_utils import cached_path, _get_base_url
 from ._bert import _WordBertModel
 from typing import List
 
-from ... import DataSet, Batch, SequentialSampler
+from ... import DataSet, DataSetIter, SequentialSampler
 from ...core.utils import _move_model_to_device, _get_model_device
 
 
@@ -234,7 +234,7 @@ class ContextualEmbedding(TokenEmbedding):
         with torch.no_grad():
             for index, dataset in enumerate(datasets):
                 try:
-                    batch = Batch(dataset, batch_size=batch_size, sampler=SequentialSampler(), prefetch=False)
+                    batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler())
                     for batch_x, batch_y in batch:
                         words = batch_x['words'].to(device)
                         words_list = words.tolist()
