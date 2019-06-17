@@ -269,7 +269,7 @@ class MatchingLoader(DataSetLoader):
     def _load(self, path: str) -> DataSet:
         raise NotImplementedError
 
-    def process(self, paths: Union[str, Dict[str, str]], **options) -> DataInfo:
+    def process(self, paths: Union[str, Dict[str, str]], input_field=None) -> DataInfo:
         if isinstance(paths, str):
             paths = {'train': paths}
 
@@ -289,6 +289,13 @@ class MatchingLoader(DataSetLoader):
                 raise RuntimeError(f'Your model is {self.data_format}, '
                                    f'Please choose from [esim, bert]')
 
+            if input_field is not None:
+                if isinstance(input_field, str):
+                    data.set_input(input_field)
+                elif isinstance(input_field, list):
+                    for field in input_field:
+                        data.set_input(field)
+
             data_set[n] = data
             print(f'successfully load {n} set!')
 
@@ -298,11 +305,11 @@ class MatchingLoader(DataSetLoader):
             raise RuntimeError(f'There is NOT label vocab attribute built!')
 
         if self.for_model != 'bert':
-            from fastNLP.modules.encoder.embedding import StaticEmbedding
-            embedding = StaticEmbedding(self.vocab, model_dir_or_name='en')
+            from fastNLP.modules.encoder.embedding import ElmoEmbedding
+            embedding = ElmoEmbedding(self.vocab, model_dir_or_name='en', requires_grad=True, layers='2')
 
         data_info = DataInfo(vocabs={'vocab': self.vocab, 'target_vocab': self.label_vocab},
-                             embeddings={'glove': embedding} if self.for_model != 'bert' else None,
+                             embeddings={'elmo': embedding} if self.for_model != 'bert' else None,
                              datasets=data_set)
 
         return data_info
@@ -338,15 +345,17 @@ class MatchingLoader(DataSetLoader):
             raw_ds.drop(lambda x: x[Const.TARGET] == '-')
 
         if not hasattr(self, 'vocab'):
-            self.vocab = Vocabulary().from_dataset(raw_ds, [Const.INPUTS(0), Const.INPUTS(1)])
+            self.vocab = Vocabulary().from_dataset(raw_ds, field_name=[Const.INPUTS(0), Const.INPUTS(1)])
         if not hasattr(self, 'label_vocab'):
             self.label_vocab = Vocabulary(padding=None, unknown=None).from_dataset(raw_ds, field_name=Const.TARGET)
 
         raw_ds.apply(lambda ins: [self.vocab.to_index(w) for w in ins[Const.INPUTS(0)]], new_field_name=Const.INPUTS(0))
         raw_ds.apply(lambda ins: [self.vocab.to_index(w) for w in ins[Const.INPUTS(1)]], new_field_name=Const.INPUTS(1))
-        raw_ds.apply(lambda ins: self.label_vocab.to_index(Const.TARGET), new_field_name=Const.TARGET)
+        raw_ds.apply(lambda ins: self.label_vocab.to_index(ins[Const.TARGET]), new_field_name=Const.TARGET)
+        raw_ds.apply(lambda ins: len(ins[Const.INPUTS(0)]), new_field_name=Const.INPUT_LENS(0))
+        raw_ds.apply(lambda ins: len(ins[Const.INPUTS(1)]), new_field_name=Const.INPUT_LENS(1))
 
-        raw_ds.set_input(Const.INPUTS(0), Const.INPUTS(1))
+        raw_ds.set_input(Const.INPUTS(0), Const.INPUTS(1), Const.INPUT_LENS(0), Const.INPUT_LENS(1))
         raw_ds.set_target(Const.TARGET)
 
         return raw_ds
@@ -404,6 +413,8 @@ class MatchingLoader(DataSetLoader):
 
         raw_ds.set_input(Const.INPUT, Const.INPUT_LENS(0), Const.INPUT_LENS(1))
         raw_ds.set_target(Const.TARGET)
+
+        return raw_ds
 
 
 class SNLILoader(JsonLoader):

@@ -152,6 +152,8 @@ class StaticEmbedding(TokenEmbedding):
 
     Example::
 
+        >>> embed = StaticEmbedding(vocab, model_dir_or_name='en-glove-6b-50')
+
 
     :param vocab: Vocabulary. 若该项为None则会读取所有的embedding。
     :param model_dir_or_name: 可以有两种方式调用预训练好的static embedding：第一种是传入embedding的文件名，第二种是传入embedding
@@ -311,8 +313,7 @@ class ElmoEmbedding(ContextualEmbedding):
 
     Example::
 
-        >>>
-        >>>
+        >>> embedding = ElmoEmbedding(vocab, model_dir_or_name='en', layers='2', requires_grad=True)
 
     :param vocab: 词表
     :param model_dir_or_name: 可以有两种方式调用预训练好的ELMo embedding：第一种是传入ELMo权重的文件名，第二种是传入ELMo版本的名称，
@@ -403,7 +404,7 @@ class BertEmbedding(ContextualEmbedding):
 
     Example::
 
-        >>>
+        >>> embedding = BertEmbedding(vocab, model_dir_or_name='en-base-uncased', requires_grad=False, layers='4,-2,-1')
 
 
     :param fastNLP.Vocabulary vocab: 词表
@@ -513,7 +514,7 @@ class CNNCharEmbedding(TokenEmbedding):
 
     Example::
 
-        >>>
+        >>> cnn_char_embed = CNNCharEmbedding(vocab)
 
 
     :param vocab: 词表
@@ -647,7 +648,7 @@ class LSTMCharEmbedding(TokenEmbedding):
 
     Example::
 
-        >>>
+        >>> lstm_char_embed = LSTMCharEmbedding(vocab)
 
     :param vocab: 词表
     :param embed_size: embedding的大小。默认值为50.
