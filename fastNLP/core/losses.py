@@ -128,29 +128,21 @@ class LossBase(object):
                     self.param_map[arg] = arg  # This param does not need mapping.
             self._evaluate_args = func_args
             self._reverse_param_map = {input_arg: func_arg for func_arg, input_arg in self.param_map.items()}
-        
-        # need to wrap inputs in dict.
+
         mapped_pred_dict = {}
         mapped_target_dict = {}
-        duplicated = []
-        for input_arg in set(list(pred_dict.keys()) + list(target_dict.keys())):
-            not_duplicate_flag = 0
-            if input_arg in self._reverse_param_map:
-                mapped_arg = self._reverse_param_map[input_arg]
-                not_duplicate_flag += 1
-            else:
-                mapped_arg = input_arg
+        for input_arg, mapped_arg in self._reverse_param_map.items():
             if input_arg in pred_dict:
                 mapped_pred_dict[mapped_arg] = pred_dict[input_arg]
-                not_duplicate_flag += 1
             if input_arg in target_dict:
                 mapped_target_dict[mapped_arg] = target_dict[input_arg]
-                not_duplicate_flag += 1
-            if not_duplicate_flag == 3:
-                duplicated.append(input_arg)
         
         # missing
         if not self._checked:
+            duplicated = []
+            for input_arg, mapped_arg in self._reverse_param_map.items():
+                if input_arg in pred_dict and input_arg in target_dict:
+                    duplicated.append(input_arg)
             check_res = _check_arg_dict_list(self.get_loss, [mapped_pred_dict, mapped_target_dict])
             # replace missing.
             missing = check_res.missing
@@ -204,15 +196,12 @@ class LossFunc(LossBase):
         
         super(LossFunc, self).__init__()
         _check_function_or_method(func)
+        self.get_loss = func
         if key_map is not None:
             if not isinstance(key_map, dict):
                 raise RuntimeError(f"Loss error: key_map except a {type({})} but got a {type(key_map)}")
-            self.param_map = key_map
-        if len(kwargs) > 0:
-            for key, val in kwargs.items():
-                self.param_map.update({key: val})
+        self._init_param_map(key_map, **kwargs)
         
-        self.get_loss = func
 
 
 class CrossEntropyLoss(LossBase):
