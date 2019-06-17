@@ -1,6 +1,5 @@
 import unittest
 
-import fastNLP
 from fastNLP.models.biaffine_parser import BiaffineParser, ParserLoss, ParserMetric
 from .model_runner import *
 

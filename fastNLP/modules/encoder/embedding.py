@@ -165,7 +165,6 @@ class StaticEmbedding(TokenEmbedding):
         super(StaticEmbedding, self).__init__(vocab)
 
         # 优先定义需要下载的static embedding有哪些。这里估计需要自己搞一个server，
-        PRETRAIN_URL = _get_base_url('static')
         PRETRAIN_STATIC_FILES = {
             'en': 'glove.840B.300d-cc1ad5e1.tar.gz',
             'en-glove-840b-300': 'glove.840B.300d-cc1ad5e1.tar.gz',
@@ -178,6 +177,7 @@ class StaticEmbedding(TokenEmbedding):
 
         # 得到cache_path
         if model_dir_or_name.lower() in PRETRAIN_STATIC_FILES:
+            PRETRAIN_URL = _get_base_url('static')
             model_name = PRETRAIN_STATIC_FILES[model_dir_or_name]
             model_url = PRETRAIN_URL + model_name
             model_path = cached_path(model_url)
@@ -333,12 +333,11 @@ class ElmoEmbedding(ContextualEmbedding):
         self.layers = layers
 
         # 根据model_dir_or_name检查是否存在并下载
-        PRETRAIN_URL = _get_base_url('elmo')
-        # TODO 把baidu云上的加上去
         PRETRAINED_ELMO_MODEL_DIR = {'en': 'elmo_en-d39843fe.tar.gz',
                                      'cn': 'elmo_cn-5e9b34e2.tar.gz'}
 
         if model_dir_or_name.lower() in PRETRAINED_ELMO_MODEL_DIR:
+            PRETRAIN_URL = _get_base_url('elmo')
             model_name = PRETRAINED_ELMO_MODEL_DIR[model_dir_or_name]
             model_url = PRETRAIN_URL + model_name
             model_dir = cached_path(model_url)
@@ -392,7 +391,7 @@ class ElmoEmbedding(ContextualEmbedding):
     def requires_grad(self, value):
         for name, param in self.named_parameters():
             if 'words_to_chars_embedding' in name: # 这个不能加入到requires_grad中
-                pass
+                continue
             param.requires_grad = value
 
 
@@ -420,7 +419,6 @@ class BertEmbedding(ContextualEmbedding):
                  pool_method: str='first', include_cls_sep: bool=False, requires_grad: bool=False):
         super(BertEmbedding, self).__init__(vocab)
         # 根据model_dir_or_name检查是否存在并下载
-        PRETRAIN_URL = _get_base_url('bert')
         PRETRAINED_BERT_MODEL_DIR = {'en': 'bert-base-cased-f89bfe08.zip',
                                      'en-base-uncased': 'bert-base-uncased-3413b23c.zip',
                                      'en-base-cased': 'bert-base-cased-f89bfe08.zip',
@@ -436,6 +434,7 @@ class BertEmbedding(ContextualEmbedding):
                                      }
 
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
+            PRETRAIN_URL = _get_base_url('bert')
             model_name = PRETRAINED_BERT_MODEL_DIR[model_dir_or_name]
             model_url = PRETRAIN_URL + model_name
             model_dir = cached_path(model_url)
@@ -487,7 +486,7 @@ class BertEmbedding(ContextualEmbedding):
     def requires_grad(self, value):
         for name, param in self.named_parameters():
             if 'word_pieces_lengths' in name:  # 这个不能加入到requires_grad中
-                pass
+                continue
             param.requires_grad = value
 
 
@@ -575,6 +574,7 @@ class CNNCharEmbedding(TokenEmbedding):
             for i in range(len(kernel_sizes))])
         self._embed_size = embed_size
         self.fc = nn.Linear(sum(filter_nums), embed_size)
+        self.init_param()
 
     def forward(self, words):
         """
@@ -627,9 +627,17 @@ class CNNCharEmbedding(TokenEmbedding):
     def requires_grad(self, value):
         for name, param in self.named_parameters():
             if 'words_to_chars_embedding' in name or 'word_lengths' in name:  # 这个不能加入到requires_grad中
-                pass
+                continue
             param.requires_grad = value
 
+    def init_param(self):
+        for name, param in self.named_parameters():
+            if 'words_to_chars_embedding' in name or 'word_lengths' in name:  # 这个不能reset
+                continue
+            if param.data.dim()>1:
+                nn.init.xavier_normal_(param, 1)
+            else:
+                nn.init.uniform_(param, -1, 1)
 
 class LSTMCharEmbedding(TokenEmbedding):
     """
@@ -753,7 +761,7 @@ class LSTMCharEmbedding(TokenEmbedding):
     def requires_grad(self, value):
         for name, param in self.named_parameters():
             if 'words_to_chars_embedding' in name or 'word_lengths' in name:  # 这个不能加入到requires_grad中
-                pass
+                continue
             param.requires_grad = value
 
 

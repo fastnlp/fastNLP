@@ -81,6 +81,12 @@ class DataSetGetter:
             raise ValueError
         self.idx_list = idx_list
 
+    def __getattr__(self, item):
+        if hasattr(self.dataset, item):
+            return getattr(self.dataset, item)
+        else:
+            raise AttributeError("'DataSetGetter' object has no attribute '{}'".format(item))
+
 
 class SamplerAdapter(torch.utils.data.Sampler):
     def __init__(self, sampler, dataset):
@@ -131,9 +137,9 @@ class DataSetIter(BatchIter):
                  timeout=0, worker_init_fn=None):
         super().__init__()
         assert isinstance(dataset, DataSet)
+        sampler = SamplerAdapter(sampler=sampler or SequentialSampler(), dataset=dataset)
         dataset = DataSetGetter(dataset, as_numpy)
         collate_fn = dataset.collate_fn if hasattr(dataset, 'collate_fn') else None
-        sampler = SamplerAdapter(sampler=sampler or SequentialSampler(), dataset=dataset)
         self.dataiter = torch.utils.data.DataLoader(
             dataset=dataset, batch_size=batch_size, sampler=sampler,
             collate_fn=collate_fn, num_workers=num_workers,

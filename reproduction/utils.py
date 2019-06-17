@@ -25,7 +25,7 @@ def check_dataloader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
             if not os.path.isfile(train_fp):
                 raise FileNotFoundError(f"train.txt is not found in folder {paths}.")
             files = {'train': train_fp}
-            for filename in ['test.txt', 'dev.txt']:
+            for filename in ['dev.txt', 'test.txt']:
                 fp = os.path.join(paths, filename)
                 if os.path.isfile(fp):
                     files[filename.split('.')[0]] = fp

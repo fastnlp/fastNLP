@@ -179,8 +179,6 @@ class FieldArray:
             return self.pad(contents)
 
     def pad(self, contents):
-        if self.padder is None:
-            raise RuntimeError
         return self.padder(contents, field_name=self.name, field_ele_dtype=self.dtype, dim=self._cell_ndim)
 
     def set_padder(self, padder):
@@ -355,8 +353,15 @@ class FieldArray:
         :return: Counter, key是label，value是出现次数
         """
         count = Counter()
+
+        def cum(cell):
+            if _is_iterable(cell) and not isinstance(cell, str):
+                for cell_ in cell:
+                    cum(cell_)
+            else:
+                count[cell] += 1
         for cell in self.content:
-            count[cell] += 1
+            cum(cell)
         return count
 
     def _after_process(self, new_contents, inplace):

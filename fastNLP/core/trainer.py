@@ -432,9 +432,8 @@ class Trainer(object):
         if metric_key is not None:
             self.increase_better = False if metric_key[0] == "-" else True
             self.metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
-        elif len(metrics) > 0:
-            self.metric_key = metrics[0].__class__.__name__.lower().strip('metric')
-        
+        else:
+            self.metric_key = None
         # prepare loss
         losser = _prepare_losser(loss)
         
@@ -454,9 +453,7 @@ class Trainer(object):
             raise TypeError("train_data type {} not support".format(type(train_data)))
         
         if check_code_level > -1 and isinstance(self.data_iterator, DataSetIter):
-            # TODO 考虑不同的dataset类型怎么check
-            _check_code(data_iterator=self.data_iterator,
-                        model=model, losser=losser, metrics=metrics, dev_data=dev_data,
+            _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data,
                         metric_key=metric_key, check_level=check_code_level,
                         batch_size=min(batch_size, DEFAULT_CHECK_BATCH_SIZE))
             # _check_code 是 fastNLP 帮助你检查代码是否正确的方法 。如果你在错误栈中看到这行注释，请认真检查你的代码
@@ -758,7 +755,9 @@ class Trainer(object):
 
         :return bool value: True means current results on dev set is the best.
         """
-        indicator_val = _check_eval_results(metrics, self.metric_key, self.metrics)
+        indicator, indicator_val = _check_eval_results(metrics, self.metric_key, self.metrics)
+        if self.metric_key is None:
+            self.metric_key = indicator
         is_better = True
         if self.best_metric_indicator is None:
             # first-time validation
@@ -797,16 +796,34 @@ def _get_value_info(_dict):
         strs.append(_str)
     return strs
 
-
-def _check_code(data_iterator, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_SIZE,
+from numbers import Number
+from .batch import _to_tensor
+def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_SIZE,
                 dev_data=None, metric_key=None,
                 check_level=0):
     # check get_loss 方法
-    model_devcie = model.parameters().__next__().device
+    model_devcie = _get_model_device(model=model)
     
-    batch = data_iterator
-    dataset = data_iterator.dataset
-    for batch_count, (batch_x, batch_y) in enumerate(batch):
+    def _iter():
+        start_idx = 0
+        while start_idx<len(dataset):
+            batch_x = {}
+            batch_y = {}
+            for field_name, field in dataset.get_all_fields().items():
+                indices = list(range(start_idx, min(start_idx+batch_size, len(dataset))))
+                if field.is_target or field.is_input:
+                    batch = field.get(indices)
+                    if field.dtype is not None and \
+                            issubclass(field.dtype, Number) and not isinstance(batch, torch.Tensor):
+                        batch, _ = _to_tensor(batch, field.dtype)
+                    if field.is_target:
+                        batch_y[field_name] = batch
+                    if field.is_input:
+                        batch_x[field_name] = batch
+            yield (batch_x, batch_y)
+            start_idx += batch_size
+
+    for batch_count, (batch_x, batch_y) in enumerate(_iter()):
         _move_dict_value_to_device(batch_x, batch_y, device=model_devcie)
         # forward check
         if batch_count == 0:
@@ -874,26 +891,16 @@ def _check_eval_results(metrics, metric_key, metric_list):
         loss, metrics = metrics
     
     if isinstance(metrics, dict):
-        if len(metrics) == 1:
-            # only single metric, just use it
-            metric_dict = list(metrics.values())[0]
-            metrics_name = list(metrics.keys())[0]
-        else:
-            metrics_name = metric_list[0].__class__.__name__
-            if metrics_name not in metrics:
-                raise RuntimeError(f"{metrics_name} is chosen to do validation, but got {metrics}")
-            metric_dict = metrics[metrics_name]
+        metric_dict = list(metrics.values())[0]  # 取第一个metric
         
-        if len(metric_dict) == 1:
+        if metric_key is None:
             indicator_val, indicator = list(metric_dict.values())[0], list(metric_dict.keys())[0]
-        elif len(metric_dict) > 1 and metric_key is None:
-            raise RuntimeError(
-                f"Got multiple metric keys: {metric_dict}, but metric_key is not set. Which one to use?")
         else:
             # metric_key is set
             if metric_key not in metric_dict:
                 raise RuntimeError(f"metric key {metric_key} not found in {metric_dict}")
             indicator_val = metric_dict[metric_key]
+            indicator = metric_key
     else:
         raise RuntimeError("Invalid metrics type. Expect {}, got {}".format((tuple, dict), type(metrics)))
-    return indicator_val
+    return indicator, indicator_val

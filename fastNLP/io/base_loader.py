@@ -124,6 +124,14 @@ class DataInfo:
         self.embeddings = embeddings or {}
         self.datasets = datasets or {}
 
+    def __repr__(self):
+        _str = 'In total {} datasets:\n'.format(len(self.datasets))
+        for name, dataset in self.datasets.items():
+            _str += '\t{} has {} instances.\n'.format(name, len(dataset))
+        _str += 'In total {} vocabs:\n'.format(len(self.vocabs))
+        for name, vocab in self.vocabs.items():
+            _str += '\t{} has {} entries.\n'.format(name, len(vocab))
+        return _str
 
 class DataSetLoader:
     """
