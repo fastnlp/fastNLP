@@ -1,10 +1,16 @@
 __all__ = [
-    "Embedding"
+    "Embedding",
+    "StaticEmbedding",
+    "ElmoEmbedding",
+    "BertEmbedding",
+    "StackEmbedding",
+    "LSTMCharEmbedding",
+    "CNNCharEmbedding",
 ]
 import torch.nn as nn
 from ..utils import get_embeddings
 from .lstm import LSTM
-from ... import Vocabulary
+from ...core.vocabulary import Vocabulary
 from abc import abstractmethod
 import torch
 from ...io import EmbedLoader
@@ -15,7 +21,9 @@ from ...io.file_utils import cached_path, _get_base_url
 from ._bert import _WordBertModel
 from typing import List
 
-from ... import DataSet, DataSetIter, SequentialSampler
+from ...core.dataset import DataSet
+from ...core.batch import DataSetIter
+from ...core.sampler import SequentialSampler
 from ...core.utils import _move_model_to_device, _get_model_device
 
 
@@ -143,6 +151,8 @@ class StaticEmbedding(TokenEmbedding):
     StaticEmbedding组件. 给定embedding的名称，根据vocab从embedding中抽取相应的数据。该Embedding可以就按照正常的embedding使用了
 
     Example::
+
+        >>> embed = StaticEmbedding(vocab, model_dir_or_name='en-glove-6b-50')
 
 
     :param vocab: Vocabulary. 若该项为None则会读取所有的embedding。
@@ -303,8 +313,7 @@ class ElmoEmbedding(ContextualEmbedding):
 
     Example::
 
-        >>>
-        >>>
+        >>> embedding = ElmoEmbedding(vocab, model_dir_or_name='en', layers='2', requires_grad=True)
 
     :param vocab: 词表
     :param model_dir_or_name: 可以有两种方式调用预训练好的ELMo embedding：第一种是传入ELMo权重的文件名，第二种是传入ELMo版本的名称，
@@ -395,7 +404,7 @@ class BertEmbedding(ContextualEmbedding):
 
     Example::
 
-        >>>
+        >>> embedding = BertEmbedding(vocab, model_dir_or_name='en-base-uncased', requires_grad=False, layers='4,-2,-1')
 
 
     :param fastNLP.Vocabulary vocab: 词表
@@ -505,7 +514,7 @@ class CNNCharEmbedding(TokenEmbedding):
 
     Example::
 
-        >>>
+        >>> cnn_char_embed = CNNCharEmbedding(vocab)
 
 
     :param vocab: 词表
@@ -641,7 +650,7 @@ class LSTMCharEmbedding(TokenEmbedding):
 
     Example::
 
-        >>>
+        >>> lstm_char_embed = LSTMCharEmbedding(vocab)
 
     :param vocab: 词表
     :param embed_size: embedding的大小。默认值为50.

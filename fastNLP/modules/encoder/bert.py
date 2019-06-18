@@ -2,9 +2,9 @@
 import os
 from torch import nn
 import torch
-from ...core import Vocabulary
+from ...core.vocabulary import Vocabulary
 from ...io.file_utils import _get_base_url, cached_path
-from ._bert import _WordPieceBertModel
+from ._bert import _WordPieceBertModel, BertModel
 
 
 class BertWordPieceEncoder(nn.Module):

@@ -7,7 +7,7 @@
 
 
 
-from ... import Vocabulary
+from ...core.vocabulary import Vocabulary
 import collections
 
 import unicodedata
