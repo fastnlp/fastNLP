@@ -500,8 +500,8 @@ class CNNCharEmbedding(TokenEmbedding):
     """
     别名：:class:`fastNLP.modules.CNNCharEmbedding`   :class:`fastNLP.modules.encoder.embedding.CNNCharEmbedding`
 
-    使用CNN生成character embedding。CNN的结果为, CNN(x) -> activation(x) -> pool -> fc. 不同的kernel大小的fitler结果是
-        concat起来的。
+    使用CNN生成character embedding。CNN的结果为, embed(x) -> Dropout(x) -> CNN(x) -> activation(x) -> pool
+        -> fc. 不同的kernel大小的fitler结果是concat起来的。
 
     Example::
 
@@ -511,13 +511,14 @@ class CNNCharEmbedding(TokenEmbedding):
     :param vocab: 词表
     :param embed_size: 该word embedding的大小，默认值为50.
     :param char_emb_size: character的embed的大小。character是从vocab中生成的。默认值为50.
+    :param dropout: 以多大的概率drop
     :param filter_nums: filter的数量. 长度需要和kernels一致。默认值为[40, 30, 20].
     :param kernel_sizes: kernel的大小. 默认值为[5, 3, 1].
     :param pool_method: character的表示在合成一个表示时所使用的pool方法，支持'avg', 'max'.
     :param activation: CNN之后使用的激活方法，支持'relu', 'sigmoid', 'tanh' 或者自定义函数.
     :param min_char_freq: character的最少出现次数。默认值为2.
     """
-    def __init__(self, vocab: Vocabulary, embed_size: int=50, char_emb_size: int=50,
+    def __init__(self, vocab: Vocabulary, embed_size: int=50, char_emb_size: int=50, dropout:float=0.5,
                  filter_nums: List[int]=(40, 30, 20), kernel_sizes: List[int]=(5, 3, 1), pool_method: str='max',
                  activation='relu', min_char_freq: int=2):
         super(CNNCharEmbedding, self).__init__(vocab)
@@ -526,6 +527,7 @@ class CNNCharEmbedding(TokenEmbedding):
             assert kernel % 2 == 1, "Only odd kernel is allowed."
 
         assert pool_method in ('max', 'avg')
+        self.dropout = nn.Dropout(dropout, inplace=True)
         self.pool_method = pool_method
         # activation function
         if isinstance(activation, str):
@@ -583,7 +585,7 @@ class CNNCharEmbedding(TokenEmbedding):
         # 为1的地方为mask
         chars_masks = chars.eq(self.char_pad_index)  # batch_size x max_len x max_word_len 如果为0, 说明是padding的位置了
         chars = self.char_embedding(chars)  # batch_size x max_len x max_word_len x embed_size
-
+        chars = self.dropout(chars)
         reshaped_chars = chars.reshape(batch_size*max_len, max_word_len, -1)
         reshaped_chars = reshaped_chars.transpose(1, 2)  # B' x E x M
         conv_chars = [conv(reshaped_chars).transpose(1, 2).reshape(batch_size, max_len, max_word_len, -1)
@@ -635,7 +637,7 @@ class LSTMCharEmbedding(TokenEmbedding):
     """
     别名：:class:`fastNLP.modules.LSTMCharEmbedding`   :class:`fastNLP.modules.encoder.embedding.LSTMCharEmbedding`
 
-    使用LSTM的方式对character进行encode.
+    使用LSTM的方式对character进行encode. embed(x) -> Dropout(x) -> LSTM(x) -> activation(x) -> pool
 
     Example::
 
@@ -644,13 +646,14 @@ class LSTMCharEmbedding(TokenEmbedding):
     :param vocab: 词表
     :param embed_size: embedding的大小。默认值为50.
     :param char_emb_size: character的embedding的大小。默认值为50.
+    :param dropout: 以多大概率drop
     :param hidden_size: LSTM的中间hidden的大小，如果为bidirectional的，hidden会除二，默认为50.
     :param pool_method: 支持'max', 'avg'
     :param activation: 激活函数，支持'relu', 'sigmoid', 'tanh', 或者自定义函数.
     :param min_char_freq: character的最小出现次数。默认值为2.
     :param bidirectional: 是否使用双向的LSTM进行encode。默认值为True。
     """
-    def __init__(self, vocab: Vocabulary, embed_size: int=50, char_emb_size: int=50, hidden_size=50,
+    def __init__(self, vocab: Vocabulary, embed_size: int=50, char_emb_size: int=50, dropout:float=0.5, hidden_size=50,
                  pool_method: str='max', activation='relu', min_char_freq: int=2, bidirectional=True):
         super(LSTMCharEmbedding, self).__init__(vocab)
 
@@ -658,7 +661,7 @@ class LSTMCharEmbedding(TokenEmbedding):
 
         assert pool_method in ('max', 'avg')
         self.pool_method = pool_method
-
+        self.dropout = nn.Dropout(dropout, inplace=True)
         # activation function
         if isinstance(activation, str):
             if activation.lower() == 'relu':
@@ -715,7 +718,7 @@ class LSTMCharEmbedding(TokenEmbedding):
         # 为mask的地方为1
         chars_masks = chars.eq(self.char_pad_index)  # batch_size x max_len x max_word_len 如果为0, 说明是padding的位置了
         chars = self.char_embedding(chars)  # batch_size x max_len x max_word_len x embed_size
-
+        chars = self.dropout(chars)
         reshaped_chars = chars.reshape(batch_size * max_len, max_word_len, -1)
         char_seq_len = chars_masks.eq(0).sum(dim=-1).reshape(batch_size * max_len)
         lstm_chars = self.lstm(reshaped_chars, char_seq_len)[0].reshape(batch_size, max_len, max_word_len, -1)

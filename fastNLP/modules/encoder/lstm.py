@@ -40,12 +40,14 @@ class LSTM(nn.Module):
 
     def init_param(self):
         for name, param in self.named_parameters():
-            if 'bias_i' in name:
-                param.data.fill_(1)
-            elif 'bias_h' in name:
+            if 'bias' in name:
+                # based on https://github.com/pytorch/pytorch/issues/750#issuecomment-280671871
                 param.data.fill_(0)
+                n = param.size(0)
+                start, end = n // 4, n // 2
+                param.data[start:end].fill_(1)
             else:
-                nn.init.xavier_normal_(param)
+                nn.init.xavier_uniform_(param)
 
     def forward(self, x, seq_len=None, h0=None, c0=None):
         """

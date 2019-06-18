@@ -428,16 +428,16 @@ def _bioes_tag_to_spans(tags, ignore_labels=None):
     prev_bioes_tag = None
     for idx, tag in enumerate(tags):
         tag = tag.lower()
-        bieso_tag, label = tag[:1], tag[2:]
-        if bieso_tag in ('b', 's'):
+        bioes_tag, label = tag[:1], tag[2:]
+        if bioes_tag in ('b', 's'):
             spans.append((label, [idx, idx]))
-        elif bieso_tag in ('i', 'e') and prev_bioes_tag in ('b', 'i') and label == spans[-1][0]:
+        elif bioes_tag in ('i', 'e') and prev_bioes_tag in ('b', 'i') and label == spans[-1][0]:
             spans[-1][1][1] = idx
-        elif bieso_tag == 'o':
+        elif bioes_tag == 'o':
             pass
         else:
             spans.append((label, [idx, idx]))
-        prev_bioes_tag = bieso_tag
+        prev_bioes_tag = bioes_tag
     return [(span[0], (span[1][0], span[1][1] + 1))
             for span in spans
             if span[0] not in ignore_labels
