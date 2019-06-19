@@ -63,8 +63,10 @@ class Conll2003DataLoader(DataSetLoader):
             data.datasets[name] = dataset
 
         # 对construct vocab
-        word_vocab = Vocabulary(min_freq=3) if word_vocab_opt is None else Vocabulary(**word_vocab_opt)
-        word_vocab.from_dataset(data.datasets['train'], field_name=Const.INPUT)
+        word_vocab = Vocabulary(min_freq=2) if word_vocab_opt is None else Vocabulary(**word_vocab_opt)
+        # word_vocab.from_dataset(data.datasets['train'], field_name=Const.INPUT)
+        # TODO 这样感觉不规范呐
+        word_vocab.from_dataset(*data.datasets.values(), field_name=Const.INPUT)
         word_vocab.index_dataset(*data.datasets.values(), field_name=Const.INPUT, new_field_name=Const.INPUT)
         data.vocabs[Const.INPUT] = word_vocab
 

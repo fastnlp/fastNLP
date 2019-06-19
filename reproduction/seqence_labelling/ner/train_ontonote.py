@@ -25,10 +25,10 @@ word_embed = StaticEmbedding(vocab=data.vocabs[Const.INPUT],
                              model_dir_or_name='/hdd/fudanNLP/pretrain_vectors/glove.6B.100d.txt',
                              requires_grad=True)
 
-model = CNNBiLSTMCRF(word_embed, char_embed, hidden_size=200, num_layers=1, tag_vocab=data.vocabs[Const.TARGET],
+model = CNNBiLSTMCRF(word_embed, char_embed, hidden_size=400, num_layers=2, tag_vocab=data.vocabs[Const.TARGET],
                      encoding_type=encoding_type)
 
-optimizer = Adam(model.parameters(), lr=0.001)
+optimizer = SGD(model.parameters(), lr=0.015, momentum=0.9)
 
 callbacks = [GradientClipCallback(), FitlogCallback(data.datasets['test'], verbose=1)]
 

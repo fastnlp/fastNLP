@@ -87,7 +87,8 @@ class OntoNoteNERDataLoader(DataSetLoader):
 
         # 对construct vocab
         word_vocab = Vocabulary(min_freq=2) if word_vocab_opt is None else Vocabulary(**word_vocab_opt)
-        word_vocab.from_dataset(data.datasets['train'], field_name='raw_words')
+        # word_vocab.from_dataset(data.datasets['train'], field_name='raw_words')
+        word_vocab.from_dataset(*data.datasets.values(), field_name=Const.INPUT)
         word_vocab.index_dataset(*data.datasets.values(), field_name='raw_words', new_field_name=Const.INPUT)
         data.vocabs[Const.INPUT] = word_vocab
 
