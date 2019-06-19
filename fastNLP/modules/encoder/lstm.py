@@ -82,7 +82,7 @@ class LSTM(nn.Module):
                 output = output[:, unsort_idx]
             #  解决LSTM无法在DataParallel下使用的问题问题https://github.com/pytorch/pytorch/issues/1591
             if output.size(1) < max_len:
-                dummy_tensor = autograd.Variable(torch.zeros(batch_size, max_len - output.size(1),  output.size(-1)))
+                dummy_tensor = output.new_zeros(batch_size, max_len - output.size(1), output.size(-1))
                 output = torch.cat([output, dummy_tensor], 1)
         else:
             output, hx = self.lstm(x, hx)
