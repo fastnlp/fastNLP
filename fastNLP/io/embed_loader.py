@@ -72,7 +72,8 @@ class EmbedLoader(BaseLoader):
             for idx, line in enumerate(f, start_idx):
                 try:
                     parts = line.strip().split()
-                    word = parts[0]
+                    word = ''.join(parts[:-dim])
+                    nums = parts[-dim:]
                     # 对齐unk与pad
                     if word==padding and vocab.padding is not None:
                         word = vocab.padding
@@ -80,7 +81,7 @@ class EmbedLoader(BaseLoader):
                         word = vocab.unknown
                     if word in vocab:
                         index = vocab.to_index(word)
-                        matrix[index] = np.fromstring(' '.join(parts[1:]), sep=' ', dtype=dtype, count=dim)
+                        matrix[index] = np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim)
                         hit_flags[index] = True
                 except Exception as e:
                     if error == 'ignore':
@@ -135,10 +136,11 @@ class EmbedLoader(BaseLoader):
             for idx, line in enumerate(f, start=start):
                 try:
                     parts = line.strip().split()
-                    word = parts[0]
                     if dim == -1:
                         dim = len(parts) - 1
-                    vec = np.fromstring(' '.join(parts[1:]), sep=' ', dtype=dtype, count=dim)
+                    word = ''.join(parts[:-dim])
+                    nums = parts[-dim:]
+                    vec = np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim)
                     vec_dict[word] = vec
                     vocab.add_word(word)
                     if unknown is not None and unknown == word:
