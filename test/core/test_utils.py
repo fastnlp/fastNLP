@@ -237,6 +237,11 @@ class TestSeqLenToMask(unittest.TestCase):
         with self.assertRaises(AssertionError):
             mask = seq_len_to_mask(seq_len)
 
+        # 3. pad到指定长度
+        seq_len = np.random.randint(1, 10, size=(10,))
+        mask = seq_len_to_mask(seq_len, 100)
+        self.assertEqual(100, mask.size(1))
+
 
     def test_pytorch_seq_len(self):
         # 1. 随机测试
@@ -250,3 +255,8 @@ class TestSeqLenToMask(unittest.TestCase):
         seq_len = torch.randn(3, 4)
         with self.assertRaises(AssertionError):
             mask = seq_len_to_mask(seq_len)
+
+        # 3. pad到指定长度
+        seq_len = torch.randint(1, 10, size=(10, ))
+        mask = seq_len_to_mask(seq_len, 100)
+        self.assertEqual(100, mask.size(1))
