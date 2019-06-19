@@ -16,7 +16,7 @@ class Conll2003DataLoader(DataSetLoader):
         加载Conll2003格式的英语语料，该数据集的信息可以在https://www.clips.uantwerpen.be/conll2003/ner/找到。当task为pos
             时，返回的DataSet中target取值于第2列; 当task为chunk时，返回的DataSet中target取值于第3列;当task为ner时，返回
             的DataSet中target取值于第4列。所有"-DOCSTART- -X- O O"将被忽略，这会导致数据的数量少于很多文献报道的值，但
-            鉴于"-DOCSTART- -X- O O"只是用于文档分割的符号，并不应该作为预测对象，所以我们忽略了数据中的中该值
+            鉴于"-DOCSTART- -X- O O"只是用于文档分割的符号，并不应该作为预测对象，所以我们忽略了数据中的-DOCTSTART-开头的行
         ner与chunk任务读取后的数据的target将为encoding_type类型。pos任务读取后就是pos列的数据。
 
         :param task: 指定需要标注任务。可选ner, pos, chunk
@@ -64,8 +64,6 @@ class Conll2003DataLoader(DataSetLoader):
 
         # 对construct vocab
         word_vocab = Vocabulary(min_freq=2) if word_vocab_opt is None else Vocabulary(**word_vocab_opt)
-        # word_vocab.from_dataset(data.datasets['train'], field_name=Const.INPUT)
-        # TODO 这样感觉不规范呐
         word_vocab.from_dataset(*data.datasets.values(), field_name=Const.INPUT)
         word_vocab.index_dataset(*data.datasets.values(), field_name=Const.INPUT, new_field_name=Const.INPUT)
         data.vocabs[Const.INPUT] = word_vocab

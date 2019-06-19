@@ -791,7 +791,7 @@ class _WordBertModel(nn.Module):
         # +2是由于需要加入[CLS]与[SEP]
         word_pieces = words.new_full((batch_size, max_word_piece_length+2), fill_value=self._wordpiece_pad_index)
         word_pieces[:, 0].fill_(self._cls_index)
-        word_pieces[:, word_pieces_lengths+1] = self._sep_index
+        word_pieces[torch.arange(batch_size).to(words), word_pieces_lengths+1] = self._sep_index
         attn_masks = torch.zeros_like(word_pieces)
         # 1. 获取words的word_pieces的id，以及对应的span范围
         word_indexes = words.tolist()

@@ -13,7 +13,7 @@ import hashlib
 def cached_path(url_or_filename: str, cache_dir: Path=None) -> Path:
     """
         给定一个url或者文件名(可以是具体的文件名，也可以是文件)，先在cache_dir下寻找该文件是否存在，如果不存在则去下载, 并
-    将文件放入到
+    将文件放入到cache_dir中
     """
     if cache_dir is None:
         dataset_cache = Path(get_defalt_path())
@@ -88,7 +88,7 @@ def split_filename_suffix(filepath):
 def get_from_cache(url: str, cache_dir: Path = None) -> Path:
     """
     尝试在cache_dir中寻找url定义的资源; 如果没有找到。则从url下载并将结果放在cache_dir下，缓存的名称由url的结果推断而来。
-        如果从url中下载的资源解压后有多个文件，则返回directory的路径; 如果只有一个资源，则返回具体的路径
+        如果从url中下载的资源解压后有多个文件，则返回directory的路径; 如果只有一个资源，则返回具体的路径。
 
     """
     cache_dir.mkdir(parents=True, exist_ok=True)
