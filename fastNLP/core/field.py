@@ -242,7 +242,7 @@ class FieldArray:
                 new_contents.append(cell.split(sep))
             except Exception as e:
                 print(f"Exception happens when process value in index {index}.")
-                print(e)
+                raise e
         return self._after_process(new_contents, inplace=inplace)
 
     def int(self, inplace:bool=True):
@@ -282,7 +282,7 @@ class FieldArray:
                     new_contents.append(float(cell))
             except Exception as e:
                 print(f"Exception happens when process value in index {index}.")
-                print(e)
+                raise e
         return self._after_process(new_contents, inplace=inplace)
 
     def bool(self, inplace=True):
@@ -302,7 +302,7 @@ class FieldArray:
                     new_contents.append(bool(cell))
             except Exception as e:
                 print(f"Exception happens when process value in index {index}.")
-                print(e)
+                raise e
 
         return self._after_process(new_contents, inplace=inplace)
 
@@ -323,7 +323,7 @@ class FieldArray:
                     new_contents.append(cell.lower())
             except Exception as e:
                 print(f"Exception happens when process value in index {index}.")
-                print(e)
+                raise e
         return self._after_process(new_contents, inplace=inplace)
 
     def upper(self, inplace=True):
@@ -343,7 +343,7 @@ class FieldArray:
                     new_contents.append(cell.upper())
             except Exception as e:
                 print(f"Exception happens when process value in index {index}.")
-                print(e)
+                raise e
         return self._after_process(new_contents, inplace=inplace)
 
     def value_count(self):

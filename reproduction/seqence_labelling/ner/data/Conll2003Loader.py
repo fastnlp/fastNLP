@@ -58,19 +58,20 @@ class Conll2003DataLoader(DataSetLoader):
             dataset = self.load(path)
             dataset.apply_field(lambda words: words, field_name='raw_words', new_field_name=Const.INPUT)
             if lower:
-                dataset.apply_field(lambda words:[word.lower() for word in words], field_name=Const.INPUT,
-                                    new_field_name=Const.INPUT)
+                dataset.words.lower()
             data.datasets[name] = dataset
 
         # 对construct vocab
         word_vocab = Vocabulary(min_freq=2) if word_vocab_opt is None else Vocabulary(**word_vocab_opt)
-        word_vocab.from_dataset(*data.datasets.values(), field_name=Const.INPUT)
+        word_vocab.from_dataset(data.datasets['train'], field_name=Const.INPUT,
+                                no_create_entry_dataset=[dataset for name, dataset in data.datasets.items() if name!='train'])
         word_vocab.index_dataset(*data.datasets.values(), field_name=Const.INPUT, new_field_name=Const.INPUT)
         data.vocabs[Const.INPUT] = word_vocab
 
         # cap words
         cap_word_vocab = Vocabulary()
-        cap_word_vocab.from_dataset(*data.datasets.values(), field_name='raw_words')
+        cap_word_vocab.from_dataset(data.datasets['train'], field_name='raw_words',
+                                no_create_entry_dataset=[dataset for name, dataset in data.datasets.items() if name!='train'])
         cap_word_vocab.index_dataset(*data.datasets.values(), field_name='raw_words', new_field_name='cap_words')
         input_fields.append('cap_words')
         data.vocabs['cap_words'] = cap_word_vocab
