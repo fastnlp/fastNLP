@@ -21,6 +21,7 @@ import os
 
 import torch
 from torch import nn
+import glob
 
 CONFIG_FILE = 'bert_config.json'
 MODEL_WEIGHTS = 'pytorch_model.bin'
@@ -346,7 +347,12 @@ class BertModel(nn.Module):
         # Instantiate model.
         model = cls(*inputs, **config, **kwargs)
         if state_dict is None:
-            weights_path = os.path.join(pretrained_model_dir, MODEL_WEIGHTS)
+            files = glob.glob(os.path.join(pretrained_model_dir, '*.bin'))
+            if len(files)==0:
+                raise FileNotFoundError(f"There is no *.bin file in {pretrained_model_dir}")
+            elif len(files)>1:
+                raise FileExistsError(f"There are multiple *.bin files in {pretrained_model_dir}")
+            weights_path = files[0]
             state_dict = torch.load(weights_path)
 
         old_keys = []
@@ -388,16 +394,6 @@ class BertModel(nn.Module):
             print("Weights from pretrained model not used in {}: {}".format(
                 model.__class__.__name__, unexpected_keys))
         return model
-
-
-
-
-
-
-
-
-
-
 
 
 def whitespace_tokenize(text):
@@ -671,6 +667,16 @@ class BertTokenizer(object):
         self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
         self.max_len = max_len if max_len is not None else int(1e12)
 
+    def _reinit_on_new_vocab(self, vocab):
+        """
+        在load bert之后，可能会对vocab进行重新排列。重新排列之后调用这个函数重新初始化与vocab相关的性质
+
+        :param vocab:
+        :return:
+        """
+        self.vocab = vocab
+        self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
+
     def tokenize(self, text):
         split_tokens = []
         if self.do_basic_tokenize:
@@ -706,6 +712,8 @@ class BertTokenizer(object):
         index = 0
         if os.path.isdir(vocab_path):
             vocab_file = os.path.join(vocab_path, VOCAB_NAME)
+        else:
+            vocab_file = vocab_path
         with open(vocab_file, "w", encoding="utf-8") as writer:
             for token, token_index in sorted(self.vocab.items(), key=lambda kv: kv[1]):
                 if index != token_index:
@@ -751,11 +759,44 @@ class _WordBertModel(nn.Module):
 
         assert pool_method in ('avg', 'max', 'first', 'last')
         self.pool_method = pool_method
-
         self.include_cls_sep = include_cls_sep
 
         # 将所有vocab中word的wordpiece计算出来, 需要额外考虑[CLS]和[SEP]
         print("Start to generating word pieces for word.")
+        # 第一步统计出需要的word_piece, 然后创建新的embed和word_piece_vocab, 然后填入值
+        word_piece_dict = {'[CLS]':1, '[SEP]':1}  # 用到的word_piece以及新增的
+        found_count = 0
+        for word, index in vocab:
+            if index == vocab.padding_idx:  # pad是个特殊的符号
+                word = '[PAD]'
+            elif index == vocab.unknown_idx:
+                word = '[UNK]'
+            word_pieces = self.tokenzier.wordpiece_tokenizer.tokenize(word)
+            if len(word_pieces)==1:
+                if not vocab._is_word_no_create_entry(word):  # 如果是train中的值, 但是却没有找到
+                    if index!=vocab.unknown_idx and word_pieces[0]=='[UNK]': # 说明这个词不在原始的word里面
+                        word_piece_dict[word] = 1  # 新增一个值
+                        continue
+            for word_piece in word_pieces:
+                word_piece_dict[word_piece] = 1
+            found_count += 1
+        original_embed = self.encoder.embeddings.word_embeddings.weight.data
+        # 特殊词汇要特殊处理
+        embed = nn.Embedding(len(word_piece_dict), original_embed.size(1))  # 新的embed
+        new_word_piece_vocab = collections.OrderedDict()
+        for index, token in enumerate(['[PAD]', '[UNK]']):
+            word_piece_dict.pop(token, None)
+            embed.weight.data[index] = original_embed[self.tokenzier.vocab[token]]
+            new_word_piece_vocab[token] = index
+        for token in word_piece_dict.keys():
+            if token in self.tokenzier.vocab:
+                embed.weight.data[len(new_word_piece_vocab)] = original_embed[self.tokenzier.vocab[token]]
+            else:
+                embed.weight.data[len(new_word_piece_vocab)] = original_embed[self.tokenzier.vocab['[UNK]']]
+            new_word_piece_vocab[token] = len(new_word_piece_vocab)
+        self.tokenzier._reinit_on_new_vocab(new_word_piece_vocab)
+        self.encoder.embeddings.word_embeddings = embed
+
         word_to_wordpieces = []
         word_pieces_lengths = []
         for word, index in vocab:
@@ -767,12 +808,11 @@ class _WordBertModel(nn.Module):
             word_pieces = self.tokenzier.convert_tokens_to_ids(word_pieces)
             word_to_wordpieces.append(word_pieces)
             word_pieces_lengths.append(len(word_pieces))
-        self._cls_index = len(vocab)
-        self._sep_index = len(vocab) + 1
+        print("Found(Or seg into word pieces) {} words out of {}.".format(found_count, len(vocab)))
+        self._cls_index = self.tokenzier.vocab['[CLS]']
+        self._sep_index = self.tokenzier.vocab['[SEP]']
         self._pad_index = vocab.padding_idx
-        self._wordpiece_pad_index = self.tokenzier.convert_tokens_to_ids(['[PAD]'])[0]  # 需要用于生成word_piece
-        word_to_wordpieces.append(self.tokenzier.convert_tokens_to_ids(['[CLS]']))
-        word_to_wordpieces.append(self.tokenzier.convert_tokens_to_ids(['[SEP]']))
+        self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
         self.word_to_wordpieces = np.array(word_to_wordpieces)
         self.word_pieces_lengths = nn.Parameter(torch.LongTensor(word_pieces_lengths), requires_grad=False)
         print("Successfully generate word pieces.")
@@ -850,7 +890,7 @@ class _WordPieceBertModel(nn.Module):
     这个模块用于直接计算word_piece的结果.
 
     """
-    def __init__(self, model_dir:str, vocab:Vocabulary, layers:str='-1'):
+    def __init__(self, model_dir:str, layers:str='-1'):
         super().__init__()
 
         self.tokenzier = BertTokenizer.from_pretrained(model_dir)
@@ -866,44 +906,34 @@ class _WordPieceBertModel(nn.Module):
                 assert layer<encoder_layer_number, f"The layer index:{layer} is out of scope for " \
                     f"a bert model with {encoder_layer_number} layers."
 
-        # 将所有vocab中word的wordpiece计算出来, 需要额外考虑[CLS]和[SEP]
-        print("Start to generating word pieces for word.")
-        self.word_to_wordpieces = []
-        self.word_pieces_length = []
-        for word, index in vocab:
-            if index == vocab.padding_idx:  # pad是个特殊的符号
-                word = '[PAD]'
-            elif index == vocab.unknown_idx:
-                word = '[UNK]'
-            word_pieces = self.tokenzier.wordpiece_tokenizer.tokenize(word)
-            word_pieces = self.tokenzier.convert_tokens_to_ids(word_pieces)
-            self.word_to_wordpieces.append(word_pieces)
-            self.word_pieces_length.append(len(word_pieces))
-        self._cls_index = len(vocab)
-        self._sep_index = len(vocab) + 1
-        self._pad_index = vocab.padding_idx
-        self._wordpiece_pad_index = self.tokenzier.convert_tokens_to_ids(['[PAD]'])[0]  # 需要用于生成word_piece
-        self.word_to_wordpieces.append(self.tokenzier.convert_tokens_to_ids(['[CLS]']))
-        self.word_to_wordpieces.append(self.tokenzier.convert_tokens_to_ids(['[SEP]']))
-        self.word_to_wordpieces = np.array(self.word_to_wordpieces, dtype=int)
-        print("Successfully generate word pieces.")
+        self._cls_index = self.tokenzier.vocab['[CLS]']
+        self._sep_index = self.tokenzier.vocab['[SEP]']
+        self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
 
-    def index_dataset(self, *datasets):
+    def index_dataset(self, *datasets, field_name):
         """
-        使用bert的tokenizer将word_pieces与word_pieces_seq_len这两列加入到datasets中，并将他们设置为input。加入的word_piece
-            已经包含了[CLS]与[SEP], 且将word_pieces这一列的pad value设置为了bert的pad value。
+        使用bert的tokenizer新生成word_pieces列加入到datasets中，并将他们设置为input。如果首尾不是
+            [CLS]与[SEP]会在首尾额外加入[CLS]与[SEP], 且将word_pieces这一列的pad value设置为了bert的pad value。
 
         :param datasets: DataSet对象
+        :param field_name: 基于哪一列index
         :return:
         """
         def convert_words_to_word_pieces(words):
-            word_pieces = list(chain(*self.word_to_wordpieces[words].tolist()))
-            word_pieces = [self._cls_index] + word_pieces + [self._sep_index]
+            word_pieces = []
+            for word in words:
+                tokens = self.tokenzier.wordpiece_tokenizer.tokenize(word)
+                word_piece_ids = self.tokenzier.convert_tokens_to_ids(tokens)
+                word_pieces.extend(word_piece_ids)
+            if word_pieces[0]!=self._cls_index:
+                word_pieces.insert(0, self._cls_index)
+            if word_pieces[-1]!=self._sep_index:
+                word_pieces.insert(-1, self._sep_index)
             return word_pieces
 
         for index, dataset in enumerate(datasets):
             try:
-                dataset.apply_field(convert_words_to_word_pieces, field_name='words', new_field_name='word_pieces',
+                dataset.apply_field(convert_words_to_word_pieces, field_name=field_name, new_field_name='word_pieces',
                                     is_input=True)
                 dataset.set_pad_val('word_pieces', self._wordpiece_pad_index)
             except Exception as e:
@@ -919,7 +949,7 @@ class _WordPieceBertModel(nn.Module):
         """
         batch_size, max_len = word_pieces.size()
 
-        attn_masks = word_pieces.ne(self._pad_index)
+        attn_masks = word_pieces.ne(self._wordpiece_pad_index)
         bert_outputs, _ = self.encoder(word_pieces, token_type_ids=token_type_ids, attention_mask=attn_masks,
                                            output_all_encoded_layers=True)
         # output_layers = [self.layers]  # len(self.layers) x batch_size x max_word_piece_length x hidden_size

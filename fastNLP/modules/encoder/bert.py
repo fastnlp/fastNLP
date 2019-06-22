@@ -2,21 +2,19 @@
 import os
 from torch import nn
 import torch
-from ...core.vocabulary import Vocabulary
 from ...io.file_utils import _get_base_url, cached_path
 from ._bert import _WordPieceBertModel, BertModel
 
-
 class BertWordPieceEncoder(nn.Module):
     """
-    可以通过读取vocabulary使用的Bert的Encoder。传入vocab，然后调用index_datasets方法在vocabulary中生成word piece的表示。
+    读取bert模型，读取之后调用index_dataset方法在dataset中生成word_pieces这一列。
 
     :param fastNLP.Vocabulary vocab: 词表
     :param str model_dir_or_name: 模型所在目录或者模型的名称。默认值为``en-base-uncased``
     :param str layers:最终结果中的表示。以','隔开层数，可以以负数去索引倒数几层
     :param bool requires_grad: 是否需要gradient。
     """
-    def __init__(self, vocab:Vocabulary, model_dir_or_name:str='en-base', layers:str='-1',
+    def __init__(self, model_dir_or_name:str='en-base-uncased', layers:str='-1',
                  requires_grad:bool=False):
         super().__init__()
         PRETRAIN_URL = _get_base_url('bert')
@@ -44,7 +42,7 @@ class BertWordPieceEncoder(nn.Module):
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
-        self.model = _WordPieceBertModel(model_dir=model_dir, vocab=vocab, layers=layers)
+        self.model = _WordPieceBertModel(model_dir=model_dir, layers=layers)
         self._embed_size = len(self.model.layers) * self.model.encoder.hidden_size
         self.requires_grad = requires_grad
 
@@ -69,27 +67,27 @@ class BertWordPieceEncoder(nn.Module):
     def embed_size(self):
         return self._embed_size
 
-    def index_datasets(self, *datasets):
+    def index_datasets(self, *datasets, field_name):
         """
-        根据datasets中的'words'列对datasets进行word piece的index。
+        使用bert的tokenizer新生成word_pieces列加入到datasets中，并将他们设置为input。如果首尾不是
+            [CLS]与[SEP]会在首尾额外加入[CLS]与[SEP], 且将word_pieces这一列的pad value设置为了bert的pad value。
 
-        Example::
-
-        :param datasets:
+        :param datasets: DataSet对象
+        :param field_name: str基于哪一列index
         :return:
         """
-        self.model.index_dataset(*datasets)
+        self.model.index_dataset(*datasets, field_name=field_name)
 
-    def forward(self, words, token_type_ids=None):
+
+    def forward(self, word_pieces, token_type_ids=None):
         """
-        计算words的bert embedding表示。计算之前会在每句话的开始增加[CLS]在结束增加[SEP], 并根据include_cls_sep判断要不要
-            删除这两个表示。
+        计算words的bert embedding表示。传入的words中应该自行包含[CLS]与[SEP]的tag。
 
         :param words: batch_size x max_len
         :param token_type_ids: batch_size x max_len, 用于区分前一句和后一句话
         :return: torch.FloatTensor. batch_size x max_len x (768*len(self.layers))
         """
-        outputs = self.model(words, token_type_ids)
+        outputs = self.model(word_pieces, token_type_ids)
         outputs = torch.cat([*outputs], dim=-1)
 
         return outputs

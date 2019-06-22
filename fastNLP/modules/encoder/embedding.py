@@ -13,7 +13,7 @@ from .lstm import LSTM
 from ...core.vocabulary import Vocabulary
 from abc import abstractmethod
 import torch
-from ...io import EmbedLoader
+import numpy as np
 import torch.nn.functional as F
 import os
 from ._elmo import _ElmoModel
@@ -21,6 +21,7 @@ from ...io.file_utils import cached_path, _get_base_url
 from ._bert import _WordBertModel
 from typing import List
 
+import warnings
 from ...core.dataset import DataSet
 from ...core.batch import DataSetIter
 from ...core.sampler import SequentialSampler
@@ -33,13 +34,15 @@ class Embedding(nn.Module):
 
     Embedding组件. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度"""
     
-    def __init__(self, init_embed, dropout=0.0):
+    def __init__(self, init_embed, dropout=0.0, dropout_word=0, unk_index=None):
         """
 
         :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: Embedding的大小(传入tuple(int, int),
             第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, Embedding, ndarray等则直接使用该值初始化Embedding;
             也可以传入TokenEmbedding对象
         :param float dropout: 对Embedding的输出的dropout。
+        :param float dropout_word: 按照一定比例随机将word设置为unk的idx，这样可以使得unk这个token得到足够的训练
+        :param int unk_index: drop word时替换为的index，如果init_embed为TokenEmbedding不需要传入该值。
         """
         super(Embedding, self).__init__()
 
@@ -48,20 +51,32 @@ class Embedding(nn.Module):
         self.dropout = nn.Dropout(dropout)
         if not isinstance(self.embed, TokenEmbedding):
             self._embed_size = self.embed.weight.size(1)
+            if dropout_word>0 and isinstance(unk_index, int):
+                raise ValueError("When drop word is set, you need to pass in the unk_index.")
         else:
             self._embed_size = self.embed.embed_size
-    
+            unk_index = self.embed.get_word_vocab().unknown_idx
+        self.unk_index = unk_index
+        self.dropout_word = dropout_word
+
     def forward(self, x):
         """
         :param torch.LongTensor x: [batch, seq_len]
         :return: torch.Tensor : [batch, seq_len, embed_dim]
         """
+        if self.dropout_word>0 and self.training:
+            mask = torch.ones_like(x).float() * self.dropout_word
+            mask = torch.bernoulli(mask).byte()  # dropout_word越大，越多位置为1
+            x = x.masked_fill(mask, self.unk_index)
         x = self.embed(x)
         return self.dropout(x)
 
     @property
     def num_embedding(self)->int:
-        return len(self)
+        if isinstance(self.embed, nn.Embedding):
+            return self.embed.weight.size(0)
+        else:
+            return self.embed.num_embedding
 
     def __len__(self):
         return len(self.embed)
@@ -95,7 +110,7 @@ class Embedding(nn.Module):
     @property
     def size(self):
         if isinstance(self.embed, TokenEmbedding):
-            return torch.Size(self.embed._word_vocab, self.embed.embed_size)
+            return self.embed.size
         else:
             return self.embed.weight.size()
 
@@ -131,6 +146,10 @@ class TokenEmbedding(nn.Module):
     def embed_size(self) -> int:
         return self._embed_size
 
+    @property
+    def num_embedding(self) -> int:
+        return len(self._word_vocab)
+
     def get_word_vocab(self):
         """
         返回embedding的词典。
@@ -141,7 +160,7 @@ class TokenEmbedding(nn.Module):
 
     @property
     def size(self):
-        return torch.Size(self.embed._word_vocab, self._embed_size)
+        return torch.Size(self.num_embedding, self._embed_size)
 
 
 class StaticEmbedding(TokenEmbedding):
@@ -159,11 +178,12 @@ class StaticEmbedding(TokenEmbedding):
     :param model_dir_or_name: 可以有两种方式调用预训练好的static embedding：第一种是传入embedding的文件名，第二种是传入embedding
         的名称。目前支持的embedding包括{`en` 或者 `en-glove-840b-300` : glove.840B.300d, `en-glove-6b-50` : glove.6B.50d,
         `en-word2vec-300` : GoogleNews-vectors-negative300}。第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载。
-    :param requires_grad: 是否需要gradient
+    :param requires_grad: 是否需要gradient. 默认为True
+    :param init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。默认使用torch.nn.init.xavier_uniform_
+        。调用该方法时传入一个tensor对象。
 
     """
-
-    def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', requires_grad: bool=False):
+    def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', requires_grad: bool=True, init_method=None):
         super(StaticEmbedding, self).__init__(vocab)
 
         # 优先定义需要下载的static embedding有哪些。这里估计需要自己搞一个server，
@@ -190,14 +210,104 @@ class StaticEmbedding(TokenEmbedding):
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
         # 读取embedding
-        embedding = EmbedLoader.load_with_vocab(model_path, vocab=vocab)
-        embedding = torch.tensor(embedding)
+        embedding, hit_flags = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method)
         self.embedding = nn.Embedding(num_embeddings=embedding.shape[0], embedding_dim=embedding.shape[1],
                                       padding_idx=vocab.padding_idx,
                                       max_norm=None, norm_type=2, scale_grad_by_freq=False,
                                       sparse=False, _weight=embedding)
+        if vocab._no_create_word_length > 0:  # 需要映射，使得来自于dev, test的idx指向unk
+            words_to_words = nn.Parameter(torch.arange(len(vocab)).long(), requires_grad=False)
+            for word, idx in vocab:
+                if vocab._is_word_no_create_entry(word) and not hit_flags[idx]:
+                    words_to_words[idx] = vocab.unknown_idx
+            self.words_to_words = words_to_words
         self._embed_size = self.embedding.weight.size(1)
         self.requires_grad = requires_grad
+
+    @property
+    def requires_grad(self):
+        """
+        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
+        :return:
+        """
+        requires_grads = set([param.requires_grad for name, param in self.named_parameters()
+                                if 'words_to_words' not in name])
+        if len(requires_grads) == 1:
+            return requires_grads.pop()
+        else:
+            return None
+
+    @requires_grad.setter
+    def requires_grad(self, value):
+        for name, param in self.named_parameters():
+            if 'words_to_words' in name:
+                continue
+            param.requires_grad = value
+
+    def _load_with_vocab(self, embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True,
+                        error='ignore', init_method=None):
+        """
+        从embed_filepath这个预训练的词向量中抽取出vocab这个词表的词的embedding。EmbedLoader将自动判断embed_filepath是
+        word2vec(第一行只有两个元素)还是glove格式的数据。
+
+        :param str embed_filepath: 预训练的embedding的路径。
+        :param vocab: 词表 :class:`~fastNLP.Vocabulary` 类型，读取出现在vocab中的词的embedding。
+            没有出现在vocab中的词的embedding将通过找到的词的embedding的正态分布采样出来，以使得整个Embedding是同分布的。
+        :param dtype: 读出的embedding的类型
+        :param str padding: 词表中padding的token
+        :param str unknown: 词表中unknown的token
+        :param bool normalize: 是否将每个vector归一化到norm为1
+        :param str error: `ignore` , `strict` ; 如果 `ignore` ，错误将自动跳过; 如果 `strict` , 错误将抛出。
+            这里主要可能出错的地方在于词表有空行或者词表出现了维度不一致。
+        :param init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。默认使用torch.nn.init.zeros_
+        :return torch.tensor:  shape为 [len(vocab), dimension], dimension由pretrain的embedding决定。
+        """
+        assert isinstance(vocab, Vocabulary), "Only fastNLP.Vocabulary is supported."
+        if not os.path.exists(embed_filepath):
+            raise FileNotFoundError("`{}` does not exist.".format(embed_filepath))
+        if init_method is None:
+            init_method = nn.init.xavier_uniform_
+        with open(embed_filepath, 'r', encoding='utf-8') as f:
+            found_count = 0
+            line = f.readline().strip()
+            parts = line.split()
+            start_idx = 0
+            if len(parts) == 2:
+                dim = int(parts[1])
+                start_idx += 1
+            else:
+                dim = len(parts) - 1
+                f.seek(0)
+            matrix = torch.zeros(len(vocab), dim)
+            init_method(matrix)
+            hit_flags = np.zeros(len(vocab), dtype=bool)
+            for idx, line in enumerate(f, start_idx):
+                try:
+                    parts = line.strip().split()
+                    word = ''.join(parts[:-dim])
+                    nums = parts[-dim:]
+                    # 对齐unk与pad
+                    if word == padding and vocab.padding is not None:
+                        word = vocab.padding
+                    elif word == unknown and vocab.unknown is not None:
+                        word = vocab.unknown
+                    if word in vocab:
+                        index = vocab.to_index(word)
+                        matrix[index] = torch.from_numpy(np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim))
+                        found_count += 1
+                        hit_flags[index] = True
+                except Exception as e:
+                    if error == 'ignore':
+                        warnings.warn("Error occurred at the {} line.".format(idx))
+                    else:
+                        print("Error occurred at the {} line.".format(idx))
+                        raise e
+            print("Found {} out of {} words in the pre-training embedding.".format(found_count, len(vocab)))
+
+            if normalize:
+                matrix /= (torch.norm(matrix, dim=1, keepdim=True) + 1e-12)
+
+            return matrix, hit_flags
 
     def forward(self, words):
         """
@@ -206,6 +316,8 @@ class StaticEmbedding(TokenEmbedding):
         :param words: torch.LongTensor, [batch_size, max_len]
         :return: torch.FloatTensor, [batch_size, max_len, embed_size]
         """
+        if hasattr(self, 'words_to_words'):
+            words = self.words_to_words[words]
         return self.embedding(words)
 
 
@@ -382,7 +494,7 @@ class ElmoEmbedding(ContextualEmbedding):
         :return:
         """
         requires_grads = set([param.requires_grad for name, param in self.named_parameters()
-                             if 'words_to_chars_embedding' not in name])
+                             if 'words_to_chars_embedding' not in name and 'words_to_words' not in name])
         if len(requires_grads) == 1:
             return requires_grads.pop()
         else:
@@ -391,7 +503,7 @@ class ElmoEmbedding(ContextualEmbedding):
     @requires_grad.setter
     def requires_grad(self, value):
         for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' in name: # 这个不能加入到requires_grad中
+            if 'words_to_chars_embedding' in name or 'words_to_words' in name: # 这个不能加入到requires_grad中
                 continue
             param.requires_grad = value
 
@@ -501,7 +613,8 @@ def _construct_char_vocab_from_vocab(vocab:Vocabulary, min_freq:int=1):
     """
     char_vocab = Vocabulary(min_freq=min_freq)
     for word, index in vocab:
-        char_vocab.add_word_lst(list(word))
+        if not vocab._is_word_no_create_entry(word):
+            char_vocab.add_word_lst(list(word))
     return char_vocab
 
 
@@ -566,7 +679,7 @@ class CNNCharEmbedding(TokenEmbedding):
                                                      requires_grad=False)
         self.word_lengths = nn.Parameter(torch.zeros(len(vocab)).long(), requires_grad=False)
         for word, index in vocab:
-            # if index!=vocab.padding_idx:  # 如果是pad的话，直接就为pad_value了。 修改为不区分pad, 这样所有的<pad>也是同一个embed
+            # if index!=vocab.padding_idx:  # 如果是pad的话，直接就为pad_value了。修改为不区分pad, 这样所有的<pad>也是同一个embed
             self.words_to_chars_embedding[index, :len(word)] = \
                 torch.LongTensor([self.char_vocab.to_index(c) for c in word])
             self.word_lengths[index] = len(word)
@@ -638,7 +751,7 @@ class CNNCharEmbedding(TokenEmbedding):
             if 'words_to_chars_embedding' in name or 'word_lengths' in name:  # 这个不能reset
                 continue
             if param.data.dim()>1:
-                nn.init.xavier_normal_(param, 1)
+                nn.init.xavier_uniform_(param, 1)
             else:
                 nn.init.uniform_(param, -1, 1)
 
