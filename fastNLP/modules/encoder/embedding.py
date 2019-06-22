@@ -408,10 +408,10 @@ class BertEmbedding(ContextualEmbedding):
 
 
     :param fastNLP.Vocabulary vocab: 词表
-    :param str model_dir_or_name: 模型所在目录或者模型的名称。默认值为``en-base-uncased``
+    :param str model_dir_or_name: 模型所在目录或者模型的名称。默认值为 ``en-base-uncased``.
     :param str layers:最终结果中的表示。以','隔开层数，可以以负数去索引倒数几层
     :param str pool_method: 因为在bert中，每个word会被表示为多个word pieces, 当获取一个word的表示的时候，怎样从它的word pieces
-        中计算得到他对应的表示。支持``last``, ``first``, ``avg``, ``max``.
+        中计算得到他对应的表示。支持 ``last``, ``first``, ``avg``, ``max``.
     :param bool include_cls_sep: bool，在bert计算句子的表示的时候，需要在前面加上[CLS]和[SEP], 是否在结果中保留这两个内容。 这样
         会使得word embedding的结果比输入的结果长两个token。在使用 :class::StackEmbedding 可能会遇到问题。
     :param bool requires_grad: 是否需要gradient。
@@ -459,7 +459,7 @@ class BertEmbedding(ContextualEmbedding):
         计算words的bert embedding表示。计算之前会在每句话的开始增加[CLS]在结束增加[SEP], 并根据include_cls_sep判断要不要
             删除这两个token的表示。
 
-        :param words: batch_size x max_len
+        :param torch.LongTensor words: [batch_size, max_len]
         :return: torch.FloatTensor. batch_size x max_len x (768*len(self.layers))
         """
         outputs = self._get_sent_reprs(words)
@@ -777,7 +777,8 @@ class StackEmbedding(TokenEmbedding):
 
     Example::
 
-        >>>
+        >>> embed_1 = StaticEmbedding(vocab, model_dir_or_name='en-glove-6b-50', requires_grad=True)
+        >>> embed_2 = StaticEmbedding(vocab, model_dir_or_name='en-word2vec-300', requires_grad=True)
 
 
     :param embeds: 一个由若干个TokenEmbedding组成的list，要求每一个TokenEmbedding的词表都保持一致
