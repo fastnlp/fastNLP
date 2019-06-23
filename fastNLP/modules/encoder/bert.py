@@ -73,11 +73,10 @@ class BertWordPieceEncoder(nn.Module):
             [CLS]与[SEP]会在首尾额外加入[CLS]与[SEP], 且将word_pieces这一列的pad value设置为了bert的pad value。
 
         :param datasets: DataSet对象
-        :param field_name: str基于哪一列index
+        :param field_name: 基于哪一列的内容生成word_pieces列。这一列中每个数据应该是List[str]的形式。
         :return:
         """
         self.model.index_dataset(*datasets, field_name=field_name)
-
 
     def forward(self, word_pieces, token_type_ids=None):
         """

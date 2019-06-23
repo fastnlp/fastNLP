@@ -831,7 +831,8 @@ class _WordBertModel(nn.Module):
         # +2是由于需要加入[CLS]与[SEP]
         word_pieces = words.new_full((batch_size, max_word_piece_length+2), fill_value=self._wordpiece_pad_index)
         word_pieces[:, 0].fill_(self._cls_index)
-        word_pieces[torch.arange(batch_size).to(words), word_pieces_lengths+1] = self._sep_index
+        batch_indexes = torch.arange(batch_size).to(words)
+        word_pieces[batch_indexes, word_pieces_lengths+1] = self._sep_index
         attn_masks = torch.zeros_like(word_pieces)
         # 1. 获取words的word_pieces的id，以及对应的span范围
         word_indexes = words.tolist()
@@ -879,8 +880,8 @@ class _WordBertModel(nn.Module):
                         start, end = batch_word_pieces_cum_length[i, j], batch_word_pieces_cum_length[i, j+1]
                         outputs[l_index, i, j+s_shift] = torch.mean(truncate_output_layer[i, start:end], dim=-2)
             if self.include_cls_sep:
-                outputs[:, :, 0] = output_layer[:, 0]
-                outputs[:, :, seq_len+s_shift] = output_layer[:, seq_len+s_shift]
+                outputs[l_index, :, 0] = output_layer[:, 0]
+                outputs[l_index, batch_indexes, seq_len+s_shift] = output_layer[batch_indexes, seq_len+s_shift]
         # 3. 最终的embedding结果
         return outputs
 

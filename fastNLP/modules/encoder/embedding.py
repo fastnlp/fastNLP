@@ -51,7 +51,7 @@ class Embedding(nn.Module):
         self.dropout = nn.Dropout(dropout)
         if not isinstance(self.embed, TokenEmbedding):
             self._embed_size = self.embed.weight.size(1)
-            if dropout_word>0 and isinstance(unk_index, int):
+            if dropout_word>0 and not isinstance(unk_index, int):
                 raise ValueError("When drop word is set, you need to pass in the unk_index.")
         else:
             self._embed_size = self.embed.embed_size
@@ -512,7 +512,8 @@ class BertEmbedding(ContextualEmbedding):
     """
     别名：:class:`fastNLP.modules.BertEmbedding`   :class:`fastNLP.modules.encoder.embedding.BertEmbedding`
 
-    使用BERT对words进行encode的Embedding。
+    使用BERT对words进行encode的Embedding。建议将输入的words长度限制在450以内，而不要使用512。这是由于预训练的bert模型长
+        度限制为512个token，而因为输入的word是未进行word piece分割的，在分割之后长度可能会超过最大长度限制。
 
     Example::
 
@@ -523,7 +524,7 @@ class BertEmbedding(ContextualEmbedding):
     :param str model_dir_or_name: 模型所在目录或者模型的名称。默认值为``en-base-uncased``
     :param str layers:最终结果中的表示。以','隔开层数，可以以负数去索引倒数几层
     :param str pool_method: 因为在bert中，每个word会被表示为多个word pieces, 当获取一个word的表示的时候，怎样从它的word pieces
-        中计算得到他对应的表示。支持``last``, ``first``, ``avg``, ``max``.
+        中计算得到它对应的表示。支持``last``, ``first``, ``avg``, ``max``。
     :param bool include_cls_sep: bool，在bert计算句子的表示的时候，需要在前面加上[CLS]和[SEP], 是否在结果中保留这两个内容。 这样
         会使得word embedding的结果比输入的结果长两个token。在使用 :class::StackEmbedding 可能会遇到问题。
     :param bool requires_grad: 是否需要gradient。
@@ -673,8 +674,8 @@ class CNNCharEmbedding(TokenEmbedding):
         self.char_pad_index = self.char_vocab.padding_idx
         print(f"In total, there are {len(self.char_vocab)} distinct characters.")
         # 对vocab进行index
-        self.max_word_len = max(map(lambda x: len(x[0]), vocab))
-        self.words_to_chars_embedding = nn.Parameter(torch.full((len(vocab), self.max_word_len),
+        max_word_len = max(map(lambda x: len(x[0]), vocab))
+        self.words_to_chars_embedding = nn.Parameter(torch.full((len(vocab), max_word_len),
                                                                 fill_value=self.char_pad_index, dtype=torch.long),
                                                      requires_grad=False)
         self.word_lengths = nn.Parameter(torch.zeros(len(vocab)).long(), requires_grad=False)
@@ -707,7 +708,7 @@ class CNNCharEmbedding(TokenEmbedding):
         # 为1的地方为mask
         chars_masks = chars.eq(self.char_pad_index)  # batch_size x max_len x max_word_len 如果为0, 说明是padding的位置了
         chars = self.char_embedding(chars)  # batch_size x max_len x max_word_len x embed_size
-        chars = self.dropout(chars)
+        self.dropout(chars)
         reshaped_chars = chars.reshape(batch_size*max_len, max_word_len, -1)
         reshaped_chars = reshaped_chars.transpose(1, 2)  # B' x E x M
         conv_chars = [conv(reshaped_chars).transpose(1, 2).reshape(batch_size, max_len, max_word_len, -1)

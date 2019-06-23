@@ -395,6 +395,8 @@ def _get_ele_type_and_dim(cell:Any, dim=0):
     :return:
     """
     if isinstance(cell, (str, Number, np.bool_)):
+        if hasattr(cell, 'dtype'):
+            return cell.dtype.type, dim
         return type(cell), dim
     elif isinstance(cell, list):
         dim += 1
@@ -412,7 +414,7 @@ def _get_ele_type_and_dim(cell:Any, dim=0):
         return cell.dtype, cell.dim() + dim  # 如果是torch.mean的结果是0
     elif isinstance(cell, np.ndarray):
         if cell.dtype != np.dtype('O'):  # 如果不是object的话说明是well-formatted的了
-            return cell.dtype.type, cell.ndim + dim
+            return cell.dtype.type, cell.ndim + dim  # dtype.type返回的会是np.int32, np.float等
         # 否则需要继续往下iterate
         dim += 1
         res = [_get_ele_type_and_dim(cell_i, dim) for cell_i in cell]
@@ -537,31 +539,30 @@ class AutoPadder(Padder):
         if field_ele_dtype:
             if dim>3:
                 return np.array(contents)
-            if isinstance(field_ele_dtype, np.dtype) or field_ele_dtype in (float, int, bool, str):
-                if isinstance(field_ele_dtype, np.number) or field_ele_dtype in (float, int, bool):
-                    if dim==0:
+            if isinstance(field_ele_dtype, type) and \
+                    (issubclass(field_ele_dtype, np.number) or issubclass(field_ele_dtype, Number)):
+                if dim==0:
+                    array = np.array(contents, dtype=field_ele_dtype)
+                elif dim==1:
+                    max_len = max(map(len, contents))
+                    array = np.full((len(contents), max_len), self.pad_val, dtype=field_ele_dtype)
+                    for i, content_i in enumerate(contents):
+                        array[i, :len(content_i)] = content_i
+                elif dim==2:
+                    max_len = max(map(len, contents))
+                    max_word_len = max([max([len(content_ii) for content_ii in content_i]) for
+                                        content_i in contents])
+                    array = np.full((len(contents), max_len, max_word_len), self.pad_val, dtype=field_ele_dtype)
+                    for i, content_i in enumerate(contents):
+                        for j, content_ii in enumerate(content_i):
+                            array[i, j, :len(content_ii)] = content_ii
+                else:
+                    shape = np.shape(contents)
+                    if len(shape)==4: # 说明各dimension是相同的大小
                         array = np.array(contents, dtype=field_ele_dtype)
-                    elif dim==1:
-                        max_len = max(map(len, contents))
-                        array = np.full((len(contents), max_len), self.pad_val, dtype=field_ele_dtype)
-                        for i, content_i in enumerate(contents):
-                            array[i, :len(content_i)] = content_i
-                    elif dim==2:
-                        max_len = max(map(len, contents))
-                        max_word_len = max([max([len(content_ii) for content_ii in content_i]) for
-                                            content_i in contents])
-                        array = np.full((len(contents), max_len, max_word_len), self.pad_val, dtype=field_ele_dtype)
-                        for i, content_i in enumerate(contents):
-                            for j, content_ii in enumerate(content_i):
-                                array[i, j, :len(content_ii)] = content_ii
                     else:
-                        shape = np.shape(contents)
-                        if len(shape)==4: # 说明各dimension是相同的大小
-                            array = np.array(contents, dtype=field_ele_dtype)
-                        else:
-                            raise RuntimeError(f"Field:{field_name} has 3 dimensions, every sample should have the same shape.")
-                    return array
-                return np.array(contents)
+                        raise RuntimeError(f"Field:{field_name} has 3 dimensions, every sample should have the same shape.")
+                return array
             elif str(field_ele_dtype).startswith('torch'):
                 if dim==0:
                     tensor = torch.tensor(contents).to(field_ele_dtype)

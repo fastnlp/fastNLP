@@ -68,7 +68,11 @@ class DataSetGetter:
                 else:
                     data = f.pad(vlist)
                     if not self.as_numpy:
-                        data, flag = _to_tensor(data, f.dtype)
+                        try:
+                            data, flag = _to_tensor(data, f.dtype)
+                        except TypeError as e:
+                            print(f"Field {n} cannot be converted to torch.tensor.")
+                            raise e
                     batch_dict[n] = data
             return batch_dict
 
@@ -173,15 +177,17 @@ class OnlineDataIter(BatchIter):
 
 def _to_tensor(batch, field_dtype):
     try:
-        if field_dtype is not None \
+        if field_dtype is not None and isinstance(field_dtype, type)\
                 and issubclass(field_dtype, Number) \
                 and not isinstance(batch, torch.Tensor):
             if issubclass(batch.dtype.type, np.floating):
                 new_batch = torch.as_tensor(batch).float()  # 默认使用float32
+            elif issubclass(batch.dtype.type, np.integer):
+                new_batch = torch.as_tensor(batch).long()  # 复用内存地址，避免复制
             else:
-                new_batch = torch.as_tensor(batch)  # 复用内存地址，避免复制
+                new_batch = torch.as_tensor(batch)
             return new_batch, True
         else:
             return batch, False
-    except:
-        return batch, False
+    except Exception as e:
+        raise e

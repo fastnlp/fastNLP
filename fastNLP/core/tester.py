@@ -99,7 +99,7 @@ class Tester(object):
 
         if isinstance(data, DataSet):
             self.data_iterator = DataSetIter(
-                dataset=data, batch_size=batch_size, num_workers=num_workers)
+                dataset=data, batch_size=batch_size, num_workers=num_workers, sampler=SequentialSampler())
         elif isinstance(data, BatchIter):
             self.data_iterator = data
         else:
