@@ -1,10 +1,10 @@
 import unittest
-from ..data import SNLIDataLoader
+from ..data import MatchingDataLoader
 from fastNLP.core.vocabulary import Vocabulary
 
 
 class TestCWSDataLoader(unittest.TestCase):
     def test_case1(self):
-        snli_loader = SNLIDataLoader()
+        snli_loader = MatchingDataLoader()
         # TODO: still in progress
 
