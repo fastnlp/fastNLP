@@ -29,8 +29,12 @@ class MatchingLoader(JsonLoader):
 
     def process(self, paths: Union[str, Dict[str, str]], dataset_name=None,
                 to_lower=False, char_information=False, seq_len_type: str=None,
-                bert_tokenizer: str=None, get_index=True, set_input: Union[list, bool]=True,
-                set_target: Union[list, bool] = True, concat: Union[str, list, bool]=None, ) -> DataInfo:
+                bert_tokenizer: str=None, get_index=True, set_input: Union[list, str, bool]=True,
+                set_target: Union[list, str, bool] = True, concat: Union[str, list, bool]=None, ) -> DataInfo:
+        if isinstance(set_input, str):
+            set_input = [set_input]
+        if isinstance(set_target, str):
+            set_target = [set_target]
         if isinstance(set_input, bool):
             auto_set_input = set_input
         else:

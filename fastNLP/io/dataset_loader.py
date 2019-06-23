@@ -16,7 +16,6 @@ __all__ = [
     'CSVLoader',
     'JsonLoader',
     'ConllLoader',
-    'MatchingLoader',
     'SNLILoader',
     'SSTLoader',
     'PeopleDailyCorpusLoader',
