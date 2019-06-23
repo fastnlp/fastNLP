@@ -120,7 +120,10 @@ class Tester(object):
                 raise TypeError(f"`{_model_name}.predict` must be callable to be used "
                                 f"for evaluation, not `{type(self._predict_func)}`.")
         else:
-            self._predict_func = self._model.forward
+            if isinstance(model, nn.DataParallel):
+                self._predict_func = self._model.module.forward
+            else:
+                self._predict_func = self._model.forward
     
     def test(self):
         """开始进行验证，并返回验证结果。

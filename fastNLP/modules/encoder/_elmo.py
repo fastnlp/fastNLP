@@ -709,7 +709,7 @@ class _ElmoModel(nn.Module):
                 config, word_emb_layer, char_emb_layer)
         self.token_embedder.load_state_dict(token_embedder_states, strict=False)
         if config['token_embedder']['word_dim'] > 0 and vocab._no_create_word_length > 0:  # 需要映射，使得来自于dev, test的idx指向unk
-            words_to_words = nn.Parameter(torch.arange(len(vocab)).long(), requires_grad=False)
+            words_to_words = nn.Parameter(torch.arange(len(vocab)+2).long(), requires_grad=False)
             for word, idx in vocab:
                 if vocab._is_word_no_create_entry(word):
                     words_to_words[idx] = vocab.unknown_idx
