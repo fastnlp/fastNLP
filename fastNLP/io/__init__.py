@@ -16,7 +16,6 @@ __all__ = [
     'CSVLoader',
     'JsonLoader',
     'ConllLoader',
-    'MatchingLoader',
     'SNLILoader',
     'SSTLoader',
     'PeopleDailyCorpusLoader',
@@ -27,6 +26,6 @@ __all__ = [
 ]
 
 from .embed_loader import EmbedLoader
-from .dataset_loader import DataSetLoader, CSVLoader, JsonLoader, ConllLoader, MatchingLoader,\
+from .dataset_loader import DataSetLoader, CSVLoader, JsonLoader, ConllLoader, \
     SNLILoader, SSTLoader, PeopleDailyCorpusLoader, Conll2003Loader
 from .model_io import ModelLoader, ModelSaver
