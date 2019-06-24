@@ -26,7 +26,7 @@ from .utils import _build_args
 from .utils import _check_arg_dict_list
 from .utils import _check_function_or_method
 from .utils import _get_func_signature
-
+from .utils import seq_len_to_mask
 
 class LossBase(object):
     """
@@ -223,7 +223,9 @@ class CrossEntropyLoss(LossBase):
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
     :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
-    :param padding_idx: padding的index，在计算loss时将忽略target中标号为padding_idx的内容
+    :param seq_len: 句子的长度, 长度之外的token不会计算loss。。
+    :param padding_idx: padding的index，在计算loss时将忽略target中标号为padding_idx的内容, 可以通过该值代替
+        传入seq_len.
 
     Example::
 
@@ -231,16 +233,18 @@ class CrossEntropyLoss(LossBase):
         
     """
     
-    def __init__(self, pred=None, target=None, padding_idx=-100):
+    def __init__(self, pred=None, target=None, seq_len=None, padding_idx=-100):
         super(CrossEntropyLoss, self).__init__()
-        self._init_param_map(pred=pred, target=target)
+        self._init_param_map(pred=pred, target=target, seq_len=seq_len)
         self.padding_idx = padding_idx
     
-    def get_loss(self, pred, target):
+    def get_loss(self, pred, target, seq_len=None):
         if pred.dim()>2:
-            if pred.size()[:2]==target.size():
-                # F.cross_entropy在计算时，如果pred是(16, 10 ,4), 会在第二维上去log_softmax, 所以需要交换一下位置
-                pred = pred.transpose(1, 2)
+            pred = pred.view(-1, pred.size(-1))
+            target = target.view(-1)
+        if seq_len is not None:
+            mask = seq_len_to_mask(seq_len).view(-1).eq(0)
+            target = target.masked_fill(mask, self.padding_idx)
 
         return F.cross_entropy(input=pred, target=target,
                                ignore_index=self.padding_idx)
