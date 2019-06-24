@@ -285,7 +285,8 @@ from .field import AutoPadder
 from .field import FieldArray
 from .instance import Instance
 from .utils import _get_func_signature
-
+from .field import AppendToTargetOrInputException
+from .field import SetInputOrTargetException
 
 class DataSet(object):
     """
@@ -422,7 +423,7 @@ class DataSet(object):
         if len(self.field_arrays) == 0:
             # DataSet has no field yet
             for name, field in instance.fields.items():
-                field = field.tolist() if isinstance(field, np.ndarray) else field
+                # field = field.tolist() if isinstance(field, np.ndarray) else field
                 self.field_arrays[name] = FieldArray(name, [field])  # 第一个样本，必须用list包装起来
         else:
             if len(self.field_arrays) != len(instance.fields):
@@ -431,7 +432,11 @@ class DataSet(object):
                         .format(len(self.field_arrays), len(instance.fields)))
             for name, field in instance.fields.items():
                 assert name in self.field_arrays
-                self.field_arrays[name].append(field)
+                try:
+                    self.field_arrays[name].append(field)
+                except AppendToTargetOrInputException as e:
+                    print(f"Cannot append to field:{name}.")
+                    raise e
     
     def add_fieldarray(self, field_name, fieldarray):
         """
@@ -549,6 +554,7 @@ class DataSet(object):
             self.field_arrays[new_name].name = new_name
         else:
             raise KeyError("DataSet has no field named {}.".format(old_name))
+        return self
     
     def set_target(self, *field_names, flag=True):
         """
@@ -565,7 +571,11 @@ class DataSet(object):
         assert isinstance(flag, bool), "Only bool type supported."
         for name in field_names:
             if name in self.field_arrays:
-                self.field_arrays[name].is_target = flag
+                try:
+                    self.field_arrays[name].is_target = flag
+                except SetInputOrTargetException as e:
+                    print(f"Cannot set field:{name} as target.")
+                    raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
     
@@ -581,7 +591,11 @@ class DataSet(object):
         """
         for name in field_names:
             if name in self.field_arrays:
-                self.field_arrays[name].is_input = flag
+                try:
+                    self.field_arrays[name].is_input = flag
+                except SetInputOrTargetException as e:
+                    print(f"Cannot set field:{name} as input, exception happens at the {e.index} value.")
+                    raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
     
@@ -748,7 +762,20 @@ class DataSet(object):
             self._add_apply_field(results, new_field_name, kwargs)
         
         return results
-    
+
+    def add_seq_len(self, field_name:str, new_field_name='seq_len'):
+        """
+        将使用len()直接对field_name中每个元素作用，将其结果作为seqence length, 并放入seq_len这个field。
+
+        :param field_name: str.
+        :return:
+        """
+        if self.has_field(field_name=field_name):
+            self.apply_field(len, field_name, new_field_name=new_field_name)
+        else:
+            raise KeyError(f"Field:{field_name} not found.")
+        return self
+
     def drop(self, func, inplace=True):
         """
         func接受一个Instance，返回bool值。返回值为True时，该Instance会被移除或者加入到返回的DataSet中。
@@ -778,7 +805,7 @@ class DataSet(object):
         """
         将DataSet按照ratio的比例拆分，返回两个DataSet
 
-        :param float ratio: 0<ratio<1, 返回的第一个DataSet拥有 `ratio` 这么多数据，第二个DataSet拥有 `(1-ratio)` 这么多数据
+        :param float ratio: 0<ratio<1, 返回的第一个DataSet拥有 `(1-ratio)` 这么多数据，第二个DataSet拥有`ratio`这么多数据
         :return: [DataSet, DataSet]
         """
         assert isinstance(ratio, float)

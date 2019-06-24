@@ -9,7 +9,7 @@ from torch import nn
 from ..utils import initial_parameter
 
 
-def allowed_transitions(id2target, encoding_type='bio', include_start_end=True):
+def allowed_transitions(id2target, encoding_type='bio', include_start_end=False):
     """
     别名：:class:`fastNLP.modules.allowed_transitions`  :class:`fastNLP.modules.decoder.crf.allowed_transitions`
 
@@ -17,7 +17,7 @@ def allowed_transitions(id2target, encoding_type='bio', include_start_end=True):
 
     :param dict id2target: key是label的indices，value是str类型的tag或tag-label。value可以是只有tag的, 比如"B", "M"; 也可以是
         "B-NN", "M-NN", tag和label之间一定要用"-"隔开。一般可以通过Vocabulary.idx2word得到id2label。
-    :param str encoding_type: 支持"bio", "bmes", "bmeso"。
+    :param str encoding_type: 支持"bio", "bmes", "bmeso", "bioes"。
     :param bool include_start_end: 是否包含开始与结尾的转换。比如在bio中，b/o可以在开头，但是i不能在开头；
         为True，返回的结果中会包含(start_idx, b_idx), (start_idx, o_idx), 但是不包含(start_idx, i_idx);
         start_idx=len(id2label), end_idx=len(id2label)+1。为False, 返回的结果中不含与开始结尾相关的内容
@@ -58,7 +58,7 @@ def allowed_transitions(id2target, encoding_type='bio', include_start_end=True):
 def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label):
     """
 
-    :param str encoding_type: 支持"BIO", "BMES", "BEMSO"。
+    :param str encoding_type: 支持"BIO", "BMES", "BEMSO", 'bioes'。
     :param str from_tag: 比如"B", "M"之类的标注tag. 还包括start, end等两种特殊tag
     :param str from_label: 比如"PER", "LOC"等label
     :param str to_tag: 比如"B", "M"之类的标注tag. 还包括start, end等两种特殊tag
@@ -134,9 +134,19 @@ def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label
             return to_tag in ['b', 's', 'end', 'o']
         else:
             raise ValueError("Unexpect tag type {}. Expect only 'B', 'M', 'E', 'S', 'O'.".format(from_tag))
-    
+    elif encoding_type == 'bioes':
+        if from_tag == 'start':
+            return to_tag in ['b', 's', 'o']
+        elif from_tag == 'b':
+            return to_tag in ['i', 'e'] and from_label == to_label
+        elif from_tag == 'i':
+            return to_tag in ['i', 'e'] and from_label == to_label
+        elif from_tag in ['e', 's', 'o']:
+            return to_tag in ['b', 's', 'end', 'o']
+        else:
+            raise ValueError("Unexpect tag type {}. Expect only 'B', 'I', 'E', 'S', 'O'.".format(from_tag))
     else:
-        raise ValueError("Only support BIO, BMES, BMESO encoding type, got {}.".format(encoding_type))
+        raise ValueError("Only support BIO, BMES, BMESO, BIOES encoding type, got {}.".format(encoding_type))
 
 
 class ConditionalRandomField(nn.Module):

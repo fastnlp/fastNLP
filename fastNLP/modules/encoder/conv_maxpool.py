@@ -5,9 +5,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..utils import initial_parameter
-
-
 class ConvMaxpool(nn.Module):
     """
     别名：:class:`fastNLP.modules.ConvMaxpool`   :class:`fastNLP.modules.encoder.conv_maxpool.ConvMaxpool`
@@ -19,20 +16,15 @@ class ConvMaxpool(nn.Module):
     :param int in_channels: 输入channel的大小，一般是embedding的维度; 或encoder的output维度
     :param int,tuple(int) out_channels: 输出channel的数量。如果为list，则需要与kernel_sizes的数量保持一致
     :param int,tuple(int) kernel_sizes: 输出channel的kernel大小。
-    :param int stride: 见pytorch Conv1D文档。所有kernel共享一个stride。
-    :param int padding: 见pytorch Conv1D文档。所有kernel共享一个padding。
-    :param int dilation: 见pytorch Conv1D文档。所有kernel共享一个dilation。
-    :param int groups: 见pytorch Conv1D文档。所有kernel共享一个groups。
-    :param bool bias: 见pytorch Conv1D文档。所有kernel共享一个bias。
     :param str activation: Convolution后的结果将通过该activation后再经过max-pooling。支持relu, sigmoid, tanh
-    :param str initial_method: str。
     """
     
-    def __init__(self, in_channels, out_channels, kernel_sizes,
-                 stride=1, padding=0, dilation=1,
-                 groups=1, bias=True, activation="relu", initial_method=None):
+    def __init__(self, in_channels, out_channels, kernel_sizes, activation="relu"):
         super(ConvMaxpool, self).__init__()
-        
+
+        for kernel_size in kernel_sizes:
+            assert kernel_size%2==1, "kernel size has to be odd numbers."
+
         # convolution
         if isinstance(kernel_sizes, (list, tuple, int)):
             if isinstance(kernel_sizes, int) and isinstance(out_channels, int):
@@ -49,11 +41,11 @@ class ConvMaxpool(nn.Module):
                 in_channels=in_channels,
                 out_channels=oc,
                 kernel_size=ks,
-                stride=stride,
-                padding=padding,
-                dilation=dilation,
-                groups=groups,
-                bias=bias)
+                stride=1,
+                padding=ks//2,
+                dilation=1,
+                groups=1,
+                bias=None)
                 for oc, ks in zip(out_channels, kernel_sizes)])
         
         else:
@@ -70,9 +62,7 @@ class ConvMaxpool(nn.Module):
         else:
             raise Exception(
                 "Undefined activation function: choose from: relu, tanh, sigmoid")
-        
-        initial_parameter(self, initial_method)
-    
+
     def forward(self, x, mask=None):
         """
 
@@ -86,7 +76,7 @@ class ConvMaxpool(nn.Module):
         xs = [self.activation(conv(x)) for conv in self.convs]  # [[N,C,L], ...]
         if mask is not None:
             mask = mask.unsqueeze(1)  # B x 1 x L
-            xs = [x.masked_fill_(mask, float('-inf')) for x in xs]
+            xs = [x.masked_fill_(mask.eq(0), float('-inf')) for x in xs]
         # max-pooling
         xs = [F.max_pool1d(input=i, kernel_size=i.size(2)).squeeze(2)
               for i in xs]  # [[N, C], ...]

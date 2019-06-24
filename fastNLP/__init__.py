@@ -12,7 +12,11 @@ fastNLP 中最常用的组件可以直接从 fastNLP 包中 import ，他们的�
 __all__ = [
     "Instance",
     "FieldArray",
-    "Batch",
+
+    "DataSetIter",
+    "BatchIter",
+    "TorchLoaderIter",
+
     "Vocabulary",
     "DataSet",
     "Const",

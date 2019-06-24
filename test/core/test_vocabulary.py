@@ -70,6 +70,24 @@ class TestAdd(unittest.TestCase):
             self.assertEqual(vocab.to_index(chr(start_char + i)), i + 2)
         vocab.index_dataset(dataset, field_name='char')
 
+    def test_from_dataset_no_entry(self):
+        # 测试能否正确将no_create_entry正确设置
+        dataset = DataSet()
+        start_char = 65
+        num_samples = 10
+        test_dataset = DataSet()
+        for i in range(num_samples):
+            char = [chr(start_char + i)] * 6
+            ins = Instance(char=char)
+            dataset.append(ins)
+            ins = Instance(char=[c+c for c in char])
+            test_dataset.append(ins)
+        vocab = Vocabulary()
+        vocab.from_dataset(dataset, field_name='char', no_create_entry_dataset=test_dataset)
+        vocab.index_dataset(dataset, field_name='char')
+        for i in range(num_samples):
+            self.assertEqual(True, vocab._is_word_no_create_entry(chr(start_char + i)+chr(start_char + i)))
+
 
 class TestIndexing(unittest.TestCase):
     def test_len(self):
@@ -100,13 +118,14 @@ class TestIndexing(unittest.TestCase):
         self.assertEqual(text, [vocab.to_word(idx) for idx in [vocab[w] for w in text]])
     
     def test_iteration(self):
-        vocab = Vocabulary()
+        vocab = Vocabulary(padding=None, unknown=None)
         text = ["FastNLP", "works", "well", "in", "most", "cases", "and", "scales", "well", "in",
                 "works", "well", "in", "most", "cases", "scales", "well"]
         vocab.update(text)
         text = set(text)
-        for word in vocab:
+        for word, idx in vocab:
             self.assertTrue(word in text)
+            self.assertTrue(idx < len(vocab))
 
 
 class TestOther(unittest.TestCase):

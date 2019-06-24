@@ -184,11 +184,8 @@ def train(path):
                         m.weight.requires_grad = True
 
     # Trainer
-    trainer = Trainer(model=model, train_data=train_data, dev_data=dev_data,
-                      loss=ParserLoss(), metrics=ParserMetric(), metric_key='UAS',
-                      **train_args.data,
-                      optimizer=fastNLP.Adam(**optim_args.data),
-                      save_path=path,
+    trainer = Trainer(train_data=train_data, model=model, optimizer=fastNLP.Adam(**optim_args.data), loss=ParserLoss(),
+                      dev_data=dev_data, metrics=ParserMetric(), metric_key='UAS', save_path=path,
                       callbacks=[MyCallback()])
 
     # Start training

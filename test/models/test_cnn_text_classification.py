@@ -12,7 +12,6 @@ class TestCNNText(unittest.TestCase):
         model = CNNText(init_emb,
                         NUM_CLS,
                         kernel_nums=(1, 3, 5),
-                        kernel_sizes=(2, 2, 2),
-                        padding=0,
+                        kernel_sizes=(1, 3, 5),
                         dropout=0.5)
         RUNNER.run_model_with_task(TEXT_CLS, model)

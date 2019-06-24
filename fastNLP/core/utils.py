@@ -3,7 +3,8 @@ utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户
 """
 __all__ = [
     "cache_results",
-    "seq_len_to_mask"
+    "seq_len_to_mask",
+    "Option",
 ]
 
 import _pickle
@@ -19,6 +20,32 @@ import torch.nn as nn
 
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])
+
+
+class Option(dict):
+    """a dict can treat keys as attributes"""
+    def __getattr__(self, item):
+        try:
+            return self.__getitem__(item)
+        except KeyError:
+            raise AttributeError(item)
+
+    def __setattr__(self, key, value):
+        if key.startswith('__') and key.endswith('__'):
+            raise AttributeError(key)
+        self.__setitem__(key, value)
+
+    def __delattr__(self, item):
+        try:
+            self.pop(item)
+        except KeyError:
+            raise AttributeError(item)
+
+    def __getstate__(self):
+        return self
+
+    def __setstate__(self, state):
+        self.update(state)
 
 
 def _prepare_cache_filepath(filepath):
@@ -258,6 +285,7 @@ def _get_model_device(model):
     :param model: nn.Module
     :return: torch.device,None 如果返回值为None，说明这个模型没有任何参数。
     """
+    # TODO 这个函数存在一定的风险，因为同一个模型可能存在某些parameter不在显卡中，比如BertEmbedding
     assert isinstance(model, nn.Module)
     
     parameters = list(model.parameters())
@@ -268,6 +296,13 @@ def _get_model_device(model):
 
 
 def _build_args(func, **kwargs):
+    """
+    根据func的初始化参数，从kwargs中选择func需要的参数
+
+    :param func: callable
+    :param kwargs: 参数
+    :return:dict. func中用到的参数
+    """
     spect = inspect.getfullargspec(func)
     if spect.varkw is not None:
         return kwargs
@@ -608,7 +643,7 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
             warnings.warn(message=_unused_warn)
 
 
-def seq_len_to_mask(seq_len):
+def seq_len_to_mask(seq_len, max_len=None):
     """
 
     将一个表示sequence length的一维数组转换为二维的mask，不包含的位置为0。
@@ -624,20 +659,26 @@ def seq_len_to_mask(seq_len):
         >>> mask = seq_len_to_mask(seq_len)
         >>> print(mask.shape)
         (14, 15)
+        >>> seq_len = torch.arange(2, 16)
+        >>> mask = seq_len_to_mask(seq_len, max_len=100)
+        >>>print(mask.size())
+        torch.Size([14, 100])
 
     :param np.ndarray,torch.LongTensor seq_len: shape将是(B,)
+    :param int max_len: 将长度pad到这个长度。默认(None)使用的是seq_len中最长的长度。但在nn.DataParallel的场景下可能不同卡的seq_len会有
+        区别，所以需要传入一个max_len使得mask的长度是pad到该长度。
     :return: np.ndarray or torch.Tensor, shape将是(B, max_length)。 元素类似为bool或torch.uint8
     """
     if isinstance(seq_len, np.ndarray):
         assert len(np.shape(seq_len)) == 1, f"seq_len can only have one dimension, got {len(np.shape(seq_len))}."
-        max_len = int(seq_len.max())
+        max_len = int(max_len) if max_len else int(seq_len.max())
         broad_cast_seq_len = np.tile(np.arange(max_len), (len(seq_len), 1))
         mask = broad_cast_seq_len < seq_len.reshape(-1, 1)
     
     elif isinstance(seq_len, torch.Tensor):
         assert seq_len.dim() == 1, f"seq_len can only have one dimension, got {seq_len.dim() == 1}."
         batch_size = seq_len.size(0)
-        max_len = seq_len.max().long()
+        max_len = int(max_len) if max_len else seq_len.max().long()
         broad_cast_seq_len = torch.arange(max_len).expand(batch_size, -1).to(seq_len)
         mask = broad_cast_seq_len.lt(seq_len.unsqueeze(1))
     else:

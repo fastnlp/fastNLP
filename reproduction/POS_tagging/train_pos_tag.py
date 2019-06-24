@@ -89,11 +89,11 @@ def train(train_data_path, dev_data_path, checkpoint=None, save=None):
         model = torch.load(checkpoint)
 
     # call trainer to train
-    trainer = Trainer(dataset, model, loss=None, metrics=SpanFPreRecMetric(tag_proc.vocab, pred="predict",
-                                                                           target="truth",
-                                                                           seq_lens="word_seq_origin_len"),
-                      dev_data=dev_data, metric_key="f",
-                      use_tqdm=True, use_cuda=True, print_every=10, n_epochs=20, save_path=save)
+    trainer = Trainer(dataset, model, loss=None, n_epochs=20, print_every=10, dev_data=dev_data,
+                      metrics=SpanFPreRecMetric(tag_proc.vocab, pred="predict",
+                                                target="truth",
+                                                seq_lens="word_seq_origin_len"), metric_key="f", save_path=save,
+                      use_tqdm=True)
     trainer.train(load_best_model=True)
 
     # save model & pipeline

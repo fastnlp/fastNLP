@@ -22,10 +22,10 @@ class ConvolutionCharEncoder(nn.Module):
     :param initial_method: 初始化参数的方式, 默认为`xavier normal`
     """
     
-    def __init__(self, char_emb_size=50, feature_maps=(40, 30, 30), kernels=(3, 4, 5), initial_method=None):
+    def __init__(self, char_emb_size=50, feature_maps=(40, 30, 30), kernels=(1, 3, 5), initial_method=None):
         super(ConvolutionCharEncoder, self).__init__()
         self.convs = nn.ModuleList([
-            nn.Conv2d(1, feature_maps[i], kernel_size=(char_emb_size, kernels[i]), bias=True, padding=(0, 4))
+            nn.Conv2d(1, feature_maps[i], kernel_size=(char_emb_size, kernels[i]), bias=True, padding=(0, kernels[i]//2))
             for i in range(len(kernels))])
         
         initial_parameter(self, initial_method)
