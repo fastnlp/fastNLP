@@ -10,6 +10,37 @@ import shutil
 import hashlib
 
 
+PRETRAINED_BERT_MODEL_DIR = {
+    'en': 'bert-base-cased-f89bfe08.zip',
+    'en-base-uncased': 'bert-base-uncased-3413b23c.zip',
+    'en-base-cased': 'bert-base-cased-f89bfe08.zip',
+    'en-large-uncased': 'bert-large-uncased-20939f45.zip',
+    'en-large-cased': 'bert-large-cased-e0cf90fc.zip',
+
+    'cn': 'bert-base-chinese-29d0a84a.zip',
+    'cn-base': 'bert-base-chinese-29d0a84a.zip',
+
+    'multilingual': 'bert-base-multilingual-cased-1bd364ee.zip',
+    'multilingual-base-uncased': 'bert-base-multilingual-uncased-f8730fe4.zip',
+    'multilingual-base-cased': 'bert-base-multilingual-cased-1bd364ee.zip',
+}
+
+PRETRAINED_ELMO_MODEL_DIR = {
+    'en': 'elmo_en-d39843fe.tar.gz',
+    'cn': 'elmo_cn-5e9b34e2.tar.gz'
+}
+
+PRETRAIN_STATIC_FILES = {
+    'en': 'glove.840B.300d-cc1ad5e1.tar.gz',
+    'en-glove-840b-300': 'glove.840B.300d-cc1ad5e1.tar.gz',
+    'en-glove-6b-50': "glove.6B.50d-a6028c70.tar.gz",
+    'en-word2vec-300': "GoogleNews-vectors-negative300-be166d9d.tar.gz",
+    'en-fasttext': "cc.en.300.vec-d53187b2.gz",
+    'cn': "tencent_cn-dab24577.tar.gz",
+    'cn-fasttext': "cc.zh.300.vec-d68a9bcf.gz",
+}
+
+
 def cached_path(url_or_filename: str, cache_dir: Path=None) -> Path:
     """
         给定一个url或者文件名(可以是具体的文件名，也可以是文件)，先在cache_dir下寻找该文件是否存在，如果不存在则去下载, 并
