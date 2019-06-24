@@ -451,9 +451,11 @@ class Trainer(object):
             self.data_iterator = train_data
         else:
             raise TypeError("train_data type {} not support".format(type(train_data)))
-        
+
+        self.model = _move_model_to_device(model, device=device)
+
         if check_code_level > -1 and isinstance(self.data_iterator, DataSetIter):
-            _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data,
+            _check_code(dataset=train_data, model=self.model, losser=losser, metrics=metrics, dev_data=dev_data,
                         metric_key=metric_key, check_level=check_code_level,
                         batch_size=min(batch_size, DEFAULT_CHECK_BATCH_SIZE))
             # _check_code 是 fastNLP 帮助你检查代码是否正确的方法 。如果你在错误栈中看到这行注释，请认真检查你的代码
@@ -474,9 +476,7 @@ class Trainer(object):
         self.best_dev_perf = None
         self.n_steps = (len(self.train_data) // self.batch_size + int(
             len(self.train_data) % self.batch_size != 0)) * self.n_epochs
-        
-        self.model = _move_model_to_device(self.model, device=device)
-        
+
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
         elif isinstance(optimizer, Optimizer):

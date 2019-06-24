@@ -12,11 +12,11 @@ class CNNBiLSTMCRF(nn.Module):
     def __init__(self, embed, char_embed, hidden_size, num_layers, tag_vocab, dropout=0.5, encoding_type='bioes'):
         super().__init__()
 
-        self.embedding = Embedding(embed, dropout=0.5)
-        self.char_embedding = Embedding(char_embed, dropout=0.5)
+        self.embedding = Embedding(embed, dropout=0.5, dropout_word=0)
+        self.char_embedding = Embedding(char_embed, dropout=0.5, dropout_word=0.01)
         self.lstm = LSTM(input_size=self.embedding.embedding_dim+self.char_embedding.embedding_dim,
-                         hidden_size=hidden_size//2, num_layers=num_layers,
-                         bidirectional=True, batch_first=True, dropout=dropout)
+                             hidden_size=hidden_size//2, num_layers=num_layers,
+                             bidirectional=True, batch_first=True)
         self.fc = nn.Linear(hidden_size, len(tag_vocab))
 
         transitions = allowed_transitions(tag_vocab.idx2word, encoding_type=encoding_type, include_start_end=True)
@@ -25,9 +25,9 @@ class CNNBiLSTMCRF(nn.Module):
         self.dropout = nn.Dropout(dropout, inplace=True)
 
         for name, param in self.named_parameters():
-            if 'ward_fc' in name:
+            if 'fc' in name:
                 if param.data.dim()>1:
-                    nn.init.xavier_normal_(param)
+                    nn.init.xavier_uniform_(param)
                 else:
                     nn.init.constant_(param, 0)
             if 'crf' in name:
