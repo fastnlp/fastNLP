@@ -109,8 +109,8 @@ class MyCallback(FN.core.callback.Callback):
 
 
 def train():
-    #seed = set_rng_seeds(1234)
-    seed = set_rng_seeds(np.random.randint(65536))
+    seed = set_rng_seeds(28848)
+    #seed = set_rng_seeds(np.random.randint(65536))
     print('RNG SEED {}'.format(seed))
     print('loading data')
     ds_list, word_v, tag_v = g_datasets['{}-{}'.format(
