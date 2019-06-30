@@ -149,14 +149,10 @@ def train():
     ) if x.requires_grad and x.size(0) != len(word_v)]
     optim_cfg = [{'params': model.enc.embedding.parameters(), 'lr': g_args.lr*0.1},
                  {'params': ex_param, 'lr': g_args.lr, 'weight_decay': g_args.w_decay}, ]
-    trainer = FN.Trainer(model=model, train_data=train_data, dev_data=dev_data,
-                         loss=loss, metrics=metric, metric_key=metric_key,
-                         optimizer=torch.optim.Adam(optim_cfg),
-                         n_epochs=g_args.ep, batch_size=g_args.bsz, print_every=10, validate_every=3000,
-                         device=device,
-                         use_tqdm=False, prefetch=False,
-                         save_path=g_args.log,
-                         callbacks=[MyCallback()])
+    trainer = FN.Trainer(train_data=train_data, model=model, optimizer=torch.optim.Adam(optim_cfg), loss=loss,
+                         batch_size=g_args.bsz, n_epochs=g_args.ep, print_every=10, dev_data=dev_data, metrics=metric,
+                         metric_key=metric_key, validate_every=3000, save_path=g_args.log, use_tqdm=False,
+                         device=device, callbacks=[MyCallback()])
 
     trainer.train()
     tester = FN.Tester(data=test_data, model=model, metrics=metric,

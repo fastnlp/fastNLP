@@ -26,7 +26,7 @@ from .utils import _build_args
 from .utils import _check_arg_dict_list
 from .utils import _check_function_or_method
 from .utils import _get_func_signature
-
+from .utils import seq_len_to_mask
 
 class LossBase(object):
     """
@@ -34,14 +34,23 @@ class LossBase(object):
     """
     
     def __init__(self):
-        self.param_map = {}
+        self._param_map = {}  # key是fun的参数，value是以该值从传入的dict取出value
         self._checked = False
-    
+
+    @property
+    def param_map(self):
+        if len(self._param_map) == 0:  # 如果为空说明还没有初始化
+            func_spect = inspect.getfullargspec(self.get_loss)
+            func_args = [arg for arg in func_spect.args if arg != 'self']
+            for arg in func_args:
+                self._param_map[arg] = arg
+        return self._param_map
+
     def get_loss(self, *args, **kwargs):
         raise NotImplementedError
     
     def _init_param_map(self, key_map=None, **kwargs):
-        """检查key_map和其他参数map，并将这些映射关系添加到self.param_map
+        """检查key_map和其他参数map，并将这些映射关系添加到self._param_map
 
         :param dict key_map: 表示key的映射关系
         :param kwargs: key word args里面的每一个的键-值对都会被构造成映射关系
@@ -53,30 +62,30 @@ class LossBase(object):
                 raise TypeError("key_map must be `dict`, got {}.".format(type(key_map)))
             for key, value in key_map.items():
                 if value is None:
-                    self.param_map[key] = key
+                    self._param_map[key] = key
                     continue
                 if not isinstance(key, str):
                     raise TypeError(f"key in key_map must be `str`, not `{type(key)}`.")
                 if not isinstance(value, str):
                     raise TypeError(f"value in key_map must be `str`, not `{type(value)}`.")
-                self.param_map[key] = value
+                self._param_map[key] = value
                 value_counter[value].add(key)
         for key, value in kwargs.items():
             if value is None:
-                self.param_map[key] = key
+                self._param_map[key] = key
                 continue
             if not isinstance(value, str):
                 raise TypeError(f"in {key}={value}, value must be `str`, not `{type(value)}`.")
-            self.param_map[key] = value
+            self._param_map[key] = value
             value_counter[value].add(key)
         for value, key_set in value_counter.items():
             if len(key_set) > 1:
                 raise ValueError(f"Several parameters:{key_set} are provided with one output {value}.")
         
-        # check consistence between signature and param_map
+        # check consistence between signature and _param_map
         func_spect = inspect.getfullargspec(self.get_loss)
         func_args = [arg for arg in func_spect.args if arg != 'self']
-        for func_param, input_param in self.param_map.items():
+        for func_param, input_param in self._param_map.items():
             if func_param not in func_args:
                 raise NameError(
                     f"Parameter `{func_param}` is not in {_get_func_signature(self.get_loss)}. Please check the "
@@ -96,7 +105,7 @@ class LossBase(object):
         :return: dict, if dict is not {}, pass it to self.evaluate. Otherwise do mapping.
         """
         fast_param = {}
-        if len(self.param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
+        if len(self._param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
             fast_param['pred'] = list(pred_dict.values())[0]
             fast_param['target'] = list(target_dict.values())[0]
             return fast_param
@@ -115,49 +124,41 @@ class LossBase(object):
             return loss
         
         if not self._checked:
-            # 1. check consistence between signature and param_map
+            # 1. check consistence between signature and _param_map
             func_spect = inspect.getfullargspec(self.get_loss)
             func_args = set([arg for arg in func_spect.args if arg != 'self'])
-            for func_arg, input_arg in self.param_map.items():
+            for func_arg, input_arg in self._param_map.items():
                 if func_arg not in func_args:
                     raise NameError(f"`{func_arg}` not in {_get_func_signature(self.get_loss)}.")
             
-            # 2. only part of the param_map are passed, left are not
+            # 2. only part of the _param_map are passed, left are not
             for arg in func_args:
-                if arg not in self.param_map:
-                    self.param_map[arg] = arg  # This param does not need mapping.
+                if arg not in self._param_map:
+                    self._param_map[arg] = arg  # This param does not need mapping.
             self._evaluate_args = func_args
-            self._reverse_param_map = {input_arg: func_arg for func_arg, input_arg in self.param_map.items()}
-        
-        # need to wrap inputs in dict.
+            self._reverse_param_map = {input_arg: func_arg for func_arg, input_arg in self._param_map.items()}
+
         mapped_pred_dict = {}
         mapped_target_dict = {}
-        duplicated = []
-        for input_arg in set(list(pred_dict.keys()) + list(target_dict.keys())):
-            not_duplicate_flag = 0
-            if input_arg in self._reverse_param_map:
-                mapped_arg = self._reverse_param_map[input_arg]
-                not_duplicate_flag += 1
-            else:
-                mapped_arg = input_arg
+        for input_arg, mapped_arg in self._reverse_param_map.items():
             if input_arg in pred_dict:
                 mapped_pred_dict[mapped_arg] = pred_dict[input_arg]
-                not_duplicate_flag += 1
             if input_arg in target_dict:
                 mapped_target_dict[mapped_arg] = target_dict[input_arg]
-                not_duplicate_flag += 1
-            if not_duplicate_flag == 3:
-                duplicated.append(input_arg)
         
         # missing
         if not self._checked:
+            duplicated = []
+            for input_arg, mapped_arg in self._reverse_param_map.items():
+                if input_arg in pred_dict and input_arg in target_dict:
+                    duplicated.append(input_arg)
             check_res = _check_arg_dict_list(self.get_loss, [mapped_pred_dict, mapped_target_dict])
             # replace missing.
             missing = check_res.missing
             replaced_missing = list(missing)
             for idx, func_arg in enumerate(missing):
                 # Don't delete `` in this information, nor add ``
-                replaced_missing[idx] = f"{self.param_map[func_arg]}" + f"(assign to `{func_arg}` " \
+                replaced_missing[idx] = f"{self._param_map[func_arg]}" + f"(assign to `{func_arg}` " \
                     f"in `{self.__class__.__name__}`)"
             
             check_res = _CheckRes(missing=replaced_missing,
@@ -170,6 +171,8 @@ class LossBase(object):
             if check_res.missing or check_res.duplicated:
                 raise _CheckError(check_res=check_res,
                                   func_signature=_get_func_signature(self.get_loss))
+            self._checked = True
+
         refined_args = _build_args(self.get_loss, **mapped_pred_dict, **mapped_target_dict)
         
         loss = self.get_loss(**refined_args)
@@ -204,15 +207,12 @@ class LossFunc(LossBase):
         
         super(LossFunc, self).__init__()
         _check_function_or_method(func)
+        self.get_loss = func
         if key_map is not None:
             if not isinstance(key_map, dict):
                 raise RuntimeError(f"Loss error: key_map except a {type({})} but got a {type(key_map)}")
-            self.param_map = key_map
-        if len(kwargs) > 0:
-            for key, val in kwargs.items():
-                self.param_map.update({key: val})
+        self._init_param_map(key_map, **kwargs)
         
-        self.get_loss = func
 
 
 class CrossEntropyLoss(LossBase):
@@ -223,7 +223,9 @@ class CrossEntropyLoss(LossBase):
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
     :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
-    :param padding_idx: padding的index，在计算loss时将忽略target中标号为padding_idx的内容
+    :param seq_len: 句子的长度, 长度之外的token不会计算loss。。
+    :param padding_idx: padding的index，在计算loss时将忽略target中标号为padding_idx的内容, 可以通过该值代替
+        传入seq_len.
 
     Example::
 
@@ -231,13 +233,19 @@ class CrossEntropyLoss(LossBase):
         
     """
     
-    def __init__(self, pred=None, target=None, padding_idx=-100):
-        # TODO 需要做一些检查，F.cross_entropy在计算时，如果pred是(16, 10 ,4), target的形状按道理应该是(16, 10), 但实际需要（16，4）
+    def __init__(self, pred=None, target=None, seq_len=None, padding_idx=-100):
         super(CrossEntropyLoss, self).__init__()
-        self._init_param_map(pred=pred, target=target)
+        self._init_param_map(pred=pred, target=target, seq_len=seq_len)
         self.padding_idx = padding_idx
     
-    def get_loss(self, pred, target):
+    def get_loss(self, pred, target, seq_len=None):
+        if pred.dim()>2:
+            pred = pred.view(-1, pred.size(-1))
+            target = target.view(-1)
+        if seq_len is not None:
+            mask = seq_len_to_mask(seq_len).view(-1).eq(0)
+            target = target.masked_fill(mask, self.padding_idx)
+
         return F.cross_entropy(input=pred, target=target,
                                ignore_index=self.padding_idx)
 

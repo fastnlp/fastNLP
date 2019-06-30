@@ -46,18 +46,10 @@ class TrainerTestGround(unittest.TestCase):
         
         model = NaiveClassifier(2, 1)
         
-        trainer = Trainer(train_set, model,
-                          loss=BCELoss(pred="predict", target="y"),
-                          metrics=AccuracyMetric(pred="predict", target="y"),
-                          n_epochs=10,
-                          batch_size=32,
-                          print_every=50,
-                          validate_every=-1,
-                          dev_data=dev_set,
-                          optimizer=SGD(lr=0.1),
-                          check_code_level=2,
-                          use_tqdm=True,
-                          save_path=None)
+        trainer = Trainer(train_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                          batch_size=32, n_epochs=10, print_every=50, dev_data=dev_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
+                          use_tqdm=True, check_code_level=2)
         trainer.train()
         """
         # 应该正确运行
@@ -83,10 +75,7 @@ class TrainerTestGround(unittest.TestCase):
         model = Model()
         
         with self.assertRaises(RuntimeError):
-            trainer = Trainer(
-                train_data=dataset,
-                model=model
-            )
+            trainer = Trainer(train_data=dataset, model=model)
         """
         # 应该获取到的报错提示
         NameError: 
@@ -116,12 +105,7 @@ class TrainerTestGround(unittest.TestCase):
                 return {'loss': loss}
         
         model = Model()
-        trainer = Trainer(
-            train_data=dataset,
-            model=model,
-            use_tqdm=False,
-            print_every=2
-        )
+        trainer = Trainer(train_data=dataset, model=model, print_every=2, use_tqdm=False)
         trainer.train()
         """
         # 应该正确运行
@@ -147,12 +131,7 @@ class TrainerTestGround(unittest.TestCase):
         
         model = Model()
         with self.assertRaises(NameError):
-            trainer = Trainer(
-                train_data=dataset,
-                model=model,
-                use_tqdm=False,
-                print_every=2
-            )
+            trainer = Trainer(train_data=dataset, model=model, print_every=2, use_tqdm=False)
             trainer.train()
     
     def test_trainer_suggestion4(self):
@@ -175,12 +154,7 @@ class TrainerTestGround(unittest.TestCase):
         
         model = Model()
         with self.assertRaises(NameError):
-            trainer = Trainer(
-                train_data=dataset,
-                model=model,
-                use_tqdm=False,
-                print_every=2
-            )
+            trainer = Trainer(train_data=dataset, model=model, print_every=2, use_tqdm=False)
     
     def test_trainer_suggestion5(self):
         # 检查报错提示能否正确提醒用户
@@ -203,12 +177,7 @@ class TrainerTestGround(unittest.TestCase):
                 return {'loss': loss}
         
         model = Model()
-        trainer = Trainer(
-            train_data=dataset,
-            model=model,
-            use_tqdm=False,
-            print_every=2
-        )
+        trainer = Trainer(train_data=dataset, model=model, print_every=2, use_tqdm=False)
     
     def test_trainer_suggestion6(self):
         # 检查报错提示能否正确提醒用户
@@ -233,14 +202,8 @@ class TrainerTestGround(unittest.TestCase):
         
         model = Model()
         with self.assertRaises(NameError):
-            trainer = Trainer(
-                train_data=dataset,
-                model=model,
-                dev_data=dataset,
-                loss=CrossEntropyLoss(),
-                metrics=AccuracyMetric(),
-                use_tqdm=False,
-                print_every=2)
+            trainer = Trainer(train_data=dataset, model=model, loss=CrossEntropyLoss(), print_every=2, dev_data=dataset,
+                              metrics=AccuracyMetric(), use_tqdm=False)
     
     """
     def test_trainer_multiprocess(self):

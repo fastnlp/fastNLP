@@ -13,7 +13,8 @@ def check_dataloader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
     }
     如果paths为不合法的，将直接进行raise相应的错误
 
-    :param paths: 路径
+    :param paths: 路径. 可以为一个文件路径(则认为该文件就是train的文件); 可以为一个文件目录，将在该目录下寻找train.txt,
+        test.txt, dev.txt; 可以为一个dict, 则key是用户自定义的某个文件的名称，value是这个文件的路径。
     :return:
     """
     if isinstance(paths, str):
@@ -24,7 +25,7 @@ def check_dataloader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
             if not os.path.isfile(train_fp):
                 raise FileNotFoundError(f"train.txt is not found in folder {paths}.")
             files = {'train': train_fp}
-            for filename in ['test.txt', 'dev.txt']:
+            for filename in ['dev.txt', 'test.txt']:
                 fp = os.path.join(paths, filename)
                 if os.path.isfile(fp):
                     files[filename.split('.')[0]] = fp

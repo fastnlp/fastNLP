@@ -16,6 +16,7 @@ import json
 
 from ..utils import get_dropout_mask
 import codecs
+from torch import autograd
 
 class LstmCellWithProjection(torch.nn.Module):
     """
@@ -429,6 +430,8 @@ class LstmTokenEmbedder(nn.Module):
     def forward(self, words, chars):
         embs = []
         if self.word_emb_layer is not None:
+            if hasattr(self, 'words_to_words'):
+                words = self.words_to_words[words]
             word_emb = self.word_emb_layer(words)
             embs.append(word_emb)
 
@@ -486,6 +489,8 @@ class ConvTokenEmbedder(nn.Module):
     def forward(self, words, chars):
         embs = []
         if self.word_emb_layer is not None:
+            if hasattr(self, 'words_to_words'):
+                words = self.words_to_words[words]
             word_emb = self.word_emb_layer(words)
             embs.append(word_emb)
 
@@ -703,7 +708,12 @@ class _ElmoModel(nn.Module):
             self.token_embedder = LstmTokenEmbedder(
                 config, word_emb_layer, char_emb_layer)
         self.token_embedder.load_state_dict(token_embedder_states, strict=False)
-
+        if config['token_embedder']['word_dim'] > 0 and vocab._no_create_word_length > 0:  # 需要映射，使得来自于dev, test的idx指向unk
+            words_to_words = nn.Parameter(torch.arange(len(vocab)+2).long(), requires_grad=False)
+            for word, idx in vocab:
+                if vocab._is_word_no_create_entry(word):
+                    words_to_words[idx] = vocab.unknown_idx
+            setattr(self.token_embedder, 'words_to_words', words_to_words)
         self.output_dim = config['encoder']['projection_dim']
 
         if config['encoder']['name'].lower() == 'elmo':
@@ -760,7 +770,11 @@ class _ElmoModel(nn.Module):
             token_embedding = self.token_embedder(expanded_words, chars)
         if self.config['encoder']['name'] == 'elmo':
             encoder_output = self.encoder(token_embedding, seq_len)
-            sz = encoder_output.size()
+            if encoder_output.size(2) < max_len+2:
+                dummy_tensor = encoder_output.new_zeros(encoder_output.size(0), batch_size,
+                                                        max_len + 2 - encoder_output.size(2), encoder_output.size(-1))
+                encoder_output = torch.cat([encoder_output, dummy_tensor], 2)
+            sz = encoder_output.size()  # 2, batch_size, max_len, hidden_size
             token_embedding = torch.cat([token_embedding, token_embedding], dim=2).view(1, sz[1], sz[2], sz[3])
             encoder_output = torch.cat([token_embedding, encoder_output], dim=0)
         elif self.config['encoder']['name'] == 'lstm':

@@ -176,7 +176,10 @@ class FieldArray:
         if self.padder is None or pad is False:
             return np.array(contents)
         else:
-            return self.padder(contents, field_name=self.name, field_ele_dtype=self.dtype, dim=self._cell_ndim)
+            return self.pad(contents)
+
+    def pad(self, contents):
+        return self.padder(contents, field_name=self.name, field_ele_dtype=self.dtype, dim=self._cell_ndim)
 
     def set_padder(self, padder):
         """
@@ -239,7 +242,7 @@ class FieldArray:
                 new_contents.append(cell.split(sep))
             except Exception as e:
                 print(f"Exception happens when process value in index {index}.")
-                print(e)
+                raise e
         return self._after_process(new_contents, inplace=inplace)
 
     def int(self, inplace:bool=True):
@@ -279,7 +282,7 @@ class FieldArray:
                     new_contents.append(float(cell))
             except Exception as e:
                 print(f"Exception happens when process value in index {index}.")
-                print(e)
+                raise e
         return self._after_process(new_contents, inplace=inplace)
 
     def bool(self, inplace=True):
@@ -299,7 +302,7 @@ class FieldArray:
                     new_contents.append(bool(cell))
             except Exception as e:
                 print(f"Exception happens when process value in index {index}.")
-                print(e)
+                raise e
 
         return self._after_process(new_contents, inplace=inplace)
 
@@ -320,7 +323,7 @@ class FieldArray:
                     new_contents.append(cell.lower())
             except Exception as e:
                 print(f"Exception happens when process value in index {index}.")
-                print(e)
+                raise e
         return self._after_process(new_contents, inplace=inplace)
 
     def upper(self, inplace=True):
@@ -340,7 +343,7 @@ class FieldArray:
                     new_contents.append(cell.upper())
             except Exception as e:
                 print(f"Exception happens when process value in index {index}.")
-                print(e)
+                raise e
         return self._after_process(new_contents, inplace=inplace)
 
     def value_count(self):
@@ -350,8 +353,15 @@ class FieldArray:
         :return: Counter, key是label，value是出现次数
         """
         count = Counter()
+
+        def cum(cell):
+            if _is_iterable(cell) and not isinstance(cell, str):
+                for cell_ in cell:
+                    cum(cell_)
+            else:
+                count[cell] += 1
         for cell in self.content:
-            count[cell] += 1
+            cum(cell)
         return count
 
     def _after_process(self, new_contents, inplace):
@@ -385,6 +395,8 @@ def _get_ele_type_and_dim(cell:Any, dim=0):
     :return:
     """
     if isinstance(cell, (str, Number, np.bool_)):
+        if hasattr(cell, 'dtype'):
+            return cell.dtype.type, dim
         return type(cell), dim
     elif isinstance(cell, list):
         dim += 1
@@ -402,7 +414,7 @@ def _get_ele_type_and_dim(cell:Any, dim=0):
         return cell.dtype, cell.dim() + dim  # 如果是torch.mean的结果是0
     elif isinstance(cell, np.ndarray):
         if cell.dtype != np.dtype('O'):  # 如果不是object的话说明是well-formatted的了
-            return cell.dtype.type, cell.ndim + dim
+            return cell.dtype.type, cell.ndim + dim  # dtype.type返回的会是np.int32, np.float等
         # 否则需要继续往下iterate
         dim += 1
         res = [_get_ele_type_and_dim(cell_i, dim) for cell_i in cell]
@@ -527,31 +539,30 @@ class AutoPadder(Padder):
         if field_ele_dtype:
             if dim>3:
                 return np.array(contents)
-            if isinstance(field_ele_dtype, np.dtype) or field_ele_dtype in (float, int, bool, str):
-                if isinstance(field_ele_dtype, np.number) or field_ele_dtype in (float, int, bool):
-                    if dim==0:
+            if isinstance(field_ele_dtype, type) and \
+                    (issubclass(field_ele_dtype, np.number) or issubclass(field_ele_dtype, Number)):
+                if dim==0:
+                    array = np.array(contents, dtype=field_ele_dtype)
+                elif dim==1:
+                    max_len = max(map(len, contents))
+                    array = np.full((len(contents), max_len), self.pad_val, dtype=field_ele_dtype)
+                    for i, content_i in enumerate(contents):
+                        array[i, :len(content_i)] = content_i
+                elif dim==2:
+                    max_len = max(map(len, contents))
+                    max_word_len = max([max([len(content_ii) for content_ii in content_i]) for
+                                        content_i in contents])
+                    array = np.full((len(contents), max_len, max_word_len), self.pad_val, dtype=field_ele_dtype)
+                    for i, content_i in enumerate(contents):
+                        for j, content_ii in enumerate(content_i):
+                            array[i, j, :len(content_ii)] = content_ii
+                else:
+                    shape = np.shape(contents)
+                    if len(shape)==4: # 说明各dimension是相同的大小
                         array = np.array(contents, dtype=field_ele_dtype)
-                    elif dim==1:
-                        max_len = max(map(len, contents))
-                        array = np.full((len(contents), max_len), self.pad_val, dtype=field_ele_dtype)
-                        for i, content_i in enumerate(contents):
-                            array[i, :len(content_i)] = content_i
-                    elif dim==2:
-                        max_len = max(map(len, contents))
-                        max_word_len = max([max([len(content_ii) for content_ii in content_i]) for
-                                            content_i in contents])
-                        array = np.full((len(contents), max_len, max_word_len), self.pad_val, dtype=field_ele_dtype)
-                        for i, content_i in enumerate(contents):
-                            for j, content_ii in enumerate(content_i):
-                                array[i, j, :len(content_ii)] = content_ii
                     else:
-                        shape = np.shape(contents)
-                        if len(shape)==4: # 说明各dimension是相同的大小
-                            array = np.array(contents, dtype=field_ele_dtype)
-                        else:
-                            raise RuntimeError(f"Field:{field_name} has 3 dimensions, every sample should have the same shape.")
-                    return array
-                return np.array(contents)
+                        raise RuntimeError(f"Field:{field_name} has 3 dimensions, every sample should have the same shape.")
+                return array
             elif str(field_ele_dtype).startswith('torch'):
                 if dim==0:
                     tensor = torch.tensor(contents).to(field_ele_dtype)

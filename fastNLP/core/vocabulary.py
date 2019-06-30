@@ -4,10 +4,11 @@ __all__ = [
 ]
 
 from functools import wraps
-from collections import Counter
+from collections import Counter, defaultdict
 from .dataset import DataSet
 from .utils import Option
-
+from functools import partial
+import numpy as np
 
 class VocabularyOption(Option):
     def __init__(self,
@@ -89,7 +90,9 @@ class Vocabulary(object):
         self.word2idx = None
         self.idx2word = None
         self.rebuild = True
-    
+        #  用于承载不需要单独创建entry的词语，具体见from_dataset()方法
+        self._no_create_word = defaultdict(int)
+
     @_check_build_status
     def update(self, word_lst):
         """依次增加序列中词在词典中的出现频率
@@ -240,8 +243,12 @@ class Vocabulary(object):
                     raise e
             else:
                 raise RuntimeError("Only DataSet type is allowed.")
-    
-    def from_dataset(self, *datasets, field_name):
+
+    @property
+    def _no_create_word_length(self):
+        return len(self._no_create_word)
+
+    def from_dataset(self, *datasets, field_name, no_create_entry_dataset=None):
         """
         使用dataset的对应field中词构建词典::
 
@@ -253,6 +260,13 @@ class Vocabulary(object):
             构建词典所使用的 field(s), 支持一个或多个field
             若有多个 DataSet, 每个DataSet都必须有这些field.
             目前仅支持的field结构: ``str`` , ``list(str)`` , ``list(list(str))``
+        :param no_create_entry_dataset: 可以传入DataSet, List[DataSet]或者None(默认)，该选项用在接下来的模型会使用pretrain
+            的embedding(包括glove, word2vec, elmo与bert)且会finetune的情况。如果仅使用来自于train的数据建立vocabulary，会导致test与dev
+            中的数据无法充分利用到来自于预训练embedding的信息，所以在建立词表的时候将test与dev考虑进来会使得最终的结果更好。
+            如果一个词出现在了train中，但是没在预训练模型中，embedding会为它用unk初始化，但它是单独的一个vector，如果
+            finetune embedding的话，这个词在更新之后可能会有更好的表示; 而如果这个词仅出现在了dev或test中，那么就不能为它们单独建立vector，
+            而应该让它指向unk这个vector的值。所以只位于no_create_entry_dataset中的token，将首先从预训练的词表中寻找它的表示，
+            如果找到了，就使用该表示; 如果没有找到，则认为该词的表示应该为unk的表示。
         :return self:
         """
         if isinstance(field_name, str):
@@ -260,19 +274,28 @@ class Vocabulary(object):
         elif not isinstance(field_name, list):
             raise TypeError('invalid argument field_name: {}'.format(field_name))
         
-        def construct_vocab(ins):
+        def construct_vocab(ins, no_create_entry=False):
             for fn in field_name:
                 field = ins[fn]
                 if isinstance(field, str):
+                    if no_create_entry and field not in self.word_count:
+                        self._no_create_word[field] += 1
                     self.add_word(field)
-                elif isinstance(field, list):
-                    if not isinstance(field[0], list):
-                        self.add_word_lst(field)
+                elif isinstance(field, (list, np.ndarray)):
+                    if not isinstance(field[0], (list, np.ndarray)):
+                        for word in field:
+                            if no_create_entry and word not in self.word_count:
+                                self._no_create_word[word] += 1
+                            self.add_word(word)
                     else:
-                        if isinstance(field[0][0], list):
+                        if isinstance(field[0][0], (list, np.ndarray)):
                             raise RuntimeError("Only support field with 2 dimensions.")
-                        [self.add_word_lst(w) for w in field]
-        
+                        for words in field:
+                            for word in words:
+                                if no_create_entry and word not in self.word_count:
+                                    self._no_create_word[word] += 1
+                                self.add_word(word)
+
         for idx, dataset in enumerate(datasets):
             if isinstance(dataset, DataSet):
                 try:
@@ -281,9 +304,27 @@ class Vocabulary(object):
                     print("When processing the `{}` dataset, the following error occurred.".format(idx))
                     raise e
             else:
-                raise RuntimeError("Only DataSet type is allowed.")
+                raise TypeError("Only DataSet type is allowed.")
+
+        if no_create_entry_dataset is not None:
+            partial_construct_vocab = partial(construct_vocab, no_create_entry=True)
+            if isinstance(no_create_entry_dataset, DataSet):
+                no_create_entry_dataset.apply(partial_construct_vocab)
+            elif isinstance(no_create_entry_dataset, list):
+                for dataset in no_create_entry_dataset:
+                    if not isinstance(dataset, DataSet):
+                        raise TypeError("Only DataSet type is allowed.")
+                    dataset.apply(partial_construct_vocab)
         return self
-    
+
+    def _is_word_no_create_entry(self, word):
+        """
+        判断当前的word是否是不需要创建entry的，具体参见from_dataset的说明
+        :param word: str
+        :return: bool
+        """
+        return word in self._no_create_word
+
     def to_index(self, w):
         """
         将词转为数字. 若词不再词典中被记录, 将视为 unknown, 若 ``unknown=None`` , 将抛出
@@ -338,6 +379,7 @@ class Vocabulary(object):
         self.word2idx = None
         self.idx2word = None
         self.rebuild = True
+        self._no_create_word.clear()
     
     def __getstate__(self):
         """Use to prepare data for pickle.

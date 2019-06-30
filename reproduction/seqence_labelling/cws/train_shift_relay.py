@@ -57,12 +57,8 @@ callbacks = [clipper]
 # if pretrain:
 #     fixer = FixEmbedding([model.char_embedding, model.bigram_embedding], fix_until=fix_until)
 #     callbacks.append(fixer)
-trainer = Trainer(data.datasets['train'], model, optimizer=optimizer, loss=None,
-                  batch_size=32, sampler=sampler, update_every=5,
-                  n_epochs=3, print_every=5,
-                  dev_data=data.datasets['dev'], metrics=RelayMetric(), metric_key='f',
-                  validate_every=-1, save_path=None,
-                  prefetch=True, use_tqdm=True, device=device,
-                  callbacks=callbacks,
+trainer = Trainer(data.datasets['train'], model, optimizer=optimizer, loss=None, batch_size=32, sampler=sampler,
+                  update_every=5, n_epochs=3, print_every=5, dev_data=data.datasets['dev'], metrics=RelayMetric(),
+                  metric_key='f', validate_every=-1, save_path=None, use_tqdm=True, device=device, callbacks=callbacks,
                   check_code_level=0)
 trainer.train()

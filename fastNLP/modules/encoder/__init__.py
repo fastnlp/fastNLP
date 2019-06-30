@@ -7,6 +7,12 @@ __all__ = [
     "ConvMaxpool",
     
     "Embedding",
+    "StaticEmbedding",
+    "ElmoEmbedding",
+    "BertEmbedding",
+    "StackEmbedding",
+    "LSTMCharEmbedding",
+    "CNNCharEmbedding",
     
     "LSTM",
     
@@ -18,10 +24,12 @@ __all__ = [
     "VarLSTM",
     "VarGRU"
 ]
-from .bert import BertModel
+from ._bert import BertModel
+from .bert import BertWordPieceEncoder
 from .char_encoder import ConvolutionCharEncoder, LSTMCharEncoder
 from .conv_maxpool import ConvMaxpool
-from .embedding import Embedding
+from .embedding import Embedding, StaticEmbedding, ElmoEmbedding, BertEmbedding, \
+    StackEmbedding, LSTMCharEmbedding, CNNCharEmbedding
 from .lstm import LSTM
 from .star_transformer import StarTransformer
 from .transformer import TransformerEncoder

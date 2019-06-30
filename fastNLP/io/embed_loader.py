@@ -38,7 +38,8 @@ class EmbedLoader(BaseLoader):
         super(EmbedLoader, self).__init__()
 
     @staticmethod
-    def load_with_vocab(embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True, error='ignore'):
+    def load_with_vocab(embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True,
+                        error='ignore', init_method=None):
         """
         从embed_filepath这个预训练的词向量中抽取出vocab这个词表的词的embedding。EmbedLoader将自动判断embed_filepath是
         word2vec(第一行只有两个元素)还是glove格式的数据。
@@ -52,6 +53,7 @@ class EmbedLoader(BaseLoader):
         :param bool normalize: 是否将每个vector归一化到norm为1
         :param str error: `ignore` , `strict` ; 如果 `ignore` ，错误将自动跳过; 如果 `strict` , 错误将抛出。
             这里主要可能出错的地方在于词表有空行或者词表出现了维度不一致。
+        :param callable init_method: 传入numpy.ndarray, 返回numpy.ndarray, 用以初始化embedding
         :return numpy.ndarray:  shape为 [len(vocab), dimension], dimension由pretrain的embedding决定。
         """
         assert isinstance(vocab, Vocabulary), "Only fastNLP.Vocabulary is supported."
@@ -69,10 +71,13 @@ class EmbedLoader(BaseLoader):
                 dim = len(parts) - 1
                 f.seek(0)
             matrix = np.random.randn(len(vocab), dim).astype(dtype)
+            if init_method:
+                matrix = init_method(matrix)
             for idx, line in enumerate(f, start_idx):
                 try:
                     parts = line.strip().split()
-                    word = parts[0]
+                    word = ''.join(parts[:-dim])
+                    nums = parts[-dim:]
                     # 对齐unk与pad
                     if word==padding and vocab.padding is not None:
                         word = vocab.padding
@@ -80,7 +85,7 @@ class EmbedLoader(BaseLoader):
                         word = vocab.unknown
                     if word in vocab:
                         index = vocab.to_index(word)
-                        matrix[index] = np.fromstring(' '.join(parts[1:]), sep=' ', dtype=dtype, count=dim)
+                        matrix[index] = np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim)
                         hit_flags[index] = True
                 except Exception as e:
                     if error == 'ignore':
@@ -90,14 +95,15 @@ class EmbedLoader(BaseLoader):
                         raise e
             total_hits = sum(hit_flags)
             print("Found {} out of {} words in the pre-training embedding.".format(total_hits, len(vocab)))
-            found_vectors = matrix[hit_flags]
-            if len(found_vectors) != 0:
-                mean = np.mean(found_vectors, axis=0, keepdims=True)
-                std = np.std(found_vectors, axis=0, keepdims=True)
-                unfound_vec_num = len(vocab) - total_hits
-                r_vecs = np.random.randn(unfound_vec_num, dim).astype(dtype) * std + mean
-                matrix[hit_flags == False] = r_vecs
-            
+            if init_method is None:
+                found_vectors = matrix[hit_flags]
+                if len(found_vectors) != 0:
+                    mean = np.mean(found_vectors, axis=0, keepdims=True)
+                    std = np.std(found_vectors, axis=0, keepdims=True)
+                    unfound_vec_num = len(vocab) - total_hits
+                    r_vecs = np.random.randn(unfound_vec_num, dim).astype(dtype) * std + mean
+                    matrix[hit_flags == False] = r_vecs
+
             if normalize:
                 matrix /= np.linalg.norm(matrix, axis=1, keepdims=True)
             
@@ -135,10 +141,11 @@ class EmbedLoader(BaseLoader):
             for idx, line in enumerate(f, start=start):
                 try:
                     parts = line.strip().split()
-                    word = parts[0]
                     if dim == -1:
                         dim = len(parts) - 1
-                    vec = np.fromstring(' '.join(parts[1:]), sep=' ', dtype=dtype, count=dim)
+                    word = ''.join(parts[:-dim])
+                    nums = parts[-dim:]
+                    vec = np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim)
                     vec_dict[word] = vec
                     vocab.add_word(word)
                     if unknown is not None and unknown == word:
@@ -155,23 +162,23 @@ class EmbedLoader(BaseLoader):
             if dim == -1:
                 raise RuntimeError("{} is an empty file.".format(embed_filepath))
             matrix = np.random.randn(len(vocab), dim).astype(dtype)
+            for key, vec in vec_dict.items():
+                index = vocab.to_index(key)
+                matrix[index] = vec
+
             if (unknown is not None and not found_unknown) or (padding is not None and not found_pad):
                 start_idx = 0
                 if padding is not None:
                     start_idx += 1
                 if unknown is not None:
                     start_idx += 1
-                
+
                 mean = np.mean(matrix[start_idx:], axis=0, keepdims=True)
                 std = np.std(matrix[start_idx:], axis=0, keepdims=True)
                 if (unknown is not None and not found_unknown):
                     matrix[start_idx - 1] = np.random.randn(1, dim).astype(dtype) * std + mean
                 if (padding is not None and not found_pad):
                     matrix[0] = np.random.randn(1, dim).astype(dtype) * std + mean
-            
-            for key, vec in vec_dict.items():
-                index = vocab.to_index(key)
-                matrix[index] = vec
             
             if normalize:
                 matrix /= np.linalg.norm(matrix, axis=1, keepdims=True)
