@@ -9,7 +9,7 @@ import torch
 from . import DataSetIter
 from . import DataSet
 from . import SequentialSampler
-from .utils import _build_args
+from .utils import _build_args, _move_dict_value_to_device, _get_model_device
 
 
 class Predictor(object):
@@ -43,6 +43,7 @@ class Predictor(object):
             raise ValueError("Field name {} not found in DataSet {}.".format(seq_len_field_name, data))
 
         self.network.eval()
+        network_device = _get_model_device(self.network)
         batch_output = defaultdict(list)
         data_iterator = DataSetIter(data, batch_size=self.batch_size, sampler=SequentialSampler(), as_numpy=False)
 
@@ -53,6 +54,7 @@ class Predictor(object):
 
         with torch.no_grad():
             for batch_x, _ in data_iterator:
+                _move_dict_value_to_device(batch_x, _, device=network_device)
                 refined_batch_x = _build_args(predict_func, **batch_x)
                 prediction = predict_func(**refined_batch_x)
 
