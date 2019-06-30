@@ -48,6 +48,7 @@ from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
+from .utils import _data_parallel_wrapper
 
 __all__ = [
     "Tester"
@@ -113,12 +114,9 @@ class Tester(object):
                 self._model = self._model.module
         
         # check predict
-        if hasattr(self._model, 'predict'):
-            self._predict_func = self._model.predict
-            if not callable(self._predict_func):
-                _model_name = model.__class__.__name__
-                raise TypeError(f"`{_model_name}.predict` must be callable to be used "
-                                f"for evaluation, not `{type(self._predict_func)}`.")
+        if hasattr(self._model, 'predict') and callable(self._model.predict):
+            self._predict_func = _data_parallel_wrapper(self._model.predict, self._model.device_ids,
+                                                        self._model.output_device)
         else:
             if isinstance(model, nn.DataParallel):
                 self._predict_func = self._model.module.forward
