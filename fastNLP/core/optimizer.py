@@ -36,6 +36,23 @@ class Optimizer(object):
         """
         return [param for param in params if param.requires_grad]
 
+class NullOptimizer(Optimizer):
+    """
+    当不希望Trainer更新optimizer时，传入本optimizer，但请确保通过callback的方式对参数进行了更新。
+
+    """
+    def __init__(self):
+        super().__init__(None)
+
+    def construct_from_pytorch(self, model_params):
+        pass
+
+    def __getattr__(self, item):
+        def pass_func(*args, **kwargs):
+            pass
+
+        return pass_func
+
 
 class SGD(Optimizer):
     """

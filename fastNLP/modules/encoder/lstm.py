@@ -73,21 +73,12 @@ class LSTM(nn.Module):
                 x = x[:, sort_idx]
             x = rnn.pack_padded_sequence(x, sort_lens, batch_first=self.batch_first)
             output, hx = self.lstm(x, hx)  # -> [N,L,C]
-            output, _ = rnn.pad_packed_sequence(output, batch_first=self.batch_first)
+            output, _ = rnn.pad_packed_sequence(output, batch_first=self.batch_first, total_length=max_len)
             _, unsort_idx = torch.sort(sort_idx, dim=0, descending=False)
             if self.batch_first:
                 output = output[unsort_idx]
             else:
                 output = output[:, unsort_idx]
-            #  解决LSTM无法在DataParallel下使用的问题问题https://github.com/pytorch/pytorch/issues/1591
-            if self.batch_first:
-                if output.size(1) < max_len:
-                    dummy_tensor = output.new_zeros(batch_size, max_len - output.size(1), output.size(-1))
-                    output = torch.cat([output, dummy_tensor], 1)
-            else:
-                if output.size(0) < max_len:
-                    dummy_tensor = output.new_zeros(max_len - output.size(1), batch_size, output.size(-1))
-                    output = torch.cat([output, dummy_tensor], 0)
         else:
             output, hx = self.lstm(x, hx)
         return output, hx

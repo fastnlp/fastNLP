@@ -615,7 +615,7 @@ class Trainer(object):
                     if self.step % self.print_every == 0:
                         avg_loss = float(avg_loss) / self.print_every
                         if self.use_tqdm:
-                            print_output = "loss:{0:<6.5f}".format(avg_loss)
+                            print_output = "loss:{:<6.5f}".format(avg_loss)
                             pbar.update(self.print_every)
                         else:
                             end = time.time()
@@ -679,7 +679,7 @@ class Trainer(object):
         """Perform weight update on a model.
 
         """
-        if self.optimizer is not None and (self.step + 1) % self.update_every == 0:
+        if self.step % self.update_every == 0:
             self.optimizer.step()
     
     def _data_forward(self, network, x):
@@ -697,7 +697,7 @@ class Trainer(object):
 
         For PyTorch, just do "loss.backward()"
         """
-        if self.step % self.update_every == 0:
+        if (self.step-1) % self.update_every == 0:
             self.model.zero_grad()
         loss.backward()
     

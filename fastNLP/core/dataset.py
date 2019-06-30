@@ -801,17 +801,19 @@ class DataSet(object):
             else:
                 return DataSet()
     
-    def split(self, ratio):
+    def split(self, ratio, shuffle=True):
         """
         将DataSet按照ratio的比例拆分，返回两个DataSet
 
         :param float ratio: 0<ratio<1, 返回的第一个DataSet拥有 `(1-ratio)` 这么多数据，第二个DataSet拥有`ratio`这么多数据
+        :param bool shuffle: 在split前是否shuffle一下
         :return: [DataSet, DataSet]
         """
         assert isinstance(ratio, float)
         assert 0 < ratio < 1
         all_indices = [_ for _ in range(len(self))]
-        np.random.shuffle(all_indices)
+        if shuffle:
+            np.random.shuffle(all_indices)
         split = int(ratio * len(self))
         dev_indices = all_indices[:split]
         train_indices = all_indices[split:]
