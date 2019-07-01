@@ -32,8 +32,6 @@ Tester在验证进行之前会调用model.eval()提示当前进入了evaluation�
 
 
 """
-import warnings
-
 import torch
 import torch.nn as nn
 
@@ -48,7 +46,8 @@ from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
-from .utils import _data_parallel_wrapper
+from ._parallel_utils import _data_parallel_wrapper
+from functools import partial
 
 __all__ = [
     "Tester"
@@ -111,8 +110,10 @@ class Tester(object):
             (isinstance(self._model, nn.DataParallel) and hasattr(self._model.module, 'predict') and
               callable(self._model.module.predict)):
             if isinstance(self._model, nn.DataParallel):
-                self._predict_func_wrapper = _data_parallel_wrapper(self._model.module.predict, self._model.device_ids,
-                                                            self._model.output_device)
+                self._predict_func_wrapper = partial(_data_parallel_wrapper('predict',
+                                                                    self._model.device_ids,
+                                                                    self._model.output_device),
+                                                     network=self._model.module)
                 self._predict_func = self._model.module.predict
             else:
                 self._predict_func = self._model.predict
