@@ -30,24 +30,37 @@ class ESIMModel(BaseModel):
         self.bi_attention = SoftmaxAttention()
 
         self.rnn_high = BiRNN(self.embedding.embed_size, hidden_size, dropout_rate=dropout_rate)
-        # self.rnn_high = LSTM(hidden_size, hidden_size, dropout=dropout_rate, bidirectional=True)
+        # self.rnn_high = LSTM(hidden_size, hidden_size, dropout=dropout_rate, bidirectional=True,)
 
         self.classifier = nn.Sequential(nn.Dropout(p=dropout_rate),
                                         nn.Linear(8 * hidden_size, hidden_size),
                                         nn.Tanh(),
                                         nn.Dropout(p=dropout_rate),
                                         nn.Linear(hidden_size, num_labels))
+
+        self.dropout_rnn = nn.Dropout(p=dropout_rate)
+
         nn.init.xavier_uniform_(self.classifier[1].weight.data)
         nn.init.xavier_uniform_(self.classifier[4].weight.data)
 
     def forward(self, words1, words2, seq_len1, seq_len2, target=None):
-        mask1 = seq_len_to_mask(seq_len1)
-        mask2 = seq_len_to_mask(seq_len2)
+        """
+        :param words1: [batch, seq_len]
+        :param words2: [batch, seq_len]
+        :param seq_len1: [batch]
+        :param seq_len2: [batch]
+        :param target:
+        :return:
+        """
+        mask1 = seq_len_to_mask(seq_len1, words1.size(1))
+        mask2 = seq_len_to_mask(seq_len2, words2.size(1))
         a0 = self.embedding(words1)  # B * len * emb_dim
         b0 = self.embedding(words2)
         a0, b0 = self.dropout_embed(a0), self.dropout_embed(b0)
         a = self.rnn(a0, mask1.byte())  # a: [B, PL, 2 * H]
         b = self.rnn(b0, mask2.byte())
+        # a = self.dropout_rnn(self.rnn(a0, seq_len1)[0])  # a: [B, PL, 2 * H]
+        # b = self.dropout_rnn(self.rnn(b0, seq_len2)[0])
 
         ai, bi = self.bi_attention(a, mask1, b, mask2)
 
@@ -58,6 +71,8 @@ class ESIMModel(BaseModel):
 
         a_h = self.rnn_high(a_f, mask1.byte())  # ma: [B, PL, 2 * H]
         b_h = self.rnn_high(b_f, mask2.byte())
+        # a_h = self.dropout_rnn(self.rnn_high(a_f, seq_len1)[0])  # ma: [B, PL, 2 * H]
+        # b_h = self.dropout_rnn(self.rnn_high(b_f, seq_len2)[0])
 
         a_avg = self.mean_pooling(a_h, mask1, dim=1)
         a_max, _ = self.max_pooling(a_h, mask1, dim=1)

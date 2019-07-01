@@ -26,6 +26,7 @@ from ...core.dataset import DataSet
 from ...core.batch import DataSetIter
 from ...core.sampler import SequentialSampler
 from ...core.utils import _move_model_to_device, _get_model_device
+from ...io.file_utils import PRETRAINED_BERT_MODEL_DIR, PRETRAINED_ELMO_MODEL_DIR, PRETRAIN_STATIC_FILES
 
 
 class Embedding(nn.Module):
@@ -179,23 +180,14 @@ class StaticEmbedding(TokenEmbedding):
         的名称。目前支持的embedding包括{`en` 或者 `en-glove-840b-300` : glove.840B.300d, `en-glove-6b-50` : glove.6B.50d,
         `en-word2vec-300` : GoogleNews-vectors-negative300}。第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载。
     :param requires_grad: 是否需要gradient. 默认为True
-    :param init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。默认使用torch.nn.init.xavier_uniform_
-        。调用该方法时传入一个tensor对象。
-
+    :param init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对象。
+    :param normailize: 是否对vector进行normalize，使得每个vector的norm为1。
     """
-    def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', requires_grad: bool=True, init_method=None):
+    def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', requires_grad: bool=True, init_method=None,
+                 normalize=False):
         super(StaticEmbedding, self).__init__(vocab)
 
         # 优先定义需要下载的static embedding有哪些。这里估计需要自己搞一个server，
-        PRETRAIN_STATIC_FILES = {
-            'en': 'glove.840B.300d-cc1ad5e1.tar.gz',
-            'en-glove-840b-300': 'glove.840B.300d-cc1ad5e1.tar.gz',
-            'en-glove-6b-50': "glove.6B.50d-a6028c70.tar.gz",
-            'en-word2vec-300': "GoogleNews-vectors-negative300-be166d9d.tar.gz",
-            'en-fasttext': "cc.en.300.vec-d53187b2.gz",
-            'cn': "tencent_cn-dab24577.tar.gz",
-            'cn-fasttext': "cc.zh.300.vec-d68a9bcf.gz",
-        }
 
         # 得到cache_path
         if model_dir_or_name.lower() in PRETRAIN_STATIC_FILES:
@@ -210,7 +202,8 @@ class StaticEmbedding(TokenEmbedding):
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
         # 读取embedding
-        embedding, hit_flags = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method)
+        embedding, hit_flags = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method,
+                                                      normalize=normalize)
         self.embedding = nn.Embedding(num_embeddings=embedding.shape[0], embedding_dim=embedding.shape[1],
                                       padding_idx=vocab.padding_idx,
                                       max_norm=None, norm_type=2, scale_grad_by_freq=False,
@@ -231,7 +224,7 @@ class StaticEmbedding(TokenEmbedding):
         :return:
         """
         requires_grads = set([param.requires_grad for name, param in self.named_parameters()
-                                if 'words_to_words' not in name])
+                              if 'words_to_words' not in name])
         if len(requires_grads) == 1:
             return requires_grads.pop()
         else:
@@ -244,8 +237,8 @@ class StaticEmbedding(TokenEmbedding):
                 continue
             param.requires_grad = value
 
-    def _load_with_vocab(self, embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True,
-                        error='ignore', init_method=None):
+    def _load_with_vocab(self, embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>',
+                         normalize=True, error='ignore', init_method=None):
         """
         从embed_filepath这个预训练的词向量中抽取出vocab这个词表的词的embedding。EmbedLoader将自动判断embed_filepath是
         word2vec(第一行只有两个元素)还是glove格式的数据。
@@ -265,10 +258,7 @@ class StaticEmbedding(TokenEmbedding):
         assert isinstance(vocab, Vocabulary), "Only fastNLP.Vocabulary is supported."
         if not os.path.exists(embed_filepath):
             raise FileNotFoundError("`{}` does not exist.".format(embed_filepath))
-        if init_method is None:
-            init_method = nn.init.xavier_uniform_
         with open(embed_filepath, 'r', encoding='utf-8') as f:
-            found_count = 0
             line = f.readline().strip()
             parts = line.split()
             start_idx = 0
@@ -279,7 +269,8 @@ class StaticEmbedding(TokenEmbedding):
                 dim = len(parts) - 1
                 f.seek(0)
             matrix = torch.zeros(len(vocab), dim)
-            init_method(matrix)
+            if init_method is not None:
+                init_method(matrix)
             hit_flags = np.zeros(len(vocab), dtype=bool)
             for idx, line in enumerate(f, start_idx):
                 try:
@@ -294,7 +285,6 @@ class StaticEmbedding(TokenEmbedding):
                     if word in vocab:
                         index = vocab.to_index(word)
                         matrix[index] = torch.from_numpy(np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim))
-                        found_count += 1
                         hit_flags[index] = True
                 except Exception as e:
                     if error == 'ignore':
@@ -302,7 +292,16 @@ class StaticEmbedding(TokenEmbedding):
                     else:
                         print("Error occurred at the {} line.".format(idx))
                         raise e
+            found_count = sum(hit_flags)
             print("Found {} out of {} words in the pre-training embedding.".format(found_count, len(vocab)))
+            if init_method is None:
+                if len(vocab)-found_count>0 and found_count>0: # 有的没找到
+                    found_vecs = matrix[torch.LongTensor(hit_flags.astype(int)).byte()]
+                    mean = found_vecs.mean(dim=0, keepdim=True)
+                    std = found_vecs.std(dim=0, keepdim=True)
+                    unfound_vec_num = np.sum(hit_flags==False)
+                    unfound_vecs = torch.randn(unfound_vec_num, dim)*std + mean
+                    matrix[torch.LongTensor(hit_flags.astype(int)).eq(0)] = unfound_vecs
 
             if normalize:
                 matrix /= (torch.norm(matrix, dim=1, keepdim=True) + 1e-12)
@@ -328,11 +327,6 @@ class ContextualEmbedding(TokenEmbedding):
     def add_sentence_cache(self, *datasets, batch_size=32, device='cpu', delete_weights: bool=True):
         """
         由于动态embedding生成比较耗时，所以可以把每句话embedding缓存下来，这样就不需要每次都运行生成过程。
-
-        Example::
-
-            >>>
-
 
         :param datasets: DataSet对象
         :param batch_size: int, 生成cache的sentence表示时使用的batch的大小
@@ -363,7 +357,7 @@ class ContextualEmbedding(TokenEmbedding):
                         seq_len = words.ne(pad_index).sum(dim=-1)
                         max_len = words.size(1)
                         # 因为有些情况可能包含CLS, SEP, 从后面往前计算比较安全。
-                        seq_len_from_behind =(max_len - seq_len).tolist()
+                        seq_len_from_behind = (max_len - seq_len).tolist()
                         word_embeds = self(words).detach().cpu().numpy()
                         for b in range(words.size(0)):
                             length = seq_len_from_behind[b]
@@ -446,9 +440,6 @@ class ElmoEmbedding(ContextualEmbedding):
         self.layers = layers
 
         # 根据model_dir_or_name检查是否存在并下载
-        PRETRAINED_ELMO_MODEL_DIR = {'en': 'elmo_en-d39843fe.tar.gz',
-                                     'cn': 'elmo_cn-5e9b34e2.tar.gz'}
-
         if model_dir_or_name.lower() in PRETRAINED_ELMO_MODEL_DIR:
             PRETRAIN_URL = _get_base_url('elmo')
             model_name = PRETRAINED_ELMO_MODEL_DIR[model_dir_or_name]
@@ -532,21 +523,8 @@ class BertEmbedding(ContextualEmbedding):
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en-base-uncased', layers: str='-1',
                  pool_method: str='first', include_cls_sep: bool=False, requires_grad: bool=False):
         super(BertEmbedding, self).__init__(vocab)
+
         # 根据model_dir_or_name检查是否存在并下载
-        PRETRAINED_BERT_MODEL_DIR = {'en': 'bert-base-cased-f89bfe08.zip',
-                                     'en-base-uncased': 'bert-base-uncased-3413b23c.zip',
-                                     'en-base-cased': 'bert-base-cased-f89bfe08.zip',
-                                     'en-large-uncased': 'bert-large-uncased-20939f45.zip',
-                                     'en-large-cased': 'bert-large-cased-e0cf90fc.zip',
-
-                                     'cn': 'bert-base-chinese-29d0a84a.zip',
-                                     'cn-base': 'bert-base-chinese-29d0a84a.zip',
-
-                                     'multilingual': 'bert-base-multilingual-cased-1bd364ee.zip',
-                                     'multilingual-base-uncased': 'bert-base-multilingual-uncased-f8730fe4.zip',
-                                     'multilingual-base-cased': 'bert-base-multilingual-cased-1bd364ee.zip',
-                                     }
-
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
             PRETRAIN_URL = _get_base_url('bert')
             model_name = PRETRAINED_BERT_MODEL_DIR[model_dir_or_name]

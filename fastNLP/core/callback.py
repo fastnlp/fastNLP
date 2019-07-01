@@ -548,7 +548,7 @@ class LRScheduler(Callback):
         else:
             raise ValueError(f"Expect torch.optim.lr_scheduler for LRScheduler. Got {type(lr_scheduler)}.")
     
-    def on_epoch_begin(self):
+    def on_epoch_end(self):
         self.scheduler.step(self.epoch)
 
 
