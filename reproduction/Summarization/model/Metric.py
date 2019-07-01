@@ -50,8 +50,8 @@ class LabelFMetric(MetricBase):
         """
         target = target.data
         pred = pred.data
-        logger.debug(pred.size())
-        logger.debug(pred[:5,:])
+        # logger.debug(pred.size())
+        # logger.debug(pred[:5,:])
         batch, N = pred.size()
         self.pred += pred.sum()
         self.true += target.sum()

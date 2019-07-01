@@ -83,7 +83,6 @@ class TransformerModel(nn.Module):
 
         :param input: [batch_size, N, seq_len]
         :param input_len: [batch_size, N]
-        :param return_atten: bool
         :return: 
         """
         # Sentence Encoder
@@ -125,12 +124,12 @@ class TransformerModel(nn.Module):
         p_sent = self.wh(self.dec_output_state)  # [batch, N, 2]
 
         idx = None
-        if self._hps == 0:
+        if self._hps.m == 0:
             prediction = p_sent.view(-1, 2).max(1)[1]
             prediction = prediction.view(batch_size, -1)
         else:
             mask_output = torch.exp(p_sent[:, :, 1])  # # [batch, N]
-            mask_output = mask_output * input_len.float()
+            mask_output = mask_output.masked_fill(input_len.eq(0), 0)
             topk, idx = torch.topk(mask_output, self._hps.m)
             prediction = torch.zeros(batch_size, N).scatter_(1, idx.data.cpu(), 1)
             prediction = prediction.long().view(batch_size, -1)

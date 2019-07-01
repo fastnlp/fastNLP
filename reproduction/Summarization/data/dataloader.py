@@ -158,11 +158,11 @@ class SummarizationLoader(JsonLoader):
             logger.info("[INFO] Load existing vocab from %s!" % vocab_path)
             word_list = []
             with open(vocab_path, 'r', encoding='utf8') as vocab_f:
-                cnt = 0
+                cnt = 2 # pad and unk
                 for line in vocab_f:
-                    cnt += 1
                     pieces = line.split("\t")
                     word_list.append(pieces[0])
+                    cnt += 1
                     if cnt > vocab_size:
                         break
             vocabs = Vocabulary(max_size=vocab_size, padding=WORD_PAD, unknown=WORD_UNK)
