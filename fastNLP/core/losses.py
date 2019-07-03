@@ -226,6 +226,7 @@ class CrossEntropyLoss(LossBase):
     :param seq_len: 句子的长度, 长度之外的token不会计算loss。。
     :param padding_idx: padding的index，在计算loss时将忽略target中标号为padding_idx的内容, 可以通过该值代替
         传入seq_len.
+    :param str reduction: 支持'elementwise_mean'和'sum'.
 
     Example::
 
@@ -233,21 +234,25 @@ class CrossEntropyLoss(LossBase):
         
     """
     
-    def __init__(self, pred=None, target=None, seq_len=None, padding_idx=-100):
+    def __init__(self, pred=None, target=None, seq_len=None, padding_idx=-100, reduction='elementwise_mean'):
         super(CrossEntropyLoss, self).__init__()
         self._init_param_map(pred=pred, target=target, seq_len=seq_len)
         self.padding_idx = padding_idx
+        assert reduction in ('elementwise_mean', 'sum')
+        self.reduction = reduction
     
     def get_loss(self, pred, target, seq_len=None):
         if pred.dim()>2:
-            pred = pred.view(-1, pred.size(-1))
-            target = target.view(-1)
+            if pred.size(1)!=target.size(1):
+                pred = pred.transpose(1, 2)
+            pred = pred.reshape(-1, pred.size(-1))
+            target = target.reshape(-1)
         if seq_len is not None:
-            mask = seq_len_to_mask(seq_len).view(-1).eq(0)
+            mask = seq_len_to_mask(seq_len).reshape(-1).eq(0)
             target = target.masked_fill(mask, self.padding_idx)
 
         return F.cross_entropy(input=pred, target=target,
-                               ignore_index=self.padding_idx)
+                               ignore_index=self.padding_idx, reduction=self.reduction)
 
 
 class L1Loss(LossBase):
