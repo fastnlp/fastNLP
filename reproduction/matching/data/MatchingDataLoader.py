@@ -5,8 +5,8 @@ from typing import Union, Dict
 
 from fastNLP.core.const import Const
 from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.io.base_loader import DataInfo
-from fastNLP.io.dataset_loader import JsonLoader, DataSetLoader, CSVLoader
+from fastNLP.io.base_loader import DataInfo, DataSetLoader
+from fastNLP.io.dataset_loader import JsonLoader, CSVLoader
 from fastNLP.io.file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
 from fastNLP.modules.encoder._bert import BertTokenizer
 
@@ -348,6 +348,9 @@ class MNLILoader(MatchingLoader, CSVLoader):
             'dev_mismatched': 'dev_mismatched.tsv',
             'test_matched': 'test_matched.tsv',
             'test_mismatched': 'test_mismatched.tsv',
+            # 'test_0.9_matched': 'multinli_0.9_test_matched_unlabeled.txt',
+            # 'test_0.9_mismatched': 'multinli_0.9_test_mismatched_unlabeled.txt',
+            # test_0.9_mathed与mismatched是MNLI0.9版本的（数据来源：kaggle）
         }
         MatchingLoader.__init__(self, paths=paths)
         CSVLoader.__init__(self, sep='\t')
@@ -363,6 +366,10 @@ class MNLILoader(MatchingLoader, CSVLoader):
         for k, v in self.fields.items():
             if k in ds.get_field_names():
                 ds.rename_field(k, v)
+
+        if Const.TARGET in ds.get_field_names():
+            if ds[0][Const.TARGET] == 'hidden':
+                ds.delete_field(Const.TARGET)
 
         parentheses_table = str.maketrans({'(': None, ')': None})
 
