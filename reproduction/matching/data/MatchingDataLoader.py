@@ -16,12 +16,11 @@ class MatchingLoader(DataSetLoader):
     别名：:class:`fastNLP.io.MatchingLoader` :class:`fastNLP.io.dataset_loader.MatchingLoader`
 
     读取Matching任务的数据集
+
+    :param dict paths: key是数据集名称（如train、dev、test），value是对应的文件名
     """
 
     def __init__(self, paths: dict=None):
-        """
-        :param dict paths: key是数据集名称（如train、dev、test），value是对应的文件名
-        """
         self.paths = paths
 
     def _load(self, path):
@@ -173,7 +172,7 @@ class MatchingLoader(DataSetLoader):
                                    new_field_name=Const.INPUT_LENS(1), is_input=auto_set_input)
 
         if auto_pad_length is not None:
-            cut_text = min(auto_pad_length, cut_text if cut_text is not None else 0)
+            cut_text = min(auto_pad_length, cut_text if cut_text is not None else auto_pad_length)
 
         if cut_text is not None:
             for data_name, data_set in data_info.datasets.items():
@@ -209,6 +208,9 @@ class MatchingLoader(DataSetLoader):
                                    is_input=auto_set_input, is_target=auto_set_target)
 
         if auto_pad_length is not None:
+            if seq_len_type == 'seq_len':
+                raise RuntimeError(f'the sequence will be padded with the length {auto_pad_length}, '
+                                   f'so the seq_len_type cannot be `{seq_len_type}`!')
             for data_name, data_set in data_info.datasets.items():
                 for fields in data_set.get_field_names():
                     if Const.INPUT in fields:
@@ -298,7 +300,8 @@ class RTELoader(MatchingLoader, CSVLoader):
         ds = CSVLoader._load(self, path)
 
         for k, v in self.fields.items():
-            ds.rename_field(k, v)
+            if v in ds.get_field_names():
+                ds.rename_field(k, v)
         for fields in ds.get_all_fields():
             if Const.INPUT in fields:
                 ds.apply(lambda x: x[fields].strip().split(), new_field_name=fields)
@@ -337,7 +340,8 @@ class QNLILoader(MatchingLoader, CSVLoader):
         ds = CSVLoader._load(self, path)
 
         for k, v in self.fields.items():
-            ds.rename_field(k, v)
+            if v in ds.get_field_names():
+                ds.rename_field(k, v)
         for fields in ds.get_all_fields():
             if Const.INPUT in fields:
                 ds.apply(lambda x: x[fields].strip().split(), new_field_name=fields)
@@ -349,7 +353,7 @@ class MNLILoader(MatchingLoader, CSVLoader):
     """
     别名：:class:`fastNLP.io.MNLILoader` :class:`fastNLP.io.dataset_loader.MNLILoader`
 
-    读取SNLI数据集，读取的DataSet包含fields::
+    读取MNLI数据集，读取的DataSet包含fields::
 
         words1: list(str)，第一句文本, premise
         words2: list(str), 第二句文本, hypothesis
@@ -401,6 +405,17 @@ class MNLILoader(MatchingLoader, CSVLoader):
 
 
 class QuoraLoader(MatchingLoader, CSVLoader):
+    """
+    别名：:class:`fastNLP.io.QuoraLoader` :class:`fastNLP.io.dataset_loader.QuoraLoader`
+
+    读取MNLI数据集，读取的DataSet包含fields::
+
+        words1: list(str)，第一句文本, premise
+        words2: list(str), 第二句文本, hypothesis
+        target: str, 真实标签
+
+    数据来源:
+    """
 
     def __init__(self, paths: dict=None):
         paths = paths if paths is not None else {
