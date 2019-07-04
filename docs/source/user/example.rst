@@ -20,7 +20,13 @@
 小标题4
 -------------------
 
-参考 http://docutils.sourceforge.net/docs/user/rst/quickref.html
+推荐使用大标题、小标题3和小标题4
+
+官方文档 http://docutils.sourceforge.net/docs/user/rst/quickref.html
+
+`熟悉markdown的同学推荐参考这篇文章 <https://macplay.github.io/posts/cong-markdown-dao-restructuredtext/#id30>`_
+
+\<\>内表示的是链接地址，\<\>外的是显示到外面的文字
 
 常见语法
 ============
@@ -84,12 +90,14 @@ http://docutils.sf.net/ 孤立的网址会自动生成链接
     print("有行号和高亮")
 
 数学块
+==========
 
 .. math::
 
     H_2O + Na = NaOH + H_2 \uparrow
 
 复杂表格
+==========
 
 +------------------------+------------+----------+----------+
 | Header row, column 1   | Header 2   | Header 3 | Header 4 |
@@ -105,6 +113,7 @@ http://docutils.sf.net/ 孤立的网址会自动生成链接
 +------------------------+------------+---------------------+
 
 简易表格
+==========
 
 =====  =====  ======
    Inputs     Output
@@ -116,11 +125,11 @@ True   True   True
 =====  =====  ======
 
 [重要]各种链接
-=================π
+===================
 
 各种链接帮助我们连接到fastNLP文档的各个位置
 
-\<\>内表示的是地址，\<\>外的是显示到外面的名字，
+\<\>内表示的是链接地址，\<\>外的是显示到外面的文字
 
 :doc:`根据文件名链接 </user/with_fitlog>`
 
