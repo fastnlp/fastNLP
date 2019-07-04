@@ -1,14 +1,13 @@
-
 import os
 
 from typing import Union, Dict
 
-from fastNLP.core.const import Const
-from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.io.base_loader import DataInfo, DataSetLoader
-from fastNLP.io.dataset_loader import JsonLoader, CSVLoader
-from fastNLP.io.file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
-from fastNLP.modules.encoder._bert import BertTokenizer
+from ...core.const import Const
+from ...core.vocabulary import Vocabulary
+from ...io.base_loader import DataInfo, DataSetLoader
+from ...io.dataset_loader import JsonLoader, CSVLoader
+from ...io.file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
+from ...modules.encoder._bert import BertTokenizer
 
 
 class MatchingLoader(DataSetLoader):
@@ -16,12 +15,11 @@ class MatchingLoader(DataSetLoader):
     别名：:class:`fastNLP.io.MatchingLoader` :class:`fastNLP.io.dataset_loader.MatchingLoader`
 
     读取Matching任务的数据集
+
+    :param dict paths: key是数据集名称（如train、dev、test），value是对应的文件名
     """
 
-    def __init__(self, paths: dict=None):
-        """
-        :param dict paths: key是数据集名称（如train、dev、test），value是对应的文件名
-        """
+    def __init__(self, paths: dict = None):
         self.paths = paths
 
     def _load(self, path):
@@ -32,11 +30,11 @@ class MatchingLoader(DataSetLoader):
         """
         raise NotImplementedError
 
-    def process(self, paths: Union[str, Dict[str, str]], dataset_name: str=None,
-                to_lower=False, seq_len_type: str=None, bert_tokenizer: str=None,
-                cut_text: int = None, get_index=True, auto_pad_length: int=None,
-                auto_pad_token: str='<pad>', set_input: Union[list, str, bool]=True,
-                set_target: Union[list, str, bool] = True, concat: Union[str, list, bool]=None, ) -> DataInfo:
+    def process(self, paths: Union[str, Dict[str, str]], dataset_name: str = None,
+                to_lower=False, seq_len_type: str = None, bert_tokenizer: str = None,
+                cut_text: int = None, get_index=True, auto_pad_length: int = None,
+                auto_pad_token: str = '<pad>', set_input: Union[list, str, bool] = True,
+                set_target: Union[list, str, bool] = True, concat: Union[str, list, bool] = None, ) -> DataInfo:
         """
         :param paths: str或者Dict[str, str]。如果是str，则为数据集所在的文件夹或者是全路径文件名：如果是文件夹，
             则会从self.paths里面找对应的数据集名称与文件名。如果是Dict，则为数据集名称（如train、dev、test）和
@@ -210,6 +208,9 @@ class MatchingLoader(DataSetLoader):
 
         if auto_pad_length is not None:
             for data_name, data_set in data_info.datasets.items():
+                if seq_len_type == 'seq_len':
+                    raise RuntimeError(f'sequence will be padded with the length {auto_pad_length},'
+                                       f'the seq_len_type cannot be `{seq_len_type}`!')
                 for fields in data_set.get_field_names():
                     if Const.INPUT in fields:
                         data_set.apply(lambda x: x[fields] + [words_vocab.to_index(words_vocab.padding)] *
@@ -241,7 +242,7 @@ class SNLILoader(MatchingLoader, JsonLoader):
     数据来源: https://nlp.stanford.edu/projects/snli/snli_1.0.zip
     """
 
-    def __init__(self, paths: dict=None):
+    def __init__(self, paths: dict = None):
         fields = {
             'sentence1_binary_parse': Const.INPUTS(0),
             'sentence2_binary_parse': Const.INPUTS(1),
@@ -280,7 +281,7 @@ class RTELoader(MatchingLoader, CSVLoader):
     数据来源:
     """
 
-    def __init__(self, paths: dict=None):
+    def __init__(self, paths: dict = None):
         paths = paths if paths is not None else {
             'train': 'train.tsv',
             'dev': 'dev.tsv',
@@ -319,7 +320,7 @@ class QNLILoader(MatchingLoader, CSVLoader):
     数据来源:
     """
 
-    def __init__(self, paths: dict=None):
+    def __init__(self, paths: dict = None):
         paths = paths if paths is not None else {
             'train': 'train.tsv',
             'dev': 'dev.tsv',
@@ -349,7 +350,7 @@ class MNLILoader(MatchingLoader, CSVLoader):
     """
     别名：:class:`fastNLP.io.MNLILoader` :class:`fastNLP.io.dataset_loader.MNLILoader`
 
-    读取SNLI数据集，读取的DataSet包含fields::
+    读取MNLI数据集，读取的DataSet包含fields::
 
         words1: list(str)，第一句文本, premise
         words2: list(str), 第二句文本, hypothesis
@@ -358,7 +359,7 @@ class MNLILoader(MatchingLoader, CSVLoader):
     数据来源:
     """
 
-    def __init__(self, paths: dict=None):
+    def __init__(self, paths: dict = None):
         paths = paths if paths is not None else {
             'train': 'train.tsv',
             'dev_matched': 'dev_matched.tsv',
@@ -401,8 +402,19 @@ class MNLILoader(MatchingLoader, CSVLoader):
 
 
 class QuoraLoader(MatchingLoader, CSVLoader):
+    """
+    别名：:class:`fastNLP.io.QuoraLoader` :class:`fastNLP.io.dataset_loader.QuoraLoader`
 
-    def __init__(self, paths: dict=None):
+    读取MNLI数据集，读取的DataSet包含fields::
+
+        words1: list(str)，第一句文本, premise
+        words2: list(str), 第二句文本, hypothesis
+        target: str, 真实标签
+
+    数据来源:
+    """
+
+    def __init__(self, paths: dict = None):
         paths = paths if paths is not None else {
             'train': 'train.tsv',
             'dev': 'dev.tsv',

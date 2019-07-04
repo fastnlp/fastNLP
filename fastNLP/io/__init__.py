@@ -11,21 +11,35 @@
 """
 __all__ = [
     'EmbedLoader',
-    
+
+    'DataInfo',
     'DataSetLoader',
+
     'CSVLoader',
     'JsonLoader',
     'ConllLoader',
-    'SNLILoader',
-    'SSTLoader',
     'PeopleDailyCorpusLoader',
     'Conll2003Loader',
     
     'ModelLoader',
     'ModelSaver',
+
+    'SSTLoader',
+
+    'MatchingLoader',
+    'SNLILoader',
+    'MNLILoader',
+    'QNLILoader',
+    'QuoraLoader',
+    'RTELoader',
 ]
 
 from .embed_loader import EmbedLoader
-from .dataset_loader import DataSetLoader, CSVLoader, JsonLoader, ConllLoader, \
-    SNLILoader, SSTLoader, PeopleDailyCorpusLoader, Conll2003Loader
+from .base_loader import DataInfo, DataSetLoader
+from .dataset_loader import CSVLoader, JsonLoader, ConllLoader, \
+    PeopleDailyCorpusLoader, Conll2003Loader
 from .model_io import ModelLoader, ModelSaver
+
+from .data_loader.sst import SSTLoader
+from .data_loader.matching import MatchingLoader, SNLILoader, \
+    MNLILoader, QNLILoader, QuoraLoader, RTELoader
