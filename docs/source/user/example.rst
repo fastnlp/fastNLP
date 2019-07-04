@@ -75,6 +75,7 @@ http://docutils.sf.net/ 孤立的网址会自动生成链接
     不显示冒号的代码块
 
 .. code-block:: python
+
     :linenos:
     :emphasize-lines: 1,3
 
@@ -88,17 +89,46 @@ http://docutils.sf.net/ 孤立的网址会自动生成链接
 
     H_2O + Na = NaOH + H_2 \uparrow
 
+复杂表格
 
-各种连接
-===========
++------------------------+------------+----------+----------+
+| Header row, column 1   | Header 2   | Header 3 | Header 4 |
+| (header rows optional) |            |          |          |
++========================+============+==========+==========+
+| body row 1, column 1   | column 2   | column 3 | column 4 |
++------------------------+------------+----------+----------+
+| body row 2             | Cells may span columns.          |
++------------------------+------------+---------------------+
+| body row 3             | Cells may  | - Table cells       |
++------------------------+ span rows. | - contain           |
+| body row 4             |            | - body elements.    |
++------------------------+------------+---------------------+
 
-:doc:`/user/with_fitlog`
+简易表格
+
+=====  =====  ======
+   Inputs     Output
+------------  ------
+  A      B    A or B
+=====  =====  ======
+False  False  False
+True   True   True
+=====  =====  ======
+
+[重要]各种链接
+=================π
+
+各种链接帮助我们连接到fastNLP文档的各个位置
+
+\<\>内表示的是地址，\<\>外的是显示到外面的名字，
+
+:doc:`根据文件名链接 </user/with_fitlog>`
 
 :mod:`~fastNLP.core.batch`
 
 :class:`~fastNLP.Batch`
 
-~表示指显示最后一项
+~表示只显示最后一项
 
 :meth:`fastNLP.DataSet.apply`
 
