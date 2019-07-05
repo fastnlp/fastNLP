@@ -10,10 +10,25 @@ FastNLP的文档使用基于[reStructuredText标记语言](http://docutils.sourc
 一般开发者只要编写符合reStructuredText语法规范的文档并通过[PR](https://help.github.com/en/articles/about-pull-requests)，
 就可以为fastNLP的文档贡献一份力量。
 
-如果你想在本地编译文档并进行大段文档的编写，您需要安装Sphinx工具以及sphinx-rtd-theme主题。然后在本目录下执行`make dev` 命令，
-并在浏览器访问 http://0.0.0.0:8000/ 查看文档。 该命令只支持Linux和MacOS系统，在结束查看后需按 Control(Ctrl) + C 退出。
-如果你在远程服务器尚进行工作，您可以通过浏览器访问 http://{服务器的ip地址}:8000/ 查看文档，但必须保证服务器的8000端口是开放的。
-如果您的电脑或远程服务器的8000端口被占用，程序会顺延使用8001、8002……等端口，具体以命令行输出的信息为准。
+如果你想在本地编译文档并进行大段文档的编写，您需要安装Sphinx工具以及sphinx-rtd-theme主题：
+```bash
+fastNLP/docs> pip install sphinx
+fastNLP/docs> pip install sphinx-rtd-theme
+```
+然后在本目录下执行 `make dev` 命令。该命令只支持Linux和MacOS系统，期望看到如下输出：
+```bash
+fastNLP/docs> make dev
+rm -rf build/html && make html && make server
+Running Sphinx v1.5.6
+making output directory...
+......
+Build finished. The HTML pages are in build/html.
+cd build/html && python -m http.server
+Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...
+```
+现在您浏览器访问 http://localhost:8000/ 查看文档。如果你在远程服务器尚进行工作，则访问地址为 http://{服务器的ip地址}:8000/ 。
+但您必须保证服务器的8000端口是开放的。如果您的电脑或远程服务器的8000端口被占用，程序会顺延使用8001、8002……等端口。
+当你结束访问时，您可以使用Control(Ctrl) + C 来结束进程。
 
 我们在[这里](./source/user/example.rst)列举了fastNLP文档经常用到的reStructuredText语法（网页查看请结合Raw模式），
 您可以通过阅读它进行快速上手。FastNLP大部分的文档都是写在代码中通过Sphinx工具进行抽取生成的，
