@@ -2,7 +2,8 @@ import torch
 import json
 import os
 from fastNLP import Vocabulary
-from fastNLP.io.dataset_loader import ConllLoader, SSTLoader, SNLILoader
+from fastNLP.io.dataset_loader import ConllLoader
+from fastNLP.io.data_loader import SSTLoader, SNLILoader
 from fastNLP.core import Const as C
 import numpy as np
 

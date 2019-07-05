@@ -20,6 +20,7 @@ from collections import defaultdict
 import torch
 import torch.nn.functional as F
 
+from ..core.const import Const
 from .utils import _CheckError
 from .utils import _CheckRes
 from .utils import _build_args
@@ -27,6 +28,7 @@ from .utils import _check_arg_dict_list
 from .utils import _check_function_or_method
 from .utils import _get_func_signature
 from .utils import seq_len_to_mask
+
 
 class LossBase(object):
     """
@@ -95,22 +97,7 @@ class LossBase(object):
         # if func_spect.varargs:
         #     raise NameError(f"Delete `*{func_spect.varargs}` in {get_func_signature(self.get_loss)}(Do not use "
         #                     f"positional argument.).")
-    
-    def _fast_param_map(self, pred_dict, target_dict):
-        """Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
-            such as pred_dict has one element, target_dict has one element
 
-        :param pred_dict:
-        :param target_dict:
-        :return: dict, if dict is not {}, pass it to self.evaluate. Otherwise do mapping.
-        """
-        fast_param = {}
-        if len(self._param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
-            fast_param['pred'] = list(pred_dict.values())[0]
-            fast_param['target'] = list(target_dict.values())[0]
-            return fast_param
-        return fast_param
-    
     def __call__(self, pred_dict, target_dict, check=False):
         """
         :param dict pred_dict: 模型的forward函数返回的dict
@@ -118,11 +105,7 @@ class LossBase(object):
         :param Boolean check: 每一次执行映射函数的时候是否检查映射表，默认为不检查
         :return:
         """
-        fast_param = self._fast_param_map(pred_dict, target_dict)
-        if fast_param:
-            loss = self.get_loss(**fast_param)
-            return loss
-        
+
         if not self._checked:
             # 1. check consistence between signature and _param_map
             func_spect = inspect.getfullargspec(self.get_loss)
@@ -212,7 +195,6 @@ class LossFunc(LossBase):
             if not isinstance(key_map, dict):
                 raise RuntimeError(f"Loss error: key_map except a {type({})} but got a {type(key_map)}")
         self._init_param_map(key_map, **kwargs)
-        
 
 
 class CrossEntropyLoss(LossBase):
@@ -226,7 +208,7 @@ class CrossEntropyLoss(LossBase):
     :param seq_len: 句子的长度, 长度之外的token不会计算loss。。
     :param padding_idx: padding的index，在计算loss时将忽略target中标号为padding_idx的内容, 可以通过该值代替
         传入seq_len.
-    :param str reduction: 支持'elementwise_mean'和'sum'.
+    :param str reduction: 支持'mean'，'sum'和'none'.
 
     Example::
 
@@ -234,16 +216,16 @@ class CrossEntropyLoss(LossBase):
         
     """
     
-    def __init__(self, pred=None, target=None, seq_len=None, padding_idx=-100, reduction='elementwise_mean'):
+    def __init__(self, pred=None, target=None, seq_len=None, padding_idx=-100, reduction='mean'):
         super(CrossEntropyLoss, self).__init__()
         self._init_param_map(pred=pred, target=target, seq_len=seq_len)
         self.padding_idx = padding_idx
-        assert reduction in ('elementwise_mean', 'sum')
+        assert reduction in ('mean', 'sum', 'none')
         self.reduction = reduction
     
     def get_loss(self, pred, target, seq_len=None):
-        if pred.dim()>2:
-            if pred.size(1)!=target.size(1):
+        if pred.dim() > 2:
+            if pred.size(1) != target.size(1):
                 pred = pred.transpose(1, 2)
             pred = pred.reshape(-1, pred.size(-1))
             target = target.reshape(-1)
@@ -263,15 +245,18 @@ class L1Loss(LossBase):
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
     :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` >`target`
+    :param str reduction: 支持'mean'，'sum'和'none'.
     
     """
     
-    def __init__(self, pred=None, target=None):
+    def __init__(self, pred=None, target=None, reduction='mean'):
         super(L1Loss, self).__init__()
         self._init_param_map(pred=pred, target=target)
+        assert reduction in ('mean', 'sum', 'none')
+        self.reduction = reduction
     
     def get_loss(self, pred, target):
-        return F.l1_loss(input=pred, target=target)
+        return F.l1_loss(input=pred, target=target, reduction=self.reduction)
 
 
 class BCELoss(LossBase):
@@ -282,14 +267,17 @@ class BCELoss(LossBase):
     
     :param pred: 参数映射表中`pred`的映射关系，None表示映射关系为`pred`->`pred`
     :param target: 参数映射表中`target`的映射关系，None表示映射关系为`target`->`target`
+    :param str reduction: 支持'mean'，'sum'和'none'.
     """
     
-    def __init__(self, pred=None, target=None):
+    def __init__(self, pred=None, target=None, reduction='mean'):
         super(BCELoss, self).__init__()
         self._init_param_map(pred=pred, target=target)
+        assert reduction in ('mean', 'sum', 'none')
+        self.reduction = reduction
     
     def get_loss(self, pred, target):
-        return F.binary_cross_entropy(input=pred, target=target)
+        return F.binary_cross_entropy(input=pred, target=target, reduction=self.reduction)
 
 
 class NLLLoss(LossBase):
@@ -300,14 +288,20 @@ class NLLLoss(LossBase):
     
     :param pred: 参数映射表中`pred`的映射关系，None表示映射关系为`pred`->`pred`
     :param target: 参数映射表中`target`的映射关系，None表示映射关系为`target`->`target`
+    :param ignore_idx: ignore的index，在计算loss时将忽略target中标号为ignore_idx的内容, 可以通过该值代替
+        传入seq_len.
+    :param str reduction: 支持'mean'，'sum'和'none'.
     """
     
-    def __init__(self, pred=None, target=None):
+    def __init__(self, pred=None, target=None, ignore_idx=-100, reduction='mean'):
         super(NLLLoss, self).__init__()
         self._init_param_map(pred=pred, target=target)
+        assert reduction in ('mean', 'sum', 'none')
+        self.reduction = reduction
+        self.ignore_idx = ignore_idx
     
     def get_loss(self, pred, target):
-        return F.nll_loss(input=pred, target=target)
+        return F.nll_loss(input=pred, target=target, ignore_index=self.ignore_idx, reduction=self.reduction)
 
 
 class LossInForward(LossBase):
@@ -319,7 +313,7 @@ class LossInForward(LossBase):
     :param str loss_key: 在forward函数中loss的键名，默认为loss
     """
     
-    def __init__(self, loss_key='loss'):
+    def __init__(self, loss_key=Const.LOSS):
         super().__init__()
         if not isinstance(loss_key, str):
             raise TypeError(f"Only str allowed for loss_key, got {type(loss_key)}.")

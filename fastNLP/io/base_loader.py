@@ -10,6 +10,7 @@ from typing import Union, Dict
 import os
 from ..core.dataset import DataSet
 
+
 class BaseLoader(object):
     """
     各个 Loader 的基类，提供了 API 的参考。
@@ -53,8 +54,6 @@ class BaseLoader(object):
             with open(cache_path, 'wb') as f:
                 pickle.dump(obj, f)
             return obj
-
-
 
 
 def _download_from_url(url, path):
@@ -115,13 +114,11 @@ class DataInfo:
     经过处理的数据信息，包括一系列数据集（比如：分开的训练集、验证集和测试集）及它们所用的词表和词嵌入。
 
     :param vocabs: 从名称(字符串)到 :class:`~fastNLP.Vocabulary` 类型的dict
-    :param embeddings: 从名称(字符串)到一系列 embedding 的dict，参考 :class:`~fastNLP.io.EmbedLoader`
     :param datasets: 从名称(字符串)到 :class:`~fastNLP.DataSet` 类型的dict
     """
 
-    def __init__(self, vocabs: dict = None, embeddings: dict = None, datasets: dict = None):
+    def __init__(self, vocabs: dict = None, datasets: dict = None):
         self.vocabs = vocabs or {}
-        self.embeddings = embeddings or {}
         self.datasets = datasets or {}
 
     def __repr__(self):
@@ -132,6 +129,7 @@ class DataInfo:
         for name, vocab in self.vocabs.items():
             _str += '\t{} has {} entries.\n'.format(name, len(vocab))
         return _str
+
 
 class DataSetLoader:
     """
@@ -213,7 +211,6 @@ class DataSetLoader:
         返回的 :class:`DataInfo` 对象有如下属性：
 
         - vocabs: 由从数据集中获取的词表组成的字典，每个词表
-        - embeddings: (可选) 数据集对应的词嵌入
         - datasets: 一个dict，包含一系列 :class:`~fastNLP.DataSet` 类型的对象。其中 field 的命名参考 :mod:`~fastNLP.core.const`
 
         :param paths: 原始数据读取的路径

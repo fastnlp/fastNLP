@@ -1,7 +1,7 @@
 import unittest
 import os
-from fastNLP.io import Conll2003Loader, PeopleDailyCorpusLoader, CSVLoader, SNLILoader, JsonLoader
-from fastNLP.io.dataset_loader import SSTLoader
+from fastNLP.io import Conll2003Loader, PeopleDailyCorpusLoader, CSVLoader, JsonLoader
+from fastNLP.io.dataset_loader import SSTLoader, SNLILoader
 from reproduction.text_classification.data.yelpLoader import yelpLoader
 
 
