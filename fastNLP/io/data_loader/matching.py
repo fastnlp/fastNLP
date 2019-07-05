@@ -4,9 +4,9 @@ from typing import Union, Dict
 
 from ...core.const import Const
 from ...core.vocabulary import Vocabulary
-from ...io.base_loader import DataInfo, DataSetLoader
-from ...io.dataset_loader import JsonLoader, CSVLoader
-from ...io.file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
+from ..base_loader import DataInfo, DataSetLoader
+from ..dataset_loader import JsonLoader, CSVLoader
+from ..file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
 from ...modules.encoder._bert import BertTokenizer
 
 

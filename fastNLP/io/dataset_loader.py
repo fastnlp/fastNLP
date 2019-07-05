@@ -16,8 +16,6 @@ __all__ = [
     'CSVLoader',
     'JsonLoader',
     'ConllLoader',
-    'SNLILoader',
-    'SSTLoader',
     'PeopleDailyCorpusLoader',
     'Conll2003Loader',
 ]
@@ -30,7 +28,6 @@ from ..core.dataset import DataSet
 from ..core.instance import Instance
 from .file_reader import _read_csv, _read_json, _read_conll
 from .base_loader import DataSetLoader, DataInfo
-from .data_loader.sst import SSTLoader
 from ..core.const import Const
 from ..modules.encoder._bert import BertTokenizer
 
@@ -111,7 +108,7 @@ class PeopleDailyCorpusLoader(DataSetLoader):
             else:
                 instance = Instance(words=sent_words)
             data_set.append(instance)
-        data_set.apply(lambda ins: len(ins["words"]), new_field_name="seq_len")
+        data_set.apply(lambda ins: len(ins[Const.INPUT]), new_field_name=Const.INPUT_LEN)
         return data_set
 
 
