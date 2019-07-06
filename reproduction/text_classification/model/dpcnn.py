@@ -3,22 +3,27 @@ import torch.nn as nn
 from fastNLP.modules.utils import get_embeddings
 from fastNLP.core import Const as C
 
+
 class DPCNN(nn.Module):
-    def __init__(self, init_embed, num_cls, n_filters=256, kernel_size=3, n_layers=7, embed_dropout=0.1, dropout=0.1):
+    def __init__(self, init_embed, num_cls, n_filters=256,
+                 kernel_size=3, n_layers=7, embed_dropout=0.1, cls_dropout=0.1):
         super().__init__()
-        self.region_embed = RegionEmbedding(init_embed, out_dim=n_filters, kernel_sizes=[3, 5, 9])
+        self.region_embed = RegionEmbedding(
+            init_embed, out_dim=n_filters, kernel_sizes=[1, 3, 5])
         embed_dim = self.region_embed.embedding_dim
         self.conv_list = nn.ModuleList()
         for i in range(n_layers):
             self.conv_list.append(nn.Sequential(
                 nn.ReLU(),
-                nn.Conv1d(n_filters, n_filters, kernel_size, padding=kernel_size//2),
-                nn.Conv1d(n_filters, n_filters, kernel_size, padding=kernel_size//2),
+                nn.Conv1d(n_filters, n_filters, kernel_size,
+                          padding=kernel_size//2),
+                nn.Conv1d(n_filters, n_filters, kernel_size,
+                          padding=kernel_size//2),
             ))
         self.pool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
         self.embed_drop = nn.Dropout(embed_dropout)
         self.classfier = nn.Sequential(
-            nn.Dropout(dropout),
+            nn.Dropout(cls_dropout),
             nn.Linear(n_filters, num_cls),
         )
         self.reset_parameters()
@@ -57,7 +62,8 @@ class RegionEmbedding(nn.Module):
         super().__init__()
         if kernel_sizes is None:
             kernel_sizes = [5, 9]
-        assert isinstance(kernel_sizes, list), 'kernel_sizes should be List(int)'
+        assert isinstance(
+            kernel_sizes, list), 'kernel_sizes should be List(int)'
         self.embed = get_embeddings(init_embed)
         try:
             embed_dim = self.embed.embedding_dim
@@ -69,14 +75,14 @@ class RegionEmbedding(nn.Module):
                 nn.Conv1d(embed_dim, embed_dim, ksz, padding=ksz // 2),
             ))
         self.linears = nn.ModuleList([nn.Conv1d(embed_dim, out_dim, 1)
-                                      for _ in range(len(kernel_sizes) + 1)])
+                                      for _ in range(len(kernel_sizes))])
         self.embedding_dim = embed_dim
 
     def forward(self, x):
         x = self.embed(x)
         x = x.transpose(1, 2)
         # B, C, L
-        out = self.linears[0](x)
+        out = 0
         for conv, fc in zip(self.region_embeds, self.linears[1:]):
             conv_i = conv(x)
             out = out + fc(conv_i)

@@ -19,7 +19,7 @@ class DotAttention(nn.Module):
         补上文档
     """
     
-    def __init__(self, key_size, value_size, dropout=0):
+    def __init__(self, key_size, value_size, dropout=0.0):
         super(DotAttention, self).__init__()
         self.key_size = key_size
         self.value_size = value_size
@@ -37,7 +37,7 @@ class DotAttention(nn.Module):
         """
         output = torch.matmul(Q, K.transpose(1, 2)) / self.scale
         if mask_out is not None:
-            output.masked_fill_(mask_out, -1e8)
+            output.masked_fill_(mask_out, -1e18)
         output = self.softmax(output)
         output = self.drop(output)
         return torch.matmul(output, V)
@@ -67,9 +67,8 @@ class MultiHeadAttention(nn.Module):
         self.k_in = nn.Linear(input_size, in_size)
         self.v_in = nn.Linear(input_size, in_size)
         # follow the paper, do not apply dropout within dot-product
-        self.attention = DotAttention(key_size=key_size, value_size=value_size, dropout=0)
+        self.attention = DotAttention(key_size=key_size, value_size=value_size, dropout=dropout)
         self.out = nn.Linear(value_size * num_head, input_size)
-        self.drop = TimestepDropout(dropout)
         self.reset_parameters()
     
     def reset_parameters(self):
@@ -105,7 +104,7 @@ class MultiHeadAttention(nn.Module):
         
         # concat all heads, do output linear
         atte = atte.permute(1, 2, 0, 3).contiguous().view(batch, sq, -1)
-        output = self.drop(self.out(atte))
+        output = self.out(atte)
         return output
 
 
