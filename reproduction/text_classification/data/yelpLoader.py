@@ -8,11 +8,20 @@ from fastNLP.io.base_loader import DataInfo
 from fastNLP.io.embed_loader import EmbeddingOption
 from fastNLP.io.file_reader import _read_json
 from typing import Union, Dict
-from reproduction.Star_transformer.datasets import EmbedLoader
 from reproduction.utils import check_dataloader_paths
 
 
-def clean_str(sentence, char_lower=False):
+def get_tokenizer():
+    try:
+        import spacy
+        en = spacy.load('en')
+        print('use spacy tokenizer')
+        return lambda x: [w.text for w in en.tokenizer(x)]
+    except Exception as e:
+        print('use raw tokenizer')
+        return lambda x: x.split()
+
+def clean_str(sentence, tokenizer, char_lower=False):
     """
     heavily borrowed from github
     https://github.com/LukeZhuang/Hierarchical-Attention-Network/blob/master/yelp-preprocess.ipynb
@@ -23,7 +32,7 @@ def clean_str(sentence, char_lower=False):
         sentence = sentence.lower()
     import re
     nonalpnum = re.compile('[^0-9a-zA-Z?!\']+')
-    words = sentence.split()
+    words = tokenizer(sentence)
     words_collection = []
     for word in words:
         if word in ['-lrb-', '-rrb-', '<sssss>', '-r', '-l', 'b-']:
@@ -65,6 +74,7 @@ class yelpLoader(JsonLoader):
         self.fine_grained = fine_grained
         self.tag_v = tag_v
         self.lower = lower
+        self.tokenizer = get_tokenizer()
 
     '''
     def _load_json(self, path):
@@ -109,7 +119,7 @@ class yelpLoader(JsonLoader):
             all_count += 1
             if len(row) == 2:
                 target = self.tag_v[row[0] + ".0"]
-                words = clean_str(row[1], self.lower)
+                words = clean_str(row[1], self.tokenizer, self.lower)
                 if len(words) != 0:
                     ds.append(Instance(words=words, target=target))
                     real_count += 1
