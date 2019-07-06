@@ -136,10 +136,10 @@ class Vocabulary(object):
         """
         if self.word2idx is None:
             self.word2idx = {}
-        if self.padding is not None:
-            self.word2idx[self.padding] = len(self.word2idx)
-        if self.unknown is not None:
-            self.word2idx[self.unknown] = len(self.word2idx)
+            if self.padding is not None:
+                self.word2idx[self.padding] = len(self.word2idx)
+            if self.unknown is not None:
+                self.word2idx[self.unknown] = len(self.word2idx)
         
         max_size = min(self.max_size, len(self.word_count)) if self.max_size else None
         words = self.word_count.most_common(max_size)
