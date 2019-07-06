@@ -1,14 +1,13 @@
-
 import os
 
 from typing import Union, Dict
 
-from fastNLP.core.const import Const
-from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.io.base_loader import DataInfo, DataSetLoader
-from fastNLP.io.dataset_loader import JsonLoader, CSVLoader
-from fastNLP.io.file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
-from fastNLP.modules.encoder._bert import BertTokenizer
+from ...core.const import Const
+from ...core.vocabulary import Vocabulary
+from ..base_loader import DataInfo, DataSetLoader
+from ..dataset_loader import JsonLoader, CSVLoader
+from ..file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
+from ...modules.encoder._bert import BertTokenizer
 
 
 class MatchingLoader(DataSetLoader):
