@@ -9,6 +9,7 @@ from fastNLP import Const
 # from reproduction.utils import check_dataloader_paths
 from functools import partial
 
+
 class IMDBLoader(DataSetLoader):
     """
     读取IMDB数据集，DataSet包含以下fields:
@@ -33,6 +34,7 @@ class IMDBLoader(DataSetLoader):
                 target = parts[0]
                 words = parts[1].split()
                 dataset.append(Instance(words=words, target=target))
+
         if len(dataset)==0:
             raise RuntimeError(f"{path} has no valid data.")
 
@@ -44,15 +46,13 @@ class IMDBLoader(DataSetLoader):
                 tgt_vocab_opt: VocabularyOption = None,
                 src_embed_opt: EmbeddingOption = None,
                 char_level_op=False):
-        
-        # paths = check_dataloader_paths(paths)
-
+       
         datasets = {}
         info = DataInfo()
         for name, path in paths.items():
             dataset = self.load(path)
             datasets[name] = dataset
-
+            
         def wordtochar(words):
             chars = []
             for word in words:
@@ -93,6 +93,7 @@ class IMDBLoader(DataSetLoader):
             dataset.set_target("target")
 
         return info
+
 
 if __name__=="__main__":
     datapath = {"train": "/remote-home/ygwang/IMDB_data/train.csv",

@@ -8,11 +8,21 @@ from fastNLP.io.base_loader import DataInfo,DataSetLoader
 from fastNLP.io.embed_loader import EmbeddingOption
 from fastNLP.io.file_reader import _read_json
 from typing import Union, Dict
-from reproduction.Star_transformer.datasets import EmbedLoader
 from reproduction.utils import check_dataloader_paths
 
 
-def clean_str(sentence,char_lower=False):
+
+def get_tokenizer():
+    try:
+        import spacy
+        en = spacy.load('en')
+        print('use spacy tokenizer')
+        return lambda x: [w.text for w in en.tokenizer(x)]
+    except Exception as e:
+        print('use raw tokenizer')
+        return lambda x: x.split()
+
+def clean_str(sentence, tokenizer, char_lower=False):
     """
     heavily borrowed from github
     https://github.com/LukeZhuang/Hierarchical-Attention-Network/blob/master/yelp-preprocess.ipynb
@@ -20,10 +30,10 @@ def clean_str(sentence,char_lower=False):
     :return:
     """
     if char_lower:
-        sentence=sentence.lower()
+        sentence = sentence.lower()
     import re
     nonalpnum = re.compile('[^0-9a-zA-Z?!\']+')
-    words = sentence.split()
+    words = tokenizer(sentence)
     words_collection = []
     for word in words:
         if word in ['-lrb-', '-rrb-', '<sssss>', '-r', '-l', 'b-']:
@@ -40,7 +50,6 @@ class yelpLoader(DataSetLoader):
     
     """
     读取Yelp_full/Yelp_polarity数据集, DataSet包含fields:
-
         words: list(str), 需要分类的文本
         target: str, 文本的标签
         chars:list(str),未index的字符列表
@@ -52,13 +61,14 @@ class yelpLoader(DataSetLoader):
     def __init__(self, fine_grained=False,lower=False):
         super(yelpLoader, self).__init__()
         tag_v = {'1.0': 'very negative', '2.0': 'negative', '3.0': 'neutral',
-            '4.0': 'positive', '5.0': 'very positive'}
+                 '4.0': 'positive', '5.0': 'very positive'}
         if not fine_grained:
             tag_v['1.0'] = tag_v['2.0']
             tag_v['5.0'] = tag_v['4.0']
         self.fine_grained = fine_grained
         self.tag_v = tag_v
-        self.lower=lower
+        self.lower = lower
+        self.tokenizer = get_tokenizer()
 
     '''
     读取Yelp数据集, DataSet包含fields:
@@ -75,6 +85,7 @@ class yelpLoader(DataSetLoader):
     
     数据来源: https://www.yelp.com/dataset/download
     
+
     def _load_json(self, path):
         ds = DataSet()
         for idx, d in _read_json(path, fields=self.fields_list, dropna=self.dropna):
@@ -107,6 +118,7 @@ class yelpLoader(DataSetLoader):
             print("all count:",all_count)
         return ds
     '''
+    
     def _load(self, path):
         ds = DataSet()
         csv_reader=csv.reader(open(path,encoding='utf-8'))
@@ -125,6 +137,7 @@ class yelpLoader(DataSetLoader):
         return ds
 
 
+
     def process(self, paths: Union[str, Dict[str, str]],
                 train_ds: Iterable[str] = None,
                 src_vocab_op: VocabularyOption = None,
@@ -139,15 +152,10 @@ class yelpLoader(DataSetLoader):
             if tgt_vocab_op is None else Vocabulary(**tgt_vocab_op)
         _train_ds = [info.datasets[name]
                      for name in train_ds] if train_ds else info.datasets.values()
-        #vocab = Vocabulary(min_freq=2) if vocab_opt is None else Vocabulary(**vocab_opt)
-        # for name, path in paths.items():
-        #     dataset = self.load(path)
-        #     datasets[name] = dataset
-        #     vocab.from_dataset(dataset, field_name="words")
-        # info.vocabs = vocab
-        # info.datasets = datasets
+
 
         def wordtochar(words):
+
             chars=[]
             for word in words:
                 word=word.lower()
@@ -173,6 +181,7 @@ class yelpLoader(DataSetLoader):
         tgt_vocab.index_dataset(
             *info.datasets.values(),
             field_name=target_name, new_field_name=target_name)
+
         info.vocabs[target_name]=tgt_vocab
 
         return info
