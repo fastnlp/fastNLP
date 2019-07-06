@@ -128,7 +128,7 @@ class yelpLoader(DataSetLoader):
             all_count+=1
             if len(row)==2:
                 target=self.tag_v[row[0]+".0"]
-                words=clean_str(row[1],self.lower)
+                words=clean_str(row[1],self.tokenizer,self.lower)
                 if len(words)!=0:
                     ds.append(Instance(words=words,target=target))
                     real_count += 1
