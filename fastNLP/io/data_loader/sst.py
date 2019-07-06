@@ -1,11 +1,14 @@
 from typing import Iterable
 from nltk import Tree
+import spacy
 from ..base_loader import DataInfo, DataSetLoader
 from ...core.vocabulary import VocabularyOption, Vocabulary
 from ...core.dataset import DataSet
 from ...core.instance import Instance
 from ..embed_loader import EmbeddingOption, EmbedLoader
 
+spacy.prefer_gpu()
+sptk = spacy.load('en')
 
 class SSTLoader(DataSetLoader):
     URL = 'https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip'
@@ -56,8 +59,8 @@ class SSTLoader(DataSetLoader):
     def _get_one(data, subtree):
         tree = Tree.fromstring(data)
         if subtree:
-            return [(t.leaves(), t.label()) for t in tree.subtrees()]
-        return [(tree.leaves(), tree.label())]
+            return [([x.text for x in sptk.tokenizer(' '.join(t.leaves()))], t.label()) for t in tree.subtrees() ]
+        return [([x.text for x in sptk.tokenizer(' '.join(tree.leaves()))], tree.label())]
 
     def process(self,
                 paths,

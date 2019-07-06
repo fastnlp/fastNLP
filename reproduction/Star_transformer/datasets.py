@@ -51,13 +51,15 @@ def load_sst(path, files):
                for sub in [True, False, False]]
     ds_list = [loader.load(os.path.join(path, fn))
                for fn, loader in zip(files, loaders)]
-    word_v = Vocabulary(min_freq=2)
+    word_v = Vocabulary(min_freq=0)
     tag_v = Vocabulary(unknown=None, padding=None)
     for ds in ds_list:
         ds.apply(lambda x: [w.lower()
                             for w in x['words']], new_field_name='words')
-    ds_list[0].drop(lambda x: len(x['words']) < 3)
+    #ds_list[0].drop(lambda x: len(x['words']) < 3)
     update_v(word_v, ds_list[0], 'words')
+    update_v(word_v, ds_list[1], 'words')
+    update_v(word_v, ds_list[2], 'words')
     ds_list[0].apply(lambda x: tag_v.add_word(
         x['target']), new_field_name=None)
 
@@ -152,7 +154,10 @@ class EmbedLoader:
             # some words from vocab are missing in pre-trained embedding
             # we normally sample each dimension
             vocab_embed = embedding_matrix[np.where(hit_flags)]
-            sampled_vectors = np.random.normal(vocab_embed.mean(axis=0), vocab_embed.std(axis=0),
+            #sampled_vectors = np.random.normal(vocab_embed.mean(axis=0), vocab_embed.std(axis=0),
+            #                                   size=(len(vocab) - np.sum(hit_flags), emb_dim))
+            sampled_vectors = np.random.uniform(-0.01, 0.01,
                                                size=(len(vocab) - np.sum(hit_flags), emb_dim))
+
             embedding_matrix[np.where(1 - hit_flags)] = sampled_vectors
         return embedding_matrix
