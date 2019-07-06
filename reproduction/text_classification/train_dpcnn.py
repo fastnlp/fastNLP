@@ -20,6 +20,7 @@ os.environ['FASTNLP_CACHE_DIR'] = '/remote-home/hyan01/fastnlp_caches'
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
 
+
 # hyper
 
 class Config():
@@ -70,6 +71,7 @@ datainfo = load_data()
 vocab = datainfo.vocabs['words']
 # embedding = StackEmbedding([StaticEmbedding(vocab), CNNCharEmbedding(vocab, 100)])
 #embedding = StaticEmbedding(vocab)
+
 embedding = StaticEmbedding(
     vocab, model_dir_or_name='en-word2vec-300', requires_grad=ops.embedding_grad,
     normalize=False
@@ -79,8 +81,10 @@ print(len(datainfo.datasets['train']))
 print(len(datainfo.datasets['test']))
 print(datainfo.datasets['train'][0])
 
+
 print(len(vocab))
 print(len(datainfo.vocabs['target']))
+
 
 model = DPCNN(init_embed=embedding, num_cls=ops.num_classes,
               embed_dropout=ops.embed_dropout, cls_dropout=ops.cls_dropout)
@@ -118,3 +122,4 @@ trainer = Trainer(datainfo.datasets['train'], model, optimizer=optimizer, loss=l
 
 if __name__ == "__main__":
     print(trainer.train())
+

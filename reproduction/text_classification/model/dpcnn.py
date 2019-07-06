@@ -1,3 +1,4 @@
+
 import torch
 import torch.nn as nn
 from fastNLP.modules.utils import get_embeddings
@@ -10,11 +11,13 @@ class DPCNN(nn.Module):
         super().__init__()
         self.region_embed = RegionEmbedding(
             init_embed, out_dim=n_filters, kernel_sizes=[1, 3, 5])
+
         embed_dim = self.region_embed.embedding_dim
         self.conv_list = nn.ModuleList()
         for i in range(n_layers):
             self.conv_list.append(nn.Sequential(
                 nn.ReLU(),
+
                 nn.Conv1d(n_filters, n_filters, kernel_size,
                           padding=kernel_size//2),
                 nn.Conv1d(n_filters, n_filters, kernel_size,
@@ -24,9 +27,11 @@ class DPCNN(nn.Module):
         self.embed_drop = nn.Dropout(embed_dropout)
         self.classfier = nn.Sequential(
             nn.Dropout(cls_dropout),
+
             nn.Linear(n_filters, num_cls),
         )
         self.reset_parameters()
+
 
     def reset_parameters(self):
         for m in self.modules():
@@ -34,6 +39,7 @@ class DPCNN(nn.Module):
                 nn.init.normal_(m.weight, mean=0, std=0.01)
                 if m.bias is not None:
                     nn.init.normal_(m.bias, mean=0, std=0.01)
+
 
     def forward(self, words, seq_len=None):
         words = words.long()
@@ -52,18 +58,20 @@ class DPCNN(nn.Module):
         x = self.classfier(x)
         return {C.OUTPUT: x}
 
+
     def predict(self, words, seq_len=None):
         x = self.forward(words, seq_len)[C.OUTPUT]
         return {C.OUTPUT: torch.argmax(x, 1)}
-
 
 class RegionEmbedding(nn.Module):
     def __init__(self, init_embed, out_dim=300, kernel_sizes=None):
         super().__init__()
         if kernel_sizes is None:
             kernel_sizes = [5, 9]
+
         assert isinstance(
             kernel_sizes, list), 'kernel_sizes should be List(int)'
+
         self.embed = get_embeddings(init_embed)
         try:
             embed_dim = self.embed.embedding_dim
@@ -95,3 +103,4 @@ if __name__ == '__main__':
     model = DPCNN((10000, 300), 20)
     y = model(x)
     print(y.size(), y.mean(1), y.std(1))
+
