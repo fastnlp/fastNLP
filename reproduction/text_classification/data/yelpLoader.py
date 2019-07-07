@@ -184,6 +184,12 @@ class yelpLoader(DataSetLoader):
 
         info.vocabs[target_name]=tgt_vocab
 
+        info.datasets['train'],info.datasets['dev']=info.datasets['train'].split(0.1, shuffle=False)
+
+        for name, dataset in info.datasets.items():
+            dataset.set_input("words")
+            dataset.set_target("target")
+
         return info
 
 if __name__=="__main__":
