@@ -8,18 +8,7 @@ from fastNLP.io.base_loader import DataInfo
 from fastNLP.io.embed_loader import EmbeddingOption
 from fastNLP.io.file_reader import _read_json
 from typing import Union, Dict
-from reproduction.utils import check_dataloader_paths
-
-
-def get_tokenizer():
-    try:
-        import spacy
-        en = spacy.load('en')
-        print('use spacy tokenizer')
-        return lambda x: [w.text for w in en.tokenizer(x)]
-    except Exception as e:
-        print('use raw tokenizer')
-        return lambda x: x.split()
+from reproduction.utils import check_dataloader_paths, get_tokenizer
 
 def clean_str(sentence, tokenizer, char_lower=False):
     """
