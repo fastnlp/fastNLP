@@ -5,7 +5,8 @@ from fastNLP.core.vocabulary import VocabularyOption, Vocabulary
 from fastNLP import DataSet
 from fastNLP import Instance
 from fastNLP.io.embed_loader import EmbeddingOption, EmbedLoader
-
+import csv
+from typing import Union, Dict
 
 class SSTLoader(DataSetLoader):
     URL = 'https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip'
