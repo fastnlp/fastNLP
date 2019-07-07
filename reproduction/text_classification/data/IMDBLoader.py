@@ -6,22 +6,21 @@ from fastNLP import DataSet
 from fastNLP import Instance
 from fastNLP import Vocabulary
 from fastNLP import Const
-from reproduction.utils import check_dataloader_paths
+# from reproduction.utils import check_dataloader_paths
 from functools import partial
 
-class MTL16Loader(DataSetLoader):
+class IMDBLoader(DataSetLoader):
     """
-    读取MTL16数据集，DataSet包含以下fields:
+    读取IMDB数据集，DataSet包含以下fields:
 
         words: list(str), 需要分类的文本
         target: str, 文本的标签
 
-    数据来源：https://pan.baidu.com/s/1c2L6vdA
 
     """
 
     def __init__(self):
-        super(MTL16Loader, self).__init__()
+        super(IMDBLoader, self).__init__()
 
     def _load(self, path):
         dataset = DataSet()
@@ -45,12 +44,14 @@ class MTL16Loader(DataSetLoader):
                 tgt_vocab_opt: VocabularyOption = None,
                 src_embed_opt: EmbeddingOption = None):
         
-        paths = check_dataloader_paths(paths)
+        # paths = check_dataloader_paths(paths)
         datasets = {}
         info = DataInfo()
         for name, path in paths.items():
             dataset = self.load(path)
             datasets[name] = dataset
+
+        datasets["train"], datasets["dev"] = datasets["train"].split(0.1, shuffle=False)
 
         src_vocab = Vocabulary() if src_vocab_opt is None else Vocabulary(**src_vocab_opt)
         src_vocab.from_dataset(datasets['train'], field_name='words')

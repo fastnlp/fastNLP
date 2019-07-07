@@ -1,68 +1,77 @@
-import ast
-from fastNLP import DataSet, Instance, Vocabulary
+from fastNLP.io.embed_loader import EmbeddingOption, EmbedLoader
 from fastNLP.core.vocabulary import VocabularyOption
-from fastNLP.io import JsonLoader
-from fastNLP.io.base_loader import DataInfo
-from fastNLP.io.embed_loader import EmbeddingOption
-from fastNLP.io.file_reader import _read_json
-from typing import Union, Dict
-from reproduction.Star_transformer.datasets import EmbedLoader
-from reproduction.utils import check_dataloader_paths
+from fastNLP.io.base_loader import DataSetLoader, DataInfo
+from typing import Union, Dict, List, Iterator
+from fastNLP import DataSet
+from fastNLP import Instance
+from fastNLP import Vocabulary
+from fastNLP import Const
+# from reproduction.utils import check_dataloader_paths
+from functools import partial
+import pandas as pd
 
-
-class yelpLoader(JsonLoader):
-    
+class yelpLoader(DataSetLoader):
     """
-    读取Yelp数据集, DataSet包含fields:
-    
-        review_id: str, 22 character unique review id
-        user_id: str, 22 character unique user id
-        business_id: str, 22 character business id
-        useful: int, number of useful votes received
-        funny: int, number of funny votes received
-        cool: int, number of cool votes received
-        date: str, date formatted YYYY-MM-DD
+    读取IMDB数据集，DataSet包含以下fields:
+
         words: list(str), 需要分类的文本
         target: str, 文本的标签
-    
-    数据来源: https://www.yelp.com/dataset/download
-    
-    :param fine_grained: 是否使用SST-5标准，若 ``False`` , 使用SST-2。Default: ``False``
-    """
-    
-    def __init__(self, fine_grained=False):
-        super(yelpLoader, self).__init__()
-        tag_v = {'1.0': 'very negative', '2.0': 'negative', '3.0': 'neutral',
-            '4.0': 'positive', '5.0': 'very positive'}
-        if not fine_grained:
-            tag_v['1.0'] = tag_v['2.0']
-            tag_v['5.0'] = tag_v['4.0']
-        self.fine_grained = fine_grained
-        self.tag_v = tag_v
-    
-    def _load(self, path):
-        ds = DataSet()
-        for idx, d in _read_json(path, fields=self.fields_list, dropna=self.dropna):
-            d = ast.literal_eval(d)
-            d["words"] = d.pop("text").split()
-            d["target"] = self.tag_v[str(d.pop("stars"))]
-            ds.append(Instance(**d))
-        return ds
 
-    def process(self, paths: Union[str, Dict[str, str]], vocab_opt: VocabularyOption = None,
-                embed_opt: EmbeddingOption = None):
-        paths = check_dataloader_paths(paths)
+
+    """
+
+    def __init__(self):
+        super(yelpLoader, self).__init__()
+
+    def _load(self, path):
+        dataset = DataSet()
+        data = pd.read_csv(path, header=None, sep=",").values
+        for line in data:
+            target = str(line[0])
+            words = str(line[1]).lower().split()
+            dataset.append(Instance(words=words, target=target))
+        if len(dataset)==0:
+            raise RuntimeError(f"{path} has no valid data.")
+
+        return dataset
+    
+    def process(self,
+                paths: Union[str, Dict[str, str]],
+                src_vocab_opt: VocabularyOption = None,
+                tgt_vocab_opt: VocabularyOption = None,
+                src_embed_opt: EmbeddingOption = None):
+        
+        # paths = check_dataloader_paths(paths)
         datasets = {}
         info = DataInfo()
-        vocab = Vocabulary(min_freq=2) if vocab_opt is None else Vocabulary(**vocab_opt)
         for name, path in paths.items():
             dataset = self.load(path)
             datasets[name] = dataset
-            vocab.from_dataset(dataset, field_name="words")
-        info.vocabs = vocab
-        info.datasets = datasets
-        if embed_opt is not None:
-            embed = EmbedLoader.load_with_vocab(**embed_opt, vocab=vocab)
-            info.embeddings['words'] = embed
-        return info
 
+        datasets["train"], datasets["dev"] = datasets["train"].split(0.1, shuffle=False)
+
+        src_vocab = Vocabulary() if src_vocab_opt is None else Vocabulary(**src_vocab_opt)
+        src_vocab.from_dataset(datasets['train'], field_name='words')
+        src_vocab.index_dataset(*datasets.values(), field_name='words')
+
+        tgt_vocab = Vocabulary(unknown=None, padding=None) \
+            if tgt_vocab_opt is None else Vocabulary(**tgt_vocab_opt)
+        tgt_vocab.from_dataset(datasets['train'], field_name='target')
+        tgt_vocab.index_dataset(*datasets.values(), field_name='target')
+
+        info.vocabs = {
+            "words": src_vocab,
+            "target": tgt_vocab
+        }
+
+        info.datasets = datasets
+
+        if src_embed_opt is not None:
+            embed = EmbedLoader.load_with_vocab(**src_embed_opt, vocab=src_vocab)
+            info.embeddings['words'] = embed
+
+        for name, dataset in info.datasets.items():
+            dataset.set_input("words")
+            dataset.set_target("target")
+
+        return info
