@@ -34,18 +34,10 @@ def clean_str(sentence, tokenizer, char_lower=False):
     return words_collection
 
 
-class yelpLoader(JsonLoader):
+class yelpLoader(DataSetLoader):
     
     """
-    读取Yelp数据集, DataSet包含fields:
-    
-        review_id: str, 22 character unique review id
-        user_id: str, 22 character unique user id
-        business_id: str, 22 character business id
-        useful: int, number of useful votes received
-        funny: int, number of funny votes received
-        cool: int, number of cool votes received
-        date: str, date formatted YYYY-MM-DD
+    读取Yelp_full/Yelp_polarity数据集, DataSet包含fields:
         words: list(str), 需要分类的文本
         target: str, 文本的标签
         chars:list(str),未index的字符列表
@@ -179,6 +171,12 @@ class yelpLoader(JsonLoader):
             field_name=target_name, new_field_name=target_name)
 
         info.vocabs[target_name]=tgt_vocab
+
+        info.datasets['train'],info.datasets['dev']=info.datasets['train'].split(0.1, shuffle=False)
+
+        for name, dataset in info.datasets.items():
+            dataset.set_input("words")
+            dataset.set_target("target")
 
         return info
 

@@ -7,7 +7,6 @@ import sys
 sys.path.append('../..')
 from fastNLP.core.const import Const as C
 import torch.nn as nn
-from fastNLP.io.dataset_loader import SSTLoader
 from data.yelpLoader import yelpLoader
 from data.sstLoader import sst2Loader
 from data.IMDBLoader import IMDBLoader
@@ -107,9 +106,9 @@ ops=Config
 
 
 ##1.task相关信息：利用dataloader载入dataInfo
-dataloader=sst2Loader()
-dataloader=IMDBLoader()
-#dataloader=yelpLoader(fine_grained=True)
+#dataloader=sst2Loader()
+#dataloader=IMDBLoader()
+dataloader=yelpLoader(fine_grained=True)
 datainfo=dataloader.process(ops.datapath,char_level_op=True)
 char_vocab=ops.char_cnn_config["alphabet"]["en"]["lower"]["alphabet"]
 ops.number_of_characters=len(char_vocab)
