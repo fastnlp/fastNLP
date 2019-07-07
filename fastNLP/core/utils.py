@@ -17,7 +17,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])
 
@@ -276,6 +275,7 @@ def _move_model_to_device(model, device):
         raise TypeError("Unsupported device type.")
     model = model.to(device)
     return model
+
 
 
 def _get_model_device(model):

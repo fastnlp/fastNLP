@@ -15,7 +15,8 @@ class MLP(nn.Module):
     多层感知器
 
     :param List[int] size_layer: 一个int的列表，用来定义MLP的层数，列表中的数字为每一层是hidden数目。MLP的层数为 len(size_layer) - 1
-    :param Union[str,func,List[str]] activation: 一个字符串或者函数的列表，用来定义每一个隐层的激活函数，字符串包括relu，tanh和sigmoid，默认值为relu
+    :param Union[str,func,List[str]] activation: 一个字符串或者函数的列表，用来定义每一个隐层的激活函数，字符串包括relu，tanh和
+        sigmoid，默认值为relu
     :param Union[str,func] output_activation:  字符串或者函数，用来定义输出层的激活函数，默认值为None，表示输出层没有激活函数
     :param str initial_method: 参数初始化方式
     :param float dropout: dropout概率，默认值为0

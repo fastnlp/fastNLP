@@ -81,6 +81,7 @@ class ESIMModel(BaseModel):
 
         out = torch.cat((a_avg, a_max, b_avg, b_max), dim=1)  # v: [B, 8 * H]
         logits = torch.tanh(self.classifier(out))
+        # logits = self.classifier(out)
 
         if target is not None:
             loss_fct = CrossEntropyLoss()
@@ -91,7 +92,8 @@ class ESIMModel(BaseModel):
             return {Const.OUTPUT: logits}
 
     def predict(self, **kwargs):
-        return self.forward(**kwargs)
+        pred = self.forward(**kwargs)[Const.OUTPUT].argmax(-1)
+        return {Const.OUTPUT: pred}
 
     # input [batch_size, len , hidden]
     # mask  [batch_size, len] (111...00)
@@ -127,7 +129,7 @@ class BiRNN(nn.Module):
 
     def forward(self, x, x_mask):
         # Sort x
-        lengths = x_mask.data.eq(1).long().sum(1).squeeze()
+        lengths = x_mask.data.eq(1).long().sum(1)
         _, idx_sort = torch.sort(lengths, dim=0, descending=True)
         _, idx_unsort = torch.sort(idx_sort, dim=0)
         lengths = list(lengths[idx_sort])

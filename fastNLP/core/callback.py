@@ -113,7 +113,7 @@ class Callback(object):
     
     @property
     def n_steps(self):
-        """Trainer一共会运行多少步"""
+        """Trainer一共会采多少个batch。当Trainer中update_every设置为非1的值时，该值不等于update的次数"""
         return self._trainer.n_steps
     
     @property
@@ -181,7 +181,7 @@ class Callback(object):
         :param dict batch_x: DataSet中被设置为input的field的batch。
         :param dict batch_y: DataSet中被设置为target的field的batch。
         :param list(int) indices: 这次采样使用到的indices，可以通过DataSet[indices]获取出这个batch采出的Instance，在一些
-            情况下可以帮助定位是哪个Sample导致了错误。仅在Trainer的prefetch为False时可用。
+            情况下可以帮助定位是哪个Sample导致了错误。仅当num_workers=0时有效。
         :return:
         """
         pass
@@ -399,10 +399,11 @@ class GradientClipCallback(Callback):
         self.clip_value = clip_value
     
     def on_backward_end(self):
-        if self.parameters is None:
-            self.clip_fun(self.model.parameters(), self.clip_value)
-        else:
-            self.clip_fun(self.parameters, self.clip_value)
+        if self.step%self.update_every==0:
+            if self.parameters is None:
+                self.clip_fun(self.model.parameters(), self.clip_value)
+            else:
+                self.clip_fun(self.parameters, self.clip_value)
 
 
 class EarlyStopCallback(Callback):

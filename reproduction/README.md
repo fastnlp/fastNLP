@@ -3,6 +3,8 @@
 
 复现的模型有:
 - [Star-Transformer](Star_transformer/)
+- [Biaffine](https://github.com/fastnlp/fastNLP/blob/999a14381747068e9e6a7cc370037b320197db00/fastNLP/models/biaffine_parser.py#L239)
+- [CNNText](https://github.com/fastnlp/fastNLP/blob/999a14381747068e9e6a7cc370037b320197db00/fastNLP/models/cnn_text_classification.py#L12)
 - ...
 
 # 任务复现
@@ -11,11 +13,11 @@
 
 
 ## Matching (自然语言推理/句子匹配)
-- still in progress
+- [Matching 任务复现](matching)
 
 
 ## Sequence Labeling (序列标注)
-- still in progress
+- [NER](seqence_labelling/ner)
 
 
 ## Coreference resolution (指代消解)

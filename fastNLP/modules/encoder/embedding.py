@@ -202,18 +202,12 @@ class StaticEmbedding(TokenEmbedding):
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
         # 读取embedding
-        embedding, hit_flags = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method,
+        embedding = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method,
                                                       normalize=normalize)
         self.embedding = nn.Embedding(num_embeddings=embedding.shape[0], embedding_dim=embedding.shape[1],
                                       padding_idx=vocab.padding_idx,
                                       max_norm=None, norm_type=2, scale_grad_by_freq=False,
                                       sparse=False, _weight=embedding)
-        if vocab._no_create_word_length > 0:  # 需要映射，使得来自于dev, test的idx指向unk
-            words_to_words = nn.Parameter(torch.arange(len(vocab)).long(), requires_grad=False)
-            for word, idx in vocab:
-                if vocab._is_word_no_create_entry(word) and not hit_flags[idx]:
-                    words_to_words[idx] = vocab.unknown_idx
-            self.words_to_words = words_to_words
         self._embed_size = self.embedding.weight.size(1)
         self.requires_grad = requires_grad
 
@@ -268,10 +262,8 @@ class StaticEmbedding(TokenEmbedding):
             else:
                 dim = len(parts) - 1
                 f.seek(0)
-            matrix = torch.zeros(len(vocab), dim)
-            if init_method is not None:
-                init_method(matrix)
-            hit_flags = np.zeros(len(vocab), dtype=bool)
+            matrix = {}
+            found_count = 0
             for idx, line in enumerate(f, start_idx):
                 try:
                     parts = line.strip().split()
@@ -285,28 +277,49 @@ class StaticEmbedding(TokenEmbedding):
                     if word in vocab:
                         index = vocab.to_index(word)
                         matrix[index] = torch.from_numpy(np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim))
-                        hit_flags[index] = True
+                        found_count += 1
                 except Exception as e:
                     if error == 'ignore':
                         warnings.warn("Error occurred at the {} line.".format(idx))
                     else:
                         print("Error occurred at the {} line.".format(idx))
                         raise e
-            found_count = sum(hit_flags)
             print("Found {} out of {} words in the pre-training embedding.".format(found_count, len(vocab)))
-            if init_method is None:
-                if len(vocab)-found_count>0 and found_count>0: # 有的没找到
-                    found_vecs = matrix[torch.LongTensor(hit_flags.astype(int)).byte()]
-                    mean = found_vecs.mean(dim=0, keepdim=True)
-                    std = found_vecs.std(dim=0, keepdim=True)
-                    unfound_vec_num = np.sum(hit_flags==False)
-                    unfound_vecs = torch.randn(unfound_vec_num, dim)*std + mean
-                    matrix[torch.LongTensor(hit_flags.astype(int)).eq(0)] = unfound_vecs
+            for word, index in vocab:
+                if index not in matrix and not vocab._is_word_no_create_entry(word):
+                    if vocab.unknown_idx in matrix:  # 如果有unkonwn，用unknown初始化
+                        matrix[index] = matrix[vocab.unknown_idx]
+                    else:
+                        matrix[index] = None
+
+            vectors = torch.zeros(len(matrix), dim)
+            if init_method:
+                init_method(vectors)
+            else:
+                nn.init.uniform_(vectors, -np.sqrt(3/dim), np.sqrt(3/dim))
+
+            if vocab._no_create_word_length>0:
+                if vocab.unknown is None:  # 创建一个专门的unknown
+                    unknown_idx = len(matrix)
+                    vectors = torch.cat([vectors, torch.zeros(1, dim)], dim=0).contiguous()
+                else:
+                    unknown_idx = vocab.unknown_idx
+                words_to_words = nn.Parameter(torch.full((len(vocab),), fill_value=unknown_idx).long(),
+                                              requires_grad=False)
+                for order, (index, vec) in enumerate(matrix.items()):
+                    if vec is not None:
+                        vectors[order] = vec
+                    words_to_words[index] = order
+                self.words_to_words = words_to_words
+            else:
+                for index, vec in matrix.items():
+                    if vec is not None:
+                        vectors[index] = vec
 
             if normalize:
-                matrix /= (torch.norm(matrix, dim=1, keepdim=True) + 1e-12)
+                vectors /= (torch.norm(vectors, dim=1, keepdim=True) + 1e-12)
 
-            return matrix, hit_flags
+            return vectors
 
     def forward(self, words):
         """

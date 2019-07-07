@@ -79,7 +79,7 @@ class TestTutorial(unittest.TestCase):
         train_data.rename_field('label', 'label_seq')
         test_data.rename_field('label', 'label_seq')
 
-        loss = CrossEntropyLoss(pred="output", target="label_seq")
+        loss = CrossEntropyLoss(target="label_seq")
         metric = AccuracyMetric(target="label_seq")
 
         # 实例化Trainer，传入模型和数据，进行训练
@@ -91,7 +91,7 @@ class TestTutorial(unittest.TestCase):
 
         # 用train_data训练，在test_data验证
         trainer = Trainer(model=model, train_data=train_data, dev_data=test_data,
-                          loss=CrossEntropyLoss(pred="output", target="label_seq"),
+                          loss=CrossEntropyLoss(target="label_seq"),
                           metrics=AccuracyMetric(target="label_seq"),
                           save_path=None,
                           batch_size=32,
