@@ -30,9 +30,9 @@ class Config():
 
     task_name = "IMDB"
     datapath={"train":"IMDB_data/train.csv", "test":"IMDB_data/test.csv"}
-    load_model_path="./result_IMDB/best_BiLSTM_SELF_ATTENTION_acc_2019-07-07-04-16-51"
     save_model_path="./result_IMDB_test/"
-opt=Config
+
+opt=Config()
 
 
 # load data
