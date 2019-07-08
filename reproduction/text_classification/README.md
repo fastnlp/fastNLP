@@ -11,8 +11,6 @@ LSTM+self_attention:论文链接[A Structured Self-attentive Sentence Embedding]
 
 AWD-LSTM:论文链接[Regularizing and Optimizing LSTM Language Models](<https://arxiv.org/pdf/1708.02182.pdf>)
 
-#待补充
-
 # 数据集及复现结果汇总
 
 使用fastNLP复现的结果vs论文汇报结果(/前为fastNLP实现，后面为论文报道,-表示论文没有在该数据集上列出结果)
