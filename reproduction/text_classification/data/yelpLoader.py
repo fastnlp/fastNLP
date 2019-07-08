@@ -141,14 +141,14 @@ class yelpLoader(DataSetLoader):
         _train_ds = [info.datasets[name]
                      for name in train_ds] if train_ds else info.datasets.values()
 
-
         def wordtochar(words):
-
-            chars=[]
+            chars = []
             for word in words:
-                word=word.lower()
+                word = word.lower()
                 for char in word:
                     chars.append(char)
+                chars.append('')
+            chars.pop()
             return chars
 
         input_name, target_name = 'words', 'target'
