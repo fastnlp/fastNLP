@@ -1,5 +1,5 @@
 
-from ...core import Const
+from ...core.const import Const
 
 from .matching import MatchingLoader
 from ..dataset_loader import JsonLoader
