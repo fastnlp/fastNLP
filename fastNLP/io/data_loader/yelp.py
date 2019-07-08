@@ -3,9 +3,10 @@ import csv
 from typing import Iterable
 
 from ...core.const import Const
-from ...core import DataSet, Instance, Vocabulary
-from ...core.vocabulary import VocabularyOption
-from ..base_loader import DataInfo,DataSetLoader
+from ...core.dataset import DataSet
+from ...core.instance import Instance
+from ...core.vocabulary import VocabularyOption, Vocabulary
+from ..base_loader import DataInfo, DataSetLoader
 from typing import Union, Dict
 from ..utils import check_dataloader_paths, get_tokenizer
 
