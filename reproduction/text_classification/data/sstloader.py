@@ -9,27 +9,22 @@ import csv
 from typing import Union, Dict
 from reproduction.utils import check_dataloader_paths, get_tokenizer
 
+
 class SSTLoader(DataSetLoader):
     URL = 'https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip'
     DATA_DIR = 'sst/'
 
     """
     别名：:class:`fastNLP.io.SSTLoader` :class:`fastNLP.io.dataset_loader.SSTLoader`
-
     读取SST数据集, DataSet包含fields::
-
         words: list(str) 需要分类的文本
         target: str 文本的标签
-
     数据来源: https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip
-
     :param subtree: 是否将数据展开为子树，扩充数据量. Default: ``False``
     :param fine_grained: 是否使用SST-5标准，若 ``False`` , 使用SST-2。Default: ``False``
     """
-
     def __init__(self, subtree=False, fine_grained=False):
         self.subtree = subtree
-
         tag_v = {'0': 'very negative', '1': 'negative', '2': 'neutral',
                  '3': 'positive', '4': 'very positive'}
         if not fine_grained:
@@ -39,7 +34,6 @@ class SSTLoader(DataSetLoader):
 
     def _load(self, path):
         """
-
         :param str path: 存储数据的路径
         :return: 一个 :class:`~fastNLP.DataSet` 类型的对象
         """
@@ -54,12 +48,14 @@ class SSTLoader(DataSetLoader):
             ds.append(Instance(words=words, target=tag))
         return ds
 
+
     @staticmethod
     def _get_one(data, subtree):
         tree = Tree.fromstring(data)
         if subtree:
             return [(t.leaves(), t.label()) for t in tree.subtrees()]
         return [(tree.leaves(), tree.label())]
+
 
     def process(self,
                 paths,
@@ -88,24 +84,29 @@ class SSTLoader(DataSetLoader):
             target_name: tgt_vocab
         }
 
+
         if src_embed_op is not None:
             src_embed_op.vocab = src_vocab
             init_emb = EmbedLoader.load_with_vocab(**src_embed_op)
             info.embeddings[input_name] = init_emb
 
+
         for name, dataset in info.datasets.items():
             dataset.set_input(input_name)
             dataset.set_target(target_name)
-
         return info
+
+
 
 class sst2Loader(DataSetLoader):
     '''
     数据来源"SST":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FSST-2.zip?alt=media&token=aabc5f6b-e466-44a2-b9b4-cf6337f84ac8',
     '''
+
     def __init__(self):
         super(sst2Loader, self).__init__()
         self.tokenizer = get_tokenizer()
+
 
     def _load(self, path: str) -> DataSet:
         ds = DataSet()
@@ -121,6 +122,8 @@ class sst2Loader(DataSetLoader):
             all_count+=1
         print("all count:", all_count)
         return ds
+
+
 
     def process(self,
                 paths: Union[str, Dict[str, str]],
@@ -153,7 +156,6 @@ class sst2Loader(DataSetLoader):
         if char_level_op:
             for dataset in datasets.values():
                 dataset.apply_field(wordtochar, field_name="words", new_field_name='chars')
-
         src_vocab = Vocabulary() if src_vocab_opt is None else Vocabulary(**src_vocab_opt)
         src_vocab.from_dataset(datasets['train'], field_name='words')
         src_vocab.index_dataset(*datasets.values(), field_name='words')
@@ -171,21 +173,26 @@ class sst2Loader(DataSetLoader):
 
         info.datasets = datasets
 
-
         if src_embed_opt is not None:
             embed = EmbedLoader.load_with_vocab(**src_embed_opt, vocab=src_vocab)
             info.embeddings['words'] = embed
 
+        for name, dataset in info.datasets.items():
+            dataset.set_input("words")
+            dataset.set_target("target")
+
         return info
+
+
 
 if __name__=="__main__":
     datapath = {"train": "/remote-home/ygwang/workspace/GLUE/SST-2/train.tsv",
                 "dev": "/remote-home/ygwang/workspace/GLUE/SST-2/dev.tsv"}
     datainfo=sst2Loader().process(datapath,char_level_op=True)
     #print(datainfo.datasets["train"])
+
     len_count = 0
     for instance in datainfo.datasets["train"]:
         len_count += len(instance["chars"])
-
     ave_len = len_count / len(datainfo.datasets["train"])
     print(ave_len)
