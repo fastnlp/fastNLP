@@ -8,19 +8,7 @@ from fastNLP.io.base_loader import DataInfo,DataSetLoader
 from fastNLP.io.embed_loader import EmbeddingOption
 from fastNLP.io.file_reader import _read_json
 from typing import Union, Dict
-from reproduction.utils import check_dataloader_paths
-
-
-
-def get_tokenizer():
-    try:
-        import spacy
-        en = spacy.load('en')
-        print('use spacy tokenizer')
-        return lambda x: [w.text for w in en.tokenizer(x)]
-    except Exception as e:
-        print('use raw tokenizer')
-        return lambda x: x.split()
+from reproduction.utils import check_dataloader_paths, get_tokenizer
 
 def clean_str(sentence, tokenizer, char_lower=False):
     """
@@ -118,7 +106,7 @@ class yelpLoader(DataSetLoader):
             print("all count:",all_count)
         return ds
     '''
-    
+
     def _load(self, path):
         ds = DataSet()
         csv_reader=csv.reader(open(path,encoding='utf-8'))
@@ -128,7 +116,7 @@ class yelpLoader(DataSetLoader):
             all_count+=1
             if len(row)==2:
                 target=self.tag_v[row[0]+".0"]
-                words=clean_str(row[1],self.tokenizer,self.lower)
+                words = clean_str(row[1], self.tokenizer, self.lower)
                 if len(words)!=0:
                     ds.append(Instance(words=words,target=target))
                     real_count += 1
@@ -153,14 +141,14 @@ class yelpLoader(DataSetLoader):
         _train_ds = [info.datasets[name]
                      for name in train_ds] if train_ds else info.datasets.values()
 
-
         def wordtochar(words):
-
-            chars=[]
+            chars = []
             for word in words:
-                word=word.lower()
+                word = word.lower()
                 for char in word:
                     chars.append(char)
+                chars.append('')
+            chars.pop()
             return chars
 
         input_name, target_name = 'words', 'target'
