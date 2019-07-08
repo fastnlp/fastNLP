@@ -11,7 +11,7 @@
 fastNLP可以方便地载入各种类型的数据。同时，针对常见的数据集，我们已经预先实现了载入方法，其中包含CoNLL-03数据集。
 在设计dataloader时，以DataSetLoader为基类，可以改写并应用于其他数据集的载入。
 
-.. code-block::python
+.. code-block:: python
 
     class Conll2003DataLoader(DataSetLoader):
     def __init__(self, task:str='ner', encoding_type:str='bioes'):
@@ -38,6 +38,7 @@ fastNLP可以方便地载入各种类型的数据。同时，针对常见的数�
         return dataset
 
 输出数据格式如：
+
     {'raw_words': ['on', 'Friday', ':'] type=list,
     'target': ['O', 'O', 'O'] type=list},
 
@@ -48,13 +49,14 @@ fastNLP可以方便地载入各种类型的数据。同时，针对常见的数�
 我们输入模型的数据包括char embedding，以及word embedding。在数据处理部分，我们尝试完成词表的构建。
 使用fastNLP中的Vocabulary类来构建词表。
 
-.. code-block::python
+.. code-block:: python
 
     word_vocab = Vocabulary(min_freq=2)
     word_vocab.from_dataset(data.datasets['train'], field_name=Const.INPUT)
     word_vocab.index_dataset(*data.datasets.values(),field_name=Const.INPUT, new_field_name=Const.INPUT)
 
 处理后的data对象内部为：
+
     dataset
     vocabs
     dataset保存了train和test中的数据，并保存为dataset类型
@@ -71,7 +73,7 @@ fastNLP可以方便地载入各种类型的数据。同时，针对常见的数�
 fastNLP将模型的训练过程封装在了 :class:`~fastnlp.trainer` 类中。
 根据不同的任务调整trainer中的参数即可。通常，一个trainer实例需要有：指定的训练数据集，模型，优化器，loss函数，评测指标，以及指定训练的epoch数，batch size等参数。
 
-.. code-block::python
+.. code-block:: python
 
     #实例化模型
     model = CNNBiLSTMCRF(word_embed, char_embed, hidden_size=200, num_layers=1, tag_vocab=data.vocabs[Const.TARGET], encoding_type=encoding_type)
@@ -87,7 +89,7 @@ fastNLP将模型的训练过程封装在了 :class:`~fastnlp.trainer` 类中。
 训练中会保存最优的参数配置。
 训练的结果如下：
 
-.. code-block::python
+.. code-block:: python
 
     Evaluation on DataSet test:                                                                                          
     SpanFPreRecMetric: f=0.727661, pre=0.732293, rec=0.723088
