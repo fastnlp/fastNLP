@@ -1,19 +1,19 @@
-from typing import Iterable
+
+from typing import Union, Dict
 from nltk import Tree
-import spacy
+
 from ..base_loader import DataInfo, DataSetLoader
+from ..dataset_loader import CSVLoader
 from ...core.vocabulary import VocabularyOption, Vocabulary
 from ...core.dataset import DataSet
+from ...core.const import Const
 from ...core.instance import Instance
 from ..utils import check_dataloader_paths, get_tokenizer
 
 
 class SSTLoader(DataSetLoader):
-    URL = 'https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip'
-    DATA_DIR = 'sst/'
-
     """
-    别名：:class:`fastNLP.io.SSTLoader` :class:`fastNLP.io.dataset_loader.SSTLoader`
+    别名：:class:`fastNLP.io.SSTLoader` :class:`fastNLP.io.data_loader.SSTLoader`
 
     读取SST数据集, DataSet包含fields::
 
@@ -25,6 +25,9 @@ class SSTLoader(DataSetLoader):
     :param subtree: 是否将数据展开为子树，扩充数据量. Default: ``False``
     :param fine_grained: 是否使用SST-5标准，若 ``False`` , 使用SST-2。Default: ``False``
     """
+
+    URL = 'https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip'
+    DATA_DIR = 'sst/'
 
     def __init__(self, subtree=False, fine_grained=False):
         self.subtree = subtree
@@ -95,6 +98,75 @@ class SSTLoader(DataSetLoader):
             input_name: src_vocab,
             target_name: tgt_vocab
         }
+
+        return info
+
+
+class SST2Loader(CSVLoader):
+    """
+    数据来源"SST":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FSST-2.zip?alt=media&token=aabc5f6b-e466-44a2-b9b4-cf6337f84ac8',
+    """
+
+    def __init__(self):
+        super(SST2Loader, self).__init__(sep='\t')
+        self.tokenizer = get_tokenizer()
+        self.field = {'sentence': Const.INPUT, 'label': Const.TARGET}
+
+    def _load(self, path: str) -> DataSet:
+        ds = super(SST2Loader, self)._load(path)
+        ds.apply(lambda x: self.tokenizer(x[Const.INPUT]), new_field_name=Const.INPUT)
+        print("all count:", len(ds))
+        return ds
+
+    def process(self,
+                paths: Union[str, Dict[str, str]],
+                src_vocab_opt: VocabularyOption = None,
+                tgt_vocab_opt: VocabularyOption = None,
+                char_level_op=False):
+
+        paths = check_dataloader_paths(paths)
+        datasets = {}
+        info = DataInfo()
+        for name, path in paths.items():
+            dataset = self.load(path)
+            datasets[name] = dataset
+
+        def wordtochar(words):
+            chars = []
+            for word in words:
+                word = word.lower()
+                for char in word:
+                    chars.append(char)
+                chars.append('')
+            chars.pop()
+            return chars
+
+        input_name, target_name = Const.INPUT, Const.TARGET
+        info.vocabs={}
+
+        # 就分隔为char形式
+        if char_level_op:
+            for dataset in datasets.values():
+                dataset.apply_field(wordtochar, field_name=Const.INPUT, new_field_name=Const.CHAR_INPUT)
+        src_vocab = Vocabulary() if src_vocab_opt is None else Vocabulary(**src_vocab_opt)
+        src_vocab.from_dataset(datasets['train'], field_name=Const.INPUT)
+        src_vocab.index_dataset(*datasets.values(), field_name=Const.INPUT)
+
+        tgt_vocab = Vocabulary(unknown=None, padding=None) \
+            if tgt_vocab_opt is None else Vocabulary(**tgt_vocab_opt)
+        tgt_vocab.from_dataset(datasets['train'], field_name=Const.TARGET)
+        tgt_vocab.index_dataset(*datasets.values(), field_name=Const.TARGET)
+
+        info.vocabs = {
+            Const.INPUT: src_vocab,
+            Const.TARGET: tgt_vocab
+        }
+
+        info.datasets = datasets
+
+        for name, dataset in info.datasets.items():
+            dataset.set_input(Const.INPUT)
+            dataset.set_target(Const.TARGET)
 
         return info
 

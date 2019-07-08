@@ -4,16 +4,26 @@
 这些模块的使用方法如下:
 """
 __all__ = [
-    'SSTLoader',
-
+    'IMDBLoader',
     'MatchingLoader',
-    'SNLILoader',
     'MNLILoader',
+    'MTL16Loader',
     'QNLILoader',
     'QuoraLoader',
     'RTELoader',
+    'SSTLoader',
+    'SNLILoader',
+    'YelpLoader',
 ]
 
+
+from .imdb import IMDBLoader
+from .matching import MatchingLoader
+from .mnli import MNLILoader
+from .mtl import MTL16Loader
+from .qnli import QNLILoader
+from .quora import QuoraLoader
+from .rte import RTELoader
+from .snli import SNLILoader
 from .sst import SSTLoader
-from .matching import MatchingLoader, SNLILoader, \
-    MNLILoader, QNLILoader, QuoraLoader, RTELoader
+from .yelp import YelpLoader

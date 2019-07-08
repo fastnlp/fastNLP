@@ -8,9 +8,9 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from ..dropout import TimestepDropout
+from fastNLP.modules.dropout import TimestepDropout
 
-from ..utils import initial_parameter
+from fastNLP.modules.utils import initial_parameter
 
 
 class DotAttention(nn.Module):
