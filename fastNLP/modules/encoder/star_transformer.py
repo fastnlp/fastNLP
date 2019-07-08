@@ -35,11 +35,13 @@ class StarTransformer(nn.Module):
         self.iters = num_layers
         
         self.norm = nn.ModuleList([nn.LayerNorm(hidden_size) for _ in range(self.iters)])
+        self.emb_fc = nn.Conv2d(hidden_size, hidden_size, 1)
+        self.emb_drop = nn.Dropout(dropout)
         self.ring_att = nn.ModuleList(
-            [_MSA1(hidden_size, nhead=num_head, head_dim=head_dim, dropout=dropout)
+            [_MSA1(hidden_size, nhead=num_head, head_dim=head_dim, dropout=0.0)
              for _ in range(self.iters)])
         self.star_att = nn.ModuleList(
-            [_MSA2(hidden_size, nhead=num_head, head_dim=head_dim, dropout=dropout)
+            [_MSA2(hidden_size, nhead=num_head, head_dim=head_dim, dropout=0.0)
              for _ in range(self.iters)])
         
         if max_len is not None:
@@ -66,18 +68,19 @@ class StarTransformer(nn.Module):
         smask = torch.cat([torch.zeros(B, 1, ).byte().to(mask), mask], 1)
         
         embs = data.permute(0, 2, 1)[:, :, :, None]  # B H L 1
-        if self.pos_emb:
+        if self.pos_emb and False:
             P = self.pos_emb(torch.arange(L, dtype=torch.long, device=embs.device) \
                              .view(1, L)).permute(0, 2, 1).contiguous()[:, :, :, None]  # 1 H L 1
             embs = embs + P
-        
+        embs = norm_func(self.emb_drop, embs)
         nodes = embs
         relay = embs.mean(2, keepdim=True)
         ex_mask = mask[:, None, :, None].expand(B, H, L, 1)
         r_embs = embs.view(B, H, 1, L)
         for i in range(self.iters):
             ax = torch.cat([r_embs, relay.expand(B, H, 1, L)], 2)
-            nodes = nodes + F.leaky_relu(self.ring_att[i](norm_func(self.norm[i], nodes), ax=ax))
+            nodes = F.leaky_relu(self.ring_att[i](norm_func(self.norm[i], nodes), ax=ax))
+            #nodes = F.leaky_relu(self.ring_att[i](nodes, ax=ax))
             relay = F.leaky_relu(self.star_att[i](relay, torch.cat([relay, nodes], 2), smask))
             
             nodes = nodes.masked_fill_(ex_mask, 0)

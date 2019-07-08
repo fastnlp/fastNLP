@@ -35,15 +35,15 @@ class Embedding(nn.Module):
 
     Embedding组件. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度"""
     
-    def __init__(self, init_embed, dropout=0.0, dropout_word=0, unk_index=None):
+    def __init__(self, init_embed, word_dropout=0, dropout=0.0, unk_index=None):
         """
 
         :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: Embedding的大小(传入tuple(int, int),
             第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, Embedding, ndarray等则直接使用该值初始化Embedding;
-            也可以传入TokenEmbedding对象
+        :param float word_dropout: 按照一定概率随机将word设置为unk_index，这样可以使得unk这个token得到足够的训练, 且会对网络有
+            一定的regularize的作用。
         :param float dropout: 对Embedding的输出的dropout。
-        :param float dropout_word: 按照一定比例随机将word设置为unk的idx，这样可以使得unk这个token得到足够的训练
-        :param int unk_index: drop word时替换为的index，如果init_embed为TokenEmbedding不需要传入该值。
+        :param int unk_index: drop word时替换为的index。fastNLP的Vocabulary的unk_index默认为1。
         """
         super(Embedding, self).__init__()
 
@@ -52,21 +52,21 @@ class Embedding(nn.Module):
         self.dropout = nn.Dropout(dropout)
         if not isinstance(self.embed, TokenEmbedding):
             self._embed_size = self.embed.weight.size(1)
-            if dropout_word>0 and not isinstance(unk_index, int):
+            if word_dropout>0 and not isinstance(unk_index, int):
                 raise ValueError("When drop word is set, you need to pass in the unk_index.")
         else:
             self._embed_size = self.embed.embed_size
             unk_index = self.embed.get_word_vocab().unknown_idx
         self.unk_index = unk_index
-        self.dropout_word = dropout_word
+        self.word_dropout = word_dropout
 
     def forward(self, x):
         """
         :param torch.LongTensor x: [batch, seq_len]
         :return: torch.Tensor : [batch, seq_len, embed_dim]
         """
-        if self.dropout_word>0 and self.training:
-            mask = torch.ones_like(x).float() * self.dropout_word
+        if self.word_dropout>0 and self.training:
+            mask = torch.ones_like(x).float() * self.word_dropout
             mask = torch.bernoulli(mask).byte()  # dropout_word越大，越多位置为1
             x = x.masked_fill(mask, self.unk_index)
         x = self.embed(x)
@@ -117,11 +117,38 @@ class Embedding(nn.Module):
 
 
 class TokenEmbedding(nn.Module):
-    def __init__(self, vocab):
+    def __init__(self, vocab, word_dropout=0.0, dropout=0.0):
         super(TokenEmbedding, self).__init__()
-        assert vocab.padding_idx is not None, "You vocabulary must have padding."
+        assert vocab.padding is not None, "Vocabulary must have a padding entry."
         self._word_vocab = vocab
         self._word_pad_index = vocab.padding_idx
+        if word_dropout>0:
+            assert vocab.unknown is not None, "Vocabulary must have unknown entry when you want to drop a word."
+        self.word_dropout = word_dropout
+        self._word_unk_index = vocab.unknown_idx
+        self.dropout_layer = nn.Dropout(dropout)
+
+    def drop_word(self, words):
+        """
+        按照设定随机将words设置为unknown_index。
+
+        :param torch.LongTensor words: batch_size x max_len
+        :return:
+        """
+        if self.dropout_word > 0 and self.training:
+            mask = torch.ones_like(words).float() * self.word_dropout
+            mask = torch.bernoulli(mask).byte()  # dropout_word越大，越多位置为1
+            words = words.masked_fill(mask, self._word_unk_index)
+        return words
+
+    def dropout(self, words):
+        """
+        对embedding后的word表示进行drop。
+
+        :param torch.FloatTensor words: batch_size x max_len x embed_size
+        :return:
+        """
+        return self.dropout_layer(words)
 
     @property
     def requires_grad(self):
@@ -163,6 +190,9 @@ class TokenEmbedding(nn.Module):
     def size(self):
         return torch.Size(self.num_embedding, self._embed_size)
 
+    @abstractmethod
+    def forward(self, *input):
+        raise NotImplementedError
 
 class StaticEmbedding(TokenEmbedding):
     """
@@ -179,15 +209,17 @@ class StaticEmbedding(TokenEmbedding):
     :param model_dir_or_name: 可以有两种方式调用预训练好的static embedding：第一种是传入embedding的文件名，第二种是传入embedding
         的名称。目前支持的embedding包括{`en` 或者 `en-glove-840b-300` : glove.840B.300d, `en-glove-6b-50` : glove.6B.50d,
         `en-word2vec-300` : GoogleNews-vectors-negative300}。第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载。
-    :param requires_grad: 是否需要gradient. 默认为True
-    :param init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对象。
-    :param normailize: 是否对vector进行normalize，使得每个vector的norm为1。
+    :param bool requires_grad: 是否需要gradient. 默认为True
+    :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对象。
+    :param bool lower: 是否将vocab中的词语小写后再和预训练的词表进行匹配。如果你的词表中包含大写的词语，或者就是需要单独
+        为大写的词语开辟一个vector表示，则将lower设置为False。
+    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
+    :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
+    :param bool normailize: 是否对vector进行normalize，使得每个vector的norm为1。
     """
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', requires_grad: bool=True, init_method=None,
-                 normalize=False):
-        super(StaticEmbedding, self).__init__(vocab)
-
-        # 优先定义需要下载的static embedding有哪些。这里估计需要自己搞一个server，
+                 lower=False, dropout=0, word_dropout=0, normalize=False):
+        super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
         # 得到cache_path
         if model_dir_or_name.lower() in PRETRAIN_STATIC_FILES:
@@ -202,18 +234,44 @@ class StaticEmbedding(TokenEmbedding):
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
         # 读取embedding
-        embedding, hit_flags = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method,
-                                                      normalize=normalize)
+        if lower:
+            lowered_vocab = Vocabulary(padding=vocab.padding, unknown=vocab.unknown)
+            for word, index in vocab:
+                if not vocab._is_word_no_create_entry(word):
+                    lowered_vocab.add_word(word.lower())  # 先加入需要创建entry的
+            for word in vocab._no_create_word.keys():  # 不需要创建entry的
+                if word in vocab:
+                    lowered_word = word.lower()
+                    if lowered_word not in lowered_vocab.word_count:
+                        lowered_vocab.add_word(lowered_word)
+                        lowered_vocab._no_create_word[lowered_word] += 1
+            print(f"All word in vocab have been lowered. There are {len(vocab)} words, {len(lowered_vocab)} unique lowered "
+                  f"words.")
+            embedding = self._load_with_vocab(model_path, vocab=lowered_vocab, init_method=init_method,
+                                                          normalize=normalize)
+            # 需要适配一下
+            if not hasattr(self, 'words_to_words'):
+                self.words_to_words = torch.arange(len(lowered_vocab, )).long()
+            if lowered_vocab.unknown:
+                unknown_idx = lowered_vocab.unknown_idx
+            else:
+                unknown_idx = embedding.size(0) - 1  # 否则是最后一个为unknow
+            words_to_words = nn.Parameter(torch.full((len(vocab),), fill_value=unknown_idx).long(),
+                                          requires_grad=False)
+            for word, index in vocab:
+                if word not in lowered_vocab:
+                    word = word.lower()
+                    if lowered_vocab._is_word_no_create_entry(word):  # 如果不需要创建entry,已经默认unknown了
+                        continue
+                words_to_words[index] = self.words_to_words[lowered_vocab.to_index(word)]
+            self.words_to_words = words_to_words
+        else:
+            embedding = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method,
+                                                          normalize=normalize)
         self.embedding = nn.Embedding(num_embeddings=embedding.shape[0], embedding_dim=embedding.shape[1],
                                       padding_idx=vocab.padding_idx,
                                       max_norm=None, norm_type=2, scale_grad_by_freq=False,
                                       sparse=False, _weight=embedding)
-        if vocab._no_create_word_length > 0:  # 需要映射，使得来自于dev, test的idx指向unk
-            words_to_words = nn.Parameter(torch.arange(len(vocab)).long(), requires_grad=False)
-            for word, idx in vocab:
-                if vocab._is_word_no_create_entry(word) and not hit_flags[idx]:
-                    words_to_words[idx] = vocab.unknown_idx
-            self.words_to_words = words_to_words
         self._embed_size = self.embedding.weight.size(1)
         self.requires_grad = requires_grad
 
@@ -268,10 +326,8 @@ class StaticEmbedding(TokenEmbedding):
             else:
                 dim = len(parts) - 1
                 f.seek(0)
-            matrix = torch.zeros(len(vocab), dim)
-            if init_method is not None:
-                init_method(matrix)
-            hit_flags = np.zeros(len(vocab), dtype=bool)
+            matrix = {}
+            found_count = 0
             for idx, line in enumerate(f, start_idx):
                 try:
                     parts = line.strip().split()
@@ -285,28 +341,49 @@ class StaticEmbedding(TokenEmbedding):
                     if word in vocab:
                         index = vocab.to_index(word)
                         matrix[index] = torch.from_numpy(np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim))
-                        hit_flags[index] = True
+                        found_count += 1
                 except Exception as e:
                     if error == 'ignore':
                         warnings.warn("Error occurred at the {} line.".format(idx))
                     else:
                         print("Error occurred at the {} line.".format(idx))
                         raise e
-            found_count = sum(hit_flags)
             print("Found {} out of {} words in the pre-training embedding.".format(found_count, len(vocab)))
-            if init_method is None:
-                if len(vocab)-found_count>0 and found_count>0: # 有的没找到
-                    found_vecs = matrix[torch.LongTensor(hit_flags.astype(int)).byte()]
-                    mean = found_vecs.mean(dim=0, keepdim=True)
-                    std = found_vecs.std(dim=0, keepdim=True)
-                    unfound_vec_num = np.sum(hit_flags==False)
-                    unfound_vecs = torch.randn(unfound_vec_num, dim)*std + mean
-                    matrix[torch.LongTensor(hit_flags.astype(int)).eq(0)] = unfound_vecs
+            for word, index in vocab:
+                if index not in matrix and not vocab._is_word_no_create_entry(word):
+                    if vocab.unknown_idx in matrix:  # 如果有unkonwn，用unknown初始化
+                        matrix[index] = matrix[vocab.unknown_idx]
+                    else:
+                        matrix[index] = None
+
+            vectors = torch.zeros(len(matrix), dim)
+            if init_method:
+                init_method(vectors)
+            else:
+                nn.init.uniform_(vectors, -np.sqrt(3/dim), np.sqrt(3/dim))
+
+            if vocab._no_create_word_length>0:
+                if vocab.unknown is None:  # 创建一个专门的unknown
+                    unknown_idx = len(matrix)
+                    vectors = torch.cat((vectors, torch.zeros(1, dim)), dim=0).contiguous()
+                else:
+                    unknown_idx = vocab.unknown_idx
+                words_to_words = nn.Parameter(torch.full((len(vocab),), fill_value=unknown_idx).long(),
+                                              requires_grad=False)
+                for order, (index, vec) in enumerate(matrix.items()):
+                    if vec is not None:
+                        vectors[order] = vec
+                    words_to_words[index] = order
+                self.words_to_words = words_to_words
+            else:
+                for index, vec in matrix.items():
+                    if vec is not None:
+                        vectors[index] = vec
 
             if normalize:
-                matrix /= (torch.norm(matrix, dim=1, keepdim=True) + 1e-12)
+                vectors /= (torch.norm(vectors, dim=1, keepdim=True) + 1e-12)
 
-            return matrix, hit_flags
+            return vectors
 
     def forward(self, words):
         """
@@ -317,12 +394,15 @@ class StaticEmbedding(TokenEmbedding):
         """
         if hasattr(self, 'words_to_words'):
             words = self.words_to_words[words]
-        return self.embedding(words)
+        words = self.drop_word(words)
+        words = self.embedding(words)
+        words = self.dropout(words)
+        return words
 
 
 class ContextualEmbedding(TokenEmbedding):
-    def __init__(self, vocab: Vocabulary):
-        super(ContextualEmbedding, self).__init__(vocab)
+    def __init__(self, vocab: Vocabulary, word_dropout:float=0.0, dropout:float=0.0):
+        super(ContextualEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
     def add_sentence_cache(self, *datasets, batch_size=32, device='cpu', delete_weights: bool=True):
         """
@@ -425,19 +505,17 @@ class ElmoEmbedding(ContextualEmbedding):
     :param model_dir_or_name: 可以有两种方式调用预训练好的ELMo embedding：第一种是传入ELMo权重的文件名，第二种是传入ELMo版本的名称，
         目前支持的ELMo包括{`en` : 英文版本的ELMo, `cn` : 中文版本的ELMo,}。第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载
     :param layers: str, 指定返回的层数, 以,隔开不同的层。如果要返回第二层的结果'2', 返回后两层的结果'1,2'。不同的层的结果
-        按照这个顺序concat起来。默认为'2'。
-    :param requires_grad: bool, 该层是否需要gradient. 默认为False
+        按照这个顺序concat起来。默认为'2'。'mix'会使用可学习的权重结合不同层的表示(权重是否可训练与requires_grad保持一致，
+        初始化权重对三层结果进行mean-pooling, 可以通过ElmoEmbedding.set_mix_weights_requires_grad()方法只将mix weights设置为可学习。)
+    :param requires_grad: bool, 该层是否需要gradient, 默认为False.
+    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
+    :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
     :param cache_word_reprs: 可以选择对word的表示进行cache; 设置为True的话，将在初始化的时候为每个word生成对应的embedding，
         并删除character encoder，之后将直接使用cache的embedding。默认为False。
     """
-    def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en',
-                 layers: str='2', requires_grad: bool=False, cache_word_reprs: bool=False):
-        super(ElmoEmbedding, self).__init__(vocab)
-        layers = list(map(int, layers.split(',')))
-        assert len(layers) > 0, "Must choose one output"
-        for layer in layers:
-            assert 0 <= layer <= 2, "Layer index should be in range [0, 2]."
-        self.layers = layers
+    def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', layers: str='2', requires_grad: bool=False,
+                 word_dropout=0.0, dropout=0.0, cache_word_reprs: bool=False):
+        super(ElmoEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
         # 根据model_dir_or_name检查是否存在并下载
         if model_dir_or_name.lower() in PRETRAINED_ELMO_MODEL_DIR:
@@ -451,8 +529,49 @@ class ElmoEmbedding(ContextualEmbedding):
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
         self.model = _ElmoModel(model_dir, vocab, cache_word_reprs=cache_word_reprs)
+
+        if layers=='mix':
+            self.layer_weights = nn.Parameter(torch.zeros(self.model.config['encoder']['n_layers']+1),
+                                              requires_grad=requires_grad)
+            self.gamma = nn.Parameter(torch.ones(1), requires_grad=requires_grad)
+            self._get_outputs = self._get_mixed_outputs
+            self._embed_size = self.model.config['encoder']['projection_dim'] * 2
+        else:
+            layers = list(map(int, layers.split(',')))
+            assert len(layers) > 0, "Must choose one output"
+            for layer in layers:
+                assert 0 <= layer <= 2, "Layer index should be in range [0, 2]."
+            self.layers = layers
+            self._get_outputs = self._get_layer_outputs
+            self._embed_size = len(self.layers) * self.model.config['encoder']['projection_dim'] * 2
+
         self.requires_grad = requires_grad
-        self._embed_size = len(self.layers) * self.model.config['encoder']['projection_dim'] * 2
+
+    def _get_mixed_outputs(self, outputs):
+        # outputs: num_layers x batch_size x max_len x hidden_size
+        # return: batch_size x max_len x hidden_size
+        weights = F.softmax(self.layer_weights+1/len(outputs), dim=0).to(outputs)
+        outputs = torch.einsum('l,lbij->bij', weights, outputs)
+        return self.gamma.to(outputs)*outputs
+
+    def set_mix_weights_requires_grad(self, flag=True):
+        """
+        当初始化ElmoEmbedding时layers被设置为mix时，可以通过调用该方法设置mix weights是否可训练。如果layers不是mix，调用
+        该方法没有用。
+        :param bool flag: 混合不同层表示的结果是否可以训练。
+        :return:
+        """
+        if hasattr(self, 'layer_weights'):
+            self.layer_weights.requires_grad = flag
+            self.gamma.requires_grad = flag
+
+    def _get_layer_outputs(self, outputs):
+        if len(self.layers) == 1:
+            outputs = outputs[self.layers[0]]
+        else:
+            outputs = torch.cat(tuple([*outputs[self.layers]]), dim=-1)
+
+        return outputs
 
     def forward(self, words: torch.LongTensor):
         """
@@ -463,19 +582,18 @@ class ElmoEmbedding(ContextualEmbedding):
         :param words: batch_size x max_len
         :return: torch.FloatTensor. batch_size x max_len x (512*len(self.layers))
         """
+        words = self.drop_word(words)
         outputs = self._get_sent_reprs(words)
         if outputs is not None:
-            return outputs
+            return self.dropout(outputs)
         outputs = self.model(words)
-        if len(self.layers) == 1:
-            outputs = outputs[self.layers[0]]
-        else:
-            outputs = torch.cat([*outputs[self.layers]], dim=-1)
-
-        return outputs
+        outputs = self._get_outputs(outputs)
+        return self.dropout(outputs)
 
     def _delete_model_weights(self):
-        del self.layers, self.model
+        for name in ['layers', 'model', 'layer_weights', 'gamma']:
+            if hasattr(self, name):
+                delattr(self, name)
 
     @property
     def requires_grad(self):
@@ -516,13 +634,16 @@ class BertEmbedding(ContextualEmbedding):
     :param str layers:最终结果中的表示。以','隔开层数，可以以负数去索引倒数几层
     :param str pool_method: 因为在bert中，每个word会被表示为多个word pieces, 当获取一个word的表示的时候，怎样从它的word pieces
         中计算得到它对应的表示。支持``last``, ``first``, ``avg``, ``max``。
+    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
+    :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
     :param bool include_cls_sep: bool，在bert计算句子的表示的时候，需要在前面加上[CLS]和[SEP], 是否在结果中保留这两个内容。 这样
         会使得word embedding的结果比输入的结果长两个token。在使用 :class::StackEmbedding 可能会遇到问题。
     :param bool requires_grad: 是否需要gradient。
     """
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en-base-uncased', layers: str='-1',
-                 pool_method: str='first', include_cls_sep: bool=False, requires_grad: bool=False):
-        super(BertEmbedding, self).__init__(vocab)
+                 pool_method: str='first', word_dropout=0, dropout=0, requires_grad: bool=False,
+                 include_cls_sep: bool=False):
+        super(BertEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
         # 根据model_dir_or_name检查是否存在并下载
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
@@ -553,13 +674,14 @@ class BertEmbedding(ContextualEmbedding):
         :param torch.LongTensor words: [batch_size, max_len]
         :return: torch.FloatTensor. batch_size x max_len x (768*len(self.layers))
         """
+        words = self.drop_word(words)
         outputs = self._get_sent_reprs(words)
         if outputs is not None:
-            return outputs
+            return self.dropout(words)
         outputs = self.model(words)
         outputs = torch.cat([*outputs], dim=-1)
 
-        return outputs
+        return self.dropout(words)
 
     @property
     def requires_grad(self):
@@ -601,8 +723,8 @@ class CNNCharEmbedding(TokenEmbedding):
     """
     别名：:class:`fastNLP.modules.CNNCharEmbedding`   :class:`fastNLP.modules.encoder.embedding.CNNCharEmbedding`
 
-    使用CNN生成character embedding。CNN的结果为, embed(x) -> Dropout(x) -> CNN(x) -> activation(x) -> pool
-        -> fc. 不同的kernel大小的fitler结果是concat起来的。
+    使用CNN生成character embedding。CNN的结果为, embed(x) -> Dropout(x) -> CNN(x) -> activation(x) -> pool -> fc -> Dropout.
+        不同的kernel大小的fitler结果是concat起来的。
 
     Example::
 
@@ -612,23 +734,24 @@ class CNNCharEmbedding(TokenEmbedding):
     :param vocab: 词表
     :param embed_size: 该word embedding的大小，默认值为50.
     :param char_emb_size: character的embed的大小。character是从vocab中生成的。默认值为50.
-    :param dropout: 以多大的概率drop
+    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
+    :param float dropout: 以多大的概率drop
     :param filter_nums: filter的数量. 长度需要和kernels一致。默认值为[40, 30, 20].
     :param kernel_sizes: kernel的大小. 默认值为[5, 3, 1].
     :param pool_method: character的表示在合成一个表示时所使用的pool方法，支持'avg', 'max'.
     :param activation: CNN之后使用的激活方法，支持'relu', 'sigmoid', 'tanh' 或者自定义函数.
     :param min_char_freq: character的最少出现次数。默认值为2.
     """
-    def __init__(self, vocab: Vocabulary, embed_size: int=50, char_emb_size: int=50, dropout:float=0.5,
-                 filter_nums: List[int]=(40, 30, 20), kernel_sizes: List[int]=(5, 3, 1), pool_method: str='max',
-                 activation='relu', min_char_freq: int=2):
-        super(CNNCharEmbedding, self).__init__(vocab)
+    def __init__(self, vocab: Vocabulary, embed_size: int=50, char_emb_size: int=50, word_dropout:float=0,
+                 dropout:float=0.5, filter_nums: List[int]=(40, 30, 20), kernel_sizes: List[int]=(5, 3, 1),
+                 pool_method: str='max', activation='relu', min_char_freq: int=2):
+        super(CNNCharEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
         for kernel in kernel_sizes:
             assert kernel % 2 == 1, "Only odd kernel is allowed."
 
         assert pool_method in ('max', 'avg')
-        self.dropout = nn.Dropout(dropout, inplace=True)
+        self.dropout = nn.Dropout(dropout)
         self.pool_method = pool_method
         # activation function
         if isinstance(activation, str):
@@ -678,6 +801,7 @@ class CNNCharEmbedding(TokenEmbedding):
         :param words: [batch_size, max_len]
         :return: [batch_size, max_len, embed_size]
         """
+        words = self.drop_word(words)
         batch_size, max_len = words.size()
         chars = self.words_to_chars_embedding[words]  # batch_size x max_len x max_word_len
         word_lengths = self.word_lengths[words] # batch_size x max_len
@@ -700,7 +824,7 @@ class CNNCharEmbedding(TokenEmbedding):
             conv_chars = conv_chars.masked_fill(chars_masks.unsqueeze(-1), 0)
             chars = torch.sum(conv_chars, dim=-2)/chars_masks.eq(0).sum(dim=-1, keepdim=True).float()
         chars = self.fc(chars)
-        return chars
+        return self.dropout(chars)
 
     @property
     def requires_grad(self):
@@ -747,6 +871,7 @@ class LSTMCharEmbedding(TokenEmbedding):
     :param vocab: 词表
     :param embed_size: embedding的大小。默认值为50.
     :param char_emb_size: character的embedding的大小。默认值为50.
+    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
     :param dropout: 以多大概率drop
     :param hidden_size: LSTM的中间hidden的大小，如果为bidirectional的，hidden会除二，默认为50.
     :param pool_method: 支持'max', 'avg'
@@ -754,15 +879,16 @@ class LSTMCharEmbedding(TokenEmbedding):
     :param min_char_freq: character的最小出现次数。默认值为2.
     :param bidirectional: 是否使用双向的LSTM进行encode。默认值为True。
     """
-    def __init__(self, vocab: Vocabulary, embed_size: int=50, char_emb_size: int=50, dropout:float=0.5, hidden_size=50,
-                 pool_method: str='max', activation='relu', min_char_freq: int=2, bidirectional=True):
+    def __init__(self, vocab: Vocabulary, embed_size: int=50, char_emb_size: int=50, word_dropout:float=0,
+                 dropout:float=0.5, hidden_size=50,pool_method: str='max', activation='relu', min_char_freq: int=2,
+                 bidirectional=True):
         super(LSTMCharEmbedding, self).__init__(vocab)
 
         assert hidden_size % 2 == 0, "Only even kernel is allowed."
 
         assert pool_method in ('max', 'avg')
         self.pool_method = pool_method
-        self.dropout = nn.Dropout(dropout, inplace=True)
+        self.dropout = nn.Dropout(dropout)
         # activation function
         if isinstance(activation, str):
             if activation.lower() == 'relu':
@@ -811,6 +937,7 @@ class LSTMCharEmbedding(TokenEmbedding):
         :param words: [batch_size, max_len]
         :return: [batch_size, max_len, embed_size]
         """
+        words = self.drop_word(words)
         batch_size, max_len = words.size()
         chars = self.words_to_chars_embedding[words]  # batch_size x max_len x max_word_len
         word_lengths = self.word_lengths[words]  # batch_size x max_len
@@ -835,7 +962,7 @@ class LSTMCharEmbedding(TokenEmbedding):
 
         chars = self.fc(chars)
 
-        return chars
+        return self.dropout(words)
 
     @property
     def requires_grad(self):
@@ -874,17 +1001,21 @@ class StackEmbedding(TokenEmbedding):
 
 
     :param embeds: 一个由若干个TokenEmbedding组成的list，要求每一个TokenEmbedding的词表都保持一致
+    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。不同embedidng会在相同的位置
+        被设置为unknown。如果这里设置了dropout，则组成的embedding就不要再设置dropout了。
+    :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
 
     """
-    def __init__(self, embeds: List[TokenEmbedding]):
+    def __init__(self, embeds: List[TokenEmbedding], word_dropout=0, dropout=0):
         vocabs = []
         for embed in embeds:
-            vocabs.append(embed.get_word_vocab())
+            if hasattr(embed, 'get_word_vocab'):
+                vocabs.append(embed.get_word_vocab())
         _vocab = vocabs[0]
         for vocab in vocabs[1:]:
-            assert vocab == _vocab, "All embeddings should use the same word vocabulary."
+            assert vocab == _vocab, "All embeddings in StackEmbedding should use the same word vocabulary."
 
-        super(StackEmbedding, self).__init__(_vocab)
+        super(StackEmbedding, self).__init__(_vocab, word_dropout=word_dropout, dropout=dropout)
         assert isinstance(embeds, list)
         for embed in embeds:
             assert isinstance(embed, TokenEmbedding), "Only TokenEmbedding type is supported."
@@ -936,7 +1067,9 @@ class StackEmbedding(TokenEmbedding):
         :return: 返回的shape和当前这个stack embedding中embedding的组成有关
         """
         outputs = []
+        words = self.drop_word(words)
         for embed in self.embeds:
             outputs.append(embed(words))
-        return torch.cat(outputs, dim=-1)
+        outputs = self.dropout(torch.cat(outputs, dim=-1))
+        return outputs
 

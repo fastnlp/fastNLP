@@ -16,8 +16,6 @@ __all__ = [
     'CSVLoader',
     'JsonLoader',
     'ConllLoader',
-    'SNLILoader',
-    'SSTLoader',
     'PeopleDailyCorpusLoader',
     'Conll2003Loader',
 ]
@@ -30,7 +28,6 @@ from ..core.dataset import DataSet
 from ..core.instance import Instance
 from .file_reader import _read_csv, _read_json, _read_conll
 from .base_loader import DataSetLoader, DataInfo
-from .data_loader.sst import SSTLoader
 from ..core.const import Const
 from ..modules.encoder._bert import BertTokenizer
 
@@ -111,7 +108,7 @@ class PeopleDailyCorpusLoader(DataSetLoader):
             else:
                 instance = Instance(words=sent_words)
             data_set.append(instance)
-        data_set.apply(lambda ins: len(ins["words"]), new_field_name="seq_len")
+        data_set.apply(lambda ins: len(ins[Const.INPUT]), new_field_name=Const.INPUT_LEN)
         return data_set
 
 
@@ -246,42 +243,6 @@ class JsonLoader(DataSetLoader):
             else:
                 ins = d
             ds.append(Instance(**ins))
-        return ds
-
-
-class SNLILoader(JsonLoader):
-    """
-    别名：:class:`fastNLP.io.SNLILoader` :class:`fastNLP.io.dataset_loader.SNLILoader`
-
-    读取SNLI数据集，读取的DataSet包含fields::
-
-        words1: list(str)，第一句文本, premise
-        words2: list(str), 第二句文本, hypothesis
-        target: str, 真实标签
-
-    数据来源: https://nlp.stanford.edu/projects/snli/snli_1.0.zip
-    """
-
-    def __init__(self):
-        fields = {
-            'sentence1_parse': Const.INPUTS(0),
-            'sentence2_parse': Const.INPUTS(1),
-            'gold_label': Const.TARGET,
-        }
-        super(SNLILoader, self).__init__(fields=fields)
-
-    def _load(self, path):
-        ds = super(SNLILoader, self)._load(path)
-
-        def parse_tree(x):
-            t = Tree.fromstring(x)
-            return t.leaves()
-
-        ds.apply(lambda ins: parse_tree(
-            ins[Const.INPUTS(0)]), new_field_name=Const.INPUTS(0))
-        ds.apply(lambda ins: parse_tree(
-            ins[Const.INPUTS(1)]), new_field_name=Const.INPUTS(1))
-        ds.drop(lambda x: x[Const.TARGET] == '-')
         return ds
 
 

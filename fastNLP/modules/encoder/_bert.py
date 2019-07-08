@@ -2,7 +2,8 @@
 
 
 """
-这个页面的代码很大程度上参考了https://github.com/huggingface/pytorch-pretrained-BERT的代码
+这个页面的代码很大程度上参考(复制粘贴)了https://github.com/huggingface/pytorch-pretrained-BERT的代码， 如果你发现该代码对你
+    有用，也请引用一下他们。
 """
 
 
@@ -11,7 +12,6 @@ from ...core.vocabulary import Vocabulary
 import collections
 
 import unicodedata
-from ...io.file_utils import _get_base_url, cached_path
 import numpy as np
 from itertools import chain
 import copy
@@ -22,9 +22,106 @@ import os
 import torch
 from torch import nn
 import glob
+import sys
 
 CONFIG_FILE = 'bert_config.json'
-MODEL_WEIGHTS = 'pytorch_model.bin'
+
+
+class BertConfig(object):
+    """Configuration class to store the configuration of a `BertModel`.
+    """
+    def __init__(self,
+                 vocab_size_or_config_json_file,
+                 hidden_size=768,
+                 num_hidden_layers=12,
+                 num_attention_heads=12,
+                 intermediate_size=3072,
+                 hidden_act="gelu",
+                 hidden_dropout_prob=0.1,
+                 attention_probs_dropout_prob=0.1,
+                 max_position_embeddings=512,
+                 type_vocab_size=2,
+                 initializer_range=0.02,
+                 layer_norm_eps=1e-12):
+        """Constructs BertConfig.
+
+        Args:
+            vocab_size_or_config_json_file: Vocabulary size of `inputs_ids` in `BertModel`.
+            hidden_size: Size of the encoder layers and the pooler layer.
+            num_hidden_layers: Number of hidden layers in the Transformer encoder.
+            num_attention_heads: Number of attention heads for each attention layer in
+                the Transformer encoder.
+            intermediate_size: The size of the "intermediate" (i.e., feed-forward)
+                layer in the Transformer encoder.
+            hidden_act: The non-linear activation function (function or string) in the
+                encoder and pooler. If string, "gelu", "relu" and "swish" are supported.
+            hidden_dropout_prob: The dropout probabilitiy for all fully connected
+                layers in the embeddings, encoder, and pooler.
+            attention_probs_dropout_prob: The dropout ratio for the attention
+                probabilities.
+            max_position_embeddings: The maximum sequence length that this model might
+                ever be used with. Typically set this to something large just in case
+                (e.g., 512 or 1024 or 2048).
+            type_vocab_size: The vocabulary size of the `token_type_ids` passed into
+                `BertModel`.
+            initializer_range: The sttdev of the truncated_normal_initializer for
+                initializing all weight matrices.
+            layer_norm_eps: The epsilon used by LayerNorm.
+        """
+        if isinstance(vocab_size_or_config_json_file, str) or (sys.version_info[0] == 2
+                        and isinstance(vocab_size_or_config_json_file, unicode)):
+            with open(vocab_size_or_config_json_file, "r", encoding='utf-8') as reader:
+                json_config = json.loads(reader.read())
+            for key, value in json_config.items():
+                self.__dict__[key] = value
+        elif isinstance(vocab_size_or_config_json_file, int):
+            self.vocab_size = vocab_size_or_config_json_file
+            self.hidden_size = hidden_size
+            self.num_hidden_layers = num_hidden_layers
+            self.num_attention_heads = num_attention_heads
+            self.hidden_act = hidden_act
+            self.intermediate_size = intermediate_size
+            self.hidden_dropout_prob = hidden_dropout_prob
+            self.attention_probs_dropout_prob = attention_probs_dropout_prob
+            self.max_position_embeddings = max_position_embeddings
+            self.type_vocab_size = type_vocab_size
+            self.initializer_range = initializer_range
+            self.layer_norm_eps = layer_norm_eps
+        else:
+            raise ValueError("First argument must be either a vocabulary size (int)"
+                             "or the path to a pretrained model config file (str)")
+
+    @classmethod
+    def from_dict(cls, json_object):
+        """Constructs a `BertConfig` from a Python dictionary of parameters."""
+        config = BertConfig(vocab_size_or_config_json_file=-1)
+        for key, value in json_object.items():
+            config.__dict__[key] = value
+        return config
+
+    @classmethod
+    def from_json_file(cls, json_file):
+        """Constructs a `BertConfig` from a json file of parameters."""
+        with open(json_file, "r", encoding='utf-8') as reader:
+            text = reader.read()
+        return cls.from_dict(json.loads(text))
+
+    def __repr__(self):
+        return str(self.to_json_string())
+
+    def to_dict(self):
+        """Serializes this instance to a Python dictionary."""
+        output = copy.deepcopy(self.__dict__)
+        return output
+
+    def to_json_string(self):
+        """Serializes this instance to a JSON string."""
+        return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
+
+    def to_json_file(self, json_file_path):
+        """ Save this instance to a json file."""
+        with open(json_file_path, "w", encoding='utf-8') as writer:
+            writer.write(self.to_json_string())
 
 
 def gelu(x):
@@ -40,6 +137,8 @@ ACT2FN = {"gelu": gelu, "relu": torch.nn.functional.relu, "swish": swish}
 
 class BertLayerNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-12):
+        """Construct a layernorm module in the TF style (epsilon inside the square root).
+        """
         super(BertLayerNorm, self).__init__()
         self.weight = nn.Parameter(torch.ones(hidden_size))
         self.bias = nn.Parameter(torch.zeros(hidden_size))
@@ -53,16 +152,18 @@ class BertLayerNorm(nn.Module):
 
 
 class BertEmbeddings(nn.Module):
-    def __init__(self, vocab_size, hidden_size, max_position_embeddings, type_vocab_size, hidden_dropout_prob):
+    """Construct the embeddings from word, position and token_type embeddings.
+    """
+    def __init__(self, config):
         super(BertEmbeddings, self).__init__()
-        self.word_embeddings = nn.Embedding(vocab_size, hidden_size)
-        self.position_embeddings = nn.Embedding(max_position_embeddings, hidden_size)
-        self.token_type_embeddings = nn.Embedding(type_vocab_size, hidden_size)
+        self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=0)
+        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
+        self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = BertLayerNorm(hidden_size, eps=1e-12)
-        self.dropout = nn.Dropout(hidden_dropout_prob)
+        self.LayerNorm = BertLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, input_ids, token_type_ids=None):
         seq_length = input_ids.size(1)
@@ -82,21 +183,21 @@ class BertEmbeddings(nn.Module):
 
 
 class BertSelfAttention(nn.Module):
-    def __init__(self, hidden_size, num_attention_heads, attention_probs_dropout_prob):
+    def __init__(self, config):
         super(BertSelfAttention, self).__init__()
-        if hidden_size % num_attention_heads != 0:
+        if config.hidden_size % config.num_attention_heads != 0:
             raise ValueError(
                 "The hidden size (%d) is not a multiple of the number of attention "
-                "heads (%d)" % (hidden_size, num_attention_heads))
-        self.num_attention_heads = num_attention_heads
-        self.attention_head_size = int(hidden_size / num_attention_heads)
+                "heads (%d)" % (config.hidden_size, config.num_attention_heads))
+        self.num_attention_heads = config.num_attention_heads
+        self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(hidden_size, self.all_head_size)
-        self.key = nn.Linear(hidden_size, self.all_head_size)
-        self.value = nn.Linear(hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
-        self.dropout = nn.Dropout(attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
         new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
@@ -133,11 +234,11 @@ class BertSelfAttention(nn.Module):
 
 
 class BertSelfOutput(nn.Module):
-    def __init__(self, hidden_size, hidden_dropout_prob):
+    def __init__(self, config):
         super(BertSelfOutput, self).__init__()
-        self.dense = nn.Linear(hidden_size, hidden_size)
-        self.LayerNorm = BertLayerNorm(hidden_size, eps=1e-12)
-        self.dropout = nn.Dropout(hidden_dropout_prob)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = BertLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
@@ -147,10 +248,10 @@ class BertSelfOutput(nn.Module):
 
 
 class BertAttention(nn.Module):
-    def __init__(self, hidden_size, num_attention_heads, attention_probs_dropout_prob, hidden_dropout_prob):
+    def __init__(self, config):
         super(BertAttention, self).__init__()
-        self.self = BertSelfAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob)
-        self.output = BertSelfOutput(hidden_size, hidden_dropout_prob)
+        self.self = BertSelfAttention(config)
+        self.output = BertSelfOutput(config)
 
     def forward(self, input_tensor, attention_mask):
         self_output = self.self(input_tensor, attention_mask)
@@ -159,11 +260,13 @@ class BertAttention(nn.Module):
 
 
 class BertIntermediate(nn.Module):
-    def __init__(self, hidden_size, intermediate_size, hidden_act):
+    def __init__(self, config):
         super(BertIntermediate, self).__init__()
-        self.dense = nn.Linear(hidden_size, intermediate_size)
-        self.intermediate_act_fn = ACT2FN[hidden_act] \
-            if isinstance(hidden_act, str) else hidden_act
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
+        if isinstance(config.hidden_act, str) or (sys.version_info[0] == 2 and isinstance(config.hidden_act, unicode)):
+            self.intermediate_act_fn = ACT2FN[config.hidden_act]
+        else:
+            self.intermediate_act_fn = config.hidden_act
 
     def forward(self, hidden_states):
         hidden_states = self.dense(hidden_states)
@@ -172,11 +275,11 @@ class BertIntermediate(nn.Module):
 
 
 class BertOutput(nn.Module):
-    def __init__(self, hidden_size, intermediate_size, hidden_dropout_prob):
+    def __init__(self, config):
         super(BertOutput, self).__init__()
-        self.dense = nn.Linear(intermediate_size, hidden_size)
-        self.LayerNorm = BertLayerNorm(hidden_size, eps=1e-12)
-        self.dropout = nn.Dropout(hidden_dropout_prob)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = BertLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
@@ -186,13 +289,11 @@ class BertOutput(nn.Module):
 
 
 class BertLayer(nn.Module):
-    def __init__(self, hidden_size, num_attention_heads, attention_probs_dropout_prob, hidden_dropout_prob,
-                 intermediate_size, hidden_act):
+    def __init__(self, config):
         super(BertLayer, self).__init__()
-        self.attention = BertAttention(hidden_size, num_attention_heads, attention_probs_dropout_prob,
-                                       hidden_dropout_prob)
-        self.intermediate = BertIntermediate(hidden_size, intermediate_size, hidden_act)
-        self.output = BertOutput(hidden_size, intermediate_size, hidden_dropout_prob)
+        self.attention = BertAttention(config)
+        self.intermediate = BertIntermediate(config)
+        self.output = BertOutput(config)
 
     def forward(self, hidden_states, attention_mask):
         attention_output = self.attention(hidden_states, attention_mask)
@@ -202,13 +303,10 @@ class BertLayer(nn.Module):
 
 
 class BertEncoder(nn.Module):
-    def __init__(self, num_hidden_layers, hidden_size, num_attention_heads, attention_probs_dropout_prob,
-                 hidden_dropout_prob,
-                 intermediate_size, hidden_act):
+    def __init__(self, config):
         super(BertEncoder, self).__init__()
-        layer = BertLayer(hidden_size, num_attention_heads, attention_probs_dropout_prob, hidden_dropout_prob,
-                          intermediate_size, hidden_act)
-        self.layer = nn.ModuleList([copy.deepcopy(layer) for _ in range(num_hidden_layers)])
+        layer = BertLayer(config)
+        self.layer = nn.ModuleList([copy.deepcopy(layer) for _ in range(config.num_hidden_layers)])
 
     def forward(self, hidden_states, attention_mask, output_all_encoded_layers=True):
         all_encoder_layers = []
@@ -222,9 +320,9 @@ class BertEncoder(nn.Module):
 
 
 class BertPooler(nn.Module):
-    def __init__(self, hidden_size):
+    def __init__(self, config):
         super(BertPooler, self).__init__()
-        self.dense = nn.Linear(hidden_size, hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
     def forward(self, hidden_states):
@@ -242,13 +340,19 @@ class BertModel(nn.Module):
     如果你想使用预训练好的权重矩阵，请在以下网址下载.
     sources::
 
-    'bert-base-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased.tar.gz",
-    'bert-large-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased.tar.gz",
-    'bert-base-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-cased.tar.gz",
-    'bert-large-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-cased.tar.gz",
-    'bert-base-multilingual-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-multilingual-uncased.tar.gz",
-    'bert-base-multilingual-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-multilingual-cased.tar.gz",
-    'bert-base-chinese': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-chinese.tar.gz",
+    'bert-base-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-pytorch_model.bin",
+    'bert-large-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased-pytorch_model.bin",
+    'bert-base-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-cased-pytorch_model.bin",
+    'bert-large-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-cased-pytorch_model.bin",
+    'bert-base-multilingual-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-multilingual-uncased-pytorch_model.bin",
+    'bert-base-multilingual-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-multilingual-cased-pytorch_model.bin",
+    'bert-base-chinese': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-chinese-pytorch_model.bin",
+    'bert-base-german-cased': "https://int-deepset-models-bert.s3.eu-central-1.amazonaws.com/pytorch/bert-base-german-cased-pytorch_model.bin",
+    'bert-large-uncased-whole-word-masking': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased-whole-word-masking-pytorch_model.bin",
+    'bert-large-cased-whole-word-masking': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-cased-whole-word-masking-pytorch_model.bin",
+    'bert-large-uncased-whole-word-masking-finetuned-squad': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased-whole-word-masking-finetuned-squad-pytorch_model.bin",
+    'bert-large-cased-whole-word-masking-finetuned-squad': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-cased-whole-word-masking-finetuned-squad-pytorch_model.bin",
+    'bert-base-cased-finetuned-mrpc': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-cased-finetuned-mrpc-pytorch_model.bin"
 
 
     用预训练权重矩阵来建立BERT模型::
@@ -272,34 +376,30 @@ class BertModel(nn.Module):
     :param int initializer_range: 初始化权重范围，默认值为0.02
     """
 
-    def __init__(self, vocab_size=30522,
-                 hidden_size=768,
-                 num_hidden_layers=12,
-                 num_attention_heads=12,
-                 intermediate_size=3072,
-                 hidden_act="gelu",
-                 hidden_dropout_prob=0.1,
-                 attention_probs_dropout_prob=0.1,
-                 max_position_embeddings=512,
-                 type_vocab_size=2,
-                 initializer_range=0.02):
+    def __init__(self, config, *inputs, **kwargs):
         super(BertModel, self).__init__()
-        self.hidden_size = hidden_size
-        self.embeddings = BertEmbeddings(vocab_size, hidden_size, max_position_embeddings,
-                                         type_vocab_size, hidden_dropout_prob)
-        self.encoder = BertEncoder(num_hidden_layers, hidden_size, num_attention_heads,
-                                   attention_probs_dropout_prob, hidden_dropout_prob, intermediate_size,
-                                   hidden_act)
-        self.pooler = BertPooler(hidden_size)
-        self.initializer_range = initializer_range
-
+        if not isinstance(config, BertConfig):
+            raise ValueError(
+                "Parameter config in `{}(config)` should be an instance of class `BertConfig`. "
+                "To create a model from a Google pretrained model use "
+                "`model = {}.from_pretrained(PRETRAINED_MODEL_NAME)`".format(
+                    self.__class__.__name__, self.__class__.__name__
+                ))
+        super(BertModel, self).__init__()
+        self.config = config
+        self.hidden_size = self.config.hidden_size
+        self.embeddings = BertEmbeddings(config)
+        self.encoder = BertEncoder(config)
+        self.pooler = BertPooler(config)
         self.apply(self.init_bert_weights)
 
     def init_bert_weights(self, module):
+        """ Initialize the weights.
+        """
         if isinstance(module, (nn.Linear, nn.Embedding)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.data.normal_(mean=0.0, std=self.initializer_range)
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
         elif isinstance(module, BertLayerNorm):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
@@ -338,14 +438,19 @@ class BertModel(nn.Module):
         return encoded_layers, pooled_output
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_dir, state_dict=None, *inputs, **kwargs):
+    def from_pretrained(cls, pretrained_model_dir, *inputs, **kwargs):
+        state_dict = kwargs.get('state_dict', None)
+        kwargs.pop('state_dict', None)
+        cache_dir = kwargs.get('cache_dir', None)
+        kwargs.pop('cache_dir', None)
+        from_tf = kwargs.get('from_tf', False)
+        kwargs.pop('from_tf', None)
         # Load config
         config_file = os.path.join(pretrained_model_dir, CONFIG_FILE)
-        config = json.load(open(config_file, "r"))
-        # config = BertConfig.from_json_file(config_file)
+        config = BertConfig.from_json_file(config_file)
         # logger.info("Model config {}".format(config))
         # Instantiate model.
-        model = cls(*inputs, **config, **kwargs)
+        model = cls(config, *inputs, **kwargs)
         if state_dict is None:
             files = glob.glob(os.path.join(pretrained_model_dir, '*.bin'))
             if len(files)==0:
@@ -353,7 +458,7 @@ class BertModel(nn.Module):
             elif len(files)>1:
                 raise FileExistsError(f"There are multiple *.bin files in {pretrained_model_dir}")
             weights_path = files[0]
-            state_dict = torch.load(weights_path)
+            state_dict = torch.load(weights_path, map_location='cpu')
 
         old_keys = []
         new_keys = []
@@ -463,6 +568,7 @@ class WordpieceTokenizer(object):
             else:
                 output_tokens.extend(sub_tokens)
         return output_tokens
+
 
 def load_vocab(vocab_file):
     """Loads a vocabulary file into a dictionary."""
@@ -593,6 +699,7 @@ class BasicTokenizer(object):
             else:
                 output.append(char)
         return "".join(output)
+
 
 def _is_whitespace(char):
     """Checks whether `chars` is a whitespace character."""
@@ -840,6 +947,7 @@ class _WordBertModel(nn.Module):
             word_pieces_i = list(chain(*self.word_to_wordpieces[word_indexes[i]]))
             word_pieces[i, 1:len(word_pieces_i)+1] = torch.LongTensor(word_pieces_i)
             attn_masks[i, :len(word_pieces_i)+2].fill_(1)
+        # TODO 截掉长度超过的部分。
         # 2. 获取hidden的结果，根据word_pieces进行对应的pool计算
         # all_outputs: [batch_size x max_len x hidden_size, batch_size x max_len x hidden_size, ...]
         bert_outputs, _ = self.encoder(word_pieces, token_type_ids=None, attention_mask=attn_masks,

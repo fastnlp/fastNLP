@@ -117,6 +117,8 @@ class Vocabulary(object):
 
         :param str word: 新词
         """
+        if word in self._no_create_word:
+            self._no_create_word.pop(word)
         self.add(word)
     
     @_check_build_status
@@ -126,6 +128,9 @@ class Vocabulary(object):
 
         :param list[str] word_lst: 词的序列
         """
+        for word in word_lst:
+            if word in self._no_create_word:
+                self._no_create_word.pop(word)
         self.update(word_lst)
     
     def build_vocab(self):
@@ -136,10 +141,10 @@ class Vocabulary(object):
         """
         if self.word2idx is None:
             self.word2idx = {}
-        if self.padding is not None:
-            self.word2idx[self.padding] = len(self.word2idx)
-        if self.unknown is not None:
-            self.word2idx[self.unknown] = len(self.word2idx)
+            if self.padding is not None:
+                self.word2idx[self.padding] = len(self.word2idx)
+            if self.unknown is not None:
+                self.word2idx[self.unknown] = len(self.word2idx)
         
         max_size = min(self.max_size, len(self.word_count)) if self.max_size else None
         words = self.word_count.most_common(max_size)

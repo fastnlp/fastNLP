@@ -104,7 +104,7 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
                     except Exception as e:
                         if dropna:
                             continue
-                        raise ValueError('invalid instance at line: {}'.format(line_idx))
+                        raise ValueError('invalid instance ends at line: {}'.format(line_idx))
             elif line.startswith('#'):
                 continue
             else:
@@ -117,5 +117,5 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
             except Exception as e:
                 if dropna:
                     return
-                print('invalid instance at line: {}'.format(line_idx))
+                print('invalid instance ends at line: {}'.format(line_idx))
                 raise e
