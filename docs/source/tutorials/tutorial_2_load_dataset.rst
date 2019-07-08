@@ -1,6 +1,6 @@
-=====
-Tutorial 4: Load DataSet
-=====
+=========================
+数据集加载教程
+=========================
 
 这一部分是一个关于如何加载数据集的教程
 
@@ -13,9 +13,9 @@ Tutorial 4: Load DataSet
     - `Part V: fastNLP封装好的数据集加载器`_
 
 
-
+----------------------------
 Part I: 数据集信息
-###########
+----------------------------
 
 在fastNLP中，我们使用 :class:`~fastNLP.io.base_loader.DataInfo` 来存储数据集信息。 :class:`~fastNLP.io.base_loader.DataInfo`
 类包含了两个重要内容： `datasets` 和 `vocabs` 。
@@ -25,8 +25,9 @@ Part I: 数据集信息
 `vocabs` 是一个 `key` 为词表名称（如 :attr:`fastNLP.Const.INPUT` 表示输入文本的词表名称， :attr:`fastNLP.Const.TARGET` 表示目标
 的真实标签词表的名称，等等）， `value` 为词表内容（ :class:`~fastNLP.Vocabulary` ）的字典。
 
+----------------------------
 Part II: 数据集的使用方式
-###########
+----------------------------
 
 在fastNLP中，我们采用 :class:`~fastNLP.io.base_loader.DataSetLoader` 来作为加载数据集的基类。
 :class:`~fastNLP.io.base_loader.DataSetLoader` 定义了各种DataSetLoader所需的API接口，开发者应该继承它实现各种的DataSetLoader。
@@ -42,9 +43,9 @@ DataSetLoader的_load或者load函数返回的 :class:`~fastNLP.DataSet` 当中�
 :class:`~fastNLP.io.DataInfo` 当中， `datasets` 的内容为已经index好的、可以直接被 :class:`~fastNLP.Trainer`
 接受的内容。
 
-
+--------------------------------------------------------
 Part III: 不同数据类型的DataSetLoader
-###########
+--------------------------------------------------------
 
 :class:`~fastNLP.io.dataset_loader.CSVLoader`
     读取CSV类型的数据集文件。例子如下：
@@ -84,9 +85,9 @@ Part III: 不同数据类型的DataSetLoader
         {"annotator_labels": ["contradiction"], "captionID": "3416050480.jpg#4", "gold_label": "contradiction", "pairID": "3416050480.jpg#4r1c", "sentence1": "A person on a horse jumps over a broken down airplane.", "sentence1_binary_parse": "( ( ( A person ) ( on ( a horse ) ) ) ( ( jumps ( over ( a ( broken ( down airplane ) ) ) ) ) . ) )", "sentence1_parse": "(ROOT (S (NP (NP (DT A) (NN person)) (PP (IN on) (NP (DT a) (NN horse)))) (VP (VBZ jumps) (PP (IN over) (NP (DT a) (JJ broken) (JJ down) (NN airplane)))) (. .)))", "sentence2": "A person is at a diner, ordering an omelette.", "sentence2_binary_parse": "( ( A person ) ( ( ( ( is ( at ( a diner ) ) ) , ) ( ordering ( an omelette ) ) ) . ) )", "sentence2_parse": "(ROOT (S (NP (DT A) (NN person)) (VP (VBZ is) (PP (IN at) (NP (DT a) (NN diner))) (, ,) (S (VP (VBG ordering) (NP (DT an) (NN omelette))))) (. .)))"}
         {"annotator_labels": ["entailment"], "captionID": "3416050480.jpg#4", "gold_label": "entailment", "pairID": "3416050480.jpg#4r1e", "sentence1": "A person on a horse jumps over a broken down airplane.", "sentence1_binary_parse": "( ( ( A person ) ( on ( a horse ) ) ) ( ( jumps ( over ( a ( broken ( down airplane ) ) ) ) ) . ) )", "sentence1_parse": "(ROOT (S (NP (NP (DT A) (NN person)) (PP (IN on) (NP (DT a) (NN horse)))) (VP (VBZ jumps) (PP (IN over) (NP (DT a) (JJ broken) (JJ down) (NN airplane)))) (. .)))", "sentence2": "A person is outdoors, on a horse.", "sentence2_binary_parse": "( ( A person ) ( ( ( ( is outdoors ) , ) ( on ( a horse ) ) ) . ) )", "sentence2_parse": "(ROOT (S (NP (DT A) (NN person)) (VP (VBZ is) (ADVP (RB outdoors)) (, ,) (PP (IN on) (NP (DT a) (NN horse)))) (. .)))"}
 
-
+------------------------------------------
 Part IV: DataSetLoader举例
-###########
+------------------------------------------
 
 以Matching任务为例子：
 
@@ -128,9 +129,9 @@ Part IV: DataSetLoader举例
                     ds.drop(lambda x: x[Const.TARGET] == '-')  # 将标签为'-'的样本丢掉
                     return ds
 
-
+------------------------------------------
 Part V: fastNLP封装好的数据集加载器
-###########
+------------------------------------------
 
 fastNLP封装好的数据集加载器可以适用于多种类型的任务：
 
@@ -140,22 +141,22 @@ fastNLP封装好的数据集加载器可以适用于多种类型的任务：
     - `指代消解任务`_
     - `摘要任务`_
 
------
-文本分类任务
------
 
 文本分类任务
+-------------------
+
+文本分类任务
 
 
------
+
 序列标注任务
------
+-------------------
 
 序列标注任务
 
------
+
 Matching任务
------
+-------------------
 
 :class:`~fastNLP.io.data_loader.matching.SNLILoader`
     一个关于SNLI数据集的DataSetLoader。SNLI数据集来自
@@ -176,16 +177,16 @@ Matching任务
 
 
 
------
-指代消解任务
------
 
 指代消解任务
+-------------------
+
+指代消解任务
 
 
------
+
 摘要任务
------
+-------------------
 
 摘要任务
 

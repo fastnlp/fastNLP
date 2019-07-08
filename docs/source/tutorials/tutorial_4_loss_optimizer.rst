@@ -1,46 +1,48 @@
-
-==============================================================================
-Tutorial for batcher, loss, optimizer----text classification example
+﻿Loss 和 optimizer 教程 ———— 以文本分类为例
 ==============================================================================
 
-我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极（label=1）还是消极（label=0）
+我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极（label=1）、消极（label=0）还是中性（label=2）
 
 --------------
 数据处理
 --------------
 
 数据读入
-    我们可以使用 fastNLP  :mod:`fastNLP.io` 模块中的 :class:`~fastNLP.io.CSVLoader` 类，轻松地从 csv 文件读取我们的数据。
-    这里的 dataset 是 fastNLP 中 :class:`~fastNLP.DataSet` 类的对象
+    我们可以使用 fastNLP  :mod:`fastNLP.io` 模块中的 :class:`~fastNLP.io.SSTLoader` 类，轻松地读取SST数据集（数据来源：https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip）。
+    这里的 dataset 是 fastNLP 中 :class:`~fastNLP.DataSet` 类的对象。
 
     .. code-block:: python
 
-        from fastNLP.io import CSVLoader
-        
-        loader = CSVLoader(headers=('text', 'label'), sep='\t')
-        dataset = loader.load("./sentiment_analysis_sample.csv")
+        from fastNLP.io import SSTLoader
+
+        loader = SSTLoader()
+        #这里的all.txt是下载好数据后train.txt、dev.txt、test.txt的组合
+        dataset = loader.load("./trainDevTestTrees_PTB/trees/all.txt")
         print(dataset[0])
 
     输出数据如下::
-	
-        {'text': if you like movies , do n't watch this movie . type=str,
-		'label': 0 type=str}
+    
+        {'words': ['It', "'s", 'a', 'lovely', 'film', 'with', 'lovely', 'performances', 'by', 'Buy', 'and', 'Accorsi', '.'] type=list,
+        'target': positive type=str}
+        
     除了读取数据外，fastNLP 还提供了读取其它文件类型的 Loader 类、读取 Embedding的 Loader 等。详见 :doc:`/fastNLP.io` 。
     
 
 数据处理
-    我们使用 :class:`~fastNLP.DataSet` 类的 :meth:`~fastNLP.DataSet.apply` 方法将 ``raw_sentence`` 中字母变成小写，并将句子分词。
-    同时也将 ``label`` :mod:`~fastNLP.core.field` 转化为整数并改名为 ``target``。
+    我们使用 :class:`~fastNLP.DataSet` 类的 :meth:`~fastNLP.DataSet.apply` 方法将 ``target`` :mod:`~fastNLP.core.field` 转化为整数。
     
     .. code-block:: python
-    
-        # 将所有字母转为小写, 使所有句子变成单词序列
-        dataset.apply(lambda x: x['text'].lower(), new_field_name='text')
-        dataset.apply_field(lambda x: x.split(), field_name='text', new_field_name='words')
-        
-        # 将label转为整数
-        dataset.apply(lambda x: int(x['label']), new_field_name='target')
 
+        def label_to_int(x):
+            if x['target']=="positive":
+                return 1
+            elif x['target']=="negative":
+                return 0
+            else:
+                return 2
+
+        # 将label转为整数
+        dataset.apply(lambda x: label_to_int(x), new_field_name='target')
 
     ``words`` 和 ``target`` 已经足够用于 :class:`~fastNLP.models.CNNText` 的训练了，但我们从其文档
     :class:`~fastNLP.models.CNNText` 中看到，在 :meth:`~fastNLP.models.CNNText.forward` 的时候，还可以传入可选参数 ``seq_len`` 。
@@ -77,12 +79,10 @@ Vocabulary 的使用
         print(dataset[0])
     
     输出数据如下::
-	
-        {'text': if you like movies , do n't watch this movie . type=str,
-        'label': 0 type=str,
-        'words': [41, 22, 43, 78, 4, 46, 27, 81, 11, 14, 2] type=list,
-        'target': 0 type=int,
-        'seq_len': 11 type=int}
+    
+        {'words': [27, 9, 6, 913, 16, 18, 913, 124, 31, 5715, 5, 1, 2] type=list,
+        'target': 1 type=int,
+        'seq_len': 13 type=int}
 
 
 ---------------------
@@ -112,7 +112,7 @@ Vocabulary 的使用
         print(Const.OUTPUT)
     
     输出结果为::
-	
+    
         words
         seq_len
         target
@@ -138,13 +138,13 @@ Vocabulary 的使用
         print(len(train_data), len(dev_data), len(test_data))
 
     输出结果为::
-	
-        1620 180 200
+    
+        9603 1067 1185
         
 损失函数
     训练模型需要提供一个损失函数
     ,fastNLP中提供了直接可以导入使用的四种loss，分别为：
-	
+    
     * :class:`~fastNLP.CrossEntropyLoss`：包装了torch.nn.functional.cross_entropy()函数，返回交叉熵损失（可以运用于多分类场景）  
     * :class:`~fastNLP.BCELoss`：包装了torch.nn.functional.binary_cross_entropy()函数，返回二分类的交叉熵  
     * :class:`~fastNLP.L1Loss`：包装了torch.nn.functional.l1_loss()函数，返回L1 损失  
@@ -159,7 +159,7 @@ Vocabulary 的使用
     .. code-block:: python
 
         from fastNLP import CrossEntropyLoss
-	
+    
         # loss = CrossEntropyLoss() 在本例中与下面这行代码等价
         loss = CrossEntropyLoss(pred=Const.OUTPUT, target=Const.TARGET)
 
@@ -171,27 +171,27 @@ Vocabulary 的使用
     .. code-block:: python
 
         from fastNLP import AccuracyMetric
-	
-	# metrics=AccuracyMetric() 在本例中与下面这行代码等价
-	metrics=AccuracyMetric(pred=Const.OUTPUT, target=Const.TARGET)
-	
+    
+        # metrics=AccuracyMetric() 在本例中与下面这行代码等价
+        metrics=AccuracyMetric(pred=Const.OUTPUT, target=Const.TARGET)
+    
 优化器
     定义模型运行的时候使用的优化器，可以使用fastNLP包装好的优化器：
-	
+    
     * :class:`~fastNLP.SGD` ：包装了torch.optim.SGD优化器
     * :class:`~fastNLP.Adam` ：包装了torch.optim.Adam优化器
-	
+    
     也可以直接使用torch.optim.Optimizer中的优化器，并在实例化 :class:`~fastNLP.Trainer` 类的时候传入优化器实参
     
     .. code-block:: python
 
         import torch.optim as optim
-	from fastNLP import Adam
+        from fastNLP import Adam
 
-	#使用 torch.optim 定义优化器
-	optimizer_1=optim.RMSprop(model_cnn.parameters(), lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
-	#使用fastNLP中包装的 Adam 定义优化器
-	optimizer_2=Adam(lr=4e-3, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, model_params=model_cnn.parameters())
+        #使用 torch.optim 定义优化器
+        optimizer_1=optim.RMSprop(model_cnn.parameters(), lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
+        #使用fastNLP中包装的 Adam 定义优化器
+        optimizer_2=Adam(lr=4e-3, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, model_params=model_cnn.parameters())
 
 快速训练
     现在我们可以导入 fastNLP 内置的文本分类模型 :class:`~fastNLP.models.CNNText` ，并使用 :class:`~fastNLP.Trainer` 进行训练了
@@ -207,7 +207,7 @@ Vocabulary 的使用
 
         #使用CNNText的时候第一个参数输入一个tuple,作为模型定义embedding的参数
         #还可以传入 kernel_nums, kernel_sizes, padding, dropout的自定义值
-        model_cnn = CNNText((len(vocab),EMBED_DIM), num_classes=2, padding=2, dropout=0.1)
+        model_cnn = CNNText((len(vocab),EMBED_DIM), num_classes=3, padding=2, dropout=0.1)
 
         #如果在定义trainer的时候没有传入optimizer参数，模型默认的优化器为torch.optim.Adam且learning rate为lr=4e-3
         #这里只使用了optimizer_1作为优化器输入，感兴趣可以尝试optimizer_2或者其他优化器作为输入
@@ -217,36 +217,36 @@ Vocabulary 的使用
         trainer.train()
 
     训练过程的输出如下::
-	
+    
         input fields after batch(if batch size is 2):
-	        words: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2, 26]) 
-	        seq_len: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2]) 
+            words: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2, 40]) 
+                seq_len: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2]) 
         target fields after batch(if batch size is 2):
-	        target: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2]) 
+                target: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2]) 
 
-        training epochs started 2019-07-05-16-18-39
-        Evaluation at Epoch 1/10. Step:102/1020. AccuracyMetric: acc=0.7
+        training epochs started 2019-07-08-15-44-48
+        Evaluation at Epoch 1/10. Step:601/6010. AccuracyMetric: acc=0.59044
 
-        Evaluation at Epoch 2/10. Step:204/1020. AccuracyMetric: acc=0.672222
+        Evaluation at Epoch 2/10. Step:1202/6010. AccuracyMetric: acc=0.599813
 
-        Evaluation at Epoch 3/10. Step:306/1020. AccuracyMetric: acc=0.683333
+        Evaluation at Epoch 3/10. Step:1803/6010. AccuracyMetric: acc=0.508903
 
-        Evaluation at Epoch 4/10. Step:408/1020. AccuracyMetric: acc=0.722222
+        Evaluation at Epoch 4/10. Step:2404/6010. AccuracyMetric: acc=0.596064
 
-        Evaluation at Epoch 5/10. Step:510/1020. AccuracyMetric: acc=0.75
+        Evaluation at Epoch 5/10. Step:3005/6010. AccuracyMetric: acc=0.47985
 
-        Evaluation at Epoch 6/10. Step:612/1020. AccuracyMetric: acc=0.738889
+        Evaluation at Epoch 6/10. Step:3606/6010. AccuracyMetric: acc=0.589503
 
-        Evaluation at Epoch 7/10. Step:714/1020. AccuracyMetric: acc=0.738889
+        Evaluation at Epoch 7/10. Step:4207/6010. AccuracyMetric: acc=0.311153
 
-        Evaluation at Epoch 8/10. Step:816/1020. AccuracyMetric: acc=0.794444
+        Evaluation at Epoch 8/10. Step:4808/6010. AccuracyMetric: acc=0.549203
 
-        Evaluation at Epoch 9/10. Step:918/1020. AccuracyMetric: acc=0.755556
+        Evaluation at Epoch 9/10. Step:5409/6010. AccuracyMetric: acc=0.581068
 
-        Evaluation at Epoch 10/10. Step:1020/1020. AccuracyMetric: acc=0.75
+        Evaluation at Epoch 10/10. Step:6010/6010. AccuracyMetric: acc=0.523899
 
 
-        In Epoch:8/Step:816, got best dev performance:AccuracyMetric: acc=0.794444
+        In Epoch:2/Step:1202, got best dev performance:AccuracyMetric: acc=0.599813
         Reloaded the best model.
 
 快速测试
@@ -256,13 +256,13 @@ Vocabulary 的使用
 
         from fastNLP import Tester
 
-	tester = Tester(test_data, model_cnn, metrics=AccuracyMetric())
-	tester.test()
+        tester = Tester(test_data, model_cnn, metrics=AccuracyMetric())
+        tester.test()
     
     训练过程输出如下::
-	
+    
         [tester] 
-	AccuracyMetric: acc=0.66
+        AccuracyMetric: acc=0.565401
 
 --------------------------
 自己编写训练过程
@@ -274,7 +274,7 @@ Vocabulary 的使用
     
 Batch
     fastNLP定义的 :class:`~fastNLP.Batch` 类在初始化时传入的参数有：
-	
+    
     * dataset: :class:`~fastNLP.DataSet` 对象, 数据集
     * batch_size: 取出的batch大小
     * sampler: 规定使用的 :class:`~fastNLP.Sampler` 若为 None, 使用 :class:`~fastNLP.RandomSampler` （Default: None）
@@ -283,7 +283,7 @@ Batch
 
 sampler
     fastNLP 实现的采样器有：
-	
+    
     * :class:`~fastNLP.BucketSampler` 可以随机地取出长度相似的元素 【初始化参数:  num_buckets：bucket的数量；  batch_size：batch大小；  seq_len_field_name：dataset中对应序列长度的 :mod:`~fastNLP.core.field` 的名字】
     * SequentialSampler： 顺序取出元素的采样器【无初始化参数】
     * RandomSampler：随机化取元素的采样器【无初始化参数】
@@ -297,7 +297,7 @@ sampler
     import torch
     import time
 
-    model = CNNText((len(vocab),embed_dim), num_classes=2, padding=2, dropout=0.1)
+    model = CNNText((len(vocab),embed_dim), num_classes=3, padding=2, dropout=0.1)
 
     def train(epoch, data, devdata):
         optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
@@ -338,17 +338,17 @@ sampler
 这段代码的输出如下::
 
     -----start training-----
-    Epoch 0 Avg Loss: 0.91 AccuracyMetric: acc=0.533333 9411ms
-    Epoch 1 Avg Loss: 0.69 AccuracyMetric: acc=0.627778 18625ms
-    Epoch 2 Avg Loss: 0.63 AccuracyMetric: acc=0.661111 27047ms
-    Epoch 3 Avg Loss: 0.56 AccuracyMetric: acc=0.605556 36406ms
-    Epoch 4 Avg Loss: 0.52 AccuracyMetric: acc=0.622222 46076ms
-    Epoch 5 Avg Loss: 0.46 AccuracyMetric: acc=0.633333 55052ms
-    Epoch 6 Avg Loss: 0.40 AccuracyMetric: acc=0.666667 64419ms
-    Epoch 7 Avg Loss: 0.35 AccuracyMetric: acc=0.644444 74495ms
-    Epoch 8 Avg Loss: 0.30 AccuracyMetric: acc=0.666667 84331ms
-    Epoch 9 Avg Loss: 0.26 AccuracyMetric: acc=0.655556 93642ms
+    Epoch 0 Avg Loss: 1.09 AccuracyMetric: acc=0.480787 58989ms
+    Epoch 1 Avg Loss: 1.00 AccuracyMetric: acc=0.500469 118348ms
+    Epoch 2 Avg Loss: 0.93 AccuracyMetric: acc=0.536082 176220ms
+    Epoch 3 Avg Loss: 0.87 AccuracyMetric: acc=0.556701 236032ms
+    Epoch 4 Avg Loss: 0.78 AccuracyMetric: acc=0.562324 294351ms
+    Epoch 5 Avg Loss: 0.69 AccuracyMetric: acc=0.58388 353673ms
+    Epoch 6 Avg Loss: 0.60 AccuracyMetric: acc=0.574508 412106ms
+    Epoch 7 Avg Loss: 0.51 AccuracyMetric: acc=0.589503 471097ms
+    Epoch 8 Avg Loss: 0.44 AccuracyMetric: acc=0.581068 529174ms
+    Epoch 9 Avg Loss: 0.39 AccuracyMetric: acc=0.572634 586216ms
     [tester] 
-    AccuracyMetric: acc=0.65
+    AccuracyMetric: acc=0.527426
 
 
