@@ -116,7 +116,7 @@ class sst2Loader(DataSetLoader):
             if idx<=skip_row:
                 continue
             target = row[1]
-            words=self.tokenizer(words)
+            words=self.tokenizer(row[0])
             ds.append(Instance(words=words,target=target))
             all_count+=1
         print("all count:", all_count)
@@ -137,11 +137,13 @@ class sst2Loader(DataSetLoader):
             datasets[name] = dataset
 
         def wordtochar(words):
-            chars=[]
+            chars = []
             for word in words:
-                word=word.lower()
+                word = word.lower()
                 for char in word:
                     chars.append(char)
+                chars.append('')
+            chars.pop()
             return chars
 
         input_name, target_name = 'words', 'target'

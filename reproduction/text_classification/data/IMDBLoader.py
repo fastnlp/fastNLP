@@ -8,6 +8,7 @@ from fastNLP import Vocabulary
 from fastNLP import Const
 # from reproduction.utils import check_dataloader_paths
 from functools import partial
+from reproduction.utils import check_dataloader_paths, get_tokenizer
 
 
 class IMDBLoader(DataSetLoader):
@@ -22,6 +23,7 @@ class IMDBLoader(DataSetLoader):
 
     def __init__(self):
         super(IMDBLoader, self).__init__()
+        self.tokenizer = get_tokenizer()
 
     def _load(self, path):
         dataset = DataSet()
@@ -32,7 +34,7 @@ class IMDBLoader(DataSetLoader):
                     continue
                 parts = line.split('\t')
                 target = parts[0]
-                words = parts[1].lower().split()
+                words = self.tokenizer(parts[1].lower())
                 dataset.append(Instance(words=words, target=target))
 
         if len(dataset)==0:
@@ -52,13 +54,15 @@ class IMDBLoader(DataSetLoader):
         for name, path in paths.items():
             dataset = self.load(path)
             datasets[name] = dataset
-            
+
         def wordtochar(words):
             chars = []
             for word in words:
                 word = word.lower()
                 for char in word:
                     chars.append(char)
+                chars.append('')
+            chars.pop()
             return chars
 
         if char_level_op:
