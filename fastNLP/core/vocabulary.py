@@ -117,6 +117,8 @@ class Vocabulary(object):
 
         :param str word: 新词
         """
+        if word in self._no_create_word:
+            self._no_create_word.pop(word)
         self.add(word)
     
     @_check_build_status
@@ -126,6 +128,9 @@ class Vocabulary(object):
 
         :param list[str] word_lst: 词的序列
         """
+        for word in word_lst:
+            if word in self._no_create_word:
+                self._no_create_word.pop(word)
         self.update(word_lst)
     
     def build_vocab(self):

@@ -179,15 +179,15 @@ class StaticEmbedding(TokenEmbedding):
     :param model_dir_or_name: 可以有两种方式调用预训练好的static embedding：第一种是传入embedding的文件名，第二种是传入embedding
         的名称。目前支持的embedding包括{`en` 或者 `en-glove-840b-300` : glove.840B.300d, `en-glove-6b-50` : glove.6B.50d,
         `en-word2vec-300` : GoogleNews-vectors-negative300}。第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载。
-    :param requires_grad: 是否需要gradient. 默认为True
-    :param init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对象。
-    :param normailize: 是否对vector进行normalize，使得每个vector的norm为1。
+    :param bool requires_grad: 是否需要gradient. 默认为True
+    :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对象。
+    :param bool normailize: 是否对vector进行normalize，使得每个vector的norm为1。
+    :param bool lower: 是否将vocab中的词语小写后再和预训练的词表进行匹配。如果你的词表中包含大写的词语，或者就是需要单独
+        为大写的词语开辟一个vector表示，则将lower设置为False。
     """
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', requires_grad: bool=True, init_method=None,
-                 normalize=False):
+                 normalize=False, lower=False):
         super(StaticEmbedding, self).__init__(vocab)
-
-        # 优先定义需要下载的static embedding有哪些。这里估计需要自己搞一个server，
 
         # 得到cache_path
         if model_dir_or_name.lower() in PRETRAIN_STATIC_FILES:
@@ -202,8 +202,40 @@ class StaticEmbedding(TokenEmbedding):
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
         # 读取embedding
-        embedding = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method,
-                                                      normalize=normalize)
+        if lower:
+            lowered_vocab = Vocabulary(padding=vocab.padding, unknown=vocab.unknown)
+            for word, index in vocab:
+                if not vocab._is_word_no_create_entry(word):
+                    lowered_vocab.add_word(word.lower())  # 先加入需要创建entry的
+            for word in vocab._no_create_word.keys():  # 不需要创建entry的
+                if word in vocab:
+                    lowered_word = word.lower()
+                    if lowered_word not in lowered_vocab.word_count:
+                        lowered_vocab.add_word(lowered_word)
+                        lowered_vocab._no_create_word[lowered_word] += 1
+            print(f"All word in vocab have been lowered. There are {len(vocab)} words, {len(lowered_vocab)} unique lowered "
+                  f"words.")
+            embedding = self._load_with_vocab(model_path, vocab=lowered_vocab, init_method=init_method,
+                                                          normalize=normalize)
+            # 需要适配一下
+            if not hasattr(self, 'words_to_words'):
+                self.words_to_words = torch.arange(len(lowered_vocab, )).long()
+            if lowered_vocab.unknown:
+                unknown_idx = lowered_vocab.unknown_idx
+            else:
+                unknown_idx = embedding.size(0) - 1  # 否则是最后一个为unknow
+            words_to_words = nn.Parameter(torch.full((len(vocab),), fill_value=unknown_idx).long(),
+                                          requires_grad=False)
+            for word, index in vocab:
+                if word not in lowered_vocab:
+                    word = word.lower()
+                    if lowered_vocab._is_word_no_create_entry(word):  # 如果不需要创建entry,已经默认unknown了
+                        continue
+                words_to_words[index] = self.words_to_words[lowered_vocab.to_index(word)]
+            self.words_to_words = words_to_words
+        else:
+            embedding = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method,
+                                                          normalize=normalize)
         self.embedding = nn.Embedding(num_embeddings=embedding.shape[0], embedding_dim=embedding.shape[1],
                                       padding_idx=vocab.padding_idx,
                                       max_norm=None, norm_type=2, scale_grad_by_freq=False,
@@ -301,7 +333,7 @@ class StaticEmbedding(TokenEmbedding):
             if vocab._no_create_word_length>0:
                 if vocab.unknown is None:  # 创建一个专门的unknown
                     unknown_idx = len(matrix)
-                    vectors = torch.cat([vectors, torch.zeros(1, dim)], dim=0).contiguous()
+                    vectors = torch.cat((vectors, torch.zeros(1, dim)), dim=0).contiguous()
                 else:
                     unknown_idx = vocab.unknown_idx
                 words_to_words = nn.Parameter(torch.full((len(vocab),), fill_value=unknown_idx).long(),
@@ -438,19 +470,15 @@ class ElmoEmbedding(ContextualEmbedding):
     :param model_dir_or_name: 可以有两种方式调用预训练好的ELMo embedding：第一种是传入ELMo权重的文件名，第二种是传入ELMo版本的名称，
         目前支持的ELMo包括{`en` : 英文版本的ELMo, `cn` : 中文版本的ELMo,}。第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载
     :param layers: str, 指定返回的层数, 以,隔开不同的层。如果要返回第二层的结果'2', 返回后两层的结果'1,2'。不同的层的结果
-        按照这个顺序concat起来。默认为'2'。
-    :param requires_grad: bool, 该层是否需要gradient. 默认为False
+        按照这个顺序concat起来。默认为'2'。'mix'会使用可学习的权重结合不同层的表示(权重是否可训练与requires_grad保持一致，
+        初始化权重对三层结果进行mean-pooling, 可以通过ElmoEmbedding.set_mix_weights_requires_grad()方法只将mix weights设置为可学习。)
+    :param requires_grad: bool, 该层是否需要gradient, 默认为False.
     :param cache_word_reprs: 可以选择对word的表示进行cache; 设置为True的话，将在初始化的时候为每个word生成对应的embedding，
         并删除character encoder，之后将直接使用cache的embedding。默认为False。
     """
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en',
                  layers: str='2', requires_grad: bool=False, cache_word_reprs: bool=False):
         super(ElmoEmbedding, self).__init__(vocab)
-        layers = list(map(int, layers.split(',')))
-        assert len(layers) > 0, "Must choose one output"
-        for layer in layers:
-            assert 0 <= layer <= 2, "Layer index should be in range [0, 2]."
-        self.layers = layers
 
         # 根据model_dir_or_name检查是否存在并下载
         if model_dir_or_name.lower() in PRETRAINED_ELMO_MODEL_DIR:
@@ -464,8 +492,49 @@ class ElmoEmbedding(ContextualEmbedding):
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
         self.model = _ElmoModel(model_dir, vocab, cache_word_reprs=cache_word_reprs)
+
+        if layers=='mix':
+            self.layer_weights = nn.Parameter(torch.zeros(self.model.config['encoder']['n_layers']+1),
+                                              requires_grad=requires_grad)
+            self.gamma = nn.Parameter(torch.ones(1), requires_grad=requires_grad)
+            self._get_outputs = self._get_mixed_outputs
+            self._embed_size = self.model.config['encoder']['projection_dim'] * 2
+        else:
+            layers = list(map(int, layers.split(',')))
+            assert len(layers) > 0, "Must choose one output"
+            for layer in layers:
+                assert 0 <= layer <= 2, "Layer index should be in range [0, 2]."
+            self.layers = layers
+            self._get_outputs = self._get_layer_outputs
+            self._embed_size = len(self.layers) * self.model.config['encoder']['projection_dim'] * 2
+
         self.requires_grad = requires_grad
-        self._embed_size = len(self.layers) * self.model.config['encoder']['projection_dim'] * 2
+
+    def _get_mixed_outputs(self, outputs):
+        # outputs: num_layers x batch_size x max_len x hidden_size
+        # return: batch_size x max_len x hidden_size
+        weights = F.softmax(self.layer_weights+1/len(outputs), dim=0).to(outputs)
+        outputs = torch.einsum('l,lbij->bij', weights, outputs)
+        return self.gamma.to(outputs)*outputs
+
+    def set_mix_weights_requires_grad(self, flag=True):
+        """
+        当初始化ElmoEmbedding时layers被设置为mix时，可以通过调用该方法设置mix weights是否可训练。如果layers不是mix，调用
+        该方法没有用。
+        :param bool flag: 混合不同层表示的结果是否可以训练。
+        :return:
+        """
+        if hasattr(self, 'layer_weights'):
+            self.layer_weights.requires_grad = flag
+            self.gamma.requires_grad = flag
+
+    def _get_layer_outputs(self, outputs):
+        if len(self.layers) == 1:
+            outputs = outputs[self.layers[0]]
+        else:
+            outputs = torch.cat(tuple([*outputs[self.layers]]), dim=-1)
+
+        return outputs
 
     def forward(self, words: torch.LongTensor):
         """
@@ -480,15 +549,12 @@ class ElmoEmbedding(ContextualEmbedding):
         if outputs is not None:
             return outputs
         outputs = self.model(words)
-        if len(self.layers) == 1:
-            outputs = outputs[self.layers[0]]
-        else:
-            outputs = torch.cat([*outputs[self.layers]], dim=-1)
-
-        return outputs
+        return self._get_outputs(outputs)
 
     def _delete_model_weights(self):
-        del self.layers, self.model
+        for name in ['layers', 'model', 'layer_weights', 'gamma']:
+            if hasattr(self, name):
+                delattr(self, name)
 
     @property
     def requires_grad(self):
@@ -892,10 +958,11 @@ class StackEmbedding(TokenEmbedding):
     def __init__(self, embeds: List[TokenEmbedding]):
         vocabs = []
         for embed in embeds:
-            vocabs.append(embed.get_word_vocab())
+            if hasattr(embed, 'get_word_vocab'):
+                vocabs.append(embed.get_word_vocab())
         _vocab = vocabs[0]
         for vocab in vocabs[1:]:
-            assert vocab == _vocab, "All embeddings should use the same word vocabulary."
+            assert vocab == _vocab, "All embeddings in StackEmbedding should use the same word vocabulary."
 
         super(StackEmbedding, self).__init__(_vocab)
         assert isinstance(embeds, list)
