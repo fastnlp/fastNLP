@@ -22,7 +22,14 @@ __all__ = [
     
     "VarRNN",
     "VarLSTM",
-    "VarGRU"
+    "VarGRU",
+
+    "MaxPool",
+    "MaxPoolWithMask",
+    "AvgPool",
+    "AvgPoolWithMask",
+
+    "MultiHeadAttention",
 ]
 from ._bert import BertModel
 from .bert import BertWordPieceEncoder
@@ -34,3 +41,6 @@ from .lstm import LSTM
 from .star_transformer import StarTransformer
 from .transformer import TransformerEncoder
 from .variational_rnn import VarRNN, VarLSTM, VarGRU
+
+from .pooling import MaxPool, MaxPoolWithMask, AvgPool, AvgPoolWithMask
+from .attention import MultiHeadAttention

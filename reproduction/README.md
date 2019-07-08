@@ -9,7 +9,7 @@
 
 # 任务复现
 ## Text Classification (文本分类)
-- still in progress
+- [Text Classification 文本分类任务复现](text_classification)
 
 
 ## Matching (自然语言推理/句子匹配)
@@ -21,11 +21,11 @@
 
 
 ## Coreference resolution (指代消解)
-- still in progress
+- [Coreference resolution 指代消解任务复现](coreference_resolution)
 
 
 ## Summarization (摘要)
-- still in progress
+- [BertSum](Summmarization)
 
 
 ## ...
