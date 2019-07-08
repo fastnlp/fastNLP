@@ -1,7 +1,7 @@
 
 
 from fastNLP.io.base_loader import DataSetLoader, DataInfo
-from fastNLP.io.dataset_loader import ConllLoader
+from fastNLP.io.data_loader import ConllLoader
 import numpy as np
 
 from itertools import chain

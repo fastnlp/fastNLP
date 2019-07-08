@@ -20,8 +20,8 @@
 - [NER](seqence_labelling/ner)
 
 
-## Coreference resolution (指代消解)
-- [Coreference resolution 指代消解任务复现](coreference_resolution)
+## Coreference resolution (共指消解)
+- [Coreference resolution 共指消解任务复现](coreference_resolution)
 
 
 ## Summarization (摘要)

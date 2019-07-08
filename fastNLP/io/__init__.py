@@ -17,17 +17,17 @@ __all__ = [
 
     'CSVLoader',
     'JsonLoader',
-    'ConllLoader',
-    'PeopleDailyCorpusLoader',
-    'Conll2003Loader',
     
     'ModelLoader',
     'ModelSaver',
 
-    'SSTLoader',
-
+    'ConllLoader',
+    'Conll2003Loader',
     'MatchingLoader',
+    'PeopleDailyCorpusLoader',
     'SNLILoader',
+    'SSTLoader',
+    'SST2Loader',
     'MNLILoader',
     'QNLILoader',
     'QuoraLoader',
@@ -36,10 +36,7 @@ __all__ = [
 
 from .embed_loader import EmbedLoader
 from .base_loader import DataInfo, DataSetLoader
-from .dataset_loader import CSVLoader, JsonLoader, ConllLoader, \
-    PeopleDailyCorpusLoader, Conll2003Loader
+from .dataset_loader import CSVLoader, JsonLoader
 from .model_io import ModelLoader, ModelSaver
 
-from .data_loader.sst import SSTLoader
-from .data_loader.matching import MatchingLoader, SNLILoader, \
-    MNLILoader, QNLILoader, QuoraLoader, RTELoader
+from .data_loader import *
