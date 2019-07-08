@@ -1,6 +1,6 @@
 
-from ...core import DataSet
-from ...core import Instance
+from ...core.dataset import DataSet
+from ...core.instance import Instance
 from ..base_loader import DataSetLoader
 from ..file_reader import _read_conll
 
