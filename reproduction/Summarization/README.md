@@ -9,6 +9,7 @@ FastNLP中实现的模型包括：
 
 1. Get To The Point: Summarization with Pointer-Generator Networks (See et al. 2017)
 2. Searching for Effective Neural Extractive Summarization  What Works and What's Next (Zhong et al. 2019)
+3. Fine-tune BERT for Extractive Summarization (Liu et al. 2019)
 
 
 
@@ -47,13 +48,29 @@ FastNLP中实现的模型包括：
     - tag: 可选，文章内容标签
     - labels: 抽取式句子标签
 
+- BertSumLoader：用于读取作为 BertSum（Liu 2019） 输入的数据集，返回以下 field：
+  - article：每篇文章被截断为 512 后的词表 ID
+  - segmet_id：每句话属于 0/1 的 segment
+  - cls_id：输入中 ‘[CLS]’ 的位置
+  - label：抽取式句子标签
+
+
+
+
 
 
 ### Performance and Hyperparameters
 
-
-| Model | ROUGE-1 | ROUGE-2 | ROUGE-L | Paper |
-See 
+|              Model              | ROUGE-1 | ROUGE-2 | ROUGE-L |                    Paper                    |
+| :-----------------------------: | :-----: | :-----: | :-----: | :-----------------------------------------: |
+|             LEAD 3              |  40.11  |  17.64  |  36.32  |            our data pre-process             |
+|             ORACLE              |  55.24  |  31.14  |  50.96  |            our data pre-process             |
+|    LSTM + Sequence Labeling     |  40.72  |  18.27  |  36.98  |                                             |
+| Transformer + Sequence Labeling |  40.86  |  18.38  |  37.18  |                                             |
+|     LSTM + Pointer Network      |    -    |    -    |    -    |                                             |
+|  Transformer + Pointer Network  |    -    |    -    |    -    |                                             |
+|             BERTSUM             |  42.71  |  19.76  |  39.03  | Fine-tune BERT for Extractive Summarization |
+|         LSTM+PN+BERT+RL         |    -    |    -    |    -    |                                             |
 
 
 
