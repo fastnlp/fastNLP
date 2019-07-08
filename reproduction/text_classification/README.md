@@ -20,7 +20,7 @@ model name | yelp_p | yelp_f | sst-2|IMDB
 char_cnn | 93.80/95.12 | - | - |- 
 dpcnn | 95.50/97.36 | - | - |- 
 HAN |- | - | - |-
-LSTM| 95.74/- |- |- |88.52/-
-AWD-LSTM| 95.96/- |- |- |88.91/-
-LSTM+self_attention| 96.34/- | - | - |89.53/-
+LSTM| 95.74/- |64.16/- |- |88.52/-
+AWD-LSTM| 95.96/- |64.74/- |- |88.91/-
+LSTM+self_attention| 96.34/- | 65.78/- | - |89.53/-
 
