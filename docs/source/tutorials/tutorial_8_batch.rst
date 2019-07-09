@@ -3,7 +3,7 @@
 Batch 教程 ———— 以文本分类为例
 ==============================================================================
 
-我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极（label=1）、消极（label=0）还是中性（label=2），使用:class:`~fastNLP.Batch` 类来编写自己的训练过程。`自己编写训练过程`之前的内容与 :doc:`tutorials/tutorial_4_loss_optimizer`中的完全一样，如已经阅读过可以跳过。
+我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极（label=1）、消极（label=0）还是中性（label=2），使用:class:`~fastNLP.Batch` 类来编写自己的训练过程。自己编写训练过程之前的内容与 :doc:`/tutorials/tutorial_4_loss_optimizer` 中的完全一样，如已经阅读过可以跳过。
 
 --------------
 数据处理
