@@ -1,4 +1,4 @@
-﻿
+
 ==============================================================================
 Loss 和 optimizer 教程 ———— 以文本分类为例
 ==============================================================================
@@ -26,7 +26,7 @@ Loss 和 optimizer 教程 ———— 以文本分类为例
 	
         {'words': ['It', "'s", 'a', 'lovely', 'film', 'with', 'lovely', 'performances', 'by', 'Buy', 'and', 'Accorsi', '.'] type=list,
         'target': positive type=str}
-		
+
     除了读取数据外，fastNLP 还提供了读取其它文件类型的 Loader 类、读取 Embedding的 Loader 等。详见 :doc:`/fastNLP.io` 。
     
 
@@ -81,7 +81,7 @@ Vocabulary 的使用
         print(dataset[0])
     
     输出数据如下::
-	
+
         {'words': [27, 9, 6, 913, 16, 18, 913, 124, 31, 5715, 5, 1, 2] type=list,
         'target': 1 type=int,
         'seq_len': 13 type=int}
@@ -114,7 +114,7 @@ Vocabulary 的使用
         print(Const.OUTPUT)
     
     输出结果为::
-	
+
         words
         seq_len
         target
@@ -158,7 +158,6 @@ Vocabulary 的使用
 损失函数
     训练模型需要提供一个损失函数
     ,fastNLP中提供了直接可以导入使用的四种loss，分别为：
-	
     * :class:`~fastNLP.CrossEntropyLoss`：包装了torch.nn.functional.cross_entropy()函数，返回交叉熵损失（可以运用于多分类场景）  
     * :class:`~fastNLP.BCELoss`：包装了torch.nn.functional.binary_cross_entropy()函数，返回二分类的交叉熵  
     * :class:`~fastNLP.L1Loss`：包装了torch.nn.functional.l1_loss()函数，返回L1 损失  
@@ -196,7 +195,7 @@ Vocabulary 的使用
         optimizer_2=Adam(lr=4e-3, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, model_params=model_cnn.parameters())
 
 快速训练
-    现在我们可以导入 fastNLP 内置的文本分类模型 :class:`~fastNLP.models.CNNText` ，并使用 :class:`~fastNLP.Trainer` 进行训练了
+    现在我们可以导入 fastNLP 内置的文本分类模型 :class:`~fastNLP.models.CNNText` ，并使用 :class:`~fastNLP.Trainer` 进行训练，
     除了使用 :class:`~fastNLP.Trainer`进行训练，我们也可以通过使用 :class:`~fastNLP.Batch` 来编写自己的训练过程，具体见 :doc:`/tutorials/tutorial_8_batch` 
 
     .. code-block:: python
@@ -222,7 +221,7 @@ Vocabulary 的使用
     训练过程的输出如下::
 	
         input fields after batch(if batch size is 2):
-        	words: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2, 40]) 
+        	      words: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2, 40]) 
                 seq_len: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2]) 
         target fields after batch(if batch size is 2):
                 target: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2]) 
@@ -266,5 +265,3 @@ Vocabulary 的使用
 	
         [tester] 
         AccuracyMetric: acc=0.565401
-
-
