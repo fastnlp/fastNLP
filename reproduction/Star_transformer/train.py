@@ -10,7 +10,8 @@ from fastNLP.models.star_transformer import STSeqLabel, STSeqCls, STNLICls
 from fastNLP.core.const import Const as C
 import sys
 #sys.path.append('/remote-home/yfshao/workdir/dev_fastnlp/')
-pre_dir = '/home/ec2-user/fast_data/'
+import os
+pre_dir = os.path.join(os.environ['HOME'], 'workdir/datasets/')
 
 g_model_select = {
     'pos': STSeqLabel,
@@ -19,7 +20,7 @@ g_model_select = {
     'nli': STNLICls,
 }
 
-g_emb_file_path = {'en': pre_dir + 'glove.840B.300d.txt',
+g_emb_file_path = {'en': pre_dir + 'word_vector/glove.840B.300d.txt',
                    'zh': pre_dir + 'cc.zh.300.vec'}
 
 g_args = None
@@ -55,7 +56,7 @@ def get_conll2012_ner():
 
 
 def get_sst():
-    path = pre_dir + 'sst'
+    path = pre_dir + 'SST'
     files = ['train.txt', 'dev.txt', 'test.txt']
     return load_sst(path, files)
 
@@ -171,10 +172,10 @@ def train():
                          sampler=FN.BucketSampler(100, g_args.bsz, C.INPUT_LEN),
                          callbacks=[MyCallback()])
 
-    trainer.train()
+    print(trainer.train())
     tester = FN.Tester(data=test_data, model=model, metrics=metric,
                        batch_size=128, device=device)
-    tester.test()
+    print(tester.test())
 
 
 def test():
