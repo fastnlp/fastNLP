@@ -4,4 +4,3 @@ tqdm>=4.28.1
 nltk>=3.4.1
 requests
 spacy
-h5py
