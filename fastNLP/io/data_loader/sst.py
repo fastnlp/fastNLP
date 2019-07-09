@@ -60,8 +60,8 @@ class SSTLoader(DataSetLoader):
     def _get_one(self, data, subtree):
         tree = Tree.fromstring(data)
         if subtree:
-            return [([x.text for x in self.tokenizer(' '.join(t.leaves()))], t.label()) for t in tree.subtrees() ]
-        return [([x.text for x in self.tokenizer(' '.join(tree.leaves()))], tree.label())]
+            return [(self.tokenizer(' '.join(t.leaves())), t.label()) for t in tree.subtrees() ]
+        return [(self.tokenizer(' '.join(tree.leaves())), tree.label())]
 
     def process(self,
                 paths, train_subtree=True,

@@ -46,8 +46,8 @@ class StarTransEnc(nn.Module):
         super(StarTransEnc, self).__init__()
         self.embedding = get_embeddings(init_embed)
         emb_dim = self.embedding.embedding_dim
-        #self.emb_fc = nn.Linear(emb_dim, hidden_size)
-        self.emb_drop = nn.Dropout(emb_dropout)
+        self.emb_fc = nn.Linear(emb_dim, hidden_size)
+        # self.emb_drop = nn.Dropout(emb_dropout)
         self.encoder = StarTransformer(hidden_size=hidden_size,
                                        num_layers=num_layers,
                                        num_head=num_head,
@@ -65,7 +65,7 @@ class StarTransEnc(nn.Module):
                 [batch, hidden] 全局 relay 节点, 详见论文
         """
         x = self.embedding(x)
-        #x = self.emb_fc(self.emb_drop(x))
+        x = self.emb_fc(x)
         nodes, relay = self.encoder(x, mask)
         return nodes, relay
 
