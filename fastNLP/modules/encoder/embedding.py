@@ -539,11 +539,11 @@ class ElmoEmbedding(ContextualEmbedding):
         self.model = _ElmoModel(model_dir, vocab, cache_word_reprs=cache_word_reprs)
 
         if layers=='mix':
-            self.layer_weights = nn.Parameter(torch.zeros(self.model.config['encoder']['n_layers']+1),
+            self.layer_weights = nn.Parameter(torch.zeros(self.model.config['lstm']['n_layers']+1),
                                               requires_grad=requires_grad)
             self.gamma = nn.Parameter(torch.ones(1), requires_grad=requires_grad)
             self._get_outputs = self._get_mixed_outputs
-            self._embed_size = self.model.config['encoder']['projection_dim'] * 2
+            self._embed_size = self.model.config['lstm']['projection_dim'] * 2
         else:
             layers = list(map(int, layers.split(',')))
             assert len(layers) > 0, "Must choose one output"
@@ -551,7 +551,7 @@ class ElmoEmbedding(ContextualEmbedding):
                 assert 0 <= layer <= 2, "Layer index should be in range [0, 2]."
             self.layers = layers
             self._get_outputs = self._get_layer_outputs
-            self._embed_size = len(self.layers) * self.model.config['encoder']['projection_dim'] * 2
+            self._embed_size = len(self.layers) * self.model.config['lstm']['projection_dim'] * 2
 
         self.requires_grad = requires_grad
 
