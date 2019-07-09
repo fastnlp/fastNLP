@@ -135,7 +135,7 @@ class TokenEmbedding(nn.Module):
         :param torch.LongTensor words: batch_size x max_len
         :return:
         """
-        if self.dropout_word > 0 and self.training:
+        if self.word_dropout > 0 and self.training:
             mask = torch.ones_like(words).float() * self.word_dropout
             mask = torch.bernoulli(mask).byte()  # dropout_word越大，越多位置为1
             words = words.masked_fill(mask, self._word_unk_index)
@@ -175,7 +175,15 @@ class TokenEmbedding(nn.Module):
         return self._embed_size
 
     @property
+    def embedding_dim(self) -> int:
+        return self._embed_size
+
+    @property
     def num_embedding(self) -> int:
+        """
+        这个值可能会大于实际的embedding矩阵的大小。
+        :return:
+        """
         return len(self._word_vocab)
 
     def get_word_vocab(self):
@@ -810,7 +818,7 @@ class CNNCharEmbedding(TokenEmbedding):
         # 为1的地方为mask
         chars_masks = chars.eq(self.char_pad_index)  # batch_size x max_len x max_word_len 如果为0, 说明是padding的位置了
         chars = self.char_embedding(chars)  # batch_size x max_len x max_word_len x embed_size
-        self.dropout(chars)
+        chars = self.dropout(chars)
         reshaped_chars = chars.reshape(batch_size*max_len, max_word_len, -1)
         reshaped_chars = reshaped_chars.transpose(1, 2)  # B' x E x M
         conv_chars = [conv(reshaped_chars).transpose(1, 2).reshape(batch_size, max_len, max_word_len, -1)
@@ -962,7 +970,7 @@ class LSTMCharEmbedding(TokenEmbedding):
 
         chars = self.fc(chars)
 
-        return self.dropout(words)
+        return self.dropout(chars)
 
     @property
     def requires_grad(self):
