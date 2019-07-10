@@ -2,7 +2,7 @@
 这里复现了在fastNLP中实现的模型，旨在达到与论文中相符的性能。
 
 复现的模型有:
-- [Star-Transformer](Star_transformer/)
+- [Star-Transformer](Star_transformer)
 - [Biaffine](https://github.com/fastnlp/fastNLP/blob/999a14381747068e9e6a7cc370037b320197db00/fastNLP/models/biaffine_parser.py#L239)
 - [CNNText](https://github.com/fastnlp/fastNLP/blob/999a14381747068e9e6a7cc370037b320197db00/fastNLP/models/cnn_text_classification.py#L12)
 - ...
@@ -20,12 +20,12 @@
 - [NER](seqence_labelling/ner)
 
 
-## Coreference resolution (共指消解)
-- [Coreference resolution 共指消解任务复现](coreference_resolution)
+## Coreference Resolution (共指消解)
+- [Coreference Resolution 共指消解任务复现](coreference_resolution)
 
 
 ## Summarization (摘要)
-- [BertSum](Summmarization)
+- [Summerization 摘要任务复现](Summarization)
 
 
 ## ...
