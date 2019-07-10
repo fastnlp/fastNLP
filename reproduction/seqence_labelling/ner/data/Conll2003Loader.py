@@ -1,6 +1,6 @@
 
 from fastNLP.core.vocabulary import VocabularyOption
-from fastNLP.io.base_loader import DataSetLoader, DataInfo
+from fastNLP.io.base_loader import DataSetLoader, DataBundle
 from typing import Union, Dict
 from fastNLP import Vocabulary
 from fastNLP import Const
@@ -51,7 +51,7 @@ class Conll2003DataLoader(DataSetLoader):
         """
         # 读取数据
         paths = check_dataloader_paths(paths)
-        data = DataInfo()
+        data = DataBundle()
         input_fields = [Const.TARGET, Const.INPUT, Const.INPUT_LEN]
         target_fields = [Const.TARGET, Const.INPUT_LEN]
         for name, path in paths.items():

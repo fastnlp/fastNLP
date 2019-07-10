@@ -12,7 +12,7 @@
 __all__ = [
     'EmbedLoader',
 
-    'DataInfo',
+    'DataBundle',
     'DataSetLoader',
 
     'CSVLoader',
@@ -35,7 +35,7 @@ __all__ = [
 ]
 
 from .embed_loader import EmbedLoader
-from .base_loader import DataInfo, DataSetLoader
+from .base_loader import DataBundle, DataSetLoader
 from .dataset_loader import CSVLoader, JsonLoader
 from .model_io import ModelLoader, ModelSaver
 

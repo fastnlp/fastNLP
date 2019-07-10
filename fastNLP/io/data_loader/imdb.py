@@ -2,7 +2,7 @@
 from typing import Union, Dict
 
 from ..embed_loader import EmbeddingOption, EmbedLoader
-from ..base_loader import DataSetLoader, DataInfo
+from ..base_loader import DataSetLoader, DataBundle
 from ...core.vocabulary import VocabularyOption, Vocabulary
 from ...core.dataset import DataSet
 from ...core.instance import Instance
@@ -48,7 +48,7 @@ class IMDBLoader(DataSetLoader):
                 char_level_op=False):
 
         datasets = {}
-        info = DataInfo()
+        info = DataBundle()
         for name, path in paths.items():
             dataset = self.load(path)
             datasets[name] = dataset

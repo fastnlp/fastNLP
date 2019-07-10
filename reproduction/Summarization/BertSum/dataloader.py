@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from fastNLP.io.dataset_loader import JsonLoader
 from fastNLP.modules.encoder._bert import BertTokenizer
-from fastNLP.io.base_loader import DataInfo
+from fastNLP.io.base_loader import DataBundle
 from fastNLP.core.const import Const
 
 class BertData(JsonLoader):
@@ -110,7 +110,7 @@ class BertData(JsonLoader):
             # set paddding value
             datasets[name].set_pad_val('article', 0)
 
-        return DataInfo(datasets=datasets)
+        return DataBundle(datasets=datasets)
 
 
 class BertSumLoader(JsonLoader):
@@ -154,4 +154,4 @@ class BertSumLoader(JsonLoader):
 
         print('Finished in {}'.format(timedelta(seconds=time()-start)))
 
-        return DataInfo(datasets=datasets)
+        return DataBundle(datasets=datasets)

@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 
 from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.io.base_loader import DataInfo
+from fastNLP.io.base_loader import DataBundle
 from fastNLP.io.dataset_loader import JsonLoader
 from fastNLP.core.const import Const
 
@@ -66,7 +66,7 @@ class SummarizationLoader(JsonLoader):
         :param domain: bool  build vocab for publication, use 'X' for unknown
         :param tag: bool  build vocab for tag, use 'X' for unknown
         :param load_vocab: bool  build vocab (False) or load vocab (True)
-        :return: DataInfo
+        :return: DataBundle
             datasets: dict  keys correspond to the paths dict
             vocabs: dict  key: vocab(if "train" in paths), domain(if domain=True), tag(if tag=True)
             embeddings: optional
@@ -182,7 +182,7 @@ class SummarizationLoader(JsonLoader):
         for ds in datasets.values():
             vocab_dict["vocab"].index_dataset(ds, field_name=Const.INPUT, new_field_name=Const.INPUT)
 
-        return DataInfo(vocabs=vocab_dict, datasets=datasets)
+        return DataBundle(vocabs=vocab_dict, datasets=datasets)
 
 
 

@@ -2,7 +2,7 @@
 from typing import Union, Dict
 from nltk import Tree
 
-from ..base_loader import DataInfo, DataSetLoader
+from ..base_loader import DataBundle, DataSetLoader
 from ..dataset_loader import CSVLoader
 from ...core.vocabulary import VocabularyOption, Vocabulary
 from ...core.dataset import DataSet
@@ -73,7 +73,7 @@ class SSTLoader(DataSetLoader):
         tgt_vocab = Vocabulary(unknown=None, padding=None) \
             if tgt_vocab_op is None else Vocabulary(**tgt_vocab_op)
 
-        info = DataInfo()
+        info = DataBundle()
         origin_subtree = self.subtree
         self.subtree = train_subtree
         info.datasets['train'] = self._load(paths['train'])
@@ -126,7 +126,7 @@ class SST2Loader(CSVLoader):
 
         paths = check_dataloader_paths(paths)
         datasets = {}
-        info = DataInfo()
+        info = DataBundle()
         for name, path in paths.items():
             dataset = self.load(path)
             datasets[name] = dataset

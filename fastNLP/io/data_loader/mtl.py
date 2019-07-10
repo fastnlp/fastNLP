@@ -1,7 +1,7 @@
 
 from typing import Union, Dict
 
-from ..base_loader import DataInfo
+from ..base_loader import DataBundle
 from ..dataset_loader import CSVLoader
 from ...core.vocabulary import Vocabulary, VocabularyOption
 from ...core.const import Const
@@ -37,7 +37,7 @@ class MTL16Loader(CSVLoader):
 
         paths = check_dataloader_paths(paths)
         datasets = {}
-        info = DataInfo()
+        info = DataBundle()
         for name, path in paths.items():
             dataset = self.load(path)
             datasets[name] = dataset

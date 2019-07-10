@@ -1,6 +1,6 @@
 from typing import Iterable
 from nltk import Tree
-from fastNLP.io.base_loader import DataInfo, DataSetLoader
+from fastNLP.io.base_loader import DataBundle, DataSetLoader
 from fastNLP.core.vocabulary import VocabularyOption, Vocabulary
 from fastNLP import DataSet
 from fastNLP import Instance
@@ -68,7 +68,7 @@ class SSTLoader(DataSetLoader):
         tgt_vocab = Vocabulary(unknown=None, padding=None) \
             if tgt_vocab_op is None else Vocabulary(**tgt_vocab_op)
 
-        info = DataInfo(datasets=self.load(paths))
+        info = DataBundle(datasets=self.load(paths))
         _train_ds = [info.datasets[name]
                      for name in train_ds] if train_ds else info.datasets.values()
         src_vocab.from_dataset(*_train_ds, field_name=input_name)
@@ -134,7 +134,7 @@ class sst2Loader(DataSetLoader):
 
         paths = check_dataloader_paths(paths)
         datasets = {}
-        info = DataInfo()
+        info = DataBundle()
         for name, path in paths.items():
             dataset = self.load(path)
             datasets[name] = dataset

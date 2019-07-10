@@ -1,7 +1,7 @@
 
 from fastNLP.io.embed_loader import EmbeddingOption, EmbedLoader
 from fastNLP.core.vocabulary import VocabularyOption
-from fastNLP.io.base_loader import DataSetLoader, DataInfo
+from fastNLP.io.base_loader import DataSetLoader, DataBundle
 from typing import Union, Dict, List, Iterator
 from fastNLP import DataSet
 from fastNLP import Instance
@@ -161,7 +161,7 @@ class SigHanLoader(DataSetLoader):
         # 推荐大家使用这个check_data_loader_paths进行paths的验证
         paths = check_dataloader_paths(paths)
         datasets = {}
-        data = DataInfo()
+        data = DataBundle()
         bigram = bigram_vocab_opt is not None
         for name, path in paths.items():
             dataset = self.load(path, bigram=bigram)

@@ -1,6 +1,6 @@
 
 
-from fastNLP.io.base_loader import DataSetLoader, DataInfo
+from fastNLP.io.base_loader import DataSetLoader, DataBundle
 from fastNLP.io.data_loader import ConllLoader
 import numpy as np
 
@@ -76,7 +76,7 @@ class CTBxJointLoader(DataSetLoader):
                 gold_label_word_pairs:
         """
         paths = check_dataloader_paths(paths)
-        data = DataInfo()
+        data = DataBundle()
 
         for name, path in paths.items():
             dataset = self.load(path)
