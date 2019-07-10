@@ -1,6 +1,6 @@
 import os
 
-from typing import Union, Dict
+from typing import Union, Dict , List
 
 from ...core.const import Const
 from ...core.vocabulary import Vocabulary
@@ -33,7 +33,8 @@ class MatchingLoader(DataSetLoader):
                 to_lower=False, seq_len_type: str=None, bert_tokenizer: str=None,
                 cut_text: int = None, get_index=True, auto_pad_length: int=None,
                 auto_pad_token: str='<pad>', set_input: Union[list, str, bool]=True,
-                set_target: Union[list, str, bool] = True, concat: Union[str, list, bool]=None, ) -> DataInfo:
+                set_target: Union[list, str, bool] = True, concat: Union[str, list, bool]=None, 
+                extra_split: List[str]=['-'], ) -> DataInfo:
         """
         :param paths: str或者Dict[str, str]。如果是str，则为数据集所在的文件夹或者是全路径文件名：如果是文件夹，
             则会从self.paths里面找对应的数据集名称与文件名。如果是Dict，则为数据集名称（如train、dev、test）和
@@ -56,6 +57,7 @@ class MatchingLoader(DataSetLoader):
         :param concat: 是否需要将两个句子拼接起来。如果为False则不会拼接。如果为True则会在两个句子之间插入一个<sep>。
             如果传入一个长度为4的list，则分别表示插在第一句开始前、第一句结束后、第二句开始前、第二句结束后的标识符。如果
             传入字符串 ``bert`` ，则会采用bert的拼接方式，等价于['[CLS]', '[SEP]', '', '[SEP]'].
+        :param extra_split: 额外的分隔符，即除了空格之外的用于分词的字符。
         :return:
         """
         if isinstance(set_input, str):
@@ -88,6 +90,24 @@ class MatchingLoader(DataSetLoader):
             if auto_set_target:
                 if Const.TARGET in data_set.get_field_names():
                     data_set.set_target(Const.TARGET)
+
+        if extra_split:
+            for data_name, data_set in data_info.datasets.items():
+                data_set.apply(lambda x: ' '.join(x[Const.INPUTS(0)]), new_field_name=Const.INPUTS(0))
+                data_set.apply(lambda x: ' '.join(x[Const.INPUTS(1)]), new_field_name=Const.INPUTS(1))
+
+                for s in extra_split:
+                    data_set.apply(lambda x: x[Const.INPUTS(0)].replace(s , ' ' + s + ' '), 
+                                    new_field_name=Const.INPUTS(0))
+                    data_set.apply(lambda x: x[Const.INPUTS(0)].replace(s , ' ' + s + ' '), 
+                                    new_field_name=Const.INPUTS(0))
+
+                _filt = lambda x : x
+                data_set.apply(lambda x: list(filter(_filt , x[Const.INPUTS(0)].split(' '))), 
+                                    new_field_name=Const.INPUTS(0), is_input=auto_set_input)
+                data_set.apply(lambda x: list(filter(_filt , x[Const.INPUTS(1)].split(' '))), 
+                                    new_field_name=Const.INPUTS(1), is_input=auto_set_input)
+                _filt = None
 
         if to_lower:
             for data_name, data_set in data_info.datasets.items():
