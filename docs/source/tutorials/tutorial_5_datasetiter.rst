@@ -1,9 +1,9 @@
 ﻿
 ==============================================================================
-Batch 教程 ———— 以文本分类为例
+DataSetIter 教程 ———— 以文本分类为例
 ==============================================================================
 
-我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极（label=1）、消极（label=0）还是中性（label=2），使用:class:`~fastNLP.Batch` 类来编写自己的训练过程。自己编写训练过程之前的内容与 :doc:`/tutorials/tutorial_4_loss_optimizer` 中的完全一样，如已经阅读过可以跳过。
+我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极（label=1）、消极（label=0）还是中性（label=2），使用:class:`~fastNLP.DataSetIter` 类来编写自己的训练过程。自己编写训练过程之前的内容与 :doc:`/tutorials/tutorial_4_loss_optimizer` 中的完全一样，如已经阅读过可以跳过。
 
 --------------
 数据处理
@@ -160,11 +160,11 @@ Vocabulary 的使用
 自己编写训练过程
 --------------------------
     如果你想用类似 PyTorch 的使用方法，自己编写训练过程，你可以参考下面这段代码。
-    其中使用了 fastNLP 提供的 :class:`~fastNLP.Batch` 来获得小批量训练的小批量数据，
-    使用 :class:`~fastNLP.BucketSampler` 做为     :class:`~fastNLP.Batch` 的参数来选择采样的方式。
+    其中使用了 fastNLP 提供的 :class:`~fastNLP.DataSetIter` 来获得小批量训练的小批量数据，
+    使用 :class:`~fastNLP.BucketSampler` 做为  :class:`~fastNLP.DataSetIter` 的参数来选择采样的方式。
     
-Batch
-    fastNLP定义的 :class:`~fastNLP.Batch` 类在初始化时传入的参数有：
+DataSetIter
+    fastNLP定义的 :class:`~fastNLP.DataSetIter` 类，用于定义一个batch，并实现batch的多种功能，在初始化时传入的参数有：
 	
     * dataset: :class:`~fastNLP.DataSet` 对象, 数据集
     * batch_size: 取出的batch大小
@@ -179,12 +179,12 @@ sampler
     * SequentialSampler： 顺序取出元素的采样器【无初始化参数】
     * RandomSampler：随机化取元素的采样器【无初始化参数】
 
-以下代码使用BucketSampler作为Batch初始化的输入，运用Batch自己写训练程序
+以下代码使用BucketSampler作为:class:`~fastNLP.DataSetIter`初始化的输入，运用:class:`~fastNLP.DataSetIter`自己写训练程序
 
 .. code-block:: python
 
     from fastNLP import BucketSampler
-    from fastNLP import Batch
+    from fastNLP import DataSetIter
     from fastNLP.models import CNNText
     from fastNLP import Tester
     import torch
@@ -201,7 +201,7 @@ sampler
         # 定义一个Batch，传入DataSet，规定batch_size和去batch的规则。
         # 顺序（Sequential），随机（Random），相似长度组成一个batch（Bucket）
         train_sampler = BucketSampler(batch_size=batch_size, seq_len_field_name='seq_len')
-        train_batch = Batch(batch_size=batch_size, dataset=data, sampler=train_sampler)
+        train_batch = DataSetIter(batch_size=batch_size, dataset=data, sampler=train_sampler)
     
         start_time = time.time()
         print("-"*5+"start training"+"-"*5)

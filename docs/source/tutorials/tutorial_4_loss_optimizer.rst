@@ -3,7 +3,7 @@
 Loss 和 optimizer 教程 ———— 以文本分类为例
 ==============================================================================
 
-我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极（label=1）、消极（label=0）还是中性（label=2），使用 :class:`~fastNLP.Trainer`  和  :class:`~fastNLP.Tester`  来进行快速训练和测试，损失函数之前的内容与 :doc:`/tutorials/tutorial_8_batch` 中的完全一样，如已经阅读过可以跳过。
+我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极（label=1）、消极（label=0）还是中性（label=2），使用 :class:`~fastNLP.Trainer`  和  :class:`~fastNLP.Tester`  来进行快速训练和测试，损失函数之前的内容与 :doc:`/tutorials/tutorial_5_datasetiter` 中的完全一样，如已经阅读过可以跳过。
 
 --------------
 数据处理
@@ -196,7 +196,7 @@ Vocabulary 的使用
 
 快速训练
     现在我们可以导入 fastNLP 内置的文本分类模型 :class:`~fastNLP.models.CNNText` ，并使用 :class:`~fastNLP.Trainer` 进行训练，
-    除了使用 :class:`~fastNLP.Trainer`进行训练，我们也可以通过使用 :class:`~fastNLP.Batch` 来编写自己的训练过程，具体见 :doc:`/tutorials/tutorial_8_batch` 
+    除了使用 :class:`~fastNLP.Trainer`进行训练，我们也可以通过使用 :class:`~fastNLP.DataSetIter` 来编写自己的训练过程，具体见 :doc:`/tutorials/tutorial_5_datasetiter`
 
     .. code-block:: python
 
