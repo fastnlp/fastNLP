@@ -18,7 +18,7 @@ from fastNLP.core.callback import GradientClipCallback, LRScheduler, FitlogCallb
 from fastNLP.modules.encoder.embedding import ElmoEmbedding, StaticEmbedding
 
 from fastNLP.io.data_loader import MNLILoader, QNLILoader, QuoraLoader, SNLILoader, RTELoader
-from model.mwan import MwanModel
+from reproduction.matching.model.mwan import MwanModel
 
 import fitlog
 fitlog.debug()
