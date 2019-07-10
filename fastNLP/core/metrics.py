@@ -737,7 +737,7 @@ def _pred_topk(y_prob, k=1):
 
 
 class ExtractiveQAMetric(MetricBase):
-    """
+    r"""
     别名：:class:`fastNLP.ExtractiveQAMetric` :class:`fastNLP.core.metrics.ExtractiveQAMetric`
 
     抽取式QA（如SQuAD）的metric.

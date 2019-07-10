@@ -114,6 +114,9 @@ class SST2Loader(CSVLoader):
 
     def _load(self, path: str) -> DataSet:
         ds = super(SST2Loader, self)._load(path)
+        for k, v in self.field.items():
+            if k in ds.get_field_names():
+                ds.rename_field(k, v)
         ds.apply(lambda x: self.tokenizer(x[Const.INPUT]), new_field_name=Const.INPUT)
         print("all count:", len(ds))
         return ds

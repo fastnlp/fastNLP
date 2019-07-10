@@ -33,8 +33,8 @@ class MatchingLoader(DataSetLoader):
                 to_lower=False, seq_len_type: str=None, bert_tokenizer: str=None,
                 cut_text: int = None, get_index=True, auto_pad_length: int=None,
                 auto_pad_token: str='<pad>', set_input: Union[list, str, bool]=True,
-                set_target: Union[list, str, bool] = True, concat: Union[str, list, bool]=None, 
-                extra_split: List[str]=['-'], ) -> DataBundle:
+                set_target: Union[list, str, bool]=True, concat: Union[str, list, bool]=None,
+                extra_split: List[str]=List['-'], ) -> DataBundle:
         """
         :param paths: str或者Dict[str, str]。如果是str，则为数据集所在的文件夹或者是全路径文件名：如果是文件夹，
             则会从self.paths里面找对应的数据集名称与文件名。如果是Dict，则为数据集名称（如train、dev、test）和
