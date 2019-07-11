@@ -11,7 +11,7 @@ Coreference resolution是查找文本中指向同一现实实体的所有表达�
 由于版权问题，本文无法提供数据集的下载，请自行下载。
 原始数据集的格式为conll格式，详细介绍参考数据集给出的官方介绍页面。
 
-代码实现采用了论文作者Lee的预处理方法，具体细节参加[链接](https://github.com/kentonl/e2e-coref/blob/e2e/setup_training.sh)。
+代码实现采用了论文作者Lee的预处理方法，具体细节参见[链接](https://github.com/kentonl/e2e-coref/blob/e2e/setup_training.sh)。
 处理之后的数据集为json格式，例子：
 ```
 {
@@ -25,12 +25,12 @@ Coreference resolution是查找文本中指向同一现实实体的所有表达�
 ### embedding 数据集下载
 [turian emdedding](https://lil.cs.washington.edu/coref/turian.50d.txt)
 
-[glove embedding]( https://nlp.stanford.edu/data/glove.840B.300d.zip)
+[glove embedding](https://nlp.stanford.edu/data/glove.840B.300d.zip)
 
 
 
 ## 运行
-```python
+```shell
 # 训练代码
 CUDA_VISIBLE_DEVICES=0 python train.py
 # 测试代码
@@ -39,9 +39,9 @@ CUDA_VISIBLE_DEVICES=0 python valid.py
 
 ## 结果
 原论文作者在测试集上取得了67.2%的结果，AllenNLP复现的结果为 [63.0%](https://allennlp.org/models)。
-其中allenNLP训练时没有加入speaker信息，没有variational dropout以及只使用了100的antecedents而不是250。
+其中AllenNLP训练时没有加入speaker信息，没有variational dropout以及只使用了100的antecedents而不是250。
 
-在与allenNLP使用同样的超参和配置时，本代码复现取得了63.6%的F1值。
+在与AllenNLP使用同样的超参和配置时，本代码复现取得了63.6%的F1值。
 
 
 ## 问题

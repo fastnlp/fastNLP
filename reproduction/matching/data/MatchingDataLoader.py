@@ -5,7 +5,7 @@ from typing import Union, Dict
 
 from fastNLP.core.const import Const
 from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.io.base_loader import DataInfo, DataSetLoader
+from fastNLP.io.base_loader import DataBundle, DataSetLoader
 from fastNLP.io.dataset_loader import JsonLoader, CSVLoader
 from fastNLP.io.file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
 from fastNLP.modules.encoder._bert import BertTokenizer
@@ -35,7 +35,7 @@ class MatchingLoader(DataSetLoader):
                 to_lower=False, seq_len_type: str=None, bert_tokenizer: str=None,
                 cut_text: int = None, get_index=True, auto_pad_length: int=None,
                 auto_pad_token: str='<pad>', set_input: Union[list, str, bool]=True,
-                set_target: Union[list, str, bool] = True, concat: Union[str, list, bool]=None, ) -> DataInfo:
+                set_target: Union[list, str, bool] = True, concat: Union[str, list, bool]=None, ) -> DataBundle:
         """
         :param paths: str或者Dict[str, str]。如果是str，则为数据集所在的文件夹或者是全路径文件名：如果是文件夹，
             则会从self.paths里面找对应的数据集名称与文件名。如果是Dict，则为数据集名称（如train、dev、test）和
@@ -80,7 +80,7 @@ class MatchingLoader(DataSetLoader):
         else:
             path = paths
 
-        data_info = DataInfo()
+        data_info = DataBundle()
         for data_name in path.keys():
             data_info.datasets[data_name] = self._load(path[data_name])
 

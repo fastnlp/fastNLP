@@ -16,6 +16,7 @@ from collections import Counter, namedtuple
 import numpy as np
 import torch
 import torch.nn as nn
+from typing import List
 
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])
@@ -162,6 +163,30 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
     
     return wrapper_
 
+def _save_model(model, model_name, save_dir, only_param=False):
+    """ 存储不含有显卡信息的state_dict或model
+    :param model:
+    :param model_name:
+    :param save_dir: 保存的directory
+    :param only_param:
+    :return:
+    """
+    model_path = os.path.join(save_dir, model_name)
+    if not os.path.isdir(save_dir):
+        os.makedirs(save_dir, exist_ok=True)
+    if isinstance(model, nn.DataParallel):
+        model = model.module
+    if only_param:
+        state_dict = model.state_dict()
+        for key in state_dict:
+            state_dict[key] = state_dict[key].cpu()
+        torch.save(state_dict, model_path)
+    else:
+        _model_device = _get_model_device(model)
+        model.cpu()
+        torch.save(model, model_path)
+        model.to(_model_device)
+
 
 # def save_pickle(obj, pickle_path, file_name):
 #     """Save an object into a pickle file.
@@ -277,7 +302,6 @@ def _move_model_to_device(model, device):
     return model
 
 
-
 def _get_model_device(model):
     """
     传入一个nn.Module的模型，获取它所在的device
@@ -285,7 +309,7 @@ def _get_model_device(model):
     :param model: nn.Module
     :return: torch.device,None 如果返回值为None，说明这个模型没有任何参数。
     """
-    # TODO 这个函数存在一定的风险，因为同一个模型可能存在某些parameter不在显卡中，比如BertEmbedding
+    # TODO 这个函数存在一定的风险，因为同一个模型可能存在某些parameter不在显卡中，比如BertEmbedding. 或者跨显卡
     assert isinstance(model, nn.Module)
     
     parameters = list(model.parameters())
@@ -712,3 +736,52 @@ class _pseudo_tqdm:
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         del self
+
+def iob2(tags:List[str])->List[str]:
+    """
+    检查数据是否是合法的IOB数据，如果是IOB1会被自动转换为IOB2。两者的差异见
+        https://datascience.stackexchange.com/questions/37824/difference-between-iob-and-iob2-format
+
+    :param tags: 需要转换的tags, 需要为大写的BIO标签。
+    """
+    for i, tag in enumerate(tags):
+        if tag == "O":
+            continue
+        split = tag.split("-")
+        if len(split) != 2 or split[0] not in ["I", "B"]:
+            raise TypeError("The encoding schema is not a valid IOB type.")
+        if split[0] == "B":
+            continue
+        elif i == 0 or tags[i - 1] == "O":  # conversion IOB1 to IOB2
+            tags[i] = "B" + tag[1:]
+        elif tags[i - 1][1:] == tag[1:]:
+            continue
+        else:  # conversion IOB1 to IOB2
+            tags[i] = "B" + tag[1:]
+    return tags
+
+def iob2bioes(tags:List[str])->List[str]:
+    """
+    将iob的tag转换为bioes编码
+    :param tags: List[str]. 编码需要是大写的。
+    :return:
+    """
+    new_tags = []
+    for i, tag in enumerate(tags):
+        if tag == 'O':
+            new_tags.append(tag)
+        else:
+            split = tag.split('-')[0]
+            if split == 'B':
+                if i+1!=len(tags) and tags[i+1].split('-')[0] == 'I':
+                    new_tags.append(tag)
+                else:
+                    new_tags.append(tag.replace('B-', 'S-'))
+            elif split == 'I':
+                if i + 1<len(tags) and tags[i+1].split('-')[0] == 'I':
+                    new_tags.append(tag)
+                else:
+                    new_tags.append(tag.replace('I-', 'E-'))
+            else:
+                raise TypeError("Invalid IOB format.")
+    return new_tags

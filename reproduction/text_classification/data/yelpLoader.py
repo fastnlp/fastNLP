@@ -4,7 +4,7 @@ from typing import Iterable
 from fastNLP import DataSet, Instance, Vocabulary
 from fastNLP.core.vocabulary import VocabularyOption
 from fastNLP.io import JsonLoader
-from fastNLP.io.base_loader import DataInfo,DataSetLoader
+from fastNLP.io.base_loader import DataBundle,DataSetLoader
 from fastNLP.io.embed_loader import EmbeddingOption
 from fastNLP.io.file_reader import _read_json
 from typing import Union, Dict
@@ -134,7 +134,7 @@ class yelpLoader(DataSetLoader):
                 char_level_op=False):
         paths = check_dataloader_paths(paths)
         datasets = {}
-        info = DataInfo(datasets=self.load(paths))
+        info = DataBundle(datasets=self.load(paths))
         src_vocab = Vocabulary() if src_vocab_op is None else Vocabulary(**src_vocab_op)
         tgt_vocab = Vocabulary(unknown=None, padding=None) \
             if tgt_vocab_op is None else Vocabulary(**tgt_vocab_op)

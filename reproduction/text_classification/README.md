@@ -7,9 +7,9 @@ dpcnn:论文链接[Deep Pyramid Convolutional Neural Networks for TextCategoriza
 
 HAN:论文链接[Hierarchical Attention Networks for Document Classiﬁcation](https://www.cs.cmu.edu/~diyiy/docs/naacl16.pdf)
 
-LSTM+self_attention:论文链接[A Structured Self-attentive Sentence Embedding](<https://arxiv.org/pdf/1703.03130.pdf>)
+LSTM+self_attention:论文链接[A Structured Self-attentive Sentence Embedding](https://arxiv.org/pdf/1703.03130.pdf)
 
-AWD-LSTM:论文链接[Regularizing and Optimizing LSTM Language Models](<https://arxiv.org/pdf/1708.02182.pdf>)
+AWD-LSTM:论文链接[Regularizing and Optimizing LSTM Language Models](https://arxiv.org/pdf/1708.02182.pdf)
 
 # 数据集及复现结果汇总
 

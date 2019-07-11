@@ -34,8 +34,8 @@ class StarTransformer(nn.Module):
         super(StarTransformer, self).__init__()
         self.iters = num_layers
         
-        self.norm = nn.ModuleList([nn.LayerNorm(hidden_size) for _ in range(self.iters)])
-        self.emb_fc = nn.Conv2d(hidden_size, hidden_size, 1)
+        self.norm = nn.ModuleList([nn.LayerNorm(hidden_size, eps=1e-6) for _ in range(self.iters)])
+        # self.emb_fc = nn.Conv2d(hidden_size, hidden_size, 1)
         self.emb_drop = nn.Dropout(dropout)
         self.ring_att = nn.ModuleList(
             [_MSA1(hidden_size, nhead=num_head, head_dim=head_dim, dropout=0.0)

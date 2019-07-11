@@ -106,7 +106,7 @@ class IDCNN(nn.Module):
             if self.crf is not None and target is not None:
                 loss = self.crf(y.transpose(1, 2), t, mask)
             else:
-                t.masked_fill_(mask == 0, -100)
+                # t.masked_fill_(mask == 0, -100)
                 loss = F.cross_entropy(y, t, ignore_index=-100)
             return loss
 
@@ -130,13 +130,3 @@ class IDCNN(nn.Module):
             C.OUTPUT: pred,
         }
 
-    def predict(self, words, seq_len, chars=None):
-        res = self.forward(
-            words=words,
-            seq_len=seq_len,
-            chars=chars,
-            target=None
-        )[C.OUTPUT]
-        return {
-            C.OUTPUT: res
-        }

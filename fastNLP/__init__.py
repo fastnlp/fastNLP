@@ -37,7 +37,7 @@ __all__ = [
     
     "AccuracyMetric",
     "SpanFPreRecMetric",
-    "SQuADMetric",
+    "ExtractiveQAMetric",
     
     "Optimizer",
     "SGD",
@@ -61,3 +61,4 @@ __version__ = '0.4.0'
 from .core import *
 from . import models
 from . import modules
+from .io import data_loader
