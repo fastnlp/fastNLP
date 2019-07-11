@@ -5,7 +5,7 @@ import os
 os.environ['FASTNLP_BASE_URL'] = 'http://10.141.222.118:8888/file/download/'
 os.environ['FASTNLP_CACHE_DIR'] = '/remote-home/hyan01/fastnlp_caches'
 
-from data.IMDBLoader import IMDBLoader
+from fastNLP.io.data_loader import IMDBLoader
 from fastNLP.embeddings import StaticEmbedding
 from model.awd_lstm import AWDLSTMSentiment
 

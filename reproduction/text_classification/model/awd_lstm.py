@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from fastNLP.core.const import Const as C
 from .awdlstm_module import LSTM
-from fastNLP.modules import encoder
+from fastNLP.embeddings.utils import get_embeddings
 from fastNLP.modules.decoder.mlp import MLP
 
 
@@ -14,7 +14,7 @@ class AWDLSTMSentiment(nn.Module):
                  nfc=128,
                  wdrop=0.5):
         super(AWDLSTMSentiment,self).__init__()
-        self.embed = encoder.Embedding(init_embed)
+        self.embed = get_embeddings(init_embed)
         self.lstm = LSTM(input_size=self.embed.embedding_dim, hidden_size=hidden_dim, num_layers=num_layers, bidirectional=True, wdrop=wdrop)
         self.mlp = MLP(size_layer=[hidden_dim* 2, nfc, num_classes])
 
