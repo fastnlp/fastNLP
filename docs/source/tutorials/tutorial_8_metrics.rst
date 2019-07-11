@@ -1,6 +1,6 @@
-=====================
-Metric 教程
-=====================
+===============================
+使用Metric快速评测你的模型
+===============================
 
 在进行训练时，fastNLP提供了各种各样的 :mod:`~fastNLP.core.metrics` 。
 如 :doc:`/user/quickstart`  中所介绍的，:class:`~fastNLP.AccuracyMetric` 类的对象被直接传到 :class:`~fastNLP.Trainer` 中用于训练

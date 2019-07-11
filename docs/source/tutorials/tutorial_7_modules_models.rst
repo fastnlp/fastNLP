@@ -1,5 +1,5 @@
 ======================================
-Modules 和 models 的教程
+使用Modules和Models快速搭建自定义模型
 ======================================
 
 :mod:`~fastNLP.modules` 和 :mod:`~fastNLP.models` 用于构建 fastNLP 所需的神经网络模型，它可以和 torch.nn 中的模型一起使用。

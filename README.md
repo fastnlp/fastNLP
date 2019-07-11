@@ -39,6 +39,7 @@ python -m spacy download en
 
 ## fastNLP教程
 
+- [0. 快速入门](https://fastnlp.readthedocs.io/zh/latest/user/quickstart.html)
 - [1. 使用DataSet预处理文本](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_1_data_preprocess.html)
 - [2. 使用DataSetLoader加载数据集](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_2_load_dataset.html)
 - [3. 使用Embedding模块将文本转成向量](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_3_embedding.html)
@@ -48,6 +49,7 @@ python -m spacy download en
 - [7. 使用Modules和Models快速搭建自定义模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_7_modules_models.html)
 - [8. 使用Metric快速评测你的模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_8_metrics.html)
 - [9. 使用Callback自定义你的训练过程](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_9_callback.html)
+- [10. 使用fitlog 辅助 fastNLP 进行科研](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_10_fitlog.html)
 
 
 
