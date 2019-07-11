@@ -1,18 +1,17 @@
 """
-batch 模块实现了 fastNLP 所需的 Batch 类。
+batch 模块实现了 fastNLP 所需的 :class:`~fastNLP.core.batch.DataSetIter` 类。
 
 """
 __all__ = [
+    "BatchIter",
     "DataSetIter",
     "TorchLoaderIter",
 ]
 
 import atexit
-from queue import Empty, Full
 
 import numpy as np
 import torch
-import torch.multiprocessing as mp
 import torch.utils.data
 from numbers import Number
 

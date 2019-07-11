@@ -5,7 +5,8 @@ optimizer 模块定义了 fastNLP 中所需的各种优化器，一般做为 :cl
 __all__ = [
     "Optimizer",
     "SGD",
-    "Adam"
+    "Adam",
+    "AdamW"
 ]
 
 import torch
@@ -104,6 +105,10 @@ class Adam(Optimizer):
 
 class AdamW(TorchOptimizer):
     r"""对AdamW的实现，该实现应该会在pytorch更高版本中出现，https://github.com/pytorch/pytorch/pull/21250。这里提前加入
+    
+    .. todo::
+        翻译成中文
+    
     The original Adam algorithm was proposed in `Adam: A Method for Stochastic Optimization`_.
     The AdamW variant was proposed in `Decoupled Weight Decay Regularization`_.
     Arguments:
