@@ -29,7 +29,7 @@ import torch.nn
 
 os.environ['FASTNLP_BASE_URL'] = 'http://10.141.222.118:8888/file/download/'
 os.environ['FASTNLP_CACHE_DIR'] = '/remote-home/hyan01/fastnlp_caches'
-sys.path.append('/remote-home/dqwang/FastNLP/fastNLP/')
+sys.path.append('/remote-home/dqwang/FastNLP/fastNLP_brxx/')
 
 
 from fastNLP.core.const import Const

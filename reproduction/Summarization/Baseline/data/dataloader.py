@@ -56,7 +56,7 @@ class SummarizationLoader(JsonLoader):
 
         return ds
 
-    def process(self, paths, vocab_size, vocab_path, sent_max_len, doc_max_timesteps, domain=False, tag=False, load_vocab=True):
+    def process(self, paths, vocab_size, vocab_path, sent_max_len, doc_max_timesteps, domain=False, tag=False, load_vocab_file=True):
         """
         :param paths: dict  path for each dataset
         :param vocab_size: int  max_size for vocab
@@ -65,7 +65,7 @@ class SummarizationLoader(JsonLoader):
         :param doc_max_timesteps: int   max sentence number of the document
         :param domain: bool  build vocab for publication, use 'X' for unknown
         :param tag: bool  build vocab for tag, use 'X' for unknown
-        :param load_vocab: bool  build vocab (False) or load vocab (True)
+        :param load_vocab_file: bool  build vocab (False) or load vocab (True)
         :return: DataBundle
             datasets: dict  keys correspond to the paths dict
             vocabs: dict  key: vocab(if "train" in paths), domain(if domain=True), tag(if tag=True)
@@ -146,7 +146,7 @@ class SummarizationLoader(JsonLoader):
                 train_ds = datasets[key]
 
         vocab_dict = {}
-        if load_vocab == False:
+        if load_vocab_file == False:
             logger.info("[INFO] Build new vocab from training dataset!")
             if train_ds == None:
                 raise ValueError("Lack train file to build vocabulary!")

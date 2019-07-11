@@ -36,8 +36,8 @@ import pickle
 
 from nltk.tokenize import sent_tokenize
 
-import utils
-from logger import *
+import tools.utils
+from tools.logger import *
 
 # <s> and </s> are used in the data files to segment the abstracts into sentences. They don't receive vocab ids.
 SENTENCE_START = '<s>'
@@ -313,7 +313,8 @@ class Example(object):
         for sent in article_sents:
             article_words = sent.split()
             self.enc_sent_len.append(len(article_words)) # store the length after truncation but before padding
-            self.enc_sent_input.append([vocab.word2id(w) for w in article_words]) # list of word ids; OOVs are represented by the id for UNK token
+            # self.enc_sent_input.append([vocab.word2id(w) for w in article_words]) # list of word ids; OOVs are represented by the id for UNK token
+            self.enc_sent_input.append([vocab.word2id(w.lower()) for w in article_words]) # list of word ids; OOVs are represented by the id for UNK token
         self._pad_encoder_input(vocab.word2id('[PAD]'))
 
         # Store the original strings
