@@ -106,7 +106,9 @@ class IDCNN(nn.Module):
             if self.crf is not None and target is not None:
                 loss = self.crf(y.transpose(1, 2), t, mask)
             else:
-                # t.masked_fill_(mask == 0, -100)
+                y.masked_fill_((mask == 0)[:,None,:], -100)
+                # f_mask = mask.float()
+                # t = f_mask * t + (1-f_mask) * -100
                 loss = F.cross_entropy(y, t, ignore_index=-100)
             return loss
 
