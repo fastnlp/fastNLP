@@ -1,6 +1,6 @@
 from fastNLP.io.embed_loader import EmbeddingOption, EmbedLoader
 from fastNLP.core.vocabulary import VocabularyOption
-from fastNLP.io.base_loader import DataSetLoader, DataInfo
+from fastNLP.io.base_loader import DataSetLoader, DataBundle
 from typing import Union, Dict, List, Iterator
 from fastNLP import DataSet
 from fastNLP import Instance
@@ -32,7 +32,7 @@ class MTL16Loader(DataSetLoader):
                     continue
                 parts = line.split('\t')
                 target = parts[0]
-                words = parts[1].split()
+                words = parts[1].lower().split()
                 dataset.append(Instance(words=words, target=target))
         if len(dataset)==0:
             raise RuntimeError(f"{path} has no valid data.")
@@ -47,7 +47,7 @@ class MTL16Loader(DataSetLoader):
         
         paths = check_dataloader_paths(paths)
         datasets = {}
-        info = DataInfo()
+        info = DataBundle()
         for name, path in paths.items():
             dataset = self.load(path)
             datasets[name] = dataset
@@ -71,5 +71,9 @@ class MTL16Loader(DataSetLoader):
         if src_embed_opt is not None:
             embed = EmbedLoader.load_with_vocab(**src_embed_opt, vocab=src_vocab)
             info.embeddings['words'] = embed
+
+        for name, dataset in info.datasets.items():
+            dataset.set_input("words")
+            dataset.set_target("target")
 
         return info

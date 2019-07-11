@@ -6,7 +6,7 @@ __all__ = [
     "MetricBase",
     "AccuracyMetric",
     "SpanFPreRecMetric",
-    "SQuADMetric"
+    "ExtractiveQAMetric"
 ]
 
 import inspect
@@ -23,6 +23,7 @@ from .utils import _get_func_signature
 from .utils import seq_len_to_mask
 from .vocabulary import Vocabulary
 from abc import abstractmethod
+
 
 class MetricBase(object):
     """
@@ -735,11 +736,11 @@ def _pred_topk(y_prob, k=1):
     return y_pred_topk, y_prob_topk
 
 
-class SQuADMetric(MetricBase):
+class ExtractiveQAMetric(MetricBase):
     r"""
-    别名：:class:`fastNLP.SQuADMetric` :class:`fastNLP.core.metrics.SQuADMetric`
+    别名：:class:`fastNLP.ExtractiveQAMetric` :class:`fastNLP.core.metrics.ExtractiveQAMetric`
 
-    SQuAD数据集metric
+    抽取式QA（如SQuAD）的metric.
     
     :param pred1: 参数映射表中 `pred1` 的映射关系，None表示映射关系为 `pred1` -> `pred1`
     :param pred2: 参数映射表中 `pred2` 的映射关系，None表示映射关系为 `pred2` -> `pred2`
@@ -755,7 +756,7 @@ class SQuADMetric(MetricBase):
     def __init__(self, pred1=None, pred2=None, target1=None, target2=None,
                  beta=1, right_open=True, print_predict_stat=False):
         
-        super(SQuADMetric, self).__init__()
+        super(ExtractiveQAMetric, self).__init__()
         
         self._init_param_map(pred1=pred1, pred2=pred2, target1=target1, target2=target2)
         

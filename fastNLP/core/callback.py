@@ -66,6 +66,8 @@ import os
 
 import torch
 from copy import deepcopy
+import sys
+from .utils import _save_model
 
 try:
     from tensorboardX import SummaryWriter
@@ -399,10 +401,11 @@ class GradientClipCallback(Callback):
         self.clip_value = clip_value
     
     def on_backward_end(self):
-        if self.parameters is None:
-            self.clip_fun(self.model.parameters(), self.clip_value)
-        else:
-            self.clip_fun(self.parameters, self.clip_value)
+        if self.step%self.update_every==0:
+            if self.parameters is None:
+                self.clip_fun(self.model.parameters(), self.clip_value)
+            else:
+                self.clip_fun(self.parameters, self.clip_value)
 
 
 class EarlyStopCallback(Callback):
@@ -734,6 +737,132 @@ class TensorboardCallback(Callback):
         if hasattr(self, "_summary_writer"):
             self._summary_writer.close()
             del self._summary_writer
+
+
+class WarmupCallback(Callback):
+    """
+    按一定的周期调节Learning rate的大小。
+
+    :param int,float warmup: 如果warmup为int，则在该step之前，learning rate根据schedule的策略变化; 如果warmup为float，
+        如0.1, 则前10%的step是按照schedule策略调整learning rate。
+    :param str schedule: 以哪种方式调整。linear: 前warmup的step上升到指定的learning rate(从Trainer中的optimizer处获取的), 后
+        warmup的step下降到0； constant前warmup的step上升到指定learning rate，后面的step保持learning rate.
+    """
+    def __init__(self, warmup=0.1, schedule='constant'):
+        super().__init__()
+        self.warmup = max(warmup, 0.)
+
+        self.initial_lrs = []  # 存放param_group的learning rate
+        if schedule == 'constant':
+            self.get_lr = self._get_constant_lr
+        elif schedule == 'linear':
+            self.get_lr = self._get_linear_lr
+        else:
+            raise RuntimeError("Only support 'linear', 'constant'.")
+
+    def _get_constant_lr(self, progress):
+        if progress<self.warmup:
+            return progress/self.warmup
+        return 1
+
+    def _get_linear_lr(self, progress):
+        if progress<self.warmup:
+            return progress/self.warmup
+        return max((progress - 1.) / (self.warmup - 1.), 0.)
+
+    def on_train_begin(self):
+        self.t_steps = (len(self.trainer.train_data) // (self.batch_size*self.update_every) +
+                            int(len(self.trainer.train_data) % (self.batch_size*self.update_every)!= 0)) * self.n_epochs
+        if self.warmup>1:
+            self.warmup = self.warmup/self.t_steps
+        self.t_steps = max(2, self.t_steps)  # 不能小于2
+        # 获取param_group的初始learning rate
+        for group in self.optimizer.param_groups:
+            self.initial_lrs.append(group['lr'])
+
+    def on_backward_end(self):
+        if self.step%self.update_every==0:
+            progress = (self.step/self.update_every)/self.t_steps
+            for lr, group in zip(self.initial_lrs, self.optimizer.param_groups):
+                group['lr'] = lr * self.get_lr(progress)
+
+
+class SaveModelCallback(Callback):
+    """
+    由于Trainer在训练过程中只会保存最佳的模型， 该callback可实现多种方式的结果存储。
+    会根据训练开始的时间戳在save_dir下建立文件夹，再在文件夹下存放多个模型
+    -save_dir
+        -2019-07-03-15-06-36
+            -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_performance是性能
+            -epoch:1_step:40_{metric_key}:{evaluate_performance}.pt
+        -2019-07-03-15-10-00
+            -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_perfomance是性能
+    :param str save_dir: 将模型存放在哪个目录下，会在该目录下创建以时间戳命名的目录，并存放模型
+    :param int top: 保存dev表现top多少模型。-1为保存所有模型。
+    :param bool only_param: 是否只保存模型d饿权重。
+    :param save_on_exception: 发生exception时，是否保存一份发生exception的模型。模型名称为epoch:x_step:x_Exception:{exception_name}.
+    """
+    def __init__(self, save_dir, top=3, only_param=False, save_on_exception=False):
+        super().__init__()
+
+        if not os.path.isdir(save_dir):
+            raise IsADirectoryError("{} is not a directory.".format(save_dir))
+        self.save_dir = save_dir
+        if top < 0:
+            self.top = sys.maxsize
+        else:
+            self.top = top
+        self._ordered_save_models = []  # List[Tuple], Tuple[0]是metric， Tuple[1]是path。metric是依次变好的，所以从头删
+
+        self.only_param = only_param
+        self.save_on_exception = save_on_exception
+
+    def on_train_begin(self):
+        self.save_dir = os.path.join(self.save_dir, self.trainer.start_time)
+
+    def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
+        metric_value = list(eval_result.values())[0][metric_key]
+        self._save_this_model(metric_value)
+
+    def _insert_into_ordered_save_models(self, pair):
+        # pair:(metric_value, model_name)
+        # 返回save的模型pair与删除的模型pair. pair中第一个元素是metric的值，第二个元素是模型的名称
+        index = -1
+        for _pair in self._ordered_save_models:
+            if _pair[0]>=pair[0] and self.trainer.increase_better:
+                break
+            if not self.trainer.increase_better and _pair[0]<=pair[0]:
+                break
+            index += 1
+        save_pair = None
+        if len(self._ordered_save_models)<self.top or (len(self._ordered_save_models)>=self.top and index!=-1):
+            save_pair = pair
+            self._ordered_save_models.insert(index+1, pair)
+        delete_pair = None
+        if len(self._ordered_save_models)>self.top:
+            delete_pair = self._ordered_save_models.pop(0)
+        return save_pair, delete_pair
+
+    def _save_this_model(self, metric_value):
+        name = "epoch:{}_step:{}_{}:{:.6f}.pt".format(self.epoch, self.step, self.trainer.metric_key, metric_value)
+        save_pair, delete_pair = self._insert_into_ordered_save_models((metric_value, name))
+        if save_pair:
+            try:
+                _save_model(self.model, model_name=name, save_dir=self.save_dir, only_param=self.only_param)
+            except Exception as e:
+                print(f"The following exception:{e} happens when save model to {self.save_dir}.")
+        if delete_pair:
+            try:
+                delete_model_path = os.path.join(self.save_dir, delete_pair[1])
+                if os.path.exists(delete_model_path):
+                    os.remove(delete_model_path)
+            except Exception as e:
+                print(f"Fail to delete model {name} at {self.save_dir} caused by exception:{e}.")
+
+    def on_exception(self, exception):
+        if self.save_on_exception:
+            name = "epoch:{}_step:{}_Exception:{}.pt".format(self.epoch, self.step, exception.__class__.__name__)
+            _save_model(self.model, model_name=name, save_dir=self.save_dir, only_param=self.only_param)
 
 
 class CallbackException(BaseException):

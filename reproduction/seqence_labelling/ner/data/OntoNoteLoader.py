@@ -1,5 +1,5 @@
 from fastNLP.core.vocabulary import VocabularyOption
-from fastNLP.io.base_loader import DataSetLoader, DataInfo
+from fastNLP.io.base_loader import DataSetLoader, DataBundle
 from typing import Union, Dict
 from fastNLP import DataSet
 from fastNLP import Vocabulary
@@ -76,7 +76,7 @@ class OntoNoteNERDataLoader(DataSetLoader):
         return dataset
 
     def process(self, paths: Union[str, Dict[str, str]], word_vocab_opt:VocabularyOption=None,
-                lower:bool=True)->DataInfo:
+                lower:bool=True)->DataBundle:
         """
         读取并处理数据。返回的DataInfo包含以下的内容
             vocabs:
@@ -96,7 +96,7 @@ class OntoNoteNERDataLoader(DataSetLoader):
         :return:
         """
         paths = check_dataloader_paths(paths)
-        data = DataInfo()
+        data = DataBundle()
         input_fields = [Const.TARGET, Const.INPUT, Const.INPUT_LEN]
         target_fields = [Const.TARGET, Const.INPUT_LEN]
         for name, path in paths.items():

@@ -1,4 +1,6 @@
 from util import get_argparser, set_gpu, set_rng_seeds, add_model_args
+seed = set_rng_seeds(15360)
+print('RNG SEED {}'.format(seed))
 from datasets import load_seqtag, load_sst, load_snli, EmbedLoader, MAX_LEN
 import torch.nn as nn
 import torch
@@ -7,8 +9,9 @@ import fastNLP as FN
 from fastNLP.models.star_transformer import STSeqLabel, STSeqCls, STNLICls
 from fastNLP.core.const import Const as C
 import sys
-sys.path.append('/remote-home/yfshao/workdir/dev_fastnlp/')
-
+#sys.path.append('/remote-home/yfshao/workdir/dev_fastnlp/')
+import os
+pre_dir = os.path.join(os.environ['HOME'], 'workdir/datasets/')
 
 g_model_select = {
     'pos': STSeqLabel,
@@ -17,8 +20,8 @@ g_model_select = {
     'nli': STNLICls,
 }
 
-g_emb_file_path = {'en': '/remote-home/yfshao/workdir/datasets/word_vector/glove.840B.300d.txt',
-                   'zh': '/remote-home/yfshao/workdir/datasets/word_vector/cc.zh.300.vec'}
+g_emb_file_path = {'en': pre_dir + 'word_vector/glove.840B.300d.txt',
+                   'zh': pre_dir + 'cc.zh.300.vec'}
 
 g_args = None
 g_model_cfg = None
@@ -53,7 +56,7 @@ def get_conll2012_ner():
 
 
 def get_sst():
-    path = '/remote-home/yfshao/workdir/datasets/SST'
+    path = pre_dir + 'SST'
     files = ['train.txt', 'dev.txt', 'test.txt']
     return load_sst(path, files)
 
@@ -94,6 +97,7 @@ class MyCallback(FN.core.callback.Callback):
         nn.utils.clip_grad.clip_grad_norm_(self.model.parameters(), 5.0)
 
     def on_step_end(self):
+        return 
         warm_steps = 6000
         # learning rate warm-up & decay
         if self.step <= warm_steps:
@@ -108,12 +112,11 @@ class MyCallback(FN.core.callback.Callback):
 
 
 def train():
-    seed = set_rng_seeds(1234)
-    print('RNG SEED {}'.format(seed))
     print('loading data')
     ds_list, word_v, tag_v = g_datasets['{}-{}'.format(
         g_args.ds, g_args.task)]()
     print(ds_list[0][:2])
+    print(len(ds_list[0]), len(ds_list[1]), len(ds_list[2]))
     embed = load_pretrain_emb(word_v, lang='zh' if g_args.ds == 'ctb' else 'en')
     g_model_cfg['num_cls'] = len(tag_v)
     print(g_model_cfg)
@@ -123,11 +126,14 @@ def train():
     def init_model(model):
         for p in model.parameters():
             if p.size(0) != len(word_v):
-                nn.init.normal_(p, 0.0, 0.05)
+                if len(p.size())<2:
+                    nn.init.constant_(p, 0.0)
+                else:
+                    nn.init.normal_(p, 0.0, 0.05)
     init_model(model)
     train_data = ds_list[0]
-    dev_data = ds_list[2]
-    test_data = ds_list[1]
+    dev_data = ds_list[1]
+    test_data = ds_list[2]
     print(tag_v.word2idx)
 
     if g_args.task in ['pos', 'ner']:
@@ -145,19 +151,31 @@ def train():
     }
     metric_key, metric = metrics[g_args.task]
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    ex_param = [x for x in model.parameters(
-    ) if x.requires_grad and x.size(0) != len(word_v)]
-    optim_cfg = [{'params': model.enc.embedding.parameters(), 'lr': g_args.lr*0.1},
-                 {'params': ex_param, 'lr': g_args.lr, 'weight_decay': g_args.w_decay}, ]
-    trainer = FN.Trainer(train_data=train_data, model=model, optimizer=torch.optim.Adam(optim_cfg), loss=loss,
-                         batch_size=g_args.bsz, n_epochs=g_args.ep, print_every=10, dev_data=dev_data, metrics=metric,
-                         metric_key=metric_key, validate_every=3000, save_path=g_args.log, use_tqdm=False,
-                         device=device, callbacks=[MyCallback()])
 
-    trainer.train()
+    params = [(x,y) for x,y in list(model.named_parameters()) if y.requires_grad and y.size(0) != len(word_v)]
+    no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+    print([n for n,p in params])
+    optim_cfg = [
+        #{'params': model.enc.embedding.parameters(), 'lr': g_args.lr*0.1},
+        {'params': [p for n, p in params if not any(nd in n for nd in no_decay)], 'lr': g_args.lr, 'weight_decay': 1.0*g_args.w_decay},
+        {'params': [p for n, p in params if any(nd in n for nd in no_decay)], 'lr': g_args.lr, 'weight_decay': 0.0*g_args.w_decay}
+    ]
+
+    print(model)
+    trainer = FN.Trainer(model=model, train_data=train_data, dev_data=dev_data,
+                         loss=loss, metrics=metric, metric_key=metric_key,
+                         optimizer=torch.optim.Adam(optim_cfg),
+                         n_epochs=g_args.ep, batch_size=g_args.bsz, print_every=100, validate_every=1000,
+                         device=device,
+                         use_tqdm=False, prefetch=False,
+                         save_path=g_args.log,
+                         sampler=FN.BucketSampler(100, g_args.bsz, C.INPUT_LEN),
+                         callbacks=[MyCallback()])
+
+    print(trainer.train())
     tester = FN.Tester(data=test_data, model=model, metrics=metric,
                        batch_size=128, device=device)
-    tester.test()
+    print(tester.test())
 
 
 def test():
@@ -195,12 +213,12 @@ def main():
         'init_embed': (None, 300),
         'num_cls': None,
         'hidden_size': g_args.hidden,
-        'num_layers': 4,
+        'num_layers': 2,
         'num_head': g_args.nhead,
         'head_dim': g_args.hdim,
         'max_len': MAX_LEN,
-        'cls_hidden_size': 600,
-        'emb_dropout': 0.3,
+        'cls_hidden_size': 200,
+        'emb_dropout': g_args.drop,
         'dropout': g_args.drop,
     }
     run_select[g_args.mode.lower()]()

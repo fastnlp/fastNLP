@@ -3,7 +3,7 @@ __all__ = [
 ]
 from torch import nn
 
-from ..aggregator.attention import MultiHeadAttention
+from fastNLP.modules.encoder.attention import MultiHeadAttention
 from ..dropout import TimestepDropout
 
 

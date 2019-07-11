@@ -5,7 +5,7 @@ from typing import Union, Dict
 
 from fastNLP.core.const import Const
 from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.io.base_loader import DataInfo, DataSetLoader
+from fastNLP.io.base_loader import DataBundle, DataSetLoader
 from fastNLP.io.dataset_loader import JsonLoader, CSVLoader
 from fastNLP.io.file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
 from fastNLP.modules.encoder._bert import BertTokenizer
@@ -16,12 +16,11 @@ class MatchingLoader(DataSetLoader):
     别名：:class:`fastNLP.io.MatchingLoader` :class:`fastNLP.io.dataset_loader.MatchingLoader`
 
     读取Matching任务的数据集
+
+    :param dict paths: key是数据集名称（如train、dev、test），value是对应的文件名
     """
 
     def __init__(self, paths: dict=None):
-        """
-        :param dict paths: key是数据集名称（如train、dev、test），value是对应的文件名
-        """
         self.paths = paths
 
     def _load(self, path):
@@ -34,8 +33,9 @@ class MatchingLoader(DataSetLoader):
 
     def process(self, paths: Union[str, Dict[str, str]], dataset_name: str=None,
                 to_lower=False, seq_len_type: str=None, bert_tokenizer: str=None,
-                cut_text: int = None, get_index=True, set_input: Union[list, str, bool]=True,
-                set_target: Union[list, str, bool] = True, concat: Union[str, list, bool]=None, ) -> DataInfo:
+                cut_text: int = None, get_index=True, auto_pad_length: int=None,
+                auto_pad_token: str='<pad>', set_input: Union[list, str, bool]=True,
+                set_target: Union[list, str, bool] = True, concat: Union[str, list, bool]=None, ) -> DataBundle:
         """
         :param paths: str或者Dict[str, str]。如果是str，则为数据集所在的文件夹或者是全路径文件名：如果是文件夹，
             则会从self.paths里面找对应的数据集名称与文件名。如果是Dict，则为数据集名称（如train、dev、test）和
@@ -49,6 +49,8 @@ class MatchingLoader(DataSetLoader):
         :param str bert_tokenizer: bert tokenizer所使用的词表所在的文件夹路径
         :param int cut_text: 将长于cut_text的内容截掉。默认为None，即不截。
         :param bool get_index: 是否需要根据词表将文本转为index
+        :param int auto_pad_length: 是否需要将文本自动pad到一定长度（超过这个长度的文本将会被截掉），默认为不会自动pad
+        :param str auto_pad_token: 自动pad的内容
         :param set_input: 如果为True，则会自动将相关的field（名字里含有Const.INPUT的）设置为input，如果为False
             则不会将任何field设置为input。如果传入str或者List[str]，则会根据传入的内容将相对应的field设置为input，
             于此同时其他field不会被设置为input。默认值为True。
@@ -78,7 +80,7 @@ class MatchingLoader(DataSetLoader):
         else:
             path = paths
 
-        data_info = DataInfo()
+        data_info = DataBundle()
         for data_name in path.keys():
             data_info.datasets[data_name] = self._load(path[data_name])
 
@@ -169,6 +171,9 @@ class MatchingLoader(DataSetLoader):
                     data_set.apply(lambda x: [1] * len(x[Const.INPUT_LENS(0)]),
                                    new_field_name=Const.INPUT_LENS(1), is_input=auto_set_input)
 
+        if auto_pad_length is not None:
+            cut_text = min(auto_pad_length, cut_text if cut_text is not None else auto_pad_length)
+
         if cut_text is not None:
             for data_name, data_set in data_info.datasets.items():
                 for fields in data_set.get_field_names():
@@ -180,7 +185,7 @@ class MatchingLoader(DataSetLoader):
         assert len(data_set_list) > 0, f'There are NO data sets in data info!'
 
         if bert_tokenizer is None:
-            words_vocab = Vocabulary()
+            words_vocab = Vocabulary(padding=auto_pad_token)
             words_vocab = words_vocab.from_dataset(*[d for n, d in data_info.datasets.items() if 'train' in n],
                                                    field_name=[n for n in data_set_list[0].get_field_names()
                                                                if (Const.INPUT in n)],
@@ -201,6 +206,20 @@ class MatchingLoader(DataSetLoader):
                 if Const.TARGET in data_set.get_field_names():
                     data_set.apply(lambda x: target_vocab.to_index(x[Const.TARGET]), new_field_name=Const.TARGET,
                                    is_input=auto_set_input, is_target=auto_set_target)
+
+        if auto_pad_length is not None:
+            if seq_len_type == 'seq_len':
+                raise RuntimeError(f'the sequence will be padded with the length {auto_pad_length}, '
+                                   f'so the seq_len_type cannot be `{seq_len_type}`!')
+            for data_name, data_set in data_info.datasets.items():
+                for fields in data_set.get_field_names():
+                    if Const.INPUT in fields:
+                        data_set.apply(lambda x: x[fields] + [words_vocab.to_index(words_vocab.padding)] *
+                                       (auto_pad_length - len(x[fields])), new_field_name=fields,
+                                       is_input=auto_set_input)
+                    elif (Const.INPUT_LEN in fields) and (seq_len_type != 'seq_len'):
+                        data_set.apply(lambda x: x[fields] + [0] * (auto_pad_length - len(x[fields])),
+                                       new_field_name=fields, is_input=auto_set_input)
 
         for data_name, data_set in data_info.datasets.items():
             if isinstance(set_input, list):
@@ -267,7 +286,7 @@ class RTELoader(MatchingLoader, CSVLoader):
         paths = paths if paths is not None else {
             'train': 'train.tsv',
             'dev': 'dev.tsv',
-            # 'test': 'test.tsv' # test set has not label
+            'test': 'test.tsv'  # test set has not label
         }
         MatchingLoader.__init__(self, paths=paths)
         self.fields = {
@@ -281,7 +300,8 @@ class RTELoader(MatchingLoader, CSVLoader):
         ds = CSVLoader._load(self, path)
 
         for k, v in self.fields.items():
-            ds.rename_field(k, v)
+            if v in ds.get_field_names():
+                ds.rename_field(k, v)
         for fields in ds.get_all_fields():
             if Const.INPUT in fields:
                 ds.apply(lambda x: x[fields].strip().split(), new_field_name=fields)
@@ -306,7 +326,7 @@ class QNLILoader(MatchingLoader, CSVLoader):
         paths = paths if paths is not None else {
             'train': 'train.tsv',
             'dev': 'dev.tsv',
-            # 'test': 'test.tsv' # test set has not label
+            'test': 'test.tsv'  # test set has not label
         }
         MatchingLoader.__init__(self, paths=paths)
         self.fields = {
@@ -320,7 +340,8 @@ class QNLILoader(MatchingLoader, CSVLoader):
         ds = CSVLoader._load(self, path)
 
         for k, v in self.fields.items():
-            ds.rename_field(k, v)
+            if v in ds.get_field_names():
+                ds.rename_field(k, v)
         for fields in ds.get_all_fields():
             if Const.INPUT in fields:
                 ds.apply(lambda x: x[fields].strip().split(), new_field_name=fields)
@@ -332,7 +353,7 @@ class MNLILoader(MatchingLoader, CSVLoader):
     """
     别名：:class:`fastNLP.io.MNLILoader` :class:`fastNLP.io.dataset_loader.MNLILoader`
 
-    读取SNLI数据集，读取的DataSet包含fields::
+    读取MNLI数据集，读取的DataSet包含fields::
 
         words1: list(str)，第一句文本, premise
         words2: list(str), 第二句文本, hypothesis
@@ -350,6 +371,7 @@ class MNLILoader(MatchingLoader, CSVLoader):
             'test_mismatched': 'test_mismatched.tsv',
             # 'test_0.9_matched': 'multinli_0.9_test_matched_unlabeled.txt',
             # 'test_0.9_mismatched': 'multinli_0.9_test_mismatched_unlabeled.txt',
+
             # test_0.9_mathed与mismatched是MNLI0.9版本的（数据来源：kaggle）
         }
         MatchingLoader.__init__(self, paths=paths)
@@ -383,6 +405,17 @@ class MNLILoader(MatchingLoader, CSVLoader):
 
 
 class QuoraLoader(MatchingLoader, CSVLoader):
+    """
+    别名：:class:`fastNLP.io.QuoraLoader` :class:`fastNLP.io.dataset_loader.QuoraLoader`
+
+    读取MNLI数据集，读取的DataSet包含fields::
+
+        words1: list(str)，第一句文本, premise
+        words2: list(str), 第二句文本, hypothesis
+        target: str, 真实标签
+
+    数据来源:
+    """
 
     def __init__(self, paths: dict=None):
         paths = paths if paths is not None else {

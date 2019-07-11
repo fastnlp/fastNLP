@@ -29,13 +29,15 @@ def check_dataloader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
                     path_pair = ('train', filename)
                 if 'dev' in filename:
                     if path_pair:
-                        raise Exception("File:{} in {} contains bot `{}` and `dev`.".format(filename, paths, path_pair[0]))
+                        raise Exception("File:{} in {} contains both `{}` and `dev`.".format(filename, paths, path_pair[0]))
                     path_pair = ('dev', filename)
                 if 'test' in filename:
                     if path_pair:
-                        raise Exception("File:{} in {} contains bot `{}` and `test`.".format(filename, paths, path_pair[0]))
+                        raise Exception("File:{} in {} contains both `{}` and `test`.".format(filename, paths, path_pair[0]))
                     path_pair = ('test', filename)
                 if path_pair:
+                    if path_pair[0] in files:
+                        raise RuntimeError(f"Multiple file under {paths} have '{path_pair[0]}' in their filename.")
                     files[path_pair[0]] = os.path.join(paths, path_pair[1])
             return files
         else:
@@ -57,4 +59,13 @@ def check_dataloader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
     else:
         raise TypeError(f"paths only supports str and dict. not {type(paths)}.")
 
-
+def get_tokenizer():
+    try:
+        import spacy
+        spacy.prefer_gpu()
+        en = spacy.load('en')
+        print('use spacy tokenizer')
+        return lambda x: [w.text for w in en.tokenizer(x)]
+    except Exception as e:
+        print('use raw tokenizer')
+        return lambda x: x.split()

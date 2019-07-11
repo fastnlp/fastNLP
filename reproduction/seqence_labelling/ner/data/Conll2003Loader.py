@@ -1,12 +1,12 @@
 
 from fastNLP.core.vocabulary import VocabularyOption
-from fastNLP.io.base_loader import DataSetLoader, DataInfo
+from fastNLP.io.base_loader import DataSetLoader, DataBundle
 from typing import Union, Dict
 from fastNLP import Vocabulary
 from fastNLP import Const
 from reproduction.utils import check_dataloader_paths
 
-from fastNLP.io.dataset_loader import ConllLoader
+from fastNLP.io import ConllLoader
 from reproduction.seqence_labelling.ner.data.utils import iob2bioes, iob2
 
 
@@ -24,7 +24,7 @@ class Conll2003DataLoader(DataSetLoader):
         assert task in ('ner', 'pos', 'chunk')
         index = {'ner':3, 'pos':1, 'chunk':2}[task]
         self._loader = ConllLoader(headers=['raw_words', 'target'], indexes=[0, index])
-        self._tag_converters = None
+        self._tag_converters = []
         if task in ('ner', 'chunk'):
             self._tag_converters = [iob2]
             if encoding_type == 'bioes':
@@ -40,18 +40,18 @@ class Conll2003DataLoader(DataSetLoader):
             dataset.apply_field(convert_tag_schema, field_name=Const.TARGET, new_field_name=Const.TARGET)
         return dataset
 
-    def process(self, paths: Union[str, Dict[str, str]], word_vocab_opt:VocabularyOption=None, lower:bool=True):
+    def process(self, paths: Union[str, Dict[str, str]], word_vocab_opt:VocabularyOption=None, lower:bool=False):
         """
         读取并处理数据。数据中的'-DOCSTART-'开头的行会被忽略
 
         :param paths:
         :param word_vocab_opt: vocabulary的初始化值
-        :param lower: 是否将所有字母转为小写
+        :param lower: 是否将所有字母转为小写。
         :return:
         """
         # 读取数据
         paths = check_dataloader_paths(paths)
-        data = DataInfo()
+        data = DataBundle()
         input_fields = [Const.TARGET, Const.INPUT, Const.INPUT_LEN]
         target_fields = [Const.TARGET, Const.INPUT_LEN]
         for name, path in paths.items():
