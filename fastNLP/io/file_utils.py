@@ -17,6 +17,10 @@ PRETRAINED_BERT_MODEL_DIR = {
     'en-large-uncased': 'bert-large-uncased-20939f45.zip',
     'en-large-cased': 'bert-large-cased-e0cf90fc.zip',
 
+    'en-large-cased-wwm': 'bert-large-cased-wwm-a457f118.zip',
+    'en-large-uncased-wwm': 'bert-large-uncased-wwm-92a50aeb.zip',
+    'en-base-cased-mrpc': 'bert-base-cased-finetuned-mrpc-c7099855.zip',
+
     'cn': 'bert-base-chinese-29d0a84a.zip',
     'cn-base': 'bert-base-chinese-29d0a84a.zip',
 
@@ -68,6 +72,7 @@ def cached_path(url_or_filename: str, cache_dir: Path=None) -> Path:
             "unable to parse {} as a URL or as a local path".format(url_or_filename)
         )
 
+
 def get_filepath(filepath):
     """
     如果filepath中只有一个文件，则直接返回对应的全路径
@@ -81,6 +86,7 @@ def get_filepath(filepath):
         else:
             return filepath
     return filepath
+
 
 def get_defalt_path():
     """
@@ -98,12 +104,14 @@ def get_defalt_path():
     fastnlp_cache_dir = os.path.expanduser(os.path.join("~", ".fastNLP"))
     return fastnlp_cache_dir
 
+
 def _get_base_url(name):
     # 返回的URL结尾必须是/
     if 'FASTNLP_BASE_URL' in os.environ:
         fastnlp_base_url = os.environ['FASTNLP_BASE_URL']
         return fastnlp_base_url
     raise RuntimeError("There function is not available right now.")
+
 
 def split_filename_suffix(filepath):
     """
@@ -115,6 +123,7 @@ def split_filename_suffix(filepath):
     if filename.endswith('.tar.gz'):
         return filename[:-7], '.tar.gz'
     return os.path.splitext(filename)
+
 
 def get_from_cache(url: str, cache_dir: Path = None) -> Path:
     """
@@ -226,6 +235,7 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
 
     return get_filepath(cache_path)
 
+
 def unzip_file(file: Path, to: Path):
     # unpack and write out in CoNLL column-like format
     from zipfile import ZipFile
@@ -234,13 +244,15 @@ def unzip_file(file: Path, to: Path):
         # Extract all the contents of zip file in current directory
         zipObj.extractall(to)
 
+
 def untar_gz_file(file:Path, to:Path):
     import tarfile
 
     with tarfile.open(file, 'r:gz') as tar:
         tar.extractall(to)
 
-def match_file(dir_name:str, cache_dir:str)->str:
+
+def match_file(dir_name: str, cache_dir: str) -> str:
     """
     匹配的原则是，在cache_dir下的文件: (1) 与dir_name完全一致; (2) 除了后缀以外和dir_name完全一致。
     如果找到了两个匹配的结果将报错. 如果找到了则返回匹配的文件的名称; 没有找到返回空字符串
@@ -260,6 +272,7 @@ def match_file(dir_name:str, cache_dir:str)->str:
         return matched_filenames[-1]
     else:
         raise RuntimeError(f"Duplicate matched files:{matched_filenames}, this should be caused by a bug.")
+
 
 if __name__ == '__main__':
     cache_dir = Path('caches')

@@ -8,9 +8,9 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from ..dropout import TimestepDropout
+from fastNLP.modules.dropout import TimestepDropout
 
-from ..utils import initial_parameter
+from fastNLP.modules.utils import initial_parameter
 
 
 class DotAttention(nn.Module):
@@ -45,8 +45,7 @@ class DotAttention(nn.Module):
 
 class MultiHeadAttention(nn.Module):
     """
-    别名：:class:`fastNLP.modules.MultiHeadAttention`   :class:`fastNLP.modules.aggregator.attention.MultiHeadAttention`
-
+    别名：:class:`fastNLP.modules.MultiHeadAttention`   :class:`fastNLP.modules.encoder.attention.MultiHeadAttention`
 
     :param input_size: int, 输入维度的大小。同时也是输出维度的大小。
     :param key_size: int, 每个head的维度大小。

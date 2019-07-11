@@ -11,9 +11,8 @@ from fastNLP import Const
 class CNNBiLSTMCRF(nn.Module):
     def __init__(self, embed, char_embed, hidden_size, num_layers, tag_vocab, dropout=0.5, encoding_type='bioes'):
         super().__init__()
-
-        self.embedding = Embedding(embed, dropout=0.5, dropout_word=0)
-        self.char_embedding = Embedding(char_embed, dropout=0.5, dropout_word=0.01)
+        self.embedding = embed
+        self.char_embedding = char_embed
         self.lstm = LSTM(input_size=self.embedding.embedding_dim+self.char_embedding.embedding_dim,
                              hidden_size=hidden_size//2, num_layers=num_layers,
                              bidirectional=True, batch_first=True)
@@ -33,24 +32,24 @@ class CNNBiLSTMCRF(nn.Module):
             if 'crf' in name:
                 nn.init.zeros_(param)
 
-    def _forward(self, words, cap_words, seq_len, target=None):
-        words = self.embedding(words)
-        chars = self.char_embedding(cap_words)
-        words = torch.cat([words, chars], dim=-1)
+    def _forward(self, words, seq_len, target=None):
+        word_embeds = self.embedding(words)
+        char_embeds = self.char_embedding(words)
+        words = torch.cat((word_embeds, char_embeds), dim=-1)
         outputs, _ = self.lstm(words, seq_len)
         self.dropout(outputs)
 
         logits = F.log_softmax(self.fc(outputs), dim=-1)
 
         if target is not None:
-            loss = self.crf(logits, target, seq_len_to_mask(seq_len))
+            loss = self.crf(logits, target, seq_len_to_mask(seq_len, max_len=logits.size(1))).mean()
             return {Const.LOSS: loss}
         else:
-            pred, _ = self.crf.viterbi_decode(logits, seq_len_to_mask(seq_len))
+            pred, _ = self.crf.viterbi_decode(logits, seq_len_to_mask(seq_len, max_len=logits.size(1)))
             return {Const.OUTPUT: pred}
 
-    def forward(self, words, cap_words, seq_len, target):
-        return self._forward(words, cap_words, seq_len, target)
+    def forward(self, words, seq_len, target):
+        return self._forward(words, seq_len, target)
 
-    def predict(self, words, cap_words, seq_len):
-        return self._forward(words, cap_words, seq_len, None)
+    def predict(self, words, seq_len):
+        return self._forward(words, seq_len, None)

@@ -11,7 +11,7 @@ from reproduction.text_classification.model.dpcnn import DPCNN
 from data.yelpLoader import yelpLoader
 from fastNLP.core.sampler import BucketSampler
 import torch.nn as nn
-from fastNLP.core import LRScheduler
+from fastNLP.core import LRScheduler, Callback
 from fastNLP.core.const import Const as C
 from fastNLP.core.vocabulary import VocabularyOption
 from utils.util_init import set_rng_seeds
@@ -25,14 +25,14 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
 class Config():
     seed = 12345
-    model_dir_or_name = "dpcnn-yelp-p"
+    model_dir_or_name = "dpcnn-yelp-f"
     embedding_grad = True
     train_epoch = 30
     batch_size = 100
-    task = "yelp_p"
+    task = "yelp_f"
     #datadir = 'workdir/datasets/SST'
-    datadir = 'workdir/datasets/yelp_polarity'
-    # datadir = 'workdir/datasets/yelp_full'
+    # datadir = 'workdir/datasets/yelp_polarity'
+    datadir = 'workdir/datasets/yelp_full'
     #datafile = {"train": "train.txt", "dev": "dev.txt", "test": "test.txt"}
     datafile = {"train": "train.csv",  "test": "test.csv"}
     lr = 1e-3
@@ -73,6 +73,8 @@ def load_data():
 
 
 datainfo, embedding = load_data()
+embedding.embedding.weight.data /= embedding.embedding.weight.data.std()
+print(embedding.embedding.weight.mean(), embedding.embedding.weight.std())
 
 # 2.或直接复用fastNLP的模型
 
@@ -92,11 +94,12 @@ optimizer = SGD([param for param in model.parameters() if param.requires_grad ==
                 lr=ops.lr, momentum=0.9, weight_decay=ops.weight_decay)
 
 callbacks = []
-# callbacks.append(LRScheduler(CosineAnnealingLR(optimizer, 5)))
-callbacks.append(
-    LRScheduler(LambdaLR(optimizer, lambda epoch: ops.lr if epoch <
-                         ops.train_epoch * 0.8 else ops.lr * 0.1))
-)
+
+callbacks.append(LRScheduler(CosineAnnealingLR(optimizer, 5)))
+# callbacks.append(
+#     LRScheduler(LambdaLR(optimizer, lambda epoch: ops.lr if epoch <
+#                          ops.train_epoch * 0.8 else ops.lr * 0.1))
+# )
 
 # callbacks.append(
 #     FitlogCallback(data=datainfo.datasets, verbose=1)

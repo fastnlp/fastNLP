@@ -1,18 +1,17 @@
 import os
 
-from typing import Union, Dict
+from typing import Union, Dict, List
 
 from ...core.const import Const
 from ...core.vocabulary import Vocabulary
-from ..base_loader import DataInfo, DataSetLoader
-from ..dataset_loader import JsonLoader, CSVLoader
+from ..base_loader import DataBundle, DataSetLoader
 from ..file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
 from ...modules.encoder._bert import BertTokenizer
 
 
 class MatchingLoader(DataSetLoader):
     """
-    别名：:class:`fastNLP.io.MatchingLoader` :class:`fastNLP.io.dataset_loader.MatchingLoader`
+    别名：:class:`fastNLP.io.MatchingLoader` :class:`fastNLP.io.data_loader.MatchingLoader`
 
     读取Matching任务的数据集
 
@@ -34,7 +33,8 @@ class MatchingLoader(DataSetLoader):
                 to_lower=False, seq_len_type: str=None, bert_tokenizer: str=None,
                 cut_text: int = None, get_index=True, auto_pad_length: int=None,
                 auto_pad_token: str='<pad>', set_input: Union[list, str, bool]=True,
-                set_target: Union[list, str, bool] = True, concat: Union[str, list, bool]=None, ) -> DataInfo:
+                set_target: Union[list, str, bool]=True, concat: Union[str, list, bool]=None,
+                extra_split: List[str]=None, ) -> DataBundle:
         """
         :param paths: str或者Dict[str, str]。如果是str，则为数据集所在的文件夹或者是全路径文件名：如果是文件夹，
             则会从self.paths里面找对应的数据集名称与文件名。如果是Dict，则为数据集名称（如train、dev、test）和
@@ -57,6 +57,7 @@ class MatchingLoader(DataSetLoader):
         :param concat: 是否需要将两个句子拼接起来。如果为False则不会拼接。如果为True则会在两个句子之间插入一个<sep>。
             如果传入一个长度为4的list，则分别表示插在第一句开始前、第一句结束后、第二句开始前、第二句结束后的标识符。如果
             传入字符串 ``bert`` ，则会采用bert的拼接方式，等价于['[CLS]', '[SEP]', '', '[SEP]'].
+        :param extra_split: 额外的分隔符，即除了空格之外的用于分词的字符。
         :return:
         """
         if isinstance(set_input, str):
@@ -79,7 +80,7 @@ class MatchingLoader(DataSetLoader):
         else:
             path = paths
 
-        data_info = DataInfo()
+        data_info = DataBundle()
         for data_name in path.keys():
             data_info.datasets[data_name] = self._load(path[data_name])
 
@@ -89,6 +90,24 @@ class MatchingLoader(DataSetLoader):
             if auto_set_target:
                 if Const.TARGET in data_set.get_field_names():
                     data_set.set_target(Const.TARGET)
+
+        if extra_split is not None:
+            for data_name, data_set in data_info.datasets.items():
+                data_set.apply(lambda x: ' '.join(x[Const.INPUTS(0)]), new_field_name=Const.INPUTS(0))
+                data_set.apply(lambda x: ' '.join(x[Const.INPUTS(1)]), new_field_name=Const.INPUTS(1))
+
+                for s in extra_split:
+                    data_set.apply(lambda x: x[Const.INPUTS(0)].replace(s, ' ' + s + ' '),
+                                   new_field_name=Const.INPUTS(0))
+                    data_set.apply(lambda x: x[Const.INPUTS(0)].replace(s, ' ' + s + ' '),
+                                   new_field_name=Const.INPUTS(0))
+
+                _filt = lambda x: x
+                data_set.apply(lambda x: list(filter(_filt, x[Const.INPUTS(0)].split(' '))),
+                               new_field_name=Const.INPUTS(0), is_input=auto_set_input)
+                data_set.apply(lambda x: list(filter(_filt, x[Const.INPUTS(1)].split(' '))),
+                               new_field_name=Const.INPUTS(1), is_input=auto_set_input)
+                _filt = None
 
         if to_lower:
             for data_name, data_set in data_info.datasets.items():
@@ -227,204 +246,3 @@ class MatchingLoader(DataSetLoader):
                 data_set.set_target(*[target for target in set_target if target in data_set.get_field_names()])
 
         return data_info
-
-
-class SNLILoader(MatchingLoader, JsonLoader):
-    """
-    别名：:class:`fastNLP.io.SNLILoader` :class:`fastNLP.io.dataset_loader.SNLILoader`
-
-    读取SNLI数据集，读取的DataSet包含fields::
-
-        words1: list(str)，第一句文本, premise
-        words2: list(str), 第二句文本, hypothesis
-        target: str, 真实标签
-
-    数据来源: https://nlp.stanford.edu/projects/snli/snli_1.0.zip
-    """
-
-    def __init__(self, paths: dict=None):
-        fields = {
-            'sentence1_binary_parse': Const.INPUTS(0),
-            'sentence2_binary_parse': Const.INPUTS(1),
-            'gold_label': Const.TARGET,
-        }
-        paths = paths if paths is not None else {
-            'train': 'snli_1.0_train.jsonl',
-            'dev': 'snli_1.0_dev.jsonl',
-            'test': 'snli_1.0_test.jsonl'}
-        MatchingLoader.__init__(self, paths=paths)
-        JsonLoader.__init__(self, fields=fields)
-
-    def _load(self, path):
-        ds = JsonLoader._load(self, path)
-
-        parentheses_table = str.maketrans({'(': None, ')': None})
-
-        ds.apply(lambda ins: ins[Const.INPUTS(0)].translate(parentheses_table).strip().split(),
-                 new_field_name=Const.INPUTS(0))
-        ds.apply(lambda ins: ins[Const.INPUTS(1)].translate(parentheses_table).strip().split(),
-                 new_field_name=Const.INPUTS(1))
-        ds.drop(lambda x: x[Const.TARGET] == '-')
-        return ds
-
-
-class RTELoader(MatchingLoader, CSVLoader):
-    """
-    别名：:class:`fastNLP.io.RTELoader` :class:`fastNLP.io.dataset_loader.RTELoader`
-
-    读取RTE数据集，读取的DataSet包含fields::
-
-        words1: list(str)，第一句文本, premise
-        words2: list(str), 第二句文本, hypothesis
-        target: str, 真实标签
-
-    数据来源:
-    """
-
-    def __init__(self, paths: dict=None):
-        paths = paths if paths is not None else {
-            'train': 'train.tsv',
-            'dev': 'dev.tsv',
-            'test': 'test.tsv'  # test set has not label
-        }
-        MatchingLoader.__init__(self, paths=paths)
-        self.fields = {
-            'sentence1': Const.INPUTS(0),
-            'sentence2': Const.INPUTS(1),
-            'label': Const.TARGET,
-        }
-        CSVLoader.__init__(self, sep='\t')
-
-    def _load(self, path):
-        ds = CSVLoader._load(self, path)
-
-        for k, v in self.fields.items():
-            if v in ds.get_field_names():
-                ds.rename_field(k, v)
-        for fields in ds.get_all_fields():
-            if Const.INPUT in fields:
-                ds.apply(lambda x: x[fields].strip().split(), new_field_name=fields)
-
-        return ds
-
-
-class QNLILoader(MatchingLoader, CSVLoader):
-    """
-    别名：:class:`fastNLP.io.QNLILoader` :class:`fastNLP.io.dataset_loader.QNLILoader`
-
-    读取QNLI数据集，读取的DataSet包含fields::
-
-        words1: list(str)，第一句文本, premise
-        words2: list(str), 第二句文本, hypothesis
-        target: str, 真实标签
-
-    数据来源:
-    """
-
-    def __init__(self, paths: dict=None):
-        paths = paths if paths is not None else {
-            'train': 'train.tsv',
-            'dev': 'dev.tsv',
-            'test': 'test.tsv'  # test set has not label
-        }
-        MatchingLoader.__init__(self, paths=paths)
-        self.fields = {
-            'question': Const.INPUTS(0),
-            'sentence': Const.INPUTS(1),
-            'label': Const.TARGET,
-        }
-        CSVLoader.__init__(self, sep='\t')
-
-    def _load(self, path):
-        ds = CSVLoader._load(self, path)
-
-        for k, v in self.fields.items():
-            if v in ds.get_field_names():
-                ds.rename_field(k, v)
-        for fields in ds.get_all_fields():
-            if Const.INPUT in fields:
-                ds.apply(lambda x: x[fields].strip().split(), new_field_name=fields)
-
-        return ds
-
-
-class MNLILoader(MatchingLoader, CSVLoader):
-    """
-    别名：:class:`fastNLP.io.MNLILoader` :class:`fastNLP.io.dataset_loader.MNLILoader`
-
-    读取MNLI数据集，读取的DataSet包含fields::
-
-        words1: list(str)，第一句文本, premise
-        words2: list(str), 第二句文本, hypothesis
-        target: str, 真实标签
-
-    数据来源:
-    """
-
-    def __init__(self, paths: dict=None):
-        paths = paths if paths is not None else {
-            'train': 'train.tsv',
-            'dev_matched': 'dev_matched.tsv',
-            'dev_mismatched': 'dev_mismatched.tsv',
-            'test_matched': 'test_matched.tsv',
-            'test_mismatched': 'test_mismatched.tsv',
-            # 'test_0.9_matched': 'multinli_0.9_test_matched_unlabeled.txt',
-            # 'test_0.9_mismatched': 'multinli_0.9_test_mismatched_unlabeled.txt',
-
-            # test_0.9_mathed与mismatched是MNLI0.9版本的（数据来源：kaggle）
-        }
-        MatchingLoader.__init__(self, paths=paths)
-        CSVLoader.__init__(self, sep='\t')
-        self.fields = {
-            'sentence1_binary_parse': Const.INPUTS(0),
-            'sentence2_binary_parse': Const.INPUTS(1),
-            'gold_label': Const.TARGET,
-        }
-
-    def _load(self, path):
-        ds = CSVLoader._load(self, path)
-
-        for k, v in self.fields.items():
-            if k in ds.get_field_names():
-                ds.rename_field(k, v)
-
-        if Const.TARGET in ds.get_field_names():
-            if ds[0][Const.TARGET] == 'hidden':
-                ds.delete_field(Const.TARGET)
-
-        parentheses_table = str.maketrans({'(': None, ')': None})
-
-        ds.apply(lambda ins: ins[Const.INPUTS(0)].translate(parentheses_table).strip().split(),
-                 new_field_name=Const.INPUTS(0))
-        ds.apply(lambda ins: ins[Const.INPUTS(1)].translate(parentheses_table).strip().split(),
-                 new_field_name=Const.INPUTS(1))
-        if Const.TARGET in ds.get_field_names():
-            ds.drop(lambda x: x[Const.TARGET] == '-')
-        return ds
-
-
-class QuoraLoader(MatchingLoader, CSVLoader):
-    """
-    别名：:class:`fastNLP.io.QuoraLoader` :class:`fastNLP.io.dataset_loader.QuoraLoader`
-
-    读取MNLI数据集，读取的DataSet包含fields::
-
-        words1: list(str)，第一句文本, premise
-        words2: list(str), 第二句文本, hypothesis
-        target: str, 真实标签
-
-    数据来源:
-    """
-
-    def __init__(self, paths: dict=None):
-        paths = paths if paths is not None else {
-            'train': 'train.tsv',
-            'dev': 'dev.tsv',
-            'test': 'test.tsv',
-        }
-        MatchingLoader.__init__(self, paths=paths)
-        CSVLoader.__init__(self, sep='\t', headers=(Const.TARGET, Const.INPUTS(0), Const.INPUTS(1), 'pairID'))
-
-    def _load(self, path):
-        ds = CSVLoader._load(self, path)
-        return ds

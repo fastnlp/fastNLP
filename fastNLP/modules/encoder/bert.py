@@ -2,35 +2,22 @@
 import os
 from torch import nn
 import torch
-from ...io.file_utils import _get_base_url, cached_path
+from ...io.file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
 from ._bert import _WordPieceBertModel, BertModel
+
 
 class BertWordPieceEncoder(nn.Module):
     """
     读取bert模型，读取之后调用index_dataset方法在dataset中生成word_pieces这一列。
 
-    :param fastNLP.Vocabulary vocab: 词表
     :param str model_dir_or_name: 模型所在目录或者模型的名称。默认值为``en-base-uncased``
     :param str layers:最终结果中的表示。以','隔开层数，可以以负数去索引倒数几层
     :param bool requires_grad: 是否需要gradient。
     """
-    def __init__(self, model_dir_or_name:str='en-base-uncased', layers:str='-1',
-                 requires_grad:bool=False):
+    def __init__(self, model_dir_or_name: str='en-base-uncased', layers: str='-1',
+                 requires_grad: bool=False):
         super().__init__()
         PRETRAIN_URL = _get_base_url('bert')
-        PRETRAINED_BERT_MODEL_DIR = {'en': 'bert-base-cased-f89bfe08.zip',
-                                     'en-base-uncased': 'bert-base-uncased-3413b23c.zip',
-                                     'en-base-cased': 'bert-base-cased-f89bfe08.zip',
-                                     'en-large-uncased': 'bert-large-uncased-20939f45.zip',
-                                     'en-large-cased': 'bert-large-cased-e0cf90fc.zip',
-
-                                     'cn': 'bert-base-chinese-29d0a84a.zip',
-                                     'cn-base': 'bert-base-chinese-29d0a84a.zip',
-
-                                     'multilingual': 'bert-base-multilingual-cased-1bd364ee.zip',
-                                     'multilingual-base-uncased': 'bert-base-multilingual-uncased-f8730fe4.zip',
-                                     'multilingual-base-cased': 'bert-base-multilingual-cased-1bd364ee.zip',
-                                     }
 
         if model_dir_or_name in PRETRAINED_BERT_MODEL_DIR:
             model_name = PRETRAINED_BERT_MODEL_DIR[model_dir_or_name]

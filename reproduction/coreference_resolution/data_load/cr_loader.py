@@ -1,7 +1,7 @@
 from fastNLP.io.dataset_loader import JsonLoader,DataSet,Instance
 from fastNLP.io.file_reader import _read_json
 from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.io.base_loader import DataInfo
+from fastNLP.io.base_loader import DataBundle
 from reproduction.coreference_resolution.model.config import Config
 import reproduction.coreference_resolution.model.preprocess as preprocess
 
@@ -26,7 +26,7 @@ class CRLoader(JsonLoader):
         return dataset
 
     def process(self, paths, **kwargs):
-        data_info = DataInfo()
+        data_info = DataBundle()
         for name in ['train', 'test', 'dev']:
             data_info.datasets[name] = self.load(paths[name])
 

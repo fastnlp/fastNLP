@@ -448,10 +448,10 @@ class FitlogCallback(Callback):
         并将验证结果写入到fitlog中。这些数据集的结果是根据dev上最好的结果报道的，即如果dev在第3个epoch取得了最佳，则
         fitlog中记录的关于这些数据集的结果就是来自第三个epoch的结果。
 
-    :param DataSet,dict(DataSet) data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
+    :param ~fastNLP.DataSet,dict(~fastNLP.DataSet) data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
         DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。若tester不为None时，data需要通过
         dict的方式传入。如果仅传入DataSet, 则被命名为test
-    :param Tester tester: Tester对象，将在on_valid_end时调用。tester中的DataSet会被称为为`test`
+    :param ~fastNLP.Tester tester: Tester对象，将在on_valid_end时调用。tester中的DataSet会被称为为`test`
     :param int log_loss_every: 多少个step记录一次loss(记录的是这几个batch的loss平均值)，如果数据集较大建议将该值设置得
         大一些，不然会导致log文件巨大。默认为0, 即不要记录loss。
     :param int verbose: 是否在终端打印evaluation的结果，0不打印。
@@ -674,7 +674,7 @@ class TensorboardCallback(Callback):
     
     .. warning::
         fastNLP 已停止对此功能的维护，请等待 fastNLP 兼容 PyTorch1.1 的下一个版本。
-        或者使用和 fastNLP 高度配合的 fitlog（参见 :doc:`/user/with_fitlog` ）。
+        或者使用和 fastNLP 高度配合的 fitlog（参见 :doc:`/tutorials/tutorial_10_fitlog` ）。
         
     """
     

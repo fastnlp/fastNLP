@@ -8,7 +8,8 @@ import os
 from fastNLP.core.dataset import DataSet
 from .utils import load_url
 from .processor import ModelProcessor
-from fastNLP.io.dataset_loader import _cut_long_sentence, ConllLoader
+from fastNLP.io.dataset_loader import _cut_long_sentence
+from fastNLP.io.data_loader import ConllLoader
 from fastNLP.core.instance import Instance
 from ..api.pipeline import Pipeline
 from fastNLP.core.metrics import SpanFPreRecMetric
