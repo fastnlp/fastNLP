@@ -78,19 +78,7 @@
                 sent, label = line.strip().split('\t')
                 dataset.append(Instance(sentence=sent, label=label))
 
-2.2 index, 返回结果为对DataSet对象的浅拷贝
-
-    Example::
-
-        import numpy as np
-        from fastNLP import DataSet
-        dataset = DataSet({'a': np.arange(10), 'b': [[_] for _ in range(10)]})
-        d[0]  # 使用一个下标获取一个instance
-        >>{'a': 0 type=int,'b': [2] type=list} # 得到一个instance
-        d[1:3]  # 使用slice获取一个新的DataSet
-        >>DataSet({'a': 1 type=int, 'b': [2] type=list}, {'a': 2 type=int, 'b': [2] type=list})
-
-2.3 对DataSet中的内容处理
+2.2 对DataSet中的内容处理
 
     Example::
 
@@ -108,7 +96,7 @@
             return words
         dataset.apply(get_words, new_field_name='words')
 
-2.4 删除DataSet的内容
+2.3 删除DataSet的内容
 
     Example::
 
@@ -124,14 +112,14 @@
         dataset.delete_field('a')
 
 
-2.5 遍历DataSet的内容
+2.4 遍历DataSet的内容
 
     Example::
 
         for instance in dataset:
             # do something
 
-2.6 一些其它操作
+2.5 一些其它操作
 
     Example::
 
