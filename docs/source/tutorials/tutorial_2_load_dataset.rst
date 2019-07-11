@@ -91,11 +91,11 @@ Part IV: DataSetLoader举例
 
 以Matching任务为例子：
 
-    :class:`~fastNLP.io.data_loader.matching.MatchingLoader`
-        我们在fastNLP当中封装了一个Matching任务数据集的数据加载类： :class:`~fastNLP.io.data_loader.matching.MatchingLoader` .
+    :class:`~fastNLP.io.data_loader.MatchingLoader`
+        我们在fastNLP当中封装了一个Matching任务数据集的数据加载类： :class:`~fastNLP.io.data_loader.MatchingLoader` .
 
         在MatchingLoader类当中我们封装了一个对数据集中的文本内容进行进一步的预处理的函数：
-        :meth:`~fastNLP.io.data_loader.matching.MatchingLoader.process`
+        :meth:`~fastNLP.io.data_loader.MatchingLoader.process`
         这个函数具有各种预处理option，如：
         - 是否将文本转成全小写
         - 是否需要序列长度信息，需要什么类型的序列长度信息
@@ -104,21 +104,58 @@ Part IV: DataSetLoader举例
 
         具体内容参见 :meth:`fastNLP.io.MatchingLoader.process` 。
 
-    :class:`~fastNLP.io.data_loader.matching.SNLILoader`
+    :class:`~fastNLP.io.data_loader.SNLILoader`
         一个关于SNLI数据集的DataSetLoader。SNLI数据集来自
         `SNLI Data Set <https://nlp.stanford.edu/projects/snli/snli_1.0.zip>`_ .
 
-        在 :class:`~fastNLP.io.data_loader.matching.SNLILoader` 的 :meth:`~fastNLP.io.data_loader.matching.SNLILoader._load`
-        函数中，我们用以下代码将数据集内容从文本文件读入内存
+        在 :class:`~fastNLP.io.data_loader.SNLILoader` 的 :meth:`~fastNLP.io.data_loader.SNLILoader._load`
+        函数中，我们用以下代码将数据集内容从文本文件读入内存：
 
         .. code-block:: python
 
                 data = SNLILoader().process(
-                    paths='path/to/snli/data', to_lower=False, seq_len_type=arg.seq_len_type,
+                    paths='path/to/snli/data', to_lower=False, seq_len_type='seq_len',
                     get_index=True, concat=False,
                 )
+                print(data)
 
-        这里的data即可直接传入 :class:`~fastNLP.Trainer` 进行
+        输出的内容是::
+
+            In total 3 datasets:
+                train has 549367 instances.
+                dev has 9842 instances.
+                test has 9824 instances.
+            In total 2 vocabs:
+                words has 43154 entries.
+                target has 3 entries.
+
+
+        这里的data是一个 :class:`~fastNLP.io.base_loader.DataBundle` ，取 ``datasets`` 字典里的内容即可直接传入
+        :class:`~fastNLP.Trainer` 或者 :class:`~fastNLP.Tester` 进行训练或者测试。
+
+    :class:`~fastNLP.io.data_loader.IMDBLoader`
+        以IMDB数据集为例，在 :class:`~fastNLP.io.data_loader.IMDBLoader` 的 :meth:`~fastNLP.io.data_loader.IMDBLoader._load`
+        函数中，我们用以下代码将数据集内容从文本文件读入内存：
+
+        .. code-block:: python
+
+                data = IMDBLoader().process(
+                    paths={'train': 'path/to/train/file', 'test': 'path/to/test/file'}
+                )
+                print(data)
+
+        输出的内容是::
+
+            In total 3 datasets:
+                train has 22500 instances.
+                test has 25000 instances.
+                dev has 2500 instances.
+            In total 2 vocabs:
+                words has 82846 entries.
+                target has 2 entries.
+
+
+        这里的将原来的train集按9:1的比例分成了训练集和验证集。
 
 
 ------------------------------------------
