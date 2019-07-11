@@ -6,8 +6,9 @@ import torch
 import torch.nn as nn
 
 from ..core.const import Const as C
+from ..core.utils import seq_len_to_mask
 from ..modules import encoder
-from fastNLP import seq_len_to_mask
+from ..embeddings import embedding
 
 
 class CNNText(torch.nn.Module):
@@ -33,7 +34,7 @@ class CNNText(torch.nn.Module):
         super(CNNText, self).__init__()
         
         # no support for pre-trained embedding currently
-        self.embed = encoder.Embedding(init_embed)
+        self.embed = embedding.Embedding(init_embed)
         self.conv_pool = encoder.ConvMaxpool(
             in_channels=self.embed.embedding_dim,
             out_channels=kernel_nums,

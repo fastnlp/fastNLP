@@ -3,9 +3,8 @@ import numpy as np
 import torch
 
 from fastNLP.core import Trainer, Tester, AccuracyMetric, Const, Adam
+from fastNLP.io.data_loader import SNLILoader, RTELoader, MNLILoader, QNLILoader, QuoraLoader
 
-from reproduction.matching.data.MatchingDataLoader import SNLILoader, RTELoader, \
-    MNLILoader, QNLILoader, QuoraLoader
 from reproduction.matching.model.bert import BertForNLI
 
 

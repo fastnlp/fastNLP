@@ -7,23 +7,17 @@ import sys
 sys.path.append('../..')
 from fastNLP.core.const import Const as C
 import torch.nn as nn
-from data.yelpLoader import yelpLoader
+from fastNLP.io.data_loader import YelpLoader
 #from data.sstLoader import sst2Loader
-from fastNLP.io.data_loader.sst import SST2Loader
-from data.IMDBLoader import IMDBLoader
 from model.char_cnn import CharacterLevelCNN
-from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.models.cnn_text_classification import CNNText
-from fastNLP.modules.encoder.embedding import CNNCharEmbedding,StaticEmbedding,StackEmbedding,LSTMCharEmbedding
 from fastNLP import CrossEntropyLoss, AccuracyMetric
 from fastNLP.core.trainer import Trainer
 from torch.optim import SGD
 from torch.autograd import Variable
 import torch
-from fastNLP import BucketSampler
-from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR
+from torch.optim.lr_scheduler import LambdaLR
 from fastNLP.core import LRScheduler
-from utils.util_init import set_rng_seeds
+
 
 ##hyper
 #todo 这里加入fastnlp的记录
@@ -117,7 +111,7 @@ ops=Config
 ##1.task相关信息：利用dataloader载入dataInfo
 #dataloader=SST2Loader()
 #dataloader=IMDBLoader()
-dataloader=yelpLoader(fine_grained=True)
+dataloader=YelpLoader(fine_grained=True)
 datainfo=dataloader.process(ops.datapath,char_level_op=True,split_dev_op=False)
 char_vocab=ops.char_cnn_config["alphabet"]["en"]["lower"]["alphabet"]
 ops.number_of_characters=len(char_vocab)

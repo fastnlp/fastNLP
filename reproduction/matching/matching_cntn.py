@@ -1,11 +1,10 @@
 import argparse
 import torch
-import os
 
 from fastNLP.core import Trainer, Tester, Adam, AccuracyMetric, Const
-from fastNLP.modules.encoder.embedding import StaticEmbedding
+from fastNLP.embeddings import StaticEmbedding
+from fastNLP.io.data_loader import QNLILoader, RTELoader, SNLILoader, MNLILoader
 
-from reproduction.matching.data.MatchingDataLoader import QNLILoader, RTELoader, SNLILoader, MNLILoader
 from reproduction.matching.model.cntn import CNTNModel
 
 # define hyper-parameters

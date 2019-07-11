@@ -1,21 +1,18 @@
 from reproduction.seqence_labelling.ner.data.OntoNoteLoader import OntoNoteNERDataLoader
-from reproduction.seqence_labelling.ner.data.Conll2003Loader import Conll2003DataLoader
-from fastNLP.core.callback import FitlogCallback, LRScheduler
+from fastNLP.core.callback import LRScheduler
 from fastNLP import GradientClipCallback
-from torch.optim.lr_scheduler import LambdaLR, CosineAnnealingLR
-from torch.optim import SGD, Adam
+from torch.optim.lr_scheduler import LambdaLR
+from torch.optim import Adam
 from fastNLP import Const
-from fastNLP import RandomSampler, BucketSampler
+from fastNLP import BucketSampler
 from fastNLP import SpanFPreRecMetric
 from fastNLP import Trainer, Tester
 from fastNLP.core.metrics import MetricBase
 from reproduction.seqence_labelling.ner.model.dilated_cnn import IDCNN
 from fastNLP.core.utils import Option
-from fastNLP.modules.encoder.embedding import CNNCharEmbedding, StaticEmbedding
+from fastNLP.embeddings.embedding import StaticEmbedding
 from fastNLP.core.utils import cache_results
 from fastNLP.core.vocabulary import VocabularyOption
-import fitlog
-import sys
 import torch.cuda
 import os
 os.environ['FASTNLP_BASE_URL'] = 'http://10.141.222.118:8888/file/download/'

@@ -20,7 +20,7 @@ from ..modules.dropout import TimestepDropout
 from ..modules.encoder.transformer import TransformerEncoder
 from ..modules.encoder.variational_rnn import VarLSTM
 from ..modules.utils import initial_parameter
-from ..modules.utils import get_embeddings
+from ..embeddings.utils import get_embeddings
 from .base_model import BaseModel
 from ..core.utils import seq_len_to_mask
 

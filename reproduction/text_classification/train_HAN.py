@@ -9,11 +9,9 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
 from fastNLP.core.const import Const as C
 from fastNLP.core import LRScheduler
-import torch.nn as nn
-from fastNLP.io.dataset_loader import SSTLoader
-from reproduction.text_classification.data.yelpLoader import yelpLoader
+from fastNLP.io.data_loader import YelpLoader
 from reproduction.text_classification.model.HAN import HANCLS
-from fastNLP.modules.encoder.embedding import StaticEmbedding, CNNCharEmbedding, StackEmbedding
+from fastNLP.embeddings import StaticEmbedding
 from fastNLP import CrossEntropyLoss, AccuracyMetric
 from fastNLP.core.trainer import Trainer
 from torch.optim import SGD
@@ -44,7 +42,7 @@ ops = Config()
 
 ##1.task相关信息：利用dataloader载入dataInfo
 
-datainfo = yelpLoader(fine_grained=True).process(paths=ops.datapath, train_ds=['train'])
+datainfo = YelpLoader(fine_grained=True).process(paths=ops.datapath, train_ds=['train'])
 print(len(datainfo.datasets['train']))
 print(len(datainfo.datasets['test']))
 

@@ -5,20 +5,13 @@ import os
 os.environ['FASTNLP_BASE_URL'] = 'http://10.141.222.118:8888/file/download/'
 os.environ['FASTNLP_CACHE_DIR'] = '/remote-home/hyan01/fastnlp_caches'
 
-
-import torch.nn as nn
-
 from data.IMDBLoader import IMDBLoader
-from fastNLP.modules.encoder.embedding import StaticEmbedding
+from fastNLP.embeddings import StaticEmbedding
 from model.awd_lstm import AWDLSTMSentiment
 
-from fastNLP.core.const import Const as C
 from fastNLP import CrossEntropyLoss, AccuracyMetric
-from fastNLP import Trainer, Tester
+from fastNLP import Trainer
 from torch.optim import Adam
-from fastNLP.io.model_io import ModelLoader, ModelSaver
-
-import argparse
 
 
 class Config():

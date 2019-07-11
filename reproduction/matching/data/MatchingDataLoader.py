@@ -1,3 +1,7 @@
+"""
+这个文件的内容已合并到fastNLP.io.data_loader里，这个文件的内容不再更新
+"""
+
 
 import os
 

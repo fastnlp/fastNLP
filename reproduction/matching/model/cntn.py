@@ -6,7 +6,7 @@ import numpy as np
 from torch.nn import CrossEntropyLoss
 
 from fastNLP.models import BaseModel
-from fastNLP.modules.encoder.embedding import TokenEmbedding
+from fastNLP.embeddings.embedding import TokenEmbedding
 from fastNLP.core.const import Const
 
 

@@ -1,23 +1,17 @@
-import sys
-
-import os
 import random
 
 import numpy as np
 import torch
-from torch.optim import Adadelta, SGD
+from torch.optim import Adadelta
 from torch.optim.lr_scheduler import StepLR
-
-from tqdm import tqdm
 
 from fastNLP import CrossEntropyLoss
 from fastNLP import cache_results
-from fastNLP.core import Trainer, Tester, Adam, AccuracyMetric, Const
-from fastNLP.core.predictor import Predictor
-from fastNLP.core.callback import GradientClipCallback, LRScheduler, FitlogCallback
-from fastNLP.modules.encoder.embedding import ElmoEmbedding, StaticEmbedding
+from fastNLP.core import Trainer, Tester, AccuracyMetric, Const
+from fastNLP.core.callback import LRScheduler, FitlogCallback
+from fastNLP.embeddings import StaticEmbedding
 
-from fastNLP.io.data_loader import MNLILoader, QNLILoader, QuoraLoader, SNLILoader, RTELoader
+from fastNLP.io.data_loader import MNLILoader, QNLILoader, SNLILoader, RTELoader
 from reproduction.matching.model.mwan import MwanModel
 
 import fitlog

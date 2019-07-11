@@ -24,7 +24,6 @@ __all__ = [
     "ConvolutionCharEncoder",
     "LSTMCharEncoder",
     "ConvMaxpool",
-    "Embedding",
     "LSTM",
     "StarTransformer",
     "TransformerEncoder",
@@ -48,4 +47,3 @@ from . import encoder
 from .decoder import *
 from .dropout import TimestepDropout
 from .encoder import *
-from .utils import get_embeddings
