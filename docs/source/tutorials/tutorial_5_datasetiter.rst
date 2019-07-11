@@ -178,71 +178,71 @@ sampler
     * SequentialSampler： 顺序取出元素的采样器【无初始化参数】
     * RandomSampler：随机化取元素的采样器【无初始化参数】
 
-以下代码使用BucketSampler作为:class:`~fastNLP.DataSetIter`初始化的输入，运用:class:`~fastNLP.DataSetIter`自己写训练程序
+    以下代码使用BucketSampler作为 :class:`~fastNLP.DataSetIter` 初始化的输入，运用 :class:`~fastNLP.DataSetIter` 自己写训练程序
 
-.. code-block:: python
+    .. code-block:: python
 
-    from fastNLP import BucketSampler
-    from fastNLP import DataSetIter
-    from fastNLP.models import CNNText
-    from fastNLP import Tester
-    import torch
-    import time
+        from fastNLP import BucketSampler
+        from fastNLP import DataSetIter
+        from fastNLP.models import CNNText
+        from fastNLP import Tester
+        import torch
+        import time
 
-    embed_dim = 100
-    model = CNNText((len(vocab),embed_dim), num_classes=3, padding=2, dropout=0.1)
+        embed_dim = 100
+        model = CNNText((len(vocab),embed_dim), num_classes=3, padding=2, dropout=0.1)
 
-    def train(epoch, data, devdata):
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-        lossfunc = torch.nn.CrossEntropyLoss()
-        batch_size = 32
+        def train(epoch, data, devdata):
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+            lossfunc = torch.nn.CrossEntropyLoss()
+            batch_size = 32
 
-        # 定义一个Batch，传入DataSet，规定batch_size和去batch的规则。
-        # 顺序（Sequential），随机（Random），相似长度组成一个batch（Bucket）
-        train_sampler = BucketSampler(batch_size=batch_size, seq_len_field_name='seq_len')
-        train_batch = DataSetIter(batch_size=batch_size, dataset=data, sampler=train_sampler)
-    
-        start_time = time.time()
-        print("-"*5+"start training"+"-"*5)
-        for i in range(epoch):
-            loss_list = []
-            for batch_x, batch_y in train_batch:
-                optimizer.zero_grad()
-                output = model(batch_x['words'])
-                loss = lossfunc(output['pred'], batch_y['target'])
-                loss.backward()
-                optimizer.step()
-                loss_list.append(loss.item())
-        
-            #这里verbose如果为0，在调用Tester对象的test()函数时不输出任何信息，返回评估信息; 如果为1，打印出验证结果，返回评估信息
-            #在调用过Tester对象的test()函数后，调用其_format_eval_results(res)函数，结构化输出验证结果
-            tester_tmp = Tester(devdata, model, metrics=AccuracyMetric(), verbose=0)
-            res=tester_tmp.test()
-            
-            print('Epoch {:d} Avg Loss: {:.2f}'.format(i, sum(loss_list) / len(loss_list)),end=" ")
-            print(tester._format_eval_results(res),end=" ")
-            print('{:d}ms'.format(round((time.time()-start_time)*1000)))
-            loss_list.clear()
-            
-    train(10, train_data, dev_data)
-    #使用tester进行快速测试
-    tester = Tester(test_data, model, metrics=AccuracyMetric())
-    tester.test()
+            # 定义一个Batch，传入DataSet，规定batch_size和去batch的规则。
+            # 顺序（Sequential），随机（Random），相似长度组成一个batch（Bucket）
+            train_sampler = BucketSampler(batch_size=batch_size, seq_len_field_name='seq_len')
+            train_batch = DataSetIter(batch_size=batch_size, dataset=data, sampler=train_sampler)
 
-这段代码的输出如下::
+            start_time = time.time()
+            print("-"*5+"start training"+"-"*5)
+            for i in range(epoch):
+                loss_list = []
+                for batch_x, batch_y in train_batch:
+                    optimizer.zero_grad()
+                    output = model(batch_x['words'])
+                    loss = lossfunc(output['pred'], batch_y['target'])
+                    loss.backward()
+                    optimizer.step()
+                    loss_list.append(loss.item())
 
-    -----start training-----
-    Epoch 0 Avg Loss: 1.09 AccuracyMetric: acc=0.480787 58989ms
-    Epoch 1 Avg Loss: 1.00 AccuracyMetric: acc=0.500469 118348ms
-    Epoch 2 Avg Loss: 0.93 AccuracyMetric: acc=0.536082 176220ms
-    Epoch 3 Avg Loss: 0.87 AccuracyMetric: acc=0.556701 236032ms
-    Epoch 4 Avg Loss: 0.78 AccuracyMetric: acc=0.562324 294351ms
-    Epoch 5 Avg Loss: 0.69 AccuracyMetric: acc=0.58388 353673ms
-    Epoch 6 Avg Loss: 0.60 AccuracyMetric: acc=0.574508 412106ms
-    Epoch 7 Avg Loss: 0.51 AccuracyMetric: acc=0.589503 471097ms
-    Epoch 8 Avg Loss: 0.44 AccuracyMetric: acc=0.581068 529174ms
-    Epoch 9 Avg Loss: 0.39 AccuracyMetric: acc=0.572634 586216ms
-    [tester] 
-    AccuracyMetric: acc=0.527426
+                #这里verbose如果为0，在调用Tester对象的test()函数时不输出任何信息，返回评估信息; 如果为1，打印出验证结果，返回评估信息
+                #在调用过Tester对象的test()函数后，调用其_format_eval_results(res)函数，结构化输出验证结果
+                tester_tmp = Tester(devdata, model, metrics=AccuracyMetric(), verbose=0)
+                res=tester_tmp.test()
+
+                print('Epoch {:d} Avg Loss: {:.2f}'.format(i, sum(loss_list) / len(loss_list)),end=" ")
+                print(tester._format_eval_results(res),end=" ")
+                print('{:d}ms'.format(round((time.time()-start_time)*1000)))
+                loss_list.clear()
+
+        train(10, train_data, dev_data)
+        #使用tester进行快速测试
+        tester = Tester(test_data, model, metrics=AccuracyMetric())
+        tester.test()
+
+    这段代码的输出如下::
+
+        -----start training-----
+        Epoch 0 Avg Loss: 1.09 AccuracyMetric: acc=0.480787 58989ms
+        Epoch 1 Avg Loss: 1.00 AccuracyMetric: acc=0.500469 118348ms
+        Epoch 2 Avg Loss: 0.93 AccuracyMetric: acc=0.536082 176220ms
+        Epoch 3 Avg Loss: 0.87 AccuracyMetric: acc=0.556701 236032ms
+        Epoch 4 Avg Loss: 0.78 AccuracyMetric: acc=0.562324 294351ms
+        Epoch 5 Avg Loss: 0.69 AccuracyMetric: acc=0.58388 353673ms
+        Epoch 6 Avg Loss: 0.60 AccuracyMetric: acc=0.574508 412106ms
+        Epoch 7 Avg Loss: 0.51 AccuracyMetric: acc=0.589503 471097ms
+        Epoch 8 Avg Loss: 0.44 AccuracyMetric: acc=0.581068 529174ms
+        Epoch 9 Avg Loss: 0.39 AccuracyMetric: acc=0.572634 586216ms
+        [tester]
+        AccuracyMetric: acc=0.527426
 
 

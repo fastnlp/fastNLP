@@ -97,10 +97,10 @@ Part IV: DataSetLoader举例
         在MatchingLoader类当中我们封装了一个对数据集中的文本内容进行进一步的预处理的函数：
         :meth:`~fastNLP.io.data_loader.matching.MatchingLoader.process`
         这个函数具有各种预处理option，如：
-            - 是否将文本转成全小写
-            - 是否需要序列长度信息，需要什么类型的序列长度信息
-            - 是否需要用BertTokenizer来获取序列的WordPiece信息
-            - 等等
+        - 是否将文本转成全小写
+        - 是否需要序列长度信息，需要什么类型的序列长度信息
+        - 是否需要用BertTokenizer来获取序列的WordPiece信息
+        - 等等
 
         具体内容参见 :meth:`fastNLP.io.MatchingLoader.process` 。
 
