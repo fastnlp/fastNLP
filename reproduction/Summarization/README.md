@@ -39,6 +39,54 @@ FastNLP中实现的模型包括：
 
 
 
+### Evaluation
+
+#### FastRougeMetric
+
+FastRougeMetric使用python实现的ROUGE非官方库来实现在训练过程中快速计算rouge近似值。
+ 源代码可见 [https://github.com/pltrdy/rouge](https://github.com/pltrdy/rouge)
+
+在fastNLP中，该方法已经被包装成Metric.py中的FastRougeMetric类以供trainer直接使用。
+需要事先使用pip安装该rouge库。
+
+    pip install rouge
+
+
+**注意：由于实现细节的差异，该结果和官方ROUGE结果存在1-2个点的差异，仅可作为训练过程优化趋势的粗略估计。**
+
+    
+
+#### PyRougeMetric
+
+PyRougeMetric 使用论文 [*ROUGE: A Package for Automatic Evaluation of Summaries*](https://www.aclweb.org/anthology/W04-1013) 提供的官方ROUGE 1.5.5评测库。
+
+由于原本的ROUGE使用perl解释器，[pyrouge](https://github.com/bheinzerling/pyrouge)对其进行了python包装，而PyRougeMetric将其进一步包装为trainer可以直接使用的Metric类。
+
+为了使用ROUGE 1.5.5，需要使用sudo权限安装一系列依赖库。
+
+1. ROUGE 本身在Ubuntu下的安装可以参考[博客](https://blog.csdn.net/Hay54/article/details/78744912)
+2. 配置wordnet可参考：
+```shell
+$ cd ~/rouge/RELEASE-1.5.5/data/WordNet-2.0-Exceptions/
+$ ./buildExeptionDB.pl . exc WordNet-2.0.exc.db
+$ cd ../
+$ ln -s WordNet-2.0-Exceptions/WordNet-2.0.exc.db WordNet-2.0.exc.db
+```
+3. 安装pyrouge
+```shell
+$ git clone https://github.com/bheinzerling/pyrouge
+$ cd pyrouge
+$ python setup.py install
+```
+4. 测试ROUGE安装是否正确
+```shell
+$ pyrouge_set_rouge_path /absolute/path/to/ROUGE-1.5.5/directory
+$ python -m pyrouge.test
+```
+
+
+
+
 ### Dataset_loader
 
 - SummarizationLoader: 用于读取处理好的jsonl格式数据集，返回以下field
@@ -56,6 +104,21 @@ FastNLP中实现的模型包括：
 
 
 
+### Train Cmdline
+
+#### Baseline
+
+LSTM + Sequence Labeling
+
+    python train.py --cuda --gpu <gpuid> --sentence_encoder deeplstm --sentence_decoder seqlab --save_root <savedir> --log_root <logdir> --lr_descent --grad_clip --max_grad_norm 10
+
+Transformer + Sequence Labeling
+
+    python train.py --cuda --gpu <gpuid> --sentence_encoder transformer --sentence_decoder seqlab --save_root <savedir> --log_root <logdir> --lr_descent --grad_clip --max_grad_norm 10
+
+
+
+#### BertSum
 
 
 
