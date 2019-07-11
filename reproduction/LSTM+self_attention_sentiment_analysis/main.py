@@ -1,6 +1,9 @@
+# 这是一个很旧版本的代码
+
+"""
 import torch.nn.functional as F
 
-from fastNLP.core.trainer import ClassificationTrainer
+from fastNLP.core.trainer import Trainer
 from fastNLP.core.utils import ClassPreprocess as Preprocess
 from fastNLP.io.config_io import ConfigLoader
 from fastNLP.io.config_io import ConfigSection
@@ -8,7 +11,7 @@ from fastNLP.io.dataset_loader import DummyClassificationReader as Dataset_loade
 from fastNLP.models.base_model import BaseModel
 from fastNLP.modules.aggregator.self_attention import SelfAttention
 from fastNLP.modules.decoder.mlp import MLP
-from fastNLP.modules.encoder.embedding import Embedding as Embedding
+from fastNLP.embeddings.embedding import Embedding as Embedding
 from fastNLP.modules.encoder.lstm import LSTM
 
 train_data_path =  'small_train_data.txt'
@@ -61,12 +64,13 @@ class SELF_ATTENTION_YELP_CLASSIFICATION(BaseModel):
 
 train_args = ConfigSection()
 ConfigLoader("good path").load_config('config.cfg',{"train": train_args})
-train_args['vocab'] = len(word2index)
+# train_args['vocab'] = len(word2index)
 
 
-trainer = ClassificationTrainer(**train_args.data)
+trainer = Trainer(**train_args.data)
 
 # for k in train_args.__dict__.keys():
 #     print(k, train_args[k])
 model = SELF_ATTENTION_YELP_CLASSIFICATION(train_args)
-trainer.train(model,train_data , dev_data)
+trainer.train()
+"""

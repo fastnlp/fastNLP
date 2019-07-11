@@ -12,6 +12,5 @@ fastNLP.modules
 .. toctree::
     :titlesonly:
 
-    fastNLP.modules.aggregator
     fastNLP.modules.decoder
     fastNLP.modules.encoder

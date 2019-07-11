@@ -6,7 +6,7 @@ __all__ = [
     "MetricBase",
     "AccuracyMetric",
     "SpanFPreRecMetric",
-    "SQuADMetric"
+    "ExtractiveQAMetric"
 ]
 
 import inspect
@@ -24,16 +24,17 @@ from .utils import seq_len_to_mask
 from .vocabulary import Vocabulary
 from abc import abstractmethod
 
+
 class MetricBase(object):
     """
-    所有metrics的基类,，所有的传入到Trainer, Tester的Metric需要继承自该对象，需要覆盖写入evaluate(), get_metric()方法。
+    所有metrics的基类,所有的传入到Trainer, Tester的Metric需要继承自该对象，需要覆盖写入evaluate(), get_metric()方法。
     
         evaluate(xxx)中传入的是一个batch的数据。
         
         get_metric(xxx)当所有数据处理完毕，调用该方法得到最终的metric值
         
     以分类问题中，Accuracy计算为例
-    假设model的forward返回dict中包含'pred'这个key, 并且该key需要用于Accuracy::
+    假设model的forward返回dict中包含 `pred` 这个key, 并且该key需要用于Accuracy::
     
         class Model(nn.Module):
             def __init__(xxx):
@@ -42,7 +43,7 @@ class MetricBase(object):
                 # do something
                 return {'pred': pred, 'other_keys':xxx} # pred's shape: batch_size x num_classes
                 
-    假设dataset中'label'这个field是需要预测的值，并且该field被设置为了target
+    假设dataset中 `label` 这个field是需要预测的值，并且该field被设置为了target
     对应的AccMetric可以按如下的定义, version1, 只使用这一次::
     
         class AccMetric(MetricBase):
@@ -477,7 +478,7 @@ class SpanFPreRecMetric(MetricBase):
     别名：:class:`fastNLP.SpanFPreRecMetric` :class:`fastNLP.core.metrics.SpanFPreRecMetric`
 
     在序列标注问题中，以span的方式计算F, pre, rec.
-    比如中文Part of speech中，会以character的方式进行标注，句子'中国在亚洲'对应的POS可能为(以BMES为例)
+    比如中文Part of speech中，会以character的方式进行标注，句子 `中国在亚洲` 对应的POS可能为(以BMES为例)
     ['B-NN', 'E-NN', 'S-DET', 'B-NN', 'E-NN']。该metric就是为类似情况下的F1计算。
     最后得到的metric结果为::
     
@@ -501,15 +502,15 @@ class SpanFPreRecMetric(MetricBase):
 
     :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` 。支持的标签为"B"(没有label)；或"B-xxx"(xxx为某种label，比如POS中的NN)，
         在解码时，会将相同xxx的认为是同一个label，比如['B-NN', 'E-NN']会被合并为一个'NN'.
-    :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用'pred'取数据
-    :param str target: 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用'target'取数据
-    :param str seq_len: 用该key在evaluate()时从传入dict中取出sequence length数据。为None，则使用'seq_len'取数据。
+    :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用 `pred` 取数据
+    :param str target: 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用 `target` 取数据
+    :param str seq_len: 用该key在evaluate()时从传入dict中取出sequence length数据。为None，则使用 `seq_len` 取数据。
     :param str encoding_type: 目前支持bio, bmes, bmeso, bioes
     :param list ignore_labels: str 组成的list. 这个list中的class不会被用于计算。例如在POS tagging时传入['NN']，则不会计算'NN'这
         个label
     :param bool only_gross: 是否只计算总的f1, precision, recall的值；如果为False，不仅返回总的f1, pre, rec, 还会返回每个
         label的f1, pre, rec
-    :param str f_type: 'micro'或'macro'. 'micro':通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; 'macro':
+    :param str f_type: `micro` 或 `macro` . `micro` :通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; `macro` :
         分布计算每个类别的f, precision, recall，然后做平均（各类别f的权重相同）
     :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
         常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
@@ -735,11 +736,11 @@ def _pred_topk(y_prob, k=1):
     return y_pred_topk, y_prob_topk
 
 
-class SQuADMetric(MetricBase):
+class ExtractiveQAMetric(MetricBase):
     r"""
-    别名：:class:`fastNLP.SQuADMetric` :class:`fastNLP.core.metrics.SQuADMetric`
+    别名：:class:`fastNLP.ExtractiveQAMetric` :class:`fastNLP.core.metrics.ExtractiveQAMetric`
 
-    SQuAD数据集metric
+    抽取式QA（如SQuAD）的metric.
     
     :param pred1: 参数映射表中 `pred1` 的映射关系，None表示映射关系为 `pred1` -> `pred1`
     :param pred2: 参数映射表中 `pred2` 的映射关系，None表示映射关系为 `pred2` -> `pred2`
@@ -755,7 +756,7 @@ class SQuADMetric(MetricBase):
     def __init__(self, pred1=None, pred2=None, target1=None, target2=None,
                  beta=1, right_open=True, print_predict_stat=False):
         
-        super(SQuADMetric, self).__init__()
+        super(ExtractiveQAMetric, self).__init__()
         
         self._init_param_map(pred1=pred1, pred2=pred2, target1=target1, target2=target2)
         

@@ -1,17 +1,18 @@
 from reproduction.seqence_labelling.ner.data.OntoNoteLoader import OntoNoteNERDataLoader
-from fastNLP.core.callback import FitlogCallback, LRScheduler
+from fastNLP.core.callback import LRScheduler
 from fastNLP import GradientClipCallback
-from torch.optim.lr_scheduler import LambdaLR, CosineAnnealingLR
-from torch.optim import SGD, Adam
+from torch.optim.lr_scheduler import LambdaLR
+from torch.optim import Adam
 from fastNLP import Const
-from fastNLP import RandomSampler, BucketSampler
+from fastNLP import BucketSampler
 from fastNLP import SpanFPreRecMetric
-from fastNLP import Trainer
+from fastNLP import Trainer, Tester
+from fastNLP.core.metrics import MetricBase
 from reproduction.seqence_labelling.ner.model.dilated_cnn import IDCNN
 from fastNLP.core.utils import Option
-from fastNLP.modules.encoder.embedding import CNNCharEmbedding, StaticEmbedding
+from fastNLP.embeddings.embedding import StaticEmbedding
 from fastNLP.core.utils import cache_results
-import sys
+from fastNLP.core.vocabulary import VocabularyOption
 import torch.cuda
 import os
 os.environ['FASTNLP_BASE_URL'] = 'http://10.141.222.118:8888/file/download/'
@@ -24,7 +25,6 @@ encoding_type = 'bioes'
 def get_path(path):
     return os.path.join(os.environ['HOME'], path)
 
-data_path = get_path('workdir/datasets/ontonotes-v4')
 
 ops = Option(
     batch_size=128,
@@ -33,34 +33,45 @@ ops = Option(
     repeats=3,
     num_layers=3,
     num_filters=400,
-    use_crf=True,
+    use_crf=False,
     gradient_clip=5,
 )
 
-@cache_results('ontonotes-cache')
+@cache_results('ontonotes-case-cache')
 def load_data():
-
-    data = OntoNoteNERDataLoader(encoding_type=encoding_type).process(data_path,
-                                                                  lower=True)
+    print('loading data')
+    data = OntoNoteNERDataLoader(encoding_type=encoding_type).process(
+        paths = get_path('workdir/datasets/ontonotes-v4'),
+        lower=False,
+        word_vocab_opt=VocabularyOption(min_freq=0),
+    )
+    # data = Conll2003DataLoader(task='ner', encoding_type=encoding_type).process(
+    #     paths=get_path('workdir/datasets/conll03'),
+    # lower=False, word_vocab_opt=VocabularyOption(min_freq=0)
+    # )
 
     # char_embed = CNNCharEmbedding(vocab=data.vocabs['cap_words'], embed_size=30, char_emb_size=30, filter_nums=[30],
     #                               kernel_sizes=[3])
-
+    print('loading embedding')
     word_embed = StaticEmbedding(vocab=data.vocabs[Const.INPUT],
                                  model_dir_or_name='en-glove-840b-300',
                                  requires_grad=True)
     return data, [word_embed]
 
 data, embeds = load_data()
+print(data)
 print(data.datasets['train'][0])
 print(list(data.vocabs.keys()))
 
-for ds in data.datasets.values():
-    ds.rename_field('cap_words', 'chars')
-    ds.set_input('chars')
+# for ds in data.datasets.values():
+#     ds.rename_field('cap_words', 'chars')
+#     ds.set_input('chars')
 
 word_embed = embeds[0]
-char_embed = CNNCharEmbedding(data.vocabs['cap_words'])
+word_embed.embedding.weight.data /= word_embed.embedding.weight.data.std()
+
+# char_embed = CNNCharEmbedding(data.vocabs['cap_words'])
+char_embed = None
 # for ds in data.datasets:
 #     ds.rename_field('')
 
@@ -75,14 +86,44 @@ model = IDCNN(init_embed=word_embed,
               kernel_size=3,
               use_crf=ops.use_crf, use_projection=True,
               block_loss=True,
-              input_dropout=0.33, hidden_dropout=0.2, inner_dropout=0.2)
+              input_dropout=0.5, hidden_dropout=0.2, inner_dropout=0.2)
 
 print(model)
 
-callbacks = [GradientClipCallback(clip_value=ops.gradient_clip, clip_type='norm'),]
+callbacks = [GradientClipCallback(clip_value=ops.gradient_clip, clip_type='value'),]
+metrics = []
+metrics.append(
+    SpanFPreRecMetric(
+        tag_vocab=data.vocabs[Const.TARGET], encoding_type=encoding_type,
+        pred=Const.OUTPUT, target=Const.TARGET, seq_len=Const.INPUT_LEN,
+    )
+)
+
+class LossMetric(MetricBase):
+    def __init__(self, loss=None):
+        super(LossMetric, self).__init__()
+        self._init_param_map(loss=loss)
+        self.total_loss = 0.0
+        self.steps = 0
+
+    def evaluate(self, loss):
+        self.total_loss += float(loss)
+        self.steps += 1
+
+    def get_metric(self, reset=True):
+        result = {'loss': self.total_loss / (self.steps + 1e-12)}
+        if reset:
+            self.total_loss = 0.0
+            self.steps = 0
+        return result
+
+metrics.append(
+    LossMetric(loss=Const.LOSS)
+)
 
 optimizer = Adam(model.parameters(), lr=ops.lr, weight_decay=0)
-# scheduler = LRScheduler(LambdaLR(optimizer, lr_lambda=lambda epoch: 1 / (1 + 0.05 * epoch)))
+scheduler = LRScheduler(LambdaLR(optimizer, lr_lambda=lambda epoch: 1 / (1 + 0.05 * epoch)))
+callbacks.append(scheduler)
 # callbacks.append(LRScheduler(CosineAnnealingLR(optimizer, 15)))
 # optimizer = SWATS(model.parameters(), verbose=True)
 # optimizer = Adam(model.parameters(), lr=0.005)
@@ -92,8 +133,20 @@ device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 trainer = Trainer(train_data=data.datasets['train'], model=model, optimizer=optimizer,
                   sampler=BucketSampler(num_buckets=50, batch_size=ops.batch_size),
                   device=device, dev_data=data.datasets['dev'], batch_size=ops.batch_size,
-                  metrics=SpanFPreRecMetric(
-                      tag_vocab=data.vocabs[Const.TARGET], encoding_type=encoding_type),
+                  metrics=metrics,
                   check_code_level=-1,
                   callbacks=callbacks, num_workers=2, n_epochs=ops.num_epochs)
 trainer.train()
+
+torch.save(model, 'idcnn.pt')
+
+tester = Tester(
+    data=data.datasets['test'],
+    model=model,
+    metrics=metrics,
+    batch_size=ops.batch_size,
+    num_workers=2,
+    device=device
+)
+tester.test()
+

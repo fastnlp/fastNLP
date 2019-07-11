@@ -121,4 +121,4 @@
     In Epoch:6/Step:12, got best dev performance:AccuracyMetric: acc=0.8
     Reloaded the best model.
 
-这份教程只是简单地介绍了使用 fastNLP 工作的流程，具体的细节分析见 :doc:`/user/tutorial_one`
+这份教程只是简单地介绍了使用 fastNLP 工作的流程，更多的教程分析见 :doc:`/user/tutorials`

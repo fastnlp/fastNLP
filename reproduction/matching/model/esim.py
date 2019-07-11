@@ -5,8 +5,7 @@ import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 
 from fastNLP.models import BaseModel
-from fastNLP.modules.encoder.embedding import TokenEmbedding
-from fastNLP.modules.encoder.lstm import LSTM
+from fastNLP.embeddings.embedding import TokenEmbedding
 from fastNLP.core.const import Const
 from fastNLP.core.utils import seq_len_to_mask
 

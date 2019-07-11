@@ -8,7 +8,7 @@ from fastNLP.models.bert import BertModel
 
 class TestBert(unittest.TestCase):
     def test_bert_1(self):
-        from fastNLP.modules.encoder._bert import BertConfig
+        from fastNLP.modules.encoder.bert import BertConfig
         config = BertConfig(32000)
         model = BertModel(config)
 

@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-from fastNLP.modules import Embedding
+from fastNLP.embeddings import Embedding
 import numpy as np
 from reproduction.seqence_labelling.cws.model.module import FeatureFunMax, SemiCRFShiftRelay
 from fastNLP.modules import LSTM

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from fastNLP.modules.utils import get_embeddings
+from fastNLP.embeddings.utils import get_embeddings
 from fastNLP.core import Const as C
 
 

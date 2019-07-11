@@ -2,18 +2,17 @@ import sys
 
 sys.path.append('../../..')
 
-from fastNLP.modules.encoder.embedding import CNNCharEmbedding, StaticEmbedding
+from fastNLP.embeddings.embedding import CNNCharEmbedding
 
 from reproduction.seqence_labelling.ner.model.lstm_cnn_crf import CNNBiLSTMCRF
 from fastNLP import Trainer
 from fastNLP import SpanFPreRecMetric
 from fastNLP import BucketSampler
 from fastNLP import Const
-from torch.optim import SGD, Adam
+from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
 from fastNLP import GradientClipCallback
 from fastNLP.core.callback import FitlogCallback, LRScheduler
-from reproduction.seqence_labelling.ner.model.swats import SWATS
 
 import fitlog
 fitlog.debug()

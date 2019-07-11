@@ -88,6 +88,27 @@ class TestAdd(unittest.TestCase):
         for i in range(num_samples):
             self.assertEqual(True, vocab._is_word_no_create_entry(chr(start_char + i)+chr(start_char + i)))
 
+    def test_no_entry(self):
+        # 先建立vocabulary，然后变化no_create_entry, 测试能否正确识别
+        text = ["FastNLP", "works", "well", "in", "most", "cases", "and", "scales", "well", "in",
+                "works", "well", "in", "most", "cases", "scales", "well"]
+        vocab = Vocabulary()
+        vocab.add_word_lst(text)
+
+        self.assertFalse(vocab._is_word_no_create_entry('FastNLP'))
+        vocab.add_word('FastNLP', no_create_entry=True)
+        self.assertFalse(vocab._is_word_no_create_entry('FastNLP'))
+
+        vocab.add_word('fastnlp', no_create_entry=True)
+        self.assertTrue(vocab._is_word_no_create_entry('fastnlp'))
+        vocab.add_word('fastnlp', no_create_entry=False)
+        self.assertFalse(vocab._is_word_no_create_entry('fastnlp'))
+
+        vocab.add_word_lst(['1']*10, no_create_entry=True)
+        self.assertTrue(vocab._is_word_no_create_entry('1'))
+        vocab.add_word('1')
+        self.assertFalse(vocab._is_word_no_create_entry('1'))
+
 
 class TestIndexing(unittest.TestCase):
     def test_len(self):
@@ -127,6 +148,21 @@ class TestIndexing(unittest.TestCase):
             self.assertTrue(word in text)
             self.assertTrue(idx < len(vocab))
 
+    def test_rebuild(self):
+        # 测试build之后新加入词，原来的词顺序不变
+        vocab = Vocabulary()
+        text = [str(idx) for idx in range(10)]
+        vocab.update(text)
+        for i in text:
+            self.assertEqual(int(i)+2, vocab.to_index(i))
+        indexes = []
+        for word, index in vocab:
+            indexes.append((word, index))
+        vocab.add_word_lst([str(idx) for idx in range(10, 13)])
+        for idx, pair in enumerate(indexes):
+            self.assertEqual(pair[1], vocab.to_index(pair[0]))
+        for i in range(13):
+            self.assertEqual(int(i)+2, vocab.to_index(str(i)))
 
 class TestOther(unittest.TestCase):
     def test_additional_update(self):
