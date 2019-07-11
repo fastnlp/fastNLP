@@ -23,6 +23,7 @@ __all__ = [
 
     'ConllLoader',
     'Conll2003Loader',
+    'IMDBLoader',
     'MatchingLoader',
     'PeopleDailyCorpusLoader',
     'SNLILoader',

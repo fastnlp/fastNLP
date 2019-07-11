@@ -6,7 +6,7 @@
 
 教程目录：
 
-    - `Part I: 数据集信息`_
+    - `Part I: 数据集容器`_
     - `Part II: 数据集的使用方式`_
     - `Part III: 不同数据类型的DataSetLoader`_
     - `Part IV: DataSetLoader举例`_
@@ -14,11 +14,11 @@
 
 
 ----------------------------
-Part I: 数据集信息
+Part I: 数据集容器
 ----------------------------
 
-在fastNLP中，我们使用 :class:`~fastNLP.io.base_loader.DataInfo` 来存储数据集信息。 :class:`~fastNLP.io.base_loader.DataInfo`
-类包含了两个重要内容： `datasets` 和 `vocabs` 。
+在fastNLP中，我们使用 :class:`~fastNLP.io.base_loader.DataBundle` 来存储数据集信息。
+:class:`~fastNLP.io.base_loader.DataBundle` 类包含了两个重要内容： `datasets` 和 `vocabs` 。
 
 `datasets` 是一个 `key` 为数据集名称（如 `train` ， `dev` ，和 `test` 等）， `value` 为 :class:`~fastNLP.DataSet` 的字典。
 
@@ -113,21 +113,13 @@ Part IV: DataSetLoader举例
 
         .. code-block:: python
 
-                def _load(self, path):
-                    ds = JsonLoader._load(self, path)  # SNLI数据集原始文件为Json格式，可以采用JsonLoader来读取数据集文件
+                data = SNLILoader().process(
+                    paths='path/to/snli/data', to_lower=False, seq_len_type=arg.seq_len_type,
+                    get_index=True, concat=False,
+                )
 
-                    parentheses_table = str.maketrans({'(': None, ')': None})
-                    # 字符串匹配格式：SNLI数据集的文本中由括号分割开的，组成树结构，因此
-                    # 我们将这些括号去除。
+        这里的data即可直接传入 :class:`~fastNLP.Trainer` 进行
 
-                    ds.apply(lambda ins: ins[Const.INPUTS(0)].translate(parentheses_table).strip().split(),
-                             new_field_name=Const.INPUTS(0))
-                    # 把第一句话的内容用上面的字符串匹配格式进行替换，并将句子分割为一个由单词组成的list
-                    ds.apply(lambda ins: ins[Const.INPUTS(1)].translate(parentheses_table).strip().split(),
-                             new_field_name=Const.INPUTS(1))
-                    # 对第二句话的内容进行同样的预处理
-                    ds.drop(lambda x: x[Const.TARGET] == '-')  # 将标签为'-'的样本丢掉
-                    return ds
 
 ------------------------------------------
 Part V: fastNLP封装好的数据集加载器
@@ -138,56 +130,58 @@ fastNLP封装好的数据集加载器可以适用于多种类型的任务：
     - `文本分类任务`_
     - `序列标注任务`_
     - `Matching任务`_
-    - `指代消解任务`_
-    - `摘要任务`_
 
 
 文本分类任务
 -------------------
 
-文本分类任务
+==========================    ==================================================================
+数据集名称                      数据集加载器
+--------------------------    ------------------------------------------------------------------
+IMDb                          :class:`~fastNLP.io.data_loader.IMDBLoader`
+--------------------------    ------------------------------------------------------------------
+SST                           :class:`~fastNLP.io.data_loader.SSTLoader`
+--------------------------    ------------------------------------------------------------------
+SST-2                         :class:`~fastNLP.io.data_loader.SST2Loader`
+--------------------------    ------------------------------------------------------------------
+Yelp Polarity                 :class:`~fastNLP.io.data_loader.YelpLoader`
+--------------------------    ------------------------------------------------------------------
+Yelp Full                     :class:`~fastNLP.io.data_loader.YelpLoader`
+--------------------------    ------------------------------------------------------------------
+MTL16                         :class:`~fastNLP.io.data_loader.MTL16Loader`
+==========================    ==================================================================
 
 
 
 序列标注任务
 -------------------
 
-序列标注任务
+==========================    ==================================================================
+数据集名称                      数据集加载器
+--------------------------    ------------------------------------------------------------------
+Conll                         :class:`~fastNLP.io.data_loader.ConllLoader`
+--------------------------    ------------------------------------------------------------------
+Conll2003                     :class:`~fastNLP.io.data_loader.Conll2003Loader`
+--------------------------    ------------------------------------------------------------------
+人民日报数据集                   :class:`~fastNLP.io.data_loader.PeopleDailyCorpusLoader`
+==========================    ==================================================================
+
 
 
 Matching任务
 -------------------
 
-:class:`~fastNLP.io.data_loader.matching.SNLILoader`
-    一个关于SNLI数据集的DataSetLoader。SNLI数据集来自
-    `SNLI Data Set <https://nlp.stanford.edu/projects/snli/snli_1.0.zip>`_ .
-
-:class:`~fastNLP.io.data_loader.matching.MNLILoader`
-    一个关于MultiNLI数据集的DataSetLoader。MultiNLI数据集来自 `GLUE benchmark <https://gluebenchmark.com/tasks>`_
-
-:class:`~fastNLP.io.data_loader.matching.QNLILoader`
-    一个关于QNLI数据集的DataSetLoader。QNLI数据集来自 `GLUE benchmark <https://gluebenchmark.com/tasks>`_
-
-:class:`~fastNLP.io.data_loader.matching.RTELoader`
-    一个关于Recognizing Textual Entailment数据集(RTE)的DataSetLoader。RTE数据集来自
-    `GLUE benchmark <https://gluebenchmark.com/tasks>`_
-
-:class:`~fastNLP.io.data_loader.matching.QuoraLoader`
-    一个关于Quora数据集的DataSetLoader。
-
-
-
-
-指代消解任务
--------------------
-
-指代消解任务
-
-
-
-摘要任务
--------------------
-
-摘要任务
-
+==========================    ==================================================================
+数据集名称                      数据集加载器
+--------------------------    ------------------------------------------------------------------
+SNLI                          :class:`~fastNLP.io.data_loader.SNLILoader`
+--------------------------    ------------------------------------------------------------------
+MultiNLI                      :class:`~fastNLP.io.data_loader.MNLILoader`
+--------------------------    ------------------------------------------------------------------
+QNLI                          :class:`~fastNLP.io.data_loader.QNLILoader`
+--------------------------    ------------------------------------------------------------------
+RTE                           :class:`~fastNLP.io.data_loader.RTELoader`
+--------------------------    ------------------------------------------------------------------
+Quora Pair Dataset            :class:`~fastNLP.io.data_loader.QuoraLoader`
+==========================    ==================================================================
 
