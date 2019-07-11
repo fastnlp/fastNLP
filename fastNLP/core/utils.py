@@ -4,7 +4,6 @@ utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户
 __all__ = [
     "cache_results",
     "seq_len_to_mask",
-    "Option",
 ]
 
 import _pickle
@@ -24,26 +23,27 @@ _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'require
 
 class Option(dict):
     """a dict can treat keys as attributes"""
+    
     def __getattr__(self, item):
         try:
             return self.__getitem__(item)
         except KeyError:
             raise AttributeError(item)
-
+    
     def __setattr__(self, key, value):
         if key.startswith('__') and key.endswith('__'):
             raise AttributeError(key)
         self.__setitem__(key, value)
-
+    
     def __delattr__(self, item):
         try:
             self.pop(item)
         except KeyError:
             raise AttributeError(item)
-
+    
     def __getstate__(self):
         return self
-
+    
     def __setstate__(self, state):
         self.update(state)
 
@@ -162,6 +162,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
         return wrapper
     
     return wrapper_
+
 
 def _save_model(model, model_name, save_dir, only_param=False):
     """ 存储不含有显卡信息的state_dict或model
@@ -673,7 +674,7 @@ def seq_len_to_mask(seq_len, max_len=None):
     将一个表示sequence length的一维数组转换为二维的mask，不包含的位置为0。
     转变 1-d seq_len到2-d mask.
 
-    Example::
+    .. code-block::
     
         >>> seq_len = torch.arange(2, 16)
         >>> mask = seq_len_to_mask(seq_len)
@@ -691,7 +692,7 @@ def seq_len_to_mask(seq_len, max_len=None):
     :param np.ndarray,torch.LongTensor seq_len: shape将是(B,)
     :param int max_len: 将长度pad到这个长度。默认(None)使用的是seq_len中最长的长度。但在nn.DataParallel的场景下可能不同卡的seq_len会有
         区别，所以需要传入一个max_len使得mask的长度是pad到该长度。
-    :return: np.ndarray or torch.Tensor, shape将是(B, max_length)。 元素类似为bool或torch.uint8
+    :return: np.ndarray, torch.Tensor 。shape将是(B, max_length)， 元素类似为bool或torch.uint8
     """
     if isinstance(seq_len, np.ndarray):
         assert len(np.shape(seq_len)) == 1, f"seq_len can only have one dimension, got {len(np.shape(seq_len))}."
@@ -737,7 +738,8 @@ class _pseudo_tqdm:
     def __exit__(self, exc_type, exc_val, exc_tb):
         del self
 
-def iob2(tags:List[str])->List[str]:
+
+def iob2(tags: List[str]) -> List[str]:
     """
     检查数据是否是合法的IOB数据，如果是IOB1会被自动转换为IOB2。两者的差异见
         https://datascience.stackexchange.com/questions/37824/difference-between-iob-and-iob2-format
@@ -760,7 +762,8 @@ def iob2(tags:List[str])->List[str]:
             tags[i] = "B" + tag[1:]
     return tags
 
-def iob2bioes(tags:List[str])->List[str]:
+
+def iob2bioes(tags: List[str]) -> List[str]:
     """
     将iob的tag转换为bioes编码
     :param tags: List[str]. 编码需要是大写的。
@@ -773,12 +776,12 @@ def iob2bioes(tags:List[str])->List[str]:
         else:
             split = tag.split('-')[0]
             if split == 'B':
-                if i+1!=len(tags) and tags[i+1].split('-')[0] == 'I':
+                if i + 1 != len(tags) and tags[i + 1].split('-')[0] == 'I':
                     new_tags.append(tag)
                 else:
                     new_tags.append(tag.replace('B-', 'S-'))
             elif split == 'I':
-                if i + 1<len(tags) and tags[i+1].split('-')[0] == 'I':
+                if i + 1 < len(tags) and tags[i + 1].split('-')[0] == 'I':
                     new_tags.append(tag)
                 else:
                     new_tags.append(tag.replace('I-', 'E-'))
