@@ -14,4 +14,5 @@ fastNLP详细使用教程
    7. 使用Modules和Models快速搭建自定义模型 </tutorials/tutorial_7_modules_models>
    8. 使用Metric快速评测你的模型 </tutorials/tutorial_8_metrics>
    9. 使用Callback自定义你的训练过程 </tutorials/tutorial_9_callback>
+   10. 使用fitlog 辅助 fastNLP 进行科研 </tutorials/tutorial_10_fitlog>
 

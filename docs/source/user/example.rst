@@ -124,6 +124,19 @@ False  False  False
 True   True   True
 =====  =====  ======
 
+csv 表格
+============
+
+.. csv-table::
+   :header: sentence, target
+
+   This is the first instance ., 0
+   Second instance ., 1
+   Third instance ., 1
+   ..., ...
+
+
+
 [重要]各种链接
 ===================
 
@@ -131,7 +144,7 @@ True   True   True
 
 \<\>内表示的是链接地址，\<\>外的是显示到外面的文字
 
-:doc:`根据文件名链接 </user/with_fitlog>`
+:doc:`根据文件名链接 </user/quickstart>`
 
 :mod:`~fastNLP.core.batch`
 

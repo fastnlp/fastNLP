@@ -122,6 +122,9 @@ FastNLP 同样提供了多种删除数据的方法 :func:`~fastNLP.DataSet.drop`
         return words
     dataset.apply(get_words, new_field_name='words')
 
+除了手动处理数据集之外，你还可以使用 fastNLP 提供的各种 :class:`~fastNLP.io.base_loader.DataSetLoader` 来进行数据处理。
+详细请参考这篇教程  :doc:`使用DataSetLoader加载数据集 </tutorials/tutorial_2_load_dataset>` 。
+
 -----------------------------
 DataSet与pad
 -----------------------------
