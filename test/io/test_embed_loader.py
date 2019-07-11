@@ -16,7 +16,7 @@ class TestEmbedLoader(unittest.TestCase):
         self.assertEqual(g_m.shape, (4, 50))
         w_m = EmbedLoader.load_with_vocab(word2vec, vocab, normalize=True)
         self.assertEqual(w_m.shape, (4, 50))
-        self.assertAlmostEqual(np.linalg.norm(w_m, axis=1).sum(), 4)
+        self.assertAlmostEqual(np.linalg.norm(w_m, axis=1).sum(), delta=1e-3)
     
     def test_load_without_vocab(self):
         words = ['the', 'of', 'in', 'a', 'to', 'and']
@@ -28,13 +28,13 @@ class TestEmbedLoader(unittest.TestCase):
             self.assertIn(word, vocab)
         w_m, vocab = EmbedLoader.load_without_vocab(word2vec, normalize=True)
         self.assertEqual(w_m.shape, (8, 50))
-        self.assertAlmostEqual(np.linalg.norm(w_m, axis=1).sum(), 8)
+        self.assertAlmostEqual(np.linalg.norm(w_m, axis=1).sum(), delta=1e-4)
         for word in words:
             self.assertIn(word, vocab)
         # no unk
         w_m, vocab = EmbedLoader.load_without_vocab(word2vec, normalize=True, unknown=None)
         self.assertEqual(w_m.shape, (7, 50))
-        self.assertAlmostEqual(np.linalg.norm(w_m, axis=1).sum(), 7)
+        self.assertAlmostEqual(np.linalg.norm(w_m, axis=1).sum(), delta=1e-4)
         for word in words:
             self.assertIn(word, vocab)
     
