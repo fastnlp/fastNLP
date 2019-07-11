@@ -67,6 +67,21 @@ fastNLP 在 :mod:`~fastNLP.models` 模块中内置了如 :class:`~fastNLP.models
       (fc): Linear(in_features=12, out_features=5, bias=True)
     )
 
+FastNLP 中内置的 models 如下表所示，您可以点击具体的名称查看详细的 API：
+
+.. csv-table::
+   :header: 名称, 介绍
+
+   :class:`~fastNLP.models.CNNText` , 使用 CNN 进行文本分类的模型
+   :class:`~fastNLP.models.SeqLabeling` , 简单的序列标注模型
+   :class:`~fastNLP.models.AdvSeqLabel` , 更大网络结构的序列标注模型
+   :class:`~fastNLP.models.ESIM` , ESIM 模型的实现
+   :class:`~fastNLP.models.StarTransEnc` , 带 word-embedding的Star-Transformer模 型
+   :class:`~fastNLP.models.STSeqLabel` , 用于序列标注的 Star-Transformer 模型
+   :class:`~fastNLP.models.STNLICls` ,用于自然语言推断 (NLI) 的 Star-Transformer 模型
+   :class:`~fastNLP.models.STSeqCls` , 用于分类任务的 Star-Transformer 模型
+   :class:`~fastNLP.models.BiaffineParser` , Biaffine 依存句法分析网络的实现
+
 ----------------------------
 使用 nn.torch 编写模型
 ----------------------------
@@ -165,3 +180,26 @@ FastNLP 完全支持使用 pyTorch 编写的模型，但与 pyTorch 中编写模
         (dropout): Dropout(p=0.5)
       )
     )
+
+FastNLP 中包含的各种模块如下表，您可以点击具体的名称查看详细的 API:
+
+.. csv-table::
+   :header: 名称, 介绍
+
+   :class:`~fastNLP.modules.ConvolutionCharEncoder` , char级别的卷积 encoder
+   :class:`~fastNLP.modules.LSTMCharEncoder` , char级别基于LSTM的 encoder
+   :class:`~fastNLP.modules.ConvMaxpool` , 结合了Convolution和Max-Pooling于一体的模块
+   :class:`~fastNLP.modules.Embedding` , 基础的Embedding模块
+   :class:`~fastNLP.modules.LSTM` , LSTM模块, 轻量封装了PyTorch的LSTM
+   :class:`~fastNLP.modules.StarTransformer` , Star-Transformer 的encoder部分
+   :class:`~fastNLP.modules.TransformerEncoder` , Transformer的encoder模块，不包含embedding层
+   :class:`~fastNLP.modules.VarRNN` , Variational Dropout RNN 模块
+   :class:`~fastNLP.modules.VarLSTM` , Variational Dropout LSTM 模块
+   :class:`~fastNLP.modules.VarGRU` , Variational Dropout GRU 模块
+   :class:`~fastNLP.modules.MaxPool` , Max-pooling模块
+   :class:`~fastNLP.modules.MaxPoolWithMask` , 带mask矩阵的max pooling。在做 max-pooling的时候不会考虑mask值为0的位置。
+   :class:`~fastNLP.modules.MultiHeadAttention` , MultiHead Attention 模块
+   :class:`~fastNLP.modules.MLP` , 简单的多层感知器模块
+   :class:`~fastNLP.modules.ConditionalRandomField` , 条件随机场模块
+   :class:`~fastNLP.modules.viterbi_decode` , 给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数 （与 :class:`~fastNLP.modules.ConditionalRandomField` 配合使用）
+   :class:`~fastNLP.modules.allowed_transitions` , 给定一个id到label的映射表，返回所有可以跳转的列表（与 :class:`~fastNLP.modules.ConditionalRandomField` 配合使用）
