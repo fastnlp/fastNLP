@@ -17,7 +17,7 @@
 
 """
 __all__ = [
-    "BertModel",
+    # "BertModel",
 
     "ConvolutionCharEncoder",
     "LSTMCharEncoder",
