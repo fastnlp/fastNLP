@@ -36,6 +36,9 @@ pip install fastNLP
 python -m spacy download en
 ```
 
+目前使用pip安装fastNLP的版本是0.4.1，有较多功能仍未更新，最新内容以master分支为准。
+fastNLP0.5.0版本将在近期推出，请密切关注。
+
 
 ## fastNLP教程
 
