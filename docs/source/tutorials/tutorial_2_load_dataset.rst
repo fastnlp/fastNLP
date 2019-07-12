@@ -6,7 +6,7 @@
 
 教程目录：
 
-    - `Part I: 数据集信息`_
+    - `Part I: 数据集容器`_
     - `Part II: 数据集的使用方式`_
     - `Part III: 不同数据类型的DataSetLoader`_
     - `Part IV: DataSetLoader举例`_
@@ -14,11 +14,11 @@
 
 
 ----------------------------
-Part I: 数据集信息
+Part I: 数据集容器
 ----------------------------
 
-在fastNLP中，我们使用 :class:`~fastNLP.io.base_loader.DataInfo` 来存储数据集信息。 :class:`~fastNLP.io.base_loader.DataInfo`
-类包含了两个重要内容： `datasets` 和 `vocabs` 。
+在fastNLP中，我们使用 :class:`~fastNLP.io.base_loader.DataBundle` 来存储数据集信息。
+:class:`~fastNLP.io.base_loader.DataBundle` 类包含了两个重要内容： `datasets` 和 `vocabs` 。
 
 `datasets` 是一个 `key` 为数据集名称（如 `train` ， `dev` ，和 `test` 等）， `value` 为 :class:`~fastNLP.DataSet` 的字典。
 
@@ -91,11 +91,11 @@ Part IV: DataSetLoader举例
 
 以Matching任务为例子：
 
-    :class:`~fastNLP.io.data_loader.matching.MatchingLoader`
-        我们在fastNLP当中封装了一个Matching任务数据集的数据加载类： :class:`~fastNLP.io.data_loader.matching.MatchingLoader` .
+    :class:`~fastNLP.io.data_loader.MatchingLoader`
+        我们在fastNLP当中封装了一个Matching任务数据集的数据加载类： :class:`~fastNLP.io.data_loader.MatchingLoader` .
 
         在MatchingLoader类当中我们封装了一个对数据集中的文本内容进行进一步的预处理的函数：
-        :meth:`~fastNLP.io.data_loader.matching.MatchingLoader.process`
+        :meth:`~fastNLP.io.data_loader.MatchingLoader.process`
         这个函数具有各种预处理option，如：
         - 是否将文本转成全小写
         - 是否需要序列长度信息，需要什么类型的序列长度信息
@@ -104,30 +104,59 @@ Part IV: DataSetLoader举例
 
         具体内容参见 :meth:`fastNLP.io.MatchingLoader.process` 。
 
-    :class:`~fastNLP.io.data_loader.matching.SNLILoader`
+    :class:`~fastNLP.io.data_loader.SNLILoader`
         一个关于SNLI数据集的DataSetLoader。SNLI数据集来自
         `SNLI Data Set <https://nlp.stanford.edu/projects/snli/snli_1.0.zip>`_ .
 
-        在 :class:`~fastNLP.io.data_loader.matching.SNLILoader` 的 :meth:`~fastNLP.io.data_loader.matching.SNLILoader._load`
-        函数中，我们用以下代码将数据集内容从文本文件读入内存
+        在 :class:`~fastNLP.io.data_loader.SNLILoader` 的 :meth:`~fastNLP.io.data_loader.SNLILoader._load`
+        函数中，我们用以下代码将数据集内容从文本文件读入内存：
 
         .. code-block:: python
 
-                def _load(self, path):
-                    ds = JsonLoader._load(self, path)  # SNLI数据集原始文件为Json格式，可以采用JsonLoader来读取数据集文件
+                data = SNLILoader().process(
+                    paths='path/to/snli/data', to_lower=False, seq_len_type='seq_len',
+                    get_index=True, concat=False,
+                )
+                print(data)
 
-                    parentheses_table = str.maketrans({'(': None, ')': None})
-                    # 字符串匹配格式：SNLI数据集的文本中由括号分割开的，组成树结构，因此
-                    # 我们将这些括号去除。
+        输出的内容是::
 
-                    ds.apply(lambda ins: ins[Const.INPUTS(0)].translate(parentheses_table).strip().split(),
-                             new_field_name=Const.INPUTS(0))
-                    # 把第一句话的内容用上面的字符串匹配格式进行替换，并将句子分割为一个由单词组成的list
-                    ds.apply(lambda ins: ins[Const.INPUTS(1)].translate(parentheses_table).strip().split(),
-                             new_field_name=Const.INPUTS(1))
-                    # 对第二句话的内容进行同样的预处理
-                    ds.drop(lambda x: x[Const.TARGET] == '-')  # 将标签为'-'的样本丢掉
-                    return ds
+            In total 3 datasets:
+                train has 549367 instances.
+                dev has 9842 instances.
+                test has 9824 instances.
+            In total 2 vocabs:
+                words has 43154 entries.
+                target has 3 entries.
+
+
+        这里的data是一个 :class:`~fastNLP.io.base_loader.DataBundle` ，取 ``datasets`` 字典里的内容即可直接传入
+        :class:`~fastNLP.Trainer` 或者 :class:`~fastNLP.Tester` 进行训练或者测试。
+
+    :class:`~fastNLP.io.data_loader.IMDBLoader`
+        以IMDB数据集为例，在 :class:`~fastNLP.io.data_loader.IMDBLoader` 的 :meth:`~fastNLP.io.data_loader.IMDBLoader._load`
+        函数中，我们用以下代码将数据集内容从文本文件读入内存：
+
+        .. code-block:: python
+
+                data = IMDBLoader().process(
+                    paths={'train': 'path/to/train/file', 'test': 'path/to/test/file'}
+                )
+                print(data)
+
+        输出的内容是::
+
+            In total 3 datasets:
+                train has 22500 instances.
+                test has 25000 instances.
+                dev has 2500 instances.
+            In total 2 vocabs:
+                words has 82846 entries.
+                target has 2 entries.
+
+
+        这里的将原来的train集按9:1的比例分成了训练集和验证集。
+
 
 ------------------------------------------
 Part V: fastNLP封装好的数据集加载器
@@ -138,56 +167,58 @@ fastNLP封装好的数据集加载器可以适用于多种类型的任务：
     - `文本分类任务`_
     - `序列标注任务`_
     - `Matching任务`_
-    - `指代消解任务`_
-    - `摘要任务`_
 
 
 文本分类任务
 -------------------
 
-文本分类任务
+==========================    ==================================================================
+数据集名称                      数据集加载器
+--------------------------    ------------------------------------------------------------------
+IMDb                          :class:`~fastNLP.io.data_loader.IMDBLoader`
+--------------------------    ------------------------------------------------------------------
+SST                           :class:`~fastNLP.io.data_loader.SSTLoader`
+--------------------------    ------------------------------------------------------------------
+SST-2                         :class:`~fastNLP.io.data_loader.SST2Loader`
+--------------------------    ------------------------------------------------------------------
+Yelp Polarity                 :class:`~fastNLP.io.data_loader.YelpLoader`
+--------------------------    ------------------------------------------------------------------
+Yelp Full                     :class:`~fastNLP.io.data_loader.YelpLoader`
+--------------------------    ------------------------------------------------------------------
+MTL16                         :class:`~fastNLP.io.data_loader.MTL16Loader`
+==========================    ==================================================================
 
 
 
 序列标注任务
 -------------------
 
-序列标注任务
+==========================    ==================================================================
+数据集名称                      数据集加载器
+--------------------------    ------------------------------------------------------------------
+Conll                         :class:`~fastNLP.io.data_loader.ConllLoader`
+--------------------------    ------------------------------------------------------------------
+Conll2003                     :class:`~fastNLP.io.data_loader.Conll2003Loader`
+--------------------------    ------------------------------------------------------------------
+人民日报数据集                   :class:`~fastNLP.io.data_loader.PeopleDailyCorpusLoader`
+==========================    ==================================================================
+
 
 
 Matching任务
 -------------------
 
-:class:`~fastNLP.io.data_loader.matching.SNLILoader`
-    一个关于SNLI数据集的DataSetLoader。SNLI数据集来自
-    `SNLI Data Set <https://nlp.stanford.edu/projects/snli/snli_1.0.zip>`_ .
-
-:class:`~fastNLP.io.data_loader.matching.MNLILoader`
-    一个关于MultiNLI数据集的DataSetLoader。MultiNLI数据集来自 `GLUE benchmark <https://gluebenchmark.com/tasks>`_
-
-:class:`~fastNLP.io.data_loader.matching.QNLILoader`
-    一个关于QNLI数据集的DataSetLoader。QNLI数据集来自 `GLUE benchmark <https://gluebenchmark.com/tasks>`_
-
-:class:`~fastNLP.io.data_loader.matching.RTELoader`
-    一个关于Recognizing Textual Entailment数据集(RTE)的DataSetLoader。RTE数据集来自
-    `GLUE benchmark <https://gluebenchmark.com/tasks>`_
-
-:class:`~fastNLP.io.data_loader.matching.QuoraLoader`
-    一个关于Quora数据集的DataSetLoader。
-
-
-
-
-指代消解任务
--------------------
-
-指代消解任务
-
-
-
-摘要任务
--------------------
-
-摘要任务
-
+==========================    ==================================================================
+数据集名称                      数据集加载器
+--------------------------    ------------------------------------------------------------------
+SNLI                          :class:`~fastNLP.io.data_loader.SNLILoader`
+--------------------------    ------------------------------------------------------------------
+MultiNLI                      :class:`~fastNLP.io.data_loader.MNLILoader`
+--------------------------    ------------------------------------------------------------------
+QNLI                          :class:`~fastNLP.io.data_loader.QNLILoader`
+--------------------------    ------------------------------------------------------------------
+RTE                           :class:`~fastNLP.io.data_loader.RTELoader`
+--------------------------    ------------------------------------------------------------------
+Quora Pair Dataset            :class:`~fastNLP.io.data_loader.QuoraLoader`
+==========================    ==================================================================
 

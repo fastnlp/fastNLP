@@ -3,15 +3,14 @@
 import torch.cuda
 from fastNLP.core.utils import cache_results
 from torch.optim import SGD
-from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from fastNLP.core.trainer import Trainer
 from fastNLP import CrossEntropyLoss, AccuracyMetric
-from fastNLP.modules.encoder.embedding import StaticEmbedding, CNNCharEmbedding, StackEmbedding
+from fastNLP.embeddings import StaticEmbedding
 from reproduction.text_classification.model.dpcnn import DPCNN
-from data.yelpLoader import yelpLoader
+from fastNLP.io.data_loader import YelpLoader
 from fastNLP.core.sampler import BucketSampler
-import torch.nn as nn
-from fastNLP.core import LRScheduler, Callback
+from fastNLP.core import LRScheduler
 from fastNLP.core.const import Const as C
 from fastNLP.core.vocabulary import VocabularyOption
 from utils.util_init import set_rng_seeds
@@ -59,7 +58,7 @@ print('RNG SEED: {}'.format(ops.seed))
 
 @cache_results(ops.model_dir_or_name+'-data-cache')
 def load_data():
-    datainfo = yelpLoader(fine_grained=True, lower=True).process(
+    datainfo = YelpLoader(fine_grained=True, lower=True).process(
         paths=ops.datapath, train_ds=['train'], src_vocab_op=ops.src_vocab_op)
     for ds in datainfo.datasets.values():
         ds.apply_field(len, C.INPUT, C.INPUT_LEN)

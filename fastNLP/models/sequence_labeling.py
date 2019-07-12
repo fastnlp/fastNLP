@@ -12,12 +12,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .base_model import BaseModel
+from ..embeddings import embedding
 from ..modules import decoder, encoder
 from ..modules.decoder.crf import allowed_transitions
 from ..core.utils import seq_len_to_mask
 from ..core.const import Const as C
 from ..modules import LSTM
-from ..modules import get_embeddings
+from ..embeddings import get_embeddings
 from ..modules import ConditionalRandomField
 
 
@@ -91,10 +92,10 @@ class SeqLabeling(BaseModel):
     def __init__(self, init_embed, hidden_size, num_classes):
         super(SeqLabeling, self).__init__()
         
-        self.Embedding = encoder.embedding.Embedding(init_embed)
-        self.Rnn = encoder.lstm.LSTM(self.Embedding.embedding_dim, hidden_size)
+        self.Embedding = embedding.Embedding(init_embed)
+        self.Rnn = encoder.LSTM(self.Embedding.embedding_dim, hidden_size)
         self.Linear = nn.Linear(hidden_size, num_classes)
-        self.Crf = decoder.crf.ConditionalRandomField(num_classes)
+        self.Crf = decoder.ConditionalRandomField(num_classes)
         self.mask = None
     
     def forward(self, words, seq_len, target):
@@ -188,7 +189,7 @@ class AdvSeqLabel(nn.Module):
         
         super().__init__()
         
-        self.Embedding = encoder.embedding.Embedding(init_embed)
+        self.Embedding = embedding.Embedding(init_embed)
         self.norm1 = torch.nn.LayerNorm(self.Embedding.embedding_dim)
         self.Rnn = encoder.LSTM(input_size=self.Embedding.embedding_dim, hidden_size=hidden_size, num_layers=2,
                                 dropout=dropout,

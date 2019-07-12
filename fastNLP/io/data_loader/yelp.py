@@ -13,12 +13,17 @@ from ..utils import check_dataloader_paths, get_tokenizer
 
 class YelpLoader(DataSetLoader):
     """
+    别名：:class:`fastNLP.io.YelpLoader` :class:`fastNLP.io.data_loader.YelpLoader`
     读取Yelp_full/Yelp_polarity数据集, DataSet包含fields:
+
         words: list(str), 需要分类的文本
+
         target: str, 文本的标签
+
         chars:list(str),未index的字符列表
 
     数据集：yelp_full/yelp_polarity
+
     :param fine_grained: 是否使用SST-5标准，若 ``False`` , 使用SST-2。Default: ``False``
     :param lower: 是否需要自动转小写，默认为False。
     """

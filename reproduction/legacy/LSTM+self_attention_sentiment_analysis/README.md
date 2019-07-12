@@ -1,5 +1,7 @@
 # Prototype
 
+这是一个很旧版本的reproduction，待修改
+
 ## Word2Idx.py
 A mapping model between words and indexes
 

@@ -10,6 +10,7 @@ from .utils import Option
 from functools import partial
 import numpy as np
 
+
 class VocabularyOption(Option):
     def __init__(self,
                  max_size=None,
@@ -92,7 +93,7 @@ class Vocabulary(object):
         self.rebuild = True
         #  用于承载不需要单独创建entry的词语，具体见from_dataset()方法
         self._no_create_word = Counter()
-
+    
     @_check_build_status
     def update(self, word_lst, no_create_entry=False):
         """依次增加序列中词在词典中的出现频率
@@ -123,7 +124,7 @@ class Vocabulary(object):
         """
         self._add_no_create_entry(word, no_create_entry)
         self.word_count[word] += 1
-
+    
     def _add_no_create_entry(self, word, no_create_entry):
         """
         在新加入word时，检查_no_create_word的设置。
@@ -139,7 +140,7 @@ class Vocabulary(object):
                 self._no_create_word[w] += 1
             elif not no_create_entry and w in self._no_create_word:
                 self._no_create_word.pop(w)
-
+    
     @_check_build_status
     def add_word(self, word, no_create_entry=False):
         """
@@ -193,10 +194,10 @@ class Vocabulary(object):
         self.word2idx.update({w: i + start_idx for i, (w, _) in enumerate(words)})
         self.build_reverse_vocab()
         self.rebuild = False
-
+    
     def build_reverse_vocab(self):
         """
-        基于 "word to index" dict, 构建 "index to word" dict.
+        基于 `word to index` dict, 构建 `index to word` dict.
 
         """
         self.idx2word = {i: w for w, i in self.word2idx.items()}
@@ -250,9 +251,9 @@ class Vocabulary(object):
             # remember to use `field_name`
             vocab.index_dataset(train_data, dev_data, test_data, field_name='words')
 
-        :param datasets: 需要转index的 class:`~fastNLP.DataSet` , 支持一个或多个（list）
+        :param ~fastNLP.DataSet,List[~fastNLP.DataSet] datasets: 需要转index的一个或多个数据集
         :param str field_name: 需要转index的field, 若有多个 DataSet, 每个DataSet都必须有此 field.
-            目前仅支持 ``str`` , ``list(str)`` , ``list(list(str))``
+            目前仅支持 ``str`` , ``List[str]`` , ``List[List[str]]``
         :param str new_field_name: 保存结果的field_name. 若为 ``None`` , 将覆盖原field.
             Default: ``None``
         """
@@ -285,11 +286,11 @@ class Vocabulary(object):
                     raise e
             else:
                 raise RuntimeError("Only DataSet type is allowed.")
-
+    
     @property
     def _no_create_word_length(self):
         return len(self._no_create_word)
-
+    
     def from_dataset(self, *datasets, field_name, no_create_entry_dataset=None):
         """
         使用dataset的对应field中词构建词典::
@@ -297,11 +298,11 @@ class Vocabulary(object):
             # remember to use `field_name`
             vocab.from_dataset(train_data1, train_data2, field_name='words')
 
-        :param datasets: 需要转index的 class:`~fastNLP.DataSet` , 支持一个或多个（list）
-        :param field_name: 可为 ``str`` 或 ``list(str)`` .
+        :param ~fastNLP.DataSet,List[~fastNLP.DataSet] datasets: 需要转index的一个或多个数据集
+        :param str,List[str] field_name: 可为 ``str`` 或 ``List[str]`` .
             构建词典所使用的 field(s), 支持一个或多个field
             若有多个 DataSet, 每个DataSet都必须有这些field.
-            目前仅支持的field结构: ``str`` , ``list(str)`` , ``list(list(str))``
+            目前仅支持的field结构: ``str`` , ``List[str]`` , ``list[List[str]]``
         :param no_create_entry_dataset: 可以传入DataSet, List[DataSet]或者None(默认)，该选项用在接下来的模型会使用pretrain
             的embedding(包括glove, word2vec, elmo与bert)且会finetune的情况。如果仅使用来自于train的数据建立vocabulary，会导致test与dev
             中的数据无法充分利用到来自于预训练embedding的信息，所以在建立词表的时候将test与dev考虑进来会使得最终的结果更好。
@@ -331,7 +332,7 @@ class Vocabulary(object):
                         for words in field:
                             for word in words:
                                 self.add_word(word, no_create_entry=no_create_entry)
-
+        
         for idx, dataset in enumerate(datasets):
             if isinstance(dataset, DataSet):
                 try:
@@ -341,7 +342,7 @@ class Vocabulary(object):
                     raise e
             else:
                 raise TypeError("Only DataSet type is allowed.")
-
+        
         if no_create_entry_dataset is not None:
             partial_construct_vocab = partial(construct_vocab, no_create_entry=True)
             if isinstance(no_create_entry_dataset, DataSet):
@@ -352,7 +353,7 @@ class Vocabulary(object):
                         raise TypeError("Only DataSet type is allowed.")
                     dataset.apply(partial_construct_vocab)
         return self
-
+    
     def _is_word_no_create_entry(self, word):
         """
         判断当前的word是否是不需要创建entry的，具体参见from_dataset的说明
@@ -360,11 +361,10 @@ class Vocabulary(object):
         :return: bool
         """
         return word in self._no_create_word
-
+    
     def to_index(self, w):
         """
-        将词转为数字. 若词不再词典中被记录, 将视为 unknown, 若 ``unknown=None`` , 将抛出
-        ``ValueError``::
+        将词转为数字. 若词不再词典中被记录, 将视为 unknown, 若 ``unknown=None`` , 将抛出``ValueError``::
 
             index = vocab.to_index('abc')
             # equals to

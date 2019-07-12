@@ -12,7 +12,7 @@ from torch.nn import functional as F
 from fastNLP.modules.dropout import TimestepDropout
 from fastNLP.modules.encoder.variational_rnn import VarLSTM
 from fastNLP import seq_len_to_mask
-from fastNLP.modules import Embedding
+from fastNLP.embeddings import Embedding
 
 
 def drop_input_independent(word_embeddings, dropout_emb):

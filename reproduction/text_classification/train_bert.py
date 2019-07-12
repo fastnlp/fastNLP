@@ -2,7 +2,7 @@ import sys
 sys.path.append('../../')
 
 from reproduction.text_classification.data.IMDBLoader import IMDBLoader
-from fastNLP.modules.encoder.embedding import BertEmbedding
+from fastNLP.embeddings import BertEmbedding
 from reproduction.text_classification.model.lstm import BiLSTMSentiment
 from fastNLP import Trainer
 from fastNLP import CrossEntropyLoss, AccuracyMetric
@@ -23,7 +23,7 @@ data_bundle.datasets['train'].drop(lambda x:len(x['words'])>400)
 data_bundle.datasets['dev'].drop(lambda x:len(x['words'])>400)
 data_bundle.datasets['test'].drop(lambda x:len(x['words'])>400)
 bert_embed = BertEmbedding(data_bundle.vocabs['words'], requires_grad=False,
-                           model_dir_or_name="en-base")
+                           model_dir_or_name="en-base-uncased")
 model = BiLSTMSentiment(bert_embed, len(data_bundle.vocabs['target']))
 
 Trainer(data_bundle.datasets['train'], model, optimizer=None, loss=CrossEntropyLoss(), device=0,

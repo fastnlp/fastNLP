@@ -7,11 +7,10 @@ from torch.optim.lr_scheduler import StepLR
 
 from fastNLP.core import Trainer, Tester, AccuracyMetric, Const
 from fastNLP.core.callback import GradientClipCallback, LRScheduler
-from fastNLP.modules.encoder.embedding import ElmoEmbedding, StaticEmbedding
-
-from reproduction.matching.data.MatchingDataLoader import SNLILoader, RTELoader, \
-    MNLILoader, QNLILoader, QuoraLoader
-from reproduction.matching.model.esim import ESIMModel
+from fastNLP.embeddings.static_embedding import StaticEmbedding
+from fastNLP.embeddings.elmo_embedding import ElmoEmbedding
+from fastNLP.io.data_loader import SNLILoader, RTELoader, MNLILoader, QNLILoader, QuoraLoader
+from fastNLP.models.snli import ESIM
 
 
 # define hyper-parameters
@@ -81,7 +80,7 @@ else:
     raise RuntimeError(f'NOT support {arg.embedding} embedding yet!')
 
 # define model
-model = ESIMModel(embedding, num_labels=len(data_info.vocabs[Const.TARGET]))
+model = ESIM(embedding, num_labels=len(data_info.vocabs[Const.TARGET]))
 
 # define optimizer and callback
 optimizer = Adamax(lr=arg.lr, params=model.parameters())

@@ -8,7 +8,7 @@ from torch import nn
 from .base_model import BaseModel
 from ..core.const import Const
 from ..modules.encoder import BertModel
-from ..modules.encoder._bert import BertConfig
+from ..modules.encoder.bert import BertConfig
 
 
 class BertForSequenceClassification(BaseModel):

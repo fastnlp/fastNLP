@@ -1,12 +1,12 @@
 """
 core 模块里实现了 fastNLP 的核心框架，常用的功能都可以从 fastNLP 包中直接 import。当然你也同样可以从 core 模块的子模块中 import，
-例如 Batch 组件有两种 import 的方式::
+例如 :class:`~fastNLP.DataSetIter` 组件有两种 import 的方式::
     
     # 直接从 fastNLP 中 import
-    from fastNLP import Batch
+    from fastNLP import DataSetIter
     
-    # 从 core 模块的子模块 batch 中 import
-    from fastNLP.core.batch import Batch
+    # 从 core 模块的子模块 batch 中 import DataSetIter
+    from fastNLP.core.batch import DataSetIter
 
 对于常用的功能，你只需要在 :doc:`fastNLP` 中查看即可。如果想了解各个子模块的具体作用，您可以在下面找到每个子模块的具体文档。
 

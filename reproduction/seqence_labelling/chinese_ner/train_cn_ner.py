@@ -2,11 +2,11 @@
 
 
 from reproduction.seqence_labelling.chinese_ner.data.ChineseNER import ChineseNERLoader
-from fastNLP.modules.encoder.embedding import StaticEmbedding
+from fastNLP.embeddings import StaticEmbedding
 
 from torch import nn
 import torch
-from fastNLP.modules import get_embeddings
+from fastNLP.embeddings.utils import get_embeddings
 from fastNLP.modules import LSTM
 from fastNLP.modules import ConditionalRandomField
 from fastNLP.modules import allowed_transitions
@@ -73,13 +73,13 @@ class CNBiLSTMCRFNER(nn.Module):
         return self._forward(chars, bigrams, trigrams, seq_len)
 
 # data_bundle = pickle.load(open('caches/msra.pkl', 'rb'))
-@cache_results('caches/msra.pkl', _refresh=False)
+@cache_results('caches/msra.pkl', _refresh=True)
 def get_data():
-    data_bundle = ChineseNERLoader().process('/remote-home/hyan01/exps/fastNLP/others/data/MSRA-NER', bigrams=True)
+    data_bundle = ChineseNERLoader().process('MSRA-NER/', bigrams=True)
     char_embed = StaticEmbedding(data_bundle.vocabs['chars'],
-                                 model_dir_or_name='/remote-home/hyan01/exps/CWS/pretrain/vectors/1grams_t3_m50_corpus.txt')
+                                 model_dir_or_name='cn-char')
     bigram_embed = StaticEmbedding(data_bundle.vocabs['bigrams'],
-                                   model_dir_or_name='/remote-home/hyan01/exps/CWS/pretrain/vectors/2gram_t3_m50_merge.txt')
+                                   model_dir_or_name='cn-bigram')
     return data_bundle, char_embed, bigram_embed
 data_bundle, char_embed, bigram_embed = get_data()
 print(data_bundle)

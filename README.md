@@ -55,12 +55,17 @@ python -m spacy download en
 
 ## 内置组件
 
-大部分用于的 NLP 任务神经网络都可以看做由编码器（encoder）、解码器（decoder）两种模块组成。
+大部分用于的 NLP 任务神经网络都可以看做由词嵌入（embeddings）和两种模块：编码器（encoder）、解码器（decoder）组成。
+
+以文本分类任务为例，下图展示了一个BiLSTM+Attention实现文本分类器的模型流程图：
 
 
 ![](./docs/source/figures/text_classification.png)
 
-fastNLP 在 modules 模块中内置了两种模块的诸多组件，可以帮助用户快速搭建自己所需的网络。 两种模块的功能和常见组件如下:
+fastNLP 在 embeddings 模块中内置了几种不同的embedding：静态embedding（GloVe、word2vec）、上下文相关embedding
+（ELMo、BERT）、字符embedding（基于CNN或者LSTM的CharEmbedding）
+
+与此同时，fastNLP 在 modules 模块中内置了两种模块的诸多组件，可以帮助用户快速搭建自己所需的网络。 两种模块的功能和常见组件如下:
 
 <table>
 <tr>
@@ -103,6 +108,10 @@ fastNLP的大致工作流程如上图所示，而项目结构如下：
 <tr>
     <td><b> fastNLP.modules </b></td>
     <td> 实现了用于搭建神经网络模型的诸多组件 </td>
+</tr>
+<tr>
+    <td><b> fastNLP.embeddings </b></td>
+    <td> 实现了将序列index转为向量序列的功能，包括读取预训练embedding等 </td>
 </tr>
 <tr>
     <td><b> fastNLP.io </b></td>

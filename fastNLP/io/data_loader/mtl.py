@@ -10,9 +10,12 @@ from ..utils import check_dataloader_paths
 
 class MTL16Loader(CSVLoader):
     """
+    别名：:class:`fastNLP.io.MTL16Loader` :class:`fastNLP.io.data_loader.MTL16Loader`
+
     读取MTL16数据集，DataSet包含以下fields:
 
         words: list(str), 需要分类的文本
+
         target: str, 文本的标签
 
     数据来源：https://pan.baidu.com/s/1c2L6vdA

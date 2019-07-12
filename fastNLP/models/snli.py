@@ -8,11 +8,10 @@ import torch.nn.functional as F
 
 from torch.nn import CrossEntropyLoss
 
-from fastNLP.models import BaseModel
-from fastNLP.modules.encoder.embedding import TokenEmbedding
-from fastNLP.modules.encoder.lstm import LSTM
-from fastNLP.core.const import Const
-from fastNLP.core.utils import seq_len_to_mask
+from .base_model import BaseModel
+from ..embeddings.embedding import TokenEmbedding
+from ..core.const import Const
+from ..core.utils import seq_len_to_mask
 
 
 class ESIM(BaseModel):

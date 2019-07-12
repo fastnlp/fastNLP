@@ -13,7 +13,7 @@ from torch import nn
 
 from ..modules.encoder.star_transformer import StarTransformer
 from ..core.utils import seq_len_to_mask
-from ..modules.utils import get_embeddings
+from ..embeddings.utils import get_embeddings
 from ..core.const import Const
 
 

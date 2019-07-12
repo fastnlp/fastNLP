@@ -1,7 +1,7 @@
 """
 tester模块实现了 fastNLP 所需的Tester类，能在提供数据、模型以及metric的情况下进行性能测试。
 
-Example::
+.. code-block::
 
     import numpy as np
     import torch
@@ -60,15 +60,14 @@ class Tester(object):
 
     Tester是在提供数据，模型以及metric的情况下进行性能测试的类。需要传入模型，数据以及metric进行验证。
 
-    :param data: 需要测试的数据集， :class:`~fastNLP.DataSet` 类型
+    :param ~fastNLP.DataSet data: 需要测试的数据集
     :param torch.nn.module model: 使用的模型
-    :param metrics: :class:`~fastNLP.core.metrics.MetricBase` 或者一个列表的 :class:`~fastNLP.core.metrics.MetricBase`
+    :param ~fastNLP.core.metrics.MetricBase,List[~fastNLP.core.metrics.MetricBase] metrics: 测试时使用的metrics
     :param int batch_size: evaluation时使用的batch_size有多大。
     :param str,int,torch.device,list(int) device: 将模型load到哪个设备。默认为None，即Trainer不对模型
         的计算位置进行管理。支持以下的输入:
 
-        1. str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中,
-        可见的第二个GPU中;
+        1. str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中,可见的第一个GPU中,可见的第二个GPU中;
 
         2. torch.device：将模型装载到torch.device上。
 

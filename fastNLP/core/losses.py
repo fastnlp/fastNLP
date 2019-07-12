@@ -208,7 +208,7 @@ class CrossEntropyLoss(LossBase):
     :param seq_len: 句子的长度, 长度之外的token不会计算loss。。
     :param padding_idx: padding的index，在计算loss时将忽略target中标号为padding_idx的内容, 可以通过该值代替
         传入seq_len.
-    :param str reduction: 支持'mean'，'sum'和'none'.
+    :param str reduction: 支持 `mean` ，`sum` 和 `none` .
 
     Example::
 
@@ -265,9 +265,9 @@ class BCELoss(LossBase):
 
     二分类交叉熵损失函数
     
-    :param pred: 参数映射表中`pred`的映射关系，None表示映射关系为`pred`->`pred`
-    :param target: 参数映射表中`target`的映射关系，None表示映射关系为`target`->`target`
-    :param str reduction: 支持'mean'，'sum'和'none'.
+    :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+    :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
+    :param str reduction: 支持 `mean` ，`sum` 和 `none` .
     """
     
     def __init__(self, pred=None, target=None, reduction='mean'):
@@ -286,11 +286,11 @@ class NLLLoss(LossBase):
     
     负对数似然损失函数
     
-    :param pred: 参数映射表中`pred`的映射关系，None表示映射关系为`pred`->`pred`
-    :param target: 参数映射表中`target`的映射关系，None表示映射关系为`target`->`target`
+    :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+    :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
     :param ignore_idx: ignore的index，在计算loss时将忽略target中标号为ignore_idx的内容, 可以通过该值代替
         传入seq_len.
-    :param str reduction: 支持'mean'，'sum'和'none'.
+    :param str reduction: 支持 `mean` ，`sum` 和 `none` .
     """
     
     def __init__(self, pred=None, target=None, ignore_idx=-100, reduction='mean'):
