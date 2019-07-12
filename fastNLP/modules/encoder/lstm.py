@@ -10,10 +10,6 @@ import torch
 import torch.nn as nn
 import torch.nn.utils.rnn as rnn
 
-from ..utils import initial_parameter
-from torch import autograd
-
-
 class LSTM(nn.Module):
     """
     别名：:class:`fastNLP.modules.LSTM`  :class:`fastNLP.modules.encoder.lstm.LSTM`

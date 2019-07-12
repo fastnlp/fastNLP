@@ -443,6 +443,8 @@ class Trainer(object):
 
         if sampler is None:
             sampler = RandomSampler()
+        elif hasattr(sampler, 'set_batch_size'):
+            sampler.set_batch_size(batch_size)
 
         if isinstance(train_data, DataSet):
             self.data_iterator = DataSetIter(

@@ -111,7 +111,7 @@ def _uncompress(src, dst):
 
 class DataBundle:
     """
-    经过处理的数据信息，包括一系列数据集（比如：分开的训练集、验证集和测试集）及它们所用的词表和词嵌入。
+    经过处理的数据信息，包括一系列数据集（比如：分开的训练集、验证集和测试集）以及各个field对应的vocabulary。
 
     :param vocabs: 从名称(字符串)到 :class:`~fastNLP.Vocabulary` 类型的dict
     :param datasets: 从名称(字符串)到 :class:`~fastNLP.DataSet` 类型的dict

@@ -9,7 +9,7 @@
 from torch import nn
 import torch
 # from fastNLP.modules.encoder.transformer import TransformerEncoder
-from reproduction.Chinese_word_segmentation.models.transformer import TransformerEncoder
+from reproduction.legacy.Chinese_word_segmentation.models import TransformerEncoder
 from fastNLP.modules.decoder.crf import ConditionalRandomField,seq_len_to_byte_mask
 from fastNLP.modules.decoder.crf import allowed_transitions
 
@@ -79,7 +79,7 @@ class TransformerCWS(nn.Module):
         return {'pred': probs, 'seq_lens':seq_lens}
 
 
-from reproduction.Chinese_word_segmentation.models.dilated_transformer import TransformerDilateEncoder
+from reproduction.legacy.Chinese_word_segmentation.models import TransformerDilateEncoder
 
 class TransformerDilatedCWS(nn.Module):
     def __init__(self, vocab_num, embed_dim=100, bigram_vocab_num=None, bigram_embed_dim=100, num_bigram_per_char=None,

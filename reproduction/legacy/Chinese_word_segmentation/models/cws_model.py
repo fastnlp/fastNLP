@@ -4,7 +4,7 @@ from torch import nn
 
 from fastNLP.models.base_model import BaseModel
 from fastNLP.modules.decoder.mlp import MLP
-from reproduction.Chinese_word_segmentation.utils import seq_lens_to_mask
+from reproduction.legacy.Chinese_word_segmentation.utils import seq_lens_to_mask
 
 
 class CWSBiLSTMEncoder(BaseModel):

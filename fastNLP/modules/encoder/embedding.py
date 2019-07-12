@@ -689,7 +689,7 @@ class BertEmbedding(ContextualEmbedding):
         outputs = self.model(words)
         outputs = torch.cat([*outputs], dim=-1)
 
-        return self.dropout(words)
+        return self.dropout(outputs)
 
     @property
     def requires_grad(self):
