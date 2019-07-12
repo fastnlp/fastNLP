@@ -10,6 +10,7 @@ fastNLP.embeddings
 ----------
 
 .. toctree::
+   :maxdepth: 1
 
    fastNLP.embeddings.bert_embedding
    fastNLP.embeddings.char_embedding

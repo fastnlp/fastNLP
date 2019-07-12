@@ -17,6 +17,7 @@ Submodules
 ----------
 
 .. toctree::
+   :maxdepth: 1
 
    fastNLP.io.base_loader
    fastNLP.io.config_io

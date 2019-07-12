@@ -10,7 +10,8 @@ fastNLP.modules
 -----------
 
 .. toctree::
-    :titlesonly:
+   :titlesonly:
+   :maxdepth: 1
 
-    fastNLP.modules.decoder
-    fastNLP.modules.encoder
+   fastNLP.modules.decoder
+   fastNLP.modules.encoder

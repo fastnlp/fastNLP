@@ -10,6 +10,7 @@ fastNLP.models
 ----------
 
 .. toctree::
+   :maxdepth: 1
 
    fastNLP.models.biaffine_parser
    fastNLP.models.cnn_text_classification
