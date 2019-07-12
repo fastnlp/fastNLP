@@ -108,6 +108,7 @@ class Vocabulary(object):
         """
         self._add_no_create_entry(word_lst, no_create_entry)
         self.word_count.update(word_lst)
+        return self
     
     @_check_build_status
     def add(self, word, no_create_entry=False):
@@ -124,6 +125,7 @@ class Vocabulary(object):
         """
         self._add_no_create_entry(word, no_create_entry)
         self.word_count[word] += 1
+        return self
     
     def _add_no_create_entry(self, word, no_create_entry):
         """
@@ -170,6 +172,7 @@ class Vocabulary(object):
             则这个词将认为是需要创建单独的vector的。
         """
         self.update(word_lst, no_create_entry=no_create_entry)
+        return self
     
     def build_vocab(self):
         """
@@ -194,13 +197,15 @@ class Vocabulary(object):
         self.word2idx.update({w: i + start_idx for i, (w, _) in enumerate(words)})
         self.build_reverse_vocab()
         self.rebuild = False
-    
+        return self
+
     def build_reverse_vocab(self):
         """
         基于 `word to index` dict, 构建 `index to word` dict.
 
         """
         self.idx2word = {i: w for w, i in self.word2idx.items()}
+        return self
     
     @_check_build_vocab
     def __len__(self):
@@ -286,6 +291,7 @@ class Vocabulary(object):
                     raise e
             else:
                 raise RuntimeError("Only DataSet type is allowed.")
+        return self
     
     @property
     def _no_create_word_length(self):
@@ -416,6 +422,7 @@ class Vocabulary(object):
         self.idx2word = None
         self.rebuild = True
         self._no_create_word.clear()
+        return self
     
     def __getstate__(self):
         """Use to prepare data for pickle.

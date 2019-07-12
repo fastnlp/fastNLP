@@ -17,10 +17,13 @@ import os
 
 import torch
 from torch import nn
-import glob
 import sys
 
+from ..utils import _get_file_name_base_on_postfix
+
 CONFIG_FILE = 'bert_config.json'
+VOCAB_NAME = 'vocab.txt'
+
 
 
 class BertConfig(object):
@@ -437,23 +440,16 @@ class BertModel(nn.Module):
     def from_pretrained(cls, pretrained_model_dir, *inputs, **kwargs):
         state_dict = kwargs.get('state_dict', None)
         kwargs.pop('state_dict', None)
-        cache_dir = kwargs.get('cache_dir', None)
         kwargs.pop('cache_dir', None)
-        from_tf = kwargs.get('from_tf', False)
         kwargs.pop('from_tf', None)
         # Load config
-        config_file = os.path.join(pretrained_model_dir, CONFIG_FILE)
+        config_file = _get_file_name_base_on_postfix(pretrained_model_dir, '.json')
         config = BertConfig.from_json_file(config_file)
         # logger.info("Model config {}".format(config))
         # Instantiate model.
         model = cls(config, *inputs, **kwargs)
         if state_dict is None:
-            files = glob.glob(os.path.join(pretrained_model_dir, '*.bin'))
-            if len(files)==0:
-                raise FileNotFoundError(f"There is no *.bin file in {pretrained_model_dir}")
-            elif len(files)>1:
-                raise FileExistsError(f"There are multiple *.bin files in {pretrained_model_dir}")
-            weights_path = files[0]
+            weights_path = _get_file_name_base_on_postfix(pretrained_model_dir, '.bin')
             state_dict = torch.load(weights_path, map_location='cpu')
 
         old_keys = []
@@ -833,15 +829,13 @@ class BertTokenizer(object):
         给定path，直接读取vocab.
 
         """
-        pretrained_model_name_or_path = os.path.join(model_dir, VOCAB_NAME)
+        pretrained_model_name_or_path = _get_file_name_base_on_postfix(model_dir, '.txt')
         print("loading vocabulary file {}".format(pretrained_model_name_or_path))
         max_len = 512
-        kwargs['max_len'] = min(kwargs.get('max_len', int(1e12)), max_len)
+        kwargs['max_len'] = min(kwargs.get('max_position_embeddings', int(1e12)), max_len)
         # Instantiate tokenizer.
         tokenizer = cls(pretrained_model_name_or_path, *inputs, **kwargs)
         return tokenizer
-
-VOCAB_NAME = 'vocab.txt'
 
 
 class _WordPieceBertModel(nn.Module):

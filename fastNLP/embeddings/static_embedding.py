@@ -9,37 +9,57 @@ import warnings
 from ..core.vocabulary import Vocabulary
 from ..io.file_utils import PRETRAIN_STATIC_FILES, _get_base_url, cached_path
 from .embedding import TokenEmbedding
-
+from ..modules.utils import _get_file_name_base_on_postfix
 
 class StaticEmbedding(TokenEmbedding):
     """
     别名：:class:`fastNLP.embeddings.StaticEmbedding`   :class:`fastNLP.embeddings.static_embedding.StaticEmbedding`
 
-    StaticEmbedding组件. 给定embedding的名称，根据vocab从embedding中抽取相应的数据。该Embedding可以就按照正常的embedding使用了
+    StaticEmbedding组件. 给定预训练embedding的名称或路径，根据vocab从embedding中抽取相应的数据(只会将出现在vocab中的词抽取出来，
+        如果没有找到，则会随机初始化一个值(但如果该word是被标记为no_create_entry的话，则不会单独创建一个值，而是会被指向unk的index))。
+        当前支持自动下载的预训练vector有以下的几种(待补充);
 
     Example::
 
-        >>> embed = StaticEmbedding(vocab, model_dir_or_name='en-glove-6b-50')
+        >>> vocab = Vocabulary().add_word_lst("The whether is good .".split())
+        >>> embed = StaticEmbedding(vocab, model_dir_or_name='en-glove-50')
 
+        >>> vocab = Vocabulary().add_word_lst(["The", 'the', "THE"])
+        >>> embed = StaticEmbedding(vocab, model_dir_or_name="en-glove-50", lower=True)
+        >>> # "the", "The", "THE"它们共用一个vector，且将使用"the"在预训练词表中寻找它们的初始化表示。
+
+        >>> vocab = Vocabulary().add_word_lst(["The", "the", "THE"])
+        >>> embed = StaticEmbedding(vocab, model_dir_or_name=None, embedding_dim=5, lower=True)
+        >>> words = torch.LongTensor([[vocab.to_index(word) for word in ["The", "the", "THE"]]])
+        >>> embed(words)
+        >>> tensor([[[ 0.5773,  0.7251, -0.3104,  0.0777,  0.4849],
+                     [ 0.5773,  0.7251, -0.3104,  0.0777,  0.4849],
+                     [ 0.5773,  0.7251, -0.3104,  0.0777,  0.4849]]],
+                   grad_fn=<EmbeddingBackward>)  # 每种word的输出是一致的。
 
     :param vocab: Vocabulary. 若该项为None则会读取所有的embedding。
-    :param model_dir_or_name: 可以有两种方式调用预训练好的static embedding：第一种是传入embedding的文件名，第二种是传入embedding
-        的名称。目前支持的embedding包括{`en` 或者 `en-glove-840b-300` : glove.840B.300d, `en-glove-6b-50` : glove.6B.50d,
-        `en-word2vec-300` : GoogleNews-vectors-negative300}。第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载。
+    :param model_dir_or_name: 可以有两种方式调用预训练好的static embedding：第一种是传入embedding文件夹(文件夹下应该只有一个
+        以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载。
+        如果输入为None则使用embedding_dim的维度随机初始化一个embedding。
+    :param int embedding_dim: 随机初始化的embedding的维度，仅在model_dir_or_name为None时有效。
     :param bool requires_grad: 是否需要gradient. 默认为True
     :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对象。
     :param bool lower: 是否将vocab中的词语小写后再和预训练的词表进行匹配。如果你的词表中包含大写的词语，或者就是需要单独
         为大写的词语开辟一个vector表示，则将lower设置为False。
     :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
     :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
-    :param bool normailize: 是否对vector进行normalize，使得每个vector的norm为1。
+    :param bool normalize: 是否对vector进行normalize，使得每个vector的norm为1。
     """
-    def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', requires_grad: bool=True, init_method=None,
-                 lower=False, dropout=0, word_dropout=0, normalize=False):
+    def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', embedding_dim=100, requires_grad: bool=True,
+                 init_method=None, lower=False, dropout=0, word_dropout=0, normalize=False):
         super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
         # 得到cache_path
-        if model_dir_or_name.lower() in PRETRAIN_STATIC_FILES:
+        if model_dir_or_name is None:
+            assert embedding_dim>=1, "The dimension of embedding should be larger than 1."
+            embedding_dim = int(embedding_dim)
+            model_path = None
+        elif model_dir_or_name.lower() in PRETRAIN_STATIC_FILES:
             PRETRAIN_URL = _get_base_url('static')
             model_name = PRETRAIN_STATIC_FILES[model_dir_or_name]
             model_url = PRETRAIN_URL + model_name
@@ -47,6 +67,8 @@ class StaticEmbedding(TokenEmbedding):
             # 检查是否存在
         elif os.path.isfile(os.path.expanduser(os.path.abspath(model_dir_or_name))):
             model_path = model_dir_or_name
+        elif os.path.isdir(os.path.expanduser(os.path.abspath(model_dir_or_name))):
+            model_path = _get_file_name_base_on_postfix(model_dir_or_name, '.txt')
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
@@ -64,8 +86,10 @@ class StaticEmbedding(TokenEmbedding):
                         lowered_vocab._no_create_word[lowered_word] += 1
             print(f"All word in vocab have been lowered. There are {len(vocab)} words, {len(lowered_vocab)} unique lowered "
                   f"words.")
-            embedding = self._load_with_vocab(model_path, vocab=lowered_vocab, init_method=init_method,
-                                                          normalize=normalize)
+            if model_path:
+                embedding = self._load_with_vocab(model_path, vocab=lowered_vocab, init_method=init_method)
+            else:
+                embedding = self._randomly_init_embed(len(vocab), embedding_dim, init_method)
             # 需要适配一下
             if not hasattr(self, 'words_to_words'):
                 self.words_to_words = torch.arange(len(lowered_vocab, )).long()
@@ -83,14 +107,35 @@ class StaticEmbedding(TokenEmbedding):
                 words_to_words[index] = self.words_to_words[lowered_vocab.to_index(word)]
             self.words_to_words = words_to_words
         else:
-            embedding = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method,
-                                                          normalize=normalize)
+            if model_path:
+                embedding = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method)
+            else:
+                embedding = self._randomly_init_embed(len(vocab), embedding_dim, init_method)
+        if normalize:
+            embedding /= (torch.norm(embedding, dim=1, keepdim=True) + 1e-12)
         self.embedding = nn.Embedding(num_embeddings=embedding.shape[0], embedding_dim=embedding.shape[1],
                                       padding_idx=vocab.padding_idx,
                                       max_norm=None, norm_type=2, scale_grad_by_freq=False,
                                       sparse=False, _weight=embedding)
         self._embed_size = self.embedding.weight.size(1)
         self.requires_grad = requires_grad
+
+    def _randomly_init_embed(self, num_embedding, embedding_dim, init_embed=None):
+        """
+
+        :param int num_embedding: embedding的entry的数量
+        :param int embedding_dim: embedding的维度大小
+        :param callable init_embed: 初始化方法
+        :return: torch.FloatTensor
+        """
+        embed = torch.zeros(num_embedding, embedding_dim)
+
+        if init_embed is None:
+            nn.init.uniform_(embed, -np.sqrt(3/embedding_dim), np.sqrt(3/embedding_dim))
+        else:
+            init_embed(embed)
+
+        return embed
 
     @property
     def requires_grad(self):
@@ -113,7 +158,7 @@ class StaticEmbedding(TokenEmbedding):
             param.requires_grad = value
 
     def _load_with_vocab(self, embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>',
-                         normalize=True, error='ignore', init_method=None):
+                         error='ignore', init_method=None):
         """
         从embed_filepath这个预训练的词向量中抽取出vocab这个词表的词的embedding。EmbedLoader将自动判断embed_filepath是
         word2vec(第一行只有两个元素)还是glove格式的数据。
@@ -124,7 +169,6 @@ class StaticEmbedding(TokenEmbedding):
         :param dtype: 读出的embedding的类型
         :param str padding: 词表中padding的token
         :param str unknown: 词表中unknown的token
-        :param bool normalize: 是否将每个vector归一化到norm为1
         :param str error: `ignore` , `strict` ; 如果 `ignore` ，错误将自动跳过; 如果 `strict` , 错误将抛出。
             这里主要可能出错的地方在于词表有空行或者词表出现了维度不一致。
         :param init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。默认使用torch.nn.init.zeros_
@@ -173,11 +217,7 @@ class StaticEmbedding(TokenEmbedding):
                     else:
                         matrix[index] = None
 
-            vectors = torch.zeros(len(matrix), dim)
-            if init_method:
-                init_method(vectors)
-            else:
-                nn.init.uniform_(vectors, -np.sqrt(3/dim), np.sqrt(3/dim))
+            vectors = self._randomly_init_embed(len(matrix), dim, init_method)
 
             if vocab._no_create_word_length>0:
                 if vocab.unknown is None:  # 创建一个专门的unknown
@@ -196,9 +236,6 @@ class StaticEmbedding(TokenEmbedding):
                 for index, vec in matrix.items():
                     if vec is not None:
                         vectors[index] = vec
-
-            if normalize:
-                vectors /= (torch.norm(vectors, dim=1, keepdim=True) + 1e-12)
 
             return vectors
 

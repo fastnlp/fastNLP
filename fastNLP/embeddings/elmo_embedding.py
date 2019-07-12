@@ -17,18 +17,27 @@ class ElmoEmbedding(ContextualEmbedding):
     """
     别名：:class:`fastNLP.modules.ElmoEmbedding`   :class:`fastNLP.modules.encoder.embedding.ElmoEmbedding`
 
-    使用ELMo的embedding。初始化之后，只需要传入words就可以得到对应的embedding。
-    我们提供的ELMo预训练模型来自 https://github.com/HIT-SCIR/ELMoForManyLangs
+    使用ELMo的embedding。初始化之后，只需要传入words就可以得到对应的embedding。当前支持的使用名称初始化的模型有以下的这些(待补充)
 
     Example::
+        >>> vocab = Vocabulary().add_word_lst("The whether is good .".split())
+        >>> # 使用不同层的concat的结果
+        >>> embed = ElmoEmbedding(vocab, model_dir_or_name='en', layers='1,2', requires_grad=False)
+        >>> words = torch.LongTensor([[vocab.to_index(word) for word in "The whether is good .".split()]])
+        >>> outputs = embed(words)
+        >>> outputs.size()
+        >>> # torch.Size([1, 5, 2048])
 
-        >>> embedding = ElmoEmbedding(vocab, model_dir_or_name='en', layers='2', requires_grad=True)
+        >>> # 使用不同层的weighted sum。
+        >>> embed = ElmoEmbedding(vocab, model_dir_or_name='en', layers='mix', requires_grad=False)
+        >>> embed.set_mix_weights_requires_grad()  # 使得weighted的权重是可以学习的，但ELMO的LSTM部分是不更新
 
     :param vocab: 词表
-    :param model_dir_or_name: 可以有两种方式调用预训练好的ELMo embedding：第一种是传入ELMo权重的文件名，第二种是传入ELMo版本的名称，
-        目前支持的ELMo包括{`en` : 英文版本的ELMo, `cn` : 中文版本的ELMo,}。第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载
+    :param model_dir_or_name: 可以有两种方式调用预训练好的ELMo embedding：第一种是传入ELMo所在文件夹，该文件夹下面应该有两个文件，
+        其中一个是以json为后缀的配置文件，另一个是以pkl为后缀的权重文件；第二种是传入ELMo版本的名称，将自动查看缓存中是否存在该模型，
+        没有的话将自动下载并缓存。
     :param layers: str, 指定返回的层数, 以,隔开不同的层。如果要返回第二层的结果'2', 返回后两层的结果'1,2'。不同的层的结果
-        按照这个顺序concat起来。默认为'2'。'mix'会使用可学习的权重结合不同层的表示(权重是否可训练与requires_grad保持一致，
+        按照这个顺序concat起来，默认为'2'。'mix'会使用可学习的权重结合不同层的表示(权重是否可训练与requires_grad保持一致，
         初始化权重对三层结果进行mean-pooling, 可以通过ElmoEmbedding.set_mix_weights_requires_grad()方法只将mix weights设置为可学习。)
     :param requires_grad: bool, 该层是否需要gradient, 默认为False.
     :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。

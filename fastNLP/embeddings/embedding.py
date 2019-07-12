@@ -1,3 +1,8 @@
+"""
+该模块中的Embedding主要用于随机初始化的embedding(更推荐使用 :class: StaticEmbedding)，或按照预训练权重初始化Embedding。
+
+"""
+
 
 import torch.nn as nn
 from abc import abstractmethod
@@ -10,18 +15,26 @@ class Embedding(nn.Module):
     """
     别名：:class:`fastNLP.embeddings.Embedding`   :class:`fastNLP.embeddings.embedding.Embedding`
 
-    Embedding组件. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度"""
-    
-    def __init__(self, init_embed, word_dropout=0, dropout=0.0, unk_index=None):
-        """
+    词向量嵌入，支持输入多种方式初始化. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度.
 
-        :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: Embedding的大小(传入tuple(int, int),
-            第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, Embedding, ndarray等则直接使用该值初始化Embedding;
-        :param float word_dropout: 按照一定概率随机将word设置为unk_index，这样可以使得unk这个token得到足够的训练, 且会对网络有
-            一定的regularize的作用。
-        :param float dropout: 对Embedding的输出的dropout。
-        :param int unk_index: drop word时替换为的index。fastNLP的Vocabulary的unk_index默认为1。
-        """
+    Example::
+
+        >>> import numpy as np
+        >>> init_embed = (2000, 100)
+        >>> embed = Embedding(init_embed)  # 随机初始化一个具有2000个词，每个词表示为100维的词向量
+        >>> init_embed = np.zeros((2000, 100))
+        >>> embed = Embedding(init_embed)  # 使用numpy.ndarray的值作为初始化值初始化一个Embedding
+
+    :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: 支持传入Embedding的大小(传入tuple(int, int),
+        第一个int为vocab_zie, 第二个int为embed_dim); 或传入Tensor, Embedding, numpy.ndarray等则直接使用该值初始化Embedding;
+    :param float word_dropout: 按照一定概率随机将word设置为unk_index，这样可以使得unk这个token得到足够的训练, 且会对网络有
+        一定的regularize的作用。设置该值时，必须同时设置unk_index
+    :param float dropout: 对Embedding的输出的dropout。
+    :param int unk_index: drop word时替换为的index。fastNLP的Vocabulary的unk_index默认为1。
+    """
+
+    def __init__(self, init_embed, word_dropout=0, dropout=0.0, unk_index=None):
+
         super(Embedding, self).__init__()
 
         self.embed = get_embeddings(init_embed)
@@ -37,17 +50,17 @@ class Embedding(nn.Module):
         self.unk_index = unk_index
         self.word_dropout = word_dropout
 
-    def forward(self, x):
+    def forward(self, words):
         """
-        :param torch.LongTensor x: [batch, seq_len]
+        :param torch.LongTensor words: [batch, seq_len]
         :return: torch.Tensor : [batch, seq_len, embed_dim]
         """
         if self.word_dropout>0 and self.training:
-            mask = torch.ones_like(x).float() * self.word_dropout
+            mask = torch.ones_like(words).float() * self.word_dropout
             mask = torch.bernoulli(mask).byte()  # dropout_word越大，越多位置为1
-            x = x.masked_fill(mask, self.unk_index)
-        x = self.embed(x)
-        return self.dropout(x)
+            words = words.masked_fill(mask, self.unk_index)
+        words = self.embed(words)
+        return self.dropout(words)
 
     @property
     def num_embedding(self)->int:
@@ -96,6 +109,8 @@ class Embedding(nn.Module):
 class TokenEmbedding(nn.Module):
     def __init__(self, vocab, word_dropout=0.0, dropout=0.0):
         super(TokenEmbedding, self).__init__()
+        if vocab.rebuild:
+            vocab.build_vocab()
         assert vocab.padding is not None, "Vocabulary must have a padding entry."
         self._word_vocab = vocab
         self._word_pad_index = vocab.padding_idx
@@ -176,5 +191,5 @@ class TokenEmbedding(nn.Module):
         return torch.Size(self.num_embedding, self._embed_size)
 
     @abstractmethod
-    def forward(self, *input):
+    def forward(self, words):
         raise NotImplementedError

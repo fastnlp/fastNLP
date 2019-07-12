@@ -17,24 +17,36 @@ class BertEmbedding(ContextualEmbedding):
     """
     别名：:class:`fastNLP.embeddings.BertEmbedding`   :class:`fastNLP.embeddings.bert_embedding.BertEmbedding`
 
-    使用BERT对words进行encode的Embedding。建议将输入的words长度限制在450以内，而不要使用512。这是由于预训练的bert模型长
-        度限制为512个token，而因为输入的word是未进行word piece分割的，在分割之后长度可能会超过最大长度限制。
+    使用BERT对words进行编码的Embedding。建议将输入的words长度限制在430以内，而不要使用512(根据预训练模型参数，可能有变化)。这是由于
+        预训练的bert模型长度限制为512个token，而因为输入的word是未进行word piece分割的(word piece的分割有BertEmbedding在输入word
+        时切分)，在分割之后长度可能会超过最大长度限制。
+
+    BertEmbedding可以支持自动下载权重，当前支持的模型有以下的几种(待补充):
 
     Example::
 
-        >>> embedding = BertEmbedding(vocab, model_dir_or_name='en-base-uncased', requires_grad=False, layers='4,-2,-1')
-
+        >>> import torch
+        >>> from fastNLP import Vocabulary
+        >>> vocab = Vocabulary().add_word_lst("The whether is good .".split())
+        >>> embed = BertEmbedding(vocab, model_dir_or_name='en-base-uncased', requires_grad=False, layers='4,-2,-1')
+        >>> words = torch.LongTensor([[vocab.to_index(word) for word in "The whether is good .".split()]])
+        >>> outputs = embed(words)
+        >>> outputs.size()
+        >>> # torch.Size([1, 5, 2304])
 
     :param fastNLP.Vocabulary vocab: 词表
-    :param str model_dir_or_name: 模型所在目录或者模型的名称。默认值为 ``en-base-uncased``.
-    :param str layers:最终结果中的表示。以','隔开层数，可以以负数去索引倒数几层
+    :param str model_dir_or_name: 模型所在目录或者模型的名称。当传入模型所在目录时，目录中应该包含一个词表文件(以.txt作为后缀名),
+        权重文件(以.bin作为文件后缀名), 配置文件(以.json作为后缀名)。
+    :param str layers:输出embedding表示来自于哪些层，不同层的结果按照layers中的顺序在最后一维concat起来。以','隔开层数，可以以负数
+        去索引倒数几层。
     :param str pool_method: 因为在bert中，每个word会被表示为多个word pieces, 当获取一个word的表示的时候，怎样从它的word pieces
         中计算得到它对应的表示。支持``last``, ``first``, ``avg``, ``max``。
     :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
     :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
     :param bool include_cls_sep: bool，在bert计算句子的表示的时候，需要在前面加上[CLS]和[SEP], 是否在结果中保留这两个内容。 这样
-        会使得word embedding的结果比输入的结果长两个token。在使用 :class::StackEmbedding 可能会遇到问题。
-    :param bool requires_grad: 是否需要gradient。
+        会使得word embedding的结果比输入的结果长两个token。如果该值为True，则在使用 :class::StackEmbedding 可能会与其它类型的
+        embedding长度不匹配。
+    :param bool requires_grad: 是否需要gradient以更新Bert的权重。
     """
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en-base-uncased', layers: str='-1',
                  pool_method: str='first', word_dropout=0, dropout=0, requires_grad: bool=False,

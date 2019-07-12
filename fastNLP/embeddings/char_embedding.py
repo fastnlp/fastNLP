@@ -1,3 +1,8 @@
+"""
+该文件中主要包含的是character的Embedding，包括基于CNN与LSTM的character Embedding。与其它Embedding一样，这里的Embedding输入也是
+词的index而不需要使用词语中的char的index来获取表达。
+"""
+
 
 import torch
 import torch.nn as nn
@@ -14,19 +19,23 @@ class CNNCharEmbedding(TokenEmbedding):
     """
     别名：:class:`fastNLP.embeddings.CNNCharEmbedding`   :class:`fastNLP.embeddings.char_embedding.CNNCharEmbedding`
 
-    使用CNN生成character embedding。CNN的结果为, embed(x) -> Dropout(x) -> CNN(x) -> activation(x) -> pool -> fc -> Dropout.
-        不同的kernel大小的fitler结果是concat起来的。
+    使用CNN生成character embedding。CNN的结构为, embed(x) -> Dropout(x) -> CNN(x) -> activation(x) -> pool -> fc -> Dropout.
+        不同的kernel大小的fitler结果是concat起来然后通过一层fully connected layer, 然后输出word的表示。
 
     Example::
 
-        >>> cnn_char_embed = CNNCharEmbedding(vocab)
-
+        >>> vocab = Vocabulary().add_word_lst("The whether is good .".split())
+        >>> embed = CNNCharEmbedding(vocab, embed_size=50)
+        >>> words = torch.LongTensor([[vocab.to_index(word) for word in "The whether is good .".split()]])
+        >>> outputs = embed(words)
+        >>> outputs.size()
+        >>> # torch.Size([1, 5，50])
 
     :param vocab: 词表
     :param embed_size: 该word embedding的大小，默认值为50.
     :param char_emb_size: character的embed的大小。character是从vocab中生成的。默认值为50.
     :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
-    :param float dropout: 以多大的概率drop
+    :param float dropout: 以多大的概率drop分布式表示与char embedding的输出。
     :param filter_nums: filter的数量. 长度需要和kernels一致。默认值为[40, 30, 20].
     :param kernel_sizes: kernel的大小. 默认值为[5, 3, 1].
     :param pool_method: character的表示在合成一个表示时所使用的pool方法，支持'avg', 'max'.
@@ -154,19 +163,24 @@ class LSTMCharEmbedding(TokenEmbedding):
     """
     别名：:class:`fastNLP.embeddings.LSTMCharEmbedding`   :class:`fastNLP.embeddings.char_embedding.LSTMCharEmbedding`
 
-    使用LSTM的方式对character进行encode. embed(x) -> Dropout(x) -> LSTM(x) -> activation(x) -> pool
+    使用LSTM的方式对character进行encode. embed(x) -> Dropout(x) -> LSTM(x) -> activation(x) -> pool -> Dropout
 
     Example::
 
-        >>> lstm_char_embed = LSTMCharEmbedding(vocab)
+        >>> vocab = Vocabulary().add_word_lst("The whether is good .".split())
+        >>> embed = LSTMCharEmbedding(vocab, embed_size=50)
+        >>> words = torch.LongTensor([[vocab.to_index(word) for word in "The whether is good .".split()]])
+        >>> outputs = embed(words)
+        >>> outputs.size()
+        >>> # torch.Size([1, 5，50])
 
     :param vocab: 词表
     :param embed_size: embedding的大小。默认值为50.
     :param char_emb_size: character的embedding的大小。默认值为50.
     :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
-    :param dropout: 以多大概率drop
+    :param dropout: 以多大概率drop character embedding的输出以及最终的word的输出。
     :param hidden_size: LSTM的中间hidden的大小，如果为bidirectional的，hidden会除二，默认为50.
-    :param pool_method: 支持'max', 'avg'
+    :param pool_method: 支持'max', 'avg'。
     :param activation: 激活函数，支持'relu', 'sigmoid', 'tanh', 或者自定义函数.
     :param min_char_freq: character的最小出现次数。默认值为2.
     :param bidirectional: 是否使用双向的LSTM进行encode。默认值为True。

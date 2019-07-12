@@ -14,9 +14,11 @@ class StackEmbedding(TokenEmbedding):
 
     Example::
 
+        >>> from fastNLP import Vocabulary
+        >>> from fastNLP.embeddings import StaticEmbedding
+        >>> vocab =  Vocabulary().add_word_lst("The whether is good .".split())
         >>> embed_1 = StaticEmbedding(vocab, model_dir_or_name='en-glove-6b-50', requires_grad=True)
         >>> embed_2 = StaticEmbedding(vocab, model_dir_or_name='en-word2vec-300', requires_grad=True)
-
 
     :param embeds: 一个由若干个TokenEmbedding组成的list，要求每一个TokenEmbedding的词表都保持一致
     :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。不同embedidng会在相同的位置
