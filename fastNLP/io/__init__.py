@@ -5,9 +5,9 @@
 
 2. 用于读入不同格式数据的 :doc:`DataSetLoader <fastNLP.io.dataset_loader>` 类
 
-3. 用于保存和载入模型的类, 参考 :doc:`model_io文档</fastNLP.io.model_io>`
+3. 用于读入不同数据集并进行预处理的 :doc:`DataLoader <fastNLP.io.data_loader>` 类
 
-4. 用于读入特定数据并进行处理的 :doc:`DataLoader <fastNLP.io.data_loader>` 类
+4. 用于保存和载入模型的类, 参考 :doc:`model_io文档</fastNLP.io.model_io>`
 
 这些类的使用方法如下:
 """
@@ -16,9 +16,6 @@ __all__ = [
 
     'CSVLoader',
     'JsonLoader',
-    
-    'ModelLoader',
-    'ModelSaver',
 
     'DataBundle',
     'DataSetLoader',
@@ -37,6 +34,9 @@ __all__ = [
     'SSTLoader',
     'SST2Loader',
     'YelpLoader',
+    
+    'ModelLoader',
+    'ModelSaver',
 ]
 
 from .embed_loader import EmbedLoader
