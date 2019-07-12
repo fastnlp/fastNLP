@@ -10,7 +10,7 @@ from ..utils import initial_parameter
 
 class MLP(nn.Module):
     """
-    别名：:class:`fastNLP.modules.MLP`  :class:`fastNLP.modules.decoder.mlp.MLP`
+    别名：:class:`fastNLP.modules.MLP`  :class:`fastNLP.modules.decoder.MLP`
 
     多层感知器
 
@@ -40,7 +40,7 @@ class MLP(nn.Module):
         >>>     print(x)
         >>>     print(y)
     """
-    
+
     def __init__(self, size_layer, activation='relu', output_activation=None, initial_method=None, dropout=0.0):
         super(MLP, self).__init__()
         self.hiddens = nn.ModuleList()
@@ -51,9 +51,9 @@ class MLP(nn.Module):
                 self.output = nn.Linear(size_layer[i - 1], size_layer[i])
             else:
                 self.hiddens.append(nn.Linear(size_layer[i - 1], size_layer[i]))
-        
+
         self.dropout = nn.Dropout(p=dropout)
-        
+
         actives = {
             'relu': nn.ReLU(),
             'tanh': nn.Tanh(),
@@ -82,7 +82,7 @@ class MLP(nn.Module):
             else:
                 raise ValueError("should set activation correctly: {}".format(activation))
         initial_parameter(self, initial_method)
-    
+
     def forward(self, x):
         """
         :param torch.Tensor x: MLP接受的输入
