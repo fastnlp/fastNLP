@@ -35,12 +35,12 @@ Part II: 数据集的使用方式
 
     - _load 函数：从一个数据文件中读取数据到一个 :class:`~fastNLP.DataSet`
     - load 函数（可以使用基类的方法）：从一个或多个数据文件中读取数据到一个或多个 :class:`~fastNLP.DataSet`
-    - process 函数：一个或多个从数据文件中读取数据，并处理成可以训练的 :class:`~fastNLP.io.DataInfo`
+    - process 函数：一个或多个从数据文件中读取数据，并处理成可以训练的 :class:`~fastNLP.io.DataBundle`
 
     **\*process函数中可以调用load函数或_load函数**
 
 DataSetLoader的_load或者load函数返回的 :class:`~fastNLP.DataSet` 当中，内容为数据集的文本信息，process函数返回的
-:class:`~fastNLP.io.DataInfo` 当中， `datasets` 的内容为已经index好的、可以直接被 :class:`~fastNLP.Trainer`
+:class:`~fastNLP.io.DataBundle` 当中， `datasets` 的内容为已经index好的、可以直接被 :class:`~fastNLP.Trainer`
 接受的内容。
 
 --------------------------------------------------------
