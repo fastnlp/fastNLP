@@ -10,8 +10,6 @@ core 模块里实现了 fastNLP 的核心框架，常用的功能都可以从 fa
 
 对于常用的功能，你只需要在 :doc:`fastNLP` 中查看即可。如果想了解各个子模块的具体作用，您可以在下面找到每个子模块的具体文档。
 
-.. todo::
-    介绍core 的子模块的分工，好像必要性不大
     
 """
 from .batch import DataSetIter, BatchIter, TorchLoaderIter
