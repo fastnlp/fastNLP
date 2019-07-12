@@ -45,7 +45,7 @@ fastNLP可以方便地载入各种类型的数据。同时，针对常见的数�
 
 数据处理
 ----------------------------
-我们进一步处理数据。将数据和词表封装在 :class:`~fastNLP.DataInfo` 类中。data是DataInfo的实例。
+我们进一步处理数据。将数据和词表封装在 :class:`~fastNLP.DataBundle` 类中。data是DataBundle的实例。
 我们输入模型的数据包括char embedding，以及word embedding。在数据处理部分，我们尝试完成词表的构建。
 使用fastNLP中的Vocabulary类来构建词表。
 

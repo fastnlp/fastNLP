@@ -5,10 +5,8 @@ import torch
 
 class TimestepDropout(torch.nn.Dropout):
     """
-    别名：:class:`fastNLP.modules.TimestepDropout`
-
-    接受的参数shape为``[batch_size, num_timesteps, embedding_dim)]`` 使用同一个mask(shape为``(batch_size, embedding_dim)``)
-     在每个timestamp上做dropout。
+    传入参数的shape为 ``(batch_size, num_timesteps, embedding_dim)``
+    使用同一个shape为 ``(batch_size, embedding_dim)`` 的mask在每个timestamp上做dropout。
     """
     
     def forward(self, x):

@@ -28,14 +28,14 @@ class VarRnnCellWrapper(nn.Module):
     """
     Wrapper for normal RNN Cells, make it support variational dropout
     """
-    
+
     def __init__(self, cell, hidden_size, input_p, hidden_p):
         super(VarRnnCellWrapper, self).__init__()
         self.cell = cell
         self.hidden_size = hidden_size
         self.input_p = input_p
         self.hidden_p = hidden_p
-    
+
     def forward(self, input_x, hidden, mask_x, mask_h, is_reversed=False):
         """
         :param PackedSequence input_x: [seq_len, batch_size, input_size]
@@ -47,13 +47,13 @@ class VarRnnCellWrapper(nn.Module):
                 hidden: for LSTM, tuple of (h_n, c_n), [batch_size, hidden_size]
                         for other RNN, h_n, [batch_size, hidden_size]
         """
-        
+
         def get_hi(hi, h0, size):
             h0_size = size - hi.size(0)
             if h0_size > 0:
                 return torch.cat([hi, h0[:h0_size]], dim=0)
             return hi[:size]
-        
+
         is_lstm = isinstance(hidden, tuple)
         input, batch_sizes = input_x.data, input_x.batch_sizes
         output = []
@@ -64,7 +64,7 @@ class VarRnnCellWrapper(nn.Module):
         else:
             batch_iter = batch_sizes
             idx = 0
-        
+
         if is_lstm:
             hn = (hidden[0].clone(), hidden[1].clone())
         else:
@@ -91,7 +91,7 @@ class VarRnnCellWrapper(nn.Module):
                 hi = cell(input_i, hi)
                 hn[:size] = hi
                 output.append(hi)
-        
+
         if is_reversed:
             output = list(reversed(output))
         output = torch.cat(output, dim=0)
@@ -117,7 +117,7 @@ class VarRNNBase(nn.Module):
     :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
     :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``
     """
-    
+
     def __init__(self, mode, Cell, input_size, hidden_size, num_layers=1,
                  bias=True, batch_first=False,
                  input_dropout=0, hidden_dropout=0, bidirectional=False):
@@ -141,7 +141,7 @@ class VarRNNBase(nn.Module):
                     cell, self.hidden_size, input_dropout, hidden_dropout))
         initial_parameter(self)
         self.is_lstm = (self.mode == "LSTM")
-    
+
     def _forward_one(self, n_layer, n_direction, input, hx, mask_x, mask_h):
         is_lstm = self.is_lstm
         idx = self.num_directions * n_layer + n_direction
@@ -150,7 +150,7 @@ class VarRNNBase(nn.Module):
         output_x, hidden_x = cell(
             input, hi, mask_x, mask_h, is_reversed=(n_direction == 1))
         return output_x, hidden_x
-    
+
     def forward(self, x, hx=None):
         """
 
@@ -170,13 +170,13 @@ class VarRNNBase(nn.Module):
         else:
             max_batch_size = int(x.batch_sizes[0])
         x, batch_sizes = x.data, x.batch_sizes
-        
+
         if hx is None:
             hx = x.new_zeros(self.num_layers * self.num_directions,
                              max_batch_size, self.hidden_size, requires_grad=True)
             if is_lstm:
                 hx = (hx, hx.new_zeros(hx.size(), requires_grad=True))
-        
+
         mask_x = x.new_ones((max_batch_size, self.input_size))
         mask_out = x.new_ones(
             (max_batch_size, self.hidden_size * self.num_directions))
@@ -185,7 +185,7 @@ class VarRNNBase(nn.Module):
                               training=self.training, inplace=True)
         nn.functional.dropout(mask_out, p=self.hidden_dropout,
                               training=self.training, inplace=True)
-        
+
         hidden = x.new_zeros(
             (self.num_layers * self.num_directions, max_batch_size, self.hidden_size))
         if is_lstm:
@@ -207,22 +207,22 @@ class VarRNNBase(nn.Module):
                 else:
                     hidden[idx] = hidden_x
             x = torch.cat(output_list, dim=-1)
-        
+
         if is_lstm:
             hidden = (hidden, cellstate)
-        
+
         if is_packed:
             output = PackedSequence(x, batch_sizes)
         else:
             x = PackedSequence(x, batch_sizes)
             output, _ = pad_packed_sequence(x, batch_first=self.batch_first)
-        
+
         return output, hidden
 
 
 class VarLSTM(VarRNNBase):
     """
-    别名：:class:`fastNLP.modules.VarLSTM`  :class:`fastNLP.modules.encoder.variational_rnn.VarLSTM`
+    别名：:class:`fastNLP.modules.VarLSTM`  :class:`fastNLP.modules.encoder.VarLSTM`
 
     Variational Dropout LSTM.
 
@@ -236,18 +236,18 @@ class VarLSTM(VarRNNBase):
     :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
     :param bidirectional: 若为 ``True``, 使用双向的LSTM. Default: ``False``
     """
-    
+
     def __init__(self, *args, **kwargs):
         super(VarLSTM, self).__init__(
             mode="LSTM", Cell=nn.LSTMCell, *args, **kwargs)
-    
+
     def forward(self, x, hx=None):
         return super(VarLSTM, self).forward(x, hx)
 
 
 class VarRNN(VarRNNBase):
     """
-    别名：:class:`fastNLP.modules.VarRNN`  :class:`fastNLP.modules.encoder.variational_rnn.VarRNN`
+    别名：:class:`fastNLP.modules.VarRNN`  :class:`fastNLP.modules.encoder.VarRNN`
 
     Variational Dropout RNN.
 
@@ -261,18 +261,18 @@ class VarRNN(VarRNNBase):
     :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
     :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``
     """
-    
+
     def __init__(self, *args, **kwargs):
         super(VarRNN, self).__init__(
             mode="RNN", Cell=nn.RNNCell, *args, **kwargs)
-    
+
     def forward(self, x, hx=None):
         return super(VarRNN, self).forward(x, hx)
 
 
 class VarGRU(VarRNNBase):
     """
-    别名：:class:`fastNLP.modules.VarGRU`  :class:`fastNLP.modules.encoder.variational_rnn.VarGRU`
+    别名：:class:`fastNLP.modules.VarGRU`  :class:`fastNLP.modules.encoder.VarGRU`
 
     Variational Dropout GRU.
 
@@ -286,10 +286,10 @@ class VarGRU(VarRNNBase):
     :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
     :param bidirectional: 若为 ``True``, 使用双向的GRU. Default: ``False``
     """
-    
+
     def __init__(self, *args, **kwargs):
         super(VarGRU, self).__init__(
             mode="GRU", Cell=nn.GRUCell, *args, **kwargs)
-    
+
     def forward(self, x, hx=None):
         return super(VarGRU, self).forward(x, hx)

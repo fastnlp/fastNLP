@@ -1,11 +1,11 @@
-
-
-
 """
 这个页面的代码很大程度上参考(复制粘贴)了https://github.com/huggingface/pytorch-pretrained-BERT的代码， 如果你发现该代码对你
     有用，也请引用一下他们。
 """
 
+__all__ = [
+    "BertModel"
+]
 
 import collections
 
@@ -29,6 +29,7 @@ VOCAB_NAME = 'vocab.txt'
 class BertConfig(object):
     """Configuration class to store the configuration of a `BertModel`.
     """
+
     def __init__(self,
                  vocab_size_or_config_json_file,
                  hidden_size=768,
@@ -67,8 +68,7 @@ class BertConfig(object):
                 initializing all weight matrices.
             layer_norm_eps: The epsilon used by LayerNorm.
         """
-        if isinstance(vocab_size_or_config_json_file, str) or (sys.version_info[0] == 2
-                        and isinstance(vocab_size_or_config_json_file, unicode)):
+        if isinstance(vocab_size_or_config_json_file, str):
             with open(vocab_size_or_config_json_file, "r", encoding='utf-8') as reader:
                 json_config = json.loads(reader.read())
             for key, value in json_config.items():
@@ -153,6 +153,7 @@ class BertLayerNorm(nn.Module):
 class BertEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings.
     """
+
     def __init__(self, config):
         super(BertEmbeddings, self).__init__()
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=0)
@@ -262,7 +263,7 @@ class BertIntermediate(nn.Module):
     def __init__(self, config):
         super(BertIntermediate, self).__init__()
         self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
-        if isinstance(config.hidden_act, str) or (sys.version_info[0] == 2 and isinstance(config.hidden_act, unicode)):
+        if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
@@ -334,7 +335,10 @@ class BertPooler(nn.Module):
 
 
 class BertModel(nn.Module):
-    """BERT(Bidirectional Embedding Representations from Transformers).
+    """
+    别名：:class:`fastNLP.modules.BertModel`   :class:`fastNLP.modules.encoder.BertModel`
+
+    BERT(Bidirectional Embedding Representations from Transformers).
 
     如果你想使用预训练好的权重矩阵，请在以下网址下载.
     sources::
@@ -576,6 +580,7 @@ def load_vocab(vocab_file):
             index += 1
     return vocab
 
+
 class BasicTokenizer(object):
     """Runs basic tokenization (punctuation splitting, lower casing, etc.)."""
 
@@ -761,8 +766,8 @@ class BertTokenizer(object):
             [(ids, tok) for tok, ids in self.vocab.items()])
         self.do_basic_tokenize = do_basic_tokenize
         if do_basic_tokenize:
-          self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case,
-                                                never_split=never_split)
+            self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case,
+                                                  never_split=never_split)
         self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
         self.max_len = max_len if max_len is not None else int(1e12)
 
@@ -817,7 +822,7 @@ class BertTokenizer(object):
             for token, token_index in sorted(self.vocab.items(), key=lambda kv: kv[1]):
                 if index != token_index:
                     print("Saving vocabulary to {}: vocabulary indices are not consecutive."
-                                   " Please check that the vocabulary is not corrupted!".format(vocab_file))
+                          " Please check that the vocabulary is not corrupted!".format(vocab_file))
                     index = token_index
                 writer.write(token + u'\n')
                 index += 1
@@ -837,13 +842,13 @@ class BertTokenizer(object):
         tokenizer = cls(pretrained_model_name_or_path, *inputs, **kwargs)
         return tokenizer
 
-
 class _WordPieceBertModel(nn.Module):
     """
     这个模块用于直接计算word_piece的结果.
 
     """
-    def __init__(self, model_dir:str, layers:str='-1'):
+
+    def __init__(self, model_dir: str, layers: str = '-1'):
         super().__init__()
 
         self.tokenzier = BertTokenizer.from_pretrained(model_dir)
@@ -852,11 +857,11 @@ class _WordPieceBertModel(nn.Module):
         encoder_layer_number = len(self.encoder.encoder.layer)
         self.layers = list(map(int, layers.split(',')))
         for layer in self.layers:
-            if layer<0:
-                assert -layer<=encoder_layer_number, f"The layer index:{layer} is out of scope for " \
+            if layer < 0:
+                assert -layer <= encoder_layer_number, f"The layer index:{layer} is out of scope for " \
                     f"a bert model with {encoder_layer_number} layers."
             else:
-                assert layer<encoder_layer_number, f"The layer index:{layer} is out of scope for " \
+                assert layer < encoder_layer_number, f"The layer index:{layer} is out of scope for " \
                     f"a bert model with {encoder_layer_number} layers."
 
         self._cls_index = self.tokenzier.vocab['[CLS]']
@@ -872,15 +877,16 @@ class _WordPieceBertModel(nn.Module):
         :param field_name: 基于哪一列index
         :return:
         """
+
         def convert_words_to_word_pieces(words):
             word_pieces = []
             for word in words:
                 tokens = self.tokenzier.wordpiece_tokenizer.tokenize(word)
                 word_piece_ids = self.tokenzier.convert_tokens_to_ids(tokens)
                 word_pieces.extend(word_piece_ids)
-            if word_pieces[0]!=self._cls_index:
+            if word_pieces[0] != self._cls_index:
                 word_pieces.insert(0, self._cls_index)
-            if word_pieces[-1]!=self._sep_index:
+            if word_pieces[-1] != self._sep_index:
                 word_pieces.insert(-1, self._sep_index)
             return word_pieces
 
@@ -904,10 +910,9 @@ class _WordPieceBertModel(nn.Module):
 
         attn_masks = word_pieces.ne(self._wordpiece_pad_index)
         bert_outputs, _ = self.encoder(word_pieces, token_type_ids=token_type_ids, attention_mask=attn_masks,
-                                           output_all_encoded_layers=True)
+                                       output_all_encoded_layers=True)
         # output_layers = [self.layers]  # len(self.layers) x batch_size x max_word_piece_length x hidden_size
         outputs = bert_outputs[0].new_zeros((len(self.layers), batch_size, max_len, bert_outputs[0].size(-1)))
         for l_index, l in enumerate(self.layers):
             outputs[l_index] = bert_outputs[l]
         return outputs
-

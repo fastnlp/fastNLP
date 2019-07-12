@@ -44,10 +44,10 @@ Callback的构建和使用
 
     这里，:class:`~fastNLP.Callback` 中所有以 ``on_`` 开头的类方法会在 :class:`~fastNLP.Trainer` 的训练中在特定时间调用。
     如 on_train_begin() 会在训练开始时被调用，on_epoch_end() 会在每个 epoch 结束时调用。
-    具体有哪些类方法，参见文档。
+    具体有哪些类方法，参见文档 :class:`~fastNLP.Callback` 。
 
     另外，为了使用方便，可以在 :class:`~fastNLP.Callback` 内部访问 :class:`~fastNLP.Trainer` 中的属性，如 optimizer, epoch, step，分别对应训练时的优化器，当前epoch数，和当前的总step数。
-    具体可访问的属性，参见文档。
+    具体可访问的属性，参见文档 :class:`~fastNLP.Callback` 。
 
 使用Callback
     在定义好 :class:`~fastNLP.Callback` 之后，就能将它传入Trainer的 ``callbacks`` 参数，在实际训练时使用。

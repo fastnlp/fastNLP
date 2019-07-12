@@ -130,6 +130,8 @@ def _find_cycle(vertices, edges):
 
 class GraphParser(BaseModel):
     """
+    别名：:class:`fastNLP.models.GraphParser`  :class:`fastNLP.models.baffine_parser.GraphParser`
+
     基于图的parser base class, 支持贪婪解码和最大生成树解码
     """
     

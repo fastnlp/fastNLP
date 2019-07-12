@@ -1,10 +1,10 @@
 """
-    本模块实现了两种序列标注模型
+    本模块实现了几种序列标注模型
 """
 __all__ = [
     "SeqLabeling",
     "AdvSeqLabel",
-    "BiLSTMCRF"
+    # "BiLSTMCRF"
 ]
 
 import torch
@@ -25,7 +25,10 @@ from ..modules import ConditionalRandomField
 class BiLSTMCRF(BaseModel):
     """
     结构为BiLSTM + FC + Dropout + CRF.
-    TODO 补充文档
+
+    .. todo::
+        继续补充文档
+
     :param embed: tuple:
     :param num_classes:
     :param num_layers:

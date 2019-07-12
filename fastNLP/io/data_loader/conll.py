@@ -58,7 +58,7 @@ class ConllLoader(DataSetLoader):
 
 class Conll2003Loader(ConllLoader):
     """
-    别名：:class:`fastNLP.io.Conll2003Loader` :class:`fastNLP.io.dataset_loader.Conll2003Loader`
+    别名：:class:`fastNLP.io.Conll2003Loader` :class:`fastNLP.io.data_loader.Conll2003Loader`
 
     读取Conll2003数据
 
