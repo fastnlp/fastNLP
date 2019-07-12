@@ -10,9 +10,10 @@ import torch
 import torch.nn as nn
 import torch.nn.utils.rnn as rnn
 
+
 class LSTM(nn.Module):
     """
-    别名：:class:`fastNLP.modules.LSTM`  :class:`fastNLP.modules.encoder.lstm.LSTM`
+    别名：:class:`fastNLP.modules.LSTM`  :class:`fastNLP.modules.encoder.LSTM`
 
     LSTM 模块, 轻量封装的Pytorch LSTM. 在提供seq_len的情况下，将自动使用pack_padded_sequence; 同时默认将forget gate的bias初始化
         为1; 且可以应对DataParallel中LSTM的使用问题。
@@ -26,7 +27,7 @@ class LSTM(nn.Module):
         :(batch, seq, feature). Default: ``False``
     :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
     """
-    
+
     def __init__(self, input_size, hidden_size=100, num_layers=1, dropout=0.0, batch_first=True,
                  bidirectional=False, bias=True):
         super(LSTM, self).__init__()

@@ -17,22 +17,30 @@
 
 """
 __all__ = [
-    # "BertModel",
+    "BertModel",
+
     "ConvolutionCharEncoder",
     "LSTMCharEncoder",
+
     "ConvMaxpool",
+
     "LSTM",
+
     "StarTransformer",
+
     "TransformerEncoder",
+
     "VarRNN",
     "VarLSTM",
     "VarGRU",
-    
+
     "MaxPool",
     "MaxPoolWithMask",
     "AvgPool",
+    "AvgPoolWithMask",
+
     "MultiHeadAttention",
-    
+
     "MLP",
     "ConditionalRandomField",
     "viterbi_decode",

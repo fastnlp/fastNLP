@@ -1,17 +1,17 @@
 __all__ = [
     "BertModel",
-    
+
     "ConvolutionCharEncoder",
     "LSTMCharEncoder",
-    
+
     "ConvMaxpool",
-    
+
     "LSTM",
-    
+
     "StarTransformer",
-    
+
     "TransformerEncoder",
-    
+
     "VarRNN",
     "VarLSTM",
     "VarGRU",
