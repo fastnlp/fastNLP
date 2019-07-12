@@ -1,7 +1,7 @@
-fastNLP.core.instance
+fastNLP.io.config\_io
 =====================
 
-.. automodule:: fastNLP.core.instance
+.. automodule:: fastNLP.io.config_io
    :members:
    :undoc-members:
    :show-inheritance:

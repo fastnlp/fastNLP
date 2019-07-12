@@ -1,7 +1,7 @@
-fastNLP.io.dataset\_loader
+fastNLP.models.base\_model
 ==========================
 
-.. automodule:: fastNLP.io.dataset_loader
+.. automodule:: fastNLP.models.base_model
    :members:
    :undoc-members:
    :show-inheritance:

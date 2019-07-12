@@ -2,9 +2,9 @@ fastNLP.modules
 ===============
 
 .. automodule:: fastNLP.modules
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 子模块
 -----------

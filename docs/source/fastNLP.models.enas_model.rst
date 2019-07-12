@@ -1,7 +1,7 @@
-fastNLP.io.dataset\_loader
+fastNLP.models.enas\_model
 ==========================
 
-.. automodule:: fastNLP.io.dataset_loader
+.. automodule:: fastNLP.models.enas_model
    :members:
    :undoc-members:
    :show-inheritance:

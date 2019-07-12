@@ -1,7 +1,7 @@
-fastNLP.models.snli
+fastNLP.models.bert
 ===================
 
-.. automodule:: fastNLP.models.snli
+.. automodule:: fastNLP.models.bert
    :members:
    :undoc-members:
    :show-inheritance:
