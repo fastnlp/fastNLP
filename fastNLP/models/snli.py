@@ -15,7 +15,10 @@ from ..core.utils import seq_len_to_mask
 
 
 class ESIM(BaseModel):
-    """ESIM model的一个PyTorch实现
+    """
+    别名：:class:`fastNLP.models.ESIM`  :class:`fastNLP.models.snli.ESIM`
+
+    ESIM model的一个PyTorch实现
     论文参见： https://arxiv.org/pdf/1609.06038.pdf
 
     :param fastNLP.TokenEmbedding init_embedding: 初始化的TokenEmbedding
