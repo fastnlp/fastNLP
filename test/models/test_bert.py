@@ -8,8 +8,9 @@ from fastNLP.models.bert import *
 class TestBert(unittest.TestCase):
     def test_bert_1(self):
         from fastNLP.core.const import Const
+        from fastNLP.modules.encoder.bert import BertConfig
 
-        model = BertForSequenceClassification(2)
+        model = BertForSequenceClassification(2, BertConfig(32000))
 
         input_ids = torch.LongTensor([[31, 51, 99], [15, 5, 0]])
         input_mask = torch.LongTensor([[1, 1, 1], [1, 1, 0]])
@@ -22,8 +23,9 @@ class TestBert(unittest.TestCase):
 
     def test_bert_2(self):
         from fastNLP.core.const import Const
+        from fastNLP.modules.encoder.bert import BertConfig
 
-        model = BertForMultipleChoice(2)
+        model = BertForMultipleChoice(2, BertConfig(32000))
 
         input_ids = torch.LongTensor([[31, 51, 99], [15, 5, 0]])
         input_mask = torch.LongTensor([[1, 1, 1], [1, 1, 0]])
@@ -36,8 +38,9 @@ class TestBert(unittest.TestCase):
 
     def test_bert_3(self):
         from fastNLP.core.const import Const
+        from fastNLP.modules.encoder.bert import BertConfig
 
-        model = BertForTokenClassification(7)
+        model = BertForTokenClassification(7, BertConfig(32000))
 
         input_ids = torch.LongTensor([[31, 51, 99], [15, 5, 0]])
         input_mask = torch.LongTensor([[1, 1, 1], [1, 1, 0]])
@@ -50,8 +53,9 @@ class TestBert(unittest.TestCase):
 
     def test_bert_4(self):
         from fastNLP.core.const import Const
+        from fastNLP.modules.encoder.bert import BertConfig
 
-        model = BertForQuestionAnswering()
+        model = BertForQuestionAnswering(BertConfig(32000))
 
         input_ids = torch.LongTensor([[31, 51, 99], [15, 5, 0]])
         input_mask = torch.LongTensor([[1, 1, 1], [1, 1, 0]])

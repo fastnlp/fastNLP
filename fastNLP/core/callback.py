@@ -2,11 +2,11 @@ r"""
 callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:`~fastNLP.Trainer` 类。
 
 虽然Trainer本身已经集成了一些功能，但仍然不足以囊括训练过程中可能需要到的功能，
-比如负采样，learning rate decay, Early Stop等。
-为了解决这个问题fastNLP引入了callback的机制，Callback 是一种在Trainer训练过程中特定阶段会运行的函数集合。
-关于Trainer的详细文档，请参见 :doc:`trainer 模块<fastNLP.core.trainer>`
+比如负采样，learning rate decay 和 early stop等。
+为了解决这个问题，fastNLP引入了callback的机制，:class:`~fastNLP.Callback` 是一种在Trainer训练过程中特定阶段会运行的函数集合。
+关于 :class:`~fastNLP.Trainer` 的详细文档，请参见 :doc:`trainer 模块<fastNLP.core.trainer>`
 
-我们将 :meth:`~fastNLP.Train.train` 这个函数内部分为以下的阶段，在对应阶段会触发相应的调用::
+我们将 :meth:`~fastNLP.Trainer.train` 这个函数内部分为以下的阶段，在对应阶段会触发相应的调用::
 
     callback.on_train_begin()  # 开始进行训练
     for i in range(1, n_epochs+1):
@@ -31,8 +31,8 @@ callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:
     callback.on_train_end() # 训练结束
     callback.on_exception() # 这是一个特殊的步骤，在训练过程中遭遇exception会跳转到这里。
 
-如下面的例子所示，我们可以使用内置的 callback 类，或者继承 :class:`~fastNLP.core.callback.Callback`
-定义自己的 callback 类::
+如下面的例子所示，我们可以使用内置的 callback 组件，或者继承 :class:`~fastNLP.core.callback.Callback`
+定义自己的 callback 组件::
     
     from fastNLP import Callback, EarlyStopCallback, Trainer, CrossEntropyLoss, AccuracyMetric
     from fastNLP.models import CNNText
@@ -66,6 +66,8 @@ import os
 
 import torch
 from copy import deepcopy
+import sys
+from .utils import _save_model
 
 try:
     from tensorboardX import SummaryWriter
@@ -113,7 +115,7 @@ class Callback(object):
     
     @property
     def n_steps(self):
-        """Trainer一共会运行多少步"""
+        """Trainer一共会采多少个batch。当Trainer中update_every设置为非1的值时，该值不等于update的次数"""
         return self._trainer.n_steps
     
     @property
@@ -181,7 +183,7 @@ class Callback(object):
         :param dict batch_x: DataSet中被设置为input的field的batch。
         :param dict batch_y: DataSet中被设置为target的field的batch。
         :param list(int) indices: 这次采样使用到的indices，可以通过DataSet[indices]获取出这个batch采出的Instance，在一些
-            情况下可以帮助定位是哪个Sample导致了错误。仅在Trainer的prefetch为False时可用。
+            情况下可以帮助定位是哪个Sample导致了错误。仅当num_workers=0时有效。
         :return:
         """
         pass
@@ -399,10 +401,11 @@ class GradientClipCallback(Callback):
         self.clip_value = clip_value
     
     def on_backward_end(self):
-        if self.parameters is None:
-            self.clip_fun(self.model.parameters(), self.clip_value)
-        else:
-            self.clip_fun(self.parameters, self.clip_value)
+        if self.step%self.update_every==0:
+            if self.parameters is None:
+                self.clip_fun(self.model.parameters(), self.clip_value)
+            else:
+                self.clip_fun(self.parameters, self.clip_value)
 
 
 class EarlyStopCallback(Callback):
@@ -445,10 +448,10 @@ class FitlogCallback(Callback):
         并将验证结果写入到fitlog中。这些数据集的结果是根据dev上最好的结果报道的，即如果dev在第3个epoch取得了最佳，则
         fitlog中记录的关于这些数据集的结果就是来自第三个epoch的结果。
 
-    :param DataSet,dict(DataSet) data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
+    :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
         DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。若tester不为None时，data需要通过
         dict的方式传入。如果仅传入DataSet, 则被命名为test
-    :param Tester tester: Tester对象，将在on_valid_end时调用。tester中的DataSet会被称为为`test`
+    :param ~fastNLP.Tester tester: Tester对象，将在on_valid_end时调用。tester中的DataSet会被称为为`test`
     :param int log_loss_every: 多少个step记录一次loss(记录的是这几个batch的loss平均值)，如果数据集较大建议将该值设置得
         大一些，不然会导致log文件巨大。默认为0, 即不要记录loss。
     :param int verbose: 是否在终端打印evaluation的结果，0不打印。
@@ -548,7 +551,7 @@ class LRScheduler(Callback):
         else:
             raise ValueError(f"Expect torch.optim.lr_scheduler for LRScheduler. Got {type(lr_scheduler)}.")
     
-    def on_epoch_begin(self):
+    def on_epoch_end(self):
         self.scheduler.step(self.epoch)
 
 
@@ -671,7 +674,7 @@ class TensorboardCallback(Callback):
     
     .. warning::
         fastNLP 已停止对此功能的维护，请等待 fastNLP 兼容 PyTorch1.1 的下一个版本。
-        或者使用和 fastNLP 高度配合的 fitlog（参见 :doc:`/user/with_fitlog` ）。
+        或者使用和 fastNLP 高度配合的 fitlog（参见 :doc:`/tutorials/tutorial_10_fitlog` ）。
         
     """
     
@@ -734,6 +737,132 @@ class TensorboardCallback(Callback):
         if hasattr(self, "_summary_writer"):
             self._summary_writer.close()
             del self._summary_writer
+
+
+class WarmupCallback(Callback):
+    """
+    按一定的周期调节Learning rate的大小。
+
+    :param int,float warmup: 如果warmup为int，则在该step之前，learning rate根据schedule的策略变化; 如果warmup为float，
+        如0.1, 则前10%的step是按照schedule策略调整learning rate。
+    :param str schedule: 以哪种方式调整。linear: 前warmup的step上升到指定的learning rate(从Trainer中的optimizer处获取的), 后
+        warmup的step下降到0； constant前warmup的step上升到指定learning rate，后面的step保持learning rate.
+    """
+    def __init__(self, warmup=0.1, schedule='constant'):
+        super().__init__()
+        self.warmup = max(warmup, 0.)
+
+        self.initial_lrs = []  # 存放param_group的learning rate
+        if schedule == 'constant':
+            self.get_lr = self._get_constant_lr
+        elif schedule == 'linear':
+            self.get_lr = self._get_linear_lr
+        else:
+            raise RuntimeError("Only support 'linear', 'constant'.")
+
+    def _get_constant_lr(self, progress):
+        if progress<self.warmup:
+            return progress/self.warmup
+        return 1
+
+    def _get_linear_lr(self, progress):
+        if progress<self.warmup:
+            return progress/self.warmup
+        return max((progress - 1.) / (self.warmup - 1.), 0.)
+
+    def on_train_begin(self):
+        self.t_steps = (len(self.trainer.train_data) // (self.batch_size*self.update_every) +
+                            int(len(self.trainer.train_data) % (self.batch_size*self.update_every)!= 0)) * self.n_epochs
+        if self.warmup>1:
+            self.warmup = self.warmup/self.t_steps
+        self.t_steps = max(2, self.t_steps)  # 不能小于2
+        # 获取param_group的初始learning rate
+        for group in self.optimizer.param_groups:
+            self.initial_lrs.append(group['lr'])
+
+    def on_backward_end(self):
+        if self.step%self.update_every==0:
+            progress = (self.step/self.update_every)/self.t_steps
+            for lr, group in zip(self.initial_lrs, self.optimizer.param_groups):
+                group['lr'] = lr * self.get_lr(progress)
+
+
+class SaveModelCallback(Callback):
+    """
+    由于Trainer在训练过程中只会保存最佳的模型， 该callback可实现多种方式的结果存储。
+    会根据训练开始的时间戳在save_dir下建立文件夹，再在文件夹下存放多个模型
+    -save_dir
+        -2019-07-03-15-06-36
+            -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_performance是性能
+            -epoch:1_step:40_{metric_key}:{evaluate_performance}.pt
+        -2019-07-03-15-10-00
+            -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_perfomance是性能
+    :param str save_dir: 将模型存放在哪个目录下，会在该目录下创建以时间戳命名的目录，并存放模型
+    :param int top: 保存dev表现top多少模型。-1为保存所有模型。
+    :param bool only_param: 是否只保存模型d饿权重。
+    :param save_on_exception: 发生exception时，是否保存一份发生exception的模型。模型名称为epoch:x_step:x_Exception:{exception_name}.
+    """
+    def __init__(self, save_dir, top=3, only_param=False, save_on_exception=False):
+        super().__init__()
+
+        if not os.path.isdir(save_dir):
+            raise IsADirectoryError("{} is not a directory.".format(save_dir))
+        self.save_dir = save_dir
+        if top < 0:
+            self.top = sys.maxsize
+        else:
+            self.top = top
+        self._ordered_save_models = []  # List[Tuple], Tuple[0]是metric， Tuple[1]是path。metric是依次变好的，所以从头删
+
+        self.only_param = only_param
+        self.save_on_exception = save_on_exception
+
+    def on_train_begin(self):
+        self.save_dir = os.path.join(self.save_dir, self.trainer.start_time)
+
+    def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
+        metric_value = list(eval_result.values())[0][metric_key]
+        self._save_this_model(metric_value)
+
+    def _insert_into_ordered_save_models(self, pair):
+        # pair:(metric_value, model_name)
+        # 返回save的模型pair与删除的模型pair. pair中第一个元素是metric的值，第二个元素是模型的名称
+        index = -1
+        for _pair in self._ordered_save_models:
+            if _pair[0]>=pair[0] and self.trainer.increase_better:
+                break
+            if not self.trainer.increase_better and _pair[0]<=pair[0]:
+                break
+            index += 1
+        save_pair = None
+        if len(self._ordered_save_models)<self.top or (len(self._ordered_save_models)>=self.top and index!=-1):
+            save_pair = pair
+            self._ordered_save_models.insert(index+1, pair)
+        delete_pair = None
+        if len(self._ordered_save_models)>self.top:
+            delete_pair = self._ordered_save_models.pop(0)
+        return save_pair, delete_pair
+
+    def _save_this_model(self, metric_value):
+        name = "epoch:{}_step:{}_{}:{:.6f}.pt".format(self.epoch, self.step, self.trainer.metric_key, metric_value)
+        save_pair, delete_pair = self._insert_into_ordered_save_models((metric_value, name))
+        if save_pair:
+            try:
+                _save_model(self.model, model_name=name, save_dir=self.save_dir, only_param=self.only_param)
+            except Exception as e:
+                print(f"The following exception:{e} happens when save model to {self.save_dir}.")
+        if delete_pair:
+            try:
+                delete_model_path = os.path.join(self.save_dir, delete_pair[1])
+                if os.path.exists(delete_model_path):
+                    os.remove(delete_model_path)
+            except Exception as e:
+                print(f"Fail to delete model {name} at {self.save_dir} caused by exception:{e}.")
+
+    def on_exception(self, exception):
+        if self.save_on_exception:
+            name = "epoch:{}_step:{}_Exception:{}.pt".format(self.epoch, self.step, exception.__class__.__name__)
+            _save_model(self.model, model_name=name, save_dir=self.save_dir, only_param=self.only_param)
 
 
 class CallbackException(BaseException):

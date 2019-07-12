@@ -12,6 +12,7 @@ from fastNLP import AccuracyMetric
 from fastNLP import SGD
 from fastNLP import Trainer
 from fastNLP.models.base_model import NaiveClassifier
+from fastNLP.core.callback import EarlyStopError
 
 
 def prepare_env():
@@ -39,89 +40,50 @@ class TestCallback(unittest.TestCase):
     
     def test_gradient_clip(self):
         data_set, model = prepare_env()
-        trainer = Trainer(data_set, model,
-                          loss=BCELoss(pred="predict", target="y"),
-                          n_epochs=20,
-                          batch_size=32,
-                          print_every=50,
-                          optimizer=SGD(lr=0.1),
-                          check_code_level=2,
-                          use_tqdm=False,
-                          dev_data=data_set,
-                          metrics=AccuracyMetric(pred="predict", target="y"),
-                          callbacks=[GradientClipCallback(model.parameters(), clip_value=2)])
+        trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                          batch_size=32, n_epochs=20, print_every=50, dev_data=data_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=False,
+                          callbacks=[GradientClipCallback(model.parameters(), clip_value=2)], check_code_level=2)
         trainer.train()
     
     def test_early_stop(self):
         data_set, model = prepare_env()
-        trainer = Trainer(data_set, model,
-                          loss=BCELoss(pred="predict", target="y"),
-                          n_epochs=20,
-                          batch_size=32,
-                          print_every=50,
-                          optimizer=SGD(lr=0.01),
-                          check_code_level=2,
-                          use_tqdm=False,
-                          dev_data=data_set,
-                          metrics=AccuracyMetric(pred="predict", target="y"),
-                          callbacks=[EarlyStopCallback(5)])
+        trainer = Trainer(data_set, model, optimizer=SGD(lr=0.01), loss=BCELoss(pred="predict", target="y"),
+                          batch_size=32, n_epochs=20, print_every=50, dev_data=data_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=False,
+                          callbacks=[EarlyStopCallback(5)], check_code_level=2)
         trainer.train()
     
     def test_lr_scheduler(self):
         data_set, model = prepare_env()
         optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-        trainer = Trainer(data_set, model,
-                          loss=BCELoss(pred="predict", target="y"),
-                          n_epochs=5,
-                          batch_size=32,
-                          print_every=50,
-                          optimizer=optimizer,
-                          check_code_level=2,
-                          use_tqdm=False,
-                          dev_data=data_set,
-                          metrics=AccuracyMetric(pred="predict", target="y"),
-                          callbacks=[LRScheduler(torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1))])
+        trainer = Trainer(data_set, model, optimizer=optimizer, loss=BCELoss(pred="predict", target="y"), batch_size=32,
+                          n_epochs=5, print_every=50, dev_data=data_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=False,
+                          callbacks=[LRScheduler(torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1))],
+                          check_code_level=2)
         trainer.train()
     
     def test_KeyBoardInterrupt(self):
         data_set, model = prepare_env()
-        trainer = Trainer(data_set, model,
-                          loss=BCELoss(pred="predict", target="y"),
-                          n_epochs=5,
-                          batch_size=32,
-                          print_every=50,
-                          optimizer=SGD(lr=0.1),
-                          check_code_level=2,
-                          use_tqdm=False,
-                          callbacks=[ControlC(False)])
+        trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                          batch_size=32, n_epochs=5, print_every=50, use_tqdm=False, callbacks=[ControlC(False)],
+                          check_code_level=2)
         trainer.train()
     
     def test_LRFinder(self):
         data_set, model = prepare_env()
-        trainer = Trainer(data_set, model,
-                          loss=BCELoss(pred="predict", target="y"),
-                          n_epochs=5,
-                          batch_size=32,
-                          print_every=50,
-                          optimizer=SGD(lr=0.1),
-                          check_code_level=2,
-                          use_tqdm=False,
-                          callbacks=[LRFinder(len(data_set) // 32)])
+        trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                          batch_size=32, n_epochs=5, print_every=50, use_tqdm=False,
+                          callbacks=[LRFinder(len(data_set) // 32)], check_code_level=2)
         trainer.train()
     
     def test_TensorboardCallback(self):
         data_set, model = prepare_env()
-        trainer = Trainer(data_set, model,
-                          loss=BCELoss(pred="predict", target="y"),
-                          n_epochs=5,
-                          batch_size=32,
-                          print_every=50,
-                          optimizer=SGD(lr=0.1),
-                          check_code_level=2,
-                          use_tqdm=False,
-                          dev_data=data_set,
-                          metrics=AccuracyMetric(pred="predict", target="y"),
-                          callbacks=[TensorboardCallback("loss", "metric")])
+        trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                          batch_size=32, n_epochs=5, print_every=50, dev_data=data_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=False,
+                          callbacks=[TensorboardCallback("loss", "metric")], check_code_level=2)
         trainer.train()
     
     def test_readonly_property(self):
@@ -140,16 +102,9 @@ class TestCallback(unittest.TestCase):
                 print(self.optimizer)
         
         data_set, model = prepare_env()
-        trainer = Trainer(data_set, model,
-                          loss=BCELoss(pred="predict", target="y"),
-                          n_epochs=total_epochs,
-                          batch_size=32,
-                          print_every=50,
-                          optimizer=SGD(lr=0.1),
-                          check_code_level=2,
-                          use_tqdm=False,
-                          dev_data=data_set,
-                          metrics=AccuracyMetric(pred="predict", target="y"),
-                          callbacks=[MyCallback()])
+        trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                          batch_size=32, n_epochs=total_epochs, print_every=50, dev_data=data_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=False, callbacks=[MyCallback()],
+                          check_code_level=2)
         trainer.train()
         assert passed_epochs == list(range(1, total_epochs + 1))

@@ -2,6 +2,6 @@ fastNLP.models.snli
 ===================
 
 .. automodule:: fastNLP.models.snli
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:

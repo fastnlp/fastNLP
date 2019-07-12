@@ -6,7 +6,7 @@ __all__ = [
     "MetricBase",
     "AccuracyMetric",
     "SpanFPreRecMetric",
-    "SQuADMetric"
+    "ExtractiveQAMetric"
 ]
 
 import inspect
@@ -22,18 +22,19 @@ from .utils import _check_arg_dict_list
 from .utils import _get_func_signature
 from .utils import seq_len_to_mask
 from .vocabulary import Vocabulary
+from abc import abstractmethod
 
 
 class MetricBase(object):
     """
-    所有metrics的基类,，所有的传入到Trainer, Tester的Metric需要继承自该对象，需要覆盖写入evaluate(), get_metric()方法。
+    所有metrics的基类,所有的传入到Trainer, Tester的Metric需要继承自该对象，需要覆盖写入evaluate(), get_metric()方法。
     
         evaluate(xxx)中传入的是一个batch的数据。
         
         get_metric(xxx)当所有数据处理完毕，调用该方法得到最终的metric值
         
     以分类问题中，Accuracy计算为例
-    假设model的forward返回dict中包含'pred'这个key, 并且该key需要用于Accuracy::
+    假设model的forward返回dict中包含 `pred` 这个key, 并且该key需要用于Accuracy::
     
         class Model(nn.Module):
             def __init__(xxx):
@@ -42,7 +43,7 @@ class MetricBase(object):
                 # do something
                 return {'pred': pred, 'other_keys':xxx} # pred's shape: batch_size x num_classes
                 
-    假设dataset中'label'这个field是需要预测的值，并且该field被设置为了target
+    假设dataset中 `label` 这个field是需要预测的值，并且该field被设置为了target
     对应的AccMetric可以按如下的定义, version1, 只使用这一次::
     
         class AccMetric(MetricBase):
@@ -115,17 +116,28 @@ class MetricBase(object):
     """
     
     def __init__(self):
-        self.param_map = {}  # key is param in function, value is input param.
+        self._param_map = {}  # key is param in function, value is input param.
         self._checked = False
-    
+
+    @property
+    def param_map(self):
+        if len(self._param_map) == 0:  # 如果为空说明还没有初始化
+            func_spect = inspect.getfullargspec(self.evaluate)
+            func_args = [arg for arg in func_spect.args if arg != 'self']
+            for arg in func_args:
+                self._param_map[arg] = arg
+        return self._param_map
+
+    @abstractmethod
     def evaluate(self, *args, **kwargs):
         raise NotImplementedError
-    
+
+    @abstractmethod
     def get_metric(self, reset=True):
         raise NotImplemented
     
     def _init_param_map(self, key_map=None, **kwargs):
-        """检查key_map和其他参数map，并将这些映射关系添加到self.param_map
+        """检查key_map和其他参数map，并将这些映射关系添加到self._param_map
 
         :param dict key_map: 表示key的映射关系
         :param kwargs: key word args里面的每一个的键-值对都会被构造成映射关系
@@ -137,30 +149,30 @@ class MetricBase(object):
                 raise TypeError("key_map must be `dict`, got {}.".format(type(key_map)))
             for key, value in key_map.items():
                 if value is None:
-                    self.param_map[key] = key
+                    self._param_map[key] = key
                     continue
                 if not isinstance(key, str):
                     raise TypeError(f"key in key_map must be `str`, not `{type(key)}`.")
                 if not isinstance(value, str):
                     raise TypeError(f"value in key_map must be `str`, not `{type(value)}`.")
-                self.param_map[key] = value
+                self._param_map[key] = value
                 value_counter[value].add(key)
         for key, value in kwargs.items():
             if value is None:
-                self.param_map[key] = key
+                self._param_map[key] = key
                 continue
             if not isinstance(value, str):
                 raise TypeError(f"in {key}={value}, value must be `str`, not `{type(value)}`.")
-            self.param_map[key] = value
+            self._param_map[key] = value
             value_counter[value].add(key)
         for value, key_set in value_counter.items():
             if len(key_set) > 1:
                 raise ValueError(f"Several parameters:{key_set} are provided with one output {value}.")
         
-        # check consistence between signature and param_map
+        # check consistence between signature and _param_map
         func_spect = inspect.getfullargspec(self.evaluate)
         func_args = [arg for arg in func_spect.args if arg != 'self']
-        for func_param, input_param in self.param_map.items():
+        for func_param, input_param in self._param_map.items():
             if func_param not in func_args:
                 raise NameError(
                     f"Parameter `{func_param}` is not in {_get_func_signature(self.evaluate)}. Please check the "
@@ -175,7 +187,7 @@ class MetricBase(object):
         :return: dict, if dict is not {}, pass it to self.evaluate. Otherwise do mapping.
         """
         fast_param = {}
-        if len(self.param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
+        if len(self._param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
             fast_param['pred'] = list(pred_dict.values())[0]
             fast_param['target'] = list(target_dict.values())[0]
             return fast_param
@@ -204,42 +216,35 @@ class MetricBase(object):
         if not self._checked:
             if not callable(self.evaluate):
                 raise TypeError(f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}.")
-            # 1. check consistence between signature and param_map
+            # 1. check consistence between signature and _param_map
             func_spect = inspect.getfullargspec(self.evaluate)
             func_args = set([arg for arg in func_spect.args if arg != 'self'])
-            for func_arg, input_arg in self.param_map.items():
+            for func_arg, input_arg in self._param_map.items():
                 if func_arg not in func_args:
                     raise NameError(f"`{func_arg}` not in {_get_func_signature(self.evaluate)}.")
             
-            # 2. only part of the param_map are passed, left are not
+            # 2. only part of the _param_map are passed, left are not
             for arg in func_args:
-                if arg not in self.param_map:
-                    self.param_map[arg] = arg  # This param does not need mapping.
+                if arg not in self._param_map:
+                    self._param_map[arg] = arg  # This param does not need mapping.
             self._evaluate_args = func_args
-            self._reverse_param_map = {input_arg: func_arg for func_arg, input_arg in self.param_map.items()}
+            self._reverse_param_map = {input_arg: func_arg for func_arg, input_arg in self._param_map.items()}
         
         # need to wrap inputs in dict.
         mapped_pred_dict = {}
         mapped_target_dict = {}
-        duplicated = []
-        for input_arg in set(list(pred_dict.keys()) + list(target_dict.keys())):
-            not_duplicate_flag = 0
-            if input_arg in self._reverse_param_map:
-                mapped_arg = self._reverse_param_map[input_arg]
-                not_duplicate_flag += 1
-            else:
-                mapped_arg = input_arg
+        for input_arg, mapped_arg in self._reverse_param_map.items():
             if input_arg in pred_dict:
                 mapped_pred_dict[mapped_arg] = pred_dict[input_arg]
-                not_duplicate_flag += 1
             if input_arg in target_dict:
                 mapped_target_dict[mapped_arg] = target_dict[input_arg]
-                not_duplicate_flag += 1
-            if not_duplicate_flag == 3:
-                duplicated.append(input_arg)
         
         # missing
         if not self._checked:
+            duplicated = []
+            for input_arg, mapped_arg in self._reverse_param_map.items():
+                if input_arg in pred_dict and input_arg in target_dict:
+                    duplicated.append(input_arg)
             check_res = _check_arg_dict_list(self.evaluate, [mapped_pred_dict, mapped_target_dict])
             # only check missing.
             # replace missing.
@@ -247,7 +252,7 @@ class MetricBase(object):
             replaced_missing = list(missing)
             for idx, func_arg in enumerate(missing):
                 # Don't delete `` in this information, nor add ``
-                replaced_missing[idx] = f"{self.param_map[func_arg]}" + f"(assign to `{func_arg}` " \
+                replaced_missing[idx] = f"{self._param_map[func_arg]}" + f"(assign to `{func_arg}` " \
                     f"in `{self.__class__.__name__}`)"
             
             check_res = _CheckRes(missing=replaced_missing,
@@ -260,10 +265,10 @@ class MetricBase(object):
             if check_res.missing or check_res.duplicated:
                 raise _CheckError(check_res=check_res,
                                   func_signature=_get_func_signature(self.evaluate))
+            self._checked = True
         refined_args = _build_args(self.evaluate, **mapped_pred_dict, **mapped_target_dict)
         
         self.evaluate(**refined_args)
-        self._checked = True
         
         return
 
@@ -409,6 +414,37 @@ def _bmeso_tag_to_spans(tags, ignore_labels=None):
             ]
 
 
+def _bioes_tag_to_spans(tags, ignore_labels=None):
+    """
+    给定一个tags的lis，比如['O', 'B-singer', 'I-singer', 'E-singer', 'O', 'O']。
+    返回[('singer', (1, 4))] (左闭右开区间)
+
+    :param tags: List[str],
+    :param ignore_labels: List[str], 在该list中的label将被忽略
+    :return: List[Tuple[str, List[int, int]]]. [(label，[start, end])]
+    """
+    ignore_labels = set(ignore_labels) if ignore_labels else set()
+
+    spans = []
+    prev_bioes_tag = None
+    for idx, tag in enumerate(tags):
+        tag = tag.lower()
+        bioes_tag, label = tag[:1], tag[2:]
+        if bioes_tag in ('b', 's'):
+            spans.append((label, [idx, idx]))
+        elif bioes_tag in ('i', 'e') and prev_bioes_tag in ('b', 'i') and label == spans[-1][0]:
+            spans[-1][1][1] = idx
+        elif bioes_tag == 'o':
+            pass
+        else:
+            spans.append((label, [idx, idx]))
+        prev_bioes_tag = bioes_tag
+    return [(span[0], (span[1][0], span[1][1] + 1))
+            for span in spans
+            if span[0] not in ignore_labels
+            ]
+
+
 def _bio_tag_to_spans(tags, ignore_labels=None):
     """
     给定一个tags的lis，比如['O', 'B-singer', 'I-singer', 'I-singer', 'O', 'O']。
@@ -442,7 +478,7 @@ class SpanFPreRecMetric(MetricBase):
     别名：:class:`fastNLP.SpanFPreRecMetric` :class:`fastNLP.core.metrics.SpanFPreRecMetric`
 
     在序列标注问题中，以span的方式计算F, pre, rec.
-    比如中文Part of speech中，会以character的方式进行标注，句子'中国在亚洲'对应的POS可能为(以BMES为例)
+    比如中文Part of speech中，会以character的方式进行标注，句子 `中国在亚洲` 对应的POS可能为(以BMES为例)
     ['B-NN', 'E-NN', 'S-DET', 'B-NN', 'E-NN']。该metric就是为类似情况下的F1计算。
     最后得到的metric结果为::
     
@@ -466,15 +502,15 @@ class SpanFPreRecMetric(MetricBase):
 
     :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` 。支持的标签为"B"(没有label)；或"B-xxx"(xxx为某种label，比如POS中的NN)，
         在解码时，会将相同xxx的认为是同一个label，比如['B-NN', 'E-NN']会被合并为一个'NN'.
-    :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用'pred'取数据
-    :param str target: 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用'target'取数据
-    :param str seq_len: 用该key在evaluate()时从传入dict中取出sequence length数据。为None，则使用'seq_len'取数据。
-    :param str encoding_type: 目前支持bio, bmes
+    :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用 `pred` 取数据
+    :param str target: 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用 `target` 取数据
+    :param str seq_len: 用该key在evaluate()时从传入dict中取出sequence length数据。为None，则使用 `seq_len` 取数据。
+    :param str encoding_type: 目前支持bio, bmes, bmeso, bioes
     :param list ignore_labels: str 组成的list. 这个list中的class不会被用于计算。例如在POS tagging时传入['NN']，则不会计算'NN'这
         个label
     :param bool only_gross: 是否只计算总的f1, precision, recall的值；如果为False，不仅返回总的f1, pre, rec, 还会返回每个
         label的f1, pre, rec
-    :param str f_type: 'micro'或'macro'. 'micro':通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; 'macro':
+    :param str f_type: `micro` 或 `macro` . `micro` :通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; `macro` :
         分布计算每个类别的f, precision, recall，然后做平均（各类别f的权重相同）
     :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
         常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
@@ -497,6 +533,8 @@ class SpanFPreRecMetric(MetricBase):
             self.tag_to_span_func = _bio_tag_to_spans
         elif self.encoding_type == 'bmeso':
             self.tag_to_span_func = _bmeso_tag_to_spans
+        elif self.encoding_type == 'bioes':
+            self.tag_to_span_func = _bioes_tag_to_spans
         else:
             raise ValueError("Only support 'bio', 'bmes', 'bmeso' type.")
         
@@ -698,11 +736,11 @@ def _pred_topk(y_prob, k=1):
     return y_pred_topk, y_prob_topk
 
 
-class SQuADMetric(MetricBase):
+class ExtractiveQAMetric(MetricBase):
     r"""
-    别名：:class:`fastNLP.SQuADMetric` :class:`fastNLP.core.metrics.SQuADMetric`
+    别名：:class:`fastNLP.ExtractiveQAMetric` :class:`fastNLP.core.metrics.ExtractiveQAMetric`
 
-    SQuAD数据集metric
+    抽取式QA（如SQuAD）的metric.
     
     :param pred1: 参数映射表中 `pred1` 的映射关系，None表示映射关系为 `pred1` -> `pred1`
     :param pred2: 参数映射表中 `pred2` 的映射关系，None表示映射关系为 `pred2` -> `pred2`
@@ -718,7 +756,7 @@ class SQuADMetric(MetricBase):
     def __init__(self, pred1=None, pred2=None, target1=None, target2=None,
                  beta=1, right_open=True, print_predict_stat=False):
         
-        super(SQuADMetric, self).__init__()
+        super(ExtractiveQAMetric, self).__init__()
         
         self._init_param_map(pred1=pred1, pred2=pred2, target1=target1, target2=target2)
         

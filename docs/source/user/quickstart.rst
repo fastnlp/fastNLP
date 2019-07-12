@@ -49,7 +49,7 @@
 .. code-block:: python
 
     from fastNLP.models import CNNText
-    model = CNNText((len(vocab),50), num_classes=5, padding=2, dropout=0.1)
+    model = CNNText((len(vocab),50), num_classes=5, dropout=0.1)
 
 :class:`~fastNLP.models.CNNText` 的网络结构如下::
 
@@ -121,4 +121,4 @@
     In Epoch:6/Step:12, got best dev performance:AccuracyMetric: acc=0.8
     Reloaded the best model.
 
-这份教程只是简单地介绍了使用 fastNLP 工作的流程，具体的细节分析见 :doc:`/user/tutorial_one`
+这份教程只是简单地介绍了使用 fastNLP 工作的流程，更多的教程分析见 :doc:`/user/tutorials`

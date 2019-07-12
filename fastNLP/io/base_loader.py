@@ -1,6 +1,6 @@
 __all__ = [
     "BaseLoader",
-    'DataInfo',
+    'DataBundle',
     'DataSetLoader',
 ]
 
@@ -9,6 +9,7 @@ import os
 from typing import Union, Dict
 import os
 from ..core.dataset import DataSet
+
 
 class BaseLoader(object):
     """
@@ -53,8 +54,6 @@ class BaseLoader(object):
             with open(cache_path, 'wb') as f:
                 pickle.dump(obj, f)
             return obj
-
-
 
 
 def _download_from_url(url, path):
@@ -110,19 +109,26 @@ def _uncompress(src, dst):
         raise ValueError('unsupported file {}'.format(src))
 
 
-class DataInfo:
+class DataBundle:
     """
-    经过处理的数据信息，包括一系列数据集（比如：分开的训练集、验证集和测试集）及它们所用的词表和词嵌入。
+    经过处理的数据信息，包括一系列数据集（比如：分开的训练集、验证集和测试集）以及各个field对应的vocabulary。
 
     :param vocabs: 从名称(字符串)到 :class:`~fastNLP.Vocabulary` 类型的dict
-    :param embeddings: 从名称(字符串)到一系列 embedding 的dict，参考 :class:`~fastNLP.io.EmbedLoader`
     :param datasets: 从名称(字符串)到 :class:`~fastNLP.DataSet` 类型的dict
     """
 
-    def __init__(self, vocabs: dict = None, embeddings: dict = None, datasets: dict = None):
+    def __init__(self, vocabs: dict = None, datasets: dict = None):
         self.vocabs = vocabs or {}
-        self.embeddings = embeddings or {}
         self.datasets = datasets or {}
+
+    def __repr__(self):
+        _str = 'In total {} datasets:\n'.format(len(self.datasets))
+        for name, dataset in self.datasets.items():
+            _str += '\t{} has {} instances.\n'.format(name, len(dataset))
+        _str += 'In total {} vocabs:\n'.format(len(self.vocabs))
+        for name, vocab in self.vocabs.items():
+            _str += '\t{} has {} entries.\n'.format(name, len(vocab))
+        return _str
 
 
 class DataSetLoader:
@@ -195,21 +201,20 @@ class DataSetLoader:
         """
         raise NotImplementedError
 
-    def process(self, paths: Union[str, Dict[str, str]], **options) -> DataInfo:
+    def process(self, paths: Union[str, Dict[str, str]], **options) -> DataBundle:
         """
         对于特定的任务和数据集，读取并处理数据，返回处理DataInfo类对象或字典。
 
         从指定一个或多个路径中的文件中读取数据，DataInfo对象中可以包含一个或多个数据集 。
         如果处理多个路径，传入的 dict 的 key 与返回DataInfo中的 dict 中的 key 保存一致。
 
-        返回的 :class:`DataInfo` 对象有如下属性：
+        返回的 :class:`DataBundle` 对象有如下属性：
 
         - vocabs: 由从数据集中获取的词表组成的字典，每个词表
-        - embeddings: (可选) 数据集对应的词嵌入
         - datasets: 一个dict，包含一系列 :class:`~fastNLP.DataSet` 类型的对象。其中 field 的命名参考 :mod:`~fastNLP.core.const`
 
         :param paths: 原始数据读取的路径
         :param options: 根据不同的任务和数据集，设计自己的参数
-        :return: 返回一个 DataInfo
+        :return: 返回一个 DataBundle
         """
         raise NotImplementedError

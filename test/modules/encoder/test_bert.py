@@ -8,8 +8,9 @@ from fastNLP.models.bert import BertModel
 
 class TestBert(unittest.TestCase):
     def test_bert_1(self):
-        model = BertModel(vocab_size=32000, hidden_size=768,
-                          num_hidden_layers=12, num_attention_heads=12, intermediate_size=3072)
+        from fastNLP.modules.encoder.bert import BertConfig
+        config = BertConfig(32000)
+        model = BertModel(config)
 
         input_ids = torch.LongTensor([[31, 51, 99], [15, 5, 0]])
         input_mask = torch.LongTensor([[1, 1, 1], [1, 1, 0]])

@@ -1,7 +1,7 @@
 """
 :class:`~fastNLP.core.dataset.DataSet` 是fastNLP中用于承载数据的容器。可以将DataSet看做是一个表格，
-每一行是一个sample (在fastNLP中被称为 :mod:`~.instance` )，
-每一列是一个feature (在fastNLP中称为 :mod:`.field` )。
+每一行是一个sample (在fastNLP中被称为 :mod:`~fastNLP.core.instance` )，
+每一列是一个feature (在fastNLP中称为 :mod:`~fastNLP.core.field` )。
 
 .. csv-table:: Following is a demo layout of DataSet
    :header: "sentence", "words", "seq_len"
@@ -13,57 +13,64 @@
 
 在fastNLP内部每一行是一个 :class:`~fastNLP.Instance` 对象； 每一列是一个 :class:`~fastNLP.FieldArray` 对象。
 
-1 DataSet的创建
-    创建DataSet主要有以下的3种方式
+----------------------------
+1.DataSet的创建
+----------------------------
+
+创建DataSet主要有以下的3种方式
 
 1.1 传入dict
+----------------------------
 
-  Example::
+    .. code-block::
 
-    from fastNLP import DataSet
-    data = {'sentence':["This is the first instance .", "Second instance .", "Third instance ."],
-            'words': [['this', 'is', 'the', 'first', 'instance', '.'], ['Second', 'instance', '.'], ['Third', 'instance', '.'],
-            'seq_len': [6, 3, 3]}
-    dataset = DataSet(data)
-    # 传入的dict的每个key的value应该为具有相同长度的list
+        from fastNLP import DataSet
+        data = {'sentence':["This is the first instance .", "Second instance .", "Third instance ."],
+                'words': [['this', 'is', 'the', 'first', 'instance', '.'], ['Second', 'instance', '.'], ['Third', 'instance', '.'],
+                'seq_len': [6, 3, 3]}
+        dataset = DataSet(data)
+        # 传入的dict的每个key的value应该为具有相同长度的list
 
-1.2 通过构建Instance
+1.2 通过 Instance 构建
+----------------------------
 
-  Example::
+    .. code-block::
 
-    from fastNLP import DataSet
-    from fastNLP import Instance
-    dataset = DataSet()
-    instance = Instance(sentence="This is the first instance",
-                        words=['this', 'is', 'the', 'first', 'instance', '.'],
-                        seq_len=6)
-    dataset.append(instance)
-    # 可以继续append更多内容，但是append的instance应该和第一个instance拥有完全相同的field
+        from fastNLP import DataSet
+        from fastNLP import Instance
+        dataset = DataSet()
+        instance = Instance(sentence="This is the first instance",
+                            words=['this', 'is', 'the', 'first', 'instance', '.'],
+                            seq_len=6)
+        dataset.append(instance)
+        # 可以继续append更多内容，但是append的instance应该和第一个instance拥有完全相同的field
 
-1.3 通过list(Instance)
+1.3 通过 List[Instance] 构建
+--------------------------------------
 
-   Example::
+    .. code-block::
 
-    from fastNLP import DataSet
-    from fastNLP import Instance
-    instances = []
-    instances.append(Instance(sentence="This is the first instance",
-                        words=['this', 'is', 'the', 'first', 'instance', '.'],
-                        seq_len=6))
-    instances.append(Instance(sentence="Second instance .",
-                        words=['Second', 'instance', '.'],
-                        seq_len=3))
-    dataset = DataSet(instances)
+        from fastNLP import DataSet
+        from fastNLP import Instance
+        instances = []
+        winstances.append(Instance(sentence="This is the first instance",
+                            ords=['this', 'is', 'the', 'first', 'instance', '.'],
+                            seq_len=6))
+        instances.append(Instance(sentence="Second instance .",
+                            words=['Second', 'instance', '.'],
+                            seq_len=3))
+        dataset = DataSet(instances)
+        
+--------------------------------------
+2.DataSet与预处理
+--------------------------------------
 
-2 DataSet与预处理
-    常见的预处理有如下几种
+常见的预处理有如下几种
 
-2.1 从某个文本文件读取内容 #
+2.1 从某个文本文件读取内容
+--------------------------------------
 
-    .. todo::
-        引用DataLoader
-
-    Example::
+    .. code-block::
 
         from fastNLP import DataSet
         from fastNLP import Instance
@@ -78,21 +85,13 @@
                 sent, label = line.strip().split('\t')
                 dataset.append(Instance(sentence=sent, label=label))
 
-2.2 index, 返回结果为对DataSet对象的浅拷贝
+    .. note::
+        直接读取特定数据集的数据请参考  :doc:`/tutorials/tutorial_2_load_dataset`
 
-    Example::
+2.2 对DataSet中的内容处理
+--------------------------------------
 
-        import numpy as np
-        from fastNLP import DataSet
-        dataset = DataSet({'a': np.arange(10), 'b': [[_] for _ in range(10)]})
-        d[0]  # 使用一个下标获取一个instance
-        >>{'a': 0 type=int,'b': [2] type=list} # 得到一个instance
-        d[1:3]  # 使用slice获取一个新的DataSet
-        >>DataSet({'a': 1 type=int, 'b': [2] type=list}, {'a': 2 type=int, 'b': [2] type=list})
-
-2.3 对DataSet中的内容处理
-
-    Example::
+    .. code-block::
 
         from fastNLP import DataSet
         data = {'sentence':["This is the first instance .", "Second instance .", "Third instance ."]}
@@ -108,9 +107,10 @@
             return words
         dataset.apply(get_words, new_field_name='words')
 
-2.4 删除DataSet的内容
+2.3 删除DataSet的内容
+--------------------------------------
 
-    Example::
+    .. code-block::
 
         from fastNLP import DataSet
         dataset = DataSet({'a': list(range(-5, 5))})
@@ -124,16 +124,18 @@
         dataset.delete_field('a')
 
 
-2.5 遍历DataSet的内容
+2.4 遍历DataSet的内容
+--------------------------------------
 
-    Example::
+    .. code-block::
 
         for instance in dataset:
             # do something
 
-2.6 一些其它操作
+2.5 一些其它操作
+--------------------------------------
 
-    Example::
+    .. code-block::
 
         #  检查是否存在名为'a'的field
         dataset.has_field('a')  # 或 ('a' in dataset)
@@ -141,21 +143,25 @@
         dataset.rename_field('a', 'b')
         #  DataSet的长度
         len(dataset)
+        
+--------------------------------------
+3.DataSet与自然语言处理(NLP)
+--------------------------------------
 
-3 DataSet与自然语言处理(NLP)
-    在目前深度学习的模型中，大都依赖于随机梯度下降法(SGD)进行模型的优化。随机梯度下降需要将数据切分成一个一个的Batch，
-    一个Batch进行一次前向计算(forward)与梯度后向传播(backward)。在自然语言处理的场景下，往往还需要对数据进行pad。这是
-    由于句子的长度一般是不同的，但是一次Batch中的每个field都必须是一个tensor，所以需要将所有句子都补齐到相同的长度。
+在目前深度学习的模型中，大都依赖于随机梯度下降法(SGD)进行模型的优化。随机梯度下降需要将数据切分成一个个的 batch，
+一个batch进行一次前向计算(forward)与梯度后向传播(backward)。在自然语言处理的场景下，往往还需要对数据进行pad。这是
+由于句子的长度一般是不同的，但是一次batch中的每个field都必须是一个tensor，所以需要将所有句子都补齐到相同的长度。
 
-3.1 DataSet与Batch
+3.1 DataSet与DataSetIter
+--------------------------------------
 
-    我们先看fastNLP中如何将数据分成一个一个的Batch的例子, 这里我们使用随机生成的数据来模拟一个二分类文本分类任务，
+    我们先看fastNLP中如何将数据分成一个一个的batch的例子, 这里我们使用随机生成的数据来模拟一个二分类文本分类任务，
     words和characters是输入，labels是文本类别
 
-    Example::
+    .. code-block::
 
         from fastNLP import DataSet
-        from fastNLP import Batch
+        from fastNLP import DataSetIter
         from fastNLP import SequentialSampler
         from fastNLP import EngChar2DPadder
 
@@ -175,7 +181,7 @@
         d.set_target('label')
         d.set_input('words', 'chars')
 
-        for batch_x, batch_y in Batch(d, sampler=SequentialSampler(), batch_size=2):
+        for batch_x, batch_y in DataSetIter(d, sampler=SequentialSampler(), batch_size=2):
             print("batch_x:", batch_x)
             print("batch_y:", batch_y)
             break
@@ -194,23 +200,26 @@
             #      [ 0,  0,  0,  0,  0]]])}
             # {'label': tensor([0, 0])}
 
-    其中 :class:`~fastNLP.Batch` 是用于从DataSet中按照batch_size为大小取出batch的迭代器，
-    :class:`~fastNLP.SequentialSampler` 用于指示 Batch 以怎样的
+    其中 :class:`~fastNLP.DataSetIter` 是用于从DataSet中按照batch_size为大小取出batch的迭代器，
+    :class:`~fastNLP.SequentialSampler` 用于指示 :class:`~fastNLP.DataSetIter` 以怎样的
     顺序从DataSet中取出instance以组成一个batch，
-    更详细的说明请参照 :class:`~fastNLP.Batch` 和 :class:`~fastNLP.SequentialSampler` 文档。
+    更详细的说明请参照 :class:`~fastNLP.DataSetIter` 和 :class:`~fastNLP.SequentialSampler` 文档。
 
-    通过DataSet.set_input('words', 'chars'), fastNLP将认为'words'和'chars'这两个field都是input，并将它们都放入迭代器
-    生成的第一个dict中; DataSet.set_target('labels'), fastNLP将认为'labels'这个field是target，并将其放入到迭代器的第
+    通过 ``DataSet.set_input('words', 'chars')`` , fastNLP将认为 `words` 和 `chars` 这两个field都是input，并将它们都放入迭代器
+    生成的第一个dict中; ``DataSet.set_target('labels')`` , fastNLP将认为 `labels` 这个field是target，并将其放入到迭代器的第
     二个dict中。如上例中所打印结果。分为input和target的原因是由于它们在被 :class:`~fastNLP.Trainer` 所使用时会有所差异，
     详见  :class:`~fastNLP.Trainer`
 
-    当把某个field设置为'target'或者'input'的时候(两者不是互斥的，可以同时设为input和target)，fastNLP不仅仅只是将其放
-    置到不同的dict中，而还会对被设置为input或target的field进行类型检查。类型检查的目的是为了看能否把该field转为
-    pytorch的torch.LongTensor或torch.FloatTensor类型(也可以在Batch中设置输出numpy类型，参考 :class:`~fastNLP.Batch` )，如上例所示，
-    fastNLP已将words，chars和label转为了Tensor类型。如果field在每个instance都拥有相同的维度(不能超过两维)，且最内层
-    的元素都为相同的type(int, float, np.int*, np.float*)，则fastNLP默认将对该field进行pad。也支持全为str的field作为
-    target和input，这种情况下，fastNLP默认不进行pad。另外，当某个field已经被设置为了target或者input后，之后append的
-    instance对应的field必须要和前面已有的内容一致，否则会报错。
+    当把某个field设置为 `target` 或者 `input` 的时候(两者不是互斥的，可以同时设为两种)，fastNLP不仅仅只是将其放
+    置到不同的dict中，而还会对被设置为 `input` 或 `target` 的 field 进行类型检查。类型检查的目的是为了看能否把该 field 转为
+    pytorch的 :class:`torch.LongTensor` 或 :class:`torch.FloatTensor` 类型
+    (也可以在 :class:`~fastNLP.DataSetIter` 中设置输出numpy类型，参考 :class:`~fastNLP.DataSetIter` )。
+    
+    如上例所示，fastNLP已将 `words` ，`chars` 和 `label` 转为了 :class:`Tensor` 类型。
+    如果 field 在每个 `instance` 都拥有相同的维度(不能超过两维)，且最内层的元素都为相同的 type(int, float, np.int*, np.float*)，
+    则fastNLP默认将对该 field 进行pad。也支持全为str的field作为target和input，这种情况下，fastNLP默认不进行pad。
+    另外，当某个 field 已经被设置为了 target 或者 input 后，之后 `append` 的
+    `instance` 对应的 field 必须要和前面已有的内容一致，否则会报错。
 
     可以查看field的dtype::
         
@@ -229,6 +238,7 @@
     错误::
 
         from fastNLP import DataSet
+        
         d = DataSet({'data': [1, 'a']})
         d.set_input('data')
         >> RuntimeError: Mixed data types in Field data: [<class 'str'>, <class 'int'>]
@@ -243,6 +253,7 @@
     当某个field被设置为忽略type之后，fastNLP将不对其进行pad。
 
 3.2 DataSet与pad
+--------------------------------------
 
     在fastNLP里，pad是与一个field绑定的。即不同的field可以使用不同的pad方式，比如在英文任务中word需要的pad和
     character的pad方式往往是不同的。fastNLP是通过一个叫做 :class:`~fastNLP.Padder` 的子类来完成的。
@@ -252,7 +263,7 @@
     如果 :class:`~fastNLP.AutoPadder` 或 :class:`~fastNLP.EngChar2DPadder` 无法满足需求，
     也可以自己写一个 :class:`~fastNLP.Padder` 。
 
-    Example::
+    .. code-block::
 
         from fastNLP import DataSet
         from fastNLP import EngChar2DPadder
@@ -285,7 +296,8 @@ from .field import AutoPadder
 from .field import FieldArray
 from .instance import Instance
 from .utils import _get_func_signature
-
+from .field import AppendToTargetOrInputException
+from .field import SetInputOrTargetException
 
 class DataSet(object):
     """
@@ -416,13 +428,13 @@ class DataSet(object):
         """
         将一个instance对象append到DataSet后面。
 
-        :param instance: :class:`~fastNLP.Instance` 类型。若DataSet不为空，则instance应该拥有和DataSet完全一样的field。
+        :param ~fastNLP.Instance instance: 若DataSet不为空，则instance应该拥有和DataSet完全一样的field。
 
         """
         if len(self.field_arrays) == 0:
             # DataSet has no field yet
             for name, field in instance.fields.items():
-                field = field.tolist() if isinstance(field, np.ndarray) else field
+                # field = field.tolist() if isinstance(field, np.ndarray) else field
                 self.field_arrays[name] = FieldArray(name, [field])  # 第一个样本，必须用list包装起来
         else:
             if len(self.field_arrays) != len(instance.fields):
@@ -431,14 +443,18 @@ class DataSet(object):
                         .format(len(self.field_arrays), len(instance.fields)))
             for name, field in instance.fields.items():
                 assert name in self.field_arrays
-                self.field_arrays[name].append(field)
+                try:
+                    self.field_arrays[name].append(field)
+                except AppendToTargetOrInputException as e:
+                    print(f"Cannot append to field:{name}.")
+                    raise e
     
     def add_fieldarray(self, field_name, fieldarray):
         """
         将fieldarray添加到DataSet中.
 
         :param str field_name: 新加入的field的名称
-        :param fieldarray: :class:`~fastNLP.FieldArray` 类型。需要加入DataSet的field的内容
+        :param ~fastNLP.core.FieldArray fieldarray: 需要加入DataSet的field的内容
         :return:
         """
         if not isinstance(fieldarray, FieldArray):
@@ -454,8 +470,7 @@ class DataSet(object):
         
         :param str field_name: 新增的field的名称
         :param list fields: 需要新增的field的内容
-        :param None, padder: :class:`~fastNLP.Padder` 类型，
-                    如果为None,则不进行pad，默认使用 :class:`~fastNLP.AutoPadder` 自动判断是否需要做pad。
+        :param None,~fastNLP.Padder padder: 如果为None,则不进行pad，默认使用 :class:`~fastNLP.AutoPadder` 自动判断是否需要做pad。
         :param bool is_input: 新加入的field是否是input
         :param bool is_target: 新加入的field是否是target
         :param bool ignore_type: 是否忽略对新加入的field的类型检查
@@ -517,7 +532,7 @@ class DataSet(object):
         """
         返回一个dict，key为field_name, value为对应的 :class:`~fastNLP.FieldArray`
 
-        :return: dict: 返回如上所述的字典
+        :return dict: 返回如上所述的字典
         """
         return self.field_arrays
     
@@ -525,7 +540,7 @@ class DataSet(object):
         """
         返回一个list，包含所有 field 的名字
 
-        :return: list: 返回如上所述的列表
+        :return list: 返回如上所述的列表
         """
         return sorted(self.field_arrays.keys())
     
@@ -549,6 +564,7 @@ class DataSet(object):
             self.field_arrays[new_name].name = new_name
         else:
             raise KeyError("DataSet has no field named {}.".format(old_name))
+        return self
     
     def set_target(self, *field_names, flag=True):
         """
@@ -565,7 +581,11 @@ class DataSet(object):
         assert isinstance(flag, bool), "Only bool type supported."
         for name in field_names:
             if name in self.field_arrays:
-                self.field_arrays[name].is_target = flag
+                try:
+                    self.field_arrays[name].is_target = flag
+                except SetInputOrTargetException as e:
+                    print(f"Cannot set field:{name} as target.")
+                    raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
     
@@ -581,7 +601,11 @@ class DataSet(object):
         """
         for name in field_names:
             if name in self.field_arrays:
-                self.field_arrays[name].is_input = flag
+                try:
+                    self.field_arrays[name].is_input = flag
+                except SetInputOrTargetException as e:
+                    print(f"Cannot set field:{name} as input, exception happens at the {e.index} value.")
+                    raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
     
@@ -610,7 +634,7 @@ class DataSet(object):
             dataset.set_padder('chars', padder)  # 则chars这个field会使用EngChar2DPadder进行pad操作
 
         :param str field_name: 设置field的padding方式为padder
-        :param None, Padder padder: 设置为None即删除padder, 即对该field不进行pad操作。
+        :param None,~fastNLP.Padder padder: 设置为None即删除padder, 即对该field不进行pad操作。
         """
         if field_name not in self.field_arrays:
             raise KeyError("There is no field named {}.".format(field_name))
@@ -658,7 +682,7 @@ class DataSet(object):
             2. is_target: bool, 如果为True则将名为 `new_field_name` 的field设置为target
 
             3. ignore_type: bool, 如果为True则将名为 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
-        :return: list(Any), 里面的元素为func的返回值，所以list长度为DataSet的长度
+        :return List[Any]:   里面的元素为func的返回值，所以list长度为DataSet的长度
 
         """
         assert len(self) != 0, "Null DataSet cannot use apply_field()."
@@ -685,7 +709,7 @@ class DataSet(object):
         """
         将results作为加入到新的field中，field名称为new_field_name
 
-        :param list(str) results: 一般是apply*()之后的结果
+        :param List[str] results: 一般是apply*()之后的结果
         :param str new_field_name: 新加入的field的名称
         :param dict kwargs: 用户apply*()时传入的自定义参数
         :return:
@@ -728,7 +752,7 @@ class DataSet(object):
 
             3. ignore_type: bool, 如果为True则将 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
             
-        :return: list(Any), 里面的元素为func的返回值，所以list长度为DataSet的长度
+        :return List[Any]: 里面的元素为func的返回值，所以list长度为DataSet的长度
         """
         assert len(self) != 0, "Null DataSet cannot use apply()."
         idx = -1
@@ -748,7 +772,20 @@ class DataSet(object):
             self._add_apply_field(results, new_field_name, kwargs)
         
         return results
-    
+
+    def add_seq_len(self, field_name:str, new_field_name='seq_len'):
+        """
+        将使用len()直接对field_name中每个元素作用，将其结果作为seqence length, 并放入seq_len这个field。
+
+        :param field_name: str.
+        :return:
+        """
+        if self.has_field(field_name=field_name):
+            self.apply_field(len, field_name, new_field_name=new_field_name)
+        else:
+            raise KeyError(f"Field:{field_name} not found.")
+        return self
+
     def drop(self, func, inplace=True):
         """
         func接受一个Instance，返回bool值。返回值为True时，该Instance会被移除或者加入到返回的DataSet中。
@@ -774,17 +811,19 @@ class DataSet(object):
             else:
                 return DataSet()
     
-    def split(self, ratio):
+    def split(self, ratio, shuffle=True):
         """
         将DataSet按照ratio的比例拆分，返回两个DataSet
 
-        :param float ratio: 0<ratio<1, 返回的第一个DataSet拥有 `ratio` 这么多数据，第二个DataSet拥有 `(1-ratio)` 这么多数据
-        :return: [DataSet, DataSet]
+        :param float ratio: 0<ratio<1, 返回的第一个DataSet拥有 `(1-ratio)` 这么多数据，第二个DataSet拥有`ratio`这么多数据
+        :param bool shuffle: 在split前是否shuffle一下
+        :return: [ :class:`~fastNLP.读取后的DataSet` , :class:`~fastNLP.读取后的DataSet` ]
         """
         assert isinstance(ratio, float)
         assert 0 < ratio < 1
         all_indices = [_ for _ in range(len(self))]
-        np.random.shuffle(all_indices)
+        if shuffle:
+            np.random.shuffle(all_indices)
         split = int(ratio * len(self))
         dev_indices = all_indices[:split]
         train_indices = all_indices[split:]
@@ -802,7 +841,7 @@ class DataSet(object):
     
     @classmethod
     def read_csv(cls, csv_path, headers=None, sep=",", dropna=True):
-        """
+        r"""
         .. warning::
             此方法会在下个版本移除，请使用 :class:`fastNLP.io.CSVLoader`
         
@@ -813,7 +852,7 @@ class DataSet(object):
             与csv文件中每行的元素个数相同。
         :param str sep: 分割符
         :param bool dropna: 是否忽略与header数量不一致行。
-        :return: 一个 :class:`~fastNLP.DataSet` 类型的对象
+        :return: 读取后的 :class:`~fastNLP.读取后的DataSet`。
         """
         warnings.warn('DataSet.read_csv is deprecated, use CSVLoader instead',
                       category=DeprecationWarning)
@@ -853,11 +892,11 @@ class DataSet(object):
     
     @staticmethod
     def load(path):
-        """
+        r"""
         从保存的DataSet pickle文件的路径中读取DataSet
 
         :param str path: 从哪里读取DataSet
-        :return: 一个 :class:`~fastNLP.DataSet` 类型的对象
+        :return: 读取后的 :class:`~fastNLP.读取后的DataSet`。
         """
         with open(path, 'rb') as f:
             d = pickle.load(f)
