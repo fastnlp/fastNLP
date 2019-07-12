@@ -29,7 +29,7 @@ fastNLP的embedding包括了预训练embedding和随机初始化embedding。
 Part II: 使用随机初始化的embedding
 ---------------------------------------
 
-使用随机初始化的embedding参见 :class:`~fastNLP.modules.encoder.embedding.Embedding` 。
+使用随机初始化的embedding参见 :class:`~fastNLP.embeddings.embedding.Embedding` 。
 
 可以传入词表大小和embedding维度：
 
@@ -53,8 +53,8 @@ Part III: 使用预训练的静态embedding
 在使用预训练的embedding之前，需要根据数据集的内容构建一个词表 :class:`~fastNLP.core.vocabulary.Vocabulary` ，在
 预训练embedding类初始化的时候需要将这个词表作为参数传入。
 
-在fastNLP中，我们提供了 :class:`~fastNLP.modules.encoder.embedding.StaticEmbedding` 这一个类。
-通过 :class:`~fastNLP.modules.encoder.embedding.StaticEmbedding` 可以加载预训练好的静态
+在fastNLP中，我们提供了 :class:`~fastNLP.embeddings.StaticEmbedding` 这一个类。
+通过 :class:`~fastNLP.embeddings.StaticEmbedding` 可以加载预训练好的静态
 Embedding，例子如下：
 
 .. code-block:: python
@@ -99,8 +99,8 @@ vocab为根据数据集构建的词表，model_dir_or_name可以是一个路径�
 Part IV: 使用预训练的Contextual Embedding(ELMo & BERT)
 -----------------------------------------------------------
 
-在fastNLP中，我们提供了ELMo和BERT的embedding： :class:`~fastNLP.modules.encoder.embedding.ElmoEmbedding`
-和 :class:`~fastNLP.modules.encoder.embedding.BertEmbedding` 。
+在fastNLP中，我们提供了ELMo和BERT的embedding： :class:`~fastNLP.embeddings.ElmoEmbedding`
+和 :class:`~fastNLP.embeddings.BertEmbedding` 。
 
 与静态embedding类似，ELMo的使用方法如下：
 
@@ -166,8 +166,8 @@ BERT-embedding的使用方法如下：
 Part V: 使用character-level的embedding
 -----------------------------------------------------
 
-除了预训练的embedding以外，fastNLP还提供了CharEmbedding： :class:`~fastNLP.modules.encoder.embedding.CNNCharEmbedding` 和
-:class:`~fastNLP.modules.encoder.embedding.LSTMCharEmbedding` 。
+除了预训练的embedding以外，fastNLP还提供了CharEmbedding： :class:`~fastNLP.embeddings.CNNCharEmbedding` 和
+:class:`~fastNLP.embeddings.LSTMCharEmbedding` 。
 
 CNNCharEmbedding的使用例子如下：
 
@@ -191,7 +191,7 @@ CNNCharEmbedding的使用例子如下：
 Part VI: 叠加使用多个embedding
 -----------------------------------------------------
 
-在fastNLP中，我们使用 :class:`~fastNLP.modules.encoder.embedding.StackEmbedding` 来叠加多个embedding
+在fastNLP中，我们使用 :class:`~fastNLP.embeddings.StackEmbedding` 来叠加多个embedding
 
 例子如下：
 
