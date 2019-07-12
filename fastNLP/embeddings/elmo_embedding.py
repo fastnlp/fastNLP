@@ -15,11 +15,12 @@ from .contextual_embedding import ContextualEmbedding
 
 class ElmoEmbedding(ContextualEmbedding):
     """
-    别名：:class:`fastNLP.modules.ElmoEmbedding`   :class:`fastNLP.modules.encoder.embedding.ElmoEmbedding`
+    别名：:class:`fastNLP.embeddings.ElmoEmbedding`   :class:`fastNLP.embeddings.elmo_embedding.ElmoEmbedding`
 
     使用ELMo的embedding。初始化之后，只需要传入words就可以得到对应的embedding。当前支持的使用名称初始化的模型有以下的这些(待补充)
 
     Example::
+    
         >>> vocab = Vocabulary().add_word_lst("The whether is good .".split())
         >>> # 使用不同层的concat的结果
         >>> embed = ElmoEmbedding(vocab, model_dir_or_name='en', layers='1,2', requires_grad=False)
@@ -91,6 +92,7 @@ class ElmoEmbedding(ContextualEmbedding):
         """
         当初始化ElmoEmbedding时layers被设置为mix时，可以通过调用该方法设置mix weights是否可训练。如果layers不是mix，调用
         该方法没有用。
+        
         :param bool flag: 混合不同层表示的结果是否可以训练。
         :return:
         """
@@ -109,8 +111,8 @@ class ElmoEmbedding(ContextualEmbedding):
     def forward(self, words: torch.LongTensor):
         """
         计算words的elmo embedding表示。根据elmo文章中介绍的ELMO实际上是有2L+1层结果，但是为了让结果比较容易拆分，token的
-            被重复了一次，使得实际上layer=0的结果是[token_embedding;token_embedding], 而layer=1的结果是[forward_hiddens;
-            backward_hiddens].
+        被重复了一次，使得实际上layer=0的结果是[token_embedding;token_embedding], 而layer=1的结果是[forward_hiddens;
+        backward_hiddens].
 
         :param words: batch_size x max_len
         :return: torch.FloatTensor. batch_size x max_len x (512*len(self.layers))

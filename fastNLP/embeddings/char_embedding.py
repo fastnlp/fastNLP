@@ -20,7 +20,7 @@ class CNNCharEmbedding(TokenEmbedding):
     别名：:class:`fastNLP.embeddings.CNNCharEmbedding`   :class:`fastNLP.embeddings.char_embedding.CNNCharEmbedding`
 
     使用CNN生成character embedding。CNN的结构为, embed(x) -> Dropout(x) -> CNN(x) -> activation(x) -> pool -> fc -> Dropout.
-        不同的kernel大小的fitler结果是concat起来然后通过一层fully connected layer, 然后输出word的表示。
+    不同的kernel大小的fitler结果是concat起来然后通过一层fully connected layer, 然后输出word的表示。
 
     Example::
 
@@ -274,6 +274,7 @@ class LSTMCharEmbedding(TokenEmbedding):
     def requires_grad(self):
         """
         Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
+        
         :return:
         """
         params = []

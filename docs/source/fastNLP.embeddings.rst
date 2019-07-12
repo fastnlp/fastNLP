@@ -14,7 +14,6 @@ fastNLP.embeddings
 
    fastNLP.embeddings.bert_embedding
    fastNLP.embeddings.char_embedding
-   fastNLP.embeddings.contextual_embedding
    fastNLP.embeddings.elmo_embedding
    fastNLP.embeddings.embedding
    fastNLP.embeddings.stack_embedding

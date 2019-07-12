@@ -16,8 +16,8 @@ class StaticEmbedding(TokenEmbedding):
     别名：:class:`fastNLP.embeddings.StaticEmbedding`   :class:`fastNLP.embeddings.static_embedding.StaticEmbedding`
 
     StaticEmbedding组件. 给定预训练embedding的名称或路径，根据vocab从embedding中抽取相应的数据(只会将出现在vocab中的词抽取出来，
-        如果没有找到，则会随机初始化一个值(但如果该word是被标记为no_create_entry的话，则不会单独创建一个值，而是会被指向unk的index))。
-        当前支持自动下载的预训练vector有以下的几种(待补充);
+    如果没有找到，则会随机初始化一个值(但如果该word是被标记为no_create_entry的话，则不会单独创建一个值，而是会被指向unk的index))。
+    当前支持自动下载的预训练vector有以下的几种(待补充);
 
     Example::
 
@@ -141,6 +141,7 @@ class StaticEmbedding(TokenEmbedding):
     def requires_grad(self):
         """
         Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
+        
         :return:
         """
         requires_grads = set([param.requires_grad for name, param in self.named_parameters()

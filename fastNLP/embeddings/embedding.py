@@ -1,5 +1,5 @@
 """
-该模块中的Embedding主要用于随机初始化的embedding(更推荐使用 :class: StaticEmbedding)，或按照预训练权重初始化Embedding。
+该模块中的Embedding主要用于随机初始化的embedding(更推荐使用 :class:`fastNLP.embeddings.StaticEmbedding` )，或按照预训练权重初始化Embedding。
 
 """
 
