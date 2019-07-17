@@ -848,7 +848,7 @@ class _WordPieceBertModel(nn.Module):
 
     """
 
-    def __init__(self, model_dir: str, layers: str = '-1'):
+    def __init__(self, model_dir: str, layers: str = '-1', pooled_cls:bool=False):
         super().__init__()
 
         self.tokenzier = BertTokenizer.from_pretrained(model_dir)
@@ -867,6 +867,7 @@ class _WordPieceBertModel(nn.Module):
         self._cls_index = self.tokenzier.vocab['[CLS]']
         self._sep_index = self.tokenzier.vocab['[SEP]']
         self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
+        self.pooled_cls = pooled_cls
 
     def index_dataset(self, *datasets, field_name):
         """
@@ -909,10 +910,13 @@ class _WordPieceBertModel(nn.Module):
         batch_size, max_len = word_pieces.size()
 
         attn_masks = word_pieces.ne(self._wordpiece_pad_index)
-        bert_outputs, _ = self.encoder(word_pieces, token_type_ids=token_type_ids, attention_mask=attn_masks,
+        bert_outputs, pooled_cls = self.encoder(word_pieces, token_type_ids=token_type_ids, attention_mask=attn_masks,
                                        output_all_encoded_layers=True)
         # output_layers = [self.layers]  # len(self.layers) x batch_size x max_word_piece_length x hidden_size
         outputs = bert_outputs[0].new_zeros((len(self.layers), batch_size, max_len, bert_outputs[0].size(-1)))
         for l_index, l in enumerate(self.layers):
-            outputs[l_index] = bert_outputs[l]
+            bert_output = bert_outputs[l]
+            if l==len(bert_outputs) and self.pooled_cls:
+                bert_output[:, 0] = pooled_cls
+            outputs[l_index] = bert_output
         return outputs
