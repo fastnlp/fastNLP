@@ -814,8 +814,8 @@ class ExtractiveQAMetric(MetricBase):
             if not self.right_open:
                 e += 1
                 te += 1
-            if ts == 0 and te == int(not self.right_open):
-                if s == 0 and e == int(not self.right_open):
+            if ts == 0 and te == 1:
+                if s == 0 and e == 1:
                     self.no_ans_correct += 1
                     self.no2no += 1
                 else:
