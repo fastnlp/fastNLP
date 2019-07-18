@@ -479,7 +479,7 @@ class FitlogCallback(Callback):
                 self.datasets[key] = value
         elif isinstance(data, DataSet):
             self.datasets['test'] = data
-        else:
+        elif data is not None:
             raise TypeError("data receives dict[DataSet] or DataSet object.")
         
         self.verbose = verbose

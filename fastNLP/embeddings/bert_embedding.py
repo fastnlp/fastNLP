@@ -37,8 +37,8 @@ class BertEmbedding(ContextualEmbedding):
     :param ~fastNLP.Vocabulary vocab: 词表
     :param str model_dir_or_name: 模型所在目录或者模型的名称。当传入模型所在目录时，目录中应该包含一个词表文件(以.txt作为后缀名),
         权重文件(以.bin作为文件后缀名), 配置文件(以.json作为后缀名)。
-    :param str layers: 输出embedding表示来自于哪些层，不同层的结果按照layers中的顺序在最后一维concat起来。以','隔开层数，可以以负数
-        去索引倒数几层。
+    :param str layers: 输出embedding表示来自于哪些层，不同层的结果按照layers中的顺序在最后一维concat起来。以','隔开层数，层的序号是
+        从0开始，可以以负数去索引倒数几层。
     :param str pool_method: 因为在bert中，每个word会被表示为多个word pieces, 当获取一个word的表示的时候，怎样从它的word pieces
         中计算得到它对应的表示。支持 ``last`` , ``first`` , ``avg`` , ``max``。
     :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
@@ -334,7 +334,7 @@ class _WordBertModel(nn.Module):
                         start, end = batch_word_pieces_cum_length[i, j], batch_word_pieces_cum_length[i, j+1]
                         outputs[l_index, i, j+s_shift] = torch.mean(truncate_output_layer[i, start:end], dim=-2)
             if self.include_cls_sep:
-                if l==len(bert_outputs) and self.pooled_cls:
+                if l in (len(bert_outputs)-1, -1) and self.pooled_cls:
                     outputs[l_index, :, 0] = pooled_cls
                 else:
                     outputs[l_index, :, 0] = output_layer[:, 0]

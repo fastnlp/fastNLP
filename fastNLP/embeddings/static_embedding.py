@@ -43,7 +43,7 @@ class StaticEmbedding(TokenEmbedding):
         如果输入为None则使用embedding_dim的维度随机初始化一个embedding。
     :param int embedding_dim: 随机初始化的embedding的维度，仅在model_dir_or_name为None时有效。
     :param bool requires_grad: 是否需要gradient. 默认为True
-    :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对象。
+    :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对
     :param bool lower: 是否将vocab中的词语小写后再和预训练的词表进行匹配。如果你的词表中包含大写的词语，或者就是需要单独
         为大写的词语开辟一个vector表示，则将lower设置为False。
     :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
@@ -84,7 +84,7 @@ class StaticEmbedding(TokenEmbedding):
                     if lowered_word not in lowered_vocab.word_count:
                         lowered_vocab.add_word(lowered_word)
                         lowered_vocab._no_create_word[lowered_word] += 1
-            print(f"All word in vocab have been lowered. There are {len(vocab)} words, {len(lowered_vocab)} unique lowered "
+            print(f"All word in the vocab have been lowered. There are {len(vocab)} words, {len(lowered_vocab)} unique lowered "
                   f"words.")
             if model_path:
                 embedding = self._load_with_vocab(model_path, vocab=lowered_vocab, init_method=init_method)

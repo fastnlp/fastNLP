@@ -47,6 +47,7 @@ from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
 from ._parallel_utils import _data_parallel_wrapper
+from .utils import _model_contains_inner_module
 from functools import partial
 
 __all__ = [
@@ -83,9 +84,7 @@ class Tester(object):
     
     def __init__(self, data, model, metrics, batch_size=16, num_workers=0, device=None, verbose=1):
         super(Tester, self).__init__()
-        
-        if not isinstance(data, DataSet):
-            raise TypeError(f"The type of data must be `fastNLP.DataSet`, got `{type(data)}`.")
+
         if not isinstance(model, nn.Module):
             raise TypeError(f"The type of model must be `torch.nn.Module`, got `{type(model)}`.")
         
@@ -106,19 +105,22 @@ class Tester(object):
 
         # check predict
         if (hasattr(self._model, 'predict') and callable(self._model.predict)) or \
-            (isinstance(self._model, nn.DataParallel) and hasattr(self._model.module, 'predict') and
-              callable(self._model.module.predict)):
+                (_model_contains_inner_module(self._model) and hasattr(self._model.module, 'predict') and
+                 callable(self._model.module.predict)):
             if isinstance(self._model, nn.DataParallel):
                 self._predict_func_wrapper = partial(_data_parallel_wrapper('predict',
                                                                     self._model.device_ids,
                                                                     self._model.output_device),
                                                      network=self._model.module)
+                self._predict_func = self._model.module.predict  # 用于匹配参数
+            elif isinstance(self._model, nn.parallel.DistributedDataParallel):
                 self._predict_func = self._model.module.predict
+                self._predict_func_wrapper = self._model.module.predict  # 用于调用
             else:
                 self._predict_func = self._model.predict
                 self._predict_func_wrapper = self._model.predict
         else:
-            if isinstance(self._model, nn.DataParallel):
+            if _model_contains_inner_module(model):
                 self._predict_func_wrapper = self._model.forward
                 self._predict_func = self._model.module.forward
             else:

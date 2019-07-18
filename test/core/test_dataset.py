@@ -1,4 +1,5 @@
 import os
+import sys
 import unittest
 
 from fastNLP import DataSet
@@ -78,6 +79,16 @@ class TestDataSetMethods(unittest.TestCase):
         dd.delete_field("x")
         self.assertFalse("x" in dd.field_arrays)
         self.assertTrue("y" in dd.field_arrays)
+
+    def test_delete_instance(self):
+        dd = DataSet()
+        old_length = 2
+        dd.add_field("x", [[1, 2, 3]] * old_length)
+        dd.add_field("y", [[1, 2, 3, 4]] * old_length)
+        dd.delete_instance(0)
+        self.assertEqual(len(dd), old_length-1)
+        dd.delete_instance(0)
+        self.assertEqual(len(dd), old_length-2)
 
     def test_getitem(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})

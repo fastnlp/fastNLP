@@ -25,9 +25,9 @@ class Sampler(object):
     
     def __call__(self, data_set):
         """
-       :param DataSet data_set: `DataSet` 对象, 需要Sample的数据
-       :return result: list(int) 其中元素的下标序列, ``data_set`` 中元素会按 ``result`` 中顺序取出
-       """
+        :param DataSet data_set: `DataSet` 对象, 需要Sample的数据
+        :return result: list(int) 其中元素的下标序列, ``data_set`` 中元素会按 ``result`` 中顺序取出
+        """
         raise NotImplementedError
 
 

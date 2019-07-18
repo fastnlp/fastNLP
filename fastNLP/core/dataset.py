@@ -487,7 +487,7 @@ class DataSet(object):
         """
         删除第index个instance
 
-        :param int index: 需要删除的instance的index，从0开始
+        :param int index: 需要删除的instance的index，序号从0开始。
         """
         assert isinstance(index, int), "Only integer supported."
         if len(self) <= index:
@@ -566,7 +566,7 @@ class DataSet(object):
             raise KeyError("DataSet has no field named {}.".format(old_name))
         return self
     
-    def set_target(self, *field_names, flag=True):
+    def set_target(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True):
         """
         将field_names的field设置为target
 
@@ -577,11 +577,14 @@ class DataSet(object):
 
         :param str field_names: field的名称
         :param bool flag: 将field_name的target状态设置为flag
+        :param bool use_1st_ins_infer_dim_type: 如果为True，将不会check该列是否所有数据都是同样的维度，同样的类型。将直接使用第一
+            行的数据进行类型和维度推断本列的数据的类型和维度。
         """
         assert isinstance(flag, bool), "Only bool type supported."
         for name in field_names:
             if name in self.field_arrays:
                 try:
+                    self.field_arrays[name]._use_1st_ins_infer_dim_type = bool(use_1st_ins_infer_dim_type)
                     self.field_arrays[name].is_target = flag
                 except SetInputOrTargetException as e:
                     print(f"Cannot set field:{name} as target.")
@@ -589,7 +592,7 @@ class DataSet(object):
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
     
-    def set_input(self, *field_names, flag=True):
+    def set_input(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True):
         """
         将field_names的field设置为input::
 
@@ -598,10 +601,13 @@ class DataSet(object):
 
         :param str field_names: field的名称
         :param bool flag: 将field_name的input状态设置为flag
+        :param bool use_1st_ins_infer_dim_type: 如果为True，将不会check该列是否所有数据都是同样的维度，同样的类型。将直接使用第一
+            行的数据进行类型和维度推断本列的数据的类型和维度。
         """
         for name in field_names:
             if name in self.field_arrays:
                 try:
+                    self.field_arrays[name]._use_1st_ins_infer_dim_type = bool(use_1st_ins_infer_dim_type)
                     self.field_arrays[name].is_input = flag
                 except SetInputOrTargetException as e:
                     print(f"Cannot set field:{name} as input, exception happens at the {e.index} value.")

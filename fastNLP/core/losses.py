@@ -225,7 +225,7 @@ class CrossEntropyLoss(LossBase):
     
     def get_loss(self, pred, target, seq_len=None):
         if pred.dim() > 2:
-            if pred.size(1) != target.size(1):
+            if pred.size(1) != target.size(1):  # 有可能顺序替换了
                 pred = pred.transpose(1, 2)
             pred = pred.reshape(-1, pred.size(-1))
             target = target.reshape(-1)

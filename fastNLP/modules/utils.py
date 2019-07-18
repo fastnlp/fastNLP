@@ -3,7 +3,8 @@ from functools import reduce
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-
+import glob
+import os
 
 def initial_parameter(net, initial_method=None):
     """A method used to initialize the weights of PyTorch models.
@@ -119,7 +120,6 @@ def get_dropout_mask(drop_p: float, tensor: torch.Tensor):
                           training=False, inplace=True)
     return mask_x
 
-import glob
 
 def _get_file_name_base_on_postfix(dir_path, postfix):
     """

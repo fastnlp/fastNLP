@@ -93,8 +93,12 @@ class DataSetGetter:
 
 class SamplerAdapter(torch.utils.data.Sampler):
     def __init__(self, sampler, dataset):
+        super().__init__(dataset)
         self.sampler = sampler
         self.dataset = dataset
+
+    def __len__(self):
+        return len(self.dataset)
 
     def __iter__(self):
         return iter(self.sampler(self.dataset))
@@ -165,15 +169,19 @@ class DataSetIter(BatchIter):
                  timeout=0, worker_init_fn=None):
         super().__init__()
         assert isinstance(dataset, DataSet)
-        sampler = SamplerAdapter(sampler=sampler or SequentialSampler(), dataset=dataset)
+        if not isinstance(sampler, torch.utils.data.Sampler):
+            self.sampler = SamplerAdapter(sampler=sampler or SequentialSampler(), dataset=dataset)
+        else:
+            self.sampler = sampler
         dataset = DataSetGetter(dataset, as_numpy)
         collate_fn = dataset.collate_fn if hasattr(dataset, 'collate_fn') else None
         self.dataiter = torch.utils.data.DataLoader(
-            dataset=dataset, batch_size=batch_size, sampler=sampler,
+            dataset=dataset, batch_size=batch_size, sampler=self.sampler,
             collate_fn=collate_fn, num_workers=num_workers,
             pin_memory=pin_memory, drop_last=drop_last,
             timeout=timeout, worker_init_fn=worker_init_fn)
-        self.num_batches = self.get_num_batches(len(dataset), batch_size, drop_last)
+        # 以sampler的数量为准，因为DistributedSampler的时候每个进程上并不是所有的数据都用上了
+        self.num_batches = self.get_num_batches(len(self.dataiter.sampler), batch_size, drop_last)
         self.batch_size = batch_size
 
 
@@ -182,7 +190,7 @@ class TorchLoaderIter(BatchIter):
         super().__init__()
         assert isinstance(dataset, torch.utils.data.DataLoader)
         self.dataiter = dataset
-        self.num_batches = self.get_num_batches(len(dataset), dataset.batch_size, dataset.drop_last)
+        self.num_batches = self.get_num_batches(len(dataset.sampler), dataset.batch_size, dataset.drop_last)
         self.batch_size = dataset.batch_size
 
 
