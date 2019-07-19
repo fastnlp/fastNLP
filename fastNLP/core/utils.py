@@ -187,18 +187,6 @@ def _save_model(model, model_name, save_dir, only_param=False):
         torch.save(model, model_path)
         model.to(_model_device)
 
-def _model_contains_inner_module(model):
-    """
-
-    :param nn.Module model: 模型文件，判断是否内部包含model.module, 多用于check模型是否是nn.DataParallel,
-        nn.parallel.DistributedDataParallel。主要是在做形参匹配的时候需要使用最内部的model的function。
-    :return: bool
-    """
-    if isinstance(model, nn.Module):
-        if isinstance(model, (nn.DataParallel, nn.parallel.DistributedDataParallel)):
-            return True
-    return False
-
 def _move_model_to_device(model, device):
     """
     将model移动到device

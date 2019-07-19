@@ -47,7 +47,7 @@ from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
 from ._parallel_utils import _data_parallel_wrapper
-from .utils import _model_contains_inner_module
+from fastNLP.core._parallel_utils import _model_contains_inner_module
 from functools import partial
 
 __all__ = [

@@ -92,7 +92,7 @@ class CNNCharEmbedding(TokenEmbedding):
             for i in range(len(kernel_sizes))])
         self._embed_size = embed_size
         self.fc = nn.Linear(sum(filter_nums), embed_size)
-        self.init_param()
+        self.reset_parameters()
 
     def forward(self, words):
         """
@@ -149,7 +149,7 @@ class CNNCharEmbedding(TokenEmbedding):
                 continue
             param.requires_grad = value
 
-    def init_param(self):
+    def reset_parameters(self):
         for name, param in self.named_parameters():
             if 'words_to_chars_embedding' in name or 'word_lengths' in name:  # 这个不能reset
                 continue

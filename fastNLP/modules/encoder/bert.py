@@ -871,7 +871,7 @@ class _WordPieceBertModel(nn.Module):
         self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
         self.pooled_cls = pooled_cls
 
-    def index_dataset(self, *datasets, field_name):
+    def index_dataset(self, *datasets, field_name, add_cls_sep=True):
         """
         使用bert的tokenizer新生成word_pieces列加入到datasets中，并将他们设置为input。如果首尾不是
             [CLS]与[SEP]会在首尾额外加入[CLS]与[SEP], 且将word_pieces这一列的pad value设置为了bert的pad value。
@@ -887,10 +887,11 @@ class _WordPieceBertModel(nn.Module):
                 tokens = self.tokenzier.wordpiece_tokenizer.tokenize(word)
                 word_piece_ids = self.tokenzier.convert_tokens_to_ids(tokens)
                 word_pieces.extend(word_piece_ids)
-            if word_pieces[0] != self._cls_index:
-                word_pieces.insert(0, self._cls_index)
-            if word_pieces[-1] != self._sep_index:
-                word_pieces.insert(-1, self._sep_index)
+            if add_cls_sep:
+                if word_pieces[0] != self._cls_index:
+                    word_pieces.insert(0, self._cls_index)
+                if word_pieces[-1] != self._sep_index:
+                    word_pieces.insert(-1, self._sep_index)
             return word_pieces
 
         for index, dataset in enumerate(datasets):
