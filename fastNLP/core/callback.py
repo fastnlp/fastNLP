@@ -250,6 +250,14 @@ class Callback(object):
         :return:
         """
         pass
+
+    def on_validation(self):
+        """
+        如果Trainer中设置了验证，则会在每次需要验证时调用该函数
+
+        :return:
+        """
+        pass
     
     def on_epoch_end(self):
         """
@@ -351,6 +359,10 @@ class CallbackManager(Callback):
     
     @_transfer
     def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
+        pass
+
+    @_transfer
+    def on_validation(self):
         pass
     
     @_transfer
