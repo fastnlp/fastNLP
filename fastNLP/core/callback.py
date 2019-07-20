@@ -100,7 +100,8 @@ class Callback(object):
     def __init__(self):
         super(Callback, self).__init__()
         self._trainer = None  # 在Trainer内部被重新赋值
-    
+        self._disabled = False
+
     @property
     def trainer(self):
         """
@@ -158,6 +159,14 @@ class Callback(object):
     def batch_per_epoch(self):
         """每个epoch一共有多少个batch，只有在on_epoch_begin之后才能调用该属性。"""
         return self._trainer.batch_per_epoch
+
+    @property
+    def is_master(self):
+        return self._trainer.is_master()
+
+    @property
+    def disabled(self):
+        return self._disabled
     
     def on_train_begin(self):
         """
@@ -289,6 +298,8 @@ def _transfer(func):
     def wrapper(manager, *arg):
         returns = []
         for callback in manager.callbacks:
+            if callback.disabled:
+                continue
             returns.append(getattr(callback, func.__name__)(*arg))
         return returns
     
@@ -320,7 +331,7 @@ class CallbackManager(Callback):
         for env_name, env_val in env.items():
             for callback in self.callbacks:
                 setattr(callback, '_' + env_name, env_val)  # Callback.trainer
-    
+
     @_transfer
     def on_train_begin(self):
         pass
@@ -378,6 +389,24 @@ class CallbackManager(Callback):
         pass
 
 
+class DistCallbackManager(CallbackManager):
+    def __init__(self, env, callbacks_all=None, callbacks_master=None):
+        assert 'trainer' in env
+        is_master = env['trainer'].is_master
+        self.patch_callback(callbacks_master, disabled=not is_master)
+        self.callbacks_all = CallbackManager(env, callbacks_all).callbacks
+        self.callbacks_master = CallbackManager(env, callbacks_master).callbacks
+        self.callbacks = self.callbacks_all + self.callbacks_master
+
+    def patch_callback(self, callbacks, disabled):
+        if not callbacks:
+            return
+        if not isinstance(callbacks, (list, tuple)):
+            callbacks = [callbacks]
+        for cb in callbacks:
+            cb._disabled = disabled
+
+
 class GradientClipCallback(Callback):
     """
     别名：:class:`fastNLP.GradientClipCallback` :class:`fastNLP.core.callback.GradientClipCallback`
@@ -415,6 +444,9 @@ class GradientClipCallback(Callback):
     def on_backward_end(self):
         if self.step%self.update_every==0:
             if self.parameters is None:
+                if getattr(self.trainer, 'fp16', default=''):
+                    from apex import amp
+                    self.clip_fun(amp.master_params(self.optimizer), self.clip_value)
                 self.clip_fun(self.model.parameters(), self.clip_value)
             else:
                 self.clip_fun(self.parameters, self.clip_value)
@@ -896,3 +928,21 @@ class EarlyStopError(CallbackException):
     
     def __init__(self, msg):
         super(EarlyStopError, self).__init__(msg)
+
+
+class EchoCallback(Callback):
+    def __init__(self, name, out=sys.stdout):
+        super(EchoCallback, self).__init__()
+        self.name = name
+        self.out = out
+
+    def __getattribute__(self, item):
+        if item.startswith('on_'):
+            print('{}.{} has been called at pid: {}'.format(self.name, item, os.getpid()),
+                  file=self.out)
+        return super(EchoCallback, self).__getattribute__(item)
+
+
+class TesterCallback(Callback):
+    def __init__(self, data, model, metrics, batch_size=16, num_workers=None):
+        self.tester = Tester(data, model)

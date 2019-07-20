@@ -431,13 +431,13 @@ class Trainer(object):
         super(Trainer, self).__init__()
         if not isinstance(model, nn.Module):
             raise TypeError(f"The type of model must be torch.nn.Module, got {type(model)}.")
-        
+
         # check metrics and dev_data
         if (not metrics) and dev_data is not None:
             raise ValueError("No metric for dev_data evaluation.")
         if metrics and (dev_data is None):
             raise ValueError("No dev_data for evaluations, pass dev_data or set metrics to None. ")
-        
+
         # check update every
         assert update_every >= 1, "update_every must be no less than 1."
         self.update_every = int(update_every)
@@ -447,7 +447,7 @@ class Trainer(object):
             raise ValueError("save_path can only be None or `str`.")
         # prepare evaluate
         metrics = _prepare_metrics(metrics)
-        
+
         # parse metric_key
         # increase_better is True. It means the exp result gets better if the indicator increases.
         # It is true by default.
@@ -546,7 +546,7 @@ class Trainer(object):
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=4e-3)
         else:
             raise TypeError("optimizer can only be torch.optim.Optimizer type, not {}.".format(type(optimizer)))
-        
+
         self.use_tqdm = use_tqdm
         self.pbar = None
         self.print_every = abs(self.print_every)
@@ -558,10 +558,10 @@ class Trainer(object):
                                  batch_size=self.batch_size,
                                  device=None,  # 由上面的部分处理device
                                  verbose=0)
-        
+
         self.step = 0
         self.start_time = None  # start timestamp
-        
+
         self.callback_manager = CallbackManager(env={"trainer": self},
                                                 callbacks=callbacks)
 
@@ -597,7 +597,7 @@ class Trainer(object):
             self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
             start_time = time.time()
             print("training epochs started " + self.start_time, flush=True)
-            
+
             try:
                 self.callback_manager.on_train_begin()
                 self._train()
@@ -610,7 +610,7 @@ class Trainer(object):
                         raise e
                 elif on_exception == 'raise':
                     raise e
-            
+
             if self.dev_data is not None and self.best_dev_perf is not None:
                 print(
                     "\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
@@ -628,9 +628,9 @@ class Trainer(object):
         finally:
             pass
         results['seconds'] = round(time.time() - start_time, 2)
-        
+
         return results
-    
+
     def _train(self):
         if not self.use_tqdm:
             from fastNLP.core.utils import _pseudo_tqdm as inner_tqdm
@@ -656,21 +656,21 @@ class Trainer(object):
                     # negative sampling; replace unknown; re-weight batch_y
                     self.callback_manager.on_batch_begin(batch_x, batch_y, indices)
                     prediction = self._data_forward(self.model, batch_x)
-                    
+
                     # edit prediction
                     self.callback_manager.on_loss_begin(batch_y, prediction)
                     loss = self._compute_loss(prediction, batch_y).mean()
                     avg_loss += loss.item()
                     loss = loss / self.update_every
-                    
+
                     # Is loss NaN or inf? requires_grad = False
                     self.callback_manager.on_backward_begin(loss)
                     self._grad_backward(loss)
                     self.callback_manager.on_backward_end()
-                    
+
                     self._update()
                     self.callback_manager.on_step_end()
-                    
+
                     if self.step % self.print_every == 0:
                         avg_loss = float(avg_loss) / self.print_every
                         if self.use_tqdm:
@@ -684,7 +684,7 @@ class Trainer(object):
                         pbar.set_postfix_str(print_output)
                         avg_loss = 0
                     self.callback_manager.on_batch_end()
-                    
+
                     if ((self.validate_every > 0 and self.step % self.validate_every == 0) or
                         (self.validate_every < 0 and self.step % len(data_iterator) == 0)) \
                             and self.dev_data is not None:
@@ -693,20 +693,20 @@ class Trainer(object):
                                                                                     self.n_steps) + \
                                    self.tester._format_eval_results(eval_res)
                         pbar.write(eval_str + '\n')
-                
+
                 # ================= mini-batch end ==================== #
-                
+
                 # lr decay; early stopping
                 self.callback_manager.on_epoch_end()
             # =============== epochs end =================== #
             pbar.close()
             self.pbar = None
         # ============ tqdm end ============== #
-    
+
     def _do_validation(self, epoch, step):
         self.callback_manager.on_valid_begin()
         res = self.tester.test()
-        
+
         is_better_eval = False
         if self._better_eval_result(res):
             if self.save_path is not None:
@@ -721,7 +721,7 @@ class Trainer(object):
         # get validation results; adjust optimizer
         self.callback_manager.on_valid_end(res, self.metric_key, self.optimizer, is_better_eval)
         return res
-    
+
     def _mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.
 
@@ -733,14 +733,14 @@ class Trainer(object):
             model.eval()
         else:
             model.train()
-    
+
     def _update(self):
         """Perform weight update on a model.
 
         """
         if self.step % self.update_every == 0:
             self.optimizer.step()
-    
+
     def _data_forward(self, network, x):
         x = _build_args(self._forward_func, **x)
         y = network(**x)
@@ -748,7 +748,7 @@ class Trainer(object):
             raise TypeError(
                 f"The return value of {_get_func_signature(self._forward_func)} should be dict, got {type(y)}.")
         return y
-    
+
     def _grad_backward(self, loss):
         """Compute gradient with link rules.
 
@@ -759,7 +759,7 @@ class Trainer(object):
         if (self.step-1) % self.update_every == 0:
             self.model.zero_grad()
         loss.backward()
-    
+
     def _compute_loss(self, predict, truth):
         """Compute loss given prediction and ground truth.
 
@@ -768,7 +768,7 @@ class Trainer(object):
         :return: a scalar
         """
         return self.losser(predict, truth)
-    
+
     def _save_model(self, model, model_name, only_param=False):
         """ 存储不含有显卡信息的state_dict或model
         :param model:
@@ -791,7 +791,7 @@ class Trainer(object):
                 model.cpu()
                 torch.save(model, model_path)
                 model.to(self._model_device)
-    
+
     def _load_model(self, model, model_name, only_param=False):
         # 返回bool值指示是否成功reload模型
         if self.save_path is not None:
@@ -809,7 +809,7 @@ class Trainer(object):
         else:
             return False
         return True
-    
+
     def _better_eval_result(self, metrics):
         """Check if the current epoch yields better validation results.
 
@@ -835,6 +835,9 @@ class Trainer(object):
                     is_better = False
         return is_better
 
+    @property
+    def is_master(self):
+        return True
 
 DEFAULT_CHECK_BATCH_SIZE = 2
 DEFAULT_CHECK_NUM_BATCH = 2

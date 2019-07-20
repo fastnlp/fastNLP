@@ -4,7 +4,7 @@ import numpy as np
 import torch.cuda
 from fastNLP import DataSet
 from fastNLP import Instance
-from fastNLP import CrossEntropyLoss
+from fastNLP import CrossEntropyLoss, BCELoss
 from fastNLP import SGD
 from fastNLP.core.dist_trainer import DistTrainer, get_local_rank
 from fastNLP.models.base_model import NaiveClassifier
@@ -12,6 +12,7 @@ import shutil
 import os
 import subprocess
 from argparse import ArgumentParser
+from fastNLP.core.callback import EchoCallback
 
 def prepare_fake_dataset():
     mean = np.array([-3, -3])
@@ -35,6 +36,26 @@ def prepare_fake_dataset2(*args, size=100):
 
 def set_rng_seed(seed):
     np.random.seed(seed)
+
+def prepare_env():
+    def prepare_fake_dataset():
+        mean = np.array([-3, -3])
+        cov = np.array([[1, 0], [0, 1]])
+        class_A = np.random.multivariate_normal(mean, cov, size=(1000,))
+
+        mean = np.array([3, 3])
+        cov = np.array([[1, 0], [0, 1]])
+        class_B = np.random.multivariate_normal(mean, cov, size=(1000,))
+
+        data_set = DataSet([Instance(x=[float(item[0]), float(item[1])], y=[0.0]) for item in class_A] +
+                           [Instance(x=[float(item[0]), float(item[1])], y=[1.0]) for item in class_B])
+        return data_set
+
+    data_set = prepare_fake_dataset()
+    data_set.set_input("x")
+    data_set.set_target("y")
+    model = NaiveClassifier(2, 1)
+    return data_set, model
 
 class TestDistTrainer(unittest.TestCase):
     save_path = './save_cp'
@@ -84,22 +105,34 @@ class TestDistTrainer(unittest.TestCase):
         if trainer.is_master and os.path.exists(self.save_path):
             shutil.rmtree(self.save_path)
 
+    def run3(self):
+        data_set, model = prepare_env()
+        trainer = DistTrainer(
+            data_set, model, optimizer=None, loss=BCELoss(pred="predict", target="y"),
+            n_epochs=3, print_every=50,
+            callbacks_all=[EchoCallback('callbacks_all')],
+            callbacks_master=[EchoCallback('callbacks_master')]
+        )
+        trainer.train()
+
     def run_dist(self, run_id):
         if torch.cuda.is_available():
-            ngpu = min(4, torch.cuda.device_count())
+            ngpu = min(2, torch.cuda.device_count())
             path = __file__
             cmd = ['python', '-m', 'torch.distributed.launch',
                    '--nproc_per_node', str(ngpu), path, '--test', str(run_id)]
             print(' '.join(cmd))
-            retcode = subprocess.call(cmd)
-            if retcode:
-                raise RuntimeError('subprocess got non-zero exit status %d' % retcode)
+            subprocess.check_call(cmd, timeout=60.0)
 
-    def test1(self):
+    def test_normal_run(self):
         self.run_dist(1)
 
-    def test2(self):
+    def test_fp16(self):
         self.run_dist(2)
+
+    def test_callback(self):
+        self.run_dist(3)
+
 
 if __name__ == '__main__':
     runner = TestDistTrainer()

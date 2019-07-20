@@ -11,7 +11,7 @@ import time
 from datetime import datetime, timedelta
 
 from .batch import DataSetIter, BatchIter
-from .callback import CallbackManager, CallbackException
+from .callback import DistCallbackManager, CallbackException
 from .dataset import DataSet
 from .losses import _prepare_losser
 from .optimizer import Optimizer
@@ -39,18 +39,36 @@ def get_local_rank():
 
 
 class DistTrainer():
-    def __init__(self, model, train_data, optimizer, loss, callbacks=None,
+    def __init__(self, train_data, model, optimizer=None, loss=None,
+                 callbacks_all=None, callbacks_master=None,
                  batch_size_per_gpu=8, n_epochs=1,
-                 num_workers=1, drop_last=False,
+                 num_data_workers=1, drop_last=False,
                  update_every=1, print_every=10, validate_every=-1,
-                 save_every=-1, save_path=None,
-                 logging_level=logging.INFO,
-                 fp16='', backend='nccl', init_method=None):
+                 save_every=-1, save_path=None, device='auto',
+                 fp16='', backend=None, init_method=None):
+
+        assert device in ['auto', 'cuda', 'cpu'], "Please set correct device in [auto', 'cuda', 'cpu']"
+        if device == 'auto':
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        if backend is None:
+            backend = 'nccl' if device == 'cuda' else 'gloo'
+
+        # init distributed
+        if device == 'cuda':
+            torch.cuda.set_device(get_local_rank())
+            self.device = torch.device("cuda", get_local_rank())
+        else:
+            self.device = torch.device(device)
+
+        dist.init_process_group(backend=backend, init_method=init_method)
+        self.world_size = dist.get_world_size()
+        self.rank = dist.get_rank() # unique id for each process
+
         self.model = model
         self.train_data = train_data
         self.batch_size_per_gpu = int(batch_size_per_gpu)
         self.n_epochs = int(n_epochs)
-        self.num_workers = int(num_workers)
+        self.num_data_workers = int(num_data_workers)
         self.drop_last = drop_last
         self.update_every = int(update_every)
         self.print_every = int(print_every)
@@ -62,16 +80,13 @@ class DistTrainer():
         self.init_method = init_method
         self.backend = backend
         self.local_rank = get_local_rank()
-        self.callback_manager = CallbackManager(env={"trainer": self}, callbacks=callbacks)
         self._forward_func = model.forward
+        self.callback_manager = DistCallbackManager(
+            env={"trainer": self}, callbacks_all=callbacks_all,
+            callbacks_master=callbacks_master)
 
-        assert torch.cuda.is_available(), "Distributed Trainer requires cuda to be enabled."
-        # init distributed
-        torch.cuda.set_device(self.local_rank)
-        self.device = torch.device("cuda", self.local_rank)
-        dist.init_process_group(backend=self.backend, init_method=self.init_method)
         model.to(self.device)
-        optimizer = self.get_optimizer(optimizer)
+        optimizer = self._get_optimizer(optimizer)
 
         # init fp16, must before DataParallel init
         if len(self.fp16):
@@ -81,51 +96,48 @@ class DistTrainer():
             except ImportError:
                 raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
             assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
+            assert device == 'cuda', "Amp requires cuda device"
             model, optimizer = amp.initialize(model, optimizer, opt_level=self.fp16)
 
         # init DataParallel
         self.model = DDP(model, device_ids=[self.local_rank],
                          output_device=self.local_rank)
         self.optimizer = optimizer
-        self.world_size = dist.get_world_size()
-        self.rank = dist.get_rank() # unique id for each process
         self.sampler = DistributedSampler(self.train_data)
-        self.data_iterator = self.get_data_iter(self.train_data)
-        self.n_steps = self.get_n_steps()
+        self.data_iterator = self._get_data_iter(self.train_data)
+        self.n_steps = self._get_n_steps()
 
         # Setup logging
+        dist.barrier()
+        self.start_time = datetime.now().strftime('%m_%d_%Y-%H_%M')
+        if self.save_path:
+            self.cp_save_path = os.path.join(self.save_path, 'checkpoints', self.start_time)
+        else:
+            self.cp_save_path = None
+
+        # use INFO in the master, WARN for others
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                             datefmt='%m/%d/%Y %H:%M:%S',
-                            level=logging_level)
+                            level=logging.INFO if self.is_master else logging.WARN)
         self.logger = logging.getLogger(__name__)
-        self.logger.info("Process pid: {}, rank: {}, local rank: {}, device: {}, fp16: {}".format(
+        self.logger.info("Setup Distributed Trainer")
+        self.logger.warning("Process pid: {}, rank: {}, local rank: {}, device: {}, fp16: {}".format(
                         os.getpid(), self.rank, self.local_rank, self.device, self.fp16 if self.fp16 else False))
-        if self.is_master:
-            self.logger.info('Total epochs: %d'% self.n_epochs)
-            self.logger.info('Total steps: %d'% self.n_steps)
-            self.logger.info('Num instances per GPU %d'% self.batch_size_per_gpu)
-            self.logger.info('Total batch_size: %d'% self.batch_size_per_gpu * dist.get_world_size())
-            self.logger.info('Total num of samples: %d'% len(self.train_data))
-            self.logger.info("Num of callbacks: {}".format(len(self.callback_manager.callbacks)))
-            self.logger.info(
-                "Use callbacks: {}".format([repr(cb) for cb in self.callback_manager.callbacks]))
+        self.logger.info("Num of processes: {}".format(self.world_size))
+        self.logger.info("Use device: {}".format(device))
+        self.logger.info("Training with fp16: {}, optimization level: {}".format(
+                        len(self.fp16) > 0, self.fp16 if self.fp16 else None))
 
-            # only master process save model
-            if self.save_path:
-                self.save_path = os.path.join(
-                    self.save_path,
-                    datetime.now().strftime('%m_%d_%y-%H_%M_%S')+'-'+str(os.getpid()))
-
-    def get_n_steps(self):
+    def _get_n_steps(self):
         batch_size = self.world_size * self.batch_size_per_gpu
         return (len(self.train_data) // batch_size + int(
             len(self.train_data) % batch_size != 0)) * int(self.drop_last == 0) * self.n_epochs
 
-    def get_data_iter(self, dataset):
+    def _get_data_iter(self, dataset):
         if isinstance(dataset, DataSet):
             return DataSetIter(
                 dataset=dataset, batch_size=self.batch_size_per_gpu,
-                num_workers=self.num_workers, sampler=self.sampler,
+                num_workers=self.num_data_workers, sampler=self.sampler,
                 drop_last=self.drop_last
             )
         elif isinstance(dataset, BatchIter):
@@ -133,7 +145,7 @@ class DistTrainer():
         else:
             raise TypeError("train_data type {} not support".format(type(dataset)))
 
-    def get_optimizer(self, optimizer):
+    def _get_optimizer(self, optimizer):
         if isinstance(optimizer, torch.optim.Optimizer):
             return optimizer
         elif isinstance(optimizer, Optimizer):
@@ -148,37 +160,50 @@ class DistTrainer():
         return self.rank == 0
 
     def train(self, on_exception='auto'):
-        start_time = time.time()
-        results = {}
-        if self.n_epochs <= 0:
-            if self.is_master:
-                self.logger.info("Training epoch is {}, nothing was done.".format(self.n_epochs))
-            results['seconds'] = 0.
-            return results
-
-        if self.is_master:
-            self.logger.info("###### Training epochs started ######")
-
         try:
-            self.callback_manager.on_train_begin()
-            self._train()
-            self.callback_manager.on_train_end()
+            self.logger.info("###### Training epochs started ######")
+            self.logger.info('Total epochs: %d'% self.n_epochs)
+            self.logger.info('Total steps: %d'% self.n_steps)
+            self.logger.info('Num instances per GPU %d'% self.batch_size_per_gpu)
+            self.logger.info('Total batch_size: %d'% self.batch_size_per_gpu * dist.get_world_size())
+            self.logger.info('Total num of samples: %d'% len(self.train_data))
+            self.logger.info("Num of callbacks for all workers: {}".format(
+                                len(self.callback_manager.callbacks_all)))
+            self.logger.info("Num of callbacks for master workers: {}".format(
+                                len(self.callback_manager.callbacks_master)))
+            self.logger.info("Callbacks for all workers: {}".format(
+                    [repr(cb) for cb in self.callback_manager.callbacks_all]))
+            self.logger.info("Callbacks for master workers: {}".format(
+                    [repr(cb) for cb in self.callback_manager.callbacks_master]))
 
-        except BaseException as e:
-            self.callback_manager.on_exception(e)
-            if on_exception == 'auto':
-                if not isinstance(e, (CallbackException, KeyboardInterrupt)):
+            start_time = time.time()
+            results = {}
+            if self.n_epochs <= 0:
+                self.logger.info("Training epoch is {}, nothing was done.".format(self.n_epochs))
+                results['seconds'] = 0.
+                return results
+
+            try:
+                self.callback_manager.on_train_begin()
+                self._train()
+                self.callback_manager.on_train_end()
+
+            except BaseException as e:
+                self.callback_manager.on_exception(e)
+                if on_exception == 'auto':
+                    if not isinstance(e, (CallbackException, KeyboardInterrupt)):
+                        raise e
+                    else:
+                        self.logger.info('Catch {}, ignored.'.format(e.__class__.__name__))
+                elif on_exception == 'raise':
                     raise e
-                else:
-                    self.logger.info('Catch {}, ignored.'.format(e.__class__.__name__))
-            elif on_exception == 'raise':
-                raise e
 
-        results['seconds'] = round(time.time() - start_time, 2)
-        if self.is_master:
+            results['seconds'] = round(time.time() - start_time, 2)
             self.logger.info("###### Train finished ######")
             self.logger.info('Total train time: {} seconds.'. format(results['seconds']))
-        return results
+            return results
+        finally:
+            self.close()
 
     def _train(self):
         if self.fp16:
@@ -187,7 +212,7 @@ class DistTrainer():
         self.step = 0
         self.epoch = 0
         self.pbar = tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}',
-            leave=False, dynamic_ncols=True, disable=not self.is_master)
+                        leave=False, dynamic_ncols=True, disable=not self.is_master)
         pbar = self.pbar
         avg_loss = 0
         data_iterator = self.data_iterator
@@ -238,18 +263,17 @@ class DistTrainer():
                     (self.validate_every < 0 and self.step % len(data_iterator) == 0)):
                     eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
                                                                                 self.n_steps)
-                    if self.is_master:
-                        self.logger.info(eval_str)
+                    self.logger.info(eval_str)
                     self.callback_manager.on_validation()
                     dist.barrier()
 
-                if self.save_path and \
+                if self.cp_save_path and \
                         self.save_every > 0 and \
                         self.step % self.save_every == 0:
                     self.save_check_point()
 
             # ================= mini-batch end ==================== #
-        if self.save_path and self.save_every < 0:
+        if self.save_every < 0 and self.cp_save_path:
             self.save_check_point()
             # lr decay; early stopping
             self.callback_manager.on_epoch_end()
@@ -287,16 +311,15 @@ class DistTrainer():
         return loss.mean()
 
     def save_check_point(self, only_params=False):
+        # only master save models
         if self.is_master:
-            if not os.path.exists(self.save_path):
-                os.makedirs(self.save_path)
-            path = os.path.join(self.save_path, 'checkpoint-{}.bin'.format(self.step))
+            os.makedirs(self.cp_save_path, exist_ok=True)
+            path = os.path.join(self.cp_save_path, 'checkpoint-{}.bin'.format(self.step))
             self.logger.info("Save checkpoint to {}".format(path))
             model_to_save = self.model.module
             if only_params:
                 model_to_save = model_to_save.state_dict()
             torch.save(model_to_save, path)
-        dist.barrier()
 
     def close(self):
         dist.destroy_process_group()
