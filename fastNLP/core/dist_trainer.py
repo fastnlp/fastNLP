@@ -11,7 +11,7 @@ import time
 from datetime import datetime, timedelta
 
 from .batch import DataSetIter, BatchIter
-from .callback import DistCallbackManager, CallbackException
+from .callback import DistCallbackManager, CallbackException, TesterCallback
 from .dataset import DataSet
 from .losses import _prepare_losser
 from .optimizer import Optimizer
@@ -39,10 +39,13 @@ def get_local_rank():
 
 
 class DistTrainer():
+    """Distributed Trainer that support distributed and mixed precision training
+    """
     def __init__(self, train_data, model, optimizer=None, loss=None,
                  callbacks_all=None, callbacks_master=None,
                  batch_size_per_gpu=8, n_epochs=1,
                  num_data_workers=1, drop_last=False,
+                 dev_data=None, metrics=None,
                  update_every=1, print_every=10, validate_every=-1,
                  save_every=-1, save_path=None, device='auto',
                  fp16='', backend=None, init_method=None):
@@ -106,6 +109,14 @@ class DistTrainer():
         self.sampler = DistributedSampler(self.train_data)
         self.data_iterator = self._get_data_iter(self.train_data)
         self.n_steps = self._get_n_steps()
+
+        # for evaluation, only run eval on master proc
+        if dev_data and metrics:
+            cb = TesterCallback(
+                dev_data, model, metrics,
+                batch_size=batch_size_per_gpu, num_workers=num_data_workers)
+            self.callback_manager.callbacks_master += \
+                self.callback_manager.prepare_callbacks([cb])
 
         # Setup logging
         dist.barrier()
@@ -261,9 +272,6 @@ class DistTrainer():
 
                 if ((self.validate_every > 0 and self.step % self.validate_every == 0) or
                     (self.validate_every < 0 and self.step % len(data_iterator) == 0)):
-                    eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
-                                                                                self.n_steps)
-                    self.logger.info(eval_str)
                     self.callback_manager.on_validation()
                     dist.barrier()
 

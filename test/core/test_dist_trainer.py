@@ -13,6 +13,7 @@ import os
 import subprocess
 from argparse import ArgumentParser
 from fastNLP.core.callback import EchoCallback
+from fastNLP import AccuracyMetric
 
 def prepare_fake_dataset():
     mean = np.array([-3, -3])
@@ -106,14 +107,35 @@ class TestDistTrainer(unittest.TestCase):
             shutil.rmtree(self.save_path)
 
     def run3(self):
+        set_rng_seed(100)
         data_set, model = prepare_env()
         trainer = DistTrainer(
-            data_set, model, optimizer=None, loss=BCELoss(pred="predict", target="y"),
+            data_set, model, optimizer=None,
+            loss=BCELoss(pred="predict", target="y"),
             n_epochs=3, print_every=50,
             callbacks_all=[EchoCallback('callbacks_all')],
             callbacks_master=[EchoCallback('callbacks_master')]
         )
         trainer.train()
+
+    def run4(self):
+        set_rng_seed(100)
+        data_set, model = prepare_env()
+
+        train_set, dev_set = data_set.split(0.3)
+
+        model = NaiveClassifier(2, 1)
+
+        trainer = DistTrainer(
+            train_set, model, optimizer=SGD(lr=0.1),
+            loss=BCELoss(pred="predict", target="y"),
+            batch_size_per_gpu=32, n_epochs=3, print_every=50, dev_data=dev_set,
+            metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
+        )
+        trainer.train()
+        """
+        # 应该正确运行
+        """
 
     def run_dist(self, run_id):
         if torch.cuda.is_available():
@@ -133,6 +155,8 @@ class TestDistTrainer(unittest.TestCase):
     def test_callback(self):
         self.run_dist(3)
 
+    def test_dev_data(self):
+        self.run_dist(4)
 
 if __name__ == '__main__':
     runner = TestDistTrainer()
