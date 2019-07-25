@@ -456,7 +456,7 @@ class GradientClipCallback(Callback):
     def on_backward_end(self):
         if self.step%self.update_every==0:
             if self.parameters is None:
-                if getattr(self.trainer, 'fp16', default=''):
+                if getattr(self.trainer, 'fp16', ''):
                     from apex import amp
                     self.clip_fun(amp.master_params(self.optimizer), self.clip_value)
                 self.clip_fun(self.model.parameters(), self.clip_value)
