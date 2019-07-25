@@ -1,30 +1,19 @@
-fastNLP.models 
-===============
-
-fastNLP.models.base\_model 
----------------------------
-
-.. automodule:: fastNLP.models.base_model
-    :members:
-
-fastNLP.models.char\_language\_model 
--------------------------------------
-
-.. automodule:: fastNLP.models.char_language_model
-    :members:
-
-fastNLP.models.cnn\_text\_classification 
------------------------------------------
-
-.. automodule:: fastNLP.models.cnn_text_classification
-    :members:
-
-fastNLP.models.sequence\_modeling 
-----------------------------------
-
-.. automodule:: fastNLP.models.sequence_modeling
-    :members:
-
+fastNLP.models
+==============
 
 .. automodule:: fastNLP.models
-    :members:
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+子模块
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   fastNLP.models.biaffine_parser
+   fastNLP.models.cnn_text_classification
+   fastNLP.models.sequence_labeling
+   fastNLP.models.snli
+   fastNLP.models.star_transformer

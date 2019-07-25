@@ -2,145 +2,127 @@
 
 [![Build Status](https://travis-ci.org/fastnlp/fastNLP.svg?branch=master)](https://travis-ci.org/fastnlp/fastNLP)
 [![codecov](https://codecov.io/gh/fastnlp/fastNLP/branch/master/graph/badge.svg)](https://codecov.io/gh/fastnlp/fastNLP)
-[![PyPI version](https://badge.fury.io/py/fastNLP.svg)](https://badge.fury.io/py/fastNLP)
+[![Pypi](https://img.shields.io/pypi/v/fastNLP.svg)](https://pypi.org/project/fastNLP)
 ![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)
 [![Documentation Status](https://readthedocs.org/projects/fastnlp/badge/?version=latest)](http://fastnlp.readthedocs.io/?badge=latest)
 
-fastNLP is a modular Natural Language Processing system based on PyTorch, for fast development of NLP tools. It divides the NLP model based on deep learning into different modules. These modules fall into 4 categories: encoder, interaction, aggregation and decoder, while each category contains different implemented modules. Encoder modules encode the input into some abstract representation, interaction modules make the information in the representation interact with each other, aggregation modules aggregate and reduce information, and decoder modules decode the representation into the output. Most current NLP models could be built on these modules, which vastly simplifies the process of developing NLP models. The architecture of fastNLP is as the figure below:
+fastNLP 是一款轻量级的 NLP 处理套件。你既可以使用它快速地完成一个序列标注（[NER](reproduction/seqence_labelling/ner)、POS-Tagging等）、中文分词、[文本分类](reproduction/text_classification)、[Matching](reproduction/matching)、[指代消解](reproduction/coreference_resolution)、[摘要](reproduction/Summarization)等任务； 也可以使用它构建许多复杂的网络模型，进行科研。它具有如下的特性：
 
-![](https://github.com/fastnlp/fastNLP/raw/master/fastnlp-architecture.jpg)
-
-
-## Requirements
-
-- numpy>=1.14.2
-- torch==0.4.0
-- torchvision>=0.1.8
-- tensorboardX
+- 统一的Tabular式数据容器，让数据预处理过程简洁明了。内置多种数据集的DataSet Loader，省去预处理代码;
+- 多种训练、测试组件，例如训练器Trainer；测试器Tester；以及各种评测metrics等等;
+- 各种方便的NLP工具，例如预处理embedding加载（包括ELMo和BERT）; 中间数据cache等;
+- 详尽的中文[文档](https://fastnlp.readthedocs.io/)、[教程](https://fastnlp.readthedocs.io/zh/latest/user/tutorials.html)以供查阅;
+- 提供诸多高级模块，例如Variational LSTM, Transformer, CRF等;
+- 在序列标注、中文分词、文本分类、Matching、指代消解、摘要等任务上封装了各种模型可供直接使用，详细内容见 [reproduction](reproduction) 部分;
+- 便捷且具有扩展性的训练器; 提供多种内置callback函数，方便实验记录、异常捕获等。
 
 
-## Resources
+## 安装指南
 
-- [Documentation](https://fastnlp.readthedocs.io/en/latest/)
-- [Source Code](https://github.com/fastnlp/fastNLP)
+fastNLP 依赖以下包:
 
++ numpy>=1.14.2
++ torch>=1.0.0
++ tqdm>=4.28.1
++ nltk>=3.4.1
++ requests
++ spacy
 
-
-## Installation
-
-### Cloning From GitHub
-
-If you just want to use fastNLP, use:
-```shell
-git clone https://github.com/fastnlp/fastNLP
-cd fastNLP
-```
-
-### PyTorch Installation
-
-Visit the [PyTorch official website] for installation instructions based on your system. In general, you could use:
-```shell
-# using conda
-conda install pytorch torchvision -c pytorch
-# or using pip
-pip3 install torch torchvision
-```
-
-### TensorboardX Installation
+其中torch的安装可能与操作系统及 CUDA 的版本相关，请参见 [PyTorch 官网](https://pytorch.org/) 。 
+在依赖包安装完成后，您可以在命令行执行如下指令完成安装
 
 ```shell
-pip3 install tensorboardX
+pip install fastNLP
+python -m spacy download en
 ```
 
-## Project Structure
+目前使用pip安装fastNLP的版本是0.4.1，有较多功能仍未更新，最新内容以master分支为准。
+fastNLP0.5.0版本将在近期推出，请密切关注。
 
-```
-FastNLP
-├── docs
-│   └── quick_tutorial.md
-├── fastNLP
-│   ├── action
-│   │   ├── action.py
-│   │   ├── inference.py
-│   │   ├── __init__.py
-│   │   ├── metrics.py
-│   │   ├── optimizer.py
-│   │   ├── README.md
-│   │   ├── tester.py
-│   │   └── trainer.py
-│   ├── fastnlp.py
-│   ├── __init__.py
-│   ├── loader
-│   │   ├── base_loader.py
-│   │   ├── config_loader.py
-│   │   ├── dataset_loader.py
-│   │   ├── embed_loader.py
-│   │   ├── __init__.py
-│   │   ├── model_loader.py
-│   │   └── preprocess.py
-│   ├── models
-│   │   ├── base_model.py
-│   │   ├── char_language_model.py
-│   │   ├── cnn_text_classification.py
-│   │   ├── __init__.py
-│   │   └── sequence_modeling.py
-│   ├── modules
-│   │   ├── aggregation
-│   │   │   ├── attention.py
-│   │   │   ├── avg_pool.py
-│   │   │   ├── __init__.py
-│   │   │   ├── kmax_pool.py
-│   │   │   ├── max_pool.py
-│   │   │   └── self_attention.py
-│   │   ├── decoder
-│   │   │   ├── CRF.py
-│   │   │   └── __init__.py
-│   │   ├── encoder
-│   │   │   ├── char_embedding.py
-│   │   │   ├── conv_maxpool.py
-│   │   │   ├── conv.py
-│   │   │   ├── embedding.py
-│   │   │   ├── __init__.py
-│   │   │   ├── linear.py
-│   │   │   ├── lstm.py
-│   │   │   ├── masked_rnn.py
-│   │   │   └── variational_rnn.py
-│   │   ├── __init__.py
-│   │   ├── interaction
-│   │   │   └── __init__.py
-│   │   ├── other_modules.py
-│   │   └── utils.py
-│   └── saver
-│       ├── base_saver.py
-│       ├── __init__.py
-│       ├── logger.py
-│       └── model_saver.py
-├── LICENSE
-├── README.md
-├── reproduction
-│   ├── Char-aware_NLM
-│   │  
-│   ├── CNN-sentence_classification
-│   │  
-│   ├── HAN-document_classification
-│   │  
-│   └── LSTM+self_attention_sentiment_analysis
-|
-├── requirements.txt
-├── setup.py
-└── test
-    ├── data_for_tests
-    │   ├── charlm.txt
-    │   ├── config
-    │   ├── cws_test
-    │   ├── cws_train
-    │   ├── people_infer.txt
-    │   └── people.txt
-    ├── test_charlm.py
-    ├── test_cws.py
-    ├── test_fastNLP.py
-    ├── test_loader.py
-    ├── test_seq_labeling.py
-    ├── test_tester.py
-    └── test_trainer.py
-```
+
+## fastNLP教程
+
+- [0. 快速入门](https://fastnlp.readthedocs.io/zh/latest/user/quickstart.html)
+- [1. 使用DataSet预处理文本](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_1_data_preprocess.html)
+- [2. 使用DataSetLoader加载数据集](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_2_load_dataset.html)
+- [3. 使用Embedding模块将文本转成向量](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_3_embedding.html)
+- [4. 动手实现一个文本分类器I-使用Trainer和Tester快速训练和测试](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_4_loss_optimizer.html)
+- [5. 动手实现一个文本分类器II-使用DataSetIter实现自定义训练过程](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_5_datasetiter.html)
+- [6. 快速实现序列标注模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_6_seq_labeling.html)
+- [7. 使用Modules和Models快速搭建自定义模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_7_modules_models.html)
+- [8. 使用Metric快速评测你的模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_8_metrics.html)
+- [9. 使用Callback自定义你的训练过程](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_9_callback.html)
+- [10. 使用fitlog 辅助 fastNLP 进行科研](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_10_fitlog.html)
+
+
+
+## 内置组件
+
+大部分用于的 NLP 任务神经网络都可以看做由词嵌入（embeddings）和两种模块：编码器（encoder）、解码器（decoder）组成。
+
+以文本分类任务为例，下图展示了一个BiLSTM+Attention实现文本分类器的模型流程图：
+
+
+![](./docs/source/figures/text_classification.png)
+
+fastNLP 在 embeddings 模块中内置了几种不同的embedding：静态embedding（GloVe、word2vec）、上下文相关embedding
+（ELMo、BERT）、字符embedding（基于CNN或者LSTM的CharEmbedding）
+
+与此同时，fastNLP 在 modules 模块中内置了两种模块的诸多组件，可以帮助用户快速搭建自己所需的网络。 两种模块的功能和常见组件如下:
+
+<table>
+<tr>
+    <td><b> 类型 </b></td>
+    <td><b> 功能 </b></td>
+    <td><b> 例子 </b></td>
+</tr>
+<tr>
+    <td> encoder </td>
+    <td> 将输入编码为具有具有表示能力的向量 </td>
+    <td> embedding, RNN, CNN, transformer
+</tr>
+<tr>
+    <td> decoder </td>
+    <td> 将具有某种表示意义的向量解码为需要的输出形式 </td>
+    <td> MLP, CRF </td>
+</tr>
+</table>
+
+
+## 项目结构
+
+![](./docs/source/figures/workflow.png)
+
+fastNLP的大致工作流程如上图所示，而项目结构如下：
+
+<table>
+<tr>
+    <td><b> fastNLP </b></td>
+    <td> 开源的自然语言处理库 </td>
+</tr>
+<tr>
+    <td><b> fastNLP.core </b></td>
+    <td> 实现了核心功能，包括数据处理组件、训练器、测试器等 </td>
+</tr>
+<tr>
+    <td><b> fastNLP.models </b></td>
+    <td> 实现了一些完整的神经网络模型 </td>
+</tr>
+<tr>
+    <td><b> fastNLP.modules </b></td>
+    <td> 实现了用于搭建神经网络模型的诸多组件 </td>
+</tr>
+<tr>
+    <td><b> fastNLP.embeddings </b></td>
+    <td> 实现了将序列index转为向量序列的功能，包括读取预训练embedding等 </td>
+</tr>
+<tr>
+    <td><b> fastNLP.io </b></td>
+    <td> 实现了读写功能，包括数据读入，模型读写等 </td>
+</tr>
+</table>
+
+
+<hr>
+
+*In memory of @FengZiYjun.  May his soul rest in peace. We will miss you very very much!*

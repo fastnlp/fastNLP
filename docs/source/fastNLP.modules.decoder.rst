@@ -1,18 +1,8 @@
-fastNLP.modules.decoder 
-========================
-
-fastNLP.modules.decoder.CRF 
-----------------------------
-
-.. automodule:: fastNLP.modules.decoder.CRF
-    :members:
-
-fastNLP.modules.decoder.MLP 
-----------------------------
-
-.. automodule:: fastNLP.modules.decoder.MLP
-    :members:
-
+fastNLP.modules.decoder
+=======================
 
 .. automodule:: fastNLP.modules.decoder
-    :members:
+   :members:
+   :undoc-members:
+   :show-inheritance:
+

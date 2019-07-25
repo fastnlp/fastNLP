@@ -1,0 +1,15 @@
+1   I           _   PRP PRP _   2   SUB
+2   solved      _   VBD VBD _   0   ROOT
+3   the         _   DT  DT  _   4   NMOD
+4   problem     _   NN  NN  _   2   OBJ
+5   with        _   IN  IN  _   2   VMOD
+6   statistics  _   NNS NNS _   5   PMOD
+7   .           _   .   .   _   2   P
+
+1   I           _   PRP PRP _   2   SUB
+2   solved      _   VBD VBD _   0   ROOT
+3   the         _   DT  DT  _   4   NMOD
+4   problem     _   NN  NN  _   2   OBJ
+5   with        _   IN  IN  _   2   VMOD
+6   statistics  _   NNS NNS _   5   PMOD
+7   .           _   .   .   _   2   P

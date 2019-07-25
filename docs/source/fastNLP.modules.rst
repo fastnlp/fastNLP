@@ -1,25 +1,17 @@
-fastNLP.modules 
-================
-
-.. toctree::
-
-    fastNLP.modules.aggregation
-    fastNLP.modules.decoder
-    fastNLP.modules.encoder
-    fastNLP.modules.interaction
-
-fastNLP.modules.other\_modules 
--------------------------------
-
-.. automodule:: fastNLP.modules.other_modules
-    :members:
-
-fastNLP.modules.utils 
-----------------------
-
-.. automodule:: fastNLP.modules.utils
-    :members:
-
+fastNLP.modules
+===============
 
 .. automodule:: fastNLP.modules
-    :members:
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+子模块
+-----------
+
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   fastNLP.modules.decoder
+   fastNLP.modules.encoder

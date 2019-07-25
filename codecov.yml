@@ -1,0 +1,5 @@
+ignore:
+- "reproduction"  # ignore folders and all its contents
+- "setup.py"
+- "docs"
+- "tutorials"

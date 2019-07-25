@@ -1,384 +1,295 @@
-import math
+"""
+Variational RNN 的 Pytorch 实现
+"""
+__all__ = [
+    "VarRNN",
+    "VarLSTM",
+    "VarGRU"
+]
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from torch.nn._functions.thnn import rnnFusedPointwise as fusedBackend
-from torch.nn.parameter import Parameter
+from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
+
+try:
+    from torch import flip
+except ImportError:
+    def flip(x, dims):
+        indices = [slice(None)] * x.dim()
+        for dim in dims:
+            indices[dim] = torch.arange(
+                x.size(dim) - 1, -1, -1, dtype=torch.long, device=x.device)
+        return x[tuple(indices)]
+
+from ..utils import initial_parameter
 
 
-def default_initializer(hidden_size):
-    stdv = 1.0 / math.sqrt(hidden_size)
+class VarRnnCellWrapper(nn.Module):
+    """
+    Wrapper for normal RNN Cells, make it support variational dropout
+    """
 
-    def forward(tensor):
-        nn.init.uniform_(tensor, -stdv, stdv)
+    def __init__(self, cell, hidden_size, input_p, hidden_p):
+        super(VarRnnCellWrapper, self).__init__()
+        self.cell = cell
+        self.hidden_size = hidden_size
+        self.input_p = input_p
+        self.hidden_p = hidden_p
 
-    return forward
+    def forward(self, input_x, hidden, mask_x, mask_h, is_reversed=False):
+        """
+        :param PackedSequence input_x: [seq_len, batch_size, input_size]
+        :param hidden: for LSTM, tuple of (h_0, c_0), [batch_size, hidden_size]
+            for other RNN, h_0, [batch_size, hidden_size]
+        :param mask_x: [batch_size, input_size] dropout mask for input
+        :param mask_h: [batch_size, hidden_size] dropout mask for hidden
+        :return PackedSequence output: [seq_len, bacth_size, hidden_size]
+                hidden: for LSTM, tuple of (h_n, c_n), [batch_size, hidden_size]
+                        for other RNN, h_n, [batch_size, hidden_size]
+        """
 
+        def get_hi(hi, h0, size):
+            h0_size = size - hi.size(0)
+            if h0_size > 0:
+                return torch.cat([hi, h0[:h0_size]], dim=0)
+            return hi[:size]
 
-def VarMaskedRecurrent(reverse=False):
-    def forward(input, hidden, cell, mask):
+        is_lstm = isinstance(hidden, tuple)
+        input, batch_sizes = input_x.data, input_x.batch_sizes
         output = []
-        steps = range(input.size(0) - 1, -1, -1) if reverse else range(input.size(0))
-        for i in steps:
-            if mask is None or mask[i].data.min() > 0.5:
-                hidden = cell(input[i], hidden)
-            elif mask[i].data.max() > 0.5:
-                hidden_next = cell(input[i], hidden)
-                # hack to handle LSTM
-                if isinstance(hidden, tuple):
-                    hx, cx = hidden
-                    hp1, cp1 = hidden_next
-                    hidden = (hx + (hp1 - hx) * mask[i], cx + (cp1 - cx) * mask[i])
-                else:
-                    hidden = hidden + (hidden_next - hidden) * mask[i]
-            # hack to handle LSTM
-            output.append(hidden[0] if isinstance(hidden, tuple) else hidden)
-
-        if reverse:
-            output.reverse()
-        output = torch.cat(output, 0).view(input.size(0), *output[0].size())
-
-        return hidden, output
-
-    return forward
-
-
-def StackedRNN(inners, num_layers, lstm=False):
-    num_directions = len(inners)
-    total_layers = num_layers * num_directions
-
-    def forward(input, hidden, cells, mask):
-        assert (len(cells) == total_layers)
-        next_hidden = []
-
-        if lstm:
-            hidden = list(zip(*hidden))
-
-        for i in range(num_layers):
-            all_output = []
-            for j, inner in enumerate(inners):
-                l = i * num_directions + j
-                hy, output = inner(input, hidden[l], cells[l], mask)
-                next_hidden.append(hy)
-                all_output.append(output)
-
-            input = torch.cat(all_output, input.dim() - 1)
-
-        if lstm:
-            next_h, next_c = zip(*next_hidden)
-            next_hidden = (
-                torch.cat(next_h, 0).view(total_layers, *next_h[0].size()),
-                torch.cat(next_c, 0).view(total_layers, *next_c[0].size())
-            )
+        cell = self.cell
+        if is_reversed:
+            batch_iter = flip(batch_sizes, [0])
+            idx = input.size(0)
         else:
-            next_hidden = torch.cat(next_hidden, 0).view(total_layers, *next_hidden[0].size())
+            batch_iter = batch_sizes
+            idx = 0
 
-        return next_hidden, input
-
-    return forward
-
-
-def AutogradVarMaskedRNN(num_layers=1, batch_first=False, bidirectional=False, lstm=False):
-    rec_factory = VarMaskedRecurrent
-
-    if bidirectional:
-        layer = (rec_factory(), rec_factory(reverse=True))
-    else:
-        layer = (rec_factory(),)
-
-    func = StackedRNN(layer,
-                      num_layers,
-                      lstm=lstm)
-
-    def forward(input, cells, hidden, mask):
-        if batch_first:
-            input = input.transpose(0, 1)
-            if mask is not None:
-                mask = mask.transpose(0, 1)
-
-        nexth, output = func(input, hidden, cells, mask)
-
-        if batch_first:
-            output = output.transpose(0, 1)
-
-        return output, nexth
-
-    return forward
-
-
-def VarMaskedStep():
-    def forward(input, hidden, cell, mask):
-        if mask is None or mask.data.min() > 0.5:
-            hidden = cell(input, hidden)
-        elif mask.data.max() > 0.5:
-            hidden_next = cell(input, hidden)
-            # hack to handle LSTM
-            if isinstance(hidden, tuple):
-                hx, cx = hidden
-                hp1, cp1 = hidden_next
-                hidden = (hx + (hp1 - hx) * mask, cx + (cp1 - cx) * mask)
+        if is_lstm:
+            hn = (hidden[0].clone(), hidden[1].clone())
+        else:
+            hn = hidden.clone()
+        hi = hidden
+        for size in batch_iter:
+            if is_reversed:
+                input_i = input[idx - size: idx] * mask_x[:size]
+                idx -= size
             else:
-                hidden = hidden + (hidden_next - hidden) * mask
-        # hack to handle LSTM
-        output = hidden[0] if isinstance(hidden, tuple) else hidden
+                input_i = input[idx: idx + size] * mask_x[:size]
+                idx += size
+            mask_hi = mask_h[:size]
+            if is_lstm:
+                hx, cx = hi
+                hi = (get_hi(hx, hidden[0], size) *
+                      mask_hi, get_hi(cx, hidden[1], size))
+                hi = cell(input_i, hi)
+                hn[0][:size] = hi[0]
+                hn[1][:size] = hi[1]
+                output.append(hi[0])
+            else:
+                hi = get_hi(hi, hidden, size) * mask_hi
+                hi = cell(input_i, hi)
+                hn[:size] = hi
+                output.append(hi)
 
-        return hidden, output
-
-    return forward
-
-
-def StackedStep(layer, num_layers, lstm=False):
-    def forward(input, hidden, cells, mask):
-        assert (len(cells) == num_layers)
-        next_hidden = []
-
-        if lstm:
-            hidden = list(zip(*hidden))
-
-        for l in range(num_layers):
-            hy, output = layer(input, hidden[l], cells[l], mask)
-            next_hidden.append(hy)
-            input = output
-
-        if lstm:
-            next_h, next_c = zip(*next_hidden)
-            next_hidden = (
-                torch.cat(next_h, 0).view(num_layers, *next_h[0].size()),
-                torch.cat(next_c, 0).view(num_layers, *next_c[0].size())
-            )
-        else:
-            next_hidden = torch.cat(next_hidden, 0).view(num_layers, *next_hidden[0].size())
-
-        return next_hidden, input
-
-    return forward
+        if is_reversed:
+            output = list(reversed(output))
+        output = torch.cat(output, dim=0)
+        return PackedSequence(output, batch_sizes), hn
 
 
-def AutogradVarMaskedStep(num_layers=1, lstm=False):
-    layer = VarMaskedStep()
+class VarRNNBase(nn.Module):
+    """
+    Variational Dropout RNN 实现.
 
-    func = StackedStep(layer,
-                       num_layers,
-                       lstm=lstm)
+    论文参考: `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016)
+    https://arxiv.org/abs/1512.05287`.
 
-    def forward(input, cells, hidden, mask):
-        nexth, output = func(input, hidden, cells, mask)
-        return output, nexth
+    :param mode: rnn 模式, (lstm or not)
+    :param Cell: rnn cell 类型, (lstm, gru, etc)
+    :param input_size:  输入 `x` 的特征维度
+    :param hidden_size: 隐状态 `h` 的特征维度
+    :param num_layers: rnn的层数. Default: 1
+    :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
+    :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
+        (batch, seq, feature). Default: ``False``
+    :param input_dropout: 对输入的dropout概率. Default: 0
+    :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
+    :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``
+    """
 
-    return forward
-
-
-class VarMaskedRNNBase(nn.Module):
-    def __init__(self, Cell, input_size, hidden_size,
-                 num_layers=1, bias=True, batch_first=False,
-                 dropout=(0, 0), bidirectional=False, initializer=None, **kwargs):
-
-        super(VarMaskedRNNBase, self).__init__()
-        self.Cell = Cell
+    def __init__(self, mode, Cell, input_size, hidden_size, num_layers=1,
+                 bias=True, batch_first=False,
+                 input_dropout=0, hidden_dropout=0, bidirectional=False):
+        super(VarRNNBase, self).__init__()
+        self.mode = mode
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.bias = bias
         self.batch_first = batch_first
+        self.input_dropout = input_dropout
+        self.hidden_dropout = hidden_dropout
         self.bidirectional = bidirectional
-        self.lstm = False
-        num_directions = 2 if bidirectional else 1
+        self.num_directions = 2 if bidirectional else 1
+        self._all_cells = nn.ModuleList()
+        for layer in range(self.num_layers):
+            for direction in range(self.num_directions):
+                input_size = self.input_size if layer == 0 else self.hidden_size * self.num_directions
+                cell = Cell(input_size, self.hidden_size, bias)
+                self._all_cells.append(VarRnnCellWrapper(
+                    cell, self.hidden_size, input_dropout, hidden_dropout))
+        initial_parameter(self)
+        self.is_lstm = (self.mode == "LSTM")
 
-        self.all_cells = []
-        for layer in range(num_layers):
-            for direction in range(num_directions):
-                layer_input_size = input_size if layer == 0 else hidden_size * num_directions
+    def _forward_one(self, n_layer, n_direction, input, hx, mask_x, mask_h):
+        is_lstm = self.is_lstm
+        idx = self.num_directions * n_layer + n_direction
+        cell = self._all_cells[idx]
+        hi = (hx[0][idx], hx[1][idx]) if is_lstm else hx[idx]
+        output_x, hidden_x = cell(
+            input, hi, mask_x, mask_h, is_reversed=(n_direction == 1))
+        return output_x, hidden_x
 
-                cell = self.Cell(layer_input_size, hidden_size, self.bias, p=dropout, initializer=initializer, **kwargs)
-                self.all_cells.append(cell)
-                self.add_module('cell%d' % (layer * num_directions + direction), cell)
+    def forward(self, x, hx=None):
+        """
 
-    def reset_parameters(self):
-        for cell in self.all_cells:
-            cell.reset_parameters()
+        :param x: [batch, seq_len, input_size] 输入序列
+        :param hx: [batch, hidden_size] 初始隐状态, 若为 ``None`` , 设为全1向量. Default: ``None``
+        :return (output, ht): [batch, seq_len, hidden_size*num_direction] 输出序列
+            和 [batch, hidden_size*num_direction] 最后时刻隐状态
+        """
+        is_lstm = self.is_lstm
+        is_packed = isinstance(x, PackedSequence)
+        if not is_packed:
+            seq_len = x.size(1) if self.batch_first else x.size(0)
+            max_batch_size = x.size(0) if self.batch_first else x.size(1)
+            seq_lens = torch.LongTensor(
+                [seq_len for _ in range(max_batch_size)])
+            x = pack_padded_sequence(x, seq_lens, batch_first=self.batch_first)
+        else:
+            max_batch_size = int(x.batch_sizes[0])
+        x, batch_sizes = x.data, x.batch_sizes
 
-    def reset_noise(self, batch_size):
-        for cell in self.all_cells:
-            cell.reset_noise(batch_size)
-
-    def forward(self, input, mask=None, hx=None):
-        batch_size = input.size(0) if self.batch_first else input.size(1)
         if hx is None:
-            num_directions = 2 if self.bidirectional else 1
-            hx = torch.tensor(input.data.new(self.num_layers * num_directions, batch_size, self.hidden_size).zero_(),
-                              requires_grad=True)
-            if self.lstm:
-                hx = (hx, hx)
+            hx = x.new_zeros(self.num_layers * self.num_directions,
+                             max_batch_size, self.hidden_size, requires_grad=True)
+            if is_lstm:
+                hx = (hx, hx.new_zeros(hx.size(), requires_grad=True))
 
-        func = AutogradVarMaskedRNN(num_layers=self.num_layers,
-                                    batch_first=self.batch_first,
-                                    bidirectional=self.bidirectional,
-                                    lstm=self.lstm)
+        mask_x = x.new_ones((max_batch_size, self.input_size))
+        mask_out = x.new_ones(
+            (max_batch_size, self.hidden_size * self.num_directions))
+        mask_h_ones = x.new_ones((max_batch_size, self.hidden_size))
+        nn.functional.dropout(mask_x, p=self.input_dropout,
+                              training=self.training, inplace=True)
+        nn.functional.dropout(mask_out, p=self.hidden_dropout,
+                              training=self.training, inplace=True)
 
-        self.reset_noise(batch_size)
+        hidden = x.new_zeros(
+            (self.num_layers * self.num_directions, max_batch_size, self.hidden_size))
+        if is_lstm:
+            cellstate = x.new_zeros(
+                (self.num_layers * self.num_directions, max_batch_size, self.hidden_size))
+        for layer in range(self.num_layers):
+            output_list = []
+            input_seq = PackedSequence(x, batch_sizes)
+            mask_h = nn.functional.dropout(
+                mask_h_ones, p=self.hidden_dropout, training=self.training, inplace=False)
+            for direction in range(self.num_directions):
+                output_x, hidden_x = self._forward_one(layer, direction, input_seq, hx,
+                                                       mask_x if layer == 0 else mask_out, mask_h)
+                output_list.append(output_x.data)
+                idx = self.num_directions * layer + direction
+                if is_lstm:
+                    hidden[idx] = hidden_x[0]
+                    cellstate[idx] = hidden_x[1]
+                else:
+                    hidden[idx] = hidden_x
+            x = torch.cat(output_list, dim=-1)
 
-        output, hidden = func(input, self.all_cells, hx, None if mask is None else mask.view(mask.size() + (1,)))
+        if is_lstm:
+            hidden = (hidden, cellstate)
+
+        if is_packed:
+            output = PackedSequence(x, batch_sizes)
+        else:
+            x = PackedSequence(x, batch_sizes)
+            output, _ = pad_packed_sequence(x, batch_first=self.batch_first)
+
         return output, hidden
 
-    def step(self, input, hx=None, mask=None):
-        '''
-        execute one step forward (only for one-directional RNN).
-        Args:
-            input (batch, input_size): input tensor of this step.
-            hx (num_layers, batch, hidden_size): the hidden state of last step.
-            mask (batch): the mask tensor of this step.
-        Returns:
-            output (batch, hidden_size): tensor containing the output of this step from the last layer of RNN.
-            hn (num_layers, batch, hidden_size): tensor containing the hidden state of this step
-        '''
-        assert not self.bidirectional, "step only cannot be applied to bidirectional RNN."
-        batch_size = input.size(0)
-        if hx is None:
-            hx = torch.tensor(input.data.new(self.num_layers, batch_size, self.hidden_size).zero_(), requires_grad=True)
-            if self.lstm:
-                hx = (hx, hx)
 
-        func = AutogradVarMaskedStep(num_layers=self.num_layers, lstm=self.lstm)
+class VarLSTM(VarRNNBase):
+    """
+    别名：:class:`fastNLP.modules.VarLSTM`  :class:`fastNLP.modules.encoder.VarLSTM`
 
-        output, hidden = func(input, self.all_cells, hx, mask)
-        return output, hidden
+    Variational Dropout LSTM.
 
+    :param input_size:  输入 `x` 的特征维度
+    :param hidden_size: 隐状态  `h`  的特征维度
+    :param num_layers: rnn的层数. Default: 1
+    :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
+    :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
+        (batch, seq, feature). Default: ``False``
+    :param input_dropout: 对输入的dropout概率. Default: 0
+    :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
+    :param bidirectional: 若为 ``True``, 使用双向的LSTM. Default: ``False``
+    """
 
-class VarMaskedFastLSTM(VarMaskedRNNBase):
     def __init__(self, *args, **kwargs):
-        super(VarMaskedFastLSTM, self).__init__(VarFastLSTMCell, *args, **kwargs)
-        self.lstm = True
+        super(VarLSTM, self).__init__(
+            mode="LSTM", Cell=nn.LSTMCell, *args, **kwargs)
+
+    def forward(self, x, hx=None):
+        return super(VarLSTM, self).forward(x, hx)
 
 
-class VarRNNCellBase(nn.Module):
-    def __repr__(self):
-        s = '{name}({input_size}, {hidden_size}'
-        if 'bias' in self.__dict__ and self.bias is not True:
-            s += ', bias={bias}'
-        if 'nonlinearity' in self.__dict__ and self.nonlinearity != "tanh":
-            s += ', nonlinearity={nonlinearity}'
-        s += ')'
-        return s.format(name=self.__class__.__name__, **self.__dict__)
-
-    def reset_noise(self, batch_size):
-        """
-        Should be overriden by all subclasses.
-        Args:
-            batch_size: (int) batch size of input.
-        """
-        raise NotImplementedError
-
-
-class VarFastLSTMCell(VarRNNCellBase):
+class VarRNN(VarRNNBase):
     """
-    A long short-term memory (LSTM) cell with variational dropout.
-    .. math::
-        \begin{array}{ll}
-        i = \mathrm{sigmoid}(W_{ii} x + b_{ii} + W_{hi} h + b_{hi}) \\
-        f = \mathrm{sigmoid}(W_{if} x + b_{if} + W_{hf} h + b_{hf}) \\
-        g = \tanh(W_{ig} x + b_{ig} + W_{hc} h + b_{hg}) \\
-        o = \mathrm{sigmoid}(W_{io} x + b_{io} + W_{ho} h + b_{ho}) \\
-        c' = f * c + i * g \\
-        h' = o * \tanh(c') \\
-        \end{array}
+    别名：:class:`fastNLP.modules.VarRNN`  :class:`fastNLP.modules.encoder.VarRNN`
+
+    Variational Dropout RNN.
+
+    :param input_size:  输入 `x` 的特征维度
+    :param hidden_size: 隐状态 `h` 的特征维度
+    :param num_layers: rnn的层数. Default: 1
+    :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
+    :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
+        (batch, seq, feature). Default: ``False``
+    :param input_dropout: 对输入的dropout概率. Default: 0
+    :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
+    :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``
     """
 
-    def __init__(self, input_size, hidden_size, bias=True, p=(0.5, 0.5), initializer=None):
-        super(VarFastLSTMCell, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.bias = bias
-        self.weight_ih = Parameter(torch.Tensor(4 * hidden_size, input_size))
-        self.weight_hh = Parameter(torch.Tensor(4 * hidden_size, hidden_size))
-        if bias:
-            self.bias_ih = Parameter(torch.Tensor(4 * hidden_size))
-            self.bias_hh = Parameter(torch.Tensor(4 * hidden_size))
-        else:
-            self.register_parameter('bias_ih', None)
-            self.register_parameter('bias_hh', None)
+    def __init__(self, *args, **kwargs):
+        super(VarRNN, self).__init__(
+            mode="RNN", Cell=nn.RNNCell, *args, **kwargs)
 
-        self.initializer = default_initializer(self.hidden_size) if initializer is None else initializer
-        self.reset_parameters()
-        p_in, p_hidden = p
-        if p_in < 0 or p_in > 1:
-            raise ValueError("input dropout probability has to be between 0 and 1, "
-                             "but got {}".format(p_in))
-        if p_hidden < 0 or p_hidden > 1:
-            raise ValueError("hidden state dropout probability has to be between 0 and 1, "
-                             "but got {}".format(p_hidden))
-        self.p_in = p_in
-        self.p_hidden = p_hidden
-        self.noise_in = None
-        self.noise_hidden = None
+    def forward(self, x, hx=None):
+        return super(VarRNN, self).forward(x, hx)
 
-    def reset_parameters(self):
-        for weight in self.parameters():
-            if weight.dim() == 1:
-                weight.data.zero_()
-            else:
-                self.initializer(weight.data)
 
-    def reset_noise(self, batch_size):
-        if self.training:
-            if self.p_in:
-                noise = self.weight_ih.data.new(batch_size, self.input_size)
-                self.noise_in = torch.tensor(noise.bernoulli_(1.0 - self.p_in) / (1.0 - self.p_in))
-            else:
-                self.noise_in = None
+class VarGRU(VarRNNBase):
+    """
+    别名：:class:`fastNLP.modules.VarGRU`  :class:`fastNLP.modules.encoder.VarGRU`
 
-            if self.p_hidden:
-                noise = self.weight_hh.data.new(batch_size, self.hidden_size)
-                self.noise_hidden = torch.tensor(noise.bernoulli_(1.0 - self.p_hidden) / (1.0 - self.p_hidden))
-            else:
-                self.noise_hidden = None
-        else:
-            self.noise_in = None
-            self.noise_hidden = None
+    Variational Dropout GRU.
 
-    def forward(self, input, hx):
-        return self.__forward(
-            input, hx,
-            self.weight_ih, self.weight_hh,
-            self.bias_ih, self.bias_hh,
-            self.noise_in, self.noise_hidden,
-        )
+    :param input_size:  输入 `x` 的特征维度
+    :param hidden_size: 隐状态 `h` 的特征维度
+    :param num_layers: rnn的层数. Default: 1
+    :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
+    :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
+        (batch, seq, feature). Default: ``False``
+    :param input_dropout: 对输入的dropout概率. Default: 0
+    :param hidden_dropout: 对每个隐状态的dropout概率. Default: 0
+    :param bidirectional: 若为 ``True``, 使用双向的GRU. Default: ``False``
+    """
 
-    @staticmethod
-    def __forward(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None, noise_in=None, noise_hidden=None):
-        if noise_in is not None:
-            if input.is_cuda:
-                input = input * noise_in.cuda(input.get_device())
-            else:
-                input = input * noise_in
+    def __init__(self, *args, **kwargs):
+        super(VarGRU, self).__init__(
+            mode="GRU", Cell=nn.GRUCell, *args, **kwargs)
 
-        if input.is_cuda:
-            w_ih = w_ih.cuda(input.get_device())
-            w_hh = w_hh.cuda(input.get_device())
-            hidden = [h.cuda(input.get_device()) for h in hidden]
-            b_ih = b_ih.cuda(input.get_device())
-            b_hh = b_hh.cuda(input.get_device())
-            igates = F.linear(input, w_ih.cuda(input.get_device()))
-            hgates = F.linear(hidden[0], w_hh) if noise_hidden is None \
-                else F.linear(hidden[0] * noise_hidden.cuda(input.get_device()), w_hh)
-            state = fusedBackend.LSTMFused.apply
-            # print("use backend")
-            # use some magic function
-            return state(igates, hgates, hidden[1]) if b_ih is None else state(igates, hgates, hidden[1], b_ih, b_hh)
-
-        hx, cx = hidden
-        if noise_hidden is not None:
-            hx = hx * noise_hidden
-        gates = F.linear(input, w_ih, b_ih) + F.linear(hx, w_hh, b_hh)
-
-        ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
-
-        ingate = F.sigmoid(ingate)
-        forgetgate = F.sigmoid(forgetgate)
-        cellgate = F.tanh(cellgate)
-        outgate = F.sigmoid(outgate)
-
-        cy = (forgetgate * cx) + (ingate * cellgate)
-        hy = outgate * F.tanh(cy)
-
-        return hy, cy
+    def forward(self, x, hx=None):
+        return super(VarGRU, self).forward(x, hx)
