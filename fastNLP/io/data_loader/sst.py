@@ -134,6 +134,7 @@ class SST2Loader(CSVLoader):
         info = DataBundle()
         for name, path in paths.items():
             dataset = self.load(path)
+            dataset.apply_field(lambda words:words.copy(), field_name='words', new_field_name='raw_words')
             datasets[name] = dataset
 
         def wordtochar(words):
