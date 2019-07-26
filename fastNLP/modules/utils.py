@@ -128,9 +128,9 @@ def _get_file_name_base_on_postfix(dir_path, postfix):
     :param postfix: 形如".bin", ".json"等
     :return: str，文件的路径
     """
-    files = glob.glob(os.path.join(dir_path, '*' + postfix))
+    files = list(filter(lambda filename:filename.endswith(postfix), os.listdir(os.path.join(dir_path))))
     if len(files) == 0:
-        raise FileNotFoundError(f"There is no file endswith *.{postfix} file in {dir_path}")
+        raise FileNotFoundError(f"There is no file endswith *{postfix} file in {dir_path}")
     elif len(files) > 1:
-        raise FileExistsError(f"There are multiple *.{postfix} files in {dir_path}")
+        raise FileExistsError(f"There are multiple *{postfix} files in {dir_path}")
     return os.path.join(dir_path, files[0])

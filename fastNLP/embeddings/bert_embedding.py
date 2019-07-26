@@ -63,7 +63,7 @@ class BertEmbedding(ContextualEmbedding):
             model_dir = cached_path(model_url)
             # 检查是否存在
         elif os.path.isdir(os.path.expanduser(os.path.abspath(model_dir_or_name))):
-            model_dir = model_dir_or_name
+            model_dir = os.path.expanduser(os.path.abspath(model_dir_or_name))
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
