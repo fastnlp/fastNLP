@@ -324,14 +324,14 @@ class CallbackManager(Callback):
         self._env = env
         self.callbacks = []
         if callbacks:
-            self.prepare_callbacks(callbacks)
+            self.callbacks = self.prepare_callbacks(callbacks)
 
     def prepare_callbacks(self, callbacks):
         if not callbacks:
             return []
         if isinstance(callbacks, list):
             if all([isinstance(cb, Callback) for cb in callbacks]) is True:
-                self.callbacks.extend(callbacks)
+                pass
             else:
                 obj = [not isinstance(cb, Callback) for cb in callbacks][0]
                 raise TypeError(f"Expect sub-classes of Callback. Got {type(obj)}")
