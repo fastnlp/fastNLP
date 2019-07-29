@@ -956,20 +956,42 @@ class EchoCallback(Callback):
 
 
 class TesterCallback(Callback):
-    def __init__(self, data, model, metrics, batch_size=16, num_workers=None):\
-        #TODO add compare & save best
+    def __init__(self, data, model, metrics, metric_key=None, batch_size=16, num_workers=None):
         super(TesterCallback, self).__init__()
         self.tester = Tester(data, model,
                              metrics=metrics, batch_size=batch_size,
                              num_workers=num_workers, verbose=0)
+        # parse metric_key
+        # increase_better is True. It means the exp result gets better if the indicator increases.
+        # It is true by default.
+        self.increase_better = True
+        if metric_key is not None:
+            self.increase_better = False if metric_key[0] == "-" else True
+            self.metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
+        else:
+            self.metric_key = None
         self.score = None
 
     def on_validation(self):
-        cur_socre = self.tester.test()
+        cur_score = self.tester.test()
         eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. - {}".format(
                     self.epoch, self.n_epochs, self.step, self.n_steps,
-                    self.tester._format_eval_results(cur_socre))
+                    self.tester._format_eval_results(cur_score))
         self.logger.info(eval_str)
+        is_better = self.compare_better(cur_score)
+        if is_better:
+            self.score = cur_score
+        return cur_score, is_better
+
+    def compare_better(self, a):
+        if self.score is None:
+            return True
+        k = self.metric_key
+        is_increase = self.score[k] <= a[k] # if equal, prefer more recent results
+        if self.increase_better:
+            return is_increase
+        else:
+            return not is_increase
 
     def on_train_end(self):
         self.logger.info('Evaluate on training ends.')
