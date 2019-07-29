@@ -563,7 +563,7 @@ class WordpieceTokenizer(object):
                 output_tokens.append(self.unk_token)
             else:
                 output_tokens.extend(sub_tokens)
-        if len(output_tokens)==0:
+        if len(output_tokens)==0:  #防止里面全是空格或者回车符号
             return [self.unk_token]
         return output_tokens
 

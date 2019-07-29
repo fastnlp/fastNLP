@@ -182,8 +182,8 @@ class _ElmoModel(nn.Module):
             raise Exception(f"Multiple config files(*.json) or weight files(*.hdf5) detected in {model_dir}.")
         elif config_count == 0 or weight_count == 0:
             raise Exception(f"No config file or weight file found in {model_dir}")
-
-        config = json.load(open(os.path.join(model_dir, config_file), 'r'))
+        with open(os.path.join(model_dir, config_file), 'r') as config_f:
+            config = json.load(config_f)
         self.weight_file = os.path.join(model_dir, weight_file)
         self.config = config
 
