@@ -1,13 +1,14 @@
 """
-用于读数据集的模块, 具体包括:
+用于读数据集的模块, 可以读取文本分类、序列标注、Matching任务的数据集
 
-这些模块的使用方法如下:
+这些模块的具体介绍如下，您可以通过阅读 :doc:`教程</tutorials/tutorial_2_load_dataset>` 来进行了解。
 """
 __all__ = [
     'ConllLoader',
     'Conll2003Loader',
     'IMDBLoader',
     'MatchingLoader',
+    'SNLILoader',
     'MNLILoader',
     'MTL16Loader',
     'PeopleDailyCorpusLoader',
@@ -16,7 +17,6 @@ __all__ = [
     'RTELoader',
     'SSTLoader',
     'SST2Loader',
-    'SNLILoader',
     'YelpLoader',
 ]
 

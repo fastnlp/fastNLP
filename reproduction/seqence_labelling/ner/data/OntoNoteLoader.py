@@ -6,7 +6,7 @@ from fastNLP import Vocabulary
 from fastNLP import Const
 from reproduction.utils import check_dataloader_paths
 
-from fastNLP.io.dataset_loader import ConllLoader
+from fastNLP.io import ConllLoader
 from reproduction.seqence_labelling.ner.data.utils import iob2bioes, iob2
 
 class OntoNoteNERDataLoader(DataSetLoader):

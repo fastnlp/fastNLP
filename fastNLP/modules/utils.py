@@ -1,10 +1,10 @@
 from functools import reduce
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-
+import glob
+import os
 
 def initial_parameter(net, initial_method=None):
     """A method used to initialize the weights of PyTorch models.
@@ -70,33 +70,6 @@ def initial_parameter(net, initial_method=None):
     net.apply(weights_init)
 
 
-def get_embeddings(init_embed):
-    """
-    根据输入的init_embed生成nn.Embedding对象。
-
-    :param init_embed: 可以是 tuple:(num_embedings, embedding_dim), 即embedding的大小和每个词的维度;也可以传入
-        nn.Embedding 对象, 此时就以传入的对象作为embedding; 传入np.ndarray也行，将使用传入的ndarray作为作为Embedding初始
-        化; 传入orch.Tensor, 将使用传入的值作为Embedding初始化。
-    :return nn.Embedding embeddings:
-    """
-    if isinstance(init_embed, tuple):
-        res = nn.Embedding(
-            num_embeddings=init_embed[0], embedding_dim=init_embed[1])
-        nn.init.uniform_(res.weight.data, a=-np.sqrt(3/res.weight.data.size(1)),
-                         b=np.sqrt(3/res.weight.data.size(1)))
-    elif isinstance(init_embed, nn.Module):
-        res = init_embed
-    elif isinstance(init_embed, torch.Tensor):
-        res = nn.Embedding.from_pretrained(init_embed, freeze=False)
-    elif isinstance(init_embed, np.ndarray):
-        init_embed = torch.tensor(init_embed, dtype=torch.float32)
-        res = nn.Embedding.from_pretrained(init_embed, freeze=False)
-    else:
-        raise TypeError(
-            'invalid init_embed type: {}'.format((type(init_embed))))
-    return res
-
-
 def summary(model: nn.Module):
     """
     得到模型的总参数量
@@ -146,3 +119,18 @@ def get_dropout_mask(drop_p: float, tensor: torch.Tensor):
     nn.functional.dropout(mask_x, p=drop_p,
                           training=False, inplace=True)
     return mask_x
+
+
+def _get_file_name_base_on_postfix(dir_path, postfix):
+    """
+    在dir_path中寻找后缀为postfix的文件.
+    :param dir_path: str, 文件夹
+    :param postfix: 形如".bin", ".json"等
+    :return: str，文件的路径
+    """
+    files = list(filter(lambda filename:filename.endswith(postfix), os.listdir(os.path.join(dir_path))))
+    if len(files) == 0:
+        raise FileNotFoundError(f"There is no file endswith *{postfix} file in {dir_path}")
+    elif len(files) > 1:
+        raise FileExistsError(f"There are multiple *{postfix} files in {dir_path}")
+    return os.path.join(dir_path, files[0])

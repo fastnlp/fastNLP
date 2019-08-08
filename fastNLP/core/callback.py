@@ -2,11 +2,11 @@ r"""
 callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:`~fastNLP.Trainer` 类。
 
 虽然Trainer本身已经集成了一些功能，但仍然不足以囊括训练过程中可能需要到的功能，
-比如负采样，learning rate decay, Early Stop等。
-为了解决这个问题fastNLP引入了callback的机制，Callback 是一种在Trainer训练过程中特定阶段会运行的函数集合。
-关于Trainer的详细文档，请参见 :doc:`trainer 模块<fastNLP.core.trainer>`
+比如负采样，learning rate decay 和 early stop等。
+为了解决这个问题，fastNLP引入了callback的机制，:class:`~fastNLP.Callback` 是一种在Trainer训练过程中特定阶段会运行的函数集合。
+关于 :class:`~fastNLP.Trainer` 的详细文档，请参见 :doc:`trainer 模块<fastNLP.core.trainer>`
 
-我们将 :meth:`~fastNLP.Train.train` 这个函数内部分为以下的阶段，在对应阶段会触发相应的调用::
+我们将 :meth:`~fastNLP.Trainer.train` 这个函数内部分为以下的阶段，在对应阶段会触发相应的调用::
 
     callback.on_train_begin()  # 开始进行训练
     for i in range(1, n_epochs+1):
@@ -31,8 +31,8 @@ callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:
     callback.on_train_end() # 训练结束
     callback.on_exception() # 这是一个特殊的步骤，在训练过程中遭遇exception会跳转到这里。
 
-如下面的例子所示，我们可以使用内置的 callback 类，或者继承 :class:`~fastNLP.core.callback.Callback`
-定义自己的 callback 类::
+如下面的例子所示，我们可以使用内置的 callback 组件，或者继承 :class:`~fastNLP.core.callback.Callback`
+定义自己的 callback 组件::
     
     from fastNLP import Callback, EarlyStopCallback, Trainer, CrossEntropyLoss, AccuracyMetric
     from fastNLP.models import CNNText
@@ -79,6 +79,7 @@ except:
 from ..io.model_io import ModelSaver, ModelLoader
 from .dataset import DataSet
 from .tester import Tester
+import logging
 
 try:
     import fitlog
@@ -100,7 +101,8 @@ class Callback(object):
     def __init__(self):
         super(Callback, self).__init__()
         self._trainer = None  # 在Trainer内部被重新赋值
-    
+        self._disabled = False
+
     @property
     def trainer(self):
         """
@@ -158,7 +160,19 @@ class Callback(object):
     def batch_per_epoch(self):
         """每个epoch一共有多少个batch，只有在on_epoch_begin之后才能调用该属性。"""
         return self._trainer.batch_per_epoch
-    
+
+    @property
+    def is_master(self):
+        return self._trainer.is_master()
+
+    @property
+    def disabled(self):
+        return self._disabled
+
+    @property
+    def logger(self):
+        return getattr(self._trainer, 'logger', logging)
+
     def on_train_begin(self):
         """
         在Train过程开始之前调用。
@@ -250,6 +264,14 @@ class Callback(object):
         :return:
         """
         pass
+
+    def on_validation(self):
+        """
+        如果Trainer中设置了验证，则会在每次需要验证时调用该函数
+
+        :return:
+        """
+        pass
     
     def on_epoch_end(self):
         """
@@ -281,6 +303,8 @@ def _transfer(func):
     def wrapper(manager, *arg):
         returns = []
         for callback in manager.callbacks:
+            if callback.disabled:
+                continue
             returns.append(getattr(callback, func.__name__)(*arg))
         return returns
     
@@ -297,22 +321,28 @@ class CallbackManager(Callback):
         """
         super(CallbackManager, self).__init__()
         # set attribute of trainer environment
-        
+        self._env = env
         self.callbacks = []
-        if callbacks is not None:
-            if isinstance(callbacks, list):
-                if all([isinstance(cb, Callback) for cb in callbacks]) is True:
-                    self.callbacks.extend(callbacks)
-                else:
-                    obj = [not isinstance(cb, Callback) for cb in callbacks][0]
-                    raise TypeError(f"Expect sub-classes of Callback. Got {type(obj)}")
+        if callbacks:
+            self.callbacks = self.prepare_callbacks(callbacks)
+
+    def prepare_callbacks(self, callbacks):
+        if not callbacks:
+            return []
+        if isinstance(callbacks, list):
+            if all([isinstance(cb, Callback) for cb in callbacks]) is True:
+                pass
             else:
-                raise TypeError(f"Expect callbacks in CallbackManager(callbacks) to be list. Got {type(callbacks)}.")
-        
-        for env_name, env_val in env.items():
-            for callback in self.callbacks:
+                obj = [not isinstance(cb, Callback) for cb in callbacks][0]
+                raise TypeError(f"Expect sub-classes of Callback. Got {type(obj)}")
+        else:
+            raise TypeError(f"Expect callbacks in CallbackManager(callbacks) to be list. Got {type(callbacks)}.")
+
+        for env_name, env_val in self._env.items():
+            for callback in callbacks:
                 setattr(callback, '_' + env_name, env_val)  # Callback.trainer
-    
+        return callbacks
+
     @_transfer
     def on_train_begin(self):
         pass
@@ -352,6 +382,10 @@ class CallbackManager(Callback):
     @_transfer
     def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
         pass
+
+    @_transfer
+    def on_validation(self):
+        pass
     
     @_transfer
     def on_epoch_end(self):
@@ -364,6 +398,25 @@ class CallbackManager(Callback):
     @_transfer
     def on_exception(self, exception):
         pass
+
+
+class DistCallbackManager(CallbackManager):
+    def __init__(self, env, callbacks_all=None, callbacks_master=None):
+        super(DistCallbackManager, self).__init__(env)
+        assert 'trainer' in env
+        is_master = env['trainer'].is_master
+        self.patch_callback(callbacks_master, disabled=not is_master)
+        self.callbacks_all = self.prepare_callbacks(callbacks_all)
+        self.callbacks_master = self.prepare_callbacks(callbacks_master)
+        self.callbacks = self.callbacks_all + self.callbacks_master
+
+    def patch_callback(self, callbacks, disabled):
+        if not callbacks:
+            return
+        if not isinstance(callbacks, (list, tuple)):
+            callbacks = [callbacks]
+        for cb in callbacks:
+            cb._disabled = disabled
 
 
 class GradientClipCallback(Callback):
@@ -403,6 +456,9 @@ class GradientClipCallback(Callback):
     def on_backward_end(self):
         if self.step%self.update_every==0:
             if self.parameters is None:
+                if getattr(self.trainer, 'fp16', ''):
+                    from apex import amp
+                    self.clip_fun(amp.master_params(self.optimizer), self.clip_value)
                 self.clip_fun(self.model.parameters(), self.clip_value)
             else:
                 self.clip_fun(self.parameters, self.clip_value)
@@ -448,10 +504,10 @@ class FitlogCallback(Callback):
         并将验证结果写入到fitlog中。这些数据集的结果是根据dev上最好的结果报道的，即如果dev在第3个epoch取得了最佳，则
         fitlog中记录的关于这些数据集的结果就是来自第三个epoch的结果。
 
-    :param DataSet,dict(DataSet) data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
+    :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
         DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。若tester不为None时，data需要通过
         dict的方式传入。如果仅传入DataSet, 则被命名为test
-    :param Tester tester: Tester对象，将在on_valid_end时调用。tester中的DataSet会被称为为`test`
+    :param ~fastNLP.Tester tester: Tester对象，将在on_valid_end时调用。tester中的DataSet会被称为为`test`
     :param int log_loss_every: 多少个step记录一次loss(记录的是这几个batch的loss平均值)，如果数据集较大建议将该值设置得
         大一些，不然会导致log文件巨大。默认为0, 即不要记录loss。
     :param int verbose: 是否在终端打印evaluation的结果，0不打印。
@@ -479,7 +535,7 @@ class FitlogCallback(Callback):
                 self.datasets[key] = value
         elif isinstance(data, DataSet):
             self.datasets['test'] = data
-        else:
+        elif data is not None:
             raise TypeError("data receives dict[DataSet] or DataSet object.")
         
         self.verbose = verbose
@@ -674,7 +730,7 @@ class TensorboardCallback(Callback):
     
     .. warning::
         fastNLP 已停止对此功能的维护，请等待 fastNLP 兼容 PyTorch1.1 的下一个版本。
-        或者使用和 fastNLP 高度配合的 fitlog（参见 :doc:`/user/with_fitlog` ）。
+        或者使用和 fastNLP 高度配合的 fitlog（参见 :doc:`/tutorials/tutorial_10_fitlog` ）。
         
     """
     
@@ -884,3 +940,59 @@ class EarlyStopError(CallbackException):
     
     def __init__(self, msg):
         super(EarlyStopError, self).__init__(msg)
+
+
+class EchoCallback(Callback):
+    def __init__(self, name, out=sys.stdout):
+        super(EchoCallback, self).__init__()
+        self.name = name
+        self.out = out
+
+    def __getattribute__(self, item):
+        if item.startswith('on_'):
+            print('{}.{} has been called at pid: {}'.format(self.name, item, os.getpid()),
+                  file=self.out)
+        return super(EchoCallback, self).__getattribute__(item)
+
+
+class TesterCallback(Callback):
+    def __init__(self, data, model, metrics, metric_key=None, batch_size=16, num_workers=None):
+        super(TesterCallback, self).__init__()
+        self.tester = Tester(data, model,
+                             metrics=metrics, batch_size=batch_size,
+                             num_workers=num_workers, verbose=0)
+        # parse metric_key
+        # increase_better is True. It means the exp result gets better if the indicator increases.
+        # It is true by default.
+        self.increase_better = True
+        if metric_key is not None:
+            self.increase_better = False if metric_key[0] == "-" else True
+            self.metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
+        else:
+            self.metric_key = None
+        self.score = None
+
+    def on_validation(self):
+        cur_score = self.tester.test()
+        eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. - {}".format(
+                    self.epoch, self.n_epochs, self.step, self.n_steps,
+                    self.tester._format_eval_results(cur_score))
+        self.logger.info(eval_str)
+        is_better = self.compare_better(cur_score)
+        if is_better:
+            self.score = cur_score
+        return cur_score, is_better
+
+    def compare_better(self, a):
+        if self.score is None:
+            return True
+        k = self.metric_key
+        is_increase = self.score[k] <= a[k] # if equal, prefer more recent results
+        if self.increase_better:
+            return is_increase
+        else:
+            return not is_increase
+
+    def on_train_end(self):
+        self.logger.info('Evaluate on training ends.')
+        self.on_validation()

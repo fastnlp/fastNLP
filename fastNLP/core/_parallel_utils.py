@@ -1,6 +1,7 @@
 
 import threading
 import torch
+from torch import nn
 from torch.nn.parallel.parallel_apply import get_a_var
 
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
@@ -86,3 +87,16 @@ def _data_parallel_wrapper(func_name, device_ids, output_device):
         outputs = parallel_apply(replicas, func_name, inputs, kwargs, device_ids[:len(replicas)])
         return gather(outputs, output_device)
     return wrapper
+
+
+def _model_contains_inner_module(model):
+    """
+
+    :param nn.Module model: 模型文件，判断是否内部包含model.module, 多用于check模型是否是nn.DataParallel,
+        nn.parallel.DistributedDataParallel。主要是在做形参匹配的时候需要使用最内部的model的function。
+    :return: bool
+    """
+    if isinstance(model, nn.Module):
+        if isinstance(model, (nn.DataParallel, nn.parallel.DistributedDataParallel)):
+            return True
+    return False

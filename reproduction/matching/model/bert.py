@@ -4,7 +4,7 @@ import torch.nn as nn
 
 from fastNLP.core.const import Const
 from fastNLP.models import BaseModel
-from fastNLP.modules.encoder.bert import BertModel
+from fastNLP.embeddings.bert import BertModel
 
 
 class BertForNLI(BaseModel):

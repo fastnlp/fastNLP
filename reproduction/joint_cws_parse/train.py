@@ -2,15 +2,15 @@ import sys
 sys.path.append('../..')
 
 from reproduction.joint_cws_parse.data.data_loader import CTBxJointLoader
-from fastNLP.modules.encoder.embedding import StaticEmbedding
+from fastNLP.embeddings.static_embedding import StaticEmbedding
 from torch import nn
 from functools import partial
 from reproduction.joint_cws_parse.models.CharParser import CharParser
 from reproduction.joint_cws_parse.models.metrics import SegAppCharParseF1Metric, CWSMetric
-from fastNLP import cache_results, BucketSampler, Trainer
+from fastNLP import BucketSampler, Trainer
 from torch import optim
-from reproduction.joint_cws_parse.models.callbacks import DevCallback, OptimizerCallback
-from torch.optim.lr_scheduler import LambdaLR, StepLR
+from reproduction.joint_cws_parse.models.callbacks import DevCallback
+from torch.optim.lr_scheduler import StepLR
 from fastNLP import Tester
 from fastNLP import GradientClipCallback, LRScheduler
 import os

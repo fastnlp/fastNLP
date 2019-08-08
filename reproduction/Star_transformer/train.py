@@ -1,7 +1,7 @@
-from util import get_argparser, set_gpu, set_rng_seeds, add_model_args
+from reproduction.Star_transformer.util import get_argparser, set_gpu, set_rng_seeds, add_model_args
 seed = set_rng_seeds(15360)
 print('RNG SEED {}'.format(seed))
-from datasets import load_seqtag, load_sst, load_snli, EmbedLoader, MAX_LEN
+from reproduction.Star_transformer.datasets import load_seqtag, load_sst, load_snli, EmbedLoader, MAX_LEN
 import torch.nn as nn
 import torch
 import numpy as np

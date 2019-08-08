@@ -10,7 +10,6 @@ from fastNLP import Const
 from functools import partial
 from reproduction.utils import check_dataloader_paths, get_tokenizer
 
-
 class IMDBLoader(DataSetLoader):
     """
     读取IMDB数据集，DataSet包含以下fields:
@@ -51,6 +50,7 @@ class IMDBLoader(DataSetLoader):
       
         datasets = {}
         info = DataBundle()
+        paths = check_dataloader_paths(paths)
         for name, path in paths.items():
             dataset = self.load(path)
             datasets[name] = dataset

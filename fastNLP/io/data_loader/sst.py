@@ -104,7 +104,9 @@ class SSTLoader(DataSetLoader):
 
 class SST2Loader(CSVLoader):
     """
-    数据来源"SST":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FSST-2.zip?alt=media&token=aabc5f6b-e466-44a2-b9b4-cf6337f84ac8',
+    别名：:class:`fastNLP.io.SST2Loader` :class:`fastNLP.io.data_loader.SST2Loader`
+
+    数据来源 SST: https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FSST-2.zip?alt=media&token=aabc5f6b-e466-44a2-b9b4-cf6337f84ac8
     """
 
     def __init__(self):
@@ -132,6 +134,7 @@ class SST2Loader(CSVLoader):
         info = DataBundle()
         for name, path in paths.items():
             dataset = self.load(path)
+            dataset.apply_field(lambda words:words.copy(), field_name='words', new_field_name='raw_words')
             datasets[name] = dataset
 
         def wordtochar(words):

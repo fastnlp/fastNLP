@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../../..')
 
-from fastNLP.modules.encoder.embedding import CNNCharEmbedding, StaticEmbedding, BertEmbedding, ElmoEmbedding, StackEmbedding
+from fastNLP.embeddings.embedding import CNNCharEmbedding, StaticEmbedding
 from fastNLP.core.vocabulary import VocabularyOption
 
 from reproduction.seqence_labelling.ner.model.lstm_cnn_crf import CNNBiLSTMCRF
@@ -9,13 +9,11 @@ from fastNLP import Trainer
 from fastNLP import SpanFPreRecMetric
 from fastNLP import BucketSampler
 from fastNLP import Const
-from torch.optim import SGD, Adam
+from torch.optim import SGD
 from fastNLP import GradientClipCallback
 from fastNLP.core.callback import FitlogCallback, LRScheduler
 from torch.optim.lr_scheduler import LambdaLR
-from fastNLP.core.optimizer import AdamW
 # from reproduction.seqence_labelling.ner.model.swats import SWATS
-from reproduction.seqence_labelling.chinese_ner.callbacks import SaveModelCallback
 from fastNLP import cache_results
 
 import fitlog

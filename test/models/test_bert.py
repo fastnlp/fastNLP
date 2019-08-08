@@ -8,7 +8,7 @@ from fastNLP.models.bert import *
 class TestBert(unittest.TestCase):
     def test_bert_1(self):
         from fastNLP.core.const import Const
-        from fastNLP.modules.encoder._bert import BertConfig
+        from fastNLP.modules.encoder.bert import BertConfig
 
         model = BertForSequenceClassification(2, BertConfig(32000))
 
@@ -23,7 +23,7 @@ class TestBert(unittest.TestCase):
 
     def test_bert_2(self):
         from fastNLP.core.const import Const
-        from fastNLP.modules.encoder._bert import BertConfig
+        from fastNLP.modules.encoder.bert import BertConfig
 
         model = BertForMultipleChoice(2, BertConfig(32000))
 
@@ -38,7 +38,7 @@ class TestBert(unittest.TestCase):
 
     def test_bert_3(self):
         from fastNLP.core.const import Const
-        from fastNLP.modules.encoder._bert import BertConfig
+        from fastNLP.modules.encoder.bert import BertConfig
 
         model = BertForTokenClassification(7, BertConfig(32000))
 
@@ -53,7 +53,7 @@ class TestBert(unittest.TestCase):
 
     def test_bert_4(self):
         from fastNLP.core.const import Const
-        from fastNLP.modules.encoder._bert import BertConfig
+        from fastNLP.modules.encoder.bert import BertConfig
 
         model = BertForQuestionAnswering(BertConfig(32000))
 

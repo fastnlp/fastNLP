@@ -1,20 +1,18 @@
 from reproduction.seqence_labelling.ner.data.OntoNoteLoader import OntoNoteNERDataLoader
-from reproduction.seqence_labelling.ner.data.Conll2003Loader import Conll2003DataLoader
-from fastNLP.core.callback import FitlogCallback, LRScheduler
+from fastNLP.core.callback import LRScheduler
 from fastNLP import GradientClipCallback
-from torch.optim.lr_scheduler import LambdaLR, CosineAnnealingLR
-from torch.optim import SGD, Adam
+from torch.optim.lr_scheduler import LambdaLR
+from torch.optim import Adam
 from fastNLP import Const
-from fastNLP import RandomSampler, BucketSampler
+from fastNLP import BucketSampler
 from fastNLP import SpanFPreRecMetric
-from fastNLP import Trainer
+from fastNLP import Trainer, Tester
 from fastNLP.core.metrics import MetricBase
 from reproduction.seqence_labelling.ner.model.dilated_cnn import IDCNN
 from fastNLP.core.utils import Option
-from fastNLP.modules.encoder.embedding import CNNCharEmbedding, StaticEmbedding
+from fastNLP.embeddings.embedding import StaticEmbedding
 from fastNLP.core.utils import cache_results
 from fastNLP.core.vocabulary import VocabularyOption
-import sys
 import torch.cuda
 import os
 os.environ['FASTNLP_BASE_URL'] = 'http://10.141.222.118:8888/file/download/'
@@ -31,7 +29,7 @@ def get_path(path):
 ops = Option(
     batch_size=128,
     num_epochs=100,
-    lr=5e-4,
+    lr=3e-4,
     repeats=3,
     num_layers=3,
     num_filters=400,
@@ -39,18 +37,18 @@ ops = Option(
     gradient_clip=5,
 )
 
-@cache_results('ontonotes-min_freq0-case-cache')
+@cache_results('ontonotes-case-cache')
 def load_data():
     print('loading data')
-    # data = OntoNoteNERDataLoader(encoding_type=encoding_type).process(
-    #     data_path = get_path('workdir/datasets/ontonotes-v4')
-    #     lower=False,
-    #     word_vocab_opt=VocabularyOption(min_freq=0),
-    # )
-    data = Conll2003DataLoader(task='ner', encoding_type=encoding_type).process(
-        paths=get_path('workdir/datasets/conll03'),
-    lower=False, word_vocab_opt=VocabularyOption(min_freq=0)
+    data = OntoNoteNERDataLoader(encoding_type=encoding_type).process(
+        paths = get_path('workdir/datasets/ontonotes-v4'),
+        lower=False,
+        word_vocab_opt=VocabularyOption(min_freq=0),
     )
+    # data = Conll2003DataLoader(task='ner', encoding_type=encoding_type).process(
+    #     paths=get_path('workdir/datasets/conll03'),
+    # lower=False, word_vocab_opt=VocabularyOption(min_freq=0)
+    # )
 
     # char_embed = CNNCharEmbedding(vocab=data.vocabs['cap_words'], embed_size=30, char_emb_size=30, filter_nums=[30],
     #                               kernel_sizes=[3])
@@ -88,11 +86,11 @@ model = IDCNN(init_embed=word_embed,
               kernel_size=3,
               use_crf=ops.use_crf, use_projection=True,
               block_loss=True,
-              input_dropout=0.5, hidden_dropout=0.0, inner_dropout=0.0)
+              input_dropout=0.5, hidden_dropout=0.2, inner_dropout=0.2)
 
 print(model)
 
-callbacks = [GradientClipCallback(clip_value=ops.gradient_clip, clip_type='norm'),]
+callbacks = [GradientClipCallback(clip_value=ops.gradient_clip, clip_type='value'),]
 metrics = []
 metrics.append(
     SpanFPreRecMetric(
@@ -123,8 +121,9 @@ metrics.append(
     LossMetric(loss=Const.LOSS)
 )
 
-optimizer = Adam(model.parameters(), lr=ops.lr, weight_decay=1e-4)
-# scheduler = LRScheduler(LambdaLR(optimizer, lr_lambda=lambda epoch: 1 / (1 + 0.05 * epoch)))
+optimizer = Adam(model.parameters(), lr=ops.lr, weight_decay=0)
+scheduler = LRScheduler(LambdaLR(optimizer, lr_lambda=lambda epoch: 1 / (1 + 0.05 * epoch)))
+callbacks.append(scheduler)
 # callbacks.append(LRScheduler(CosineAnnealingLR(optimizer, 15)))
 # optimizer = SWATS(model.parameters(), verbose=True)
 # optimizer = Adam(model.parameters(), lr=0.005)
@@ -138,3 +137,16 @@ trainer = Trainer(train_data=data.datasets['train'], model=model, optimizer=opti
                   check_code_level=-1,
                   callbacks=callbacks, num_workers=2, n_epochs=ops.num_epochs)
 trainer.train()
+
+torch.save(model, 'idcnn.pt')
+
+tester = Tester(
+    data=data.datasets['test'],
+    model=model,
+    metrics=metrics,
+    batch_size=ops.batch_size,
+    num_workers=2,
+    device=device
+)
+tester.test()
+

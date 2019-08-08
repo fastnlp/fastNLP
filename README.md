@@ -36,9 +36,13 @@ pip install fastNLP
 python -m spacy download en
 ```
 
+目前使用pip安装fastNLP的版本是0.4.1，有较多功能仍未更新，最新内容以master分支为准。
+fastNLP0.5.0版本将在近期推出，请密切关注。
+
 
 ## fastNLP教程
 
+- [0. 快速入门](https://fastnlp.readthedocs.io/zh/latest/user/quickstart.html)
 - [1. 使用DataSet预处理文本](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_1_data_preprocess.html)
 - [2. 使用DataSetLoader加载数据集](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_2_load_dataset.html)
 - [3. 使用Embedding模块将文本转成向量](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_3_embedding.html)
@@ -48,17 +52,23 @@ python -m spacy download en
 - [7. 使用Modules和Models快速搭建自定义模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_7_modules_models.html)
 - [8. 使用Metric快速评测你的模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_8_metrics.html)
 - [9. 使用Callback自定义你的训练过程](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_9_callback.html)
+- [10. 使用fitlog 辅助 fastNLP 进行科研](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_10_fitlog.html)
 
 
 
 ## 内置组件
 
-大部分用于的 NLP 任务神经网络都可以看做由编码器（encoder）、解码器（decoder）两种模块组成。
+大部分用于的 NLP 任务神经网络都可以看做由词嵌入（embeddings）和两种模块：编码器（encoder）、解码器（decoder）组成。
+
+以文本分类任务为例，下图展示了一个BiLSTM+Attention实现文本分类器的模型流程图：
 
 
 ![](./docs/source/figures/text_classification.png)
 
-fastNLP 在 modules 模块中内置了两种模块的诸多组件，可以帮助用户快速搭建自己所需的网络。 两种模块的功能和常见组件如下:
+fastNLP 在 embeddings 模块中内置了几种不同的embedding：静态embedding（GloVe、word2vec）、上下文相关embedding
+（ELMo、BERT）、字符embedding（基于CNN或者LSTM的CharEmbedding）
+
+与此同时，fastNLP 在 modules 模块中内置了两种模块的诸多组件，可以帮助用户快速搭建自己所需的网络。 两种模块的功能和常见组件如下:
 
 <table>
 <tr>
@@ -101,6 +111,10 @@ fastNLP的大致工作流程如上图所示，而项目结构如下：
 <tr>
     <td><b> fastNLP.modules </b></td>
     <td> 实现了用于搭建神经网络模型的诸多组件 </td>
+</tr>
+<tr>
+    <td><b> fastNLP.embeddings </b></td>
+    <td> 实现了将序列index转为向量序列的功能，包括读取预训练embedding等 </td>
 </tr>
 <tr>
     <td><b> fastNLP.io </b></td>
