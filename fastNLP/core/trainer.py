@@ -352,7 +352,7 @@ from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
-from fastNLP.core._parallel_utils import _model_contains_inner_module
+from ._parallel_utils import _model_contains_inner_module
 
 
 class Trainer(object):
@@ -557,7 +557,8 @@ class Trainer(object):
                                  metrics=self.metrics,
                                  batch_size=self.batch_size,
                                  device=None,  # 由上面的部分处理device
-                                 verbose=0)
+                                 verbose=0,
+                                 use_tqdm=self.use_tqdm)
 
         self.step = 0
         self.start_time = None  # start timestamp
@@ -633,7 +634,7 @@ class Trainer(object):
 
     def _train(self):
         if not self.use_tqdm:
-            from fastNLP.core.utils import _pseudo_tqdm as inner_tqdm
+            from .utils import _pseudo_tqdm as inner_tqdm
         else:
             inner_tqdm = tqdm
         self.step = 0
@@ -859,8 +860,11 @@ def _get_value_info(_dict):
         strs.append(_str)
     return strs
 
+
 from numbers import Number
 from .batch import _to_tensor
+
+
 def _check_code(dataset, model, losser, metrics, forward_func, batch_size=DEFAULT_CHECK_BATCH_SIZE,
                 dev_data=None, metric_key=None, check_level=0):
     # check get_loss 方法
