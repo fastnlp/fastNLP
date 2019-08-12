@@ -624,7 +624,7 @@ class SpanFPreRecMetric(MetricBase):
                 f, pre, rec = self._compute_f_pre_rec(tp, fn, fp)
                 f_sum += f
                 pre_sum += pre
-                rec_sum + rec
+                rec_sum += rec
                 if not self.only_gross and tag != '':  # tag!=''防止无tag的情况
                     f_key = 'f-{}'.format(tag)
                     pre_key = 'pre-{}'.format(tag)
