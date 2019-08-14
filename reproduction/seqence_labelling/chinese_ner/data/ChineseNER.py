@@ -51,7 +51,7 @@ class ChineseNERLoader(DataSetLoader):
         :param paths:
         :param bool, bigrams: 是否包含生成bigram feature, [a, b, c, d] -> [ab, bc, cd, d<eos>]
         :param bool, trigrams: 是否包含trigram feature，[a, b, c, d] -> [abc, bcd, cd<eos>, d<eos><eos>]
-        :return: DataBundle
+        :return: ~fastNLP.io.DataBundle
             包含以下的fields
                 raw_chars: List[str]
                 chars: List[int]

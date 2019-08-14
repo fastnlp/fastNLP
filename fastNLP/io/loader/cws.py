@@ -1,6 +1,6 @@
-
 from .loader import Loader
-from ...core import DataSet, Instance
+from ...core.dataset import DataSet
+from ...core.instance import Instance
 
 
 class CWSLoader(Loader):

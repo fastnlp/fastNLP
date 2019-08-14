@@ -1,6 +1,6 @@
 from typing import List
-from ...core import Vocabulary
-from ...core import Const
+from ...core.vocabulary import Vocabulary
+from ...core.const import Const
 
 def iob2(tags:List[str])->List[str]:
     """

@@ -6,12 +6,17 @@ fastNLP.modules
    :undoc-members:
    :show-inheritance:
 
-子模块
+Subpackages
 -----------
 
 .. toctree::
-   :titlesonly:
-   :maxdepth: 1
 
    fastNLP.modules.decoder
    fastNLP.modules.encoder
+
+Submodules
+----------
+
+.. toctree::
+
+   fastNLP.modules.utils

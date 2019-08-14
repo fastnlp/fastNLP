@@ -112,7 +112,7 @@ def get_dropout_mask(drop_p: float, tensor: torch.Tensor):
     根据tensor的形状，生成一个mask
 
     :param drop_p: float, 以多大的概率置为0。
-    :param tensor:torch.Tensor
+    :param tensor: torch.Tensor
     :return: torch.FloatTensor. 与tensor一样的shape
     """
     mask_x = torch.ones_like(tensor)

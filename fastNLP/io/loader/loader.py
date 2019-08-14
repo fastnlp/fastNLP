@@ -1,4 +1,4 @@
-from ... import DataSet
+from ...core.dataset import DataSet
 from .. import DataBundle
 from ..utils import check_loader_paths
 from typing import Union, Dict

@@ -1,3 +1,6 @@
+"""
+正在开发中的分布式训练代码
+"""
 import torch
 import torch.cuda
 import torch.optim
@@ -41,7 +44,8 @@ def get_local_rank():
 
 
 class DistTrainer():
-    """Distributed Trainer that support distributed and mixed precision training
+    """
+    Distributed Trainer that support distributed and mixed precision training
     """
     def __init__(self, train_data, model, optimizer=None, loss=None,
                  callbacks_all=None, callbacks_master=None,

@@ -1,7 +1,7 @@
 from .pipe import Pipe
 from .. import DataBundle
 from .utils import iob2, iob2bioes
-from ... import Const
+from ...core.const import Const
 from ..loader.conll import Conll2003NERLoader, OntoNotesNERLoader
 from .utils import _indexize, _add_words_field
 
@@ -19,15 +19,16 @@ class _NERPipe(Pipe):
     :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
     :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为-100。
     """
-    def __init__(self, encoding_type:str='bio', lower:bool=False, target_pad_val=0):
-        if  encoding_type == 'bio':
+
+    def __init__(self, encoding_type: str = 'bio', lower: bool = False, target_pad_val=0):
+        if encoding_type == 'bio':
             self.convert_tag = iob2
         else:
             self.convert_tag = iob2bioes
         self.lower = lower
         self.target_pad_val = int(target_pad_val)
 
-    def process(self, data_bundle:DataBundle)->DataBundle:
+    def process(self, data_bundle: DataBundle) -> DataBundle:
         """
         支持的DataSet的field为
 
@@ -146,4 +147,3 @@ class OntoNotesNERPipe(_NERPipe):
     def process_from_file(self, paths):
         data_bundle = OntoNotesNERLoader().load(paths)
         return self.process(data_bundle)
-

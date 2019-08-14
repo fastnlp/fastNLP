@@ -176,9 +176,9 @@ class BertWordPieceEncoder(nn.Module):
     def index_datasets(self, *datasets, field_name, add_cls_sep=True):
         """
         使用bert的tokenizer新生成word_pieces列加入到datasets中，并将他们设置为input,且将word_pieces这一列的pad value设置为了
-            bert的pad value。
+        bert的pad value。
 
-        :param DataSet datasets: DataSet对象
+        :param ~fastNLP.DataSet datasets: DataSet对象
         :param str field_name: 基于哪一列的内容生成word_pieces列。这一列中每个数据应该是List[str]的形式。
         :param bool add_cls_sep: 如果首尾不是[CLS]与[SEP]会在首尾额外加入[CLS]与[SEP]。
         :return:
