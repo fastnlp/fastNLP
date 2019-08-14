@@ -1,4 +1,3 @@
-
 from nltk import Tree
 
 from ..base_loader import DataBundle

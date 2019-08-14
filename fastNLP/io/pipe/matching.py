@@ -6,6 +6,7 @@ from ...core import Const
 from ...core import Vocabulary
 from ..loader.matching import SNLILoader, MNLILoader, QNLILoader, RTELoader, QuoraLoader
 
+
 class MatchingBertPipe(Pipe):
     """
     Matching任务的Bert pipe，输出的DataSet将包含以下的field
