@@ -6,11 +6,10 @@ fastNLP.core
    :undoc-members:
    :show-inheritance:
 
-子模块
+Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 1
 
    fastNLP.core.batch
    fastNLP.core.callback

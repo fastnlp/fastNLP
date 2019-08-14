@@ -6,11 +6,10 @@ fastNLP.models
    :undoc-members:
    :show-inheritance:
 
-子模块
+Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 1
 
    fastNLP.models.biaffine_parser
    fastNLP.models.cnn_text_classification
