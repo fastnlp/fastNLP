@@ -1,7 +1,7 @@
 from .pipe import Pipe
 from .. import DataBundle
 from .utils import iob2, iob2bioes
-from ... import Const
+from ...core.const import Const
 from ..loader.conll import Conll2003NERLoader, OntoNotesNERLoader
 from .utils import _indexize, _add_words_field
 

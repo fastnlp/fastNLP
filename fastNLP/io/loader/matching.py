@@ -1,12 +1,12 @@
 import warnings
 from .loader import Loader
 from .json import JsonLoader
-from ...core import Const
+from ...core.const import Const
 from .. import DataBundle
 import os
 from typing import Union, Dict
-from ...core import DataSet
-from ...core import Instance
+from ...core.dataset import DataSet
+from ...core.instance import Instance
 
 
 class MNLILoader(Loader):

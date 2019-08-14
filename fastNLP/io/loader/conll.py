@@ -1,12 +1,12 @@
 from typing import Dict, Union
 
 from .loader import Loader
-from ... import DataSet
+from ...core.dataset import DataSet
 from ..file_reader import _read_conll
-from ... import Instance
+from ...core.instance import Instance
 from .. import DataBundle
 from ..utils import check_loader_paths
-from ... import Const
+from ...core.const import Const
 
 
 class ConllLoader(Loader):

@@ -2,8 +2,8 @@ import math
 
 from .pipe import Pipe
 from .utils import get_tokenizer
-from ...core import Const
-from ...core import Vocabulary
+from ...core.const import Const
+from ...core.vocabulary import Vocabulary
 from ..loader.matching import SNLILoader, MNLILoader, QNLILoader, RTELoader, QuoraLoader
 
 

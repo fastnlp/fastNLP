@@ -4,13 +4,14 @@ from ..base_loader import DataBundle
 from ...core.vocabulary import Vocabulary
 from ...core.const import Const
 from ..loader.classification import IMDBLoader, YelpFullLoader, SSTLoader, SST2Loader, YelpPolarityLoader
-from ...core import DataSet, Instance
+from ...core.dataset import DataSet
+from ...core.instance import Instance
 
 from .utils import get_tokenizer, _indexize, _add_words_field, _drop_empty_instance
 from .pipe import Pipe
 import re
 nonalpnum = re.compile('[^0-9a-zA-Z?!\']+')
-from ...core import cache_results
+from ...core.utils import cache_results
 
 class _CLSPipe(Pipe):
     """
