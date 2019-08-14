@@ -257,7 +257,7 @@ class SSTPipe(_CLSPipe):
             "(4 (4 (2 Offers) (3 (3 (2 that) (3 (3 rare)..."
             "..."
 
-        :param DataBundle data_bundle: 需要处理的DataBundle对象
+        :param ~fastNLP.io.DataBundle data_bundle: 需要处理的DataBundle对象
         :return:
         """
         #  先取出subtree
@@ -407,7 +407,7 @@ class IMDBPipe(_CLSPipe):
 
         :param DataBunlde data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和target两个field，且raw_words列应该为str,
             target列应该为str。
-        :return:DataBundle
+        :return: DataBundle
         """
         # 替换<br />
         def replace_br(raw_words):

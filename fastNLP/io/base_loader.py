@@ -128,7 +128,7 @@ class DataBundle:
         """
         向DataBunlde中增加vocab
 
-        :param Vocabulary vocab: 词表
+        :param ~fastNLP.Vocabulary vocab: 词表
         :param str field_name: 这个vocab对应的field名称
         :return:
         """
@@ -138,7 +138,7 @@ class DataBundle:
     def set_dataset(self, dataset, name):
         """
 
-        :param DataSet dataset: 传递给DataBundle的DataSet
+        :param ~fastNLP.DataSet dataset: 传递给DataBundle的DataSet
         :param str name: dataset的名称
         :return:
         """

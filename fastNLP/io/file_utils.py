@@ -84,6 +84,7 @@ def cached_path(url_or_filename:str, cache_dir:str=None, name=None) -> Path:
     给定一个url，尝试通过url中的解析出来的文件名字filename到{cache_dir}/{name}/{filename}下寻找这个文件，
         (1)如果cache_dir=None, 则cache_dir=~/.fastNLP/; 否则cache_dir=cache_dir
         (2)如果name=None, 则没有中间的{name}这一层结构；否者中间结构就为{name}
+
     如果有该文件，就直接返回路径
     如果没有该文件，则尝试用传入的url下载
 
@@ -126,8 +127,10 @@ def get_filepath(filepath):
     如果filepath为文件夹，
         如果内含多个文件, 返回filepath
         如果只有一个文件, 返回filepath + filename
+
     如果filepath为文件
         返回filepath
+
     :param str filepath: 路径
     :return:
     """
@@ -237,7 +240,8 @@ def split_filename_suffix(filepath):
 def get_from_cache(url: str, cache_dir: Path = None) -> Path:
     """
     尝试在cache_dir中寻找url定义的资源; 如果没有找到; 则从url下载并将结果放在cache_dir下，缓存的名称由url的结果推断而来。会将下载的
-        文件解压，将解压后的文件全部放在cache_dir文件夹中。
+    文件解压，将解压后的文件全部放在cache_dir文件夹中。
+
     如果从url中下载的资源解压后有多个文件，则返回目录的路径; 如果只有一个资源文件，则返回具体的路径。
     """
     cache_dir.mkdir(parents=True, exist_ok=True)

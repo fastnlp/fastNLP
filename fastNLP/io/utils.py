@@ -6,12 +6,14 @@ from pathlib import Path
 
 def check_loader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
     """
-    检查传入dataloader的文件的合法性。如果为合法路径，将返回至少包含'train'这个key的dict。类似于下面的结果
-    {
-        'train': '/some/path/to/', # 一定包含，建词表应该在这上面建立，剩下的其它文件应该只需要处理并index。
-        'test': 'xxx' # 可能有，也可能没有
-        ...
-    }
+    检查传入dataloader的文件的合法性。如果为合法路径，将返回至少包含'train'这个key的dict。类似于下面的结果::
+
+        {
+            'train': '/some/path/to/', # 一定包含，建词表应该在这上面建立，剩下的其它文件应该只需要处理并index。
+            'test': 'xxx' # 可能有，也可能没有
+            ...
+        }
+
     如果paths为不合法的，将直接进行raise相应的错误. 如果paths内不包含train也会报错。
 
     :param str paths: 路径. 可以为一个文件路径(则认为该文件就是train的文件); 可以为一个文件目录，将在该目录下寻找train(文件名
