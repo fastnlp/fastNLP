@@ -942,7 +942,7 @@ def _check_code(dataset, model, losser, metrics, forward_func, batch_size=DEFAUL
     
     if dev_data is not None:
         tester = Tester(data=dev_data[:batch_size * DEFAULT_CHECK_NUM_BATCH], model=model, metrics=metrics,
-                        batch_size=batch_size, verbose=-1)
+                        batch_size=batch_size, verbose=-1, use_tqdm=False)
         evaluate_results = tester.test()
         _check_eval_results(metrics=evaluate_results, metric_key=metric_key, metric_list=metrics)
 

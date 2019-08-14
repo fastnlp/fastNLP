@@ -28,6 +28,7 @@ from .utils import _check_arg_dict_list
 from .utils import _check_function_or_method
 from .utils import _get_func_signature
 from .utils import seq_len_to_mask
+import warnings
 
 
 class LossBase(object):
@@ -226,7 +227,8 @@ class CrossEntropyLoss(LossBase):
     def get_loss(self, pred, target, seq_len=None):
         if pred.dim() > 2:
             if pred.size(1) != target.size(1):  # 有可能顺序替换了
-                pred = pred.transpose(1, 2)
+                raise RuntimeError("It seems like that your prediction's shape is (batch_size, num_labels, max_len)."
+                              " It should be (batch_size, max_len, num_labels).")
             pred = pred.reshape(-1, pred.size(-1))
             target = target.reshape(-1)
         if seq_len is not None:

@@ -11,7 +11,7 @@ from ..core.vocabulary import Vocabulary
 from ..io.file_utils import _get_embedding_url, cached_path, PRETRAINED_BERT_MODEL_DIR
 from ..modules.encoder.bert import _WordPieceBertModel, BertModel, BertTokenizer
 from .contextual_embedding import ContextualEmbedding
-
+import warnings
 
 class BertEmbedding(ContextualEmbedding):
     """
@@ -229,6 +229,10 @@ class _WordBertModel(nn.Module):
         # 第一步统计出需要的word_piece, 然后创建新的embed和word_piece_vocab, 然后填入值
         word_piece_dict = {'[CLS]':1, '[SEP]':1}  # 用到的word_piece以及新增的
         found_count = 0
+        self._has_sep_in_vocab = '[SEP]' in vocab  # 用来判断传入的数据是否需要生成token_ids
+        if "[CLS]" in vocab:
+            warnings.warn("[CLS] detected in your vocabulary. BertEmbedding will add [CSL] and [SEP] to the begin "
+                          "and end of the sentence automatically.")
         for word, index in vocab:
             if index == vocab.padding_idx:  # pad是个特殊的符号
                 word = '[PAD]'
@@ -316,9 +320,18 @@ class _WordBertModel(nn.Module):
         word_pieces[:, 0].fill_(self._cls_index)
         batch_indexes = torch.arange(batch_size).to(words)
         word_pieces[batch_indexes, word_pieces_lengths+1] = self._sep_index
+        if self._has_sep_in_vocab:  #但[SEP]在vocab中出现应该才会需要token_ids
+            with torch.no_grad():
+                sep_mask = word_pieces.eq(self._sep_index)  # batch_size x max_len
+                sep_mask_cumsum = sep_mask.flip(dim=-1).cumsum(dim=-1).flip(dim=-1)
+            token_type_ids = sep_mask_cumsum.fmod(2)
+            if token_type_ids[0, 0].item():  # 如果开头是奇数，则需要flip一下结果，因为需要保证开头为0
+                token_type_ids = token_type_ids.eq(0).float()
+        else:
+            token_type_ids = torch.zeros_like(word_pieces)
         # 2. 获取hidden的结果，根据word_pieces进行对应的pool计算
         # all_outputs: [batch_size x max_len x hidden_size, batch_size x max_len x hidden_size, ...]
-        bert_outputs, pooled_cls = self.encoder(word_pieces, token_type_ids=None, attention_mask=attn_masks,
+        bert_outputs, pooled_cls = self.encoder(word_pieces, token_type_ids=token_type_ids, attention_mask=attn_masks,
                                            output_all_encoded_layers=True)
         # output_layers = [self.layers]  # len(self.layers) x batch_size x real_word_piece_length x hidden_size
 
