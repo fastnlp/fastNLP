@@ -291,6 +291,7 @@ import _pickle as pickle
 import warnings
 
 import numpy as np
+from copy import deepcopy
 
 from .field import AutoPadder
 from .field import FieldArray
@@ -298,6 +299,7 @@ from .instance import Instance
 from .utils import _get_func_signature
 from .field import AppendToTargetOrInputException
 from .field import SetInputOrTargetException
+from .const import Const
 
 class DataSet(object):
     """
@@ -349,7 +351,11 @@ class DataSet(object):
                     self.idx])
                 assert self.idx < len(self.dataset.field_arrays[item]), "index:{} out of range".format(self.idx)
                 return self.dataset.field_arrays[item][self.idx]
-            
+
+            def items(self):
+                ins = self.dataset[self.idx]
+                return ins.items()
+
             def __repr__(self):
                 return self.dataset[self.idx].__repr__()
         
@@ -497,6 +503,7 @@ class DataSet(object):
         else:
             for field in self.field_arrays.values():
                 field.pop(index)
+        return self
     
     def delete_field(self, field_name):
         """
@@ -505,7 +512,22 @@ class DataSet(object):
         :param str field_name: 需要删除的field的名称.
         """
         self.field_arrays.pop(field_name)
-    
+        return self
+
+    def copy_field(self, field_name, new_field_name):
+        """
+        深度copy名为field_name的field到new_field_name
+
+        :param str field_name: 需要copy的field。
+        :param str new_field_name: copy生成的field名称
+        :return: self
+        """
+        if not self.has_field(field_name):
+            raise KeyError(f"Field:{field_name} not found in DataSet.")
+        fieldarray = deepcopy(self.get_field(field_name))
+        self.add_fieldarray(field_name=new_field_name, fieldarray=fieldarray)
+        return self
+
     def has_field(self, field_name):
         """
         判断DataSet中是否有名为field_name这个field
@@ -701,7 +723,7 @@ class DataSet(object):
                 results.append(func(ins[field_name]))
         except Exception as e:
             if idx != -1:
-                print("Exception happens at the `{}`th instance.".format(idx))
+                print("Exception happens at the `{}`th(from 1) instance.".format(idx+1))
             raise e
         if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
             raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
@@ -766,10 +788,11 @@ class DataSet(object):
             results = []
             for idx, ins in enumerate(self._inner_iter()):
                 results.append(func(ins))
-        except Exception as e:
+        except BaseException as e:
             if idx != -1:
                 print("Exception happens at the `{}`th instance.".format(idx))
             raise e
+
         # results = [func(ins) for ins in self._inner_iter()]
         if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
             raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
@@ -779,7 +802,7 @@ class DataSet(object):
         
         return results
 
-    def add_seq_len(self, field_name:str, new_field_name='seq_len'):
+    def add_seq_len(self, field_name:str, new_field_name=Const.INPUT_LEN):
         """
         将使用len()直接对field_name中每个元素作用，将其结果作为seqence length, 并放入seq_len这个field。
 

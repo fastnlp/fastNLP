@@ -121,7 +121,7 @@ class MatchingLoader(DataSetLoader):
                 PRETRAIN_URL = _get_base_url('bert')
                 model_name = PRETRAINED_BERT_MODEL_DIR[bert_tokenizer]
                 model_url = PRETRAIN_URL + model_name
-                model_dir = cached_path(model_url)
+                model_dir = cached_path(model_url, name='embedding')
                 # 检查是否存在
             elif os.path.isdir(bert_tokenizer):
                 model_dir = bert_tokenizer

@@ -48,6 +48,11 @@ class DataSetGetter:
         return len(self.dataset)
 
     def collate_fn(self, batch: list):
+        """
+
+        :param batch: [[idx1, x_dict1, y_dict1], [idx2, x_dict2, y_dict2], [xx, xx, xx]]
+        :return:
+        """
         # TODO 支持在DataSet中定义collate_fn，因为有时候可能需要不同的field之间融合，比如BERT的场景
         batch_x = {n:[] for n in self.inputs.keys()}
         batch_y = {n:[] for n in self.targets.keys()}
@@ -208,6 +213,13 @@ class OnlineDataIter(BatchIter):
 
 
 def _to_tensor(batch, field_dtype):
+    """
+
+    :param batch: np.array()
+    :param field_dtype: 数据类型
+    :return: batch, flag. 如果传入的数据支持转为tensor，返回的batch就是tensor，且flag为True；如果传入的数据不支持转为tensor，
+        返回的batch就是原来的数据，且flag为False
+    """
     try:
         if field_dtype is not None and isinstance(field_dtype, type)\
                 and issubclass(field_dtype, Number) \

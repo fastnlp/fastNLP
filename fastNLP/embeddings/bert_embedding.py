@@ -8,7 +8,7 @@ import numpy as np
 from itertools import chain
 
 from ..core.vocabulary import Vocabulary
-from ..io.file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
+from ..io.file_utils import _get_embedding_url, cached_path, PRETRAINED_BERT_MODEL_DIR
 from ..modules.encoder.bert import _WordPieceBertModel, BertModel, BertTokenizer
 from .contextual_embedding import ContextualEmbedding
 
@@ -60,10 +60,8 @@ class BertEmbedding(ContextualEmbedding):
 
         # 根据model_dir_or_name检查是否存在并下载
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
-            PRETRAIN_URL = _get_base_url('bert')
-            model_name = PRETRAINED_BERT_MODEL_DIR[model_dir_or_name]
-            model_url = PRETRAIN_URL + model_name
-            model_dir = cached_path(model_url)
+            model_url = _get_embedding_url('bert', model_dir_or_name.lower())
+            model_dir = cached_path(model_url, name='embedding')
             # 检查是否存在
         elif os.path.isdir(os.path.expanduser(os.path.abspath(model_dir_or_name))):
             model_dir = os.path.expanduser(os.path.abspath(model_dir_or_name))
@@ -133,11 +131,9 @@ class BertWordPieceEncoder(nn.Module):
                     pooled_cls: bool = False, requires_grad: bool=False):
         super().__init__()
 
-        if model_dir_or_name in PRETRAINED_BERT_MODEL_DIR:
-            PRETRAIN_URL = _get_base_url('bert')
-            model_name = PRETRAINED_BERT_MODEL_DIR[model_dir_or_name]
-            model_url = PRETRAIN_URL + model_name
-            model_dir = cached_path(model_url)
+        if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
+            model_url = _get_embedding_url('bert', model_dir_or_name.lower())
+            model_dir = cached_path(model_url, name='embedding')
             # 检查是否存在
         elif os.path.isdir(os.path.expanduser(os.path.abspath(model_dir_or_name))):
             model_dir = model_dir_or_name

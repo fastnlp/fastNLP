@@ -4,6 +4,7 @@ utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户
 __all__ = [
     "cache_results",
     "seq_len_to_mask",
+    "get_seq_len"
 ]
 
 import _pickle
@@ -730,3 +731,23 @@ def iob2bioes(tags: List[str]) -> List[str]:
             else:
                 raise TypeError("Invalid IOB format.")
     return new_tags
+
+
+def _is_iterable(value):
+    # 检查是否是iterable的, duck typing
+    try:
+        iter(value)
+        return True
+    except BaseException as e:
+        return False
+
+
+def get_seq_len(words, pad_value=0):
+    """
+    给定batch_size x max_len的words矩阵，返回句子长度
+
+    :param words: batch_size x max_len
+    :return: (batch_size,)
+    """
+    mask = words.ne(pad_value)
+    return mask.sum(dim=-1)

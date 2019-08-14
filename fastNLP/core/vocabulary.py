@@ -4,12 +4,12 @@ __all__ = [
 ]
 
 from functools import wraps
-from collections import Counter, defaultdict
+from collections import Counter
 from .dataset import DataSet
 from .utils import Option
 from functools import partial
 import numpy as np
-
+from .utils import _is_iterable
 
 class VocabularyOption(Option):
     def __init__(self,
@@ -131,11 +131,11 @@ class Vocabulary(object):
         """
         在新加入word时，检查_no_create_word的设置。
 
-        :param str, List[str] word:
+        :param str List[str] word:
         :param bool no_create_entry:
         :return:
         """
-        if isinstance(word, str):
+        if isinstance(word, str) or not _is_iterable(word):
             word = [word]
         for w in word:
             if no_create_entry and self.word_count.get(w, 0) == self._no_create_word.get(w, 0):
@@ -257,35 +257,45 @@ class Vocabulary(object):
             vocab.index_dataset(train_data, dev_data, test_data, field_name='words')
 
         :param ~fastNLP.DataSet,List[~fastNLP.DataSet] datasets: 需要转index的一个或多个数据集
-        :param str field_name: 需要转index的field, 若有多个 DataSet, 每个DataSet都必须有此 field.
-            目前仅支持 ``str`` , ``List[str]`` , ``List[List[str]]``
-        :param str new_field_name: 保存结果的field_name. 若为 ``None`` , 将覆盖原field.
-            Default: ``None``
+        :param list,str field_name: 需要转index的field, 若有多个 DataSet, 每个DataSet都必须有此 field.
+            目前支持 ``str`` , ``List[str]``
+        :param list,str new_field_name: 保存结果的field_name. 若为 ``None`` , 将覆盖原field.
+            Default: ``None``.
         """
         
-        def index_instance(ins):
+        def index_instance(field):
             """
             有几种情况, str, 1d-list, 2d-list
             :param ins:
             :return:
             """
-            field = ins[field_name]
-            if isinstance(field, str):
+            if isinstance(field, str) or not _is_iterable(field):
                 return self.to_index(field)
-            elif isinstance(field, list):
-                if not isinstance(field[0], list):
+            else:
+                if isinstance(field[0], str) or not _is_iterable(field[0]):
                     return [self.to_index(w) for w in field]
                 else:
-                    if isinstance(field[0][0], list):
+                    if not isinstance(field[0][0], str) and _is_iterable(field[0][0]):
                         raise RuntimeError("Only support field with 2 dimensions.")
                     return [[self.to_index(c) for c in w] for w in field]
-        
-        if new_field_name is None:
-            new_field_name = field_name
+
+        new_field_name = new_field_name or field_name
+
+        if type(new_field_name) == type(field_name):
+            if isinstance(new_field_name, list):
+                assert len(new_field_name) == len(field_name), "new_field_name should have same number elements with " \
+                                                             "field_name."
+            elif isinstance(new_field_name, str):
+                field_name = [field_name]
+                new_field_name = [new_field_name]
+            else:
+                raise TypeError("field_name and new_field_name can only be str or List[str].")
+
         for idx, dataset in enumerate(datasets):
             if isinstance(dataset, DataSet):
                 try:
-                    dataset.apply(index_instance, new_field_name=new_field_name)
+                    for f_n, n_f_n in zip(field_name, new_field_name):
+                        dataset.apply_field(index_instance, field_name=f_n, new_field_name=n_f_n)
                 except Exception as e:
                     print("When processing the `{}` dataset, the following error occurred.".format(idx))
                     raise e
@@ -306,9 +316,8 @@ class Vocabulary(object):
 
         :param ~fastNLP.DataSet,List[~fastNLP.DataSet] datasets: 需要转index的一个或多个数据集
         :param str,List[str] field_name: 可为 ``str`` 或 ``List[str]`` .
-            构建词典所使用的 field(s), 支持一个或多个field
-            若有多个 DataSet, 每个DataSet都必须有这些field.
-            目前仅支持的field结构: ``str`` , ``List[str]`` , ``list[List[str]]``
+            构建词典所使用的 field(s), 支持一个或多个field，若有多个 DataSet, 每个DataSet都必须有这些field. 目前支持的field结构
+            : ``str`` , ``List[str]``
         :param no_create_entry_dataset: 可以传入DataSet, List[DataSet]或者None(默认)，该选项用在接下来的模型会使用pretrain
             的embedding(包括glove, word2vec, elmo与bert)且会finetune的情况。如果仅使用来自于train的数据建立vocabulary，会导致test与dev
             中的数据无法充分利用到来自于预训练embedding的信息，所以在建立词表的时候将test与dev考虑进来会使得最终的结果更好。
@@ -326,14 +335,14 @@ class Vocabulary(object):
         def construct_vocab(ins, no_create_entry=False):
             for fn in field_name:
                 field = ins[fn]
-                if isinstance(field, str):
+                if isinstance(field, str) or not _is_iterable(field):
                     self.add_word(field, no_create_entry=no_create_entry)
-                elif isinstance(field, (list, np.ndarray)):
-                    if not isinstance(field[0], (list, np.ndarray)):
+                else:
+                    if isinstance(field[0], str) or not _is_iterable(field[0]):
                         for word in field:
                             self.add_word(word, no_create_entry=no_create_entry)
                     else:
-                        if isinstance(field[0][0], (list, np.ndarray)):
+                        if not isinstance(field[0][0], str) and _is_iterable(field[0][0]):
                             raise RuntimeError("Only support field with 2 dimensions.")
                         for words in field:
                             for word in words:
@@ -343,8 +352,8 @@ class Vocabulary(object):
             if isinstance(dataset, DataSet):
                 try:
                     dataset.apply(construct_vocab)
-                except Exception as e:
-                    print("When processing the `{}` dataset, the following error occurred.".format(idx))
+                except BaseException as e:
+                    print("When processing the `{}` dataset, the following error occurred:".format(idx))
                     raise e
             else:
                 raise TypeError("Only DataSet type is allowed.")

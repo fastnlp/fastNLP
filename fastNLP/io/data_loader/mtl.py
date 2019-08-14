@@ -5,7 +5,7 @@ from ..base_loader import DataBundle
 from ..dataset_loader import CSVLoader
 from ...core.vocabulary import Vocabulary, VocabularyOption
 from ...core.const import Const
-from ..utils import check_dataloader_paths
+from ..utils import check_loader_paths
 
 
 class MTL16Loader(CSVLoader):
@@ -38,7 +38,7 @@ class MTL16Loader(CSVLoader):
                 src_vocab_opt: VocabularyOption = None,
                 tgt_vocab_opt: VocabularyOption = None,):
 
-        paths = check_dataloader_paths(paths)
+        paths = check_loader_paths(paths)
         datasets = {}
         info = DataBundle()
         for name, path in paths.items():

@@ -2,7 +2,7 @@
 此模块用于给其它模块提供读取文件的函数，没有为用户提供 API
 """
 import json
-
+import warnings
 
 def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
     """
@@ -91,7 +91,7 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
     with open(path, 'r', encoding=encoding) as f:
         sample = []
         start = next(f).strip()
-        if '-DOCSTART-' not in start and start!='':
+        if start!='':
             sample.append(start.split())
         for line_idx, line in enumerate(f, 1):
             line = line.strip()
@@ -103,13 +103,13 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
                         yield line_idx, res
                     except Exception as e:
                         if dropna:
+                            warnings.warn('Invalid instance ends at line: {} has been dropped.'.format(line_idx))
                             continue
-                        raise ValueError('invalid instance ends at line: {}'.format(line_idx))
+                        raise ValueError('Invalid instance ends at line: {}'.format(line_idx))
             elif line.startswith('#'):
                 continue
             else:
-                if not line.startswith('-DOCSTART-'):
-                    sample.append(line.split())
+                sample.append(line.split())
         if len(sample) > 0:
             try:
                 res = parse_conll(sample)

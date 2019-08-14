@@ -7,6 +7,7 @@ from typing import Any
 from abc import abstractmethod
 from copy import deepcopy
 from collections import Counter
+from .utils import _is_iterable
 
 class SetInputOrTargetException(Exception):
     def __init__(self, msg, index=None, field_name=None):
@@ -441,15 +442,6 @@ def _get_ele_type_and_dim(cell:Any, dim=0):
         return types.pop(), dims.pop()
     else: # 包含tuple, set, dict以及其它的类型
         raise SetInputOrTargetException(f"Cannot process type:{type(cell)}.")
-
-
-def _is_iterable(value):
-    # 检查是否是iterable的, duck typing
-    try:
-        iter(value)
-        return True
-    except BaseException as e:
-        return False
 
 
 class Padder:

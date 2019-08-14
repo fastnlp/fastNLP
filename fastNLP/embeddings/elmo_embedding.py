@@ -8,7 +8,7 @@ import json
 import codecs
 
 from ..core.vocabulary import Vocabulary
-from ..io.file_utils import cached_path, _get_base_url, PRETRAINED_ELMO_MODEL_DIR
+from ..io.file_utils import cached_path, _get_embedding_url, PRETRAINED_ELMO_MODEL_DIR
 from ..modules.encoder._elmo import ElmobiLm, ConvTokenEmbedder
 from .contextual_embedding import ContextualEmbedding
 
@@ -53,10 +53,8 @@ class ElmoEmbedding(ContextualEmbedding):
 
         # 根据model_dir_or_name检查是否存在并下载
         if model_dir_or_name.lower() in PRETRAINED_ELMO_MODEL_DIR:
-            PRETRAIN_URL = _get_base_url('elmo')
-            model_name = PRETRAINED_ELMO_MODEL_DIR[model_dir_or_name]
-            model_url = PRETRAIN_URL + model_name
-            model_dir = cached_path(model_url)
+            model_url = _get_embedding_url('elmo', model_dir_or_name.lower())
+            model_dir = cached_path(model_url, name='embedding')
             # 检查是否存在
         elif os.path.isdir(os.path.expanduser(os.path.abspath(model_dir_or_name))):
             model_dir = model_dir_or_name

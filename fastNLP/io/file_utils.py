@@ -7,7 +7,7 @@ import requests
 import tempfile
 from tqdm import tqdm
 import shutil
-import hashlib
+from requests import HTTPError
 
 
 PRETRAINED_BERT_MODEL_DIR = {
@@ -23,15 +23,25 @@ PRETRAINED_BERT_MODEL_DIR = {
 
     'cn': 'bert-base-chinese-29d0a84a.zip',
     'cn-base': 'bert-base-chinese-29d0a84a.zip',
-
-    'multilingual': 'bert-base-multilingual-cased.zip',
-    'multilingual-base-uncased': 'bert-base-multilingual-uncased.zip',
-    'multilingual-base-cased': 'bert-base-multilingual-cased.zip',
+    'bert-base-chinese': 'bert-base-chinese.zip',
+    'bert-base-cased': 'bert-base-cased.zip',
+    'bert-base-cased-finetuned-mrpc': 'bert-base-cased-finetuned-mrpc.zip',
+    'bert-large-cased-wwm': 'bert-large-cased-wwm.zip',
+    'bert-large-uncased': 'bert-large-uncased.zip',
+    'bert-large-cased': 'bert-large-cased.zip',
+    'bert-base-uncased': 'bert-base-uncased.zip',
+    'bert-large-uncased-wwm': 'bert-large-uncased-wwm.zip',
+    'bert-chinese-wwm': 'bert-chinese-wwm.zip',
+    'bert-base-multilingual-cased': 'bert-base-multilingual-cased.zip',
+    'bert-base-multilingual-uncased': 'bert-base-multilingual-uncased.zip',
 }
 
 PRETRAINED_ELMO_MODEL_DIR = {
     'en': 'elmo_en-d39843fe.tar.gz',
-    'en-small': "elmo_en_Small.zip"
+    'en-small': "elmo_en_Small.zip",
+    'en-original-5.5b': 'elmo_en_Original_5.5B.zip',
+    'en-original': 'elmo_en_Original.zip',
+    'en-medium': 'elmo_en_Medium.zip'
 }
 
 PRETRAIN_STATIC_FILES = {
@@ -42,34 +52,68 @@ PRETRAIN_STATIC_FILES = {
     'en-fasttext-wiki': "wiki-news-300d-1M.vec.zip",
     'cn': "tencent_cn-dab24577.tar.gz",
     'cn-fasttext': "cc.zh.300.vec-d68a9bcf.gz",
+    'sgns-literature-word':'sgns.literature.word.txt.zip',
+    'glove-42b-300d': 'glove.42B.300d.zip',
+    'glove-6b-50d': 'glove.6B.50d.zip',
+    'glove-6b-100d': 'glove.6B.100d.zip',
+    'glove-6b-200d': 'glove.6B.200d.zip',
+    'glove-6b-300d': 'glove.6B.300d.zip',
+    'glove-840b-300d': 'glove.840B.300d.zip',
+    'glove-twitter-27b-25d': 'glove.twitter.27B.25d.zip',
+    'glove-twitter-27b-50d': 'glove.twitter.27B.50d.zip',
+    'glove-twitter-27b-100d': 'glove.twitter.27B.100d.zip',
+    'glove-twitter-27b-200d': 'glove.twitter.27B.200d.zip'
 }
 
 
-def cached_path(url_or_filename: str, cache_dir: Path=None) -> Path:
+DATASET_DIR = {
+    'aclImdb': "imdb.zip",
+    "yelp-review-full":"yelp_review_full.tar.gz",
+    "yelp-review-polarity": "yelp_review_polarity.tar.gz",
+    "mnli": "MNLI.zip",
+    "snli": "SNLI.zip",
+    "qnli": "QNLI.zip",
+    "sst-2": "SST-2.zip",
+    "sst": "SST.zip",
+    "rte": "RTE.zip"
+}
+
+
+def cached_path(url_or_filename:str, cache_dir:str=None, name=None) -> Path:
     """
-    给定一个url或者文件名(可以是具体的文件名，也可以是文件)，先在cache_dir下寻找该文件是否存在，如果不存在则去下载, 并
+    给定一个url，尝试通过url中的解析出来的文件名字filename到{cache_dir}/{name}/{filename}下寻找这个文件，
+        (1)如果cache_dir=None, 则cache_dir=~/.fastNLP/; 否则cache_dir=cache_dir
+        (2)如果name=None, 则没有中间的{name}这一层结构；否者中间结构就为{name}
+    如果有该文件，就直接返回路径
+    如果没有该文件，则尝试用传入的url下载
+
+    或者文件名(可以是具体的文件名，也可以是文件夹)，先在cache_dir下寻找该文件是否存在，如果不存在则去下载, 并
         将文件放入到cache_dir中.
 
-    :param url_or_filename: 文件的下载url或者文件路径
-    :param cache_dir: 文件的缓存文件夹
+    :param str url_or_filename: 文件的下载url或者文件名称。
+    :param str cache_dir: 文件的缓存文件夹。如果为None，将使用"~/.fastNLP"这个默认路径
+    :param str name: 中间一层的名称。如embedding, dataset
     :return:
     """
     if cache_dir is None:
-        dataset_cache = Path(get_default_cache_path())
+        data_cache = Path(get_default_cache_path())
     else:
-        dataset_cache = cache_dir
+        data_cache = cache_dir
+
+    if name:
+        data_cache = os.path.join(data_cache, name)
 
     parsed = urlparse(url_or_filename)
 
     if parsed.scheme in ("http", "https"):
         # URL, so get it from the cache (downloading if necessary)
-        return get_from_cache(url_or_filename, dataset_cache)
-    elif parsed.scheme == "" and Path(os.path.join(dataset_cache, url_or_filename)).exists():
+        return get_from_cache(url_or_filename, Path(data_cache))
+    elif parsed.scheme == "" and Path(os.path.join(data_cache, url_or_filename)).exists():
         # File, and it exists.
-        return Path(url_or_filename)
+        return Path(os.path.join(data_cache, url_or_filename))
     elif parsed.scheme == "":
         # File, but it doesn't exist.
-        raise FileNotFoundError("file {} not found".format(url_or_filename))
+        raise FileNotFoundError("file {} not found in {}.".format(url_or_filename, data_cache))
     else:
         # Something unknown
         raise ValueError(
@@ -79,8 +123,12 @@ def cached_path(url_or_filename: str, cache_dir: Path=None) -> Path:
 
 def get_filepath(filepath):
     """
-    如果filepath中只有一个文件，则直接返回对应的全路径.
-    :param filepath:
+    如果filepath为文件夹，
+        如果内含多个文件, 返回filepath
+        如果只有一个文件, 返回filepath + filename
+    如果filepath为文件
+        返回filepath
+    :param str filepath: 路径
     :return:
     """
     if os.path.isdir(filepath):
@@ -89,14 +137,17 @@ def get_filepath(filepath):
             return os.path.join(filepath, files[0])
         else:
             return filepath
-    return filepath
+    elif os.path.isfile(filepath):
+        return filepath
+    else:
+        raise FileNotFoundError(f"{filepath} is not a valid file or directory.")
 
 
 def get_default_cache_path():
     """
     获取默认的fastNLP存放路径, 如果将FASTNLP_CACHE_PATH设置在了环境变量中，将使用环境变量的值，使得不用每个用户都去下载。
 
-    :return:
+    :return: str
     """
     if 'FASTNLP_CACHE_DIR' in os.environ:
         fastnlp_cache_dir = os.environ.get('FASTNLP_CACHE_DIR')
@@ -109,17 +160,66 @@ def get_default_cache_path():
 
 
 def _get_base_url(name):
+    """
+    根据name返回下载的url地址。
+
+    :param str name: 支持dataset和embedding两种
+    :return:
+    """
     # 返回的URL结尾必须是/
-    if 'FASTNLP_BASE_URL' in os.environ:
-        fastnlp_base_url = os.environ['FASTNLP_BASE_URL']
-        if fastnlp_base_url.endswith('/'):
-            return fastnlp_base_url
+    environ_name = "FASTNLP_{}_URL".format(name.upper())
+
+    if environ_name in os.environ:
+        url = os.environ[environ_name]
+        if url.endswith('/'):
+            return url
         else:
-            return fastnlp_base_url + '/'
+            return url + '/'
     else:
-        # TODO 替换
-        dbbrain_url = "http://dbcloud.irocn.cn:8989/api/public/dl/"
-        return dbbrain_url
+        URLS = {
+                    'embedding': "http://dbcloud.irocn.cn:8989/api/public/dl/",
+                    "dataset": "http://dbcloud.irocn.cn:8989/api/public/dl/dataset/"
+                }
+        if name.lower() not in URLS:
+            raise KeyError(f"{name} is not recognized.")
+        return URLS[name.lower()]
+
+
+def _get_embedding_url(type, name):
+    """
+    给定embedding类似和名称，返回下载url
+
+    :param str type: 支持static, bert, elmo。即embedding的类型
+    :param str name: embedding的名称, 例如en, cn, based等
+    :return: str, 下载的url地址
+    """
+    PRETRAIN_MAP = {'elmo': PRETRAINED_ELMO_MODEL_DIR,
+                    "bert": PRETRAINED_BERT_MODEL_DIR,
+                    "static":PRETRAIN_STATIC_FILES}
+    map = PRETRAIN_MAP.get(type, None)
+    if map:
+        filename = map.get(name, None)
+        if filename:
+            url = _get_base_url('embedding') + filename
+            return url
+        raise KeyError("There is no {}. Only supports {}.".format(name, list(map.keys())))
+    else:
+        raise KeyError(f"There is no {type}. Only supports bert, elmo, static")
+
+
+def _get_dataset_url(name):
+    """
+    给定dataset的名称，返回下载url
+
+    :param str name: 给定dataset的名称，比如imdb, sst-2等
+    :return: str
+    """
+    filename = DATASET_DIR.get(name, None)
+    if filename:
+        url = _get_base_url('dataset') + filename
+        return url
+    else:
+        raise KeyError(f"There is no {name}.")
 
 
 def split_filename_suffix(filepath):
@@ -136,9 +236,9 @@ def split_filename_suffix(filepath):
 
 def get_from_cache(url: str, cache_dir: Path = None) -> Path:
     """
-    尝试在cache_dir中寻找url定义的资源; 如果没有找到。则从url下载并将结果放在cache_dir下，缓存的名称由url的结果推断而来。
-        如果从url中下载的资源解压后有多个文件，则返回directory的路径; 如果只有一个资源，则返回具体的路径。
-
+    尝试在cache_dir中寻找url定义的资源; 如果没有找到; 则从url下载并将结果放在cache_dir下，缓存的名称由url的结果推断而来。会将下载的
+        文件解压，将解压后的文件全部放在cache_dir文件夹中。
+    如果从url中下载的资源解压后有多个文件，则返回目录的路径; 如果只有一个资源文件，则返回具体的路径。
     """
     cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -173,63 +273,68 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
 
         # GET file object
         req = requests.get(url, stream=True, headers={"User-Agent": "fastNLP"})
-        content_length = req.headers.get("Content-Length")
-        total = int(content_length) if content_length is not None else None
-        progress = tqdm(unit="B", total=total)
-        with open(temp_filename, "wb") as temp_file:
-            for chunk in req.iter_content(chunk_size=1024):
-                if chunk:  # filter out keep-alive new chunks
-                    progress.update(len(chunk))
-                    temp_file.write(chunk)
-        progress.close()
-        print(f"Finish download from {url}.")
+        if req.status_code==200:
+            content_length = req.headers.get("Content-Length")
+            total = int(content_length) if content_length is not None else None
+            progress = tqdm(unit="B", total=total, unit_scale=1)
+            with open(temp_filename, "wb") as temp_file:
+                for chunk in req.iter_content(chunk_size=1024*16):
+                    if chunk:  # filter out keep-alive new chunks
+                        progress.update(len(chunk))
+                        temp_file.write(chunk)
+            progress.close()
+            print(f"Finish download from {url}.")
 
-        # 开始解压
-        delete_temp_dir = None
-        if suffix in ('.zip', '.tar.gz'):
-            uncompress_temp_dir = tempfile.mkdtemp()
-            delete_temp_dir = uncompress_temp_dir
-            print(f"Start to uncompress file to {uncompress_temp_dir}")
-            if suffix == '.zip':
-                unzip_file(Path(temp_filename), Path(uncompress_temp_dir))
+            # 开始解压
+            delete_temp_dir = None
+            if suffix in ('.zip', '.tar.gz'):
+                uncompress_temp_dir = tempfile.mkdtemp()
+                delete_temp_dir = uncompress_temp_dir
+                print(f"Start to uncompress file to {uncompress_temp_dir}")
+                if suffix == '.zip':
+                    unzip_file(Path(temp_filename), Path(uncompress_temp_dir))
+                else:
+                    untar_gz_file(Path(temp_filename), Path(uncompress_temp_dir))
+                filenames = os.listdir(uncompress_temp_dir)
+                if len(filenames)==1:
+                    if os.path.isdir(os.path.join(uncompress_temp_dir, filenames[0])):
+                        uncompress_temp_dir = os.path.join(uncompress_temp_dir, filenames[0])
+
+                cache_path.mkdir(parents=True, exist_ok=True)
+                print("Finish un-compressing file.")
             else:
-                untar_gz_file(Path(temp_filename), Path(uncompress_temp_dir))
-            filenames = os.listdir(uncompress_temp_dir)
-            if len(filenames)==1:
-                if os.path.isdir(os.path.join(uncompress_temp_dir, filenames[0])):
-                    uncompress_temp_dir = os.path.join(uncompress_temp_dir, filenames[0])
-
-            cache_path.mkdir(parents=True, exist_ok=True)
-            print("Finish un-compressing file.")
+                uncompress_temp_dir = temp_filename
+                cache_path = str(cache_path) + suffix
+            success = False
+            try:
+                # 复制到指定的位置
+                print(f"Copy file to {cache_path}")
+                if os.path.isdir(uncompress_temp_dir):
+                    for filename in os.listdir(uncompress_temp_dir):
+                        if os.path.isdir(os.path.join(uncompress_temp_dir, filename)):
+                            shutil.copytree(os.path.join(uncompress_temp_dir, filename), cache_path/filename)
+                        else:
+                            shutil.copyfile(os.path.join(uncompress_temp_dir, filename), cache_path/filename)
+                else:
+                    shutil.copyfile(uncompress_temp_dir, cache_path)
+                success = True
+            except Exception as e:
+                print(e)
+                raise e
+            finally:
+                if not success:
+                    if cache_path.exists():
+                        if cache_path.is_file():
+                            os.remove(cache_path)
+                        else:
+                            shutil.rmtree(cache_path)
+                if delete_temp_dir:
+                    shutil.rmtree(delete_temp_dir)
+                os.close(fd)
+                os.remove(temp_filename)
+            return get_filepath(cache_path)
         else:
-            uncompress_temp_dir = temp_filename
-            cache_path = str(cache_path) + suffix
-        success = False
-        try:
-            # 复制到指定的位置
-            print(f"Copy file to {cache_path}")
-            if os.path.isdir(uncompress_temp_dir):
-                for filename in os.listdir(uncompress_temp_dir):
-                    shutil.copyfile(os.path.join(uncompress_temp_dir, filename), cache_path/filename)
-            else:
-                shutil.copyfile(uncompress_temp_dir, cache_path)
-            success = True
-        except Exception as e:
-            print(e)
-            raise e
-        finally:
-            if not success:
-                if cache_path.exists():
-                    if cache_path.is_file():
-                        os.remove(cache_path)
-                    else:
-                        shutil.rmtree(cache_path)
-            if delete_temp_dir:
-                shutil.rmtree(delete_temp_dir)
-            os.close(fd)
-            os.remove(temp_filename)
-
-    return get_filepath(cache_path)
+            raise HTTPError(f"Fail to download from {url}.")
 
 
 def unzip_file(file: Path, to: Path):

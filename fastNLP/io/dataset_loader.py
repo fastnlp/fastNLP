@@ -114,25 +114,3 @@ def _cut_long_sentence(sent, max_sample_length=200):
     else:
         cutted_sentence.append(sent)
     return cutted_sentence
-
-
-def _add_seg_tag(data):
-    """
-
-    :param data: list of ([word], [pos], [heads], [head_tags])
-    :return: list of ([word], [pos])
-    """
-
-    _processed = []
-    for word_list, pos_list, _, _ in data:
-        new_sample = []
-        for word, pos in zip(word_list, pos_list):
-            if len(word) == 1:
-                new_sample.append((word, 'S-' + pos))
-            else:
-                new_sample.append((word[0], 'B-' + pos))
-                for c in word[1:-1]:
-                    new_sample.append((c, 'M-' + pos))
-                new_sample.append((word[-1], 'E-' + pos))
-        _processed.append(list(map(list, zip(*new_sample))))
-    return _processed

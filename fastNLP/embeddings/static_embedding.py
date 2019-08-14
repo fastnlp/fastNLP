@@ -7,7 +7,7 @@ import numpy as np
 import warnings
 
 from ..core.vocabulary import Vocabulary
-from ..io.file_utils import PRETRAIN_STATIC_FILES, _get_base_url, cached_path
+from ..io.file_utils import PRETRAIN_STATIC_FILES, _get_embedding_url, cached_path
 from .embedding import TokenEmbedding
 from ..modules.utils import _get_file_name_base_on_postfix
 
@@ -60,10 +60,8 @@ class StaticEmbedding(TokenEmbedding):
             embedding_dim = int(embedding_dim)
             model_path = None
         elif model_dir_or_name.lower() in PRETRAIN_STATIC_FILES:
-            PRETRAIN_URL = _get_base_url('static')
-            model_name = PRETRAIN_STATIC_FILES[model_dir_or_name]
-            model_url = PRETRAIN_URL + model_name
-            model_path = cached_path(model_url)
+            model_url = _get_embedding_url('static', model_dir_or_name.lower())
+            model_path = cached_path(model_url, name='embedding')
             # 检查是否存在
         elif os.path.isfile(os.path.expanduser(os.path.abspath(model_dir_or_name))):
             model_path = model_dir_or_name
@@ -84,8 +82,8 @@ class StaticEmbedding(TokenEmbedding):
                     if lowered_word not in lowered_vocab.word_count:
                         lowered_vocab.add_word(lowered_word)
                         lowered_vocab._no_create_word[lowered_word] += 1
-            print(f"All word in the vocab have been lowered. There are {len(vocab)} words, {len(lowered_vocab)} unique lowered "
-                  f"words.")
+            print(f"All word in the vocab have been lowered before finding pretrained vectors. There are {len(vocab)} "
+                  f"words, {len(lowered_vocab)} unique lowered words.")
             if model_path:
                 embedding = self._load_with_vocab(model_path, vocab=lowered_vocab, init_method=init_method)
             else:

@@ -8,7 +8,7 @@ from ...core.vocabulary import VocabularyOption, Vocabulary
 from ...core.dataset import DataSet
 from ...core.const import Const
 from ...core.instance import Instance
-from ..utils import check_dataloader_paths, get_tokenizer
+from ..utils import check_loader_paths, get_tokenizer
 
 
 class SSTLoader(DataSetLoader):
@@ -67,7 +67,7 @@ class SSTLoader(DataSetLoader):
                 paths, train_subtree=True,
                 src_vocab_op: VocabularyOption = None,
                 tgt_vocab_op: VocabularyOption = None,):
-        paths = check_dataloader_paths(paths)
+        paths = check_loader_paths(paths)
         input_name, target_name = 'words', 'target'
         src_vocab = Vocabulary() if src_vocab_op is None else Vocabulary(**src_vocab_op)
         tgt_vocab = Vocabulary(unknown=None, padding=None) \
@@ -129,7 +129,7 @@ class SST2Loader(CSVLoader):
                 tgt_vocab_opt: VocabularyOption = None,
                 char_level_op=False):
 
-        paths = check_dataloader_paths(paths)
+        paths = check_loader_paths(paths)
         datasets = {}
         info = DataBundle()
         for name, path in paths.items():
@@ -155,7 +155,9 @@ class SST2Loader(CSVLoader):
             for dataset in datasets.values():
                 dataset.apply_field(wordtochar, field_name=Const.INPUT, new_field_name=Const.CHAR_INPUT)
         src_vocab = Vocabulary() if src_vocab_opt is None else Vocabulary(**src_vocab_opt)
-        src_vocab.from_dataset(datasets['train'], field_name=Const.INPUT)
+        src_vocab.from_dataset(datasets['train'], field_name=Const.INPUT, no_create_entry_dataset=[
+            dataset for name, dataset in datasets.items() if name!='train'
+        ])
         src_vocab.index_dataset(*datasets.values(), field_name=Const.INPUT)
 
         tgt_vocab = Vocabulary(unknown=None, padding=None) \
