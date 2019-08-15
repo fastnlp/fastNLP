@@ -138,9 +138,8 @@ class OntoNotesNERPipe(_NERPipe):
        "[AL-AIN, United, Arab, ...]", "[3, 4, 5,...]", "[3, 4]", 6
        "[...]", "[...]", "[...]", .
 
-
+    :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
     :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
-    :param bool delete_unused_fields: 是否删除NER任务中用不到的field。
     :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为-100。
     """
 

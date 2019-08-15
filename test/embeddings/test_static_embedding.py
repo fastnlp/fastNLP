@@ -34,6 +34,7 @@ class TestRandomSameEntry(unittest.TestCase):
 
     @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
     def test_same_vector3(self):
+        # 验证lower
         word_lst = ["The", "the"]
         no_create_word_lst = ['of', 'Of', 'With', 'with']
         vocab = Vocabulary().add_word_lst(word_lst)
@@ -60,13 +61,7 @@ class TestRandomSameEntry(unittest.TestCase):
 
     @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
     def test_same_vector4(self):
-        # words = []
-        # create_word_lst = []  # 需要创建
-        # no_create_word_lst = []
-        # ignore_word_lst = []
-        # with open('/remote-home/source/fastnlp_caches/glove.6B.100d/glove.demo.txt', 'r', encoding='utf-8') as f:
-        #     for line in f:
-        #         words
+        # 验证在有min_freq下的lower
         word_lst = ["The", "the", "the", "The", "a", "A"]
         no_create_word_lst = ['of', 'Of', "Of", "of", 'With', 'with']
         all_words = word_lst[:-2] + no_create_word_lst[:-2]
@@ -90,3 +85,28 @@ class TestRandomSameEntry(unittest.TestCase):
             word_i, word_j = words[0, idx], lowered_words[0, idx]
             with self.subTest(idx=idx, word=all_words[idx]):
                 assert torch.sum(word_i == word_j).eq(lowered_embed.embed_size)
+
+    @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
+    def test_same_vector5(self):
+        # 检查通过使用min_freq后的word是否内容一致
+        word_lst = ["they", "the", "they", "the", 'he', 'he', "a", "A"]
+        no_create_word_lst = ['of', "of", "she", "she", 'With', 'with']
+        all_words = word_lst[:-2] + no_create_word_lst[:-2]
+        vocab = Vocabulary().add_word_lst(word_lst)
+        vocab.add_word_lst(no_create_word_lst, no_create_entry=True)
+        embed = StaticEmbedding(vocab, model_dir_or_name='/remote-home/source/fastnlp_caches/glove.6B.100d/glove.demo.txt',
+                                lower=False, min_freq=2)
+        words = torch.LongTensor([[vocab.to_index(word) for word in all_words]])
+        words = embed(words)
+
+        min_freq_vocab = Vocabulary(min_freq=2).add_word_lst(word_lst)
+        min_freq_vocab.add_word_lst(no_create_word_lst, no_create_entry=True)
+        min_freq_embed = StaticEmbedding(min_freq_vocab, model_dir_or_name='/remote-home/source/fastnlp_caches/glove.6B.100d/glove.demo.txt',
+                                lower=False)
+        min_freq_words = torch.LongTensor([[min_freq_vocab.to_index(word.lower()) for word in all_words]])
+        min_freq_words = min_freq_embed(min_freq_words)
+
+        for idx in range(len(all_words)):
+            word_i, word_j = words[0, idx], min_freq_words[0, idx]
+            with self.subTest(idx=idx, word=all_words[idx]):
+                assert torch.sum(word_i == word_j).eq(min_freq_embed.embed_size)

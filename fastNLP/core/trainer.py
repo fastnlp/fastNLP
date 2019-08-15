@@ -422,7 +422,7 @@ class Trainer(object):
                  num_workers=0, n_epochs=10, print_every=5,
                  dev_data=None, metrics=None, metric_key=None,
                  validate_every=-1, save_path=None, use_tqdm=True, device=None, prefetch=False,
-                 callbacks=None, check_code_level=0):
+                 callbacks=None, check_code_level=0, **kwargs):
         if prefetch and num_workers==0:
             num_workers = 1
         if prefetch:
@@ -550,12 +550,12 @@ class Trainer(object):
         self.use_tqdm = use_tqdm
         self.pbar = None
         self.print_every = abs(self.print_every)
-
+        self.kwargs = kwargs
         if self.dev_data is not None:
             self.tester = Tester(model=self.model,
                                  data=self.dev_data,
                                  metrics=self.metrics,
-                                 batch_size=self.batch_size,
+                                 batch_size=kwargs.get("dev_batch_size", self.batch_size),
                                  device=None,  # 由上面的部分处理device
                                  verbose=0,
                                  use_tqdm=self.use_tqdm)
