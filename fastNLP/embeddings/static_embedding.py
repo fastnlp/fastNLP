@@ -74,14 +74,10 @@ class StaticEmbedding(TokenEmbedding):
         if lower:
             lowered_vocab = Vocabulary(padding=vocab.padding, unknown=vocab.unknown)
             for word, index in vocab:
-                if not vocab._is_word_no_create_entry(word):
+                if vocab._is_word_no_create_entry(word):
+                    lowered_vocab.add_word(word.lower(), no_create_entry=True)
+                else:
                     lowered_vocab.add_word(word.lower())  # 先加入需要创建entry的
-            for word in vocab._no_create_word.keys():  # 不需要创建entry的
-                if word in vocab:
-                    lowered_word = word.lower()
-                    if lowered_word not in lowered_vocab.word_count:
-                        lowered_vocab.add_word(lowered_word)
-                        lowered_vocab._no_create_word[lowered_word] += 1
             print(f"All word in the vocab have been lowered before finding pretrained vectors. There are {len(vocab)} "
                   f"words, {len(lowered_vocab)} unique lowered words.")
             if model_path:
@@ -90,7 +86,7 @@ class StaticEmbedding(TokenEmbedding):
                 embedding = self._randomly_init_embed(len(vocab), embedding_dim, init_method)
             # 需要适配一下
             if not hasattr(self, 'words_to_words'):
-                self.words_to_words = torch.arange(len(lowered_vocab, )).long()
+                self.words_to_words = torch.arange(len(lowered_vocab)).long()
             if lowered_vocab.unknown:
                 unknown_idx = lowered_vocab.unknown_idx
             else:
@@ -100,10 +96,11 @@ class StaticEmbedding(TokenEmbedding):
             for word, index in vocab:
                 if word not in lowered_vocab:
                     word = word.lower()
-                    if lowered_vocab._is_word_no_create_entry(word):  # 如果不需要创建entry,已经默认unknown了
-                        continue
+                    if word not in lowered_vocab and lowered_vocab._is_word_no_create_entry(word):
+                        continue  # 如果不需要创建entry,已经默认unknown了
                 words_to_words[index] = self.words_to_words[lowered_vocab.to_index(word)]
             self.words_to_words = words_to_words
+            self._word_unk_index = lowered_vocab.unknown_idx  # 替换一下unknown的index
         else:
             if model_path:
                 embedding = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method)
@@ -211,12 +208,14 @@ class StaticEmbedding(TokenEmbedding):
             print("Found {} out of {} words in the pre-training embedding.".format(found_count, len(vocab)))
             for word, index in vocab:
                 if index not in matrix and not vocab._is_word_no_create_entry(word):
-                    if vocab.unknown_idx in matrix:  # 如果有unkonwn，用unknown初始化
+                    if vocab.padding_idx == index:
+                        matrix[index] = torch.zeros(dim)
+                    elif vocab.unknown_idx in matrix:  # 如果有unkonwn，用unknown初始化
                         matrix[index] = matrix[vocab.unknown_idx]
                     else:
                         matrix[index] = None
 
-            vectors = self._randomly_init_embed(len(matrix), dim, init_method)
+            vectors = self._randomly_init_embed(len(vocab), dim, init_method)
 
             if vocab._no_create_word_length>0:
                 if vocab.unknown is None:  # 创建一个专门的unknown
@@ -226,10 +225,13 @@ class StaticEmbedding(TokenEmbedding):
                     unknown_idx = vocab.unknown_idx
                 words_to_words = nn.Parameter(torch.full((len(vocab),), fill_value=unknown_idx).long(),
                                               requires_grad=False)
-                for order, (index, vec) in enumerate(matrix.items()):
+                for word, index in vocab:
+                    vec = matrix.get(index, None)
                     if vec is not None:
-                        vectors[order] = vec
-                    words_to_words[index] = order
+                        vectors[index] = vec
+                        words_to_words[index] = index
+                    else:
+                        vectors[index] = vectors[unknown_idx]
                 self.words_to_words = words_to_words
             else:
                 for index, vec in matrix.items():

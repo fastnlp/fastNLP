@@ -61,7 +61,7 @@ def get_tokenizer(tokenizer:str, lang='en'):
     if tokenizer == 'spacy':
         import spacy
         spacy.prefer_gpu()
-        if lang!='en':
+        if lang != 'en':
             raise RuntimeError("Spacy only supports en right right.")
         en = spacy.load(lang)
         tokenizer = lambda x: [w.text for w in en.tokenizer(x)]

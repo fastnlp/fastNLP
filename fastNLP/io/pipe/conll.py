@@ -24,7 +24,7 @@ class _NERPipe(Pipe):
         if encoding_type == 'bio':
             self.convert_tag = iob2
         else:
-            self.convert_tag = iob2bioes
+            self.convert_tag = lambda words: iob2bioes(iob2(words))
         self.lower = lower
         self.target_pad_val = int(target_pad_val)
 

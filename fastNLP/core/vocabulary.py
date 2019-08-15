@@ -376,7 +376,7 @@ class Vocabulary(object):
         :return: bool
         """
         return word in self._no_create_word
-    
+
     def to_index(self, w):
         """
         将词转为数字. 若词不再词典中被记录, 将视为 unknown, 若 ``unknown=None`` , 将抛出``ValueError``::

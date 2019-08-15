@@ -68,6 +68,10 @@ class BertEmbedding(ContextualEmbedding):
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
+        self._word_sep_index = None
+        if '[SEP]' in vocab:
+            self._word_sep_index = vocab['[SEP]']
+
         self.model = _WordBertModel(model_dir=model_dir, vocab=vocab, layers=layers,
                                     pool_method=pool_method, include_cls_sep=include_cls_sep,
                                     pooled_cls=pooled_cls, auto_truncate=auto_truncate)
@@ -86,7 +90,11 @@ class BertEmbedding(ContextualEmbedding):
         :param torch.LongTensor words: [batch_size, max_len]
         :return: torch.FloatTensor. batch_size x max_len x (768*len(self.layers))
         """
+        if self._word_sep_index:  # 不能drop sep
+            sep_mask = words.eq(self._word_sep_index)
         words = self.drop_word(words)
+        if self._word_sep_index:
+            words.masked_fill_(sep_mask, self._word_sep_index)
         outputs = self._get_sent_reprs(words)
         if outputs is not None:
             return self.dropout(words)

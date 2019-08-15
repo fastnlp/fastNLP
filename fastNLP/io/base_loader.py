@@ -144,7 +144,7 @@ class DataBundle:
         """
         self.datasets[name] = dataset
 
-    def get_dataset(self, name:str):
+    def get_dataset(self, name:str)->DataSet:
         """
         获取名为name的dataset
 
@@ -153,7 +153,7 @@ class DataBundle:
         """
         return self.datasets[name]
 
-    def get_vocab(self, field_name:str):
+    def get_vocab(self, field_name:str)->Vocabulary:
         """
         获取field名为field_name对应的vocab
 

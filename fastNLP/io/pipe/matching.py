@@ -57,7 +57,7 @@ class MatchingBertPipe(Pipe):
                 dataset[Const.INPUTS(0)].lower()
                 dataset[Const.INPUTS(1)].lower()
 
-        data_bundle = self._tokenize(data_bundle, [Const.INPUTS(0), Const.INPUT(1)],
+        data_bundle = self._tokenize(data_bundle, [Const.INPUTS(0), Const.INPUTS(1)],
                                      [Const.INPUTS(0), Const.INPUTS(1)])
 
         # concat两个words

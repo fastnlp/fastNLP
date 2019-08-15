@@ -3,7 +3,7 @@ from .. import DataBundle
 from ..utils import check_loader_paths
 from typing import Union, Dict
 import os
-from ..file_utils import _get_dataset_url, get_default_cache_path, cached_path
+from ..file_utils import _get_dataset_url, get_cache_path, cached_path
 
 class Loader:
     def __init__(self):
@@ -66,7 +66,7 @@ class Loader:
         :return: str, 数据集的目录地址。直接到该目录下读取相应的数据即可。
         """
 
-        default_cache_path = get_default_cache_path()
+        default_cache_path = get_cache_path()
         url = _get_dataset_url(dataset_name)
         output_dir = cached_path(url_or_filename=url, cache_dir=default_cache_path, name='dataset')
 

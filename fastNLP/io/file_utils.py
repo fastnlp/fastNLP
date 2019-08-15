@@ -78,6 +78,17 @@ DATASET_DIR = {
     "rte": "RTE.zip"
 }
 
+PRETRAIN_MAP = {'elmo': PRETRAINED_ELMO_MODEL_DIR,
+                "bert": PRETRAINED_BERT_MODEL_DIR,
+                "static": PRETRAIN_STATIC_FILES}
+
+#  用于扩展fastNLP的下载
+FASTNLP_EXTEND_DATASET_URL = 'fastnlp_dataset_url.txt'
+FASTNLP_EXTEND_EMBEDDING_URL = {'elmo': 'fastnlp_elmo_url.txt',
+                         'bert':'fastnlp_bert_url.txt',
+                         'static': 'fastnlp_static_url.txt'
+}
+
 
 def cached_path(url_or_filename:str, cache_dir:str=None, name=None) -> Path:
     """
@@ -97,7 +108,7 @@ def cached_path(url_or_filename:str, cache_dir:str=None, name=None) -> Path:
     :return:
     """
     if cache_dir is None:
-        data_cache = Path(get_default_cache_path())
+        data_cache = Path(get_cache_path())
     else:
         data_cache = cache_dir
 
@@ -146,7 +157,7 @@ def get_filepath(filepath):
         raise FileNotFoundError(f"{filepath} is not a valid file or directory.")
 
 
-def get_default_cache_path():
+def get_cache_path():
     """
     获取默认的fastNLP存放路径, 如果将FASTNLP_CACHE_PATH设置在了环境变量中，将使用环境变量的值，使得不用每个用户都去下载。
 
@@ -188,27 +199,51 @@ def _get_base_url(name):
         return URLS[name.lower()]
 
 
-def _get_embedding_url(type, name):
+def _get_embedding_url(embed_type, name):
     """
     给定embedding类似和名称，返回下载url
 
-    :param str type: 支持static, bert, elmo。即embedding的类型
+    :param str embed_type: 支持static, bert, elmo。即embedding的类型
     :param str name: embedding的名称, 例如en, cn, based等
     :return: str, 下载的url地址
     """
-    PRETRAIN_MAP = {'elmo': PRETRAINED_ELMO_MODEL_DIR,
-                    "bert": PRETRAINED_BERT_MODEL_DIR,
-                    "static":PRETRAIN_STATIC_FILES}
-    map = PRETRAIN_MAP.get(type, None)
+    #  从扩展中寻找下载的url
+    _filename = FASTNLP_EXTEND_EMBEDDING_URL.get(embed_type, None)
+    if _filename:
+        url = _read_extend_url_file(_filename, name)
+        if url:
+            return url
+    map = PRETRAIN_MAP.get(embed_type, None)
     if map:
+
         filename = map.get(name, None)
         if filename:
             url = _get_base_url('embedding') + filename
             return url
         raise KeyError("There is no {}. Only supports {}.".format(name, list(map.keys())))
     else:
-        raise KeyError(f"There is no {type}. Only supports bert, elmo, static")
+        raise KeyError(f"There is no {embed_type}. Only supports bert, elmo, static")
 
+def _read_extend_url_file(filename, name)->str:
+    """
+    filename中的内容使用制表符隔开，第一列是名称，第二列是下载的url地址
+
+    :param str filename: 在默认的路径下寻找file这个文件
+    :param str name: 需要寻找的资源的名称
+    :return: str or None
+    """
+    cache_dir = get_cache_path()
+    filepath = os.path.join(cache_dir, filename)
+    if os.path.exists(filepath):
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    parts = line.split('\t')
+                    if len(parts) == 2:
+                        if name == parts[0]:
+                            return parts[1]
+    return None
 
 def _get_dataset_url(name):
     """
@@ -217,6 +252,11 @@ def _get_dataset_url(name):
     :param str name: 给定dataset的名称，比如imdb, sst-2等
     :return: str
     """
+    #  从扩展中寻找下载的url
+    url = _read_extend_url_file(FASTNLP_EXTEND_DATASET_URL, name)
+    if url:
+        return url
+
     filename = DATASET_DIR.get(name, None)
     if filename:
         url = _get_base_url('dataset') + filename
