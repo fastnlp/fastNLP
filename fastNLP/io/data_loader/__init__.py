@@ -1,4 +1,8 @@
 """
+.. warning::
+
+    本模块在 `0.5.0版本` 中被废弃，由 :mod:`~fastNLP.io.loader`  和 :mod:`~fastNLP.io.pipe` 模块替代。
+
 用于读数据集的模块, 可以读取文本分类、序列标注、Matching任务的数据集
 
 这些模块的具体介绍如下，您可以通过阅读 :doc:`教程</tutorials/tutorial_2_load_dataset>` 来进行了解。

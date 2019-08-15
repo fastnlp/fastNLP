@@ -1,4 +1,8 @@
 """
+.. warning::
+
+    本模块将在 `0.5.0版本` 中被废弃，由 :mod:`~fastNLP.io.loader`  和 :mod:`~fastNLP.io.pipe` 模块替代。
+
 dataset_loader模块实现了许多 DataSetLoader, 用于读取不同格式的数据, 并返回 `DataSet` ,
 得到的 :class:`~fastNLP.DataSet` 对象可以直接传入 :class:`~fastNLP.Trainer` 和 :class:`~fastNLP.Tester`, 用于模型的训练和测试。
 以SNLI数据集为例::
@@ -11,6 +15,7 @@ dataset_loader模块实现了许多 DataSetLoader, 用于读取不同格式的�
     # ... do stuff
     
 为 fastNLP 提供 DataSetLoader 的开发者请参考 :class:`~fastNLP.io.DataSetLoader` 的介绍。
+
 """
 __all__ = [
     'CSVLoader',
