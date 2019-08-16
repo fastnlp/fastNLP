@@ -10,6 +10,7 @@ from .base_model import BaseModel
 from ..core.const import Const
 from ..modules.encoder import BertModel
 from ..modules.encoder.bert import BertConfig, CONFIG_FILE
+from ..core.utils import seq_len_to_mask
 
 
 class BertForSequenceClassification(BaseModel):
@@ -70,6 +71,10 @@ class BertForSequenceClassification(BaseModel):
         return model
 
     def forward(self, words, seq_len=None, target=None):
+        if seq_len is None:
+            seq_len = torch.ones_like(words, dtype=words.dtype, device=words.device)
+        if len(seq_len.size()) + 1 == len(words.size()):
+            seq_len = seq_len_to_mask(seq_len, max_len=words.size(-1))
         _, pooled_output = self.bert(words, attention_mask=seq_len, output_all_encoded_layers=False)
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
