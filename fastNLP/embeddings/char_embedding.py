@@ -45,9 +45,9 @@ class CNNCharEmbedding(TokenEmbedding):
     :param pool_method: character的表示在合成一个表示时所使用的pool方法，支持'avg', 'max'.
     :param activation: CNN之后使用的激活方法，支持'relu', 'sigmoid', 'tanh' 或者自定义函数.
     :param min_char_freq: character的最少出现次数。默认值为2.
-    :param pre_train_char_embed:可以有两种方式调用预训练好的character embedding：第一种是传入embedding文件夹(文件夹下应该只有一个
-        以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载。
-        如果输入为None则使用embedding_dim的维度随机初始化一个embedding.
+    :param pre_train_char_embed: 可以有两种方式调用预训练好的character embedding：第一种是传入embedding文件夹
+        (文件夹下应该只有一个以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，
+        没有的话将自动下载。如果输入为None则使用embedding_dim的维度随机初始化一个embedding.
     """
     def __init__(self, vocab: Vocabulary, embed_size: int=50, char_emb_size: int=50, word_dropout:float=0,
                  dropout:float=0.5, filter_nums: List[int]=(40, 30, 20), kernel_sizes: List[int]=(5, 3, 1),
@@ -198,9 +198,9 @@ class LSTMCharEmbedding(TokenEmbedding):
     :param activation: 激活函数，支持'relu', 'sigmoid', 'tanh', 或者自定义函数.
     :param min_char_freq: character的最小出现次数。默认值为2.
     :param bidirectional: 是否使用双向的LSTM进行encode。默认值为True。
-    :param pre_train_char_embed:可以有两种方式调用预训练好的character embedding：第一种是传入embedding文件夹(文件夹下应该只有一个
-        以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载。
-        如果输入为None则使用embedding_dim的维度随机初始化一个embedding.
+    :param pre_train_char_embed: 可以有两种方式调用预训练好的character embedding：第一种是传入embedding文件夹
+        (文件夹下应该只有一个以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，
+        没有的话将自动下载。如果输入为None则使用embedding_dim的维度随机初始化一个embedding.
     """
     def __init__(self, vocab: Vocabulary, embed_size: int=50, char_emb_size: int=50, word_dropout:float=0,
                  dropout:float=0.5, hidden_size=50,pool_method: str='max', activation='relu', min_char_freq: int=2,

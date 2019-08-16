@@ -10,6 +10,7 @@ class Loader:
     各种数据 Loader 的基类，提供了 API 的参考.
     
     """
+    
     def __init__(self):
         pass
     
@@ -24,7 +25,7 @@ class Loader:
     
     def load(self, paths: Union[str, Dict[str, str]] = None) -> DataBundle:
         """
-        从指定一个或多个路径中的文件中读取数据，返回:class:`~fastNLP.io.DataBundle` 。
+        从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.DataBundle` 。
 
         读取的field根据ConllLoader初始化时传入的headers决定。
 
@@ -59,7 +60,7 @@ class Loader:
         data_bundle = DataBundle(datasets=datasets)
         return data_bundle
     
-    def download(self)->str:
+    def download(self) -> str:
         """
         自动下载该数据集
 

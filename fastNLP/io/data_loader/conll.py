@@ -76,29 +76,7 @@ class ConllLoader(DataSetLoader):
 
         读取的field根据ConllLoader初始化时传入的headers决定。
 
-        :param Union[str, Dict[str, str]] paths: 支持以下的几种输入方式
-            (1) 传入一个目录, 该目录下名称包含train的被认为是train，包含test的被认为是test，包含dev的被认为是dev，如果检测到多个文件
-                名包含'train'、 'dev'、 'test'则会报错
-
-                Example::
-                    data_bundle = ConllLoader().load('/path/to/dir')  # 返回的DataBundle中datasets根据目录下是否检测到train, dev, test等有所变化
-                    # 可以通过以下的方式取出DataSet
-                    tr_data = data_bundle.datasets['train']
-                    te_data = data_bundle.datasets['test']  # 如果目录下有文件包含test这个字段
-
-            (2) 传入文件path
-
-                Example::
-                    data_bundle = ConllLoader().load("/path/to/a/train.conll") # 返回DataBundle对象, datasets中仅包含'train'
-                    tr_data = data_bundle.datasets['train']  # 可以通过以下的方式取出DataSet
-
-            (3) 传入一个dict，比如train，dev，test不在同一个目录下，或者名称中不包含train, dev, test
-
-                Example::
-                    paths = {'train':"/path/to/tr.conll", 'dev':"/to/validate.conll", "test":"/to/te.conll"}
-                    data_bundle = ConllLoader().load(paths)  # 返回的DataBundle中的dataset中包含"train", "dev", "test"
-                    dev_data = data_bundle.datasets['dev']
-
+        :param Union[str, Dict[str, str]] paths:
         :return: :class:`~fastNLP.DataSet` 类的对象或 :class:`~fastNLP.io.DataBundle` 的字典
         """
         paths = check_loader_paths(paths)

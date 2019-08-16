@@ -110,9 +110,14 @@ def _uncompress(src, dst):
 class DataBundle:
     """
     经过处理的数据信息，包括一系列数据集（比如：分开的训练集、验证集和测试集）以及各个field对应的vocabulary。该对象一般由fastNLP中各种
-    DataSetLoader的load函数生成，可以通过以下的方法获取里面的内容
+    Loader的load函数生成，可以通过以下的方法获取里面的内容
 
     Example::
+        
+        data_bundle = YelpLoader().load({'train':'/path/to/train', 'dev': '/path/to/dev'})
+        train_vocabs = data_bundle.vocabs['train']
+        train_data = data_bundle.datasets['train']
+        dev_data = data_bundle.datasets['train']
 
     :param vocabs: 从名称(字符串)到 :class:`~fastNLP.Vocabulary` 类型的dict
     :param datasets: 从名称(字符串)到 :class:`~fastNLP.DataSet` 类型的dict
