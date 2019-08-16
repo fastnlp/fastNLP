@@ -21,6 +21,9 @@ class ElmoEmbedding(ContextualEmbedding):
 
     Example::
     
+        >>> import torch
+        >>> from fastNLP import Vocabulary
+        >>> from fastNLP.embeddings import ElmoEmbedding
         >>> vocab = Vocabulary().add_word_lst("The whether is good .".split())
         >>> # 使用不同层的concat的结果
         >>> embed = ElmoEmbedding(vocab, model_dir_or_name='en', layers='1,2', requires_grad=False)
