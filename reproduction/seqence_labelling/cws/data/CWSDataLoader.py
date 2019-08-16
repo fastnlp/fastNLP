@@ -1,7 +1,7 @@
 
 from fastNLP.io.embed_loader import EmbeddingOption, EmbedLoader
 from fastNLP.core.vocabulary import VocabularyOption
-from fastNLP.io.base_loader import DataSetLoader, DataBundle
+from fastNLP.io.data_bundle import DataSetLoader, DataBundle
 from typing import Union, Dict, List, Iterator
 from fastNLP import DataSet
 from fastNLP import Instance

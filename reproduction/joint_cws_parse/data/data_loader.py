@@ -1,6 +1,6 @@
 
 
-from fastNLP.io.base_loader import DataSetLoader, DataBundle
+from fastNLP.io.data_bundle import DataSetLoader, DataBundle
 from fastNLP.io.data_loader import ConllLoader
 import numpy as np
 

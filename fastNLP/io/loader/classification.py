@@ -7,6 +7,7 @@ import random
 import shutil
 import numpy as np
 
+
 class YelpLoader(Loader):
     """
     别名：:class:`fastNLP.io.YelpLoader` :class:`fastNLP.io.loader.YelpLoader`
@@ -14,6 +15,7 @@ class YelpLoader(Loader):
     原始数据中内容应该为, 每一行为一个sample，第一个逗号之前为target，第一个逗号之后为文本内容。
 
     Example::
+    
         "1","I got 'new' tires from the..."
         "1","Don't waste your time..."
 
@@ -28,11 +30,11 @@ class YelpLoader(Loader):
        "...", "..."
 
     """
-
+    
     def __init__(self):
         super(YelpLoader, self).__init__()
-
-    def _load(self, path: str=None):
+    
+    def _load(self, path: str = None):
         ds = DataSet()
         with open(path, 'r', encoding='utf-8') as f:
             for line in f:
@@ -69,12 +71,12 @@ class YelpFullLoader(YelpLoader):
         :param int seed: 划分dev时的随机数种子
         :return: str, 数据集的目录地址
         """
-
+        
         dataset_name = 'yelp-review-full'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
         if os.path.exists(os.path.join(data_dir, 'dev.csv')):  # 存在dev的话，check是否需要重新下载
             re_download = True
-            if dev_ratio>0:
+            if dev_ratio > 0:
                 dev_line_count = 0
                 tr_line_count = 0
                 with open(os.path.join(data_dir, 'train.csv'), 'r', encoding='utf-8') as f1, \
@@ -83,14 +85,14 @@ class YelpFullLoader(YelpLoader):
                         tr_line_count += 1
                     for line in f2:
                         dev_line_count += 1
-                if not np.isclose(dev_line_count, dev_ratio*(tr_line_count + dev_line_count), rtol=0.005):
+                if not np.isclose(dev_line_count, dev_ratio * (tr_line_count + dev_line_count), rtol=0.005):
                     re_download = True
                 else:
                     re_download = False
             if re_download:
                 shutil.rmtree(data_dir)
                 data_dir = self._get_dataset_path(dataset_name=dataset_name)
-
+        
         if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
@@ -109,7 +111,7 @@ class YelpFullLoader(YelpLoader):
                 finally:
                     if os.path.exists(os.path.join(data_dir, 'middle_file.csv')):
                         os.remove(os.path.join(data_dir, 'middle_file.csv'))
-
+        
         return data_dir
 
 
@@ -131,7 +133,7 @@ class YelpPolarityLoader(YelpLoader):
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
         if os.path.exists(os.path.join(data_dir, 'dev.csv')):  # 存在dev的话，check是否符合比例要求
             re_download = True
-            if dev_ratio>0:
+            if dev_ratio > 0:
                 dev_line_count = 0
                 tr_line_count = 0
                 with open(os.path.join(data_dir, 'train.csv'), 'r', encoding='utf-8') as f1, \
@@ -140,14 +142,14 @@ class YelpPolarityLoader(YelpLoader):
                         tr_line_count += 1
                     for line in f2:
                         dev_line_count += 1
-                if not np.isclose(dev_line_count, dev_ratio*(tr_line_count + dev_line_count), rtol=0.005):
+                if not np.isclose(dev_line_count, dev_ratio * (tr_line_count + dev_line_count), rtol=0.005):
                     re_download = True
                 else:
                     re_download = False
             if re_download:
                 shutil.rmtree(data_dir)
                 data_dir = self._get_dataset_path(dataset_name=dataset_name)
-
+        
         if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
@@ -166,7 +168,7 @@ class YelpPolarityLoader(YelpLoader):
                 finally:
                     if os.path.exists(os.path.join(data_dir, 'middle_file.csv')):
                         os.remove(os.path.join(data_dir, 'middle_file.csv'))
-
+        
         return data_dir
 
 
@@ -185,10 +187,10 @@ class IMDBLoader(Loader):
        "...", "..."
 
     """
-
+    
     def __init__(self):
         super(IMDBLoader, self).__init__()
-
+    
     def _load(self, path: str):
         dataset = DataSet()
         with open(path, 'r', encoding="utf-8") as f:
@@ -201,12 +203,12 @@ class IMDBLoader(Loader):
                 words = parts[1]
                 if words:
                     dataset.append(Instance(raw_words=words, target=target))
-
+        
         if len(dataset) == 0:
             raise RuntimeError(f"{path} has no valid data.")
-
+        
         return dataset
-
+    
     def download(self, dev_ratio: float = 0.1, seed: int = 0):
         """
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
@@ -221,9 +223,9 @@ class IMDBLoader(Loader):
         """
         dataset_name = 'aclImdb'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        if os.path.exists(os.path.join(data_dir, 'dev.txt')):   # 存在dev的话，check是否符合比例要求
+        if os.path.exists(os.path.join(data_dir, 'dev.txt')):  # 存在dev的话，check是否符合比例要求
             re_download = True
-            if dev_ratio>0:
+            if dev_ratio > 0:
                 dev_line_count = 0
                 tr_line_count = 0
                 with open(os.path.join(data_dir, 'train.txt'), 'r', encoding='utf-8') as f1, \
@@ -232,14 +234,14 @@ class IMDBLoader(Loader):
                         tr_line_count += 1
                     for line in f2:
                         dev_line_count += 1
-                if not np.isclose(dev_line_count, dev_ratio*(tr_line_count + dev_line_count), rtol=0.005):
+                if not np.isclose(dev_line_count, dev_ratio * (tr_line_count + dev_line_count), rtol=0.005):
                     re_download = True
                 else:
                     re_download = False
             if re_download:
                 shutil.rmtree(data_dir)
                 data_dir = self._get_dataset_path(dataset_name=dataset_name)
-
+        
         if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
@@ -258,7 +260,7 @@ class IMDBLoader(Loader):
                 finally:
                     if os.path.exists(os.path.join(data_dir, 'middle_file.txt')):
                         os.remove(os.path.join(data_dir, 'middle_file.txt'))
-
+        
         return data_dir
 
 
@@ -278,10 +280,10 @@ class SSTLoader(Loader):
     raw_words列是str。
 
     """
-
+    
     def __init__(self):
         super().__init__()
-
+    
     def _load(self, path: str):
         """
         从path读取SST文件
@@ -296,7 +298,7 @@ class SSTLoader(Loader):
                 if line:
                     ds.append(Instance(raw_words=line))
         return ds
-
+    
     def download(self):
         """
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
@@ -323,10 +325,10 @@ class SST2Loader(Loader):
 
     test的DataSet没有target列。
     """
-
+    
     def __init__(self):
         super().__init__()
-
+    
     def _load(self, path: str):
         """
         从path读取SST2文件
@@ -335,7 +337,7 @@ class SST2Loader(Loader):
         :return: DataSet
         """
         ds = DataSet()
-
+        
         with open(path, 'r', encoding='utf-8') as f:
             f.readline()  # 跳过header
             if 'test' in os.path.split(path)[1]:
@@ -356,7 +358,7 @@ class SST2Loader(Loader):
                         if raw_words:
                             ds.append(Instance(raw_words=raw_words, target=target))
         return ds
-
+    
     def download(self):
         """
         自动下载数据集，如果你使用了该数据集，请引用以下的文章

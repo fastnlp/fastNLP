@@ -59,7 +59,10 @@ def clear(path='./source/'):
             else:
                 shorten(path + file, to_delete)
     for file in to_delete:
-        os.remove(path + file + ".rst")
+        try:
+            os.remove(path + file + ".rst")
+        except:
+            pass
 
 
 clear()

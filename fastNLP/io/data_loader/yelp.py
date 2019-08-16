@@ -6,7 +6,7 @@ from ...core.const import Const
 from ...core.dataset import DataSet
 from ...core.instance import Instance
 from ...core.vocabulary import VocabularyOption, Vocabulary
-from ..base_loader import DataBundle, DataSetLoader
+from ..data_bundle import DataBundle, DataSetLoader
 from typing import Union, Dict
 from ..utils import check_loader_paths, get_tokenizer
 

@@ -1,7 +1,7 @@
 
 from typing import Union, Dict
 
-from ..base_loader import DataBundle
+from ..data_bundle import DataBundle
 from ..dataset_loader import CSVLoader
 from ...core.vocabulary import Vocabulary, VocabularyOption
 from ...core.const import Const

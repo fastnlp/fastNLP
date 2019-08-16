@@ -1,11 +1,11 @@
 
 from ...core.dataset import DataSet
 from ...core.instance import Instance
-from ..base_loader import DataSetLoader
+from ..data_bundle import DataSetLoader
 from ..file_reader import _read_conll
 from typing import Union, Dict
 from ..utils import check_loader_paths
-from ..base_loader import DataBundle
+from ..data_bundle import DataBundle
 
 class ConllLoader(DataSetLoader):
     """
