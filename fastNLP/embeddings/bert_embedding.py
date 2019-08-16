@@ -27,6 +27,7 @@ class BertEmbedding(ContextualEmbedding):
 
         >>> import torch
         >>> from fastNLP import Vocabulary
+        >>> from fastNLP.embeddings import BertEmbedding
         >>> vocab = Vocabulary().add_word_lst("The whether is good .".split())
         >>> embed = BertEmbedding(vocab, model_dir_or_name='en-base-uncased', requires_grad=False, layers='4,-2,-1')
         >>> words = torch.LongTensor([[vocab.to_index(word) for word in "The whether is good .".split()]])
