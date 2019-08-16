@@ -89,14 +89,16 @@ FASTNLP_EXTEND_EMBEDDING_URL = {'elmo': 'fastnlp_elmo_url.txt',
 def cached_path(url_or_filename: str, cache_dir: str = None, name=None) -> Path:
     """
     给定一个url，尝试通过url中的解析出来的文件名字filename到{cache_dir}/{name}/{filename}下寻找这个文件，
-        (1)如果cache_dir=None, 则cache_dir=~/.fastNLP/; 否则cache_dir=cache_dir
-        (2)如果name=None, 则没有中间的{name}这一层结构；否者中间结构就为{name}
+    
+    1. 如果cache_dir=None, 则cache_dir=~/.fastNLP/; 否则cache_dir=cache_dir
+    2. 如果name=None, 则没有中间的{name}这一层结构；否者中间结构就为{name}
 
     如果有该文件，就直接返回路径
+    
     如果没有该文件，则尝试用传入的url下载
 
     或者文件名(可以是具体的文件名，也可以是文件夹)，先在cache_dir下寻找该文件是否存在，如果不存在则去下载, 并
-        将文件放入到cache_dir中.
+    将文件放入到cache_dir中.
 
     :param str url_or_filename: 文件的下载url或者文件名称。
     :param str cache_dir: 文件的缓存文件夹。如果为None，将使用"~/.fastNLP"这个默认路径
@@ -132,10 +134,13 @@ def cached_path(url_or_filename: str, cache_dir: str = None, name=None) -> Path:
 def get_filepath(filepath):
     """
     如果filepath为文件夹，
+    
         如果内含多个文件, 返回filepath
+        
         如果只有一个文件, 返回filepath + filename
 
     如果filepath为文件
+        
         返回filepath
 
     :param str filepath: 路径
@@ -155,9 +160,9 @@ def get_filepath(filepath):
 
 def get_cache_path():
     """
-    获取默认的fastNLP存放路径, 如果将FASTNLP_CACHE_PATH设置在了环境变量中，将使用环境变量的值，使得不用每个用户都去下载。
+    获取fastNLP默认cache的存放路径, 如果将FASTNLP_CACHE_PATH设置在了环境变量中，将使用环境变量的值，使得不用每个用户都去下载。
 
-    :return: str
+    :return str:  存放路径
     """
     if 'FASTNLP_CACHE_DIR' in os.environ:
         fastnlp_cache_dir = os.environ.get('FASTNLP_CACHE_DIR')
@@ -262,8 +267,9 @@ def _get_dataset_url(name):
 
 def split_filename_suffix(filepath):
     """
-    给定filepath返回对应的name和suffix. 如果后缀是多个点，仅支持.tar.gz类型
-    :param filepath:
+    给定filepath 返回对应的name和suffix. 如果后缀是多个点，仅支持.tar.gz类型
+    
+    :param filepath: 文件路径
     :return: filename, suffix
     """
     filename = os.path.basename(filepath)
@@ -278,6 +284,10 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
     文件解压，将解压后的文件全部放在cache_dir文件夹中。
 
     如果从url中下载的资源解压后有多个文件，则返回目录的路径; 如果只有一个资源文件，则返回具体的路径。
+    
+    :param url: 资源的 url
+    :param cache_dir: cache 目录
+    :return: 路径
     """
     cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -394,12 +404,12 @@ def untar_gz_file(file: Path, to: Path):
 
 def match_file(dir_name: str, cache_dir: Path) -> str:
     """
-    匹配的原则是，在cache_dir下的文件: (1) 与dir_name完全一致; (2) 除了后缀以外和dir_name完全一致。
+    匹配的原则是: 在cache_dir下的文件与dir_name完全一致, 或除了后缀以外和dir_name完全一致。
     如果找到了两个匹配的结果将报错. 如果找到了则返回匹配的文件的名称; 没有找到返回空字符串
 
     :param dir_name: 需要匹配的名称
     :param cache_dir: 在该目录下找匹配dir_name是否存在
-    :return: str
+    :return str: 做为匹配结果的字符串
     """
     files = os.listdir(cache_dir)
     matched_filenames = []
