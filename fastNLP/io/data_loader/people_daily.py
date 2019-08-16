@@ -1,5 +1,5 @@
 
-from ..base_loader import DataSetLoader
+from ..data_bundle import DataSetLoader
 from ...core.dataset import DataSet
 from ...core.instance import Instance
 from ...core.const import Const

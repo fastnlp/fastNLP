@@ -12,10 +12,9 @@
 这些类的使用方法如下:
 """
 __all__ = [
-    'EmbedLoader',
-
     'DataBundle',
-    'DataSetLoader',
+    
+    'EmbedLoader',
 
     'YelpLoader',
     'YelpFullLoader',
@@ -69,7 +68,7 @@ __all__ = [
 ]
 
 from .embed_loader import EmbedLoader
-from .base_loader import DataBundle, DataSetLoader
+from .data_bundle import DataBundle
 from .dataset_loader import CSVLoader, JsonLoader
 from .model_io import ModelLoader, ModelSaver
 

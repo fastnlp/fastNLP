@@ -2,7 +2,7 @@
 from typing import Union, Dict
 from nltk import Tree
 
-from ..base_loader import DataBundle, DataSetLoader
+from ..data_bundle import DataBundle, DataSetLoader
 from ..dataset_loader import CSVLoader
 from ...core.vocabulary import VocabularyOption, Vocabulary
 from ...core.dataset import DataSet

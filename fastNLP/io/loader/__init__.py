@@ -44,6 +44,8 @@ fastNLP 目前提供了如下的 Loader
 """
 
 __all__ = [
+    'Loader',
+    
     'YelpLoader',
     'YelpFullLoader',
     'YelpPolarityLoader',
@@ -57,7 +59,6 @@ __all__ = [
     'OntoNotesNERLoader',
     'CTBLoader',
 
-    'Loader',
     'CSVLoader',
     'JsonLoader',
 

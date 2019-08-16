@@ -9,7 +9,7 @@ from typing import Union, Dict
 
 from fastNLP.core.const import Const
 from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.io.base_loader import DataBundle, DataSetLoader
+from fastNLP.io.data_bundle import DataBundle, DataSetLoader
 from fastNLP.io.dataset_loader import JsonLoader, CSVLoader
 from fastNLP.io.file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
 from fastNLP.modules.encoder._bert import BertTokenizer

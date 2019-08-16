@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 
 from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.io.base_loader import DataBundle
+from fastNLP.io.data_bundle import DataBundle
 from fastNLP.io.dataset_loader import JsonLoader
 from fastNLP.core.const import Const
 

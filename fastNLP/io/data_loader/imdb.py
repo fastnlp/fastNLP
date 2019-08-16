@@ -2,7 +2,7 @@
 from typing import Union, Dict
 
 from ..embed_loader import EmbeddingOption, EmbedLoader
-from ..base_loader import DataSetLoader, DataBundle
+from ..data_bundle import DataSetLoader, DataBundle
 from ...core.vocabulary import VocabularyOption, Vocabulary
 from ...core.dataset import DataSet
 from ...core.instance import Instance

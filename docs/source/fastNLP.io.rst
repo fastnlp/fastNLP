@@ -20,7 +20,7 @@ Submodules
 
 .. toctree::
 
-   fastNLP.io.base_loader
+   fastNLP.io.data_bundle
    fastNLP.io.dataset_loader
    fastNLP.io.embed_loader
    fastNLP.io.file_utils

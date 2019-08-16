@@ -1,6 +1,6 @@
 from nltk import Tree
 
-from ..base_loader import DataBundle
+from ..data_bundle import DataBundle
 from ...core.vocabulary import Vocabulary
 from ...core.const import Const
 from ..loader.classification import IMDBLoader, YelpFullLoader, SSTLoader, SST2Loader, YelpPolarityLoader

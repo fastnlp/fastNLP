@@ -4,7 +4,7 @@ from typing import Union, Dict, List
 
 from ...core.const import Const
 from ...core.vocabulary import Vocabulary
-from ..base_loader import DataBundle, DataSetLoader
+from ..data_bundle import DataBundle, DataSetLoader
 from ..file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
 from ...modules.encoder.bert import BertTokenizer
 

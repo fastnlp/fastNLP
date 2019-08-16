@@ -1,6 +1,6 @@
 
 
-from fastNLP.io.base_loader import DataSetLoader, DataBundle
+from fastNLP.io.data_bundle import DataSetLoader, DataBundle
 from fastNLP.io import ConllLoader
 from reproduction.seqence_labelling.ner.data.utils import iob2bioes, iob2
 from fastNLP import Const

@@ -26,7 +26,7 @@ __all__ = [
 from ..core.dataset import DataSet
 from ..core.instance import Instance
 from .file_reader import _read_csv, _read_json
-from .base_loader import DataSetLoader
+from .data_bundle import DataSetLoader
 
 
 class JsonLoader(DataSetLoader):

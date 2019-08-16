@@ -1,7 +1,5 @@
 __all__ = [
-    "BaseLoader",
     'DataBundle',
-    'DataSetLoader',
 ]
 
 import _pickle as pickle
