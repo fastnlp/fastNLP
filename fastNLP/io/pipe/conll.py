@@ -111,7 +111,7 @@ class Conll2003NERPipe(_NERPipe):
 
     :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
     :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
-    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为-100。
+    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为0。
     """
 
     def process_from_file(self, paths) -> DataBundle:
@@ -140,7 +140,7 @@ class OntoNotesNERPipe(_NERPipe):
 
     :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
     :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
-    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为-100。
+    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为0。
     """
 
     def process_from_file(self, paths):

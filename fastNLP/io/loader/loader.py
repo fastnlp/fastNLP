@@ -14,6 +14,12 @@ class Loader:
         pass
     
     def _load(self, path: str) -> DataSet:
+        """
+        给定一个路径，返回读取的DataSet。
+
+        :param str path: 路径
+        :return: DataSet
+        """
         raise NotImplementedError
     
     def load(self, paths: Union[str, Dict[str, str]] = None) -> DataBundle:
@@ -53,7 +59,12 @@ class Loader:
         data_bundle = DataBundle(datasets=datasets)
         return data_bundle
     
-    def download(self):
+    def download(self)->str:
+        """
+        自动下载该数据集
+
+        :return: 下载后解压目录
+        """
         raise NotImplementedError(f"{self.__class__} cannot download data automatically.")
     
     def _get_dataset_path(self, dataset_name):
