@@ -129,7 +129,7 @@ class StaticEmbedding(TokenEmbedding):
                     word = word.lower()
                     if word not in lowered_vocab and lowered_vocab._is_word_no_create_entry(word):
                         continue  # 如果不需要创建entry,已经默认unknown了
-                words_to_words[index] = self.words_to_words[lowered_vocab.to_index(word)]
+                words_to_words[index] = words_to_words[lowered_vocab.to_index(word)]
             self.words_to_words = words_to_words
             self._word_unk_index = lowered_vocab.unknown_idx  # 替换一下unknown的index
         else:
