@@ -57,6 +57,7 @@ __all__ = [
     "FitlogCallback",
     "LRScheduler",
     "ControlC",
+    "EvaluateCallback",
     
     "CallbackException",
     "EarlyStopError"
@@ -79,6 +80,7 @@ except:
 from ..io.model_io import ModelSaver, ModelLoader
 from .dataset import DataSet
 from .tester import Tester
+import logging
 
 try:
     import fitlog
@@ -100,7 +102,8 @@ class Callback(object):
     def __init__(self):
         super(Callback, self).__init__()
         self._trainer = None  # 在Trainer内部被重新赋值
-    
+        self._disabled = False
+
     @property
     def trainer(self):
         """
@@ -158,7 +161,19 @@ class Callback(object):
     def batch_per_epoch(self):
         """每个epoch一共有多少个batch，只有在on_epoch_begin之后才能调用该属性。"""
         return self._trainer.batch_per_epoch
-    
+
+    @property
+    def is_master(self):
+        return self._trainer.is_master()
+
+    @property
+    def disabled(self):
+        return self._disabled
+
+    @property
+    def logger(self):
+        return getattr(self._trainer, 'logger', logging)
+
     def on_train_begin(self):
         """
         在Train过程开始之前调用。
@@ -250,6 +265,14 @@ class Callback(object):
         :return:
         """
         pass
+
+    def on_validation(self):
+        """
+        如果Trainer中设置了验证，则会在每次需要验证时调用该函数
+
+        :return:
+        """
+        pass
     
     def on_epoch_end(self):
         """
@@ -281,6 +304,8 @@ def _transfer(func):
     def wrapper(manager, *arg):
         returns = []
         for callback in manager.callbacks:
+            if callback.disabled:
+                continue
             returns.append(getattr(callback, func.__name__)(*arg))
         return returns
     
@@ -297,22 +322,28 @@ class CallbackManager(Callback):
         """
         super(CallbackManager, self).__init__()
         # set attribute of trainer environment
-        
+        self._env = env
         self.callbacks = []
-        if callbacks is not None:
-            if isinstance(callbacks, list):
-                if all([isinstance(cb, Callback) for cb in callbacks]) is True:
-                    self.callbacks.extend(callbacks)
-                else:
-                    obj = [not isinstance(cb, Callback) for cb in callbacks][0]
-                    raise TypeError(f"Expect sub-classes of Callback. Got {type(obj)}")
+        if callbacks:
+            self.callbacks = self.prepare_callbacks(callbacks)
+
+    def prepare_callbacks(self, callbacks):
+        if not callbacks:
+            return []
+        if isinstance(callbacks, list):
+            if all([isinstance(cb, Callback) for cb in callbacks]) is True:
+                pass
             else:
-                raise TypeError(f"Expect callbacks in CallbackManager(callbacks) to be list. Got {type(callbacks)}.")
-        
-        for env_name, env_val in env.items():
-            for callback in self.callbacks:
+                obj = [not isinstance(cb, Callback) for cb in callbacks][0]
+                raise TypeError(f"Expect sub-classes of Callback. Got {type(obj)}")
+        else:
+            raise TypeError(f"Expect callbacks in CallbackManager(callbacks) to be list. Got {type(callbacks)}.")
+
+        for env_name, env_val in self._env.items():
+            for callback in callbacks:
                 setattr(callback, '_' + env_name, env_val)  # Callback.trainer
-    
+        return callbacks
+
     @_transfer
     def on_train_begin(self):
         pass
@@ -352,6 +383,10 @@ class CallbackManager(Callback):
     @_transfer
     def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
         pass
+
+    @_transfer
+    def on_validation(self):
+        pass
     
     @_transfer
     def on_epoch_end(self):
@@ -364,6 +399,25 @@ class CallbackManager(Callback):
     @_transfer
     def on_exception(self, exception):
         pass
+
+
+class DistCallbackManager(CallbackManager):
+    def __init__(self, env, callbacks_all=None, callbacks_master=None):
+        super(DistCallbackManager, self).__init__(env)
+        assert 'trainer' in env
+        is_master = env['trainer'].is_master
+        self.patch_callback(callbacks_master, disabled=not is_master)
+        self.callbacks_all = self.prepare_callbacks(callbacks_all)
+        self.callbacks_master = self.prepare_callbacks(callbacks_master)
+        self.callbacks = self.callbacks_all + self.callbacks_master
+
+    def patch_callback(self, callbacks, disabled):
+        if not callbacks:
+            return
+        if not isinstance(callbacks, (list, tuple)):
+            callbacks = [callbacks]
+        for cb in callbacks:
+            cb._disabled = disabled
 
 
 class GradientClipCallback(Callback):
@@ -403,6 +457,9 @@ class GradientClipCallback(Callback):
     def on_backward_end(self):
         if self.step%self.update_every==0:
             if self.parameters is None:
+                if getattr(self.trainer, 'fp16', ''):
+                    from apex import amp
+                    self.clip_fun(amp.master_params(self.optimizer), self.clip_value)
                 self.clip_fun(self.model.parameters(), self.clip_value)
             else:
                 self.clip_fun(self.parameters, self.clip_value)
@@ -448,10 +505,9 @@ class FitlogCallback(Callback):
         并将验证结果写入到fitlog中。这些数据集的结果是根据dev上最好的结果报道的，即如果dev在第3个epoch取得了最佳，则
         fitlog中记录的关于这些数据集的结果就是来自第三个epoch的结果。
 
-    :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
-        DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。若tester不为None时，data需要通过
-        dict的方式传入。如果仅传入DataSet, 则被命名为test
-    :param ~fastNLP.Tester tester: Tester对象，将在on_valid_end时调用。tester中的DataSet会被称为为`test`
+    :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要
+        传入多个DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。data的结果的名称以'data'开头。
+    :param ~fastNLP.Tester,Dict[~fastNLP.Tester] tester: Tester对象，将在on_valid_end时调用。tester的结果的名称以'tester'开头
     :param int log_loss_every: 多少个step记录一次loss(记录的是这几个batch的loss平均值)，如果数据集较大建议将该值设置得
         大一些，不然会导致log文件巨大。默认为0, 即不要记录loss。
     :param int verbose: 是否在终端打印evaluation的结果，0不打印。
@@ -465,21 +521,24 @@ class FitlogCallback(Callback):
         self._log_exception = log_exception
         assert isinstance(log_loss_every, int) and log_loss_every>=0
         if tester is not None:
-            assert isinstance(tester, Tester), "Only fastNLP.Tester allowed."
-            assert isinstance(data, dict) or data is None, "If tester is not None, only dict[DataSet] allowed for data."
-            if data is not None:
-                assert 'test' not in data, "Cannot use `test` as DataSet key, when tester is passed."
-            setattr(tester, 'verbose', 0)
-            self.testers['test'] = tester
-        
+            if isinstance(tester, dict):
+                for name, test in tester.items():
+                    if not isinstance(test, Tester):
+                        raise TypeError(f"{name} in tester is not a valid fastNLP.Tester.")
+                    self.testers['tester-' + name] = test
+            if isinstance(tester, Tester):
+                self.testers['tester-test'] = tester
+            for tester in self.testers.values():
+                setattr(tester, 'verbose', 0)
+
         if isinstance(data, dict):
             for key, value in data.items():
                 assert isinstance(value, DataSet), f"Only DataSet object is allowed, not {type(value)}."
             for key, value in data.items():
-                self.datasets[key] = value
+                self.datasets['data-' + key] = value
         elif isinstance(data, DataSet):
-            self.datasets['test'] = data
-        else:
+            self.datasets['data-test'] = data
+        elif data is not None:
             raise TypeError("data receives dict[DataSet] or DataSet object.")
         
         self.verbose = verbose
@@ -492,8 +551,11 @@ class FitlogCallback(Callback):
         
         if len(self.datasets) > 0:
             for key, data in self.datasets.items():
-                tester = Tester(data=data, model=self.model, batch_size=self.batch_size, metrics=self.trainer.metrics,
-                                verbose=0)
+                tester = Tester(data=data, model=self.model,
+                                batch_size=self.trainer.kwargs.get('dev_batch_size', self.batch_size),
+                                metrics=self.trainer.metrics,
+                                verbose=0,
+                                use_tqdm=self.trainer.use_tqdm)
                 self.testers[key] = tester
         fitlog.add_progress(total_steps=self.n_steps)
     
@@ -531,6 +593,65 @@ class FitlogCallback(Callback):
         fitlog.finish(status=1)
         if self._log_exception:
             fitlog.add_other(repr(exception), name='except_info')
+
+
+class EvaluateCallback(Callback):
+    """
+    别名: :class:`fastNLP.EvaluateCallback` :class:`fastNLP.core.callback.EvaluateCallback`
+
+    该callback用于扩展Trainer训练过程中只能对dev数据进行验证的问题。
+
+    :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
+        DataSet请通过dict的方式传入。
+    :param ~fastNLP.Tester,Dict[~fastNLP.DataSet] tester: Tester对象，将在on_valid_end时调用。
+    """
+
+    def __init__(self, data=None, tester=None):
+        super().__init__()
+        self.datasets = {}
+        self.testers = {}
+        if tester is not None:
+            if isinstance(tester, dict):
+                for name, test in tester.items():
+                    if not isinstance(test, Tester):
+                        raise TypeError(f"{name} in tester is not a valid fastNLP.Tester.")
+                    self.testers['tester-' + name] = test
+            if isinstance(tester, Tester):
+                self.testers['tester-test'] = tester
+            for tester in self.testers.values():
+                setattr(tester, 'verbose', 0)
+
+        if isinstance(data, dict):
+            for key, value in data.items():
+                assert isinstance(value, DataSet), f"Only DataSet object is allowed, not {type(value)}."
+            for key, value in data.items():
+                self.datasets['data-' + key] = value
+        elif isinstance(data, DataSet):
+            self.datasets['data-test'] = data
+        elif data is not None:
+            raise TypeError("data receives dict[DataSet] or DataSet object.")
+
+    def on_train_begin(self):
+        if len(self.datasets) > 0and self.trainer.dev_data is None:
+            raise RuntimeError("Trainer has no dev data, you cannot pass extra DataSet to do evaluation.")
+
+        if len(self.datasets) > 0:
+            for key, data in self.datasets.items():
+                tester = Tester(data=data, model=self.model,
+                                batch_size=self.trainer.kwargs.get('dev_batch_size', self.batch_size),
+                                metrics=self.trainer.metrics, verbose=0,
+                                use_tqdm=self.trainer.use_tqdm)
+                self.testers[key] = tester
+
+    def on_valid_end(self, eval_result, metric_key, optimizer, better_result):
+        if len(self.testers) > 0:
+            for key, tester in self.testers.items():
+                try:
+                    eval_result = tester.test()
+                    self.pbar.write("Evaluation on {}:".format(key))
+                    self.pbar.write(tester._format_eval_results(eval_result))
+                except Exception:
+                    self.pbar.write("Exception happens when evaluate on DataSet named `{}`.".format(key))
 
 
 class LRScheduler(Callback):
@@ -884,3 +1005,59 @@ class EarlyStopError(CallbackException):
     
     def __init__(self, msg):
         super(EarlyStopError, self).__init__(msg)
+
+
+class EchoCallback(Callback):
+    def __init__(self, name, out=sys.stdout):
+        super(EchoCallback, self).__init__()
+        self.name = name
+        self.out = out
+
+    def __getattribute__(self, item):
+        if item.startswith('on_'):
+            print('{}.{} has been called at pid: {}'.format(self.name, item, os.getpid()),
+                  file=self.out)
+        return super(EchoCallback, self).__getattribute__(item)
+
+
+class TesterCallback(Callback):
+    def __init__(self, data, model, metrics, metric_key=None, batch_size=16, num_workers=None):
+        super(TesterCallback, self).__init__()
+        self.tester = Tester(data, model,
+                             metrics=metrics, batch_size=batch_size,
+                             num_workers=num_workers, verbose=0)
+        # parse metric_key
+        # increase_better is True. It means the exp result gets better if the indicator increases.
+        # It is true by default.
+        self.increase_better = True
+        if metric_key is not None:
+            self.increase_better = False if metric_key[0] == "-" else True
+            self.metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
+        else:
+            self.metric_key = None
+        self.score = None
+
+    def on_validation(self):
+        cur_score = self.tester.test()
+        eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. - {}".format(
+                    self.epoch, self.n_epochs, self.step, self.n_steps,
+                    self.tester._format_eval_results(cur_score))
+        self.logger.info(eval_str)
+        is_better = self.compare_better(cur_score)
+        if is_better:
+            self.score = cur_score
+        return cur_score, is_better
+
+    def compare_better(self, a):
+        if self.score is None:
+            return True
+        k = self.metric_key
+        is_increase = self.score[k] <= a[k] # if equal, prefer more recent results
+        if self.increase_better:
+            return is_increase
+        else:
+            return not is_increase
+
+    def on_train_end(self):
+        self.logger.info('Evaluate on training ends.')
+        self.on_validation()

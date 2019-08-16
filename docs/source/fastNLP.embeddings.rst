@@ -6,11 +6,10 @@ fastNLP.embeddings
    :undoc-members:
    :show-inheritance:
 
-子模块
+Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 1
 
    fastNLP.embeddings.bert_embedding
    fastNLP.embeddings.char_embedding

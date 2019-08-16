@@ -3,9 +3,9 @@
 
 1. 用于读入 embedding 的 :doc:`EmbedLoader <fastNLP.io.embed_loader>` 类,
 
-2. 用于读入不同格式数据的 :doc:`DataSetLoader <fastNLP.io.dataset_loader>` 类
+2. 用于读入不同格式数据的 :doc:`Loader <fastNLP.io.loader>` 类
 
-3. 用于读入不同数据集并进行预处理的 :doc:`DataLoader <fastNLP.io.data_loader>` 类
+3. 用于处理读入数据的 :doc:`Pipe <fastNLP.io.pipe>` 类
 
 4. 用于保存和载入模型的类, 参考 :doc:`model_io文档</fastNLP.io.model_io>`
 
@@ -14,27 +14,56 @@
 __all__ = [
     'EmbedLoader',
 
-    'CSVLoader',
-    'JsonLoader',
-
     'DataBundle',
     'DataSetLoader',
 
-    'ConllLoader',
-    'Conll2003Loader',
+    'YelpLoader',
+    'YelpFullLoader',
+    'YelpPolarityLoader',
     'IMDBLoader',
-    'MatchingLoader',
-    'SNLILoader',
-    'MNLILoader',
-    'MTL16Loader',
-    'PeopleDailyCorpusLoader',
-    'QNLILoader',
-    'QuoraLoader',
-    'RTELoader',
     'SSTLoader',
     'SST2Loader',
-    'YelpLoader',
-    
+
+    'ConllLoader',
+    'Conll2003Loader',
+    'Conll2003NERLoader',
+    'OntoNotesNERLoader',
+    'CTBLoader',
+
+    'Loader',
+    'CSVLoader',
+    'JsonLoader',
+
+    'CWSLoader',
+
+    'MNLILoader',
+    "QuoraLoader",
+    "SNLILoader",
+    "QNLILoader",
+    "RTELoader",
+
+    "YelpFullPipe",
+    "YelpPolarityPipe",
+    "SSTPipe",
+    "SST2Pipe",
+    "IMDBPipe",
+
+    "Conll2003NERPipe",
+    "OntoNotesNERPipe",
+
+    "MatchingBertPipe",
+    "RTEBertPipe",
+    "SNLIBertPipe",
+    "QuoraBertPipe",
+    "QNLIBertPipe",
+    "MNLIBertPipe",
+    "MatchingPipe",
+    "RTEPipe",
+    "SNLIPipe",
+    "QuoraPipe",
+    "QNLIPipe",
+    "MNLIPipe",
+
     'ModelLoader',
     'ModelSaver',
 ]
@@ -44,4 +73,5 @@ from .base_loader import DataBundle, DataSetLoader
 from .dataset_loader import CSVLoader, JsonLoader
 from .model_io import ModelLoader, ModelSaver
 
-from .data_loader import *
+from .loader import *
+from .pipe import *

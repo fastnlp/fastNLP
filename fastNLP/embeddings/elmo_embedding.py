@@ -8,7 +8,7 @@ import json
 import codecs
 
 from ..core.vocabulary import Vocabulary
-from ..io.file_utils import cached_path, _get_base_url, PRETRAINED_ELMO_MODEL_DIR
+from ..io.file_utils import cached_path, _get_embedding_url, PRETRAINED_ELMO_MODEL_DIR
 from ..modules.encoder._elmo import ElmobiLm, ConvTokenEmbedder
 from .contextual_embedding import ContextualEmbedding
 
@@ -40,7 +40,7 @@ class ElmoEmbedding(ContextualEmbedding):
     :param model_dir_or_name: 可以有两种方式调用预训练好的ELMo embedding：第一种是传入ELMo所在文件夹，该文件夹下面应该有两个文件，
         其中一个是以json为后缀的配置文件，另一个是以pkl为后缀的权重文件；第二种是传入ELMo版本的名称，将自动查看缓存中是否存在该模型，
         没有的话将自动下载并缓存。
-    :param layers: str, 指定返回的层数, 以,隔开不同的层。如果要返回第二层的结果'2', 返回后两层的结果'1,2'。不同的层的结果
+    :param layers: str, 指定返回的层数(从0开始), 以,隔开不同的层。如果要返回第二层的结果'2', 返回后两层的结果'1,2'。不同的层的结果
         按照这个顺序concat起来，默认为'2'。'mix'会使用可学习的权重结合不同层的表示(权重是否可训练与requires_grad保持一致，
         初始化权重对三层结果进行mean-pooling, 可以通过ElmoEmbedding.set_mix_weights_requires_grad()方法只将mix weights设置为可学习。)
     :param requires_grad: bool, 该层是否需要gradient, 默认为False.
@@ -56,10 +56,8 @@ class ElmoEmbedding(ContextualEmbedding):
 
         # 根据model_dir_or_name检查是否存在并下载
         if model_dir_or_name.lower() in PRETRAINED_ELMO_MODEL_DIR:
-            PRETRAIN_URL = _get_base_url('elmo')
-            model_name = PRETRAINED_ELMO_MODEL_DIR[model_dir_or_name]
-            model_url = PRETRAIN_URL + model_name
-            model_dir = cached_path(model_url)
+            model_url = _get_embedding_url('elmo', model_dir_or_name.lower())
+            model_dir = cached_path(model_url, name='embedding')
             # 检查是否存在
         elif os.path.isdir(os.path.expanduser(os.path.abspath(model_dir_or_name))):
             model_dir = model_dir_or_name
@@ -185,8 +183,8 @@ class _ElmoModel(nn.Module):
             raise Exception(f"Multiple config files(*.json) or weight files(*.hdf5) detected in {model_dir}.")
         elif config_count == 0 or weight_count == 0:
             raise Exception(f"No config file or weight file found in {model_dir}")
-
-        config = json.load(open(os.path.join(model_dir, config_file), 'r'))
+        with open(os.path.join(model_dir, config_file), 'r') as config_f:
+            config = json.load(config_f)
         self.weight_file = os.path.join(model_dir, weight_file)
         self.config = config
 

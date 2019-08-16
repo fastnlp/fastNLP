@@ -8,7 +8,7 @@ from ...core.instance import Instance
 from ...core.vocabulary import VocabularyOption, Vocabulary
 from ..base_loader import DataBundle, DataSetLoader
 from typing import Union, Dict
-from ..utils import check_dataloader_paths, get_tokenizer
+from ..utils import check_loader_paths, get_tokenizer
 
 
 class YelpLoader(DataSetLoader):
@@ -62,7 +62,7 @@ class YelpLoader(DataSetLoader):
                 src_vocab_op: VocabularyOption = None,
                 tgt_vocab_op: VocabularyOption = None,
                 char_level_op=False):
-        paths = check_dataloader_paths(paths)
+        paths = check_loader_paths(paths)
         info = DataBundle(datasets=self.load(paths))
         src_vocab = Vocabulary() if src_vocab_op is None else Vocabulary(**src_vocab_op)
         tgt_vocab = Vocabulary(unknown=None, padding=None) \

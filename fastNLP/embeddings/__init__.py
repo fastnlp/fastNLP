@@ -10,6 +10,7 @@ __all__ = [
     "StaticEmbedding",
     "ElmoEmbedding",
     "BertEmbedding",
+    "BertWordPieceEncoder",
     "StackEmbedding",
     "LSTMCharEmbedding",
     "CNNCharEmbedding",
@@ -20,7 +21,7 @@ __all__ = [
 from .embedding import Embedding
 from .static_embedding import StaticEmbedding
 from .elmo_embedding import ElmoEmbedding
-from .bert_embedding import BertEmbedding
+from .bert_embedding import BertEmbedding, BertWordPieceEncoder
 from .char_embedding import CNNCharEmbedding, LSTMCharEmbedding
 from .stack_embedding import StackEmbedding
 from .utils import get_embeddings

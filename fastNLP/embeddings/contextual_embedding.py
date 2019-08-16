@@ -1,4 +1,3 @@
-
 from abc import abstractmethod
 import torch
 
@@ -8,6 +7,10 @@ from ..core.batch import DataSetIter
 from ..core.sampler import SequentialSampler
 from ..core.utils import _move_model_to_device, _get_model_device
 from .embedding import TokenEmbedding
+
+__all__ = [
+    "ContextualEmbedding"
+]
 
 
 class ContextualEmbedding(TokenEmbedding):

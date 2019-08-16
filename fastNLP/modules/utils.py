@@ -3,7 +3,8 @@ from functools import reduce
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-
+import glob
+import os
 
 def initial_parameter(net, initial_method=None):
     """A method used to initialize the weights of PyTorch models.
@@ -111,7 +112,7 @@ def get_dropout_mask(drop_p: float, tensor: torch.Tensor):
     根据tensor的形状，生成一个mask
 
     :param drop_p: float, 以多大的概率置为0。
-    :param tensor:torch.Tensor
+    :param tensor: torch.Tensor
     :return: torch.FloatTensor. 与tensor一样的shape
     """
     mask_x = torch.ones_like(tensor)
@@ -119,7 +120,6 @@ def get_dropout_mask(drop_p: float, tensor: torch.Tensor):
                           training=False, inplace=True)
     return mask_x
 
-import glob
 
 def _get_file_name_base_on_postfix(dir_path, postfix):
     """
@@ -128,9 +128,9 @@ def _get_file_name_base_on_postfix(dir_path, postfix):
     :param postfix: 形如".bin", ".json"等
     :return: str，文件的路径
     """
-    files = glob.glob(os.path.join(dir_path, '*' + postfix))
+    files = list(filter(lambda filename:filename.endswith(postfix), os.listdir(os.path.join(dir_path))))
     if len(files) == 0:
-        raise FileNotFoundError(f"There is no file endswith *.{postfix} file in {dir_path}")
+        raise FileNotFoundError(f"There is no file endswith *{postfix} file in {dir_path}")
     elif len(files) > 1:
-        raise FileExistsError(f"There are multiple *.{postfix} files in {dir_path}")
+        raise FileExistsError(f"There are multiple *{postfix} files in {dir_path}")
     return os.path.join(dir_path, files[0])

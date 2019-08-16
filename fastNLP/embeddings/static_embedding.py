@@ -7,9 +7,11 @@ import numpy as np
 import warnings
 
 from ..core.vocabulary import Vocabulary
-from ..io.file_utils import PRETRAIN_STATIC_FILES, _get_base_url, cached_path
+from ..io.file_utils import PRETRAIN_STATIC_FILES, _get_embedding_url, cached_path
 from .embedding import TokenEmbedding
 from ..modules.utils import _get_file_name_base_on_postfix
+from copy import deepcopy
+from collections import defaultdict
 
 class StaticEmbedding(TokenEmbedding):
     """
@@ -45,15 +47,16 @@ class StaticEmbedding(TokenEmbedding):
         如果输入为None则使用embedding_dim的维度随机初始化一个embedding。
     :param int embedding_dim: 随机初始化的embedding的维度，仅在model_dir_or_name为None时有效。
     :param bool requires_grad: 是否需要gradient. 默认为True
-    :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对象。
+    :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对
     :param bool lower: 是否将vocab中的词语小写后再和预训练的词表进行匹配。如果你的词表中包含大写的词语，或者就是需要单独
         为大写的词语开辟一个vector表示，则将lower设置为False。
-    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
     :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
+    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
     :param bool normalize: 是否对vector进行normalize，使得每个vector的norm为1。
+    :param int min_freq: Vocabulary词频数小于这个数量的word将被指向unk。
     """
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', embedding_dim=100, requires_grad: bool=True,
-                 init_method=None, lower=False, dropout=0, word_dropout=0, normalize=False):
+                 init_method=None, lower=False, dropout=0, word_dropout=0, normalize=False, min_freq=1, **kwargs):
         super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
         # 得到cache_path
@@ -62,10 +65,8 @@ class StaticEmbedding(TokenEmbedding):
             embedding_dim = int(embedding_dim)
             model_path = None
         elif model_dir_or_name.lower() in PRETRAIN_STATIC_FILES:
-            PRETRAIN_URL = _get_base_url('static')
-            model_name = PRETRAIN_STATIC_FILES[model_dir_or_name]
-            model_url = PRETRAIN_URL + model_name
-            model_path = cached_path(model_url)
+            model_url = _get_embedding_url('static', model_dir_or_name.lower())
+            model_path = cached_path(model_url, name='embedding')
             # 检查是否存在
         elif os.path.isfile(os.path.expanduser(os.path.abspath(model_dir_or_name))):
             model_path = model_dir_or_name
@@ -74,27 +75,49 @@ class StaticEmbedding(TokenEmbedding):
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
+        # 根据min_freq缩小vocab
+        truncate_vocab = (vocab.min_freq is None and min_freq>1) or (vocab.min_freq and vocab.min_freq<min_freq)
+        if truncate_vocab:
+            truncated_vocab = deepcopy(vocab)
+            truncated_vocab.min_freq = min_freq
+            truncated_vocab.word2idx = None
+            if lower:  # 如果有lower，将大小写的的freq需要同时考虑到
+                lowered_word_count = defaultdict(int)
+                for word, count in truncated_vocab.word_count.items():
+                    lowered_word_count[word.lower()] += count
+                for word in truncated_vocab.word_count.keys():
+                    word_count = truncated_vocab.word_count[word]
+                    if lowered_word_count[word.lower()]>=min_freq and word_count<min_freq:
+                        truncated_vocab.add_word_lst([word]*(min_freq-word_count),
+                                                     no_create_entry=truncated_vocab._is_word_no_create_entry(word))
+
+            # 只限制在train里面的词语使用min_freq筛选
+            if kwargs.get('only_train_min_freq', False):
+                for word in truncated_vocab.word_count.keys():
+                    if truncated_vocab._is_word_no_create_entry(word) and truncated_vocab.word_count[word]<min_freq:
+                        truncated_vocab.add_word_lst([word] * (min_freq - truncated_vocab.word_count[word]),
+                                                     no_create_entry=True)
+            truncated_vocab.build_vocab()
+            truncated_words_to_words = torch.arange(len(vocab)).long()
+            for word, index in vocab:
+                truncated_words_to_words[index] = truncated_vocab.to_index(word)
+            print(f"{len(vocab) - len(truncated_vocab)} out of {len(vocab)} words have frequency less than {min_freq}.")
+            vocab = truncated_vocab
+
         # 读取embedding
         if lower:
             lowered_vocab = Vocabulary(padding=vocab.padding, unknown=vocab.unknown)
             for word, index in vocab:
-                if not vocab._is_word_no_create_entry(word):
+                if vocab._is_word_no_create_entry(word):
+                    lowered_vocab.add_word(word.lower(), no_create_entry=True)
+                else:
                     lowered_vocab.add_word(word.lower())  # 先加入需要创建entry的
-            for word in vocab._no_create_word.keys():  # 不需要创建entry的
-                if word in vocab:
-                    lowered_word = word.lower()
-                    if lowered_word not in lowered_vocab.word_count:
-                        lowered_vocab.add_word(lowered_word)
-                        lowered_vocab._no_create_word[lowered_word] += 1
-            print(f"All word in vocab have been lowered. There are {len(vocab)} words, {len(lowered_vocab)} unique lowered "
-                  f"words.")
+            print(f"All word in the vocab have been lowered before finding pretrained vectors. There are {len(vocab)} "
+                  f"words, {len(lowered_vocab)} unique lowered words.")
             if model_path:
                 embedding = self._load_with_vocab(model_path, vocab=lowered_vocab, init_method=init_method)
             else:
                 embedding = self._randomly_init_embed(len(vocab), embedding_dim, init_method)
-            # 需要适配一下
-            if not hasattr(self, 'words_to_words'):
-                self.words_to_words = torch.arange(len(lowered_vocab, )).long()
             if lowered_vocab.unknown:
                 unknown_idx = lowered_vocab.unknown_idx
             else:
@@ -104,10 +127,11 @@ class StaticEmbedding(TokenEmbedding):
             for word, index in vocab:
                 if word not in lowered_vocab:
                     word = word.lower()
-                    if lowered_vocab._is_word_no_create_entry(word):  # 如果不需要创建entry,已经默认unknown了
-                        continue
+                    if word not in lowered_vocab and lowered_vocab._is_word_no_create_entry(word):
+                        continue  # 如果不需要创建entry,已经默认unknown了
                 words_to_words[index] = self.words_to_words[lowered_vocab.to_index(word)]
             self.words_to_words = words_to_words
+            self._word_unk_index = lowered_vocab.unknown_idx  # 替换一下unknown的index
         else:
             if model_path:
                 embedding = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method)
@@ -115,6 +139,14 @@ class StaticEmbedding(TokenEmbedding):
                 embedding = self._randomly_init_embed(len(vocab), embedding_dim, init_method)
         if normalize:
             embedding /= (torch.norm(embedding, dim=1, keepdim=True) + 1e-12)
+
+        if truncate_vocab:
+            for i in range(len(truncated_words_to_words)):
+                index_in_truncated_vocab = truncated_words_to_words[i]
+                truncated_words_to_words[i] = self.words_to_words[index_in_truncated_vocab]
+            del self.words_to_words
+            self.words_to_words = nn.Parameter(truncated_words_to_words, requires_grad=False)
+
         self.embedding = nn.Embedding(num_embeddings=embedding.shape[0], embedding_dim=embedding.shape[1],
                                       padding_idx=vocab.padding_idx,
                                       max_norm=None, norm_type=2, scale_grad_by_freq=False,
@@ -191,6 +223,10 @@ class StaticEmbedding(TokenEmbedding):
                 dim = len(parts) - 1
                 f.seek(0)
             matrix = {}
+            if vocab.padding:
+                matrix[vocab.padding_idx] = torch.zeros(dim)
+            if vocab.unknown:
+                matrix[vocab.unknown_idx] = torch.zeros(dim)
             found_count = 0
             for idx, line in enumerate(f, start_idx):
                 try:
@@ -219,26 +255,21 @@ class StaticEmbedding(TokenEmbedding):
                         matrix[index] = matrix[vocab.unknown_idx]
                     else:
                         matrix[index] = None
-
+            # matrix中代表是需要建立entry的词
             vectors = self._randomly_init_embed(len(matrix), dim, init_method)
 
-            if vocab._no_create_word_length>0:
-                if vocab.unknown is None:  # 创建一个专门的unknown
-                    unknown_idx = len(matrix)
-                    vectors = torch.cat((vectors, torch.zeros(1, dim)), dim=0).contiguous()
-                else:
-                    unknown_idx = vocab.unknown_idx
-                words_to_words = nn.Parameter(torch.full((len(vocab),), fill_value=unknown_idx).long(),
-                                              requires_grad=False)
-                for order, (index, vec) in enumerate(matrix.items()):
-                    if vec is not None:
-                        vectors[order] = vec
-                    words_to_words[index] = order
-                self.words_to_words = words_to_words
+            if vocab.unknown is None:  # 创建一个专门的unknown
+                unknown_idx = len(matrix)
+                vectors = torch.cat((vectors, torch.zeros(1, dim)), dim=0).contiguous()
             else:
-                for index, vec in matrix.items():
-                    if vec is not None:
-                        vectors[index] = vec
+                unknown_idx = vocab.unknown_idx
+            self.words_to_words = nn.Parameter(torch.full((len(vocab), ), fill_value=unknown_idx).long(),
+                                               requires_grad=False)
+
+            for index, (index_in_vocab, vec) in enumerate(matrix.items()):
+                if vec is not None:
+                    vectors[index] = vec
+                self.words_to_words[index_in_vocab] = index
 
             return vectors
 

@@ -1,23 +1,27 @@
 import os
 
 from typing import Union, Dict
+from pathlib import Path
 
 
-def check_dataloader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
+def check_loader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
     """
-    检查传入dataloader的文件的合法性。如果为合法路径，将返回至少包含'train'这个key的dict。类似于下面的结果
-    {
-        'train': '/some/path/to/', # 一定包含，建词表应该在这上面建立，剩下的其它文件应该只需要处理并index。
-        'test': 'xxx' # 可能有，也可能没有
-        ...
-    }
-    如果paths为不合法的，将直接进行raise相应的错误
+    检查传入dataloader的文件的合法性。如果为合法路径，将返回至少包含'train'这个key的dict。类似于下面的结果::
 
-    :param paths: 路径. 可以为一个文件路径(则认为该文件就是train的文件); 可以为一个文件目录，将在该目录下寻找train(文件名
+        {
+            'train': '/some/path/to/', # 一定包含，建词表应该在这上面建立，剩下的其它文件应该只需要处理并index。
+            'test': 'xxx' # 可能有，也可能没有
+            ...
+        }
+
+    如果paths为不合法的，将直接进行raise相应的错误. 如果paths内不包含train也会报错。
+
+    :param str paths: 路径. 可以为一个文件路径(则认为该文件就是train的文件); 可以为一个文件目录，将在该目录下寻找train(文件名
         中包含train这个字段), test.txt, dev.txt; 可以为一个dict, 则key是用户自定义的某个文件的名称，value是这个文件的路径。
     :return:
     """
-    if isinstance(paths, str):
+    if isinstance(paths, (str, Path)):
+        paths = os.path.abspath(os.path.expanduser(paths))
         if os.path.isfile(paths):
             return {'train': paths}
         elif os.path.isdir(paths):
@@ -37,6 +41,8 @@ def check_dataloader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
                     path_pair = ('test', filename)
                 if path_pair:
                     files[path_pair[0]] = os.path.join(paths, path_pair[1])
+            if 'train' not in files:
+                raise KeyError(f"There is no train file in {paths}.")
             return files
         else:
             raise FileNotFoundError(f"{paths} is not a valid file path.")
@@ -47,8 +53,10 @@ def check_dataloader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
                 raise KeyError("You have to include `train` in your dict.")
             for key, value in paths.items():
                 if isinstance(key, str) and isinstance(value, str):
+                    value = os.path.abspath(os.path.expanduser(value))
                     if not os.path.isfile(value):
                         raise TypeError(f"{value} is not a valid file.")
+                    paths[key] = value
                 else:
                     raise TypeError("All keys and values in paths should be str.")
             return paths

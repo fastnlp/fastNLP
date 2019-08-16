@@ -352,6 +352,7 @@ from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
+from ._parallel_utils import _model_contains_inner_module
 
 
 class Trainer(object):
@@ -389,8 +390,8 @@ class Trainer(object):
         要指定以哪个指标为准。另外有些指标是越小效果越好，比如语言模型的困惑度，这种情况下，在key前面增加一个'-'来表
         明验证时，值越小越好(比如: "-ppl")。仅在传入dev_data时有效。
     :param int validate_every: 多少个step在验证集上验证一次; 如果为-1，则每个epoch结束验证一次。仅在传入dev_data时有效。
-    :param str,None save_path: 将模型保存路径。如果为None，则不保存模型。如果dev_data为None，则保存最后一次迭代的模型。
-        保存的时候不仅保存了参数，还保存了模型结构。即便使用DataParallel，这里也只保存模型。
+    :param str,None save_path: 将模型保存路径，如果路径不存在，将自动创建文件夹。如果为None，则不保存模型。如果dev_data为None，则保存
+        最后一次迭代的模型。保存的时候不仅保存了参数，还保存了模型结构。即便使用DataParallel，这里也只保存模型。
     :param bool use_tqdm: 是否使用tqdm来显示训练进度; 如果为False，则将loss打印在终端中。
     :param str,int,torch.device,list(int) device: 将模型load到哪个设备。默认为None，即Trainer不对模型
         的计算位置进行管理。支持以下的输入:
@@ -421,7 +422,7 @@ class Trainer(object):
                  num_workers=0, n_epochs=10, print_every=5,
                  dev_data=None, metrics=None, metric_key=None,
                  validate_every=-1, save_path=None, use_tqdm=True, device=None, prefetch=False,
-                 callbacks=None, check_code_level=0):
+                 callbacks=None, check_code_level=0, **kwargs):
         if prefetch and num_workers==0:
             num_workers = 1
         if prefetch:
@@ -430,23 +431,23 @@ class Trainer(object):
         super(Trainer, self).__init__()
         if not isinstance(model, nn.Module):
             raise TypeError(f"The type of model must be torch.nn.Module, got {type(model)}.")
-        
+
         # check metrics and dev_data
         if (not metrics) and dev_data is not None:
             raise ValueError("No metric for dev_data evaluation.")
         if metrics and (dev_data is None):
             raise ValueError("No dev_data for evaluations, pass dev_data or set metrics to None. ")
-        
+
         # check update every
         assert update_every >= 1, "update_every must be no less than 1."
         self.update_every = int(update_every)
-        
+
         # check save_path
         if not (save_path is None or isinstance(save_path, str)):
             raise ValueError("save_path can only be None or `str`.")
         # prepare evaluate
         metrics = _prepare_metrics(metrics)
-        
+
         # parse metric_key
         # increase_better is True. It means the exp result gets better if the indicator increases.
         # It is true by default.
@@ -458,30 +459,69 @@ class Trainer(object):
             self.metric_key = None
         # prepare loss
         losser = _prepare_losser(loss)
-        
-        # sampler check
-        if sampler is not None and not isinstance(sampler, Sampler):
-            raise ValueError("The type of sampler should be fastNLP.BaseSampler, got {}.".format(type(sampler)))
 
-        if sampler is None:
-            sampler = RandomSampler()
-        elif hasattr(sampler, 'set_batch_size'):
-            sampler.set_batch_size(batch_size)
+        if isinstance(train_data, BatchIter):
+            if sampler is not None:
+                warnings.warn("sampler is ignored when train_data is a BatchIter.")
+            if num_workers>0:
+                warnings.warn("num_workers is ignored when train_data is BatchIter.")
+            if drop_last:
+                warnings.warn("drop_last is ignored when train_data is BatchIter.")
+
+        if isinstance(model, nn.parallel.DistributedDataParallel):  # 如果是分布式的
+            # device为None
+            if device is not None:
+                warnings.warn("device is ignored when model is nn.parallel.DistributedDataParallel.")
+                device = None
+            # Sampler要是分布式的
+            if sampler is None:
+                sampler = torch.utils.data.DistributedSampler(train_data)
+            elif not isinstance(sampler, torch.utils.data.DistributedSampler):
+                raise TypeError("When using nn.parallel.DistributedDataParallel, "
+                                "sampler must be None or torch.utils.data.DistributedSampler.")
+            # 不能保存模型
+            if save_path:
+                raise RuntimeError("Saving model in Distributed situation is not allowed right now.")
+        else:
+            # sampler check
+            if sampler is not None and not isinstance(sampler, (Sampler, torch.utils.data.Sampler)):
+                raise ValueError(f"The type of sampler should be fastNLP.BaseSampler or pytorch's Sampler, got {type(sampler)}")
+            if sampler is None:
+                sampler = RandomSampler()
+            elif hasattr(sampler, 'set_batch_size'):
+                sampler.set_batch_size(batch_size)
 
         if isinstance(train_data, DataSet):
             self.data_iterator = DataSetIter(
                 dataset=train_data, batch_size=batch_size, num_workers=num_workers, sampler=sampler, drop_last=drop_last)
         elif isinstance(train_data, BatchIter):
             self.data_iterator = train_data
+            train_data = train_data.dataset
         else:
             raise TypeError("train_data type {} not support".format(type(train_data)))
 
-        if check_code_level > -1 and isinstance(self.data_iterator, DataSetIter):
-            _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data,
-                        metric_key=self.metric_key, check_level=check_code_level,
-                        batch_size=min(batch_size, DEFAULT_CHECK_BATCH_SIZE))
-            # _check_code 是 fastNLP 帮助你检查代码是否正确的方法 。如果你在错误栈中看到这行注释，请认真检查你的代码
         self.model = _move_model_to_device(model, device=device)
+        if _model_contains_inner_module(self.model):
+            self._forward_func = self.model.module.forward
+        else:
+            self._forward_func = self.model.forward
+        if check_code_level > -1:
+            # _check_code 是 fastNLP 帮助你检查代码是否正确的方法 。如果你在错误栈中看到这行注释，请认真检查你的field名与模型的输入
+            #   名是否匹配
+            dev_dataset = dev_data
+            if isinstance(dev_data, BatchIter):
+                dev_dataset = None
+                warnings.warn("dev_data is of BatchIter type, ignore validation checking.")
+            check_batch_size = min(batch_size, DEFAULT_CHECK_BATCH_SIZE)
+            if isinstance(self.model, nn.DataParallel):
+                _num_devices = len(self.model.device_ids)
+                if batch_size//_num_devices>1:  # 如果多卡是每个卡可以分多个数据的，则用每个卡给两个sample
+                    check_batch_size = max(len(self.model.device_ids)*2, check_batch_size)
+                else:
+                    check_batch_size = max(len(self.model.device_ids), check_batch_size)
+            _check_code(dataset=train_data, model=self.model, losser=losser, forward_func=self._forward_func, metrics=metrics,
+                        dev_data=dev_dataset, metric_key=self.metric_key, check_level=check_code_level,
+                        batch_size=check_batch_size)
 
         self.train_data = train_data
         self.dev_data = dev_data  # If None, No validation.
@@ -496,8 +536,7 @@ class Trainer(object):
         self.best_dev_epoch = None
         self.best_dev_step = None
         self.best_dev_perf = None
-        self.n_steps = (len(self.train_data) // self.batch_size + int(
-            len(self.train_data) % self.batch_size != 0)) * int(drop_last==0) * self.n_epochs
+        self.n_steps = len(self.data_iterator) * self.n_epochs
 
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
@@ -507,22 +546,23 @@ class Trainer(object):
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=4e-3)
         else:
             raise TypeError("optimizer can only be torch.optim.Optimizer type, not {}.".format(type(optimizer)))
-        
+
         self.use_tqdm = use_tqdm
         self.pbar = None
         self.print_every = abs(self.print_every)
-
+        self.kwargs = kwargs
         if self.dev_data is not None:
             self.tester = Tester(model=self.model,
                                  data=self.dev_data,
                                  metrics=self.metrics,
-                                 batch_size=self.batch_size,
+                                 batch_size=kwargs.get("dev_batch_size", self.batch_size),
                                  device=None,  # 由上面的部分处理device
-                                 verbose=0)
-        
+                                 verbose=0,
+                                 use_tqdm=self.use_tqdm)
+
         self.step = 0
         self.start_time = None  # start timestamp
-        
+
         self.callback_manager = CallbackManager(env={"trainer": self},
                                                 callbacks=callbacks)
 
@@ -558,7 +598,7 @@ class Trainer(object):
             self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
             start_time = time.time()
             print("training epochs started " + self.start_time, flush=True)
-            
+
             try:
                 self.callback_manager.on_train_begin()
                 self._train()
@@ -571,7 +611,7 @@ class Trainer(object):
                         raise e
                 elif on_exception == 'raise':
                     raise e
-            
+
             if self.dev_data is not None and self.best_dev_perf is not None:
                 print(
                     "\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
@@ -589,21 +629,17 @@ class Trainer(object):
         finally:
             pass
         results['seconds'] = round(time.time() - start_time, 2)
-        
+
         return results
-    
+
     def _train(self):
         if not self.use_tqdm:
-            from fastNLP.core.utils import _pseudo_tqdm as inner_tqdm
+            from .utils import _pseudo_tqdm as inner_tqdm
         else:
             inner_tqdm = tqdm
         self.step = 0
         self.epoch = 0
         start = time.time()
-        if isinstance(self.model, nn.DataParallel):
-            self._forward_func = self.model.module.forward
-        else:
-            self._forward_func = self.model.forward
         with inner_tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
             self.pbar = pbar
             avg_loss = 0
@@ -621,21 +657,21 @@ class Trainer(object):
                     # negative sampling; replace unknown; re-weight batch_y
                     self.callback_manager.on_batch_begin(batch_x, batch_y, indices)
                     prediction = self._data_forward(self.model, batch_x)
-                    
+
                     # edit prediction
                     self.callback_manager.on_loss_begin(batch_y, prediction)
                     loss = self._compute_loss(prediction, batch_y).mean()
                     avg_loss += loss.item()
                     loss = loss / self.update_every
-                    
+
                     # Is loss NaN or inf? requires_grad = False
                     self.callback_manager.on_backward_begin(loss)
                     self._grad_backward(loss)
                     self.callback_manager.on_backward_end()
-                    
+
                     self._update()
                     self.callback_manager.on_step_end()
-                    
+
                     if self.step % self.print_every == 0:
                         avg_loss = float(avg_loss) / self.print_every
                         if self.use_tqdm:
@@ -649,29 +685,29 @@ class Trainer(object):
                         pbar.set_postfix_str(print_output)
                         avg_loss = 0
                     self.callback_manager.on_batch_end()
-                    
+
                     if ((self.validate_every > 0 and self.step % self.validate_every == 0) or
                         (self.validate_every < 0 and self.step % len(data_iterator) == 0)) \
                             and self.dev_data is not None:
                         eval_res = self._do_validation(epoch=epoch, step=self.step)
-                        eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
+                        eval_str = "Evaluation on dev at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
                                                                                     self.n_steps) + \
                                    self.tester._format_eval_results(eval_res)
                         pbar.write(eval_str + '\n')
-                
+
                 # ================= mini-batch end ==================== #
-                
+
                 # lr decay; early stopping
                 self.callback_manager.on_epoch_end()
             # =============== epochs end =================== #
             pbar.close()
             self.pbar = None
         # ============ tqdm end ============== #
-    
+
     def _do_validation(self, epoch, step):
         self.callback_manager.on_valid_begin()
         res = self.tester.test()
-        
+
         is_better_eval = False
         if self._better_eval_result(res):
             if self.save_path is not None:
@@ -686,7 +722,7 @@ class Trainer(object):
         # get validation results; adjust optimizer
         self.callback_manager.on_valid_end(res, self.metric_key, self.optimizer, is_better_eval)
         return res
-    
+
     def _mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.
 
@@ -698,14 +734,14 @@ class Trainer(object):
             model.eval()
         else:
             model.train()
-    
+
     def _update(self):
         """Perform weight update on a model.
 
         """
         if self.step % self.update_every == 0:
             self.optimizer.step()
-    
+
     def _data_forward(self, network, x):
         x = _build_args(self._forward_func, **x)
         y = network(**x)
@@ -713,7 +749,7 @@ class Trainer(object):
             raise TypeError(
                 f"The return value of {_get_func_signature(self._forward_func)} should be dict, got {type(y)}.")
         return y
-    
+
     def _grad_backward(self, loss):
         """Compute gradient with link rules.
 
@@ -724,7 +760,7 @@ class Trainer(object):
         if (self.step-1) % self.update_every == 0:
             self.model.zero_grad()
         loss.backward()
-    
+
     def _compute_loss(self, predict, truth):
         """Compute loss given prediction and ground truth.
 
@@ -733,7 +769,7 @@ class Trainer(object):
         :return: a scalar
         """
         return self.losser(predict, truth)
-    
+
     def _save_model(self, model, model_name, only_param=False):
         """ 存储不含有显卡信息的state_dict或model
         :param model:
@@ -745,7 +781,7 @@ class Trainer(object):
             model_path = os.path.join(self.save_path, model_name)
             if not os.path.exists(self.save_path):
                 os.makedirs(self.save_path, exist_ok=True)
-            if isinstance(model, nn.DataParallel):
+            if _model_contains_inner_module(model):
                 model = model.module
             if only_param:
                 state_dict = model.state_dict()
@@ -756,7 +792,7 @@ class Trainer(object):
                 model.cpu()
                 torch.save(model, model_path)
                 model.to(self._model_device)
-    
+
     def _load_model(self, model, model_name, only_param=False):
         # 返回bool值指示是否成功reload模型
         if self.save_path is not None:
@@ -765,7 +801,7 @@ class Trainer(object):
                 states = torch.load(model_path)
             else:
                 states = torch.load(model_path).state_dict()
-            if isinstance(model, nn.DataParallel):
+            if _model_contains_inner_module(model):
                 model.module.load_state_dict(states)
             else:
                 model.load_state_dict(states)
@@ -774,7 +810,7 @@ class Trainer(object):
         else:
             return False
         return True
-    
+
     def _better_eval_result(self, metrics):
         """Check if the current epoch yields better validation results.
 
@@ -800,6 +836,9 @@ class Trainer(object):
                     is_better = False
         return is_better
 
+    @property
+    def is_master(self):
+        return True
 
 DEFAULT_CHECK_BATCH_SIZE = 2
 DEFAULT_CHECK_NUM_BATCH = 2
@@ -821,14 +860,15 @@ def _get_value_info(_dict):
         strs.append(_str)
     return strs
 
+
 from numbers import Number
 from .batch import _to_tensor
-def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_SIZE,
-                dev_data=None, metric_key=None,
-                check_level=0):
+
+
+def _check_code(dataset, model, losser, metrics, forward_func, batch_size=DEFAULT_CHECK_BATCH_SIZE,
+                dev_data=None, metric_key=None, check_level=0):
     # check get_loss 方法
-    model_devcie = _get_model_device(model=model)
-    
+    model_device = _get_model_device(model=model)
     def _iter():
         start_idx = 0
         while start_idx<len(dataset):
@@ -849,7 +889,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
             start_idx += batch_size
 
     for batch_count, (batch_x, batch_y) in enumerate(_iter()):
-        _move_dict_value_to_device(batch_x, batch_y, device=model_devcie)
+        _move_dict_value_to_device(batch_x, batch_y, device=model_device)
         # forward check
         if batch_count == 0:
             info_str = ""
@@ -868,15 +908,11 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
             else:
                 info_str += 'There is no target field.'
             print(info_str)
-            _check_forward_error(forward_func=model.forward, dataset=dataset,
+            _check_forward_error(forward_func=forward_func, dataset=dataset,
                                  batch_x=batch_x, check_level=check_level)
-        if isinstance(model, nn.DataParallel):
-            forward_func = model.module.forward
-        else:
-            forward_func = model.forward
         refined_batch_x = _build_args(forward_func, **batch_x)
         pred_dict = model(**refined_batch_x)
-        func_signature = _get_func_signature(model.forward)
+        func_signature = _get_func_signature(forward_func)
         if not isinstance(pred_dict, dict):
             raise TypeError(f"The return value of {func_signature} should be `dict`, not `{type(pred_dict)}`.")
         
@@ -896,7 +932,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
             loss.backward()
         except _CheckError as e:
             # TODO: another error raised if _CheckError caught
-            pre_func_signature = _get_func_signature(model.forward)
+            pre_func_signature = _get_func_signature(forward_func)
             _check_loss_evaluate(prev_func_signature=pre_func_signature, func_signature=e.func_signature,
                                  check_res=e.check_res, pred_dict=pred_dict, target_dict=batch_y,
                                  dataset=dataset, check_level=check_level)
@@ -906,7 +942,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
     
     if dev_data is not None:
         tester = Tester(data=dev_data[:batch_size * DEFAULT_CHECK_NUM_BATCH], model=model, metrics=metrics,
-                        batch_size=batch_size, verbose=-1)
+                        batch_size=batch_size, verbose=-1, use_tqdm=False)
         evaluate_results = tester.test()
         _check_eval_results(metrics=evaluate_results, metric_key=metric_key, metric_list=metrics)
 

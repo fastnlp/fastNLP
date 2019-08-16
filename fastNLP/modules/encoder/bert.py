@@ -563,6 +563,8 @@ class WordpieceTokenizer(object):
                 output_tokens.append(self.unk_token)
             else:
                 output_tokens.extend(sub_tokens)
+        if len(output_tokens)==0:  #防止里面全是空格或者回车符号
+            return [self.unk_token]
         return output_tokens
 
 
@@ -848,7 +850,7 @@ class _WordPieceBertModel(nn.Module):
 
     """
 
-    def __init__(self, model_dir: str, layers: str = '-1'):
+    def __init__(self, model_dir: str, layers: str = '-1', pooled_cls:bool=False):
         super().__init__()
 
         self.tokenzier = BertTokenizer.from_pretrained(model_dir)
@@ -867,8 +869,9 @@ class _WordPieceBertModel(nn.Module):
         self._cls_index = self.tokenzier.vocab['[CLS]']
         self._sep_index = self.tokenzier.vocab['[SEP]']
         self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
+        self.pooled_cls = pooled_cls
 
-    def index_dataset(self, *datasets, field_name):
+    def index_dataset(self, *datasets, field_name, add_cls_sep=True):
         """
         使用bert的tokenizer新生成word_pieces列加入到datasets中，并将他们设置为input。如果首尾不是
             [CLS]与[SEP]会在首尾额外加入[CLS]与[SEP], 且将word_pieces这一列的pad value设置为了bert的pad value。
@@ -884,10 +887,11 @@ class _WordPieceBertModel(nn.Module):
                 tokens = self.tokenzier.wordpiece_tokenizer.tokenize(word)
                 word_piece_ids = self.tokenzier.convert_tokens_to_ids(tokens)
                 word_pieces.extend(word_piece_ids)
-            if word_pieces[0] != self._cls_index:
-                word_pieces.insert(0, self._cls_index)
-            if word_pieces[-1] != self._sep_index:
-                word_pieces.insert(-1, self._sep_index)
+            if add_cls_sep:
+                if word_pieces[0] != self._cls_index:
+                    word_pieces.insert(0, self._cls_index)
+                if word_pieces[-1] != self._sep_index:
+                    word_pieces.insert(-1, self._sep_index)
             return word_pieces
 
         for index, dataset in enumerate(datasets):
@@ -909,10 +913,13 @@ class _WordPieceBertModel(nn.Module):
         batch_size, max_len = word_pieces.size()
 
         attn_masks = word_pieces.ne(self._wordpiece_pad_index)
-        bert_outputs, _ = self.encoder(word_pieces, token_type_ids=token_type_ids, attention_mask=attn_masks,
+        bert_outputs, pooled_cls = self.encoder(word_pieces, token_type_ids=token_type_ids, attention_mask=attn_masks,
                                        output_all_encoded_layers=True)
         # output_layers = [self.layers]  # len(self.layers) x batch_size x max_word_piece_length x hidden_size
         outputs = bert_outputs[0].new_zeros((len(self.layers), batch_size, max_len, bert_outputs[0].size(-1)))
         for l_index, l in enumerate(self.layers):
-            outputs[l_index] = bert_outputs[l]
+            bert_output = bert_outputs[l]
+            if l==len(bert_outputs) and self.pooled_cls:
+                bert_output[:, 0] = pooled_cls
+            outputs[l_index] = bert_output
         return outputs

@@ -624,7 +624,7 @@ class SpanFPreRecMetric(MetricBase):
                 f, pre, rec = self._compute_f_pre_rec(tp, fn, fp)
                 f_sum += f
                 pre_sum += pre
-                rec_sum + rec
+                rec_sum += rec
                 if not self.only_gross and tag != '':  # tag!=''防止无tag的情况
                     f_key = 'f-{}'.format(tag)
                     pre_key = 'pre-{}'.format(tag)
@@ -814,8 +814,8 @@ class ExtractiveQAMetric(MetricBase):
             if not self.right_open:
                 e += 1
                 te += 1
-            if ts == 0 and te == int(not self.right_open):
-                if s == 0 and e == int(not self.right_open):
+            if ts == 0 and te == 1:
+                if s == 0 and e == 1:
                     self.no_ans_correct += 1
                     self.no2no += 1
                 else:

@@ -1,4 +1,8 @@
 """
+.. warning::
+
+    本模块将在 `0.5.0版本` 中被废弃，由 :mod:`~fastNLP.io.loader`  和 :mod:`~fastNLP.io.pipe` 模块替代。
+
 dataset_loader模块实现了许多 DataSetLoader, 用于读取不同格式的数据, 并返回 `DataSet` ,
 得到的 :class:`~fastNLP.DataSet` 对象可以直接传入 :class:`~fastNLP.Trainer` 和 :class:`~fastNLP.Tester`, 用于模型的训练和测试。
 以SNLI数据集为例::
@@ -11,6 +15,7 @@ dataset_loader模块实现了许多 DataSetLoader, 用于读取不同格式的�
     # ... do stuff
     
 为 fastNLP 提供 DataSetLoader 的开发者请参考 :class:`~fastNLP.io.DataSetLoader` 的介绍。
+
 """
 __all__ = [
     'CSVLoader',
@@ -114,25 +119,3 @@ def _cut_long_sentence(sent, max_sample_length=200):
     else:
         cutted_sentence.append(sent)
     return cutted_sentence
-
-
-def _add_seg_tag(data):
-    """
-
-    :param data: list of ([word], [pos], [heads], [head_tags])
-    :return: list of ([word], [pos])
-    """
-
-    _processed = []
-    for word_list, pos_list, _, _ in data:
-        new_sample = []
-        for word, pos in zip(word_list, pos_list):
-            if len(word) == 1:
-                new_sample.append((word, 'S-' + pos))
-            else:
-                new_sample.append((word[0], 'B-' + pos))
-                for c in word[1:-1]:
-                    new_sample.append((c, 'M-' + pos))
-                new_sample.append((word[-1], 'E-' + pos))
-        _processed.append(list(map(list, zip(*new_sample))))
-    return _processed
