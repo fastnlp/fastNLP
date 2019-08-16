@@ -9,7 +9,7 @@ import shutil
 from requests import HTTPError
 
 PRETRAINED_BERT_MODEL_DIR = {
-    'en': 'bert-large-cased-wwm.zip',
+    'en': 'bert-base-cased.zip',
     'en-large-cased-wwm': 'bert-large-cased-wwm.zip',
     'en-large-uncased-wwm': 'bert-large-uncased-wwm.zip',
 
@@ -30,7 +30,7 @@ PRETRAINED_BERT_MODEL_DIR = {
 }
 
 PRETRAINED_ELMO_MODEL_DIR = {
-    'en': 'elmo_en_Medium.tar.gz',
+    'en': 'elmo_en_Medium.zip',
     'en-small': "elmo_en_Small.zip",
     'en-original-5.5b': 'elmo_en_Original_5.5B.zip',
     'en-original': 'elmo_en_Original.zip',
