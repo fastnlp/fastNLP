@@ -20,12 +20,14 @@ class StaticEmbedding(TokenEmbedding):
     当前支持自动下载的预训练vector有以下的几种(待补充);
 
     Example::
-
+        
+        >>> from fastNLP import Vocabulary
+        >>> from fastNLP.embeddings import StaticEmbedding
         >>> vocab = Vocabulary().add_word_lst("The whether is good .".split())
-        >>> embed = StaticEmbedding(vocab, model_dir_or_name='en-glove-50')
+        >>> embed = StaticEmbedding(vocab, model_dir_or_name='en-glove-50d')
 
         >>> vocab = Vocabulary().add_word_lst(["The", 'the', "THE"])
-        >>> embed = StaticEmbedding(vocab, model_dir_or_name="en-glove-50", lower=True)
+        >>> embed = StaticEmbedding(vocab, model_dir_or_name="en-glove-50d", lower=True)
         >>> # "the", "The", "THE"它们共用一个vector，且将使用"the"在预训练词表中寻找它们的初始化表示。
 
         >>> vocab = Vocabulary().add_word_lst(["The", "the", "THE"])
