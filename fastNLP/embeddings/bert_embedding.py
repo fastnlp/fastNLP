@@ -74,7 +74,7 @@ class BertEmbedding(ContextualEmbedding):
 
         self.model = _WordBertModel(model_dir=model_dir, vocab=vocab, layers=layers,
                                     pool_method=pool_method, include_cls_sep=include_cls_sep,
-                                    pooled_cls=pooled_cls, auto_truncate=auto_truncate)
+                                    pooled_cls=pooled_cls, auto_truncate=auto_truncate, min_freq=2)
 
         self.requires_grad = requires_grad
         self._embed_size = len(self.model.layers)*self.model.encoder.hidden_size
@@ -209,7 +209,7 @@ class BertWordPieceEncoder(nn.Module):
 
 class _WordBertModel(nn.Module):
     def __init__(self, model_dir:str, vocab:Vocabulary, layers:str='-1', pool_method:str='first',
-                 include_cls_sep:bool=False, pooled_cls:bool=False, auto_truncate:bool=False):
+                 include_cls_sep:bool=False, pooled_cls:bool=False, auto_truncate:bool=False, min_freq=2):
         super().__init__()
 
         self.tokenzier = BertTokenizer.from_pretrained(model_dir)
@@ -238,9 +238,12 @@ class _WordBertModel(nn.Module):
         word_piece_dict = {'[CLS]':1, '[SEP]':1}  # 用到的word_piece以及新增的
         found_count = 0
         self._has_sep_in_vocab = '[SEP]' in vocab  # 用来判断传入的数据是否需要生成token_ids
+        if '[sep]' in vocab:
+            warnings.warn("Lower cased [sep] detected, it cannot be correctly recognized as [SEP] by BertEmbedding.")
         if "[CLS]" in vocab:
             warnings.warn("[CLS] detected in your vocabulary. BertEmbedding will add [CSL] and [SEP] to the begin "
-                          "and end of the sentence automatically.")
+                          "and end of the input automatically, make sure you don't add [CLS] and [SEP] at the begin"
+                          " and end.")
         for word, index in vocab:
             if index == vocab.padding_idx:  # pad是个特殊的符号
                 word = '[PAD]'
@@ -250,7 +253,8 @@ class _WordBertModel(nn.Module):
             if len(word_pieces)==1:
                 if not vocab._is_word_no_create_entry(word):  # 如果是train中的值, 但是却没有找到
                     if index!=vocab.unknown_idx and word_pieces[0]=='[UNK]': # 说明这个词不在原始的word里面
-                        word_piece_dict[word] = 1  # 新增一个值
+                        if vocab.word_count[word]>=min_freq and not vocab._is_word_no_create_entry(word):  #出现次数大于这个次数才新增
+                            word_piece_dict[word] = 1  # 新增一个值
                         continue
             for word_piece in word_pieces:
                 word_piece_dict[word_piece] = 1

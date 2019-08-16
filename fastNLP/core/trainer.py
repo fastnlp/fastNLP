@@ -690,7 +690,7 @@ class Trainer(object):
                         (self.validate_every < 0 and self.step % len(data_iterator) == 0)) \
                             and self.dev_data is not None:
                         eval_res = self._do_validation(epoch=epoch, step=self.step)
-                        eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
+                        eval_str = "Evaluation on dev at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
                                                                                     self.n_steps) + \
                                    self.tester._format_eval_results(eval_res)
                         pbar.write(eval_str + '\n')

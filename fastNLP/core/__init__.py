@@ -14,6 +14,7 @@ core 模块里实现了 fastNLP 的核心框架，常用的功能都可以从 fa
 """
 from .batch import DataSetIter, BatchIter, TorchLoaderIter
 from .callback import Callback, GradientClipCallback, EarlyStopCallback, TensorboardCallback, LRScheduler, ControlC
+from .callback import EvaluateCallback, FitlogCallback, SaveModelCallback
 from .const import Const
 from .dataset import DataSet
 from .field import FieldArray, Padder, AutoPadder, EngChar2DPadder

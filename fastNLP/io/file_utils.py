@@ -307,15 +307,15 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
     if not cache_path.exists():
         # Download to temporary file, then copy to cache dir once finished.
         # Otherwise you get corrupt cache entries if the download gets interrupted.
-        fd, temp_filename = tempfile.mkstemp()
-        print("%s not found in cache, downloading to %s" % (url, temp_filename))
-
         # GET file object
         req = requests.get(url, stream=True, headers={"User-Agent": "fastNLP"})
         if req.status_code == 200:
             content_length = req.headers.get("Content-Length")
             total = int(content_length) if content_length is not None else None
             progress = tqdm(unit="B", total=total, unit_scale=1)
+            fd, temp_filename = tempfile.mkstemp()
+            print("%s not found in cache, downloading to %s" % (url, temp_filename))
+
             with open(temp_filename, "wb") as temp_file:
                 for chunk in req.iter_content(chunk_size=1024 * 16):
                     if chunk:  # filter out keep-alive new chunks
@@ -373,7 +373,7 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
                 os.remove(temp_filename)
             return get_filepath(cache_path)
         else:
-            raise HTTPError(f"Fail to download from {url}.")
+            raise HTTPError(f"Status code:{req.status_code}. Fail to download from {url}.")
 
 
 def unzip_file(file: Path, to: Path):

@@ -57,6 +57,7 @@ __all__ = [
     "FitlogCallback",
     "LRScheduler",
     "ControlC",
+    "EvaluateCallback",
     
     "CallbackException",
     "EarlyStopError"
@@ -504,10 +505,9 @@ class FitlogCallback(Callback):
         并将验证结果写入到fitlog中。这些数据集的结果是根据dev上最好的结果报道的，即如果dev在第3个epoch取得了最佳，则
         fitlog中记录的关于这些数据集的结果就是来自第三个epoch的结果。
 
-    :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
-        DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。若tester不为None时，data需要通过
-        dict的方式传入。如果仅传入DataSet, 则被命名为test
-    :param ~fastNLP.Tester tester: Tester对象，将在on_valid_end时调用。tester中的DataSet会被称为为`test`
+    :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要
+        传入多个DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。data的结果的名称以'data'开头。
+    :param ~fastNLP.Tester,Dict[~fastNLP.Tester] tester: Tester对象，将在on_valid_end时调用。tester的结果的名称以'tester'开头
     :param int log_loss_every: 多少个step记录一次loss(记录的是这几个batch的loss平均值)，如果数据集较大建议将该值设置得
         大一些，不然会导致log文件巨大。默认为0, 即不要记录loss。
     :param int verbose: 是否在终端打印evaluation的结果，0不打印。
@@ -521,20 +521,23 @@ class FitlogCallback(Callback):
         self._log_exception = log_exception
         assert isinstance(log_loss_every, int) and log_loss_every>=0
         if tester is not None:
-            assert isinstance(tester, Tester), "Only fastNLP.Tester allowed."
-            assert isinstance(data, dict) or data is None, "If tester is not None, only dict[DataSet] allowed for data."
-            if data is not None:
-                assert 'test' not in data, "Cannot use `test` as DataSet key, when tester is passed."
-            setattr(tester, 'verbose', 0)
-            self.testers['test'] = tester
-        
+            if isinstance(tester, dict):
+                for name, test in tester.items():
+                    if not isinstance(test, Tester):
+                        raise TypeError(f"{name} in tester is not a valid fastNLP.Tester.")
+                    self.testers['tester-' + name] = test
+            if isinstance(tester, Tester):
+                self.testers['tester-test'] = tester
+            for tester in self.testers.values():
+                setattr(tester, 'verbose', 0)
+
         if isinstance(data, dict):
             for key, value in data.items():
                 assert isinstance(value, DataSet), f"Only DataSet object is allowed, not {type(value)}."
             for key, value in data.items():
-                self.datasets[key] = value
+                self.datasets['data-' + key] = value
         elif isinstance(data, DataSet):
-            self.datasets['test'] = data
+            self.datasets['data-test'] = data
         elif data is not None:
             raise TypeError("data receives dict[DataSet] or DataSet object.")
         
@@ -548,8 +551,11 @@ class FitlogCallback(Callback):
         
         if len(self.datasets) > 0:
             for key, data in self.datasets.items():
-                tester = Tester(data=data, model=self.model, batch_size=self.batch_size, metrics=self.trainer.metrics,
-                                verbose=0)
+                tester = Tester(data=data, model=self.model,
+                                batch_size=self.trainer.kwargs.get('dev_batch_size', self.batch_size),
+                                metrics=self.trainer.metrics,
+                                verbose=0,
+                                use_tqdm=self.trainer.use_tqdm)
                 self.testers[key] = tester
         fitlog.add_progress(total_steps=self.n_steps)
     
@@ -587,6 +593,65 @@ class FitlogCallback(Callback):
         fitlog.finish(status=1)
         if self._log_exception:
             fitlog.add_other(repr(exception), name='except_info')
+
+
+class EvaluateCallback(Callback):
+    """
+    别名: :class:`fastNLP.EvaluateCallback` :class:`fastNLP.core.callback.EvaluateCallback`
+
+    该callback用于扩展Trainer训练过程中只能对dev数据进行验证的问题。
+
+    :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
+        DataSet请通过dict的方式传入。
+    :param ~fastNLP.Tester,Dict[~fastNLP.DataSet] tester: Tester对象，将在on_valid_end时调用。
+    """
+
+    def __init__(self, data=None, tester=None):
+        super().__init__()
+        self.datasets = {}
+        self.testers = {}
+        if tester is not None:
+            if isinstance(tester, dict):
+                for name, test in tester.items():
+                    if not isinstance(test, Tester):
+                        raise TypeError(f"{name} in tester is not a valid fastNLP.Tester.")
+                    self.testers['tester-' + name] = test
+            if isinstance(tester, Tester):
+                self.testers['tester-test'] = tester
+            for tester in self.testers.values():
+                setattr(tester, 'verbose', 0)
+
+        if isinstance(data, dict):
+            for key, value in data.items():
+                assert isinstance(value, DataSet), f"Only DataSet object is allowed, not {type(value)}."
+            for key, value in data.items():
+                self.datasets['data-' + key] = value
+        elif isinstance(data, DataSet):
+            self.datasets['data-test'] = data
+        elif data is not None:
+            raise TypeError("data receives dict[DataSet] or DataSet object.")
+
+    def on_train_begin(self):
+        if len(self.datasets) > 0and self.trainer.dev_data is None:
+            raise RuntimeError("Trainer has no dev data, you cannot pass extra DataSet to do evaluation.")
+
+        if len(self.datasets) > 0:
+            for key, data in self.datasets.items():
+                tester = Tester(data=data, model=self.model,
+                                batch_size=self.trainer.kwargs.get('dev_batch_size', self.batch_size),
+                                metrics=self.trainer.metrics, verbose=0,
+                                use_tqdm=self.trainer.use_tqdm)
+                self.testers[key] = tester
+
+    def on_valid_end(self, eval_result, metric_key, optimizer, better_result):
+        if len(self.testers) > 0:
+            for key, tester in self.testers.items():
+                try:
+                    eval_result = tester.test()
+                    self.pbar.write("Evaluation on {}:".format(key))
+                    self.pbar.write(tester._format_eval_results(eval_result))
+                except Exception:
+                    self.pbar.write("Exception happens when evaluate on DataSet named `{}`.".format(key))
 
 
 class LRScheduler(Callback):

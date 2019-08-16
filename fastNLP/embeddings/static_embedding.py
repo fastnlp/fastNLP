@@ -54,7 +54,7 @@ class StaticEmbedding(TokenEmbedding):
     :param int min_freq: Vocabulary词频数小于这个数量的word将被指向unk。
     """
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', embedding_dim=100, requires_grad: bool=True,
-                 init_method=None, lower=False, dropout=0, word_dropout=0, normalize=False, min_freq=1):
+                 init_method=None, lower=False, dropout=0, word_dropout=0, normalize=False, min_freq=1, **kwargs):
         super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
         # 得到cache_path
@@ -73,7 +73,7 @@ class StaticEmbedding(TokenEmbedding):
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
-        # 缩小vocab
+        # 根据min_freq缩小vocab
         truncate_vocab = (vocab.min_freq is None and min_freq>1) or (vocab.min_freq and vocab.min_freq<min_freq)
         if truncate_vocab:
             truncated_vocab = deepcopy(vocab)
@@ -88,6 +88,13 @@ class StaticEmbedding(TokenEmbedding):
                     if lowered_word_count[word.lower()]>=min_freq and word_count<min_freq:
                         truncated_vocab.add_word_lst([word]*(min_freq-word_count),
                                                      no_create_entry=truncated_vocab._is_word_no_create_entry(word))
+
+            # 只限制在train里面的词语使用min_freq筛选
+            if kwargs.get('only_train_min_freq', False):
+                for word in truncated_vocab.word_count.keys():
+                    if truncated_vocab._is_word_no_create_entry(word) and truncated_vocab.word_count[word]<min_freq:
+                        truncated_vocab.add_word_lst([word] * (min_freq - truncated_vocab.word_count[word]),
+                                                     no_create_entry=True)
             truncated_vocab.build_vocab()
             truncated_words_to_words = torch.arange(len(vocab)).long()
             for word, index in vocab:
