@@ -17,7 +17,7 @@ class StackEmbedding(TokenEmbedding):
         >>> from fastNLP import Vocabulary
         >>> from fastNLP.embeddings import StaticEmbedding
         >>> vocab =  Vocabulary().add_word_lst("The whether is good .".split())
-        >>> embed_1 = StaticEmbedding(vocab, model_dir_or_name='en-glove-6b-50', requires_grad=True)
+        >>> embed_1 = StaticEmbedding(vocab, model_dir_or_name='en-glove-6b-50d', requires_grad=True)
         >>> embed_2 = StaticEmbedding(vocab, model_dir_or_name='en-word2vec-300', requires_grad=True)
 
     :param embeds: 一个由若干个TokenEmbedding组成的list，要求每一个TokenEmbedding的词表都保持一致
