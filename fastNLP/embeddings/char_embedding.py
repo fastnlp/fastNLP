@@ -24,6 +24,9 @@ class CNNCharEmbedding(TokenEmbedding):
 
     Example::
 
+        >>> import torch
+        >>> from fastNLP import Vocabulary
+        >>> from fastNLP.embeddings import CNNCharEmbedding
         >>> vocab = Vocabulary().add_word_lst("The whether is good .".split())
         >>> embed = CNNCharEmbedding(vocab, embed_size=50)
         >>> words = torch.LongTensor([[vocab.to_index(word) for word in "The whether is good .".split()]])
@@ -167,6 +170,9 @@ class LSTMCharEmbedding(TokenEmbedding):
 
     Example::
 
+        >>> import torch
+        >>> from fastNLP import Vocabulary
+        >>> from fastNLP.embeddings import LSTMCharEmbedding
         >>> vocab = Vocabulary().add_word_lst("The whether is good .".split())
         >>> embed = LSTMCharEmbedding(vocab, embed_size=50)
         >>> words = torch.LongTensor([[vocab.to_index(word) for word in "The whether is good .".split()]])

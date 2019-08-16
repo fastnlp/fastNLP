@@ -20,6 +20,7 @@ class Embedding(nn.Module):
     Example::
 
         >>> import numpy as np
+        >>> from fastNLP.embeddings import Embedding
         >>> init_embed = (2000, 100)
         >>> embed = Embedding(init_embed)  # 随机初始化一个具有2000个词，每个词表示为100维的词向量
         >>> init_embed = np.zeros((2000, 100))

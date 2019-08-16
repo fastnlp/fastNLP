@@ -192,7 +192,7 @@ sampler
         import time
 
         embed_dim = 100
-        model = CNNText((len(vocab),embed_dim), num_classes=3, padding=2, dropout=0.1)
+        model = CNNText((len(vocab),embed_dim), num_classes=3, dropout=0.1)
 
         def train(epoch, data, devdata):
             optimizer = torch.optim.Adam(model.parameters(), lr=0.001)

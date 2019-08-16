@@ -158,6 +158,7 @@ Vocabulary 的使用
 损失函数
     训练模型需要提供一个损失函数
     ,fastNLP中提供了直接可以导入使用的四种loss，分别为：
+    
     * :class:`~fastNLP.CrossEntropyLoss`：包装了torch.nn.functional.cross_entropy()函数，返回交叉熵损失（可以运用于多分类场景）  
     * :class:`~fastNLP.BCELoss`：包装了torch.nn.functional.binary_cross_entropy()函数，返回二分类的交叉熵  
     * :class:`~fastNLP.L1Loss`：包装了torch.nn.functional.l1_loss()函数，返回L1 损失  
@@ -209,7 +210,7 @@ Vocabulary 的使用
 
         #使用CNNText的时候第一个参数输入一个tuple,作为模型定义embedding的参数
         #还可以传入 kernel_nums, kernel_sizes, padding, dropout的自定义值
-        model_cnn = CNNText((len(vocab),EMBED_DIM), num_classes=3, padding=2, dropout=0.1)
+        model_cnn = CNNText((len(vocab),EMBED_DIM), num_classes=3, dropout=0.1)
 
         #如果在定义trainer的时候没有传入optimizer参数，模型默认的优化器为torch.optim.Adam且learning rate为lr=4e-3
         #这里只使用了optimizer_1作为优化器输入，感兴趣可以尝试optimizer_2或者其他优化器作为输入
