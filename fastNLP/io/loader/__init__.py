@@ -59,8 +59,8 @@ __all__ = [
     'OntoNotesNERLoader',
     'CTBLoader',
 
-    'CSVLoader',
-    'JsonLoader',
+    # 'CSVLoader',
+    # 'JsonLoader',
 
     'CWSLoader',
 
