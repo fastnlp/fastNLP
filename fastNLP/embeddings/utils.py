@@ -31,7 +31,7 @@ def get_embeddings(init_embed):
     :param init_embed: 可以是 tuple:(num_embedings, embedding_dim), 即embedding的大小和每个词的维度;也可以传入
         nn.Embedding 对象, 此时就以传入的对象作为embedding; 传入np.ndarray也行，将使用传入的ndarray作为作为Embedding初始化;
         传入torch.Tensor, 将使用传入的值作为Embedding初始化。
-    :return nn.Embedding embeddings:
+    :return nn.Embedding:  embeddings
     """
     if isinstance(init_embed, tuple):
         res = nn.Embedding(

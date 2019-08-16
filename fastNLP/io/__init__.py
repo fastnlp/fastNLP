@@ -15,7 +15,9 @@ __all__ = [
     'DataBundle',
     
     'EmbedLoader',
-
+    
+    'Loader',
+    
     'YelpLoader',
     'YelpFullLoader',
     'YelpPolarityLoader',
@@ -29,7 +31,6 @@ __all__ = [
     'OntoNotesNERLoader',
     'CTBLoader',
 
-    'Loader',
     'CSVLoader',
     'JsonLoader',
 
