@@ -91,7 +91,7 @@ fastNLP 在 embeddings 模块中内置了几种不同的embedding：静态embedd
 
 ## 项目结构
 
-![](./docs/source/figures/workflow.png)
+<img src="./docs/source/figures/workflow.png" width="60%" height="60%">
 
 fastNLP的大致工作流程如上图所示，而项目结构如下：
 
