@@ -164,7 +164,7 @@ class Callback(object):
 
     @property
     def is_master(self):
-        return self._trainer.is_master()
+        return self._trainer.is_master
 
     @property
     def disabled(self):
@@ -172,7 +172,7 @@ class Callback(object):
 
     @property
     def logger(self):
-        return getattr(self._trainer, 'logger', logging)
+        return getattr(self._trainer, 'logger', logging.getLogger(__name__))
 
     def on_train_begin(self):
         """
@@ -405,11 +405,11 @@ class DistCallbackManager(CallbackManager):
     def __init__(self, env, callbacks_all=None, callbacks_master=None):
         super(DistCallbackManager, self).__init__(env)
         assert 'trainer' in env
-        is_master = env['trainer'].is_master
-        self.patch_callback(callbacks_master, disabled=not is_master)
-        self.callbacks_all = self.prepare_callbacks(callbacks_all)
-        self.callbacks_master = self.prepare_callbacks(callbacks_master)
-        self.callbacks = self.callbacks_all + self.callbacks_master
+        self._trainer = env['trainer']
+        self.callbacks_master = []
+        self.callbacks_all = []
+        self.add_callback(callbacks_all, master=False)
+        self.add_callback(callbacks_master, master=True)
 
     def patch_callback(self, callbacks, disabled):
         if not callbacks:
@@ -418,6 +418,14 @@ class DistCallbackManager(CallbackManager):
             callbacks = [callbacks]
         for cb in callbacks:
             cb._disabled = disabled
+
+    def add_callback(self, cb, master=False):
+        if master:
+            self.patch_callback(cb, not self.is_master)
+            self.callbacks_master += self.prepare_callbacks(cb)
+        else:
+            self.callbacks_all += self.prepare_callbacks(cb)
+        self.callbacks = self.callbacks_all + self.callbacks_master
 
 
 class GradientClipCallback(Callback):
@@ -1048,15 +1056,26 @@ class TesterCallback(Callback):
             self.score = cur_score
         return cur_score, is_better
 
+    def _get_score(self, metric_dict, key):
+        for metric in metric_dict.items():
+            if key in metric:
+                return metric[key]
+        return None
+
     def compare_better(self, a):
         if self.score is None:
             return True
+        if self.metric_key is None:
+            self.metric_key = list(list(self.score.values())[0].keys())[0]
         k = self.metric_key
-        is_increase = self.score[k] <= a[k] # if equal, prefer more recent results
+        score = self._get_score(self.score, k)
+        new_score = self._get_score(a, k)
+        if score is None or new_score is None:
+            return False
         if self.increase_better:
-            return is_increase
+            return score <= new_score
         else:
-            return not is_increase
+            return score >= new_score
 
     def on_train_end(self):
         self.logger.info('Evaluate on training ends.')

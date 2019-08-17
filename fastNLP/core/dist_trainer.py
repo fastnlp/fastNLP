@@ -22,6 +22,7 @@ from .optimizer import Optimizer
 from .utils import _build_args
 from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
+from  ..io.logger import initLogger
 from pkg_resources import parse_version
 
 __all__ = [
@@ -40,7 +41,7 @@ def get_local_rank():
     if 'local_rank' in args and args.local_rank:
         os.environ['LOCAL_RANK'] = str(args.local_rank) # for multiple calls for this function
         return args.local_rank
-    raise RuntimeError('Please use "python -m torch.distributed.launch train_script.py')
+    raise RuntimeError('Please use "python -m torch.distributed.launch --nproc_per_node=N train_script.py')
 
 
 class DistTrainer():
@@ -50,7 +51,7 @@ class DistTrainer():
     def __init__(self, train_data, model, optimizer=None, loss=None,
                  callbacks_all=None, callbacks_master=None,
                  batch_size_per_gpu=8, n_epochs=1,
-                 num_data_workers=1, drop_last=False,
+                 num_workers=1, drop_last=False,
                  dev_data=None, metrics=None, metric_key=None,
                  update_every=1, print_every=10, validate_every=-1,
                  log_path=None,
@@ -78,7 +79,7 @@ class DistTrainer():
         self.train_data = train_data
         self.batch_size_per_gpu = int(batch_size_per_gpu)
         self.n_epochs = int(n_epochs)
-        self.num_data_workers = int(num_data_workers)
+        self.num_data_workers = int(num_workers)
         self.drop_last = drop_last
         self.update_every = int(update_every)
         self.print_every = int(print_every)
@@ -127,9 +128,8 @@ class DistTrainer():
         if dev_data and metrics:
             cb = TesterCallback(
                 dev_data, model, metrics,
-                batch_size=batch_size_per_gpu, num_workers=num_data_workers)
-            self.callback_manager.callbacks_master += \
-                self.callback_manager.prepare_callbacks([cb])
+                batch_size=batch_size_per_gpu, num_workers=num_workers)
+            self.callback_manager.add_callback([cb], master=True)
 
         # Setup logging
         dist.barrier()
@@ -140,10 +140,7 @@ class DistTrainer():
             self.cp_save_path = None
 
         # use INFO in the master, WARN for others
-        logging.basicConfig(filename=log_path,
-                            format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
-                            datefmt='%m/%d/%Y %H:%M:%S',
-                            level=logging.INFO if self.is_master else logging.WARN)
+        initLogger(log_path, level=logging.INFO if self.is_master else logging.WARNING)
         self.logger = logging.getLogger(__name__)
         self.logger.info("Setup Distributed Trainer")
         self.logger.warning("Process pid: {}, rank: {}, local rank: {}, device: {}, fp16: {}".format(
@@ -284,18 +281,8 @@ class DistTrainer():
 
                 self.callback_manager.on_batch_end()
 
-                if ((self.validate_every > 0 and self.step % self.validate_every == 0) or
-                    (self.validate_every < 0 and self.step % len(data_iterator) == 0)):
-                    self.callback_manager.on_valid_begin()
-                    eval_res = self.callback_manager.on_validation()
-                    eval_res = list(filter(lambda x: x is not None, eval_res))
-                    if len(eval_res):
-                        eval_res, is_better = list(zip(*eval_res))
-                    else:
-                        eval_res, is_better = None, None
-                    self.callback_manager.on_valid_end(
-                        eval_res, self.metric_key, self.optimizer, is_better)
-                    dist.barrier()
+                if (self.validate_every > 0 and self.step % self.validate_every == 0):
+                    self._do_validation()
 
                 if self.cp_save_path and \
                         self.save_every > 0 and \
@@ -303,6 +290,9 @@ class DistTrainer():
                     self.save_check_point()
 
             # ================= mini-batch end ==================== #
+            if self.validate_every < 0:
+                self._do_validation()
+
         if self.save_every < 0 and self.cp_save_path:
             self.save_check_point()
             # lr decay; early stopping
@@ -350,6 +340,18 @@ class DistTrainer():
             if only_params:
                 model_to_save = model_to_save.state_dict()
             torch.save(model_to_save, path)
+
+    def _do_validation(self):
+        self.callback_manager.on_valid_begin()
+        eval_res = self.callback_manager.on_validation()
+        eval_res = list(filter(lambda x: x is not None, eval_res))
+        if len(eval_res):
+            eval_res, is_better = list(zip(*eval_res))
+        else:
+            eval_res, is_better = None, None
+        self.callback_manager.on_valid_end(
+            eval_res, self.metric_key, self.optimizer, is_better)
+        dist.barrier()
 
     def close(self):
         dist.destroy_process_group()

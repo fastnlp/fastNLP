@@ -17,6 +17,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from typing import List
+import logging
 
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])
@@ -659,15 +660,14 @@ class _pseudo_tqdm:
     """
     当无法引入tqdm，或者Trainer中设置use_tqdm为false的时候，用该方法打印数据
     """
-    
     def __init__(self, **kwargs):
-        pass
+        self.logger = logging.getLogger()
     
     def write(self, info):
-        print(info)
+        self.logger.info(info)
     
     def set_postfix_str(self, info):
-        print(info)
+        self.logger.info(info)
     
     def __getattr__(self, item):
         def pass_func(*args, **kwargs):

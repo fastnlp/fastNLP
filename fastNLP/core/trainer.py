@@ -353,6 +353,8 @@ from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
 from ._parallel_utils import _model_contains_inner_module
+from ..io.logger import initLogger
+import logging
 
 
 class Trainer(object):
@@ -547,6 +549,12 @@ class Trainer(object):
         else:
             raise TypeError("optimizer can only be torch.optim.Optimizer type, not {}.".format(type(optimizer)))
 
+        log_path = None
+        if save_path is not None:
+            log_path = os.path.join(os.path.dirname(save_path), 'log')
+        initLogger(log_path)
+        self.logger = logging.getLogger(__name__)
+
         self.use_tqdm = use_tqdm
         self.pbar = None
         self.print_every = abs(self.print_every)
@@ -588,7 +596,7 @@ class Trainer(object):
         """
         results = {}
         if self.n_epochs <= 0:
-            print(f"training epoch is {self.n_epochs}, nothing was done.")
+            self.logger.info(f"training epoch is {self.n_epochs}, nothing was done.")
             results['seconds'] = 0.
             return results
         try:
@@ -597,7 +605,7 @@ class Trainer(object):
             self._load_best_model = load_best_model
             self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
             start_time = time.time()
-            print("training epochs started " + self.start_time, flush=True)
+            self.logger.info("training epochs started " + self.start_time)
 
             try:
                 self.callback_manager.on_train_begin()
@@ -613,7 +621,7 @@ class Trainer(object):
                     raise e
 
             if self.dev_data is not None and self.best_dev_perf is not None:
-                print(
+                self.logger.info(
                     "\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
                     self.tester._format_eval_results(self.best_dev_perf), )
                 results['best_eval'] = self.best_dev_perf
@@ -623,9 +631,9 @@ class Trainer(object):
                     model_name = "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time])
                     load_succeed = self._load_model(self.model, model_name)
                     if load_succeed:
-                        print("Reloaded the best model.")
+                        self.logger.info("Reloaded the best model.")
                     else:
-                        print("Fail to reload best model.")
+                        self.logger.info("Fail to reload best model.")
         finally:
             pass
         results['seconds'] = round(time.time() - start_time, 2)
@@ -825,12 +833,12 @@ class Trainer(object):
             self.best_metric_indicator = indicator_val
         else:
             if self.increase_better is True:
-                if indicator_val > self.best_metric_indicator:
+                if indicator_val >= self.best_metric_indicator:
                     self.best_metric_indicator = indicator_val
                 else:
                     is_better = False
             else:
-                if indicator_val < self.best_metric_indicator:
+                if indicator_val <= self.best_metric_indicator:
                     self.best_metric_indicator = indicator_val
                 else:
                     is_better = False
