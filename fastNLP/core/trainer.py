@@ -353,8 +353,7 @@ from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
 from ._parallel_utils import _model_contains_inner_module
-from ..io.logger import initLogger
-import logging
+from ..io.logger import init_logger, get_logger
 
 
 class Trainer(object):
@@ -552,8 +551,8 @@ class Trainer(object):
         log_path = None
         if save_path is not None:
             log_path = os.path.join(os.path.dirname(save_path), 'log')
-        initLogger(log_path)
-        self.logger = logging.getLogger(__name__)
+        init_logger(path=log_path, stdout='tqdm' if use_tqdm else 'plain')
+        self.logger = get_logger(__name__)
 
         self.use_tqdm = use_tqdm
         self.pbar = None
@@ -701,8 +700,8 @@ class Trainer(object):
                         eval_str = "Evaluation on dev at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
                                                                                     self.n_steps) + \
                                    self.tester._format_eval_results(eval_res)
-                        pbar.write(eval_str + '\n')
-
+                        # pbar.write(eval_str + '\n')
+                        self.logger.info(eval_str)
                 # ================= mini-batch end ==================== #
 
                 # lr decay; early stopping

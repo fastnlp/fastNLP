@@ -22,7 +22,7 @@ from .optimizer import Optimizer
 from .utils import _build_args
 from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
-from  ..io.logger import initLogger
+from  ..io.logger import init_logger
 from pkg_resources import parse_version
 
 __all__ = [
@@ -140,7 +140,7 @@ class DistTrainer():
             self.cp_save_path = None
 
         # use INFO in the master, WARN for others
-        initLogger(log_path, level=logging.INFO if self.is_master else logging.WARNING)
+        init_logger(log_path, level=logging.INFO if self.is_master else logging.WARNING)
         self.logger = logging.getLogger(__name__)
         self.logger.info("Setup Distributed Trainer")
         self.logger.warning("Process pid: {}, rank: {}, local rank: {}, device: {}, fp16: {}".format(

@@ -656,10 +656,13 @@ class EvaluateCallback(Callback):
             for key, tester in self.testers.items():
                 try:
                     eval_result = tester.test()
-                    self.pbar.write("Evaluation on {}:".format(key))
-                    self.pbar.write(tester._format_eval_results(eval_result))
+                    # self.pbar.write("Evaluation on {}:".format(key))
+                    self.logger.info("Evaluation on {}:".format(key))
+                    # self.pbar.write(tester._format_eval_results(eval_result))
+                    self.logger.info(tester._format_eval_results(eval_result))
                 except Exception:
-                    self.pbar.write("Exception happens when evaluate on DataSet named `{}`.".format(key))
+                    # self.pbar.write("Exception happens when evaluate on DataSet named `{}`.".format(key))
+                    self.logger.info("Exception happens when evaluate on DataSet named `{}`.".format(key))
 
 
 class LRScheduler(Callback):

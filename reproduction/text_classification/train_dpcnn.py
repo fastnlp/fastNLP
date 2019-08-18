@@ -111,17 +111,17 @@ device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 print(device)
 
 # 4.定义train方法
-# trainer = Trainer(datainfo.datasets['train'], model, optimizer=optimizer, loss=loss,
-#                   sampler=BucketSampler(num_buckets=50, batch_size=ops.batch_size),
-#                   metrics=[metric],
-#                   dev_data=datainfo.datasets['test'], device=device,
-#                   check_code_level=-1, batch_size=ops.batch_size, callbacks=callbacks,
-#                   n_epochs=ops.train_epoch, num_workers=4)
-trainer = DistTrainer(datainfo.datasets['train'], model, optimizer=optimizer, loss=loss,
-                      metrics=[metric],
-                      dev_data=datainfo.datasets['test'], device='cuda',
-                      batch_size_per_gpu=ops.batch_size, callbacks_all=callbacks,
-                      n_epochs=ops.train_epoch, num_workers=4)
+trainer = Trainer(datainfo.datasets['train'], model, optimizer=optimizer, loss=loss,
+                  sampler=BucketSampler(num_buckets=50, batch_size=ops.batch_size),
+                  metrics=[metric], use_tqdm=False,
+                  dev_data=datainfo.datasets['test'], device=device,
+                  check_code_level=-1, batch_size=ops.batch_size, callbacks=callbacks,
+                  n_epochs=ops.train_epoch, num_workers=4)
+# trainer = DistTrainer(datainfo.datasets['train'], model, optimizer=optimizer, loss=loss,
+#                       metrics=[metric],
+#                       dev_data=datainfo.datasets['test'], device='cuda',
+#                       batch_size_per_gpu=ops.batch_size, callbacks_all=callbacks,
+#                       n_epochs=ops.train_epoch, num_workers=4)
 
 
 if __name__ == "__main__":

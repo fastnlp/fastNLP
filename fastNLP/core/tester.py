@@ -56,6 +56,7 @@ from .utils import _move_model_to_device
 from ._parallel_utils import _data_parallel_wrapper
 from ._parallel_utils import _model_contains_inner_module
 from functools import partial
+from ..io.logger import init_logger, get_logger
 
 __all__ = [
     "Tester"
@@ -103,6 +104,8 @@ class Tester(object):
         self.batch_size = batch_size
         self.verbose = verbose
         self.use_tqdm = use_tqdm
+        init_logger(stdout='tqdm' if use_tqdm else 'plain')
+        self.logger = get_logger(__name__)
 
         if isinstance(data, DataSet):
             self.data_iterator = DataSetIter(
@@ -181,7 +184,8 @@ class Tester(object):
 
                     end_time = time.time()
                     test_str = f'Evaluate data in {round(end_time - start_time, 2)} seconds!'
-                    pbar.write(test_str)
+                    # pbar.write(test_str)
+                    self.logger.info(test_str)
                     pbar.close()
         except _CheckError as e:
             prev_func_signature = _get_func_signature(self._predict_func)
