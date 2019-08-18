@@ -68,7 +68,8 @@ class Loader:
         """
         raise NotImplementedError(f"{self.__class__} cannot download data automatically.")
     
-    def _get_dataset_path(self, dataset_name):
+    @staticmethod
+    def _get_dataset_path(dataset_name):
         """
         传入dataset的名称，获取读取数据的目录。如果数据不存在，会尝试自动下载并缓存
 

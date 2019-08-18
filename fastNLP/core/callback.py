@@ -51,13 +51,19 @@ callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:
 """
 __all__ = [
     "Callback",
+
     "GradientClipCallback",
     "EarlyStopCallback",
-    "TensorboardCallback",
     "FitlogCallback",
+    "EvaluateCallback",
     "LRScheduler",
     "ControlC",
-    "EvaluateCallback",
+    "LRFinder",
+    "TensorboardCallback",
+    "WarmupCallback",
+    "SaveModelCallback",
+    "EchoCallback",
+    "TesterCallback",
     
     "CallbackException",
     "EarlyStopError"
@@ -718,7 +724,7 @@ class SmoothValue(object):
         self.smooth = None
     
     def add_value(self, val: float) -> None:
-        "Add `val` to calculate updated smoothed value."
+        """Add `val` to calculate updated smoothed value."""
         self.n += 1
         self.mov_avg = self.beta * self.mov_avg + (1 - self.beta) * val
         self.smooth = self.mov_avg / (1 - self.beta ** self.n)
