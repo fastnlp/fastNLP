@@ -86,7 +86,7 @@ except:
 from ..io.model_io import ModelSaver, ModelLoader
 from .dataset import DataSet
 from .tester import Tester
-import logging
+from ..io import logger
 
 try:
     import fitlog
@@ -178,7 +178,7 @@ class Callback(object):
 
     @property
     def logger(self):
-        return getattr(self._trainer, 'logger', logging.getLogger(__name__))
+        return getattr(self._trainer, 'logger', logger)
 
     def on_train_begin(self):
         """

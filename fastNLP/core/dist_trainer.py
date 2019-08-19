@@ -9,7 +9,6 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 import os
 from tqdm import tqdm
-import logging
 import time
 from datetime import datetime, timedelta
 from functools import partial
@@ -22,7 +21,8 @@ from .optimizer import Optimizer
 from .utils import _build_args
 from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
-from  ..io.logger import init_logger
+from  ..io import logger
+import logging
 from pkg_resources import parse_version
 
 __all__ = [
@@ -140,8 +140,8 @@ class DistTrainer():
             self.cp_save_path = None
 
         # use INFO in the master, WARN for others
-        init_logger(log_path, level=logging.INFO if self.is_master else logging.WARNING)
-        self.logger = logging.getLogger(__name__)
+        logger.setLevel(logging.INFO  if self.is_master else logging.WARNING)
+        self.logger = logger
         self.logger.info("Setup Distributed Trainer")
         self.logger.warning("Process pid: {}, rank: {}, local rank: {}, device: {}, fp16: {}".format(
                         os.getpid(), self.rank, self.local_rank, self.device, self.fp16 if self.fp16 else False))

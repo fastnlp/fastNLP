@@ -353,7 +353,7 @@ from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
 from ._parallel_utils import _model_contains_inner_module
-from ..io.logger import init_logger, get_logger
+from ..io import logger
 
 
 class Trainer(object):
@@ -548,11 +548,7 @@ class Trainer(object):
         else:
             raise TypeError("optimizer can only be torch.optim.Optimizer type, not {}.".format(type(optimizer)))
 
-        log_path = None
-        if save_path is not None:
-            log_path = os.path.join(os.path.dirname(save_path), 'log')
-        init_logger(path=log_path, stdout='tqdm' if use_tqdm else 'plain')
-        self.logger = get_logger(__name__)
+        self.logger = logger
 
         self.use_tqdm = use_tqdm
         self.pbar = None
@@ -701,7 +697,7 @@ class Trainer(object):
                                                                                     self.n_steps) + \
                                    self.tester._format_eval_results(eval_res)
                         # pbar.write(eval_str + '\n')
-                        self.logger.info(eval_str)
+                        self.logger.info(eval_str + '\n')
                 # ================= mini-batch end ==================== #
 
                 # lr decay; early stopping

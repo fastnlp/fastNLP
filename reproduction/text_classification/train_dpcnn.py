@@ -15,13 +15,14 @@ from fastNLP.core.const import Const as C
 from fastNLP.core.vocabulary import VocabularyOption
 from fastNLP.core.dist_trainer import DistTrainer
 from utils.util_init import set_rng_seeds
+from fastNLP.io import logger
 import os
 # os.environ['FASTNLP_BASE_URL'] = 'http://10.141.222.118:8888/file/download/'
 # os.environ['FASTNLP_CACHE_DIR'] = '/remote-home/hyan01/fastnlp_caches'
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
-
 # hyper
+logger.add_file('log', 'INFO')
 
 class Config():
     seed = 12345
@@ -46,11 +47,11 @@ class Config():
         self.datapath = {k: os.path.join(self.datadir, v)
                          for k, v in self.datafile.items()}
 
-
 ops = Config()
 
 set_rng_seeds(ops.seed)
-print('RNG SEED: {}'.format(ops.seed))
+# print('RNG SEED: {}'.format(ops.seed))
+logger.info('RNG SEED %d'%ops.seed)
 
 # 1.task相关信息：利用dataloader载入dataInfo
 
@@ -81,8 +82,9 @@ print(embedding.embedding.weight.data.mean(), embedding.embedding.weight.data.st
 # embedding = StackEmbedding([StaticEmbedding(vocab), CNNCharEmbedding(vocab, 100)])
 datainfo.datasets['train'] = datainfo.datasets['train'][:1000]
 datainfo.datasets['test'] = datainfo.datasets['test'][:1000]
-print(datainfo)
-print(datainfo.datasets['train'][0])
+# print(datainfo)
+# print(datainfo.datasets['train'][0])
+logger.info(datainfo)
 
 model = DPCNN(init_embed=embedding, num_cls=len(datainfo.vocabs[C.TARGET]),
               embed_dropout=ops.embed_dropout, cls_dropout=ops.cls_dropout)
@@ -108,12 +110,13 @@ callbacks.append(LRScheduler(CosineAnnealingLR(optimizer, 5)))
 
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
-print(device)
+# print(device)
+logger.info(device)
 
 # 4.定义train方法
 trainer = Trainer(datainfo.datasets['train'], model, optimizer=optimizer, loss=loss,
                   sampler=BucketSampler(num_buckets=50, batch_size=ops.batch_size),
-                  metrics=[metric], use_tqdm=False,
+                  metrics=[metric], use_tqdm=False, save_path='save',
                   dev_data=datainfo.datasets['test'], device=device,
                   check_code_level=-1, batch_size=ops.batch_size, callbacks=callbacks,
                   n_epochs=ops.train_epoch, num_workers=4)

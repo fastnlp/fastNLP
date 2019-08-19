@@ -56,7 +56,7 @@ from .utils import _move_model_to_device
 from ._parallel_utils import _data_parallel_wrapper
 from ._parallel_utils import _model_contains_inner_module
 from functools import partial
-from ..io.logger import init_logger, get_logger
+from ..io import logger
 
 __all__ = [
     "Tester"
@@ -104,8 +104,7 @@ class Tester(object):
         self.batch_size = batch_size
         self.verbose = verbose
         self.use_tqdm = use_tqdm
-        init_logger(stdout='tqdm' if use_tqdm else 'plain')
-        self.logger = get_logger(__name__)
+        self.logger = logger
 
         if isinstance(data, DataSet):
             self.data_iterator = DataSetIter(
