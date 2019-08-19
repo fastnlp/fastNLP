@@ -7,6 +7,7 @@ torch.FloatTensor。所有的embedding都可以使用 `self.num_embedding` 获�
 
 __all__ = [
     "Embedding",
+    "TokenEmbedding",
     "StaticEmbedding",
     "ElmoEmbedding",
     "BertEmbedding",
@@ -14,11 +15,11 @@ __all__ = [
     "StackEmbedding",
     "LSTMCharEmbedding",
     "CNNCharEmbedding",
-    "get_embeddings"
+    "get_embeddings",
 ]
 
 
-from .embedding import Embedding
+from .embedding import Embedding, TokenEmbedding
 from .static_embedding import StaticEmbedding
 from .elmo_embedding import ElmoEmbedding
 from .bert_embedding import BertEmbedding, BertWordPieceEncoder
