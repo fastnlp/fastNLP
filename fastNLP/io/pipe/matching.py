@@ -89,13 +89,15 @@ class MatchingBertPipe(Pipe):
         data_bundle.set_vocab(word_vocab, Const.INPUT)
         data_bundle.set_vocab(target_vocab, Const.TARGET)
 
-        input_fields = [Const.INPUT, Const.INPUT_LEN, Const.TARGET]
+        input_fields = [Const.INPUT, Const.INPUT_LEN]
         target_fields = [Const.TARGET]
 
         for name, dataset in data_bundle.datasets.items():
             dataset.add_seq_len(Const.INPUT)
             dataset.set_input(*input_fields, flag=True)
-            dataset.set_target(*target_fields, flag=True)
+            for fields in target_fields:
+                if dataset.has_field(fields):
+                    dataset.set_target(fields, flag=True)
 
         return data_bundle
 
@@ -210,14 +212,16 @@ class MatchingPipe(Pipe):
         data_bundle.set_vocab(word_vocab, Const.INPUTS(0))
         data_bundle.set_vocab(target_vocab, Const.TARGET)
 
-        input_fields = [Const.INPUTS(0), Const.INPUTS(1), Const.INPUT_LENS(0), Const.INPUT_LENS(1), Const.TARGET]
+        input_fields = [Const.INPUTS(0), Const.INPUTS(1), Const.INPUT_LENS(0), Const.INPUT_LENS(1)]
         target_fields = [Const.TARGET]
 
         for name, dataset in data_bundle.datasets.items():
             dataset.add_seq_len(Const.INPUTS(0), Const.INPUT_LENS(0))
             dataset.add_seq_len(Const.INPUTS(1), Const.INPUT_LENS(1))
             dataset.set_input(*input_fields, flag=True)
-            dataset.set_target(*target_fields, flag=True)
+            for fields in target_fields:
+                if dataset.has_field(fields):
+                    dataset.set_target(fields, flag=True)
 
         return data_bundle
 

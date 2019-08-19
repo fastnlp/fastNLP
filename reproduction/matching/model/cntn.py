@@ -3,10 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from torch.nn import CrossEntropyLoss
-
-from fastNLP.models import BaseModel
-from fastNLP.embeddings.embedding import TokenEmbedding
+from fastNLP.models.base_model import BaseModel
+from fastNLP.embeddings import TokenEmbedding
 from fastNLP.core.const import Const
 
 
@@ -83,13 +81,12 @@ class CNTNModel(BaseModel):
         self.weight_V = nn.Linear(2 * ns, r)
         self.weight_u = nn.Sequential(nn.Dropout(p=dropout_rate), nn.Linear(r, num_labels))
 
-    def forward(self, words1, words2, seq_len1, seq_len2, target=None):
+    def forward(self, words1, words2, seq_len1, seq_len2):
         """
         :param words1: [batch, seq_len, emb_size] Question.
         :param words2: [batch, seq_len, emb_size] Answer.
         :param seq_len1: [batch]
         :param seq_len2: [batch]
-        :param target: [batch] Glod labels.
         :return:
         """
         in_q = self.embedding(words1)
@@ -109,12 +106,7 @@ class CNTNModel(BaseModel):
         in_a = self.fc_q(in_a.view(in_a.size(0), -1))
         score = torch.tanh(self.weight_u(self.weight_M(in_q, in_a) + self.weight_V(torch.cat((in_q, in_a), -1))))
 
-        if target is not None:
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(score, target)
-            return {Const.LOSS: loss, Const.OUTPUT: score}
-        else:
-            return {Const.OUTPUT: score}
+        return {Const.OUTPUT: score}
 
-    def predict(self, **kwargs):
-        return self.forward(**kwargs)
+    def predict(self, words1, words2, seq_len1, seq_len2):
+        return self.forward(words1, words2, seq_len1, seq_len2)
