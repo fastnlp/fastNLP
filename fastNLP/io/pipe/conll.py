@@ -158,9 +158,9 @@ class Conll2003Pipe(Pipe):
         _indexize(data_bundle, input_field_names=Const.INPUT, target_field_names=['pos', 'ner'])
         # chunk中存在一些tag只在dev中出现，没在train中
         tgt_vocab = Vocabulary(unknown=None, padding=None)
-        tgt_vocab.from_dataset(*data_bundle.datasets.values(), field_name='ner')
-        tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name='ner')
-        data_bundle.set_vocab(tgt_vocab, 'ner')
+        tgt_vocab.from_dataset(*data_bundle.datasets.values(), field_name='chunk')
+        tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name='chunk')
+        data_bundle.set_vocab(tgt_vocab, 'chunk')
 
         input_fields = [Const.INPUT, Const.INPUT_LEN]
         target_fields = ['pos', 'ner', 'chunk', Const.INPUT_LEN]
