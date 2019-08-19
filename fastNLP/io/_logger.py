@@ -133,10 +133,12 @@ def _get_logger(name=None, level='INFO'):
 
 
 class FastNLPLogger(logging.Logger):
-    def add_file(self, path, level):
+    def add_file(self, path='./log.txt', level='INFO'):
+        """add log output file and level"""
         _add_file_handler(self, path, level)
 
-    def set_stdout(self, stdout, level):
+    def set_stdout(self, stdout='tqdm', level='INFO'):
+        """set stdout format and level"""
         _set_stdout_handler(self, stdout, level)
 
 _logger = _init_logger(path=None)

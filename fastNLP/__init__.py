@@ -13,11 +13,11 @@ fastNLP 中最常用的组件可以直接从 fastNLP 包中 import ，他们的�
 __all__ = [
     "Instance",
     "FieldArray",
-
+    
     "DataSetIter",
     "BatchIter",
     "TorchLoaderIter",
-
+    
     "Vocabulary",
     "DataSet",
     "Const",
@@ -51,7 +51,8 @@ __all__ = [
     
     "LossFunc",
     "CrossEntropyLoss",
-    "L1Loss", "BCELoss",
+    "L1Loss",
+    "BCELoss",
     "NLLLoss",
     "LossInForward",
     

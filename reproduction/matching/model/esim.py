@@ -2,10 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torch.nn import CrossEntropyLoss
-
-from fastNLP.models import BaseModel
-from fastNLP.embeddings.embedding import TokenEmbedding
+from fastNLP.models.base_model import BaseModel
+from fastNLP.embeddings import TokenEmbedding
 from fastNLP.core.const import Const
 from fastNLP.core.utils import seq_len_to_mask
 
@@ -42,13 +40,12 @@ class ESIMModel(BaseModel):
         nn.init.xavier_uniform_(self.classifier[1].weight.data)
         nn.init.xavier_uniform_(self.classifier[4].weight.data)
 
-    def forward(self, words1, words2, seq_len1, seq_len2, target=None):
+    def forward(self, words1, words2, seq_len1, seq_len2):
         """
         :param words1: [batch, seq_len]
         :param words2: [batch, seq_len]
         :param seq_len1: [batch]
         :param seq_len2: [batch]
-        :param target:
         :return:
         """
         mask1 = seq_len_to_mask(seq_len1, words1.size(1))
@@ -82,16 +79,10 @@ class ESIMModel(BaseModel):
         logits = torch.tanh(self.classifier(out))
         # logits = self.classifier(out)
 
-        if target is not None:
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits, target)
+        return {Const.OUTPUT: logits}
 
-            return {Const.LOSS: loss, Const.OUTPUT: logits}
-        else:
-            return {Const.OUTPUT: logits}
-
-    def predict(self, **kwargs):
-        pred = self.forward(**kwargs)[Const.OUTPUT].argmax(-1)
+    def predict(self, words1, words2, seq_len1, seq_len2):
+        pred = self.forward(words1, words2, seq_len1, seq_len2)[Const.OUTPUT].argmax(-1)
         return {Const.OUTPUT: pred}
 
     # input [batch_size, len , hidden]
