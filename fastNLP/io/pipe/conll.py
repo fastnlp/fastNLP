@@ -5,8 +5,8 @@ from ...core.const import Const
 from ..loader.conll import Conll2003NERLoader, OntoNotesNERLoader
 from .utils import _indexize, _add_words_field
 from .utils import _add_chars_field
-from ..loader.conll import PeopleDailyNERLoader, WeiboNERLoader, MsraNERLoader
-
+from ..loader.conll import PeopleDailyNERLoader, WeiboNERLoader, MsraNERLoader, ConllLoader
+from ...core.vocabulary import Vocabulary
 
 class _NERPipe(Pipe):
     """
@@ -78,7 +78,7 @@ class Conll2003NERPipe(_NERPipe):
        :header: "raw_words", "words", "target", "seq_len"
 
        "[Nadim, Ladki]", "[2, 3]", "[1, 2]", 2
-       "[AL-AIN, United, Arab, ...]", "[4, 5, 6,...]", "[3, 4]", 6
+       "[AL-AIN, United, Arab, ...]", "[4, 5, 6,...]", "[3, 4,...]", 6
        "[...]", "[...]", "[...]", .
 
     raw_words列为List[str], 是未转换的原始数据; words列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
@@ -100,6 +100,90 @@ class Conll2003NERPipe(_NERPipe):
         data_bundle = self.process(data_bundle)
 
         return data_bundle
+
+
+class Conll2003Pipe(Pipe):
+    def __init__(self, chunk_encoding_type='bioes', ner_encoding_type='bioes', lower: bool = False, target_pad_val=0):
+        """
+        经过该Pipe后，DataSet中的内容如下
+
+        .. csv-table::
+           :header: "raw_words", "words", "pos", "chunk", "ner", "seq_len"
+
+           "[Nadim, Ladki]", "[2, 3]", "[0, 0]", "[1, 2]", "[1, 2]", 2
+           "[AL-AIN, United, Arab, ...]", "[4, 5, 6,...]", "[1, 2...]", "[3, 4...]", "[3, 4...]", 6
+           "[...]", "[...]", "[...]", "[...]", "[...]".
+
+        其中words, seq_len是input; pos, chunk, ner, seq_len是target
+
+        :param str chunk_encoding_type: 支持bioes, bio。
+        :param str ner_encoding_type: 支持bioes, bio。
+        :param bool lower: 是否将words列小写化后再建立词表
+        :param int target_pad_val: pos, ner, chunk列的padding值
+        """
+        if chunk_encoding_type == 'bio':
+            self.chunk_convert_tag = iob2
+        else:
+            self.chunk_convert_tag = lambda tags: iob2bioes(iob2(tags))
+        if ner_encoding_type == 'bio':
+            self.ner_convert_tag = iob2
+        else:
+            self.ner_convert_tag = lambda tags: iob2bioes(iob2(tags))
+        self.lower = lower
+        self.target_pad_val = int(target_pad_val)
+
+    def process(self, data_bundle)->DataBundle:
+        """
+        输入的DataSet应该类似于如下的形式
+
+        .. csv-table::
+           :header: "raw_words", "pos", "chunk", "ner"
+
+           "[Nadim, Ladki]", "[NNP, NNP]", "[B-NP, I-NP]", "[B-PER, I-PER]"
+           "[AL-AIN, United, Arab, ...]", "[NNP, NNP...]", "[B-NP, B-NP, ...]", "[B-LOC, B-LOC,...]"
+           "[...]", "[...]", "[...]", "[...]".
+
+        :param data_bundle:
+        :return: 传入的DataBundle
+        """
+        # 转换tag
+        for name, dataset in data_bundle.datasets.items():
+            dataset.drop(lambda x: "-DOCSTART-" in x[Const.RAW_WORD])
+            dataset.apply_field(self.chunk_convert_tag, field_name='chunk', new_field_name='chunk')
+            dataset.apply_field(self.ner_convert_tag, field_name='ner', new_field_name='ner')
+
+        _add_words_field(data_bundle, lower=self.lower)
+
+        # index
+        _indexize(data_bundle, input_field_names=Const.INPUT, target_field_names=['pos', 'ner'])
+        # chunk中存在一些tag只在dev中出现，没在train中
+        tgt_vocab = Vocabulary(unknown=None, padding=None)
+        tgt_vocab.from_dataset(*data_bundle.datasets.values(), field_name='ner')
+        tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name='ner')
+        data_bundle.set_vocab(tgt_vocab, 'ner')
+
+        input_fields = [Const.INPUT, Const.INPUT_LEN]
+        target_fields = ['pos', 'ner', 'chunk', Const.INPUT_LEN]
+
+        for name, dataset in data_bundle.datasets.items():
+            dataset.set_pad_val('pos', self.target_pad_val)
+            dataset.set_pad_val('ner', self.target_pad_val)
+            dataset.set_pad_val('chunk', self.target_pad_val)
+            dataset.add_seq_len(Const.INPUT)
+
+        data_bundle.set_input(*input_fields)
+        data_bundle.set_target(*target_fields)
+
+        return data_bundle
+
+    def process_from_file(self, paths):
+        """
+
+        :param paths:
+        :return:
+        """
+        data_bundle = ConllLoader(headers=['raw_words', 'pos', 'chunk', 'ner']).load(paths)
+        return self.process(data_bundle)
 
 
 class OntoNotesNERPipe(_NERPipe):
@@ -171,7 +255,7 @@ class _CNNERPipe(Pipe):
         _add_chars_field(data_bundle, lower=False)
 
         # index
-        _indexize(data_bundle, input_field_name=Const.CHAR_INPUT, target_field_name=Const.TARGET)
+        _indexize(data_bundle, input_field_names=Const.CHAR_INPUT, target_field_names=Const.TARGET)
 
         input_fields = [Const.TARGET, Const.CHAR_INPUT, Const.INPUT_LEN]
         target_fields = [Const.TARGET, Const.INPUT_LEN]

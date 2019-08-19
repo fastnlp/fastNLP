@@ -4,7 +4,8 @@ from ...core.const import Const
 
 def iob2(tags:List[str])->List[str]:
     """
-    检查数据是否是合法的IOB数据，如果是IOB1会被自动转换为IOB2。两种格式的区别见https://datascience.stackexchange.com/questions/37824/difference-between-iob-and-iob2-format
+    检查数据是否是合法的IOB数据，如果是IOB1会被自动转换为IOB2。两种格式的区别见
+    https://datascience.stackexchange.com/questions/37824/difference-between-iob-and-iob2-format
 
     :param tags: 需要转换的tags
     """
@@ -76,27 +77,32 @@ def _raw_split(sent):
     return sent.split()
 
 
-def _indexize(data_bundle, input_field_name=Const.INPUT, target_field_name=Const.TARGET):
+def _indexize(data_bundle, input_field_names=Const.INPUT, target_field_names=Const.TARGET):
     """
     在dataset中的field_name列建立词表，Const.TARGET列建立词表，并把词表加入到data_bundle中。
 
     :param data_bundle:
-    :param: str input_field_name:
-    :param: str target_field_name: 这一列的vocabulary没有unknown和padding
+    :param: str,list input_field_names:
+    :param: str,list target_field_names: 这一列的vocabulary没有unknown和padding
     :return:
     """
-    src_vocab = Vocabulary()
-    src_vocab.from_dataset(data_bundle.datasets['train'], field_name=input_field_name,
-                           no_create_entry_dataset=[dataset for name, dataset in data_bundle.datasets.items() if
-                                                    name != 'train'])
-    src_vocab.index_dataset(*data_bundle.datasets.values(), field_name=input_field_name)
+    if isinstance(input_field_names, str):
+        input_field_names = [input_field_names]
+    if isinstance(target_field_names, str):
+        target_field_names = [target_field_names]
+    for input_field_name in input_field_names:
+        src_vocab = Vocabulary()
+        src_vocab.from_dataset(data_bundle.datasets['train'], field_name=input_field_name,
+                               no_create_entry_dataset=[dataset for name, dataset in data_bundle.datasets.items() if
+                                                        name != 'train'])
+        src_vocab.index_dataset(*data_bundle.datasets.values(), field_name=input_field_name)
+        data_bundle.set_vocab(src_vocab, input_field_name)
 
-    tgt_vocab = Vocabulary(unknown=None, padding=None)
-    tgt_vocab.from_dataset(data_bundle.datasets['train'], field_name=target_field_name)
-    tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name=target_field_name)
-
-    data_bundle.set_vocab(src_vocab, input_field_name)
-    data_bundle.set_vocab(tgt_vocab, target_field_name)
+    for target_field_name in target_field_names:
+        tgt_vocab = Vocabulary(unknown=None, padding=None)
+        tgt_vocab.from_dataset(data_bundle.datasets['train'], field_name=target_field_name)
+        tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name=target_field_name)
+        data_bundle.set_vocab(tgt_vocab, target_field_name)
 
     return data_bundle
 

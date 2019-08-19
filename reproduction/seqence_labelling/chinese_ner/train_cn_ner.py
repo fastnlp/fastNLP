@@ -47,7 +47,7 @@ class ChineseNERPipe(Pipe):
         _add_chars_field(data_bundle, lower=False)
 
         # index
-        _indexize(data_bundle, input_field_name=C.CHAR_INPUT, target_field_name=C.TARGET)
+        _indexize(data_bundle, input_field_names=C.CHAR_INPUT, target_field_names=C.TARGET)
 
         for name, dataset in data_bundle.datasets.items():
             dataset.set_pad_val(C.TARGET, self.target_pad_val)

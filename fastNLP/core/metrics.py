@@ -358,6 +358,7 @@ def _bmes_tag_to_spans(tags, ignore_labels=None):
     """
     给定一个tags的lis，比如['S-song', 'B-singer', 'M-singer', 'E-singer', 'S-moive', 'S-actor']。
     返回[('song', (0, 1)), ('singer', (1, 4)), ('moive', (4, 5)), ('actor', (5, 6))] (左闭右开区间)
+    也可以是单纯的['S', 'B', 'M', 'E', 'B', 'M', 'M',...]序列
 
     :param tags: List[str],
     :param ignore_labels: List[str], 在该list中的label将被忽略

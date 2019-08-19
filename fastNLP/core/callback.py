@@ -646,7 +646,7 @@ class EvaluateCallback(Callback):
             raise TypeError("data receives dict[DataSet] or DataSet object.")
 
     def on_train_begin(self):
-        if len(self.datasets) > 0and self.trainer.dev_data is None:
+        if len(self.datasets) > 0 and self.trainer.dev_data is None:
             raise RuntimeError("Trainer has no dev data, you cannot pass extra DataSet to do evaluation.")
 
         if len(self.datasets) > 0:
