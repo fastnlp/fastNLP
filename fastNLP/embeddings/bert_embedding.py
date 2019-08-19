@@ -61,6 +61,9 @@ class BertEmbedding(ContextualEmbedding):
 
         # 根据model_dir_or_name检查是否存在并下载
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
+            if 'cn' in model_dir_or_name.lower() and pool_method not in ('first', 'last'):
+                warnings.warn("For Chinese bert, pooled_method should choose from 'first', 'last' in order to achieve"
+                              " faster speed.")
             model_url = _get_embedding_url('bert', model_dir_or_name.lower())
             model_dir = cached_path(model_url, name='embedding')
             # 检查是否存在
@@ -91,18 +94,32 @@ class BertEmbedding(ContextualEmbedding):
         :param torch.LongTensor words: [batch_size, max_len]
         :return: torch.FloatTensor. batch_size x max_len x (768*len(self.layers))
         """
-        if self._word_sep_index:  # 不能drop sep
-            sep_mask = words.eq(self._word_sep_index)
         words = self.drop_word(words)
-        if self._word_sep_index:
-            words.masked_fill_(sep_mask, self._word_sep_index)
         outputs = self._get_sent_reprs(words)
         if outputs is not None:
-            return self.dropout(words)
+            return self.dropout(outputs)
         outputs = self.model(words)
         outputs = torch.cat([*outputs], dim=-1)
 
         return self.dropout(outputs)
+
+    def drop_word(self, words):
+        """
+        按照设定随机将words设置为unknown_index。
+
+        :param torch.LongTensor words: batch_size x max_len
+        :return:
+        """
+        if self.word_dropout > 0 and self.training:
+            with torch.no_grad():
+                if self._word_sep_index:  # 不能drop sep
+                    sep_mask = words.eq(self._word_sep_index)
+                mask = torch.ones_like(words).float() * self.word_dropout
+                mask = torch.bernoulli(mask).byte()  # dropout_word越大，越多位置为1
+                words = words.masked_fill(mask, self._word_unk_index)
+                if self._word_sep_index:
+                    words.masked_fill_(sep_mask, self._word_sep_index)
+        return words
 
     @property
     def requires_grad(self):
@@ -134,10 +151,12 @@ class BertWordPieceEncoder(nn.Module):
     :param str layers: 最终结果中的表示。以','隔开层数，可以以负数去索引倒数几层
     :param bool pooled_cls: 返回的句子开头的[CLS]是否使用预训练中的BertPool映射一下，仅在include_cls_sep时有效。如果下游任务只取
         [CLS]做预测，一般该值为True。
+    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
+    :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
     :param bool requires_grad: 是否需要gradient。
     """
-    def __init__(self, model_dir_or_name: str='en-base-uncased', layers: str='-1',
-                    pooled_cls: bool = False, requires_grad: bool=False):
+    def __init__(self, model_dir_or_name: str='en-base-uncased', layers: str='-1', pooled_cls: bool = False,
+                 word_dropout=0, dropout=0, requires_grad: bool=False):
         super().__init__()
 
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
@@ -150,8 +169,12 @@ class BertWordPieceEncoder(nn.Module):
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
         self.model = _WordPieceBertModel(model_dir=model_dir, layers=layers, pooled_cls=pooled_cls)
+        self._sep_index = self.model._sep_index
+        self._wordpiece_unk_index = self.model._wordpiece_unknown_index
         self._embed_size = len(self.model.layers) * self.model.encoder.hidden_size
         self.requires_grad = requires_grad
+        self.word_dropout = word_dropout
+        self.dropout_layer = nn.Dropout(dropout)
 
     @property
     def requires_grad(self):
@@ -199,13 +222,41 @@ class BertWordPieceEncoder(nn.Module):
         计算words的bert embedding表示。传入的words中应该自行包含[CLS]与[SEP]的tag。
 
         :param words: batch_size x max_len
-        :param token_type_ids: batch_size x max_len, 用于区分前一句和后一句话
+        :param token_type_ids: batch_size x max_len, 用于区分前一句和后一句话. 如果不传入，则自动生成(大部分情况，都不需要输入),
+            第一个[SEP]及之前为0, 第二个[SEP]及到第一个[SEP]之间为1; 第三个[SEP]及到第二个[SEP]之间为0，依次往后推。
         :return: torch.FloatTensor. batch_size x max_len x (768*len(self.layers))
         """
+        with torch.no_grad():
+            sep_mask = word_pieces.eq(self._sep_index)  # batch_size x max_len
+            if token_type_ids is None:
+                sep_mask_cumsum = sep_mask.flip(dims=[-1]).cumsum(dim=-1).flip(dims=[-1])
+                token_type_ids = sep_mask_cumsum.fmod(2)
+                if token_type_ids[0, 0].item():  # 如果开头是奇数，则需要flip一下结果，因为需要保证开头为0
+                    token_type_ids = token_type_ids.eq(0).long()
+
+        word_pieces = self.drop_word(word_pieces)
         outputs = self.model(word_pieces, token_type_ids)
         outputs = torch.cat([*outputs], dim=-1)
 
-        return outputs
+        return self.dropout_layer(outputs)
+
+    def drop_word(self, words):
+        """
+        按照设定随机将words设置为unknown_index。
+
+        :param torch.LongTensor words: batch_size x max_len
+        :return:
+        """
+        if self.word_dropout > 0 and self.training:
+            with torch.no_grad():
+                if self._word_sep_index:  # 不能drop sep
+                    sep_mask = words.eq(self._wordpiece_unk_index)
+                mask = torch.ones_like(words).float() * self.word_dropout
+                mask = torch.bernoulli(mask).byte()  # dropout_word越大，越多位置为1
+                words = words.masked_fill(mask, self._word_unk_index)
+                if self._word_sep_index:
+                    words.masked_fill_(sep_mask, self._wordpiece_unk_index)
+        return words
 
 
 class _WordBertModel(nn.Module):
@@ -288,11 +339,11 @@ class _WordBertModel(nn.Module):
             word_pieces = self.tokenzier.convert_tokens_to_ids(word_pieces)
             word_to_wordpieces.append(word_pieces)
             word_pieces_lengths.append(len(word_pieces))
-        print("Found(Or seg into word pieces) {} words out of {}.".format(found_count, len(vocab)))
         self._cls_index = self.tokenzier.vocab['[CLS]']
         self._sep_index = self.tokenzier.vocab['[SEP]']
         self._word_pad_index = vocab.padding_idx
         self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
+        print("Found(Or segment into word pieces) {} words out of {}.".format(found_count, len(vocab)))
         self.word_to_wordpieces = np.array(word_to_wordpieces)
         self.word_pieces_lengths = nn.Parameter(torch.LongTensor(word_pieces_lengths), requires_grad=False)
         print("Successfully generate word pieces.")
@@ -339,7 +390,7 @@ class _WordBertModel(nn.Module):
                 sep_mask_cumsum = sep_mask.flip(dims=[-1]).cumsum(dim=-1).flip(dims=[-1])
                 token_type_ids = sep_mask_cumsum.fmod(2)
                 if token_type_ids[0, 0].item():  # 如果开头是奇数，则需要flip一下结果，因为需要保证开头为0
-                    token_type_ids = token_type_ids.eq(0).float()
+                    token_type_ids = token_type_ids.eq(0).long()
             else:
                 token_type_ids = torch.zeros_like(word_pieces)
         # 2. 获取hidden的结果，根据word_pieces进行对应的pool计算

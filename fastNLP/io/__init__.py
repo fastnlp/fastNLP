@@ -30,6 +30,9 @@ __all__ = [
     'Conll2003NERLoader',
     'OntoNotesNERLoader',
     'CTBLoader',
+    "MsraNERLoader",
+    "WeiboNERLoader",
+    "PeopleDailyNERLoader",
 
     'CSVLoader',
     'JsonLoader',
@@ -50,6 +53,9 @@ __all__ = [
 
     "Conll2003NERPipe",
     "OntoNotesNERPipe",
+    "MsraNERPipe",
+    "PeopleDailyPipe",
+    "WeiboNERPipe",
 
     "MatchingBertPipe",
     "RTEBertPipe",

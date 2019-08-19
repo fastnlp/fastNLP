@@ -4,6 +4,8 @@ from .utils import iob2, iob2bioes
 from ...core.const import Const
 from ..loader.conll import Conll2003NERLoader, OntoNotesNERLoader
 from .utils import _indexize, _add_words_field
+from .utils import _add_chars_field
+from ..loader.conll import PeopleDailyNERLoader, WeiboNERLoader, MsraNERLoader
 
 
 class _NERPipe(Pipe):
@@ -17,7 +19,7 @@ class _NERPipe(Pipe):
 
     :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
     :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
-    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为-100。
+    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为0。
     """
 
     def __init__(self, encoding_type: str = 'bio', lower: bool = False, target_pad_val=0):
@@ -32,31 +34,16 @@ class _NERPipe(Pipe):
         """
         支持的DataSet的field为
 
-        .. csv-table:: Following is a demo layout of DataSet returned by Conll2003Loader
+        .. csv-table::
            :header: "raw_words", "target"
 
            "[Nadim, Ladki]", "[B-PER, I-PER]"
            "[AL-AIN, United, Arab, ...]", "[B-LOC, B-LOC, I-LOC, ...]"
            "[...]", "[...]"
 
-
         :param DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]。
             在传入DataBundle基础上原位修改。
         :return: DataBundle
-
-        Example::
-
-            data_bundle = Conll2003Loader().load('/path/to/conll2003/')
-            data_bundle = Conll2003NERPipe().process(data_bundle)
-
-            # 获取train
-            tr_data = data_bundle.get_dataset('train')
-
-            # 获取target这个field的词表
-            target_vocab = data_bundle.get_vocab('target')
-            # 获取words这个field的词表
-            word_vocab = data_bundle.get_vocab('words')
-
         """
         # 转换tag
         for name, dataset in data_bundle.datasets.items():
@@ -79,18 +66,6 @@ class _NERPipe(Pipe):
 
         return data_bundle
 
-    def process_from_file(self, paths) -> DataBundle:
-        """
-
-        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.ConllLoader` 的load函数。
-        :return: DataBundle
-        """
-        # 读取数据
-        data_bundle = Conll2003NERLoader().load(paths)
-        data_bundle = self.process(data_bundle)
-
-        return data_bundle
-
 
 class Conll2003NERPipe(_NERPipe):
     """
@@ -102,8 +77,8 @@ class Conll2003NERPipe(_NERPipe):
     .. csv-table:: Following is a demo layout of DataSet returned by Conll2003Loader
        :header: "raw_words", "words", "target", "seq_len"
 
-       "[Nadim, Ladki]", "[1, 2]", "[1, 2]", 2
-       "[AL-AIN, United, Arab, ...]", "[3, 4, 5,...]", "[3, 4]", 10
+       "[Nadim, Ladki]", "[2, 3]", "[1, 2]", 2
+       "[AL-AIN, United, Arab, ...]", "[4, 5, 6,...]", "[3, 4]", 6
        "[...]", "[...]", "[...]", .
 
     raw_words列为List[str], 是未转换的原始数据; words列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
@@ -134,9 +109,12 @@ class OntoNotesNERPipe(_NERPipe):
     .. csv-table:: Following is a demo layout of DataSet returned by Conll2003Loader
        :header: "raw_words", "words", "target", "seq_len"
 
-       "[Nadim, Ladki]", "[1, 2]", "[1, 2]", 2
-       "[AL-AIN, United, Arab, ...]", "[3, 4, 5,...]", "[3, 4]", 6
+       "[Nadim, Ladki]", "[2, 3]", "[1, 2]", 2
+       "[AL-AIN, United, Arab, ...]", "[4, 5, 6,...]", "[3, 4]", 6
        "[...]", "[...]", "[...]", .
+
+    raw_words列为List[str], 是未转换的原始数据; words列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
+    target。返回的DataSet中被设置为input有words, target, seq_len; 设置为target有target。
 
     :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
     :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
@@ -145,4 +123,125 @@ class OntoNotesNERPipe(_NERPipe):
 
     def process_from_file(self, paths):
         data_bundle = OntoNotesNERLoader().load(paths)
+        return self.process(data_bundle)
+
+
+class _CNNERPipe(Pipe):
+    """
+    中文NER任务的处理Pipe, 该Pipe会（1）复制raw_chars列，并命名为chars; (2）在chars, target列建立词表
+    (创建 :class:`fastNLP.Vocabulary` 对象，所以在返回的DataBundle中将有两个Vocabulary); (3）将chars，target列根据相应的
+    Vocabulary转换为index。
+
+    raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
+    target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target, seq_len。
+
+    :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
+    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为0。
+    """
+
+    def __init__(self, encoding_type: str = 'bio', target_pad_val=0):
+        if encoding_type == 'bio':
+            self.convert_tag = iob2
+        else:
+            self.convert_tag = lambda words: iob2bioes(iob2(words))
+        self.target_pad_val = int(target_pad_val)
+
+    def process(self, data_bundle: DataBundle) -> DataBundle:
+        """
+        支持的DataSet的field为
+
+        .. csv-table::
+           :header: "raw_chars", "target"
+
+           "[相, 比, 之, 下,...]", "[O, O, O, O, ...]"
+           "[青, 岛, 海, 牛, 队, 和, ...]", "[B-ORG, I-ORG, I-ORG, ...]"
+           "[...]", "[...]"
+
+        raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
+        target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
+
+        :param DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]。
+            在传入DataBundle基础上原位修改。
+        :return: DataBundle
+        """
+        # 转换tag
+        for name, dataset in data_bundle.datasets.items():
+            dataset.apply_field(self.convert_tag, field_name=Const.TARGET, new_field_name=Const.TARGET)
+
+        _add_chars_field(data_bundle, lower=False)
+
+        # index
+        _indexize(data_bundle, input_field_name=Const.CHAR_INPUT, target_field_name=Const.TARGET)
+
+        input_fields = [Const.TARGET, Const.CHAR_INPUT, Const.INPUT_LEN]
+        target_fields = [Const.TARGET, Const.INPUT_LEN]
+
+        for name, dataset in data_bundle.datasets.items():
+            dataset.set_pad_val(Const.TARGET, self.target_pad_val)
+            dataset.add_seq_len(Const.CHAR_INPUT)
+
+        data_bundle.set_input(*input_fields)
+        data_bundle.set_target(*target_fields)
+
+        return data_bundle
+
+
+class MsraNERPipe(_CNNERPipe):
+    """
+    处理MSRA-NER的数据，处理之后的DataSet的field情况为
+
+    .. csv-table::
+       :header: "raw_chars", "chars", "target", "seq_len"
+
+       "[相, 比, 之, 下,...]", "[2, 3, 4, 5, ...]", "[0, 0, 0, 0, ...]", 11
+       "[青, 岛, 海, 牛, 队, 和, ...]", "[10, 21, ....]", "[1, 2, 3, ...]", 21
+       "[...]", "[...]", "[...]", .
+
+    raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
+    target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
+
+    """
+    def process_from_file(self, paths=None) -> DataBundle:
+        data_bundle = MsraNERLoader().load(paths)
+        return self.process(data_bundle)
+
+
+class PeopleDailyPipe(_CNNERPipe):
+    """
+    处理people daily的ner的数据，处理之后的DataSet的field情况为
+
+    .. csv-table::
+       :header: "raw_chars", "chars", "target", "seq_len"
+
+       "[相, 比, 之, 下,...]", "[2, 3, 4, 5, ...]", "[0, 0, 0, 0, ...]", 11
+       "[青, 岛, 海, 牛, 队, 和, ...]", "[10, 21, ....]", "[1, 2, 3, ...]", 21
+       "[...]", "[...]", "[...]", .
+
+    raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
+    target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
+    """
+    def process_from_file(self, paths=None) -> DataBundle:
+        data_bundle = PeopleDailyNERLoader().load(paths)
+        return self.process(data_bundle)
+
+
+class WeiboNERPipe(_CNNERPipe):
+    """
+    处理weibo的ner的数据，处理之后的DataSet的field情况为
+
+    .. csv-table::
+       :header: "raw_chars", "chars", "target", "seq_len"
+
+       "[相, 比, 之, 下,...]", "[2, 3, 4, 5, ...]", "[0, 0, 0, 0, ...]", 11
+       "[青, 岛, 海, 牛, 队, 和, ...]", "[10, 21, ....]", "[1, 2, 3, ...]", 21
+       "[...]", "[...]", "[...]", .
+
+    raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
+    target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
+
+    :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
+    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为0。
+    """
+    def process_from_file(self, paths=None) -> DataBundle:
+        data_bundle = WeiboNERLoader().load(paths)
         return self.process(data_bundle)

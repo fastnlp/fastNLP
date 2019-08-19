@@ -27,6 +27,7 @@ PRETRAINED_BERT_MODEL_DIR = {
     'cn': 'bert-chinese-wwm.zip',
     'cn-base': 'bert-base-chinese.zip',
     'cn-wwm': 'bert-chinese-wwm.zip',
+    'cn-wwm-ext': "bert-chinese-wwm-ext.zip"
 }
 
 PRETRAINED_ELMO_MODEL_DIR = {
@@ -56,7 +57,7 @@ PRETRAIN_STATIC_FILES = {
     'en-fasttext-wiki': "wiki-news-300d-1M.vec.zip",
     'en-fasttext-crawl': "crawl-300d-2M.vec.zip",
 
-    'cn': "tencent_cn.txt.zip",
+    'cn': "tencent_cn.zip",
     'cn-tencent': "tencent_cn.txt.zip",
     'cn-fasttext': "cc.zh.300.vec.gz",
     'cn-sgns-literature-word': 'sgns.literature.word.txt.zip',
@@ -71,7 +72,10 @@ DATASET_DIR = {
     "qnli": "QNLI.zip",
     "sst-2": "SST-2.zip",
     "sst": "SST.zip",
-    "rte": "RTE.zip"
+    "rte": "RTE.zip",
+    "msra-ner": "MSRA_NER.zip",
+    "peopledaily": "peopledaily.zip",
+    "weibo-ner": "weibo_NER.zip"
 }
 
 PRETRAIN_MAP = {'elmo': PRETRAINED_ELMO_MODEL_DIR,
@@ -320,42 +324,44 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
         # GET file object
         req = requests.get(url, stream=True, headers={"User-Agent": "fastNLP"})
         if req.status_code == 200:
-            content_length = req.headers.get("Content-Length")
-            total = int(content_length) if content_length is not None else None
-            progress = tqdm(unit="B", total=total, unit_scale=1)
-            fd, temp_filename = tempfile.mkstemp()
-            print("%s not found in cache, downloading to %s" % (url, temp_filename))
-
-            with open(temp_filename, "wb") as temp_file:
-                for chunk in req.iter_content(chunk_size=1024 * 16):
-                    if chunk:  # filter out keep-alive new chunks
-                        progress.update(len(chunk))
-                        temp_file.write(chunk)
-            progress.close()
-            print(f"Finish download from {url}.")
-
-            # 开始解压
-            delete_temp_dir = None
-            if suffix in ('.zip', '.tar.gz'):
-                uncompress_temp_dir = tempfile.mkdtemp()
-                delete_temp_dir = uncompress_temp_dir
-                print(f"Start to uncompress file to {uncompress_temp_dir}")
-                if suffix == '.zip':
-                    unzip_file(Path(temp_filename), Path(uncompress_temp_dir))
-                else:
-                    untar_gz_file(Path(temp_filename), Path(uncompress_temp_dir))
-                filenames = os.listdir(uncompress_temp_dir)
-                if len(filenames) == 1:
-                    if os.path.isdir(os.path.join(uncompress_temp_dir, filenames[0])):
-                        uncompress_temp_dir = os.path.join(uncompress_temp_dir, filenames[0])
-
-                cache_path.mkdir(parents=True, exist_ok=True)
-                print("Finish un-compressing file.")
-            else:
-                uncompress_temp_dir = temp_filename
-                cache_path = str(cache_path) + suffix
             success = False
+            fd, temp_filename = tempfile.mkstemp()
+            uncompress_temp_dir = None
             try:
+                content_length = req.headers.get("Content-Length")
+                total = int(content_length) if content_length is not None else None
+                progress = tqdm(unit="B", total=total, unit_scale=1)
+                print("%s not found in cache, downloading to %s" % (url, temp_filename))
+
+                with open(temp_filename, "wb") as temp_file:
+                    for chunk in req.iter_content(chunk_size=1024 * 16):
+                        if chunk:  # filter out keep-alive new chunks
+                            progress.update(len(chunk))
+                            temp_file.write(chunk)
+                progress.close()
+                print(f"Finish download from {url}")
+
+                # 开始解压
+                if suffix in ('.zip', '.tar.gz', '.gz'):
+                    uncompress_temp_dir = tempfile.mkdtemp()
+                    print(f"Start to uncompress file to {uncompress_temp_dir}")
+                    if suffix == '.zip':
+                        unzip_file(Path(temp_filename), Path(uncompress_temp_dir))
+                    elif suffix == '.gz':
+                        ungzip_file(temp_filename, uncompress_temp_dir, dir_name)
+                    else:
+                        untar_gz_file(Path(temp_filename), Path(uncompress_temp_dir))
+                    filenames = os.listdir(uncompress_temp_dir)
+                    if len(filenames) == 1:
+                        if os.path.isdir(os.path.join(uncompress_temp_dir, filenames[0])):
+                            uncompress_temp_dir = os.path.join(uncompress_temp_dir, filenames[0])
+
+                    cache_path.mkdir(parents=True, exist_ok=True)
+                    print("Finish un-compressing file.")
+                else:
+                    uncompress_temp_dir = temp_filename
+                    cache_path = str(cache_path) + suffix
+
                 # 复制到指定的位置
                 print(f"Copy file to {cache_path}")
                 if os.path.isdir(uncompress_temp_dir):
@@ -377,10 +383,12 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
                             os.remove(cache_path)
                         else:
                             shutil.rmtree(cache_path)
-                if delete_temp_dir:
-                    shutil.rmtree(delete_temp_dir)
                 os.close(fd)
                 os.remove(temp_filename)
+                if os.path.isdir(uncompress_temp_dir):
+                    shutil.rmtree(uncompress_temp_dir)
+                elif os.path.isfile(uncompress_temp_dir):
+                    os.remove(uncompress_temp_dir)
             return get_filepath(cache_path)
         else:
             raise HTTPError(f"Status code:{req.status_code}. Fail to download from {url}.")
@@ -400,6 +408,15 @@ def untar_gz_file(file: Path, to: Path):
 
     with tarfile.open(file, 'r:gz') as tar:
         tar.extractall(to)
+
+
+def ungzip_file(file: str, to: str, filename:str):
+    import gzip
+
+    g_file = gzip.GzipFile(file)
+    with open(os.path.join(to, filename), 'wb+') as f:
+        f.write(g_file.read())
+    g_file.close()
 
 
 def match_file(dir_name: str, cache_dir: Path) -> str:

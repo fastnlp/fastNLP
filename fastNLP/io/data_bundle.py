@@ -133,19 +133,21 @@ class DataBundle:
 
         :param ~fastNLP.Vocabulary vocab: 词表
         :param str field_name: 这个vocab对应的field名称
-        :return:
+        :return: self
         """
         assert isinstance(vocab, Vocabulary), "Only fastNLP.Vocabulary supports."
         self.vocabs[field_name] = vocab
+        return self
 
     def set_dataset(self, dataset, name):
         """
 
         :param ~fastNLP.DataSet dataset: 传递给DataBundle的DataSet
         :param str name: dataset的名称
-        :return:
+        :return: self
         """
         self.datasets[name] = dataset
+        return self
 
     def get_dataset(self, name:str)->DataSet:
         """
@@ -165,7 +167,7 @@ class DataBundle:
         """
         return self.vocabs[field_name]
 
-    def set_input(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True, ignore_miss_field=True):
+    def set_input(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True, ignore_miss_dataset=True):
         """
         将field_names中的field设置为input, 对data_bundle中所有的dataset执行该操作::
 
@@ -176,18 +178,21 @@ class DataBundle:
         :param bool flag: 将field_name的input状态设置为flag
         :param bool use_1st_ins_infer_dim_type: 如果为True，将不会check该列是否所有数据都是同样的维度，同样的类型。将直接使用第一
             行的数据进行类型和维度推断本列的数据的类型和维度。
-        :param bool ignore_miss_field: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略; 如果为False，则报错
+        :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
+            如果为False，则报错
+        :return self
         """
         for field_name in field_names:
             for name, dataset in self.datasets.items():
-                if not ignore_miss_field and not dataset.has_field(field_name):
+                if not ignore_miss_dataset and not dataset.has_field(field_name):
                     raise KeyError(f"Field:{field_name} was not found in DataSet:{name}")
                 if not dataset.has_field(field_name):
                     continue
                 else:
                     dataset.set_input(field_name, flag=flag, use_1st_ins_infer_dim_type=use_1st_ins_infer_dim_type)
+        return self
 
-    def set_target(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True, ignore_miss_field=True):
+    def set_target(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True, ignore_miss_dataset=True):
         """
         将field_names中的field设置为target, 对data_bundle中所有的dataset执行该操作::
 
@@ -198,16 +203,34 @@ class DataBundle:
         :param bool flag: 将field_name的target状态设置为flag
         :param bool use_1st_ins_infer_dim_type: 如果为True，将不会check该列是否所有数据都是同样的维度，同样的类型。将直接使用第一
             行的数据进行类型和维度推断本列的数据的类型和维度。
-        :param bool ignore_miss_field: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略; 如果为False，则报错
+        :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略; 如果为False，则报错
+        :return self
         """
         for field_name in field_names:
             for name, dataset in self.datasets.items():
-                if not ignore_miss_field and not dataset.has_field(field_name):
+                if not ignore_miss_dataset and not dataset.has_field(field_name):
                     raise KeyError(f"Field:{field_name} was not found in DataSet:{name}")
                 if not dataset.has_field(field_name):
                     continue
                 else:
                     dataset.set_target(field_name, flag=flag, use_1st_ins_infer_dim_type=use_1st_ins_infer_dim_type)
+        return self
+
+    def copy_field(self, field_name, new_field_name, ignore_miss_dataset=True):
+        """
+        将DataBundle中所有的field_name复制一份叫new_field_name.
+
+        :param str field_name:
+        :param str new_field_name:
+        :param bool ignore_miss_dataset: 若DataBundle中的DataSet的
+        :return: self
+        """
+        for name, dataset in self.datasets.items():
+            if dataset.has_field(field_name=field_name):
+                dataset.copy_field(field_name=field_name, new_field_name=new_field_name)
+            elif ignore_miss_dataset:
+                raise KeyError(f"{field_name} not found DataSet:{name}.")
+        return self
 
     def __repr__(self):
         _str = 'In total {} datasets:\n'.format(len(self.datasets))

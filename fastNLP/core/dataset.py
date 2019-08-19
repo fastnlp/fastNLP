@@ -613,6 +613,7 @@ class DataSet(object):
                     raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
+        return self
     
     def set_input(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True):
         """
@@ -636,6 +637,7 @@ class DataSet(object):
                     raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
+        return self
     
     def set_ignore_type(self, *field_names, flag=True):
         """
@@ -652,6 +654,7 @@ class DataSet(object):
                 self.field_arrays[name].ignore_type = flag
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
+        return self
     
     def set_padder(self, field_name, padder):
         """
@@ -667,6 +670,7 @@ class DataSet(object):
         if field_name not in self.field_arrays:
             raise KeyError("There is no field named {}.".format(field_name))
         self.field_arrays[field_name].set_padder(padder)
+        return self
     
     def set_pad_val(self, field_name, pad_val):
         """
@@ -678,6 +682,7 @@ class DataSet(object):
         if field_name not in self.field_arrays:
             raise KeyError("There is no field named {}.".format(field_name))
         self.field_arrays[field_name].set_pad_val(pad_val)
+        return self
     
     def get_input_name(self):
         """
@@ -867,48 +872,6 @@ class DataSet(object):
             dev_set.field_arrays[field_name].to(self.field_arrays[field_name])
         
         return train_set, dev_set
-    
-    @classmethod
-    def read_csv(cls, csv_path, headers=None, sep=",", dropna=True):
-        r"""
-        .. warning::
-            此方法会在下个版本移除，请使用 :class:`fastNLP.io.CSVLoader`
-        
-        从csv_path路径下以csv的格式读取数据。
-
-        :param str csv_path: 从哪里读取csv文件
-        :param list[str] headers: 如果为None，则使用csv文件的第一行作为header; 如果传入list(str), 则元素的个数必须
-            与csv文件中每行的元素个数相同。
-        :param str sep: 分割符
-        :param bool dropna: 是否忽略与header数量不一致行。
-        :return: 读取后的 :class:`~fastNLP.读取后的DataSet`。
-        """
-        warnings.warn('DataSet.read_csv is deprecated, use CSVLoader instead',
-                      category=DeprecationWarning)
-        with open(csv_path, "r", encoding='utf-8') as f:
-            start_idx = 0
-            if headers is None:
-                headers = f.readline().rstrip('\r\n')
-                headers = headers.split(sep)
-                start_idx += 1
-            else:
-                assert isinstance(headers, (list, tuple)), "headers should be list or tuple, not {}.".format(
-                    type(headers))
-            _dict = {}
-            for col in headers:
-                _dict[col] = []
-            for line_idx, line in enumerate(f, start_idx):
-                contents = line.rstrip('\r\n').split(sep)
-                if len(contents) != len(headers):
-                    if dropna:
-                        continue
-                    else:
-                        # TODO change error type
-                        raise ValueError("Line {} has {} parts, while header has {} parts." \
-                                         .format(line_idx, len(contents), len(headers)))
-                for header, content in zip(headers, contents):
-                    _dict[header].append(content)
-        return cls(_dict)
     
     def save(self, path):
         """

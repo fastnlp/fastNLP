@@ -76,25 +76,27 @@ def _raw_split(sent):
     return sent.split()
 
 
-def _indexize(data_bundle):
+def _indexize(data_bundle, input_field_name=Const.INPUT, target_field_name=Const.TARGET):
     """
-    在dataset中的"words"列建立词表，"target"列建立词表，并把词表加入到data_bundle中。
+    在dataset中的field_name列建立词表，Const.TARGET列建立词表，并把词表加入到data_bundle中。
 
     :param data_bundle:
+    :param: str input_field_name:
+    :param: str target_field_name: 这一列的vocabulary没有unknown和padding
     :return:
     """
     src_vocab = Vocabulary()
-    src_vocab.from_dataset(data_bundle.datasets['train'], field_name=Const.INPUT,
+    src_vocab.from_dataset(data_bundle.datasets['train'], field_name=input_field_name,
                            no_create_entry_dataset=[dataset for name, dataset in data_bundle.datasets.items() if
                                                     name != 'train'])
-    src_vocab.index_dataset(*data_bundle.datasets.values(), field_name=Const.INPUT)
+    src_vocab.index_dataset(*data_bundle.datasets.values(), field_name=input_field_name)
 
     tgt_vocab = Vocabulary(unknown=None, padding=None)
-    tgt_vocab.from_dataset(data_bundle.datasets['train'], field_name=Const.TARGET)
-    tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name=Const.TARGET)
+    tgt_vocab.from_dataset(data_bundle.datasets['train'], field_name=target_field_name)
+    tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name=target_field_name)
 
-    data_bundle.set_vocab(src_vocab, Const.INPUT)
-    data_bundle.set_vocab(tgt_vocab, Const.TARGET)
+    data_bundle.set_vocab(src_vocab, input_field_name)
+    data_bundle.set_vocab(tgt_vocab, target_field_name)
 
     return data_bundle
 
@@ -107,13 +109,29 @@ def _add_words_field(data_bundle, lower=False):
     :param bool lower:是否要小写化
     :return: 传入的DataBundle
     """
-    for name, dataset in data_bundle.datasets.items():
-        dataset.copy_field(field_name=Const.RAW_WORD, new_field_name=Const.INPUT)
+    data_bundle.copy_field(field_name=Const.RAW_WORD, new_field_name=Const.INPUT, ignore_miss_dataset=True)
 
     if lower:
         for name, dataset in data_bundle.datasets.items():
             dataset[Const.INPUT].lower()
     return data_bundle
+
+
+def _add_chars_field(data_bundle, lower=False):
+    """
+    给data_bundle中的dataset中复制一列chars. 并根据lower参数判断是否需要小写化
+
+    :param data_bundle:
+    :param bool lower:是否要小写化
+    :return: 传入的DataBundle
+    """
+    data_bundle.copy_field(field_name=Const.RAW_CHAR, new_field_name=Const.CHAR_INPUT, ignore_miss_dataset=True)
+
+    if lower:
+        for name, dataset in data_bundle.datasets.items():
+            dataset[Const.CHAR_INPUT].lower()
+    return data_bundle
+
 
 def _drop_empty_instance(data_bundle, field_name):
     """

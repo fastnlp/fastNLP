@@ -50,8 +50,8 @@ class MatchingBertPipe(Pipe):
                 dataset.drop(lambda x: x[Const.TARGET] == '-')
 
         for name, dataset in data_bundle.datasets.items():
-            dataset.copy_field(Const.RAW_WORDS(0), Const.INPUTS(0))
-            dataset.copy_field(Const.RAW_WORDS(1), Const.INPUTS(1))
+            dataset.copy_field(Const.RAW_WORDS(0), Const.INPUTS(0), )
+            dataset.copy_field(Const.RAW_WORDS(1), Const.INPUTS(1), )
 
         if self.lower:
             for name, dataset in data_bundle.datasets.items():

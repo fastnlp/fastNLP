@@ -45,7 +45,7 @@ class StaticEmbedding(TokenEmbedding):
     :param model_dir_or_name: 可以有两种方式调用预训练好的static embedding：第一种是传入embedding文件夹(文件夹下应该只有一个
         以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载。
         如果输入为None则使用embedding_dim的维度随机初始化一个embedding。
-    :param int embedding_dim: 随机初始化的embedding的维度，仅在model_dir_or_name为None时有效。
+    :param int embedding_dim: 随机初始化的embedding的维度，当该值为大于0的值时，将忽略model_dir_or_name。
     :param bool requires_grad: 是否需要gradient. 默认为True
     :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对
     :param bool lower: 是否将vocab中的词语小写后再和预训练的词表进行匹配。如果你的词表中包含大写的词语，或者就是需要单独
@@ -55,9 +55,11 @@ class StaticEmbedding(TokenEmbedding):
     :param bool normalize: 是否对vector进行normalize，使得每个vector的norm为1。
     :param int min_freq: Vocabulary词频数小于这个数量的word将被指向unk。
     """
-    def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', embedding_dim=100, requires_grad: bool=True,
+    def __init__(self, vocab: Vocabulary, model_dir_or_name: str='en', embedding_dim=-1, requires_grad: bool=True,
                  init_method=None, lower=False, dropout=0, word_dropout=0, normalize=False, min_freq=1, **kwargs):
         super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
+        if embedding_dim>0:
+            model_dir_or_name = None
 
         # 得到cache_path
         if model_dir_or_name is None:

@@ -868,6 +868,7 @@ class _WordPieceBertModel(nn.Module):
 
         self._cls_index = self.tokenzier.vocab['[CLS]']
         self._sep_index = self.tokenzier.vocab['[SEP]']
+        self._wordpiece_unknown_index = self.tokenzier.vocab['[UNK]']
         self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
         self.pooled_cls = pooled_cls
 
@@ -919,7 +920,7 @@ class _WordPieceBertModel(nn.Module):
         outputs = bert_outputs[0].new_zeros((len(self.layers), batch_size, max_len, bert_outputs[0].size(-1)))
         for l_index, l in enumerate(self.layers):
             bert_output = bert_outputs[l]
-            if l==len(bert_outputs) and self.pooled_cls:
+            if l in (len(bert_outputs)-1, -1) and self.pooled_cls:
                 bert_output[:, 0] = pooled_cls
             outputs[l_index] = bert_output
         return outputs

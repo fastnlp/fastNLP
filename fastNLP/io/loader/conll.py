@@ -4,10 +4,12 @@ from .loader import Loader
 from ...core.dataset import DataSet
 from ..file_reader import _read_conll
 from ...core.instance import Instance
-from .. import DataBundle
-from ..utils import check_loader_paths
 from ...core.const import Const
-
+import glob
+import os
+import shutil
+import time
+import random
 
 class ConllLoader(Loader):
     """
@@ -262,3 +264,173 @@ class CTBLoader(Loader):
 
     def _load(self, path:str):
         pass
+
+
+class CNNERLoader(Loader):
+    def _load(self, path:str):
+        """
+        支持加载形如以下格式的内容，一行两列，以空格隔开两个sample
+
+        Example::
+
+            我 O
+            们 O
+            变 O
+            而 O
+            以 O
+            书 O
+            会 O
+            ...
+
+        :param str path: 文件路径
+        :return: DataSet，包含raw_words列和target列
+        """
+        ds = DataSet()
+        with open(path, 'r', encoding='utf-8') as f:
+            raw_chars = []
+            target = []
+            for line in f:
+                line = line.strip()
+                if line:
+                    parts = line.split()
+                    if len(parts) == 1:  # 网上下载的数据有一些列少tag，默认补充O
+                        parts.append('O')
+                    raw_chars.append(parts[0])
+                    target.append(parts[1])
+                else:
+                    if raw_chars:
+                        ds.append(Instance(raw_chars=raw_chars, target=target))
+                    raw_chars = []
+                    target = []
+        return ds
+
+
+class MsraNERLoader(CNNERLoader):
+    """
+    读取MSRA-NER数据，数据中的格式应该类似与下列的内容
+
+    Example::
+
+        我 O
+        们 O
+        变 O
+        而 O
+        以 O
+        书 O
+        会 O
+        ...
+
+    读取后的DataSet包含以下的field
+
+    .. csv-table:: target列是基于BIO的编码方式
+        :header: "raw_chars", "target"
+
+        "[我, 们, 变...]", "[O, O, ...]"
+        "[中, 共, 中, ...]", "[B-ORG, I-ORG, I-ORG, ...]"
+        "[...]", "[...]"
+
+    """
+    def __init__(self):
+        super().__init__()
+
+    def download(self, dev_ratio:float=0.1, re_download:bool=False)->str:
+        """
+        自动下载MSAR-NER的数据，如果你使用该数据，请引用 Gina-Anne Levow, 2006, The Third International Chinese Language
+        Processing Bakeoff: Word Segmentation and Named Entity Recognition.
+
+        根据dev_ratio的值随机将train中的数据取出一部分作为dev数据。下载完成后在output_dir中有train.conll, test.conll,
+        dev.conll三个文件。
+
+        :param float dev_ratio: 如果路径中没有dev集，从train划分多少作为dev的数据. 如果为0，则不划分dev。
+        :param bool re_download: 是否重新下载数据，以重新切分数据。
+        :return: str, 数据集的目录地址
+        :return:
+        """
+        dataset_name = 'msra-ner'
+        data_dir = self._get_dataset_path(dataset_name=dataset_name)
+        modify_time = 0
+        for filepath in glob.glob(os.path.join(data_dir, '*')):
+            modify_time = os.stat(filepath).st_mtime
+            break
+        if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
+            shutil.rmtree(data_dir)
+            data_dir = self._get_dataset_path(dataset_name=dataset_name)
+
+        if not os.path.exists(os.path.join(data_dir, 'dev.conll')):
+            if dev_ratio > 0:
+                assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
+                try:
+                    with open(os.path.join(data_dir, 'train.conll'), 'r', encoding='utf-8') as f, \
+                            open(os.path.join(data_dir, 'middle_file.conll'), 'w', encoding='utf-8') as f1, \
+                            open(os.path.join(data_dir, 'dev.conll'), 'w', encoding='utf-8') as f2:
+                        lines = []  # 一个sample包含很多行
+                        for line in f:
+                            line = line.strip()
+                            if line:
+                                lines.append(line)
+                            else:
+                                if random.random() < dev_ratio:
+                                    f2.write('\n'.join(lines) + '\n\n')
+                                else:
+                                    f1.write('\n'.join(lines) + '\n\n')
+                                lines.clear()
+                    os.remove(os.path.join(data_dir, 'train.conll'))
+                    os.renames(os.path.join(data_dir, 'middle_file.conll'), os.path.join(data_dir, 'train.conll'))
+                finally:
+                    if os.path.exists(os.path.join(data_dir, 'middle_file.conll')):
+                        os.remove(os.path.join(data_dir, 'middle_file.conll'))
+
+        return data_dir
+
+
+class WeiboNERLoader(CNNERLoader):
+    def __init__(self):
+        super().__init__()
+
+    def download(self)->str:
+        """
+        自动下载Weibo-NER的数据，如果你使用了该数据，请引用 Nanyun Peng and Mark Dredze, 2015, Named Entity Recognition for
+        Chinese Social Media with Jointly Trained Embeddings.
+
+        :return: str
+        """
+        dataset_name = 'weibo-ner'
+        data_dir = self._get_dataset_path(dataset_name=dataset_name)
+
+        return data_dir
+
+
+class PeopleDailyNERLoader(CNNERLoader):
+    """
+    支持加载的数据格式如下
+
+    Example::
+
+        当 O
+        希 O
+        望 O
+        工 O
+        程 O
+        救 O
+        助 O
+        的 O
+        百 O
+
+    读取后的DataSet包含以下的field
+
+    .. csv-table:: target列是基于BIO的编码方式
+        :header: "raw_chars", "target"
+
+        "[我, 们, 变...]", "[O, O, ...]"
+        "[中, 共, 中, ...]", "[B-ORG, I-ORG, I-ORG, ...]"
+        "[...]", "[...]"
+
+    """
+    def __init__(self):
+        super().__init__()
+
+    def download(self) -> str:
+        dataset_name = 'peopledaily'
+        data_dir = self._get_dataset_path(dataset_name=dataset_name)
+
+        return data_dir

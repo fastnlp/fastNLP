@@ -6,6 +6,8 @@ import os
 import random
 import shutil
 import numpy as np
+import glob
+import time
 
 
 class YelpLoader(Loader):
@@ -57,7 +59,7 @@ class YelpLoader(Loader):
 
 
 class YelpFullLoader(YelpLoader):
-    def download(self, dev_ratio: float = 0.1, seed: int = 0):
+    def download(self, dev_ratio: float = 0.1, re_download:bool=False):
         """
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
 
@@ -68,35 +70,23 @@ class YelpFullLoader(YelpLoader):
         dev.csv三个文件。
 
         :param float dev_ratio: 如果路径中没有dev集，从train划分多少作为dev的数据. 如果为0，则不划分dev。
-        :param int seed: 划分dev时的随机数种子
+        :param bool re_download: 是否重新下载数据，以重新切分数据。
         :return: str, 数据集的目录地址
         """
         
         dataset_name = 'yelp-review-full'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        if os.path.exists(os.path.join(data_dir, 'dev.csv')):  # 存在dev的话，check是否需要重新下载
-            re_download = True
-            if dev_ratio > 0:
-                dev_line_count = 0
-                tr_line_count = 0
-                with open(os.path.join(data_dir, 'train.csv'), 'r', encoding='utf-8') as f1, \
-                        open(os.path.join(data_dir, 'dev.csv'), 'r', encoding='utf-8') as f2:
-                    for line in f1:
-                        tr_line_count += 1
-                    for line in f2:
-                        dev_line_count += 1
-                if not np.isclose(dev_line_count, dev_ratio * (tr_line_count + dev_line_count), rtol=0.005):
-                    re_download = True
-                else:
-                    re_download = False
-            if re_download:
-                shutil.rmtree(data_dir)
-                data_dir = self._get_dataset_path(dataset_name=dataset_name)
+        modify_time = 0
+        for filepath in glob.glob(os.path.join(data_dir, '*')):
+            modify_time = os.stat(filepath).st_mtime
+            break
+        if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
+            shutil.rmtree(data_dir)
+            data_dir = self._get_dataset_path(dataset_name=dataset_name)
         
         if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
-                random.seed(int(seed))
                 try:
                     with open(os.path.join(data_dir, 'train.csv'), 'r', encoding='utf-8') as f, \
                             open(os.path.join(data_dir, 'middle_file.csv'), 'w', encoding='utf-8') as f1, \
@@ -116,44 +106,32 @@ class YelpFullLoader(YelpLoader):
 
 
 class YelpPolarityLoader(YelpLoader):
-    def download(self, dev_ratio: float = 0.1, seed: int = 0):
+    def download(self, dev_ratio: float = 0.1, re_download=False):
         """
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
 
         Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional Networks for Text Classification. Advances
         in Neural Information Processing Systems 28 (NIPS 2015)
 
-        根据dev_ratio的值随机将train中的数据取出一部分作为dev数据。下载完成后从train中切分0.1作为dev
+        根据dev_ratio的值随机将train中的数据取出一部分作为dev数据。下载完成后从train中切分dev_ratio这么多作为dev
 
-        :param float dev_ratio: 如果路径中不存在dev.csv, 从train划分多少作为dev的数据. 如果为0，则不划分dev
-        :param int seed: 划分dev时的随机数种子
+        :param float dev_ratio: 如果路径中不存在dev.csv, 从train划分多少作为dev的数据。 如果为0，则不划分dev。
+        :param bool re_download: 是否重新下载数据，以重新切分数据。
         :return: str, 数据集的目录地址
         """
         dataset_name = 'yelp-review-polarity'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        if os.path.exists(os.path.join(data_dir, 'dev.csv')):  # 存在dev的话，check是否符合比例要求
-            re_download = True
-            if dev_ratio > 0:
-                dev_line_count = 0
-                tr_line_count = 0
-                with open(os.path.join(data_dir, 'train.csv'), 'r', encoding='utf-8') as f1, \
-                        open(os.path.join(data_dir, 'dev.csv'), 'r', encoding='utf-8') as f2:
-                    for line in f1:
-                        tr_line_count += 1
-                    for line in f2:
-                        dev_line_count += 1
-                if not np.isclose(dev_line_count, dev_ratio * (tr_line_count + dev_line_count), rtol=0.005):
-                    re_download = True
-                else:
-                    re_download = False
-            if re_download:
-                shutil.rmtree(data_dir)
-                data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        
+        modify_time = 0
+        for filepath in glob.glob(os.path.join(data_dir, '*')):
+            modify_time = os.stat(filepath).st_mtime
+            break
+        if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
+            shutil.rmtree(data_dir)
+            data_dir = self._get_dataset_path(dataset_name=dataset_name)
+
         if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
-                random.seed(int(seed))
                 try:
                     with open(os.path.join(data_dir, 'train.csv'), 'r', encoding='utf-8') as f, \
                             open(os.path.join(data_dir, 'middle_file.csv'), 'w', encoding='utf-8') as f1, \
@@ -209,7 +187,7 @@ class IMDBLoader(Loader):
         
         return dataset
     
-    def download(self, dev_ratio: float = 0.1, seed: int = 0):
+    def download(self, dev_ratio: float = 0.1, re_download=False):
         """
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
 
@@ -218,34 +196,22 @@ class IMDBLoader(Loader):
         根据dev_ratio的值随机将train中的数据取出一部分作为dev数据。下载完成后从train中切分0.1作为dev
 
         :param float dev_ratio: 如果路径中没有dev.txt。从train划分多少作为dev的数据. 如果为0，则不划分dev
-        :param int seed: 划分dev时的随机数种子
+        :param bool re_download: 是否重新下载数据，以重新切分数据。
         :return: str, 数据集的目录地址
         """
         dataset_name = 'aclImdb'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        if os.path.exists(os.path.join(data_dir, 'dev.txt')):  # 存在dev的话，check是否符合比例要求
-            re_download = True
-            if dev_ratio > 0:
-                dev_line_count = 0
-                tr_line_count = 0
-                with open(os.path.join(data_dir, 'train.txt'), 'r', encoding='utf-8') as f1, \
-                        open(os.path.join(data_dir, 'dev.txt'), 'r', encoding='utf-8') as f2:
-                    for line in f1:
-                        tr_line_count += 1
-                    for line in f2:
-                        dev_line_count += 1
-                if not np.isclose(dev_line_count, dev_ratio * (tr_line_count + dev_line_count), rtol=0.005):
-                    re_download = True
-                else:
-                    re_download = False
-            if re_download:
-                shutil.rmtree(data_dir)
-                data_dir = self._get_dataset_path(dataset_name=dataset_name)
+        modify_time = 0
+        for filepath in glob.glob(os.path.join(data_dir, '*')):
+            modify_time = os.stat(filepath).st_mtime
+            break
+        if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
+            shutil.rmtree(data_dir)
+            data_dir = self._get_dataset_path(dataset_name=dataset_name)
         
         if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
-                random.seed(int(seed))
                 try:
                     with open(os.path.join(data_dir, 'train.txt'), 'r', encoding='utf-8') as f, \
                             open(os.path.join(data_dir, 'middle_file.txt'), 'w', encoding='utf-8') as f1, \

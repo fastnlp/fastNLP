@@ -58,6 +58,9 @@ __all__ = [
     'Conll2003NERLoader',
     'OntoNotesNERLoader',
     'CTBLoader',
+    "MsraNERLoader",
+    "PeopleDailyNERLoader",
+    "WeiboNERLoader",
 
     # 'CSVLoader',
     # 'JsonLoader',
@@ -77,3 +80,4 @@ from .cws import CWSLoader
 from .json import JsonLoader
 from .loader import Loader
 from .matching import MNLILoader, QuoraLoader, SNLILoader, QNLILoader, RTELoader
+from .conll import MsraNERLoader, PeopleDailyNERLoader, WeiboNERLoader
