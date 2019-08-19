@@ -22,7 +22,7 @@ from .field import FieldArray, Padder, AutoPadder, EngChar2DPadder
 from .instance import Instance
 from .losses import LossFunc, CrossEntropyLoss, L1Loss, BCELoss, NLLLoss, LossInForward
 from .metrics import AccuracyMetric, SpanFPreRecMetric, ExtractiveQAMetric
-from .optimizer import Optimizer, SGD, Adam
+from .optimizer import Optimizer, SGD, Adam, AdamW
 from .sampler import SequentialSampler, BucketSampler, RandomSampler, Sampler
 from .tester import Tester
 from .trainer import Trainer
