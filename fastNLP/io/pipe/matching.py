@@ -239,6 +239,7 @@ class QuoraPipe(MatchingPipe):
         data_bundle = QuoraLoader().load(paths)
         return self.process(data_bundle)
 
+
 class QNLIPipe(MatchingPipe):
     def process_from_file(self, paths=None):
         data_bundle = QNLILoader().load(paths)
