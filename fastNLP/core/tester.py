@@ -178,7 +178,7 @@ class Tester(object):
                         if not isinstance(eval_result, dict):
                             raise TypeError(f"The return value of {_get_func_signature(metric.get_metric)} must be "
                                             f"`dict`, got {type(eval_result)}")
-                        metric_name = metric.__class__.__name__
+                        metric_name = metric.get_metric_name()
                         eval_results[metric_name] = eval_result
 
                     end_time = time.time()
