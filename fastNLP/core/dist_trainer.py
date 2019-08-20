@@ -21,7 +21,7 @@ from .optimizer import Optimizer
 from .utils import _build_args
 from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
-from  ..io import logger
+from  ._logger import logger
 import logging
 from pkg_resources import parse_version
 
