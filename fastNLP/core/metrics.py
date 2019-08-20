@@ -142,9 +142,10 @@ class MetricBase(object):
         设置metric的名称，默认是Metric的class name.
 
         :param str name:
-        :return:
+        :return: self
         """
         self._metric_name = name
+        return self
 
     def get_metric_name(self):
         """

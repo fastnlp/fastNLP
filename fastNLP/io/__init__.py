@@ -50,6 +50,7 @@ __all__ = [
     "SSTPipe",
     "SST2Pipe",
     "IMDBPipe",
+    "Conll2003Pipe",
 
     "Conll2003NERPipe",
     "OntoNotesNERPipe",

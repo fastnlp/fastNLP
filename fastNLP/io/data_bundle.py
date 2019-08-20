@@ -158,6 +158,16 @@ class DataBundle:
         """
         return self.datasets[name]
 
+    def delete_dataset(self, name:str):
+        """
+        删除名为name的DataSet
+
+        :param str name:
+        :return: self
+        """
+        self.datasets.pop(name, None)
+        return self
+
     def get_vocab(self, field_name:str)->Vocabulary:
         """
         获取field名为field_name对应的vocab
@@ -166,6 +176,15 @@ class DataBundle:
         :return: Vocabulary
         """
         return self.vocabs[field_name]
+
+    def delete_vocab(self, field_name:str):
+        """
+        删除vocab
+        :param str field_name:
+        :return: self
+        """
+        self.vocabs.pop(field_name, None)
+        return self
 
     def set_input(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True, ignore_miss_dataset=True):
         """

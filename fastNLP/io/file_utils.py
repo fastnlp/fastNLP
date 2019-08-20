@@ -75,7 +75,12 @@ DATASET_DIR = {
     "rte": "RTE.zip",
     "msra-ner": "MSRA_NER.zip",
     "peopledaily": "peopledaily.zip",
-    "weibo-ner": "weibo_NER.zip"
+    "weibo-ner": "weibo_NER.zip",
+
+    "cws-pku": 'cws_pku.zip',
+    "cws-cityu": "cws_cityu.zip",
+    "cws-as": 'cws_as.zip',
+    "cws-msra": 'cws_msra.zip'
 }
 
 PRETRAIN_MAP = {'elmo': PRETRAINED_ELMO_MODEL_DIR,
