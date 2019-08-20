@@ -69,7 +69,7 @@ def _add_file_handler(logger, path, level='INFO'):
 
     file_handler = logging.FileHandler(path, mode='a')
     file_handler.setLevel(_get_level(level))
-    file_formatter = logging.Formatter(fmt='%(asctime)s - [%(levelname)s] - %(message)s',
+    file_formatter = logging.Formatter(fmt='%(asctime)s - %(module)s - [%(levelname)s] - %(message)s',
                                        datefmt='%Y/%m/%d %H:%M:%S')
     file_handler.setFormatter(file_formatter)
     logger.addHandler(file_handler)
@@ -97,18 +97,36 @@ def _set_stdout_handler(logger, stdout='tqdm', level='INFO'):
         stream_handler = None
 
     if stream_handler is not None:
-        stream_formatter = logging.Formatter('[%(levelname)s] %(message)s')
+        stream_formatter = logging.Formatter('%(message)s')
         stream_handler.setLevel(level)
         stream_handler.setFormatter(stream_formatter)
         logger.addHandler(stream_handler)
 
 
+
+class FastNLPLogger(logging.getLoggerClass()):
+    def __init__(self, name):
+        super().__init__(name)
+
+    def add_file(self, path='./log.txt', level='INFO'):
+        """add log output file and level"""
+        _add_file_handler(self, path, level)
+
+    def set_stdout(self, stdout='tqdm', level='INFO'):
+        """set stdout format and level"""
+        _set_stdout_handler(self, stdout, level)
+
+logging.setLoggerClass(FastNLPLogger)
+# print(logging.getLoggerClass())
+# print(logging.getLogger())
+
 def _init_logger(path=None, stdout='tqdm', level='INFO'):
     """initialize logger"""
     level = _get_level(level)
 
-    # logger = logging.getLogger(ROOT_NAME)
-    logger = logging.getLogger()
+    # logger = logging.getLogger()
+    logger = logging.getLogger(ROOT_NAME)
+    logger.propagate = False
     logger.setLevel(level)
 
     _set_stdout_handler(logger, stdout, level)
@@ -132,16 +150,4 @@ def _get_logger(name=None, level='INFO'):
     return logger
 
 
-class FastNLPLogger(logging.Logger):
-    def add_file(self, path='./log.txt', level='INFO'):
-        """add log output file and level"""
-        _add_file_handler(self, path, level)
-
-    def set_stdout(self, stdout='tqdm', level='INFO'):
-        """set stdout format and level"""
-        _set_stdout_handler(self, stdout, level)
-
-_logger = _init_logger(path=None)
-logger = FastNLPLogger(ROOT_NAME)
-logger.__dict__.update(_logger.__dict__)
-del _logger
+logger = _init_logger(path=None)

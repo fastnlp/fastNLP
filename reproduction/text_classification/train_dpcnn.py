@@ -15,14 +15,14 @@ from fastNLP.core.const import Const as C
 from fastNLP.core.vocabulary import VocabularyOption
 from fastNLP.core.dist_trainer import DistTrainer
 from utils.util_init import set_rng_seeds
-from fastNLP.io import logger
+from fastNLP import logger
 import os
 # os.environ['FASTNLP_BASE_URL'] = 'http://10.141.222.118:8888/file/download/'
 # os.environ['FASTNLP_CACHE_DIR'] = '/remote-home/hyan01/fastnlp_caches'
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-
 # hyper
 logger.add_file('log', 'INFO')
+print(logger.handlers)
 
 class Config():
     seed = 12345

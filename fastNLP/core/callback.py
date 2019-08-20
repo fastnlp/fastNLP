@@ -86,7 +86,7 @@ except:
 from ..io.model_io import ModelSaver, ModelLoader
 from .dataset import DataSet
 from .tester import Tester
-from ..io import logger
+from ._logger import logger
 
 try:
     import fitlog

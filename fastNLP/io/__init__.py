@@ -74,7 +74,6 @@ __all__ = [
     'ModelLoader',
     'ModelSaver',
 
-    'logger',
 ]
 
 from .embed_loader import EmbedLoader
@@ -84,4 +83,3 @@ from .model_io import ModelLoader, ModelSaver
 
 from .loader import *
 from .pipe import *
-from ._logger import *
