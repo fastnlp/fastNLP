@@ -353,8 +353,7 @@ from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
 from ._parallel_utils import _model_contains_inner_module
-from ..io import logger
-
+from ._logger import logger
 
 class Trainer(object):
     """

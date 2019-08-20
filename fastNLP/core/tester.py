@@ -56,7 +56,7 @@ from .utils import _move_model_to_device
 from ._parallel_utils import _data_parallel_wrapper
 from ._parallel_utils import _model_contains_inner_module
 from functools import partial
-from ..io import logger
+from ._logger import logger
 
 __all__ = [
     "Tester"

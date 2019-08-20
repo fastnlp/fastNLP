@@ -59,7 +59,9 @@ __all__ = [
     "NLLLoss",
     "LossInForward",
     
-    "cache_results"
+    "cache_results",
+
+    'logger'
 ]
 __version__ = '0.4.5'
 
