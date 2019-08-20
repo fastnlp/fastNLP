@@ -14,6 +14,7 @@ __all__ = [
     "Instance",
     "FieldArray",
     
+    
     "DataSetIter",
     "BatchIter",
     "TorchLoaderIter",
@@ -31,6 +32,7 @@ __all__ = [
     "TensorboardCallback",
     "LRScheduler",
     "ControlC",
+    "LRFinder",
     
     "Padder",
     "AutoPadder",
@@ -43,7 +45,8 @@ __all__ = [
     "Optimizer",
     "SGD",
     "Adam",
-    
+    "AdamW",
+
     "Sampler",
     "SequentialSampler",
     "BucketSampler",
