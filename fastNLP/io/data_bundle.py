@@ -222,7 +222,8 @@ class DataBundle:
         :param bool flag: 将field_name的target状态设置为flag
         :param bool use_1st_ins_infer_dim_type: 如果为True，将不会check该列是否所有数据都是同样的维度，同样的类型。将直接使用第一
             行的数据进行类型和维度推断本列的数据的类型和维度。
-        :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略; 如果为False，则报错
+        :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
+            如果为False，则报错
         :return self
         """
         for field_name in field_names:
@@ -241,14 +242,59 @@ class DataBundle:
 
         :param str field_name:
         :param str new_field_name:
-        :param bool ignore_miss_dataset: 若DataBundle中的DataSet的
+        :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
+            如果为False，则报错
         :return: self
         """
         for name, dataset in self.datasets.items():
             if dataset.has_field(field_name=field_name):
                 dataset.copy_field(field_name=field_name, new_field_name=new_field_name)
-            elif ignore_miss_dataset:
+            elif not ignore_miss_dataset:
                 raise KeyError(f"{field_name} not found DataSet:{name}.")
+        return self
+
+    def apply_field(self, func, field_name:str, new_field_name:str, ignore_miss_dataset=True,  **kwargs):
+        """
+        对DataBundle中所有的dataset使用apply方法
+
+        :param callable func: input是instance中名为 `field_name` 的field的内容。
+        :param str field_name: 传入func的是哪个field。
+        :param str new_field_name: 将func返回的内容放入到 `new_field_name` 这个field中，如果名称与已有的field相同，则覆
+            盖之前的field。如果为None则不创建新的field。
+        :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
+            如果为False，则报错
+        :param optional kwargs: 支持输入is_input,is_target,ignore_type
+
+            1. is_input: bool, 如果为True则将名为 `new_field_name` 的field设置为input
+
+            2. is_target: bool, 如果为True则将名为 `new_field_name` 的field设置为target
+
+            3. ignore_type: bool, 如果为True则将名为 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
+        """
+        for name, dataset in self.datasets.items():
+            if dataset.has_field(field_name=field_name):
+                dataset.apply_field(func=func, field_name=field_name, new_field_name=new_field_name, **kwargs)
+            elif not ignore_miss_dataset:
+                raise KeyError(f"{field_name} not found DataSet:{name}.")
+        return self
+
+    def apply(self, func, new_field_name:str, **kwargs):
+        """
+        对DataBundle中所有的dataset使用apply方法
+
+        :param callable func: input是instance中名为 `field_name` 的field的内容。
+        :param str new_field_name: 将func返回的内容放入到 `new_field_name` 这个field中，如果名称与已有的field相同，则覆
+            盖之前的field。如果为None则不创建新的field。
+        :param optional kwargs: 支持输入is_input,is_target,ignore_type
+
+            1. is_input: bool, 如果为True则将名为 `new_field_name` 的field设置为input
+
+            2. is_target: bool, 如果为True则将名为 `new_field_name` 的field设置为target
+
+            3. ignore_type: bool, 如果为True则将名为 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
+        """
+        for name, dataset in self.datasets.items():
+            dataset.apply(func, new_field_name=new_field_name, **kwargs)
         return self
 
     def __repr__(self):

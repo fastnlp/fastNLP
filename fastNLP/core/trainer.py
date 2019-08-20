@@ -690,11 +690,11 @@ class Trainer(object):
                         (self.validate_every < 0 and self.step % len(data_iterator) == 0)) \
                             and self.dev_data is not None:
                         eval_res = self._do_validation(epoch=epoch, step=self.step)
-                        eval_str = "Evaluation on dev at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
-                                                                                    self.n_steps) + \
-                                   self.tester._format_eval_results(eval_res)
+                        eval_str = "Evaluation on dev at Epoch {}/{}. Step:{}/{}: ".format(epoch, self.n_epochs, self.step,
+                                                                                    self.n_steps)
                         # pbar.write(eval_str + '\n')
-                        self.logger.info(eval_str + '\n')
+                        self.logger.info(eval_str)
+                        self.logger.info(self.tester._format_eval_results(eval_res)+'\n')
                 # ================= mini-batch end ==================== #
 
                 # lr decay; early stopping
@@ -907,7 +907,7 @@ def _check_code(dataset, model, losser, metrics, forward_func, batch_size=DEFAUL
                 info_str += '\n'
             else:
                 info_str += 'There is no target field.'
-            print(info_str)
+            logger.info(info_str)
             _check_forward_error(forward_func=forward_func, dataset=dataset,
                                  batch_x=batch_x, check_level=check_level)
         refined_batch_x = _build_args(forward_func, **batch_x)

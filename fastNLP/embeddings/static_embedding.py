@@ -70,10 +70,10 @@ class StaticEmbedding(TokenEmbedding):
             model_url = _get_embedding_url('static', model_dir_or_name.lower())
             model_path = cached_path(model_url, name='embedding')
             # 检查是否存在
-        elif os.path.isfile(os.path.expanduser(os.path.abspath(model_dir_or_name))):
-            model_path = model_dir_or_name
-        elif os.path.isdir(os.path.expanduser(os.path.abspath(model_dir_or_name))):
-            model_path = _get_file_name_base_on_postfix(model_dir_or_name, '.txt')
+        elif os.path.isfile(os.path.abspath(os.path.expanduser(model_dir_or_name))):
+            model_path = os.path.abspath(os.path.expanduser(model_dir_or_name))
+        elif os.path.isdir(os.path.abspath(os.path.expanduser(model_dir_or_name))):
+            model_path = _get_file_name_base_on_postfix(os.path.abspath(os.path.expanduser(model_dir_or_name)), '.txt')
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
 
@@ -94,7 +94,7 @@ class StaticEmbedding(TokenEmbedding):
                                                      no_create_entry=truncated_vocab._is_word_no_create_entry(word))
 
             # 只限制在train里面的词语使用min_freq筛选
-            if kwargs.get('only_train_min_freq', False):
+            if kwargs.get('only_train_min_freq', False) and model_dir_or_name is not None:
                 for word in truncated_vocab.word_count.keys():
                     if truncated_vocab._is_word_no_create_entry(word) and truncated_vocab.word_count[word]<min_freq:
                         truncated_vocab.add_word_lst([word] * (min_freq - truncated_vocab.word_count[word]),
@@ -114,8 +114,8 @@ class StaticEmbedding(TokenEmbedding):
                     lowered_vocab.add_word(word.lower(), no_create_entry=True)
                 else:
                     lowered_vocab.add_word(word.lower())  # 先加入需要创建entry的
-            print(f"All word in the vocab have been lowered before finding pretrained vectors. There are {len(vocab)} "
-                  f"words, {len(lowered_vocab)} unique lowered words.")
+            print(f"All word in the vocab have been lowered. There are {len(vocab)} words, {len(lowered_vocab)} "
+                  f"unique lowered words.")
             if model_path:
                 embedding = self._load_with_vocab(model_path, vocab=lowered_vocab, init_method=init_method)
             else:

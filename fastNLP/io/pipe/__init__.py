@@ -21,6 +21,7 @@ __all__ = [
     "MsraNERPipe",
     "WeiboNERPipe",
     "PeopleDailyPipe",
+    "Conll2003Pipe",
 
     "MatchingBertPipe",
     "RTEBertPipe",
@@ -41,3 +42,4 @@ from .conll import Conll2003NERPipe, OntoNotesNERPipe, MsraNERPipe, WeiboNERPipe
 from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe, QNLIBertPipe, MNLIBertPipe, \
     MatchingPipe, RTEPipe, SNLIPipe, QuoraPipe, QNLIPipe, MNLIPipe
 from .pipe import Pipe
+from .conll import Conll2003Pipe

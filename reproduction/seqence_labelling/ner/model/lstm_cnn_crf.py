@@ -8,11 +8,10 @@ import torch.nn.functional as F
 from fastNLP import Const
 
 class CNNBiLSTMCRF(nn.Module):
-    def __init__(self, embed, char_embed, hidden_size, num_layers, tag_vocab, dropout=0.5, encoding_type='bioes'):
+    def __init__(self, embed, hidden_size, num_layers, tag_vocab, dropout=0.5, encoding_type='bioes'):
         super().__init__()
         self.embedding = embed
-        self.char_embedding = char_embed
-        self.lstm = LSTM(input_size=self.embedding.embedding_dim+self.char_embedding.embedding_dim,
+        self.lstm = LSTM(input_size=self.embedding.embedding_dim,
                              hidden_size=hidden_size//2, num_layers=num_layers,
                              bidirectional=True, batch_first=True)
         self.fc = nn.Linear(hidden_size, len(tag_vocab))
@@ -32,9 +31,7 @@ class CNNBiLSTMCRF(nn.Module):
                 nn.init.zeros_(param)
 
     def _forward(self, words, seq_len, target=None):
-        word_embeds = self.embedding(words)
-        char_embeds = self.char_embedding(words)
-        words = torch.cat((word_embeds, char_embeds), dim=-1)
+        words = self.embedding(words)
         outputs, _ = self.lstm(words, seq_len)
         self.dropout(outputs)
 

@@ -1,64 +1,53 @@
 
-import os
+import sys
+sys.path.append('../../..')
 
 from fastNLP import cache_results
-from reproduction.seqence_labelling.cws.data.CWSDataLoader import SigHanLoader
-from reproduction.seqence_labelling.cws.model.model import ShiftRelayCWSModel
-from fastNLP.io.embed_loader import EmbeddingOption
-from fastNLP.core.vocabulary import VocabularyOption
+from reproduction.seqence_labelling.cws.data.cws_shift_pipe import CWSShiftRelayPipe
+from reproduction.seqence_labelling.cws.model.bilstm_shift_relay import ShiftRelayCWSModel
 from fastNLP import Trainer
 from torch.optim import Adam
 from fastNLP import BucketSampler
 from fastNLP import GradientClipCallback
 from reproduction.seqence_labelling.cws.model.metric import RelayMetric
-
-
-# 借助一下fastNLP的自动缓存机制，但是只能缓存4G以下的结果
-@cache_results(None)
-def prepare_data():
-    data = SigHanLoader(target_type='shift_relay').process(file_dir, char_embed_opt=char_embed_opt,
-                                                           bigram_vocab_opt=bigram_vocab_opt,
-                                                           bigram_embed_opt=bigram_embed_opt,
-                                                           L=L)
-    return data
+from fastNLP.embeddings import StaticEmbedding
+from fastNLP import EvaluateCallback
 
 #########hyper
 L = 4
 hidden_size = 200
 num_layers = 1
 drop_p = 0.2
-lr = 0.02
-
+lr = 0.008
+data_name = 'pku'
 #########hyper
 device = 0
 
-# !!!!这里千万不要放完全路径，因为这样会暴露你们在服务器上的用户名，比较危险。所以一定要使用相对路径，最好把数据放到
-#   你们的reproduction路径下，然后设置.gitignore
-file_dir = '/path/to/'
-char_embed_path = '/pretrain/vectors/1grams_t3_m50_corpus.txt'
-bigram_embed_path = '/pretrain/vectors/2grams_t3_m50_corpus.txt'
-bigram_vocab_opt = VocabularyOption(min_freq=3)
-char_embed_opt = EmbeddingOption(embed_filepath=char_embed_path)
-bigram_embed_opt = EmbeddingOption(embed_filepath=bigram_embed_path)
-
-data_name = os.path.basename(file_dir)
 cache_fp = 'caches/{}.pkl'.format(data_name)
+@cache_results(_cache_fp=cache_fp, _refresh=True)   # 将结果缓存到cache_fp中，这样下次运行就直接读取，而不需要再次运行
+def prepare_data():
+    data_bundle = CWSShiftRelayPipe(dataset_name=data_name, L=L).process_from_file()
+    # 预训练的character embedding和bigram embedding
+    char_embed = StaticEmbedding(data_bundle.get_vocab('chars'), dropout=0.5, word_dropout=0.01,
+                                 model_dir_or_name='~/exps/CWS/pretrain/vectors/1grams_t3_m50_corpus.txt')
+    bigram_embed = StaticEmbedding(data_bundle.get_vocab('bigrams'), dropout=0.5, min_freq=3, word_dropout=0.01,
+                                 model_dir_or_name='~/exps/CWS/pretrain/vectors/2grams_t3_m50_corpus.txt')
 
-data = prepare_data(_cache_fp=cache_fp, _refresh=True)
+    return data_bundle, char_embed, bigram_embed
 
-model = ShiftRelayCWSModel(char_embed=data.embeddings['chars'], bigram_embed=data.embeddings['bigrams'],
-                           hidden_size=hidden_size, num_layers=num_layers,
-                           L=L, num_bigram_per_char=1, drop_p=drop_p)
+data, char_embed, bigram_embed = prepare_data()
 
-sampler = BucketSampler(batch_size=32)
+model = ShiftRelayCWSModel(char_embed=char_embed, bigram_embed=bigram_embed,
+                           hidden_size=hidden_size, num_layers=num_layers, drop_p=drop_p, L=L)
+
+sampler = BucketSampler()
 optimizer = Adam(model.parameters(), lr=lr)
-clipper = GradientClipCallback(clip_value=5, clip_type='value')
-callbacks = [clipper]
-# if pretrain:
-#     fixer = FixEmbedding([model.char_embedding, model.bigram_embedding], fix_until=fix_until)
-#     callbacks.append(fixer)
-trainer = Trainer(data.datasets['train'], model, optimizer=optimizer, loss=None, batch_size=32, sampler=sampler,
-                  update_every=5, n_epochs=3, print_every=5, dev_data=data.datasets['dev'], metrics=RelayMetric(),
+clipper = GradientClipCallback(clip_value=5, clip_type='value')  # 截断太大的梯度
+evaluator = EvaluateCallback(data.get_dataset('test'))  # 额外测试在test集上的效果
+callbacks = [clipper, evaluator]
+
+trainer = Trainer(data.get_dataset('train'), model, optimizer=optimizer, loss=None, batch_size=128, sampler=sampler,
+                  update_every=1, n_epochs=10, print_every=5, dev_data=data.get_dataset('dev'), metrics=RelayMetric(),
                   metric_key='f', validate_every=-1, save_path=None, use_tqdm=True, device=device, callbacks=callbacks,
-                  check_code_level=0)
+                  check_code_level=0, num_workers=1)
 trainer.train()

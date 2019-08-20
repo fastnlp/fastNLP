@@ -1,7 +1,5 @@
 from torch import nn
 import torch
-from fastNLP.embeddings import Embedding
-import numpy as np
 from reproduction.seqence_labelling.cws.model.module import FeatureFunMax, SemiCRFShiftRelay
 from fastNLP.modules import LSTM
 
@@ -21,25 +19,21 @@ class ShiftRelayCWSModel(nn.Module):
     :param num_bigram_per_char: 每个character对应的bigram的数量
     :param drop_p: Dropout的大小
     """
-    def __init__(self, char_embed:Embedding, bigram_embed:Embedding, hidden_size:int=400, num_layers:int=1,
-                 L:int=6, num_bigram_per_char:int=1, drop_p:float=0.2):
+    def __init__(self, char_embed, bigram_embed, hidden_size:int=400, num_layers:int=1, L:int=6, drop_p:float=0.2):
         super().__init__()
-        self.char_embedding = Embedding(char_embed, dropout=drop_p)
-        self._pretrained_embed = False
-        if isinstance(char_embed, np.ndarray):
-            self._pretrained_embed = True
-        self.bigram_embedding = Embedding(bigram_embed, dropout=drop_p)
-        self.lstm = LSTM(100 * (num_bigram_per_char + 1), hidden_size // 2, num_layers=num_layers, bidirectional=True,
+        self.char_embedding = char_embed
+        self.bigram_embedding = bigram_embed
+        self.lstm = LSTM(char_embed.embed_size+bigram_embed.embed_size, hidden_size // 2, num_layers=num_layers,
+                         bidirectional=True,
                          batch_first=True)
         self.feature_fn = FeatureFunMax(hidden_size, L)
         self.semi_crf_relay = SemiCRFShiftRelay(L)
         self.feat_drop = nn.Dropout(drop_p)
         self.reset_param()
-        # self.feature_fn.reset_parameters()
 
     def reset_param(self):
         for name, param in self.named_parameters():
-            if 'embedding' in name and self._pretrained_embed:
+            if 'embedding' in name:
                 continue
             if 'bias_hh' in name:
                 nn.init.constant_(param, 0)
@@ -51,10 +45,8 @@ class ShiftRelayCWSModel(nn.Module):
                 nn.init.xavier_uniform_(param)
 
     def get_feats(self, chars, bigrams, seq_len):
-        batch_size, max_len = chars.size()
         chars = self.char_embedding(chars)
         bigrams = self.bigram_embedding(bigrams)
-        bigrams = bigrams.view(bigrams.size(0), max_len, -1)
         chars = torch.cat([chars, bigrams], dim=-1)
         feats, _ = self.lstm(chars, seq_len)
         feats = self.feat_drop(feats)

@@ -2,7 +2,7 @@ import sys
 
 sys.path.append('../../..')
 
-from fastNLP.embeddings import CNNCharEmbedding, StaticEmbedding
+from fastNLP.embeddings import CNNCharEmbedding, StaticEmbedding, StackEmbedding
 
 from reproduction.seqence_labelling.ner.model.lstm_cnn_crf import CNNBiLSTMCRF
 from fastNLP import Trainer
@@ -35,7 +35,7 @@ def cache():
     char_embed = CNNCharEmbedding(vocab=data.vocabs['words'], embed_size=30, char_emb_size=30, filter_nums=[30],
                                   kernel_sizes=[3], dropout=dropout)
     word_embed = StaticEmbedding(vocab=data.vocabs[Const.INPUT],
-                                 model_dir_or_name='en-glove-100d',
+                                 model_dir_or_name='en-glove-6b-100d',
                                  requires_grad=True,
                                  normalize=normalize,
                                  word_dropout=0.01,
@@ -47,7 +47,8 @@ data, char_embed, word_embed = cache()
 
 print(data)
 
-model = CNNBiLSTMCRF(word_embed, char_embed, hidden_size=1200, num_layers=1, tag_vocab=data.vocabs[Const.TARGET],
+embed = StackEmbedding([word_embed, char_embed])
+model = CNNBiLSTMCRF(embed, hidden_size=1200, num_layers=1, tag_vocab=data.vocabs[Const.TARGET],
                      encoding_type=encoding_type, dropout=dropout)
 
 callbacks = [

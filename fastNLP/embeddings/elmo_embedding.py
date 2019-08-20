@@ -59,7 +59,7 @@ class ElmoEmbedding(ContextualEmbedding):
             model_url = _get_embedding_url('elmo', model_dir_or_name.lower())
             model_dir = cached_path(model_url, name='embedding')
             # 检查是否存在
-        elif os.path.isdir(os.path.expanduser(os.path.abspath(model_dir_or_name))):
+        elif os.path.isdir(os.path.abspath(os.path.expanduser(model_dir_or_name))):
             model_dir = model_dir_or_name
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")

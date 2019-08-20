@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../../..')
 
-from fastNLP.embeddings import CNNCharEmbedding, StaticEmbedding
+from fastNLP.embeddings import CNNCharEmbedding, StaticEmbedding, StackEmbedding
 
 from reproduction.seqence_labelling.ner.model.lstm_cnn_crf import CNNBiLSTMCRF
 from fastNLP import Trainer
@@ -22,7 +22,7 @@ def load_data():
     paths = {'test':"NER/corpus/CoNLL-2003/eng.testb",
              'train':"NER/corpus/CoNLL-2003/eng.train",
              'dev':"NER/corpus/CoNLL-2003/eng.testa"}
-    data = Conll2003NERPipe(encoding_type=encoding_type, target_pad_val=0).process_from_file(paths)
+    data = Conll2003NERPipe(encoding_type=encoding_type).process_from_file(paths)
     return data
 data = load_data()
 print(data)
@@ -33,8 +33,9 @@ word_embed = StaticEmbedding(vocab=data.get_vocab('words'),
                              model_dir_or_name='en-glove-6b-100d',
                              requires_grad=True, lower=True, word_dropout=0.01, dropout=0.5)
 word_embed.embedding.weight.data = word_embed.embedding.weight.data/word_embed.embedding.weight.data.std()
+embed = StackEmbedding([word_embed, char_embed])
 
-model = CNNBiLSTMCRF(word_embed, char_embed, hidden_size=200, num_layers=1, tag_vocab=data.vocabs[Const.TARGET],
+model = CNNBiLSTMCRF(embed, hidden_size=200, num_layers=1, tag_vocab=data.vocabs[Const.TARGET],
                      encoding_type=encoding_type)
 
 callbacks = [

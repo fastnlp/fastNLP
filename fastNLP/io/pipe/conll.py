@@ -19,16 +19,14 @@ class _NERPipe(Pipe):
 
     :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
     :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
-    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为0。
     """
 
-    def __init__(self, encoding_type: str = 'bio', lower: bool = False, target_pad_val=0):
+    def __init__(self, encoding_type: str = 'bio', lower: bool = False):
         if encoding_type == 'bio':
             self.convert_tag = iob2
         else:
             self.convert_tag = lambda words: iob2bioes(iob2(words))
         self.lower = lower
-        self.target_pad_val = int(target_pad_val)
 
     def process(self, data_bundle: DataBundle) -> DataBundle:
         """
@@ -58,7 +56,6 @@ class _NERPipe(Pipe):
         target_fields = [Const.TARGET, Const.INPUT_LEN]
 
         for name, dataset in data_bundle.datasets.items():
-            dataset.set_pad_val(Const.TARGET, self.target_pad_val)
             dataset.add_seq_len(Const.INPUT)
 
         data_bundle.set_input(*input_fields)
@@ -86,7 +83,6 @@ class Conll2003NERPipe(_NERPipe):
 
     :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
     :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
-    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为0。
     """
 
     def process_from_file(self, paths) -> DataBundle:
@@ -103,7 +99,7 @@ class Conll2003NERPipe(_NERPipe):
 
 
 class Conll2003Pipe(Pipe):
-    def __init__(self, chunk_encoding_type='bioes', ner_encoding_type='bioes', lower: bool = False, target_pad_val=0):
+    def __init__(self, chunk_encoding_type='bioes', ner_encoding_type='bioes', lower: bool = False):
         """
         经过该Pipe后，DataSet中的内容如下
 
@@ -119,7 +115,6 @@ class Conll2003Pipe(Pipe):
         :param str chunk_encoding_type: 支持bioes, bio。
         :param str ner_encoding_type: 支持bioes, bio。
         :param bool lower: 是否将words列小写化后再建立词表
-        :param int target_pad_val: pos, ner, chunk列的padding值
         """
         if chunk_encoding_type == 'bio':
             self.chunk_convert_tag = iob2
@@ -130,7 +125,6 @@ class Conll2003Pipe(Pipe):
         else:
             self.ner_convert_tag = lambda tags: iob2bioes(iob2(tags))
         self.lower = lower
-        self.target_pad_val = int(target_pad_val)
 
     def process(self, data_bundle)->DataBundle:
         """
@@ -166,9 +160,6 @@ class Conll2003Pipe(Pipe):
         target_fields = ['pos', 'ner', 'chunk', Const.INPUT_LEN]
 
         for name, dataset in data_bundle.datasets.items():
-            dataset.set_pad_val('pos', self.target_pad_val)
-            dataset.set_pad_val('ner', self.target_pad_val)
-            dataset.set_pad_val('chunk', self.target_pad_val)
             dataset.add_seq_len(Const.INPUT)
 
         data_bundle.set_input(*input_fields)
@@ -202,7 +193,6 @@ class OntoNotesNERPipe(_NERPipe):
 
     :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
     :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
-    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为0。
     """
 
     def process_from_file(self, paths):
@@ -220,15 +210,13 @@ class _CNNERPipe(Pipe):
     target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target, seq_len。
 
     :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
-    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为0。
     """
 
-    def __init__(self, encoding_type: str = 'bio', target_pad_val=0):
+    def __init__(self, encoding_type: str = 'bio'):
         if encoding_type == 'bio':
             self.convert_tag = iob2
         else:
             self.convert_tag = lambda words: iob2bioes(iob2(words))
-        self.target_pad_val = int(target_pad_val)
 
     def process(self, data_bundle: DataBundle) -> DataBundle:
         """
@@ -261,7 +249,6 @@ class _CNNERPipe(Pipe):
         target_fields = [Const.TARGET, Const.INPUT_LEN]
 
         for name, dataset in data_bundle.datasets.items():
-            dataset.set_pad_val(Const.TARGET, self.target_pad_val)
             dataset.add_seq_len(Const.CHAR_INPUT)
 
         data_bundle.set_input(*input_fields)
@@ -324,7 +311,6 @@ class WeiboNERPipe(_CNNERPipe):
     target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
 
     :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
-    :param int target_pad_val: target的padding值，target这一列pad的位置值为target_pad_val。默认为0。
     """
     def process_from_file(self, paths=None) -> DataBundle:
         data_bundle = WeiboNERLoader().load(paths)
