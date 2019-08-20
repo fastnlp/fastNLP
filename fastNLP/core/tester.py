@@ -180,12 +180,11 @@ class Tester(object):
                                             f"`dict`, got {type(eval_result)}")
                         metric_name = metric.get_metric_name()
                         eval_results[metric_name] = eval_result
-
+                    pbar.close()
                     end_time = time.time()
                     test_str = f'Evaluate data in {round(end_time - start_time, 2)} seconds!'
                     # pbar.write(test_str)
                     self.logger.info(test_str)
-                    pbar.close()
         except _CheckError as e:
             prev_func_signature = _get_func_signature(self._predict_func)
             _check_loss_evaluate(prev_func_signature=prev_func_signature, func_signature=e.func_signature,
