@@ -115,7 +115,7 @@ class BertEmbedding(ContextualEmbedding):
                 if self._word_sep_index:  # 不能drop sep
                     sep_mask = words.eq(self._word_sep_index)
                 mask = torch.ones_like(words).float() * self.word_dropout
-                mask = torch.bernoulli(mask).byte()  # dropout_word越大，越多位置为1
+                mask = torch.bernoulli(mask).eq(1)  # dropout_word越大，越多位置为1
                 words = words.masked_fill(mask, self._word_unk_index)
                 if self._word_sep_index:
                     words.masked_fill_(sep_mask, self._word_sep_index)
@@ -252,7 +252,7 @@ class BertWordPieceEncoder(nn.Module):
                 if self._word_sep_index:  # 不能drop sep
                     sep_mask = words.eq(self._wordpiece_unk_index)
                 mask = torch.ones_like(words).float() * self.word_dropout
-                mask = torch.bernoulli(mask).byte()  # dropout_word越大，越多位置为1
+                mask = torch.bernoulli(mask).eq(1)  # dropout_word越大，越多位置为1
                 words = words.masked_fill(mask, self._word_unk_index)
                 if self._word_sep_index:
                     words.masked_fill_(sep_mask, self._wordpiece_unk_index)

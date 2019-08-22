@@ -150,7 +150,7 @@ class GraphParser(BaseModel):
         """
         _, seq_len, _ = arc_matrix.shape
         matrix = arc_matrix + torch.diag(arc_matrix.new(seq_len).fill_(-np.inf))
-        flip_mask = (mask == 0).byte()
+        flip_mask = mask.eq(0)
         matrix.masked_fill_(flip_mask.unsqueeze(1), -np.inf)
         _, heads = torch.max(matrix, dim=2)
         if mask is not None:

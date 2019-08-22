@@ -27,7 +27,7 @@ def viterbi_decode(logits, transitions, mask=None, unpad=False):
             "compatible."
     logits = logits.transpose(0, 1).data  # L, B, H
     if mask is not None:
-        mask = mask.transpose(0, 1).data.byte()  # L, B
+        mask = mask.transpose(0, 1).data.eq(1)  # L, B
     else:
         mask = logits.new_ones((seq_len, batch_size), dtype=torch.uint8)
 
