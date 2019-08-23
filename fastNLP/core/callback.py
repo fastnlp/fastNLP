@@ -569,7 +569,7 @@ class FitlogCallback(Callback):
                                 batch_size=self.trainer.kwargs.get('dev_batch_size', self.batch_size),
                                 metrics=self.trainer.metrics,
                                 verbose=0,
-                                use_tqdm=self.trainer.use_tqdm)
+                                use_tqdm=self.trainer.test_use_tqdm)
                 self.testers[key] = tester
         fitlog.add_progress(total_steps=self.n_steps)
     
@@ -654,7 +654,7 @@ class EvaluateCallback(Callback):
                 tester = Tester(data=data, model=self.model,
                                 batch_size=self.trainer.kwargs.get('dev_batch_size', self.batch_size),
                                 metrics=self.trainer.metrics, verbose=0,
-                                use_tqdm=self.trainer.use_tqdm)
+                                use_tqdm=self.trainer.test_use_tqdm)
                 self.testers[key] = tester
 
     def on_valid_end(self, eval_result, metric_key, optimizer, better_result):

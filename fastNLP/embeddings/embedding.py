@@ -63,7 +63,7 @@ class Embedding(nn.Module):
         """
         if self.word_dropout>0 and self.training:
             mask = torch.ones_like(words).float() * self.word_dropout
-            mask = torch.bernoulli(mask).byte()  # dropout_word越大，越多位置为1
+            mask = torch.bernoulli(mask).eq(1)  # dropout_word越大，越多位置为1
             words = words.masked_fill(mask, self.unk_index)
         words = self.embed(words)
         return self.dropout(words)
@@ -135,7 +135,7 @@ class TokenEmbedding(nn.Module):
         """
         if self.word_dropout > 0 and self.training:
             mask = torch.ones_like(words).float() * self.word_dropout
-            mask = torch.bernoulli(mask).byte()  # dropout_word越大，越多位置为1
+            mask = torch.bernoulli(mask).eq(1)  # dropout_word越大，越多位置为1
             words = words.masked_fill(mask, self._word_unk_index)
         return words
 

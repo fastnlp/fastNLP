@@ -106,6 +106,7 @@ class StaticEmbedding(TokenEmbedding):
             print(f"{len(vocab) - len(truncated_vocab)} out of {len(vocab)} words have frequency less than {min_freq}.")
             vocab = truncated_vocab
 
+        self.only_norm_found_vector = kwargs.get('only_norm_found_vector', False)
         # 读取embedding
         if lower:
             lowered_vocab = Vocabulary(padding=vocab.padding, unknown=vocab.unknown)
@@ -142,7 +143,7 @@ class StaticEmbedding(TokenEmbedding):
             else:
                 embedding = self._randomly_init_embed(len(vocab), embedding_dim, init_method)
                 self.words_to_words = nn.Parameter(torch.arange(len(vocab)).long(), requires_grad=False)
-        if normalize:
+        if not self.only_norm_found_vector and normalize:
             embedding /= (torch.norm(embedding, dim=1, keepdim=True) + 1e-12)
 
         if truncate_vocab:
@@ -233,6 +234,7 @@ class StaticEmbedding(TokenEmbedding):
             if vocab.unknown:
                 matrix[vocab.unknown_idx] = torch.zeros(dim)
             found_count = 0
+            found_unknown = False
             for idx, line in enumerate(f, start_idx):
                 try:
                     parts = line.strip().split()
@@ -243,9 +245,12 @@ class StaticEmbedding(TokenEmbedding):
                         word = vocab.padding
                     elif word == unknown and vocab.unknown is not None:
                         word = vocab.unknown
+                        found_unknown = True
                     if word in vocab:
                         index = vocab.to_index(word)
                         matrix[index] = torch.from_numpy(np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim))
+                        if self.only_norm_found_vector:
+                            matrix[index] = matrix[index]/np.linalg.norm(matrix[index])
                         found_count += 1
                 except Exception as e:
                     if error == 'ignore':
@@ -256,7 +261,7 @@ class StaticEmbedding(TokenEmbedding):
             print("Found {} out of {} words in the pre-training embedding.".format(found_count, len(vocab)))
             for word, index in vocab:
                 if index not in matrix and not vocab._is_word_no_create_entry(word):
-                    if vocab.unknown_idx in matrix:  # 如果有unkonwn，用unknown初始化
+                    if found_unknown:  # 如果有unkonwn，用unknown初始化
                         matrix[index] = matrix[vocab.unknown_idx]
                     else:
                         matrix[index] = None

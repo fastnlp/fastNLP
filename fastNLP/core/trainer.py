@@ -545,6 +545,10 @@ class Trainer(object):
         self.logger = logger
 
         self.use_tqdm = use_tqdm
+        if 'test_use_tqdm' in kwargs:
+            self.test_use_tqdm = kwargs.get('test_use_tqdm')
+        else:
+            self.test_use_tqdm = self.use_tqdm
         self.pbar = None
         self.print_every = abs(self.print_every)
         self.kwargs = kwargs
@@ -555,7 +559,7 @@ class Trainer(object):
                                  batch_size=kwargs.get("dev_batch_size", self.batch_size),
                                  device=None,  # 由上面的部分处理device
                                  verbose=0,
-                                 use_tqdm=self.use_tqdm)
+                                 use_tqdm=self.test_use_tqdm)
 
         self.step = 0
         self.start_time = None  # start timestamp
