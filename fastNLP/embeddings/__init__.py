@@ -18,7 +18,6 @@ __all__ = [
     "get_embeddings",
 ]
 
-
 from .embedding import Embedding, TokenEmbedding
 from .static_embedding import StaticEmbedding
 from .elmo_embedding import ElmoEmbedding
