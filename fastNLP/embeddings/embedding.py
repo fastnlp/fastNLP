@@ -138,7 +138,7 @@ class TokenEmbedding(nn.Module):
         :return:
         """
         if self.word_dropout > 0 and self.training:
-            mask = torch.full_like(words, fill_value=self.word_dropout)
+            mask = torch.full_like(words, fill_value=self.word_dropout, dtype=torch.float, device=words.device)
             mask = torch.bernoulli(mask).eq(1)  # dropout_word越大，越多位置为1
             pad_mask = words.ne(self._word_pad_index)
             mask = mask.__and__(pad_mask)

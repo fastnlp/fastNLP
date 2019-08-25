@@ -5,6 +5,7 @@ from fastNLP import Vocabulary
 import torch
 import os
 
+
 class TestLoad(unittest.TestCase):
     def test_norm1(self):
         # 测试只对可以找到的norm
@@ -21,6 +22,16 @@ class TestLoad(unittest.TestCase):
                                 normalize=True)
         self.assertEqual(round(torch.norm(embed(torch.LongTensor([[2]]))).item(), 4), 1)
         self.assertEqual(round(torch.norm(embed(torch.LongTensor([[4]]))).item(), 4), 1)
+
+    def test_dropword(self):
+        # 测试是否可以通过drop word
+        vocab = Vocabulary().add_word_lst([chr(i) for i in range(1, 200)])
+        embed = StaticEmbedding(vocab, model_dir_or_name=None, embedding_dim=10, dropout=0.1, word_dropout=0.4)
+        for i in range(10):
+            length = torch.randint(1, 50, (1,)).item()
+            batch = torch.randint(1, 4, (1,)).item()
+            words = torch.randint(1, 200, (batch, length)).long()
+            embed(words)
 
 class TestRandomSameEntry(unittest.TestCase):
     def test_same_vector(self):
