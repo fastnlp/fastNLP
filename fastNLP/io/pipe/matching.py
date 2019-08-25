@@ -181,8 +181,8 @@ class MatchingPipe(Pipe):
            "This site includes a...", "The Government Executive...", "not_entailment"
            "...", "..."
 
-        :param data_bundle:
-        :return:
+        :param data_bundle: 通过loader读取得到的data_bundle，里面包含了数据集的原始数据内容
+        :return: data_bundle
         """
         data_bundle = self._tokenize(data_bundle, [Const.RAW_WORDS(0), Const.RAW_WORDS(1)],
                                      [Const.INPUTS(0), Const.INPUTS(1)])

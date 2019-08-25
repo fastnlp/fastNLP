@@ -59,7 +59,7 @@ PRETRAIN_STATIC_FILES = {
     'en-fasttext-crawl': "crawl-300d-2M.vec.zip",
 
     'cn': "tencent_cn.zip",
-    'cn-tencent': "tencent_cn.txt.zip",
+    'cn-tencent': "tencent_cn.zip",
     'cn-fasttext': "cc.zh.300.vec.gz",
     'cn-sgns-literature-word': 'sgns.literature.word.txt.zip',
 }

@@ -6,7 +6,7 @@ from .loader import Loader
 
 class CSVLoader(Loader):
     """
-    别名：:class:`fastNLP.io.CSVLoader` :class:`fastNLP.io.dataset_loader.CSVLoader`
+    别名：:class:`fastNLP.io.CSVLoader` :class:`fastNLP.io.loader.CSVLoader`
 
     读取CSV格式的数据集, 返回 ``DataSet`` 。
 

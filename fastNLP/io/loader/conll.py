@@ -11,9 +11,10 @@ import shutil
 import time
 import random
 
+
 class ConllLoader(Loader):
     """
-    别名：:class:`fastNLP.io.ConllLoader` :class:`fastNLP.io.data_loader.ConllLoader`
+    别名：:class:`fastNLP.io.ConllLoader` :class:`fastNLP.io.loader.ConllLoader`
 
     ConllLoader支持读取的数据格式: 以空行隔开两个sample，除了分割行，每一行用空格或者制表符隔开不同的元素。如下例所示:
 

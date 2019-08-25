@@ -38,13 +38,14 @@ __all__ = [
     'JsonLoader',
 
     'CWSLoader',
-    "CWSPipe",
 
     'MNLILoader',
     "QuoraLoader",
     "SNLILoader",
     "QNLILoader",
     "RTELoader",
+
+    "Pipe",
 
     "YelpFullPipe",
     "YelpPolarityPipe",
@@ -58,6 +59,8 @@ __all__ = [
     "MsraNERPipe",
     "PeopleDailyPipe",
     "WeiboNERPipe",
+
+    "CWSPipe",
 
     "MatchingBertPipe",
     "RTEBertPipe",
