@@ -1,4 +1,4 @@
-from reproduction.seqence_labelling.ner.data.OntoNoteLoader import OntoNoteNERDataLoader
+from fastNLP.io import OntoNotesNERPipe
 from fastNLP.core.callback import LRScheduler
 from fastNLP import GradientClipCallback
 from torch.optim.lr_scheduler import LambdaLR
@@ -10,14 +10,10 @@ from fastNLP import Trainer, Tester
 from fastNLP.core.metrics import MetricBase
 from reproduction.seqence_labelling.ner.model.dilated_cnn import IDCNN
 from fastNLP.core.utils import Option
-from fastNLP.embeddings.embedding import StaticEmbedding
+from fastNLP.embeddings import StaticEmbedding
 from fastNLP.core.utils import cache_results
-from fastNLP.core.vocabulary import VocabularyOption
 import torch.cuda
 import os
-os.environ['FASTNLP_BASE_URL'] = 'http://10.141.222.118:8888/file/download/'
-os.environ['FASTNLP_CACHE_DIR'] = '/remote-home/hyan01/fastnlp_caches'
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
 encoding_type = 'bioes'
 
@@ -40,18 +36,8 @@ ops = Option(
 @cache_results('ontonotes-case-cache')
 def load_data():
     print('loading data')
-    data = OntoNoteNERDataLoader(encoding_type=encoding_type).process(
-        paths = get_path('workdir/datasets/ontonotes-v4'),
-        lower=False,
-        word_vocab_opt=VocabularyOption(min_freq=0),
-    )
-    # data = Conll2003DataLoader(task='ner', encoding_type=encoding_type).process(
-    #     paths=get_path('workdir/datasets/conll03'),
-    # lower=False, word_vocab_opt=VocabularyOption(min_freq=0)
-    # )
-
-    # char_embed = CNNCharEmbedding(vocab=data.vocabs['cap_words'], embed_size=30, char_emb_size=30, filter_nums=[30],
-    #                               kernel_sizes=[3])
+    data = OntoNotesNERPipe(encoding_type=encoding_type).process_from_file(
+        paths = get_path('workdir/datasets/ontonotes-v4'))
     print('loading embedding')
     word_embed = StaticEmbedding(vocab=data.vocabs[Const.INPUT],
                                  model_dir_or_name='en-glove-840b-300',

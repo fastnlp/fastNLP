@@ -17,8 +17,7 @@ import os
 
 import torch
 from torch import nn
-import sys
-
+from ...core import logger
 from ..utils import _get_file_name_base_on_postfix
 
 CONFIG_FILE = 'bert_config.json'
@@ -489,10 +488,10 @@ class BertModel(nn.Module):
 
         load(model, prefix='' if hasattr(model, 'bert') else 'bert.')
         if len(missing_keys) > 0:
-            print("Weights of {} not initialized from pretrained model: {}".format(
+            logger.warn("Weights of {} not initialized from pretrained model: {}".format(
                 model.__class__.__name__, missing_keys))
         if len(unexpected_keys) > 0:
-            print("Weights from pretrained model not used in {}: {}".format(
+            logger.warn("Weights from pretrained model not used in {}: {}".format(
                 model.__class__.__name__, unexpected_keys))
         return model
 
@@ -799,7 +798,7 @@ class BertTokenizer(object):
         for token in tokens:
             ids.append(self.vocab[token])
         if len(ids) > self.max_len:
-            print(
+            logger.warn(
                 "Token indices sequence length is longer than the specified maximum "
                 " sequence length for this BERT model ({} > {}). Running this"
                 " sequence through BERT will result in indexing errors".format(len(ids), self.max_len)
@@ -823,7 +822,7 @@ class BertTokenizer(object):
         with open(vocab_file, "w", encoding="utf-8") as writer:
             for token, token_index in sorted(self.vocab.items(), key=lambda kv: kv[1]):
                 if index != token_index:
-                    print("Saving vocabulary to {}: vocabulary indices are not consecutive."
+                    logger.warn("Saving vocabulary to {}: vocabulary indices are not consecutive."
                           " Please check that the vocabulary is not corrupted!".format(vocab_file))
                     index = token_index
                 writer.write(token + u'\n')
@@ -837,7 +836,7 @@ class BertTokenizer(object):
 
         """
         pretrained_model_name_or_path = _get_file_name_base_on_postfix(model_dir, '.txt')
-        print("loading vocabulary file {}".format(pretrained_model_name_or_path))
+        logger.info("loading vocabulary file {}".format(pretrained_model_name_or_path))
         max_len = 512
         kwargs['max_len'] = min(kwargs.get('max_position_embeddings', int(1e12)), max_len)
         # Instantiate tokenizer.
@@ -901,7 +900,7 @@ class _WordPieceBertModel(nn.Module):
                                     is_input=True)
                 dataset.set_pad_val('word_pieces', self._wordpiece_pad_index)
             except Exception as e:
-                print(f"Exception happens when processing the {index} dataset.")
+                logger.error(f"Exception happens when processing the {index} dataset.")
                 raise e
 
     def forward(self, word_pieces, token_type_ids=None):

@@ -12,6 +12,7 @@ from abc import abstractmethod
 from copy import deepcopy
 from collections import Counter
 from .utils import _is_iterable
+from ._logger import logger
 
 
 class SetInputOrTargetException(Exception):
@@ -39,7 +40,7 @@ class FieldArray:
         try:
             _content = list(_content)
         except BaseException as e:
-            print(f"Cannot convert content(of type:{type(content)}) into list.")
+            logger.error(f"Cannot convert content(of type:{type(content)}) into list.")
             raise e
         self.name = name
         self.content = _content
@@ -263,7 +264,7 @@ class FieldArray:
             try:
                 new_contents.append(cell.split(sep))
             except Exception as e:
-                print(f"Exception happens when process value in index {index}.")
+                logger.error(f"Exception happens when process value in index {index}.")
                 raise e
         return self._after_process(new_contents, inplace=inplace)
     
@@ -283,8 +284,8 @@ class FieldArray:
                 else:
                     new_contents.append(int(cell))
             except Exception as e:
-                print(f"Exception happens when process value in index {index}.")
-                print(e)
+                logger.error(f"Exception happens when process value in index {index}.")
+                raise e
         return self._after_process(new_contents, inplace=inplace)
     
     def float(self, inplace=True):
@@ -303,7 +304,7 @@ class FieldArray:
                 else:
                     new_contents.append(float(cell))
             except Exception as e:
-                print(f"Exception happens when process value in index {index}.")
+                logger.error(f"Exception happens when process value in index {index}.")
                 raise e
         return self._after_process(new_contents, inplace=inplace)
     
@@ -323,7 +324,7 @@ class FieldArray:
                 else:
                     new_contents.append(bool(cell))
             except Exception as e:
-                print(f"Exception happens when process value in index {index}.")
+                logger.error(f"Exception happens when process value in index {index}.")
                 raise e
         
         return self._after_process(new_contents, inplace=inplace)
@@ -344,7 +345,7 @@ class FieldArray:
                 else:
                     new_contents.append(cell.lower())
             except Exception as e:
-                print(f"Exception happens when process value in index {index}.")
+                logger.error(f"Exception happens when process value in index {index}.")
                 raise e
         return self._after_process(new_contents, inplace=inplace)
     
@@ -364,7 +365,7 @@ class FieldArray:
                 else:
                     new_contents.append(cell.upper())
             except Exception as e:
-                print(f"Exception happens when process value in index {index}.")
+                logger.error(f"Exception happens when process value in index {index}.")
                 raise e
         return self._after_process(new_contents, inplace=inplace)
     
@@ -401,7 +402,7 @@ class FieldArray:
                 self.is_input = self.is_input
                 self.is_target = self.is_input
             except SetInputOrTargetException as e:
-                print("The newly generated field cannot be set as input or target.")
+                logger.error("The newly generated field cannot be set as input or target.")
                 raise e
             return self
         else:

@@ -11,7 +11,7 @@ import numpy as np
 from ..core.vocabulary import Vocabulary
 from .data_bundle import BaseLoader
 from ..core.utils import Option
-
+import logging
 
 class EmbeddingOption(Option):
     def __init__(self,
@@ -91,10 +91,10 @@ class EmbedLoader(BaseLoader):
                     if error == 'ignore':
                         warnings.warn("Error occurred at the {} line.".format(idx))
                     else:
-                        print("Error occurred at the {} line.".format(idx))
+                        logging.error("Error occurred at the {} line.".format(idx))
                         raise e
             total_hits = sum(hit_flags)
-            print("Found {} out of {} words in the pre-training embedding.".format(total_hits, len(vocab)))
+            logging.info("Found {} out of {} words in the pre-training embedding.".format(total_hits, len(vocab)))
             if init_method is None:
                 found_vectors = matrix[hit_flags]
                 if len(found_vectors) != 0:
@@ -157,7 +157,7 @@ class EmbedLoader(BaseLoader):
                         warnings.warn("Error occurred at the {} line.".format(idx))
                         pass
                     else:
-                        print("Error occurred at the {} line.".format(idx))
+                        logging.error("Error occurred at the {} line.".format(idx))
                         raise e
             if dim == -1:
                 raise RuntimeError("{} is an empty file.".format(embed_filepath))

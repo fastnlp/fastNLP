@@ -16,7 +16,7 @@ from ..core.batch import DataSetIter
 from ..core.sampler import SequentialSampler
 from ..core.utils import _move_model_to_device, _get_model_device
 from .embedding import TokenEmbedding
-
+from ..core import logger
 
 class ContextualEmbedding(TokenEmbedding):
     def __init__(self, vocab: Vocabulary, word_dropout: float = 0.0, dropout: float = 0.0):
@@ -37,14 +37,14 @@ class ContextualEmbedding(TokenEmbedding):
                 assert isinstance(dataset, DataSet), "Only fastNLP.DataSet object is allowed."
                 assert 'words' in dataset.get_input_name(), "`words` field has to be set as input."
             except Exception as e:
-                print(f"Exception happens at {index} dataset.")
+                logger.error(f"Exception happens at {index} dataset.")
                 raise e
         
         sent_embeds = {}
         _move_model_to_device(self, device=device)
         device = _get_model_device(self)
         pad_index = self._word_vocab.padding_idx
-        print("Start to calculate sentence representations.")
+        logger.info("Start to calculate sentence representations.")
         with torch.no_grad():
             for index, dataset in enumerate(datasets):
                 try:
@@ -64,9 +64,9 @@ class ContextualEmbedding(TokenEmbedding):
                             else:
                                 sent_embeds[tuple(words_list[b][:seq_len[b]])] = word_embeds[b, :-length]
                 except Exception as e:
-                    print(f"Exception happens at {index} dataset.")
+                    logger.error(f"Exception happens at {index} dataset.")
                     raise e
-        print("Finish calculating sentence representations.")
+        logger.info("Finish calculating sentence representations.")
         self.sent_embeds = sent_embeds
         if delete_weights:
             self._delete_model_weights()

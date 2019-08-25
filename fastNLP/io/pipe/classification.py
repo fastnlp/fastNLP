@@ -11,7 +11,7 @@ from .utils import get_tokenizer, _indexize, _add_words_field, _drop_empty_insta
 from .pipe import Pipe
 import re
 nonalpnum = re.compile('[^0-9a-zA-Z?!\']+')
-from ...core.utils import cache_results
+
 
 class _CLSPipe(Pipe):
     """

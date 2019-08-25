@@ -2,7 +2,8 @@
 此模块用于给其它模块提供读取文件的函数，没有为用户提供 API
 """
 import json
-import warnings
+from ..core import logger
+
 
 def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
     """
@@ -103,9 +104,9 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
                         yield line_idx, res
                     except Exception as e:
                         if dropna:
-                            warnings.warn('Invalid instance ends at line: {} has been dropped.'.format(line_idx))
+                            logger.warn('Invalid instance which ends at line: {} has been dropped.'.format(line_idx))
                             continue
-                        raise ValueError('Invalid instance ends at line: {}'.format(line_idx))
+                        raise ValueError('Invalid instance which ends at line: {}'.format(line_idx))
             elif line.startswith('#'):
                 continue
             else:
@@ -117,5 +118,5 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
             except Exception as e:
                 if dropna:
                     return
-                print('invalid instance ends at line: {}'.format(line_idx))
+                logger.error('invalid instance ends at line: {}'.format(line_idx))
                 raise e

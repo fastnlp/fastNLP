@@ -18,7 +18,7 @@ from ..core.vocabulary import Vocabulary
 from ..io.file_utils import cached_path, _get_embedding_url, PRETRAINED_ELMO_MODEL_DIR
 from ..modules.encoder._elmo import ElmobiLm, ConvTokenEmbedder
 from .contextual_embedding import ContextualEmbedding
-
+from ..core import logger
 
 class ElmoEmbedding(ContextualEmbedding):
     """
@@ -243,7 +243,7 @@ class _ElmoModel(nn.Module):
                 index_in_pre = char_lexicon[OOV_TAG]
             char_emb_layer.weight.data[index] = char_embed_weights[index_in_pre]
         
-        print(f"{found_char_count} out of {len(char_vocab)} characters were found in pretrained elmo embedding.")
+        logger.info(f"{found_char_count} out of {len(char_vocab)} characters were found in pretrained elmo embedding.")
         # 生成words到chars的映射
         max_chars = config['char_cnn']['max_characters_per_token']
         
@@ -281,7 +281,7 @@ class _ElmoModel(nn.Module):
         
         if cache_word_reprs:
             if config['char_cnn']['embedding']['dim'] > 0:  # 只有在使用了chars的情况下有用
-                print("Start to generate cache word representations.")
+                logger.info("Start to generate cache word representations.")
                 batch_size = 320
                 # bos eos
                 word_size = self.words_to_chars_embedding.size(0)
@@ -299,10 +299,10 @@ class _ElmoModel(nn.Module):
                                                          chars).detach()  # batch_size x 1 x config['encoder']['projection_dim']
                         self.cached_word_embedding.weight.data[words] = word_reprs.squeeze(1)
                     
-                    print("Finish generating cached word representations. Going to delete the character encoder.")
+                    logger.info("Finish generating cached word representations. Going to delete the character encoder.")
                 del self.token_embedder, self.words_to_chars_embedding
             else:
-                print("There is no need to cache word representations, since no character information is used.")
+                logger.info("There is no need to cache word representations, since no character information is used.")
     
     def forward(self, words):
         """

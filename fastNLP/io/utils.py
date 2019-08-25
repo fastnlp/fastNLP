@@ -2,7 +2,7 @@ import os
 
 from typing import Union, Dict
 from pathlib import Path
-
+from ..core import logger
 
 def check_loader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
     """
@@ -70,8 +70,8 @@ def get_tokenizer():
         import spacy
         spacy.prefer_gpu()
         en = spacy.load('en')
-        print('use spacy tokenizer')
+        logger.info('use spacy tokenizer')
         return lambda x: [w.text for w in en.tokenizer(x)]
     except Exception as e:
-        print('use raw tokenizer')
+        logger.error('use raw tokenizer')
         return lambda x: x.split()

@@ -21,6 +21,7 @@ from ..io.file_utils import _get_embedding_url, cached_path, PRETRAINED_BERT_MOD
 from ..modules.encoder.bert import _WordPieceBertModel, BertModel, BertTokenizer
 from .contextual_embedding import ContextualEmbedding
 import warnings
+from ..core import logger
 
 
 class BertEmbedding(ContextualEmbedding):
@@ -125,8 +126,10 @@ class BertEmbedding(ContextualEmbedding):
             with torch.no_grad():
                 if self._word_sep_index:  # 不能drop sep
                     sep_mask = words.eq(self._word_sep_index)
-                mask = torch.ones_like(words).float() * self.word_dropout
+                mask = torch.full_like(words, fill_value=self.word_dropout)
                 mask = torch.bernoulli(mask).eq(1)  # dropout_word越大，越多位置为1
+                pad_mask = words.ne(0)
+                mask = pad_mask.__and__(mask)  # pad的位置不为unk
                 words = words.masked_fill(mask, self._word_unk_index)
                 if self._word_sep_index:
                     words.masked_fill_(sep_mask, self._word_sep_index)
@@ -182,6 +185,7 @@ class BertWordPieceEncoder(nn.Module):
         
         self.model = _WordPieceBertModel(model_dir=model_dir, layers=layers, pooled_cls=pooled_cls)
         self._sep_index = self.model._sep_index
+        self._wordpiece_pad_index = self.model._wordpiece_pad_index
         self._wordpiece_unk_index = self.model._wordpiece_unknown_index
         self._embed_size = len(self.model.layers) * self.model.encoder.hidden_size
         self.requires_grad = requires_grad
@@ -263,8 +267,10 @@ class BertWordPieceEncoder(nn.Module):
             with torch.no_grad():
                 if self._word_sep_index:  # 不能drop sep
                     sep_mask = words.eq(self._wordpiece_unk_index)
-                mask = torch.ones_like(words).float() * self.word_dropout
+                mask = torch.full_like(words, fill_value=self.word_dropout)
                 mask = torch.bernoulli(mask).eq(1)  # dropout_word越大，越多位置为1
+                pad_mask = words.ne(self._wordpiece_pad_index)
+                mask = pad_mask.__and__(mask)  # pad的位置不为unk
                 words = words.masked_fill(mask, self._word_unk_index)
                 if self._word_sep_index:
                     words.masked_fill_(sep_mask, self._wordpiece_unk_index)
@@ -297,7 +303,7 @@ class _WordBertModel(nn.Module):
         self.auto_truncate = auto_truncate
         
         # 将所有vocab中word的wordpiece计算出来, 需要额外考虑[CLS]和[SEP]
-        print("Start to generating word pieces for word.")
+        logger.info("Start to generating word pieces for word.")
         # 第一步统计出需要的word_piece, 然后创建新的embed和word_piece_vocab, 然后填入值
         word_piece_dict = {'[CLS]': 1, '[SEP]': 1}  # 用到的word_piece以及新增的
         found_count = 0
@@ -356,10 +362,10 @@ class _WordBertModel(nn.Module):
         self._sep_index = self.tokenzier.vocab['[SEP]']
         self._word_pad_index = vocab.padding_idx
         self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
-        print("Found(Or segment into word pieces) {} words out of {}.".format(found_count, len(vocab)))
+        logger.info("Found(Or segment into word pieces) {} words out of {}.".format(found_count, len(vocab)))
         self.word_to_wordpieces = np.array(word_to_wordpieces)
         self.word_pieces_lengths = nn.Parameter(torch.LongTensor(word_pieces_lengths), requires_grad=False)
-        print("Successfully generate word pieces.")
+        logger.debug("Successfully generate word pieces.")
     
     def forward(self, words):
         """

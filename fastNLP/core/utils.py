@@ -145,7 +145,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
                     with open(cache_filepath, 'rb') as f:
                         results = _pickle.load(f)
                     if verbose == 1:
-                        print("Read cache from {}.".format(cache_filepath))
+                        logger.info("Read cache from {}.".format(cache_filepath))
                     refresh_flag = False
             
             if refresh_flag:
@@ -156,7 +156,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
                     _prepare_cache_filepath(cache_filepath)
                     with open(cache_filepath, 'wb') as f:
                         _pickle.dump(results, f)
-                    print("Save cache to {}.".format(cache_filepath))
+                    logger.info("Save cache to {}.".format(cache_filepath))
             
             return results
         

@@ -10,6 +10,7 @@ from .utils import Option
 from functools import partial
 import numpy as np
 from .utils import _is_iterable
+from ._logger import logger
 
 class VocabularyOption(Option):
     def __init__(self,
@@ -49,7 +50,7 @@ def _check_build_status(func):
         if self.rebuild is False:
             self.rebuild = True
             if self.max_size is not None and len(self.word_count) >= self.max_size:
-                print("[Warning] Vocabulary has reached the max size {} when calling {} method. "
+                logger.info("[Warning] Vocabulary has reached the max size {} when calling {} method. "
                       "Adding more words may cause unexpected behaviour of Vocabulary. ".format(
                     self.max_size, func.__name__))
         return func(self, *args, **kwargs)
@@ -297,7 +298,7 @@ class Vocabulary(object):
                     for f_n, n_f_n in zip(field_name, new_field_name):
                         dataset.apply_field(index_instance, field_name=f_n, new_field_name=n_f_n)
                 except Exception as e:
-                    print("When processing the `{}` dataset, the following error occurred.".format(idx))
+                    logger.info("When processing the `{}` dataset, the following error occurred.".format(idx))
                     raise e
             else:
                 raise RuntimeError("Only DataSet type is allowed.")
@@ -353,7 +354,7 @@ class Vocabulary(object):
                 try:
                     dataset.apply(construct_vocab)
                 except BaseException as e:
-                    print("When processing the `{}` dataset, the following error occurred:".format(idx))
+                    log("When processing the `{}` dataset, the following error occurred:".format(idx))
                     raise e
             else:
                 raise TypeError("Only DataSet type is allowed.")

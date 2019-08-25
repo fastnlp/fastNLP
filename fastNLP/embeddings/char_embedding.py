@@ -19,6 +19,7 @@ from ..core.vocabulary import Vocabulary
 from .embedding import TokenEmbedding
 from .utils import _construct_char_vocab_from_vocab
 from .utils import get_embeddings
+from ..core import logger
 
 
 class CNNCharEmbedding(TokenEmbedding):
@@ -81,11 +82,11 @@ class CNNCharEmbedding(TokenEmbedding):
             raise Exception(
                 "Undefined activation function: choose from: [relu, tanh, sigmoid, or a callable function]")
         
-        print("Start constructing character vocabulary.")
+        logger.info("Start constructing character vocabulary.")
         # 建立char的词表
         self.char_vocab = _construct_char_vocab_from_vocab(vocab, min_freq=min_char_freq)
         self.char_pad_index = self.char_vocab.padding_idx
-        print(f"In total, there are {len(self.char_vocab)} distinct characters.")
+        logger.info(f"In total, there are {len(self.char_vocab)} distinct characters.")
         # 对vocab进行index
         max_word_len = max(map(lambda x: len(x[0]), vocab))
         self.words_to_chars_embedding = nn.Parameter(torch.full((len(vocab), max_word_len),
@@ -236,11 +237,11 @@ class LSTMCharEmbedding(TokenEmbedding):
             raise Exception(
                 "Undefined activation function: choose from: [relu, tanh, sigmoid, or a callable function]")
         
-        print("Start constructing character vocabulary.")
+        logger.info("Start constructing character vocabulary.")
         # 建立char的词表
         self.char_vocab = _construct_char_vocab_from_vocab(vocab, min_freq=min_char_freq)
         self.char_pad_index = self.char_vocab.padding_idx
-        print(f"In total, there are {len(self.char_vocab)} distinct characters.")
+        logger.info(f"In total, there are {len(self.char_vocab)} distinct characters.")
         # 对vocab进行index
         self.max_word_len = max(map(lambda x: len(x[0]), vocab))
         self.words_to_chars_embedding = nn.Parameter(torch.full((len(vocab), self.max_word_len),

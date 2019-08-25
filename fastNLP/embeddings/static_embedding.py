@@ -19,6 +19,7 @@ from .embedding import TokenEmbedding
 from ..modules.utils import _get_file_name_base_on_postfix
 from copy import deepcopy
 from collections import defaultdict
+from ..core import logger
 
 
 class StaticEmbedding(TokenEmbedding):
@@ -112,7 +113,7 @@ class StaticEmbedding(TokenEmbedding):
             truncated_words_to_words = torch.arange(len(vocab)).long()
             for word, index in vocab:
                 truncated_words_to_words[index] = truncated_vocab.to_index(word)
-            print(f"{len(vocab) - len(truncated_vocab)} out of {len(vocab)} words have frequency less than {min_freq}.")
+            logger.info(f"{len(vocab) - len(truncated_vocab)} out of {len(vocab)} words have frequency less than {min_freq}.")
             vocab = truncated_vocab
         
         self.only_norm_found_vector = kwargs.get('only_norm_found_vector', False)
@@ -124,7 +125,7 @@ class StaticEmbedding(TokenEmbedding):
                     lowered_vocab.add_word(word.lower(), no_create_entry=True)
                 else:
                     lowered_vocab.add_word(word.lower())  # 先加入需要创建entry的
-            print(f"All word in the vocab have been lowered. There are {len(vocab)} words, {len(lowered_vocab)} "
+            logger.info(f"All word in the vocab have been lowered. There are {len(vocab)} words, {len(lowered_vocab)} "
                   f"unique lowered words.")
             if model_path:
                 embedding = self._load_with_vocab(model_path, vocab=lowered_vocab, init_method=init_method)
@@ -265,9 +266,9 @@ class StaticEmbedding(TokenEmbedding):
                     if error == 'ignore':
                         warnings.warn("Error occurred at the {} line.".format(idx))
                     else:
-                        print("Error occurred at the {} line.".format(idx))
+                        logger.error("Error occurred at the {} line.".format(idx))
                         raise e
-            print("Found {} out of {} words in the pre-training embedding.".format(found_count, len(vocab)))
+            logger.info("Found {} out of {} words in the pre-training embedding.".format(found_count, len(vocab)))
             for word, index in vocab:
                 if index not in matrix and not vocab._is_word_no_create_entry(word):
                     if found_unknown:  # 如果有unkonwn，用unknown初始化

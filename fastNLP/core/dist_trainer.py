@@ -54,7 +54,6 @@ class DistTrainer():
                  num_workers=1, drop_last=False,
                  dev_data=None, metrics=None, metric_key=None,
                  update_every=1, print_every=10, validate_every=-1,
-                 log_path=None,
                  save_every=-1, save_path=None, device='auto',
                  fp16='', backend=None, init_method=None):
 

@@ -7,6 +7,7 @@ import tempfile
 from tqdm import tqdm
 import shutil
 from requests import HTTPError
+from ..core import logger
 
 PRETRAINED_BERT_MODEL_DIR = {
     'en': 'bert-base-cased.zip',
@@ -336,7 +337,7 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
                 content_length = req.headers.get("Content-Length")
                 total = int(content_length) if content_length is not None else None
                 progress = tqdm(unit="B", total=total, unit_scale=1)
-                print("%s not found in cache, downloading to %s" % (url, temp_filename))
+                logger.info("%s not found in cache, downloading to %s" % (url, temp_filename))
 
                 with open(temp_filename, "wb") as temp_file:
                     for chunk in req.iter_content(chunk_size=1024 * 16):
@@ -344,12 +345,12 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
                             progress.update(len(chunk))
                             temp_file.write(chunk)
                 progress.close()
-                print(f"Finish download from {url}")
+                logger.info(f"Finish download from {url}")
 
                 # 开始解压
                 if suffix in ('.zip', '.tar.gz', '.gz'):
                     uncompress_temp_dir = tempfile.mkdtemp()
-                    print(f"Start to uncompress file to {uncompress_temp_dir}")
+                    logger.debug(f"Start to uncompress file to {uncompress_temp_dir}")
                     if suffix == '.zip':
                         unzip_file(Path(temp_filename), Path(uncompress_temp_dir))
                     elif suffix == '.gz':
@@ -362,13 +363,13 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
                             uncompress_temp_dir = os.path.join(uncompress_temp_dir, filenames[0])
 
                     cache_path.mkdir(parents=True, exist_ok=True)
-                    print("Finish un-compressing file.")
+                    logger.debug("Finish un-compressing file.")
                 else:
                     uncompress_temp_dir = temp_filename
                     cache_path = str(cache_path) + suffix
 
                 # 复制到指定的位置
-                print(f"Copy file to {cache_path}")
+                logger.info(f"Copy file to {cache_path}")
                 if os.path.isdir(uncompress_temp_dir):
                     for filename in os.listdir(uncompress_temp_dir):
                         if os.path.isdir(os.path.join(uncompress_temp_dir, filename)):
@@ -379,7 +380,7 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
                     shutil.copyfile(uncompress_temp_dir, cache_path)
                 success = True
             except Exception as e:
-                print(e)
+                logger.error(e)
                 raise e
             finally:
                 if not success:
