@@ -10,6 +10,8 @@ Pipe用于处理通过 Loader 读取的数据，所有的 Pipe 都包含 ``proce
 __all__ = [
     "Pipe",
 
+    "CWSPipe",
+
     "YelpFullPipe",
     "YelpPolarityPipe",
     "SSTPipe",
@@ -43,3 +45,4 @@ from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe
     MatchingPipe, RTEPipe, SNLIPipe, QuoraPipe, QNLIPipe, MNLIPipe
 from .pipe import Pipe
 from .conll import Conll2003Pipe
+from .cws import CWSPipe

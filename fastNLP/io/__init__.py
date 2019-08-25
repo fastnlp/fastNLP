@@ -38,6 +38,7 @@ __all__ = [
     'JsonLoader',
 
     'CWSLoader',
+    "CWSPipe",
 
     'MNLILoader',
     "QuoraLoader",
