@@ -1,7 +1,11 @@
-# Code Modified from https://github.com/carpedm20/ENAS-pytorch
+"""undocumented
+Code Modified from https://github.com/carpedm20/ENAS-pytorch
+"""
 
-from collections import defaultdict
+__all__ = []
+
 import collections
+from collections import defaultdict
 
 import numpy as np
 import torch

@@ -35,6 +35,13 @@ class Instance(object):
         :param Any field: 新增field的内容
         """
         self.fields[field_name] = field
+
+    def items(self):
+        """
+        返回一个迭代器，迭代器返回两个内容，第一个内容是field_name, 第二个内容是field_value
+        :return:
+        """
+        return self.fields.items()
     
     def __getitem__(self, name):
         if name in self.fields:

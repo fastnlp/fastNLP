@@ -10,14 +10,14 @@ class TestCRF(unittest.TestCase):
         id2label = {0: 'B', 1: 'I', 2:'O'}
         expected_res = {(0, 0), (0, 1), (0, 2), (0, 4), (1, 0), (1, 1), (1, 2), (1, 4), (2, 0), (2, 2),
                         (2, 4), (3, 0), (3, 2)}
-        self.assertSetEqual(expected_res, set(allowed_transitions(id2label)))
+        self.assertSetEqual(expected_res, set(allowed_transitions(id2label, include_start_end=True)))
 
         id2label = {0: 'B', 1:'M', 2:'E', 3:'S'}
         expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 5), (3, 0), (3, 3), (3, 5), (4, 0), (4, 3)}
-        self.assertSetEqual(expected_res, set(allowed_transitions(id2label, encoding_type='BMES')))
+        self.assertSetEqual(expected_res, set(allowed_transitions(id2label, encoding_type='BMES', include_start_end=True)))
 
         id2label = {0: 'B', 1: 'I', 2:'O', 3: '<pad>', 4:"<unk>"}
-        allowed_transitions(id2label)
+        allowed_transitions(id2label, include_start_end=True)
 
         labels = ['O']
         for label in ['X', 'Y']:
@@ -27,7 +27,7 @@ class TestCRF(unittest.TestCase):
         expected_res = {(0, 0), (0, 1), (0, 3), (0, 6), (1, 0), (1, 1), (1, 2), (1, 3), (1, 6), (2, 0), (2, 1),
                         (2, 2), (2, 3), (2, 6), (3, 0), (3, 1), (3, 3), (3, 4), (3, 6), (4, 0), (4, 1), (4, 3),
                         (4, 4), (4, 6), (5, 0), (5, 1), (5, 3)}
-        self.assertSetEqual(expected_res, set(allowed_transitions(id2label)))
+        self.assertSetEqual(expected_res, set(allowed_transitions(id2label, include_start_end=True)))
 
         labels = []
         for label in ['X', 'Y']:
@@ -37,7 +37,7 @@ class TestCRF(unittest.TestCase):
         expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 4), (2, 7), (2, 9), (3, 0), (3, 3), (3, 4),
                         (3, 7), (3, 9), (4, 5), (4, 6), (5, 5), (5, 6), (6, 0), (6, 3), (6, 4), (6, 7), (6, 9), (7, 0),
                         (7, 3), (7, 4), (7, 7), (7, 9), (8, 0), (8, 3), (8, 4), (8, 7)}
-        self.assertSetEqual(expected_res, set(allowed_transitions(id2label, encoding_type='BMES')))
+        self.assertSetEqual(expected_res, set(allowed_transitions(id2label, encoding_type='BMES', include_start_end=True)))
 
     def test_case2(self):
         # 测试CRF能否避免解码出非法跃迁, 使用allennlp做了验证。

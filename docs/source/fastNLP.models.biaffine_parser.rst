@@ -1,7 +1,7 @@
-fastNLP.models.biaffine\_parser
-===============================
+fastNLP.models.biaffine_parser
+==============================
 
 .. automodule:: fastNLP.models.biaffine_parser
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members: BiaffineParser, GraphParser
+   :inherited-members:
+

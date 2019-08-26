@@ -2,15 +2,13 @@ fastNLP.core
 ============
 
 .. automodule:: fastNLP.core
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members: DataSet, Instance, FieldArray, Padder, AutoPadder, EngChar2DPadder, Vocabulary, DataSetIter, BatchIter, TorchLoaderIter, Const, Tester, Trainer, cache_results, seq_len_to_mask, get_seq_len, logger, Callback, GradientClipCallback, EarlyStopCallback, FitlogCallback, EvaluateCallback, LRScheduler, ControlC, LRFinder, TensorboardCallback, WarmupCallback, SaveModelCallback, EchoCallback, TesterCallback, CallbackException, EarlyStopError, LossFunc, CrossEntropyLoss, L1Loss, BCELoss, NLLLoss, LossInForward, AccuracyMetric, SpanFPreRecMetric, ExtractiveQAMetric, Optimizer, SGD, Adam, AdamW, SequentialSampler, BucketSampler, RandomSampler, Sampler
+   :inherited-members:
 
 子模块
-----------
+------
 
 .. toctree::
-   :titlesonly:
 
    fastNLP.core.batch
    fastNLP.core.callback
@@ -26,4 +24,3 @@ fastNLP.core
    fastNLP.core.trainer
    fastNLP.core.utils
    fastNLP.core.vocabulary
-

@@ -1,7 +1,6 @@
-fastNLP.io.dataset\_loader
-==========================
+fastNLP.io.dataset_loader
+=========================
 
 .. automodule:: fastNLP.io.dataset_loader
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members: CSVLoader, JsonLoader
+
