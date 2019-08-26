@@ -1,3 +1,5 @@
+"""undocumented"""
+
 __all__ = [
     "ConditionalRandomField",
     "allowed_transitions"
@@ -9,13 +11,14 @@ from torch import nn
 from ..utils import initial_parameter
 from ...core import Vocabulary
 
+
 def allowed_transitions(id2target, encoding_type='bio', include_start_end=False):
     """
     别名：:class:`fastNLP.modules.allowed_transitions`  :class:`fastNLP.modules.decoder.allowed_transitions`
 
     给定一个id到label的映射表，返回所有可以跳转的(from_tag_id, to_tag_id)列表。
 
-    :param dict,Vocabulary id2target: key是label的indices，value是str类型的tag或tag-label。value可以是只有tag的, 比如"B", "M"; 也可以是
+    :param dict, ~fastNLP.Vocabulary id2target: key是label的indices，value是str类型的tag或tag-label。value可以是只有tag的, 比如"B", "M"; 也可以是
         "B-NN", "M-NN", tag和label之间一定要用"-"隔开。一般可以通过Vocabulary.idx2word得到id2label。
     :param str encoding_type: 支持"bio", "bmes", "bmeso", "bioes"。
     :param bool include_start_end: 是否包含开始与结尾的转换。比如在bio中，b/o可以在开头，但是i不能在开头；

@@ -1,6 +1,7 @@
-"""
+"""undocumented
 Variational RNN 的 Pytorch 实现
 """
+
 __all__ = [
     "VarRNN",
     "VarLSTM",

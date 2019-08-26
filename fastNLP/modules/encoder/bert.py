@@ -1,4 +1,4 @@
-"""
+"""undocumented
 这个页面的代码很大程度上参考(复制粘贴)了https://github.com/huggingface/pytorch-pretrained-BERT的代码， 如果你发现该代码对你
     有用，也请引用一下他们。
 """
@@ -8,17 +8,17 @@ __all__ = [
 ]
 
 import collections
-
-import unicodedata
 import copy
 import json
 import math
 import os
+import unicodedata
 
 import torch
 from torch import nn
-from ...core import logger
+
 from ..utils import _get_file_name_base_on_postfix
+from ...core import logger
 
 CONFIG_FILE = 'bert_config.json'
 VOCAB_NAME = 'vocab.txt'

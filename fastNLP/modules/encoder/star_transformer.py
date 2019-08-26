@@ -1,6 +1,7 @@
-"""
+"""undocumented
 Star-Transformer 的encoder部分的 Pytorch 实现
 """
+
 __all__ = [
     "StarTransformer"
 ]

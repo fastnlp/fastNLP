@@ -1,4 +1,8 @@
-__all__ = []
+"""undocumented"""
+
+__all__ = [
+    "TimestepDropout"
+]
 
 import torch
 
