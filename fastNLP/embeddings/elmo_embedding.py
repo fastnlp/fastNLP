@@ -240,10 +240,9 @@ class _ElmoModel(nn.Module):
         # 生成words到chars的映射
         max_chars = config['char_cnn']['max_characters_per_token']
 
-        self.words_to_chars_embedding = nn.Parameter(torch.full((len(vocab) + 2, max_chars),
+        self.register_buffer('words_to_chars_embedding', torch.full((len(vocab) + 2, max_chars),
                                                                 fill_value=len(char_vocab),
-                                                                dtype=torch.long),
-                                                     requires_grad=False)
+                                                                dtype=torch.long))
         for word, index in list(iter(vocab)) + [(BOS_TAG, len(vocab)), (EOS_TAG, len(vocab) + 1)]:
             if len(word) + 2 > max_chars:
                 word = word[:max_chars - 2]

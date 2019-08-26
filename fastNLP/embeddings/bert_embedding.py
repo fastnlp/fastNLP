@@ -345,7 +345,7 @@ class _WordBertModel(nn.Module):
         self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
         print("Found(Or segment into word pieces) {} words out of {}.".format(found_count, len(vocab)))
         self.word_to_wordpieces = np.array(word_to_wordpieces)
-        self.word_pieces_lengths = nn.Parameter(torch.LongTensor(word_pieces_lengths), requires_grad=False)
+        self.register_buffer('word_pieces_lengths', torch.LongTensor(word_pieces_lengths))
         print("Successfully generate word pieces.")
 
     def forward(self, words):

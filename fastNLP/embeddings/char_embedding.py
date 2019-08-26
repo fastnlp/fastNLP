@@ -82,10 +82,9 @@ class CNNCharEmbedding(TokenEmbedding):
         print(f"In total, there are {len(self.char_vocab)} distinct characters.")
         # 对vocab进行index
         max_word_len = max(map(lambda x: len(x[0]), vocab))
-        self.words_to_chars_embedding = nn.Parameter(torch.full((len(vocab), max_word_len),
-                                                                fill_value=self.char_pad_index, dtype=torch.long),
-                                                     requires_grad=False)
-        self.word_lengths = nn.Parameter(torch.zeros(len(vocab)).long(), requires_grad=False)
+        self.register_buffer('words_to_chars_embedding', torch.full((len(vocab), max_word_len),
+                                                                fill_value=self.char_pad_index, dtype=torch.long))
+        self.register_buffer('word_lengths', torch.zeros(len(vocab)).long())
         for word, index in vocab:
             # if index!=vocab.padding_idx:  # 如果是pad的话，直接就为pad_value了。修改为不区分pad, 这样所有的<pad>也是同一个embed
             self.words_to_chars_embedding[index, :len(word)] = \
@@ -235,10 +234,9 @@ class LSTMCharEmbedding(TokenEmbedding):
         print(f"In total, there are {len(self.char_vocab)} distinct characters.")
         # 对vocab进行index
         self.max_word_len = max(map(lambda x: len(x[0]), vocab))
-        self.words_to_chars_embedding = nn.Parameter(torch.full((len(vocab), self.max_word_len),
-                                                                fill_value=self.char_pad_index, dtype=torch.long),
-                                                     requires_grad=False)
-        self.word_lengths = nn.Parameter(torch.zeros(len(vocab)).long(), requires_grad=False)
+        self.register_buffer('words_to_chars_embedding', torch.full((len(vocab), self.max_word_len),
+                                                                fill_value=self.char_pad_index, dtype=torch.long))
+        self.register_buffer('word_lengths', torch.zeros(len(vocab)).long())
         for word, index in vocab:
             # if index!=vocab.padding_idx:  # 如果是pad的话，直接就为pad_value了. 修改为不区分pad与否
             self.words_to_chars_embedding[index, :len(word)] = \
