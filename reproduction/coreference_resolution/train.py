@@ -7,7 +7,8 @@ from torch.optim import Adam
 from fastNLP.core.callback import Callback, GradientClipCallback
 from fastNLP.core.trainer import Trainer
 
-from reproduction.coreference_resolution.data_load.cr_loader import CRLoader
+from fastNLP.io.pipe.coreference import CoreferencePipe
+
 from reproduction.coreference_resolution.model.config import Config
 from reproduction.coreference_resolution.model.model_re import Model
 from reproduction.coreference_resolution.model.softmax_loss import SoftmaxLoss
@@ -38,11 +39,8 @@ if __name__ == "__main__":
 
     @cache_results('cache.pkl')
     def cache():
-        cr_train_dev_test = CRLoader()
-
-        data_info = cr_train_dev_test.process({'train': config.train_path, 'dev': config.dev_path,
-                                               'test': config.test_path})
-        return data_info
+        bundle = CoreferencePipe(Config()).process_from_file({'train': config.train_path, 'dev': config.dev_path,'test': config.test_path})
+        return bundle
     data_info = cache()
     print("数据集划分：\ntrain:", str(len(data_info.datasets["train"])),
           "\ndev:" + str(len(data_info.datasets["dev"])) + "\ntest:" + str(len(data_info.datasets["test"])))

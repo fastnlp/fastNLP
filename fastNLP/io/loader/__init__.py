@@ -71,7 +71,9 @@ __all__ = [
     "QuoraLoader",
     "SNLILoader",
     "QNLILoader",
-    "RTELoader"
+    "RTELoader",
+
+    "CRLoader"
 ]
 from .classification import YelpLoader, YelpFullLoader, YelpPolarityLoader, IMDBLoader, SSTLoader, SST2Loader
 from .conll import ConllLoader, Conll2003Loader, Conll2003NERLoader, OntoNotesNERLoader, CTBLoader
@@ -81,3 +83,4 @@ from .json import JsonLoader
 from .loader import Loader
 from .matching import MNLILoader, QuoraLoader, SNLILoader, QNLILoader, RTELoader
 from .conll import MsraNERLoader, PeopleDailyNERLoader, WeiboNERLoader
+from .coreference import CRLoader
