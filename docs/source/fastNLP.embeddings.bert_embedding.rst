@@ -1,7 +1,7 @@
-fastNLP.embeddings.bert\_embedding
-==================================
+fastNLP.embeddings.bert_embedding
+=================================
 
 .. automodule:: fastNLP.embeddings.bert_embedding
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :members: BertEmbedding, BertWordPieceEncoder
+   :inherited-members:
+

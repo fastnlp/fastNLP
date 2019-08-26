@@ -2,6 +2,6 @@ fastNLP.modules.utils
 =====================
 
 .. automodule:: fastNLP.modules.utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :members: initial_parameter, summary
+   :inherited-members:
+

@@ -2,6 +2,6 @@ fastNLP.io.utils
 ================
 
 .. automodule:: fastNLP.io.utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :members: check_loader_paths
+   :inherited-members:
+

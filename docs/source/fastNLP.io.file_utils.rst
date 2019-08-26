@@ -1,7 +1,7 @@
-fastNLP.io.file\_utils
-======================
+fastNLP.io.file_utils
+=====================
 
 .. automodule:: fastNLP.io.file_utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :members: cached_path, get_filepath, get_cache_path, split_filename_suffix, get_from_cache
+   :inherited-members:
+
