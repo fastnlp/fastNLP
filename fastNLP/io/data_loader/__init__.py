@@ -1,4 +1,4 @@
-"""
+"""undocumented
 .. warning::
 
     本模块在 `0.5.0版本` 中被废弃，由 :mod:`~fastNLP.io.loader`  和 :mod:`~fastNLP.io.pipe` 模块替代。
