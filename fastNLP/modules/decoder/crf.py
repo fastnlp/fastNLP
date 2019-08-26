@@ -9,7 +9,7 @@ import torch
 from torch import nn
 
 from ..utils import initial_parameter
-from ...core import Vocabulary
+from ...core.vocabulary import Vocabulary
 
 
 def allowed_transitions(id2target, encoding_type='bio', include_start_end=False):
