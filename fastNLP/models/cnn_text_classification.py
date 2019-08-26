@@ -1,3 +1,8 @@
+"""
+.. todo::
+    doc
+"""
+
 __all__ = [
     "CNNText"
 ]
@@ -7,8 +12,8 @@ import torch.nn as nn
 
 from ..core.const import Const as C
 from ..core.utils import seq_len_to_mask
-from ..modules import encoder
 from ..embeddings import embedding
+from ..modules import encoder
 
 
 class CNNText(torch.nn.Module):

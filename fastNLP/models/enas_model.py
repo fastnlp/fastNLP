@@ -1,7 +1,10 @@
-"""
+"""undocumented
 Module containing the shared RNN model.
 Code Modified from https://github.com/carpedm20/ENAS-pytorch
 """
+
+__all__ = []
+
 import collections
 
 import numpy as np
