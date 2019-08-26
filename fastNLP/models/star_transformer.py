@@ -13,7 +13,7 @@ from torch import nn
 
 from ..modules.encoder.star_transformer import StarTransformer
 from ..core.utils import seq_len_to_mask
-from ..modules.utils import get_embeddings
+from ..embeddings.utils import get_embeddings
 from ..core.const import Const
 
 
@@ -34,7 +34,7 @@ class StarTransEnc(nn.Module):
     :param emb_dropout: 词嵌入的dropout概率.
     :param dropout: 模型除词嵌入外的dropout概率.
     """
-    
+
     def __init__(self, init_embed,
                  hidden_size,
                  num_layers,
@@ -46,15 +46,15 @@ class StarTransEnc(nn.Module):
         super(StarTransEnc, self).__init__()
         self.embedding = get_embeddings(init_embed)
         emb_dim = self.embedding.embedding_dim
-        #self.emb_fc = nn.Linear(emb_dim, hidden_size)
-        self.emb_drop = nn.Dropout(emb_dropout)
+        self.emb_fc = nn.Linear(emb_dim, hidden_size)
+        # self.emb_drop = nn.Dropout(emb_dropout)
         self.encoder = StarTransformer(hidden_size=hidden_size,
                                        num_layers=num_layers,
                                        num_head=num_head,
                                        head_dim=head_dim,
                                        dropout=dropout,
                                        max_len=max_len)
-    
+
     def forward(self, x, mask):
         """
         :param FloatTensor x: [batch, length, hidden] 输入的序列
@@ -65,7 +65,7 @@ class StarTransEnc(nn.Module):
                 [batch, hidden] 全局 relay 节点, 详见论文
         """
         x = self.embedding(x)
-        #x = self.emb_fc(self.emb_drop(x))
+        x = self.emb_fc(x)
         nodes, relay = self.encoder(x, mask)
         return nodes, relay
 
@@ -79,7 +79,7 @@ class _Cls(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(hid_dim, num_cls),
         )
-    
+
     def forward(self, x):
         h = self.fc(x)
         return h
@@ -95,7 +95,7 @@ class _NLICls(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(hid_dim, num_cls),
         )
-    
+
     def forward(self, x1, x2):
         x = torch.cat([x1, x2, torch.abs(x1 - x2), x1 * x2], 1)
         h = self.fc(x)
@@ -121,7 +121,7 @@ class STSeqLabel(nn.Module):
     :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
-    
+
     def __init__(self, init_embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
@@ -141,7 +141,7 @@ class STSeqLabel(nn.Module):
                                 emb_dropout=emb_dropout,
                                 dropout=dropout)
         self.cls = _Cls(hidden_size, num_cls, cls_hidden_size)
-    
+
     def forward(self, words, seq_len):
         """
 
@@ -154,7 +154,7 @@ class STSeqLabel(nn.Module):
         output = self.cls(nodes)
         output = output.transpose(1, 2)  # make hidden to be dim 1
         return {Const.OUTPUT: output}  # [bsz, n_cls, seq_len]
-    
+
     def predict(self, words, seq_len):
         """
 
@@ -186,7 +186,7 @@ class STSeqCls(nn.Module):
     :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
-    
+
     def __init__(self, init_embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
@@ -206,7 +206,7 @@ class STSeqCls(nn.Module):
                                 emb_dropout=emb_dropout,
                                 dropout=dropout)
         self.cls = _Cls(hidden_size, num_cls, cls_hidden_size, dropout=dropout)
-    
+
     def forward(self, words, seq_len):
         """
 
@@ -219,7 +219,7 @@ class STSeqCls(nn.Module):
         y = 0.5 * (relay + nodes.max(1)[0])
         output = self.cls(y)  # [bsz, n_cls]
         return {Const.OUTPUT: output}
-    
+
     def predict(self, words, seq_len):
         """
 
@@ -251,7 +251,7 @@ class STNLICls(nn.Module):
     :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
-    
+
     def __init__(self, init_embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
@@ -271,7 +271,7 @@ class STNLICls(nn.Module):
                                 emb_dropout=emb_dropout,
                                 dropout=dropout)
         self.cls = _NLICls(hidden_size, num_cls, cls_hidden_size)
-    
+
     def forward(self, words1, words2, seq_len1, seq_len2):
         """
 
@@ -283,16 +283,16 @@ class STNLICls(nn.Module):
         """
         mask1 = seq_len_to_mask(seq_len1)
         mask2 = seq_len_to_mask(seq_len2)
-        
+
         def enc(seq, mask):
             nodes, relay = self.enc(seq, mask)
             return 0.5 * (relay + nodes.max(1)[0])
-        
+
         y1 = enc(words1, mask1)
         y2 = enc(words2, mask2)
         output = self.cls(y1, y2)  # [bsz, n_cls]
         return {Const.OUTPUT: output}
-    
+
     def predict(self, words1, words2, seq_len1, seq_len2):
         """
 

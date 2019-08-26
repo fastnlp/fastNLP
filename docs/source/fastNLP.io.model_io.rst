@@ -1,7 +1,7 @@
-fastNLP.io.model\_io
-====================
+fastNLP.io.model_io
+===================
 
 .. automodule:: fastNLP.io.model_io
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members: ModelLoader, ModelSaver
+   :inherited-members:
+

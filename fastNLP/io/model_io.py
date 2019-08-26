@@ -8,7 +8,7 @@ __all__ = [
 
 import torch
 
-from .base_loader import BaseLoader
+from .data_bundle import BaseLoader
 
 
 class ModelLoader(BaseLoader):

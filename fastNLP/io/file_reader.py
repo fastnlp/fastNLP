@@ -1,7 +1,12 @@
-"""
+"""undocumented
 此模块用于给其它模块提供读取文件的函数，没有为用户提供 API
 """
+
+__all__ = []
+
 import json
+
+from ..core import logger
 
 
 def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
@@ -23,8 +28,8 @@ def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
             headers = headers.split(sep)
             start_idx += 1
         elif not isinstance(headers, (list, tuple)):
-                raise TypeError("headers should be list or tuple, not {}." \
-                        .format(type(headers)))
+            raise TypeError("headers should be list or tuple, not {}." \
+                            .format(type(headers)))
         for line_idx, line in enumerate(f, start_idx):
             contents = line.rstrip('\r\n').split(sep)
             if len(contents) != len(headers):
@@ -81,6 +86,7 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
             :if False, raise ValueError when reading invalid data. default: True
     :return: generator, every time yield (line number, conll item)
     """
+    
     def parse_conll(sample):
         sample = list(map(list, zip(*sample)))
         sample = [sample[i] for i in indexes]
@@ -88,14 +94,15 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
             if len(f) <= 0:
                 raise ValueError('empty field')
         return sample
+    
     with open(path, 'r', encoding=encoding) as f:
         sample = []
         start = next(f).strip()
-        if '-DOCSTART-' not in start and start!='':
+        if start != '':
             sample.append(start.split())
         for line_idx, line in enumerate(f, 1):
             line = line.strip()
-            if line=='':
+            if line == '':
                 if len(sample):
                     try:
                         res = parse_conll(sample)
@@ -103,13 +110,13 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
                         yield line_idx, res
                     except Exception as e:
                         if dropna:
+                            logger.warn('Invalid instance which ends at line: {} has been dropped.'.format(line_idx))
                             continue
-                        raise ValueError('invalid instance ends at line: {}'.format(line_idx))
+                        raise ValueError('Invalid instance which ends at line: {}'.format(line_idx))
             elif line.startswith('#'):
                 continue
             else:
-                if not line.startswith('-DOCSTART-'):
-                    sample.append(line.split())
+                sample.append(line.split())
         if len(sample) > 0:
             try:
                 res = parse_conll(sample)
@@ -117,5 +124,5 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
             except Exception as e:
                 if dropna:
                     return
-                print('invalid instance ends at line: {}'.format(line_idx))
+                logger.error('invalid instance ends at line: {}'.format(line_idx))
                 raise e

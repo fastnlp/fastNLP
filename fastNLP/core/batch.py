@@ -1,5 +1,5 @@
 """
-batch 模块实现了 fastNLP 所需的 Batch 类。
+batch 模块实现了 fastNLP 所需的 :class:`~fastNLP.core.batch.DataSetIter` 类。
 
 """
 __all__ = [
@@ -9,17 +9,15 @@ __all__ = [
 ]
 
 import atexit
-from queue import Empty, Full
 
 import numpy as np
 import torch
-import torch.multiprocessing as mp
 import torch.utils.data
 from numbers import Number
 
 from .sampler import SequentialSampler
 from .dataset import DataSet
-
+from ._logger import logger
 _python_is_exit = False
 
 
@@ -50,6 +48,12 @@ class DataSetGetter:
         return len(self.dataset)
 
     def collate_fn(self, batch: list):
+        """
+
+        :param batch: [[idx1, x_dict1, y_dict1], [idx2, x_dict2, y_dict2], [xx, xx, xx]]
+        :return:
+        """
+        # TODO 支持在DataSet中定义collate_fn，因为有时候可能需要不同的field之间融合，比如BERT的场景
         batch_x = {n:[] for n in self.inputs.keys()}
         batch_y = {n:[] for n in self.targets.keys()}
         indices = []
@@ -71,7 +75,7 @@ class DataSetGetter:
                         try:
                             data, flag = _to_tensor(data, f.dtype)
                         except TypeError as e:
-                            print(f"Field {n} cannot be converted to torch.tensor.")
+                            logger.error(f"Field {n} cannot be converted to torch.tensor.")
                             raise e
                     batch_dict[n] = data
             return batch_dict
@@ -94,8 +98,12 @@ class DataSetGetter:
 
 class SamplerAdapter(torch.utils.data.Sampler):
     def __init__(self, sampler, dataset):
+        super().__init__(dataset)
         self.sampler = sampler
         self.dataset = dataset
+
+    def __len__(self):
+        return len(self.dataset)
 
     def __iter__(self):
         return iter(self.sampler(self.dataset))
@@ -136,20 +144,49 @@ class BatchIter:
 
 
 class DataSetIter(BatchIter):
+    """
+    别名：:class:`fastNLP.DataSetIter` :class:`fastNLP.core.batch.DataSetIter`
+
+    DataSetIter 用于从 `DataSet` 中按一定的顺序, 依次按 ``batch_size`` 的大小将数据取出，
+    组成 `x` 和 `y`::
+
+        batch = DataSetIter(data_set, batch_size=16, sampler=SequentialSampler())
+        num_batch = len(batch)
+        for batch_x, batch_y in batch:
+            # do stuff ...
+
+    :param dataset: :class:`~fastNLP.DataSet` 对象, 数据集
+    :param int batch_size: 取出的batch大小
+    :param sampler: 规定使用的 :class:`~fastNLP.Sampler` 方式. 若为 ``None`` , 使用 :class:`~fastNLP.SequentialSampler`.
+
+        Default: ``None``
+    :param bool as_numpy: 若为 ``True`` , 输出batch为 numpy.array. 否则为 :class:`torch.Tensor`.
+
+        Default: ``False``
+    :param int num_workers: 使用多少个进程来预处理数据
+    :param bool pin_memory: 是否将产生的tensor使用pin memory, 可能会加快速度。
+    :param bool drop_last: 如果最后一个batch没有batch_size这么多sample，就扔掉最后一个
+    :param timeout:
+    :param worker_init_fn: 在每个worker启动时调用该函数，会传入一个值，该值是worker的index。
+    """
     def __init__(self, dataset, batch_size=1, sampler=None, as_numpy=False,
                  num_workers=0, pin_memory=False, drop_last=False,
                  timeout=0, worker_init_fn=None):
         super().__init__()
         assert isinstance(dataset, DataSet)
-        sampler = SamplerAdapter(sampler=sampler or SequentialSampler(), dataset=dataset)
+        if not isinstance(sampler, torch.utils.data.Sampler):
+            self.sampler = SamplerAdapter(sampler=sampler or SequentialSampler(), dataset=dataset)
+        else:
+            self.sampler = sampler
         dataset = DataSetGetter(dataset, as_numpy)
         collate_fn = dataset.collate_fn if hasattr(dataset, 'collate_fn') else None
         self.dataiter = torch.utils.data.DataLoader(
-            dataset=dataset, batch_size=batch_size, sampler=sampler,
+            dataset=dataset, batch_size=batch_size, sampler=self.sampler,
             collate_fn=collate_fn, num_workers=num_workers,
             pin_memory=pin_memory, drop_last=drop_last,
             timeout=timeout, worker_init_fn=worker_init_fn)
-        self.num_batches = self.get_num_batches(len(dataset), batch_size, drop_last)
+        # 以sampler的数量为准，因为DistributedSampler的时候每个进程上并不是所有的数据都用上了
+        self.num_batches = self.get_num_batches(len(self.dataiter.sampler), batch_size, drop_last)
         self.batch_size = batch_size
 
 
@@ -158,7 +195,7 @@ class TorchLoaderIter(BatchIter):
         super().__init__()
         assert isinstance(dataset, torch.utils.data.DataLoader)
         self.dataiter = dataset
-        self.num_batches = self.get_num_batches(len(dataset), dataset.batch_size, dataset.drop_last)
+        self.num_batches = self.get_num_batches(len(dataset.sampler), dataset.batch_size, dataset.drop_last)
         self.batch_size = dataset.batch_size
 
 
@@ -176,6 +213,13 @@ class OnlineDataIter(BatchIter):
 
 
 def _to_tensor(batch, field_dtype):
+    """
+
+    :param batch: np.array()
+    :param field_dtype: 数据类型
+    :return: batch, flag. 如果传入的数据支持转为tensor，返回的batch就是tensor，且flag为True；如果传入的数据不支持转为tensor，
+        返回的batch就是原来的数据，且flag为False
+    """
     try:
         if field_dtype is not None and isinstance(field_dtype, type)\
                 and issubclass(field_dtype, Number) \

@@ -170,22 +170,22 @@ class TestFieldArray(unittest.TestCase):
 
     def test_append(self):
         with self.assertRaises(Exception):
-            fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1, 2, 3, 4, 5]], is_input=True)
+            fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1, 2, 3, 4, 5]], is_input=True, use_1st_ins_infer_dim_type=False)
             fa.append(0)
 
         with self.assertRaises(Exception):
-            fa = FieldArray("y", [1.1, 2.2, 3.3, 4.4, 5.5], is_input=True)
+            fa = FieldArray("y", [1.1, 2.2, 3.3, 4.4, 5.5], is_input=True, use_1st_ins_infer_dim_type=False)
             fa.append([1, 2, 3, 4, 5])
 
         with self.assertRaises(Exception):
-            fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1, 2, 3, 4, 5]], is_input=True)
+            fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1, 2, 3, 4, 5]], is_input=True, use_1st_ins_infer_dim_type=False)
             fa.append([])
 
         with self.assertRaises(Exception):
-            fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1, 2, 3, 4, 5]], is_input=True)
+            fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1, 2, 3, 4, 5]], is_input=True, use_1st_ins_infer_dim_type=False)
             fa.append(["str", 0, 0, 0, 1.89])
 
-        fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1.0, 2.0, 3.0, 4.0, 5.0]], is_input=True)
+        fa = FieldArray("y", [[1.1, 2.2, 3.3, 4.4, 5.5], [1.0, 2.0, 3.0, 4.0, 5.0]], is_input=True, use_1st_ins_infer_dim_type=False)
         fa.append([1.2, 2.3, 3.4, 4.5, 5.6])
         self.assertEqual(len(fa), 3)
         self.assertEqual(fa[2], [1.2, 2.3, 3.4, 4.5, 5.6])

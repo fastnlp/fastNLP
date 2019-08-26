@@ -1,14 +1,22 @@
+"""
+.. todo::
+    doc
+"""
+
 __all__ = [
     "Vocabulary",
     "VocabularyOption",
 ]
 
+from collections import Counter
+from functools import partial
 from functools import wraps
-from collections import Counter, defaultdict
+
+from ._logger import logger
 from .dataset import DataSet
 from .utils import Option
-from functools import partial
-import numpy as np
+from .utils import _is_iterable
+
 
 class VocabularyOption(Option):
     def __init__(self,
@@ -48,8 +56,8 @@ def _check_build_status(func):
         if self.rebuild is False:
             self.rebuild = True
             if self.max_size is not None and len(self.word_count) >= self.max_size:
-                print("[Warning] Vocabulary has reached the max size {} when calling {} method. "
-                      "Adding more words may cause unexpected behaviour of Vocabulary. ".format(
+                logger.info("[Warning] Vocabulary has reached the max size {} when calling {} method. "
+                            "Adding more words may cause unexpected behaviour of Vocabulary. ".format(
                     self.max_size, func.__name__))
         return func(self, *args, **kwargs)
     
@@ -91,42 +99,87 @@ class Vocabulary(object):
         self.idx2word = None
         self.rebuild = True
         #  用于承载不需要单独创建entry的词语，具体见from_dataset()方法
-        self._no_create_word = defaultdict(int)
-
+        self._no_create_word = Counter()
+    
     @_check_build_status
-    def update(self, word_lst):
+    def update(self, word_lst, no_create_entry=False):
         """依次增加序列中词在词典中的出现频率
 
         :param list word_lst: a list of strings
+        :param bool no_create_entry: 在使用fastNLP.TokenEmbedding加载预训练模型时，没有从预训练词表中找到这个词的处理方式。
+            如果为True，则不会有这个词语创建一个单独的entry，它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独
+            的entry。如果这个word来自于dev或者test，一般设置为True，如果来自与train一般设置为False。以下两种情况: 如果新
+            加入一个word，且no_create_entry为True，但这个词之前已经在Vocabulary中且并不是no_create_entry的，则还是会为这
+            个词创建一个单独的vector; 如果no_create_entry为False，但这个词之前已经在Vocabulary中且并不是no_create_entry的，
+            则这个词将认为是需要创建单独的vector的。
         """
+        self._add_no_create_entry(word_lst, no_create_entry)
         self.word_count.update(word_lst)
+        return self
     
     @_check_build_status
-    def add(self, word):
+    def add(self, word, no_create_entry=False):
         """
         增加一个新词在词典中的出现频率
 
         :param str word: 新词
+        :param bool no_create_entry: 在使用fastNLP.TokenEmbedding加载预训练模型时，没有从预训练词表中找到这个词的处理方式。
+            如果为True，则不会有这个词语创建一个单独的entry，它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独
+            的entry。如果这个word来自于dev或者test，一般设置为True，如果来自与train一般设置为False。以下两种情况: 如果新
+            加入一个word，且no_create_entry为True，但这个词之前已经在Vocabulary中且并不是no_create_entry的，则还是会为这
+            个词创建一个单独的vector; 如果no_create_entry为False，但这个词之前已经在Vocabulary中且并不是no_create_entry的，
+            则这个词将认为是需要创建单独的vector的。
         """
+        self._add_no_create_entry(word, no_create_entry)
         self.word_count[word] += 1
+        return self
+    
+    def _add_no_create_entry(self, word, no_create_entry):
+        """
+        在新加入word时，检查_no_create_word的设置。
+
+        :param str List[str] word:
+        :param bool no_create_entry:
+        :return:
+        """
+        if isinstance(word, str) or not _is_iterable(word):
+            word = [word]
+        for w in word:
+            if no_create_entry and self.word_count.get(w, 0) == self._no_create_word.get(w, 0):
+                self._no_create_word[w] += 1
+            elif not no_create_entry and w in self._no_create_word:
+                self._no_create_word.pop(w)
     
     @_check_build_status
-    def add_word(self, word):
+    def add_word(self, word, no_create_entry=False):
         """
         增加一个新词在词典中的出现频率
 
         :param str word: 新词
+        :param bool no_create_entry: 在使用fastNLP.TokenEmbedding加载预训练模型时，没有从预训练词表中找到这个词的处理方式。
+            如果为True，则不会有这个词语创建一个单独的entry，它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独
+            的entry。如果这个word来自于dev或者test，一般设置为True，如果来自与train一般设置为False。以下两种情况: 如果新
+            加入一个word，且no_create_entry为True，但这个词之前已经在Vocabulary中且并不是no_create_entry的，则还是会为这
+            个词创建一个单独的vector; 如果no_create_entry为False，但这个词之前已经在Vocabulary中且并不是no_create_entry的，
+            则这个词将认为是需要创建单独的vector的。
         """
-        self.add(word)
+        self.add(word, no_create_entry=no_create_entry)
     
     @_check_build_status
-    def add_word_lst(self, word_lst):
+    def add_word_lst(self, word_lst, no_create_entry=False):
         """
         依次增加序列中词在词典中的出现频率
 
         :param list[str] word_lst: 词的序列
+        :param bool no_create_entry: 在使用fastNLP.TokenEmbedding加载预训练模型时，没有从预训练词表中找到这个词的处理方式。
+            如果为True，则不会有这个词语创建一个单独的entry，它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独
+            的entry。如果这个word来自于dev或者test，一般设置为True，如果来自与train一般设置为False。以下两种情况: 如果新
+            加入一个word，且no_create_entry为True，但这个词之前已经在Vocabulary中且并不是no_create_entry的，则还是会为这
+            个词创建一个单独的vector; 如果no_create_entry为False，但这个词之前已经在Vocabulary中且并不是no_create_entry的，
+            则这个词将认为是需要创建单独的vector的。
         """
-        self.update(word_lst)
+        self.update(word_lst, no_create_entry=no_create_entry)
+        return self
     
     def build_vocab(self):
         """
@@ -136,10 +189,10 @@ class Vocabulary(object):
         """
         if self.word2idx is None:
             self.word2idx = {}
-        if self.padding is not None:
-            self.word2idx[self.padding] = len(self.word2idx)
-        if self.unknown is not None:
-            self.word2idx[self.unknown] = len(self.word2idx)
+            if self.padding is not None:
+                self.word2idx[self.padding] = len(self.word2idx)
+            if self.unknown is not None:
+                self.word2idx[self.unknown] = len(self.word2idx)
         
         max_size = min(self.max_size, len(self.word_count)) if self.max_size else None
         words = self.word_count.most_common(max_size)
@@ -151,13 +204,15 @@ class Vocabulary(object):
         self.word2idx.update({w: i + start_idx for i, (w, _) in enumerate(words)})
         self.build_reverse_vocab()
         self.rebuild = False
-
+        return self
+    
     def build_reverse_vocab(self):
         """
-        基于 "word to index" dict, 构建 "index to word" dict.
+        基于 `word to index` dict, 构建 `index to word` dict.
 
         """
         self.idx2word = {i: w for w, i in self.word2idx.items()}
+        return self
     
     @_check_build_vocab
     def __len__(self):
@@ -208,46 +263,57 @@ class Vocabulary(object):
             # remember to use `field_name`
             vocab.index_dataset(train_data, dev_data, test_data, field_name='words')
 
-        :param datasets: 需要转index的 class:`~fastNLP.DataSet` , 支持一个或多个（list）
-        :param str field_name: 需要转index的field, 若有多个 DataSet, 每个DataSet都必须有此 field.
-            目前仅支持 ``str`` , ``list(str)`` , ``list(list(str))``
-        :param str new_field_name: 保存结果的field_name. 若为 ``None`` , 将覆盖原field.
-            Default: ``None``
+        :param ~fastNLP.DataSet,List[~fastNLP.DataSet] datasets: 需要转index的一个或多个数据集
+        :param list,str field_name: 需要转index的field, 若有多个 DataSet, 每个DataSet都必须有此 field.
+            目前支持 ``str`` , ``List[str]``
+        :param list,str new_field_name: 保存结果的field_name. 若为 ``None`` , 将覆盖原field.
+            Default: ``None``.
         """
         
-        def index_instance(ins):
+        def index_instance(field):
             """
             有几种情况, str, 1d-list, 2d-list
             :param ins:
             :return:
             """
-            field = ins[field_name]
-            if isinstance(field, str):
+            if isinstance(field, str) or not _is_iterable(field):
                 return self.to_index(field)
-            elif isinstance(field, list):
-                if not isinstance(field[0], list):
+            else:
+                if isinstance(field[0], str) or not _is_iterable(field[0]):
                     return [self.to_index(w) for w in field]
                 else:
-                    if isinstance(field[0][0], list):
+                    if not isinstance(field[0][0], str) and _is_iterable(field[0][0]):
                         raise RuntimeError("Only support field with 2 dimensions.")
                     return [[self.to_index(c) for c in w] for w in field]
         
-        if new_field_name is None:
-            new_field_name = field_name
+        new_field_name = new_field_name or field_name
+        
+        if type(new_field_name) == type(field_name):
+            if isinstance(new_field_name, list):
+                assert len(new_field_name) == len(field_name), "new_field_name should have same number elements with " \
+                                                               "field_name."
+            elif isinstance(new_field_name, str):
+                field_name = [field_name]
+                new_field_name = [new_field_name]
+            else:
+                raise TypeError("field_name and new_field_name can only be str or List[str].")
+        
         for idx, dataset in enumerate(datasets):
             if isinstance(dataset, DataSet):
                 try:
-                    dataset.apply(index_instance, new_field_name=new_field_name)
+                    for f_n, n_f_n in zip(field_name, new_field_name):
+                        dataset.apply_field(index_instance, field_name=f_n, new_field_name=n_f_n)
                 except Exception as e:
-                    print("When processing the `{}` dataset, the following error occurred.".format(idx))
+                    logger.info("When processing the `{}` dataset, the following error occurred.".format(idx))
                     raise e
             else:
                 raise RuntimeError("Only DataSet type is allowed.")
-
+        return self
+    
     @property
     def _no_create_word_length(self):
         return len(self._no_create_word)
-
+    
     def from_dataset(self, *datasets, field_name, no_create_entry_dataset=None):
         """
         使用dataset的对应field中词构建词典::
@@ -255,11 +321,10 @@ class Vocabulary(object):
             # remember to use `field_name`
             vocab.from_dataset(train_data1, train_data2, field_name='words')
 
-        :param datasets: 需要转index的 class:`~fastNLP.DataSet` , 支持一个或多个（list）
-        :param field_name: 可为 ``str`` 或 ``list(str)`` .
-            构建词典所使用的 field(s), 支持一个或多个field
-            若有多个 DataSet, 每个DataSet都必须有这些field.
-            目前仅支持的field结构: ``str`` , ``list(str)`` , ``list(list(str))``
+        :param ~fastNLP.DataSet,List[~fastNLP.DataSet] datasets: 需要转index的一个或多个数据集
+        :param str,List[str] field_name: 可为 ``str`` 或 ``List[str]`` .
+            构建词典所使用的 field(s), 支持一个或多个field，若有多个 DataSet, 每个DataSet都必须有这些field. 目前支持的field结构
+            : ``str`` , ``List[str]``
         :param no_create_entry_dataset: 可以传入DataSet, List[DataSet]或者None(默认)，该选项用在接下来的模型会使用pretrain
             的embedding(包括glove, word2vec, elmo与bert)且会finetune的情况。如果仅使用来自于train的数据建立vocabulary，会导致test与dev
             中的数据无法充分利用到来自于预训练embedding的信息，所以在建立词表的时候将test与dev考虑进来会使得最终的结果更好。
@@ -277,35 +342,29 @@ class Vocabulary(object):
         def construct_vocab(ins, no_create_entry=False):
             for fn in field_name:
                 field = ins[fn]
-                if isinstance(field, str):
-                    if no_create_entry and field not in self.word_count:
-                        self._no_create_word[field] += 1
-                    self.add_word(field)
-                elif isinstance(field, (list, np.ndarray)):
-                    if not isinstance(field[0], (list, np.ndarray)):
+                if isinstance(field, str) or not _is_iterable(field):
+                    self.add_word(field, no_create_entry=no_create_entry)
+                else:
+                    if isinstance(field[0], str) or not _is_iterable(field[0]):
                         for word in field:
-                            if no_create_entry and word not in self.word_count:
-                                self._no_create_word[word] += 1
-                            self.add_word(word)
+                            self.add_word(word, no_create_entry=no_create_entry)
                     else:
-                        if isinstance(field[0][0], (list, np.ndarray)):
+                        if not isinstance(field[0][0], str) and _is_iterable(field[0][0]):
                             raise RuntimeError("Only support field with 2 dimensions.")
                         for words in field:
                             for word in words:
-                                if no_create_entry and word not in self.word_count:
-                                    self._no_create_word[word] += 1
-                                self.add_word(word)
-
+                                self.add_word(word, no_create_entry=no_create_entry)
+        
         for idx, dataset in enumerate(datasets):
             if isinstance(dataset, DataSet):
                 try:
                     dataset.apply(construct_vocab)
-                except Exception as e:
-                    print("When processing the `{}` dataset, the following error occurred.".format(idx))
+                except BaseException as e:
+                    log("When processing the `{}` dataset, the following error occurred:".format(idx))
                     raise e
             else:
                 raise TypeError("Only DataSet type is allowed.")
-
+        
         if no_create_entry_dataset is not None:
             partial_construct_vocab = partial(construct_vocab, no_create_entry=True)
             if isinstance(no_create_entry_dataset, DataSet):
@@ -316,7 +375,7 @@ class Vocabulary(object):
                         raise TypeError("Only DataSet type is allowed.")
                     dataset.apply(partial_construct_vocab)
         return self
-
+    
     def _is_word_no_create_entry(self, word):
         """
         判断当前的word是否是不需要创建entry的，具体参见from_dataset的说明
@@ -324,11 +383,10 @@ class Vocabulary(object):
         :return: bool
         """
         return word in self._no_create_word
-
+    
     def to_index(self, w):
         """
-        将词转为数字. 若词不再词典中被记录, 将视为 unknown, 若 ``unknown=None`` , 将抛出
-        ``ValueError``::
+        将词转为数字. 若词不再词典中被记录, 将视为 unknown, 若 ``unknown=None`` , 将抛出``ValueError``::
 
             index = vocab.to_index('abc')
             # equals to
@@ -380,6 +438,7 @@ class Vocabulary(object):
         self.idx2word = None
         self.rebuild = True
         self._no_create_word.clear()
+        return self
     
     def __getstate__(self):
         """Use to prepare data for pickle.

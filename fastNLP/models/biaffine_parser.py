@@ -20,7 +20,7 @@ from ..modules.dropout import TimestepDropout
 from ..modules.encoder.transformer import TransformerEncoder
 from ..modules.encoder.variational_rnn import VarLSTM
 from ..modules.utils import initial_parameter
-from ..modules.utils import get_embeddings
+from ..embeddings.utils import get_embeddings
 from .base_model import BaseModel
 from ..core.utils import seq_len_to_mask
 
@@ -130,6 +130,8 @@ def _find_cycle(vertices, edges):
 
 class GraphParser(BaseModel):
     """
+    别名：:class:`fastNLP.models.GraphParser`  :class:`fastNLP.models.baffine_parser.GraphParser`
+
     基于图的parser base class, 支持贪婪解码和最大生成树解码
     """
     
@@ -148,7 +150,7 @@ class GraphParser(BaseModel):
         """
         _, seq_len, _ = arc_matrix.shape
         matrix = arc_matrix + torch.diag(arc_matrix.new(seq_len).fill_(-np.inf))
-        flip_mask = (mask == 0).byte()
+        flip_mask = mask.eq(0)
         matrix.masked_fill_(flip_mask.unsqueeze(1), -np.inf)
         _, heads = torch.max(matrix, dim=2)
         if mask is not None:

@@ -4,7 +4,7 @@ utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户
 __all__ = [
     "cache_results",
     "seq_len_to_mask",
-    "Option",
+    "get_seq_len"
 ]
 
 import _pickle
@@ -16,6 +16,8 @@ from collections import Counter, namedtuple
 import numpy as np
 import torch
 import torch.nn as nn
+from typing import List
+from ._logger import logger
 
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])
@@ -23,26 +25,27 @@ _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'require
 
 class Option(dict):
     """a dict can treat keys as attributes"""
+    
     def __getattr__(self, item):
         try:
             return self.__getitem__(item)
         except KeyError:
             raise AttributeError(item)
-
+    
     def __setattr__(self, key, value):
         if key.startswith('__') and key.endswith('__'):
             raise AttributeError(key)
         self.__setitem__(key, value)
-
+    
     def __delattr__(self, item):
         try:
             self.pop(item)
         except KeyError:
             raise AttributeError(item)
-
+    
     def __getstate__(self):
         return self
-
+    
     def __setstate__(self, state):
         self.update(state)
 
@@ -61,7 +64,6 @@ def _prepare_cache_filepath(filepath):
         os.makedirs(cache_dir)
 
 
-#  TODO 可以保存下缓存时的参数，如果load的时候发现参数不一致，发出警告。
 def cache_results(_cache_fp, _refresh=False, _verbose=1):
     """
     别名：:class:`fastNLP.cache_results` :class:`fastNLP.core.uitls.cache_results`
@@ -143,7 +145,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
                     with open(cache_filepath, 'rb') as f:
                         results = _pickle.load(f)
                     if verbose == 1:
-                        print("Read cache from {}.".format(cache_filepath))
+                        logger.info("Read cache from {}.".format(cache_filepath))
                     refresh_flag = False
             
             if refresh_flag:
@@ -154,7 +156,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
                     _prepare_cache_filepath(cache_filepath)
                     with open(cache_filepath, 'wb') as f:
                         _pickle.dump(results, f)
-                    print("Save cache to {}.".format(cache_filepath))
+                    logger.info("Save cache to {}.".format(cache_filepath))
             
             return results
         
@@ -163,48 +165,29 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
     return wrapper_
 
 
-# def save_pickle(obj, pickle_path, file_name):
-#     """Save an object into a pickle file.
-#
-#     :param obj: an object
-#     :param pickle_path: str, the directory where the pickle file is to be saved
-#     :param file_name: str, the name of the pickle file. In general, it should be ended by "pkl".
-#     """
-#     if not os.path.exists(pickle_path):
-#         os.mkdir(pickle_path)
-#         print("make dir {} before saving pickle file".format(pickle_path))
-#     with open(os.path.join(pickle_path, file_name), "wb") as f:
-#         _pickle.dump(obj, f)
-#     print("{} saved in {}".format(file_name, pickle_path))
-#
-#
-# def load_pickle(pickle_path, file_name):
-#     """Load an object from a given pickle file.
-#
-#     :param pickle_path: str, the directory where the pickle file is.
-#     :param file_name: str, the name of the pickle file.
-#     :return obj: an object stored in the pickle
-#     """
-#     with open(os.path.join(pickle_path, file_name), "rb") as f:
-#         obj = _pickle.load(f)
-#     print("{} loaded from {}".format(file_name, pickle_path))
-#     return obj
-#
-#
-# def pickle_exist(pickle_path, pickle_name):
-#     """Check if a given pickle file exists in the directory.
-#
-#     :param pickle_path: the directory of target pickle file
-#     :param pickle_name: the filename of target pickle file
-#     :return: True if file exists else False
-#     """
-#     if not os.path.exists(pickle_path):
-#         os.makedirs(pickle_path)
-#     file_name = os.path.join(pickle_path, pickle_name)
-#     if os.path.exists(file_name):
-#         return True
-#     else:
-#         return False
+def _save_model(model, model_name, save_dir, only_param=False):
+    """ 存储不含有显卡信息的state_dict或model
+    :param model:
+    :param model_name:
+    :param save_dir: 保存的directory
+    :param only_param:
+    :return:
+    """
+    model_path = os.path.join(save_dir, model_name)
+    if not os.path.isdir(save_dir):
+        os.makedirs(save_dir, exist_ok=True)
+    if isinstance(model, nn.DataParallel):
+        model = model.module
+    if only_param:
+        state_dict = model.state_dict()
+        for key in state_dict:
+            state_dict[key] = state_dict[key].cpu()
+        torch.save(state_dict, model_path)
+    else:
+        _model_device = _get_model_device(model)
+        model.cpu()
+        torch.save(model, model_path)
+        model.to(_model_device)
 
 def _move_model_to_device(model, device):
     """
@@ -228,8 +211,8 @@ def _move_model_to_device(model, device):
 
     :return: torch.nn.DataParallel or torch.nn.Module
     """
-    if isinstance(model, torch.nn.parallel.DistributedDataParallel):
-        raise RuntimeError("model of `torch.nn.parallel.DistributedDataParallel` is not supported right now.")
+    # if isinstance(model, torch.nn.parallel.DistributedDataParallel):
+    #     raise RuntimeError("model of `torch.nn.parallel.DistributedDataParallel` is not supported right now.")
     
     if device is None:
         if isinstance(model, torch.nn.DataParallel):
@@ -277,7 +260,6 @@ def _move_model_to_device(model, device):
     return model
 
 
-
 def _get_model_device(model):
     """
     传入一个nn.Module的模型，获取它所在的device
@@ -285,7 +267,7 @@ def _get_model_device(model):
     :param model: nn.Module
     :return: torch.device,None 如果返回值为None，说明这个模型没有任何参数。
     """
-    # TODO 这个函数存在一定的风险，因为同一个模型可能存在某些parameter不在显卡中，比如BertEmbedding
+    # TODO 这个函数存在一定的风险，因为同一个模型可能存在某些parameter不在显卡中，比如BertEmbedding. 或者跨显卡
     assert isinstance(model, nn.Module)
     
     parameters = list(model.parameters())
@@ -327,7 +309,6 @@ def _map_args(maps: dict, **kwargs):
             output.update({name: val})
     for keys in maps.keys():
         if keys not in output.keys():
-            # TODO: add UNUSED warning.
             pass
     return output
 
@@ -545,18 +526,6 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
                 else:
                     _tmp = f'Provide `{_miss}` in DataSet or output of {prev_func_signature}.'
                 suggestions.append(_tmp)
-        # for _miss in unmapped_missing:
-        #     if _miss in dataset:
-        #         suggestions.append(f"Set `{_miss}` as target.")
-        #     else:
-        #         _tmp = ''
-        #         if check_res.unused:
-        #             _tmp = f"Specify your assignment for `{input_func_map.get(_miss, _miss)}` when initialize {module_name}."
-        #         if _tmp:
-        #             _tmp += f' Or provide `{_miss}` in DataSet or output of {prev_func_signature}.'
-        #         else:
-        #             _tmp = f'Provide `{_miss}` in output of {prev_func_signature} or DataSet.'
-        #         suggestions.append(_tmp)
     
     if check_res.duplicated:
         errs.append(f"\tduplicated param: {check_res.duplicated}.")
@@ -649,7 +618,7 @@ def seq_len_to_mask(seq_len, max_len=None):
     将一个表示sequence length的一维数组转换为二维的mask，不包含的位置为0。
     转变 1-d seq_len到2-d mask.
 
-    Example::
+    .. code-block::
     
         >>> seq_len = torch.arange(2, 16)
         >>> mask = seq_len_to_mask(seq_len)
@@ -667,7 +636,7 @@ def seq_len_to_mask(seq_len, max_len=None):
     :param np.ndarray,torch.LongTensor seq_len: shape将是(B,)
     :param int max_len: 将长度pad到这个长度。默认(None)使用的是seq_len中最长的长度。但在nn.DataParallel的场景下可能不同卡的seq_len会有
         区别，所以需要传入一个max_len使得mask的长度是pad到该长度。
-    :return: np.ndarray or torch.Tensor, shape将是(B, max_length)。 元素类似为bool或torch.uint8
+    :return: np.ndarray, torch.Tensor 。shape将是(B, max_length)， 元素类似为bool或torch.uint8
     """
     if isinstance(seq_len, np.ndarray):
         assert len(np.shape(seq_len)) == 1, f"seq_len can only have one dimension, got {len(np.shape(seq_len))}."
@@ -691,15 +660,14 @@ class _pseudo_tqdm:
     """
     当无法引入tqdm，或者Trainer中设置use_tqdm为false的时候，用该方法打印数据
     """
-    
     def __init__(self, **kwargs):
-        pass
+        self.logger = logger
     
     def write(self, info):
-        print(info)
+        self.logger.info(info)
     
     def set_postfix_str(self, info):
-        print(info)
+        self.logger.info(info)
     
     def __getattr__(self, item):
         def pass_func(*args, **kwargs):
@@ -712,3 +680,74 @@ class _pseudo_tqdm:
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         del self
+
+
+def iob2(tags: List[str]) -> List[str]:
+    """
+    检查数据是否是合法的IOB数据，如果是IOB1会被自动转换为IOB2。两者的差异见
+        https://datascience.stackexchange.com/questions/37824/difference-between-iob-and-iob2-format
+
+    :param tags: 需要转换的tags, 需要为大写的BIO标签。
+    """
+    for i, tag in enumerate(tags):
+        if tag == "O":
+            continue
+        split = tag.split("-")
+        if len(split) != 2 or split[0] not in ["I", "B"]:
+            raise TypeError("The encoding schema is not a valid IOB type.")
+        if split[0] == "B":
+            continue
+        elif i == 0 or tags[i - 1] == "O":  # conversion IOB1 to IOB2
+            tags[i] = "B" + tag[1:]
+        elif tags[i - 1][1:] == tag[1:]:
+            continue
+        else:  # conversion IOB1 to IOB2
+            tags[i] = "B" + tag[1:]
+    return tags
+
+
+def iob2bioes(tags: List[str]) -> List[str]:
+    """
+    将iob的tag转换为bioes编码
+    :param tags: List[str]. 编码需要是大写的。
+    :return:
+    """
+    new_tags = []
+    for i, tag in enumerate(tags):
+        if tag == 'O':
+            new_tags.append(tag)
+        else:
+            split = tag.split('-')[0]
+            if split == 'B':
+                if i + 1 != len(tags) and tags[i + 1].split('-')[0] == 'I':
+                    new_tags.append(tag)
+                else:
+                    new_tags.append(tag.replace('B-', 'S-'))
+            elif split == 'I':
+                if i + 1 < len(tags) and tags[i + 1].split('-')[0] == 'I':
+                    new_tags.append(tag)
+                else:
+                    new_tags.append(tag.replace('I-', 'E-'))
+            else:
+                raise TypeError("Invalid IOB format.")
+    return new_tags
+
+
+def _is_iterable(value):
+    # 检查是否是iterable的, duck typing
+    try:
+        iter(value)
+        return True
+    except BaseException as e:
+        return False
+
+
+def get_seq_len(words, pad_value=0):
+    """
+    给定batch_size x max_len的words矩阵，返回句子长度
+
+    :param words: batch_size x max_len
+    :return: (batch_size,)
+    """
+    mask = words.ne(pad_value)
+    return mask.sum(dim=-1)

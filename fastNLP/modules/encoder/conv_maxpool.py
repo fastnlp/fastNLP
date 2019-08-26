@@ -1,3 +1,5 @@
+"""undocumented"""
+
 __all__ = [
     "ConvMaxpool"
 ]
@@ -5,9 +7,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class ConvMaxpool(nn.Module):
     """
-    别名：:class:`fastNLP.modules.ConvMaxpool`   :class:`fastNLP.modules.encoder.conv_maxpool.ConvMaxpool`
+    别名：:class:`fastNLP.modules.ConvMaxpool`   :class:`fastNLP.modules.encoder.ConvMaxpool`
 
     集合了Convolution和Max-Pooling于一体的层。给定一个batch_size x max_len x input_size的输入，返回batch_size x
     sum(output_channels) 大小的matrix。在内部，是先使用CNN给输入做卷积，然后经过activation激活层，在通过在长度(max_len)
@@ -18,12 +21,12 @@ class ConvMaxpool(nn.Module):
     :param int,tuple(int) kernel_sizes: 输出channel的kernel大小。
     :param str activation: Convolution后的结果将通过该activation后再经过max-pooling。支持relu, sigmoid, tanh
     """
-    
+
     def __init__(self, in_channels, out_channels, kernel_sizes, activation="relu"):
         super(ConvMaxpool, self).__init__()
 
         for kernel_size in kernel_sizes:
-            assert kernel_size%2==1, "kernel size has to be odd numbers."
+            assert kernel_size % 2 == 1, "kernel size has to be odd numbers."
 
         # convolution
         if isinstance(kernel_sizes, (list, tuple, int)):
@@ -36,22 +39,22 @@ class ConvMaxpool(nn.Module):
                                    " of kernel_sizes."
             else:
                 raise ValueError("The type of out_channels and kernel_sizes should be the same.")
-            
+
             self.convs = nn.ModuleList([nn.Conv1d(
                 in_channels=in_channels,
                 out_channels=oc,
                 kernel_size=ks,
                 stride=1,
-                padding=ks//2,
+                padding=ks // 2,
                 dilation=1,
                 groups=1,
                 bias=None)
                 for oc, ks in zip(out_channels, kernel_sizes)])
-        
+
         else:
             raise Exception(
                 'Incorrect kernel sizes: should be list, tuple or int')
-        
+
         # activation function
         if activation == 'relu':
             self.activation = F.relu

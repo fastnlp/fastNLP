@@ -11,288 +11,310 @@ Trainer在fastNLP中用于组织单任务的训练过程，可以避免用户在
     
     (5) 保存获得更好验证性能的模型。
 
-1 Trainer的基本使用
-    下面的例子是使用神经网络来进行预测一个序列中是否有偶数个1。
 
-    Example::
+----------------------------
+1. Trainer的基本使用
+----------------------------
 
-        import numpy as np
-        from torch import nn
-        import torch
-        import torch.nn.functional as F
-        from torch.optim import SGD
+下面的例子是使用神经网络来进行预测一个序列中是否有偶数个1。
 
-        from fastNLP import DataSet
-        from fastNLP import Trainer
-        from fastNLP import CrossEntropyLoss
-        from fastNLP import AccuracyMetric
-        from fastNLP.modules.decoder import MLP
+.. code-block:: python
 
-        # 模型
-        class Model(nn.Module):
-            def __init__(self, input_num):
-                super().__init__()
-                self.fcs = MLP([input_num, 40, 40, 2], 'relu')
+    import numpy as np
+    from torch import nn
+    import torch
+    import torch.nn.functional as F
+    from torch.optim import SGD
 
-            def forward(self, x):
-                x = self.fcs(x)
-                return {'pred': x}
-        model = Model(10)
+    from fastNLP import DataSet
+    from fastNLP import Trainer
+    from fastNLP import CrossEntropyLoss
+    from fastNLP import AccuracyMetric
+    from fastNLP.modules.decoder import MLP
 
-        # 生成数据
-        def generate_psedo_dataset(num_samples):
-            dataset = DataSet()
-            data = np.random.randint(2, size=(num_samples, 10))
-            label = np.sum(data, axis=1)%2
-            dataset = DataSet({'x':data.astype(float), 'label': label})
-            dataset.set_input('x')
-            dataset.set_target('label')
-            return dataset
-        tr_dataset = generate_psedo_dataset(1000)
-        dev_data = generate_psedo_dataset(100)
+    # 模型
+    class Model(nn.Module):
+        def __init__(self, input_num):
+            super().__init__()
+            self.fcs = MLP([input_num, 40, 40, 2], 'relu')
 
-        # 训练
-        trainer = Trainer(tr_dataset, model, loss=CrossEntropyLoss(target='label'),
-                           optimizer=SGD(model.parameters(), lr=0.1),n_epochs=1000,
-                           dev_data = dev_data, metrics=AccuracyMetric(target='label'))
-        trainer.train()
+        def forward(self, x):
+            x = self.fcs(x)
+            return {'pred': x}
+    model = Model(10)
 
-    由上面的例子可以看出通过使用Trainer，可以使得训练部分的代码大幅减少。
-    使用Trainer需要满足以下几个条件:
+    # 生成数据
+    def generate_psedo_dataset(num_samples):
+        dataset = DataSet()
+        data = np.random.randint(2, size=(num_samples, 10))
+        label = np.sum(data, axis=1)%2
+        dataset = DataSet({'x':data.astype(float), 'label': label})
+        dataset.set_input('x')
+        dataset.set_target('label')
+        return dataset
+    tr_dataset = generate_psedo_dataset(1000)
+    dev_data = generate_psedo_dataset(100)
+
+    # 训练
+    trainer = Trainer(tr_dataset, model, loss=CrossEntropyLoss(target='label'),
+                       optimizer=SGD(model.parameters(), lr=0.1),n_epochs=1000,
+                       dev_data = dev_data, metrics=AccuracyMetric(target='label'))
+    trainer.train()
+
+由上面的例子可以看出通过使用Trainer，可以使得训练部分的代码大幅减少。
+使用Trainer需要满足以下几个条件:
 
 1.1 模型
-    1 模型的forward()的参数名需要与DataSet中的名字对应。实际上fastNLP在将DataSet中的数据传递给模型forward()时，是
-    通过匹配名称实现的。所以上例中，如果Model的forward函数修改为forward(self, data), 则DataSet中的'x'这个field就应该
-    改名为'data'。
+----------------------------
 
-    2 传递给forward()的参数是DataSet中被设置为input的那些field。但如果forward()中没有对应的参数，则不会将数据传递
-    给forward()。例如，DataSet中'x1', 'x2'都是input，但是模型的函数为forward(self, x1), 那么'x2'不会传递给forward()。
+1 模型的forward()的参数名需要与DataSet中的名字对应。实际上fastNLP在将DataSet中的数据传递给模型forward()时，是
+通过匹配名称实现的。所以上例中，如果Model的forward函数修改为forward(self, data), 则DataSet中的'x'这个field就应该
+改名为'data'。
 
-    3 模型的forward()返回值需要为一个dict。
+2 传递给forward()的参数是DataSet中被设置为input的那些field。但如果forward()中没有对应的参数，则不会将数据传递
+给forward()。例如，DataSet中'x1', 'x2'都是input，但是模型的函数为forward(self, x1), 那么'x2'不会传递给forward()。
+
+3 模型的forward()返回值需要为一个dict。
 
 1.2 Loss
-    fastNLP中的为了不限制forward函数的返回内容数量(比如一些复杂任务需要返回多个内容，如Dependency Parsing，
-    :mod:`Loss<fastNLP.core.losses>` 与 :mod:`Metric<fastNLP.core.metrics>` 都使用了通过名称来匹配相应内容的策略。如上面的例子中
+----------------------------
 
-    Example::
+fastNLP中的为了不限制forward函数的返回内容数量(比如一些复杂任务需要返回多个内容，如Dependency Parsing，
+:mod:`Loss<fastNLP.core.losses>` 与 :mod:`Metric<fastNLP.core.metrics>` 都使用了通过名称来匹配相应内容的策略。如上面的例子中
 
-        trainer = Trainer(tr_dataset, model, loss=CrossEntropyLoss(target='label'),
-                   optimizer=SGD(model.parameters(), lr=0.1),n_epochs=1000,
-                   dev_data = dev_data, metrics=AccuracyMetric(target='label'))
+.. code-block:: python
 
-    loss被设置为了 :class:`~fastNLP.CrossEntropyLoss` , 但在初始化的时候传入了target='label'这个参数，
-    :class:`~fastNLP.CrossEntropyLoss` 的初始化参数为(pred=None, target=None, padding_idx=-100)。
-    
-    这里的两个参数分别为计算CrossEntropy时需要使用到的模型的预测值与真实值。
-    其中 `pred` 一般来自于模型forward()的返回结果，`target` 一般是来自于DataSet中被设置为target的field。
-    由于每个人对真实值或者model的返回值取名并不一样，所以fastNLP的 :mod:`Loss<fastNLP.core.losses>` 提供一种类似于映射的机制来匹配对应的值，
-    比如这里 :class:`~fastNLP.CrossEntropyLoss` 将尝试找到名为'label'的内容来作为真实值得到loss；
-    而pred=None, 则 :class:`~fastNLP.CrossEntropyLoss` 使用'pred'作为名称匹配预测值，
-    正好forward的返回值也叫pred，所以这里不需要申明pred。
+    trainer = Trainer(tr_dataset, model, loss=CrossEntropyLoss(target='label'),
+               optimizer=SGD(model.parameters(), lr=0.1),n_epochs=1000,
+               dev_data = dev_data, metrics=AccuracyMetric(target='label'))
 
-    尽管fastNLP使用了映射机制来使得loss的计算变得比较灵活，但有些情况下loss必须在模型中进行计算，比如使用了CRF的模型。
-    fastNLP中提供了 :class:`~fastNLP.LossInForward` 这个loss。
-    这个loss的原理是直接在forward()的返回结果中找到loss_key(默认寻找'loss')指定的那个tensor，并使用它作为loss。
-    如果Trainer初始化没有提供loss则默认使用 :class:`~fastNLP.LossInForward` 。
-    
-    .. todo::
-        补充一个例子  详细例子可以参照
+loss被设置为了 :class:`~fastNLP.CrossEntropyLoss` , 但在初始化的时候传入了target='label'这个参数，
+:class:`~fastNLP.CrossEntropyLoss` 的初始化参数为(pred=None, target=None, padding_idx=-100)。
+
+这里的两个参数分别为计算CrossEntropy时需要使用到的模型的预测值与真实值。
+其中 `pred` 一般来自于模型forward()的返回结果，`target` 一般是来自于DataSet中被设置为target的field。
+由于每个人对真实值或者model的返回值取名并不一样，所以fastNLP的 :mod:`Loss<fastNLP.core.losses>` 提供一种类似于映射的机制来匹配对应的值，
+比如这里 :class:`~fastNLP.CrossEntropyLoss` 将尝试找到名为'label'的内容来作为真实值得到loss；
+而pred=None, 则 :class:`~fastNLP.CrossEntropyLoss` 使用'pred'作为名称匹配预测值，
+正好forward的返回值也叫pred，所以这里不需要申明pred。
+
+尽管fastNLP使用了映射机制来使得loss的计算变得比较灵活，但有些情况下loss必须在模型中进行计算，比如使用了CRF的模型。
+fastNLP中提供了 :class:`~fastNLP.LossInForward` 这个loss。
+这个loss的原理是直接在forward()的返回结果中找到loss_key(默认寻找'loss')指定的那个tensor，并使用它作为loss。
+如果Trainer初始化没有提供loss则默认使用 :class:`~fastNLP.LossInForward` 。
+
+.. todo::
+    补充一个例子  详细例子可以参照
 
 1.3 Metric
-    :mod:`Metric<fastNLP.core.metrics>` 使用了与上述Loss一样的策略，即使用名称进行匹配。
-    AccuracyMetric(target='label')的情况与CrossEntropyLoss 是同理的。
-    
-    在进行验证时，可能用到的计算与forward()中不太一致，没有办法直接从forward()的结果中得到预测值，这时模型可以提供一个predict()方法，
-    如果提供的模型具有predict方法，则在模型验证时将调用predict()方法获取预测结果，
-    传入到predict()的参数也是从DataSet中被设置为input的field中选择出来的;
-    与forward()一样，返回值需要为一个dict。
-    
-    .. todo::
-        补充一个例子 具体例子可以参考
+----------------------------
 
-2 Trainer的代码检查
-    由于在fastNLP中采取了映射的机制，所以难免可能存在对应出错的情况。Trainer提供一种映射检查机制，可以通过check_code_level来进行控制
-    比如下面的例子中，由于各种原因产生的报错
+:mod:`Metric<fastNLP.core.metrics>` 使用了与上述Loss一样的策略，即使用名称进行匹配。
+AccuracyMetric(target='label')的情况与CrossEntropyLoss 是同理的。
+
+在进行验证时，可能用到的计算与forward()中不太一致，没有办法直接从forward()的结果中得到预测值，这时模型可以提供一个predict()方法，
+如果提供的模型具有predict方法，则在模型验证时将调用predict()方法获取预测结果，
+传入到predict()的参数也是从DataSet中被设置为input的field中选择出来的;
+与forward()一样，返回值需要为一个dict。
+
+.. todo::
+    补充一个例子 具体例子可以参考
+    
+----------------------------
+2. Trainer的代码检查
+----------------------------
+
+由于在fastNLP中采取了映射的机制，所以难免可能存在对应出错的情况。Trainer提供一种映射检查机制，可以通过check_code_level来进行控制
+比如下面的例子中，由于各种原因产生的报错
 
 Example2.1
-    ::
-    
-        import numpy as np
-        from torch import nn
-        import torch
-        from torch.optim import SGD
-        from fastNLP import Trainer
-        from fastNLP import DataSet
+----------------------------
 
-        class Model(nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.fc = nn.Linear(1, 1)
-            def forward(self, x, b):
-                loss = torch.mean((self.fc(x)-b)**2)
-                return {'loss': loss}
-        model = Model()
+.. code-block:: python
 
-        dataset = DataSet({'a': np.arange(10), 'b':np.arange(10)*2})
-        dataset.set_input('a', 'b')
+    import numpy as np
+    from torch import nn
+    import torch
+    from torch.optim import SGD
+    from fastNLP import Trainer
+    from fastNLP import DataSet
 
-        trainer = Trainer(dataset, model, loss=None, optimizer=SGD(model.parameters(), lr=0.001))
+    class Model(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.fc = nn.Linear(1, 1)
+        def forward(self, x, b):
+            loss = torch.mean((self.fc(x)-b)**2)
+            return {'loss': loss}
+    model = Model()
 
-        trainer = Trainer(dataset, model, SGD(model.parameters()))
-        #  会报以下的错误
-        # input fields after batch(if batch size is 2):
-        #     a: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2])
-        #     b: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2])
-        # There is no target field.
-        # ....
-        # NameError:
-        # Problems occurred when calling Model.forward(self, x, b)
-        #     missing param: ['x']
-        #     unused field: ['a']
-        #     Suggestion: You need to provide ['x'] in DataSet and set it as input.
+    dataset = DataSet({'a': np.arange(10), 'b':np.arange(10)*2})
+    dataset.set_input('a', 'b')
 
-    这里就是由于在Trainer初始化的时候，fastNLP会尝试使用一个batch_size=2的batch去运行一遍forward()以及backward()。这里有两类
-    信息可以为你提供参考
+    trainer = Trainer(dataset, model, loss=None, optimizer=SGD(model.parameters(), lr=0.001))
 
-    1 'input fields after batch...'这部分显示的是train dataset经过Batch操作后，每个field对应的类型以及进行shape。这里
-    因为train dataset没有target所以没有显示。根据这里可以看出是否正确将需要的内容设置为了input或target。
+    trainer = Trainer(dataset, model, SGD(model.parameters()))
+    #  会报以下的错误
+    # input fields after batch(if batch size is 2):
+    #     a: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2])
+    #     b: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2])
+    # There is no target field.
+    # ....
+    # NameError:
+    # Problems occurred when calling Model.forward(self, x, b)
+    #     missing param: ['x']
+    #     unused field: ['a']
+    #     Suggestion: You need to provide ['x'] in DataSet and set it as input.
 
-    2 NameError，NameError发生在映射出错的情况。这里报错的原因是由于尝试进行forward计算时(可以通过Model.forward(self, x, b)判断
-    出当前是在调取forward)，却没有获取到forward()函数中需要的'x'；在报错信息中同时指出了缺'x'，而'a'没有被使用，那么可能
-    就是由于field的名称不对。这里将dataset中'a'这个field的名称改为'x'，或者model的参数从'x'修改为'a'都可以解决问题。
+这里就是由于在Trainer初始化的时候，fastNLP会尝试使用一个batch_size=2的batch去运行一遍forward()以及backward()。这里有两类
+信息可以为你提供参考
 
-    下面的例子是由于loss计算的时候找不到需要的值
+1 'input fields after batch...'这部分显示的是train dataset经过Batch操作后，每个field对应的类型以及进行shape。这里
+因为train dataset没有target所以没有显示。根据这里可以看出是否正确将需要的内容设置为了input或target。
+
+2 NameError，NameError发生在映射出错的情况。这里报错的原因是由于尝试进行forward计算时(可以通过Model.forward(self, x, b)判断
+出当前是在调取forward)，却没有获取到forward()函数中需要的'x'；在报错信息中同时指出了缺'x'，而'a'没有被使用，那么可能
+就是由于field的名称不对。这里将dataset中'a'这个field的名称改为'x'，或者model的参数从'x'修改为'a'都可以解决问题。
+
+下面的例子是由于loss计算的时候找不到需要的值
 
 Example2.2
-    ::
+----------------------------
 
-        import numpy as np
-        from torch import nn
-        from torch.optim import SGD
-        from fastNLP import Trainer
-        from fastNLP import DataSet
-        from fastNLP import L1Loss
-        import torch
+.. code-block:: python
 
-        class Model(nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.fc = nn.Linear(1, 1)
-            def forward(self, a):
-                return {'pred_b': self.fc(a.unsqueeze(1)).squeeze(1), 'No use':1}
+    import numpy as np
+    from torch import nn
+    from torch.optim import SGD
+    from fastNLP import Trainer
+    from fastNLP import DataSet
+    from fastNLP import L1Loss
+    import torch
 
-        model = Model()
+    class Model(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.fc = nn.Linear(1, 1)
+        def forward(self, a):
+            return {'pred_b': self.fc(a.unsqueeze(1)).squeeze(1), 'No use':1}
 
-        dataset = DataSet({'a': np.arange(10, dtype=float), 'b':np.arange(10, dtype=float)*2})
+    model = Model()
 
-        dataset.set_input('a')
-        dataset.set_target('b')
+    dataset = DataSet({'a': np.arange(10, dtype=float), 'b':np.arange(10, dtype=float)*2})
 
-        trainer = Trainer(dataset, model, loss=L1Loss(target='label'), optimizer=SGD(model.parameters(), lr=0.001))
-        # 报错信息如下
-        # input fields after batch(if batch size is 2):
-        #     a: (1)type:torch.Tensor (2)dtype:torch.float32, (3)shape:torch.Size([2])
-        # target fields after batch(if batch size is 2):
-        #     b: (1)type:torch.Tensor (2)dtype:torch.float32, (3)shape:torch.Size([2])
-        # ....
-        # NameError:
-        # Problems occurred when calling L1Loss.get_loss(self, pred, target)
-        #     missing param: ['pred(assign to `pred` in `L1Loss`)', 'label(assign to `target` in `L1Loss`)']
-        #     unused field: ['b']
-        #     unused param: ['pred_b', 'No use']
-        #     target field: ['b']
-        #     param from Model.forward(self, a): ['pred_b', 'No use']
-        #     Suggestion: (1). Check key assignment for `target` when initialize L1Loss. Or provide `label` in DataSet or output of Model.forward(self, a).
-        #             (2). Check key assignment for `pred` when initialize L1Loss. Or provide `pred` in DataSet or output of Model.forward(self, a).
+    dataset.set_input('a')
+    dataset.set_target('b')
 
-    报错信息也包含两部分:
+    trainer = Trainer(dataset, model, loss=L1Loss(target='label'), optimizer=SGD(model.parameters(), lr=0.001))
+    # 报错信息如下
+    # input fields after batch(if batch size is 2):
+    #     a: (1)type:torch.Tensor (2)dtype:torch.float32, (3)shape:torch.Size([2])
+    # target fields after batch(if batch size is 2):
+    #     b: (1)type:torch.Tensor (2)dtype:torch.float32, (3)shape:torch.Size([2])
+    # ....
+    # NameError:
+    # Problems occurred when calling L1Loss.get_loss(self, pred, target)
+    #     missing param: ['pred(assign to `pred` in `L1Loss`)', 'label(assign to `target` in `L1Loss`)']
+    #     unused field: ['b']
+    #     unused param: ['pred_b', 'No use']
+    #     target field: ['b']
+    #     param from Model.forward(self, a): ['pred_b', 'No use']
+    #     Suggestion: (1). Check key assignment for `target` when initialize L1Loss. Or provide `label` in DataSet or output of Model.forward(self, a).
+    #             (2). Check key assignment for `pred` when initialize L1Loss. Or provide `pred` in DataSet or output of Model.forward(self, a).
 
-    1 第一部分与上面是一样的
+报错信息也包含两部分:
 
-    2 这里报错的原因是由于计算loss的时候找不到相应的值(通过L1Loss.get_loss(self, pred, target)判断出来的)；
-    报错的原因是因为 `pred` 和 `label` (我们在初始化L1Loss时将target指定为了label)都没有找到。
-    这里'unused field'是DataSet中出现了，但却没有被设置为input或者target的field；
-    'unused param'是forward()中返回且没有被使用到的内容；'target field'是被设置为了target的field;
-    'param from Model.forward(self, a)'是forward()返回的所有key。"Suggestion"是关于当前错误处理的建议。
+1 第一部分与上面是一样的
 
-    但是在一些情况下，比如forward()返回值只有一个，target也只有一个，fastNLP不会进行匹配，而直接将forward()的结果作为pred,
-    将DataSet中的target设置为target。上面的例子在返回值中加入了一个'No use'则只是为了使得Loss去匹配结果。
+2 这里报错的原因是由于计算loss的时候找不到相应的值(通过L1Loss.get_loss(self, pred, target)判断出来的)；
+报错的原因是因为 `pred` 和 `label` (我们在初始化L1Loss时将target指定为了label)都没有找到。
+这里'unused field'是DataSet中出现了，但却没有被设置为input或者target的field；
+'unused param'是forward()中返回且没有被使用到的内容；'target field'是被设置为了target的field;
+'param from Model.forward(self, a)'是forward()返回的所有key。"Suggestion"是关于当前错误处理的建议。
+
+但是在一些情况下，比如forward()返回值只有一个，target也只有一个，fastNLP不会进行匹配，而直接将forward()的结果作为pred,
+将DataSet中的target设置为target。上面的例子在返回值中加入了一个'No use'则只是为了使得Loss去匹配结果。
 
 
-    下面是带有dev dataset时如果出现错误会发生的报错，
+下面是带有dev dataset时如果出现错误会发生的报错，
 
 Example2.3
-    ::
+----------------------------
+
+.. code-block:: python
+
+    import numpy as np
+    from torch import nn
+    from torch.optim import SGD
+    from fastNLP import Trainer
+    from fastNLP import DataSet
+    from fastNLP import AccuracyMetric
+    import torch
+
+    class Model(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.fc = nn.Linear(1, 1)
+        def forward(self, a, b):
+            loss = torch.mean((self.fc(a.float().unsqueeze(1))-b.float())**2)
+            return {'loss': loss}
+        def predict(self, a):  # 使用predict()进行验证
+            return {'output':self.fc(a.float().unsqueeze(1))} #这里return的值不包含'pred'这个key
+    model = Model()
+
+    dataset = DataSet({'a': np.arange(10), 'b':np.arange(10)*2})
+    dev_data = DataSet({'a': np.arange(10, 20), 'b':np.arange(10, 20)*2})
+
+    dataset.set_input('a', 'b')
+    dev_data.set_input('a')  # 这里没有设置target
+
+    trainer = Trainer(dataset, model, loss=None, optimizer=SGD(model.parameters(), lr=0.001),
+                     dev_data=dev_data, metrics=AccuracyMetric())
+
+    # 报错信息
+    # ...
+    # NameError:
+    # Problems occurred when calling AccuracyMetric.evaluate(self, pred, target, seq_len=None)
+    #     missing param: ['pred(assign to `pred` in `AccuracyMetric`)', 'target(assign to `target` in `AccuracyMetric`)']
+    #     unused param: ['output']
+    #     target field: []
+    #     param from Model.predict(self, a): ['output']
+    #     Suggestion: (1). Check key assignment for `pred` when initialize AccuracyMetric. Or provide `pred` in DataSet or output of Model.predict(self, a).
+    #             (2). Check key assignment for `target` when initialize AccuracyMetric. Or provide `target` in DataSet or output of Model.predict(self, a).
+
+报错信息和前面都是类似的，但是可以通过'AccuracyMetric.evaluate(self, pred, target, seq_len=None)'看出这里是evaluation
+的时候发生了错误。这样避免了需要在完成一整个epoch的训练才能发现evaluation弄错的情况。这里的修改是通过在初始化metric的时候
+指明通过'output'获取`pred`, 即AccuracyMetric(pred='output')。
+
+可以通过check_code_level调节检查的强度。默认为0，即进行检查。
+
+----------------------------
+3. Trainer与callback
+----------------------------
+
+虽然Trainer本身已经集成了一些功能，但仍然不足以囊括训练过程中可能需要到的功能，比如负采样，learning rate decay, Early Stop等。
+为了解决这个问题fastNLP引入了callback的机制，:class:`~fastNLP.Callback` 是一种在Trainer训练过程中特定阶段会运行的函数集合，
+所有的 :class:`~fastNLP.Callback` 都具有on_*(比如on_train_start, on_backward_begin)等函数。
+如果 Callback 实现了该函数，则Trainer运行至对应阶段，会进行调用，例如::
+
+    from fastNLP import Callback, EarlyStopCallback, Trainer, CrossEntropyLoss, AccuracyMetric
+    from fastNLP.models import CNNText
+
+    start_time = time.time()
     
-        import numpy as np
-        from torch import nn
-        from torch.optim import SGD
-        from fastNLP import Trainer
-        from fastNLP import DataSet
-        from fastNLP import AccuracyMetric
-        import torch
-
-        class Model(nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.fc = nn.Linear(1, 1)
-            def forward(self, a, b):
-                loss = torch.mean((self.fc(a.float().unsqueeze(1))-b.float())**2)
-                return {'loss': loss}
-            def predict(self, a):  # 使用predict()进行验证
-                return {'output':self.fc(a.float().unsqueeze(1))} #这里return的值不包含'pred'这个key
-        model = Model()
-
-        dataset = DataSet({'a': np.arange(10), 'b':np.arange(10)*2})
-        dev_data = DataSet({'a': np.arange(10, 20), 'b':np.arange(10, 20)*2})
-
-        dataset.set_input('a', 'b')
-        dev_data.set_input('a')  # 这里没有设置target
-
-        trainer = Trainer(dataset, model, loss=None, optimizer=SGD(model.parameters(), lr=0.001),
-                         dev_data=dev_data, metrics=AccuracyMetric())
-
-        # 报错信息
-        # ...
-        # NameError:
-        # Problems occurred when calling AccuracyMetric.evaluate(self, pred, target, seq_len=None)
-        #     missing param: ['pred(assign to `pred` in `AccuracyMetric`)', 'target(assign to `target` in `AccuracyMetric`)']
-        #     unused param: ['output']
-        #     target field: []
-        #     param from Model.predict(self, a): ['output']
-        #     Suggestion: (1). Check key assignment for `pred` when initialize AccuracyMetric. Or provide `pred` in DataSet or output of Model.predict(self, a).
-        #             (2). Check key assignment for `target` when initialize AccuracyMetric. Or provide `target` in DataSet or output of Model.predict(self, a).
-
-    报错信息和前面都是类似的，但是可以通过'AccuracyMetric.evaluate(self, pred, target, seq_len=None)'看出这里是evaluation
-    的时候发生了错误。这样避免了需要在完成一整个epoch的训练才能发现evaluation弄错的情况。这里的修改是通过在初始化metric的时候
-    指明通过'output'获取`pred`, 即AccuracyMetric(pred='output')。
-
-    可以通过check_code_level调节检查的强度。默认为0，即进行检查。
-
-3 Trainer与callback
-    虽然Trainer本身已经集成了一些功能，但仍然不足以囊括训练过程中可能需要到的功能，比如负采样，learning rate decay, Early Stop等。
-    为了解决这个问题fastNLP引入了callback的机制，:class:`~fastNLP.Callback` 是一种在Trainer训练过程中特定阶段会运行的函数集合，
-    所有的 :class:`~fastNLP.Callback` 都具有on_*(比如on_train_start, on_backward_begin)等函数。
-    如果 Callback 实现了该函数，则Trainer运行至对应阶段，会进行调用，例如::
+    class MyCallback(Callback):
+        def on_epoch_end(self):
+            print('{:d}ms\n\n'.format(round((time.time()-start_time)*1000)))
     
-        from fastNLP import Callback, EarlyStopCallback, Trainer, CrossEntropyLoss, AccuracyMetric
-        from fastNLP.models import CNNText
-
-        start_time = time.time()
-        
-        class MyCallback(Callback):
-            def on_epoch_end(self):
-                print('{:d}ms\n\n'.format(round((time.time()-start_time)*1000)))
-        
-        model = CNNText((len(vocab),50), num_classes=5, padding=2, dropout=0.1)
-        trainer = Trainer(model=model, train_data=train_data, dev_data=dev_data, loss=CrossEntropyLoss(),
-                          metrics=AccuracyMetric(), callbacks=[MyCallback(),EarlyStopCallback(10)])
-        trainer.train()
-        
-    这里，我们通过继承 :class:`~fastNLP.Callback` 类定义了自己的 callback 的，并和内置的 :class:`~fastNLP.EarlyStopCallback`
-    一起传给了 :class:`~fastNLP.Trainer` ，增强了 :class:`~fastNLP.Trainer` 的功能
+    model = CNNText((len(vocab),50), num_classes=5, padding=2, dropout=0.1)
+    trainer = Trainer(model=model, train_data=train_data, dev_data=dev_data, loss=CrossEntropyLoss(),
+                      metrics=AccuracyMetric(), callbacks=[MyCallback(),EarlyStopCallback(10)])
+    trainer.train()
     
-    fastNLP已经自带了很多callback函数供使用，可以参考 :doc:`fastNLP.core.callback` 。
+这里，我们通过继承 :class:`~fastNLP.Callback` 类定义了自己的 callback 的，并和内置的 :class:`~fastNLP.EarlyStopCallback`
+一起传给了 :class:`~fastNLP.Trainer` ，增强了 :class:`~fastNLP.Trainer` 的功能
+
+fastNLP已经自带了很多callback函数供使用，可以参考 :doc:`fastNLP.core.callback` 。
 
 """
 __all__ = [
@@ -314,7 +336,7 @@ except:
 import warnings
 
 from .batch import DataSetIter, BatchIter
-from .callback import CallbackManager, CallbackException
+from .callback import CallbackManager, CallbackException, Callback
 from .dataset import DataSet
 from .losses import _prepare_losser
 from .metrics import _prepare_metrics
@@ -330,7 +352,8 @@ from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
-
+from ._parallel_utils import _model_contains_inner_module
+from ._logger import logger
 
 class Trainer(object):
     """
@@ -367,8 +390,8 @@ class Trainer(object):
         要指定以哪个指标为准。另外有些指标是越小效果越好，比如语言模型的困惑度，这种情况下，在key前面增加一个'-'来表
         明验证时，值越小越好(比如: "-ppl")。仅在传入dev_data时有效。
     :param int validate_every: 多少个step在验证集上验证一次; 如果为-1，则每个epoch结束验证一次。仅在传入dev_data时有效。
-    :param str,None save_path: 将模型保存路径。如果为None，则不保存模型。如果dev_data为None，则保存最后一次迭代的模型。
-        保存的时候不仅保存了参数，还保存了模型结构。即便使用DataParallel，这里也只保存模型。
+    :param str,None save_path: 将模型保存路径，如果路径不存在，将自动创建文件夹。如果为None，则不保存模型。如果dev_data为None，则保存
+        最后一次迭代的模型。保存的时候不仅保存了参数，还保存了模型结构。即便使用DataParallel，这里也只保存模型。
     :param bool use_tqdm: 是否使用tqdm来显示训练进度; 如果为False，则将loss打印在终端中。
     :param str,int,torch.device,list(int) device: 将模型load到哪个设备。默认为None，即Trainer不对模型
         的计算位置进行管理。支持以下的输入:
@@ -398,33 +421,28 @@ class Trainer(object):
                  batch_size=32, sampler=None, drop_last=False, update_every=1,
                  num_workers=0, n_epochs=10, print_every=5,
                  dev_data=None, metrics=None, metric_key=None,
-                 validate_every=-1, save_path=None, use_tqdm=True, device=None, prefetch=False,
-                 callbacks=None, check_code_level=0):
-        if prefetch and num_workers==0:
-            num_workers = 1
-        if prefetch:
-            warnings.warn("prefetch is deprecated, will be removed in version 0.5.0, please use num_workers instead.")
-
+                 validate_every=-1, save_path=None, use_tqdm=True, device=None,
+                 callbacks=None, check_code_level=0, **kwargs):
         super(Trainer, self).__init__()
         if not isinstance(model, nn.Module):
             raise TypeError(f"The type of model must be torch.nn.Module, got {type(model)}.")
-        
+
         # check metrics and dev_data
         if (not metrics) and dev_data is not None:
             raise ValueError("No metric for dev_data evaluation.")
         if metrics and (dev_data is None):
             raise ValueError("No dev_data for evaluations, pass dev_data or set metrics to None. ")
-        
+
         # check update every
         assert update_every >= 1, "update_every must be no less than 1."
         self.update_every = int(update_every)
-        
+
         # check save_path
         if not (save_path is None or isinstance(save_path, str)):
             raise ValueError("save_path can only be None or `str`.")
         # prepare evaluate
         metrics = _prepare_metrics(metrics)
-        
+
         # parse metric_key
         # increase_better is True. It means the exp result gets better if the indicator increases.
         # It is true by default.
@@ -436,28 +454,69 @@ class Trainer(object):
             self.metric_key = None
         # prepare loss
         losser = _prepare_losser(loss)
-        
-        # sampler check
-        if sampler is not None and not isinstance(sampler, Sampler):
-            raise ValueError("The type of sampler should be fastNLP.BaseSampler, got {}.".format(type(sampler)))
 
-        if sampler is None:
-            sampler = RandomSampler()
+        if isinstance(train_data, BatchIter):
+            if sampler is not None:
+                warnings.warn("sampler is ignored when train_data is a BatchIter.")
+            if num_workers>0:
+                warnings.warn("num_workers is ignored when train_data is BatchIter.")
+            if drop_last:
+                warnings.warn("drop_last is ignored when train_data is BatchIter.")
+
+        if isinstance(model, nn.parallel.DistributedDataParallel):  # 如果是分布式的
+            # device为None
+            if device is not None:
+                warnings.warn("device is ignored when model is nn.parallel.DistributedDataParallel.")
+                device = None
+            # Sampler要是分布式的
+            if sampler is None:
+                sampler = torch.utils.data.DistributedSampler(train_data)
+            elif not isinstance(sampler, torch.utils.data.DistributedSampler):
+                raise TypeError("When using nn.parallel.DistributedDataParallel, "
+                                "sampler must be None or torch.utils.data.DistributedSampler.")
+            # 不能保存模型
+            if save_path:
+                raise RuntimeError("Saving model in Distributed situation is not allowed right now.")
+        else:
+            # sampler check
+            if sampler is not None and not isinstance(sampler, (Sampler, torch.utils.data.Sampler)):
+                raise ValueError(f"The type of sampler should be fastNLP.BaseSampler or pytorch's Sampler, got {type(sampler)}")
+            if sampler is None:
+                sampler = RandomSampler()
+            elif hasattr(sampler, 'set_batch_size'):
+                sampler.set_batch_size(batch_size)
 
         if isinstance(train_data, DataSet):
             self.data_iterator = DataSetIter(
                 dataset=train_data, batch_size=batch_size, num_workers=num_workers, sampler=sampler, drop_last=drop_last)
         elif isinstance(train_data, BatchIter):
             self.data_iterator = train_data
+            train_data = train_data.dataset
         else:
             raise TypeError("train_data type {} not support".format(type(train_data)))
 
-        if check_code_level > -1 and isinstance(self.data_iterator, DataSetIter):
-            _check_code(dataset=train_data, model=model, losser=losser, metrics=metrics, dev_data=dev_data,
-                        metric_key=self.metric_key, check_level=check_code_level,
-                        batch_size=min(batch_size, DEFAULT_CHECK_BATCH_SIZE))
-            # _check_code 是 fastNLP 帮助你检查代码是否正确的方法 。如果你在错误栈中看到这行注释，请认真检查你的代码
         self.model = _move_model_to_device(model, device=device)
+        if _model_contains_inner_module(self.model):
+            self._forward_func = self.model.module.forward
+        else:
+            self._forward_func = self.model.forward
+        if check_code_level > -1:
+            # _check_code 是 fastNLP 帮助你检查代码是否正确的方法 。如果你在错误栈中看到这行注释，请认真检查你的field名与模型的输入
+            #   名是否匹配
+            dev_dataset = dev_data
+            if isinstance(dev_data, BatchIter):
+                dev_dataset = None
+                warnings.warn("dev_data is of BatchIter type, ignore validation checking.")
+            check_batch_size = min(batch_size, DEFAULT_CHECK_BATCH_SIZE)
+            if isinstance(self.model, nn.DataParallel):
+                _num_devices = len(self.model.device_ids)
+                if batch_size//_num_devices>1:  # 如果多卡是每个卡可以分多个数据的，则用每个卡给两个sample
+                    check_batch_size = max(len(self.model.device_ids)*2, check_batch_size)
+                else:
+                    check_batch_size = max(len(self.model.device_ids), check_batch_size)
+            _check_code(dataset=train_data, model=self.model, losser=losser, forward_func=self._forward_func, metrics=metrics,
+                        dev_data=dev_dataset, metric_key=self.metric_key, check_level=check_code_level,
+                        batch_size=check_batch_size)
 
         self.train_data = train_data
         self.dev_data = dev_data  # If None, No validation.
@@ -472,8 +531,7 @@ class Trainer(object):
         self.best_dev_epoch = None
         self.best_dev_step = None
         self.best_dev_perf = None
-        self.n_steps = (len(self.train_data) // self.batch_size + int(
-            len(self.train_data) % self.batch_size != 0)) * int(drop_last==0) * self.n_epochs
+        self.n_steps = len(self.data_iterator) * self.n_epochs
 
         if isinstance(optimizer, torch.optim.Optimizer):
             self.optimizer = optimizer
@@ -483,22 +541,32 @@ class Trainer(object):
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=4e-3)
         else:
             raise TypeError("optimizer can only be torch.optim.Optimizer type, not {}.".format(type(optimizer)))
-        
+
+        self.logger = logger
+
         self.use_tqdm = use_tqdm
+        if 'test_use_tqdm' in kwargs:
+            self.test_use_tqdm = kwargs.get('test_use_tqdm')
+        else:
+            self.test_use_tqdm = self.use_tqdm
         self.pbar = None
         self.print_every = abs(self.print_every)
-
+        self.kwargs = kwargs
         if self.dev_data is not None:
             self.tester = Tester(model=self.model,
                                  data=self.dev_data,
                                  metrics=self.metrics,
-                                 batch_size=self.batch_size,
+                                 batch_size=kwargs.get("dev_batch_size", self.batch_size),
                                  device=None,  # 由上面的部分处理device
-                                 verbose=0)
-        
+                                 verbose=0,
+                                 use_tqdm=self.test_use_tqdm)
+
         self.step = 0
         self.start_time = None  # start timestamp
-        
+
+        if isinstance(callbacks, Callback):
+            callbacks = [callbacks]
+
         self.callback_manager = CallbackManager(env={"trainer": self},
                                                 callbacks=callbacks)
 
@@ -524,7 +592,7 @@ class Trainer(object):
         """
         results = {}
         if self.n_epochs <= 0:
-            print(f"training epoch is {self.n_epochs}, nothing was done.")
+            self.logger.info(f"training epoch is {self.n_epochs}, nothing was done.")
             results['seconds'] = 0.
             return results
         try:
@@ -533,8 +601,8 @@ class Trainer(object):
             self._load_best_model = load_best_model
             self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
             start_time = time.time()
-            print("training epochs started " + self.start_time, flush=True)
-            
+            self.logger.info("training epochs started " + self.start_time)
+
             try:
                 self.callback_manager.on_train_begin()
                 self._train()
@@ -547,11 +615,11 @@ class Trainer(object):
                         raise e
                 elif on_exception == 'raise':
                     raise e
-            
+
             if self.dev_data is not None and self.best_dev_perf is not None:
-                print(
-                    "\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step) +
-                    self.tester._format_eval_results(self.best_dev_perf), )
+                self.logger.info(
+                    "\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step))
+                self.logger.info(self.tester._format_eval_results(self.best_dev_perf))
                 results['best_eval'] = self.best_dev_perf
                 results['best_epoch'] = self.best_dev_epoch
                 results['best_step'] = self.best_dev_step
@@ -559,27 +627,23 @@ class Trainer(object):
                     model_name = "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time])
                     load_succeed = self._load_model(self.model, model_name)
                     if load_succeed:
-                        print("Reloaded the best model.")
+                        self.logger.info("Reloaded the best model.")
                     else:
-                        print("Fail to reload best model.")
+                        self.logger.info("Fail to reload best model.")
         finally:
             pass
         results['seconds'] = round(time.time() - start_time, 2)
-        
+
         return results
-    
+
     def _train(self):
         if not self.use_tqdm:
-            from fastNLP.core.utils import _pseudo_tqdm as inner_tqdm
+            from .utils import _pseudo_tqdm as inner_tqdm
         else:
             inner_tqdm = tqdm
         self.step = 0
         self.epoch = 0
         start = time.time()
-        if isinstance(self.model, nn.DataParallel):
-            self._forward_func = self.model.module.forward
-        else:
-            self._forward_func = self.model.forward
         with inner_tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
             self.pbar = pbar
             avg_loss = 0
@@ -597,21 +661,21 @@ class Trainer(object):
                     # negative sampling; replace unknown; re-weight batch_y
                     self.callback_manager.on_batch_begin(batch_x, batch_y, indices)
                     prediction = self._data_forward(self.model, batch_x)
-                    
+
                     # edit prediction
                     self.callback_manager.on_loss_begin(batch_y, prediction)
                     loss = self._compute_loss(prediction, batch_y).mean()
                     avg_loss += loss.item()
                     loss = loss / self.update_every
-                    
+
                     # Is loss NaN or inf? requires_grad = False
                     self.callback_manager.on_backward_begin(loss)
                     self._grad_backward(loss)
                     self.callback_manager.on_backward_end()
-                    
+
                     self._update()
                     self.callback_manager.on_step_end()
-                    
+
                     if self.step % self.print_every == 0:
                         avg_loss = float(avg_loss) / self.print_every
                         if self.use_tqdm:
@@ -625,29 +689,29 @@ class Trainer(object):
                         pbar.set_postfix_str(print_output)
                         avg_loss = 0
                     self.callback_manager.on_batch_end()
-                    
+
                     if ((self.validate_every > 0 and self.step % self.validate_every == 0) or
                         (self.validate_every < 0 and self.step % len(data_iterator) == 0)) \
                             and self.dev_data is not None:
                         eval_res = self._do_validation(epoch=epoch, step=self.step)
-                        eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. ".format(epoch, self.n_epochs, self.step,
-                                                                                    self.n_steps) + \
-                                   self.tester._format_eval_results(eval_res)
-                        pbar.write(eval_str + '\n')
-                
+                        eval_str = "Evaluation on dev at Epoch {}/{}. Step:{}/{}: ".format(epoch, self.n_epochs, self.step,
+                                                                                    self.n_steps)
+                        # pbar.write(eval_str + '\n')
+                        self.logger.info(eval_str)
+                        self.logger.info(self.tester._format_eval_results(eval_res)+'\n')
                 # ================= mini-batch end ==================== #
-                
+
                 # lr decay; early stopping
                 self.callback_manager.on_epoch_end()
             # =============== epochs end =================== #
             pbar.close()
             self.pbar = None
         # ============ tqdm end ============== #
-    
+
     def _do_validation(self, epoch, step):
         self.callback_manager.on_valid_begin()
         res = self.tester.test()
-        
+
         is_better_eval = False
         if self._better_eval_result(res):
             if self.save_path is not None:
@@ -662,7 +726,7 @@ class Trainer(object):
         # get validation results; adjust optimizer
         self.callback_manager.on_valid_end(res, self.metric_key, self.optimizer, is_better_eval)
         return res
-    
+
     def _mode(self, model, is_test=False):
         """Train mode or Test mode. This is for PyTorch currently.
 
@@ -674,14 +738,14 @@ class Trainer(object):
             model.eval()
         else:
             model.train()
-    
+
     def _update(self):
         """Perform weight update on a model.
 
         """
         if self.step % self.update_every == 0:
             self.optimizer.step()
-    
+
     def _data_forward(self, network, x):
         x = _build_args(self._forward_func, **x)
         y = network(**x)
@@ -689,7 +753,7 @@ class Trainer(object):
             raise TypeError(
                 f"The return value of {_get_func_signature(self._forward_func)} should be dict, got {type(y)}.")
         return y
-    
+
     def _grad_backward(self, loss):
         """Compute gradient with link rules.
 
@@ -700,7 +764,7 @@ class Trainer(object):
         if (self.step-1) % self.update_every == 0:
             self.model.zero_grad()
         loss.backward()
-    
+
     def _compute_loss(self, predict, truth):
         """Compute loss given prediction and ground truth.
 
@@ -709,7 +773,7 @@ class Trainer(object):
         :return: a scalar
         """
         return self.losser(predict, truth)
-    
+
     def _save_model(self, model, model_name, only_param=False):
         """ 存储不含有显卡信息的state_dict或model
         :param model:
@@ -721,7 +785,7 @@ class Trainer(object):
             model_path = os.path.join(self.save_path, model_name)
             if not os.path.exists(self.save_path):
                 os.makedirs(self.save_path, exist_ok=True)
-            if isinstance(model, nn.DataParallel):
+            if _model_contains_inner_module(model):
                 model = model.module
             if only_param:
                 state_dict = model.state_dict()
@@ -732,7 +796,7 @@ class Trainer(object):
                 model.cpu()
                 torch.save(model, model_path)
                 model.to(self._model_device)
-    
+
     def _load_model(self, model, model_name, only_param=False):
         # 返回bool值指示是否成功reload模型
         if self.save_path is not None:
@@ -741,7 +805,7 @@ class Trainer(object):
                 states = torch.load(model_path)
             else:
                 states = torch.load(model_path).state_dict()
-            if isinstance(model, nn.DataParallel):
+            if _model_contains_inner_module(model):
                 model.module.load_state_dict(states)
             else:
                 model.load_state_dict(states)
@@ -750,7 +814,7 @@ class Trainer(object):
         else:
             return False
         return True
-    
+
     def _better_eval_result(self, metrics):
         """Check if the current epoch yields better validation results.
 
@@ -765,17 +829,20 @@ class Trainer(object):
             self.best_metric_indicator = indicator_val
         else:
             if self.increase_better is True:
-                if indicator_val > self.best_metric_indicator:
+                if indicator_val >= self.best_metric_indicator:
                     self.best_metric_indicator = indicator_val
                 else:
                     is_better = False
             else:
-                if indicator_val < self.best_metric_indicator:
+                if indicator_val <= self.best_metric_indicator:
                     self.best_metric_indicator = indicator_val
                 else:
                     is_better = False
         return is_better
 
+    @property
+    def is_master(self):
+        return True
 
 DEFAULT_CHECK_BATCH_SIZE = 2
 DEFAULT_CHECK_NUM_BATCH = 2
@@ -797,14 +864,15 @@ def _get_value_info(_dict):
         strs.append(_str)
     return strs
 
+
 from numbers import Number
 from .batch import _to_tensor
-def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_SIZE,
-                dev_data=None, metric_key=None,
-                check_level=0):
+
+
+def _check_code(dataset, model, losser, metrics, forward_func, batch_size=DEFAULT_CHECK_BATCH_SIZE,
+                dev_data=None, metric_key=None, check_level=0):
     # check get_loss 方法
-    model_devcie = _get_model_device(model=model)
-    
+    model_device = _get_model_device(model=model)
     def _iter():
         start_idx = 0
         while start_idx<len(dataset):
@@ -825,7 +893,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
             start_idx += batch_size
 
     for batch_count, (batch_x, batch_y) in enumerate(_iter()):
-        _move_dict_value_to_device(batch_x, batch_y, device=model_devcie)
+        _move_dict_value_to_device(batch_x, batch_y, device=model_device)
         # forward check
         if batch_count == 0:
             info_str = ""
@@ -843,16 +911,12 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
                 info_str += '\n'
             else:
                 info_str += 'There is no target field.'
-            print(info_str)
-            _check_forward_error(forward_func=model.forward, dataset=dataset,
+            logger.info(info_str)
+            _check_forward_error(forward_func=forward_func, dataset=dataset,
                                  batch_x=batch_x, check_level=check_level)
-        if isinstance(model, nn.DataParallel):
-            forward_func = model.module.forward
-        else:
-            forward_func = model.forward
         refined_batch_x = _build_args(forward_func, **batch_x)
         pred_dict = model(**refined_batch_x)
-        func_signature = _get_func_signature(model.forward)
+        func_signature = _get_func_signature(forward_func)
         if not isinstance(pred_dict, dict):
             raise TypeError(f"The return value of {func_signature} should be `dict`, not `{type(pred_dict)}`.")
         
@@ -872,7 +936,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
             loss.backward()
         except _CheckError as e:
             # TODO: another error raised if _CheckError caught
-            pre_func_signature = _get_func_signature(model.forward)
+            pre_func_signature = _get_func_signature(forward_func)
             _check_loss_evaluate(prev_func_signature=pre_func_signature, func_signature=e.func_signature,
                                  check_res=e.check_res, pred_dict=pred_dict, target_dict=batch_y,
                                  dataset=dataset, check_level=check_level)
@@ -882,7 +946,7 @@ def _check_code(dataset, model, losser, metrics, batch_size=DEFAULT_CHECK_BATCH_
     
     if dev_data is not None:
         tester = Tester(data=dev_data[:batch_size * DEFAULT_CHECK_NUM_BATCH], model=model, metrics=metrics,
-                        batch_size=batch_size, verbose=-1)
+                        batch_size=batch_size, verbose=-1, use_tqdm=False)
         evaluate_results = tester.test()
         _check_eval_results(metrics=evaluate_results, metric_key=metric_key, metric_list=metrics)
 
