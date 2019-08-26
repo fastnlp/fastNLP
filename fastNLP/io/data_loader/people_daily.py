@@ -1,5 +1,5 @@
 
-from ..base_loader import DataSetLoader
+from ..data_bundle import DataSetLoader
 from ...core.dataset import DataSet
 from ...core.instance import Instance
 from ...core.const import Const
@@ -7,7 +7,7 @@ from ...core.const import Const
 
 class PeopleDailyCorpusLoader(DataSetLoader):
     """
-    别名：:class:`fastNLP.io.PeopleDailyCorpusLoader` :class:`fastNLP.io.dataset_loader.PeopleDailyCorpusLoader`
+    别名：:class:`fastNLP.io.PeopleDailyCorpusLoader` :class:`fastNLP.io.data_loader.PeopleDailyCorpusLoader`
 
     读取人民日报数据集
     """

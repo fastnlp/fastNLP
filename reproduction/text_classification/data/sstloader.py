@@ -1,6 +1,6 @@
 from typing import Iterable
 from nltk import Tree
-from fastNLP.io.base_loader import DataBundle, DataSetLoader
+from fastNLP.io.data_bundle import DataBundle, DataSetLoader
 from fastNLP.core.vocabulary import VocabularyOption, Vocabulary
 from fastNLP import DataSet
 from fastNLP import Instance

@@ -1,5 +1,5 @@
 ==============================
-数据格式及预处理教程
+使用DataSet预处理文本
 ==============================
 
 :class:`~fastNLP.DataSet` 是fastNLP中用于承载数据的容器。可以将DataSet看做是一个表格，
@@ -60,7 +60,7 @@
             seq_len=3)
         ])
 
-在初步构建完数据集之后，我们可可以通过 `for` 循环遍历 :class:`~fastNLP.DataSet` 中的内容。
+在初步构建完数据集之后，我们可以通过 `for` 循环遍历 :class:`~fastNLP.DataSet` 中的内容。
 
 .. code-block:: python
 

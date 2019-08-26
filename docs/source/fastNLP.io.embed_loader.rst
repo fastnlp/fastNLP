@@ -1,7 +1,7 @@
-fastNLP.io.embed\_loader
-========================
+fastNLP.io.embed_loader
+=======================
 
 .. automodule:: fastNLP.io.embed_loader
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members: EmbedLoader, EmbeddingOption
+   :inherited-members:
+

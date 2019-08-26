@@ -4,9 +4,9 @@ from typing import Union, Dict, List
 
 from ...core.const import Const
 from ...core.vocabulary import Vocabulary
-from ..base_loader import DataBundle, DataSetLoader
+from ..data_bundle import DataBundle, DataSetLoader
 from ..file_utils import _get_base_url, cached_path, PRETRAINED_BERT_MODEL_DIR
-from ...modules.encoder._bert import BertTokenizer
+from ...modules.encoder.bert import BertTokenizer
 
 
 class MatchingLoader(DataSetLoader):
@@ -121,7 +121,7 @@ class MatchingLoader(DataSetLoader):
                 PRETRAIN_URL = _get_base_url('bert')
                 model_name = PRETRAINED_BERT_MODEL_DIR[bert_tokenizer]
                 model_url = PRETRAIN_URL + model_name
-                model_dir = cached_path(model_url)
+                model_dir = cached_path(model_url, name='embedding')
                 # 检查是否存在
             elif os.path.isdir(bert_tokenizer):
                 model_dir = bert_tokenizer

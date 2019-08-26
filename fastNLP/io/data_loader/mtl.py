@@ -1,18 +1,21 @@
 
 from typing import Union, Dict
 
-from ..base_loader import DataBundle
+from ..data_bundle import DataBundle
 from ..dataset_loader import CSVLoader
 from ...core.vocabulary import Vocabulary, VocabularyOption
 from ...core.const import Const
-from ..utils import check_dataloader_paths
+from ..utils import check_loader_paths
 
 
 class MTL16Loader(CSVLoader):
     """
+    别名：:class:`fastNLP.io.MTL16Loader` :class:`fastNLP.io.data_loader.MTL16Loader`
+
     读取MTL16数据集，DataSet包含以下fields:
 
         words: list(str), 需要分类的文本
+
         target: str, 文本的标签
 
     数据来源：https://pan.baidu.com/s/1c2L6vdA
@@ -35,7 +38,7 @@ class MTL16Loader(CSVLoader):
                 src_vocab_opt: VocabularyOption = None,
                 tgt_vocab_opt: VocabularyOption = None,):
 
-        paths = check_dataloader_paths(paths)
+        paths = check_loader_paths(paths)
         datasets = {}
         info = DataBundle()
         for name, path in paths.items():

@@ -1,20 +1,17 @@
-API 文档
-===============
+fastNLP
+=======
 
 .. automodule:: fastNLP
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members: Instance, FieldArray, DataSetIter, BatchIter, TorchLoaderIter, Vocabulary, DataSet, Const, Trainer, Tester, Callback, GradientClipCallback, EarlyStopCallback, TensorboardCallback, LRScheduler, ControlC, LRFinder, Padder, AutoPadder, EngChar2DPadder, AccuracyMetric, SpanFPreRecMetric, ExtractiveQAMetric, Optimizer, SGD, Adam, AdamW, Sampler, SequentialSampler, BucketSampler, RandomSampler, LossFunc, CrossEntropyLoss, L1Loss, BCELoss, NLLLoss, LossInForward, cache_results, logger
+   :inherited-members:
 
-内部模块
------------
+子模块
+------
 
 .. toctree::
-    :titlesonly:
-    :maxdepth: 3
 
-    fastNLP.core
-    fastNLP.io
-    fastNLP.modules
-    fastNLP.models
-
+   fastNLP.core
+   fastNLP.embeddings
+   fastNLP.io
+   fastNLP.models
+   fastNLP.modules

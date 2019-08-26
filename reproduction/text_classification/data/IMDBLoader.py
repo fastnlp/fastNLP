@@ -1,6 +1,6 @@
 from fastNLP.io.embed_loader import EmbeddingOption, EmbedLoader
 from fastNLP.core.vocabulary import VocabularyOption
-from fastNLP.io.base_loader import DataSetLoader, DataBundle
+from fastNLP.io.data_bundle import DataSetLoader, DataBundle
 from typing import Union, Dict, List, Iterator
 from fastNLP import DataSet
 from fastNLP import Instance
@@ -9,7 +9,6 @@ from fastNLP import Const
 # from reproduction.utils import check_dataloader_paths
 from functools import partial
 from reproduction.utils import check_dataloader_paths, get_tokenizer
-
 
 class IMDBLoader(DataSetLoader):
     """
@@ -51,6 +50,7 @@ class IMDBLoader(DataSetLoader):
       
         datasets = {}
         info = DataBundle()
+        paths = check_dataloader_paths(paths)
         for name, path in paths.items():
             dataset = self.load(path)
             datasets[name] = dataset

@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from fastNLP.modules.utils import get_embeddings
 from fastNLP.core import Const as C
 
 
@@ -64,7 +63,8 @@ class RegionEmbedding(nn.Module):
             kernel_sizes = [5, 9]
         assert isinstance(
             kernel_sizes, list), 'kernel_sizes should be List(int)'
-        self.embed = get_embeddings(init_embed)
+        # self.embed = nn.Embedding.from_pretrained(torch.tensor(init_embed).float(), freeze=False)
+        self.embed = init_embed
         try:
             embed_dim = self.embed.embedding_dim
         except Exception:

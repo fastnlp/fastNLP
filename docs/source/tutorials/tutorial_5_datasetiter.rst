@@ -1,8 +1,10 @@
 ﻿==============================================================================
-DataSetIter 教程 ———— 以文本分类为例
+动手实现一个文本分类器II-使用DataSetIter实现自定义训练过程
 ==============================================================================
 
-我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极（label=1）、消极（label=0）还是中性（label=2），使用:class:`~fastNLP.DataSetIter` 类来编写自己的训练过程。自己编写训练过程之前的内容与 :doc:`/tutorials/tutorial_4_loss_optimizer` 中的完全一样，如已经阅读过可以跳过。
+我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极（label=1）、
+消极（label=0）还是中性（label=2），使用 :class:`~fastNLP.DataSetIter` 类来编写自己的训练过程。
+自己编写训练过程之前的内容与 :doc:`/tutorials/tutorial_4_loss_optimizer` 中的完全一样，如已经阅读过可以跳过。
 
 --------------
 数据处理
@@ -190,7 +192,7 @@ sampler
         import time
 
         embed_dim = 100
-        model = CNNText((len(vocab),embed_dim), num_classes=3, padding=2, dropout=0.1)
+        model = CNNText((len(vocab),embed_dim), num_classes=3, dropout=0.1)
 
         def train(epoch, data, devdata):
             optimizer = torch.optim.Adam(model.parameters(), lr=0.001)

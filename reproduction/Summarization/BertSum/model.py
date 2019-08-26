@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import init
 
-from fastNLP.modules.encoder._bert import BertModel
+from fastNLP.modules.encoder.bert import BertModel
 
 
 class Classifier(nn.Module):

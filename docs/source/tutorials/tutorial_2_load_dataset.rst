@@ -1,57 +1,53 @@
-=========================
-数据集加载教程
-=========================
+=======================================
+使用Loader和Pipe加载并处理数据集
+=======================================
 
 这一部分是一个关于如何加载数据集的教程
 
 教程目录：
 
-    - `Part I: 数据集信息`_
-    - `Part II: 数据集的使用方式`_
-    - `Part III: 不同数据类型的DataSetLoader`_
-    - `Part IV: DataSetLoader举例`_
-    - `Part V: fastNLP封装好的数据集加载器`_
+    - `Part I: 数据集容器DataBundle`_
+    - `Part II: 加载数据集的基类Loader`_
+    - `Part III: 不同格式类型的基础Loader`_
+    - `Part IV: 使用Pipe对数据集进行预处理`_
+    - `Part V: fastNLP封装好的Loader和Pipe`_
 
 
-----------------------------
-Part I: 数据集信息
-----------------------------
+------------------------------------
+Part I: 数据集容器DataBundle
+------------------------------------
 
-在fastNLP中，我们使用 :class:`~fastNLP.io.base_loader.DataInfo` 来存储数据集信息。 :class:`~fastNLP.io.base_loader.DataInfo`
-类包含了两个重要内容： `datasets` 和 `vocabs` 。
+在fastNLP中，我们使用 :class:`~fastNLP.io.data_bundle.DataBundle` 来存储数据集信息。
+:class:`~fastNLP.io.data_bundle.DataBundle` 类包含了两个重要内容： `datasets` 和 `vocabs` 。
 
 `datasets` 是一个 `key` 为数据集名称（如 `train` ， `dev` ，和 `test` 等）， `value` 为 :class:`~fastNLP.DataSet` 的字典。
 
 `vocabs` 是一个 `key` 为词表名称（如 :attr:`fastNLP.Const.INPUT` 表示输入文本的词表名称， :attr:`fastNLP.Const.TARGET` 表示目标
 的真实标签词表的名称，等等）， `value` 为词表内容（ :class:`~fastNLP.Vocabulary` ）的字典。
 
-----------------------------
-Part II: 数据集的使用方式
-----------------------------
+-------------------------------------
+Part II: 加载数据集的基类Loader
+-------------------------------------
 
-在fastNLP中，我们采用 :class:`~fastNLP.io.base_loader.DataSetLoader` 来作为加载数据集的基类。
-:class:`~fastNLP.io.base_loader.DataSetLoader` 定义了各种DataSetLoader所需的API接口，开发者应该继承它实现各种的DataSetLoader。
-在各种数据集的DataSetLoader当中，至少应该编写如下内容:
+在fastNLP中，我们采用 :class:`~fastNLP.io.loader.Loader` 来作为加载数据集的基类。
+:class:`~fastNLP.io.loader.Loader` 定义了各种Loader所需的API接口，开发者应该继承它实现各种的Loader。
+在各种数据集的Loader当中，至少应该编写如下内容:
 
-    - _load 函数：从一个数据文件中读取数据到一个 :class:`~fastNLP.DataSet`
-    - load 函数（可以使用基类的方法）：从一个或多个数据文件中读取数据到一个或多个 :class:`~fastNLP.DataSet`
-    - process 函数：一个或多个从数据文件中读取数据，并处理成可以训练的 :class:`~fastNLP.io.DataInfo`
+    - _load 函数：从一个数据文件中读取数据，返回一个 :class:`~fastNLP.DataSet`
+    - load 函数：从文件或者文件夹中读取数据并组装成 :class:`~fastNLP.io.data_bundle.DataBundle`
 
-    **\*process函数中可以调用load函数或_load函数**
-
-DataSetLoader的_load或者load函数返回的 :class:`~fastNLP.DataSet` 当中，内容为数据集的文本信息，process函数返回的
-:class:`~fastNLP.io.DataInfo` 当中， `datasets` 的内容为已经index好的、可以直接被 :class:`~fastNLP.Trainer`
-接受的内容。
+Loader的load函数返回的 :class:`~fastNLP.io.data_bundle.DataBundle` 里面包含了数据集的原始数据。
 
 --------------------------------------------------------
-Part III: 不同数据类型的DataSetLoader
+Part III: 不同格式类型的基础Loader
 --------------------------------------------------------
 
-:class:`~fastNLP.io.dataset_loader.CSVLoader`
+:class:`~fastNLP.io.loader.CSVLoader`
     读取CSV类型的数据集文件。例子如下：
 
     .. code-block:: python
 
+        from fastNLP.io.loader import CSVLoader
         data_set_loader = CSVLoader(
             headers=('words', 'target'), sep='\t'
         )
@@ -67,17 +63,18 @@ Part III: 不同数据类型的DataSetLoader
         The performances are an absolute joy .	4
 
 
-:class:`~fastNLP.io.dataset_loader.JsonLoader`
+:class:`~fastNLP.io.loader.JsonLoader`
     读取Json类型的数据集文件，数据必须按行存储，每行是一个包含各类属性的Json对象。例子如下：
 
     .. code-block:: python
 
-        data_set_loader = JsonLoader(
+        from fastNLP.io.loader import JsonLoader
+        oader = JsonLoader(
             fields={'sentence1': 'words1', 'sentence2': 'words2', 'gold_label': 'target'}
         )
         # 表示将Json对象中'sentence1'、'sentence2'和'gold_label'对应的值赋给'words1'、'words2'、'target'这三个fields
 
-        data_set = data_set_loader._load('path/to/your/file')
+        data_set = loader._load('path/to/your/file')
 
     数据集内容样例如下 ::
 
@@ -86,108 +83,68 @@ Part III: 不同数据类型的DataSetLoader
         {"annotator_labels": ["entailment"], "captionID": "3416050480.jpg#4", "gold_label": "entailment", "pairID": "3416050480.jpg#4r1e", "sentence1": "A person on a horse jumps over a broken down airplane.", "sentence1_binary_parse": "( ( ( A person ) ( on ( a horse ) ) ) ( ( jumps ( over ( a ( broken ( down airplane ) ) ) ) ) . ) )", "sentence1_parse": "(ROOT (S (NP (NP (DT A) (NN person)) (PP (IN on) (NP (DT a) (NN horse)))) (VP (VBZ jumps) (PP (IN over) (NP (DT a) (JJ broken) (JJ down) (NN airplane)))) (. .)))", "sentence2": "A person is outdoors, on a horse.", "sentence2_binary_parse": "( ( A person ) ( ( ( ( is outdoors ) , ) ( on ( a horse ) ) ) . ) )", "sentence2_parse": "(ROOT (S (NP (DT A) (NN person)) (VP (VBZ is) (ADVP (RB outdoors)) (, ,) (PP (IN on) (NP (DT a) (NN horse)))) (. .)))"}
 
 ------------------------------------------
-Part IV: DataSetLoader举例
+Part IV: 使用Pipe对数据集进行预处理
 ------------------------------------------
 
-以Matching任务为例子：
+在fastNLP中，我们采用 :class:`~fastNLP.io.pipe.Pipe` 来作为加载数据集的基类。
+:class:`~fastNLP.io.pipe.Pipe` 定义了各种Pipe所需的API接口，开发者应该继承它实现各种的Pipe。
+在各种数据集的Pipe当中，至少应该编写如下内容:
 
-    :class:`~fastNLP.io.data_loader.matching.MatchingLoader`
-        我们在fastNLP当中封装了一个Matching任务数据集的数据加载类： :class:`~fastNLP.io.data_loader.matching.MatchingLoader` .
+    - process 函数：对输入的 :class:`~fastNLP.io.data_bundle.DataBundle` 进行处理（如构建词表、
+      将dataset的文本内容转成index等等），然后返回该 :class:`~fastNLP.io.data_bundle.DataBundle`
+    - process_from_file 函数：输入数据集所在文件夹，读取内容并组装成 :class:`~fastNLP.io.data_bundle.DataBundle` ，
+      然后调用相对应的process函数对数据进行预处理
 
-        在MatchingLoader类当中我们封装了一个对数据集中的文本内容进行进一步的预处理的函数：
-        :meth:`~fastNLP.io.data_loader.matching.MatchingLoader.process`
-        这个函数具有各种预处理option，如：
-        - 是否将文本转成全小写
-        - 是否需要序列长度信息，需要什么类型的序列长度信息
-        - 是否需要用BertTokenizer来获取序列的WordPiece信息
-        - 等等
+以SNLI数据集为例，写一个自定义Pipe的例子如下：
 
-        具体内容参见 :meth:`fastNLP.io.MatchingLoader.process` 。
+.. code-block:: python
 
-    :class:`~fastNLP.io.data_loader.matching.SNLILoader`
-        一个关于SNLI数据集的DataSetLoader。SNLI数据集来自
-        `SNLI Data Set <https://nlp.stanford.edu/projects/snli/snli_1.0.zip>`_ .
+    from fastNLP.io.loader import SNLILoader
+    from fastNLP.io.pipe import MatchingPipe
 
-        在 :class:`~fastNLP.io.data_loader.matching.SNLILoader` 的 :meth:`~fastNLP.io.data_loader.matching.SNLILoader._load`
-        函数中，我们用以下代码将数据集内容从文本文件读入内存
+    class MySNLIPipe(MatchingPipe):
 
-        .. code-block:: python
+        def process(self, data_bundle):
+            data_bundle = super(MySNLIPipe, self).process(data_bundle)
+            # MatchingPipe类里封装了一个关于matching任务的process函数，可以直接继承使用
+            # 如果有需要进行额外的预处理操作可以在这里加入您的代码
+            return data_bundle
 
-                def _load(self, path):
-                    ds = JsonLoader._load(self, path)  # SNLI数据集原始文件为Json格式，可以采用JsonLoader来读取数据集文件
+        def process_from_file(self, paths=None):
+            data_bundle = SNLILoader().load(paths) # 使用SNLILoader读取原始数据集
+            # SNLILoader的load函数中，paths如果为None则会自动下载
+            return self.process(data_bundle)  # 调用相对应的process函数对data_bundle进行处理
 
-                    parentheses_table = str.maketrans({'(': None, ')': None})
-                    # 字符串匹配格式：SNLI数据集的文本中由括号分割开的，组成树结构，因此
-                    # 我们将这些括号去除。
+调用Pipe示例：
 
-                    ds.apply(lambda ins: ins[Const.INPUTS(0)].translate(parentheses_table).strip().split(),
-                             new_field_name=Const.INPUTS(0))
-                    # 把第一句话的内容用上面的字符串匹配格式进行替换，并将句子分割为一个由单词组成的list
-                    ds.apply(lambda ins: ins[Const.INPUTS(1)].translate(parentheses_table).strip().split(),
-                             new_field_name=Const.INPUTS(1))
-                    # 对第二句话的内容进行同样的预处理
-                    ds.drop(lambda x: x[Const.TARGET] == '-')  # 将标签为'-'的样本丢掉
-                    return ds
+.. code-block:: python
+
+    from fastNLP.io.pipe import SNLIBertPipe
+    data_bundle = SNLIBertPipe(lower=True, tokenizer=arg.tokenizer).process_from_file()
+    print(data_bundle)
+
+输出的内容是::
+
+    In total 3 datasets:
+            train has 549367 instances.
+            dev has 9842 instances.
+            test has 9824 instances.
+    In total 2 vocabs:
+            words has 34184 entries.
+            target has 3 entries.
+
+这里表示一共有3个数据集和2个词表。其中：
+
+    - 3个数据集分别为train、dev、test数据集，分别有549367、9842、9824个instance
+    - 2个词表分别为words词表与target词表。其中words词表为句子文本所构建的词表，一共有34184个单词；
+      target词表为目标标签所构建的词表，一共有3种标签。（注：如果有多个输入，则句子文本所构建的词表将
+      会被命名为words1以对应相对应的列名）
 
 ------------------------------------------
-Part V: fastNLP封装好的数据集加载器
+Part V: fastNLP封装好的Loader和Pipe
 ------------------------------------------
 
-fastNLP封装好的数据集加载器可以适用于多种类型的任务：
+fastNLP封装了多种任务/数据集的Loader和Pipe并提供自动下载功能，具体参见文档
 
-    - `文本分类任务`_
-    - `序列标注任务`_
-    - `Matching任务`_
-    - `指代消解任务`_
-    - `摘要任务`_
-
-
-文本分类任务
--------------------
-
-文本分类任务
-
-
-
-序列标注任务
--------------------
-
-序列标注任务
-
-
-Matching任务
--------------------
-
-:class:`~fastNLP.io.data_loader.matching.SNLILoader`
-    一个关于SNLI数据集的DataSetLoader。SNLI数据集来自
-    `SNLI Data Set <https://nlp.stanford.edu/projects/snli/snli_1.0.zip>`_ .
-
-:class:`~fastNLP.io.data_loader.matching.MNLILoader`
-    一个关于MultiNLI数据集的DataSetLoader。MultiNLI数据集来自 `GLUE benchmark <https://gluebenchmark.com/tasks>`_
-
-:class:`~fastNLP.io.data_loader.matching.QNLILoader`
-    一个关于QNLI数据集的DataSetLoader。QNLI数据集来自 `GLUE benchmark <https://gluebenchmark.com/tasks>`_
-
-:class:`~fastNLP.io.data_loader.matching.RTELoader`
-    一个关于Recognizing Textual Entailment数据集(RTE)的DataSetLoader。RTE数据集来自
-    `GLUE benchmark <https://gluebenchmark.com/tasks>`_
-
-:class:`~fastNLP.io.data_loader.matching.QuoraLoader`
-    一个关于Quora数据集的DataSetLoader。
-
-
-
-
-指代消解任务
--------------------
-
-指代消解任务
-
-
-
-摘要任务
--------------------
-
-摘要任务
-
+`fastNLP可加载的embedding与数据集 <https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0>`_
 

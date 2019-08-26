@@ -2,7 +2,7 @@
 from typing import Union, Dict
 
 from ..embed_loader import EmbeddingOption, EmbedLoader
-from ..base_loader import DataSetLoader, DataBundle
+from ..data_bundle import DataSetLoader, DataBundle
 from ...core.vocabulary import VocabularyOption, Vocabulary
 from ...core.dataset import DataSet
 from ...core.instance import Instance
@@ -13,9 +13,12 @@ from ..utils import get_tokenizer
 
 class IMDBLoader(DataSetLoader):
     """
+    别名：:class:`fastNLP.io.IMDBLoader` :class:`fastNLP.io.data_loader.IMDBLoader`
+
     读取IMDB数据集，DataSet包含以下fields:
 
         words: list(str), 需要分类的文本
+
         target: str, 文本的标签
 
     """

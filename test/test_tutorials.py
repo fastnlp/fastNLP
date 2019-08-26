@@ -5,14 +5,13 @@ from fastNLP import Instance
 from fastNLP import Vocabulary
 from fastNLP.core.losses import CrossEntropyLoss
 from fastNLP.core.metrics import AccuracyMetric
-
+from fastNLP.io.loader import CSVLoader
 
 class TestTutorial(unittest.TestCase):
     def test_fastnlp_10min_tutorial(self):
         # 从csv读取数据到DataSet
         sample_path = "test/data_for_tests/tutorial_sample_dataset.csv"
-        dataset = DataSet.read_csv(sample_path, headers=('raw_sentence', 'label'),
-                                   sep='\t')
+        dataset = CSVLoader(headers=['raw_sentence', 'label'], sep='	')._load(sample_path)
         print(len(dataset))
         print(dataset[0])
         print(dataset[-3])
@@ -110,7 +109,7 @@ class TestTutorial(unittest.TestCase):
     def test_fastnlp_1min_tutorial(self):
         # tutorials/fastnlp_1min_tutorial.ipynb
         data_path = "test/data_for_tests/tutorial_sample_dataset.csv"
-        ds = DataSet.read_csv(data_path, headers=('raw_sentence', 'label'), sep='\t')
+        ds = CSVLoader(headers=['raw_sentence', 'label'], sep='	')._load(data_path)
         print(ds[1])
 
         # 将所有数字转为小写

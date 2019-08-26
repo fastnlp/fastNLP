@@ -61,17 +61,17 @@ class TestDatasetLoader(unittest.TestCase):
         print(info.datasets)
         os.remove(train), os.remove(test)
 
-    def test_import(self):
-        import fastNLP
-        from fastNLP.io import SNLILoader
-        ds = SNLILoader().process('test/data_for_tests/sample_snli.jsonl', to_lower=True,
-                                  get_index=True, seq_len_type='seq_len', extra_split=['-'])
-        assert 'train' in ds.datasets
-        assert len(ds.datasets) == 1
-        assert len(ds.datasets['train']) == 3
-
-        ds = SNLILoader().process('test/data_for_tests/sample_snli.jsonl', to_lower=True,
-                                  get_index=True, seq_len_type='seq_len')
-        assert 'train' in ds.datasets
-        assert len(ds.datasets) == 1
-        assert len(ds.datasets['train']) == 3
+    # def test_import(self):
+    #     import fastNLP
+    #     from fastNLP.io import SNLILoader
+    #     ds = SNLILoader().process('test/data_for_tests/sample_snli.jsonl', to_lower=True,
+    #                               get_index=True, seq_len_type='seq_len', extra_split=['-'])
+    #     assert 'train' in ds.datasets
+    #     assert len(ds.datasets) == 1
+    #     assert len(ds.datasets['train']) == 3
+    #
+    #     ds = SNLILoader().process('test/data_for_tests/sample_snli.jsonl', to_lower=True,
+    #                               get_index=True, seq_len_type='seq_len')
+    #     assert 'train' in ds.datasets
+    #     assert len(ds.datasets) == 1
+    #     assert len(ds.datasets['train']) == 3

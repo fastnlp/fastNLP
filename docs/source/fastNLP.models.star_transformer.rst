@@ -1,7 +1,7 @@
-fastNLP.models.star\_transformer
-================================
+fastNLP.models.star_transformer
+===============================
 
 .. automodule:: fastNLP.models.star_transformer
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members: StarTransEnc, STNLICls, STSeqCls, STSeqLabel
+   :inherited-members:
+

@@ -5,7 +5,8 @@ optimizer 模块定义了 fastNLP 中所需的各种优化器，一般做为 :cl
 __all__ = [
     "Optimizer",
     "SGD",
-    "Adam"
+    "Adam",
+    "AdamW"
 ]
 
 import torch
@@ -48,7 +49,7 @@ class NullOptimizer(Optimizer):
         super().__init__(None)
 
     def construct_from_pytorch(self, model_params):
-        pass
+        return self
 
     def __getattr__(self, item):
         def pass_func(*args, **kwargs):
@@ -103,21 +104,28 @@ class Adam(Optimizer):
 
 
 class AdamW(TorchOptimizer):
-    r"""对AdamW的实现，该实现应该会在pytorch更高版本中出现，https://github.com/pytorch/pytorch/pull/21250。这里提前加入
+    r"""
+    别名：:class:`fastNLP.AdamW` :class:`fastNLP.core.optimizer.AdamW`
+
+    对AdamW的实现，该实现应该会在pytorch更高版本中出现，https://github.com/pytorch/pytorch/pull/21250。这里提前加入
+    
+    .. todo::
+        翻译成中文
+    
     The original Adam algorithm was proposed in `Adam: A Method for Stochastic Optimization`_.
     The AdamW variant was proposed in `Decoupled Weight Decay Regularization`_.
-    Arguments:
-        params (iterable): iterable of parameters to optimize or dicts defining
-            parameter groups
-        lr (float, optional): learning rate (default: 1e-3)
-        betas (Tuple[float, float], optional): coefficients used for computing
-            running averages of gradient and its square (default: (0.9, 0.99))
-        eps (float, optional): term added to the denominator to improve
-            numerical stability (default: 1e-8)
-        weight_decay (float, optional): weight decay coefficient (default: 1e-2)
-        amsgrad (boolean, optional): whether to use the AMSGrad variant of this
-            algorithm from the paper `On the Convergence of Adam and Beyond`_
-            (default: False)
+
+    :param params (iterable): iterable of parameters to optimize or dicts defining
+        parameter groups
+    :param lr (float, optional): learning rate (default: 1e-3)
+    :param betas (Tuple[float, float], optional): coefficients used for computing
+        running averages of gradient and its square (default: (0.9, 0.99))
+    :param eps (float, optional): term added to the denominator to improve
+        numerical stability (default: 1e-8)
+    :param weight_decay (float, optional): weight decay coefficient (default: 1e-2)
+        algorithm from the paper `On the Convergence of Adam and Beyond`_
+        (default: False)
+
     .. _Adam\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980
     .. _Decoupled Weight Decay Regularization:
@@ -147,9 +155,9 @@ class AdamW(TorchOptimizer):
 
     def step(self, closure=None):
         """Performs a single optimization step.
-        Arguments:
-            closure (callable, optional): A closure that reevaluates the model
-                and returns the loss.
+
+        :param closure: (callable, optional) A closure that reevaluates the model
+            and returns the loss.
         """
         loss = None
         if closure is not None:

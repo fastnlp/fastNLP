@@ -12,7 +12,9 @@ class QuoraLoader(MatchingLoader, CSVLoader):
     读取MNLI数据集，读取的DataSet包含fields::
 
         words1: list(str)，第一句文本, premise
+
         words2: list(str), 第二句文本, hypothesis
+
         target: str, 真实标签
 
     数据来源:

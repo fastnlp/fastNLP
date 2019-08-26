@@ -4,7 +4,7 @@ from typing import Iterable
 from fastNLP import DataSet, Instance, Vocabulary
 from fastNLP.core.vocabulary import VocabularyOption
 from fastNLP.io import JsonLoader
-from fastNLP.io.base_loader import DataBundle,DataSetLoader
+from fastNLP.io.data_bundle import DataBundle,DataSetLoader
 from fastNLP.io.embed_loader import EmbeddingOption
 from fastNLP.io.file_reader import _read_json
 from typing import Union, Dict
@@ -131,7 +131,9 @@ class yelpLoader(DataSetLoader):
                 src_vocab_op: VocabularyOption = None,
                 tgt_vocab_op: VocabularyOption = None,
                 embed_opt: EmbeddingOption = None,
-                char_level_op=False):
+                char_level_op=False,
+                split_dev_op=True
+                ):
         paths = check_dataloader_paths(paths)
         datasets = {}
         info = DataBundle(datasets=self.load(paths))
@@ -172,7 +174,8 @@ class yelpLoader(DataSetLoader):
 
         info.vocabs[target_name]=tgt_vocab
 
-        info.datasets['train'],info.datasets['dev']=info.datasets['train'].split(0.1, shuffle=False)
+        if split_dev_op:
+            info.datasets['train'], info.datasets['dev'] = info.datasets['train'].split(0.1, shuffle=False)
 
         for name, dataset in info.datasets.items():
             dataset.set_input("words")

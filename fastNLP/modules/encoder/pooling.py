@@ -1,3 +1,5 @@
+"""undocumented"""
+
 __all__ = [
     "MaxPool",
     "MaxPoolWithMask",
@@ -10,7 +12,7 @@ import torch.nn as nn
 
 class MaxPool(nn.Module):
     """
-    别名：:class:`fastNLP.modules.MaxPool`  :class:`fastNLP.modules.encoder.pooling.MaxPool`
+    别名：:class:`fastNLP.modules.MaxPool`  :class:`fastNLP.modules.encoder.MaxPool`
 
     Max-pooling模块。
     
@@ -21,9 +23,9 @@ class MaxPool(nn.Module):
     :param kernel_size: max pooling的窗口大小，默认为tensor最后k维，其中k为dimension
     :param ceil_mode:
     """
-    
+
     def __init__(self, stride=None, padding=0, dilation=1, dimension=1, kernel_size=None, ceil_mode=False):
-        
+
         super(MaxPool, self).__init__()
         assert (1 <= dimension) and (dimension <= 3)
         self.dimension = dimension
@@ -32,7 +34,7 @@ class MaxPool(nn.Module):
         self.dilation = dilation
         self.kernel_size = kernel_size
         self.ceil_mode = ceil_mode
-    
+
     def forward(self, x):
         if self.dimension == 1:
             pooling = nn.MaxPool1d(
@@ -59,15 +61,15 @@ class MaxPool(nn.Module):
 
 class MaxPoolWithMask(nn.Module):
     """
-    别名：:class:`fastNLP.modules.MaxPoolWithMask`  :class:`fastNLP.modules.encoder.pooling.MaxPoolWithMask`
+    别名：:class:`fastNLP.modules.MaxPoolWithMask`  :class:`fastNLP.modules.encoder.MaxPoolWithMask`
 
     带mask矩阵的max pooling。在做max-pooling的时候不会考虑mask值为0的位置。
     """
-    
+
     def __init__(self):
         super(MaxPoolWithMask, self).__init__()
         self.inf = 10e12
-    
+
     def forward(self, tensor, mask, dim=1):
         """
         :param torch.FloatTensor tensor: [batch_size, seq_len, channels] 初始tensor
@@ -82,11 +84,11 @@ class MaxPoolWithMask(nn.Module):
 
 class KMaxPool(nn.Module):
     """K max-pooling module."""
-    
+
     def __init__(self, k=1):
         super(KMaxPool, self).__init__()
         self.k = k
-    
+
     def forward(self, x):
         """
         :param torch.Tensor x: [N, C, L] 初始tensor
@@ -99,16 +101,16 @@ class KMaxPool(nn.Module):
 
 class AvgPool(nn.Module):
     """
-    别名：:class:`fastNLP.modules.AvgPool`  :class:`fastNLP.modules.encoder.pooling.AvgPool`
+    别名：:class:`fastNLP.modules.AvgPool`  :class:`fastNLP.modules.encoder.AvgPool`
 
     给定形如[batch_size, max_len, hidden_size]的输入，在最后一维进行avg pooling. 输出为[batch_size, hidden_size]
     """
-    
+
     def __init__(self, stride=None, padding=0):
         super(AvgPool, self).__init__()
         self.stride = stride
         self.padding = padding
-    
+
     def forward(self, x):
         """
         :param torch.Tensor x: [N, C, L] 初始tensor
@@ -126,16 +128,16 @@ class AvgPool(nn.Module):
 
 class AvgPoolWithMask(nn.Module):
     """
-    别名：:class:`fastNLP.modules.AvgPoolWithMask`  :class:`fastNLP.modules.encoder.pooling.AvgPoolWithMask`
+    别名：:class:`fastNLP.modules.AvgPoolWithMask`  :class:`fastNLP.modules.encoder.AvgPoolWithMask`
 
     给定形如[batch_size, max_len, hidden_size]的输入，在最后一维进行avg pooling. 输出为[batch_size, hidden_size], pooling
     的时候只会考虑mask为1的位置
     """
-    
+
     def __init__(self):
         super(AvgPoolWithMask, self).__init__()
         self.inf = 10e12
-    
+
     def forward(self, tensor, mask, dim=1):
         """
         :param torch.FloatTensor tensor: [batch_size, seq_len, channels] 初始tensor
