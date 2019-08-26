@@ -1,3 +1,9 @@
+"""undocumented"""
+
+__all__ = [
+    "CWSPipe"
+]
+
 import re
 from itertools import chain
 

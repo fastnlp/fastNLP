@@ -1,10 +1,20 @@
-import os
+"""
+.. todo::
+    doc
+"""
 
-from typing import Union, Dict
+__all__ = [
+    "check_loader_paths"
+]
+
+import os
 from pathlib import Path
+from typing import Union, Dict
+
 from ..core import logger
 
-def check_loader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
+
+def check_loader_paths(paths: Union[str, Dict[str, str]]) -> Dict[str, str]:
     """
     检查传入dataloader的文件的合法性。如果为合法路径，将返回至少包含'train'这个key的dict。类似于下面的结果::
 
@@ -33,11 +43,13 @@ def check_loader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
                     path_pair = ('train', filename)
                 if 'dev' in filename:
                     if path_pair:
-                        raise Exception("File:{} in {} contains bot `{}` and `dev`.".format(filename, paths, path_pair[0]))
+                        raise Exception(
+                            "File:{} in {} contains bot `{}` and `dev`.".format(filename, paths, path_pair[0]))
                     path_pair = ('dev', filename)
                 if 'test' in filename:
                     if path_pair:
-                        raise Exception("File:{} in {} contains bot `{}` and `test`.".format(filename, paths, path_pair[0]))
+                        raise Exception(
+                            "File:{} in {} contains bot `{}` and `test`.".format(filename, paths, path_pair[0]))
                     path_pair = ('test', filename)
                 if path_pair:
                     files[path_pair[0]] = os.path.join(paths, path_pair[1])
@@ -46,7 +58,7 @@ def check_loader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
             return files
         else:
             raise FileNotFoundError(f"{paths} is not a valid file path.")
-
+    
     elif isinstance(paths, dict):
         if paths:
             if 'train' not in paths:
@@ -64,6 +76,7 @@ def check_loader_paths(paths:Union[str, Dict[str, str]])->Dict[str, str]:
             raise ValueError("Empty paths is not allowed.")
     else:
         raise TypeError(f"paths only supports str and dict. not {type(paths)}.")
+
 
 def get_tokenizer():
     try:

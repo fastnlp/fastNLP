@@ -1,3 +1,9 @@
+"""undocumented"""
+
+__all__ = [
+    "Pipe",
+]
+
 from .. import DataBundle
 
 

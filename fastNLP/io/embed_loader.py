@@ -1,17 +1,22 @@
+"""
+.. todo::
+    doc
+"""
 __all__ = [
     "EmbedLoader",
     "EmbeddingOption",
 ]
 
+import logging
 import os
 import warnings
 
 import numpy as np
 
-from ..core.vocabulary import Vocabulary
 from .data_bundle import BaseLoader
 from ..core.utils import Option
-import logging
+from ..core.vocabulary import Vocabulary
+
 
 class EmbeddingOption(Option):
     def __init__(self,
