@@ -8,15 +8,17 @@ __all__ = [
 ]
 
 from abc import abstractmethod
+
 import torch
 
-from ..core.vocabulary import Vocabulary
-from ..core.dataset import DataSet
-from ..core.batch import DataSetIter
-from ..core.sampler import SequentialSampler
-from ..core.utils import _move_model_to_device, _get_model_device
 from .embedding import TokenEmbedding
 from ..core import logger
+from ..core.batch import DataSetIter
+from ..core.dataset import DataSet
+from ..core.sampler import SequentialSampler
+from ..core.utils import _move_model_to_device, _get_model_device
+from ..core.vocabulary import Vocabulary
+
 
 class ContextualEmbedding(TokenEmbedding):
     def __init__(self, vocab: Vocabulary, word_dropout: float = 0.0, dropout: float = 0.0):

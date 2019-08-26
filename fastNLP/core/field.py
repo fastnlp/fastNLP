@@ -1,18 +1,25 @@
+"""
+.. todo::
+    doc
+"""
+
 __all__ = [
     "Padder",
     "AutoPadder",
     "EngChar2DPadder",
 ]
 
-from numbers import Number
-import torch
-import numpy as np
-from typing import Any
 from abc import abstractmethod
-from copy import deepcopy
 from collections import Counter
-from .utils import _is_iterable
+from copy import deepcopy
+from numbers import Number
+from typing import Any
+
+import numpy as np
+import torch
+
 from ._logger import logger
+from .utils import _is_iterable
 
 
 class SetInputOrTargetException(Exception):
