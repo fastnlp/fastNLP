@@ -1,7 +1,13 @@
+"""undocumented"""
+
+__all__ = [
+    "JsonLoader"
+]
+
+from .loader import Loader
+from ..file_reader import _read_json
 from ...core.dataset import DataSet
 from ...core.instance import Instance
-from ..file_reader import _read_json
-from .loader import Loader
 
 
 class JsonLoader(Loader):

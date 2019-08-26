@@ -1,7 +1,7 @@
-fastNLP.io.data\_bundle
-=======================
+fastNLP.io.data_bundle
+======================
 
 .. automodule:: fastNLP.io.data_bundle
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members: DataBundle
+   :inherited-members:
+

@@ -1,5 +1,10 @@
-# Code Modified from https://github.com/carpedm20/ENAS-pytorch
-"""A module with NAS controller-related code."""
+"""undocumented
+Code Modified from https://github.com/carpedm20/ENAS-pytorch
+A module with NAS controller-related code.
+"""
+
+__all__ = []
+
 import collections
 import os
 

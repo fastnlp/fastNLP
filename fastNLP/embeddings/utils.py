@@ -1,13 +1,19 @@
+"""
+.. todo::
+    doc
+"""
 import numpy as np
 import torch
 from torch import nn as nn
 
 from ..core.vocabulary import Vocabulary
 
-__all__ = ['get_embeddings']
+__all__ = [
+    'get_embeddings'
+]
 
 
-def _construct_char_vocab_from_vocab(vocab:Vocabulary, min_freq:int=1):
+def _construct_char_vocab_from_vocab(vocab: Vocabulary, min_freq: int = 1):
     """
     给定一个word的vocabulary生成character的vocabulary.
 
@@ -36,8 +42,8 @@ def get_embeddings(init_embed):
     if isinstance(init_embed, tuple):
         res = nn.Embedding(
             num_embeddings=init_embed[0], embedding_dim=init_embed[1])
-        nn.init.uniform_(res.weight.data, a=-np.sqrt(3/res.weight.data.size(1)),
-                         b=np.sqrt(3/res.weight.data.size(1)))
+        nn.init.uniform_(res.weight.data, a=-np.sqrt(3 / res.weight.data.size(1)),
+                         b=np.sqrt(3 / res.weight.data.size(1)))
     elif isinstance(init_embed, nn.Module):
         res = init_embed
     elif isinstance(init_embed, torch.Tensor):

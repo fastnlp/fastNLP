@@ -192,7 +192,7 @@ class Tester(object):
                                  dataset=self.data, check_level=0)
         
         if self.verbose >= 1:
-            print("[tester] \n{}".format(self._format_eval_results(eval_results)))
+            logger.info("[tester] \n{}".format(self._format_eval_results(eval_results)))
         self._mode(network, is_test=False)
         return eval_results
     

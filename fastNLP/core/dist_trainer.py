@@ -1,29 +1,29 @@
-"""
+"""undocumented
 正在开发中的分布式训练代码
 """
+import logging
+import os
+import time
+from datetime import datetime
+
 import torch
 import torch.cuda
-import torch.optim
 import torch.distributed as dist
-from torch.utils.data.distributed import DistributedSampler
+import torch.optim
+from pkg_resources import parse_version
 from torch.nn.parallel import DistributedDataParallel as DDP
-import os
+from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm
-import time
-from datetime import datetime, timedelta
-from functools import partial
 
+from ._logger import logger
 from .batch import DataSetIter, BatchIter
 from .callback import DistCallbackManager, CallbackException, TesterCallback
 from .dataset import DataSet
 from .losses import _prepare_losser
 from .optimizer import Optimizer
 from .utils import _build_args
-from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
-from  ._logger import logger
-import logging
-from pkg_resources import parse_version
+from .utils import _move_dict_value_to_device
 
 __all__ = [
     'get_local_rank',
@@ -54,7 +54,6 @@ class DistTrainer():
                  num_workers=1, drop_last=False,
                  dev_data=None, metrics=None, metric_key=None,
                  update_every=1, print_every=10, validate_every=-1,
-                 log_path=None,
                  save_every=-1, save_path=None, device='auto',
                  fp16='', backend=None, init_method=None):
 

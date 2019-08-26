@@ -300,6 +300,7 @@ from .utils import _get_func_signature
 from .field import AppendToTargetOrInputException
 from .field import SetInputOrTargetException
 from .const import Const
+from ._logger import logger
 
 class DataSet(object):
     """
@@ -452,7 +453,7 @@ class DataSet(object):
                 try:
                     self.field_arrays[name].append(field)
                 except AppendToTargetOrInputException as e:
-                    print(f"Cannot append to field:{name}.")
+                    logger.error(f"Cannot append to field:{name}.")
                     raise e
     
     def add_fieldarray(self, field_name, fieldarray):
@@ -609,7 +610,7 @@ class DataSet(object):
                     self.field_arrays[name]._use_1st_ins_infer_dim_type = bool(use_1st_ins_infer_dim_type)
                     self.field_arrays[name].is_target = flag
                 except SetInputOrTargetException as e:
-                    print(f"Cannot set field:{name} as target.")
+                    logger.error(f"Cannot set field:{name} as target.")
                     raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
@@ -633,7 +634,7 @@ class DataSet(object):
                     self.field_arrays[name]._use_1st_ins_infer_dim_type = bool(use_1st_ins_infer_dim_type)
                     self.field_arrays[name].is_input = flag
                 except SetInputOrTargetException as e:
-                    print(f"Cannot set field:{name} as input, exception happens at the {e.index} value.")
+                    logger.error(f"Cannot set field:{name} as input, exception happens at the {e.index} value.")
                     raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
@@ -728,7 +729,7 @@ class DataSet(object):
                 results.append(func(ins[field_name]))
         except Exception as e:
             if idx != -1:
-                print("Exception happens at the `{}`th(from 1) instance.".format(idx+1))
+                logger.error("Exception happens at the `{}`th(from 1) instance.".format(idx+1))
             raise e
         if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
             raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
@@ -795,7 +796,7 @@ class DataSet(object):
                 results.append(func(ins))
         except BaseException as e:
             if idx != -1:
-                print("Exception happens at the `{}`th instance.".format(idx))
+                logger.error("Exception happens at the `{}`th instance.".format(idx))
             raise e
 
         # results = [func(ins) for ins in self._inner_iter()]

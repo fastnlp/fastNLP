@@ -1,4 +1,4 @@
-"""
+"""undocumented
 .. warning::
 
     本模块将在 `0.5.0版本` 中被废弃，由 :mod:`~fastNLP.io.loader`  和 :mod:`~fastNLP.io.pipe` 模块替代。
@@ -23,10 +23,10 @@ __all__ = [
 ]
 
 
+from .data_bundle import DataSetLoader
+from .file_reader import _read_csv, _read_json
 from ..core.dataset import DataSet
 from ..core.instance import Instance
-from .file_reader import _read_csv, _read_json
-from .data_bundle import DataSetLoader
 
 
 class JsonLoader(DataSetLoader):

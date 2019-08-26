@@ -1,11 +1,15 @@
-# Code Modified from https://github.com/carpedm20/ENAS-pytorch
-import math
-import numpy as np
-import time
-import torch
+"""undocumented
+Code Modified from https://github.com/carpedm20/ENAS-pytorch
+"""
 
+__all__ = []
+
+import math
+import time
 from datetime import datetime, timedelta
 
+import numpy as np
+import torch
 from torch.optim import Adam
 
 try:
@@ -15,7 +19,7 @@ except:
 
 from ..core.trainer import Trainer
 from ..core.batch import DataSetIter
-from ..core.callback import CallbackManager, CallbackException
+from ..core.callback import CallbackException
 from ..core.dataset import DataSet
 from ..core.utils import _move_dict_value_to_device
 from . import enas_utils as utils

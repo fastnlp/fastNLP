@@ -1,15 +1,22 @@
+"""
+.. todo::
+    doc
+"""
+
 __all__ = [
     "Vocabulary",
     "VocabularyOption",
 ]
 
-from functools import wraps
 from collections import Counter
+from functools import partial
+from functools import wraps
+
+from ._logger import logger
 from .dataset import DataSet
 from .utils import Option
-from functools import partial
-import numpy as np
 from .utils import _is_iterable
+
 
 class VocabularyOption(Option):
     def __init__(self,
@@ -49,8 +56,8 @@ def _check_build_status(func):
         if self.rebuild is False:
             self.rebuild = True
             if self.max_size is not None and len(self.word_count) >= self.max_size:
-                print("[Warning] Vocabulary has reached the max size {} when calling {} method. "
-                      "Adding more words may cause unexpected behaviour of Vocabulary. ".format(
+                logger.info("[Warning] Vocabulary has reached the max size {} when calling {} method. "
+                            "Adding more words may cause unexpected behaviour of Vocabulary. ".format(
                     self.max_size, func.__name__))
         return func(self, *args, **kwargs)
     
@@ -198,7 +205,7 @@ class Vocabulary(object):
         self.build_reverse_vocab()
         self.rebuild = False
         return self
-
+    
     def build_reverse_vocab(self):
         """
         基于 `word to index` dict, 构建 `index to word` dict.
@@ -278,26 +285,26 @@ class Vocabulary(object):
                     if not isinstance(field[0][0], str) and _is_iterable(field[0][0]):
                         raise RuntimeError("Only support field with 2 dimensions.")
                     return [[self.to_index(c) for c in w] for w in field]
-
+        
         new_field_name = new_field_name or field_name
-
+        
         if type(new_field_name) == type(field_name):
             if isinstance(new_field_name, list):
                 assert len(new_field_name) == len(field_name), "new_field_name should have same number elements with " \
-                                                             "field_name."
+                                                               "field_name."
             elif isinstance(new_field_name, str):
                 field_name = [field_name]
                 new_field_name = [new_field_name]
             else:
                 raise TypeError("field_name and new_field_name can only be str or List[str].")
-
+        
         for idx, dataset in enumerate(datasets):
             if isinstance(dataset, DataSet):
                 try:
                     for f_n, n_f_n in zip(field_name, new_field_name):
                         dataset.apply_field(index_instance, field_name=f_n, new_field_name=n_f_n)
                 except Exception as e:
-                    print("When processing the `{}` dataset, the following error occurred.".format(idx))
+                    logger.info("When processing the `{}` dataset, the following error occurred.".format(idx))
                     raise e
             else:
                 raise RuntimeError("Only DataSet type is allowed.")
@@ -353,7 +360,7 @@ class Vocabulary(object):
                 try:
                     dataset.apply(construct_vocab)
                 except BaseException as e:
-                    print("When processing the `{}` dataset, the following error occurred:".format(idx))
+                    log("When processing the `{}` dataset, the following error occurred:".format(idx))
                     raise e
             else:
                 raise TypeError("Only DataSet type is allowed.")
@@ -376,7 +383,7 @@ class Vocabulary(object):
         :return: bool
         """
         return word in self._no_create_word
-
+    
     def to_index(self, w):
         """
         将词转为数字. 若词不再词典中被记录, 将视为 unknown, 若 ``unknown=None`` , 将抛出``ValueError``::

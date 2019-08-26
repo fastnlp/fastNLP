@@ -1,16 +1,20 @@
-"""
+"""undocumented
 bert.py is modified from huggingface/pytorch-pretrained-BERT, which is licensed under the Apache License 2.0.
 
 """
+
+__all__ = []
+
 import os
+
 import torch
 from torch import nn
 
 from .base_model import BaseModel
 from ..core.const import Const
+from ..core.utils import seq_len_to_mask
 from ..modules.encoder import BertModel
 from ..modules.encoder.bert import BertConfig, CONFIG_FILE
-from ..core.utils import seq_len_to_mask
 
 
 class BertForSequenceClassification(BaseModel):

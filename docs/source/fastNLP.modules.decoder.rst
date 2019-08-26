@@ -2,7 +2,6 @@ fastNLP.modules.decoder
 =======================
 
 .. automodule:: fastNLP.modules.decoder
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :members: MLP, ConditionalRandomField, viterbi_decode, allowed_transitions
+   :inherited-members:
 

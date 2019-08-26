@@ -1,19 +1,33 @@
-from typing import Dict, Union
+"""undocumented"""
 
-from .loader import Loader
-from ...core.dataset import DataSet
-from ..file_reader import _read_conll
-from ...core.instance import Instance
-from ...core.const import Const
+__all__ = [
+    "ConllLoader",
+    "Conll2003Loader",
+    "Conll2003NERLoader",
+    "OntoNotesNERLoader",
+    "CTBLoader",
+    "CNNERLoader",
+    "MsraNERLoader",
+    "WeiboNERLoader",
+    "PeopleDailyNERLoader"
+]
+
 import glob
 import os
+import random
 import shutil
 import time
-import random
+
+from .loader import Loader
+from ..file_reader import _read_conll
+from ...core.const import Const
+from ...core.dataset import DataSet
+from ...core.instance import Instance
+
 
 class ConllLoader(Loader):
     """
-    别名：:class:`fastNLP.io.ConllLoader` :class:`fastNLP.io.data_loader.ConllLoader`
+    别名：:class:`fastNLP.io.ConllLoader` :class:`fastNLP.io.loader.ConllLoader`
 
     ConllLoader支持读取的数据格式: 以空行隔开两个sample，除了分割行，每一行用空格或者制表符隔开不同的元素。如下例所示:
 
@@ -46,6 +60,7 @@ class ConllLoader(Loader):
     :param bool dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
 
     """
+    
     def __init__(self, headers, indexes=None, dropna=True):
         super(ConllLoader, self).__init__()
         if not isinstance(headers, (list, tuple)):
@@ -59,7 +74,7 @@ class ConllLoader(Loader):
             if len(indexes) != len(headers):
                 raise ValueError
             self.indexes = indexes
-
+    
     def _load(self, path):
         """
         传入的一个文件路径，将该文件读入DataSet中，field由ConllLoader初始化时指定的headers决定。
@@ -100,12 +115,13 @@ class Conll2003Loader(ConllLoader):
        "[...]", "[...]", "[...]", "[...]"
 
     """
+    
     def __init__(self):
         headers = [
             'raw_words', 'pos', 'chunk', 'ner',
         ]
         super(Conll2003Loader, self).__init__(headers=headers)
-
+    
     def _load(self, path):
         """
         传入的一个文件路径，将该文件读入DataSet中，field由ConllLoader初始化时指定的headers决定。
@@ -126,7 +142,7 @@ class Conll2003Loader(ConllLoader):
             ins = {h: data[i] for i, h in enumerate(self.headers)}
             ds.append(Instance(**ins))
         return ds
-
+    
     def download(self, output_dir=None):
         raise RuntimeError("conll2003 cannot be downloaded automatically.")
 
@@ -157,12 +173,13 @@ class Conll2003NERLoader(ConllLoader):
        "[...]",  "[...]"
 
     """
+    
     def __init__(self):
         headers = [
             'raw_words', 'target',
         ]
         super().__init__(headers=headers, indexes=[0, 3])
-
+    
     def _load(self, path):
         """
         传入的一个文件路径，将该文件读入DataSet中，field由ConllLoader初始化时指定的headers决定。
@@ -183,7 +200,7 @@ class Conll2003NERLoader(ConllLoader):
             ins = {h: data[i] for i, h in enumerate(self.headers)}
             ds.append(Instance(**ins))
         return ds
-
+    
     def download(self):
         raise RuntimeError("conll2003 cannot be downloaded automatically.")
 
@@ -203,13 +220,13 @@ class OntoNotesNERLoader(ConllLoader):
         "[...]", "[...]"
 
     """
-
+    
     def __init__(self):
         super().__init__(headers=[Const.RAW_WORD, Const.TARGET], indexes=[3, 10])
-
-    def _load(self, path:str):
+    
+    def _load(self, path: str):
         dataset = super()._load(path)
-
+        
         def convert_to_bio(tags):
             bio_tags = []
             flag = None
@@ -226,7 +243,7 @@ class OntoNotesNERLoader(ConllLoader):
                     flag = None
                 bio_tags.append(bio_label)
             return bio_tags
-
+        
         def convert_word(words):
             converted_words = []
             for word in words:
@@ -235,7 +252,7 @@ class OntoNotesNERLoader(ConllLoader):
                     converted_words.append(word)
                     continue
                 # 以下是由于这些符号被转义了，再转回来
-                tfrs = {'-LRB-':'(',
+                tfrs = {'-LRB-': '(',
                         '-RRB-': ')',
                         '-LSB-': '[',
                         '-RSB-': ']',
@@ -247,12 +264,12 @@ class OntoNotesNERLoader(ConllLoader):
                 else:
                     converted_words.append(word)
             return converted_words
-
+        
         dataset.apply_field(convert_word, field_name=Const.RAW_WORD, new_field_name=Const.RAW_WORD)
         dataset.apply_field(convert_to_bio, field_name=Const.TARGET, new_field_name=Const.TARGET)
-
+        
         return dataset
-
+    
     def download(self):
         raise RuntimeError("Ontonotes cannot be downloaded automatically, you can refer "
                            "https://github.com/yhcc/OntoNotes-5.0-NER to download and preprocess.")
@@ -261,13 +278,13 @@ class OntoNotesNERLoader(ConllLoader):
 class CTBLoader(Loader):
     def __init__(self):
         super().__init__()
-
-    def _load(self, path:str):
+    
+    def _load(self, path: str):
         pass
 
 
 class CNNERLoader(Loader):
-    def _load(self, path:str):
+    def _load(self, path: str):
         """
         支持加载形如以下格式的内容，一行两列，以空格隔开两个sample
 
@@ -330,10 +347,11 @@ class MsraNERLoader(CNNERLoader):
         "[...]", "[...]"
 
     """
+    
     def __init__(self):
         super().__init__()
-
-    def download(self, dev_ratio:float=0.1, re_download:bool=False)->str:
+    
+    def download(self, dev_ratio: float = 0.1, re_download: bool = False) -> str:
         """
         自动下载MSAR-NER的数据，如果你使用该数据，请引用 Gina-Anne Levow, 2006, The Third International Chinese Language
         Processing Bakeoff: Word Segmentation and Named Entity Recognition.
@@ -355,7 +373,7 @@ class MsraNERLoader(CNNERLoader):
         if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
             shutil.rmtree(data_dir)
             data_dir = self._get_dataset_path(dataset_name=dataset_name)
-
+        
         if not os.path.exists(os.path.join(data_dir, 'dev.conll')):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
@@ -379,15 +397,15 @@ class MsraNERLoader(CNNERLoader):
                 finally:
                     if os.path.exists(os.path.join(data_dir, 'middle_file.conll')):
                         os.remove(os.path.join(data_dir, 'middle_file.conll'))
-
+        
         return data_dir
 
 
 class WeiboNERLoader(CNNERLoader):
     def __init__(self):
         super().__init__()
-
-    def download(self)->str:
+    
+    def download(self) -> str:
         """
         自动下载Weibo-NER的数据，如果你使用了该数据，请引用 Nanyun Peng and Mark Dredze, 2015, Named Entity Recognition for
         Chinese Social Media with Jointly Trained Embeddings.
@@ -396,7 +414,7 @@ class WeiboNERLoader(CNNERLoader):
         """
         dataset_name = 'weibo-ner'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-
+        
         return data_dir
 
 
@@ -426,11 +444,12 @@ class PeopleDailyNERLoader(CNNERLoader):
         "[...]", "[...]"
 
     """
+    
     def __init__(self):
         super().__init__()
-
+    
     def download(self) -> str:
         dataset_name = 'peopledaily'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-
+        
         return data_dir
