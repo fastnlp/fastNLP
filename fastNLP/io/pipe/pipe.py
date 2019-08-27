@@ -15,7 +15,7 @@ class Pipe:
         """
         对输入的DataBundle进行处理，然后返回该DataBundle。
 
-        :param data_bundle: 需要处理的DataBundle对象
+        :param ~fastNLP.DataBundle data_bundle: 需要处理的DataBundle对象
         :return:
         """
         raise NotImplementedError

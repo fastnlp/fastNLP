@@ -204,7 +204,7 @@ class DataBundle:
             行的数据进行类型和维度推断本列的数据的类型和维度。
         :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
             如果为False，则报错
-        :return self
+        :return: self
         """
         for field_name in field_names:
             for name, dataset in self.datasets.items():
@@ -229,7 +229,7 @@ class DataBundle:
             行的数据进行类型和维度推断本列的数据的类型和维度。
         :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
             如果为False，则报错
-        :return self
+        :return: self
         """
         for field_name in field_names:
             for name, dataset in self.datasets.items():

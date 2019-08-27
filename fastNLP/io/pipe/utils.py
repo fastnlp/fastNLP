@@ -92,7 +92,7 @@ def _indexize(data_bundle, input_field_names=Const.INPUT, target_field_names=Con
     """
     在dataset中的field_name列建立词表，Const.TARGET列建立词表，并把词表加入到data_bundle中。
 
-    :param data_bundle:
+    :param ~fastNLP.DataBundle data_bundle:
     :param: str,list input_field_names:
     :param: str,list target_field_names: 这一列的vocabulary没有unknown和padding
     :return:
@@ -154,7 +154,7 @@ def _drop_empty_instance(data_bundle, field_name):
     """
     删除data_bundle的DataSet中存在的某个field为空的情况
 
-    :param data_bundle: DataBundle
+    :param ~fastNLP.DataBundle data_bundle:
     :param str field_name: 对哪个field进行检查，如果为None，则任意field为空都会删掉
     :return: 传入的DataBundle
     """

@@ -70,10 +70,11 @@ __all__ = [
 ]
 
 import os
+import sys
+from copy import deepcopy
 
 import torch
-from copy import deepcopy
-import sys
+
 from .utils import _save_model
 
 try:
@@ -928,13 +929,15 @@ class WarmupCallback(Callback):
 class SaveModelCallback(Callback):
     """
     由于Trainer在训练过程中只会保存最佳的模型， 该callback可实现多种方式的结果存储。
-    会根据训练开始的时间戳在save_dir下建立文件夹，再在文件夹下存放多个模型
-    -save_dir
-        -2019-07-03-15-06-36
-            -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_performance是性能
-            -epoch:1_step:40_{metric_key}:{evaluate_performance}.pt
-        -2019-07-03-15-10-00
-            -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_perfomance是性能
+    会根据训练开始的时间戳在save_dir下建立文件夹，再在文件夹下存放多个模型::
+        
+        -save_dir
+            -2019-07-03-15-06-36
+                -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_performance是性能
+                -epoch:1_step:40_{metric_key}:{evaluate_performance}.pt
+            -2019-07-03-15-10-00
+                -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_perfomance是性能
+    
     :param str save_dir: 将模型存放在哪个目录下，会在该目录下创建以时间戳命名的目录，并存放模型
     :param int top: 保存dev表现top多少模型。-1为保存所有模型。
     :param bool only_param: 是否只保存模型d饿权重。

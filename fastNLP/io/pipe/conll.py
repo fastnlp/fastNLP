@@ -51,7 +51,7 @@ class _NERPipe(Pipe):
            "[AL-AIN, United, Arab, ...]", "[B-LOC, B-LOC, I-LOC, ...]"
            "[...]", "[...]"
 
-        :param DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]。
+        :param ~fastNLP.DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]。
             在传入DataBundle基础上原位修改。
         :return: DataBundle
         """
@@ -244,7 +244,7 @@ class _CNNERPipe(Pipe):
         raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
         target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
 
-        :param DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]。
+        :param ~fastNLP.DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]。
             在传入DataBundle基础上原位修改。
         :return: DataBundle
         """
