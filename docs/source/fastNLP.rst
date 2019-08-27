@@ -9,6 +9,7 @@ fastNLP
 ------
 
 .. toctree::
+   :maxdepth: 1
 
    fastNLP.core
    fastNLP.embeddings

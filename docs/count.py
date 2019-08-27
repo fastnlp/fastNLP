@@ -66,12 +66,13 @@ def create_rst_file(modules, name, children):
         fout.write(t + "\n")
         fout.write("\n")
         fout.write(".. automodule:: " + name + "\n")
-        if len(m.__all__) > 0:
+        if name != "fastNLP.core" and len(m.__all__) > 0:
             fout.write("   :members: " + ", ".join(m.__all__) + "\n")
-            fout.write("   :inherited-members:\n")
+            if not (name.startswith('fastNLP.models') or name.startswith('fastNLP.modules')):
+                fout.write("   :inherited-members:\n")
         fout.write("\n")
         if name in children:
-            fout.write("子模块\n------\n\n.. toctree::\n\n")
+            fout.write("子模块\n------\n\n.. toctree::\n   :maxdepth: 1\n\n")
             for module in children[name]:
                 fout.write("   " + module + "\n")
 

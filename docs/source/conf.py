@@ -168,9 +168,11 @@ texinfo_documents = [
 
 # -- Extension configuration -------------------------------------------------
 def maybe_skip_member(app, what, name, obj, skip, options):
-    if name.startswith("_"):
-        return True
     if obj.__doc__ is None:
+        return True
+    if name == "__init__":
+        return False
+    if name.startswith("_"):
         return True
     return False
 

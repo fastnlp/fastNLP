@@ -9,6 +9,7 @@ fastNLP.io
 ------
 
 .. toctree::
+   :maxdepth: 1
 
    fastNLP.io.data_bundle
    fastNLP.io.embed_loader
