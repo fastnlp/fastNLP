@@ -48,12 +48,14 @@ extensions = [
 autodoc_default_options = {
     'member-order': 'bysource',
     'special-members': '__init__',
-    'undoc-members': True,
+    'undoc-members': False,
 }
+
+autoclass_content = "class"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
-
+# template_bridge
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
@@ -113,7 +115,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'fastNLPdoc'
+htmlhelp_basename = 'fastNLP doc'
 
 # -- Options for LaTeX output ------------------------------------------------
 

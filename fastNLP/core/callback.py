@@ -83,7 +83,6 @@ try:
 except:
     tensorboardX_flag = False
 
-from ..io.model_io import ModelSaver, ModelLoader
 from .dataset import DataSet
 from .tester import Tester
 from ._logger import logger
@@ -505,7 +504,7 @@ class EarlyStopCallback(Callback):
     
     def on_exception(self, exception):
         if isinstance(exception, EarlyStopError):
-            print("Early Stopping triggered in epoch {}!".format(self.epoch))
+            logger.info("Early Stopping triggered in epoch {}!".format(self.epoch))
         else:
             raise exception  # 抛出陌生Error
 
@@ -752,8 +751,7 @@ class LRFinder(Callback):
         self.smooth_value = SmoothValue(0.8)
         self.opt = None
         self.find = None
-        self.loader = ModelLoader()
-    
+
     @property
     def lr_gen(self):
         scale = (self.end_lr - self.start_lr) / self.batch_per_epoch
@@ -768,7 +766,7 @@ class LRFinder(Callback):
             self.opt = self.trainer.optimizer  # pytorch optimizer
             self.opt.param_groups[0]["lr"] = self.start_lr
             # save model
-            ModelSaver("tmp").save_pytorch(self.trainer.model, param_only=True)
+            torch.save(self.model.state_dict(), 'tmp')
             self.find = True
     
     def on_backward_begin(self, loss):
@@ -797,7 +795,9 @@ class LRFinder(Callback):
             self.opt.param_groups[0]["lr"] = self.best_lr
             self.find = False
             # reset model
-            ModelLoader().load_pytorch(self.trainer.model, "tmp")
+            states = torch.load('tmp')
+            self.model.load_state_dict(states)
+            os.remove('tmp')
             self.pbar.write("Model reset. \nFind best lr={}".format(self.best_lr))
 
 
@@ -988,14 +988,14 @@ class SaveModelCallback(Callback):
             try:
                 _save_model(self.model, model_name=name, save_dir=self.save_dir, only_param=self.only_param)
             except Exception as e:
-                print(f"The following exception:{e} happens when save model to {self.save_dir}.")
+                logger.error(f"The following exception:{e} happens when save model to {self.save_dir}.")
         if delete_pair:
             try:
                 delete_model_path = os.path.join(self.save_dir, delete_pair[1])
                 if os.path.exists(delete_model_path):
                     os.remove(delete_model_path)
             except Exception as e:
-                print(f"Fail to delete model {name} at {self.save_dir} caused by exception:{e}.")
+                logger.error(f"Fail to delete model {name} at {self.save_dir} caused by exception:{e}.")
 
     def on_exception(self, exception):
         if self.save_on_exception:
@@ -1032,7 +1032,7 @@ class EchoCallback(Callback):
 
     def __getattribute__(self, item):
         if item.startswith('on_'):
-            print('{}.{} has been called at pid: {}'.format(self.name, item, os.getpid()),
+            logger.info('{}.{} has been called at pid: {}'.format(self.name, item, os.getpid()),
                   file=self.out)
         return super(EchoCallback, self).__getattribute__(item)
 

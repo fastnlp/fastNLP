@@ -1,3 +1,5 @@
+"""undocumented"""
+
 __all__ = [
     "ConvolutionCharEncoder",
     "LSTMCharEncoder"

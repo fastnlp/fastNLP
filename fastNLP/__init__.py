@@ -65,8 +65,8 @@ __all__ = [
 ]
 __version__ = '0.4.5'
 
-from .core import *
+from . import embeddings
 from . import models
 from . import modules
-from . import embeddings
-from .io import data_loader
+from .core import *
+from .io import loader, pipe

@@ -1,7 +1,8 @@
-"""
+"""undocumented
 轻量封装的 Pytorch LSTM 模块.
 可在 forward 时传入序列的长度, 自动对padding做合适的处理.
 """
+
 __all__ = [
     "LSTM"
 ]

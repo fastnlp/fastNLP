@@ -2,12 +2,11 @@ fastNLP.models
 ==============
 
 .. automodule:: fastNLP.models
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :members: CNNText, SeqLabeling, AdvSeqLabel, ESIM, StarTransEnc, STSeqLabel, STNLICls, STSeqCls, BiaffineParser, GraphParser
+   :inherited-members:
 
-Submodules
-----------
+子模块
+------
 
 .. toctree::
 

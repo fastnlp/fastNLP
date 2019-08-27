@@ -1,98 +1,107 @@
+import inspect
 import os
+import sys
 
 
-def find_all(path='../fastNLP'):
-    head_list = []
-    alias_list = []
-    for path, dirs, files in os.walk(path):
+def _colored_string(string: str, color: str or int) -> str:
+    """在终端中显示一串有颜色的文字
+    :param string: 在终端中显示的文字
+    :param color: 文字的颜色
+    :return:
+    """
+    if isinstance(color, str):
+        color = {
+            "black": 30, "Black": 30, "BLACK": 30,
+            "red": 31, "Red": 31, "RED": 31,
+            "green": 32, "Green": 32, "GREEN": 32,
+            "yellow": 33, "Yellow": 33, "YELLOW": 33,
+            "blue": 34, "Blue": 34, "BLUE": 34,
+            "purple": 35, "Purple": 35, "PURPLE": 35,
+            "cyan": 36, "Cyan": 36, "CYAN": 36,
+            "white": 37, "White": 37, "WHITE": 37
+        }[color]
+    return "\033[%dm%s\033[0m" % (color, string)
+
+
+def find_all_modules():
+    modules = {}
+    children = {}
+    to_doc = set()
+    root = '../fastNLP'
+    for path, dirs, files in os.walk(root):
         for file in files:
             if file.endswith('.py'):
                 name = ".".join(path.split('/')[1:])
                 if file.split('.')[0] != "__init__":
                     name = name + '.' + file.split('.')[0]
-                if len(name.split('.')) < 3 or name.startswith('fastNLP.core'):
-                    heads, alias = find_one(path + '/' + file)
-                    for h in heads:
-                        head_list.append(name + "." + h)
-                    for a in alias:
-                        alias_list.append(a)
-    heads = {}
-    for h in head_list:
-        end = h.split('.')[-1]
-        file = h[:-len(end) - 1]
-        if end not in heads:
-            heads[end] = set()
-        heads[end].add(file)
-    alias = {}
-    for a in alias_list:
-        for each in a:
-            end = each.split('.')[-1]
-            file = each[:-len(end) - 1]
-            if end not in alias:
-                alias[end] = set()
-            alias[end].add(file)
-    print("IN alias NOT IN heads")
-    for item in alias:
-        if item not in heads:
-            print(item, alias[item])
-        elif len(heads[item]) != 2:
-            print(item, alias[item], heads[item])
-    
-    print("\n\nIN heads NOT IN alias")
-    for item in heads:
-        if item not in alias:
-            print(item, heads[item])
+                __import__(name)
+                m = sys.modules[name]
+                modules[name] = m
+                try:
+                    m.__all__
+                except:
+                    print(name, "__all__ missing")
+                    continue
+                if m.__doc__ is None:
+                    print(name, "__doc__ missing")
+                    continue
+                if "undocumented" not in m.__doc__:
+                    to_doc.add(name)
+    for module in to_doc:
+        t = ".".join(module.split('.')[:-1])
+        if t in to_doc:
+            if t not in children:
+                children[t] = set()
+            children[t].add(module)
+    for m in children:
+        children[m] = sorted(children[m])
+    return modules, to_doc, children
 
 
-def find_class(path):
-    with open(path, 'r') as fin:
-        lines = fin.readlines()
-    pars = {}
-    for i, line in enumerate(lines):
-        if line.strip().startswith('class'):
-            line = line.strip()[len('class'):-1].strip()
-            if line[-1] == ')':
-                line = line[:-1].split('(')
-                name = line[0].strip()
-                parents = line[1].split(',')
-                for i in range(len(parents)):
-                    parents[i] = parents[i].strip()
-                if len(parents) == 1:
-                    pars[name] = parents[0]
-                else:
-                    pars[name] = tuple(parents)
-    return pars
+def create_rst_file(modules, name, children):
+    m = modules[name]
+    with open("./source/" + name + ".rst", "w") as fout:
+        t = "=" * len(name)
+        fout.write(name + "\n")
+        fout.write(t + "\n")
+        fout.write("\n")
+        fout.write(".. automodule:: " + name + "\n")
+        if len(m.__all__) > 0:
+            fout.write("   :members: " + ", ".join(m.__all__) + "\n")
+            fout.write("   :inherited-members:\n")
+        fout.write("\n")
+        if name in children:
+            fout.write("子模块\n------\n\n.. toctree::\n\n")
+            for module in children[name]:
+                fout.write("   " + module + "\n")
 
 
-def find_one(path):
-    head_list = []
-    alias = []
-    with open(path, 'r') as fin:
-        lines = fin.readlines()
-    flag = False
-    for i, line in enumerate(lines):
-        if line.strip().startswith('__all__'):
-            line = line.strip()[len('__all__'):].strip()
-            if line[-1] == ']':
-                line = line[1:-1].strip()[1:].strip()
-                head_list.append(line.strip("\"").strip("\'").strip())
-            else:
-                flag = True
-        elif line.strip() == ']':
-            flag = False
-        elif flag:
-            line = line.strip()[:-1].strip("\"").strip("\'").strip()
-            if len(line) == 0 or line[0] == '#':
-                continue
-            head_list.append(line)
-        if line.startswith('def') or line.startswith('class'):
-            if lines[i + 2].strip().startswith("别名："):
-                names = lines[i + 2].strip()[len("别名："):].split()
-                names[0] = names[0][len(":class:`"):-1]
-                names[1] = names[1][len(":class:`"):-1]
-                alias.append((names[0], names[1]))
-    return head_list, alias
+def check_file(m, name):
+    for item, obj in inspect.getmembers(m):
+        if inspect.isclass(obj) and obj.__module__ == name:
+            print(obj)
+        if inspect.isfunction(obj) and obj.__module__ == name:
+            print("FUNC", obj)
+
+
+def check_files(modules):
+    for name in sorted(modules.keys()):
+        if name == 'fastNLP.core.utils':
+            check_file(modules[name], name)
+
+
+def main():
+    print(_colored_string('Getting modules...', "Blue"))
+    modules, to_doc, children = find_all_modules()
+    print(_colored_string('Done!', "Green"))
+    print(_colored_string('Creating rst files...', "Blue"))
+    for name in to_doc:
+        create_rst_file(modules, name, children)
+    print(_colored_string('Done!', "Green"))
+    print(_colored_string('Checking all files...', "Blue"))
+    check_files(modules)
+    print(_colored_string('Done!', "Green"))
 
 
 if __name__ == "__main__":
-    find_all()  # use to check __all__
+    main()

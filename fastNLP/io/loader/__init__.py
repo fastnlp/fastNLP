@@ -62,8 +62,8 @@ __all__ = [
     "PeopleDailyNERLoader",
     "WeiboNERLoader",
 
-    # 'CSVLoader',
-    # 'JsonLoader',
+    'CSVLoader',
+    'JsonLoader',
 
     'CWSLoader',
 

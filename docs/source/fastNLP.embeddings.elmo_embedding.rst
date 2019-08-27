@@ -1,7 +1,7 @@
-fastNLP.embeddings.elmo\_embedding
-==================================
+fastNLP.embeddings.elmo_embedding
+=================================
 
 .. automodule:: fastNLP.embeddings.elmo_embedding
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :members: ElmoEmbedding
+   :inherited-members:
+

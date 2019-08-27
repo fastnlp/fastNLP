@@ -1,9 +1,25 @@
+"""undocumented"""
+
+__all__ = [
+    "MatchingBertPipe",
+    "RTEBertPipe",
+    "SNLIBertPipe",
+    "QuoraBertPipe",
+    "QNLIBertPipe",
+    "MNLIBertPipe",
+    "MatchingPipe",
+    "RTEPipe",
+    "SNLIPipe",
+    "QuoraPipe",
+    "QNLIPipe",
+    "MNLIPipe",
+]
 
 from .pipe import Pipe
 from .utils import get_tokenizer
+from ..loader.matching import SNLILoader, MNLILoader, QNLILoader, RTELoader, QuoraLoader
 from ...core.const import Const
 from ...core.vocabulary import Vocabulary
-from ..loader.matching import SNLILoader, MNLILoader, QNLILoader, RTELoader, QuoraLoader
 
 
 class MatchingBertPipe(Pipe):
@@ -24,12 +40,13 @@ class MatchingBertPipe(Pipe):
     :param bool lower: 是否将word小写化。
     :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
     """
-    def __init__(self, lower=False, tokenizer: str='raw'):
+    
+    def __init__(self, lower=False, tokenizer: str = 'raw'):
         super().__init__()
-
+        
         self.lower = bool(lower)
         self.tokenizer = get_tokenizer(tokenizer=tokenizer)
-
+    
     def _tokenize(self, data_bundle, field_names, new_field_names):
         """
 
@@ -43,62 +60,62 @@ class MatchingBertPipe(Pipe):
                 dataset.apply_field(lambda words: self.tokenizer(words), field_name=field_name,
                                     new_field_name=new_field_name)
         return data_bundle
-
+    
     def process(self, data_bundle):
         for dataset in data_bundle.datasets.values():
             if dataset.has_field(Const.TARGET):
                 dataset.drop(lambda x: x[Const.TARGET] == '-')
-
+        
         for name, dataset in data_bundle.datasets.items():
             dataset.copy_field(Const.RAW_WORDS(0), Const.INPUTS(0), )
             dataset.copy_field(Const.RAW_WORDS(1), Const.INPUTS(1), )
-
+        
         if self.lower:
             for name, dataset in data_bundle.datasets.items():
                 dataset[Const.INPUTS(0)].lower()
                 dataset[Const.INPUTS(1)].lower()
-
+        
         data_bundle = self._tokenize(data_bundle, [Const.INPUTS(0), Const.INPUTS(1)],
                                      [Const.INPUTS(0), Const.INPUTS(1)])
-
+        
         # concat两个words
         def concat(ins):
             words0 = ins[Const.INPUTS(0)]
             words1 = ins[Const.INPUTS(1)]
             words = words0 + ['[SEP]'] + words1
             return words
-
+        
         for name, dataset in data_bundle.datasets.items():
             dataset.apply(concat, new_field_name=Const.INPUT)
             dataset.delete_field(Const.INPUTS(0))
             dataset.delete_field(Const.INPUTS(1))
-
+        
         word_vocab = Vocabulary()
         word_vocab.from_dataset(*[dataset for name, dataset in data_bundle.datasets.items() if 'train' in name],
                                 field_name=Const.INPUT,
                                 no_create_entry_dataset=[dataset for name, dataset in data_bundle.datasets.items() if
                                                          'train' not in name])
         word_vocab.index_dataset(*data_bundle.datasets.values(), field_name=Const.INPUT)
-
+        
         target_vocab = Vocabulary(padding=None, unknown=None)
         target_vocab.from_dataset(data_bundle.datasets['train'], field_name=Const.TARGET)
         has_target_datasets = [dataset for name, dataset in data_bundle.datasets.items() if
                                dataset.has_field(Const.TARGET)]
         target_vocab.index_dataset(*has_target_datasets, field_name=Const.TARGET)
-
+        
         data_bundle.set_vocab(word_vocab, Const.INPUT)
         data_bundle.set_vocab(target_vocab, Const.TARGET)
-
+        
         input_fields = [Const.INPUT, Const.INPUT_LEN]
         target_fields = [Const.TARGET]
-
+        
         for name, dataset in data_bundle.datasets.items():
             dataset.add_seq_len(Const.INPUT)
             dataset.set_input(*input_fields, flag=True)
             for fields in target_fields:
                 if dataset.has_field(fields):
                     dataset.set_target(fields, flag=True)
-
+        
         return data_bundle
 
 
@@ -150,12 +167,13 @@ class MatchingPipe(Pipe):
     :param bool lower: 是否将所有raw_words转为小写。
     :param str tokenizer: 将原始数据tokenize的方式。支持spacy, raw. spacy是使用spacy切分，raw就是用空格切分。
     """
-    def __init__(self, lower=False, tokenizer: str='raw'):
+    
+    def __init__(self, lower=False, tokenizer: str = 'raw'):
         super().__init__()
-
+        
         self.lower = bool(lower)
         self.tokenizer = get_tokenizer(tokenizer=tokenizer)
-
+    
     def _tokenize(self, data_bundle, field_names, new_field_names):
         """
 
@@ -169,7 +187,7 @@ class MatchingPipe(Pipe):
                 dataset.apply_field(lambda words: self.tokenizer(words), field_name=field_name,
                                     new_field_name=new_field_name)
         return data_bundle
-
+    
     def process(self, data_bundle):
         """
         接受的DataBundle中的DataSet应该具有以下的field, target列可以没有
@@ -181,40 +199,40 @@ class MatchingPipe(Pipe):
            "This site includes a...", "The Government Executive...", "not_entailment"
            "...", "..."
 
-        :param data_bundle:
-        :return:
+        :param data_bundle: 通过loader读取得到的data_bundle，里面包含了数据集的原始数据内容
+        :return: data_bundle
         """
         data_bundle = self._tokenize(data_bundle, [Const.RAW_WORDS(0), Const.RAW_WORDS(1)],
                                      [Const.INPUTS(0), Const.INPUTS(1)])
-
+        
         for dataset in data_bundle.datasets.values():
             if dataset.has_field(Const.TARGET):
                 dataset.drop(lambda x: x[Const.TARGET] == '-')
-
+        
         if self.lower:
             for name, dataset in data_bundle.datasets.items():
                 dataset[Const.INPUTS(0)].lower()
                 dataset[Const.INPUTS(1)].lower()
-
+        
         word_vocab = Vocabulary()
         word_vocab.from_dataset(*[dataset for name, dataset in data_bundle.datasets.items() if 'train' in name],
                                 field_name=[Const.INPUTS(0), Const.INPUTS(1)],
                                 no_create_entry_dataset=[dataset for name, dataset in data_bundle.datasets.items() if
                                                          'train' not in name])
         word_vocab.index_dataset(*data_bundle.datasets.values(), field_name=[Const.INPUTS(0), Const.INPUTS(1)])
-
+        
         target_vocab = Vocabulary(padding=None, unknown=None)
         target_vocab.from_dataset(data_bundle.datasets['train'], field_name=Const.TARGET)
         has_target_datasets = [dataset for name, dataset in data_bundle.datasets.items() if
                                dataset.has_field(Const.TARGET)]
         target_vocab.index_dataset(*has_target_datasets, field_name=Const.TARGET)
-
+        
         data_bundle.set_vocab(word_vocab, Const.INPUTS(0))
         data_bundle.set_vocab(target_vocab, Const.TARGET)
-
+        
         input_fields = [Const.INPUTS(0), Const.INPUTS(1), Const.INPUT_LENS(0), Const.INPUT_LENS(1)]
         target_fields = [Const.TARGET]
-
+        
         for name, dataset in data_bundle.datasets.items():
             dataset.add_seq_len(Const.INPUTS(0), Const.INPUT_LENS(0))
             dataset.add_seq_len(Const.INPUTS(1), Const.INPUT_LENS(1))
@@ -222,7 +240,7 @@ class MatchingPipe(Pipe):
             for fields in target_fields:
                 if dataset.has_field(fields):
                     dataset.set_target(fields, flag=True)
-
+        
         return data_bundle
 
 
@@ -254,4 +272,3 @@ class MNLIPipe(MatchingPipe):
     def process_from_file(self, paths=None):
         data_bundle = MNLILoader().load(paths)
         return self.process(data_bundle)
-

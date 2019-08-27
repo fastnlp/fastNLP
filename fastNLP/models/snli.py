@@ -1,3 +1,7 @@
+"""
+.. todo::
+    doc
+"""
 __all__ = [
     "ESIM"
 ]
@@ -5,13 +9,12 @@ __all__ = [
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from torch.nn import CrossEntropyLoss
 
 from .base_model import BaseModel
-from ..embeddings.embedding import TokenEmbedding, Embedding
 from ..core.const import Const
 from ..core.utils import seq_len_to_mask
+from ..embeddings.embedding import TokenEmbedding, Embedding
 
 
 class ESIM(BaseModel):

@@ -1,5 +1,5 @@
 """
-    本模块实现了几种序列标注模型
+本模块实现了几种序列标注模型
 """
 __all__ = [
     "SeqLabeling",
@@ -12,14 +12,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .base_model import BaseModel
-from ..embeddings import embedding
-from ..modules import decoder, encoder
-from ..modules.decoder.crf import allowed_transitions
-from ..core.utils import seq_len_to_mask
 from ..core.const import Const as C
-from ..modules import LSTM
+from ..core.utils import seq_len_to_mask
+from ..embeddings import embedding
 from ..embeddings import get_embeddings
 from ..modules import ConditionalRandomField
+from ..modules import LSTM
+from ..modules import decoder, encoder
+from ..modules.decoder.crf import allowed_transitions
 
 
 class BiLSTMCRF(BaseModel):

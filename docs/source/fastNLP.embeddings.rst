@@ -2,17 +2,17 @@ fastNLP.embeddings
 ==================
 
 .. automodule:: fastNLP.embeddings
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :members: Embedding, TokenEmbedding, StaticEmbedding, ElmoEmbedding, BertEmbedding, BertWordPieceEncoder, StackEmbedding, LSTMCharEmbedding, CNNCharEmbedding, get_embeddings
+   :inherited-members:
 
-Submodules
-----------
+子模块
+------
 
 .. toctree::
 
    fastNLP.embeddings.bert_embedding
    fastNLP.embeddings.char_embedding
+   fastNLP.embeddings.contextual_embedding
    fastNLP.embeddings.elmo_embedding
    fastNLP.embeddings.embedding
    fastNLP.embeddings.stack_embedding

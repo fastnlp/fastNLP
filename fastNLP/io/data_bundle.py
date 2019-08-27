@@ -1,10 +1,15 @@
+"""
+.. todo::
+    doc
+"""
 __all__ = [
     'DataBundle',
 ]
 
 import _pickle as pickle
-from typing import Union, Dict
 import os
+from typing import Union, Dict
+
 from ..core.dataset import DataSet
 from ..core.vocabulary import Vocabulary
 

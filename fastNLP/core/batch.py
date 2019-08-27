@@ -17,7 +17,7 @@ from numbers import Number
 
 from .sampler import SequentialSampler
 from .dataset import DataSet
-
+from ._logger import logger
 _python_is_exit = False
 
 
@@ -75,7 +75,7 @@ class DataSetGetter:
                         try:
                             data, flag = _to_tensor(data, f.dtype)
                         except TypeError as e:
-                            print(f"Field {n} cannot be converted to torch.tensor.")
+                            logger.error(f"Field {n} cannot be converted to torch.tensor.")
                             raise e
                     batch_dict[n] = data
             return batch_dict

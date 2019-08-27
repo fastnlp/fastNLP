@@ -45,6 +45,8 @@ __all__ = [
     "QNLILoader",
     "RTELoader",
 
+    "Pipe",
+
     "YelpFullPipe",
     "YelpPolarityPipe",
     "SSTPipe",
@@ -57,6 +59,8 @@ __all__ = [
     "MsraNERPipe",
     "PeopleDailyPipe",
     "WeiboNERPipe",
+
+    "CWSPipe",
 
     "MatchingBertPipe",
     "RTEBertPipe",

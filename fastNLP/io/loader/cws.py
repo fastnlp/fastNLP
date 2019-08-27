@@ -1,11 +1,18 @@
+"""undocumented"""
+
+__all__ = [
+    "CWSLoader"
+]
+
+import glob
+import os
+import random
+import shutil
+import time
+
 from .loader import Loader
 from ...core.dataset import DataSet
 from ...core.instance import Instance
-import glob
-import os
-import time
-import shutil
-import random
 
 
 class CWSLoader(Loader):
