@@ -110,11 +110,11 @@ $ python -m pyrouge.test
 
 LSTM + Sequence Labeling
 
-    python train.py --cuda --gpu <gpuid> --sentence_encoder deeplstm --sentence_decoder seqlab --save_root <savedir> --log_root <logdir> --lr_descent --grad_clip --max_grad_norm 10
+    python train.py --cuda --gpu <gpuid> --sentence_encoder deeplstm --sentence_decoder SeqLab --save_root <savedir> --log_root <logdir> --lr_descent --grad_clip --max_grad_norm 10
 
 Transformer + Sequence Labeling
 
-    python train.py --cuda --gpu <gpuid> --sentence_encoder transformer --sentence_decoder seqlab --save_root <savedir> --log_root <logdir> --lr_descent --grad_clip --max_grad_norm 10
+    python train.py --cuda --gpu <gpuid> --sentence_encoder transformer --sentence_decoder SeqLab --save_root <savedir> --log_root <logdir> --lr_descent --grad_clip --max_grad_norm 10
 
 
 

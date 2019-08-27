@@ -34,11 +34,11 @@ sys.path.append('/remote-home/dqwang/FastNLP/fastNLP_brxx/')
 
 from fastNLP.core.const import Const
 from fastNLP.core.trainer import Trainer, Tester
+from fastNLP.io.pipe.summarization import ExtCNNDMPipe
 from fastNLP.io.model_io import ModelLoader, ModelSaver
 from fastNLP.io.embed_loader import EmbedLoader
 
 from tools.logger import *
-from data.dataloader import SummarizationLoader
 # from model.TransformerModel import TransformerModel
 from model.TForiginal import TransformerModel
 from model.Metric import LabelFMetric, FastRougeMetric, PyRougeMetric
@@ -209,22 +209,24 @@ def main():
     logger.addHandler(file_handler)
 
     logger.info("Pytorch %s", torch.__version__)
-    sum_loader = SummarizationLoader()
 
     hps = args
+    dbPipe = ExtCNNDMPipe(vocab_size=hps.vocab_size,
+                          vocab_path=VOCAL_FILE,
+                          sent_max_len=hps.sent_max_len,
+                          doc_max_timesteps=hps.doc_max_timesteps)
     if hps.mode == 'test':
-        paths = {"test": DATA_FILE}
         hps.recurrent_dropout_prob = 0.0
         hps.atten_dropout_prob = 0.0
         hps.ffn_dropout_prob = 0.0
         logger.info(hps)
+        db = dbPipe.process_from_file(DATA_FILE)
     else:
         paths = {"train": DATA_FILE, "valid": VALID_FILE}
-
-    dataInfo = sum_loader.process(paths=paths, vocab_size=hps.vocab_size, vocab_path=VOCAL_FILE, sent_max_len=hps.sent_max_len, doc_max_timesteps=hps.doc_max_timesteps, load_vocab=os.path.exists(VOCAL_FILE))
+        db = dbPipe.process_from_file(paths)
 
     if args.embedding == "glove":
-        vocab = dataInfo.vocabs["vocab"]
+        vocab = db.get_vocab("vocab")
         embed = torch.nn.Embedding(len(vocab), hps.word_emb_dim)
         if hps.word_embedding:
             embed_loader = EmbedLoader()
@@ -249,12 +251,12 @@ def main():
         model = model.cuda()
         logger.info("[INFO] Use cuda")
     if hps.mode == 'train':
-        dataInfo.datasets["valid"].set_target("text", "summary")
-        setup_training(model, dataInfo.datasets["train"], dataInfo.datasets["valid"], hps)
+        db.get_dataset("valid").set_target("text", "summary")
+        setup_training(model, db.get_dataset("train"), db.get_dataset("valid"), hps)
     elif hps.mode == 'test':
         logger.info("[INFO] Decoding...")
-        dataInfo.datasets["test"].set_target("text", "summary")
-        run_test(model, dataInfo.datasets["test"], hps, limited=hps.limited)
+        db.get_dataset("test").set_target("text", "summary")
+        run_test(model, db.get_dataset("test"), hps, limited=hps.limited)
     else:
         logger.error("The 'mode' flag must be one of train/eval/test")
         raise ValueError("The 'mode' flag must be one of train/eval/test")
