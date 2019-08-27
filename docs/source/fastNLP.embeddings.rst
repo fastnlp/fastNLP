@@ -3,7 +3,6 @@ fastNLP.embeddings
 
 .. automodule:: fastNLP.embeddings
    :members: Embedding, TokenEmbedding, StaticEmbedding, ElmoEmbedding, BertEmbedding, BertWordPieceEncoder, StackEmbedding, LSTMCharEmbedding, CNNCharEmbedding, get_embeddings
-   :inherited-members:
 
 子模块
 ------

@@ -68,7 +68,8 @@ def create_rst_file(modules, name, children):
         fout.write(".. automodule:: " + name + "\n")
         if name != "fastNLP.core" and len(m.__all__) > 0:
             fout.write("   :members: " + ", ".join(m.__all__) + "\n")
-            if not (name.startswith('fastNLP.models') or name.startswith('fastNLP.modules')):
+            short = name[len("fastNLP."):]
+            if not (short.startswith('models') or short.startswith('modules') or short.startswith('embeddings')):
                 fout.write("   :inherited-members:\n")
         fout.write("\n")
         if name in children:
