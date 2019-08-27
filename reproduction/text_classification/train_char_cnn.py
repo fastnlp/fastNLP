@@ -135,12 +135,8 @@ else:
 
 def wordtochar(words):
     chars = []
-    for word in words:
-        #word = word.lower()
-        for char in word:
-            chars.append(char)
-        chars.append('')
-    chars.pop()
+    for char in words:
+        chars.append(char)
     return chars
 
 #chartoindex
