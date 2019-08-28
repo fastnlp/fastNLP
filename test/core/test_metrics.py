@@ -338,6 +338,41 @@ class SpanF1PreRecMetric(unittest.TestCase):
         for key, value in expected_metric.items():
             self.assertAlmostEqual(value, metric_value[key], places=5)
 
+    def test_encoding_type(self):
+        # 检查传入的tag_vocab与encoding_type不符合时，是否会报错
+        vocabs = {}
+        import random
+        from itertools import product
+        for encoding_type in ['bio', 'bioes', 'bmeso']:
+            vocab = Vocabulary(unknown=None, padding=None)
+            for i in range(random.randint(10, 100)):
+                label = str(random.randint(1, 10))
+                for tag in encoding_type:
+                    if tag!='o':
+                        vocab.add_word(f'{tag}-{label}')
+                    else:
+                        vocab.add_word('o')
+            vocabs[encoding_type] = vocab
+        for e1, e2 in product(['bio', 'bioes', 'bmeso'], ['bio', 'bioes', 'bmeso']):
+            with self.subTest(e1=e1, e2=e2):
+                if e1==e2:
+                    metric = SpanFPreRecMetric(vocabs[e1], encoding_type=e2)
+                else:
+                    s2 = set(e2)
+                    s2.update(set(e1))
+                    if s2==set(e2):
+                        continue
+                    with self.assertRaises(AssertionError):
+                        metric = SpanFPreRecMetric(vocabs[e1], encoding_type=e2)
+        for encoding_type in ['bio', 'bioes', 'bmeso']:
+            with self.assertRaises(AssertionError):
+                metric = SpanFPreRecMetric(vocabs[encoding_type], encoding_type='bmes')
+
+        with self.assertWarns(Warning):
+            vocab = Vocabulary(unknown=None, padding=None).add_word_lst(list('bmes'))
+            metric = SpanFPreRecMetric(vocab, encoding_type='bmeso')
+            vocab = Vocabulary().add_word_lst(list('bmes'))
+            metric = SpanFPreRecMetric(vocab, encoding_type='bmeso')
 
 class TestUsefulFunctions(unittest.TestCase):
     # 测试metrics.py中一些看上去挺有用的函数
