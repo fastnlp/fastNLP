@@ -505,7 +505,7 @@ def _check_tag_vocab_and_encoding_type(vocab:Vocabulary, encoding_type:str):
     for tag, idx in vocab:
         if idx in (vocab.unknown_idx, vocab.padding_idx):
             continue
-        tag = tag[:1]
+        tag = tag[:1].lower()
         tag_set.add(tag)
     tags = encoding_type
     for tag in tag_set:
