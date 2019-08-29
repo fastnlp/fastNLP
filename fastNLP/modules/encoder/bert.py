@@ -143,7 +143,7 @@ def _get_bert_dir(model_dir_or_name: str = 'en-base-uncased'):
     else:
         logger.error(f"Cannot recognize BERT dir or name ``{model_dir_or_name}``.")
         raise ValueError(f"Cannot recognize BERT dir or name ``{model_dir_or_name}``.")
-    return model_dir
+    return str(model_dir)
 
 
 class BertLayerNorm(nn.Module):
@@ -453,6 +453,9 @@ class BertModel(nn.Module):
         if state_dict is None:
             weights_path = _get_file_name_base_on_postfix(pretrained_model_dir, '.bin')
             state_dict = torch.load(weights_path, map_location='cpu')
+        else:
+            logger.error(f'Cannot load parameters through `state_dict` variable.')
+            raise RuntimeError(f'Cannot load parameters through `state_dict` variable.')
 
         old_keys = []
         new_keys = []
@@ -493,7 +496,7 @@ class BertModel(nn.Module):
             logger.warn("Weights from pretrained model not used in {}: {}".format(
                 model.__class__.__name__, unexpected_keys))
 
-        logger.info(f"Load pre-trained BERT parameters from dir {pretrained_model_dir}.")
+        logger.info(f"Load pre-trained BERT parameters from file {weights_path}.")
         return model
 
 
@@ -854,9 +857,8 @@ class _WordPieceBertModel(nn.Module):
     def __init__(self, model_dir_or_name: str, layers: str = '-1', pooled_cls: bool=False):
         super().__init__()
 
-        self.model_dir = _get_bert_dir(model_dir_or_name)
-        self.tokenzier = BertTokenizer.from_pretrained(self.model_dir)
-        self.encoder = BertModel.from_pretrained(self.model_dir)
+        self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
+        self.encoder = BertModel.from_pretrained(model_dir_or_name)
         #  检查encoder_layer_number是否合理
         encoder_layer_number = len(self.encoder.encoder.layer)
         self.layers = list(map(int, layers.split(',')))
