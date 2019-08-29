@@ -22,17 +22,7 @@ class Config():
     bert_embedding_larers= '4,-2,-1'
     train_epoch= 100
     num_classes=2
-    task= "sst-2"
-    #yelp_p
-    datapath = {"train": "/remote-home/ygwang/yelp_polarity/train.csv",
-               "test": "/remote-home/ygwang/yelp_polarity/test.csv"}
-    #IMDB
-    #datapath = {"train": "/remote-home/ygwang/IMDB_data/train.csv",
-    #           "test": "/remote-home/ygwang/IMDB_data/test.csv"}
-    # sst
-    # datapath = {"train": "/remote-home/ygwang/workspace/GLUE/SST-2/train.tsv",
-    #           "dev": "/remote-home/ygwang/workspace/GLUE/SST-2/dev.tsv"}
-
+    task= "yelp_p"
     lr=0.01
     batch_size=128
     model_size="large"
