@@ -20,13 +20,59 @@ from __future__ import division
 
 
 import torch
+import torch.nn.functional as F
+
 from rouge import Rouge
 
 from fastNLP.core.const import Const
 from fastNLP.core.metrics import MetricBase
 
-from tools.logger import *
+# from tools.logger import *
+from fastNLP.core._logger import logger
 from tools.utils import pyrouge_score_all, pyrouge_score_all_multi
+
+
+class LossMetric(MetricBase):
+    def __init__(self, pred=None, target=None, mask=None, padding_idx=-100, reduce='mean'):
+        super().__init__()
+
+        self._init_param_map(pred=pred, target=target, mask=mask)
+        self.padding_idx = padding_idx
+        self.reduce = reduce
+        self.loss = 0.0
+        self.iteration = 0
+
+    def evaluate(self, pred, target, mask):
+        """
+
+                :param pred: [batch, N, 2]
+                :param target: [batch, N]
+                :param input_mask: [batch, N]
+                :return: 
+                """
+
+        batch, N, _ = pred.size()
+        pred = pred.view(-1, 2)
+        target = target.view(-1)
+        loss = F.cross_entropy(input=pred, target=target,
+                               ignore_index=self.padding_idx, reduction=self.reduce)
+        loss = loss.view(batch, -1)
+        loss = loss.masked_fill(mask.eq(0), 0)
+        loss = loss.sum(1).mean()
+        self.loss += loss
+        self.iteration += 1
+
+    def get_metric(self, reset=True):
+        epoch_avg_loss = self.loss / self.iteration
+        if reset:
+            self.loss = 0.0
+            self.iteration = 0
+        metric = {"loss": -epoch_avg_loss}
+        logger.info(metric)
+        return metric
+
+
+
 
 class LabelFMetric(MetricBase):
     def __init__(self, pred=None, target=None):

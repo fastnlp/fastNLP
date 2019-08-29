@@ -21,6 +21,7 @@
 import os
 import sys
 import json
+import shutil
 import argparse
 import datetime
 
@@ -32,18 +33,23 @@ os.environ['FASTNLP_CACHE_DIR'] = '/remote-home/hyan01/fastnlp_caches'
 sys.path.append('/remote-home/dqwang/FastNLP/fastNLP_brxx/')
 
 
+from fastNLP.core._logger import logger
+# from fastNLP.core._logger import _init_logger
 from fastNLP.core.const import Const
 from fastNLP.core.trainer import Trainer, Tester
 from fastNLP.io.pipe.summarization import ExtCNNDMPipe
 from fastNLP.io.model_io import ModelLoader, ModelSaver
 from fastNLP.io.embed_loader import EmbedLoader
 
-from tools.logger import *
+# from tools.logger import *
 # from model.TransformerModel import TransformerModel
 from model.TForiginal import TransformerModel
-from model.Metric import LabelFMetric, FastRougeMetric, PyRougeMetric
+from model.LSTMModel import SummarizationModel
+from model.Metric import LossMetric, LabelFMetric, FastRougeMetric, PyRougeMetric
 from model.Loss import MyCrossEntropyLoss
 from tools.Callback import TrainCallback
+
+
 
 
 def setup_training(model, train_loader, valid_loader, hps):
@@ -60,32 +66,23 @@ def setup_training(model, train_loader, valid_loader, hps):
     else:
         logger.info("[INFO] Create new model for training...")
 
-    try:
-        run_training(model, train_loader, valid_loader, hps) # this is an infinite loop until interrupted
-    except KeyboardInterrupt:
-        logger.error("[Error] Caught keyboard interrupt on worker. Stopping supervisor...")
-        save_file = os.path.join(train_dir, "earlystop.pkl")
-        saver = ModelSaver(save_file)
-        saver.save_pytorch(model)
-        logger.info('[INFO] Saving early stop model to %s', save_file)
+    run_training(model, train_loader, valid_loader, hps) # this is an infinite loop until interrupted
 
 def run_training(model, train_loader, valid_loader, hps):
-    """Repeatedly runs training iterations, logging loss to screen and writing summaries"""
     logger.info("[INFO] Starting run_training")
 
     train_dir = os.path.join(hps.save_root, "train")
-    if not os.path.exists(train_dir): os.makedirs(train_dir)
+    if os.path.exists(train_dir): shutil.rmtree(train_dir)
+    os.makedirs(train_dir)
     eval_dir = os.path.join(hps.save_root, "eval")  # make a subdir of the root dir for eval data
     if not os.path.exists(eval_dir): os.makedirs(eval_dir)
 
-    lr = hps.lr
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=hps.lr)
     criterion = MyCrossEntropyLoss(pred = "p_sent", target=Const.TARGET, mask=Const.INPUT_LEN, reduce='none')
-    # criterion = torch.nn.CrossEntropyLoss(reduce="none")
 
     trainer = Trainer(model=model, train_data=train_loader, optimizer=optimizer, loss=criterion,
-                      n_epochs=hps.n_epochs, print_every=100, dev_data=valid_loader, metrics=[LabelFMetric(pred="prediction"), FastRougeMetric(hps, pred="prediction")],
-                      metric_key="f", validate_every=-1, save_path=eval_dir,
+                      n_epochs=hps.n_epochs, print_every=100, dev_data=valid_loader, metrics=[LossMetric(pred = "p_sent", target=Const.TARGET, mask=Const.INPUT_LEN, reduce='none'), LabelFMetric(pred="prediction"), FastRougeMetric(hps, pred="prediction")],
+                      metric_key="loss", validate_every=-1, save_path=eval_dir,
                       callbacks=[TrainCallback(hps, patience=5)], use_tqdm=False)
 
     train_info = trainer.train(load_best_model=True)
@@ -98,8 +95,8 @@ def run_training(model, train_loader, valid_loader, hps):
     saver.save_pytorch(model)
     logger.info('[INFO] Saving eval best model to %s', bestmodel_save_path)
 
-def run_test(model, loader, hps, limited=False):
-    """Repeatedly runs eval iterations, logging to screen and writing summaries. Saves the model with the best loss seen so far."""
+
+def run_test(model, loader, hps):
     test_dir = os.path.join(hps.save_root, "test") # make a subdir of the root dir for eval data
     eval_dir = os.path.join(hps.save_root, "eval")
     if not os.path.exists(test_dir) : os.makedirs(test_dir)
@@ -113,8 +110,8 @@ def run_test(model, loader, hps, limited=False):
         train_dir = os.path.join(hps.save_root, "train")
         bestmodel_load_path = os.path.join(train_dir, 'earlystop.pkl')
     else:
-        logger.error("None of such model! Must be one of evalbestmodel/trainbestmodel/earlystop")
-        raise ValueError("None of such model! Must be one of evalbestmodel/trainbestmodel/earlystop")
+        logger.error("None of such model! Must be one of evalbestmodel/earlystop")
+        raise ValueError("None of such model! Must be one of evalbestmodel/earlystop")
     logger.info("[INFO] Restoring %s for testing...The path is %s", hps.test_model, bestmodel_load_path)
 
     modelloader = ModelLoader()
@@ -174,13 +171,11 @@ def main():
     # Training
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     parser.add_argument('--lr_descent', action='store_true', default=False, help='learning rate descent')
-    parser.add_argument('--warmup_steps', type=int, default=4000, help='warmup_steps')
     parser.add_argument('--grad_clip', action='store_true', default=False, help='for gradient clipping')
     parser.add_argument('--max_grad_norm', type=float, default=10, help='for gradient clipping max gradient normalization')
 
     # test
     parser.add_argument('-m', type=int, default=3, help='decode summary length')
-    parser.add_argument('--limited', action='store_true', default=False, help='limited decode summary length')
     parser.add_argument('--test_model', type=str, default='evalbestmodel', help='choose different model to test [evalbestmodel/evalbestFmodel/trainbestmodel/trainbestFmodel/earlystop]')
     parser.add_argument('--use_pyrouge', action='store_true', default=False, help='use_pyrouge')
 
@@ -195,21 +190,22 @@ def main():
     VOCAL_FILE = args.vocab_path
     LOG_PATH = args.log_root
 
-    # train_log setting
+    # # train_log setting
     if not os.path.exists(LOG_PATH):
         if args.mode == "train":
             os.makedirs(LOG_PATH)
         else:
-            logger.exception("[Error] Logdir %s doesn't exist. Run in train mode to create it.", LOG_PATH)
             raise Exception("[Error] Logdir %s doesn't exist. Run in train mode to create it." % (LOG_PATH))
     nowTime=datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     log_path = os.path.join(LOG_PATH, args.mode + "_" + nowTime)
-    file_handler = logging.FileHandler(log_path)
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+    # logger = _init_logger(path=log_path)
+    # file_handler = logging.FileHandler(log_path)
+    # file_handler.setFormatter(formatter)
+    # logger.addHandler(file_handler)
 
     logger.info("Pytorch %s", torch.__version__)
 
+    # dataset
     hps = args
     dbPipe = ExtCNNDMPipe(vocab_size=hps.vocab_size,
                           vocab_path=VOCAL_FILE,
@@ -225,6 +221,8 @@ def main():
         paths = {"train": DATA_FILE, "valid": VALID_FILE}
         db = dbPipe.process_from_file(paths)
 
+
+    # embedding
     if args.embedding == "glove":
         vocab = db.get_vocab("vocab")
         embed = torch.nn.Embedding(len(vocab), hps.word_emb_dim)
@@ -237,19 +235,24 @@ def main():
         logger.error("[ERROR] embedding To Be Continued!")
         sys.exit(1)
 
+    # model
     if args.sentence_encoder == "transformer" and args.sentence_decoder == "SeqLab":
         model_param = json.load(open("config/transformer.config", "rb"))
         hps.__dict__.update(model_param)
         model = TransformerModel(hps, embed)
+    elif args.sentence_encoder == "deeplstm" and args.sentence_decoder == "SeqLab":
+        model_param = json.load(open("config/deeplstm.config", "rb"))
+        hps.__dict__.update(model_param)
+        model = SummarizationModel(hps, embed)
     else:
         logger.error("[ERROR] Model To Be Continued!")
         sys.exit(1)
-
-    logger.info(hps)
-
     if hps.cuda:
         model = model.cuda()
         logger.info("[INFO] Use cuda")
+
+    logger.info(hps)
+
     if hps.mode == 'train':
         db.get_dataset("valid").set_target("text", "summary")
         setup_training(model, db.get_dataset("train"), db.get_dataset("valid"), hps)

@@ -21,7 +21,7 @@ import torch
 import torch.nn.functional as F
 
 from fastNLP.core.losses import LossBase
-from tools.logger import *
+from fastNLP.core._logger import logger
 
 class MyCrossEntropyLoss(LossBase):
     def __init__(self, pred=None, target=None, mask=None, padding_idx=-100, reduce='mean'):

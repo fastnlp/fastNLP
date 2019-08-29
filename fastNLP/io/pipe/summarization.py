@@ -62,7 +62,7 @@ class ExtCNNDMPipe(Pipe):
         db.set_input(Const.INPUT, Const.INPUT_LEN)
         db.set_target(Const.TARGET, Const.INPUT_LEN)
 
-        print("[INFO] Load existing vocab from %s!" % self.vocab_path)
+        # print("[INFO] Load existing vocab from %s!" % self.vocab_path)
         word_list = []
         with open(self.vocab_path, 'r', encoding='utf8') as vocab_f:
             cnt = 2  # pad and unk
