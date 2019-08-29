@@ -41,7 +41,7 @@ class MNLILoader(Loader):
         ds = DataSet()
         with open(path, 'r', encoding='utf-8') as f:
             f.readline()  # 跳过header
-            if path.endswith("test.tsv"):
+            if path.endswith("test_matched.tsv") or path.endswith('test_mismatched.tsv'):
                 warnings.warn("RTE's test file has no target.")
                 for line in f:
                     line = line.strip()

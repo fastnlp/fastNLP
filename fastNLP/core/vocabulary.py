@@ -253,7 +253,7 @@ class Vocabulary(object):
         if self.unknown is not None:
             return self.word2idx[self.unknown]
         else:
-            raise ValueError("word {} not in vocabulary".format(w))
+            raise ValueError("word `{}` not in vocabulary".format(w))
     
     @_check_build_vocab
     def index_dataset(self, *datasets, field_name, new_field_name=None):
@@ -360,7 +360,7 @@ class Vocabulary(object):
                 try:
                     dataset.apply(construct_vocab)
                 except BaseException as e:
-                    log("When processing the `{}` dataset, the following error occurred:".format(idx))
+                    logger.error("When processing the `{}` dataset, the following error occurred:".format(idx))
                     raise e
             else:
                 raise TypeError("Only DataSet type is allowed.")

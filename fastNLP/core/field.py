@@ -595,7 +595,7 @@ class AutoPadder(Padder):
                     max_len = max(map(len, contents))
                     tensor = torch.full((len(contents), max_len), fill_value=self.pad_val, dtype=field_ele_dtype)
                     for i, content_i in enumerate(contents):
-                        tensor[i, :len(content_i)] = torch.tensor(content_i)
+                        tensor[i, :len(content_i)] = content_i.clone().detach()
                 elif dim == 2:
                     max_len = max(map(len, contents))
                     max_word_len = max([max([len(content_ii) for content_ii in content_i]) for
@@ -604,7 +604,7 @@ class AutoPadder(Padder):
                                         dtype=field_ele_dtype)
                     for i, content_i in enumerate(contents):
                         for j, content_ii in enumerate(content_i):
-                            tensor[i, j, :len(content_ii)] = torch.tensor(content_ii)
+                            tensor[i, j, :len(content_ii)] = content_ii.clone().detach()
                 else:
                     shapes = set([np.shape(content_i) for content_i in contents])
                     if len(shapes) > 1:
@@ -615,7 +615,7 @@ class AutoPadder(Padder):
                         tensor = torch.full([len(contents)] + list(shape), fill_value=self.pad_val,
                                             dtype=field_ele_dtype)
                         for i, content_i in enumerate(contents):
-                            tensor[i] = torch.tensor(content_i, dtype=field_ele_dtype)
+                            tensor[i] = content_i.clone().detach().to(field_ele_dtype)
                     else:
                         raise RuntimeError(
                             f"Field:{field_name} has 3 dimensions, every sample should have the same shape.")
