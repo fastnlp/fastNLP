@@ -49,7 +49,7 @@ class NullOptimizer(Optimizer):
         super().__init__(None)
 
     def construct_from_pytorch(self, model_params):
-        pass
+        return self
 
     def __getattr__(self, item):
         def pass_func(*args, **kwargs):

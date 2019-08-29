@@ -1,3 +1,8 @@
+"""
+.. todo::
+    doc
+"""
+
 __all__ = [
     "CNNText"
 ]
@@ -7,8 +12,8 @@ import torch.nn as nn
 
 from ..core.const import Const as C
 from ..core.utils import seq_len_to_mask
-from ..modules import encoder
 from ..embeddings import embedding
+from ..modules import encoder
 
 
 class CNNText(torch.nn.Module):
@@ -25,14 +30,14 @@ class CNNText(torch.nn.Module):
     :param int,tuple(int) kernel_sizes: 输出channel的kernel大小。
     :param float dropout: Dropout的大小
     """
-    
+
     def __init__(self, init_embed,
                  num_classes,
                  kernel_nums=(30, 40, 50),
                  kernel_sizes=(1, 3, 5),
                  dropout=0.5):
         super(CNNText, self).__init__()
-        
+
         # no support for pre-trained embedding currently
         self.embed = embedding.Embedding(init_embed)
         self.conv_pool = encoder.ConvMaxpool(
@@ -41,7 +46,7 @@ class CNNText(torch.nn.Module):
             kernel_sizes=kernel_sizes)
         self.dropout = nn.Dropout(dropout)
         self.fc = nn.Linear(sum(kernel_nums), num_classes)
-    
+
     def forward(self, words, seq_len=None):
         """
 
@@ -58,7 +63,7 @@ class CNNText(torch.nn.Module):
         x = self.dropout(x)
         x = self.fc(x)  # [N,C] -> [N, N_class]
         return {C.OUTPUT: x}
-    
+
     def predict(self, words, seq_len=None):
         """
         :param torch.LongTensor words: [batch_size, seq_len]，句子中word的index

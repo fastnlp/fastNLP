@@ -8,10 +8,8 @@ __all__ = [
 
 import torch
 
-from .base_loader import BaseLoader
 
-
-class ModelLoader(BaseLoader):
+class ModelLoader:
     """
     别名：:class:`fastNLP.io.ModelLoader` :class:`fastNLP.io.model_io.ModelLoader`
 

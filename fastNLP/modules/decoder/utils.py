@@ -1,3 +1,5 @@
+"""undocumented"""
+
 __all__ = [
     "viterbi_decode"
 ]
@@ -6,7 +8,7 @@ import torch
 
 def viterbi_decode(logits, transitions, mask=None, unpad=False):
     r"""
-    别名：:class:`fastNLP.modules.viterbi_decode`  :class:`fastNLP.modules.decoder.utils.viterbi_decode`
+    别名：:class:`fastNLP.modules.viterbi_decode`  :class:`fastNLP.modules.decoder.viterbi_decode`
 
     给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
 
@@ -27,14 +29,14 @@ def viterbi_decode(logits, transitions, mask=None, unpad=False):
             "compatible."
     logits = logits.transpose(0, 1).data  # L, B, H
     if mask is not None:
-        mask = mask.transpose(0, 1).data.byte()  # L, B
+        mask = mask.transpose(0, 1).data.eq(1)  # L, B
     else:
         mask = logits.new_ones((seq_len, batch_size), dtype=torch.uint8)
-    
+
     # dp
     vpath = logits.new_zeros((seq_len, batch_size, n_tags), dtype=torch.long)
     vscore = logits[0]
-    
+
     trans_score = transitions.view(1, n_tags, n_tags).data
     for i in range(1, seq_len):
         prev_score = vscore.view(batch_size, n_tags, 1)
@@ -44,14 +46,14 @@ def viterbi_decode(logits, transitions, mask=None, unpad=False):
         vpath[i] = best_dst
         vscore = best_score.masked_fill(mask[i].eq(0).view(batch_size, 1), 0) + \
                  vscore.masked_fill(mask[i].view(batch_size, 1), 0)
-    
+
     # backtrace
     batch_idx = torch.arange(batch_size, dtype=torch.long, device=logits.device)
     seq_idx = torch.arange(seq_len, dtype=torch.long, device=logits.device)
     lens = (mask.long().sum(0) - 1)
     # idxes [L, B], batched idx from seq_len-1 to 0
     idxes = (lens.view(1, -1) - seq_idx.view(-1, 1)) % seq_len
-    
+
     ans = logits.new_empty((seq_len, batch_size), dtype=torch.long)
     ans_score, last_tags = vscore.max(1)
     ans[idxes[0], batch_idx] = last_tags

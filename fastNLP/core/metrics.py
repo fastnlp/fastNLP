@@ -23,6 +23,7 @@ from .utils import _get_func_signature
 from .utils import seq_len_to_mask
 from .vocabulary import Vocabulary
 from abc import abstractmethod
+import warnings
 
 
 class MetricBase(object):
@@ -118,6 +119,7 @@ class MetricBase(object):
     def __init__(self):
         self._param_map = {}  # key is param in function, value is input param.
         self._checked = False
+        self._metric_name = self.__class__.__name__
 
     @property
     def param_map(self):
@@ -135,6 +137,23 @@ class MetricBase(object):
     @abstractmethod
     def get_metric(self, reset=True):
         raise NotImplemented
+
+    def set_metric_name(self, name:str):
+        """
+        设置metric的名称，默认是Metric的class name.
+
+        :param str name:
+        :return: self
+        """
+        self._metric_name = name
+        return self
+
+    def get_metric_name(self):
+        """
+        返回metric的名称
+        :return:
+        """
+        return self._metric_name
     
     def _init_param_map(self, key_map=None, **kwargs):
         """检查key_map和其他参数map，并将这些映射关系添加到self._param_map
@@ -358,6 +377,7 @@ def _bmes_tag_to_spans(tags, ignore_labels=None):
     """
     给定一个tags的lis，比如['S-song', 'B-singer', 'M-singer', 'E-singer', 'S-moive', 'S-actor']。
     返回[('song', (0, 1)), ('singer', (1, 4)), ('moive', (4, 5)), ('actor', (5, 6))] (左闭右开区间)
+    也可以是单纯的['S', 'B', 'M', 'E', 'B', 'M', 'M',...]序列
 
     :param tags: List[str],
     :param ignore_labels: List[str], 在该list中的label将被忽略
@@ -473,6 +493,30 @@ def _bio_tag_to_spans(tags, ignore_labels=None):
     return [(span[0], (span[1][0], span[1][1] + 1)) for span in spans if span[0] not in ignore_labels]
 
 
+def _check_tag_vocab_and_encoding_type(vocab:Vocabulary, encoding_type:str):
+    """
+    检查vocab中的tag是否与encoding_type是匹配的
+
+    :param vocab: target的Vocabulary
+    :param encoding_type: bio, bmes, bioes, bmeso
+    :return:
+    """
+    tag_set = set()
+    for tag, idx in vocab:
+        if idx in (vocab.unknown_idx, vocab.padding_idx):
+            continue
+        tag = tag[:1].lower()
+        tag_set.add(tag)
+    tags = encoding_type
+    for tag in tag_set:
+        assert tag in tags, f"{tag} is not a valid tag in encoding type:{encoding_type}. Please check your " \
+            f"encoding_type."
+        tags = tags.replace(tag, '')  # 删除该值
+    if tags:  # 如果不为空，说明出现了未使用的tag
+        warnings.warn(f"Tag:{tags} in encoding type:{encoding_type} is not presented in your Vocabulary. Check your "
+                      "encoding_type.")
+
+
 class SpanFPreRecMetric(MetricBase):
     r"""
     别名：:class:`fastNLP.SpanFPreRecMetric` :class:`fastNLP.core.metrics.SpanFPreRecMetric`
@@ -527,6 +571,7 @@ class SpanFPreRecMetric(MetricBase):
             raise ValueError("f_type only supports `micro` or `macro`', got {}.".format(f_type))
         
         self.encoding_type = encoding_type
+        _check_tag_vocab_and_encoding_type(tag_vocab, encoding_type)
         if self.encoding_type == 'bmes':
             self.tag_to_span_func = _bmes_tag_to_spans
         elif self.encoding_type == 'bio':
@@ -624,7 +669,7 @@ class SpanFPreRecMetric(MetricBase):
                 f, pre, rec = self._compute_f_pre_rec(tp, fn, fp)
                 f_sum += f
                 pre_sum += pre
-                rec_sum + rec
+                rec_sum += rec
                 if not self.only_gross and tag != '':  # tag!=''防止无tag的情况
                     f_key = 'f-{}'.format(tag)
                     pre_key = 'pre-{}'.format(tag)
@@ -814,8 +859,8 @@ class ExtractiveQAMetric(MetricBase):
             if not self.right_open:
                 e += 1
                 te += 1
-            if ts == 0 and te == int(not self.right_open):
-                if s == 0 and e == int(not self.right_open):
+            if ts == 0 and te == 1:
+                if s == 0 and e == 1:
                     self.no_ans_correct += 1
                     self.no2no += 1
                 else:

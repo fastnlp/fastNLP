@@ -7,7 +7,7 @@ from fastNLP import AccuracyMetric
 from fastNLP.core.metrics import _pred_topk, _accuracy_topk
 from fastNLP.core.vocabulary import Vocabulary
 from collections import Counter
-from fastNLP.core.metrics import SpanFPreRecMetric
+from fastNLP.core.metrics import SpanFPreRecMetric, ExtractiveQAMetric
 
 
 def _generate_tags(encoding_type, number_labels=4):
@@ -338,6 +338,41 @@ class SpanF1PreRecMetric(unittest.TestCase):
         for key, value in expected_metric.items():
             self.assertAlmostEqual(value, metric_value[key], places=5)
 
+    def test_encoding_type(self):
+        # 检查传入的tag_vocab与encoding_type不符合时，是否会报错
+        vocabs = {}
+        import random
+        from itertools import product
+        for encoding_type in ['bio', 'bioes', 'bmeso']:
+            vocab = Vocabulary(unknown=None, padding=None)
+            for i in range(random.randint(10, 100)):
+                label = str(random.randint(1, 10))
+                for tag in encoding_type:
+                    if tag!='o':
+                        vocab.add_word(f'{tag}-{label}')
+                    else:
+                        vocab.add_word('o')
+            vocabs[encoding_type] = vocab
+        for e1, e2 in product(['bio', 'bioes', 'bmeso'], ['bio', 'bioes', 'bmeso']):
+            with self.subTest(e1=e1, e2=e2):
+                if e1==e2:
+                    metric = SpanFPreRecMetric(vocabs[e1], encoding_type=e2)
+                else:
+                    s2 = set(e2)
+                    s2.update(set(e1))
+                    if s2==set(e2):
+                        continue
+                    with self.assertRaises(AssertionError):
+                        metric = SpanFPreRecMetric(vocabs[e1], encoding_type=e2)
+        for encoding_type in ['bio', 'bioes', 'bmeso']:
+            with self.assertRaises(AssertionError):
+                metric = SpanFPreRecMetric(vocabs[encoding_type], encoding_type='bmes')
+
+        with self.assertWarns(Warning):
+            vocab = Vocabulary(unknown=None, padding=None).add_word_lst(list('bmes'))
+            metric = SpanFPreRecMetric(vocab, encoding_type='bmeso')
+            vocab = Vocabulary().add_word_lst(list('bmes'))
+            metric = SpanFPreRecMetric(vocab, encoding_type='bmeso')
 
 class TestUsefulFunctions(unittest.TestCase):
     # 测试metrics.py中一些看上去挺有用的函数
@@ -347,3 +382,46 @@ class TestUsefulFunctions(unittest.TestCase):
         _ = _pred_topk(np.random.randint(0, 3, size=(10, 1)))
         
         # 跑通即可
+
+
+class TestExtractiveQAMetric(unittest.TestCase):
+
+    def test_cast_1(self):
+        qa_prediction = torch.FloatTensor([[[-0.4424, -0.4579, -0.7376, 1.8129, 0.1316, 1.6566, -1.2169,
+                                            -0.3782, 0.8240],
+                                           [-1.2348, -0.1876, -0.1462, -0.4834, -0.6692, -0.9735, -1.1563,
+                                            -0.3562, -1.4116],
+                                           [-1.6550, -0.9555, 0.3782, -1.3160, -1.5835, -0.3443, -1.7858,
+                                            -2.0023, 0.0075],
+                                           [-0.3772, -0.5447, -1.5631, 1.1614, 1.4598, -1.2764, 0.5186,
+                                            0.3832, -0.1540],
+                                           [-0.1011, 0.0600, 1.1090, -0.3545, 0.1284, 1.1484, -1.0120,
+                                            -1.3508, -0.9513],
+                                           [1.8948, 0.8627, -2.1359, 1.3740, -0.7499, 1.5019, 0.6919,
+                                            -0.0842, -0.4294]],
+
+                                          [[-0.2802, 0.6941, -0.4788, -0.3845, 1.7752, 1.2950, -1.9490,
+                                            -1.4138, -0.8853],
+                                           [-1.3752, -0.5457, -0.5305, 0.4018, 0.2934, 0.7931, 2.3845,
+                                            -1.0726, 0.0364],
+                                           [0.3621, 0.2609, 0.1269, -0.5950, 0.7212, 0.5959, 1.6264,
+                                            -0.8836, -0.9320],
+                                           [0.2003, -1.0758, -1.1560, -0.6472, -1.7549, 0.1264, 0.6044,
+                                            -1.6857, 1.1571],
+                                           [1.4277, -0.4915, 0.4496, 2.2027, 0.0730, -3.1792, -0.5125,
+                                            3.5837, 1.0184],
+                                           [1.6495, 1.7145, -0.2143, -0.1230, -0.2205, 0.8250, 0.4943,
+                                            -0.9025, 0.0864]]])
+        qa_prediction = qa_prediction.permute(1, 2, 0)
+        pred1, pred2 = qa_prediction.split(1, dim=-1)
+        pred1 = pred1.squeeze(-1)
+        pred2 = pred2.squeeze(-1)
+        target1 = torch.LongTensor([3, 0, 2, 4, 4, 0])
+        target2 = torch.LongTensor([4, 1, 6, 8, 7, 1])
+        metric = ExtractiveQAMetric()
+        metric.evaluate(pred1, pred2, target1, target2)
+        result = metric.get_metric()
+        truth = {'EM': 62.5, 'f_1': 72.5, 'noAns-f_1': 50.0, 'noAns-EM': 50.0, 'hasAns-f_1': 95.0, 'hasAns-EM': 75.0}
+        for k, v in truth.items():
+            self.assertTrue(k in result)
+            self.assertEqual(v, result[k])

@@ -60,7 +60,7 @@
             seq_len=3)
         ])
 
-在初步构建完数据集之后，我们可可以通过 `for` 循环遍历 :class:`~fastNLP.DataSet` 中的内容。
+在初步构建完数据集之后，我们可以通过 `for` 循环遍历 :class:`~fastNLP.DataSet` 中的内容。
 
 .. code-block:: python
 

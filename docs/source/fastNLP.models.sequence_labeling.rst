@@ -1,7 +1,6 @@
-fastNLP.models.sequence\_labeling
-=================================
+fastNLP.models.sequence_labeling
+================================
 
 .. automodule:: fastNLP.models.sequence_labeling
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members: SeqLabeling, AdvSeqLabel
+

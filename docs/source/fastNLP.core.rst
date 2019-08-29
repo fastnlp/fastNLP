@@ -2,15 +2,12 @@ fastNLP.core
 ============
 
 .. automodule:: fastNLP.core
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 子模块
-----------
+------
 
 .. toctree::
-   :titlesonly:
+   :maxdepth: 1
 
    fastNLP.core.batch
    fastNLP.core.callback
@@ -26,4 +23,3 @@ fastNLP.core
    fastNLP.core.trainer
    fastNLP.core.utils
    fastNLP.core.vocabulary
-

@@ -224,11 +224,11 @@ class CharBiaffineParser(BiaffineParser):
 
         batch_size, seq_len, _ = arc_pred.shape
         flip_mask = (mask == 0)
-        _arc_pred = arc_pred.clone()
-        _arc_pred.masked_fill_(flip_mask.unsqueeze(1), -float('inf'))
+        # _arc_pred = arc_pred.clone()
+        _arc_pred = arc_pred.masked_fill(flip_mask.unsqueeze(1), -float('inf'))
 
-        arc_true[:, 0].fill_(-1)
-        label_true[:, 0].fill_(-1)
+        arc_true.data[:, 0].fill_(-1)
+        label_true.data[:, 0].fill_(-1)
 
         arc_nll = F.cross_entropy(_arc_pred.view(-1, seq_len), arc_true.view(-1), ignore_index=-1)
         label_nll = F.cross_entropy(label_pred.view(-1, label_pred.size(-1)), label_true.view(-1), ignore_index=-1)

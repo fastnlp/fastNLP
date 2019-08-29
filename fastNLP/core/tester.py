@@ -32,8 +32,15 @@ Tester在验证进行之前会调用model.eval()提示当前进入了evaluation�
 
 
 """
+import time
+
 import torch
 import torch.nn as nn
+
+try:
+    from tqdm.auto import tqdm
+except:
+    from .utils import _pseudo_tqdm as tqdm
 
 from .batch import BatchIter, DataSetIter
 from .dataset import DataSet
@@ -47,7 +54,9 @@ from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
 from ._parallel_utils import _data_parallel_wrapper
+from ._parallel_utils import _model_contains_inner_module
 from functools import partial
+from ._logger import logger
 
 __all__ = [
     "Tester"
@@ -79,13 +88,12 @@ class Tester(object):
 
         如果模型是通过predict()进行预测的话，那么将不能使用多卡(DataParallel)进行验证，只会使用第一张卡上的模型。
     :param int verbose: 如果为0不输出任何信息; 如果为1，打印出验证结果。
+    :param bool use_tqdm: 是否使用tqdm来显示测试进度; 如果为False，则不会显示任何内容。
     """
     
-    def __init__(self, data, model, metrics, batch_size=16, num_workers=0, device=None, verbose=1):
+    def __init__(self, data, model, metrics, batch_size=16, num_workers=0, device=None, verbose=1, use_tqdm=True):
         super(Tester, self).__init__()
-        
-        if not isinstance(data, DataSet):
-            raise TypeError(f"The type of data must be `fastNLP.DataSet`, got `{type(data)}`.")
+
         if not isinstance(model, nn.Module):
             raise TypeError(f"The type of model must be `torch.nn.Module`, got `{type(model)}`.")
         
@@ -95,6 +103,8 @@ class Tester(object):
         self._model = _move_model_to_device(model, device=device)
         self.batch_size = batch_size
         self.verbose = verbose
+        self.use_tqdm = use_tqdm
+        self.logger = logger
 
         if isinstance(data, DataSet):
             self.data_iterator = DataSetIter(
@@ -106,19 +116,22 @@ class Tester(object):
 
         # check predict
         if (hasattr(self._model, 'predict') and callable(self._model.predict)) or \
-            (isinstance(self._model, nn.DataParallel) and hasattr(self._model.module, 'predict') and
-              callable(self._model.module.predict)):
+                (_model_contains_inner_module(self._model) and hasattr(self._model.module, 'predict') and
+                 callable(self._model.module.predict)):
             if isinstance(self._model, nn.DataParallel):
                 self._predict_func_wrapper = partial(_data_parallel_wrapper('predict',
                                                                     self._model.device_ids,
                                                                     self._model.output_device),
                                                      network=self._model.module)
+                self._predict_func = self._model.module.predict  # 用于匹配参数
+            elif isinstance(self._model, nn.parallel.DistributedDataParallel):
                 self._predict_func = self._model.module.predict
+                self._predict_func_wrapper = self._model.module.predict  # 用于调用
             else:
                 self._predict_func = self._model.predict
                 self._predict_func_wrapper = self._model.predict
         else:
-            if isinstance(self._model, nn.DataParallel):
+            if _model_contains_inner_module(model):
                 self._predict_func_wrapper = self._model.forward
                 self._predict_func = self._model.module.forward
             else:
@@ -139,21 +152,39 @@ class Tester(object):
         eval_results = {}
         try:
             with torch.no_grad():
-                for batch_x, batch_y in data_iterator:
-                    _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
-                    pred_dict = self._data_forward(self._predict_func, batch_x)
-                    if not isinstance(pred_dict, dict):
-                        raise TypeError(f"The return value of {_get_func_signature(self._predict_func)} "
-                                        f"must be `dict`, got {type(pred_dict)}.")
+                if not self.use_tqdm:
+                    from .utils import _pseudo_tqdm as inner_tqdm
+                else:
+                    inner_tqdm = tqdm
+                with inner_tqdm(total=len(data_iterator), leave=False, dynamic_ncols=True) as pbar:
+                    pbar.set_description_str(desc="Test")
+
+                    start_time = time.time()
+
+                    for batch_x, batch_y in data_iterator:
+                        _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
+                        pred_dict = self._data_forward(self._predict_func, batch_x)
+                        if not isinstance(pred_dict, dict):
+                            raise TypeError(f"The return value of {_get_func_signature(self._predict_func)} "
+                                            f"must be `dict`, got {type(pred_dict)}.")
+                        for metric in self.metrics:
+                            metric(pred_dict, batch_y)
+
+                        if self.use_tqdm:
+                            pbar.update()
+
                     for metric in self.metrics:
-                        metric(pred_dict, batch_y)
-                for metric in self.metrics:
-                    eval_result = metric.get_metric()
-                    if not isinstance(eval_result, dict):
-                        raise TypeError(f"The return value of {_get_func_signature(metric.get_metric)} must be "
-                                        f"`dict`, got {type(eval_result)}")
-                    metric_name = metric.__class__.__name__
-                    eval_results[metric_name] = eval_result
+                        eval_result = metric.get_metric()
+                        if not isinstance(eval_result, dict):
+                            raise TypeError(f"The return value of {_get_func_signature(metric.get_metric)} must be "
+                                            f"`dict`, got {type(eval_result)}")
+                        metric_name = metric.get_metric_name()
+                        eval_results[metric_name] = eval_result
+                    pbar.close()
+                    end_time = time.time()
+                    test_str = f'Evaluate data in {round(end_time - start_time, 2)} seconds!'
+                    # pbar.write(test_str)
+                    self.logger.info(test_str)
         except _CheckError as e:
             prev_func_signature = _get_func_signature(self._predict_func)
             _check_loss_evaluate(prev_func_signature=prev_func_signature, func_signature=e.func_signature,
@@ -161,7 +192,7 @@ class Tester(object):
                                  dataset=self.data, check_level=0)
         
         if self.verbose >= 1:
-            print("[tester] \n{}".format(self._format_eval_results(eval_results)))
+            logger.info("[tester] \n{}".format(self._format_eval_results(eval_results)))
         self._mode(network, is_test=False)
         return eval_results
     

@@ -15,12 +15,12 @@ class BiLSTMSentiment(nn.Module):
         super(BiLSTMSentiment,self).__init__()
         self.embed = get_embeddings(init_embed)
         self.lstm = LSTM(input_size=self.embed.embedding_dim, hidden_size=hidden_dim, num_layers=num_layers, bidirectional=True)
-        self.mlp = MLP(size_layer=[hidden_dim* 2, nfc, num_classes])
+        self.mlp = MLP(size_layer=[hidden_dim*2, nfc, num_classes])
 
     def forward(self, words):
         x_emb = self.embed(words)
         output, _ = self.lstm(x_emb)
-        output = self.mlp(output[:,-1,:])
+        output = self.mlp(torch.max(output, dim=1)[0])
         return {C.OUTPUT: output}
 
     def predict(self, words):

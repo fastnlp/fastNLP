@@ -1,7 +1,6 @@
-fastNLP.models.cnn\_text\_classification
-========================================
+fastNLP.models.cnn_text_classification
+======================================
 
 .. automodule:: fastNLP.models.cnn_text_classification
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members: CNNText
+

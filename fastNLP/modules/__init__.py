@@ -1,45 +1,52 @@
 """
-大部分用于的 NLP 任务神经网络都可以看做由编码 :mod:`~fastNLP.modules.encoder` 、
-解码 :mod:`~fastNLP.modules.decoder` 两种模块组成。
 
 .. image:: figures/text_classification.png
 
-:mod:`~fastNLP.modules` 中实现了 fastNLP 提供的诸多模块组件，可以帮助用户快速搭建自己所需的网络。
-两种模块的功能和常见组件如下:
+大部分用于的 NLP 任务神经网络都可以看做由 :mod:`embedding<fastNLP.embeddings>` 、 :mod:`~fastNLP.modules.encoder` 、
+:mod:`~fastNLP.modules.decoder` 三种模块组成。 本模块中实现了 fastNLP 提供的诸多模块组件，
+可以帮助用户快速搭建自己所需的网络。几种模块的功能和常见组件如下:
 
-+-----------------------+-----------------------+-----------------------+
-| module type           | functionality         | example               |
-+=======================+=======================+=======================+
-| encoder               | 将输入编码为具有具    | embedding, RNN, CNN,  |
-|                       | 有表示能力的向量      | transformer           |
-+-----------------------+-----------------------+-----------------------+
-| decoder               | 将具有某种表示意义的  | MLP, CRF              |
-|                       | 向量解码为需要的输出  |                       |
-|                       | 形式                  |                       |
-+-----------------------+-----------------------+-----------------------+
+.. csv-table::
+   :header: "类型", "功能", "常见组件"
+
+   "embedding", 参见 :doc:`/fastNLP.embeddings` ,  "Elmo, Bert"
+   "encoder", "将输入编码为具有表示能力的向量", "CNN, LSTM, Transformer"
+   "decoder", "将具有某种表示意义的向量解码为需要的输出形式 ", "MLP, CRF"
+   "其它", "配合其它组件使用的组件", "Dropout"
+
 
 """
 __all__ = [
     # "BertModel",
+
     "ConvolutionCharEncoder",
     "LSTMCharEncoder",
+
     "ConvMaxpool",
+
     "LSTM",
+
     "StarTransformer",
+
     "TransformerEncoder",
+
     "VarRNN",
     "VarLSTM",
     "VarGRU",
-    
+
     "MaxPool",
     "MaxPoolWithMask",
     "AvgPool",
+    "AvgPoolWithMask",
+
     "MultiHeadAttention",
-    
+
     "MLP",
     "ConditionalRandomField",
     "viterbi_decode",
     "allowed_transitions",
+
+    "TimestepDropout",
 ]
 
 from . import decoder

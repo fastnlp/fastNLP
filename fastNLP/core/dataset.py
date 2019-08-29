@@ -291,6 +291,7 @@ import _pickle as pickle
 import warnings
 
 import numpy as np
+from copy import deepcopy
 
 from .field import AutoPadder
 from .field import FieldArray
@@ -298,6 +299,8 @@ from .instance import Instance
 from .utils import _get_func_signature
 from .field import AppendToTargetOrInputException
 from .field import SetInputOrTargetException
+from .const import Const
+from ._logger import logger
 
 class DataSet(object):
     """
@@ -349,7 +352,11 @@ class DataSet(object):
                     self.idx])
                 assert self.idx < len(self.dataset.field_arrays[item]), "index:{} out of range".format(self.idx)
                 return self.dataset.field_arrays[item][self.idx]
-            
+
+            def items(self):
+                ins = self.dataset[self.idx]
+                return ins.items()
+
             def __repr__(self):
                 return self.dataset[self.idx].__repr__()
         
@@ -446,7 +453,7 @@ class DataSet(object):
                 try:
                     self.field_arrays[name].append(field)
                 except AppendToTargetOrInputException as e:
-                    print(f"Cannot append to field:{name}.")
+                    logger.error(f"Cannot append to field:{name}.")
                     raise e
     
     def add_fieldarray(self, field_name, fieldarray):
@@ -487,7 +494,7 @@ class DataSet(object):
         """
         删除第index个instance
 
-        :param int index: 需要删除的instance的index，从0开始
+        :param int index: 需要删除的instance的index，序号从0开始。
         """
         assert isinstance(index, int), "Only integer supported."
         if len(self) <= index:
@@ -497,6 +504,7 @@ class DataSet(object):
         else:
             for field in self.field_arrays.values():
                 field.pop(index)
+        return self
     
     def delete_field(self, field_name):
         """
@@ -505,7 +513,22 @@ class DataSet(object):
         :param str field_name: 需要删除的field的名称.
         """
         self.field_arrays.pop(field_name)
-    
+        return self
+
+    def copy_field(self, field_name, new_field_name):
+        """
+        深度copy名为field_name的field到new_field_name
+
+        :param str field_name: 需要copy的field。
+        :param str new_field_name: copy生成的field名称
+        :return: self
+        """
+        if not self.has_field(field_name):
+            raise KeyError(f"Field:{field_name} not found in DataSet.")
+        fieldarray = deepcopy(self.get_field(field_name))
+        self.add_fieldarray(field_name=new_field_name, fieldarray=fieldarray)
+        return self
+
     def has_field(self, field_name):
         """
         判断DataSet中是否有名为field_name这个field
@@ -566,7 +589,7 @@ class DataSet(object):
             raise KeyError("DataSet has no field named {}.".format(old_name))
         return self
     
-    def set_target(self, *field_names, flag=True):
+    def set_target(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True):
         """
         将field_names的field设置为target
 
@@ -577,19 +600,23 @@ class DataSet(object):
 
         :param str field_names: field的名称
         :param bool flag: 将field_name的target状态设置为flag
+        :param bool use_1st_ins_infer_dim_type: 如果为True，将不会check该列是否所有数据都是同样的维度，同样的类型。将直接使用第一
+            行的数据进行类型和维度推断本列的数据的类型和维度。
         """
         assert isinstance(flag, bool), "Only bool type supported."
         for name in field_names:
             if name in self.field_arrays:
                 try:
+                    self.field_arrays[name]._use_1st_ins_infer_dim_type = bool(use_1st_ins_infer_dim_type)
                     self.field_arrays[name].is_target = flag
                 except SetInputOrTargetException as e:
-                    print(f"Cannot set field:{name} as target.")
+                    logger.error(f"Cannot set field:{name} as target.")
                     raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
+        return self
     
-    def set_input(self, *field_names, flag=True):
+    def set_input(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True):
         """
         将field_names的field设置为input::
 
@@ -598,16 +625,20 @@ class DataSet(object):
 
         :param str field_names: field的名称
         :param bool flag: 将field_name的input状态设置为flag
+        :param bool use_1st_ins_infer_dim_type: 如果为True，将不会check该列是否所有数据都是同样的维度，同样的类型。将直接使用第一
+            行的数据进行类型和维度推断本列的数据的类型和维度。
         """
         for name in field_names:
             if name in self.field_arrays:
                 try:
+                    self.field_arrays[name]._use_1st_ins_infer_dim_type = bool(use_1st_ins_infer_dim_type)
                     self.field_arrays[name].is_input = flag
                 except SetInputOrTargetException as e:
-                    print(f"Cannot set field:{name} as input, exception happens at the {e.index} value.")
+                    logger.error(f"Cannot set field:{name} as input, exception happens at the {e.index} value.")
                     raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
+        return self
     
     def set_ignore_type(self, *field_names, flag=True):
         """
@@ -624,6 +655,7 @@ class DataSet(object):
                 self.field_arrays[name].ignore_type = flag
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
+        return self
     
     def set_padder(self, field_name, padder):
         """
@@ -639,6 +671,7 @@ class DataSet(object):
         if field_name not in self.field_arrays:
             raise KeyError("There is no field named {}.".format(field_name))
         self.field_arrays[field_name].set_padder(padder)
+        return self
     
     def set_pad_val(self, field_name, pad_val):
         """
@@ -650,6 +683,7 @@ class DataSet(object):
         if field_name not in self.field_arrays:
             raise KeyError("There is no field named {}.".format(field_name))
         self.field_arrays[field_name].set_pad_val(pad_val)
+        return self
     
     def get_input_name(self):
         """
@@ -695,7 +729,7 @@ class DataSet(object):
                 results.append(func(ins[field_name]))
         except Exception as e:
             if idx != -1:
-                print("Exception happens at the `{}`th instance.".format(idx))
+                logger.error("Exception happens at the `{}`th(from 1) instance.".format(idx+1))
             raise e
         if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
             raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
@@ -760,10 +794,11 @@ class DataSet(object):
             results = []
             for idx, ins in enumerate(self._inner_iter()):
                 results.append(func(ins))
-        except Exception as e:
+        except BaseException as e:
             if idx != -1:
-                print("Exception happens at the `{}`th instance.".format(idx))
+                logger.error("Exception happens at the `{}`th instance.".format(idx))
             raise e
+
         # results = [func(ins) for ins in self._inner_iter()]
         if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
             raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
@@ -773,7 +808,7 @@ class DataSet(object):
         
         return results
 
-    def add_seq_len(self, field_name:str, new_field_name='seq_len'):
+    def add_seq_len(self, field_name:str, new_field_name=Const.INPUT_LEN):
         """
         将使用len()直接对field_name中每个元素作用，将其结果作为seqence length, 并放入seq_len这个field。
 
@@ -838,48 +873,6 @@ class DataSet(object):
             dev_set.field_arrays[field_name].to(self.field_arrays[field_name])
         
         return train_set, dev_set
-    
-    @classmethod
-    def read_csv(cls, csv_path, headers=None, sep=",", dropna=True):
-        r"""
-        .. warning::
-            此方法会在下个版本移除，请使用 :class:`fastNLP.io.CSVLoader`
-        
-        从csv_path路径下以csv的格式读取数据。
-
-        :param str csv_path: 从哪里读取csv文件
-        :param list[str] headers: 如果为None，则使用csv文件的第一行作为header; 如果传入list(str), 则元素的个数必须
-            与csv文件中每行的元素个数相同。
-        :param str sep: 分割符
-        :param bool dropna: 是否忽略与header数量不一致行。
-        :return: 读取后的 :class:`~fastNLP.读取后的DataSet`。
-        """
-        warnings.warn('DataSet.read_csv is deprecated, use CSVLoader instead',
-                      category=DeprecationWarning)
-        with open(csv_path, "r", encoding='utf-8') as f:
-            start_idx = 0
-            if headers is None:
-                headers = f.readline().rstrip('\r\n')
-                headers = headers.split(sep)
-                start_idx += 1
-            else:
-                assert isinstance(headers, (list, tuple)), "headers should be list or tuple, not {}.".format(
-                    type(headers))
-            _dict = {}
-            for col in headers:
-                _dict[col] = []
-            for line_idx, line in enumerate(f, start_idx):
-                contents = line.rstrip('\r\n').split(sep)
-                if len(contents) != len(headers):
-                    if dropna:
-                        continue
-                    else:
-                        # TODO change error type
-                        raise ValueError("Line {} has {} parts, while header has {} parts." \
-                                         .format(line_idx, len(contents), len(headers)))
-                for header, content in zip(headers, contents):
-                    _dict[header].append(content)
-        return cls(_dict)
     
     def save(self, path):
         """

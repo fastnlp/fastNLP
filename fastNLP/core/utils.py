@@ -4,6 +4,7 @@ utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户
 __all__ = [
     "cache_results",
     "seq_len_to_mask",
+    "get_seq_len"
 ]
 
 import _pickle
@@ -16,6 +17,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from typing import List
+from ._logger import logger
 
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])
@@ -62,7 +64,6 @@ def _prepare_cache_filepath(filepath):
         os.makedirs(cache_dir)
 
 
-#  TODO 可以保存下缓存时的参数，如果load的时候发现参数不一致，发出警告。
 def cache_results(_cache_fp, _refresh=False, _verbose=1):
     """
     别名：:class:`fastNLP.cache_results` :class:`fastNLP.core.uitls.cache_results`
@@ -144,7 +145,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
                     with open(cache_filepath, 'rb') as f:
                         results = _pickle.load(f)
                     if verbose == 1:
-                        print("Read cache from {}.".format(cache_filepath))
+                        logger.info("Read cache from {}.".format(cache_filepath))
                     refresh_flag = False
             
             if refresh_flag:
@@ -155,7 +156,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
                     _prepare_cache_filepath(cache_filepath)
                     with open(cache_filepath, 'wb') as f:
                         _pickle.dump(results, f)
-                    print("Save cache to {}.".format(cache_filepath))
+                    logger.info("Save cache to {}.".format(cache_filepath))
             
             return results
         
@@ -188,50 +189,6 @@ def _save_model(model, model_name, save_dir, only_param=False):
         torch.save(model, model_path)
         model.to(_model_device)
 
-
-# def save_pickle(obj, pickle_path, file_name):
-#     """Save an object into a pickle file.
-#
-#     :param obj: an object
-#     :param pickle_path: str, the directory where the pickle file is to be saved
-#     :param file_name: str, the name of the pickle file. In general, it should be ended by "pkl".
-#     """
-#     if not os.path.exists(pickle_path):
-#         os.mkdir(pickle_path)
-#         print("make dir {} before saving pickle file".format(pickle_path))
-#     with open(os.path.join(pickle_path, file_name), "wb") as f:
-#         _pickle.dump(obj, f)
-#     print("{} saved in {}".format(file_name, pickle_path))
-#
-#
-# def load_pickle(pickle_path, file_name):
-#     """Load an object from a given pickle file.
-#
-#     :param pickle_path: str, the directory where the pickle file is.
-#     :param file_name: str, the name of the pickle file.
-#     :return obj: an object stored in the pickle
-#     """
-#     with open(os.path.join(pickle_path, file_name), "rb") as f:
-#         obj = _pickle.load(f)
-#     print("{} loaded from {}".format(file_name, pickle_path))
-#     return obj
-#
-#
-# def pickle_exist(pickle_path, pickle_name):
-#     """Check if a given pickle file exists in the directory.
-#
-#     :param pickle_path: the directory of target pickle file
-#     :param pickle_name: the filename of target pickle file
-#     :return: True if file exists else False
-#     """
-#     if not os.path.exists(pickle_path):
-#         os.makedirs(pickle_path)
-#     file_name = os.path.join(pickle_path, pickle_name)
-#     if os.path.exists(file_name):
-#         return True
-#     else:
-#         return False
-
 def _move_model_to_device(model, device):
     """
     将model移动到device
@@ -254,8 +211,8 @@ def _move_model_to_device(model, device):
 
     :return: torch.nn.DataParallel or torch.nn.Module
     """
-    if isinstance(model, torch.nn.parallel.DistributedDataParallel):
-        raise RuntimeError("model of `torch.nn.parallel.DistributedDataParallel` is not supported right now.")
+    # if isinstance(model, torch.nn.parallel.DistributedDataParallel):
+    #     raise RuntimeError("model of `torch.nn.parallel.DistributedDataParallel` is not supported right now.")
     
     if device is None:
         if isinstance(model, torch.nn.DataParallel):
@@ -352,7 +309,6 @@ def _map_args(maps: dict, **kwargs):
             output.update({name: val})
     for keys in maps.keys():
         if keys not in output.keys():
-            # TODO: add UNUSED warning.
             pass
     return output
 
@@ -570,18 +526,6 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
                 else:
                     _tmp = f'Provide `{_miss}` in DataSet or output of {prev_func_signature}.'
                 suggestions.append(_tmp)
-        # for _miss in unmapped_missing:
-        #     if _miss in dataset:
-        #         suggestions.append(f"Set `{_miss}` as target.")
-        #     else:
-        #         _tmp = ''
-        #         if check_res.unused:
-        #             _tmp = f"Specify your assignment for `{input_func_map.get(_miss, _miss)}` when initialize {module_name}."
-        #         if _tmp:
-        #             _tmp += f' Or provide `{_miss}` in DataSet or output of {prev_func_signature}.'
-        #         else:
-        #             _tmp = f'Provide `{_miss}` in output of {prev_func_signature} or DataSet.'
-        #         suggestions.append(_tmp)
     
     if check_res.duplicated:
         errs.append(f"\tduplicated param: {check_res.duplicated}.")
@@ -716,15 +660,14 @@ class _pseudo_tqdm:
     """
     当无法引入tqdm，或者Trainer中设置use_tqdm为false的时候，用该方法打印数据
     """
-    
     def __init__(self, **kwargs):
-        pass
+        self.logger = logger
     
     def write(self, info):
-        print(info)
+        self.logger.info(info)
     
     def set_postfix_str(self, info):
-        print(info)
+        self.logger.info(info)
     
     def __getattr__(self, item):
         def pass_func(*args, **kwargs):
@@ -788,3 +731,23 @@ def iob2bioes(tags: List[str]) -> List[str]:
             else:
                 raise TypeError("Invalid IOB format.")
     return new_tags
+
+
+def _is_iterable(value):
+    # 检查是否是iterable的, duck typing
+    try:
+        iter(value)
+        return True
+    except BaseException as e:
+        return False
+
+
+def get_seq_len(words, pad_value=0):
+    """
+    给定batch_size x max_len的words矩阵，返回句子长度
+
+    :param words: batch_size x max_len
+    :return: (batch_size,)
+    """
+    mask = words.ne(pad_value)
+    return mask.sum(dim=-1)
