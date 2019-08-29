@@ -18,7 +18,7 @@ from itertools import chain
 
 from ..core.vocabulary import Vocabulary
 from ..io.file_utils import _get_embedding_url, cached_path, PRETRAINED_BERT_MODEL_DIR
-from ..modules.encoder.bert import _WordPieceBertModel, BertModel, BertTokenizer
+from ..modules.encoder.bert import _WordPieceBertModel, BertModel, BertTokenizer, _get_bert_dir
 from .contextual_embedding import ContextualEmbedding
 import warnings
 from ..core import logger
@@ -70,19 +70,16 @@ class BertEmbedding(ContextualEmbedding):
                  pool_method: str = 'first', word_dropout=0, dropout=0, include_cls_sep: bool = False,
                  pooled_cls=True, requires_grad: bool = False, auto_truncate: bool = False):
         super(BertEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
-        
-        # 根据model_dir_or_name检查是否存在并下载
+
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
             if 'cn' in model_dir_or_name.lower() and pool_method not in ('first', 'last'):
+                logger.warn("For Chinese bert, pooled_method should choose from 'first', 'last' in order to achieve"
+                            " faster speed.")
                 warnings.warn("For Chinese bert, pooled_method should choose from 'first', 'last' in order to achieve"
                               " faster speed.")
-            model_url = _get_embedding_url('bert', model_dir_or_name.lower())
-            model_dir = cached_path(model_url, name='embedding')
-            # 检查是否存在
-        elif os.path.isdir(os.path.abspath(os.path.expanduser(model_dir_or_name))):
-            model_dir = os.path.abspath(os.path.expanduser(model_dir_or_name))
-        else:
-            raise ValueError(f"Cannot recognize {model_dir_or_name}.")
+
+        # 根据model_dir_or_name检查是否存在并下载
+        model_dir = _get_bert_dir(model_dir_or_name)
         
         self._word_sep_index = None
         if '[SEP]' in vocab:
@@ -173,15 +170,9 @@ class BertWordPieceEncoder(nn.Module):
     def __init__(self, model_dir_or_name: str = 'en-base-uncased', layers: str = '-1', pooled_cls: bool = False,
                  word_dropout=0, dropout=0, requires_grad: bool = False):
         super().__init__()
-        
-        if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
-            model_url = _get_embedding_url('bert', model_dir_or_name.lower())
-            model_dir = cached_path(model_url, name='embedding')
-            # 检查是否存在
-        elif os.path.isdir(os.path.expanduser(os.path.abspath(model_dir_or_name))):
-            model_dir = model_dir_or_name
-        else:
-            raise ValueError(f"Cannot recognize {model_dir_or_name}.")
+
+        # 根据model_dir_or_name检查是否存在并下载
+        model_dir = _get_bert_dir(model_dir_or_name)
         
         self.model = _WordPieceBertModel(model_dir=model_dir, layers=layers, pooled_cls=pooled_cls)
         self._sep_index = self.model._sep_index
