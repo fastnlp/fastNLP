@@ -30,14 +30,14 @@ class DotAttention(nn.Module):
     def forward(self, Q, K, V, mask_out=None):
         """
 
-        :param Q: [batch, seq_len_q, key_size]
-        :param K: [batch, seq_len_k, key_size]
-        :param V: [batch, seq_len_k, value_size]
-        :param mask_out: [batch, 1, seq_len] or [batch, seq_len_q, seq_len_k]
+        :param Q: [..., seq_len_q, key_size]
+        :param K: [..., seq_len_k, key_size]
+        :param V: [..., seq_len_k, value_size]
+        :param mask_out: [..., 1, seq_len] or [..., seq_len_q, seq_len_k]
         """
-        output = torch.matmul(Q, K.transpose(1, 2)) / self.scale
+        output = torch.matmul(Q, K.transpose(-1, -2)) / self.scale
         if mask_out is not None:
-            output.masked_fill_(mask_out, -1e18)
+            output.masked_fill_(mask_out, -1e9)
         output = self.softmax(output)
         output = self.drop(output)
         return torch.matmul(output, V)
@@ -65,17 +65,16 @@ class MultiHeadAttention(nn.Module):
         self.q_in = nn.Linear(input_size, in_size)
         self.k_in = nn.Linear(input_size, in_size)
         self.v_in = nn.Linear(input_size, in_size)
-        # follow the paper, do not apply dropout within dot-product
         self.attention = DotAttention(key_size=key_size, value_size=value_size, dropout=dropout)
         self.out = nn.Linear(value_size * num_head, input_size)
         self.reset_parameters()
 
     def reset_parameters(self):
         sqrt = math.sqrt
-        nn.init.normal_(self.q_in.weight, mean=0, std=sqrt(2.0 / (self.input_size + self.key_size)))
-        nn.init.normal_(self.k_in.weight, mean=0, std=sqrt(2.0 / (self.input_size + self.key_size)))
-        nn.init.normal_(self.v_in.weight, mean=0, std=sqrt(2.0 / (self.input_size + self.value_size)))
-        nn.init.xavier_normal_(self.out.weight)
+        nn.init.normal_(self.q_in.weight, mean=0, std=sqrt(1.0 / self.input_size))
+        nn.init.normal_(self.k_in.weight, mean=0, std=sqrt(1.0 / self.input_size))
+        nn.init.normal_(self.v_in.weight, mean=0, std=sqrt(1.0 / self.input_size))
+        nn.init.normal_(self.out.weight, mean=0, std=sqrt(1.0 / self.input_size))
 
     def forward(self, Q, K, V, atte_mask_out=None):
         """
@@ -89,20 +88,16 @@ class MultiHeadAttention(nn.Module):
         sk = K.size(1)
         d_k, d_v, n_head = self.key_size, self.value_size, self.num_head
         # input linear
-        q = self.q_in(Q).view(batch, sq, n_head, d_k)
-        k = self.k_in(K).view(batch, sk, n_head, d_k)
-        v = self.v_in(V).view(batch, sk, n_head, d_v)
+        q = self.q_in(Q).view(batch, sq, n_head, d_k).transpose(1, 2)
+        k = self.k_in(K).view(batch, sk, n_head, d_k).transpose(1, 2)
+        v = self.v_in(V).view(batch, sk, n_head, d_v).transpose(1, 2)
 
-        # transpose q, k and v to do batch attention
-        q = q.permute(2, 0, 1, 3).contiguous().view(-1, sq, d_k)
-        k = k.permute(2, 0, 1, 3).contiguous().view(-1, sk, d_k)
-        v = v.permute(2, 0, 1, 3).contiguous().view(-1, sk, d_v)
         if atte_mask_out is not None:
-            atte_mask_out = atte_mask_out.repeat(n_head, 1, 1)
-        atte = self.attention(q, k, v, atte_mask_out).view(n_head, batch, sq, d_v)
+            atte_mask_out = atte_mask_out[:,None,:,:] # [bsz,1,1,len]
+        atte = self.attention(q, k, v, atte_mask_out).view(batch, n_head, sq, d_v)
 
         # concat all heads, do output linear
-        atte = atte.permute(1, 2, 0, 3).contiguous().view(batch, sq, -1)
+        atte = atte.transpose(1, 2).contiguous().view(batch, sq, -1)
         output = self.out(atte)
         return output
 

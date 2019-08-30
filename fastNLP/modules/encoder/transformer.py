@@ -5,8 +5,7 @@ __all__ = [
 ]
 from torch import nn
 
-from fastNLP.modules.encoder.attention import MultiHeadAttention
-from ..dropout import TimestepDropout
+from .attention import MultiHeadAttention
 
 
 class TransformerEncoder(nn.Module):
@@ -29,12 +28,12 @@ class TransformerEncoder(nn.Module):
         def __init__(self, model_size, inner_size, key_size, value_size, num_head, dropout=0.1):
             super(TransformerEncoder.SubLayer, self).__init__()
             self.atte = MultiHeadAttention(model_size, key_size, value_size, num_head, dropout)
-            self.norm1 = nn.LayerNorm(model_size)
+            self.norm1 = nn.LayerNorm(model_size, eps=1e-6)
             self.ffn = nn.Sequential(nn.Linear(model_size, inner_size),
                                      nn.ReLU(),
                                      nn.Dropout(dropout),
                                      nn.Linear(inner_size, model_size))
-            self.norm2 = nn.LayerNorm(model_size)
+            self.norm2 = nn.LayerNorm(model_size, eps=1e-6)
             self.dropout = nn.Dropout(dropout)
 
         def forward(self, input, seq_mask=None, atte_mask_out=None):
@@ -47,17 +46,17 @@ class TransformerEncoder(nn.Module):
             input = self.norm1(input)
             attention = self.atte(input, input, input, atte_mask_out)
             input = input + self.dropout(attention)
-            # attention *= seq_mask
+            attention *= seq_mask
             input = self.norm2(input)
             output = self.ffn(input)
             input = input + self.dropout(output)
-            # output *= seq_mask
-            return output
+            input *= seq_mask
+            return input
 
     def __init__(self, num_layers, **kargs):
         super(TransformerEncoder, self).__init__()
         self.layers = nn.ModuleList([self.SubLayer(**kargs) for _ in range(num_layers)])
-        self.norm = nn.LayerNorm(kargs['model_size'])
+        self.norm = nn.LayerNorm(kargs['model_size'], eps=1e-6)
 
     def forward(self, x, seq_mask=None):
         """
@@ -70,7 +69,7 @@ class TransformerEncoder(nn.Module):
         if seq_mask is None:
             atte_mask_out = None
         else:
-            atte_mask_out = (seq_mask < 1)[:, None, :]
+            atte_mask_out = (seq_mask == 0)[:, None, :]
             seq_mask = seq_mask[:, :, None]
         for layer in self.layers:
             output = layer(output, seq_mask, atte_mask_out)
