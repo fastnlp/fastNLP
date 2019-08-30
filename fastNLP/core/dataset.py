@@ -575,18 +575,18 @@ class DataSet(object):
         """
         return len(self)
     
-    def rename_field(self, old_name, new_name):
+    def rename_field(self, field_name, new_field_name):
         """
         将某个field重新命名.
 
-        :param str old_name: 原来的field名称。
-        :param str new_name: 修改为new_name。
+        :param str field_name: 原来的field名称。
+        :param str new_field_name: 修改为new_name。
         """
-        if old_name in self.field_arrays:
-            self.field_arrays[new_name] = self.field_arrays.pop(old_name)
-            self.field_arrays[new_name].name = new_name
+        if field_name in self.field_arrays:
+            self.field_arrays[new_field_name] = self.field_arrays.pop(field_name)
+            self.field_arrays[new_field_name].name = new_field_name
         else:
-            raise KeyError("DataSet has no field named {}.".format(old_name))
+            raise KeyError("DataSet has no field named {}.".format(field_name))
         return self
     
     def set_target(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True):

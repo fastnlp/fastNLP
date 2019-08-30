@@ -139,9 +139,44 @@ class DataBundle:
                     dataset.set_target(field_name, flag=flag, use_1st_ins_infer_dim_type=use_1st_ins_infer_dim_type)
         return self
 
+    def set_pad_val(self, field_name, pad_val,  ignore_miss_dataset=True):
+        """
+        将DataBundle中所有的DataSet中名为field_name的Field的padding值设置为pad_val.
+
+        :param str field_name:
+        :param int pad_val:
+        :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
+            如果为False，则报错
+        :return: self
+        """
+        for name, dataset in self.datasets.items():
+            if dataset.has_field(field_name=field_name):
+                dataset.set_pad_val(field_name=field_name, pad_val=pad_val)
+            elif not ignore_miss_dataset:
+                raise KeyError(f"{field_name} not found DataSet:{name}.")
+        return self
+
+    def set_ignore_type(self, *field_names, flag=True, ignore_miss_dataset=True):
+        """
+        将DataBundle中所有的DataSet中名为*field_names的Field的ignore_type设置为flag状态
+
+        :param str field_names:
+        :param bool flag:
+        :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
+            如果为False，则报错
+        :return: self
+        """
+        for name, dataset in self.datasets.items():
+            for field_name in field_names:
+                if dataset.has_field(field_name=field_name):
+                    dataset.set_ignore_type(field_name, flag=flag)
+                elif not ignore_miss_dataset:
+                    raise KeyError(f"{field_name} not found DataSet:{name}.")
+        return self
+
     def copy_field(self, field_name, new_field_name, ignore_miss_dataset=True):
         """
-        将DataBundle中所有的field_name复制一份叫new_field_name.
+        将DataBundle中所有的DataSet中名为field_name的Field复制一份并命名为叫new_field_name.
 
         :param str field_name:
         :param str new_field_name:
@@ -156,9 +191,42 @@ class DataBundle:
                 raise KeyError(f"{field_name} not found DataSet:{name}.")
         return self
 
+    def rename_field(self, field_name, new_field_name, ignore_miss_dataset=True):
+        """
+        将DataBundle中所有DataSet中名为field_name的field重命名为new_field_name.
+
+        :param str field_name:
+        :param str new_field_name:
+        :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
+            如果为False，则报错
+        :return: self
+        """
+        for name, dataset in self.datasets.items():
+            if dataset.has_field(field_name=field_name):
+                dataset.rename_field(field_name=field_name, new_field_name=new_field_name)
+            elif not ignore_miss_dataset:
+                raise KeyError(f"{field_name} not found DataSet:{name}.")
+        return self
+
+    def delete_field(self, field_name, ignore_miss_dataset=True):
+        """
+        将DataBundle中所有DataSet中名为field_name的field删除掉.
+
+        :param str field_name:
+        :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
+            如果为False，则报错
+        :return: self
+        """
+        for name, dataset in self.datasets.items():
+            if dataset.has_field(field_name=field_name):
+                dataset.delete_field(field_name=field_name)
+            elif not ignore_miss_dataset:
+                raise KeyError(f"{field_name} not found DataSet:{name}.")
+        return self
+
     def apply_field(self, func, field_name:str, new_field_name:str, ignore_miss_dataset=True,  **kwargs):
         """
-        对DataBundle中所有的dataset使用apply方法
+        对DataBundle中所有的dataset使用apply_field方法
 
         :param callable func: input是instance中名为 `field_name` 的field的内容。
         :param str field_name: 传入func的是哪个field。
