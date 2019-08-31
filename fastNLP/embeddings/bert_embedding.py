@@ -393,7 +393,7 @@ class _WordBertModel(nn.Module):
             batch_indexes = torch.arange(batch_size).to(words)
             word_pieces[batch_indexes, word_pieces_lengths + 1] = self._sep_index
             if self._has_sep_in_vocab:  # 但[SEP]在vocab中出现应该才会需要token_ids
-                sep_mask = word_pieces.eq(self._sep_index)  # batch_size x max_len
+                sep_mask = word_pieces.eq(self._sep_index).long()  # batch_size x max_len
                 sep_mask_cumsum = sep_mask.flip(dims=[-1]).cumsum(dim=-1).flip(dims=[-1])
                 token_type_ids = sep_mask_cumsum.fmod(2)
                 if token_type_ids[0, 0].item():  # 如果开头是奇数，则需要flip一下结果，因为需要保证开头为0

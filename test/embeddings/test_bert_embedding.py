@@ -19,3 +19,12 @@ class TestDownload(unittest.TestCase):
         for i in range(10):
             words = torch.LongTensor([[2, 3, 4, 0]])
             print(embed(words).size())
+
+
+class TestBertEmbedding(unittest.TestCase):
+    def test_bert_embedding_1(self):
+        vocab = Vocabulary().add_word_lst("this is a test .".split())
+        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert')
+        words = torch.LongTensor([[2, 3, 4, 0]])
+        result = embed(words)
+        self.assertEqual(result.size(), (1, 4, 16))

@@ -10,7 +10,8 @@ class TestLoad(unittest.TestCase):
     def test_norm1(self):
         # 测试只对可以找到的norm
         vocab = Vocabulary().add_word_lst(['the', 'a', 'notinfile'])
-        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/glove.6B.50d_test.txt',
+        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+                                                         'glove.6B.50d_test.txt',
                                 only_norm_found_vector=True)
         self.assertEqual(round(torch.norm(embed(torch.LongTensor([[2]]))).item(), 4), 1)
         self.assertNotEqual(torch.norm(embed(torch.LongTensor([[4]]))).item(), 1)
@@ -18,7 +19,8 @@ class TestLoad(unittest.TestCase):
     def test_norm2(self):
         # 测试对所有都norm
         vocab = Vocabulary().add_word_lst(['the', 'a', 'notinfile'])
-        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/glove.6B.50d_test.txt',
+        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+                                                         'glove.6B.50d_test.txt',
                                 normalize=True)
         self.assertEqual(round(torch.norm(embed(torch.LongTensor([[2]]))).item(), 4), 1)
         self.assertEqual(round(torch.norm(embed(torch.LongTensor([[4]]))).item(), 4), 1)

@@ -435,14 +435,14 @@ class BertModel(nn.Module):
         return encoded_layers, pooled_output
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_dir_or_name, *inputs, **kwargs):
+    def from_pretrained(cls, model_dir_or_name, *inputs, **kwargs):
         state_dict = kwargs.get('state_dict', None)
         kwargs.pop('state_dict', None)
         kwargs.pop('cache_dir', None)
         kwargs.pop('from_tf', None)
 
         # get model dir from name or dir
-        pretrained_model_dir = _get_bert_dir(pretrained_model_dir_or_name)
+        pretrained_model_dir = _get_bert_dir(model_dir_or_name)
 
         # Load config
         config_file = _get_file_name_base_on_postfix(pretrained_model_dir, '.json')
