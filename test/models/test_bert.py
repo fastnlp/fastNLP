@@ -82,7 +82,7 @@ class TestBert(unittest.TestCase):
     def test_bert_5(self):
 
         vocab = Vocabulary().add_word_lst("this is a test [SEP] .".split())
-        embed = BertEmbedding(vocab, model_dir_or_name='./../data_for_tests/embedding/small_bert',
+        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
                               include_cls_sep=True)
         model = BertForSentenceMatching(embed)
 
