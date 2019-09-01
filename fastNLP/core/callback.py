@@ -1031,12 +1031,11 @@ class EchoCallback(Callback):
     def __init__(self, name, out=sys.stdout):
         super(EchoCallback, self).__init__()
         self.name = name
-        self.out = out
+        self.out = out  # deprecated
 
     def __getattribute__(self, item):
         if item.startswith('on_'):
-            logger.info('{}.{} has been called at pid: {}'.format(self.name, item, os.getpid()),
-                  file=self.out)
+            logger.info('{}.{} has been called at pid: {}'.format(self.name, item, os.getpid()))
         return super(EchoCallback, self).__getattribute__(item)
 
 
