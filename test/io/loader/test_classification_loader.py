@@ -17,3 +17,11 @@ class TestDownload(unittest.TestCase):
         for loader in [YelpFullLoader, YelpPolarityLoader, IMDBLoader, SST2Loader, SSTLoader]:
             data_bundle = loader().load()
             print(data_bundle)
+
+
+class TestLoad(unittest.TestCase):
+
+    def test_load(self):
+        for loader in [IMDBLoader]:
+            data_bundle = loader().load('test/data_for_tests/io/imdb')
+            print(data_bundle)

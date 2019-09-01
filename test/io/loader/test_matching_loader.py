@@ -20,3 +20,11 @@ class TestDownload(unittest.TestCase):
             data_bundle = loader().load()
             print(data_bundle)
 
+
+class TestLoad(unittest.TestCase):
+
+    def test_load(self):
+        for loader in [RTELoader]:
+            data_bundle = loader().load('test/data_for_tests/io/rte')
+            print(data_bundle)
+

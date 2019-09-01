@@ -11,3 +11,11 @@ class TestPipe(unittest.TestCase):
                 print(pipe)
                 data_bundle = pipe(tokenizer='raw').process_from_file()
                 print(data_bundle)
+
+
+class TestRunPipe(unittest.TestCase):
+
+    def test_load(self):
+        for pipe in [IMDBPipe]:
+            data_bundle = pipe(tokenizer='raw').process_from_file('test/data_for_tests/io/imdb')
+            print(data_bundle)
