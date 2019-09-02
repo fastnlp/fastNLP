@@ -39,7 +39,7 @@ def _check_build_vocab(func):
     
     @wraps(func)  # to solve missing docstring
     def _wrapper(self, *args, **kwargs):
-        if self.word2idx is None or self.rebuild is True:
+        if self._word2idx is None or self.rebuild is True:
             self.build_vocab()
         return func(self, *args, **kwargs)
     
@@ -95,12 +95,30 @@ class Vocabulary(object):
         self.word_count = Counter()
         self.unknown = unknown
         self.padding = padding
-        self.word2idx = None
-        self.idx2word = None
+        self._word2idx = None
+        self._idx2word = None
         self.rebuild = True
         #  用于承载不需要单独创建entry的词语，具体见from_dataset()方法
         self._no_create_word = Counter()
-    
+
+    @property
+    @_check_build_vocab
+    def word2idx(self):
+        return self._word2idx
+
+    @word2idx.setter
+    def word2idx(self, value):
+        self._word2idx = value
+
+    @property
+    @_check_build_vocab
+    def idx2word(self):
+        return self._idx2word
+
+    @idx2word.setter
+    def idx2word(self, value):
+        self._word2idx = value
+
     @_check_build_status
     def update(self, word_lst, no_create_entry=False):
         """依次增加序列中词在词典中的出现频率
@@ -187,21 +205,21 @@ class Vocabulary(object):
         但已经记录在词典中的词, 不会改变对应的 `int`
 
         """
-        if self.word2idx is None:
-            self.word2idx = {}
+        if self._word2idx is None:
+            self._word2idx = {}
             if self.padding is not None:
-                self.word2idx[self.padding] = len(self.word2idx)
+                self._word2idx[self.padding] = len(self._word2idx)
             if self.unknown is not None:
-                self.word2idx[self.unknown] = len(self.word2idx)
+                self._word2idx[self.unknown] = len(self._word2idx)
         
         max_size = min(self.max_size, len(self.word_count)) if self.max_size else None
         words = self.word_count.most_common(max_size)
         if self.min_freq is not None:
             words = filter(lambda kv: kv[1] >= self.min_freq, words)
-        if self.word2idx is not None:
-            words = filter(lambda kv: kv[0] not in self.word2idx, words)
-        start_idx = len(self.word2idx)
-        self.word2idx.update({w: i + start_idx for i, (w, _) in enumerate(words)})
+        if self._word2idx is not None:
+            words = filter(lambda kv: kv[0] not in self._word2idx, words)
+        start_idx = len(self._word2idx)
+        self._word2idx.update({w: i + start_idx for i, (w, _) in enumerate(words)})
         self.build_reverse_vocab()
         self.rebuild = False
         return self
@@ -211,12 +229,12 @@ class Vocabulary(object):
         基于 `word to index` dict, 构建 `index to word` dict.
 
         """
-        self.idx2word = {i: w for w, i in self.word2idx.items()}
+        self._idx2word = {i: w for w, i in self._word2idx.items()}
         return self
     
     @_check_build_vocab
     def __len__(self):
-        return len(self.word2idx)
+        return len(self._word2idx)
     
     @_check_build_vocab
     def __contains__(self, item):
@@ -226,7 +244,7 @@ class Vocabulary(object):
         :param item: the word
         :return: True or False
         """
-        return item in self.word2idx
+        return item in self._word2idx
     
     def has_word(self, w):
         """
@@ -248,10 +266,10 @@ class Vocabulary(object):
 
             vocab[w]
         """
-        if w in self.word2idx:
-            return self.word2idx[w]
+        if w in self._word2idx:
+            return self._word2idx[w]
         if self.unknown is not None:
-            return self.word2idx[self.unknown]
+            return self._word2idx[self.unknown]
         else:
             raise ValueError("word `{}` not in vocabulary".format(w))
     
@@ -405,7 +423,7 @@ class Vocabulary(object):
         """
         if self.unknown is None:
             return None
-        return self.word2idx[self.unknown]
+        return self._word2idx[self.unknown]
     
     @property
     @_check_build_vocab
@@ -415,7 +433,7 @@ class Vocabulary(object):
         """
         if self.padding is None:
             return None
-        return self.word2idx[self.padding]
+        return self._word2idx[self.padding]
     
     @_check_build_vocab
     def to_word(self, idx):
@@ -425,7 +443,7 @@ class Vocabulary(object):
         :param int idx: the index
         :return str word: the word
         """
-        return self.idx2word[idx]
+        return self._idx2word[idx]
     
     def clear(self):
         """
@@ -434,8 +452,8 @@ class Vocabulary(object):
         :return:
         """
         self.word_count.clear()
-        self.word2idx = None
-        self.idx2word = None
+        self._word2idx = None
+        self._idx2word = None
         self.rebuild = True
         self._no_create_word.clear()
         return self
@@ -446,8 +464,8 @@ class Vocabulary(object):
         """
         len(self)  # make sure vocab has been built
         state = self.__dict__.copy()
-        # no need to pickle idx2word as it can be constructed from word2idx
-        del state['idx2word']
+        # no need to pickle _idx2word as it can be constructed from _word2idx
+        del state['_idx2word']
         return state
     
     def __setstate__(self, state):
@@ -462,5 +480,5 @@ class Vocabulary(object):
     
     @_check_build_vocab
     def __iter__(self):
-        for word, index in self.word2idx.items():
+        for word, index in self._word2idx.items():
             yield word, index

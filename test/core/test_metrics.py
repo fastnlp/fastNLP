@@ -11,6 +11,12 @@ from fastNLP.core.metrics import SpanFPreRecMetric, ExtractiveQAMetric
 
 
 def _generate_tags(encoding_type, number_labels=4):
+    """
+
+    :param encoding_type: 例如BIOES, BMES, BIO等
+    :param number_labels: 多少个label，大于1
+    :return:
+    """
     vocab = {}
     for i in range(number_labels):
         label = str(i)
@@ -184,7 +190,7 @@ class TestAccuracyMetric(unittest.TestCase):
         self.assertDictEqual(metric.get_metric(), {'acc': 1.})
 
 
-class SpanF1PreRecMetric(unittest.TestCase):
+class SpanFPreRecMetricTest(unittest.TestCase):
     def test_case1(self):
         from fastNLP.core.metrics import _bmes_tag_to_spans
         from fastNLP.core.metrics import _bio_tag_to_spans
@@ -337,6 +343,39 @@ class SpanF1PreRecMetric(unittest.TestCase):
         metric_value = metric.get_metric()
         for key, value in expected_metric.items():
             self.assertAlmostEqual(value, metric_value[key], places=5)
+
+    def test_auto_encoding_type_infer(self):
+        #  检查是否可以自动check encode的类型
+        vocabs = {}
+        import random
+        for encoding_type in ['bio', 'bioes', 'bmeso']:
+            vocab = Vocabulary(unknown=None, padding=None)
+            for i in range(random.randint(10, 100)):
+                label = str(random.randint(1, 10))
+                for tag in encoding_type:
+                    if tag!='o':
+                        vocab.add_word(f'{tag}-{label}')
+                    else:
+                        vocab.add_word('o')
+            vocabs[encoding_type] = vocab
+        for e in ['bio', 'bioes', 'bmeso']:
+            with self.subTest(e=e):
+                metric = SpanFPreRecMetric(tag_vocab=vocabs[e])
+                assert metric.encoding_type == e
+
+        bmes_vocab = _generate_tags('bmes')
+        vocab = Vocabulary()
+        for tag, index in bmes_vocab.items():
+            vocab.add_word(tag)
+        metric = SpanFPreRecMetric(vocab)
+        assert metric.encoding_type == 'bmes'
+
+        # 一些无法check的情况
+        vocab = Vocabulary()
+        for i in range(10):
+            vocab.add_word(str(i))
+        with self.assertRaises(Exception):
+            metric = SpanFPreRecMetric(vocab)
 
     def test_encoding_type(self):
         # 检查传入的tag_vocab与encoding_type不符合时，是否会报错

@@ -207,7 +207,7 @@ class ArcBiaffine(nn.Module):
         output = dep.matmul(self.U)
         output = output.bmm(head.transpose(-1, -2))
         if self.has_bias:
-            output += head.matmul(self.bias).unsqueeze(1)
+            output = output + head.matmul(self.bias).unsqueeze(1)
         return output
 
 
@@ -234,7 +234,7 @@ class LabelBilinear(nn.Module):
         :return output: [batch, seq_len, num_cls] 每个元素对应类别的概率图
         """
         output = self.bilinear(x1, x2)
-        output += self.lin(torch.cat([x1, x2], dim=2))
+        output = output + self.lin(torch.cat([x1, x2], dim=2))
         return output
 
 
@@ -363,7 +363,7 @@ class BiaffineParser(GraphParser):
         # print('forward {} {}'.format(batch_size, seq_len))
         
         # get sequence mask
-        mask = seq_len_to_mask(seq_len).long()
+        mask = seq_len_to_mask(seq_len, max_len=length).long()
         
         word = self.word_embedding(words1)  # [N,L] -> [N,L,C_0]
         pos = self.pos_embedding(words2)  # [N,L] -> [N,L,C_1]
@@ -435,10 +435,10 @@ class BiaffineParser(GraphParser):
         """
         
         batch_size, length, _ = pred1.shape
-        mask = seq_len_to_mask(seq_len)
+        mask = seq_len_to_mask(seq_len, max_len=length)
         flip_mask = (mask == 0)
         _arc_pred = pred1.clone()
-        _arc_pred.masked_fill_(flip_mask.unsqueeze(1), -float('inf'))
+        _arc_pred = _arc_pred.masked_fill(flip_mask.unsqueeze(1), -float('inf'))
         arc_logits = F.log_softmax(_arc_pred, dim=2)
         label_logits = F.log_softmax(pred2, dim=2)
         batch_index = torch.arange(batch_size, device=arc_logits.device, dtype=torch.long).unsqueeze(1)
@@ -446,9 +446,8 @@ class BiaffineParser(GraphParser):
         arc_loss = arc_logits[batch_index, child_index, target1]
         label_loss = label_logits[batch_index, child_index, target2]
         
-        byte_mask = flip_mask.byte()
-        arc_loss.masked_fill_(byte_mask, 0)
-        label_loss.masked_fill_(byte_mask, 0)
+        arc_loss = arc_loss.masked_fill(flip_mask, 0)
+        label_loss = label_loss.masked_fill(flip_mask, 0)
         arc_nll = -arc_loss.mean()
         label_nll = -label_loss.mean()
         return arc_nll + label_nll

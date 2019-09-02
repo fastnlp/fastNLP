@@ -193,7 +193,7 @@ class OntoNotesNERPipe(_NERPipe):
     """
     处理OntoNotes的NER数据，处理之后DataSet中的field情况为
 
-    .. csv-table:: Following is a demo layout of DataSet returned by Conll2003Loader
+    .. csv-table::
        :header: "raw_words", "words", "target", "seq_len"
 
        "[Nadim, Ladki]", "[2, 3]", "[1, 2]", 2

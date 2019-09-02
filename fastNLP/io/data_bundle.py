@@ -8,7 +8,7 @@ __all__ = [
 
 from ..core.dataset import DataSet
 from ..core.vocabulary import Vocabulary
-
+from typing import Union
 
 class DataBundle:
     """
@@ -191,7 +191,7 @@ class DataBundle:
                 raise KeyError(f"{field_name} not found DataSet:{name}.")
         return self
 
-    def rename_field(self, field_name, new_field_name, ignore_miss_dataset=True):
+    def rename_field(self, field_name, new_field_name, ignore_miss_dataset=True, rename_vocab=True):
         """
         将DataBundle中所有DataSet中名为field_name的field重命名为new_field_name.
 
@@ -199,6 +199,7 @@ class DataBundle:
         :param str new_field_name:
         :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
             如果为False，则报错
+        :param bool rename_vocab: 如果该field同时也存在于vocabs中，会将该field的名称对应修改
         :return: self
         """
         for name, dataset in self.datasets.items():
@@ -206,15 +207,20 @@ class DataBundle:
                 dataset.rename_field(field_name=field_name, new_field_name=new_field_name)
             elif not ignore_miss_dataset:
                 raise KeyError(f"{field_name} not found DataSet:{name}.")
+        if rename_vocab:
+            if field_name in self.vocabs:
+                self.vocabs[new_field_name] = self.vocabs.pop(field_name)
+
         return self
 
-    def delete_field(self, field_name, ignore_miss_dataset=True):
+    def delete_field(self, field_name, ignore_miss_dataset=True, delete_vocab=True):
         """
         将DataBundle中所有DataSet中名为field_name的field删除掉.
 
         :param str field_name:
         :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
             如果为False，则报错
+        :param bool delete_vocab: 如果该field也在vocabs中存在，将该值也一并删除
         :return: self
         """
         for name, dataset in self.datasets.items():
@@ -222,7 +228,38 @@ class DataBundle:
                 dataset.delete_field(field_name=field_name)
             elif not ignore_miss_dataset:
                 raise KeyError(f"{field_name} not found DataSet:{name}.")
+        if delete_vocab:
+            if field_name in self.vocabs:
+                self.vocabs.pop(field_name)
         return self
+
+    def iter_datasets(self)->Union[str, DataSet]:
+        """
+        迭代data_bundle中的DataSet
+
+        Example::
+
+            for name, dataset in data_bundle.iter_datasets():
+                pass
+
+        :return:
+        """
+        for name, dataset in self.datasets.items():
+            yield name, dataset
+
+    def iter_vocabs(self)->Union[str, Vocabulary]:
+        """
+        迭代data_bundle中的DataSet
+
+        Example:
+
+            for field_name, vocab in data_bundle.iter_vocabs():
+                pass
+
+        :return:
+        """
+        for field_name, vocab in self.vocabs.items():
+            yield field_name, vocab
 
     def apply_field(self, func, field_name:str, new_field_name:str, ignore_miss_dataset=True,  **kwargs):
         """

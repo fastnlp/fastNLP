@@ -24,7 +24,7 @@ from .utils import seq_len_to_mask
 from .vocabulary import Vocabulary
 from abc import abstractmethod
 import warnings
-
+from typing import Union
 
 class MetricBase(object):
     """
@@ -337,15 +337,18 @@ class AccuracyMetric(MetricBase):
             raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(seq_len)}.")
         
-        if seq_len is not None:
-            masks = seq_len_to_mask(seq_len=seq_len)
+        if seq_len is not None and target.dim()>1:
+            max_len = target.size(1)
+            masks = seq_len_to_mask(seq_len=seq_len, max_len=max_len)
         else:
             masks = None
         
-        if pred.size() == target.size():
+        if pred.dim() == target.dim():
             pass
-        elif len(pred.size()) == len(target.size()) + 1:
+        elif pred.dim() == target.dim() + 1:
             pred = pred.argmax(dim=-1)
+            if seq_len is None:
+                warnings.warn("You are not passing `seq_len` to exclude pad when calculate accuracy.")
         else:
             raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
                                f"size:{pred.size()}, target should have size: {pred.size()} or "
@@ -493,20 +496,63 @@ def _bio_tag_to_spans(tags, ignore_labels=None):
     return [(span[0], (span[1][0], span[1][1] + 1)) for span in spans if span[0] not in ignore_labels]
 
 
-def _check_tag_vocab_and_encoding_type(vocab:Vocabulary, encoding_type:str):
+def _get_encoding_type_from_tag_vocab(tag_vocab:Union[Vocabulary, dict])->str:
+    """
+    给定Vocabulary自动判断是哪种类型的encoding, 支持判断bmes, bioes, bmeso, bio
+
+    :param tag_vocab: 支持传入tag Vocabulary; 或者传入形如{0:"O", 1:"B-tag1"}，即index在前，tag在后的dict。
+    :return:
+    """
+    tag_set = set()
+    unk_token = '<unk>'
+    pad_token = '<pad>'
+    if isinstance(tag_vocab, Vocabulary):
+        unk_token = tag_vocab.unknown
+        pad_token = tag_vocab.padding
+        tag_vocab = tag_vocab.idx2word
+    for idx, tag in tag_vocab.items():
+        if tag in (unk_token, pad_token):
+            continue
+        tag = tag[:1].lower()
+        tag_set.add(tag)
+
+    bmes_tag_set = set('bmes')
+    if tag_set == bmes_tag_set:
+        return 'bmes'
+    bio_tag_set = set('bio')
+    if tag_set == bio_tag_set:
+        return 'bio'
+    bmeso_tag_set = set('bmeso')
+    if tag_set == bmeso_tag_set:
+        return 'bmeso'
+    bioes_tag_set = set('bioes')
+    if tag_set == bioes_tag_set:
+        return 'bioes'
+    raise RuntimeError("encoding_type cannot be inferred automatically. Only support "
+                       "'bio', 'bmes', 'bmeso', 'bioes' type.")
+
+
+def _check_tag_vocab_and_encoding_type(tag_vocab:Union[Vocabulary, dict], encoding_type:str):
     """
     检查vocab中的tag是否与encoding_type是匹配的
 
-    :param vocab: target的Vocabulary
+    :param tag_vocab: 支持传入tag Vocabulary; 或者传入形如{0:"O", 1:"B-tag1"}，即index在前，tag在后的dict。
     :param encoding_type: bio, bmes, bioes, bmeso
     :return:
     """
     tag_set = set()
-    for tag, idx in vocab:
-        if idx in (vocab.unknown_idx, vocab.padding_idx):
+    unk_token = '<unk>'
+    pad_token = '<pad>'
+    if isinstance(tag_vocab, Vocabulary):
+        unk_token = tag_vocab.unknown
+        pad_token = tag_vocab.padding
+        tag_vocab = tag_vocab.idx2word
+    for idx, tag in tag_vocab.items():
+        if tag in (unk_token, pad_token):
             continue
         tag = tag[:1].lower()
         tag_set.add(tag)
+
     tags = encoding_type
     for tag in tag_set:
         assert tag in tags, f"{tag} is not a valid tag in encoding type:{encoding_type}. Please check your " \
@@ -549,7 +595,7 @@ class SpanFPreRecMetric(MetricBase):
     :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用 `pred` 取数据
     :param str target: 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用 `target` 取数据
     :param str seq_len: 用该key在evaluate()时从传入dict中取出sequence length数据。为None，则使用 `seq_len` 取数据。
-    :param str encoding_type: 目前支持bio, bmes, bmeso, bioes
+    :param str encoding_type: 目前支持bio, bmes, bmeso, bioes。默认为None，通过tag_vocab自动判断.
     :param list ignore_labels: str 组成的list. 这个list中的class不会被用于计算。例如在POS tagging时传入['NN']，则不会计算'NN'这
         个label
     :param bool only_gross: 是否只计算总的f1, precision, recall的值；如果为False，不仅返回总的f1, pre, rec, 还会返回每个
@@ -560,18 +606,21 @@ class SpanFPreRecMetric(MetricBase):
         常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
     """
     
-    def __init__(self, tag_vocab, pred=None, target=None, seq_len=None, encoding_type='bio', ignore_labels=None,
+    def __init__(self, tag_vocab, pred=None, target=None, seq_len=None, encoding_type=None, ignore_labels=None,
                  only_gross=True, f_type='micro', beta=1):
-        
-        encoding_type = encoding_type.lower()
-        
+
         if not isinstance(tag_vocab, Vocabulary):
             raise TypeError("tag_vocab can only be fastNLP.Vocabulary, not {}.".format(type(tag_vocab)))
         if f_type not in ('micro', 'macro'):
             raise ValueError("f_type only supports `micro` or `macro`', got {}.".format(f_type))
-        
-        self.encoding_type = encoding_type
-        _check_tag_vocab_and_encoding_type(tag_vocab, encoding_type)
+
+        if encoding_type:
+            encoding_type = encoding_type.lower()
+            _check_tag_vocab_and_encoding_type(tag_vocab, encoding_type)
+            self.encoding_type = encoding_type
+        else:
+            self.encoding_type =  _get_encoding_type_from_tag_vocab(tag_vocab)
+
         if self.encoding_type == 'bmes':
             self.tag_to_span_func = _bmes_tag_to_spans
         elif self.encoding_type == 'bio':
@@ -581,7 +630,7 @@ class SpanFPreRecMetric(MetricBase):
         elif self.encoding_type == 'bioes':
             self.tag_to_span_func = _bioes_tag_to_spans
         else:
-            raise ValueError("Only support 'bio', 'bmes', 'bmeso' type.")
+            raise ValueError("Only support 'bio', 'bmes', 'bmeso', 'bioes' type.")
         
         self.ignore_labels = ignore_labels
         self.f_type = f_type
