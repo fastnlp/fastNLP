@@ -1,9 +1,35 @@
-"""undocumented
-bert.py is modified from huggingface/pytorch-pretrained-BERT, which is licensed under the Apache License 2.0.
+"""
+fastNLP提供了BERT应用到五个下游任务的模型代码，可以直接调用。这五个任务分别为
+
+    - 文本分类任务： :class:`~fastNLP.models.BertForSequenceClassification`
+    - Matching任务： :class:`~fastNLP.models.BertForSentenceMatching`
+    - 多选任务： :class:`~fastNLP.models.BertForMultipleChoice`
+    - 序列标注任务： :class:`~fastNLP.models.BertForTokenClassification`
+    - 抽取式QA任务： :class:`~fastNLP.models.BertForQuestionAnswering`
+
+每一个模型必须要传入一个名字为 `embed` 的 :class:`fastNLP.embeddings.BertEmbedding` ，这个参数包含了
+:class:`fastNLP.modules.encoder.BertModel` ，是下游模型的编码器(encoder)。
+
+除此以外，还需要传入一个数字，这个数字在不同下游任务模型上的意义如下::
+
+    下游任务模型                     参数名称      含义
+    BertForSequenceClassification  num_labels  文本分类类别数目，默认值为2
+    BertForSentenceMatching        num_labels  Matching任务类别数目，默认值为2
+    BertForMultipleChoice          num_choices 多选任务选项数目，默认值为2
+    BertForTokenClassification     num_labels  序列标注标签数目，无默认值
+    BertForQuestionAnswering       num_labels  抽取式QA列数，默认值为2(即第一列为start_span, 第二列为end_span)
+
+最后还可以传入dropout的大小，默认值为0.1。
 
 """
 
-__all__ = []
+__all__ = [
+    "BertForSequenceClassification",
+    "BertForSentenceMatching",
+    "BertForMultipleChoice",
+    "BertForTokenClassification",
+    "BertForQuestionAnswering"
+]
 
 import warnings
 
@@ -13,28 +39,40 @@ from torch import nn
 from .base_model import BaseModel
 from ..core.const import Const
 from ..core._logger import logger
-from ..modules.encoder import BertModel
-from ..modules.encoder.bert import BertConfig, CONFIG_FILE
-from ..embeddings.bert_embedding import BertEmbedding
+from ..embeddings import BertEmbedding
 
 
 class BertForSequenceClassification(BaseModel):
-    """BERT model for classification.
     """
-    def __init__(self, init_embed: BertEmbedding, num_labels: int=2):
+    别名： :class:`fastNLP.models.BertForSequenceClassification`
+    :class:`fastNLP.models.bert.BertForSequenceClassification`
+
+    BERT model for classification.
+
+    :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
+    :param int num_labels: 文本分类类别数目，默认值为2.
+    :param float dropout: dropout的大小，默认值为0.1.
+    """
+    def __init__(self, embed: BertEmbedding, num_labels: int=2, dropout=0.1):
         super(BertForSequenceClassification, self).__init__()
 
         self.num_labels = num_labels
-        self.bert = init_embed
-        self.dropout = nn.Dropout(0.1)
+        self.bert = embed
+        self.dropout = nn.Dropout(p=dropout)
         self.classifier = nn.Linear(self.bert.embedding_dim, num_labels)
 
         if not self.bert.model.include_cls_sep:
-            warn_msg = "Bert for sequence classification excepts BertEmbedding `include_cls_sep` True, but got False."
+            self.bert.model.include_cls_sep = True
+            warn_msg = "Bert for sequence classification excepts BertEmbedding `include_cls_sep` True, " \
+                       "but got False. FastNLP has changed it to True."
             logger.warn(warn_msg)
             warnings.warn(warn_msg)
 
     def forward(self, words):
+        """
+        :param torch.LongTensor words: [batch_size, seq_len]
+        :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.Tensor [batch_size, num_labels]
+        """
         hidden = self.dropout(self.bert(words))
         cls_hidden = hidden[:, 0]
         logits = self.classifier(cls_hidden)
@@ -42,172 +80,193 @@ class BertForSequenceClassification(BaseModel):
         return {Const.OUTPUT: logits}
 
     def predict(self, words):
+        """
+        :param torch.LongTensor words: [batch_size, seq_len]
+        :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.LongTensor [batch_size]
+        """
         logits = self.forward(words)[Const.OUTPUT]
         return {Const.OUTPUT: torch.argmax(logits, dim=-1)}
 
 
 class BertForSentenceMatching(BaseModel):
-
-    """BERT model for matching.
     """
-    def __init__(self, init_embed: BertEmbedding, num_labels: int=2):
+    别名： :class:`fastNLP.models.BertForSentenceMatching`
+    :class:`fastNLP.models.bert.BertForSentenceMatching`
+
+    BERT model for sentence matching.
+
+    :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
+    :param int num_labels: Matching任务类别数目，默认值为2.
+    :param float dropout: dropout的大小，默认值为0.1.
+    """
+    def __init__(self, embed: BertEmbedding, num_labels: int=2, dropout=0.1):
         super(BertForSentenceMatching, self).__init__()
         self.num_labels = num_labels
-        self.bert = init_embed
-        self.dropout = nn.Dropout(0.1)
+        self.bert = embed
+        self.dropout = nn.Dropout(p=dropout)
         self.classifier = nn.Linear(self.bert.embedding_dim, num_labels)
 
         if not self.bert.model.include_cls_sep:
-            error_msg = "Bert for sentence matching excepts BertEmbedding `include_cls_sep` True, but got False."
-            logger.error(error_msg)
-            raise RuntimeError(error_msg)
+            self.bert.model.include_cls_sep = True
+            warn_msg = "Bert for sentence matching excepts BertEmbedding `include_cls_sep` True, " \
+                       "but got False. FastNLP has changed it to True."
+            logger.warn(warn_msg)
+            warnings.warn(warn_msg)
 
     def forward(self, words):
-        hidden = self.dropout(self.bert(words))
-        cls_hidden = hidden[:, 0]
+        """
+        :param torch.LongTensor words: [batch_size, seq_len]
+        :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.Tensor [batch_size, num_labels]
+        """
+        hidden = self.bert(words)
+        cls_hidden = self.dropout(hidden[:, 0])
         logits = self.classifier(cls_hidden)
 
         return {Const.OUTPUT: logits}
 
     def predict(self, words):
+        """
+        :param torch.LongTensor words: [batch_size, seq_len]
+        :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.LongTensor [batch_size]
+        """
         logits = self.forward(words)[Const.OUTPUT]
         return {Const.OUTPUT: torch.argmax(logits, dim=-1)}
 
 
 class BertForMultipleChoice(BaseModel):
-    """BERT model for multiple choice tasks.
     """
-    def __init__(self, init_embed: BertEmbedding, num_choices=2):
+    别名： :class:`fastNLP.models.BertForMultipleChoice`
+    :class:`fastNLP.models.bert.BertForMultipleChoice`
+
+    BERT model for multiple choice.
+
+    :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
+    :param int num_choices: 多选任务选项数目，默认值为2.
+    :param float dropout: dropout的大小，默认值为0.1.
+    """
+    def __init__(self, embed: BertEmbedding, num_choices=2, dropout=0.1):
         super(BertForMultipleChoice, self).__init__()
 
         self.num_choices = num_choices
-        self.bert = init_embed
-        self.dropout = nn.Dropout(0.1)
+        self.bert = embed
+        self.dropout = nn.Dropout(p=dropout)
         self.classifier = nn.Linear(self.bert.embedding_dim, 1)
-        self.include_cls_sep = init_embed.model.include_cls_sep
 
         if not self.bert.model.include_cls_sep:
-            error_msg = "Bert for multiple choice excepts BertEmbedding `include_cls_sep` True, but got False."
-            logger.error(error_msg)
-            raise RuntimeError(error_msg)
+            self.bert.model.include_cls_sep = True
+            warn_msg = "Bert for multiple choice excepts BertEmbedding `include_cls_sep` True, " \
+                       "but got False. FastNLP has changed it to True."
+            logger.warn(warn_msg)
+            warnings.warn(warn_msg)
 
     def forward(self, words):
         """
-        :param torch.Tensor words: [batch_size, num_choices, seq_len]
-        :return: [batch_size, num_labels]
+        :param torch.LongTensor words: [batch_size, num_choices, seq_len]
+        :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.LongTensor [batch_size, num_choices]
         """
         batch_size, num_choices, seq_len = words.size()
 
         input_ids = words.view(batch_size * num_choices, seq_len)
         hidden = self.bert(input_ids)
-        pooled_output = hidden[:, 0]
-        pooled_output = self.dropout(pooled_output)
+        pooled_output = self.dropout(hidden[:, 0])
         logits = self.classifier(pooled_output)
         reshaped_logits = logits.view(-1, self.num_choices)
 
         return {Const.OUTPUT: reshaped_logits}
 
     def predict(self, words):
+        """
+        :param torch.LongTensor words: [batch_size, num_choices, seq_len]
+        :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.LongTensor [batch_size]
+        """
         logits = self.forward(words)[Const.OUTPUT]
         return {Const.OUTPUT: torch.argmax(logits, dim=-1)}
 
 
 class BertForTokenClassification(BaseModel):
-    """BERT model for token-level classification.
     """
-    def __init__(self, init_embed: BertEmbedding, num_labels):
+    别名： :class:`fastNLP.models.BertForTokenClassification`
+    :class:`fastNLP.models.bert.BertForTokenClassification`
+
+    BERT model for token classification.
+
+    :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
+    :param int num_labels: 序列标注标签数目，无默认值.
+    :param float dropout: dropout的大小，默认值为0.1.
+    """
+    def __init__(self, embed: BertEmbedding, num_labels, dropout=0.1):
         super(BertForTokenClassification, self).__init__()
 
         self.num_labels = num_labels
-        self.bert = init_embed
-        self.dropout = nn.Dropout(0.1)
+        self.bert = embed
+        self.dropout = nn.Dropout(p=dropout)
         self.classifier = nn.Linear(self.bert.embedding_dim, num_labels)
-        self.include_cls_sep = init_embed.model.include_cls_sep
 
-        if self.include_cls_sep:
-            warn_msg = "Bert for token classification excepts BertEmbedding `include_cls_sep` False, but got True."
-            warnings.warn(warn_msg)
+        if self.bert.model.include_cls_sep:
+            self.bert.model.include_cls_sep = False
+            warn_msg = "Bert for token classification excepts BertEmbedding `include_cls_sep` False, " \
+                       "but got True. FastNLP has changed it to False."
             logger.warn(warn_msg)
+            warnings.warn(warn_msg)
 
     def forward(self, words):
         """
-        :param torch.Tensor words: [batch_size, seq_len]
-        :return: [batch_size, seq_len, num_labels]
+        :param torch.LongTensor words: [batch_size, seq_len]
+        :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.Tensor [batch_size, seq_len, num_labels]
         """
-        sequence_output = self.bert(words)
-        if self.include_cls_sep:
-            sequence_output = sequence_output[:, 1: -1]  # [batch_size, seq_len, embed_dim]
+        sequence_output = self.bert(words)  # [batch_size, seq_len, embed_dim]
         sequence_output = self.dropout(sequence_output)
         logits = self.classifier(sequence_output)
 
         return {Const.OUTPUT: logits}
 
     def predict(self, words):
+        """
+        :param torch.LongTensor words: [batch_size, seq_len]
+        :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.LongTensor [batch_size, seq_len]
+        """
         logits = self.forward(words)[Const.OUTPUT]
         return {Const.OUTPUT: torch.argmax(logits, dim=-1)}
 
 
 class BertForQuestionAnswering(BaseModel):
-    """BERT model for Question Answering (span extraction).
-    This module is composed of the BERT model with a linear layer on top of
-    the sequence output that computes start_logits and end_logits
-    Params:
-        `config`: a BertConfig class instance with the configuration to build a new model.
-        `bert_dir`: a dir which contains the bert parameters within file `pytorch_model.bin`
-    Inputs:
-        `input_ids`: a torch.LongTensor of shape [batch_size, sequence_length]
-            with the word token indices in the vocabulary(see the tokens preprocessing logic in the scripts
-            `extract_features.py`, `run_classifier.py` and `run_squad.py`)
-        `token_type_ids`: an optional torch.LongTensor of shape [batch_size, sequence_length] with the token
-            types indices selected in [0, 1]. Type 0 corresponds to a `sentence A` and type 1 corresponds to
-            a `sentence B` token (see BERT paper for more details).
-        `attention_mask`: an optional torch.LongTensor of shape [batch_size, sequence_length] with indices
-            selected in [0, 1]. It's a mask to be used if the input sequence length is smaller than the max
-            input sequence length in the current batch. It's the mask that we typically use for attention when
-            a batch has varying length sentences.
-        `start_positions`: position of the first token for the labeled span: torch.LongTensor of shape [batch_size].
-            Positions are clamped to the length of the sequence and position outside of the sequence are not taken
-            into account for computing the loss.
-        `end_positions`: position of the last token for the labeled span: torch.LongTensor of shape [batch_size].
-            Positions are clamped to the length of the sequence and position outside of the sequence are not taken
-            into account for computing the loss.
-    Outputs:
-        if `start_positions` and `end_positions` are not `None`:
-            Outputs the total_loss which is the sum of the CrossEntropy loss for the start and end token positions.
-        if `start_positions` or `end_positions` is `None`:
-            Outputs a tuple of start_logits, end_logits which are the logits respectively for the start and end
-            position tokens of shape [batch_size, sequence_length].
-    Example usage:
-    ```python
-    # Already been converted into WordPiece token ids
-    input_ids = torch.LongTensor([[31, 51, 99], [15, 5, 0]])
-    input_mask = torch.LongTensor([[1, 1, 1], [1, 1, 0]])
-    token_type_ids = torch.LongTensor([[0, 0, 1], [0, 1, 0]])
-    config = BertConfig(vocab_size_or_config_json_file=32000, hidden_size=768,
-        num_hidden_layers=12, num_attention_heads=12, intermediate_size=3072)
-    bert_dir = 'your-bert-file-dir'
-    model = BertForQuestionAnswering(config, bert_dir)
-    start_logits, end_logits = model(input_ids, token_type_ids, input_mask)
-    ```
     """
-    def __init__(self, init_embed: BertEmbedding, num_labels=2):
+    别名： :class:`fastNLP.models.BertForQuestionAnswering`
+    :class:`fastNLP.models.bert.BertForQuestionAnswering`
+
+    BERT model for classification.
+
+    :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
+    :param int num_labels: 抽取式QA列数，默认值为2(即第一列为start_span, 第二列为end_span).
+    """
+    def __init__(self, embed: BertEmbedding, num_labels=2):
         super(BertForQuestionAnswering, self).__init__()
 
-        self.bert = init_embed
+        self.bert = embed
         self.num_labels = num_labels
         self.qa_outputs = nn.Linear(self.bert.embedding_dim, self.num_labels)
 
         if not self.bert.model.include_cls_sep:
-            error_msg = "Bert for multiple choice excepts BertEmbedding `include_cls_sep` True, but got False."
-            logger.error(error_msg)
-            raise RuntimeError(error_msg)
+            self.bert.model.include_cls_sep = True
+            warn_msg = "Bert for question answering excepts BertEmbedding `include_cls_sep` True, " \
+                       "but got False. FastNLP has changed it to True."
+            logger.warn(warn_msg)
+            warnings.warn(warn_msg)
 
     def forward(self, words):
+        """
+        :param torch.LongTensor words: [batch_size, seq_len]
+        :return: 一个包含num_labels个logit的dict，每一个logit的形状都是[batch_size, seq_len]
+        """
         sequence_output = self.bert(words)
         logits = self.qa_outputs(sequence_output)  # [batch_size, seq_len, num_labels]
 
         return {Const.OUTPUTS(i): logits[:, :, i] for i in range(self.num_labels)}
 
     def predict(self, words):
+        """
+        :param torch.LongTensor words: [batch_size, seq_len]
+        :return: 一个包含num_labels个logit的dict，每一个logit的形状都是[batch_size]
+        """
         logits = self.forward(words)
         return {Const.OUTPUTS(i): torch.argmax(logits[Const.OUTPUTS(i)], dim=-1) for i in range(self.num_labels)}

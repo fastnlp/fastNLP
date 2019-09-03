@@ -21,12 +21,18 @@ __all__ = [
     "STSeqCls",
     
     "BiaffineParser",
-    "GraphParser"
+    "GraphParser",
+
+    "BertForSequenceClassification",
+    "BertForSentenceMatching",
+    "BertForMultipleChoice",
+    "BertForTokenClassification",
+    "BertForQuestionAnswering"
 ]
 
 from .base_model import BaseModel
 from .bert import BertForMultipleChoice, BertForQuestionAnswering, BertForSequenceClassification, \
-    BertForTokenClassification
+    BertForTokenClassification, BertForSentenceMatching
 from .biaffine_parser import BiaffineParser, GraphParser
 from .cnn_text_classification import CNNText
 from .sequence_labeling import SeqLabeling, AdvSeqLabel

@@ -24,21 +24,21 @@ class ESIM(BaseModel):
     ESIM model的一个PyTorch实现
     论文参见： https://arxiv.org/pdf/1609.06038.pdf
 
-    :param init_embedding: 初始化的Embedding
+    :param embed: 初始化的Embedding
     :param int hidden_size: 隐藏层大小，默认值为Embedding的维度
     :param int num_labels: 目标标签种类数量，默认值为3
     :param float dropout_rate: dropout的比率，默认值为0.3
     :param float dropout_embed: 对Embedding的dropout比率，默认值为0.1
     """
 
-    def __init__(self, init_embedding, hidden_size=None, num_labels=3, dropout_rate=0.3,
+    def __init__(self, embed, hidden_size=None, num_labels=3, dropout_rate=0.3,
                  dropout_embed=0.1):
         super(ESIM, self).__init__()
 
-        if isinstance(init_embedding, TokenEmbedding) or isinstance(init_embedding, Embedding):
-            self.embedding = init_embedding
+        if isinstance(embed, TokenEmbedding) or isinstance(embed, Embedding):
+            self.embedding = embed
         else:
-            self.embedding = Embedding(init_embedding)
+            self.embedding = Embedding(embed)
         self.dropout_embed = EmbedDropout(p=dropout_embed)
         if hidden_size is None:
             hidden_size = self.embedding.embed_size

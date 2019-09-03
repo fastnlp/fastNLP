@@ -245,7 +245,7 @@ class BiaffineParser(GraphParser):
     Biaffine Dependency Parser 实现.
     论文参考 `Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016) <https://arxiv.org/abs/1611.01734>`_ .
 
-    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+    :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
         embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
         此时就以传入的对象作为embedding
     :param pos_vocab_size: part-of-speech 词典大小
@@ -262,7 +262,7 @@ class BiaffineParser(GraphParser):
     """
     
     def __init__(self,
-                 init_embed,
+                 embed,
                  pos_vocab_size,
                  pos_emb_dim,
                  num_label,
@@ -276,7 +276,7 @@ class BiaffineParser(GraphParser):
         super(BiaffineParser, self).__init__()
         rnn_out_size = 2 * rnn_hidden_size
         word_hid_dim = pos_hid_dim = rnn_hidden_size
-        self.word_embedding = get_embeddings(init_embed)
+        self.word_embedding = get_embeddings(embed)
         word_emb_dim = self.word_embedding.embedding_dim
         self.pos_embedding = nn.Embedding(num_embeddings=pos_vocab_size, embedding_dim=pos_emb_dim)
         self.word_fc = nn.Linear(word_emb_dim, word_hid_dim)
