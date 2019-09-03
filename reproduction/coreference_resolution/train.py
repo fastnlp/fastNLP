@@ -45,7 +45,7 @@ if __name__ == "__main__":
     print("数据集划分：\ntrain:", str(len(data_info.datasets["train"])),
           "\ndev:" + str(len(data_info.datasets["dev"])) + "\ntest:" + str(len(data_info.datasets["test"])))
     # print(data_info)
-    model = Model(data_info.vocabs, config)
+    model = Model(data_info.vocabs['vocab'], config)
     print(model)
 
     loss = SoftmaxLoss()

@@ -6,12 +6,16 @@ __all__ = [
 from .pipe import Pipe
 from ..data_bundle import DataBundle
 from ..loader.coreference import CRLoader
+from ...core.const import Const
 from fastNLP.core.vocabulary import Vocabulary
 import numpy as np
 import collections
 
 
 class CoreferencePipe(Pipe):
+    """
+    对Coreference resolution问题进行处理，得到文章种类/说话者/字符级信息/序列长度。
+    """
 
     def __init__(self,config):
         super().__init__()
@@ -19,28 +23,39 @@ class CoreferencePipe(Pipe):
 
     def process(self, data_bundle: DataBundle):
         genres = {g: i for i, g in enumerate(["bc", "bn", "mz", "nw", "pt", "tc", "wb"])}
-        vocab = Vocabulary().from_dataset(*data_bundle.datasets.values(), field_name='sentences')
+        vocab = Vocabulary().from_dataset(*data_bundle.datasets.values(), field_name=Const.INPUTS(2))
         vocab.build_vocab()
         word2id = vocab.word2idx
+        data_bundle.vocabs = {"vocab":vocab}
         char_dict = get_char_dict(self.config.char_path)
-        for name, ds in data_bundle.datasets.items():
-            ds.apply(lambda x: doc2numpy(x['sentences'], word2id, char_dict, max(self.config.filter),
-                                                    self.config.max_sentences, is_train=name == 'train')[0],
-                     new_field_name='doc_np')
-            ds.apply(lambda x: doc2numpy(x['sentences'], word2id, char_dict, max(self.config.filter),
-                                                    self.config.max_sentences, is_train=name == 'train')[1],
-                     new_field_name='char_index')
-            ds.apply(lambda x: doc2numpy(x['sentences'], word2id, char_dict, max(self.config.filter),
-                                                    self.config.max_sentences, is_train=name == 'train')[2],
-                     new_field_name='seq_len')
-            ds.apply(lambda x: speaker2numpy(x["speakers"], self.config.max_sentences, is_train=name == 'train'),
-                     new_field_name='speaker_ids_np')
-            ds.apply(lambda x: genres[x["doc_key"][:2]], new_field_name='genre')
 
-            ds.set_ignore_type('clusters')
-            ds.set_padder('clusters', None)
-            ds.set_input("sentences", "doc_np", "speaker_ids_np", "genre", "char_index", "seq_len")
-            ds.set_target("clusters")
+        for name, ds in data_bundle.datasets.items():
+            # genre
+            ds.apply(lambda x: genres[x[Const.INPUTS(0)][:2]], new_field_name=Const.INPUTS(0))
+
+            # speaker_ids_np
+            ds.apply(lambda x: speaker2numpy(x[Const.INPUTS(1)], self.config.max_sentences, is_train=name == 'train'),
+                     new_field_name=Const.INPUTS(1))
+
+            # doc_np
+            ds.apply(lambda x: doc2numpy(x[Const.INPUTS(2)], word2id, char_dict, max(self.config.filter),
+                                                    self.config.max_sentences, is_train=name == 'train')[0],
+                     new_field_name=Const.INPUTS(3))
+            # char_index
+            ds.apply(lambda x: doc2numpy(x[Const.INPUTS(2)], word2id, char_dict, max(self.config.filter),
+                                                    self.config.max_sentences, is_train=name == 'train')[1],
+                     new_field_name=Const.CHAR_INPUT)
+            # seq len
+            ds.apply(lambda x: doc2numpy(x[Const.INPUTS(2)], word2id, char_dict, max(self.config.filter),
+                                                    self.config.max_sentences, is_train=name == 'train')[2],
+                     new_field_name=Const.INPUT_LEN)
+
+
+            ds.set_ignore_type(Const.TARGET)
+            ds.set_padder(Const.TARGET, None)
+            ds.set_input(Const.INPUTS(0), Const.INPUTS(1), Const.INPUTS(2), Const.INPUTS(3), Const.CHAR_INPUT, Const.INPUT_LEN)
+            ds.set_target(Const.TARGET)
+
         return data_bundle
 
     def process_from_file(self, paths):

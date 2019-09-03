@@ -1,17 +1,34 @@
 from ...core.dataset import DataSet
 from ..file_reader import _read_json
 from ...core.instance import Instance
+from ...core.const import Const
 from .json import JsonLoader
 
 
 class CRLoader(JsonLoader):
+    """
+        原始数据中内容应该为, 每一行为一个json对象,其中doc_key包含文章的种类信息，speakers包含每句话的说话者信息，cluster是指向现实中同一个事物的聚集，sentences是文本信息内容。
+
+        Example::
+
+           {"doc_key":"bc/cctv/00/cctv_001",
+           "speakers":"[["Speaker1","Speaker1","Speaker1"],["Speaker1","Speaker1","Speaker1"]]",
+           "clusters":"[[[2,3],[4,5]],[7,8],[18,20]]]",
+           "sentences":[["I","have","an","apple"],["It","is","good"]]
+           }
+
+        读取预处理好的Conll2012数据。
+
+        """
     def __init__(self, fields=None, dropna=False):
         super().__init__(fields, dropna)
+        self.fields = {"doc_key":Const.INPUTS(0),"speakers":Const.INPUTS(1),"clusters":Const.TARGET,"sentences":Const.INPUTS(2)}
 
     def _load(self, path):
         """
         加载数据
-        :param path:
+        :param path: 数据文件路径，文件为json
+
         :return:
         """
         dataset = DataSet()
