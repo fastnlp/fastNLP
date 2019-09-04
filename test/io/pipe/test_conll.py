@@ -4,12 +4,14 @@ from fastNLP.io import MsraNERPipe, PeopleDailyPipe, WeiboNERPipe, Conll2003Pipe
 
 
 @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
-class TestPipe(unittest.TestCase):
+class TestConllPipe(unittest.TestCase):
     def test_process_from_file(self):
         for pipe in [MsraNERPipe, PeopleDailyPipe, WeiboNERPipe]:
             with self.subTest(pipe=pipe):
                 print(pipe)
-                data_bundle = pipe().process_from_file()
+                data_bundle = pipe(bigrams=True, trigrams=True).process_from_file()
+                print(data_bundle)
+                data_bundle = pipe(encoding_type='bioes').process_from_file()
                 print(data_bundle)
 
 

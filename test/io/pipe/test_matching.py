@@ -7,7 +7,7 @@ from fastNLP.io.pipe.matching import SNLIBertPipe, RTEBertPipe, QNLIBertPipe, MN
 
 
 @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
-class TestPipe(unittest.TestCase):
+class TestMatchingPipe(unittest.TestCase):
     def test_process_from_file(self):
         for pipe in [SNLIPipe, RTEPipe, QNLIPipe, MNLIPipe]:
             with self.subTest(pipe=pipe):
@@ -17,7 +17,7 @@ class TestPipe(unittest.TestCase):
 
 
 @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
-class TestBertPipe(unittest.TestCase):
+class TestMatchingBertPipe(unittest.TestCase):
     def test_process_from_file(self):
         for pipe in [SNLIBertPipe, RTEBertPipe, QNLIBertPipe, MNLIBertPipe]:
             with self.subTest(pipe=pipe):
@@ -26,7 +26,7 @@ class TestBertPipe(unittest.TestCase):
                 print(data_bundle)
 
 
-class TestRunPipe(unittest.TestCase):
+class TestRunMatchingPipe(unittest.TestCase):
 
     def test_load(self):
         for pipe in [RTEPipe, RTEBertPipe]:

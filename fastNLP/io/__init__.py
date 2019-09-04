@@ -24,6 +24,7 @@ __all__ = [
     'IMDBLoader',
     'SSTLoader',
     'SST2Loader',
+    "ChnSentiCorpLoader",
 
     'ConllLoader',
     'Conll2003Loader',
@@ -52,8 +53,9 @@ __all__ = [
     "SSTPipe",
     "SST2Pipe",
     "IMDBPipe",
-    "Conll2003Pipe",
+    "ChnSentiCorpPipe",
 
+    "Conll2003Pipe",
     "Conll2003NERPipe",
     "OntoNotesNERPipe",
     "MsraNERPipe",

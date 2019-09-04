@@ -347,7 +347,7 @@ class AccuracyMetric(MetricBase):
             pass
         elif pred.dim() == target.dim() + 1:
             pred = pred.argmax(dim=-1)
-            if seq_len is None:
+            if seq_len is None and target.dim()>1:
                 warnings.warn("You are not passing `seq_len` to exclude pad when calculate accuracy.")
         else:
             raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "

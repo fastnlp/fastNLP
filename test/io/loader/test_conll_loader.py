@@ -5,7 +5,7 @@ from fastNLP.io.loader.conll import MsraNERLoader, PeopleDailyNERLoader, WeiboNE
     Conll2003Loader
 
 
-class MSRANERTest(unittest.TestCase):
+class TestMSRANER(unittest.TestCase):
     @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
     def test_download(self):
         MsraNERLoader().download(re_download=False)
@@ -13,13 +13,13 @@ class MSRANERTest(unittest.TestCase):
         print(data_bundle)
 
 
-class PeopleDailyTest(unittest.TestCase):
+class TestPeopleDaily(unittest.TestCase):
     @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
     def test_download(self):
         PeopleDailyNERLoader().download()
 
 
-class WeiboNERTest(unittest.TestCase):
+class TestWeiboNER(unittest.TestCase):
     @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
     def test_download(self):
         WeiboNERLoader().download()

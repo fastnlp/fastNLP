@@ -238,8 +238,8 @@ class CrossEntropyLoss(LossBase):
                 pred = pred.tranpose(-1, pred)
             pred = pred.reshape(-1, pred.size(-1))
             target = target.reshape(-1)
-        if seq_len is not None:
-            mask = seq_len_to_mask(seq_len).reshape(-1).eq(0)
+        if seq_len is not None and target.dim()>1:
+            mask = seq_len_to_mask(seq_len, max_len=target.size(1)).reshape(-1).eq(0)
             target = target.masked_fill(mask, self.padding_idx)
 
         return F.cross_entropy(input=pred, target=target,

@@ -77,6 +77,9 @@ PRETRAIN_STATIC_FILES = {
     'cn-tencent': "tencent_cn.zip",
     'cn-fasttext': "cc.zh.300.vec.gz",
     'cn-sgns-literature-word': 'sgns.literature.word.txt.zip',
+    'cn-char-fastnlp-100d': "cn_char_fastnlp_100d.zip",
+    'cn-bi-fastnlp-100d': "cn_bi_fastnlp_100d.zip",
+    "cn-tri-fastnlp-100d": "cn_tri_fastnlp_100d.zip"
 }
 
 DATASET_DIR = {
@@ -96,7 +99,9 @@ DATASET_DIR = {
     "cws-pku": 'cws_pku.zip',
     "cws-cityu": "cws_cityu.zip",
     "cws-as": 'cws_as.zip',
-    "cws-msra": 'cws_msra.zip'
+    "cws-msra": 'cws_msra.zip',
+
+    "chn-senti-corp":"chn_senti_corp.zip"
 }
 
 PRETRAIN_MAP = {'elmo': PRETRAINED_ELMO_MODEL_DIR,

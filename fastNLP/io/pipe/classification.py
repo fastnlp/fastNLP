@@ -5,7 +5,8 @@ __all__ = [
     "YelpPolarityPipe",
     "SSTPipe",
     "SST2Pipe",
-    'IMDBPipe'
+    'IMDBPipe',
+    "ChnSentiCorpPipe"
 ]
 
 import re
@@ -13,16 +14,16 @@ import re
 from nltk import Tree
 
 from .pipe import Pipe
-from .utils import get_tokenizer, _indexize, _add_words_field, _drop_empty_instance
+from .utils import get_tokenizer, _indexize, _add_words_field, _drop_empty_instance, _add_chars_field
 from ..data_bundle import DataBundle
 from ..loader.classification import IMDBLoader, YelpFullLoader, SSTLoader, SST2Loader, YelpPolarityLoader
 from ...core.const import Const
 from ...core.dataset import DataSet
 from ...core.instance import Instance
 from ...core.vocabulary import Vocabulary
+from ..loader.classification import ChnSentiCorpLoader
 
 nonalpnum = re.compile('[^0-9a-zA-Z?!\']+')
-
 
 
 class _CLSPipe(Pipe):
@@ -456,4 +457,98 @@ class IMDBPipe(_CLSPipe):
         data_bundle = IMDBLoader().load(paths)
         data_bundle = self.process(data_bundle)
         
+        return data_bundle
+
+
+class ChnSentiCorpPipe(Pipe):
+    """
+    处理之后的DataSet有以下的结构
+
+    .. csv-table::
+        :header: "raw_chars", "chars", "target", "seq_len"
+
+        "這間酒店環境和服務態度亦算不錯,但房間空間太小~~", "[2, 3, 4, 5, ...]", 1, 31
+        "<荐书> 推荐所有喜欢<红楼>...", "[10, 21, ....]", 1, 25
+        "..."
+
+    其中chars, seq_len是input，target是target
+
+    :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
+        设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+        data_bundle.get_vocab('bigrams')获取.
+    :param bool trigrams: 是否增加一列trigrams. trigrams的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
+        。如果设置为True，返回的DataSet将有一列名为trigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+        data_bundle.get_vocab('trigrams')获取.
+    """
+    def __init__(self, bigrams=False, trigrams=False):
+        super().__init__()
+
+        self.bigrams = bigrams
+        self.trigrams = trigrams
+
+    def _tokenize(self, data_bundle):
+        """
+        将DataSet中的"复旦大学"拆分为["复", "旦", "大", "学"]. 未来可以通过扩展这个函数实现分词。
+
+        :param data_bundle:
+        :return:
+        """
+        data_bundle.apply_field(list, field_name=Const.CHAR_INPUT, new_field_name=Const.CHAR_INPUT)
+        return data_bundle
+
+    def process(self, data_bundle:DataBundle):
+        """
+        可以处理的DataSet应该具备以下的field
+
+        .. csv-table::
+            :header: "raw_chars", "target"
+
+            "這間酒店環境和服務態度亦算不錯,但房間空間太小~~", "1"
+            "<荐书> 推荐所有喜欢<红楼>...", "1"
+            "..."
+
+        :param data_bundle:
+        :return:
+        """
+        _add_chars_field(data_bundle, lower=False)
+
+        data_bundle = self._tokenize(data_bundle)
+
+        input_field_names = [Const.CHAR_INPUT]
+        if self.bigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT, new_field_name='bigrams')
+            input_field_names.append('bigrams')
+        if self.trigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT, new_field_name='trigrams')
+            input_field_names.append('trigrams')
+
+        # index
+        _indexize(data_bundle, input_field_names, Const.TARGET)
+
+        input_fields = [Const.TARGET, Const.INPUT_LEN] + input_field_names
+        target_fields = [Const.TARGET]
+
+        for name, dataset in data_bundle.datasets.items():
+            dataset.add_seq_len(Const.CHAR_INPUT)
+
+        data_bundle.set_input(*input_fields)
+        data_bundle.set_target(*target_fields)
+
+        return data_bundle
+
+    def process_from_file(self, paths=None):
+        """
+
+        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
+        :return: DataBundle
+        """
+        # 读取数据
+        data_bundle = ChnSentiCorpLoader().load(paths)
+        data_bundle = self.process(data_bundle)
+
         return data_bundle

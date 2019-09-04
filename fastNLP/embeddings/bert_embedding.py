@@ -68,7 +68,7 @@ class BertEmbedding(ContextualEmbedding):
     
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en-base-uncased', layers: str = '-1',
                  pool_method: str = 'first', word_dropout=0, dropout=0, include_cls_sep: bool = False,
-                 pooled_cls=True, requires_grad: bool = False, auto_truncate: bool = False):
+                 pooled_cls=True, requires_grad: bool = True, auto_truncate: bool = False):
         super(BertEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
@@ -165,7 +165,7 @@ class BertWordPieceEncoder(nn.Module):
     """
     
     def __init__(self, model_dir_or_name: str = 'en-base-uncased', layers: str = '-1', pooled_cls: bool = False,
-                 word_dropout=0, dropout=0, requires_grad: bool = False):
+                 word_dropout=0, dropout=0, requires_grad: bool = True):
         super().__init__()
         
         self.model = _WordPieceBertModel(model_dir_or_name=model_dir_or_name, layers=layers, pooled_cls=pooled_cls)
@@ -288,7 +288,7 @@ class _WordBertModel(nn.Module):
         self.auto_truncate = auto_truncate
         
         # 将所有vocab中word的wordpiece计算出来, 需要额外考虑[CLS]和[SEP]
-        logger.info("Start to generating word pieces for word.")
+        logger.info("Start to generate word pieces for word.")
         # 第一步统计出需要的word_piece, 然后创建新的embed和word_piece_vocab, 然后填入值
         word_piece_dict = {'[CLS]': 1, '[SEP]': 1}  # 用到的word_piece以及新增的
         found_count = 0
@@ -374,7 +374,8 @@ class _WordBertModel(nn.Module):
                 else:
                     raise RuntimeError(
                         "After split words into word pieces, the lengths of word pieces are longer than the "
-                        f"maximum allowed sequence length:{self._max_position_embeddings} of bert.")
+                        f"maximum allowed sequence length:{self._max_position_embeddings} of bert. You can set "
+                        f"`auto_truncate=True` for BertEmbedding to automatically truncate overlong input.")
             
             # +2是由于需要加入[CLS]与[SEP]
             word_pieces = words.new_full((batch_size, min(word_piece_length + 2, self._max_position_embeddings)),
@@ -407,15 +408,26 @@ class _WordBertModel(nn.Module):
         # output_layers = [self.layers]  # len(self.layers) x batch_size x real_word_piece_length x hidden_size
         
         if self.include_cls_sep:
-            outputs = bert_outputs[-1].new_zeros(len(self.layers), batch_size, max_word_len + 2,
-                                                 bert_outputs[-1].size(-1))
             s_shift = 1
+            outputs = bert_outputs[-1].new_zeros(len(self.layers), batch_size, max_word_len + 2,
+                                                     bert_outputs[-1].size(-1))
+
         else:
+            s_shift = 0
             outputs = bert_outputs[-1].new_zeros(len(self.layers), batch_size, max_word_len,
                                                  bert_outputs[-1].size(-1))
-            s_shift = 0
         batch_word_pieces_cum_length = batch_word_pieces_length.new_zeros(batch_size, max_word_len + 1)
         batch_word_pieces_cum_length[:, 1:] = batch_word_pieces_length.cumsum(dim=-1)  # batch_size x max_len
+
+        if self.pool_method == 'first':
+            batch_word_pieces_cum_length = batch_word_pieces_cum_length[:, :seq_len.max()]
+            batch_word_pieces_cum_length.masked_fill_(batch_word_pieces_cum_length.ge(word_piece_length), 0)
+            batch_indexes = batch_indexes[:, None].expand((batch_size, batch_word_pieces_cum_length.size(1)))
+        elif self.pool_method == 'last':
+            batch_word_pieces_cum_length = batch_word_pieces_cum_length[:, 1:seq_len.max()+1] - 1
+            batch_word_pieces_cum_length.masked_fill_(batch_word_pieces_cum_length.ge(word_piece_length), 0)
+            batch_indexes = batch_indexes[:, None].expand((batch_size, batch_word_pieces_cum_length.size(1)))
+
         for l_index, l in enumerate(self.layers):
             output_layer = bert_outputs[l]
             real_word_piece_length = output_layer.size(1) - 2
@@ -426,16 +438,15 @@ class _WordBertModel(nn.Module):
                 output_layer = torch.cat((output_layer, paddings), dim=1).contiguous()
             # 从word_piece collapse到word的表示
             truncate_output_layer = output_layer[:, 1:-1]  # 删除[CLS]与[SEP] batch_size x len x hidden_size
-            outputs_seq_len = seq_len + s_shift
             if self.pool_method == 'first':
-                for i in range(batch_size):
-                    i_word_pieces_cum_length = batch_word_pieces_cum_length[i, :seq_len[i]]  # 每个word的start位置
-                    outputs[l_index, i, s_shift:outputs_seq_len[i]] = truncate_output_layer[
-                        i, i_word_pieces_cum_length]  # num_layer x batch_size x len x hidden_size
+                tmp = truncate_output_layer[batch_indexes, batch_word_pieces_cum_length]
+                tmp = tmp.masked_fill(word_mask[:, :batch_word_pieces_cum_length.size(1), None].eq(0), 0)
+                outputs[l_index, :, s_shift:batch_word_pieces_cum_length.size(1)+s_shift] = tmp
+
             elif self.pool_method == 'last':
-                for i in range(batch_size):
-                    i_word_pieces_cum_length = batch_word_pieces_cum_length[i, 1:seq_len[i] + 1] - 1  # 每个word的end
-                    outputs[l_index, i, s_shift:outputs_seq_len[i]] = truncate_output_layer[i, i_word_pieces_cum_length]
+                tmp = truncate_output_layer[batch_indexes, batch_word_pieces_cum_length]
+                tmp = tmp.masked_fill(word_mask[:, :batch_word_pieces_cum_length.size(1), None].eq(0), 0)
+                outputs[l_index, :, s_shift:batch_word_pieces_cum_length.size(1)+s_shift] = tmp
             elif self.pool_method == 'max':
                 for i in range(batch_size):
                     for j in range(seq_len[i]):
@@ -452,5 +463,6 @@ class _WordBertModel(nn.Module):
                 else:
                     outputs[l_index, :, 0] = output_layer[:, 0]
                 outputs[l_index, batch_indexes, seq_len + s_shift] = output_layer[batch_indexes, seq_len + s_shift]
+
         # 3. 最终的embedding结果
         return outputs

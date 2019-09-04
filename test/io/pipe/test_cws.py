@@ -4,7 +4,7 @@ import os
 from fastNLP.io.pipe.cws import CWSPipe
 
 
-class CWSPipeTest(unittest.TestCase):
+class TestCWSPipe(unittest.TestCase):
     @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
     def test_process_from_file(self):
         dataset_names = ['pku', 'cityu', 'as', 'msra']
@@ -14,7 +14,7 @@ class CWSPipeTest(unittest.TestCase):
                 print(data_bundle)
 
 
-class RunCWSPipeTest(unittest.TestCase):
+class TestRunCWSPipe(unittest.TestCase):
     def test_process_from_file(self):
         dataset_names = ['msra']
         for dataset_name in dataset_names:

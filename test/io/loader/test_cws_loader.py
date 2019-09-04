@@ -3,7 +3,7 @@ import os
 from fastNLP.io.loader import CWSLoader
 
 
-class CWSLoaderTest(unittest.TestCase):
+class TestCWSLoader(unittest.TestCase):
     @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
     def test_download(self):
         dataset_names = ['pku', 'cityu', 'as', 'msra']
@@ -13,7 +13,7 @@ class CWSLoaderTest(unittest.TestCase):
                 print(data_bundle)
 
 
-class RunCWSLoaderTest(unittest.TestCase):
+class TestRunCWSLoader(unittest.TestCase):
     def test_cws_loader(self):
         dataset_names = ['msra']
         for dataset_name in dataset_names:

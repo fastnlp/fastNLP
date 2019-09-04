@@ -13,6 +13,12 @@ class TestDownload(unittest.TestCase):
         words = torch.LongTensor([[2, 3, 4, 0]])
         print(embed(words).size())
 
+        for pool_method in ['first', 'last', 'max', 'avg']:
+            for include_cls_sep in [True, False]:
+                embed = BertEmbedding(vocab, model_dir_or_name='en', pool_method=pool_method,
+                                      include_cls_sep=include_cls_sep)
+                print(embed(words).size())
+
     def test_word_drop(self):
         vocab = Vocabulary().add_word_lst("This is a test .".split())
         embed = BertEmbedding(vocab, model_dir_or_name='en', dropout=0.1, word_dropout=0.2)
