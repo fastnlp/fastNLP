@@ -37,15 +37,15 @@ if __name__ == "__main__":
 
     print(config)
 
-    @cache_results('cache.pkl')
+    # @cache_results('cache.pkl')
     def cache():
-        bundle = CoreferencePipe(Config()).process_from_file({'train': config.train_path, 'dev': config.dev_path,'test': config.test_path})
+        bundle = CoreferencePipe(config).process_from_file({'train': config.train_path, 'dev': config.dev_path,'test': config.test_path})
         return bundle
-    data_info = cache()
-    print("数据集划分：\ntrain:", str(len(data_info.datasets["train"])),
-          "\ndev:" + str(len(data_info.datasets["dev"])) + "\ntest:" + str(len(data_info.datasets["test"])))
+    data_bundle = cache()
+    print("数据集划分：\ntrain:", str(len(data_bundle.get_dataset("train"))),
+          "\ndev:" + str(len(data_bundle.get_dataset("dev"))) + "\ntest:" + str(len(data_bundle.get_dataset('test'))))
     # print(data_info)
-    model = Model(data_info.vocabs['vocab'], config)
+    model = Model(data_bundle.vocabs['vocab'], config)
     print(model)
 
     loss = SoftmaxLoss()
@@ -56,8 +56,8 @@ if __name__ == "__main__":
 
     lr_decay_callback = LRCallback(optim.param_groups, config.lr_decay)
 
-    trainer = Trainer(model=model, train_data=data_info.datasets["train"], dev_data=data_info.datasets["dev"],
-                      loss=loss, metrics=metric, check_code_level=-1,sampler=None,
+    trainer = Trainer(model=model, train_data=data_bundle.datasets["train"], dev_data=data_bundle.datasets["dev"],
+                      loss=loss, metrics=metric, check_code_level=-1, sampler=None,
                       batch_size=1, device=torch.device("cuda:" + config.cuda), metric_key='f', n_epochs=config.epoch,
                       optimizer=optim,
                       save_path='/remote-home/xxliu/pycharm/fastNLP/fastNLP/reproduction/coreference_resolution/save',
