@@ -17,8 +17,6 @@ from .utils import get_embeddings
 
 class Embedding(nn.Module):
     """
-    别名：:class:`fastNLP.embeddings.Embedding`   :class:`fastNLP.embeddings.embedding.Embedding`
-
     词向量嵌入，支持输入多种方式初始化. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度.
 
     Example::

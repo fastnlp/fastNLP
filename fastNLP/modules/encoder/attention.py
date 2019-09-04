@@ -45,7 +45,6 @@ class DotAttention(nn.Module):
 
 class MultiHeadAttention(nn.Module):
     """
-    别名：:class:`fastNLP.modules.MultiHeadAttention`   :class:`fastNLP.modules.encoder.MultiHeadAttention`
 
     :param input_size: int, 输入维度的大小。同时也是输出维度的大小。
     :param key_size: int, 每个head的维度大小。

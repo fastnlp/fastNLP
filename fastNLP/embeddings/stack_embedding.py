@@ -17,8 +17,6 @@ from .embedding import TokenEmbedding
 
 class StackEmbedding(TokenEmbedding):
     """
-    别名：:class:`fastNLP.embeddings.StackEmbedding`   :class:`fastNLP.embeddings.stack_embedding.StackEmbedding`
-
     支持将多个embedding集合成一个embedding。
 
     Example::

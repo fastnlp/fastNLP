@@ -11,11 +11,7 @@ from reproduction.utils import check_dataloader_paths, get_tokenizer
 
 
 class SSTLoader(DataSetLoader):
-    URL = 'https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip'
-    DATA_DIR = 'sst/'
-
     """
-    别名：:class:`fastNLP.io.SSTLoader` :class:`fastNLP.io.dataset_loader.SSTLoader`
     读取SST数据集, DataSet包含fields::
         words: list(str) 需要分类的文本
         target: str 文本的标签
@@ -23,6 +19,10 @@ class SSTLoader(DataSetLoader):
     :param subtree: 是否将数据展开为子树，扩充数据量. Default: ``False``
     :param fine_grained: 是否使用SST-5标准，若 ``False`` , 使用SST-2。Default: ``False``
     """
+
+    URL = 'https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip'
+    DATA_DIR = 'sst/'
+
     def __init__(self, subtree=False, fine_grained=False):
         self.subtree = subtree
         tag_v = {'0': 'very negative', '1': 'negative', '2': 'neutral',

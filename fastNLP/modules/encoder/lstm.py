@@ -14,8 +14,6 @@ import torch.nn.utils.rnn as rnn
 
 class LSTM(nn.Module):
     """
-    别名：:class:`fastNLP.modules.LSTM`  :class:`fastNLP.modules.encoder.LSTM`
-
     LSTM 模块, 轻量封装的Pytorch LSTM. 在提供seq_len的情况下，将自动使用pack_padded_sequence; 同时默认将forget gate的bias初始化
         为1; 且可以应对DataParallel中LSTM的使用问题。
 

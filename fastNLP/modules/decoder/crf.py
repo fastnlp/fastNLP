@@ -15,8 +15,6 @@ from typing import Union
 
 def allowed_transitions(tag_vocab:Union[Vocabulary, dict], encoding_type=None, include_start_end=False):
     """
-    别名：:class:`fastNLP.modules.allowed_transitions`  :class:`fastNLP.modules.decoder.allowed_transitions`
-
     给定一个id到label的映射表，返回所有可以跳转的(from_tag_id, to_tag_id)列表。
 
     :param ~fastNLP.Vocabulary,dict tag_vocab: 支持类型为tag或tag-label。只有tag的,比如"B", "M"; 也可以是"B-NN", "M-NN",

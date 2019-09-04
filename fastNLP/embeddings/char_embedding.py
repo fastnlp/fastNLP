@@ -24,8 +24,6 @@ from ..core import logger
 
 class CNNCharEmbedding(TokenEmbedding):
     """
-    别名：:class:`fastNLP.embeddings.CNNCharEmbedding`   :class:`fastNLP.embeddings.char_embedding.CNNCharEmbedding`
-
     使用CNN生成character embedding。CNN的结构为, embed(x) -> Dropout(x) -> CNN(x) -> activation(x) -> pool -> fc -> Dropout.
     不同的kernel大小的fitler结果是concat起来然后通过一层fully connected layer, 然后输出word的表示。
 
@@ -179,8 +177,6 @@ class CNNCharEmbedding(TokenEmbedding):
 
 class LSTMCharEmbedding(TokenEmbedding):
     """
-    别名：:class:`fastNLP.embeddings.LSTMCharEmbedding`   :class:`fastNLP.embeddings.char_embedding.LSTMCharEmbedding`
-
     使用LSTM的方式对character进行encode. embed(x) -> Dropout(x) -> LSTM(x) -> activation(x) -> pool -> Dropout
 
     Example::

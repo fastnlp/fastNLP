@@ -22,8 +22,6 @@ from ..core import logger
 
 class ElmoEmbedding(ContextualEmbedding):
     """
-    别名：:class:`fastNLP.embeddings.ElmoEmbedding`   :class:`fastNLP.embeddings.elmo_embedding.ElmoEmbedding`
-
     使用ELMo的embedding。初始化之后，只需要传入words就可以得到对应的embedding。当前支持的使用名称初始化的模型有以下的这些(待补充)
 
     Example::

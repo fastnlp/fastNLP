@@ -348,8 +348,6 @@ class BertPooler(nn.Module):
 
 class BertModel(nn.Module):
     """
-    别名：:class:`fastNLP.modules.BertModel`   :class:`fastNLP.modules.encoder.BertModel`
-
     BERT(Bidirectional Embedding Representations from Transformers).
 
     用预训练权重矩阵来建立BERT模型::

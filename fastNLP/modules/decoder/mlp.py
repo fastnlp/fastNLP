@@ -12,8 +12,6 @@ from ..utils import initial_parameter
 
 class MLP(nn.Module):
     """
-    别名：:class:`fastNLP.modules.MLP`  :class:`fastNLP.modules.decoder.MLP`
-
     多层感知器
 
     :param List[int] size_layer: 一个int的列表，用来定义MLP的层数，列表中的数字为每一层是hidden数目。MLP的层数为 len(size_layer) - 1

@@ -26,8 +26,6 @@ from ..core import logger
 
 class BertEmbedding(ContextualEmbedding):
     """
-    别名：:class:`fastNLP.embeddings.BertEmbedding`   :class:`fastNLP.embeddings.bert_embedding.BertEmbedding`
-
     使用BERT对words进行编码的Embedding。建议将输入的words长度限制在430以内，而不要使用512(根据预训练模型参数，可能有变化)。这是由于
     预训练的bert模型长度限制为512个token，而因为输入的word是未进行word piece分割的(word piece的分割有BertEmbedding在输入word
     时切分)，在分割之后长度可能会超过最大长度限制。

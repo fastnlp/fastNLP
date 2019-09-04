@@ -10,9 +10,6 @@ from .attention import MultiHeadAttention
 
 class TransformerEncoder(nn.Module):
     """
-    别名：:class:`fastNLP.modules.TransformerEncoder`  :class:`fastNLP.modules.encoder.TransformerEncoder`
-
-
     transformer的encoder模块，不包含embedding层
 
     :param int num_layers: transformer的层数

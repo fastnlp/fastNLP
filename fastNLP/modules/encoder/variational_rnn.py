@@ -223,8 +223,6 @@ class VarRNNBase(nn.Module):
 
 class VarLSTM(VarRNNBase):
     """
-    别名：:class:`fastNLP.modules.VarLSTM`  :class:`fastNLP.modules.encoder.VarLSTM`
-
     Variational Dropout LSTM.
 
     :param input_size:  输入 `x` 的特征维度
@@ -248,8 +246,6 @@ class VarLSTM(VarRNNBase):
 
 class VarRNN(VarRNNBase):
     """
-    别名：:class:`fastNLP.modules.VarRNN`  :class:`fastNLP.modules.encoder.VarRNN`
-
     Variational Dropout RNN.
 
     :param input_size:  输入 `x` 的特征维度
@@ -273,8 +269,6 @@ class VarRNN(VarRNNBase):
 
 class VarGRU(VarRNNBase):
     """
-    别名：:class:`fastNLP.modules.VarGRU`  :class:`fastNLP.modules.encoder.VarGRU`
-
     Variational Dropout GRU.
 
     :param input_size:  输入 `x` 的特征维度
