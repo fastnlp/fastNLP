@@ -241,7 +241,7 @@ class BertForQuestionAnswering(BaseModel):
     def forward(self, words):
         """
         :param torch.LongTensor words: [batch_size, seq_len]
-        :return: 一个包含num_labels个logit的dict，每一个logit的形状都是[batch_size, seq_len]
+        :return: 一个包含num_labels个logit的dict，每一个logit的形状都是[batch_size, seq_len + 2]
         """
         sequence_output = self.bert(words)
         logits = self.qa_outputs(sequence_output)  # [batch_size, seq_len, num_labels]

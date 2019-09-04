@@ -1,0 +1,29 @@
+{
+  "lstm": {
+    "use_skip_connections": true,
+    "projection_dim": 16,
+    "cell_clip": 3,
+    "proj_clip": 3,
+    "dim": 16,
+    "n_layers": 1
+  },
+  "char_cnn": {
+    "activation": "relu",
+    "filters": [
+      [
+        1,
+        16
+      ],
+      [
+        2,
+        16
+      ]
+    ],
+    "n_highway": 1,
+    "embedding": {
+      "dim": 4
+    },
+    "n_characters": 262,
+    "max_characters_per_token": 50
+  }
+}

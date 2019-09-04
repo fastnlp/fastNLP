@@ -18,4 +18,19 @@ class TestDownload(unittest.TestCase):
 # 首先保证所有权重可以加载；上传权重；验证可以下载
 
 
+class TestRunElmo(unittest.TestCase):
+    def test_elmo_embedding(self):
+        vocab = Vocabulary().add_word_lst("This is a test .".split())
+        elmo_embed = ElmoEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_elmo', layers='0,1')
+        words = torch.LongTensor([[0, 1, 2]])
+        hidden = elmo_embed(words)
+        print(hidden.size())
+
+    def test_elmo_embedding_layer_assertion(self):
+        vocab = Vocabulary().add_word_lst("This is a test .".split())
+        try:
+            elmo_embed = ElmoEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_elmo',
+                                       layers='0,1,2')
+        except AssertionError as e:
+            print(e)
 

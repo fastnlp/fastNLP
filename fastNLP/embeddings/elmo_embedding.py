@@ -69,6 +69,7 @@ class ElmoEmbedding(ContextualEmbedding):
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
         self.model = _ElmoModel(model_dir, vocab, cache_word_reprs=cache_word_reprs)
+        num_layers = self.model.encoder.num_layers
         
         if layers == 'mix':
             self.layer_weights = nn.Parameter(torch.zeros(self.model.config['lstm']['n_layers'] + 1),
@@ -78,9 +79,9 @@ class ElmoEmbedding(ContextualEmbedding):
             self._embed_size = self.model.config['lstm']['projection_dim'] * 2
         else:
             layers = list(map(int, layers.split(',')))
-            assert len(layers) > 0, "Must choose one output"
+            assert len(layers) > 0, "Must choose at least one output, but got None."
             for layer in layers:
-                assert 0 <= layer <= 2, "Layer index should be in range [0, 2]."
+                assert 0 <= layer <= num_layers, f"Layer index should be in range [0, {num_layers}], but got {layer}."
             self.layers = layers
             self._get_outputs = self._get_layer_outputs
             self._embed_size = len(self.layers) * self.model.config['lstm']['projection_dim'] * 2
