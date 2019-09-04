@@ -357,8 +357,6 @@ from ._logger import logger
 
 class Trainer(object):
     """
-    别名：:class:`fastNLP.Trainer` :class:`fastNLP.core.trainer.Trainer`
-    
     Trainer在fastNLP中用于组织单任务的训练过程，可以避免用户在不同训练任务中重复撰写
         (1) epoch循环;
         (2) 将数据分成不同的Batch;

@@ -464,8 +464,6 @@ def _get_ele_type_and_dim(cell: Any, dim=0):
 
 class Padder:
     """
-    别名：:class:`fastNLP.Padder` :class:`fastNLP.core.field.Padder`
-
     所有padder都需要继承这个类，并覆盖__call__方法。
     用于对batch进行padding操作。传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前deepcopy一份。
 
@@ -534,8 +532,6 @@ class Padder:
 
 class AutoPadder(Padder):
     """
-    别名：:class:`fastNLP.AutoPadder` :class:`fastNLP.core.field.AutoPadder`
-
     根据contents的数据自动判定是否需要做padding。
 
     1 如果元素类型(元素类型是指field中最里层元素的数据类型, 可以通过FieldArray.dtype查看，比如['This', 'is', ...]的元素类
@@ -628,8 +624,6 @@ class AutoPadder(Padder):
 
 class EngChar2DPadder(Padder):
     """
-    别名：:class:`fastNLP.EngChar2DPadder` :class:`fastNLP.core.field.EngChar2DPadder`
-
     用于为英语执行character级别的2D padding操作。对应的field内容应该类似[['T', 'h', 'i', 's'], ['a'], ['d', 'e', 'm', 'o']]，
     但这个Padder只能处理index为int的情况。
 

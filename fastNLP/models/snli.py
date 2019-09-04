@@ -19,8 +19,6 @@ from ..embeddings.embedding import TokenEmbedding, Embedding
 
 class ESIM(BaseModel):
     """
-    别名：:class:`fastNLP.models.ESIM`  :class:`fastNLP.models.snli.ESIM`
-
     ESIM model的一个PyTorch实现
     论文参见： https://arxiv.org/pdf/1609.06038.pdf
 

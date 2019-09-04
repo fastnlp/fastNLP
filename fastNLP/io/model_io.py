@@ -11,8 +11,6 @@ import torch
 
 class ModelLoader:
     """
-    别名：:class:`fastNLP.io.ModelLoader` :class:`fastNLP.io.model_io.ModelLoader`
-
     用于读取模型
     """
     
@@ -41,8 +39,6 @@ class ModelLoader:
 
 class ModelSaver(object):
     """
-    别名：:class:`fastNLP.io.ModelSaver` :class:`fastNLP.io.model_io.ModelSaver`
-
     用于保存模型
     
     Example::

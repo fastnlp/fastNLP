@@ -12,8 +12,6 @@ from ...core.instance import Instance
 
 class JsonLoader(Loader):
     """
-    别名：:class:`fastNLP.io.JsonLoader` :class:`fastNLP.io.loader.JsonLoader`
-
     读取json格式数据.数据必须按行存储,每行是一个包含各类属性的json对象
 
     :param dict fields: 需要读入的json属性名称, 和读入后在DataSet中存储的field_name

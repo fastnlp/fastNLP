@@ -304,8 +304,6 @@ from ._logger import logger
 
 class DataSet(object):
     """
-    别名：:class:`fastNLP.DataSet`   :class:`fastNLP.core.dataset.DataSet`
-
     fastNLP的数据容器，详细的使用方法见文档  :doc:`fastNLP.core.dataset`
     
     :param data: 如果为dict类型，则每个key的value应该为等长的list; 如果为list，

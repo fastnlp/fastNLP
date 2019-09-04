@@ -228,8 +228,6 @@ class YelpPolarityPipe(_CLSPipe):
 
 class SSTPipe(_CLSPipe):
     """
-    别名：:class:`fastNLP.io.SSTPipe` :class:`fastNLP.io.pipe.SSTPipe`
-
     经过该Pipe之后，DataSet中具备的field如下所示
 
     .. csv-table:: 下面是使用SSTPipe处理后的DataSet所具备的field

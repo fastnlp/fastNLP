@@ -145,8 +145,6 @@ class BatchIter:
 
 class DataSetIter(BatchIter):
     """
-    别名：:class:`fastNLP.DataSetIter` :class:`fastNLP.core.batch.DataSetIter`
-
     DataSetIter 用于从 `DataSet` 中按一定的顺序, 依次按 ``batch_size`` 的大小将数据取出，
     组成 `x` 和 `y`::
 

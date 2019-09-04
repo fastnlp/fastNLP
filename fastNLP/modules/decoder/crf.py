@@ -166,10 +166,7 @@ def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label
 
 class ConditionalRandomField(nn.Module):
     """
-    别名：:class:`fastNLP.modules.ConditionalRandomField`  :class:`fastNLP.modules.decoder.ConditionalRandomField`
-
-    条件随机场。
-    提供forward()以及viterbi_decode()两个方法，分别用于训练与inference。
+    条件随机场。提供forward()以及viterbi_decode()两个方法，分别用于训练与inference。
 
     :param int num_tags: 标签的数量
     :param bool include_start_end_trans: 是否考虑各个tag作为开始以及结尾的分数。

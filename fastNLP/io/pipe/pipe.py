@@ -9,7 +9,9 @@ from .. import DataBundle
 
 class Pipe:
     """
-    别名：:class:`fastNLP.io.Pipe` :class:`fastNLP.io.pipe.Pipe`
+    .. todo::
+        doc
+
     """
     def process(self, data_bundle: DataBundle) -> DataBundle:
         """

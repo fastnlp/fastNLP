@@ -66,8 +66,6 @@ def _prepare_cache_filepath(filepath):
 
 def cache_results(_cache_fp, _refresh=False, _verbose=1):
     """
-    别名：:class:`fastNLP.cache_results` :class:`fastNLP.core.uitls.cache_results`
-
     cache_results是fastNLP中用于cache数据的装饰器。通过下面的例子看一下如何使用::
 
         import time

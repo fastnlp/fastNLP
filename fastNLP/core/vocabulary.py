@@ -66,8 +66,6 @@ def _check_build_status(func):
 
 class Vocabulary(object):
     """
-    别名：:class:`fastNLP.Vocabulary` :class:`fastNLP.core.vocabulary.Vocabulary`
-    
     用于构建, 存储和使用 `str` 到 `int` 的一一映射::
 
         vocab = Vocabulary()

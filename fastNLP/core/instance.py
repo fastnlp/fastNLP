@@ -10,8 +10,6 @@ __all__ = [
 
 class Instance(object):
     """
-    别名：:class:`fastNLP.Instance` :class:`fastNLP.core.instance.Instance`
-
     Instance是fastNLP中对应一个sample的类。每个sample在fastNLP中是一个Instance对象。
     Instance一般与 :class:`~fastNLP.DataSet` 一起使用, Instance的初始化如下面的Example所示::
     

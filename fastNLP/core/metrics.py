@@ -294,9 +294,6 @@ class MetricBase(object):
 
 class AccuracyMetric(MetricBase):
     """
-    
-    别名：:class:`fastNLP.AccuracyMetric` :class:`fastNLP.core.metrics.AccuracyMetric`
-
     准确率Metric（其它的Metric参见 :doc:`fastNLP.core.metrics` ）
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -565,8 +562,6 @@ def _check_tag_vocab_and_encoding_type(tag_vocab:Union[Vocabulary, dict], encodi
 
 class SpanFPreRecMetric(MetricBase):
     r"""
-    别名：:class:`fastNLP.SpanFPreRecMetric` :class:`fastNLP.core.metrics.SpanFPreRecMetric`
-
     在序列标注问题中，以span的方式计算F, pre, rec.
     比如中文Part of speech中，会以character的方式进行标注，句子 `中国在亚洲` 对应的POS可能为(以BMES为例)
     ['B-NN', 'E-NN', 'S-DET', 'B-NN', 'E-NN']。该metric就是为类似情况下的F1计算。
@@ -832,8 +827,6 @@ def _pred_topk(y_prob, k=1):
 
 class ExtractiveQAMetric(MetricBase):
     r"""
-    别名：:class:`fastNLP.ExtractiveQAMetric` :class:`fastNLP.core.metrics.ExtractiveQAMetric`
-
     抽取式QA（如SQuAD）的metric.
     
     :param pred1: 参数映射表中 `pred1` 的映射关系，None表示映射关系为 `pred1` -> `pred1`

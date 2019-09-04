@@ -96,8 +96,6 @@ except:
 
 class Callback(object):
     """
-    别名：:class:`fastNLP.Callback` :class:`fastNLP.core.callback.Callback`
-
     Callback是fastNLP中被设计用于增强 :class:`~fastNLP.Trainer` 的类。
     如果Callback被传递给了 Trainer , 则 Trainer 会在对应的阶段调用Callback的函数，
     具体调用时机可以通过 :doc:`trainer 模块<fastNLP.core.trainer>` 查看。
@@ -436,8 +434,6 @@ class DistCallbackManager(CallbackManager):
 
 class GradientClipCallback(Callback):
     """
-    别名：:class:`fastNLP.GradientClipCallback` :class:`fastNLP.core.callback.GradientClipCallback`
-
     每次backward前，将parameter的gradient clip到某个范围。
 
     :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。
@@ -481,8 +477,6 @@ class GradientClipCallback(Callback):
 
 class EarlyStopCallback(Callback):
     """
-    别名：:class:`fastNLP.EarlyStopCallback` :class:`fastNLP.core.callback.EarlyStopCallback`
-    
     多少个epoch没有变好就停止训练，相关类 :class:`EarlyStopError`
 
     :param int patience: epoch的数量
@@ -512,12 +506,10 @@ class EarlyStopCallback(Callback):
 
 class FitlogCallback(Callback):
     """
-    别名: :class:`fastNLP.FitlogCallback` :class:`fastNLP.core.callback.FitlogCallback`
-
     该callback可将loss和progress写入到fitlog中; 如果Trainer有dev的数据，将自动把dev的结果写入到log中; 同时还支持传入
-        一个(或多个)test数据集进行测试(只有在trainer具有dev时才能使用)，每次在dev上evaluate之后会在这些数据集上验证一下。
-        并将验证结果写入到fitlog中。这些数据集的结果是根据dev上最好的结果报道的，即如果dev在第3个epoch取得了最佳，则
-        fitlog中记录的关于这些数据集的结果就是来自第三个epoch的结果。
+    一个(或多个)test数据集进行测试(只有在trainer具有dev时才能使用)，每次在dev上evaluate之后会在这些数据集上验证一下。
+    并将验证结果写入到fitlog中。这些数据集的结果是根据dev上最好的结果报道的，即如果dev在第3个epoch取得了最佳，则
+    fitlog中记录的关于这些数据集的结果就是来自第三个epoch的结果。
 
     :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要
         传入多个DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。data的结果的名称以'data'开头。
@@ -611,8 +603,6 @@ class FitlogCallback(Callback):
 
 class EvaluateCallback(Callback):
     """
-    别名: :class:`fastNLP.EvaluateCallback` :class:`fastNLP.core.callback.EvaluateCallback`
-
     该callback用于扩展Trainer训练过程中只能对dev数据进行验证的问题。
 
     :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
@@ -673,8 +663,6 @@ class EvaluateCallback(Callback):
 
 class LRScheduler(Callback):
     """
-    别名：:class:`fastNLP.LRScheduler` :class:`fastNLP.core.callback.LRScheduler`
-
     对PyTorch LR Scheduler的包装以使得其可以被Trainer所使用
 
     :param torch.optim.lr_scheduler._LRScheduler lr_scheduler: PyTorch的lr_scheduler
@@ -695,7 +683,6 @@ class LRScheduler(Callback):
 
 class ControlC(Callback):
     """
-    别名：:class:`fastNLP.ControlC` :class:`fastNLP.core.callback.ControlC`
 
     :param bool quit_all: 若为True,则检测到control+C 直接退出程序；否则只退出Trainer
     """
@@ -732,8 +719,6 @@ class SmoothValue(object):
 
 class LRFinder(Callback):
     """
-    别名：:class:`fastNLP.LRFinder` :class:`fastNLP.core.callback.LRFinder`
-
     用第一个 epoch 找最佳的学习率，从第二个epoch开始应用它
 
     :param float start_lr: 学习率下界
@@ -804,8 +789,6 @@ class LRFinder(Callback):
 
 class TensorboardCallback(Callback):
     """
-    别名：:class:`fastNLP.TensorboardCallback` :class:`fastNLP.core.callback.TensorboardCallback`
-
     接受以下一个或多个字符串作为参数：
     - "model"
     - "loss"

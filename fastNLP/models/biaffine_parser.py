@@ -130,8 +130,6 @@ def _find_cycle(vertices, edges):
 
 class GraphParser(BaseModel):
     """
-    别名：:class:`fastNLP.models.GraphParser`  :class:`fastNLP.models.baffine_parser.GraphParser`
-
     基于图的parser base class, 支持贪婪解码和最大生成树解码
     """
     
@@ -240,8 +238,6 @@ class LabelBilinear(nn.Module):
 
 class BiaffineParser(GraphParser):
     """
-    别名：:class:`fastNLP.models.BiaffineParser`  :class:`fastNLP.models.baffine_parser.BiaffineParser`
-
     Biaffine Dependency Parser 实现.
     论文参考 `Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016) <https://arxiv.org/abs/1611.01734>`_ .
 
@@ -475,8 +471,6 @@ class BiaffineParser(GraphParser):
 
 class ParserLoss(LossFunc):
     """
-    别名：:class:`fastNLP.models.ParserLoss`  :class:`fastNLP.models.baffine_parser.ParserLoss`
-
     计算parser的loss
 
     :param pred1: [batch_size, seq_len, seq_len] 边预测logits
@@ -500,8 +494,6 @@ class ParserLoss(LossFunc):
 
 class ParserMetric(MetricBase):
     """
-    别名：:class:`fastNLP.models.ParserMetric`  :class:`fastNLP.models.baffine_parser.ParserMetric`
-
     评估parser的性能
 
     :param pred1: 边预测logits

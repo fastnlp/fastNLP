@@ -44,9 +44,6 @@ from ..embeddings import BertEmbedding
 
 class BertForSequenceClassification(BaseModel):
     """
-    别名： :class:`fastNLP.models.BertForSequenceClassification`
-    :class:`fastNLP.models.bert.BertForSequenceClassification`
-
     BERT model for classification.
 
     :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
@@ -90,9 +87,6 @@ class BertForSequenceClassification(BaseModel):
 
 class BertForSentenceMatching(BaseModel):
     """
-    别名： :class:`fastNLP.models.BertForSentenceMatching`
-    :class:`fastNLP.models.bert.BertForSentenceMatching`
-
     BERT model for sentence matching.
 
     :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
@@ -135,9 +129,6 @@ class BertForSentenceMatching(BaseModel):
 
 class BertForMultipleChoice(BaseModel):
     """
-    别名： :class:`fastNLP.models.BertForMultipleChoice`
-    :class:`fastNLP.models.bert.BertForMultipleChoice`
-
     BERT model for multiple choice.
 
     :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
@@ -185,9 +176,6 @@ class BertForMultipleChoice(BaseModel):
 
 class BertForTokenClassification(BaseModel):
     """
-    别名： :class:`fastNLP.models.BertForTokenClassification`
-    :class:`fastNLP.models.bert.BertForTokenClassification`
-
     BERT model for token classification.
 
     :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
@@ -231,9 +219,6 @@ class BertForTokenClassification(BaseModel):
 
 class BertForQuestionAnswering(BaseModel):
     """
-    别名： :class:`fastNLP.models.BertForQuestionAnswering`
-    :class:`fastNLP.models.bert.BertForQuestionAnswering`
-
     BERT model for classification.
 
     :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).

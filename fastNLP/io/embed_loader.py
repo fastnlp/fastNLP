@@ -33,8 +33,6 @@ class EmbeddingOption(Option):
 
 class EmbedLoader:
     """
-    别名：:class:`fastNLP.io.EmbedLoader` :class:`fastNLP.io.embed_loader.EmbedLoader`
-
     用于读取预训练的embedding, 读取结果可直接载入为模型参数。
     """
     

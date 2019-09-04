@@ -65,8 +65,6 @@ __all__ = [
 
 class Tester(object):
     """
-    别名：:class:`fastNLP.Tester` :class:`fastNLP.core.tester.Tester`
-
     Tester是在提供数据，模型以及metric的情况下进行性能测试的类。需要传入模型，数据以及metric进行验证。
 
     :param ~fastNLP.DataSet data: 需要测试的数据集

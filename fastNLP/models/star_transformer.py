@@ -19,8 +19,6 @@ from ..core.const import Const
 
 class StarTransEnc(nn.Module):
     """
-    别名：:class:`fastNLP.models.StarTransEnc`  :class:`fastNLP.models.star_transformer.StarTransEnc`
-
     带word embedding的Star-Transformer Encoder
 
     :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
@@ -104,8 +102,6 @@ class _NLICls(nn.Module):
 
 class STSeqLabel(nn.Module):
     """
-    别名：:class:`fastNLP.models.STSeqLabel`  :class:`fastNLP.models.star_transformer.STSeqLabel`
-
     用于序列标注的Star-Transformer模型
 
     :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
@@ -169,8 +165,6 @@ class STSeqLabel(nn.Module):
 
 class STSeqCls(nn.Module):
     """
-    别名：:class:`fastNLP.models.STSeqCls`  :class:`fastNLP.models.star_transformer.STSeqCls`
-
     用于分类任务的Star-Transformer
 
     :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
@@ -234,8 +228,6 @@ class STSeqCls(nn.Module):
 
 class STNLICls(nn.Module):
     """
-    别名：:class:`fastNLP.models.STNLICls`  :class:`fastNLP.models.star_transformer.STNLICls`
-    
     用于自然语言推断(NLI)的Star-Transformer
 
     :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即

@@ -167,8 +167,6 @@ class LossBase(object):
 
 class LossFunc(LossBase):
     """
-    别名：:class:`fastNLP.LossFunc` :class:`fastNLP.core.losses.LossFunc`
-
     提供给用户使用自定义损失函数的类
 
     :param func: 用户自行定义的损失函数，应当为一个函数或者callable(func)为True的ojbect
@@ -200,8 +198,6 @@ class LossFunc(LossBase):
 
 class CrossEntropyLoss(LossBase):
     """
-    别名：:class:`fastNLP.CrossEntropyLoss` :class:`fastNLP.core.losses.CrossEntropyLoss`
-
     交叉熵损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -248,8 +244,6 @@ class CrossEntropyLoss(LossBase):
 
 class L1Loss(LossBase):
     """
-    别名：:class:`fastNLP.L1Loss` :class:`fastNLP.core.losses.L1Loss`
-
     L1损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -270,8 +264,6 @@ class L1Loss(LossBase):
 
 class BCELoss(LossBase):
     """
-    别名：:class:`fastNLP.BCELoss` :class:`fastNLP.core.losses.BCELoss`
-
     二分类交叉熵损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -291,8 +283,6 @@ class BCELoss(LossBase):
 
 class NLLLoss(LossBase):
     """
-    别名：:class:`fastNLP.NLLLoss` :class:`fastNLP.core.losses.NLLLoss`
-    
     负对数似然损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -315,8 +305,6 @@ class NLLLoss(LossBase):
 
 class LossInForward(LossBase):
     """
-    别名：:class:`fastNLP.LossInForward` :class:`fastNLP.core.losses.LossInForward`
-
     从forward()函数返回结果中获取loss
     
     :param str loss_key: 在forward函数中loss的键名，默认为loss

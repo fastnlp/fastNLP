@@ -24,8 +24,6 @@ from ...core.instance import Instance
 
 class YelpLoader(Loader):
     """
-    别名：:class:`fastNLP.io.YelpLoader` :class:`fastNLP.io.loader.YelpLoader`
-
     原始数据中内容应该为, 每一行为一个sample，第一个逗号之前为target，第一个逗号之后为文本内容。
 
     Example::
@@ -164,8 +162,6 @@ class YelpPolarityLoader(YelpLoader):
 
 class IMDBLoader(Loader):
     """
-    别名：:class:`fastNLP.io.IMDBLoader` :class:`fastNLP.io.loader.IMDBLoader`
-
     IMDBLoader读取后的数据将具有以下两列内容: raw_words: str, 需要分类的文本; target: str, 文本的标签
     DataSet具备以下的结构:
 
@@ -244,8 +240,6 @@ class IMDBLoader(Loader):
 
 class SSTLoader(Loader):
     """
-    别名：:class:`fastNLP.io.SSTLoader` :class:`fastNLP.io.loader.SSTLoader`
-
     读取之后的DataSet具有以下的结构
 
     .. csv-table:: 下面是使用SSTLoader读取的DataSet所具备的field

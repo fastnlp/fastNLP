@@ -17,7 +17,6 @@ from torch.optim.optimizer import Optimizer as TorchOptimizer
 
 class Optimizer(object):
     """
-    别名：:class:`fastNLP.Optimizer` :class:`fastNLP.core.optimizer.Optimizer`
 
     :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
     :param kwargs: additional parameters.
@@ -60,7 +59,6 @@ class NullOptimizer(Optimizer):
 
 class SGD(Optimizer):
     """
-    别名：:class:`fastNLP.SGD` :class:`fastNLP.core.optimizer.SGD`
 
     :param float lr: learning rate. Default: 0.01
     :param float momentum: momentum. Default: 0
@@ -82,7 +80,6 @@ class SGD(Optimizer):
 
 class Adam(Optimizer):
     """
-    别名：:class:`fastNLP.Adam` :class:`fastNLP.core.optimizer.Adam`
 
     :param float lr: learning rate
     :param float weight_decay:
@@ -105,8 +102,6 @@ class Adam(Optimizer):
 
 class AdamW(TorchOptimizer):
     r"""
-    别名：:class:`fastNLP.AdamW` :class:`fastNLP.core.optimizer.AdamW`
-
     对AdamW的实现，该实现应该会在pytorch更高版本中出现，https://github.com/pytorch/pytorch/pull/21250。这里提前加入
     
     .. todo::
