@@ -468,18 +468,18 @@ class Padder:
     用于对batch进行padding操作。传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前deepcopy一份。
 
     .. py:function:: __call__(self, contents, field_name, field_ele_dtype):
+    
+    """
+    
+    def __init__(self, pad_val=0, **kwargs):
+        """
         
-        传入的是List内容。假设有以下的DataSet。
-
         :param List[Any] contents: 传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前
             deepcopy一份。
         :param str, field_name: field的名称。
         :param np.int64,np.float64,np.str,None, field_ele_dtype: 该field的内层元素的类型。如果该field的ignore_type为True，该这个值为None。
         :return: np.array([padded_element])
-
-    """
-    
-    def __init__(self, pad_val=0, **kwargs):
+        """
         self.pad_val = pad_val
     
     def set_pad_val(self, pad_val):

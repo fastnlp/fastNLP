@@ -51,14 +51,16 @@ class RandomSampler(Sampler):
 class BucketSampler(Sampler):
     """
     带Bucket的 `Random Sampler`. 可以随机地取出长度相似的元素
-
-    :param int num_buckets: bucket的数量
-    :param int batch_size: batch的大小. 默认为None，Trainer在调用BucketSampler时，会将该值正确设置，如果是非Trainer场景使用，需
-        要显示传递该值
-    :param str seq_len_field_name: 对应序列长度的 `field` 的名字
     """
     
     def __init__(self, num_buckets=10, batch_size=None, seq_len_field_name='seq_len'):
+        """
+        
+        :param int num_buckets: bucket的数量
+        :param int batch_size: batch的大小. 默认为None，Trainer在调用BucketSampler时，会将该值正确设置，如果是非Trainer场景使用，需
+            要显示传递该值
+        :param str seq_len_field_name: 对应序列长度的 `field` 的名字
+        """
         self.num_buckets = num_buckets
         self.batch_size = batch_size
         self.seq_len_field_name = seq_len_field_name

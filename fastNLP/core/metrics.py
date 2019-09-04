@@ -10,7 +10,10 @@ __all__ = [
 ]
 
 import inspect
+import warnings
+from abc import abstractmethod
 from collections import defaultdict
+from typing import Union
 
 import numpy as np
 import torch
@@ -22,9 +25,7 @@ from .utils import _check_arg_dict_list
 from .utils import _get_func_signature
 from .utils import seq_len_to_mask
 from .vocabulary import Vocabulary
-from abc import abstractmethod
-import warnings
-from typing import Union
+
 
 class MetricBase(object):
     """
@@ -295,13 +296,15 @@ class MetricBase(object):
 class AccuracyMetric(MetricBase):
     """
     准确率Metric（其它的Metric参见 :doc:`fastNLP.core.metrics` ）
-    
-    :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
-    :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
-    :param seq_len: 参数映射表中 `seq_len` 的映射关系，None表示映射关系为 `seq_len` -> `seq_len`
     """
     
     def __init__(self, pred=None, target=None, seq_len=None):
+        """
+        
+        :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+        :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
+        :param seq_len: 参数映射表中 `seq_len` 的映射关系，None表示映射关系为 `seq_len` -> `seq_len`
+        """
         
         super().__init__()
         
@@ -584,25 +587,23 @@ class SpanFPreRecMetric(MetricBase):
             'rec-label':xxx,
             ...
         }
-
-    :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` 。支持的标签为"B"(没有label)；或"B-xxx"(xxx为某种label，比如POS中的NN)，
-        在解码时，会将相同xxx的认为是同一个label，比如['B-NN', 'E-NN']会被合并为一个'NN'.
-    :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用 `pred` 取数据
-    :param str target: 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用 `target` 取数据
-    :param str seq_len: 用该key在evaluate()时从传入dict中取出sequence length数据。为None，则使用 `seq_len` 取数据。
-    :param str encoding_type: 目前支持bio, bmes, bmeso, bioes。默认为None，通过tag_vocab自动判断.
-    :param list ignore_labels: str 组成的list. 这个list中的class不会被用于计算。例如在POS tagging时传入['NN']，则不会计算'NN'这
-        个label
-    :param bool only_gross: 是否只计算总的f1, precision, recall的值；如果为False，不仅返回总的f1, pre, rec, 还会返回每个
-        label的f1, pre, rec
-    :param str f_type: `micro` 或 `macro` . `micro` :通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; `macro` :
-        分布计算每个类别的f, precision, recall，然后做平均（各类别f的权重相同）
-    :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
-        常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
     """
     
     def __init__(self, tag_vocab, pred=None, target=None, seq_len=None, encoding_type=None, ignore_labels=None,
                  only_gross=True, f_type='micro', beta=1):
+        r"""
+        
+        :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` 。支持的标签为"B"(没有label)；或"B-xxx"(xxx为某种label，比如POS中的NN)，
+            在解码时，会将相同xxx的认为是同一个label，比如['B-NN', 'E-NN']会被合并为一个'NN'.
+        :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用 `pred` 取数据
+        :param str target: 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用 `target` 取数据
+        :param str seq_len: 用该key在evaluate()时从传入dict中取出sequence length数据。为None，则使用 `seq_len` 取数据。
+        :param str encoding_type: 目前支持bio, bmes, bmeso, bioes。默认为None，通过tag_vocab自动判断.
+        :param list ignore_labels: str 组成的list. 这个list中的class不会被用于计算。例如在POS tagging时传入['NN']，则不会计算'NN'个label
+        :param bool only_gross: 是否只计算总的f1, precision, recall的值；如果为False，不仅返回总的f1, pre, rec, 还会返回每个label的f1, pre, rec
+        :param str f_type: `micro` 或 `macro` . `micro` :通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; `macro` : 分布计算每个类别的f, precision, recall，然后做平均（各类别f的权重相同）
+        :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` . 常用为 `beta=0.5, 1, 2` 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
+        """
 
         if not isinstance(tag_vocab, Vocabulary):
             raise TypeError("tag_vocab can only be fastNLP.Vocabulary, not {}.".format(type(tag_vocab)))
@@ -829,20 +830,21 @@ class ExtractiveQAMetric(MetricBase):
     r"""
     抽取式QA（如SQuAD）的metric.
     
-    :param pred1: 参数映射表中 `pred1` 的映射关系，None表示映射关系为 `pred1` -> `pred1`
-    :param pred2: 参数映射表中 `pred2` 的映射关系，None表示映射关系为 `pred2` -> `pred2`
-    :param target1: 参数映射表中 `target1` 的映射关系，None表示映射关系为 `target1` -> `target1`
-    :param target2: 参数映射表中 `target2` 的映射关系，None表示映射关系为 `target2` -> `target2`
-    :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
-        常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
-    :param bool right_open: right_open为true表示start跟end指针指向一个左闭右开区间，为false表示指向一个左闭右闭区间。
-    :param bool print_predict_stat: True则输出预测答案是否为空与正确答案是否为空的统计信息, False则不输出
-    
     """
     
     def __init__(self, pred1=None, pred2=None, target1=None, target2=None,
                  beta=1, right_open=True, print_predict_stat=False):
+        r"""
         
+        :param pred1: 参数映射表中 `pred1` 的映射关系，None表示映射关系为 `pred1` -> `pred1`
+        :param pred2: 参数映射表中 `pred2` 的映射关系，None表示映射关系为 `pred2` -> `pred2`
+        :param target1: 参数映射表中 `target1` 的映射关系，None表示映射关系为 `target1` -> `target1`
+        :param target2: 参数映射表中 `target2` 的映射关系，None表示映射关系为 `target2` -> `target2`
+        :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
+            常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
+        :param bool right_open: right_open为true表示start跟end指针指向一个左闭右开区间，为false表示指向一个左闭右闭区间。
+        :param bool print_predict_stat: True则输出预测答案是否为空与正确答案是否为空的统计信息, False则不输出
+        """
         super(ExtractiveQAMetric, self).__init__()
         
         self._init_param_map(pred1=pred1, pred2=pred2, target1=target1, target2=target2)

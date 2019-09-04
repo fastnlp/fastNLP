@@ -288,30 +288,31 @@ __all__ = [
 ]
 
 import _pickle as pickle
-import warnings
-
-import numpy as np
 from copy import deepcopy
 
+import numpy as np
+
+from ._logger import logger
+from .const import Const
+from .field import AppendToTargetOrInputException
 from .field import AutoPadder
 from .field import FieldArray
+from .field import SetInputOrTargetException
 from .instance import Instance
 from .utils import _get_func_signature
-from .field import AppendToTargetOrInputException
-from .field import SetInputOrTargetException
-from .const import Const
-from ._logger import logger
+
 
 class DataSet(object):
     """
     fastNLP的数据容器，详细的使用方法见文档  :doc:`fastNLP.core.dataset`
-    
-    :param data: 如果为dict类型，则每个key的value应该为等长的list; 如果为list，
-        每个元素应该为具有相同field的 :class:`~fastNLP.Instance` 。
-
     """
     
     def __init__(self, data=None):
+        """
+        
+        :param data: 如果为dict类型，则每个key的value应该为等长的list; 如果为list，
+            每个元素应该为具有相同field的 :class:`~fastNLP.Instance` 。
+        """
         self.field_arrays = {}
         if data is not None:
             if isinstance(data, dict):

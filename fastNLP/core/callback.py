@@ -317,9 +317,11 @@ def _transfer(func):
 
 
 class CallbackManager(Callback):
+    """
+    内部使用的Callback管理类
+    """
     def __init__(self, env, callbacks=None):
         """
-        内部使用的Callback管理类
 
         :param dict env: The key is the name of the Trainer attribute(str). The value is the attribute itself.
         :param List[Callback] callbacks:
@@ -435,23 +437,23 @@ class DistCallbackManager(CallbackManager):
 class GradientClipCallback(Callback):
     """
     每次backward前，将parameter的gradient clip到某个范围。
-
-    :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。
-        如果为None则默认对Trainer的model中所有参数进行clip
-    :param float clip_value: 将gradient 限制到[-clip_value, clip_value]。clip_value应该为正数
-    :param str clip_type: 支持'norm', 'value'
-        两种::
-
-            1 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
-        
-            2 'value', 将gradient限制在[-clip_value, clip_value],
-                小于-clip_value的gradient被赋值为-clip_value;
-                大于clip_value的gradient被赋值为clip_value.
-
     """
     
     def __init__(self, parameters=None, clip_value=1, clip_type='norm'):
+        """
         
+        :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。
+            如果为None则默认对Trainer的model中所有参数进行clip
+        :param float clip_value: 将gradient 限制到[-clip_value, clip_value]。clip_value应该为正数
+        :param str clip_type: 支持'norm', 'value'
+            两种::
+    
+                1 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
+            
+                2 'value', 将gradient限制在[-clip_value, clip_value],
+                    小于-clip_value的gradient被赋值为-clip_value;
+                    大于clip_value的gradient被赋值为clip_value.
+        """
         super().__init__()
         
         from torch import nn
@@ -477,12 +479,14 @@ class GradientClipCallback(Callback):
 
 class EarlyStopCallback(Callback):
     """
-    多少个epoch没有变好就停止训练，相关类 :class:`EarlyStopError`
-
-    :param int patience: epoch的数量
+    多少个epoch没有变好就停止训练，相关类 :class:`~fastNLP.core.callback.EarlyStopError`
     """
     
     def __init__(self, patience):
+        """
+        
+        :param int patience: epoch的数量
+        """
         super(EarlyStopCallback, self).__init__()
         self.patience = patience
         self.wait = 0
@@ -510,17 +514,19 @@ class FitlogCallback(Callback):
     一个(或多个)test数据集进行测试(只有在trainer具有dev时才能使用)，每次在dev上evaluate之后会在这些数据集上验证一下。
     并将验证结果写入到fitlog中。这些数据集的结果是根据dev上最好的结果报道的，即如果dev在第3个epoch取得了最佳，则
     fitlog中记录的关于这些数据集的结果就是来自第三个epoch的结果。
-
-    :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要
-        传入多个DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。data的结果的名称以'data'开头。
-    :param ~fastNLP.Tester,Dict[~fastNLP.Tester] tester: Tester对象，将在on_valid_end时调用。tester的结果的名称以'tester'开头
-    :param int log_loss_every: 多少个step记录一次loss(记录的是这几个batch的loss平均值)，如果数据集较大建议将该值设置得
-        大一些，不然会导致log文件巨大。默认为0, 即不要记录loss。
-    :param int verbose: 是否在终端打印evaluation的结果，0不打印。
-    :param bool log_exception: fitlog是否记录发生的exception信息
     """
 
     def __init__(self, data=None, tester=None, log_loss_every=0, verbose=0, log_exception=False):
+        """
+        
+        :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要
+            传入多个DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。data的结果的名称以'data'开头。
+        :param ~fastNLP.Tester,Dict[~fastNLP.Tester] tester: Tester对象，将在on_valid_end时调用。tester的结果的名称以'tester'开头
+        :param int log_loss_every: 多少个step记录一次loss(记录的是这几个batch的loss平均值)，如果数据集较大建议将该值设置得
+            大一些，不然会导致log文件巨大。默认为0, 即不要记录loss。
+        :param int verbose: 是否在终端打印evaluation的结果，0不打印。
+        :param bool log_exception: fitlog是否记录发生的exception信息
+        """
         super().__init__()
         self.datasets = {}
         self.testers = {}
@@ -604,13 +610,14 @@ class FitlogCallback(Callback):
 class EvaluateCallback(Callback):
     """
     该callback用于扩展Trainer训练过程中只能对dev数据进行验证的问题。
-
-    :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
-        DataSet请通过dict的方式传入。
-    :param ~fastNLP.Tester,Dict[~fastNLP.DataSet] tester: Tester对象，将在on_valid_end时调用。
     """
 
     def __init__(self, data=None, tester=None):
+        """
+        :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
+            DataSet请通过dict的方式传入。
+        :param ~fastNLP.Tester,Dict[~fastNLP.DataSet] tester: Tester对象，将在on_valid_end时调用。
+        """
         super().__init__()
         self.datasets = {}
         self.testers = {}
@@ -664,12 +671,12 @@ class EvaluateCallback(Callback):
 class LRScheduler(Callback):
     """
     对PyTorch LR Scheduler的包装以使得其可以被Trainer所使用
-
-    :param torch.optim.lr_scheduler._LRScheduler lr_scheduler: PyTorch的lr_scheduler
     """
     
     def __init__(self, lr_scheduler):
-        
+        """
+        :param torch.optim.lr_scheduler._LRScheduler lr_scheduler: PyTorch的lr_scheduler
+        """
         super(LRScheduler, self).__init__()
         import torch.optim
         if isinstance(lr_scheduler, torch.optim.lr_scheduler._LRScheduler):
@@ -683,12 +690,13 @@ class LRScheduler(Callback):
 
 class ControlC(Callback):
     """
-
-    :param bool quit_all: 若为True,则检测到control+C 直接退出程序；否则只退出Trainer
+    检测到 control+C 时的反馈
     """
     
     def __init__(self, quit_all):
-        
+        """
+        :param bool quit_all: 若为True,则检测到control+C 直接退出程序；否则只退出Trainer
+        """
         super(ControlC, self).__init__()
         if type(quit_all) != bool:
             raise ValueError("In KeyBoardInterrupt, quit_all arguemnt must be a bool.")
@@ -720,13 +728,14 @@ class SmoothValue(object):
 class LRFinder(Callback):
     """
     用第一个 epoch 找最佳的学习率，从第二个epoch开始应用它
-
-    :param float start_lr: 学习率下界
-    :param float end_lr: 学习率上界
     """
     
     def __init__(self, start_lr=1e-6, end_lr=10):
+        """
         
+        :param float start_lr: 学习率下界
+        :param float end_lr: 学习率上界
+        """
         super(LRFinder, self).__init__()
         self.start_lr, self.end_lr = start_lr, end_lr
         
@@ -864,13 +873,15 @@ class TensorboardCallback(Callback):
 class WarmupCallback(Callback):
     """
     按一定的周期调节Learning rate的大小。
-
-    :param int,float warmup: 如果warmup为int，则在该step之前，learning rate根据schedule的策略变化; 如果warmup为float，
-        如0.1, 则前10%的step是按照schedule策略调整learning rate。
-    :param str schedule: 以哪种方式调整。linear: 前warmup的step上升到指定的learning rate(从Trainer中的optimizer处获取的), 后
-        warmup的step下降到0； constant前warmup的step上升到指定learning rate，后面的step保持learning rate.
     """
     def __init__(self, warmup=0.1, schedule='constant'):
+        """
+        
+        :param int,float warmup: 如果warmup为int，则在该step之前，learning rate根据schedule的策略变化; 如果warmup为float，
+            如0.1, 则前10%的step是按照schedule策略调整learning rate。
+        :param str schedule: 以哪种方式调整。linear: 前warmup的step上升到指定的learning rate(从Trainer中的optimizer处获取的), 后
+            warmup的step下降到0； constant前warmup的step上升到指定learning rate，后面的step保持learning rate.
+        """
         super().__init__()
         self.warmup = max(warmup, 0.)
 
@@ -920,13 +931,15 @@ class SaveModelCallback(Callback):
                 -epoch:1_step:40_{metric_key}:{evaluate_performance}.pt
             -2019-07-03-15-10-00
                 -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_perfomance是性能
-    
-    :param str save_dir: 将模型存放在哪个目录下，会在该目录下创建以时间戳命名的目录，并存放模型
-    :param int top: 保存dev表现top多少模型。-1为保存所有模型。
-    :param bool only_param: 是否只保存模型d饿权重。
-    :param save_on_exception: 发生exception时，是否保存一份发生exception的模型。模型名称为epoch:x_step:x_Exception:{exception_name}.
     """
     def __init__(self, save_dir, top=3, only_param=False, save_on_exception=False):
+        """
+        
+        :param str save_dir: 将模型存放在哪个目录下，会在该目录下创建以时间戳命名的目录，并存放模型
+        :param int top: 保存dev表现top多少模型。-1为保存所有模型。
+        :param bool only_param: 是否只保存模型d饿权重。
+        :param save_on_exception: 发生exception时，是否保存一份发生exception的模型。模型名称为epoch:x_step:x_Exception:{exception_name}.
+        """
         super().__init__()
 
         if not os.path.isdir(save_dir):
@@ -992,11 +1005,13 @@ class SaveModelCallback(Callback):
 class CallbackException(BaseException):
     """
    当需要通过callback跳出训练的时候可以通过抛出CallbackException并在on_exception中捕获这个值。
-
-   :param str msg: Exception的信息。
    """
     
     def __init__(self, msg):
+        """
+        
+        :param str msg: Exception的信息。
+        """
         super(CallbackException, self).__init__(msg)
 
 

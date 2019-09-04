@@ -37,7 +37,8 @@ class Instance(object):
     def items(self):
         """
         返回一个迭代器，迭代器返回两个内容，第一个内容是field_name, 第二个内容是field_value
-        :return:
+        
+        :return: 一个迭代器
         """
         return self.fields.items()
     

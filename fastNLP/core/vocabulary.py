@@ -73,21 +73,23 @@ class Vocabulary(object):
         vocab.update(word_list)
         vocab["word"] # str to int
         vocab.to_word(5) # int to str
-
-    :param int max_size: `Vocabulary` 的最大大小, 即能存储词的最大数量
-        若为 ``None`` , 则不限制大小. Default: ``None``
-    :param int min_freq: 能被记录下的词在文本中的最小出现频率, 应大于或等于 1.
-        若小于该频率, 词语将被视为 `unknown`. 若为 ``None`` , 所有文本中的词都被记录. Default: ``None``
-    :param str optional padding: padding的字符. 如果设置为 ``None`` ,
-        则vocabulary中不考虑padding, 也不计入词表大小，为 ``None`` 的情况多在为label建立Vocabulary的情况.
-        Default: '<pad>'
-    :param str optional unknown: unknown的字符，所有未被记录的词在转为 `int` 时将被视为unknown.
-        如果设置为 ``None`` ,则vocabulary中不考虑unknow, 也不计入词表大小.
-        为 ``None`` 的情况多在为label建立Vocabulary的情况.
-        Default: '<unk>'
     """
     
     def __init__(self, max_size=None, min_freq=None, padding='<pad>', unknown='<unk>'):
+        """
+        
+        :param int max_size: `Vocabulary` 的最大大小, 即能存储词的最大数量
+            若为 ``None`` , 则不限制大小. Default: ``None``
+        :param int min_freq: 能被记录下的词在文本中的最小出现频率, 应大于或等于 1.
+            若小于该频率, 词语将被视为 `unknown`. 若为 ``None`` , 所有文本中的词都被记录. Default: ``None``
+        :param str optional padding: padding的字符. 如果设置为 ``None`` ,
+            则vocabulary中不考虑padding, 也不计入词表大小，为 ``None`` 的情况多在为label建立Vocabulary的情况.
+            Default: '<pad>'
+        :param str optional unknown: unknown的字符，所有未被记录的词在转为 `int` 时将被视为unknown.
+            如果设置为 ``None`` ,则vocabulary中不考虑unknow, 也不计入词表大小.
+            为 ``None`` 的情况多在为label建立Vocabulary的情况.
+            Default: '<unk>'
+        """
         self.max_size = max_size
         self.min_freq = min_freq
         self.word_count = Counter()
@@ -402,7 +404,7 @@ class Vocabulary(object):
     
     def to_index(self, w):
         """
-        将词转为数字. 若词不再词典中被记录, 将视为 unknown, 若 ``unknown=None`` , 将抛出``ValueError``::
+        将词转为数字. 若词不再词典中被记录, 将视为 unknown, 若 ``unknown=None`` , 将抛出 ``ValueError`` ::
 
             index = vocab.to_index('abc')
             # equals to

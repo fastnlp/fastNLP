@@ -20,7 +20,6 @@ from collections import defaultdict
 import torch
 import torch.nn.functional as F
 
-from ..core.const import Const
 from .utils import _CheckError
 from .utils import _CheckRes
 from .utils import _build_args
@@ -28,7 +27,7 @@ from .utils import _check_arg_dict_list
 from .utils import _check_function_or_method
 from .utils import _get_func_signature
 from .utils import seq_len_to_mask
-import warnings
+from ..core.const import Const
 
 
 class LossBase(object):
@@ -284,15 +283,17 @@ class BCELoss(LossBase):
 class NLLLoss(LossBase):
     """
     负对数似然损失函数
-    
-    :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
-    :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
-    :param ignore_idx: ignore的index，在计算loss时将忽略target中标号为ignore_idx的内容, 可以通过该值代替
-        传入seq_len.
-    :param str reduction: 支持 `mean` ，`sum` 和 `none` .
     """
     
     def __init__(self, pred=None, target=None, ignore_idx=-100, reduction='mean'):
+        """
+        
+        :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+        :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
+        :param ignore_idx: ignore的index，在计算loss时将忽略target中标号为ignore_idx的内容, 可以通过该值代替
+            传入seq_len.
+        :param str reduction: 支持 `mean` ，`sum` 和 `none` .
+        """
         super(NLLLoss, self).__init__()
         self._init_param_map(pred=pred, target=target)
         assert reduction in ('mean', 'sum', 'none')
@@ -306,11 +307,13 @@ class NLLLoss(LossBase):
 class LossInForward(LossBase):
     """
     从forward()函数返回结果中获取loss
-    
-    :param str loss_key: 在forward函数中loss的键名，默认为loss
     """
     
     def __init__(self, loss_key=Const.LOSS):
+        """
+        
+        :param str loss_key: 在forward函数中loss的键名，默认为loss
+        """
         super().__init__()
         if not isinstance(loss_key, str):
             raise TypeError(f"Only str allowed for loss_key, got {type(loss_key)}.")
