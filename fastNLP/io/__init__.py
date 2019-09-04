@@ -88,3 +88,7 @@ from .model_io import ModelLoader, ModelSaver
 
 from .loader import *
 from .pipe import *
+
+import sys
+from ..doc_utils import doc_process
+doc_process(sys.modules[__name__])

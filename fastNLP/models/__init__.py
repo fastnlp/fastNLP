@@ -38,3 +38,7 @@ from .cnn_text_classification import CNNText
 from .sequence_labeling import SeqLabeling, AdvSeqLabel
 from .snli import ESIM
 from .star_transformer import StarTransEnc, STSeqCls, STNLICls, STSeqLabel
+
+import sys
+from ..doc_utils import doc_process
+doc_process(sys.modules[__name__])
