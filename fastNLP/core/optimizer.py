@@ -120,12 +120,11 @@ class AdamW(TorchOptimizer):
     The original Adam algorithm was proposed in `Adam: A Method for Stochastic Optimization`_.
     The AdamW variant was proposed in `Decoupled Weight Decay Regularization`_.
 
-    .. _Adam\: A Method for Stochastic Optimization:
-        https://arxiv.org/abs/1412.6980
-    .. _Decoupled Weight Decay Regularization:
-        https://arxiv.org/abs/1711.05101
-    .. _On the Convergence of Adam and Beyond:
-        https://openreview.net/forum?id=ryQu7f-RZ
+    .. _Adam\: A Method for Stochastic Optimization: https://arxiv.org/abs/1412.6980
+    
+    .. _Decoupled Weight Decay Regularization: https://arxiv.org/abs/1711.05101
+    
+    .. _On the Convergence of Adam and Beyond: https://openreview.net/forum?id=ryQu7f-RZ
     """
 
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
