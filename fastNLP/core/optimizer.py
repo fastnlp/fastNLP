@@ -9,21 +9,23 @@ __all__ = [
     "AdamW"
 ]
 
-import torch
 import math
+
 import torch
 from torch.optim.optimizer import Optimizer as TorchOptimizer
 
 
 class Optimizer(object):
     """
-    别名：:class:`fastNLP.Optimizer` :class:`fastNLP.core.optimizer.Optimizer`
-
-    :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
-    :param kwargs: additional parameters.
+    Optimizer
     """
     
     def __init__(self, model_params, **kwargs):
+        """
+        
+        :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
+        :param kwargs: additional parameters.
+        """
         if model_params is not None and not hasattr(model_params, "__next__"):
             raise RuntimeError("model parameters should be a generator, rather than {}.".format(type(model_params)))
         self.model_params = model_params
@@ -60,14 +62,15 @@ class NullOptimizer(Optimizer):
 
 class SGD(Optimizer):
     """
-    别名：:class:`fastNLP.SGD` :class:`fastNLP.core.optimizer.SGD`
-
-    :param float lr: learning rate. Default: 0.01
-    :param float momentum: momentum. Default: 0
-    :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
+    SGD
     """
     
     def __init__(self, lr=0.001, momentum=0, model_params=None):
+        """
+        :param float lr: learning rate. Default: 0.01
+        :param float momentum: momentum. Default: 0
+        :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
+        """
         if not isinstance(lr, float):
             raise TypeError("learning rate has to be float.")
         super(SGD, self).__init__(model_params, lr=lr, momentum=momentum)
@@ -82,14 +85,18 @@ class SGD(Optimizer):
 
 class Adam(Optimizer):
     """
-    别名：:class:`fastNLP.Adam` :class:`fastNLP.core.optimizer.Adam`
 
-    :param float lr: learning rate
-    :param float weight_decay:
-    :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
     """
     
     def __init__(self, lr=0.001, weight_decay=0, betas=(0.9, 0.999), eps=1e-8, amsgrad=False, model_params=None):
+        """
+        
+        :param float lr: learning rate
+        :param float weight_decay:
+        :param eps:
+        :param amsgrad:
+        :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
+        """
         if not isinstance(lr, float):
             raise TypeError("learning rate has to be float.")
         super(Adam, self).__init__(model_params, lr=lr, betas=betas, eps=eps, amsgrad=amsgrad,
@@ -105,8 +112,6 @@ class Adam(Optimizer):
 
 class AdamW(TorchOptimizer):
     r"""
-    别名：:class:`fastNLP.AdamW` :class:`fastNLP.core.optimizer.AdamW`
-
     对AdamW的实现，该实现应该会在pytorch更高版本中出现，https://github.com/pytorch/pytorch/pull/21250。这里提前加入
     
     .. todo::
@@ -115,27 +120,28 @@ class AdamW(TorchOptimizer):
     The original Adam algorithm was proposed in `Adam: A Method for Stochastic Optimization`_.
     The AdamW variant was proposed in `Decoupled Weight Decay Regularization`_.
 
-    :param params (iterable): iterable of parameters to optimize or dicts defining
-        parameter groups
-    :param lr (float, optional): learning rate (default: 1e-3)
-    :param betas (Tuple[float, float], optional): coefficients used for computing
-        running averages of gradient and its square (default: (0.9, 0.99))
-    :param eps (float, optional): term added to the denominator to improve
-        numerical stability (default: 1e-8)
-    :param weight_decay (float, optional): weight decay coefficient (default: 1e-2)
-        algorithm from the paper `On the Convergence of Adam and Beyond`_
-        (default: False)
-
-    .. _Adam\: A Method for Stochastic Optimization:
-        https://arxiv.org/abs/1412.6980
-    .. _Decoupled Weight Decay Regularization:
-        https://arxiv.org/abs/1711.05101
-    .. _On the Convergence of Adam and Beyond:
-        https://openreview.net/forum?id=ryQu7f-RZ
+    .. _Adam\: A Method for Stochastic Optimization: https://arxiv.org/abs/1412.6980
+    
+    .. _Decoupled Weight Decay Regularization: https://arxiv.org/abs/1711.05101
+    
+    .. _On the Convergence of Adam and Beyond: https://openreview.net/forum?id=ryQu7f-RZ
     """
 
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
                  weight_decay=1e-2, amsgrad=False):
+        """
+        
+        :param params (iterable): iterable of parameters to optimize or dicts defining
+            parameter groups
+        :param lr (float, optional): learning rate (default: 1e-3)
+        :param betas (Tuple[float, float], optional): coefficients used for computing
+            running averages of gradient and its square (default: (0.9, 0.99))
+        :param eps (float, optional): term added to the denominator to improve
+            numerical stability (default: 1e-8)
+        :param weight_decay (float, optional): weight decay coefficient (default: 1e-2)
+            algorithm from the paper `On the Convergence of Adam and Beyond`_
+            (default: False)
+        """
         if not 0.0 <= lr:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if not 0.0 <= eps:

@@ -1,3 +1,13 @@
+"""
+.. todo::
+    doc
+"""
+
+__all__ = [
+    "Const"
+]
+
+
 class Const:
     """
     fastNLP中field命名常量。
@@ -25,47 +35,47 @@ class Const:
     LOSS = 'loss'
     RAW_WORD = 'raw_words'
     RAW_CHAR = 'raw_chars'
-
+    
     @staticmethod
     def INPUTS(i):
         """得到第 i 个 ``INPUT`` 的命名"""
         i = int(i) + 1
         return Const.INPUT + str(i)
-
+    
     @staticmethod
     def CHAR_INPUTS(i):
         """得到第 i 个 ``CHAR_INPUT`` 的命名"""
         i = int(i) + 1
         return Const.CHAR_INPUT + str(i)
-
+    
     @staticmethod
     def RAW_WORDS(i):
         i = int(i) + 1
         return Const.RAW_WORD + str(i)
-
+    
     @staticmethod
     def RAW_CHARS(i):
         i = int(i) + 1
         return Const.RAW_CHAR + str(i)
-
+    
     @staticmethod
     def INPUT_LENS(i):
         """得到第 i 个 ``INPUT_LEN`` 的命名"""
         i = int(i) + 1
         return Const.INPUT_LEN + str(i)
-
+    
     @staticmethod
     def OUTPUTS(i):
         """得到第 i 个 ``OUTPUT`` 的命名"""
         i = int(i) + 1
         return Const.OUTPUT + str(i)
-
+    
     @staticmethod
     def TARGETS(i):
         """得到第 i 个 ``TARGET`` 的命名"""
         i = int(i) + 1
         return Const.TARGET + str(i)
-
+    
     @staticmethod
     def LOSSES(i):
         """得到第 i 个 ``LOSS`` 的命名"""

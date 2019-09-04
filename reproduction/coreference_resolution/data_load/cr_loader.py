@@ -1,7 +1,7 @@
 from fastNLP.io.dataset_loader import JsonLoader,DataSet,Instance
 from fastNLP.io.file_reader import _read_json
 from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.io.base_loader import DataBundle
+from fastNLP.io.data_bundle import DataBundle
 from reproduction.coreference_resolution.model.config import Config
 import reproduction.coreference_resolution.model.preprocess as preprocess
 

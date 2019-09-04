@@ -1,3 +1,7 @@
+"""
+.. todo::
+    doc
+"""
 __all__ = [
     "MLP",
     "ConditionalRandomField",
@@ -6,6 +10,6 @@ __all__ = [
 ]
 
 from .crf import ConditionalRandomField
+from .crf import allowed_transitions
 from .mlp import MLP
 from .utils import viterbi_decode
-from .crf import allowed_transitions

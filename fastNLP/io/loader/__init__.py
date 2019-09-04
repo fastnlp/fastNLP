@@ -44,20 +44,25 @@ fastNLP 目前提供了如下的 Loader
 """
 
 __all__ = [
+    'Loader',
+    
     'YelpLoader',
     'YelpFullLoader',
     'YelpPolarityLoader',
     'IMDBLoader',
     'SSTLoader',
     'SST2Loader',
+    "ChnSentiCorpLoader",
 
     'ConllLoader',
     'Conll2003Loader',
     'Conll2003NERLoader',
     'OntoNotesNERLoader',
     'CTBLoader',
+    "MsraNERLoader",
+    "PeopleDailyNERLoader",
+    "WeiboNERLoader",
 
-    'Loader',
     'CSVLoader',
     'JsonLoader',
 
@@ -69,10 +74,11 @@ __all__ = [
     "QNLILoader",
     "RTELoader"
 ]
-from .classification import YelpLoader, YelpFullLoader, YelpPolarityLoader, IMDBLoader, SSTLoader, SST2Loader
+from .classification import YelpLoader, YelpFullLoader, YelpPolarityLoader, IMDBLoader, SSTLoader, SST2Loader, ChnSentiCorpLoader
 from .conll import ConllLoader, Conll2003Loader, Conll2003NERLoader, OntoNotesNERLoader, CTBLoader
 from .csv import CSVLoader
 from .cws import CWSLoader
 from .json import JsonLoader
 from .loader import Loader
 from .matching import MNLILoader, QuoraLoader, SNLILoader, QNLILoader, RTELoader
+from .conll import MsraNERLoader, PeopleDailyNERLoader, WeiboNERLoader

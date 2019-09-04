@@ -8,14 +8,23 @@ Pipe用于处理通过 Loader 读取的数据，所有的 Pipe 都包含 ``proce
 
 """
 __all__ = [
+    "Pipe",
+
+    "CWSPipe",
+
     "YelpFullPipe",
     "YelpPolarityPipe",
     "SSTPipe",
     "SST2Pipe",
     "IMDBPipe",
+    "ChnSentiCorpPipe",
 
     "Conll2003NERPipe",
     "OntoNotesNERPipe",
+    "MsraNERPipe",
+    "WeiboNERPipe",
+    "PeopleDailyPipe",
+    "Conll2003Pipe",
 
     "MatchingBertPipe",
     "RTEBertPipe",
@@ -31,7 +40,10 @@ __all__ = [
     "MNLIPipe",
 ]
 
-from .classification import YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe
-from .conll import Conll2003NERPipe, OntoNotesNERPipe
+from .classification import YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe, ChnSentiCorpPipe
+from .conll import Conll2003NERPipe, OntoNotesNERPipe, MsraNERPipe, WeiboNERPipe, PeopleDailyPipe
 from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe, QNLIBertPipe, MNLIBertPipe, \
     MatchingPipe, RTEPipe, SNLIPipe, QuoraPipe, QNLIPipe, MNLIPipe
+from .pipe import Pipe
+from .conll import Conll2003Pipe
+from .cws import CWSPipe

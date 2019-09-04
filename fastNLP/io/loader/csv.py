@@ -1,13 +1,17 @@
+"""undocumented"""
+
+__all__ = [
+    "CSVLoader",
+]
+
+from .loader import Loader
+from ..file_reader import _read_csv
 from ...core.dataset import DataSet
 from ...core.instance import Instance
-from ..file_reader import _read_csv
-from .loader import Loader
 
 
 class CSVLoader(Loader):
     """
-    别名：:class:`fastNLP.io.CSVLoader` :class:`fastNLP.io.dataset_loader.CSVLoader`
-
     读取CSV格式的数据集, 返回 ``DataSet`` 。
 
     :param List[str] headers: CSV文件的文件头.定义每一列的属性名称,即返回的DataSet中`field`的名称

@@ -1,12 +1,28 @@
+"""
+.. todo::
+    doc
+"""
+
+__all__ = [
+    "cached_path",
+    "get_filepath",
+    "get_cache_path",
+    "split_filename_suffix",
+    "get_from_cache",
+]
+
 import os
+import re
+import shutil
+import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
-import re
+
 import requests
-import tempfile
-from tqdm import tqdm
-import shutil
 from requests import HTTPError
+from tqdm import tqdm
+
+from ..core import logger
 
 PRETRAINED_BERT_MODEL_DIR = {
     'en': 'bert-base-cased.zip',
@@ -27,6 +43,7 @@ PRETRAINED_BERT_MODEL_DIR = {
     'cn': 'bert-chinese-wwm.zip',
     'cn-base': 'bert-base-chinese.zip',
     'cn-wwm': 'bert-chinese-wwm.zip',
+    'cn-wwm-ext': "bert-chinese-wwm-ext.zip"
 }
 
 PRETRAINED_ELMO_MODEL_DIR = {
@@ -56,10 +73,13 @@ PRETRAIN_STATIC_FILES = {
     'en-fasttext-wiki': "wiki-news-300d-1M.vec.zip",
     'en-fasttext-crawl': "crawl-300d-2M.vec.zip",
 
-    'cn': "tencent_cn.txt.zip",
-    'cn-tencent': "tencent_cn.txt.zip",
+    'cn': "tencent_cn.zip",
+    'cn-tencent': "tencent_cn.zip",
     'cn-fasttext': "cc.zh.300.vec.gz",
     'cn-sgns-literature-word': 'sgns.literature.word.txt.zip',
+    'cn-char-fastnlp-100d': "cn_char_fastnlp_100d.zip",
+    'cn-bi-fastnlp-100d': "cn_bi_fastnlp_100d.zip",
+    "cn-tri-fastnlp-100d": "cn_tri_fastnlp_100d.zip"
 }
 
 DATASET_DIR = {
@@ -71,7 +91,17 @@ DATASET_DIR = {
     "qnli": "QNLI.zip",
     "sst-2": "SST-2.zip",
     "sst": "SST.zip",
-    "rte": "RTE.zip"
+    "rte": "RTE.zip",
+    "msra-ner": "MSRA_NER.zip",
+    "peopledaily": "peopledaily.zip",
+    "weibo-ner": "weibo_NER.zip",
+
+    "cws-pku": 'cws_pku.zip',
+    "cws-cityu": "cws_cityu.zip",
+    "cws-as": 'cws_as.zip',
+    "cws-msra": 'cws_msra.zip',
+
+    "chn-senti-corp":"chn_senti_corp.zip"
 }
 
 PRETRAIN_MAP = {'elmo': PRETRAINED_ELMO_MODEL_DIR,
@@ -89,14 +119,16 @@ FASTNLP_EXTEND_EMBEDDING_URL = {'elmo': 'fastnlp_elmo_url.txt',
 def cached_path(url_or_filename: str, cache_dir: str = None, name=None) -> Path:
     """
     给定一个url，尝试通过url中的解析出来的文件名字filename到{cache_dir}/{name}/{filename}下寻找这个文件，
-        (1)如果cache_dir=None, 则cache_dir=~/.fastNLP/; 否则cache_dir=cache_dir
-        (2)如果name=None, 则没有中间的{name}这一层结构；否者中间结构就为{name}
+    
+    1. 如果cache_dir=None, 则cache_dir=~/.fastNLP/; 否则cache_dir=cache_dir
+    2. 如果name=None, 则没有中间的{name}这一层结构；否者中间结构就为{name}
 
     如果有该文件，就直接返回路径
+    
     如果没有该文件，则尝试用传入的url下载
 
     或者文件名(可以是具体的文件名，也可以是文件夹)，先在cache_dir下寻找该文件是否存在，如果不存在则去下载, 并
-        将文件放入到cache_dir中.
+    将文件放入到cache_dir中.
 
     :param str url_or_filename: 文件的下载url或者文件名称。
     :param str cache_dir: 文件的缓存文件夹。如果为None，将使用"~/.fastNLP"这个默认路径
@@ -132,10 +164,13 @@ def cached_path(url_or_filename: str, cache_dir: str = None, name=None) -> Path:
 def get_filepath(filepath):
     """
     如果filepath为文件夹，
+    
         如果内含多个文件, 返回filepath
+        
         如果只有一个文件, 返回filepath + filename
 
     如果filepath为文件
+        
         返回filepath
 
     :param str filepath: 路径
@@ -155,9 +190,9 @@ def get_filepath(filepath):
 
 def get_cache_path():
     """
-    获取默认的fastNLP存放路径, 如果将FASTNLP_CACHE_PATH设置在了环境变量中，将使用环境变量的值，使得不用每个用户都去下载。
+    获取fastNLP默认cache的存放路径, 如果将FASTNLP_CACHE_PATH设置在了环境变量中，将使用环境变量的值，使得不用每个用户都去下载。
 
-    :return: str
+    :return str:  存放路径
     """
     if 'FASTNLP_CACHE_DIR' in os.environ:
         fastnlp_cache_dir = os.environ.get('FASTNLP_CACHE_DIR')
@@ -262,8 +297,9 @@ def _get_dataset_url(name):
 
 def split_filename_suffix(filepath):
     """
-    给定filepath返回对应的name和suffix. 如果后缀是多个点，仅支持.tar.gz类型
-    :param filepath:
+    给定filepath 返回对应的name和suffix. 如果后缀是多个点，仅支持.tar.gz类型
+    
+    :param filepath: 文件路径
     :return: filename, suffix
     """
     filename = os.path.basename(filepath)
@@ -278,6 +314,10 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
     文件解压，将解压后的文件全部放在cache_dir文件夹中。
 
     如果从url中下载的资源解压后有多个文件，则返回目录的路径; 如果只有一个资源文件，则返回具体的路径。
+    
+    :param url: 资源的 url
+    :param cache_dir: cache 目录
+    :return: 路径
     """
     cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -307,47 +347,49 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
     if not cache_path.exists():
         # Download to temporary file, then copy to cache dir once finished.
         # Otherwise you get corrupt cache entries if the download gets interrupted.
-        fd, temp_filename = tempfile.mkstemp()
-        print("%s not found in cache, downloading to %s" % (url, temp_filename))
-
         # GET file object
         req = requests.get(url, stream=True, headers={"User-Agent": "fastNLP"})
         if req.status_code == 200:
-            content_length = req.headers.get("Content-Length")
-            total = int(content_length) if content_length is not None else None
-            progress = tqdm(unit="B", total=total, unit_scale=1)
-            with open(temp_filename, "wb") as temp_file:
-                for chunk in req.iter_content(chunk_size=1024 * 16):
-                    if chunk:  # filter out keep-alive new chunks
-                        progress.update(len(chunk))
-                        temp_file.write(chunk)
-            progress.close()
-            print(f"Finish download from {url}.")
-
-            # 开始解压
-            delete_temp_dir = None
-            if suffix in ('.zip', '.tar.gz'):
-                uncompress_temp_dir = tempfile.mkdtemp()
-                delete_temp_dir = uncompress_temp_dir
-                print(f"Start to uncompress file to {uncompress_temp_dir}")
-                if suffix == '.zip':
-                    unzip_file(Path(temp_filename), Path(uncompress_temp_dir))
-                else:
-                    untar_gz_file(Path(temp_filename), Path(uncompress_temp_dir))
-                filenames = os.listdir(uncompress_temp_dir)
-                if len(filenames) == 1:
-                    if os.path.isdir(os.path.join(uncompress_temp_dir, filenames[0])):
-                        uncompress_temp_dir = os.path.join(uncompress_temp_dir, filenames[0])
-
-                cache_path.mkdir(parents=True, exist_ok=True)
-                print("Finish un-compressing file.")
-            else:
-                uncompress_temp_dir = temp_filename
-                cache_path = str(cache_path) + suffix
             success = False
+            fd, temp_filename = tempfile.mkstemp()
+            uncompress_temp_dir = None
             try:
+                content_length = req.headers.get("Content-Length")
+                total = int(content_length) if content_length is not None else None
+                progress = tqdm(unit="B", total=total, unit_scale=1)
+                logger.info("%s not found in cache, downloading to %s" % (url, temp_filename))
+
+                with open(temp_filename, "wb") as temp_file:
+                    for chunk in req.iter_content(chunk_size=1024 * 16):
+                        if chunk:  # filter out keep-alive new chunks
+                            progress.update(len(chunk))
+                            temp_file.write(chunk)
+                progress.close()
+                logger.info(f"Finish download from {url}")
+
+                # 开始解压
+                if suffix in ('.zip', '.tar.gz', '.gz'):
+                    uncompress_temp_dir = tempfile.mkdtemp()
+                    logger.debug(f"Start to uncompress file to {uncompress_temp_dir}")
+                    if suffix == '.zip':
+                        unzip_file(Path(temp_filename), Path(uncompress_temp_dir))
+                    elif suffix == '.gz':
+                        ungzip_file(temp_filename, uncompress_temp_dir, dir_name)
+                    else:
+                        untar_gz_file(Path(temp_filename), Path(uncompress_temp_dir))
+                    filenames = os.listdir(uncompress_temp_dir)
+                    if len(filenames) == 1:
+                        if os.path.isdir(os.path.join(uncompress_temp_dir, filenames[0])):
+                            uncompress_temp_dir = os.path.join(uncompress_temp_dir, filenames[0])
+
+                    cache_path.mkdir(parents=True, exist_ok=True)
+                    logger.debug("Finish un-compressing file.")
+                else:
+                    uncompress_temp_dir = temp_filename
+                    cache_path = str(cache_path) + suffix
+
                 # 复制到指定的位置
-                print(f"Copy file to {cache_path}")
+                logger.info(f"Copy file to {cache_path}")
                 if os.path.isdir(uncompress_temp_dir):
                     for filename in os.listdir(uncompress_temp_dir):
                         if os.path.isdir(os.path.join(uncompress_temp_dir, filename)):
@@ -358,7 +400,7 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
                     shutil.copyfile(uncompress_temp_dir, cache_path)
                 success = True
             except Exception as e:
-                print(e)
+                logger.error(e)
                 raise e
             finally:
                 if not success:
@@ -367,13 +409,15 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
                             os.remove(cache_path)
                         else:
                             shutil.rmtree(cache_path)
-                if delete_temp_dir:
-                    shutil.rmtree(delete_temp_dir)
                 os.close(fd)
                 os.remove(temp_filename)
+                if os.path.isdir(uncompress_temp_dir):
+                    shutil.rmtree(uncompress_temp_dir)
+                elif os.path.isfile(uncompress_temp_dir):
+                    os.remove(uncompress_temp_dir)
             return get_filepath(cache_path)
         else:
-            raise HTTPError(f"Fail to download from {url}.")
+            raise HTTPError(f"Status code:{req.status_code}. Fail to download from {url}.")
 
 
 def unzip_file(file: Path, to: Path):
@@ -392,14 +436,23 @@ def untar_gz_file(file: Path, to: Path):
         tar.extractall(to)
 
 
+def ungzip_file(file: str, to: str, filename:str):
+    import gzip
+
+    g_file = gzip.GzipFile(file)
+    with open(os.path.join(to, filename), 'wb+') as f:
+        f.write(g_file.read())
+    g_file.close()
+
+
 def match_file(dir_name: str, cache_dir: Path) -> str:
     """
-    匹配的原则是，在cache_dir下的文件: (1) 与dir_name完全一致; (2) 除了后缀以外和dir_name完全一致。
+    匹配的原则是: 在cache_dir下的文件与dir_name完全一致, 或除了后缀以外和dir_name完全一致。
     如果找到了两个匹配的结果将报错. 如果找到了则返回匹配的文件的名称; 没有找到返回空字符串
 
     :param dir_name: 需要匹配的名称
     :param cache_dir: 在该目录下找匹配dir_name是否存在
-    :return: str
+    :return str: 做为匹配结果的字符串
     """
     files = os.listdir(cache_dir)
     matched_filenames = []

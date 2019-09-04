@@ -10,8 +10,6 @@ __all__ = [
 
 class Instance(object):
     """
-    别名：:class:`fastNLP.Instance` :class:`fastNLP.core.instance.Instance`
-
     Instance是fastNLP中对应一个sample的类。每个sample在fastNLP中是一个Instance对象。
     Instance一般与 :class:`~fastNLP.DataSet` 一起使用, Instance的初始化如下面的Example所示::
     
@@ -39,7 +37,8 @@ class Instance(object):
     def items(self):
         """
         返回一个迭代器，迭代器返回两个内容，第一个内容是field_name, 第二个内容是field_value
-        :return:
+        
+        :return: 一个迭代器
         """
         return self.fields.items()
     

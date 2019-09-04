@@ -23,7 +23,7 @@ Callback的构建和使用
 
         class LRDecay(fastNLP.Callback):
             def __init__(self):
-                super(MyCallback, self).__init__()
+                super(LRDecay, self).__init__()
                 self.base_lrs = []
                 self.delta = []
 

@@ -17,6 +17,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from typing import List
+from ._logger import logger
 
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])
@@ -65,8 +66,6 @@ def _prepare_cache_filepath(filepath):
 
 def cache_results(_cache_fp, _refresh=False, _verbose=1):
     """
-    别名：:class:`fastNLP.cache_results` :class:`fastNLP.core.uitls.cache_results`
-
     cache_results是fastNLP中用于cache数据的装饰器。通过下面的例子看一下如何使用::
 
         import time
@@ -144,7 +143,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
                     with open(cache_filepath, 'rb') as f:
                         results = _pickle.load(f)
                     if verbose == 1:
-                        print("Read cache from {}.".format(cache_filepath))
+                        logger.info("Read cache from {}.".format(cache_filepath))
                     refresh_flag = False
             
             if refresh_flag:
@@ -155,7 +154,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
                     _prepare_cache_filepath(cache_filepath)
                     with open(cache_filepath, 'wb') as f:
                         _pickle.dump(results, f)
-                    print("Save cache to {}.".format(cache_filepath))
+                    logger.info("Save cache to {}.".format(cache_filepath))
             
             return results
         
@@ -659,15 +658,14 @@ class _pseudo_tqdm:
     """
     当无法引入tqdm，或者Trainer中设置use_tqdm为false的时候，用该方法打印数据
     """
-    
     def __init__(self, **kwargs):
-        pass
+        self.logger = logger
     
     def write(self, info):
-        print(info)
+        self.logger.info(info)
     
     def set_postfix_str(self, info):
-        print(info)
+        self.logger.info(info)
     
     def __getattr__(self, item):
         def pass_func(*args, **kwargs):

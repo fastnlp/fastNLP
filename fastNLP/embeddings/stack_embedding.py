@@ -1,3 +1,12 @@
+"""
+.. todo::
+    doc
+"""
+
+__all__ = [
+    "StackEmbedding",
+]
+
 from typing import List
 
 import torch
@@ -8,8 +17,6 @@ from .embedding import TokenEmbedding
 
 class StackEmbedding(TokenEmbedding):
     """
-    别名：:class:`fastNLP.embeddings.StackEmbedding`   :class:`fastNLP.embeddings.stack_embedding.StackEmbedding`
-
     支持将多个embedding集合成一个embedding。
 
     Example::
@@ -17,7 +24,7 @@ class StackEmbedding(TokenEmbedding):
         >>> from fastNLP import Vocabulary
         >>> from fastNLP.embeddings import StaticEmbedding
         >>> vocab =  Vocabulary().add_word_lst("The whether is good .".split())
-        >>> embed_1 = StaticEmbedding(vocab, model_dir_or_name='en-glove-6b-50', requires_grad=True)
+        >>> embed_1 = StaticEmbedding(vocab, model_dir_or_name='en-glove-6b-50d', requires_grad=True)
         >>> embed_2 = StaticEmbedding(vocab, model_dir_or_name='en-word2vec-300', requires_grad=True)
 
     :param embeds: 一个由若干个TokenEmbedding组成的list，要求每一个TokenEmbedding的词表都保持一致
@@ -26,6 +33,7 @@ class StackEmbedding(TokenEmbedding):
     :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
 
     """
+    
     def __init__(self, embeds: List[TokenEmbedding], word_dropout=0, dropout=0):
         vocabs = []
         for embed in embeds:
@@ -34,14 +42,14 @@ class StackEmbedding(TokenEmbedding):
         _vocab = vocabs[0]
         for vocab in vocabs[1:]:
             assert vocab == _vocab, "All embeddings in StackEmbedding should use the same word vocabulary."
-
+        
         super(StackEmbedding, self).__init__(_vocab, word_dropout=word_dropout, dropout=dropout)
         assert isinstance(embeds, list)
         for embed in embeds:
             assert isinstance(embed, TokenEmbedding), "Only TokenEmbedding type is supported."
         self.embeds = nn.ModuleList(embeds)
         self._embed_size = sum([embed.embed_size for embed in self.embeds])
-
+    
     def append(self, embed: TokenEmbedding):
         """
         添加一个embedding到结尾。
@@ -50,18 +58,18 @@ class StackEmbedding(TokenEmbedding):
         """
         assert isinstance(embed, TokenEmbedding)
         self.embeds.append(embed)
-
+    
     def pop(self):
         """
         弹出最后一个embed
         :return:
         """
         return self.embeds.pop()
-
+    
     @property
     def embed_size(self):
         return self._embed_size
-
+    
     @property
     def requires_grad(self):
         """
@@ -73,12 +81,12 @@ class StackEmbedding(TokenEmbedding):
             return requires_grads.pop()
         else:
             return None
-
+    
     @requires_grad.setter
     def requires_grad(self, value):
         for embed in self.embeds():
             embed.requires_grad = value
-
+    
     def forward(self, words):
         """
         得到多个embedding的结果，并把结果按照顺序concat起来。

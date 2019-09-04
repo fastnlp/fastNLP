@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from fastNLP.io.dataset_loader import JsonLoader
 from fastNLP.modules.encoder._bert import BertTokenizer
-from fastNLP.io.base_loader import DataBundle
+from fastNLP.io.data_bundle import DataBundle
 from fastNLP.core.const import Const
 
 class BertData(JsonLoader):

@@ -12,25 +12,29 @@
 这些类的使用方法如下:
 """
 __all__ = [
-    'EmbedLoader',
-
     'DataBundle',
-    'DataSetLoader',
-
+    
+    'EmbedLoader',
+    
+    'Loader',
+    
     'YelpLoader',
     'YelpFullLoader',
     'YelpPolarityLoader',
     'IMDBLoader',
     'SSTLoader',
     'SST2Loader',
+    "ChnSentiCorpLoader",
 
     'ConllLoader',
     'Conll2003Loader',
     'Conll2003NERLoader',
     'OntoNotesNERLoader',
     'CTBLoader',
+    "MsraNERLoader",
+    "WeiboNERLoader",
+    "PeopleDailyNERLoader",
 
-    'Loader',
     'CSVLoader',
     'JsonLoader',
 
@@ -42,14 +46,23 @@ __all__ = [
     "QNLILoader",
     "RTELoader",
 
+    "Pipe",
+
     "YelpFullPipe",
     "YelpPolarityPipe",
     "SSTPipe",
     "SST2Pipe",
     "IMDBPipe",
+    "ChnSentiCorpPipe",
 
+    "Conll2003Pipe",
     "Conll2003NERPipe",
     "OntoNotesNERPipe",
+    "MsraNERPipe",
+    "PeopleDailyPipe",
+    "WeiboNERPipe",
+
+    "CWSPipe",
 
     "MatchingBertPipe",
     "RTEBertPipe",
@@ -66,12 +79,16 @@ __all__ = [
 
     'ModelLoader',
     'ModelSaver',
+
 ]
 
 from .embed_loader import EmbedLoader
-from .base_loader import DataBundle, DataSetLoader
-from .dataset_loader import CSVLoader, JsonLoader
+from .data_bundle import DataBundle
 from .model_io import ModelLoader, ModelSaver
 
 from .loader import *
 from .pipe import *
+
+import sys
+from ..doc_utils import doc_process
+doc_process(sys.modules[__name__])

@@ -20,7 +20,7 @@ server:
 	cd build/html && python -m http.server
 
 dev:
-	rm -rf build/html && make html && make server
+	rm -rf build && make html && make server
 
 .PHONY: help Makefile
 

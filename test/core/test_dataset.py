@@ -182,8 +182,9 @@ class TestDataSetMethods(unittest.TestCase):
     def test_apply2(self):
         def split_sent(ins):
             return ins['raw_sentence'].split()
-        csv_loader = CSVLoader(headers=['raw_sentence', 'label'],sep='\t')
-        dataset = csv_loader.load('test/data_for_tests/tutorial_sample_dataset.csv')
+        csv_loader = CSVLoader(headers=['raw_sentence', 'label'], sep='\t')
+        data_bundle = csv_loader.load('test/data_for_tests/tutorial_sample_dataset.csv')
+        dataset = data_bundle.datasets['train']
         dataset.drop(lambda x: len(x['raw_sentence'].split()) == 0, inplace=True)
         dataset.apply(split_sent, new_field_name='words', is_input=True)
         # print(dataset)

@@ -1,6 +1,6 @@
 
 import unittest
-
+from fastNLP import Vocabulary
 
 class TestCRF(unittest.TestCase):
     def test_case1(self):
@@ -14,7 +14,8 @@ class TestCRF(unittest.TestCase):
 
         id2label = {0: 'B', 1:'M', 2:'E', 3:'S'}
         expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 5), (3, 0), (3, 3), (3, 5), (4, 0), (4, 3)}
-        self.assertSetEqual(expected_res, set(allowed_transitions(id2label, encoding_type='BMES', include_start_end=True)))
+        self.assertSetEqual(expected_res, set(
+            allowed_transitions(id2label, encoding_type='BMES', include_start_end=True)))
 
         id2label = {0: 'B', 1: 'I', 2:'O', 3: '<pad>', 4:"<unk>"}
         allowed_transitions(id2label, include_start_end=True)
@@ -37,7 +38,100 @@ class TestCRF(unittest.TestCase):
         expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 4), (2, 7), (2, 9), (3, 0), (3, 3), (3, 4),
                         (3, 7), (3, 9), (4, 5), (4, 6), (5, 5), (5, 6), (6, 0), (6, 3), (6, 4), (6, 7), (6, 9), (7, 0),
                         (7, 3), (7, 4), (7, 7), (7, 9), (8, 0), (8, 3), (8, 4), (8, 7)}
-        self.assertSetEqual(expected_res, set(allowed_transitions(id2label, encoding_type='BMES', include_start_end=True)))
+        self.assertSetEqual(expected_res, set(
+            allowed_transitions(id2label, include_start_end=True)))
+
+    def test_case11(self):
+        # 测试自动推断encoding类型
+        from fastNLP.modules.decoder.crf import allowed_transitions
+
+        id2label = {0: 'B', 1: 'I', 2: 'O'}
+        expected_res = {(0, 0), (0, 1), (0, 2), (0, 4), (1, 0), (1, 1), (1, 2), (1, 4), (2, 0), (2, 2),
+                        (2, 4), (3, 0), (3, 2)}
+        self.assertSetEqual(expected_res, set(allowed_transitions(id2label, include_start_end=True)))
+
+        id2label = {0: 'B', 1: 'M', 2: 'E', 3: 'S'}
+        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 5), (3, 0), (3, 3), (3, 5), (4, 0), (4, 3)}
+        self.assertSetEqual(expected_res, set(
+            allowed_transitions(id2label, include_start_end=True)))
+
+        id2label = {0: 'B', 1: 'I', 2: 'O', 3: '<pad>', 4: "<unk>"}
+        allowed_transitions(id2label, include_start_end=True)
+
+        labels = ['O']
+        for label in ['X', 'Y']:
+            for tag in 'BI':
+                labels.append('{}-{}'.format(tag, label))
+        id2label = {idx: label for idx, label in enumerate(labels)}
+        expected_res = {(0, 0), (0, 1), (0, 3), (0, 6), (1, 0), (1, 1), (1, 2), (1, 3), (1, 6), (2, 0), (2, 1),
+                        (2, 2), (2, 3), (2, 6), (3, 0), (3, 1), (3, 3), (3, 4), (3, 6), (4, 0), (4, 1), (4, 3),
+                        (4, 4), (4, 6), (5, 0), (5, 1), (5, 3)}
+        self.assertSetEqual(expected_res, set(allowed_transitions(id2label, include_start_end=True)))
+
+        labels = []
+        for label in ['X', 'Y']:
+            for tag in 'BMES':
+                labels.append('{}-{}'.format(tag, label))
+        id2label = {idx: label for idx, label in enumerate(labels)}
+        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 4), (2, 7), (2, 9), (3, 0), (3, 3), (3, 4),
+                        (3, 7), (3, 9), (4, 5), (4, 6), (5, 5), (5, 6), (6, 0), (6, 3), (6, 4), (6, 7), (6, 9), (7, 0),
+                        (7, 3), (7, 4), (7, 7), (7, 9), (8, 0), (8, 3), (8, 4), (8, 7)}
+        self.assertSetEqual(expected_res, set(
+            allowed_transitions(id2label, include_start_end=True)))
+
+    def test_case12(self):
+        # 测试能否通过vocab生成转移矩阵
+        from fastNLP.modules.decoder.crf import allowed_transitions
+
+        id2label = {0: 'B', 1: 'I', 2: 'O'}
+        vocab = Vocabulary(unknown=None, padding=None)
+        for idx, tag in id2label.items():
+            vocab.add_word(tag)
+        expected_res = {(0, 0), (0, 1), (0, 2), (0, 4), (1, 0), (1, 1), (1, 2), (1, 4), (2, 0), (2, 2),
+                        (2, 4), (3, 0), (3, 2)}
+        self.assertSetEqual(expected_res, set(allowed_transitions(vocab, include_start_end=True)))
+
+        id2label = {0: 'B', 1: 'M', 2: 'E', 3: 'S'}
+        vocab = Vocabulary(unknown=None, padding=None)
+        for idx, tag in id2label.items():
+            vocab.add_word(tag)
+        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 5), (3, 0), (3, 3), (3, 5), (4, 0), (4, 3)}
+        self.assertSetEqual(expected_res, set(
+            allowed_transitions(vocab, include_start_end=True)))
+
+        id2label = {0: 'B', 1: 'I', 2: 'O', 3: '<pad>', 4: "<unk>"}
+        vocab = Vocabulary()
+        for idx, tag in id2label.items():
+            vocab.add_word(tag)
+        allowed_transitions(vocab, include_start_end=True)
+
+        labels = ['O']
+        for label in ['X', 'Y']:
+            for tag in 'BI':
+                labels.append('{}-{}'.format(tag, label))
+        id2label = {idx: label for idx, label in enumerate(labels)}
+        expected_res = {(0, 0), (0, 1), (0, 3), (0, 6), (1, 0), (1, 1), (1, 2), (1, 3), (1, 6), (2, 0), (2, 1),
+                        (2, 2), (2, 3), (2, 6), (3, 0), (3, 1), (3, 3), (3, 4), (3, 6), (4, 0), (4, 1), (4, 3),
+                        (4, 4), (4, 6), (5, 0), (5, 1), (5, 3)}
+        vocab = Vocabulary(unknown=None, padding=None)
+        for idx, tag in id2label.items():
+            vocab.add_word(tag)
+        self.assertSetEqual(expected_res, set(allowed_transitions(vocab, include_start_end=True)))
+
+        labels = []
+        for label in ['X', 'Y']:
+            for tag in 'BMES':
+                labels.append('{}-{}'.format(tag, label))
+        id2label = {idx: label for idx, label in enumerate(labels)}
+        vocab = Vocabulary(unknown=None, padding=None)
+        for idx, tag in id2label.items():
+            vocab.add_word(tag)
+        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 4), (2, 7), (2, 9), (3, 0), (3, 3), (3, 4),
+                        (3, 7), (3, 9), (4, 5), (4, 6), (5, 5), (5, 6), (6, 0), (6, 3), (6, 4), (6, 7), (6, 9), (7, 0),
+                        (7, 3), (7, 4), (7, 7), (7, 9), (8, 0), (8, 3), (8, 4), (8, 7)}
+        self.assertSetEqual(expected_res, set(
+            allowed_transitions(vocab, include_start_end=True)))
+
 
     def test_case2(self):
         # 测试CRF能否避免解码出非法跃迁, 使用allennlp做了验证。

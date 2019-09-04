@@ -2,8 +2,12 @@ import random
 import numpy as np
 import torch
 
-from fastNLP.core import Trainer, Tester, AccuracyMetric, Const, Adam
-from fastNLP.io.data_loader import SNLILoader, RTELoader, MNLILoader, QNLILoader, QuoraLoader
+from fastNLP.core import Trainer, Tester, AccuracyMetric, Const
+from fastNLP.core.callback import WarmupCallback, EvaluateCallback
+from fastNLP.core.optimizer import AdamW
+from fastNLP.embeddings import BertEmbedding
+from fastNLP.io.pipe.matching import SNLIBertPipe, RTEBertPipe, MNLIBertPipe,\
+    QNLIBertPipe, QuoraBertPipe
 
 from reproduction.matching.model.bert import BertForNLI
 
@@ -12,16 +16,22 @@ from reproduction.matching.model.bert import BertForNLI
 class BERTConfig:
 
     task = 'snli'
+
     batch_size_per_gpu = 6
     n_epochs = 6
     lr = 2e-5
-    seq_len_type = 'bert'
+    warm_up_rate = 0.1
     seed = 42
+    save_path = None  # 模型存储的位置，None表示不存储模型。
+
     train_dataset_name = 'train'
     dev_dataset_name = 'dev'
     test_dataset_name = 'test'
-    save_path = None  # 模型存储的位置，None表示不存储模型。
-    bert_dir = 'path/to/bert/dir'  # 预训练BERT参数文件的文件夹
+
+    to_lower = True  # 忽略大小写
+    tokenizer = 'spacy'  # 使用spacy进行分词
+
+    bert_model_dir_or_name = 'bert-base-uncased'
 
 
 arg = BERTConfig()
@@ -37,58 +47,52 @@ if n_gpu > 0:
 
 # load data set
 if arg.task == 'snli':
-    data_info = SNLILoader().process(
-        paths='path/to/snli/data', to_lower=True, seq_len_type=arg.seq_len_type,
-        bert_tokenizer=arg.bert_dir, cut_text=512,
-        get_index=True, concat='bert',
-    )
+    data_bundle = SNLIBertPipe(lower=arg.to_lower, tokenizer=arg.tokenizer).process_from_file()
 elif arg.task == 'rte':
-    data_info = RTELoader().process(
-        paths='path/to/rte/data', to_lower=True, seq_len_type=arg.seq_len_type,
-        bert_tokenizer=arg.bert_dir, cut_text=512,
-        get_index=True, concat='bert',
-    )
+    data_bundle = RTEBertPipe(lower=arg.to_lower, tokenizer=arg.tokenizer).process_from_file()
 elif arg.task == 'qnli':
-    data_info = QNLILoader().process(
-        paths='path/to/qnli/data', to_lower=True, seq_len_type=arg.seq_len_type,
-        bert_tokenizer=arg.bert_dir, cut_text=512,
-        get_index=True, concat='bert',
-    )
+    data_bundle = QNLIBertPipe(lower=arg.to_lower, tokenizer=arg.tokenizer).process_from_file()
 elif arg.task == 'mnli':
-    data_info = MNLILoader().process(
-        paths='path/to/mnli/data', to_lower=True, seq_len_type=arg.seq_len_type,
-        bert_tokenizer=arg.bert_dir, cut_text=512,
-        get_index=True, concat='bert',
-    )
+    data_bundle = MNLIBertPipe(lower=arg.to_lower, tokenizer=arg.tokenizer).process_from_file()
 elif arg.task == 'quora':
-    data_info = QuoraLoader().process(
-        paths='path/to/quora/data', to_lower=True, seq_len_type=arg.seq_len_type,
-        bert_tokenizer=arg.bert_dir, cut_text=512,
-        get_index=True, concat='bert',
-    )
+    data_bundle = QuoraBertPipe(lower=arg.to_lower, tokenizer=arg.tokenizer).process_from_file()
 else:
     raise RuntimeError(f'NOT support {arg.task} task yet!')
 
+print(data_bundle)  # print details in data_bundle
+
+# load embedding
+embed = BertEmbedding(data_bundle.vocabs[Const.INPUT], model_dir_or_name=arg.bert_model_dir_or_name)
+
 # define model
-model = BertForNLI(class_num=len(data_info.vocabs[Const.TARGET]), bert_dir=arg.bert_dir)
+model = BertForNLI(embed, class_num=len(data_bundle.vocabs[Const.TARGET]))
+
+# define optimizer and callback
+optimizer = AdamW(lr=arg.lr, params=model.parameters())
+callbacks = [WarmupCallback(warmup=arg.warm_up_rate, schedule='linear'), ]
+
+if arg.task in ['snli']:
+    callbacks.append(EvaluateCallback(data=data_bundle.datasets[arg.test_dataset_name]))
+    # evaluate test set in every epoch if task is snli.
 
 # define trainer
-trainer = Trainer(train_data=data_info.datasets[arg.train_dataset_name], model=model,
-                  optimizer=Adam(lr=arg.lr, model_params=model.parameters()),
+trainer = Trainer(train_data=data_bundle.datasets[arg.train_dataset_name], model=model,
+                  optimizer=optimizer,
                   batch_size=torch.cuda.device_count() * arg.batch_size_per_gpu,
                   n_epochs=arg.n_epochs, print_every=-1,
-                  dev_data=data_info.datasets[arg.dev_dataset_name],
+                  dev_data=data_bundle.datasets[arg.dev_dataset_name],
                   metrics=AccuracyMetric(), metric_key='acc',
                   device=[i for i in range(torch.cuda.device_count())],
                   check_code_level=-1,
-                  save_path=arg.save_path)
+                  save_path=arg.save_path,
+                  callbacks=callbacks)
 
 # train model
 trainer.train(load_best_model=True)
 
 # define tester
 tester = Tester(
-    data=data_info.datasets[arg.test_dataset_name],
+    data=data_bundle.datasets[arg.test_dataset_name],
     model=model,
     metrics=AccuracyMetric(),
     batch_size=torch.cuda.device_count() * arg.batch_size_per_gpu,

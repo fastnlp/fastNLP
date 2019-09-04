@@ -27,7 +27,7 @@ def prepare_parser_data():
 
 class TestBiaffineParser(unittest.TestCase):
     def test_train(self):
-        model = BiaffineParser(init_embed=(VOCAB_SIZE, 10),
+        model = BiaffineParser(embed=(VOCAB_SIZE, 10),
                                pos_vocab_size=VOCAB_SIZE, pos_emb_dim=10,
                                rnn_hidden_size=10,
                                arc_mlp_size=10,
@@ -37,7 +37,7 @@ class TestBiaffineParser(unittest.TestCase):
         RUNNER.run_model(model, ds, loss=ParserLoss(), metrics=ParserMetric())
 
     def test_train2(self):
-        model = BiaffineParser(init_embed=(VOCAB_SIZE, 10),
+        model = BiaffineParser(embed=(VOCAB_SIZE, 10),
                                pos_vocab_size=VOCAB_SIZE, pos_emb_dim=10,
                                rnn_hidden_size=16,
                                arc_mlp_size=10,

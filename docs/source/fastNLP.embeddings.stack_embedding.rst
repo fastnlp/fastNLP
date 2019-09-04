@@ -1,7 +1,6 @@
-fastNLP.embeddings.stack\_embedding
-===================================
+fastNLP.embeddings.stack_embedding
+==================================
 
 .. automodule:: fastNLP.embeddings.stack_embedding
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :members: StackEmbedding
+
