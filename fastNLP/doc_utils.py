@@ -1,3 +1,7 @@
+"""undocumented"""
+
+__all__ = []
+
 import inspect
 import sys
 
@@ -7,7 +11,8 @@ def doc_process(m):
         if inspect.isclass(obj) or inspect.isfunction(obj):
             if obj.__module__ != m.__name__:
                 if obj.__doc__ is None:
-                    print(name, obj.__doc__)
+                    # print(name, obj.__doc__)
+                    pass
                 else:
                     module_name = obj.__module__
                     while 1:
@@ -18,5 +23,5 @@ def doc_process(m):
                             break
                         module_name = ".".join(module_name.split('.')[:-1])
                         if module_name == m.__name__:
-                            print(name, ": not found defined doc.")
+                            # print(name, ": not found defined doc.")
                             break
