@@ -45,7 +45,7 @@ if __name__ == "__main__":
     print("数据集划分：\ntrain:", str(len(data_bundle.get_dataset("train"))),
           "\ndev:" + str(len(data_bundle.get_dataset("dev"))) + "\ntest:" + str(len(data_bundle.get_dataset('test'))))
     # print(data_info)
-    model = Model(data_bundle.vocabs['vocab'], config)
+    model = Model(data_bundle.get_vocab("vocab"), config)
     print(model)
 
     loss = SoftmaxLoss()
@@ -60,7 +60,7 @@ if __name__ == "__main__":
                       loss=loss, metrics=metric, check_code_level=-1, sampler=None,
                       batch_size=1, device=torch.device("cuda:" + config.cuda), metric_key='f', n_epochs=config.epoch,
                       optimizer=optim,
-                      save_path='/remote-home/xxliu/pycharm/fastNLP/fastNLP/reproduction/coreference_resolution/save',
+                      save_path= None,
                       callbacks=[lr_decay_callback, GradientClipCallback(clip_value=5)])
     print()
 
