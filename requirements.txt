@@ -2,5 +2,6 @@ numpy>=1.14.2
 torch>=1.0.0
 tqdm>=4.28.1
 nltk>=3.4.1
+prettytable>=0.7.2
 requests
 spacy
