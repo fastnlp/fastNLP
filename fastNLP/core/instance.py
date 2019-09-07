@@ -3,9 +3,12 @@ instance 模块实现了Instance 类在fastNLP中对应sample。一个sample可�
 便于理解的例子可以参考文档 :doc:`fastNLP.core.dataset` 中的表格
 
 """
+
 __all__ = [
     "Instance"
 ]
+
+from .utils import pretty_table_printer
 
 
 class Instance(object):
@@ -20,11 +23,11 @@ class Instance(object):
         >>>ins.add_field("field_3", [3, 3, 3])
         >>>ins = Instance(**{'x1': 1, 'x2':np.zeros((3, 4))})
     """
-    
+
     def __init__(self, **fields):
-        
+
         self.fields = fields
-    
+
     def add_field(self, field_name, field):
         """
         向Instance中增加一个field
@@ -41,18 +44,15 @@ class Instance(object):
         :return: 一个迭代器
         """
         return self.fields.items()
-    
+
     def __getitem__(self, name):
         if name in self.fields:
             return self.fields[name]
         else:
             raise KeyError("{} not found".format(name))
-    
+
     def __setitem__(self, name, field):
         return self.add_field(name, field)
-    
+
     def __repr__(self):
-        s = '\''
-        return "{" + ",\n".join(
-            "\'" + field_name + "\': " + str(self.fields[field_name]) + \
-            f" type={(str(type(self.fields[field_name]))).split(s)[1]}" for field_name in self.fields) + "}"
+        return str(pretty_table_printer(self))
