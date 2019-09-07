@@ -229,4 +229,17 @@ class TestDataSetIter(unittest.TestCase):
     def test__repr__(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
         for iter in ds:
-            self.assertEqual(iter.__repr__(), "{'x': [1, 2, 3, 4] type=list,\n'y': [5, 6] type=list}")
+            self.assertEqual(iter.__repr__(), """+--------------+--------+
+|      x       |   y    |
++--------------+--------+
+| [1, 2, 3, 4] | [5, 6] |
++--------------+--------+""")
+
+
+class TestDataSetFieldMeta(unittest.TestCase):
+    def test_print_field_meta(self):
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
+        ds.print_field_meta()
+
+        ds.set_input('x')
+        ds.print_field_meta()

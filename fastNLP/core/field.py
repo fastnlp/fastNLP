@@ -53,7 +53,7 @@ class FieldArray:
         self.content = _content
         self._ignore_type = ignore_type
         #  根据input的情况设置input，target等
-        self._cell_ndim = None  # 多少维度
+        self._cell_ndim = None  # 多少维度， 如果value是1, dim为0; 如果value是[1, 2], dim=2
         self.dtype = None  # 最内层的element都是什么类型的
         self._use_1st_ins_infer_dim_type = bool(use_1st_ins_infer_dim_type)
         self._is_input = False
@@ -484,7 +484,10 @@ class Padder:
     
     def set_pad_val(self, pad_val):
         self.pad_val = pad_val
-    
+
+    def get_pad_val(self):
+        return self.pad_val
+
     @abstractmethod
     def __call__(self, contents, field_name, field_ele_dtype, dim: int):
         """

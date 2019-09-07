@@ -4,3 +4,4 @@ tqdm>=4.28.1
 nltk>=3.4.1
 requests
 spacy
+prettytable>=0.7.2

@@ -301,6 +301,7 @@ from .field import SetInputOrTargetException
 from .instance import Instance
 from .utils import _get_func_signature
 from .utils import pretty_table_printer
+from prettytable import PrettyTable
 
 
 class DataSet(object):
@@ -424,6 +425,62 @@ class DataSet(object):
 
     def __repr__(self):
         return str(pretty_table_printer(self))
+
+    def print_field_meta(self):
+        """
+        输出当前field的meta信息, 形似下列的输出
+        
+        +-------------+-------+-------+
+        | field_names |   x   |   y   |
+        +-------------+-------+-------+
+        |   is_input  |  True | False |
+        |  is_target  | False | False |
+        | ignore_type | False |       |
+        |  pad_value  |   0   |       |
+        +-------------+-------+-------+
+
+        field_names: DataSet中field的名称
+        is_input: field是否为input
+        is_target: field是否为target
+        ignore_type: 是否忽略该field的type, 一般仅在该field至少为input或target时才有意义
+        pad_value: 该field的pad的值，仅在该field为input或target时有意义
+
+        :return:
+        """
+        if len(self.field_arrays)>0:
+            field_names = ['field_names']
+            is_inputs = ['is_input']
+            is_targets = ['is_target']
+            pad_values = ['pad_value']
+            ignore_types = ['ignore_type']
+
+            for name, field_array in self.field_arrays.items():
+                field_names.append(name)
+                if field_array.is_input:
+                    is_inputs.append(True)
+                else:
+                    is_inputs.append(False)
+                if field_array.is_target:
+                    is_targets.append(True)
+                else:
+                    is_targets.append(False)
+
+                if (field_array.is_input or field_array.is_target) and field_array.padder is not None:
+                    pad_values.append(field_array.padder.get_pad_val())
+                else:
+                    pad_values.append(' ')
+
+                if field_array._ignore_type:
+                    ignore_types.append(True)
+                elif field_array.is_input or field_array.is_target:
+                    ignore_types.append(False)
+                else:
+                    ignore_types.append(' ')
+            table = PrettyTable(field_names=field_names)
+            fields = [is_inputs, is_targets, ignore_types, pad_values]
+            for field in fields:
+                table.add_row(field)
+            logger.info(table)
 
     def append(self, instance):
         """
