@@ -2,6 +2,7 @@
 此模块用于给其它模块提供读取文件的函数，没有为用户提供 API
 """
 import json
+import csv
 
 
 def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
@@ -16,27 +17,26 @@ def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
             :if False, raise ValueError when reading invalid data. default: True
     :return: generator, every time yield (line number, csv item)
     """
-    with open(path, 'r', encoding=encoding) as f:
-        start_idx = 0
-        if headers is None:
-            headers = f.readline().rstrip('\r\n')
-            headers = headers.split(sep)
-            start_idx += 1
-        elif not isinstance(headers, (list, tuple)):
-                raise TypeError("headers should be list or tuple, not {}." \
+    f = csv.reader(open(path, encoding=encoding), delimiter=sep)
+    start_idx = 0
+    if headers is None:
+        headers = next(f)
+        start_idx += 1
+    elif not isinstance(headers, (list, tuple)):
+        raise TypeError("headers should be list or tuple, not {}." \
                         .format(type(headers)))
-        for line_idx, line in enumerate(f, start_idx):
-            contents = line.rstrip('\r\n').split(sep)
-            if len(contents) != len(headers):
-                if dropna:
-                    continue
-                else:
-                    raise ValueError("Line {} has {} parts, while header has {} parts." \
-                                     .format(line_idx, len(contents), len(headers)))
-            _dict = {}
-            for header, content in zip(headers, contents):
-                _dict[header] = content
-            yield line_idx, _dict
+    for line_idx, line in enumerate(f, start_idx):
+        contents = line
+        if len(contents) != len(headers):
+            if dropna:
+                continue
+            else:
+                raise ValueError("Line {} has {} parts, while header has {} parts." \
+                                 .format(line_idx, len(contents), len(headers)))
+        _dict = {}
+        for header, content in zip(headers, contents):
+            _dict[header] = content
+        yield line_idx, _dict
 
 
 def _read_json(path, encoding='utf-8', fields=None, dropna=True):
