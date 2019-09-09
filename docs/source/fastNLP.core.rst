@@ -2,12 +2,9 @@ fastNLP.core
 ============
 
 .. automodule:: fastNLP.core
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 子模块
-----------
+------
 
 .. toctree::
    :maxdepth: 1

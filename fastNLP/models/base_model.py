@@ -1,3 +1,7 @@
+"""undocumented"""
+
+__all__ = []
+
 import torch
 
 from ..modules.decoder.mlp import MLP

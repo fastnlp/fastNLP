@@ -1,4 +1,5 @@
 import os
+import sys
 import unittest
 
 from fastNLP import DataSet
@@ -78,6 +79,16 @@ class TestDataSetMethods(unittest.TestCase):
         dd.delete_field("x")
         self.assertFalse("x" in dd.field_arrays)
         self.assertTrue("y" in dd.field_arrays)
+
+    def test_delete_instance(self):
+        dd = DataSet()
+        old_length = 2
+        dd.add_field("x", [[1, 2, 3]] * old_length)
+        dd.add_field("y", [[1, 2, 3, 4]] * old_length)
+        dd.delete_instance(0)
+        self.assertEqual(len(dd), old_length-1)
+        dd.delete_instance(0)
+        self.assertEqual(len(dd), old_length-2)
 
     def test_getitem(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
@@ -171,8 +182,9 @@ class TestDataSetMethods(unittest.TestCase):
     def test_apply2(self):
         def split_sent(ins):
             return ins['raw_sentence'].split()
-        csv_loader = CSVLoader(headers=['raw_sentence', 'label'],sep='\t')
-        dataset = csv_loader.load('test/data_for_tests/tutorial_sample_dataset.csv')
+        csv_loader = CSVLoader(headers=['raw_sentence', 'label'], sep='\t')
+        data_bundle = csv_loader.load('test/data_for_tests/tutorial_sample_dataset.csv')
+        dataset = data_bundle.datasets['train']
         dataset.drop(lambda x: len(x['raw_sentence'].split()) == 0, inplace=True)
         dataset.apply(split_sent, new_field_name='words', is_input=True)
         # print(dataset)
@@ -217,4 +229,17 @@ class TestDataSetIter(unittest.TestCase):
     def test__repr__(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
         for iter in ds:
-            self.assertEqual(iter.__repr__(), "{'x': [1, 2, 3, 4] type=list,\n'y': [5, 6] type=list}")
+            self.assertEqual(iter.__repr__(), """+--------------+--------+
+|      x       |   y    |
++--------------+--------+
+| [1, 2, 3, 4] | [5, 6] |
++--------------+--------+""")
+
+
+class TestDataSetFieldMeta(unittest.TestCase):
+    def test_print_field_meta(self):
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
+        ds.print_field_meta()
+
+        ds.set_input('x')
+        ds.print_field_meta()

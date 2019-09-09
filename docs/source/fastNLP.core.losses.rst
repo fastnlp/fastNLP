@@ -2,6 +2,6 @@ fastNLP.core.losses
 ===================
 
 .. automodule:: fastNLP.core.losses
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :members: LossBase, LossFunc, LossInForward, CrossEntropyLoss, BCELoss, L1Loss, NLLLoss
+   :inherited-members:
+

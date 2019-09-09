@@ -11,6 +11,13 @@ LSTM+self_attention:论文链接[A Structured Self-attentive Sentence Embedding]
 
 AWD-LSTM:论文链接[Regularizing and Optimizing LSTM Language Models](https://arxiv.org/pdf/1708.02182.pdf)
 
+#数据集来源
+IMDB：http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
+SST-2：https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FSST-2.zip?alt=media&token=aabc5f6b-e466-44a2-b9b4-cf6337f84ac8
+SST：https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip
+yelp_full:https://drive.google.com/drive/folders/0Bz8a_Dbh9Qhbfll6bVpmNUtUcFdjYmF2SEpmZUZUcVNiMUw1TWN6RDV3a0JHT3kxLVhVR2M
+yelp_polarity:https://drive.google.com/drive/folders/0Bz8a_Dbh9Qhbfll6bVpmNUtUcFdjYmF2SEpmZUZUcVNiMUw1TWN6RDV3a0JHT3kxLVhVR2M
+
 # 数据集及复现结果汇总
 
 使用fastNLP复现的结果vs论文汇报结果(/前为fastNLP实现，后面为论文报道,-表示论文没有在该数据集上列出结果)

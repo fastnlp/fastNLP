@@ -20,7 +20,9 @@
 
         loader = SSTLoader()
         #这里的all.txt是下载好数据后train.txt、dev.txt、test.txt的组合
-        dataset = loader.load("./trainDevTestTrees_PTB/trees/all.txt")
+        #loader.load(path)会首先判断path是否为none，若是则自动从网站下载数据，若不是则读入数据并返回databundle
+        databundle_ = loader.load("./trainDevTestTrees_PTB/trees/all.txt")
+        dataset = databundle_.datasets['train']
         print(dataset[0])
 
     输出数据如下::
@@ -32,6 +34,7 @@
     
 
 数据处理
+    可以使用事先定义的 :class:`~fastNLP.io.SSTPipe` 类对数据进行基本预处理，这里我们手动进行处理。
     我们使用 :class:`~fastNLP.DataSet` 类的 :meth:`~fastNLP.DataSet.apply` 方法将 ``target`` :mod:`~fastNLP.core.field` 转化为整数。
     
     .. code-block:: python
@@ -192,7 +195,7 @@ sampler
         import time
 
         embed_dim = 100
-        model = CNNText((len(vocab),embed_dim), num_classes=3, padding=2, dropout=0.1)
+        model = CNNText((len(vocab),embed_dim), num_classes=3, dropout=0.1)
 
         def train(epoch, data, devdata):
             optimizer = torch.optim.Adam(model.parameters(), lr=0.001)

@@ -4,7 +4,7 @@ from typing import Iterable
 from fastNLP import DataSet, Instance, Vocabulary
 from fastNLP.core.vocabulary import VocabularyOption
 from fastNLP.io import JsonLoader
-from fastNLP.io.base_loader import DataBundle,DataSetLoader
+from fastNLP.io.data_bundle import DataBundle,DataSetLoader
 from fastNLP.io.embed_loader import EmbeddingOption
 from fastNLP.io.file_reader import _read_json
 from typing import Union, Dict
