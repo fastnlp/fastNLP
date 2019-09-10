@@ -3,7 +3,7 @@ import unittest
 
 import torch
 
-from fastNLP.models.bert import BertModel
+from fastNLP.modules.encoder.bert import BertModel
 
 
 class TestBert(unittest.TestCase):

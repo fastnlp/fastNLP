@@ -22,8 +22,6 @@ from ..core import logger
 
 class ElmoEmbedding(ContextualEmbedding):
     """
-    别名：:class:`fastNLP.embeddings.ElmoEmbedding`   :class:`fastNLP.embeddings.elmo_embedding.ElmoEmbedding`
-
     使用ELMo的embedding。初始化之后，只需要传入words就可以得到对应的embedding。当前支持的使用名称初始化的模型有以下的这些(待补充)
 
     Example::
@@ -57,7 +55,7 @@ class ElmoEmbedding(ContextualEmbedding):
         并删除character encoder，之后将直接使用cache的embedding。默认为False。
     """
     
-    def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', layers: str = '2', requires_grad: bool = False,
+    def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', layers: str = '2', requires_grad: bool = True,
                  word_dropout=0.0, dropout=0.0, cache_word_reprs: bool = False):
         super(ElmoEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         
@@ -71,6 +69,7 @@ class ElmoEmbedding(ContextualEmbedding):
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
         self.model = _ElmoModel(model_dir, vocab, cache_word_reprs=cache_word_reprs)
+        num_layers = self.model.encoder.num_layers
         
         if layers == 'mix':
             self.layer_weights = nn.Parameter(torch.zeros(self.model.config['lstm']['n_layers'] + 1),
@@ -80,9 +79,9 @@ class ElmoEmbedding(ContextualEmbedding):
             self._embed_size = self.model.config['lstm']['projection_dim'] * 2
         else:
             layers = list(map(int, layers.split(',')))
-            assert len(layers) > 0, "Must choose one output"
+            assert len(layers) > 0, "Must choose at least one output, but got None."
             for layer in layers:
-                assert 0 <= layer <= 2, "Layer index should be in range [0, 2]."
+                assert 0 <= layer <= num_layers, f"Layer index should be in range [0, {num_layers}], but got {layer}."
             self.layers = layers
             self._get_outputs = self._get_layer_outputs
             self._embed_size = len(self.layers) * self.model.config['lstm']['projection_dim'] * 2
@@ -137,27 +136,6 @@ class ElmoEmbedding(ContextualEmbedding):
         for name in ['layers', 'model', 'layer_weights', 'gamma']:
             if hasattr(self, name):
                 delattr(self, name)
-    
-    @property
-    def requires_grad(self):
-        """
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
-
-        :return:
-        """
-        requires_grads = set([param.requires_grad for name, param in self.named_parameters()
-                              if 'words_to_chars_embedding' not in name and 'words_to_words' not in name])
-        if len(requires_grads) == 1:
-            return requires_grads.pop()
-        else:
-            return None
-    
-    @requires_grad.setter
-    def requires_grad(self, value):
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' in name or 'words_to_words' in name:  # 这个不能加入到requires_grad中
-                continue
-            param.requires_grad = value
 
 
 class _ElmoModel(nn.Module):
@@ -246,11 +224,9 @@ class _ElmoModel(nn.Module):
         logger.info(f"{found_char_count} out of {len(char_vocab)} characters were found in pretrained elmo embedding.")
         # 生成words到chars的映射
         max_chars = config['char_cnn']['max_characters_per_token']
-        
-        self.words_to_chars_embedding = nn.Parameter(torch.full((len(vocab) + 2, max_chars),
+        self.register_buffer('words_to_chars_embedding', torch.full((len(vocab) + 2, max_chars),
                                                                 fill_value=len(char_vocab),
-                                                                dtype=torch.long),
-                                                     requires_grad=False)
+                                                                dtype=torch.long))
         for word, index in list(iter(vocab)) + [(BOS_TAG, len(vocab)), (EOS_TAG, len(vocab) + 1)]:
             if len(word) + 2 > max_chars:
                 word = word[:max_chars - 2]

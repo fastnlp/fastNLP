@@ -130,8 +130,6 @@ def _find_cycle(vertices, edges):
 
 class GraphParser(BaseModel):
     """
-    别名：:class:`fastNLP.models.GraphParser`  :class:`fastNLP.models.baffine_parser.GraphParser`
-
     基于图的parser base class, 支持贪婪解码和最大生成树解码
     """
     
@@ -207,7 +205,7 @@ class ArcBiaffine(nn.Module):
         output = dep.matmul(self.U)
         output = output.bmm(head.transpose(-1, -2))
         if self.has_bias:
-            output += head.matmul(self.bias).unsqueeze(1)
+            output = output + head.matmul(self.bias).unsqueeze(1)
         return output
 
 
@@ -234,18 +232,16 @@ class LabelBilinear(nn.Module):
         :return output: [batch, seq_len, num_cls] 每个元素对应类别的概率图
         """
         output = self.bilinear(x1, x2)
-        output += self.lin(torch.cat([x1, x2], dim=2))
+        output = output + self.lin(torch.cat([x1, x2], dim=2))
         return output
 
 
 class BiaffineParser(GraphParser):
     """
-    别名：:class:`fastNLP.models.BiaffineParser`  :class:`fastNLP.models.baffine_parser.BiaffineParser`
-
     Biaffine Dependency Parser 实现.
     论文参考 `Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016) <https://arxiv.org/abs/1611.01734>`_ .
 
-    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+    :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
         embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
         此时就以传入的对象作为embedding
     :param pos_vocab_size: part-of-speech 词典大小
@@ -262,7 +258,7 @@ class BiaffineParser(GraphParser):
     """
     
     def __init__(self,
-                 init_embed,
+                 embed,
                  pos_vocab_size,
                  pos_emb_dim,
                  num_label,
@@ -276,7 +272,7 @@ class BiaffineParser(GraphParser):
         super(BiaffineParser, self).__init__()
         rnn_out_size = 2 * rnn_hidden_size
         word_hid_dim = pos_hid_dim = rnn_hidden_size
-        self.word_embedding = get_embeddings(init_embed)
+        self.word_embedding = get_embeddings(embed)
         word_emb_dim = self.word_embedding.embedding_dim
         self.pos_embedding = nn.Embedding(num_embeddings=pos_vocab_size, embedding_dim=pos_emb_dim)
         self.word_fc = nn.Linear(word_emb_dim, word_hid_dim)
@@ -363,7 +359,7 @@ class BiaffineParser(GraphParser):
         # print('forward {} {}'.format(batch_size, seq_len))
         
         # get sequence mask
-        mask = seq_len_to_mask(seq_len).long()
+        mask = seq_len_to_mask(seq_len, max_len=length).long()
         
         word = self.word_embedding(words1)  # [N,L] -> [N,L,C_0]
         pos = self.pos_embedding(words2)  # [N,L] -> [N,L,C_1]
@@ -435,10 +431,10 @@ class BiaffineParser(GraphParser):
         """
         
         batch_size, length, _ = pred1.shape
-        mask = seq_len_to_mask(seq_len)
+        mask = seq_len_to_mask(seq_len, max_len=length)
         flip_mask = (mask == 0)
         _arc_pred = pred1.clone()
-        _arc_pred.masked_fill_(flip_mask.unsqueeze(1), -float('inf'))
+        _arc_pred = _arc_pred.masked_fill(flip_mask.unsqueeze(1), -float('inf'))
         arc_logits = F.log_softmax(_arc_pred, dim=2)
         label_logits = F.log_softmax(pred2, dim=2)
         batch_index = torch.arange(batch_size, device=arc_logits.device, dtype=torch.long).unsqueeze(1)
@@ -446,9 +442,8 @@ class BiaffineParser(GraphParser):
         arc_loss = arc_logits[batch_index, child_index, target1]
         label_loss = label_logits[batch_index, child_index, target2]
         
-        byte_mask = flip_mask.byte()
-        arc_loss.masked_fill_(byte_mask, 0)
-        label_loss.masked_fill_(byte_mask, 0)
+        arc_loss = arc_loss.masked_fill(flip_mask, 0)
+        label_loss = label_loss.masked_fill(flip_mask, 0)
         arc_nll = -arc_loss.mean()
         label_nll = -label_loss.mean()
         return arc_nll + label_nll
@@ -476,8 +471,6 @@ class BiaffineParser(GraphParser):
 
 class ParserLoss(LossFunc):
     """
-    别名：:class:`fastNLP.models.ParserLoss`  :class:`fastNLP.models.baffine_parser.ParserLoss`
-
     计算parser的loss
 
     :param pred1: [batch_size, seq_len, seq_len] 边预测logits
@@ -501,8 +494,6 @@ class ParserLoss(LossFunc):
 
 class ParserMetric(MetricBase):
     """
-    别名：:class:`fastNLP.models.ParserMetric`  :class:`fastNLP.models.baffine_parser.ParserMetric`
-
     评估parser的性能
 
     :param pred1: 边预测logits

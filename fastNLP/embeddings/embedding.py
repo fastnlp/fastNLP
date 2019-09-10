@@ -17,8 +17,6 @@ from .utils import get_embeddings
 
 class Embedding(nn.Module):
     """
-    别名：:class:`fastNLP.embeddings.Embedding`   :class:`fastNLP.embeddings.embedding.Embedding`
-
     词向量嵌入，支持输入多种方式初始化. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度.
 
     Example::
@@ -117,6 +115,10 @@ class Embedding(nn.Module):
 
 
 class TokenEmbedding(nn.Module):
+    """
+    fastNLP中各种Embedding的基类
+
+    """
     def __init__(self, vocab, word_dropout=0.0, dropout=0.0):
         super(TokenEmbedding, self).__init__()
         if vocab.rebuild:

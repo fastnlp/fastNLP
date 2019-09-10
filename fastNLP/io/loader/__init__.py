@@ -52,6 +52,7 @@ __all__ = [
     'IMDBLoader',
     'SSTLoader',
     'SST2Loader',
+    "ChnSentiCorpLoader",
 
     'ConllLoader',
     'Conll2003Loader',
@@ -75,7 +76,7 @@ __all__ = [
 
     "CRLoader"
 ]
-from .classification import YelpLoader, YelpFullLoader, YelpPolarityLoader, IMDBLoader, SSTLoader, SST2Loader
+from .classification import YelpLoader, YelpFullLoader, YelpPolarityLoader, IMDBLoader, SSTLoader, SST2Loader, ChnSentiCorpLoader
 from .conll import ConllLoader, Conll2003Loader, Conll2003NERLoader, OntoNotesNERLoader, CTBLoader
 from .csv import CSVLoader
 from .cws import CWSLoader

@@ -24,8 +24,6 @@ from ..core import logger
 
 class CNNCharEmbedding(TokenEmbedding):
     """
-    别名：:class:`fastNLP.embeddings.CNNCharEmbedding`   :class:`fastNLP.embeddings.char_embedding.CNNCharEmbedding`
-
     使用CNN生成character embedding。CNN的结构为, embed(x) -> Dropout(x) -> CNN(x) -> activation(x) -> pool -> fc -> Dropout.
     不同的kernel大小的fitler结果是concat起来然后通过一层fully connected layer, 然后输出word的表示。
 
@@ -89,10 +87,9 @@ class CNNCharEmbedding(TokenEmbedding):
         logger.info(f"In total, there are {len(self.char_vocab)} distinct characters.")
         # 对vocab进行index
         max_word_len = max(map(lambda x: len(x[0]), vocab))
-        self.words_to_chars_embedding = nn.Parameter(torch.full((len(vocab), max_word_len),
-                                                                fill_value=self.char_pad_index, dtype=torch.long),
-                                                     requires_grad=False)
-        self.word_lengths = nn.Parameter(torch.zeros(len(vocab)).long(), requires_grad=False)
+        self.register_buffer('words_to_chars_embedding', torch.full((len(vocab), max_word_len),
+                                                                fill_value=self.char_pad_index, dtype=torch.long))
+        self.register_buffer('word_lengths', torch.zeros(len(vocab)).long())
         for word, index in vocab:
             # if index!=vocab.padding_idx:  # 如果是pad的话，直接就为pad_value了。修改为不区分pad, 这样所有的<pad>也是同一个embed
             self.words_to_chars_embedding[index, :len(word)] = \
@@ -109,8 +106,7 @@ class CNNCharEmbedding(TokenEmbedding):
             for i in range(len(kernel_sizes))])
         self._embed_size = embed_size
         self.fc = nn.Linear(sum(filter_nums), embed_size)
-        self.reset_parameters()
-    
+
     def forward(self, words):
         """
         输入words的index后，生成对应的words的表示。
@@ -142,46 +138,10 @@ class CNNCharEmbedding(TokenEmbedding):
             chars = torch.sum(conv_chars, dim=-2) / chars_masks.eq(0).sum(dim=-1, keepdim=True).float()
         chars = self.fc(chars)
         return self.dropout(chars)
-    
-    @property
-    def requires_grad(self):
-        """
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
-        :return:
-        """
-        params = []
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' not in name and 'word_lengths' not in name:
-                params.append(param.requires_grad)
-        requires_grads = set(params)
-        if len(requires_grads) == 1:
-            return requires_grads.pop()
-        else:
-            return None
-    
-    @requires_grad.setter
-    def requires_grad(self, value):
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' in name or 'word_lengths' in name:  # 这个不能加入到requires_grad中
-                continue
-            param.requires_grad = value
-    
-    def reset_parameters(self):
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' in name or 'word_lengths' in name:  # 这个不能reset
-                continue
-            if 'char_embedding' in name:
-                continue
-            if param.data.dim() > 1:
-                nn.init.xavier_uniform_(param, 1)
-            else:
-                nn.init.uniform_(param, -1, 1)
 
 
 class LSTMCharEmbedding(TokenEmbedding):
     """
-    别名：:class:`fastNLP.embeddings.LSTMCharEmbedding`   :class:`fastNLP.embeddings.char_embedding.LSTMCharEmbedding`
-
     使用LSTM的方式对character进行encode. embed(x) -> Dropout(x) -> LSTM(x) -> activation(x) -> pool -> Dropout
 
     Example::
@@ -244,10 +204,9 @@ class LSTMCharEmbedding(TokenEmbedding):
         logger.info(f"In total, there are {len(self.char_vocab)} distinct characters.")
         # 对vocab进行index
         self.max_word_len = max(map(lambda x: len(x[0]), vocab))
-        self.words_to_chars_embedding = nn.Parameter(torch.full((len(vocab), self.max_word_len),
-                                                                fill_value=self.char_pad_index, dtype=torch.long),
-                                                     requires_grad=False)
-        self.word_lengths = nn.Parameter(torch.zeros(len(vocab)).long(), requires_grad=False)
+        self.register_buffer('words_to_chars_embedding', torch.full((len(vocab), self.max_word_len),
+                                                                fill_value=self.char_pad_index, dtype=torch.long))
+        self.register_buffer('word_lengths', torch.zeros(len(vocab)).long())
         for word, index in vocab:
             # if index!=vocab.padding_idx:  # 如果是pad的话，直接就为pad_value了. 修改为不区分pad与否
             self.words_to_chars_embedding[index, :len(word)] = \
@@ -299,27 +258,3 @@ class LSTMCharEmbedding(TokenEmbedding):
         chars = self.fc(chars)
         
         return self.dropout(chars)
-    
-    @property
-    def requires_grad(self):
-        """
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
-        
-        :return:
-        """
-        params = []
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' not in name and 'word_lengths' not in name:
-                params.append(param)
-        requires_grads = set(params)
-        if len(requires_grads) == 1:
-            return requires_grads.pop()
-        else:
-            return None
-    
-    @requires_grad.setter
-    def requires_grad(self, value):
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' in name or 'word_lengths' in name:  # 这个不能加入到requires_grad中
-                continue
-            param.requires_grad = value

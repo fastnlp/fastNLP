@@ -23,6 +23,13 @@ def _colored_string(string: str, color: str or int) -> str:
     return "\033[%dm%s\033[0m" % (color, string)
 
 
+def gr(string, flag):
+    if flag:
+        return _colored_string(string, "green")
+    else:
+        return _colored_string(string, "red")
+
+
 def find_all_modules():
     modules = {}
     children = {}
@@ -66,31 +73,75 @@ def create_rst_file(modules, name, children):
         fout.write(t + "\n")
         fout.write("\n")
         fout.write(".. automodule:: " + name + "\n")
-        if len(m.__all__) > 0:
+        if name != "fastNLP.core" and len(m.__all__) > 0:
             fout.write("   :members: " + ", ".join(m.__all__) + "\n")
-            fout.write("   :inherited-members:\n")
+            short = name[len("fastNLP."):]
+            if not (short.startswith('models') or short.startswith('modules') or short.startswith('embeddings')):
+                fout.write("   :inherited-members:\n")
         fout.write("\n")
         if name in children:
-            fout.write("子模块\n------\n\n.. toctree::\n\n")
+            fout.write("子模块\n------\n\n.. toctree::\n   :maxdepth: 1\n\n")
             for module in children[name]:
                 fout.write("   " + module + "\n")
 
 
 def check_file(m, name):
+    names = name.split('.')
+    test_name = "test." + ".".join(names[1:-1]) + ".test_" + names[-1]
+    try:
+        __import__(test_name)
+        tm = sys.modules[test_name]
+    except ModuleNotFoundError:
+        tm = None
+    tested = tm is not None
+    funcs = {}
+    classes = {}
     for item, obj in inspect.getmembers(m):
-        if inspect.isclass(obj) and obj.__module__ == name:
-            print(obj)
-        if inspect.isfunction(obj) and obj.__module__ == name:
-            print("FUNC", obj)
+        if inspect.isclass(obj) and obj.__module__ == name and not obj.__name__.startswith('_'):
+            this = (obj.__doc__ is not None, tested and obj.__name__ in dir(tm), {})
+            for i in dir(obj):
+                func = getattr(obj, i)
+                if inspect.isfunction(func) and not i.startswith('_'):
+                    this[2][i] = (func.__doc__ is not None, False)
+            classes[obj.__name__] = this
+        if inspect.isfunction(obj) and obj.__module__ == name and not obj.__name__.startswith('_'):
+            this = (obj.__doc__ is not None, tested and obj.__name__ in dir(tm))  # docs
+            funcs[obj.__name__] = this
+    return funcs, classes
 
 
-def check_files(modules):
+def check_files(modules, out=None):
     for name in sorted(modules.keys()):
-        if name == 'fastNLP.core.utils':
-            check_file(modules[name], name)
+        print(name, file=out)
+        funcs, classes = check_file(modules[name], name)
+        if out is None:
+            for f in funcs:
+                print("%-30s \t %s \t %s" % (f, gr("文档", funcs[f][0]), gr("测试", funcs[f][1])))
+            for c in classes:
+                print("%-30s \t %s \t %s" % (c, gr("文档", classes[c][0]), gr("测试", classes[c][1])))
+                methods = classes[c][2]
+                for f in methods:
+                    print("  %-28s \t %s" % (f, gr("文档", methods[f][0])))
+        else:
+            for f in funcs:
+                if not funcs[f][0]:
+                    print("缺少文档 %s" % (f), file=out)
+                if not funcs[f][1]:
+                    print("缺少测试 %s" % (f), file=out)
+            for c in classes:
+                if not classes[c][0]:
+                    print("缺少文档 %s" % (c), file=out)
+                if not classes[c][1]:
+                    print("缺少测试 %s" % (c), file=out)
+                methods = classes[c][2]
+                for f in methods:
+                    if not methods[f][0]:
+                        print("缺少文档 %s" % (c + "." + f), file=out)
+            print(file=out)
 
 
 def main():
+    sys.path.append("..")
     print(_colored_string('Getting modules...', "Blue"))
     modules, to_doc, children = find_all_modules()
     print(_colored_string('Done!', "Green"))
@@ -99,7 +150,7 @@ def main():
         create_rst_file(modules, name, children)
     print(_colored_string('Done!', "Green"))
     print(_colored_string('Checking all files...', "Blue"))
-    check_files(modules)
+    check_files(modules, out=open("results.txt", "w"))
     print(_colored_string('Done!', "Green"))
 
 

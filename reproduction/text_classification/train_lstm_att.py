@@ -1,9 +1,7 @@
-# 首先需要加入以下的路径到环境变量，因为当前只对内部测试开放，所以需要手动申明一下路径
-import os
-os.environ['FASTNLP_BASE_URL'] = 'http://10.141.222.118:8888/file/download/'
-os.environ['FASTNLP_CACHE_DIR'] = '/remote-home/hyan01/fastnlp_caches'
+import sys
+sys.path.append('../..')
 
-from fastNLP.io.data_loader import IMDBLoader
+from fastNLP.io.pipe.classification import IMDBPipe
 from fastNLP.embeddings import StaticEmbedding
 from model.lstm_self_attention import BiLSTM_SELF_ATTENTION
 
@@ -31,15 +29,14 @@ opt=Config()
 
 
 # load data
-dataloader=IMDBLoader()
-datainfo=dataloader.process(opt.datapath)
+data_bundle=IMDBPipe.process_from_file(opt.datapath)
 
-# print(datainfo.datasets["train"])
-# print(datainfo)
+# print(data_bundle.datasets["train"])
+# print(data_bundle)
 
 
 # define model
-vocab=datainfo.vocabs['words']
+vocab=data_bundle.vocabs['words']
 embed = StaticEmbedding(vocab, model_dir_or_name='en-glove-840b-300', requires_grad=True)
 model=BiLSTM_SELF_ATTENTION(init_embed=embed, num_classes=opt.num_classes, hidden_dim=opt.hidden_dim, num_layers=opt.num_layers, attention_unit=opt.attention_unit, attention_hops=opt.attention_hops, nfc=opt.nfc)
 
@@ -50,12 +47,12 @@ metrics=AccuracyMetric()
 optimizer= Adam([param for param in model.parameters() if param.requires_grad==True], lr=opt.lr)
 
 
-def train(datainfo, model, optimizer, loss, metrics, opt):
-    trainer = Trainer(datainfo.datasets['train'], model, optimizer=optimizer, loss=loss,
-                        metrics=metrics, dev_data=datainfo.datasets['test'], device=0, check_code_level=-1,
+def train(data_bundle, model, optimizer, loss, metrics, opt):
+    trainer = Trainer(data_bundle.datasets['train'], model, optimizer=optimizer, loss=loss,
+                        metrics=metrics, dev_data=data_bundle.datasets['test'], device=0, check_code_level=-1,
                         n_epochs=opt.train_epoch, save_path=opt.save_model_path)
     trainer.train()
 
 
 if __name__ == "__main__":
-    train(datainfo, model, optimizer, loss, metrics, opt)
+    train(data_bundle, model, optimizer, loss, metrics, opt)

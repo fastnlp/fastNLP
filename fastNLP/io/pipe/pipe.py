@@ -9,13 +9,15 @@ from .. import DataBundle
 
 class Pipe:
     """
-    别名：:class:`fastNLP.io.Pipe` :class:`fastNLP.io.pipe.Pipe`
+    .. todo::
+        doc
+
     """
     def process(self, data_bundle: DataBundle) -> DataBundle:
         """
         对输入的DataBundle进行处理，然后返回该DataBundle。
 
-        :param data_bundle: 需要处理的DataBundle对象
+        :param ~fastNLP.DataBundle data_bundle: 需要处理的DataBundle对象
         :return:
         """
         raise NotImplementedError

@@ -5,6 +5,7 @@
 __all__ = []
 
 import json
+import csv
 
 from ..core import logger
 
@@ -21,17 +22,17 @@ def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
             :if False, raise ValueError when reading invalid data. default: True
     :return: generator, every time yield (line number, csv item)
     """
-    with open(path, 'r', encoding=encoding) as f:
+    with open(path, 'r', encoding=encoding) as csv_file:
+        f = csv.reader(csv_file, delimiter=sep)
         start_idx = 0
         if headers is None:
-            headers = f.readline().rstrip('\r\n')
-            headers = headers.split(sep)
+            headers = next(f)
             start_idx += 1
         elif not isinstance(headers, (list, tuple)):
             raise TypeError("headers should be list or tuple, not {}." \
                             .format(type(headers)))
         for line_idx, line in enumerate(f, start_idx):
-            contents = line.rstrip('\r\n').split(sep)
+            contents = line
             if len(contents) != len(headers):
                 if dropna:
                     continue

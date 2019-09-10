@@ -19,11 +19,9 @@ from ..core.const import Const
 
 class StarTransEnc(nn.Module):
     """
-    别名：:class:`fastNLP.models.StarTransEnc`  :class:`fastNLP.models.star_transformer.StarTransEnc`
-
     带word embedding的Star-Transformer Encoder
 
-    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+    :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
         embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
         此时就以传入的对象作为embedding
     :param hidden_size: 模型中特征维度.
@@ -35,7 +33,7 @@ class StarTransEnc(nn.Module):
     :param dropout: 模型除词嵌入外的dropout概率.
     """
 
-    def __init__(self, init_embed,
+    def __init__(self, embed,
                  hidden_size,
                  num_layers,
                  num_head,
@@ -44,7 +42,7 @@ class StarTransEnc(nn.Module):
                  emb_dropout,
                  dropout):
         super(StarTransEnc, self).__init__()
-        self.embedding = get_embeddings(init_embed)
+        self.embedding = get_embeddings(embed)
         emb_dim = self.embedding.embedding_dim
         self.emb_fc = nn.Linear(emb_dim, hidden_size)
         # self.emb_drop = nn.Dropout(emb_dropout)
@@ -104,11 +102,9 @@ class _NLICls(nn.Module):
 
 class STSeqLabel(nn.Module):
     """
-    别名：:class:`fastNLP.models.STSeqLabel`  :class:`fastNLP.models.star_transformer.STSeqLabel`
-
     用于序列标注的Star-Transformer模型
 
-    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+    :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
         embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
         此时就以传入的对象作为embedding
     :param num_cls: 输出类别个数
@@ -122,7 +118,7 @@ class STSeqLabel(nn.Module):
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
 
-    def __init__(self, init_embed, num_cls,
+    def __init__(self, embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
                  num_head=8,
@@ -132,7 +128,7 @@ class STSeqLabel(nn.Module):
                  emb_dropout=0.1,
                  dropout=0.1, ):
         super(STSeqLabel, self).__init__()
-        self.enc = StarTransEnc(init_embed=init_embed,
+        self.enc = StarTransEnc(embed=embed,
                                 hidden_size=hidden_size,
                                 num_layers=num_layers,
                                 num_head=num_head,
@@ -169,11 +165,9 @@ class STSeqLabel(nn.Module):
 
 class STSeqCls(nn.Module):
     """
-    别名：:class:`fastNLP.models.STSeqCls`  :class:`fastNLP.models.star_transformer.STSeqCls`
-
     用于分类任务的Star-Transformer
 
-    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+    :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
         embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
         此时就以传入的对象作为embedding
     :param num_cls: 输出类别个数
@@ -187,7 +181,7 @@ class STSeqCls(nn.Module):
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
 
-    def __init__(self, init_embed, num_cls,
+    def __init__(self, embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
                  num_head=8,
@@ -197,7 +191,7 @@ class STSeqCls(nn.Module):
                  emb_dropout=0.1,
                  dropout=0.1, ):
         super(STSeqCls, self).__init__()
-        self.enc = StarTransEnc(init_embed=init_embed,
+        self.enc = StarTransEnc(embed=embed,
                                 hidden_size=hidden_size,
                                 num_layers=num_layers,
                                 num_head=num_head,
@@ -234,11 +228,9 @@ class STSeqCls(nn.Module):
 
 class STNLICls(nn.Module):
     """
-    别名：:class:`fastNLP.models.STNLICls`  :class:`fastNLP.models.star_transformer.STNLICls`
-    
     用于自然语言推断(NLI)的Star-Transformer
 
-    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+    :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
         embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
         此时就以传入的对象作为embedding
     :param num_cls: 输出类别个数
@@ -252,7 +244,7 @@ class STNLICls(nn.Module):
     :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
 
-    def __init__(self, init_embed, num_cls,
+    def __init__(self, embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
                  num_head=8,
@@ -262,7 +254,7 @@ class STNLICls(nn.Module):
                  emb_dropout=0.1,
                  dropout=0.1, ):
         super(STNLICls, self).__init__()
-        self.enc = StarTransEnc(init_embed=init_embed,
+        self.enc = StarTransEnc(embed=embed,
                                 hidden_size=hidden_size,
                                 num_layers=num_layers,
                                 num_head=num_head,

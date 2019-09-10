@@ -12,8 +12,6 @@ from ...core.instance import Instance
 
 class CSVLoader(Loader):
     """
-    别名：:class:`fastNLP.io.CSVLoader` :class:`fastNLP.io.loader.CSVLoader`
-
     读取CSV格式的数据集, 返回 ``DataSet`` 。
 
     :param List[str] headers: CSV文件的文件头.定义每一列的属性名称,即返回的DataSet中`field`的名称

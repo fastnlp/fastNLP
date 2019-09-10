@@ -177,7 +177,7 @@ class MatchingPipe(Pipe):
     def _tokenize(self, data_bundle, field_names, new_field_names):
         """
 
-        :param DataBundle data_bundle: DataBundle.
+        :param ~fastNLP.DataBundle data_bundle: DataBundle.
         :param list field_names: List[str], 需要tokenize的field名称
         :param list new_field_names: List[str], tokenize之后field的名称，与field_names一一对应。
         :return: 输入的DataBundle对象
@@ -199,7 +199,7 @@ class MatchingPipe(Pipe):
            "This site includes a...", "The Government Executive...", "not_entailment"
            "...", "..."
 
-        :param data_bundle: 通过loader读取得到的data_bundle，里面包含了数据集的原始数据内容
+        :param ~fastNLP.DataBundle data_bundle: 通过loader读取得到的data_bundle，里面包含了数据集的原始数据内容
         :return: data_bundle
         """
         data_bundle = self._tokenize(data_bundle, [Const.RAW_WORDS(0), Const.RAW_WORDS(1)],

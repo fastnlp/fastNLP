@@ -8,7 +8,7 @@ from fastNLP.io.loader.matching import MNLILoader
 import os
 
 @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
-class TestDownload(unittest.TestCase):
+class TestMatchingDownload(unittest.TestCase):
     def test_download(self):
         for loader in [RTELoader, QNLILoader, SNLILoader, MNLILoader]:
             loader().download()
@@ -18,5 +18,12 @@ class TestDownload(unittest.TestCase):
     def test_load(self):
         for loader in [RTELoader, QNLILoader, SNLILoader, MNLILoader]:
             data_bundle = loader().load()
+            print(data_bundle)
+
+
+class TestMatchingLoad(unittest.TestCase):
+    def test_load(self):
+        for loader in [RTELoader]:
+            data_bundle = loader().load('test/data_for_tests/io/rte')
             print(data_bundle)
 

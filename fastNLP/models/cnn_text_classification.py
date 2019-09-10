@@ -18,12 +18,10 @@ from ..modules import encoder
 
 class CNNText(torch.nn.Module):
     """
-    别名：:class:`fastNLP.models.CNNText`  :class:`fastNLP.models.cnn_text_classification.CNNText`
-
     使用CNN进行文本分类的模型
     'Yoon Kim. 2014. Convolution Neural Networks for Sentence Classification.'
     
-    :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: Embedding的大小(传入tuple(int, int),
+    :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray embed: Embedding的大小(传入tuple(int, int),
         第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, Embedding, ndarray等则直接使用该值初始化Embedding
     :param int num_classes: 一共有多少类
     :param int,tuple(int) out_channels: 输出channel的数量。如果为list，则需要与kernel_sizes的数量保持一致
@@ -31,7 +29,7 @@ class CNNText(torch.nn.Module):
     :param float dropout: Dropout的大小
     """
 
-    def __init__(self, init_embed,
+    def __init__(self, embed,
                  num_classes,
                  kernel_nums=(30, 40, 50),
                  kernel_sizes=(1, 3, 5),
@@ -39,7 +37,7 @@ class CNNText(torch.nn.Module):
         super(CNNText, self).__init__()
 
         # no support for pre-trained embedding currently
-        self.embed = embedding.Embedding(init_embed)
+        self.embed = embedding.Embedding(embed)
         self.conv_pool = encoder.ConvMaxpool(
             in_channels=self.embed.embedding_dim,
             out_channels=kernel_nums,

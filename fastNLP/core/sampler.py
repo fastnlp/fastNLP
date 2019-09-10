@@ -15,9 +15,6 @@ import numpy as np
 
 class Sampler(object):
     """
-    别名：:class:`fastNLP.Sampler` :class:`fastNLP.core.sampler.Sampler`
-
-     
     `Sampler` 类的基类. 规定以何种顺序取出data中的元素
 
     子类必须实现 ``__call__`` 方法. 输入 `DataSet` 对象, 返回其中元素的下标序列
@@ -33,8 +30,6 @@ class Sampler(object):
 
 class SequentialSampler(Sampler):
     """
-    别名：:class:`fastNLP.SequentialSampler` :class:`fastNLP.core.sampler.SequentialSampler`
-     
     顺序取出元素的 `Sampler`
 
     """
@@ -45,8 +40,6 @@ class SequentialSampler(Sampler):
 
 class RandomSampler(Sampler):
     """
-    别名：:class:`fastNLP.RandomSampler` :class:`fastNLP.core.sampler.RandomSampler`
-
     随机化取元素的 `Sampler`
 
     """
@@ -57,17 +50,17 @@ class RandomSampler(Sampler):
 
 class BucketSampler(Sampler):
     """
-    别名：:class:`fastNLP.BucketSampler` :class:`fastNLP.core.sampler.BucketSampler`
-
     带Bucket的 `Random Sampler`. 可以随机地取出长度相似的元素
-
-    :param int num_buckets: bucket的数量
-    :param int batch_size: batch的大小. 默认为None，Trainer在调用BucketSampler时，会将该值正确设置，如果是非Trainer场景使用，需
-        要显示传递该值
-    :param str seq_len_field_name: 对应序列长度的 `field` 的名字
     """
     
     def __init__(self, num_buckets=10, batch_size=None, seq_len_field_name='seq_len'):
+        """
+        
+        :param int num_buckets: bucket的数量
+        :param int batch_size: batch的大小. 默认为None，Trainer在调用BucketSampler时，会将该值正确设置，如果是非Trainer场景使用，需
+            要显示传递该值
+        :param str seq_len_field_name: 对应序列长度的 `field` 的名字
+        """
         self.num_buckets = num_buckets
         self.batch_size = batch_size
         self.seq_len_field_name = seq_len_field_name

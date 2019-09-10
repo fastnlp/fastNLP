@@ -20,7 +20,6 @@ from collections import defaultdict
 import torch
 import torch.nn.functional as F
 
-from ..core.const import Const
 from .utils import _CheckError
 from .utils import _CheckRes
 from .utils import _build_args
@@ -28,7 +27,7 @@ from .utils import _check_arg_dict_list
 from .utils import _check_function_or_method
 from .utils import _get_func_signature
 from .utils import seq_len_to_mask
-import warnings
+from ..core.const import Const
 
 
 class LossBase(object):
@@ -167,8 +166,6 @@ class LossBase(object):
 
 class LossFunc(LossBase):
     """
-    别名：:class:`fastNLP.LossFunc` :class:`fastNLP.core.losses.LossFunc`
-
     提供给用户使用自定义损失函数的类
 
     :param func: 用户自行定义的损失函数，应当为一个函数或者callable(func)为True的ojbect
@@ -200,8 +197,6 @@ class LossFunc(LossBase):
 
 class CrossEntropyLoss(LossBase):
     """
-    别名：:class:`fastNLP.CrossEntropyLoss` :class:`fastNLP.core.losses.CrossEntropyLoss`
-
     交叉熵损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -238,8 +233,8 @@ class CrossEntropyLoss(LossBase):
                 pred = pred.tranpose(-1, pred)
             pred = pred.reshape(-1, pred.size(-1))
             target = target.reshape(-1)
-        if seq_len is not None:
-            mask = seq_len_to_mask(seq_len).reshape(-1).eq(0)
+        if seq_len is not None and target.dim()>1:
+            mask = seq_len_to_mask(seq_len, max_len=target.size(1)).reshape(-1).eq(0)
             target = target.masked_fill(mask, self.padding_idx)
 
         return F.cross_entropy(input=pred, target=target,
@@ -248,8 +243,6 @@ class CrossEntropyLoss(LossBase):
 
 class L1Loss(LossBase):
     """
-    别名：:class:`fastNLP.L1Loss` :class:`fastNLP.core.losses.L1Loss`
-
     L1损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -270,8 +263,6 @@ class L1Loss(LossBase):
 
 class BCELoss(LossBase):
     """
-    别名：:class:`fastNLP.BCELoss` :class:`fastNLP.core.losses.BCELoss`
-
     二分类交叉熵损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -291,18 +282,18 @@ class BCELoss(LossBase):
 
 class NLLLoss(LossBase):
     """
-    别名：:class:`fastNLP.NLLLoss` :class:`fastNLP.core.losses.NLLLoss`
-    
     负对数似然损失函数
-    
-    :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
-    :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
-    :param ignore_idx: ignore的index，在计算loss时将忽略target中标号为ignore_idx的内容, 可以通过该值代替
-        传入seq_len.
-    :param str reduction: 支持 `mean` ，`sum` 和 `none` .
     """
     
     def __init__(self, pred=None, target=None, ignore_idx=-100, reduction='mean'):
+        """
+        
+        :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+        :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
+        :param ignore_idx: ignore的index，在计算loss时将忽略target中标号为ignore_idx的内容, 可以通过该值代替
+            传入seq_len.
+        :param str reduction: 支持 `mean` ，`sum` 和 `none` .
+        """
         super(NLLLoss, self).__init__()
         self._init_param_map(pred=pred, target=target)
         assert reduction in ('mean', 'sum', 'none')
@@ -315,14 +306,14 @@ class NLLLoss(LossBase):
 
 class LossInForward(LossBase):
     """
-    别名：:class:`fastNLP.LossInForward` :class:`fastNLP.core.losses.LossInForward`
-
     从forward()函数返回结果中获取loss
-    
-    :param str loss_key: 在forward函数中loss的键名，默认为loss
     """
     
     def __init__(self, loss_key=Const.LOSS):
+        """
+        
+        :param str loss_key: 在forward函数中loss的键名，默认为loss
+        """
         super().__init__()
         if not isinstance(loss_key, str):
             raise TypeError(f"Only str allowed for loss_key, got {type(loss_key)}.")

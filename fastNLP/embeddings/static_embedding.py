@@ -24,8 +24,6 @@ from ..core import logger
 
 class StaticEmbedding(TokenEmbedding):
     """
-    别名：:class:`fastNLP.embeddings.StaticEmbedding`   :class:`fastNLP.embeddings.static_embedding.StaticEmbedding`
-
     StaticEmbedding组件. 给定预训练embedding的名称或路径，根据vocab从embedding中抽取相应的数据(只会将出现在vocab中的词抽取出来，
     如果没有找到，则会随机初始化一个值(但如果该word是被标记为no_create_entry的话，则不会单独创建一个值，而是会被指向unk的index))。
     当前支持自动下载的预训练vector有以下的几种(待补充);
@@ -56,13 +54,16 @@ class StaticEmbedding(TokenEmbedding):
         如果输入为None则使用embedding_dim的维度随机初始化一个embedding。
     :param int embedding_dim: 随机初始化的embedding的维度，当该值为大于0的值时，将忽略model_dir_or_name。
     :param bool requires_grad: 是否需要gradient. 默认为True
-    :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对
+    :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法, 传入的方法应该接受一个tensor，并
+        inplace地修改其值。
     :param bool lower: 是否将vocab中的词语小写后再和预训练的词表进行匹配。如果你的词表中包含大写的词语，或者就是需要单独
         为大写的词语开辟一个vector表示，则将lower设置为False。
     :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
     :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
     :param bool normalize: 是否对vector进行normalize，使得每个vector的norm为1。
     :param int min_freq: Vocabulary词频数小于这个数量的word将被指向unk。
+    :param dict **kwarngs: only_train_min_freq, 仅对train中的词语使用min_freq筛选; only_norm_found_vector是否仅对在预训练中
+        找到的词语使用normalize。
     """
     
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', embedding_dim=-1, requires_grad: bool = True,
@@ -131,28 +132,27 @@ class StaticEmbedding(TokenEmbedding):
                 embedding = self._load_with_vocab(model_path, vocab=lowered_vocab, init_method=init_method)
             else:
                 embedding = self._randomly_init_embed(len(vocab), embedding_dim, init_method)
-                self.words_to_words = nn.Parameter(torch.arange(len(vocab)).long(), requires_grad=False)
+                self.register_buffer('words_to_words', torch.arange(len(vocab)).long())
             if lowered_vocab.unknown:
                 unknown_idx = lowered_vocab.unknown_idx
             else:
                 unknown_idx = embedding.size(0) - 1  # 否则是最后一个为unknow
-                self.words_to_words = nn.Parameter(torch.arange(len(vocab)).long(), requires_grad=False)
-            words_to_words = nn.Parameter(torch.full((len(vocab),), fill_value=unknown_idx).long(),
-                                          requires_grad=False)
+                self.register_buffer('words_to_words', torch.arange(len(vocab)).long())
+            words_to_words = torch.full((len(vocab),), fill_value=unknown_idx).long()
             for word, index in vocab:
                 if word not in lowered_vocab:
                     word = word.lower()
                     if word not in lowered_vocab and lowered_vocab._is_word_no_create_entry(word):
                         continue  # 如果不需要创建entry,已经默认unknown了
                 words_to_words[index] = self.words_to_words[lowered_vocab.to_index(word)]
-            self.words_to_words = words_to_words
+            self.register_buffer('words_to_words', words_to_words)
             self._word_unk_index = lowered_vocab.unknown_idx  # 替换一下unknown的index
         else:
             if model_path:
                 embedding = self._load_with_vocab(model_path, vocab=vocab, init_method=init_method)
             else:
                 embedding = self._randomly_init_embed(len(vocab), embedding_dim, init_method)
-                self.words_to_words = nn.Parameter(torch.arange(len(vocab)).long(), requires_grad=False)
+                self.register_buffer('words_to_words', torch.arange(len(vocab)).long())
         if not self.only_norm_found_vector and normalize:
             embedding /= (torch.norm(embedding, dim=1, keepdim=True) + 1e-12)
         
@@ -161,8 +161,7 @@ class StaticEmbedding(TokenEmbedding):
                 index_in_truncated_vocab = truncated_words_to_words[i]
                 truncated_words_to_words[i] = self.words_to_words[index_in_truncated_vocab]
             del self.words_to_words
-            self.words_to_words = nn.Parameter(truncated_words_to_words, requires_grad=False)
-        
+            self.register_buffer('words_to_words', truncated_words_to_words)
         self.embedding = nn.Embedding(num_embeddings=embedding.shape[0], embedding_dim=embedding.shape[1],
                                       padding_idx=vocab.padding_idx,
                                       max_norm=None, norm_type=2, scale_grad_by_freq=False,
@@ -186,27 +185,6 @@ class StaticEmbedding(TokenEmbedding):
             init_embed(embed)
         
         return embed
-    
-    @property
-    def requires_grad(self):
-        """
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
-        
-        :return:
-        """
-        requires_grads = set([param.requires_grad for name, param in self.named_parameters()
-                              if 'words_to_words' not in name])
-        if len(requires_grads) == 1:
-            return requires_grads.pop()
-        else:
-            return None
-    
-    @requires_grad.setter
-    def requires_grad(self, value):
-        for name, param in self.named_parameters():
-            if 'words_to_words' in name:
-                continue
-            param.requires_grad = value
     
     def _load_with_vocab(self, embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>',
                          error='ignore', init_method=None):
@@ -283,9 +261,7 @@ class StaticEmbedding(TokenEmbedding):
                 vectors = torch.cat((vectors, torch.zeros(1, dim)), dim=0).contiguous()
             else:
                 unknown_idx = vocab.unknown_idx
-            self.words_to_words = nn.Parameter(torch.full((len(vocab),), fill_value=unknown_idx).long(),
-                                               requires_grad=False)
-            
+            self.register_buffer('words_to_words', torch.full((len(vocab), ), fill_value=unknown_idx).long())
             for index, (index_in_vocab, vec) in enumerate(matrix.items()):
                 if vec is not None:
                     vectors[index] = vec
