@@ -110,18 +110,34 @@ def check_file(m, name):
     return funcs, classes
 
 
-def check_files(modules, out=sys.stdout):
+def check_files(modules, out=None):
     for name in sorted(modules.keys()):
         print(name, file=out)
         funcs, classes = check_file(modules[name], name)
-        for f in funcs:
-            print("%-30s \t %s \t %s" % (f, gr("文档", funcs[f][0]), gr("测试", funcs[f][1])), file=out)
-        for c in classes:
-            print("%-30s \t %s \t %s" % (c, gr("文档", classes[c][0]), gr("测试", classes[c][1])), file=out)
-            methods = classes[c][2]
-            for f in methods:
-                print("  %-28s \t %s" % (f, gr("文档", methods[f][0])), file=out)
-        print(file=out)
+        if out is None:
+            for f in funcs:
+                print("%-30s \t %s \t %s" % (f, gr("文档", funcs[f][0]), gr("测试", funcs[f][1])))
+            for c in classes:
+                print("%-30s \t %s \t %s" % (c, gr("文档", classes[c][0]), gr("测试", classes[c][1])))
+                methods = classes[c][2]
+                for f in methods:
+                    print("  %-28s \t %s" % (f, gr("文档", methods[f][0])))
+        else:
+            for f in funcs:
+                if not funcs[f][0]:
+                    print("缺少文档 %s" % (f), file=out)
+                if not funcs[f][1]:
+                    print("缺少测试 %s" % (f), file=out)
+            for c in classes:
+                if not classes[c][0]:
+                    print("缺少文档 %s" % (c), file=out)
+                if not classes[c][1]:
+                    print("缺少测试 %s" % (c), file=out)
+                methods = classes[c][2]
+                for f in methods:
+                    if not methods[f][0]:
+                        print("缺少文档 %s" % (c + "." + f), file=out)
+            print(file=out)
 
 
 def main():
@@ -134,7 +150,7 @@ def main():
         create_rst_file(modules, name, children)
     print(_colored_string('Done!', "Green"))
     print(_colored_string('Checking all files...', "Blue"))
-    check_files(modules)
+    check_files(modules, out=open("results.txt", "w"))
     print(_colored_string('Done!', "Green"))
 
 
