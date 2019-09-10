@@ -25,3 +25,15 @@ def doc_process(m):
                         if module_name == m.__name__:
                             # print(name, ": not found defined doc.")
                             break
+                    
+                    if inspect.isclass(obj):
+                        for base in obj.__bases__:
+                            if base.__module__.startswith("fastNLP"):
+                                parts = base.__module__.split(".") + []
+                                module_name, i = "fastNLP", 1
+                                for i in range(len(parts) - 1):
+                                    defined_m = sys.modules[module_name]
+                                    if "undocumented" not in defined_m.__doc__ and name in defined_m.__all__:
+                                        obj.__doc__ = r"基类 :class:`" + defined_m.__name__ + "." + base.__name__ + "` \n\n" + obj.__doc__
+                                        break
+                                    module_name += "." + parts[i + 1]
