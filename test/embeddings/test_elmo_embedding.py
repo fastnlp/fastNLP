@@ -25,6 +25,7 @@ class TestRunElmo(unittest.TestCase):
         words = torch.LongTensor([[0, 1, 2]])
         hidden = elmo_embed(words)
         print(hidden.size())
+        self.assertEqual(hidden.size(), (1, 3, elmo_embed.embedding_dim))
 
     def test_elmo_embedding_layer_assertion(self):
         vocab = Vocabulary().add_word_lst("This is a test .".split())
