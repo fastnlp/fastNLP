@@ -1,3 +1,5 @@
+"""undocumented"""
+
 from ...core.dataset import DataSet
 from ..file_reader import _read_json
 from ...core.instance import Instance
