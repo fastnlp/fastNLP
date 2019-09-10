@@ -13,6 +13,7 @@ class Pipe:
         doc
 
     """
+    
     def process(self, data_bundle: DataBundle) -> DataBundle:
         """
         对输入的DataBundle进行处理，然后返回该DataBundle。

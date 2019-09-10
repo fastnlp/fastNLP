@@ -146,15 +146,18 @@ class CWSPipe(Pipe):
 
     其中bigrams仅当bigrams列为True的时候为真
 
-    :param str,None dataset_name: 支持'pku', 'msra', 'cityu', 'as', None
-    :param str encoding_type: 可以选择'bmes', 'segapp'两种。"我 来自 复旦大学...", bmes的tag为[S, B, E, B, M, M, E...]; segapp
-        的tag为[seg, app, seg, app, app, app, seg, ...]
-    :param bool replace_num_alpha: 是否将数字和字母用特殊字符替换。
-    :param bool bigrams: 是否增加一列bigram. bigram的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]
-    :param bool trigrams: 是否增加一列trigram. trigram的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
     """
     
     def __init__(self, dataset_name=None, encoding_type='bmes', replace_num_alpha=True, bigrams=False, trigrams=False):
+        """
+        
+        :param str,None dataset_name: 支持'pku', 'msra', 'cityu', 'as', None
+        :param str encoding_type: 可以选择'bmes', 'segapp'两种。"我 来自 复旦大学...", bmes的tag为[S, B, E, B, M, M, E...]; segapp
+            的tag为[seg, app, seg, app, app, app, seg, ...]
+        :param bool replace_num_alpha: 是否将数字和字母用特殊字符替换。
+        :param bool bigrams: 是否增加一列bigram. bigram的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]
+        :param bool trigrams: 是否增加一列trigram. trigram的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
+        """
         if encoding_type == 'bmes':
             self.word_lens_to_tags = _word_lens_to_bmes
         else:
@@ -253,7 +256,7 @@ class CWSPipe(Pipe):
     
     def process_from_file(self, paths=None) -> DataBundle:
         """
-
+        
         :param str paths:
         :return:
         """

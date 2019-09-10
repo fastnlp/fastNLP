@@ -53,13 +53,15 @@ class ConllLoader(Loader):
 
     数据中以"-DOCSTART-"开头的行将被忽略，因为该符号在conll 2003中被用为文档分割符。
 
-    :param list headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
-    :param list indexes: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
-    :param bool dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
-
     """
     
     def __init__(self, headers, indexes=None, dropna=True):
+        """
+        
+        :param list headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
+        :param list indexes: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
+        :param bool dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
+        """
         super(ConllLoader, self).__init__()
         if not isinstance(headers, (list, tuple)):
             raise TypeError(

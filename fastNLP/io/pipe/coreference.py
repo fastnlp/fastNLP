@@ -5,13 +5,15 @@ __all__ = [
 
 ]
 
+import collections
+
+import numpy as np
+
+from fastNLP.core.vocabulary import Vocabulary
 from .pipe import Pipe
 from ..data_bundle import DataBundle
 from ..loader.coreference import CRLoader
 from ...core.const import Const
-from fastNLP.core.vocabulary import Vocabulary
-import numpy as np
-import collections
 
 
 class CoreferencePipe(Pipe):
@@ -25,8 +27,8 @@ class CoreferencePipe(Pipe):
 
     def process(self, data_bundle: DataBundle):
         """
-        对load进来的数据进一步处理
-        原始数据包含：raw_key,raw_speaker,raw_words,raw_clusters
+        对load进来的数据进一步处理原始数据包含：raw_key,raw_speaker,raw_words,raw_clusters
+        
         .. csv-table::
            :header: "raw_key", "raw_speaker","raw_words","raw_clusters"
 
@@ -35,6 +37,7 @@ class CoreferencePipe(Pipe):
            "[...]", "[...]","[...]","[...]"
 
         处理完成后数据包含文章类别、speaker信息、句子信息、句子对应的index、char、句子长度、target：
+        
         .. csv-table::
            :header: "words1", "words2","words3","words4","chars","seq_len","target"
 

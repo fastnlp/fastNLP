@@ -128,7 +128,7 @@ class SNLILoader(JsonLoader):
     
     def load(self, paths: Union[str, Dict[str, str]] = None) -> DataBundle:
         """
-        从指定一个或多个路径中的文件中读取数据，返回:class:`~fastNLP.io.DataBundle` 。
+        从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.DataBundle` 。
 
         读取的field根据ConllLoader初始化时传入的headers决定。
 

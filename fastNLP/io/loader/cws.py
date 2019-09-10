@@ -33,10 +33,13 @@ class CWSLoader(Loader):
        "上海 浦东 开发 与 法制 建设 同步"
        "新华社 上海 二月 十日 电 （ 记者 谢金虎 、 张持坚 ）"
        "..."
-
-    :param: str dataset_name: data的名称，支持pku, msra, cityu(繁体), as(繁体), None
+       
     """
     def __init__(self, dataset_name:str=None):
+        """
+        
+        :param str dataset_name: data的名称，支持pku, msra, cityu(繁体), as(繁体), None
+        """
         super().__init__()
         datanames = {'pku': 'cws-pku', 'msra':'cws-msra', 'as':'cws-as', 'cityu':'cws-cityu'}
         if dataset_name in datanames:

@@ -37,11 +37,14 @@ class MatchingBertPipe(Pipe):
     words列被设置为input，target列被设置为target和input(设置为input以方便在forward函数中计算loss，
     如果不在forward函数中计算loss也不影响，fastNLP将根据forward函数的形参名进行传参).
 
-    :param bool lower: 是否将word小写化。
-    :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
     """
     
     def __init__(self, lower=False, tokenizer: str = 'raw'):
+        """
+        
+        :param bool lower: 是否将word小写化。
+        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
+        """
         super().__init__()
         
         self.lower = bool(lower)
@@ -163,12 +166,14 @@ class MatchingPipe(Pipe):
     words1是premise，words2是hypothesis。其中words1,words2,seq_len1,seq_len2被设置为input；target被设置为target
     和input(设置为input以方便在forward函数中计算loss，如果不在forward函数中计算loss也不影响，fastNLP将根据forward函数
     的形参名进行传参)。
-
-    :param bool lower: 是否将所有raw_words转为小写。
-    :param str tokenizer: 将原始数据tokenize的方式。支持spacy, raw. spacy是使用spacy切分，raw就是用空格切分。
     """
     
     def __init__(self, lower=False, tokenizer: str = 'raw'):
+        """
+        
+        :param bool lower: 是否将所有raw_words转为小写。
+        :param str tokenizer: 将原始数据tokenize的方式。支持spacy, raw. spacy是使用spacy切分，raw就是用空格切分。
+        """
         super().__init__()
         
         self.lower = bool(lower)

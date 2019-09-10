@@ -6,9 +6,11 @@ __all__ = [
     'DataBundle',
 ]
 
+from typing import Union
+
 from ..core.dataset import DataSet
 from ..core.vocabulary import Vocabulary
-from typing import Union
+
 
 class DataBundle:
     """
@@ -22,11 +24,14 @@ class DataBundle:
         train_data = data_bundle.datasets['train']
         dev_data = data_bundle.datasets['train']
 
-    :param vocabs: 从名称(字符串)到 :class:`~fastNLP.Vocabulary` 类型的dict
-    :param datasets: 从名称(字符串)到 :class:`~fastNLP.DataSet` 类型的dict
     """
 
     def __init__(self, vocabs: dict = None, datasets: dict = None):
+        """
+        
+        :param vocabs: 从名称(字符串)到 :class:`~fastNLP.Vocabulary` 类型的dict
+        :param datasets: 从名称(字符串)到 :class:`~fastNLP.DataSet` 类型的dict
+        """
         self.vocabs = vocabs or {}
         self.datasets = datasets or {}
 
