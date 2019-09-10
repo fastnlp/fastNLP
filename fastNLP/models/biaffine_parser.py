@@ -6,23 +6,23 @@ __all__ = [
     "GraphParser"
 ]
 
+from collections import defaultdict
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from collections import defaultdict
-
+from .base_model import BaseModel
 from ..core.const import Const as C
 from ..core.losses import LossFunc
 from ..core.metrics import MetricBase
+from ..core.utils import seq_len_to_mask
+from ..embeddings.utils import get_embeddings
 from ..modules.dropout import TimestepDropout
 from ..modules.encoder.transformer import TransformerEncoder
 from ..modules.encoder.variational_rnn import VarLSTM
 from ..modules.utils import initial_parameter
-from ..embeddings.utils import get_embeddings
-from .base_model import BaseModel
-from ..core.utils import seq_len_to_mask
 
 
 def _mst(scores):
@@ -181,11 +181,14 @@ class ArcBiaffine(nn.Module):
     """
     Biaffine Dependency Parser 的子模块, 用于构建预测边的图
 
-    :param hidden_size: 输入的特征维度
-    :param bias: 是否使用bias. Default: ``True``
     """
     
     def __init__(self, hidden_size, bias=True):
+        """
+        
+        :param hidden_size: 输入的特征维度
+        :param bias: 是否使用bias. Default: ``True``
+        """
         super(ArcBiaffine, self).__init__()
         self.U = nn.Parameter(torch.Tensor(hidden_size, hidden_size), requires_grad=True)
         self.has_bias = bias
@@ -213,13 +216,16 @@ class LabelBilinear(nn.Module):
     """
     Biaffine Dependency Parser 的子模块, 用于构建预测边类别的图
 
-    :param in1_features: 输入的特征1维度
-    :param in2_features: 输入的特征2维度
-    :param num_label: 边类别的个数
-    :param bias: 是否使用bias. Default: ``True``
     """
     
     def __init__(self, in1_features, in2_features, num_label, bias=True):
+        """
+        
+        :param in1_features: 输入的特征1维度
+        :param in2_features: 输入的特征2维度
+        :param num_label: 边类别的个数
+        :param bias: 是否使用bias. Default: ``True``
+        """
         super(LabelBilinear, self).__init__()
         self.bilinear = nn.Bilinear(in1_features, in2_features, num_label, bias=bias)
         self.lin = nn.Linear(in1_features + in2_features, num_label, bias=False)
@@ -241,20 +247,6 @@ class BiaffineParser(GraphParser):
     Biaffine Dependency Parser 实现.
     论文参考 `Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016) <https://arxiv.org/abs/1611.01734>`_ .
 
-    :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
-        embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
-        此时就以传入的对象作为embedding
-    :param pos_vocab_size: part-of-speech 词典大小
-    :param pos_emb_dim: part-of-speech 向量维度
-    :param num_label: 边的类别个数
-    :param rnn_layers: rnn encoder的层数
-    :param rnn_hidden_size: rnn encoder 的隐状态维度
-    :param arc_mlp_size: 边预测的MLP维度
-    :param label_mlp_size: 类别预测的MLP维度
-    :param dropout: dropout概率.
-    :param encoder: encoder类别, 可选 ('lstm', 'var-lstm', 'transformer'). Default: lstm
-    :param use_greedy_infer: 是否在inference时使用贪心算法.
-        若 ``False`` , 使用更加精确但相对缓慢的MST算法. Default: ``False``
     """
     
     def __init__(self,
@@ -269,6 +261,23 @@ class BiaffineParser(GraphParser):
                  dropout=0.3,
                  encoder='lstm',
                  use_greedy_infer=False):
+        """
+        
+        :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+            embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
+            此时就以传入的对象作为embedding
+        :param pos_vocab_size: part-of-speech 词典大小
+        :param pos_emb_dim: part-of-speech 向量维度
+        :param num_label: 边的类别个数
+        :param rnn_layers: rnn encoder的层数
+        :param rnn_hidden_size: rnn encoder 的隐状态维度
+        :param arc_mlp_size: 边预测的MLP维度
+        :param label_mlp_size: 类别预测的MLP维度
+        :param dropout: dropout概率.
+        :param encoder: encoder类别, 可选 ('lstm', 'var-lstm', 'transformer'). Default: lstm
+        :param use_greedy_infer: 是否在inference时使用贪心算法.
+            若 ``False`` , 使用更加精确但相对缓慢的MST算法. Default: ``False``
+        """
         super(BiaffineParser, self).__init__()
         rnn_out_size = 2 * rnn_hidden_size
         word_hid_dim = pos_hid_dim = rnn_hidden_size
@@ -473,17 +482,20 @@ class ParserLoss(LossFunc):
     """
     计算parser的loss
 
-    :param pred1: [batch_size, seq_len, seq_len] 边预测logits
-    :param pred2: [batch_size, seq_len, num_label] label预测logits
-    :param target1: [batch_size, seq_len] 真实边的标注
-    :param target2: [batch_size, seq_len] 真实类别的标注
-    :param seq_len: [batch_size, seq_len] 真实目标的长度
-    :return loss: scalar
     """
     
     def __init__(self, pred1=None, pred2=None,
                  target1=None, target2=None,
                  seq_len=None):
+        """
+        
+        :param pred1: [batch_size, seq_len, seq_len] 边预测logits
+        :param pred2: [batch_size, seq_len, num_label] label预测logits
+        :param target1: [batch_size, seq_len] 真实边的标注
+        :param target2: [batch_size, seq_len] 真实类别的标注
+        :param seq_len: [batch_size, seq_len] 真实目标的长度
+        :return loss: scalar
+        """
         super(ParserLoss, self).__init__(BiaffineParser.loss,
                                          pred1=pred1,
                                          pred2=pred2,
@@ -496,20 +508,22 @@ class ParserMetric(MetricBase):
     """
     评估parser的性能
 
-    :param pred1: 边预测logits
-    :param pred2: label预测logits
-    :param target1: 真实边的标注
-    :param target2: 真实类别的标注
-    :param seq_len: 序列长度
-    :return dict: 评估结果::
-
-        UAS: 不带label时, 边预测的准确率
-        LAS: 同时预测边和label的准确率
     """
     
     def __init__(self, pred1=None, pred2=None,
                  target1=None, target2=None, seq_len=None):
+        """
         
+        :param pred1: 边预测logits
+        :param pred2: label预测logits
+        :param target1: 真实边的标注
+        :param target2: 真实类别的标注
+        :param seq_len: 序列长度
+        :return dict: 评估结果::
+    
+            UAS: 不带label时, 边预测的准确率
+            LAS: 同时预测边和label的准确率
+        """
         super().__init__()
         self._init_param_map(pred1=pred1, pred2=pred2,
                              target1=target1, target2=target2,
