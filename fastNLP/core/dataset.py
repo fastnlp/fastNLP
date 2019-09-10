@@ -291,6 +291,7 @@ import _pickle as pickle
 from copy import deepcopy
 
 import numpy as np
+from prettytable import PrettyTable
 
 from ._logger import logger
 from .const import Const
@@ -301,7 +302,6 @@ from .field import SetInputOrTargetException
 from .instance import Instance
 from .utils import _get_func_signature
 from .utils import pretty_table_printer
-from prettytable import PrettyTable
 
 
 class DataSet(object):
@@ -428,23 +428,22 @@ class DataSet(object):
 
     def print_field_meta(self):
         """
-        输出当前field的meta信息, 形似下列的输出
-        
-        +-------------+-------+-------+
-        | field_names |   x   |   y   |
-        +-------------+-------+-------+
-        |   is_input  |  True | False |
-        |  is_target  | False | False |
-        | ignore_type | False |       |
-        |  pad_value  |   0   |       |
-        +-------------+-------+-------+
+        输出当前field的meta信息, 形似下列的输出::
 
-        field_names: DataSet中field的名称
-        is_input: field是否为input
-        is_target: field是否为target
-        ignore_type: 是否忽略该field的type, 一般仅在该field至少为input或target时才有意义
-        pad_value: 该field的pad的值，仅在该field为input或target时有意义
+            +-------------+-------+-------+
+            | field_names |   x   |   y   |
+            +=============+=======+=======+
+            |   is_input  |  True | False |
+            |  is_target  | False | False |
+            | ignore_type | False |       |
+            |  pad_value  |   0   |       |
+            +-------------+-------+-------+
 
+        :param field_names: DataSet中field的名称
+        :param is_input: field是否为input
+        :param is_target: field是否为target
+        :param ignore_type: 是否忽略该field的type, 一般仅在该field至少为input或target时才有意义
+        :param pad_value: 该field的pad的值，仅在该field为input或target时有意义
         :return:
         """
         if len(self.field_arrays)>0:

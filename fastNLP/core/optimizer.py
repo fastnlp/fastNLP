@@ -37,6 +37,7 @@ class Optimizer(object):
     def _get_require_grads_param(self, params):
         """
         将params中不需要gradient的删除
+        
         :param iterable params: parameters
         :return: list(nn.Parameters)
         """
@@ -85,7 +86,7 @@ class SGD(Optimizer):
 
 class Adam(Optimizer):
     """
-
+    Adam
     """
     
     def __init__(self, lr=0.001, weight_decay=0, betas=(0.9, 0.999), eps=1e-8, amsgrad=False, model_params=None):

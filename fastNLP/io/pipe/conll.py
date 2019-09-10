@@ -28,12 +28,14 @@ class _NERPipe(Pipe):
 
     raw_words列为List[str], 是未转换的原始数据; words列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
     target。返回的DataSet中被设置为input有words, target, seq_len; 设置为target有target, seq_len。
-
-    :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
-    :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
     """
     
     def __init__(self, encoding_type: str = 'bio', lower: bool = False):
+        """
+
+        :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
+        :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
+        """
         if encoding_type == 'bio':
             self.convert_tag = iob2
         else:
@@ -51,9 +53,8 @@ class _NERPipe(Pipe):
            "[AL-AIN, United, Arab, ...]", "[B-LOC, B-LOC, I-LOC, ...]"
            "[...]", "[...]"
 
-        :param ~fastNLP.DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]。
-            在传入DataBundle基础上原位修改。
-        :return: DataBundle
+        :param ~fastNLP.DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]在传入DataBundle基础上原位修改。
+        :return DataBundle: 
         """
         # 转换tag
         for name, dataset in data_bundle.datasets.items():
@@ -253,8 +254,7 @@ class _CNNERPipe(Pipe):
         raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，
         是转换为index的target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
 
-        :param ~fastNLP.DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field
-        的内容均为List[str]。在传入DataBundle基础上原位修改。
+        :param ~fastNLP.DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]。在传入DataBundle基础上原位修改。
         :return: DataBundle
         """
         # 转换tag

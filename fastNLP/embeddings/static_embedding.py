@@ -7,19 +7,19 @@ __all__ = [
     "StaticEmbedding"
 ]
 import os
+import warnings
+from collections import defaultdict
+from copy import deepcopy
 
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-import warnings
 
+from .embedding import TokenEmbedding
+from ..core import logger
 from ..core.vocabulary import Vocabulary
 from ..io.file_utils import PRETRAIN_STATIC_FILES, _get_embedding_url, cached_path
-from .embedding import TokenEmbedding
 from ..modules.utils import _get_file_name_base_on_postfix
-from copy import deepcopy
-from collections import defaultdict
-from ..core import logger
 
 
 class StaticEmbedding(TokenEmbedding):
@@ -62,8 +62,7 @@ class StaticEmbedding(TokenEmbedding):
     :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
     :param bool normalize: 是否对vector进行normalize，使得每个vector的norm为1。
     :param int min_freq: Vocabulary词频数小于这个数量的word将被指向unk。
-    :param dict **kwarngs: only_train_min_freq, 仅对train中的词语使用min_freq筛选; only_norm_found_vector是否仅对在预训练中
-        找到的词语使用normalize。
+    :param dict kwarngs: only_train_min_freq, 仅对train中的词语使用min_freq筛选; only_norm_found_vector是否仅对在预训练中找到的词语使用normalize。
     """
     
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', embedding_dim=-1, requires_grad: bool = True,

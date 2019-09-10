@@ -24,7 +24,7 @@ class Pipe:
 
     def process_from_file(self, paths) -> DataBundle:
         """
-        传入文件路径，生成处理好的DataBundle对象。paths支持的路径形式可以参考 `fastNLP.io.loader.Loader.load()`
+        传入文件路径，生成处理好的DataBundle对象。paths支持的路径形式可以参考 ：:meth:`fastNLP.io.Loader.load()`
 
         :param paths:
         :return: DataBundle
