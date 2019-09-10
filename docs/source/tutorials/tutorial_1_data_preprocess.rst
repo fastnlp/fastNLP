@@ -2,9 +2,9 @@
 DataSet
 ==============================
 
-:class:`~fastNLP.DataSet` 是fastNLP用于承载数据的类，一般训练集、验证集和测试集会被加载为三个单独的:class:`~fastNLP.DataSet`对象。
+:class:`~fastNLP.DataSet` 是fastNLP用于承载数据的类，一般训练集、验证集和测试集会被加载为三个单独的 :class:`~fastNLP.DataSet` 对象。
 
-:class:`~fastNLP.DataSet`中的数据组织形式类似一个表格，比如下面 :class:`~fastNLP.DataSet` 一共有3列，列在fastNLP中被称为field。
+:class:`~fastNLP.DataSet` 中的数据组织形式类似一个表格，比如下面 :class:`~fastNLP.DataSet` 一共有3列，列在fastNLP中被称为field。
 
 .. csv-table::
    :header: "raw_chars", "chars", "seq_len"
@@ -134,7 +134,7 @@ FastNLP 同样提供了多种删除数据的方法 :func:`~fastNLP.DataSet.drop`
     dataset.apply(get_words, new_field_name='words')
 
 除了手动处理数据集之外，你还可以使用 fastNLP 提供的各种 :class:`~fastNLP.io.Loader`和:class:`~fastNLP.io.Pipe` 来进行数据处理。
-详细请参考这篇教程  :doc:`使用Loader和Pipe处理数据 </tutorials/tutorial_2_load_dataset>` 。
+详细请参考这篇教程  :doc:`使用Loader和Pipe处理数据 </tutorials/tutorial_4_load_dataset>` 。
 
 -----------------------------
 fastNLP中field的命名习惯
@@ -142,24 +142,22 @@ fastNLP中field的命名习惯
 
 在英文任务中，fastNLP常用的field名称有:
 
-    - raw_words: 表示的是原始的str。例如"This is a demo sentence ."。存在多个raw_words的情况，例如matching任务，它们会被定义为
-        raw_words0, raw_words1。但在conll格式下，raw_words列也可能为["This", "is", "a", "demo", "sentence", "."]的形式。
-    - words: 表示的是已经tokenize后的词语。例如["This", "is", "a", "demo", "sentence"], 但由于str并不能直接被神经网络所使用，
-        所以words中的内容往往被转换为int，如[3, 10, 4, 2, 7, ...]等。多列words的情况，会被命名为words0, words1
+    - raw_words: 表示的是原始的str。例如"This is a demo sentence ."。存在多个raw_words的情况，例如matching任务，它们会被定义为raw_words0, raw_words1。但在conll格式下，raw_words列也可能为["This", "is", "a", "demo", "sentence", "."]的形式。
+    - words: 表示的是已经tokenize后的词语。例如["This", "is", "a", "demo", "sentence"], 但由于str并不能直接被神经网络所使用，所以words中的内容往往被转换为int，如[3, 10, 4, 2, 7, ...]等。多列words的情况，会被命名为words0, words1
     - target: 表示目标值。分类场景下，只有一个值；序列标注场景下是一个序列。
     - seq_len: 一般用于表示words列的长度
 
 在中文任务中，fastNLP常用的field名称有:
 
     - raw_chars: 表示的是原始的连续汉字序列。例如"这是一个示例。"
-    - chars: 表示已经切分为单独的汉字的序列。例如["这", "是", "一", "个", "示", "例", "。"]。但由于神经网络不能识别汉字，所以一般
-        该列会被转为int形式，如[3, 4, 5, 6, ...]。
+    - chars: 表示已经切分为单独的汉字的序列。例如["这", "是", "一", "个", "示", "例", "。"]。但由于神经网络不能识别汉字，所以一般该列会被转为int形式，如[3, 4, 5, 6, ...]。
     - raw_words: 如果原始汉字序列中已经包含了词语的边界，则该列称为raw_words。如"上海 浦东 开发 与 法制 建设 同步"。
     - words: 表示单独的汉字词语序列。例如["上海", "", "浦东", "开发", "与", "法制", "建设", ...]或[2, 3, 4, ...]
     - target: 表示目标值。分类场景下，只有一个值；序列标注场景下是一个序列。
     - seq_len: 表示输入序列的长度
 
-# TODO 这一段移动到datasetiter那里
+.. todo::
+    这一段移动到datasetiter那里
 
 -----------------------------
 DataSet与pad

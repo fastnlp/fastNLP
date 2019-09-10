@@ -26,17 +26,16 @@ elmo以及bert。
 但使用这些词嵌入方式的时候都需要做一些加载上的处理，比如预训练的word2vec, fasttext以及glove都有着超过几十万个词语的表示，但一般任务大概
 只会用到其中几万个词，如果直接加载所有的词汇，会导致内存占用变大以及运行速度变慢，需要从预训练文件中抽取本次实验的用到的词汇；而对于英文的
 elmo和character embedding, 需要将word拆分成character才能使用；Bert的使用更是涉及到了Byte pair encoding(BPE)相关的内容。为了方便
-大家的使用，fastNLP通过:class:`~fastNLP.Vocabulary`统一了不同embedding的使用。下面我们将讲述一些例子来说明一下
+大家的使用，fastNLP通过 :class:`~fastNLP.Vocabulary` 统一了不同embedding的使用。下面我们将讲述一些例子来说明一下
 
 
 ---------------------------------------
 Part II: 使用预训练的静态embedding
 ---------------------------------------
 
-在fastNLP中，加载预训练的word2vec, glove以及fasttext都使用的是 :class:`~fastNLP.embeddings.StaticEmbedding`。另外，为了方便大家的
+在fastNLP中，加载预训练的word2vec, glove以及fasttext都使用的是 :class:`~fastNLP.embeddings.StaticEmbedding` 。另外，为了方便大家的
 使用，fastNLP提供了多种静态词向量的自动下载并缓存(默认缓存到~/.fastNLP/embeddings文件夹下)的功能，支持自动下载的预训练向量可以在
-`<https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0>`_
-查看。
+`此处 <https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0>`_ 查看。
 
 .. code-block:: python
 
@@ -56,17 +55,17 @@ Part II: 使用预训练的静态embedding
 
     torch.Size([1, 5, 50])
 
-fastNLP的StaticEmbedding在初始化之后，就和pytorch中的Embedding是类似的了。:class:`~fastNLP.embeddings.StaticEmbedding`的初始化
-主要是从model_dir_or_name提供的词向量中抽取出:class:`~fastNLP.Vocabulary`中词语的vector。
+fastNLP的StaticEmbedding在初始化之后，就和pytorch中的Embedding是类似的了。 :class:`~fastNLP.embeddings.StaticEmbedding` 的初始化
+主要是从model_dir_or_name提供的词向量中抽取出 :class:`~fastNLP.Vocabulary` 中词语的vector。
 
-除了可以通过使用预先提供的Embedding，:class:`~fastNLP.embeddings.StaticEmbedding`也支持加载本地的预训练词向量，glove, word2vec以及
+除了可以通过使用预先提供的Embedding, :class:`~fastNLP.embeddings.StaticEmbedding` 也支持加载本地的预训练词向量，glove, word2vec以及
 fasttext格式的。通过将model_dir_or_name修改为本地的embedding文件路径，即可使用本地的embedding。
 
 ---------------------------------------
 Part III: 使用随机初始化的embedding
 ---------------------------------------
 
-有时候需要使用随机初始化的Embedding，也可以通过使用 :class:`~fastNLP.embeddings.StaticEmbedding`获得。只需要将model_dir_or_name
+有时候需要使用随机初始化的Embedding，也可以通过使用 :class:`~fastNLP.embeddings.StaticEmbedding` 获得。只需要将model_dir_or_name
 置为None，且传入embedding_dim，如下例所示
 
 .. code-block:: python
@@ -93,7 +92,7 @@ Part IV: ELMo Embedding
 
 在fastNLP中，我们提供了ELMo和BERT的embedding： :class:`~fastNLP.embeddings.ElmoEmbedding`
 和 :class:`~fastNLP.embeddings.BertEmbedding` 。可自动下载的ElmoEmbedding可以
-从`<https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0>`_找到。
+从 `此处 <https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0>`_ 找到。
 
 与静态embedding类似，ELMo的使用方法如下：
 
@@ -124,7 +123,7 @@ Part IV: ELMo Embedding
 
     torch.Size([1, 5, 512])
 
-另外，根据`<https://arxiv.org/abs/1802.05365>`_，不同层之间使用可学习的权重可以使得ELMo的效果更好，在fastNLP中可以通过以下的初始化
+另外，根据 `这篇文章 <https://arxiv.org/abs/1802.05365>`_ ，不同层之间使用可学习的权重可以使得ELMo的效果更好，在fastNLP中可以通过以下的初始化
 实现3层输出的结果通过可学习的权重进行加法融合。
 
 .. code-block:: python
@@ -142,7 +141,7 @@ Part V: Bert Embedding
 -----------------------------------------------------------
 
 虽然Bert并不算严格意义上的Embedding，但通过将Bert封装成Embedding的形式将极大减轻使用的复杂程度。可自动下载的Bert Embedding可以
-从`<https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0>`_找到。我们将使用下面的例子讲述一下
+从 `此处 <https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0>`_ 找到。我们将使用下面的例子讲述一下
 BertEmbedding的使用
 
 .. code-block:: python
@@ -187,8 +186,8 @@ BertEmbedding的使用
 
     torch.Size([1, 7, 768])
 
-在英文Bert模型中，一个英文单词可能会被切分为多个subword，例如"fairness"会被拆分为["fair", "##ness"]，这样一个word对应的将有两个输出，
-:class:`~fastNLP.embeddings.BertEmbedding`会使用pooling方法将一个word的subword的表示合并成一个vector，通过pool_method可以控制
+在英文Bert模型中，一个英文单词可能会被切分为多个subword，例如"fairness"会被拆分为 ``["fair", "##ness"]`` ，这样一个word对应的将有两个输出，
+:class:`~fastNLP.embeddings.BertEmbedding` 会使用pooling方法将一个word的subword的表示合并成一个vector，通过pool_method可以控制
 该pooling方法，支持的有"first"(即使用fair的表示作为fairness的表示), "last"(使用##ness的表示作为fairness的表示), "max"(对fair和
 ##ness在每一维上做max),"avg"(对fair和##ness每一维做average)。
 
@@ -201,7 +200,7 @@ BertEmbedding的使用
 
     torch.Size([1, 5, 768])
 
-另外，根据`<https://arxiv.org/abs/1810.04805>`_ ，Bert的还存在一种用法，句子之间通过[SEP]拼接起来，前一句话的token embedding为0，
+另外，根据 `文章 <https://arxiv.org/abs/1810.04805>`_ ，Bert的还存在一种用法，句子之间通过[SEP]拼接起来，前一句话的token embedding为0，
 后一句话的token embedding为1。BertEmbedding能够自动识别句子中间的[SEP]来正确设置对应的token_type_id的。
 
 .. code-block:: python
@@ -220,7 +219,10 @@ BertEmbedding的使用
 在多个[SEP]的情况下，将会使token_type_id不断0，1循环。比如"first sentence [SEP] second sentence [SEP] third sentence", 它们的
 token_type_id将是[0, 0, 0, 1, 1, 1, 0, 0]。但请注意[SEP]一定要大写的，不能是[sep]，否则无法识别。
 
-更多:class:`~fastNLP.embedding.BertEmbedding`的使用，请参考\ref{找人写一篇BertEmbedding的使用教程}
+更多 :class:`~fastNLP.embedding.BertEmbedding` 的使用，请参考BertEmbedding的使用教程
+
+.. todo::
+    找人写一篇BertEmbedding的使用教程
 
 -----------------------------------------------------
 Part VI: 使用character-level的embedding
@@ -228,8 +230,8 @@ Part VI: 使用character-level的embedding
 
 除了预训练的embedding以外，fastNLP还提供了两种Character Embedding： :class:`~fastNLP.embeddings.CNNCharEmbedding` 和
 :class:`~fastNLP.embeddings.LSTMCharEmbedding` 。一般在使用character embedding时，需要在预处理的时候将word拆分成character，这
-会使得预处理过程变得非常繁琐。在fastNLP中，使用character embedding也只需要传入:class:`~fastNLP.Vocabulary`即可，而且该
-Vocabulary与其它Embedding使用的Vocabulary是一致的，如下面的例子所示
+会使得预处理过程变得非常繁琐。在fastNLP中，使用character embedding也只需要传入 :class:`~fastNLP.Vocabulary` 即可，而且该
+Vocabulary与其它Embedding使用的Vocabulary是一致的，下面我们看两个例子。
 
 CNNCharEmbedding的使用例子如下：
 
@@ -273,7 +275,7 @@ CNNCharEmbedding的使用例子如下：
 Part VII: 叠加使用多个embedding
 -----------------------------------------------------
 
-单独使用Character Embedding往往效果并不是很好，需要同时结合word embedding。在fastNLP中可以通过:class:`~fastNLP.embeddings.StackEmbedding`
+单独使用Character Embedding往往效果并不是很好，需要同时结合word embedding。在fastNLP中可以通过 :class:`~fastNLP.embeddings.StackEmbedding`
 来叠加embedding，具体的例子如下所示
 
 .. code-block:: python
@@ -295,10 +297,10 @@ Part VII: 叠加使用多个embedding
 
     torch.Size([1, 5, 114])
 
-:class:`~fastNLP.embeddings.StaticEmbedding`, :class:`~fastNLP.embeddings.ElmoEmbedding`,
-:class:`~fastNLP.embeddings.CNNCharEmbedding`, :class:`~fastNLP.embeddings.BertEmbedding`等都可以互相拼接。
-:class:`~fastNLP.embeddings.StackEmbedding`的使用也是和其它Embedding是一致的，即输出index返回对应的表示。但能够拼接起来的Embedding
-必须使用同样的:class:`~fastNLP.Vocabulary`，因为只有使用同样的:class:`~fastNLP.Vocabulary`才能保证同一个index指向的是同一个词或字
+:class:`~fastNLP.embeddings.StaticEmbedding` , :class:`~fastNLP.embeddings.ElmoEmbedding` ,
+:class:`~fastNLP.embeddings.CNNCharEmbedding` , :class:`~fastNLP.embeddings.BertEmbedding` 等都可以互相拼接。
+:class:`~fastNLP.embeddings.StackEmbedding` 的使用也是和其它Embedding是一致的，即输出index返回对应的表示。但能够拼接起来的Embedding
+必须使用同样的 :class:`~fastNLP.Vocabulary` ，因为只有使用同样的 :class:`~fastNLP.Vocabulary` 才能保证同一个index指向的是同一个词或字
 
 -----------------------------------------------------------
 Part VIII: Embedding的其它说明
@@ -345,24 +347,24 @@ Part VIII: Embedding的其它说明
 fastNLP中所有的Embedding都支持传入word_dropout和dropout参数，word_dropout指示的是以多大概率将输入的word置为unk的index，这样既可以
 是的unk得到训练，也可以有一定的regularize效果; dropout参数是在获取到word的表示之后，以多大概率将一些维度的表示置为0。
 
-如果使用:class:`~fastNLP.embeddings.StackEmbedding`且需要用到word_dropout，建议将word_dropout设置在:class:`~fastNLP.embeddings.StackEmbedding`。
+如果使用 :class:`~fastNLP.embeddings.StackEmbedding` 且需要用到word_dropout，建议将word_dropout设置在 :class:`~fastNLP.embeddings.StackEmbedding` 。
 
 
 -----------------------------------------------------------
 Part IX: StaticEmbedding的使用建议
 -----------------------------------------------------------
 
-在英文的命名实体识别(NER)任务中，由`<http://xxx.itp.ac.cn/pdf/1511.08308.pdf>`_ 指出，同时使用cnn character embedding和word embedding
-会使得NER的效果有比较大的提升。正如你在\ref{引用第七节}看到的那样，fastNLP支持将:class:`~fastNLP.embeddings.CNNCharacterEmbedding`
-与:class:`~fastNLP.embeddings.StaticEmbedding`拼成一个:class:`~fastNLP.embeddings.StackEmbedding`。如果通过这种方式使用，需要
+在英文的命名实体识别(NER)任务中，由 `论文 <http://xxx.itp.ac.cn/pdf/1511.08308.pdf>`_ 指出，同时使用cnn character embedding和word embedding
+会使得NER的效果有比较大的提升。正如你在上节中看到的那样，fastNLP支持将 :class:`~fastNLP.embeddings.CNNCharEmbedding`
+与 :class:`~fastNLP.embeddings.StaticEmbedding` 拼成一个 :class:`~fastNLP.embeddings.StackEmbedding` 。如果通过这种方式使用，需要
 在预处理文本时，不要将词汇小写化(因为Character Embedding需要利用词语中的大小写信息)且不要将出现频次低于某个阈值的word设置为unk(因为
-Character embedding需要利用字形信息)；但:class:`~fastNLP.embeddings.StaticEmbedding`使用的某些预训练词嵌入的词汇表中只有小写的词
+Character embedding需要利用字形信息)；但 :class:`~fastNLP.embeddings.StaticEmbedding` 使用的某些预训练词嵌入的词汇表中只有小写的词
 语, 且某些低频词并未在预训练中出现需要被剔除。即(1) character embedding需要保留大小写，而某些static embedding不需要保留大小写。(2)
 character embedding需要保留所有的字形, 而static embedding需要设置一个最低阈值以学到更好的表示。
 
 (1) fastNLP如何解决关于大小写的问题
 
-fastNLP通过在:class:`~fastNLP.embeddings.StaticEmbedding`增加了一个lower参数解决该问题。如下面的例子所示
+fastNLP通过在 :class:`~fastNLP.embeddings.StaticEmbedding` 增加了一个lower参数解决该问题。如下面的例子所示
 
 .. code-block:: python
 
@@ -380,7 +382,7 @@ fastNLP通过在:class:`~fastNLP.embeddings.StaticEmbedding`增加了一个lower
     tensor([[-0.4685,  0.4572,  0.5159, -0.2618, -0.6871]], grad_fn=<EmbeddingBackward>)
     tensor([[ 0.2615,  0.1490, -0.2491,  0.4009, -0.3842]], grad_fn=<EmbeddingBackward>)
 
-可以看到"The"与"the"的vector是不一致的。但如果我们在初始化:class:`~fastNLP.embeddings.StaticEmbedding`将lower设置为True，效果将
+可以看到"The"与"the"的vector是不一致的。但如果我们在初始化 :class:`~fastNLP.embeddings.StaticEmbedding` 将lower设置为True，效果将
 如下所示
 
 .. code-block:: python
@@ -399,12 +401,12 @@ fastNLP通过在:class:`~fastNLP.embeddings.StaticEmbedding`增加了一个lower
     tensor([[-0.2237,  0.6825, -0.3459, -0.1795,  0.7516]], grad_fn=<EmbeddingBackward>)
     tensor([[-0.2237,  0.6825, -0.3459, -0.1795,  0.7516]], grad_fn=<EmbeddingBackward>)
 
-可以看到"The"与"the"的vector是一致的。他们实际上也是引用的同一个vector。通过将lower设置为True，可以在:class:`~fastNLP.embeddings.StaticEmbedding`
+可以看到"The"与"the"的vector是一致的。他们实际上也是引用的同一个vector。通过将lower设置为True，可以在 :class:`~fastNLP.embeddings.StaticEmbedding`
 实现类似具备相同小写结果的词语引用同一个vector。
 
 (2) fastNLP如何解决min_freq的问题
 
-fastNLP通过在:class:`~fastNLP.embeddings.StaticEmbedding`增加了一个min_freq参数解决该问题。如下面的例子所示
+fastNLP通过在 :class:`~fastNLP.embeddings.StaticEmbedding` 增加了一个min_freq参数解决该问题。如下面的例子所示
 
 .. code-block:: python
 

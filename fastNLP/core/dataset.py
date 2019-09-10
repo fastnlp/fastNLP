@@ -86,7 +86,7 @@
                 dataset.append(Instance(sentence=sent, label=label))
 
     .. note::
-        直接读取特定数据集的数据请参考  :doc:`/tutorials/tutorial_2_load_dataset`
+        直接读取特定数据集的数据请参考  :doc:`/tutorials/tutorial_4_load_dataset`
 
 2.2 对DataSet中的内容处理
 --------------------------------------
