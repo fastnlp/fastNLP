@@ -54,13 +54,16 @@ class StaticEmbedding(TokenEmbedding):
         如果输入为None则使用embedding_dim的维度随机初始化一个embedding。
     :param int embedding_dim: 随机初始化的embedding的维度，当该值为大于0的值时，将忽略model_dir_or_name。
     :param bool requires_grad: 是否需要gradient. 默认为True
-    :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法。调用该方法时传入一个tensor对
+    :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法, 传入的方法应该接受一个tensor，并
+        inplace地修改其值。
     :param bool lower: 是否将vocab中的词语小写后再和预训练的词表进行匹配。如果你的词表中包含大写的词语，或者就是需要单独
         为大写的词语开辟一个vector表示，则将lower设置为False。
     :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
     :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
     :param bool normalize: 是否对vector进行normalize，使得每个vector的norm为1。
     :param int min_freq: Vocabulary词频数小于这个数量的word将被指向unk。
+    :param dict **kwarngs: only_train_min_freq, 仅对train中的词语使用min_freq筛选; only_norm_found_vector是否仅对在预训练中
+        找到的词语使用normalize。
     """
     
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', embedding_dim=-1, requires_grad: bool = True,
@@ -182,27 +185,6 @@ class StaticEmbedding(TokenEmbedding):
             init_embed(embed)
         
         return embed
-    
-    @property
-    def requires_grad(self):
-        """
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
-        
-        :return:
-        """
-        requires_grads = set([param.requires_grad for name, param in self.named_parameters()
-                              if 'words_to_words' not in name])
-        if len(requires_grads) == 1:
-            return requires_grads.pop()
-        else:
-            return None
-    
-    @requires_grad.setter
-    def requires_grad(self, value):
-        for name, param in self.named_parameters():
-            if 'words_to_words' in name:
-                continue
-            param.requires_grad = value
     
     def _load_with_vocab(self, embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>',
                          error='ignore', init_method=None):

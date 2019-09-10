@@ -22,10 +22,11 @@ class StackEmbedding(TokenEmbedding):
     Example::
 
         >>> from fastNLP import Vocabulary
-        >>> from fastNLP.embeddings import StaticEmbedding
+        >>> from fastNLP.embeddings import StaticEmbedding, StackEmbedding
         >>> vocab =  Vocabulary().add_word_lst("The whether is good .".split())
         >>> embed_1 = StaticEmbedding(vocab, model_dir_or_name='en-glove-6b-50d', requires_grad=True)
         >>> embed_2 = StaticEmbedding(vocab, model_dir_or_name='en-word2vec-300', requires_grad=True)
+        >>> embed = StackEmbedding([embed_1, embed_2])
 
     :param embeds: 一个由若干个TokenEmbedding组成的list，要求每一个TokenEmbedding的词表都保持一致
     :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。不同embedidng会在相同的位置
@@ -57,35 +58,26 @@ class StackEmbedding(TokenEmbedding):
         :return:
         """
         assert isinstance(embed, TokenEmbedding)
+        self._embed_size += embed.embed_size
         self.embeds.append(embed)
+        return self
     
     def pop(self):
         """
         弹出最后一个embed
         :return:
         """
-        return self.embeds.pop()
+        embed = self.embeds.pop()
+        self._embed_size -= embed.embed_size
+        return embed
     
     @property
     def embed_size(self):
-        return self._embed_size
-    
-    @property
-    def requires_grad(self):
         """
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
+        该Embedding输出的vector的最后一维的维度。
         :return:
         """
-        requires_grads = set([embed.requires_grad for embed in self.embeds()])
-        if len(requires_grads) == 1:
-            return requires_grads.pop()
-        else:
-            return None
-    
-    @requires_grad.setter
-    def requires_grad(self, value):
-        for embed in self.embeds():
-            embed.requires_grad = value
+        return self._embed_size
     
     def forward(self, words):
         """

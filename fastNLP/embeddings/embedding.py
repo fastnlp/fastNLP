@@ -115,6 +115,10 @@ class Embedding(nn.Module):
 
 
 class TokenEmbedding(nn.Module):
+    """
+    fastNLP中各种Embedding的基类
+
+    """
     def __init__(self, vocab, word_dropout=0.0, dropout=0.0):
         super(TokenEmbedding, self).__init__()
         if vocab.rebuild:

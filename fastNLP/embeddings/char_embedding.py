@@ -139,40 +139,6 @@ class CNNCharEmbedding(TokenEmbedding):
             chars = torch.sum(conv_chars, dim=-2) / chars_masks.eq(0).sum(dim=-1, keepdim=True).float()
         chars = self.fc(chars)
         return self.dropout(chars)
-    
-    @property
-    def requires_grad(self):
-        """
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
-        :return:
-        """
-        params = []
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' not in name and 'word_lengths' not in name:
-                params.append(param.requires_grad)
-        requires_grads = set(params)
-        if len(requires_grads) == 1:
-            return requires_grads.pop()
-        else:
-            return None
-    
-    @requires_grad.setter
-    def requires_grad(self, value):
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' in name or 'word_lengths' in name:  # 这个不能加入到requires_grad中
-                continue
-            param.requires_grad = value
-    
-    def reset_parameters(self):
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' in name or 'word_lengths' in name:  # 这个不能reset
-                continue
-            if 'char_embedding' in name:
-                continue
-            if param.data.dim() > 1:
-                nn.init.xavier_uniform_(param, 1)
-            else:
-                nn.init.uniform_(param, -1, 1)
 
 
 class LSTMCharEmbedding(TokenEmbedding):
@@ -293,27 +259,3 @@ class LSTMCharEmbedding(TokenEmbedding):
         chars = self.fc(chars)
         
         return self.dropout(chars)
-    
-    @property
-    def requires_grad(self):
-        """
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
-        
-        :return:
-        """
-        params = []
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' not in name and 'word_lengths' not in name:
-                params.append(param)
-        requires_grads = set(params)
-        if len(requires_grads) == 1:
-            return requires_grads.pop()
-        else:
-            return None
-    
-    @requires_grad.setter
-    def requires_grad(self, value):
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' in name or 'word_lengths' in name:  # 这个不能加入到requires_grad中
-                continue
-            param.requires_grad = value

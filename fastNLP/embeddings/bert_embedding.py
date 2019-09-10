@@ -126,27 +126,6 @@ class BertEmbedding(ContextualEmbedding):
                 if self._word_sep_index:
                     words.masked_fill_(sep_mask, self._word_sep_index)
         return words
-    
-    @property
-    def requires_grad(self):
-        """
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
-        
-        :return:
-        """
-        requires_grads = set([param.requires_grad for name, param in self.named_parameters()
-                              if 'word_pieces_lengths' not in name])
-        if len(requires_grads) == 1:
-            return requires_grads.pop()
-        else:
-            return None
-    
-    @requires_grad.setter
-    def requires_grad(self, value):
-        for name, param in self.named_parameters():
-            if 'word_pieces_lengths' in name:  # 这个不能加入到requires_grad中
-                continue
-            param.requires_grad = value
 
 
 class BertWordPieceEncoder(nn.Module):
@@ -174,23 +153,6 @@ class BertWordPieceEncoder(nn.Module):
         self.requires_grad = requires_grad
         self.word_dropout = word_dropout
         self.dropout_layer = nn.Dropout(dropout)
-    
-    @property
-    def requires_grad(self):
-        """
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
-        :return:
-        """
-        requires_grads = set([param.requires_grad for name, param in self.named_parameters()])
-        if len(requires_grads) == 1:
-            return requires_grads.pop()
-        else:
-            return None
-    
-    @requires_grad.setter
-    def requires_grad(self, value):
-        for name, param in self.named_parameters():
-            param.requires_grad = value
     
     @property
     def embed_size(self):

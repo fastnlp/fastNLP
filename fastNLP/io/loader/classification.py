@@ -31,7 +31,6 @@ class YelpLoader(Loader):
         "1","I got 'new' tires from the..."
         "1","Don't waste your time..."
 
-    读取YelpFull, YelpPolarity的数据。可以通过xxx下载并预处理数据。
     读取的DataSet将具备以下的数据结构
 
     .. csv-table::

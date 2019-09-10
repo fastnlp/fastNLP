@@ -55,7 +55,7 @@ class ElmoEmbedding(ContextualEmbedding):
         并删除character encoder，之后将直接使用cache的embedding。默认为False。
     """
     
-    def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', layers: str = '2', requires_grad: bool = False,
+    def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', layers: str = '2', requires_grad: bool = True,
                  word_dropout=0.0, dropout=0.0, cache_word_reprs: bool = False):
         super(ElmoEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         
@@ -136,27 +136,6 @@ class ElmoEmbedding(ContextualEmbedding):
         for name in ['layers', 'model', 'layer_weights', 'gamma']:
             if hasattr(self, name):
                 delattr(self, name)
-    
-    @property
-    def requires_grad(self):
-        """
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
-
-        :return:
-        """
-        requires_grads = set([param.requires_grad for name, param in self.named_parameters()
-                              if 'words_to_chars_embedding' not in name and 'words_to_words' not in name])
-        if len(requires_grads) == 1:
-            return requires_grads.pop()
-        else:
-            return None
-    
-    @requires_grad.setter
-    def requires_grad(self, value):
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' in name or 'words_to_words' in name:  # 这个不能加入到requires_grad中
-                continue
-            param.requires_grad = value
 
 
 class _ElmoModel(nn.Module):
