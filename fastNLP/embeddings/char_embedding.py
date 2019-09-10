@@ -8,18 +8,19 @@ __all__ = [
     "LSTMCharEmbedding"
 ]
 
+from typing import List
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import List
 
-from .static_embedding import StaticEmbedding
-from ..modules.encoder.lstm import LSTM
-from ..core.vocabulary import Vocabulary
 from .embedding import TokenEmbedding
+from .static_embedding import StaticEmbedding
 from .utils import _construct_char_vocab_from_vocab
 from .utils import get_embeddings
 from ..core import logger
+from ..core.vocabulary import Vocabulary
+from ..modules.encoder.lstm import LSTM
 
 
 class CNNCharEmbedding(TokenEmbedding):
@@ -39,24 +40,27 @@ class CNNCharEmbedding(TokenEmbedding):
         >>> outputs.size()
         >>> # torch.Size([1, 5，50])
 
-    :param vocab: 词表
-    :param embed_size: 该CNNCharEmbedding的输出维度大小，默认值为50.
-    :param char_emb_size: character的embed的维度。character是从vocab中生成的。默认值为50.
-    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
-    :param float dropout: 以多大的概率drop分布式表示与char embedding的输出。
-    :param filter_nums: filter的数量. 长度需要和kernels一致。默认值为[40, 30, 20].
-    :param kernel_sizes: kernel的大小. 默认值为[5, 3, 1].
-    :param pool_method: character的表示在合成一个表示时所使用的pool方法，支持'avg', 'max'.
-    :param activation: CNN之后使用的激活方法，支持'relu', 'sigmoid', 'tanh' 或者自定义函数.
-    :param min_char_freq: character的最少出现次数。默认值为2.
-    :param pre_train_char_embed: 可以有两种方式调用预训练好的character embedding：第一种是传入embedding文件夹
-        (文件夹下应该只有一个以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，
-        没有的话将自动下载。如果输入为None则使用embedding_dim的维度随机初始化一个embedding.
     """
     
     def __init__(self, vocab: Vocabulary, embed_size: int = 50, char_emb_size: int = 50, word_dropout: float = 0,
                  dropout: float = 0, filter_nums: List[int] = (40, 30, 20), kernel_sizes: List[int] = (5, 3, 1),
                  pool_method: str = 'max', activation='relu', min_char_freq: int = 2, pre_train_char_embed: str = None):
+        """
+        
+        :param vocab: 词表
+        :param embed_size: 该CNNCharEmbedding的输出维度大小，默认值为50.
+        :param char_emb_size: character的embed的维度。character是从vocab中生成的。默认值为50.
+        :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
+        :param float dropout: 以多大的概率drop分布式表示与char embedding的输出。
+        :param filter_nums: filter的数量. 长度需要和kernels一致。默认值为[40, 30, 20].
+        :param kernel_sizes: kernel的大小. 默认值为[5, 3, 1].
+        :param pool_method: character的表示在合成一个表示时所使用的pool方法，支持'avg', 'max'.
+        :param activation: CNN之后使用的激活方法，支持'relu', 'sigmoid', 'tanh' 或者自定义函数.
+        :param min_char_freq: character的最少出现次数。默认值为2.
+        :param pre_train_char_embed: 可以有两种方式调用预训练好的character embedding：第一种是传入embedding文件夹
+            (文件夹下应该只有一个以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，
+            没有的话将自动下载。如果输入为None则使用embedding_dim的维度随机初始化一个embedding.
+        """
         super(CNNCharEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         
         for kernel in kernel_sizes:
@@ -156,25 +160,28 @@ class LSTMCharEmbedding(TokenEmbedding):
         >>> outputs.size()
         >>> # torch.Size([1, 5，50])
 
-    :param vocab: 词表
-    :param embed_size: LSTMCharEmbedding的输出维度。默认值为50.
-    :param char_emb_size: character的embedding的维度。默认值为50.
-    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
-    :param dropout: 以多大概率drop character embedding的输出以及最终的word的输出。
-    :param hidden_size: LSTM的中间hidden的大小，如果为bidirectional的，hidden会除二，默认为50.
-    :param pool_method: 支持'max', 'avg'。
-    :param activation: 激活函数，支持'relu', 'sigmoid', 'tanh', 或者自定义函数.
-    :param min_char_freq: character的最小出现次数。默认值为2.
-    :param bidirectional: 是否使用双向的LSTM进行encode。默认值为True。
-    :param pre_train_char_embed: 可以有两种方式调用预训练好的character embedding：第一种是传入embedding文件夹
-        (文件夹下应该只有一个以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，
-        没有的话将自动下载。如果输入为None则使用embedding_dim的维度随机初始化一个embedding.
     """
     
     def __init__(self, vocab: Vocabulary, embed_size: int = 50, char_emb_size: int = 50, word_dropout: float = 0,
                  dropout: float = 0, hidden_size=50, pool_method: str = 'max', activation='relu',
                  min_char_freq: int = 2,
                  bidirectional=True, pre_train_char_embed: str = None):
+        """
+        
+        :param vocab: 词表
+        :param embed_size: LSTMCharEmbedding的输出维度。默认值为50.
+        :param char_emb_size: character的embedding的维度。默认值为50.
+        :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
+        :param dropout: 以多大概率drop character embedding的输出以及最终的word的输出。
+        :param hidden_size: LSTM的中间hidden的大小，如果为bidirectional的，hidden会除二，默认为50.
+        :param pool_method: 支持'max', 'avg'。
+        :param activation: 激活函数，支持'relu', 'sigmoid', 'tanh', 或者自定义函数.
+        :param min_char_freq: character的最小出现次数。默认值为2.
+        :param bidirectional: 是否使用双向的LSTM进行encode。默认值为True。
+        :param pre_train_char_embed: 可以有两种方式调用预训练好的character embedding：第一种是传入embedding文件夹
+            (文件夹下应该只有一个以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，
+            没有的话将自动下载。如果输入为None则使用embedding_dim的维度随机初始化一个embedding.
+        """
         super(LSTMCharEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         
         assert hidden_size % 2 == 0, "Only even kernel is allowed."

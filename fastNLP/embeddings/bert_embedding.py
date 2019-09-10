@@ -8,20 +8,19 @@ __all__ = [
     "BertWordPieceEncoder"
 ]
 
-import os
 import collections
-
-from torch import nn
-import torch
-import numpy as np
+import warnings
 from itertools import chain
 
+import numpy as np
+import torch
+from torch import nn
+
+from .contextual_embedding import ContextualEmbedding
+from ..core import logger
 from ..core.vocabulary import Vocabulary
 from ..io.file_utils import PRETRAINED_BERT_MODEL_DIR
 from ..modules.encoder.bert import _WordPieceBertModel, BertModel, BertTokenizer
-from .contextual_embedding import ContextualEmbedding
-import warnings
-from ..core import logger
 
 
 class BertEmbedding(ContextualEmbedding):
@@ -43,30 +42,32 @@ class BertEmbedding(ContextualEmbedding):
         >>> outputs = embed(words)
         >>> outputs.size()
         >>> # torch.Size([1, 5, 2304])
-
-    :param ~fastNLP.Vocabulary vocab: 词表
-    :param str model_dir_or_name: 模型所在目录或者模型的名称。当传入模型所在目录时，目录中应该包含一个词表文件(以.txt作为后缀名),
-        权重文件(以.bin作为文件后缀名), 配置文件(以.json作为后缀名)。
-    :param str layers: 输出embedding表示来自于哪些层，不同层的结果按照layers中的顺序在最后一维concat起来。以','隔开层数，层的序号是
-        从0开始，可以以负数去索引倒数几层。
-    :param str pool_method: 因为在bert中，每个word会被表示为多个word pieces, 当获取一个word的表示的时候，怎样从它的word pieces
-        中计算得到它对应的表示。支持 ``last`` , ``first`` , ``avg`` , ``max``。
-    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
-    :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
-    :param bool include_cls_sep: bool，在bert计算句子的表示的时候，需要在前面加上[CLS]和[SEP], 是否在结果中保留这两个内容。 这样
-        会使得word embedding的结果比输入的结果长两个token。如果该值为True，则在使用 :class::StackEmbedding 可能会与其它类型的
-        embedding长度不匹配。
-    :param bool pooled_cls: 返回的[CLS]是否使用预训练中的BertPool映射一下，仅在include_cls_sep时有效。如果下游任务只取[CLS]做预测，
-        一般该值为True。
-    :param bool requires_grad: 是否需要gradient以更新Bert的权重。
-    :param bool auto_truncate: 当句子words拆分为word pieces长度超过bert最大允许长度(一般为512), 自动截掉拆分后的超过510个
-        word pieces后的内容，并将第512个word piece置为[SEP]。超过长度的部分的encode结果直接全部置零。一般仅有只使用[CLS]
-        来进行分类的任务将auto_truncate置为True。
     """
     
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en-base-uncased', layers: str = '-1',
                  pool_method: str = 'first', word_dropout=0, dropout=0, include_cls_sep: bool = False,
                  pooled_cls=True, requires_grad: bool = True, auto_truncate: bool = False):
+        """
+        
+        :param ~fastNLP.Vocabulary vocab: 词表
+        :param str model_dir_or_name: 模型所在目录或者模型的名称。当传入模型所在目录时，目录中应该包含一个词表文件(以.txt作为后缀名),
+            权重文件(以.bin作为文件后缀名), 配置文件(以.json作为后缀名)。
+        :param str layers: 输出embedding表示来自于哪些层，不同层的结果按照layers中的顺序在最后一维concat起来。以','隔开层数，层的序号是
+            从0开始，可以以负数去索引倒数几层。
+        :param str pool_method: 因为在bert中，每个word会被表示为多个word pieces, 当获取一个word的表示的时候，怎样从它的word pieces
+            中计算得到它对应的表示。支持 ``last`` , ``first`` , ``avg`` , ``max``。
+        :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
+        :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
+        :param bool include_cls_sep: bool，在bert计算句子的表示的时候，需要在前面加上[CLS]和[SEP], 是否在结果中保留这两个内容。 这样
+            会使得word embedding的结果比输入的结果长两个token。如果该值为True，则在使用 :class::StackEmbedding 可能会与其它类型的
+            embedding长度不匹配。
+        :param bool pooled_cls: 返回的[CLS]是否使用预训练中的BertPool映射一下，仅在include_cls_sep时有效。如果下游任务只取[CLS]做预测，
+            一般该值为True。
+        :param bool requires_grad: 是否需要gradient以更新Bert的权重。
+        :param bool auto_truncate: 当句子words拆分为word pieces长度超过bert最大允许长度(一般为512), 自动截掉拆分后的超过510个
+            word pieces后的内容，并将第512个word piece置为[SEP]。超过长度的部分的encode结果直接全部置零。一般仅有只使用[CLS]
+            来进行分类的任务将auto_truncate置为True。
+        """
         super(BertEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
@@ -131,18 +132,20 @@ class BertEmbedding(ContextualEmbedding):
 class BertWordPieceEncoder(nn.Module):
     """
     读取bert模型，读取之后调用index_dataset方法在dataset中生成word_pieces这一列。
-
-    :param str model_dir_or_name: 模型所在目录或者模型的名称。默认值为 ``en-base-uncased``
-    :param str layers: 最终结果中的表示。以','隔开层数，可以以负数去索引倒数几层
-    :param bool pooled_cls: 返回的句子开头的[CLS]是否使用预训练中的BertPool映射一下，仅在include_cls_sep时有效。如果下游任务只取
-        [CLS]做预测，一般该值为True。
-    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
-    :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
-    :param bool requires_grad: 是否需要gradient。
     """
     
     def __init__(self, model_dir_or_name: str = 'en-base-uncased', layers: str = '-1', pooled_cls: bool = False,
                  word_dropout=0, dropout=0, requires_grad: bool = True):
+        """
+        
+        :param str model_dir_or_name: 模型所在目录或者模型的名称。默认值为 ``en-base-uncased``
+        :param str layers: 最终结果中的表示。以','隔开层数，可以以负数去索引倒数几层
+        :param bool pooled_cls: 返回的句子开头的[CLS]是否使用预训练中的BertPool映射一下，仅在include_cls_sep时有效。如果下游任务只取
+            [CLS]做预测，一般该值为True。
+        :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
+        :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
+        :param bool requires_grad: 是否需要gradient。
+        """
         super().__init__()
         
         self.model = _WordPieceBertModel(model_dir_or_name=model_dir_or_name, layers=layers, pooled_cls=pooled_cls)

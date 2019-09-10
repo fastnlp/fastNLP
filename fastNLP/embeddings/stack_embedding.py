@@ -28,14 +28,16 @@ class StackEmbedding(TokenEmbedding):
         >>> embed_2 = StaticEmbedding(vocab, model_dir_or_name='en-word2vec-300', requires_grad=True)
         >>> embed = StackEmbedding([embed_1, embed_2])
 
-    :param embeds: 一个由若干个TokenEmbedding组成的list，要求每一个TokenEmbedding的词表都保持一致
-    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。不同embedidng会在相同的位置
-        被设置为unknown。如果这里设置了dropout，则组成的embedding就不要再设置dropout了。
-    :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
-
     """
     
     def __init__(self, embeds: List[TokenEmbedding], word_dropout=0, dropout=0):
+        """
+        
+        :param embeds: 一个由若干个TokenEmbedding组成的list，要求每一个TokenEmbedding的词表都保持一致
+        :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。不同embedidng会在相同的位置
+            被设置为unknown。如果这里设置了dropout，则组成的embedding就不要再设置dropout了。
+        :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
+        """
         vocabs = []
         for embed in embeds:
             if hasattr(embed, 'get_word_vocab'):

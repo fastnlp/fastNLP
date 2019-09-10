@@ -8,9 +8,10 @@ __all__ = [
     "TokenEmbedding"
 ]
 
-import torch.nn as nn
 from abc import abstractmethod
+
 import torch
+import torch.nn as nn
 
 from .utils import get_embeddings
 
@@ -28,16 +29,18 @@ class Embedding(nn.Module):
         >>> init_embed = np.zeros((2000, 100))
         >>> embed = Embedding(init_embed)  # 使用numpy.ndarray的值作为初始化值初始化一个Embedding
 
-    :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: 支持传入Embedding的大小(传入tuple(int, int),
-        第一个int为vocab_zie, 第二个int为embed_dim); 或传入Tensor, Embedding, numpy.ndarray等则直接使用该值初始化Embedding;
-    :param float word_dropout: 按照一定概率随机将word设置为unk_index，这样可以使得unk这个token得到足够的训练, 且会对网络有
-        一定的regularize的作用。设置该值时，必须同时设置unk_index
-    :param float dropout: 对Embedding的输出的dropout。
-    :param int unk_index: drop word时替换为的index。fastNLP的Vocabulary的unk_index默认为1。
     """
     
     def __init__(self, init_embed, word_dropout=0, dropout=0.0, unk_index=None):
+        """
         
+        :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: 支持传入Embedding的大小(传入tuple(int, int),
+            第一个int为vocab_zie, 第二个int为embed_dim); 或传入Tensor, Embedding, numpy.ndarray等则直接使用该值初始化Embedding;
+        :param float word_dropout: 按照一定概率随机将word设置为unk_index，这样可以使得unk这个token得到足够的训练, 且会对网络有
+            一定的regularize的作用。设置该值时，必须同时设置unk_index
+        :param float dropout: 对Embedding的输出的dropout。
+        :param int unk_index: drop word时替换为的index。fastNLP的Vocabulary的unk_index默认为1。
+        """
         super(Embedding, self).__init__()
         
         self.embed = get_embeddings(init_embed)
