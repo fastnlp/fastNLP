@@ -5,13 +5,15 @@ __all__ = [
     "allowed_transitions"
 ]
 
+from typing import Union
+
 import torch
 from torch import nn
 
 from ..utils import initial_parameter
-from ...core.vocabulary import Vocabulary
 from ...core.metrics import _get_encoding_type_from_tag_vocab, _check_tag_vocab_and_encoding_type
-from typing import Union
+from ...core.vocabulary import Vocabulary
+
 
 def allowed_transitions(tag_vocab:Union[Vocabulary, dict], encoding_type=None, include_start_end=False):
     """
@@ -168,17 +170,19 @@ class ConditionalRandomField(nn.Module):
     """
     条件随机场。提供forward()以及viterbi_decode()两个方法，分别用于训练与inference。
 
-    :param int num_tags: 标签的数量
-    :param bool include_start_end_trans: 是否考虑各个tag作为开始以及结尾的分数。
-    :param List[Tuple[from_tag_id(int), to_tag_id(int)]] allowed_transitions: 内部的Tuple[from_tag_id(int),
-                               to_tag_id(int)]视为允许发生的跃迁，其他没有包含的跃迁认为是禁止跃迁，可以通过
-                               allowed_transitions()函数得到；如果为None，则所有跃迁均为合法
-    :param str initial_method: 初始化方法。见initial_parameter
     """
 
     def __init__(self, num_tags, include_start_end_trans=False, allowed_transitions=None,
                  initial_method=None):
-
+        """
+        
+        :param int num_tags: 标签的数量
+        :param bool include_start_end_trans: 是否考虑各个tag作为开始以及结尾的分数。
+        :param List[Tuple[from_tag_id(int), to_tag_id(int)]] allowed_transitions: 内部的Tuple[from_tag_id(int),
+                                   to_tag_id(int)]视为允许发生的跃迁，其他没有包含的跃迁认为是禁止跃迁，可以通过
+                                   allowed_transitions()函数得到；如果为None，则所有跃迁均为合法
+        :param str initial_method: 初始化方法。见initial_parameter
+        """
         super(ConditionalRandomField, self).__init__()
 
         self.include_start_end_trans = include_start_end_trans

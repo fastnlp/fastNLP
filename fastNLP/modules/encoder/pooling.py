@@ -14,16 +14,18 @@ class MaxPool(nn.Module):
     """
     Max-pooling模块。
     
-    :param stride: 窗口移动大小，默认为kernel_size
-    :param padding: padding的内容，默认为0
-    :param dilation: 控制窗口内元素移动距离的大小
-    :param dimension: MaxPool的维度，支持1，2，3维。
-    :param kernel_size: max pooling的窗口大小，默认为tensor最后k维，其中k为dimension
-    :param ceil_mode:
     """
 
     def __init__(self, stride=None, padding=0, dilation=1, dimension=1, kernel_size=None, ceil_mode=False):
-
+        """
+        
+        :param stride: 窗口移动大小，默认为kernel_size
+        :param padding: padding的内容，默认为0
+        :param dilation: 控制窗口内元素移动距离的大小
+        :param dimension: MaxPool的维度，支持1，2，3维。
+        :param kernel_size: max pooling的窗口大小，默认为tensor最后k维，其中k为dimension
+        :param ceil_mode:
+        """
         super(MaxPool, self).__init__()
         assert (1 <= dimension) and (dimension <= 3)
         self.dimension = dimension

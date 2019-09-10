@@ -46,14 +46,17 @@ class DotAttention(nn.Module):
 class MultiHeadAttention(nn.Module):
     """
 
-    :param input_size: int, 输入维度的大小。同时也是输出维度的大小。
-    :param key_size: int, 每个head的维度大小。
-    :param value_size: int，每个head中value的维度。
-    :param num_head: int，head的数量。
-    :param dropout: float。
     """
 
     def __init__(self, input_size, key_size, value_size, num_head, dropout=0.1):
+        """
+        
+        :param input_size: int, 输入维度的大小。同时也是输出维度的大小。
+        :param key_size: int, 每个head的维度大小。
+        :param value_size: int，每个head中value的维度。
+        :param num_head: int，head的数量。
+        :param dropout: float。
+        """
         super(MultiHeadAttention, self).__init__()
         self.input_size = input_size
         self.key_size = key_size
@@ -169,15 +172,17 @@ class BiAttention(nn.Module):
 class SelfAttention(nn.Module):
     """
     Self Attention Module.
-    
-    :param int input_size: 输入tensor的hidden维度
-    :param int attention_unit: 输出tensor的hidden维度
-    :param int attention_hops:
-    :param float drop: dropout概率，默认值为0.5
-    :param str initial_method: 初始化参数方法
     """
 
     def __init__(self, input_size, attention_unit=300, attention_hops=10, drop=0.5, initial_method=None, ):
+        """
+        
+        :param int input_size: 输入tensor的hidden维度
+        :param int attention_unit: 输出tensor的hidden维度
+        :param int attention_hops:
+        :param float drop: dropout概率，默认值为0.5
+        :param str initial_method: 初始化参数方法
+        """
         super(SelfAttention, self).__init__()
 
         self.attention_hops = attention_hops

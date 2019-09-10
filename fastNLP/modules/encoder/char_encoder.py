@@ -15,14 +15,17 @@ class ConvolutionCharEncoder(nn.Module):
     """
     char级别的卷积编码器.
     
-    :param int char_emb_size: char级别embedding的维度. Default: 50
-        :例: 有26个字符, 每一个的embedding是一个50维的向量, 所以输入的向量维度为50.
-    :param tuple feature_maps: 一个由int组成的tuple. tuple的长度是char级别卷积操作的数目, 第`i`个int表示第`i`个卷积操作的filter.
-    :param tuple kernels: 一个由int组成的tuple. tuple的长度是char级别卷积操作的数目, 第`i`个int表示第`i`个卷积操作的卷积核.
-    :param initial_method: 初始化参数的方式, 默认为`xavier normal`
     """
 
     def __init__(self, char_emb_size=50, feature_maps=(40, 30, 30), kernels=(1, 3, 5), initial_method=None):
+        """
+        
+        :param int char_emb_size: char级别embedding的维度. Default: 50
+            :例: 有26个字符, 每一个的embedding是一个50维的向量, 所以输入的向量维度为50.
+        :param tuple feature_maps: 一个由int组成的tuple. tuple的长度是char级别卷积操作的数目, 第`i`个int表示第`i`个卷积操作的filter.
+        :param tuple kernels: 一个由int组成的tuple. tuple的长度是char级别卷积操作的数目, 第`i`个int表示第`i`个卷积操作的卷积核.
+        :param initial_method: 初始化参数的方式, 默认为`xavier normal`
+        """
         super(ConvolutionCharEncoder, self).__init__()
         self.convs = nn.ModuleList([
             nn.Conv2d(1, feature_maps[i], kernel_size=(char_emb_size, kernels[i]), bias=True,

@@ -12,13 +12,6 @@ class TransformerEncoder(nn.Module):
     """
     transformer的encoder模块，不包含embedding层
 
-    :param int num_layers: transformer的层数
-    :param int model_size: 输入维度的大小。同时也是输出维度的大小。
-    :param int inner_size: FFN层的hidden大小
-    :param int key_size: 每个head的维度大小。
-    :param int value_size: 每个head中value的维度。
-    :param int num_head: head的数量。
-    :param float dropout: dropout概率. Default: 0.1
     """
 
     class SubLayer(nn.Module):
@@ -53,6 +46,16 @@ class TransformerEncoder(nn.Module):
             return input
 
     def __init__(self, num_layers, **kargs):
+        """
+        
+        :param int num_layers: transformer的层数
+        :param int model_size: 输入维度的大小。同时也是输出维度的大小。
+        :param int inner_size: FFN层的hidden大小
+        :param int key_size: 每个head的维度大小。
+        :param int value_size: 每个head中value的维度。
+        :param int num_head: head的数量。
+        :param float dropout: dropout概率. Default: 0.1
+        """
         super(TransformerEncoder, self).__init__()
         self.layers = nn.ModuleList([self.SubLayer(**kargs) for _ in range(num_layers)])
         self.norm = nn.LayerNorm(kargs['model_size'], eps=1e-6)
