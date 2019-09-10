@@ -106,8 +106,7 @@ class CNNCharEmbedding(TokenEmbedding):
             for i in range(len(kernel_sizes))])
         self._embed_size = embed_size
         self.fc = nn.Linear(sum(filter_nums), embed_size)
-        self.reset_parameters()
-    
+
     def forward(self, words):
         """
         输入words的index后，生成对应的words的表示。
