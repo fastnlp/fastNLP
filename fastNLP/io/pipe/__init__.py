@@ -39,7 +39,7 @@ __all__ = [
     "QNLIPipe",
     "MNLIPipe",
 
-    "CoreferencePipe"
+    "CoReferencePipe"
 ]
 
 from .classification import YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe, ChnSentiCorpPipe
@@ -49,4 +49,4 @@ from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe
 from .pipe import Pipe
 from .conll import Conll2003Pipe
 from .cws import CWSPipe
-from .coreference import CoreferencePipe
+from .coreference import CoReferencePipe

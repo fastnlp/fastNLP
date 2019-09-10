@@ -1,8 +1,7 @@
 """undocumented"""
 
 __all__ = [
-    "CoreferencePipe"
-
+    "CoReferencePipe"
 ]
 
 import collections
@@ -12,11 +11,11 @@ import numpy as np
 from fastNLP.core.vocabulary import Vocabulary
 from .pipe import Pipe
 from ..data_bundle import DataBundle
-from ..loader.coreference import CRLoader
+from ..loader.coreference import CoReferenceLoader
 from ...core.const import Const
 
 
-class CoreferencePipe(Pipe):
+class CoReferencePipe(Pipe):
     """
     对Coreference resolution问题进行处理，得到文章种类/说话者/字符级信息/序列长度。
     """
@@ -52,7 +51,7 @@ class CoreferencePipe(Pipe):
         vocab = Vocabulary().from_dataset(*data_bundle.datasets.values(), field_name= Const.RAW_WORDS(3))
         vocab.build_vocab()
         word2id = vocab.word2idx
-        data_bundle.set_vocab(vocab,Const.INPUT)
+        data_bundle.set_vocab(vocab, Const.INPUTS(0))
         if self.config.char_path:
             char_dict = get_char_dict(self.config.char_path)
         else:
@@ -93,7 +92,6 @@ class CoreferencePipe(Pipe):
             # clusters
             ds.rename_field(Const.RAW_WORDS(2), Const.TARGET)
 
-
             ds.set_ignore_type(Const.TARGET)
             ds.set_padder(Const.TARGET, None)
             ds.set_input(Const.INPUTS(0), Const.INPUTS(1), Const.INPUTS(2), Const.INPUTS(3), Const.CHAR_INPUT, Const.INPUT_LEN)
@@ -102,7 +100,7 @@ class CoreferencePipe(Pipe):
         return data_bundle
 
     def process_from_file(self, paths):
-        bundle = CRLoader().load(paths)
+        bundle = CoReferenceLoader().load(paths)
         return self.process(bundle)
 
 
