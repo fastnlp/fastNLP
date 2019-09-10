@@ -8,6 +8,7 @@ from fastNLP.core.callback import Callback, GradientClipCallback
 from fastNLP.core.trainer import Trainer
 
 from fastNLP.io.pipe.coreference import CoreferencePipe
+from fastNLP.core.const import Const
 
 from reproduction.coreference_resolution.model.config import Config
 from reproduction.coreference_resolution.model.model_re import Model
@@ -45,7 +46,7 @@ if __name__ == "__main__":
     print("数据集划分：\ntrain:", str(len(data_bundle.get_dataset("train"))),
           "\ndev:" + str(len(data_bundle.get_dataset("dev"))) + "\ntest:" + str(len(data_bundle.get_dataset('test'))))
     # print(data_info)
-    model = Model(data_bundle.get_vocab("vocab"), config)
+    model = Model(data_bundle.get_vocab(Const.INPUT), config)
     print(model)
 
     loss = SoftmaxLoss()

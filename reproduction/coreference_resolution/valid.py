@@ -17,7 +17,7 @@ if __name__=='__main__':
         {'train': config.train_path, 'dev': config.dev_path, 'test': config.test_path})
     metirc = CRMetric()
     model = torch.load(args.path)
-    tester = Tester(bundle.datasets['test'],model,metirc,batch_size=1,device="cuda:0")
+    tester = Tester(bundle.get_dataset("test"),model,metirc,batch_size=1,device="cuda:0")
     tester.test()
     print('test over')
 

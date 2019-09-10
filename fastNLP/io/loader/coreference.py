@@ -26,8 +26,8 @@ class CRLoader(JsonLoader):
         super().__init__(fields, dropna)
         # self.fields = {"doc_key":Const.INPUTS(0),"speakers":Const.INPUTS(1),"clusters":Const.TARGET,"sentences":Const.INPUTS(2)}
         # TODO check 1
-        self.fields = {"doc_key": "raw_key", "speakers": "raw_speakers", "clusters": "raw_clusters",
-                       "sentences": "raw_words"}
+        self.fields = {"doc_key": Const.RAW_WORDS(0), "speakers": Const.RAW_WORDS(1), "clusters": Const.RAW_WORDS(2),
+                       "sentences": Const.RAW_WORDS(3)}
 
     def _load(self, path):
         """
