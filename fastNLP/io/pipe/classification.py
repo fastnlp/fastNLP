@@ -10,6 +10,7 @@ __all__ = [
 ]
 
 import re
+import warnings
 
 from nltk import Tree
 
@@ -22,6 +23,7 @@ from ...core.const import Const
 from ...core.dataset import DataSet
 from ...core.instance import Instance
 from ...core.vocabulary import Vocabulary
+from ...core._logger import logger
 
 nonalpnum = re.compile('[^0-9a-zA-Z?!\']+')
 
@@ -373,7 +375,17 @@ class SST2Pipe(_CLSPipe):
         src_vocab.index_dataset(*data_bundle.datasets.values(), field_name=Const.INPUT)
         
         tgt_vocab = Vocabulary(unknown=None, padding=None)
-        tgt_vocab.from_dataset(data_bundle.datasets['train'], field_name=Const.TARGET)
+        tgt_vocab.from_dataset(*[ds for name, ds in data_bundle.iter_datasets() if 'train' in name],
+                               field_name=Const.TARGET,
+                               no_create_entry_dataset=[ds for name, ds in data_bundle.iter_datasets()
+                                                        if ('train' not in name) and (ds.has_field(Const.TARGET))]
+                               )
+        if len(tgt_vocab._no_create_word) > 0:
+            warn_msg = f"There are {len(tgt_vocab._no_create_word)} target labels" \
+                       f" in {[name for name in data_bundle.datasets.keys() if 'train' not in name]} " \
+                       f"data set but not in train data set!."
+            warnings.warn(warn_msg)
+            logger.warn(warn_msg)
         datasets = []
         for name, dataset in data_bundle.datasets.items():
             if dataset.has_field(Const.TARGET):

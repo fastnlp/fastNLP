@@ -15,11 +15,14 @@ __all__ = [
     "MNLIPipe",
 ]
 
+import warnings
+
 from .pipe import Pipe
 from .utils import get_tokenizer
 from ..loader.matching import SNLILoader, MNLILoader, QNLILoader, RTELoader, QuoraLoader
 from ...core.const import Const
 from ...core.vocabulary import Vocabulary
+from ...core._logger import logger
 
 
 class MatchingBertPipe(Pipe):
@@ -101,7 +104,18 @@ class MatchingBertPipe(Pipe):
         word_vocab.index_dataset(*data_bundle.datasets.values(), field_name=Const.INPUT)
         
         target_vocab = Vocabulary(padding=None, unknown=None)
-        target_vocab.from_dataset(data_bundle.datasets['train'], field_name=Const.TARGET)
+        target_vocab.from_dataset(*[ds for name, ds in data_bundle.iter_datasets() if 'train' in name],
+                                  field_name=Const.TARGET,
+                                  no_create_entry_dataset=[ds for name, ds in data_bundle.iter_datasets()
+                                                           if ('train' not in name) and (ds.has_field(Const.TARGET))]
+                                  )
+        if len(target_vocab._no_create_word) > 0:
+            warn_msg = f"There are {len(tgt_vocab._no_create_word)} target labels" \
+                       f" in {[name for name in data_bundle.datasets.keys() if 'train' not in name]} " \
+                       f"data set but not in train data set!."
+            warnings.warn(warn_msg)
+            logger.warn(warn_msg)
+
         has_target_datasets = [dataset for name, dataset in data_bundle.datasets.items() if
                                dataset.has_field(Const.TARGET)]
         target_vocab.index_dataset(*has_target_datasets, field_name=Const.TARGET)
@@ -227,7 +241,18 @@ class MatchingPipe(Pipe):
         word_vocab.index_dataset(*data_bundle.datasets.values(), field_name=[Const.INPUTS(0), Const.INPUTS(1)])
         
         target_vocab = Vocabulary(padding=None, unknown=None)
-        target_vocab.from_dataset(data_bundle.datasets['train'], field_name=Const.TARGET)
+        target_vocab.from_dataset(*[ds for name, ds in data_bundle.iter_datasets() if 'train' in name],
+                                  field_name=Const.TARGET,
+                                  no_create_entry_dataset=[ds for name, ds in data_bundle.iter_datasets()
+                                                           if ('train' not in name) and (ds.has_field(Const.TARGET))]
+                                  )
+        if len(target_vocab._no_create_word) > 0:
+            warn_msg = f"There are {len(tgt_vocab._no_create_word)} target labels" \
+                       f" in {[name for name in data_bundle.datasets.keys() if 'train' not in name]} " \
+                       f"data set but not in train data set!."
+            warnings.warn(warn_msg)
+            logger.warn(warn_msg)
+
         has_target_datasets = [dataset for name, dataset in data_bundle.datasets.items() if
                                dataset.has_field(Const.TARGET)]
         target_vocab.index_dataset(*has_target_datasets, field_name=Const.TARGET)
