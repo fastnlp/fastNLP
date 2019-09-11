@@ -182,8 +182,8 @@ class Tester(object):
                     pbar.close()
                     end_time = time.time()
                     test_str = f'Evaluate data in {round(end_time - start_time, 2)} seconds!'
-                    # pbar.write(test_str)
-                    self.logger.info(test_str)
+                    if self.verbose >= 0:
+                        self.logger.info(test_str)
         except _CheckError as e:
             prev_func_signature = _get_func_signature(self._predict_func)
             _check_loss_evaluate(prev_func_signature=prev_func_signature, func_signature=e.func_signature,
