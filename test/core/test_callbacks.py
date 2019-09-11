@@ -85,6 +85,9 @@ class TestCallback(unittest.TestCase):
                           metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=False,
                           callbacks=[TensorboardCallback("loss", "metric")], check_code_level=2)
         trainer.train()
+        import os
+        import shutil
+        shutil.rmtree(os.path.join("./", 'tensorboard_logs_{}'.format(trainer.start_time)))
     
     def test_readonly_property(self):
         from fastNLP.core.callback import Callback
