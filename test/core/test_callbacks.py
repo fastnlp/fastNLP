@@ -87,7 +87,9 @@ class TestCallback(unittest.TestCase):
         trainer.train()
         import os
         import shutil
-        shutil.rmtree(os.path.join("./", 'tensorboard_logs_{}'.format(trainer.start_time)))
+        path = os.path.join("./", 'tensorboard_logs_{}'.format(trainer.start_time))
+        if os.path.exists(path):
+            shutil.rmtree(path)
     
     def test_readonly_property(self):
         from fastNLP.core.callback import Callback
