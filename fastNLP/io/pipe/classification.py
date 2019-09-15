@@ -6,7 +6,12 @@ __all__ = [
     "SSTPipe",
     "SST2Pipe",
     'IMDBPipe',
-    "ChnSentiCorpPipe"
+    "ChnSentiCorpPipe",
+    "THUCNewsPipe",
+    "WeiboSenti100kPipe",
+    "XNLIPipe",
+    "LCQMCPipe",
+    "BQCorpusPipe"
 ]
 
 import re
@@ -21,7 +26,7 @@ from ...core.const import Const
 from ...core.dataset import DataSet
 from ...core.instance import Instance
 from ...core.vocabulary import Vocabulary
-from ..loader.classification import ChnSentiCorpLoader
+from ..loader.classification import ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader, XNLILoader, LCQMCLoader, BQCorpusLoader
 
 nonalpnum = re.compile('[^0-9a-zA-Z?!\']+')
 
@@ -549,4 +554,874 @@ class ChnSentiCorpPipe(Pipe):
         data_bundle = ChnSentiCorpLoader().load(paths)
         data_bundle = self.process(data_bundle)
 
+        return data_bundle
+
+class THUCNewsPipe(_CLSPipe):
+    """
+    处理之后的DataSet有以下的结构
+
+    .. csv-table::
+        :header: "raw_chars", "chars", "target", "seq_len"
+
+        "马晓旭意外受伤让国奥警惕 无奈大雨格外青睐殷家军记者傅亚雨沈阳报道...", "[409, 1197, 2146, 213, ...]", 0, 746
+        "..."
+
+    其中chars, seq_len是input，target是target
+
+    :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
+        设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+        data_bundle.get_vocab('bigrams')获取.
+    :param bool trigrams: 是否增加一列trigrams. trigrams的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
+        。如果设置为True，返回的DataSet将有一列名为trigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+        data_bundle.get_vocab('trigrams')获取.
+    """
+    def __init__(self, bigrams=False, trigrams=False):
+        super().__init__()
+
+        self.bigrams = bigrams
+        self.trigrams = trigrams
+
+    def _chracter_split(self, sent):
+        return list(sent)
+        #return [w for w in sent]
+
+    def _raw_split(self, sent):
+        return sent.split()
+
+    def _tokenize(self, data_bundle, field_name=Const.INPUT, new_field_name=None):
+        new_field_name = new_field_name or field_name
+        for name, dataset in data_bundle.datasets.items():
+            dataset.apply_field(self._chracter_split, field_name=field_name, new_field_name=new_field_name)
+        return data_bundle
+
+    def _indexize(self, data_bundle, field_name, target_field_name = Const.TARGET):
+        """
+        在dataset中的几个field_name中建立一个词表，"target"列建立一个词表，并把词表加入到data_bundle中。
+        field_name可以是str，也可以是List[str]
+        :param data_bundle:
+        :return:
+        """
+        if isinstance(field_name, str):
+            field_name = [field_name]
+        elif not isinstance(field_name, list):
+            raise TypeError('invalid argument field_name: {}'.format(field_name))
+
+        src_vocab = Vocabulary()
+        src_vocab.from_dataset(data_bundle.datasets['train'], field_name=field_name,
+                               no_create_entry_dataset=[dataset for name, dataset in data_bundle.datasets.items() if
+                                                        name != 'train'])
+        src_vocab.index_dataset(*data_bundle.datasets.values(), field_name=field_name)
+
+        tgt_vocab = Vocabulary(unknown=None, padding=None)
+        tgt_vocab.from_dataset(data_bundle.datasets['train'], field_name=target_field_name)
+        tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name=target_field_name)
+
+        data_bundle.set_vocab(src_vocab, Const.CHAR_INPUT)
+        data_bundle.set_vocab(tgt_vocab, Const.TARGET)
+
+        return data_bundle
+
+    def process(self, data_bundle:DataBundle):
+        """
+        可处理的DataSet应具备如下的field
+
+        .. csv-table::
+            :header: "raw_words", "target"
+            "马晓旭意外受伤让国奥警惕 无奈大雨格外青睐殷家军记者傅亚雨沈阳报道 ... ", "体育"
+            "...", "..."
+
+        :param data_bundle:
+        :return:
+        """
+        #根据granularity设置tag
+        tag_map = {'体育': 0, '财经': 1, '房产': 2, '家居': 3, '教育': 4, '科技': 5, '时尚': 6, '时政': 7, '游戏': 8, '娱乐': 9}
+        data_bundle = self._granularize(data_bundle = data_bundle, tag_map = tag_map)
+
+        #clean,lower
+
+        #CWS(tokenize)
+        data_bundle = self._tokenize(data_bundle=data_bundle, field_name='raw_chars', new_field_name='chars')
+
+        input_field_names = [Const.CHAR_INPUT]
+
+        #n-grams
+        if self.bigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT, new_field_name='bigrams')
+            input_field_names.append('bigrams')
+        if self.trigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT, new_field_name='trigrams')
+            input_field_names.append('trigrams')
+
+        #index
+        data_bundle = self._indexize(data_bundle = data_bundle, field_name=Const.CHAR_INPUT)
+
+        # add length
+        for name, dataset in data_bundle.datasets.items():
+            dataset.add_seq_len(field_name=Const.CHAR_INPUT, new_field_name=Const.INPUT_LEN)
+
+        input_fields = [Const.TARGET, Const.INPUT_LEN] + input_field_names
+        target_fields = [Const.TARGET]
+
+        data_bundle.set_input(*input_fields)
+        data_bundle.set_target(*target_fields)
+
+        return data_bundle
+
+    def process_from_file(self, paths = None):
+        """
+        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
+        :return: DataBundle
+        """
+        data_loader = THUCNewsLoader() #此处需要实例化一个data_loader，否则传入load()的参数为None
+        data_bundle = data_loader.load(paths)
+        data_bundle = self.process(data_bundle)
+        return data_bundle
+
+class WeiboSenti100kPipe(_CLSPipe):
+    """
+    处理之后的DataSet有以下的结构
+
+    .. csv-table::
+        :header: "raw_chars", "chars", "target", "seq_len"
+
+        "六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]", "[0, 690, 18, ...]", 0, 56
+        "..."
+
+    其中chars, seq_len是input，target是target
+
+    :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
+        设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+        data_bundle.get_vocab('bigrams')获取.
+    :param bool trigrams: 是否增加一列trigrams. trigrams的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
+        。如果设置为True，返回的DataSet将有一列名为trigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+        data_bundle.get_vocab('trigrams')获取.
+    """
+    def __init__(self, bigrams=False, trigrams=False):
+        super().__init__()
+
+        self.bigrams = bigrams
+        self.trigrams = trigrams
+
+    def _chracter_split(self, sent):
+        return list(sent)
+
+    def _tokenize(self, data_bundle, field_name=Const.INPUT, new_field_name=None):
+        new_field_name = new_field_name or field_name
+        for name, dataset in data_bundle.datasets.items():
+            dataset.apply_field(self._chracter_split, field_name=field_name, new_field_name=new_field_name)
+        return data_bundle
+
+    def _indexize(self, data_bundle, field_name, target_field_name = Const.TARGET):
+        """
+        在dataset中的几个field_name中建立一个词表，"target"列建立一个词表，并把词表加入到data_bundle中。
+        field_name可以是str，也可以是List[str]
+        :param data_bundle:
+        :return:
+        """
+        if isinstance(field_name, str):
+            field_name = [field_name]
+        elif not isinstance(field_name, list):
+            raise TypeError('invalid argument field_name: {}'.format(field_name))
+
+        src_vocab = Vocabulary()
+        src_vocab.from_dataset(data_bundle.datasets['train'], field_name=field_name,
+                               no_create_entry_dataset=[dataset for name, dataset in data_bundle.datasets.items() if
+                                                        name != 'train'])
+        src_vocab.index_dataset(*data_bundle.datasets.values(), field_name=field_name)
+
+        tgt_vocab = Vocabulary(unknown=None, padding=None)
+        tgt_vocab.from_dataset(data_bundle.datasets['train'], field_name=target_field_name)
+        tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name=target_field_name)
+
+        data_bundle.set_vocab(src_vocab, Const.CHAR_INPUT)
+        data_bundle.set_vocab(tgt_vocab, Const.TARGET)
+
+        return data_bundle
+
+    def process(self, data_bundle:DataBundle):
+        """
+        可处理的DataSet应具备以下的field
+
+        .. csv-table::
+            :header: "raw_chars", "target"
+            "六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]", "0"
+            "...", "..."
+
+        :param data_bundle:
+        :return:
+        """
+        #clean,lower
+
+        #CWS(tokenize)
+        data_bundle = self._tokenize(data_bundle=data_bundle, field_name='raw_chars', new_field_name='chars')
+
+        input_field_names = [Const.CHAR_INPUT]
+
+        #n-grams
+        if self.bigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT, new_field_name='bigrams')
+            input_field_names.append('bigrams')
+        if self.trigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT, new_field_name='trigrams')
+            input_field_names.append('trigrams')
+
+        #index
+        data_bundle = self._indexize(data_bundle = data_bundle, field_name = 'chars')
+
+        # add length
+        for name, dataset in data_bundle.datasets.items():
+            dataset.add_seq_len(field_name=Const.CHAR_INPUT, new_field_name=Const.INPUT_LEN)
+
+        input_fields = [Const.TARGET, Const.INPUT_LEN] + input_field_names
+        target_fields = [Const.TARGET]
+
+        data_bundle.set_input(*input_fields)
+        data_bundle.set_target(*target_fields)
+
+        return data_bundle
+
+    def process_from_file(self, paths = None):
+        """
+        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
+        :return: DataBundle
+        """
+        data_loader = WeiboSenti100kLoader() #此处需要实例化一个data_loader，否则传入load()的参数为None
+        data_bundle = data_loader.load(paths)
+        data_bundle = self.process(data_bundle)
+        return data_bundle
+
+class XNLIPipe(_CLSPipe):
+    """
+    处理之后的DataSet有以下结构
+    .. csv-table::
+        :header: "raw_chars1", "raw_chars2", "chars1", "chars2", "target", "seq_len1", "seq_len2"
+
+        "从概念上看,奶油收入有两个基本方面产品和地理.", "产品和地理是什么使奶油抹霜工作.", "[88, 1059, 757, ...]", "[263, 319, 17, ...]", 1, 23, 16
+        "..."
+
+    其中chars1,chars2,seq_len1,seq_len2为input，target为target
+
+    :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
+        设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+        data_bundle.get_vocab('bigrams')获取.
+    :param bool trigrams: 是否增加一列trigrams. trigrams的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
+        。如果设置为True，返回的DataSet将有一列名为trigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+        data_bundle.get_vocab('trigrams')获取.
+    """
+    def __init__(self, bigrams=False, trigrams=False):
+        super().__init__()
+
+        self.bigrams = bigrams
+        self.trigrams = trigrams
+
+    def _chracter_split(self, sent):
+        return list(sent)
+
+    def _XNLI_character_split(self, sent):
+        return list("".join(sent.split())) #把已经分好词的premise和hypo强制还原为character segmentation
+
+    def truncate_sentence(self, sentence): #used for bert
+        if(len(sentence) > 215):
+            sentence = sentence[:215]
+        return sentence
+
+    def _tokenize(self, data_bundle, field_name=Const.INPUT, new_field_name=None, split_func = _chracter_split):
+        new_field_name = new_field_name or field_name
+        for name, dataset in data_bundle.datasets.items():
+            dataset.apply_field(split_func, field_name=field_name, new_field_name=new_field_name)
+        return data_bundle
+
+    def _indexize(self, data_bundle, field_name, target_field_name = Const.TARGET):
+        """
+        在dataset中的几个field_name中建立一个词表，"target"列建立一个词表，并把词表加入到data_bundle中。
+        field_name可以是str，也可以是List[str]
+        :param data_bundle:
+        :return:
+        """
+        if isinstance(field_name, str):
+            field_name = [field_name]
+        elif not isinstance(field_name, list):
+            raise TypeError('invalid argument field_name: {}'.format(field_name))
+
+        src_vocab = Vocabulary()
+        src_vocab.from_dataset(data_bundle.datasets['train'], field_name=field_name,
+                               no_create_entry_dataset=[dataset for name, dataset in data_bundle.datasets.items() if
+                                                        name != 'train'])
+        src_vocab.index_dataset(*data_bundle.datasets.values(), field_name=field_name)
+
+        tgt_vocab = Vocabulary(unknown=None, padding=None)
+        tgt_vocab.from_dataset(data_bundle.datasets['train'], field_name=target_field_name)
+        tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name=target_field_name)
+
+        data_bundle.set_vocab(src_vocab, Const.CHAR_INPUT)
+        data_bundle.set_vocab(tgt_vocab, Const.TARGET)
+
+        return data_bundle
+
+    def process(self, data_bundle:DataBundle):
+        """
+        可处理的DataSet应具备以下的field:
+
+        .. csv-table::
+           :header: "raw_chars1", "raw_chars2", "target"
+           "从概念上看,奶油收入有两个基本方面产品和地理.", "产品和地理是什么使奶油抹霜工作.", "1"
+           ""...", "...", "..."
+
+        """
+        #根据granularity设置tag
+        tag_map = {'neutral':0, 'entailment': 1, 'contradictory': 2, 'contradiction': 2}
+        data_bundle = self._granularize(data_bundle=data_bundle, tag_map=tag_map)
+
+        #clean,lower
+
+        #CWS(tokenize)
+        data_bundle = self._tokenize(data_bundle, field_name='raw_chars1', new_field_name='chars1', split_func=self._XNLI_character_split)
+        data_bundle = self._tokenize(data_bundle, field_name='raw_chars2', new_field_name='chars2', split_func=self._XNLI_character_split)
+
+        input_field_names = [Const.CHAR_INPUT + '1', Const.CHAR_INPUT + '2']
+
+        #n-grams
+        if self.bigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT+'1', new_field_name='bigrams1')
+            input_field_names.append('bigrams1')
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT+'2', new_field_name='bigrams2')
+            input_field_names.append('bigrams2')
+        if self.trigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT+'1', new_field_name='trigrams1')
+            input_field_names.append('trigrams1')
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT+'2', new_field_name='trigrams2')
+            input_field_names.append('trigrams2')
+
+        # index
+        data_bundle = self._indexize(data_bundle, field_name=['chars1', 'chars2'])
+
+        #add length
+        for name, dataset in data_bundle.datasets.items():
+            dataset.add_seq_len(field_name = 'chars1', new_field_name = "seq_len1")
+            dataset.add_seq_len(field_name = 'chars2', new_field_name = 'seq_len2')
+
+        input_fields = [Const.TARGET, 'seq_len1', 'seq_len2'] + input_field_names
+        target_fields = [Const.TARGET]
+
+        data_bundle.set_input(*input_fields)
+        data_bundle.set_target(*target_fields)
+
+        return data_bundle
+
+    def process_for_bert(self, data_bundle: DataBundle):
+        """
+        可处理的DataSet应具备以下的field:
+
+        .. csv-table::
+           :header: "raw_chars1", "raw_chars2", "target"
+           "从概念上看,奶油收入有两个基本方面产品和地理.", "产品和地理是什么使奶油抹霜工作.", "1"
+           ""...", "...", "..."
+
+        """
+        # 根据granularity设置tag
+        tag_map = {'neutral': 0, 'entailment': 1, 'contradictory': 2, 'contradiction': 2}
+        data_bundle = self._granularize(data_bundle=data_bundle, tag_map=tag_map)
+
+        # clean,lower
+
+        # CWS(tokenize)
+        data_bundle = self._tokenize(data_bundle, field_name='raw_chars1', new_field_name='chars1',
+                                     split_func=self._XNLI_character_split)
+        data_bundle = self._tokenize(data_bundle, field_name='raw_chars2', new_field_name='chars2',
+                                     split_func=self._XNLI_character_split)
+        input_field_names = [Const.CHAR_INPUT + '1', Const.CHAR_INPUT + '2']
+
+        # add length
+        for name, dataset in data_bundle.datasets.items():
+            dataset.add_seq_len(field_name='chars1', new_field_name="seq_len1")
+            dataset.add_seq_len(field_name='chars2', new_field_name='seq_len2')
+
+        # (used for bert) cat, truncate(length after concatenation is supposed to be less than 430)
+        for name, dataset in data_bundle.datasets.items():
+            dataset.apply_field(self.truncate_sentence, field_name='chars1')
+            dataset.apply_field(self.truncate_sentence, field_name='chars2')
+
+        # (used for bert)
+        for name, dataset in data_bundle.datasets.items():
+            dataset.apply(lambda ins:ins['chars1'] + ['[SEP]'] + ins['chars2'], new_field_name = 'chars')
+        input_field_names = input_field_names + ['chars']
+
+        #n-grams
+        if self.bigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT+'1', new_field_name='bigrams1')
+            input_field_names.append('bigrams1')
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT+'2', new_field_name='bigrams2')
+            input_field_names.append('bigrams2')
+        if self.trigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT+'1', new_field_name='trigrams1')
+            input_field_names.append('trigrams1')
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT+'2', new_field_name='trigrams2')
+            input_field_names.append('trigrams2')
+
+        # index
+        data_bundle = self._indexize(data_bundle, field_name= 'chars')
+
+        input_fields = [Const.TARGET, 'seq_len1', 'seq_len2'] + input_field_names
+        target_fields = [Const.TARGET]
+
+        data_bundle.set_input(*input_fields)
+        data_bundle.set_target(*target_fields)
+
+        return data_bundle
+
+    def process_from_file(self, paths = None, used_for_bert = False):
+        """
+        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
+        :return: DataBundle
+        """
+        data_loader = XNLILoader()
+        data_bundle = data_loader.load(paths)
+        if not used_for_bert:
+            data_bundle = self.process(data_bundle)
+        else:
+            data_bundle = self.process_for_bert(data_bundle)
+        return data_bundle
+
+class LCQMCPipe(_CLSPipe):
+    """
+    处理之后的DataSet有以下结构
+    .. csv-table::
+        :header: "raw_chars1", "raw_chars2", "chars1", "chars2", "target", "seq_len1", "seq_len2"
+
+        "大家觉得她好看吗", "大家觉得跑男好看吗？", "[45, 79, 526, ...]", "[[45, 79, 526, ...]", 1, 8, 10
+        "..."
+
+    其中
+
+    :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
+        设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+        data_bundle.get_vocab('bigrams')获取.
+    :param bool trigrams: 是否增加一列trigrams. trigrams的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
+        。如果设置为True，返回的DataSet将有一列名为trigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+        data_bundle.get_vocab('trigrams')获取.
+    """
+    def __init__(self, bigrams=False, trigrams=False):
+        super().__init__()
+
+        self.bigrams = bigrams
+        self.trigrams = trigrams
+
+    def _chracter_split(self, sent):
+        return list(sent)
+
+    def truncate_sentence(self, sentence): #used for bert
+        if(len(sentence) > 215):
+            sentence = sentence[:215]
+        return sentence
+
+    def _tokenize(self, data_bundle, field_name=Const.INPUT, new_field_name=None):
+        new_field_name = new_field_name or field_name
+        for name, dataset in data_bundle.datasets.items():
+            dataset.apply_field(self._chracter_split, field_name=field_name, new_field_name=new_field_name)
+        return data_bundle
+
+    def _indexize(self, data_bundle, field_name, target_field_name = Const.TARGET):
+        """
+        在dataset中的几个field_name中建立一个词表，"target"列建立一个词表，并把词表加入到data_bundle中。
+        field_name可以是str，也可以是List[str]
+        :param data_bundle:
+        :return:
+        """
+        if isinstance(field_name, str):
+            field_name = [field_name]
+        elif not isinstance(field_name, list):
+            raise TypeError('invalid argument field_name: {}'.format(field_name))
+
+        src_vocab = Vocabulary()
+        src_vocab.from_dataset(data_bundle.datasets['train'], field_name=field_name,
+                               no_create_entry_dataset=[dataset for name, dataset in data_bundle.datasets.items() if
+                                                        name != 'train'])
+        src_vocab.index_dataset(*data_bundle.datasets.values(), field_name=field_name)
+
+        tgt_vocab = Vocabulary(unknown=None, padding=None)
+        tgt_vocab.from_dataset(data_bundle.datasets['train'], field_name=target_field_name)
+        tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name=target_field_name)
+
+        data_bundle.set_vocab(src_vocab, Const.CHAR_INPUT)
+        data_bundle.set_vocab(tgt_vocab, Const.TARGET)
+
+        return data_bundle
+
+    def process(self, data_bundle:DataBundle):
+        """
+        可以处理的DataSet因该具备以下的field
+
+        .. csv-table::
+            :header: "raw_chars1", "raw_chars2", "target"
+            "喜欢打篮球的男生喜欢什么样的女生？", "爱打篮球的男生喜欢什么样的女生？", "1"
+            "晚上睡觉带着耳机听音乐有什么害处吗？", "妇可以戴耳机听音乐吗?", "0"
+            ""...", "...", "..."
+
+        :param data_bundle:
+        :return:
+        """
+        # clean,lower
+
+        # CWS(tokenize)
+        data_bundle = self._tokenize(data_bundle, field_name='raw_chars1', new_field_name='chars1')
+        data_bundle = self._tokenize(data_bundle, field_name='raw_chars2', new_field_name='chars2')
+
+        input_field_names = [Const.CHAR_INPUT + '1', Const.CHAR_INPUT + '2']
+
+        #n-grams
+        if self.bigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT+'1', new_field_name='bigrams1')
+            input_field_names.append('bigrams1')
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT+'2', new_field_name='bigrams2')
+            input_field_names.append('bigrams2')
+        if self.trigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT+'1', new_field_name='trigrams1')
+            input_field_names.append('trigrams1')
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT+'2', new_field_name='trigrams2')
+            input_field_names.append('trigrams2')
+
+        # index
+        data_bundle = self._indexize(data_bundle, field_name=['chars1', 'chars2'])
+
+        #add length
+        for name, dataset in data_bundle.datasets.items():
+            dataset.add_seq_len(field_name='chars1', new_field_name="seq_len1")
+            dataset.add_seq_len(field_name='chars2', new_field_name='seq_len2')
+
+        input_fields = [Const.TARGET, 'seq_len1', 'seq_len2'] + input_field_names
+        target_fields = [Const.TARGET]
+
+        data_bundle.set_input(*input_fields)
+        data_bundle.set_target(*target_fields)
+
+        return data_bundle
+
+    def process_for_bert(self, data_bundle:DataBundle):
+        """
+        可以处理的DataSet因该具备以下的field
+
+        .. csv-table::
+            :header: "raw_chars1", "raw_chars2", "target"
+            "喜欢打篮球的男生喜欢什么样的女生？", "爱打篮球的男生喜欢什么样的女生？", "1"
+            "晚上睡觉带着耳机听音乐有什么害处吗？", "妇可以戴耳机听音乐吗?", "0"
+            ""...", "...", "..."
+
+        :param data_bundle:
+        :return:
+        """
+        # clean,lower
+
+        # CWS(tokenize)
+        data_bundle = self._tokenize(data_bundle, field_name='raw_chars1', new_field_name='chars1')
+        data_bundle = self._tokenize(data_bundle, field_name='raw_chars2', new_field_name='chars2')
+
+        input_field_names = [Const.CHAR_INPUT + '1', Const.CHAR_INPUT + '2']
+
+        # add length
+        for name, dataset in data_bundle.datasets.items():
+            dataset.add_seq_len(field_name='chars1', new_field_name="seq_len1")
+            dataset.add_seq_len(field_name='chars2', new_field_name='seq_len2')
+
+        # (used for bert) cat, truncate(length after concatenation is supposed to be less than 430)
+        for name, dataset in data_bundle.datasets.items():
+            dataset.apply_field(self.truncate_sentence, field_name='chars1')
+            dataset.apply_field(self.truncate_sentence, field_name='chars2')
+
+        # (used for bert)
+        for name, dataset in data_bundle.datasets.items():
+            dataset.apply(lambda ins:ins['chars1'] + ['[SEP]'] + ins['chars2'], new_field_name = 'chars')
+        input_field_names = input_field_names + ['chars']
+
+        # n-grams
+        if self.bigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT + '1', new_field_name='bigrams1')
+            input_field_names.append('bigrams1')
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT + '2', new_field_name='bigrams2')
+            input_field_names.append('bigrams2')
+        if self.trigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT + '1', new_field_name='trigrams1')
+            input_field_names.append('trigrams1')
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT + '2', new_field_name='trigrams2')
+            input_field_names.append('trigrams2')
+
+        # index
+        data_bundle = self._indexize(data_bundle, field_name= 'chars')
+
+        input_fields = [Const.TARGET, 'seq_len1', 'seq_len2'] + input_field_names
+        target_fields = [Const.TARGET]
+
+        data_bundle.set_input(*input_fields)
+        data_bundle.set_target(*target_fields)
+
+        return data_bundle
+
+
+    def process_from_file(self, paths = None, used_for_bert = False):
+        """
+        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
+        :return: DataBundle
+        """
+        data_loader = LCQMCLoader()
+        data_bundle = data_loader.load(paths)
+        if not(used_for_bert):
+            data_bundle = self.process(data_bundle)
+        else:
+            data_bundle = self.process_for_bert(data_bundle)
+        return data_bundle
+
+class BQCorpusPipe(_CLSPipe):
+    """
+    处理之后的DataSet有以下结构
+    .. csv-table::
+        :header: "raw_chars1", "raw_chars2", "chars1", "chars2", "target", "seq_len1", "seq_len2"
+
+        "用微信都6年，微信没有微粒贷功能", "4。  号码来微粒贷", "[2, 3, ...]", "[4, 5, ...]", 0, 16, 12
+        "..."
+
+    其中chars1,chars2,seq_len1,seq_len2为input，target为target
+
+    :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
+        设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+        data_bundle.get_vocab('bigrams')获取.
+    :param bool trigrams: 是否增加一列trigrams. trigrams的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
+        。如果设置为True，返回的DataSet将有一列名为trigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+        data_bundle.get_vocab('trigrams')获取.
+    """
+    def __init__(self, bigrams=False, trigrams=False):
+        super().__init__()
+
+        self.bigrams = bigrams
+        self.trigrams = trigrams
+
+    def _chracter_split(self, sent):
+        return list(sent)
+
+    def truncate_sentence(self, sentence): #used for bert
+        if(len(sentence) > 215):
+            sentence = sentence[:215]
+        return sentence
+
+    def _tokenize(self, data_bundle, field_name=Const.INPUT, new_field_name=None):
+        new_field_name = new_field_name or field_name
+        for name, dataset in data_bundle.datasets.items():
+            dataset.apply_field(self._chracter_split, field_name=field_name, new_field_name=new_field_name)
+        return data_bundle
+
+    def _indexize(self, data_bundle, field_name, target_field_name = Const.TARGET):
+        """
+        在dataset中的几个field_name中建立一个词表，"target"列建立一个词表，并把词表加入到data_bundle中。
+        field_name可以是str，也可以是List[str]
+        :param data_bundle:
+        :return:
+        """
+        if isinstance(field_name, str):
+            field_name = [field_name]
+        elif not isinstance(field_name, list):
+            raise TypeError('invalid argument field_name: {}'.format(field_name))
+
+        src_vocab = Vocabulary()
+        src_vocab.from_dataset(data_bundle.datasets['train'], field_name=field_name,
+                               no_create_entry_dataset=[dataset for name, dataset in data_bundle.datasets.items() if
+                                                        name != 'train'])
+        src_vocab.index_dataset(*data_bundle.datasets.values(), field_name=field_name)
+
+        tgt_vocab = Vocabulary(unknown=None, padding=None)
+        tgt_vocab.from_dataset(data_bundle.datasets['train'], field_name=target_field_name)
+        tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name=target_field_name)
+
+        data_bundle.set_vocab(src_vocab, Const.CHAR_INPUT)
+        data_bundle.set_vocab(tgt_vocab, Const.TARGET)
+
+        return data_bundle
+
+    def process(self, data_bundle:DataBundle):
+        """
+        可处理的DataSet应具备以下的field:
+
+        .. csv-table::
+            :header: "raw_chars1", "raw_chars2", "target"
+
+            "不是邀请的如何贷款？", "我不是你们邀请的客人可以贷款吗？", "1"
+            "如何满足微粒银行的审核", "建设银行有微粒贷的资格吗", "0"
+            "...", "...", "..."
+
+        :param data_bundle:
+        :return:
+        """
+        #clean,lower
+
+        #CWS(tokenize)
+        data_bundle = self._tokenize(data_bundle, field_name='raw_chars1', new_field_name='chars1')
+        data_bundle = self._tokenize(data_bundle, field_name='raw_chars2', new_field_name='chars2')
+
+        input_field_names = [Const.CHAR_INPUT + '1', Const.CHAR_INPUT + '2']
+
+        #n-grams
+        if self.bigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT+'1', new_field_name='bigrams1')
+            input_field_names.append('bigrams1')
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT+'2', new_field_name='bigrams2')
+            input_field_names.append('bigrams2')
+        if self.trigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT+'1', new_field_name='trigrams1')
+            input_field_names.append('trigrams1')
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT+'2', new_field_name='trigrams2')
+            input_field_names.append('trigrams2')
+
+        #index
+        data_bundle = self._indexize(data_bundle, field_name=['chars1', 'chars2'])
+
+        #add length
+        for name, dataset in data_bundle.datasets.items():
+            dataset.add_seq_len(field_name = 'chars1', new_field_name = "seq_len1")
+            dataset.add_seq_len(field_name = 'chars2', new_field_name = 'seq_len2')
+
+        input_fields = [Const.TARGET, 'seq_len1', 'seq_len2'] + input_field_names
+        target_fields = [Const.TARGET]
+
+        data_bundle.set_input(*input_fields)
+        data_bundle.set_target(*target_fields)
+
+        return data_bundle
+
+    def process_for_bert(self, data_bundle:DataBundle, used_for_bert = True):
+        """
+        可处理的DataSet应具备以下的field:
+
+        .. csv-table::
+            :header: "raw_chars1", "raw_chars2", "target"
+
+            "不是邀请的如何贷款？", "我不是你们邀请的客人可以贷款吗？", "1"
+            "如何满足微粒银行的审核", "建设银行有微粒贷的资格吗", "0"
+            "...", "...", "..."
+
+        :param data_bundle:
+        :return:
+        """
+        # clean,lower
+
+        #CWS(tokenize)
+        data_bundle = self._tokenize(data_bundle, field_name='raw_chars1', new_field_name='chars1')
+        data_bundle = self._tokenize(data_bundle, field_name='raw_chars2', new_field_name='chars2')
+        input_field_names = [Const.CHAR_INPUT + '1', Const.CHAR_INPUT + '2']
+
+        #add length
+        for name, dataset in data_bundle.datasets.items():
+            dataset.add_seq_len(field_name = 'chars1', new_field_name = "seq_len1")
+            dataset.add_seq_len(field_name = 'chars2', new_field_name = 'seq_len2')
+
+        # (used for bert) cat, truncate(length after concatenation is supposed to be less than 430)
+        for name, dataset in data_bundle.datasets.items():
+            dataset.apply_field(self.truncate_sentence, field_name='chars1')
+            dataset.apply_field(self.truncate_sentence, field_name='chars2')
+
+        # (used for bert)
+        for name, dataset in data_bundle.datasets.items():
+            dataset.apply(lambda ins:ins['chars1'] + ['[SEP]'] + ins['chars2'], new_field_name = 'chars')
+        input_field_names = input_field_names + ['chars']
+
+        #n-grams
+        if self.bigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT+'1', new_field_name='bigrams1')
+            input_field_names.append('bigrams1')
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT+'2', new_field_name='bigrams2')
+            input_field_names.append('bigrams2')
+        if self.trigrams:
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT+'1', new_field_name='trigrams1')
+            input_field_names.append('trigrams1')
+            for name, dataset in data_bundle.iter_datasets():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT+'2', new_field_name='trigrams2')
+            input_field_names.append('trigrams2')
+
+        #index
+        data_bundle = self._indexize(data_bundle, field_name = 'chars')
+
+        input_fields = [Const.TARGET, 'seq_len1', 'seq_len2'] + input_field_names
+        target_fields = [Const.TARGET]
+
+        data_bundle.set_input(*input_fields)
+        data_bundle.set_target(*target_fields)
+
+        return data_bundle
+
+    def process_from_file(self, paths = None, used_for_bert = False):
+        """
+        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
+        :return: DataBundle
+        """
+        data_loader = BQCorpusLoader()
+        data_bundle = data_loader.load(paths)
+        if not used_for_bert:
+            data_bundle = self.process(data_bundle)
+        else:
+            data_bundle = self.process_for_bert(data_bundle)
         return data_bundle
