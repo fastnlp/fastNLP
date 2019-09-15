@@ -7,7 +7,12 @@ __all__ = [
     "IMDBLoader",
     "SSTLoader",
     "SST2Loader",
-    "ChnSentiCorpLoader"
+    "ChnSentiCorpLoader",
+    "BQCorpusLoader",
+    "LCQMCLoader",
+    "THUCNewsLoader",
+    "WeiboSenti100kLoader",
+    "XNLILoader"
 ]
 
 import glob
@@ -397,3 +402,200 @@ class ChnSentiCorpLoader(Loader):
         """
         output_dir = self._get_dataset_path('chn-senti-corp')
         return output_dir
+
+class LCQMCLoader(Loader):
+    """
+    别名：
+    数据集简介：句对匹配（question matching）
+    原始数据为：
+    '喜欢打篮球的男生喜欢什么样的女生\t爱打篮球的男生喜欢什么样的女生\t1\n'
+    '晚上睡觉带着耳机听音乐有什么害处吗？\t孕妇可以戴耳机听音乐吗?\t0\n'
+    读取后的Dataset将具有以下的数据结构：
+
+    .. csv-table::
+       :header: "raw_chars1", "raw_chars2", "target"
+       "喜欢打篮球的男生喜欢什么样的女生？", "爱打篮球的男生喜欢什么样的女生？", "1"
+       "晚上睡觉带着耳机听音乐有什么害处吗？", "妇可以戴耳机听音乐吗?", "0"
+       ""...", "...", "..."
+
+    """
+    def __init__(self):
+        super(LCQMCLoader, self).__init__()
+
+    def _load(self, path:str = None):
+        ds = DataSet()
+        with open(path, 'r', encoding = 'utf-8') as f:
+            for line in f:
+                line = line.strip()
+                line_segments = line.split('\t')
+                assert len(line_segments)==3
+
+                target = line_segments[-1]
+
+                raw_chars1 = line_segments[0]
+                raw_chars2 = line_segments[1]
+
+                if raw_chars1:
+                    ds.append(Instance(raw_chars1 = raw_chars1, raw_chars2 = raw_chars2, target = target))
+        return ds
+
+    '''
+    def download(self)->str:
+        """
+        自动下载数据，该数据取自论文 LCQMC: A Large-scale Chinese Question Matching Corpus.
+        InProceedings of the 27thInternational Conference on Computational Linguistics. 1952–1962.
+
+        :return:
+        """
+        output_dir = self._get_dataset_path('chn-senti-corp')
+        return output_dir
+    '''
+
+class THUCNewsLoader(Loader):
+    """
+    别名：
+    数据集简介：document-level分类任务，新闻10分类
+    原始数据内容为：每行一个sample，第一个'\t'之前为target，第一个'\t'之后为raw_words
+    读取后的Dataset将具有以下数据结构：
+
+    .. csv-table::
+       :header: "raw_words", "target"
+       "马晓旭意外受伤让国奥警惕 无奈大雨格外青睐殷家军记者傅亚雨沈阳报道 ... ", "体育"
+       "...", "..."
+
+    """
+    def __init__(self):
+        super(THUCNewsLoader, self).__init__()
+
+    def _load(self, path:str = None):
+        ds = DataSet()
+        with open(path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                sep_index = line.index('\t')
+                raw_chars = line[sep_index+1:]
+                target = line[:sep_index]
+                if raw_chars:
+                    ds.append(Instance(raw_chars = raw_chars, target = target))
+        return ds
+
+class WeiboSenti100kLoader(Loader):
+    """
+    别名：
+    数据集简介：微博sentiment classification，二分类
+    原始数据内容为：
+    label   text
+    0   六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]
+    1   听过一场！笑死了昂，一听茄子脱口秀，从此节操是路人！[嘻嘻] //@中国梦网官微:@Pencil彭赛 @茄子脱口秀 [圣诞帽][圣诞树][平安果]
+    读取后的Dataset将具有以下数据结构：
+
+    .. csv-table::
+       :header: "raw_chars", "target"
+       "六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]", "0"
+       "...", "..."
+
+    """
+    def __init__(self):
+        super(WeiboSenti100kLoader, self).__init__()
+
+    def _load(self, path:str = None):
+        ds = DataSet()
+        with open(path, 'r', encoding= 'utf-8') as f:
+            next(f)
+            for line in f:
+                line = line.strip()
+                target = line[0]
+                raw_chars = line[1:]
+                if raw_chars:
+                    ds.append(Instance(raw_chars = raw_chars, target = target))
+        return ds
+
+from .csv import CSVLoader
+from ..utils import check_loader_paths
+from ..data_bundle import DataBundle
+from typing import Union, Dict
+class XNLILoader(Loader):
+    """
+    别名：
+    数据集简介：中文句对NLI（本为multi-lingual的数据集，但是这里只取了中文的数据集）。原句子已被MOSES tokenizer处理
+    原始数据为：
+    train中的数据包括premise，hypo和label三个field
+    dev和test中的数据为csv或json格式，包括十多个field，这里只取与以上三个field中的数据
+    读取后的Dataset将具有以下数据结构：
+
+    .. csv-table::
+       :header: "raw_chars1", "raw_chars2", "target"
+       "从概念上看,奶油收入有两个基本方面产品和地理.", "产品和地理是什么使奶油抹霜工作.", "1"
+       ""...", "...", "..."
+
+    """
+    def __init__(self):
+        super(XNLILoader, self).__init__()
+
+    def _load(self, path:str = None):
+        csv_loader = CSVLoader(sep = '\t')
+        ds_all = csv_loader._load(path)
+        ds_zh = DataSet()
+        for i in ds_all:
+            if i['language'] == 'zh':
+                ds_zh.append(Instance(raw_chars1 = i['sentence1'], raw_chars2 = i['sentence2'], target = i['gold_label']))
+
+        return ds_zh
+
+    def _load_train(self, path:str = None):
+        csv_loader = CSVLoader(sep = '\t')
+        ds = csv_loader._load(path)
+        ds.rename_field('label', 'target')
+        ds.rename_field('premise', 'raw_chars1')
+        ds.rename_field('hypo', 'raw_chars2')
+        ds.apply(lambda i: "".join(i['raw_chars1'].split()), new_field_name='raw_chars1')
+        ds.apply(lambda i: "".join(i['raw_chars2'].split()), new_field_name='raw_chars2')
+        return ds
+
+    def load(self, paths: Union[str, Dict[str, str]] = None) -> DataBundle:
+        if paths is None:
+            paths = self.download()
+        paths = check_loader_paths(paths)
+        datasets = {}
+        for name, path in paths.items():
+            if name == 'train':
+                datasets[name] = self._load_train(path)
+            else:
+                datasets[name] = self._load(path)
+
+        data_bundle = DataBundle(datasets=datasets)
+        return data_bundle
+
+class BQCorpusLoader(Loader):
+    """
+    别名：
+    数据集简介:句子对二分类任务（判断是否具有相同的语义）
+    原始数据内容为：
+    每行一个sample，第一个','之前为text1，第二个','之前为text2，第二个','之后为target
+    第一行为sentence1 sentence2 label
+    读取后的Dataset将具有以下数据结构：
+
+    .. csv-table::
+       :header: "raw_chars1", "raw_chars2", "target"
+       "不是邀请的如何贷款？", "我不是你们邀请的客人可以贷款吗？", "1"
+       "如何满足微粒银行的审核", "建设银行有微粒贷的资格吗", "0"
+       "...", "...", "..."
+
+    """
+    def __init__(self):
+        super(BQCorpusLoader, self).__init__()
+
+    def _load(self, path:str = None):
+        ds = DataSet()
+        with open(path, 'r', encoding='utf-8') as f:
+            next(f)
+            for line in f:
+                line = line.strip()
+                target = line[-1]
+                sep_index = line.index(',')
+                raw_chars1 = line[:sep_index]
+                raw_chars2 = line[sep_index+1:]
+
+                if raw_chars1:
+                    ds.append(Instance(raw_chars1 = raw_chars1, raw_chars2 = raw_chars2, target = target))
+        return ds
