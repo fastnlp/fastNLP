@@ -38,8 +38,10 @@ class _NERPipe(Pipe):
         """
         if encoding_type == 'bio':
             self.convert_tag = iob2
-        else:
+        elif encoding_type == 'bioes':
             self.convert_tag = lambda words: iob2bioes(iob2(words))
+        else:
+            raise ValueError("encoding_type only supports `bio` and `bioes`.")
         self.lower = lower
     
     def process(self, data_bundle: DataBundle) -> DataBundle:
@@ -132,12 +134,16 @@ class Conll2003Pipe(Pipe):
         """
         if chunk_encoding_type == 'bio':
             self.chunk_convert_tag = iob2
-        else:
+        elif chunk_encoding_type == 'bioes':
             self.chunk_convert_tag = lambda tags: iob2bioes(iob2(tags))
+        else:
+            raise ValueError("chunk_encoding_type only supports `bio` and `bioes`.")
         if ner_encoding_type == 'bio':
             self.ner_convert_tag = iob2
-        else:
+        elif ner_encoding_type == 'bioes':
             self.ner_convert_tag = lambda tags: iob2bioes(iob2(tags))
+        else:
+            raise ValueError("ner_encoding_type only supports `bio` and `bioes`.")
         self.lower = lower
     
     def process(self, data_bundle) -> DataBundle:
@@ -236,8 +242,10 @@ class _CNNERPipe(Pipe):
         """
         if encoding_type == 'bio':
             self.convert_tag = iob2
-        else:
+        elif encoding_type == 'bioes':
             self.convert_tag = lambda words: iob2bioes(iob2(words))
+        else:
+            raise ValueError("encoding_type only supports `bio` and `bioes`.")
 
         self.bigrams = bigrams
         self.trigrams = trigrams
