@@ -7,7 +7,9 @@ __all__ = [
     "IMDBLoader",
     "SSTLoader",
     "SST2Loader",
-    "ChnSentiCorpLoader"
+    "ChnSentiCorpLoader",
+    "THUCNewsLoader",
+    "WeiboSenti100kLoader"
 ]
 
 import glob
@@ -27,7 +29,7 @@ class YelpLoader(Loader):
     原始数据中内容应该为, 每一行为一个sample，第一个逗号之前为target，第一个逗号之后为文本内容。
 
     Example::
-    
+
         "1","I got 'new' tires from the..."
         "1","Don't waste your time..."
 
@@ -42,10 +44,10 @@ class YelpLoader(Loader):
        "...", "..."
 
     """
-    
+
     def __init__(self):
         super(YelpLoader, self).__init__()
-    
+
     def _load(self, path: str = None):
         ds = DataSet()
         with open(path, 'r', encoding='utf-8') as f:
@@ -83,7 +85,7 @@ class YelpFullLoader(YelpLoader):
         :param bool re_download: 是否重新下载数据，以重新切分数据。
         :return: str, 数据集的目录地址
         """
-        
+
         dataset_name = 'yelp-review-full'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
         modify_time = 0
@@ -93,7 +95,7 @@ class YelpFullLoader(YelpLoader):
         if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
             shutil.rmtree(data_dir)
             data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        
+
         if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
@@ -111,7 +113,7 @@ class YelpFullLoader(YelpLoader):
                 finally:
                     if os.path.exists(os.path.join(data_dir, 'middle_file.csv')):
                         os.remove(os.path.join(data_dir, 'middle_file.csv'))
-        
+
         return data_dir
 
 
@@ -138,7 +140,7 @@ class YelpPolarityLoader(YelpLoader):
         if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
             shutil.rmtree(data_dir)
             data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        
+
         if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
@@ -156,7 +158,7 @@ class YelpPolarityLoader(YelpLoader):
                 finally:
                     if os.path.exists(os.path.join(data_dir, 'middle_file.csv')):
                         os.remove(os.path.join(data_dir, 'middle_file.csv'))
-        
+
         return data_dir
 
 
@@ -173,10 +175,10 @@ class IMDBLoader(Loader):
        "...", "..."
 
     """
-    
+
     def __init__(self):
         super(IMDBLoader, self).__init__()
-    
+
     def _load(self, path: str):
         dataset = DataSet()
         with open(path, 'r', encoding="utf-8") as f:
@@ -189,12 +191,12 @@ class IMDBLoader(Loader):
                 words = parts[1]
                 if words:
                     dataset.append(Instance(raw_words=words, target=target))
-        
+
         if len(dataset) == 0:
             raise RuntimeError(f"{path} has no valid data.")
-        
+
         return dataset
-    
+
     def download(self, dev_ratio: float = 0.1, re_download=False):
         """
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
@@ -216,7 +218,7 @@ class IMDBLoader(Loader):
         if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
             shutil.rmtree(data_dir)
             data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        
+
         if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
@@ -234,7 +236,7 @@ class IMDBLoader(Loader):
                 finally:
                     if os.path.exists(os.path.join(data_dir, 'middle_file.txt')):
                         os.remove(os.path.join(data_dir, 'middle_file.txt'))
-        
+
         return data_dir
 
 
@@ -252,10 +254,10 @@ class SSTLoader(Loader):
     raw_words列是str。
 
     """
-    
+
     def __init__(self):
         super().__init__()
-    
+
     def _load(self, path: str):
         """
         从path读取SST文件
@@ -270,7 +272,7 @@ class SSTLoader(Loader):
                 if line:
                     ds.append(Instance(raw_words=line))
         return ds
-    
+
     def download(self):
         """
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
@@ -297,10 +299,10 @@ class SST2Loader(Loader):
 
     test的DataSet没有target列。
     """
-    
+
     def __init__(self):
         super().__init__()
-    
+
     def _load(self, path: str):
         """
         从path读取SST2文件
@@ -309,7 +311,7 @@ class SST2Loader(Loader):
         :return: DataSet
         """
         ds = DataSet()
-        
+
         with open(path, 'r', encoding='utf-8') as f:
             f.readline()  # 跳过header
             if 'test' in os.path.split(path)[1]:
@@ -330,7 +332,7 @@ class SST2Loader(Loader):
                         if raw_words:
                             ds.append(Instance(raw_words=raw_words, target=target))
         return ds
-    
+
     def download(self):
         """
         自动下载数据集，如果你使用了该数据集，请引用以下的文章
@@ -365,10 +367,11 @@ class ChnSentiCorpLoader(Loader):
         "..."
 
     """
+
     def __init__(self):
         super().__init__()
 
-    def _load(self, path:str):
+    def _load(self, path: str):
         """
         从path中读取数据
 
@@ -381,14 +384,14 @@ class ChnSentiCorpLoader(Loader):
             for line in f:
                 line = line.strip()
                 tab_index = line.index('\t')
-                if tab_index!=-1:
+                if tab_index != -1:
                     target = line[:tab_index]
-                    raw_chars = line[tab_index+1:]
+                    raw_chars = line[tab_index + 1:]
                     if raw_chars:
                         ds.append(Instance(raw_chars=raw_chars, target=target))
         return ds
 
-    def download(self)->str:
+    def download(self) -> str:
         """
         自动下载数据，该数据取自https://github.com/pengming617/bert_classification/tree/master/data，在
         https://arxiv.org/pdf/1904.09223.pdf与https://arxiv.org/pdf/1906.08101.pdf有使用
@@ -397,3 +400,66 @@ class ChnSentiCorpLoader(Loader):
         """
         output_dir = self._get_dataset_path('chn-senti-corp')
         return output_dir
+
+
+class THUCNewsLoader(Loader):
+    """
+    别名：
+    数据集简介：document-level分类任务，新闻10分类
+    原始数据内容为：每行一个sample，第一个'\t'之前为target，第一个'\t'之后为raw_words
+    读取后的Dataset将具有以下数据结构：
+
+    .. csv-table::
+       :header: "raw_words", "target"
+       "马晓旭意外受伤让国奥警惕 无奈大雨格外青睐殷家军记者傅亚雨沈阳报道 ... ", "体育"
+       "...", "..."
+
+    """
+
+    def __init__(self):
+        super(THUCNewsLoader, self).__init__()
+
+    def _load(self, path: str = None):
+        ds = DataSet()
+        with open(path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                sep_index = line.index('\t')
+                raw_chars = line[sep_index + 1:]
+                target = line[:sep_index]
+                if raw_chars:
+                    ds.append(Instance(raw_chars=raw_chars, target=target))
+        return ds
+
+
+class WeiboSenti100kLoader(Loader):
+    """
+    别名：
+    数据集简介：微博sentiment classification，二分类
+    原始数据内容为：
+    label   text
+    0   六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]
+    1   听过一场！笑死了昂，一听茄子脱口秀，从此节操是路人！[嘻嘻] //@中国梦网官微:@Pencil彭赛 @茄子脱口秀 [圣诞帽][圣诞树][平安果]
+    读取后的Dataset将具有以下数据结构：
+
+    .. csv-table::
+       :header: "raw_chars", "target"
+       "六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]", "0"
+       "...", "..."
+
+    """
+
+    def __init__(self):
+        super(WeiboSenti100kLoader, self).__init__()
+
+    def _load(self, path: str = None):
+        ds = DataSet()
+        with open(path, 'r', encoding='utf-8') as f:
+            next(f)
+            for line in f:
+                line = line.strip()
+                target = line[0]
+                raw_chars = line[1:]
+                if raw_chars:
+                    ds.append(Instance(raw_chars=raw_chars, target=target))
+        return ds
