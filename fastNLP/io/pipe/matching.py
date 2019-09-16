@@ -51,7 +51,7 @@ class MatchingBertPipe(Pipe):
         super().__init__()
         
         self.lower = bool(lower)
-        self.tokenizer = get_tokenizer(tokenizer=tokenizer)
+        self.tokenizer = get_tokenizer(tokenize_method=tokenizer)
     
     def _tokenize(self, data_bundle, field_names, new_field_names):
         """
@@ -191,7 +191,7 @@ class MatchingPipe(Pipe):
         super().__init__()
         
         self.lower = bool(lower)
-        self.tokenizer = get_tokenizer(tokenizer=tokenizer)
+        self.tokenizer = get_tokenizer(tokenize_method=tokenizer)
     
     def _tokenize(self, data_bundle, field_names, new_field_names):
         """

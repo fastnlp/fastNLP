@@ -1,6 +1,5 @@
-"""
-.. todo::
-    doc
+r"""
+fastNLP包当中的field命名均符合一定的规范，该规范由fastNLP.Const类进行定义。
 """
 
 __all__ = [
@@ -50,11 +49,13 @@ class Const:
     
     @staticmethod
     def RAW_WORDS(i):
+        """得到第 i 个 ``RAW_WORDS`` 的命名"""
         i = int(i) + 1
         return Const.RAW_WORD + str(i)
     
     @staticmethod
     def RAW_CHARS(i):
+        """得到第 i 个 ``RAW_CHARS`` 的命名"""
         i = int(i) + 1
         return Const.RAW_CHAR + str(i)
     

@@ -65,25 +65,34 @@ def iob2bioes(tags: List[str]) -> List[str]:
     return new_tags
 
 
-def get_tokenizer(tokenizer: str, lang='en'):
+def get_tokenizer(tokenize_method: str, lang='en'):
     """
 
-    :param str tokenizer: 获取tokenzier方法
+    :param str tokenize_method: 获取tokenzier方法
     :param str lang: 语言，当前仅支持en
     :return: 返回tokenize函数
     """
-    if tokenizer == 'spacy':
+    tokenizer_dict = {
+        'spacy': None,
+        'raw': _raw_split,
+        'cn-char': _cn_char_split,
+    }
+    if tokenize_method == 'spacy':
         import spacy
         spacy.prefer_gpu()
         if lang != 'en':
             raise RuntimeError("Spacy only supports en right right.")
         en = spacy.load(lang)
         tokenizer = lambda x: [w.text for w in en.tokenizer(x)]
-    elif tokenizer == 'raw':
-        tokenizer = _raw_split
+    elif tokenize_method in tokenizer_dict:
+        tokenizer = tokenizer_dict[tokenize_method]
     else:
-        raise RuntimeError("Only support `spacy`, `raw` tokenizer.")
+        raise RuntimeError(f"Only support {tokenizer_dict.keys()} tokenizer.")
     return tokenizer
+
+
+def _cn_char_split(sent):
+    return [chars for chars in sent]
 
 
 def _raw_split(sent):
