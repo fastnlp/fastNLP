@@ -2,7 +2,7 @@
 使用Loader和Pipe加载并处理数据集
 =======================================
 
-这一部分是一个关于如何加载数据集的教程
+这一部分是关于如何加载数据集的教程
 
 教程目录：
 
@@ -18,26 +18,26 @@ Part I: 数据集容器DataBundle
 ------------------------------------
 
 而由于对于同一个任务，训练集，验证集和测试集会共用同一个词表以及具有相同的目标值，所以在fastNLP中我们使用了 :class:`~fastNLP.io.DataBundle`
-来承载同一个任务的多个数据集 :class:`~fastNLP.DataSet` 以及它们的词表 :class:`~fastNLP.Vocabulary`。下面会有例子介绍 :class:`~fastNLP.io.DataBundle`
+来承载同一个任务的多个数据集 :class:`~fastNLP.DataSet` 以及它们的词表 :class:`~fastNLP.Vocabulary` 。下面会有例子介绍 :class:`~fastNLP.io.DataBundle`
 的相关使用。
 
-:class:`~fastNLP.io.DataBundle` 在fastNLP中主要在各个 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 中被使用。
-下面我们将先介绍一下 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` , 之后我们将给出相应的例子。
+ :class:`~fastNLP.io.DataBundle` 在fastNLP中主要在各个 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 中被使用。
+下面我们先介绍一下 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 。
 
 -------------------------------------
 Part II: 加载的各种数据集的Loader
 -------------------------------------
 
-在fastNLP中，所有的数据Loader都可以通过其文档判断其支持读取的数据格式，以及读取之后返回的 :class:`~fastNLP.DataSet` 的格式。例如
-\ref 加个引用。
+在fastNLP中，所有的 :class:`~fastNLP.io.Loader` 都可以通过其文档判断其支持读取的数据格式，以及读取之后返回的 :class:`~fastNLP.DataSet` 的格式,
+例如 :class:`~fastNLP.io.ChnSentiCorpLoader` 。
 
-    - download 函数：自动将该数据集下载到缓存地址，默认缓存地址为~/.fastNLP/datasets/。由于版权等原因，不是所有的Loader都实现了该方法。该方法会返回下载后文件所处的缓存地址。可以查看对应Loader的download的方法的文档来判断该Loader加载的数据。
-    - _load 函数：从一个数据文件中读取数据，返回一个 :class:`~fastNLP.DataSet` 。返回的DataSet的格式可从Loader文档判断。
-    - load 函数：从文件或者文件夹中读取数据并组装成 :class:`~fastNLP.io.DataBundle`。支持接受的参数类型有以下的几种
+    - **download()** 函数：自动将该数据集下载到缓存地址，默认缓存地址为~/.fastNLP/datasets/。由于版权等原因，不是所有的Loader都实现了该方法。该方法会返回下载后文件所处的缓存地址。
+    - **_load()** 函数：从一个数据文件中读取数据，返回一个 :class:`~fastNLP.DataSet` 。返回的DataSet的格式可从Loader文档判断。
+    - **load()** 函数：从文件或者文件夹中读取数据为 :class:`~fastNLP.DataSet` 并将它们组装成 :class:`~fastNLP.io.DataBundle`。支持接受的参数类型有以下的几种
 
         - None, 将尝试读取自动缓存的数据，仅支持提供了自动下载数据的Loader
-        - 文件夹路径, 默认将尝试在该路径下匹配文件名中含有 `train` , `test` , `dev` 的python文件，如果有多个文件含有这相同的关键字，将无法通过该方式读取
-        - dict, 例如{'train':"/path/to/tr.conll", 'dev':"/to/validate.conll", "test":"/to/te.conll"}
+        - 文件夹路径, 默认将尝试在该文件夹下匹配文件名中含有 `train` , `test` , `dev` 的文件，如果有多个文件含有相同的关键字，将无法通过该方式读取
+        - dict, 例如{'train':"/path/to/tr.conll", 'dev':"/to/validate.conll", "test":"/to/te.conll"}。
 
 .. code-block:: python
 
@@ -56,9 +56,9 @@ Part II: 加载的各种数据集的Loader
 
 这里表示一共有3个数据集。其中：
 
-    - 3个数据集分别为train、dev、test数据集，分别有17223、1831、1944个instance
+    - 3个数据集的名称分别为train、dev、test，分别有17223、1831、1944个instance
 
-也可以取出DataSet并DataSet中的具体内容
+也可以取出DataSet，并打印DataSet中的具体内容
 
 .. code-block:: python
 
@@ -77,21 +77,22 @@ Part II: 加载的各种数据集的Loader
 ------------------------------------------
 Part III: 使用Pipe对数据集进行预处理
 ------------------------------------------
-通过:class:`~fastNLP.io.Loader` 可以将文本数据读入，但并不能直接被神经网络使用，还需要进行一定的预处理。
+通过 :class:`~fastNLP.io.Loader` 可以将文本数据读入，但并不能直接被神经网络使用，还需要进行一定的预处理。
 
-在fastNLP中，我们使用 :class:`~fastNLP.io.Pipe`的子类作为数据预处理的类，Pipe和Loader一般具备一一对应的关系，该关系可以从其名称判断，
+在fastNLP中，我们使用 :class:`~fastNLP.io.Pipe` 的子类作为数据预处理的类， :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 一般具备一一对应的关系，该关系可以从其名称判断，
 例如 :class:`~fastNLP.io.CWSLoader` 与 :class:`~fastNLP.io.CWSPipe` 是一一对应的。一般情况下Pipe处理包含以下的几个过程，(1)将raw_words或
 raw_chars进行tokenize以切分成不同的词或字; (2) 再建立词或字的 :class:`~fastNLP.Vocabulary` , 并将词或字转换为index; (3)将target
 列建立词表并将target列转为index;
 
-所有的Pipe都可通过其文档查看通过该Pipe之后DataSet中的field的情况; 如 \ref{TODO 添加对例子的引用}
+所有的Pipe都可通过其文档查看该Pipe支持处理的 :class:`~fastNLP.DataSet` 以及返回的 :class:`~fastNLP.io.DataSet` 中的field的情况;
+如 :class:`~fastNLP.io.`
 
 各种数据集的Pipe当中，都包含了以下的两个函数:
 
-    - process 函数：对输入的 :class:`~fastNLP.io.DataBundle` 进行处理, 然后返回处理之后的 :class:`~fastNLP.io.DataBundle` 。process函数的文档中包含了该Pipe支持处理的DataSet的格式。
-    - process_from_file 函数：输入数据集所在文件夹，使用对应的Loader读取数据(所以该函数支持的参数类型是由于其对应的Loader的load函数决定的)，然后调用相对应的process函数对数据进行预处理。相当于是把Load和process放在一个函数中执行。
+    - process() 函数：对输入的 :class:`~fastNLP.io.DataBundle` 进行处理, 然后返回处理之后的 :class:`~fastNLP.io.DataBundle` 。process函数的文档中包含了该Pipe支持处理的DataSet的格式。
+    - process_from_file() 函数：输入数据集所在文件夹，使用对应的Loader读取数据(所以该函数支持的参数类型是由于其对应的Loader的load函数决定的)，然后调用相对应的process函数对数据进行预处理。相当于是把Load和process放在一个函数中执行。
 
-接着上面CWSLoader的例子，我们展示一下CWSPipe的功能：
+接着上面 :class:`~fastNLP.io.CWSLoader` 的例子，我们展示一下 :class:`~fastNLP.io.CWSPipe` 的功能：
 
 .. code-block:: python
 
@@ -112,8 +113,8 @@ raw_chars进行tokenize以切分成不同的词或字; (2) 再建立词或字的
 
 表示一共有3个数据集和2个词表。其中：
 
-    - 3个数据集分别为train、dev、test数据集，分别有17223、1831、1944个instance
-    - 2个词表分别为chars词表与target词表。其中chars词表为句子文本所构建的词表，一共有4777个字；target词表为目标标签所构建的词表，一共有4种标签。
+    - 3个数据集的名称分别为train、dev、test，分别有17223、1831、1944个instance
+    - 2个词表分别为chars词表与target词表。其中chars词表为句子文本所构建的词表，一共有4777个不同的字；target词表为目标标签所构建的词表，一共有4种标签。
 
 相较于之前CWSLoader读取的DataBundle，新增了两个Vocabulary。 我们可以打印一下处理之后的DataSet
 
@@ -147,9 +148,8 @@ raw_chars进行tokenize以切分成不同的词或字; (2) 再建立词或字的
 Part IV: fastNLP封装好的Loader和Pipe
 ------------------------------------------
 
-fastNLP封装了多种任务/数据集的Loader和Pipe并提供自动下载功能，具体参见文档
-
-`fastNLP可加载数据集 <https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0>`_
+fastNLP封装了多种任务/数据集的 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 并提供自动下载功能，具体参见文档
+`数据集 <https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0>`_
 
 --------------------------------------------------------
 Part V: 不同格式类型的基础Loader
@@ -165,12 +165,12 @@ Part V: 不同格式类型的基础Loader
         data_set_loader = CSVLoader(
             headers=('raw_words', 'target'), sep='\t'
         )
-        # 表示将CSV文件中每一行的第一项填入'words' field，第二项填入'target' field。
+        # 表示将CSV文件中每一行的第一项将填入'raw_words' field，第二项填入'target' field。
         # 其中项之间由'\t'分割开来
 
         data_set = data_set_loader._load('path/to/your/file')
 
-    数据集内容样例如下 ::
+    文件内容样例如下 ::
 
         But it does not leave you with much .	1
         You could hate it for the same reason .	1

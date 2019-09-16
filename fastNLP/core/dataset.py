@@ -480,6 +480,7 @@ class DataSet(object):
             for field in fields:
                 table.add_row(field)
             logger.info(table)
+            return table
 
     def append(self, instance):
         """

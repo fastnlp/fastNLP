@@ -19,10 +19,10 @@ Vocabulary
     vocab.to_index('我')  # 会输出1，Vocabulary中默认pad的index为0, unk(没有找到的词)的index为1
 
     #  在构建target的Vocabulary时，词表中应该用不上pad和unk，可以通过以下的初始化
-    vocab = Vocabulary(unknown=None, pad=None)
+    vocab = Vocabulary(unknown=None, padding=None)
     vocab.add_word_lst(['positive', 'negative'])
     vocab.to_index('positive')  # 输出0
-    vocab.to_index('neutral')  # 会报错
+    vocab.to_index('neutral')  # 会报错，因为没有unk这种情况
 
 除了通过以上的方式建立词表，Vocabulary还可以通过使用下面的函数直从 :class:`~fastNLP.DataSet` 中的某一列建立词表以及将该列转换为index
 
@@ -86,7 +86,7 @@ Vocabulary
     vocab.from_dataset(tr_data, field_name='chars', no_create_entry_dataset=[dev_data])
 
 
-:class:`~fastNLP.Vocabulary` 中的 `no_create_entry` , 建议在添加来自于测试集和验证集的词的时候将该参数置为True, 或将验证集和测试集
+ :class:`~fastNLP.Vocabulary` 中的 `no_create_entry` , 建议在添加来自于测试集和验证集的词的时候将该参数置为True, 或将验证集和测试集
 传入 `no_create_entry_dataset` 参数。它们的意义是在接下来的模型会使用pretrain的embedding(包括glove, word2vec, elmo与bert)且会finetune的
 情况下，如果仅使用来自于train的数据建立vocabulary，会导致只出现在test与dev中的词语无法充分利用到来自于预训练embedding的信息(因为他们
 会被认为是unk)，所以在建立词表的时候将test与dev考虑进来会使得最终的结果更好。通过与fastNLP中的各种Embedding配合使用，会有如下的效果，
@@ -96,7 +96,7 @@ Vocabulary
 果找到了，就使用该表示; 如果没有找到，则认为该词的表示应该为unk的表示。
 
 下面我们结合部分 :class:`~fastNLP.embeddings.StaticEmbedding` 的例子来说明下该值造成的影响，如果您对
-:class:`~fastNLP.embeddings.StaticEmbedding` 不太了解，您可以先参考 :doc:`tutorial_3_embedding` 部分再来阅读该部分
+ :class:`~fastNLP.embeddings.StaticEmbedding` 不太了解，您可以先参考 :doc:`使用Embedding模块将文本转成向量 </tutorials/tutorial_3_embedding>` 部分再来阅读该部分
 
 .. code-block:: python
 
@@ -108,7 +108,7 @@ Vocabulary
     vocab.add_word('train')
     vocab.add_word('only_in_train')  # 仅在train出现，但肯定在预训练词表中不存在
     vocab.add_word('test', no_create_entry=True)  # 该词只在dev或test中出现
-    vocab.add_word('only_in_test', no_create_entry=True)  # 这个词肯定在预训练中找不到
+    vocab.add_word('only_in_test', no_create_entry=True)  # 这个词在预训练的词表中找不到
 
     embed = StaticEmbedding(vocab, model_dir_or_name='en-glove-6b-50d')
     print(embed(torch.LongTensor([vocab.to_index('train')])))
@@ -119,12 +119,12 @@ Vocabulary
 
 输出结果(只截取了部分vector)::
 
-    tensor([[ 0.9497,  0.3433,  0.8450, -0.8852, ...]], grad_fn=<EmbeddingBackward>)  # train
-    tensor([[ 0.0540, -0.0557, -0.0514, -0.1688, ...]], grad_fn=<EmbeddingBackward>)  # only_in_train
-    tensor([[ 0.1318, -0.2552, -0.0679,  0.2619, ...]], grad_fn=<EmbeddingBackward>)  # test
-    tensor([[0., 0., 0., 0., 0., ...]], grad_fn=<EmbeddingBackward>)   # only_in_test
-    tensor([[0., 0., 0., 0., 0., ...]], grad_fn=<EmbeddingBackward>)   # unk
+    tensor([[ 0.9497,  0.3433,  0.8450, -0.8852, ...]], grad_fn=<EmbeddingBackward>)  # train，en-glove-6b-50d，找到了该词
+    tensor([[ 0.0540, -0.0557, -0.0514, -0.1688, ...]], grad_fn=<EmbeddingBackward>)  # only_in_train，en-glove-6b-50d，使用了随机初始化
+    tensor([[ 0.1318, -0.2552, -0.0679,  0.2619, ...]], grad_fn=<EmbeddingBackward>)  # test，在en-glove-6b-50d中找到了这个词
+    tensor([[0., 0., 0., 0., 0., ...]], grad_fn=<EmbeddingBackward>)   # only_in_test, en-glove-6b-50d中找不到这个词，使用unk的vector
+    tensor([[0., 0., 0., 0., 0., ...]], grad_fn=<EmbeddingBackward>)   # unk，使用zero初始化
 
 首先train和test都能够从预训练中找到对应的vector，所以它们是各自的vector表示; only_in_train在预训练中找不到，StaticEmbedding为它
-新建了一个entry，所以它有一个单独的vector; 而only_in_dev在预训练中找不到被指向了unk的值(fastNLP用零向量初始化unk)，与最后一行unk的
+新建了一个entry，所以它有一个单独的vector; 而only_in_test在预训练中找不到改词，因此被指向了unk的值(fastNLP用零向量初始化unk)，与最后一行unk的
 表示相同。

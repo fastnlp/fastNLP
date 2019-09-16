@@ -287,7 +287,7 @@ class SST2Loader(Loader):
     数据SST2的Loader
     读取之后DataSet将如下所示
 
-    .. csv-table:: 下面是使用SSTLoader读取的DataSet所具备的field
+    .. csv-table::
         :header: "raw_words", "target"
 
         "it 's a charming and often affecting...", "1"
@@ -345,7 +345,7 @@ class SST2Loader(Loader):
 class ChnSentiCorpLoader(Loader):
     """
     支持读取的数据的格式为，第一行为标题(具体内容会被忽略)，之后一行为一个sample，第一个制表符之前被认为是label，第
-    一个制表符及之后认为是句子
+    一个制表符之后认为是句子
 
     Example::
 
