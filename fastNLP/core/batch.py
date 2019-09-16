@@ -201,19 +201,6 @@ class TorchLoaderIter(BatchIter):
         self.batch_size = dataset.batch_size
 
 
-class OnlineDataGettter:
-    # TODO
-    pass
-
-
-class OnlineDataIter(BatchIter):
-    # TODO
-    def __init__(self, dataset, batch_size=1, buffer_size=10000, sampler=None, as_numpy=False,
-                 num_workers=0, pin_memory=False, drop_last=False,
-                 timeout=0, worker_init_fn=None, **kwargs):
-        super().__init__()
-
-
 def _to_tensor(batch, field_dtype):
     """
 
