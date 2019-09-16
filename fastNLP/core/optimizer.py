@@ -33,8 +33,9 @@ class Optimizer(object):
     
     def construct_from_pytorch(self, model_params):
         raise NotImplementedError
-    
-    def _get_require_grads_param(self, params):
+
+    @staticmethod
+    def _get_require_grads_param(params):
         """
         将params中不需要gradient的删除
         
@@ -42,6 +43,7 @@ class Optimizer(object):
         :return: list(nn.Parameters)
         """
         return [param for param in params if param.requires_grad]
+
 
 class NullOptimizer(Optimizer):
     """
@@ -113,7 +115,8 @@ class Adam(Optimizer):
 
 class AdamW(TorchOptimizer):
     r"""
-    对AdamW的实现，该实现应该会在pytorch更高版本中出现，https://github.com/pytorch/pytorch/pull/21250。这里提前加入
+    对AdamW的实现，该实现在pytorch 1.2.0版本中已经出现，https://github.com/pytorch/pytorch/pull/21250。
+    这里加入以适配低版本的pytorch
     
     .. todo::
         翻译成中文
