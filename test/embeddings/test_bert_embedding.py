@@ -1,6 +1,6 @@
 import unittest
 from fastNLP import Vocabulary
-from fastNLP.embeddings import BertEmbedding
+from fastNLP.embeddings import BertEmbedding, BertWordPieceEncoder
 import torch
 import os
 
@@ -37,3 +37,12 @@ class TestBertEmbedding(unittest.TestCase):
         words = torch.LongTensor([[2, 3, 4, 0]])
         result = embed(words)
         self.assertEqual(result.size(), (1, 4, 16))
+
+
+class TestBertWordPieceEncoder(unittest.TestCase):
+    def test_bert_word_piece_encoder(self):
+        embed = BertWordPieceEncoder(model_dir_or_name='test/data_for_tests/embedding/small_bert', word_dropout=0.1)
+        from fastNLP import DataSet
+        ds = DataSet({'words': ["this is a test . [SEP]".split()]})
+        embed.index_datasets(ds, field_name='words')
+        self.assertTrue(ds.has_field('word_pieces'))

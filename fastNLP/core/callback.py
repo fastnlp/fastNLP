@@ -590,7 +590,7 @@ class FitlogCallback(Callback):
                 try:
                     eval_result = tester.test()
                     if self.verbose != 0:
-                        self.pbar.write("Evaluation on DataSet {}:".format(key))
+                        self.pbar.write("FitlogCallback evaluation on {}:".format(key))
                         self.pbar.write(tester._format_eval_results(eval_result))
                     fitlog.add_metric(eval_result, name=key, step=self.step, epoch=self.epoch)
                     if better_result:
@@ -609,14 +609,16 @@ class FitlogCallback(Callback):
 
 class EvaluateCallback(Callback):
     """
-    该callback用于扩展Trainer训练过程中只能对dev数据进行验证的问题。
+    通过使用该Callback可以使得Trainer在evaluate dev之外还可以evaluate其它数据集，比如测试集。每一次验证dev之前都会先验证EvaluateCallback
+    中的数据。
     """
 
     def __init__(self, data=None, tester=None):
         """
-        :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
+        :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用Trainer中的metric对数据进行验证。如果需要传入多个
             DataSet请通过dict的方式传入。
-        :param ~fastNLP.Tester,Dict[~fastNLP.DataSet] tester: Tester对象，将在on_valid_end时调用。
+        :param ~fastNLP.Tester,Dict[~fastNLP.DataSet] tester: Tester对象, 通过使用Tester对象，可以使得验证的metric与Trainer中
+            的metric不一样。
         """
         super().__init__()
         self.datasets = {}
@@ -659,13 +661,10 @@ class EvaluateCallback(Callback):
             for key, tester in self.testers.items():
                 try:
                     eval_result = tester.test()
-                    # self.pbar.write("Evaluation on {}:".format(key))
-                    self.logger.info("Evaluation on {}:".format(key))
-                    # self.pbar.write(tester._format_eval_results(eval_result))
+                    self.logger.info("EvaluateCallback evaluation on {}:".format(key))
                     self.logger.info(tester._format_eval_results(eval_result))
                 except Exception:
-                    # self.pbar.write("Exception happens when evaluate on DataSet named `{}`.".format(key))
-                    self.logger.info("Exception happens when evaluate on DataSet named `{}`.".format(key))
+                    self.logger.error("Exception happens when evaluate on DataSet named `{}`.".format(key))
 
 
 class LRScheduler(Callback):
@@ -872,15 +871,16 @@ class TensorboardCallback(Callback):
 
 class WarmupCallback(Callback):
     """
-    按一定的周期调节Learning rate的大小。
+    learning rate按照一定的速率从0上升到设置的learning rate。
     """
     def __init__(self, warmup=0.1, schedule='constant'):
         """
         
         :param int,float warmup: 如果warmup为int，则在该step之前，learning rate根据schedule的策略变化; 如果warmup为float，
             如0.1, 则前10%的step是按照schedule策略调整learning rate。
-        :param str schedule: 以哪种方式调整。linear: 前warmup的step上升到指定的learning rate(从Trainer中的optimizer处获取的), 后
-            warmup的step下降到0； constant前warmup的step上升到指定learning rate，后面的step保持learning rate.
+        :param str schedule: 以哪种方式调整。
+            linear: 前warmup的step上升到指定的learning rate(从Trainer中的optimizer处获取的), 后warmup的step下降到0；
+            constant前warmup的step上升到指定learning rate，后面的step保持learning rate.
         """
         super().__init__()
         self.warmup = max(warmup, 0.)
@@ -935,15 +935,14 @@ class SaveModelCallback(Callback):
     def __init__(self, save_dir, top=3, only_param=False, save_on_exception=False):
         """
         
-        :param str save_dir: 将模型存放在哪个目录下，会在该目录下创建以时间戳命名的目录，并存放模型
+        :param str save_dir: 将模型存放在哪个目录下，会在该目录下创建以时间戳命名的目录，并存放模型。如果save_dir不存在将自动创建
         :param int top: 保存dev表现top多少模型。-1为保存所有模型。
-        :param bool only_param: 是否只保存模型d饿权重。
+        :param bool only_param: 是否只保存模型的权重。
         :param save_on_exception: 发生exception时，是否保存一份发生exception的模型。模型名称为epoch:x_step:x_Exception:{exception_name}.
         """
         super().__init__()
 
-        if not os.path.isdir(save_dir):
-            raise IsADirectoryError("{} is not a directory.".format(save_dir))
+        os.makedirs(save_dir, exist_ok=True)
         self.save_dir = save_dir
         if top < 0:
             self.top = sys.maxsize

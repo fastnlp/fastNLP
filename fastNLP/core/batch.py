@@ -122,6 +122,14 @@ class BatchIter:
 
     @staticmethod
     def get_num_batches(num_samples, batch_size, drop_last):
+        """
+        计算batch的数量。
+
+        :param int num_samples:
+        :param int batch_size:
+        :param bool drop_last: 如果最后一个batch没有batch_size这么多，是否就丢掉。
+        :return:
+        """
         num_batches = num_samples // batch_size
         if not drop_last and (num_samples % batch_size > 0):
             num_batches += 1
@@ -134,6 +142,11 @@ class BatchIter:
             yield batch_x, batch_y
 
     def get_batch_indices(self):
+        """
+        获取当前已经输出的batch的index。
+
+        :return:
+        """
         return self.cur_batch_indices
 
     def __len__(self):
@@ -193,6 +206,10 @@ class DataSetIter(BatchIter):
 
 
 class TorchLoaderIter(BatchIter):
+    """
+    与DataSetIter类似，但用于pytorch的DataSet对象。通过使用TorchLoaderIter封装pytorch的DataSet，然后将其传入到Trainer中。
+
+    """
     def __init__(self, dataset):
         super().__init__()
         assert isinstance(dataset, torch.utils.data.DataLoader)
