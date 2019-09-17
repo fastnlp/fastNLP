@@ -76,15 +76,3 @@ def check_loader_paths(paths: Union[str, Dict[str, str]]) -> Dict[str, str]:
             raise ValueError("Empty paths is not allowed.")
     else:
         raise TypeError(f"paths only supports str and dict. not {type(paths)}.")
-
-
-def get_tokenizer():
-    try:
-        import spacy
-        spacy.prefer_gpu()
-        en = spacy.load('en')
-        logger.info('use spacy tokenizer')
-        return lambda x: [w.text for w in en.tokenizer(x)]
-    except Exception as e:
-        logger.error('use raw tokenizer')
-        return lambda x: x.split()
