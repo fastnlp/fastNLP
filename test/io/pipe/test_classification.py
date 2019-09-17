@@ -3,7 +3,7 @@ import os
 
 from fastNLP.io import DataBundle
 from fastNLP.io.pipe.classification import SSTPipe, SST2Pipe, IMDBPipe, YelpFullPipe, YelpPolarityPipe
-from fastNLP.io.pipe.classification import ChnSentiCorpPipe
+from fastNLP.io.pipe.classification import ChnSentiCorpPipe, THUCNewsPipe, WeiboSenti100kPipe
 
 
 @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
@@ -41,6 +41,8 @@ class TestRunClassificationPipe(unittest.TestCase):
             'sst': ('test/data_for_tests/io/SST', SSTPipe, (6, 354, 6), (232, 5), False),
             'imdb': ('test/data_for_tests/io/imdb', IMDBPipe, (6, 6, 6), (1670, 2), False),
             'ChnSentiCorp': ('test/data_for_tests/io/ChnSentiCorp', ChnSentiCorpPipe, (6, 6, 6), (529, 1296, 1483, 2), False),
+            'Chn-THUCNews': ('test/data_for_tests/io/THUCNews', THUCNewsPipe, (9, 9, 9), (1864, 9), False),
+            'Chn-WeiboSenti100k': ('test/data_for_tests/io/WeiboSenti100k', WeiboSenti100kPipe, (7, 6, 6), (452, 2), False),
         }
         for k, v in data_set_dict.items():
             path, pipe, data_set, vocab, warns = v

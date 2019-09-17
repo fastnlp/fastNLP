@@ -3,9 +3,9 @@ import unittest
 import os
 
 from fastNLP.io import DataBundle
-from fastNLP.io.pipe.matching import SNLIPipe, RTEPipe, QNLIPipe, MNLIPipe, \
+from fastNLP.io.pipe.matching import SNLIPipe, RTEPipe, QNLIPipe, QuoraPipe, MNLIPipe, \
     XNLIPipe, BQCorpusPipe, LCQMCPipe
-from fastNLP.io.pipe.matching import SNLIBertPipe, RTEBertPipe, QNLIBertPipe, MNLIBertPipe, \
+from fastNLP.io.pipe.matching import SNLIBertPipe, RTEBertPipe, QNLIBertPipe, QuoraBertPipe, MNLIBertPipe, \
     XNLIBertPipe, BQCorpusBertPipe, LCQMCBertPipe
 
 
@@ -75,7 +75,7 @@ class TestRunMatchingPipe(unittest.TestCase):
 
     def test_spacy(self):
         data_set_dict = {
-            'RTE': ('test/data_for_tests/io/RTE', RTEPipe, RTEBertPipe, (5, 5, 5), (425, 2)),
+            'Quora': ('test/data_for_tests/io/Quora', QuoraPipe, QuoraBertPipe, (2, 2, 2), (93, 2)),
             }
         for k, v in data_set_dict.items():
             path, pipe1, pipe2, data_set, vocab = v

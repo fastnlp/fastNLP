@@ -29,6 +29,7 @@ class TestMatchingLoad(unittest.TestCase):
             'SNLI': ('test/data_for_tests/io/SNLI', SNLILoader, (5, 5, 5), False),
             'QNLI': ('test/data_for_tests/io/QNLI', QNLILoader, (5, 5, 5), True),
             'MNLI': ('test/data_for_tests/io/MNLI', MNLILoader, (5, 5, 5, 5, 6), True),
+            'Quora': ('test/data_for_tests/io/Quora', QuoraLoader, (2, 2, 2), False),
             'BQCorpus': ('test/data_for_tests/io/BQCorpus', BQCorpusLoader, (5, 5, 5), False),
             'XNLI': ('test/data_for_tests/io/XNLI', XNLILoader, (6, 7, 6), False),
             'LCQMC': ('test/data_for_tests/io/LCQMC', LCQMCLoader, (5, 6, 6), False),

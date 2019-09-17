@@ -7,6 +7,9 @@ __all__ = [
     "QuoraBertPipe",
     "QNLIBertPipe",
     "MNLIBertPipe",
+    "XNLIBertPipe",
+    "BQCorpusBertPipe",
+    "LCQMCBertPipe",
     "MatchingPipe",
     "RTEPipe",
     "SNLIPipe",
@@ -15,7 +18,7 @@ __all__ = [
     "MNLIPipe",
     "XNLIPipe",
     "BQCorpusPipe",
-    "LCQMCPipe"
+    "LCQMCPipe",
 ]
 
 import warnings
