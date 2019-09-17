@@ -114,7 +114,7 @@ class MatchingBertPipe(Pipe):
                                                            if ('train' not in name) and (ds.has_field(Const.TARGET))]
                                   )
         if len(target_vocab._no_create_word) > 0:
-            warn_msg = f"There are {len(tgt_vocab._no_create_word)} target labels" \
+            warn_msg = f"There are {len(target_vocab._no_create_word)} target labels" \
                        f" in {[name for name in data_bundle.datasets.keys() if 'train' not in name]} " \
                        f"data set but not in train data set!."
             warnings.warn(warn_msg)
@@ -251,7 +251,7 @@ class MatchingPipe(Pipe):
                                                            if ('train' not in name) and (ds.has_field(Const.TARGET))]
                                   )
         if len(target_vocab._no_create_word) > 0:
-            warn_msg = f"There are {len(tgt_vocab._no_create_word)} target labels" \
+            warn_msg = f"There are {len(target_vocab._no_create_word)} target labels" \
                        f" in {[name for name in data_bundle.datasets.keys() if 'train' not in name]} " \
                        f"data set but not in train data set!."
             warnings.warn(warn_msg)
