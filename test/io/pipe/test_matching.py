@@ -80,9 +80,8 @@ class TestRunMatchingPipe(unittest.TestCase):
         for k, v in data_set_dict.items():
             path, pipe1, pipe2, data_set, vocab = v
 
-            with self.assertWarns(Warning):
-                data_bundle1 = pipe1(tokenizer='spacy').process_from_file(path)
-                data_bundle2 = pipe2(tokenizer='spacy').process_from_file(path)
+            data_bundle1 = pipe1(tokenizer='spacy').process_from_file(path)
+            data_bundle2 = pipe2(tokenizer='spacy').process_from_file(path)
 
             self.assertTrue(isinstance(data_bundle1, DataBundle))
             self.assertEqual(len(data_set), data_bundle1.num_dataset)
