@@ -23,6 +23,7 @@ __all__ = [
 
     "MaxPool",
     "MaxPoolWithMask",
+    "KMaxPool",
     "AvgPool",
     "AvgPoolWithMask",
 
@@ -36,7 +37,7 @@ from .bert import BertModel
 from .char_encoder import ConvolutionCharEncoder, LSTMCharEncoder
 from .conv_maxpool import ConvMaxpool
 from .lstm import LSTM
-from .pooling import MaxPool, MaxPoolWithMask, AvgPool, AvgPoolWithMask
+from .pooling import MaxPool, MaxPoolWithMask, AvgPool, AvgPoolWithMask, KMaxPool
 from .star_transformer import StarTransformer
 from .transformer import TransformerEncoder
 from .variational_rnn import VarRNN, VarLSTM, VarGRU
