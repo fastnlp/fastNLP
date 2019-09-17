@@ -1,0 +1,6 @@
+(3 (2 It) (4 (4 (2 's) (4 (3 (2 a) (4 (3 lovely) (2 film))) (3 (2 with) (4 (3 (3 lovely) (2 performances)) (2 (2 by) (2 (2 (2 Buy) (2 and)) (2 Accorsi))))))) (2 .)))
+(2 (2 (1 No) (2 one)) (1 (1 (2 goes) (2 (1 (2 (2 unindicted) (2 here)) (2 ,)) (2 (2 which) (3 (2 (2 is) (2 probably)) (3 (2 for) (4 (2 the) (4 best))))))) (2 .)))
+(3 (2 And) (4 (3 (2 if) (1 (2 you) (1 (2 (2 (2 're) (1 not)) (2 nearly)) (4 (3 (3 moved) (2 (2 to) (1 tears))) (2 (2 by) (2 (2 (2 a) (2 couple)) (2 (2 of) (2 scenes)))))))) (2 (2 ,) (2 (2 you) (2 (2 (2 've) (1 (2 got) (2 (3 (2 ice) (2 water)) (2 (2 in) (2 (2 your) (2 veins)))))) (2 .))))))
+(4 (4 (2 A) (4 (3 (3 warm) (2 ,)) (3 funny))) (3 (2 ,) (3 (4 (4 engaging) (2 film)) (2 .))))
+(4 (3 (2 Uses) (3 (3 (4 (3 sharp) (4 (3 (4 humor) (2 and)) (2 insight))) (2 (2 into) (3 (2 human) (2 nature)))) (2 (2 to) (2 (2 examine) (2 (2 class) (1 conflict)))))) (2 (2 ,) (2 (2 (2 adolescent) (2 (2 (2 yearning) (2 ,)) (3 (2 (2 the) (2 roots)) (3 (2 of) (2 (2 friendship) (2 (2 and) (2 (2 sexual) (2 identity)))))))) (2 .))))
+(2 (2 (2 Half) (1 (2 (2 (2 (2 (2 Submarine) (2 flick)) (2 ,)) (2 (2 Half) (2 (2 Ghost) (2 Story)))) (2 ,)) (2 (2 All) (2 (2 in) (2 (2 one) (2 criminally)))))) (1 (1 neglected) (2 film)))

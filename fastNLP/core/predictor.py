@@ -20,11 +20,13 @@ class Predictor(object):
 
     与测试器（Tester）不同的是，predictor不关心模型性能的评价指标，只做inference。
     这是一个fastNLP调用的高级模型包装器。它与Trainer、Tester不共享任何操作。
-
-    :param torch.nn.Module network: 用来完成预测任务的模型
     """
     
     def __init__(self, network):
+        """
+        
+        :param torch.nn.Module network: 用来完成预测任务的模型
+        """
         if not isinstance(network, torch.nn.Module):
             raise ValueError(
                 "Only fastNLP.models.BaseModel or torch.nn,Module is allowed, not {}".format(type(network)))

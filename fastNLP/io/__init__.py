@@ -24,6 +24,7 @@ __all__ = [
     'IMDBLoader',
     'SSTLoader',
     'SST2Loader',
+    "ChnSentiCorpLoader",
 
     'ConllLoader',
     'Conll2003Loader',
@@ -52,8 +53,9 @@ __all__ = [
     "SSTPipe",
     "SST2Pipe",
     "IMDBPipe",
-    "Conll2003Pipe",
+    "ChnSentiCorpPipe",
 
+    "Conll2003Pipe",
     "Conll2003NERPipe",
     "OntoNotesNERPipe",
     "MsraNERPipe",
@@ -82,8 +84,11 @@ __all__ = [
 
 from .embed_loader import EmbedLoader
 from .data_bundle import DataBundle
-from .dataset_loader import CSVLoader, JsonLoader
 from .model_io import ModelLoader, ModelSaver
 
 from .loader import *
 from .pipe import *
+
+import sys
+from ..doc_utils import doc_process
+doc_process(sys.modules[__name__])

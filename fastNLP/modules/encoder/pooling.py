@@ -12,20 +12,20 @@ import torch.nn as nn
 
 class MaxPool(nn.Module):
     """
-    别名：:class:`fastNLP.modules.MaxPool`  :class:`fastNLP.modules.encoder.MaxPool`
-
     Max-pooling模块。
     
-    :param stride: 窗口移动大小，默认为kernel_size
-    :param padding: padding的内容，默认为0
-    :param dilation: 控制窗口内元素移动距离的大小
-    :param dimension: MaxPool的维度，支持1，2，3维。
-    :param kernel_size: max pooling的窗口大小，默认为tensor最后k维，其中k为dimension
-    :param ceil_mode:
     """
 
     def __init__(self, stride=None, padding=0, dilation=1, dimension=1, kernel_size=None, ceil_mode=False):
-
+        """
+        
+        :param stride: 窗口移动大小，默认为kernel_size
+        :param padding: padding的内容，默认为0
+        :param dilation: 控制窗口内元素移动距离的大小
+        :param dimension: MaxPool的维度，支持1，2，3维。
+        :param kernel_size: max pooling的窗口大小，默认为tensor最后k维，其中k为dimension
+        :param ceil_mode:
+        """
         super(MaxPool, self).__init__()
         assert (1 <= dimension) and (dimension <= 3)
         self.dimension = dimension
@@ -61,8 +61,6 @@ class MaxPool(nn.Module):
 
 class MaxPoolWithMask(nn.Module):
     """
-    别名：:class:`fastNLP.modules.MaxPoolWithMask`  :class:`fastNLP.modules.encoder.MaxPoolWithMask`
-
     带mask矩阵的max pooling。在做max-pooling的时候不会考虑mask值为0的位置。
     """
 
@@ -101,8 +99,6 @@ class KMaxPool(nn.Module):
 
 class AvgPool(nn.Module):
     """
-    别名：:class:`fastNLP.modules.AvgPool`  :class:`fastNLP.modules.encoder.AvgPool`
-
     给定形如[batch_size, max_len, hidden_size]的输入，在最后一维进行avg pooling. 输出为[batch_size, hidden_size]
     """
 
@@ -128,8 +124,6 @@ class AvgPool(nn.Module):
 
 class AvgPoolWithMask(nn.Module):
     """
-    别名：:class:`fastNLP.modules.AvgPoolWithMask`  :class:`fastNLP.modules.encoder.AvgPoolWithMask`
-
     给定形如[batch_size, max_len, hidden_size]的输入，在最后一维进行avg pooling. 输出为[batch_size, hidden_size], pooling
     的时候只会考虑mask为1的位置
     """

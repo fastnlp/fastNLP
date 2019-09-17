@@ -32,7 +32,6 @@ Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...
 
 我们在[这里](./source/user/example.rst)列举了fastNLP文档经常用到的reStructuredText语法（网页查看请结合Raw模式），
 您可以通过阅读它进行快速上手。FastNLP大部分的文档都是写在代码中通过Sphinx工具进行抽取生成的，
-您还可以参考这篇[未完成的文章](./source/user/docs_in_code.rst)了解代码内文档编写的规范。
 
 ## 文档维护人员
 

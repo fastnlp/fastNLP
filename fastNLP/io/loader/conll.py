@@ -27,8 +27,6 @@ from ...core.instance import Instance
 
 class ConllLoader(Loader):
     """
-    别名：:class:`fastNLP.io.ConllLoader` :class:`fastNLP.io.loader.ConllLoader`
-
     ConllLoader支持读取的数据格式: 以空行隔开两个sample，除了分割行，每一行用空格或者制表符隔开不同的元素。如下例所示:
 
     Example::
@@ -55,13 +53,15 @@ class ConllLoader(Loader):
 
     数据中以"-DOCSTART-"开头的行将被忽略，因为该符号在conll 2003中被用为文档分割符。
 
-    :param list headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
-    :param list indexes: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
-    :param bool dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
-
     """
     
     def __init__(self, headers, indexes=None, dropna=True):
+        """
+        
+        :param list headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
+        :param list indexes: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
+        :param bool dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
+        """
         super(ConllLoader, self).__init__()
         if not isinstance(headers, (list, tuple)):
             raise TypeError(

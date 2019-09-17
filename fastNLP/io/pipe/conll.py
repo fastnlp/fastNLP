@@ -28,16 +28,20 @@ class _NERPipe(Pipe):
 
     raw_words列为List[str], 是未转换的原始数据; words列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
     target。返回的DataSet中被设置为input有words, target, seq_len; 设置为target有target, seq_len。
-
-    :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
-    :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
     """
     
     def __init__(self, encoding_type: str = 'bio', lower: bool = False):
+        """
+
+        :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
+        :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
+        """
         if encoding_type == 'bio':
             self.convert_tag = iob2
-        else:
+        elif encoding_type == 'bioes':
             self.convert_tag = lambda words: iob2bioes(iob2(words))
+        else:
+            raise ValueError("encoding_type only supports `bio` and `bioes`.")
         self.lower = lower
     
     def process(self, data_bundle: DataBundle) -> DataBundle:
@@ -51,9 +55,8 @@ class _NERPipe(Pipe):
            "[AL-AIN, United, Arab, ...]", "[B-LOC, B-LOC, I-LOC, ...]"
            "[...]", "[...]"
 
-        :param DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]。
-            在传入DataBundle基础上原位修改。
-        :return: DataBundle
+        :param ~fastNLP.DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]在传入DataBundle基础上原位修改。
+        :return DataBundle:
         """
         # 转换tag
         for name, dataset in data_bundle.datasets.items():
@@ -93,8 +96,6 @@ class Conll2003NERPipe(_NERPipe):
     raw_words列为List[str], 是未转换的原始数据; words列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
     target。返回的DataSet中被设置为input有words, target, seq_len; 设置为target有target。
 
-    :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
-    :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
     """
     
     def process_from_file(self, paths) -> DataBundle:
@@ -111,18 +112,21 @@ class Conll2003NERPipe(_NERPipe):
 
 
 class Conll2003Pipe(Pipe):
+    r"""
+    经过该Pipe后，DataSet中的内容如下
+
+    .. csv-table::
+       :header: "raw_words" , "words", "pos", "chunk", "ner", "seq_len"
+
+       "[Nadim, Ladki]", "[2, 3]", "[0, 0]", "[1, 2]", "[1, 2]", 2
+       "[AL-AIN, United, Arab, ...]", "[4, 5, 6,...]", "[1, 2...]", "[3, 4...]", "[3, 4...]", 6
+       "[...]", "[...]", "[...]", "[...]", "[...]", .
+
+    其中words, seq_len是input; pos, chunk, ner, seq_len是target
+
+    """
     def __init__(self, chunk_encoding_type='bioes', ner_encoding_type='bioes', lower: bool = False):
         """
-        经过该Pipe后，DataSet中的内容如下
-
-        .. csv-table::
-           :header: "raw_words", "words", "pos", "chunk", "ner", "seq_len"
-
-           "[Nadim, Ladki]", "[2, 3]", "[0, 0]", "[1, 2]", "[1, 2]", 2
-           "[AL-AIN, United, Arab, ...]", "[4, 5, 6,...]", "[1, 2...]", "[3, 4...]", "[3, 4...]", 6
-           "[...]", "[...]", "[...]", "[...]", "[...]".
-
-        其中words, seq_len是input; pos, chunk, ner, seq_len是target
 
         :param str chunk_encoding_type: 支持bioes, bio。
         :param str ner_encoding_type: 支持bioes, bio。
@@ -130,12 +134,16 @@ class Conll2003Pipe(Pipe):
         """
         if chunk_encoding_type == 'bio':
             self.chunk_convert_tag = iob2
-        else:
+        elif chunk_encoding_type == 'bioes':
             self.chunk_convert_tag = lambda tags: iob2bioes(iob2(tags))
+        else:
+            raise ValueError("chunk_encoding_type only supports `bio` and `bioes`.")
         if ner_encoding_type == 'bio':
             self.ner_convert_tag = iob2
-        else:
+        elif ner_encoding_type == 'bioes':
             self.ner_convert_tag = lambda tags: iob2bioes(iob2(tags))
+        else:
+            raise ValueError("ner_encoding_type only supports `bio` and `bioes`.")
         self.lower = lower
     
     def process(self, data_bundle) -> DataBundle:
@@ -147,7 +155,7 @@ class Conll2003Pipe(Pipe):
 
            "[Nadim, Ladki]", "[NNP, NNP]", "[B-NP, I-NP]", "[B-PER, I-PER]"
            "[AL-AIN, United, Arab, ...]", "[NNP, NNP...]", "[B-NP, B-NP, ...]", "[B-LOC, B-LOC,...]"
-           "[...]", "[...]", "[...]", "[...]".
+           "[...]", "[...]", "[...]", "[...]", .
 
         :param data_bundle:
         :return: 传入的DataBundle
@@ -193,7 +201,7 @@ class OntoNotesNERPipe(_NERPipe):
     """
     处理OntoNotes的NER数据，处理之后DataSet中的field情况为
 
-    .. csv-table:: Following is a demo layout of DataSet returned by Conll2003Loader
+    .. csv-table::
        :header: "raw_words", "words", "target", "seq_len"
 
        "[Nadim, Ladki]", "[2, 3]", "[1, 2]", 2
@@ -203,8 +211,6 @@ class OntoNotesNERPipe(_NERPipe):
     raw_words列为List[str], 是未转换的原始数据; words列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
     target。返回的DataSet中被设置为input有words, target, seq_len; 设置为target有target。
 
-    :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
-    :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
     """
     
     def process_from_file(self, paths):
@@ -221,15 +227,29 @@ class _CNNERPipe(Pipe):
     raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
     target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target, seq_len。
 
-    :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
     """
     
-    def __init__(self, encoding_type: str = 'bio'):
+    def __init__(self, encoding_type: str = 'bio', bigrams=False, trigrams=False):
+        """
+        
+        :param str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
+        :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
+            设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+            data_bundle.get_vocab('bigrams')获取.
+        :param bool trigrams: 是否增加一列trigrams. trigrams的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
+            。如果设置为True，返回的DataSet将有一列名为trigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
+            data_bundle.get_vocab('trigrams')获取.
+        """
         if encoding_type == 'bio':
             self.convert_tag = iob2
-        else:
+        elif encoding_type == 'bioes':
             self.convert_tag = lambda words: iob2bioes(iob2(words))
-    
+        else:
+            raise ValueError("encoding_type only supports `bio` and `bioes`.")
+
+        self.bigrams = bigrams
+        self.trigrams = trigrams
+
     def process(self, data_bundle: DataBundle) -> DataBundle:
         """
         支持的DataSet的field为
@@ -241,11 +261,10 @@ class _CNNERPipe(Pipe):
            "[青, 岛, 海, 牛, 队, 和, ...]", "[B-ORG, I-ORG, I-ORG, ...]"
            "[...]", "[...]"
 
-        raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
-        target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
+        raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，
+        是转换为index的target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
 
-        :param DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]。
-            在传入DataBundle基础上原位修改。
+        :param ~fastNLP.DataBundle data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和ner两个field，且两个field的内容均为List[str]。在传入DataBundle基础上原位修改。
         :return: DataBundle
         """
         # 转换tag
@@ -253,11 +272,24 @@ class _CNNERPipe(Pipe):
             dataset.apply_field(self.convert_tag, field_name=Const.TARGET, new_field_name=Const.TARGET)
         
         _add_chars_field(data_bundle, lower=False)
-        
+
+        input_field_names = [Const.CHAR_INPUT]
+        if self.bigrams:
+            for name, dataset in data_bundle.datasets.items():
+                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
+                                    field_name=Const.CHAR_INPUT, new_field_name='bigrams')
+            input_field_names.append('bigrams')
+        if self.trigrams:
+            for name, dataset in data_bundle.datasets.items():
+                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
+                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
+                                    field_name=Const.CHAR_INPUT, new_field_name='trigrams')
+            input_field_names.append('trigrams')
+
         # index
-        _indexize(data_bundle, input_field_names=Const.CHAR_INPUT, target_field_names=Const.TARGET)
+        _indexize(data_bundle, input_field_names, Const.TARGET)
         
-        input_fields = [Const.TARGET, Const.CHAR_INPUT, Const.INPUT_LEN]
+        input_fields = [Const.TARGET, Const.INPUT_LEN] + input_field_names
         target_fields = [Const.TARGET, Const.INPUT_LEN]
         
         for name, dataset in data_bundle.datasets.items():
@@ -324,7 +356,6 @@ class WeiboNERPipe(_CNNERPipe):
     raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
     target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
 
-    :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
     """
     
     def process_from_file(self, paths=None) -> DataBundle:

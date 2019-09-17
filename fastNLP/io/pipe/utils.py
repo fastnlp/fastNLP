@@ -7,9 +7,11 @@ __all__ = [
 ]
 
 from typing import List
+import warnings
 
 from ...core.const import Const
 from ...core.vocabulary import Vocabulary
+from ...core._logger import logger
 
 
 def iob2(tags: List[str]) -> List[str]:
@@ -63,25 +65,34 @@ def iob2bioes(tags: List[str]) -> List[str]:
     return new_tags
 
 
-def get_tokenizer(tokenizer: str, lang='en'):
+def get_tokenizer(tokenize_method: str, lang='en'):
     """
 
-    :param str tokenizer: 获取tokenzier方法
+    :param str tokenize_method: 获取tokenzier方法
     :param str lang: 语言，当前仅支持en
     :return: 返回tokenize函数
     """
-    if tokenizer == 'spacy':
+    tokenizer_dict = {
+        'spacy': None,
+        'raw': _raw_split,
+        'cn-char': _cn_char_split,
+    }
+    if tokenize_method == 'spacy':
         import spacy
         spacy.prefer_gpu()
         if lang != 'en':
             raise RuntimeError("Spacy only supports en right right.")
         en = spacy.load(lang)
         tokenizer = lambda x: [w.text for w in en.tokenizer(x)]
-    elif tokenizer == 'raw':
-        tokenizer = _raw_split
+    elif tokenize_method in tokenizer_dict:
+        tokenizer = tokenizer_dict[tokenize_method]
     else:
-        raise RuntimeError("Only support `spacy`, `raw` tokenizer.")
+        raise RuntimeError(f"Only support {tokenizer_dict.keys()} tokenizer.")
     return tokenizer
+
+
+def _cn_char_split(sent):
+    return [chars for chars in sent]
 
 
 def _raw_split(sent):
@@ -92,7 +103,7 @@ def _indexize(data_bundle, input_field_names=Const.INPUT, target_field_names=Con
     """
     在dataset中的field_name列建立词表，Const.TARGET列建立词表，并把词表加入到data_bundle中。
 
-    :param data_bundle:
+    :param ~fastNLP.DataBundle data_bundle:
     :param: str,list input_field_names:
     :param: str,list target_field_names: 这一列的vocabulary没有unknown和padding
     :return:
@@ -103,15 +114,27 @@ def _indexize(data_bundle, input_field_names=Const.INPUT, target_field_names=Con
         target_field_names = [target_field_names]
     for input_field_name in input_field_names:
         src_vocab = Vocabulary()
-        src_vocab.from_dataset(data_bundle.datasets['train'], field_name=input_field_name,
-                               no_create_entry_dataset=[dataset for name, dataset in data_bundle.datasets.items() if
-                                                        name != 'train'])
+        src_vocab.from_dataset(*[ds for name, ds in data_bundle.iter_datasets() if 'train' in name],
+                               field_name=input_field_name,
+                               no_create_entry_dataset=[ds for name, ds in data_bundle.iter_datasets()
+                                                        if ('train' not in name) and (ds.has_field(input_field_name))]
+                               )
         src_vocab.index_dataset(*data_bundle.datasets.values(), field_name=input_field_name)
         data_bundle.set_vocab(src_vocab, input_field_name)
     
     for target_field_name in target_field_names:
         tgt_vocab = Vocabulary(unknown=None, padding=None)
-        tgt_vocab.from_dataset(data_bundle.datasets['train'], field_name=target_field_name)
+        tgt_vocab.from_dataset(*[ds for name, ds in data_bundle.iter_datasets() if 'train' in name],
+                               field_name=target_field_name,
+                               no_create_entry_dataset=[ds for name, ds in data_bundle.iter_datasets()
+                                                        if ('train' not in name) and (ds.has_field(target_field_name))]
+                               )
+        if len(tgt_vocab._no_create_word) > 0:
+            warn_msg = f"There are {len(tgt_vocab._no_create_word)} target labels" \
+                       f" in {[name for name in data_bundle.datasets.keys() if 'train' not in name]} " \
+                       f"data set but not in train data set!."
+            warnings.warn(warn_msg)
+            logger.warn(warn_msg)
         tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name=target_field_name)
         data_bundle.set_vocab(tgt_vocab, target_field_name)
     
@@ -154,7 +177,7 @@ def _drop_empty_instance(data_bundle, field_name):
     """
     删除data_bundle的DataSet中存在的某个field为空的情况
 
-    :param data_bundle: DataBundle
+    :param ~fastNLP.DataBundle data_bundle:
     :param str field_name: 对哪个field进行检查，如果为None，则任意field为空都会删掉
     :return: 传入的DataBundle
     """

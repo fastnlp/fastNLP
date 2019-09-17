@@ -7,6 +7,7 @@ __all__ = [
     "IMDBLoader",
     "SSTLoader",
     "SST2Loader",
+    "ChnSentiCorpLoader"
 ]
 
 import glob
@@ -23,8 +24,6 @@ from ...core.instance import Instance
 
 class YelpLoader(Loader):
     """
-    别名：:class:`fastNLP.io.YelpLoader` :class:`fastNLP.io.loader.YelpLoader`
-
     原始数据中内容应该为, 每一行为一个sample，第一个逗号之前为target，第一个逗号之后为文本内容。
 
     Example::
@@ -32,7 +31,6 @@ class YelpLoader(Loader):
         "1","I got 'new' tires from the..."
         "1","Don't waste your time..."
 
-    读取YelpFull, YelpPolarity的数据。可以通过xxx下载并预处理数据。
     读取的DataSet将具备以下的数据结构
 
     .. csv-table::
@@ -163,8 +161,6 @@ class YelpPolarityLoader(YelpLoader):
 
 class IMDBLoader(Loader):
     """
-    别名：:class:`fastNLP.io.IMDBLoader` :class:`fastNLP.io.loader.IMDBLoader`
-
     IMDBLoader读取后的数据将具有以下两列内容: raw_words: str, 需要分类的文本; target: str, 文本的标签
     DataSet具备以下的结构:
 
@@ -243,8 +239,6 @@ class IMDBLoader(Loader):
 
 class SSTLoader(Loader):
     """
-    别名：:class:`fastNLP.io.SSTLoader` :class:`fastNLP.io.loader.SSTLoader`
-
     读取之后的DataSet具有以下的结构
 
     .. csv-table:: 下面是使用SSTLoader读取的DataSet所具备的field
@@ -293,7 +287,7 @@ class SST2Loader(Loader):
     数据SST2的Loader
     读取之后DataSet将如下所示
 
-    .. csv-table:: 下面是使用SSTLoader读取的DataSet所具备的field
+    .. csv-table::
         :header: "raw_words", "target"
 
         "it 's a charming and often affecting...", "1"
@@ -345,4 +339,60 @@ class SST2Loader(Loader):
         :return:
         """
         output_dir = self._get_dataset_path(dataset_name='sst-2')
+        return output_dir
+
+
+class ChnSentiCorpLoader(Loader):
+    """
+    支持读取的数据的格式为，第一行为标题(具体内容会被忽略)，之后一行为一个sample，第一个制表符之前被认为是label，第
+    一个制表符之后认为是句子
+
+    Example::
+
+        label	raw_chars
+        1	這間酒店環境和服務態度亦算不錯,但房間空間太小~~
+        1	<荐书> 推荐所有喜欢<红楼>的红迷们一定要收藏这本书,要知道...
+        0	商品的不足暂时还没发现，京东的订单处理速度实在.......周二就打包完成，周五才发货...
+
+    读取后的DataSet具有以下的field
+
+    .. csv-table::
+        :header: "raw_chars", "target"
+
+        "這間酒店環境和服務態度亦算不錯,但房間空間太小~~", "1"
+        "<荐书> 推荐所有喜欢<红楼>...", "1"
+        "..."
+
+    """
+    def __init__(self):
+        super().__init__()
+
+    def _load(self, path:str):
+        """
+        从path中读取数据
+
+        :param path:
+        :return:
+        """
+        ds = DataSet()
+        with open(path, 'r', encoding='utf-8') as f:
+            f.readline()
+            for line in f:
+                line = line.strip()
+                tab_index = line.index('\t')
+                if tab_index!=-1:
+                    target = line[:tab_index]
+                    raw_chars = line[tab_index+1:]
+                    if raw_chars:
+                        ds.append(Instance(raw_chars=raw_chars, target=target))
+        return ds
+
+    def download(self)->str:
+        """
+        自动下载数据，该数据取自https://github.com/pengming617/bert_classification/tree/master/data，在
+        https://arxiv.org/pdf/1904.09223.pdf与https://arxiv.org/pdf/1906.08101.pdf有使用
+
+        :return:
+        """
+        output_dir = self._get_dataset_path('chn-senti-corp')
         return output_dir

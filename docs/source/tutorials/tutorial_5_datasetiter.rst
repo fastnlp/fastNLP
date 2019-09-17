@@ -4,7 +4,7 @@
 
 我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极（label=1）、
 消极（label=0）还是中性（label=2），使用 :class:`~fastNLP.DataSetIter` 类来编写自己的训练过程。
-自己编写训练过程之前的内容与 :doc:`/tutorials/tutorial_4_loss_optimizer` 中的完全一样，如已经阅读过可以跳过。
+自己编写训练过程之前的内容与 :doc:`/tutorials/tutorial_6_loss_optimizer` 中的完全一样，如已经阅读过可以跳过。
 
 --------------
 数据处理
@@ -20,7 +20,9 @@
 
         loader = SSTLoader()
         #这里的all.txt是下载好数据后train.txt、dev.txt、test.txt的组合
-        dataset = loader.load("./trainDevTestTrees_PTB/trees/all.txt")
+        #loader.load(path)会首先判断path是否为none，若是则自动从网站下载数据，若不是则读入数据并返回databundle
+        databundle_ = loader.load("./trainDevTestTrees_PTB/trees/all.txt")
+        dataset = databundle_.datasets['train']
         print(dataset[0])
 
     输出数据如下::
@@ -32,6 +34,7 @@
     
 
 数据处理
+    可以使用事先定义的 :class:`~fastNLP.io.SSTPipe` 类对数据进行基本预处理，这里我们手动进行处理。
     我们使用 :class:`~fastNLP.DataSet` 类的 :meth:`~fastNLP.DataSet.apply` 方法将 ``target`` :mod:`~fastNLP.core.field` 转化为整数。
     
     .. code-block:: python

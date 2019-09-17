@@ -53,7 +53,7 @@ class FieldArray:
         self.content = _content
         self._ignore_type = ignore_type
         #  根据input的情况设置input，target等
-        self._cell_ndim = None  # 多少维度
+        self._cell_ndim = None  # 多少维度， 如果value是1, dim为0; 如果value是[1, 2], dim=2
         self.dtype = None  # 最内层的element都是什么类型的
         self._use_1st_ins_infer_dim_type = bool(use_1st_ins_infer_dim_type)
         self._is_input = False
@@ -464,29 +464,30 @@ def _get_ele_type_and_dim(cell: Any, dim=0):
 
 class Padder:
     """
-    别名：:class:`fastNLP.Padder` :class:`fastNLP.core.field.Padder`
-
     所有padder都需要继承这个类，并覆盖__call__方法。
     用于对batch进行padding操作。传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前deepcopy一份。
 
     .. py:function:: __call__(self, contents, field_name, field_ele_dtype):
+    
+    """
+    
+    def __init__(self, pad_val=0, **kwargs):
+        """
         
-        传入的是List内容。假设有以下的DataSet。
-
         :param List[Any] contents: 传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前
             deepcopy一份。
         :param str, field_name: field的名称。
         :param np.int64,np.float64,np.str,None, field_ele_dtype: 该field的内层元素的类型。如果该field的ignore_type为True，该这个值为None。
         :return: np.array([padded_element])
-
-    """
-    
-    def __init__(self, pad_val=0, **kwargs):
+        """
         self.pad_val = pad_val
     
     def set_pad_val(self, pad_val):
         self.pad_val = pad_val
-    
+
+    def get_pad_val(self):
+        return self.pad_val
+
     @abstractmethod
     def __call__(self, contents, field_name, field_ele_dtype, dim: int):
         """
@@ -534,8 +535,6 @@ class Padder:
 
 class AutoPadder(Padder):
     """
-    别名：:class:`fastNLP.AutoPadder` :class:`fastNLP.core.field.AutoPadder`
-
     根据contents的数据自动判定是否需要做padding。
 
     1 如果元素类型(元素类型是指field中最里层元素的数据类型, 可以通过FieldArray.dtype查看，比如['This', 'is', ...]的元素类
@@ -595,7 +594,7 @@ class AutoPadder(Padder):
                     max_len = max(map(len, contents))
                     tensor = torch.full((len(contents), max_len), fill_value=self.pad_val, dtype=field_ele_dtype)
                     for i, content_i in enumerate(contents):
-                        tensor[i, :len(content_i)] = torch.tensor(content_i)
+                        tensor[i, :len(content_i)] = content_i.clone().detach()
                 elif dim == 2:
                     max_len = max(map(len, contents))
                     max_word_len = max([max([len(content_ii) for content_ii in content_i]) for
@@ -604,7 +603,7 @@ class AutoPadder(Padder):
                                         dtype=field_ele_dtype)
                     for i, content_i in enumerate(contents):
                         for j, content_ii in enumerate(content_i):
-                            tensor[i, j, :len(content_ii)] = torch.tensor(content_ii)
+                            tensor[i, j, :len(content_ii)] = content_ii.clone().detach()
                 else:
                     shapes = set([np.shape(content_i) for content_i in contents])
                     if len(shapes) > 1:
@@ -615,7 +614,7 @@ class AutoPadder(Padder):
                         tensor = torch.full([len(contents)] + list(shape), fill_value=self.pad_val,
                                             dtype=field_ele_dtype)
                         for i, content_i in enumerate(contents):
-                            tensor[i] = torch.tensor(content_i, dtype=field_ele_dtype)
+                            tensor[i] = content_i.clone().detach().to(field_ele_dtype)
                     else:
                         raise RuntimeError(
                             f"Field:{field_name} has 3 dimensions, every sample should have the same shape.")
@@ -628,8 +627,6 @@ class AutoPadder(Padder):
 
 class EngChar2DPadder(Padder):
     """
-    别名：:class:`fastNLP.EngChar2DPadder` :class:`fastNLP.core.field.EngChar2DPadder`
-
     用于为英语执行character级别的2D padding操作。对应的field内容应该类似[['T', 'h', 'i', 's'], ['a'], ['d', 'e', 'm', 'o']]，
     但这个Padder只能处理index为int的情况。
 

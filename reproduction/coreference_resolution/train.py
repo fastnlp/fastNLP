@@ -1,5 +1,3 @@
-import sys
-sys.path.append('../..')
 
 import torch
 from torch.optim import Adam
@@ -7,17 +5,14 @@ from torch.optim import Adam
 from fastNLP.core.callback import Callback, GradientClipCallback
 from fastNLP.core.trainer import Trainer
 
-from reproduction.coreference_resolution.data_load.cr_loader import CRLoader
+from fastNLP.io.pipe.coreference import CoReferencePipe
+from fastNLP.core.const import Const
+
 from reproduction.coreference_resolution.model.config import Config
 from reproduction.coreference_resolution.model.model_re import Model
 from reproduction.coreference_resolution.model.softmax_loss import SoftmaxLoss
 from reproduction.coreference_resolution.model.metric import CRMetric
-from fastNLP import SequentialSampler
-from fastNLP import cache_results
 
-
-# torch.backends.cudnn.benchmark = False
-# torch.backends.cudnn.deterministic = True
 
 class LRCallback(Callback):
     def __init__(self, parameters, decay_rate=1e-3):
@@ -36,18 +31,13 @@ if __name__ == "__main__":
 
     print(config)
 
-    @cache_results('cache.pkl')
     def cache():
-        cr_train_dev_test = CRLoader()
-
-        data_info = cr_train_dev_test.process({'train': config.train_path, 'dev': config.dev_path,
-                                               'test': config.test_path})
-        return data_info
-    data_info = cache()
-    print("数据集划分：\ntrain:", str(len(data_info.datasets["train"])),
-          "\ndev:" + str(len(data_info.datasets["dev"])) + "\ntest:" + str(len(data_info.datasets["test"])))
-    # print(data_info)
-    model = Model(data_info.vocabs, config)
+        bundle = CoReferencePipe(config).process_from_file({'train': config.train_path, 'dev': config.dev_path,
+                                                            'test': config.test_path})
+        return bundle
+    data_bundle = cache()
+    print(data_bundle)
+    model = Model(data_bundle.get_vocab(Const.INPUTS(0)), config)
     print(model)
 
     loss = SoftmaxLoss()
@@ -58,11 +48,12 @@ if __name__ == "__main__":
 
     lr_decay_callback = LRCallback(optim.param_groups, config.lr_decay)
 
-    trainer = Trainer(model=model, train_data=data_info.datasets["train"], dev_data=data_info.datasets["dev"],
-                      loss=loss, metrics=metric, check_code_level=-1,sampler=None,
-                      batch_size=1, device=torch.device("cuda:" + config.cuda), metric_key='f', n_epochs=config.epoch,
+    trainer = Trainer(model=model, train_data=data_bundle.datasets["train"], dev_data=data_bundle.datasets["dev"],
+                      loss=loss, metrics=metric, check_code_level=-1, sampler=None,
+                      batch_size=1, device=torch.device("cuda:" + config.cuda) if torch.cuda.is_available() else None,
+                      metric_key='f', n_epochs=config.epoch,
                       optimizer=optim,
-                      save_path='/remote-home/xxliu/pycharm/fastNLP/fastNLP/reproduction/coreference_resolution/save',
+                      save_path=None,
                       callbacks=[lr_decay_callback, GradientClipCallback(clip_value=5)])
     print()
 

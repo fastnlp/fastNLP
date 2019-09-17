@@ -17,6 +17,7 @@ __all__ = [
     "SSTPipe",
     "SST2Pipe",
     "IMDBPipe",
+    "ChnSentiCorpPipe",
 
     "Conll2003NERPipe",
     "OntoNotesNERPipe",
@@ -37,12 +38,15 @@ __all__ = [
     "QuoraPipe",
     "QNLIPipe",
     "MNLIPipe",
+
+    "CoReferencePipe"
 ]
 
-from .classification import YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe
+from .classification import YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe, ChnSentiCorpPipe
 from .conll import Conll2003NERPipe, OntoNotesNERPipe, MsraNERPipe, WeiboNERPipe, PeopleDailyPipe
 from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe, QNLIBertPipe, MNLIBertPipe, \
     MatchingPipe, RTEPipe, SNLIPipe, QuoraPipe, QNLIPipe, MNLIPipe
 from .pipe import Pipe
 from .conll import Conll2003Pipe
 from .cws import CWSPipe
+from .coreference import CoReferencePipe

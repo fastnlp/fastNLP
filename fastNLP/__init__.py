@@ -14,7 +14,6 @@ __all__ = [
     "Instance",
     "FieldArray",
     
-    
     "DataSetIter",
     "BatchIter",
     "TorchLoaderIter",
@@ -29,10 +28,18 @@ __all__ = [
     "Callback",
     "GradientClipCallback",
     "EarlyStopCallback",
-    "TensorboardCallback",
+    "FitlogCallback",
+    "EvaluateCallback",
     "LRScheduler",
     "ControlC",
     "LRFinder",
+    "TensorboardCallback",
+    "WarmupCallback",
+    'SaveModelCallback',
+    "EchoCallback",
+    "TesterCallback",
+    "CallbackException",
+    "EarlyStopError",
     
     "Padder",
     "AutoPadder",
@@ -46,7 +53,7 @@ __all__ = [
     "SGD",
     "Adam",
     "AdamW",
-
+    
     "Sampler",
     "SequentialSampler",
     "BucketSampler",
@@ -60,13 +67,18 @@ __all__ = [
     "LossInForward",
     
     "cache_results",
-
+    
     'logger'
 ]
 __version__ = '0.4.5'
+
+import sys
 
 from . import embeddings
 from . import models
 from . import modules
 from .core import *
+from .doc_utils import doc_process
 from .io import loader, pipe
+
+doc_process(sys.modules[__name__])

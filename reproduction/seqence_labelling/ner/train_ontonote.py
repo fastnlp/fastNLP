@@ -18,11 +18,9 @@ from fastNLP.io.pipe.conll import OntoNotesNERPipe
 
 #######hyper
 normalize = False
-lower = False
 lr = 0.01
 dropout = 0.5
 batch_size = 32
-job_embed = False
 data_name = 'ontonote'
 #######hyper
 
@@ -41,7 +39,7 @@ def cache():
                                  word_dropout=0.01,
                                  dropout=dropout,
                                  lower=True,
-                                 min_freq=2)
+                                 min_freq=1)
     return data, char_embed, word_embed
 data, char_embed, word_embed = cache()
 

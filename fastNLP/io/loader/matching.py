@@ -41,7 +41,7 @@ class MNLILoader(Loader):
         ds = DataSet()
         with open(path, 'r', encoding='utf-8') as f:
             f.readline()  # 跳过header
-            if path.endswith("test.tsv"):
+            if path.endswith("test_matched.tsv") or path.endswith('test_mismatched.tsv'):
                 warnings.warn("RTE's test file has no target.")
                 for line in f:
                     line = line.strip()
@@ -128,7 +128,7 @@ class SNLILoader(JsonLoader):
     
     def load(self, paths: Union[str, Dict[str, str]] = None) -> DataBundle:
         """
-        从指定一个或多个路径中的文件中读取数据，返回:class:`~fastNLP.io.DataBundle` 。
+        从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.DataBundle` 。
 
         读取的field根据ConllLoader初始化时传入的headers决定。
 

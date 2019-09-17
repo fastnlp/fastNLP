@@ -10,7 +10,10 @@ __all__ = [
 ]
 
 import inspect
+import warnings
+from abc import abstractmethod
 from collections import defaultdict
+from typing import Union
 
 import numpy as np
 import torch
@@ -22,7 +25,6 @@ from .utils import _check_arg_dict_list
 from .utils import _get_func_signature
 from .utils import seq_len_to_mask
 from .vocabulary import Vocabulary
-from abc import abstractmethod
 
 
 class MetricBase(object):
@@ -150,6 +152,7 @@ class MetricBase(object):
     def get_metric_name(self):
         """
         返回metric的名称
+        
         :return:
         """
         return self._metric_name
@@ -293,17 +296,16 @@ class MetricBase(object):
 
 class AccuracyMetric(MetricBase):
     """
-    
-    别名：:class:`fastNLP.AccuracyMetric` :class:`fastNLP.core.metrics.AccuracyMetric`
-
     准确率Metric（其它的Metric参见 :doc:`fastNLP.core.metrics` ）
-    
-    :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
-    :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
-    :param seq_len: 参数映射表中 `seq_len` 的映射关系，None表示映射关系为 `seq_len` -> `seq_len`
     """
     
     def __init__(self, pred=None, target=None, seq_len=None):
+        """
+        
+        :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+        :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
+        :param seq_len: 参数映射表中 `seq_len` 的映射关系，None表示映射关系为 `seq_len` -> `seq_len`
+        """
         
         super().__init__()
         
@@ -336,15 +338,18 @@ class AccuracyMetric(MetricBase):
             raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
                             f"got {type(seq_len)}.")
         
-        if seq_len is not None:
-            masks = seq_len_to_mask(seq_len=seq_len)
+        if seq_len is not None and target.dim()>1:
+            max_len = target.size(1)
+            masks = seq_len_to_mask(seq_len=seq_len, max_len=max_len)
         else:
             masks = None
         
-        if pred.size() == target.size():
+        if pred.dim() == target.dim():
             pass
-        elif len(pred.size()) == len(target.size()) + 1:
+        elif pred.dim() == target.dim() + 1:
             pred = pred.argmax(dim=-1)
+            if seq_len is None and target.dim()>1:
+                warnings.warn("You are not passing `seq_len` to exclude pad when calculate accuracy.")
         else:
             raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
                                f"size:{pred.size()}, target should have size: {pred.size()} or "
@@ -492,10 +497,75 @@ def _bio_tag_to_spans(tags, ignore_labels=None):
     return [(span[0], (span[1][0], span[1][1] + 1)) for span in spans if span[0] not in ignore_labels]
 
 
+def _get_encoding_type_from_tag_vocab(tag_vocab:Union[Vocabulary, dict])->str:
+    """
+    给定Vocabulary自动判断是哪种类型的encoding, 支持判断bmes, bioes, bmeso, bio
+
+    :param tag_vocab: 支持传入tag Vocabulary; 或者传入形如{0:"O", 1:"B-tag1"}，即index在前，tag在后的dict。
+    :return:
+    """
+    tag_set = set()
+    unk_token = '<unk>'
+    pad_token = '<pad>'
+    if isinstance(tag_vocab, Vocabulary):
+        unk_token = tag_vocab.unknown
+        pad_token = tag_vocab.padding
+        tag_vocab = tag_vocab.idx2word
+    for idx, tag in tag_vocab.items():
+        if tag in (unk_token, pad_token):
+            continue
+        tag = tag[:1].lower()
+        tag_set.add(tag)
+
+    bmes_tag_set = set('bmes')
+    if tag_set == bmes_tag_set:
+        return 'bmes'
+    bio_tag_set = set('bio')
+    if tag_set == bio_tag_set:
+        return 'bio'
+    bmeso_tag_set = set('bmeso')
+    if tag_set == bmeso_tag_set:
+        return 'bmeso'
+    bioes_tag_set = set('bioes')
+    if tag_set == bioes_tag_set:
+        return 'bioes'
+    raise RuntimeError("encoding_type cannot be inferred automatically. Only support "
+                       "'bio', 'bmes', 'bmeso', 'bioes' type.")
+
+
+def _check_tag_vocab_and_encoding_type(tag_vocab:Union[Vocabulary, dict], encoding_type:str):
+    """
+    检查vocab中的tag是否与encoding_type是匹配的
+
+    :param tag_vocab: 支持传入tag Vocabulary; 或者传入形如{0:"O", 1:"B-tag1"}，即index在前，tag在后的dict。
+    :param encoding_type: bio, bmes, bioes, bmeso
+    :return:
+    """
+    tag_set = set()
+    unk_token = '<unk>'
+    pad_token = '<pad>'
+    if isinstance(tag_vocab, Vocabulary):
+        unk_token = tag_vocab.unknown
+        pad_token = tag_vocab.padding
+        tag_vocab = tag_vocab.idx2word
+    for idx, tag in tag_vocab.items():
+        if tag in (unk_token, pad_token):
+            continue
+        tag = tag[:1].lower()
+        tag_set.add(tag)
+
+    tags = encoding_type
+    for tag in tag_set:
+        assert tag in tags, f"{tag} is not a valid tag in encoding type:{encoding_type}. Please check your " \
+            f"encoding_type."
+        tags = tags.replace(tag, '')  # 删除该值
+    if tags:  # 如果不为空，说明出现了未使用的tag
+        warnings.warn(f"Tag:{tags} in encoding type:{encoding_type} is not presented in your Vocabulary. Check your "
+                      "encoding_type.")
+
+
 class SpanFPreRecMetric(MetricBase):
     r"""
-    别名：:class:`fastNLP.SpanFPreRecMetric` :class:`fastNLP.core.metrics.SpanFPreRecMetric`
-
     在序列标注问题中，以span的方式计算F, pre, rec.
     比如中文Part of speech中，会以character的方式进行标注，句子 `中国在亚洲` 对应的POS可能为(以BMES为例)
     ['B-NN', 'E-NN', 'S-DET', 'B-NN', 'E-NN']。该metric就是为类似情况下的F1计算。
@@ -518,34 +588,36 @@ class SpanFPreRecMetric(MetricBase):
             'rec-label':xxx,
             ...
         }
-
-    :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` 。支持的标签为"B"(没有label)；或"B-xxx"(xxx为某种label，比如POS中的NN)，
-        在解码时，会将相同xxx的认为是同一个label，比如['B-NN', 'E-NN']会被合并为一个'NN'.
-    :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用 `pred` 取数据
-    :param str target: 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用 `target` 取数据
-    :param str seq_len: 用该key在evaluate()时从传入dict中取出sequence length数据。为None，则使用 `seq_len` 取数据。
-    :param str encoding_type: 目前支持bio, bmes, bmeso, bioes
-    :param list ignore_labels: str 组成的list. 这个list中的class不会被用于计算。例如在POS tagging时传入['NN']，则不会计算'NN'这
-        个label
-    :param bool only_gross: 是否只计算总的f1, precision, recall的值；如果为False，不仅返回总的f1, pre, rec, 还会返回每个
-        label的f1, pre, rec
-    :param str f_type: `micro` 或 `macro` . `micro` :通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; `macro` :
-        分布计算每个类别的f, precision, recall，然后做平均（各类别f的权重相同）
-    :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
-        常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
     """
     
-    def __init__(self, tag_vocab, pred=None, target=None, seq_len=None, encoding_type='bio', ignore_labels=None,
+    def __init__(self, tag_vocab, pred=None, target=None, seq_len=None, encoding_type=None, ignore_labels=None,
                  only_gross=True, f_type='micro', beta=1):
+        r"""
         
-        encoding_type = encoding_type.lower()
-        
+        :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` 。支持的标签为"B"(没有label)；或"B-xxx"(xxx为某种label，比如POS中的NN)，
+            在解码时，会将相同xxx的认为是同一个label，比如['B-NN', 'E-NN']会被合并为一个'NN'.
+        :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用 `pred` 取数据
+        :param str target: 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用 `target` 取数据
+        :param str seq_len: 用该key在evaluate()时从传入dict中取出sequence length数据。为None，则使用 `seq_len` 取数据。
+        :param str encoding_type: 目前支持bio, bmes, bmeso, bioes。默认为None，通过tag_vocab自动判断.
+        :param list ignore_labels: str 组成的list. 这个list中的class不会被用于计算。例如在POS tagging时传入['NN']，则不会计算'NN'个label
+        :param bool only_gross: 是否只计算总的f1, precision, recall的值；如果为False，不仅返回总的f1, pre, rec, 还会返回每个label的f1, pre, rec
+        :param str f_type: `micro` 或 `macro` . `micro` :通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; `macro` : 分布计算每个类别的f, precision, recall，然后做平均（各类别f的权重相同）
+        :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` . 常用为 `beta=0.5, 1, 2` 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
+        """
+
         if not isinstance(tag_vocab, Vocabulary):
             raise TypeError("tag_vocab can only be fastNLP.Vocabulary, not {}.".format(type(tag_vocab)))
         if f_type not in ('micro', 'macro'):
             raise ValueError("f_type only supports `micro` or `macro`', got {}.".format(f_type))
-        
-        self.encoding_type = encoding_type
+
+        if encoding_type:
+            encoding_type = encoding_type.lower()
+            _check_tag_vocab_and_encoding_type(tag_vocab, encoding_type)
+            self.encoding_type = encoding_type
+        else:
+            self.encoding_type =  _get_encoding_type_from_tag_vocab(tag_vocab)
+
         if self.encoding_type == 'bmes':
             self.tag_to_span_func = _bmes_tag_to_spans
         elif self.encoding_type == 'bio':
@@ -555,7 +627,7 @@ class SpanFPreRecMetric(MetricBase):
         elif self.encoding_type == 'bioes':
             self.tag_to_span_func = _bioes_tag_to_spans
         else:
-            raise ValueError("Only support 'bio', 'bmes', 'bmeso' type.")
+            raise ValueError("Only support 'bio', 'bmes', 'bmeso', 'bioes' type.")
         
         self.ignore_labels = ignore_labels
         self.f_type = f_type
@@ -757,24 +829,23 @@ def _pred_topk(y_prob, k=1):
 
 class ExtractiveQAMetric(MetricBase):
     r"""
-    别名：:class:`fastNLP.ExtractiveQAMetric` :class:`fastNLP.core.metrics.ExtractiveQAMetric`
-
     抽取式QA（如SQuAD）的metric.
-    
-    :param pred1: 参数映射表中 `pred1` 的映射关系，None表示映射关系为 `pred1` -> `pred1`
-    :param pred2: 参数映射表中 `pred2` 的映射关系，None表示映射关系为 `pred2` -> `pred2`
-    :param target1: 参数映射表中 `target1` 的映射关系，None表示映射关系为 `target1` -> `target1`
-    :param target2: 参数映射表中 `target2` 的映射关系，None表示映射关系为 `target2` -> `target2`
-    :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
-        常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
-    :param bool right_open: right_open为true表示start跟end指针指向一个左闭右开区间，为false表示指向一个左闭右闭区间。
-    :param bool print_predict_stat: True则输出预测答案是否为空与正确答案是否为空的统计信息, False则不输出
     
     """
     
     def __init__(self, pred1=None, pred2=None, target1=None, target2=None,
                  beta=1, right_open=True, print_predict_stat=False):
+        r"""
         
+        :param pred1: 参数映射表中 `pred1` 的映射关系，None表示映射关系为 `pred1` -> `pred1`
+        :param pred2: 参数映射表中 `pred2` 的映射关系，None表示映射关系为 `pred2` -> `pred2`
+        :param target1: 参数映射表中 `target1` 的映射关系，None表示映射关系为 `target1` -> `target1`
+        :param target2: 参数映射表中 `target2` 的映射关系，None表示映射关系为 `target2` -> `target2`
+        :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
+            常用为beta=0.5, 1, 2. 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
+        :param bool right_open: right_open为true表示start跟end指针指向一个左闭右开区间，为false表示指向一个左闭右闭区间。
+        :param bool print_predict_stat: True则输出预测答案是否为空与正确答案是否为空的统计信息, False则不输出
+        """
         super(ExtractiveQAMetric, self).__init__()
         
         self._init_param_map(pred1=pred1, pred2=pred2, target1=target1, target2=target2)
