@@ -1,0 +1,21 @@
+language	gold_label	sentence1_binary_parse	sentence2_binary_parse	sentence1_parse	sentence2_parse	sentence1	sentence2	promptID	pairID	genre	label1	label2	label3	label4	label5	sentence1_tokenized	sentence2_tokenized	match
+zh	neutral					他说，妈妈，我回来了。	校车把他放下后，他立即给他妈妈打了电话。	1	1	facetoface	neutral	contradiction	neutral	neutral	neutral	他 说 ， 妈妈 ， 我 回来 了 。	校车 把 他 放下 后 ， 他 立即 给 他 妈妈 打 了 电话 。	True
+zh	contradiction					他说，妈妈，我回来了。	他没说一句话。	1	2	facetoface	contradiction	contradiction	contradiction	contradiction	contradiction	他 说 ， 妈妈 ， 我 回来 了 。	他 没 说 一 句 话 。	True
+zh	entailment					他说，妈妈，我回来了。	他告诉他的妈妈他已经回到家了。	1	3	facetoface	entailment	entailment	neutral	entailment	entailment	他 说 ， 妈妈 ， 我 回来 了 。	他 告诉 他 的 妈妈 他 已经 回到家 了 。	True
+zh	neutral					我不知道我要去干什么还是什么的，所以就去华盛顿指定的地方报到。	我从来没有去过华盛顿，所以当我被派到那里时，为了找地方我都找迷路了。	6	16	facetoface	neutral	neutral	neutral	neutral	neutral	我 不 知道 我 要 去 干 什么 还 是 什么 的 ， 所以 就 去 华盛顿 指定 的 地方 报到 。	我 从来 没有 去 过 华盛顿 ， 所以 当 我 被 派 到 那里 时 ， 为了 找 地方 我 都 找 迷路 了 。	True
+zh	contradiction					我不知道我要去干什么还是什么的，所以就去华盛顿指定的地方报到。	在我游行到华盛顿的时候我知道我要什么	6	17	facetoface	contradiction	contradiction	contradiction	contradiction	contradiction	我 不 知道 我 要 去 干 什么 还 是 什么 的 ， 所以 就 去 华盛顿 指定 的 地方 报到 。	在 我 游行 到 华盛顿 的 时候 我 知道 我 要 什么	True
+zh	entailment					我不知道我要去干什么还是什么的，所以就去华盛顿指定的地方报到。	我不确定我要做什么，所以我去了华盛顿。我被派去述职。	6	18	facetoface	entailment	entailment	entailment	entailment	entailment	我 不 知道 我 要 去 干 什么 还 是 什么 的 ， 所以 就 去 华盛顿 指定 的 地方 报到 。	我 不 确定 我 要 做 什么 ， 所以 我 去 了 华盛顿 。 我 被 派 去 述职 。	True
+zh	contradiction					他没去到。	他是第一个被邀请并享受这种体验的人。	8	22	facetoface	contradiction	contradiction	contradiction	contradiction	contradiction	他 没 去 到 。	他 是 第一 个 被 邀请 并 享受 这种 体验 的 人 。	True
+zh	entailment					他没去到。	他未被允许参加。	8	23	facetoface	entailment	entailment	neutral	entailment	entailment	他 没 去 到 。	他 未 被 允许 参加 。	True
+zh	neutral					他没去到。	他不被允许前往博物馆的开幕礼。	8	24	facetoface	neutral	neutral	neutral	neutral	neutral	他 没 去 到 。	他 不被 允许 前往 博物馆 的 开幕 礼 。	True
+zh	entailment					我没事，就这样！	在我答应之后，事情就结束了。	9	25	facetoface	entailment	entailment	entailment	entailment	entailment	我 没事 ， 就 这样 ！	在 我 答应 之后 ， 事情 就 结束 了 。	True
+zh	contradiction					我没事，就这样！	我说不，这就一直拖下去。	9	26	facetoface	contradiction	contradiction	contradiction	contradiction	contradiction	我 没事 ， 就 这样 ！	我 说 不 ， 这 就 一直 拖 下去 。	True
+zh	neutral					我没事，就这样！	当我说是的时候，我们决定那天结婚。	9	27	facetoface	neutral	neutral	neutral	neutral	neutral	我 没事 ， 就 这样 ！	当 我 说 是 的 时候 ， 我们 决定 那天 结婚 。	True
+zh	contradiction					我就在那里尝试解决这个问题。	我对此从一开始就理解的很好。	11	31	facetoface	contradiction	neutral	contradiction	contradiction	contradiction	我 就 在 那里 尝试 解决 这个 问题 。	我 对 此 从 一 开始 就 理解 的 很 好 。	True
+zh	neutral					我就在那里尝试解决这个问题。	我试图了解钱的去向。	11	32	facetoface	neutral	neutral	neutral	neutral	entailment	我 就 在 那里 尝试 解决 这个 问题 。	我 试图 了解 钱 的 去向 。	True
+zh	entailment					我就在那里尝试解决这个问题。	我试图理解。	11	33	facetoface	entailment	entailment	entailment	entailment	entailment	我 就 在 那里 尝试 解决 这个 问题 。	我 试图 理解 。	True
+zh	contradiction					他们停止了跟这家交朋友，因为他们决定了当白人。	他们每天都继续拜访。	13	37	facetoface	contradiction	contradiction	contradiction	contradiction	contradiction	他们 停止 了 跟 这家 交朋友 ， 因为 他们 决定 了 当 白人 。	他们 每天 都 继续 拜访 。	True
+zh	entailment					他们停止了跟这家交朋友，因为他们决定了当白人。	他们没有再去探望这家人。	13	38	facetoface	entailment	entailment	entailment	entailment	entailment	他们 停止 了 跟 这家 交朋友 ， 因为 他们 决定 了 当 白人 。	他们 没有 再 去 探望 这家 人 。	True
+zh	neutral					他们停止了跟这家交朋友，因为他们决定了当白人。	种族紧张局势开始时，他们不再探望这家人。	13	39	facetoface	neutral	entailment	entailment	entailment	entailment	他们 停止 了 跟 这家 交朋友 ， 因为 他们 决定 了 当 白人 。	种族 紧张 局势 开始 时 ， 他们 不再 探望 这家 人 。	False
+zh	contradiction					老太太以前常说她姐姐和姐丈是如何决定要搬到奥古斯塔城里去，并且被当做白人看待。	奶奶的妹妹是白人，搬到了德克萨斯州。	17	49	facetoface	contradiction	contradiction	contradiction	contradiction	neutral	老太太 以前 常 说 她 姐姐 和 姐丈 是 如何 决定 要 搬 到 奥古斯塔 城里 去 ， 并且 被 当做 白人 看待 。	奶奶 的 妹妹 是 白人 ， 搬 到 了 德克萨斯州 。	True
+zh	entailment					老太太以前常说她姐姐和姐丈是如何决定要搬到奥古斯塔城里去，并且被当做白人看待。	奶奶的姐姐不是白人。	17	50	facetoface	entailment	entailment	contradiction	neutral	entailment	老太太 以前 常 说 她 姐姐 和 姐丈 是 如何 决定 要 搬 到 奥古斯塔 城里 去 ， 并且 被 当做 白人 看待 。	奶奶 的 姐姐 不 是 白人 。	True
