@@ -1039,6 +1039,9 @@ class EchoCallback(Callback):
 class TesterCallback(Callback):
     def __init__(self, data, model, metrics, metric_key=None, batch_size=16, num_workers=None):
         super(TesterCallback, self).__init__()
+        if hasattr(model, 'module'):
+            # for data parallel model
+            model = model.module
         self.tester = Tester(data, model,
                              metrics=metrics, batch_size=batch_size,
                              num_workers=num_workers, verbose=0)

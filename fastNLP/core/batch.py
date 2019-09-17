@@ -111,11 +111,31 @@ class SamplerAdapter(torch.utils.data.Sampler):
 
 
 class BatchIter:
-    def __init__(self):
-        self.dataiter = None
-        self.num_batches = None
+    def __init__(self, dataset, batch_size=1, sampler=None,
+                 num_workers=0, pin_memory=False, drop_last=False,
+                 timeout=0, worker_init_fn=None, collate_fn=None):
+        if not isinstance(sampler, torch.utils.data.Sampler):
+            self.sampler = SamplerAdapter(sampler=sampler or SequentialSampler(), dataset=dataset)
+        else:
+            self.sampler = sampler
+        if collate_fn is None:
+            # pytoch <= 1.1 中不能设置collate_fn=None
+            self.dataiter = torch.utils.data.DataLoader(
+                dataset=dataset, batch_size=batch_size, sampler=self.sampler,
+                num_workers=num_workers,
+                pin_memory=pin_memory, drop_last=drop_last,
+                timeout=timeout, worker_init_fn=worker_init_fn)
+        else:
+            self.dataiter = torch.utils.data.DataLoader(
+                dataset=dataset, batch_size=batch_size, sampler=self.sampler,
+                collate_fn=collate_fn, num_workers=num_workers,
+                pin_memory=pin_memory, drop_last=drop_last,
+                timeout=timeout, worker_init_fn=worker_init_fn)
+
+        # 以sampler的数量为准，因为DistributedSampler的时候每个进程上并不是所有的数据都用上了
+        self.num_batches = self.get_num_batches(len(self.dataiter.sampler), batch_size, drop_last)
+        self.batch_size = batch_size
         self.cur_batch_indices = None
-        self.batch_size = None
 
     def init_iter(self):
         pass
@@ -134,12 +154,6 @@ class BatchIter:
         if not drop_last and (num_samples % batch_size > 0):
             num_batches += 1
         return num_batches
-
-    def __iter__(self):
-        self.init_iter()
-        for indices, batch_x, batch_y in self.dataiter:
-            self.cur_batch_indices = indices
-            yield batch_x, batch_y
 
     def get_batch_indices(self):
         """
@@ -170,7 +184,7 @@ class DataSetIter(BatchIter):
     """
     def __init__(self, dataset, batch_size=1, sampler=None, as_numpy=False,
                  num_workers=0, pin_memory=False, drop_last=False,
-                 timeout=0, worker_init_fn=None):
+                 timeout=0, worker_init_fn=None, collate_fn=None):
         """
         
         :param dataset: :class:`~fastNLP.DataSet` 对象, 数据集
@@ -187,22 +201,21 @@ class DataSetIter(BatchIter):
         :param timeout:
         :param worker_init_fn: 在每个worker启动时调用该函数，会传入一个值，该值是worker的index。
         """
-        super().__init__()
         assert isinstance(dataset, DataSet)
-        if not isinstance(sampler, torch.utils.data.Sampler):
-            self.sampler = SamplerAdapter(sampler=sampler or SequentialSampler(), dataset=dataset)
-        else:
-            self.sampler = sampler
         dataset = DataSetGetter(dataset, as_numpy)
-        collate_fn = dataset.collate_fn if hasattr(dataset, 'collate_fn') else None
-        self.dataiter = torch.utils.data.DataLoader(
-            dataset=dataset, batch_size=batch_size, sampler=self.sampler,
-            collate_fn=collate_fn, num_workers=num_workers,
-            pin_memory=pin_memory, drop_last=drop_last,
-            timeout=timeout, worker_init_fn=worker_init_fn)
-        # 以sampler的数量为准，因为DistributedSampler的时候每个进程上并不是所有的数据都用上了
-        self.num_batches = self.get_num_batches(len(self.dataiter.sampler), batch_size, drop_last)
-        self.batch_size = batch_size
+        collate_fn = dataset.collate_fn if collate_fn is None else collate_fn
+        super().__init__(
+            dataset=dataset, batch_size=batch_size, sampler=sampler,
+            num_workers=num_workers, pin_memory=pin_memory,
+            drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
+            collate_fn=collate_fn
+        )
+
+    def __iter__(self):
+        self.init_iter()
+        for indices, batch_x, batch_y in self.dataiter:
+            self.cur_batch_indices = indices
+            yield batch_x, batch_y
 
 
 class TorchLoaderIter(BatchIter):
@@ -210,12 +223,27 @@ class TorchLoaderIter(BatchIter):
     与DataSetIter类似，但用于pytorch的DataSet对象。通过使用TorchLoaderIter封装pytorch的DataSet，然后将其传入到Trainer中。
 
     """
-    def __init__(self, dataset):
-        super().__init__()
-        assert isinstance(dataset, torch.utils.data.DataLoader)
-        self.dataiter = dataset
-        self.num_batches = self.get_num_batches(len(dataset.sampler), dataset.batch_size, dataset.drop_last)
-        self.batch_size = dataset.batch_size
+    def __init__(self, dataset, batch_size=1, sampler=None,
+                 num_workers=0, pin_memory=False, drop_last=False,
+                 timeout=0, worker_init_fn=None, collate_fn=None):
+        assert len(dataset) > 0
+        ins = dataset[0]
+        assert len(ins) == 2 and \
+               isinstance(ins[0], dict) and \
+               isinstance(ins[1], dict), 'DataSet should return two dict, as X and Y'
+
+        super().__init__(
+            dataset=dataset, batch_size=batch_size, sampler=sampler,
+            num_workers=num_workers, pin_memory=pin_memory,
+            drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
+            collate_fn=collate_fn
+        )
+
+    def __iter__(self):
+        self.init_iter()
+        for batch_x, batch_y in self.dataiter:
+            self.cur_batch_indices = None
+            yield batch_x, batch_y
 
 
 def _to_tensor(batch, field_dtype):

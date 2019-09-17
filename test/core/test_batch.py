@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import torch
 
-from fastNLP import DataSetIter
+from fastNLP import DataSetIter, TorchLoaderIter
 from fastNLP import DataSet
 from fastNLP import Instance
 from fastNLP import SequentialSampler
@@ -149,7 +149,33 @@ class TestCase1(unittest.TestCase):
         batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler())
         for batch_x, batch_y in batch:
             pass
-    
+
+    def testTensorLoaderIter(self):
+        class FakeData:
+            def __init__(self, return_dict=True):
+                self.x = [[1,2,3], [4,5,6]]
+                self.return_dict = return_dict
+
+            def __len__(self):
+                return len(self.x)
+
+            def __getitem__(self, i):
+                x = self.x[i]
+                y = 0
+                if self.return_dict:
+                    return {'x':x}, {'y':y}
+                return x, y
+
+        data1 = FakeData()
+        dataiter = TorchLoaderIter(data1, batch_size=2)
+        for x, y in dataiter:
+            print(x, y)
+
+        def func():
+            data2 = FakeData(return_dict=False)
+            dataiter = TorchLoaderIter(data2, batch_size=2)
+        self.assertRaises(Exception, func)
+
     """
     def test_multi_workers_batch(self):
         batch_size = 32
