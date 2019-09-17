@@ -22,3 +22,19 @@ class TestRunPipe(unittest.TestCase):
                 print(pipe)
                 data_bundle = pipe().process_from_file('test/data_for_tests/conll_2003_example.txt')
                 print(data_bundle)
+
+
+class TestNERPipe(unittest.TestCase):
+    def test_process_from_file(self):
+        data_dict = {
+            'weibo_NER': WeiboNERPipe,
+            'peopledaily': PeopleDailyPipe,
+            'MSRA_NER': MsraNERPipe,
+        }
+        for k, v in data_dict.items():
+            pipe = v
+            with self.subTest(pipe=pipe):
+                data_bundle = pipe(bigrams=True, trigrams=True).process_from_file(f'test/data_for_tests/io/{k}')
+                print(data_bundle)
+                data_bundle = pipe(encoding_type='bioes').process_from_file(f'test/data_for_tests/io/{k}')
+                print(data_bundle)

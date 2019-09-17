@@ -31,6 +31,7 @@ class TestLoad(unittest.TestCase):
             'sst-2': ('test/data_for_tests/io/SST-2', SST2Loader, (5, 5, 5), True),
             'sst': ('test/data_for_tests/io/SST', SSTLoader, (6, 6, 6), False),
             'imdb': ('test/data_for_tests/io/imdb', IMDBLoader, (6, 6, 6), False),
+            'ChnSentiCorp': ('test/data_for_tests/io/ChnSentiCorp', ChnSentiCorpLoader, (6, 6, 6), False),
         }
         for k, v in data_set_dict.items():
             path, loader, data_set, warns = v
