@@ -15,7 +15,7 @@ class TestCWSLoader(unittest.TestCase):
 
 class TestRunCWSLoader(unittest.TestCase):
     def test_cws_loader(self):
-        dataset_names = ['msra']
+        dataset_names = ['msra', 'cityu', 'as', 'msra']
         for dataset_name in dataset_names:
             with self.subTest(dataset_name=dataset_name):
                 data_bundle = CWSLoader(dataset_name=dataset_name).load(

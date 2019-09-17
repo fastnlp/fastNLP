@@ -36,6 +36,7 @@ __all__ = [
 
     "MaxPool",
     "MaxPoolWithMask",
+    "KMaxPool",
     "AvgPool",
     "AvgPoolWithMask",
 
