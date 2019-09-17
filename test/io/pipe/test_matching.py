@@ -72,3 +72,37 @@ class TestRunMatchingPipe(unittest.TestCase):
             for x, y in zip(vocab, data_bundle1.iter_vocabs()):
                 name, vocabs = y
                 self.assertEqual(x + 1 if name == 'words' else x, len(vocabs))
+
+    def test_spacy(self):
+        data_set_dict = {
+            'RTE': ('test/data_for_tests/io/RTE', RTEPipe, RTEBertPipe, (5, 5, 5), (425, 2)),
+            }
+        for k, v in data_set_dict.items():
+            path, pipe1, pipe2, data_set, vocab = v
+
+            with self.assertWarns(Warning):
+                data_bundle1 = pipe1(tokenizer='spacy').process_from_file(path)
+                data_bundle2 = pipe2(tokenizer='spacy').process_from_file(path)
+
+            self.assertTrue(isinstance(data_bundle1, DataBundle))
+            self.assertEqual(len(data_set), data_bundle1.num_dataset)
+            print(k)
+            print(data_bundle1)
+            print(data_bundle2)
+            for x, y in zip(data_set, data_bundle1.iter_datasets()):
+                name, dataset = y
+                self.assertEqual(x, len(dataset))
+            self.assertEqual(len(data_set), data_bundle2.num_dataset)
+            for x, y in zip(data_set, data_bundle2.iter_datasets()):
+                name, dataset = y
+                self.assertEqual(x, len(dataset))
+
+            self.assertEqual(len(vocab), data_bundle1.num_vocab)
+            for x, y in zip(vocab, data_bundle1.iter_vocabs()):
+                name, vocabs = y
+                self.assertEqual(x, len(vocabs))
+            self.assertEqual(len(vocab), data_bundle2.num_vocab)
+            for x, y in zip(vocab, data_bundle1.iter_vocabs()):
+                name, vocabs = y
+                self.assertEqual(x + 1 if name == 'words' else x, len(vocabs))
+
