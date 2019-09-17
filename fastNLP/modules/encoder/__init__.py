@@ -27,9 +27,11 @@ __all__ = [
     "AvgPoolWithMask",
 
     "MultiHeadAttention",
+    "BiAttention",
+    "SelfAttention",
 ]
 
-from .attention import MultiHeadAttention
+from .attention import MultiHeadAttention, BiAttention, SelfAttention
 from .bert import BertModel
 from .char_encoder import ConvolutionCharEncoder, LSTMCharEncoder
 from .conv_maxpool import ConvMaxpool
