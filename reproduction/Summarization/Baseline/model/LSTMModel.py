@@ -17,11 +17,12 @@ class SummarizationModel(nn.Module):
         """
         
         :param hps: hyperparameters for the model
-        :param vocab: vocab object
+        :param embed: word embedding
         """
         super(SummarizationModel, self).__init__()
 
         self._hps = hps
+        self.Train = (hps.mode == 'train')
 
         # sentence encoder
         self.encoder = Encoder(hps, embed)
@@ -45,17 +46,18 @@ class SummarizationModel(nn.Module):
         self.wh = nn.Linear(self.d_v, 2)
 
 
-    def forward(self, input, input_len, Train):
+    def forward(self, words, seq_len):
         """
         
         :param input: [batch_size, N, seq_len], word idx long tensor 
         :param input_len: [batch_size, N], 1 for sentence and 0 for padding
-        :param Train: True for train and False for eval and test
-        :param return_atten: True or False to return multi-head attention output self.output_slf_attn
         :return: 
             p_sent: [batch_size, N, 2]
             output_slf_attn: (option) [n_head, batch_size, N, N]
         """
+
+        input = words
+        input_len = seq_len
 
         # -- Sentence Encoder
         self.sent_embedding = self.encoder(input) # [batch, N, Co * kernel_sizes]
@@ -67,7 +69,7 @@ class SummarizationModel(nn.Module):
         self.inputs[0] = self.sent_embedding.permute(1, 0, 2) # [N, batch, Co * kernel_sizes]
         self.input_masks[0] = input_len.permute(1, 0).unsqueeze(2)
 
-        self.lstm_output_state = self.deep_lstm(self.inputs, self.input_masks, Train)    # [batch, N, hidden_size]
+        self.lstm_output_state = self.deep_lstm(self.inputs, self.input_masks, Train=self.train)    # [batch, N, hidden_size]
 
         # -- Prepare masks
         batch_size, N = input_len.size()

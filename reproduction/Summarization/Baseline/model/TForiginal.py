@@ -51,7 +51,7 @@ class TransformerModel(nn.Module):
                 ffn_inner_hidden_size: FFN hiddens size
                 atten_dropout_prob: dropout size
                 doc_max_timesteps: max sentence number of the document
-        :param vocab: 
+        :param embed: word embedding 
         """
         super(TransformerModel, self).__init__()
 
