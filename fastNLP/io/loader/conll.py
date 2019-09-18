@@ -212,7 +212,7 @@ class OntoNotesNERLoader(ConllLoader):
 
     返回的DataSet的内容为
 
-    .. csv-table:: 下面是使用OntoNoteNERLoader读取的DataSet所具备的结构, target列是BIO编码
+    .. csv-table::
         :header: "raw_words", "target"
 
         "[Nadim, Ladki]", "[B-PER, I-PER]"
@@ -276,11 +276,45 @@ class OntoNotesNERLoader(ConllLoader):
 
 
 class CTBLoader(Loader):
+    """
+    支持加载的数据应该具备以下格式, 其中第二列为词语，第四列为pos tag，第七列为依赖树的head，第八列为依赖树的label
+
+    Example::
+
+        1       印度    _       NR      NR      _       3       nn      _       _
+        2       海军    _       NN      NN      _       3       nn      _       _
+        3       参谋长  _       NN      NN      _       5       nsubjpass       _       _
+        4       被      _       SB      SB      _       5       pass    _       _
+        5       解职    _       VV      VV      _       0       root    _       _
+
+        1       新华社  _       NR      NR      _       7       dep     _       _
+        2       新德里  _       NR      NR      _       7       dep     _       _
+        3       １２月  _       NT      NT      _       7       dep     _       _
+        ...
+
+    读取之后DataSet具备的格式为
+
+    .. csv-table::
+        :header: "raw_words", "pos", "dep_head", "dep_label"
+
+        "[印度, 海军, ...]", "[NR, NN, SB, ...]", "[3, 3, ...]", "[nn, nn, ...]"
+        "[新华社, 新德里, ...]", "[NR, NR, NT, ...]", "[7, 7, 7, ...]", "[dep, dep, dep, ...]"
+        "[...]", "[...]", "[...]", "[...]"
+
+    """
     def __init__(self):
         super().__init__()
+        headers = [
+            'raw_words', 'pos', 'dep_head', 'dep_label',
+        ]
+        indexes = [
+            1, 3, 6, 7,
+        ]
+        self.loader = ConllLoader(headers=headers, indexes=indexes)
     
     def _load(self, path: str):
-        pass
+        dataset = self.loader._load(path)
+        return dataset
 
 
 class CNNERLoader(Loader):
@@ -339,7 +373,7 @@ class MsraNERLoader(CNNERLoader):
 
     读取后的DataSet包含以下的field
 
-    .. csv-table:: target列是基于BIO的编码方式
+    .. csv-table::
         :header: "raw_chars", "target"
 
         "[我, 们, 变...]", "[O, O, ...]"
