@@ -130,11 +130,12 @@ def _indexize(data_bundle, input_field_names=Const.INPUT, target_field_names=Con
                                                         if ('train' not in name) and (ds.has_field(target_field_name))]
                                )
         if len(tgt_vocab._no_create_word) > 0:
-            warn_msg = f"There are {len(tgt_vocab._no_create_word)} target labels" \
+            warn_msg = f"There are {len(tgt_vocab._no_create_word)} `{target_field_name}` labels" \
                        f" in {[name for name in data_bundle.datasets.keys() if 'train' not in name]} " \
-                       f"data set but not in train data set!."
+                       f"data set but not in train data set!.\n" \
+                       f"These label(s) are {tgt_vocab._no_create_word}"
             warnings.warn(warn_msg)
-            logger.warn(warn_msg)
+            logger.warning(warn_msg)
         tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name=target_field_name)
         data_bundle.set_vocab(tgt_vocab, target_field_name)
     
