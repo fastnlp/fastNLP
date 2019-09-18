@@ -1,0 +1,50 @@
+
+bc/msnbc/00/msnbc_0003   0    0             The    DT     (TOP(S(NP*          -    -   -    Chris_Matthews         *      *       (ARG1*      *        *        *         *      -
+bc/msnbc/00/msnbc_0003   0    1            move    NN              *)       move  02   2    Chris_Matthews         *    (V*)           *)     *        *        *         *      -
+bc/msnbc/00/msnbc_0003   0    2           comes   VBZ           (VP*        come  03   2    Chris_Matthews         *      *          (V*)     *        *        *         *      -
+bc/msnbc/00/msnbc_0003   0    3               a    DT      (SBAR(NP*          -    -   -    Chris_Matthews    (DATE*      *   (ARGM-TMP*      *        *        *         *      -
+bc/msnbc/00/msnbc_0003   0    4           month    NN              *)      month   -   2    Chris_Matthews         *)     *            *      *        *        *         *      -
+bc/msnbc/00/msnbc_0003   0    5          before    IN              *          -    -   -    Chris_Matthews         *      *            *      *        *        *         *      -
+bc/msnbc/00/msnbc_0003   0    6             the    DT         (S(NP*          -    -   -    Chris_Matthews         *      *            *      *   (ARG1*   (ARG0*         *      -
+bc/msnbc/00/msnbc_0003   0    7          Senate   NNP              *)         -    -   -    Chris_Matthews      (ORG)     *            *      *        *)       *)        *      -
+bc/msnbc/00/msnbc_0003   0    8              is   VBZ           (VP*          be  03   -    Chris_Matthews         *      *            *    (V*)       *        *         *      -
+bc/msnbc/00/msnbc_0003   0    9       scheduled   VBN           (VP*    schedule  01   -    Chris_Matthews         *      *            *      *      (V*)       *         *      -
+bc/msnbc/00/msnbc_0003   0   10              to    TO         (S(VP*          -    -   -    Chris_Matthews         *      *            *      *   (ARG2*        *         *      -
+bc/msnbc/00/msnbc_0003   0   11            hold    VB           (VP*        hold  04   8    Chris_Matthews         *      *            *      *        *      (V*)        *      -
+bc/msnbc/00/msnbc_0003   0   12    confirmation    NN        (NP(NP*          -    -   -    Chris_Matthews         *      *            *      *        *   (ARG1*    (ARG2*)     -
+bc/msnbc/00/msnbc_0003   0   13        hearings   NNS              *)    hearing  01   1    Chris_Matthews         *      *            *      *        *        *       (V*)     -
+bc/msnbc/00/msnbc_0003   0   14              on    IN           (PP*          -    -   -    Chris_Matthews         *      *            *      *        *        *    (ARG1*      -
+bc/msnbc/00/msnbc_0003   0   15       President   NNP     (NP(NP(NP*          -    -   -    Chris_Matthews         *      *            *      *        *        *         *   (194
+bc/msnbc/00/msnbc_0003   0   16            Bush   NNP              *          -    -   -    Chris_Matthews   (PERSON)     *            *      *        *        *         *      -
+bc/msnbc/00/msnbc_0003   0   17              's   POS              *)         -    -   -    Chris_Matthews         *      *            *      *        *        *         *    194)
+bc/msnbc/00/msnbc_0003   0   18         Supreme   NNP          (NML*          -    -   -    Chris_Matthews     (ORG*      *            *      *        *        *         *      -
+bc/msnbc/00/msnbc_0003   0   19           Court   NNP              *)         -    -   -    Chris_Matthews         *)     *            *      *        *        *         *      -
+bc/msnbc/00/msnbc_0003   0   20         nominee    NN              *)         -    -   -    Chris_Matthews         *      *            *      *        *        *         *      -
+bc/msnbc/00/msnbc_0003   0   21            John   NNP           (NP*          -    -   -    Chris_Matthews  (PERSON*      *            *      *        *        *         *      -
+bc/msnbc/00/msnbc_0003   0   22         Roberts   NNP   *))))))))))))         -    -   -    Chris_Matthews         *)     *            *)     *        *)       *)        *)     -
+bc/msnbc/00/msnbc_0003   0   23              /.     .             *))         -    -   -    Chris_Matthews         *      *            *      *        *        *         *      -
+
+bc/msnbc/00/msnbc_0003   0    0        Senator    NNP  (TOP(S(NP(NP*             -    -   -    Chris_Matthews         *   (ARG1*             *        *       (162
+bc/msnbc/00/msnbc_0003   0    1          Chris    NNP              *             -    -   -    Chris_Matthews  (PERSON*        *             *        *          -
+bc/msnbc/00/msnbc_0003   0    2           Dodd    NNP              *)            -    -   -    Chris_Matthews         *)       *             *        *          -
+bc/msnbc/00/msnbc_0003   0    3             of     IN           (PP*             -    -   -    Chris_Matthews         *        *             *        *          -
+bc/msnbc/00/msnbc_0003   0    4    Connecticut    NNP         (NP*)))            -    -   -    Chris_Matthews      (GPE)       *)            *        *        162)
+bc/msnbc/00/msnbc_0003   0    5            was    VBD           (VP*             be  01   1    Chris_Matthews         *      (V*)            *        *          -
+bc/msnbc/00/msnbc_0003   0    6          among     IN           (PP*             -    -   -    Chris_Matthews         *   (ARG2*             *        *          -
+bc/msnbc/00/msnbc_0003   0    7          those     DT        (NP(NP*             -    -   -    Chris_Matthews         *        *        (ARG0*        *          -
+bc/msnbc/00/msnbc_0003   0    8      Democrats   NNPS              *)            -    -   -    Chris_Matthews     (NORP)       *             *)       *          -
+bc/msnbc/00/msnbc_0003   0    9            who     WP    (SBAR(WHNP*)            -    -   -    Chris_Matthews         *        *      (R-ARG0*)       *          -
+bc/msnbc/00/msnbc_0003   0   10          spoke    VBD         (S(VP*          speak  03   5    Chris_Matthews         *        *           (V*)       *          -
+bc/msnbc/00/msnbc_0003   0   11            out     RP          (PRT*)            -    -   -    Chris_Matthews         *        *             *        *          -
+bc/msnbc/00/msnbc_0003   0   12        against     IN           (PP*             -    -   -    Chris_Matthews         *        *        (ARG1*        *          -
+bc/msnbc/00/msnbc_0003   0   13         Bolton    NNP        (NP(NP*             -    -   -    Chris_Matthews   (PERSON)       *             *   (ARG1*   (31|(130
+bc/msnbc/00/msnbc_0003   0   14             's    POS              *)            -    -   -    Chris_Matthews         *        *             *        *)        31)
+bc/msnbc/00/msnbc_0003   0   15    appointment     NN             *))   appointment  01   1    Chris_Matthews         *        *             *)     (V*)       130)
+bc/msnbc/00/msnbc_0003   0   16          today     NN     (NP*)))))))         today   -   2    Chris_Matthews     (DATE)       *)   (ARGM-TMP*)       *       (121)
+bc/msnbc/00/msnbc_0003   0   17             /.      .             *))            -    -   -    Chris_Matthews         *        *             *        *          -
+
+bc/msnbc/00/msnbc_0003   0    0        I   PRP     (TOP(S(NP*)      -    -   -    Christopher_Dodd  *      *        (ARG0*)            *    (162)
+bc/msnbc/00/msnbc_0003   0    1     just    RB         (ADVP*)      -    -   -    Christopher_Dodd  *      *    (ARGM-ADV*)            *       -
+bc/msnbc/00/msnbc_0003   0    2       do   VBP           (VP*       do  01   -    Christopher_Dodd  *    (V*)            *             *       -
+bc/msnbc/00/msnbc_0003   0    3      n't    RB              *       -    -   -    Christopher_Dodd  *      *    (ARGM-NEG*)            *       -
+bc/msnbc/00/msnbc_0003   0    4    think    VB           (VP*    think  01   1    Christopher_Dodd  *      *           (V*)            *       -
