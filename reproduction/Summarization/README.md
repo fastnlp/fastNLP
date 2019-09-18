@@ -18,7 +18,7 @@ FastNLP中实现的模型包括：
 
 这里提供的摘要任务数据集包括：
 
-- CNN/DailyMail
+- CNN/DailyMail ([Get To The Point: Summarization with Pointer-Generator Networks](http://arxiv.org/abs/1704.04368))
 - Newsroom
 - The New York Times Annotated Corpus
     - NYT

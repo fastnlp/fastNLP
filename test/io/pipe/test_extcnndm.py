@@ -44,10 +44,12 @@ class TestRunExtCNNDMPipe(unittest.TestCase):
                               vocab_path=VOCAL_FILE,
                               sent_max_len=sent_max_len,
                               doc_max_timesteps=doc_max_timesteps,
-                               domain=True)
+                                domain=True)
         for k, v in data_set_dict.items():
             db = dbPipe.process_from_file(v)
             db2 = dbPipe2.process_from_file(v)
+
+            # print(db2.get_dataset("train"))
 
             self.assertTrue(isinstance(db, DataBundle))
             self.assertTrue(isinstance(db2, DataBundle))
