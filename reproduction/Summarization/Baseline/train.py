@@ -216,7 +216,8 @@ def main():
         hps.atten_dropout_prob = 0.0
         hps.ffn_dropout_prob = 0.0
         logger.info(hps)
-        db = dbPipe.process_from_file(DATA_FILE)
+        paths = {"test": DATA_FILE}
+        db = dbPipe.process_from_file(paths)
     else:
         paths = {"train": DATA_FILE, "valid": VALID_FILE}
         db = dbPipe.process_from_file(paths)

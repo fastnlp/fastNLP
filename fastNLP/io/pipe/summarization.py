@@ -79,7 +79,7 @@ class ExtCNNDMPipe(Pipe):
 
         if self.domain == True:
             domaindict = Vocabulary(padding=None, unknown=DOMAIN_UNK)
-            domaindict.from_dataset(db, field_name="publication")
+            domaindict.from_dataset(db.get_dataset("train"), field_name="publication")
             db.set_vocab(domaindict, "domain")
 
         return db
