@@ -222,8 +222,8 @@ def _get_base_url(name):
             return url + '/'
     else:
         URLS = {
-            'embedding': "http://dbcloud.irocn.cn:8989/api/public/dl/",
-            "dataset": "http://dbcloud.irocn.cn:8989/api/public/dl/dataset/"
+            'embedding': "http://fudan.irocn.cn:8989/api/public/dl/",
+            "dataset": "http://fudan.irocn.cn:8989/api/public/dl/dataset/"
         }
         if name.lower() not in URLS:
             raise KeyError(f"{name} is not recognized.")
