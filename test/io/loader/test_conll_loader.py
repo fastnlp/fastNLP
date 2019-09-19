@@ -26,6 +26,12 @@ class TestWeiboNER(unittest.TestCase):
 
 
 class TestConll2003Loader(unittest.TestCase):
-    def test__load(self):
+    def test_load(self):
         Conll2003Loader()._load('test/data_for_tests/conll_2003_example.txt')
+
+
+class TestConllLoader(unittest.TestCase):
+    def test_conll(self):
+        db = Conll2003Loader().load('test/data_for_tests/io/conll2003')
+        print(db)
 

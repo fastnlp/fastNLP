@@ -72,8 +72,8 @@ class BertEmbedding(ContextualEmbedding):
 
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
             if 'cn' in model_dir_or_name.lower() and pool_method not in ('first', 'last'):
-                logger.warn("For Chinese bert, pooled_method should choose from 'first', 'last' in order to achieve"
-                            " faster speed.")
+                logger.warning("For Chinese bert, pooled_method should choose from 'first', 'last' in order to achieve"
+                               " faster speed.")
                 warnings.warn("For Chinese bert, pooled_method should choose from 'first', 'last' in order to achieve"
                               " faster speed.")
         

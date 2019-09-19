@@ -65,7 +65,7 @@ class BertForSequenceClassification(BaseModel):
             self.bert.model.include_cls_sep = True
             warn_msg = "Bert for sequence classification excepts BertEmbedding `include_cls_sep` True, " \
                        "but got False. FastNLP has changed it to True."
-            logger.warn(warn_msg)
+            logger.warning(warn_msg)
             warnings.warn(warn_msg)
 
     def forward(self, words):
@@ -110,7 +110,7 @@ class BertForSentenceMatching(BaseModel):
             self.bert.model.include_cls_sep = True
             warn_msg = "Bert for sentence matching excepts BertEmbedding `include_cls_sep` True, " \
                        "but got False. FastNLP has changed it to True."
-            logger.warn(warn_msg)
+            logger.warning(warn_msg)
             warnings.warn(warn_msg)
 
     def forward(self, words):
@@ -156,7 +156,7 @@ class BertForMultipleChoice(BaseModel):
             self.bert.model.include_cls_sep = True
             warn_msg = "Bert for multiple choice excepts BertEmbedding `include_cls_sep` True, " \
                        "but got False. FastNLP has changed it to True."
-            logger.warn(warn_msg)
+            logger.warning(warn_msg)
             warnings.warn(warn_msg)
 
     def forward(self, words):
@@ -206,7 +206,7 @@ class BertForTokenClassification(BaseModel):
             self.bert.model.include_cls_sep = False
             warn_msg = "Bert for token classification excepts BertEmbedding `include_cls_sep` False, " \
                        "but got True. FastNLP has changed it to False."
-            logger.warn(warn_msg)
+            logger.warning(warn_msg)
             warnings.warn(warn_msg)
 
     def forward(self, words):
@@ -250,7 +250,7 @@ class BertForQuestionAnswering(BaseModel):
             self.bert.model.include_cls_sep = True
             warn_msg = "Bert for question answering excepts BertEmbedding `include_cls_sep` True, " \
                        "but got False. FastNLP has changed it to True."
-            logger.warn(warn_msg)
+            logger.warning(warn_msg)
             warnings.warn(warn_msg)
 
     def forward(self, words):

@@ -387,7 +387,7 @@ class SST2Pipe(_CLSPipe):
                        f" in {[name for name in data_bundle.datasets.keys() if 'train' not in name]} " \
                        f"data set but not in train data set!."
             warnings.warn(warn_msg)
-            logger.warn(warn_msg)
+            logger.warning(warn_msg)
         datasets = []
         for name, dataset in data_bundle.datasets.items():
             if dataset.has_field(Const.TARGET):

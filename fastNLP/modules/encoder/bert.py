@@ -488,10 +488,10 @@ class BertModel(nn.Module):
 
         load(model, prefix='' if hasattr(model, 'bert') else 'bert.')
         if len(missing_keys) > 0:
-            logger.warn("Weights of {} not initialized from pretrained model: {}".format(
+            logger.warning("Weights of {} not initialized from pretrained model: {}".format(
                 model.__class__.__name__, missing_keys))
         if len(unexpected_keys) > 0:
-            logger.warn("Weights from pretrained model not used in {}: {}".format(
+            logger.warning("Weights from pretrained model not used in {}: {}".format(
                 model.__class__.__name__, unexpected_keys))
 
         logger.info(f"Load pre-trained BERT parameters from file {weights_path}.")
@@ -800,7 +800,7 @@ class BertTokenizer(object):
         for token in tokens:
             ids.append(self.vocab[token])
         if len(ids) > self.max_len:
-            logger.warn(
+            logger.warning(
                 "Token indices sequence length is longer than the specified maximum "
                 " sequence length for this BERT model ({} > {}). Running this"
                 " sequence through BERT will result in indexing errors".format(len(ids), self.max_len)
@@ -824,8 +824,8 @@ class BertTokenizer(object):
         with open(vocab_file, "w", encoding="utf-8") as writer:
             for token, token_index in sorted(self.vocab.items(), key=lambda kv: kv[1]):
                 if index != token_index:
-                    logger.warn("Saving vocabulary to {}: vocabulary indices are not consecutive."
-                          " Please check that the vocabulary is not corrupted!".format(vocab_file))
+                    logger.warning("Saving vocabulary to {}: vocabulary indices are not consecutive."
+                                   " Please check that the vocabulary is not corrupted!".format(vocab_file))
                     index = token_index
                 writer.write(token + u'\n')
                 index += 1

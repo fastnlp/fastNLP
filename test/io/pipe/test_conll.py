@@ -1,6 +1,7 @@
 import unittest
 import os
-from fastNLP.io import MsraNERPipe, PeopleDailyPipe, WeiboNERPipe, Conll2003Pipe, Conll2003NERPipe
+from fastNLP.io import MsraNERPipe, PeopleDailyPipe, WeiboNERPipe, Conll2003Pipe, Conll2003NERPipe, \
+    OntoNotesNERPipe
 
 
 @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
@@ -38,3 +39,14 @@ class TestNERPipe(unittest.TestCase):
                 print(data_bundle)
                 data_bundle = pipe(encoding_type='bioes').process_from_file(f'test/data_for_tests/io/{k}')
                 print(data_bundle)
+
+
+class TestConll2003Pipe(unittest.TestCase):
+    def test_conll(self):
+        with self.assertWarns(Warning):
+            data_bundle = Conll2003Pipe().process_from_file('test/data_for_tests/io/conll2003')
+        print(data_bundle)
+
+    def test_OntoNotes(self):
+        data_bundle = OntoNotesNERPipe().process_from_file('test/data_for_tests/io/OntoNotes')
+        print(data_bundle)
