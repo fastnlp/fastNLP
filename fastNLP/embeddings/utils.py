@@ -13,18 +13,21 @@ __all__ = [
 ]
 
 
-def _construct_char_vocab_from_vocab(vocab: Vocabulary, min_freq: int = 1):
+def _construct_char_vocab_from_vocab(vocab: Vocabulary, min_freq: int = 1, include_word_start_end=True):
     """
     给定一个word的vocabulary生成character的vocabulary.
 
     :param vocab: 从vocab
     :param min_freq:
+    :param include_word_start_end: 是否需要包含特殊的<bow>和<eos>
     :return:
     """
     char_vocab = Vocabulary(min_freq=min_freq)
     for word, index in vocab:
         if not vocab._is_word_no_create_entry(word):
             char_vocab.add_word_lst(list(word))
+    if include_word_start_end:
+        char_vocab.add_word_lst(['<bow>', '<eow>'])
     return char_vocab
 
 

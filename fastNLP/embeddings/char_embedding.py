@@ -44,7 +44,8 @@ class CNNCharEmbedding(TokenEmbedding):
     
     def __init__(self, vocab: Vocabulary, embed_size: int = 50, char_emb_size: int = 50, word_dropout: float = 0,
                  dropout: float = 0, filter_nums: List[int] = (40, 30, 20), kernel_sizes: List[int] = (5, 3, 1),
-                 pool_method: str = 'max', activation='relu', min_char_freq: int = 2, pre_train_char_embed: str = None):
+                 pool_method: str = 'max', activation='relu', min_char_freq: int = 2, pre_train_char_embed: str = None,
+                 requires_grad:bool=True, include_word_start_end:bool=True):
         """
         
         :param vocab: 词表
@@ -60,6 +61,8 @@ class CNNCharEmbedding(TokenEmbedding):
         :param pre_train_char_embed: 可以有两种方式调用预训练好的character embedding：第一种是传入embedding文件夹
             (文件夹下应该只有一个以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，
             没有的话将自动下载。如果输入为None则使用embedding_dim的维度随机初始化一个embedding.
+        :param requires_grad: 是否更新权重
+        :param include_word_start_end: 是否在每个word开始的character前和结束的character增加特殊标示符号；
         """
         super(CNNCharEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         
@@ -86,16 +89,21 @@ class CNNCharEmbedding(TokenEmbedding):
         
         logger.info("Start constructing character vocabulary.")
         # 建立char的词表
-        self.char_vocab = _construct_char_vocab_from_vocab(vocab, min_freq=min_char_freq)
+        self.char_vocab = _construct_char_vocab_from_vocab(vocab, min_freq=min_char_freq,
+                                                           include_word_start_end=include_word_start_end)
         self.char_pad_index = self.char_vocab.padding_idx
         logger.info(f"In total, there are {len(self.char_vocab)} distinct characters.")
         # 对vocab进行index
         max_word_len = max(map(lambda x: len(x[0]), vocab))
+        if include_word_start_end:
+            max_word_len += 2
         self.register_buffer('words_to_chars_embedding', torch.full((len(vocab), max_word_len),
                                                                 fill_value=self.char_pad_index, dtype=torch.long))
         self.register_buffer('word_lengths', torch.zeros(len(vocab)).long())
         for word, index in vocab:
             # if index!=vocab.padding_idx:  # 如果是pad的话，直接就为pad_value了。修改为不区分pad, 这样所有的<pad>也是同一个embed
+            if include_word_start_end:
+                word = ['<bow>'] + list(word) + ['<eow>']
             self.words_to_chars_embedding[index, :len(word)] = \
                 torch.LongTensor([self.char_vocab.to_index(c) for c in word])
             self.word_lengths[index] = len(word)
@@ -110,6 +118,7 @@ class CNNCharEmbedding(TokenEmbedding):
             for i in range(len(kernel_sizes))])
         self._embed_size = embed_size
         self.fc = nn.Linear(sum(filter_nums), embed_size)
+        self.requires_grad = requires_grad
 
     def forward(self, words):
         """
@@ -164,8 +173,8 @@ class LSTMCharEmbedding(TokenEmbedding):
     
     def __init__(self, vocab: Vocabulary, embed_size: int = 50, char_emb_size: int = 50, word_dropout: float = 0,
                  dropout: float = 0, hidden_size=50, pool_method: str = 'max', activation='relu',
-                 min_char_freq: int = 2,
-                 bidirectional=True, pre_train_char_embed: str = None):
+                 min_char_freq: int = 2, bidirectional=True, pre_train_char_embed: str = None,
+                 requires_grad:bool=True, include_word_start_end:bool=True):
         """
         
         :param vocab: 词表
@@ -181,6 +190,8 @@ class LSTMCharEmbedding(TokenEmbedding):
         :param pre_train_char_embed: 可以有两种方式调用预训练好的character embedding：第一种是传入embedding文件夹
             (文件夹下应该只有一个以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，
             没有的话将自动下载。如果输入为None则使用embedding_dim的维度随机初始化一个embedding.
+        :param requires_grad: 是否更新权重
+        :param include_word_start_end: 是否在每个word开始的character前和结束的character增加特殊标示符号；
         """
         super(LSTMCharEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         
@@ -206,20 +217,24 @@ class LSTMCharEmbedding(TokenEmbedding):
         
         logger.info("Start constructing character vocabulary.")
         # 建立char的词表
-        self.char_vocab = _construct_char_vocab_from_vocab(vocab, min_freq=min_char_freq)
+        self.char_vocab = _construct_char_vocab_from_vocab(vocab, min_freq=min_char_freq,
+                                                           include_word_start_end=include_word_start_end)
         self.char_pad_index = self.char_vocab.padding_idx
         logger.info(f"In total, there are {len(self.char_vocab)} distinct characters.")
         # 对vocab进行index
-        self.max_word_len = max(map(lambda x: len(x[0]), vocab))
-        self.register_buffer('words_to_chars_embedding', torch.full((len(vocab), self.max_word_len),
+        max_word_len = max(map(lambda x: len(x[0]), vocab))
+        if include_word_start_end:
+            max_word_len += 2
+        self.register_buffer('words_to_chars_embedding', torch.full((len(vocab), max_word_len),
                                                                 fill_value=self.char_pad_index, dtype=torch.long))
         self.register_buffer('word_lengths', torch.zeros(len(vocab)).long())
         for word, index in vocab:
             # if index!=vocab.padding_idx:  # 如果是pad的话，直接就为pad_value了. 修改为不区分pad与否
+            if include_word_start_end:
+                word = ['<bow>'] + list(word) + ['<eow>']
             self.words_to_chars_embedding[index, :len(word)] = \
                 torch.LongTensor([self.char_vocab.to_index(c) for c in word])
             self.word_lengths[index] = len(word)
-        # self.char_embedding = nn.Embedding(len(self.char_vocab), char_emb_size)
         if pre_train_char_embed:
             self.char_embedding = StaticEmbedding(self.char_vocab, pre_train_char_embed)
         else:
@@ -231,6 +246,7 @@ class LSTMCharEmbedding(TokenEmbedding):
         self.lstm = LSTM(char_emb_size, hidden_size, bidirectional=bidirectional, batch_first=True)
         self._embed_size = embed_size
         self.bidirectional = bidirectional
+        self.requires_grad = requires_grad
     
     def forward(self, words):
         """
