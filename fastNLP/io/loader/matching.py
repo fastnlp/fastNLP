@@ -377,6 +377,16 @@ class XNLILoader(Loader):
         data_bundle = DataBundle(datasets=datasets)
         return data_bundle
 
+    def download(self) -> str:
+        """
+        自动下载数据，该数据取自 https://arxiv.org/abs/1809.05053
+        在 https://arxiv.org/pdf/1905.05526.pdf https://arxiv.org/pdf/1901.10125.pdf
+        https://arxiv.org/pdf/1809.05053.pdf 有使用
+        :return:
+        """
+        output_dir = self._get_dataset_path('xnli')
+        return output_dir
+
 
 class BQCorpusLoader(Loader):
     """
