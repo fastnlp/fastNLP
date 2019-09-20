@@ -842,6 +842,7 @@ class Trainer(object):
 
     @property
     def is_master(self):
+        """是否是主进程"""
         return True
 
 DEFAULT_CHECK_BATCH_SIZE = 2

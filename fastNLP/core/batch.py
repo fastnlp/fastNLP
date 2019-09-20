@@ -193,13 +193,14 @@ class DataSetIter(BatchIter):
     
             Default: ``None``
         :param bool as_numpy: 若为 ``True`` , 输出batch为 numpy.array. 否则为 :class:`torch.Tensor`.
-    
+
             Default: ``False``
         :param int num_workers: 使用多少个进程来预处理数据
         :param bool pin_memory: 是否将产生的tensor使用pin memory, 可能会加快速度。
         :param bool drop_last: 如果最后一个batch没有batch_size这么多sample，就扔掉最后一个
-        :param timeout:
+        :param timeout: 生成一个batch的timeout值
         :param worker_init_fn: 在每个worker启动时调用该函数，会传入一个值，该值是worker的index。
+        :param collate_fn: 用于将样本组合成batch的函数
         """
         assert isinstance(dataset, DataSet)
         dataset = DataSetGetter(dataset, as_numpy)
@@ -220,12 +221,26 @@ class DataSetIter(BatchIter):
 
 class TorchLoaderIter(BatchIter):
     """
-    与DataSetIter类似，但用于pytorch的DataSet对象。通过使用TorchLoaderIter封装pytorch的DataSet，然后将其传入到Trainer中。
+    与DataSetIter类似，但用于pytorch的DataSet对象。
+    通过使用TorchLoaderIter封装pytorch的DataSet，然后将其传入到Trainer中。
 
     """
     def __init__(self, dataset, batch_size=1, sampler=None,
                  num_workers=0, pin_memory=False, drop_last=False,
                  timeout=0, worker_init_fn=None, collate_fn=None):
+        """
+
+        :param dataset: :class:`~fastNLP.DataSet` 对象, 数据集
+        :param int batch_size: 取出的batch大小
+        :param sampler: 规定使用的 :class:`~fastNLP.Sampler` 方式. 若为 ``None`` , 使用 :class:`~fastNLP.SequentialSampler`.
+
+            Default: ``None``
+        :param int num_workers: 使用多少个进程来预处理数据
+        :param bool pin_memory: 是否将产生的tensor使用pin memory, 可能会加快速度。
+        :param bool drop_last: 如果最后一个batch没有batch_size这么多sample，就扔掉最后一个
+        :param timeout: 生成一个batch的timeout值
+        :param worker_init_fn: 在每个worker启动时调用该函数，会传入一个值，该值是worker的index。
+        :param collate_fn: 用于将样本组合成batch的函数"""
         assert len(dataset) > 0
         ins = dataset[0]
         assert len(ins) == 2 and \
