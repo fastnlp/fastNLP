@@ -48,6 +48,8 @@ __all__ = [
     "allowed_transitions",
 
     "TimestepDropout",
+
+    'summary'
 ]
 
 from . import decoder
@@ -55,6 +57,7 @@ from . import encoder
 from .decoder import *
 from .dropout import TimestepDropout
 from .encoder import *
+from .utils import summary
 
 import sys
 from ..doc_utils import doc_process
