@@ -63,7 +63,7 @@ __all__ = [
     "WarmupCallback",
     "SaveModelCallback",
     "EchoCallback",
-    "TesterCallback",
+    "_TesterCallback",
     
     "CallbackException",
     "EarlyStopError"

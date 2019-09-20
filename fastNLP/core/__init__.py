@@ -49,7 +49,6 @@ __all__ = [
     "WarmupCallback",
     'SaveModelCallback',
     "EchoCallback",
-    "TesterCallback",
     "CallbackException",
     "EarlyStopError",
     
@@ -79,7 +78,7 @@ from ._logger import logger
 from .batch import DataSetIter, BatchIter, TorchLoaderIter
 from .callback import Callback, GradientClipCallback, EarlyStopCallback, FitlogCallback, EvaluateCallback, \
     LRScheduler, ControlC, LRFinder, TensorboardCallback, WarmupCallback, SaveModelCallback, EchoCallback, \
-    TesterCallback, CallbackException, EarlyStopError
+    CallbackException, EarlyStopError
 from .const import Const
 from .dataset import DataSet
 from .field import FieldArray, Padder, AutoPadder, EngChar2DPadder

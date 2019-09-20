@@ -130,12 +130,14 @@ class TestDistTrainer(unittest.TestCase):
             train_set, model, optimizer=SGD(lr=0.1),
             loss=BCELoss(pred="predict", target="y"),
             batch_size_per_gpu=32, n_epochs=3, print_every=50, dev_data=dev_set,
-            metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
+            metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=self.save_path,
         )
         trainer.train()
         """
         # 应该正确运行
         """
+        if trainer.is_master and os.path.exists(self.save_path):
+            shutil.rmtree(self.save_path)
 
     def run_dist(self, run_id):
         if torch.cuda.is_available():
