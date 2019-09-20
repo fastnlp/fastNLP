@@ -163,14 +163,21 @@ class YelpPolarityLoader(YelpLoader):
 
 class IMDBLoader(Loader):
     """
+    原始数据中内容应该为, 每一行为一个sample，制表符之前为target，制表符之后为文本内容。
+
+    Example::
+
+        neg	Alan Rickman & Emma...
+        neg	I have seen this...
+
     IMDBLoader读取后的数据将具有以下两列内容: raw_words: str, 需要分类的文本; target: str, 文本的标签
-    DataSet具备以下的结构:
+    读取的DataSet具备以下的结构:
 
     .. csv-table::
        :header: "raw_words", "target"
 
-       "Bromwell High is a cartoon ... ", "pos"
-       "Story of a man who has ...", "neg"
+       "Alan Rickman & Emma... ", "neg"
+       "I have seen this...", "neg"
        "...", "..."
 
     """
@@ -241,13 +248,20 @@ class IMDBLoader(Loader):
 
 class SSTLoader(Loader):
     """
+    原始数据中内容应该为:
+
+    Example::
+
+        (2 (3 (3 Effective) (2 but)) (1 (1 too-tepid)...
+        (3 (3 (2 If) (3 (2 you) (3 (2 sometimes)...
+
     读取之后的DataSet具有以下的结构
 
     .. csv-table:: 下面是使用SSTLoader读取的DataSet所具备的field
         :header: "raw_words"
 
-        "(3 (2 It) (4 (4 (2 's) (4 (3 (2 a)..."
-        "(4 (4 (2 Offers) (3 (3 (2 that) (3 (3 rare)..."
+        "(2 (3 (3 Effective) (2 but)) (1 (1 too-tepid)..."
+        "(3 (3 (2 If) (3 (2 you) (3 (2 sometimes) ..."
         "..."
 
     raw_words列是str。
@@ -286,7 +300,14 @@ class SSTLoader(Loader):
 
 class SST2Loader(Loader):
     """
-    数据SST2的Loader
+    原始数据中内容为：第一行为标题(具体内容会被忽略)，之后一行为一个sample，第一个制表符之前被认为是句子，第一个制表符之后认为是label
+
+    Example::
+
+        sentence	label
+        it 's a charming and often affecting journey . 	1
+        unflinchingly bleak and desperate 	0
+
     读取之后DataSet将如下所示
 
     .. csv-table::
@@ -351,18 +372,17 @@ class ChnSentiCorpLoader(Loader):
 
     Example::
 
-        label	raw_chars
-        1	這間酒店環境和服務態度亦算不錯,但房間空間太小~~
-        1	<荐书> 推荐所有喜欢<红楼>的红迷们一定要收藏这本书,要知道...
-        0	商品的不足暂时还没发现，京东的订单处理速度实在.......周二就打包完成，周五才发货...
+        label	text_a
+        1	基金痛所有投资项目一样，必须先要有所了解...
+        1	系统很好装，LED屏是不错，就是16比9的比例...
 
     读取后的DataSet具有以下的field
 
     .. csv-table::
         :header: "raw_chars", "target"
 
-        "這間酒店環境和服務態度亦算不錯,但房間空間太小~~", "1"
-        "<荐书> 推荐所有喜欢<红楼>...", "1"
+        "基金痛所有投资项目一样，必须先要有所了解...", "1"
+        "系统很好装，LED屏是不错，就是16比9的比例...", "1"
         "..."
 
     """
@@ -400,73 +420,21 @@ class ChnSentiCorpLoader(Loader):
         return output_dir
 
 
-class ChnSentiCorpLoader(Loader):
-    """
-    支持读取的数据的格式为，第一行为标题(具体内容会被忽略)，之后一行为一个sample，第一个制表符之前被认为是label，第
-    一个制表符及之后认为是句子
-
-    Example::
-
-        label	raw_chars
-        1	這間酒店環境和服務態度亦算不錯,但房間空間太小~~
-        1	<荐书> 推荐所有喜欢<红楼>的红迷们一定要收藏这本书,要知道...
-        0	商品的不足暂时还没发现，京东的订单处理速度实在.......周二就打包完成，周五才发货...
-
-    读取后的DataSet具有以下的field
-
-    .. csv-table::
-        :header: "raw_chars", "target"
-
-        "這間酒店環境和服務態度亦算不錯,但房間空間太小~~", "1"
-        "<荐书> 推荐所有喜欢<红楼>...", "1"
-        "..."
-
-    """
-
-    def __init__(self):
-        super().__init__()
-
-    def _load(self, path: str):
-        """
-        从path中读取数据
-
-        :param path:
-        :return:
-        """
-        ds = DataSet()
-        with open(path, 'r', encoding='utf-8') as f:
-            f.readline()
-            for line in f:
-                line = line.strip()
-                tab_index = line.index('\t')
-                if tab_index != -1:
-                    target = line[:tab_index]
-                    raw_chars = line[tab_index + 1:]
-                    if raw_chars:
-                        ds.append(Instance(raw_chars=raw_chars, target=target))
-        return ds
-
-    def download(self) -> str:
-        """
-        自动下载数据，该数据取自https://github.com/pengming617/bert_classification/tree/master/data，在
-        https://arxiv.org/pdf/1904.09223.pdf与https://arxiv.org/pdf/1906.08101.pdf有使用
-
-        :return:
-        """
-        output_dir = self._get_dataset_path('chn-senti-corp')
-        return output_dir
-
-
 class THUCNewsLoader(Loader):
     """
     别名：
     数据集简介：document-level分类任务，新闻10分类
-    原始数据内容为：每行一个sample，第一个'\t'之前为target，第一个'\t'之后为raw_words
+    原始数据内容为：每行一个sample，第一个制表符之前为target，第一个制表符之后为raw_words
+
+    Example::
+
+        体育	调查-您如何评价热火客场胜绿军总分3-1夺赛点？...
+
     读取后的Dataset将具有以下数据结构：
 
     .. csv-table::
        :header: "raw_words", "target"
-       "马晓旭意外受伤让国奥警惕 无奈大雨格外青睐殷家军记者傅亚雨沈阳报道 ... ", "体育"
+       "调查-您如何评价热火客场胜绿军总分3-1夺赛点？...", "体育"
        "...", "..."
 
     """
@@ -492,14 +460,19 @@ class WeiboSenti100kLoader(Loader):
     别名：
     数据集简介：微博sentiment classification，二分类
     原始数据内容为：
-    label   text
-    0   六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]
-    1   听过一场！笑死了昂，一听茄子脱口秀，从此节操是路人！[嘻嘻] //@中国梦网官微:@Pencil彭赛 @茄子脱口秀 [圣诞帽][圣诞树][平安果]
+
+    Example::
+
+        label	text
+        1	多谢小莲，好运满满[爱你]
+        1	能在他乡遇老友真不赖，哈哈，珠儿，我也要用...
+
     读取后的Dataset将具有以下数据结构：
 
     .. csv-table::
        :header: "raw_chars", "target"
-       "六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]", "0"
+       "多谢小莲，好运满满[爱你]", "1"
+       "能在他乡遇老友真不赖，哈哈，珠儿，我也要用...", "1"
        "...", "..."
 
     """
