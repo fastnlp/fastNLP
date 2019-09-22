@@ -18,9 +18,29 @@ from ...core.const import Const
 class CoReferencePipe(Pipe):
     """
     对Coreference resolution问题进行处理，得到文章种类/说话者/字符级信息/序列长度。
+
+    处理完成后数据包含文章类别、speaker信息、句子信息、句子对应的index、char、句子长度、target：
+
+        .. csv-table::
+           :header: "words1", "words2","words3","words4","chars","seq_len","target"
+
+           "bc", "[[0,0],[1,1]]","[['I','am'],[]]","[[1,2],[]]","[[[1],[2,3]],[]]","[2,3]","[[[2,3],[6,7]],[[10,12],[20,22]]]"
+           "[...]", "[...]","[...]","[...]","[...]","[...]","[...]"
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_chars | target | chars | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   |  True  |  True |   True  |
+        |  is_target  |   False   |  True  | False |   True  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
+
     """
 
-    def __init__(self,config):
+    def __init__(self, config):
         super().__init__()
         self.config = config
 
@@ -34,14 +54,6 @@ class CoReferencePipe(Pipe):
            "bc/cctv/00/cctv_0000_0", "[[Speaker#1, Speaker#1],[]]","[['I','am'],[]]","[[[2,3],[6,7]],[[10,12],[20,22]]]"
            "bc/cctv/00/cctv_0000_1", "[['Speaker#1', 'peaker#1'],[]]","[['He','is'],[]]","[[[2,3],[6,7]],[[10,12],[20,22]]]"
            "[...]", "[...]","[...]","[...]"
-
-        处理完成后数据包含文章类别、speaker信息、句子信息、句子对应的index、char、句子长度、target：
-        
-        .. csv-table::
-           :header: "words1", "words2","words3","words4","chars","seq_len","target"
-
-           "bc", "[[0,0],[1,1]]","[['I','am'],[]]","[[1,2],[]]","[[[1],[2,3]],[]]","[2,3]","[[[2,3],[6,7]],[[10,12],[20,22]]]"
-           "[...]", "[...]","[...]","[...]","[...]","[...]","[...]"
 
 
         :param data_bundle:
