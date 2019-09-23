@@ -25,6 +25,8 @@ __all__ = [
     'SSTLoader',
     'SST2Loader',
     "ChnSentiCorpLoader",
+    "THUCNewsLoader",
+    "WeiboSenti100kLoader",
 
     'ConllLoader',
     'Conll2003Loader',
@@ -45,6 +47,9 @@ __all__ = [
     "SNLILoader",
     "QNLILoader",
     "RTELoader",
+    "XNLILoader",
+    "BQCorpusLoader",
+    "LCQMCLoader",
 
     "Pipe",
 
@@ -54,6 +59,8 @@ __all__ = [
     "SST2Pipe",
     "IMDBPipe",
     "ChnSentiCorpPipe",
+    "THUCNewsPipe",
+    "WeiboSenti100kPipe",
 
     "Conll2003Pipe",
     "Conll2003NERPipe",
