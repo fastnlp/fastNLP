@@ -37,7 +37,6 @@ __all__ = [
     "WarmupCallback",
     'SaveModelCallback',
     "EchoCallback",
-    "TesterCallback",
     "CallbackException",
     "EarlyStopError",
     
