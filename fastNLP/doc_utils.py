@@ -1,4 +1,6 @@
-"""undocumented"""
+"""undocumented
+用于辅助生成 fastNLP 文档的代码
+"""
 
 __all__ = []
 
@@ -15,6 +17,9 @@ def doc_process(m):
                     pass
                 else:
                     module_name = obj.__module__
+                    
+                    # 识别并标注类和函数在不同层次中的位置
+                    
                     while 1:
                         defined_m = sys.modules[module_name]
                         if "undocumented" not in defined_m.__doc__ and name in defined_m.__all__:
@@ -25,6 +30,8 @@ def doc_process(m):
                         if module_name == m.__name__:
                             # print(name, ": not found defined doc.")
                             break
+
+                    # 识别并标注基类，只有基类也在 fastNLP 中定义才显示
                     
                     if inspect.isclass(obj):
                         for base in obj.__bases__:
