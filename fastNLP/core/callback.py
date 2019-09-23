@@ -62,7 +62,6 @@ __all__ = [
     "TensorboardCallback",
     "WarmupCallback",
     "SaveModelCallback",
-    "EchoCallback",
     
     "CallbackException",
     "EarlyStopError"
@@ -710,6 +709,8 @@ class ControlC(Callback):
 
 
 class SmoothValue(object):
+    """work for LRFinder"""
+    
     def __init__(self, beta: float):
         self.beta, self.n, self.mov_avg = beta, 0, 0
         self.smooth = None
@@ -1022,6 +1023,10 @@ class EarlyStopError(CallbackException):
 
 
 class EchoCallback(Callback):
+    """
+    用于测试分布式训练
+    
+    """
     def __init__(self, name, out=sys.stdout):
         super(EchoCallback, self).__init__()
         self.name = name
