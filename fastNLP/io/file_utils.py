@@ -89,6 +89,7 @@ DATASET_DIR = {
     "mnli": "MNLI.zip",
     "snli": "SNLI.zip",
     "qnli": "QNLI.zip",
+    "xnli": "XNLI.zip",
     "sst-2": "SST-2.zip",
     "sst": "SST.zip",
     "rte": "RTE.zip",
@@ -101,7 +102,8 @@ DATASET_DIR = {
     "cws-as": 'cws_as.zip',
     "cws-msra": 'cws_msra.zip',
 
-    "chn-senti-corp":"chn_senti_corp.zip"
+    "chn-senti-corp" : "chn_senti_corp.zip",
+    "weibo-senti-100k" : "WeiboSenti100k.zip"
 }
 
 PRETRAIN_MAP = {'elmo': PRETRAINED_ELMO_MODEL_DIR,

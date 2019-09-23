@@ -518,3 +518,12 @@ class WeiboSenti100kLoader(Loader):
                 if raw_chars:
                     ds.append(Instance(raw_chars=raw_chars, target=target))
         return ds
+
+    def download(self) -> str:
+        """
+        自动下载数据，该数据取自 https://github.com/SophonPlus/ChineseNlpCorpus/
+        在 https://arxiv.org/abs/1906.08101 有使用
+        :return:
+        """
+        output_dir = self._get_dataset_path('weibo-senti-100k')
+        return output_dir
