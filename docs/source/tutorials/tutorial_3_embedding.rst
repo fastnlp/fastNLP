@@ -187,7 +187,7 @@ BertEmbedding的使用
     torch.Size([1, 7, 768])
 
 在英文Bert模型中，一个英文单词可能会被切分为多个subword，例如"fairness"会被拆分为 ``["fair", "##ness"]`` ，这样一个word对应的将有两个输出，
- :class:`~fastNLP.embeddings.BertEmbedding` 会使用pooling方法将一个word的subword的表示合并成一个vector，通过pool_method可以控制
+:class:`~fastNLP.embeddings.BertEmbedding` 会使用pooling方法将一个word的subword的表示合并成一个vector，通过pool_method可以控制
 该pooling方法，支持的有"first"(即使用fair的表示作为fairness的表示), "last"(使用##ness的表示作为fairness的表示), "max"(对fair和
 ##ness在每一维上做max),"avg"(对fair和##ness每一维做average)。
 
@@ -200,8 +200,8 @@ BertEmbedding的使用
 
     torch.Size([1, 5, 768])
 
-另外，根据 `BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding
- <https://arxiv.org/abs/1810.04805>`_ ，Bert在针对具有两句话的任务时（如matching，Q&A任务），句子之间通过[SEP]拼接起来，前一句话的token embedding为0，
+另外，根据 `BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding <https://arxiv.org/abs/1810.04805>`_ ，
+Bert在针对具有两句话的任务时（如matching，Q&A任务），句子之间通过[SEP]拼接起来，前一句话的token embedding为0，
 后一句话的token embedding为1。BertEmbedding能够自动识别句子中间的[SEP]来正确设置对应的token_type_id的。
 
 .. code-block:: python
@@ -230,7 +230,7 @@ Part VI: 使用character-level的embedding
 -----------------------------------------------------
 
 除了预训练的embedding以外，fastNLP还提供了两种Character Embedding： :class:`~fastNLP.embeddings.CNNCharEmbedding` 和
- :class:`~fastNLP.embeddings.LSTMCharEmbedding` 。一般在使用character embedding时，需要在预处理的时候将word拆分成character，这
+:class:`~fastNLP.embeddings.LSTMCharEmbedding` 。一般在使用character embedding时，需要在预处理的时候将word拆分成character，这
 会使得预处理过程变得非常繁琐。在fastNLP中，使用character embedding也只需要传入 :class:`~fastNLP.Vocabulary` 即可，而且该
 Vocabulary与其它Embedding使用的Vocabulary是一致的，下面我们看两个例子。
 
@@ -298,10 +298,11 @@ Part VII: 叠加使用多个embedding
 
     torch.Size([1, 5, 114])
 
- :class:`~fastNLP.embeddings.StaticEmbedding` , :class:`~fastNLP.embeddings.ElmoEmbedding` ,
- :class:`~fastNLP.embeddings.CNNCharEmbedding` , :class:`~fastNLP.embeddings.BertEmbedding` 等都可以互相拼接。
- :class:`~fastNLP.embeddings.StackEmbedding` 的使用也是和其它Embedding是一致的，即输出index返回对应的表示。但能够拼接起来的Embedding
+:class:`~fastNLP.embeddings.StaticEmbedding` , :class:`~fastNLP.embeddings.ElmoEmbedding` ,
+:class:`~fastNLP.embeddings.CNNCharEmbedding` , :class:`~fastNLP.embeddings.BertEmbedding` 等都可以互相拼接。
+:class:`~fastNLP.embeddings.StackEmbedding` 的使用也是和其它Embedding是一致的，即输出index返回对应的表示。但能够拼接起来的Embedding
 必须使用同样的 :class:`~fastNLP.Vocabulary` ，因为只有使用同样的 :class:`~fastNLP.Vocabulary` 才能保证同一个index指向的是同一个词或字
+
 
 -----------------------------------------------------------
 Part VIII: Embedding的其它说明
