@@ -47,7 +47,7 @@ __all__ = [
     "SNLILoader",
     "QNLILoader",
     "RTELoader",
-    "XNLILoader",
+    "CNXNLILoader",
     "BQCorpusLoader",
     "LCQMCLoader",
 
@@ -70,32 +70,61 @@ __all__ = [
     "WeiboNERPipe",
 
     "CWSPipe",
-
+    
+    "Pipe",
+    
+    "CWSPipe",
+    
+    "YelpFullPipe",
+    "YelpPolarityPipe",
+    "SSTPipe",
+    "SST2Pipe",
+    "IMDBPipe",
+    "ChnSentiCorpPipe",
+    "THUCNewsPipe",
+    "WeiboSenti100kPipe",
+    
+    "Conll2003NERPipe",
+    "OntoNotesNERPipe",
+    "MsraNERPipe",
+    "WeiboNERPipe",
+    "PeopleDailyPipe",
+    "Conll2003Pipe",
+    
     "MatchingBertPipe",
     "RTEBertPipe",
     "SNLIBertPipe",
     "QuoraBertPipe",
     "QNLIBertPipe",
     "MNLIBertPipe",
+    "CNXNLIBertPipe",
+    "BQCorpusBertPipe",
+    "LCQMCBertPipe",
     "MatchingPipe",
     "RTEPipe",
     "SNLIPipe",
     "QuoraPipe",
     "QNLIPipe",
     "MNLIPipe",
+    "LCQMCPipe",
+    "CNXNLIPipe",
+    "BQCorpusPipe",
+    "RenamePipe",
+    "GranularizePipe",
+    "MachingTruncatePipe",
 
     'ModelLoader',
     'ModelSaver',
 
 ]
 
-from .embed_loader import EmbedLoader
-from .data_bundle import DataBundle
-from .model_io import ModelLoader, ModelSaver
-
-from .loader import *
-from .pipe import *
-
 import sys
+
+from .data_bundle import DataBundle
+from .embed_loader import EmbedLoader
+from .loader import *
+from .model_io import ModelLoader, ModelSaver
+from .pipe import *
 from ..doc_utils import doc_process
+
 doc_process(sys.modules[__name__])

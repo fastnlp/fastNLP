@@ -54,7 +54,9 @@ __all__ = [
     'SSTLoader',
     'SST2Loader',
     "ChnSentiCorpLoader",
-
+    "THUCNewsLoader",
+    "WeiboSenti100kLoader",
+    
     'ConllLoader',
     'Conll2003Loader',
     'Conll2003NERLoader',
@@ -63,26 +65,31 @@ __all__ = [
     "MsraNERLoader",
     "PeopleDailyNERLoader",
     "WeiboNERLoader",
-
+    
     'CSVLoader',
     'JsonLoader',
-
+    
     'CWSLoader',
-
+    
     'MNLILoader',
     "QuoraLoader",
     "SNLILoader",
     "QNLILoader",
     "RTELoader",
-
+    "CNXNLILoader",
+    "BQCorpusLoader",
+    "LCQMCLoader",
+    
     "CoReferenceLoader"
 ]
-from .classification import YelpLoader, YelpFullLoader, YelpPolarityLoader, IMDBLoader, SSTLoader, SST2Loader, ChnSentiCorpLoader
+from .classification import YelpLoader, YelpFullLoader, YelpPolarityLoader, IMDBLoader, SSTLoader, SST2Loader, \
+    ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader
 from .conll import ConllLoader, Conll2003Loader, Conll2003NERLoader, OntoNotesNERLoader, CTBLoader
+from .conll import MsraNERLoader, PeopleDailyNERLoader, WeiboNERLoader
+from .coreference import CoReferenceLoader
 from .csv import CSVLoader
 from .cws import CWSLoader
 from .json import JsonLoader
 from .loader import Loader
-from .matching import MNLILoader, QuoraLoader, SNLILoader, QNLILoader, RTELoader
-from .conll import MsraNERLoader, PeopleDailyNERLoader, WeiboNERLoader
-from .coreference import CoReferenceLoader
+from .matching import MNLILoader, QuoraLoader, SNLILoader, QNLILoader, RTELoader, CNXNLILoader, BQCorpusLoader, \
+    LCQMCLoader
