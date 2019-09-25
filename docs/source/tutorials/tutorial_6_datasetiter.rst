@@ -37,12 +37,12 @@ DataSetIter初探之前的内容与 :doc:`/tutorials/tutorial_5_loss_optimizer` 
     输出数据如下::
 	
         In total 3 datasets:
-	test has 1821 instances.
-	train has 67349 instances.
-	dev has 872 instances.
+            test has 1821 instances.
+            train has 67349 instances.
+            dev has 872 instances.
         In total 2 vocabs:
-	words has 16293 entries.
-	target has 2 entries.
+            words has 16293 entries.
+            target has 2 entries.
 
         +-------------------------------------------+--------+--------------------------------------+---------+
         |                 raw_words                 | target |                words                 | seq_len |
@@ -59,9 +59,9 @@ DataSetIter初探之前的内容与 :doc:`/tutorials/tutorial_5_loss_optimizer` 
 
     .. code-block:: python
 
-        train_data = databundle.datasets['train']
+        train_data = databundle.get_dataset('train')
         train_data, test_data = train_data.split(0.015)
-        dev_data = databundle.datasets['dev']
+        dev_data = databundle.get_dataset('dev')
         print(len(train_data),len(dev_data),len(test_data))
 
     输出结果为::
@@ -69,7 +69,10 @@ DataSetIter初探之前的内容与 :doc:`/tutorials/tutorial_5_loss_optimizer` 
         66339 872 1010
 
 数据集 :meth:`~fastNLP.DataSet.set_input` 和  :meth:`~fastNLP.DataSet.set_target` 函数
-    :class:`~fastNLP.io.SST2Pipe`  类的 :meth:`~fastNLP.io.SST2Pipe.process_from_file` 方法在预处理过程中还将训练、测试、验证集的 `words` 、`seq_len` :mod:`~fastNLP.core.field` 设定为input，同时将`target` :mod:`~fastNLP.core.field` 设定为target。我们可以通过 :class:`~fastNLP.core.Dataset` 类的 :meth:`~fastNLP.core.Dataset.print_field_meta` 方法查看各个       :mod:`~fastNLP.core.field` 的设定情况，代码如下：
+    :class:`~fastNLP.io.SST2Pipe`  类的 :meth:`~fastNLP.io.SST2Pipe.process_from_file` 方法在预处理过程中还将训练、测试、验证集
+    的 `words` 、`seq_len` :mod:`~fastNLP.core.field` 设定为input，同时将`target` :mod:`~fastNLP.core.field` 设定为target。
+    我们可以通过 :class:`~fastNLP.core.Dataset` 类的 :meth:`~fastNLP.core.Dataset.print_field_meta` 方法查看各个
+     :mod:`~fastNLP.core.field` 的设定情况，代码如下：
 
     .. code-block:: python
 
@@ -86,9 +89,13 @@ DataSetIter初探之前的内容与 :doc:`/tutorials/tutorial_5_loss_optimizer` 
         |  pad_value  |           |   0    |   0   |    0    |
         +-------------+-----------+--------+-------+---------+
 
-    其中is_input和is_target分别表示是否为input和target。ignore_type为true时指使用  :class:`~fastNLP.DataSetIter` 取出batch数据时fastNLP不会进行自动padding，pad_value指对应 :mod:`~fastNLP.core.field` padding所用的值，这两者只有当 :mod:`~fastNLP.core.field` 设定为input或者target的时候才有存在的意义。
+    其中is_input和is_target分别表示是否为input和target。ignore_type为true时指使用  :class:`~fastNLP.DataSetIter` 取出batch数
+    据时fastNLP不会进行自动padding，pad_value指对应 :mod:`~fastNLP.core.field` padding所用的值，这两者只有当
+     :mod:`~fastNLP.core.field` 设定为input或者target的时候才有存在的意义。
 
-    is_input为true的 :mod:`~fastNLP.core.field` 在 :class:`~fastNLP.DataSetIter` 迭代取出的 batch_x 中，而 is_target为true的 :mod:`~fastNLP.core.field` 在                 :class:`~fastNLP.DataSetIter` 迭代取出的 batch_y 中。具体分析见下面DataSetIter的介绍过程。
+    is_input为true的 :mod:`~fastNLP.core.field` 在 :class:`~fastNLP.DataSetIter` 迭代取出的 batch_x 中，
+    而 is_target为true的 :mod:`~fastNLP.core.field` 在  :class:`~fastNLP.DataSetIter` 迭代取出的 batch_y 中。
+    具体分析见下面DataSetIter的介绍过程。
 
 
 评价指标
@@ -111,6 +118,7 @@ DataSetIter初探之前的内容与 :doc:`/tutorials/tutorial_5_loss_optimizer` 
 --------------------------
 DataSetIter初探
 --------------------------
+
 DataSetIter
     fastNLP定义的 :class:`~fastNLP.DataSetIter` 类，用于定义一个batch，并实现batch的多种功能，在初始化时传入的参数有：
 	

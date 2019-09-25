@@ -12,6 +12,7 @@ __all__ = [
     
     "SeqLabeling",
     "AdvSeqLabel",
+    "BiLSTMCRF",
     
     "ESIM",
     
@@ -35,7 +36,7 @@ from .bert import BertForMultipleChoice, BertForQuestionAnswering, BertForSequen
     BertForTokenClassification, BertForSentenceMatching
 from .biaffine_parser import BiaffineParser, GraphParser
 from .cnn_text_classification import CNNText
-from .sequence_labeling import SeqLabeling, AdvSeqLabel
+from .sequence_labeling import SeqLabeling, AdvSeqLabel, BiLSTMCRF
 from .snli import ESIM
 from .star_transformer import StarTransEnc, STSeqCls, STNLICls, STSeqLabel
 

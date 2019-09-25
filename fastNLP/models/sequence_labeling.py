@@ -27,7 +27,7 @@ class BiLSTMCRF(BaseModel):
 
     """
     def __init__(self, embed, num_classes, num_layers=1, hidden_size=100, dropout=0.5,
-                  target_vocab=None, encoding_type=None):
+                  target_vocab=None):
         """
         
         :param embed: 支持(1)fastNLP的各种Embedding, (2) tuple, 指明num_embedding, dimension, 如(1000, 100)
@@ -35,8 +35,7 @@ class BiLSTMCRF(BaseModel):
         :param num_layers: BiLSTM的层数
         :param hidden_size: BiLSTM的hidden_size，实际hidden size为该值的两倍(前向、后向)
         :param dropout: dropout的概率，0为不dropout
-        :param target_vocab: Vocabulary对象，target与index的对应关系
-        :param encoding_type: encoding的类型，支持'bioes', 'bmes', 'bio', 'bmeso'等
+        :param target_vocab: Vocabulary对象，target与index的对应关系。如果传入该值，将自动避免非法的解码序列。
         """
         super().__init__()
         self.embed = get_embeddings(embed)
@@ -52,8 +51,9 @@ class BiLSTMCRF(BaseModel):
         self.fc = nn.Linear(hidden_size*2, num_classes)
 
         trans = None
-        if target_vocab is not None and encoding_type is not None:
-            trans = allowed_transitions(target_vocab.idx2word, encoding_type=encoding_type, include_start_end=True)
+        if target_vocab is not None:
+            assert len(target_vocab)==num_classes, "The number of classes should be same with the length of target vocabulary."
+            trans = allowed_transitions(target_vocab.idx2word, include_start_end=True)
 
         self.crf = ConditionalRandomField(num_classes, include_start_end_trans=True, allowed_transitions=trans)
 

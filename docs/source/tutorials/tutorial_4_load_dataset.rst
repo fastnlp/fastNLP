@@ -13,7 +13,6 @@
     - `Part V: 不同格式类型的基础Loader`_
 
 
-------------------------------------
 Part I: 数据集容器DataBundle
 ------------------------------------
 
@@ -24,7 +23,6 @@ Part I: 数据集容器DataBundle
  :class:`~fastNLP.io.DataBundle` 在fastNLP中主要在各个 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 中被使用。
 下面我们先介绍一下 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 。
 
--------------------------------------
 Part II: 加载的各种数据集的Loader
 -------------------------------------
 
@@ -74,7 +72,6 @@ Part II: 加载的各种数据集的Loader
     |                      中共中央  总书记  、  国家  主席  江  泽民                          |
     +--------------------------------------------------------------------------------------+
 
-------------------------------------------
 Part III: 使用Pipe对数据集进行预处理
 ------------------------------------------
 通过 :class:`~fastNLP.io.Loader` 可以将文本数据读入，但并不能直接被神经网络使用，还需要进行一定的预处理。
@@ -84,8 +81,8 @@ Part III: 使用Pipe对数据集进行预处理
 raw_chars进行tokenize以切分成不同的词或字; (2) 再建立词或字的 :class:`~fastNLP.Vocabulary` , 并将词或字转换为index; (3)将target
 列建立词表并将target列转为index;
 
-所有的Pipe都可通过其文档查看该Pipe支持处理的 :class:`~fastNLP.DataSet` 以及返回的 :class:`~fastNLP.io.DataSet` 中的field的情况;
-如 :class:`~fastNLP.io.`
+所有的Pipe都可通过其文档查看该Pipe支持处理的 :class:`~fastNLP.DataSet` 以及返回的 :class:`~fastNLP.io.DataBundle` 中的Vocabulary的情况;
+如 :class:`~fastNLP.io.OntoNotesNERPipe`
 
 各种数据集的Pipe当中，都包含了以下的两个函数:
 
@@ -144,14 +141,14 @@ raw_chars进行tokenize以切分成不同的词或字; (2) 再建立词或字的
 
     Vocabulary(['B', 'E', 'S', 'M']...)
 
-------------------------------------------
+
 Part IV: fastNLP封装好的Loader和Pipe
 ------------------------------------------
 
 fastNLP封装了多种任务/数据集的 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 并提供自动下载功能，具体参见文档
 `数据集 <https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0>`_
 
---------------------------------------------------------
+
 Part V: 不同格式类型的基础Loader
 --------------------------------------------------------
 

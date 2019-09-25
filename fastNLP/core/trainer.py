@@ -495,6 +495,7 @@ class Trainer(object):
         else:
             raise TypeError("train_data type {} not support".format(type(train_data)))
 
+        model.train()
         self.model = _move_model_to_device(model, device=device)
         if _model_contains_inner_module(self.model):
             self._forward_func = self.model.module.forward

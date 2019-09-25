@@ -2,97 +2,123 @@
 快速实现序列标注模型
 =====================
 
-这一部分的内容主要展示如何使用fastNLP 实现序列标注任务。你可以使用fastNLP的各个组件快捷，方便地完成序列标注任务，达到出色的效果。
-在阅读这篇Tutorial前，希望你已经熟悉了fastNLP的基础使用，尤其是数据的载入以及模型的构建，通过这个小任务的能让你进一步熟悉fastNLP的使用。
-我们将对基于Weibo的中文社交数据集进行处理，展示如何完成命名实体标注任务的整个过程。
+这一部分的内容主要展示如何使用fastNLP实现序列标注任务。您可以使用fastNLP的各个组件快捷，方便地完成序列标注任务，达到出色的效果。
+在阅读这篇Tutorial前，希望您已经熟悉了fastNLP的基础使用，尤其是数据的载入以及模型的构建，通过这个小任务的能让您进一步熟悉fastNLP的使用。
+
+命名实体识别(name entity recognition, NER)
+------------------------------------------
+
+命名实体识别任务是从文本中抽取出具有特殊意义或者指代性非常强的实体，通常包括人名、地名、机构名和时间等。
+如下面的例子中
+
+    我来自复旦大学。
+
+其中“复旦大学”就是一个机构名，命名实体识别就是要从中识别出“复旦大学”这四个字是一个整体，且属于机构名这个类别。这个问题在实际做的时候会被
+转换为序列标注问题
+
+    针对"我来自复旦大学"这句话，我们的预测目标将是[O, O, O, B-ORG, I-ORG, I-ORG, I-ORG]，其中O表示out,即不是一个实体，B-ORG是ORG(
+    organization的缩写)这个类别的开头(Begin)，I-ORG是ORG类别的中间(Inside)。
+
+在本tutorial中我们将通过fastNLP尝试写出一个能够执行以上任务的模型。
 
 载入数据
-===================================
-fastNLP的数据载入主要是由Loader与Pipe两个基类衔接完成的。通过Loader可以方便地载入各种类型的数据。同时，针对常见的数据集，我们已经预先实现了载入方法，其中包含weibo数据集。
-在设计dataloader时，以DataSetLoader为基类，可以改写并应用于其他数据集的载入。
+------------------------------------------
+fastNLP的数据载入主要是由Loader与Pipe两个基类衔接完成的，您可以通过 :doc:`使用Loader和Pipe处理数据 </tutorials/tutorial_4_load_dataset>`
+了解如何使用fastNLP提供的数据加载函数。下面我们以微博命名实体任务来演示一下在fastNLP进行序列标注任务。
 
 .. code-block:: python
 
-	from fastNLP.io import WeiboNERLoader
-	data_bundle = WeiboNERLoader().load()
+    from fastNLP.io import WeiboNERPipe
+    data_bundle = WeiboNERPipe().process_from_file()
+    print(data_bundle.get_dataset('train')[:2])
 
+打印的数据如下 ::
 
+    +-------------------------------------------------+------------------------------------------+------------------------------------------+---------+
+    |                    raw_chars                    |                  target                  |                  chars                   | seq_len |
+    +-------------------------------------------------+------------------------------------------+------------------------------------------+---------+
+    | ['一', '节', '课', '的', '时', '间', '真', '... | [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, ... | [8, 211, 775, 3, 49, 245, 89, 26, 101... |    16   |
+    | ['回', '复', '支', '持', '，', '赞', '成', '... | [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ... | [116, 480, 127, 109, 2, 446, 134, 2, ... |    59   |
+    +-------------------------------------------------+------------------------------------------+------------------------------------------+---------+
 
-载入后的数据如 ::
-
-	{'dev': DataSet(
-	{{'raw_chars': ['用', '最', '大', '努', '力', '去', '做''人', '生', '。', '哈', '哈', '哈', '哈', '哈', '哈', '
-    'target': ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O',, 'O', 'O', 'O', 'O', 'O', 'O'] type=list})}
-
-	{'test': DataSet(
-	{{'raw_chars': ['感', '恩', '大', '回', '馈'] type=list,   'target': ['O', 'O', 'O', 'O', 'O'] type=list})}
-
-	{'train': DataSet(
-	{'raw_chars': ['国', '安', '老', '球', '迷'] type=list,   'target': ['B-ORG.NAM', 'I-ORG.NAM', 'B-PER.NOM', 'I-PER.NOM', 'I-PER.NOM'] type=list})}
-
-
-
-数据处理
-----------------------------
-我们进一步处理数据。通过Pipe基类处理Loader载入的数据。 如果你还有印象，应该还能想起，实现自定义数据集的Pipe时，至少要编写process 函数或者process_from_file 函数。前者接受 :class:`~fastNLP.DataBundle` 类的数据，并返回该 :class:`~fastNLP.DataBundle`  。后者接收数据集所在文件夹为参数，读取并处理为 :class:`~fastNLP.DataBundle` 后，通过process 函数处理数据。
-这里我们已经实现通过Loader载入数据，并已返回 :class:`~fastNLP.DataBundle` 类的数据。我们编写process 函数以处理Loader载入后的数据。
-
-.. code-block:: python
-
-    from fastNLP.io import ChineseNERPipe
-    data_bundle = ChineseNERPipe(encoding_type='bioes', bigram=True).process(data_bundle)
-
-载入后的数据如下 ::
-
-    {'raw_chars': ['用', '最', '大', '努', '力', '去', '做', '值', '得', '的', '事', '人', '生', '。', '哈', '哈', '哈', '哈', '哈', '哈', '我', '在'] type=list,
-    'target': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] type=list,
-    'chars': [97, 71, 34, 422, 104, 72, 144, 628, 66, 3, 158, 2, 9, 647, 485, 196, 2,19] type=list,
-    'bigrams': [5948, 1950, 34840, 98, 8413, 3961, 34841, 631, 34842, 407, 462, 45, 3 1959, 1619, 3, 3, 3, 3, 3, 2663, 29, 90] type=list,
-    'seq_len': 30 type=int}
 
 模型构建
 --------------------------------
-我们使用CNN-BILSTM-CRF模型完成这一任务。在网络构建方面，fastNLP的网络定义继承pytorch的 :class:`nn.Module` 类。
-自己可以按照pytorch的方式定义网络。需要注意的是命名。fastNLP的标准命名位于 :class:`~fastNLP.Const` 类。
 
-模型的训练
-首先实例化模型，导入所需的char embedding以及word embedding。Embedding的载入可以参考教程。
-也可以查看 :mod:`~fastNLP.embedding` 使用所需的embedding 载入方法。
-fastNLP将模型的训练过程封装在了 :class:`~fastnlp.Trainer` 类中。
-根据不同的任务调整trainer中的参数即可。通常，一个trainer实例需要有：指定的训练数据集，模型，优化器，loss函数，评测指标，以及指定训练的epoch数，batch size等参数。
+首先选择需要使用的Embedding类型。关于Embedding的相关说明可以参见 :doc:`使用Embedding模块将文本转成向量 </tutorials/tutorial_3_embedding>` 。
+在这里我们使用通过word2vec预训练的中文汉字embedding。
 
 .. code-block:: python
 
-    #实例化模型
-    model = CNBiLSTMCRFNER(char_embed, num_classes=len(data_bundle.vocabs['target']), bigram_embed=bigram_embed)
-    #定义评估指标
-    Metrics=SpanFPreRecMetric(data_bundle.vocabs['target'], encoding_type='bioes')
-    #实例化trainer并训练
-    Trainer(data_bundle.datasets['train'], model, batch_size=20, metrics=Metrics, num_workers=2, dev_data=data_bundle. datasets['dev']).train()
+    from fastNLP.embeddings import StaticEmbedding
 
-    
-训练中会保存最优的参数配置。
+    embed = StaticEmbedding(vocab=data_bundle.get_vocab('chars'), model_dir_or_name='cn-char-fastnlp-100d')
 
-训练的结果如下 ::
+选择好Embedding之后，我们可以使用fastNLP中自带的 :class:`fastNLP.models.BiLSTMCRF` 作为模型。
 
-    Evaluation on DataSet test:                                                                                          
-    SpanFPreRecMetric: f=0.727661, pre=0.732293, rec=0.723088
-    Evaluation at Epoch 1/100. Step:1405/140500. SpanFPreRecMetric: f=0.727661, pre=0.732293, rec=0.723088
-    
-    Evaluation on DataSet test:
-    SpanFPreRecMetric: f=0.784307, pre=0.779371, rec=0.789306
-    Evaluation at Epoch 2/100. Step:2810/140500. SpanFPreRecMetric: f=0.784307, pre=0.779371, rec=0.789306
-    
-    Evaluation on DataSet test:                                                                                          
-    SpanFPreRecMetric: f=0.810068, pre=0.811003, rec=0.809136
-    Evaluation at Epoch 3/100. Step:4215/140500. SpanFPreRecMetric: f=0.810068, pre=0.811003, rec=0.809136
-    
-    Evaluation on DataSet test:                                                                                          
-    SpanFPreRecMetric: f=0.829592, pre=0.84153, rec=0.817989
-    Evaluation at Epoch 4/100. Step:5620/140500. SpanFPreRecMetric: f=0.829592, pre=0.84153, rec=0.817989
-    
-    Evaluation on DataSet test:
-    SpanFPreRecMetric: f=0.828789, pre=0.837096, rec=0.820644
-    Evaluation at Epoch 5/100. Step:7025/140500. SpanFPreRecMetric: f=0.828789, pre=0.837096, rec=0.820644
+.. code-block:: python
+
+    from fastNLP.models import BiLSTMCRF
+
+    data_bundle.rename_field('chars', 'words')  # 这是由于BiLSTMCRF模型的forward函数接受的words，而不是chars，所以需要把这一列重新命名
+    model = BiLSTMCRF(embed=embed, num_classes=len(data_bundle.get_vocab('target')), num_layers=1, hidden_size=200, dropout=0.5,
+                  target_vocab=data_bundle.get_vocab('target'))
+
+下面我们选择用来评估模型的metric，以及优化用到的优化函数。
+
+.. code-block:: python
+
+    from fastNLP import SpanFPreRecMetric
+    from torch.optim import Adam
+    from fastNLP import LossInForward
+
+    metric = SpanFPreRecMetric(tag_vocab=data_bundle.get_vocab('target'))
+    optimizer = Adam(model.parameters(), lr=1e-4)
+    loss = LossInForward()
+
+使用Trainer进行训练
+
+.. code-block:: python
+
+    from fastNLP import Trainer
+    import torch
+
+    device= 0 if torch.cuda.is_available() else 'cpu'
+    trainer = Trainer(data_bundle.get_dataset('train'), model, loss=loss, optimizer=optimizer,
+                        dev_data=data_bundle.get_dataset('dev'), metrics=metric, device=device)
+    trainer.train()
+
+训练过程输出为::
+
+    input fields after batch(if batch size is 2):
+        target: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2, 26])
+        seq_len: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2])
+        words: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2, 26])
+    target fields after batch(if batch size is 2):
+        target: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2, 26])
+        seq_len: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2])
+
+    training epochs started 2019-09-25-10-43-09
+    Evaluate data in 0.62 seconds!
+    Evaluation on dev at Epoch 1/10. Step:43/430:
+    SpanFPreRecMetric: f=0.070352, pre=0.100962, rec=0.053985
+
+    ...
+
+    Evaluate data in 0.61 seconds!
+    Evaluation on dev at Epoch 10/10. Step:430/430:
+    SpanFPreRecMetric: f=0.51223, pre=0.581699, rec=0.457584
 
 
+    In Epoch:7/Step:301, got best dev performance:
+    SpanFPreRecMetric: f=0.515528, pre=0.65098, rec=0.426735
+    Reloaded the best model.
+
+训练结束之后过，可以通过 :class:`fastNLP.Tester`测试其在测试集上的性能
+
+.. code-block::python
+
+    from fastNLP import Tester
+
+    tester = Tester(data_bundle.get_dataset('test'), model, metrics=metric)
+    tester.test()
