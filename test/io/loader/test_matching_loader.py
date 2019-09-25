@@ -5,7 +5,7 @@ import os
 
 from fastNLP.io import DataBundle
 from fastNLP.io.loader.matching import RTELoader, QNLILoader, SNLILoader, QuoraLoader, MNLILoader, \
-    BQCorpusLoader, XNLILoader, LCQMCLoader
+    BQCorpusLoader, CNXNLILoader, LCQMCLoader
 
 
 @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
@@ -31,7 +31,7 @@ class TestMatchingLoad(unittest.TestCase):
             'MNLI': ('test/data_for_tests/io/MNLI', MNLILoader, (5, 5, 5, 5, 6), True),
             'Quora': ('test/data_for_tests/io/Quora', QuoraLoader, (2, 2, 2), False),
             'BQCorpus': ('test/data_for_tests/io/BQCorpus', BQCorpusLoader, (5, 5, 5), False),
-            'XNLI': ('test/data_for_tests/io/XNLI', XNLILoader, (6, 7, 6), False),
+            'XNLI': ('test/data_for_tests/io/XNLI', CNXNLILoader, (6, 7, 6), False),
             'LCQMC': ('test/data_for_tests/io/LCQMC', LCQMCLoader, (5, 6, 6), False),
         }
         for k, v in data_set_dict.items():

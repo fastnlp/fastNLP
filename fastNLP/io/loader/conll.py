@@ -316,6 +316,16 @@ class CTBLoader(Loader):
         dataset = self.loader._load(path)
         return dataset
 
+    def download(self):
+        """
+        由于版权限制，不能提供自动下载功能。可参考
+
+        https://catalog.ldc.upenn.edu/LDC2013T21
+
+        :return:
+        """
+        raise RuntimeError("CTB cannot be downloaded automatically.")
+
 
 class CNNERLoader(Loader):
     def _load(self, path: str):

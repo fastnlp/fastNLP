@@ -382,66 +382,9 @@ class ChnSentiCorpLoader(Loader):
             for line in f:
                 line = line.strip()
                 tab_index = line.index('\t')
-                if tab_index!=-1:
-                    target = line[:tab_index]
-                    raw_chars = line[tab_index+1:]
-                    if raw_chars:
-                        ds.append(Instance(raw_chars=raw_chars, target=target))
-        return ds
-
-    def download(self)->str:
-        """
-        自动下载数据，该数据取自https://github.com/pengming617/bert_classification/tree/master/data，在
-        https://arxiv.org/pdf/1904.09223.pdf与https://arxiv.org/pdf/1906.08101.pdf有使用
-
-        :return:
-        """
-        output_dir = self._get_dataset_path('chn-senti-corp')
-        return output_dir
-
-
-class ChnSentiCorpLoader(Loader):
-    """
-    支持读取的数据的格式为，第一行为标题(具体内容会被忽略)，之后一行为一个sample，第一个制表符之前被认为是label，第
-    一个制表符及之后认为是句子
-
-    Example::
-
-        label	raw_chars
-        1	這間酒店環境和服務態度亦算不錯,但房間空間太小~~
-        1	<荐书> 推荐所有喜欢<红楼>的红迷们一定要收藏这本书,要知道...
-        0	商品的不足暂时还没发现，京东的订单处理速度实在.......周二就打包完成，周五才发货...
-
-    读取后的DataSet具有以下的field
-
-    .. csv-table::
-        :header: "raw_chars", "target"
-
-        "這間酒店環境和服務態度亦算不錯,但房間空間太小~~", "1"
-        "<荐书> 推荐所有喜欢<红楼>...", "1"
-        "..."
-
-    """
-
-    def __init__(self):
-        super().__init__()
-
-    def _load(self, path: str):
-        """
-        从path中读取数据
-
-        :param path:
-        :return:
-        """
-        ds = DataSet()
-        with open(path, 'r', encoding='utf-8') as f:
-            f.readline()
-            for line in f:
-                line = line.strip()
-                tab_index = line.index('\t')
                 if tab_index != -1:
                     target = line[:tab_index]
-                    raw_chars = line[tab_index + 1:]
+                    raw_chars = line[tab_index+1:]
                     if raw_chars:
                         ds.append(Instance(raw_chars=raw_chars, target=target))
         return ds
@@ -485,6 +428,17 @@ class THUCNewsLoader(Loader):
                 if raw_chars:
                     ds.append(Instance(raw_chars=raw_chars, target=target))
         return ds
+
+    def download(self) -> str:
+        """
+        自动下载数据，该数据取自
+
+        http://thuctc.thunlp.org/#%E4%B8%AD%E6%96%87%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB%E6%95%B0%E6%8D%AE%E9%9B%86THUCNews
+
+        :return:
+        """
+        output_dir = self._get_dataset_path('thuc-news')
+        return output_dir
 
 
 class WeiboSenti100kLoader(Loader):

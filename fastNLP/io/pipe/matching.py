@@ -7,7 +7,7 @@ __all__ = [
     "QuoraBertPipe",
     "QNLIBertPipe",
     "MNLIBertPipe",
-    "XNLIBertPipe",
+    "CNXNLIBertPipe",
     "BQCorpusBertPipe",
     "LCQMCBertPipe",
     "MatchingPipe",
@@ -16,7 +16,7 @@ __all__ = [
     "QuoraPipe",
     "QNLIPipe",
     "MNLIPipe",
-    "XNLIPipe",
+    "CNXNLIPipe",
     "BQCorpusPipe",
     "LCQMCPipe",
 ]
@@ -25,7 +25,7 @@ import warnings
 
 from .pipe import Pipe
 from .utils import get_tokenizer
-from ..loader.matching import SNLILoader, MNLILoader, QNLILoader, RTELoader, QuoraLoader, BQCorpusLoader, XNLILoader, LCQMCLoader
+from ..loader.matching import SNLILoader, MNLILoader, QNLILoader, RTELoader, QuoraLoader, BQCorpusLoader, CNXNLILoader, LCQMCLoader
 from ...core.const import Const
 from ...core.vocabulary import Vocabulary
 from ...core._logger import logger
@@ -354,10 +354,10 @@ class LCQMCPipe(MatchingPipe):
         return data_bundle
 
 
-class XNLIPipe(MatchingPipe):
-    def process_from_file(self, paths = None):
-        data_bundle = XNLILoader().load(paths)
-        data_bundle = GranularizePipe(task = 'XNLI').process(data_bundle)
+class CNXNLIPipe(MatchingPipe):
+    def process_from_file(self, paths=None):
+        data_bundle = CNXNLILoader().load(paths)
+        data_bundle = GranularizePipe(task='XNLI').process(data_bundle)
         data_bundle = RenamePipe().process(data_bundle) #使中文数据的field
         data_bundle = self.process(data_bundle)
         data_bundle = RenamePipe().process(data_bundle)
@@ -473,9 +473,9 @@ class BQCorpusBertPipe(MatchingBertPipe):
         return data_bundle
 
 
-class XNLIBertPipe(MatchingBertPipe):
+class CNXNLIBertPipe(MatchingBertPipe):
     def process_from_file(self, paths = None):
-        data_bundle = XNLILoader().load(paths)
+        data_bundle = CNXNLILoader().load(paths)
         data_bundle = GranularizePipe(task='XNLI').process(data_bundle)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
         data_bundle = self.process(data_bundle)
