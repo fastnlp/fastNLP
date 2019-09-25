@@ -1,67 +1,132 @@
 ===================================================
-使用Callback自定义你的训练过程
+使用 Callback 自定义你的训练过程
 ===================================================
 
-在训练时，我们常常要使用trick来提高模型的性能（如调节学习率），或者要打印训练中的信息。
-这里我们提供Callback类，在Trainer中插入代码，完成一些自定义的操作。
+- 什么是 Callback
+- 使用 Callback 
+- 一些常用的 Callback
+- 自定义实现 Callback
 
-我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。
-给出一段评价性文字，预测其情感倾向是积极（label=1）、消极（label=0）还是中性（label=2），使用 :class:`~fastNLP.Trainer`  和  :class:`~fastNLP.Tester`  来进行快速训练和测试。
-关于数据处理，Loss和Optimizer的选择可以看其他教程，这里仅在训练时加入学习率衰减。
 
----------------------
-Callback的构建和使用
+什么是Callback
 ---------------------
 
-创建Callback
-    我们可以继承fastNLP :class:`~fastNLP.Callback` 类来定义自己的Callback。
-    这里我们实现一个让学习率线性衰减的Callback。
+Callback 是与 Trainer 紧密结合的模块，利用 Callback 可以在 Trainer 训练时，加入自定义的操作，比如梯度裁剪，学习率调节，测试模型的性能等。定义的 Callback 会在训练的特定阶段被调用。
 
-    .. code-block:: python
+fastNLP 中提供了很多常用的 Callback ，开箱即用。
 
-        import fastNLP
 
-        class LRDecay(fastNLP.Callback):
-            def __init__(self):
-                super(LRDecay, self).__init__()
-                self.base_lrs = []
-                self.delta = []
+使用 Callback
+---------------------
 
-            def on_train_begin(self):
-                # 初始化，仅训练开始时调用
-                self.base_lrs = [pg['lr'] for pg in self.optimizer.param_groups]
-                self.delta = [float(lr) / self.n_epochs for lr in self.base_lrs]
+使用 Callback 很简单，将需要的 callback 按 list 存储，以对应参数 ``callbacks`` 传入对应的 Trainer。Trainer 在训练时就会自动执行这些 Callback 指定的操作了。
 
-            def on_epoch_end(self):
-                # 每个epoch结束时，更新学习率
-                ep = self.epoch
-                lrs = [lr - d * ep for lr, d in zip(self.base_lrs, self.delta)]
-                self.change_lr(lrs)
 
-            def change_lr(self, lrs):
-                for pg, lr in zip(self.optimizer.param_groups, lrs):
-                    pg['lr'] = lr
+.. code-block:: python
 
-    这里，:class:`~fastNLP.Callback` 中所有以 ``on_`` 开头的类方法会在 :class:`~fastNLP.Trainer` 的训练中在特定时间调用。
-    如 on_train_begin() 会在训练开始时被调用，on_epoch_end() 会在每个 epoch 结束时调用。
-    具体有哪些类方法，参见文档 :class:`~fastNLP.Callback` 。
+    from fastNLP import (Callback, EarlyStopCallback,
+                         Trainer, CrossEntropyLoss, AccuracyMetric)
+    from fastNLP.models import CNNText
+    import torch.cuda
 
-    另外，为了使用方便，可以在 :class:`~fastNLP.Callback` 内部访问 :class:`~fastNLP.Trainer` 中的属性，如 optimizer, epoch, step，分别对应训练时的优化器，当前epoch数，和当前的总step数。
-    具体可访问的属性，参见文档 :class:`~fastNLP.Callback` 。
+    # prepare data
+    def get_data():
+        from fastNLP.io import ChnSentiCorpPipe as pipe
+        data = pipe().process_from_file()
+        print(data)
+        data.rename_field('chars', 'words')
+        train_data = data.datasets['train']
+        dev_data = data.datasets['dev']
+        test_data = data.datasets['test']
+        vocab = data.vocabs['words']
+        tgt_vocab = data.vocabs['target']
+        return train_data, dev_data, test_data, vocab, tgt_vocab
 
-使用Callback
-    在定义好 :class:`~fastNLP.Callback` 之后，就能将它传入Trainer的 ``callbacks`` 参数，在实际训练时使用。
+    # prepare model
+    train_data, dev_data, _, vocab, tgt_vocab = get_data()
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    model = CNNText((len(vocab),50), num_classes=len(tgt_vocab))
 
-    .. code-block:: python
+    # define callback
+    callbacks=[EarlyStopCallback(5)]
 
-        """
-        数据预处理，模型定义等等
-        """
-
-        trainer = fastNLP.Trainer(
-            model=model, train_data=train_data, dev_data=dev_data,
-            optimizer=optimizer, metrics=metrics,
-            batch_size=10, n_epochs=100,
-            callbacks=[LRDecay()])
-
+    # pass callbacks to Trainer
+    def train_with_callback(cb_list):
+        trainer = Trainer(
+            device=device,
+            n_epochs=3,
+            model=model,
+            train_data=train_data,
+            dev_data=dev_data,
+            loss=CrossEntropyLoss(),
+            metrics=AccuracyMetric(),
+            callbacks=cb_list,
+            check_code_level=-1
+        )
         trainer.train()
+
+    train_with_callback(callbacks)
+
+
+
+fastNLP 中的 Callback
+---------------------
+
+fastNLP 中提供了很多常用的 Callback，如梯度裁剪，训练时早停和测试验证集，fitlog 等等。具体 Callback 请参考 fastNLP.core.callbacks
+
+.. code-block:: python
+
+    from fastNLP import EarlyStopCallback, GradientClipCallback, EvaluateCallback
+    callbacks = [
+        EarlyStopCallback(5),
+        GradientClipCallback(clip_value=5, clip_type='value'),
+        EvaluateCallback(dev_data)
+    ]
+
+    train_with_callback(callbacks)
+
+自定义 Callback
+---------------------
+
+这里我们以一个简单的 Callback作为例子，它的作用是打印每一个 Epoch 平均训练 loss。
+
+1. 创建 Callback
+    
+    要自定义 Callback，我们要实现一个类，继承 fastNLP.Callback。这里我们定义 MyCallBack ，继承 fastNLP.Callback 。
+
+2. 指定 Callback 调用的阶段
+    
+    Callback 中所有以 `on_` 开头的类方法会在 Trainer 的训练中在特定阶段调用。 如 on_train_begin() 会在训练开始时被调用，on_epoch_end()
+    会在每个 epoch 结束时调用。 具体有哪些类方法，参见 Callback 文档。这里， MyCallBack 在求得loss时调用 on_backward_begin() 记录
+    当前 loss，在每一个 epoch 结束时调用 on_epoch_end() ，求当前 epoch 平均loss并输出。
+
+3. 使用 Callback 的属性访问 Trainer 的内部信息
+    
+    为了方便使用，可以使用 Callback 的属性，访问 Trainer 中的对应信息，如 optimizer, epoch, n_epochs，分别对应训练时的优化器，
+    当前 epoch 数，和总 epoch 数。 具体可访问的属性，参见文档 Callback 。这里， MyCallBack 为了求平均 loss ，需要知道当前 epoch 的总步
+    数，可以通过 self.step 属性得到当前训练了多少步。
+
+.. code-block:: python
+
+    from fastNLP import Callback
+    from fastNLP import logger
+
+    class MyCallBack(Callback):
+        """Print average loss in each epoch"""
+        def __init__(self):
+            super().__init__()
+            self.total_loss = 0
+            self.start_step = 0
+
+        def on_backward_begin(self, loss):
+            self.total_loss += loss.item()
+
+        def on_epoch_end(self):
+            n_steps = self.step - self.start_step
+            avg_loss = self.total_loss / n_steps
+            logger.info('Avg loss at epoch %d, %.6f', self.epoch, avg_loss)
+            self.start_step = self.step
+
+    callbacks = [MyCallBack()]
+    train_with_callback(callbacks)
+
