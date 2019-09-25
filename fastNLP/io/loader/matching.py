@@ -15,14 +15,14 @@ import os
 import warnings
 from typing import Union, Dict
 
+from .csv import CSVLoader
 from .json import JsonLoader
 from .loader import Loader
 from .. import DataBundle
+from ..utils import check_loader_paths
 from ...core.const import Const
 from ...core.dataset import DataSet
 from ...core.instance import Instance
-from .csv import CSVLoader
-from ..utils import check_loader_paths
 
 
 class MNLILoader(Loader):
@@ -348,8 +348,9 @@ class CNXNLILoader(Loader):
 
     .. csv-table::
        :header: "raw_chars1", "raw_chars2", "target"
+       
        "从概念上看,奶油收入有两个基本方面产品和地理.", "产品和地理是什么使奶油抹霜工作.", "1"
-       ""...", "...", "..."
+       "...", "...", "..."
 
     """
 
@@ -412,6 +413,7 @@ class BQCorpusLoader(Loader):
 
     .. csv-table::
        :header: "raw_chars1", "raw_chars2", "target"
+       
        "不是邀请的如何贷款？", "我不是你们邀请的客人可以贷款吗？", "1"
        "如何满足微粒银行的审核", "建设银行有微粒贷的资格吗", "0"
        "...", "...", "..."
@@ -448,20 +450,26 @@ class BQCorpusLoader(Loader):
 
 
 class LCQMCLoader(Loader):
-    """
-    别名：
+    r"""
     数据集简介：句对匹配（question matching）
+    
     原始数据为：
-    '喜欢打篮球的男生喜欢什么样的女生\t爱打篮球的男生喜欢什么样的女生\t1\n'
-    '晚上睡觉带着耳机听音乐有什么害处吗？\t孕妇可以戴耳机听音乐吗?\t0\n'
-    读取后的Dataset将具有以下的数据结构：
-
+    
+    .. code-block:: text
+    
+        '喜欢打篮球的男生喜欢什么样的女生\t爱打篮球的男生喜欢什么样的女生\t1\n'
+        '晚上睡觉带着耳机听音乐有什么害处吗？\t孕妇可以戴耳机听音乐吗?\t0\n'
+    
+    读取后的Dataset将具有以下的数据结构
+    
     .. csv-table::
        :header: "raw_chars1", "raw_chars2", "target"
+       
        "喜欢打篮球的男生喜欢什么样的女生？", "爱打篮球的男生喜欢什么样的女生？", "1"
        "晚上睡觉带着耳机听音乐有什么害处吗？", "妇可以戴耳机听音乐吗?", "0"
-       ""...", "...", "..."
-
+       "...", "...", "..."
+    
+    
     """
 
     def __init__(self):

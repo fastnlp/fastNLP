@@ -86,7 +86,7 @@ Vocabulary
     vocab.from_dataset(tr_data, field_name='chars', no_create_entry_dataset=[dev_data])
 
 
- :class:`~fastNLP.Vocabulary` 中的 `no_create_entry` , 建议在添加来自于测试集和验证集的词的时候将该参数置为True, 或将验证集和测试集
+:class:`~fastNLP.Vocabulary` 中的 `no_create_entry` , 建议在添加来自于测试集和验证集的词的时候将该参数置为True, 或将验证集和测试集
 传入 `no_create_entry_dataset` 参数。它们的意义是在接下来的模型会使用pretrain的embedding(包括glove, word2vec, elmo与bert)且会finetune的
 情况下，如果仅使用来自于train的数据建立vocabulary，会导致只出现在test与dev中的词语无法充分利用到来自于预训练embedding的信息(因为他们
 会被认为是unk)，所以在建立词表的时候将test与dev考虑进来会使得最终的结果更好。通过与fastNLP中的各种Embedding配合使用，会有如下的效果，

@@ -20,7 +20,7 @@ Part I: 数据集容器DataBundle
 来承载同一个任务的多个数据集 :class:`~fastNLP.DataSet` 以及它们的词表 :class:`~fastNLP.Vocabulary` 。下面会有例子介绍 :class:`~fastNLP.io.DataBundle`
 的相关使用。
 
- :class:`~fastNLP.io.DataBundle` 在fastNLP中主要在各个 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 中被使用。
+:class:`~fastNLP.io.DataBundle` 在fastNLP中主要在各个 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 中被使用。
 下面我们先介绍一下 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 。
 
 Part II: 加载的各种数据集的Loader

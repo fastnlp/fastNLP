@@ -21,11 +21,11 @@ from .utils import get_tokenizer, _indexize, _add_words_field, _drop_empty_insta
 from ..data_bundle import DataBundle
 from ..loader.classification import ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader
 from ..loader.classification import IMDBLoader, YelpFullLoader, SSTLoader, SST2Loader, YelpPolarityLoader
+from ...core._logger import logger
 from ...core.const import Const
 from ...core.dataset import DataSet
 from ...core.instance import Instance
 from ...core.vocabulary import Vocabulary
-from ...core._logger import logger
 
 nonalpnum = re.compile('[^0-9a-zA-Z?!\']+')
 
@@ -718,6 +718,7 @@ class THUCNewsPipe(_CLSPipe):
 
         .. csv-table::
             :header: "raw_words", "target"
+            
             "马晓旭意外受伤让国奥警惕 无奈大雨格外青睐殷家军记者傅亚雨沈阳报道 ... ", "体育"
             "...", "..."
 
@@ -826,6 +827,7 @@ class WeiboSenti100kPipe(_CLSPipe):
 
         .. csv-table::
             :header: "raw_chars", "target"
+            
             "六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]", "0"
             "...", "..."
 

@@ -16,20 +16,24 @@ __all__ = [
     "QuoraPipe",
     "QNLIPipe",
     "MNLIPipe",
+    "LCQMCPipe",
     "CNXNLIPipe",
     "BQCorpusPipe",
-    "LCQMCPipe",
+    "RenamePipe",
+    "GranularizePipe",
+    "MachingTruncatePipe",
 ]
 
 import warnings
 
 from .pipe import Pipe
 from .utils import get_tokenizer
-from ..loader.matching import SNLILoader, MNLILoader, QNLILoader, RTELoader, QuoraLoader, BQCorpusLoader, CNXNLILoader, LCQMCLoader
+from ..data_bundle import DataBundle
+from ..loader.matching import SNLILoader, MNLILoader, QNLILoader, RTELoader, QuoraLoader, BQCorpusLoader, CNXNLILoader, \
+    LCQMCLoader
+from ...core._logger import logger
 from ...core.const import Const
 from ...core.vocabulary import Vocabulary
-from ...core._logger import logger
-from ..data_bundle import DataBundle
 
 
 class MatchingBertPipe(Pipe):
@@ -145,7 +149,7 @@ class MatchingBertPipe(Pipe):
                        f"data set but not in train data set!."
             warnings.warn(warn_msg)
             logger.warning(warn_msg)
-
+        
         has_target_datasets = [dataset for name, dataset in data_bundle.datasets.items() if
                                dataset.has_field(Const.TARGET)]
         target_vocab.index_dataset(*has_target_datasets, field_name=Const.TARGET)
@@ -294,7 +298,7 @@ class MatchingPipe(Pipe):
                        f"data set but not in train data set!."
             warnings.warn(warn_msg)
             logger.warning(warn_msg)
-
+        
         has_target_datasets = [dataset for name, dataset in data_bundle.datasets.items() if
                                dataset.has_field(Const.TARGET)]
         target_vocab.index_dataset(*has_target_datasets, field_name=Const.TARGET)
@@ -345,8 +349,9 @@ class MNLIPipe(MatchingPipe):
         data_bundle = MNLILoader().load(paths)
         return self.process(data_bundle)
 
+
 class LCQMCPipe(MatchingPipe):
-    def process_from_file(self, paths = None):
+    def process_from_file(self, paths=None):
         data_bundle = LCQMCLoader().load(paths)
         data_bundle = RenamePipe().process(data_bundle)
         data_bundle = self.process(data_bundle)
@@ -358,14 +363,14 @@ class CNXNLIPipe(MatchingPipe):
     def process_from_file(self, paths=None):
         data_bundle = CNXNLILoader().load(paths)
         data_bundle = GranularizePipe(task='XNLI').process(data_bundle)
-        data_bundle = RenamePipe().process(data_bundle) #使中文数据的field
+        data_bundle = RenamePipe().process(data_bundle)  # 使中文数据的field
         data_bundle = self.process(data_bundle)
         data_bundle = RenamePipe().process(data_bundle)
         return data_bundle
 
 
 class BQCorpusPipe(MatchingPipe):
-    def process_from_file(self, paths = None):
+    def process_from_file(self, paths=None):
         data_bundle = BQCorpusLoader().load(paths)
         data_bundle = RenamePipe().process(data_bundle)
         data_bundle = self.process(data_bundle)
@@ -374,12 +379,12 @@ class BQCorpusPipe(MatchingPipe):
 
 
 class RenamePipe(Pipe):
-    def __init__(self, task = 'cn-nli'):
+    def __init__(self, task='cn-nli'):
         super().__init__()
         self.task = task
-
+    
     def process(self, data_bundle: DataBundle):  # rename field name for Chinese Matching dataset
-        if(self.task == 'cn-nli'):
+        if (self.task == 'cn-nli'):
             for name, dataset in data_bundle.datasets.items():
                 if (dataset.has_field(Const.RAW_CHARS(0))):
                     dataset.rename_field(Const.RAW_CHARS(0), Const.RAW_WORDS(0))  # RAW_CHARS->RAW_WORDS
@@ -392,12 +397,12 @@ class RenamePipe(Pipe):
                 else:
                     raise RuntimeError(
                         "field name of dataset is not qualified. It should have ether RAW_CHARS or WORDS")
-        elif(self.task == 'cn-nli-bert'):
+        elif (self.task == 'cn-nli-bert'):
             for name, dataset in data_bundle.datasets.items():
                 if (dataset.has_field(Const.RAW_CHARS(0))):
                     dataset.rename_field(Const.RAW_CHARS(0), Const.RAW_WORDS(0))  # RAW_CHARS->RAW_WORDS
                     dataset.rename_field(Const.RAW_CHARS(1), Const.RAW_WORDS(1))
-                elif(dataset.has_field(Const.RAW_WORDS(0))):
+                elif (dataset.has_field(Const.RAW_WORDS(0))):
                     dataset.rename_field(Const.RAW_WORDS(0), Const.RAW_CHARS(0))
                     dataset.rename_field(Const.RAW_WORDS(1), Const.RAW_CHARS(1))
                     dataset.rename_field(Const.INPUT, Const.CHAR_INPUT)
@@ -409,15 +414,15 @@ class RenamePipe(Pipe):
             raise RuntimeError(
                 "Only support task='cn-nli' or 'cn-nli-bert'"
             )
-
+        
         return data_bundle
 
 
 class GranularizePipe(Pipe):
-    def __init__(self, task = None):
+    def __init__(self, task=None):
         super().__init__()
         self.task = task
-
+    
     def _granularize(self, data_bundle, tag_map):
         """
         该函数对data_bundle中'target'列中的内容进行转换。
@@ -434,21 +439,22 @@ class GranularizePipe(Pipe):
             dataset.drop(lambda ins: ins[Const.TARGET] == -100)
             data_bundle.set_dataset(dataset, name)
         return data_bundle
-
+    
     def process(self, data_bundle: DataBundle):
         task_tag_dict = {
-            'XNLI':{'neutral': 0, 'entailment': 1, 'contradictory': 2, 'contradiction': 2}
+            'XNLI': {'neutral': 0, 'entailment': 1, 'contradictory': 2, 'contradiction': 2}
         }
         if self.task in task_tag_dict:
-            data_bundle = self._granularize(data_bundle=data_bundle, tag_map= task_tag_dict[self.task])
+            data_bundle = self._granularize(data_bundle=data_bundle, tag_map=task_tag_dict[self.task])
         else:
             raise RuntimeError(f"Only support {task_tag_dict.keys()} task_tag_map.")
         return data_bundle
 
 
-class MachingTruncatePipe(Pipe): #truncate sentence for bert, modify seq_len
+class MachingTruncatePipe(Pipe):  # truncate sentence for bert, modify seq_len
     def __init__(self):
         super().__init__()
+    
     def process(self, data_bundle: DataBundle):
         for name, dataset in data_bundle.datasets.items():
             pass
@@ -456,7 +462,7 @@ class MachingTruncatePipe(Pipe): #truncate sentence for bert, modify seq_len
 
 
 class LCQMCBertPipe(MatchingBertPipe):
-    def process_from_file(self, paths = None):
+    def process_from_file(self, paths=None):
         data_bundle = LCQMCLoader().load(paths)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
         data_bundle = self.process(data_bundle)
@@ -465,7 +471,7 @@ class LCQMCBertPipe(MatchingBertPipe):
 
 
 class BQCorpusBertPipe(MatchingBertPipe):
-    def process_from_file(self, paths = None):
+    def process_from_file(self, paths=None):
         data_bundle = BQCorpusLoader().load(paths)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
         data_bundle = self.process(data_bundle)
@@ -474,7 +480,7 @@ class BQCorpusBertPipe(MatchingBertPipe):
 
 
 class CNXNLIBertPipe(MatchingBertPipe):
-    def process_from_file(self, paths = None):
+    def process_from_file(self, paths=None):
         data_bundle = CNXNLILoader().load(paths)
         data_bundle = GranularizePipe(task='XNLI').process(data_bundle)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)

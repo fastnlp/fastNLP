@@ -9,9 +9,9 @@ Pipe用于处理通过 Loader 读取的数据，所有的 Pipe 都包含 ``proce
 """
 __all__ = [
     "Pipe",
-
+    
     "CWSPipe",
-
+    
     "YelpFullPipe",
     "YelpPolarityPipe",
     "SSTPipe",
@@ -20,35 +20,46 @@ __all__ = [
     "ChnSentiCorpPipe",
     "THUCNewsPipe",
     "WeiboSenti100kPipe",
-
+    
     "Conll2003NERPipe",
     "OntoNotesNERPipe",
     "MsraNERPipe",
     "WeiboNERPipe",
     "PeopleDailyPipe",
     "Conll2003Pipe",
-
+    
     "MatchingBertPipe",
     "RTEBertPipe",
     "SNLIBertPipe",
     "QuoraBertPipe",
     "QNLIBertPipe",
     "MNLIBertPipe",
+    "CNXNLIBertPipe",
+    "BQCorpusBertPipe",
+    "LCQMCBertPipe",
     "MatchingPipe",
     "RTEPipe",
     "SNLIPipe",
     "QuoraPipe",
     "QNLIPipe",
     "MNLIPipe",
-
+    "LCQMCPipe",
+    "CNXNLIPipe",
+    "BQCorpusPipe",
+    "RenamePipe",
+    "GranularizePipe",
+    "MachingTruncatePipe",
+    
     "CoReferencePipe"
 ]
 
-from .classification import YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe, ChnSentiCorpPipe, THUCNewsPipe, WeiboSenti100kPipe
+from .classification import YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe, ChnSentiCorpPipe, THUCNewsPipe, \
+    WeiboSenti100kPipe
 from .conll import Conll2003NERPipe, OntoNotesNERPipe, MsraNERPipe, WeiboNERPipe, PeopleDailyPipe
-from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe, QNLIBertPipe, MNLIBertPipe, \
-    MatchingPipe, RTEPipe, SNLIPipe, QuoraPipe, QNLIPipe, MNLIPipe
-from .pipe import Pipe
 from .conll import Conll2003Pipe
-from .cws import CWSPipe
 from .coreference import CoReferencePipe
+from .cws import CWSPipe
+from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe, QNLIBertPipe, MNLIBertPipe, \
+    MatchingPipe, RTEPipe, SNLIPipe, QuoraPipe, QNLIPipe, MNLIPipe, CNXNLIBertPipe, CNXNLIPipe, BQCorpusBertPipe, \
+    LCQMCPipe, BQCorpusPipe, LCQMCBertPipe, RenamePipe, GranularizePipe, MachingTruncatePipe
+from .pipe import Pipe
