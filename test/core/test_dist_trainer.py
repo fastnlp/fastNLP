@@ -148,7 +148,7 @@ class TestDistTrainer(unittest.TestCase):
     def run_dist(self, run_id):
         if torch.cuda.is_available():
             ngpu = min(2, torch.cuda.device_count())
-            path = __file__
+            path = os.path.abspath(__file__)
             cmd = ['python', '-m', 'torch.distributed.launch',
                    '--nproc_per_node', str(ngpu), path, '--test', str(run_id)]
             print(' '.join(cmd))

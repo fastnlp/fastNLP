@@ -978,7 +978,7 @@ class SaveModelCallback(Callback):
         return save_pair, delete_pair
 
     def _save_this_model(self, metric_value):
-        name = "epoch:{}_step:{}_{}:{:.6f}.pt".format(self.epoch, self.step, self.trainer.metric_key, metric_value)
+        name = "epoch-{}_step-{}_{}-{:.6f}.pt".format(self.epoch, self.step, self.trainer.metric_key, metric_value)
         save_pair, delete_pair = self._insert_into_ordered_save_models((metric_value, name))
         if save_pair:
             try:
@@ -995,7 +995,7 @@ class SaveModelCallback(Callback):
 
     def on_exception(self, exception):
         if self.save_on_exception:
-            name = "epoch:{}_step:{}_Exception:{}.pt".format(self.epoch, self.step, exception.__class__.__name__)
+            name = "epoch-{}_step-{}_Exception-{}.pt".format(self.epoch, self.step, exception.__class__.__name__)
             _save_model(self.model, model_name=name, save_dir=self.save_dir, only_param=self.only_param)
 
 
