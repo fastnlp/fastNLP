@@ -1,5 +1,5 @@
 ==============================
-DataSet
+fastNLP中的DataSet
 ==============================
 
 :class:`~fastNLP.DataSet` 是fastNLP用于承载数据的类，一般训练集、验证集和测试集会被加载为三个单独的 :class:`~fastNLP.DataSet` 对象。
@@ -16,8 +16,7 @@ DataSet
 每一行是一个instance (在fastNLP中被称为 :mod:`~fastNLP.core.Instance` )，
 每一列是一个field (在fastNLP中称为 :mod:`~fastNLP.core.FieldArray` )。
 
------------------------------
-数据集构建和删除
+DataSet构建和删除
 -----------------------------
 
 我们使用传入字典的方式构建一个数据集，这是 :class:`~fastNLP.DataSet` 初始化的最基础的方式
@@ -93,7 +92,7 @@ FastNLP 同样提供了多种删除数据的方法 :func:`~fastNLP.DataSet.drop`
     #  删除名为'a'的field
     dataset.delete_field('a')
 
------------------------------
+
 简单的数据预处理
 -----------------------------
 
@@ -136,7 +135,7 @@ FastNLP 同样提供了多种删除数据的方法 :func:`~fastNLP.DataSet.drop`
 除了手动处理数据集之外，你还可以使用 fastNLP 提供的各种 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 来进行数据处理。
 详细请参考这篇教程  :doc:`使用Loader和Pipe处理数据 </tutorials/tutorial_4_load_dataset>` 。
 
------------------------------
+
 fastNLP中field的命名习惯
 -----------------------------
 

@@ -5,7 +5,6 @@
 我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极的（label=0）、
 还是消极的（label=1），使用 :class:`~fastNLP.Trainer`  和  :class:`~fastNLP.Tester`  来进行快速训练和测试。
 
------------------
 数据读入和处理
 -----------------
 
@@ -27,21 +26,21 @@
         
         pipe = SST2Pipe()
         databundle = pipe.process_from_file()
-        vocab = databundle.vocabs['words']
+        vocab = databundle.get_vocab('words')
         print(databundle)
-        print(databundle.datasets['train'][0])
-        print(databundle.vocabs['words'])
+        print(databundle.get_dataset('train')[0])
+        print(databundle.get_vocab('words'))
 
 
     输出数据如下::
-	
+
         In total 3 datasets:
-	test has 1821 instances.
-	train has 67349 instances.
-	dev has 872 instances.
+            test has 1821 instances.
+            train has 67349 instances.
+            dev has 872 instances.
         In total 2 vocabs:
-	words has 16293 entries.
-	target has 2 entries.
+            words has 16293 entries.
+            target has 2 entries.
 
         +-------------------------------------------+--------+--------------------------------------+---------+
         |                 raw_words                 | target |                words                 | seq_len |
@@ -51,16 +50,16 @@
          
         Vocabulary(['hide', 'new', 'secretions', 'from', 'the']...)
 
-    除了可以对数据进行读入的Pipe类，fastNLP还提供了读入和下载数据的Loader类，不同数据集的Pipe和Loader及其用法详见 :doc:`/tutorials/tutorial_4_load_dataset` 。
+    除了可以对数据进行读入的Pipe类，fastNLP还提供了读入和下载数据的Loader类，不同数据集的Pipe和Loader及其用法详见 :doc:` </tutorials/tutorial_4_load_dataset>` 。
     
 数据集分割
     由于SST2数据集的测试集并不带有标签数值，故我们分割出一部分训练集作为测试集。下面这段代码展示了 :meth:`~fastNLP.DataSet.split`  的使用方法
 
     .. code-block:: python
 
-        train_data = databundle.datasets['train']
+        train_data = databundle.get_dataset('train')
         train_data, test_data = train_data.split(0.015)
-        dev_data = databundle.datasets['dev']
+        dev_data = databundle.get_dataset('dev')
         print(len(train_data),len(dev_data),len(test_data))
 
     输出结果为::
@@ -68,14 +67,17 @@
         66339 872 1010
 
 数据集 :meth:`~fastNLP.DataSet.set_input` 和  :meth:`~fastNLP.DataSet.set_target` 函数
-    :class:`~fastNLP.io.SST2Pipe`  类的 :meth:`~fastNLP.io.SST2Pipe.process_from_file` 方法在预处理过程中还将训练、测试、验证集的 `words` 、`seq_len` :mod:`~fastNLP.core.field` 设定为input，同时将 `target`  :mod:`~fastNLP.core.field` 设定为target。我们可以通过 :class:`~fastNLP.core.Dataset` 类的 :meth:`~fastNLP.core.Dataset.print_field_meta` 方法查看各个       :mod:`~fastNLP.core.field` 的设定情况，代码如下：
+    :class:`~fastNLP.io.SST2Pipe`  类的 :meth:`~fastNLP.io.SST2Pipe.process_from_file` 方法在预处理过程中还将训练、测试、验证
+    集的 `words` 、`seq_len` :mod:`~fastNLP.core.field` 设定为input，同时将 `target`  :mod:`~fastNLP.core.field` 设定
+    为target。我们可以通过 :class:`~fastNLP.core.Dataset` 类的 :meth:`~fastNLP.core.Dataset.print_field_meta` 方法查看各个
+     :mod:`~fastNLP.core.field` 的设定情况，代码如下：
 
     .. code-block:: python
 
         train_data.print_field_meta()
 
     输出结果为::
-	
+
         +-------------+-----------+--------+-------+---------+
         | field_names | raw_words | target | words | seq_len |
         +-------------+-----------+--------+-------+---------+
@@ -85,11 +87,14 @@
         |  pad_value  |           |   0    |   0   |    0    |
         +-------------+-----------+--------+-------+---------+
 
-    其中is_input和is_target分别表示是否为input和target。ignore_type为true时指使用  :class:`~fastNLP.DataSetIter` 取出batch数据时fastNLP不会进行自动padding，pad_value指对应 :mod:`~fastNLP.core.field` padding所用的值，这两者只有当 :mod:`~fastNLP.core.field` 设定为input或者target的时候才有存在的意义。
+    其中is_input和is_target分别表示是否为input和target。ignore_type为true时指使用  :class:`~fastNLP.DataSetIter` 取出batch数
+    据时fastNLP不会进行自动padding，pad_value指对应 :mod:`~fastNLP.core.field` padding所用的值，这两者只有
+    当 :mod:`~fastNLP.core.field` 设定为input或者target的时候才有存在的意义。
 
-    is_input为true的 :mod:`~fastNLP.core.field` 在 :class:`~fastNLP.DataSetIter` 迭代取出的 batch_x 中，而 is_target为true的 :mod:`~fastNLP.core.field` 在                 :class:`~fastNLP.DataSetIter` 迭代取出的 batch_y 中。具体分析见 :doc:`/tutorials/tutorial_6_datasetiter` 的DataSetIter初探。
+    is_input为true的 :mod:`~fastNLP.core.field` 在 :class:`~fastNLP.DataSetIter` 迭代取出的batch_x 中，而is_target为true
+    的 :mod:`~fastNLP.core.field` 在:class:`~fastNLP.DataSetIter` 迭代取出的 batch_y 中。
+    具体分析见 :doc:`使用DataSetIter实现自定义训练过程 </tutorials/tutorial_6_datasetiter>` 。
 
----------------------
 使用内置模型训练
 ---------------------
 模型定义和初始化
@@ -106,7 +111,7 @@
         #还可以传入 kernel_nums, kernel_sizes, padding, dropout的自定义值
         model_cnn = CNNText((len(vocab),EMBED_DIM), num_classes=2, dropout=0.1)
 
-    使用fastNLP快速搭建自己的模型详见 :doc:`/tutorials/tutorial_8_modules_models`  。
+    使用fastNLP快速搭建自己的模型详见 :doc:`</tutorials/tutorial_8_modules_models>`  。
 
 评价指标
     训练模型需要提供一个评价指标。这里使用准确率做为评价指标。
@@ -194,10 +199,10 @@
     训练过程的输出如下::
 
         input fields after batch(if batch size is 2):
-        	        words: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2, 16]) 
-        	        seq_len: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2]) 
+            words: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2, 16])
+            seq_len: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2])
         target fields after batch(if batch size is 2):
-	        target: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2]) 
+            target: (1)type:torch.Tensor (2)dtype:torch.int64, (3)shape:torch.Size([2])
 
         training epochs started 2019-09-17-14-29-00
 
@@ -205,37 +210,7 @@
         Evaluation on dev at Epoch 1/10. Step:4147/41470: 
         AccuracyMetric: acc=0.762615
 
-        Evaluate data in 0.19 seconds!
-        Evaluation on dev at Epoch 2/10. Step:8294/41470: 
-        AccuracyMetric: acc=0.800459
-
-        Evaluate data in 0.16 seconds!
-        Evaluation on dev at Epoch 3/10. Step:12441/41470: 
-        AccuracyMetric: acc=0.777523
-
-        Evaluate data in 0.11 seconds!
-        Evaluation on dev at Epoch 4/10. Step:16588/41470: 
-        AccuracyMetric: acc=0.634174
-
-        Evaluate data in 0.11 seconds!
-        Evaluation on dev at Epoch 5/10. Step:20735/41470: 
-        AccuracyMetric: acc=0.791284
-
-        Evaluate data in 0.15 seconds!
-        Evaluation on dev at Epoch 6/10. Step:24882/41470: 
-        AccuracyMetric: acc=0.573394
-
-        Evaluate data in 0.18 seconds!
-        Evaluation on dev at Epoch 7/10. Step:29029/41470: 
-        AccuracyMetric: acc=0.759174
-
-        Evaluate data in 0.17 seconds!
-        Evaluation on dev at Epoch 8/10. Step:33176/41470: 
-        AccuracyMetric: acc=0.776376
-
-        Evaluate data in 0.18 seconds!
-        Evaluation on dev at Epoch 9/10. Step:37323/41470: 
-        AccuracyMetric: acc=0.740826
+        ...
 
         Evaluate data in 0.2 seconds!
         Evaluation on dev at Epoch 10/10. Step:41470/41470: 

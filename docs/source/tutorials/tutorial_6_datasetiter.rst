@@ -6,7 +6,7 @@
 还是消极的（label=1），使用 :class:`~fastNLP.DataSetIter` 类来编写自己的训练过程。  
 DataSetIter初探之前的内容与 :doc:`/tutorials/tutorial_5_loss_optimizer` 中的完全一样，如已经阅读过可以跳过。
 
---------------------
+
 数据读入和预处理
 --------------------
 
@@ -115,7 +115,7 @@ DataSetIter初探之前的内容与 :doc:`/tutorials/tutorial_5_loss_optimizer` 
         # metrics=AccuracyMetric() 在本例中与下面这行代码等价
         metrics=AccuracyMetric(pred=Const.OUTPUT, target=Const.TARGET)
 
---------------------------
+
 DataSetIter初探
 --------------------------
 
@@ -313,7 +313,7 @@ Dataset个性化padding
 
     在这里所有的`words`都被pad成了长度为40的list。
 
-------------------------------------
+
 使用DataSetIter自己编写训练过程
 ------------------------------------
     如果你想用类似 PyTorch 的使用方法，自己编写训练过程，可以参考下面这段代码。

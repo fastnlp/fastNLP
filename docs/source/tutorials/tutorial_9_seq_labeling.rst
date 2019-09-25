@@ -73,7 +73,7 @@ fastNLP的数据载入主要是由Loader与Pipe两个基类衔接完成的，您
     from fastNLP import LossInForward
 
     metric = SpanFPreRecMetric(tag_vocab=data_bundle.get_vocab('target'))
-    optimizer = Adam(model.parameters(), lr=1e-4)
+    optimizer = Adam(model.parameters(), lr=1e-2)
     loss = LossInForward()
 
 使用Trainer进行训练
@@ -122,3 +122,66 @@ fastNLP的数据载入主要是由Loader与Pipe两个基类衔接完成的，您
 
     tester = Tester(data_bundle.get_dataset('test'), model, metrics=metric)
     tester.test()
+
+输出为::
+
+    [tester]
+    SpanFPreRecMetric: f=0.482399, pre=0.530086, rec=0.442584
+
+
+使用更强的Bert做序列标注
+--------------------------------
+
+在fastNLP使用Bert进行任务，您只需要切换为 :class:`fastNLP.embeddings.BertEmbedding` 即可。
+
+.. code-block:: python
+
+    from fastNLP.io import WeiboNERPipe
+    data_bundle = WeiboNERPipe().process_from_file()
+    data_bundle.rename_field('chars', 'words')
+
+    from fastNLP.embeddings import BertEmbedding
+    embed = BertEmbedding(vocab=data_bundle.get_vocab('words'), model_dir_or_name='cn')
+    model = BiLSTMCRF(embed=embed, num_classes=len(data_bundle.get_vocab('target')), num_layers=1, hidden_size=200, dropout=0.5,
+                  target_vocab=data_bundle.get_vocab('target'))
+
+    from fastNLP import SpanFPreRecMetric
+    from torch import Adam
+    from fastNLP import LossInForward
+    metric = SpanFPreRecMetric(tag_vocab=data_bundle.get_vocab('target'))
+    optimizer = Adam(model.parameters(), lr=2e-5)
+    loss = LossInForward()
+
+    from fastNLP import Trainer
+    import torch
+    device= 0 if torch.cuda.is_available() else 'cpu'
+    trainer = Trainer(data_bundle.get_dataset('train'), model, loss=loss, optimizer=optimizer, batch_size=12,
+                        dev_data=data_bundle.get_dataset('dev'), metrics=metric, device=device)
+    trainer.train()
+
+    from fastNLP import Tester
+    tester = Tester(data_bundle.get_dataset('test'), model, metrics=metric)
+    tester.test()
+
+输出为::
+
+    training epochs started 2019-09-25-07-15-43
+    Evaluate data in 2.02 seconds!
+    Evaluation on dev at Epoch 1/10. Step:113/1130:
+    SpanFPreRecMetric: f=0.0, pre=0.0, rec=0.0
+
+    ...
+
+    Evaluate data in 2.17 seconds!
+    Evaluation on dev at Epoch 10/10. Step:1130/1130:
+    SpanFPreRecMetric: f=0.647332, pre=0.589852, rec=0.717224
+
+    In Epoch:6/Step:678, got best dev performance:
+    SpanFPreRecMetric: f=0.669963, pre=0.645238, rec=0.696658
+    Reloaded the best model.
+
+    Evaluate data in 1.82 seconds!
+    [tester]
+    SpanFPreRecMetric: f=0.641774, pre=0.626424, rec=0.657895
+
+可以看出通过使用Bert，效果有明显的提升，从48.2提升到了64.1。

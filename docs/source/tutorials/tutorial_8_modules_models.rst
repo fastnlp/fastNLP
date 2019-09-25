@@ -6,7 +6,6 @@
 下面我们会分三节介绍编写构建模型的具体方法。
 
 
-----------------------
 使用 models 中的模型
 ----------------------
 
@@ -81,8 +80,9 @@ FastNLP 中内置的 models 如下表所示，您可以点击具体的名称查�
    :class:`~fastNLP.models.STNLICls` ,用于自然语言推断 (NLI) 的 Star-Transformer 模型
    :class:`~fastNLP.models.STSeqCls` , 用于分类任务的 Star-Transformer 模型
    :class:`~fastNLP.models.BiaffineParser` , Biaffine 依存句法分析网络的实现
+   :class:`~fastNLP.models.BiLSTMCRF`, 使用BiLSTM与CRF进行序列标注
 
-----------------------------
+
 使用 nn.torch 编写模型
 ----------------------------
 
@@ -137,7 +137,7 @@ FastNLP 完全支持使用 pyTorch 编写的模型，但与 pyTorch 中编写模
       (dropout): Dropout(p=0.5)
     )
 
-----------------------------
+
 使用 modules 编写模型
 ----------------------------
 
