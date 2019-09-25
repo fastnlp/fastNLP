@@ -220,10 +220,7 @@ Bert在针对具有两句话的任务时（如matching，Q&A任务），句子�
 在多个[SEP]的情况下，将会使token_type_id不断0，1循环。比如"first sentence [SEP] second sentence [SEP] third sentence", 它们的
 token_type_id将是[0, 0, 0, 1, 1, 1, 0, 0]。但请注意[SEP]一定要大写的，不能是[sep]，否则无法识别。
 
-更多 :class:`~fastNLP.embedding.BertEmbedding` 的使用，请参考BertEmbedding的使用教程
-
-.. todo::
-    找人写一篇BertEmbedding的使用教程
+更多 :class:`~fastNLP.embedding.BertEmbedding` 的使用，请参考 :doc:`/tutorials/extend_1_bert_embedding`
 
 -----------------------------------------------------
 Part VI: 使用character-level的embedding
