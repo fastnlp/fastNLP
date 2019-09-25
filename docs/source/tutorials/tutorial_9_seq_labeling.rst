@@ -114,7 +114,7 @@ fastNLP的数据载入主要是由Loader与Pipe两个基类衔接完成的，您
     SpanFPreRecMetric: f=0.515528, pre=0.65098, rec=0.426735
     Reloaded the best model.
 
-训练结束之后过，可以通过 :class:`fastNLP.Tester`测试其在测试集上的性能
+训练结束之后过，可以通过 :class:`~fastNLP.Tester` 测试其在测试集上的性能
 
 .. code-block::python
 

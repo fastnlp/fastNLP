@@ -1,6 +1,6 @@
 """
 instance 模块实现了Instance 类在fastNLP中对应sample。一个sample可以认为是一个Instance类型的对象。
-便于理解的例子可以参考文档 :doc:`fastNLP.core.dataset` 中的表格
+便于理解的例子可以参考文档 :mod:`fastNLP.core.dataset` 中的表格
 
 """
 

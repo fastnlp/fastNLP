@@ -314,7 +314,7 @@ Example2.3
 这里，我们通过继承 :class:`~fastNLP.Callback` 类定义了自己的 callback 的，并和内置的 :class:`~fastNLP.EarlyStopCallback`
 一起传给了 :class:`~fastNLP.Trainer` ，增强了 :class:`~fastNLP.Trainer` 的功能
 
-fastNLP已经自带了很多callback函数供使用，可以参考 :doc:`fastNLP.core.callback` 。
+fastNLP已经自带了很多callback函数供使用，可以参考 :mod:`fastNLP.core.callback` 。
 
 """
 __all__ = [
@@ -364,7 +364,7 @@ class Trainer(object):
         (4) 每个epoch结束或一定step后进行验证集验证;
         (5) 保存获得更好验证性能的模型等。
     
-    详细的介绍参见 :doc:`fastNLP.core.trainer`
+    详细的介绍参见 :mod:`fastNLP.core.trainer`
     """
     
     def __init__(self, train_data, model, optimizer=None, loss=None,
@@ -391,7 +391,7 @@ class Trainer(object):
         :param metrics: 验证的评估函数。可以只使用一个 :class:`Metric<fastNLP.core.metrics.MetricBase>` ，
             也可以使用多个 :class:`Metric<fastNLP.core.metrics.MetricBase>` ，通过列表传入。
             如验证时取得了更好的验证结果(如果有多个Metric，以列表中第一个Metric为准)，且save_path不为None，
-            则保存当前模型。Metric种类详见 :doc:`metrics模块 <fastNLP.core.metrics>` 。仅在传入dev_data时有效。
+            则保存当前模型。Metric种类详见 :mod:`metrics模块 <fastNLP.core.metrics>` 。仅在传入dev_data时有效。
         :param str,None metric_key:  :class:`Metric<fastNLP.core.metrics.MetricBase>` 有时会有多个指标，
             比如 :class:`~fastNLP.core.metrics.SpanFPreRecMetric` 中包含了'f', 'pre', 'rec'。此时需
             要指定以哪个指标为准。另外有些指标是越小效果越好，比如语言模型的困惑度，这种情况下，在key前面增加一个'-'来表
@@ -417,7 +417,7 @@ class Trainer(object):
             已知可能会出现的问题：Adagrad优化器可能无法正常使用这个参数，请手动管理模型位置。
     
         :param list(callbacks) callbacks: 用于在train过程中起调节作用的回调函数。比如early stop，negative sampling等可以
-            通过callback机制实现。 可使用的callback参见 :doc:`callback模块 <fastNLP.core.callback>`
+            通过callback机制实现。 可使用的callback参见 :mod:`callback模块 <fastNLP.core.callback>`
         :param int check_code_level: 模型检查等级. -1: 不进行检查; 0: 仅出现错误时停止; 1: 如果有field没有被使用，
             报告警告信息; 2: 有任何field没有被使用都报错. 检查的原理是通过使用很小的batch(默认2个sample)来运行代码，但是
             这个过程理论上不会修改任何参数，只是会检查能否运行。但如果(1)模型中存在将batch_size写为某个固定值的情况；

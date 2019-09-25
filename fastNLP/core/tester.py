@@ -27,7 +27,7 @@ tester模块实现了 fastNLP 所需的Tester类，能在提供数据、模型�
     tester = Tester(dataset, model, metrics=AccuracyMetric())
     eval_results = tester.test()
 
-这里Metric的映射规律是和 :class:`fastNLP.Trainer` 中一致的，具体使用请参考 :doc:`trainer 模块<fastNLP.core.trainer>` 的1.3部分。
+这里Metric的映射规律是和 :class:`fastNLP.Trainer` 中一致的，具体使用请参考 :mod:`trainer 模块<fastNLP.core.trainer>` 的1.3部分。
 Tester在验证进行之前会调用model.eval()提示当前进入了evaluation阶段，即会关闭nn.Dropout()等，在验证结束之后会调用model.train()恢复到训练状态。
 
 

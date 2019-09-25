@@ -306,7 +306,7 @@ from .utils import pretty_table_printer
 
 class DataSet(object):
     """
-    fastNLP的数据容器，详细的使用方法见文档  :doc:`fastNLP.core.dataset`
+    fastNLP的数据容器，详细的使用方法见文档  :mod:`fastNLP.core.dataset`
     """
 
     def __init__(self, data=None):

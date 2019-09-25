@@ -9,7 +9,7 @@
 .. csv-table::
    :header: "类型", "功能", "常见组件"
 
-   "embedding", 参见 :doc:`/fastNLP.embeddings` ,  "Elmo, Bert"
+   "embedding", 参见 :mod:`/fastNLP.embeddings` ,  "Elmo, Bert"
    "encoder", "将输入编码为具有表示能力的向量", "CNN, LSTM, Transformer"
    "decoder", "将具有某种表示意义的向量解码为需要的输出形式 ", "MLP, CRF"
    "其它", "配合其它组件使用的组件", "Dropout"
@@ -52,13 +52,14 @@ __all__ = [
     'summary'
 ]
 
+import sys
+
 from . import decoder
 from . import encoder
 from .decoder import *
 from .dropout import TimestepDropout
 from .encoder import *
 from .utils import summary
-
-import sys
 from ..doc_utils import doc_process
+
 doc_process(sys.modules[__name__])
