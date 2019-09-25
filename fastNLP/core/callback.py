@@ -62,8 +62,6 @@ __all__ = [
     "TensorboardCallback",
     "WarmupCallback",
     "SaveModelCallback",
-    "EchoCallback",
-    "TesterCallback",
     
     "CallbackException",
     "EarlyStopError"
@@ -87,11 +85,17 @@ except:
 from .dataset import DataSet
 from .tester import Tester
 from ._logger import logger
+from .utils import _check_fp16
 
 try:
     import fitlog
 except:
     pass
+
+try:
+    from apex import amp
+except:
+    amp = None
 
 
 class Callback(object):
@@ -266,14 +270,6 @@ class Callback(object):
         :param str metric_key: 初始化Trainer时传入的metric_key。
         :param torch.Optimizer optimizer: Trainer中使用的优化器。
         :param bool is_better_eval: 当前dev结果是否比之前的好。
-        :return:
-        """
-        pass
-
-    def on_validation(self):
-        """
-        如果Trainer中设置了验证，则会在每次需要验证时调用该函数
-
         :return:
         """
         pass
@@ -470,7 +466,7 @@ class GradientClipCallback(Callback):
         if self.step%self.update_every==0:
             if self.parameters is None:
                 if getattr(self.trainer, 'fp16', ''):
-                    from apex import amp
+                    _check_fp16()
                     self.clip_fun(amp.master_params(self.optimizer), self.clip_value)
                 self.clip_fun(self.model.parameters(), self.clip_value)
             else:
@@ -713,6 +709,8 @@ class ControlC(Callback):
 
 
 class SmoothValue(object):
+    """work for LRFinder"""
+    
     def __init__(self, beta: float):
         self.beta, self.n, self.mov_avg = beta, 0, 0
         self.smooth = None
@@ -1025,6 +1023,10 @@ class EarlyStopError(CallbackException):
 
 
 class EchoCallback(Callback):
+    """
+    用于测试分布式训练
+    
+    """
     def __init__(self, name, out=sys.stdout):
         super(EchoCallback, self).__init__()
         self.name = name
@@ -1036,27 +1038,23 @@ class EchoCallback(Callback):
         return super(EchoCallback, self).__getattribute__(item)
 
 
-class TesterCallback(Callback):
+class _TesterCallback(Callback):
     def __init__(self, data, model, metrics, metric_key=None, batch_size=16, num_workers=None):
-        super(TesterCallback, self).__init__()
+        super(_TesterCallback, self).__init__()
         if hasattr(model, 'module'):
             # for data parallel model
             model = model.module
         self.tester = Tester(data, model,
                              metrics=metrics, batch_size=batch_size,
                              num_workers=num_workers, verbose=0)
-        # parse metric_key
-        # increase_better is True. It means the exp result gets better if the indicator increases.
-        # It is true by default.
-        self.increase_better = True
         if metric_key is not None:
-            self.increase_better = False if metric_key[0] == "-" else True
-            self.metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
+            self.metric_key, self.increase_better = self._parse_metric_key(metric_key)
         else:
             self.metric_key = None
+            self.increase_better = True
         self.score = None
 
-    def on_validation(self):
+    def on_valid_begin(self):
         cur_score = self.tester.test()
         eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. - {}".format(
                     self.epoch, self.n_epochs, self.step, self.n_steps,
@@ -1067,17 +1065,28 @@ class TesterCallback(Callback):
             self.score = cur_score
         return cur_score, is_better
 
-    def _get_score(self, metric_dict, key):
+    @staticmethod
+    def _get_score(metric_dict, key):
         for metric in metric_dict.items():
             if key in metric:
                 return metric[key]
         return None
 
+    @staticmethod
+    def _parse_metric_key(metric_key):
+        # parse metric_key
+        # increase_better is True. It means the exp result gets better if the indicator increases.
+        # It is true by default.
+        increase_better = False if metric_key[0] == "-" else True
+        metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
+        return metric_key, increase_better
+
     def compare_better(self, a):
         if self.score is None:
             return True
         if self.metric_key is None:
-            self.metric_key = list(list(self.score.values())[0].keys())[0]
+            metric_key = list(list(self.score.values())[0].keys())[0]
+            self.metric_key, self.increase_better = self._parse_metric_key(metric_key)
         k = self.metric_key
         score = self._get_score(self.score, k)
         new_score = self._get_score(a, k)
@@ -1087,7 +1096,3 @@ class TesterCallback(Callback):
             return score <= new_score
         else:
             return score >= new_score
-
-    def on_train_end(self):
-        self.logger.info('Evaluate on training ends.')
-        self.on_validation()

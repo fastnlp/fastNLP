@@ -1,5 +1,6 @@
 """undocumented
-Variational RNN 的 Pytorch 实现
+Variational RNN 及相关模型的 fastNLP实现，相关论文参考：
+`A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016) <https://arxiv.org/abs/1512.05287>`_
 """
 
 __all__ = [
@@ -227,6 +228,7 @@ class VarRNNBase(nn.Module):
 class VarLSTM(VarRNNBase):
     """
     Variational Dropout LSTM.
+    相关论文参考：`A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016) <https://arxiv.org/abs/1512.05287>`_
 
     """
 
@@ -253,7 +255,8 @@ class VarLSTM(VarRNNBase):
 class VarRNN(VarRNNBase):
     """
     Variational Dropout RNN.
-
+    相关论文参考：`A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016) <https://arxiv.org/abs/1512.05287>`_
+    
     """
 
     def __init__(self, *args, **kwargs):
@@ -279,7 +282,8 @@ class VarRNN(VarRNNBase):
 class VarGRU(VarRNNBase):
     """
     Variational Dropout GRU.
-
+    相关论文参考：`A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016) <https://arxiv.org/abs/1512.05287>`_
+    
     """
 
     def __init__(self, *args, **kwargs):

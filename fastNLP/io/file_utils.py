@@ -83,25 +83,41 @@ PRETRAIN_STATIC_FILES = {
 }
 
 DATASET_DIR = {
+    # Classification, English
     'aclImdb': "imdb.zip",
     "yelp-review-full": "yelp_review_full.tar.gz",
     "yelp-review-polarity": "yelp_review_polarity.tar.gz",
+    "sst-2": "SST-2.zip",
+    "sst": "SST.zip",
+
+    # Classification, Chinese
+    "chn-senti-corp": "chn_senti_corp.zip",
+    "weibo-senti-100k": "WeiboSenti100k.zip",
+    "thuc-news": "THUCNews.zip",
+
+    # Matching, English
     "mnli": "MNLI.zip",
     "snli": "SNLI.zip",
     "qnli": "QNLI.zip",
-    "sst-2": "SST-2.zip",
-    "sst": "SST.zip",
     "rte": "RTE.zip",
+
+    # Matching, Chinese
+    "cn-xnli": "XNLI.zip",
+
+    # Sequence Labeling, Chinese
     "msra-ner": "MSRA_NER.zip",
     "peopledaily": "peopledaily.zip",
     "weibo-ner": "weibo_NER.zip",
 
+    # Chinese Word Segmentation
     "cws-pku": 'cws_pku.zip',
     "cws-cityu": "cws_cityu.zip",
     "cws-as": 'cws_as.zip',
     "cws-msra": 'cws_msra.zip',
 
-    "chn-senti-corp":"chn_senti_corp.zip"
+    # Summarization, English
+    "ext-cnndm": "ext-cnndm.zip",
+
 }
 
 PRETRAIN_MAP = {'elmo': PRETRAINED_ELMO_MODEL_DIR,

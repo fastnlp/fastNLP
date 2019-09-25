@@ -87,14 +87,25 @@ class Conll2003NERPipe(_NERPipe):
     经过该Pipe过后，DataSet中的内容如下所示
 
     .. csv-table:: Following is a demo layout of DataSet returned by Conll2003Loader
-       :header: "raw_words", "words", "target", "seq_len"
+       :header: "raw_words", "target", "words", "seq_len"
 
-       "[Nadim, Ladki]", "[2, 3]", "[1, 2]", 2
-       "[AL-AIN, United, Arab, ...]", "[4, 5, 6,...]", "[3, 4,...]", 6
+       "[Nadim, Ladki]", "[1, 2]", "[2, 3]", 2
+       "[AL-AIN, United, Arab, ...]", "[3, 4,...]", "[4, 5, 6,...]", 6
        "[...]", "[...]", "[...]", .
 
     raw_words列为List[str], 是未转换的原始数据; words列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
     target。返回的DataSet中被设置为input有words, target, seq_len; 设置为target有target。
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_words | target | words | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   |  True  |  True |   True  |
+        |  is_target  |   False   |  True  | False |   True  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
 
     """
     
@@ -112,17 +123,28 @@ class Conll2003NERPipe(_NERPipe):
 
 
 class Conll2003Pipe(Pipe):
-    r"""
+    """
     经过该Pipe后，DataSet中的内容如下
 
     .. csv-table::
-       :header: "raw_words" , "words", "pos", "chunk", "ner", "seq_len"
+       :header: "raw_words" , "pos", "chunk", "ner", "words", "seq_len"
 
-       "[Nadim, Ladki]", "[2, 3]", "[0, 0]", "[1, 2]", "[1, 2]", 2
-       "[AL-AIN, United, Arab, ...]", "[4, 5, 6,...]", "[1, 2...]", "[3, 4...]", "[3, 4...]", 6
+       "[Nadim, Ladki]", "[0, 0]", "[1, 2]", "[1, 2]", "[2, 3]", 2
+       "[AL-AIN, United, Arab, ...]", "[1, 2...]", "[3, 4...]", "[3, 4...]", "[4, 5, 6,...]", 6
        "[...]", "[...]", "[...]", "[...]", "[...]", .
 
     其中words, seq_len是input; pos, chunk, ner, seq_len是target
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+-------+-------+-------+-------+---------+
+        | field_names | raw_words |  pos  | chunk |  ner  | words | seq_len |
+        +-------------+-----------+-------+-------+-------+-------+---------+
+        |   is_input  |   False   | False | False | False |  True |   True  |
+        |  is_target  |   False   |  True |  True |  True | False |   True  |
+        | ignore_type |           | False | False | False | False |  False  |
+        |  pad_value  |           |   0   |   0   |   0   |   0   |    0    |
+        +-------------+-----------+-------+-------+-------+-------+---------+
+
 
     """
     def __init__(self, chunk_encoding_type='bioes', ner_encoding_type='bioes', lower: bool = False):
@@ -202,14 +224,25 @@ class OntoNotesNERPipe(_NERPipe):
     处理OntoNotes的NER数据，处理之后DataSet中的field情况为
 
     .. csv-table::
-       :header: "raw_words", "words", "target", "seq_len"
+       :header: "raw_words", "target", "words", "seq_len"
 
-       "[Nadim, Ladki]", "[2, 3]", "[1, 2]", 2
-       "[AL-AIN, United, Arab, ...]", "[4, 5, 6,...]", "[3, 4]", 6
+       "[Nadim, Ladki]", "[1, 2]", "[2, 3]", 2
+       "[AL-AIN, United, Arab, ...]", "[3, 4]", "[4, 5, 6,...]", 6
        "[...]", "[...]", "[...]", .
 
     raw_words列为List[str], 是未转换的原始数据; words列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
     target。返回的DataSet中被设置为input有words, target, seq_len; 设置为target有target。
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_words | target | words | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   |  True  |  True |   True  |
+        |  is_target  |   False   |  True  | False |   True  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
 
     """
     
@@ -306,14 +339,25 @@ class MsraNERPipe(_CNNERPipe):
     处理MSRA-NER的数据，处理之后的DataSet的field情况为
 
     .. csv-table::
-       :header: "raw_chars", "chars", "target", "seq_len"
+       :header: "raw_chars", "target", "chars", "seq_len"
 
-       "[相, 比, 之, 下,...]", "[2, 3, 4, 5, ...]", "[0, 0, 0, 0, ...]", 11
-       "[青, 岛, 海, 牛, 队, 和, ...]", "[10, 21, ....]", "[1, 2, 3, ...]", 21
+       "[相, 比, 之, 下,...]", "[0, 0, 0, 0, ...]", "[2, 3, 4, 5, ...]", 11
+       "[青, 岛, 海, 牛, 队, 和, ...]", "[1, 2, 3, ...]", "[10, 21, ....]", 21
        "[...]", "[...]", "[...]", .
 
     raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
     target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_chars | target | chars | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   |  True  |  True |   True  |
+        |  is_target  |   False   |  True  | False |   True  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
 
     """
     
@@ -327,14 +371,26 @@ class PeopleDailyPipe(_CNNERPipe):
     处理people daily的ner的数据，处理之后的DataSet的field情况为
 
     .. csv-table::
-       :header: "raw_chars", "chars", "target", "seq_len"
+       :header: "raw_chars", "target", "chars", "seq_len"
 
-       "[相, 比, 之, 下,...]", "[2, 3, 4, 5, ...]", "[0, 0, 0, 0, ...]", 11
-       "[青, 岛, 海, 牛, 队, 和, ...]", "[10, 21, ....]", "[1, 2, 3, ...]", 21
+       "[相, 比, 之, 下,...]", "[0, 0, 0, 0, ...]", "[2, 3, 4, 5, ...]", 11
+       "[青, 岛, 海, 牛, 队, 和, ...]", "[1, 2, 3, ...]", "[10, 21, ....]", 21
        "[...]", "[...]", "[...]", .
 
     raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
     target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_chars | target | chars | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   |  True  |  True |   True  |
+        |  is_target  |   False   |  True  | False |   True  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
+
     """
     
     def process_from_file(self, paths=None) -> DataBundle:
@@ -349,12 +405,23 @@ class WeiboNERPipe(_CNNERPipe):
     .. csv-table::
        :header: "raw_chars", "chars", "target", "seq_len"
 
-       "[相, 比, 之, 下,...]", "[2, 3, 4, 5, ...]", "[0, 0, 0, 0, ...]", 11
-       "[青, 岛, 海, 牛, 队, 和, ...]", "[10, 21, ....]", "[1, 2, 3, ...]", 21
+       "['老', '百', '姓']", "[4, 3, 3]", "[38, 39, 40]", 3
+       "['心']", "[0]", "[41]", 1
        "[...]", "[...]", "[...]", .
 
     raw_chars列为List[str], 是未转换的原始数据; chars列为List[int]，是转换为index的输入数据; target列是List[int]，是转换为index的
     target。返回的DataSet中被设置为input有chars, target, seq_len; 设置为target有target。
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_chars | target | chars | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   |  True  |  True |   True  |
+        |  is_target  |   False   |  True  | False |   True  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
 
     """
     

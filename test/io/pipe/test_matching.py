@@ -4,9 +4,9 @@ import os
 
 from fastNLP.io import DataBundle
 from fastNLP.io.pipe.matching import SNLIPipe, RTEPipe, QNLIPipe, QuoraPipe, MNLIPipe, \
-    XNLIPipe, BQCorpusPipe, LCQMCPipe
+    CNXNLIPipe, BQCorpusPipe, LCQMCPipe
 from fastNLP.io.pipe.matching import SNLIBertPipe, RTEBertPipe, QNLIBertPipe, QuoraBertPipe, MNLIBertPipe, \
-    XNLIBertPipe, BQCorpusBertPipe, LCQMCBertPipe
+    CNXNLIBertPipe, BQCorpusBertPipe, LCQMCBertPipe
 
 
 @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
@@ -38,7 +38,7 @@ class TestRunMatchingPipe(unittest.TestCase):
             'QNLI': ('test/data_for_tests/io/QNLI', QNLIPipe, QNLIBertPipe, (5, 5, 5), (372, 2), True),
             'MNLI': ('test/data_for_tests/io/MNLI', MNLIPipe, MNLIBertPipe, (5, 5, 5, 5, 6), (459, 3), True),
             'BQCorpus': ('test/data_for_tests/io/BQCorpus', BQCorpusPipe, BQCorpusBertPipe, (5, 5, 5), (32, 2), False),
-            'XNLI': ('test/data_for_tests/io/XNLI', XNLIPipe, XNLIBertPipe, (6, 7, 6), (37, 3), False),
+            'XNLI': ('test/data_for_tests/io/XNLI', CNXNLIPipe, CNXNLIBertPipe, (6, 7, 6), (37, 3), False),
             'LCQMC': ('test/data_for_tests/io/LCQMC', LCQMCPipe, LCQMCBertPipe, (5, 6, 6), (36, 2), False),
         }
         for k, v in data_set_dict.items():

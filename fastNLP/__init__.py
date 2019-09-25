@@ -36,8 +36,6 @@ __all__ = [
     "TensorboardCallback",
     "WarmupCallback",
     'SaveModelCallback',
-    "EchoCallback",
-    "TesterCallback",
     "CallbackException",
     "EarlyStopError",
     

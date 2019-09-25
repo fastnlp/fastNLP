@@ -7,7 +7,7 @@ __all__ = [
     "RTELoader",
     "QuoraLoader",
     "BQCorpusLoader",
-    "XNLILoader",
+    "CNXNLILoader",
     "LCQMCLoader"
 ]
 
@@ -135,12 +135,12 @@ class SNLILoader(JsonLoader):
         """
         从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.DataBundle` 。
 
-        读取的field根据ConllLoader初始化时传入的headers决定。
+        读取的field根据Loader初始化时传入的field决定。
 
         :param str paths: 传入一个目录, 将在该目录下寻找snli_1.0_train.jsonl, snli_1.0_dev.jsonl
             和snli_1.0_test.jsonl三个文件。
 
-        :return: 返回的:class:`~fastNLP.io.DataBundle`
+        :return: 返回的 :class:`~fastNLP.io.DataBundle`
         """
         _paths = {}
         if paths is None:
@@ -222,8 +222,7 @@ class QNLILoader(JsonLoader):
         """
         如果您的实验使用到了该数据，请引用
 
-        .. todo::
-            补充
+        https://arxiv.org/pdf/1809.05053.pdf
 
         :return:
         """
@@ -276,6 +275,13 @@ class RTELoader(Loader):
         return ds
     
     def download(self):
+        """
+        如果您的实验使用到了该数据，请引用GLUE Benchmark
+
+        https://openreview.net/pdf?id=rJ4km2R5t7
+
+        :return:
+        """
         return self._get_dataset_path('rte')
 
 
@@ -321,10 +327,17 @@ class QuoraLoader(Loader):
         return ds
     
     def download(self):
+        """
+        由于版权限制，不能提供自动下载功能。可参考
+
+        https://www.kaggle.com/c/quora-question-pairs/data
+
+        :return:
+        """
         raise RuntimeError("Quora cannot be downloaded automatically.")
 
 
-class XNLILoader(Loader):
+class CNXNLILoader(Loader):
     """
     别名：
     数据集简介：中文句对NLI（本为multi-lingual的数据集，但是这里只取了中文的数据集）。原句子已被MOSES tokenizer处理
@@ -341,7 +354,7 @@ class XNLILoader(Loader):
     """
 
     def __init__(self):
-        super(XNLILoader, self).__init__()
+        super(CNXNLILoader, self).__init__()
 
     def _load(self, path: str = None):
         csv_loader = CSVLoader(sep='\t')
@@ -376,6 +389,16 @@ class XNLILoader(Loader):
 
         data_bundle = DataBundle(datasets=datasets)
         return data_bundle
+
+    def download(self) -> str:
+        """
+        自动下载数据，该数据取自 https://arxiv.org/abs/1809.05053
+        在 https://arxiv.org/pdf/1905.05526.pdf https://arxiv.org/pdf/1901.10125.pdf
+        https://arxiv.org/pdf/1809.05053.pdf 有使用
+        :return:
+        """
+        output_dir = self._get_dataset_path('cn-xnli')
+        return output_dir
 
 
 class BQCorpusLoader(Loader):
@@ -412,6 +435,16 @@ class BQCorpusLoader(Loader):
                 if raw_chars1:
                     ds.append(Instance(raw_chars1=raw_chars1, raw_chars2=raw_chars2, target=target))
         return ds
+
+    def download(self):
+        """
+        由于版权限制，不能提供自动下载功能。可参考
+
+        https://github.com/ymcui/Chinese-BERT-wwm
+
+        :return:
+        """
+        raise RuntimeError("BQCorpus cannot be downloaded automatically.")
 
 
 class LCQMCLoader(Loader):
@@ -451,16 +484,14 @@ class LCQMCLoader(Loader):
                     ds.append(Instance(raw_chars1=raw_chars1, raw_chars2=raw_chars2, target=target))
         return ds
 
-    '''
-    def download(self)->str:
+    def download(self):
         """
-        自动下载数据，该数据取自论文 LCQMC: A Large-scale Chinese Question Matching Corpus.
-        InProceedings of the 27thInternational Conference on Computational Linguistics. 1952–1962.
+        由于版权限制，不能提供自动下载功能。可参考
+
+        https://github.com/ymcui/Chinese-BERT-wwm
 
         :return:
         """
-        output_dir = self._get_dataset_path('chn-senti-corp')
-        return output_dir
-    '''
+        raise RuntimeError("LCQMC cannot be downloaded automatically.")
 
 

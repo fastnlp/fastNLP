@@ -19,6 +19,10 @@ import torch.nn as nn
 from typing import List
 from ._logger import logger
 from prettytable import PrettyTable
+try:
+    from apex import amp
+except:
+    amp = None
 
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])
@@ -805,3 +809,10 @@ def sub_column(string: str, c: int, c_size: int, title: str) -> str:
     if len(string) > avg:
         string = string[:(avg - 3)] + "..."
     return string
+
+
+def _check_fp16():
+    if amp is None:
+        raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
+    if not torch.backends.cudnn.enabled:
+        raise RuntimeError("Amp requires cudnn backend to be enabled.")

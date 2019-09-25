@@ -829,12 +829,12 @@ class Trainer(object):
             self.best_metric_indicator = indicator_val
         else:
             if self.increase_better is True:
-                if indicator_val >= self.best_metric_indicator:
+                if indicator_val > self.best_metric_indicator:
                     self.best_metric_indicator = indicator_val
                 else:
                     is_better = False
             else:
-                if indicator_val <= self.best_metric_indicator:
+                if indicator_val < self.best_metric_indicator:
                     self.best_metric_indicator = indicator_val
                 else:
                     is_better = False
@@ -842,6 +842,7 @@ class Trainer(object):
 
     @property
     def is_master(self):
+        """是否是主进程"""
         return True
 
 DEFAULT_CHECK_BATCH_SIZE = 2

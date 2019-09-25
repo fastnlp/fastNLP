@@ -7,7 +7,7 @@ __all__ = [
     "QuoraBertPipe",
     "QNLIBertPipe",
     "MNLIBertPipe",
-    "XNLIBertPipe",
+    "CNXNLIBertPipe",
     "BQCorpusBertPipe",
     "LCQMCBertPipe",
     "MatchingPipe",
@@ -16,7 +16,7 @@ __all__ = [
     "QuoraPipe",
     "QNLIPipe",
     "MNLIPipe",
-    "XNLIPipe",
+    "CNXNLIPipe",
     "BQCorpusPipe",
     "LCQMCPipe",
 ]
@@ -25,7 +25,7 @@ import warnings
 
 from .pipe import Pipe
 from .utils import get_tokenizer
-from ..loader.matching import SNLILoader, MNLILoader, QNLILoader, RTELoader, QuoraLoader, BQCorpusLoader, XNLILoader, LCQMCLoader
+from ..loader.matching import SNLILoader, MNLILoader, QNLILoader, RTELoader, QuoraLoader, BQCorpusLoader, CNXNLILoader, LCQMCLoader
 from ...core.const import Const
 from ...core.vocabulary import Vocabulary
 from ...core._logger import logger
@@ -37,15 +37,26 @@ class MatchingBertPipe(Pipe):
     Matching任务的Bert pipe，输出的DataSet将包含以下的field
 
     .. csv-table::
-       :header: "raw_words1", "raw_words2", "words", "target", "seq_len"
+       :header: "raw_words1", "raw_words2", "target", "words", "seq_len"
 
-       "The new rights are...", "Everyone really likes..",  "[2, 3, 4, 5, ...]", 1, 10
-       "This site includes a...", "The Government Executive...", "[11, 12, 13,...]", 0, 5
-       "...", "...", "[...]", ., .
+       "The new rights are...", "Everyone really likes..", 1,  "[2, 3, 4, 5, ...]", 10
+       "This site includes a...", "The Government Executive...", 0, "[11, 12, 13,...]", 5
+       "...", "...", ., "[...]", .
 
     words列是将raw_words1(即premise), raw_words2(即hypothesis)使用"[SEP]"链接起来转换为index的。
     words列被设置为input，target列被设置为target和input(设置为input以方便在forward函数中计算loss，
     如果不在forward函数中计算loss也不影响，fastNLP将根据forward函数的形参名进行传参).
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+------------+------------+--------+-------+---------+
+        | field_names | raw_words1 | raw_words2 | target | words | seq_len |
+        +-------------+------------+------------+--------+-------+---------+
+        |   is_input  |   False    |   False    | False  |  True |   True  |
+        |  is_target  |   False    |   False    |  True  | False |  False  |
+        | ignore_type |            |            | False  | False |  False  |
+        |  pad_value  |            |            |   0    |   0   |    0    |
+        +-------------+------------+------------+--------+-------+---------+
 
     """
     
@@ -75,6 +86,18 @@ class MatchingBertPipe(Pipe):
         return data_bundle
     
     def process(self, data_bundle):
+        """
+        输入的data_bundle中的dataset需要具有以下结构：
+
+        .. csv-table::
+            :header: "raw_words1", "raw_words2", "target"
+
+            "Dana Reeve, the widow of the actor...", "Christopher Reeve had an...", "not_entailment"
+            "...","..."
+
+        :param data_bundle:
+        :return:
+        """
         for dataset in data_bundle.datasets.values():
             if dataset.has_field(Const.TARGET):
                 dataset.drop(lambda x: x[Const.TARGET] == '-')
@@ -178,15 +201,27 @@ class MatchingPipe(Pipe):
     Matching任务的Pipe。输出的DataSet将包含以下的field
 
     .. csv-table::
-       :header: "raw_words1", "raw_words2", "words1", "words2", "target", "seq_len1", "seq_len2"
+       :header: "raw_words1", "raw_words2", "target", "words1", "words2", "seq_len1", "seq_len2"
 
-       "The new rights are...", "Everyone really likes..",  "[2, 3, 4, 5, ...]", "[10, 20, 6]", 1, 10, 13
-       "This site includes a...", "The Government Executive...", "[11, 12, 13,...]", "[2, 7, ...]", 0, 6, 7
-       "...", "...", "[...]", "[...]", ., ., .
+       "The new rights are...", "Everyone really likes..", 1,  "[2, 3, 4, 5, ...]", "[10, 20, 6]", 10, 13
+       "This site includes a...", "The Government Executive...", 0, "[11, 12, 13,...]", "[2, 7, ...]", 6, 7
+       "...", "...", ., "[...]", "[...]", ., .
 
     words1是premise，words2是hypothesis。其中words1,words2,seq_len1,seq_len2被设置为input；target被设置为target
     和input(设置为input以方便在forward函数中计算loss，如果不在forward函数中计算loss也不影响，fastNLP将根据forward函数
     的形参名进行传参)。
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+------------+------------+--------+--------+--------+----------+----------+
+        | field_names | raw_words1 | raw_words2 | target | words1 | words2 | seq_len1 | seq_len2 |
+        +-------------+------------+------------+--------+--------+--------+----------+----------+
+        |   is_input  |   False    |   False    | False  |  True  |  True  |   True   |   True   |
+        |  is_target  |   False    |   False    |  True  | False  | False  |  False   |  False   |
+        | ignore_type |            |            | False  | False  | False  |  False   |  False   |
+        |  pad_value  |            |            |   0    |   0    |   0    |    0     |    0     |
+        +-------------+------------+------------+--------+--------+--------+----------+----------+
+
     """
     
     def __init__(self, lower=False, tokenizer: str = 'raw'):
@@ -319,10 +354,10 @@ class LCQMCPipe(MatchingPipe):
         return data_bundle
 
 
-class XNLIPipe(MatchingPipe):
-    def process_from_file(self, paths = None):
-        data_bundle = XNLILoader().load(paths)
-        data_bundle = GranularizePipe(task = 'XNLI').process(data_bundle)
+class CNXNLIPipe(MatchingPipe):
+    def process_from_file(self, paths=None):
+        data_bundle = CNXNLILoader().load(paths)
+        data_bundle = GranularizePipe(task='XNLI').process(data_bundle)
         data_bundle = RenamePipe().process(data_bundle) #使中文数据的field
         data_bundle = self.process(data_bundle)
         data_bundle = RenamePipe().process(data_bundle)
@@ -438,9 +473,9 @@ class BQCorpusBertPipe(MatchingBertPipe):
         return data_bundle
 
 
-class XNLIBertPipe(MatchingBertPipe):
+class CNXNLIBertPipe(MatchingBertPipe):
     def process_from_file(self, paths = None):
-        data_bundle = XNLILoader().load(paths)
+        data_bundle = CNXNLILoader().load(paths)
         data_bundle = GranularizePipe(task='XNLI').process(data_bundle)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
         data_bundle = self.process(data_bundle)

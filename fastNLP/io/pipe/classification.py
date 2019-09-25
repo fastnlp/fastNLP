@@ -97,11 +97,22 @@ class YelpFullPipe(_CLSPipe):
     处理YelpFull的数据, 处理之后DataSet中的内容如下
 
     .. csv-table:: 下面是使用YelpFullPipe处理后的DataSet所具备的field
-        :header: "raw_words", "words", "target", "seq_len"
+        :header: "raw_words", "target", "words",  "seq_len"
 
-        "It 's a ...", "[4, 2, 10, ...]", 0, 10
-        "Offers that ...", "[20, 40, ...]", 1, 21
-        "...", "[...]", ., .
+        "I got 'new' tires from them and within...", 0 ,"[7, 110, 22, 107, 22, 499, 59, 140, 3,...]", 160
+        " Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
+        "...", ., "[...]", .
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_words | target | words | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   | False  |  True |   True  |
+        |  is_target  |   False   |  True  | False |  False  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
 
     """
     
@@ -193,11 +204,22 @@ class YelpPolarityPipe(_CLSPipe):
     处理YelpPolarity的数据, 处理之后DataSet中的内容如下
 
     .. csv-table:: 下面是使用YelpFullPipe处理后的DataSet所具备的field
-        :header: "raw_words", "words", "target", "seq_len"
+        :header: "raw_words", "target", "words", "seq_len"
 
-        "It 's a ...", "[4, 2, 10, ...]", 0, 10
-        "Offers that ...", "[20, 40, ...]", 1, 21
-        "...", "[...]", ., .
+        "I got 'new' tires from them and within...", 0 ,"[7, 110, 22, 107, 22, 499, 59, 140, 3,...]", 160
+        " Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
+        "...", ., "[...]", .
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_words | target | words | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   | False  |  True |   True  |
+        |  is_target  |   False   |  True  | False |  False  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
 
     """
     
@@ -211,6 +233,19 @@ class YelpPolarityPipe(_CLSPipe):
         self.lower = lower
     
     def process(self, data_bundle):
+        """
+        传入的DataSet应该具备如下的结构
+
+        .. csv-table::
+            :header: "raw_words", "target"
+
+            "I got 'new' tires from them and... ", "1"
+            "Don't waste your time.  We had two...", "1"
+            "...", "..."
+
+        :param data_bundle:
+        :return:
+        """
         # 复制一列words
         data_bundle = _add_words_field(data_bundle, lower=self.lower)
         
@@ -244,9 +279,20 @@ class SSTPipe(_CLSPipe):
     .. csv-table:: 下面是使用SSTPipe处理后的DataSet所具备的field
         :header: "raw_words", "words", "target", "seq_len"
 
-        "It 's a ...", "[4, 2, 10, ...]", 0, 16
-        "Offers that ...", "[20, 40, ...]", 1, 18
-        "...", "[...]", ., .
+        "It 's a lovely film with lovely perfor...", 1, "[187, 6, 5, 132, 120, 70, 132, 188, 25...", 13
+        "No one goes unindicted here , which is...", 0, "[191, 126, 192, 193, 194, 4, 195, 17, ...", 13
+        "...", ., "[...]", .
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_words | target | words | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   | False  |  True |   True  |
+        |  is_target  |   False   |  True  | False |  False  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
 
     """
     
@@ -278,11 +324,11 @@ class SSTPipe(_CLSPipe):
         """
         对DataBundle中的数据进行预处理。输入的DataSet应该至少拥有raw_words这一列，且内容类似与
 
-        .. csv-table::
+        .. csv-table:: 下面是使用SSTLoader读取的DataSet所具备的field
             :header: "raw_words"
 
-            "(3 (2 It) (4 (4 (2 's) (4 (3 (2 a)..."
-            "(4 (4 (2 Offers) (3 (3 (2 that) (3 (3 rare)..."
+            "(2 (3 (3 Effective) (2 but)) (1 (1 too-tepid)..."
+            "(3 (3 (2 If) (3 (2 you) (3 (2 sometimes) ..."
             "..."
 
         :param ~fastNLP.io.DataBundle data_bundle: 需要处理的DataBundle对象
@@ -335,11 +381,22 @@ class SST2Pipe(_CLSPipe):
     加载SST2的数据, 处理完成之后DataSet将拥有以下的field
 
     .. csv-table::
-       :header: "raw_words", "words", "target", "seq_len"
+       :header: "raw_words", "target", "words", "seq_len"
 
-       "it 's a charming and... ", "[3, 4, 5, 6, 7,...]", 1, 43
-       "unflinchingly bleak and...", "[10, 11, 7,...]", 1, 21
+       "it 's a charming and often affecting j... ", 1, "[19, 9, 6, 111, 5, 112, 113, 114, 3]", 9
+       "unflinchingly bleak and desperate", 0, "[115, 116, 5, 117]", 4
        "...", "...", ., .
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_words | target | words | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   | False  |  True |   True  |
+        |  is_target  |   False   |  True  | False |  False  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
 
     """
     
@@ -357,11 +414,11 @@ class SST2Pipe(_CLSPipe):
         可以处理的DataSet应该具备如下的结构
 
         .. csv-table::
-           :header: "raw_words", "target"
+            :header: "raw_words", "target"
 
-           "it 's a charming and... ", 1
-           "unflinchingly bleak and...", 1
-           "...", "..."
+            "it 's a charming and often affecting...", "1"
+            "unflinchingly bleak and...", "0"
+            "..."
 
         :param data_bundle:
         :return:
@@ -420,14 +477,25 @@ class IMDBPipe(_CLSPipe):
     经过本Pipe处理后DataSet将如下
 
     .. csv-table:: 输出DataSet的field
-       :header: "raw_words", "words", "target", "seq_len"
+       :header: "raw_words", "target", "words", "seq_len"
 
-       "Bromwell High is a cartoon ... ", "[3, 5, 6, 9, ...]", 0, 20
-       "Story of a man who has ...", "[20, 43, 9, 10, ...]", 1, 31
-       "...", "[...]", ., .
+       "Bromwell High is a cartoon ... ", 0, "[3, 5, 6, 9, ...]", 20
+       "Story of a man who has ...", 1, "[20, 43, 9, 10, ...]", 31
+       "...", ., "[...]", .
 
     其中raw_words为str类型，是原文; words是转换为index的输入; target是转换为index的目标值;
     words列被设置为input; target列被设置为target。
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_words | target | words | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   | False  |  True |   True  |
+        |  is_target  |   False   |  True  | False |  False  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
 
     """
     
@@ -493,13 +561,23 @@ class ChnSentiCorpPipe(Pipe):
     处理之后的DataSet有以下的结构
 
     .. csv-table::
-        :header: "raw_chars", "chars", "target", "seq_len"
+        :header: "raw_chars", "target", "chars", "seq_len"
 
-        "這間酒店環境和服務態度亦算不錯,但房間空間太小~~", "[2, 3, 4, 5, ...]", 1, 31
-        "<荐书> 推荐所有喜欢<红楼>...", "[10, 21, ....]", 1, 25
+        "這間酒店環境和服務態度亦算不錯,但房間空間太小~~", 1, "[2, 3, 4, 5, ...]", 31
+        "<荐书> 推荐所有喜欢<红楼>...", 1, "[10, 21, ....]", 25
         "..."
 
     其中chars, seq_len是input，target是target
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_chars | target | chars | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   |  True  |  True |   True  |
+        |  is_target  |   False   |  True  | False |  False  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
 
     """
     def __init__(self, bigrams=False, trigrams=False):
@@ -590,12 +668,22 @@ class THUCNewsPipe(_CLSPipe):
     处理之后的DataSet有以下的结构
 
     .. csv-table::
-        :header: "raw_chars", "chars", "target", "seq_len"
+        :header: "raw_chars", "target", "chars", "seq_len"
 
-        "马晓旭意外受伤让国奥警惕 无奈大雨格外青睐殷家军记者傅亚雨沈阳报道...", "[409, 1197, 2146, 213, ...]", 0, 746
+        "马晓旭意外受伤让国奥警惕 无奈大雨格外青睐殷家军记者傅亚雨沈阳报道...", 0, "[409, 1197, 2146, 213, ...]", 746
         "..."
 
     其中chars, seq_len是input，target是target
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_chars | target | chars | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   |  True  |  True |   True  |
+        |  is_target  |   False   |  True  | False |  False  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
 
     :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
         设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
@@ -691,12 +779,22 @@ class WeiboSenti100kPipe(_CLSPipe):
     处理之后的DataSet有以下的结构
 
     .. csv-table::
-        :header: "raw_chars", "chars", "target", "seq_len"
+        :header: "raw_chars", "target", "chars", "seq_len"
 
-        "六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]", "[0, 690, 18, ...]", 0, 56
+        "六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]", 0, "[0, 690, 18, ...]", 56
         "..."
 
     其中chars, seq_len是input，target是target
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_chars | target | chars | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   |  True  |  True |   True  |
+        |  is_target  |   False   |  True  | False |  False  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
 
     :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
         设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
