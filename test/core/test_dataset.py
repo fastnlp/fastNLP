@@ -230,7 +230,7 @@ class TestDataSetIter(unittest.TestCase):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
         for iter in ds:
             self.assertEqual(iter.__repr__(), """+--------------+--------+
-|      x       |   y    |
+| x            | y      |
 +--------------+--------+
 | [1, 2, 3, 4] | [5, 6] |
 +--------------+--------+""")
