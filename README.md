@@ -133,6 +133,13 @@ fastNLP的大致工作流程如上图所示，而项目结构如下：
     <td> 实现了读写功能，包括数据读入与预处理，模型读写，自动下载等 </td>
 </tr>
 </table>
+<hr>
+
+<b>致谢</b>  
+感谢 [深脑云](http://www.dbcloud.ai/) 提供的模型与数据存储、下载服务。
+<a href="http://www.dbcloud.ai/">
+    <img src="http://www.dbcloud.ai/static/images/logo/logo.png">
+</a>
 
 
 <hr>
