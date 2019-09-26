@@ -296,7 +296,7 @@ class MetricBase(object):
 
 class AccuracyMetric(MetricBase):
     """
-    准确率Metric（其它的Metric参见 :doc:`fastNLP.core.metrics` ）
+    准确率Metric（其它的Metric参见 :mod:`fastNLP.core.metrics` ）
     """
     
     def __init__(self, pred=None, target=None, seq_len=None):

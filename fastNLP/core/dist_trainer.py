@@ -23,10 +23,9 @@ from .dataset import DataSet
 from .losses import _prepare_losser
 from .optimizer import Optimizer
 from .utils import _build_args
+from .utils import _check_fp16
 from .utils import _get_func_signature
 from .utils import _move_dict_value_to_device
-from .utils import _check_fp16
-
 
 try:
     from apex import amp
@@ -76,9 +75,9 @@ class DistTrainer():
         :param optimizer: `torch.optim.Optimizer` 优化器。如果为None，则Trainer使用默认的Adam(model.parameters(), lr=4e-3)这个优化器
         :param loss: 使用的 :class:`~fastNLP.core.losses.LossBase` 对象。当为None时，默认使用 :class:`~fastNLP.LossInForward`
         :param list callbacks_all: 用于在train过程中起调节作用的回调函数，作用于所有训练进程中。
-            可使用的callback参见 :doc:`callback模块 <fastNLP.core.callback>`
+            可使用的callback参见 :mod:`callback模块 <fastNLP.core.callback>`
         :param list callbacks_master: 用于在train过程中起调节作用的回调函数，只作用于其中一个进程（ Master 进程）。
-            可使用的callback参见 :doc:`callback模块 <fastNLP.core.callback>`
+            可使用的callback参见 :mod:`callback模块 <fastNLP.core.callback>`
         :param int batch_size_per_gpu: 训练时，每个进程的 batch 大小。
         :param int n_epochs: 需要优化迭代多少次。
         :param num_workers: int, 有多少个线程来进行数据pad处理。
@@ -87,7 +86,7 @@ class DistTrainer():
         :param metrics: 验证的评估函数。可以只使用一个 :class:`Metric<fastNLP.core.metrics.MetricBase>` ，
             也可以使用多个 :class:`Metric<fastNLP.core.metrics.MetricBase>` ，通过列表传入。
             如验证时取得了更好的验证结果(如果有多个Metric，以列表中第一个Metric为准)，且save_path不为None，
-            则保存当前模型。Metric种类详见 :doc:`metrics模块 <fastNLP.core.metrics>` 。仅在传入dev_data时有效。
+            则保存当前模型。Metric种类详见 :mod:`metrics模块 <fastNLP.core.metrics>` 。仅在传入dev_data时有效。
         :param str,None metric_key:  :class:`Metric<fastNLP.core.metrics.MetricBase>` 有时会有多个指标，
             比如 :class:`~fastNLP.core.metrics.SpanFPreRecMetric` 中包含了'f', 'pre', 'rec'。此时需
             要指定以哪个指标为准。另外有些指标是越小效果越好，比如语言模型的困惑度，这种情况下，在key前面增加一个'-'来表

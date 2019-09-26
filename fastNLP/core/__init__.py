@@ -8,7 +8,7 @@ core 模块里实现了 fastNLP 的核心框架，常用的功能都可以从 fa
     # 从 core 模块的子模块 batch 中 import DataSetIter
     from fastNLP.core.batch import DataSetIter
 
-对于常用的功能，你只需要在 :doc:`fastNLP` 中查看即可。如果想了解各个子模块的具体作用，您可以在下面找到每个子模块的具体文档。
+对于常用的功能，你只需要在 :mod:`fastNLP` 中查看即可。如果想了解各个子模块的具体作用，您可以在下面找到每个子模块的具体文档。
 
 """
 __all__ = [
