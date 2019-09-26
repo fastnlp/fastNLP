@@ -340,7 +340,7 @@ class QuoraLoader(Loader):
 class CNXNLILoader(Loader):
     """
     别名：
-    数据集简介：中文句对NLI（本为multi-lingual的数据集，但是这里只取了中文的数据集）。原句子已被MOSES tokenizer处理
+    数据集简介：中文句对NLI（本为multi-lingual的数据集，但是这里只取了中文的数据集）。原句子已被MOSES tokenizer处理，这里我们将其还原并重新按字tokenize
     原始数据为：
     train中的数据包括premise，hypo和label三个field
     dev和test中的数据为csv或json格式，包括十多个field，这里只取与以上三个field中的数据
@@ -358,8 +358,6 @@ class CNXNLILoader(Loader):
         super(CNXNLILoader, self).__init__()
 
     def _load(self, path: str = None):
-        #csv_loader = CSVLoader(sep='\t')
-        #ds_all = csv_loader._load(path)
         ds_all = DataSet()
         with open(path, 'r', encoding='utf-8') as f:
             head_name_list = f.readline().strip().split('\t')
@@ -386,17 +384,15 @@ class CNXNLILoader(Loader):
         return ds_zh
 
     def _load_train(self, path: str = None):
-        #csv_loader = CSVLoader(sep='\t')
-        #ds = csv_loader._load(path)
         ds = DataSet()
 
         with open(path, 'r', encoding='utf-8') as f:
             next(f)
             for line in f:
                 raw_instance = line.strip().split('\t')
-                premise = raw_instance[0]
-                hypo = raw_instance[1]
-                label = raw_instance[-1]
+                premise = "".join(raw_instance[0].split())# 把已经分好词的premise和hypo强制还原为character segmentation
+                hypo = "".join(raw_instance[1].split())
+                label = "".join(raw_instance[-1].split())
                 if premise:
                     ds.append(Instance(premise=premise, hypo=hypo, label=label))
 
