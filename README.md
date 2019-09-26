@@ -137,6 +137,7 @@ fastNLP的大致工作流程如上图所示，而项目结构如下：
 
 <b>致谢</b>  
 感谢 [深脑云](http://www.dbcloud.ai/) 提供的模型与数据存储、下载服务。
+
 <a href="http://www.dbcloud.ai/">
     <img src="http://www.dbcloud.ai/static/images/logo/logo.png">
 </a>
