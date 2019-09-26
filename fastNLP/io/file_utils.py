@@ -37,6 +37,8 @@ PRETRAINED_BERT_MODEL_DIR = {
 
     'en-base-cased-mrpc': 'bert-base-cased-finetuned-mrpc.zip',
 
+    'en-distilbert-base-uncased': 'distilbert-base-uncased.zip',
+
     'multi-base-cased': 'bert-base-multilingual-cased.zip',
     'multi-base-uncased': 'bert-base-multilingual-uncased.zip',
 
