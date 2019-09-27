@@ -354,6 +354,9 @@ class DataSet(object):
                 assert self.idx < len(self.dataset.field_arrays[item]), "index:{} out of range".format(self.idx)
                 return self.dataset.field_arrays[item][self.idx]
 
+            def __setitem__(self, key, value):
+                raise TypeError("You cannot modify value directly.")
+
             def items(self):
                 ins = self.dataset[self.idx]
                 return ins.items()

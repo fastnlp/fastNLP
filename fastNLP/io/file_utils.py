@@ -118,6 +118,9 @@ DATASET_DIR = {
     # Summarization, English
     "ext-cnndm": "ext-cnndm.zip",
 
+    # Question & answer
+    "cmrc2018": "cmrc2018.zip"
+
 }
 
 PRETRAIN_MAP = {'elmo': PRETRAINED_ELMO_MODEL_DIR,

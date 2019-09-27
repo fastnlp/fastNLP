@@ -231,10 +231,10 @@ class BertForTokenClassification(BaseModel):
 
 class BertForQuestionAnswering(BaseModel):
     """
-    BERT model for classification.
+    用于做Q&A的Bert模型，如果是Squad2.0请将BertEmbedding的include_cls_sep设置为True，Squad1.0或CMRC则设置为False
 
     """
-    def __init__(self, embed: BertEmbedding, num_labels=2):
+    def __init__(self, embed: BertEmbedding):
         """
         
         :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
@@ -243,15 +243,7 @@ class BertForQuestionAnswering(BaseModel):
         super(BertForQuestionAnswering, self).__init__()
 
         self.bert = embed
-        self.num_labels = num_labels
-        self.qa_outputs = nn.Linear(self.bert.embedding_dim, self.num_labels)
-
-        if not self.bert.model.include_cls_sep:
-            self.bert.model.include_cls_sep = True
-            warn_msg = "Bert for question answering excepts BertEmbedding `include_cls_sep` True, " \
-                       "but got False. FastNLP has changed it to True."
-            logger.warning(warn_msg)
-            warnings.warn(warn_msg)
+        self.qa_outputs = nn.Linear(self.bert.embedding_dim, 2)
 
     def forward(self, words):
         """
@@ -261,12 +253,7 @@ class BertForQuestionAnswering(BaseModel):
         sequence_output = self.bert(words)
         logits = self.qa_outputs(sequence_output)  # [batch_size, seq_len, num_labels]
 
-        return {Const.OUTPUTS(i): logits[:, :, i] for i in range(self.num_labels)}
+        return {'pred_start': logits[:, :, 0], 'pred_end': logits[:, :, 1]}
 
     def predict(self, words):
-        """
-        :param torch.LongTensor words: [batch_size, seq_len]
-        :return: 一个包含num_labels个logit的dict，每一个logit的形状都是[batch_size]
-        """
-        logits = self.forward(words)
-        return {Const.OUTPUTS(i): torch.argmax(logits[Const.OUTPUTS(i)], dim=-1) for i in range(self.num_labels)}
+        return self.forward(words)

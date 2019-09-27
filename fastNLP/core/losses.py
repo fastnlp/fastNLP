@@ -11,7 +11,10 @@ __all__ = [
     "CrossEntropyLoss",
     "BCELoss",
     "L1Loss",
-    "NLLLoss"
+    "NLLLoss",
+
+    "CMRC2018Loss"
+
 ]
 
 import inspect
@@ -343,6 +346,47 @@ class LossInForward(LossBase):
         
         return loss
 
+
+class CMRC2018Loss(LossBase):
+    """
+    用于计算CMRC2018中文问答任务。
+
+    """
+    def __init__(self, target_start=None, target_end=None, context_len=None, pred_start=None, pred_end=None,
+                  reduction='mean'):
+        super().__init__()
+
+        assert reduction in ('mean', 'sum')
+
+        self._init_param_map(target_start=target_start, target_end=target_end, context_len=context_len,
+                             pred_start=pred_start, pred_end=pred_end)
+        self.reduction = reduction
+
+    def get_loss(self, target_start, target_end, context_len, pred_start, pred_end):
+        """
+
+        :param target_start: batch_size
+        :param target_end: batch_size
+        :param context_len: batch_size
+        :param pred_start: batch_size x max_len
+        :param pred_end: batch_size x max_len
+        :return:
+        """
+        batch_size, max_len = pred_end.size()
+        mask = seq_len_to_mask(context_len, max_len).eq(0)
+
+        pred_start = pred_start.masked_fill(mask, float('-inf'))
+        pred_end = pred_end.masked_fill(mask, float('-inf'))
+
+        start_loss = F.cross_entropy(pred_start, target_start, reduction='sum')
+        end_loss = F.cross_entropy(pred_end, target_end, reduction='sum')
+
+        loss = start_loss + end_loss
+
+        if self.reduction == 'mean':
+            loss = loss / batch_size
+
+        return loss/2
 
 def _prepare_losser(losser):
     if losser is None:

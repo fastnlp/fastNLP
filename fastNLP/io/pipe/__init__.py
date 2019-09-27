@@ -50,7 +50,9 @@ __all__ = [
     "GranularizePipe",
     "MachingTruncatePipe",
     
-    "CoReferencePipe"
+    "CoReferencePipe",
+
+    "CMRC2018BertPipe"
 ]
 
 from .classification import YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe, ChnSentiCorpPipe, THUCNewsPipe, \
@@ -63,3 +65,4 @@ from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe
     MatchingPipe, RTEPipe, SNLIPipe, QuoraPipe, QNLIPipe, MNLIPipe, CNXNLIBertPipe, CNXNLIPipe, BQCorpusBertPipe, \
     LCQMCPipe, BQCorpusPipe, LCQMCBertPipe, RenamePipe, GranularizePipe, MachingTruncatePipe
 from .pipe import Pipe
+from .qa import CMRC2018BertPipe

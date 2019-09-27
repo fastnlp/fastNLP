@@ -80,7 +80,9 @@ __all__ = [
     "BQCorpusLoader",
     "LCQMCLoader",
     
-    "CoReferenceLoader"
+    "CoReferenceLoader",
+
+    "CMRC2018Loader"
 ]
 from .classification import YelpLoader, YelpFullLoader, YelpPolarityLoader, IMDBLoader, SSTLoader, SST2Loader, \
     ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader
@@ -93,3 +95,5 @@ from .json import JsonLoader
 from .loader import Loader
 from .matching import MNLILoader, QuoraLoader, SNLILoader, QNLILoader, RTELoader, CNXNLILoader, BQCorpusLoader, \
     LCQMCLoader
+from .qa import CMRC2018Loader
+

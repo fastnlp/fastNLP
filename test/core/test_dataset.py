@@ -135,6 +135,14 @@ class TestDataSetMethods(unittest.TestCase):
         ds.apply(lambda ins: (len(ins["x"]), "hahaha"), new_field_name="k", ignore_type=True)
         # expect no exception raised
 
+    def test_apply_cannot_modify_instance(self):
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
+        def modify_inplace(instance):
+            instance['words'] = 1
+
+        with self.assertRaises(TypeError):
+            ds.apply(modify_inplace)
+
     def test_drop(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6], [7, 8, 9, 0]] * 20})
         ds.drop(lambda ins: len(ins["y"]) < 3, inplace=True)

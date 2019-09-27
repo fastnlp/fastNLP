@@ -51,6 +51,8 @@ __all__ = [
     "BQCorpusLoader",
     "LCQMCLoader",
 
+    "CMRC2018Loader",
+
     "Pipe",
 
     "YelpFullPipe",
@@ -112,6 +114,8 @@ __all__ = [
     "RenamePipe",
     "GranularizePipe",
     "MachingTruncatePipe",
+
+    "CMRC2018BertPipe",
 
     'ModelLoader',
     'ModelSaver',

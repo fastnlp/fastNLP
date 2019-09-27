@@ -468,7 +468,8 @@ class GradientClipCallback(Callback):
                 if getattr(self.trainer, 'fp16', ''):
                     _check_fp16()
                     self.clip_fun(amp.master_params(self.optimizer), self.clip_value)
-                self.clip_fun(self.model.parameters(), self.clip_value)
+                else:
+                    self.clip_fun(self.model.parameters(), self.clip_value)
             else:
                 self.clip_fun(self.parameters, self.clip_value)
 

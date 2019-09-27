@@ -45,6 +45,9 @@ class Instance(object):
         """
         return self.fields.items()
 
+    def __contains__(self, item):
+        return item in self.fields
+
     def __getitem__(self, name):
         if name in self.fields:
             return self.fields[name]

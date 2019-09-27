@@ -107,41 +107,37 @@ class TestBert(unittest.TestCase):
             self.assertEqual(tuple(pred[Const.OUTPUT].shape), (2, 3))
 
     def test_bert_4(self):
-
         vocab = Vocabulary().add_word_lst("this is a test [SEP] .".split())
         embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
-                              include_cls_sep=True)
+                              include_cls_sep=False)
         model = BertForQuestionAnswering(embed)
 
         input_ids = torch.LongTensor([[1, 2, 3], [6, 5, 0]])
 
         pred = model(input_ids)
         self.assertTrue(isinstance(pred, dict))
-        self.assertTrue(Const.OUTPUTS(0) in pred)
-        self.assertTrue(Const.OUTPUTS(1) in pred)
-        self.assertEqual(tuple(pred[Const.OUTPUTS(0)].shape), (2, 5))
-        self.assertEqual(tuple(pred[Const.OUTPUTS(1)].shape), (2, 5))
+        self.assertTrue('pred_start' in pred)
+        self.assertTrue('pred_end' in pred)
+        self.assertEqual(tuple(pred['pred_start'].shape), (2, 3))
+        self.assertEqual(tuple(pred['pred_end'].shape), (2, 3))
 
-        model = BertForQuestionAnswering(embed, 7)
-        pred = model(input_ids)
-        self.assertTrue(isinstance(pred, dict))
-        self.assertEqual(len(pred), 7)
+    def test_bert_for_question_answering_train(self):
+        from fastNLP import CMRC2018Loss
+        from fastNLP.io import CMRC2018BertPipe
+        from fastNLP import Trainer
 
-    def test_bert_4_w(self):
+        data_bundle = CMRC2018BertPipe().process_from_file('test/data_for_tests/io/cmrc')
+        data_bundle.rename_field('chars', 'words')
+        train_data = data_bundle.get_dataset('train')
+        vocab = data_bundle.get_vocab('words')
 
-        vocab = Vocabulary().add_word_lst("this is a test [SEP] .".split())
         embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
-                              include_cls_sep=False)
+                              include_cls_sep=False, auto_truncate=True)
+        model = BertForQuestionAnswering(embed)
+        loss = CMRC2018Loss()
 
-        with self.assertWarns(Warning):
-            model = BertForQuestionAnswering(embed)
-
-            input_ids = torch.LongTensor([[1, 2, 3], [6, 5, 0]])
-
-            pred = model.predict(input_ids)
-            self.assertTrue(isinstance(pred, dict))
-            self.assertTrue(Const.OUTPUTS(1) in pred)
-            self.assertEqual(tuple(pred[Const.OUTPUTS(1)].shape), (2,))
+        trainer = Trainer(train_data, model, loss=loss, use_tqdm=False)
+        trainer.train(load_best_model=False)
 
     def test_bert_5(self):
 
