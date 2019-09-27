@@ -466,6 +466,7 @@ class LCQMCBertPipe(MatchingBertPipe):
         data_bundle = LCQMCLoader().load(paths)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
         data_bundle = self.process(data_bundle)
+        data_bundle = TruncateBertPipe(task='cn').process(data_bundle)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
         return data_bundle
 
@@ -475,6 +476,7 @@ class BQCorpusBertPipe(MatchingBertPipe):
         data_bundle = BQCorpusLoader().load(paths)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
         data_bundle = self.process(data_bundle)
+        data_bundle = TruncateBertPipe(task='cn').process(data_bundle)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
         return data_bundle
 
@@ -485,5 +487,41 @@ class CNXNLIBertPipe(MatchingBertPipe):
         data_bundle = GranularizePipe(task='XNLI').process(data_bundle)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
         data_bundle = self.process(data_bundle)
+        data_bundle = TruncateBertPipe(task='cn').process(data_bundle)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
         return data_bundle
+
+
+class TruncateBertPipe(Pipe):
+    def __init__(self, task='cn'):
+        super().__init__()
+        self.task = task
+
+    def _truncate(self, sentence_index:list, sep_index_vocab):
+        # 根据[SEP]在vocab中的index，找到[SEP]在dataset的field['words']中的index
+        sep_index_words = sentence_index.index(sep_index_vocab)
+        words_before_sep = sentence_index[:sep_index_words]
+        words_after_sep = sentence_index[sep_index_words:]  # 注意此部分包括了[SEP]
+        if self.task == 'cn':
+            # 中文任务将Instance['words']中在[SEP]前后的文本分别截至长度不超过250
+            words_before_sep = words_before_sep[:250]
+            words_after_sep = words_after_sep[:250]
+        elif self.task == 'en':
+            # 英文任务将Instance['words']中在[SEP]前后的文本分别截至长度不超过215
+            words_before_sep = words_before_sep[:215]
+            words_after_sep = words_after_sep[:215]
+        else:
+            raise RuntimeError("Only support 'cn' or 'en' task.")
+
+        return words_before_sep + words_after_sep
+
+    def process(self, data_bundle: DataBundle) -> DataBundle:
+        for name in data_bundle.datasets.keys():
+            dataset = data_bundle.get_dataset(name)
+            sep_index_vocab = data_bundle.get_vocab('words').to_index('[SEP]')
+            dataset.apply_field(lambda sent_index: self._truncate(sentence_index=sent_index, sep_index_vocab=sep_index_vocab), field_name='words', new_field_name='words')
+
+            # truncate之后需要更新seq_len
+            dataset.add_seq_len(field_name='words')
+        return data_bundle
+
