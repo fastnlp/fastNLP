@@ -351,6 +351,10 @@ class MNLIPipe(MatchingPipe):
 
 
 class LCQMCPipe(MatchingPipe):
+    def __init__(self):
+        super().__init__()
+        self.tokenizer = 'cn-char'
+
     def process_from_file(self, paths=None):
         data_bundle = LCQMCLoader().load(paths)
         data_bundle = RenamePipe().process(data_bundle)
@@ -360,6 +364,10 @@ class LCQMCPipe(MatchingPipe):
 
 
 class CNXNLIPipe(MatchingPipe):
+    def __init__(self):
+        super().__init__()
+        self.tokenizer = 'cn-char'
+
     def process_from_file(self, paths=None):
         data_bundle = CNXNLILoader().load(paths)
         data_bundle = GranularizePipe(task='XNLI').process(data_bundle)
@@ -370,6 +378,10 @@ class CNXNLIPipe(MatchingPipe):
 
 
 class BQCorpusPipe(MatchingPipe):
+    def __init__(self):
+        super().__init__()
+        self.tokenizer = 'cn-char'
+
     def process_from_file(self, paths=None):
         data_bundle = BQCorpusLoader().load(paths)
         data_bundle = RenamePipe().process(data_bundle)
@@ -462,6 +474,10 @@ class MachingTruncatePipe(Pipe):  # truncate sentence for bert, modify seq_len
 
 
 class LCQMCBertPipe(MatchingBertPipe):
+    def __init__(self):
+        super().__init__()
+        self.tokenizer = 'cn-char'
+
     def process_from_file(self, paths=None):
         data_bundle = LCQMCLoader().load(paths)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
@@ -472,6 +488,10 @@ class LCQMCBertPipe(MatchingBertPipe):
 
 
 class BQCorpusBertPipe(MatchingBertPipe):
+    def __init__(self):
+        super().__init__()
+        self.tokenizer = 'cn-char'
+
     def process_from_file(self, paths=None):
         data_bundle = BQCorpusLoader().load(paths)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
@@ -482,6 +502,10 @@ class BQCorpusBertPipe(MatchingBertPipe):
 
 
 class CNXNLIBertPipe(MatchingBertPipe):
+    def __init__(self):
+        super().__init__()
+        self.tokenizer = 'cn-char'
+
     def process_from_file(self, paths=None):
         data_bundle = CNXNLILoader().load(paths)
         data_bundle = GranularizePipe(task='XNLI').process(data_bundle)
