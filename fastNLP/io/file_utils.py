@@ -243,8 +243,8 @@ def _get_base_url(name):
             return url + '/'
     else:
         URLS = {
-            'embedding': "http://fudan.irocn.cn:8989/api/public/dl/",
-            "dataset": "http://fudan.irocn.cn:8989/api/public/dl/dataset/"
+            'embedding': "http://212.129.155.247/embedding/",
+            "dataset": "http://212.129.155.247/dataset/"
         }
         if name.lower() not in URLS:
             raise KeyError(f"{name} is not recognized.")

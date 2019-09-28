@@ -149,8 +149,9 @@ class Conll2003Loader(ConllLoader):
 
 class Conll2003NERLoader(ConllLoader):
     """
-    用于读取conll2003任务的NER数据。
+    用于读取conll2003任务的NER数据。每一行有4列内容，空行意味着隔开两个句子
 
+    支持读取的内容如下
     Example::
 
         Nadim NNP B-NP B-PER
@@ -199,6 +200,8 @@ class Conll2003NERLoader(ConllLoader):
                 continue
             ins = {h: data[i] for i, h in enumerate(self.headers)}
             ds.append(Instance(**ins))
+        if len(ds) == 0:
+            raise RuntimeError("No data found {}.".format(path))
         return ds
     
     def download(self):
