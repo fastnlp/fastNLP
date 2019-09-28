@@ -351,8 +351,8 @@ class MNLIPipe(MatchingPipe):
 
 
 class LCQMCPipe(MatchingPipe):
-    def __init__(self):
-        super().__init__(tokenizer='cn-char')
+    def __init__(self, tokenizer='cn=char'):
+        super().__init__(tokenizer=tokenizer)
 
     def process_from_file(self, paths=None):
         data_bundle = LCQMCLoader().load(paths)
@@ -363,8 +363,8 @@ class LCQMCPipe(MatchingPipe):
 
 
 class CNXNLIPipe(MatchingPipe):
-    def __init__(self):
-        super().__init__(tokenizer='cn-char')
+    def __init__(self, tokenizer='cn-char'):
+        super().__init__(tokenizer=tokenizer)
 
     def process_from_file(self, paths=None):
         data_bundle = CNXNLILoader().load(paths)
@@ -376,8 +376,8 @@ class CNXNLIPipe(MatchingPipe):
 
 
 class BQCorpusPipe(MatchingPipe):
-    def __init__(self):
-        super().__init__(tokenizer='cn-char')
+    def __init__(self, tokenizer='cn-char'):
+        super().__init__(tokenizer=tokenizer)
 
     def process_from_file(self, paths=None):
         data_bundle = BQCorpusLoader().load(paths)
@@ -471,8 +471,8 @@ class MachingTruncatePipe(Pipe):  # truncate sentence for bert, modify seq_len
 
 
 class LCQMCBertPipe(MatchingBertPipe):
-    def __init__(self):
-        super().__init__(tokenizer='cn-char')
+    def __init__(self, tokenizer='cn=char'):
+        super().__init__(tokenizer=tokenizer)
 
     def process_from_file(self, paths=None):
         data_bundle = LCQMCLoader().load(paths)
@@ -484,8 +484,8 @@ class LCQMCBertPipe(MatchingBertPipe):
 
 
 class BQCorpusBertPipe(MatchingBertPipe):
-    def __init__(self):
-        super().__init__(tokenizer='cn-char')
+    def __init__(self, tokenizer='cn-char'):
+        super().__init__(tokenizer=tokenizer)
 
     def process_from_file(self, paths=None):
         data_bundle = BQCorpusLoader().load(paths)
@@ -497,8 +497,8 @@ class BQCorpusBertPipe(MatchingBertPipe):
 
 
 class CNXNLIBertPipe(MatchingBertPipe):
-    def __init__(self):
-        super().__init__(tokenizer='cn-char')
+    def __init__(self, tokenizer='cn-char'):
+        super().__init__(tokenizer=tokenizer)
 
     def process_from_file(self, paths=None):
         data_bundle = CNXNLILoader().load(paths)
