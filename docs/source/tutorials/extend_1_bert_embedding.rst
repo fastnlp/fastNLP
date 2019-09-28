@@ -2,13 +2,13 @@
 BertEmbedding的各种用法
 ==============================
 
-Bert自从在`BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding <https://arxiv.org/abs/1810.04805>`_
+Bert自从在 `BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding <https://arxiv.org/abs/1810.04805>`_
 中被提出后，因其性能卓越受到了极大的关注，在这里我们展示一下在fastNLP中如何使用Bert进行各类任务。其中中文Bert我们使用的模型的权重来自于
 `中文Bert预训练 <https://github.com/ymcui/Chinese-BERT-wwm>`_ 。
 
 为了方便大家的使用，fastNLP提供了预训练的Embedding权重及数据集的自动下载，支持自动下载的Embedding和数据集见
-`数据集 <https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?tab=fed5xh&c=D42A0AC0>`_ 。或您可从 doc:`tutorial/tutorial_3_embedding` 与
- doc:`tutorial/tutorial_4_load_dataset` 了解更多相关信息。
+`数据集 <https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?tab=fed5xh&c=D42A0AC0>`_ 。或您可从 :doc:`/tutorials/tutorial_3_embedding` 与
+:doc:`/tutorials/tutorial_4_load_dataset` 了解更多相关信息。
 
 ----------------------------------
 中文任务
@@ -148,7 +148,8 @@ Bert自从在`BERT: Pre-training of Deep Bidirectional Transformers for Language
 4. 使用Bert进行中文问答
 ----------------------------------
 问答任务是给定一段内容，以及一个问题，需要从这段内容中找到答案。
-例如
+例如::
+
     "context": "锣鼓经是大陆传统器乐及戏曲里面常用的打击乐记谱方法，以中文字的声音模拟敲击乐的声音，纪录打击乐的各种不同的演奏方法。常
     用的节奏型称为「锣鼓点」。而锣鼓是戏曲节奏的支柱，除了加强演员身段动作的节奏感，也作为音乐的引子和尾声，提示音乐的板式和速度，以及
     作为唱腔和念白的伴奏，令诗句的韵律更加抑扬顿锉，段落分明。锣鼓的运用有约定俗成的程式，依照角色行当的身份、性格、情绪以及环境，配合
@@ -173,7 +174,7 @@ Bert自从在`BERT: Pre-training of Deep Bidirectional Transformers for Language
         }
     ]
 
-您可以通过以下的代码训练`CMRC2018 <https://github.com/ymcui/cmrc2018>`_
+您可以通过以下的代码训练 `CMRC2018 <https://github.com/ymcui/cmrc2018>`_
 
 .. code-block:: python
 
