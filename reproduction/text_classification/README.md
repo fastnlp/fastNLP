@@ -18,6 +18,13 @@ SST：https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip
 yelp_full:https://drive.google.com/drive/folders/0Bz8a_Dbh9Qhbfll6bVpmNUtUcFdjYmF2SEpmZUZUcVNiMUw1TWN6RDV3a0JHT3kxLVhVR2M
 yelp_polarity:https://drive.google.com/drive/folders/0Bz8a_Dbh9Qhbfll6bVpmNUtUcFdjYmF2SEpmZUZUcVNiMUw1TWN6RDV3a0JHT3kxLVhVR2M
 
+dataset |classes | train samples | dev samples | test samples|refer|
+:---: | :---: | :---: | :---: | :---: | :---: | 
+yelp_polarity | 2 |560k | - |38k|[char_cnn](https://arxiv.org/pdf/1509.01626v3.pdf)|
+yelp_full | 5|650k | - |50k|[char_cnn](https://arxiv.org/pdf/1509.01626v3.pdf)|
+IMDB | 2 |25k | - |25k|[IMDB](https://ai.stanford.edu/~ang/papers/acl11-WordVectorsSentimentAnalysis.pdf)|
+sst-2 | 2 |67k | 872 |1.8k|[GLUE](https://arxiv.org/pdf/1804.07461.pdf)|
+
 # 数据集及复现结果汇总
 
 使用fastNLP复现的结果vs论文汇报结果(/前为fastNLP实现，后面为论文报道,-表示论文没有在该数据集上列出结果)
