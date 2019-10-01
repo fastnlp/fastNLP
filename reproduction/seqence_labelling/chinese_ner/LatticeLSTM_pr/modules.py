@@ -275,7 +275,7 @@ class MultiInputLSTMCell_V1(nn.Module):
             nn.init.constant_(self.bias.data, val=0)
             nn.init.constant_(self.alpha_bias.data, val=0)
 
-    def forward(self, inp, skip_c, skip_count, hx,should_print=False):
+    def forward(self, inp, skip_c, skip_count, hx):
         '''
 
         :param inp: chars B * hidden
@@ -522,8 +522,9 @@ class LatticeLSTMLayer_sup_back_V1(nn.Module):
         :param inp: batch * seq_len * embedding, chars
         :param seq_len: batch, length of chars
         :param skip_sources: batch * seq_len * X, 跳边的起点
-        :param skip_words: batch * seq_len * X * embedding, 跳边的词
-        :param lexicon_count: batch * seq_len, count of lexicon per example per position
+        :param skip_words: batch * seq_len * X * embedding_size, 跳边的词
+        :param lexicon_count: batch * seq_len,
+        lexicon_count[i,j]为第i个例子以第j个位子为结尾匹配到的词的数量
         :param init_state: the hx of rnn
         :return:
         '''
@@ -540,6 +541,9 @@ class LatticeLSTMLayer_sup_back_V1(nn.Module):
                 max_lexicon_count = max(torch.max(skip_count[:, i]).item(), 1)
                 h_0, c_0 = h_[:, i, :], c_[:, i, :]
 
+                #为了使rnn能够计算B*lexicon_count*embedding_size的张量，需要将其reshape成二维张量
+                #为了匹配pytorch的[]取址方式，需要将reshape成二维张量
+
                 skip_word_flat = skip_words[:, i, :max_lexicon_count].contiguous()
 
                 skip_word_flat = skip_word_flat.view(batch_size*max_lexicon_count,self.word_input_size)
@@ -548,6 +552,7 @@ class LatticeLSTMLayer_sup_back_V1(nn.Module):
 
                 index_0 = torch.tensor(range(batch_size)).unsqueeze(1).expand(batch_size,max_lexicon_count)
                 index_1 = skip_source_flat
+
 
                 if not self.skip_before_head:
                     c_x = c_[[index_0, index_1+1]]
@@ -613,12 +618,8 @@ class LatticeLSTMLayer_sup_back_V1(nn.Module):
 
 
                 c_1_skip = c_1_flat.view(batch_size,max_lexicon_count,self.hidden_size)
-                if i < 20:
-                    should_print=True
-                else:
-                    should_print=False
 
-                h_1,c_1 = self.char_cell(inp[:,i,:],c_1_skip,skip_count[:,i],(h_0,c_0),should_print)
+                h_1,c_1 = self.char_cell(inp[:,i,:],c_1_skip,skip_count[:,i],(h_0,c_0))
 
 
                 h_1_mask = h_1.masked_fill(1-mask_for_seq_len[:,i].unsqueeze(-1),0)

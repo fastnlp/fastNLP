@@ -14,7 +14,7 @@ class LatticeLSTM_SeqLabel(nn.Module):
             self.device = torch.device('cpu')
         else:
             self.device = torch.device(device)
-        from modules import LatticeLSTMLayer, LatticeLSTMLayer_sup_back
+        from modules import LatticeLSTMLayer_sup_back_V0
         super().__init__()
         self.debug = debug
         self.skip_batch_first = skip_batch_first
@@ -35,7 +35,7 @@ class LatticeLSTM_SeqLabel(nn.Module):
         self.char_embed = char_embed
         self.bigram_embed = bigram_embed
         self.word_embed = word_embed
-        self.encoder = LatticeLSTMLayer_sup_back(self.input_size,self.word_embed_size,
+        self.encoder = LatticeLSTMLayer_sup_back_V0(self.input_size,self.word_embed_size,
                                                  self.hidden_size,
                                                  left2right=True,
                                                  bias=bias,
@@ -43,7 +43,7 @@ class LatticeLSTM_SeqLabel(nn.Module):
                                                  debug=self.debug,
                                                  skip_before_head=skip_before_head)
         if self.bidirectional:
-            self.encoder_back = LatticeLSTMLayer_sup_back(self.input_size,
+            self.encoder_back = LatticeLSTMLayer_sup_back_V0(self.input_size,
                                                           self.word_embed_size, self.hidden_size,
                                                           left2right=False,
                                                           bias=bias,
