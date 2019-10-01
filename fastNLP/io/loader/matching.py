@@ -27,15 +27,24 @@ from ...core.instance import Instance
 
 class MNLILoader(Loader):
     """
+    读取的数据格式为：
+
+    Example::
+
+        index	promptID	pairID	genre	sentence1_binary_parse	sentence2_binary_parse	sentence1_parse	sentence2_parse	sentence1	sentence2	label1	gold_label
+        0	31193	31193n	government	( ( Conceptually ( cream skimming ) ) ...
+        1	101457	101457e	telephone	( you ( ( know ( during ( ( ( the season ) and ) ( i guess ) ) )...
+        ...
+
     读取MNLI任务的数据，读取之后的DataSet中包含以下的内容，words0是sentence1, words1是sentence2, target是gold_label, 测试集中没
     有target列。
 
     .. csv-table::
        :header: "raw_words1", "raw_words2", "target"
 
-       "The new rights are...", "Everyone really likes..", "neutral"
-       "This site includes a...", "The Government Executive...", "contradiction"
-       "...", "...","."
+       "Conceptually cream ...", "Product and geography...", "neutral"
+       "you know during the ...", "You lose the things to the...", "entailment"
+       "...", "...", "..."
 
     """
     
@@ -113,14 +122,28 @@ class MNLILoader(Loader):
 
 class SNLILoader(JsonLoader):
     """
+    文件每一行是一个sample，每一行都为一个json对象，其数据格式为：
+
+    Example::
+
+        {"annotator_labels": ["neutral", "entailment", "neutral", "neutral", "neutral"], "captionID": "4705552913.jpg#2",
+         "gold_label": "neutral", "pairID": "4705552913.jpg#2r1n",
+         "sentence1": "Two women are embracing while holding to go packages.",
+         "sentence1_binary_parse": "( ( Two women ) ( ( are ( embracing ( while ( holding ( to ( go packages ) ) ) ) ) ) . ) )",
+         "sentence1_parse": "(ROOT (S (NP (CD Two) (NNS women)) (VP (VBP are) (VP (VBG embracing) (SBAR (IN while) (S (NP (VBG holding)) (VP (TO to) (VP (VB go) (NP (NNS packages)))))))) (. .)))",
+         "sentence2": "The sisters are hugging goodbye while holding to go packages after just eating lunch.",
+         "sentence2_binary_parse": "( ( The sisters ) ( ( are ( ( hugging goodbye ) ( while ( holding ( to ( ( go packages ) ( after ( just ( eating lunch ) ) ) ) ) ) ) ) ) . ) )",
+         "sentence2_parse": "(ROOT (S (NP (DT The) (NNS sisters)) (VP (VBP are) (VP (VBG hugging) (NP (UH goodbye)) (PP (IN while) (S (VP (VBG holding) (S (VP (TO to) (VP (VB go) (NP (NNS packages)) (PP (IN after) (S (ADVP (RB just)) (VP (VBG eating) (NP (NN lunch))))))))))))) (. .)))"
+         }
+
     读取之后的DataSet中的field情况为
 
     .. csv-table:: 下面是使用SNLILoader加载的DataSet所具备的field
-       :header: "raw_words1", "raw_words2", "target"
+       :header: "target", "raw_words1", "raw_words2",
 
-       "The new rights are...", "Everyone really likes..", "neutral"
-       "This site includes a...", "The Government Executive...", "entailment"
-       "...", "...", "."
+       "neutral ", "Two women are embracing while holding..", "The sisters are hugging goodbye..."
+       "entailment", "Two women are embracing while holding...", "Two woman are holding packages."
+       "...", "...", "..."
 
     """
     
@@ -174,6 +197,13 @@ class SNLILoader(JsonLoader):
 
 class QNLILoader(JsonLoader):
     """
+    第一行为标题(具体内容会被忽略)，之后每一行是一个sample，由index、问题、句子和标签构成（以制表符分割），数据结构如下：
+
+    Example::
+
+        index	question	sentence	label
+        0	What came into force after the new constitution was herald?	As of that day, the new constitution heralding the Second Republic came into force.	entailment
+
     QNLI数据集的Loader,
     加载的DataSet将具备以下的field, raw_words1是question, raw_words2是sentence, target是label
 
@@ -181,7 +211,6 @@ class QNLILoader(JsonLoader):
         :header: "raw_words1", "raw_words2", "target"
 
         "What came into force after the new...", "As of that day...", "entailment"
-        "What is the first major...", "The most important tributaries", "not_entailment"
         "...","."
 
     test数据集没有target列
@@ -231,6 +260,13 @@ class QNLILoader(JsonLoader):
 
 class RTELoader(Loader):
     """
+    第一行为标题(具体内容会被忽略)，之后每一行是一个sample，由index、句子1、句子2和标签构成（以制表符分割），数据结构如下：
+
+    Example::
+
+        index	sentence1	sentence2	label
+        0	Dana Reeve, the widow of the actor Christopher Reeve, has died of lung cancer at age 44, according to the Christopher Reeve Foundation.	Christopher Reeve had an accident.	not_entailment
+
     RTE数据的loader
     加载的DataSet将具备以下的field, raw_words1是sentence0，raw_words2是sentence1, target是label
 
@@ -238,8 +274,7 @@ class RTELoader(Loader):
         :header: "raw_words1", "raw_words2", "target"
 
         "Dana Reeve, the widow of the actor...", "Christopher Reeve had an...", "not_entailment"
-        "Yet, we now are discovering that...", "Bacteria is winning...", "entailment"
-        "...","."
+        "...","..."
 
     test数据集没有target列
     """
@@ -294,7 +329,7 @@ class QuoraLoader(Loader):
     Example::
 
         1	How do I get funding for my web based startup idea ?	How do I get seed funding pre product ?	327970
-        1	How can I stop my depression ?	What can I do to stop being depressed ?	339556
+        0	Is honey a viable alternative to sugar for diabetics ?	How would you compare the United States ' euthanasia laws to Denmark ?	90348
         ...
 
     加载的DataSet将具备以下的field
@@ -302,9 +337,9 @@ class QuoraLoader(Loader):
     .. csv-table::
         :header: "raw_words1", "raw_words2", "target"
 
-        "What should I do to avoid...", "1"
-        "How do I not sleep in a boring class...", "0"
-        "...","."
+        "How do I get funding for my web based...", "How do I get seed funding...","1"
+        "Is honey a viable alternative ...", "How would you compare the United...","0"
+        "...","...","..."
 
     """
     
@@ -339,17 +374,21 @@ class QuoraLoader(Loader):
 
 class CNXNLILoader(Loader):
     """
-    别名：
     数据集简介：中文句对NLI（本为multi-lingual的数据集，但是这里只取了中文的数据集）。原句子已被MOSES tokenizer处理，这里我们将其还原并重新按字tokenize
-    原始数据为：
-    train中的数据包括premise，hypo和label三个field
+    原始数据数据为：
+
+    Example::
+
+        premise	hypo	label
+        我们 家里 有 一个 但 我 没 找到 我 可以 用 的 时间	我们 家里 有 一个 但 我 从来 没有 时间 使用 它 .	entailment
+
     dev和test中的数据为csv或json格式，包括十多个field，这里只取与以上三个field中的数据
     读取后的Dataset将具有以下数据结构：
 
     .. csv-table::
        :header: "raw_chars1", "raw_chars2", "target"
        
-       "从概念上看,奶油收入有两个基本方面产品和地理.", "产品和地理是什么使奶油抹霜工作.", "1"
+       "我们 家里 有 一个 但 我 没 找到 我 可以 用 的 时间", "我们 家里 有 一个 但 我 从来 没有 时间 使用 它 .", "0"
        "...", "...", "..."
 
     """
@@ -432,16 +471,21 @@ class BQCorpusLoader(Loader):
     """
     别名：
     数据集简介:句子对二分类任务（判断是否具有相同的语义）
-    原始数据内容为：
-    每行一个sample，第一个','之前为text1，第二个','之前为text2，第二个','之后为target
-    第一行为sentence1 sentence2 label
+    原始数据结构为：
+
+    Example::
+
+        sentence1,sentence2,label
+        综合评分不足什么原因,综合评估的依据,0
+        什么时候我能使用微粒贷,你就赶快给我开通就行了,0
+
     读取后的Dataset将具有以下数据结构：
 
     .. csv-table::
        :header: "raw_chars1", "raw_chars2", "target"
        
-       "不是邀请的如何贷款？", "我不是你们邀请的客人可以贷款吗？", "1"
-       "如何满足微粒银行的审核", "建设银行有微粒贷的资格吗", "0"
+       "综合评分不足什么原因", "综合评估的依据", "0"
+       "什么时候我能使用微粒贷", "你就赶快给我开通就行了", "0"
        "...", "...", "..."
 
     """
@@ -480,19 +524,20 @@ class LCQMCLoader(Loader):
     数据集简介：句对匹配（question matching）
     
     原始数据为：
-    
-    .. code-block:: text
-    
-        '喜欢打篮球的男生喜欢什么样的女生\t爱打篮球的男生喜欢什么样的女生\t1\n'
-        '晚上睡觉带着耳机听音乐有什么害处吗？\t孕妇可以戴耳机听音乐吗?\t0\n'
+
+    Example::
+
+        喜欢打篮球的男生喜欢什么样的女生	爱打篮球的男生喜欢什么样的女生	1
+        你帮我设计小说的封面吧	谁能帮我给小说设计个封面？	0
+
     
     读取后的Dataset将具有以下的数据结构
     
     .. csv-table::
        :header: "raw_chars1", "raw_chars2", "target"
        
-       "喜欢打篮球的男生喜欢什么样的女生？", "爱打篮球的男生喜欢什么样的女生？", "1"
-       "晚上睡觉带着耳机听音乐有什么害处吗？", "妇可以戴耳机听音乐吗?", "0"
+       "喜欢打篮球的男生喜欢什么样的女生", "爱打篮球的男生喜欢什么样的女生", "1"
+       "你帮我设计小说的封面吧", "妇可以戴耳机听音乐吗?", "0"
        "...", "...", "..."
     
     

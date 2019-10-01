@@ -213,13 +213,21 @@ class OntoNotesNERLoader(ConllLoader):
     用以读取OntoNotes的NER数据，同时也是Conll2012的NER任务数据。将OntoNote数据处理为conll格式的过程可以参考
     https://github.com/yhcc/OntoNotes-5.0-NER。OntoNoteNERLoader将取第4列和第11列的内容。
 
+    读取的数据格式为：
+
+    Example::
+
+        bc/msnbc/00/msnbc_0000   0   0          Hi   UH   (TOP(FRAG(INTJ*)  -   -   -    Dan_Abrams  *   -
+        bc/msnbc/00/msnbc_0000   0   1    everyone   NN              (NP*)  -   -   -    Dan_Abrams  *   -
+        ...
+
     返回的DataSet的内容为
 
     .. csv-table::
         :header: "raw_words", "target"
 
-        "[Nadim, Ladki]", "[B-PER, I-PER]"
-        "[AL-AIN, United, Arab, ...]", "[B-LOC, B-LOC, I-LOC, ...]"
+        "['Hi', 'everyone', '.']", "['O', 'O', 'O']"
+        "['first', 'up', 'on', 'the', 'docket'], "['O', 'O', 'O', 'O', 'O']"
         "[...]", "[...]"
 
     """
@@ -375,13 +383,22 @@ class MsraNERLoader(CNNERLoader):
 
     Example::
 
-        我 O
-        们 O
-        变 O
-        而 O
-        以 O
-        书 O
-        会 O
+        把	O
+        欧	B-LOC
+
+        美	B-LOC
+        、	O
+
+        港	B-LOC
+        台	B-LOC
+
+        流	O
+        行	O
+
+        的	O
+
+        食	O
+
         ...
 
     读取后的DataSet包含以下的field
@@ -389,8 +406,8 @@ class MsraNERLoader(CNNERLoader):
     .. csv-table::
         :header: "raw_chars", "target"
 
-        "[我, 们, 变...]", "[O, O, ...]"
-        "[中, 共, 中, ...]", "[B-ORG, I-ORG, I-ORG, ...]"
+        "['把', '欧'] ", "['O', 'B-LOC']"
+        "['美', '、']", "['B-LOC', 'O']"
         "[...]", "[...]"
 
     """
@@ -449,6 +466,30 @@ class MsraNERLoader(CNNERLoader):
 
 
 class WeiboNERLoader(CNNERLoader):
+    """
+    读取WeiboNER数据，数据中的格式应该类似与下列的内容
+
+    Example::
+
+        老	B-PER.NOM
+        百	I-PER.NOM
+        姓	I-PER.NOM
+
+        心	O
+
+        ...
+
+        读取后的DataSet包含以下的field
+
+        .. csv-table::
+
+            :header: "raw_chars", "target"
+
+            "['老', '百', '姓']", "['B-PER.NOM', 'I-PER.NOM', 'I-PER.NOM']"
+            "['心']", "['O']"
+            "[...]", "[...]"
+
+        """
     def __init__(self):
         super().__init__()
     
@@ -471,23 +512,21 @@ class PeopleDailyNERLoader(CNNERLoader):
 
     Example::
 
-        当 O
-        希 O
-        望 O
-        工 O
-        程 O
-        救 O
-        助 O
-        的 O
-        百 O
+        中 B-ORG
+        共 I-ORG
+        中 I-ORG
+        央 I-ORG
+
+        致 O
+        中 B-ORG
+        ...
 
     读取后的DataSet包含以下的field
 
     .. csv-table:: target列是基于BIO的编码方式
         :header: "raw_chars", "target"
 
-        "[我, 们, 变...]", "[O, O, ...]"
-        "[中, 共, 中, ...]", "[B-ORG, I-ORG, I-ORG, ...]"
+        "['中', '共', '中', '央']", "['B-ORG', 'I-ORG', 'I-ORG', 'I-ORG']"
         "[...]", "[...]"
 
     """

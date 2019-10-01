@@ -163,14 +163,21 @@ class YelpPolarityLoader(YelpLoader):
 
 class IMDBLoader(Loader):
     """
+    原始数据中内容应该为, 每一行为一个sample，制表符之前为target，制表符之后为文本内容。
+
+    Example::
+
+        neg	Alan Rickman & Emma...
+        neg	I have seen this...
+
     IMDBLoader读取后的数据将具有以下两列内容: raw_words: str, 需要分类的文本; target: str, 文本的标签
-    DataSet具备以下的结构:
+    读取的DataSet具备以下的结构:
 
     .. csv-table::
        :header: "raw_words", "target"
 
-       "Bromwell High is a cartoon ... ", "pos"
-       "Story of a man who has ...", "neg"
+       "Alan Rickman & Emma... ", "neg"
+       "I have seen this... ", "neg"
        "...", "..."
 
     """
@@ -241,13 +248,20 @@ class IMDBLoader(Loader):
 
 class SSTLoader(Loader):
     """
+    原始数据中内容应该为:
+
+    Example::
+
+        (2 (3 (3 Effective) (2 but)) (1 (1 too-tepid)...
+        (3 (3 (2 If) (3 (2 you) (3 (2 sometimes)...
+
     读取之后的DataSet具有以下的结构
 
     .. csv-table:: 下面是使用SSTLoader读取的DataSet所具备的field
         :header: "raw_words"
 
-        "(3 (2 It) (4 (4 (2 's) (4 (3 (2 a)..."
-        "(4 (4 (2 Offers) (3 (3 (2 that) (3 (3 rare)..."
+        "(2 (3 (3 Effective) (2 but)) (1 (1 too-tepid)..."
+        "(3 (3 (2 If) (3 (2 you) (3 (2 sometimes) ..."
         "..."
 
     raw_words列是str。
@@ -286,14 +300,21 @@ class SSTLoader(Loader):
 
 class SST2Loader(Loader):
     """
-    数据SST2的Loader
+    原始数据中内容为：第一行为标题(具体内容会被忽略)，之后一行为一个sample，第一个制表符之前被认为是句子，第一个制表符之后认为是label
+
+    Example::
+
+        sentence	label
+        it 's a charming and often affecting journey . 	1
+        unflinchingly bleak and desperate 	0
+
     读取之后DataSet将如下所示
 
     .. csv-table::
         :header: "raw_words", "target"
 
-        "it 's a charming and often affecting...", "1"
-        "unflinchingly bleak and...", "0"
+        "it 's a charming and often affecting journey .", "1"
+        "unflinchingly bleak and desperate", "0"
         "..."
 
     test的DataSet没有target列。
@@ -351,18 +372,17 @@ class ChnSentiCorpLoader(Loader):
 
     Example::
 
-        label	raw_chars
-        1	這間酒店環境和服務態度亦算不錯,但房間空間太小~~
-        1	<荐书> 推荐所有喜欢<红楼>的红迷们一定要收藏这本书,要知道...
-        0	商品的不足暂时还没发现，京东的订单处理速度实在.......周二就打包完成，周五才发货...
+        label	text_a
+        1	基金痛所有投资项目一样，必须先要有所了解...
+        1	系统很好装，LED屏是不错，就是16比9的比例...
 
     读取后的DataSet具有以下的field
 
     .. csv-table::
         :header: "raw_chars", "target"
 
-        "這間酒店環境和服務態度亦算不錯,但房間空間太小~~", "1"
-        "<荐书> 推荐所有喜欢<红楼>...", "1"
+        "基金痛所有投资项目一样，必须先要有所了解...", "1"
+        "系统很好装，LED屏是不错，就是16比9的比例...", "1"
         "..."
 
     """
@@ -402,15 +422,19 @@ class ChnSentiCorpLoader(Loader):
 
 class THUCNewsLoader(Loader):
     """
-    别名：
     数据集简介：document-level分类任务，新闻10分类
     原始数据内容为：每行一个sample，第一个'\t'之前为target，第一个'\t'之后为raw_words
+
+    Example::
+
+        体育	调查-您如何评价热火客场胜绿军总分3-1夺赛点？...
+
     读取后的Dataset将具有以下数据结构：
 
     .. csv-table::
        :header: "raw_words", "target"
        
-       "马晓旭意外受伤让国奥警惕 无奈大雨格外青睐殷家军记者傅亚雨沈阳报道 ... ", "体育"
+       "调查-您如何评价热火客场胜绿军总分3-1夺赛点？...", "体育"
        "...", "..."
 
     """
@@ -446,21 +470,21 @@ class WeiboSenti100kLoader(Loader):
     """
     别名：
     数据集简介：微博sentiment classification，二分类
-    原始数据内容为：
-    
-    .. .. code-block:: text
-    
-        label   text
-        0   六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]
-        1   听过一场！笑死了昂，一听茄子脱口秀，从此节操是路人！[嘻嘻] //@中国梦网官微:@Pencil彭赛 @茄子脱口秀 [圣诞帽][圣诞树][平安果]
-    
+
+    Example::
+
+        label	text
+        1	多谢小莲，好运满满[爱你]
+        1	能在他乡遇老友真不赖，哈哈，珠儿，我也要用...
+
     读取后的Dataset将具有以下数据结构：
 
     .. csv-table::
-       :header: "raw_chars", "target"
+        :header: "raw_chars", "target"
        
-       "六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]", "0"
-       "...", "..."
+        "多谢小莲，好运满满[爱你]", "1"
+        "能在他乡遇老友真不赖，哈哈，珠儿，我也要用...", "1"
+        "...", "..."
 
     """
 
