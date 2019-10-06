@@ -37,8 +37,12 @@ def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
                 if dropna:
                     continue
                 else:
-                    raise ValueError("Line {} has {} parts, while header has {} parts." \
-                                     .format(line_idx, len(contents), len(headers)))
+                    if "" in headers:
+                        raise ValueError(" 数据{}有{}个字段, 但header有{}个字段. 请检查header中的空白字段或多余的'{}'" \
+                                         .format(line_idx, len(contents), len(headers), sep))
+                    else:
+                        raise ValueError("Line {} has {} parts, while header has {} parts." \
+                                         .format(line_idx, len(contents), len(headers)))
             _dict = {}
             for header, content in zip(headers, contents):
                 _dict[header] = content
@@ -87,7 +91,7 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
             :if False, raise ValueError when reading invalid data. default: True
     :return: generator, every time yield (line number, conll item)
     """
-    
+
     def parse_conll(sample):
         sample = list(map(list, zip(*sample)))
         sample = [sample[i] for i in indexes]
@@ -95,7 +99,7 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
             if len(f) <= 0:
                 raise ValueError('empty field')
         return sample
-    
+
     with open(path, 'r', encoding=encoding) as f:
         sample = []
         start = next(f).strip()
