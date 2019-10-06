@@ -38,7 +38,8 @@ def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
                     continue
                 else:
                     if "" in headers:
-                        raise ValueError(" 数据{}有{}个字段, 但header有{}个字段. 请检查header中的空白字段或多余的'{}'" \
+                        raise ValueError(("Line {} has {} parts, while header has {} parts.\n" +
+                                          "Please check the empty parts or unnecessary '{}'s  in header.")
                                          .format(line_idx, len(contents), len(headers), sep))
                     else:
                         raise ValueError("Line {} has {} parts, while header has {} parts." \
