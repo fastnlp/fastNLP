@@ -3,7 +3,7 @@ from fastNLP.embeddings import StaticEmbedding
 from fastNLP.modules import LSTM, ConditionalRandomField
 import torch
 from fastNLP import seq_len_to_mask
-from utils import better_init_rnn
+from utils import better_init_rnn,print_info
 
 
 class LatticeLSTM_SeqLabel(nn.Module):
@@ -120,7 +120,7 @@ class LatticeLSTM_SeqLabel(nn.Module):
 class LatticeLSTM_SeqLabel_V1(nn.Module):
     def __init__(self, char_embed, bigram_embed, word_embed, hidden_size, label_size, bias=True, bidirectional=False,
                  device=None, embed_dropout=0, output_dropout=0, skip_batch_first=True,debug=False,
-                 skip_before_head=False,use_bigram=True,vocabs=None):
+                 skip_before_head=False,use_bigram=True,vocabs=None,gaz_dropout=0):
         if device is None:
             self.device = torch.device('cpu')
         else:
@@ -173,6 +173,7 @@ class LatticeLSTM_SeqLabel_V1(nn.Module):
 
         self.loss_func = nn.CrossEntropyLoss()
         self.embed_dropout = nn.Dropout(embed_dropout)
+        self.gaz_dropout = nn.Dropout(gaz_dropout)
         self.output_dropout = nn.Dropout(output_dropout)
 
     def forward(self, chars, bigrams, seq_len, target,
@@ -257,15 +258,22 @@ class LSTM_SeqLabel(nn.Module):
 
         better_init_rnn(self.encoder.lstm)
 
+
         self.output = nn.Linear(self.hidden_size * (2 if self.bidirectional else 1), self.label_size)
 
-        self.debug = False
+        self.debug = True
         self.loss_func = nn.CrossEntropyLoss()
         self.embed_dropout = nn.Dropout(embed_dropout)
         self.output_dropout = nn.Dropout(output_dropout)
         self.crf = ConditionalRandomField(label_size, True)
 
     def forward(self, chars, bigrams, seq_len, target):
+        if self.debug:
+
+            print_info('chars:{}'.format(chars.size()))
+            print_info('bigrams:{}'.format(bigrams.size()))
+            print_info('seq_len:{}'.format(seq_len.size()))
+            print_info('target:{}'.format(target.size()))
         embed_char = self.char_embed(chars)
 
         if self.use_bigram:
@@ -291,6 +299,9 @@ class LSTM_SeqLabel(nn.Module):
 
         # batch_size, sent_len = pred.shape[0], pred.shape[1]
         # loss = self.loss_func(pred.reshape(batch_size * sent_len, -1), target.reshape(batch_size * sent_len))
+        if self.debug:
+            print('debug mode:finish')
+            exit(1208)
         if self.training:
             loss = self.crf(pred, target, mask)
             return {'loss': loss}

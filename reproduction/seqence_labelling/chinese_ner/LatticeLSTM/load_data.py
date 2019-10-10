@@ -416,10 +416,92 @@ def load_conllized_ontonote_pkl_yf(path):
     return task_lst, vocabs
 
 
+@cache_results(_cache_fp='weiboNER old uni+bi', _refresh=False)
+def load_weibo_ner_old(path,unigram_embedding_path=None,bigram_embedding_path=None,index_token=True,
+                  normlize={'char':True,'bigram':True,'word':False}):
+    from fastNLP.io.data_loader import ConllLoader
+    from utils import get_bigrams
+
+    loader = ConllLoader(['chars','target'])
+    # from fastNLP.io.file_reader import _read_conll
+    # from fastNLP.core import Instance,DataSet
+    # def _load(path):
+    #     ds = DataSet()
+    #     for idx, data in _read_conll(path, indexes=loader.indexes, dropna=loader.dropna,
+    #                                 encoding='ISO-8859-1'):
+    #         ins = {h: data[i] for i, h in enumerate(loader.headers)}
+    #         ds.append(Instance(**ins))
+    #     return ds
+    # from fastNLP.io.utils import check_loader_paths
+    # paths = check_loader_paths(path)
+    # datasets = {name: _load(path) for name, path in paths.items()}
+    datasets = {}
+    train_path = os.path.join(path,'train.all.bmes')
+    dev_path = os.path.join(path,'dev.all.bmes')
+    test_path = os.path.join(path,'test.all.bmes')
+    datasets['train'] = loader.load(train_path).datasets['train']
+    datasets['dev'] = loader.load(dev_path).datasets['train']
+    datasets['test'] = loader.load(test_path).datasets['train']
+
+    for k,v in datasets.items():
+        print('{}:{}'.format(k,len(v)))
+
+    vocabs = {}
+    word_vocab = Vocabulary()
+    bigram_vocab = Vocabulary()
+    label_vocab = Vocabulary(padding=None,unknown=None)
+
+    for k,v in datasets.items():
+        # ignore the word segmentation tag
+        v.apply_field(lambda x: [w[0] for w in x],'chars','chars')
+        v.apply_field(get_bigrams,'chars','bigrams')
+
+
+    word_vocab.from_dataset(datasets['train'],field_name='chars',no_create_entry_dataset=[datasets['dev'],datasets['test']])
+    label_vocab.from_dataset(datasets['train'],field_name='target')
+    print('label_vocab:{}\n{}'.format(len(label_vocab),label_vocab.idx2word))
+
+
+    for k,v in datasets.items():
+        # v.set_pad_val('target',-100)
+        v.add_seq_len('chars',new_field_name='seq_len')
+
+
+    vocabs['char'] = word_vocab
+    vocabs['label'] = label_vocab
+
+
+    bigram_vocab.from_dataset(datasets['train'],field_name='bigrams',no_create_entry_dataset=[datasets['dev'],datasets['test']])
+    if index_token:
+        word_vocab.index_dataset(*list(datasets.values()), field_name='raw_words', new_field_name='words')
+        bigram_vocab.index_dataset(*list(datasets.values()),field_name='raw_bigrams',new_field_name='bigrams')
+        label_vocab.index_dataset(*list(datasets.values()), field_name='raw_target', new_field_name='target')
+
+    # for k,v in datasets.items():
+    #     v.set_input('chars','bigrams','seq_len','target')
+    #     v.set_target('target','seq_len')
+
+    vocabs['bigram'] = bigram_vocab
+
+    embeddings = {}
+
+    if unigram_embedding_path is not None:
+        unigram_embedding = StaticEmbedding(word_vocab, model_dir_or_name=unigram_embedding_path,
+                                            word_dropout=0.01,normalize=normlize['char'])
+        embeddings['char'] = unigram_embedding
+
+    if bigram_embedding_path is not None:
+        bigram_embedding = StaticEmbedding(bigram_vocab, model_dir_or_name=bigram_embedding_path,
+                                           word_dropout=0.01,normalize=normlize['bigram'])
+        embeddings['bigram'] = bigram_embedding
+
+    return datasets, vocabs, embeddings
+
+
 @cache_results(_cache_fp='weiboNER uni+bi', _refresh=False)
 def load_weibo_ner(path,unigram_embedding_path=None,bigram_embedding_path=None,index_token=True,
                    normlize={'char':True,'bigram':True,'word':False}):
-    from fastNLP.io.data_loader import ConllLoader
+    from fastNLP.io.loader import ConllLoader
     from utils import get_bigrams
 
     loader = ConllLoader(['chars','target'])
@@ -492,7 +574,7 @@ def load_weibo_ner(path,unigram_embedding_path=None,bigram_embedding_path=None,i
 @cache_results(_cache_fp='cache/ontonotes4ner',_refresh=False)
 def load_ontonotes4ner(path,char_embedding_path=None,bigram_embedding_path=None,index_token=True,
                        normalize={'char':True,'bigram':True,'word':False}):
-    from fastNLP.io.data_loader import ConllLoader
+    from fastNLP.io.loader import ConllLoader
     from utils import get_bigrams
 
     train_path = os.path.join(path,'train.char.bmes')

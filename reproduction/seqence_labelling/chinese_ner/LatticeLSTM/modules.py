@@ -326,7 +326,7 @@ class MultiInputLSTMCell_V1(nn.Module):
 
             alpha = torch.sigmoid(alpha_wi + alpha_wh + alpha_bias_batch)
 
-            skip_mask = seq_len_to_mask(skip_count,max_len=skip_c.size()[1])
+            skip_mask = seq_len_to_mask(skip_count,max_len=skip_c.size()[1]).float()
 
             skip_mask = 1 - skip_mask
 
@@ -622,8 +622,8 @@ class LatticeLSTMLayer_sup_back_V1(nn.Module):
                 h_1,c_1 = self.char_cell(inp[:,i,:],c_1_skip,skip_count[:,i],(h_0,c_0))
 
 
-                h_1_mask = h_1.masked_fill(1-mask_for_seq_len[:,i].unsqueeze(-1),0)
-                c_1_mask = c_1.masked_fill(1 - mask_for_seq_len[:, i].unsqueeze(-1), 0)
+                h_1_mask = h_1.masked_fill(~ mask_for_seq_len[:,i].unsqueeze(-1),0)
+                c_1_mask = c_1.masked_fill(~ mask_for_seq_len[:, i].unsqueeze(-1), 0)
 
 
                 h_ = torch.cat([h_1_mask.unsqueeze(1),h_],dim=1)

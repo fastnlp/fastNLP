@@ -1,6 +1,8 @@
 import torch.nn as nn
+# print(1111111111)
 # from pathes import *
-from load_data import load_ontonotes4ner,equip_chinese_ner_with_skip,load_yangjie_rich_pretrain_word_list,load_resume_ner,load_weibo_ner
+from load_data import load_ontonotes4ner,equip_chinese_ner_with_skip,load_yangjie_rich_pretrain_word_list,\
+    load_resume_ner,load_weibo_ner,load_weibo_ner_old
 from fastNLP.embeddings import StaticEmbedding
 from models import LatticeLSTM_SeqLabel,LSTM_SeqLabel,LatticeLSTM_SeqLabel_V1
 from fastNLP import CrossEntropyLoss,SpanFPreRecMetric,Trainer,AccuracyMetric,LossInForward
@@ -18,23 +20,24 @@ from fastNLP import LRScheduler
 from torch.optim.lr_scheduler import LambdaLR
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--device',default='cuda:4')
+parser.add_argument('--device',default='cuda:1')
 parser.add_argument('--debug',default=False)
 
-parser.add_argument('--norm_embed',default=True)
-parser.add_argument('--batch',default=10)
+parser.add_argument('--norm_embed',default=False)
+parser.add_argument('--batch',default=1)
 parser.add_argument('--test_batch',default=1024)
 parser.add_argument('--optim',default='sgd',help='adam|sgd')
 parser.add_argument('--lr',default=0.045)
 parser.add_argument('--model',default='lattice',help='lattice|lstm')
 parser.add_argument('--skip_before_head',default=False)#in paper it's false
-parser.add_argument('--hidden',default=100)
+parser.add_argument('--hidden',default=113)
 parser.add_argument('--momentum',default=0)
 parser.add_argument('--bi',default=True)
-parser.add_argument('--dataset',default='ontonote',help='resume|ontonote|weibo|msra')
+parser.add_argument('--dataset',default='weibo',help='resume|ontonote|weibo|msra')
 parser.add_argument('--use_bigram',default=True)
 
 parser.add_argument('--embed_dropout',default=0.5)
+parser.add_argument('--gaz_dropout',default=-1)
 parser.add_argument('--output_dropout',default=0.5)
 parser.add_argument('--epoch',default=100)
 parser.add_argument('--seed',default=100)
@@ -49,8 +52,6 @@ if args.model == 'lattice':
 fit_msg = ' '.join(fit_msg_list)
 fitlog.commit(__file__,fit_msg=fit_msg)
 
-
-fitlog.add_hyper(args)
 device = torch.device(args.device)
 for k,v in args.__dict__.items():
     print(k,v)
@@ -78,6 +79,10 @@ elif args.dataset == 'weibo':
                                                     _refresh=refresh_data,index_token=False,
                                                     )
 
+elif args.dataset == 'weibo_old':
+    datasets,vocabs,embeddings = load_weibo_ner_old(weibo_ner_old_path,yangjie_rich_pretrain_unigram_path,yangjie_rich_pretrain_bigram_path,
+                                                    _refresh=refresh_data,index_token=False,
+                                                    )
 if args.dataset == 'ontonote':
     args.batch = 10
     args.lr = 0.045
@@ -85,9 +90,18 @@ elif args.dataset == 'resume':
     args.batch = 1
     args.lr = 0.015
 elif args.dataset == 'weibo':
+    args.batch = 10
+    args.gaz_dropout = 0.1
+    args.embed_dropout = 0.1
+    args.output_dropout = 0.1
+elif args.dataset == 'weibo_old':
     args.embed_dropout = 0.1
     args.output_dropout = 0.1
 
+if args.gaz_dropout < 0:
+    args.gaz_dropout = args.embed_dropout
+
+fitlog.add_hyper(args)
 w_list = load_yangjie_rich_pretrain_word_list(yangjie_rich_pretrain_word_path,
                                               _refresh=refresh_data)
 
@@ -145,7 +159,8 @@ if args.model =='lattice':
                         hidden_size=args.hidden,label_size=len(vocabs['label']),device=args.device,
                                  embed_dropout=args.embed_dropout,output_dropout=args.output_dropout,
                                  skip_batch_first=True,bidirectional=args.bi,debug=args.debug,
-                                 skip_before_head=args.skip_before_head,use_bigram=args.use_bigram
+                                 skip_before_head=args.skip_before_head,use_bigram=args.use_bigram,
+                                    gaz_dropout=args.gaz_dropout
                                  )
 elif args.model == 'lstm':
     model = LSTM_SeqLabel(embeddings['char'],embeddings['bigram'],embeddings['word'],
@@ -156,11 +171,12 @@ elif args.model == 'lstm':
 
 
 loss = LossInForward()
-
-f1_metric = SpanFPreRecMetric(vocabs['label'],pred='pred',target='target',seq_len='seq_len',encoding_type='bmeso')
-f1_metric_yj = SpanFPreRecMetric_YJ(vocabs['label'],pred='pred',target='target',seq_len='seq_len',encoding_type='bmesoyj')
+encoding_type = 'bmeso'
+if args.dataset == 'weibo':
+    encoding_type = 'bio'
+f1_metric = SpanFPreRecMetric(vocabs['label'],pred='pred',target='target',seq_len='seq_len',encoding_type=encoding_type)
 acc_metric = AccuracyMetric(pred='pred',target='target',seq_len='seq_len')
-metrics = [f1_metric,f1_metric_yj,acc_metric]
+metrics = [f1_metric,acc_metric]
 
 if args.optim == 'adam':
     optimizer = optim.Adam(model.parameters(),lr=args.lr)
@@ -174,7 +190,7 @@ callbacks = [
     FitlogCallback({'test':datasets['test'],'train':datasets['train']}),
     LRScheduler(lr_scheduler=LambdaLR(optimizer, lambda ep: 1 / (1 + 0.03)**ep))
 ]
-
+print('label_vocab:{}\n{}'.format(len(vocabs['label']),vocabs['label'].idx2word))
 trainer = Trainer(datasets['train'],model,
                   optimizer=optimizer,
                   loss=loss,
