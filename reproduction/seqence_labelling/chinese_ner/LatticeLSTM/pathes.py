@@ -21,3 +21,4 @@ ontonote4ner_cn_path = '/remote-home/xnli/data/corpus/sequence_labelling/chinese
 msra_ner_cn_path = '/remote-home/xnli/data/corpus/sequence_labelling/chinese_ner/MSRANER'
 resume_ner_path = '/remote-home/xnli/data/corpus/sequence_labelling/chinese_ner/ResumeNER'
 weibo_ner_path = '/remote-home/xnli/data/corpus/sequence_labelling/chinese_ner/WeiboNER'
+weibo_ner_old_path = '/remote-home/xnli/data/corpus/sequence_labelling/chinese_ner/WeiboNER_old'
