@@ -86,7 +86,7 @@
                 dataset.append(Instance(sentence=sent, label=label))
 
     .. note::
-        直接读取特定数据集的数据请参考  :doc:`/tutorials/tutorial_2_load_dataset`
+        直接读取特定数据集的数据请参考  :doc:`/tutorials/tutorial_4_load_dataset`
 
 2.2 对DataSet中的内容处理
 --------------------------------------
@@ -288,29 +288,33 @@ __all__ = [
 ]
 
 import _pickle as pickle
-import warnings
+from copy import deepcopy
 
 import numpy as np
+from prettytable import PrettyTable
 
+from ._logger import logger
+from .const import Const
+from .field import AppendToTargetOrInputException
 from .field import AutoPadder
 from .field import FieldArray
+from .field import SetInputOrTargetException
 from .instance import Instance
 from .utils import _get_func_signature
-from .field import AppendToTargetOrInputException
-from .field import SetInputOrTargetException
+from .utils import pretty_table_printer
+
 
 class DataSet(object):
     """
-    别名：:class:`fastNLP.DataSet`   :class:`fastNLP.core.dataset.DataSet`
-
-    fastNLP的数据容器，详细的使用方法见文档  :doc:`fastNLP.core.dataset`
-    
-    :param data: 如果为dict类型，则每个key的value应该为等长的list; 如果为list，
-        每个元素应该为具有相同field的 :class:`~fastNLP.Instance` 。
-
+    fastNLP的数据容器，详细的使用方法见文档  :mod:`fastNLP.core.dataset`
     """
-    
+
     def __init__(self, data=None):
+        """
+        
+        :param data: 如果为dict类型，则每个key的value应该为等长的list; 如果为list，
+            每个元素应该为具有相同field的 :class:`~fastNLP.Instance` 。
+        """
         self.field_arrays = {}
         if data is not None:
             if isinstance(data, dict):
@@ -324,41 +328,48 @@ class DataSet(object):
                 for ins in data:
                     assert isinstance(ins, Instance), "Must be Instance type, not {}.".format(type(ins))
                     self.append(ins)
-            
+
             else:
                 raise ValueError("data only be dict or list type.")
-    
+
     def __contains__(self, item):
         return item in self.field_arrays
-    
+
     def __iter__(self):
         def iter_func():
             for idx in range(len(self)):
                 yield self[idx]
-        
+
         return iter_func()
-    
+
     def _inner_iter(self):
         class Iter_ptr:
             def __init__(self, dataset, idx):
                 self.dataset = dataset
                 self.idx = idx
-            
+
             def __getitem__(self, item):
                 assert item in self.dataset.field_arrays, "no such field:{} in Instance {}".format(item, self.dataset[
                     self.idx])
                 assert self.idx < len(self.dataset.field_arrays[item]), "index:{} out of range".format(self.idx)
                 return self.dataset.field_arrays[item][self.idx]
-            
+
+            def __setitem__(self, key, value):
+                raise TypeError("You cannot modify value directly.")
+
+            def items(self):
+                ins = self.dataset[self.idx]
+                return ins.items()
+
             def __repr__(self):
                 return self.dataset[self.idx].__repr__()
-        
+
         def inner_iter_func():
             for idx in range(len(self)):
                 yield Iter_ptr(self, idx)
-        
+
         return inner_iter_func()
-    
+
     def __getitem__(self, idx):
         """给定int的index，返回一个Instance; 给定slice，返回包含这个slice内容的新的DataSet。
 
@@ -391,20 +402,20 @@ class DataSet(object):
             return dataset
         else:
             raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
-    
+
     def __getattr__(self, item):
         # Not tested. Don't use !!
         if item == "field_arrays":
             raise AttributeError
         if isinstance(item, str) and item in self.field_arrays:
             return self.field_arrays[item]
-    
+
     def __setstate__(self, state):
         self.__dict__ = state
-    
+
     def __getstate__(self):
         return self.__dict__
-    
+
     def __len__(self):
         """Fetch the length of the dataset.
 
@@ -414,16 +425,66 @@ class DataSet(object):
             return 0
         field = iter(self.field_arrays.values()).__next__()
         return len(field)
-    
-    def __inner_repr__(self):
-        if len(self) < 20:
-            return ",\n".join([ins.__repr__() for ins in self])
-        else:
-            return self[:5].__inner_repr__() + "\n...\n" + self[-5:].__inner_repr__()
-    
+
     def __repr__(self):
-        return "DataSet(" + self.__inner_repr__() + ")"
-    
+        return str(pretty_table_printer(self))
+
+    def print_field_meta(self):
+        """
+        输出当前field的meta信息, 形似下列的输出::
+
+            +-------------+-------+-------+
+            | field_names |   x   |   y   |
+            +=============+=======+=======+
+            |   is_input  |  True | False |
+            |  is_target  | False | False |
+            | ignore_type | False |       |
+            |  pad_value  |   0   |       |
+            +-------------+-------+-------+
+
+        :param field_names: DataSet中field的名称
+        :param is_input: field是否为input
+        :param is_target: field是否为target
+        :param ignore_type: 是否忽略该field的type, 一般仅在该field至少为input或target时才有意义
+        :param pad_value: 该field的pad的值，仅在该field为input或target时有意义
+        :return:
+        """
+        if len(self.field_arrays)>0:
+            field_names = ['field_names']
+            is_inputs = ['is_input']
+            is_targets = ['is_target']
+            pad_values = ['pad_value']
+            ignore_types = ['ignore_type']
+
+            for name, field_array in self.field_arrays.items():
+                field_names.append(name)
+                if field_array.is_input:
+                    is_inputs.append(True)
+                else:
+                    is_inputs.append(False)
+                if field_array.is_target:
+                    is_targets.append(True)
+                else:
+                    is_targets.append(False)
+
+                if (field_array.is_input or field_array.is_target) and field_array.padder is not None:
+                    pad_values.append(field_array.padder.get_pad_val())
+                else:
+                    pad_values.append(' ')
+
+                if field_array._ignore_type:
+                    ignore_types.append(True)
+                elif field_array.is_input or field_array.is_target:
+                    ignore_types.append(False)
+                else:
+                    ignore_types.append(' ')
+            table = PrettyTable(field_names=field_names)
+            fields = [is_inputs, is_targets, ignore_types, pad_values]
+            for field in fields:
+                table.add_row(field)
+            logger.info(table)
+            return table
+
     def append(self, instance):
         """
         将一个instance对象append到DataSet后面。
@@ -446,9 +507,9 @@ class DataSet(object):
                 try:
                     self.field_arrays[name].append(field)
                 except AppendToTargetOrInputException as e:
-                    print(f"Cannot append to field:{name}.")
+                    logger.error(f"Cannot append to field:{name}.")
                     raise e
-    
+
     def add_fieldarray(self, field_name, fieldarray):
         """
         将fieldarray添加到DataSet中.
@@ -463,7 +524,7 @@ class DataSet(object):
             raise RuntimeError(f"The field to add must have the same size as dataset. "
                                f"Dataset size {len(self)} != field size {len(fieldarray)}")
         self.field_arrays[field_name] = fieldarray
-    
+
     def add_field(self, field_name, fields, padder=AutoPadder(), is_input=False, is_target=False, ignore_type=False):
         """
         新增一个field
@@ -475,19 +536,19 @@ class DataSet(object):
         :param bool is_target: 新加入的field是否是target
         :param bool ignore_type: 是否忽略对新加入的field的类型检查
         """
-        
+
         if len(self.field_arrays) != 0:
             if len(self) != len(fields):
                 raise RuntimeError(f"The field to add must have the same size as dataset. "
                                    f"Dataset size {len(self)} != field size {len(fields)}")
         self.field_arrays[field_name] = FieldArray(field_name, fields, is_target=is_target, is_input=is_input,
                                                    padder=padder, ignore_type=ignore_type)
-    
+
     def delete_instance(self, index):
         """
         删除第index个instance
 
-        :param int index: 需要删除的instance的index，从0开始
+        :param int index: 需要删除的instance的index，序号从0开始。
         """
         assert isinstance(index, int), "Only integer supported."
         if len(self) <= index:
@@ -497,7 +558,8 @@ class DataSet(object):
         else:
             for field in self.field_arrays.values():
                 field.pop(index)
-    
+        return self
+
     def delete_field(self, field_name):
         """
         删除名为field_name的field
@@ -505,7 +567,22 @@ class DataSet(object):
         :param str field_name: 需要删除的field的名称.
         """
         self.field_arrays.pop(field_name)
-    
+        return self
+
+    def copy_field(self, field_name, new_field_name):
+        """
+        深度copy名为field_name的field到new_field_name
+
+        :param str field_name: 需要copy的field。
+        :param str new_field_name: copy生成的field名称
+        :return: self
+        """
+        if not self.has_field(field_name):
+            raise KeyError(f"Field:{field_name} not found in DataSet.")
+        fieldarray = deepcopy(self.get_field(field_name))
+        self.add_fieldarray(field_name=new_field_name, fieldarray=fieldarray)
+        return self
+
     def has_field(self, field_name):
         """
         判断DataSet中是否有名为field_name这个field
@@ -516,7 +593,7 @@ class DataSet(object):
         if isinstance(field_name, str):
             return field_name in self.field_arrays
         return False
-    
+
     def get_field(self, field_name):
         """
         获取field_name这个field
@@ -527,7 +604,7 @@ class DataSet(object):
         if field_name not in self.field_arrays:
             raise KeyError("Field name {} not found in DataSet".format(field_name))
         return self.field_arrays[field_name]
-    
+
     def get_all_fields(self):
         """
         返回一个dict，key为field_name, value为对应的 :class:`~fastNLP.FieldArray`
@@ -535,7 +612,7 @@ class DataSet(object):
         :return dict: 返回如上所述的字典
         """
         return self.field_arrays
-    
+
     def get_field_names(self) -> list:
         """
         返回一个list，包含所有 field 的名字
@@ -543,7 +620,7 @@ class DataSet(object):
         :return list: 返回如上所述的列表
         """
         return sorted(self.field_arrays.keys())
-    
+
     def get_length(self):
         """
         获取DataSet的元素数量
@@ -551,22 +628,22 @@ class DataSet(object):
         :return: int: DataSet中Instance的个数。
         """
         return len(self)
-    
-    def rename_field(self, old_name, new_name):
+
+    def rename_field(self, field_name, new_field_name):
         """
         将某个field重新命名.
 
-        :param str old_name: 原来的field名称。
-        :param str new_name: 修改为new_name。
+        :param str field_name: 原来的field名称。
+        :param str new_field_name: 修改为new_name。
         """
-        if old_name in self.field_arrays:
-            self.field_arrays[new_name] = self.field_arrays.pop(old_name)
-            self.field_arrays[new_name].name = new_name
+        if field_name in self.field_arrays:
+            self.field_arrays[new_field_name] = self.field_arrays.pop(field_name)
+            self.field_arrays[new_field_name].name = new_field_name
         else:
-            raise KeyError("DataSet has no field named {}.".format(old_name))
+            raise KeyError("DataSet has no field named {}.".format(field_name))
         return self
-    
-    def set_target(self, *field_names, flag=True):
+
+    def set_target(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True):
         """
         将field_names的field设置为target
 
@@ -577,19 +654,23 @@ class DataSet(object):
 
         :param str field_names: field的名称
         :param bool flag: 将field_name的target状态设置为flag
+        :param bool use_1st_ins_infer_dim_type: 如果为True，将不会check该列是否所有数据都是同样的维度，同样的类型。将直接使用第一
+            行的数据进行类型和维度推断本列的数据的类型和维度。
         """
         assert isinstance(flag, bool), "Only bool type supported."
         for name in field_names:
             if name in self.field_arrays:
                 try:
+                    self.field_arrays[name]._use_1st_ins_infer_dim_type = bool(use_1st_ins_infer_dim_type)
                     self.field_arrays[name].is_target = flag
                 except SetInputOrTargetException as e:
-                    print(f"Cannot set field:{name} as target.")
+                    logger.error(f"Cannot set field:{name} as target.")
                     raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
-    
-    def set_input(self, *field_names, flag=True):
+        return self
+
+    def set_input(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True):
         """
         将field_names的field设置为input::
 
@@ -598,17 +679,21 @@ class DataSet(object):
 
         :param str field_names: field的名称
         :param bool flag: 将field_name的input状态设置为flag
+        :param bool use_1st_ins_infer_dim_type: 如果为True，将不会check该列是否所有数据都是同样的维度，同样的类型。将直接使用第一
+            行的数据进行类型和维度推断本列的数据的类型和维度。
         """
         for name in field_names:
             if name in self.field_arrays:
                 try:
+                    self.field_arrays[name]._use_1st_ins_infer_dim_type = bool(use_1st_ins_infer_dim_type)
                     self.field_arrays[name].is_input = flag
                 except SetInputOrTargetException as e:
-                    print(f"Cannot set field:{name} as input, exception happens at the {e.index} value.")
+                    logger.error(f"Cannot set field:{name} as input, exception happens at the {e.index} value.")
                     raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
-    
+        return self
+
     def set_ignore_type(self, *field_names, flag=True):
         """
         将field设置为忽略类型状态。当某个field被设置了ignore_type, 则在被设置为target或者input时将不进行类型检查，
@@ -624,7 +709,8 @@ class DataSet(object):
                 self.field_arrays[name].ignore_type = flag
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
-    
+        return self
+
     def set_padder(self, field_name, padder):
         """
         为field_name设置padder::
@@ -639,7 +725,8 @@ class DataSet(object):
         if field_name not in self.field_arrays:
             raise KeyError("There is no field named {}.".format(field_name))
         self.field_arrays[field_name].set_padder(padder)
-    
+        return self
+
     def set_pad_val(self, field_name, pad_val):
         """
         为某个field设置对应的pad_val.
@@ -650,7 +737,8 @@ class DataSet(object):
         if field_name not in self.field_arrays:
             raise KeyError("There is no field named {}.".format(field_name))
         self.field_arrays[field_name].set_pad_val(pad_val)
-    
+        return self
+
     def get_input_name(self):
         """
         返回所有is_input被设置为True的field名称
@@ -658,7 +746,7 @@ class DataSet(object):
         :return list: 里面的元素为被设置为input的field名称
         """
         return [name for name, field in self.field_arrays.items() if field.is_input]
-    
+
     def get_target_name(self):
         """
         返回所有is_target被设置为True的field名称
@@ -666,7 +754,7 @@ class DataSet(object):
         :return list: 里面的元素为被设置为target的field名称
         """
         return [name for name, field in self.field_arrays.items() if field.is_target]
-    
+
     def apply_field(self, func, field_name, new_field_name=None, **kwargs):
         """
         将DataSet中的每个instance中的名为 `field_name` 的field传给func，并获取它的返回值。
@@ -695,16 +783,16 @@ class DataSet(object):
                 results.append(func(ins[field_name]))
         except Exception as e:
             if idx != -1:
-                print("Exception happens at the `{}`th instance.".format(idx))
+                logger.error("Exception happens at the `{}`th(from 1) instance.".format(idx + 1))
             raise e
         if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
             raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
-        
+
         if new_field_name is not None:
             self._add_apply_field(results, new_field_name, kwargs)
-        
+
         return results
-    
+
     def _add_apply_field(self, results, new_field_name, kwargs):
         """
         将results作为加入到新的field中，field名称为new_field_name
@@ -736,7 +824,7 @@ class DataSet(object):
             self.add_field(field_name=new_field_name, fields=results, is_input=extra_param.get("is_input", None),
                            is_target=extra_param.get("is_target", None),
                            ignore_type=extra_param.get("ignore_type", False))
-    
+
     def apply(self, func, new_field_name=None, **kwargs):
         """
         将DataSet中每个instance传入到func中，并获取它的返回值.
@@ -760,20 +848,21 @@ class DataSet(object):
             results = []
             for idx, ins in enumerate(self._inner_iter()):
                 results.append(func(ins))
-        except Exception as e:
+        except BaseException as e:
             if idx != -1:
-                print("Exception happens at the `{}`th instance.".format(idx))
+                logger.error("Exception happens at the `{}`th instance.".format(idx))
             raise e
+
         # results = [func(ins) for ins in self._inner_iter()]
         if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
             raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
-        
+
         if new_field_name is not None:
             self._add_apply_field(results, new_field_name, kwargs)
-        
+
         return results
 
-    def add_seq_len(self, field_name:str, new_field_name='seq_len'):
+    def add_seq_len(self, field_name: str, new_field_name=Const.INPUT_LEN):
         """
         将使用len()直接对field_name中每个元素作用，将其结果作为seqence length, 并放入seq_len这个field。
 
@@ -810,7 +899,7 @@ class DataSet(object):
                 return dataset
             else:
                 return DataSet()
-    
+
     def split(self, ratio, shuffle=True):
         """
         将DataSet按照ratio的比例拆分，返回两个DataSet
@@ -836,51 +925,9 @@ class DataSet(object):
         for field_name in self.field_arrays:
             train_set.field_arrays[field_name].to(self.field_arrays[field_name])
             dev_set.field_arrays[field_name].to(self.field_arrays[field_name])
-        
-        return train_set, dev_set
-    
-    @classmethod
-    def read_csv(cls, csv_path, headers=None, sep=",", dropna=True):
-        r"""
-        .. warning::
-            此方法会在下个版本移除，请使用 :class:`fastNLP.io.CSVLoader`
-        
-        从csv_path路径下以csv的格式读取数据。
 
-        :param str csv_path: 从哪里读取csv文件
-        :param list[str] headers: 如果为None，则使用csv文件的第一行作为header; 如果传入list(str), 则元素的个数必须
-            与csv文件中每行的元素个数相同。
-        :param str sep: 分割符
-        :param bool dropna: 是否忽略与header数量不一致行。
-        :return: 读取后的 :class:`~fastNLP.读取后的DataSet`。
-        """
-        warnings.warn('DataSet.read_csv is deprecated, use CSVLoader instead',
-                      category=DeprecationWarning)
-        with open(csv_path, "r", encoding='utf-8') as f:
-            start_idx = 0
-            if headers is None:
-                headers = f.readline().rstrip('\r\n')
-                headers = headers.split(sep)
-                start_idx += 1
-            else:
-                assert isinstance(headers, (list, tuple)), "headers should be list or tuple, not {}.".format(
-                    type(headers))
-            _dict = {}
-            for col in headers:
-                _dict[col] = []
-            for line_idx, line in enumerate(f, start_idx):
-                contents = line.rstrip('\r\n').split(sep)
-                if len(contents) != len(headers):
-                    if dropna:
-                        continue
-                    else:
-                        # TODO change error type
-                        raise ValueError("Line {} has {} parts, while header has {} parts." \
-                                         .format(line_idx, len(contents), len(headers)))
-                for header, content in zip(headers, contents):
-                    _dict[header].append(content)
-        return cls(_dict)
-    
+        return train_set, dev_set
+
     def save(self, path):
         """
         保存DataSet.
@@ -889,7 +936,7 @@ class DataSet(object):
         """
         with open(path, 'wb') as f:
             pickle.dump(self, f)
-    
+
     @staticmethod
     def load(path):
         r"""

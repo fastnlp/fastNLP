@@ -1,37 +1,54 @@
+"""undocumented"""
+
 __all__ = [
     "ConditionalRandomField",
     "allowed_transitions"
 ]
 
+from typing import Union
+
 import torch
 from torch import nn
 
 from ..utils import initial_parameter
+from ...core.metrics import _get_encoding_type_from_tag_vocab, _check_tag_vocab_and_encoding_type
+from ...core.vocabulary import Vocabulary
 
 
-def allowed_transitions(id2target, encoding_type='bio', include_start_end=False):
+def allowed_transitions(tag_vocab:Union[Vocabulary, dict], encoding_type=None, include_start_end=False):
     """
-    别名：:class:`fastNLP.modules.allowed_transitions`  :class:`fastNLP.modules.decoder.allowed_transitions`
-
     给定一个id到label的映射表，返回所有可以跳转的(from_tag_id, to_tag_id)列表。
 
-    :param dict id2target: key是label的indices，value是str类型的tag或tag-label。value可以是只有tag的, 比如"B", "M"; 也可以是
-        "B-NN", "M-NN", tag和label之间一定要用"-"隔开。一般可以通过Vocabulary.idx2word得到id2label。
-    :param str encoding_type: 支持"bio", "bmes", "bmeso", "bioes"。
+    :param ~fastNLP.Vocabulary,dict tag_vocab: 支持类型为tag或tag-label。只有tag的,比如"B", "M"; 也可以是"B-NN", "M-NN",
+        tag和label之间一定要用"-"隔开。如果传入dict，格式需要形如{0:"O", 1:"B-tag1"}，即index在前，tag在后。
+    :param str encoding_type: 支持"bio", "bmes", "bmeso", "bioes"。默认为None，通过vocab自动推断
     :param bool include_start_end: 是否包含开始与结尾的转换。比如在bio中，b/o可以在开头，但是i不能在开头；
         为True，返回的结果中会包含(start_idx, b_idx), (start_idx, o_idx), 但是不包含(start_idx, i_idx);
         start_idx=len(id2label), end_idx=len(id2label)+1。为False, 返回的结果中不含与开始结尾相关的内容
     :return: List[Tuple(int, int)]], 内部的Tuple是可以进行跳转的(from_tag_id, to_tag_id)。
     """
-    num_tags = len(id2target)
+    if encoding_type is None:
+        encoding_type = _get_encoding_type_from_tag_vocab(tag_vocab)
+    else:
+        encoding_type = encoding_type.lower()
+        _check_tag_vocab_and_encoding_type(tag_vocab, encoding_type)
+
+    pad_token = '<pad>'
+    unk_token = '<unk>'
+
+    if isinstance(tag_vocab, Vocabulary):
+        id_label_lst = list(tag_vocab.idx2word.items())
+        pad_token = tag_vocab.padding
+        unk_token = tag_vocab.unknown
+    else:
+        id_label_lst = list(tag_vocab.items())
+
+    num_tags = len(tag_vocab)
     start_idx = num_tags
     end_idx = num_tags + 1
-    encoding_type = encoding_type.lower()
     allowed_trans = []
-    id_label_lst = list(id2target.items())
     if include_start_end:
         id_label_lst += [(start_idx, 'start'), (end_idx, 'end')]
-
     def split_tag_label(from_label):
         from_label = from_label.lower()
         if from_label in ['start', 'end']:
@@ -43,11 +60,11 @@ def allowed_transitions(id2target, encoding_type='bio', include_start_end=False)
         return from_tag, from_label
 
     for from_id, from_label in id_label_lst:
-        if from_label in ['<pad>', '<unk>']:
+        if from_label in [pad_token, unk_token]:
             continue
         from_tag, from_label = split_tag_label(from_label)
         for to_id, to_label in id_label_lst:
-            if to_label in ['<pad>', '<unk>']:
+            if to_label in [pad_token, unk_token]:
                 continue
             to_tag, to_label = split_tag_label(to_label)
             if _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label):
@@ -151,22 +168,21 @@ def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label
 
 class ConditionalRandomField(nn.Module):
     """
-    别名：:class:`fastNLP.modules.ConditionalRandomField`  :class:`fastNLP.modules.decoder.ConditionalRandomField`
+    条件随机场。提供forward()以及viterbi_decode()两个方法，分别用于训练与inference。
 
-    条件随机场。
-    提供forward()以及viterbi_decode()两个方法，分别用于训练与inference。
-
-    :param int num_tags: 标签的数量
-    :param bool include_start_end_trans: 是否考虑各个tag作为开始以及结尾的分数。
-    :param List[Tuple[from_tag_id(int), to_tag_id(int)]] allowed_transitions: 内部的Tuple[from_tag_id(int),
-                               to_tag_id(int)]视为允许发生的跃迁，其他没有包含的跃迁认为是禁止跃迁，可以通过
-                               allowed_transitions()函数得到；如果为None，则所有跃迁均为合法
-    :param str initial_method: 初始化方法。见initial_parameter
     """
 
     def __init__(self, num_tags, include_start_end_trans=False, allowed_transitions=None,
                  initial_method=None):
-
+        """
+        
+        :param int num_tags: 标签的数量
+        :param bool include_start_end_trans: 是否考虑各个tag作为开始以及结尾的分数。
+        :param List[Tuple[from_tag_id(int), to_tag_id(int)]] allowed_transitions: 内部的Tuple[from_tag_id(int),
+                                   to_tag_id(int)]视为允许发生的跃迁，其他没有包含的跃迁认为是禁止跃迁，可以通过
+                                   allowed_transitions()函数得到；如果为None，则所有跃迁均为合法
+        :param str initial_method: 初始化方法。见initial_parameter
+        """
         super(ConditionalRandomField, self).__init__()
 
         self.include_start_end_trans = include_start_end_trans
@@ -208,7 +224,7 @@ class ConditionalRandomField(nn.Module):
             trans_score = self.trans_m.view(1, n_tags, n_tags)
             tmp = alpha.view(batch_size, n_tags, 1) + emit_score + trans_score
             alpha = torch.logsumexp(tmp, 1).masked_fill(flip_mask[i].view(batch_size, 1), 0) + \
-                    alpha.masked_fill(mask[i].byte().view(batch_size, 1), 0)
+                    alpha.masked_fill(mask[i].eq(1).view(batch_size, 1), 0)
 
         if self.include_start_end_trans:
             alpha = alpha + self.end_scores.view(1, -1)
@@ -228,7 +244,7 @@ class ConditionalRandomField(nn.Module):
         seq_idx = torch.arange(seq_len, dtype=torch.long, device=logits.device)
 
         # trans_socre [L-1, B]
-        mask = mask.byte()
+        mask = mask.eq(1)
         flip_mask = mask.eq(0)
         trans_score = self.trans_m[tags[:seq_len - 1], tags[1:]].masked_fill(flip_mask[1:, :], 0)
         # emit_score [L, B]
@@ -276,7 +292,7 @@ class ConditionalRandomField(nn.Module):
         """
         batch_size, seq_len, n_tags = logits.size()
         logits = logits.transpose(0, 1).data  # L, B, H
-        mask = mask.transpose(0, 1).data.byte()  # L, B
+        mask = mask.transpose(0, 1).data.eq(1)  # L, B
 
         # dp
         vpath = logits.new_zeros((seq_len, batch_size, n_tags), dtype=torch.long)

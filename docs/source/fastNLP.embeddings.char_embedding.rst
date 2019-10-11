@@ -1,7 +1,6 @@
-fastNLP.embeddings.char\_embedding
-==================================
+fastNLP.embeddings.char_embedding
+=================================
 
 .. automodule:: fastNLP.embeddings.char_embedding
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :members: CNNCharEmbedding, LSTMCharEmbedding
+

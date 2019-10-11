@@ -6,12 +6,11 @@ from torch.optim import Adadelta
 from torch.optim.lr_scheduler import StepLR
 
 from fastNLP import CrossEntropyLoss
-from fastNLP import cache_results
 from fastNLP.core import Trainer, Tester, AccuracyMetric, Const
-from fastNLP.core.callback import LRScheduler, FitlogCallback
+from fastNLP.core.callback import LRScheduler, EvaluateCallback
 from fastNLP.embeddings import StaticEmbedding
 
-from fastNLP.io.data_loader import MNLILoader, QNLILoader, SNLILoader, RTELoader
+from fastNLP.io.pipe.matching import SNLIPipe, RTEPipe, MNLIPipe, QNLIPipe, QuoraPipe
 from reproduction.matching.model.mwan import MwanModel
 
 import fitlog
@@ -46,47 +45,25 @@ for k in arg.__dict__:
 
 # load data set
 if arg.task == 'snli':
-    @cache_results(f'snli_mwan.pkl')
-    def read_snli():
-        data_info = SNLILoader().process(
-            paths='path/to/snli/data', to_lower=True, seq_len_type=None, bert_tokenizer=None,
-            get_index=True, concat=False, extra_split=['/','%','-'],
-        )
-        return data_info
-    data_info = read_snli()
+    data_bundle = SNLIPipe(lower=True, tokenizer='spacy').process_from_file()
 elif arg.task == 'rte':
-    @cache_results(f'rte_mwan.pkl')
-    def read_rte():
-        data_info = RTELoader().process(
-            paths='path/to/rte/data', to_lower=True, seq_len_type=None, bert_tokenizer=None,
-            get_index=True, concat=False, extra_split=['/','%','-'],
-        )
-        return data_info
-    data_info = read_rte()
+    data_bundle = RTEPipe(lower=True, tokenizer='spacy').process_from_file()
 elif arg.task == 'qnli':
-    data_info = QNLILoader().process(
-        paths='path/to/qnli/data', to_lower=True, seq_len_type=None, bert_tokenizer=None,
-        get_index=True, concat=False , cut_text=512, extra_split=['/','%','-'],
-    )
+    data_bundle = QNLIPipe(lower=True, tokenizer='spacy').process_from_file()
 elif arg.task == 'mnli':
-    @cache_results(f'mnli_v0.9_mwan.pkl')
-    def read_mnli():
-        data_info = MNLILoader().process(
-            paths='path/to/mnli/data', to_lower=True, seq_len_type=None, bert_tokenizer=None,
-            get_index=True, concat=False, extra_split=['/','%','-'],
-        )
-        return data_info
-    data_info = read_mnli()
+    data_bundle = MNLIPipe(lower=True, tokenizer='spacy').process_from_file()
+elif arg.task == 'quora':
+    data_bundle = QuoraPipe(lower=True, tokenizer='spacy').process_from_file()
 else:
     raise RuntimeError(f'NOT support {arg.task} task yet!')
 
-print(data_info)
-print(len(data_info.vocabs['words']))
+print(data_bundle)
+print(len(data_bundle.vocabs[Const.INPUTS(0)]))
 
 
 model = MwanModel(
-	num_class = len(data_info.vocabs[Const.TARGET]), 
-	EmbLayer = StaticEmbedding(data_info.vocabs[Const.INPUT], requires_grad=False, normalize=False), 
+	num_class = len(data_bundle.vocabs[Const.TARGET]),
+	EmbLayer = StaticEmbedding(data_bundle.vocabs[Const.INPUTS(0)], requires_grad=False, normalize=False),
 	ElmoLayer = None,
 	args_of_imm = {
 		"input_size"	 	: 300 , 
@@ -105,21 +82,20 @@ callbacks = [
 ]
 
 if arg.task in ['snli']:
-    callbacks.append(FitlogCallback(data_info.datasets[arg.testset_name], verbose=1))
+    callbacks.append(EvaluateCallback(data=data_bundle.datasets[arg.testset_name]))
 elif arg.task == 'mnli':
-    callbacks.append(FitlogCallback({'dev_matched': data_info.datasets['dev_matched'],
-                                     'dev_mismatched': data_info.datasets['dev_mismatched']},
-                                    verbose=1))
+    callbacks.append(EvaluateCallback(data={'dev_matched': data_bundle.datasets['dev_matched'],
+                                      'dev_mismatched': data_bundle.datasets['dev_mismatched']},))
 
 trainer = Trainer(
-    train_data       = data_info.datasets['train'], 
+    train_data       = data_bundle.datasets['train'],
     model            = model,
     optimizer        = optimizer, 
     num_workers      = 0,
     batch_size       = arg.batch_size,
     n_epochs         = arg.n_epochs, 
     print_every      = -1,
-    dev_data         = data_info.datasets[arg.devset_name],
+    dev_data         = data_bundle.datasets[arg.devset_name],
     metrics          = AccuracyMetric(pred = "pred" , target = "target"), 
     metric_key       = 'acc', 
     device           = [i for i in range(torch.cuda.device_count())],
@@ -130,7 +106,7 @@ trainer = Trainer(
 trainer.train(load_best_model=True)
 
 tester = Tester(
-    data=data_info.datasets[arg.testset_name],
+    data=data_bundle.datasets[arg.testset_name],
     model=model,
     metrics=AccuracyMetric(),
     batch_size=arg.batch_size,

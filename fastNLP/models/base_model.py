@@ -1,3 +1,7 @@
+"""undocumented"""
+
+__all__ = []
+
 import torch
 
 from ..modules.decoder.mlp import MLP
@@ -18,6 +22,9 @@ class BaseModel(torch.nn.Module):
 
 
 class NaiveClassifier(BaseModel):
+    """
+    一个简单的分类器例子，可用于各种测试
+    """
     def __init__(self, in_feature_dim, out_feature_dim):
         super(NaiveClassifier, self).__init__()
         self.mlp = MLP([in_feature_dim, in_feature_dim, out_feature_dim])

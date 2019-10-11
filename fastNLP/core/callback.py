@@ -4,7 +4,7 @@ callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:
 虽然Trainer本身已经集成了一些功能，但仍然不足以囊括训练过程中可能需要到的功能，
 比如负采样，learning rate decay 和 early stop等。
 为了解决这个问题，fastNLP引入了callback的机制，:class:`~fastNLP.Callback` 是一种在Trainer训练过程中特定阶段会运行的函数集合。
-关于 :class:`~fastNLP.Trainer` 的详细文档，请参见 :doc:`trainer 模块<fastNLP.core.trainer>`
+关于 :class:`~fastNLP.Trainer` 的详细文档，请参见 :mod:`trainer 模块<fastNLP.core.trainer>`
 
 我们将 :meth:`~fastNLP.Trainer.train` 这个函数内部分为以下的阶段，在对应阶段会触发相应的调用::
 
@@ -51,22 +51,28 @@ callback模块实现了 fastNLP 中的许多 callback 类，用于增强 :class:
 """
 __all__ = [
     "Callback",
+
     "GradientClipCallback",
     "EarlyStopCallback",
-    "TensorboardCallback",
     "FitlogCallback",
+    "EvaluateCallback",
     "LRScheduler",
     "ControlC",
+    "LRFinder",
+    "TensorboardCallback",
+    "WarmupCallback",
+    "SaveModelCallback",
     
     "CallbackException",
     "EarlyStopError"
 ]
 
 import os
+import sys
+from copy import deepcopy
 
 import torch
-from copy import deepcopy
-import sys
+
 from .utils import _save_model
 
 try:
@@ -76,23 +82,27 @@ try:
 except:
     tensorboardX_flag = False
 
-from ..io.model_io import ModelSaver, ModelLoader
 from .dataset import DataSet
 from .tester import Tester
+from ._logger import logger
+from .utils import _check_fp16
 
 try:
     import fitlog
 except:
     pass
 
+try:
+    from apex import amp
+except:
+    amp = None
+
 
 class Callback(object):
     """
-    别名：:class:`fastNLP.Callback` :class:`fastNLP.core.callback.Callback`
-
     Callback是fastNLP中被设计用于增强 :class:`~fastNLP.Trainer` 的类。
     如果Callback被传递给了 Trainer , 则 Trainer 会在对应的阶段调用Callback的函数，
-    具体调用时机可以通过 :doc:`trainer 模块<fastNLP.core.trainer>` 查看。
+    具体调用时机可以通过 :mod:`trainer 模块<fastNLP.core.trainer>` 查看。
     这是Callback的基类，所有的callback必须继承自这个类
 
     """
@@ -100,7 +110,8 @@ class Callback(object):
     def __init__(self):
         super(Callback, self).__init__()
         self._trainer = None  # 在Trainer内部被重新赋值
-    
+        self._disabled = False
+
     @property
     def trainer(self):
         """
@@ -158,7 +169,19 @@ class Callback(object):
     def batch_per_epoch(self):
         """每个epoch一共有多少个batch，只有在on_epoch_begin之后才能调用该属性。"""
         return self._trainer.batch_per_epoch
-    
+
+    @property
+    def is_master(self):
+        return self._trainer.is_master
+
+    @property
+    def disabled(self):
+        return self._disabled
+
+    @property
+    def logger(self):
+        return getattr(self._trainer, 'logger', logger)
+
     def on_train_begin(self):
         """
         在Train过程开始之前调用。
@@ -281,6 +304,8 @@ def _transfer(func):
     def wrapper(manager, *arg):
         returns = []
         for callback in manager.callbacks:
+            if callback.disabled:
+                continue
             returns.append(getattr(callback, func.__name__)(*arg))
         return returns
     
@@ -288,31 +313,39 @@ def _transfer(func):
 
 
 class CallbackManager(Callback):
+    """
+    内部使用的Callback管理类
+    """
     def __init__(self, env, callbacks=None):
         """
-        内部使用的Callback管理类
 
         :param dict env: The key is the name of the Trainer attribute(str). The value is the attribute itself.
         :param List[Callback] callbacks:
         """
         super(CallbackManager, self).__init__()
         # set attribute of trainer environment
-        
+        self._env = env
         self.callbacks = []
-        if callbacks is not None:
-            if isinstance(callbacks, list):
-                if all([isinstance(cb, Callback) for cb in callbacks]) is True:
-                    self.callbacks.extend(callbacks)
-                else:
-                    obj = [not isinstance(cb, Callback) for cb in callbacks][0]
-                    raise TypeError(f"Expect sub-classes of Callback. Got {type(obj)}")
+        if callbacks:
+            self.callbacks = self.prepare_callbacks(callbacks)
+
+    def prepare_callbacks(self, callbacks):
+        if not callbacks:
+            return []
+        if isinstance(callbacks, list):
+            if all([isinstance(cb, Callback) for cb in callbacks]) is True:
+                pass
             else:
-                raise TypeError(f"Expect callbacks in CallbackManager(callbacks) to be list. Got {type(callbacks)}.")
-        
-        for env_name, env_val in env.items():
-            for callback in self.callbacks:
+                obj = [not isinstance(cb, Callback) for cb in callbacks][0]
+                raise TypeError(f"Expect sub-classes of Callback. Got {type(obj)}")
+        else:
+            raise TypeError(f"Expect callbacks in CallbackManager(callbacks) to be list. Got {type(callbacks)}.")
+
+        for env_name, env_val in self._env.items():
+            for callback in callbacks:
                 setattr(callback, '_' + env_name, env_val)  # Callback.trainer
-    
+        return callbacks
+
     @_transfer
     def on_train_begin(self):
         pass
@@ -352,6 +385,10 @@ class CallbackManager(Callback):
     @_transfer
     def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
         pass
+
+    @_transfer
+    def on_validation(self):
+        pass
     
     @_transfer
     def on_epoch_end(self):
@@ -366,28 +403,53 @@ class CallbackManager(Callback):
         pass
 
 
+class DistCallbackManager(CallbackManager):
+    def __init__(self, env, callbacks_all=None, callbacks_master=None):
+        super(DistCallbackManager, self).__init__(env)
+        assert 'trainer' in env
+        self._trainer = env['trainer']
+        self.callbacks_master = []
+        self.callbacks_all = []
+        self.add_callback(callbacks_all, master=False)
+        self.add_callback(callbacks_master, master=True)
+
+    def patch_callback(self, callbacks, disabled):
+        if not callbacks:
+            return
+        if not isinstance(callbacks, (list, tuple)):
+            callbacks = [callbacks]
+        for cb in callbacks:
+            cb._disabled = disabled
+
+    def add_callback(self, cb, master=False):
+        if master:
+            self.patch_callback(cb, not self.is_master)
+            self.callbacks_master += self.prepare_callbacks(cb)
+        else:
+            self.callbacks_all += self.prepare_callbacks(cb)
+        self.callbacks = self.callbacks_all + self.callbacks_master
+
+
 class GradientClipCallback(Callback):
     """
-    别名：:class:`fastNLP.GradientClipCallback` :class:`fastNLP.core.callback.GradientClipCallback`
-
     每次backward前，将parameter的gradient clip到某个范围。
-
-    :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。
-        如果为None则默认对Trainer的model中所有参数进行clip
-    :param float clip_value: 将gradient 限制到[-clip_value, clip_value]。clip_value应该为正数
-    :param str clip_type: 支持'norm', 'value'
-        两种::
-
-            1 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
-        
-            2 'value', 将gradient限制在[-clip_value, clip_value],
-                小于-clip_value的gradient被赋值为-clip_value;
-                大于clip_value的gradient被赋值为clip_value.
-
     """
     
     def __init__(self, parameters=None, clip_value=1, clip_type='norm'):
+        """
         
+        :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。
+            如果为None则默认对Trainer的model中所有参数进行clip
+        :param float clip_value: 将gradient 限制到[-clip_value, clip_value]。clip_value应该为正数
+        :param str clip_type: 支持'norm', 'value'
+            两种::
+    
+                1 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
+            
+                2 'value', 将gradient限制在[-clip_value, clip_value],
+                    小于-clip_value的gradient被赋值为-clip_value;
+                    大于clip_value的gradient被赋值为clip_value.
+        """
         super().__init__()
         
         from torch import nn
@@ -403,21 +465,25 @@ class GradientClipCallback(Callback):
     def on_backward_end(self):
         if self.step%self.update_every==0:
             if self.parameters is None:
-                self.clip_fun(self.model.parameters(), self.clip_value)
+                if getattr(self.trainer, 'fp16', ''):
+                    _check_fp16()
+                    self.clip_fun(amp.master_params(self.optimizer), self.clip_value)
+                else:
+                    self.clip_fun(self.model.parameters(), self.clip_value)
             else:
                 self.clip_fun(self.parameters, self.clip_value)
 
 
 class EarlyStopCallback(Callback):
     """
-    别名：:class:`fastNLP.EarlyStopCallback` :class:`fastNLP.core.callback.EarlyStopCallback`
-    
-    多少个epoch没有变好就停止训练，相关类 :class:`EarlyStopError`
-
-    :param int patience: epoch的数量
+    多少个epoch没有变好就停止训练，相关类 :class:`~fastNLP.core.callback.EarlyStopError`
     """
     
     def __init__(self, patience):
+        """
+        
+        :param int patience: epoch的数量
+        """
         super(EarlyStopCallback, self).__init__()
         self.patience = patience
         self.wait = 0
@@ -434,52 +500,54 @@ class EarlyStopCallback(Callback):
     
     def on_exception(self, exception):
         if isinstance(exception, EarlyStopError):
-            print("Early Stopping triggered in epoch {}!".format(self.epoch))
+            logger.info("Early Stopping triggered in epoch {}!".format(self.epoch))
         else:
             raise exception  # 抛出陌生Error
 
 
 class FitlogCallback(Callback):
     """
-    别名: :class:`fastNLP.FitlogCallback` :class:`fastNLP.core.callback.FitlogCallback`
-
     该callback可将loss和progress写入到fitlog中; 如果Trainer有dev的数据，将自动把dev的结果写入到log中; 同时还支持传入
-        一个(或多个)test数据集进行测试(只有在trainer具有dev时才能使用)，每次在dev上evaluate之后会在这些数据集上验证一下。
-        并将验证结果写入到fitlog中。这些数据集的结果是根据dev上最好的结果报道的，即如果dev在第3个epoch取得了最佳，则
-        fitlog中记录的关于这些数据集的结果就是来自第三个epoch的结果。
-
-    :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要传入多个
-        DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。若tester不为None时，data需要通过
-        dict的方式传入。如果仅传入DataSet, 则被命名为test
-    :param ~fastNLP.Tester tester: Tester对象，将在on_valid_end时调用。tester中的DataSet会被称为为`test`
-    :param int log_loss_every: 多少个step记录一次loss(记录的是这几个batch的loss平均值)，如果数据集较大建议将该值设置得
-        大一些，不然会导致log文件巨大。默认为0, 即不要记录loss。
-    :param int verbose: 是否在终端打印evaluation的结果，0不打印。
-    :param bool log_exception: fitlog是否记录发生的exception信息
+    一个(或多个)test数据集进行测试(只有在trainer具有dev时才能使用)，每次在dev上evaluate之后会在这些数据集上验证一下。
+    并将验证结果写入到fitlog中。这些数据集的结果是根据dev上最好的结果报道的，即如果dev在第3个epoch取得了最佳，则
+    fitlog中记录的关于这些数据集的结果就是来自第三个epoch的结果。
     """
 
     def __init__(self, data=None, tester=None, log_loss_every=0, verbose=0, log_exception=False):
+        """
+        
+        :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要
+            传入多个DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。data的结果的名称以'data'开头。
+        :param ~fastNLP.Tester,Dict[~fastNLP.Tester] tester: Tester对象，将在on_valid_end时调用。tester的结果的名称以'tester'开头
+        :param int log_loss_every: 多少个step记录一次loss(记录的是这几个batch的loss平均值)，如果数据集较大建议将该值设置得
+            大一些，不然会导致log文件巨大。默认为0, 即不要记录loss。
+        :param int verbose: 是否在终端打印evaluation的结果，0不打印。
+        :param bool log_exception: fitlog是否记录发生的exception信息
+        """
         super().__init__()
         self.datasets = {}
         self.testers = {}
         self._log_exception = log_exception
         assert isinstance(log_loss_every, int) and log_loss_every>=0
         if tester is not None:
-            assert isinstance(tester, Tester), "Only fastNLP.Tester allowed."
-            assert isinstance(data, dict) or data is None, "If tester is not None, only dict[DataSet] allowed for data."
-            if data is not None:
-                assert 'test' not in data, "Cannot use `test` as DataSet key, when tester is passed."
-            setattr(tester, 'verbose', 0)
-            self.testers['test'] = tester
-        
+            if isinstance(tester, dict):
+                for name, test in tester.items():
+                    if not isinstance(test, Tester):
+                        raise TypeError(f"{name} in tester is not a valid fastNLP.Tester.")
+                    self.testers['tester-' + name] = test
+            if isinstance(tester, Tester):
+                self.testers['tester-test'] = tester
+            for tester in self.testers.values():
+                setattr(tester, 'verbose', 0)
+
         if isinstance(data, dict):
             for key, value in data.items():
                 assert isinstance(value, DataSet), f"Only DataSet object is allowed, not {type(value)}."
             for key, value in data.items():
-                self.datasets[key] = value
+                self.datasets['data-' + key] = value
         elif isinstance(data, DataSet):
-            self.datasets['test'] = data
-        else:
+            self.datasets['data-test'] = data
+        elif data is not None:
             raise TypeError("data receives dict[DataSet] or DataSet object.")
         
         self.verbose = verbose
@@ -492,8 +560,11 @@ class FitlogCallback(Callback):
         
         if len(self.datasets) > 0:
             for key, data in self.datasets.items():
-                tester = Tester(data=data, model=self.model, batch_size=self.batch_size, metrics=self.trainer.metrics,
-                                verbose=0)
+                tester = Tester(data=data, model=self.model,
+                                batch_size=self.trainer.kwargs.get('dev_batch_size', self.batch_size),
+                                metrics=self.trainer.metrics,
+                                verbose=0,
+                                use_tqdm=self.trainer.test_use_tqdm)
                 self.testers[key] = tester
         fitlog.add_progress(total_steps=self.n_steps)
     
@@ -516,7 +587,7 @@ class FitlogCallback(Callback):
                 try:
                     eval_result = tester.test()
                     if self.verbose != 0:
-                        self.pbar.write("Evaluation on DataSet {}:".format(key))
+                        self.pbar.write("FitlogCallback evaluation on {}:".format(key))
                         self.pbar.write(tester._format_eval_results(eval_result))
                     fitlog.add_metric(eval_result, name=key, step=self.step, epoch=self.epoch)
                     if better_result:
@@ -533,17 +604,75 @@ class FitlogCallback(Callback):
             fitlog.add_other(repr(exception), name='except_info')
 
 
+class EvaluateCallback(Callback):
+    """
+    通过使用该Callback可以使得Trainer在evaluate dev之外还可以evaluate其它数据集，比如测试集。每一次验证dev之前都会先验证EvaluateCallback
+    中的数据。
+    """
+
+    def __init__(self, data=None, tester=None):
+        """
+        :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用Trainer中的metric对数据进行验证。如果需要传入多个
+            DataSet请通过dict的方式传入。
+        :param ~fastNLP.Tester,Dict[~fastNLP.DataSet] tester: Tester对象, 通过使用Tester对象，可以使得验证的metric与Trainer中
+            的metric不一样。
+        """
+        super().__init__()
+        self.datasets = {}
+        self.testers = {}
+        if tester is not None:
+            if isinstance(tester, dict):
+                for name, test in tester.items():
+                    if not isinstance(test, Tester):
+                        raise TypeError(f"{name} in tester is not a valid fastNLP.Tester.")
+                    self.testers['tester-' + name] = test
+            if isinstance(tester, Tester):
+                self.testers['tester-test'] = tester
+            for tester in self.testers.values():
+                setattr(tester, 'verbose', 0)
+
+        if isinstance(data, dict):
+            for key, value in data.items():
+                assert isinstance(value, DataSet), f"Only DataSet object is allowed, not {type(value)}."
+            for key, value in data.items():
+                self.datasets['data-' + key] = value
+        elif isinstance(data, DataSet):
+            self.datasets['data-test'] = data
+        elif data is not None:
+            raise TypeError("data receives dict[DataSet] or DataSet object.")
+
+    def on_train_begin(self):
+        if len(self.datasets) > 0 and self.trainer.dev_data is None:
+            raise RuntimeError("Trainer has no dev data, you cannot pass extra DataSet to do evaluation.")
+
+        if len(self.datasets) > 0:
+            for key, data in self.datasets.items():
+                tester = Tester(data=data, model=self.model,
+                                batch_size=self.trainer.kwargs.get('dev_batch_size', self.batch_size),
+                                metrics=self.trainer.metrics, verbose=0,
+                                use_tqdm=self.trainer.test_use_tqdm)
+                self.testers[key] = tester
+
+    def on_valid_end(self, eval_result, metric_key, optimizer, better_result):
+        if len(self.testers) > 0:
+            for key, tester in self.testers.items():
+                try:
+                    eval_result = tester.test()
+                    self.logger.info("EvaluateCallback evaluation on {}:".format(key))
+                    self.logger.info(tester._format_eval_results(eval_result))
+                except Exception:
+                    self.logger.error("Exception happens when evaluate on DataSet named `{}`.".format(key))
+
+
 class LRScheduler(Callback):
     """
-    别名：:class:`fastNLP.LRScheduler` :class:`fastNLP.core.callback.LRScheduler`
-
     对PyTorch LR Scheduler的包装以使得其可以被Trainer所使用
-
-    :param torch.optim.lr_scheduler._LRScheduler lr_scheduler: PyTorch的lr_scheduler
     """
     
     def __init__(self, lr_scheduler):
-        
+        """
+        :param torch.optim.lr_scheduler._LRScheduler lr_scheduler: PyTorch的lr_scheduler
+        """
         super(LRScheduler, self).__init__()
         import torch.optim
         if isinstance(lr_scheduler, torch.optim.lr_scheduler._LRScheduler):
@@ -557,13 +686,13 @@ class LRScheduler(Callback):
 
 class ControlC(Callback):
     """
-    别名：:class:`fastNLP.ControlC` :class:`fastNLP.core.callback.ControlC`
-
-    :param bool quit_all: 若为True,则检测到control+C 直接退出程序；否则只退出Trainer
+    检测到 control+C 时的反馈
     """
     
     def __init__(self, quit_all):
-        
+        """
+        :param bool quit_all: 若为True,则检测到control+C 直接退出程序；否则只退出Trainer
+        """
         super(ControlC, self).__init__()
         if type(quit_all) != bool:
             raise ValueError("In KeyBoardInterrupt, quit_all arguemnt must be a bool.")
@@ -581,12 +710,14 @@ class ControlC(Callback):
 
 
 class SmoothValue(object):
+    """work for LRFinder"""
+    
     def __init__(self, beta: float):
         self.beta, self.n, self.mov_avg = beta, 0, 0
         self.smooth = None
     
     def add_value(self, val: float) -> None:
-        "Add `val` to calculate updated smoothed value."
+        """Add `val` to calculate updated smoothed value."""
         self.n += 1
         self.mov_avg = self.beta * self.mov_avg + (1 - self.beta) * val
         self.smooth = self.mov_avg / (1 - self.beta ** self.n)
@@ -594,16 +725,15 @@ class SmoothValue(object):
 
 class LRFinder(Callback):
     """
-    别名：:class:`fastNLP.LRFinder` :class:`fastNLP.core.callback.LRFinder`
-
     用第一个 epoch 找最佳的学习率，从第二个epoch开始应用它
-
-    :param float start_lr: 学习率下界
-    :param float end_lr: 学习率上界
     """
     
     def __init__(self, start_lr=1e-6, end_lr=10):
+        """
         
+        :param float start_lr: 学习率下界
+        :param float end_lr: 学习率上界
+        """
         super(LRFinder, self).__init__()
         self.start_lr, self.end_lr = start_lr, end_lr
         
@@ -614,8 +744,7 @@ class LRFinder(Callback):
         self.smooth_value = SmoothValue(0.8)
         self.opt = None
         self.find = None
-        self.loader = ModelLoader()
-    
+
     @property
     def lr_gen(self):
         scale = (self.end_lr - self.start_lr) / self.batch_per_epoch
@@ -630,7 +759,7 @@ class LRFinder(Callback):
             self.opt = self.trainer.optimizer  # pytorch optimizer
             self.opt.param_groups[0]["lr"] = self.start_lr
             # save model
-            ModelSaver("tmp").save_pytorch(self.trainer.model, param_only=True)
+            torch.save(self.model.state_dict(), 'tmp')
             self.find = True
     
     def on_backward_begin(self, loss):
@@ -659,14 +788,14 @@ class LRFinder(Callback):
             self.opt.param_groups[0]["lr"] = self.best_lr
             self.find = False
             # reset model
-            ModelLoader().load_pytorch(self.trainer.model, "tmp")
+            states = torch.load('tmp')
+            self.model.load_state_dict(states)
+            os.remove('tmp')
             self.pbar.write("Model reset. \nFind best lr={}".format(self.best_lr))
 
 
 class TensorboardCallback(Callback):
     """
-    别名：:class:`fastNLP.TensorboardCallback` :class:`fastNLP.core.callback.TensorboardCallback`
-
     接受以下一个或多个字符串作为参数：
     - "model"
     - "loss"
@@ -674,7 +803,7 @@ class TensorboardCallback(Callback):
     
     .. warning::
         fastNLP 已停止对此功能的维护，请等待 fastNLP 兼容 PyTorch1.1 的下一个版本。
-        或者使用和 fastNLP 高度配合的 fitlog（参见 :doc:`/tutorials/tutorial_10_fitlog` ）。
+        或者使用和 fastNLP 高度配合的 fitlog（参见 :doc:`/tutorials/tutorial_11_fitlog` ）。
         
     """
     
@@ -741,14 +870,17 @@ class TensorboardCallback(Callback):
 
 class WarmupCallback(Callback):
     """
-    按一定的周期调节Learning rate的大小。
-
-    :param int,float warmup: 如果warmup为int，则在该step之前，learning rate根据schedule的策略变化; 如果warmup为float，
-        如0.1, 则前10%的step是按照schedule策略调整learning rate。
-    :param str schedule: 以哪种方式调整。linear: 前warmup的step上升到指定的learning rate(从Trainer中的optimizer处获取的), 后
-        warmup的step下降到0； constant前warmup的step上升到指定learning rate，后面的step保持learning rate.
+    learning rate按照一定的速率从0上升到设置的learning rate。
     """
     def __init__(self, warmup=0.1, schedule='constant'):
+        """
+        
+        :param int,float warmup: 如果warmup为int，则在该step之前，learning rate根据schedule的策略变化; 如果warmup为float，
+            如0.1, 则前10%的step是按照schedule策略调整learning rate。
+        :param str schedule: 以哪种方式调整。
+            linear: 前warmup的step上升到指定的learning rate(从Trainer中的optimizer处获取的), 后warmup的step下降到0；
+            constant前warmup的step上升到指定learning rate，后面的step保持learning rate.
+        """
         super().__init__()
         self.warmup = max(warmup, 0.)
 
@@ -790,23 +922,26 @@ class WarmupCallback(Callback):
 class SaveModelCallback(Callback):
     """
     由于Trainer在训练过程中只会保存最佳的模型， 该callback可实现多种方式的结果存储。
-    会根据训练开始的时间戳在save_dir下建立文件夹，再在文件夹下存放多个模型
-    -save_dir
-        -2019-07-03-15-06-36
-            -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_performance是性能
-            -epoch:1_step:40_{metric_key}:{evaluate_performance}.pt
-        -2019-07-03-15-10-00
-            -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_perfomance是性能
-    :param str save_dir: 将模型存放在哪个目录下，会在该目录下创建以时间戳命名的目录，并存放模型
-    :param int top: 保存dev表现top多少模型。-1为保存所有模型。
-    :param bool only_param: 是否只保存模型d饿权重。
-    :param save_on_exception: 发生exception时，是否保存一份发生exception的模型。模型名称为epoch:x_step:x_Exception:{exception_name}.
+    会根据训练开始的时间戳在save_dir下建立文件夹，再在文件夹下存放多个模型::
+        
+        -save_dir
+            -2019-07-03-15-06-36
+                -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_performance是性能
+                -epoch:1_step:40_{metric_key}:{evaluate_performance}.pt
+            -2019-07-03-15-10-00
+                -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_perfomance是性能
     """
     def __init__(self, save_dir, top=3, only_param=False, save_on_exception=False):
+        """
+        
+        :param str save_dir: 将模型存放在哪个目录下，会在该目录下创建以时间戳命名的目录，并存放模型。如果save_dir不存在将自动创建
+        :param int top: 保存dev表现top多少模型。-1为保存所有模型。
+        :param bool only_param: 是否只保存模型的权重。
+        :param save_on_exception: 发生exception时，是否保存一份发生exception的模型。模型名称为epoch:x_step:x_Exception:{exception_name}.
+        """
         super().__init__()
 
-        if not os.path.isdir(save_dir):
-            raise IsADirectoryError("{} is not a directory.".format(save_dir))
+        os.makedirs(save_dir, exist_ok=True)
         self.save_dir = save_dir
         if top < 0:
             self.top = sys.maxsize
@@ -844,35 +979,37 @@ class SaveModelCallback(Callback):
         return save_pair, delete_pair
 
     def _save_this_model(self, metric_value):
-        name = "epoch:{}_step:{}_{}:{:.6f}.pt".format(self.epoch, self.step, self.trainer.metric_key, metric_value)
+        name = "epoch-{}_step-{}_{}-{:.6f}.pt".format(self.epoch, self.step, self.trainer.metric_key, metric_value)
         save_pair, delete_pair = self._insert_into_ordered_save_models((metric_value, name))
         if save_pair:
             try:
                 _save_model(self.model, model_name=name, save_dir=self.save_dir, only_param=self.only_param)
             except Exception as e:
-                print(f"The following exception:{e} happens when save model to {self.save_dir}.")
+                logger.error(f"The following exception:{e} happens when save model to {self.save_dir}.")
         if delete_pair:
             try:
                 delete_model_path = os.path.join(self.save_dir, delete_pair[1])
                 if os.path.exists(delete_model_path):
                     os.remove(delete_model_path)
             except Exception as e:
-                print(f"Fail to delete model {name} at {self.save_dir} caused by exception:{e}.")
+                logger.error(f"Fail to delete model {name} at {self.save_dir} caused by exception:{e}.")
 
     def on_exception(self, exception):
         if self.save_on_exception:
-            name = "epoch:{}_step:{}_Exception:{}.pt".format(self.epoch, self.step, exception.__class__.__name__)
+            name = "epoch-{}_step-{}_Exception-{}.pt".format(self.epoch, self.step, exception.__class__.__name__)
             _save_model(self.model, model_name=name, save_dir=self.save_dir, only_param=self.only_param)
 
 
 class CallbackException(BaseException):
     """
    当需要通过callback跳出训练的时候可以通过抛出CallbackException并在on_exception中捕获这个值。
-
-   :param str msg: Exception的信息。
    """
     
     def __init__(self, msg):
+        """
+        
+        :param str msg: Exception的信息。
+        """
         super(CallbackException, self).__init__(msg)
 
 
@@ -884,3 +1021,79 @@ class EarlyStopError(CallbackException):
     
     def __init__(self, msg):
         super(EarlyStopError, self).__init__(msg)
+
+
+class EchoCallback(Callback):
+    """
+    用于测试分布式训练
+    
+    """
+    def __init__(self, name, out=sys.stdout):
+        super(EchoCallback, self).__init__()
+        self.name = name
+        self.out = out  # deprecated
+
+    def __getattribute__(self, item):
+        if item.startswith('on_'):
+            logger.info('{}.{} has been called at pid: {}'.format(self.name, item, os.getpid()))
+        return super(EchoCallback, self).__getattribute__(item)
+
+
+class _TesterCallback(Callback):
+    def __init__(self, data, model, metrics, metric_key=None, batch_size=16, num_workers=None):
+        super(_TesterCallback, self).__init__()
+        if hasattr(model, 'module'):
+            # for data parallel model
+            model = model.module
+        self.tester = Tester(data, model,
+                             metrics=metrics, batch_size=batch_size,
+                             num_workers=num_workers, verbose=0)
+        if metric_key is not None:
+            self.metric_key, self.increase_better = self._parse_metric_key(metric_key)
+        else:
+            self.metric_key = None
+            self.increase_better = True
+        self.score = None
+
+    def on_valid_begin(self):
+        cur_score = self.tester.test()
+        eval_str = "Evaluation at Epoch {}/{}. Step:{}/{}. - {}".format(
+                    self.epoch, self.n_epochs, self.step, self.n_steps,
+                    self.tester._format_eval_results(cur_score))
+        self.logger.info(eval_str)
+        is_better = self.compare_better(cur_score)
+        if is_better:
+            self.score = cur_score
+        return cur_score, is_better
+
+    @staticmethod
+    def _get_score(metric_dict, key):
+        for metric in metric_dict.items():
+            if key in metric:
+                return metric[key]
+        return None
+
+    @staticmethod
+    def _parse_metric_key(metric_key):
+        # parse metric_key
+        # increase_better is True. It means the exp result gets better if the indicator increases.
+        # It is true by default.
+        increase_better = False if metric_key[0] == "-" else True
+        metric_key = metric_key[1:] if metric_key[0] == "+" or metric_key[0] == "-" else metric_key
+        return metric_key, increase_better
+
+    def compare_better(self, a):
+        if self.score is None:
+            return True
+        if self.metric_key is None:
+            metric_key = list(list(self.score.values())[0].keys())[0]
+            self.metric_key, self.increase_better = self._parse_metric_key(metric_key)
+        k = self.metric_key
+        score = self._get_score(self.score, k)
+        new_score = self._get_score(a, k)
+        if score is None or new_score is None:
+            return False
+        if self.increase_better:
+            return score <= new_score
+        else:
+            return score >= new_score

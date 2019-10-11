@@ -1,3 +1,7 @@
+"""
+.. todo::
+    doc
+"""
 __all__ = [
     "ESIM"
 ]
@@ -5,34 +9,38 @@ __all__ = [
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from torch.nn import CrossEntropyLoss
 
 from .base_model import BaseModel
-from ..embeddings.embedding import TokenEmbedding
 from ..core.const import Const
 from ..core.utils import seq_len_to_mask
+from ..embeddings.embedding import TokenEmbedding, Embedding
+from ..modules.encoder import BiAttention
 
 
 class ESIM(BaseModel):
     """
-    别名：:class:`fastNLP.models.ESIM`  :class:`fastNLP.models.snli.ESIM`
-
     ESIM model的一个PyTorch实现
     论文参见： https://arxiv.org/pdf/1609.06038.pdf
 
-    :param fastNLP.TokenEmbedding init_embedding: 初始化的TokenEmbedding
-    :param int hidden_size: 隐藏层大小，默认值为Embedding的维度
-    :param int num_labels: 目标标签种类数量，默认值为3
-    :param float dropout_rate: dropout的比率，默认值为0.3
-    :param float dropout_embed: 对Embedding的dropout比率，默认值为0.1
     """
 
-    def __init__(self, init_embedding: TokenEmbedding, hidden_size=None, num_labels=3, dropout_rate=0.3,
+    def __init__(self, embed, hidden_size=None, num_labels=3, dropout_rate=0.3,
                  dropout_embed=0.1):
+        """
+        
+        :param embed: 初始化的Embedding
+        :param int hidden_size: 隐藏层大小，默认值为Embedding的维度
+        :param int num_labels: 目标标签种类数量，默认值为3
+        :param float dropout_rate: dropout的比率，默认值为0.3
+        :param float dropout_embed: 对Embedding的dropout比率，默认值为0.1
+        """
         super(ESIM, self).__init__()
 
-        self.embedding = init_embedding
+        if isinstance(embed, TokenEmbedding) or isinstance(embed, Embedding):
+            self.embedding = embed
+        else:
+            self.embedding = Embedding(embed)
         self.dropout_embed = EmbedDropout(p=dropout_embed)
         if hidden_size is None:
             hidden_size = self.embedding.embed_size
@@ -43,7 +51,7 @@ class ESIM(BaseModel):
                                        nn.Linear(8 * hidden_size, hidden_size),
                                        nn.ReLU())
         nn.init.xavier_uniform_(self.interfere[1].weight.data)
-        self.bi_attention = SoftmaxAttention()
+        self.bi_attention = BiAttention()
 
         self.rnn_high = BiRNN(self.embedding.embed_size, hidden_size, dropout_rate=dropout_rate)
         # self.rnn_high = LSTM(hidden_size, hidden_size, dropout=dropout_rate, bidirectional=True,)
@@ -167,48 +175,3 @@ class BiRNN(nn.Module):
             output = torch.cat([output, padding], 1)
         return output
 
-
-def masked_softmax(tensor, mask):
-    tensor_shape = tensor.size()
-    reshaped_tensor = tensor.view(-1, tensor_shape[-1])
-
-    # Reshape the mask so it matches the size of the input tensor.
-    while mask.dim() < tensor.dim():
-        mask = mask.unsqueeze(1)
-    mask = mask.expand_as(tensor).contiguous().float()
-    reshaped_mask = mask.view(-1, mask.size()[-1])
-    result = F.softmax(reshaped_tensor * reshaped_mask, dim=-1)
-    result = result * reshaped_mask
-    # 1e-13 is added to avoid divisions by zero.
-    result = result / (result.sum(dim=-1, keepdim=True) + 1e-13)
-    return result.view(*tensor_shape)
-
-
-def weighted_sum(tensor, weights, mask):
-    w_sum = weights.bmm(tensor)
-    while mask.dim() < w_sum.dim():
-        mask = mask.unsqueeze(1)
-    mask = mask.transpose(-1, -2)
-    mask = mask.expand_as(w_sum).contiguous().float()
-    return w_sum * mask
-
-
-class SoftmaxAttention(nn.Module):
-
-    def forward(self, premise_batch, premise_mask, hypothesis_batch, hypothesis_mask):
-        similarity_matrix = premise_batch.bmm(hypothesis_batch.transpose(2, 1)
-                                              .contiguous())
-
-        prem_hyp_attn = masked_softmax(similarity_matrix, hypothesis_mask)
-        hyp_prem_attn = masked_softmax(similarity_matrix.transpose(1, 2)
-                                       .contiguous(),
-                                       premise_mask)
-
-        attended_premises = weighted_sum(hypothesis_batch,
-                                         prem_hyp_attn,
-                                         premise_mask)
-        attended_hypotheses = weighted_sum(premise_batch,
-                                           hyp_prem_attn,
-                                           hypothesis_mask)
-
-        return attended_premises, attended_hypotheses

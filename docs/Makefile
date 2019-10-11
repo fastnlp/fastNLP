@@ -14,13 +14,13 @@ help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 apidoc:
-	$(SPHINXAPIDOC) -efM -o source ../$(SPHINXPROJ)
+	$(SPHINXAPIDOC) -efM -o source ../$(SPHINXPROJ) && python3 format.py
 
 server:
 	cd build/html && python -m http.server
 
 dev:
-	rm -rf build/html && make html && make server
+	rm -rf build && make html && make server
 
 .PHONY: help Makefile
 

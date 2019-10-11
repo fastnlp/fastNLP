@@ -7,10 +7,16 @@ from fastNLP import AccuracyMetric
 from fastNLP.core.metrics import _pred_topk, _accuracy_topk
 from fastNLP.core.vocabulary import Vocabulary
 from collections import Counter
-from fastNLP.core.metrics import SpanFPreRecMetric
+from fastNLP.core.metrics import SpanFPreRecMetric, CMRC2018Metric
 
 
 def _generate_tags(encoding_type, number_labels=4):
+    """
+
+    :param encoding_type: 例如BIOES, BMES, BIO等
+    :param number_labels: 多少个label，大于1
+    :return:
+    """
     vocab = {}
     for i in range(number_labels):
         label = str(i)
@@ -184,7 +190,7 @@ class TestAccuracyMetric(unittest.TestCase):
         self.assertDictEqual(metric.get_metric(), {'acc': 1.})
 
 
-class SpanF1PreRecMetric(unittest.TestCase):
+class SpanFPreRecMetricTest(unittest.TestCase):
     def test_case1(self):
         from fastNLP.core.metrics import _bmes_tag_to_spans
         from fastNLP.core.metrics import _bio_tag_to_spans
@@ -338,6 +344,97 @@ class SpanF1PreRecMetric(unittest.TestCase):
         for key, value in expected_metric.items():
             self.assertAlmostEqual(value, metric_value[key], places=5)
 
+    def test_auto_encoding_type_infer(self):
+        #  检查是否可以自动check encode的类型
+        vocabs = {}
+        import random
+        for encoding_type in ['bio', 'bioes', 'bmeso']:
+            vocab = Vocabulary(unknown=None, padding=None)
+            for i in range(random.randint(10, 100)):
+                label = str(random.randint(1, 10))
+                for tag in encoding_type:
+                    if tag!='o':
+                        vocab.add_word(f'{tag}-{label}')
+                    else:
+                        vocab.add_word('o')
+            vocabs[encoding_type] = vocab
+        for e in ['bio', 'bioes', 'bmeso']:
+            with self.subTest(e=e):
+                metric = SpanFPreRecMetric(tag_vocab=vocabs[e])
+                assert metric.encoding_type == e
+
+        bmes_vocab = _generate_tags('bmes')
+        vocab = Vocabulary()
+        for tag, index in bmes_vocab.items():
+            vocab.add_word(tag)
+        metric = SpanFPreRecMetric(vocab)
+        assert metric.encoding_type == 'bmes'
+
+        # 一些无法check的情况
+        vocab = Vocabulary()
+        for i in range(10):
+            vocab.add_word(str(i))
+        with self.assertRaises(Exception):
+            metric = SpanFPreRecMetric(vocab)
+
+    def test_encoding_type(self):
+        # 检查传入的tag_vocab与encoding_type不符合时，是否会报错
+        vocabs = {}
+        import random
+        from itertools import product
+        for encoding_type in ['bio', 'bioes', 'bmeso']:
+            vocab = Vocabulary(unknown=None, padding=None)
+            for i in range(random.randint(10, 100)):
+                label = str(random.randint(1, 10))
+                for tag in encoding_type:
+                    if tag!='o':
+                        vocab.add_word(f'{tag}-{label}')
+                    else:
+                        vocab.add_word('o')
+            vocabs[encoding_type] = vocab
+        for e1, e2 in product(['bio', 'bioes', 'bmeso'], ['bio', 'bioes', 'bmeso']):
+            with self.subTest(e1=e1, e2=e2):
+                if e1==e2:
+                    metric = SpanFPreRecMetric(vocabs[e1], encoding_type=e2)
+                else:
+                    s2 = set(e2)
+                    s2.update(set(e1))
+                    if s2==set(e2):
+                        continue
+                    with self.assertRaises(AssertionError):
+                        metric = SpanFPreRecMetric(vocabs[e1], encoding_type=e2)
+        for encoding_type in ['bio', 'bioes', 'bmeso']:
+            with self.assertRaises(AssertionError):
+                metric = SpanFPreRecMetric(vocabs[encoding_type], encoding_type='bmes')
+
+        with self.assertWarns(Warning):
+            vocab = Vocabulary(unknown=None, padding=None).add_word_lst(list('bmes'))
+            metric = SpanFPreRecMetric(vocab, encoding_type='bmeso')
+            vocab = Vocabulary().add_word_lst(list('bmes'))
+            metric = SpanFPreRecMetric(vocab, encoding_type='bmeso')
+
+
+class TestCMRC2018Metric(unittest.TestCase):
+    def test_case1(self):
+        # 测试能否正确计算
+        import torch
+        metric = CMRC2018Metric()
+
+        raw_chars = [list("abcsdef"), list("123456s789")]
+        context_len = torch.LongTensor([3, 6])
+        answers = [["abc", "abc", "abc"], ["12", "12", "12"]]
+        pred_start = torch.randn(2, max(map(len, raw_chars)))
+        pred_end = torch.randn(2, max(map(len, raw_chars)))
+        pred_start[0, 0] = 1000  # 正好是abc
+        pred_end[0, 2] = 1000
+        pred_start[1, 1] = 1000  # 取出234
+        pred_end[1, 3] = 1000
+
+        metric.evaluate(answers, raw_chars, context_len, pred_start, pred_end)
+
+        eval_res = metric.get_metric()
+        self.assertDictEqual(eval_res, {'f1': 70.0, 'em': 50.0})
+
 
 class TestUsefulFunctions(unittest.TestCase):
     # 测试metrics.py中一些看上去挺有用的函数
@@ -347,3 +444,6 @@ class TestUsefulFunctions(unittest.TestCase):
         _ = _pred_topk(np.random.randint(0, 3, size=(10, 1)))
         
         # 跑通即可
+
+
+

@@ -1,9 +1,11 @@
 """
 utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户可以使用的是 :func:`cache_results` 修饰器。
 """
+
 __all__ = [
     "cache_results",
     "seq_len_to_mask",
+    "get_seq_len"
 ]
 
 import _pickle
@@ -11,11 +13,16 @@ import inspect
 import os
 import warnings
 from collections import Counter, namedtuple
-
 import numpy as np
 import torch
 import torch.nn as nn
 from typing import List
+from ._logger import logger
+from prettytable import PrettyTable
+try:
+    from apex import amp
+except:
+    amp = None
 
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])
@@ -23,27 +30,27 @@ _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'require
 
 class Option(dict):
     """a dict can treat keys as attributes"""
-    
+
     def __getattr__(self, item):
         try:
             return self.__getitem__(item)
         except KeyError:
             raise AttributeError(item)
-    
+
     def __setattr__(self, key, value):
         if key.startswith('__') and key.endswith('__'):
             raise AttributeError(key)
         self.__setitem__(key, value)
-    
+
     def __delattr__(self, item):
         try:
             self.pop(item)
         except KeyError:
             raise AttributeError(item)
-    
+
     def __getstate__(self):
         return self
-    
+
     def __setstate__(self, state):
         self.update(state)
 
@@ -62,11 +69,8 @@ def _prepare_cache_filepath(filepath):
         os.makedirs(cache_dir)
 
 
-#  TODO 可以保存下缓存时的参数，如果load的时候发现参数不一致，发出警告。
 def cache_results(_cache_fp, _refresh=False, _verbose=1):
     """
-    别名：:class:`fastNLP.cache_results` :class:`fastNLP.core.uitls.cache_results`
-
     cache_results是fastNLP中用于cache数据的装饰器。通过下面的例子看一下如何使用::
 
         import time
@@ -113,13 +117,13 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
     :param int _verbose: 是否打印cache的信息。
     :return:
     """
-    
+
     def wrapper_(func):
         signature = inspect.signature(func)
         for key, _ in signature.parameters.items():
             if key in ('_cache_fp', '_refresh', '_verbose'):
                 raise RuntimeError("The function decorated by cache_results cannot have keyword `{}`.".format(key))
-        
+
         def wrapper(*args, **kwargs):
             if '_cache_fp' in kwargs:
                 cache_filepath = kwargs.pop('_cache_fp')
@@ -137,16 +141,16 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
             else:
                 verbose = _verbose
             refresh_flag = True
-            
+
             if cache_filepath is not None and refresh is False:
                 # load data
                 if os.path.exists(cache_filepath):
                     with open(cache_filepath, 'rb') as f:
                         results = _pickle.load(f)
                     if verbose == 1:
-                        print("Read cache from {}.".format(cache_filepath))
+                        logger.info("Read cache from {}.".format(cache_filepath))
                     refresh_flag = False
-            
+
             if refresh_flag:
                 results = func(*args, **kwargs)
                 if cache_filepath is not None:
@@ -155,12 +159,12 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
                     _prepare_cache_filepath(cache_filepath)
                     with open(cache_filepath, 'wb') as f:
                         _pickle.dump(results, f)
-                    print("Save cache to {}.".format(cache_filepath))
-            
+                    logger.info("Save cache to {}.".format(cache_filepath))
+
             return results
-        
+
         return wrapper
-    
+
     return wrapper_
 
 
@@ -189,49 +193,6 @@ def _save_model(model, model_name, save_dir, only_param=False):
         model.to(_model_device)
 
 
-# def save_pickle(obj, pickle_path, file_name):
-#     """Save an object into a pickle file.
-#
-#     :param obj: an object
-#     :param pickle_path: str, the directory where the pickle file is to be saved
-#     :param file_name: str, the name of the pickle file. In general, it should be ended by "pkl".
-#     """
-#     if not os.path.exists(pickle_path):
-#         os.mkdir(pickle_path)
-#         print("make dir {} before saving pickle file".format(pickle_path))
-#     with open(os.path.join(pickle_path, file_name), "wb") as f:
-#         _pickle.dump(obj, f)
-#     print("{} saved in {}".format(file_name, pickle_path))
-#
-#
-# def load_pickle(pickle_path, file_name):
-#     """Load an object from a given pickle file.
-#
-#     :param pickle_path: str, the directory where the pickle file is.
-#     :param file_name: str, the name of the pickle file.
-#     :return obj: an object stored in the pickle
-#     """
-#     with open(os.path.join(pickle_path, file_name), "rb") as f:
-#         obj = _pickle.load(f)
-#     print("{} loaded from {}".format(file_name, pickle_path))
-#     return obj
-#
-#
-# def pickle_exist(pickle_path, pickle_name):
-#     """Check if a given pickle file exists in the directory.
-#
-#     :param pickle_path: the directory of target pickle file
-#     :param pickle_name: the filename of target pickle file
-#     :return: True if file exists else False
-#     """
-#     if not os.path.exists(pickle_path):
-#         os.makedirs(pickle_path)
-#     file_name = os.path.join(pickle_path, pickle_name)
-#     if os.path.exists(file_name):
-#         return True
-#     else:
-#         return False
-
 def _move_model_to_device(model, device):
     """
     将model移动到device
@@ -254,9 +215,9 @@ def _move_model_to_device(model, device):
 
     :return: torch.nn.DataParallel or torch.nn.Module
     """
-    if isinstance(model, torch.nn.parallel.DistributedDataParallel):
-        raise RuntimeError("model of `torch.nn.parallel.DistributedDataParallel` is not supported right now.")
-    
+    # if isinstance(model, torch.nn.parallel.DistributedDataParallel):
+    #     raise RuntimeError("model of `torch.nn.parallel.DistributedDataParallel` is not supported right now.")
+
     if device is None:
         if isinstance(model, torch.nn.DataParallel):
             model.cuda()
@@ -265,10 +226,10 @@ def _move_model_to_device(model, device):
         if not torch.cuda.is_available() and (
                 device != 'cpu' or (isinstance(device, torch.device) and device.type != 'cpu')):
             raise ValueError("There is no usable gpu. set `device` as `cpu` or `None`.")
-    
+
     if isinstance(model, torch.nn.DataParallel):
         raise RuntimeError("When model is `torch.nn.DataParallel`, the device has to be `None`.")
-    
+
     if isinstance(device, int):
         assert device > -1, "device can only be non-negative integer"
         assert torch.cuda.device_count() > device, "Only has {} gpus, cannot use device {}.".format(
@@ -312,7 +273,7 @@ def _get_model_device(model):
     """
     # TODO 这个函数存在一定的风险，因为同一个模型可能存在某些parameter不在显卡中，比如BertEmbedding. 或者跨显卡
     assert isinstance(model, nn.Module)
-    
+
     parameters = list(model.parameters())
     if len(parameters) == 0:
         return None
@@ -352,7 +313,6 @@ def _map_args(maps: dict, **kwargs):
             output.update({name: val})
     for keys in maps.keys():
         if keys not in output.keys():
-            # TODO: add UNUSED warning.
             pass
     return output
 
@@ -473,10 +433,10 @@ def _move_dict_value_to_device(*args, device: torch.device, non_blocking=False):
     """
     if not torch.cuda.is_available():
         return
-    
+
     if not isinstance(device, torch.device):
         raise TypeError(f"device must be `torch.device`, got `{type(device)}`")
-    
+
     for arg in args:
         if isinstance(arg, dict):
             for key, value in arg.items():
@@ -491,10 +451,10 @@ class _CheckError(Exception):
 
     _CheckError. Used in losses.LossBase, metrics.MetricBase.
     """
-    
+
     def __init__(self, check_res: _CheckRes, func_signature: str):
         errs = [f'Problems occurred when calling `{func_signature}`']
-        
+
         if check_res.varargs:
             errs.append(f"\tvarargs: {check_res.varargs}(Does not support pass positional arguments, please delete it)")
         if check_res.missing:
@@ -503,9 +463,9 @@ class _CheckError(Exception):
             errs.append(f"\tduplicated param: {check_res.duplicated}")
         if check_res.unused:
             errs.append(f"\tunused param: {check_res.unused}")
-        
+
         Exception.__init__(self, '\n'.join(errs))
-        
+
         self.check_res = check_res
         self.func_signature = func_signature
 
@@ -525,7 +485,7 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
     # if check_res.varargs:
     #     errs.append(f"\tvarargs: *{check_res.varargs}")
     #     suggestions.append(f"Does not support pass positional arguments, please delete *{check_res.varargs}.")
-    
+
     if check_res.unused:
         for _unused in check_res.unused:
             if _unused in target_dict:
@@ -536,7 +496,7 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
             unuseds.append(f"\tunused field: {_unused_field}")
         if _unused_param:
             unuseds.append(f"\tunused param: {_unused_param}")  # output from predict or forward
-    
+
     module_name = func_signature.split('.')[0]
     if check_res.missing:
         errs.append(f"\tmissing param: {check_res.missing}")
@@ -557,7 +517,7 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
                     mapped_missing.append(_miss)
             else:
                 unmapped_missing.append(_miss)
-        
+
         for _miss in mapped_missing + unmapped_missing:
             if _miss in dataset:
                 suggestions.append(f"Set `{_miss}` as target.")
@@ -570,29 +530,17 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
                 else:
                     _tmp = f'Provide `{_miss}` in DataSet or output of {prev_func_signature}.'
                 suggestions.append(_tmp)
-        # for _miss in unmapped_missing:
-        #     if _miss in dataset:
-        #         suggestions.append(f"Set `{_miss}` as target.")
-        #     else:
-        #         _tmp = ''
-        #         if check_res.unused:
-        #             _tmp = f"Specify your assignment for `{input_func_map.get(_miss, _miss)}` when initialize {module_name}."
-        #         if _tmp:
-        #             _tmp += f' Or provide `{_miss}` in DataSet or output of {prev_func_signature}.'
-        #         else:
-        #             _tmp = f'Provide `{_miss}` in output of {prev_func_signature} or DataSet.'
-        #         suggestions.append(_tmp)
-    
+
     if check_res.duplicated:
         errs.append(f"\tduplicated param: {check_res.duplicated}.")
         suggestions.append(f"Delete {check_res.duplicated} in the output of "
                            f"{prev_func_signature} or do not set {check_res.duplicated} as targets. ")
-    
+
     if len(errs) > 0:
         errs.extend(unuseds)
     elif check_level == STRICT_CHECK_LEVEL:
         errs.extend(unuseds)
-    
+
     if len(errs) > 0:
         errs.insert(0, f'Problems occurred when calling {func_signature}')
         sugg_str = ""
@@ -619,11 +567,11 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
 def _check_forward_error(forward_func, batch_x, dataset, check_level):
     check_res = _check_arg_dict_list(forward_func, batch_x)
     func_signature = _get_func_signature(forward_func)
-    
+
     errs = []
     suggestions = []
     _unused = []
-    
+
     # if check_res.varargs:
     #     errs.append(f"\tvarargs: {check_res.varargs}")
     #     suggestions.append(f"Does not support pass positional arguments, please delete *{check_res.varargs}.")
@@ -644,14 +592,14 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
             #     _tmp += f"Or you might find it in `unused field:`, you can use DataSet.rename_field() to " \
             #             f"rename the field in `unused field:`."
             suggestions.append(_tmp)
-    
+
     if check_res.unused:
         _unused = [f"\tunused field: {check_res.unused}"]
         if len(errs) > 0:
             errs.extend(_unused)
         elif check_level == STRICT_CHECK_LEVEL:
             errs.extend(_unused)
-    
+
     if len(errs) > 0:
         errs.insert(0, f'Problems occurred when calling {func_signature}')
         sugg_str = ""
@@ -699,7 +647,7 @@ def seq_len_to_mask(seq_len, max_len=None):
         max_len = int(max_len) if max_len else int(seq_len.max())
         broad_cast_seq_len = np.tile(np.arange(max_len), (len(seq_len), 1))
         mask = broad_cast_seq_len < seq_len.reshape(-1, 1)
-    
+
     elif isinstance(seq_len, torch.Tensor):
         assert seq_len.dim() == 1, f"seq_len can only have one dimension, got {seq_len.dim() == 1}."
         batch_size = seq_len.size(0)
@@ -708,7 +656,7 @@ def seq_len_to_mask(seq_len, max_len=None):
         mask = broad_cast_seq_len.lt(seq_len.unsqueeze(1))
     else:
         raise TypeError("Only support 1-d numpy.ndarray or 1-d torch.Tensor.")
-    
+
     return mask
 
 
@@ -716,25 +664,25 @@ class _pseudo_tqdm:
     """
     当无法引入tqdm，或者Trainer中设置use_tqdm为false的时候，用该方法打印数据
     """
-    
+
     def __init__(self, **kwargs):
-        pass
-    
+        self.logger = logger
+
     def write(self, info):
-        print(info)
-    
+        self.logger.info(info)
+
     def set_postfix_str(self, info):
-        print(info)
-    
+        self.logger.info(info)
+
     def __getattr__(self, item):
         def pass_func(*args, **kwargs):
             pass
-        
+
         return pass_func
-    
+
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         del self
 
@@ -788,3 +736,95 @@ def iob2bioes(tags: List[str]) -> List[str]:
             else:
                 raise TypeError("Invalid IOB format.")
     return new_tags
+
+
+def _is_iterable(value):
+    # 检查是否是iterable的, duck typing
+    try:
+        iter(value)
+        return True
+    except BaseException as e:
+        return False
+
+
+def get_seq_len(words, pad_value=0):
+    """
+    给定batch_size x max_len的words矩阵，返回句子长度
+
+    :param words: batch_size x max_len
+    :return: (batch_size,)
+    """
+    mask = words.ne(pad_value)
+    return mask.sum(dim=-1)
+
+
+def pretty_table_printer(dataset_or_ins) -> PrettyTable:
+    """
+    :param dataset_or_ins: 传入一个dataSet或者instance
+    ins = Instance(field_1=[1, 1, 1], field_2=[2, 2, 2], field_3=["a", "b", "c"])
+    +-----------+-----------+-----------------+
+    |  field_1  |  field_2  |     field_3     |
+    +-----------+-----------+-----------------+
+    | [1, 1, 1] | [2, 2, 2] | ['a', 'b', 'c'] |
+    +-----------+-----------+-----------------+
+    :return: 以 pretty table的形式返回根据terminal大小进行自动截断
+    """
+    x = PrettyTable()
+    try:
+        sz = os.get_terminal_size()
+        column = sz.columns
+        row = sz.lines
+    except OSError:
+        column = 144
+        row = 11
+
+    if type(dataset_or_ins).__name__ == "DataSet":
+        x.field_names = list(dataset_or_ins.field_arrays.keys())
+        c_size = len(x.field_names)
+        for ins in dataset_or_ins:
+            x.add_row([sub_column(ins[k], column, c_size, k) for k in x.field_names])
+            row -= 1
+            if row < 0:
+                x.add_row(["..." for _ in range(c_size)])
+                break
+    elif type(dataset_or_ins).__name__ == "Instance":
+        x.field_names = list(dataset_or_ins.fields.keys())
+        c_size = len(x.field_names)
+        x.add_row([sub_column(dataset_or_ins[k], column, c_size, k) for k in x.field_names])
+
+    else:
+        raise Exception("only accept  DataSet and Instance")
+    x.align = "l"
+
+    return x
+
+
+def sub_column(string: str, c: int, c_size: int, title: str) -> str:
+    """
+    :param string: 要被截断的字符串
+    :param c: 命令行列数
+    :param c_size: instance或dataset field数
+    :param title: 列名
+    :return: 对一个过长的列进行截断的结果
+    """
+    avg = max(int(c / c_size / 2), len(title))
+    string = str(string)
+    res = ""
+    counter = 0
+    for char in string:
+        if ord(char) > 255:
+            counter += 2
+        else:
+            counter += 1
+        res += char
+        if counter > avg:
+            res = res + "..."
+            break
+    return res
+
+
+def _check_fp16():
+    if amp is None:
+        raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
+    if not torch.backends.cudnn.enabled:
+        raise RuntimeError("Amp requires cudnn backend to be enabled.")

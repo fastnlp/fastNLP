@@ -1,11 +1,9 @@
 # 这个模型需要在pytorch=0.4下运行，weight_drop不支持1.0
 
-# 首先需要加入以下的路径到环境变量，因为当前只对内部测试开放，所以需要手动申明一下路径
-import os
-os.environ['FASTNLP_BASE_URL'] = 'http://10.141.222.118:8888/file/download/'
-os.environ['FASTNLP_CACHE_DIR'] = '/remote-home/hyan01/fastnlp_caches'
+import sys
+sys.path.append('../..')
 
-from fastNLP.io.data_loader import IMDBLoader
+from fastNLP.io.pipe.classification import IMDBPipe
 from fastNLP.embeddings import StaticEmbedding
 from model.awd_lstm import AWDLSTMSentiment
 
@@ -32,15 +30,14 @@ opt=Config()
 
 
 # load data
-dataloader=IMDBLoader()
-datainfo=dataloader.process(opt.datapath)
+data_bundle=IMDBPipe.process_from_file(opt.datapath)
 
-# print(datainfo.datasets["train"])
-# print(datainfo)
+# print(data_bundle.datasets["train"])
+# print(data_bundle)
 
 
 # define model
-vocab=datainfo.vocabs['words']
+vocab=data_bundle.vocabs['words']
 embed = StaticEmbedding(vocab, model_dir_or_name='en-glove-840b-300', requires_grad=True)
 model=AWDLSTMSentiment(init_embed=embed, num_classes=opt.num_classes, hidden_dim=opt.hidden_dim, num_layers=opt.num_layers, nfc=opt.nfc, wdrop=opt.wdrop)
 
@@ -52,11 +49,11 @@ optimizer= Adam([param for param in model.parameters() if param.requires_grad==T
 
 
 def train(datainfo, model, optimizer, loss, metrics, opt):
-    trainer = Trainer(datainfo.datasets['train'], model, optimizer=optimizer, loss=loss,
-                        metrics=metrics, dev_data=datainfo.datasets['test'], device=0, check_code_level=-1,
+    trainer = Trainer(data_bundle.datasets['train'], model, optimizer=optimizer, loss=loss,
+                        metrics=metrics, dev_data=data_bundle.datasets['test'], device=0, check_code_level=-1,
                         n_epochs=opt.train_epoch, save_path=opt.save_model_path)
     trainer.train()
 
 
 if __name__ == "__main__":
-    train(datainfo, model, optimizer, loss, metrics, opt)
+    train(data_bundle, model, optimizer, loss, metrics, opt)

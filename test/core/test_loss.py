@@ -4,7 +4,6 @@ import torch
 import torch.nn.functional as F
 
 import fastNLP as loss
-from fastNLP.core.losses import squash, unpad
 
 
 class TestLoss(unittest.TestCase):
@@ -73,15 +72,3 @@ class TestLosserError(unittest.TestCase):
         
         with self.assertRaises(Exception):
             ans = l1({"my_predict": a}, {"truth": b, "my": a})
-
-
-class TestLossUtils(unittest.TestCase):
-    def test_squash(self):
-        a, b = squash(torch.randn(3, 5), torch.randn(3, 5))
-        self.assertEqual(tuple(a.size()), (3, 5))
-        self.assertEqual(tuple(b.size()), (15,))
-    
-    def test_unpad(self):
-        a, b = unpad(torch.randn(5, 8, 3), torch.randn(5, 8))
-        self.assertEqual(tuple(a.size()), (5, 8, 3))
-        self.assertEqual(tuple(b.size()), (5, 8))

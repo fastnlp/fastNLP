@@ -8,6 +8,7 @@ from fastNLP.models.base_model import BaseModel
 from fastNLP.modules.encoder.variational_rnn import VarLSTM
 from reproduction.coreference_resolution.model import preprocess
 from fastNLP.io.embed_loader import EmbedLoader
+from fastNLP.core.const import Const
 import random
 
 # 设置seed
@@ -415,7 +416,7 @@ class Model(BaseModel):
         return predicted_clusters
 
 
-    def forward(self, sentences, doc_np, speaker_ids_np, genre, char_index, seq_len):
+    def forward(self, words1 , words2, words3, words4, chars, seq_len):
         """
         实际输入都是tensor
         :param sentences: 句子，被fastNLP转化成了numpy，
@@ -426,6 +427,14 @@ class Model(BaseModel):
         :param seq_len: 被fastNLP转化成了Tensor
         :return:
         """
+
+        sentences = words3
+        doc_np = words4
+        speaker_ids_np = words2
+        genre = words1
+        char_index = chars
+
+
         # change for fastNLP
         sentences = sentences[0].tolist()
         doc_tensor = doc_np[0]

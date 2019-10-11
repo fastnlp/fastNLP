@@ -1,0 +1,69 @@
+坏      O
+男      B-PER.NOM
+人      I-PER.NOM
+
+男      B-PER.NOM
+人      I-PER.NOM
+帮      I-PER.NOM
+
+
+不      O
+
+南      B-GPE.NAM
+都      I-GPE.NAM
+
+南      B-GPE.NAM
+方      I-GPE.NAM
+都      I-GPE.NAM
+市      I-GPE.NAM
+
+的      O
+
+那      B-LOC.NOM
+座      I-LOC.NOM
+
+来      O
+
+学      B-ORG.NOM
+校      I-ORG.NOM
+
+的      O
+
+卫      B-ORG.NAM
+生      I-ORG.NAM
+部      I-ORG.NAM
+
+台      B-GPE.NAM
+灣      I-GPE.NAM
+
+火      B-LOC.NAM
+焰      I-LOC.NAM
+山      I-LOC.NAM
+
+的      O
+
+成       O
+李       B-PER.NAM
+力       I-PER.NAM
+帆       I-PER.NAM
+
+我       O
+
+南	B-GPE.NAM
+都	I-GPE.NAM
+
+深	B-GPE.NAM
+圳	I-GPE.NAM
+
+一	O
+个	O
+
+国	B-GPE.NOM
+家	I-GPE.NOM
+
+以	O
+
+民	B-PER.NOM
+
+为	O
+本	O

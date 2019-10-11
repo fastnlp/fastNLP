@@ -24,9 +24,9 @@ copyright = '2018, xpqiu'
 author = 'xpqiu'
 
 # The short X.Y version
-version = '0.4.5'
+version = '0.5.0'
 # The full version, including alpha/beta/rc tags
-release = '0.4.5'
+release = '0.5.0'
 
 # -- General configuration ---------------------------------------------------
 
@@ -48,12 +48,14 @@ extensions = [
 autodoc_default_options = {
     'member-order': 'bysource',
     'special-members': '__init__',
-    'undoc-members': True,
+    'undoc-members': False,
 }
+
+autoclass_content = "class"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
-
+# template_bridge
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
@@ -113,7 +115,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'fastNLPdoc'
+htmlhelp_basename = 'fastNLP doc'
 
 # -- Options for LaTeX output ------------------------------------------------
 
@@ -166,9 +168,11 @@ texinfo_documents = [
 
 # -- Extension configuration -------------------------------------------------
 def maybe_skip_member(app, what, name, obj, skip, options):
-    if name.startswith("_"):
-        return True
     if obj.__doc__ is None:
+        return True
+    if name == "__init__":
+        return False
+    if name.startswith("_"):
         return True
     return False
 

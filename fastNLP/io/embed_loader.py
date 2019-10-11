@@ -1,16 +1,20 @@
+"""
+.. todo::
+    doc
+"""
 __all__ = [
     "EmbedLoader",
     "EmbeddingOption",
 ]
 
+import logging
 import os
 import warnings
 
 import numpy as np
 
-from ..core.vocabulary import Vocabulary
-from .base_loader import BaseLoader
 from ..core.utils import Option
+from ..core.vocabulary import Vocabulary
 
 
 class EmbeddingOption(Option):
@@ -27,10 +31,8 @@ class EmbeddingOption(Option):
         )
 
 
-class EmbedLoader(BaseLoader):
+class EmbedLoader:
     """
-    别名：:class:`fastNLP.io.EmbedLoader` :class:`fastNLP.io.embed_loader.EmbedLoader`
-
     用于读取预训练的embedding, 读取结果可直接载入为模型参数。
     """
     
@@ -79,9 +81,9 @@ class EmbedLoader(BaseLoader):
                     word = ''.join(parts[:-dim])
                     nums = parts[-dim:]
                     # 对齐unk与pad
-                    if word==padding and vocab.padding is not None:
+                    if word == padding and vocab.padding is not None:
                         word = vocab.padding
-                    elif word==unknown and vocab.unknown is not None:
+                    elif word == unknown and vocab.unknown is not None:
                         word = vocab.unknown
                     if word in vocab:
                         index = vocab.to_index(word)
@@ -91,10 +93,10 @@ class EmbedLoader(BaseLoader):
                     if error == 'ignore':
                         warnings.warn("Error occurred at the {} line.".format(idx))
                     else:
-                        print("Error occurred at the {} line.".format(idx))
+                        logging.error("Error occurred at the {} line.".format(idx))
                         raise e
             total_hits = sum(hit_flags)
-            print("Found {} out of {} words in the pre-training embedding.".format(total_hits, len(vocab)))
+            logging.info("Found {} out of {} words in the pre-training embedding.".format(total_hits, len(vocab)))
             if init_method is None:
                 found_vectors = matrix[hit_flags]
                 if len(found_vectors) != 0:
@@ -157,7 +159,7 @@ class EmbedLoader(BaseLoader):
                         warnings.warn("Error occurred at the {} line.".format(idx))
                         pass
                     else:
-                        print("Error occurred at the {} line.".format(idx))
+                        logging.error("Error occurred at the {} line.".format(idx))
                         raise e
             if dim == -1:
                 raise RuntimeError("{} is an empty file.".format(embed_filepath))
@@ -166,7 +168,7 @@ class EmbedLoader(BaseLoader):
                 index = vocab.to_index(key)
                 matrix[index] = vec
 
-            if (unknown is not None and not found_unknown) or (padding is not None and not found_pad):
+            if ((unknown is not None) and (not found_unknown)) or ((padding is not None) and (not found_pad)):
                 start_idx = 0
                 if padding is not None:
                     start_idx += 1
@@ -175,9 +177,9 @@ class EmbedLoader(BaseLoader):
 
                 mean = np.mean(matrix[start_idx:], axis=0, keepdims=True)
                 std = np.std(matrix[start_idx:], axis=0, keepdims=True)
-                if (unknown is not None and not found_unknown):
+                if (unknown is not None) and (not found_unknown):
                     matrix[start_idx - 1] = np.random.randn(1, dim).astype(dtype) * std + mean
-                if (padding is not None and not found_pad):
+                if (padding is not None) and (not found_pad):
                     matrix[0] = np.random.randn(1, dim).astype(dtype) * std + mean
             
             if normalize:

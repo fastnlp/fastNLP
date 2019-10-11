@@ -1,10 +1,14 @@
+"""undocumented"""
+
+__all__ = []
 
 import threading
-import torch
-from torch.nn.parallel.parallel_apply import get_a_var
 
-from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
+import torch
+from torch import nn
+from torch.nn.parallel.parallel_apply import get_a_var
 from torch.nn.parallel.replicate import replicate
+from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
 
 
 def parallel_apply(modules, func_name, inputs, kwargs_tup=None, devices=None):
@@ -26,11 +30,11 @@ def parallel_apply(modules, func_name, inputs, kwargs_tup=None, devices=None):
         assert len(modules) == len(devices)
     else:
         devices = [None] * len(modules)
-
+    
     lock = threading.Lock()
     results = {}
     grad_enabled = torch.is_grad_enabled()
-
+    
     def _worker(i, module, input, kwargs, device=None):
         torch.set_grad_enabled(grad_enabled)
         if device is None:
@@ -46,20 +50,20 @@ def parallel_apply(modules, func_name, inputs, kwargs_tup=None, devices=None):
         except Exception as e:
             with lock:
                 results[i] = e
-
+    
     if len(modules) > 1:
         threads = [threading.Thread(target=_worker,
                                     args=(i, module, input, kwargs, device))
                    for i, (module, input, kwargs, device) in
                    enumerate(zip(modules, inputs, kwargs_tup, devices))]
-
+        
         for thread in threads:
             thread.start()
         for thread in threads:
             thread.join()
     else:
         _worker(0, modules[0], inputs[0], kwargs_tup[0], devices[0])
-
+    
     outputs = []
     for i in range(len(inputs)):
         output = results[i]
@@ -78,6 +82,7 @@ def _data_parallel_wrapper(func_name, device_ids, output_device):
     :param output_device: nn.DataParallel中的output_device
     :return:
     """
+    
     def wrapper(network, *inputs, **kwargs):
         inputs, kwargs = scatter_kwargs(inputs, kwargs, device_ids, dim=0)
         if len(device_ids) == 1:
@@ -85,4 +90,18 @@ def _data_parallel_wrapper(func_name, device_ids, output_device):
         replicas = replicate(network, device_ids[:len(inputs)])
         outputs = parallel_apply(replicas, func_name, inputs, kwargs, device_ids[:len(replicas)])
         return gather(outputs, output_device)
+    
     return wrapper
+
+
+def _model_contains_inner_module(model):
+    """
+
+    :param nn.Module model: 模型文件，判断是否内部包含model.module, 多用于check模型是否是nn.DataParallel,
+        nn.parallel.DistributedDataParallel。主要是在做形参匹配的时候需要使用最内部的model的function。
+    :return: bool
+    """
+    if isinstance(model, nn.Module):
+        if isinstance(model, (nn.DataParallel, nn.parallel.DistributedDataParallel)):
+            return True
+    return False

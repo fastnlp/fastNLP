@@ -12,6 +12,7 @@ __all__ = [
     
     "SeqLabeling",
     "AdvSeqLabel",
+    "BiLSTMCRF",
     
     "ESIM",
     
@@ -21,14 +22,24 @@ __all__ = [
     "STSeqCls",
     
     "BiaffineParser",
-    "GraphParser"
+    "GraphParser",
+
+    "BertForSequenceClassification",
+    "BertForSentenceMatching",
+    "BertForMultipleChoice",
+    "BertForTokenClassification",
+    "BertForQuestionAnswering"
 ]
 
 from .base_model import BaseModel
 from .bert import BertForMultipleChoice, BertForQuestionAnswering, BertForSequenceClassification, \
-    BertForTokenClassification
+    BertForTokenClassification, BertForSentenceMatching
 from .biaffine_parser import BiaffineParser, GraphParser
 from .cnn_text_classification import CNNText
-from .sequence_labeling import SeqLabeling, AdvSeqLabel
+from .sequence_labeling import SeqLabeling, AdvSeqLabel, BiLSTMCRF
 from .snli import ESIM
 from .star_transformer import StarTransEnc, STSeqCls, STNLICls, STSeqLabel
+
+import sys
+from ..doc_utils import doc_process
+doc_process(sys.modules[__name__])

@@ -1,14 +1,8 @@
-# 首先需要加入以下的路径到环境变量，因为当前只对内部测试开放，所以需要手动申明一下路径
-import os
-os.environ['FASTNLP_BASE_URL'] = 'http://10.141.222.118:8888/file/download/'
-os.environ['FASTNLP_CACHE_DIR'] = '/remote-home/hyan01/fastnlp_caches'
-
 import sys
 sys.path.append('../..')
 from fastNLP.core.const import Const as C
 import torch.nn as nn
-from fastNLP.io.data_loader import YelpLoader
-#from data.sstLoader import sst2Loader
+from fastNLP.io.pipe.classification import YelpFullPipe,YelpPolarityPipe,SST2Pipe,IMDBPipe
 from model.char_cnn import CharacterLevelCNN
 from fastNLP import CrossEntropyLoss, AccuracyMetric
 from fastNLP.core.trainer import Trainer
@@ -26,19 +20,9 @@ class Config():
     model_dir_or_name="en-base-uncased"
     embedding_grad= False,
     bert_embedding_larers= '4,-2,-1'
-    train_epoch= 50
+    train_epoch= 100
     num_classes=2
     task= "yelp_p"
-    #yelp_p
-    datapath = {"train": "/remote-home/ygwang/yelp_polarity/train.csv",
-               "test": "/remote-home/ygwang/yelp_polarity/test.csv"}
-    #IMDB
-    #datapath = {"train": "/remote-home/ygwang/IMDB_data/train.csv",
-    #           "test": "/remote-home/ygwang/IMDB_data/test.csv"}
-    # sst
-    # datapath = {"train": "/remote-home/ygwang/workspace/GLUE/SST-2/train.tsv",
-    #           "dev": "/remote-home/ygwang/workspace/GLUE/SST-2/dev.tsv"}
-
     lr=0.01
     batch_size=128
     model_size="large"
@@ -46,6 +30,8 @@ class Config():
     extra_characters=''
     max_length=1014
     weight_decay = 1e-5
+    to_lower=True
+    tokenizer = 'spacy'  # 使用spacy进行分词
 
     char_cnn_config={
         "alphabet": {
@@ -111,11 +97,36 @@ ops=Config
 ##1.task相关信息：利用dataloader载入dataInfo
 #dataloader=SST2Loader()
 #dataloader=IMDBLoader()
-dataloader=YelpLoader(fine_grained=True)
-datainfo=dataloader.process(ops.datapath,char_level_op=True,split_dev_op=False)
+# dataloader=YelpLoader(fine_grained=True)
+# datainfo=dataloader.process(ops.datapath,char_level_op=True,split_dev_op=False)
 char_vocab=ops.char_cnn_config["alphabet"]["en"]["lower"]["alphabet"]
 ops.number_of_characters=len(char_vocab)
 ops.embedding_dim=ops.number_of_characters
+
+# load data set
+if ops.task == 'yelp_p':
+    data_bundle = YelpPolarityPipe(lower=ops.to_lower, tokenizer=ops.tokenizer).process_from_file()
+elif ops.task == 'yelp_f':
+    data_bundle = YelpFullPipe(lower=ops.to_lower, tokenizer=ops.tokenizer).process_from_file()
+elif ops.task == 'imdb':
+    data_bundle = IMDBPipe(lower=ops.to_lower, tokenizer=ops.tokenizer).process_from_file()
+elif ops.task == 'sst-2':
+    data_bundle = SST2Pipe(lower=ops.to_lower, tokenizer=ops.tokenizer).process_from_file()
+else:
+    raise RuntimeError(f'NOT support {ops.task} task yet!')
+
+print(data_bundle)
+
+def wordtochar(words):
+    chars = []
+
+    #for word in words:
+        #word = word.lower()
+    for char in words:
+        chars.append(char)
+        #chars.append('')
+    #chars.pop()
+    return chars
 
 #chartoindex
 def chartoindex(chars):
@@ -136,13 +147,18 @@ def chartoindex(chars):
         char_index_list=[zero_index]*max_seq_len
     return char_index_list
 
-for dataset in datainfo.datasets.values():
+
+for dataset in data_bundle.datasets.values():
+    dataset.apply_field(wordtochar, field_name="raw_words", new_field_name='chars')
     dataset.apply_field(chartoindex,field_name='chars',new_field_name='chars')
 
-datainfo.datasets['train'].set_input('chars')
-datainfo.datasets['test'].set_input('chars')
-datainfo.datasets['train'].set_target('target')
-datainfo.datasets['test'].set_target('target')
+# print(data_bundle.datasets['train'][0]['chars'])
+# print(data_bundle.datasets['train'][0]['raw_words'])
+
+data_bundle.datasets['train'].set_input('chars')
+data_bundle.datasets['test'].set_input('chars')
+data_bundle.datasets['train'].set_target('target')
+data_bundle.datasets['test'].set_target('target')
 
 ##2. 定义/组装模型，这里可以随意，就如果是fastNLP封装好的，类似CNNText就直接用初始化调用就好了，这里只是给出一个伪框架表示占位，在这里建立符合fastNLP输入输出规范的model
 class ModelFactory(nn.Module):
@@ -165,7 +181,7 @@ class ModelFactory(nn.Module):
 
 ## 2.或直接复用fastNLP的模型
 #vocab=datainfo.vocabs['words']
-vocab_label=datainfo.vocabs['target']
+vocab_label=data_bundle.vocabs['target']
 '''
 # emded_char=CNNCharEmbedding(vocab)
 # embed_word = StaticEmbedding(vocab, model_dir_or_name='en-glove-6b-50', requires_grad=True)
@@ -189,7 +205,6 @@ model=CharacterLevelCNN(ops,embedding)
 ## 3. 声明loss,metric,optimizer
 loss=CrossEntropyLoss
 metric=AccuracyMetric
-#optimizer= SGD([param for param in model.parameters() if param.requires_grad==True], lr=ops.lr)
 optimizer = SGD([param for param in model.parameters() if param.requires_grad == True],
                 lr=ops.lr, momentum=0.9, weight_decay=ops.weight_decay)
 callbacks = []
@@ -203,14 +218,10 @@ callbacks.append(
 def train(model,datainfo,loss,metrics,optimizer,num_epochs=100):
     trainer = Trainer(datainfo.datasets['train'], model, optimizer=optimizer, loss=loss(target='target'),batch_size=ops.batch_size,
                       metrics=[metrics(target='target')], dev_data=datainfo.datasets['test'], device=[0,1,2], check_code_level=-1,
-                      n_epochs=num_epochs)
+                      n_epochs=num_epochs,callbacks=callbacks)
     print(trainer.train())
 
 
 
 if __name__=="__main__":
-    #print(vocab_label)
-
-    #print(datainfo.datasets["train"])
-    train(model,datainfo,loss,metric,optimizer,num_epochs=ops.train_epoch)
-    
+    train(model,data_bundle,loss,metric,optimizer,num_epochs=ops.train_epoch)

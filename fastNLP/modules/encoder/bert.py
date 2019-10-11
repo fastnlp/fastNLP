@@ -1,4 +1,4 @@
-"""
+"""undocumented
 这个页面的代码很大程度上参考(复制粘贴)了https://github.com/huggingface/pytorch-pretrained-BERT的代码， 如果你发现该代码对你
     有用，也请引用一下他们。
 """
@@ -8,22 +8,40 @@ __all__ = [
 ]
 
 import collections
-
-import unicodedata
 import copy
 import json
 import math
 import os
+import unicodedata
 
 import torch
 from torch import nn
-import sys
+import numpy as np
 
 from ..utils import _get_file_name_base_on_postfix
+from ...io.file_utils import _get_embedding_url, cached_path, PRETRAINED_BERT_MODEL_DIR
+from ...core import logger
 
 CONFIG_FILE = 'bert_config.json'
 VOCAB_NAME = 'vocab.txt'
 
+BERT_KEY_RENAME_MAP_1 = {
+    'gamma': 'weight',
+    'beta': 'bias',
+    'distilbert.embeddings': 'bert.embeddings',
+    'distilbert.transformer': 'bert.encoder',
+}
+
+BERT_KEY_RENAME_MAP_2 = {
+    'q_lin': 'self.query',
+    'k_lin': 'self.key',
+    'v_lin': 'self.value',
+    'out_lin': 'output.dense',
+    'sa_layer_norm': 'attention.output.LayerNorm',
+    'ffn.lin1': 'intermediate.dense',
+    'ffn.lin2': 'output.dense',
+    'output_layer_norm': 'output.LayerNorm',
+}
 
 
 class BertConfig(object):
@@ -134,6 +152,19 @@ def swish(x):
 ACT2FN = {"gelu": gelu, "relu": torch.nn.functional.relu, "swish": swish}
 
 
+def _get_bert_dir(model_dir_or_name: str = 'en-base-uncased'):
+    if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
+        model_url = _get_embedding_url('bert', model_dir_or_name.lower())
+        model_dir = cached_path(model_url, name='embedding')
+        # 检查是否存在
+    elif os.path.isdir(os.path.abspath(os.path.expanduser(model_dir_or_name))):
+        model_dir = os.path.abspath(os.path.expanduser(model_dir_or_name))
+    else:
+        logger.error(f"Cannot recognize BERT dir or name ``{model_dir_or_name}``.")
+        raise ValueError(f"Cannot recognize BERT dir or name ``{model_dir_or_name}``.")
+    return str(model_dir)
+
+
 class BertLayerNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-12):
         """Construct a layernorm module in the TF style (epsilon inside the square root).
@@ -148,6 +179,55 @@ class BertLayerNorm(nn.Module):
         s = (x - u).pow(2).mean(-1, keepdim=True)
         x = (x - u) / torch.sqrt(s + self.variance_epsilon)
         return self.weight * x + self.bias
+
+
+class DistilBertEmbeddings(nn.Module):
+    def __init__(self, config):
+        super(DistilBertEmbeddings, self).__init__()
+
+        def create_sinusoidal_embeddings(n_pos, dim, out):
+            position_enc = np.array([
+                [pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)]
+                for pos in range(n_pos)
+            ])
+            out[:, 0::2] = torch.FloatTensor(np.sin(position_enc[:, 0::2]))
+            out[:, 1::2] = torch.FloatTensor(np.cos(position_enc[:, 1::2]))
+            out.detach_()
+            out.requires_grad = False
+
+        self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=0)
+        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
+        if config.sinusoidal_pos_embds:
+            create_sinusoidal_embeddings(n_pos=config.max_position_embeddings,
+                                         dim=config.hidden_size,
+                                         out=self.position_embeddings.weight)
+
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=1e-12)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+    def forward(self, input_ids, token_type_ids):
+        """
+        Parameters
+        ----------
+        input_ids: torch.tensor(bs, max_seq_length)
+            The token ids to embed.
+        token_type_ids: no used.
+        Outputs
+        -------
+        embeddings: torch.tensor(bs, max_seq_length, dim)
+            The embedded tokens (plus position embeddings, no token_type embeddings)
+        """
+        seq_length = input_ids.size(1)
+        position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device) # (max_seq_length)
+        position_ids = position_ids.unsqueeze(0).expand_as(input_ids)                      # (bs, max_seq_length)
+
+        word_embeddings = self.word_embeddings(input_ids)                   # (bs, max_seq_length, dim)
+        position_embeddings = self.position_embeddings(position_ids)        # (bs, max_seq_length, dim)
+
+        embeddings = word_embeddings + position_embeddings  # (bs, max_seq_length, dim)
+        embeddings = self.LayerNorm(embeddings)             # (bs, max_seq_length, dim)
+        embeddings = self.dropout(embeddings)               # (bs, max_seq_length, dim)
+        return embeddings
 
 
 class BertEmbeddings(nn.Module):
@@ -336,31 +416,11 @@ class BertPooler(nn.Module):
 
 class BertModel(nn.Module):
     """
-    别名：:class:`fastNLP.modules.BertModel`   :class:`fastNLP.modules.encoder.BertModel`
-
     BERT(Bidirectional Embedding Representations from Transformers).
-
-    如果你想使用预训练好的权重矩阵，请在以下网址下载.
-    sources::
-
-    'bert-base-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-pytorch_model.bin",
-    'bert-large-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased-pytorch_model.bin",
-    'bert-base-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-cased-pytorch_model.bin",
-    'bert-large-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-cased-pytorch_model.bin",
-    'bert-base-multilingual-uncased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-multilingual-uncased-pytorch_model.bin",
-    'bert-base-multilingual-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-multilingual-cased-pytorch_model.bin",
-    'bert-base-chinese': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-chinese-pytorch_model.bin",
-    'bert-base-german-cased': "https://int-deepset-models-bert.s3.eu-central-1.amazonaws.com/pytorch/bert-base-german-cased-pytorch_model.bin",
-    'bert-large-uncased-whole-word-masking': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased-whole-word-masking-pytorch_model.bin",
-    'bert-large-cased-whole-word-masking': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-cased-whole-word-masking-pytorch_model.bin",
-    'bert-large-uncased-whole-word-masking-finetuned-squad': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased-whole-word-masking-finetuned-squad-pytorch_model.bin",
-    'bert-large-cased-whole-word-masking-finetuned-squad': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-cased-whole-word-masking-finetuned-squad-pytorch_model.bin",
-    'bert-base-cased-finetuned-mrpc': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-cased-finetuned-mrpc-pytorch_model.bin"
-
 
     用预训练权重矩阵来建立BERT模型::
 
-        model = BertModel.from_pretrained("path/to/weights/directory")
+        model = BertModel.from_pretrained(model_dir_or_name)
 
     用随机初始化权重矩阵来建立BERT模型::
 
@@ -391,9 +451,22 @@ class BertModel(nn.Module):
         super(BertModel, self).__init__()
         self.config = config
         self.hidden_size = self.config.hidden_size
-        self.embeddings = BertEmbeddings(config)
+        self.model_type = 'bert'
+        if hasattr(config, 'sinusoidal_pos_embds'):
+            self.model_type = 'distilbert'
+        elif 'model_type' in kwargs:
+            self.model_type = kwargs['model_type'].lower()
+
+        if self.model_type == 'distilbert':
+            self.embeddings = DistilBertEmbeddings(config)
+        else:
+            self.embeddings = BertEmbeddings(config)
+
         self.encoder = BertEncoder(config)
-        self.pooler = BertPooler(config)
+        if self.model_type != 'distilbert':
+            self.pooler = BertPooler(config)
+        else:
+            logger.info('DistilBert has NOT pooler, will use hidden states of [CLS] token as pooled output.')
         self.apply(self.init_bert_weights)
 
     def init_bert_weights(self, module):
@@ -435,40 +508,68 @@ class BertModel(nn.Module):
                                       extended_attention_mask,
                                       output_all_encoded_layers=output_all_encoded_layers)
         sequence_output = encoded_layers[-1]
-        pooled_output = self.pooler(sequence_output)
+        if self.model_type != 'distilbert':
+            pooled_output = self.pooler(sequence_output)
+        else:
+            pooled_output = sequence_output[:, 0]
         if not output_all_encoded_layers:
             encoded_layers = encoded_layers[-1]
         return encoded_layers, pooled_output
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_dir, *inputs, **kwargs):
+    def from_pretrained(cls, model_dir_or_name, *inputs, **kwargs):
         state_dict = kwargs.get('state_dict', None)
         kwargs.pop('state_dict', None)
         kwargs.pop('cache_dir', None)
         kwargs.pop('from_tf', None)
+
+        # get model dir from name or dir
+        pretrained_model_dir = _get_bert_dir(model_dir_or_name)
+
         # Load config
         config_file = _get_file_name_base_on_postfix(pretrained_model_dir, '.json')
         config = BertConfig.from_json_file(config_file)
-        # logger.info("Model config {}".format(config))
-        # Instantiate model.
-        model = cls(config, *inputs, **kwargs)
+
         if state_dict is None:
             weights_path = _get_file_name_base_on_postfix(pretrained_model_dir, '.bin')
             state_dict = torch.load(weights_path, map_location='cpu')
+        else:
+            logger.error(f'Cannot load parameters through `state_dict` variable.')
+            raise RuntimeError(f'Cannot load parameters through `state_dict` variable.')
 
+        model_type = 'BERT'
         old_keys = []
         new_keys = []
         for key in state_dict.keys():
             new_key = None
-            if 'gamma' in key:
-                new_key = key.replace('gamma', 'weight')
-            if 'beta' in key:
-                new_key = key.replace('beta', 'bias')
+            for key_name in BERT_KEY_RENAME_MAP_1:
+                if key_name in key:
+                    new_key = key.replace(key_name, BERT_KEY_RENAME_MAP_1[key_name])
+                    if 'distilbert' in key:
+                        model_type = 'DistilBert'
+                    break
             if new_key:
                 old_keys.append(key)
                 new_keys.append(new_key)
         for old_key, new_key in zip(old_keys, new_keys):
             state_dict[new_key] = state_dict.pop(old_key)
+
+        old_keys = []
+        new_keys = []
+        for key in state_dict.keys():
+            new_key = None
+            for key_name in BERT_KEY_RENAME_MAP_2:
+                if key_name in key:
+                    new_key = key.replace(key_name, BERT_KEY_RENAME_MAP_2[key_name])
+                    break
+            if new_key:
+                old_keys.append(key)
+                new_keys.append(new_key)
+        for old_key, new_key in zip(old_keys, new_keys):
+            state_dict[new_key] = state_dict.pop(old_key)
+
+        # Instantiate model.
+        model = cls(config, model_type=model_type, *inputs, **kwargs)
 
         missing_keys = []
         unexpected_keys = []
@@ -489,11 +590,13 @@ class BertModel(nn.Module):
 
         load(model, prefix='' if hasattr(model, 'bert') else 'bert.')
         if len(missing_keys) > 0:
-            print("Weights of {} not initialized from pretrained model: {}".format(
+            logger.warning("Weights of {} not initialized from pretrained model: {}".format(
                 model.__class__.__name__, missing_keys))
         if len(unexpected_keys) > 0:
-            print("Weights from pretrained model not used in {}: {}".format(
+            logger.warning("Weights from pretrained model not used in {}: {}".format(
                 model.__class__.__name__, unexpected_keys))
+
+        logger.info(f"Load pre-trained {model_type} parameters from file {weights_path}.")
         return model
 
 
@@ -563,6 +666,8 @@ class WordpieceTokenizer(object):
                 output_tokens.append(self.unk_token)
             else:
                 output_tokens.extend(sub_tokens)
+        if len(output_tokens) == 0:  # 防止里面全是空格或者回车符号
+            return [self.unk_token]
         return output_tokens
 
 
@@ -672,14 +777,14 @@ class BasicTokenizer(object):
         # as is Japanese Hiragana and Katakana. Those alphabets are used to write
         # space-separated words, so they are not treated specially and handled
         # like the all of the other languages.
-        if ((cp >= 0x4E00 and cp <= 0x9FFF) or  #
-                (cp >= 0x3400 and cp <= 0x4DBF) or  #
-                (cp >= 0x20000 and cp <= 0x2A6DF) or  #
-                (cp >= 0x2A700 and cp <= 0x2B73F) or  #
-                (cp >= 0x2B740 and cp <= 0x2B81F) or  #
-                (cp >= 0x2B820 and cp <= 0x2CEAF) or
-                (cp >= 0xF900 and cp <= 0xFAFF) or  #
-                (cp >= 0x2F800 and cp <= 0x2FA1F)):  #
+        if (((cp >= 0x4E00) and (cp <= 0x9FFF)) or  #
+            ((cp >= 0x3400) and (cp <= 0x4DBF)) or  #
+            ((cp >= 0x20000) and (cp <= 0x2A6DF)) or  #
+            ((cp >= 0x2A700) and (cp <= 0x2B73F)) or  #
+            ((cp >= 0x2B740) and (cp <= 0x2B81F)) or  #
+            ((cp >= 0x2B820) and (cp <= 0x2CEAF)) or
+            ((cp >= 0xF900) and (cp <= 0xFAFF)) or  #
+            ((cp >= 0x2F800) and (cp <= 0x2FA1F))):  #
             return True
 
         return False
@@ -729,8 +834,8 @@ def _is_punctuation(char):
     # Characters such as "^", "$", and "`" are not in the Unicode
     # Punctuation class but we treat them as punctuation anyways, for
     # consistency.
-    if ((cp >= 33 and cp <= 47) or (cp >= 58 and cp <= 64) or
-            (cp >= 91 and cp <= 96) or (cp >= 123 and cp <= 126)):
+    if (((cp >= 33) and (cp <= 47)) or ((cp >= 58) and (cp <= 64)) or
+       ((cp >= 91) and (cp <= 96)) or ((cp >= 123) and (cp <= 126))):
         return True
     cat = unicodedata.category(char)
     if cat.startswith("P"):
@@ -797,7 +902,7 @@ class BertTokenizer(object):
         for token in tokens:
             ids.append(self.vocab[token])
         if len(ids) > self.max_len:
-            print(
+            logger.warning(
                 "Token indices sequence length is longer than the specified maximum "
                 " sequence length for this BERT model ({} > {}). Running this"
                 " sequence through BERT will result in indexing errors".format(len(ids), self.max_len)
@@ -821,26 +926,27 @@ class BertTokenizer(object):
         with open(vocab_file, "w", encoding="utf-8") as writer:
             for token, token_index in sorted(self.vocab.items(), key=lambda kv: kv[1]):
                 if index != token_index:
-                    print("Saving vocabulary to {}: vocabulary indices are not consecutive."
-                          " Please check that the vocabulary is not corrupted!".format(vocab_file))
+                    logger.warning("Saving vocabulary to {}: vocabulary indices are not consecutive."
+                                   " Please check that the vocabulary is not corrupted!".format(vocab_file))
                     index = token_index
                 writer.write(token + u'\n')
                 index += 1
         return vocab_file
 
     @classmethod
-    def from_pretrained(cls, model_dir, *inputs, **kwargs):
+    def from_pretrained(cls, model_dir_or_name, *inputs, **kwargs):
         """
-        给定path，直接读取vocab.
-
+        给定模型的名字或者路径，直接读取vocab.
         """
+        model_dir = _get_bert_dir(model_dir_or_name)
         pretrained_model_name_or_path = _get_file_name_base_on_postfix(model_dir, '.txt')
-        print("loading vocabulary file {}".format(pretrained_model_name_or_path))
+        logger.info("loading vocabulary file {}".format(pretrained_model_name_or_path))
         max_len = 512
         kwargs['max_len'] = min(kwargs.get('max_position_embeddings', int(1e12)), max_len)
         # Instantiate tokenizer.
         tokenizer = cls(pretrained_model_name_or_path, *inputs, **kwargs)
         return tokenizer
+
 
 class _WordPieceBertModel(nn.Module):
     """
@@ -848,11 +954,11 @@ class _WordPieceBertModel(nn.Module):
 
     """
 
-    def __init__(self, model_dir: str, layers: str = '-1'):
+    def __init__(self, model_dir_or_name: str, layers: str = '-1', pooled_cls: bool=False):
         super().__init__()
 
-        self.tokenzier = BertTokenizer.from_pretrained(model_dir)
-        self.encoder = BertModel.from_pretrained(model_dir)
+        self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
+        self.encoder = BertModel.from_pretrained(model_dir_or_name)
         #  检查encoder_layer_number是否合理
         encoder_layer_number = len(self.encoder.encoder.layer)
         self.layers = list(map(int, layers.split(',')))
@@ -866,9 +972,11 @@ class _WordPieceBertModel(nn.Module):
 
         self._cls_index = self.tokenzier.vocab['[CLS]']
         self._sep_index = self.tokenzier.vocab['[SEP]']
+        self._wordpiece_unknown_index = self.tokenzier.vocab['[UNK]']
         self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
+        self.pooled_cls = pooled_cls
 
-    def index_dataset(self, *datasets, field_name):
+    def index_dataset(self, *datasets, field_name, add_cls_sep=True):
         """
         使用bert的tokenizer新生成word_pieces列加入到datasets中，并将他们设置为input。如果首尾不是
             [CLS]与[SEP]会在首尾额外加入[CLS]与[SEP], 且将word_pieces这一列的pad value设置为了bert的pad value。
@@ -884,10 +992,11 @@ class _WordPieceBertModel(nn.Module):
                 tokens = self.tokenzier.wordpiece_tokenizer.tokenize(word)
                 word_piece_ids = self.tokenzier.convert_tokens_to_ids(tokens)
                 word_pieces.extend(word_piece_ids)
-            if word_pieces[0] != self._cls_index:
-                word_pieces.insert(0, self._cls_index)
-            if word_pieces[-1] != self._sep_index:
-                word_pieces.insert(-1, self._sep_index)
+            if add_cls_sep:
+                if word_pieces[0] != self._cls_index:
+                    word_pieces.insert(0, self._cls_index)
+                if word_pieces[-1] != self._sep_index:
+                    word_pieces.insert(-1, self._sep_index)
             return word_pieces
 
         for index, dataset in enumerate(datasets):
@@ -896,7 +1005,7 @@ class _WordPieceBertModel(nn.Module):
                                     is_input=True)
                 dataset.set_pad_val('word_pieces', self._wordpiece_pad_index)
             except Exception as e:
-                print(f"Exception happens when processing the {index} dataset.")
+                logger.error(f"Exception happens when processing the {index} dataset.")
                 raise e
 
     def forward(self, word_pieces, token_type_ids=None):
@@ -909,10 +1018,13 @@ class _WordPieceBertModel(nn.Module):
         batch_size, max_len = word_pieces.size()
 
         attn_masks = word_pieces.ne(self._wordpiece_pad_index)
-        bert_outputs, _ = self.encoder(word_pieces, token_type_ids=token_type_ids, attention_mask=attn_masks,
-                                       output_all_encoded_layers=True)
+        bert_outputs, pooled_cls = self.encoder(word_pieces, token_type_ids=token_type_ids, attention_mask=attn_masks,
+                                                output_all_encoded_layers=True)
         # output_layers = [self.layers]  # len(self.layers) x batch_size x max_word_piece_length x hidden_size
         outputs = bert_outputs[0].new_zeros((len(self.layers), batch_size, max_len, bert_outputs[0].size(-1)))
         for l_index, l in enumerate(self.layers):
-            outputs[l_index] = bert_outputs[l]
+            bert_output = bert_outputs[l]
+            if l in (len(bert_outputs)-1, -1) and self.pooled_cls:
+                bert_output[:, 0] = pooled_cls
+            outputs[l_index] = bert_output
         return outputs

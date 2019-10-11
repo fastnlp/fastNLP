@@ -10,7 +10,8 @@ import torch
 from torch import nn
 from fastNLP.core.utils import _move_model_to_device, _get_model_device
 import numpy as np
-from fastNLP.core.utils import seq_len_to_mask
+from fastNLP.core.utils import seq_len_to_mask, get_seq_len
+from fastNLP.core.utils import iob2, iob2bioes
 
 class Model(nn.Module):
     def __init__(self):
@@ -119,7 +120,8 @@ class TestCache(unittest.TestCase):
     def test_cache_save(self):
         try:
             start_time = time.time()
-            embed, vocab, d = process_data_1('test/data_for_tests/word2vec_test.txt', 'test/data_for_tests/cws_train')
+            embed, vocab, d = process_data_1('test/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
+                                             'test/data_for_tests/cws_train')
             end_time = time.time()
             pre_time = end_time - start_time
             with open('test/demo1.pkl', 'rb') as f:
@@ -128,7 +130,8 @@ class TestCache(unittest.TestCase):
             for i in range(embed.shape[0]):
                 self.assertListEqual(embed[i].tolist(), _embed[i].tolist())
             start_time = time.time()
-            embed, vocab, d = process_data_1('test/data_for_tests/word2vec_test.txt', 'test/data_for_tests/cws_train')
+            embed, vocab, d = process_data_1('test/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
+                                             'test/data_for_tests/cws_train')
             end_time = time.time()
             read_time = end_time - start_time
             print("Read using {:.3f}, while prepare using:{:.3f}".format(read_time, pre_time))
@@ -139,7 +142,7 @@ class TestCache(unittest.TestCase):
     def test_cache_save_overwrite_path(self):
         try:
             start_time = time.time()
-            embed, vocab, d = process_data_1('test/data_for_tests/word2vec_test.txt', 'test/data_for_tests/cws_train',
+            embed, vocab, d = process_data_1('test/data_for_tests/embedding/small_static_embedding/word2vec_test.txt', 'test/data_for_tests/cws_train',
                                              _cache_fp='test/demo_overwrite.pkl')
             end_time = time.time()
             pre_time = end_time - start_time
@@ -149,7 +152,8 @@ class TestCache(unittest.TestCase):
             for i in range(embed.shape[0]):
                 self.assertListEqual(embed[i].tolist(), _embed[i].tolist())
             start_time = time.time()
-            embed, vocab, d = process_data_1('test/data_for_tests/word2vec_test.txt', 'test/data_for_tests/cws_train',
+            embed, vocab, d = process_data_1('test/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
+                                             'test/data_for_tests/cws_train',
                                              _cache_fp='test/demo_overwrite.pkl')
             end_time = time.time()
             read_time = end_time - start_time
@@ -161,7 +165,8 @@ class TestCache(unittest.TestCase):
     def test_cache_refresh(self):
         try:
             start_time = time.time()
-            embed, vocab, d = process_data_1('test/data_for_tests/word2vec_test.txt', 'test/data_for_tests/cws_train',
+            embed, vocab, d = process_data_1('test/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
+                                             'test/data_for_tests/cws_train',
                                              _refresh=True)
             end_time = time.time()
             pre_time = end_time - start_time
@@ -171,7 +176,8 @@ class TestCache(unittest.TestCase):
             for i in range(embed.shape[0]):
                 self.assertListEqual(embed[i].tolist(), _embed[i].tolist())
             start_time = time.time()
-            embed, vocab, d = process_data_1('test/data_for_tests/word2vec_test.txt', 'test/data_for_tests/cws_train',
+            embed, vocab, d = process_data_1('test/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
+                                             'test/data_for_tests/cws_train',
                                              _refresh=True)
             end_time = time.time()
             read_time = end_time - start_time
@@ -259,3 +265,26 @@ class TestSeqLenToMask(unittest.TestCase):
         seq_len = torch.randint(1, 10, size=(10, ))
         mask = seq_len_to_mask(seq_len, 100)
         self.assertEqual(100, mask.size(1))
+
+
+class TestUtils(unittest.TestCase):
+    def test_get_seq_len(self):
+        seq_len = torch.randint(1, 10, size=(10, ))
+        mask = seq_len_to_mask(seq_len)
+        new_seq_len = get_seq_len(mask)
+        self.assertSequenceEqual(seq_len.tolist(), new_seq_len.tolist())
+
+    def test_iob2(self):
+        tags = ['B-NP', 'O', 'B-NP', 'B-VP', 'B-NP', 'I-NP', 'O', 'B-NP', 'B-PP', 'B-NP', 'I-NP', 'O', 'B-NP', 'I-NP', 'B-NP', 'O', 'B-NP', 'I-NP', 'I-NP']
+        convert_tags = ['B-NP', 'O', 'B-NP', 'B-VP', 'B-NP', 'I-NP', 'O', 'B-NP', 'B-PP', 'B-NP', 'I-NP', 'O', 'B-NP', 'I-NP', 'B-NP', 'O', 'B-NP', 'I-NP', 'I-NP']
+        self.assertSequenceEqual(convert_tags, iob2(tags))
+
+        tags = ['I-NP', 'O', 'I-NP', 'I-VP', 'B-NP', 'I-NP', 'O', 'I-NP', 'I-PP', 'B-NP', 'I-NP', 'O', 'B-NP', 'I-NP', 'B-NP', 'O', 'B-NP', 'I-NP', 'I-NP']
+        self.assertSequenceEqual(convert_tags, iob2(tags))
+
+    def test_iob2bioes(self):
+        tags = ['B-NP', 'O', 'B-NP', 'B-VP', 'B-NP', 'I-NP', 'O', 'B-NP', 'B-PP', 'B-NP', 'I-NP', 'O', 'B-NP', 'I-NP', 'B-NP', 'O', 'B-NP', 'I-NP', 'I-NP']
+        convert_tags = ['S-NP', 'O', 'S-NP', 'S-VP', 'B-NP', 'E-NP', 'O', 'S-NP', 'S-PP', 'B-NP', 'E-NP', 'O', 'B-NP', 'E-NP', 'S-NP', 'O', 'B-NP', 'I-NP', 'E-NP']
+
+        self.assertSequenceEqual(convert_tags, iob2bioes(tags))
+

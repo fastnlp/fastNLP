@@ -94,6 +94,8 @@ class Encoder(nn.Module):
         if self._hps.cuda:
             input_pos = input_pos.cuda()
         enc_pos_embed_input = self.position_embedding(input_pos.long()) # [batch_size*N, D]
+        # print(enc_embed_input.size())
+        # print(enc_pos_embed_input.size())
         enc_conv_input = enc_embed_input + enc_pos_embed_input
         enc_conv_input = enc_conv_input.unsqueeze(1) # (batch * N,Ci,L,D)
         enc_conv_output = [F.relu(conv(enc_conv_input)).squeeze(3) for conv in self.convs] # kernel_sizes * (batch*N, Co, W)

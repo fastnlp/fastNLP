@@ -1,3 +1,5 @@
+"""undocumented"""
+
 __all__ = [
     "viterbi_decode"
 ]
@@ -6,8 +8,6 @@ import torch
 
 def viterbi_decode(logits, transitions, mask=None, unpad=False):
     r"""
-    别名：:class:`fastNLP.modules.viterbi_decode`  :class:`fastNLP.modules.decoder.viterbi_decode`
-
     给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
 
     :param torch.FloatTensor logits: batch_size x max_len x num_tags，特征矩阵。
@@ -27,7 +27,7 @@ def viterbi_decode(logits, transitions, mask=None, unpad=False):
             "compatible."
     logits = logits.transpose(0, 1).data  # L, B, H
     if mask is not None:
-        mask = mask.transpose(0, 1).data.byte()  # L, B
+        mask = mask.transpose(0, 1).data.eq(1)  # L, B
     else:
         mask = logits.new_ones((seq_len, batch_size), dtype=torch.uint8)
 

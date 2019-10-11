@@ -4,11 +4,13 @@ python:
 # command to install dependencies
 install:
   - pip install --quiet -r requirements.txt
+  - pip install --quiet fitlog
   - pip install pytest>=3.6
   - pip install pytest-cov
 # command to run tests
 script:
-  - pytest --cov=./ test/
+  - python -m spacy download en
+  - pytest --cov=fastNLP test/
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

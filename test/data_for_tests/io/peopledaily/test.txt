@@ -1,0 +1,41 @@
+美 B-LOC
+国 I-LOC
+
+的 O
+华 B-PER
+
+莱 B-PER
+士 B-PER
+
+中 B-ORG
+共 I-ORG
+
+中 I-ORG
+央 I-ORG
+
+举 O
+办 O
+
+《 O
+“ O
+
+一 O
+国 O
+
+两 O
+制 O
+
+” O
+与 O
+
+香 B-LOC
+港 I-LOC
+
+基 O
+本 O
+
+法 O
+》 O
+
+讲 O
+座 O

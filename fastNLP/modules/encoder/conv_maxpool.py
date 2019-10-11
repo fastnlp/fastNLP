@@ -1,3 +1,5 @@
+"""undocumented"""
+
 __all__ = [
     "ConvMaxpool"
 ]
@@ -8,19 +10,20 @@ import torch.nn.functional as F
 
 class ConvMaxpool(nn.Module):
     """
-    别名：:class:`fastNLP.modules.ConvMaxpool`   :class:`fastNLP.modules.encoder.ConvMaxpool`
-
     集合了Convolution和Max-Pooling于一体的层。给定一个batch_size x max_len x input_size的输入，返回batch_size x
     sum(output_channels) 大小的matrix。在内部，是先使用CNN给输入做卷积，然后经过activation激活层，在通过在长度(max_len)
     这一维进行max_pooling。最后得到每个sample的一个向量表示。
 
-    :param int in_channels: 输入channel的大小，一般是embedding的维度; 或encoder的output维度
-    :param int,tuple(int) out_channels: 输出channel的数量。如果为list，则需要与kernel_sizes的数量保持一致
-    :param int,tuple(int) kernel_sizes: 输出channel的kernel大小。
-    :param str activation: Convolution后的结果将通过该activation后再经过max-pooling。支持relu, sigmoid, tanh
     """
 
     def __init__(self, in_channels, out_channels, kernel_sizes, activation="relu"):
+        """
+        
+        :param int in_channels: 输入channel的大小，一般是embedding的维度; 或encoder的output维度
+        :param int,tuple(int) out_channels: 输出channel的数量。如果为list，则需要与kernel_sizes的数量保持一致
+        :param int,tuple(int) kernel_sizes: 输出channel的kernel大小。
+        :param str activation: Convolution后的结果将通过该activation后再经过max-pooling。支持relu, sigmoid, tanh
+        """
         super(ConvMaxpool, self).__init__()
 
         for kernel_size in kernel_sizes:
