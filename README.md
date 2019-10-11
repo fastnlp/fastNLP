@@ -38,9 +38,6 @@ pip install fastNLP
 python -m spacy download en
 ```
 
-目前使用pypi安装fastNLP的版本是0.4.1，有较多功能仍未更新，最新内容以master分支为准。
-fastNLP0.5.0版本将在近期推出，请密切关注。
-
 
 ## fastNLP教程
 
@@ -60,12 +57,11 @@ fastNLP0.5.0版本将在近期推出，请密切关注。
 - [8. 使用Modules和Models快速搭建自定义模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_8_modules_models.html)
 - [9. 快速实现序列标注模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_9_seq_labeling.html)
 - [10. 使用Callback自定义你的训练过程](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_10_callback.html)
-- [11. 使用fitlog 辅助 fastNLP 进行科研](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_11_fitlog.html)
 
 ### 扩展教程
 
 - [Extend-1. BertEmbedding的各种用法](https://fastnlp.readthedocs.io/zh/latest/tutorials/extend_1_bert_embedding.html)
-
+- [Extend-2. 使用fitlog 辅助 fastNLP 进行科研](https://fastnlp.readthedocs.io/zh/latest/tutorials/extend_2_fitlog.html)
 
 
 ## 内置组件
@@ -91,19 +87,19 @@ fastNLP 在 embeddings 模块中内置了几种不同的embedding：静态embedd
 <tr>
     <td> encoder </td>
     <td> 将输入编码为具有具有表示能力的向量 </td>
-    <td> embedding, RNN, CNN, transformer
+    <td> Embedding, RNN, CNN, Transformer, ...
 </tr>
 <tr>
     <td> decoder </td>
     <td> 将具有某种表示意义的向量解码为需要的输出形式 </td>
-    <td> MLP, CRF </td>
+    <td> MLP, CRF, ... </td>
 </tr>
 </table>
 
 
 ## 项目结构
 
-<img src="./docs/source/figures/workflow.png" width="60%" height="60%">
+![](./docs/source/figures/workflow.png)
 
 fastNLP的大致工作流程如上图所示，而项目结构如下：
 
@@ -130,7 +126,7 @@ fastNLP的大致工作流程如上图所示，而项目结构如下：
 </tr>
 <tr>
     <td><b> fastNLP.io </b></td>
-    <td> 实现了读写功能，包括数据读入与预处理，模型读写，自动下载等 </td>
+    <td> 实现了读写功能，包括数据读入与预处理，模型读写，数据与模型自动下载等 </td>
 </tr>
 </table>
 
