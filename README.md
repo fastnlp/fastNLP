@@ -6,7 +6,7 @@
 ![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)
 [![Documentation Status](https://readthedocs.org/projects/fastnlp/badge/?version=latest)](http://fastnlp.readthedocs.io/?badge=latest)
 
-fastNLP 是一款轻量级的 NLP 工具包。你既可以使用它快速地完成一个序列标注（[NER](reproduction/seqence_labelling/ner)、POS-Tagging等）、中文分词、[文本分类](reproduction/text_classification)、[Matching](reproduction/matching)、[指代消解](reproduction/coreference_resolution)、[摘要](reproduction/Summarization)等任务； 也可以使用它快速构建许多复杂的网络模型，进行科研。它具有如下的特性：
+fastNLP 是一款轻量级的 NLP 工具包。你既可以使用它快速地完成一个序列标注（[NER](reproduction/sequence_labelling/ner)、POS-Tagging等）、中文分词、[文本分类](reproduction/text_classification)、[Matching](reproduction/matching)、[指代消解](reproduction/coreference_resolution)、[摘要](reproduction/Summarization)等任务； 也可以使用它快速构建许多复杂的网络模型，进行科研。它具有如下的特性：
 
 - 统一的Tabular式数据容器，让数据预处理过程简洁明了。内置多种数据集的Loader和Pipe，省去预处理代码;
 - 多种训练、测试组件，例如训练器Trainer；测试器Tester；以及各种评测metrics等等;

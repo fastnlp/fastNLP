@@ -8,7 +8,7 @@ from fastNLP import BucketSampler
 from fastNLP import SpanFPreRecMetric
 from fastNLP import Trainer, Tester
 from fastNLP.core.metrics import MetricBase
-from reproduction.seqence_labelling.ner.model.dilated_cnn import IDCNN
+from reproduction.sequence_labelling.ner.model.dilated_cnn import IDCNN
 from fastNLP.core.utils import Option
 from fastNLP.embeddings import StaticEmbedding
 from fastNLP.core.utils import cache_results

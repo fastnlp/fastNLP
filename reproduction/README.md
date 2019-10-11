@@ -17,7 +17,7 @@
 
 
 ## Sequence Labeling (序列标注)
-- [NER](seqence_labelling/ner)
+- [NER](sequence_labelling/ner)
 
 
 ## Coreference Resolution (指代消解)

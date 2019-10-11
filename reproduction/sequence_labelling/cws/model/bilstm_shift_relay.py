@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-from reproduction.seqence_labelling.cws.model.module import FeatureFunMax, SemiCRFShiftRelay
+from reproduction.sequence_labelling.cws.model.module import FeatureFunMax, SemiCRFShiftRelay
 from fastNLP.modules import LSTM
 
 class ShiftRelayCWSModel(nn.Module):

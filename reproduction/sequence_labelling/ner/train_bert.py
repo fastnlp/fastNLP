@@ -9,7 +9,7 @@ import sys
 
 sys.path.append('../../../')
 
-from reproduction.seqence_labelling.ner.model.bert_crf import BertCRF
+from reproduction.sequence_labelling.ner.model.bert_crf import BertCRF
 from fastNLP.embeddings import BertEmbedding
 from fastNLP import Trainer, Const
 from fastNLP import BucketSampler, SpanFPreRecMetric, GradientClipCallback

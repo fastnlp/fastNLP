@@ -2,7 +2,7 @@ import sys
 sys.path.append('../../..')
 
 from fastNLP.io.pipe.cws import CWSPipe
-from reproduction.seqence_labelling.cws.model.bilstm_crf_cws import BiLSTMCRF
+from reproduction.sequence_labelling.cws.model.bilstm_crf_cws import BiLSTMCRF
 from fastNLP import Trainer, cache_results
 from fastNLP.embeddings import StaticEmbedding
 from fastNLP import EvaluateCallback, BucketSampler, SpanFPreRecMetric, GradientClipCallback

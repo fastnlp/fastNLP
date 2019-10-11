@@ -4,7 +4,7 @@ sys.path.append('../../..')
 
 from fastNLP.embeddings import CNNCharEmbedding, StaticEmbedding, StackEmbedding
 
-from reproduction.seqence_labelling.ner.model.lstm_cnn_crf import CNNBiLSTMCRF
+from reproduction.sequence_labelling.ner.model.lstm_cnn_crf import CNNBiLSTMCRF
 from fastNLP import Trainer
 from fastNLP import SpanFPreRecMetric
 from fastNLP import Const

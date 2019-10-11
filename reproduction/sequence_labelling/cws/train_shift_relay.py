@@ -3,13 +3,13 @@ import sys
 sys.path.append('../../..')
 
 from fastNLP import cache_results
-from reproduction.seqence_labelling.cws.data.cws_shift_pipe import CWSShiftRelayPipe
-from reproduction.seqence_labelling.cws.model.bilstm_shift_relay import ShiftRelayCWSModel
+from reproduction.sequence_labelling.cws.data.cws_shift_pipe import CWSShiftRelayPipe
+from reproduction.sequence_labelling.cws.model.bilstm_shift_relay import ShiftRelayCWSModel
 from fastNLP import Trainer
 from torch.optim import Adam
 from fastNLP import BucketSampler
 from fastNLP import GradientClipCallback
-from reproduction.seqence_labelling.cws.model.metric import RelayMetric
+from reproduction.sequence_labelling.cws.model.metric import RelayMetric
 from fastNLP.embeddings import StaticEmbedding
 from fastNLP import EvaluateCallback
 
