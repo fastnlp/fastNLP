@@ -7,7 +7,7 @@
 
     1, 商务大床房，房间很大，床有2M宽，整体感觉经济实惠不错!
 
-其中开头的1是只这条评论的标签，表示是正面的情绪。我们将使用到的数据可以通过 `此链接 <http://dbcloud.irocn.cn:8989/api/public/dl/dataset/chn\_senti\_corp.zip>`_
+其中开头的1是只这条评论的标签，表示是正面的情绪。我们将使用到的数据可以通过 `此链接 <http://212.129.155.247/dataset/chn_senti_corp.zip>`_
 下载并解压，当然也可以通过fastNLP自动下载该数据。
 
 数据中的内容如下图所示。接下来，我们将用fastNLP在这个数据上训练一个分类网络。
@@ -73,11 +73,12 @@ DataBundle的相关介绍，可以参考 :class:`~fastNLP.io.DataBundle` 。我�
 
 .. code-block:: text
 
-    DataSet({'raw_chars': 选择珠江花园的原因就是方便，有电动扶梯直接到达海边，周围餐馆、食廊、商场、超市、摊位一应俱全。酒店装修一般，但还算整洁。 泳池在大堂的屋顶，因此很小，不过女儿倒是喜欢。 包的早餐是西式的，还算丰富。 服务吗，一般 type=str,
-    'target': 1 type=str},
-    {'raw_chars': 15.4寸笔记本的键盘确实爽，基本跟台式机差不多了，蛮喜欢数字小键盘，输数字特方便，样子也很美观，做工也相当不错 type=str,
-    'target': 1 type=str})
-
+    +-----------------------------+--------+
+    | raw_chars                   | target |
+    +-----------------------------+--------+
+    | 选择珠江花园的原因就是方...    | 1      |
+    | 15.4寸笔记本的键盘确实爽...    | 1      |
+    +-----------------------------+--------+
 
 (2) 预处理数据
 ~~~~~~~~~~~~~~~~~~~~
@@ -121,14 +122,12 @@ fastNLP中也提供了多种数据集的处理类，这里我们直接使用fast
 
 .. code-block:: text
 
-    DataSet({'raw_chars': 选择珠江花园的原因就是方便，有电动扶梯直接到达海边，周围餐馆、食廊、商场、超市、摊位一应俱全。酒店装修一般，但还算整洁。 泳池在大堂的屋顶，因此很小，不过女儿倒是喜欢。 包的早餐是西式的，还算丰富。 服务吗，一般 type=str,
-    'target': 1 type=int,
-    'chars': [338, 464, 1400, 784, 468, 739, 3, 289, 151, 21, 5, 88, 143, 2, 9, 81, 134, 2573, 766, 233, 196, 23, 536, 342, 297, 2, 405, 698, 132, 281, 74, 744, 1048, 74, 420, 387, 74, 412, 433, 74, 2021, 180, 8, 219, 1929, 213, 4, 34, 31, 96, 363, 8, 230, 2, 66, 18, 229, 331, 768, 4, 11, 1094, 479, 17, 35, 593, 3, 1126, 967, 2, 151, 245, 12, 44, 2, 6, 52, 260, 263, 635, 5, 152, 162, 4, 11, 336, 3, 154, 132, 5, 236, 443, 3, 2, 18, 229, 761, 700, 4, 11, 48, 59, 653, 2, 8, 230] type=list,
-    'seq_len': 106 type=int},
-    {'raw_chars': 15.4寸笔记本的键盘确实爽，基本跟台式机差不多了，蛮喜欢数字小键盘，输数字特方便，样子也很美观，做工也相当不错 type=str,
-    'target': 1 type=int,
-    'chars': [50, 133, 20, 135, 945, 520, 343, 24, 3, 301, 176, 350, 86, 785, 2, 456, 24, 461, 163, 443, 128, 109, 6, 47, 7, 2, 916, 152, 162, 524, 296, 44, 301, 176, 2, 1384, 524, 296, 259, 88, 143, 2, 92, 67, 26, 12, 277, 269, 2, 188, 223, 26, 228, 83, 6, 63] type=list,
-    'seq_len': 56 type=int})
+    +-----------------+--------+-----------------+---------+
+    | raw_chars       | target | chars           | seq_len |
+    +-----------------+--------+-----------------+---------+
+    | 选择珠江花园... | 0      | [338, 464, 1... | 106     |
+    | 15.4寸笔记本... | 0      | [50, 133, 20... | 56      |
+    +-----------------+--------+-----------------+---------+
 
 
 新增了一列为数字列表的chars，以及变为数字的target列。可以看出这两列的名称和刚好与data\_bundle中两个Vocabulary的名称是一致的，我们可以打印一下Vocabulary看一下里面的内容。
@@ -182,11 +181,6 @@ fastNLP支持使用名字指定的Embedding以及相关说明可以参见 :mod:`
 
 (4) 创建模型
 ~~~~~~~~~~~~
-
-这里我们使用到的模型结构如下所示
-
-.. todo::
-    补图
 
 .. code-block:: python
 
@@ -261,63 +255,23 @@ fastNLP提供了Trainer对象来组织训练过程，包括完成loss计算(所�
     Evaluate data in 0.01 seconds!
     training epochs started 2019-09-03-23-57-10
 
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=3000), HTML(value='')), layout=Layout(display…
-
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=38), HTML(value='')), layout=Layout(display='…
-
     Evaluate data in 0.43 seconds!
     Evaluation on dev at Epoch 1/10. Step:300/3000: 
     AccuracyMetric: acc=0.81
-
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=38), HTML(value='')), layout=Layout(display='…
 
     Evaluate data in 0.44 seconds!
     Evaluation on dev at Epoch 2/10. Step:600/3000: 
     AccuracyMetric: acc=0.8675
 
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=38), HTML(value='')), layout=Layout(display='…
-
     Evaluate data in 0.44 seconds!
     Evaluation on dev at Epoch 3/10. Step:900/3000:
     AccuracyMetric: acc=0.878333
 
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=38), HTML(value='')), layout=Layout(display='…
-
-    Evaluate data in 0.43 seconds!
-    Evaluation on dev at Epoch 4/10. Step:1200/3000: 
-    AccuracyMetric: acc=0.873333
-
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=38), HTML(value='')), layout=Layout(display='…
-
-    Evaluate data in 0.44 seconds!
-    Evaluation on dev at Epoch 5/10. Step:1500/3000: 
-    AccuracyMetric: acc=0.878333
-
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=38), HTML(value='')), layout=Layout(display='…
-
-    Evaluate data in 0.42 seconds!
-    Evaluation on dev at Epoch 6/10. Step:1800/3000: 
-    AccuracyMetric: acc=0.895833
-
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=38), HTML(value='')), layout=Layout(display='…
-
-    Evaluate data in 0.44 seconds!
-    Evaluation on dev at Epoch 7/10. Step:2100/3000: 
-    AccuracyMetric: acc=0.8975
-
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=38), HTML(value='')), layout=Layout(display='…
-
-    Evaluate data in 0.43 seconds!
-    Evaluation on dev at Epoch 8/10. Step:2400/3000: 
-    AccuracyMetric: acc=0.894167
-
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=38), HTML(value='')), layout=Layout(display='…
+    ....
 
     Evaluate data in 0.48 seconds!
     Evaluation on dev at Epoch 9/10. Step:2700/3000: 
     AccuracyMetric: acc=0.8875
-
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=38), HTML(value='')), layout=Layout(display='…
 
     Evaluate data in 0.43 seconds!
     Evaluation on dev at Epoch 10/10. Step:3000/3000: 
@@ -326,8 +280,6 @@ fastNLP提供了Trainer对象来组织训练过程，包括完成loss计算(所�
     In Epoch:7/Step:2100, got best dev performance:
     AccuracyMetric: acc=0.8975
     Reloaded the best model.
-
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=19), HTML(value='')), layout=Layout(display='…
 
     Evaluate data in 0.34 seconds!
     [tester] 
@@ -375,8 +327,8 @@ fastNLP提供了Trainer对象来组织训练过程，包括完成loss计算(所�
 
 .. code-block:: text
 
-    loading vocabulary file /home/yh/.fastNLP/embedding/bert-chinese-wwm/vocab.txt
-    Load pre-trained BERT parameters from file /home/yh/.fastNLP/embedding/bert-chinese-wwm/chinese_wwm_pytorch.bin.
+    loading vocabulary file ~/.fastNLP/embedding/bert-chinese-wwm/vocab.txt
+    Load pre-trained BERT parameters from file ~/.fastNLP/embedding/bert-chinese-wwm/chinese_wwm_pytorch.bin.
     Start to generating word pieces for word.
     Found(Or segment into word pieces) 4286 words out of 4409.
     input fields after batch(if batch size is 2):
@@ -390,21 +342,13 @@ fastNLP提供了Trainer对象来组织训练过程，包括完成loss计算(所�
     Evaluate data in 0.05 seconds!
     training epochs started 2019-09-04-00-02-37
 
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=3600), HTML(value='')), layout=Layout(display…
-
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=150), HTML(value='')), layout=Layout(display=…
-
     Evaluate data in 15.89 seconds!
     Evaluation on dev at Epoch 1/3. Step:1200/3600: 
     AccuracyMetric: acc=0.9
 
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=150), HTML(value='')), layout=Layout(display=…
-
     Evaluate data in 15.92 seconds!
     Evaluation on dev at Epoch 2/3. Step:2400/3600: 
     AccuracyMetric: acc=0.904167
-
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=150), HTML(value='')), layout=Layout(display=…
 
     Evaluate data in 15.91 seconds!
     Evaluation on dev at Epoch 3/3. Step:3600/3600: 
@@ -414,8 +358,6 @@ fastNLP提供了Trainer对象来组织训练过程，包括完成loss计算(所�
     AccuracyMetric: acc=0.918333
     Reloaded the best model.
     Performance on test is:
-
-    HBox(children=(IntProgress(value=0, layout=Layout(flex='2'), max=19), HTML(value='')), layout=Layout(display='…
 
     Evaluate data in 29.24 seconds!
     [tester] 
