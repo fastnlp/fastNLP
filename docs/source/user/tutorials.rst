@@ -17,9 +17,9 @@ fastNLP 详细使用教程
    使用Modules和Models快速搭建自定义模型 </tutorials/tutorial_8_modules_models>
    快速实现序列标注模型 </tutorials/tutorial_9_seq_labeling>
    使用Callback自定义你的训练过程 </tutorials/tutorial_10_callback>
-   使用fitlog 辅助 fastNLP 进行科研 </tutorials/tutorial_11_fitlog>
 
 .. toctree::
    :maxdepth: 1
 
-    拓展阅读：BertEmbedding的各种用法 </tutorials/extend_1_bert_embedding>
+    拓展阅读1：BertEmbedding的各种用法 </tutorials/extend_1_bert_embedding>
+    拓展阅读2：使用fitlog 辅助 fastNLP 进行科研 </tutorials/extend_2_fitlog>
