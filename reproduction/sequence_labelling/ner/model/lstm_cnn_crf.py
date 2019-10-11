@@ -1,5 +1,4 @@
 
-import torch
 from torch import nn
 from fastNLP import seq_len_to_mask
 from fastNLP.modules import LSTM

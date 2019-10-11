@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from fastNLP.modules.decoder import ConditionalRandomField
-from fastNLP.modules.encoder import Embedding
+from fastNLP.embeddings import Embedding
 from fastNLP.core.utils import seq_len_to_mask
 from fastNLP.core.const import Const as C
 
