@@ -6,16 +6,16 @@
 ![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)
 [![Documentation Status](https://readthedocs.org/projects/fastnlp/badge/?version=latest)](http://fastnlp.readthedocs.io/?badge=latest)
 
-fastNLP是一款轻量级的自然语言处理（NLP）工具包。你既可以用来为一个NLP任务快速地实现算法并运行，也可以用来在研究中快速构建复杂的网络模型。
+fastNLP是一款轻量级的自然语言处理（NLP）工具包。你既可以用它来快速地完成一个NLP任务，也可以用它在研究中快速构建更复杂的模型。
 
 fastNLP具有如下的特性：
 
 - 统一的Tabular式数据容器，简化数据预处理过程；
-- 内置多种数据集的Loader，省去预处理代码;
-- 各种方便的NLP工具，例如预处理embedding加载（包括ELMo和BERT）、中间数据cache等;
+- 内置多种数据集的Loader和Pipe，省去预处理代码;
+- 各种方便的NLP工具，例如Embedding加载（包括ELMo和BERT）、中间数据cache等;
 - 部分[数据集与预训练模型](https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0)的自动下载；
-- 提供多种神经网络组件以及模型复现（涵盖中文分词、命名实体识别、文本分类、文本匹配、指代消解、摘要等任务）;
-- Trainer提供多种内置callback函数，方便实验记录、异常捕获等。
+- 提供多种神经网络组件以及复现模型（涵盖中文分词、命名实体识别、句法分析、文本分类、文本匹配、指代消解、摘要等任务）;
+- Trainer提供多种内置Callback函数，方便实验记录、异常捕获等。
 
 ## 安装指南
 
