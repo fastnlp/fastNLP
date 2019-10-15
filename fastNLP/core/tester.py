@@ -189,10 +189,10 @@ class Tester(object):
             _check_loss_evaluate(prev_func_signature=prev_func_signature, func_signature=e.func_signature,
                                  check_res=e.check_res, pred_dict=pred_dict, target_dict=batch_y,
                                  dataset=self.data, check_level=0)
-        
+        finally:
+            self._mode(network, is_test=False)
         if self.verbose >= 1:
             logger.info("[tester] \n{}".format(self._format_eval_results(eval_results)))
-        self._mode(network, is_test=False)
         return eval_results
     
     def _mode(self, model, is_test=False):

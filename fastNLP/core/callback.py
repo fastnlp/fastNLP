@@ -592,9 +592,10 @@ class FitlogCallback(Callback):
                     fitlog.add_metric(eval_result, name=key, step=self.step, epoch=self.epoch)
                     if better_result:
                         fitlog.add_best_metric(eval_result, name=key)
-                except Exception:
+                except Exception as e:
                     self.pbar.write("Exception happens when evaluate on DataSet named `{}`.".format(key))
-    
+                    raise e
+
     def on_train_end(self):
         fitlog.finish()
     
@@ -660,9 +661,9 @@ class EvaluateCallback(Callback):
                     eval_result = tester.test()
                     self.logger.info("EvaluateCallback evaluation on {}:".format(key))
                     self.logger.info(tester._format_eval_results(eval_result))
-                except Exception:
+                except Exception as e:
                     self.logger.error("Exception happens when evaluate on DataSet named `{}`.".format(key))
-
+                    raise e
 
 class LRScheduler(Callback):
     """
