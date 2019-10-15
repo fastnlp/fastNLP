@@ -237,7 +237,7 @@ class CrossEntropyLoss(LossBase):
                 if pred.size(1) != target.size(1):  # 有可能顺序替换了
                     pred = pred.transpose(1, 2)
             else:
-                pred = pred.transpose(1, 2)
+                pred = pred.transpose(-1, self.class_in_dim)
             pred = pred.reshape(-1, pred.size(-1))
             target = target.reshape(-1)
 
