@@ -498,7 +498,7 @@ class TestClassfiyFPreRecMetric(unittest.TestCase):
         metric = ClassifyFPreRecMetric(f_type='micro')
         metric.evaluate(pred, target)
         result_dict = metric.get_metric(reset=True)
-        ground_truth = {'f': 0.85022, 'pre': 0.853982, 'rec': 0.846491}
+        ground_truth = {'f': 0.84375, 'pre': 0.84375, 'rec': 0.84375}
         for keys in ['f', 'pre', 'rec']:
             self.assertAlmostEqual(result_dict[keys], ground_truth[keys], delta=0.0001)
 
@@ -507,8 +507,8 @@ class TestClassfiyFPreRecMetric(unittest.TestCase):
         result_dict = metric.get_metric(reset=True)
         ground_truth = {'f-0': 0.857143, 'pre-0': 0.75, 'rec-0': 1.0, 'f-1': 0.875, 'pre-1': 0.777778, 'rec-1': 1.0,
                         'f-2': 0.75, 'pre-2': 0.75, 'rec-2': 0.75, 'f-3': 0.857143, 'pre-3': 0.857143,
-                        'rec-3': 0.857143, 'f-4': 0.842105, 'pre-4': 1.0, 'rec-4': 0.727273, 'f': 0.85022,
-                        'pre': 0.853982, 'rec': 0.846491}
+                        'rec-3': 0.857143, 'f-4': 0.842105, 'pre-4': 1.0, 'rec-4': 0.727273, 'f': 0.84375,
+                        'pre': 0.84375, 'rec': 0.84375}
         for keys in ground_truth.keys():
             self.assertAlmostEqual(result_dict[keys], ground_truth[keys], delta=0.0001)
 

@@ -465,6 +465,7 @@ class ClassifyFPreRecMetric(MetricBase):
             masks = seq_len_to_mask(seq_len=seq_len, max_len=max_len)
         else:
             masks = torch.ones_like(target).long().to(target.device)
+        masks = masks.eq(0)
 
         if pred.dim() == target.dim():
             pass
@@ -477,12 +478,12 @@ class ClassifyFPreRecMetric(MetricBase):
                                f"size:{pred.size()}, target should have size: {pred.size()} or "
                                f"{pred.size()[:-1]}, got {target.size()}.")
 
-        target_list = target.tolist()
+        target_idxes = set(target.reshape(-1).tolist())
         target = target.to(pred)
-        for target_num in target_list:
-            self._tp[target_num] += torch.sum((pred == target_num).long().masked_fill(target != target_num, 0).masked_fill(masks.eq(0), 0)).item()
-            self._fp[target_num] += torch.sum((pred != target_num).long().masked_fill(target != target_num, 0).masked_fill(masks.eq(0), 0)).item()
-            self._fn[target_num] += torch.sum((pred == target_num).long().masked_fill(target == target_num, 0).masked_fill(masks.eq(0), 0)).item()
+        for target_idx in target_idxes:
+            self._tp[target_idx] += torch.sum((pred == target_idx).long().masked_fill(target != target_idx, 0).masked_fill(masks, 0)).item()
+            self._fp[target_idx] += torch.sum((pred != target_idx).long().masked_fill(target != target_idx, 0).masked_fill(masks, 0)).item()
+            self._fn[target_idx] += torch.sum((pred == target_idx).long().masked_fill(target == target_idx, 0).masked_fill(masks, 0)).item()
 
     def get_metric(self, reset=True):
         """
