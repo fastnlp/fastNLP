@@ -864,9 +864,10 @@ class DataSet(object):
 
     def add_seq_len(self, field_name: str, new_field_name=Const.INPUT_LEN):
         """
-        将使用len()直接对field_name中每个元素作用，将其结果作为seqence length, 并放入seq_len这个field。
+        将使用len()直接对field_name中每个元素作用，将其结果作为sequence length, 并放入seq_len这个field。
 
         :param field_name: str.
+        :param new_field_name: str. 新的field_name
         :return:
         """
         if self.has_field(field_name=field_name):

@@ -33,7 +33,6 @@ class CNNText(torch.nn.Module):
         :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray embed: Embedding的大小(传入tuple(int, int),
             第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, Embedding, ndarray等则直接使用该值初始化Embedding
         :param int num_classes: 一共有多少类
-        :param int,tuple(int) out_channels: 输出channel的数量。如果为list，则需要与kernel_sizes的数量保持一致
         :param int,tuple(int) kernel_sizes: 输出channel的kernel大小。
         :param float dropout: Dropout的大小
         """
