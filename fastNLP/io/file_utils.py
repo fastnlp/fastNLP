@@ -120,7 +120,7 @@ DATASET_DIR = {
     # Summarization, English
     "ext-cnndm": "ext-cnndm.zip",
 
-    # Question & answer
+    # Question & answer, Chinese
     "cmrc2018": "cmrc2018.zip"
 
 }

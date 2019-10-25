@@ -225,7 +225,7 @@ class IMDBLoader(Loader):
             shutil.rmtree(data_dir)
             data_dir = self._get_dataset_path(dataset_name=dataset_name)
         
-        if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
+        if not os.path.exists(os.path.join(data_dir, 'dev.txt')):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
                 try:

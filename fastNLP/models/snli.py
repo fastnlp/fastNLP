@@ -164,6 +164,7 @@ class BiRNN(nn.Module):
         if self.dropout_rate > 0:
             dropout_input = F.dropout(rnn_input.data, p=self.dropout_rate, training=self.training)
             rnn_input = nn.utils.rnn.PackedSequence(dropout_input, rnn_input.batch_sizes)
+        self.rnn.flatten_parameters()
         output = self.rnn(rnn_input)[0]
         # Unpack everything
         output = nn.utils.rnn.pad_packed_sequence(output, batch_first=True)[0]
