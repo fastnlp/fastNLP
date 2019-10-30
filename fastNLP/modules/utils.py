@@ -101,7 +101,7 @@ def summary(model: nn.Module):
             else:
                 nontrain.append(count_size(p.shape))
         for p in module.buffers():
-            buffer.append(count_size(p))
+            buffer.append(count_size(p.shape))
         for subm in module.children():
             layer_summary(subm)
     
