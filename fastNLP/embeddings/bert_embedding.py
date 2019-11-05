@@ -325,7 +325,7 @@ class _WordBertModel(nn.Module):
             batch_size, max_word_len = words.size()
             word_mask = words.ne(self._word_pad_index)  # 为1的地方有word
             seq_len = word_mask.sum(dim=-1)
-            batch_word_pieces_length = self.word_pieces_lengths[words].masked_fill(word_mask.eq(0),
+            batch_word_pieces_length = self.word_pieces_lengths[words].masked_fill(word_mask.eq(False),
                                                                                    0)  # batch_size x max_len
             word_pieces_lengths = batch_word_pieces_length.sum(dim=-1)  # batch_size
             word_piece_length = batch_word_pieces_length.sum(dim=-1).max().item()  # 表示word piece的长度(包括padding)
@@ -403,12 +403,12 @@ class _WordBertModel(nn.Module):
             truncate_output_layer = output_layer[:, 1:-1]  # 删除[CLS]与[SEP] batch_size x len x hidden_size
             if self.pool_method == 'first':
                 tmp = truncate_output_layer[_batch_indexes, batch_word_pieces_cum_length]
-                tmp = tmp.masked_fill(word_mask[:, :batch_word_pieces_cum_length.size(1), None].eq(0), 0)
+                tmp = tmp.masked_fill(word_mask[:, :batch_word_pieces_cum_length.size(1), None].eq(False), 0)
                 outputs[l_index, :, s_shift:batch_word_pieces_cum_length.size(1)+s_shift] = tmp
 
             elif self.pool_method == 'last':
                 tmp = truncate_output_layer[_batch_indexes, batch_word_pieces_cum_length]
-                tmp = tmp.masked_fill(word_mask[:, :batch_word_pieces_cum_length.size(1), None].eq(0), 0)
+                tmp = tmp.masked_fill(word_mask[:, :batch_word_pieces_cum_length.size(1), None].eq(False), 0)
                 outputs[l_index, :, s_shift:batch_word_pieces_cum_length.size(1)+s_shift] = tmp
             elif self.pool_method == 'max':
                 for i in range(batch_size):

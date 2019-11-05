@@ -47,7 +47,7 @@ class MyCrossEntropyLoss(LossBase):
         loss =  F.cross_entropy(input=pred, target=target,
                                ignore_index=self.padding_idx, reduction=self.reduce)
         loss = loss.view(batch, -1)
-        loss = loss.masked_fill(mask.eq(0), 0)
+        loss = loss.masked_fill(mask.eq(False), 0)
         loss = loss.sum(1).mean()
         logger.debug("loss %f", loss)
         return loss

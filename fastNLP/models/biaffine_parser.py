@@ -148,7 +148,7 @@ class GraphParser(BaseModel):
         """
         _, seq_len, _ = arc_matrix.shape
         matrix = arc_matrix + torch.diag(arc_matrix.new(seq_len).fill_(-np.inf))
-        flip_mask = mask.eq(0)
+        flip_mask = mask.eq(False)
         matrix.masked_fill_(flip_mask.unsqueeze(1), -np.inf)
         _, heads = torch.max(matrix, dim=2)
         if mask is not None:
@@ -441,7 +441,7 @@ class BiaffineParser(GraphParser):
         
         batch_size, length, _ = pred1.shape
         mask = seq_len_to_mask(seq_len, max_len=length)
-        flip_mask = (mask == 0)
+        flip_mask = (mask.eq(False))
         _arc_pred = pred1.clone()
         _arc_pred = _arc_pred.masked_fill(flip_mask.unsqueeze(1), -float('inf'))
         arc_logits = F.log_softmax(_arc_pred, dim=2)

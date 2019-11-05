@@ -33,8 +33,8 @@ class BertSum(nn.Module):
         # print(segment_id.device)
         # print(cls_id.device)
 
-        input_mask = 1 - (article == 0)
-        mask_cls = 1 - (cls_id == -1)
+        input_mask = 1 - (article == 0).long()
+        mask_cls = 1 - (cls_id == -1).long()
         assert input_mask.size() == article.size()
         assert mask_cls.size() == cls_id.size()
 

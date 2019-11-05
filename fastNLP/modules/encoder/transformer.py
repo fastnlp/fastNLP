@@ -71,7 +71,7 @@ class TransformerEncoder(nn.Module):
         if seq_mask is None:
             atte_mask_out = None
         else:
-            atte_mask_out = (seq_mask == 0)[:, None, :]
+            atte_mask_out = (seq_mask.eq(False))[:, None, :]
             seq_mask = seq_mask[:, :, None]
         for layer in self.layers:
             output = layer(output, seq_mask, atte_mask_out)
