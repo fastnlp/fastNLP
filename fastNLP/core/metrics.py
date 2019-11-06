@@ -358,7 +358,7 @@ class AccuracyMetric(MetricBase):
 
         target = target.to(pred)
         if masks is not None:
-            self.acc_count += torch.sum(torch.eq(pred, target).masked_fill(masks.eq(0), 0)).item()
+            self.acc_count += torch.sum(torch.eq(pred, target).masked_fill(masks.eq(False), 0)).item()
             self.total += torch.sum(masks).item()
         else:
             self.acc_count += torch.sum(torch.eq(pred, target)).item()
@@ -465,7 +465,7 @@ class ClassifyFPreRecMetric(MetricBase):
             masks = seq_len_to_mask(seq_len=seq_len, max_len=max_len)
         else:
             masks = torch.ones_like(target).long().to(target.device)
-        masks = masks.eq(0)
+        masks = masks.eq(False)
 
         if pred.dim() == target.dim():
             pass
@@ -1017,7 +1017,7 @@ class CMRC2018Metric(MetricBase):
         :return:
         """
         batch_size, max_len = pred_start.size()
-        context_mask = seq_len_to_mask(context_len, max_len=max_len).eq(0)
+        context_mask = seq_len_to_mask(context_len, max_len=max_len).eq(False)
         pred_start.masked_fill_(context_mask, float('-inf'))
         pred_end.masked_fill_(context_mask, float('-inf'))
         max_pred_start, pred_start_index = pred_start.max(dim=-1, keepdim=True)  # batch_size,

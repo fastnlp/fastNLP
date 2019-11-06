@@ -229,7 +229,7 @@ class CrossEntropyLoss(LossBase):
     
     def get_loss(self, pred, target, seq_len=None):
         if seq_len is not None and target.dim()>1:
-            mask = seq_len_to_mask(seq_len, max_len=target.size(1)).eq(0)
+            mask = seq_len_to_mask(seq_len, max_len=target.size(1)).eq(False)
             target = target.masked_fill(mask, self.padding_idx)
 
         if pred.dim() > 2:
@@ -374,7 +374,7 @@ class CMRC2018Loss(LossBase):
         :return:
         """
         batch_size, max_len = pred_end.size()
-        mask = seq_len_to_mask(context_len, max_len).eq(0)
+        mask = seq_len_to_mask(context_len, max_len).eq(False)
 
         pred_start = pred_start.masked_fill(mask, float('-inf'))
         pred_end = pred_end.masked_fill(mask, float('-inf'))

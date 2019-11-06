@@ -148,7 +148,7 @@ class CNNCharEmbedding(TokenEmbedding):
             chars, _ = torch.max(conv_chars, dim=-2)  # batch_size x max_len x sum(filters)
         else:
             conv_chars = conv_chars.masked_fill(chars_masks.unsqueeze(-1), 0)
-            chars = torch.sum(conv_chars, dim=-2) / chars_masks.eq(0).sum(dim=-1, keepdim=True).float()
+            chars = torch.sum(conv_chars, dim=-2) / chars_masks.eq(False).sum(dim=-1, keepdim=True).float()
         chars = self.fc(chars)
         return self.dropout(chars)
 
@@ -266,7 +266,7 @@ class LSTMCharEmbedding(TokenEmbedding):
         chars = self.char_embedding(chars)  # batch_size x max_len x max_word_len x embed_size
         chars = self.dropout(chars)
         reshaped_chars = chars.reshape(batch_size * max_len, max_word_len, -1)
-        char_seq_len = chars_masks.eq(0).sum(dim=-1).reshape(batch_size * max_len)
+        char_seq_len = chars_masks.eq(False).sum(dim=-1).reshape(batch_size * max_len)
         lstm_chars = self.lstm(reshaped_chars, char_seq_len)[0].reshape(batch_size, max_len, max_word_len, -1)
         # B x M x M x H
         
@@ -276,7 +276,7 @@ class LSTMCharEmbedding(TokenEmbedding):
             chars, _ = torch.max(lstm_chars, dim=-2)  # batch_size x max_len x H
         else:
             lstm_chars = lstm_chars.masked_fill(chars_masks.unsqueeze(-1), 0)
-            chars = torch.sum(lstm_chars, dim=-2) / chars_masks.eq(0).sum(dim=-1, keepdim=True).float()
+            chars = torch.sum(lstm_chars, dim=-2) / chars_masks.eq(False).sum(dim=-1, keepdim=True).float()
         
         chars = self.fc(chars)
         

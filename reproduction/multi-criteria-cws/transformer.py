@@ -27,7 +27,7 @@ def attention(query, key, value, mask=None, dropout=None):
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
     if mask is not None:
         # print(scores.size(),mask.size()) # [bsz,1,1,len]
-        scores = scores.masked_fill(mask == 0, -1e9)
+        scores = scores.masked_fill(mask.eq(False), -1e9)
     p_attn = F.softmax(scores, dim=-1)
     if dropout is not None:
         p_attn = dropout(p_attn)
