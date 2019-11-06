@@ -18,7 +18,7 @@ def subsequent_mask(size):
     "Mask out subsequent positions."
     attn_shape = (1, size, size)
     subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype("uint8")
-    return torch.from_numpy(subsequent_mask) == 0
+    return torch.from_numpy(subsequent_mask).eq(False)
 
 
 def attention(query, key, value, mask=None, dropout=None):

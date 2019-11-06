@@ -42,7 +42,7 @@ def viterbi_decode(logits, transitions, mask=None, unpad=False):
         score = prev_score + trans_score + cur_score
         best_score, best_dst = score.max(1)
         vpath[i] = best_dst
-        vscore = best_score.masked_fill(mask[i].eq(0).view(batch_size, 1), 0) + \
+        vscore = best_score.masked_fill(mask[i].eq(False).view(batch_size, 1), 0) + \
                  vscore.masked_fill(mask[i].view(batch_size, 1), 0)
 
     # backtrace

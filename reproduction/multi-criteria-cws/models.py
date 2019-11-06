@@ -158,7 +158,7 @@ class CWSModel(nn.Module):
         else:
             if tags is not None:
                 out = out.contiguous().view(-1, self.tag_size)
-                tags = tags.data.masked_fill_(mask == 0, -100).view(-1)
+                tags = tags.data.masked_fill_(mask.eq(False), -100).view(-1)
                 loss = self.loss_f(out, tags)
                 return {"loss": loss}
             else:

@@ -80,7 +80,7 @@ class ConvMaxpool(nn.Module):
         xs = [self.activation(conv(x)) for conv in self.convs]  # [[N,C,L], ...]
         if mask is not None:
             mask = mask.unsqueeze(1)  # B x 1 x L
-            xs = [x.masked_fill_(mask.eq(0), float('-inf')) for x in xs]
+            xs = [x.masked_fill_(mask.eq(False), float('-inf')) for x in xs]
         # max-pooling
         xs = [F.max_pool1d(input=i, kernel_size=i.size(2)).squeeze(2)
               for i in xs]  # [[N, C], ...]
