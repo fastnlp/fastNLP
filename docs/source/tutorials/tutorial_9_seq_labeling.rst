@@ -146,7 +146,7 @@ fastNLP的数据载入主要是由Loader与Pipe两个基类衔接完成的，您
                   target_vocab=data_bundle.get_vocab('target'))
 
     from fastNLP import SpanFPreRecMetric
-    from torch import Adam
+    from torch.optim import Adam
     from fastNLP import LossInForward
     metric = SpanFPreRecMetric(tag_vocab=data_bundle.get_vocab('target'))
     optimizer = Adam(model.parameters(), lr=2e-5)
