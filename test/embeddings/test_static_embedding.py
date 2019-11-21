@@ -35,6 +35,79 @@ class TestLoad(unittest.TestCase):
             words = torch.randint(1, 200, (batch, length)).long()
             embed(words)
 
+    def test_only_use_pretrain_word(self):
+        def check_word_unk(words, vocab, embed):
+            for word in words:
+                self.assertListEqual(embed(torch.LongTensor([vocab.to_index(word)])).tolist()[0],
+                                         embed(torch.LongTensor([1])).tolist()[0])
+
+        def check_vector_equal(words, vocab, embed, embed_dict, lower=False):
+            for word in words:
+                index = vocab.to_index(word)
+                v1 = embed(torch.LongTensor([index])).tolist()[0]
+                if lower:
+                    word = word.lower()
+                v2 = embed_dict[word]
+                for v1i, v2i in zip(v1, v2):
+                    self.assertAlmostEqual(v1i, v2i, places=4)
+        embed_dict = read_static_embed('test/data_for_tests/embedding/small_static_embedding/'
+                                                         'glove.6B.50d_test.txt')
+
+        # 测试是否只使用pretrain的word
+        vocab = Vocabulary().add_word_lst(['the', 'a', 'notinfile'])
+        vocab.add_word('of', no_create_entry=True)
+        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+                                                         'glove.6B.50d_test.txt',
+                                only_use_pretrain_word=True)
+        #   notinfile应该被置为unk
+        check_vector_equal(['the', 'a', 'of'], vocab, embed, embed_dict)
+        check_word_unk(['notinfile'], vocab, embed)
+
+        # 测试在大小写情况下的使用
+        vocab = Vocabulary().add_word_lst(['The', 'a', 'notinfile'])
+        vocab.add_word('Of', no_create_entry=True)
+        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+                                                         'glove.6B.50d_test.txt',
+                                only_use_pretrain_word=True)
+        check_word_unk(['The', 'Of', 'notinfile'], vocab, embed)  # 这些词应该找不到
+        check_vector_equal(['a'], vocab, embed, embed_dict)
+
+        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+                                                         'glove.6B.50d_test.txt',
+                                only_use_pretrain_word=True, lower=True)
+        check_vector_equal(['The', 'Of', 'a'], vocab, embed, embed_dict, lower=True)
+        check_word_unk(['notinfile'], vocab, embed)
+
+        # 测试min_freq
+        vocab = Vocabulary().add_word_lst(['The', 'a', 'notinfile1', 'A', 'notinfile2', 'notinfile2'])
+        vocab.add_word('Of', no_create_entry=True)
+
+        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+                                                         'glove.6B.50d_test.txt',
+                                only_use_pretrain_word=True, lower=True, min_freq=2, only_train_min_freq=True)
+
+        check_vector_equal(['Of', 'a'], vocab, embed, embed_dict, lower=True)
+        check_word_unk(['notinfile1', 'The', 'notinfile2'], vocab, embed)
+
+
+def read_static_embed(fp):
+    """
+
+    :param str fp: embedding的路径
+    :return: {}, key是word, value是vector
+    """
+    embed = {}
+    with open(fp, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                parts = line.split()
+                vector = list(map(float, parts[1:]))
+                word = parts[0]
+                embed[word] = vector
+    return embed
+
+
 class TestRandomSameEntry(unittest.TestCase):
     def test_same_vector(self):
         vocab = Vocabulary().add_word_lst(["The", "the", "THE", 'a', "A"])

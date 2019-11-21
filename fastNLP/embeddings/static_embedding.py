@@ -68,7 +68,11 @@ class StaticEmbedding(TokenEmbedding):
         :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
         :param bool normalize: 是否对vector进行normalize，使得每个vector的norm为1。
         :param int min_freq: Vocabulary词频数小于这个数量的word将被指向unk。
-        :param dict kwarngs: only_train_min_freq, 仅对train中的词语使用min_freq筛选; only_norm_found_vector是否仅对在预训练中找到的词语使用normalize。
+        :param dict kwarngs:
+                bool only_train_min_freq: 仅对train中的词语使用min_freq筛选;
+                bool only_norm_found_vector: 是否仅对在预训练中找到的词语使用normalize;
+                bool only_use_pretrain_word: 仅使用出现在pretrain词表中的词语。如果该词没有在预训练的词表中出现则为unk。如果词表
+                    不需要更新设置为True。
         """
         super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         if embedding_dim > 0:
@@ -118,7 +122,8 @@ class StaticEmbedding(TokenEmbedding):
                 truncated_words_to_words[index] = truncated_vocab.to_index(word)
             logger.info(f"{len(vocab) - len(truncated_vocab)} out of {len(vocab)} words have frequency less than {min_freq}.")
             vocab = truncated_vocab
-        
+
+        self.only_use_pretrain_word = kwargs.get('only_use_pretrain_word', False)
         self.only_norm_found_vector = kwargs.get('only_norm_found_vector', False)
         # 读取embedding
         if lower:
@@ -249,12 +254,13 @@ class StaticEmbedding(TokenEmbedding):
                         logger.error("Error occurred at the {} line.".format(idx))
                         raise e
             logger.info("Found {} out of {} words in the pre-training embedding.".format(found_count, len(vocab)))
-            for word, index in vocab:
-                if index not in matrix and not vocab._is_word_no_create_entry(word):
-                    if found_unknown:  # 如果有unkonwn，用unknown初始化
-                        matrix[index] = matrix[vocab.unknown_idx]
-                    else:
-                        matrix[index] = None
+            if not self.only_use_pretrain_word:  # 如果只用pretrain中的值就不要为未找到的词创建entry了
+                for word, index in vocab:
+                    if index not in matrix and not vocab._is_word_no_create_entry(word):
+                        if found_unknown:  # 如果有unkonwn，用unknown初始化
+                            matrix[index] = matrix[vocab.unknown_idx]
+                        else:
+                            matrix[index] = None
             # matrix中代表是需要建立entry的词
             vectors = self._randomly_init_embed(len(matrix), dim, init_method)
             

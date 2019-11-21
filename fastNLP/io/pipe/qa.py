@@ -16,9 +16,9 @@ from ...core import Vocabulary
 __all__ = ['CMRC2018BertPipe']
 
 
-def _concat_clip(data_bundle, tokenizer, max_len, concat_field_name='raw_chars'):
+def _concat_clip(data_bundle, max_len, concat_field_name='raw_chars'):
     """
-    处理data_bundle中的DataSet，将context与question进行tokenize，然后使用[SEP]将两者连接起来。
+    处理data_bundle中的DataSet，将context与question按照character进行tokenize，然后使用[SEP]将两者连接起来。
 
     会新增field: context_len(int), raw_words(list[str]), target_start(int), target_end(int)其中target_start
     与target_end是与raw_chars等长的。其中target_start和target_end是前闭后闭的区间。
@@ -26,6 +26,7 @@ def _concat_clip(data_bundle, tokenizer, max_len, concat_field_name='raw_chars')
     :param DataBundle data_bundle: 类似["a", "b", "[SEP]", "c", ]
     :return:
     """
+    tokenizer = get_tokenizer('cn-char', lang='cn')
     for name in list(data_bundle.datasets.keys()):
         ds = data_bundle.get_dataset(name)
         data_bundle.delete_dataset(name)
@@ -87,8 +88,8 @@ class CMRC2018BertPipe(Pipe):
 
        ".", "...", "...","...", "..."
 
-    raw_words列是context与question拼起来的结果，words是转为index的值, target_start当当前位置为答案的开头时为1，target_end当当前
-    位置为答案的结尾是为1；context_len指示的是words列中context的长度。
+    raw_words列是context与question拼起来的结果(连接的地方加入了[SEP])，words是转为index的值, target_start为答案start的index，target_end为答案end的index
+    （闭区间）；context_len指示的是words列中context的长度。
 
     其中各列的meta信息如下:
         +-------------+-------------+-----------+--------------+------------+-------+---------+
@@ -119,8 +120,7 @@ class CMRC2018BertPipe(Pipe):
         :param data_bundle:
         :return:
         """
-        _tokenizer = get_tokenizer('cn-char', lang='cn')
-        data_bundle = _concat_clip(data_bundle, tokenizer=_tokenizer, max_len=self.max_len, concat_field_name='raw_chars')
+        data_bundle = _concat_clip(data_bundle, max_len=self.max_len, concat_field_name='raw_chars')
 
         src_vocab = Vocabulary()
         src_vocab.from_dataset(*[ds for name, ds in data_bundle.iter_datasets() if 'train' in name],

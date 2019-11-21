@@ -1006,24 +1006,28 @@ class CMRC2018Metric(MetricBase):
         self.total = 0
         self.f1 = 0
 
-    def evaluate(self, answers, raw_chars, context_len, pred_start, pred_end):
+    def evaluate(self, answers, raw_chars, pred_start, pred_end, context_len=None):
         """
 
         :param list[str] answers: 如[["答案1", "答案2", "答案3"], [...], ...]
         :param list[str] raw_chars: [["这", "是", ...], [...]]
+        :param tensor pred_start: batch_size x length 或 batch_size,
+        :param tensor pred_end: batch_size x length 或 batch_size(是闭区间，包含end位置),
         :param tensor context_len: context长度, batch_size
-        :param tensor pred_start: batch_size x length
-        :param tensor pred_end: batch_size x length
         :return:
         """
-        batch_size, max_len = pred_start.size()
-        context_mask = seq_len_to_mask(context_len, max_len=max_len).eq(False)
-        pred_start.masked_fill_(context_mask, float('-inf'))
-        pred_end.masked_fill_(context_mask, float('-inf'))
-        max_pred_start, pred_start_index = pred_start.max(dim=-1, keepdim=True)  # batch_size,
-        pred_start_mask = pred_start.eq(max_pred_start).cumsum(dim=-1).eq(0)  # 只能预测这之后的值
-        pred_end.masked_fill_(pred_start_mask, float('-inf'))
-        pred_end_index = pred_end.argmax(dim=-1) + 1
+        if pred_start.dim() > 1:
+            batch_size, max_len = pred_start.size()
+            context_mask = seq_len_to_mask(context_len, max_len=max_len).eq(False)
+            pred_start.masked_fill_(context_mask, float('-inf'))
+            pred_end.masked_fill_(context_mask, float('-inf'))
+            max_pred_start, pred_start_index = pred_start.max(dim=-1, keepdim=True)  # batch_size,
+            pred_start_mask = pred_start.eq(max_pred_start).cumsum(dim=-1).eq(0)  # 只能预测这之后的值
+            pred_end.masked_fill_(pred_start_mask, float('-inf'))
+            pred_end_index = pred_end.argmax(dim=-1) + 1
+        else:
+            pred_start_index = pred_start
+            pred_end_index = pred_end + 1
         pred_ans = []
         for index, (start, end) in enumerate(zip(pred_start_index.flatten().tolist(), pred_end_index.tolist())):
             pred_ans.append(''.join(raw_chars[index][start:end]))
