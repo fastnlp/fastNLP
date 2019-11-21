@@ -878,11 +878,10 @@ class DataSet(object):
 
     def drop(self, func, inplace=True):
         """
-        func接受一个Instance，返回bool值。返回值为True时，该Instance会被移除或者加入到返回的DataSet中。
+        func接受一个Instance，返回bool值。返回值为True时，该Instance会被移除或者不会包含在返回的DataSet中。
 
         :param callable func: 接受一个Instance作为参数，返回bool值。为True时删除该instance
-        :param bool inplace: 是否在当前DataSet中直接删除instance。如果为False，被删除的Instance的组成的新DataSet将作为
-            :返回值
+        :param bool inplace: 是否在当前DataSet中直接删除instance；如果为False，将返回一个新的DataSet。
 
         :return: DataSet
         """
