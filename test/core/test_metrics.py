@@ -430,7 +430,8 @@ class TestCMRC2018Metric(unittest.TestCase):
         pred_start[1, 1] = 1000  # 取出234
         pred_end[1, 3] = 1000
 
-        metric.evaluate(answers, raw_chars, context_len, pred_start, pred_end)
+        metric.evaluate(answers=answers, raw_chars=raw_chars, pred_start=pred_start,
+                        pred_end=pred_end, context_len=context_len)
 
         eval_res = metric.get_metric()
         self.assertDictEqual(eval_res, {'f1': 70.0, 'em': 50.0})
