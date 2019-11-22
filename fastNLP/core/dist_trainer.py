@@ -1,5 +1,8 @@
-"""undocumented
-正在开发中的分布式训练代码
+"""
+分布式 Trainer
+使用步骤
+1. 在代码中调用 DistTrainer，类似 Trainer，传入模型和数据等等参数
+2. 在命令行中，将 python your_script.py 替换为 python -m torch.distributed.launch --nproc_per_node=N your_script.py
 """
 import logging
 import os

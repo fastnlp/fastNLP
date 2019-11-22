@@ -1,4 +1,20 @@
-"""undocumented"""
+"""
+Logger 是fastNLP中记录日志的模块，logger封装了logging模块的Logger，
+具体使用方式与直接使用logging.Logger相同，同时也新增一些简单好用的API
+使用方式：
+from fastNLP import logger
+#
+# logger 可以和 logging.Logger 一样使用
+logger.info('your msg')
+logger.error('your msg')
+
+# logger 新增的API
+# 将日志输出到文件，以及输出的日志等级
+logger.add_file('/path/to/log', level='INFO')
+# 定义在命令行中的显示格式和日志等级
+logger.set_stdout('tqdm', level='WARN')
+
+"""
 
 __all__ = [
     'logger',
@@ -108,11 +124,11 @@ class FastNLPLogger(logging.getLoggerClass()):
         super().__init__(name)
     
     def add_file(self, path='./log.txt', level='INFO'):
-        """add log output file and level"""
+        """add log output file and the output level"""
         _add_file_handler(self, path, level)
     
     def set_stdout(self, stdout='tqdm', level='INFO'):
-        """set stdout format and level"""
+        """set stdout format and the output level"""
         _set_stdout_handler(self, stdout, level)
 
 
@@ -152,4 +168,4 @@ def _get_logger(name=None, level='INFO'):
     return logger
 
 
-logger = _init_logger(path=None)
+logger = _init_logger(path=None, level=1) # make the logger the lowest level
