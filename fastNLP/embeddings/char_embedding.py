@@ -114,7 +114,8 @@ class CNNCharEmbedding(TokenEmbedding):
             self.char_embedding = get_embeddings((len(self.char_vocab), char_emb_size))
         
         self.convs = nn.ModuleList([nn.Conv1d(
-            char_emb_size, filter_nums[i], kernel_size=kernel_sizes[i], bias=True, padding=kernel_sizes[i] // 2)
+            self.char_embedding.embedding_dim, filter_nums[i], kernel_size=kernel_sizes[i], bias=True,
+            padding=kernel_sizes[i] // 2)
             for i in range(len(kernel_sizes))])
         self._embed_size = embed_size
         self.fc = nn.Linear(sum(filter_nums), embed_size)
@@ -238,12 +239,12 @@ class LSTMCharEmbedding(TokenEmbedding):
         if pre_train_char_embed:
             self.char_embedding = StaticEmbedding(self.char_vocab, pre_train_char_embed)
         else:
-            self.char_embedding = nn.Embedding(len(self.char_vocab), char_emb_size)
+            self.char_embedding = get_embeddings((len(self.char_vocab), char_emb_size))
         
         self.fc = nn.Linear(hidden_size, embed_size)
         hidden_size = hidden_size // 2 if bidirectional else hidden_size
         
-        self.lstm = LSTM(char_emb_size, hidden_size, bidirectional=bidirectional, batch_first=True)
+        self.lstm = LSTM(self.char_embedding.embedding_dim, hidden_size, bidirectional=bidirectional, batch_first=True)
         self._embed_size = embed_size
         self.bidirectional = bidirectional
         self.requires_grad = requires_grad

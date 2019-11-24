@@ -68,7 +68,7 @@ class StaticEmbedding(TokenEmbedding):
         :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
         :param bool normalize: 是否对vector进行normalize，使得每个vector的norm为1。
         :param int min_freq: Vocabulary词频数小于这个数量的word将被指向unk。
-        :param dict kwarngs:
+        :param dict kwargs:
                 bool only_train_min_freq: 仅对train中的词语使用min_freq筛选;
                 bool only_norm_found_vector: 是否仅对在预训练中找到的词语使用normalize;
                 bool only_use_pretrain_word: 仅使用出现在pretrain词表中的词语。如果该词没有在预训练的词表中出现则为unk。如果词表

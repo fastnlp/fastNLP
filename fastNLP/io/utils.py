@@ -44,14 +44,17 @@ def check_loader_paths(paths: Union[str, Dict[str, str]]) -> Dict[str, str]:
                 if 'dev' in filename:
                     if path_pair:
                         raise Exception(
-                            "File:{} in {} contains bot `{}` and `dev`.".format(filename, paths, path_pair[0]))
+                            "Directory:{} in {} contains both `{}` and `dev`.".format(filename, paths, path_pair[0]))
                     path_pair = ('dev', filename)
                 if 'test' in filename:
                     if path_pair:
                         raise Exception(
-                            "File:{} in {} contains bot `{}` and `test`.".format(filename, paths, path_pair[0]))
+                            "Directory:{} in {} contains both `{}` and `test`.".format(filename, paths, path_pair[0]))
                     path_pair = ('test', filename)
                 if path_pair:
+                    if path_pair[0] in files:
+                        raise FileExistsError(f"Two files contain `{path_pair[0]}` were found, please specify the "
+                                              f"filepath for `{path_pair[0]}`.")
                     files[path_pair[0]] = os.path.join(paths, path_pair[1])
             if 'train' not in files:
                 raise KeyError(f"There is no train file in {paths}.")
