@@ -1,17 +1,17 @@
 fastNLP 中文文档
 =====================
 
-`fastNLP <https://github.com/fastnlp/fastNLP/>`_ 是一款轻量级的 NLP 处理套件。你既可以使用它快速地完成一个序列标注
-（NER、POS-Tagging等）、中文分词、文本分类、Matching、指代消解、摘要等任务
-（详见 `reproduction <https://github.com/fastnlp/fastNLP/tree/master/reproduction>`_ ）；
-也可以使用它构建许多复杂的网络模型，进行科研。它具有如下的特性：
+`fastNLP <https://github.com/fastnlp/fastNLP/>`_ 是一款轻量级的自然语言处理（NLP）工具包。你既可以用它来快速地完成一个NLP任务，
+也可以用它在研究中快速构建更复杂的模型。
 
-- 统一的Tabular式数据容器，让数据预处理过程简洁明了。内置多种数据集的 :mod:`~fastNLP.io.data_loader` ，省去预处理代码;
-- 多种训练、测试组件，例如训练器 :class:`~fastNLP.Trainer` ；测试器 :class:`~fastNLP.Tester` ；以及各种评测 :mod:`~fastNLP.core.metrics` 等等;
-- 各种方便的NLP工具，例如预处理 :mod:`embedding<fastNLP.embeddings>` 加载（包括ELMo和BERT）; 中间数据存储 :func:`cache <fastNLP.cache_results>` 等;
-- 提供诸多高级模块 :mod:`~fastNLP.modules`，例如 :class:`~fastNLP.modules.VarLSTM` , :class:`Transformer<fastNLP.modules.TransformerEncoder>` , :class:`CRF<fastNLP.modules.ConditionalRandomField>` 等;
-- 在序列标注、中文分词、文本分类、Matching、指代消解、摘要等任务上封装了各种 :mod:`~fastNLP.models` 可供直接使用;
-- 训练器便捷且具有扩展性，提供多种内置 :mod:`~fastNLP.core.callback` 函数，方便实验记录、异常捕获等。
+fastNLP具有如下的特性：
+
+- 统一的Tabular式数据容器，简化数据预处理过程;
+- 内置多种数据集的 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` ，省去预处理代码;
+- 各种方便的NLP工具，例如Embedding加载（包括 :class:`~fastNLP.embeddings.ElmoEmbedding` 和 :class:`~fastNLP.embeddings.BertEmbedding` ）、中间数据cache等;
+- 部分 `数据集与预训练模型 <https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0>`_ 的自动下载;
+- 提供多种神经网络组件以及复现模型（涵盖中文分词、命名实体识别、句法分析、文本分类、文本匹配、指代消解、摘要等任务）;
+- :class:`~fastNLP.Trainer` 提供多种内置 :mod:`~fastNLP.core.callback` 函数，方便实验记录、异常捕获等.
 
 
 用户手册

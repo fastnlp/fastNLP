@@ -380,7 +380,7 @@ class AccuracyMetric(MetricBase):
 
 
 class ClassifyFPreRecMetric(MetricBase):
-    """
+    r"""
     分类问题计算FPR值的Metric（其它的Metric参见 :mod:`fastNLP.core.metrics` ）
 
     最后得到的metric结果为::
@@ -999,6 +999,9 @@ def _pred_topk(y_prob, k=1):
 
 
 class CMRC2018Metric(MetricBase):
+    r"""
+    CRMC2018任务的评价metric
+    """
     def __init__(self, answers=None, raw_chars=None, context_len=None, pred_start=None, pred_end=None):
         super().__init__()
         self._init_param_map(answers=answers, raw_chars=raw_chars, context_len=context_len, pred_start=pred_start,

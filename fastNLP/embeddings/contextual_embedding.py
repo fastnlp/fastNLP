@@ -21,6 +21,9 @@ from ..core.vocabulary import Vocabulary
 
 
 class ContextualEmbedding(TokenEmbedding):
+    r"""
+    ContextualEmbedding组件. BertEmbedding与ElmoEmbedding的基类
+    """
     def __init__(self, vocab: Vocabulary, word_dropout: float = 0.0, dropout: float = 0.0):
         super(ContextualEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
     
