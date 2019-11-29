@@ -259,7 +259,7 @@ class _WordBertModel(nn.Module):
         if '[sep]' in vocab:
             warnings.warn("Lower cased [sep] detected, it cannot be correctly recognized as [SEP] by BertEmbedding.")
         if "[CLS]" in vocab:
-            warnings.warn("[CLS] detected in your vocabulary. BertEmbedding will add [CSL] and [SEP] to the begin "
+            warnings.warn("[CLS] detected in your vocabulary. BertEmbedding will add [CLS] and [SEP] to the begin "
                           "and end of the input automatically, make sure you don't add [CLS] and [SEP] at the begin"
                           " and end.")
         for word, index in vocab:
