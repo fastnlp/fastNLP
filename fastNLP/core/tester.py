@@ -72,7 +72,7 @@ class Tester(object):
         """
         
         :param ~fastNLP.DataSet data: 需要测试的数据集
-        :param torch.nn.module model: 使用的模型
+        :param torch.nn.Module model: 使用的模型
         :param ~fastNLP.core.metrics.MetricBase,List[~fastNLP.core.metrics.MetricBase] metrics: 测试时使用的metrics
         :param int batch_size: evaluation时使用的batch_size有多大。
         :param str,int,torch.device,list(int) device: 将模型load到哪个设备。默认为None，即Trainer不对模型

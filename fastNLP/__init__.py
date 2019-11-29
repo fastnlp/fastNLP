@@ -45,7 +45,8 @@ __all__ = [
     
     "AccuracyMetric",
     "SpanFPreRecMetric",
-    "ExtractiveQAMetric",
+    "CMRC2018Metric",
+    "ClassifyFPreRecMetric",
     
     "Optimizer",
     "SGD",
