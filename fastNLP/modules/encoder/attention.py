@@ -26,7 +26,7 @@ class DotAttention(nn.Module):
         self.value_size = value_size
         self.scale = math.sqrt(key_size)
         self.drop = nn.Dropout(dropout)
-        self.softmax = nn.Softmax(dim=2)
+        self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, Q, K, V, mask_out=None):
         """

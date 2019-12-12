@@ -209,7 +209,7 @@ class Vocabulary(object):
             self._word2idx = {}
             if self.padding is not None:
                 self._word2idx[self.padding] = len(self._word2idx)
-            if self.unknown is not None:
+            if (self.unknown is not None) and (self.unknown != self.padding):
                 self._word2idx[self.unknown] = len(self._word2idx)
         
         max_size = min(self.max_size, len(self.word_count)) if self.max_size else None
