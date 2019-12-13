@@ -122,7 +122,7 @@ def _find_and_replace_digit_spans(line):
     otherwise unkdgt
     """
     new_line = ''
-    pattern = '\d[\d\\.﹒·]*(?=[\u4e00-\u9fff  ，％,。！<－“])'
+    pattern = '\d[\d\\.﹒·]*(?=[\u4e00-\u9fff  ，％%,。！<－“])'
     prev_end = 0
     for match in re.finditer(pattern, line):
         start, end = match.span()
@@ -193,9 +193,13 @@ class CWSPipe(Pipe):
                 subchar = []
                 for c in word:
                     if c == '<':
+                        if subchar:
+                            char.extend(subchar)
+                            subchar = []
                         subchar.append(c)
                         continue
-                    if c == '>' and subchar[0] == '<':
+                    if c == '>' and len(subchar)>0 and subchar[0] == '<':
+                        subchar.append(c)
                         char.append(''.join(subchar))
                         subchar = []
                     if subchar:
