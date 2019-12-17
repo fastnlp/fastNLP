@@ -117,6 +117,7 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
                     except Exception as e:
                         if dropna:
                             logger.warning('Invalid instance which ends at line: {} has been dropped.'.format(line_idx))
+                            sample = []
                             continue
                         raise ValueError('Invalid instance which ends at line: {}'.format(line_idx))
             elif line.startswith('#'):
