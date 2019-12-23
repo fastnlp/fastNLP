@@ -193,7 +193,7 @@ class BertWordPieceEncoder(nn.Module):
         with torch.no_grad():
             sep_mask = word_pieces.eq(self._sep_index)  # batch_size x max_len
             if token_type_ids is None:
-                sep_mask_cumsum = sep_mask.flip(dims=[-1]).cumsum(dim=-1).flip(dims=[-1])
+                sep_mask_cumsum = sep_mask.long().flip(dims=[-1]).cumsum(dim=-1).flip(dims=[-1])
                 token_type_ids = sep_mask_cumsum.fmod(2)
                 if token_type_ids[0, 0].item():  # 如果开头是奇数，则需要flip一下结果，因为需要保证开头为0
                     token_type_ids = token_type_ids.eq(0).long()
