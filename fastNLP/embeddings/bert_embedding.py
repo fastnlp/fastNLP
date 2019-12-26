@@ -140,8 +140,7 @@ class BertWordPieceEncoder(nn.Module):
         
         :param str model_dir_or_name: 模型所在目录或者模型的名称。默认值为 ``en-base-uncased``
         :param str layers: 最终结果中的表示。以','隔开层数，可以以负数去索引倒数几层
-        :param bool pooled_cls: 返回的句子开头的[CLS]是否使用预训练中的BertPool映射一下，仅在include_cls_sep时有效。如果下游任务只取
-            [CLS]做预测，一般该值为True。
+        :param bool pooled_cls: 返回的句子开头的[CLS]是否使用预训练中的BertPool映射一下。如果下游任务取[CLS]做预测，一般该值为True。
         :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
         :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
         :param bool requires_grad: 是否需要gradient。

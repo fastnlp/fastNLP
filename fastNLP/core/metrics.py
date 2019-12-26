@@ -216,7 +216,6 @@ class MetricBase(object):
         :return:
         """
 
-
         if not self._checked:
             if not callable(self.evaluate):
                 raise TypeError(f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}.")
