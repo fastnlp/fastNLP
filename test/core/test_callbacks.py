@@ -41,8 +41,8 @@ class TestCallback(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp()
     
     def tearDown(self):
-        pass
-        # shutil.rmtree(self.tempdir)
+        import shutil
+        shutil.rmtree(self.tempdir)
     
     def test_gradient_clip(self):
         data_set, model = prepare_env()
@@ -145,7 +145,54 @@ class TestCallback(unittest.TestCase):
                           metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=True,
                           callbacks=fitlog_callback, check_code_level=2)
         trainer.train()
-    
+
+    def test_CheckPointCallback(self):
+
+        from fastNLP import CheckPointCallback, Callback
+        from fastNLP import Tester
+
+        class RaiseCallback(Callback):
+            def __init__(self, stop_step=10):
+                super().__init__()
+                self.stop_step = stop_step
+
+            def on_backward_begin(self, loss):
+                if self.step > self.stop_step:
+                    raise RuntimeError()
+
+        data_set, model = prepare_env()
+        tester = Tester(data=data_set, model=model, metrics=AccuracyMetric(pred="predict", target="y"))
+        import fitlog
+
+        fitlog.set_log_dir(self.tempdir)
+        tempfile_path = os.path.join(self.tempdir, 'chkt.pt')
+        callbacks = [CheckPointCallback(tempfile_path)]
+
+        fitlog_callback = FitlogCallback(data_set, tester)
+        callbacks.append(fitlog_callback)
+
+        callbacks.append(RaiseCallback(100))
+        try:
+            trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                              batch_size=32, n_epochs=5, print_every=50, dev_data=data_set,
+                              metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=True,
+                              callbacks=callbacks, check_code_level=2)
+            trainer.train()
+        except:
+            pass
+        #  用下面的代码模拟重新运行
+        data_set, model = prepare_env()
+        callbacks = [CheckPointCallback(tempfile_path)]
+        tester = Tester(data=data_set, model=model, metrics=AccuracyMetric(pred="predict", target="y"))
+        fitlog_callback = FitlogCallback(data_set, tester)
+        callbacks.append(fitlog_callback)
+
+        trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                          batch_size=32, n_epochs=5, print_every=50, dev_data=data_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=True,
+                          callbacks=callbacks, check_code_level=2)
+        trainer.train()
+
     def test_save_model_callback(self):
         data_set, model = prepare_env()
         top = 3

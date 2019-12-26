@@ -562,7 +562,6 @@ class Trainer(object):
                                  verbose=0,
                                  use_tqdm=self.test_use_tqdm)
 
-        self.step = 0
         self.start_time = None  # start timestamp
 
         if isinstance(callbacks, Callback):
@@ -603,7 +602,8 @@ class Trainer(object):
             self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
             start_time = time.time()
             self.logger.info("training epochs started " + self.start_time)
-
+            self.step = 0
+            self.epoch = 1
             try:
                 self.callback_manager.on_train_begin()
                 self._train()
@@ -642,14 +642,12 @@ class Trainer(object):
             from .utils import _pseudo_tqdm as inner_tqdm
         else:
             inner_tqdm = tqdm
-        self.step = 0
-        self.epoch = 0
         start = time.time()
         with inner_tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
             self.pbar = pbar
             avg_loss = 0
             self.batch_per_epoch = self.data_iterator.num_batches
-            for epoch in range(1, self.n_epochs + 1):
+            for epoch in range(self.epoch, self.n_epochs + 1):
                 self.epoch = epoch
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
                 # early stopping

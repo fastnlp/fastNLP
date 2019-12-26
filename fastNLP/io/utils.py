@@ -26,8 +26,8 @@ def check_loader_paths(paths: Union[str, Dict[str, str]]) -> Dict[str, str]:
 
     如果paths为不合法的，将直接进行raise相应的错误. 如果paths内不包含train也会报错。
 
-    :param str paths: 路径. 可以为一个文件路径(则认为该文件就是train的文件); 可以为一个文件目录，将在该目录下寻找train(文件名
-        中包含train这个字段), test.txt, dev.txt; 可以为一个dict, 则key是用户自定义的某个文件的名称，value是这个文件的路径。
+    :param str paths: 路径. 可以为一个文件路径(则认为该文件就是train的文件); 可以为一个文件目录，将在该目录下寻找包含train(文件名
+        中包含train这个字段), test, dev这三个字段的文件或文件夹; 可以为一个dict, 则key是用户自定义的某个文件的名称，value是这个文件的路径。
     :return:
     """
     if isinstance(paths, (str, Path)):
@@ -69,8 +69,8 @@ def check_loader_paths(paths: Union[str, Dict[str, str]]) -> Dict[str, str]:
             for key, value in paths.items():
                 if isinstance(key, str) and isinstance(value, str):
                     value = os.path.abspath(os.path.expanduser(value))
-                    if not os.path.isfile(value):
-                        raise TypeError(f"{value} is not a valid file.")
+                    if not os.path.exists(value):
+                        raise TypeError(f"{value} is not a valid path.")
                     paths[key] = value
                 else:
                     raise TypeError("All keys and values in paths should be str.")

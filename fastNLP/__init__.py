@@ -38,11 +38,13 @@ __all__ = [
     'SaveModelCallback',
     "CallbackException",
     "EarlyStopError",
-    
+    "CheckPointCallback",
+
     "Padder",
     "AutoPadder",
     "EngChar2DPadder",
-    
+
+    "MetricBase",
     "AccuracyMetric",
     "SpanFPreRecMetric",
     "CMRC2018Metric",
