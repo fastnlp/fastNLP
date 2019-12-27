@@ -29,5 +29,6 @@ class TestLogger(unittest.TestCase):
     def test_stdout(self, mock_out):
         for i in range(3):
             logger.info(self.msg)
+            logger.debug('aabbc')
 
         self.assertEqual([self.msg for i in range(3)], mock_out.getvalue().strip().split('\n'))

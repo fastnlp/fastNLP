@@ -145,7 +145,7 @@ def _init_logger(path=None, stdout='tqdm', level='INFO'):
     # logger = logging.getLogger()
     logger = logging.getLogger(ROOT_NAME)
     logger.propagate = False
-    logger.setLevel(level)
+    logger.setLevel(1)  # make the logger the lowest level
     
     _set_stdout_handler(logger, stdout, level)
     
@@ -168,4 +168,4 @@ def _get_logger(name=None, level='INFO'):
     return logger
 
 
-logger = _init_logger(path=None, level=1) # make the logger the lowest level
+logger = _init_logger(path=None, level='INFO')
