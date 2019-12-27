@@ -19,6 +19,8 @@ import torch.nn as nn
 from typing import List
 from ._logger import logger
 from prettytable import PrettyTable
+from ._parallel_utils import _model_contains_inner_module
+
 try:
     from apex import amp
 except:
@@ -179,7 +181,7 @@ def _save_model(model, model_name, save_dir, only_param=False):
     model_path = os.path.join(save_dir, model_name)
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir, exist_ok=True)
-    if isinstance(model, nn.DataParallel):
+    if _model_contains_inner_module(model):
         model = model.module
     if only_param:
         state_dict = model.state_dict()
