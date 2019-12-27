@@ -898,6 +898,10 @@ class CheckPointCallback(Callback):
         self.save_path = os.path.abspath(os.path.expanduser(save_path))
         self.delete_when_train_finish = delete_when_train_finish
         self.recover_fitlog = recovery_fitlog
+        try:
+            import fitlog
+        except:
+            self.recover_fitlog = False
         if os.path.exists(os.path.expanduser(self.save_path)):
             logger.info("The train will start from the checkpoint saved in {}.".format(self.save_path))
             if self.recover_fitlog:
