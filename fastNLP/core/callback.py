@@ -574,7 +574,7 @@ class FitlogCallback(Callback):
         if self._log_loss_every>0:
             self._avg_loss += loss.item()
             if self.step%self._log_loss_every==0:
-                fitlog.add_loss(self._avg_loss/self._log_loss_every, name='loss', step=self.step, epoch=self.epoch)
+                fitlog.add_loss(self._avg_loss/self._log_loss_every*self.update_every, name='loss', step=self.step, epoch=self.epoch)
                 self._avg_loss = 0
 
     def on_valid_end(self, eval_result, metric_key, optimizer, better_result):
