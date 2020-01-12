@@ -20,7 +20,6 @@ from .pipe import Pipe
 from .utils import get_tokenizer, _indexize, _add_words_field, _drop_empty_instance, _add_chars_field
 from ..data_bundle import DataBundle
 from ..loader.classification import ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader
-from ..loader.classification import IMDBLoader, YelpFullLoader, SSTLoader, SST2Loader, YelpPolarityLoader
 from ..loader.classification import IMDBLoader, YelpFullLoader, SSTLoader, SST2Loader, YelpPolarityLoader, \
     AGsNewsLoader
 from ...core._logger import logger
