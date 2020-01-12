@@ -4,6 +4,7 @@ __all__ = [
     "YelpLoader",
     "YelpFullLoader",
     "YelpPolarityLoader",
+    "AGsNewsLoader",
     "IMDBLoader",
     "SSTLoader",
     "SST2Loader",
@@ -159,6 +160,20 @@ class YelpPolarityLoader(YelpLoader):
                         os.remove(os.path.join(data_dir, 'middle_file.csv'))
         
         return data_dir
+
+
+class AGsNewsLoader(YelpLoader):
+    def download(self):
+        """
+        自动下载数据集，如果你使用了这个数据集，请引用以下的文章
+
+        Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional Networks for Text Classification. Advances
+        in Neural Information Processing Systems 28 (NIPS 2015)
+
+        :return: str, 数据集的目录地址
+        """
+
+        return self._get_dataset_path(dataset_name='ag-news')
 
 
 class IMDBLoader(Loader):

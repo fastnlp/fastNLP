@@ -57,6 +57,7 @@ class MNLILoader(Loader):
             f.readline()  # 跳过header
             if path.endswith("test_matched.tsv") or path.endswith('test_mismatched.tsv'):
                 warnings.warn("RTE's test file has no target.")
+                warnings.warn("MNLI's test file has no target.")
                 for line in f:
                     line = line.strip()
                     if line:
