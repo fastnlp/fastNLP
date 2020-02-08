@@ -347,7 +347,95 @@ class AccuracyMetric(MetricBase):
             self.acc_count = 0
             self.total = 0
         return evaluate_result
+    
+class ConfusionMatrix(MetricBase):
+    """
+    混淆矩阵Matrix
+    """
+    import numpy as np
+    def __init__(self, pred=None, target=None, seq_len=None):
+        """
+        
+        :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+        :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
+        :param seq_len: 参数映射表中 `seq_len` 的映射关系，None表示映射关系为 `seq_len` -> `seq_len`
+        """
+        
+        super().__init__()
+        
+        self._init_param_map(pred=pred, target=target, seq_len=seq_len)
+        
+        
+        self.result=[]
+        self.min_label=0
+        self.max_label=0
 
+    def evaluate(self, pred, target, seq_len=None):
+        """
+        evaluate函数将针对一个批次的预测结果做评价指标的累计
+
+        :param torch.Tensor pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
+                torch.Size([B, max_len]), 或者torch.Size([B, max_len, n_classes])
+        :param torch.Tensor target: 真实值的tensor, tensor的形状可以是Element's can be: torch.Size([B,]),
+                torch.Size([B,]), torch.Size([B, max_len]), 或者torch.Size([B, max_len])
+        :param torch.Tensor seq_len: 序列长度标记, 标记的形状可以是None, None, torch.Size([B]), 或者torch.Size([B]).
+                如果mask也被传进来的话seq_len会被忽略.
+
+        """
+        # TODO 这里报错需要更改，因为pred是啥用户并不知道。需要告知用户真实的value
+        if not isinstance(pred, torch.Tensor):
+            raise TypeError(f"`pred` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                            f"got {type(pred)}.")
+        if not isinstance(target, torch.Tensor):
+            raise TypeError(f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                            f"got {type(target)}.")
+        if seq_len is not None and not isinstance(seq_len, torch.Tensor):
+            raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                            f"got {type(seq_len)}.")
+        
+        if seq_len is not None and target.dim()>1:
+            max_len = target.size(1)
+            masks = seq_len_to_mask(seq_len=seq_len, max_len=max_len)
+        else:
+            masks = None
+        
+        if pred.dim() == target.dim():
+            pass
+        elif pred.dim() == target.dim() + 1:
+            pred = pred.argmax(dim=-1)
+            if seq_len is None and target.dim()>1:
+                warnings.warn("You are not passing `seq_len` to exclude pad when calculate .")
+        else:
+            raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
+                               f"size:{pred.size()}, target should have size: {pred.size()} or "
+                               f"{pred.size()[:-1]}, got {target.size()}.")
+        
+        target = target.to(pred)
+        if masks is not None:
+            pass
+        else:
+            self.result.append((pred,target))
+            if self.min_label > min(target):
+                self.min_label =  min(target)
+            if self.max_label < max(target):
+                self.max_label = max(target)
+
+    def get_metric(self, reset=True):
+        """
+        get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果.
+
+        :param bool reset: 在调用完get_metric后是否清空混淆矩阵计数.
+        :return dict: ConfusionMatrix
+        """
+        s = self.max_label - self.min_label + 1 #若2,3,4,5,6  为5
+        M = np.zeros((s,s))
+        for p in self.result:
+            for i,j in zip(p[0],p[1]): #(2,5),(3,2)
+                M[i-self.min_label][j-self.min_label]+=1.0
+        ConfusionMatrix=M
+        if reset:
+            M = np.zeros((s,s))
+        return {"ConfusionMatrix":ConfusionMatrix}    
 
 def _bmes_tag_to_spans(tags, ignore_labels=None):
     """
