@@ -47,9 +47,11 @@ fastNLP 目前提供了如下的 Loader
 __all__ = [
     'Loader',
     
-    'YelpLoader',
+    'CLSBaseLoader',
     'YelpFullLoader',
     'YelpPolarityLoader',
+    'AGsNewsLoader',
+    'DBPediaLoader',
     'IMDBLoader',
     'SSTLoader',
     'SST2Loader',
@@ -84,7 +86,8 @@ __all__ = [
 
     "CMRC2018Loader"
 ]
-from .classification import YelpLoader, YelpFullLoader, YelpPolarityLoader, IMDBLoader, SSTLoader, SST2Loader, \
+from .classification import CLSBaseLoader, YelpFullLoader, YelpPolarityLoader, AGsNewsLoader, IMDBLoader, \
+    SSTLoader, SST2Loader, DBPediaLoader, \
     ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader
 from .conll import ConllLoader, Conll2003Loader, Conll2003NERLoader, OntoNotesNERLoader, CTBLoader
 from .conll import MsraNERLoader, PeopleDailyNERLoader, WeiboNERLoader

@@ -12,6 +12,9 @@ __all__ = [
     
     "CWSPipe",
     
+    "CLSBasePipe",
+    "AGsNewsPipe",
+    "DBPediaPipe",
     "YelpFullPipe",
     "YelpPolarityPipe",
     "SSTPipe",
@@ -55,8 +58,8 @@ __all__ = [
     "CMRC2018BertPipe"
 ]
 
-from .classification import YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe, ChnSentiCorpPipe, THUCNewsPipe, \
-    WeiboSenti100kPipe
+from .classification import CLSBasePipe, YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe, ChnSentiCorpPipe, THUCNewsPipe, \
+    WeiboSenti100kPipe, AGsNewsPipe, DBPediaPipe
 from .conll import Conll2003NERPipe, OntoNotesNERPipe, MsraNERPipe, WeiboNERPipe, PeopleDailyPipe
 from .conll import Conll2003Pipe
 from .coreference import CoReferencePipe

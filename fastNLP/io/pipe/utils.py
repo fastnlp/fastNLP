@@ -136,7 +136,7 @@ def _indexize(data_bundle, input_field_names=Const.INPUT, target_field_names=Con
                        f"These label(s) are {tgt_vocab._no_create_word}"
             warnings.warn(warn_msg)
             logger.warning(warn_msg)
-        tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name=target_field_name)
+        tgt_vocab.index_dataset(*[ds for ds in data_bundle.datasets.values() if ds.has_field(target_field_name)], field_name=target_field_name)
         data_bundle.set_vocab(tgt_vocab, target_field_name)
     
     return data_bundle
@@ -197,4 +197,24 @@ def _drop_empty_instance(data_bundle, field_name):
     for name, dataset in data_bundle.datasets.items():
         dataset.drop(empty_instance)
     
+    return data_bundle
+
+
+def _granularize(data_bundle, tag_map):
+    """
+    该函数对data_bundle中'target'列中的内容进行转换。
+
+    :param data_bundle:
+    :param dict tag_map: 将target列中的tag做以下的映射，比如{"0":0, "1":0, "3":1, "4":1}, 则会删除target为"2"的instance，
+        且将"1"认为是第0类。
+    :return: 传入的data_bundle
+    """
+    if tag_map is None:
+        return data_bundle
+    for name in list(data_bundle.datasets.keys()):
+        dataset = data_bundle.get_dataset(name)
+        dataset.apply_field(lambda target: tag_map.get(target, -100), field_name=Const.TARGET,
+                            new_field_name=Const.TARGET)
+        dataset.drop(lambda ins: ins[Const.TARGET] == -100)
+        data_bundle.set_dataset(dataset, name)
     return data_bundle
