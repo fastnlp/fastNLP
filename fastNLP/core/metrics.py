@@ -7,7 +7,8 @@ __all__ = [
     "AccuracyMetric",
     "SpanFPreRecMetric",
     "CMRC2018Metric",
-    "ClassifyFPreRecMetric"
+    "ClassifyFPreRecMetric",
+    "ConfusionMatrixMetric"
 ]
 
 import inspect
