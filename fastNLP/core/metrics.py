@@ -27,6 +27,7 @@ from .utils import _check_arg_dict_list
 from .utils import _get_func_signature
 from .utils import seq_len_to_mask
 from .vocabulary import Vocabulary
+from .utils import ConfusionMatrix
 
 
 class MetricBase(object):
@@ -274,6 +275,49 @@ class MetricBase(object):
         self.evaluate(**refined_args)
 
         return
+
+
+class ConfusionMatrixMetric(MetricBase):
+    def __init__(self, vocab=None, pred=None, target=None, seq_len=None):
+        super().__init__()
+        self._init_param_map(pred=pred, target=target, seq_len=seq_len)
+        self.confusion_matrix = ConfusionMatrix(vocab=vocab)
+
+    def evaluate(self, pred, target, seq_len=None):
+        if not isinstance(pred, torch.Tensor):
+            raise TypeError(f"`pred` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                            f"got {type(pred)}.")
+        if not isinstance(target, torch.Tensor):
+            raise TypeError(f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                            f"got {type(target)}.")
+
+        if seq_len is not None and not isinstance(seq_len, torch.Tensor):
+            raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                            f"got {type(seq_len)}.")
+
+        if pred.dim() == target.dim():
+            pass
+        elif pred.dim() == target.dim() + 1:
+            pred = pred.argmax(dim=-1)
+            if seq_len is None and target.dim() > 1:
+                warnings.warn("You are not passing `seq_len` to exclude pad.")
+        else:
+            raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
+                               f"size:{pred.size()}, target should have size: {pred.size()} or "
+                               f"{pred.size()[:-1]}, got {target.size()}.")
+
+        target = target.to(pred)
+        if seq_len is not None and  target.dim() > 1:
+            for p, t, l in zip(pred.tolist(), target.tolist(), seq_len.tolist()):  
+                self.confusion_matrix.add_pred_target(p[::l], t[::l])
+        else:
+            self.confusion_matrix.add_pred_target(pred.tolist(), target.tolist())
+
+    def get_metric(self,reset=True):
+        confusion = {'confusion_matrix': deepcopy(self.confusion_matrix)}
+        if reset:
+            self.confusion_matrix.clear()
+        return confusion
 
 
 class AccuracyMetric(MetricBase):
