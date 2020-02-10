@@ -21,6 +21,131 @@ import torch.nn as nn
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])
 
+from copy import deepcopy
+from .vocabulary import Vocabulary
+
+class ConfusionMatrix:
+    def __init__(self, vocab=None):
+        if  vocab and not isinstance(vocab,Vocabulary):
+            raise TypeError(f"`vocab` in {_get_func_signature(self.__init__)} must be Fastnlp.core.Vocabulary,"
+                            f"got {type(vocab)}.")
+        self.confusiondict={} #key: vocab的index, value: word ocunt
+        # self.predcount={}  #key:pred index, value:count
+        self.targetcount={}
+        self.vocab=vocab
+        
+
+    def add_pred_target(self, pred, target):  #一组结果
+        """
+        通过这个函数向ConfusionMatrix加入一组预测结果
+
+        :param list pred:
+        :param list target:
+        :return:
+        """
+        for p,t in zip(pred,target): #<int, int>
+            # self.predcount[p]=self.predconut.get(p,0)+ 1
+            self.targetcount[t]=self.targetcount.get(t,0)+1 
+            if p in self.confusiondict:
+                self.confusiondict[p][t]=self.confusiondict[p].get(t,0) + 1
+            else:
+                self.confusiondict[p]={}
+                self.confusiondict[p][t]= 1
+            
+        return self.confusiondict
+
+        
+    
+    def clear(self):
+        """
+        清除一些值，等待再次新加入
+        
+        :return: 
+        """
+        self.confusiondict={}
+        self.targetcount={}
+        
+    
+    def __repr__(self):
+        row2idx={}
+        idx2row={}
+        # targetdict=sorted(self.confusiondict.items()) # key:index value:wordcount  5,1,3...->1,3,5...
+        # targetdict=dict(targetdict)
+        s=len(self.targetcount)
+        namedict={}  # key :idx value:word/idx
+
+        if self.vocab:
+            namedict=self.vocab.idx2word
+        else:
+            namedict=dict([(k,str(k)) for k in self.targetcount.keys()])
+            # 这里打印东西
+
+        for key,num in zip(self.targetcount.keys(),range(s)):
+            idx2row[key]=num  #建立一个临时字典，key:vocab的index, value: 行列index  1,3,5...->0,1,2,...
+            row2idx[num]=key  #建立一个临时字典，value:vocab的index, key: 行列index  0,1,2...->1,3,5,...
+
+        head=["\ntarget"]+[str(namedict[k]) for k in row2idx.keys()]+["all"]
+        output="\t".join(head) + "\n" + "pred" + "\n"
+        for i in row2idx.keys(): #第i行
+            p=row2idx[i]
+            h=namedict[p]
+            l=[0 for _ in range(s)]
+            if self.confusiondict.get(p,None):
+                # print(type(self.confusiondict[p]))
+                for t,c in self.confusiondict[p].items():
+                    l[idx2row[t]] = c #完成一行
+            #增加表头
+            l=[h]+[str(n) for n in l]+[str(sum(l))]
+            output+="\t".join(l) +"\n"
+        tail=[self.targetcount.get(k,0) for k in row2idx.keys()]
+        tail=["all"]+[str(n) for n in tail]+[str(sum(tail))]
+        output+="\t".join(tail)
+        return output
+
+class ConfusionMatrixMetric():
+    def __init__(self, vocab=None, pred='pred', target='target', seq_len='seq_len'):
+        # super().__init__()
+        # self._init_param_map(pred=pred, target=target, seq_len=seq_len)
+        self.confusion_matrix = ConfusionMatrix(vocab=vocab)
+
+    def evaluate(self, pred, target, seq_len=None):
+        if not isinstance(pred, torch.Tensor):
+            raise TypeError(f"`pred` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                            f"got {type(pred)}.")
+        if not isinstance(target, torch.Tensor):
+            raise TypeError(f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                            f"got {type(target)}.")
+
+        if seq_len is not None and not isinstance(seq_len, torch.Tensor):
+            raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                            f"got {type(seq_len)}.")
+
+        if pred.dim() == target.dim():
+            pass
+        elif pred.dim() == target.dim() + 1:
+            pred = pred.argmax(dim=-1)
+            if seq_len is None and target.dim() > 1:
+                warnings.warn("You are not passing `seq_len` to exclude pad.")
+        else:
+            raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
+                               f"size:{pred.size()}, target should have size: {pred.size()} or "
+                               f"{pred.size()[:-1]}, got {target.size()}.")
+
+        target = target.to(pred)
+        if seq_len is not None and  target.dim() > 1:
+            for p, t, l in zip(pred.tolist(), target.tolist(), seq_len.tolist()):  
+                self.confusion_matrix.add_pred_target(p[::l], t[::l])
+        else:
+            self.confusion_matrix.add_pred_target(pred.tolist(), target.tolist())
+
+
+
+    def get_metric(self,reset=True):
+        confusion = {'confusion_matrix': deepcopy(self.confusion_matrix)}
+        if reset:
+            self.confusion_matrix.clear()
+        return confusion
+
 
 class Example(dict):
     """a dict can treat keys as attributes"""
