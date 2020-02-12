@@ -8,18 +8,22 @@ __all__ = [
     "get_seq_len"
 ]
 
-import _pickle
 import inspect
 import os
 import warnings
 from collections import Counter, namedtuple
+from copy import deepcopy
+from typing import List
+
+import _pickle
 import numpy as np
 import torch
 import torch.nn as nn
-from typing import List
-from ._logger import logger
 from prettytable import PrettyTable
+
+from ._logger import logger
 from ._parallel_utils import _model_contains_inner_module
+from .vocabulary import Vocabulary
 
 try:
     from apex import amp
@@ -30,8 +34,6 @@ _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'require
                                      'varargs'])
 
 
-from copy import deepcopy
-from .vocabulary import Vocabulary
 
 
 class ConfusionMatrix:
@@ -64,8 +66,6 @@ class ConfusionMatrix:
             
         return self.confusiondict
 
-        
-    
     def clear(self):
         """
         清除一些值，等待再次新加入
