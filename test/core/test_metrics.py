@@ -44,6 +44,12 @@ def _convert_res_to_fastnlp_res(metric_result):
         allen_result[key] = round(value, 6)
     return allen_result
 
+
+
+class TestConfusionMatrixMetric(unittest.TestCase):
+    
+
+
 class TestAccuracyMetric(unittest.TestCase):
     def test_AccuracyMetric1(self):
         # (1) only input, targets passed
