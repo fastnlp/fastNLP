@@ -37,7 +37,11 @@ _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'require
 
 
 class ConfusionMatrix:
+    """a dict can provide Confusion Matrix"""
     def __init__(self, vocab=None):
+        """
+        :param vocab: 需要有to_word方法，建议直接使用Fastnlp.core.Vocabulary。
+        """
         if vocab and not hasattr(vocab, 'to_word'):
             raise TypeError(f"`vocab` in {_get_func_signature(self.__init__)} must be Fastnlp.core.Vocabulary,"
                             f"got {type(vocab)}.")
@@ -50,9 +54,22 @@ class ConfusionMatrix:
         """
         通过这个函数向ConfusionMatrix加入一组预测结果
 
-        :param list pred:
-        :param list target:
-        :return:
+        :param list pred: 预测的标签列表
+        :param list target: 真实值的标签列表
+        :return ConfusionMatrix
+
+        confusion=ConfusionMatrix()
+        pred = [2,1,3]
+        target = [2,2,1]
+        confusion.add_pred_target(pred, target)
+        print(confusion)
+
+        target  1       2       3       all
+        pred
+        1       0       1       0       1
+        2       0       1       0       1
+        3       1       0       0       1
+        all     1       2       0       3
         """
         for p,t in zip(pred,target): #<int, int>
             self.predcount[p]=self.predcount.get(p,0)+ 1
@@ -67,7 +84,6 @@ class ConfusionMatrix:
     def clear(self):
         """
         清除一些值，等待再次新加入
-        
         :return: 
         """
         self.confusiondict={}
@@ -75,6 +91,9 @@ class ConfusionMatrix:
         self.predcount={}  
     
     def __repr__(self):
+        """
+        :return string output: ConfusionMatrix的格式化输出，包括表头各标签字段，具体值与汇总统计。
+        """
         row2idx={}
         idx2row={}
         # 已知的所有键/label
@@ -101,7 +120,7 @@ class ConfusionMatrix:
             l=[h]+[str(n) for n in l]+[str(sum(l))]
             output+="\t".join(l) +"\n"
         #表尾
-        tail=[self.targetcount.get(k,0) for k in row2idx.keys()]
+        tail=[self.targetcount.get(row2idx[k],0) for k in row2idx.keys()]
         tail=["all"]+[str(n) for n in tail]+[str(sum(tail))]
         output+="\t".join(tail)
         return output
