@@ -23,7 +23,7 @@ from prettytable import PrettyTable
 
 from ._logger import logger
 from ._parallel_utils import _model_contains_inner_module
-from .vocabulary import Vocabulary
+# from .vocabulary import Vocabulary
 
 try:
     from apex import amp
@@ -38,15 +38,14 @@ _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'require
 
 class ConfusionMatrix:
     def __init__(self, vocab=None):
-        if  vocab and not isinstance(vocab,Vocabulary):
+        if vocab and not hasattr(vocab, 'to_word'):
             raise TypeError(f"`vocab` in {_get_func_signature(self.__init__)} must be Fastnlp.core.Vocabulary,"
                             f"got {type(vocab)}.")
-        self.confusiondict={} #key: vocab的index, value: word ocunt
-        # self.predcount={}  #key:pred index, value:count
-        self.targetcount={}
+        self.confusiondict={}  #key: pred index, value:target word ocunt
+        self.predcount={}  #key:pred index, value:count
+        self.targetcount={}  #key:target index, value:count
         self.vocab=vocab
         
-
     def add_pred_target(self, pred, target):  #一组结果
         """
         通过这个函数向ConfusionMatrix加入一组预测结果
@@ -56,14 +55,13 @@ class ConfusionMatrix:
         :return:
         """
         for p,t in zip(pred,target): #<int, int>
-            # self.predcount[p]=self.predconut.get(p,0)+ 1
+            self.predcount[p]=self.predcount.get(p,0)+ 1
             self.targetcount[t]=self.targetcount.get(t,0)+1 
             if p in self.confusiondict:
                 self.confusiondict[p][t]=self.confusiondict[p].get(t,0) + 1
             else:
                 self.confusiondict[p]={}
                 self.confusiondict[p][t]= 1
-            
         return self.confusiondict
 
     def clear(self):
@@ -74,39 +72,35 @@ class ConfusionMatrix:
         """
         self.confusiondict={}
         self.targetcount={}
-        
+        self.predcount={}  
     
     def __repr__(self):
         row2idx={}
         idx2row={}
-        # targetdict=sorted(self.confusiondict.items()) # key:index value:wordcount  5,1,3...->1,3,5...
-        # targetdict=dict(targetdict)
-        s=len(self.targetcount)
-        namedict={}  # key :idx value:word/idx
+        # 已知的所有键/label
+        totallabel=sorted(list(set(self.targetcount.keys()).union(set(self.predcount.keys()))))
+        lenth=len(totallabel)
+        # namedict key :idx value:word/idx
+        namedict=dict([(k,str(k if self.vocab == None else self.vocab.to_word(k))) for k in totallabel])
 
-        if self.vocab:
-            namedict=self.vocab.idx2word
-        else:
-            namedict=dict([(k,str(k)) for k in self.targetcount.keys()])
-            # 这里打印东西
-
-        for key,num in zip(self.targetcount.keys(),range(s)):
-            idx2row[key]=num  #建立一个临时字典，key:vocab的index, value: 行列index  1,3,5...->0,1,2,...
-            row2idx[num]=key  #建立一个临时字典，value:vocab的index, key: 行列index  0,1,2...->1,3,5,...
-
-        head=["\ntarget"]+[str(namedict[k]) for k in row2idx.keys()]+["all"]
+        for label,idx in zip(totallabel,range(lenth)):
+            idx2row[label]=idx  #建立一个临时字典，key:vocab的index, value: 行列index  1,3,5...->0,1,2,...
+            row2idx[idx]=label  #建立一个临时字典，value:vocab的index, key: 行列index  0,1,2...->1,3,5,...
+        # 这里打印东西
+        #表头
+        head=["\ntarget"]+[str(namedict[row2idx[k]]) for k in row2idx.keys()]+["all"]
         output="\t".join(head) + "\n" + "pred" + "\n"
+        #内容
         for i in row2idx.keys(): #第i行
             p=row2idx[i]
             h=namedict[p]
-            l=[0 for _ in range(s)]
+            l=[0 for _ in range(lenth)]
             if self.confusiondict.get(p,None):
-                # print(type(self.confusiondict[p]))
                 for t,c in self.confusiondict[p].items():
                     l[idx2row[t]] = c #完成一行
-            #增加表头
             l=[h]+[str(n) for n in l]+[str(sum(l))]
             output+="\t".join(l) +"\n"
+        #表尾
         tail=[self.targetcount.get(k,0) for k in row2idx.keys()]
         tail=["all"]+[str(n) for n in tail]+[str(sum(tail))]
         output+="\t".join(tail)

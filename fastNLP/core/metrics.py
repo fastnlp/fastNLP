@@ -16,6 +16,7 @@ import warnings
 from abc import abstractmethod
 from collections import defaultdict
 from typing import Union
+from copy import deepcopy
 import re
 
 import numpy as np
@@ -310,7 +311,11 @@ class ConfusionMatrixMetric(MetricBase):
         target = target.to(pred)
         if seq_len is not None and  target.dim() > 1:
             for p, t, l in zip(pred.tolist(), target.tolist(), seq_len.tolist()):  
-                self.confusion_matrix.add_pred_target(p[::l], t[::l])
+                l=int(l)
+                self.confusion_matrix.add_pred_target(p[:l], t[:l])
+        elif target.dim() > 1: #对于没有传入seq_len，但是又是高维的target，按全长输出
+            for p, t in zip(pred.tolist(), target.tolist()):  
+                self.confusion_matrix.add_pred_target(p, t)
         else:
             self.confusion_matrix.add_pred_target(pred.tolist(), target.tolist())
 
