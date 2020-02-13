@@ -7,7 +7,7 @@ from fastNLP import AccuracyMetric
 from fastNLP.core.metrics import _pred_topk, _accuracy_topk
 from fastNLP.core.vocabulary import Vocabulary
 from collections import Counter
-from fastNLP.core.metrics import SpanFPreRecMetric, CMRC2018Metric, ClassifyFPreRecMetric
+from fastNLP.core.metrics import SpanFPreRecMetric, CMRC2018Metric, ClassifyFPreRecMetric,ConfusionMatrixMetric
 
 
 def _generate_tags(encoding_type, number_labels=4):
@@ -43,6 +43,141 @@ def _convert_res_to_fastnlp_res(metric_result):
                 key = '{}-{}'.format(key[:3], label)
         allen_result[key] = round(value, 6)
     return allen_result
+
+
+
+class TestConfusionMatrixMetric(unittest.TestCase):
+    def test_ConfusionMatrixMetric1(self):
+        pred_dict = {"pred": torch.zeros(4,3)}
+        target_dict = {'target': torch.zeros(4)}
+        metric = ConfusionMatrixMetric()
+
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        print(metric.get_metric())
+
+    def test_ConfusionMatrixMetric2(self):
+        # (2) with corrupted size
+        try:
+            pred_dict = {"pred": torch.zeros(4, 3, 2)}
+            target_dict = {'target': torch.zeros(4)}
+            metric = ConfusionMatrixMetric()
+            
+            metric(pred_dict=pred_dict, target_dict=target_dict, )
+            print(metric.get_metric())
+        except Exception as e:
+            print(e)
+            return
+        print("No exception catches.")
+
+    def test_ConfusionMatrixMetric3(self):
+    # (3) the second batch is corrupted size
+        try:
+            metric = ConfusionMatrixMetric()
+            pred_dict = {"pred": torch.zeros(4, 3, 2)}
+            target_dict = {'target': torch.zeros(4, 3)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+            
+            pred_dict = {"pred": torch.zeros(4, 3, 2)}
+            target_dict = {'target': torch.zeros(4)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+            
+            print(metric.get_metric())
+        except Exception as e:
+            print(e)
+            return
+        assert(True, False), "No exception catches."
+
+    def test_ConfusionMatrixMetric4(self):
+    # (4) check reset
+        metric = ConfusionMatrixMetric()
+        pred_dict = {"pred": torch.randn(4, 3, 2)}
+        target_dict = {'target': torch.ones(4, 3)}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        res = metric.get_metric()
+        self.assertTrue(isinstance(res, dict))
+        print(res)
+
+    def test_ConfusionMatrixMetric5(self):
+    # (5) check numpy array is not acceptable
+        try:
+            metric = ConfusionMatrixMetric()
+            pred_dict = {"pred": np.zeros((4, 3, 2))}
+            target_dict = {'target': np.zeros((4, 3))}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+        except Exception as e:
+            print(e)
+            return
+        self.assertTrue(True, False), "No exception catches."
+    
+    def test_ConfusionMatrixMetric6(self):
+    # (6) check map, match
+        metric = ConfusionMatrixMetric(pred='predictions', target='targets')
+        pred_dict = {"predictions": torch.randn(4, 3, 2)}
+        target_dict = {'targets': torch.zeros(4, 3)}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        res = metric.get_metric()
+        print(res)
+
+    def test_ConfusionMatrixMetric7(self):
+    # (7) check map, include unused
+        try:
+            metric = ConfusionMatrixMetric(pred='prediction', target='targets')
+            pred_dict = {"prediction": torch.zeros(4, 3, 2), 'unused': 1}
+            target_dict = {'targets': torch.zeros(4, 3)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+        except Exception as e:
+            print(e)
+            return
+        self.assertTrue(True, False), "No exception catches."
+        
+    def test_ConfusionMatrixMetric8(self):
+# (8) check _fast_metric
+        try:
+            metric = ConfusionMatrixMetric()
+            pred_dict = {"predictions": torch.zeros(4, 3, 2), "seq_len": torch.ones(3) * 3}
+            target_dict = {'targets': torch.zeros(4, 3)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+            print(metric.get_metric())
+        except Exception as e:
+            print(e)
+            return
+        self.assertTrue(True, False), "No exception catches."
+
+    def test_duplicate(self):
+        # 0.4.1的潜在bug，不能出现形参重复的情况
+        metric = ConfusionMatrixMetric(pred='predictions', target='targets')
+        pred_dict = {"predictions": torch.zeros(4, 3, 2), "seq_len": torch.ones(4) * 3, 'pred':0}
+        target_dict = {'targets':torch.zeros(4, 3), 'target': 0}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        print(metric.get_metric())
+
+
+    def test_seq_len(self):
+        N = 256
+        seq_len = torch.zeros(N).long()
+        seq_len[0] = 2
+        pred = {'pred': torch.ones(N, 2)}
+        target = {'target': torch.ones(N, 2), 'seq_len': seq_len}
+        metric = ConfusionMatrixMetric()
+        metric(pred_dict=pred, target_dict=target)
+        metric.get_metric(reset=False)
+        seq_len[1:] = 1
+        metric(pred_dict=pred, target_dict=target)
+        metric.get_metric()
+
+    def test_vocab(self):
+        vocab = Vocabulary()
+        word_list = "this is a word list".split()
+        vocab.update(word_list)
+        
+        pred_dict = {"pred": torch.zeros(4,3)}
+        target_dict = {'target': torch.zeros(4)}
+        metric = ConfusionMatrixMetric(vocab=vocab)
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        print(metric.get_metric())
+
+
+
 
 class TestAccuracyMetric(unittest.TestCase):
     def test_AccuracyMetric1(self):
@@ -133,7 +268,7 @@ class TestAccuracyMetric(unittest.TestCase):
     def test_AccuaryMetric8(self):
         try:
             metric = AccuracyMetric(pred='predictions', target='targets')
-            pred_dict = {"prediction": torch.zeros(4, 3, 2)}
+            pred_dict = {"predictions": torch.zeros(4, 3, 2)}
             target_dict = {'targets': torch.zeros(4, 3)}
             metric(pred_dict=pred_dict, target_dict=target_dict, )
             self.assertDictEqual(metric.get_metric(), {'acc': 1})
