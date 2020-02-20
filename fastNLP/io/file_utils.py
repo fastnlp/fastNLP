@@ -432,7 +432,9 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
                             shutil.rmtree(cache_path)
                 os.close(fd)
                 os.remove(temp_filename)
-                if os.path.isdir(uncompress_temp_dir):
+                if uncompress_temp_dir is None:
+                    pass
+                elif os.path.isdir(uncompress_temp_dir):
                     shutil.rmtree(uncompress_temp_dir)
                 elif os.path.isfile(uncompress_temp_dir):
                     os.remove(uncompress_temp_dir)

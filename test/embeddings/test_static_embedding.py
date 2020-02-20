@@ -89,6 +89,24 @@ class TestLoad(unittest.TestCase):
         check_vector_equal(['Of', 'a'], vocab, embed, embed_dict, lower=True)
         check_word_unk(['notinfile1', 'The', 'notinfile2'], vocab, embed)
 
+    def test_sequential_index(self):
+        # 当不存在no_create_entry时，words_to_words应该是顺序的
+        vocab = Vocabulary().add_word_lst(['The', 'a', 'notinfile1', 'A', 'notinfile2', 'notinfile2'])
+        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+                                                         'glove.6B.50d_test.txt')
+        for index,i in enumerate(embed.words_to_words):
+            assert index==i
+
+        embed_dict = read_static_embed('test/data_for_tests/embedding/small_static_embedding/'
+                                                         'glove.6B.50d_test.txt')
+
+        for word, index in vocab:
+            if word in embed_dict:
+                index = vocab.to_index(word)
+                v1 = embed(torch.LongTensor([index])).tolist()[0]
+                v2 = embed_dict[word]
+                for v1i, v2i in zip(v1, v2):
+                    self.assertAlmostEqual(v1i, v2i, places=4)
 
 def read_static_embed(fp):
     """
