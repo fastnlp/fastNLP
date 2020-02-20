@@ -7,7 +7,8 @@ __all__ = [
     "AccuracyMetric",
     "SpanFPreRecMetric",
     "CMRC2018Metric",
-    "ClassifyFPreRecMetric"
+    "ClassifyFPreRecMetric",
+    "ConfusionMatrixMetric"
 ]
 
 import inspect
@@ -15,6 +16,7 @@ import warnings
 from abc import abstractmethod
 from collections import defaultdict
 from typing import Union
+from copy import deepcopy
 import re
 
 import numpy as np
@@ -27,6 +29,7 @@ from .utils import _check_arg_dict_list
 from .utils import _get_func_signature
 from .utils import seq_len_to_mask
 from .vocabulary import Vocabulary
+from .utils import ConfusionMatrix
 
 
 class MetricBase(object):
@@ -274,6 +277,95 @@ class MetricBase(object):
         self.evaluate(**refined_args)
 
         return
+
+
+class ConfusionMatrixMetric(MetricBase):
+    r"""
+    分类问题计算混淆矩阵的Metric（其它的Metric参见 :mod:`fastNLP.core.metrics` ）
+
+    最后返回结果为dict,{'confusion_matrix': ConfusionMatrix实例}
+    ConfusionMatrix实例的print()函数将输出矩阵字符串。
+
+    pred_dict = {"pred": torch.Tensor([2,1,3])}
+    target_dict = {'target': torch.Tensor([2,2,1])}
+    metric = ConfusionMatrixMetric()
+    metric(pred_dict=pred_dict, target_dict=target_dict, )
+    print(metric.get_metric())
+
+    {'confusion_matrix': 
+    target  1.0     2.0     3.0     all
+    pred
+    1.0     0       1       0       1
+    2.0     0       1       0       1
+    3.0     1       0       0       1
+    all     1       2       0       3}
+    """
+    def __init__(self, vocab=None, pred=None, target=None, seq_len=None):
+        """
+        :param vocab: vocab词表类,要求有to_word()方法。
+        :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+        :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
+        :param seq_len: 参数映射表中 `seq_len` 的映射关系，None表示映射关系为 `seq_len` -> `seq_len`
+        """
+        super().__init__()
+        self._init_param_map(pred=pred, target=target, seq_len=seq_len)
+        self.confusion_matrix = ConfusionMatrix(vocab=vocab)
+
+    def evaluate(self, pred, target, seq_len=None):
+        """
+        evaluate函数将针对一个批次的预测结果做评价指标的累计
+
+        :param torch.Tensor pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
+                torch.Size([B, max_len]), 或者torch.Size([B, max_len, n_classes])
+        :param torch.Tensor target: 真实值的tensor, tensor的形状可以是Element's can be: torch.Size([B,]),
+                torch.Size([B,]), torch.Size([B, max_len]), 或者torch.Size([B, max_len])
+        :param torch.Tensor seq_len: 序列长度标记, 标记的形状可以是None, torch.Size([B]), 或者torch.Size([B]).
+                
+        """
+        if not isinstance(pred, torch.Tensor):
+            raise TypeError(f"`pred` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                            f"got {type(pred)}.")
+        if not isinstance(target, torch.Tensor):
+            raise TypeError(f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                            f"got {type(target)}.")
+
+        if seq_len is not None and not isinstance(seq_len, torch.Tensor):
+            raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                            f"got {type(seq_len)}.")
+
+        if pred.dim() == target.dim():
+            pass
+        elif pred.dim() == target.dim() + 1:
+            pred = pred.argmax(dim=-1)
+            if seq_len is None and target.dim() > 1:
+                warnings.warn("You are not passing `seq_len` to exclude pad.")
+        else:
+            raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
+                               f"size:{pred.size()}, target should have size: {pred.size()} or "
+                               f"{pred.size()[:-1]}, got {target.size()}.")
+
+        target = target.to(pred)
+        if seq_len is not None and  target.dim() > 1:
+            for p, t, l in zip(pred.tolist(), target.tolist(), seq_len.tolist()):  
+                l=int(l)
+                self.confusion_matrix.add_pred_target(p[:l], t[:l])
+        elif target.dim() > 1: #对于没有传入seq_len，但是又是高维的target，按全长输出
+            for p, t in zip(pred.tolist(), target.tolist()):  
+                self.confusion_matrix.add_pred_target(p, t)
+        else:
+            self.confusion_matrix.add_pred_target(pred.tolist(), target.tolist())
+
+    def get_metric(self,reset=True):
+        """
+        get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果.
+
+        :param bool reset: 在调用完get_metric后是否清空评价指标统计量.
+        :return dict evaluate_result: {"confusion_matrix": ConfusionMatrix}
+        """
+        confusion = {'confusion_matrix': deepcopy(self.confusion_matrix)}
+        if reset:
+            self.confusion_matrix.clear()
+        return confusion
 
 
 class AccuracyMetric(MetricBase):

@@ -1,6 +1,9 @@
 """undocumented"""
 
 __all__ = [
+    "CLSBasePipe",
+    "AGsNewsPipe",
+    "DBPediaPipe",
     "YelpFullPipe",
     "YelpPolarityPipe",
     "SSTPipe",
@@ -17,29 +20,24 @@ import warnings
 from nltk import Tree
 
 from .pipe import Pipe
-from .utils import get_tokenizer, _indexize, _add_words_field, _drop_empty_instance, _add_chars_field
+from .utils import get_tokenizer, _indexize, _add_words_field, _add_chars_field, _granularize
 from ..data_bundle import DataBundle
 from ..loader.classification import ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader
-from ..loader.classification import IMDBLoader, YelpFullLoader, SSTLoader, SST2Loader, YelpPolarityLoader
+from ..loader.classification import IMDBLoader, YelpFullLoader, SSTLoader, SST2Loader, YelpPolarityLoader, \
+    AGsNewsLoader, DBPediaLoader
 from ...core._logger import logger
 from ...core.const import Const
 from ...core.dataset import DataSet
 from ...core.instance import Instance
-from ...core.vocabulary import Vocabulary
-
-nonalpnum = re.compile('[^0-9a-zA-Z?!\']+')
 
 
-class _CLSPipe(Pipe):
-    """
-    分类问题的基类，负责对classification的数据进行tokenize操作。默认是对raw_words列操作，然后生成words列
+class CLSBasePipe(Pipe):
 
-    """
-    
-    def __init__(self, tokenizer: str = 'spacy', lang='en'):
-        
+    def __init__(self, lower: bool=False, tokenizer: str='spacy', lang='en'):
+        super().__init__()
+        self.lower = lower
         self.tokenizer = get_tokenizer(tokenizer, lang=lang)
-    
+
     def _tokenize(self, data_bundle, field_name=Const.INPUT, new_field_name=None):
         """
         将DataBundle中的数据进行tokenize
@@ -52,47 +50,49 @@ class _CLSPipe(Pipe):
         new_field_name = new_field_name or field_name
         for name, dataset in data_bundle.datasets.items():
             dataset.apply_field(self.tokenizer, field_name=field_name, new_field_name=new_field_name)
-        
+
         return data_bundle
-    
-    def _granularize(self, data_bundle, tag_map):
+
+    def process(self, data_bundle: DataBundle):
         """
-        该函数对data_bundle中'target'列中的内容进行转换。
+        传入的DataSet应该具备如下的结构
+
+        .. csv-table::
+            :header: "raw_words", "target"
+
+            "I got 'new' tires from them and... ", "1"
+            "Don't waste your time.  We had two...", "1"
+            "...", "..."
 
         :param data_bundle:
-        :param dict tag_map: 将target列中的tag做以下的映射，比如{"0":0, "1":0, "3":1, "4":1}, 则会删除target为"2"的instance，
-            且将"1"认为是第0类。
-        :return: 传入的data_bundle
+        :return:
         """
-        for name in list(data_bundle.datasets.keys()):
-            dataset = data_bundle.get_dataset(name)
-            dataset.apply_field(lambda target: tag_map.get(target, -100), field_name=Const.TARGET,
-                                new_field_name=Const.TARGET)
-            dataset.drop(lambda ins: ins[Const.TARGET] == -100)
-            data_bundle.set_dataset(dataset, name)
+        # 复制一列words
+        data_bundle = _add_words_field(data_bundle, lower=self.lower)
+        # 进行tokenize
+        data_bundle = self._tokenize(data_bundle=data_bundle, field_name=Const.INPUT)
+        # 建立词表并index
+        data_bundle = _indexize(data_bundle=data_bundle)
+
+        for name, dataset in data_bundle.datasets.items():
+            dataset.add_seq_len(Const.INPUT)
+
+        data_bundle.set_input(Const.INPUT, Const.INPUT_LEN)
+        data_bundle.set_target(Const.TARGET)
+
         return data_bundle
 
+    def process_from_file(self, paths) -> DataBundle:
+        """
+        传入文件路径，生成处理好的DataBundle对象。paths支持的路径形式可以参考 ：:meth:`fastNLP.io.Loader.load()`
 
-def _clean_str(words):
-    """
-    heavily borrowed from github
-    https://github.com/LukeZhuang/Hierarchical-Attention-Network/blob/master/yelp-preprocess.ipynb
-    :param sentence:  is a str
-    :return:
-    """
-    words_collection = []
-    for word in words:
-        if word in ['-lrb-', '-rrb-', '<sssss>', '-r', '-l', 'b-']:
-            continue
-        tt = nonalpnum.split(word)
-        t = ''.join(tt)
-        if t != '':
-            words_collection.append(t)
-    
-    return words_collection
+        :param paths:
+        :return: DataBundle
+        """
+        raise NotImplementedError
 
 
-class YelpFullPipe(_CLSPipe):
+class YelpFullPipe(CLSBasePipe):
     """
     处理YelpFull的数据, 处理之后DataSet中的内容如下
 
@@ -124,32 +124,16 @@ class YelpFullPipe(_CLSPipe):
             1、2归为1类，3归为1类，4、5归为1类；若为5, 则有5分类问题。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
         """
-        super().__init__(tokenizer=tokenizer, lang='en')
-        self.lower = lower
+        super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
         assert granularity in (2, 3, 5), "granularity can only be 2,3,5."
         self.granularity = granularity
         
         if granularity == 2:
-            self.tag_map = {"1": 0, "2": 0, "4": 1, "5": 1}
+            self.tag_map = {"1": "negative", "2": "negative", "4": "positive", "5": "positive"}
         elif granularity == 3:
-            self.tag_map = {"1": 0, "2": 0, "3": 1, "4": 2, "5": 2}
+            self.tag_map = {"1": "negative", "2": "negative", "3": "medium", "4": "positive", "5": "positive"}
         else:
-            self.tag_map = {"1": 0, "2": 1, "3": 2, "4": 3, "5": 4}
-    
-    def _tokenize(self, data_bundle, field_name=Const.INPUT, new_field_name=None):
-        """
-        将DataBundle中的数据进行tokenize
-
-        :param DataBundle data_bundle:
-        :param str field_name:
-        :param str new_field_name:
-        :return: 传入的DataBundle对象
-        """
-        new_field_name = new_field_name or field_name
-        for name, dataset in data_bundle.datasets.items():
-            dataset.apply_field(self.tokenizer, field_name=field_name, new_field_name=new_field_name)
-            dataset.apply_field(_clean_str, field_name=field_name, new_field_name=new_field_name)
-        return data_bundle
+            self.tag_map = None
     
     def process(self, data_bundle):
         """
@@ -165,27 +149,10 @@ class YelpFullPipe(_CLSPipe):
         :param data_bundle:
         :return:
         """
-        
-        # 复制一列words
-        data_bundle = _add_words_field(data_bundle, lower=self.lower)
-        
-        # 进行tokenize
-        data_bundle = self._tokenize(data_bundle=data_bundle, field_name=Const.INPUT)
-        
-        # 根据granularity设置tag
-        data_bundle = self._granularize(data_bundle, tag_map=self.tag_map)
-        
-        # 删除空行
-        data_bundle = _drop_empty_instance(data_bundle, field_name=Const.INPUT)
-        
-        # index
-        data_bundle = _indexize(data_bundle=data_bundle)
-        
-        for name, dataset in data_bundle.datasets.items():
-            dataset.add_seq_len(Const.INPUT)
-        
-        data_bundle.set_input(Const.INPUT, Const.INPUT_LEN)
-        data_bundle.set_target(Const.TARGET)
+        if self.tag_map is not None:
+            data_bundle = _granularize(data_bundle, self.tag_map)
+
+        data_bundle = super().process(data_bundle)
         
         return data_bundle
     
@@ -199,7 +166,7 @@ class YelpFullPipe(_CLSPipe):
         return self.process(data_bundle=data_bundle)
 
 
-class YelpPolarityPipe(_CLSPipe):
+class YelpPolarityPipe(CLSBasePipe):
     """
     处理YelpPolarity的数据, 处理之后DataSet中的内容如下
 
@@ -229,38 +196,7 @@ class YelpPolarityPipe(_CLSPipe):
         :param bool lower: 是否对输入进行小写化。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
         """
-        super().__init__(tokenizer=tokenizer, lang='en')
-        self.lower = lower
-    
-    def process(self, data_bundle):
-        """
-        传入的DataSet应该具备如下的结构
-
-        .. csv-table::
-            :header: "raw_words", "target"
-
-            "I got 'new' tires from them and... ", "1"
-            "Don't waste your time.  We had two...", "1"
-            "...", "..."
-
-        :param data_bundle:
-        :return:
-        """
-        # 复制一列words
-        data_bundle = _add_words_field(data_bundle, lower=self.lower)
-        
-        # 进行tokenize
-        data_bundle = self._tokenize(data_bundle=data_bundle, field_name=Const.INPUT)
-        # index
-        data_bundle = _indexize(data_bundle=data_bundle)
-        
-        for name, dataset in data_bundle.datasets.items():
-            dataset.add_seq_len(Const.INPUT)
-        
-        data_bundle.set_input(Const.INPUT, Const.INPUT_LEN)
-        data_bundle.set_target(Const.TARGET)
-        
-        return data_bundle
+        super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
     
     def process_from_file(self, paths=None):
         """
@@ -272,7 +208,89 @@ class YelpPolarityPipe(_CLSPipe):
         return self.process(data_bundle=data_bundle)
 
 
-class SSTPipe(_CLSPipe):
+class AGsNewsPipe(CLSBasePipe):
+    """
+    处理AG's News的数据, 处理之后DataSet中的内容如下
+
+    .. csv-table:: 下面是使用AGsNewsPipe处理后的DataSet所具备的field
+        :header: "raw_words", "target", "words", "seq_len"
+
+        "I got 'new' tires from them and within...", 0 ,"[7, 110, 22, 107, 22, 499, 59, 140, 3,...]", 160
+        " Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
+        "...", ., "[...]", .
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_words | target | words | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   | False  |  True |   True  |
+        |  is_target  |   False   |  True  | False |  False  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
+
+    """
+
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+        """
+
+        :param bool lower: 是否对输入进行小写化。
+        :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
+        """
+        super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
+
+    def process_from_file(self, paths=None):
+        """
+        :param str paths:
+        :return: DataBundle
+        """
+        data_bundle = AGsNewsLoader().load(paths)
+        return self.process(data_bundle=data_bundle)
+
+
+class DBPediaPipe(CLSBasePipe):
+    """
+    处理DBPedia的数据, 处理之后DataSet中的内容如下
+
+    .. csv-table:: 下面是使用DBPediaPipe处理后的DataSet所具备的field
+        :header: "raw_words", "target", "words", "seq_len"
+
+        "I got 'new' tires from them and within...", 0 ,"[7, 110, 22, 107, 22, 499, 59, 140, 3,...]", 160
+        " Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
+        "...", ., "[...]", .
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_words | target | words | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   | False  |  True |   True  |
+        |  is_target  |   False   |  True  | False |  False  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
+
+    """
+
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+        """
+
+        :param bool lower: 是否对输入进行小写化。
+        :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
+        """
+        super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
+
+    def process_from_file(self, paths=None):
+        """
+        :param str paths:
+        :return: DataBundle
+        """
+        data_bundle = DBPediaLoader().load(paths)
+        return self.process(data_bundle=data_bundle)
+
+
+class SSTPipe(CLSBasePipe):
     """
     经过该Pipe之后，DataSet中具备的field如下所示
 
@@ -314,11 +332,11 @@ class SSTPipe(_CLSPipe):
         self.granularity = granularity
         
         if granularity == 2:
-            self.tag_map = {"0": 0, "1": 0, "3": 1, "4": 1}
+            self.tag_map = {"0": "negative", "1": "negative", "3": "positive", "4": "positive"}
         elif granularity == 3:
-            self.tag_map = {"0": 0, "1": 0, "2": 1, "3": 2, "4": 2}
+            self.tag_map = {"0": "negative", "1": "negative", "2": "medium", "3": "positive", "4": "positive"}
         else:
-            self.tag_map = {"0": 0, "1": 1, "2": 2, "3": 3, "4": 4}
+            self.tag_map = None
     
     def process(self, data_bundle: DataBundle):
         """
@@ -340,7 +358,7 @@ class SSTPipe(_CLSPipe):
             ds = DataSet()
             use_subtree = self.subtree or (name == 'train' and self.train_tree)
             for ins in dataset:
-                raw_words = ins['raw_words']
+                raw_words = ins[Const.RAW_WORD]
                 tree = Tree.fromstring(raw_words)
                 if use_subtree:
                     for t in tree.subtrees():
@@ -351,23 +369,11 @@ class SSTPipe(_CLSPipe):
                     instance = Instance(raw_words=' '.join(tree.leaves()), target=tree.label())
                     ds.append(instance)
             data_bundle.set_dataset(ds, name)
-        
-        _add_words_field(data_bundle, lower=self.lower)
-        
-        # 进行tokenize
-        data_bundle = self._tokenize(data_bundle=data_bundle, field_name=Const.INPUT)
-        
+
         # 根据granularity设置tag
-        data_bundle = self._granularize(data_bundle, tag_map=self.tag_map)
+        data_bundle = _granularize(data_bundle, tag_map=self.tag_map)
         
-        # index
-        data_bundle = _indexize(data_bundle=data_bundle)
-        
-        for name, dataset in data_bundle.datasets.items():
-            dataset.add_seq_len(Const.INPUT)
-        
-        data_bundle.set_input(Const.INPUT, Const.INPUT_LEN)
-        data_bundle.set_target(Const.TARGET)
+        data_bundle = super().process(data_bundle)
         
         return data_bundle
     
@@ -376,7 +382,7 @@ class SSTPipe(_CLSPipe):
         return self.process(data_bundle=data_bundle)
 
 
-class SST2Pipe(_CLSPipe):
+class SST2Pipe(CLSBasePipe):
     """
     加载SST2的数据, 处理完成之后DataSet将拥有以下的field
 
@@ -406,61 +412,7 @@ class SST2Pipe(_CLSPipe):
         :param bool lower: 是否对输入进行小写化。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
         """
-        super().__init__(tokenizer=tokenizer, lang='en')
-        self.lower = lower
-    
-    def process(self, data_bundle: DataBundle):
-        """
-        可以处理的DataSet应该具备如下的结构
-
-        .. csv-table::
-            :header: "raw_words", "target"
-
-            "it 's a charming and often affecting...", "1"
-            "unflinchingly bleak and...", "0"
-            "..."
-
-        :param data_bundle:
-        :return:
-        """
-        _add_words_field(data_bundle, self.lower)
-        
-        data_bundle = self._tokenize(data_bundle=data_bundle)
-        
-        src_vocab = Vocabulary()
-        src_vocab.from_dataset(data_bundle.datasets['train'], field_name=Const.INPUT,
-                               no_create_entry_dataset=[dataset for name, dataset in data_bundle.datasets.items() if
-                                                        name != 'train'])
-        src_vocab.index_dataset(*data_bundle.datasets.values(), field_name=Const.INPUT)
-        
-        tgt_vocab = Vocabulary(unknown=None, padding=None)
-        tgt_vocab.from_dataset(*[ds for name, ds in data_bundle.iter_datasets() if 'train' in name],
-                               field_name=Const.TARGET,
-                               no_create_entry_dataset=[ds for name, ds in data_bundle.iter_datasets()
-                                                        if ('train' not in name) and (ds.has_field(Const.TARGET))]
-                               )
-        if len(tgt_vocab._no_create_word) > 0:
-            warn_msg = f"There are {len(tgt_vocab._no_create_word)} target labels" \
-                       f" in {[name for name in data_bundle.datasets.keys() if 'train' not in name]} " \
-                       f"data set but not in train data set!."
-            warnings.warn(warn_msg)
-            logger.warning(warn_msg)
-        datasets = []
-        for name, dataset in data_bundle.datasets.items():
-            if dataset.has_field(Const.TARGET):
-                datasets.append(dataset)
-        tgt_vocab.index_dataset(*datasets, field_name=Const.TARGET)
-        
-        data_bundle.set_vocab(src_vocab, Const.INPUT)
-        data_bundle.set_vocab(tgt_vocab, Const.TARGET)
-        
-        for name, dataset in data_bundle.datasets.items():
-            dataset.add_seq_len(Const.INPUT)
-        
-        data_bundle.set_input(Const.INPUT, Const.INPUT_LEN)
-        data_bundle.set_target(Const.TARGET)
-        
-        return data_bundle
+        super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
     
     def process_from_file(self, paths=None):
         """
@@ -472,7 +424,7 @@ class SST2Pipe(_CLSPipe):
         return self.process(data_bundle)
 
 
-class IMDBPipe(_CLSPipe):
+class IMDBPipe(CLSBasePipe):
     """
     经过本Pipe处理后DataSet将如下
 
@@ -532,14 +484,7 @@ class IMDBPipe(_CLSPipe):
         for name, dataset in data_bundle.datasets.items():
             dataset.apply_field(replace_br, field_name=Const.RAW_WORD, new_field_name=Const.RAW_WORD)
         
-        _add_words_field(data_bundle, lower=self.lower)
-        self._tokenize(data_bundle, field_name=Const.INPUT, new_field_name=Const.INPUT)
-        _indexize(data_bundle)
-        
-        for name, dataset in data_bundle.datasets.items():
-            dataset.add_seq_len(Const.INPUT)
-            dataset.set_input(Const.INPUT, Const.INPUT_LEN)
-            dataset.set_target(Const.TARGET)
+        data_bundle = super().process(data_bundle)
         
         return data_bundle
     
@@ -663,7 +608,7 @@ class ChnSentiCorpPipe(Pipe):
         return data_bundle
 
 
-class THUCNewsPipe(_CLSPipe):
+class THUCNewsPipe(CLSBasePipe):
     """
     处理之后的DataSet有以下的结构
 
@@ -727,7 +672,7 @@ class THUCNewsPipe(_CLSPipe):
         """
         # 根据granularity设置tag
         tag_map = {'体育': 0, '财经': 1, '房产': 2, '家居': 3, '教育': 4, '科技': 5, '时尚': 6, '时政': 7, '游戏': 8, '娱乐': 9}
-        data_bundle = self._granularize(data_bundle=data_bundle, tag_map=tag_map)
+        data_bundle = _granularize(data_bundle=data_bundle, tag_map=tag_map)
 
         # clean,lower
 
@@ -775,7 +720,7 @@ class THUCNewsPipe(_CLSPipe):
         return data_bundle
 
 
-class WeiboSenti100kPipe(_CLSPipe):
+class WeiboSenti100kPipe(CLSBasePipe):
     """
     处理之后的DataSet有以下的结构
 
@@ -819,7 +764,6 @@ class WeiboSenti100kPipe(_CLSPipe):
         for name, dataset in data_bundle.datasets.items():
             dataset.apply_field(self._chracter_split, field_name=field_name, new_field_name=new_field_name)
         return data_bundle
-
 
     def process(self, data_bundle: DataBundle):
         """

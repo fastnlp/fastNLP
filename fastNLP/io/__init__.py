@@ -18,7 +18,9 @@ __all__ = [
     
     'Loader',
     
-    'YelpLoader',
+    'CLSBaseLoader',
+    'AGsNewsLoader',
+    'DBPediaLoader',
     'YelpFullLoader',
     'YelpPolarityLoader',
     'IMDBLoader',
@@ -55,6 +57,9 @@ __all__ = [
 
     "Pipe",
 
+    "CLSBasePipe",
+    "AGsNewsPipe",
+    "DBPediaPipe",
     "YelpFullPipe",
     "YelpPolarityPipe",
     "SSTPipe",
@@ -72,19 +77,6 @@ __all__ = [
     "WeiboNERPipe",
 
     "CWSPipe",
-    
-    "Pipe",
-    
-    "CWSPipe",
-    
-    "YelpFullPipe",
-    "YelpPolarityPipe",
-    "SSTPipe",
-    "SST2Pipe",
-    "IMDBPipe",
-    "ChnSentiCorpPipe",
-    "THUCNewsPipe",
-    "WeiboSenti100kPipe",
     
     "Conll2003NERPipe",
     "OntoNotesNERPipe",
