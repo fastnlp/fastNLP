@@ -16,7 +16,7 @@ fastNLP中的DataSet
 每一行是一个instance (在fastNLP中被称为 :mod:`~fastNLP.core.Instance` )，
 每一列是一个field (在fastNLP中称为 :mod:`~fastNLP.core.FieldArray` )。
 
-DataSet构建和删除
+DataSet的构建
 -----------------------------
 
 我们使用传入字典的方式构建一个数据集，这是 :class:`~fastNLP.DataSet` 初始化的最基础的方式
@@ -77,16 +77,25 @@ DataSet构建和删除
     for instance in dataset:
         # do something
 
+DataSet的删除
+-----------------------------
+
 FastNLP 同样提供了多种删除数据的方法 :func:`~fastNLP.DataSet.drop` 、 :func:`~fastNLP.DataSet.delete_instance` 和 :func:`~fastNLP.DataSet.delete_field`
+我们先用下面的代码生成一个只有两列的样例数据集，第一列的值分别为 -5 ~ 4，第二列的值均为 0.
 
 .. code-block:: python
 
     from fastNLP import DataSet
-    dataset = DataSet({'a': list(range(-5, 5))})
-    # 返回满足条件的instance,并放入DataSet中
+    dataset = DataSet({'a': range(-5, 5), 'c': [0]*10})
+
+然后我们使用三种方法进行删除，删除后的数据集仅包含名为 c 的一列，包含4个值为0 的数据。
+
+.. code-block:: python
+
+    # 不改变dataset，生成一个删除了满足条件的instance的新 DataSet
     dropped_dataset = dataset.drop(lambda ins:ins['a']<0, inplace=False)
     # 在dataset中删除满足条件的instance
-    dataset.drop(lambda ins:ins['a']<0)  # dataset的instance数量减少
+    dataset.drop(lambda ins:ins['a']<0)
     #  删除第3个instance
     dataset.delete_instance(2)
     #  删除名为'a'的field
@@ -103,8 +112,8 @@ FastNLP 同样提供了多种删除数据的方法 :func:`~fastNLP.DataSet.drop`
 
     #  检查是否存在名为'a'的field
     dataset.has_field('a')  # 或 ('a' in dataset)
-    #  将名为'a'的field改名为'b'
-    dataset.rename_field('a', 'b')
+    #  将名为'c'的field改名为'b'
+    dataset.rename_field('c', 'b')
     #  DataSet的长度
     len(dataset)
 
