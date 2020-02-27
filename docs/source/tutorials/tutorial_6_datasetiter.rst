@@ -1,9 +1,8 @@
 ﻿==============================================================================
-动手实现一个文本分类器II-使用DataSetIter实现自定义训练过程
+使用DataSetIter实现自定义训练过程
 ==============================================================================
 
-我们使用和 :doc:`/user/quickstart` 中一样的任务来进行详细的介绍。给出一段评价性文字，预测其情感倾向是积极的（label=0）、
-还是消极的（label=1），使用 :class:`~fastNLP.DataSetIter` 类来编写自己的训练过程。  
+我们使用前面介绍过的 :doc:`/tutorials/文本分类` 任务来进行详细的介绍。这里我们把数据集换成了SST2，使用 :class:`~fastNLP.DataSetIter` 类来编写自己的训练过程。
 DataSetIter初探之前的内容与 :doc:`/tutorials/tutorial_5_loss_optimizer` 中的完全一样，如已经阅读过可以跳过。
 
 
@@ -55,18 +54,19 @@ DataSetIter初探之前的内容与 :doc:`/tutorials/tutorial_5_loss_optimizer` 
     除了可以对数据进行读入的Pipe类，fastNLP还提供了读入和下载数据的Loader类，不同数据集的Pipe和Loader及其用法详见 :doc:`/tutorials/tutorial_4_load_dataset` 。
     
 数据集分割
-    由于SST2数据集的测试集并不带有标签数值，故我们分割出一部分训练集作为测试集。下面这段代码展示了 :meth:`~fastNLP.DataSet.split`  的使用方法
+    由于SST2数据集的测试集并不带有标签数值，故我们分割出一部分训练集作为测试集。下面这段代码展示了 :meth:`~fastNLP.DataSet.split`  的使用方法，
+    为了能让读者快速运行完整个教程，我们只取了训练集的前5000个数据。
 
     .. code-block:: python
 
-        train_data = databundle.get_dataset('train')
+        train_data = databundle.get_dataset('train')[:5000]
         train_data, test_data = train_data.split(0.015)
         dev_data = databundle.get_dataset('dev')
         print(len(train_data),len(dev_data),len(test_data))
 
     输出结果为::
-	
-        66339 872 1010
+
+        4925 872 75
 
 数据集 :meth:`~fastNLP.DataSet.set_input` 和  :meth:`~fastNLP.DataSet.set_target` 函数
     :class:`~fastNLP.io.SST2Pipe`  类的 :meth:`~fastNLP.io.SST2Pipe.process_from_file` 方法在预处理过程中还将训练、测试、验证集
@@ -162,33 +162,33 @@ DataSetIter自动padding
     
     输出结果如下::
 
-        batch_x:  {'words': tensor([[    4,   278,   686,    18,     7],
-                [15619,  3205,     5,  1676,     0]]), 'seq_len': tensor([5, 4])}
-        batch_y:  {'target': tensor([1, 1])}
-        batch_x:  {'words': tensor([[   44,   753,   328,   181,    10, 15622,    16,    71,  8905,     9,
-                  1218,     7,     0,     0,     0,     0,     0,     0,     0,     0],
-                [  880,    97,     8,  1027,    12,  8068,    11, 13624,     8, 15620,
-                     4,   674,   663,    15,     4,  1155,   241,   640,   418,     7]]), 'seq_len': tensor([12, 20])}
-        batch_y:  {'target': tensor([1, 0])}
-        batch_x:  {'words': tensor([[ 1046, 11114,    16,   105,     5,     4,   177,  1825,  1705,     3,
-                     2,    18,    11,     4,  1019,   433,   144,    32,   246,   309,
+        batch_x:  {'words': tensor([[   13,   830,  7746,   174,     3,    47,     6,    83,  5752,    15,
+                  2177,    15,    63,    57,   406,    84,  1009,  4973,    27,    17,
+                 13785,     3,   533,  3687, 15623,    39,   375,     8, 15624,     8,
+                  1323,  4398,     7],
+                [ 1045, 11113,    16,   104,     5,     4,   176,  1824,  1704,     3,
+                     2,    18,    11,     4,  1018,   432,   143,    33,   245,   308,
                      7,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-                     0,     0,     0],
-                [   13,   831,  7747,   175,     3,    46,     6,    84,  5753,    15,
-                  2178,    15,    62,    56,   407,    85,  1010,  4974,    26,    17,
-                 13786,     3,   534,  3688, 15624,    38,   376,     8, 15625,     8,
-                 1324,  4399,     7]]), 'seq_len': tensor([21, 33])}
-        batch_y:  {'target': tensor([0, 1])}
-        batch_x:  {'words': tensor([[  14,   10,  438,   31,   78,    3,   78,  438,    7],
-                [  14,   10,    4,  312,    5,  155, 1419,  610,    7]]), 'seq_len': tensor([9, 9])}
+                     0,     0,     0]]), 'seq_len': tensor([33, 21])}
         batch_y:  {'target': tensor([1, 0])}
-        batch_x:  {'words': tensor([[   24,    96,    27,    45,     8,   337,    37,   240,     8,  2134,
-                     2,    18,    10, 15623,  1422,     6,    60,     5,   388,     7],
-                [    2,   156,     3,  4427,     3,   240,     3,   740,     5,  1137,
-                    40,    42,  2428,   737,     2,   649,    10, 15621,  2286,     7]]), 'seq_len': tensor([20, 20])}
+        batch_x:  {'words': tensor([[  14,   10,    4,  311,    5,  154, 1418,  609,    7],
+                [  14,   10,  437,   32,   78,    3,   78,  437,    7]]), 'seq_len': tensor([9, 9])}
+        batch_y:  {'target': tensor([0, 1])}
+        batch_x:  {'words': tensor([[    4,   277,   685,    18,     7],
+                [15618,  3204,     5,  1675,     0]]), 'seq_len': tensor([5, 4])}
+        batch_y:  {'target': tensor([1, 1])}
+        batch_x:  {'words': tensor([[    2,   155,     3,  4426,     3,   239,     3,   739,     5,  1136,
+                    41,    43,  2427,   736,     2,   648,    10, 15620,  2285,     7],
+                [   24,    95,    28,    46,     8,   336,    38,   239,     8,  2133,
+                     2,    18,    10, 15622,  1421,     6,    61,     5,   387,     7]]), 'seq_len': tensor([20, 20])}
         batch_y:  {'target': tensor([0, 0])}
+        batch_x:  {'words': tensor([[  879,    96,     8,  1026,    12,  8067,    11, 13623,     8, 15619,
+                     4,   673,   662,    15,     4,  1154,   240,   639,   417,     7],
+                [   45,   752,   327,   180,    10, 15621,    16,    72,  8904,     9,
+                  1217,     7,     0,     0,     0,     0,     0,     0,     0,     0]]), 'seq_len': tensor([20, 12])}
+        batch_y:  {'target': tensor([0, 1])}
 
-    可以看到那些设定为input的 :mod:`~fastNLP.core.field` 都出现在batch_x中，而设定为target的 :mod:`~fastNLP.core.field` 则出现在batch_y中。同时对于同一个batch_x中的两个数    据，长度偏短的那个会被自动padding到和长度偏长的句子长度一致，默认的padding值为0。
+    可以看到那些设定为input的 :mod:`~fastNLP.core.field` 都出现在batch_x中，而设定为target的 :mod:`~fastNLP.core.field` 则出现在batch_y中。同时对于同一个batch_x中的两个数据，长度偏短的那个会被自动padding到和长度偏长的句子长度一致，默认的padding值为0。
 
 Dataset改变padding值
     可以通过 :meth:`~fastNLP.core.Dataset.set_pad_val` 方法修改默认的pad值，代码如下：
@@ -203,36 +203,36 @@ Dataset改变padding值
 
     输出结果如下::
 
-        batch_x:  {'words': tensor([[15619,  3205,     5,  1676,    -1],
-                [    4,   278,   686,    18,     7]]), 'seq_len': tensor([4, 5])}
-        batch_y:  {'target': tensor([1, 1])}
-        batch_x:  {'words': tensor([[ 1046, 11114,    16,   105,     5,     4,   177,  1825,  1705,     3,
-                     2,    18,    11,     4,  1019,   433,   144,    32,   246,   309,
+        batch_x:  {'words': tensor([[   13,   830,  7746,   174,     3,    47,     6,    83,  5752,    15,
+                  2177,    15,    63,    57,   406,    84,  1009,  4973,    27,    17,
+                 13785,     3,   533,  3687, 15623,    39,   375,     8, 15624,     8,
+                  1323,  4398,     7],
+                [ 1045, 11113,    16,   104,     5,     4,   176,  1824,  1704,     3,
+                     2,    18,    11,     4,  1018,   432,   143,    33,   245,   308,
                      7,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-                    -1,    -1,    -1],
-                [   13,   831,  7747,   175,     3,    46,     6,    84,  5753,    15,
-                  2178,    15,    62,    56,   407,    85,  1010,  4974,    26,    17,
-                 13786,     3,   534,  3688, 15624,    38,   376,     8, 15625,     8,
-                  1324,  4399,     7]]), 'seq_len': tensor([21, 33])}
-        batch_y:  {'target': tensor([0, 1])}
-        batch_x:  {'words': tensor([[  14,   10,    4,  312,    5,  155, 1419,  610,    7],
-                [  14,   10,  438,   31,   78,    3,   78,  438,    7]]), 'seq_len': tensor([9, 9])}
-        batch_y:  {'target': tensor([0, 1])}
-        batch_x:  {'words': tensor([[    2,   156,     3,  4427,     3,   240,     3,   740,     5,  1137,
-                    40,    42,  2428,   737,     2,   649,    10, 15621,  2286,     7],
-                [   24,    96,    27,    45,     8,   337,    37,   240,     8,  2134,
-                     2,    18,    10, 15623,  1422,     6,    60,     5,   388,     7]]), 'seq_len': tensor([20, 20])}
-        batch_y:  {'target': tensor([0, 0])}
-        batch_x:  {'words': tensor([[   44,   753,   328,   181,    10, 15622,    16,    71,  8905,     9,
-                  1218,     7,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1],
-                [  880,    97,     8,  1027,    12,  8068,    11, 13624,     8, 15620,
-                     4,   674,   663,    15,     4,  1155,   241,   640,   418,     7]]), 'seq_len': tensor([12, 20])}
+                    -1,    -1,    -1]]), 'seq_len': tensor([33, 21])}
         batch_y:  {'target': tensor([1, 0])}
+        batch_x:  {'words': tensor([[  14,   10,    4,  311,    5,  154, 1418,  609,    7],
+                [  14,   10,  437,   32,   78,    3,   78,  437,    7]]), 'seq_len': tensor([9, 9])}
+        batch_y:  {'target': tensor([0, 1])}
+        batch_x:  {'words': tensor([[    2,   155,     3,  4426,     3,   239,     3,   739,     5,  1136,
+                    41,    43,  2427,   736,     2,   648,    10, 15620,  2285,     7],
+                [   24,    95,    28,    46,     8,   336,    38,   239,     8,  2133,
+                     2,    18,    10, 15622,  1421,     6,    61,     5,   387,     7]]), 'seq_len': tensor([20, 20])}
+        batch_y:  {'target': tensor([0, 0])}
+        batch_x:  {'words': tensor([[    4,   277,   685,    18,     7],
+                [15618,  3204,     5,  1675,    -1]]), 'seq_len': tensor([5, 4])}
+        batch_y:  {'target': tensor([1, 1])}
+        batch_x:  {'words': tensor([[  879,    96,     8,  1026,    12,  8067,    11, 13623,     8, 15619,
+                     4,   673,   662,    15,     4,  1154,   240,   639,   417,     7],
+                [   45,   752,   327,   180,    10, 15621,    16,    72,  8904,     9,
+                  1217,     7,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1]]), 'seq_len': tensor([20, 12])}
+        batch_y:  {'target': tensor([0, 1])}
  
     可以看到使用了-1进行padding。
 
 Dataset个性化padding
-    如果我们希望对某一些 :mod:`~fastNLP.core.field` 进行个性化padding，可以自己构造Padder类，并使用 :meth:`~fastNLP.core.Dataset.set_padder` 函数修改padder来实现。下面通   过构造一个将数据padding到固定长度的padder进行展示：
+    如果我们希望对某一些 :mod:`~fastNLP.core.field` 进行个性化padding，可以自己构造Padder类，并使用 :meth:`~fastNLP.core.Dataset.set_padder` 函数修改padder来实现。下面通过构造一个将数据padding到固定长度的padder进行展示：
 
     .. code-block:: python
 
@@ -265,53 +265,53 @@ Dataset个性化padding
 
     输出结果如下::
 
-        batch_x:  {'words': tensor([[    4,   278,   686,    18,     7,     0,     0,     0,     0,     0,
-                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0],
-                [15619,  3205,     5,  1676,     0,     0,     0,     0,     0,     0,
-                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0]]), 'seq_len': tensor([5, 4])}
-        batch_y:  {'target': tensor([1, 1])}
-        batch_x:  {'words': tensor([[    2,   156,     3,  4427,     3,   240,     3,   740,     5,  1137,
-                    40,    42,  2428,   737,     2,   649,    10, 15621,  2286,     7,
+        batch_x:  {'words': tensor([[   45,   752,   327,   180,    10, 15621,    16,    72,  8904,     9,
+                  1217,     7,     0,     0,     0,     0,     0,     0,     0,     0,
                      0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
                      0,     0,     0,     0,     0,     0,     0,     0,     0,     0],
-                [   24,    96,    27,    45,     8,   337,    37,   240,     8,  2134,
-                     2,    18,    10, 15623,  1422,     6,    60,     5,   388,     7,
+                [  879,    96,     8,  1026,    12,  8067,    11, 13623,     8, 15619,
+                     4,   673,   662,    15,     4,  1154,   240,   639,   417,     7,
                      0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0]]), 'seq_len': tensor([20, 20])}
-        batch_y:  {'target': tensor([0, 0])}
-        batch_x:  {'words': tensor([[   13,   831,  7747,   175,     3,    46,     6,    84,  5753,    15,
-                  2178,    15,    62,    56,   407,    85,  1010,  4974,    26,    17,
-                 13786,     3,   534,  3688, 15624,    38,   376,     8, 15625,     8,
-                  1324,  4399,     7,     0,     0,     0,     0,     0,     0,     0],
-                [ 1046, 11114,    16,   105,     5,     4,   177,  1825,  1705,     3,
-                     2,    18,    11,     4,  1019,   433,   144,    32,   246,   309,
+                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0]]), 'seq_len': tensor([12, 20])}
+        batch_y:  {'target': tensor([1, 0])}
+        batch_x:  {'words': tensor([[   13,   830,  7746,   174,     3,    47,     6,    83,  5752,    15,
+                  2177,    15,    63,    57,   406,    84,  1009,  4973,    27,    17,
+                 13785,     3,   533,  3687, 15623,    39,   375,     8, 15624,     8,
+                  1323,  4398,     7,     0,     0,     0,     0,     0,     0,     0],
+                [ 1045, 11113,    16,   104,     5,     4,   176,  1824,  1704,     3,
+                     2,    18,    11,     4,  1018,   432,   143,    33,   245,   308,
                      7,     0,     0,     0,     0,     0,     0,     0,     0,     0,
                      0,     0,     0,     0,     0,     0,     0,     0,     0,     0]]), 'seq_len': tensor([33, 21])}
         batch_y:  {'target': tensor([1, 0])}
-        batch_x:  {'words': tensor([[  14,   10,    4,  312,    5,  155, 1419,  610,    7,    0,    0,    0,
+        batch_x:  {'words': tensor([[  14,   10,    4,  311,    5,  154, 1418,  609,    7,    0,    0,    0,
                     0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
                     0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
                     0,    0,    0,    0],
-                [  14,   10,  438,   31,   78,    3,   78,  438,    7,    0,    0,    0,
+                [  14,   10,  437,   32,   78,    3,   78,  437,    7,    0,    0,    0,
                     0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
                     0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
                     0,    0,    0,    0]]), 'seq_len': tensor([9, 9])}
         batch_y:  {'target': tensor([0, 1])}
-        batch_x:  {'words': tensor([[   44,   753,   328,   181,    10, 15622,    16,    71,  8905,     9,
-                  1218,     7,     0,     0,     0,     0,     0,     0,     0,     0,
+        batch_x:  {'words': tensor([[    2,   155,     3,  4426,     3,   239,     3,   739,     5,  1136,
+                    41,    43,  2427,   736,     2,   648,    10, 15620,  2285,     7,
                      0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
                      0,     0,     0,     0,     0,     0,     0,     0,     0,     0],
-                [  880,    97,     8,  1027,    12,  8068,    11, 13624,     8, 15620,
-                     4,   674,   663,    15,     4,  1155,   241,   640,   418,     7,
+                [   24,    95,    28,    46,     8,   336,    38,   239,     8,  2133,
+                     2,    18,    10, 15622,  1421,     6,    61,     5,   387,     7,
                      0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0]]), 'seq_len': tensor([12, 20])}
-        batch_y:  {'target': tensor([1, 0])}
+                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0]]), 'seq_len': tensor([20, 20])}
+        batch_y:  {'target': tensor([0, 0])}
+        batch_x:  {'words': tensor([[    4,   277,   685,    18,     7,     0,     0,     0,     0,     0,
+                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0],
+                [15618,  3204,     5,  1675,     0,     0,     0,     0,     0,     0,
+                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+                     0,     0,     0,     0,     0,     0,     0,     0,     0,     0]]), 'seq_len': tensor([5, 4])}
+        batch_y:  {'target': tensor([1, 1])}
 
-    在这里所有的`words`都被pad成了长度为40的list。
+    在这里所有的 `words` 都被pad成了长度为40的list。
 
 
 使用DataSetIter自己编写训练过程
@@ -375,39 +375,38 @@ Dataset个性化padding
 
         -----start training-----
 
-        Evaluate data in 0.2 seconds!
-        Epoch 0 Avg Loss: 0.33 AccuracyMetric: acc=0.825688 48895ms
+        Evaluate data in 2.68 seconds!
+        Epoch 0 Avg Loss: 0.66 AccuracyMetric: acc=0.708716 29307ms
 
-        Evaluate data in 0.19 seconds!
-        Epoch 1 Avg Loss: 0.16 AccuracyMetric: acc=0.829128 102081ms
+        Evaluate data in 0.38 seconds!
+        Epoch 1 Avg Loss: 0.41 AccuracyMetric: acc=0.770642 52200ms
 
-        Evaluate data in 0.18 seconds!
-        Epoch 2 Avg Loss: 0.10 AccuracyMetric: acc=0.822248 152853ms
+        Evaluate data in 0.51 seconds!
+        Epoch 2 Avg Loss: 0.16 AccuracyMetric: acc=0.747706 70268ms
 
-        Evaluate data in 0.17 seconds!
-        Epoch 3 Avg Loss: 0.08 AccuracyMetric: acc=0.821101 200184ms
+        Evaluate data in 0.96 seconds!
+        Epoch 3 Avg Loss: 0.06 AccuracyMetric: acc=0.741972 90349ms
 
-        Evaluate data in 0.17 seconds!
-        Epoch 4 Avg Loss: 0.06 AccuracyMetric: acc=0.827982 253097ms
+        Evaluate data in 1.04 seconds!
+        Epoch 4 Avg Loss: 0.03 AccuracyMetric: acc=0.740826 114250ms
 
-        Evaluate data in 0.27 seconds!
-        Epoch 5 Avg Loss: 0.05 AccuracyMetric: acc=0.806193 303883ms
+        Evaluate data in 0.8 seconds!
+        Epoch 5 Avg Loss: 0.02 AccuracyMetric: acc=0.738532 134742ms
 
-        Evaluate data in 0.26 seconds!
-        Epoch 6 Avg Loss: 0.04 AccuracyMetric: acc=0.803899 392315ms
+        Evaluate data in 0.65 seconds!
+        Epoch 6 Avg Loss: 0.01 AccuracyMetric: acc=0.731651 154503ms
+
+        Evaluate data in 0.8 seconds!
+        Epoch 7 Avg Loss: 0.01 AccuracyMetric: acc=0.738532 175397ms
 
         Evaluate data in 0.36 seconds!
-        Epoch 7 Avg Loss: 0.04 AccuracyMetric: acc=0.802752 527211ms
+        Epoch 8 Avg Loss: 0.01 AccuracyMetric: acc=0.733945 192384ms
 
-        Evaluate data in 0.15 seconds!
-        Epoch 8 Avg Loss: 0.03 AccuracyMetric: acc=0.809633 661533ms
+        Evaluate data in 0.84 seconds!
+        Epoch 9 Avg Loss: 0.01 AccuracyMetric: acc=0.744266 214417ms
 
-        Evaluate data in 0.31 seconds!
-        Epoch 9 Avg Loss: 0.03 AccuracyMetric: acc=0.797018 812232ms
-
-        Evaluate data in 0.25 seconds!
-        [tester] 
-        AccuracyMetric: acc=0.917822
-        
+        Evaluate data in 0.04 seconds!
+        [tester]
+        AccuracyMetric: acc=0.786667
 
 

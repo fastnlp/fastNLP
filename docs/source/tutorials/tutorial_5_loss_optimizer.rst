@@ -232,6 +232,6 @@
     
     训练过程输出如下::
 	
-        Evaluate data in 0.19 seconds!
-        [tester] 
-        AccuracyMetric: acc=0.889109
+        Evaluate data in 0.43 seconds!
+        [tester]
+        AccuracyMetric: acc=0.773333
