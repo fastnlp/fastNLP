@@ -9,8 +9,8 @@
 
 数据读入
     我们可以使用 fastNLP  :mod:`fastNLP.io` 模块中的 :class:`~fastNLP.io.SST2Pipe` 类，轻松地读取以及预处理SST2数据集。:class:`~fastNLP.io.SST2Pipe` 对象的
-    :meth:`~fastNLP.io.SST2Pipe.process_from_file` 方法能够对读入的SST2数据集进行数据的预处理，方法的参数为paths, 指要处理的文件所在目录，如果paths为None，则会自动下载数      据集，函数默认paths值为None。
-    此函数返回一个 :class:`~fastNLP.io.DataBundle`，包含SST2数据集的训练集、测试集、验证集以及source端和target端的字典。其训练、测试、验证数据集含有四个     :mod:`~fastNLP.core.field` ：
+    :meth:`~fastNLP.io.SST2Pipe.process_from_file` 方法能够对读入的SST2数据集进行数据的预处理，方法的参数为paths, 指要处理的文件所在目录，如果paths为None，则会自动下载数据集，函数默认paths值为None。
+    此函数返回一个 :class:`~fastNLP.io.DataBundle`，包含SST2数据集的训练集、测试集、验证集以及source端和target端的字典。其训练、测试、验证数据集含有四个 :mod:`~fastNLP.core.field` ：
 
     * raw_words: 原source句子
     * target: 标签值
@@ -69,8 +69,7 @@
 数据集 :meth:`~fastNLP.DataSet.set_input` 和  :meth:`~fastNLP.DataSet.set_target` 函数
     :class:`~fastNLP.io.SST2Pipe`  类的 :meth:`~fastNLP.io.SST2Pipe.process_from_file` 方法在预处理过程中还将训练、测试、验证
     集的 `words` 、`seq_len` :mod:`~fastNLP.core.field` 设定为input，同时将 `target`  :mod:`~fastNLP.core.field` 设定
-    为target。我们可以通过 :class:`~fastNLP.core.Dataset` 类的 :meth:`~fastNLP.core.Dataset.print_field_meta` 方法查看各个
-     :mod:`~fastNLP.core.field` 的设定情况，代码如下：
+    为target。我们可以通过 :class:`~fastNLP.core.Dataset` 类的 :meth:`~fastNLP.core.Dataset.print_field_meta` 方法查看各个 :mod:`~fastNLP.core.field` 的设定情况，代码如下：
 
     .. code-block:: python
 
