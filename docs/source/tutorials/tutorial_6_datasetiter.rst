@@ -5,6 +5,9 @@
 我们使用前面介绍过的 :doc:`/tutorials/文本分类` 任务来进行详细的介绍。这里我们把数据集换成了SST2，使用 :class:`~fastNLP.DataSetIter` 类来编写自己的训练过程。
 DataSetIter初探之前的内容与 :doc:`/tutorials/tutorial_5_loss_optimizer` 中的完全一样，如已经阅读过可以跳过。
 
+.. note::
+
+    本教程中的代码没有使用 GPU 。读者可以自行修改代码，扩大数据量并使用 GPU 进行训练。
 
 数据读入和预处理
 --------------------
