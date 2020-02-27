@@ -7,9 +7,8 @@
 
 .. code-block:: python
 
-    trainer = Trainer(train_data=train_data, model=model, loss=loss,
-                      optimizer=optimizer, batch_size=32, dev_data=dev_data,
-                      metrics=metric, device=device)
+    trainer = Trainer(train_data=train_data, dev_data=dev_data, model=model,
+                      loss=loss, device=device, metrics=metric)
     trainer.train()
 
 除了 :class:`~fastNLP.AccuracyMetric` 之外，:class:`~fastNLP.SpanFPreRecMetric` 也是一种非常见的评价指标，
@@ -89,7 +88,7 @@
             super().__init__()
 
             # 如果没有注册该则效果与 Version 1 就是一样的
-            self._init_param_map(pred=pred, target=target) # 该方法会注册label和pred. 仅需要注册evaluate()方法会用到的参数名即可
+            self._init_param_map(pred=pred, target=target) # 该方法会注册 pred 和 target . 仅需要注册evaluate()方法会用到的参数名即可
 
             # 根据你的情况自定义指标
             self.total = 0
