@@ -19,8 +19,6 @@
 .. figure:: ./cn_cls_example.png
    :alt: jupyter
 
-   jupyter
-
 步骤
 ----
 
