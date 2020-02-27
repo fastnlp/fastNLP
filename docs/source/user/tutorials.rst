@@ -15,7 +15,7 @@ fastNLP 详细使用教程
    使用DataSetIter实现自定义训练过程 </tutorials/tutorial_6_datasetiter>
    使用Metric快速评测你的模型 </tutorials/tutorial_7_metrics>
    使用Modules和Models快速搭建自定义模型 </tutorials/tutorial_8_modules_models>
-   使用Callback自定义你的训练过程 </tutorials/tutorial_10_callback>
+   使用Callback自定义你的训练过程 </tutorials/tutorial_9_callback>
 
 .. toctree::
    :maxdepth: 1
