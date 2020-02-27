@@ -5,6 +5,10 @@
 这一部分的内容主要展示如何使用fastNLP实现序列标注(Sequence labeling)任务。您可以使用fastNLP的各个组件快捷，方便地完成序列标注任务，达到出色的效果。
 在阅读这篇教程前，希望您已经熟悉了fastNLP的基础使用，尤其是数据的载入以及模型的构建，通过这个小任务的能让您进一步熟悉fastNLP的使用。
 
+.. note::
+
+    本教程推荐使用 GPU 进行实验
+
 命名实体识别(name entity recognition, NER)
 ------------------------------------------
 
@@ -16,8 +20,8 @@
 其中“复旦大学”就是一个机构名，命名实体识别就是要从中识别出“复旦大学”这四个字是一个整体，且属于机构名这个类别。这个问题在实际做的时候会被
 转换为序列标注问题
 
-    针对"我来自复旦大学"这句话，我们的预测目标将是[O, O, O, B-ORG, I-ORG, I-ORG, I-ORG]，其中O表示out,即不是一个实体，B-ORG是ORG(
-    organization的缩写)这个类别的开头(Begin)，I-ORG是ORG类别的中间(Inside)。
+针对"我来自复旦大学"这句话，我们的预测目标将是[O, O, O, B-ORG, I-ORG, I-ORG, I-ORG]，其中O表示out,即不是一个实体，B-ORG是ORG(
+organization的缩写)这个类别的开头(Begin)，I-ORG是ORG类别的中间(Inside)。
 
 在本tutorial中我们将通过fastNLP尝试写出一个能够执行以上任务的模型。
 
@@ -64,6 +68,9 @@ fastNLP的数据载入主要是由Loader与Pipe两个基类衔接完成的，您
     model = BiLSTMCRF(embed=embed, num_classes=len(data_bundle.get_vocab('target')), num_layers=1, hidden_size=200, dropout=0.5,
                   target_vocab=data_bundle.get_vocab('target'))
 
+进行训练
+--------------------------------
+
 下面我们选择用来评估模型的metric，以及优化用到的优化函数。
 
 .. code-block:: python
@@ -76,7 +83,7 @@ fastNLP的数据载入主要是由Loader与Pipe两个基类衔接完成的，您
     optimizer = Adam(model.parameters(), lr=1e-2)
     loss = LossInForward()
 
-使用Trainer进行训练
+使用Trainer进行训练, 您可以通过修改 device 的值来选择显卡。
 
 .. code-block:: python
 
@@ -114,6 +121,9 @@ fastNLP的数据载入主要是由Loader与Pipe两个基类衔接完成的，您
     SpanFPreRecMetric: f=0.515528, pre=0.65098, rec=0.426735
     Reloaded the best model.
 
+进行测试
+--------------------------------
+
 训练结束之后过，可以通过 :class:`~fastNLP.Tester` 测试其在测试集上的性能
 
 .. code-block:: python
@@ -132,7 +142,7 @@ fastNLP的数据载入主要是由Loader与Pipe两个基类衔接完成的，您
 使用更强的Bert做序列标注
 --------------------------------
 
-在fastNLP使用Bert进行任务，您只需要切换为 :class:`fastNLP.embeddings.BertEmbedding` 即可。
+在fastNLP使用Bert进行任务，您只需要把 :class:`fastNLP.embeddings.StaticEmbedding` 切换为 :class:`fastNLP.embeddings.BertEmbedding` （可修改 device 选择显卡）。
 
 .. code-block:: python
 
