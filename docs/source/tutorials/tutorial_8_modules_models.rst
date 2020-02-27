@@ -11,39 +11,16 @@
 
 fastNLP 在 :mod:`~fastNLP.models` 模块中内置了如 :class:`~fastNLP.models.CNNText` 、
 :class:`~fastNLP.models.SeqLabeling` 等完整的模型，以供用户直接使用。
-以 :class:`~fastNLP.models.CNNText` 为例，我们看一个简单的文本分类的任务的实现过程。
-
-首先是数据读入和处理部分，这里的代码和 :doc:`快速入门 </user/quickstart>` 中一致。
+以文本分类的任务为例，我们从 models 中导入 :class:`~fastNLP.models.CNNText` 模型，用它进行训练。
 
 .. code-block:: python
 
-    from fastNLP.io import CSVLoader
-    from fastNLP import Vocabulary, CrossEntropyLoss, AccuracyMetric
+   from fastNLP.models import CNNText
 
-    loader = CSVLoader(headers=('raw_sentence', 'label'), sep='\t')
-    dataset = loader.load("./sample_data/tutorial_sample_dataset.csv")
+    model_cnn = CNNText((len(vocab),100), num_classes=2, dropout=0.1)
 
-    dataset.apply(lambda x: x['raw_sentence'].lower(), new_field_name='sentence')
-    dataset.apply_field(lambda x: x.split(), field_name='sentence', new_field_name='words', is_input=True)
-    dataset.apply(lambda x: int(x['label']), new_field_name='target', is_target=True)
-
-    train_dev_data, test_data = dataset.split(0.1)
-    train_data, dev_data = train_dev_data.split(0.1)
-
-    vocab = Vocabulary(min_freq=2).from_dataset(train_data, field_name='words')
-    vocab.index_dataset(train_data, dev_data, test_data, field_name='words', new_field_name='words')
-
-然后我们从 :mod:`~fastNLP.models` 中导入 ``CNNText`` 模型，用它进行训练
-
-.. code-block:: python
-
-    from fastNLP.models import CNNText
-    from fastNLP import Trainer
-
-    model_cnn = CNNText((len(vocab),50), num_classes=5, padding=2, dropout=0.1)
-
-    trainer = Trainer(model=model_cnn, train_data=train_data, dev_data=dev_data,
-                      loss=CrossEntropyLoss(), metrics=AccuracyMetric())
+    trainer = Trainer(train_data=train_data, dev_data=dev_data, metrics=metric,
+                      loss=loss, device=device, model=model_cnn)
     trainer.train()
 
 在 iPython 环境输入 `model_cnn` ，我们可以看到 ``model_cnn`` 的网络结构
@@ -52,18 +29,18 @@ fastNLP 在 :mod:`~fastNLP.models` 模块中内置了如 :class:`~fastNLP.models
 
     CNNText(
       (embed): Embedding(
-        169, 50
-        (dropout): Dropout(p=0.0)
+        (embed): Embedding(16292, 100)
+        (dropout): Dropout(p=0.0, inplace=False)
       )
       (conv_pool): ConvMaxpool(
         (convs): ModuleList(
-          (0): Conv1d(50, 3, kernel_size=(3,), stride=(1,), padding=(2,))
-          (1): Conv1d(50, 4, kernel_size=(4,), stride=(1,), padding=(2,))
-          (2): Conv1d(50, 5, kernel_size=(5,), stride=(1,), padding=(2,))
+          (0): Conv1d(100, 30, kernel_size=(1,), stride=(1,), bias=False)
+          (1): Conv1d(100, 40, kernel_size=(3,), stride=(1,), padding=(1,), bias=False)
+          (2): Conv1d(100, 50, kernel_size=(5,), stride=(1,), padding=(2,), bias=False)
         )
       )
-      (dropout): Dropout(p=0.1)
-      (fc): Linear(in_features=12, out_features=5, bias=True)
+      (dropout): Dropout(p=0.1, inplace=False)
+      (fc): Linear(in_features=120, out_features=2, bias=True)
     )
 
 FastNLP 中内置的 models 如下表所示，您可以点击具体的名称查看详细的 API：
@@ -131,10 +108,10 @@ FastNLP 完全支持使用 pyTorch 编写的模型，但与 pyTorch 中编写模
 .. parsed-literal::
 
     LSTMText(
-      (embedding): Embedding(169, 50)
-      (lstm): LSTM(50, 64, num_layers=2, dropout=0.5, bidirectional=True)
-      (fc): Linear(in_features=128, out_features=5, bias=True)
-      (dropout): Dropout(p=0.5)
+      (embedding): Embedding(16292, 100)
+      (lstm): LSTM(100, 64, num_layers=2, dropout=0.5, bidirectional=True)
+      (fc): Linear(in_features=128, out_features=2, bias=True)
+      (dropout): Dropout(p=0.5, inplace=False)
     )
 
 
@@ -148,7 +125,7 @@ FastNLP 完全支持使用 pyTorch 编写的模型，但与 pyTorch 中编写模
 
     from fastNLP.modules import Embedding, LSTM, MLP
 
-    class Model(nn.Module):
+    class MyText(nn.Module):
         def __init__(self, vocab_size, embedding_dim, output_dim, hidden_dim=64, num_layers=2, dropout=0.5):
             super().__init__()
 
@@ -166,18 +143,18 @@ FastNLP 完全支持使用 pyTorch 编写的模型，但与 pyTorch 中编写模
 
 .. parsed-literal::
 
-    Model(
+    MyText(
       (embedding): Embedding(
-        169, 50
-        (dropout): Dropout(p=0.0)
+        (embed): Embedding(16292, 100)
+        (dropout): Dropout(p=0.0, inplace=False)
       )
       (lstm): LSTM(
-        (lstm): LSTM(50, 64, num_layers=2, batch_first=True, bidirectional=True)
+        (lstm): LSTM(100, 64, num_layers=2, batch_first=True, bidirectional=True)
       )
       (mlp): MLP(
         (hiddens): ModuleList()
-        (output): Linear(in_features=128, out_features=5, bias=True)
-        (dropout): Dropout(p=0.5)
+        (output): Linear(in_features=128, out_features=2, bias=True)
+        (dropout): Dropout(p=0.5, inplace=False)
       )
     )
 
