@@ -15,6 +15,10 @@ Bert自从在 `BERT: Pre-training of Deep Bidirectional Transformers for Languag
 ----------------------------------
 下面我们将介绍通过使用Bert来进行文本分类, 中文命名实体识别, 文本匹配, 中文问答。
 
+.. note::
+
+    本教程必须使用 GPU 进行实验，并且会花费大量的时间
+
 1. 使用Bert进行文本分类
 ----------------------------------
 文本分类是指给定一段文字，判定其所属的类别。例如下面的文本情感分类
@@ -28,26 +32,25 @@ Bert自从在 `BERT: Pre-training of Deep Bidirectional Transformers for Languag
 .. code-block:: python
 
     from fastNLP.io import WeiboSenti100kPipe
+    from fastNLP.embeddings import BertEmbedding
+    from fastNLP.models import BertForSequenceClassification
+    from fastNLP import Trainer, CrossEntropyLoss, AccuracyMetric, Adam
+    import torch
 
     data_bundle =WeiboSenti100kPipe().process_from_file()
     data_bundle.rename_field('chars', 'words')
 
     # 载入BertEmbedding
-    from fastNLP.embeddings import BertEmbedding
-
     embed = BertEmbedding(data_bundle.get_vocab('words'), model_dir_or_name='cn-wwm', include_cls_sep=True)
 
     # 载入模型
-    from fastNLP.models import BertForSequenceClassification
-
     model = BertForSequenceClassification(embed, len(data_bundle.get_vocab('target')))
 
     # 训练模型
-    from fastNLP import Trainer, CrossEntropyLoss, AccuracyMetric, Adam
-
+    device = 0 if torch.cuda.is_available() else 'cpu'
     trainer = Trainer(data_bundle.get_dataset('train'), model,
                       optimizer=Adam(model_params=model.parameters(), lr=2e-5),
-                      loss=CrossEntropyLoss(), device=0,
+                      loss=CrossEntropyLoss(), device=device,
                       batch_size=8, dev_data=data_bundle.get_dataset('dev'),
                       metrics=AccuracyMetric(), n_epochs=2, print_every=1)
     trainer.train()
@@ -92,7 +95,7 @@ Bert自从在 `BERT: Pre-training of Deep Bidirectional Transformers for Languag
     贺	O
     词	O
 
-这部分内容请参考 :doc:`快速实现序列标注模型 </tutorials/tutorial_9_seq_labeling>`
+这部分内容请参考 :doc:`/tutorials/序列标注`
 
 
 3. 使用Bert进行文本匹配
@@ -102,36 +105,36 @@ Bert自从在 `BERT: Pre-training of Deep Bidirectional Transformers for Languag
 
 .. code-block:: python
 
-    data_bundle = CNXNLIBertPipe().process_from_file(paths)
+    from fastNLP.io import CNXNLIBertPipe
+    from fastNLP.embeddings import BertEmbedding
+    from fastNLP.models import BertForSentenceMatching
+    from fastNLP import Trainer, CrossEntropyLoss, AccuracyMetric, Adam
+    from fastNLP.core.optimizer import AdamW
+    from fastNLP.core.callback import WarmupCallback
+    from fastNLP import Tester
+    import torch
+
+    data_bundle = CNXNLIBertPipe().process_from_file()
     data_bundle.rename_field('chars', 'words')
     print(data_bundle)
 
     # 载入BertEmbedding
-    from fastNLP.embeddings import BertEmbedding
-
     embed = BertEmbedding(data_bundle.get_vocab('words'), model_dir_or_name='cn-wwm', include_cls_sep=True)
 
     # 载入模型
-    from fastNLP.models import BertForSentenceMatching
-
     model = BertForSentenceMatching(embed, len(data_bundle.get_vocab('target')))
 
     # 训练模型
-    from fastNLP import Trainer, CrossEntropyLoss, AccuracyMetric, Adam
-    from fastNLP.core.optimizer import AdamW
-    from fastNLP.core.callback import WarmupCallback
-
     callbacks = [WarmupCallback(warmup=0.1, schedule='linear'), ]
-
+    device = 0 if torch.cuda.is_available() else 'cpu'
     trainer = Trainer(data_bundle.get_dataset('train'), model,
                       optimizer=AdamW(params=model.parameters(), lr=4e-5),
-                      loss=CrossEntropyLoss(), device=0,
+                      loss=CrossEntropyLoss(), device=device,
                       batch_size=8, dev_data=data_bundle.get_dataset('dev'),
                       metrics=AccuracyMetric(), n_epochs=5, print_every=1,
                       update_every=8, callbacks=callbacks)
     trainer.train()
 
-    from fastNLP import Tester
     tester = Tester(data_bundle.get_dataset('test'), model, batch_size=8, metrics=AccuracyMetric())
     tester.test()
 
@@ -174,7 +177,7 @@ Bert自从在 `BERT: Pre-training of Deep Bidirectional Transformers for Languag
         }
     ]
 
-您可以通过以下的代码训练 `CMRC2018 <https://github.com/ymcui/cmrc2018>`_
+您可以通过以下的代码训练 (原文代码：`CMRC2018 <https://github.com/ymcui/cmrc2018>`_)
 
 .. code-block:: python
 
@@ -186,7 +189,7 @@ Bert自从在 `BERT: Pre-training of Deep Bidirectional Transformers for Languag
     from fastNLP import Trainer, BucketSampler
     from fastNLP import WarmupCallback, GradientClipCallback
     from fastNLP.core.optimizer import AdamW
-
+    import torch
 
     data_bundle = CMRC2018BertPipe().process_from_file()
     data_bundle.rename_field('chars', 'words')
@@ -205,14 +208,15 @@ Bert自从在 `BERT: Pre-training of Deep Bidirectional Transformers for Languag
 
     optimizer = AdamW(model.parameters(), lr=5e-5)
 
+    device = 0 if torch.cuda.is_available() else 'cpu'
     trainer = Trainer(data_bundle.get_dataset('train'), model, loss=loss, optimizer=optimizer,
                       sampler=BucketSampler(seq_len_field_name='context_len'),
                       dev_data=data_bundle.get_dataset('dev'), metrics=metric,
-                      callbacks=callbacks, device=0, batch_size=6, num_workers=2, n_epochs=2, print_every=1,
+                      callbacks=callbacks, device=device, batch_size=6, num_workers=2, n_epochs=2, print_every=1,
                       test_use_tqdm=False, update_every=10)
     trainer.train(load_best_model=False)
 
-训练结果(和论文中报道的基本一致)::
+训练结果(和原论文中报道的基本一致)::
 
     In Epoch:2/Step:1692, got best dev performance:
     CMRC2018Metric: f1=85.61, em=66.08
