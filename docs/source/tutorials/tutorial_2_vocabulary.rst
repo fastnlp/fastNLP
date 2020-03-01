@@ -24,7 +24,7 @@ fastNLP中的Vocabulary
     vocab.to_index('positive')  # 输出0
     vocab.to_index('neutral')  # 会报错，因为没有unk这种情况
 
-除了通过以上的方式建立词表，Vocabulary还可以通过使用下面的函数直从 :class:`~fastNLP.DataSet` 中的某一列建立词表以及将该列转换为index
+除了通过以上的方式建立词表，Vocabulary还可以通过使用下面的函数直接从 :class:`~fastNLP.DataSet` 中的某一列建立词表以及将该列转换为index
 
 .. code-block:: python
 
@@ -39,7 +39,9 @@ fastNLP中的Vocabulary
     })
 
     vocab = Vocabulary()
+    #  从该dataset中的chars列建立词表
     vocab.from_dataset(dataset, field_name='chars')
+    #  使用vocabulary将chars列转换为index
     vocab.index_dataset(dataset, field_name='chars')
 
     target_vocab = Vocabulary(padding=None, unknown=None)
@@ -60,7 +62,7 @@ fastNLP中的Vocabulary
 一些使用tips
 -----------------------------
 
-在通过使用from_dataset()函数在DataSet上建立词表时，将测试集和验证集放入参数no_create_entry_dataset中，如下所示
+在使用from_dataset()函数建立词表时，将测试集和验证集放入参数no_create_entry_dataset中，如下所示
 
 .. code-block:: python
 
