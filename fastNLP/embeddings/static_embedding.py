@@ -76,6 +76,10 @@ class StaticEmbedding(TokenEmbedding):
         """
         super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         if embedding_dim > 0:
+            if model_dir_or_name is not None:
+                warnings.warn(f"StaticEmbedding will ignore `model_dir_or_name`, and randomly initialize embedding with"
+                              f" dimension {embedding_dim}. If you want to use pre-trained embedding, "
+                              f"set `embedding_dim` to 0.")
             model_dir_or_name = None
         
         # 得到cache_path
