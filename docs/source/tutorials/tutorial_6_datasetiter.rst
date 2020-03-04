@@ -28,10 +28,10 @@ DataSetIter初探之前的内容与 :doc:`/tutorials/tutorial_5_loss_optimizer` 
         
         pipe = SST2Pipe()
         databundle = pipe.process_from_file()
-        vocab = databundle.vocabs['words']
+        vocab = databundle.get_vocab('words')
         print(databundle)
-        print(databundle.datasets['train'][0])
-        print(databundle.vocabs['words'])
+        print(databundle.get_dataset('train')[0])
+        print(databundle.get_vocab('words'))
 
 
     输出数据如下::
