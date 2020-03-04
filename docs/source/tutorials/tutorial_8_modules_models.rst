@@ -15,7 +15,7 @@ fastNLP 在 :mod:`~fastNLP.models` 模块中内置了如 :class:`~fastNLP.models
 
 .. code-block:: python
 
-   from fastNLP.models import CNNText
+    from fastNLP.models import CNNText
 
     model_cnn = CNNText((len(vocab),100), num_classes=2, dropout=0.1)
 
