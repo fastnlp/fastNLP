@@ -1,7 +1,11 @@
-文本分类(Text classification)
+文本分类
 =============================
 
-文本分类任务是将一句话或一段话划分到某个具体的类别。比如垃圾邮件识别，文本情绪分类等。
+文本分类(Text classification)任务是将一句话或一段话划分到某个具体的类别。比如垃圾邮件识别，文本情绪分类等。这篇教程可以带你从零开始了解 fastNLP 的使用
+
+.. note::
+
+    本教程推荐使用 GPU 进行实验
 
 .. code-block:: text
 
@@ -14,8 +18,6 @@
 
 .. figure:: ./cn_cls_example.png
    :alt: jupyter
-
-   jupyter
 
 步骤
 ----

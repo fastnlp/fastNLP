@@ -24,7 +24,7 @@ fastNLP中的Vocabulary
     vocab.to_index('positive')  # 输出0
     vocab.to_index('neutral')  # 会报错，因为没有unk这种情况
 
-除了通过以上的方式建立词表，Vocabulary还可以通过使用下面的函数直从 :class:`~fastNLP.DataSet` 中的某一列建立词表以及将该列转换为index
+除了通过以上的方式建立词表，Vocabulary还可以通过使用下面的函数直接从 :class:`~fastNLP.DataSet` 中的某一列建立词表以及将该列转换为index
 
 .. code-block:: python
 
@@ -39,7 +39,9 @@ fastNLP中的Vocabulary
     })
 
     vocab = Vocabulary()
+    #  从该dataset中的chars列建立词表
     vocab.from_dataset(dataset, field_name='chars')
+    #  使用vocabulary将chars列转换为index
     vocab.index_dataset(dataset, field_name='chars')
 
     target_vocab = Vocabulary(padding=None, unknown=None)
@@ -60,7 +62,7 @@ fastNLP中的Vocabulary
 一些使用tips
 -----------------------------
 
-在通过使用from_dataset()函数在DataSet上建立词表时，将测试集和验证集放入参数no_create_entry_dataset中，如下所示
+在使用from_dataset()函数建立词表时，将测试集和验证集放入参数no_create_entry_dataset中，如下所示
 
 .. code-block:: python
 
@@ -84,18 +86,18 @@ fastNLP中的Vocabulary
     #  将验证集或者测试集在建立词表是放入no_create_entry_dataset这个参数中。
     vocab.from_dataset(tr_data, field_name='chars', no_create_entry_dataset=[dev_data])
 
-
- :class:`~fastNLP.Vocabulary` 中的 `no_create_entry` , 建议在添加来自于测试集和验证集的词的时候将该参数置为True, 或将验证集和测试集
+:class:`~fastNLP.Vocabulary` 中的 `no_create_entry` , 建议在添加来自于测试集和验证集的词的时候将该参数置为True, 或将验证集和测试集
 传入 `no_create_entry_dataset` 参数。它们的意义是在接下来的模型会使用pretrain的embedding(包括glove, word2vec, elmo与bert)且会finetune的
 情况下，如果仅使用来自于train的数据建立vocabulary，会导致只出现在test与dev中的词语无法充分利用到来自于预训练embedding的信息(因为他们
-会被认为是unk)，所以在建立词表的时候将test与dev考虑进来会使得最终的结果更好。通过与fastNLP中的各种Embedding配合使用，会有如下的效果，
+会被认为是unk)，所以在建立词表的时候将test与dev考虑进来会使得最终的结果更好。
+
+通过与fastNLP中的各种Embedding配合使用，会有如下的效果，
 如果一个词出现在了train中，但是没在预训练模型中，embedding会为随机初始化，且它单独的一个vector，如果finetune embedding的话，
 这个词在更新之后可能会有更好的表示; 而如果这个词仅出现在了dev或test中，那么就不能为它们单独建立vector，而应该让它指向unk这个vector的
 值(当unk的值更新时，这个词也使用的是更新之后的vector)。所以被认为是no_create_entry的token，将首先从预训练的词表中寻找它的表示，如
 果找到了，就使用该表示; 如果没有找到，则认为该词的表示应该为unk的表示。
 
-下面我们结合部分 :class:`~fastNLP.embeddings.StaticEmbedding` 的例子来说明下该值造成的影响，如果您对
- :class:`~fastNLP.embeddings.StaticEmbedding` 不太了解，您可以先参考 :doc:`使用Embedding模块将文本转成向量 </tutorials/tutorial_3_embedding>` 部分再来阅读该部分
+下面我们结合部分 :class:`~fastNLP.embeddings.StaticEmbedding` 的例子来说明下该值造成的影响，如果您对 :class:`~fastNLP.embeddings.StaticEmbedding` 不太了解，您可以先参考 :doc:`使用Embedding模块将文本转成向量 </tutorials/tutorial_3_embedding>` 部分再来阅读该部分
 
 .. code-block:: python
 

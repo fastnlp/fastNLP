@@ -254,14 +254,14 @@ CNNCharEmbedding的使用例子如下：
 
 .. code-block:: python
 
-    from fastNLP.embeddings import LSTMCharEmbeddding
+    from fastNLP.embeddings import LSTMCharEmbedding
     from fastNLP import Vocabulary
 
     vocab = Vocabulary()
     vocab.add_word_lst("this is a demo .".split())
 
     # character的embedding维度大小为50，返回的embedding结果维度大小为64。
-    embed = LSTMCharEmbeddding(vocab, embed_size=64, char_emb_size=50)
+    embed = LSTMCharEmbedding(vocab, embed_size=64, char_emb_size=50)
     words = torch.LongTensor([[vocab.to_index(word) for word in "this is a demo .".split()]])
     print(embed(words).size())
 
