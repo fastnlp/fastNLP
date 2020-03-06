@@ -24,7 +24,13 @@ from ..modules.encoder._elmo import ElmobiLm, ConvTokenEmbedder
 
 class ElmoEmbedding(ContextualEmbedding):
     """
-    使用ELMo的embedding。初始化之后，只需要传入words就可以得到对应的embedding。当前支持的使用名称初始化的模型有以下的这些(待补充)
+    使用ELMo的embedding。初始化之后，只需要传入words就可以得到对应的embedding。
+    当前支持的使用名称初始化的模型:
+        en: 即en-medium hidden_size 1024; output_size 12
+        en-medium: hidden_size 2048; output_size 256
+        en-origial: hidden_size 4096; output_size 512
+        en-original-5.5b: hidden_size 4096; output_size 512
+        en-small: hidden_size 1024; output_size 128
 
     Example::
     

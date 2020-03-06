@@ -70,7 +70,7 @@ PRETRAIN_STATIC_FILES = {
     'en-glove-twitter-27b-100d': 'glove.twitter.27B.100d.zip',
     'en-glove-twitter-27b-200d': 'glove.twitter.27B.200d.zip',
 
-    'en-word2vec-300': "GoogleNews-vectors-negative300.txt.gz",
+    'en-word2vec-300d': "GoogleNews-vectors-negative300.txt.gz",
 
     'en-fasttext-wiki': "wiki-news-300d-1M.vec.zip",
     'en-fasttext-crawl': "crawl-300d-2M.vec.zip",

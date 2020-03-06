@@ -29,7 +29,17 @@ class BertEmbedding(ContextualEmbedding):
     预训练的bert模型长度限制为512个token，而因为输入的word是未进行word piece分割的(word piece的分割有BertEmbedding在输入word
     时切分)，在分割之后长度可能会超过最大长度限制。
 
-    BertEmbedding可以支持自动下载权重，当前支持的模型有以下的几种(待补充):
+    BertEmbedding可以支持自动下载权重，当前支持的模型:
+        en: base-cased
+        en-large-cased-wwm:
+        en-large-cased:
+        en-large-uncased:
+        en-large-uncased-wwm
+        cn: 中文BERT wwm by HIT
+        cn-base: 中文BERT base-chinese
+        cn-wwm-ext: 中文BERT wwm by HIT with extra data pretrain.
+        multi-base-cased: multilingual cased
+        multi-base-uncased: multilingual uncased
 
     Example::
 
@@ -70,6 +80,9 @@ class BertEmbedding(ContextualEmbedding):
         """
         super(BertEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
+        if word_dropout>0:
+            assert vocab.unknown != None, "When word_drop>0, Vocabulary must contain the unknown token."
+
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
             if 'cn' in model_dir_or_name.lower() and pool_method not in ('first', 'last'):
                 logger.warning("For Chinese bert, pooled_method should choose from 'first', 'last' in order to achieve"
@@ -84,7 +97,8 @@ class BertEmbedding(ContextualEmbedding):
         self.model = _WordBertModel(model_dir_or_name=model_dir_or_name, vocab=vocab, layers=layers,
                                     pool_method=pool_method, include_cls_sep=include_cls_sep,
                                     pooled_cls=pooled_cls, auto_truncate=auto_truncate, min_freq=2)
-        
+        self._sep_index = self.model._sep_index
+        self._cls_index = self.model._cls_index
         self.requires_grad = requires_grad
         self._embed_size = len(self.model.layers) * self.model.encoder.hidden_size
     
@@ -117,21 +131,35 @@ class BertEmbedding(ContextualEmbedding):
         """
         if self.word_dropout > 0 and self.training:
             with torch.no_grad():
-                if self._word_sep_index:  # 不能drop sep
-                    sep_mask = words.eq(self._word_sep_index)
+                not_sep_mask = words.ne(self._sep_index)
+                not_cls_mask = words.ne(self._cls_index)
+                if self._word_sep_index:
+                    not_sep_mask = not_sep_mask.__and__(words.ne(self._word_sep_index))
+                replaceable_mask = not_sep_mask.__and__(not_cls_mask)
                 mask = torch.full_like(words, fill_value=self.word_dropout, dtype=torch.float, device=words.device)
                 mask = torch.bernoulli(mask).eq(1)  # dropout_word越大，越多位置为1
                 pad_mask = words.ne(0)
-                mask = pad_mask.__and__(mask)  # pad的位置不为unk
+                mask = pad_mask.__and__(mask).__and__(replaceable_mask)  # pad的位置不为unk
                 words = words.masked_fill(mask, self._word_unk_index)
-                if self._word_sep_index:
-                    words.masked_fill_(sep_mask, self._word_sep_index)
         return words
 
 
 class BertWordPieceEncoder(nn.Module):
     """
     读取bert模型，读取之后调用index_dataset方法在dataset中生成word_pieces这一列。
+
+    BertWordPieceEncoder可以支持自动下载权重，当前支持的模型:
+        en: base-cased
+        en-large-cased-wwm:
+        en-large-cased:
+        en-large-uncased:
+        en-large-uncased-wwm
+        cn: 中文BERT wwm by HIT
+        cn-base: 中文BERT base-chinese
+        cn-wwm-ext: 中文BERT wwm by HIT with extra data pretrain.
+        multi-base-cased: multilingual cased
+        multi-base-uncased: multilingual uncased
+
     """
     
     def __init__(self, model_dir_or_name: str = 'en-base-uncased', layers: str = '-1', pooled_cls: bool = False,
@@ -149,6 +177,7 @@ class BertWordPieceEncoder(nn.Module):
         
         self.model = _WordPieceBertModel(model_dir_or_name=model_dir_or_name, layers=layers, pooled_cls=pooled_cls)
         self._sep_index = self.model._sep_index
+        self._cls_index = self.model._cls_index
         self._wordpiece_pad_index = self.model._wordpiece_pad_index
         self._wordpiece_unk_index = self.model._wordpiece_unknown_index
         self._embed_size = len(self.model.layers) * self.model.encoder.hidden_size
@@ -212,15 +241,14 @@ class BertWordPieceEncoder(nn.Module):
         """
         if self.word_dropout > 0 and self.training:
             with torch.no_grad():
-                if self._word_sep_index:  # 不能drop sep
-                    sep_mask = words.eq(self._wordpiece_unk_index)
+                not_sep_mask = words.ne(self._sep_index)
+                not_cls_mask = words.ne(self._cls_index)
+                replaceable_mask = not_sep_mask.__and__(not_cls_mask)
                 mask = torch.full_like(words, fill_value=self.word_dropout, dtype=torch.float, device=words.device)
                 mask = torch.bernoulli(mask).eq(1)  # dropout_word越大，越多位置为1
                 pad_mask = words.ne(self._wordpiece_pad_index)
-                mask = pad_mask.__and__(mask)  # pad的位置不为unk
-                words = words.masked_fill(mask, self._word_unk_index)
-                if self._word_sep_index:
-                    words.masked_fill_(sep_mask, self._wordpiece_unk_index)
+                mask = pad_mask.__and__(mask).__and__(replaceable_mask)  # pad的位置不为unk
+                words = words.masked_fill(mask, self._wordpiece_unk_index)
         return words
 
 

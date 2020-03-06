@@ -26,7 +26,24 @@ class StaticEmbedding(TokenEmbedding):
     """
     StaticEmbedding组件. 给定预训练embedding的名称或路径，根据vocab从embedding中抽取相应的数据(只会将出现在vocab中的词抽取出来，
     如果没有找到，则会随机初始化一个值(但如果该word是被标记为no_create_entry的话，则不会单独创建一个值，而是会被指向unk的index))。
-    当前支持自动下载的预训练vector有以下的几种(待补充);
+    当前支持自动下载的预训练vector有:
+        en: 实际为en-glove-840b-300d(常用)
+        en-glove-6b-50d: glove官方的50d向量
+        en-glove-6b-100d: glove官方的100d向量
+        en-glove-6b-200d: glove官方的200d向量
+        en-glove-6b-300d: glove官方的300d向量
+        en-glove-42b-300d: glove官方使用42B数据训练版本
+        en-glove-840b-300d:
+        en-glove-twitter-27b-25d:
+        en-glove-twitter-27b-50d:
+        en-glove-twitter-27b-100d:
+        en-glove-twitter-27b-200d:
+        en-word2vec-300d: word2vec官方发布的300d向量
+        en-fasttext-crawl: fasttext官方发布的300d英文预训练
+        cn-char-fastnlp-100d: fastNLP训练的100d的character embedding
+        cn-bi-fastnlp-100d: fastNLP训练的100d的bigram embedding
+        cn-tri-fastnlp-100d: fastNLP训练的100d的trigram embedding
+        cn-fasttext: fasttext官方发布的300d中文预训练embedding
 
     Example::
         

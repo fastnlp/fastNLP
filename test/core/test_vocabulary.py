@@ -189,3 +189,32 @@ class TestOther(unittest.TestCase):
         vocab.update(["hahahha", "hhh", "vvvv", "ass", "asss", "jfweiong", "eqgfeg", "feqfw"])
         # this will print a warning
         self.assertEqual(vocab.rebuild, True)
+
+    def test_save_and_load(self):
+        fp = 'vocab_save_test.txt'
+        try:
+            # check word2idx没变，no_create_entry正常
+            words = list('abcdefaddfdkjfe')
+            no_create_entry = list('12342331')
+            unk = '[UNK]'
+            vocab = Vocabulary(unknown=unk, max_size=500)
+
+            vocab.add_word_lst(words)
+            vocab.add_word_lst(no_create_entry, no_create_entry=True)
+            vocab.save(fp)
+
+            new_vocab = Vocabulary.load(fp)
+
+            for word, index in vocab:
+                self.assertEqual(new_vocab.to_index(word), index)
+            for word in no_create_entry:
+                self.assertTrue(new_vocab._is_word_no_create_entry(word))
+            for word in words:
+                self.assertFalse(new_vocab._is_word_no_create_entry(word))
+            for idx in range(len(vocab)):
+                self.assertEqual(vocab.to_word(idx), new_vocab.to_word(idx))
+            self.assertEqual(vocab.unknown, new_vocab.unknown)
+        except:
+            import os
+            if os.path.exists(fp):
+                os.remove(fp)

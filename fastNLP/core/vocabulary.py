@@ -482,3 +482,80 @@ class Vocabulary(object):
     def __iter__(self):
         for word, index in self._word2idx.items():
             yield word, index
+
+    def save(self, filepath):
+        """
+
+        :param str filepath: Vocabulary的储存路径
+        :return:
+        """
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(f'max_size\t{self.max_size}\n')
+            f.write(f'min_freq\t{self.min_freq}\n')
+            f.write(f'unknown\t{self.unknown}\n')
+            f.write(f'padding\t{self.padding}\n')
+            f.write(f'rebuild\t{self.rebuild}\n')
+            f.write('\n')
+            # idx: 如果idx为-2, 说明还没有进行build; 如果idx为-1，说明该词未编入
+            # no_create_entry: 如果为1，说明该词是no_create_entry; 0 otherwise
+            # word \t count \t idx \t no_create_entry \n
+            idx = -2
+            for word, count in self.word_count.items():
+                if self._word2idx is not None:
+                    idx = self._word2idx.get(word, -1)
+                is_no_create_entry = int(self._is_word_no_create_entry(word))
+                f.write(f'{word}\t{count}\t{idx}\t{is_no_create_entry}\n')
+
+    @staticmethod
+    def load(filepath):
+        """
+
+        :param str filepath: Vocabulary的读取路径
+        :return: Vocabulary
+        """
+        with open(filepath, 'r', encoding='utf-8') as f:
+            vocab = Vocabulary()
+            for line in f:
+                line = line.strip()
+                if line:
+                    name, value = line.split()
+                    if name == 'max_size':
+                        vocab.max_size = int(value) if value!='None' else None
+                    elif name == 'min_freq':
+                        vocab.min_freq = int(value) if value!='None' else None
+                    elif name in ('unknown', 'padding'):
+                        setattr(vocab, name, value)
+                    elif name == 'rebuild':
+                        vocab.rebuild = True if value=='True' else False
+                else:
+                    break
+            word_counter = {}
+            no_create_entry_counter = {}
+            word2idx = {}
+            for line in f:
+                line = line.strip()
+                if line:
+                    parts = line.split()
+                    word,count,idx,no_create_entry = parts[0], int(parts[1]), int(parts[2]), int(parts[3])
+                    if idx >= 0:
+                        word2idx[word] = idx
+                    word_counter[word] = count
+                    if no_create_entry_counter:
+                        no_create_entry_counter[word] = count
+
+            word_counter = Counter(word_counter)
+            no_create_entry_counter = Counter(no_create_entry_counter)
+            if len(word2idx)>0:
+                if vocab.padding:
+                    word2idx[vocab.padding] = 0
+                if vocab.unknown:
+                    word2idx[vocab.unknown] = 1 if vocab.padding else 0
+                idx2word = {value:key for key,value in word2idx.items()}
+
+            vocab.word_count = word_counter
+            vocab._no_create_word = no_create_entry_counter
+            if word2idx:
+                vocab._word2idx = word2idx
+                vocab._idx2word = idx2word
+
+        return vocab

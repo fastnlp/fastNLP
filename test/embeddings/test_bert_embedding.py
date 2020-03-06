@@ -46,3 +46,4 @@ class TestBertWordPieceEncoder(unittest.TestCase):
         ds = DataSet({'words': ["this is a test . [SEP]".split()]})
         embed.index_datasets(ds, field_name='words')
         self.assertTrue(ds.has_field('word_pieces'))
+        result = embed(torch.LongTensor([[1,2,3,4]]))
