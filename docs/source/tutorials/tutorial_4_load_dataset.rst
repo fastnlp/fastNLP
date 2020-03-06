@@ -187,7 +187,7 @@ Part V: 不同格式类型的基础Loader
     .. code-block:: python
 
         from fastNLP.io.loader import JsonLoader
-        oader = JsonLoader(
+        loader = JsonLoader(
             fields={'sentence1': 'raw_words1', 'sentence2': 'raw_words2', 'gold_label': 'target'}
         )
         # 表示将Json对象中'sentence1'、'sentence2'和'gold_label'对应的值赋给'raw_words1'、'raw_words2'、'target'这三个fields
