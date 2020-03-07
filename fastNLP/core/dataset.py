@@ -302,6 +302,7 @@ from .field import SetInputOrTargetException
 from .instance import Instance
 from .utils import _get_func_signature
 from .utils import pretty_table_printer
+from .collect_fn import Collector
 
 
 class DataSet(object):
@@ -331,6 +332,7 @@ class DataSet(object):
 
             else:
                 raise ValueError("data only be dict or list type.")
+        self.collector = Collector()
 
     def __contains__(self, item):
         return item in self.field_arrays
@@ -954,3 +956,29 @@ class DataSet(object):
             d = pickle.load(f)
             assert isinstance(d, DataSet), "The object is not DataSet, but {}.".format(type(d))
         return d
+
+    def add_collect_fn(self, fn, name, fields, is_input=True):
+        """
+        添加 CollectFn，使用多个field产生batch中的数据
+
+        :param CollectFn fn: 定义产生数据的方式
+        :param str name: 生成的数据在batch中的名称
+        :param list fields: 用于产生数据的 fields，有序
+        :param bool is_input: 是否出现在input中，为否则出现在target batch中
+        """
+        def check_fields(fields):
+            for f in fields:
+                if f not in self.field_arrays:
+                    raise ValueError(f)
+
+        def check_name(name):
+            if name in self.field_arrays:
+                logger.warning('name of collect_fn will cover the field name in dataset')
+
+        check_fields(fields)
+        check_name(name)
+
+        self.collector.add_fn(fn, name, fields, is_input)
+
+    def _collect_batch(self, batch_dict):
+        return self.collector.collect_batch(batch_dict)

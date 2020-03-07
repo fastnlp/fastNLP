@@ -65,25 +65,49 @@ class DataSetGetter:
             for n, v in y.items():
                 batch_y[n].append(v)
 
+        def may_to_tensor(data):
+            if not self.as_numpy:
+                try:
+                    data, flag = _to_tensor(data, data.dtype)
+                except TypeError as e:
+                    logger.error(f"Field {n} cannot be converted to torch.tensor.")
+                    raise e
+            return data
+
+        def pad_collect(batch_dict):
+            batch_x, batch_y = self.dataset._collect_batch(batch_dict)
+            for b in [batch_x, batch_y]:
+                for n in b.keys():
+                    b[n] = may_to_tensor(b[n])
+            return batch_x, batch_y
+
         def pad_batch(batch_dict, field_array):
+            result = {}
             for n, vlist in batch_dict.items():
                 f = field_array[n]
                 if f.padder is None:
-                    batch_dict[n] = np.array(vlist)
+                    result[n] = np.array(vlist)
                 else:
                     data = f.pad(vlist)
-                    if not self.as_numpy:
-                        try:
-                            data, flag = _to_tensor(data, f.dtype)
-                        except TypeError as e:
-                            logger.error(f"Field {n} cannot be converted to torch.tensor.")
-                            raise e
-                    batch_dict[n] = data
-            return batch_dict
+                    result[n] = may_to_tensor(data)
+            return result
+
+        # do padding on field_array
+        pad_batch_x = pad_batch(batch_x, self.inputs)
+        pad_batch_y = pad_batch(batch_y, self.targets)
+
+        # do padding on dataset collect_fn
+        batch_dict = batch_x.copy()
+        batch_dict.update(batch_y)
+        pad_dict_x, pad_dict_y = pad_collect(batch_dict)
+
+        # group together
+        pad_batch_x.update(pad_dict_x)
+        pad_batch_y.update(pad_dict_y)
 
         return (indices,
-                pad_batch(batch_x, self.inputs),
-                pad_batch(batch_y, self.targets))
+                pad_batch_x,
+                pad_batch_y)
 
     def set_idx_list(self, idx_list):
         if len(idx_list) != len(self.idx_list):

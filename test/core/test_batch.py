@@ -7,6 +7,7 @@ from fastNLP import DataSetIter, TorchLoaderIter
 from fastNLP import DataSet
 from fastNLP import Instance
 from fastNLP import SequentialSampler
+from fastNLP import ConcatCollectFn
 
 
 def generate_fake_dataset(num_samples=1000):
@@ -149,6 +150,21 @@ class TestCase1(unittest.TestCase):
         batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler())
         for batch_x, batch_y in batch:
             pass
+
+    def test_collect_fn(self):
+        batch_size = 32
+        num_samples = 1000
+        dataset = generate_fake_dataset(num_samples)
+        dataset.set_input('1','2')
+        fn = ConcatCollectFn()
+        dataset.add_collect_fn(fn, '12', fields=['1', '2'], is_input=True)
+
+        batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler(), drop_last=True)
+        for batch_x, batch_y in batch:
+            for i in range(batch_size):
+                # print(i)
+                self.assertEqual(batch_x['12'][i].sum(), batch_x['1'][i].sum() + batch_x['2'][i].sum())
+
 
     def testTensorLoaderIter(self):
         class FakeData:
