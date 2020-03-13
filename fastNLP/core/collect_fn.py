@@ -1,6 +1,9 @@
+from builtins import sorted
+
 import torch
 import numpy as np
 from .field import _get_ele_type_and_dim
+from collections import defaultdict
 
 
 def _check_type(batch_dict, fields):
@@ -33,46 +36,99 @@ def batching(samples, max_len=0, padding_val=0):
 
 class Collector:
     def __init__(self):
-        self.fns = []
-        self.names = []
-        self.fields_list = []
-        self.is_input = []
+        self.fns = {}
+        self.input2fn = defaultdict(list)
+        self.output2fn = defaultdict(list)
+        self.fn2input = {}
+        self.fn2output = {}
 
-    def add_fn(self, fn, name, fields, is_input):
-        if name in self.names:
-            raise ValueError("Duplicated name: {} for CollectFn: {}".format(name, fn))
-        if fn.num_fields() > 0 and len(fields) != fn.num_fields():
+    def add_fn(self, fn, inputs, outputs, is_input, is_target):
+        for name in outputs:
+            if name in self.output2fn:
+                raise ValueError("Duplicated name: {} for CollectFn: {}".format(name, fn))
+
+        if fn.num_inputs() > 0 and len(inputs) != fn.num_inputs():
             raise ValueError(
-                "Incorrect num of fields, should be {} not {}".format(
-                    fn.num_fields(), len(fields)
+                "Incorrect num of inputs, should be {} not {}".format(
+                    fn.num_inputs(), len(inputs)
                 ))
 
-        self.fns.append(fn)
-        self.names.append(name)
-        self.fields_list.append(fields)
-        self.is_input.append(is_input)
+        if fn.num_outputs() > 0 and len(outputs) != fn.num_outputs():
+            raise ValueError("Incorrect num of inputs, should be {} not {}".format(
+                    fn.num_outputs(), len(outputs)))
 
-    def collect_batch(self, batch_dict):
-        if len(batch_dict) == 0:
+        self.fns[fn] = {'is_input': is_input, 'is_target': is_target}
+        for i, field in enumerate(inputs):
+            self.input2fn[field].append((fn, i))
+        for i, name in enumerate(outputs):
+            self.output2fn[name].append((fn, i))
+
+    def _rebuild_fn2io(self):
+        def transpose(name2fn):
+            fn2names = defaultdict(list)
+            for name, vlist in name2fn.items():
+                for fn, i in vlist:
+                    fn2names[fn].append((name, i))
+            for fn, vlist in fn2names.items():
+                vlist = sorted(vlist, key=lambda x: x[1])
+                fn2names[fn] = [name for name, i in vlist]
+            return fn2names
+
+        self.fn2input = transpose(self.input2fn)
+        self.fn2output = transpose(self.output2fn)
+
+    def _clear_fn2io(self):
+        self.fn2input.clear()
+        self.fn2output.clear()
+
+    def collect_batch(self, ins_list):
+        if len(ins_list) == 0:
             return {}, {}
-        batch_x, batch_y = {}, {}
-        for fn, name, fields, is_input in zip(self.fns, self.names, self.fields_list, self.is_input):
-            batch = fn.collect(batch_dict, fields)
-            if is_input:
-                batch_x[name] = batch
-            else:
-                batch_y[name] = batch
-        return batch_x, batch_y
+
+        if len(self.fn2output) == 0:
+            self._rebuild_fn2io()
+
+        bx = {}
+        by = {}
+        for fn, attr in self.fns.items():
+            inputs = self.fn2input.get(fn, None)
+            outputs = self.fn2output.get(fn, None)
+            res = fn.collect(ins_list, inputs, outputs)
+            if attr.get('is_input', False):
+                bx.update(res)
+            if attr.get('is_target', False):
+                by.update(res)
+        return bx, by
+
+    def rename_field(self, old_f, new_f):
+        if new_f in self.input2fn:
+            # name conflict
+            raise ValueError
+        if old_f not in self.input2fn:
+            # renamed field not affect collectors
+            return
+        self.input2fn[new_f] = self.input2fn[old_f]
+        self._clear_fn2io()
+
+    def drop_field(self, f):
+        if f in self.input2fn:
+            raise ValueError
+
+    def outputs(self):
+        return self.output2fn.keys()
 
 
 class CollectFn:
     def __init__(self):
         self.fields = []
 
-    def collect(self, batch_dict, fields):
+    def collect(self, ins_list, inputs, outputs):
         raise NotImplementedError
 
-    def num_fields(self):
+    def num_inputs(self):
+        return 0
+
+    def num_outputs(self):
         return 0
 
     @staticmethod
@@ -95,24 +151,28 @@ class ConcatCollectFn(CollectFn):
         self.pad_val = pad_val
         self.max_len = max_len
 
-    def collect(self, batch_dict, fields):
-        samples = []
-        dtype = _check_type(batch_dict, fields)
-        batch_size = self.get_batch_size(batch_dict)
-        for i in range(batch_size):
-            sample = []
-            for n in fields:
-                seq = batch_dict[n][i]
-                if str(dtype).startswith('torch'):
-                    seq = seq.numpy()
-                else:
-                    seq = np.array(seq, dtype=dtype)
-                sample.append(seq)
-            samples.append(np.concatenate(sample, axis=0))
-        batch = batching(samples, max_len=self.max_len, padding_val=self.pad_val)
-        if str(dtype).startswith('torch'):
-            batch = torch.tensor(batch, dtype=dtype)
-        return batch
+    @staticmethod
+    def _to_numpy(seq):
+        if torch.is_tensor(seq):
+            return seq.numpy()
+        else:
+            return np.array(seq)
 
-    def num_fields(self):
+    def collect(self, ins_list, inputs, outputs):
+        samples = []
+        for i, ins in ins_list:
+            sample = []
+            for i in inputs:
+                sample.append(self._to_numpy(ins[i]))
+            samples.append(np.concatenate(sample, axis=0))
+        seq_len = [s.shape[0] for s in samples]
+        batch = batching(samples, max_len=self.max_len, padding_val=self.pad_val)
+        o1, o2 = outputs
+        return {o1: batch, o2: seq_len}
+
+    def num_inputs(self):
         return 0
+
+    def num_outputs(self):
+        # (concat_words, seq_len)
+        return 2

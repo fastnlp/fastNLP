@@ -14,10 +14,12 @@ from numbers import Number
 import numpy as np
 import torch
 import torch.utils.data
+from collections import defaultdict
 
 from ._logger import logger
 from .dataset import DataSet
 from .sampler import SequentialSampler
+from .field import _get_ele_type_and_dim
 
 _python_is_exit = False
 
@@ -33,81 +35,75 @@ atexit.register(_set_python_is_exit)
 class DataSetGetter:
     def __init__(self, dataset: DataSet, as_numpy=False):
         self.dataset = dataset
-        self.inputs = {n: f for n, f in dataset.get_all_fields().items() if f.is_input}
-        self.targets = {n: f for n, f in dataset.get_all_fields().items() if f.is_target}
         self.as_numpy = as_numpy
         self.idx_list = list(range(len(dataset)))
+
+        self.x_names = {n for n, f in dataset.get_all_fields().items() if f.is_input}
+        self.y_names = {n for n, f in dataset.get_all_fields().items() if f.is_target}
 
     def __getitem__(self, idx: int):
         # mapping idx to sampled idx
         idx = self.idx_list[idx]
-        inputs = {n:f.get(idx) for n, f in self.inputs.items()}
-        targets = {n:f.get(idx) for n, f in self.targets.items()}
-        return idx, inputs, targets
+        ins = self.dataset[idx]
+        return idx, ins
 
     def __len__(self):
         return len(self.dataset)
 
-    def collate_fn(self, batch: list):
+    def collate_fn(self, ins_list: list):
         """
 
         :param batch: [[idx1, x_dict1, y_dict1], [idx2, x_dict2, y_dict2], [xx, xx, xx]]
         :return:
         """
         # TODO 支持在DataSet中定义collate_fn，因为有时候可能需要不同的field之间融合，比如BERT的场景
-        batch_x = {n:[] for n in self.inputs.keys()}
-        batch_y = {n:[] for n in self.targets.keys()}
         indices = []
-        for idx, x, y in batch:
+        sin_x, sin_y = defaultdict(list), defaultdict(list)
+        for idx, ins in ins_list:
             indices.append(idx)
-            for n, v in x.items():
-                batch_x[n].append(v)
-            for n, v in y.items():
-                batch_y[n].append(v)
+            for n, v in ins.items():
+                if n in self.x_names:
+                    sin_x[n].append(v)
+                if n in self.y_names:
+                    sin_y[n].append(v)
 
         def may_to_tensor(data):
+            dtype, dim = _get_ele_type_and_dim(data)
+            print(dtype, type(dtype))
             if not self.as_numpy:
                 try:
-                    data, flag = _to_tensor(data, data.dtype)
+                    data, flag = _to_tensor(data, dtype)
                 except TypeError as e:
                     logger.error(f"Field {n} cannot be converted to torch.tensor.")
                     raise e
             return data
 
-        def pad_collect(batch_dict):
-            batch_x, batch_y = self.dataset._collect_batch(batch_dict)
-            for b in [batch_x, batch_y]:
-                for n in b.keys():
-                    b[n] = may_to_tensor(b[n])
-            return batch_x, batch_y
-
-        def pad_batch(batch_dict, field_array):
+        def pad(batch_dict):
             result = {}
             for n, vlist in batch_dict.items():
-                f = field_array[n]
+                f = self.dataset.field_arrays[n]
                 if f.padder is None:
                     result[n] = np.array(vlist)
                 else:
-                    data = f.pad(vlist)
-                    result[n] = may_to_tensor(data)
+                    result[n] = f.pad(vlist)
             return result
 
-        # do padding on field_array
-        pad_batch_x = pad_batch(batch_x, self.inputs)
-        pad_batch_y = pad_batch(batch_y, self.targets)
+        sin_x = pad(sin_x)
+        sin_y = pad(sin_y)
 
-        # do padding on dataset collect_fn
-        batch_dict = batch_x.copy()
-        batch_dict.update(batch_y)
-        pad_dict_x, pad_dict_y = pad_collect(batch_dict)
+        bx, by = self.dataset._collect_batch(ins_list)
+        def convert_tensor(batch_dict):
+            for n, v in batch_dict.items():
+                batch_dict[n] = may_to_tensor(v)
 
-        # group together
-        pad_batch_x.update(pad_dict_x)
-        pad_batch_y.update(pad_dict_y)
+        # collect_fn replaces single field
+        sin_x.update(bx)
+        sin_y.update(by)
 
-        return (indices,
-                pad_batch_x,
-                pad_batch_y)
+        convert_tensor(sin_x)
+        convert_tensor(sin_y)
+
+        return (indices, sin_x, sin_y)
 
     def set_idx_list(self, idx_list):
         if len(idx_list) != len(self.idx_list):
@@ -297,9 +293,9 @@ def _to_tensor(batch, field_dtype):
         if field_dtype is not None and isinstance(field_dtype, type)\
                 and issubclass(field_dtype, Number) \
                 and not isinstance(batch, torch.Tensor):
-            if issubclass(batch.dtype.type, np.floating):
+            if issubclass(field_dtype, np.floating):
                 new_batch = torch.as_tensor(batch).float()  # 默认使用float32
-            elif issubclass(batch.dtype.type, np.integer):
+            elif issubclass(field_dtype, np.integer):
                 new_batch = torch.as_tensor(batch).long()  # 复用内存地址，避免复制
             else:
                 new_batch = torch.as_tensor(batch)

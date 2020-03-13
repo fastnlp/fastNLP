@@ -26,7 +26,7 @@ def generate_fake_dataset(num_samples=1000):
         data = []
         lengths = np.random.randint(min_len, max_len, size=(num_samples))
         for length in lengths:
-            data.append(np.random.randint(100, size=length))
+            data.append(np.random.randint(1, 100, size=length))
         data_dict[str(i)] = data
     
     dataset = DataSet(data_dict)
@@ -156,14 +156,21 @@ class TestCase1(unittest.TestCase):
         num_samples = 1000
         dataset = generate_fake_dataset(num_samples)
         dataset.set_input('1','2')
+        dataset.set_target('0','3')
+
         fn = ConcatCollectFn()
-        dataset.add_collect_fn(fn, '12', fields=['1', '2'], is_input=True)
+        dataset.add_collect_fn(fn, inputs=['1', '2'],
+                               outputs=['12', 'seq_len'],
+                               is_input=True, is_target=False)
 
         batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler(), drop_last=True)
         for batch_x, batch_y in batch:
             for i in range(batch_size):
                 # print(i)
                 self.assertEqual(batch_x['12'][i].sum(), batch_x['1'][i].sum() + batch_x['2'][i].sum())
+                self.assertEqual(
+                    batch_x['seq_len'][i],
+                    (batch_x['1'][i]!=0).sum() + (batch_x['2'][i]!=0).sum())
 
 
     def testTensorLoaderIter(self):
