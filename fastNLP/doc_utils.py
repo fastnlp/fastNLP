@@ -22,13 +22,17 @@ def doc_process(m):
                     
                     while 1:
                         defined_m = sys.modules[module_name]
-                        if "undocumented" not in defined_m.__doc__ and name in defined_m.__all__:
-                            obj.__doc__ = r"别名 :class:`" + m.__name__ + "." + name + "`" \
-                                          + " :class:`" + module_name + "." + name + "`\n" + obj.__doc__
-                            break
-                        module_name = ".".join(module_name.split('.')[:-1])
-                        if module_name == m.__name__:
-                            # print(name, ": not found defined doc.")
+                        try:
+                            if "undocumented" not in defined_m.__doc__ and name in defined_m.__all__:
+                                obj.__doc__ = r"别名 :class:`" + m.__name__ + "." + name + "`" \
+                                              + " :class:`" + module_name + "." + name + "`\n" + obj.__doc__
+                                break
+                            module_name = ".".join(module_name.split('.')[:-1])
+                            if module_name == m.__name__:
+                                # print(name, ": not found defined doc.")
+                                break
+                        except:
+                            print("Warning: Module {} lacks `__doc__`".format(module_name))
                             break
 
                     # 识别并标注基类，只有基类也在 fastNLP 中定义才显示
@@ -40,7 +44,11 @@ def doc_process(m):
                                 module_name, i = "fastNLP", 1
                                 for i in range(len(parts) - 1):
                                     defined_m = sys.modules[module_name]
-                                    if "undocumented" not in defined_m.__doc__ and name in defined_m.__all__:
-                                        obj.__doc__ = r"基类 :class:`" + defined_m.__name__ + "." + base.__name__ + "` \n\n" + obj.__doc__
+                                    try:
+                                        if "undocumented" not in defined_m.__doc__ and name in defined_m.__all__:
+                                            obj.__doc__ = r"基类 :class:`" + defined_m.__name__ + "." + base.__name__ + "` \n\n" + obj.__doc__
+                                            break
+                                        module_name += "." + parts[i + 1]
+                                    except:
+                                        print("Warning: Module {} lacks `__doc__`".format(module_name))
                                         break
-                                    module_name += "." + parts[i + 1]
