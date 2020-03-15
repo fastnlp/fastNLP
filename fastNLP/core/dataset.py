@@ -569,6 +569,7 @@ class DataSet(object):
         :param str field_name: 需要删除的field的名称.
         """
         self.field_arrays.pop(field_name)
+        self.collector.drop_field(field_name)
         return self
 
     def copy_field(self, field_name, new_field_name):
@@ -641,6 +642,7 @@ class DataSet(object):
         if field_name in self.field_arrays:
             self.field_arrays[new_field_name] = self.field_arrays.pop(field_name)
             self.field_arrays[new_field_name].name = new_field_name
+            self.collector.rename_field(field_name, new_field_name)
         else:
             raise KeyError("DataSet has no field named {}.".format(field_name))
         return self
@@ -933,6 +935,8 @@ class DataSet(object):
             train_set.field_arrays[field_name].to(self.field_arrays[field_name])
             dev_set.field_arrays[field_name].to(self.field_arrays[field_name])
 
+        train_set.collector.copy_from(self.collector)
+        dev_set.collector.copy_from(self.collector)
         return train_set, dev_set
 
     def save(self, path):
