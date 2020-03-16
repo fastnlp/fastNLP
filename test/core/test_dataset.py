@@ -3,6 +3,7 @@ import sys
 import unittest
 
 from fastNLP import DataSet
+from fastNLP.core.dataset import ApplyResultException
 from fastNLP import FieldArray
 from fastNLP import Instance
 from fastNLP.io import CSVLoader
@@ -142,6 +143,42 @@ class TestDataSetMethods(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             ds.apply(modify_inplace)
+
+    def test_apply_more(self):
+    
+        T = DataSet({"a": [1, 2, 3], "b": [2, 4, 5]})
+        func_1 = lambda x: {"c": x["a"] * 2, "d": x["a"] ** 2}
+        func_2 = lambda x: {"c": x * 3, "d": x ** 3}
+    
+        def func_err_1(x):
+            if x["a"] == 1:
+                return {"e": x["a"] * 2, "f": x["a"] ** 2}
+            else:
+                return {"e": x["a"] * 2}
+    
+        def func_err_2(x):
+            if x == 1:
+                return {"e": x * 2, "f": x ** 2}
+            else:
+                return {"e": x * 2}
+    
+        T.apply_more(func_1)
+        self.assertEqual(list(T["c"]), [2, 4, 6])
+        self.assertEqual(list(T["d"]), [1, 4, 9])
+    
+        res = T.apply_field_more(func_2, "a", modify_fields=False)
+        self.assertEqual(list(T["c"]), [2, 4, 6])
+        self.assertEqual(list(T["d"]), [1, 4, 9])
+        self.assertEqual(list(res["c"]), [3, 6, 9])
+        self.assertEqual(list(res["d"]), [1, 8, 27])
+    
+        with self.assertRaises(ApplyResultException) as e:
+            T.apply_more(func_err_1)
+            print(e)
+    
+        with self.assertRaises(ApplyResultException) as e:
+            T.apply_field_more(func_err_2, "a")
+            print(e)
 
     def test_drop(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6], [7, 8, 9, 0]] * 20})
