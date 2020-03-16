@@ -12,7 +12,7 @@ class TransformerSeq2SeqEncoder(nn.Module):
                  d_model: int = 512, n_head: int = 8, dim_ff: int = 2048, dropout: float = 0.1):
         super(TransformerSeq2SeqEncoder, self).__init__()
         self.embed = embed
-        self.transformer = TransformerEncoder(nn.TransformerEncoderLayer(d_model, n_head), num_layers)
+        self.transformer = TransformerEncoder(nn.TransformerEncoderLayer(d_model, n_head,dim_ff,dropout), num_layers)
 
     def forward(self, words, seq_len):
         """

@@ -360,7 +360,6 @@ class TransformerSeq2SeqDecoder(Decoder):
     @torch.no_grad()
     def decode_one(self, tokens, past) -> Tuple[torch.Tensor, Past]:
         """
-        # todo: 对于transformer而言，因为position的原因，需要输入整个prefix序列，因此lstm的decode one和beam search需要改一下，以统一接口
         # todo: 是否不需要return past？ 因为past已经被改变了，不需要显式return？
         :param tokens: torch.LongTensor (batch_size,1)
         :param past: TransformerPast
@@ -376,20 +375,6 @@ class TransformerSeq2SeqDecoder(Decoder):
     def _get_triangle_mask(self, max_seq_len):
         tensor = torch.ones(max_seq_len, max_seq_len)
         return torch.tril(tensor).byte()
-
-
-class BiLSTMEncoder(nn.Module):
-    def __init__(self, embed, num_layers=3, hidden_size=400, dropout=0.3):
-        super().__init__()
-        self.embed = embed
-        self.lstm = LSTM(input_size=self.embed.embedding_dim, hidden_size=hidden_size // 2, bidirectional=True,
-                         batch_first=True, dropout=dropout, num_layers=num_layers)
-
-    def forward(self, words, seq_len):
-        words = self.embed(words)
-        words, hx = self.lstm(words, seq_len)
-
-        return words, hx
 
 
 class LSTMPast(Past):
