@@ -27,3 +27,17 @@ class TransformerSeq2SeqEncoder(nn.Module):
         words = self.transformer(words, src_key_padding_mask=~encoder_mask)  # seq_len,batch,dim
 
         return words.transpose(0, 1), encoder_mask
+
+
+class BiLSTMEncoder(nn.Module):
+    def __init__(self, embed, num_layers=3, hidden_size=400, dropout=0.3):
+        super().__init__()
+        self.embed = embed
+        self.lstm = LSTM(input_size=self.embed.embedding_dim, hidden_size=hidden_size // 2, bidirectional=True,
+                         batch_first=True, dropout=dropout, num_layers=num_layers)
+
+    def forward(self, words, seq_len):
+        words = self.embed(words)
+        words, hx = self.lstm(words, seq_len)
+
+        return words, hx

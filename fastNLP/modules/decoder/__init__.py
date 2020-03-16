@@ -6,7 +6,9 @@ __all__ = [
     "MLP",
     "ConditionalRandomField",
     "viterbi_decode",
-    "allowed_transitions"
+    "allowed_transitions",
+    "seq2seq_decoder",
+    "seq2seq_generator"
 ]
 
 from .crf import ConditionalRandomField

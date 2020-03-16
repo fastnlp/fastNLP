@@ -7,6 +7,7 @@ from fastNLP.embeddings import StaticEmbedding
 import numpy as np
 from typing import Union, Tuple
 from fastNLP.embeddings import get_embeddings
+from fastNLP.modules import LSTM
 from torch.nn import LayerNorm
 import math
 from reproduction.Summarization.Baseline.tools.PositionEmbedding import \
@@ -24,8 +25,7 @@ class Past:
 
 class TransformerPast(Past):
     def __init__(self, encoder_outputs: torch.Tensor = None, encoder_mask: torch.Tensor = None,
-                 encoder_key: torch.Tensor = None, encoder_value: torch.Tensor = None,
-                 decoder_prev_key: torch.Tensor = None, decoder_prev_value: torch.Tensor = None):
+                 num_decoder_layer: int = 6):
         """
 
         :param encoder_outputs: (batch,src_seq_len,dim)
@@ -37,15 +37,35 @@ class TransformerPast(Past):
         """
         self.encoder_outputs = encoder_outputs
         self.encoder_mask = encoder_mask
-        self.encoder_kv = encoder_key
-        self.encoder_value = encoder_value
-        self.decoder_prev_key = decoder_prev_key
-        self.decoder_prev_value = decoder_prev_value
+        self.encoder_key = [None] * num_decoder_layer
+        self.encoder_value = [None] * num_decoder_layer
+        self.decoder_prev_key = [None] * num_decoder_layer
+        self.decoder_prev_value = [None] * num_decoder_layer
 
     def num_samples(self):
         if self.encoder_outputs is not None:
             return self.encoder_outputs.size(0)
         return None
+
+    def _reorder_state(self, state, indices):
+        if type(state) == torch.Tensor:
+            state = state.index_select(index=indices, dim=0)
+        elif type(state) == list:
+            for i in range(len(state)):
+                assert state[i] is not None
+                state[i] = state[i].index_select(index=indices, dim=0)
+        else:
+            raise ValueError('State does not support other format')
+
+        return state
+
+    def reorder_past(self, indices: torch.LongTensor):
+        self.encoder_outputs = self._reorder_state(self.encoder_outputs, indices)
+        self.encoder_mask = self._reorder_state(self.encoder_mask, indices)
+        self.encoder_key = self._reorder_state(self.encoder_key, indices)
+        self.encoder_value = self._reorder_state(self.encoder_value, indices)
+        self.decoder_prev_key = self._reorder_state(self.decoder_prev_key, indices)
+        self.decoder_prev_value = self._reorder_state(self.decoder_prev_value, indices)
 
 
 class Decoder(nn.Module):
@@ -324,7 +344,7 @@ class TransformerSeq2SeqDecoder(Decoder):
         pos = self.pos_embed(tokens)  # bs,decode_len,embed_dim
         tokens = pos + tokens
         if inference:
-            tokens = tokens[:, -1, :]
+            tokens = tokens[:, -1:, :]
 
         x = F.dropout(tokens, p=self.dropout, training=self.training)
         for layer in self.layer_stacks:
@@ -349,6 +369,312 @@ class TransformerSeq2SeqDecoder(Decoder):
         output = self.forward(tokens, past, inference=True)  # batch,1,vocab_size
         return output.squeeze(1), past
 
+    def reorder_past(self, indices: torch.LongTensor, past: TransformerPast) -> TransformerPast:
+        past.reorder_past(indices)
+        return past  # todo : 其实可以不要这个的
+
     def _get_triangle_mask(self, max_seq_len):
         tensor = torch.ones(max_seq_len, max_seq_len)
         return torch.tril(tensor).byte()
+
+
+class BiLSTMEncoder(nn.Module):
+    def __init__(self, embed, num_layers=3, hidden_size=400, dropout=0.3):
+        super().__init__()
+        self.embed = embed
+        self.lstm = LSTM(input_size=self.embed.embedding_dim, hidden_size=hidden_size // 2, bidirectional=True,
+                         batch_first=True, dropout=dropout, num_layers=num_layers)
+
+    def forward(self, words, seq_len):
+        words = self.embed(words)
+        words, hx = self.lstm(words, seq_len)
+
+        return words, hx
+
+
+class LSTMPast(Past):
+    def __init__(self, encode_outputs=None, encode_mask=None, decode_states=None, hx=None):
+        """
+
+        :param torch.Tensor encode_outputs: batch_size x max_len x input_size
+        :param torch.Tensor encode_mask: batch_size x max_len, 与encode_outputs一样大，用以辅助decode的时候attention到正确的
+            词。为1的地方有词
+        :param torch.Tensor decode_states: batch_size x decode_len x hidden_size, Decoder中LSTM的输出结果
+        :param tuple hx: 包含LSTM所需要的h与c，h: num_layer x batch_size x hidden_size, c: num_layer x batch_size x hidden_size
+        """
+        super().__init__()
+        self._encode_outputs = encode_outputs
+        if encode_mask is None:
+            if encode_outputs is not None:
+                self._encode_mask = encode_outputs.new_ones(encode_outputs.size(0), encode_outputs.size(1)).eq(1)
+            else:
+                self._encode_mask = None
+        else:
+            self._encode_mask = encode_mask
+        self._decode_states = decode_states
+        self._hx = hx  # 包含了hidden和cell
+        self._attn_states = None  # 当LSTM使用了Attention时会用到
+
+    def num_samples(self):
+        for tensor in (self.encode_outputs, self.decode_states, self.hx):
+            if tensor is not None:
+                if isinstance(tensor, torch.Tensor):
+                    return tensor.size(0)
+                else:
+                    return tensor[0].size(0)
+        return None
+
+    @property
+    def hx(self):
+        return self._hx
+
+    @hx.setter
+    def hx(self, hx):
+        self._hx = hx
+
+    @property
+    def encode_outputs(self):
+        return self._encode_outputs
+
+    @encode_outputs.setter
+    def encode_outputs(self, value):
+        self._encode_outputs = value
+
+    @property
+    def encode_mask(self):
+        return self._encode_mask
+
+    @encode_mask.setter
+    def encode_mask(self, value):
+        self._encode_mask = value
+
+    @property
+    def decode_states(self):
+        return self._decode_states
+
+    @decode_states.setter
+    def decode_states(self, value):
+        self._decode_states = value
+
+    @property
+    def attn_states(self):
+        """
+        表示LSTMDecoder中attention模块的结果，正常情况下不需要手动设置
+        :return:
+        """
+        return self._attn_states
+
+    @attn_states.setter
+    def attn_states(self, value):
+        self._attn_states = value
+
+
+class AttentionLayer(nn.Module):
+    def __init__(self, input_size, encode_hidden_size, decode_hidden_size, bias=False):
+        super().__init__()
+
+        self.input_proj = nn.Linear(input_size, encode_hidden_size, bias=bias)
+        self.output_proj = nn.Linear(input_size + encode_hidden_size, decode_hidden_size, bias=bias)
+
+    def forward(self, input, encode_outputs, encode_mask):
+        """
+
+        :param input: batch_size x input_size
+        :param encode_outputs: batch_size x max_len x encode_hidden_size
+        :param encode_mask: batch_size x max_len
+        :return: batch_size x decode_hidden_size, batch_size x max_len
+        """
+
+        # x: bsz x encode_hidden_size
+        x = self.input_proj(input)
+
+        # compute attention
+        attn_scores = torch.matmul(encode_outputs, x.unsqueeze(-1)).squeeze(-1)  # b x max_len
+
+        # don't attend over padding
+        if encode_mask is not None:
+            attn_scores = attn_scores.float().masked_fill_(
+                encode_mask.eq(0),
+                float('-inf')
+            ).type_as(attn_scores)  # FP16 support: cast to float and back
+
+        attn_scores = F.softmax(attn_scores, dim=-1)  # srclen x bsz
+
+        # sum weighted sources
+        x = torch.matmul(attn_scores.unsqueeze(1), encode_outputs).squeeze(1)  # b x encode_hidden_size
+
+        x = torch.tanh(self.output_proj(torch.cat((x, input), dim=1)))
+        return x, attn_scores
+
+
+class LSTMDecoder(Decoder):
+    def __init__(self, embed: Union[Tuple[int, int], nn.Module, torch.Tensor, np.ndarray], num_layers, input_size,
+                 hidden_size=None, dropout=0,
+                 output_embed: Union[Tuple[int, int], int, nn.Module, torch.Tensor, np.ndarray] = None,
+                 bind_input_output_embed=False,
+                 attention=True):
+        """
+        # embed假设是TokenEmbedding, 则没有对应关系（因为可能一个token会对应多个word）？vocab出来的结果是不对的
+
+        :param embed: 输入的embedding
+        :param int num_layers: 使用多少层LSTM
+        :param int input_size: 输入被encode后的维度
+        :param int hidden_size: LSTM中的隐藏层维度
+        :param float dropout: 多层LSTM的dropout
+        :param int output_embed: 输出的词表如何初始化，如果bind_input_output_embed为True，则改值无效
+        :param bool bind_input_output_embed: 是否将输入输出的embedding权重使用同一个
+        :param bool attention: 是否使用attention对encode之后的内容进行计算
+        """
+
+        super().__init__()
+        self.token_embed = get_embeddings(embed)
+        if hidden_size is None:
+            hidden_size = input_size
+        self.hidden_size = hidden_size
+        self.input_size = input_size
+        if num_layers == 1:
+            self.lstm = nn.LSTM(self.token_embed.embedding_dim + hidden_size, hidden_size, num_layers=num_layers,
+                                bidirectional=False, batch_first=True)
+        else:
+            self.lstm = nn.LSTM(self.token_embed.embedding_dim + hidden_size, hidden_size, num_layers=num_layers,
+                                bidirectional=False, batch_first=True, dropout=dropout)
+        if input_size != hidden_size:
+            self.encode_hidden_proj = nn.Linear(input_size, hidden_size)
+            self.encode_cell_proj = nn.Linear(input_size, hidden_size)
+        self.dropout_layer = nn.Dropout(p=dropout)
+
+        if isinstance(output_embed, int):
+            output_embed = (output_embed, hidden_size)
+            output_embed = get_embeddings(output_embed)
+        elif output_embed is not None:
+            assert not bind_input_output_embed, "When `output_embed` is not None, `bind_input_output_embed` must " \
+                                                "be False."
+            if isinstance(output_embed, StaticEmbedding):
+                for i in self.token_embed.words_to_words:
+                    assert i == self.token_embed.words_to_words[i], "The index does not match."
+                output_embed = self.token_embed.embedding.weight
+            else:
+                output_embed = get_embeddings(output_embed)
+        else:
+            if not bind_input_output_embed:
+                raise RuntimeError("You have to specify output embedding.")
+
+        if bind_input_output_embed:
+            assert output_embed is None, "When `bind_input_output_embed=True`, `output_embed` must be None"
+            if isinstance(self.token_embed, StaticEmbedding):
+                for i in self.token_embed.words_to_words:
+                    assert i == self.token_embed.words_to_words[i], "The index does not match."
+            self.output_embed = nn.Parameter(self.token_embed.weight.transpose(0, 1))
+            self.output_hidden_size = self.token_embed.embedding_dim
+        else:
+            if isinstance(output_embed, nn.Embedding):
+                self.output_embed = nn.Parameter(output_embed.weight.transpose(0, 1))
+            else:
+                self.output_embed = output_embed.transpose(0, 1)
+            self.output_hidden_size = self.output_embed.size(0)
+
+        self.ffn = nn.Sequential(nn.Linear(hidden_size, hidden_size),
+                                 nn.ReLU(),
+                                 nn.Linear(hidden_size, self.output_hidden_size))
+        self.num_layers = num_layers
+
+        if attention:
+            self.attention_layer = AttentionLayer(hidden_size, input_size, hidden_size, bias=False)
+        else:
+            self.attention_layer = None
+
+    def _init_hx(self, past, tokens):
+        batch_size = tokens.size(0)
+        if past.hx is None:
+            zeros = tokens.new_zeros((self.num_layers, batch_size, self.hidden_size)).float()
+            past.hx = (zeros, zeros)
+        else:
+            assert past.hx[0].size(-1) == self.input_size
+            if self.attention_layer is not None:
+                if past.attn_states is None:
+                    past.attn_states = past.hx[0].new_zeros(batch_size, self.hidden_size)
+                else:
+                    assert past.attn_states.size(-1) == self.hidden_size, "The attention states dimension mismatch."
+            if self.hidden_size != past.hx[0].size(-1):
+                hidden, cell = past.hx
+                hidden = self.encode_hidden_proj(hidden)
+                cell = self.encode_cell_proj(cell)
+                past.hx = (hidden, cell)
+        return past
+
+    def forward(self, tokens, past=None, return_attention=False):
+        """
+
+        :param torch.LongTensor, tokens: batch_size x decode_len, 应该输入整个句子
+        :param LSTMPast past: 应该包含了encode的输出
+        :param bool return_attention: 是否返回各处attention的值
+        :return:
+        """
+        batch_size, decode_len = tokens.size()
+        tokens = self.token_embed(tokens)  # b x decode_len x embed_size
+
+        past = self._init_hx(past, tokens)
+
+        tokens = self.dropout_layer(tokens)
+
+        decode_states = tokens.new_zeros((batch_size, decode_len, self.hidden_size))
+        if self.attention_layer is not None:
+            attn_scores = tokens.new_zeros((tokens.size(0), tokens.size(1), past.encode_outputs.size(1)))
+        if self.attention_layer is not None:
+            input_feed = past.attn_states
+        else:
+            input_feed = past.hx[0][-1]
+        for i in range(tokens.size(1)):
+            input = torch.cat([tokens[:, i:i + 1], input_feed.unsqueeze(1)], dim=2)  # batch_size x 1 x h'
+            # bsz x 1 x hidden_size, (n_layer x bsz x hidden_size, n_layer x bsz x hidden_size)
+            _, (hidden, cell) = self.lstm(input, hx=past.hx)
+            past.hx = (hidden, cell)
+            if self.attention_layer is not None:
+                input_feed, attn_score = self.attention_layer(hidden[-1], past.encode_outputs, past.encode_mask)
+                attn_scores[:, i] = attn_score
+                past.attn_states = input_feed
+            else:
+                input_feed = hidden[-1]
+            decode_states[:, i] = input_feed
+
+        decode_states = self.dropout_layer(decode_states)
+
+        outputs = self.ffn(decode_states)  # batch_size x decode_len x output_hidden_size
+
+        feats = torch.matmul(outputs, self.output_embed)  # bsz x decode_len x vocab_size
+        if return_attention:
+            return feats, attn_scores
+        else:
+            return feats
+
+    @torch.no_grad()
+    def decode_one(self, tokens, past) -> Tuple[torch.Tensor, Past]:
+        """
+        给定上一个位置的输出，决定当前位置的输出。
+        :param torch.LongTensor tokens: batch_size x seq_len
+        :param LSTMPast past:
+        :return:
+        """
+        # past = self._init_hx(past, tokens)
+        tokens = tokens[:, -1:]
+        feats = self.forward(tokens, past, return_attention=False)
+        return feats.squeeze(1), past
+
+    def reorder_past(self, indices: torch.LongTensor, past: LSTMPast) -> LSTMPast:
+        """
+        将LSTMPast中的状态重置一下
+
+        :param torch.LongTensor indices: 在batch维度的index
+        :param LSTMPast past: 保存的过去的状态
+        :return:
+        """
+        encode_outputs = past.encode_outputs.index_select(index=indices, dim=0)
+        encoder_mask = past.encode_mask.index_select(index=indices, dim=0)
+        hx = (past.hx[0].index_select(index=indices, dim=1),
+              past.hx[1].index_select(index=indices, dim=1))
+        if past.attn_states is not None:
+            past.attn_states = past.attn_states.index_select(index=indices, dim=0)
+        past.encode_mask = encoder_mask
+        past.encode_outputs = encode_outputs
+        past.hx = hx
+        return past
