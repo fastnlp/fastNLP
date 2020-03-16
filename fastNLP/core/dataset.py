@@ -288,7 +288,6 @@ __all__ = [
 ]
 
 import _pickle as pickle
-from inspect import isfunction
 from copy import deepcopy
 
 import numpy as np
@@ -874,7 +873,7 @@ class DataSet(object):
         :return Dict[int:Field]: 返回一个字典
         """
         # 返回 dict , 检查是否一直相同
-        assert isfunction(func), "The func you provide is not callable."
+        assert callable(func), "The func you provide is not callable."
         assert len(self) != 0, "Null DataSet cannot use apply()."
         idx = -1
         try:
