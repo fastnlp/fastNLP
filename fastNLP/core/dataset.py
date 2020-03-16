@@ -925,7 +925,7 @@ class DataSet(object):
             
         :return List[Any]: 里面的元素为func的返回值，所以list长度为DataSet的长度
         """
-        assert isfunction(func), "The func you provide is not callable."
+        assert callable(func), "The func you provide is not callable."
         assert len(self) != 0, "Null DataSet cannot use apply()."
         idx = -1
         try:
