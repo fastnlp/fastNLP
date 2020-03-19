@@ -191,24 +191,31 @@ class FieldArray:
     
     def get(self, indices, pad=True):
         """
-        根据给定的indices返回内容
+        根据给定的indices返回内容。
 
         :param int,List[int] indices: 获取indices对应的内容。
-        :param bool pad:  是否对返回的结果进行padding。仅对indices为List[int]时有效
-        :return: 根据给定的indices返回的内容，可能是单个值或List
+        :param bool pad: 是否对返回的结果进行padding。仅对: (1) indices为List[int]; (2)padder不为None; (3)field设置了input
+            或target，有效
+        :return: 根据给定的indices返回的内容，可能是单个值或ndarray
         """
         if isinstance(indices, int):
             return self.content[indices]
-        if self.is_input is False and self.is_target is False:
-            raise RuntimeError("Please specify either is_input or is_target to True for {}".format(self.name))
-        
+
         contents = [self.content[i] for i in indices]
         if self.padder is None or pad is False:
             return np.array(contents)
-        else:
+        elif self.is_input or self.is_target:
             return self.pad(contents)
+        else:
+            return np.array(contents)
     
     def pad(self, contents):
+        """
+        传入list的contents，将contents使用padder进行padding，contents必须为从本FieldArray中取出的。
+
+        :param list contents:
+        :return:
+        """
         return self.padder(contents, field_name=self.name, field_ele_dtype=self.dtype, dim=self._cell_ndim)
     
     def set_padder(self, padder):

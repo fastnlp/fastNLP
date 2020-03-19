@@ -281,6 +281,75 @@
         #  也可以设置pad的value
         dataset.set_pad_val('chars', -1)
 
+3.3 根据DataSet中多个field合成新的field
+--------------------------------------
+
+    DataSet支持在进行batch时，默认只能看到当前的field的值，但在某些训练中可能存在以下的情况: (1)需要两个field拼接成为一个field;
+    (2)需要在batch中进行负采样。这时候就需要能够同时利用多个field进行batch的操作，DataSet中的add_collect_fn()函数支持添加
+    自定义涉及多个field的collect_fn函数。例如下例中将两个field拼接成一个field的场景
+
+    .. code-block::
+
+        from fastNLP import DataSet, DataSetIter
+        import torch
+
+        data = DataSet({
+            'x1': [[0, 1],
+                   [2]],
+            'x2': [[3],
+                   [2, 4, 5]],
+            'y': [0, 1]
+        })
+        data.set_target('y')
+
+        # 所有的collect_fn函数都接受list[(ind1, instance1), (ind2, instance2), ...]作为输入，其中ind1/ind2是该instance在dataset中
+        #   的index，instance1/instance2是这次batch取出来的数据，包含了所有的field.
+        def concat_collect_fn(ins_list):
+            x1 = [ins['x1'] for ind,ins in ins_list]
+            x2 = [ins['x2'] for ind,ins in ins_list]
+            xs = []
+            for i in range(len(ins_list)):
+                xs.append(torch.LongTensor(x1[i] + x2[i]))
+            # 需要自行pad并转换为tensor，但不需要移动到gpu
+            arr = torch.nn.utils.rnn.pad_sequence(xs, batch_first=True, padding_value=0)
+            b_x = {'x': arr}
+            b_y = {}
+            # 返回值一定是两个dict，第一个dict的值会认为是input，第二个dict的值会认为是target. 若名称与已有input或target重复，则
+            #   采用返回值。
+            return b_x, b_y
+
+        data.add_collect_fn(concat_collect_fn)
+
+        for batch_x, batch_y in DataSetIter(data, sampler=SequentialSampler(), batch_size=2):
+            print("batch_x:", batch_x)
+            print("batch_y:", batch_y)
+            # batch_x: {'x': tensor([[0, 1, 3, 0],
+            #                        [2, 2, 4, 5]])}
+            # batch_y: {'y': array([0, 1])}
+
+        # 如果取batch过程含有一些参数，可以通过类来实现
+        class ConCollectFn:
+            def __init__(self, max_len=3):
+                self.max_len = max_len
+
+            def __call__(self, ins_list):  # 实现该类的__call__函数
+                x1 = [ins['x1'] for ind, ins in ins_list]
+                x2 = [ins['x2'] for ind, ins in ins_list]
+                xs = []
+                for i in range(len(ins_list)):
+                    xs.append(torch.LongTensor(x1[i] + x2[i])[:self.max_len])
+                arr = torch.nn.utils.rnn.pad_sequence(xs, batch_first=True, padding_value=0)
+                b_x = {'x': arr}
+                b_y = {}
+                return b_x, b_y
+        data.delete_collect_fn()  # 删除之前的collect_fn
+        data.add_collect_fn(ConCollectFn(max_len=3))
+        for batch_x, batch_y in DataSetIter(data, sampler=SequentialSampler(), batch_size=2):
+            print("batch_x:", batch_x)
+            print("batch_y:", batch_y)
+            # batch_x: {'x': tensor([[0, 1, 3],
+            #                        [2, 2, 4]])}
+            # batch_y: {'y': array([0, 1])}
 
 """
 __all__ = [
@@ -300,7 +369,6 @@ from .field import AutoPadder
 from .field import FieldArray
 from .field import SetInputOrTargetException
 from .instance import Instance
-from .utils import _get_func_signature
 from .utils import pretty_table_printer
 from .collect_fn import Collector
 
@@ -394,6 +462,7 @@ class DataSet(object):
             for field in self.field_arrays.values():
                 data_set.add_field(field_name=field.name, fields=field.content[idx], padder=field.padder,
                                    is_input=field.is_input, is_target=field.is_target, ignore_type=field.ignore_type)
+            data_set.collector = self.collector.copy_from(self.collector)
             return data_set
         elif isinstance(idx, str):
             if idx not in self:
@@ -407,6 +476,7 @@ class DataSet(object):
                 dataset.append(instance)
             for field_name, field in self.field_arrays.items():
                 dataset.field_arrays[field_name].to(field)
+            dataset.collector = self.collector.copy_from(self.collector)
             return dataset
         else:
             raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
@@ -575,7 +645,6 @@ class DataSet(object):
         :param str field_name: 需要删除的field的名称.
         """
         self.field_arrays.pop(field_name)
-        self.collector.drop_field(field_name)
         return self
 
     def copy_field(self, field_name, new_field_name):
@@ -648,7 +717,6 @@ class DataSet(object):
         if field_name in self.field_arrays:
             self.field_arrays[new_field_name] = self.field_arrays.pop(field_name)
             self.field_arrays[new_field_name].name = new_field_name
-            self.collector.rename_field(field_name, new_field_name)
         else:
             raise KeyError("DataSet has no field named {}.".format(field_name))
         return self
@@ -1040,30 +1108,30 @@ class DataSet(object):
             assert isinstance(d, DataSet), "The object is not DataSet, but {}.".format(type(d))
         return d
 
-    def add_collect_fn(self, fn, inputs, outputs, is_input, is_target):
+    def add_collect_fn(self, fn, name=None):
         """
-        添加 CollectFn，使用多个field产生batch中的数据
+        添加 CollectFn，collect_fn允许在生成的batch的过程中动态生成一些数据(在DataSetIter作为迭代器的情况下有效，默认情况下就是用的
+        这个)。支持依次添加多个collect_fn, 如果相同的key，后面的collect_fn的结果覆盖前面的collect_fn的结果。
 
-        :param CollectFn fn: 定义产生数据的方式
-        :param list inputs: 生成的数据在batch中的名称
-        :param list outputs: 用于产生数据的 fields，有序
-        :param bool is_input: 是否出现在input中，为否则出现在target batch中
-        :param bool is_target:
+        :param callable fn: 传入一个可调用的function, 该function可接受的参数为List[(ind1, instance1), (ind2, instance2)]
+            (某个batch被选中的所有的indice以及instance),其中ind1/ind2是该instance在dataset中的index，instance1/instance2是
+            这次batch取出来的数据，包含了所有的field。返回值需要为两个dict，第一个dict的值将被认为是input，第二个dict的值被认为是
+            target，返回的值至多允许一个空dict。若返回的dict中包含了被设置为input或target的field的名称，将覆盖dataset中的field。
+            fastNLP不会将collect_fn的返回结果pad和转换为tensor，需要在collect_fn中完成pad和转换为tensor（不需要将tensor移动到
+            gpu中，如果是pytorch的tensor，fastNLP会自动将其移动到特定gpu）。不要修改传入collect_fn中的数据，否则可能导致未知问题。
+        :param str,int name: collect_fn的名称，如果不传入，默认使用自增长的数字作为key。相同的name会覆盖之前的collect_fn。
         """
-        def check_fields(fields):
-            for f in fields:
-                if f not in self.field_arrays:
-                    raise ValueError(f)
+        assert callable(fn), "You must pass in a callable object."
+        self.collector.add_fn(fn, name=name)
 
-        def check_name(names):
-            for name in names:
-                if name in self.field_arrays:
-                    logger.warning('name of collect_fn will cover the field name in dataset')
+    def delete_collect_fn(self, name=None):
+        """
+        删除某个collect_fn
 
-        check_fields(inputs)
-        check_name(outputs)
-
-        self.collector.add_fn(fn, inputs, outputs, is_input, is_target)
+        :param str,int name: 如果为None，则删除最近加入的collect_fn
+        :return:
+        """
+        self.collector.delete_fn(name)
 
     def _collect_batch(self, ins_list):
         return self.collector.collect_batch(ins_list)

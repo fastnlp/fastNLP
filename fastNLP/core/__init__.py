@@ -21,7 +21,6 @@ __all__ = [
     "AutoPadder",
     "EngChar2DPadder",
 
-    "CollectFn",
     "ConcatCollectFn",
     
     "Vocabulary",
@@ -97,4 +96,4 @@ from .tester import Tester
 from .trainer import Trainer
 from .utils import cache_results, seq_len_to_mask, get_seq_len
 from .vocabulary import Vocabulary
-from .collect_fn import CollectFn, ConcatCollectFn
+from .collect_fn import ConcatCollectFn

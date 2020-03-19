@@ -158,20 +158,130 @@ class TestCase1(unittest.TestCase):
         dataset.set_input('1','2')
         dataset.set_target('0','3')
 
-        fn = ConcatCollectFn()
-        dataset.add_collect_fn(fn, inputs=['1', '2'],
-                               outputs=['12', 'seq_len'],
-                               is_input=True, is_target=False)
-
+        fn = ConcatCollectFn(inputs=['1', '2'], output='12', pad_val=0, max_len=0, is_input=True, is_target=False)
+        dataset.add_collect_fn(fn, name='demo')
         batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler(), drop_last=True)
         for batch_x, batch_y in batch:
             for i in range(batch_size):
                 # print(i)
                 self.assertEqual(batch_x['12'][i].sum(), batch_x['1'][i].sum() + batch_x['2'][i].sum())
-                self.assertEqual(
-                    batch_x['seq_len'][i],
-                    (batch_x['1'][i]!=0).sum() + (batch_x['2'][i]!=0).sum())
+        dataset.delete_collect_fn(name='demo')
 
+        # 测试非input的情况
+        dataset.set_input('1', '2', flag=False)  #
+        fn = ConcatCollectFn(inputs=['1', '2'], output='12', pad_val=0, max_len=0, is_input=True, is_target=False)
+        dataset.add_collect_fn(fn, name='demo')
+        batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler(), drop_last=True)
+        for batch_x, batch_y in batch:
+            for i in range(batch_size):
+                self.assertTrue('12' in batch_x)
+        dataset.delete_collect_fn(name='demo')
+        dataset.set_input('1', '2', flag=True)  #
+
+        # 测试覆盖其它field的情况
+        fn = ConcatCollectFn(inputs=['1', '2'], output='3', pad_val=0, max_len=0, is_input=True, is_target=True)
+        dataset.add_collect_fn(fn, name='demo')
+        batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler(), drop_last=True)
+        for batch_x, batch_y in batch:
+            for i in range(batch_size):
+                # print(i)
+                self.assertEqual(batch_y['3'][i].sum(), batch_x['1'][i].sum() + batch_x['2'][i].sum())
+        dataset.delete_collect_fn(name='demo')
+
+        # 测试非input，target的情况
+        dataset.set_input('1', '2', flag=False)
+        fn = ConcatCollectFn(inputs=['1', '2'], output='3', pad_val=0, max_len=0, is_input=True, is_target=True)
+        dataset.add_collect_fn(fn, name='demo')
+        batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler(), drop_last=True)
+        for batch_x, batch_y in batch:
+            for i in range(batch_size):
+                # print(i)
+                self.assertTrue('3' in batch_x)
+                self.assertTrue('3' in batch_y)
+        dataset.delete_collect_fn(name='demo')
+
+        # 测试加入非法fn的请
+        with self.assertRaises(AssertionError):
+            dataset.add_collect_fn(1)
+
+        # 测试collect_fn返回值只有一个的情况
+        def demo_collect_fn(ins_list):
+            return {'3':1}
+        dataset.add_collect_fn(demo_collect_fn, name='demo')
+        with self.assertRaises(BaseException):
+            batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler(), drop_last=True)
+            for batch_x, batch_y in batch:
+                pass
+        dataset.delete_collect_fn(name='demo')
+
+        # 测试多个collect_fn
+        dataset.add_collect_fn(demo_collect_fn, name='demo')
+        dataset.add_collect_fn(demo_collect_fn, name='demo')
+        # 测试删除
+        dataset.delete_collect_fn()
+        dataset.delete_collect_fn()
+        self.assertTrue(dataset.collector.is_empty())
+
+    def test_demo(self):
+        import torch
+
+        data = DataSet({
+            'x1': [[0, 1],
+                   [2]],
+            'x2': [[3],
+                   [2, 4, 5]
+                   ],
+            'y': [0, 1]
+        })
+        data.set_target('y')
+
+        # 所有的collect_fn函数都接受list[(ind1, instance1), (ind2, instance2), ...]作为输入，其中ind1/ind2是该instance在dataset中
+        #   的index，instance1/instance2是这次batch取出来的数据，包含了所有的field.
+        def concat_collect_fn(ins_list):
+            x1 = [ins['x1'] for ind,ins in ins_list]
+            x2 = [ins['x2'] for ind,ins in ins_list]
+            xs = []
+            for i in range(len(ins_list)):
+                xs.append(torch.LongTensor(x1[i] + x2[i]))
+            # 需要自行pad并转换为tensor，但不需要移动到gpu
+            arr = torch.nn.utils.rnn.pad_sequence(xs, batch_first=True, padding_value=0)
+            b_x = {'x': arr}
+            b_y = {}
+            # 返回值一定是两个dict，第一个dict的值会认为是input，第二个dict的值会认为是target. 若名称与已有input或target重复，则
+            #   采用返回值。
+            return b_x, b_y
+
+        data.add_collect_fn(concat_collect_fn)
+
+        for batch_x, batch_y in DataSetIter(data, sampler=SequentialSampler(), batch_size=2):
+            print("batch_x:", batch_x)
+            print("batch_y:", batch_y)
+            # batch_x: {'x': tensor([[0, 1, 3, 0],
+            #                        [2, 2, 4, 5]])}
+            # batch_y: {'y': array([0, 1])}
+
+        # 如果取batch过程含有一些参数，可以通过类来实现
+        class ConCollectFn:
+            def __init__(self, max_len=3):
+                self.max_len = max_len
+            def __call__(self, ins_list):
+                x1 = [ins['x1'] for ind, ins in ins_list]
+                x2 = [ins['x2'] for ind, ins in ins_list]
+                xs = []
+                for i in range(len(ins_list)):
+                    xs.append(torch.LongTensor(x1[i] + x2[i])[:self.max_len])
+                arr = torch.nn.utils.rnn.pad_sequence(xs, batch_first=True, padding_value=0)
+                b_x = {'x': arr}
+                b_y = {}
+                return b_x, b_y
+        data.delete_collect_fn()  # 删除之前的collect_fn
+        data.add_collect_fn(ConCollectFn(max_len=3))
+        for batch_x, batch_y in DataSetIter(data, sampler=SequentialSampler(), batch_size=2):
+            print("batch_x:", batch_x)
+            print("batch_y:", batch_y)
+            # batch_x: {'x': tensor([[0, 1, 3],
+            #                        [2, 2, 4]])}
+            # batch_y: {'y': array([0, 1])}
 
     def testTensorLoaderIter(self):
         class FakeData:

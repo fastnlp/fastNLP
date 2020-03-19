@@ -4,7 +4,8 @@ from builtins import sorted
 import torch
 import numpy as np
 from .field import _get_ele_type_and_dim
-from collections import defaultdict
+from .utils import logger
+from copy import deepcopy
 
 
 def _check_type(batch_dict, fields):
@@ -36,127 +37,89 @@ def batching(samples, max_len=0, padding_val=0):
 
 
 class Collector:
+    """
+    辅助DataSet管理collect_fn的类
+
+    """
     def __init__(self):
-        self.fns = {}
-        self.input2fn = defaultdict(list)
-        self.output2fn = defaultdict(list)
-        self.fn2input = {}
-        self.fn2output = {}
+        self.collect_fns = {}
 
-    def add_fn(self, fn, inputs, outputs, is_input, is_target):
-        for name in outputs:
-            if name in self.output2fn:
-                raise ValueError("Duplicated name: {} for CollectFn: {}".format(name, fn))
+    def add_fn(self, fn, name=None):
+        """
+        向collector新增一个collect_fn函数
 
-        if fn.num_inputs() > 0 and len(inputs) != fn.num_inputs():
-            raise ValueError(
-                "Incorrect num of inputs, should be {} not {}".format(
-                    fn.num_inputs(), len(inputs)
-                ))
+        :param callable fn:
+        :param str,int name:
+        :return:
+        """
+        if name in self.collect_fns:
+            logger.warn(f"collect_fn:{name} will be overwritten.")
+        if name is None:
+            name = len(self.collect_fns)
+        self.collect_fns[name] = fn
 
-        if fn.num_outputs() > 0 and len(outputs) != fn.num_outputs():
-            raise ValueError("Incorrect num of inputs, should be {} not {}".format(
-                    fn.num_outputs(), len(outputs)))
+    def is_empty(self):
+        """
+        返回是否包含collect_fn
 
-        self.fns[fn] = {'is_input': is_input, 'is_target': is_target}
-        for i, field in enumerate(inputs):
-            self.input2fn[field].append((fn, i))
-        for i, name in enumerate(outputs):
-            self.output2fn[name].append((fn, i))
+        :return:
+        """
+        return len(self.collect_fns)==0
 
-    def _rebuild_fn2io(self):
-        def transpose(name2fn):
-            fn2names = defaultdict(list)
-            for name, vlist in name2fn.items():
-                for fn, i in vlist:
-                    fn2names[fn].append((name, i))
-            for fn, vlist in fn2names.items():
-                vlist = sorted(vlist, key=lambda x: x[1])
-                fn2names[fn] = [name for name, i in vlist]
-            return fn2names
+    def delete_fn(self, name=None):
+        """
+        删除collect_fn
 
-        self.fn2input = transpose(self.input2fn)
-        self.fn2output = transpose(self.output2fn)
-
-    def _clear_fn2io(self):
-        self.fn2input.clear()
-        self.fn2output.clear()
+        :param str,int name: 如果为None就删除最近加入的collect_fn
+        :return:
+        """
+        if not self.is_empty():
+            if name in self.collect_fns:
+                self.collect_fns.pop(name)
+            elif name is None:
+                last_key = list(self.collect_fns.keys())[0]
+                self.collect_fns.pop(last_key)
 
     def collect_batch(self, ins_list):
-        if len(ins_list) == 0:
-            return {}, {}
-
-        if len(self.fn2output) == 0:
-            self._rebuild_fn2io()
-
-        bx = {}
-        by = {}
-        for fn, attr in self.fns.items():
-            inputs = self.fn2input.get(fn, None)
-            outputs = self.fn2output.get(fn, None)
-            res = fn.collect(ins_list, inputs, outputs)
-            if attr.get('is_input', False):
-                bx.update(res)
-            if attr.get('is_target', False):
-                by.update(res)
+        bx, by = {}, {}
+        for name, fn in self.collect_fns.items():
+            try:
+                batch_x, batch_y = fn(ins_list)
+            except BaseException as e:
+                logger.error(f"Exception:`{e}` happens when call collect_fn:`{name}`.")
+                raise e
+            bx.update(batch_x)
+            by.update(batch_y)
         return bx, by
-
-    def rename_field(self, old_f, new_f):
-        if new_f in self.input2fn:
-            # name conflict
-            raise ValueError
-        if old_f not in self.input2fn:
-            # renamed field not affect collectors
-            return
-        self.input2fn[new_f] = self.input2fn[old_f]
-        self._clear_fn2io()
-
-    def drop_field(self, f):
-        if f in self.input2fn:
-            raise ValueError
-
-    def outputs(self):
-        return self.output2fn.keys()
 
     def copy_from(self, col):
         assert isinstance(col, Collector)
-        self.fns = col.fns.copy()
-        self.input2fn = col.input2fn.copy()
-        self.output2fn = col.output2fn.copy()
-        self._clear_fn2io()
-
-class CollectFn:
-    def __init__(self):
-        self.fields = []
-
-    def collect(self, ins_list, inputs, outputs):
-        raise NotImplementedError
-
-    def num_inputs(self):
-        return 0
-
-    def num_outputs(self):
-        return 0
-
-    @staticmethod
-    def get_batch_size(batch_dict):
-        if len(batch_dict) == 0:
-            return 0
-        return len(next(iter(batch_dict.values())))
+        new_col = Collector()
+        new_col.collect_fns = deepcopy(col)
+        return new_col
 
 
-class ConcatCollectFn(CollectFn):
+class ConcatCollectFn:
     """
-    field拼接Fn，将不同field按序拼接后，padding产生数据。所有field必须有相同的dim。
+    field拼接collect_fn，将不同field按序拼接后，padding产生数据。
 
+    :param List[str] inputs: 将哪些field的数据拼接起来, 目前仅支持1d的field
+    :param str output: 拼接后的field名称
     :param pad_val: padding的数值
     :param max_len: 拼接后最大长度
+    :param is_input: 是否将生成的output设置为input
+    :param is_target: 是否将生成的output设置为target
     """
 
-    def __init__(self, pad_val=0, max_len=0):
+    def __init__(self, inputs, output, pad_val=0, max_len=0, is_input=True, is_target=False):
         super().__init__()
+        assert isinstance(inputs, list)
+        self.inputs = inputs
+        self.output = output
         self.pad_val = pad_val
         self.max_len = max_len
+        self.is_input = is_input
+        self.is_target = is_target
 
     @staticmethod
     def _to_numpy(seq):
@@ -165,21 +128,18 @@ class ConcatCollectFn(CollectFn):
         else:
             return np.array(seq)
 
-    def collect(self, ins_list, inputs, outputs):
+    def __call__(self, ins_list):
         samples = []
         for i, ins in ins_list:
             sample = []
-            for i in inputs:
-                sample.append(self._to_numpy(ins[i]))
+            for input_name in self.inputs:
+                sample.append(self._to_numpy(ins[input_name]))
             samples.append(np.concatenate(sample, axis=0))
-        seq_len = [s.shape[0] for s in samples]
         batch = batching(samples, max_len=self.max_len, padding_val=self.pad_val)
-        o1, o2 = outputs
-        return {o1: batch, o2: seq_len}
+        b_x, b_y = {}, {}
+        if self.is_input:
+            b_x[self.output] = batch
+        if self.is_target:
+            b_y[self.output] = batch
 
-    def num_inputs(self):
-        return 0
-
-    def num_outputs(self):
-        # (concat_words, seq_len)
-        return 2
+        return b_x, b_y

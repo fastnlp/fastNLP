@@ -375,7 +375,7 @@ class Trainer(object):
                  callbacks=None, check_code_level=0, **kwargs):
         """
         
-        :param train_data: 训练集， :class:`~fastNLP.DataSet` 类型。
+        :param train_data: 训练集， :class:`~fastNLP.DataSet` 类型或 :class:`~fastNLP.BatchIter`的子类
         :param nn.modules model: 待训练的模型
         :param optimizer: `torch.optim.Optimizer` 优化器。如果为None，则Trainer使用默认的Adam(model.parameters(), lr=4e-3)这个优化器
         :param int batch_size: 训练和验证的时候的batch大小。

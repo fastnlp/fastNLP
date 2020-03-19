@@ -9,17 +9,16 @@ __all__ = [
 ]
 
 import atexit
-from numbers import Number
+import abc
 
+from numbers import Number
 import numpy as np
 import torch
 import torch.utils.data
 from collections import defaultdict
 
-from ._logger import logger
 from .dataset import DataSet
 from .sampler import SequentialSampler
-from .field import _get_ele_type_and_dim
 
 _python_is_exit = False
 
@@ -33,6 +32,9 @@ atexit.register(_set_python_is_exit)
 
 
 class DataSetGetter:
+    """
+    传递给torch.utils.data.DataLoader获取数据，DataLoder会传入int的idx获取数据(调用这里的__getitem__()函数)。
+    """
     def __init__(self, dataset: DataSet, as_numpy=False):
         self.dataset = dataset
         self.as_numpy = as_numpy
@@ -56,7 +58,6 @@ class DataSetGetter:
         :param batch: [[idx1, x_dict1, y_dict1], [idx2, x_dict2, y_dict2], [xx, xx, xx]]
         :return:
         """
-        # TODO 支持在DataSet中定义collate_fn，因为有时候可能需要不同的field之间融合，比如BERT的场景
         indices = []
         sin_x, sin_y = defaultdict(list), defaultdict(list)
         for idx, ins in ins_list:
@@ -66,24 +67,6 @@ class DataSetGetter:
                     sin_x[n].append(v)
                 if n in self.y_names:
                     sin_y[n].append(v)
-
-        def may_to_tensor(data):
-            dtype, dim = _get_ele_type_and_dim(data)
-            # print(dtype, type(dtype), str(dtype))
-            if not self.as_numpy:
-                try:
-                    data, flag = _to_tensor(data, dtype)
-                except TypeError as e:
-                    logger.error(f"Field {n} cannot be converted to torch.tensor.")
-                    raise e
-            # if torch.is_tensor(data):
-            #     str_dtype = str(dtype)
-            #     if 'float' in str_dtype:
-            #         data = data.float()
-            #     elif 'int' in str_dtype:
-            #         data = data.long()
-            # print(data.dtype)
-            return data
 
         def pad(batch_dict):
             result = {}
@@ -98,24 +81,12 @@ class DataSetGetter:
         sin_x = pad(sin_x)
         sin_y = pad(sin_y)
 
-        bx, by = self.dataset._collect_batch(ins_list)
-        def convert_tensor(batch_dict):
-            for n, v in batch_dict.items():
-                batch_dict[n] = may_to_tensor(v)
-
-        # collect_fn replaces single field
-        sin_x.update(bx)
-        sin_y.update(by)
-
-        convert_tensor(sin_x)
-        convert_tensor(sin_y)
+        if not self.dataset.collector.is_empty():
+            bx, by = self.dataset._collect_batch(ins_list)
+            sin_x.update(bx)
+            sin_y.update(by)
 
         return (indices, sin_x, sin_y)
-
-    def set_idx_list(self, idx_list):
-        if len(idx_list) != len(self.idx_list):
-            raise ValueError
-        self.idx_list = idx_list
 
     def __getattr__(self, item):
         if hasattr(self.dataset, item):
@@ -125,6 +96,10 @@ class DataSetGetter:
 
 
 class SamplerAdapter(torch.utils.data.Sampler):
+    """
+    用于传入torch.utils.data.DataLoader中，DataLoader会调用__iter__()方法获取index(一次只取一个int)
+
+    """
     def __init__(self, sampler, dataset):
         super().__init__(dataset)
         self.sampler = sampler
@@ -138,6 +113,11 @@ class SamplerAdapter(torch.utils.data.Sampler):
 
 
 class BatchIter:
+    """
+    Trainer用于迭代数据的类。继承该类，并实现get_num_batches(), get_batch_indices(), dataset(), num_batches(),
+        __iter__()方法。
+
+    """
     def __init__(self, dataset, batch_size=1, sampler=None,
                  num_workers=0, pin_memory=False, drop_last=False,
                  timeout=0, worker_init_fn=None, collate_fn=None):
@@ -145,6 +125,8 @@ class BatchIter:
             self.sampler = SamplerAdapter(sampler=sampler or SequentialSampler(), dataset=dataset)
         else:
             self.sampler = sampler
+
+        # DataLoader的collect_fn输入是List[]，里面的元素是dataset[index]返回的结果
         if collate_fn is None:
             # pytoch <= 1.1 中不能设置collate_fn=None
             self.dataiter = torch.utils.data.DataLoader(
@@ -160,9 +142,17 @@ class BatchIter:
                 timeout=timeout, worker_init_fn=worker_init_fn)
 
         # 以sampler的数量为准，因为DistributedSampler的时候每个进程上并不是所有的数据都用上了
-        self.num_batches = self.get_num_batches(len(self.dataiter.sampler), batch_size, drop_last)
+        self._num_batches = self.get_num_batches(len(self.dataiter.sampler), batch_size, drop_last)
         self.batch_size = batch_size
         self.cur_batch_indices = None
+
+    @property
+    def num_batches(self):
+        return self._num_batches
+
+    @num_batches.setter
+    def num_batches(self, value):
+        self._num_batches = value
 
     def init_iter(self):
         pass
@@ -170,7 +160,7 @@ class BatchIter:
     @staticmethod
     def get_num_batches(num_samples, batch_size, drop_last):
         """
-        计算batch的数量。
+        计算batch的数量。用于前端显示进度
 
         :param int num_samples:
         :param int batch_size:
@@ -184,7 +174,7 @@ class BatchIter:
 
     def get_batch_indices(self):
         """
-        获取当前已经输出的batch的index。
+        获取最近输出的batch的index。用于溯源当前batch的数据
 
         :return:
         """
@@ -195,7 +185,21 @@ class BatchIter:
 
     @property
     def dataset(self):
+        """
+        获取正在参与iterate的dataset
+
+        :return:
+        """
         return self.dataiter.dataset
+
+    @abc.abstractmethod
+    def __iter__(self):
+        """
+        用于实际数据循环的类，返回值需要为两个dict, 第一个dict中的内容会认为是input, 第二个dict中的内容会认为是target
+
+        :return:
+        """
+        raise NotImplemented
 
 
 class DataSetIter(BatchIter):

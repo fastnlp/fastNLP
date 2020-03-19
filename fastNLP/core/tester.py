@@ -71,7 +71,7 @@ class Tester(object):
     def __init__(self, data, model, metrics, batch_size=16, num_workers=0, device=None, verbose=1, use_tqdm=True):
         """
         
-        :param ~fastNLP.DataSet data: 需要测试的数据集
+        :param ~fastNLP.DataSet,~fastNLP.BatchIter data: 需要测试的数据集
         :param torch.nn.Module model: 使用的模型
         :param ~fastNLP.core.metrics.MetricBase,List[~fastNLP.core.metrics.MetricBase] metrics: 测试时使用的metrics
         :param int batch_size: evaluation时使用的batch_size有多大。
