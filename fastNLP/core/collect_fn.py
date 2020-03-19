@@ -95,7 +95,7 @@ class Collector:
     def copy_from(self, col):
         assert isinstance(col, Collector)
         new_col = Collector()
-        new_col.collect_fns = deepcopy(col)
+        new_col.collect_fns = deepcopy(col.collect_fns)
         return new_col
 
 
