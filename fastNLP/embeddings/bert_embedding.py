@@ -294,7 +294,10 @@ class _WordBertModel(nn.Module):
                 word = '[PAD]'
             elif index == vocab.unknown_idx:
                 word = '[UNK]'
-            word_pieces = self.tokenzier.wordpiece_tokenizer.tokenize(word)
+            _words = self.tokenzier.basic_tokenizer._tokenize_chinese_chars(word).split()
+            word_pieces = []
+            for w in _words:
+                word_pieces.extend(self.tokenzier.wordpiece_tokenizer.tokenize(w))
             if len(word_pieces) == 1:
                 if not vocab._is_word_no_create_entry(word):  # 如果是train中的值, 但是却没有找到
                     if index != vocab.unknown_idx and word_pieces[0] == '[UNK]':  # 说明这个词不在原始的word里面

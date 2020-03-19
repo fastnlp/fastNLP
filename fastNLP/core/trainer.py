@@ -599,7 +599,8 @@ class Trainer(object):
             self._model_device = _get_model_device(self.model)
             self._mode(self.model, is_test=False)
             self._load_best_model = load_best_model
-            self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+            # 加上millsecond，防止两个太接近的保存
+            self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S-%f'))
             start_time = time.time()
             self.logger.info("training epochs started " + self.start_time)
             self.step = 0

@@ -989,7 +989,10 @@ class _WordPieceBertModel(nn.Module):
         def convert_words_to_word_pieces(words):
             word_pieces = []
             for word in words:
-                tokens = self.tokenzier.wordpiece_tokenizer.tokenize(word)
+                _words = self.tokenzier.basic_tokenizer._tokenize_chinese_chars(word).split()
+                tokens = []
+                for word in _words:
+                    tokens.extend(self.tokenzier.wordpiece_tokenizer.tokenize(word))
                 word_piece_ids = self.tokenzier.convert_tokens_to_ids(tokens)
                 word_pieces.extend(word_piece_ids)
             if add_cls_sep:
