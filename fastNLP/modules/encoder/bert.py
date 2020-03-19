@@ -542,6 +542,18 @@ class BertModel(nn.Module):
         new_keys = []
         for key in state_dict.keys():
             new_key = None
+            if 'bert' not in key:
+                new_key = 'bert.' + key
+            if new_key:
+                old_keys.append(key)
+                new_keys.append(new_key)
+        for old_key, new_key in zip(old_keys, new_keys):
+            state_dict[new_key] = state_dict.pop(old_key)
+
+        old_keys = []
+        new_keys = []
+        for key in state_dict.keys():
+            new_key = None
             for key_name in BERT_KEY_RENAME_MAP_1:
                 if key_name in key:
                     new_key = key.replace(key_name, BERT_KEY_RENAME_MAP_1[key_name])

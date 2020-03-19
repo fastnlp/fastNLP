@@ -118,6 +118,12 @@ class Collector:
     def outputs(self):
         return self.output2fn.keys()
 
+    def copy_from(self, col):
+        assert isinstance(col, Collector)
+        self.fns = col.fns.copy()
+        self.input2fn = col.input2fn.copy()
+        self.output2fn = col.output2fn.copy()
+        self._clear_fn2io()
 
 class CollectFn:
     def __init__(self):
