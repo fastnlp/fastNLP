@@ -293,15 +293,22 @@ class ConfusionMatrixMetric(MetricBase):
     print(metric.get_metric())
 
     {'confusion_matrix': 
-    target  1.0     2.0     3.0     all
-    pred
-    1.0     0       1       0       1
-    2.0     0       1       0       1
-    3.0     1       0       0       1
-    all     1       2       0       3}
+     target  1.0     2.0     3.0     all
+       pred
+        1.0    0       1       0       1
+        2.0    0       1       0       1
+        3.0    1       0       0       1
+        all    1       2       0       3
+}
     """
-    def __init__(self, vocab=None, pred=None, target=None, seq_len=None):
+    def __init__(self,
+                 print_ratio=False,
+                 vocab=None,
+                 pred=None,
+                 target=None,
+                 seq_len=None):
         """
+        :param print_ratio: 限制print的输出，false only for result, true for result, percent(dim=0), percent(dim = 1) 
         :param vocab: vocab词表类,要求有to_word()方法。
         :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
         :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
@@ -309,7 +316,8 @@ class ConfusionMatrixMetric(MetricBase):
         """
         super().__init__()
         self._init_param_map(pred=pred, target=target, seq_len=seq_len)
-        self.confusion_matrix = ConfusionMatrix(vocab=vocab)
+        self.confusion_matrix = ConfusionMatrix(print_ratio=print_ratio,
+                                                vocab=vocab)
 
     def evaluate(self, pred, target, seq_len=None):
         """
@@ -346,11 +354,11 @@ class ConfusionMatrixMetric(MetricBase):
 
         target = target.to(pred)
         if seq_len is not None and  target.dim() > 1:
-            for p, t, l in zip(pred.tolist(), target.tolist(), seq_len.tolist()):  
+            for p, t, l in zip(pred.tolist(), target.tolist(), seq_len.tolist()):
                 l=int(l)
                 self.confusion_matrix.add_pred_target(p[:l], t[:l])
         elif target.dim() > 1: #对于没有传入seq_len，但是又是高维的target，按全长输出
-            for p, t in zip(pred.tolist(), target.tolist()):  
+            for p, t in zip(pred.tolist(), target.tolist()):
                 self.confusion_matrix.add_pred_target(p, t)
         else:
             self.confusion_matrix.add_pred_target(pred.tolist(), target.tolist())
@@ -366,6 +374,8 @@ class ConfusionMatrixMetric(MetricBase):
         if reset:
             self.confusion_matrix.clear()
         return confusion
+
+
 
 
 class AccuracyMetric(MetricBase):
