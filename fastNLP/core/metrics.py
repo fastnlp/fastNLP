@@ -299,17 +299,18 @@ class ConfusionMatrixMetric(MetricBase):
 }
     """
     def __init__(self,
-                 print_ratio=False,
                  vocab=None,
                  pred=None,
                  target=None,
-                 seq_len=None):
+                 seq_len=None,
+                 print_ratio=False
+                ):
         """
-        :param print_ratio: 限制print的输出，false only for result, true for result, percent(dim=0), percent(dim = 1) 
         :param vocab: vocab词表类,要求有to_word()方法。
         :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
         :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
         :param seq_len: 参数映射表中 `seq_len` 的映射关系，None表示映射关系为 `seq_len` -> `seq_len`
+        :param print_ratio: 限制print的输出，false only for result, true for result, percent(dim=0), percent(dim = 1) 
         """
         super().__init__()
         self._init_param_map(pred=pred, target=target, seq_len=seq_len)
