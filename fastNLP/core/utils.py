@@ -38,10 +38,10 @@ _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'require
 
 class ConfusionMatrix:
     """a dict can provide Confusion Matrix"""
-    def __init__(self, print_ratio=False, vocab=None):
+    def __init__(self, vocab=None, print_ratio=False):
         """
         :param vocab: 需要有to_word方法，建议直接使用Fastnlp.core.Vocabulary。
-        :param print_ratio: 限制print的输出，false only for result, true for result, percent(dim=0), percent(dim = 1) 
+        :param print_ratio: 限制print的输出，False只输出数量Confusion Matrix, True还会输出百分比Confusion Matrix, 分别为行/列
         """
         if vocab and not hasattr(vocab, "to_word"):
             raise TypeError(
@@ -141,8 +141,7 @@ class ConfusionMatrix:
             tmp = tmp * 100
         elif dim == 1:
             tmp = np.array(result).T
-            tmp = tmp / (tmp[:, -1].reshape([len(result), -1]))
-            tmp[np.isnan(tmp)] = 0
+            mp = tmp / (tmp[:, -1].reshape([len(result), -1]) + 1e-12)
             tmp = tmp.T * 100
         tmp = np.around(tmp, decimals=2)
         return tmp.tolist()
