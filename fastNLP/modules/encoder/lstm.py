@@ -24,7 +24,7 @@ class LSTM(nn.Module):
         """
         
         :param input_size:  输入 `x` 的特征维度
-        :param hidden_size: 隐状态 `h` 的特征维度.
+        :param hidden_size: 隐状态 `h` 的特征维度. 如果bidirectional为True，则输出的维度会是hidde_size*2
         :param num_layers: rnn的层数. Default: 1
         :param dropout: 层间dropout概率. Default: 0
         :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``

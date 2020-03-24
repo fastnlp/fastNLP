@@ -147,6 +147,8 @@ fastNLP的数据载入主要是由Loader与Pipe两个基类衔接完成的，您
 .. code-block:: python
 
     from fastNLP.io import WeiboNERPipe
+    from fastNLP.models import BiLSTMCRF
+
     data_bundle = WeiboNERPipe().process_from_file()
     data_bundle.rename_field('chars', 'words')
 

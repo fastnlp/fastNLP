@@ -301,7 +301,7 @@ fastNLP提供了Trainer对象来组织训练过程，包括完成loss计算(所�
     
     # 这里为了演示一下效果，所以默认Bert不更新权重
     bert_embed = BertEmbedding(char_vocab, model_dir_or_name='cn', auto_truncate=True, requires_grad=False)
-    model = BiLSTMMaxPoolCls(bert_embed, len(data_bundle.get_vocab('target')), )
+    model = BiLSTMMaxPoolCls(bert_embed, len(data_bundle.get_vocab('target')))
     
     
     import torch
