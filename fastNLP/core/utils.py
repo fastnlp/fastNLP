@@ -34,8 +34,6 @@ _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'require
                                      'varargs'])
 
 
-
-
 class ConfusionMatrix:
     """a dict can provide Confusion Matrix"""
     def __init__(self, vocab=None, print_ratio=False):
@@ -83,7 +81,7 @@ class ConfusionMatrix:
 
     def clear(self):
         """
-        清除一些值，等待再次新加入
+        清空ConfusionMatrix，等待再次新加入
         :return: 
         """
         self.confusiondict = {}
@@ -102,11 +100,6 @@ class ConfusionMatrix:
                 set(self.targetcount.keys()).union(set(
                     self.predcount.keys()))))
         lenth = len(totallabel)
-        # namedict key :idx value:word/idx
-        namedict = dict([
-            (k, str(k if self.vocab == None else self.vocab.to_word(k)))
-            for k in totallabel
-        ])
 
         for label, idx in zip(totallabel, range(lenth)):
             idx2row[
@@ -116,7 +109,6 @@ class ConfusionMatrix:
         output = []
         for i in row2idx.keys():  # 第i行
             p = row2idx[i]
-            h = namedict[p]
             l = [0 for _ in range(lenth)]
             if self.confusiondict.get(p, None):
                 for t, c in self.confusiondict[p].items():
@@ -141,7 +133,7 @@ class ConfusionMatrix:
             tmp = tmp * 100
         elif dim == 1:
             tmp = np.array(result).T
-            mp = tmp / (tmp[:, -1].reshape([len(result), -1]) + 1e-12)
+            tmp = tmp / (tmp[:, -1].reshape([len(result), -1]) + 1e-12)
             tmp = tmp.T * 100
         tmp = np.around(tmp, decimals=2)
         return tmp.tolist()
@@ -172,7 +164,6 @@ class ConfusionMatrix:
             row2idx[
                 idx] = label  # 建立一个临时字典，value:vocab的index, key: 行列index  0,1,2...->1,3,5,...
         # 这里打印东西
-        col_lenths = []
         out = str()
         output = []
         # 表头
