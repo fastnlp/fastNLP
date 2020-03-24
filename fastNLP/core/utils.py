@@ -38,47 +38,47 @@ _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'require
 
 class ConfusionMatrix:
     """a dict can provide Confusion Matrix"""
-    def __init__(self, vocab=None):
+    def __init__(self, vocab=None, print_ratio=False):
         """
         :param vocab: 需要有to_word方法，建议直接使用Fastnlp.core.Vocabulary。
+        :param print_ratio: 限制print的输出，False只输出数量Confusion Matrix, True还会输出百分比Confusion Matrix, 分别为行/列
         """
-        if vocab and not hasattr(vocab, 'to_word'):
-            raise TypeError(f"`vocab` in {_get_func_signature(self.__init__)} must be Fastnlp.core.Vocabulary,"
-                            f"got {type(vocab)}.")
-        self.confusiondict={}  #key: pred index, value:target word ocunt
-        self.predcount={}  #key:pred index, value:count
-        self.targetcount={}  #key:target index, value:count
-        self.vocab=vocab
-        
-    def add_pred_target(self, pred, target):  #一组结果
+        if vocab and not hasattr(vocab, "to_word"):
+            raise TypeError(
+                f"`vocab` in {_get_func_signature(self.__init__)} must be Fastnlp.core.Vocabulary,"
+                f"got {type(vocab)}.")
+        self.confusiondict = {}  # key: pred index, value:target word ocunt
+        self.predcount = {}  # key:pred index, value:count
+        self.targetcount = {}  # key:target index, value:count
+        self.vocab = vocab
+        self.print_ratio = print_ratio
+
+    def add_pred_target(self, pred, target):  # 一组结果
         """
         通过这个函数向ConfusionMatrix加入一组预测结果
-
         :param list pred: 预测的标签列表
         :param list target: 真实值的标签列表
         :return ConfusionMatrix
-
         confusion=ConfusionMatrix()
         pred = [2,1,3]
         target = [2,2,1]
         confusion.add_pred_target(pred, target)
         print(confusion)
-
         target  1       2       3       all
-        pred
-        1       0       1       0       1
-        2       0       1       0       1
-        3       1       0       0       1
-        all     1       2       0       3
+          pred
+             1  0       1       0         1
+             2  0       1       0         1
+             3  1       0       0         1
+           all  1       2       0         3
         """
-        for p,t in zip(pred,target): #<int, int>
-            self.predcount[p]=self.predcount.get(p,0)+ 1
-            self.targetcount[t]=self.targetcount.get(t,0)+1 
+        for p, t in zip(pred, target):  # <int, int>
+            self.predcount[p] = self.predcount.get(p, 0) + 1
+            self.targetcount[t] = self.targetcount.get(t, 0) + 1
             if p in self.confusiondict:
-                self.confusiondict[p][t]=self.confusiondict[p].get(t,0) + 1
+                self.confusiondict[p][t] = self.confusiondict[p].get(t, 0) + 1
             else:
-                self.confusiondict[p]={}
-                self.confusiondict[p][t]= 1
+                self.confusiondict[p] = {}
+                self.confusiondict[p][t] = 1
         return self.confusiondict
 
     def clear(self):
@@ -86,44 +86,144 @@ class ConfusionMatrix:
         清除一些值，等待再次新加入
         :return: 
         """
-        self.confusiondict={}
-        self.targetcount={}
-        self.predcount={}  
-    
+        self.confusiondict = {}
+        self.targetcount = {}
+        self.predcount = {}
+
+    def get_result(self):
+        """
+        :return list output: ConfusionMatrix content,具体值与汇总统计
+        """
+        row2idx = {}
+        idx2row = {}
+        # 已知的所有键/label
+        totallabel = sorted(
+            list(
+                set(self.targetcount.keys()).union(set(
+                    self.predcount.keys()))))
+        lenth = len(totallabel)
+        # namedict key :idx value:word/idx
+        namedict = dict([
+            (k, str(k if self.vocab == None else self.vocab.to_word(k)))
+            for k in totallabel
+        ])
+
+        for label, idx in zip(totallabel, range(lenth)):
+            idx2row[
+                label] = idx  # 建立一个临时字典，key:vocab的index, value: 行列index  1,3,5...->0,1,2,...
+            row2idx[
+                idx] = label  # 建立一个临时字典，value:vocab的index, key: 行列index  0,1,2...->1,3,5,...
+        output = []
+        for i in row2idx.keys():  # 第i行
+            p = row2idx[i]
+            h = namedict[p]
+            l = [0 for _ in range(lenth)]
+            if self.confusiondict.get(p, None):
+                for t, c in self.confusiondict[p].items():
+                    l[idx2row[t]] = c  # 完成一行
+            l = [n for n in l] + [sum(l)]
+            output.append(l)
+        tail = [self.targetcount.get(row2idx[k], 0) for k in row2idx.keys()]
+        tail += [sum(tail)]
+        output.append(tail)
+        return output
+
+    def get_percent(self, dim=0):
+        """
+        :param dim int: 0/1, 0 for row,1 for column
+        :return list output: ConfusionMatrix content,具体值与汇总统计
+        """
+        result = self.get_result()
+        if dim == 0:
+            tmp = np.array(result)
+            tmp = tmp / (tmp[:, -1].reshape([len(result), -1]))
+            tmp[np.isnan(tmp)] = 0
+            tmp = tmp * 100
+        elif dim == 1:
+            tmp = np.array(result).T
+            mp = tmp / (tmp[:, -1].reshape([len(result), -1]) + 1e-12)
+            tmp = tmp.T * 100
+        tmp = np.around(tmp, decimals=2)
+        return tmp.tolist()
+
+    def get_aligned_table(self, data, flag="result"):
+        """
+        :param data: highly recommend use get_percent/ get_result return as dataset here, or make sure data is a n*n list type data
+        :param flag: only difference between result and other words is whether "%" is in output string
+        :return: an aligned_table ready to print out
+        """
+        row2idx = {}
+        idx2row = {}
+        # 已知的所有键/label
+        totallabel = sorted(
+            list(
+                set(self.targetcount.keys()).union(set(
+                    self.predcount.keys()))))
+        lenth = len(totallabel)
+        # namedict key :idx value:word/idx
+        namedict = dict([
+            (k, str(k if self.vocab == None else self.vocab.to_word(k)))
+            for k in totallabel
+        ])
+
+        for label, idx in zip(totallabel, range(lenth)):
+            idx2row[
+                label] = idx  # 建立一个临时字典，key:vocab的index, value: 行列index  1,3,5...->0,1,2,...
+            row2idx[
+                idx] = label  # 建立一个临时字典，value:vocab的index, key: 行列index  0,1,2...->1,3,5,...
+        # 这里打印东西
+        col_lenths = []
+        out = str()
+        output = []
+        # 表头
+        head = (["target"] +
+                [str(namedict[row2idx[k]]) for k in row2idx.keys()] + ["all"])
+        col_lenths = [len(h) for h in head]
+        output.append(head)
+        output.append(["pred"])
+        # 内容
+        for i in row2idx.keys():  # 第i行
+            p = row2idx[i]
+            h = namedict[p]
+            l = [h] + [[str(n) + "%", str(n)][flag == "result"]
+                       for n in data[i]]
+            col_lenths = [
+                max(col_lenths[idx], [len(i) for i in l][idx])
+                for idx in range(len(col_lenths))
+            ]
+            output.append(l)
+        tail = ["all"] + [[str(n) + "%", str(n)][flag == "result"]
+                          for n in data[-1]]
+        col_lenths = [
+            max(col_lenths[idx], [len(i) for i in tail][idx])
+            for idx in range(len(col_lenths))
+        ]
+        output.append(tail)
+        for line in output:
+            for colidx in range(len(line)):
+                out += "%*s" % (col_lenths[colidx], line[colidx]) + "\t"
+            out += "\n"
+        return "\n" + out
+
     def __repr__(self):
         """
         :return string output: ConfusionMatrix的格式化输出，包括表头各标签字段，具体值与汇总统计。
         """
-        row2idx={}
-        idx2row={}
-        # 已知的所有键/label
-        totallabel=sorted(list(set(self.targetcount.keys()).union(set(self.predcount.keys()))))
-        lenth=len(totallabel)
-        # namedict key :idx value:word/idx
-        namedict=dict([(k,str(k if self.vocab == None else self.vocab.to_word(k))) for k in totallabel])
+        result = self.get_result()
+        o0 = self.get_aligned_table(result, flag="result")
 
-        for label,idx in zip(totallabel,range(lenth)):
-            idx2row[label]=idx  #建立一个临时字典，key:vocab的index, value: 行列index  1,3,5...->0,1,2,...
-            row2idx[idx]=label  #建立一个临时字典，value:vocab的index, key: 行列index  0,1,2...->1,3,5,...
-        # 这里打印东西
-        #表头
-        head=["\ntarget"]+[str(namedict[row2idx[k]]) for k in row2idx.keys()]+["all"]
-        output="\t".join(head) + "\n" + "pred" + "\n"
-        #内容
-        for i in row2idx.keys(): #第i行
-            p=row2idx[i]
-            h=namedict[p]
-            l=[0 for _ in range(lenth)]
-            if self.confusiondict.get(p,None):
-                for t,c in self.confusiondict[p].items():
-                    l[idx2row[t]] = c #完成一行
-            l=[h]+[str(n) for n in l]+[str(sum(l))]
-            output+="\t".join(l) +"\n"
-        #表尾
-        tail=[self.targetcount.get(row2idx[k],0) for k in row2idx.keys()]
-        tail=["all"]+[str(n) for n in tail]+[str(sum(tail))]
-        output+="\t".join(tail)
-        return output
+        out = str()
+        if self.print_ratio:
+            p1 = self.get_percent()
+            o1 = "\nNotice the row direction\n" + self.get_aligned_table(
+                p1, flag="percent")
+            p2 = self.get_percent(dim=1)
+            o2 = "\nNotice the column direction\n" + self.get_aligned_table(
+                p2, flag="percent")
+            out = out + o0 + o1 + o2
+        else:
+            out = o0
+        return out
 
 
 class Option(dict):
