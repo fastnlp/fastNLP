@@ -775,7 +775,8 @@ class DataSet(object):
     def set_ignore_type(self, *field_names, flag=True):
         """
         将field设置为忽略类型状态。当某个field被设置了ignore_type, 则在被设置为target或者input时将不进行类型检查，
-        默认情况下也不进行pad。
+        默认情况下也不进行pad。如果仍需要pad该field，可通过自定义Padder实现，若该field需要转换为tensor，需要在padder
+        中转换，但不需要在padder中移动到gpu。
 
         :param str field_names: field的名称
         :param bool flag: 将field_name的ignore_type状态设置为flag

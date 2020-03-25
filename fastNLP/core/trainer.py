@@ -492,6 +492,7 @@ class Trainer(object):
         elif isinstance(train_data, BatchIter):
             self.data_iterator = train_data
             train_data = train_data.dataset
+            check_code_level = -1  # 强制跳过校验
         else:
             raise TypeError("train_data type {} not support".format(type(train_data)))
 
@@ -873,26 +874,9 @@ def _check_code(dataset, model, losser, metrics, forward_func, batch_size=DEFAUL
                 dev_data=None, metric_key=None, check_level=0):
     # check get_loss 方法
     model_device = _get_model_device(model=model)
-    def _iter():
-        start_idx = 0
-        while start_idx<len(dataset):
-            batch_x = {}
-            batch_y = {}
-            for field_name, field in dataset.get_all_fields().items():
-                indices = list(range(start_idx, min(start_idx+batch_size, len(dataset))))
-                if field.is_target or field.is_input:
-                    batch = field.get(indices)
-                    if field.dtype is not None and \
-                            issubclass(field.dtype, Number) and not isinstance(batch, torch.Tensor):
-                        batch, _ = _to_tensor(batch, field.dtype)
-                    if field.is_target:
-                        batch_y[field_name] = batch
-                    if field.is_input:
-                        batch_x[field_name] = batch
-            yield (batch_x, batch_y)
-            start_idx += batch_size
+    _iter = DataSetIter(dataset, batch_size=batch_size, sampler=None)
 
-    for batch_count, (batch_x, batch_y) in enumerate(_iter()):
+    for batch_count, (batch_x, batch_y) in enumerate(_iter):
         _move_dict_value_to_device(batch_x, batch_y, device=model_device)
         # forward check
         if batch_count == 0:

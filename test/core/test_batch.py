@@ -64,7 +64,7 @@ class TestCase1(unittest.TestCase):
         for _, _ in batch:
             cnt += 1
         self.assertEqual(cnt, 10)
-    
+
     def test_dataset_batching(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
         ds.set_input("x")
@@ -150,6 +150,32 @@ class TestCase1(unittest.TestCase):
         batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler())
         for batch_x, batch_y in batch:
             pass
+
+    def test_udf_padder(self):
+        from fastNLP.core.field import Padder
+        alphas = list('abcdefghijk')
+        class UDFPadder(Padder):
+            def __init__(self):
+                super().__init__()
+
+            def __call__(self, contents, field_name, field_ele_dtype, dim):
+                results = [alphas[:con] for con in contents]
+                return results
+
+        batch_size = 32
+        num_samples = 1000
+        dataset = generate_fake_dataset(num_samples)
+        contents = np.random.randint(5, size=(num_samples))
+        dataset.add_field('test', contents, is_input=True, padder=UDFPadder(),
+                          ignore_type=True)
+
+        batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler())
+        for batch_x, batch_y in batch:
+            test = batch_x['test']
+            indices = batch.cur_batch_indices
+            cons = contents[indices]
+            for con,t in zip(cons, test):
+                self.assertEqual(alphas[:con], t)
 
     def test_collect_fn(self):
         batch_size = 32
