@@ -413,3 +413,9 @@ Dataset个性化padding
         AccuracyMetric: acc=0.786667
 
 
+
+----------------------------------
+代码下载
+----------------------------------
+
+`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_6_datasetiter.ipynb>`_)

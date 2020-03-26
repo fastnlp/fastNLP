@@ -182,3 +182,10 @@ FastNLP 中包含的各种模块如下表，您可以点击具体的名称查看
    :class:`~fastNLP.modules.viterbi_decode` , 给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数 （与 :class:`~fastNLP.modules.ConditionalRandomField` 配合使用）
    :class:`~fastNLP.modules.allowed_transitions` , 给定一个id到label的映射表，返回所有可以跳转的列表（与 :class:`~fastNLP.modules.ConditionalRandomField` 配合使用）
    :class:`~fastNLP.modules.TimestepDropout` , 简单包装过的Dropout 组件
+
+
+----------------------------------
+代码下载
+----------------------------------
+
+`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_8_modules_models.ipynb>`_)

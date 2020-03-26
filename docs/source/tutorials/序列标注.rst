@@ -197,3 +197,10 @@ fastNLP的数据载入主要是由Loader与Pipe两个基类衔接完成的，您
     SpanFPreRecMetric: f=0.641774, pre=0.626424, rec=0.657895
 
 可以看出通过使用Bert，效果有明显的提升，从48.2提升到了64.1。
+
+
+----------------------------------
+代码下载
+----------------------------------
+
+`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/%E5%BA%8F%E5%88%97%E6%A0%87%E6%B3%A8.ipynb>`_)

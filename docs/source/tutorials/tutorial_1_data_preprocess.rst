@@ -162,3 +162,9 @@ fastNLP中field的命名习惯
     - **chars**: 表示已经切分为单独的汉字的序列。例如["这", "是", "一", "个", "示", "例", "。"]。但由于神经网络不能识别汉字，所以一般该列会被转为int形式，如[3, 4, 5, 6, ...]。
     - **target**: 表示目标值。分类场景下，只有一个值；序列标注场景下是一个序列
     - **seq_len**: 表示输入序列的长度
+
+----------------------------------
+代码下载
+----------------------------------
+
+`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_1_data_preprocess.ipynb>`_)

@@ -451,3 +451,10 @@ fastNLP通过在 :class:`~fastNLP.embeddings.StaticEmbedding` 增加了一个min
     tensor([[ 0.6707, -0.5786, -0.6967,  0.0111,  0.1209]], grad_fn=<EmbeddingBackward>)  # unk
 
 可以看到a不再和最后一行的unknown共享一个表示了，这是由于a与A都算入了a的词频，且A的表示也是a的表示。
+
+
+----------------------------------
+代码下载
+----------------------------------
+
+`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_3_embedding.ipynb>`_)

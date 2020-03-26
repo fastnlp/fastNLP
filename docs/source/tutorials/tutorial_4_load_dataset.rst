@@ -208,3 +208,10 @@ Part V: 不同格式类型的基础Loader
         "A person on a horse jumps over a broken down airplane.", "A person is training his horse for a competition.", "neutral"
         "A person on a horse jumps over a broken down airplane.", "A person is at a diner, ordering an omelette.", "contradiction"
         "A person on a horse jumps over a broken down airplane.", "A person is outdoors, on a horse.", "entailment"
+
+
+----------------------------------
+代码下载
+----------------------------------
+
+`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_4_load_dataset.ipynb>`_)

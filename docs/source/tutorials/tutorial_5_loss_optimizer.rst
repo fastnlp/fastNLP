@@ -238,3 +238,9 @@
         Evaluate data in 0.43 seconds!
         [tester]
         AccuracyMetric: acc=0.773333
+
+----------------------------------
+代码下载
+----------------------------------
+
+`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_5_loss_optimizer.ipynb>`_)

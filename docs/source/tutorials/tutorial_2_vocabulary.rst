@@ -129,3 +129,10 @@ fastNLP中的Vocabulary
 首先train和test都能够从预训练中找到对应的vector，所以它们是各自的vector表示; only_in_train在预训练中找不到，StaticEmbedding为它
 新建了一个entry，所以它有一个单独的vector; 而only_in_test在预训练中找不到改词，因此被指向了unk的值(fastNLP用零向量初始化unk)，与最后一行unk的
 表示相同。
+
+
+----------------------------------
+代码下载
+----------------------------------
+
+`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_2_vocabulary.ipynb>`_)

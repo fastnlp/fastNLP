@@ -222,3 +222,8 @@ Bert自从在 `BERT: Pre-training of Deep Bidirectional Transformers for Languag
     CMRC2018Metric: f1=85.61, em=66.08
 
 
+----------------------------------
+代码下载
+----------------------------------
+
+`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/extend_1_bert_embedding.ipynb>`_)

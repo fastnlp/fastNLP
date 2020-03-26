@@ -125,3 +125,9 @@
 self.evaluate将计算一个批次(batch)的评价指标，并累计。 没有返回值
 self.get_metric将统计当前的评价指标并返回评价结果, 返回值需要是一个dict, key是指标名称，value是指标的值
 
+
+----------------------------------
+代码下载
+----------------------------------
+
+`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_7_metrics.ipynb>`_)
