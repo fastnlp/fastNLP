@@ -214,4 +214,6 @@ Part V: 不同格式类型的基础Loader
 代码下载
 ----------------------------------
 
-`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_4_load_dataset.ipynb>`_)
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_4_load_dataset.ipynb" download="tutorial_4_load_dataset.ipynb">点击下载 IPython Notebook 文件</a><hr>

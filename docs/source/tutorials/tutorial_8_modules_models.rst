@@ -188,4 +188,6 @@ FastNLP 中包含的各种模块如下表，您可以点击具体的名称查看
 代码下载
 ----------------------------------
 
-`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_8_modules_models.ipynb>`_)
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_8_modules_models.ipynb" download="tutorial_8_modules_models.ipynb">点击下载 IPython Notebook 文件</a><hr>

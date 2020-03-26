@@ -130,4 +130,6 @@ self.get_metric将统计当前的评价指标并返回评价结果, 返回值需
 代码下载
 ----------------------------------
 
-`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_7_metrics.ipynb>`_)
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_7_metrics.ipynb" download="tutorial_7_metrics.ipynb">点击下载 IPython Notebook 文件</a><hr>

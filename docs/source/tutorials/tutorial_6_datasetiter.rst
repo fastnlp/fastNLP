@@ -418,4 +418,6 @@ Dataset个性化padding
 代码下载
 ----------------------------------
 
-`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_6_datasetiter.ipynb>`_)
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_6_datasetiter.ipynb" download="tutorial_6_datasetiter.ipynb">点击下载 IPython Notebook 文件</a><hr>

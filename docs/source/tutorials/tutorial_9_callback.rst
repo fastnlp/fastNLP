@@ -135,4 +135,6 @@ fastNLP 中提供了很多常用的 Callback，如梯度裁剪，训练时早停
 代码下载
 ----------------------------------
 
-`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_9_callback.ipynb>`_)
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_9_callback.ipynb" download="tutorial_9_callback.ipynb">点击下载 IPython Notebook 文件</a><hr>

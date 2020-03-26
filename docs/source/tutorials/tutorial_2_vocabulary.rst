@@ -135,4 +135,6 @@ fastNLP中的Vocabulary
 代码下载
 ----------------------------------
 
-`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_2_vocabulary.ipynb>`_)
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_2_vocabulary.ipynb" download="tutorial_2_vocabulary.ipynb">点击下载 IPython Notebook 文件</a><hr>

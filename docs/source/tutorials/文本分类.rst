@@ -373,4 +373,6 @@ fastNLP提供了Trainer对象来组织训练过程，包括完成loss计算(所�
 代码下载
 ----------------------------------
 
-`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB.ipynb>`_)
+.. raw:: html
+
+    <a href="../_static/notebooks/%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB.ipynb" download="文本分类.ipynb">点击下载 IPython Notebook 文件 </a>

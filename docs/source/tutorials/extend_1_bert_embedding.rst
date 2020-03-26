@@ -226,4 +226,6 @@ Bert自从在 `BERT: Pre-training of Deep Bidirectional Transformers for Languag
 代码下载
 ----------------------------------
 
-`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/extend_1_bert_embedding.ipynb>`_)
+.. raw:: html
+
+    <a href="../_static/notebooks/extend_1_bert_embedding.ipynb" download="extend_1_bert_embedding.ipynb">点击下载 IPython Notebook 文件</a><hr>

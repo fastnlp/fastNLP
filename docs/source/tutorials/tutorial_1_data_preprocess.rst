@@ -167,4 +167,6 @@ fastNLP中field的命名习惯
 代码下载
 ----------------------------------
 
-`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_1_data_preprocess.ipynb>`_)
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_1_data_preprocess.ipynb" download="tutorial_1_data_preprocess.ipynb">点击下载 IPython Notebook 文件</a><hr>

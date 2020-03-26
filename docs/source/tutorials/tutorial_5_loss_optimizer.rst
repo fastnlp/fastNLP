@@ -243,4 +243,6 @@
 代码下载
 ----------------------------------
 
-`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_5_loss_optimizer.ipynb>`_)
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_5_loss_optimizer.ipynb" download="tutorial_5_loss_optimizer.ipynb">点击下载 IPython Notebook 文件</a><hr>

@@ -457,4 +457,6 @@ fastNLP通过在 :class:`~fastNLP.embeddings.StaticEmbedding` 增加了一个min
 代码下载
 ----------------------------------
 
-`点击下载 IPython Notebook 文件 <https://sourcegraph.com/github.com/fastnlp/fastNLP@master/-/raw/tutorials/tutorial_3_embedding.ipynb>`_)
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_3_embedding.ipynb" download="tutorial_3_embedding.ipynb">点击下载 IPython Notebook 文件</a><hr>
