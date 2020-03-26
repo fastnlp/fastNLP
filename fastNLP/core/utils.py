@@ -620,7 +620,7 @@ def _move_dict_value_to_device(*args, device: torch.device, non_blocking=False):
     :param args:
     :return:
     """
-    if not torch.cuda.is_available():
+    if not torch.cuda.is_available() or device is None:
         return
 
     if not isinstance(device, torch.device):

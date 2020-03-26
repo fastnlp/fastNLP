@@ -122,7 +122,7 @@ class SamplerAdapter(torch.utils.data.Sampler):
 
 class BatchIter:
     """
-    Trainer用于迭代数据的类。继承该类，并实现get_num_batches(), get_batch_indices(), num_batches(), __iter__()方法以及属性。
+    Trainer用于迭代数据的类。继承该类，并实现get_num_batches(), get_batch_indices(), num_batches(), __iter__()方法以及dataset属性。
 
     """
     def __init__(self, dataset, batch_size=1, sampler=None,
@@ -259,8 +259,8 @@ class DataSetIter(BatchIter):
 
 class TorchLoaderIter(BatchIter):
     """
-    与DataSetIter类似，但可以用于pytorch的DataSet对象。可以通过使用TorchLoaderIter封装pytorch的DataSet，然后将其传入到Trainer中。
-        或者也可以传入任何实现了类似以下方法的对象
+    与DataSetIter类似，但可以用于非fastNLP的数据容器对象，然后将其传入到Trainer中。
+        只需要保证数据容器实现了实现了以下的方法
 
         Example::
 
@@ -287,7 +287,7 @@ class TorchLoaderIter(BatchIter):
                     x, y = l
                     xs.append(x)
                     ys.append(y)
-                # 不需要转移到gpu，Trainer和Tester会将其转移到model所在的device
+                # 不需要转移到gpu，Trainer或Tester会将其转移到model所在的device
                 x,y = torch.FloatTensor(xs), torch.FloatTensor(ys)
                 return {'x':x, 'y':y}, {'y':y}
 

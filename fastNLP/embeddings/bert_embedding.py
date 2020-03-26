@@ -56,7 +56,7 @@ class BertEmbedding(ContextualEmbedding):
     
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en-base-uncased', layers: str = '-1',
                  pool_method: str = 'first', word_dropout=0, dropout=0, include_cls_sep: bool = False,
-                 pooled_cls=True, requires_grad: bool = True, auto_truncate: bool = False):
+                 pooled_cls=True, requires_grad: bool = True, auto_truncate: bool = False, **kwargs):
         """
         
         :param ~fastNLP.Vocabulary vocab: 词表
@@ -77,6 +77,9 @@ class BertEmbedding(ContextualEmbedding):
         :param bool auto_truncate: 当句子words拆分为word pieces长度超过bert最大允许长度(一般为512), 自动截掉拆分后的超过510个
             word pieces后的内容，并将第512个word piece置为[SEP]。超过长度的部分的encode结果直接全部置零。一般仅有只使用[CLS]
             来进行分类的任务将auto_truncate置为True。
+        :param kwargs:
+            bool only_use_pretrain_bpe: 仅使用出现在pretrain词表中的bpe，如果该词没法tokenize则使用unk。如果embedding不需要更新
+                建议设置为True。
         """
         super(BertEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
@@ -93,10 +96,13 @@ class BertEmbedding(ContextualEmbedding):
         self._word_sep_index = None
         if '[SEP]' in vocab:
             self._word_sep_index = vocab['[SEP]']
+
+        only_use_pretrain_bpe = kwargs.get('only_use_pretrain_bpe', False)
         
         self.model = _WordBertModel(model_dir_or_name=model_dir_or_name, vocab=vocab, layers=layers,
                                     pool_method=pool_method, include_cls_sep=include_cls_sep,
-                                    pooled_cls=pooled_cls, auto_truncate=auto_truncate, min_freq=2)
+                                    pooled_cls=pooled_cls, auto_truncate=auto_truncate, min_freq=2,
+                                    only_use_pretrain_bpe=only_use_pretrain_bpe)
         self._sep_index = self.model._sep_index
         self._cls_index = self.model._cls_index
         self.requires_grad = requires_grad
@@ -254,7 +260,8 @@ class BertWordPieceEncoder(nn.Module):
 
 class _WordBertModel(nn.Module):
     def __init__(self, model_dir_or_name: str, vocab: Vocabulary, layers: str = '-1', pool_method: str = 'first',
-                 include_cls_sep: bool = False, pooled_cls: bool = False, auto_truncate: bool = False, min_freq=2):
+                 include_cls_sep: bool = False, pooled_cls: bool = False, auto_truncate: bool = False, min_freq=2,
+                 only_use_pretrain_bpe=False):
         super().__init__()
         
         self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
@@ -302,7 +309,7 @@ class _WordBertModel(nn.Module):
                 if not vocab._is_word_no_create_entry(word):  # 如果是train中的值, 但是却没有找到
                     if index != vocab.unknown_idx and word_pieces[0] == '[UNK]':  # 说明这个词不在原始的word里面
                         if vocab.word_count[word] >= min_freq and not vocab._is_word_no_create_entry(
-                                word):  # 出现次数大于这个次数才新增
+                                word) and not only_use_pretrain_bpe:  # 出现次数大于这个次数才新增
                             word_piece_dict[word] = 1  # 新增一个值
                         continue
             for word_piece in word_pieces:

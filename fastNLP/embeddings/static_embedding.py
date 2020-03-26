@@ -88,8 +88,8 @@ class StaticEmbedding(TokenEmbedding):
         :param dict kwargs:
                 bool only_train_min_freq: 仅对train中的词语使用min_freq筛选;
                 bool only_norm_found_vector: 是否仅对在预训练中找到的词语使用normalize;
-                bool only_use_pretrain_word: 仅使用出现在pretrain词表中的词语。如果该词没有在预训练的词表中出现则为unk。如果词表
-                    不需要更新设置为True。
+                bool only_use_pretrain_word: 仅使用出现在pretrain词表中的词，如果该词没有在预训练的词表中出现则为unk。如果
+                    embedding不需要更新建议设置为True。
         """
         super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         if embedding_dim > 0:

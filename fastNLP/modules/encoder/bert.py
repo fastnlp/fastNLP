@@ -605,7 +605,7 @@ class BertModel(nn.Module):
             logger.warning("Weights of {} not initialized from pretrained model: {}".format(
                 model.__class__.__name__, missing_keys))
         if len(unexpected_keys) > 0:
-            logger.warning("Weights from pretrained model not used in {}: {}".format(
+            logger.debug("Weights from pretrained model not used in {}: {}".format(
                 model.__class__.__name__, unexpected_keys))
 
         logger.info(f"Load pre-trained {model_type} parameters from file {weights_path}.")
