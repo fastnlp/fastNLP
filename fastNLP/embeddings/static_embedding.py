@@ -27,6 +27,9 @@ class StaticEmbedding(TokenEmbedding):
     StaticEmbedding组件. 给定预训练embedding的名称或路径，根据vocab从embedding中抽取相应的数据(只会将出现在vocab中的词抽取出来，
     如果没有找到，则会随机初始化一个值(但如果该word是被标记为no_create_entry的话，则不会单独创建一个值，而是会被指向unk的index))。
     当前支持自动下载的预训练vector有:
+    
+    .. code::
+    
         en: 实际为en-glove-840b-300d(常用)
         en-glove-6b-50d: glove官方的50d向量
         en-glove-6b-100d: glove官方的100d向量
@@ -88,8 +91,7 @@ class StaticEmbedding(TokenEmbedding):
         :param dict kwargs:
                 bool only_train_min_freq: 仅对train中的词语使用min_freq筛选;
                 bool only_norm_found_vector: 是否仅对在预训练中找到的词语使用normalize;
-                bool only_use_pretrain_word: 仅使用出现在pretrain词表中的词，如果该词没有在预训练的词表中出现则为unk。如果
-                    embedding不需要更新建议设置为True。
+                bool only_use_pretrain_word: 仅使用出现在pretrain词表中的词，如果该词没有在预训练的词表中出现则为unk。如果embedding不需要更新建议设置为True。
         """
         super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         if embedding_dim > 0:

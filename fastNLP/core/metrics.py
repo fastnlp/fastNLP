@@ -282,21 +282,31 @@ class MetricBase(object):
 class ConfusionMatrixMetric(MetricBase):
     r"""
     分类问题计算混淆矩阵的Metric（其它的Metric参见 :mod:`fastNLP.core.metrics` ）
-    最后返回结果为dict,{'confusion_matrix': ConfusionMatrix实例}
+    最后返回结果为::
+        
+        dict,{'confusion_matrix': ConfusionMatrix实例}
+        
     ConfusionMatrix实例的print()函数将输出矩阵字符串。
-    pred_dict = {"pred": torch.Tensor([2,1,3])}
-    target_dict = {'target': torch.Tensor([2,2,1])}
-    metric = ConfusionMatrixMetric()
-    metric(pred_dict=pred_dict, target_dict=target_dict, )
-    print(metric.get_metric())
-    {'confusion_matrix': 
-     target  1.0     2.0     3.0     all
-       pred
-        1.0    0       1       0       1
-        2.0    0       1       0       1
-        3.0    1       0       0       1
-        all    1       2       0       3
-}
+    
+    .. code ::
+    
+        pred_dict = {"pred": torch.Tensor([2,1,3])}
+        target_dict = {'target': torch.Tensor([2,2,1])}
+        metric = ConfusionMatrixMetric()
+        metric(pred_dict=pred_dict, target_dict=target_dict, )
+        print(metric.get_metric())
+        
+    .. code ::
+        
+        {'confusion_matrix':
+         target  1.0     2.0     3.0     all
+           pred
+            1.0    0       1       0       1
+            2.0    0       1       0       1
+            3.0    1       0       0       1
+            all    1       2       0       3
+        }
+        
     """
     def __init__(self,
                  vocab=None,
@@ -322,12 +332,12 @@ class ConfusionMatrixMetric(MetricBase):
     def evaluate(self, pred, target, seq_len=None):
         """
         evaluate函数将针对一个批次的预测结果做评价指标的累计
+        
         :param torch.Tensor pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
-                torch.Size([B, max_len]), 或者torch.Size([B, max_len, n_classes])
+            torch.Size([B, max_len]), 或者torch.Size([B, max_len, n_classes])
         :param torch.Tensor target: 真实值的tensor, tensor的形状可以是Element's can be: torch.Size([B,]),
-                torch.Size([B,]), torch.Size([B, max_len]), 或者torch.Size([B, max_len])
+            torch.Size([B,]), torch.Size([B, max_len]), 或者torch.Size([B, max_len])
         :param torch.Tensor seq_len: 序列长度标记, 标记的形状可以是None, torch.Size([B]), 或者torch.Size([B]).
-                
         """
         if not isinstance(pred, torch.Tensor):
             raise TypeError(
@@ -489,11 +499,12 @@ class ClassifyFPreRecMetric(MetricBase):
             'rec-label':xxx,
             ...
         }
+    
     """
 
     def __init__(self, tag_vocab=None, pred=None, target=None, seq_len=None, ignore_labels=None,
                  only_gross=True, f_type='micro', beta=1):
-        """
+        r"""
 
         :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` . 默认值为None。若为None则使用数字来作为标签内容，否则使用vocab来作为标签内容。
         :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用 `pred` 取数据
@@ -504,6 +515,7 @@ class ClassifyFPreRecMetric(MetricBase):
         :param str f_type: `micro` 或 `macro` . `micro` :通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; `macro` : 分布计算每个类别的f, precision, recall，然后做平均（各类别f的权重相同）
         :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` . 常用为 `beta=0.5, 1, 2` 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
         """
+        
         if tag_vocab:
             if not isinstance(tag_vocab, Vocabulary):
                 raise TypeError("tag_vocab can only be fastNLP.Vocabulary, not {}.".format(type(tag_vocab)))

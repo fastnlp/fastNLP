@@ -260,51 +260,51 @@ class DataSetIter(BatchIter):
 class TorchLoaderIter(BatchIter):
     """
     与DataSetIter类似，但可以用于非fastNLP的数据容器对象，然后将其传入到Trainer中。
-        只需要保证数据容器实现了实现了以下的方法
+    只需要保证数据容器实现了实现了以下的方法
 
-        Example::
+    Example::
 
-            import random
-            from fastNLP import TorchLoaderIter
-            import torch
-            class UdfDataSet:
-                def __init__(self, num_samples):
-                    self.num_samples = num_samples
+        import random
+        from fastNLP import TorchLoaderIter
+        import torch
+        class UdfDataSet:
+            def __init__(self, num_samples):
+                self.num_samples = num_samples
 
-                def __getitem__(self, idx):  # 必须实现的方法，输入参数是一个int，范围为[0, len(self))
-                    x = [random.random() for _ in range(3)]
-                    y = random.random()
-                    return x,y
+            def __getitem__(self, idx):  # 必须实现的方法，输入参数是一个int，范围为[0, len(self))
+                x = [random.random() for _ in range(3)]
+                y = random.random()
+                return x,y
 
-                def __len__(self):  # 需要实现该方法返回值需要是一个int数据
-                    return self.num_samples
+            def __len__(self):  # 需要实现该方法返回值需要是一个int数据
+                return self.num_samples
 
-            # 需要实现collact_fn将数据转换为tensor
-            def collact_fn(data_list):
-                # [(x1,y1), (x2,y2), ...], 这里的输入实际上是将UdfDataSet的__getitem__输入结合为list
-                xs, ys = [], []
-                for l in data_list:
-                    x, y = l
-                    xs.append(x)
-                    ys.append(y)
-                # 不需要转移到gpu，Trainer或Tester会将其转移到model所在的device
-                x,y = torch.FloatTensor(xs), torch.FloatTensor(ys)
-                return {'x':x, 'y':y}, {'y':y}
+        # 需要实现collact_fn将数据转换为tensor
+        def collact_fn(data_list):
+            # [(x1,y1), (x2,y2), ...], 这里的输入实际上是将UdfDataSet的__getitem__输入结合为list
+            xs, ys = [], []
+            for l in data_list:
+                x, y = l
+                xs.append(x)
+                ys.append(y)
+            # 不需要转移到gpu，Trainer或Tester会将其转移到model所在的device
+            x,y = torch.FloatTensor(xs), torch.FloatTensor(ys)
+            return {'x':x, 'y':y}, {'y':y}
 
-            udf_dataset = UdfDataSet(10)
-            dataset = TorchLoaderIter(udf_dataset, collate_fn=collact_fn)
-            class Model(nn.Module):
-                def __init__(self):
-                    super().__init__()
-                    self.fc = nn.Linear(3, 1)
-                def forward(self, x, y):
-                    return {'loss':torch.pow(self.fc(x).squeeze(-1)-y, 2).sum()}
-                def predict(self, x):
-                    return {'pred':self.fc(x).squeeze(0)}
-            model = Model()
-            trainer = Trainer(train_data=dataset, model=model, loss=None, print_every=2, dev_data=dataset,
-                              metrics=AccuracyMetric(target='y'), use_tqdm=False)
-            trainer.train(load_best_model=False)
+        udf_dataset = UdfDataSet(10)
+        dataset = TorchLoaderIter(udf_dataset, collate_fn=collact_fn)
+        class Model(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fc = nn.Linear(3, 1)
+            def forward(self, x, y):
+                return {'loss':torch.pow(self.fc(x).squeeze(-1)-y, 2).sum()}
+            def predict(self, x):
+                return {'pred':self.fc(x).squeeze(0)}
+        model = Model()
+        trainer = Trainer(train_data=dataset, model=model, loss=None, print_every=2, dev_data=dataset,
+                          metrics=AccuracyMetric(target='y'), use_tqdm=False)
+        trainer.train(load_best_model=False)
 
     除此之外，还可以通过该方法实现OnTheFly的训练，如下面的代码所示
 
@@ -321,7 +321,7 @@ class TorchLoaderIter(BatchIter):
                 data.append(x + [y])
             with open(tmp_file_path, 'w') as f:
                 for d in data:
-                    f.write(' '.join(map(str, d)) + '\n')
+                    f.write(' '.join(map(str, d)) + '\\n')
 
             class FileDataSet:
                 def __init__(self, tmp_file):
@@ -382,6 +382,7 @@ class TorchLoaderIter(BatchIter):
             import os
             if os.path.exists(tmp_file_path):
                 os.remove(tmp_file_path)
+    
     """
     def __init__(self, dataset, batch_size=1, sampler=None,
                  num_workers=0, pin_memory=False, drop_last=False,
@@ -391,7 +392,6 @@ class TorchLoaderIter(BatchIter):
         :param dataset: :class:`~fastNLP.DataSet` 对象, 数据集
         :param int batch_size: 取出的batch大小
         :param sampler: 规定使用的 :class:`~fastNLP.Sampler` 方式. 若为 ``None`` , 使用 :class:`~fastNLP.SequentialSampler`.
-
             Default: ``None``
         :param int num_workers: 使用多少个进程来预处理数据
         :param bool pin_memory: 是否将产生的tensor使用pin memory, 可能会加快速度。

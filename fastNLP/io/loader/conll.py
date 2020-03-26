@@ -227,7 +227,7 @@ class OntoNotesNERLoader(ConllLoader):
         :header: "raw_words", "target"
 
         "['Hi', 'everyone', '.']", "['O', 'O', 'O']"
-        "['first', 'up', 'on', 'the', 'docket'], "['O', 'O', 'O', 'O', 'O']"
+        "['first', 'up', 'on', 'the', 'docket']", "['O', 'O', 'O', 'O', 'O']"
         "[...]", "[...]"
 
     """

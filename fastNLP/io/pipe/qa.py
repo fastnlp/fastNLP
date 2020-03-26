@@ -83,15 +83,19 @@ class CMRC2018BertPipe(Pipe):
 
     .. csv-table::
         :header: "context_len", "raw_chars",  "target_start", "target_end", "chars"
-        492, ['范', '廷', '颂... ], 30, 34, [21, 25, ...]
-        491, ['范', '廷', '颂... ], 41, 61, [21, 25, ...]
+        
+        492, ['范', '廷', '颂... ], 30, 34, "[21, 25, ...]"
+        491, ['范', '廷', '颂... ], 41, 61, "[21, 25, ...]"
 
-       ".", "...", "...","...", "..."
+        ".", "...", "...","...", "..."
 
     raw_words列是context与question拼起来的结果(连接的地方加入了[SEP])，words是转为index的值, target_start为答案start的index，target_end为答案end的index
     （闭区间）；context_len指示的是words列中context的长度。
 
     其中各列的meta信息如下:
+    
+    .. code::
+    
         +-------------+-------------+-----------+--------------+------------+-------+---------+
         | field_names | context_len | raw_chars | target_start | target_end | chars | answers |
         +-------------+-------------+-----------+--------------+------------+-------+---------|
@@ -100,7 +104,7 @@ class CMRC2018BertPipe(Pipe):
         | ignore_type |    False    |    True   |    False     |   False    | False |  True   |
         |  pad_value  |      0      |     0     |      0       |     0      |   0   |   0     |
         +-------------+-------------+-----------+--------------+------------+-------+---------+
-
+    
     """
     def __init__(self, max_len=510):
         super().__init__()
