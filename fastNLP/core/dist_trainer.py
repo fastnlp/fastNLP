@@ -1,4 +1,4 @@
-"""
+r"""
 分布式 Trainer
 使用步骤
 1. 在代码中调用 DistTrainer，类似 Trainer，传入模型和数据等等参数
@@ -41,7 +41,7 @@ __all__ = [
 ]
 
 def get_local_rank():
-    """
+    r"""
     返回当前进程的 local rank， 0 到 N-1 ，N为当前分布式总进程数
     """
     if 'LOCAL_RANK' in os.environ:
@@ -57,7 +57,7 @@ def get_local_rank():
 
 
 class DistTrainer():
-    """
+    r"""
     分布式的 Trainer，支持分布式训练和混合精度的训练。具体实现原理请阅读 pytorch 官方文档。
 
     Note: 使用分布式 Trainer 时会同时有多个进程执行训练代码。因此将单进程的训练代码改为多进程之前，
@@ -71,7 +71,7 @@ class DistTrainer():
                  update_every=1, print_every=10, validate_every=-1,
                  save_every=-1, save_path=None, device='auto',
                  fp16='', backend=None, init_method=None, use_tqdm=True):
-        """
+        r"""
 
         :param train_data: 训练集， :class:`~fastNLP.DataSet` 类型。
         :param nn.modules model: 待训练的模型
@@ -227,11 +227,11 @@ class DistTrainer():
 
     @property
     def is_master(self):
-        """是否是主进程"""
+        r"""是否是主进程"""
         return self.rank == 0
 
     def train(self, load_best_model=True, on_exception='auto'):
-        """
+        r"""
         使用该函数使Trainer开始训练。
 
         :param str on_exception: 在训练过程遭遇exception，并被 :py:class:Callback 的on_exception()处理后，是否继续抛出异常。
@@ -374,7 +374,7 @@ class DistTrainer():
     # ============ tqdm end ============== #
 
     def _update(self):
-        """Perform weight update on a model.
+        r"""Perform weight update on a model.
 
         """
         if self.step % self.update_every == 0:
@@ -390,7 +390,7 @@ class DistTrainer():
         return y
 
     def _compute_loss(self, predict, truth):
-        """Compute loss given prediction and ground truth.
+        r"""Compute loss given prediction and ground truth.
 
         :param predict: prediction dict, produced by model.forward
         :param truth: ground truth dict, produced by batch_y
@@ -404,7 +404,7 @@ class DistTrainer():
         return loss
 
     def save_check_point(self, name=None, only_params=False):
-        """保存当前模型"""
+        r"""保存当前模型"""
         # only master save models
         if self.is_master:
             if name is None:
@@ -446,5 +446,5 @@ class DistTrainer():
         dist.barrier()
 
     def close(self):
-        """关闭Trainer，销毁进程"""
+        r"""关闭Trainer，销毁进程"""
         dist.destroy_process_group()

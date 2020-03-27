@@ -1,4 +1,4 @@
-"""
+r"""
 instance 模块实现了Instance 类在fastNLP中对应sample。一个sample可以认为是一个Instance类型的对象。
 便于理解的例子可以参考文档 :mod:`fastNLP.core.dataset` 中的表格
 
@@ -12,7 +12,7 @@ from .utils import pretty_table_printer
 
 
 class Instance(object):
-    """
+    r"""
     Instance是fastNLP中对应一个sample的类。每个sample在fastNLP中是一个Instance对象。
     Instance一般与 :class:`~fastNLP.DataSet` 一起使用, Instance的初始化如下面的Example所示::
     
@@ -29,7 +29,7 @@ class Instance(object):
         self.fields = fields
 
     def add_field(self, field_name, field):
-        """
+        r"""
         向Instance中增加一个field
 
         :param str field_name: 新增field的名称
@@ -38,7 +38,7 @@ class Instance(object):
         self.fields[field_name] = field
 
     def items(self):
-        """
+        r"""
         返回一个迭代器，迭代器返回两个内容，第一个内容是field_name, 第二个内容是field_value
         
         :return: 一个迭代器

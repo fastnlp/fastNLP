@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -23,7 +23,7 @@ from ..modules.utils import _get_file_name_base_on_postfix
 
 
 class StaticEmbedding(TokenEmbedding):
-    """
+    r"""
     StaticEmbedding组件. 给定预训练embedding的名称或路径，根据vocab从embedding中抽取相应的数据(只会将出现在vocab中的词抽取出来，
     如果没有找到，则会随机初始化一个值(但如果该word是被标记为no_create_entry的话，则不会单独创建一个值，而是会被指向unk的index))。
     当前支持自动下载的预训练vector有:
@@ -72,7 +72,7 @@ class StaticEmbedding(TokenEmbedding):
     
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', embedding_dim=-1, requires_grad: bool = True,
                  init_method=None, lower=False, dropout=0, word_dropout=0, normalize=False, min_freq=1, **kwargs):
-        """
+        r"""
         
         :param vocab: Vocabulary. 若该项为None则会读取所有的embedding。
         :param model_dir_or_name: 可以有两种方式调用预训练好的static embedding：第一种是传入embedding文件夹(文件夹下应该只有一个
@@ -204,7 +204,7 @@ class StaticEmbedding(TokenEmbedding):
         return self.embedding.weight
     
     def _randomly_init_embed(self, num_embedding, embedding_dim, init_embed=None):
-        """
+        r"""
 
         :param int num_embedding: embedding的entry的数量
         :param int embedding_dim: embedding的维度大小
@@ -222,7 +222,7 @@ class StaticEmbedding(TokenEmbedding):
     
     def _load_with_vocab(self, embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>',
                          error='ignore', init_method=None):
-        """
+        r"""
         从embed_filepath这个预训练的词向量中抽取出vocab这个词表的词的embedding。EmbedLoader将自动判断embed_filepath是
         word2vec(第一行只有两个元素)还是glove格式的数据。
 
@@ -309,7 +309,7 @@ class StaticEmbedding(TokenEmbedding):
             return vectors
     
     def forward(self, words):
-        """
+        r"""
         传入words的index
 
         :param words: torch.LongTensor, [batch_size, max_len]

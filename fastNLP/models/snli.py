@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -19,7 +19,7 @@ from ..modules.encoder import BiAttention
 
 
 class ESIM(BaseModel):
-    """
+    r"""
     ESIM model的一个PyTorch实现
     论文参见： https://arxiv.org/pdf/1609.06038.pdf
 
@@ -27,7 +27,7 @@ class ESIM(BaseModel):
 
     def __init__(self, embed, hidden_size=None, num_labels=3, dropout_rate=0.3,
                  dropout_embed=0.1):
-        """
+        r"""
         
         :param embed: 初始化的Embedding
         :param int hidden_size: 隐藏层大小，默认值为Embedding的维度
@@ -68,7 +68,7 @@ class ESIM(BaseModel):
         nn.init.xavier_uniform_(self.classifier[4].weight.data)
 
     def forward(self, words1, words2, seq_len1, seq_len2, target=None):
-        """
+        r"""
         :param words1: [batch, seq_len]
         :param words2: [batch, seq_len]
         :param seq_len1: [batch]

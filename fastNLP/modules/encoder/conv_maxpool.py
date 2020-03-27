@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "ConvMaxpool"
@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 
 class ConvMaxpool(nn.Module):
-    """
+    r"""
     集合了Convolution和Max-Pooling于一体的层。给定一个batch_size x max_len x input_size的输入，返回batch_size x
     sum(output_channels) 大小的matrix。在内部，是先使用CNN给输入做卷积，然后经过activation激活层，在通过在长度(max_len)
     这一维进行max_pooling。最后得到每个sample的一个向量表示。
@@ -17,7 +17,7 @@ class ConvMaxpool(nn.Module):
     """
 
     def __init__(self, in_channels, out_channels, kernel_sizes, activation="relu"):
-        """
+        r"""
         
         :param int in_channels: 输入channel的大小，一般是embedding的维度; 或encoder的output维度
         :param int,tuple(int) out_channels: 输出channel的数量。如果为list，则需要与kernel_sizes的数量保持一致
@@ -68,7 +68,7 @@ class ConvMaxpool(nn.Module):
                 "Undefined activation function: choose from: relu, tanh, sigmoid")
 
     def forward(self, x, mask=None):
-        """
+        r"""
 
         :param torch.FloatTensor x: batch_size x max_len x input_size, 一般是经过embedding后的值
         :param mask: batch_size x max_len, pad的地方为0。不影响卷积运算，max-pool一定不会pool到pad为0的位置

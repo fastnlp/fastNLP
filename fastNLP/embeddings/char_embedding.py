@@ -1,4 +1,4 @@
-"""
+r"""
 该文件中主要包含的是character的Embedding，包括基于CNN与LSTM的character Embedding。与其它Embedding一样，这里的Embedding输入也是
 词的index而不需要使用词语中的char的index来获取表达。
 """
@@ -24,7 +24,7 @@ from ..modules.encoder.lstm import LSTM
 
 
 class CNNCharEmbedding(TokenEmbedding):
-    """
+    r"""
     使用CNN生成character embedding。CNN的结构为, embed(x) -> Dropout(x) -> CNN(x) -> activation(x) -> pool -> fc -> Dropout.
     不同的kernel大小的fitler结果是concat起来然后通过一层fully connected layer, 然后输出word的表示。
 
@@ -46,7 +46,7 @@ class CNNCharEmbedding(TokenEmbedding):
                  dropout: float = 0, filter_nums: List[int] = (40, 30, 20), kernel_sizes: List[int] = (5, 3, 1),
                  pool_method: str = 'max', activation='relu', min_char_freq: int = 2, pre_train_char_embed: str = None,
                  requires_grad:bool=True, include_word_start_end:bool=True):
-        """
+        r"""
         
         :param vocab: 词表
         :param embed_size: 该CNNCharEmbedding的输出维度大小，默认值为50.
@@ -122,7 +122,7 @@ class CNNCharEmbedding(TokenEmbedding):
         self.requires_grad = requires_grad
 
     def forward(self, words):
-        """
+        r"""
         输入words的index后，生成对应的words的表示。
 
         :param words: [batch_size, max_len]
@@ -155,7 +155,7 @@ class CNNCharEmbedding(TokenEmbedding):
 
 
 class LSTMCharEmbedding(TokenEmbedding):
-    """
+    r"""
     使用LSTM的方式对character进行encode. embed(x) -> Dropout(x) -> LSTM(x) -> activation(x) -> pool -> Dropout
 
     Example::
@@ -176,7 +176,7 @@ class LSTMCharEmbedding(TokenEmbedding):
                  dropout: float = 0, hidden_size=50, pool_method: str = 'max', activation='relu',
                  min_char_freq: int = 2, bidirectional=True, pre_train_char_embed: str = None,
                  requires_grad:bool=True, include_word_start_end:bool=True):
-        """
+        r"""
         
         :param vocab: 词表
         :param embed_size: LSTMCharEmbedding的输出维度。默认值为50.
@@ -250,7 +250,7 @@ class LSTMCharEmbedding(TokenEmbedding):
         self.requires_grad = requires_grad
     
     def forward(self, words):
-        """
+        r"""
         输入words的index后，生成对应的words的表示。
 
         :param words: [batch_size, max_len]

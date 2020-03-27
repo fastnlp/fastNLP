@@ -1,4 +1,4 @@
-"""
+r"""
 
 .. image:: figures/text_classification.png
 

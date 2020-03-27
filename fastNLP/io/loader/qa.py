@@ -1,4 +1,4 @@
-"""
+r"""
 该文件中的Loader主要用于读取问答式任务的数据
 
 """
@@ -12,7 +12,7 @@ __all__ = ['CMRC2018Loader']
 
 
 class CMRC2018Loader(Loader):
-    """
+    r"""
     请直接使用从fastNLP下载的数据进行处理。该数据集未提供测试集，测试需要通过上传到对应的系统进行评测
 
     读取之后训练集DataSet将具备以下的内容，每个问题的答案只有一个
@@ -64,7 +64,7 @@ class CMRC2018Loader(Loader):
         return ds
 
     def download(self) -> str:
-        """
+        r"""
         如果您使用了本数据，请引用A Span-Extraction Dataset for Chinese Machine Reading Comprehension. Yiming Cui, Ting Liu, etc.
 
         :return:

@@ -357,7 +357,7 @@ from ._logger import logger
 
 
 class Trainer(object):
-    """
+    r"""
     Trainer在fastNLP中用于组织单任务的训练过程，可以避免用户在不同训练任务中重复撰写
         (1) epoch循环;
         (2) 将数据分成不同的Batch;
@@ -572,7 +572,7 @@ class Trainer(object):
                                                 callbacks=callbacks)
 
     def train(self, load_best_model=True, on_exception='auto'):
-        """
+        r"""
         使用该函数使Trainer开始训练。
 
         :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现
@@ -728,7 +728,7 @@ class Trainer(object):
         return res
 
     def _mode(self, model, is_test=False):
-        """Train mode or Test mode. This is for PyTorch currently.
+        r"""Train mode or Test mode. This is for PyTorch currently.
 
         :param model: a PyTorch model
         :param bool is_test: whether in test mode or not.
@@ -740,7 +740,7 @@ class Trainer(object):
             model.train()
 
     def _update(self):
-        """Perform weight update on a model.
+        r"""Perform weight update on a model.
 
         """
         if self.step % self.update_every == 0:
@@ -755,7 +755,7 @@ class Trainer(object):
         return y
 
     def _grad_backward(self, loss):
-        """Compute gradient with link rules.
+        r"""Compute gradient with link rules.
 
         :param loss: a scalar where back-prop starts
 
@@ -766,7 +766,7 @@ class Trainer(object):
         loss.backward()
 
     def _compute_loss(self, predict, truth):
-        """Compute loss given prediction and ground truth.
+        r"""Compute loss given prediction and ground truth.
 
         :param predict: prediction dict, produced by model.forward
         :param truth: ground truth dict, produced by batch_y
@@ -775,7 +775,7 @@ class Trainer(object):
         return self.losser(predict, truth)
 
     def _save_model(self, model, model_name, only_param=False):
-        """ 存储不含有显卡信息的state_dict或model
+        r""" 存储不含有显卡信息的state_dict或model
         :param model:
         :param model_name:
         :param only_param:
@@ -816,7 +816,7 @@ class Trainer(object):
         return True
 
     def _better_eval_result(self, metrics):
-        """Check if the current epoch yields better validation results.
+        r"""Check if the current epoch yields better validation results.
 
         :return bool value: True means current results on dev set is the best.
         """
@@ -842,7 +842,7 @@ class Trainer(object):
 
     @property
     def is_master(self):
-        """是否是主进程"""
+        r"""是否是主进程"""
         return True
 
 DEFAULT_CHECK_BATCH_SIZE = 2

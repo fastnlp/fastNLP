@@ -1,4 +1,4 @@
-"""
+r"""
 sampler 子类实现了 fastNLP 所需的各种采样器。
 """
 __all__ = [
@@ -14,14 +14,14 @@ import numpy as np
 
 
 class Sampler(object):
-    """
+    r"""
     `Sampler` 类的基类. 规定以何种顺序取出data中的元素
 
     子类必须实现 ``__call__`` 方法. 输入 `DataSet` 对象, 返回其中元素的下标序列
     """
     
     def __call__(self, data_set):
-        """
+        r"""
         :param DataSet data_set: `DataSet` 对象, 需要Sample的数据
         :return result: list(int) 其中元素的下标序列, ``data_set`` 中元素会按 ``result`` 中顺序取出
         """
@@ -29,7 +29,7 @@ class Sampler(object):
 
 
 class SequentialSampler(Sampler):
-    """
+    r"""
     顺序取出元素的 `Sampler`
 
     """
@@ -39,7 +39,7 @@ class SequentialSampler(Sampler):
 
 
 class RandomSampler(Sampler):
-    """
+    r"""
     随机化取元素的 `Sampler`
 
     """
@@ -49,12 +49,12 @@ class RandomSampler(Sampler):
 
 
 class BucketSampler(Sampler):
-    """
+    r"""
     带Bucket的 `Random Sampler`. 可以随机地取出长度相似的元素
     """
     
     def __init__(self, num_buckets=10, batch_size=None, seq_len_field_name='seq_len'):
-        """
+        r"""
         
         :param int num_buckets: bucket的数量
         :param int batch_size: batch的大小. 默认为None，Trainer在调用BucketSampler时，会将该值正确设置，如果是非Trainer场景使用，需
@@ -66,7 +66,7 @@ class BucketSampler(Sampler):
         self.seq_len_field_name = seq_len_field_name
 
     def set_batch_size(self, batch_size):
-        """
+        r"""
 
         :param int batch_size: 每个batch的大小
         :return:
@@ -111,7 +111,7 @@ class BucketSampler(Sampler):
 
 
 def simple_sort_bucketing(lengths):
-    """
+    r"""
 
     :param lengths: list of int, the lengths of all examples.
     :return data: 2-level list
@@ -131,7 +131,7 @@ def simple_sort_bucketing(lengths):
 
 
 def k_means_1d(x, k, max_iter=100):
-    """Perform k-means on 1-D data.
+    r"""Perform k-means on 1-D data.
 
     :param x: list of int, representing points in 1-D.
     :param k: the number of clusters required.
@@ -161,7 +161,7 @@ def k_means_1d(x, k, max_iter=100):
 
 
 def k_means_bucketing(lengths, buckets):
-    """Assign all instances into possible buckets using k-means, such that instances in the same bucket have similar lengths.
+    r"""Assign all instances into possible buckets using k-means, such that instances in the same bucket have similar lengths.
 
     :param lengths: list of int, the length of all samples.
     :param buckets: list of int. The length of the list is the number of buckets. Each integer is the maximum length

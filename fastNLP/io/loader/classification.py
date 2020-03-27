@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "CLSBaseLoader",
@@ -29,7 +29,7 @@ from ...core._logger import logger
 
 
 class CLSBaseLoader(Loader):
-    """
+    r"""
     文本分类Loader的一个基类
 
     原始数据中内容应该为, 每一行为一个sample，第一个逗号之前为target，第一个逗号之后为文本内容。
@@ -118,7 +118,7 @@ def _split_dev(dataset_name, data_dir, dev_ratio=0.0, re_download=False, suffix=
 
 class AGsNewsLoader(CLSBaseLoader):
     def download(self):
-        """
+        r"""
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
 
         Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional Networks for Text Classification. Advances
@@ -131,7 +131,7 @@ class AGsNewsLoader(CLSBaseLoader):
 
 class DBPediaLoader(CLSBaseLoader):
     def download(self, dev_ratio: float = 0.0, re_download: bool = False):
-        """
+        r"""
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
 
         Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional Networks for Text Classification. Advances
@@ -155,7 +155,7 @@ class DBPediaLoader(CLSBaseLoader):
 
 
 class IMDBLoader(CLSBaseLoader):
-    """
+    r"""
     原始数据中内容应该为, 每一行为一个sample，制表符之前为target，制表符之后为文本内容。
 
     Example::
@@ -178,7 +178,7 @@ class IMDBLoader(CLSBaseLoader):
         super().__init__(sep='\t')
 
     def download(self, dev_ratio: float = 0.0, re_download=False):
-        """
+        r"""
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
 
         http://www.aclweb.org/anthology/P11-1015
@@ -200,7 +200,7 @@ class IMDBLoader(CLSBaseLoader):
 
 
 class SSTLoader(Loader):
-    """
+    r"""
     原始数据中内容应该为:
 
     Example::
@@ -225,7 +225,7 @@ class SSTLoader(Loader):
         super().__init__()
 
     def _load(self, path: str):
-        """
+        r"""
         从path读取SST文件
 
         :param str path: 文件路径
@@ -240,7 +240,7 @@ class SSTLoader(Loader):
         return ds
 
     def download(self):
-        """
+        r"""
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
 
             https://nlp.stanford.edu/~socherr/EMNLP2013_RNTN.pdf
@@ -253,7 +253,7 @@ class SSTLoader(Loader):
 
 class YelpFullLoader(CLSBaseLoader):
     def download(self, dev_ratio: float = 0.0, re_download: bool = False):
-        """
+        r"""
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
 
         Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional Networks for Text Classification. Advances
@@ -278,7 +278,7 @@ class YelpFullLoader(CLSBaseLoader):
 
 class YelpPolarityLoader(CLSBaseLoader):
     def download(self, dev_ratio: float = 0.0, re_download: bool = False):
-        """
+        r"""
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
 
         Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional Networks for Text Classification. Advances
@@ -302,7 +302,7 @@ class YelpPolarityLoader(CLSBaseLoader):
 
 
 class SST2Loader(Loader):
-    """
+    r"""
     原始数据中内容为：第一行为标题(具体内容会被忽略)，之后一行为一个sample，第一个制表符之前被认为是句子，第一个制表符之后认为是label
 
     Example::
@@ -327,7 +327,7 @@ class SST2Loader(Loader):
         super().__init__()
 
     def _load(self, path: str):
-        """从path读取SST2文件
+        r"""从path读取SST2文件
 
         :param str path: 数据路径
         :return: DataSet
@@ -357,7 +357,7 @@ class SST2Loader(Loader):
         return ds
 
     def download(self):
-        """
+        r"""
         自动下载数据集，如果你使用了该数据集，请引用以下的文章
         https://nlp.stanford.edu/pubs/SocherBauerManningNg_ACL2013.pdf
         :return:
@@ -367,7 +367,7 @@ class SST2Loader(Loader):
 
 
 class ChnSentiCorpLoader(Loader):
-    """
+    r"""
     支持读取的数据的格式为，第一行为标题(具体内容会被忽略)，之后一行为一个sample，第一个制表符之前被认为是label，第
     一个制表符之后认为是句子
 
@@ -391,7 +391,7 @@ class ChnSentiCorpLoader(Loader):
         super().__init__()
 
     def _load(self, path: str):
-        """
+        r"""
         从path中读取数据
 
         :param path:
@@ -411,7 +411,7 @@ class ChnSentiCorpLoader(Loader):
         return ds
 
     def download(self) -> str:
-        """
+        r"""
         自动下载数据，该数据取自https://github.com/pengming617/bert_classification/tree/master/data，在
         https://arxiv.org/pdf/1904.09223.pdf与https://arxiv.org/pdf/1906.08101.pdf有使用
 
@@ -422,9 +422,9 @@ class ChnSentiCorpLoader(Loader):
 
 
 class THUCNewsLoader(Loader):
-    """
+    r"""
     数据集简介：document-level分类任务，新闻10分类
-    原始数据内容为：每行一个sample，第一个'\t'之前为target，第一个'\t'之后为raw_words
+    原始数据内容为：每行一个sample，第一个 "\\t" 之前为target，第一个 "\\t" 之后为raw_words
 
     Example::
 
@@ -456,7 +456,7 @@ class THUCNewsLoader(Loader):
         return ds
 
     def download(self) -> str:
-        """
+        r"""
         自动下载数据，该数据取自
 
         http://thuctc.thunlp.org/#%E4%B8%AD%E6%96%87%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB%E6%95%B0%E6%8D%AE%E9%9B%86THUCNews
@@ -468,7 +468,7 @@ class THUCNewsLoader(Loader):
 
 
 class WeiboSenti100kLoader(Loader):
-    """
+    r"""
     别名：
     数据集简介：微博sentiment classification，二分类
 
@@ -505,7 +505,7 @@ class WeiboSenti100kLoader(Loader):
         return ds
 
     def download(self) -> str:
-        """
+        r"""
         自动下载数据，该数据取自 https://github.com/SophonPlus/ChineseNlpCorpus/
         在 https://arxiv.org/abs/1906.08101 有使用
         :return:

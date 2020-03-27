@@ -1,4 +1,4 @@
-"""
+r"""
 optimizer 模块定义了 fastNLP 中所需的各种优化器，一般做为 :class:`~fastNLP.Trainer` 的参数使用。
 
 """
@@ -16,12 +16,12 @@ from torch.optim.optimizer import Optimizer as TorchOptimizer
 
 
 class Optimizer(object):
-    """
+    r"""
     Optimizer
     """
     
     def __init__(self, model_params, **kwargs):
-        """
+        r"""
         
         :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
         :param kwargs: additional parameters.
@@ -36,7 +36,7 @@ class Optimizer(object):
 
     @staticmethod
     def _get_require_grads_param(params):
-        """
+        r"""
         将params中不需要gradient的删除
         
         :param iterable params: parameters
@@ -46,7 +46,7 @@ class Optimizer(object):
 
 
 class NullOptimizer(Optimizer):
-    """
+    r"""
     当不希望Trainer更新optimizer时，传入本optimizer，但请确保通过callback的方式对参数进行了更新。
 
     """
@@ -64,12 +64,12 @@ class NullOptimizer(Optimizer):
 
 
 class SGD(Optimizer):
-    """
+    r"""
     SGD
     """
     
     def __init__(self, lr=0.001, momentum=0, model_params=None):
-        """
+        r"""
         :param float lr: learning rate. Default: 0.01
         :param float momentum: momentum. Default: 0
         :param model_params: a generator. E.g. ``model.parameters()`` for PyTorch models.
@@ -87,12 +87,12 @@ class SGD(Optimizer):
 
 
 class Adam(Optimizer):
-    """
+    r"""
     Adam
     """
     
     def __init__(self, lr=0.001, weight_decay=0, betas=(0.9, 0.999), eps=1e-8, amsgrad=False, model_params=None):
-        """
+        r"""
         
         :param float lr: learning rate
         :param float weight_decay:
@@ -133,7 +133,7 @@ class AdamW(TorchOptimizer):
 
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
                  weight_decay=1e-2, amsgrad=False):
-        """
+        r"""
         
         :param params (iterable): iterable of parameters to optimize or dicts defining
             parameter groups
@@ -164,7 +164,7 @@ class AdamW(TorchOptimizer):
             group.setdefault('amsgrad', False)
 
     def step(self, closure=None):
-        """Performs a single optimization step.
+        r"""Performs a single optimization step.
 
         :param closure: (callable, optional) A closure that reevaluates the model
             and returns the loss.

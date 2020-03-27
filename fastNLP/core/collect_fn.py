@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 from builtins import sorted
 
 import torch
@@ -37,7 +37,7 @@ def batching(samples, max_len=0, padding_val=0):
 
 
 class Collector:
-    """
+    r"""
     辅助DataSet管理collect_fn的类
 
     """
@@ -45,7 +45,7 @@ class Collector:
         self.collect_fns = {}
 
     def add_fn(self, fn, name=None):
-        """
+        r"""
         向collector新增一个collect_fn函数
 
         :param callable fn:
@@ -59,7 +59,7 @@ class Collector:
         self.collect_fns[name] = fn
 
     def is_empty(self):
-        """
+        r"""
         返回是否包含collect_fn
 
         :return:
@@ -67,7 +67,7 @@ class Collector:
         return len(self.collect_fns)==0
 
     def delete_fn(self, name=None):
-        """
+        r"""
         删除collect_fn
 
         :param str,int name: 如果为None就删除最近加入的collect_fn
@@ -100,7 +100,7 @@ class Collector:
 
 
 class ConcatCollectFn:
-    """
+    r"""
     field拼接collect_fn，将不同field按序拼接后，padding产生数据。
 
     :param List[str] inputs: 将哪些field的数据拼接起来, 目前仅支持1d的field

@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -15,7 +15,7 @@ from ..core import logger
 
 
 def check_loader_paths(paths: Union[str, Dict[str, str]]) -> Dict[str, str]:
-    """
+    r"""
     检查传入dataloader的文件的合法性。如果为合法路径，将返回至少包含'train'这个key的dict。类似于下面的结果::
 
         {

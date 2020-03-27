@@ -1,4 +1,4 @@
-"""undocumented
+r"""undocumented
 此模块用于给其它模块提供读取文件的函数，没有为用户提供 API
 """
 
@@ -11,7 +11,7 @@ from ..core import logger
 
 
 def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
-    """
+    r"""
     Construct a generator to read csv items.
 
     :param path: file path
@@ -51,7 +51,7 @@ def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
 
 
 def _read_json(path, encoding='utf-8', fields=None, dropna=True):
-    """
+    r"""
     Construct a generator to read json items.
 
     :param path: file path
@@ -82,7 +82,7 @@ def _read_json(path, encoding='utf-8', fields=None, dropna=True):
 
 
 def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
-    """
+    r"""
     Construct a generator to read conll items.
 
     :param path: file path

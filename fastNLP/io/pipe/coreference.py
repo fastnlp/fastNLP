@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "CoReferencePipe"
@@ -16,7 +16,7 @@ from ...core.const import Const
 
 
 class CoReferencePipe(Pipe):
-    """
+    r"""
     对Coreference resolution问题进行处理，得到文章种类/说话者/字符级信息/序列长度。
 
     处理完成后数据包含文章类别、speaker信息、句子信息、句子对应的index、char、句子长度、target：
@@ -45,7 +45,7 @@ class CoReferencePipe(Pipe):
         self.config = config
 
     def process(self, data_bundle: DataBundle):
-        """
+        r"""
         对load进来的数据进一步处理原始数据包含：raw_key,raw_speaker,raw_words,raw_clusters
         
         .. csv-table::

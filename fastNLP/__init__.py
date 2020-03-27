@@ -1,4 +1,4 @@
-"""
+r"""
 fastNLP 由 :mod:`~fastNLP.core` 、 :mod:`~fastNLP.io` 、:mod:`~fastNLP.embeddings` 、 :mod:`~fastNLP.modules`、
 :mod:`~fastNLP.models` 等子模块组成，你可以查看每个模块的文档。
 

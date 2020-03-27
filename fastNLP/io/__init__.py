@@ -1,4 +1,4 @@
-"""
+r"""
 用于IO的模块, 具体包括:
 
 1. 用于读入 embedding 的 :mod:`EmbedLoader <fastNLP.io.embed_loader>` 类,
