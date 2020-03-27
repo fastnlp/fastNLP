@@ -424,7 +424,7 @@ class ChnSentiCorpLoader(Loader):
 class THUCNewsLoader(Loader):
     r"""
     数据集简介：document-level分类任务，新闻10分类
-    原始数据内容为：每行一个sample，第一个'\t'之前为target，第一个'\t'之后为raw_words
+    原始数据内容为：每行一个sample，第一个 "\\t" 之前为target，第一个 "\\t" 之后为raw_words
 
     Example::
 

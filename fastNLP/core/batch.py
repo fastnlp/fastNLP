@@ -321,7 +321,7 @@ class TorchLoaderIter(BatchIter):
                 data.append(x + [y])
             with open(tmp_file_path, 'w') as f:
                 for d in data:
-                    f.write(' '.join(map(str, d)) + '\\n')
+                    f.write(' '.join(map(str, d)) + '\n')
 
             class FileDataSet:
                 def __init__(self, tmp_file):
