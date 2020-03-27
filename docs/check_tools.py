@@ -140,7 +140,7 @@ def check_files(modules, out=None):
             print(file=out)
 
 
-def main():
+def main_check():
     sys.path.append("..")
     print(_colored_string('Getting modules...', "Blue"))
     modules, to_doc, children = find_all_modules()
@@ -154,5 +154,38 @@ def main():
     print(_colored_string('Done!', "Green"))
 
 
+def check_file_r(file_path):
+    with open(file_path) as fin:
+        content = fin.read()
+    index = -3
+    cuts = []
+    while index != -1:
+        index = content.find('"""',index+3)
+        cuts.append(index)
+    cuts = cuts[:-1]
+    assert len(cuts)%2 == 0
+    write_content = ""
+    last = 0
+    for i in range(len(cuts)//2):
+        start, end = cuts[i+i], cuts[i+i+1]
+        if content[start-1] == "r":
+            write_content += content[last:end+3]
+        else:
+            write_content += content[last:start] + "r"
+            write_content += content[start:end+3]
+        last = end + 3
+    write_content += content[last:]
+    with open(file_path, "w") as fout:
+        fout.write(write_content)
+
+
+def add_r(base_path='../fastNLP'):
+    for path, _, files in os.walk(base_path):
+        for f in files:
+            if f.endswith(".py"):
+                check_file_r(os.path.abspath(os.path.join(path,f)))
+                sys.exit(0)
+
+
 if __name__ == "__main__":
-    main()
+    add_r()
