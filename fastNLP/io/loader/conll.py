@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "ConllLoader",
@@ -26,7 +26,7 @@ from ...core.instance import Instance
 
 
 class ConllLoader(Loader):
-    """
+    r"""
     ConllLoader支持读取的数据格式: 以空行隔开两个sample，除了分割行，每一行用空格或者制表符隔开不同的元素。如下例所示:
 
     Example::
@@ -56,7 +56,7 @@ class ConllLoader(Loader):
     """
     
     def __init__(self, headers, indexes=None, dropna=True):
-        """
+        r"""
         
         :param list headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
         :param list indexes: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
@@ -76,7 +76,7 @@ class ConllLoader(Loader):
             self.indexes = indexes
     
     def _load(self, path):
-        """
+        r"""
         传入的一个文件路径，将该文件读入DataSet中，field由ConllLoader初始化时指定的headers决定。
 
         :param str path: 文件的路径
@@ -90,7 +90,7 @@ class ConllLoader(Loader):
 
 
 class Conll2003Loader(ConllLoader):
-    """
+    r"""
     用于读取conll2003任务的数据。数据的内容应该类似与以下的内容, 第一列为raw_words, 第二列为pos, 第三列为chunking，第四列为ner。
 
     Example::
@@ -123,7 +123,7 @@ class Conll2003Loader(ConllLoader):
         super(Conll2003Loader, self).__init__(headers=headers)
     
     def _load(self, path):
-        """
+        r"""
         传入的一个文件路径，将该文件读入DataSet中，field由ConllLoader初始化时指定的headers决定。
 
         :param str path: 文件的路径
@@ -148,7 +148,7 @@ class Conll2003Loader(ConllLoader):
 
 
 class Conll2003NERLoader(ConllLoader):
-    """
+    r"""
     用于读取conll2003任务的NER数据。每一行有4列内容，空行意味着隔开两个句子
 
     支持读取的内容如下
@@ -182,7 +182,7 @@ class Conll2003NERLoader(ConllLoader):
         super().__init__(headers=headers, indexes=[0, 3])
     
     def _load(self, path):
-        """
+        r"""
         传入的一个文件路径，将该文件读入DataSet中，field由ConllLoader初始化时指定的headers决定。
 
         :param str path: 文件的路径
@@ -209,7 +209,7 @@ class Conll2003NERLoader(ConllLoader):
 
 
 class OntoNotesNERLoader(ConllLoader):
-    """
+    r"""
     用以读取OntoNotes的NER数据，同时也是Conll2012的NER任务数据。将OntoNote数据处理为conll格式的过程可以参考
     https://github.com/yhcc/OntoNotes-5.0-NER。OntoNoteNERLoader将取第4列和第11列的内容。
 
@@ -287,7 +287,7 @@ class OntoNotesNERLoader(ConllLoader):
 
 
 class CTBLoader(Loader):
-    """
+    r"""
     支持加载的数据应该具备以下格式, 其中第二列为词语，第四列为pos tag，第七列为依赖树的head，第八列为依赖树的label
 
     Example::
@@ -328,7 +328,7 @@ class CTBLoader(Loader):
         return dataset
 
     def download(self):
-        """
+        r"""
         由于版权限制，不能提供自动下载功能。可参考
 
         https://catalog.ldc.upenn.edu/LDC2013T21
@@ -340,7 +340,7 @@ class CTBLoader(Loader):
 
 class CNNERLoader(Loader):
     def _load(self, path: str):
-        """
+        r"""
         支持加载形如以下格式的内容，一行两列，以空格隔开两个sample
 
         Example::
@@ -378,7 +378,7 @@ class CNNERLoader(Loader):
 
 
 class MsraNERLoader(CNNERLoader):
-    """
+    r"""
     读取MSRA-NER数据，数据中的格式应该类似与下列的内容
 
     Example::
@@ -416,7 +416,7 @@ class MsraNERLoader(CNNERLoader):
         super().__init__()
     
     def download(self, dev_ratio: float = 0.1, re_download: bool = False) -> str:
-        """
+        r"""
         自动下载MSAR-NER的数据，如果你使用该数据，请引用 Gina-Anne Levow, 2006, The Third International Chinese Language
         Processing Bakeoff: Word Segmentation and Named Entity Recognition.
 
@@ -466,7 +466,7 @@ class MsraNERLoader(CNNERLoader):
 
 
 class WeiboNERLoader(CNNERLoader):
-    """
+    r"""
     读取WeiboNER数据，数据中的格式应该类似与下列的内容
 
     Example::
@@ -494,7 +494,7 @@ class WeiboNERLoader(CNNERLoader):
         super().__init__()
     
     def download(self) -> str:
-        """
+        r"""
         自动下载Weibo-NER的数据，如果你使用了该数据，请引用 Nanyun Peng and Mark Dredze, 2015, Named Entity Recognition for
         Chinese Social Media with Jointly Trained Embeddings.
 
@@ -507,7 +507,7 @@ class WeiboNERLoader(CNNERLoader):
 
 
 class PeopleDailyNERLoader(CNNERLoader):
-    """
+    r"""
     支持加载的数据格式如下
 
     Example::

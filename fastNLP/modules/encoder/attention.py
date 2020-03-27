@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "MultiHeadAttention",
@@ -16,7 +16,7 @@ from fastNLP.modules.utils import initial_parameter
 
 
 class DotAttention(nn.Module):
-    """
+    r"""
     Transformer当中的DotAttention
     """
 
@@ -29,7 +29,7 @@ class DotAttention(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, Q, K, V, mask_out=None):
-        """
+        r"""
 
         :param Q: [..., seq_len_q, key_size]
         :param K: [..., seq_len_k, key_size]
@@ -45,12 +45,12 @@ class DotAttention(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
-    """
+    r"""
     Transformer当中的MultiHeadAttention
     """
 
     def __init__(self, input_size, key_size, value_size, num_head, dropout=0.1):
-        """
+        r"""
         
         :param input_size: int, 输入维度的大小。同时也是输出维度的大小。
         :param key_size: int, 每个head的维度大小。
@@ -80,7 +80,7 @@ class MultiHeadAttention(nn.Module):
         nn.init.normal_(self.out.weight, mean=0, std=sqrt(1.0 / self.input_size))
 
     def forward(self, Q, K, V, atte_mask_out=None):
-        """
+        r"""
 
         :param Q: [batch, seq_len_q, model_size]
         :param K: [batch, seq_len_k, model_size]
@@ -147,7 +147,7 @@ class BiAttention(nn.Module):
     """
 
     def forward(self, premise_batch, premise_mask, hypothesis_batch, hypothesis_mask):
-        """
+        r"""
         :param torch.Tensor premise_batch: [batch_size, a_seq_len, hidden_size]
         :param torch.Tensor premise_mask: [batch_size, a_seq_len]
         :param torch.Tensor hypothesis_batch: [batch_size, b_seq_len, hidden_size]
@@ -173,13 +173,13 @@ class BiAttention(nn.Module):
 
 
 class SelfAttention(nn.Module):
-    """
+    r"""
     这是一个基于论文 `A structured self-attentive sentence embedding <https://arxiv.org/pdf/1703.03130.pdf>`_
     的Self Attention Module.
     """
 
     def __init__(self, input_size, attention_unit=300, attention_hops=10, drop=0.5, initial_method=None, ):
-        """
+        r"""
         
         :param int input_size: 输入tensor的hidden维度
         :param int attention_unit: 输出tensor的hidden维度
@@ -199,7 +199,7 @@ class SelfAttention(nn.Module):
         initial_parameter(self, initial_method)
 
     def _penalization(self, attention):
-        """
+        r"""
         compute the penalization term for attention module
         """
         baz = attention.size(0)
@@ -213,7 +213,7 @@ class SelfAttention(nn.Module):
         return torch.sum(ret) / size[0]
 
     def forward(self, input, input_origin):
-        """
+        r"""
         :param torch.Tensor input: [batch_size, seq_len, hidden_size] 要做attention的矩阵
         :param torch.Tensor input_origin: [batch_size, seq_len] 原始token的index组成的矩阵，含有pad部分内容
         :return torch.Tensor output1: [batch_size, multi-head, hidden_size] 经过attention操作后输入矩阵的结果

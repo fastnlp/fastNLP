@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "Predictor"
@@ -15,7 +15,7 @@ from .utils import _build_args, _move_dict_value_to_device, _get_model_device
 
 
 class Predictor(object):
-    """
+    r"""
     一个根据训练模型预测输出的预测器（Predictor）
 
     与测试器（Tester）不同的是，predictor不关心模型性能的评价指标，只做inference。
@@ -23,7 +23,7 @@ class Predictor(object):
     """
     
     def __init__(self, network):
-        """
+        r"""
         
         :param torch.nn.Module network: 用来完成预测任务的模型
         """
@@ -35,7 +35,7 @@ class Predictor(object):
         self.batch_output = []
     
     def predict(self, data: DataSet, seq_len_field_name=None):
-        """用已经训练好的模型进行inference.
+        r"""用已经训练好的模型进行inference.
 
         :param fastNLP.DataSet data: 待预测的数据集
         :param str seq_len_field_name: 表示序列长度信息的field名字

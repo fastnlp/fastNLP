@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -88,7 +88,7 @@ class FieldArray:
     
     @is_input.setter
     def is_input(self, value):
-        """
+        r"""
             当 field_array.is_input = True / False 时被调用
         """
         # 如果(value为True)且(_is_input和_is_target都是False)且(ignore_type为False)
@@ -107,7 +107,7 @@ class FieldArray:
     
     @is_target.setter
     def is_target(self, value):
-        """
+        r"""
         当 field_array.is_target = True / False 时被调用
         """
         if value is True and \
@@ -120,7 +120,7 @@ class FieldArray:
         self._is_target = value
     
     def _check_dtype_and_ndim(self, only_check_1st_ins_dim_type=True):
-        """
+        r"""
         检查当前content所有的element是否是同一个类型，且是否每个元素具有相同的维度。通过的话，设置_cell_ndim与_ele_type属性；没有
             通过将直接报错.
 
@@ -150,7 +150,7 @@ class FieldArray:
             raise e
     
     def append(self, val: Any):
-        """
+        r"""
         :param val: 把该val append到fieldarray。
         :return:
         """
@@ -167,7 +167,7 @@ class FieldArray:
             self.content.append(val)
     
     def pop(self, index):
-        """
+        r"""
         删除该field中index处的元素
         :param int index: 从0开始的数据下标。
         :return:
@@ -190,7 +190,7 @@ class FieldArray:
         self.content[idx] = val
     
     def get(self, indices, pad=True):
-        """
+        r"""
         根据给定的indices返回内容。
 
         :param int,List[int] indices: 获取indices对应的内容。
@@ -210,7 +210,7 @@ class FieldArray:
             return np.array(contents)
     
     def pad(self, contents):
-        """
+        r"""
         传入list的contents，将contents使用padder进行padding，contents必须为从本FieldArray中取出的。
 
         :param list contents:
@@ -219,7 +219,7 @@ class FieldArray:
         return self.padder(contents, field_name=self.name, field_ele_dtype=self.dtype, dim=self._cell_ndim)
     
     def set_padder(self, padder):
-        """
+        r"""
         设置padder，在这个field进行pad的时候用这个padder进行pad，如果为None则不进行pad。
 
         :param padder: :class:`~fastNLP.Padder` 类型，设置为None即删除padder。
@@ -231,7 +231,7 @@ class FieldArray:
             self.padder = None
     
     def set_pad_val(self, pad_val):
-        """
+        r"""
         修改padder的pad_val.
 
         :param int pad_val: 该field的pad值设置为该值。
@@ -241,7 +241,7 @@ class FieldArray:
         return self
     
     def __len__(self):
-        """
+        r"""
         Returns the size of FieldArray.
 
         :return int length:
@@ -249,7 +249,7 @@ class FieldArray:
         return len(self.content)
     
     def to(self, other):
-        """
+        r"""
         将other的属性复制给本FieldArray(other必须为FieldArray类型).
         属性包括 is_input, is_target, padder, ignore_type
 
@@ -266,7 +266,7 @@ class FieldArray:
         return self
     
     def split(self, sep: str = None, inplace: bool = True):
-        """
+        r"""
         依次对自身的元素使用.split()方法，应该只有当本field的元素为str时，该方法才有用。将返回值
 
         :param sep: 分割符，如果为None则直接调用str.split()。
@@ -283,7 +283,7 @@ class FieldArray:
         return self._after_process(new_contents, inplace=inplace)
     
     def int(self, inplace: bool = True):
-        """
+        r"""
         将本field中的值调用int(cell). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
             (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
 
@@ -303,7 +303,7 @@ class FieldArray:
         return self._after_process(new_contents, inplace=inplace)
     
     def float(self, inplace=True):
-        """
+        r"""
         将本field中的值调用float(cell). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
             (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
 
@@ -323,7 +323,7 @@ class FieldArray:
         return self._after_process(new_contents, inplace=inplace)
     
     def bool(self, inplace=True):
-        """
+        r"""
         将本field中的值调用bool(cell). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
             (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
 
@@ -344,7 +344,7 @@ class FieldArray:
         return self._after_process(new_contents, inplace=inplace)
     
     def lower(self, inplace=True):
-        """
+        r"""
         将本field中的值调用cell.lower(). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
             (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
 
@@ -364,7 +364,7 @@ class FieldArray:
         return self._after_process(new_contents, inplace=inplace)
     
     def upper(self, inplace=True):
-        """
+        r"""
         将本field中的值调用cell.lower(). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
             (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
 
@@ -384,7 +384,7 @@ class FieldArray:
         return self._after_process(new_contents, inplace=inplace)
     
     def value_count(self):
-        """
+        r"""
         返回该field下不同value的数量。多用于统计label数量
 
         :return: Counter, key是label，value是出现次数
@@ -403,7 +403,7 @@ class FieldArray:
         return count
     
     def _after_process(self, new_contents, inplace):
-        """
+        r"""
         当调用处理函数之后，决定是否要替换field。
 
         :param new_contents:
@@ -424,7 +424,7 @@ class FieldArray:
 
 
 def _get_ele_type_and_dim(cell: Any, dim=0):
-    """
+    r"""
     识别cell的类别与dimension的数量
 
     numpy scalar type:https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.scalars.html
@@ -470,7 +470,7 @@ def _get_ele_type_and_dim(cell: Any, dim=0):
 
 
 class Padder:
-    """
+    r"""
     所有padder都需要继承这个类，并覆盖__call__方法。
     用于对batch进行padding操作。传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前deepcopy一份。
 
@@ -479,7 +479,7 @@ class Padder:
     """
     
     def __init__(self, pad_val=0, **kwargs):
-        """
+        r"""
         
         :param List[Any] contents: 传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前
             deepcopy一份。
@@ -497,7 +497,7 @@ class Padder:
 
     @abstractmethod
     def __call__(self, contents, field_name, field_ele_dtype, dim: int):
-        """
+        r"""
         传入的是List内容。假设有以下的DataSet。
 
         :param List[Any] contents: 传入的element是inplace的，即直接修改element可能导致数据变化，建议inplace修改之前
@@ -541,7 +541,7 @@ class Padder:
 
 
 class AutoPadder(Padder):
-    """
+    r"""
     根据contents的数据自动判定是否需要做padding。
 
     1 如果元素类型(元素类型是指field中最里层元素的数据类型, 可以通过FieldArray.dtype查看，比如['This', 'is', ...]的元素类
@@ -633,7 +633,7 @@ class AutoPadder(Padder):
 
 
 class EngChar2DPadder(Padder):
-    """
+    r"""
     用于为英语执行character级别的2D padding操作。对应的field内容应该类似[['T', 'h', 'i', 's'], ['a'], ['d', 'e', 'm', 'o']]，
     但这个Padder只能处理index为int的情况。
 
@@ -655,7 +655,7 @@ class EngChar2DPadder(Padder):
     """
     
     def __init__(self, pad_val=0, pad_length=0):
-        """
+        r"""
         :param pad_val: int, pad的位置使用该index
         :param pad_length: int, 如果为0则取一个batch中最大的单词长度作为padding长度。如果为大于0的数，则将所有单词的长度
             都pad或截取到该长度.
@@ -665,7 +665,7 @@ class EngChar2DPadder(Padder):
         self.pad_length = pad_length
     
     def __call__(self, contents, field_name, field_ele_dtype, dim):
-        """
+        r"""
         期望输入类似于
         [
             [[0, 2], [2, 3, 4], ..],

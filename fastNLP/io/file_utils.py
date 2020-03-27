@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -138,7 +138,7 @@ FASTNLP_EXTEND_EMBEDDING_URL = {'elmo': 'fastnlp_elmo_url.txt',
 
 
 def cached_path(url_or_filename: str, cache_dir: str = None, name=None) -> Path:
-    """
+    r"""
     给定一个url，尝试通过url中的解析出来的文件名字filename到{cache_dir}/{name}/{filename}下寻找这个文件，
     
     1. 如果cache_dir=None, 则cache_dir=~/.fastNLP/; 否则cache_dir=cache_dir
@@ -183,7 +183,7 @@ def cached_path(url_or_filename: str, cache_dir: str = None, name=None) -> Path:
 
 
 def get_filepath(filepath):
-    """
+    r"""
     如果filepath为文件夹，
     
         如果内含多个文件, 返回filepath
@@ -210,7 +210,7 @@ def get_filepath(filepath):
 
 
 def get_cache_path():
-    """
+    r"""
     获取fastNLP默认cache的存放路径, 如果将FASTNLP_CACHE_PATH设置在了环境变量中，将使用环境变量的值，使得不用每个用户都去下载。
 
     :return str:  存放路径
@@ -226,7 +226,7 @@ def get_cache_path():
 
 
 def _get_base_url(name):
-    """
+    r"""
     根据name返回下载的url地址。
 
     :param str name: 支持dataset和embedding两种
@@ -252,7 +252,7 @@ def _get_base_url(name):
 
 
 def _get_embedding_url(embed_type, name):
-    """
+    r"""
     给定embedding类似和名称，返回下载url
 
     :param str embed_type: 支持static, bert, elmo。即embedding的类型
@@ -276,7 +276,7 @@ def _get_embedding_url(embed_type, name):
         raise KeyError(f"There is no {embed_type}. Only supports bert, elmo, static")
 
 def _read_extend_url_file(filename, name)->str:
-    """
+    r"""
     filename中的内容使用制表符隔开，第一列是名称，第二列是下载的url地址
 
     :param str filename: 在默认的路径下寻找file这个文件
@@ -297,7 +297,7 @@ def _read_extend_url_file(filename, name)->str:
     return None
 
 def _get_dataset_url(name):
-    """
+    r"""
     给定dataset的名称，返回下载url
 
     :param str name: 给定dataset的名称，比如imdb, sst-2等
@@ -317,7 +317,7 @@ def _get_dataset_url(name):
 
 
 def split_filename_suffix(filepath):
-    """
+    r"""
     给定filepath 返回对应的name和suffix. 如果后缀是多个点，仅支持.tar.gz类型
     
     :param filepath: 文件路径
@@ -330,7 +330,7 @@ def split_filename_suffix(filepath):
 
 
 def get_from_cache(url: str, cache_dir: Path = None) -> Path:
-    """
+    r"""
     尝试在cache_dir中寻找url定义的资源; 如果没有找到; 则从url下载并将结果放在cache_dir下，缓存的名称由url的结果推断而来。会将下载的
     文件解压，将解压后的文件全部放在cache_dir文件夹中。
 
@@ -469,7 +469,7 @@ def ungzip_file(file: str, to: str, filename:str):
 
 
 def match_file(dir_name: str, cache_dir: Path) -> str:
-    """
+    r"""
     匹配的原则是: 在cache_dir下的文件与dir_name完全一致, 或除了后缀以外和dir_name完全一致。
     如果找到了两个匹配的结果将报错. 如果找到了则返回匹配的文件的名称; 没有找到返回空字符串
 

@@ -1,4 +1,4 @@
-"""
+r"""
 utils模块实现了 fastNLP 内部和外部所需的很多工具。其中用户可以使用的是 :func:`cache_results` 修饰器。
 """
 
@@ -35,9 +35,9 @@ _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'require
 
 
 class ConfusionMatrix:
-    """a dict can provide Confusion Matrix"""
+    r"""a dict can provide Confusion Matrix"""
     def __init__(self, vocab=None, print_ratio=False):
-        """
+        r"""
         :param vocab: 需要有to_word方法，建议直接使用Fastnlp.core.Vocabulary。
         :param print_ratio: 限制print的输出，False只输出数量Confusion Matrix, True还会输出百分比Confusion Matrix, 分别为行/列
         """
@@ -52,7 +52,7 @@ class ConfusionMatrix:
         self.print_ratio = print_ratio
 
     def add_pred_target(self, pred, target):  # 一组结果
-        """
+        r"""
         通过这个函数向ConfusionMatrix加入一组预测结果
         :param list pred: 预测的标签列表
         :param list target: 真实值的标签列表
@@ -80,7 +80,7 @@ class ConfusionMatrix:
         return self.confusiondict
 
     def clear(self):
-        """
+        r"""
         清空ConfusionMatrix，等待再次新加入
         :return: 
         """
@@ -89,7 +89,7 @@ class ConfusionMatrix:
         self.predcount = {}
 
     def get_result(self):
-        """
+        r"""
         :return list output: ConfusionMatrix content,具体值与汇总统计
         """
         row2idx = {}
@@ -121,7 +121,7 @@ class ConfusionMatrix:
         return output
 
     def get_percent(self, dim=0):
-        """
+        r"""
         :param dim int: 0/1, 0 for row,1 for column
         :return list output: ConfusionMatrix content,具体值与汇总统计
         """
@@ -139,7 +139,7 @@ class ConfusionMatrix:
         return tmp.tolist()
 
     def get_aligned_table(self, data, flag="result"):
-        """
+        r"""
         :param data: highly recommend use get_percent/ get_result return as dataset here, or make sure data is a n*n list type data
         :param flag: only difference between result and other words is whether "%" is in output string
         :return: an aligned_table ready to print out
@@ -197,7 +197,7 @@ class ConfusionMatrix:
         return "\n" + out
 
     def __repr__(self):
-        """
+        r"""
         :return string output: ConfusionMatrix的格式化输出，包括表头各标签字段，具体值与汇总统计。
         """
         result = self.get_result()
@@ -218,7 +218,7 @@ class ConfusionMatrix:
 
 
 class Option(dict):
-    """a dict can treat keys as attributes"""
+    r"""a dict can treat keys as attributes"""
 
     def __getattr__(self, item):
         try:
@@ -245,7 +245,7 @@ class Option(dict):
 
 
 def _prepare_cache_filepath(filepath):
-    """
+    r"""
     检查filepath是否可以作为合理的cache文件. 如果可以的话，会自动创造路径
     :param filepath: str.
     :return: None, if not, this function will raise error
@@ -259,7 +259,7 @@ def _prepare_cache_filepath(filepath):
 
 
 def cache_results(_cache_fp, _refresh=False, _verbose=1):
-    """
+    r"""
     cache_results是fastNLP中用于cache数据的装饰器。通过下面的例子看一下如何使用::
 
         import time
@@ -358,7 +358,7 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1):
 
 
 def _save_model(model, model_name, save_dir, only_param=False):
-    """ 存储不含有显卡信息的state_dict或model
+    r""" 存储不含有显卡信息的state_dict或model
     :param model:
     :param model_name:
     :param save_dir: 保存的directory
@@ -383,7 +383,7 @@ def _save_model(model, model_name, save_dir, only_param=False):
 
 
 def _move_model_to_device(model, device):
-    """
+    r"""
     将model移动到device
 
     :param model: torch.nn.DataParallel or torch.nn.Module. 当为torch.nn.DataParallel, 则只是调用一次cuda。device必须为
@@ -454,7 +454,7 @@ def _move_model_to_device(model, device):
 
 
 def _get_model_device(model):
-    """
+    r"""
     传入一个nn.Module的模型，获取它所在的device
 
     :param model: nn.Module
@@ -471,7 +471,7 @@ def _get_model_device(model):
 
 
 def _build_args(func, **kwargs):
-    """
+    r"""
     根据func的初始化参数，从kwargs中选择func需要的参数
 
     :param func: callable
@@ -555,7 +555,7 @@ def _check_arg_dict_list(func, args):
 
 
 def _get_func_signature(func):
-    """
+    r"""
 
     Given a function or method, return its signature.
     For example:
@@ -596,7 +596,7 @@ def _get_func_signature(func):
 
 
 def _is_function_or_method(func):
-    """
+    r"""
 
     :param func:
     :return:
@@ -612,7 +612,7 @@ def _check_function_or_method(func):
 
 
 def _move_dict_value_to_device(*args, device: torch.device, non_blocking=False):
-    """
+    r"""
 
     move data to model's device, element in *args should be dict. This is a inplace change.
     :param device: torch.device
@@ -636,7 +636,7 @@ def _move_dict_value_to_device(*args, device: torch.device, non_blocking=False):
 
 
 class _CheckError(Exception):
-    """
+    r"""
 
     _CheckError. Used in losses.LossBase, metrics.MetricBase.
     """
@@ -807,7 +807,7 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
 
 
 def seq_len_to_mask(seq_len, max_len=None):
-    """
+    r"""
 
     将一个表示sequence length的一维数组转换为二维的mask，不包含的位置为0。
     转变 1-d seq_len到2-d mask.
@@ -851,7 +851,7 @@ def seq_len_to_mask(seq_len, max_len=None):
 
 
 class _pseudo_tqdm:
-    """
+    r"""
     当无法引入tqdm，或者Trainer中设置use_tqdm为false的时候，用该方法打印数据
     """
 
@@ -878,7 +878,7 @@ class _pseudo_tqdm:
 
 
 def iob2(tags: List[str]) -> List[str]:
-    """
+    r"""
     检查数据是否是合法的IOB数据，如果是IOB1会被自动转换为IOB2。两者的差异见
         https://datascience.stackexchange.com/questions/37824/difference-between-iob-and-iob2-format
 
@@ -902,7 +902,7 @@ def iob2(tags: List[str]) -> List[str]:
 
 
 def iob2bioes(tags: List[str]) -> List[str]:
-    """
+    r"""
     将iob的tag转换为bioes编码
     :param tags: List[str]. 编码需要是大写的。
     :return:
@@ -938,7 +938,7 @@ def _is_iterable(value):
 
 
 def get_seq_len(words, pad_value=0):
-    """
+    r"""
     给定batch_size x max_len的words矩阵，返回句子长度
 
     :param words: batch_size x max_len
@@ -949,7 +949,7 @@ def get_seq_len(words, pad_value=0):
 
 
 def pretty_table_printer(dataset_or_ins) -> PrettyTable:
-    """
+    r"""
     :param dataset_or_ins: 传入一个dataSet或者instance
     ins = Instance(field_1=[1, 1, 1], field_2=[2, 2, 2], field_3=["a", "b", "c"])
     +-----------+-----------+-----------------+
@@ -990,7 +990,7 @@ def pretty_table_printer(dataset_or_ins) -> PrettyTable:
 
 
 def sub_column(string: str, c: int, c_size: int, title: str) -> str:
-    """
+    r"""
     :param string: 要被截断的字符串
     :param c: 命令行列数
     :param c_size: instance或dataset field数

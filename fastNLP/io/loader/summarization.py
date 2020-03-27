@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "ExtCNNDMLoader"
@@ -13,7 +13,7 @@ from .json import JsonLoader
 
 
 class ExtCNNDMLoader(JsonLoader):
-    """
+    r"""
     读取之后的DataSet中的field情况为
 
     .. csv-table::
@@ -30,7 +30,7 @@ class ExtCNNDMLoader(JsonLoader):
         super(ExtCNNDMLoader, self).__init__(fields=fields)
 
     def load(self, paths: Union[str, Dict[str, str]] = None):
-        """
+        r"""
         从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.DataBundle` 。
 
         读取的field根据ExtCNNDMLoader初始化时传入的headers决定。
@@ -53,7 +53,7 @@ class ExtCNNDMLoader(JsonLoader):
         return data_bundle
 
     def download(self):
-        """
+        r"""
         如果你使用了这个数据，请引用
 
         https://arxiv.org/pdf/1506.03340.pdf

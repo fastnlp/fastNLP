@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "MNLILoader",
@@ -26,7 +26,7 @@ from ...core.instance import Instance
 
 
 class MNLILoader(Loader):
-    """
+    r"""
     读取的数据格式为：
 
     Example::
@@ -80,7 +80,7 @@ class MNLILoader(Loader):
         return ds
     
     def load(self, paths: str = None):
-        """
+        r"""
 
         :param str paths: 传入数据所在目录，会在该目录下寻找dev_matched.tsv, dev_mismatched.tsv, test_matched.tsv,
             test_mismatched.tsv, train.tsv文件夹
@@ -112,7 +112,7 @@ class MNLILoader(Loader):
         return data_bundle
     
     def download(self):
-        """
+        r"""
         如果你使用了这个数据，请引用
 
         https://www.nyu.edu/projects/bowman/multinli/paper.pdf
@@ -123,7 +123,7 @@ class MNLILoader(Loader):
 
 
 class SNLILoader(JsonLoader):
-    """
+    r"""
     文件每一行是一个sample，每一行都为一个json对象，其数据格式为：
 
     Example::
@@ -157,7 +157,7 @@ class SNLILoader(JsonLoader):
         })
     
     def load(self, paths: Union[str, Dict[str, str]] = None) -> DataBundle:
-        """
+        r"""
         从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.DataBundle` 。
 
         读取的field根据Loader初始化时传入的field决定。
@@ -187,7 +187,7 @@ class SNLILoader(JsonLoader):
         return data_bundle
     
     def download(self):
-        """
+        r"""
         如果您的文章使用了这份数据，请引用
 
         http://nlp.stanford.edu/pubs/snli_paper.pdf
@@ -198,7 +198,7 @@ class SNLILoader(JsonLoader):
 
 
 class QNLILoader(JsonLoader):
-    """
+    r"""
     第一行为标题(具体内容会被忽略)，之后每一行是一个sample，由index、问题、句子和标签构成（以制表符分割），数据结构如下：
 
     Example::
@@ -250,7 +250,7 @@ class QNLILoader(JsonLoader):
         return ds
     
     def download(self):
-        """
+        r"""
         如果您的实验使用到了该数据，请引用
 
         https://arxiv.org/pdf/1809.05053.pdf
@@ -261,7 +261,7 @@ class QNLILoader(JsonLoader):
 
 
 class RTELoader(Loader):
-    """
+    r"""
     第一行为标题(具体内容会被忽略)，之后每一行是一个sample，由index、句子1、句子2和标签构成（以制表符分割），数据结构如下：
 
     Example::
@@ -312,7 +312,7 @@ class RTELoader(Loader):
         return ds
     
     def download(self):
-        """
+        r"""
         如果您的实验使用到了该数据，请引用GLUE Benchmark
 
         https://openreview.net/pdf?id=rJ4km2R5t7
@@ -323,7 +323,7 @@ class RTELoader(Loader):
 
 
 class QuoraLoader(Loader):
-    """
+    r"""
     Quora matching任务的数据集Loader
 
     支持读取的文件中的内容，应该有以下的形式, 以制表符分隔，且前三列的内容必须是：第一列是label，第二列和第三列是句子
@@ -364,7 +364,7 @@ class QuoraLoader(Loader):
         return ds
     
     def download(self):
-        """
+        r"""
         由于版权限制，不能提供自动下载功能。可参考
 
         https://www.kaggle.com/c/quora-question-pairs/data
@@ -375,7 +375,7 @@ class QuoraLoader(Loader):
 
 
 class CNXNLILoader(Loader):
-    """
+    r"""
     数据集简介：中文句对NLI（本为multi-lingual的数据集，但是这里只取了中文的数据集）。原句子已被MOSES tokenizer处理，这里我们将其还原并重新按字tokenize
     原始数据数据为：
 
@@ -459,7 +459,7 @@ class CNXNLILoader(Loader):
         return data_bundle
 
     def download(self) -> str:
-        """
+        r"""
         自动下载数据，该数据取自 https://arxiv.org/abs/1809.05053
         在 https://arxiv.org/pdf/1905.05526.pdf https://arxiv.org/pdf/1901.10125.pdf
         https://arxiv.org/pdf/1809.05053.pdf 有使用
@@ -470,7 +470,7 @@ class CNXNLILoader(Loader):
 
 
 class BQCorpusLoader(Loader):
-    """
+    r"""
     别名：
     数据集简介:句子对二分类任务（判断是否具有相同的语义）
     原始数据结构为：
@@ -511,7 +511,7 @@ class BQCorpusLoader(Loader):
         return ds
 
     def download(self):
-        """
+        r"""
         由于版权限制，不能提供自动下载功能。可参考
 
         https://github.com/ymcui/Chinese-BERT-wwm
@@ -566,7 +566,7 @@ class LCQMCLoader(Loader):
         return ds
 
     def download(self):
-        """
+        r"""
         由于版权限制，不能提供自动下载功能。可参考
 
         https://github.com/ymcui/Chinese-BERT-wwm

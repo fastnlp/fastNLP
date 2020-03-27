@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "Loader"
@@ -13,7 +13,7 @@ from ...core.dataset import DataSet
 
 
 class Loader:
-    """
+    r"""
     各种数据 Loader 的基类，提供了 API 的参考.
     Loader支持以下的三个函数
 
@@ -27,7 +27,7 @@ class Loader:
         pass
     
     def _load(self, path: str) -> DataSet:
-        """
+        r"""
         给定一个路径，返回读取的DataSet。
 
         :param str path: 路径
@@ -71,7 +71,7 @@ class Loader:
         return data_bundle
     
     def download(self) -> str:
-        """
+        r"""
         自动下载该数据集
 
         :return: 下载后解压目录
@@ -80,7 +80,7 @@ class Loader:
     
     @staticmethod
     def _get_dataset_path(dataset_name):
-        """
+        r"""
         传入dataset的名称，获取读取数据的目录。如果数据不存在，会尝试自动下载并缓存（如果支持的话）
 
         :param str dataset_name: 数据集的名称

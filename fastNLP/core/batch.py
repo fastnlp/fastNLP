@@ -1,4 +1,4 @@
-"""
+r"""
 batch 模块实现了 fastNLP 所需的 :class:`~fastNLP.core.batch.DataSetIter` 类。
 
 """
@@ -49,7 +49,7 @@ def _pad(batch_dict, dataset, as_numpy):
 
 
 class DataSetGetter:
-    """
+    r"""
     传递给torch.utils.data.DataLoader获取数据，DataLoder会传入int的idx获取数据(调用这里的__getitem__()函数)。
     """
     def __init__(self, dataset: DataSet, as_numpy=False):
@@ -70,7 +70,7 @@ class DataSetGetter:
         return len(self.dataset)
 
     def collate_fn(self, ins_list: list):
-        """
+        r"""
 
         :param batch: [[idx1, x_dict1, y_dict1], [idx2, x_dict2, y_dict2], [xx, xx, xx]]
         :return:
@@ -104,7 +104,7 @@ class DataSetGetter:
 
 
 class SamplerAdapter(torch.utils.data.Sampler):
-    """
+    r"""
     用于传入torch.utils.data.DataLoader中，DataLoader会调用__iter__()方法获取index(一次只取一个int)
 
     """
@@ -121,7 +121,7 @@ class SamplerAdapter(torch.utils.data.Sampler):
 
 
 class BatchIter:
-    """
+    r"""
     Trainer用于迭代数据的类。继承该类，并实现get_num_batches(), get_batch_indices(), num_batches(), __iter__()方法以及dataset属性。
 
     """
@@ -166,7 +166,7 @@ class BatchIter:
 
     @staticmethod
     def get_num_batches(num_samples, batch_size, drop_last):
-        """
+        r"""
         计算batch的数量。用于前端显示进度
 
         :param int num_samples:
@@ -180,7 +180,7 @@ class BatchIter:
         return num_batches
 
     def get_batch_indices(self):
-        """
+        r"""
         获取最近输出的batch的index。用于溯源当前batch的数据
 
         :return:
@@ -192,7 +192,7 @@ class BatchIter:
 
     @property
     def dataset(self):
-        """
+        r"""
         获取正在参与iterate的dataset
 
         :return:
@@ -201,7 +201,7 @@ class BatchIter:
 
     @abc.abstractmethod
     def __iter__(self):
-        """
+        r"""
         用于实际数据循环的类，返回值需要为两个dict, 第一个dict中的内容会认为是input, 第二个dict中的内容会认为是target
 
         :return:
@@ -210,7 +210,7 @@ class BatchIter:
 
 
 class DataSetIter(BatchIter):
-    """
+    r"""
     DataSetIter 用于从 `DataSet` 中按一定的顺序, 依次按 ``batch_size`` 的大小将数据取出，
     组成 `x` 和 `y`::
 
@@ -223,7 +223,7 @@ class DataSetIter(BatchIter):
     def __init__(self, dataset, batch_size=1, sampler=None, as_numpy=False,
                  num_workers=0, pin_memory=False, drop_last=False,
                  timeout=0, worker_init_fn=None, collate_fn=None):
-        """
+        r"""
         
         :param dataset: :class:`~fastNLP.DataSet` 对象, 数据集
         :param int batch_size: 取出的batch大小
@@ -258,7 +258,7 @@ class DataSetIter(BatchIter):
 
 
 class TorchLoaderIter(BatchIter):
-    """
+    r"""
     与DataSetIter类似，但可以用于非fastNLP的数据容器对象，然后将其传入到Trainer中。
     只需要保证数据容器实现了实现了以下的方法
 
@@ -387,7 +387,7 @@ class TorchLoaderIter(BatchIter):
     def __init__(self, dataset, batch_size=1, sampler=None,
                  num_workers=0, pin_memory=False, drop_last=False,
                  timeout=0, worker_init_fn=None, collate_fn=None):
-        """
+        r"""
 
         :param dataset: :class:`~fastNLP.DataSet` 对象, 数据集
         :param int batch_size: 取出的batch大小
@@ -421,7 +421,7 @@ class TorchLoaderIter(BatchIter):
 
 
 def _to_tensor(batch, field_dtype):
-    """
+    r"""
 
     :param batch: np.array()
     :param field_dtype: 数据类型

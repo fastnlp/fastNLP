@@ -1,4 +1,4 @@
-"""
+r"""
 Star-Transformer 的 Pytorch 实现。
 """
 __all__ = [
@@ -18,7 +18,7 @@ from ..modules.encoder.star_transformer import StarTransformer
 
 
 class StarTransEnc(nn.Module):
-    """
+    r"""
     带word embedding的Star-Transformer Encoder
 
     """
@@ -31,7 +31,7 @@ class StarTransEnc(nn.Module):
                  max_len,
                  emb_dropout,
                  dropout):
-        """
+        r"""
         
         :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
             embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,此时就以传入的对象作为embedding
@@ -56,7 +56,7 @@ class StarTransEnc(nn.Module):
                                        max_len=max_len)
 
     def forward(self, x, mask):
-        """
+        r"""
         :param FloatTensor x: [batch, length, hidden] 输入的序列
         :param ByteTensor mask: [batch, length] 输入序列的padding mask, 在没有内容(padding 部分) 为 0,
             否则为 1
@@ -103,7 +103,7 @@ class _NLICls(nn.Module):
 
 
 class STSeqLabel(nn.Module):
-    """
+    r"""
     用于序列标注的Star-Transformer模型
 
     """
@@ -117,7 +117,7 @@ class STSeqLabel(nn.Module):
                  cls_hidden_size=600,
                  emb_dropout=0.1,
                  dropout=0.1, ):
-        """
+        r"""
         
         :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
             embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象, 此时就以传入的对象作为embedding
@@ -143,7 +143,7 @@ class STSeqLabel(nn.Module):
         self.cls = _Cls(hidden_size, num_cls, cls_hidden_size)
 
     def forward(self, words, seq_len):
-        """
+        r"""
 
         :param words: [batch, seq_len] 输入序列
         :param seq_len: [batch,] 输入序列的长度
@@ -156,7 +156,7 @@ class STSeqLabel(nn.Module):
         return {Const.OUTPUT: output}  # [bsz, n_cls, seq_len]
 
     def predict(self, words, seq_len):
-        """
+        r"""
 
         :param words: [batch, seq_len] 输入序列
         :param seq_len: [batch,] 输入序列的长度
@@ -168,7 +168,7 @@ class STSeqLabel(nn.Module):
 
 
 class STSeqCls(nn.Module):
-    """
+    r"""
     用于分类任务的Star-Transformer
 
     """
@@ -182,7 +182,7 @@ class STSeqCls(nn.Module):
                  cls_hidden_size=600,
                  emb_dropout=0.1,
                  dropout=0.1, ):
-        """
+        r"""
         
         :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
             embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象, 此时就以传入的对象作为embedding
@@ -208,7 +208,7 @@ class STSeqCls(nn.Module):
         self.cls = _Cls(hidden_size, num_cls, cls_hidden_size, dropout=dropout)
 
     def forward(self, words, seq_len):
-        """
+        r"""
 
         :param words: [batch, seq_len] 输入序列
         :param seq_len: [batch,] 输入序列的长度
@@ -221,7 +221,7 @@ class STSeqCls(nn.Module):
         return {Const.OUTPUT: output}
 
     def predict(self, words, seq_len):
-        """
+        r"""
 
         :param words: [batch, seq_len] 输入序列
         :param seq_len: [batch,] 输入序列的长度
@@ -233,7 +233,7 @@ class STSeqCls(nn.Module):
 
 
 class STNLICls(nn.Module):
-    """
+    r"""
     用于自然语言推断(NLI)的Star-Transformer
 
     """
@@ -247,7 +247,7 @@ class STNLICls(nn.Module):
                  cls_hidden_size=600,
                  emb_dropout=0.1,
                  dropout=0.1, ):
-        """
+        r"""
         
         :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
             embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象, 此时就以传入的对象作为embedding
@@ -273,7 +273,7 @@ class STNLICls(nn.Module):
         self.cls = _NLICls(hidden_size, num_cls, cls_hidden_size)
 
     def forward(self, words1, words2, seq_len1, seq_len2):
-        """
+        r"""
 
         :param words1: [batch, seq_len] 输入序列1
         :param words2: [batch, seq_len] 输入序列2
@@ -294,7 +294,7 @@ class STNLICls(nn.Module):
         return {Const.OUTPUT: output}
 
     def predict(self, words1, words2, seq_len1, seq_len2):
-        """
+        r"""
 
         :param words1: [batch, seq_len] 输入序列1
         :param words2: [batch, seq_len] 输入序列2

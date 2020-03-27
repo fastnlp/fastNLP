@@ -1,4 +1,4 @@
-"""
+r"""
 本模块实现了几种序列标注模型
 """
 __all__ = [
@@ -22,13 +22,13 @@ from ..modules.decoder.crf import allowed_transitions
 
 
 class BiLSTMCRF(BaseModel):
-    """
+    r"""
     结构为embedding + BiLSTM + FC + Dropout + CRF.
 
     """
     def __init__(self, embed, num_classes, num_layers=1, hidden_size=100, dropout=0.5,
                   target_vocab=None):
-        """
+        r"""
         
         :param embed: 支持(1)fastNLP的各种Embedding, (2) tuple, 指明num_embedding, dimension, 如(1000, 100)
         :param num_classes: 一共多少个类
@@ -79,14 +79,14 @@ class BiLSTMCRF(BaseModel):
 
 
 class SeqLabeling(BaseModel):
-    """
+    r"""
     一个基础的Sequence labeling的模型。
     用于做sequence labeling的基础类。结构包含一层Embedding，一层LSTM(单向，一层)，一层FC，以及一层CRF。
     
     """
     
     def __init__(self, embed, hidden_size, num_classes):
-        """
+        r"""
         
         :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray embed: Embedding的大小(传入tuple(int, int),
             第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, embedding, ndarray等则直接使用该值初始化Embedding
@@ -101,7 +101,7 @@ class SeqLabeling(BaseModel):
         self.crf = decoder.ConditionalRandomField(num_classes)
 
     def forward(self, words, seq_len, target):
-        """
+        r"""
         :param torch.LongTensor words: [batch_size, max_len]，序列的index
         :param torch.LongTensor seq_len: [batch_size,], 这个序列的长度
         :param torch.LongTensor target: [batch_size, max_len], 序列的目标值
@@ -118,7 +118,7 @@ class SeqLabeling(BaseModel):
         return {C.LOSS: self._internal_loss(x, target, mask)}
     
     def predict(self, words, seq_len):
-        """
+        r"""
         用于在预测时使用
 
         :param torch.LongTensor words: [batch_size, max_len]
@@ -137,7 +137,7 @@ class SeqLabeling(BaseModel):
         return {C.OUTPUT: pred}
     
     def _internal_loss(self, x, y, mask):
-        """
+        r"""
         Negative log likelihood loss.
         :param x: Tensor, [batch_size, max_len, tag_size]
         :param y: Tensor, [batch_size, max_len]
@@ -150,7 +150,7 @@ class SeqLabeling(BaseModel):
         return torch.mean(total_loss)
     
     def _decode(self, x, mask):
-        """
+        r"""
         :param torch.FloatTensor x: [batch_size, max_len, tag_size]
         :return prediction: [batch_size, max_len]
         """
@@ -159,12 +159,12 @@ class SeqLabeling(BaseModel):
 
 
 class AdvSeqLabel(nn.Module):
-    """
+    r"""
     更复杂的Sequence Labelling模型。结构为Embedding, LayerNorm, 双向LSTM(两层)，FC，LayerNorm，DropOut，FC，CRF。
     """
     
     def __init__(self, embed, hidden_size, num_classes, dropout=0.3, id2words=None, encoding_type='bmes'):
-        """
+        r"""
         
         :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray embed: Embedding的大小(传入tuple(int, int),
             第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, Embedding, ndarray等则直接使用该值初始化Embedding
@@ -197,7 +197,7 @@ class AdvSeqLabel(nn.Module):
                                                                                                   encoding_type=encoding_type))
     
     def _decode(self, x, mask):
-        """
+        r"""
         :param torch.FloatTensor x: [batch_size, max_len, tag_size]
         :param torch.ByteTensor mask: [batch_size, max_len]
         :return torch.LongTensor, [batch_size, max_len]
@@ -206,7 +206,7 @@ class AdvSeqLabel(nn.Module):
         return tag_seq
     
     def _internal_loss(self, x, y, mask):
-        """
+        r"""
         Negative log likelihood loss.
         :param x: Tensor, [batch_size, max_len, tag_size]
         :param y: Tensor, [batch_size, max_len]
@@ -220,7 +220,7 @@ class AdvSeqLabel(nn.Module):
         return torch.mean(total_loss)
     
     def _forward(self, words, seq_len, target=None):
-        """
+        r"""
         :param torch.LongTensor words: [batch_size, mex_len]
         :param torch.LongTensor seq_len:[batch_size, ]
         :param torch.LongTensor target: [batch_size, max_len]
@@ -254,7 +254,7 @@ class AdvSeqLabel(nn.Module):
             return {"pred": self._decode(x, mask)}
     
     def forward(self, words, seq_len, target):
-        """
+        r"""
         
         :param torch.LongTensor words: [batch_size, mex_len]
         :param torch.LongTensor seq_len: [batch_size, ]
@@ -264,7 +264,7 @@ class AdvSeqLabel(nn.Module):
         return self._forward(words, seq_len, target)
     
     def predict(self, words, seq_len):
-        """
+        r"""
         
         :param torch.LongTensor words: [batch_size, mex_len]
         :param torch.LongTensor seq_len: [batch_size, ]

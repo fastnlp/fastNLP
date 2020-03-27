@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -23,7 +23,7 @@ from ..modules.encoder._elmo import ElmobiLm, ConvTokenEmbedder
 
 
 class ElmoEmbedding(ContextualEmbedding):
-    """
+    r"""
     使用ELMo的embedding。初始化之后，只需要传入words就可以得到对应的embedding。
     当前支持的使用名称初始化的模型:
     
@@ -56,7 +56,7 @@ class ElmoEmbedding(ContextualEmbedding):
     
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', layers: str = '2', requires_grad: bool = True,
                  word_dropout=0.0, dropout=0.0, cache_word_reprs: bool = False):
-        """
+        r"""
         
         :param vocab: 词表
         :param model_dir_or_name: 可以有两种方式调用预训练好的ELMo embedding：第一种是传入ELMo所在文件夹，该文件夹下面应该有两个文件，
@@ -110,7 +110,7 @@ class ElmoEmbedding(ContextualEmbedding):
         return self.gamma.to(outputs) * outputs
     
     def set_mix_weights_requires_grad(self, flag=True):
-        """
+        r"""
         当初始化ElmoEmbedding时layers被设置为mix时，可以通过调用该方法设置mix weights是否可训练。如果layers不是mix，调用
         该方法没有用。
         
@@ -130,7 +130,7 @@ class ElmoEmbedding(ContextualEmbedding):
         return outputs
     
     def forward(self, words: torch.LongTensor):
-        """
+        r"""
         计算words的elmo embedding表示。根据elmo文章中介绍的ELMO实际上是有2L+1层结果，但是为了让结果比较容易拆分，token的
         被重复了一次，使得实际上layer=0的结果是[token_embedding;token_embedding], 而layer=1的结果是[forward_hiddens;
         backward_hiddens].
@@ -153,7 +153,7 @@ class ElmoEmbedding(ContextualEmbedding):
 
 
 class _ElmoModel(nn.Module):
-    """
+    r"""
     该Module是ElmoEmbedding中进行所有的heavy lifting的地方。做的工作，包括
         (1) 根据配置，加载模型;
         (2) 根据vocab，对模型中的embedding进行调整. 并将其正确初始化
@@ -295,7 +295,7 @@ class _ElmoModel(nn.Module):
                 logger.info("There is no need to cache word representations, since no character information is used.")
     
     def forward(self, words):
-        """
+        r"""
 
         :param words: batch_size x max_len
         :return: num_layers x batch_size x max_len x hidden_size

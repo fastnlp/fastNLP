@@ -1,4 +1,4 @@
-"""
+r"""
 :class:`~fastNLP.core.dataset.DataSet` 是fastNLP中用于承载数据的容器。可以将DataSet看做是一个表格，
 每一行是一个sample (在fastNLP中被称为 :mod:`~fastNLP.core.instance` )，
 每一列是一个feature (在fastNLP中称为 :mod:`~fastNLP.core.field` )。
@@ -380,12 +380,12 @@ class ApplyResultException(Exception):
         self.index = index  # 标示在哪个数据遭遇到问题了
     
 class DataSet(object):
-    """
+    r"""
     fastNLP的数据容器，详细的使用方法见文档  :mod:`fastNLP.core.dataset`
     """
 
     def __init__(self, data=None):
-        """
+        r"""
         
         :param data: 如果为dict类型，则每个key的value应该为等长的list; 如果为list，
             每个元素应该为具有相同field的 :class:`~fastNLP.Instance` 。
@@ -447,7 +447,7 @@ class DataSet(object):
         return inner_iter_func()
 
     def __getitem__(self, idx):
-        """给定int的index，返回一个Instance; 给定slice，返回包含这个slice内容的新的DataSet。
+        r"""给定int的index，返回一个Instance; 给定slice，返回包含这个slice内容的新的DataSet。
 
         :param idx: can be int or slice.
         :return: If `idx` is int, return an Instance object.
@@ -495,7 +495,7 @@ class DataSet(object):
         return self.__dict__
 
     def __len__(self):
-        """Fetch the length of the dataset.
+        r"""Fetch the length of the dataset.
 
         :return length:
         """
@@ -508,7 +508,7 @@ class DataSet(object):
         return str(pretty_table_printer(self))
 
     def print_field_meta(self):
-        """
+        r"""
         输出当前field的meta信息, 形似下列的输出::
 
             +-------------+-------+-------+
@@ -564,7 +564,7 @@ class DataSet(object):
             return table
 
     def append(self, instance):
-        """
+        r"""
         将一个instance对象append到DataSet后面。
 
         :param ~fastNLP.Instance instance: 若DataSet不为空，则instance应该拥有和DataSet完全一样的field。
@@ -589,7 +589,7 @@ class DataSet(object):
                     raise e
 
     def add_fieldarray(self, field_name, fieldarray):
-        """
+        r"""
         将fieldarray添加到DataSet中.
 
         :param str field_name: 新加入的field的名称
@@ -604,7 +604,7 @@ class DataSet(object):
         self.field_arrays[field_name] = fieldarray
 
     def add_field(self, field_name, fields, padder=AutoPadder(), is_input=False, is_target=False, ignore_type=False):
-        """
+        r"""
         新增一个field
         
         :param str field_name: 新增的field的名称
@@ -623,7 +623,7 @@ class DataSet(object):
                                                    padder=padder, ignore_type=ignore_type)
 
     def delete_instance(self, index):
-        """
+        r"""
         删除第index个instance
 
         :param int index: 需要删除的instance的index，序号从0开始。
@@ -639,7 +639,7 @@ class DataSet(object):
         return self
 
     def delete_field(self, field_name):
-        """
+        r"""
         删除名为field_name的field
 
         :param str field_name: 需要删除的field的名称.
@@ -648,7 +648,7 @@ class DataSet(object):
         return self
 
     def copy_field(self, field_name, new_field_name):
-        """
+        r"""
         深度copy名为field_name的field到new_field_name
 
         :param str field_name: 需要copy的field。
@@ -662,7 +662,7 @@ class DataSet(object):
         return self
 
     def has_field(self, field_name):
-        """
+        r"""
         判断DataSet中是否有名为field_name这个field
 
         :param str field_name: field的名称
@@ -673,7 +673,7 @@ class DataSet(object):
         return False
 
     def get_field(self, field_name):
-        """
+        r"""
         获取field_name这个field
 
         :param str field_name: field的名称
@@ -684,7 +684,7 @@ class DataSet(object):
         return self.field_arrays[field_name]
 
     def get_all_fields(self):
-        """
+        r"""
         返回一个dict，key为field_name, value为对应的 :class:`~fastNLP.FieldArray`
 
         :return dict: 返回如上所述的字典
@@ -692,7 +692,7 @@ class DataSet(object):
         return self.field_arrays
 
     def get_field_names(self) -> list:
-        """
+        r"""
         返回一个list，包含所有 field 的名字
 
         :return list: 返回如上所述的列表
@@ -700,7 +700,7 @@ class DataSet(object):
         return sorted(self.field_arrays.keys())
 
     def get_length(self):
-        """
+        r"""
         获取DataSet的元素数量
 
         :return: int: DataSet中Instance的个数。
@@ -708,7 +708,7 @@ class DataSet(object):
         return len(self)
 
     def rename_field(self, field_name, new_field_name):
-        """
+        r"""
         将某个field重新命名.
 
         :param str field_name: 原来的field名称。
@@ -722,7 +722,7 @@ class DataSet(object):
         return self
 
     def set_target(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True):
-        """
+        r"""
         将field_names的field设置为target
 
         Example::
@@ -749,7 +749,7 @@ class DataSet(object):
         return self
 
     def set_input(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True):
-        """
+        r"""
         将field_names的field设置为input::
 
             dataset.set_input('words', 'seq_len')   # 将words和seq_len这两个field的input属性设置为True
@@ -773,7 +773,7 @@ class DataSet(object):
         return self
 
     def set_ignore_type(self, *field_names, flag=True):
-        """
+        r"""
         将field设置为忽略类型状态。当某个field被设置了ignore_type, 则在被设置为target或者input时将不进行类型检查，
         默认情况下也不进行pad。如果仍需要pad该field，可通过自定义Padder实现，若该field需要转换为tensor，需要在padder
         中转换，但不需要在padder中移动到gpu。
@@ -791,7 +791,7 @@ class DataSet(object):
         return self
 
     def set_padder(self, field_name, padder):
-        """
+        r"""
         为field_name设置padder::
 
             from fastNLP import EngChar2DPadder
@@ -807,7 +807,7 @@ class DataSet(object):
         return self
 
     def set_pad_val(self, field_name, pad_val):
-        """
+        r"""
         为某个field设置对应的pad_val.
 
         :param str field_name: 修改该field的pad_val
@@ -819,7 +819,7 @@ class DataSet(object):
         return self
 
     def get_input_name(self):
-        """
+        r"""
         返回所有is_input被设置为True的field名称
 
         :return list: 里面的元素为被设置为input的field名称
@@ -827,7 +827,7 @@ class DataSet(object):
         return [name for name, field in self.field_arrays.items() if field.is_input]
 
     def get_target_name(self):
-        """
+        r"""
         返回所有is_target被设置为True的field名称
 
         :return list: 里面的元素为被设置为target的field名称
@@ -835,7 +835,7 @@ class DataSet(object):
         return [name for name, field in self.field_arrays.items() if field.is_target]
 
     def apply_field(self, func, field_name, new_field_name=None, **kwargs):
-        """
+        r"""
         将DataSet中的每个instance中的名为 `field_name` 的field传给func，并获取它的返回值。
 
         :param callable func: input是instance中名为 `field_name` 的field的内容。
@@ -858,7 +858,7 @@ class DataSet(object):
         return self.apply(func, new_field_name, _apply_field=field_name, **kwargs)
 
     def apply_field_more(self, func, field_name, modify_fields=True, **kwargs):
-        """
+        r"""
         将 ``DataSet`` 中的每个 ``Instance`` 中的名为 `field_name` 的field 传给 func，并获取它的返回值。
         func 可以返回一个或多个 field 上的结果。
         
@@ -885,7 +885,7 @@ class DataSet(object):
         return self.apply_more(func, modify_fields, _apply_field=field_name, **kwargs)
     
     def _add_apply_field(self, results, new_field_name, kwargs):
-        """
+        r"""
         将results作为加入到新的field中，field名称为new_field_name
 
         :param List[str] results: 一般是apply*()之后的结果
@@ -917,7 +917,7 @@ class DataSet(object):
                            ignore_type=extra_param.get("ignore_type", False))
 
     def apply_more(self, func, modify_fields=True, **kwargs):
-        """
+        r"""
         将 ``DataSet`` 中每个 ``Instance`` 传入到func中，并获取它的返回值。func可以返回一个或多个 field 上的结果。
         
         .. note::
@@ -978,7 +978,7 @@ class DataSet(object):
         return results
 
     def apply(self, func, new_field_name=None, **kwargs):
-        """
+        r"""
         将DataSet中每个instance传入到func中，并获取它的返回值.
 
         :param callable func: 参数是 ``DataSet`` 中的 ``Instance``
@@ -1015,7 +1015,7 @@ class DataSet(object):
         return results
 
     def add_seq_len(self, field_name: str, new_field_name=Const.INPUT_LEN):
-        """
+        r"""
         将使用len()直接对field_name中每个元素作用，将其结果作为sequence length, 并放入seq_len这个field。
 
         :param field_name: str.
@@ -1029,7 +1029,7 @@ class DataSet(object):
         return self
 
     def drop(self, func, inplace=True):
-        """
+        r"""
         func接受一个Instance，返回bool值。返回值为True时，该Instance会被移除或者不会包含在返回的DataSet中。
 
         :param callable func: 接受一个Instance作为参数，返回bool值。为True时删除该instance
@@ -1053,7 +1053,7 @@ class DataSet(object):
                 return DataSet()
 
     def split(self, ratio, shuffle=True):
-        """
+        r"""
         将DataSet按照ratio的比例拆分，返回两个DataSet
 
         :param float ratio: 0<ratio<1, 返回的第一个DataSet拥有 `(1-ratio)` 这么多数据，第二个DataSet拥有`ratio`这么多数据
@@ -1088,7 +1088,7 @@ class DataSet(object):
         return train_set, dev_set
 
     def save(self, path):
-        """
+        r"""
         保存DataSet.
 
         :param str path: 将DataSet存在哪个路径
@@ -1110,7 +1110,7 @@ class DataSet(object):
         return d
 
     def add_collect_fn(self, fn, name=None):
-        """
+        r"""
         添加 CollectFn，collect_fn允许在生成的batch的过程中动态生成一些数据(在DataSetIter作为迭代器的情况下有效，默认情况下就是用的
         这个)。支持依次添加多个collect_fn, 如果相同的key，后面的collect_fn的结果覆盖前面的collect_fn的结果。
 
@@ -1126,7 +1126,7 @@ class DataSet(object):
         self.collector.add_fn(fn, name=name)
 
     def delete_collect_fn(self, name=None):
-        """
+        r"""
         删除某个collect_fn
 
         :param str,int name: 如果为None，则删除最近加入的collect_fn

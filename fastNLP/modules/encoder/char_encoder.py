@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "ConvolutionCharEncoder",
@@ -12,13 +12,13 @@ from ..utils import initial_parameter
 
 # from torch.nn.init import xavier_uniform
 class ConvolutionCharEncoder(nn.Module):
-    """
+    r"""
     char级别的卷积编码器.
     
     """
 
     def __init__(self, char_emb_size=50, feature_maps=(40, 30, 30), kernels=(1, 3, 5), initial_method=None):
-        """
+        r"""
         
         :param int char_emb_size: char级别embedding的维度. Default: 50
             :例: 有26个字符, 每一个的embedding是一个50维的向量, 所以输入的向量维度为50.
@@ -35,7 +35,7 @@ class ConvolutionCharEncoder(nn.Module):
         initial_parameter(self, initial_method)
 
     def forward(self, x):
-        """
+        r"""
         :param torch.Tensor x: ``[batch_size * sent_length, word_length, char_emb_size]`` 输入字符的embedding
         :return: torch.Tensor : 卷积计算的结果, 维度为[batch_size * sent_length, sum(feature_maps), 1]
         """
@@ -60,12 +60,12 @@ class ConvolutionCharEncoder(nn.Module):
 
 
 class LSTMCharEncoder(nn.Module):
-    """
+    r"""
     char级别基于LSTM的encoder.
     """
 
     def __init__(self, char_emb_size=50, hidden_size=None, initial_method=None):
-        """
+        r"""
         :param int char_emb_size: char级别embedding的维度. Default: 50
                 例: 有26个字符, 每一个的embedding是一个50维的向量, 所以输入的向量维度为50.
         :param int hidden_size: LSTM隐层的大小, 默认为char的embedding维度
@@ -82,7 +82,7 @@ class LSTMCharEncoder(nn.Module):
         initial_parameter(self, initial_method)
 
     def forward(self, x):
-        """
+        r"""
         :param torch.Tensor x: ``[ n_batch*n_word, word_length, char_emb_size]`` 输入字符的embedding
         :return: torch.Tensor : [ n_batch*n_word, char_emb_size]经过LSTM编码的结果
         """

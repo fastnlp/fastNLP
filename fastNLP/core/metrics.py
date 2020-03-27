@@ -1,4 +1,4 @@
-"""
+r"""
 metrics 模块实现了 fastNLP 所需的各种常用衡量指标，一般做为 :class:`~fastNLP.Trainer` 的参数使用。
 
 """
@@ -33,7 +33,7 @@ from .utils import ConfusionMatrix
 
 
 class MetricBase(object):
-    """
+    r"""
     所有metrics的基类,所有的传入到Trainer, Tester的Metric需要继承自该对象，需要覆盖写入evaluate(), get_metric()方法。
     
         evaluate(xxx)中传入的是一个batch的数据。
@@ -145,7 +145,7 @@ class MetricBase(object):
         raise NotImplemented
 
     def set_metric_name(self, name: str):
-        """
+        r"""
         设置metric的名称，默认是Metric的class name.
 
         :param str name:
@@ -155,7 +155,7 @@ class MetricBase(object):
         return self
 
     def get_metric_name(self):
-        """
+        r"""
         返回metric的名称
         
         :return:
@@ -163,7 +163,7 @@ class MetricBase(object):
         return self._metric_name
 
     def _init_param_map(self, key_map=None, **kwargs):
-        """检查key_map和其他参数map，并将这些映射关系添加到self._param_map
+        r"""检查key_map和其他参数map，并将这些映射关系添加到self._param_map
 
         :param dict key_map: 表示key的映射关系
         :param kwargs: key word args里面的每一个的键-值对都会被构造成映射关系
@@ -205,7 +205,7 @@ class MetricBase(object):
                     f"initialization parameters, or change its signature.")
 
     def __call__(self, pred_dict, target_dict):
-        """
+        r"""
         这个方法会调用self.evaluate 方法.
         在调用之前，会进行以下检测:
             1. self.evaluate当中是否有varargs, 这是不支持的.
@@ -315,7 +315,7 @@ class ConfusionMatrixMetric(MetricBase):
                  seq_len=None,
                  print_ratio=False
                 ):
-        """
+        r"""
         :param vocab: vocab词表类,要求有to_word()方法。
         :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
         :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
@@ -330,7 +330,7 @@ class ConfusionMatrixMetric(MetricBase):
         )
 
     def evaluate(self, pred, target, seq_len=None):
-        """
+        r"""
         evaluate函数将针对一个批次的预测结果做评价指标的累计
         
         :param torch.Tensor pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
@@ -379,7 +379,7 @@ class ConfusionMatrixMetric(MetricBase):
                                                   target.tolist())
 
     def get_metric(self, reset=True):
-        """
+        r"""
         get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果.
         :param bool reset: 在调用完get_metric后是否清空评价指标统计量.
         :return dict evaluate_result: {"confusion_matrix": ConfusionMatrix}
@@ -394,12 +394,12 @@ class ConfusionMatrixMetric(MetricBase):
 
 
 class AccuracyMetric(MetricBase):
-    """
+    r"""
     准确率Metric（其它的Metric参见 :mod:`fastNLP.core.metrics` ）
     """
 
     def __init__(self, pred=None, target=None, seq_len=None):
-        """
+        r"""
         
         :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
         :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
@@ -414,7 +414,7 @@ class AccuracyMetric(MetricBase):
         self.acc_count = 0
 
     def evaluate(self, pred, target, seq_len=None):
-        """
+        r"""
         evaluate函数将针对一个批次的预测结果做评价指标的累计
 
         :param torch.Tensor pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
@@ -463,7 +463,7 @@ class AccuracyMetric(MetricBase):
             self.total += np.prod(list(pred.size()))
 
     def get_metric(self, reset=True):
-        """
+        r"""
         get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果.
 
         :param bool reset: 在调用完get_metric后是否清空评价指标统计量.
@@ -537,7 +537,7 @@ class ClassifyFPreRecMetric(MetricBase):
         # tp: truth=T, classify=T; fp: truth=T, classify=F; fn: truth=F, classify=T
 
     def evaluate(self, pred, target, seq_len=None):
-        """
+        r"""
         evaluate函数将针对一个批次的预测结果做评价指标的累计
 
         :param torch.Tensor pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
@@ -586,7 +586,7 @@ class ClassifyFPreRecMetric(MetricBase):
             self._fn[target_idx] += torch.sum((pred == target_idx).long().masked_fill(target == target_idx, 0).masked_fill(masks, 0)).item()
 
     def get_metric(self, reset=True):
-        """
+        r"""
         get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果.
 
         :param bool reset: 在调用完get_metric后是否清空评价指标统计量.
@@ -646,7 +646,7 @@ class ClassifyFPreRecMetric(MetricBase):
 
 
 def _bmes_tag_to_spans(tags, ignore_labels=None):
-    """
+    r"""
     给定一个tags的lis，比如['S-song', 'B-singer', 'M-singer', 'E-singer', 'S-moive', 'S-actor']。
     返回[('song', (0, 1)), ('singer', (1, 4)), ('moive', (4, 5)), ('actor', (5, 6))] (左闭右开区间)
     也可以是单纯的['S', 'B', 'M', 'E', 'B', 'M', 'M',...]序列
@@ -676,7 +676,7 @@ def _bmes_tag_to_spans(tags, ignore_labels=None):
 
 
 def _bmeso_tag_to_spans(tags, ignore_labels=None):
-    """
+    r"""
     给定一个tags的lis，比如['O', 'B-singer', 'M-singer', 'E-singer', 'O', 'O']。
     返回[('singer', (1, 4))] (左闭右开区间)
 
@@ -707,7 +707,7 @@ def _bmeso_tag_to_spans(tags, ignore_labels=None):
 
 
 def _bioes_tag_to_spans(tags, ignore_labels=None):
-    """
+    r"""
     给定一个tags的lis，比如['O', 'B-singer', 'I-singer', 'E-singer', 'O', 'O']。
     返回[('singer', (1, 4))] (左闭右开区间)
 
@@ -738,7 +738,7 @@ def _bioes_tag_to_spans(tags, ignore_labels=None):
 
 
 def _bio_tag_to_spans(tags, ignore_labels=None):
-    """
+    r"""
     给定一个tags的lis，比如['O', 'B-singer', 'I-singer', 'I-singer', 'O', 'O']。
         返回[('singer', (1, 4))] (左闭右开区间)
 
@@ -766,7 +766,7 @@ def _bio_tag_to_spans(tags, ignore_labels=None):
 
 
 def _get_encoding_type_from_tag_vocab(tag_vocab: Union[Vocabulary, dict]) -> str:
-    """
+    r"""
     给定Vocabulary自动判断是哪种类型的encoding, 支持判断bmes, bioes, bmeso, bio
 
     :param tag_vocab: 支持传入tag Vocabulary; 或者传入形如{0:"O", 1:"B-tag1"}，即index在前，tag在后的dict。
@@ -802,7 +802,7 @@ def _get_encoding_type_from_tag_vocab(tag_vocab: Union[Vocabulary, dict]) -> str
 
 
 def _check_tag_vocab_and_encoding_type(tag_vocab: Union[Vocabulary, dict], encoding_type: str):
-    """
+    r"""
     检查vocab中的tag是否与encoding_type是匹配的
 
     :param tag_vocab: 支持传入tag Vocabulary; 或者传入形如{0:"O", 1:"B-tag1"}，即index在前，tag在后的dict。
@@ -913,7 +913,7 @@ class SpanFPreRecMetric(MetricBase):
         self._false_negatives = defaultdict(int)
 
     def evaluate(self, pred, target, seq_len):
-        """evaluate函数将针对一个批次的预测结果做评价指标的累计
+        r"""evaluate函数将针对一个批次的预测结果做评价指标的累计
 
         :param pred: [batch, seq_len] 或者 [batch, seq_len, len(tag_vocab)], 预测的结果
         :param target: [batch, seq_len], 真实值
@@ -967,7 +967,7 @@ class SpanFPreRecMetric(MetricBase):
                 self._false_negatives[span[0]] += 1
 
     def get_metric(self, reset=True):
-        """get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果."""
+        r"""get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果."""
         evaluate_result = {}
         if not self.only_gross or self.f_type == 'macro':
             tags = set(self._false_negatives.keys())
@@ -1018,7 +1018,7 @@ class SpanFPreRecMetric(MetricBase):
 
 
 def _compute_f_pre_rec(beta_square, tp, fn, fp):
-    """
+    r"""
 
     :param tp: int, true positive
     :param fn: int, false negative
@@ -1033,7 +1033,7 @@ def _compute_f_pre_rec(beta_square, tp, fn, fp):
 
 
 def _prepare_metrics(metrics):
-    """
+    r"""
 
     Prepare list of Metric based on input
     :param metrics:
@@ -1064,7 +1064,7 @@ def _prepare_metrics(metrics):
 
 
 def _accuracy_topk(y_true, y_prob, k=1):
-    """Compute accuracy of y_true matching top-k probable labels in y_prob.
+    r"""Compute accuracy of y_true matching top-k probable labels in y_prob.
 
     :param y_true: ndarray, true label, [n_samples]
     :param y_prob: ndarray, label probabilities, [n_samples, n_classes]
@@ -1080,7 +1080,7 @@ def _accuracy_topk(y_true, y_prob, k=1):
 
 
 def _pred_topk(y_prob, k=1):
-    """Return top-k predicted labels and corresponding probabilities.
+    r"""Return top-k predicted labels and corresponding probabilities.
 
     :param y_prob: ndarray, size [n_samples, n_classes], probabilities on labels
     :param k: int, k of top-k
@@ -1110,7 +1110,7 @@ class CMRC2018Metric(MetricBase):
         self.f1 = 0
 
     def evaluate(self, answers, raw_chars, pred_start, pred_end, context_len=None):
-        """
+        r"""
 
         :param list[str] answers: 如[["答案1", "答案2", "答案3"], [...], ...]
         :param list[str] raw_chars: [["这", "是", ...], [...]]

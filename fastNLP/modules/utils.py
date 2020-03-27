@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -17,7 +17,7 @@ import torch.nn.init as init
 
 
 def initial_parameter(net, initial_method=None):
-    """A method used to initialize the weights of PyTorch models.
+    r"""A method used to initialize the weights of PyTorch models.
 
     :param net: a PyTorch model
     :param str initial_method: one of the following initializations.
@@ -81,7 +81,7 @@ def initial_parameter(net, initial_method=None):
 
 
 def summary(model: nn.Module):
-    """
+    r"""
     得到模型的总参数量
 
     :params model: Pytorch 模型
@@ -122,7 +122,7 @@ def summary(model: nn.Module):
 
 
 def get_dropout_mask(drop_p: float, tensor: torch.Tensor):
-    """
+    r"""
     根据tensor的形状，生成一个mask
 
     :param drop_p: float, 以多大的概率置为0。
@@ -136,7 +136,7 @@ def get_dropout_mask(drop_p: float, tensor: torch.Tensor):
 
 
 def _get_file_name_base_on_postfix(dir_path, postfix):
-    """
+    r"""
     在dir_path中寻找后缀为postfix的文件.
     :param dir_path: str, 文件夹
     :param postfix: 形如".bin", ".json"等

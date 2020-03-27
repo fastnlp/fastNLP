@@ -1,4 +1,4 @@
-"""
+r"""
 core 模块里实现了 fastNLP 的核心框架，常用的功能都可以从 fastNLP 包中直接 import。当然你也同样可以从 core 模块的子模块中 import，
 例如 :class:`~fastNLP.DataSetIter` 组件有两种 import 的方式::
     

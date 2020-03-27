@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -24,7 +24,7 @@ from ..modules.encoder.bert import _WordPieceBertModel, BertModel, BertTokenizer
 
 
 class BertEmbedding(ContextualEmbedding):
-    """
+    r"""
     使用BERT对words进行编码的Embedding。建议将输入的words长度限制在430以内，而不要使用512(根据预训练模型参数，可能有变化)。这是由于
     预训练的bert模型长度限制为512个token，而因为输入的word是未进行word piece分割的(word piece的分割有BertEmbedding在输入word
     时切分)，在分割之后长度可能会超过最大长度限制。
@@ -57,7 +57,7 @@ class BertEmbedding(ContextualEmbedding):
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en-base-uncased', layers: str = '-1',
                  pool_method: str = 'first', word_dropout=0, dropout=0, include_cls_sep: bool = False,
                  pooled_cls=True, requires_grad: bool = True, auto_truncate: bool = False, **kwargs):
-        """
+        r"""
         
         :param ~fastNLP.Vocabulary vocab: 词表
         :param str model_dir_or_name: 模型所在目录或者模型的名称。当传入模型所在目录时，目录中应该包含一个词表文件(以.txt作为后缀名),
@@ -112,7 +112,7 @@ class BertEmbedding(ContextualEmbedding):
         del self.model
     
     def forward(self, words):
-        """
+        r"""
         计算words的bert embedding表示。计算之前会在每句话的开始增加[CLS]在结束增加[SEP], 并根据include_cls_sep判断要不要
             删除这两个token的表示。
 
@@ -129,7 +129,7 @@ class BertEmbedding(ContextualEmbedding):
         return self.dropout(outputs)
     
     def drop_word(self, words):
-        """
+        r"""
         按照设定随机将words设置为unknown_index。
 
         :param torch.LongTensor words: batch_size x max_len
@@ -151,7 +151,7 @@ class BertEmbedding(ContextualEmbedding):
 
 
 class BertWordPieceEncoder(nn.Module):
-    """
+    r"""
     读取bert模型，读取之后调用index_dataset方法在dataset中生成word_pieces这一列。
 
     BertWordPieceEncoder可以支持自动下载权重，当前支持的模型:
@@ -170,7 +170,7 @@ class BertWordPieceEncoder(nn.Module):
     
     def __init__(self, model_dir_or_name: str = 'en-base-uncased', layers: str = '-1', pooled_cls: bool = False,
                  word_dropout=0, dropout=0, requires_grad: bool = True):
-        """
+        r"""
         
         :param str model_dir_or_name: 模型所在目录或者模型的名称。默认值为 ``en-base-uncased``
         :param str layers: 最终结果中的表示。以','隔开层数，可以以负数去索引倒数几层
@@ -204,7 +204,7 @@ class BertWordPieceEncoder(nn.Module):
         return self.model.encoder.config.vocab_size
     
     def index_datasets(self, *datasets, field_name, add_cls_sep=True):
-        """
+        r"""
         使用bert的tokenizer新生成word_pieces列加入到datasets中，并将他们设置为input,且将word_pieces这一列的pad value设置为了
         bert的pad value。
 
@@ -216,7 +216,7 @@ class BertWordPieceEncoder(nn.Module):
         self.model.index_dataset(*datasets, field_name=field_name, add_cls_sep=add_cls_sep)
     
     def forward(self, word_pieces, token_type_ids=None):
-        """
+        r"""
         计算words的bert embedding表示。传入的words中应该自行包含[CLS]与[SEP]的tag。
 
         :param words: batch_size x max_len
@@ -239,7 +239,7 @@ class BertWordPieceEncoder(nn.Module):
         return self.dropout_layer(outputs)
     
     def drop_word(self, words):
-        """
+        r"""
         按照设定随机将words设置为unknown_index。
 
         :param torch.LongTensor words: batch_size x max_len
@@ -353,7 +353,7 @@ class _WordBertModel(nn.Module):
         logger.debug("Successfully generate word pieces.")
     
     def forward(self, words):
-        """
+        r"""
 
         :param words: torch.LongTensor, batch_size x max_len
         :return: num_layers x batch_size x max_len x hidden_size或者num_layers x batch_size x (max_len+2) x hidden_size

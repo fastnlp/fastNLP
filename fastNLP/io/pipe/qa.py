@@ -1,4 +1,4 @@
-"""
+r"""
 本文件中的Pipe主要用于处理问答任务的数据。
 
 """
@@ -17,7 +17,7 @@ __all__ = ['CMRC2018BertPipe']
 
 
 def _concat_clip(data_bundle, max_len, concat_field_name='raw_chars'):
-    """
+    r"""
     处理data_bundle中的DataSet，将context与question按照character进行tokenize，然后使用[SEP]将两者连接起来。
 
     会新增field: context_len(int), raw_words(list[str]), target_start(int), target_end(int)其中target_start
@@ -78,7 +78,7 @@ def _concat_clip(data_bundle, max_len, concat_field_name='raw_chars'):
 
 
 class CMRC2018BertPipe(Pipe):
-    """
+    r"""
     处理之后的DataSet将新增以下的field(传入的field仍然保留)
 
     .. csv-table::
@@ -111,7 +111,7 @@ class CMRC2018BertPipe(Pipe):
         self.max_len = max_len
 
     def process(self, data_bundle: DataBundle) -> DataBundle:
-        """
+        r"""
         传入的DataSet应该具备以下的field
 
         .. csv-table::

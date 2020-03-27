@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -28,7 +28,7 @@ class ContextualEmbedding(TokenEmbedding):
         super(ContextualEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
     
     def add_sentence_cache(self, *datasets, batch_size=32, device='cpu', delete_weights: bool = True):
-        """
+        r"""
         由于动态embedding生成比较耗时，所以可以把每句话embedding缓存下来，这样就不需要每次都运行生成过程。
 
         :param datasets: DataSet对象
@@ -77,7 +77,7 @@ class ContextualEmbedding(TokenEmbedding):
             self._delete_model_weights()
     
     def _get_sent_reprs(self, words):
-        """
+        r"""
         获取sentence的表示，如果有缓存，则返回缓存的值; 没有缓存则返回None
 
         :param words: torch.LongTensor
@@ -101,11 +101,11 @@ class ContextualEmbedding(TokenEmbedding):
     
     @abstractmethod
     def _delete_model_weights(self):
-        """删除计算表示的模型以节省资源"""
+        r"""删除计算表示的模型以节省资源"""
         raise NotImplementedError
     
     def remove_sentence_cache(self):
-        """
+        r"""
         删除缓存的句子表示. 删除之后如果模型权重没有被删除，将开始使用动态计算权重。
 
         :return:

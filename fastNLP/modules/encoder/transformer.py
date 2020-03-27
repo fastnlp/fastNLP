@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "TransformerEncoder"
@@ -9,7 +9,7 @@ from .attention import MultiHeadAttention
 
 
 class TransformerEncoder(nn.Module):
-    """
+    r"""
     transformer的encoder模块，不包含embedding层
 
     """
@@ -27,7 +27,7 @@ class TransformerEncoder(nn.Module):
             self.dropout = nn.Dropout(dropout)
 
         def forward(self, input, seq_mask=None, atte_mask_out=None):
-            """
+            r"""
 
             :param input: [batch, seq_len, model_size]
             :param seq_mask: [batch, seq_len]
@@ -46,7 +46,7 @@ class TransformerEncoder(nn.Module):
             return input
 
     def __init__(self, num_layers, **kargs):
-        """
+        r"""
         
         :param int num_layers: transformer的层数
         :param int model_size: 输入维度的大小。同时也是输出维度的大小。
@@ -61,7 +61,7 @@ class TransformerEncoder(nn.Module):
         self.norm = nn.LayerNorm(kargs['model_size'], eps=1e-6)
 
     def forward(self, x, seq_mask=None):
-        """
+        r"""
         :param x: [batch, seq_len, model_size] 输入序列
         :param seq_mask: [batch, seq_len] 输入序列的padding mask, 若为 ``None`` , 生成全1向量.
             Default: ``None``

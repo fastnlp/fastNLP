@@ -1,4 +1,4 @@
-"""
+r"""
 该模块中的Embedding主要用于随机初始化的embedding(更推荐使用 :class:`fastNLP.embeddings.StaticEmbedding` )，或按照预训练权重初始化Embedding。
 
 """
@@ -17,7 +17,7 @@ from .utils import get_embeddings
 
 
 class Embedding(nn.Module):
-    """
+    r"""
     词向量嵌入，支持输入多种方式初始化. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度.
 
     Example::
@@ -32,7 +32,7 @@ class Embedding(nn.Module):
     """
     
     def __init__(self, init_embed, word_dropout=0, dropout=0.0, unk_index=None):
-        """
+        r"""
         
         :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: 支持传入Embedding的大小(传入tuple(int, int),
             第一个int为vocab_zie, 第二个int为embed_dim); 或传入Tensor, Embedding, numpy.ndarray等则直接使用该值初始化Embedding;
@@ -62,7 +62,7 @@ class Embedding(nn.Module):
         self.word_dropout = word_dropout
     
     def forward(self, words):
-        """
+        r"""
         :param torch.LongTensor words: [batch, seq_len]
         :return: torch.Tensor : [batch, seq_len, embed_dim]
         """
@@ -93,7 +93,7 @@ class Embedding(nn.Module):
     
     @property
     def requires_grad(self):
-        """
+        r"""
         Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
         :return:
         """
@@ -118,7 +118,7 @@ class Embedding(nn.Module):
 
 
 class TokenEmbedding(nn.Module):
-    """
+    r"""
     fastNLP中各种Embedding的基类
 
     """
@@ -136,7 +136,7 @@ class TokenEmbedding(nn.Module):
         self.dropout_layer = nn.Dropout(dropout)
     
     def drop_word(self, words):
-        """
+        r"""
         按照设定随机将words设置为unknown_index。
 
         :param torch.LongTensor words: batch_size x max_len
@@ -151,7 +151,7 @@ class TokenEmbedding(nn.Module):
         return words
     
     def dropout(self, words):
-        """
+        r"""
         对embedding后的word表示进行drop。
 
         :param torch.FloatTensor words: batch_size x max_len x embed_size
@@ -161,7 +161,7 @@ class TokenEmbedding(nn.Module):
     
     @property
     def requires_grad(self):
-        """
+        r"""
         Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
         :return:
         """
@@ -189,14 +189,14 @@ class TokenEmbedding(nn.Module):
     
     @property
     def num_embedding(self) -> int:
-        """
+        r"""
         这个值可能会大于实际的embedding矩阵的大小。
         :return:
         """
         return len(self._word_vocab)
     
     def get_word_vocab(self):
-        """
+        r"""
         返回embedding的词典。
 
         :return: Vocabulary

@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "CLSBasePipe",
@@ -39,7 +39,7 @@ class CLSBasePipe(Pipe):
         self.tokenizer = get_tokenizer(tokenizer, lang=lang)
 
     def _tokenize(self, data_bundle, field_name=Const.INPUT, new_field_name=None):
-        """
+        r"""
         将DataBundle中的数据进行tokenize
 
         :param DataBundle data_bundle:
@@ -54,7 +54,7 @@ class CLSBasePipe(Pipe):
         return data_bundle
 
     def process(self, data_bundle: DataBundle):
-        """
+        r"""
         传入的DataSet应该具备如下的结构
 
         .. csv-table::
@@ -83,7 +83,7 @@ class CLSBasePipe(Pipe):
         return data_bundle
 
     def process_from_file(self, paths) -> DataBundle:
-        """
+        r"""
         传入文件路径，生成处理好的DataBundle对象。paths支持的路径形式可以参考 ：:meth:`fastNLP.io.Loader.load()`
 
         :param paths:
@@ -93,7 +93,7 @@ class CLSBasePipe(Pipe):
 
 
 class YelpFullPipe(CLSBasePipe):
-    """
+    r"""
     处理YelpFull的数据, 处理之后DataSet中的内容如下
 
     .. csv-table:: 下面是使用YelpFullPipe处理后的DataSet所具备的field
@@ -117,7 +117,7 @@ class YelpFullPipe(CLSBasePipe):
     """
     
     def __init__(self, lower: bool = False, granularity=5, tokenizer: str = 'spacy'):
-        """
+        r"""
         
         :param bool lower: 是否对输入进行小写化。
         :param int granularity: 支持2, 3, 5。若为2, 则认为是2分类问题，将1、2归为1类，4、5归为一类，丢掉2；若为3, 则有3分类问题，将
@@ -136,7 +136,7 @@ class YelpFullPipe(CLSBasePipe):
             self.tag_map = None
     
     def process(self, data_bundle):
-        """
+        r"""
         传入的DataSet应该具备如下的结构
 
         .. csv-table::
@@ -157,7 +157,7 @@ class YelpFullPipe(CLSBasePipe):
         return data_bundle
     
     def process_from_file(self, paths=None):
-        """
+        r"""
 
         :param paths:
         :return: DataBundle
@@ -167,7 +167,7 @@ class YelpFullPipe(CLSBasePipe):
 
 
 class YelpPolarityPipe(CLSBasePipe):
-    """
+    r"""
     处理YelpPolarity的数据, 处理之后DataSet中的内容如下
 
     .. csv-table:: 下面是使用YelpFullPipe处理后的DataSet所具备的field
@@ -191,7 +191,7 @@ class YelpPolarityPipe(CLSBasePipe):
     """
     
     def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
-        """
+        r"""
         
         :param bool lower: 是否对输入进行小写化。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
@@ -199,7 +199,7 @@ class YelpPolarityPipe(CLSBasePipe):
         super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
     
     def process_from_file(self, paths=None):
-        """
+        r"""
 
         :param str paths:
         :return: DataBundle
@@ -209,7 +209,7 @@ class YelpPolarityPipe(CLSBasePipe):
 
 
 class AGsNewsPipe(CLSBasePipe):
-    """
+    r"""
     处理AG's News的数据, 处理之后DataSet中的内容如下
 
     .. csv-table:: 下面是使用AGsNewsPipe处理后的DataSet所具备的field
@@ -233,7 +233,7 @@ class AGsNewsPipe(CLSBasePipe):
     """
 
     def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
-        """
+        r"""
 
         :param bool lower: 是否对输入进行小写化。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
@@ -241,7 +241,7 @@ class AGsNewsPipe(CLSBasePipe):
         super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
 
     def process_from_file(self, paths=None):
-        """
+        r"""
         :param str paths:
         :return: DataBundle
         """
@@ -250,7 +250,7 @@ class AGsNewsPipe(CLSBasePipe):
 
 
 class DBPediaPipe(CLSBasePipe):
-    """
+    r"""
     处理DBPedia的数据, 处理之后DataSet中的内容如下
 
     .. csv-table:: 下面是使用DBPediaPipe处理后的DataSet所具备的field
@@ -274,7 +274,7 @@ class DBPediaPipe(CLSBasePipe):
     """
 
     def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
-        """
+        r"""
 
         :param bool lower: 是否对输入进行小写化。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
@@ -282,7 +282,7 @@ class DBPediaPipe(CLSBasePipe):
         super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
 
     def process_from_file(self, paths=None):
-        """
+        r"""
         :param str paths:
         :return: DataBundle
         """
@@ -291,7 +291,7 @@ class DBPediaPipe(CLSBasePipe):
 
 
 class SSTPipe(CLSBasePipe):
-    """
+    r"""
     经过该Pipe之后，DataSet中具备的field如下所示
 
     .. csv-table:: 下面是使用SSTPipe处理后的DataSet所具备的field
@@ -315,7 +315,7 @@ class SSTPipe(CLSBasePipe):
     """
     
     def __init__(self, subtree=False, train_subtree=True, lower=False, granularity=5, tokenizer='spacy'):
-        """
+        r"""
         
         :param bool subtree: 是否将train, test, dev数据展开为子树，扩充数据量。 Default: ``False``
         :param bool train_subtree: 是否将train集通过子树扩展数据。
@@ -339,7 +339,7 @@ class SSTPipe(CLSBasePipe):
             self.tag_map = None
     
     def process(self, data_bundle: DataBundle):
-        """
+        r"""
         对DataBundle中的数据进行预处理。输入的DataSet应该至少拥有raw_words这一列，且内容类似与
 
         .. csv-table:: 下面是使用SSTLoader读取的DataSet所具备的field
@@ -383,7 +383,7 @@ class SSTPipe(CLSBasePipe):
 
 
 class SST2Pipe(CLSBasePipe):
-    """
+    r"""
     加载SST2的数据, 处理完成之后DataSet将拥有以下的field
 
     .. csv-table::
@@ -407,7 +407,7 @@ class SST2Pipe(CLSBasePipe):
     """
     
     def __init__(self, lower=False, tokenizer='spacy'):
-        """
+        r"""
         
         :param bool lower: 是否对输入进行小写化。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
@@ -415,7 +415,7 @@ class SST2Pipe(CLSBasePipe):
         super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
     
     def process_from_file(self, paths=None):
-        """
+        r"""
 
         :param str paths: 如果为None，则自动下载并缓存到fastNLP的缓存地址。
         :return: DataBundle
@@ -425,7 +425,7 @@ class SST2Pipe(CLSBasePipe):
 
 
 class IMDBPipe(CLSBasePipe):
-    """
+    r"""
     经过本Pipe处理后DataSet将如下
 
     .. csv-table:: 输出DataSet的field
@@ -452,7 +452,7 @@ class IMDBPipe(CLSBasePipe):
     """
     
     def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
-        """
+        r"""
         
         :param bool lower: 是否将words列的数据小写。
         :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
@@ -461,7 +461,7 @@ class IMDBPipe(CLSBasePipe):
         self.lower = lower
     
     def process(self, data_bundle: DataBundle):
-        """
+        r"""
         期待的DataBunlde中输入的DataSet应该类似于如下，有两个field，raw_words和target，且均为str类型
 
         .. csv-table:: 输入DataSet的field
@@ -489,7 +489,7 @@ class IMDBPipe(CLSBasePipe):
         return data_bundle
     
     def process_from_file(self, paths=None):
-        """
+        r"""
 
         :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
         :return: DataBundle
@@ -502,7 +502,7 @@ class IMDBPipe(CLSBasePipe):
 
 
 class ChnSentiCorpPipe(Pipe):
-    """
+    r"""
     处理之后的DataSet有以下的结构
 
     .. csv-table::
@@ -526,7 +526,7 @@ class ChnSentiCorpPipe(Pipe):
 
     """
     def __init__(self, bigrams=False, trigrams=False):
-        """
+        r"""
         
         :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
             设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
@@ -541,7 +541,7 @@ class ChnSentiCorpPipe(Pipe):
         self.trigrams = trigrams
 
     def _tokenize(self, data_bundle):
-        """
+        r"""
         将DataSet中的"复旦大学"拆分为["复", "旦", "大", "学"]. 未来可以通过扩展这个函数实现分词。
 
         :param data_bundle:
@@ -551,7 +551,7 @@ class ChnSentiCorpPipe(Pipe):
         return data_bundle
 
     def process(self, data_bundle:DataBundle):
-        """
+        r"""
         可以处理的DataSet应该具备以下的field
 
         .. csv-table::
@@ -596,7 +596,7 @@ class ChnSentiCorpPipe(Pipe):
         return data_bundle
 
     def process_from_file(self, paths=None):
-        """
+        r"""
 
         :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
         :return: DataBundle
@@ -609,7 +609,7 @@ class ChnSentiCorpPipe(Pipe):
 
 
 class THUCNewsPipe(CLSBasePipe):
-    """
+    r"""
     处理之后的DataSet有以下的结构
 
     .. csv-table::
@@ -658,7 +658,7 @@ class THUCNewsPipe(CLSBasePipe):
         return data_bundle
 
     def process(self, data_bundle: DataBundle):
-        """
+        r"""
         可处理的DataSet应具备如下的field
 
         .. csv-table::
@@ -710,7 +710,7 @@ class THUCNewsPipe(CLSBasePipe):
         return data_bundle
 
     def process_from_file(self, paths=None):
-        """
+        r"""
         :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
         :return: DataBundle
         """
@@ -721,7 +721,7 @@ class THUCNewsPipe(CLSBasePipe):
 
 
 class WeiboSenti100kPipe(CLSBasePipe):
-    """
+    r"""
     处理之后的DataSet有以下的结构
 
     .. csv-table::
@@ -766,7 +766,7 @@ class WeiboSenti100kPipe(CLSBasePipe):
         return data_bundle
 
     def process(self, data_bundle: DataBundle):
-        """
+        r"""
         可处理的DataSet应具备以下的field
 
         .. csv-table::
@@ -814,7 +814,7 @@ class WeiboSenti100kPipe(CLSBasePipe):
         return data_bundle
 
     def process_from_file(self, paths=None):
-        """
+        r"""
         :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
         :return: DataBundle
         """

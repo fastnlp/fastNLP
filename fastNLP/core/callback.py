@@ -101,7 +101,7 @@ except:
 
 
 class Callback(object):
-    """
+    r"""
     Callback是fastNLP中被设计用于增强 :class:`~fastNLP.Trainer` 的类。
     如果Callback被传递给了 Trainer , 则 Trainer 会在对应的阶段调用Callback的函数，
     具体调用时机可以通过 :mod:`trainer 模块<fastNLP.core.trainer>` 查看。
@@ -116,60 +116,60 @@ class Callback(object):
 
     @property
     def trainer(self):
-        """
+        r"""
         该属性可以通过self.trainer获取到，一般情况下不需要使用这个属性。
         """
         return self._trainer
     
     @property
     def step(self):
-        """当前运行到的step, 范围为[1, self.n_steps+1)"""
+        r"""当前运行到的step, 范围为[1, self.n_steps+1)"""
         return self._trainer.step
     
     @property
     def n_steps(self):
-        """Trainer一共会采多少个batch。当Trainer中update_every设置为非1的值时，该值不等于update的次数"""
+        r"""Trainer一共会采多少个batch。当Trainer中update_every设置为非1的值时，该值不等于update的次数"""
         return self._trainer.n_steps
     
     @property
     def batch_size(self):
-        """train和evaluate时的batch_size为多大"""
+        r"""train和evaluate时的batch_size为多大"""
         return self._trainer.batch_size
     
     @property
     def epoch(self):
-        """当前运行的epoch数，范围是[1, self.n_epochs+1)"""
+        r"""当前运行的epoch数，范围是[1, self.n_epochs+1)"""
         return self._trainer.epoch
     
     @property
     def n_epochs(self):
-        """一共会运行多少个epoch"""
+        r"""一共会运行多少个epoch"""
         return self._trainer.n_epochs
     
     @property
     def optimizer(self):
-        """初始化Trainer时传递的Optimizer"""
+        r"""初始化Trainer时传递的Optimizer"""
         return self._trainer.optimizer
     
     @property
     def model(self):
-        """正在被Trainer训练的模型"""
+        r"""正在被Trainer训练的模型"""
         return self._trainer.model
     
     @property
     def pbar(self):
-        """如果在Callback中需要打印内容，请使用self.pbar.write(str)。否则可能出现命令行显示效果不太好的问题。在
+        r"""如果在Callback中需要打印内容，请使用self.pbar.write(str)。否则可能出现命令行显示效果不太好的问题。在
         on_train_begin(), on_train_end(), on_exception()中请不要使用该属性，通过print输出即可。"""
         return self._trainer.pbar
     
     @property
     def update_every(self):
-        """Trainer中的模型多少次反向传播才进行一次梯度更新，在Trainer初始化时传入的。"""
+        r"""Trainer中的模型多少次反向传播才进行一次梯度更新，在Trainer初始化时传入的。"""
         return self._trainer.update_every
     
     @property
     def batch_per_epoch(self):
-        """每个epoch一共有多少个batch，只有在on_epoch_begin之后才能调用该属性。"""
+        r"""每个epoch一共有多少个batch，只有在on_epoch_begin之后才能调用该属性。"""
         return self._trainer.batch_per_epoch
 
     @property
@@ -185,7 +185,7 @@ class Callback(object):
         return getattr(self._trainer, 'logger', logger)
 
     def on_train_begin(self):
-        """
+        r"""
         在Train过程开始之前调用。
 
         :return:
@@ -193,7 +193,7 @@ class Callback(object):
         pass
     
     def on_epoch_begin(self):
-        """
+        r"""
         在每个epoch开始之前调用一次
 
         :return:
@@ -201,7 +201,7 @@ class Callback(object):
         pass
     
     def on_batch_begin(self, batch_x, batch_y, indices):
-        """
+        r"""
         每次采集到一个batch的数据则调用一次。这里对batch_x或batch_y删除添加内容是可以影响到Trainer中内容的。所以在这一步
         可以进行一些负采样之类的操作
 
@@ -214,7 +214,7 @@ class Callback(object):
         pass
     
     def on_loss_begin(self, batch_y, predict_y):
-        """
+        r"""
         在计算loss前调用，即这里修改batch_y或predict_y的值是可以影响到loss计算的。
 
         :param dict batch_y: 在DataSet中被设置为target的field的batch集合。
@@ -224,7 +224,7 @@ class Callback(object):
         pass
     
     def on_backward_begin(self, loss):
-        """
+        r"""
         在loss得到之后，但在反向传播之前。可能可以进行loss是否为NaN的检查。
 
         :param torch.Tensor loss: 计算得到的loss值
@@ -233,7 +233,7 @@ class Callback(object):
         pass
     
     def on_backward_end(self):
-        """
+        r"""
         反向梯度传播已完成，但由于update_every的设置，可能并不是每一次调用都有梯度。到这一步，还没有更新参数。
 
         :return:
@@ -241,7 +241,7 @@ class Callback(object):
         pass
     
     def on_step_end(self):
-        """
+        r"""
         到这里模型的参数已经按照梯度更新。但可能受update_every影响，并不是每次都更新了。
 
         :return:
@@ -249,14 +249,14 @@ class Callback(object):
         pass
     
     def on_batch_end(self):
-        """
+        r"""
         这一步与on_step_end是紧接着的。只是为了对称性加上了这一步。
 
         """
         pass
     
     def on_valid_begin(self):
-        """
+        r"""
         如果Trainer中设置了验证，则发生验证前会调用该函数
 
         :return:
@@ -264,7 +264,7 @@ class Callback(object):
         pass
     
     def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
-        """
+        r"""
         每次执行验证集的evaluation后会调用。
 
         :param Dict[str: Dict[str: float]] eval_result: , evaluation的结果。一个例子为{'AccuracyMetric':{'acc':1.0}}，即
@@ -277,19 +277,19 @@ class Callback(object):
         pass
     
     def on_epoch_end(self):
-        """
+        r"""
         每个epoch结束将会调用该方法
         """
         pass
     
     def on_train_end(self):
-        """
+        r"""
         训练结束，调用该方法
         """
         pass
     
     def on_exception(self, exception):
-        """
+        r"""
         当训练过程出现异常，会触发该方法
         :param exception: 某种类型的Exception，比如KeyboardInterrupt等
         """
@@ -297,7 +297,7 @@ class Callback(object):
 
 
 def _transfer(func):
-    """装饰器，将对CallbackManager的调用转发到各个Callback子类.
+    r"""装饰器，将对CallbackManager的调用转发到各个Callback子类.
     
     :param func:
     :return:
@@ -315,11 +315,11 @@ def _transfer(func):
 
 
 class CallbackManager(Callback):
-    """
+    r"""
     内部使用的Callback管理类
     """
     def __init__(self, env, callbacks=None):
-        """
+        r"""
 
         :param dict env: The key is the name of the Trainer attribute(str). The value is the attribute itself.
         :param List[Callback] callbacks:
@@ -433,12 +433,12 @@ class DistCallbackManager(CallbackManager):
 
 
 class GradientClipCallback(Callback):
-    """
+    r"""
     每次backward前，将parameter的gradient clip到某个范围。
     """
     
     def __init__(self, parameters=None, clip_value=1, clip_type='norm'):
-        """
+        r"""
         
         :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。
             如果为None则默认对Trainer的model中所有参数进行clip
@@ -477,12 +477,12 @@ class GradientClipCallback(Callback):
 
 
 class EarlyStopCallback(Callback):
-    """
+    r"""
     多少个epoch没有变好就停止训练，相关类 :class:`~fastNLP.core.callback.EarlyStopError`
     """
     
     def __init__(self, patience):
-        """
+        r"""
         
         :param int patience: epoch的数量
         """
@@ -508,7 +508,7 @@ class EarlyStopCallback(Callback):
 
 
 class FitlogCallback(Callback):
-    """
+    r"""
     该callback可将loss和progress写入到fitlog中; 如果Trainer有dev的数据，将自动把dev的结果写入到log中; 同时还支持传入
     一个(或多个)test数据集进行测试(只有在trainer具有dev时才能使用)，每次在dev上evaluate之后会在这些数据集上验证一下。
     并将验证结果写入到fitlog中。这些数据集的结果是根据dev上最好的结果报道的，即如果dev在第3个epoch取得了最佳，则
@@ -516,7 +516,7 @@ class FitlogCallback(Callback):
     """
 
     def __init__(self, data=None, tester=None, log_loss_every=0, verbose=0, log_exception=False):
-        """
+        r"""
         
         :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要
             传入多个DataSet请通过dict的方式传入，dict的key将作为对应dataset的name传递给fitlog。data的结果的名称以'data'开头。
@@ -608,13 +608,13 @@ class FitlogCallback(Callback):
 
 
 class EvaluateCallback(Callback):
-    """
+    r"""
     通过使用该Callback可以使得Trainer在evaluate dev之外还可以evaluate其它数据集，比如测试集。每一次验证dev之前都会先验证EvaluateCallback
     中的数据。
     """
 
     def __init__(self, data=None, tester=None):
-        """
+        r"""
         :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用Trainer中的metric对数据进行验证。如果需要传入多个
             DataSet请通过dict的方式传入。
         :param ~fastNLP.Tester,Dict[~fastNLP.DataSet] tester: Tester对象, 通过使用Tester对象，可以使得验证的metric与Trainer中
@@ -668,12 +668,12 @@ class EvaluateCallback(Callback):
                     raise e
 
 class LRScheduler(Callback):
-    """
+    r"""
     对PyTorch LR Scheduler的包装以使得其可以被Trainer所使用
     """
     
     def __init__(self, lr_scheduler):
-        """
+        r"""
         :param torch.optim.lr_scheduler._LRScheduler lr_scheduler: PyTorch的lr_scheduler
         """
         super(LRScheduler, self).__init__()
@@ -688,12 +688,12 @@ class LRScheduler(Callback):
 
 
 class ControlC(Callback):
-    """
+    r"""
     检测到 control+C 时的反馈
     """
     
     def __init__(self, quit_all):
-        """
+        r"""
         :param bool quit_all: 若为True,则检测到control+C 直接退出程序；否则只退出Trainer
         """
         super(ControlC, self).__init__()
@@ -713,26 +713,26 @@ class ControlC(Callback):
 
 
 class SmoothValue(object):
-    """work for LRFinder"""
+    r"""work for LRFinder"""
     
     def __init__(self, beta: float):
         self.beta, self.n, self.mov_avg = beta, 0, 0
         self.smooth = None
     
     def add_value(self, val: float) -> None:
-        """Add `val` to calculate updated smoothed value."""
+        r"""Add `val` to calculate updated smoothed value."""
         self.n += 1
         self.mov_avg = self.beta * self.mov_avg + (1 - self.beta) * val
         self.smooth = self.mov_avg / (1 - self.beta ** self.n)
 
 
 class LRFinder(Callback):
-    """
+    r"""
     用第一个 epoch 找最佳的学习率，从第二个epoch开始应用它
     """
     
     def __init__(self, start_lr=1e-6, end_lr=10):
-        """
+        r"""
         
         :param float start_lr: 学习率下界
         :param float end_lr: 学习率上界
@@ -798,7 +798,7 @@ class LRFinder(Callback):
 
 
 class TensorboardCallback(Callback):
-    """
+    r"""
     接受以下一个或多个字符串作为参数：
     - "model"
     - "loss"
@@ -873,7 +873,7 @@ class TensorboardCallback(Callback):
 
 class CheckPointCallback(Callback):
     def __init__(self, save_path, delete_when_train_finish=True, recovery_fitlog=True):
-        """
+        r"""
         用于在每个epoch结束的时候保存一下当前的Trainer状态，可以用于恢复之前的运行。使用最近的一个epoch继续训练
         一段示例代码
         Example1::
@@ -918,7 +918,7 @@ class CheckPointCallback(Callback):
                         logger.error("Fail to recovery the fitlog states.")
 
     def on_train_begin(self):
-        """
+        r"""
         当train开始时，且需要恢复上次训练时，会做以下的操作
             (1) 重新加载model权重
             (2) 重新加载optimizer的状态
@@ -944,7 +944,7 @@ class CheckPointCallback(Callback):
                 self.trainer.best_metric_indicator = states['best_metric_indicator']
 
     def on_epoch_end(self):
-        """
+        r"""
         保存状态，使得结果可以被恢复
 
         :param self:
@@ -984,11 +984,11 @@ class CheckPointCallback(Callback):
 
 
 class WarmupCallback(Callback):
-    """
+    r"""
     learning rate按照一定的速率从0上升到设置的learning rate。
     """
     def __init__(self, warmup=0.1, schedule='constant'):
-        """
+        r"""
         
         :param int,float warmup: 如果warmup为int，则在该step之前，learning rate根据schedule的策略变化; 如果warmup为float，
             如0.1, 则前10%的step是按照schedule策略调整learning rate。
@@ -1035,7 +1035,7 @@ class WarmupCallback(Callback):
 
 
 class SaveModelCallback(Callback):
-    """
+    r"""
     由于Trainer在训练过程中只会保存最佳的模型， 该callback可实现多种方式的结果存储。
     会根据训练开始的时间戳在save_dir下建立文件夹，再在文件夹下存放多个模型::
         
@@ -1047,7 +1047,7 @@ class SaveModelCallback(Callback):
                 -epoch:0_step:20_{metric_key}:{evaluate_performance}.pt   # metric是给定的metric_key, evaluate_perfomance是性能
     """
     def __init__(self, save_dir, top=3, only_param=False, save_on_exception=False):
-        """
+        r"""
         
         :param str save_dir: 将模型存放在哪个目录下，会在该目录下创建以时间戳命名的目录，并存放模型。如果save_dir不存在将自动创建
         :param int top: 保存dev表现top多少模型。-1为保存所有模型。
@@ -1116,12 +1116,12 @@ class SaveModelCallback(Callback):
 
 
 class CallbackException(BaseException):
-    """
+    r"""
    当需要通过callback跳出训练的时候可以通过抛出CallbackException并在on_exception中捕获这个值。
    """
     
     def __init__(self, msg):
-        """
+        r"""
         
         :param str msg: Exception的信息。
         """
@@ -1129,7 +1129,7 @@ class CallbackException(BaseException):
 
 
 class EarlyStopError(CallbackException):
-    """
+    r"""
     用于EarlyStop时从Trainer训练循环中跳出。
     
     """
@@ -1139,7 +1139,7 @@ class EarlyStopError(CallbackException):
 
 
 class EchoCallback(Callback):
-    """
+    r"""
     用于测试分布式训练
     
     """

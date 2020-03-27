@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -14,7 +14,7 @@ from ..core._logger import logger
 
 
 class DataBundle:
-    """
+    r"""
     经过处理的数据信息，包括一系列数据集（比如：分开的训练集、验证集和测试集）以及各个field对应的vocabulary。该对象一般由fastNLP中各种
     Loader的load函数生成，可以通过以下的方法获取里面的内容
 
@@ -28,7 +28,7 @@ class DataBundle:
     """
 
     def __init__(self, vocabs: dict = None, datasets: dict = None):
-        """
+        r"""
         
         :param vocabs: 从名称(字符串)到 :class:`~fastNLP.Vocabulary` 类型的dict
         :param datasets: 从名称(字符串)到 :class:`~fastNLP.DataSet` 类型的dict
@@ -37,7 +37,7 @@ class DataBundle:
         self.datasets = datasets or {}
 
     def set_vocab(self, vocab, field_name):
-        """
+        r"""
         向DataBunlde中增加vocab
 
         :param ~fastNLP.Vocabulary vocab: 词表
@@ -49,7 +49,7 @@ class DataBundle:
         return self
 
     def set_dataset(self, dataset, name: str):
-        """
+        r"""
 
         :param ~fastNLP.DataSet dataset: 传递给DataBundle的DataSet
         :param str name: dataset的名称
@@ -60,7 +60,7 @@ class DataBundle:
         return self
 
     def get_dataset(self, name: str) -> DataSet:
-        """
+        r"""
         获取名为name的dataset
 
         :param str name: dataset的名称，一般为'train', 'dev', 'test'
@@ -75,7 +75,7 @@ class DataBundle:
             raise KeyError(error_msg)
 
     def delete_dataset(self, name: str):
-        """
+        r"""
         删除名为name的DataSet
 
         :param str name:
@@ -85,7 +85,7 @@ class DataBundle:
         return self
 
     def get_vocab(self, field_name: str) -> Vocabulary:
-        """
+        r"""
         获取field名为field_name对应的vocab
 
         :param str field_name: 名称
@@ -100,7 +100,7 @@ class DataBundle:
             raise KeyError(error_msg)
 
     def delete_vocab(self, field_name: str):
-        """
+        r"""
         删除vocab
         :param str field_name:
         :return: self
@@ -117,7 +117,7 @@ class DataBundle:
         return len(self.vocabs)
 
     def set_input(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True, ignore_miss_dataset=True):
-        """
+        r"""
         将field_names中的field设置为input, 对data_bundle中所有的dataset执行该操作::
 
             data_bundle.set_input('words', 'seq_len')   # 将words和seq_len这两个field的input属性设置为True
@@ -142,7 +142,7 @@ class DataBundle:
         return self
 
     def set_target(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True, ignore_miss_dataset=True):
-        """
+        r"""
         将field_names中的field设置为target, 对data_bundle中所有的dataset执行该操作::
 
             data_bundle.set_target('target', 'seq_len')   # 将words和target这两个field的input属性设置为True
@@ -167,7 +167,7 @@ class DataBundle:
         return self
 
     def set_pad_val(self, field_name, pad_val,  ignore_miss_dataset=True):
-        """
+        r"""
         将DataBundle中所有的DataSet中名为field_name的Field的padding值设置为pad_val.
 
         :param str field_name:
@@ -184,7 +184,7 @@ class DataBundle:
         return self
 
     def set_ignore_type(self, *field_names, flag=True, ignore_miss_dataset=True):
-        """
+        r"""
         将DataBundle中所有的DataSet中名为*field_names的Field的ignore_type设置为flag状态
 
         :param str field_names:
@@ -202,7 +202,7 @@ class DataBundle:
         return self
 
     def copy_field(self, field_name, new_field_name, ignore_miss_dataset=True):
-        """
+        r"""
         将DataBundle中所有的DataSet中名为field_name的Field复制一份并命名为叫new_field_name.
 
         :param str field_name:
@@ -219,7 +219,7 @@ class DataBundle:
         return self
 
     def rename_field(self, field_name, new_field_name, ignore_miss_dataset=True, rename_vocab=True):
-        """
+        r"""
         将DataBundle中所有DataSet中名为field_name的field重命名为new_field_name.
 
         :param str field_name:
@@ -241,7 +241,7 @@ class DataBundle:
         return self
 
     def delete_field(self, field_name, ignore_miss_dataset=True, delete_vocab=True):
-        """
+        r"""
         将DataBundle中所有DataSet中名为field_name的field删除掉.
 
         :param str field_name:
@@ -261,7 +261,7 @@ class DataBundle:
         return self
 
     def iter_datasets(self) -> Union[str, DataSet]:
-        """
+        r"""
         迭代data_bundle中的DataSet
 
         Example::
@@ -275,7 +275,7 @@ class DataBundle:
             yield name, dataset
 
     def get_dataset_names(self) -> List[str]:
-        """
+        r"""
         返回DataBundle中DataSet的名称
 
         :return:
@@ -283,7 +283,7 @@ class DataBundle:
         return list(self.datasets.keys())
 
     def get_vocab_names(self)->List[str]:
-        """
+        r"""
         返回DataBundle中Vocabulary的名称
 
         :return:
@@ -291,7 +291,7 @@ class DataBundle:
         return list(self.vocabs.keys())
 
     def iter_vocabs(self) -> Union[str, Vocabulary]:
-        """
+        r"""
         迭代data_bundle中的DataSet
 
         Example:
@@ -305,7 +305,7 @@ class DataBundle:
             yield field_name, vocab
 
     def apply_field(self, func, field_name: str, new_field_name: str, ignore_miss_dataset=True,  **kwargs):
-        """
+        r"""
         对DataBundle中所有的dataset使用apply_field方法
 
         :param callable func: input是instance中名为 `field_name` 的field的内容。
@@ -330,7 +330,7 @@ class DataBundle:
         return self
 
     def apply(self, func, new_field_name:str, **kwargs):
-        """
+        r"""
         对DataBundle中所有的dataset使用apply方法
 
         :param callable func: input是instance中名为 `field_name` 的field的内容。
@@ -349,7 +349,7 @@ class DataBundle:
         return self
 
     def add_collect_fn(self, fn, name=None):
-        """
+        r"""
         向所有DataSet增加collect_fn, collect_fn详见 :class:`~fastNLP.DataSet` 中相关说明.
 
         :param callable fn:
@@ -360,7 +360,7 @@ class DataBundle:
             dataset.add_collect_fn(fn=fn, name=name)
 
     def delete_collect_fn(self, name=None):
-        """
+        r"""
         删除DataSet中的collect_fn
 
         :param name:

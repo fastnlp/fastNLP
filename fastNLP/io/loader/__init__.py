@@ -1,4 +1,4 @@
-"""
+r"""
 Loader用于读取数据，并将内容读取到 :class:`~fastNLP.DataSet` 或者 :class:`~fastNLP.io.DataBundle` 中。所有的Loader都支持以下的
 三个方法： ``__init__`` ， ``_load`` , ``loads`` . 其中 ``__init__(...)`` 用于申明读取参数，以及说明该Loader支持的数据格式，
 读取后 :class:`~fastNLP.DataSet` 中的 `field` ; ``_load(path)`` 方法传入文件路径读取单个文件，并返回 :class:`~fastNLP.DataSet` ;

@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "CWSLoader"
@@ -16,7 +16,7 @@ from ...core.instance import Instance
 
 
 class CWSLoader(Loader):
-    """
+    r"""
     CWSLoader支持的数据格式为，一行一句话，不同词之间用空格隔开, 例如：
 
     Example::
@@ -36,7 +36,7 @@ class CWSLoader(Loader):
        
     """
     def __init__(self, dataset_name:str=None):
-        """
+        r"""
         
         :param str dataset_name: data的名称，支持pku, msra, cityu(繁体), as(繁体), None
         """
@@ -57,7 +57,7 @@ class CWSLoader(Loader):
         return ds
 
     def download(self, dev_ratio=0.1, re_download=False)->str:
-        """
+        r"""
         如果你使用了该数据集，请引用以下的文章:Thomas Emerson, The Second International Chinese Word Segmentation Bakeoff,
         2005. 更多信息可以在http://sighan.cs.uchicago.edu/bakeoff2005/查看
 

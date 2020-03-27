@@ -184,7 +184,7 @@ def add_r(base_path='../fastNLP'):
         for f in files:
             if f.endswith(".py"):
                 check_file_r(os.path.abspath(os.path.join(path,f)))
-                sys.exit(0)
+                # sys.exit(0)
 
 
 if __name__ == "__main__":
