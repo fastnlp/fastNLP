@@ -52,6 +52,7 @@ __all__ = [
     "SpanFPreRecMetric",
     "CMRC2018Metric",
     "ClassifyFPreRecMetric",
+    "ConfusionMatrixMetric",
     
     "Optimizer",
     "SGD",
