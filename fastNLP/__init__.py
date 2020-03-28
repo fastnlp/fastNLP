@@ -69,6 +69,8 @@ __all__ = [
     "BCELoss",
     "NLLLoss",
     "LossInForward",
+    "LossBase",
+    "CMRC2018Loss",
     
     "cache_results",
     
