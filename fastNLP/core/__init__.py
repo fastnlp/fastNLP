@@ -61,6 +61,7 @@ __all__ = [
     "NLLLoss",
     "LossInForward",
     "CMRC2018Loss",
+    "LossBase",
 
     "MetricBase",
     "AccuracyMetric",
@@ -88,7 +89,7 @@ from .const import Const
 from .dataset import DataSet
 from .field import FieldArray, Padder, AutoPadder, EngChar2DPadder
 from .instance import Instance
-from .losses import LossFunc, CrossEntropyLoss, L1Loss, BCELoss, NLLLoss, LossInForward, CMRC2018Loss
+from .losses import LossFunc, CrossEntropyLoss, L1Loss, BCELoss, NLLLoss, LossInForward, CMRC2018Loss, LossBase
 from .metrics import AccuracyMetric, SpanFPreRecMetric, CMRC2018Metric, ClassifyFPreRecMetric, MetricBase
 from .optimizer import Optimizer, SGD, Adam, AdamW
 from .sampler import SequentialSampler, BucketSampler, RandomSampler, Sampler
