@@ -7,7 +7,7 @@ from fastNLP import DataSetIter, TorchLoaderIter
 from fastNLP import DataSet
 from fastNLP import Instance
 from fastNLP import SequentialSampler
-from fastNLP import ConcatCollectFn
+from fastNLP import ConcatCollateFn
 
 
 def generate_fake_dataset(num_samples=1000):
@@ -177,76 +177,76 @@ class TestCase1(unittest.TestCase):
             for con,t in zip(cons, test):
                 self.assertEqual(alphas[:con], t)
 
-    def test_collect_fn(self):
+    def test_collate_fn(self):
         batch_size = 32
         num_samples = 1000
         dataset = generate_fake_dataset(num_samples)
         dataset.set_input('1','2')
         dataset.set_target('0','3')
 
-        fn = ConcatCollectFn(inputs=['1', '2'], output='12', pad_val=0, max_len=0, is_input=True, is_target=False)
-        dataset.add_collect_fn(fn, name='demo')
+        fn = ConcatCollateFn(inputs=['1', '2'], output='12', pad_val=0, max_len=0, is_input=True, is_target=False)
+        dataset.add_collate_fn(fn, name='demo')
         batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler(), drop_last=True)
         for batch_x, batch_y in batch:
             for i in range(batch_size):
                 # print(i)
                 self.assertEqual(batch_x['12'][i].sum(), batch_x['1'][i].sum() + batch_x['2'][i].sum())
-        dataset.delete_collect_fn(name='demo')
+        dataset.delete_collate_fn(name='demo')
 
         # 测试非input的情况
         dataset.set_input('1', '2', flag=False)  #
-        fn = ConcatCollectFn(inputs=['1', '2'], output='12', pad_val=0, max_len=0, is_input=True, is_target=False)
-        dataset.add_collect_fn(fn, name='demo')
+        fn = ConcatCollateFn(inputs=['1', '2'], output='12', pad_val=0, max_len=0, is_input=True, is_target=False)
+        dataset.add_collate_fn(fn, name='demo')
         batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler(), drop_last=True)
         for batch_x, batch_y in batch:
             for i in range(batch_size):
                 self.assertTrue('12' in batch_x)
-        dataset.delete_collect_fn(name='demo')
+        dataset.delete_collate_fn(name='demo')
         dataset.set_input('1', '2', flag=True)  #
 
         # 测试覆盖其它field的情况
-        fn = ConcatCollectFn(inputs=['1', '2'], output='3', pad_val=0, max_len=0, is_input=True, is_target=True)
-        dataset.add_collect_fn(fn, name='demo')
+        fn = ConcatCollateFn(inputs=['1', '2'], output='3', pad_val=0, max_len=0, is_input=True, is_target=True)
+        dataset.add_collate_fn(fn, name='demo')
         batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler(), drop_last=True)
         for batch_x, batch_y in batch:
             for i in range(batch_size):
                 # print(i)
                 self.assertEqual(batch_y['3'][i].sum(), batch_x['1'][i].sum() + batch_x['2'][i].sum())
-        dataset.delete_collect_fn(name='demo')
+        dataset.delete_collate_fn(name='demo')
 
         # 测试非input，target的情况
         dataset.set_input('1', '2', flag=False)
-        fn = ConcatCollectFn(inputs=['1', '2'], output='3', pad_val=0, max_len=0, is_input=True, is_target=True)
-        dataset.add_collect_fn(fn, name='demo')
+        fn = ConcatCollateFn(inputs=['1', '2'], output='3', pad_val=0, max_len=0, is_input=True, is_target=True)
+        dataset.add_collate_fn(fn, name='demo')
         batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler(), drop_last=True)
         for batch_x, batch_y in batch:
             for i in range(batch_size):
                 # print(i)
                 self.assertTrue('3' in batch_x)
                 self.assertTrue('3' in batch_y)
-        dataset.delete_collect_fn(name='demo')
+        dataset.delete_collate_fn(name='demo')
 
         # 测试加入非法fn的请
         with self.assertRaises(AssertionError):
-            dataset.add_collect_fn(1)
+            dataset.add_collate_fn(1)
 
-        # 测试collect_fn返回值只有一个的情况
-        def demo_collect_fn(ins_list):
+        # 测试collate_fn返回值只有一个的情况
+        def demo_collate_fn(ins_list):
             return {'3':1}
-        dataset.add_collect_fn(demo_collect_fn, name='demo')
+        dataset.add_collate_fn(demo_collate_fn, name='demo')
         with self.assertRaises(BaseException):
             batch = DataSetIter(dataset, batch_size=batch_size, sampler=SequentialSampler(), drop_last=True)
             for batch_x, batch_y in batch:
                 pass
-        dataset.delete_collect_fn(name='demo')
+        dataset.delete_collate_fn(name='demo')
 
-        # 测试多个collect_fn
-        dataset.add_collect_fn(demo_collect_fn, name='demo')
-        dataset.add_collect_fn(demo_collect_fn, name='demo')
+        # 测试多个collate_fn
+        dataset.add_collate_fn(demo_collate_fn, name='demo')
+        dataset.add_collate_fn(demo_collate_fn, name='demo')
         # 测试删除
-        dataset.delete_collect_fn()
-        dataset.delete_collect_fn()
-        self.assertTrue(dataset.collector.is_empty())
+        dataset.delete_collate_fn()
+        dataset.delete_collate_fn()
+        self.assertTrue(dataset.collater.is_empty())
 
     def test_demo(self):
         import torch
@@ -261,9 +261,9 @@ class TestCase1(unittest.TestCase):
         })
         data.set_target('y')
 
-        # 所有的collect_fn函数都接受list[(ind1, instance1), (ind2, instance2), ...]作为输入，其中ind1/ind2是该instance在dataset中
+        # 所有的collate_fn函数都接受list[(ind1, instance1), (ind2, instance2), ...]作为输入，其中ind1/ind2是该instance在dataset中
         #   的index，instance1/instance2是这次batch取出来的数据，包含了所有的field.
-        def concat_collect_fn(ins_list):
+        def concat_collate_fn(ins_list):
             x1 = [ins['x1'] for ind,ins in ins_list]
             x2 = [ins['x2'] for ind,ins in ins_list]
             xs = []
@@ -277,7 +277,7 @@ class TestCase1(unittest.TestCase):
             #   采用返回值。
             return b_x, b_y
 
-        data.add_collect_fn(concat_collect_fn)
+        data.add_collate_fn(concat_collate_fn)
 
         for batch_x, batch_y in DataSetIter(data, sampler=SequentialSampler(), batch_size=2):
             print("batch_x:", batch_x)
@@ -287,7 +287,7 @@ class TestCase1(unittest.TestCase):
             # batch_y: {'y': array([0, 1])}
 
         # 如果取batch过程含有一些参数，可以通过类来实现
-        class ConCollectFn:
+        class ConCollateFn:
             def __init__(self, max_len=3):
                 self.max_len = max_len
             def __call__(self, ins_list):
@@ -300,8 +300,8 @@ class TestCase1(unittest.TestCase):
                 b_x = {'x': arr}
                 b_y = {}
                 return b_x, b_y
-        data.delete_collect_fn()  # 删除之前的collect_fn
-        data.add_collect_fn(ConCollectFn(max_len=3))
+        data.delete_collate_fn()  # 删除之前的collate_fn
+        data.add_collate_fn(ConCollateFn(max_len=3))
         for batch_x, batch_y in DataSetIter(data, sampler=SequentialSampler(), batch_size=2):
             print("batch_x:", batch_x)
             print("batch_y:", batch_y)
@@ -326,14 +326,77 @@ class TestCase1(unittest.TestCase):
                 return x, y
 
         data1 = FakeData()
-        dataiter = TorchLoaderIter(data1, batch_size=2)
+        def collact_fn(ins_list):
+            xs = [ins[0]['x'] for ins in ins_list]
+            ys = [ins[1]['y'] for ins in ins_list]
+            return {'x':xs}, {'y':ys}
+        dataiter = TorchLoaderIter(data1, collate_fn=collact_fn, batch_size=2)
         for x, y in dataiter:
             print(x, y)
 
-        def func():
-            data2 = FakeData(return_dict=False)
-            dataiter = TorchLoaderIter(data2, batch_size=2)
-        self.assertRaises(Exception, func)
+    def test_batch_sampler(self):
+        # 测试DataSetIter与TorchLoaderIter的batch_sampler能否正常工作
+        # DataSetIter
+        ds = generate_fake_dataset(5)
+        ds.set_input('1')
+        class BatchSampler:
+            def __init__(self, dataset):
+                self.num_samples = len(dataset)
+
+            def __iter__(self):
+                index = 0
+                indexes = list(range(self.num_samples))
+                np.random.shuffle(indexes)
+                start_idx = 0
+                while index < self.num_samples:
+                    if start_idx == 0:
+                        end_index = self.num_samples//2
+                    else:
+                        end_index = self.num_samples
+                    yield indexes[start_idx:end_index]
+                    index = end_index
+                    start_idx = end_index
+
+            def __len__(self):
+                return 2
+
+        batch_sampler = BatchSampler(ds)
+
+        data_iter = DataSetIter(ds, batch_size=10, sampler=batch_sampler, as_numpy=False,
+                 num_workers=0, pin_memory=False, drop_last=False,
+                 timeout=0, worker_init_fn=None, collate_fn=None,
+                 batch_sampler=batch_sampler)
+        num_samples = [len(ds)//2, len(ds)-len(ds)//2]
+        for idx, (batch_x, batch_y) in enumerate(data_iter):
+            self.assertEqual(num_samples[idx], len(batch_x['1']))
+
+        # TorchLoaderIter
+        class FakeData:
+            def __init__(self):
+                self.x = [[1,2,3], [4,5,6], [1,2]]
+
+            def __len__(self):
+                return len(self.x)
+
+            def __getitem__(self, i):
+                x = self.x[i]
+                y = 0
+                return x,y
+
+        def collate_fn(ins_list):
+            xs = [ins[0] for ins in ins_list]
+            ys = [ins[1] for ins in ins_list]
+            return {'x':xs}, {'y':ys}
+
+        ds = FakeData()
+        batch_sampler = BatchSampler(ds)
+        data_iter = TorchLoaderIter(ds, batch_size=10, sampler=batch_sampler,
+                 num_workers=0, pin_memory=False, drop_last=False,
+                 timeout=0, worker_init_fn=None, collate_fn=collate_fn,
+                 batch_sampler=batch_sampler)
+        num_samples = [len(ds)//2, len(ds)-len(ds)//2]
+        for idx, (batch_x, batch_y) in enumerate(data_iter):
+            self.assertEqual(num_samples[idx], len(batch_x['x']))
 
     """
     def test_multi_workers_batch(self):

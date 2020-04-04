@@ -36,72 +36,72 @@ def batching(samples, max_len=0, padding_val=0):
     return batch
 
 
-class Collector:
+class Collater:
     r"""
-    辅助DataSet管理collect_fn的类
+    辅助DataSet管理collate_fn的类
 
     """
     def __init__(self):
-        self.collect_fns = {}
+        self.collate_fns = {}
 
     def add_fn(self, fn, name=None):
         r"""
-        向collector新增一个collect_fn函数
+        向collater新增一个collate_fn函数
 
         :param callable fn:
         :param str,int name:
         :return:
         """
-        if name in self.collect_fns:
-            logger.warn(f"collect_fn:{name} will be overwritten.")
+        if name in self.collate_fns:
+            logger.warn(f"collate_fn:{name} will be overwritten.")
         if name is None:
-            name = len(self.collect_fns)
-        self.collect_fns[name] = fn
+            name = len(self.collate_fns)
+        self.collate_fns[name] = fn
 
     def is_empty(self):
         r"""
-        返回是否包含collect_fn
+        返回是否包含collate_fn
 
         :return:
         """
-        return len(self.collect_fns)==0
+        return len(self.collate_fns) == 0
 
     def delete_fn(self, name=None):
         r"""
-        删除collect_fn
+        删除collate_fn
 
-        :param str,int name: 如果为None就删除最近加入的collect_fn
+        :param str,int name: 如果为None就删除最近加入的collate_fn
         :return:
         """
         if not self.is_empty():
-            if name in self.collect_fns:
-                self.collect_fns.pop(name)
+            if name in self.collate_fns:
+                self.collate_fns.pop(name)
             elif name is None:
-                last_key = list(self.collect_fns.keys())[0]
-                self.collect_fns.pop(last_key)
+                last_key = list(self.collate_fns.keys())[0]
+                self.collate_fns.pop(last_key)
 
-    def collect_batch(self, ins_list):
+    def collate_batch(self, ins_list):
         bx, by = {}, {}
-        for name, fn in self.collect_fns.items():
+        for name, fn in self.collate_fns.items():
             try:
                 batch_x, batch_y = fn(ins_list)
             except BaseException as e:
-                logger.error(f"Exception:`{e}` happens when call collect_fn:`{name}`.")
+                logger.error(f"Exception:`{e}` happens when call collate_fn:`{name}`.")
                 raise e
             bx.update(batch_x)
             by.update(batch_y)
         return bx, by
 
     def copy_from(self, col):
-        assert isinstance(col, Collector)
-        new_col = Collector()
-        new_col.collect_fns = deepcopy(col.collect_fns)
+        assert isinstance(col, Collater)
+        new_col = Collater()
+        new_col.collate_fns = deepcopy(col.collate_fns)
         return new_col
 
 
-class ConcatCollectFn:
+class ConcatCollateFn:
     r"""
-    field拼接collect_fn，将不同field按序拼接后，padding产生数据。
+    field拼接collate_fn，将不同field按序拼接后，padding产生数据。
 
     :param List[str] inputs: 将哪些field的数据拼接起来, 目前仅支持1d的field
     :param str output: 拼接后的field名称

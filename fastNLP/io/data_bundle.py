@@ -348,26 +348,26 @@ class DataBundle:
             dataset.apply(func, new_field_name=new_field_name, **kwargs)
         return self
 
-    def add_collect_fn(self, fn, name=None):
+    def add_collate_fn(self, fn, name=None):
         r"""
-        向所有DataSet增加collect_fn, collect_fn详见 :class:`~fastNLP.DataSet` 中相关说明.
+        向所有DataSet增加collate_fn, collate_fn详见 :class:`~fastNLP.DataSet` 中相关说明.
 
         :param callable fn:
         :param name:
         :return:
         """
         for _, dataset in self.datasets.items():
-            dataset.add_collect_fn(fn=fn, name=name)
+            dataset.add_collate_fn(fn=fn, name=name)
 
-    def delete_collect_fn(self, name=None):
+    def delete_collate_fn(self, name=None):
         r"""
-        删除DataSet中的collect_fn
+        删除DataSet中的collate_fn
 
         :param name:
         :return:
         """
         for _, dataset in self.datasets.items():
-            dataset.delete_collect_fn(name=name)
+            dataset.delete_collate_fn(name=name)
 
     def __repr__(self):
         _str = ''

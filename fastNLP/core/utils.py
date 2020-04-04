@@ -718,8 +718,8 @@ def _check_loss_evaluate(prev_func_signature: str, func_signature: str, check_re
                     _tmp += f' Or provide `{_miss}` in DataSet or the output of {prev_func_signature}. '
                 else:
                     _tmp = f'Provide `{_miss}` in DataSet or the output of {prev_func_signature}.'
-                if not dataset.collector.is_empty():
-                    _tmp += f'Or you need to add `{_miss}` in the output of your collect_fn. '
+                if not dataset.collater.is_empty():
+                    _tmp += f'Or you need to add `{_miss}` in the output of your collate_fn. '
                 suggestions.append(_tmp)
 
     if check_res.duplicated:
@@ -779,8 +779,8 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
             suggestions.append(f"You might need to set `{_miss_in_dataset}` as input. ")
         if _miss_out_dataset:
             _tmp = f"You need to provide `{_miss_out_dataset}` in DataSet and set it as input. "
-            if not dataset.collector.is_empty():
-                _tmp += f'Or you need to add `{_miss_out_dataset}` in the output of your collect_fn. '
+            if not dataset.collator.is_empty():
+                _tmp += f'Or you need to add `{_miss_out_dataset}` in the output of your collate_fn. '
             suggestions.append(_tmp)
 
     if check_res.unused:

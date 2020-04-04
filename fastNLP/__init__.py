@@ -44,8 +44,8 @@ __all__ = [
     "AutoPadder",
     "EngChar2DPadder",
 
-    # "CollectFn",
-    "ConcatCollectFn",
+    # "CollateFn",
+    "ConcatCollateFn",
 
     "MetricBase",
     "AccuracyMetric",

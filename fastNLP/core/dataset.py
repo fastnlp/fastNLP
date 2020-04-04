@@ -285,8 +285,8 @@ r"""
 ------------------------------------------------------------
 
     DataSet支持在进行batch时，默认只能看到当前的field的值，但在某些训练中可能存在以下的情况: (1)需要两个field拼接成为一个field;
-    (2)需要在batch中进行负采样。这时候就需要能够同时利用多个field进行batch的操作，DataSet中的add_collect_fn()函数支持添加
-    自定义涉及多个field的collect_fn函数。例如下例中将两个field拼接成一个field的场景
+    (2)需要在batch中进行负采样。这时候就需要能够同时利用多个field进行batch的操作，DataSet中的add_collate_fn()函数支持添加
+    自定义涉及多个field的collate_fn函数。例如下例中将两个field拼接成一个field的场景
 
     .. code-block::
 
@@ -302,9 +302,9 @@ r"""
         })
         data.set_target('y')
 
-        # 所有的collect_fn函数都接受list[(ind1, instance1), (ind2, instance2), ...]作为输入，其中ind1/ind2是该instance在dataset中
+        # 所有的collate_fn函数都接受list[(ind1, instance1), (ind2, instance2), ...]作为输入，其中ind1/ind2是该instance在dataset中
         #   的index，instance1/instance2是这次batch取出来的数据，包含了所有的field.
-        def concat_collect_fn(ins_list):
+        def concat_collate_fn(ins_list):
             x1 = [ins['x1'] for ind,ins in ins_list]
             x2 = [ins['x2'] for ind,ins in ins_list]
             xs = []
@@ -318,7 +318,7 @@ r"""
             #   采用返回值。
             return b_x, b_y
 
-        data.add_collect_fn(concat_collect_fn)
+        data.add_collate_fn(concat_collate_fn)
 
         for batch_x, batch_y in DataSetIter(data, sampler=SequentialSampler(), batch_size=2):
             print("batch_x:", batch_x)
@@ -328,7 +328,7 @@ r"""
             # batch_y: {'y': array([0, 1])}
 
         # 如果取batch过程含有一些参数，可以通过类来实现
-        class ConCollectFn:
+        class ConCollateFn:
             def __init__(self, max_len=3):
                 self.max_len = max_len
 
@@ -342,8 +342,8 @@ r"""
                 b_x = {'x': arr}
                 b_y = {}
                 return b_x, b_y
-        data.delete_collect_fn()  # 删除之前的collect_fn
-        data.add_collect_fn(ConCollectFn(max_len=3))
+        data.delete_collate_fn()  # 删除之前的collate_fn
+        data.add_collate_fn(ConCollateFn(max_len=3))
         for batch_x, batch_y in DataSetIter(data, sampler=SequentialSampler(), batch_size=2):
             print("batch_x:", batch_x)
             print("batch_y:", batch_y)
@@ -370,7 +370,7 @@ from .field import FieldArray
 from .field import SetInputOrTargetException
 from .instance import Instance
 from .utils import pretty_table_printer
-from .collect_fn import Collector
+from .collate_fn import Collater
 
 
 class ApplyResultException(Exception):
@@ -406,7 +406,7 @@ class DataSet(object):
 
             else:
                 raise ValueError("data only be dict or list type.")
-        self.collector = Collector()
+        self.collater = Collater()
 
     def __contains__(self, item):
         return item in self.field_arrays
@@ -462,7 +462,7 @@ class DataSet(object):
             for field in self.field_arrays.values():
                 data_set.add_field(field_name=field.name, fields=field.content[idx], padder=field.padder,
                                    is_input=field.is_input, is_target=field.is_target, ignore_type=field.ignore_type)
-            data_set.collector = self.collector.copy_from(self.collector)
+            data_set.collater = self.collater.copy_from(self.collater)
             return data_set
         elif isinstance(idx, str):
             if idx not in self:
@@ -476,7 +476,7 @@ class DataSet(object):
                 dataset.append(instance)
             for field_name, field in self.field_arrays.items():
                 dataset.field_arrays[field_name].to(field)
-            dataset.collector = self.collector.copy_from(self.collector)
+            dataset.collater = self.collater.copy_from(self.collater)
             return dataset
         else:
             raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
@@ -1083,8 +1083,8 @@ class DataSet(object):
             train_set.field_arrays[field_name].to(self.field_arrays[field_name])
             dev_set.field_arrays[field_name].to(self.field_arrays[field_name])
 
-        train_set.collector.copy_from(self.collector)
-        dev_set.collector.copy_from(self.collector)
+        train_set.collater.copy_from(self.collater)
+        dev_set.collater.copy_from(self.collater)
         return train_set, dev_set
 
     def save(self, path):
@@ -1109,30 +1109,30 @@ class DataSet(object):
             assert isinstance(d, DataSet), "The object is not DataSet, but {}.".format(type(d))
         return d
 
-    def add_collect_fn(self, fn, name=None):
+    def add_collate_fn(self, fn, name=None):
         r"""
-        添加 CollectFn，collect_fn允许在生成的batch的过程中动态生成一些数据(在DataSetIter作为迭代器的情况下有效，默认情况下就是用的
-        这个)。支持依次添加多个collect_fn, 如果相同的key，后面的collect_fn的结果覆盖前面的collect_fn的结果。
+        添加 CollateFn，collate_fn允许在生成的batch的过程中动态生成一些数据(在DataSetIter作为迭代器的情况下有效，默认情况下就是用的
+        这个)。支持依次添加多个collate_fn, 如果相同的key，后面的collate_fn的结果覆盖前面的collate_fn的结果。
 
         :param callable fn: 传入一个可调用的function, 该function可接受的参数为List[(ind1, instance1), (ind2, instance2)]
             (某个batch被选中的所有的indice以及instance),其中ind1/ind2是该instance在dataset中的index，instance1/instance2是
             这次batch取出来的数据，包含了所有的field。返回值需要为两个dict，第一个dict的值将被认为是input，第二个dict的值被认为是
             target，返回的值至多允许一个空dict。若返回的dict中包含了被设置为input或target的field的名称，将覆盖dataset中的field。
-            fastNLP不会将collect_fn的返回结果pad和转换为tensor，需要在collect_fn中完成pad和转换为tensor（不需要将tensor移动到
-            gpu中，如果是pytorch的tensor，fastNLP会自动将其移动到特定gpu）。不要修改传入collect_fn中的数据，否则可能导致未知问题。
-        :param str,int name: collect_fn的名称，如果不传入，默认使用自增长的数字作为key。相同的name会覆盖之前的collect_fn。
+            fastNLP不会将collate_fn的返回结果pad和转换为tensor，需要在collate_fn中完成pad和转换为tensor（不需要将tensor移动到
+            gpu中，fastNLP会自动将其移动到特定gpu）。不要修改传入collate_fn中的数据，否则可能导致未知问题。
+        :param str,int name: collate_fn的名称，如果不传入，默认使用自增长的数字作为key。相同的name会覆盖之前的collate_fn。
         """
         assert callable(fn), "You must pass in a callable object."
-        self.collector.add_fn(fn, name=name)
+        self.collater.add_fn(fn, name=name)
 
-    def delete_collect_fn(self, name=None):
+    def delete_collate_fn(self, name=None):
         r"""
-        删除某个collect_fn
+        删除某个collate_fn
 
-        :param str,int name: 如果为None，则删除最近加入的collect_fn
+        :param str,int name: 如果为None，则删除最近加入的collate_fn
         :return:
         """
-        self.collector.delete_fn(name)
+        self.collater.delete_fn(name)
 
-    def _collect_batch(self, ins_list):
-        return self.collector.collect_batch(ins_list)
+    def _collate_batch(self, ins_list):
+        return self.collater.collate_batch(ins_list)

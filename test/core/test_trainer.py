@@ -243,7 +243,7 @@ class TrainerTestGround(unittest.TestCase):
             def __len__(self):
                 return self.num_samples
 
-        def collect_fn(data_list):
+        def collate_fn(data_list):
             # [(x1,y1), (x2,y2), ...], 这里的输入实际上是将UdfDataSet的__getitem__输入结合为list
             xs, ys = [], []
             for l in data_list:
@@ -254,7 +254,7 @@ class TrainerTestGround(unittest.TestCase):
             return {'x':x, 'y':y}, {'y':y}
 
         dataset = UdfDataSet(10)
-        dataset = TorchLoaderIter(dataset, collate_fn=collect_fn)
+        dataset = TorchLoaderIter(dataset, collate_fn=collate_fn)
         class Model(nn.Module):
             def __init__(self):
                 super().__init__()
@@ -263,6 +263,67 @@ class TrainerTestGround(unittest.TestCase):
                 return {'loss':torch.pow(self.fc(x).squeeze(-1)-y, 2).sum()}
             def predict(self, x):
                 return {'pred':self.fc(x).squeeze(0)}
+        model = Model()
+        trainer = Trainer(train_data=dataset, model=model, loss=None, print_every=2, dev_data=dataset,
+                          metrics=AccuracyMetric(target='y'), use_tqdm=False)
+        trainer.train(load_best_model=False)
+
+    def test_batch_sampler_dataiter(self):
+        import random
+        import torch
+        class BatchSampler:
+            def __init__(self, dataset):
+                self.num_samples = len(dataset)
+
+            def __iter__(self):
+                index = 0
+                indexes = list(range(self.num_samples))
+                np.random.shuffle(indexes)
+                start_idx = 0
+                while index < self.num_samples:
+                    if start_idx == 0:
+                        end_index = self.num_samples//2
+                    else:
+                        end_index = self.num_samples
+                    yield indexes[start_idx:end_index]
+                    index = end_index
+                    start_idx = end_index
+            def __len__(self):
+                return 2
+
+        class UdfDataSet:
+            def __init__(self, num_samples):
+                self.num_samples = num_samples
+
+            def __getitem__(self, idx):
+                x = [random.random() for _ in range(3)]
+                y = random.random()
+                return x,y
+
+            def __len__(self):
+                return self.num_samples
+
+        def collate_fn(data_list):
+            # [(x1,y1), (x2,y2), ...], 这里的输入实际上是将UdfDataSet的__getitem__输入结合为list
+            xs, ys = [], []
+            for l in data_list:
+                x, y = l
+                xs.append(x)
+                ys.append(y)
+            x,y = torch.FloatTensor(xs), torch.FloatTensor(ys)
+            return {'x':x, 'y':y}, {'y':y}
+
+        dataset = UdfDataSet(11)
+        batch_sampler = BatchSampler(dataset)
+        dataset = TorchLoaderIter(dataset, collate_fn=collate_fn, batch_sampler=batch_sampler)
+        class Model(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fc = nn.Linear(3, 1)
+            def forward(self, x, y):
+                return {'loss':torch.pow(self.fc(x).squeeze(-1)-y, 2).sum()}
+            def predict(self, x):
+                return {'pred':self.fc(x).squeeze(-1)}
         model = Model()
         trainer = Trainer(train_data=dataset, model=model, loss=None, print_every=2, dev_data=dataset,
                           metrics=AccuracyMetric(target='y'), use_tqdm=False)
@@ -333,7 +394,7 @@ class TrainerTestGround(unittest.TestCase):
                     return {'loss': torch.pow(self.fc(x).squeeze(-1) - y, 2).sum()}
 
                 def predict(self, x):
-                    return {'pred': self.fc(x).squeeze(0)}
+                    return {'pred': self.fc(x).squeeze(-1)}
 
             model = Model()
             trainer = Trainer(train_data=dataset, model=model, loss=None, print_every=2, dev_data=dataset,
@@ -356,7 +417,7 @@ class TrainerTestGround(unittest.TestCase):
                 x.append(ins['x1']+ins['x2'])
             x = torch.FloatTensor(x)
             return {'x':x}, {}
-        dataset.add_collect_fn(fn)
+        dataset.add_collate_fn(fn)
 
         class Model(nn.Module):
             def __init__(self):
@@ -377,7 +438,7 @@ class TrainerTestGround(unittest.TestCase):
                           dev_data=dataset, metrics=AccuracyMetric(target='y'), use_tqdm=False)
         trainer.train()
 
-    def test_collect_fn2(self):
+    def test_collate_fn2(self):
         """测试能否实现batch_x, batch_y"""
         dataset = prepare_fake_dataset2('x1', 'x2')
         dataset.set_input('x1', 'x2')
@@ -389,7 +450,7 @@ class TrainerTestGround(unittest.TestCase):
                 x.append(ins['x1']+ins['x2'])
             x = torch.FloatTensor(x)
             return {'x':x}, {'target':x[:, :4].argmax(dim=-1)}
-        dataset.add_collect_fn(fn)
+        dataset.add_collate_fn(fn)
 
         class Model(nn.Module):
             def __init__(self):
@@ -410,7 +471,7 @@ class TrainerTestGround(unittest.TestCase):
                           dev_data=dataset, metrics=AccuracyMetric(), use_tqdm=False)
         trainer.train()
 
-    def test_collect_fn3(self):
+    def test_collate_fn3(self):
         """
         测试应该会覆盖
 
@@ -426,7 +487,7 @@ class TrainerTestGround(unittest.TestCase):
                 x.append(ins['x1']+ins['x2'])
             x = torch.FloatTensor(x)
             return {'x1':torch.zeros_like(x)}, {'target':torch.zeros(x.size(0)).long(), 'y':x}
-        dataset.add_collect_fn(fn)
+        dataset.add_collate_fn(fn)
 
         class Model(nn.Module):
             def __init__(self):

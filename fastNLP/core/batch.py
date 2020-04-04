@@ -18,7 +18,7 @@ import torch.utils.data
 from collections import defaultdict
 
 from .dataset import DataSet
-from .sampler import SequentialSampler
+from .sampler import SequentialSampler, Sampler
 from ._logger import logger
 
 
@@ -89,8 +89,8 @@ class DataSetGetter:
         sin_x = _pad(sin_x, dataset=self.dataset, as_numpy=self.as_numpy)
         sin_y = _pad(sin_y, dataset=self.dataset, as_numpy=self.as_numpy)
 
-        if not self.dataset.collector.is_empty():
-            bx, by = self.dataset._collect_batch(ins_list)
+        if not self.dataset.collater.is_empty():
+            bx, by = self.dataset._collate_batch(ins_list)
             sin_x.update(bx)
             sin_y.update(by)
 
@@ -127,29 +127,35 @@ class BatchIter:
     """
     def __init__(self, dataset, batch_size=1, sampler=None,
                  num_workers=0, pin_memory=False, drop_last=False,
-                 timeout=0, worker_init_fn=None, collate_fn=None):
-        if not isinstance(sampler, torch.utils.data.Sampler):
-            self.sampler = SamplerAdapter(sampler=sampler or SequentialSampler(), dataset=dataset)
-        else:
-            self.sampler = sampler
+                 timeout=0, worker_init_fn=None, collate_fn=None,
+                 batch_sampler=None):
+        if isinstance(sampler, Sampler):  # 如果时fastNLP的sampler需要adapt一下
+            sampler = SamplerAdapter(sampler=sampler or SequentialSampler(), dataset=dataset)
+        self.sampler = sampler
+        self.batch_sampler = batch_sampler
 
-        # DataLoader的collect_fn输入是List[]，里面的元素是dataset[index]返回的结果
+        # DataLoader的collate_fn输入是List[]，里面的元素是dataset[index]返回的结果
         if collate_fn is None:
             # pytoch <= 1.1 中不能设置collate_fn=None
             self.dataiter = torch.utils.data.DataLoader(
                 dataset=dataset, batch_size=batch_size, sampler=self.sampler,
                 num_workers=num_workers,
                 pin_memory=pin_memory, drop_last=drop_last,
-                timeout=timeout, worker_init_fn=worker_init_fn)
+                timeout=timeout, worker_init_fn=worker_init_fn,
+                batch_sampler=batch_sampler)
         else:
             self.dataiter = torch.utils.data.DataLoader(
                 dataset=dataset, batch_size=batch_size, sampler=self.sampler,
                 collate_fn=collate_fn, num_workers=num_workers,
                 pin_memory=pin_memory, drop_last=drop_last,
-                timeout=timeout, worker_init_fn=worker_init_fn)
+                timeout=timeout, worker_init_fn=worker_init_fn,
+                batch_sampler=batch_sampler)
 
         # 以sampler的数量为准，因为DistributedSampler的时候每个进程上并不是所有的数据都用上了
-        self._num_batches = self.get_num_batches(len(self.dataiter.sampler), batch_size, drop_last)
+        if self.batch_sampler is None:
+            self._num_batches = self.get_num_batches(len(self.dataiter.sampler), batch_size, drop_last)
+        else:
+            self._num_batches = len(self.batch_sampler)
         self.batch_size = batch_size
         self.cur_batch_indices = None
 
@@ -222,7 +228,8 @@ class DataSetIter(BatchIter):
     """
     def __init__(self, dataset, batch_size=1, sampler=None, as_numpy=False,
                  num_workers=0, pin_memory=False, drop_last=False,
-                 timeout=0, worker_init_fn=None, collate_fn=None):
+                 timeout=0, worker_init_fn=None, collate_fn=None,
+                 batch_sampler=None):
         r"""
         
         :param dataset: :class:`~fastNLP.DataSet` 对象, 数据集
@@ -239,15 +246,21 @@ class DataSetIter(BatchIter):
         :param timeout: 生成一个batch的timeout值
         :param worker_init_fn: 在每个worker启动时调用该函数，会传入一个值，该值是worker的index。
         :param collate_fn: 用于将样本组合成batch的函数
+        :param batch_sampler: 当每次batch取出的数据数量不一致时，可以使用该sampler。batch_sampler每次iter应该输出一个list的index。
+            当batch_sampler不为None时，参数batch_size, sampler, drop_last会被忽略。
         """
         assert isinstance(dataset, DataSet)
         dataset = DataSetGetter(dataset, as_numpy)
         collate_fn = dataset.collate_fn if collate_fn is None else collate_fn
+        if batch_sampler is not None:
+            batch_size = 1
+            sampler = None
+            drop_last = False
         super().__init__(
             dataset=dataset, batch_size=batch_size, sampler=sampler,
             num_workers=num_workers, pin_memory=pin_memory,
             drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
-            collate_fn=collate_fn
+            collate_fn=collate_fn, batch_sampler=batch_sampler
         )
 
     def __iter__(self):
@@ -384,12 +397,16 @@ class TorchLoaderIter(BatchIter):
                 os.remove(tmp_file_path)
     
     """
-    def __init__(self, dataset, batch_size=1, sampler=None,
+    def __init__(self, dataset, collate_fn, batch_size=1, sampler=None,
                  num_workers=0, pin_memory=False, drop_last=False,
-                 timeout=0, worker_init_fn=None, collate_fn=None):
+                 timeout=0, worker_init_fn=None,
+                 batch_sampler=None):
         r"""
 
-        :param dataset: :class:`~fastNLP.DataSet` 对象, 数据集
+        :param dataset: 实现了__getitem__和__len__方法的数据容器。
+        :param callable collate_fn: 用于将样本组合成batch的函数。输入为[dataset[idx1], dataset[idx2], ...], 即dataset中
+            __getitem__返回值组成的list，返回值必须为两个dict，其中第一个dict会被认为是input，第二个dict中的内容被认为是target。
+            需要转换为tensor的数据，需要在collate_fn中转化，但不需要转移到对应device。
         :param int batch_size: 取出的batch大小
         :param sampler: 规定使用的 :class:`~fastNLP.Sampler` 方式. 若为 ``None`` , 使用 :class:`~fastNLP.SequentialSampler`.
             Default: ``None``
@@ -398,19 +415,21 @@ class TorchLoaderIter(BatchIter):
         :param bool drop_last: 如果最后一个batch没有batch_size这么多sample，就扔掉最后一个
         :param timeout: 生成一个batch的timeout值
         :param worker_init_fn: 在每个worker启动时调用该函数，会传入一个值，该值是worker的index。
-        :param collate_fn: 用于将样本组合成batch的函数。
+        :param batch_sampler: 当每次batch取出的数据数量不一致时，可以使用该sampler。batch_sampler每次iter应该输出一个list的index。
+            当batch_sampler不为None时，参数batch_size, sampler, drop_last会被忽略。
         """
         assert len(dataset) > 0
-        ins = dataset[0]
-        if (len(ins) != 2 or not isinstance(ins[0], dict) or not isinstance(ins[1], dict)) and collate_fn is None:
-            raise RuntimeError("If the provided dataset does not return two dicts when call __getitem__(), the"
-                               " `collate_fn` must be provided.")
+        assert collate_fn is not None, "You must pass collate_fn to pad the batch."
+        if batch_sampler is not None:
+            batch_size = 1
+            sampler = None
+            drop_last = False
 
         super().__init__(
             dataset=dataset, batch_size=batch_size, sampler=sampler,
             num_workers=num_workers, pin_memory=pin_memory,
             drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
-            collate_fn=collate_fn
+            collate_fn=collate_fn, batch_sampler=batch_sampler
         )
 
     def __iter__(self):
