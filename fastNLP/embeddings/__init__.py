@@ -22,6 +22,7 @@ from .embedding import Embedding, TokenEmbedding
 from .static_embedding import StaticEmbedding
 from .elmo_embedding import ElmoEmbedding
 from .bert_embedding import BertEmbedding, BertWordPieceEncoder
+from .roberta_embedding import RobertaEmbedding
 from .char_embedding import CNNCharEmbedding, LSTMCharEmbedding
 from .stack_embedding import StackEmbedding
 from .utils import get_embeddings

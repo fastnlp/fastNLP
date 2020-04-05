@@ -34,6 +34,7 @@ __all__ = [
 
 from .attention import MultiHeadAttention, BiAttention, SelfAttention
 from .bert import BertModel
+from .roberta import RobertaModel
 from .char_encoder import ConvolutionCharEncoder, LSTMCharEncoder
 from .conv_maxpool import ConvMaxpool
 from .lstm import LSTM

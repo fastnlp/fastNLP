@@ -148,3 +148,14 @@ def _get_file_name_base_on_postfix(dir_path, postfix):
     elif len(files) > 1:
         raise FileExistsError(f"There are multiple *{postfix} files in {dir_path}")
     return os.path.join(dir_path, files[0])
+
+
+def create_position_ids_from_input_ids(input_ids, padding_idx=0):
+    r""" Replace non-padding symbols with their position numbers. Position numbers begin at
+    padding_idx+1. Padding symbols are ignored. This is modified from fairseq's
+    `utils.make_positions`.
+    """
+    # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
+    mask = input_ids.ne(padding_idx).int()
+    incremental_indicies = torch.cumsum(mask, dim=1).type_as(mask) * mask
+    return incremental_indicies.long() + padding_idx
