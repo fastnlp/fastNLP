@@ -224,9 +224,9 @@ class BertWordPieceEncoder(nn.Module):
             第一个[SEP]及之前为0, 第二个[SEP]及到第一个[SEP]之间为1; 第三个[SEP]及到第二个[SEP]之间为0，依次往后推。
         :return: torch.FloatTensor. batch_size x max_len x (768*len(self.layers))
         """
-        with torch.no_grad():
-            sep_mask = word_pieces.eq(self._sep_index)  # batch_size x max_len
-            if token_type_ids is None:
+        if token_type_ids is None:
+            with torch.no_grad():
+                sep_mask = word_pieces.eq(self._sep_index)  # batch_size x max_len
                 sep_mask_cumsum = sep_mask.long().flip(dims=[-1]).cumsum(dim=-1).flip(dims=[-1])
                 token_type_ids = sep_mask_cumsum.fmod(2)
                 if token_type_ids[0, 0].item():  # 如果开头是奇数，则需要flip一下结果，因为需要保证开头为0
@@ -462,7 +462,7 @@ class _WordBertModel(nn.Module):
                     outputs[l_index, :, 0] = pooled_cls
                 else:
                     outputs[l_index, :, 0] = output_layer[:, 0]
-                outputs[l_index, batch_indexes, seq_len + s_shift] = output_layer[batch_indexes, seq_len + s_shift]
+                outputs[l_index, batch_indexes, seq_len + s_shift] = output_layer[batch_indexes, word_pieces_lengths + s_shift]
 
         # 3. 最终的embedding结果
         return outputs

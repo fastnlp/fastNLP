@@ -1011,7 +1011,7 @@ class _WordPieceBertModel(nn.Module):
                 if word_pieces[0] != self._cls_index:
                     word_pieces.insert(0, self._cls_index)
                 if word_pieces[-1] != self._sep_index:
-                    word_pieces.insert(-1, self._sep_index)
+                    word_pieces.append(self._sep_index)
             return word_pieces
 
         for index, dataset in enumerate(datasets):
