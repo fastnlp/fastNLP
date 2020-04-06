@@ -54,6 +54,47 @@ class TestBertEmbedding(unittest.TestCase):
         result = embed(words)
         self.assertEqual(result.size(), (1, 516, 16))
 
+    def test_bert_embedding_2(self):
+        # 测试only_use_pretrain_vocab与truncate_embed是否正常工作
+        with open('test/data_for_tests/embedding/small_bert/vocab.txt', 'r', encoding='utf-8') as f:
+            num_word = len(f.readlines())
+        Embedding = BertEmbedding
+        vocab = Vocabulary().add_word_lst("this is a texta and [SEP] NotInBERT".split())
+        embed1 = Embedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+                              only_use_pretrain_bpe=True, truncate_embed=True, min_freq=1)
+        embed_bpe_vocab_size = len(vocab)-1 + 2  # 排除NotInBERT, 额外加##a, [CLS]
+        self.assertEqual(embed_bpe_vocab_size, len(embed1.model.tokenzier.vocab))
+
+        embed2 = Embedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+                              only_use_pretrain_bpe=True, truncate_embed=False, min_freq=1)
+        embed_bpe_vocab_size = num_word  # 排除NotInBERT
+        self.assertEqual(embed_bpe_vocab_size, len(embed2.model.tokenzier.vocab))
+
+        embed3 = Embedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+                              only_use_pretrain_bpe=False, truncate_embed=True, min_freq=1)
+        embed_bpe_vocab_size = len(vocab)+2  # 新增##a, [CLS]
+        self.assertEqual(embed_bpe_vocab_size, len(embed3.model.tokenzier.vocab))
+
+        embed4 = Embedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+                              only_use_pretrain_bpe=False, truncate_embed=False, min_freq=1)
+        embed_bpe_vocab_size = num_word+1  # 新增##a
+        self.assertEqual(embed_bpe_vocab_size, len(embed4.model.tokenzier.vocab))
+
+        # 测试各种情况下以下tensor的值是相等的
+        embed1.eval()
+        embed2.eval()
+        embed3.eval()
+        embed4.eval()
+        tensor = torch.LongTensor([[vocab.to_index(w) for w in 'this is a texta and'.split()]])
+        t1 = embed1(tensor)
+        t2 = embed2(tensor)
+        t3 = embed3(tensor)
+        t4 = embed4(tensor)
+
+        self.assertEqual((t1-t2).sum(), 0)
+        self.assertEqual((t1-t3).sum(), 0)
+        self.assertEqual((t1-t4).sum(), 0)
+
 
 class TestBertWordPieceEncoder(unittest.TestCase):
     def test_bert_word_piece_encoder(self):
