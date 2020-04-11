@@ -18,6 +18,7 @@ logger.set_stdout('tqdm', level='WARN')
 
 __all__ = [
     'logger',
+    'init_logger_dist'
 ]
 
 import logging
@@ -25,6 +26,7 @@ import logging.config
 import os
 import sys
 import warnings
+from torch import distributed as dist
 
 ROOT_NAME = 'fastNLP'
 
@@ -169,3 +171,9 @@ def _get_logger(name=None, level='INFO'):
 
 
 logger = _init_logger(path=None, level='INFO')
+
+
+def init_logger_dist():
+    global logger
+    rank = dist.get_rank()
+    logger.setLevel(logging.INFO if rank else logging.WARNING)

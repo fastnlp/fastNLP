@@ -24,6 +24,9 @@ __all__ = [
     
     "Trainer",
     "Tester",
+
+    "DistTrainer",
+    "get_local_rank",
     
     "Callback",
     "GradientClipCallback",
@@ -75,7 +78,8 @@ __all__ = [
     
     "cache_results",
     
-    'logger'
+    'logger',
+    "init_logger_dist",
 ]
 __version__ = '0.5.0'
 
