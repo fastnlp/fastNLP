@@ -176,4 +176,4 @@ logger = _init_logger(path=None, level='INFO')
 def init_logger_dist():
     global logger
     rank = dist.get_rank()
-    logger.setLevel(logging.INFO if rank else logging.WARNING)
+    logger.setLevel(logging.INFO if rank == 0 else logging.WARNING)
