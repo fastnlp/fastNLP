@@ -264,7 +264,6 @@ class TestDataSetMethods(unittest.TestCase):
         self.assertEqual(ans.content, [[5, 6]] * 10)
 
     def test_add_null(self):
-        # TODO test failed because 'fastNLP\core\field.py:143: RuntimeError'
         ds = DataSet()
         with self.assertRaises(RuntimeError) as RE:
             ds.add_field('test', [])

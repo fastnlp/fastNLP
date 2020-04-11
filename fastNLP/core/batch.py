@@ -217,7 +217,8 @@ class BatchIter:
 
 class DataSetIter(BatchIter):
     r"""
-    DataSetIter 用于从 `DataSet` 中按一定的顺序, 依次按 ``batch_size`` 的大小将数据取出，
+    DataSetIter 用于从 `DataSet` 中按一定的顺序, 依次按 ``batch_size`` 的大小将数据取出，通过使用DataSetIter，可以不需要考虑
+        输入的padding(由DataSet中每列的Padder决定了)以及不需要考虑将数据转为tensor。
     组成 `x` 和 `y`::
 
         batch = DataSetIter(data_set, batch_size=16, sampler=SequentialSampler())
@@ -226,10 +227,8 @@ class DataSetIter(BatchIter):
             # do stuff ...
 
     """
-    def __init__(self, dataset, batch_size=1, sampler=None, as_numpy=False,
-                 num_workers=0, pin_memory=False, drop_last=False,
-                 timeout=0, worker_init_fn=None, collate_fn=None,
-                 batch_sampler=None):
+    def __init__(self, dataset, batch_size=1, sampler=None, as_numpy=False, num_workers=0, pin_memory=False,
+                 drop_last=False, timeout=0, worker_init_fn=None, batch_sampler=None):
         r"""
         
         :param dataset: :class:`~fastNLP.DataSet` 对象, 数据集
@@ -245,13 +244,12 @@ class DataSetIter(BatchIter):
         :param bool drop_last: 如果最后一个batch没有batch_size这么多sample，就扔掉最后一个
         :param timeout: 生成一个batch的timeout值
         :param worker_init_fn: 在每个worker启动时调用该函数，会传入一个值，该值是worker的index。
-        :param collate_fn: 用于将样本组合成batch的函数
         :param batch_sampler: 当每次batch取出的数据数量不一致时，可以使用该sampler。batch_sampler每次iter应该输出一个list的index。
             当batch_sampler不为None时，参数batch_size, sampler, drop_last会被忽略。
         """
         assert isinstance(dataset, DataSet)
         dataset = DataSetGetter(dataset, as_numpy)
-        collate_fn = dataset.collate_fn if collate_fn is None else collate_fn
+        collate_fn = dataset.collate_fn
         if batch_sampler is not None:
             batch_size = 1
             sampler = None
@@ -272,8 +270,9 @@ class DataSetIter(BatchIter):
 
 class TorchLoaderIter(BatchIter):
     r"""
-    与DataSetIter类似，但可以用于非fastNLP的数据容器对象，然后将其传入到Trainer中。
-    只需要保证数据容器实现了实现了以下的方法
+    与DataSetIter类似，但可以用于非fastNLP的数据容器对象，以及可以实现完全自定义的生成batch的方式，然后与Trainer，Tester可以实现
+        与DataSetIter一样的对接。
+    需要保证传入的数据容器实现了实现了以下的方法
 
     Example::
 
@@ -293,7 +292,7 @@ class TorchLoaderIter(BatchIter):
                 return self.num_samples
 
         # 需要实现collact_fn将数据转换为tensor
-        def collact_fn(data_list):
+        def collate_fn(data_list):
             # [(x1,y1), (x2,y2), ...], 这里的输入实际上是将UdfDataSet的__getitem__输入结合为list
             xs, ys = [], []
             for l in data_list:
@@ -302,10 +301,10 @@ class TorchLoaderIter(BatchIter):
                 ys.append(y)
             # 不需要转移到gpu，Trainer或Tester会将其转移到model所在的device
             x,y = torch.FloatTensor(xs), torch.FloatTensor(ys)
-            return {'x':x, 'y':y}, {'y':y}
+            return {'x':x, 'y':y}, {'y':y}  # 第一个dict中内容类似于DataSet中的input列，第二个dict的内容类似于target列
 
         udf_dataset = UdfDataSet(10)
-        dataset = TorchLoaderIter(udf_dataset, collate_fn=collact_fn)
+        dataset = TorchLoaderIter(udf_dataset, collate_fn=collate_fn)
         class Model(nn.Module):
             def __init__(self):
                 super().__init__()
@@ -362,7 +361,7 @@ class TorchLoaderIter(BatchIter):
                 def __len__(self):
                     return self.num_samples
 
-            def collact_fn(data_list):
+            def collate_fn(data_list):
                 # [(x1,y1), (x2,y2), ...], 这里的输入实际上是将UdfDataSet的__getitem__输入结合为list
                 xs, ys = [], []
                 for l in data_list:
@@ -370,10 +369,10 @@ class TorchLoaderIter(BatchIter):
                     xs.append(x)
                     ys.append(y)
                 x, y = torch.FloatTensor(xs), torch.FloatTensor(ys)
-                return {'x': x, 'y': y}, {'y': y}
+                return {'x': x, 'y': y}, {'y': y}  # 第一个dict中内容类似于DataSet中的input列，第二个dict的内容类似于target列
 
             file_data = FileDataSet(tmp_file_path)
-            dataset = TorchLoaderIter(file_data, collate_fn=collact_fn)
+            dataset = TorchLoaderIter(file_data, collate_fn=collate_fn)
 
             class Model(nn.Module):
                 def __init__(self):

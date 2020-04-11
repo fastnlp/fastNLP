@@ -48,6 +48,18 @@ PRETRAINED_BERT_MODEL_DIR = {
     'cn-wwm-ext': "bert-chinese-wwm-ext.zip"
 }
 
+PRETRAINED_GPT2_MODEL_DIR = {
+    'en': 'gpt2.zip',
+    'en-medium': 'gpt2-medium.zip',
+    'en-large': 'gpt2-large.zip',
+    'en-xl': 'gpt2-xl.zip'
+}
+
+PRETRAINED_ROBERTA_MODEL_DIR = {
+    'en': 'roberta-base.zip',
+    'en-large': 'roberta-large.zip'
+}
+
 PRETRAINED_ELMO_MODEL_DIR = {
     'en': 'elmo_en_Medium.zip',
     'en-small': "elmo_en_Small.zip",
@@ -127,14 +139,18 @@ DATASET_DIR = {
 
 PRETRAIN_MAP = {'elmo': PRETRAINED_ELMO_MODEL_DIR,
                 "bert": PRETRAINED_BERT_MODEL_DIR,
-                "static": PRETRAIN_STATIC_FILES}
+                "static": PRETRAIN_STATIC_FILES,
+                'gpt2': PRETRAINED_GPT2_MODEL_DIR,
+                'roberta': PRETRAINED_ROBERTA_MODEL_DIR}
 
 #  用于扩展fastNLP的下载
 FASTNLP_EXTEND_DATASET_URL = 'fastnlp_dataset_url.txt'
 FASTNLP_EXTEND_EMBEDDING_URL = {'elmo': 'fastnlp_elmo_url.txt',
-                         'bert':'fastnlp_bert_url.txt',
-                         'static': 'fastnlp_static_url.txt'
-}
+                                'bert':'fastnlp_bert_url.txt',
+                                'static': 'fastnlp_static_url.txt',
+                                'gpt2': 'fastnlp_gpt2_url.txt',
+                                'roberta': 'fastnlp_roberta_url.txt'
+                                }
 
 
 def cached_path(url_or_filename: str, cache_dir: str = None, name=None) -> Path:
@@ -273,7 +289,7 @@ def _get_embedding_url(embed_type, name):
             return url
         raise KeyError("There is no {}. Only supports {}.".format(name, list(embed_map.keys())))
     else:
-        raise KeyError(f"There is no {embed_type}. Only supports bert, elmo, static")
+        raise KeyError(f"There is no {embed_type}. Only supports bert, elmo, static, gpt2, roberta")
 
 def _read_extend_url_file(filename, name)->str:
     r"""
@@ -281,7 +297,7 @@ def _read_extend_url_file(filename, name)->str:
 
     :param str filename: 在默认的路径下寻找file这个文件
     :param str name: 需要寻找的资源的名称
-    :return: str or None
+    :return: str,None
     """
     cache_dir = get_cache_path()
     filepath = os.path.join(cache_dir, filename)
@@ -488,3 +504,42 @@ def match_file(dir_name: str, cache_dir: Path) -> str:
         return matched_filenames[-1]
     else:
         raise RuntimeError(f"Duplicate matched files:{matched_filenames}, this should be caused by a bug.")
+
+
+def _get_bert_dir(model_dir_or_name: str = 'en-base-uncased'):
+    if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
+        model_url = _get_embedding_url('bert', model_dir_or_name.lower())
+        model_dir = cached_path(model_url, name='embedding')
+        # 检查是否存在
+    elif os.path.isdir(os.path.abspath(os.path.expanduser(model_dir_or_name))):
+        model_dir = os.path.abspath(os.path.expanduser(model_dir_or_name))
+    else:
+        logger.error(f"Cannot recognize BERT dir or name ``{model_dir_or_name}``.")
+        raise ValueError(f"Cannot recognize BERT dir or name ``{model_dir_or_name}``.")
+    return str(model_dir)
+
+
+def _get_gpt2_dir(model_dir_or_name: str = 'en'):
+    if model_dir_or_name.lower() in PRETRAINED_GPT2_MODEL_DIR:
+        model_url = _get_embedding_url('gpt2', model_dir_or_name.lower())
+        model_dir = cached_path(model_url, name='embedding')
+        # 检查是否存在
+    elif os.path.isdir(os.path.abspath(os.path.expanduser(model_dir_or_name))):
+        model_dir = os.path.abspath(os.path.expanduser(model_dir_or_name))
+    else:
+        logger.error(f"Cannot recognize GPT2 dir or name ``{model_dir_or_name}``.")
+        raise ValueError(f"Cannot recognize GPT2 dir or name ``{model_dir_or_name}``.")
+    return str(model_dir)
+
+
+def _get_roberta_dir(model_dir_or_name: str = 'en'):
+    if model_dir_or_name.lower() in PRETRAINED_ROBERTA_MODEL_DIR:
+        model_url = _get_embedding_url('roberta', model_dir_or_name.lower())
+        model_dir = cached_path(model_url, name='embedding')
+        # 检查是否存在
+    elif os.path.isdir(os.path.abspath(os.path.expanduser(model_dir_or_name))):
+        model_dir = os.path.abspath(os.path.expanduser(model_dir_or_name))
+    else:
+        logger.error(f"Cannot recognize RoBERTa dir or name ``{model_dir_or_name}``.")
+        raise ValueError(f"Cannot recognize RoBERTa dir or name ``{model_dir_or_name}``.")
+    return str(model_dir)

@@ -49,7 +49,15 @@ __all__ = [
 
     "TimestepDropout",
 
-    'summary'
+    'summary',
+
+    "BertTokenizer",
+    "BertModel",
+
+    "RobertaTokenizer",
+    "RobertaModel",
+
+    "GPT2Tokenizer"
 ]
 
 import sys
@@ -61,5 +69,6 @@ from .dropout import TimestepDropout
 from .encoder import *
 from .utils import summary
 from ..doc_utils import doc_process
+from .tokenizer import *
 
 doc_process(sys.modules[__name__])

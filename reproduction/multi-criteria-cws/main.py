@@ -406,18 +406,8 @@ if not options.test:
     logger.info("Number training instances: {}".format(len(train_set)))
     logger.info("Number dev instances: {}".format(len(dev_set)))
 
-    train_batch = DataSetIter(
-        batch_size=options.batch_size,
-        dataset=train_set,
-        sampler=train_sampler,
-        num_workers=4,
-    )
-    dev_batch = DataSetIter(
-        batch_size=options.batch_size,
-        dataset=dev_set,
-        sampler=dev_sampler,
-        num_workers=4,
-    )
+    train_batch = DataSetIter(dataset=train_set, batch_size=options.batch_size, sampler=train_sampler, num_workers=4)
+    dev_batch = DataSetIter(dataset=dev_set, batch_size=options.batch_size, sampler=dev_sampler, num_workers=4)
 
     best_f1 = 0.0
     for epoch in range(int(options.num_epochs)):

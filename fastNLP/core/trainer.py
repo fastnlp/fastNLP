@@ -487,8 +487,8 @@ class Trainer(object):
                 sampler.set_batch_size(batch_size)
 
         if isinstance(train_data, DataSet):
-            self.data_iterator = DataSetIter(
-                dataset=train_data, batch_size=batch_size, num_workers=num_workers, sampler=sampler, drop_last=drop_last)
+            self.data_iterator = DataSetIter(dataset=train_data, batch_size=batch_size, sampler=sampler,
+                                             num_workers=num_workers, drop_last=drop_last)
         elif isinstance(train_data, BatchIter):
             self.data_iterator = train_data
             train_data = train_data.dataset

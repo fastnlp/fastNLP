@@ -30,6 +30,10 @@ __all__ = [
     "MultiHeadAttention",
     "BiAttention",
     "SelfAttention",
+
+    "BertModel",
+
+    "RobertaModel",
 ]
 
 from .attention import MultiHeadAttention, BiAttention, SelfAttention
