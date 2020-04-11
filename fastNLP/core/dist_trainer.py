@@ -214,11 +214,8 @@ class DistTrainer():
 
     def _get_data_iter(self, dataset):
         if isinstance(dataset, DataSet):
-            return DataSetIter(
-                dataset=dataset, batch_size=self.batch_size_per_gpu,
-                num_workers=self.num_data_workers, sampler=self.sampler,
-                drop_last=self.drop_last
-            )
+            return DataSetIter(dataset=dataset, batch_size=self.batch_size_per_gpu, sampler=self.sampler,
+                               num_workers=self.num_data_workers, drop_last=self.drop_last)
         elif isinstance(dataset, BatchIter):
             return dataset
         else:

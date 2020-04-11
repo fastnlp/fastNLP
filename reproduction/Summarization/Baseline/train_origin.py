@@ -687,16 +687,16 @@ def main():
     if hps.mode == 'train':
         trainset = dataInfo.datasets["train"]
         train_sampler = BucketSampler(batch_size=hps.batch_size, seq_len_field_name=Const.INPUT)
-        train_batch = DataSetIter(batch_size=hps.batch_size, dataset=trainset, sampler=train_sampler)
+        train_batch = DataSetIter(dataset=trainset, batch_size=hps.batch_size, sampler=train_sampler)
         validset = dataInfo.datasets["valid"]
         validset.set_input("text", "summary")
-        valid_batch = DataSetIter(batch_size=hps.batch_size, dataset=validset)
+        valid_batch = DataSetIter(dataset=validset, batch_size=hps.batch_size)
         setup_training(model, train_batch, valid_batch, hps)
     elif hps.mode == 'test':
         logger.info("[INFO] Decoding...")
         testset = dataInfo.datasets["test"]
         testset.set_input("text", "summary")
-        test_batch = DataSetIter(batch_size=hps.batch_size, dataset=testset)
+        test_batch = DataSetIter(dataset=testset, batch_size=hps.batch_size)
         run_test(model, test_batch, hps, limited=hps.limited)
     else:
         logger.error("The 'mode' flag must be one of train/eval/test")

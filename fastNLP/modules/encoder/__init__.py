@@ -30,10 +30,18 @@ __all__ = [
     "MultiHeadAttention",
     "BiAttention",
     "SelfAttention",
+
+    "BertModel",
+
+    "RobertaModel",
+
+    "GPT2Model"
 ]
 
 from .attention import MultiHeadAttention, BiAttention, SelfAttention
 from .bert import BertModel
+from .roberta import RobertaModel
+from .gpt2 import GPT2Model
 from .char_encoder import ConvolutionCharEncoder, LSTMCharEncoder
 from .conv_maxpool import ConvMaxpool
 from .lstm import LSTM

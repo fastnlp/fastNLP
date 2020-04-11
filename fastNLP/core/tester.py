@@ -107,8 +107,8 @@ class Tester(object):
         self.logger = logger
 
         if isinstance(data, DataSet):
-            self.data_iterator = DataSetIter(
-                dataset=data, batch_size=batch_size, num_workers=num_workers, sampler=SequentialSampler())
+            self.data_iterator = DataSetIter(dataset=data, batch_size=batch_size, sampler=SequentialSampler(),
+                                             num_workers=num_workers)
         elif isinstance(data, BatchIter):
             self.data_iterator = data
         else:

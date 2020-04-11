@@ -19,7 +19,7 @@ from .embedding import TokenEmbedding
 from ..core import logger
 from ..core.vocabulary import Vocabulary
 from ..io.file_utils import PRETRAIN_STATIC_FILES, _get_embedding_url, cached_path
-from ..modules.utils import _get_file_name_base_on_postfix
+from fastNLP.io.file_utils import _get_file_name_base_on_postfix
 
 
 class StaticEmbedding(TokenEmbedding):

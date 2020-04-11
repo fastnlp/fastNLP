@@ -8,7 +8,6 @@ __all__ = [
     "summary"
 ]
 
-import os
 from functools import reduce
 
 import torch
@@ -133,18 +132,3 @@ def get_dropout_mask(drop_p: float, tensor: torch.Tensor):
     nn.functional.dropout(mask_x, p=drop_p,
                           training=False, inplace=True)
     return mask_x
-
-
-def _get_file_name_base_on_postfix(dir_path, postfix):
-    r"""
-    在dir_path中寻找后缀为postfix的文件.
-    :param dir_path: str, 文件夹
-    :param postfix: 形如".bin", ".json"等
-    :return: str，文件的路径
-    """
-    files = list(filter(lambda filename: filename.endswith(postfix), os.listdir(os.path.join(dir_path))))
-    if len(files) == 0:
-        raise FileNotFoundError(f"There is no file endswith *{postfix} file in {dir_path}")
-    elif len(files) > 1:
-        raise FileExistsError(f"There are multiple *{postfix} files in {dir_path}")
-    return os.path.join(dir_path, files[0])

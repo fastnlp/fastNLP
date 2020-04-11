@@ -12,16 +12,26 @@ __all__ = [
     "ElmoEmbedding",
     "BertEmbedding",
     "BertWordPieceEncoder",
+
+    "RobertaEmbedding",
+    "RobertaWordPieceEncoder",
+
+    "GPT2Embedding",
+    "GPT2WordPieceEncoder",
+
     "StackEmbedding",
     "LSTMCharEmbedding",
     "CNNCharEmbedding",
     "get_embeddings",
+
 ]
 
 from .embedding import Embedding, TokenEmbedding
 from .static_embedding import StaticEmbedding
 from .elmo_embedding import ElmoEmbedding
 from .bert_embedding import BertEmbedding, BertWordPieceEncoder
+from .roberta_embedding import RobertaEmbedding, RobertaWordPieceEncoder
+from .gpt2_embedding import GPT2WordPieceEncoder, GPT2Embedding
 from .char_embedding import CNNCharEmbedding, LSTMCharEmbedding
 from .stack_embedding import StackEmbedding
 from .utils import get_embeddings

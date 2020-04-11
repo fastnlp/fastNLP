@@ -279,7 +279,7 @@ class TestCase1(unittest.TestCase):
 
         data.add_collate_fn(concat_collate_fn)
 
-        for batch_x, batch_y in DataSetIter(data, sampler=SequentialSampler(), batch_size=2):
+        for batch_x, batch_y in DataSetIter(data, batch_size=2, sampler=SequentialSampler()):
             print("batch_x:", batch_x)
             print("batch_y:", batch_y)
             # batch_x: {'x': tensor([[0, 1, 3, 0],
@@ -302,7 +302,7 @@ class TestCase1(unittest.TestCase):
                 return b_x, b_y
         data.delete_collate_fn()  # 删除之前的collate_fn
         data.add_collate_fn(ConCollateFn(max_len=3))
-        for batch_x, batch_y in DataSetIter(data, sampler=SequentialSampler(), batch_size=2):
+        for batch_x, batch_y in DataSetIter(data, batch_size=2, sampler=SequentialSampler()):
             print("batch_x:", batch_x)
             print("batch_y:", batch_y)
             # batch_x: {'x': tensor([[0, 1, 3],
@@ -362,10 +362,9 @@ class TestCase1(unittest.TestCase):
 
         batch_sampler = BatchSampler(ds)
 
-        data_iter = DataSetIter(ds, batch_size=10, sampler=batch_sampler, as_numpy=False,
-                 num_workers=0, pin_memory=False, drop_last=False,
-                 timeout=0, worker_init_fn=None, collate_fn=None,
-                 batch_sampler=batch_sampler)
+        data_iter = DataSetIter(ds, batch_size=10, sampler=batch_sampler, as_numpy=False, num_workers=0,
+                                pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None,
+                                batch_sampler=batch_sampler)
         num_samples = [len(ds)//2, len(ds)-len(ds)//2]
         for idx, (batch_x, batch_y) in enumerate(data_iter):
             self.assertEqual(num_samples[idx], len(batch_x['1']))
