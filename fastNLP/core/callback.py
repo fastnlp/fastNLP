@@ -114,6 +114,9 @@ class Callback(object):
         self._trainer = None  # 在Trainer内部被重新赋值
         self._disabled = False
 
+    def __repr__(self):
+        return self.__class__.__name__
+
     @property
     def trainer(self):
         r"""
@@ -1157,9 +1160,6 @@ class EchoCallback(Callback):
 class _TesterCallback(Callback):
     def __init__(self, data, model, metrics, metric_key=None, batch_size=16, num_workers=None):
         super(_TesterCallback, self).__init__()
-        if hasattr(model, 'module'):
-            # for data parallel model
-            model = model.module
         self.tester = Tester(data, model,
                              metrics=metrics, batch_size=batch_size,
                              num_workers=num_workers, verbose=0)
@@ -1183,7 +1183,7 @@ class _TesterCallback(Callback):
 
     @staticmethod
     def _get_score(metric_dict, key):
-        for metric in metric_dict.items():
+        for metric in metric_dict.values():
             if key in metric:
                 return metric[key]
         return None

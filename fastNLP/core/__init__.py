@@ -33,12 +33,16 @@ __all__ = [
     
     "Tester",
     "Trainer",
-    
+
+    "DistTrainer",
+    "get_local_rank",
+
     "cache_results",
     "seq_len_to_mask",
     "get_seq_len",
     "logger",
-    
+    "init_logger_dist",
+
     "Callback",
     "GradientClipCallback",
     "EarlyStopCallback",
@@ -81,7 +85,7 @@ __all__ = [
     "Sampler",
 ]
 
-from ._logger import logger
+from ._logger import logger, init_logger_dist
 from .batch import DataSetIter, BatchIter, TorchLoaderIter
 from .callback import Callback, GradientClipCallback, EarlyStopCallback, FitlogCallback, EvaluateCallback, \
     LRScheduler, ControlC, LRFinder, TensorboardCallback, WarmupCallback, SaveModelCallback, CallbackException, \
@@ -100,3 +104,4 @@ from .trainer import Trainer
 from .utils import cache_results, seq_len_to_mask, get_seq_len
 from .vocabulary import Vocabulary
 from .collate_fn import ConcatCollateFn
+from .dist_trainer import DistTrainer, get_local_rank
