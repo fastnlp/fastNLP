@@ -15,7 +15,7 @@ import torch
 from torch import nn
 import numpy as np
 
-from fastNLP.io.file_utils import _get_file_name_base_on_postfix
+from ...io.file_utils import _get_file_name_base_on_postfix
 from ...io.file_utils import _get_bert_dir
 from ...core import logger
 
