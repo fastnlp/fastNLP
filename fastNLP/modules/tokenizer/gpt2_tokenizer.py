@@ -71,24 +71,6 @@ VOCAB_FILES_NAMES = {
 }
 
 
-PRETRAINED_VOCAB_FILES_MAP = {
-    "vocab_file": {
-        "gpt2": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-vocab.json",
-        "gpt2-medium": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-medium-vocab.json",
-        "gpt2-large": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-vocab.json",
-        "gpt2-xl": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-xl-vocab.json",
-        "distilgpt2": "https://s3.amazonaws.com/models.huggingface.co/bert/distilgpt2-vocab.json",
-    },
-    "merges_file": {
-        "gpt2": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-merges.txt",
-        "gpt2-medium": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-medium-merges.txt",
-        "gpt2-large": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-merges.txt",
-        "gpt2-xl": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-xl-merges.txt",
-        "distilgpt2": "https://s3.amazonaws.com/models.huggingface.co/bert/distilgpt2-merges.txt",
-    },
-}
-
-
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
     "en-small": 1024,
     'en': 1024,
@@ -127,9 +109,6 @@ class GPT2Tokenizer:
           Otherwise, this tokenizer's ``encode``, ``decode``, and ``tokenize`` methods will not conserve
           the spaces at the beginning of a string: `tokenizer.decode(tokenizer.encode(" Hello")) = "Hello"`
     """
-
-    vocab_files_names = VOCAB_FILES_NAMES
-    pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
 
     SPECIAL_TOKENS_ATTRIBUTES = [
         "bos_token",
