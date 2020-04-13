@@ -519,11 +519,11 @@ class Vocabulary(object):
                 line = line.strip()
                 if line:
                     name, value = line.split()
-                    if name == 'max_size':
-                        vocab.max_size = int(value) if value!='None' else None
-                    elif name == 'min_freq':
-                        vocab.min_freq = int(value) if value!='None' else None
+                    if name in ('max_size', 'min_freq'):
+                        value = int(value) if value!='None' else None
+                        setattr(vocab, name, value)
                     elif name in ('unknown', 'padding'):
+                        value = value if value!='None' else None
                         setattr(vocab, name, value)
                     elif name == 'rebuild':
                         vocab.rebuild = True if value=='True' else False
@@ -535,12 +535,12 @@ class Vocabulary(object):
             for line in f:
                 line = line.strip()
                 if line:
-                    parts = line.split()
+                    parts = line.split('\t')
                     word,count,idx,no_create_entry = parts[0], int(parts[1]), int(parts[2]), int(parts[3])
                     if idx >= 0:
                         word2idx[word] = idx
                     word_counter[word] = count
-                    if no_create_entry_counter:
+                    if no_create_entry:
                         no_create_entry_counter[word] = count
 
             word_counter = Counter(word_counter)
