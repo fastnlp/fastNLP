@@ -695,20 +695,26 @@ class ControlC(Callback):
     检测到 control+C 时的反馈
     """
     
-    def __init__(self, quit_all):
+    @staticmethod
+    def quit_all():
+        import sys
+        sys.exit(0)  # 直接退出程序
+    
+    def __init__(self, quit_and_do, action=quit_all):
         r"""
-        :param bool quit_all: 若为True,则检测到control+C 直接退出程序；否则只退出Trainer
+        :param bool quit_and_do: 若为True,则检测到control+C 进行后续操作（默认值为：直接退出程序）；否则只退出Trainer。
         """
+        
         super(ControlC, self).__init__()
-        if type(quit_all) != bool:
-            raise ValueError("In KeyBoardInterrupt, quit_all arguemnt must be a bool.")
-        self.quit_all = quit_all
+        if type(quit_and_do) != bool:
+            raise ValueError("In KeyBoardInterrupt, quit_and_do arguemnt must be a bool.")
+        self.quit_and_do = quit_and_do
+        self.action = action
     
     def on_exception(self, exception):
         if isinstance(exception, KeyboardInterrupt):
-            if self.quit_all is True:
-                import sys
-                sys.exit(0)  # 直接退出程序
+            if self.quit_and_do is True:
+                self.action()
             else:
                 pass
         else:
