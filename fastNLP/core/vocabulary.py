@@ -480,8 +480,9 @@ class Vocabulary(object):
     
     @_check_build_vocab
     def __iter__(self):
-        for word, index in self._word2idx.items():
-            yield word, index
+        # 依次(word1, 0), (word1, 1)
+        for index in range(len(self._word2idx)):
+            yield self.to_word(index), index
 
     def save(self, filepath):
         r"""
