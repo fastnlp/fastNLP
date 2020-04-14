@@ -21,4 +21,5 @@ fastNLP 详细使用教程
    :maxdepth: 1
 
     拓展阅读1：BertEmbedding的各种用法 </tutorials/extend_1_bert_embedding>
-    拓展阅读2：使用fitlog 辅助 fastNLP 进行科研 </tutorials/extend_2_fitlog>
+    拓展阅读2：分布式训练简介 </tutorials/extend_2_dist>
+    拓展阅读3：使用fitlog 辅助 fastNLP 进行科研 </tutorials/extend_3_fitlog>
