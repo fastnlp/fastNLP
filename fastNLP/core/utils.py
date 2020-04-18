@@ -779,7 +779,7 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
             suggestions.append(f"You might need to set `{_miss_in_dataset}` as input. ")
         if _miss_out_dataset:
             _tmp = f"You need to provide `{_miss_out_dataset}` in DataSet and set it as input. "
-            if not dataset.collator.is_empty():
+            if not dataset.collater.is_empty():
                 _tmp += f'Or you need to add `{_miss_out_dataset}` in the output of your collate_fn. '
             suggestions.append(_tmp)
 

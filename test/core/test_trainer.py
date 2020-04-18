@@ -1,9 +1,11 @@
 import time
 import unittest
+import os
 
 import numpy as np
 import torch.nn.functional as F
 from torch import nn
+import torch
 
 from fastNLP import DataSet
 from fastNLP import Instance
@@ -227,6 +229,33 @@ class TrainerTestGround(unittest.TestCase):
         with self.assertRaises(NameError):
             trainer = Trainer(train_data=dataset, model=model, loss=CrossEntropyLoss(), print_every=2, dev_data=dataset,
                               metrics=AccuracyMetric(), use_tqdm=False)
+
+    @unittest.skipIf('TRAVIS' in os.environ, "Need to be tested in hosts with more than 1 gpus")
+    def test_trainer_data_parallel(self):
+        if torch.cuda.device_count()>1:
+            from fastNLP import AccuracyMetric
+            dataset = prepare_fake_dataset2('x1', 'x2')
+            dataset.set_input('x1', 'x2', 'y', flag=True)
+
+            class Model(nn.Module):
+                def __init__(self):
+                    super().__init__()
+                    self.fc = nn.Linear(5, 4)
+
+                def forward(self, x1, x2, y=None):
+                    x1 = self.fc(x1)
+                    x2 = self.fc(x2)
+                    x = x1 + x2
+                    if self.training:
+                        loss = F.cross_entropy(x, y)
+                        return {'loss': loss}
+                    else:
+                        return {'pred':x, 'target':y}
+
+            model = Model()
+            trainer = Trainer(train_data=dataset, model=model, print_every=2, use_tqdm=False,
+                              dev_data=dataset, metrics=AccuracyMetric(), device=[0, 1])
+            trainer.train(load_best_model=False)
 
     def test_udf_dataiter(self):
         import random

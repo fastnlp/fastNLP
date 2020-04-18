@@ -47,7 +47,7 @@ class GPT2Embedding(ContextualEmbedding):
         >>> # torch.Size([1, 5, 3096])
     """
 
-    def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en-small', layers: str = '-1',
+    def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', layers: str = '-1',
                  pool_method: str = 'first', dropout=0, requires_grad: bool = True,
                  auto_truncate: bool = False, language_model: bool = False, **kwargs):
         """
@@ -152,7 +152,7 @@ class GPT2WordPieceEncoder(nn.Module):
 
     """
 
-    def __init__(self, model_dir_or_name: str = 'en-small', layers: str = '-1',
+    def __init__(self, model_dir_or_name: str = 'en', layers: str = '-1',
                  word_dropout=0, dropout=0, requires_grad: bool = True, language_model:bool=False):
         """
 

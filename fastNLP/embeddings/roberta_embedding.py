@@ -47,7 +47,7 @@ class RobertaEmbedding(ContextualEmbedding):
         >>> # torch.Size([1, 5, 2304])
     """
 
-    def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en-base-uncased', layers: str = '-1',
+    def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', layers: str = '-1',
                  pool_method: str = 'first', word_dropout=0, dropout=0, include_cls_sep: bool = False,
                  pooled_cls=True, requires_grad: bool = True, auto_truncate: bool = False, **kwargs):
         r"""
@@ -373,13 +373,13 @@ class RobertaWordPieceEncoder(nn.Module):
     r"""
     读取bert模型，读取之后调用index_dataset方法在dataset中生成word_pieces这一列。
 
-    BertWordPieceEncoder可以支持自动下载权重，当前支持的模型:
+    RobertaWordPieceEncoder可以支持自动下载权重，当前支持的模型:
         en: roberta-base
         en-large: roberta-large
 
     """
 
-    def __init__(self, model_dir_or_name: str = 'en-base-uncased', layers: str = '-1', pooled_cls: bool = False,
+    def __init__(self, model_dir_or_name: str = 'en', layers: str = '-1', pooled_cls: bool = False,
                  word_dropout=0, dropout=0, requires_grad: bool = True):
         r"""
 
