@@ -40,7 +40,7 @@ class RobertaEmbedding(ContextualEmbedding):
         >>> from fastNLP import Vocabulary
         >>> from fastNLP.embeddings import RobertaEmbedding
         >>> vocab = Vocabulary().add_word_lst("The whether is good .".split())
-        >>> embed = RobertaEmbedding(vocab, model_dir_or_name='en-base-uncased', requires_grad=False, layers='4,-2,-1')
+        >>> embed = RobertaEmbedding(vocab, model_dir_or_name='en', requires_grad=False, layers='4,-2,-1')
         >>> words = torch.LongTensor([[vocab.to_index(word) for word in "The whether is good .".split()]])
         >>> outputs = embed(words)
         >>> outputs.size()
