@@ -464,7 +464,7 @@ class GradientClipCallback(Callback):
             self.clip_fun = nn.utils.clip_grad_value_
         else:
             raise ValueError("Only supports `norm` or `value` right now.")
-        self.parameters = parameters
+        self.parameters = list(parameters)
         self.clip_value = clip_value
     
     def on_backward_end(self):
