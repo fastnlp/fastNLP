@@ -1,7 +1,10 @@
+__all__ = [
+    "SequenceGenerator"
+]
 import torch
 from .seq2seq_decoder import Decoder
 import torch.nn.functional as F
-from fastNLP.core.utils import _get_model_device
+from ...core.utils import _get_model_device
 from functools import partial
 
 
@@ -130,8 +133,8 @@ def _no_beam_search_generate(decoder: Decoder, tokens=None, past=None, max_lengt
     else:
         _eos_token_id = eos_token_id
 
-    for i in range(tokens.size(1) - 1):
-        scores, past = decoder.decode_one(tokens[:, :i + 1], past)  # batch_size x vocab_size, Past
+    for i in range(tokens.size(1)):
+        scores, past = decoder.decode(tokens[:, :i + 1], past)  # batch_size x vocab_size, Past
 
     token_ids = tokens.clone()
     cur_len = token_ids.size(1)
@@ -139,7 +142,7 @@ def _no_beam_search_generate(decoder: Decoder, tokens=None, past=None, max_lengt
     # tokens = tokens[:, -1:]
 
     while cur_len < max_length:
-        scores, past = decoder.decode_one(tokens, past)  # batch_size x vocab_size, Past
+        scores, past = decoder.decode(tokens, past)  # batch_size x vocab_size, Past
 
         if repetition_penalty != 1.0:
             token_scores = scores.gather(dim=1, index=token_ids)
@@ -153,7 +156,7 @@ def _no_beam_search_generate(decoder: Decoder, tokens=None, past=None, max_lengt
             eos_mask = scores.new_ones(scores.size(1))
             eos_mask[eos_token_id] = 0
             eos_mask = eos_mask.unsqueeze(0).eq(1)
-            scores = scores.masked_scatter(eos_mask, token_scores)
+            scores = scores.masked_scatter(eos_mask, token_scores)  # 也即除了eos，其他词的分数经过了放大/缩小
 
         if do_sample:
             if temperature > 0 and temperature != 1:
@@ -167,7 +170,7 @@ def _no_beam_search_generate(decoder: Decoder, tokens=None, past=None, max_lengt
         else:
             next_tokens = torch.argmax(scores, dim=-1)  # batch_size
 
-        next_tokens = next_tokens.masked_fill(dones, 0)
+        next_tokens = next_tokens.masked_fill(dones, 0)  # 对已经搜索完成的sample做padding
         tokens = next_tokens.unsqueeze(1)
 
         token_ids = torch.cat([token_ids, tokens], dim=-1)  # batch_size x max_len
@@ -181,7 +184,7 @@ def _no_beam_search_generate(decoder: Decoder, tokens=None, past=None, max_lengt
 
     if eos_token_id is not None:
         if cur_len == max_length:
-            token_ids[:, -1].masked_fill_(dones, eos_token_id)
+            token_ids[:, -1].masked_fill_(~dones, eos_token_id)  # 若到最长长度仍未到EOS，则强制将最后一个词替换成eos
 
     return token_ids
 
@@ -206,9 +209,9 @@ def _beam_search_generate(decoder: Decoder, tokens=None, past=None, max_length=2
         assert past.num_samples() == batch_size, "The number of samples in `tokens` and `past` should match."
 
     for i in range(tokens.size(1) - 1):  # 如果输入的长度较长，先decode
-        scores, past = decoder.decode_one(tokens[:, :i + 1],
-                                          past)  # (batch_size, vocab_size), Past
-    scores, past = decoder.decode_one(tokens, past)   # 这里要传入的是整个句子的长度
+        scores, past = decoder.decode(tokens[:, :i + 1],
+                                      past)  # (batch_size, vocab_size), Past
+    scores, past = decoder.decode(tokens, past)  # 这里要传入的是整个句子的长度
     vocab_size = scores.size(1)
     assert vocab_size >= num_beams, "num_beams should be smaller than the number of vocabulary size."
 
@@ -224,7 +227,7 @@ def _beam_search_generate(decoder: Decoder, tokens=None, past=None, max_length=2
 
     indices = torch.arange(batch_size, dtype=torch.long).to(device)
     indices = indices.repeat_interleave(num_beams)
-    past = decoder.reorder_past(indices, past)
+    decoder.reorder_past(indices, past)
 
     tokens = tokens.index_select(dim=0, index=indices)  # batch_size * num_beams x length
     # 记录生成好的token (batch_size', cur_len)
@@ -240,11 +243,11 @@ def _beam_search_generate(decoder: Decoder, tokens=None, past=None, max_length=2
     hypos = [
         BeamHypotheses(num_beams, max_length, length_penalty, early_stopping=False) for _ in range(batch_size)
     ]
-    # 0,num_beams, 2*num_beams
+    # 0,num_beams, 2*num_beams, ...
     batch_inds_with_numbeams_interval = (torch.arange(batch_size) * num_beams).view(-1, 1).to(token_ids)
 
     while cur_len < max_length:
-        scores, past = decoder.decode_one(tokens, past)  # batch_size * num_beams x vocab_size, Past
+        scores, past = decoder.decode(tokens, past)  # batch_size * num_beams x vocab_size, Past
 
         if repetition_penalty != 1.0:
             token_scores = scores.gather(dim=1, index=token_ids)
@@ -298,8 +301,8 @@ def _beam_search_generate(decoder: Decoder, tokens=None, past=None, max_length=2
         beam_scores = _next_scores.view(-1)
 
         # 更改past状态, 重组token_ids
-        reorder_inds = (batch_inds_with_numbeams_interval + _from_which_beam).view(-1)
-        past = decoder.reorder_past(reorder_inds, past)
+        reorder_inds = (batch_inds_with_numbeams_interval + _from_which_beam).view(-1)  # flatten成一维
+        decoder.reorder_past(reorder_inds, past)
 
         flag = True
         if cur_len + 1 == max_length:
@@ -445,7 +448,7 @@ if __name__ == '__main__':
             super().__init__()
             self.num_words = num_words
 
-        def decode_one(self, tokens, past):
+        def decode(self, tokens, past):
             batch_size = tokens.size(0)
             return torch.randn(batch_size, self.num_words), past
 

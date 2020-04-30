@@ -1,7 +1,12 @@
+__all__ = [
+    "TransformerSeq2SeqEncoder",
+    "BiLSTMEncoder"
+]
+
 from torch import nn
 import torch
-from fastNLP.modules import LSTM
-from fastNLP import seq_len_to_mask
+from ...modules.encoder import LSTM
+from ...core.utils import seq_len_to_mask
 from torch.nn import TransformerEncoder
 from typing import Union, Tuple
 import numpy as np

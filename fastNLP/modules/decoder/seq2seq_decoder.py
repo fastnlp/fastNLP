@@ -1,17 +1,46 @@
 # coding=utf-8
+__all__ = [
+    "TransformerPast",
+    "LSTMPast",
+    "Past",
+    "LSTMDecoder",
+    "TransformerSeq2SeqDecoder",
+    "Decoder"
+]
 import torch
 from torch import nn
 import abc
 import torch.nn.functional as F
-from fastNLP.embeddings import StaticEmbedding
+from ...embeddings import StaticEmbedding
 import numpy as np
 from typing import Union, Tuple
-from fastNLP.embeddings import get_embeddings
-from fastNLP.modules import LSTM
+from ...embeddings.utils import get_embeddings
 from torch.nn import LayerNorm
 import math
-from reproduction.Summarization.Baseline.tools.PositionEmbedding import \
-    get_sinusoid_encoding_table  # todo: 应该将position embedding移到core
+
+
+# from reproduction.Summarization.Baseline.tools.PositionEmbedding import \
+#     get_sinusoid_encoding_table  # todo: 应该将position embedding移到core
+
+def get_sinusoid_encoding_table(n_position, d_hid, padding_idx=None):
+    ''' Sinusoid position encoding table '''
+
+    def cal_angle(position, hid_idx):
+        return position / np.power(10000, 2 * (hid_idx // 2) / d_hid)
+
+    def get_posi_angle_vec(position):
+        return [cal_angle(position, hid_j) for hid_j in range(d_hid)]
+
+    sinusoid_table = np.array([get_posi_angle_vec(pos_i) for pos_i in range(n_position)])
+
+    sinusoid_table[:, 0::2] = np.sin(sinusoid_table[:, 0::2])  # dim 2i
+    sinusoid_table[:, 1::2] = np.cos(sinusoid_table[:, 1::2])  # dim 2i+1
+
+    if padding_idx is not None:
+        # zero vector for padding dimension
+        sinusoid_table[padding_idx] = 0.
+
+    return torch.FloatTensor(sinusoid_table)
 
 
 class Past:
@@ -82,7 +111,7 @@ class Decoder(nn.Module):
         """
         raise NotImplemented
 
-    def decode_one(self, *args, **kwargs) -> Tuple[torch.Tensor, Past]:
+    def decode(self, *args, **kwargs) -> Tuple[torch.Tensor, Past]:
         """
         当模型进行解码时，使用这个函数。只返回一个batch_size x vocab_size的结果。需要考虑一种特殊情况，即tokens长度不是1，即给定了
             解码句子开头的情况，这种情况需要查看Past中是否正确计算了decode的状态
@@ -100,6 +129,7 @@ class DecoderMultiheadAttention(nn.Module):
     """
 
     def __init__(self, d_model: int = 512, n_head: int = 8, dropout: float = 0.0, layer_idx: int = None):
+        super(DecoderMultiheadAttention, self).__init__()
         self.d_model = d_model
         self.n_head = n_head
         self.dropout = dropout
@@ -157,11 +187,11 @@ class DecoderMultiheadAttention(nn.Module):
             past.encoder_key[self.layer_idx] = k
             past.encoder_value[self.layer_idx] = v
         if inference and not is_encoder_attn:
-            past.decoder_prev_key[self.layer_idx] = prev_k
-            past.decoder_prev_value[self.layer_idx] = prev_v
+            past.decoder_prev_key[self.layer_idx] = prev_k if prev_k is not None else k
+            past.decoder_prev_value[self.layer_idx] = prev_v if prev_v is not None else v
 
         batch_size, q_len, d_model = query.size()
-        k_len, v_len = key.size(1), value.size(1)
+        k_len, v_len = k.size(1), v.size(1)
         q = q.contiguous().view(batch_size, q_len, self.n_head, self.head_dim)
         k = k.contiguous().view(batch_size, k_len, self.n_head, self.head_dim)
         v = v.contiguous().view(batch_size, v_len, self.n_head, self.head_dim)
@@ -172,8 +202,8 @@ class DecoderMultiheadAttention(nn.Module):
             if len(mask.size()) == 2:  # 是encoder mask, batch,src_len/k_len
                 mask = mask[:, None, :, None]
             else:  # (1, seq_len, seq_len)
-                mask = mask[...:None]
-            _mask = mask
+                mask = mask[..., None]
+            _mask = ~mask.bool()
 
             attn_weights = attn_weights.masked_fill(_mask, float('-inf'))
 
@@ -181,21 +211,22 @@ class DecoderMultiheadAttention(nn.Module):
         attn_weights = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         output = torch.einsum('bqkn,bknh->bqnh', attn_weights, v)  # batch,q_len,n_head,head_dim
-        output = output.view(batch_size, q_len, -1)
+        output = output.reshape(batch_size, q_len, -1)
         output = self.out_proj(output)  # batch,q_len,dim
 
         return output, attn_weights
 
     def reset_parameters(self):
-        nn.init.xavier_uniform_(self.q_proj)
-        nn.init.xavier_uniform_(self.k_proj)
-        nn.init.xavier_uniform_(self.v_proj)
-        nn.init.xavier_uniform_(self.out_proj)
+        nn.init.xavier_uniform_(self.q_proj.weight)
+        nn.init.xavier_uniform_(self.k_proj.weight)
+        nn.init.xavier_uniform_(self.v_proj.weight)
+        nn.init.xavier_uniform_(self.out_proj.weight)
 
 
 class TransformerSeq2SeqDecoderLayer(nn.Module):
     def __init__(self, d_model: int = 512, n_head: int = 8, dim_ff: int = 2048, dropout: float = 0.1,
                  layer_idx: int = None):
+        super(TransformerSeq2SeqDecoderLayer, self).__init__()
         self.d_model = d_model
         self.n_head = n_head
         self.dim_ff = dim_ff
@@ -313,10 +344,10 @@ class TransformerSeq2SeqDecoder(Decoder):
             if isinstance(self.token_embed, StaticEmbedding):
                 for i in self.token_embed.words_to_words:
                     assert i == self.token_embed.words_to_words[i], "The index does not match."
-            self.output_embed = nn.Parameter(self.token_embed.weight.transpose(0, 1))
+            self.output_embed = nn.Parameter(self.token_embed.weight.transpose(0, 1), requires_grad=True)
         else:
             if isinstance(output_embed, nn.Embedding):
-                self.output_embed = nn.Parameter(output_embed.weight.transpose(0, 1))
+                self.output_embed = nn.Parameter(output_embed.weight.transpose(0, 1), requires_grad=True)
             else:
                 self.output_embed = output_embed.transpose(0, 1)
             self.output_hidden_size = self.output_embed.size(0)
@@ -326,7 +357,8 @@ class TransformerSeq2SeqDecoder(Decoder):
     def forward(self, tokens, past, return_attention=False, inference=False):
         """
 
-        :param tokens: torch.LongTensor, tokens: batch_size x decode_len
+        :param tokens: torch.LongTensor, tokens: batch_size , decode_len
+        :param self_attn_mask: 在inference的时候不需要，而在train的时候，因为训练的时候交叉熵会自动屏蔽掉padding的地方，所以也不需要
         :param past: TransformerPast: 包含encoder输出及mask，在inference阶段保存了上一时刻的key和value以减少矩阵运算
         :param return_attention:
         :param inference: 是否在inference阶段
@@ -335,13 +367,16 @@ class TransformerSeq2SeqDecoder(Decoder):
         assert past is not None
         batch_size, decode_len = tokens.size()
         device = tokens.device
+        pos_idx = torch.arange(1, decode_len + 1).unsqueeze(0).long()
+
         if not inference:
             self_attn_mask = self._get_triangle_mask(decode_len)
             self_attn_mask = self_attn_mask.to(device)[None, :, :]  # 1,seq,seq
         else:
             self_attn_mask = None
+
         tokens = self.token_embed(tokens) * self.embed_scale  # bs,decode_len,embed_dim
-        pos = self.pos_embed(tokens)  # bs,decode_len,embed_dim
+        pos = self.pos_embed(pos_idx)  # 1,decode_len,embed_dim
         tokens = pos + tokens
         if inference:
             tokens = tokens[:, -1:, :]
@@ -358,7 +393,7 @@ class TransformerSeq2SeqDecoder(Decoder):
         return output
 
     @torch.no_grad()
-    def decode_one(self, tokens, past) -> Tuple[torch.Tensor, Past]:
+    def decode(self, tokens, past) -> Tuple[torch.Tensor, Past]:
         """
         # todo: 是否不需要return past？ 因为past已经被改变了，不需要显式return？
         :param tokens: torch.LongTensor (batch_size,1)
@@ -370,7 +405,7 @@ class TransformerSeq2SeqDecoder(Decoder):
 
     def reorder_past(self, indices: torch.LongTensor, past: TransformerPast) -> TransformerPast:
         past.reorder_past(indices)
-        return past  # todo : 其实可以不要这个的
+        return past
 
     def _get_triangle_mask(self, max_seq_len):
         tensor = torch.ones(max_seq_len, max_seq_len)
@@ -408,6 +443,27 @@ class LSTMPast(Past):
                 else:
                     return tensor[0].size(0)
         return None
+
+    def _reorder_past(self, state, indices, dim=0):
+        if type(state) == torch.Tensor:
+            state = state.index_select(index=indices, dim=dim)
+        elif type(state) == tuple:
+            tmp_list = []
+            for i in range(len(state)):
+                assert state[i] is not None
+                tmp_list.append(state[i].index_select(index=indices, dim=dim))
+            state = tuple(tmp_list)
+        else:
+            raise ValueError('State does not support other format')
+
+        return state
+
+    def reorder_past(self, indices: torch.LongTensor):
+        self.encode_outputs = self._reorder_past(self.encode_outputs, indices)
+        self.encode_mask = self._reorder_past(self.encode_mask, indices)
+        self.hx = self._reorder_past(self.hx, indices, 1)
+        if self.attn_states is not None:
+            self.attn_states = self._reorder_past(self.attn_states, indices)
 
     @property
     def hx(self):
@@ -493,7 +549,7 @@ class AttentionLayer(nn.Module):
 
 
 class LSTMDecoder(Decoder):
-    def __init__(self, embed: Union[Tuple[int, int], nn.Module, torch.Tensor, np.ndarray], num_layers, input_size,
+    def __init__(self, embed: Union[Tuple[int, int], nn.Module, torch.Tensor, np.ndarray], num_layers=3, input_size=400,
                  hidden_size=None, dropout=0,
                  output_embed: Union[Tuple[int, int], int, nn.Module, torch.Tensor, np.ndarray] = None,
                  bind_input_output_embed=False,
@@ -612,6 +668,7 @@ class LSTMDecoder(Decoder):
         for i in range(tokens.size(1)):
             input = torch.cat([tokens[:, i:i + 1], input_feed.unsqueeze(1)], dim=2)  # batch_size x 1 x h'
             # bsz x 1 x hidden_size, (n_layer x bsz x hidden_size, n_layer x bsz x hidden_size)
+
             _, (hidden, cell) = self.lstm(input, hx=past.hx)
             past.hx = (hidden, cell)
             if self.attention_layer is not None:
@@ -633,7 +690,7 @@ class LSTMDecoder(Decoder):
             return feats
 
     @torch.no_grad()
-    def decode_one(self, tokens, past) -> Tuple[torch.Tensor, Past]:
+    def decode(self, tokens, past) -> Tuple[torch.Tensor, Past]:
         """
         给定上一个位置的输出，决定当前位置的输出。
         :param torch.LongTensor tokens: batch_size x seq_len
@@ -653,13 +710,5 @@ class LSTMDecoder(Decoder):
         :param LSTMPast past: 保存的过去的状态
         :return:
         """
-        encode_outputs = past.encode_outputs.index_select(index=indices, dim=0)
-        encoder_mask = past.encode_mask.index_select(index=indices, dim=0)
-        hx = (past.hx[0].index_select(index=indices, dim=1),
-              past.hx[1].index_select(index=indices, dim=1))
-        if past.attn_states is not None:
-            past.attn_states = past.attn_states.index_select(index=indices, dim=0)
-        past.encode_mask = encoder_mask
-        past.encode_outputs = encode_outputs
-        past.hx = hx
+        past.reorder_past(indices)
         return past

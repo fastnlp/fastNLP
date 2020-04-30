@@ -49,7 +49,19 @@ __all__ = [
 
     "TimestepDropout",
 
-    'summary'
+    'summary',
+
+    "BiLSTMEncoder",
+    "TransformerSeq2SeqEncoder",
+
+    "SequenceGenerator",
+    "LSTMDecoder",
+    "LSTMPast",
+    "TransformerSeq2SeqDecoder",
+    "TransformerPast",
+    "Decoder",
+    "Past"
+
 ]
 
 import sys
