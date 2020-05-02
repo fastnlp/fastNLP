@@ -278,11 +278,11 @@ class GPT2WordPieceEncoder(nn.Module):
 
         return output_strs
 
-    def generate(self, word_pieces, max_len=40, do_sample=True, num_beams=1, temperature=1, top_k=50, top_p=1.0,
+    def generate(self, word_pieces=None, max_len=40, do_sample=True, num_beams=1, temperature=1, top_k=50, top_p=1.0,
                     repetition_penalty=1.0, length_penalty=1.0):
         """
 
-        :param word_pieces:
+        :param torch.LongTensor,None word_pieces: 如果传入tensor，shape应该为batch_size x start_len; 如果传入None，会随机生成。
         :param int max_len: 生成多长的句子
         :param bool do_sample: 是否使用采样的方式生成，如果使用采样，相同的参数可能出现不同的句子。
         :param int num_beams: 使用多大的beam size
@@ -293,7 +293,7 @@ class GPT2WordPieceEncoder(nn.Module):
         :param float length_penalty: 惩罚过长的句子
         :return:
         """
-        pass
+        raise NotImplemented
 
     def get_lm_loss(self, release=True):
         """

@@ -1062,10 +1062,3 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         # all hidden states, tuple: n_layer x batch_size x max_len x embed_size，
         # attention, tuple: n_layer x batch_size x n_head' x src_len x tgt_len
         return outputs  # (loss), lm_logits, presents, all hidden_states, (attentions)
-
-
-
-
-
-# 输出每个位置的
-

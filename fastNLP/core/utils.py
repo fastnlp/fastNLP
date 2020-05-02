@@ -796,9 +796,12 @@ def _check_forward_error(forward_func, batch_x, dataset, check_level):
         if len(suggestions) > 1:
             for idx, sugg in enumerate(suggestions):
                 sugg_str += f'({idx + 1}). {sugg}'
-        else:
+            err_str = '\n' + '\n'.join(errs) + '\n\tSuggestion: ' + sugg_str
+        elif len(suggestions):
             sugg_str += suggestions[0]
-        err_str = '\n' + '\n'.join(errs) + '\n\tSuggestion: ' + sugg_str
+            err_str = '\n' + '\n'.join(errs) + '\n\tSuggestion: ' + sugg_str
+        else:
+            err_str = '\n' + '\n'.join(errs)
         raise NameError(err_str)
     if _unused:
         if check_level == WARNING_CHECK_LEVEL:

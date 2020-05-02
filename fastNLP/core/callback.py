@@ -947,13 +947,14 @@ class CheckPointCallback(Callback):
                 model = model.module
             model.load_state_dict(states['model'])
             self.optimizer.load_state_dict(states['optimizer'])
-            self.trainer.epoch = states['epoch'] + 1  # 因为是结束储存的，所以需要从下一个epoch开始
+            self.trainer.epoch = states['epoch'] + 1 # 因为是结束储存的，所以需要从下一个epoch开始
             self.trainer.step = states['step']
             if 'best_dev_epoch' in states:
                 self.trainer.best_dev_perf = states['best_dev_perf']
                 self.trainer.best_dev_epoch = states['best_dev_epoch']
                 self.trainer.best_dev_step = states['best_dev_step']
                 self.trainer.best_metric_indicator = states['best_metric_indicator']
+            logger.info("Load checkpoint from {}".format(os.path.expanduser(self.save_path)))
 
     def on_epoch_end(self):
         r"""
