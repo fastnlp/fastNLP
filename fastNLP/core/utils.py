@@ -62,10 +62,7 @@ class ConfusionMatrix:
         target = [2,2,1]
         confusion.add_pred_target(pred, target)
         print(confusion)
-<<<<<<< HEAD
-        
-=======
->>>>>>> d5347f06e72c237eda7e478eb2418f2b337e9936
+
         target  1       2       3       all
           pred
              1  0       1       0         1
