@@ -35,6 +35,7 @@ _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'require
 
 
 class ConfusionMatrix:
+<<<<<<< HEAD
     r"""a dict can provide Confusion Matrix"""
     def __init__(self, vocab=None, print_ratio=False):
         r"""
@@ -52,7 +53,11 @@ class ConfusionMatrix:
         self.print_ratio = print_ratio
 
     def add_pred_target(self, pred, target):  # 一组结果
+<<<<<<< HEAD
         r"""
+=======
+        """
+>>>>>>> d5347f06e72c237eda7e478eb2418f2b337e9936
         通过这个函数向ConfusionMatrix加入一组预测结果
         :param list pred: 预测的标签列表
         :param list target: 真实值的标签列表
@@ -62,7 +67,10 @@ class ConfusionMatrix:
         target = [2,2,1]
         confusion.add_pred_target(pred, target)
         print(confusion)
+<<<<<<< HEAD
         
+=======
+>>>>>>> d5347f06e72c237eda7e478eb2418f2b337e9936
         target  1       2       3       all
           pred
              1  0       1       0         1
@@ -90,6 +98,7 @@ class ConfusionMatrix:
         self.predcount = {}
 
     def get_result(self):
+<<<<<<< HEAD
         r"""
         :return list output: ConfusionMatrix content,具体值与汇总统计
         """
@@ -145,6 +154,72 @@ class ConfusionMatrix:
         :param flag: only difference between result and other words is whether "%" is in output string
         :return: an aligned_table ready to print out
         """
+=======
+        """
+        :return list output: ConfusionMatrix content,具体值与汇总统计
+        """
+>>>>>>> d5347f06e72c237eda7e478eb2418f2b337e9936
+        row2idx = {}
+        idx2row = {}
+        # 已知的所有键/label
+        totallabel = sorted(
+            list(
+                set(self.targetcount.keys()).union(set(
+                    self.predcount.keys()))))
+        lenth = len(totallabel)
+        # namedict key :idx value:word/idx
+        namedict = dict([
+            (k, str(k if self.vocab == None else self.vocab.to_word(k)))
+            for k in totallabel
+        ])
+
+        for label, idx in zip(totallabel, range(lenth)):
+            idx2row[
+                label] = idx  # 建立一个临时字典，key:vocab的index, value: 行列index  1,3,5...->0,1,2,...
+            row2idx[
+                idx] = label  # 建立一个临时字典，value:vocab的index, key: 行列index  0,1,2...->1,3,5,...
+<<<<<<< HEAD
+        # 这里打印东西
+=======
+        output = []
+        for i in row2idx.keys():  # 第i行
+            p = row2idx[i]
+            h = namedict[p]
+            l = [0 for _ in range(lenth)]
+            if self.confusiondict.get(p, None):
+                for t, c in self.confusiondict[p].items():
+                    l[idx2row[t]] = c  # 完成一行
+            l = [n for n in l] + [sum(l)]
+            output.append(l)
+        tail = [self.targetcount.get(row2idx[k], 0) for k in row2idx.keys()]
+        tail += [sum(tail)]
+        output.append(tail)
+        return output
+
+    def get_percent(self, dim=0):
+        """
+        :param dim int: 0/1, 0 for row,1 for column
+        :return list output: ConfusionMatrix content,具体值与汇总统计
+        """
+        result = self.get_result()
+        if dim == 0:
+            tmp = np.array(result)
+            tmp = tmp / (tmp[:, -1].reshape([len(result), -1]))
+            tmp[np.isnan(tmp)] = 0
+            tmp = tmp * 100
+        elif dim == 1:
+            tmp = np.array(result).T
+            mp = tmp / (tmp[:, -1].reshape([len(result), -1]) + 1e-12)
+            tmp = tmp.T * 100
+        tmp = np.around(tmp, decimals=2)
+        return tmp.tolist()
+
+    def get_aligned_table(self, data, flag="result"):
+        """
+        :param data: highly recommend use get_percent/ get_result return as dataset here, or make sure data is a n*n list type data
+        :param flag: only difference between result and other words is whether "%" is in output string
+        :return: an aligned_table ready to print out
+        """
         row2idx = {}
         idx2row = {}
         # 已知的所有键/label
@@ -165,6 +240,8 @@ class ConfusionMatrix:
             row2idx[
                 idx] = label  # 建立一个临时字典，value:vocab的index, key: 行列index  0,1,2...->1,3,5,...
         # 这里打印东西
+        col_lenths = []
+>>>>>>> d5347f06e72c237eda7e478eb2418f2b337e9936
         out = str()
         output = []
         # 表头
@@ -198,7 +275,11 @@ class ConfusionMatrix:
         return "\n" + out
 
     def __repr__(self):
+<<<<<<< HEAD
         r"""
+=======
+        """
+>>>>>>> d5347f06e72c237eda7e478eb2418f2b337e9936
         :return string output: ConfusionMatrix的格式化输出，包括表头各标签字段，具体值与汇总统计。
         """
         result = self.get_result()

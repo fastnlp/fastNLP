@@ -282,6 +282,7 @@ class MetricBase(object):
 class ConfusionMatrixMetric(MetricBase):
     r"""
     分类问题计算混淆矩阵的Metric（其它的Metric参见 :mod:`fastNLP.core.metrics` ）
+<<<<<<< HEAD
     
     最后返回结果为::
         
@@ -309,6 +310,23 @@ class ConfusionMatrixMetric(MetricBase):
         }
         
 >>>>>>> upstream/master
+=======
+    最后返回结果为dict,{'confusion_matrix': ConfusionMatrix实例}
+    ConfusionMatrix实例的print()函数将输出矩阵字符串。
+    pred_dict = {"pred": torch.Tensor([2,1,3])}
+    target_dict = {'target': torch.Tensor([2,2,1])}
+    metric = ConfusionMatrixMetric()
+    metric(pred_dict=pred_dict, target_dict=target_dict, )
+    print(metric.get_metric())
+    {'confusion_matrix': 
+     target  1.0     2.0     3.0     all
+       pred
+        1.0    0       1       0       1
+        2.0    0       1       0       1
+        3.0    1       0       0       1
+        all    1       2       0       3
+}
+>>>>>>> d5347f06e72c237eda7e478eb2418f2b337e9936
     """
     def __init__(self,
                  vocab=None,
@@ -318,6 +336,7 @@ class ConfusionMatrixMetric(MetricBase):
                  print_ratio=False
                 ):
         r"""
+
         :param vocab: vocab词表类,要求有to_word()方法。
         :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
         :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
@@ -334,7 +353,10 @@ class ConfusionMatrixMetric(MetricBase):
     def evaluate(self, pred, target, seq_len=None):
         r"""
         evaluate函数将针对一个批次的预测结果做评价指标的累计
+<<<<<<< HEAD
         
+=======
+>>>>>>> d5347f06e72c237eda7e478eb2418f2b337e9936
         :param torch.Tensor pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
             torch.Size([B, max_len]), 或者torch.Size([B, max_len, n_classes])
         :param torch.Tensor target: 真实值的tensor, tensor的形状可以是Element's can be: torch.Size([B,]),
@@ -381,7 +403,11 @@ class ConfusionMatrixMetric(MetricBase):
                                                   target.tolist())
 
     def get_metric(self, reset=True):
+<<<<<<< HEAD
         r"""
+=======
+        """
+>>>>>>> d5347f06e72c237eda7e478eb2418f2b337e9936
         get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果.
         :param bool reset: 在调用完get_metric后是否清空评价指标统计量.
         :return dict evaluate_result: {"confusion_matrix": ConfusionMatrix}
