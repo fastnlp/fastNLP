@@ -187,7 +187,7 @@ Part V: 不同格式类型的基础Loader
     .. code-block:: python
 
         from fastNLP.io.loader import JsonLoader
-        oader = JsonLoader(
+        loader = JsonLoader(
             fields={'sentence1': 'raw_words1', 'sentence2': 'raw_words2', 'gold_label': 'target'}
         )
         # 表示将Json对象中'sentence1'、'sentence2'和'gold_label'对应的值赋给'raw_words1'、'raw_words2'、'target'这三个fields
@@ -208,3 +208,12 @@ Part V: 不同格式类型的基础Loader
         "A person on a horse jumps over a broken down airplane.", "A person is training his horse for a competition.", "neutral"
         "A person on a horse jumps over a broken down airplane.", "A person is at a diner, ordering an omelette.", "contradiction"
         "A person on a horse jumps over a broken down airplane.", "A person is outdoors, on a horse.", "entailment"
+
+
+----------------------------------
+代码下载
+----------------------------------
+
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_4_load_dataset.ipynb" download="tutorial_4_load_dataset.ipynb">点击下载 IPython Notebook 文件</a><hr>

@@ -35,6 +35,9 @@ API 文档
    
    fastNLP
 
+
+:doc:`API变动列表 </user/api_update>`
+
 fitlog文档
 ----------
 

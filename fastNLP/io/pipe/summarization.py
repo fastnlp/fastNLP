@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 import os
 import numpy as np
 
@@ -18,7 +18,7 @@ TAG_UNK = "X"
 
 
 class ExtCNNDMPipe(Pipe):
-    """
+    r"""
     对CNN/Daily Mail数据进行适用于extractive summarization task的预处理，预处理之后的数据，具备以下结构：
     
     .. csv-table::
@@ -26,7 +26,7 @@ class ExtCNNDMPipe(Pipe):
     
     """
     def __init__(self, vocab_size, sent_max_len, doc_max_timesteps, vocab_path=None, domain=False):
-        """
+        r"""
         
         :param vocab_size: int, 词表大小
         :param sent_max_len: int, 句子最大长度，不足的句子将padding，超出的将截断
@@ -41,7 +41,7 @@ class ExtCNNDMPipe(Pipe):
         self.domain = domain
 
     def process(self, data_bundle: DataBundle):
-        """
+        r"""
         传入的DataSet应该具备如下的结构
 
         .. csv-table::
@@ -107,7 +107,7 @@ class ExtCNNDMPipe(Pipe):
         return data_bundle
 
     def process_from_file(self, paths=None):
-        """
+        r"""
         :param paths: dict or string
         :return: DataBundle
         """

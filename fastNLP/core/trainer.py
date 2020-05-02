@@ -355,8 +355,9 @@ from .utils import _move_model_to_device
 from ._parallel_utils import _model_contains_inner_module
 from ._logger import logger
 
+
 class Trainer(object):
-    """
+    r"""
     Trainer在fastNLP中用于组织单任务的训练过程，可以避免用户在不同训练任务中重复撰写
         (1) epoch循环;
         (2) 将数据分成不同的Batch;
@@ -373,9 +374,8 @@ class Trainer(object):
                  dev_data=None, metrics=None, metric_key=None,
                  validate_every=-1, save_path=None, use_tqdm=True, device=None,
                  callbacks=None, check_code_level=0, **kwargs):
-        """
-        
-        :param train_data: 训练集， :class:`~fastNLP.DataSet` 类型。
+        r"""
+        :param train_data: 训练集， :class:`~fastNLP.DataSet` 类型或 :class:`~fastNLP.BatchIter` 的子类
         :param nn.modules model: 待训练的模型
         :param optimizer: `torch.optim.Optimizer` 优化器。如果为None，则Trainer使用默认的Adam(model.parameters(), lr=4e-3)这个优化器
         :param int batch_size: 训练和验证的时候的batch大小。
@@ -487,11 +487,12 @@ class Trainer(object):
                 sampler.set_batch_size(batch_size)
 
         if isinstance(train_data, DataSet):
-            self.data_iterator = DataSetIter(
-                dataset=train_data, batch_size=batch_size, num_workers=num_workers, sampler=sampler, drop_last=drop_last)
+            self.data_iterator = DataSetIter(dataset=train_data, batch_size=batch_size, sampler=sampler,
+                                             num_workers=num_workers, drop_last=drop_last)
         elif isinstance(train_data, BatchIter):
             self.data_iterator = train_data
             train_data = train_data.dataset
+            check_code_level = -1  # 强制跳过校验
         else:
             raise TypeError("train_data type {} not support".format(type(train_data)))
 
@@ -571,7 +572,7 @@ class Trainer(object):
                                                 callbacks=callbacks)
 
     def train(self, load_best_model=True, on_exception='auto'):
-        """
+        r"""
         使用该函数使Trainer开始训练。
 
         :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现
@@ -599,7 +600,8 @@ class Trainer(object):
             self._model_device = _get_model_device(self.model)
             self._mode(self.model, is_test=False)
             self._load_best_model = load_best_model
-            self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+            # 加上millsecond，防止两个太接近的保存
+            self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S-%f'))
             start_time = time.time()
             self.logger.info("training epochs started " + self.start_time)
             self.step = 0
@@ -617,6 +619,14 @@ class Trainer(object):
                 elif on_exception == 'raise':
                     raise e
 
+            if self.dev_data is not None and self.best_dev_perf is not None and load_best_model:
+                model_name = "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time])
+                load_succeed = self._load_model(self.model, model_name)
+                if load_succeed:
+                    self.logger.info("Reloaded the best model.")
+                else:
+                    self.logger.info("Fail to reload best model.")
+        finally:
             if self.dev_data is not None and self.best_dev_perf is not None:
                 self.logger.info(
                     "\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step))
@@ -624,15 +634,7 @@ class Trainer(object):
                 results['best_eval'] = self.best_dev_perf
                 results['best_epoch'] = self.best_dev_epoch
                 results['best_step'] = self.best_dev_step
-                if load_best_model:
-                    model_name = "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time])
-                    load_succeed = self._load_model(self.model, model_name)
-                    if load_succeed:
-                        self.logger.info("Reloaded the best model.")
-                    else:
-                        self.logger.info("Fail to reload best model.")
-        finally:
-            pass
+
         results['seconds'] = round(time.time() - start_time, 2)
 
         return results
@@ -643,7 +645,8 @@ class Trainer(object):
         else:
             inner_tqdm = tqdm
         start = time.time()
-        with inner_tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
+        with inner_tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True,
+                        initial=self.step) as pbar:
             self.pbar = pbar
             avg_loss = 0
             self.batch_per_epoch = self.data_iterator.num_batches
@@ -726,7 +729,7 @@ class Trainer(object):
         return res
 
     def _mode(self, model, is_test=False):
-        """Train mode or Test mode. This is for PyTorch currently.
+        r"""Train mode or Test mode. This is for PyTorch currently.
 
         :param model: a PyTorch model
         :param bool is_test: whether in test mode or not.
@@ -738,7 +741,7 @@ class Trainer(object):
             model.train()
 
     def _update(self):
-        """Perform weight update on a model.
+        r"""Perform weight update on a model.
 
         """
         if self.step % self.update_every == 0:
@@ -753,7 +756,7 @@ class Trainer(object):
         return y
 
     def _grad_backward(self, loss):
-        """Compute gradient with link rules.
+        r"""Compute gradient with link rules.
 
         :param loss: a scalar where back-prop starts
 
@@ -764,7 +767,7 @@ class Trainer(object):
         loss.backward()
 
     def _compute_loss(self, predict, truth):
-        """Compute loss given prediction and ground truth.
+        r"""Compute loss given prediction and ground truth.
 
         :param predict: prediction dict, produced by model.forward
         :param truth: ground truth dict, produced by batch_y
@@ -773,7 +776,7 @@ class Trainer(object):
         return self.losser(predict, truth)
 
     def _save_model(self, model, model_name, only_param=False):
-        """ 存储不含有显卡信息的state_dict或model
+        r""" 存储不含有显卡信息的state_dict或model
         :param model:
         :param model_name:
         :param only_param:
@@ -814,7 +817,7 @@ class Trainer(object):
         return True
 
     def _better_eval_result(self, metrics):
-        """Check if the current epoch yields better validation results.
+        r"""Check if the current epoch yields better validation results.
 
         :return bool value: True means current results on dev set is the best.
         """
@@ -840,7 +843,7 @@ class Trainer(object):
 
     @property
     def is_master(self):
-        """是否是主进程"""
+        r"""是否是主进程"""
         return True
 
 DEFAULT_CHECK_BATCH_SIZE = 2
@@ -872,26 +875,9 @@ def _check_code(dataset, model, losser, metrics, forward_func, batch_size=DEFAUL
                 dev_data=None, metric_key=None, check_level=0):
     # check get_loss 方法
     model_device = _get_model_device(model=model)
-    def _iter():
-        start_idx = 0
-        while start_idx<len(dataset):
-            batch_x = {}
-            batch_y = {}
-            for field_name, field in dataset.get_all_fields().items():
-                indices = list(range(start_idx, min(start_idx+batch_size, len(dataset))))
-                if field.is_target or field.is_input:
-                    batch = field.get(indices)
-                    if field.dtype is not None and \
-                            issubclass(field.dtype, Number) and not isinstance(batch, torch.Tensor):
-                        batch, _ = _to_tensor(batch, field.dtype)
-                    if field.is_target:
-                        batch_y[field_name] = batch
-                    if field.is_input:
-                        batch_x[field_name] = batch
-            yield (batch_x, batch_y)
-            start_idx += batch_size
+    _iter = DataSetIter(dataset, batch_size=batch_size, sampler=None)
 
-    for batch_count, (batch_x, batch_y) in enumerate(_iter()):
+    for batch_count, (batch_x, batch_y) in enumerate(_iter):
         _move_dict_value_to_device(batch_x, batch_y, device=model_device)
         # forward check
         if batch_count == 0:

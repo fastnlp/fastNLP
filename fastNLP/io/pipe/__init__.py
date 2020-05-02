@@ -1,4 +1,4 @@
-"""
+r"""
 Pipe用于处理通过 Loader 读取的数据，所有的 Pipe 都包含 ``process`` 和 ``process_from_file`` 两种方法。
 ``process(data_bundle)`` 传入一个 :class:`~fastNLP.io.DataBundle` 类型的对象, 在传入的 `data_bundle` 上进行原位修改，并将其返回；
 ``process_from_file(paths)`` 传入的文件路径，返回一个 :class:`~fastNLP.io.DataBundle` 类型的对象。

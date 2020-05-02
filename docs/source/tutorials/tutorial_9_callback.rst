@@ -130,3 +130,11 @@ fastNLP 中提供了很多常用的 Callback，如梯度裁剪，训练时早停
     callbacks = [MyCallBack()]
     train_with_callback(callbacks)
 
+
+----------------------------------
+代码下载
+----------------------------------
+
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_9_callback.ipynb" download="tutorial_9_callback.ipynb">点击下载 IPython Notebook 文件</a><hr>

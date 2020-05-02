@@ -1,4 +1,4 @@
-"""
+r"""
 Biaffine Dependency Parser 的 Pytorch 实现.
 """
 __all__ = [
@@ -26,7 +26,7 @@ from ..modules.utils import initial_parameter
 
 
 def _mst(scores):
-    """
+    r"""
     with some modification to support parser output for MST decoding
     https://github.com/tdozat/Parser/blob/0739216129cd39d69997d28cbc4133b360ea3934/lib/models/nn.py#L692
     """
@@ -85,7 +85,7 @@ def _mst(scores):
 
 
 def _find_cycle(vertices, edges):
-    """
+    r"""
     https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
     https://github.com/tdozat/Parser/blob/0739216129cd39d69997d28cbc4133b360ea3934/lib/etc/tarjan.py
     """
@@ -129,7 +129,7 @@ def _find_cycle(vertices, edges):
 
 
 class GraphParser(BaseModel):
-    """
+    r"""
     基于图的parser base class, 支持贪婪解码和最大生成树解码
     """
     
@@ -138,7 +138,7 @@ class GraphParser(BaseModel):
     
     @staticmethod
     def greedy_decoder(arc_matrix, mask=None):
-        """
+        r"""
         贪心解码方式, 输入图, 输出贪心解码的parsing结果, 不保证合法的构成树
 
         :param arc_matrix: [batch, seq_len, seq_len] 输入图矩阵
@@ -157,7 +157,7 @@ class GraphParser(BaseModel):
     
     @staticmethod
     def mst_decoder(arc_matrix, mask=None):
-        """
+        r"""
         用最大生成树算法, 计算parsing结果, 保证输出合法的树结构
 
         :param arc_matrix: [batch, seq_len, seq_len] 输入图矩阵
@@ -178,13 +178,13 @@ class GraphParser(BaseModel):
 
 
 class ArcBiaffine(nn.Module):
-    """
+    r"""
     Biaffine Dependency Parser 的子模块, 用于构建预测边的图
 
     """
     
     def __init__(self, hidden_size, bias=True):
-        """
+        r"""
         
         :param hidden_size: 输入的特征维度
         :param bias: 是否使用bias. Default: ``True``
@@ -199,7 +199,7 @@ class ArcBiaffine(nn.Module):
         initial_parameter(self)
     
     def forward(self, head, dep):
-        """
+        r"""
 
         :param head: arc-head tensor [batch, length, hidden]
         :param dep: arc-dependent tensor [batch, length, hidden]
@@ -213,13 +213,13 @@ class ArcBiaffine(nn.Module):
 
 
 class LabelBilinear(nn.Module):
-    """
+    r"""
     Biaffine Dependency Parser 的子模块, 用于构建预测边类别的图
 
     """
     
     def __init__(self, in1_features, in2_features, num_label, bias=True):
-        """
+        r"""
         
         :param in1_features: 输入的特征1维度
         :param in2_features: 输入的特征2维度
@@ -231,7 +231,7 @@ class LabelBilinear(nn.Module):
         self.lin = nn.Linear(in1_features + in2_features, num_label, bias=False)
     
     def forward(self, x1, x2):
-        """
+        r"""
 
         :param x1: [batch, seq_len, hidden] 输入特征1, 即label-head
         :param x2: [batch, seq_len, hidden] 输入特征2, 即label-dep
@@ -243,7 +243,7 @@ class LabelBilinear(nn.Module):
 
 
 class BiaffineParser(GraphParser):
-    """
+    r"""
     Biaffine Dependency Parser 实现.
     论文参考 `Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016) <https://arxiv.org/abs/1611.01734>`_ .
 
@@ -261,7 +261,7 @@ class BiaffineParser(GraphParser):
                  dropout=0.3,
                  encoder='lstm',
                  use_greedy_infer=False):
-        """
+        r"""
         
         :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
             embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
@@ -347,7 +347,7 @@ class BiaffineParser(GraphParser):
                     nn.init.normal_(p, 0, 0.1)
     
     def forward(self, words1, words2, seq_len, target1=None):
-        """模型forward阶段
+        r"""模型forward阶段
 
         :param words1: [batch_size, seq_len] 输入word序列
         :param words2: [batch_size, seq_len] 输入pos序列
@@ -428,7 +428,7 @@ class BiaffineParser(GraphParser):
     
     @staticmethod
     def loss(pred1, pred2, target1, target2, seq_len):
-        """
+        r"""
         计算parser的loss
 
         :param pred1: [batch_size, seq_len, seq_len] 边预测logits
@@ -458,7 +458,7 @@ class BiaffineParser(GraphParser):
         return arc_nll + label_nll
     
     def predict(self, words1, words2, seq_len):
-        """模型预测API
+        r"""模型预测API
 
         :param words1: [batch_size, seq_len] 输入word序列
         :param words2: [batch_size, seq_len] 输入pos序列
@@ -479,7 +479,7 @@ class BiaffineParser(GraphParser):
 
 
 class ParserLoss(LossFunc):
-    """
+    r"""
     计算parser的loss
 
     """
@@ -487,7 +487,7 @@ class ParserLoss(LossFunc):
     def __init__(self, pred1=None, pred2=None,
                  target1=None, target2=None,
                  seq_len=None):
-        """
+        r"""
         
         :param pred1: [batch_size, seq_len, seq_len] 边预测logits
         :param pred2: [batch_size, seq_len, num_label] label预测logits
@@ -505,14 +505,14 @@ class ParserLoss(LossFunc):
 
 
 class ParserMetric(MetricBase):
-    """
+    r"""
     评估parser的性能
 
     """
     
     def __init__(self, pred1=None, pred2=None,
                  target1=None, target2=None, seq_len=None):
-        """
+        r"""
         
         :param pred1: 边预测logits
         :param pred2: label预测logits
@@ -539,7 +539,7 @@ class ParserMetric(MetricBase):
         return res
     
     def evaluate(self, pred1, pred2, target1, target2, seq_len=None):
-        """Evaluate the performance of prediction.
+        r"""Evaluate the performance of prediction.
         """
         if seq_len is None:
             seq_mask = pred1.new_ones(pred1.size(), dtype=torch.long)

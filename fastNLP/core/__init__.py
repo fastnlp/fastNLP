@@ -1,4 +1,4 @@
-"""
+r"""
 core 模块里实现了 fastNLP 的核心框架，常用的功能都可以从 fastNLP 包中直接 import。当然你也同样可以从 core 模块的子模块中 import，
 例如 :class:`~fastNLP.DataSetIter` 组件有两种 import 的方式::
     
@@ -20,6 +20,8 @@ __all__ = [
     "Padder",
     "AutoPadder",
     "EngChar2DPadder",
+
+    "ConcatCollateFn",
     
     "Vocabulary",
     
@@ -31,12 +33,16 @@ __all__ = [
     
     "Tester",
     "Trainer",
-    
+
+    "DistTrainer",
+    "get_local_rank",
+
     "cache_results",
     "seq_len_to_mask",
     "get_seq_len",
     "logger",
-    
+    "init_logger_dist",
+
     "Callback",
     "GradientClipCallback",
     "EarlyStopCallback",
@@ -59,12 +65,14 @@ __all__ = [
     "NLLLoss",
     "LossInForward",
     "CMRC2018Loss",
+    "LossBase",
 
     "MetricBase",
     "AccuracyMetric",
     "SpanFPreRecMetric",
     "CMRC2018Metric",
     "ClassifyFPreRecMetric",
+    "ConfusionMatrixMetric",
 
     "Optimizer",
     "SGD",
@@ -77,7 +85,7 @@ __all__ = [
     "Sampler",
 ]
 
-from ._logger import logger
+from ._logger import logger, init_logger_dist
 from .batch import DataSetIter, BatchIter, TorchLoaderIter
 from .callback import Callback, GradientClipCallback, EarlyStopCallback, FitlogCallback, EvaluateCallback, \
     LRScheduler, ControlC, LRFinder, TensorboardCallback, WarmupCallback, SaveModelCallback, CallbackException, \
@@ -86,11 +94,14 @@ from .const import Const
 from .dataset import DataSet
 from .field import FieldArray, Padder, AutoPadder, EngChar2DPadder
 from .instance import Instance
-from .losses import LossFunc, CrossEntropyLoss, L1Loss, BCELoss, NLLLoss, LossInForward, CMRC2018Loss
-from .metrics import AccuracyMetric, SpanFPreRecMetric, CMRC2018Metric, ClassifyFPreRecMetric, MetricBase
+from .losses import LossFunc, CrossEntropyLoss, L1Loss, BCELoss, NLLLoss, LossInForward, CMRC2018Loss, LossBase
+from .metrics import AccuracyMetric, SpanFPreRecMetric, CMRC2018Metric, ClassifyFPreRecMetric, MetricBase,\
+    ConfusionMatrixMetric
 from .optimizer import Optimizer, SGD, Adam, AdamW
 from .sampler import SequentialSampler, BucketSampler, RandomSampler, Sampler
 from .tester import Tester
 from .trainer import Trainer
 from .utils import cache_results, seq_len_to_mask, get_seq_len
 from .vocabulary import Vocabulary
+from .collate_fn import ConcatCollateFn
+from .dist_trainer import DistTrainer, get_local_rank

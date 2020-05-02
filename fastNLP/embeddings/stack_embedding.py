@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -16,7 +16,7 @@ from .embedding import TokenEmbedding
 
 
 class StackEmbedding(TokenEmbedding):
-    """
+    r"""
     支持将多个embedding集合成一个embedding。
 
     Example::
@@ -31,7 +31,7 @@ class StackEmbedding(TokenEmbedding):
     """
     
     def __init__(self, embeds: List[TokenEmbedding], word_dropout=0, dropout=0):
-        """
+        r"""
         
         :param embeds: 一个由若干个TokenEmbedding组成的list，要求每一个TokenEmbedding的词表都保持一致
         :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。不同embedidng会在相同的位置
@@ -54,7 +54,7 @@ class StackEmbedding(TokenEmbedding):
         self._embed_size = sum([embed.embed_size for embed in self.embeds])
     
     def append(self, embed: TokenEmbedding):
-        """
+        r"""
         添加一个embedding到结尾。
         :param embed:
         :return:
@@ -65,7 +65,7 @@ class StackEmbedding(TokenEmbedding):
         return self
     
     def pop(self):
-        """
+        r"""
         弹出最后一个embed
         :return:
         """
@@ -75,14 +75,14 @@ class StackEmbedding(TokenEmbedding):
     
     @property
     def embed_size(self):
-        """
+        r"""
         该Embedding输出的vector的最后一维的维度。
         :return:
         """
         return self._embed_size
     
     def forward(self, words):
-        """
+        r"""
         得到多个embedding的结果，并把结果按照顺序concat起来。
 
         :param words: batch_size x max_len

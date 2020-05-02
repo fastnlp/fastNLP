@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "CoReferenceLoader",
@@ -12,7 +12,7 @@ from .json import JsonLoader
 
 
 class CoReferenceLoader(JsonLoader):
-    """
+    r"""
     原始数据中内容应该为, 每一行为一个json对象,其中doc_key包含文章的种类信息，speakers包含每句话的说话者信息，cluster是指向现实中同一个事物的聚集，sentences是文本信息内容。
 
     Example::
@@ -38,7 +38,7 @@ class CoReferenceLoader(JsonLoader):
                        "sentences": Const.RAW_WORDS(3)}
 
     def _load(self, path):
-        """
+        r"""
         加载数据
         :param path: 数据文件路径，文件为json
 
@@ -54,7 +54,7 @@ class CoReferenceLoader(JsonLoader):
         return dataset
 
     def download(self):
-        """
+        r"""
         由于版权限制，不能提供自动下载功能。可参考
 
         https://www.aclweb.org/anthology/W12-4501

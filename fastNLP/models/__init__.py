@@ -1,4 +1,4 @@
-"""
+r"""
 fastNLP 在 :mod:`~fastNLP.models` 模块中内置了如 :class:`~fastNLP.models.CNNText` 、
 :class:`~fastNLP.models.SeqLabeling` 等完整的模型，以供用户直接使用。
 

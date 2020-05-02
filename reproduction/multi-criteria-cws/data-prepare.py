@@ -51,7 +51,7 @@ def preprocess(text):
 def to_sentence_list(text, split_long_sentence=False):
     text = preprocess(text)
     delimiter = set()
-    delimiter.update("。！？：；…、，（）,;!?、,\"'")
+    delimiter.update("。！？：；…、，（）,;!?、.\"'")
     delimiter.add("……")
     sent_list = []
     sent = []

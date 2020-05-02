@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "MatchingBertPipe",
@@ -37,7 +37,7 @@ from ...core.vocabulary import Vocabulary
 
 
 class MatchingBertPipe(Pipe):
-    """
+    r"""
     Matching任务的Bert pipe，输出的DataSet将包含以下的field
 
     .. csv-table::
@@ -65,7 +65,7 @@ class MatchingBertPipe(Pipe):
     """
     
     def __init__(self, lower=False, tokenizer: str = 'raw'):
-        """
+        r"""
         
         :param bool lower: 是否将word小写化。
         :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
@@ -76,7 +76,7 @@ class MatchingBertPipe(Pipe):
         self.tokenizer = get_tokenizer(tokenize_method=tokenizer)
     
     def _tokenize(self, data_bundle, field_names, new_field_names):
-        """
+        r"""
 
         :param DataBundle data_bundle: DataBundle.
         :param list field_names: List[str], 需要tokenize的field名称
@@ -90,7 +90,7 @@ class MatchingBertPipe(Pipe):
         return data_bundle
     
     def process(self, data_bundle):
-        """
+        r"""
         输入的data_bundle中的dataset需要具有以下结构：
 
         .. csv-table::
@@ -201,7 +201,7 @@ class MNLIBertPipe(MatchingBertPipe):
 
 
 class MatchingPipe(Pipe):
-    """
+    r"""
     Matching任务的Pipe。输出的DataSet将包含以下的field
 
     .. csv-table::
@@ -229,7 +229,7 @@ class MatchingPipe(Pipe):
     """
     
     def __init__(self, lower=False, tokenizer: str = 'raw'):
-        """
+        r"""
         
         :param bool lower: 是否将所有raw_words转为小写。
         :param str tokenizer: 将原始数据tokenize的方式。支持spacy, raw. spacy是使用spacy切分，raw就是用空格切分。
@@ -240,7 +240,7 @@ class MatchingPipe(Pipe):
         self.tokenizer = get_tokenizer(tokenize_method=tokenizer)
     
     def _tokenize(self, data_bundle, field_names, new_field_names):
-        """
+        r"""
 
         :param ~fastNLP.DataBundle data_bundle: DataBundle.
         :param list field_names: List[str], 需要tokenize的field名称
@@ -254,7 +254,7 @@ class MatchingPipe(Pipe):
         return data_bundle
     
     def process(self, data_bundle):
-        """
+        r"""
         接受的DataBundle中的DataSet应该具有以下的field, target列可以没有
 
         .. csv-table::
@@ -433,7 +433,7 @@ class GranularizePipe(Pipe):
         self.task = task
     
     def _granularize(self, data_bundle, tag_map):
-        """
+        r"""
         该函数对data_bundle中'target'列中的内容进行转换。
 
         :param data_bundle:

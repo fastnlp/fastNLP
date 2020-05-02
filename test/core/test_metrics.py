@@ -57,21 +57,18 @@ class TestConfusionMatrixMetric(unittest.TestCase):
 
     def test_ConfusionMatrixMetric2(self):
         # (2) with corrupted size
-        try:
+
+        with self.assertRaises(Exception):
             pred_dict = {"pred": torch.zeros(4, 3, 2)}
             target_dict = {'target': torch.zeros(4)}
             metric = ConfusionMatrixMetric()
-            
+
             metric(pred_dict=pred_dict, target_dict=target_dict, )
             print(metric.get_metric())
-        except Exception as e:
-            print(e)
-            return
-        print("No exception catches.")
 
     def test_ConfusionMatrixMetric3(self):
     # (3) the second batch is corrupted size
-        try:
+        with self.assertRaises(Exception):
             metric = ConfusionMatrixMetric()
             pred_dict = {"pred": torch.zeros(4, 3, 2)}
             target_dict = {'target': torch.zeros(4, 3)}
@@ -82,10 +79,6 @@ class TestConfusionMatrixMetric(unittest.TestCase):
             metric(pred_dict=pred_dict, target_dict=target_dict)
             
             print(metric.get_metric())
-        except Exception as e:
-            print(e)
-            return
-        assert(True, False), "No exception catches."
 
     def test_ConfusionMatrixMetric4(self):
     # (4) check reset
@@ -99,16 +92,13 @@ class TestConfusionMatrixMetric(unittest.TestCase):
 
     def test_ConfusionMatrixMetric5(self):
     # (5) check numpy array is not acceptable
-        try:
+
+        with self.assertRaises(Exception):
             metric = ConfusionMatrixMetric()
             pred_dict = {"pred": np.zeros((4, 3, 2))}
             target_dict = {'target': np.zeros((4, 3))}
             metric(pred_dict=pred_dict, target_dict=target_dict)
-        except Exception as e:
-            print(e)
-            return
-        self.assertTrue(True, False), "No exception catches."
-    
+
     def test_ConfusionMatrixMetric6(self):
     # (6) check map, match
         metric = ConfusionMatrixMetric(pred='predictions', target='targets')
@@ -119,29 +109,21 @@ class TestConfusionMatrixMetric(unittest.TestCase):
         print(res)
 
     def test_ConfusionMatrixMetric7(self):
-    # (7) check map, include unused
-        try:
-            metric = ConfusionMatrixMetric(pred='prediction', target='targets')
-            pred_dict = {"prediction": torch.zeros(4, 3, 2), 'unused': 1}
-            target_dict = {'targets': torch.zeros(4, 3)}
-            metric(pred_dict=pred_dict, target_dict=target_dict)
-        except Exception as e:
-            print(e)
-            return
-        self.assertTrue(True, False), "No exception catches."
-        
+        # (7) check map, include unused
+        metric = ConfusionMatrixMetric(pred='prediction', target='targets')
+        pred_dict = {"prediction": torch.zeros(4, 3, 2), 'unused': 1}
+        target_dict = {'targets': torch.zeros(4, 3)}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+
     def test_ConfusionMatrixMetric8(self):
-# (8) check _fast_metric
-        try:
+        # (8) check _fast_metric
+        with self.assertRaises(Exception):
             metric = ConfusionMatrixMetric()
             pred_dict = {"predictions": torch.zeros(4, 3, 2), "seq_len": torch.ones(3) * 3}
             target_dict = {'targets': torch.zeros(4, 3)}
             metric(pred_dict=pred_dict, target_dict=target_dict)
             print(metric.get_metric())
-        except Exception as e:
-            print(e)
-            return
-        self.assertTrue(True, False), "No exception catches."
+
 
     def test_duplicate(self):
         # 0.4.1的潜在bug，不能出现形参重复的情况
@@ -175,7 +157,6 @@ class TestConfusionMatrixMetric(unittest.TestCase):
         metric = ConfusionMatrixMetric(vocab=vocab)
         metric(pred_dict=pred_dict, target_dict=target_dict)
         print(metric.get_metric())
-
 
 
 

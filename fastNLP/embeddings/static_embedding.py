@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -19,14 +19,34 @@ from .embedding import TokenEmbedding
 from ..core import logger
 from ..core.vocabulary import Vocabulary
 from ..io.file_utils import PRETRAIN_STATIC_FILES, _get_embedding_url, cached_path
-from ..modules.utils import _get_file_name_base_on_postfix
+from fastNLP.io.file_utils import _get_file_name_base_on_postfix
 
 
 class StaticEmbedding(TokenEmbedding):
-    """
+    r"""
     StaticEmbedding组件. 给定预训练embedding的名称或路径，根据vocab从embedding中抽取相应的数据(只会将出现在vocab中的词抽取出来，
     如果没有找到，则会随机初始化一个值(但如果该word是被标记为no_create_entry的话，则不会单独创建一个值，而是会被指向unk的index))。
-    当前支持自动下载的预训练vector有以下的几种(待补充);
+    当前支持自动下载的预训练vector有:
+    
+    .. code::
+    
+        en: 实际为en-glove-840b-300d(常用)
+        en-glove-6b-50d: glove官方的50d向量
+        en-glove-6b-100d: glove官方的100d向量
+        en-glove-6b-200d: glove官方的200d向量
+        en-glove-6b-300d: glove官方的300d向量
+        en-glove-42b-300d: glove官方使用42B数据训练版本
+        en-glove-840b-300d:
+        en-glove-twitter-27b-25d:
+        en-glove-twitter-27b-50d:
+        en-glove-twitter-27b-100d:
+        en-glove-twitter-27b-200d:
+        en-word2vec-300d: word2vec官方发布的300d向量
+        en-fasttext-crawl: fasttext官方发布的300d英文预训练
+        cn-char-fastnlp-100d: fastNLP训练的100d的character embedding
+        cn-bi-fastnlp-100d: fastNLP训练的100d的bigram embedding
+        cn-tri-fastnlp-100d: fastNLP训练的100d的trigram embedding
+        cn-fasttext: fasttext官方发布的300d中文预训练embedding
 
     Example::
         
@@ -52,7 +72,7 @@ class StaticEmbedding(TokenEmbedding):
     
     def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', embedding_dim=-1, requires_grad: bool = True,
                  init_method=None, lower=False, dropout=0, word_dropout=0, normalize=False, min_freq=1, **kwargs):
-        """
+        r"""
         
         :param vocab: Vocabulary. 若该项为None则会读取所有的embedding。
         :param model_dir_or_name: 可以有两种方式调用预训练好的static embedding：第一种是传入embedding文件夹(文件夹下应该只有一个
@@ -71,11 +91,14 @@ class StaticEmbedding(TokenEmbedding):
         :param dict kwargs:
                 bool only_train_min_freq: 仅对train中的词语使用min_freq筛选;
                 bool only_norm_found_vector: 是否仅对在预训练中找到的词语使用normalize;
-                bool only_use_pretrain_word: 仅使用出现在pretrain词表中的词语。如果该词没有在预训练的词表中出现则为unk。如果词表
-                    不需要更新设置为True。
+                bool only_use_pretrain_word: 仅使用出现在pretrain词表中的词，如果该词没有在预训练的词表中出现则为unk。如果embedding不需要更新建议设置为True。
         """
         super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         if embedding_dim > 0:
+            if model_dir_or_name is not None:
+                warnings.warn(f"StaticEmbedding will ignore `model_dir_or_name`, and randomly initialize embedding with"
+                              f" dimension {embedding_dim}. If you want to use pre-trained embedding, "
+                              f"set `embedding_dim` to 0.")
             model_dir_or_name = None
         
         # 得到cache_path
@@ -175,9 +198,13 @@ class StaticEmbedding(TokenEmbedding):
                                       sparse=False, _weight=embedding)
         self._embed_size = self.embedding.weight.size(1)
         self.requires_grad = requires_grad
+
+    @property
+    def weight(self):
+        return self.embedding.weight
     
     def _randomly_init_embed(self, num_embedding, embedding_dim, init_embed=None):
-        """
+        r"""
 
         :param int num_embedding: embedding的entry的数量
         :param int embedding_dim: embedding的维度大小
@@ -195,7 +222,7 @@ class StaticEmbedding(TokenEmbedding):
     
     def _load_with_vocab(self, embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>',
                          error='ignore', init_method=None):
-        """
+        r"""
         从embed_filepath这个预训练的词向量中抽取出vocab这个词表的词的embedding。EmbedLoader将自动判断embed_filepath是
         word2vec(第一行只有两个元素)还是glove格式的数据。
 
@@ -223,7 +250,7 @@ class StaticEmbedding(TokenEmbedding):
             else:
                 dim = len(parts) - 1
                 f.seek(0)
-            matrix = {}
+            matrix = {}  # index是word在vocab中的index，value是vector或None(如果在pretrain中没有找到该word)
             if vocab.padding:
                 matrix[vocab.padding_idx] = torch.zeros(dim)
             if vocab.unknown:
@@ -270,15 +297,19 @@ class StaticEmbedding(TokenEmbedding):
             else:
                 unknown_idx = vocab.unknown_idx
             self.register_buffer('words_to_words', torch.full((len(vocab), ), fill_value=unknown_idx).long())
-            for index, (index_in_vocab, vec) in enumerate(matrix.items()):
-                if vec is not None:
-                    vectors[index] = vec
-                self.words_to_words[index_in_vocab] = index
-            
+            index = 0
+            for word, index_in_vocab in vocab:
+                if index_in_vocab in matrix:
+                    vec = matrix.get(index_in_vocab)
+                    if vec is not None:  # 使用找到的vector, 如果为None说明需要训练
+                        vectors[index] = vec
+                    self.words_to_words[index_in_vocab] = index
+                    index += 1
+
             return vectors
     
     def forward(self, words):
-        """
+        r"""
         传入words的index
 
         :param words: torch.LongTensor, [batch_size, max_len]

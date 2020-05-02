@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "MLP"
@@ -11,7 +11,7 @@ from ..utils import initial_parameter
 
 
 class MLP(nn.Module):
-    """
+    r"""
     多层感知器
 
     
@@ -36,7 +36,7 @@ class MLP(nn.Module):
     """
 
     def __init__(self, size_layer, activation='relu', output_activation=None, initial_method=None, dropout=0.0):
-        """
+        r"""
         
         :param List[int] size_layer: 一个int的列表，用来定义MLP的层数，列表中的数字为每一层是hidden数目。MLP的层数为 len(size_layer) - 1
         :param Union[str,func,List[str]] activation: 一个字符串或者函数的列表，用来定义每一个隐层的激活函数，字符串包括relu，tanh和
@@ -87,7 +87,7 @@ class MLP(nn.Module):
         initial_parameter(self, initial_method)
 
     def forward(self, x):
-        """
+        r"""
         :param torch.Tensor x: MLP接受的输入
         :return: torch.Tensor : MLP的输出结果
         """

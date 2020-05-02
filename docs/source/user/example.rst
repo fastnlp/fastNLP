@@ -154,3 +154,9 @@ csv 表格
 
 :meth:`fastNLP.DataSet.apply`
 
+下面这个代码是不可行的，必须要用 r""" 才行:
+
+.. code::
+
+    :param float beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` . 常用为 `beta=0.5, 1, 2` 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
+

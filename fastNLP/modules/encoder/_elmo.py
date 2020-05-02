@@ -1,4 +1,4 @@
-"""undocumented
+r"""undocumented
 这个页面的代码大量参考了 allenNLP
 """
 
@@ -15,7 +15,7 @@ from ..utils import get_dropout_mask
 
 
 class LstmCellWithProjection(torch.nn.Module):
-    """
+    r"""
     An LSTM with Recurrent Dropout and a projected and clipped hidden state and
     memory. Note: this implementation is slower than the native Pytorch LSTM because
     it cannot make use of CUDNN optimizations for stacked RNNs due to and
@@ -96,7 +96,7 @@ class LstmCellWithProjection(torch.nn.Module):
                 inputs: torch.FloatTensor,
                 batch_lengths: List[int],
                 initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
-        """
+        r"""
         Parameters
         ----------
         inputs : ``torch.FloatTensor``, required.
@@ -307,7 +307,7 @@ class ElmobiLm(torch.nn.Module):
         self.backward_layers = backward_layers
 
     def forward(self, inputs, seq_len):
-        """
+        r"""
 
         :param inputs: batch_size x max_len x embed_size
         :param seq_len: batch_size
@@ -326,7 +326,7 @@ class ElmobiLm(torch.nn.Module):
                       inputs: PackedSequence,
                       initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> \
             Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        """
+        r"""
         Parameters
         ----------
         inputs : ``PackedSequence``, required.
@@ -451,7 +451,7 @@ class ConvTokenEmbedder(nn.Module):
             self._projection = torch.nn.Linear(n_filters, self.output_dim, bias=True)
 
     def forward(self, words, chars):
-        """
+        r"""
         :param words:
         :param chars: Tensor  Shape ``(batch_size, sequence_length, 50)``:
         :return Tensor Shape ``(batch_size, sequence_length + 2, embedding_dim)`` :
@@ -491,7 +491,7 @@ class ConvTokenEmbedder(nn.Module):
 
 
 class Highway(torch.nn.Module):
-    """
+    r"""
     A `Highway layer <https://arxiv.org/abs/1505.00387>`_ does a gated combination of a linear
     transformation and a non-linear transformation of its input.  :math:`y = g * x + (1 - g) *
     f(A(x))`, where :math:`A` is a linear transformation, :math:`f` is an element-wise

@@ -1,4 +1,4 @@
-"""undocumented
+r"""undocumented
 Star-Transformer 的encoder部分的 Pytorch 实现
 """
 
@@ -13,7 +13,7 @@ from torch.nn import functional as F
 
 
 class StarTransformer(nn.Module):
-    """
+    r"""
     Star-Transformer 的encoder部分。 输入3d的文本输入, 返回相同长度的文本编码
 
     paper: https://arxiv.org/abs/1902.09113
@@ -21,7 +21,7 @@ class StarTransformer(nn.Module):
     """
 
     def __init__(self, hidden_size, num_layers, num_head, head_dim, dropout=0.1, max_len=None):
-        """
+        r"""
         
         :param int hidden_size: 输入维度的大小。同时也是输出维度的大小。
         :param int num_layers: star-transformer的层数
@@ -51,7 +51,7 @@ class StarTransformer(nn.Module):
             self.pos_emb = None
 
     def forward(self, data, mask):
-        """
+        r"""
         :param FloatTensor data: [batch, length, hidden] 输入的序列
         :param ByteTensor mask: [batch, length] 输入序列的padding mask, 在没有内容(padding 部分) 为 0,
             否则为 1

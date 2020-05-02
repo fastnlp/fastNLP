@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "iob2",
@@ -15,7 +15,7 @@ from ...core._logger import logger
 
 
 def iob2(tags: List[str]) -> List[str]:
-    """
+    r"""
     检查数据是否是合法的IOB数据，如果是IOB1会被自动转换为IOB2。两种格式的区别见
     https://datascience.stackexchange.com/questions/37824/difference-between-iob-and-iob2-format
 
@@ -39,7 +39,7 @@ def iob2(tags: List[str]) -> List[str]:
 
 
 def iob2bioes(tags: List[str]) -> List[str]:
-    """
+    r"""
     将iob的tag转换为bioes编码
     :param tags:
     :return:
@@ -66,7 +66,7 @@ def iob2bioes(tags: List[str]) -> List[str]:
 
 
 def get_tokenizer(tokenize_method: str, lang='en'):
-    """
+    r"""
 
     :param str tokenize_method: 获取tokenzier方法
     :param str lang: 语言，当前仅支持en
@@ -100,7 +100,7 @@ def _raw_split(sent):
 
 
 def _indexize(data_bundle, input_field_names=Const.INPUT, target_field_names=Const.TARGET):
-    """
+    r"""
     在dataset中的field_name列建立词表，Const.TARGET列建立词表，并把词表加入到data_bundle中。
 
     :param ~fastNLP.DataBundle data_bundle:
@@ -143,7 +143,7 @@ def _indexize(data_bundle, input_field_names=Const.INPUT, target_field_names=Con
 
 
 def _add_words_field(data_bundle, lower=False):
-    """
+    r"""
     给data_bundle中的dataset中复制一列words. 并根据lower参数判断是否需要小写化
 
     :param data_bundle:
@@ -159,7 +159,7 @@ def _add_words_field(data_bundle, lower=False):
 
 
 def _add_chars_field(data_bundle, lower=False):
-    """
+    r"""
     给data_bundle中的dataset中复制一列chars. 并根据lower参数判断是否需要小写化
 
     :param data_bundle:
@@ -175,7 +175,7 @@ def _add_chars_field(data_bundle, lower=False):
 
 
 def _drop_empty_instance(data_bundle, field_name):
-    """
+    r"""
     删除data_bundle的DataSet中存在的某个field为空的情况
 
     :param ~fastNLP.DataBundle data_bundle:
@@ -201,7 +201,7 @@ def _drop_empty_instance(data_bundle, field_name):
 
 
 def _granularize(data_bundle, tag_map):
-    """
+    r"""
     该函数对data_bundle中'target'列中的内容进行转换。
 
     :param data_bundle:

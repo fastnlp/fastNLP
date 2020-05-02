@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "JsonLoader"
@@ -11,7 +11,7 @@ from ...core.instance import Instance
 
 
 class JsonLoader(Loader):
-    """
+    r"""
     别名：:class:`fastNLP.io.JsonLoader` :class:`fastNLP.io.loader.JsonLoader`
 
     读取json格式数据.数据必须按行存储,每行是一个包含各类属性的json对象

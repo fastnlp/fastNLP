@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = []
 
@@ -74,7 +74,7 @@ def parallel_apply(modules, func_name, inputs, kwargs_tup=None, devices=None):
 
 
 def _data_parallel_wrapper(func_name, device_ids, output_device):
-    """
+    r"""
     这个函数是用于对需要多卡执行的函数的wrapper函数。参考的nn.DataParallel的forward函数
 
     :param str, func_name: 对network中的这个函数进行多卡运行
@@ -95,7 +95,7 @@ def _data_parallel_wrapper(func_name, device_ids, output_device):
 
 
 def _model_contains_inner_module(model):
-    """
+    r"""
 
     :param nn.Module model: 模型文件，判断是否内部包含model.module, 多用于check模型是否是nn.DataParallel,
         nn.parallel.DistributedDataParallel。主要是在做形参匹配的时候需要使用最内部的model的function。

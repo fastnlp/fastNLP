@@ -1,4 +1,4 @@
-"""
+r"""
 Logger 是fastNLP中记录日志的模块，logger封装了logging模块的Logger，
 具体使用方式与直接使用logging.Logger相同，同时也新增一些简单好用的API
 使用方式：
@@ -18,6 +18,7 @@ logger.set_stdout('tqdm', level='WARN')
 
 __all__ = [
     'logger',
+    'init_logger_dist'
 ]
 
 import logging
@@ -25,6 +26,7 @@ import logging.config
 import os
 import sys
 import warnings
+from torch import distributed as dist
 
 ROOT_NAME = 'fastNLP'
 
@@ -124,11 +126,11 @@ class FastNLPLogger(logging.getLoggerClass()):
         super().__init__(name)
     
     def add_file(self, path='./log.txt', level='INFO'):
-        """add log output file and the output level"""
+        r"""add log output file and the output level"""
         _add_file_handler(self, path, level)
     
     def set_stdout(self, stdout='tqdm', level='INFO'):
-        """set stdout format and the output level"""
+        r"""set stdout format and the output level"""
         _set_stdout_handler(self, stdout, level)
 
 
@@ -139,7 +141,7 @@ logging.setLoggerClass(FastNLPLogger)
 # print(logging.getLogger())
 
 def _init_logger(path=None, stdout='tqdm', level='INFO'):
-    """initialize logger"""
+    r"""initialize logger"""
     level = _get_level(level)
     
     # logger = logging.getLogger()
@@ -169,3 +171,9 @@ def _get_logger(name=None, level='INFO'):
 
 
 logger = _init_logger(path=None, level='INFO')
+
+
+def init_logger_dist():
+    global logger
+    rank = dist.get_rank()
+    logger.setLevel(logging.INFO if rank == 0 else logging.WARNING)

@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -32,7 +32,7 @@ class EmbeddingOption(Option):
 
 
 class EmbedLoader:
-    """
+    r"""
     用于读取预训练的embedding, 读取结果可直接载入为模型参数。
     """
     
@@ -42,7 +42,7 @@ class EmbedLoader:
     @staticmethod
     def load_with_vocab(embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True,
                         error='ignore', init_method=None):
-        """
+        r"""
         从embed_filepath这个预训练的词向量中抽取出vocab这个词表的词的embedding。EmbedLoader将自动判断embed_filepath是
         word2vec(第一行只有两个元素)还是glove格式的数据。
 
@@ -114,7 +114,7 @@ class EmbedLoader:
     @staticmethod
     def load_without_vocab(embed_filepath, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True,
                            error='ignore'):
-        """
+        r"""
         从embed_filepath中读取预训练的word vector。根据预训练的词表读取embedding并生成一个对应的Vocabulary。
 
         :param str embed_filepath: 预训练的embedding的路径。

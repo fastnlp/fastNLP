@@ -1,4 +1,4 @@
-"""
+r"""
 tester模块实现了 fastNLP 所需的Tester类，能在提供数据、模型以及metric的情况下进行性能测试。
 
 .. code-block::
@@ -64,14 +64,14 @@ __all__ = [
 
 
 class Tester(object):
-    """
+    r"""
     Tester是在提供数据，模型以及metric的情况下进行性能测试的类。需要传入模型，数据以及metric进行验证。
     """
     
     def __init__(self, data, model, metrics, batch_size=16, num_workers=0, device=None, verbose=1, use_tqdm=True):
-        """
+        r"""
         
-        :param ~fastNLP.DataSet data: 需要测试的数据集
+        :param ~fastNLP.DataSet,~fastNLP.BatchIter data: 需要测试的数据集
         :param torch.nn.Module model: 使用的模型
         :param ~fastNLP.core.metrics.MetricBase,List[~fastNLP.core.metrics.MetricBase] metrics: 测试时使用的metrics
         :param int batch_size: evaluation时使用的batch_size有多大。
@@ -107,8 +107,8 @@ class Tester(object):
         self.logger = logger
 
         if isinstance(data, DataSet):
-            self.data_iterator = DataSetIter(
-                dataset=data, batch_size=batch_size, num_workers=num_workers, sampler=SequentialSampler())
+            self.data_iterator = DataSetIter(dataset=data, batch_size=batch_size, sampler=SequentialSampler(),
+                                             num_workers=num_workers)
         elif isinstance(data, BatchIter):
             self.data_iterator = data
         else:
@@ -196,7 +196,7 @@ class Tester(object):
         return eval_results
     
     def _mode(self, model, is_test=False):
-        """Train mode or Test mode. This is for PyTorch currently.
+        r"""Train mode or Test mode. This is for PyTorch currently.
 
         :param model: a PyTorch model
         :param is_test: bool, whether in test mode or not.
@@ -208,13 +208,13 @@ class Tester(object):
             model.train()
     
     def _data_forward(self, func, x):
-        """A forward pass of the model. """
+        r"""A forward pass of the model. """
         x = _build_args(func, **x)
         y = self._predict_func_wrapper(**x)
         return y
     
     def _format_eval_results(self, results):
-        """Override this method to support more print formats.
+        r"""Override this method to support more print formats.
 
         :param results: dict, (str: float) is (metrics name: value)
 

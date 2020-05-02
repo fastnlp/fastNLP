@@ -1,4 +1,4 @@
-"""
+r"""
 本文件中的Pipe主要用于处理问答任务的数据。
 
 """
@@ -17,7 +17,7 @@ __all__ = ['CMRC2018BertPipe']
 
 
 def _concat_clip(data_bundle, max_len, concat_field_name='raw_chars'):
-    """
+    r"""
     处理data_bundle中的DataSet，将context与question按照character进行tokenize，然后使用[SEP]将两者连接起来。
 
     会新增field: context_len(int), raw_words(list[str]), target_start(int), target_end(int)其中target_start
@@ -78,20 +78,24 @@ def _concat_clip(data_bundle, max_len, concat_field_name='raw_chars'):
 
 
 class CMRC2018BertPipe(Pipe):
-    """
+    r"""
     处理之后的DataSet将新增以下的field(传入的field仍然保留)
 
     .. csv-table::
         :header: "context_len", "raw_chars",  "target_start", "target_end", "chars"
-        492, ['范', '廷', '颂... ], 30, 34, [21, 25, ...]
-        491, ['范', '廷', '颂... ], 41, 61, [21, 25, ...]
+        
+        492, ['范', '廷', '颂... ], 30, 34, "[21, 25, ...]"
+        491, ['范', '廷', '颂... ], 41, 61, "[21, 25, ...]"
 
-       ".", "...", "...","...", "..."
+        ".", "...", "...","...", "..."
 
     raw_words列是context与question拼起来的结果(连接的地方加入了[SEP])，words是转为index的值, target_start为答案start的index，target_end为答案end的index
     （闭区间）；context_len指示的是words列中context的长度。
 
     其中各列的meta信息如下:
+    
+    .. code::
+    
         +-------------+-------------+-----------+--------------+------------+-------+---------+
         | field_names | context_len | raw_chars | target_start | target_end | chars | answers |
         +-------------+-------------+-----------+--------------+------------+-------+---------|
@@ -100,14 +104,14 @@ class CMRC2018BertPipe(Pipe):
         | ignore_type |    False    |    True   |    False     |   False    | False |  True   |
         |  pad_value  |      0      |     0     |      0       |     0      |   0   |   0     |
         +-------------+-------------+-----------+--------------+------------+-------+---------+
-
+    
     """
     def __init__(self, max_len=510):
         super().__init__()
         self.max_len = max_len
 
     def process(self, data_bundle: DataBundle) -> DataBundle:
-        """
+        r"""
         传入的DataSet应该具备以下的field
 
         .. csv-table::
