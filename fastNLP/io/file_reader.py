@@ -81,7 +81,7 @@ def _read_json(path, encoding='utf-8', fields=None, dropna=True):
             yield line_idx, _res
 
 
-def _read_conll(path, encoding='utf-8',sep='\t', indexes=None, dropna=True):
+def _read_conll(path, encoding='utf-8',sep=None, indexes=None, dropna=True):
     r"""
     Construct a generator to read conll items.
 
@@ -106,7 +106,7 @@ def _read_conll(path, encoding='utf-8',sep='\t', indexes=None, dropna=True):
         sample = []
         start = next(f).strip()
         if start != '':
-            sample.append(start.split(sep))
+            sample.append(start.split(sep)) if sep else sample.append(start.split())
         for line_idx, line in enumerate(f, 1):
             line = line.strip()
             if line == '':
@@ -124,7 +124,7 @@ def _read_conll(path, encoding='utf-8',sep='\t', indexes=None, dropna=True):
             elif line.startswith('#'):
                 continue
             else:
-                sample.append(line.split(sep))
+                sample.append(line.split(sep)) if sep else sample.append(line.split())
         if len(sample) > 0:
             try:
                 res = parse_conll(sample)

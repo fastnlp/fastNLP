@@ -55,7 +55,7 @@ class ConllLoader(Loader):
 
     """
     
-    def __init__(self, headers, sep='\t', indexes=None, dropna=True):
+    def __init__(self, headers, sep=None, indexes=None, dropna=True):
         r"""
         
         :param list headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
@@ -69,6 +69,7 @@ class ConllLoader(Loader):
                 'invalid headers: {}, should be list of strings'.format(headers))
         self.headers = headers
         self.dropna = dropna
+        self.sep=sep
         if indexes is None:
             self.indexes = list(range(len(self.headers)))
         else:
@@ -84,7 +85,7 @@ class ConllLoader(Loader):
         :return: DataSet
         """
         ds = DataSet()
-        for idx, data in _read_conll(path, indexes=self.indexes, dropna=self.dropna):
+        for idx, data in _read_conll(path,sep=self.sep, indexes=self.indexes, dropna=self.dropna):
             ins = {h: data[i] for i, h in enumerate(self.headers)}
             ds.append(Instance(**ins))
         return ds
