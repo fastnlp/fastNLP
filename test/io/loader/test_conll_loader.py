@@ -1,7 +1,7 @@
 import unittest
 import os
 from fastNLP.io.loader.conll import MsraNERLoader, PeopleDailyNERLoader, WeiboNERLoader, \
-    Conll2003Loader
+    Conll2003Loader, ConllLoader
 
 
 class TestMSRANER(unittest.TestCase):
@@ -35,6 +35,9 @@ class TestConllLoader(unittest.TestCase):
         print(db)
 
 class TestConllLoader(unittest.TestCase):
-    def test_conll(self):
-        db = Conll2003Loader(sep="\t").load('test/data_for_tests/io/conll2003')
+    def test_sep(self):
+        headers = [
+            'raw_words',  'ner',
+        ]
+        db = ConllLoader(headers = headers,sep="\t").load('test/data_for_tests/io/MSRA_NER')
         print(db)
