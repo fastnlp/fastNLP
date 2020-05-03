@@ -379,7 +379,7 @@ class ConfusionMatrixMetric(MetricBase):
                                                   target.tolist())
 
     def get_metric(self, reset=True):
-        """
+        r"""
         get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果.
         :param bool reset: 在调用完get_metric后是否清空评价指标统计量.
         :return dict evaluate_result: {"confusion_matrix": ConfusionMatrix}
