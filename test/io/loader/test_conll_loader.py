@@ -1,4 +1,3 @@
-
 import unittest
 import os
 from fastNLP.io.loader.conll import MsraNERLoader, PeopleDailyNERLoader, WeiboNERLoader, \
@@ -35,3 +34,7 @@ class TestConllLoader(unittest.TestCase):
         db = Conll2003Loader().load('test/data_for_tests/io/conll2003')
         print(db)
 
+class TestConllLoader(unittest.TestCase):
+    def test_conll(self):
+        db = Conll2003Loader(sep="\t").load('test/data_for_tests/io/conll2003')
+        print(db)
