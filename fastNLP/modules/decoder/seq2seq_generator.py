@@ -2,23 +2,29 @@ __all__ = [
     "SequenceGenerator"
 ]
 import torch
-from .seq2seq_decoder import Decoder
+from ...models.seq2seq_model import BaseSeq2SeqModel
+from ..encoder.seq2seq_encoder import Seq2SeqEncoder
+from ..decoder.seq2seq_decoder import Seq2SeqDecoder
 import torch.nn.functional as F
 from ...core.utils import _get_model_device
 from functools import partial
+from ...core import Vocabulary
 
 
 class SequenceGenerator:
-    def __init__(self, decoder: Decoder, max_length=20, num_beams=1,
+    def __init__(self, encoder: Seq2SeqEncoder = None, decoder: Seq2SeqDecoder = None,
+                 max_length=20, num_beams=1,
                  do_sample=True, temperature=1.0, top_k=50, top_p=1.0, bos_token_id=None, eos_token_id=None,
                  repetition_penalty=1, length_penalty=1.0):
         if do_sample:
-            self.generate_func = partial(sample_generate, decoder=decoder, max_length=max_length, num_beams=num_beams,
+            self.generate_func = partial(sample_generate, decoder=decoder, max_length=max_length,
+                                         num_beams=num_beams,
                                          temperature=temperature, top_k=top_k, top_p=top_p, bos_token_id=bos_token_id,
                                          eos_token_id=eos_token_id, repetition_penalty=repetition_penalty,
                                          length_penalty=length_penalty)
         else:
-            self.generate_func = partial(greedy_generate, decoder=decoder, max_length=max_length, num_beams=num_beams,
+            self.generate_func = partial(greedy_generate, decoder=decoder, max_length=max_length,
+                                         num_beams=num_beams,
                                          bos_token_id=bos_token_id, eos_token_id=eos_token_id,
                                          repetition_penalty=repetition_penalty,
                                          length_penalty=length_penalty)
@@ -32,30 +38,45 @@ class SequenceGenerator:
         self.eos_token_id = eos_token_id
         self.repetition_penalty = repetition_penalty
         self.length_penalty = length_penalty
+        # self.vocab = tgt_vocab
+        self.encoder = encoder
         self.decoder = decoder
 
     @torch.no_grad()
-    def generate(self, tokens=None, past=None):
+    def generate(self, src_tokens: torch.Tensor = None, src_seq_len: torch.Tensor = None, prev_tokens=None):
         """
 
-        :param torch.LongTensor tokens: batch_size x length, 开始的token
-        :param past:
+        :param src_tokens:
+        :param src_seq_len:
+        :param prev_tokens:
         :return:
         """
-        # TODO 需要查看如果tokens长度不是1，decode的时候是否还能够直接decode？
-        return self.generate_func(tokens=tokens, past=past)
+        if self.encoder is not None:
+            encoder_output, encoder_mask = self.encoder(src_tokens, src_seq_len)
+        else:
+            encoder_output = encoder_mask = None
+
+        # 每次都初始化past
+        if encoder_output is not None:
+            self.decoder.init_past(encoder_output, encoder_mask)
+        else:
+            self.decoder.init_past()
+        return self.generate_func(src_tokens, src_seq_len, prev_tokens)
 
 
 @torch.no_grad()
-def greedy_generate(decoder, tokens=None, past=None, max_length=20, num_beams=1,
+def greedy_generate(decoder: Seq2SeqDecoder, encoder_output=None, encoder_mask=None,
+                    prev_tokens=None, max_length=20, num_beams=1,
                     bos_token_id=None, eos_token_id=None,
                     repetition_penalty=1, length_penalty=1.0):
     """
     贪婪地搜索句子
 
-    :param Decoder decoder: Decoder对象
-    :param torch.LongTensor tokens: batch_size x len, decode的输入值，如果为None，则自动从bos_token_id开始生成
-    :param Past past: 应该包好encoder的一些输出。
+
+    :param decoder:
+    :param encoder_output:
+    :param encoder_mask:
+    :param prev_tokens: batch_size x len, decode的输入值，如果为None，则自动从bos_token_id开始生成
     :param int max_length: 生成句子的最大长度。
     :param int num_beams: 使用多大的beam进行解码。
     :param int bos_token_id: 如果tokens传入为None，则使用bos_token_id开始往后解码。
@@ -65,11 +86,18 @@ def greedy_generate(decoder, tokens=None, past=None, max_length=20, num_beams=1,
     :return:
     """
     if num_beams == 1:
-        token_ids = _no_beam_search_generate(decoder, tokens, past, max_length, temperature=1, top_k=50, top_p=1,
+        token_ids = _no_beam_search_generate(decoder=decoder,
+                                             encoder_output=encoder_output, encoder_mask=encoder_mask,
+                                             prev_tokens=prev_tokens,
+                                             max_length=max_length, temperature=1,
+                                             top_k=50, top_p=1,
                                              bos_token_id=bos_token_id, eos_token_id=eos_token_id, do_sample=False,
                                              repetition_penalty=repetition_penalty, length_penalty=length_penalty)
     else:
-        token_ids = _beam_search_generate(decoder, tokens, past, max_length, num_beams=num_beams,
+        token_ids = _beam_search_generate(decoder=decoder,
+                                          encoder_output=encoder_output, encoder_mask=encoder_mask,
+                                          prev_tokens=prev_tokens, max_length=max_length,
+                                          num_beams=num_beams,
                                           temperature=1, top_k=50, top_p=1,
                                           bos_token_id=bos_token_id, eos_token_id=eos_token_id, do_sample=False,
                                           repetition_penalty=repetition_penalty, length_penalty=length_penalty)
@@ -78,14 +106,17 @@ def greedy_generate(decoder, tokens=None, past=None, max_length=20, num_beams=1,
 
 
 @torch.no_grad()
-def sample_generate(decoder, tokens=None, past=None, max_length=20, num_beams=1, temperature=1.0, top_k=50,
+def sample_generate(decoder: Seq2SeqDecoder, encoder_output=None, encoder_mask=None,
+                    prev_tokens=None, max_length=20, num_beams=1,
+                    temperature=1.0, top_k=50,
                     top_p=1.0, bos_token_id=None, eos_token_id=None, repetition_penalty=1.0, length_penalty=1.0):
     """
     使用采样的方法生成句子
 
-    :param Decoder decoder: Decoder对象
-    :param torch.LongTensor tokens: batch_size x len, decode的输入值，如果为None，则自动从bos_token_id开始生成
-    :param Past past: 应该包好encoder的一些输出。
+    :param decoder
+    :param encoder_output:
+    :param encoder_mask:
+    :param torch.LongTensor prev_tokens: batch_size x len, decode的输入值，如果为None，则自动从bos_token_id开始生成
     :param int max_length: 生成句子的最大长度。
     :param int num_beam: 使用多大的beam进行解码。
     :param float temperature: 采样时的退火大小
@@ -99,50 +130,55 @@ def sample_generate(decoder, tokens=None, past=None, max_length=20, num_beams=1,
     """
     # 每个位置在生成的时候会sample生成
     if num_beams == 1:
-        token_ids = _no_beam_search_generate(decoder, tokens, past, max_length, temperature=temperature,
+        token_ids = _no_beam_search_generate(decoder=decoder, encoder_output=encoder_output, encoder_mask=encoder_mask,
+                                             prev_tokens=prev_tokens, max_length=max_length,
+                                             temperature=temperature,
                                              top_k=top_k, top_p=top_p,
                                              bos_token_id=bos_token_id, eos_token_id=eos_token_id, do_sample=True,
                                              repetition_penalty=repetition_penalty, length_penalty=length_penalty)
     else:
-        token_ids = _beam_search_generate(decoder, tokens, past, max_length, num_beams=num_beams,
+        token_ids = _beam_search_generate(decoder=decoder, encoder_output=encoder_output, encoder_mask=encoder_mask,
+                                          prev_tokens=prev_tokens, max_length=max_length,
+                                          num_beams=num_beams,
                                           temperature=temperature, top_k=top_k, top_p=top_p,
                                           bos_token_id=bos_token_id, eos_token_id=eos_token_id, do_sample=True,
                                           repetition_penalty=repetition_penalty, length_penalty=length_penalty)
     return token_ids
 
 
-def _no_beam_search_generate(decoder: Decoder, tokens=None, past=None, max_length=20, temperature=1.0, top_k=50,
-                             top_p=1.0, bos_token_id=None, eos_token_id=None, do_sample=True,
+def _no_beam_search_generate(decoder: Seq2SeqDecoder,
+                             encoder_output=None, encoder_mask: torch.Tensor = None,
+                             prev_tokens: torch.Tensor = None, max_length=20,
+                             temperature=1.0, top_k=50,
+                             top_p=1.0, bos_token_id=None, eos_token_id=None, do_sample=False,
                              repetition_penalty=1.0, length_penalty=1.0):
+    if encoder_output is not None:
+        batch_size = encoder_output.size(0)
+    else:
+        assert prev_tokens is not None, "You have to specify either `src_tokens` or `prev_tokens`"
+        batch_size = prev_tokens.size(0)
     device = _get_model_device(decoder)
-    if tokens is None:
+
+    if prev_tokens is None:
         if bos_token_id is None:
-            raise RuntimeError("You have to specify either `tokens` or `bos_token_id`.")
-        if past is None:
-            raise RuntimeError("You have to specify either `past` or `tokens`.")
-        batch_size = past.num_samples()
-        if batch_size is None:
-            raise RuntimeError("Cannot infer the number of samples from `past`.")
-        tokens = torch.full([batch_size, 1], fill_value=bos_token_id, dtype=torch.long).to(device)
-    batch_size = tokens.size(0)
-    if past is not None:
-        assert past.num_samples() == batch_size, "The number of samples in `tokens` and `past` should match."
+            raise RuntimeError("You have to specify either `prev_tokens` or `bos_token_id`.")
+
+        prev_tokens = torch.full([batch_size, 1], fill_value=bos_token_id, dtype=torch.long).to(device)
 
     if eos_token_id is None:
         _eos_token_id = float('nan')
     else:
         _eos_token_id = eos_token_id
 
-    for i in range(tokens.size(1)):
-        scores, past = decoder.decode(tokens[:, :i + 1], past)  # batch_size x vocab_size, Past
+    for i in range(prev_tokens.size(1)):  # 先过一遍pretoken，做初始化
+        decoder.decode(prev_tokens[:, :i + 1], encoder_output, encoder_mask)
 
-    token_ids = tokens.clone()
+    token_ids = prev_tokens.clone()  # 保存所有生成的token
     cur_len = token_ids.size(1)
     dones = token_ids.new_zeros(batch_size).eq(1)
-    # tokens = tokens[:, -1:]
 
     while cur_len < max_length:
-        scores, past = decoder.decode(tokens, past)  # batch_size x vocab_size, Past
+        scores = decoder.decode(token_ids, encoder_output, encoder_mask)  # batch_size x vocab_size
 
         if repetition_penalty != 1.0:
             token_scores = scores.gather(dim=1, index=token_ids)
@@ -171,9 +207,9 @@ def _no_beam_search_generate(decoder: Decoder, tokens=None, past=None, max_lengt
             next_tokens = torch.argmax(scores, dim=-1)  # batch_size
 
         next_tokens = next_tokens.masked_fill(dones, 0)  # 对已经搜索完成的sample做padding
-        tokens = next_tokens.unsqueeze(1)
+        next_tokens = next_tokens.unsqueeze(1)
 
-        token_ids = torch.cat([token_ids, tokens], dim=-1)  # batch_size x max_len
+        token_ids = torch.cat([token_ids, next_tokens], dim=-1)  # batch_size x max_len
 
         end_mask = next_tokens.eq(_eos_token_id)
         dones = dones.__or__(end_mask)
@@ -189,29 +225,31 @@ def _no_beam_search_generate(decoder: Decoder, tokens=None, past=None, max_lengt
     return token_ids
 
 
-def _beam_search_generate(decoder: Decoder, tokens=None, past=None, max_length=20, num_beams=4, temperature=1.0,
+def _beam_search_generate(decoder: Seq2SeqDecoder,
+                          encoder_output=None, encoder_mask: torch.Tensor = None,
+                          prev_tokens: torch.Tensor = None, max_length=20, num_beams=4, temperature=1.0,
                           top_k=50,
-                          top_p=1.0, bos_token_id=None, eos_token_id=None, do_sample=True,
+                          top_p=1.0, bos_token_id=None, eos_token_id=None, do_sample=False,
                           repetition_penalty=1.0, length_penalty=None) -> torch.LongTensor:
     # 进行beam search
-    device = _get_model_device(decoder)
-    if tokens is None:
-        if bos_token_id is None:
-            raise RuntimeError("You have to specify either `tokens` or `bos_token_id`.")
-        if past is None:
-            raise RuntimeError("You have to specify either `past` or `tokens`.")
-        batch_size = past.num_samples()
-        if batch_size is None:
-            raise RuntimeError("Cannot infer the number of samples from `past`.")
-        tokens = torch.full([batch_size, 1], fill_value=bos_token_id, dtype=torch.long).to(device)
-    batch_size = tokens.size(0)
-    if past is not None:
-        assert past.num_samples() == batch_size, "The number of samples in `tokens` and `past` should match."
 
-    for i in range(tokens.size(1) - 1):  # 如果输入的长度较长，先decode
-        scores, past = decoder.decode(tokens[:, :i + 1],
-                                      past)  # (batch_size, vocab_size), Past
-    scores, past = decoder.decode(tokens, past)  # 这里要传入的是整个句子的长度
+    if encoder_output is not None:
+        batch_size = encoder_output.size(0)
+    else:
+        assert prev_tokens is not None, "You have to specify either `src_tokens` or `prev_tokens`"
+        batch_size = prev_tokens.size(0)
+
+    device = _get_model_device(decoder)
+
+    if prev_tokens is None:
+        if bos_token_id is None:
+            raise RuntimeError("You have to specify either `prev_tokens` or `bos_token_id`.")
+
+        prev_tokens = torch.full([batch_size, 1], fill_value=bos_token_id, dtype=torch.long).to(device)
+
+    for i in range(prev_tokens.size(1)):  # 如果输入的长度较长，先decode
+        scores = decoder.decode(prev_tokens[:, :i + 1], encoder_output, encoder_mask)
+
     vocab_size = scores.size(1)
     assert vocab_size >= num_beams, "num_beams should be smaller than the number of vocabulary size."
 
@@ -225,15 +263,15 @@ def _beam_search_generate(decoder: Decoder, tokens=None, past=None, max_length=2
         # 得到(batch_size, num_beams), (batch_size, num_beams)
         next_scores, next_tokens = torch.topk(scores, num_beams, dim=1, largest=True, sorted=True)
 
+    # 根据index来做顺序的调转
     indices = torch.arange(batch_size, dtype=torch.long).to(device)
     indices = indices.repeat_interleave(num_beams)
-    decoder.reorder_past(indices, past)
+    decoder.reorder_past(indices)
+    prev_tokens = prev_tokens.index_select(dim=0, index=indices)  # batch_size * num_beams x length
 
-    tokens = tokens.index_select(dim=0, index=indices)  # batch_size * num_beams x length
     # 记录生成好的token (batch_size', cur_len)
-    token_ids = torch.cat([tokens, next_tokens.view(-1, 1)], dim=-1)
+    token_ids = torch.cat([prev_tokens, next_tokens.view(-1, 1)], dim=-1)
     dones = [False] * batch_size
-    tokens = next_tokens.view(-1, 1)
 
     beam_scores = next_scores.view(-1)  # batch_size * num_beams
 
@@ -247,7 +285,7 @@ def _beam_search_generate(decoder: Decoder, tokens=None, past=None, max_length=2
     batch_inds_with_numbeams_interval = (torch.arange(batch_size) * num_beams).view(-1, 1).to(token_ids)
 
     while cur_len < max_length:
-        scores, past = decoder.decode(tokens, past)  # batch_size * num_beams x vocab_size, Past
+        scores = decoder.decode(token_ids, encoder_output, encoder_mask)  # batch_size * num_beams x vocab_size
 
         if repetition_penalty != 1.0:
             token_scores = scores.gather(dim=1, index=token_ids)
@@ -300,9 +338,9 @@ def _beam_search_generate(decoder: Decoder, tokens=None, past=None, max_length=2
         _next_scores = next_scores.masked_select(keep_mask).view(batch_size, num_beams)
         beam_scores = _next_scores.view(-1)
 
-        # 更改past状态, 重组token_ids
+        # 重组past/encoder状态, 重组token_ids
         reorder_inds = (batch_inds_with_numbeams_interval + _from_which_beam).view(-1)  # flatten成一维
-        decoder.reorder_past(reorder_inds, past)
+        decoder.reorder_past(reorder_inds)
 
         flag = True
         if cur_len + 1 == max_length:
@@ -327,8 +365,8 @@ def _beam_search_generate(decoder: Decoder, tokens=None, past=None, max_length=2
                     hypos[batch_idx].add(token_ids[batch_idx * num_beams + beam_idx, :cur_len].clone(), score)
 
         # 重新组织token_ids的状态
-        tokens = _next_tokens
-        token_ids = torch.cat([token_ids.index_select(index=reorder_inds, dim=0), tokens], dim=-1)
+        cur_tokens = _next_tokens
+        token_ids = torch.cat([token_ids.index_select(index=reorder_inds, dim=0), cur_tokens], dim=-1)
 
         for batch_idx in range(batch_size):
             dones[batch_idx] = dones[batch_idx] or hypos[batch_idx].is_done(next_scores[batch_idx, 0].item())
@@ -436,38 +474,3 @@ def top_k_top_p_filtering(logits, top_k=0, top_p=1.0, filter_value=-float("Inf")
         indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
         logits[indices_to_remove] = filter_value
     return logits
-
-
-if __name__ == '__main__':
-    # TODO 需要检查一下greedy_generate和sample_generate是否正常工作。
-    from torch import nn
-
-
-    class DummyDecoder(nn.Module):
-        def __init__(self, num_words):
-            super().__init__()
-            self.num_words = num_words
-
-        def decode(self, tokens, past):
-            batch_size = tokens.size(0)
-            return torch.randn(batch_size, self.num_words), past
-
-        def reorder_past(self, indices, past):
-            return past
-
-
-    num_words = 10
-    batch_size = 3
-    decoder = DummyDecoder(num_words)
-
-    tokens = greedy_generate(decoder=decoder, tokens=torch.zeros(batch_size, 1).long(), past=None, max_length=20,
-                             num_beams=2,
-                             bos_token_id=0, eos_token_id=num_words - 1,
-                             repetition_penalty=1, length_penalty=1.0)
-    print(tokens)
-
-    tokens = sample_generate(decoder, tokens=torch.zeros(batch_size, 1).long(),
-                             past=None, max_length=20, num_beams=2, temperature=1.0, top_k=50,
-                             top_p=1.0, bos_token_id=0, eos_token_id=num_words - 1, repetition_penalty=1.0,
-                             length_penalty=1.0)
-    print(tokens)

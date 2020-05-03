@@ -51,15 +51,17 @@ __all__ = [
 
     'summary',
 
-    "BiLSTMEncoder",
     "TransformerSeq2SeqEncoder",
+    "LSTMSeq2SeqEncoder",
+    "Seq2SeqEncoder",
 
     "SequenceGenerator",
-    "LSTMDecoder",
-    "LSTMPast",
     "TransformerSeq2SeqDecoder",
+    "LSTMSeq2SeqDecoder",
+    "Seq2SeqDecoder",
+
     "TransformerPast",
-    "Decoder",
+    "LSTMPast",
     "Past"
 
 ]

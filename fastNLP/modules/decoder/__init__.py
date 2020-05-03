@@ -9,12 +9,14 @@ __all__ = [
     "allowed_transitions",
 
     "SequenceGenerator",
-    "LSTMDecoder",
+
     "LSTMPast",
-    "TransformerSeq2SeqDecoder",
     "TransformerPast",
-    "Decoder",
     "Past",
+
+    "TransformerSeq2SeqDecoder",
+    "LSTMSeq2SeqDecoder",
+    "Seq2SeqDecoder"
 
 ]
 
@@ -23,4 +25,5 @@ from .crf import allowed_transitions
 from .mlp import MLP
 from .utils import viterbi_decode
 from .seq2seq_generator import SequenceGenerator
-from .seq2seq_decoder import *
+from .seq2seq_decoder import Seq2SeqDecoder, LSTMSeq2SeqDecoder, TransformerSeq2SeqDecoder, LSTMPast, TransformerPast, \
+    Past

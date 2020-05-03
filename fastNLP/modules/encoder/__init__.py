@@ -31,8 +31,9 @@ __all__ = [
     "BiAttention",
     "SelfAttention",
 
-    "BiLSTMEncoder",
-    "TransformerSeq2SeqEncoder"
+    "LSTMSeq2SeqEncoder",
+    "TransformerSeq2SeqEncoder",
+    "Seq2SeqEncoder"
 ]
 
 from .attention import MultiHeadAttention, BiAttention, SelfAttention
@@ -45,4 +46,4 @@ from .star_transformer import StarTransformer
 from .transformer import TransformerEncoder
 from .variational_rnn import VarRNN, VarLSTM, VarGRU
 
-from .seq2seq_encoder import BiLSTMEncoder, TransformerSeq2SeqEncoder
+from .seq2seq_encoder import LSTMSeq2SeqEncoder, TransformerSeq2SeqEncoder, Seq2SeqEncoder
