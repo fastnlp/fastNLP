@@ -76,6 +76,8 @@ class BertForSequenceClassification(BaseModel):
         hidden = self.dropout(self.bert(words))
         cls_hidden = hidden[:, 0]
         logits = self.classifier(cls_hidden)
+        if logits.size(-1) == 1:
+            logits = logits.squeeze(-1)
 
         return {Const.OUTPUT: logits}
 
@@ -85,7 +87,10 @@ class BertForSequenceClassification(BaseModel):
         :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.LongTensor [batch_size]
         """
         logits = self.forward(words)[Const.OUTPUT]
-        return {Const.OUTPUT: torch.argmax(logits, dim=-1)}
+        if self.num_labels > 1:
+            return {Const.OUTPUT: torch.argmax(logits, dim=-1)}
+        else:
+            return {Const.OUTPUT: logits}
 
 
 class BertForSentenceMatching(BaseModel):
