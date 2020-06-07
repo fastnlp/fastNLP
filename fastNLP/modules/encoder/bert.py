@@ -473,6 +473,17 @@ class BertModel(nn.Module):
             module.bias.data.zero_()
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, output_all_encoded_layers=True):
+        """
+
+        :param torch.LongTensor input_ids: bsz x max_len的输入id
+        :param torch.LongTensor token_type_ids: bsz x max_len，如果不输入认为全为0，一般第一个sep(含)及以前为0, 一个sep之后为1
+        :param attention_mask: 需要attend的为1，不需要为0
+        :param bool output_all_encoded_layers: 是否输出所有层，默认输出token embedding(包含bpe, position以及type embedding)
+            及每一层的hidden states。如果为False，只输出最后一层的结果
+        :return: encode_layers: 如果output_all_encoded_layers为True，返回list(共num_layers+1个元素)，每个元素为
+            bsz x max_len x hidden_size否则返回bsz x max_len x hidden_size的tensor;
+            pooled_output: bsz x hidden_size为cls的表示，可以用于句子的分类
+        """
         if attention_mask is None:
             attention_mask = torch.ones_like(input_ids)
         if token_type_ids is None:
@@ -504,7 +515,8 @@ class BertModel(nn.Module):
             pooled_output = sequence_output[:, 0]
         if not output_all_encoded_layers:
             encoded_layers = encoded_layers[-1]
-        encoded_layers.insert(0, embedding_output)
+        else:
+            encoded_layers.insert(0, embedding_output)
         return encoded_layers, pooled_output
 
     @classmethod
