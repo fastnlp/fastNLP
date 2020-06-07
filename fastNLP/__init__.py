@@ -69,6 +69,7 @@ __all__ = [
     
     "LossFunc",
     "CrossEntropyLoss",
+    "MSELoss",
     "L1Loss",
     "BCELoss",
     "NLLLoss",

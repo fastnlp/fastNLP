@@ -62,6 +62,7 @@ class ConfusionMatrix:
         target = [2,2,1]
         confusion.add_pred_target(pred, target)
         print(confusion)
+
         target  1       2       3       all
           pred
              1  0       1       0         1
@@ -157,7 +158,6 @@ class ConfusionMatrix:
             (k, str(k if self.vocab == None else self.vocab.to_word(k)))
             for k in totallabel
         ])
-
         for label, idx in zip(totallabel, range(lenth)):
             idx2row[
                 label] = idx  # 建立一个临时字典，key:vocab的index, value: 行列index  1,3,5...->0,1,2,...

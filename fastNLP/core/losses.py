@@ -12,6 +12,7 @@ __all__ = [
     "BCELoss",
     "L1Loss",
     "NLLLoss",
+    "MSELoss",
 
     "CMRC2018Loss"
 
@@ -263,6 +264,26 @@ class L1Loss(LossBase):
     
     def get_loss(self, pred, target):
         return F.l1_loss(input=pred, target=target, reduction=self.reduction)
+
+
+class MSELoss(LossBase):
+    r"""
+    MSE损失函数
+
+    :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+    :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` >`target`
+    :param str reduction: 支持'mean'，'sum'和'none'.
+
+    """
+
+    def __init__(self, pred=None, target=None, reduction='mean'):
+        super(MSELoss, self).__init__()
+        self._init_param_map(pred=pred, target=target)
+        assert reduction in ('mean', 'sum', 'none')
+        self.reduction = reduction
+
+    def get_loss(self, pred, target):
+        return F.mse_loss(input=pred, target=target, reduction=self.reduction)
 
 
 class BCELoss(LossBase):
