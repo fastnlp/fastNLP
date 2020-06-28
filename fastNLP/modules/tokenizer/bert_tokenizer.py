@@ -384,6 +384,9 @@ class BertTokenizer(object):
                 index += 1
         return vocab_file
 
+    def save_pretrained(self, save_directory):
+        self.save_vocabulary(save_directory)
+
     @classmethod
     def from_pretrained(cls, model_dir_or_name, *inputs, **kwargs):
         r"""

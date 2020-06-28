@@ -40,8 +40,7 @@ class TestBertEmbedding(unittest.TestCase):
         result = embed(words)
         self.assertEqual(result.size(), (1, 4, 16))
 
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert', word_dropout=0.1,
-                              only_use_pretrain_bpe=True)
+        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert', word_dropout=0.1)
         embed.eval()
         words = torch.LongTensor([[2, 3, 4, 0]])
         result = embed(words)
@@ -49,53 +48,30 @@ class TestBertEmbedding(unittest.TestCase):
 
         # 自动截断而不报错
         embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert', word_dropout=0.1,
-                              only_use_pretrain_bpe=True, auto_truncate=True)
+                              auto_truncate=True)
 
         words = torch.LongTensor([[2, 3, 4, 1]*10,
                                   [2, 3]+[0]*38])
         result = embed(words)
         self.assertEqual(result.size(), (2, 40, 16))
 
-    def test_bert_embedding_2(self):
-        # 测试only_use_pretrain_vocab与truncate_embed是否正常工作
-        with open('test/data_for_tests/embedding/small_bert/vocab.txt', 'r', encoding='utf-8') as f:
-            num_word = len(f.readlines())
-        Embedding = BertEmbedding
-        vocab = Vocabulary().add_word_lst("this is a texta and [SEP] NotInBERT".split())
-        embed1 = Embedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
-                              only_use_pretrain_bpe=True, truncate_embed=True, min_freq=1)
-        embed_bpe_vocab_size = len(vocab)-1 + 2  # 排除NotInBERT, 额外加##a, [CLS]
-        self.assertEqual(embed_bpe_vocab_size, len(embed1.model.tokenzier.vocab))
+    def test_save_load(self):
+        bert_save_test = 'bert_save_test'
+        try:
+            os.makedirs(bert_save_test, exist_ok=True)
+            vocab = Vocabulary().add_word_lst("this is a test . [SEP] NotInBERT".split())
+            embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert', word_dropout=0.1,
+                                  auto_truncate=True)
 
-        embed2 = Embedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
-                              only_use_pretrain_bpe=True, truncate_embed=False, min_freq=1)
-        embed_bpe_vocab_size = num_word  # 排除NotInBERT
-        self.assertEqual(embed_bpe_vocab_size, len(embed2.model.tokenzier.vocab))
+            embed.save(bert_save_test)
+            load_embed = BertEmbedding.load(bert_save_test)
+            words = torch.randint(len(vocab), size=(2, 20))
+            embed.eval(), load_embed.eval()
+            self.assertEqual((embed(words) - load_embed(words)).sum(), 0)
 
-        embed3 = Embedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
-                              only_use_pretrain_bpe=False, truncate_embed=True, min_freq=1)
-        embed_bpe_vocab_size = len(vocab)+2  # 新增##a, [CLS]
-        self.assertEqual(embed_bpe_vocab_size, len(embed3.model.tokenzier.vocab))
-
-        embed4 = Embedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
-                              only_use_pretrain_bpe=False, truncate_embed=False, min_freq=1)
-        embed_bpe_vocab_size = num_word+1  # 新增##a
-        self.assertEqual(embed_bpe_vocab_size, len(embed4.model.tokenzier.vocab))
-
-        # 测试各种情况下以下tensor的值是相等的
-        embed1.eval()
-        embed2.eval()
-        embed3.eval()
-        embed4.eval()
-        tensor = torch.LongTensor([[vocab.to_index(w) for w in 'this is a texta and'.split()]])
-        t1 = embed1(tensor)
-        t2 = embed2(tensor)
-        t3 = embed3(tensor)
-        t4 = embed4(tensor)
-
-        self.assertEqual((t1-t2).sum(), 0)
-        self.assertEqual((t1-t3).sum(), 0)
-        self.assertEqual((t1-t4).sum(), 0)
+        finally:
+            import shutil
+            shutil.rmtree(bert_save_test)
 
 
 class TestBertWordPieceEncoder(unittest.TestCase):
@@ -120,7 +96,7 @@ class TestBertWordPieceEncoder(unittest.TestCase):
         ds.set_input('words')
         words = torch.LongTensor(ds['words'].get([0, 1]))
         embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
-                              pool_method='first', include_cls_sep=True, pooled_cls=False)
+                              pool_method='first', include_cls_sep=True, pooled_cls=False, min_freq=1)
         embed.eval()
         words_res = embed(words)
 
@@ -128,3 +104,22 @@ class TestBertWordPieceEncoder(unittest.TestCase):
         self.assertEqual((word_pieces_res[0, :5]-words_res[0, :5]).sum(), 0)
         self.assertEqual((word_pieces_res[0, 6:]-words_res[0, 5:]).sum(), 0)
         self.assertEqual((word_pieces_res[1, :3]-words_res[1, :3]).sum(), 0)
+
+    def test_save_load(self):
+        bert_save_test = 'bert_save_test'
+        try:
+            os.makedirs(bert_save_test, exist_ok=True)
+            embed = BertWordPieceEncoder(model_dir_or_name='test/data_for_tests/embedding/small_bert', word_dropout=0.0,
+                                         layers='-2')
+            ds = DataSet({'words': ["this is a test . [SEP]".split()]})
+            embed.index_datasets(ds, field_name='words')
+            self.assertTrue(ds.has_field('word_pieces'))
+            words = torch.LongTensor([[1, 2, 3, 4]])
+            embed.save(bert_save_test)
+            load_embed = BertWordPieceEncoder.load(bert_save_test)
+            embed.eval(), load_embed.eval()
+            self.assertEqual((embed(words) - load_embed(words)).sum(), 0)
+        finally:
+            import shutil
+            shutil.rmtree(bert_save_test)
+

@@ -39,7 +39,7 @@ from torch import nn
 from .base_model import BaseModel
 from ..core._logger import logger
 from ..core.const import Const
-from ..embeddings import BertEmbedding
+from ..embeddings.bert_embedding import BertEmbedding
 
 
 class BertForSequenceClassification(BaseModel):

@@ -10,8 +10,8 @@ __all__ = [
 
 
 from functools import partial
-import collections
-import warnings
+import os
+import json
 from itertools import chain
 
 import numpy as np
@@ -22,6 +22,13 @@ from .contextual_embedding import ContextualEmbedding
 from ..core import logger, Vocabulary
 from ..modules.encoder.roberta import RobertaModel
 from ..modules.tokenizer import RobertaTokenizer
+
+
+VOCAB_NAME = 'vocab.txt'
+ROBERTA_EMBED_HYPER = 'roberta_hyper.json'
+ROBERTA_ENCODER_HYPER = 'roberta_hyper.json'
+ROBERTA_EMBED_FOLDER = 'roberta'
+ROBERTA_ENCODER_FOLDER = 'roberta'
 
 
 class RobertaEmbedding(ContextualEmbedding):
@@ -71,10 +78,7 @@ class RobertaEmbedding(ContextualEmbedding):
             word pieces后的内容，并将第512个word piece置为</s>。超过长度的部分的encode结果直接全部置零。一般仅有只使用<s>
             来进行分类的任务将auto_truncate置为True。
         :param kwargs:
-            bool only_use_pretrain_bpe: 仅使用出现在pretrain词表中的bpe，如果该词没法tokenize则使用unk。如果embedding不需要更新
-                建议设置为True。
-            int min_freq: 仅在only_use_pretrain_bpe为False有效，大于等于该次数的词会被新加入BERT的BPE词表中
-            bool truncate_embed: 是否仅保留用到的bpe(这样会减内存占用和加快速度)
+            int min_freq: 小于该次数的词会被unk代替
         """
         super().__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
@@ -89,14 +93,12 @@ class RobertaEmbedding(ContextualEmbedding):
         if '<s>' in vocab:
             self._word_cls_index = vocab['<s>']
 
-        only_use_pretrain_bpe = kwargs.get('only_use_pretrain_bpe', False)
-        truncate_embed = kwargs.get('truncate_embed', True)
         min_freq = kwargs.get('min_freq', 2)
+        self._min_freq = min_freq
 
         self.model = _RobertaWordModel(model_dir_or_name=model_dir_or_name, vocab=vocab, layers=layers,
                                        pool_method=pool_method, include_cls_sep=include_cls_sep,
-                                       pooled_cls=pooled_cls, auto_truncate=auto_truncate, min_freq=min_freq,
-                                       only_use_pretrain_bpe=only_use_pretrain_bpe, truncate_embed=truncate_embed)
+                                       pooled_cls=pooled_cls, auto_truncate=auto_truncate, min_freq=min_freq)
         self.requires_grad = requires_grad
         self._embed_size = len(self.model.layers) * self.model.encoder.hidden_size
 
@@ -142,11 +144,56 @@ class RobertaEmbedding(ContextualEmbedding):
                 words = words.masked_fill(mask, self._word_unk_index)
         return words
 
+    def save(self, folder):
+        """
+        将roberta embedding保存到folder，保存之后包含三个文件vocab.txt, roberta_embed_hyper.txt, roberta_embed/,
+
+        :param str folder: 保存地址
+        :return:
+        """
+        os.makedirs(folder, exist_ok=True)
+        self.get_word_vocab().save(os.path.join(folder, VOCAB_NAME))
+
+        hyper = {}
+        hyper['min_freq'] = self._min_freq
+        hyper['layers'] = ','.join(map(str, self.model.layers))
+        hyper['pool_method'] = self.model.pool_method
+        hyper['dropout'] = self.dropout_layer.p
+        hyper['word_dropout'] = self.word_dropout
+        hyper['include_cls_sep'] = self.model.include_cls_sep
+        hyper['pooled_cls'] = self.model.pooled_cls
+        hyper['auto_truncate'] = self.model.auto_truncate
+        hyper['requires_grad'] = bool(self.requires_grad)
+
+        with open(os.path.join(folder, ROBERTA_EMBED_HYPER), 'w', encoding='utf-8') as f:
+            json.dump(hyper, f, indent=2)
+
+        os.makedirs(os.path.join(folder, ROBERTA_EMBED_FOLDER), exist_ok=True)
+        self.model.save(os.path.join(folder, ROBERTA_EMBED_FOLDER))
+
+    @classmethod
+    def load(cls, folder):
+        """
+        从folder中读取数据初始化RobertaEmbedding
+
+        :param folder:
+        :return:
+        """
+        for name in [VOCAB_NAME, ROBERTA_EMBED_HYPER, ROBERTA_EMBED_FOLDER]:
+            assert os.path.exists(os.path.join(folder, name)), f"{name} not found in {folder}."
+
+        vocab = Vocabulary.load(os.path.join(folder, VOCAB_NAME))
+        with open(os.path.join(folder, ROBERTA_EMBED_HYPER), 'r', encoding='utf-8') as f:
+            hyper = json.load(f)
+        model_name_or_path = os.path.join(folder, ROBERTA_EMBED_FOLDER)
+
+        roberta = cls(vocab=vocab, model_dir_or_name=model_name_or_path, **hyper)
+        return roberta
+
 
 class _RobertaWordModel(nn.Module):
     def __init__(self, model_dir_or_name: str, vocab: Vocabulary, layers: str = '-1', pool_method: str = 'first',
-                 include_cls_sep: bool = False, pooled_cls: bool = False, auto_truncate: bool = False, min_freq=2,
-                 only_use_pretrain_bpe=False, truncate_embed=True):
+                 include_cls_sep: bool = False, pooled_cls: bool = False, auto_truncate: bool = False, min_freq=2):
         super().__init__()
 
         self.tokenzier = RobertaTokenizer.from_pretrained(model_dir_or_name)
@@ -177,78 +224,14 @@ class _RobertaWordModel(nn.Module):
         self.pooled_cls = pooled_cls
         self.auto_truncate = auto_truncate
 
-        # 将所有vocab中word的wordpiece计算出来, 需要额外考虑<s>和</s>
-        logger.info("Start to generate word pieces for word.")
-        # 第一步统计出需要的word_piece, 然后创建新的embed和word_piece_vocab, 然后填入值
-        word_piece_dict = {'<s>': 1, '</s>': 1}  # 用到的word_piece以及新增的
-        found_count = 0
-        new_add_to_bpe_vocab = 0
-        unsegment_count = 0
-        if "<s>" in vocab:
-            warnings.warn("<s> detected in your vocabulary. RobertaEmbedding will add <s> and </s> to the begin "
-                          "and end of the input automatically, make sure you don't add <s> and </s> at the begin"
-                          " and end.")
-        for word, index in vocab:
-            if index == vocab.padding_idx:  # pad是个特殊的符号
-                word = '<pad>'
-            elif index == vocab.unknown_idx:
-                word = '<unk>'
-            # _words = self.tokenzier.basic_tokenizer._tokenize_chinese_chars(word).split()  # 这里暂时不考虑中文内容
-            word_pieces = []
-            # 如果这个word不是在句子开头
-            word_pieces.extend(self.tokenzier.tokenize(word, add_prefix_space=True))
-            if len(word_pieces) == 1:
-                if not vocab._is_word_no_create_entry(word):  # 如果是train中的值, 但是却没有找到
-                    if index != vocab.unknown_idx and word_pieces[0] == '<unk>':  # 说明这个词不在原始的word里面
-                        if vocab.word_count[word] >= min_freq and not vocab._is_word_no_create_entry(
-                                word) and not only_use_pretrain_bpe:  # 出现次数大于这个次数才新增
-                            word_piece_dict[word] = 1  # 新增一个值
-                            new_add_to_bpe_vocab += 1
-                        unsegment_count += 1
-                        continue
-            found_count += 1
-            for word_piece in word_pieces:
-                word_piece_dict[word_piece] = 1
-            # 如果这个word是在句子开头
-
-        original_embed = self.encoder.embeddings.word_embeddings.weight.data
-        # 特殊词汇要特殊处理
-        if not truncate_embed:  # 如果不删除的话需要将已有的加上
-            word_piece_dict.update(self.tokenzier.encoder)
-
-        embed = nn.Embedding(len(word_piece_dict), original_embed.size(1))  # 新的embed
-        new_word_piece_vocab = collections.OrderedDict()
-
-        for index, token in enumerate(['<s>', '<pad>', '</s>', '<unk>']):
-            index = word_piece_dict.pop(token, None)
-            if index is not None:
-                new_word_piece_vocab[token] = len(new_word_piece_vocab)
-                embed.weight.data[new_word_piece_vocab[token]] = original_embed[self.tokenzier.encoder[token]]
-        for token in word_piece_dict.keys():
-            if token not in new_word_piece_vocab:
-                new_word_piece_vocab[token] = len(new_word_piece_vocab)
-            index = new_word_piece_vocab[token]
-            if token in self.tokenzier.encoder:
-                embed.weight.data[index] = original_embed[self.tokenzier.encoder[token]]
-            else:
-                embed.weight.data[index] = original_embed[self.tokenzier.encoder['<unk>']]
-
-        self.tokenzier._reinit_on_new_vocab(new_word_piece_vocab)
-        self.encoder.embeddings.word_embeddings = embed
-        self.encoder.config.vocab_size = len(new_word_piece_vocab)
-
-        if unsegment_count>0:
-            if only_use_pretrain_bpe or new_add_to_bpe_vocab==0:
-                logger.info(f"{unsegment_count} words are unsegmented.")
-            else:
-                logger.info(f"{unsegment_count} words are unsegmented. Among them, {new_add_to_bpe_vocab} added to the BPE vocab.")
-
         word_to_wordpieces = []
         word_pieces_lengths = []
         for word, index in vocab:
             if index == vocab.padding_idx:  # pad是个特殊的符号
                 word = '<pad>'
             elif index == vocab.unknown_idx:
+                word = '<unk>'
+            elif vocab.word_count[word]<min_freq:
                 word = '<unk>'
             word_pieces = self.tokenzier.tokenize(word)
             word_pieces = self.tokenzier.convert_tokens_to_ids(word_pieces)
@@ -368,6 +351,10 @@ class _RobertaWordModel(nn.Module):
         # 3. 最终的embedding结果
         return outputs
 
+    def save(self, folder):
+        self.tokenzier.save_pretrained(folder)
+        self.encoder.save_pretrained(folder)
+
 
 class RobertaWordPieceEncoder(nn.Module):
     r"""
@@ -380,7 +367,7 @@ class RobertaWordPieceEncoder(nn.Module):
     """
 
     def __init__(self, model_dir_or_name: str = 'en', layers: str = '-1', pooled_cls: bool = False,
-                 word_dropout=0, dropout=0, requires_grad: bool = True):
+                 word_dropout=0, dropout=0, requires_grad: bool = True, **kwargs):
         r"""
 
         :param str model_dir_or_name: 模型所在目录或者模型的名称。默认值为 ``en-base-uncased``
@@ -462,6 +449,36 @@ class RobertaWordPieceEncoder(nn.Module):
                 words = words.masked_fill(mask, self._wordpiece_unk_index)
         return words
 
+    def save(self, folder):
+        os.makedirs(folder, exist_ok=True)
+
+        hyper = {}
+        hyper['layers'] = ','.join(map(str, self.model.layers))
+        hyper['dropout'] = self.dropout_layer.p
+        hyper['word_dropout'] = self.word_dropout
+        hyper['pooled_cls'] = self.model.pooled_cls
+        hyper['requires_grad'] = bool(self.requires_grad)
+
+        with open(os.path.join(folder, ROBERTA_ENCODER_HYPER), 'w', encoding='utf-8') as f:
+            json.dump(hyper, f, indent=2)
+
+        os.makedirs(os.path.join(folder, ROBERTA_ENCODER_FOLDER), exist_ok=True)
+        self.model.save(os.path.join(folder, ROBERTA_ENCODER_FOLDER))
+        logger.debug(f"BertWordPieceEncoder has been saved in {folder}")
+
+    @classmethod
+    def load(cls, folder):
+        for name in [ROBERTA_ENCODER_HYPER, ROBERTA_ENCODER_FOLDER]:
+            assert os.path.exists(os.path.join(folder, name)), f"{name} not found in {folder}."
+
+        with open(os.path.join(folder, ROBERTA_ENCODER_HYPER), 'r', encoding='utf-8') as f:
+            hyper = json.load(f)
+
+        model_dir_or_name = os.path.join(os.path.join(folder, ROBERTA_ENCODER_FOLDER))
+
+        bert_encoder = cls(model_dir_or_name=model_dir_or_name, **hyper)
+        return bert_encoder
+
 
 class _WordPieceRobertaModel(nn.Module):
     def __init__(self, model_dir_or_name: str, layers: str = '-1', pooled_cls: bool=False):
@@ -536,3 +553,7 @@ class _WordPieceRobertaModel(nn.Module):
                 roberta_output[:, 0] = pooled_cls
             outputs[l_index] = roberta_output
         return outputs
+
+    def save(self, folder):
+        self.tokenzier.save_pretrained(folder)
+        self.encoder.save_pretrained(folder)

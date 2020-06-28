@@ -47,7 +47,7 @@ class TestRobertWordPieceEncoder(unittest.TestCase):
         ds.set_input('words')
         words = torch.LongTensor(ds['words'].get([0, 1]))
         embed = RobertaEmbedding(vocab, model_dir_or_name=weight_path,
-                                pool_method='first', include_cls_sep=True, pooled_cls=False)
+                                pool_method='first', include_cls_sep=True, pooled_cls=False, min_freq=1)
         embed.eval()
         words_res = embed(words)
 
@@ -183,6 +183,24 @@ class TestRobertWordPieceEncoder(unittest.TestCase):
         torch.save(model.state_dict(), 'test/data_for_tests/embedding/small_roberta/small_pytorch_model.bin')
         print(model(torch.LongTensor([[0,1,2,3]])))
 
+    def test_save_load(self):
+        bert_save_test = 'roberta_save_test'
+        try:
+            os.makedirs(bert_save_test, exist_ok=True)
+            embed = RobertaWordPieceEncoder(model_dir_or_name='test/data_for_tests/embedding/small_roberta', word_dropout=0.0,
+                                         layers='-2')
+            ds = DataSet({'words': ["this is a test . [SEP]".split()]})
+            embed.index_datasets(ds, field_name='words')
+            self.assertTrue(ds.has_field('word_pieces'))
+            words = torch.LongTensor([[1, 2, 3, 4]])
+            embed.save(bert_save_test)
+            load_embed = RobertaWordPieceEncoder.load(bert_save_test)
+            embed.eval(), load_embed.eval()
+            self.assertEqual((embed(words) - load_embed(words)).sum(), 0)
+        finally:
+            import shutil
+            shutil.rmtree(bert_save_test)
+
 
 class TestRobertaEmbedding(unittest.TestCase):
     def test_roberta_embedding_1(self):
@@ -250,3 +268,20 @@ class TestRobertaEmbedding(unittest.TestCase):
         self.assertEqual((t1-t2).sum(), 0)
         self.assertEqual((t1-t3).sum(), 0)
         self.assertEqual((t1-t4).sum(), 0)
+
+    def test_save_load(self):
+        bert_save_test = 'roberta_save_test'
+        try:
+            os.makedirs(bert_save_test, exist_ok=True)
+            vocab = Vocabulary().add_word_lst("this is a test . [SEP] NotInBERT".split())
+            embed = RobertaEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_roberta',
+                                     word_dropout=0.1,
+                                     auto_truncate=True)
+            embed.save(bert_save_test)
+            load_embed = RobertaEmbedding.load(bert_save_test)
+            words = torch.randint(len(vocab), size=(2, 20))
+            embed.eval(), load_embed.eval()
+            self.assertEqual((embed(words) - load_embed(words)).sum(), 0)
+        finally:
+            import shutil
+            shutil.rmtree(bert_save_test)

@@ -255,14 +255,17 @@ class TestGPT2WordPieceEncoder(unittest.TestCase):
         result = embed(torch.LongTensor([[1, 2, 3, 4]]))
 
     def test_generate(self):
-        weight_path = 'test/data_for_tests/embedding/small_gpt2'
+        # weight_path = 'test/data_for_tests/embedding/small_gpt2'
+        weight_path = 'en'
 
         encoder = GPT2WordPieceEncoder(model_dir_or_name=weight_path, language_model=True)
 
         # 测试一下各项东西是否正常work
-        print(encoder.generate_from_str('this', max_len=20, do_sample=False, num_beams=1, temperature=1, top_k=50, top_p=1.0,
+        print(encoder.generate_from_str('This', max_len=20, do_sample=False, num_beams=1, temperature=1, top_k=50, top_p=1.0,
                           repetition_penalty=1.0, length_penalty=1.0))
-        print(encoder.generate_from_str('this', max_len=20, do_sample=True, num_beams=3, temperature=1, top_k=50, top_p=1.0,
+        print(encoder.generate_from_str('This day', max_len=20, do_sample=False, num_beams=1, temperature=1, top_k=50, top_p=1.0,
                           repetition_penalty=1.0, length_penalty=1.0))
-        print(encoder.generate_from_str('this', max_len=20, do_sample=True, num_beams=3, temperature=2, top_k=20, top_p=2.0,
+        print(encoder.generate_from_str('This', max_len=20, do_sample=True, num_beams=3, temperature=1, top_k=50, top_p=1.0,
+                          repetition_penalty=1.0, length_penalty=1.0))
+        print(encoder.generate_from_str('This', max_len=20, do_sample=True, num_beams=3, temperature=2, top_k=20, top_p=2.0,
                           repetition_penalty=2.0, length_penalty=1.5))

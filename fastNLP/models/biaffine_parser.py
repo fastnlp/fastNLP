@@ -314,13 +314,8 @@ class BiaffineParser(GraphParser):
                 raise ValueError('unsupported rnn_out_size: {} for transformer'.format(rnn_out_size))
             self.position_emb = nn.Embedding(num_embeddings=self.max_len,
                                              embedding_dim=rnn_out_size, )
-            self.encoder = TransformerEncoder(num_layers=rnn_layers,
-                                              model_size=rnn_out_size,
-                                              inner_size=1024,
-                                              key_size=d_k,
-                                              value_size=d_v,
-                                              num_head=n_head,
-                                              dropout=dropout, )
+            self.encoder = TransformerEncoder( num_layers=rnn_layers, d_model=rnn_out_size,
+                                               n_head=n_head, dim_ff=1024, dropout=dropout)
         else:
             raise ValueError('unsupported encoder type: {}'.format(encoder))
         

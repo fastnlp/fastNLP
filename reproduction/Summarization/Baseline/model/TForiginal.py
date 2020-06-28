@@ -32,7 +32,6 @@ from tools.PositionEmbedding import get_sinusoid_encoding_table
 from tools.logger import *
 
 from fastNLP.core.const import Const
-from fastNLP.modules.encoder.transformer import TransformerEncoder
 
 from transformer.Layers import EncoderLayer
 

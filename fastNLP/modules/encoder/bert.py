@@ -10,6 +10,7 @@ __all__ = [
 import copy
 import json
 import math
+import os
 
 import torch
 from torch import nn
@@ -20,7 +21,8 @@ from ...io.file_utils import _get_bert_dir
 from ...core import logger
 
 
-CONFIG_FILE = 'bert_config.json'
+CONFIG_FILE = 'config.json'
+WEIGHTS_NAME = 'pytorch_model.bin'
 
 BERT_KEY_RENAME_MAP_1 = {
     'gamma': 'weight',
@@ -57,7 +59,8 @@ class BertConfig(object):
                  max_position_embeddings=512,
                  type_vocab_size=2,
                  initializer_range=0.02,
-                 layer_norm_eps=1e-12):
+                 layer_norm_eps=1e-12,
+                 architectures='bert'):
         r"""Constructs BertConfig.
 
         Args:
@@ -101,6 +104,7 @@ class BertConfig(object):
             self.type_vocab_size = type_vocab_size
             self.initializer_range = initializer_range
             self.layer_norm_eps = layer_norm_eps
+            self.architectures = architectures
         else:
             raise ValueError("First argument must be either a vocabulary size (int)"
                              "or the path to a pretrained model config file (str)")
@@ -134,9 +138,13 @@ class BertConfig(object):
 
     def to_json_file(self, json_file_path):
         r""" Save this instance to a json file."""
+        if os.path.isdir(json_file_path):
+            json_file_path = os.path.join(json_file_path, CONFIG_FILE)
         with open(json_file_path, "w", encoding='utf-8') as writer:
             writer.write(self.to_json_string())
 
+    def save_pretrained(self, save_directory):
+        self.to_json_file(save_directory)
 
 def gelu(x):
     return x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
@@ -148,21 +156,6 @@ def swish(x):
 
 ACT2FN = {"gelu": gelu, "relu": torch.nn.functional.relu, "swish": swish}
 
-
-# class BertLayerNorm(nn.Module):
-#     def __init__(self, hidden_size, eps=1e-12):
-#         r"""Construct a layernorm module in the TF style (epsilon inside the square root).
-#         """
-#         super(BertLayerNorm, self).__init__()
-#         self.weight = nn.Parameter(torch.ones(hidden_size))
-#         self.bias = nn.Parameter(torch.zeros(hidden_size))
-#         self.variance_epsilon = eps
-#
-#     def forward(self, x):
-#         u = x.mean(-1, keepdim=True)
-#         s = (x - u).pow(2).mean(-1, keepdim=True)
-#         x = (x - u) / torch.sqrt(s + self.variance_epsilon)
-#         return self.weight * x + self.bias
 
 BertLayerNorm = torch.nn.LayerNorm
 
@@ -613,3 +606,24 @@ class BertModel(nn.Module):
 
         logger.info(f"Load pre-trained {model_type} parameters from file {weights_path}.")
         return model
+
+    def save_pretrained(self, save_directory):
+        """ 保存模型到某个folder
+        """
+        assert os.path.isdir(
+            save_directory
+        ), "Saving path should be a directory where the model and configuration can be saved"
+
+        # Only save the model itself if we are using distributed training
+        model_to_save = self.module if hasattr(self, "module") else self
+
+        # Attach architecture to the config
+        model_to_save.config.architectures = [model_to_save.__class__.__name__]
+
+        # Save configuration file
+        model_to_save.config.save_pretrained(save_directory)
+
+        # If we save using the predefined names, we can load using `from_pretrained`
+        output_model_file = os.path.join(save_directory, WEIGHTS_NAME)
+        torch.save(model_to_save.state_dict(), output_model_file)
+        logger.debug("Model weights saved in {}".format(output_model_file))
