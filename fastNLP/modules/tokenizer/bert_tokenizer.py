@@ -10,7 +10,7 @@ import os
 import collections
 import unicodedata
 from ...core import logger
-from fastNLP.io.file_utils import _get_file_name_base_on_postfix
+from ...io.file_utils import _get_file_name_base_on_postfix
 from ...io.file_utils import _get_bert_dir
 
 VOCAB_NAME = 'vocab.txt'
