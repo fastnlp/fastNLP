@@ -78,7 +78,7 @@ class Embedding(nn.Module):
         if isinstance(self.embed, nn.Embedding):
             return self.embed.weight.size(0)
         else:
-            return self.embed.num_embedding
+            return self.embed.num_embeddings
     
     def __len__(self):
         return len(self.embed)
@@ -188,7 +188,7 @@ class TokenEmbedding(nn.Module):
         return self._embed_size
     
     @property
-    def num_embedding(self) -> int:
+    def num_embeddings(self) -> int:
         r"""
         这个值可能会大于实际的embedding矩阵的大小。
         :return:
@@ -205,7 +205,7 @@ class TokenEmbedding(nn.Module):
     
     @property
     def size(self):
-        return torch.Size(self.num_embedding, self._embed_size)
+        return torch.Size(self.num_embeddings, self._embed_size)
     
     @abstractmethod
     def forward(self, words):

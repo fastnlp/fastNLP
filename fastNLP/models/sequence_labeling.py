@@ -14,9 +14,9 @@ import torch.nn.functional as F
 from .base_model import BaseModel
 from ..core.const import Const as C
 from ..core.utils import seq_len_to_mask
-from ..embeddings import get_embeddings
-from ..modules import ConditionalRandomField
-from ..modules import LSTM
+from ..embeddings.utils import get_embeddings
+from ..modules.decoder import ConditionalRandomField
+from ..modules.encoder import LSTM
 from ..modules import decoder, encoder
 from ..modules.decoder.crf import allowed_transitions
 

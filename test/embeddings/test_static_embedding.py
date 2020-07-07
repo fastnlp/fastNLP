@@ -108,6 +108,56 @@ class TestLoad(unittest.TestCase):
                 for v1i, v2i in zip(v1, v2):
                     self.assertAlmostEqual(v1i, v2i, places=4)
 
+    def test_save_load_static_embed(self):
+        static_test_folder = 'static_save_test'
+        try:
+            # 测试包含no_create_entry
+            os.makedirs(static_test_folder, exist_ok=True)
+
+            vocab = Vocabulary().add_word_lst(['The', 'a', 'notinfile1', 'A'])
+            vocab.add_word_lst(['notinfile2', 'notinfile2'], no_create_entry=True)
+            embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+                                                             'glove.6B.50d_test.txt')
+            embed.save(static_test_folder)
+            load_embed = StaticEmbedding.load(static_test_folder)
+            words = torch.randint(len(vocab), size=(2, 20))
+            self.assertEqual((embed(words) - load_embed(words)).sum(), 0)
+
+            # 测试不包含no_create_entry
+            vocab = Vocabulary().add_word_lst(['The', 'a', 'notinfile1', 'A'])
+            embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+                                                             'glove.6B.50d_test.txt')
+            embed.save(static_test_folder)
+            load_embed = StaticEmbedding.load(static_test_folder)
+            words = torch.randint(len(vocab), size=(2, 20))
+            self.assertEqual((embed(words) - load_embed(words)).sum(), 0)
+
+            # 测试lower, min_freq
+            vocab = Vocabulary().add_word_lst(['The', 'the', 'the', 'A', 'a', 'B'])
+            embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+                                                             'glove.6B.50d_test.txt', min_freq=2, lower=True)
+            embed.save(static_test_folder)
+            load_embed = StaticEmbedding.load(static_test_folder)
+            words = torch.randint(len(vocab), size=(2, 20))
+            self.assertEqual((embed(words) - load_embed(words)).sum(), 0)
+
+            # 测试random的embedding
+            vocab = Vocabulary().add_word_lst(['The', 'the', 'the', 'A', 'a', 'B'])
+            vocab = vocab.add_word_lst(['b'], no_create_entry=True)
+            embed = StaticEmbedding(vocab, model_dir_or_name=None, embedding_dim=4, min_freq=2, lower=True,
+                                    normalize=True)
+            embed.weight.data += 0.2  # 使得它不是normalize
+            embed.save(static_test_folder)
+            load_embed = StaticEmbedding.load(static_test_folder)
+            words = torch.randint(len(vocab), size=(2, 20))
+            self.assertEqual((embed(words) - load_embed(words)).sum(), 0)
+
+        finally:
+            if os.path.isdir(static_test_folder):
+                import shutil
+                shutil.rmtree(static_test_folder)
+
+
 def read_static_embed(fp):
     """
 

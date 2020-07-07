@@ -1,7 +1,6 @@
 import fastNLP
 import torch
 import math
-from fastNLP.modules.encoder.transformer import TransformerEncoder
 from fastNLP.modules.decoder.crf import ConditionalRandomField
 from fastNLP import Const
 import copy
@@ -181,7 +180,6 @@ def make_CWS(
     freeze=True,
 ):
     c = copy.deepcopy
-    # encoder=TransformerEncoder(num_layers=N,model_size=d_model,inner_size=d_ff,key_size=d_model//h,value_size=d_model//h,num_head=h,dropout=dropout)
     encoder = transformer.make_encoder(
         N=N, d_model=d_model, h=h, dropout=dropout, d_ff=d_ff
     )

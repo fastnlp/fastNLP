@@ -22,8 +22,9 @@ __all__ = [
     "StackEmbedding",
     "LSTMCharEmbedding",
     "CNNCharEmbedding",
-    "get_embeddings",
 
+    "get_embeddings",
+    "get_sinusoid_encoding_table"
 ]
 
 from .embedding import Embedding, TokenEmbedding
@@ -34,7 +35,7 @@ from .roberta_embedding import RobertaEmbedding, RobertaWordPieceEncoder
 from .gpt2_embedding import GPT2WordPieceEncoder, GPT2Embedding
 from .char_embedding import CNNCharEmbedding, LSTMCharEmbedding
 from .stack_embedding import StackEmbedding
-from .utils import get_embeddings
+from .utils import get_embeddings, get_sinusoid_encoding_table
 
 import sys
 from ..doc_utils import doc_process

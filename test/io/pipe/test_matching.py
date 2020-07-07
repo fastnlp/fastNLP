@@ -39,7 +39,7 @@ class TestRunMatchingPipe(unittest.TestCase):
             'MNLI': ('test/data_for_tests/io/MNLI', MNLIPipe, MNLIBertPipe, (5, 5, 5, 5, 6), (459, 3), True),
             'BQCorpus': ('test/data_for_tests/io/BQCorpus', BQCorpusPipe, BQCorpusBertPipe, (5, 5, 5), (32, 2), False),
             'XNLI': ('test/data_for_tests/io/XNLI', CNXNLIPipe, CNXNLIBertPipe, (6, 8, 6), (39, 3), False),
-            'LCQMC': ('test/data_for_tests/io/LCQMC', LCQMCPipe, LCQMCBertPipe, (5, 6, 6), (36, 2), False),
+            'LCQMC': ('test/data_for_tests/io/LCQMC', LCQMCPipe, LCQMCBertPipe, (6, 6, 5), (36, 2), False),
         }
         for k, v in data_set_dict.items():
             path, pipe1, pipe2, data_set, vocab, warns = v
@@ -58,7 +58,8 @@ class TestRunMatchingPipe(unittest.TestCase):
             print(data_bundle2)
             for x, y in zip(data_set, data_bundle1.iter_datasets()):
                 name, dataset = y
-                self.assertEqual(x, len(dataset))
+                with self.subTest(path=path, split=name):
+                    self.assertEqual(x, len(dataset))
             self.assertEqual(len(data_set), data_bundle2.num_dataset)
             for x, y in zip(data_set, data_bundle2.iter_datasets()):
                 name, dataset = y

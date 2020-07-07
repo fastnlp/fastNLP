@@ -1,9 +1,8 @@
-import torch
 import torch.nn as nn
 from fastNLP.core.const import Const as C
 from fastNLP.modules.encoder.lstm import LSTM
 from fastNLP.embeddings.utils import get_embeddings
-from fastNLP.modules.encoder.attention import SelfAttention
+from fastNLP.modules.attention import SelfAttention
 from fastNLP.modules.decoder.mlp import MLP
 
 

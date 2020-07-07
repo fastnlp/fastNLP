@@ -10,7 +10,7 @@ import os
 import collections
 import unicodedata
 from ...core import logger
-from fastNLP.io.file_utils import _get_file_name_base_on_postfix
+from ...io.file_utils import _get_file_name_base_on_postfix
 from ...io.file_utils import _get_bert_dir
 
 VOCAB_NAME = 'vocab.txt'
@@ -383,6 +383,9 @@ class BertTokenizer(object):
                 writer.write(token + u'\n')
                 index += 1
         return vocab_file
+
+    def save_pretrained(self, save_directory):
+        self.save_vocabulary(save_directory)
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name, *inputs, **kwargs):

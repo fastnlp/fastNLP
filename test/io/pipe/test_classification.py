@@ -70,7 +70,7 @@ class TestRunClassificationPipe(unittest.TestCase):
         }
         for k, v in data_set_dict.items():
             path, pipe, data_set, vocab, warns = v
-            with self.subTest(pipe=pipe):
+            with self.subTest(path=path):
                 if 'Chn' not in k:
                     if warns:
                         with self.assertWarns(Warning):

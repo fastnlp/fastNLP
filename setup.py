@@ -16,7 +16,7 @@ print(pkgs)
 
 setup(
     name='FastNLP',
-    version='0.5.0',
+    version='0.5.6',
     url='https://github.com/fastnlp/fastNLP',
     description='fastNLP: Deep Learning Toolkit for NLP, developed by Fudan FastNLP Team',
     long_description=readme,

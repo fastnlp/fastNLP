@@ -10,6 +10,7 @@ __all__ = [
 import copy
 import json
 import math
+import os
 
 import torch
 from torch import nn
@@ -20,7 +21,8 @@ from ...io.file_utils import _get_bert_dir
 from ...core import logger
 
 
-CONFIG_FILE = 'bert_config.json'
+CONFIG_FILE = 'config.json'
+WEIGHTS_NAME = 'pytorch_model.bin'
 
 BERT_KEY_RENAME_MAP_1 = {
     'gamma': 'weight',
@@ -57,7 +59,8 @@ class BertConfig(object):
                  max_position_embeddings=512,
                  type_vocab_size=2,
                  initializer_range=0.02,
-                 layer_norm_eps=1e-12):
+                 layer_norm_eps=1e-12,
+                 architectures='bert'):
         r"""Constructs BertConfig.
 
         Args:
@@ -101,6 +104,7 @@ class BertConfig(object):
             self.type_vocab_size = type_vocab_size
             self.initializer_range = initializer_range
             self.layer_norm_eps = layer_norm_eps
+            self.architectures = architectures
         else:
             raise ValueError("First argument must be either a vocabulary size (int)"
                              "or the path to a pretrained model config file (str)")
@@ -134,9 +138,13 @@ class BertConfig(object):
 
     def to_json_file(self, json_file_path):
         r""" Save this instance to a json file."""
+        if os.path.isdir(json_file_path):
+            json_file_path = os.path.join(json_file_path, CONFIG_FILE)
         with open(json_file_path, "w", encoding='utf-8') as writer:
             writer.write(self.to_json_string())
 
+    def save_pretrained(self, save_directory):
+        self.to_json_file(save_directory)
 
 def gelu(x):
     return x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
@@ -148,21 +156,6 @@ def swish(x):
 
 ACT2FN = {"gelu": gelu, "relu": torch.nn.functional.relu, "swish": swish}
 
-
-# class BertLayerNorm(nn.Module):
-#     def __init__(self, hidden_size, eps=1e-12):
-#         r"""Construct a layernorm module in the TF style (epsilon inside the square root).
-#         """
-#         super(BertLayerNorm, self).__init__()
-#         self.weight = nn.Parameter(torch.ones(hidden_size))
-#         self.bias = nn.Parameter(torch.zeros(hidden_size))
-#         self.variance_epsilon = eps
-#
-#     def forward(self, x):
-#         u = x.mean(-1, keepdim=True)
-#         s = (x - u).pow(2).mean(-1, keepdim=True)
-#         x = (x - u) / torch.sqrt(s + self.variance_epsilon)
-#         return self.weight * x + self.bias
 
 BertLayerNorm = torch.nn.LayerNorm
 
@@ -473,6 +466,17 @@ class BertModel(nn.Module):
             module.bias.data.zero_()
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, output_all_encoded_layers=True):
+        """
+
+        :param torch.LongTensor input_ids: bsz x max_len的输入id
+        :param torch.LongTensor token_type_ids: bsz x max_len，如果不输入认为全为0，一般第一个sep(含)及以前为0, 一个sep之后为1
+        :param attention_mask: 需要attend的为1，不需要为0
+        :param bool output_all_encoded_layers: 是否输出所有层，默认输出token embedding(包含bpe, position以及type embedding)
+            及每一层的hidden states。如果为False，只输出最后一层的结果
+        :return: encode_layers: 如果output_all_encoded_layers为True，返回list(共num_layers+1个元素)，每个元素为
+            bsz x max_len x hidden_size否则返回bsz x max_len x hidden_size的tensor;
+            pooled_output: bsz x hidden_size为cls的表示，可以用于句子的分类
+        """
         if attention_mask is None:
             attention_mask = torch.ones_like(input_ids)
         if token_type_ids is None:
@@ -504,7 +508,8 @@ class BertModel(nn.Module):
             pooled_output = sequence_output[:, 0]
         if not output_all_encoded_layers:
             encoded_layers = encoded_layers[-1]
-        encoded_layers.insert(0, embedding_output)
+        else:
+            encoded_layers.insert(0, embedding_output)
         return encoded_layers, pooled_output
 
     @classmethod
@@ -601,3 +606,24 @@ class BertModel(nn.Module):
 
         logger.info(f"Load pre-trained {model_type} parameters from file {weights_path}.")
         return model
+
+    def save_pretrained(self, save_directory):
+        """ 保存模型到某个folder
+        """
+        assert os.path.isdir(
+            save_directory
+        ), "Saving path should be a directory where the model and configuration can be saved"
+
+        # Only save the model itself if we are using distributed training
+        model_to_save = self.module if hasattr(self, "module") else self
+
+        # Attach architecture to the config
+        model_to_save.config.architectures = [model_to_save.__class__.__name__]
+
+        # Save configuration file
+        model_to_save.config.save_pretrained(save_directory)
+
+        # If we save using the predefined names, we can load using `from_pretrained`
+        output_model_file = os.path.join(save_directory, WEIGHTS_NAME)
+        torch.save(model_to_save.state_dict(), output_model_file)
+        logger.debug("Model weights saved in {}".format(output_model_file))

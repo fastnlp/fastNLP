@@ -377,6 +377,9 @@ class GPT2Tokenizer:
         text = bytearray([self.byte_decoder[c] for c in text]).decode("utf-8", errors=self.errors)
         return text
 
+    def save_pretrained(self, save_directory):
+        return self.save_vocabulary(save_directory)
+
     def save_vocabulary(self, save_directory):
         """Save the tokenizer vocabulary and merge files to a directory."""
         if not os.path.isdir(save_directory):

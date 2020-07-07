@@ -15,9 +15,8 @@ import math
 from torch.nn import CrossEntropyLoss
 from fastNLP.io.file_utils import _get_file_name_base_on_postfix
 
-from ..decoder.seq2seq_decoder import Decoder, Past
+from ..decoder.seq2seq_decoder import Seq2SeqDecoder, State
 from ..generator.seq2seq_generator import SequenceGenerator
-from typing import Tuple
 
 
 GELU_CONSTANT = math.sqrt(2 / math.pi)
@@ -732,7 +731,7 @@ class GPT2PreTrainedModel(nn.Module):
                                      bos_token_id=bos_token_id, eos_token_id=eos_token_ids,
                                      repetition_penalty=repetition_penalty, length_penalty=length_penalty,
                                      pad_token_id=pad_token_id)
-        results = generator.generate(input_ids, past=None)
+        results = generator.generate(tokens=input_ids, state=GPT2State())
         return results
 
 
@@ -788,21 +787,13 @@ class GPT2Model(GPT2PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.h[layer].attn.prune_heads(heads)
 
-    def forward(
-        self,
-        input_ids,
-        past=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        output_attentions=True
-    ):
+    def forward(self, input_ids, state=None, attention_mask=None, token_type_ids=None, position_ids=None,
+                head_mask=None, output_attentions=True):
         """
 
         :param torch.LongTensor input_ids: batch_size x max_len or batch_size x beam_size x 1
-        :param GPT2Past past: 之前的状态
-        :param torch.ByteTensor attention_mask: batch_size x (pre_len+past_len)， 与input_ids与past的concat一样大。
+        :param GPT2State state: 之前的状态
+        :param torch.ByteTensor attention_mask: batch_size x (pre_len+past_len)， 与input_ids与state的concat一样大。
             为0的地方为padding。
         :param torch.LongTensor token_type_ids:  batch_size x max_len。
         :param torch.LongTensor position_ids: 与input_ids对应的位置
@@ -818,11 +809,11 @@ class GPT2Model(GPT2PreTrainedModel):
         if position_ids is not None:
             position_ids = position_ids.view(-1, input_shape[-1])
 
-        if past is None or len(past)==0:
+        if state is None or len(state)==0:
             past_length = 0
-            past = [None] * len(self.h)  # len(self.h) 是layer的层数
+            state = [None] * len(self.h)  # len(self.h) 是layer的层数
         else:
-            past_length = past[0][0].size(-2)
+            past_length = state[0][0].size(-2)
         if position_ids is None:  # 如果没有position id则生成
             device = input_ids.device
             position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=device)
@@ -880,7 +871,7 @@ class GPT2Model(GPT2PreTrainedModel):
         presents = ()
         all_attentions = []
         all_hidden_states = ()
-        for i, (block, layer_past) in enumerate(zip(self.h, past)):
+        for i, (block, layer_past) in enumerate(zip(self.h, state)):
             all_hidden_states = all_hidden_states + (hidden_states.view(*output_shape),)
 
             outputs = block(
@@ -915,56 +906,63 @@ class GPT2Model(GPT2PreTrainedModel):
         return outputs  # last hidden state, (presents), (all hidden_states), (attentions)
 
 
-class GPT2Past(Past):
+class GPT2State(State):
     def __init__(self):
-        super().__init__()
-        self.past = None  # tuple [n_layer, 2 x batch_size x n_head x past_len x head_dim]
+        super().__init__(None, None)
+        self.state = None  # tuple [n_layer, 2 x batch_size x n_head x past_len x head_dim]
 
+    @property
     def num_samples(self):
-        if self.past is not None:
-            return self.past[0].size(1)
+        if self.state is not None:
+            return self.state[0].size(1)
         return None
 
-    def reorder_past(self, indices):
-        for i in range(len(self.past)):
-            assert self.past[i] is not None
-            self.past[i] = self.past[i].index_select(index=indices, dim=1)
+    @property
+    def decode_length(self):
+        if self.state is None:
+            return 0
+        return self.state[0].size(-2)
+
+    def reorder_state(self, indices):
+        if self.state:
+            for i in range(len(self.state)):
+                assert self.state[i] is not None
+                self.state[i] = self.state[i].index_select(index=indices, dim=1)
 
     def __iter__(self):
-        for p in self.past:
+        for p in self.state:
             yield p
 
     def __getitem__(self, item):
         assert isinstance(item, int)
-        return self.past[item]
+        return self.state[item]
 
     def __len__(self):
-        if self.past is not None:
-            return len(self.past)
+        if self.state is not None:
+            return len(self.state)
         return 0
 
 
-class _GPT2Decoder(Decoder):
+class _GPT2Decoder(Seq2SeqDecoder):
+    """
+    用于wrap GPT2是的可以在SequenceGenerator中使用
+    """
     def __init__(self, gpt_model):
         super().__init__()
         self.gpt_model = gpt_model
 
-    def decode(self, tokens, past=None) -> Tuple[torch.Tensor, Past]:
-        if past is None:
-            past = GPT2Past()
-        lm_logits, presents, _ = self.gpt_model(input_ids=tokens,
-                                    past=past,
+    def decode(self, tokens, state=None) -> torch.Tensor:
+        if state is None:
+            state = GPT2State()
+        lm_logits, presents, _ = self.gpt_model(input_ids=tokens[:, state.decode_length:],
+                                    state=state,
                                     attention_mask=None,
                                     token_type_ids=None,
                                     position_ids=None,
                                     head_mask=None,
                                     output_attentions=False)
-        past.past = list(presents)
-        return lm_logits[:, -1], past
-
-    def reorder_past(self, indices: torch.LongTensor, past: GPT2Past) -> GPT2Past:
-        past.reorder_past(indices)
-        return past
+        state.state = list(presents)
+        return lm_logits[:, -1]
 
 
 class GPT2LMHeadModel(GPT2PreTrainedModel):
@@ -1008,21 +1006,12 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
     def get_input_embeddings(self):
         return self.transformer.wte
 
-    def forward(
-        self,
-        input_ids,
-        past=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        labels=None,
-        output_attentions=False
-    ):
+    def forward(self, input_ids, state=None, attention_mask=None, token_type_ids=None, position_ids=None,
+                head_mask=None, labels=None, output_attentions=False):
         """
 
         :param torch.LongTensor input_ids: batch_size x max_len or batch_size x beam_size x 1
-        :param tuple past: num_layers x 2 x batch_size x n_head x max_len' x head_dim. 可以将前一个时刻的presents作为输入
+        :param tuple state: num_layers x 2 x batch_size x n_head x max_len' x head_dim. 可以将前一个时刻的presents作为输入
         :param torch.ByteTensor attention_mask: batch_size x max_len， 与input_ids一样大。为0的地方为padding。
         :param torch.LongTensor token_type_ids:  batch_size x max_len。
         :param torch.LongTensor position_ids: 与input_ids对应的位置
@@ -1034,7 +1023,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         """
         transformer_outputs = self.transformer(
             input_ids,
-            past=past,
+            state=state,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
             position_ids=position_ids,

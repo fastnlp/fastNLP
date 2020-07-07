@@ -10,6 +10,8 @@ import os
 import warnings
 from collections import defaultdict
 from copy import deepcopy
+import json
+from typing import Union
 
 import numpy as np
 import torch
@@ -19,7 +21,12 @@ from .embedding import TokenEmbedding
 from ..core import logger
 from ..core.vocabulary import Vocabulary
 from ..io.file_utils import PRETRAIN_STATIC_FILES, _get_embedding_url, cached_path
-from fastNLP.io.file_utils import _get_file_name_base_on_postfix
+from ..io.file_utils import _get_file_name_base_on_postfix
+
+
+VOCAB_FILENAME = 'vocab.txt'
+STATIC_HYPER_FILENAME = 'static_hyper.json'
+STATIC_EMBED_FILENAME = 'static.txt'
 
 
 class StaticEmbedding(TokenEmbedding):
@@ -70,7 +77,7 @@ class StaticEmbedding(TokenEmbedding):
 
     """
     
-    def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', embedding_dim=-1, requires_grad: bool = True,
+    def __init__(self, vocab: Vocabulary, model_dir_or_name: Union[str, None] = 'en', embedding_dim=-1, requires_grad: bool = True,
                  init_method=None, lower=False, dropout=0, word_dropout=0, normalize=False, min_freq=1, **kwargs):
         r"""
         
@@ -95,8 +102,8 @@ class StaticEmbedding(TokenEmbedding):
         """
         super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         if embedding_dim > 0:
-            if model_dir_or_name is not None:
-                warnings.warn(f"StaticEmbedding will ignore `model_dir_or_name`, and randomly initialize embedding with"
+            if model_dir_or_name:
+                logger.info(f"StaticEmbedding will ignore `model_dir_or_name`, and randomly initialize embedding with"
                               f" dimension {embedding_dim}. If you want to use pre-trained embedding, "
                               f"set `embedding_dim` to 0.")
             model_dir_or_name = None
@@ -116,7 +123,9 @@ class StaticEmbedding(TokenEmbedding):
             model_path = _get_file_name_base_on_postfix(os.path.abspath(os.path.expanduser(model_dir_or_name)), '.txt')
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
-        
+
+        kwargs['min_freq'] = min_freq
+        kwargs['lower'] = lower
         # 根据min_freq缩小vocab
         truncate_vocab = (vocab.min_freq is None and min_freq > 1) or (vocab.min_freq and vocab.min_freq < min_freq)
         if truncate_vocab:
@@ -143,7 +152,7 @@ class StaticEmbedding(TokenEmbedding):
             truncated_words_to_words = torch.arange(len(vocab)).long()
             for word, index in vocab:
                 truncated_words_to_words[index] = truncated_vocab.to_index(word)
-            logger.info(f"{len(vocab) - len(truncated_vocab)} out of {len(vocab)} words have frequency less than {min_freq}.")
+            logger.info(f"{len(vocab) - len(truncated_vocab)} words have frequency less than {min_freq}.")
             vocab = truncated_vocab
 
         self.only_use_pretrain_word = kwargs.get('only_use_pretrain_word', False)
@@ -198,6 +207,7 @@ class StaticEmbedding(TokenEmbedding):
                                       sparse=False, _weight=embedding)
         self._embed_size = self.embedding.weight.size(1)
         self.requires_grad = requires_grad
+        self.kwargs = kwargs
 
     @property
     def weight(self):
@@ -321,3 +331,71 @@ class StaticEmbedding(TokenEmbedding):
         words = self.embedding(words)
         words = self.dropout(words)
         return words
+
+    def save(self, folder):
+        """
+        将embedding存储到folder下，之后可以通过使用load方法读取
+
+        :param str folder: 会在该folder下生成三个文件, vocab.txt, static_embed_hyper.txt, static_embed_hyper.json.
+            其中vocab.txt可以用Vocabulary通过load读取; embedding.txt按照word2vec的方式存储，以空格的方式隔开元素,
+            第一行只有两个元素，剩下的行首先是word然后是各个维度的值; static_embed_hyper.json是StaticEmbedding的超参数
+        :return:
+        """
+        os.makedirs(folder, exist_ok=True)
+
+        vocab = self.get_word_vocab()
+        vocab_fp = os.path.join(folder, VOCAB_FILENAME)
+        vocab.save(vocab_fp)
+        kwargs = self.kwargs.copy()
+        kwargs['dropout'] = self.dropout_layer.p
+        kwargs['word_dropout'] = self.word_dropout
+        kwargs['requires_grad'] = self.requires_grad
+        kwargs['only_norm_found_vector'] = False
+        kwargs['only_use_pretrain_word'] = True
+
+        with open(os.path.join(folder, STATIC_HYPER_FILENAME), 'w', encoding='utf-8') as f:
+            json.dump(kwargs, f, indent=2)
+
+        with open(os.path.join(folder, STATIC_EMBED_FILENAME), 'w', encoding='utf-8') as f:
+            f.write('{}\n'.format(' '*30))  # 留白之后再来填写
+            word_count = 0
+            saved_word = {}
+            valid_word_count = 0
+            for i in range(len(self.words_to_words)):
+                word = vocab.to_word(i)
+                if not vocab._is_word_no_create_entry(word):
+                    word_count += 1
+                    if kwargs['lower']:
+                        word = word.lower()
+                    if word in saved_word:
+                        continue
+                    saved_word[word] = 1
+                    vec_i = self.words_to_words[i]
+                    if vec_i==vocab.unknown_idx and i!=vocab.unknown_idx:
+                        continue
+                    vec = self.embedding.weight.data[vec_i].tolist()
+                    vec_str = ' '.join(map(str, vec))
+                    f.write(f'{word} {vec_str}\n')
+                    valid_word_count += 1
+            f.seek(0)
+            f.write('{} {}'.format(valid_word_count, self.embedding_dim))
+        logger.debug(f"StaticEmbedding has been saved to {folder}.")
+
+    @classmethod
+    def load(cls, folder):
+        """
+
+        :param str folder: 该folder下应该有以下三个文件vocab.txt, static_embed.txt, static_hyper.json
+        :return:
+        """
+        for name in [VOCAB_FILENAME, STATIC_EMBED_FILENAME, STATIC_HYPER_FILENAME]:
+            assert os.path.exists(os.path.join(folder, name)), f"{name} not found in {folder}."
+
+        vocab = Vocabulary.load(os.path.join(folder, VOCAB_FILENAME))
+        with open(os.path.join(folder, STATIC_HYPER_FILENAME), 'r', encoding='utf-8') as f:
+            hyper = json.load(f)
+
+        logger.info(f"Load StaticEmbedding from {folder}.")
+        embed = cls(vocab=vocab, model_dir_or_name=os.path.join(folder, STATIC_EMBED_FILENAME), **hyper)
+        return embed
+

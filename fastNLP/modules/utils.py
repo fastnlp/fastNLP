@@ -66,7 +66,10 @@ def initial_parameter(net, initial_method=None):
                     init.normal_(w.data)  # bias
         elif m is not None and hasattr(m, 'weight') and \
                 hasattr(m.weight, "requires_grad"):
-            init_method(m.weight.data)
+                if len(m.weight.size()) > 1:
+                    init_method(m.weight.data)
+                else:
+                    init.normal_(m.weight.data)  # batchnorm or layernorm
         else:
             for w in m.parameters():
                 if w.requires_grad:

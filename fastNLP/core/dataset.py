@@ -861,10 +861,9 @@ class DataSet(object):
 
             3. ignore_type: bool, 如果为True则将名为 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
         :return List[Any]:   里面的元素为func的返回值，所以list长度为DataSet的长度
-
         """
         assert len(self) != 0, "Null DataSet cannot use apply_field()."
-        if field_name not in self:
+        if not self.has_field(field_name=field_name):
             raise KeyError("DataSet has no field named `{}`.".format(field_name))
         return self.apply(func, new_field_name, _apply_field=field_name, **kwargs)
 
@@ -888,10 +887,10 @@ class DataSet(object):
 
             3. ignore_type: bool, 如果为True则将被修改的field的ignore_type设置为true, 忽略其类型
 
-        :return Dict[int:Field]: 返回一个字典
+        :return Dict[str:Field]: 返回一个字典
         """
         assert len(self) != 0, "Null DataSet cannot use apply_field()."
-        if field_name not in self:
+        if not self.has_field(field_name=field_name):
             raise KeyError("DataSet has no field named `{}`.".format(field_name))
         return self.apply_more(func, modify_fields, _apply_field=field_name, **kwargs)
     
@@ -950,7 +949,7 @@ class DataSet(object):
 
             3. ignore_type: bool, 如果为True则将被修改的的field的ignore_type设置为true, 忽略其类型
 
-        :return Dict[int:Field]: 返回一个字典
+        :return Dict[str:Field]: 返回一个字典
         """
         # 返回 dict , 检查是否一直相同
         assert callable(func), "The func you provide is not callable."
