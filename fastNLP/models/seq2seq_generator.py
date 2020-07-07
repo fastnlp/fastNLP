@@ -1,3 +1,5 @@
+r"""undocumented"""
+
 import torch
 from torch import nn
 from .seq2seq_model import Seq2SeqModel

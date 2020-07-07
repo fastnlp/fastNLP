@@ -1,4 +1,4 @@
-
+r"""undocumented"""
 from typing import Union, Tuple
 import math
 

@@ -30,7 +30,7 @@ class TestLoad(unittest.TestCase):
             'imdb': ('test/data_for_tests/io/imdb', IMDBLoader, (6, 6, 6), False),
             'ChnSentiCorp': ('test/data_for_tests/io/ChnSentiCorp', ChnSentiCorpLoader, (6, 6, 6), False),
             'THUCNews': ('test/data_for_tests/io/THUCNews', THUCNewsLoader, (9, 9, 9), False),
-            'WeiboSenti100k': ('test/data_for_tests/io/WeiboSenti100k', WeiboSenti100kLoader, (6, 6, 7), False),
+            'WeiboSenti100k': ('test/data_for_tests/io/WeiboSenti100k', WeiboSenti100kLoader, (6, 7, 6), False),
         }
         for k, v in data_set_dict.items():
             path, loader, data_set, warns = v
