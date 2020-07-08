@@ -867,10 +867,6 @@ def _get_value_info(_dict):
     return strs
 
 
-from numbers import Number
-from .batch import _to_tensor
-
-
 def _check_code(dataset, model, losser, metrics, forward_func, batch_size=DEFAULT_CHECK_BATCH_SIZE,
                 dev_data=None, metric_key=None, check_level=0):
     # check get_loss 方法

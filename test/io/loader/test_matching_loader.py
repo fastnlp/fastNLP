@@ -31,8 +31,8 @@ class TestMatchingLoad(unittest.TestCase):
             'MNLI': ('test/data_for_tests/io/MNLI', MNLILoader, (5, 5, 5, 5, 6), True),
             'Quora': ('test/data_for_tests/io/Quora', QuoraLoader, (2, 2, 2), False),
             'BQCorpus': ('test/data_for_tests/io/BQCorpus', BQCorpusLoader, (5, 5, 5), False),
-            'XNLI': ('test/data_for_tests/io/XNLI', CNXNLILoader, (6, 8, 6), False),
-            'LCQMC': ('test/data_for_tests/io/LCQMC', LCQMCLoader, (6, 6, 5), False),
+            'XNLI': ('test/data_for_tests/io/XNLI', CNXNLILoader, (6, 6, 8), False),
+            'LCQMC': ('test/data_for_tests/io/LCQMC', LCQMCLoader, (6, 5, 6), False),
         }
         for k, v in data_set_dict.items():
             path, loader, instance, warns = v

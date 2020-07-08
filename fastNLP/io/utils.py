@@ -36,6 +36,7 @@ def check_loader_paths(paths: Union[str, Dict[str, str]]) -> Dict[str, str]:
             return {'train': paths}
         elif os.path.isdir(paths):
             filenames = os.listdir(paths)
+            filenames.sort()
             files = {}
             for filename in filenames:
                 path_pair = None

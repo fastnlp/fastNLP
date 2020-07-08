@@ -1,3 +1,4 @@
+r"""undocumented"""
 import torch.nn as nn
 import torch
 from torch.nn import LayerNorm
