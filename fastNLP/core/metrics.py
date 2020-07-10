@@ -313,6 +313,7 @@ class ConfusionMatrixMetric(MetricBase):
                  pred=None,
                  target=None,
                  seq_len=None,
+                 show_result=None,
                  print_ratio=False
                 ):
         r"""
@@ -326,6 +327,7 @@ class ConfusionMatrixMetric(MetricBase):
         super().__init__()
         self._init_param_map(pred=pred, target=target, seq_len=seq_len)
         self.confusion_matrix = ConfusionMatrix(
+            show_result=show_result,
             vocab=vocab,
             print_ratio=print_ratio,
         )
