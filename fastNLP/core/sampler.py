@@ -5,7 +5,8 @@ __all__ = [
     "Sampler",
     "BucketSampler",
     "SequentialSampler",
-    "RandomSampler"
+    "RandomSampler",
+    "SortedSampler"
 ]
 
 from itertools import chain
@@ -57,8 +58,8 @@ class BucketSampler(Sampler):
         r"""
         
         :param int num_buckets: bucket的数量
-        :param int batch_size: batch的大小. 默认为None，Trainer在调用BucketSampler时，会将该值正确设置，如果是非Trainer场景使用，需
-            要显示传递该值
+        :param int batch_size: batch的大小. 默认为None，Trainer/Tester在调用BucketSampler时，会将该值正确设置，如果是非
+            Trainer/Tester场景使用，需要显示传递该值
         :param str seq_len_field_name: 对应序列长度的 `field` 的名字
         """
         self.num_buckets = num_buckets
@@ -108,6 +109,27 @@ class BucketSampler(Sampler):
         np.random.shuffle(batchs)
         
         return list(chain(*batchs))
+
+
+class SortedSampler(Sampler):
+    r"""
+    按照sample的长度进行排序，主要在测试的时候使用，可以加速测试（因为减少了padding）
+    """
+    def __init__(self, seq_len_field_name='seq_len', descending=True):
+        """
+
+        :param str seq_len_field_name: 对应序列长度的 `field` 的名字
+        :param bool descending: 是否降序排列
+        """
+        self.seq_len_field_name = seq_len_field_name
+        self.descending = descending
+
+    def __call__(self, data_set):
+        seq_lens = data_set.get_field(self.seq_len_field_name).content
+        orders = np.argsort(seq_lens).tolist()  # 从小到大的顺序
+        if self.descending:
+            orders = orders[::-1]
+        return orders
 
 
 def simple_sort_bucketing(lengths):

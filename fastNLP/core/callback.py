@@ -521,7 +521,7 @@ class FitlogCallback(Callback):
     fitlog中记录的关于这些数据集的结果就是来自第三个epoch的结果。
     """
 
-    def __init__(self, data=None, tester=None, log_loss_every=0, verbose=0, log_exception=False):
+    def __init__(self, data=None, tester=None, log_loss_every=0, verbose=1, log_exception=False):
         r"""
         
         :param ~fastNLP.DataSet,Dict[~fastNLP.DataSet] data: 传入DataSet对象，会使用多个Trainer中的metric对数据进行验证。如果需要
@@ -572,7 +572,8 @@ class FitlogCallback(Callback):
                                 batch_size=self.trainer.kwargs.get('dev_batch_size', self.batch_size),
                                 metrics=self.trainer.metrics,
                                 verbose=0,
-                                use_tqdm=self.trainer.test_use_tqdm)
+                                use_tqdm=self.trainer.test_use_tqdm,
+                                sampler=self.trainer.kwargs.get('test_sampler', None))
                 self.testers[key] = tester
         fitlog.add_progress(total_steps=self.n_steps)
     

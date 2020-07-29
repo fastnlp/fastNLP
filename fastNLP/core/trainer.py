@@ -422,6 +422,9 @@ class Trainer(object):
             报告警告信息; 2: 有任何field没有被使用都报错. 检查的原理是通过使用很小的batch(默认2个sample)来运行代码，但是
             这个过程理论上不会修改任何参数，只是会检查能否运行。但如果(1)模型中存在将batch_size写为某个固定值的情况；
             (2)模型中存在累加前向计算次数的，可能会多计算1次。以上情况建议将check_code_level设置为-1。
+        :param kwargs: 支持配置可选参数
+            bool test_use_tqdm: 在dev上验证的时候是否开启tqdm
+            Sampler test_sampler: 在evaluate的时候使用的sampler
         """
         super(Trainer, self).__init__()
         if not isinstance(model, nn.Module):
@@ -561,7 +564,8 @@ class Trainer(object):
                                  batch_size=kwargs.get("dev_batch_size", self.batch_size),
                                  device=None,  # 由上面的部分处理device
                                  verbose=0,
-                                 use_tqdm=self.test_use_tqdm)
+                                 use_tqdm=self.test_use_tqdm,
+                                 sampler=kwargs.get('test_sampler', None))
 
         self.start_time = None  # start timestamp
 
@@ -691,8 +695,7 @@ class Trainer(object):
                         avg_loss = 0
                     self.callback_manager.on_batch_end()
 
-                    if ((self.validate_every > 0 and self.step % self.validate_every == 0) or
-                        (self.validate_every < 0 and self.step % len(self.data_iterator) == 0)) \
+                    if (self.validate_every > 0 and self.step % self.validate_every == 0) \
                             and self.dev_data is not None:
                         eval_res = self._do_validation(epoch=epoch, step=self.step)
                         eval_str = "Evaluation on dev at Epoch {}/{}. Step:{}/{}: ".format(epoch, self.n_epochs, self.step,
@@ -701,7 +704,13 @@ class Trainer(object):
                         self.logger.info(eval_str)
                         self.logger.info(self.tester._format_eval_results(eval_res)+'\n')
                 # ================= mini-batch end ==================== #
-
+                if self.validate_every<0 and self.dev_data is not None:  # 在epoch结束之后的evaluate
+                    eval_res = self._do_validation(epoch=epoch, step=self.step)
+                    eval_str = "Evaluation on dev at Epoch {}/{}. Step:{}/{}: ".format(epoch, self.n_epochs, self.step,
+                                                                                       self.n_steps)
+                    # pbar.write(eval_str + '\n')
+                    self.logger.info(eval_str)
+                    self.logger.info(self.tester._format_eval_results(eval_res) + '\n')
                 # lr decay; early stopping
                 self.callback_manager.on_epoch_end()
             # =============== epochs end =================== #

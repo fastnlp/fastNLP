@@ -84,6 +84,7 @@ __all__ = [
     "BucketSampler",
     "RandomSampler",
     "Sampler",
+    "SortedSampler"
 ]
 
 from ._logger import logger, init_logger_dist
@@ -100,7 +101,7 @@ from .losses import LossFunc, CrossEntropyLoss, L1Loss, BCELoss, NLLLoss, \
 from .metrics import AccuracyMetric, SpanFPreRecMetric, CMRC2018Metric, ClassifyFPreRecMetric, MetricBase,\
     ConfusionMatrixMetric
 from .optimizer import Optimizer, SGD, Adam, AdamW
-from .sampler import SequentialSampler, BucketSampler, RandomSampler, Sampler
+from .sampler import SequentialSampler, BucketSampler, RandomSampler, Sampler, SortedSampler
 from .tester import Tester
 from .trainer import Trainer
 from .utils import cache_results, seq_len_to_mask, get_seq_len
