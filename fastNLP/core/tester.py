@@ -57,6 +57,7 @@ from ._parallel_utils import _data_parallel_wrapper
 from ._parallel_utils import _model_contains_inner_module
 from functools import partial
 from ._logger import logger
+from .sampler import Sampler
 
 __all__ = [
     "Tester"
@@ -68,7 +69,8 @@ class Tester(object):
     Tester是在提供数据，模型以及metric的情况下进行性能测试的类。需要传入模型，数据以及metric进行验证。
     """
     
-    def __init__(self, data, model, metrics, batch_size=16, num_workers=0, device=None, verbose=1, use_tqdm=True):
+    def __init__(self, data, model, metrics, batch_size=16, num_workers=0, device=None, verbose=1, use_tqdm=True,
+                 **kwargs):
         r"""
         
         :param ~fastNLP.DataSet,~fastNLP.BatchIter data: 需要测试的数据集
@@ -91,6 +93,7 @@ class Tester(object):
             如果模型是通过predict()进行预测的话，那么将不能使用多卡(DataParallel)进行验证，只会使用第一张卡上的模型。
         :param int verbose: 如果为0不输出任何信息; 如果为1，打印出验证结果。
         :param bool use_tqdm: 是否使用tqdm来显示测试进度; 如果为False，则不会显示任何内容。
+        :param kwargs: 支持传入sampler控制测试顺序
         """
         super(Tester, self).__init__()
 
@@ -107,7 +110,14 @@ class Tester(object):
         self.logger = logger
 
         if isinstance(data, DataSet):
-            self.data_iterator = DataSetIter(dataset=data, batch_size=batch_size, sampler=SequentialSampler(),
+            sampler = kwargs.get('sampler', None)
+            if sampler is None:
+                sampler = SequentialSampler()
+            elif not isinstance(sampler, (Sampler, torch.utils.data.Sampler)):
+                raise ValueError(f"The type of sampler should be fastNLP.BaseSampler or pytorch's Sampler, got {type(sampler)}")
+            if hasattr(sampler, 'set_batch_size'):
+                sampler.set_batch_size(batch_size)
+            self.data_iterator = DataSetIter(dataset=data, batch_size=batch_size, sampler=sampler,
                                              num_workers=num_workers)
         elif isinstance(data, BatchIter):
             self.data_iterator = data

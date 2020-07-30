@@ -263,8 +263,8 @@ class TransformerSeq2SeqDecoderLayer(nn.Module):
         """
 
         :param x: (batch, seq_len, dim), decoder端的输入
-        :param encoder_output: (batch,src_seq_len,dim)
-        :param encoder_mask: batch,src_seq_len
+        :param encoder_output: (batch,src_seq_len,dim), encoder的输出
+        :param encoder_mask: batch,src_seq_len, 为1的地方需要attend
         :param self_attn_mask: seq_len, seq_len，下三角的mask矩阵，只在训练时传入
         :param TransformerState state: 只在inference阶段传入
         :return:

@@ -12,15 +12,16 @@ class SequenceGeneratorModel(nn.Module):
 
     """
 
-    def __init__(self, seq2seq_model: Seq2SeqModel, bos_token_id, eos_token_id=None, max_length=30, num_beams=1,
-                 do_sample=True, temperature=1.0, top_k=50, top_p=1.0,
+    def __init__(self, seq2seq_model: Seq2SeqModel, bos_token_id, eos_token_id=None, max_length=30, max_len_a=0.0,
+                 num_beams=1, do_sample=True, temperature=1.0, top_k=50, top_p=1.0,
                  repetition_penalty=1, length_penalty=1.0, pad_token_id=0):
         """
 
         :param Seq2SeqModel seq2seq_model: 序列到序列模型
         :param int,None bos_token_id: 句子开头的token id
         :param int,None eos_token_id: 句子结束的token id
-        :param int max_length: 句子的最大长度
+        :param int max_length: 生成句子的最大长度, 每句话的decode长度为max_length + max_len_a*src_len
+        :param float max_len_a: 每句话的decode长度为max_length + max_len_a*src_len。 如果不为0，需要保证State中包含encoder_mask
         :param int num_beams: beam search的大小
         :param bool do_sample: 是否通过采样的方式生成
         :param float temperature: 只有在do_sample为True才有意义
@@ -32,7 +33,8 @@ class SequenceGeneratorModel(nn.Module):
         """
         super().__init__()
         self.seq2seq_model = seq2seq_model
-        self.generator = SequenceGenerator(seq2seq_model.decoder, max_length=max_length, num_beams=num_beams,
+        self.generator = SequenceGenerator(seq2seq_model.decoder, max_length=max_length, max_len_a=max_len_a,
+                                           num_beams=num_beams,
                                            do_sample=do_sample, temperature=temperature, top_k=top_k, top_p=top_p,
                                            bos_token_id=bos_token_id,
                                            eos_token_id=eos_token_id,

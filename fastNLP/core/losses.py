@@ -36,7 +36,7 @@ from ..core.const import Const
 
 class LossBase(object):
     r"""
-    所有loss的基类。如果想了解其中的原理，请查看源码。
+    所有loss的基类。如果需要结合到Trainer之中需要实现get_loss方法
     """
     
     def __init__(self):
@@ -53,6 +53,12 @@ class LossBase(object):
         return self._param_map
 
     def get_loss(self, *args, **kwargs):
+        """
+
+        :param args:
+        :param kwargs:
+        :return: torch.Tensor
+        """
         raise NotImplementedError
     
     def _init_param_map(self, key_map=None, **kwargs):
