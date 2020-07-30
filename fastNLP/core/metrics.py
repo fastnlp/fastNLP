@@ -313,11 +313,9 @@ class ConfusionMatrixMetric(MetricBase):
                  pred=None,
                  target=None,
                  seq_len=None,
-                 show_result=None,
                  print_ratio=False
                 ):
         r"""
-
         :param vocab: vocab词表类,要求有to_word()方法。
         :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
         :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
@@ -327,7 +325,6 @@ class ConfusionMatrixMetric(MetricBase):
         super().__init__()
         self._init_param_map(pred=pred, target=target, seq_len=seq_len)
         self.confusion_matrix = ConfusionMatrix(
-            show_result=show_result,
             vocab=vocab,
             print_ratio=print_ratio,
         )
@@ -335,6 +332,7 @@ class ConfusionMatrixMetric(MetricBase):
     def evaluate(self, pred, target, seq_len=None):
         r"""
         evaluate函数将针对一个批次的预测结果做评价指标的累计
+        
         :param torch.Tensor pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
             torch.Size([B, max_len]), 或者torch.Size([B, max_len, n_classes])
         :param torch.Tensor target: 真实值的tensor, tensor的形状可以是Element's can be: torch.Size([B,]),
@@ -356,6 +354,10 @@ class ConfusionMatrixMetric(MetricBase):
                 f"got {type(seq_len)}.")
 
         if pred.dim() == target.dim():
+            if torch.numel(pred) !=torch.numel(target):
+                raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have same dimensions with target, they should have same element numbers. while target have "
+                               f"element numbers:{torch.numel(target)}, pred have element numbers: {torch.numel(pred)}")
+
             pass
         elif pred.dim() == target.dim() + 1:
             pred = pred.argmax(dim=-1)
@@ -446,6 +448,10 @@ class AccuracyMetric(MetricBase):
             masks = None
 
         if pred.dim() == target.dim():
+            if torch.numel(pred) !=torch.numel(target):
+                raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have same dimensions with target, they should have same element numbers. while target have "
+                               f"element numbers:{torch.numel(target)}, pred have element numbers: {torch.numel(pred)}")
+
             pass
         elif pred.dim() == target.dim() + 1:
             pred = pred.argmax(dim=-1)
@@ -476,7 +482,6 @@ class AccuracyMetric(MetricBase):
             self.acc_count = 0
             self.total = 0
         return evaluate_result
-
 
 class ClassifyFPreRecMetric(MetricBase):
     r"""
@@ -567,9 +572,14 @@ class ClassifyFPreRecMetric(MetricBase):
             masks = seq_len_to_mask(seq_len=seq_len, max_len=max_len)
         else:
             masks = torch.ones_like(target).long().to(target.device)
-        masks = masks.eq(False)
+
+        masks = masks.eq(1)
 
         if pred.dim() == target.dim():
+            if torch.numel(pred) !=torch.numel(target):
+                raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have same dimensions with target, they should have same element numbers. while target have "
+                               f"element numbers:{torch.numel(target)}, pred have element numbers: {torch.numel(pred)}")
+
             pass
         elif pred.dim() == target.dim() + 1:
             pred = pred.argmax(dim=-1)
@@ -580,12 +590,14 @@ class ClassifyFPreRecMetric(MetricBase):
                                f"size:{pred.size()}, target should have size: {pred.size()} or "
                                f"{pred.size()[:-1]}, got {target.size()}.")
 
-        target_idxes = set(target.reshape(-1).tolist())
         target = target.to(pred)
+        target = target.masked_select(masks)
+        pred = pred.masked_select(masks)
+        target_idxes = set(target.reshape(-1).tolist())
         for target_idx in target_idxes:
-            self._tp[target_idx] += torch.sum((pred == target_idx).long().masked_fill(target != target_idx, 0).masked_fill(masks, 0)).item()
-            self._fp[target_idx] += torch.sum((pred != target_idx).long().masked_fill(target != target_idx, 0).masked_fill(masks, 0)).item()
-            self._fn[target_idx] += torch.sum((pred == target_idx).long().masked_fill(target == target_idx, 0).masked_fill(masks, 0)).item()
+            self._tp[target_idx] += torch.sum((pred == target_idx).long().masked_fill(target != target_idx, 0)).item()
+            self._fp[target_idx] += torch.sum((pred == target_idx).long().masked_fill(target == target_idx, 0)).item()
+            self._fn[target_idx] += torch.sum((pred != target_idx).long().masked_fill(target != target_idx, 0)).item()
 
     def get_metric(self, reset=True):
         r"""
