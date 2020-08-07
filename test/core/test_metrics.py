@@ -8,7 +8,6 @@ from fastNLP.core.metrics import (ClassifyFPreRecMetric, CMRC2018Metric,
                                   ConfusionMatrixMetric, SpanFPreRecMetric,
                                   _accuracy_topk, _pred_topk)
 from fastNLP.core.vocabulary import Vocabulary
-from sklearn import metrics as m
 
 
 def _generate_tags(encoding_type, number_labels=4):
