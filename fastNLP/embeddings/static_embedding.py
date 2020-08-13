@@ -260,12 +260,8 @@ class StaticEmbedding(TokenEmbedding):
             else:
                 dim = len(parts) - 1
                 f.seek(0)
-            matrix = {}  # index是word在vocab中的index，value是vector或None(如果在pretrain中没有找到该word)
-            if vocab.padding:
-                matrix[vocab.padding_idx] = torch.zeros(dim)
-            if vocab.unknown:
-                matrix[vocab.unknown_idx] = torch.zeros(dim)
-            found_count = 0
+            pre_train_matrix = {}  # index是word，value是pre train vector
+            # 首先加载所有预训练词向量
             found_unknown = False
             for idx, line in enumerate(f, start_idx):
                 try:
@@ -278,19 +274,41 @@ class StaticEmbedding(TokenEmbedding):
                     elif word == unknown and vocab.unknown is not None:
                         word = vocab.unknown
                         found_unknown = True
-                    if word in vocab:
-                        index = vocab.to_index(word)
-                        matrix[index] = torch.from_numpy(np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim))
-                        if self.only_norm_found_vector:
-                            matrix[index] = matrix[index] / np.linalg.norm(matrix[index])
-                        found_count += 1
+                    pre_train_matrix[word] = torch.from_numpy(
+                        np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim))
+                    if self.only_norm_found_vector:
+                        pre_train_matrix[word] = pre_train_matrix[word] / np.linalg.norm(pre_train_matrix[word])
                 except Exception as e:
                     if error == 'ignore':
                         warnings.warn("Error occurred at the {} line.".format(idx))
                     else:
                         logger.error("Error occurred at the {} line.".format(idx))
                         raise e
+
+            matrix = {}  # index是word在vocab中的index，value是vector或None(如果在pretrain中没有找到该word)
+            if vocab.padding:
+                matrix[vocab.padding_idx] = torch.zeros(dim)
+            if vocab.unknown:
+                matrix[vocab.unknown_idx] = torch.zeros(dim)
+            found_count = 0
+            # 遍历vocab，查看vocab的word是否存在于预训练词向量中，若原始word不存在，对word分别进行小写化、大写化、
+            # 首字母大写化处理后，判断处理后的word是否存在，从而增大vocab匹配到词向量的比例。
+            for word, index_in_vocab in vocab:
+                if word in pre_train_matrix:
+                    matrix[index_in_vocab] = pre_train_matrix[word]
+                    found_count += 1
+                elif word.lower() in pre_train_matrix:
+                    matrix[index_in_vocab] = pre_train_matrix[word.lower()]
+                    found_count += 1
+                elif word.upper() in pre_train_matrix:
+                    matrix[index_in_vocab] = pre_train_matrix[word.upper()]
+                    found_count += 1
+                elif word.capitalize() in pre_train_matrix:
+                    matrix[index_in_vocab] = pre_train_matrix[word.capitalize()]
+                    found_count += 1
+
             logger.info("Found {} out of {} words in the pre-training embedding.".format(found_count, len(vocab)))
+
             if not self.only_use_pretrain_word:  # 如果只用pretrain中的值就不要为未找到的词创建entry了
                 for word, index in vocab:
                     if index not in matrix and not vocab._is_word_no_create_entry(word):
