@@ -1,4 +1,4 @@
-"""
+r"""
 :class:`~fastNLP.core.dataset.DataSet` 是fastNLP中用于承载数据的容器。可以将DataSet看做是一个表格，
 每一行是一个sample (在fastNLP中被称为 :mod:`~fastNLP.core.instance` )，
 每一列是一个feature (在fastNLP中称为 :mod:`~fastNLP.core.field` )。
@@ -86,7 +86,7 @@
                 dataset.append(Instance(sentence=sent, label=label))
 
     .. note::
-        直接读取特定数据集的数据请参考  :doc:`/tutorials/tutorial_2_load_dataset`
+        直接读取特定数据集的数据请参考  :doc:`/tutorials/tutorial_4_load_dataset`
 
 2.2 对DataSet中的内容处理
 --------------------------------------
@@ -281,39 +281,115 @@
         #  也可以设置pad的value
         dataset.set_pad_val('chars', -1)
 
+3.3 根据DataSet中多个field合成新的field
+------------------------------------------------------------
+
+    DataSet支持在进行batch时，默认只能看到当前的field的值，但在某些训练中可能存在以下的情况: (1)需要两个field拼接成为一个field;
+    (2)需要在batch中进行负采样。这时候就需要能够同时利用多个field进行batch的操作，DataSet中的add_collate_fn()函数支持添加
+    自定义涉及多个field的collate_fn函数。例如下例中将两个field拼接成一个field的场景
+
+    .. code-block::
+
+        from fastNLP import DataSet, DataSetIter
+        import torch
+
+        data = DataSet({
+            'x1': [[0, 1],
+                   [2]],
+            'x2': [[3],
+                   [2, 4, 5]],
+            'y': [0, 1]
+        })
+        data.set_target('y')
+
+        # 所有的collate_fn函数都接受list[(ind1, instance1), (ind2, instance2), ...]作为输入，其中ind1/ind2是该instance在dataset中
+        #   的index，instance1/instance2是这次batch取出来的数据，包含了所有的field.
+        def concat_collate_fn(ins_list):
+            x1 = [ins['x1'] for ind,ins in ins_list]
+            x2 = [ins['x2'] for ind,ins in ins_list]
+            xs = []
+            for i in range(len(ins_list)):
+                xs.append(torch.LongTensor(x1[i] + x2[i]))
+            # 需要自行pad并转换为tensor，但不需要移动到gpu
+            arr = torch.nn.utils.rnn.pad_sequence(xs, batch_first=True, padding_value=0)
+            b_x = {'x': arr}
+            b_y = {}
+            # 返回值一定是两个dict，第一个dict的值会认为是input，第二个dict的值会认为是target. 若名称与已有input或target重复，则
+            #   采用返回值。
+            return b_x, b_y
+
+        data.add_collate_fn(concat_collate_fn)
+
+        for batch_x, batch_y in DataSetIter(data, sampler=SequentialSampler(), batch_size=2):
+            print("batch_x:", batch_x)
+            print("batch_y:", batch_y)
+            # batch_x: {'x': tensor([[0, 1, 3, 0],
+            #                        [2, 2, 4, 5]])}
+            # batch_y: {'y': array([0, 1])}
+
+        # 如果取batch过程含有一些参数，可以通过类来实现
+        class ConCollateFn:
+            def __init__(self, max_len=3):
+                self.max_len = max_len
+
+            def __call__(self, ins_list):  # 实现该类的__call__函数
+                x1 = [ins['x1'] for ind, ins in ins_list]
+                x2 = [ins['x2'] for ind, ins in ins_list]
+                xs = []
+                for i in range(len(ins_list)):
+                    xs.append(torch.LongTensor(x1[i] + x2[i])[:self.max_len])
+                arr = torch.nn.utils.rnn.pad_sequence(xs, batch_first=True, padding_value=0)
+                b_x = {'x': arr}
+                b_y = {}
+                return b_x, b_y
+        data.delete_collate_fn()  # 删除之前的collate_fn
+        data.add_collate_fn(ConCollateFn(max_len=3))
+        for batch_x, batch_y in DataSetIter(data, sampler=SequentialSampler(), batch_size=2):
+            print("batch_x:", batch_x)
+            print("batch_y:", batch_y)
+            # batch_x: {'x': tensor([[0, 1, 3],
+            #                        [2, 2, 4]])}
+            # batch_y: {'y': array([0, 1])}
 
 """
 __all__ = [
-    "DataSet"
+    "DataSet",
 ]
 
 import _pickle as pickle
-import warnings
-
-import numpy as np
 from copy import deepcopy
 
+import numpy as np
+from prettytable import PrettyTable
+
+from ._logger import logger
+from .const import Const
+from .field import AppendToTargetOrInputException
 from .field import AutoPadder
 from .field import FieldArray
-from .instance import Instance
-from .utils import _get_func_signature
-from .field import AppendToTargetOrInputException
 from .field import SetInputOrTargetException
-from .const import Const
-from ._logger import logger
+from .instance import Instance
+from .utils import pretty_table_printer
+from .collate_fn import Collater
 
+
+class ApplyResultException(Exception):
+    def __init__(self, msg, index=None):
+        super().__init__(msg)
+        self.msg = msg
+        self.index = index  # 标示在哪个数据遭遇到问题了
+    
 class DataSet(object):
+    r"""
+    fastNLP的数据容器，详细的使用方法见文档  :mod:`fastNLP.core.dataset`
     """
-    别名：:class:`fastNLP.DataSet`   :class:`fastNLP.core.dataset.DataSet`
 
-    fastNLP的数据容器，详细的使用方法见文档  :doc:`fastNLP.core.dataset`
-    
-    :param data: 如果为dict类型，则每个key的value应该为等长的list; 如果为list，
-        每个元素应该为具有相同field的 :class:`~fastNLP.Instance` 。
-
-    """
-    
     def __init__(self, data=None):
+        r"""
+        
+        :param data: 如果为dict类型，则每个key的value应该为等长的list; 如果为list，
+            每个元素应该为具有相同field的 :class:`~fastNLP.Instance` 。
+        """
         self.field_arrays = {}
         if data is not None:
             if isinstance(data, dict):
@@ -327,31 +403,46 @@ class DataSet(object):
                 for ins in data:
                     assert isinstance(ins, Instance), "Must be Instance type, not {}.".format(type(ins))
                     self.append(ins)
-            
+
             else:
                 raise ValueError("data only be dict or list type.")
-    
+        self._collater = Collater()
+
+    @property
+    def collater(self):
+        if self._collater is None:
+            self._collater = Collater()
+        return self._collater
+
+    @collater.setter
+    def collater(self, value):
+        assert isinstance(value, Collater)
+        self._collater = value
+
     def __contains__(self, item):
         return item in self.field_arrays
-    
+
     def __iter__(self):
         def iter_func():
             for idx in range(len(self)):
                 yield self[idx]
-        
+
         return iter_func()
-    
+
     def _inner_iter(self):
         class Iter_ptr:
             def __init__(self, dataset, idx):
                 self.dataset = dataset
                 self.idx = idx
-            
+
             def __getitem__(self, item):
                 assert item in self.dataset.field_arrays, "no such field:{} in Instance {}".format(item, self.dataset[
                     self.idx])
                 assert self.idx < len(self.dataset.field_arrays[item]), "index:{} out of range".format(self.idx)
                 return self.dataset.field_arrays[item][self.idx]
+
+            def __setitem__(self, key, value):
+                raise TypeError("You cannot modify value directly.")
 
             def items(self):
                 ins = self.dataset[self.idx]
@@ -359,15 +450,15 @@ class DataSet(object):
 
             def __repr__(self):
                 return self.dataset[self.idx].__repr__()
-        
+
         def inner_iter_func():
             for idx in range(len(self)):
                 yield Iter_ptr(self, idx)
-        
+
         return inner_iter_func()
-    
+
     def __getitem__(self, idx):
-        """给定int的index，返回一个Instance; 给定slice，返回包含这个slice内容的新的DataSet。
+        r"""给定int的index，返回一个Instance; 给定slice，返回包含这个slice内容的新的DataSet。
 
         :param idx: can be int or slice.
         :return: If `idx` is int, return an Instance object.
@@ -382,6 +473,7 @@ class DataSet(object):
             for field in self.field_arrays.values():
                 data_set.add_field(field_name=field.name, fields=field.content[idx], padder=field.padder,
                                    is_input=field.is_input, is_target=field.is_target, ignore_type=field.ignore_type)
+            data_set.collater = self.collater.copy_from(self.collater)
             return data_set
         elif isinstance(idx, str):
             if idx not in self:
@@ -395,25 +487,26 @@ class DataSet(object):
                 dataset.append(instance)
             for field_name, field in self.field_arrays.items():
                 dataset.field_arrays[field_name].to(field)
+            dataset.collater = self.collater.copy_from(self.collater)
             return dataset
         else:
             raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
-    
+
     def __getattr__(self, item):
         # Not tested. Don't use !!
         if item == "field_arrays":
             raise AttributeError
         if isinstance(item, str) and item in self.field_arrays:
             return self.field_arrays[item]
-    
+
     def __setstate__(self, state):
         self.__dict__ = state
-    
+
     def __getstate__(self):
         return self.__dict__
-    
+
     def __len__(self):
-        """Fetch the length of the dataset.
+        r"""Fetch the length of the dataset.
 
         :return length:
         """
@@ -421,18 +514,68 @@ class DataSet(object):
             return 0
         field = iter(self.field_arrays.values()).__next__()
         return len(field)
-    
-    def __inner_repr__(self):
-        if len(self) < 20:
-            return ",\n".join([ins.__repr__() for ins in self])
-        else:
-            return self[:5].__inner_repr__() + "\n...\n" + self[-5:].__inner_repr__()
-    
+
     def __repr__(self):
-        return "DataSet(" + self.__inner_repr__() + ")"
-    
-    def append(self, instance):
+        return str(pretty_table_printer(self))
+
+    def print_field_meta(self):
+        r"""
+        输出当前field的meta信息, 形似下列的输出::
+
+            +-------------+-------+-------+
+            | field_names |   x   |   y   |
+            +=============+=======+=======+
+            |   is_input  |  True | False |
+            |  is_target  | False | False |
+            | ignore_type | False |       |
+            |  pad_value  |   0   |       |
+            +-------------+-------+-------+
+
+        :param field_names: DataSet中field的名称
+        :param is_input: field是否为input
+        :param is_target: field是否为target
+        :param ignore_type: 是否忽略该field的type, 一般仅在该field至少为input或target时才有意义
+        :param pad_value: 该field的pad的值，仅在该field为input或target时有意义
+        :return:
         """
+        if len(self.field_arrays)>0:
+            field_names = ['field_names']
+            is_inputs = ['is_input']
+            is_targets = ['is_target']
+            pad_values = ['pad_value']
+            ignore_types = ['ignore_type']
+
+            for name, field_array in self.field_arrays.items():
+                field_names.append(name)
+                if field_array.is_input:
+                    is_inputs.append(True)
+                else:
+                    is_inputs.append(False)
+                if field_array.is_target:
+                    is_targets.append(True)
+                else:
+                    is_targets.append(False)
+
+                if (field_array.is_input or field_array.is_target) and field_array.padder is not None:
+                    pad_values.append(field_array.padder.get_pad_val())
+                else:
+                    pad_values.append(' ')
+
+                if field_array._ignore_type:
+                    ignore_types.append(True)
+                elif field_array.is_input or field_array.is_target:
+                    ignore_types.append(False)
+                else:
+                    ignore_types.append(' ')
+            table = PrettyTable(field_names=field_names)
+            fields = [is_inputs, is_targets, ignore_types, pad_values]
+            for field in fields:
+                table.add_row(field)
+            logger.info(table)
+            return table
+
+    def append(self, instance):
+        r"""
         将一个instance对象append到DataSet后面。
 
         :param ~fastNLP.Instance instance: 若DataSet不为空，则instance应该拥有和DataSet完全一样的field。
@@ -455,9 +598,9 @@ class DataSet(object):
                 except AppendToTargetOrInputException as e:
                     logger.error(f"Cannot append to field:{name}.")
                     raise e
-    
+
     def add_fieldarray(self, field_name, fieldarray):
-        """
+        r"""
         将fieldarray添加到DataSet中.
 
         :param str field_name: 新加入的field的名称
@@ -470,9 +613,9 @@ class DataSet(object):
             raise RuntimeError(f"The field to add must have the same size as dataset. "
                                f"Dataset size {len(self)} != field size {len(fieldarray)}")
         self.field_arrays[field_name] = fieldarray
-    
+
     def add_field(self, field_name, fields, padder=AutoPadder(), is_input=False, is_target=False, ignore_type=False):
-        """
+        r"""
         新增一个field
         
         :param str field_name: 新增的field的名称
@@ -482,16 +625,16 @@ class DataSet(object):
         :param bool is_target: 新加入的field是否是target
         :param bool ignore_type: 是否忽略对新加入的field的类型检查
         """
-        
+
         if len(self.field_arrays) != 0:
             if len(self) != len(fields):
                 raise RuntimeError(f"The field to add must have the same size as dataset. "
                                    f"Dataset size {len(self)} != field size {len(fields)}")
         self.field_arrays[field_name] = FieldArray(field_name, fields, is_target=is_target, is_input=is_input,
                                                    padder=padder, ignore_type=ignore_type)
-    
+
     def delete_instance(self, index):
-        """
+        r"""
         删除第index个instance
 
         :param int index: 需要删除的instance的index，序号从0开始。
@@ -505,9 +648,9 @@ class DataSet(object):
             for field in self.field_arrays.values():
                 field.pop(index)
         return self
-    
+
     def delete_field(self, field_name):
-        """
+        r"""
         删除名为field_name的field
 
         :param str field_name: 需要删除的field的名称.
@@ -516,7 +659,7 @@ class DataSet(object):
         return self
 
     def copy_field(self, field_name, new_field_name):
-        """
+        r"""
         深度copy名为field_name的field到new_field_name
 
         :param str field_name: 需要copy的field。
@@ -530,7 +673,7 @@ class DataSet(object):
         return self
 
     def has_field(self, field_name):
-        """
+        r"""
         判断DataSet中是否有名为field_name这个field
 
         :param str field_name: field的名称
@@ -539,9 +682,9 @@ class DataSet(object):
         if isinstance(field_name, str):
             return field_name in self.field_arrays
         return False
-    
+
     def get_field(self, field_name):
-        """
+        r"""
         获取field_name这个field
 
         :param str field_name: field的名称
@@ -550,47 +693,47 @@ class DataSet(object):
         if field_name not in self.field_arrays:
             raise KeyError("Field name {} not found in DataSet".format(field_name))
         return self.field_arrays[field_name]
-    
+
     def get_all_fields(self):
-        """
+        r"""
         返回一个dict，key为field_name, value为对应的 :class:`~fastNLP.FieldArray`
 
         :return dict: 返回如上所述的字典
         """
         return self.field_arrays
-    
+
     def get_field_names(self) -> list:
-        """
+        r"""
         返回一个list，包含所有 field 的名字
 
         :return list: 返回如上所述的列表
         """
         return sorted(self.field_arrays.keys())
-    
+
     def get_length(self):
-        """
+        r"""
         获取DataSet的元素数量
 
         :return: int: DataSet中Instance的个数。
         """
         return len(self)
-    
-    def rename_field(self, old_name, new_name):
-        """
+
+    def rename_field(self, field_name, new_field_name):
+        r"""
         将某个field重新命名.
 
-        :param str old_name: 原来的field名称。
-        :param str new_name: 修改为new_name。
+        :param str field_name: 原来的field名称。
+        :param str new_field_name: 修改为new_name。
         """
-        if old_name in self.field_arrays:
-            self.field_arrays[new_name] = self.field_arrays.pop(old_name)
-            self.field_arrays[new_name].name = new_name
+        if field_name in self.field_arrays:
+            self.field_arrays[new_field_name] = self.field_arrays.pop(field_name)
+            self.field_arrays[new_field_name].name = new_field_name
         else:
-            raise KeyError("DataSet has no field named {}.".format(old_name))
+            raise KeyError("DataSet has no field named {}.".format(field_name))
         return self
-    
+
     def set_target(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True):
-        """
+        r"""
         将field_names的field设置为target
 
         Example::
@@ -615,9 +758,9 @@ class DataSet(object):
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
         return self
-    
+
     def set_input(self, *field_names, flag=True, use_1st_ins_infer_dim_type=True):
-        """
+        r"""
         将field_names的field设置为input::
 
             dataset.set_input('words', 'seq_len')   # 将words和seq_len这两个field的input属性设置为True
@@ -639,11 +782,12 @@ class DataSet(object):
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
         return self
-    
+
     def set_ignore_type(self, *field_names, flag=True):
-        """
+        r"""
         将field设置为忽略类型状态。当某个field被设置了ignore_type, 则在被设置为target或者input时将不进行类型检查，
-        默认情况下也不进行pad。
+        默认情况下也不进行pad。如果仍需要pad该field，可通过自定义Padder实现，若该field需要转换为tensor，需要在padder
+        中转换，但不需要在padder中移动到gpu。
 
         :param str field_names: field的名称
         :param bool flag: 将field_name的ignore_type状态设置为flag
@@ -656,9 +800,9 @@ class DataSet(object):
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
         return self
-    
+
     def set_padder(self, field_name, padder):
-        """
+        r"""
         为field_name设置padder::
 
             from fastNLP import EngChar2DPadder
@@ -672,9 +816,9 @@ class DataSet(object):
             raise KeyError("There is no field named {}.".format(field_name))
         self.field_arrays[field_name].set_padder(padder)
         return self
-    
+
     def set_pad_val(self, field_name, pad_val):
-        """
+        r"""
         为某个field设置对应的pad_val.
 
         :param str field_name: 修改该field的pad_val
@@ -684,25 +828,25 @@ class DataSet(object):
             raise KeyError("There is no field named {}.".format(field_name))
         self.field_arrays[field_name].set_pad_val(pad_val)
         return self
-    
+
     def get_input_name(self):
-        """
+        r"""
         返回所有is_input被设置为True的field名称
 
         :return list: 里面的元素为被设置为input的field名称
         """
         return [name for name, field in self.field_arrays.items() if field.is_input]
-    
+
     def get_target_name(self):
-        """
+        r"""
         返回所有is_target被设置为True的field名称
 
         :return list: 里面的元素为被设置为target的field名称
         """
         return [name for name, field in self.field_arrays.items() if field.is_target]
-    
+
     def apply_field(self, func, field_name, new_field_name=None, **kwargs):
-        """
+        r"""
         将DataSet中的每个instance中的名为 `field_name` 的field传给func，并获取它的返回值。
 
         :param callable func: input是instance中名为 `field_name` 的field的内容。
@@ -717,30 +861,41 @@ class DataSet(object):
 
             3. ignore_type: bool, 如果为True则将名为 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
         :return List[Any]:   里面的元素为func的返回值，所以list长度为DataSet的长度
-
         """
         assert len(self) != 0, "Null DataSet cannot use apply_field()."
-        if field_name not in self:
+        if not self.has_field(field_name=field_name):
             raise KeyError("DataSet has no field named `{}`.".format(field_name))
-        results = []
-        idx = -1
-        try:
-            for idx, ins in enumerate(self._inner_iter()):
-                results.append(func(ins[field_name]))
-        except Exception as e:
-            if idx != -1:
-                logger.error("Exception happens at the `{}`th(from 1) instance.".format(idx+1))
-            raise e
-        if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
-            raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
+        return self.apply(func, new_field_name, _apply_field=field_name, **kwargs)
+
+    def apply_field_more(self, func, field_name, modify_fields=True, **kwargs):
+        r"""
+        将 ``DataSet`` 中的每个 ``Instance`` 中的名为 `field_name` 的field 传给 func，并获取它的返回值。
+        func 可以返回一个或多个 field 上的结果。
         
-        if new_field_name is not None:
-            self._add_apply_field(results, new_field_name, kwargs)
-        
-        return results
+        .. note::
+            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :meth:`~fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
+            ``apply`` 区别的介绍。
+            
+        :param callable func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
+        :param str field_name: 传入func的是哪个field。
+        :param bool modify_fields: 是否用结果修改 `DataSet` 中的 `Field`， 默认为 True
+        :param optional kwargs: 支持输入is_input,is_target,ignore_type
+
+            1. is_input: bool, 如果为True则将被修改的field设置为input
+
+            2. is_target: bool, 如果为True则将被修改的field设置为target
+
+            3. ignore_type: bool, 如果为True则将被修改的field的ignore_type设置为true, 忽略其类型
+
+        :return Dict[str:Field]: 返回一个字典
+        """
+        assert len(self) != 0, "Null DataSet cannot use apply_field()."
+        if not self.has_field(field_name=field_name):
+            raise KeyError("DataSet has no field named `{}`.".format(field_name))
+        return self.apply_more(func, modify_fields, _apply_field=field_name, **kwargs)
     
     def _add_apply_field(self, results, new_field_name, kwargs):
-        """
+        r"""
         将results作为加入到新的field中，field名称为new_field_name
 
         :param List[str] results: 一般是apply*()之后的结果
@@ -770,13 +925,74 @@ class DataSet(object):
             self.add_field(field_name=new_field_name, fields=results, is_input=extra_param.get("is_input", None),
                            is_target=extra_param.get("is_target", None),
                            ignore_type=extra_param.get("ignore_type", False))
-    
-    def apply(self, func, new_field_name=None, **kwargs):
+
+    def apply_more(self, func, modify_fields=True, **kwargs):
+        r"""
+        将 ``DataSet`` 中每个 ``Instance`` 传入到func中，并获取它的返回值。func可以返回一个或多个 field 上的结果。
+        
+        .. note::
+            ``apply_more`` 与 ``apply`` 的区别：
+            
+            1. ``apply_more`` 可以返回多个 field 的结果， ``apply`` 只可以返回一个field 的结果；
+            
+            2. ``apply_more`` 的返回值是一个字典，每个 key-value 对中的 key 表示 field 的名字，value 表示计算结果；
+            
+            3. ``apply_more`` 默认修改 ``DataSet`` 中的 field ，``apply`` 默认不修改。
+
+        :param callable func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
+        :param bool modify_fields: 是否用结果修改 ``DataSet`` 中的 ``Field`` ， 默认为 True
+        :param optional kwargs: 支持输入is_input,is_target,ignore_type
+
+            1. is_input: bool, 如果为True则将被修改的的field设置为input
+
+            2. is_target: bool, 如果为True则将被修改的的field设置为target
+
+            3. ignore_type: bool, 如果为True则将被修改的的field的ignore_type设置为true, 忽略其类型
+
+        :return Dict[str:Field]: 返回一个字典
         """
+        # 返回 dict , 检查是否一直相同
+        assert callable(func), "The func you provide is not callable."
+        assert len(self) != 0, "Null DataSet cannot use apply()."
+        idx = -1
+        try:
+            results = {}
+            for idx, ins in enumerate(self._inner_iter()):
+                if "_apply_field" in kwargs:
+                    res = func(ins[kwargs["_apply_field"]])
+                else:
+                    res = func(ins)
+                if not isinstance(res, dict):
+                    raise ApplyResultException("The result of func is not a dict", idx)
+                if idx == 0:
+                    for key, value in res.items():
+                        results[key] = [value]
+                else:
+                    for key, value in res.items():
+                        if key not in results:
+                            raise ApplyResultException("apply results have different fields", idx)
+                        results[key].append(value)
+                    if len(res) != len(results):
+                        raise ApplyResultException("apply results have different fields", idx)
+        except Exception as e:
+            if idx != -1:
+                if isinstance(e, ApplyResultException):
+                    logger.error(e.msg)
+                logger.error("Exception happens at the `{}`th instance.".format(idx))
+            raise e
+    
+        if modify_fields is True:
+            for field, result in results.items():
+                self._add_apply_field(result, field, kwargs)
+    
+        return results
+
+    def apply(self, func, new_field_name=None, **kwargs):
+        r"""
         将DataSet中每个instance传入到func中，并获取它的返回值.
 
-        :param callable func: 参数是DataSet中的Instance
-        :param None,str new_field_name: 将func返回的内容放入到new_field_name这个field中，如果名称与已有的field相同，则覆
+        :param callable func: 参数是 ``DataSet`` 中的 ``Instance``
+        :param None,str new_field_name: 将func返回的内容放入到 `new_field_name` 这个field中，如果名称与已有的field相同，则覆
             盖之前的field。如果为None则不创建新的field。
         :param optional kwargs: 支持输入is_input,is_target,ignore_type
 
@@ -788,31 +1004,32 @@ class DataSet(object):
             
         :return List[Any]: 里面的元素为func的返回值，所以list长度为DataSet的长度
         """
+        assert callable(func), "The func you provide is not callable."
         assert len(self) != 0, "Null DataSet cannot use apply()."
         idx = -1
         try:
             results = []
             for idx, ins in enumerate(self._inner_iter()):
-                results.append(func(ins))
+                if "_apply_field" in kwargs:
+                    results.append(func(ins[kwargs["_apply_field"]]))
+                else:
+                    results.append(func(ins))
         except BaseException as e:
             if idx != -1:
                 logger.error("Exception happens at the `{}`th instance.".format(idx))
             raise e
 
-        # results = [func(ins) for ins in self._inner_iter()]
-        if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
-            raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
-        
         if new_field_name is not None:
             self._add_apply_field(results, new_field_name, kwargs)
-        
+
         return results
 
-    def add_seq_len(self, field_name:str, new_field_name=Const.INPUT_LEN):
-        """
-        将使用len()直接对field_name中每个元素作用，将其结果作为seqence length, 并放入seq_len这个field。
+    def add_seq_len(self, field_name: str, new_field_name=Const.INPUT_LEN):
+        r"""
+        将使用len()直接对field_name中每个元素作用，将其结果作为sequence length, 并放入seq_len这个field。
 
         :param field_name: str.
+        :param new_field_name: str. 新的field_name
         :return:
         """
         if self.has_field(field_name=field_name):
@@ -822,12 +1039,11 @@ class DataSet(object):
         return self
 
     def drop(self, func, inplace=True):
-        """
-        func接受一个Instance，返回bool值。返回值为True时，该Instance会被移除或者加入到返回的DataSet中。
+        r"""
+        func接受一个Instance，返回bool值。返回值为True时，该Instance会被移除或者不会包含在返回的DataSet中。
 
         :param callable func: 接受一个Instance作为参数，返回bool值。为True时删除该instance
-        :param bool inplace: 是否在当前DataSet中直接删除instance。如果为False，被删除的Instance的组成的新DataSet将作为
-            :返回值
+        :param bool inplace: 是否在当前DataSet中直接删除instance；如果为False，将返回一个新的DataSet。
 
         :return: DataSet
         """
@@ -845,21 +1061,26 @@ class DataSet(object):
                 return dataset
             else:
                 return DataSet()
-    
+
     def split(self, ratio, shuffle=True):
-        """
+        r"""
         将DataSet按照ratio的比例拆分，返回两个DataSet
 
         :param float ratio: 0<ratio<1, 返回的第一个DataSet拥有 `(1-ratio)` 这么多数据，第二个DataSet拥有`ratio`这么多数据
         :param bool shuffle: 在split前是否shuffle一下
         :return: [ :class:`~fastNLP.读取后的DataSet` , :class:`~fastNLP.读取后的DataSet` ]
         """
+        assert len(self) > 1, f'DataSet with {len(self)} instance cannot be split.'
         assert isinstance(ratio, float)
         assert 0 < ratio < 1
         all_indices = [_ for _ in range(len(self))]
         if shuffle:
             np.random.shuffle(all_indices)
         split = int(ratio * len(self))
+        if split == 0:
+            error_msg = f'Dev DataSet has {split} instance after split.'
+            logger.error(error_msg)
+            raise IndexError(error_msg)
         dev_indices = all_indices[:split]
         train_indices = all_indices[split:]
         dev_set = DataSet()
@@ -871,18 +1092,20 @@ class DataSet(object):
         for field_name in self.field_arrays:
             train_set.field_arrays[field_name].to(self.field_arrays[field_name])
             dev_set.field_arrays[field_name].to(self.field_arrays[field_name])
-        
+
+        train_set.collater.copy_from(self.collater)
+        dev_set.collater.copy_from(self.collater)
         return train_set, dev_set
-    
+
     def save(self, path):
-        """
+        r"""
         保存DataSet.
 
         :param str path: 将DataSet存在哪个路径
         """
         with open(path, 'wb') as f:
             pickle.dump(self, f)
-    
+
     @staticmethod
     def load(path):
         r"""
@@ -895,3 +1118,31 @@ class DataSet(object):
             d = pickle.load(f)
             assert isinstance(d, DataSet), "The object is not DataSet, but {}.".format(type(d))
         return d
+
+    def add_collate_fn(self, fn, name=None):
+        r"""
+        添加 CollateFn，collate_fn允许在生成的batch的过程中动态生成一些数据(在DataSetIter作为迭代器的情况下有效，默认情况下就是用的
+        这个)。支持依次添加多个collate_fn, 如果相同的key，后面的collate_fn的结果覆盖前面的collate_fn的结果。
+
+        :param callable fn: 传入一个可调用的function, 该function可接受的参数为List[(ind1, instance1), (ind2, instance2)]
+            (某个batch被选中的所有的indice以及instance),其中ind1/ind2是该instance在dataset中的index，instance1/instance2是
+            这次batch取出来的数据，包含了所有的field。返回值需要为两个dict，第一个dict的值将被认为是input，第二个dict的值被认为是
+            target，返回的值至多允许一个空dict。若返回的dict中包含了被设置为input或target的field的名称，将覆盖dataset中的field。
+            fastNLP不会将collate_fn的返回结果pad和转换为tensor，需要在collate_fn中完成pad和转换为tensor（不需要将tensor移动到
+            gpu中，fastNLP会自动将其移动到特定gpu）。不要修改传入collate_fn中的数据，否则可能导致未知问题。
+        :param str,int name: collate_fn的名称，如果不传入，默认使用自增长的数字作为key。相同的name会覆盖之前的collate_fn。
+        """
+        assert callable(fn), "You must pass in a callable object."
+        self.collater.add_fn(fn, name=name)
+
+    def delete_collate_fn(self, name=None):
+        r"""
+        删除某个collate_fn
+
+        :param str,int name: 如果为None，则删除最近加入的collate_fn
+        :return:
+        """
+        self.collater.delete_fn(name)
+
+    def _collate_batch(self, ins_list):
+        return self.collater.collate_batch(ins_list)

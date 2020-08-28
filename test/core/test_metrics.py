@@ -1,16 +1,23 @@
 import unittest
+from collections import Counter
 
 import numpy as np
 import torch
-
 from fastNLP import AccuracyMetric
-from fastNLP.core.metrics import _pred_topk, _accuracy_topk
+from fastNLP.core.metrics import (ClassifyFPreRecMetric, CMRC2018Metric,
+                                  ConfusionMatrixMetric, SpanFPreRecMetric,
+                                  _accuracy_topk, _pred_topk)
 from fastNLP.core.vocabulary import Vocabulary
-from collections import Counter
-from fastNLP.core.metrics import SpanFPreRecMetric, ExtractiveQAMetric
+from sklearn import metrics as m
 
 
 def _generate_tags(encoding_type, number_labels=4):
+    """
+
+    :param encoding_type: 例如BIOES, BMES, BIO等
+    :param number_labels: 多少个label，大于1
+    :return:
+    """
     vocab = {}
     for i in range(number_labels):
         label = str(i)
@@ -37,6 +44,122 @@ def _convert_res_to_fastnlp_res(metric_result):
                 key = '{}-{}'.format(key[:3], label)
         allen_result[key] = round(value, 6)
     return allen_result
+
+
+
+class TestConfusionMatrixMetric(unittest.TestCase):
+    def test_ConfusionMatrixMetric1(self):
+        pred_dict = {"pred": torch.zeros(4,3)}
+        target_dict = {'target': torch.zeros(4)}
+        metric = ConfusionMatrixMetric()
+
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        print(metric.get_metric())
+
+    def test_ConfusionMatrixMetric2(self):
+        # (2) with corrupted size
+
+        with self.assertRaises(Exception):
+            pred_dict = {"pred": torch.zeros(4, 3, 2)}
+            target_dict = {'target': torch.zeros(4)}
+            metric = ConfusionMatrixMetric()
+
+            metric(pred_dict=pred_dict, target_dict=target_dict, )
+            print(metric.get_metric())
+
+    def test_ConfusionMatrixMetric3(self):
+    # (3) the second batch is corrupted size
+        with self.assertRaises(Exception):
+            metric = ConfusionMatrixMetric()
+            pred_dict = {"pred": torch.zeros(4, 3, 2)}
+            target_dict = {'target': torch.zeros(4, 3)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+            
+            pred_dict = {"pred": torch.zeros(4, 3, 2)}
+            target_dict = {'target': torch.zeros(4)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+            
+            print(metric.get_metric())
+
+    def test_ConfusionMatrixMetric4(self):
+    # (4) check reset
+        metric = ConfusionMatrixMetric()
+        pred_dict = {"pred": torch.randn(4, 3, 2)}
+        target_dict = {'target': torch.ones(4, 3)}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        res = metric.get_metric()
+        self.assertTrue(isinstance(res, dict))
+        print(res)
+
+    def test_ConfusionMatrixMetric5(self):
+    # (5) check numpy array is not acceptable
+
+        with self.assertRaises(Exception):
+            metric = ConfusionMatrixMetric()
+            pred_dict = {"pred": np.zeros((4, 3, 2))}
+            target_dict = {'target': np.zeros((4, 3))}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+
+    def test_ConfusionMatrixMetric6(self):
+    # (6) check map, match
+        metric = ConfusionMatrixMetric(pred='predictions', target='targets')
+        pred_dict = {"predictions": torch.randn(4, 3, 2)}
+        target_dict = {'targets': torch.zeros(4, 3)}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        res = metric.get_metric()
+        print(res)
+
+    def test_ConfusionMatrixMetric7(self):
+        # (7) check map, include unused
+        metric = ConfusionMatrixMetric(pred='prediction', target='targets')
+        pred_dict = {"prediction": torch.zeros(4, 3, 2), 'unused': 1}
+        target_dict = {'targets': torch.zeros(4, 3)}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+
+    def test_ConfusionMatrixMetric8(self):
+        # (8) check _fast_metric
+        with self.assertRaises(Exception):
+            metric = ConfusionMatrixMetric()
+            pred_dict = {"predictions": torch.zeros(4, 3, 2), "seq_len": torch.ones(3) * 3}
+            target_dict = {'targets': torch.zeros(4, 3)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+            print(metric.get_metric())
+
+
+    def test_duplicate(self):
+        # 0.4.1的潜在bug，不能出现形参重复的情况
+        metric = ConfusionMatrixMetric(pred='predictions', target='targets')
+        pred_dict = {"predictions": torch.zeros(4, 3, 2), "seq_len": torch.ones(4) * 3, 'pred':0}
+        target_dict = {'targets':torch.zeros(4, 3), 'target': 0}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        print(metric.get_metric())
+
+
+    def test_seq_len(self):
+        N = 256
+        seq_len = torch.zeros(N).long()
+        seq_len[0] = 2
+        pred = {'pred': torch.ones(N, 2)}
+        target = {'target': torch.ones(N, 2), 'seq_len': seq_len}
+        metric = ConfusionMatrixMetric()
+        metric(pred_dict=pred, target_dict=target)
+        metric.get_metric(reset=False)
+        seq_len[1:] = 1
+        metric(pred_dict=pred, target_dict=target)
+        metric.get_metric()
+
+    def test_vocab(self):
+        vocab = Vocabulary()
+        word_list = "this is a word list".split()
+        vocab.update(word_list)
+        
+        pred_dict = {"pred": torch.zeros(4,3)}
+        target_dict = {'target': torch.zeros(4)}
+        metric = ConfusionMatrixMetric(vocab=vocab)
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        print(metric.get_metric())
+
+
 
 class TestAccuracyMetric(unittest.TestCase):
     def test_AccuracyMetric1(self):
@@ -127,7 +250,7 @@ class TestAccuracyMetric(unittest.TestCase):
     def test_AccuaryMetric8(self):
         try:
             metric = AccuracyMetric(pred='predictions', target='targets')
-            pred_dict = {"prediction": torch.zeros(4, 3, 2)}
+            pred_dict = {"predictions": torch.zeros(4, 3, 2)}
             target_dict = {'targets': torch.zeros(4, 3)}
             metric(pred_dict=pred_dict, target_dict=target_dict, )
             self.assertDictEqual(metric.get_metric(), {'acc': 1})
@@ -184,7 +307,7 @@ class TestAccuracyMetric(unittest.TestCase):
         self.assertDictEqual(metric.get_metric(), {'acc': 1.})
 
 
-class SpanF1PreRecMetric(unittest.TestCase):
+class SpanFPreRecMetricTest(unittest.TestCase):
     def test_case1(self):
         from fastNLP.core.metrics import _bmes_tag_to_spans
         from fastNLP.core.metrics import _bio_tag_to_spans
@@ -338,6 +461,98 @@ class SpanF1PreRecMetric(unittest.TestCase):
         for key, value in expected_metric.items():
             self.assertAlmostEqual(value, metric_value[key], places=5)
 
+    def test_auto_encoding_type_infer(self):
+        #  检查是否可以自动check encode的类型
+        vocabs = {}
+        import random
+        for encoding_type in ['bio', 'bioes', 'bmeso']:
+            vocab = Vocabulary(unknown=None, padding=None)
+            for i in range(random.randint(10, 100)):
+                label = str(random.randint(1, 10))
+                for tag in encoding_type:
+                    if tag!='o':
+                        vocab.add_word(f'{tag}-{label}')
+                    else:
+                        vocab.add_word('o')
+            vocabs[encoding_type] = vocab
+        for e in ['bio', 'bioes', 'bmeso']:
+            with self.subTest(e=e):
+                metric = SpanFPreRecMetric(tag_vocab=vocabs[e])
+                assert metric.encoding_type == e
+
+        bmes_vocab = _generate_tags('bmes')
+        vocab = Vocabulary()
+        for tag, index in bmes_vocab.items():
+            vocab.add_word(tag)
+        metric = SpanFPreRecMetric(vocab)
+        assert metric.encoding_type == 'bmes'
+
+        # 一些无法check的情况
+        vocab = Vocabulary()
+        for i in range(10):
+            vocab.add_word(str(i))
+        with self.assertRaises(Exception):
+            metric = SpanFPreRecMetric(vocab)
+
+    def test_encoding_type(self):
+        # 检查传入的tag_vocab与encoding_type不符合时，是否会报错
+        vocabs = {}
+        import random
+        from itertools import product
+        for encoding_type in ['bio', 'bioes', 'bmeso']:
+            vocab = Vocabulary(unknown=None, padding=None)
+            for i in range(random.randint(10, 100)):
+                label = str(random.randint(1, 10))
+                for tag in encoding_type:
+                    if tag!='o':
+                        vocab.add_word(f'{tag}-{label}')
+                    else:
+                        vocab.add_word('o')
+            vocabs[encoding_type] = vocab
+        for e1, e2 in product(['bio', 'bioes', 'bmeso'], ['bio', 'bioes', 'bmeso']):
+            with self.subTest(e1=e1, e2=e2):
+                if e1==e2:
+                    metric = SpanFPreRecMetric(vocabs[e1], encoding_type=e2)
+                else:
+                    s2 = set(e2)
+                    s2.update(set(e1))
+                    if s2==set(e2):
+                        continue
+                    with self.assertRaises(AssertionError):
+                        metric = SpanFPreRecMetric(vocabs[e1], encoding_type=e2)
+        for encoding_type in ['bio', 'bioes', 'bmeso']:
+            with self.assertRaises(AssertionError):
+                metric = SpanFPreRecMetric(vocabs[encoding_type], encoding_type='bmes')
+
+        with self.assertWarns(Warning):
+            vocab = Vocabulary(unknown=None, padding=None).add_word_lst(list('bmes'))
+            metric = SpanFPreRecMetric(vocab, encoding_type='bmeso')
+            vocab = Vocabulary().add_word_lst(list('bmes'))
+            metric = SpanFPreRecMetric(vocab, encoding_type='bmeso')
+
+
+class TestCMRC2018Metric(unittest.TestCase):
+    def test_case1(self):
+        # 测试能否正确计算
+        import torch
+        metric = CMRC2018Metric()
+
+        raw_chars = [list("abcsdef"), list("123456s789")]
+        context_len = torch.LongTensor([3, 6])
+        answers = [["abc", "abc", "abc"], ["12", "12", "12"]]
+        pred_start = torch.randn(2, max(map(len, raw_chars)))
+        pred_end = torch.randn(2, max(map(len, raw_chars)))
+        pred_start[0, 0] = 1000  # 正好是abc
+        pred_end[0, 2] = 1000
+        pred_start[1, 1] = 1000  # 取出234
+        pred_end[1, 3] = 1000
+
+        metric.evaluate(answers=answers, raw_chars=raw_chars, pred_start=pred_start,
+                        pred_end=pred_end, context_len=context_len)
+
+        eval_res = metric.get_metric()
+        self.assertDictEqual(eval_res, {'f1': 70.0, 'em': 50.0})
+
 
 class TestUsefulFunctions(unittest.TestCase):
     # 测试metrics.py中一些看上去挺有用的函数
@@ -349,44 +564,45 @@ class TestUsefulFunctions(unittest.TestCase):
         # 跑通即可
 
 
-class TestExtractiveQAMetric(unittest.TestCase):
 
-    def test_cast_1(self):
-        qa_prediction = torch.FloatTensor([[[-0.4424, -0.4579, -0.7376, 1.8129, 0.1316, 1.6566, -1.2169,
-                                            -0.3782, 0.8240],
-                                           [-1.2348, -0.1876, -0.1462, -0.4834, -0.6692, -0.9735, -1.1563,
-                                            -0.3562, -1.4116],
-                                           [-1.6550, -0.9555, 0.3782, -1.3160, -1.5835, -0.3443, -1.7858,
-                                            -2.0023, 0.0075],
-                                           [-0.3772, -0.5447, -1.5631, 1.1614, 1.4598, -1.2764, 0.5186,
-                                            0.3832, -0.1540],
-                                           [-0.1011, 0.0600, 1.1090, -0.3545, 0.1284, 1.1484, -1.0120,
-                                            -1.3508, -0.9513],
-                                           [1.8948, 0.8627, -2.1359, 1.3740, -0.7499, 1.5019, 0.6919,
-                                            -0.0842, -0.4294]],
+class TestClassfiyFPreRecMetric(unittest.TestCase):
+    def test_case_1(self):
 
-                                          [[-0.2802, 0.6941, -0.4788, -0.3845, 1.7752, 1.2950, -1.9490,
-                                            -1.4138, -0.8853],
-                                           [-1.3752, -0.5457, -0.5305, 0.4018, 0.2934, 0.7931, 2.3845,
-                                            -1.0726, 0.0364],
-                                           [0.3621, 0.2609, 0.1269, -0.5950, 0.7212, 0.5959, 1.6264,
-                                            -0.8836, -0.9320],
-                                           [0.2003, -1.0758, -1.1560, -0.6472, -1.7549, 0.1264, 0.6044,
-                                            -1.6857, 1.1571],
-                                           [1.4277, -0.4915, 0.4496, 2.2027, 0.0730, -3.1792, -0.5125,
-                                            3.5837, 1.0184],
-                                           [1.6495, 1.7145, -0.2143, -0.1230, -0.2205, 0.8250, 0.4943,
-                                            -0.9025, 0.0864]]])
-        qa_prediction = qa_prediction.permute(1, 2, 0)
-        pred1, pred2 = qa_prediction.split(1, dim=-1)
-        pred1 = pred1.squeeze(-1)
-        pred2 = pred2.squeeze(-1)
-        target1 = torch.LongTensor([3, 0, 2, 4, 4, 0])
-        target2 = torch.LongTensor([4, 1, 6, 8, 7, 1])
-        metric = ExtractiveQAMetric()
-        metric.evaluate(pred1, pred2, target1, target2)
-        result = metric.get_metric()
-        truth = {'EM': 62.5, 'f_1': 72.5, 'noAns-f_1': 50.0, 'noAns-EM': 50.0, 'hasAns-f_1': 95.0, 'hasAns-EM': 75.0}
-        for k, v in truth.items():
-            self.assertTrue(k in result)
-            self.assertEqual(v, result[k])
+        pred= torch.randn(32,5)
+        arg_max_pred = torch.argmax(pred,dim=-1)
+        target=np.random.randint(0, high=5, size=(32,1)) 
+        target = torch.from_numpy(target)
+        
+        metric = ClassifyFPreRecMetric(f_type='macro')
+        metric.evaluate(pred, target)
+        result_dict = metric.get_metric() 
+        f1_score = m.f1_score(target.tolist(), arg_max_pred.tolist(), average="macro")
+        recall = m.recall_score(target.tolist(), arg_max_pred.tolist(), average="macro")
+        pre = m.precision_score(target.tolist(), arg_max_pred.tolist(), average="macro")
+
+        ground_truth = {'f': f1_score, 'pre': pre, 'rec': recall}
+        for keys in ['f', 'pre', 'rec']:
+            self.assertAlmostEqual(result_dict[keys], ground_truth[keys], delta=0.0001)
+
+        metric = ClassifyFPreRecMetric(f_type='micro')
+        metric.evaluate(pred, target)
+        result_dict = metric.get_metric() 
+        f1_score = m.f1_score(target.tolist(), arg_max_pred.tolist(), average="micro")
+        recall = m.recall_score(target.tolist(), arg_max_pred.tolist(), average="micro")
+        pre = m.precision_score(target.tolist(), arg_max_pred.tolist(), average="micro")
+
+        ground_truth = {'f': f1_score, 'pre': pre, 'rec': recall}
+        for keys in ['f', 'pre', 'rec']:
+            self.assertAlmostEqual(result_dict[keys], ground_truth[keys], delta=0.0001)
+
+        metric = ClassifyFPreRecMetric(only_gross=False, f_type='macro')
+        metric.evaluate(pred, target)
+        result_dict = metric.get_metric(reset=True)
+        ground_truth = m.classification_report(target.tolist(), arg_max_pred.tolist(),output_dict=True)
+        for keys in result_dict.keys():
+            if keys=="f" or "pre" or "rec":
+                continue
+            gl=str(keys[-1])
+            tmp_d={"p":"precision","r":"recall","f":"f1-score"}
+            gk=tmp_d[keys[0]]
+            self.assertAlmostEqual(result_dict[keys], ground_truth[gl][gk], delta=0.0001)

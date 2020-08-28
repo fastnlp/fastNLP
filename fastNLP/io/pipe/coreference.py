@@ -1,50 +1,118 @@
-__all__ = [
-    "CoreferencePipe"
+r"""undocumented"""
 
+__all__ = [
+    "CoReferencePipe"
 ]
 
-from .pipe import Pipe
-from ..data_bundle import DataBundle
-from ..loader.coreference import CRLoader
-from fastNLP.core.vocabulary import Vocabulary
-import numpy as np
 import collections
 
+import numpy as np
 
-class CoreferencePipe(Pipe):
+from fastNLP.core.vocabulary import Vocabulary
+from .pipe import Pipe
+from ..data_bundle import DataBundle
+from ..loader.coreference import CoReferenceLoader
+from ...core.const import Const
 
-    def __init__(self,config):
+
+class CoReferencePipe(Pipe):
+    r"""
+    对Coreference resolution问题进行处理，得到文章种类/说话者/字符级信息/序列长度。
+
+    处理完成后数据包含文章类别、speaker信息、句子信息、句子对应的index、char、句子长度、target：
+
+        .. csv-table::
+           :header: "words1", "words2","words3","words4","chars","seq_len","target"
+
+           "bc", "[[0,0],[1,1]]","[['I','am'],[]]","[[1,2],[]]","[[[1],[2,3]],[]]","[2,3]","[[[2,3],[6,7]],[[10,12],[20,22]]]"
+           "[...]", "[...]","[...]","[...]","[...]","[...]","[...]"
+
+    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+
+        +-------------+-----------+--------+-------+---------+
+        | field_names | raw_chars | target | chars | seq_len |
+        +-------------+-----------+--------+-------+---------+
+        |   is_input  |   False   |  True  |  True |   True  |
+        |  is_target  |   False   |  True  | False |   True  |
+        | ignore_type |           | False  | False |  False  |
+        |  pad_value  |           |   0    |   0   |    0    |
+        +-------------+-----------+--------+-------+---------+
+
+    """
+
+    def __init__(self, config):
         super().__init__()
         self.config = config
 
     def process(self, data_bundle: DataBundle):
+        r"""
+        对load进来的数据进一步处理原始数据包含：raw_key,raw_speaker,raw_words,raw_clusters
+        
+        .. csv-table::
+           :header: "raw_key", "raw_speaker","raw_words","raw_clusters"
+
+           "bc/cctv/00/cctv_0000_0", "[[Speaker#1, Speaker#1],[]]","[['I','am'],[]]","[[[2,3],[6,7]],[[10,12],[20,22]]]"
+           "bc/cctv/00/cctv_0000_1", "[['Speaker#1', 'peaker#1'],[]]","[['He','is'],[]]","[[[2,3],[6,7]],[[10,12],[20,22]]]"
+           "[...]", "[...]","[...]","[...]"
+
+
+        :param data_bundle:
+        :return:
+        """
         genres = {g: i for i, g in enumerate(["bc", "bn", "mz", "nw", "pt", "tc", "wb"])}
-        vocab = Vocabulary().from_dataset(*data_bundle.datasets.values(), field_name='sentences')
+        vocab = Vocabulary().from_dataset(*data_bundle.datasets.values(), field_name= Const.RAW_WORDS(3))
         vocab.build_vocab()
         word2id = vocab.word2idx
-        char_dict = get_char_dict(self.config.char_path)
-        for name, ds in data_bundle.datasets.items():
-            ds.apply(lambda x: doc2numpy(x['sentences'], word2id, char_dict, max(self.config.filter),
-                                                    self.config.max_sentences, is_train=name == 'train')[0],
-                     new_field_name='doc_np')
-            ds.apply(lambda x: doc2numpy(x['sentences'], word2id, char_dict, max(self.config.filter),
-                                                    self.config.max_sentences, is_train=name == 'train')[1],
-                     new_field_name='char_index')
-            ds.apply(lambda x: doc2numpy(x['sentences'], word2id, char_dict, max(self.config.filter),
-                                                    self.config.max_sentences, is_train=name == 'train')[2],
-                     new_field_name='seq_len')
-            ds.apply(lambda x: speaker2numpy(x["speakers"], self.config.max_sentences, is_train=name == 'train'),
-                     new_field_name='speaker_ids_np')
-            ds.apply(lambda x: genres[x["doc_key"][:2]], new_field_name='genre')
+        data_bundle.set_vocab(vocab, Const.INPUTS(0))
+        if self.config.char_path:
+            char_dict = get_char_dict(self.config.char_path)
+        else:
+            char_set = set()
+            for i,w in enumerate(word2id):
+                if i < 2:
+                    continue
+                for c in w:
+                    char_set.add(c)
 
-            ds.set_ignore_type('clusters')
-            ds.set_padder('clusters', None)
-            ds.set_input("sentences", "doc_np", "speaker_ids_np", "genre", "char_index", "seq_len")
-            ds.set_target("clusters")
+            char_dict = collections.defaultdict(int)
+            char_dict.update({c: i for i, c in enumerate(char_set)})
+
+        for name, ds in data_bundle.datasets.items():
+            # genre
+            ds.apply(lambda x: genres[x[Const.RAW_WORDS(0)][:2]], new_field_name=Const.INPUTS(0))
+
+            # speaker_ids_np
+            ds.apply(lambda x: speaker2numpy(x[Const.RAW_WORDS(1)], self.config.max_sentences, is_train=name == 'train'),
+                     new_field_name=Const.INPUTS(1))
+
+            # sentences
+            ds.rename_field(Const.RAW_WORDS(3),Const.INPUTS(2))
+
+            # doc_np
+            ds.apply(lambda x: doc2numpy(x[Const.INPUTS(2)], word2id, char_dict, max(self.config.filter),
+                                                    self.config.max_sentences, is_train=name == 'train')[0],
+                     new_field_name=Const.INPUTS(3))
+            # char_index
+            ds.apply(lambda x: doc2numpy(x[Const.INPUTS(2)], word2id, char_dict, max(self.config.filter),
+                                                    self.config.max_sentences, is_train=name == 'train')[1],
+                     new_field_name=Const.CHAR_INPUT)
+            # seq len
+            ds.apply(lambda x: doc2numpy(x[Const.INPUTS(2)], word2id, char_dict, max(self.config.filter),
+                                                    self.config.max_sentences, is_train=name == 'train')[2],
+                     new_field_name=Const.INPUT_LEN)
+
+            # clusters
+            ds.rename_field(Const.RAW_WORDS(2), Const.TARGET)
+
+            ds.set_ignore_type(Const.TARGET)
+            ds.set_padder(Const.TARGET, None)
+            ds.set_input(Const.INPUTS(0), Const.INPUTS(1), Const.INPUTS(2), Const.INPUTS(3), Const.CHAR_INPUT, Const.INPUT_LEN)
+            ds.set_target(Const.TARGET)
+
         return data_bundle
 
     def process_from_file(self, paths):
-        bundle = CRLoader().load(paths)
+        bundle = CoReferenceLoader().load(paths)
         return self.process(bundle)
 
 

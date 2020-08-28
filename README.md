@@ -6,17 +6,16 @@
 ![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)
 [![Documentation Status](https://readthedocs.org/projects/fastnlp/badge/?version=latest)](http://fastnlp.readthedocs.io/?badge=latest)
 
-fastNLP 是一款轻量级的 NLP 工具包。你既可以使用它快速地完成一个序列标注（[NER](reproduction/seqence_labelling/ner)、POS-Tagging等）、中文分词、[文本分类](reproduction/text_classification)、[Matching](reproduction/matching)、[指代消解](reproduction/coreference_resolution)、[摘要](reproduction/Summarization)等任务； 也可以使用它快速构建许多复杂的网络模型，进行科研。它具有如下的特性：
+fastNLP是一款轻量级的自然语言处理（NLP）工具包，目标是快速实现NLP任务以及构建复杂模型。
 
-- 统一的Tabular式数据容器，让数据预处理过程简洁明了。内置多种数据集的Loader和Pipe，省去预处理代码;
-- 多种训练、测试组件，例如训练器Trainer；测试器Tester；以及各种评测metrics等等;
-- 各种方便的NLP工具，例如预处理embedding加载（包括ELMo和BERT）; 中间数据cache等;
-- 部分[数据集与预训练模型](https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0)的自动下载
-- 详尽的中文[文档](https://fastnlp.readthedocs.io/)、[教程](https://fastnlp.readthedocs.io/zh/latest/user/tutorials.html)以供查阅;
-- 提供诸多高级模块，例如Variational LSTM, Transformer, CRF等;
-- 在序列标注、中文分词、文本分类、Matching、指代消解、摘要等任务上封装了各种模型可供直接使用，详细内容见 [reproduction](reproduction) 部分;
-- 便捷且具有扩展性的训练器; 提供多种内置callback函数，方便实验记录、异常捕获等。
+fastNLP具有如下的特性：
 
+- 统一的Tabular式数据容器，简化数据预处理过程；
+- 内置多种数据集的Loader和Pipe，省去预处理代码;
+- 各种方便的NLP工具，例如Embedding加载（包括ELMo和BERT）、中间数据cache等;
+- 部分[数据集与预训练模型](https://docs.qq.com/sheet/DVnpkTnF6VW9UeXdh?c=A1A0A0)的自动下载；
+- 提供多种神经网络组件以及复现模型（涵盖中文分词、命名实体识别、句法分析、文本分类、文本匹配、指代消解、摘要等任务）;
+- Trainer提供多种内置Callback函数，方便实验记录、异常捕获等。
 
 ## 安装指南
 
@@ -28,6 +27,7 @@ fastNLP 依赖以下包:
 + nltk>=3.4.1
 + requests
 + spacy
++ prettytable>=0.7.2
 
 其中torch的安装可能与操作系统及 CUDA 的版本相关，请参见 [PyTorch 官网](https://pytorch.org/) 。 
 在依赖包安装完成后，您可以在命令行执行如下指令完成安装
@@ -37,24 +37,32 @@ pip install fastNLP
 python -m spacy download en
 ```
 
-目前使用pypi安装fastNLP的版本是0.4.1，有较多功能仍未更新，最新内容以master分支为准。
-fastNLP0.5.0版本将在近期推出，请密切关注。
-
 
 ## fastNLP教程
+中文[文档](https://fastnlp.readthedocs.io/)、[教程](https://fastnlp.readthedocs.io/zh/latest/user/tutorials.html)
+
+### 快速入门
 
 - [0. 快速入门](https://fastnlp.readthedocs.io/zh/latest/user/quickstart.html)
-- [1. 使用DataSet预处理文本](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_1_data_preprocess.html)
-- [2. 使用Loader和Pipe加载并处理数据集](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_2_load_dataset.html)
-- [3. 使用Embedding模块将文本转成向量](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_3_embedding.html)
-- [4. 动手实现一个文本分类器I-使用Trainer和Tester快速训练和测试](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_4_loss_optimizer.html)
-- [5. 动手实现一个文本分类器II-使用DataSetIter实现自定义训练过程](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_5_datasetiter.html)
-- [6. 快速实现序列标注模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_6_seq_labeling.html)
-- [7. 使用Modules和Models快速搭建自定义模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_7_modules_models.html)
-- [8. 使用Metric快速评测你的模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_8_metrics.html)
-- [9. 使用Callback自定义你的训练过程](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_9_callback.html)
-- [10. 使用fitlog 辅助 fastNLP 进行科研](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_10_fitlog.html)
 
+### 详细使用教程
+
+- [1. 使用DataSet预处理文本](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_1_data_preprocess.html)
+- [2. 使用Vocabulary转换文本与index](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_2_vocabulary.html)
+- [3. 使用Embedding模块将文本转成向量](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_3_embedding.html)
+- [4. 使用Loader和Pipe加载并处理数据集](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_4_load_dataset.html)
+- [5. 动手实现一个文本分类器I-使用Trainer和Tester快速训练和测试](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_5_loss_optimizer.html)
+- [6. 动手实现一个文本分类器II-使用DataSetIter实现自定义训练过程](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_6_datasetiter.html)
+- [7. 使用Metric快速评测你的模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_7_metrics.html)
+- [8. 使用Modules和Models快速搭建自定义模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_8_modules_models.html)
+- [9. 快速实现序列标注模型](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_9_seq_labeling.html)
+- [10. 使用Callback自定义你的训练过程](https://fastnlp.readthedocs.io/zh/latest/tutorials/tutorial_10_callback.html)
+
+### 扩展教程
+
+- [Extend-1. BertEmbedding的各种用法](https://fastnlp.readthedocs.io/zh/latest/tutorials/extend_1_bert_embedding.html)
+- [Extend-2. 分布式训练简介](https://fastnlp.readthedocs.io/zh/latest/tutorials/extend_2_dist.html)
+- [Extend-3. 使用fitlog 辅助 fastNLP 进行科研](https://fastnlp.readthedocs.io/zh/latest/tutorials/extend_3_fitlog.html)
 
 
 ## 内置组件
@@ -80,19 +88,21 @@ fastNLP 在 embeddings 模块中内置了几种不同的embedding：静态embedd
 <tr>
     <td> encoder </td>
     <td> 将输入编码为具有具有表示能力的向量 </td>
-    <td> embedding, RNN, CNN, transformer
+    <td> Embedding, RNN, CNN, Transformer, ...
 </tr>
 <tr>
     <td> decoder </td>
     <td> 将具有某种表示意义的向量解码为需要的输出形式 </td>
-    <td> MLP, CRF </td>
+    <td> MLP, CRF, ... </td>
 </tr>
 </table>
 
 
 ## 项目结构
 
-<img src="./docs/source/figures/workflow.png" width="60%" height="60%">
+<div align=center><img width="450" height="350" src="./docs/source/figures/workflow.png"/></div>
+
+
 
 fastNLP的大致工作流程如上图所示，而项目结构如下：
 
@@ -119,10 +129,9 @@ fastNLP的大致工作流程如上图所示，而项目结构如下：
 </tr>
 <tr>
     <td><b> fastNLP.io </b></td>
-    <td> 实现了读写功能，包括数据读入与预处理，模型读写，自动下载等 </td>
+    <td> 实现了读写功能，包括数据读入与预处理，模型读写，数据与模型自动下载等 </td>
 </tr>
 </table>
-
 
 <hr>
 

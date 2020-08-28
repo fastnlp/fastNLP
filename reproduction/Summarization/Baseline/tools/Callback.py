@@ -28,7 +28,7 @@ from fastNLP.core.const import Const
 from fastNLP.io.model_io import ModelSaver
 from fastNLP.core.callback import Callback, EarlyStopError
 
-from tools.logger import *
+from fastNLP.core._logger import logger
 
 class TrainCallback(Callback):
     def __init__(self, hps, patience=3, quit_all=True):
@@ -36,6 +36,9 @@ class TrainCallback(Callback):
         self._hps = hps
         self.patience = patience
         self.wait = 0
+        self.train_loss = 0.0
+        self.prev_train_avg_loss = 1000.0
+        self.train_dir = os.path.join(self._hps.save_root, "train")
 
         if type(quit_all) != bool:
             raise ValueError("In KeyBoardInterrupt, quit_all arguemnt must be a bool.")
@@ -43,20 +46,7 @@ class TrainCallback(Callback):
 
     def on_epoch_begin(self):
         self.epoch_start_time = time.time()
-
-    # def on_loss_begin(self, batch_y, predict_y):
-    #     """
-    #
-    #     :param batch_y: dict
-    #             input_len: [batch, N]
-    #     :param predict_y: dict
-    #             p_sent: [batch, N, 2]
-    #     :return:
-    #     """
-    #     input_len = batch_y[Const.INPUT_LEN]
-    #     batch_y[Const.TARGET] = batch_y[Const.TARGET] * ((1 - input_len) * -100)
-    #     # predict_y["p_sent"] = predict_y["p_sent"] * input_len.unsqueeze(-1)
-    #     # logger.debug(predict_y["p_sent"][0:5,:,:])
+        self.model.Train = True
 
     def on_backward_begin(self, loss):
         """
@@ -72,19 +62,34 @@ class TrainCallback(Callback):
                     logger.info(name)
                     logger.info(param.grad.data.sum())
             raise Exception("train Loss is not finite. Stopping.")
+        self.train_loss += loss.data
 
 
     def on_backward_end(self):
         if self._hps.grad_clip:
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self._hps.max_grad_norm)
+        torch.cuda.empty_cache()
 
     def on_epoch_end(self):
-        logger.info('   | end of epoch {:3d} | time: {:5.2f}s | '
-                    .format(self.epoch, (time.time() - self.epoch_start_time)))
+        epoch_avg_loss = self.train_loss / self.n_steps
+        logger.info('   | end of epoch {:3d} | time: {:5.2f}s | train loss: {:5.6f}'
+                    .format(self.epoch, (time.time() - self.epoch_start_time), epoch_avg_loss))
+        if self.prev_train_avg_loss < epoch_avg_loss:
+            save_file = os.path.join(self.train_dir, "earlystop.pkl")
+            self.save_model(save_file)
+        else:
+            self.prev_train_avg_loss = epoch_avg_loss
+            self.train_loss = 0.0
+
+        # save epoch
+        save_file = os.path.join(self.train_dir, "epoch_%d.pkl" % self.epoch)
+        self.save_model(save_file)
+
 
 
     def on_valid_begin(self):
         self.valid_start_time = time.time()
+        self.model.Train = False
 
     def on_valid_end(self, eval_result, metric_key, optimizer, is_better_eval):
         logger.info('   | end of valid {:3d} | time: {:5.2f}s | '
@@ -95,9 +100,7 @@ class TrainCallback(Callback):
             if self.wait == self.patience:
                 train_dir = os.path.join(self._hps.save_root, "train")
                 save_file = os.path.join(train_dir, "earlystop.pkl")
-                saver = ModelSaver(save_file)
-                saver.save_pytorch(self.model)
-                logger.info('[INFO] Saving early stop model to %s', save_file)
+                self.save_model(save_file)
                 raise EarlyStopError("Early stopping raised.")
             else:
                 self.wait += 1
@@ -111,14 +114,12 @@ class TrainCallback(Callback):
                 param_group['lr'] = new_lr
             logger.info("[INFO] The learning rate now is %f", new_lr)
 
+
     def on_exception(self, exception):
         if isinstance(exception, KeyboardInterrupt):
             logger.error("[Error] Caught keyboard interrupt on worker. Stopping supervisor...")
-            train_dir = os.path.join(self._hps.save_root, "train")
-            save_file = os.path.join(train_dir, "earlystop.pkl")
-            saver = ModelSaver(save_file)
-            saver.save_pytorch(self.model)
-            logger.info('[INFO] Saving early stop model to %s', save_file)
+            save_file = os.path.join(self.train_dir, "earlystop.pkl")
+            self.save_model(save_file)
 
             if self.quit_all is True:
                 sys.exit(0)  # 直接退出程序
@@ -126,6 +127,11 @@ class TrainCallback(Callback):
                 pass
         else:
             raise exception  # 抛出陌生Error
+
+    def save_model(self, save_file):
+        saver = ModelSaver(save_file)
+        saver.save_pytorch(self.model)
+        logger.info('[INFO] Saving model to %s', save_file)
 
 
 

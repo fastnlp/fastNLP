@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -13,7 +13,6 @@ import warnings
 
 import numpy as np
 
-from .data_bundle import BaseLoader
 from ..core.utils import Option
 from ..core.vocabulary import Vocabulary
 
@@ -32,10 +31,8 @@ class EmbeddingOption(Option):
         )
 
 
-class EmbedLoader(BaseLoader):
-    """
-    别名：:class:`fastNLP.io.EmbedLoader` :class:`fastNLP.io.embed_loader.EmbedLoader`
-
+class EmbedLoader:
+    r"""
     用于读取预训练的embedding, 读取结果可直接载入为模型参数。
     """
     
@@ -45,7 +42,7 @@ class EmbedLoader(BaseLoader):
     @staticmethod
     def load_with_vocab(embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True,
                         error='ignore', init_method=None):
-        """
+        r"""
         从embed_filepath这个预训练的词向量中抽取出vocab这个词表的词的embedding。EmbedLoader将自动判断embed_filepath是
         word2vec(第一行只有两个元素)还是glove格式的数据。
 
@@ -84,9 +81,9 @@ class EmbedLoader(BaseLoader):
                     word = ''.join(parts[:-dim])
                     nums = parts[-dim:]
                     # 对齐unk与pad
-                    if word==padding and vocab.padding is not None:
+                    if word == padding and vocab.padding is not None:
                         word = vocab.padding
-                    elif word==unknown and vocab.unknown is not None:
+                    elif word == unknown and vocab.unknown is not None:
                         word = vocab.unknown
                     if word in vocab:
                         index = vocab.to_index(word)
@@ -117,7 +114,7 @@ class EmbedLoader(BaseLoader):
     @staticmethod
     def load_without_vocab(embed_filepath, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True,
                            error='ignore'):
-        """
+        r"""
         从embed_filepath中读取预训练的word vector。根据预训练的词表读取embedding并生成一个对应的Vocabulary。
 
         :param str embed_filepath: 预训练的embedding的路径。
@@ -171,7 +168,7 @@ class EmbedLoader(BaseLoader):
                 index = vocab.to_index(key)
                 matrix[index] = vec
 
-            if (unknown is not None and not found_unknown) or (padding is not None and not found_pad):
+            if ((unknown is not None) and (not found_unknown)) or ((padding is not None) and (not found_pad)):
                 start_idx = 0
                 if padding is not None:
                     start_idx += 1
@@ -180,9 +177,9 @@ class EmbedLoader(BaseLoader):
 
                 mean = np.mean(matrix[start_idx:], axis=0, keepdims=True)
                 std = np.std(matrix[start_idx:], axis=0, keepdims=True)
-                if (unknown is not None and not found_unknown):
+                if (unknown is not None) and (not found_unknown):
                     matrix[start_idx - 1] = np.random.randn(1, dim).astype(dtype) * std + mean
-                if (padding is not None and not found_pad):
+                if (padding is not None) and (not found_pad):
                     matrix[0] = np.random.randn(1, dim).astype(dtype) * std + mean
             
             if normalize:

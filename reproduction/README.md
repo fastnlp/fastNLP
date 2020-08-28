@@ -3,8 +3,8 @@
 
 复现的模型有:
 - [Star-Transformer](Star_transformer)
-- [Biaffine](https://github.com/fastnlp/fastNLP/blob/999a14381747068e9e6a7cc370037b320197db00/fastNLP/models/biaffine_parser.py#L239)
-- [CNNText](https://github.com/fastnlp/fastNLP/blob/999a14381747068e9e6a7cc370037b320197db00/fastNLP/models/cnn_text_classification.py#L12)
+- [Biaffine](https://github.com/fastnlp/fastNLP/blob/master/fastNLP/models/biaffine_parser.py)
+- [CNNText](https://github.com/fastnlp/fastNLP/blob/master/fastNLP/models/cnn_text_classification.py)
 - ...
 
 # 任务复现
@@ -17,11 +17,11 @@
 
 
 ## Sequence Labeling (序列标注)
-- [NER](seqence_labelling/ner)
+- [NER](sequence_labelling/ner)
 
 
-## Coreference Resolution (共指消解)
-- [Coreference Resolution 共指消解任务复现](coreference_resolution)
+## Coreference Resolution (指代消解)
+- [Coreference Resolution 指代消解任务复现](coreference_resolution)
 
 
 ## Summarization (摘要)

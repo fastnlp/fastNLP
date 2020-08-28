@@ -119,7 +119,7 @@ class BiRNN(nn.Module):
 
     def forward(self, x, x_mask):
         # Sort x
-        lengths = x_mask.data.eq(1).long().sum(1)
+        lengths = x_mask.data.eq(True).long().sum(1)
         _, idx_sort = torch.sort(lengths, dim=0, descending=True)
         _, idx_unsort = torch.sort(idx_sort, dim=0)
         lengths = list(lengths[idx_sort])

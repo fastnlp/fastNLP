@@ -32,7 +32,6 @@ from tools.PositionEmbedding import get_sinusoid_encoding_table
 from tools.logger import *
 
 from fastNLP.core.const import Const
-from fastNLP.modules.encoder.transformer import TransformerEncoder
 
 from transformer.Layers import EncoderLayer
 
@@ -51,7 +50,7 @@ class TransformerModel(nn.Module):
                 ffn_inner_hidden_size: FFN hiddens size
                 atten_dropout_prob: dropout size
                 doc_max_timesteps: max sentence number of the document
-        :param vocab: 
+        :param embed: word embedding 
         """
         super(TransformerModel, self).__init__()
 

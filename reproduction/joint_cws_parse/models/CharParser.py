@@ -223,7 +223,7 @@ class CharBiaffineParser(BiaffineParser):
         """
 
         batch_size, seq_len, _ = arc_pred.shape
-        flip_mask = (mask == 0)
+        flip_mask = (mask.eq(False))
         # _arc_pred = arc_pred.clone()
         _arc_pred = arc_pred.masked_fill(flip_mask.unsqueeze(1), -float('inf'))
 

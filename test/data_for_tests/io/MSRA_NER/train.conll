@@ -1,0 +1,60 @@
+是	O
+我	O
+
+们	O
+收	O
+
+藏	O
+北	B-LOC
+
+京	I-LOC
+史	O
+
+料	O
+
+调	O
+查	O
+
+范	O
+围	O
+
+涉	O
+及	O
+
+故	B-LOC
+宫	I-LOC
+
+、	O
+历	B-LOC
+
+博	I-LOC
+、	O
+
+古	B-ORG
+研	I-ORG
+
+所	I-ORG
+、	O
+
+北	B-LOC
+大	I-LOC
+
+清	I-LOC
+华	I-LOC
+
+图	I-LOC
+书	I-LOC
+
+馆	I-LOC
+．	O
+
+夏	B-PER
+财	I-PER
+
+兴	I-PER
+家	O
+
+分	O
+到	O
+
+田	O

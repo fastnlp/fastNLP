@@ -1,4 +1,4 @@
-"""
+r"""
 该模块中的Embedding主要用于随机初始化的embedding(更推荐使用 :class:`fastNLP.embeddings.StaticEmbedding` )，或按照预训练权重初始化Embedding。
 
 """
@@ -8,17 +8,16 @@ __all__ = [
     "TokenEmbedding"
 ]
 
-import torch.nn as nn
 from abc import abstractmethod
+
 import torch
+import torch.nn as nn
 
 from .utils import get_embeddings
 
 
 class Embedding(nn.Module):
-    """
-    别名：:class:`fastNLP.embeddings.Embedding`   :class:`fastNLP.embeddings.embedding.Embedding`
-
+    r"""
     词向量嵌入，支持输入多种方式初始化. 可以通过self.num_embeddings获取词表大小; self.embedding_dim获取embedding的维度.
 
     Example::
@@ -30,16 +29,18 @@ class Embedding(nn.Module):
         >>> init_embed = np.zeros((2000, 100))
         >>> embed = Embedding(init_embed)  # 使用numpy.ndarray的值作为初始化值初始化一个Embedding
 
-    :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: 支持传入Embedding的大小(传入tuple(int, int),
-        第一个int为vocab_zie, 第二个int为embed_dim); 或传入Tensor, Embedding, numpy.ndarray等则直接使用该值初始化Embedding;
-    :param float word_dropout: 按照一定概率随机将word设置为unk_index，这样可以使得unk这个token得到足够的训练, 且会对网络有
-        一定的regularize的作用。设置该值时，必须同时设置unk_index
-    :param float dropout: 对Embedding的输出的dropout。
-    :param int unk_index: drop word时替换为的index。fastNLP的Vocabulary的unk_index默认为1。
     """
     
     def __init__(self, init_embed, word_dropout=0, dropout=0.0, unk_index=None):
+        r"""
         
+        :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray init_embed: 支持传入Embedding的大小(传入tuple(int, int),
+            第一个int为vocab_zie, 第二个int为embed_dim); 或传入Tensor, Embedding, numpy.ndarray等则直接使用该值初始化Embedding;
+        :param float word_dropout: 按照一定概率随机将word设置为unk_index，这样可以使得unk这个token得到足够的训练, 且会对网络有
+            一定的regularize的作用。设置该值时，必须同时设置unk_index
+        :param float dropout: 对Embedding的输出的dropout。
+        :param int unk_index: drop word时替换为的index。fastNLP的Vocabulary的unk_index默认为1。
+        """
         super(Embedding, self).__init__()
         
         self.embed = get_embeddings(init_embed)
@@ -61,7 +62,7 @@ class Embedding(nn.Module):
         self.word_dropout = word_dropout
     
     def forward(self, words):
-        """
+        r"""
         :param torch.LongTensor words: [batch, seq_len]
         :return: torch.Tensor : [batch, seq_len, embed_dim]
         """
@@ -77,7 +78,7 @@ class Embedding(nn.Module):
         if isinstance(self.embed, nn.Embedding):
             return self.embed.weight.size(0)
         else:
-            return self.embed.num_embedding
+            return self.embed.num_embeddings
     
     def __len__(self):
         return len(self.embed)
@@ -92,7 +93,7 @@ class Embedding(nn.Module):
     
     @property
     def requires_grad(self):
-        """
+        r"""
         Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
         :return:
         """
@@ -117,6 +118,10 @@ class Embedding(nn.Module):
 
 
 class TokenEmbedding(nn.Module):
+    r"""
+    fastNLP中各种Embedding的基类
+
+    """
     def __init__(self, vocab, word_dropout=0.0, dropout=0.0):
         super(TokenEmbedding, self).__init__()
         if vocab.rebuild:
@@ -131,7 +136,7 @@ class TokenEmbedding(nn.Module):
         self.dropout_layer = nn.Dropout(dropout)
     
     def drop_word(self, words):
-        """
+        r"""
         按照设定随机将words设置为unknown_index。
 
         :param torch.LongTensor words: batch_size x max_len
@@ -146,7 +151,7 @@ class TokenEmbedding(nn.Module):
         return words
     
     def dropout(self, words):
-        """
+        r"""
         对embedding后的word表示进行drop。
 
         :param torch.FloatTensor words: batch_size x max_len x embed_size
@@ -156,7 +161,7 @@ class TokenEmbedding(nn.Module):
     
     @property
     def requires_grad(self):
-        """
+        r"""
         Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
         :return:
         """
@@ -183,15 +188,15 @@ class TokenEmbedding(nn.Module):
         return self._embed_size
     
     @property
-    def num_embedding(self) -> int:
-        """
+    def num_embeddings(self) -> int:
+        r"""
         这个值可能会大于实际的embedding矩阵的大小。
         :return:
         """
         return len(self._word_vocab)
     
     def get_word_vocab(self):
-        """
+        r"""
         返回embedding的词典。
 
         :return: Vocabulary
@@ -200,7 +205,7 @@ class TokenEmbedding(nn.Module):
     
     @property
     def size(self):
-        return torch.Size(self.num_embedding, self._embed_size)
+        return torch.Size(self.num_embeddings, self._embed_size)
     
     @abstractmethod
     def forward(self, words):
