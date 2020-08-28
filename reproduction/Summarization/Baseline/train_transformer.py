@@ -264,7 +264,7 @@ def run_eval(model, loader, hps, best_loss, best_F, non_descent_cnt):
             label = Variable(label)
             input_len = Variable(input_len, requires_grad=False)
 
-            model_outputs = model.forward(input,input_len) # [batch, N, 2]
+            model_outputs = model.forward(input, input_len)  # [batch, N, 2]
             outputs = model_outputs[Const.OUTPUTS]
             prediction = model_outputs["prediction"]
 

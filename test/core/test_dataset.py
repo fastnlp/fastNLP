@@ -3,6 +3,7 @@ import sys
 import unittest
 
 from fastNLP import DataSet
+from fastNLP.core.dataset import ApplyResultException
 from fastNLP import FieldArray
 from fastNLP import Instance
 from fastNLP.io import CSVLoader
@@ -135,6 +136,50 @@ class TestDataSetMethods(unittest.TestCase):
         ds.apply(lambda ins: (len(ins["x"]), "hahaha"), new_field_name="k", ignore_type=True)
         # expect no exception raised
 
+    def test_apply_cannot_modify_instance(self):
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
+        def modify_inplace(instance):
+            instance['words'] = 1
+
+        with self.assertRaises(TypeError):
+            ds.apply(modify_inplace)
+
+    def test_apply_more(self):
+    
+        T = DataSet({"a": [1, 2, 3], "b": [2, 4, 5]})
+        func_1 = lambda x: {"c": x["a"] * 2, "d": x["a"] ** 2}
+        func_2 = lambda x: {"c": x * 3, "d": x ** 3}
+    
+        def func_err_1(x):
+            if x["a"] == 1:
+                return {"e": x["a"] * 2, "f": x["a"] ** 2}
+            else:
+                return {"e": x["a"] * 2}
+    
+        def func_err_2(x):
+            if x == 1:
+                return {"e": x * 2, "f": x ** 2}
+            else:
+                return {"e": x * 2}
+    
+        T.apply_more(func_1)
+        self.assertEqual(list(T["c"]), [2, 4, 6])
+        self.assertEqual(list(T["d"]), [1, 4, 9])
+    
+        res = T.apply_field_more(func_2, "a", modify_fields=False)
+        self.assertEqual(list(T["c"]), [2, 4, 6])
+        self.assertEqual(list(T["d"]), [1, 4, 9])
+        self.assertEqual(list(res["c"]), [3, 6, 9])
+        self.assertEqual(list(res["d"]), [1, 8, 27])
+    
+        with self.assertRaises(ApplyResultException) as e:
+            T.apply_more(func_err_1)
+            print(e)
+    
+        with self.assertRaises(ApplyResultException) as e:
+            T.apply_field_more(func_err_2, "a")
+            print(e)
+
     def test_drop(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6], [7, 8, 9, 0]] * 20})
         ds.drop(lambda ins: len(ins["y"]) < 3, inplace=True)
@@ -182,8 +227,9 @@ class TestDataSetMethods(unittest.TestCase):
     def test_apply2(self):
         def split_sent(ins):
             return ins['raw_sentence'].split()
-        csv_loader = CSVLoader(headers=['raw_sentence', 'label'],sep='\t')
-        dataset = csv_loader.load('test/data_for_tests/tutorial_sample_dataset.csv')
+        csv_loader = CSVLoader(headers=['raw_sentence', 'label'], sep='\t')
+        data_bundle = csv_loader.load('test/data_for_tests/tutorial_sample_dataset.csv')
+        dataset = data_bundle.datasets['train']
         dataset.drop(lambda x: len(x['raw_sentence'].split()) == 0, inplace=True)
         dataset.apply(split_sent, new_field_name='words', is_input=True)
         # print(dataset)
@@ -218,7 +264,6 @@ class TestDataSetMethods(unittest.TestCase):
         self.assertEqual(ans.content, [[5, 6]] * 10)
 
     def test_add_null(self):
-        # TODO test failed because 'fastNLP\core\field.py:143: RuntimeError'
         ds = DataSet()
         with self.assertRaises(RuntimeError) as RE:
             ds.add_field('test', [])
@@ -228,4 +273,17 @@ class TestDataSetIter(unittest.TestCase):
     def test__repr__(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
         for iter in ds:
-            self.assertEqual(iter.__repr__(), "{'x': [1, 2, 3, 4] type=list,\n'y': [5, 6] type=list}")
+            self.assertEqual(iter.__repr__(), """+--------------+--------+
+| x            | y      |
++--------------+--------+
+| [1, 2, 3, 4] | [5, 6] |
++--------------+--------+""")
+
+
+class TestDataSetFieldMeta(unittest.TestCase):
+    def test_print_field_meta(self):
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})
+        ds.print_field_meta()
+
+        ds.set_input('x')
+        ds.print_field_meta()

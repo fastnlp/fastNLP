@@ -1,88 +1,107 @@
 ==============================
-使用DataSet预处理文本
+fastNLP中的DataSet
 ==============================
 
-:class:`~fastNLP.DataSet` 是fastNLP中用于承载数据的容器。可以将DataSet看做是一个表格，
-每一行是一个sample (在fastNLP中被称为 :mod:`~fastNLP.core.instance` )，
-每一列是一个feature (在fastNLP中称为 :mod:`~fastNLP.core.field` )。
+:class:`~fastNLP.DataSet` 是fastNLP用于承载数据的类，一般训练集、验证集和测试集会被加载为三个单独的 :class:`~fastNLP.DataSet` 对象。
+
+:class:`~fastNLP.DataSet` 中的数据组织形式类似一个表格，比如下面 :class:`~fastNLP.DataSet` 一共有3列，列在fastNLP中被称为field。
 
 .. csv-table::
-   :header: "sentence", "words", "seq_len"
+   :header: "raw_chars", "chars", "seq_len"
 
-   "This is the first instance .", "[This, is, the, first, instance, .]", 6
-   "Second instance .", "[Second, instance, .]", 3
+   "历任公司副总经理、总工程师，", "[历 任 公 司 副 总 经 理 、 总 工 程 师 ，]", 6
    "Third instance .", "[Third, instance, .]", 3
    "...", "[...]", "..."
 
-上面是一个样例数据中 DataSet 的存储结构。其中它的每一行是一个 :class:`~fastNLP.Instance` 对象； 每一列是一个 :class:`~fastNLP.FieldArray` 对象。
+每一行是一个instance (在fastNLP中被称为 :mod:`~fastNLP.core.Instance` )，
+每一列是一个field (在fastNLP中称为 :mod:`~fastNLP.core.FieldArray` )。
 
-
+DataSet的构建
 -----------------------------
-数据集构建和删除
------------------------------
 
-我们使用传入字典的方式构建一个数据集，这是 :class:`~fastNLP.DataSet` 初始化的最基础的方式
+我们使用传入字典的方式初始化一个DataSet，这是 :class:`~fastNLP.DataSet` 初始化的最基础的方式
 
 .. code-block:: python
 
     from fastNLP import DataSet
-    data = {'sentence':["This is the first instance .", "Second instance .", "Third instance ."],
+    data = {'raw_words':["This is the first instance .", "Second instance .", "Third instance ."],
             'words': [['this', 'is', 'the', 'first', 'instance', '.'], ['Second', 'instance', '.'], ['Third', 'instance', '.']],
             'seq_len': [6, 3, 3]}
     dataset = DataSet(data)
     # 传入的dict的每个key的value应该为具有相同长度的list
+    print(dataset)
 
-我们还可以使用 :func:`~fastNLP.DataSet.append` 方法向数据集内增加数据
+输出为::
+
+    +------------------------------+------------------------------------------------+---------+
+    |           raw_words          |                     words                      | seq_len |
+    +------------------------------+------------------------------------------------+---------+
+    | This is the first instance . | ['this', 'is', 'the', 'first', 'instance', ... |    6    |
+    |      Second instance .       |          ['Second', 'instance', '.']           |    3    |
+    |       Third instance .       |           ['Third', 'instance', '.']           |    3    |
+    +------------------------------+------------------------------------------------+---------+
+
+
+我们还可以使用 :func:`~fastNLP.DataSet.append` 方法向DataSet增加数据
 
 .. code-block:: python
 
     from fastNLP import DataSet
     from fastNLP import Instance
     dataset = DataSet()
-    instance = Instance(sentence="This is the first instance",
+    instance = Instance(raw_words="This is the first instance",
                         words=['this', 'is', 'the', 'first', 'instance', '.'],
                         seq_len=6)
     dataset.append(instance)
     # 可以继续append更多内容，但是append的instance应该和前面的instance拥有完全相同的field
 
-另外，我们还可以用 :class:`~fastNLP.Instance` 数组的方式构建数据集
+另外，我们还可以用 :class:`~fastNLP.Instance` 数组的方式构建DataSet
 
 .. code-block:: python
 
     from fastNLP import DataSet
     from fastNLP import Instance
     dataset = DataSet([
-        Instance(sentence="This is the first instance",
+        Instance(raw_words="This is the first instance",
             words=['this', 'is', 'the', 'first', 'instance', '.'],
             seq_len=6),
-        Instance(sentence="Second instance .",
+        Instance(raw_words="Second instance .",
             words=['Second', 'instance', '.'],
             seq_len=3)
         ])
 
-在初步构建完数据集之后，我们可以通过 `for` 循环遍历 :class:`~fastNLP.DataSet` 中的内容。
+在初步构建完DataSet之后，我们可以通过 `for` 循环遍历 :class:`~fastNLP.DataSet` 中的内容。
 
 .. code-block:: python
 
     for instance in dataset:
         # do something
 
+DataSet的删除
+-----------------------------
+
 FastNLP 同样提供了多种删除数据的方法 :func:`~fastNLP.DataSet.drop` 、 :func:`~fastNLP.DataSet.delete_instance` 和 :func:`~fastNLP.DataSet.delete_field`
+我们先用下面的代码生成一个只有两列的样例DataSet，第一列的值分别为 -5 ~ 4，第二列的值均为 0.
 
 .. code-block:: python
 
     from fastNLP import DataSet
-    dataset = DataSet({'a': list(range(-5, 5))})
-    # 返回满足条件的instance,并放入DataSet中
+    dataset = DataSet({'a': range(-5, 5), 'c': [0]*10})
+
+然后我们使用三种方法进行删除，删除后的DataSet仅包含名为 c 的一列，包含4个值为0 的数据。
+
+.. code-block:: python
+
+    # 不改变dataset，生成一个删除了满足条件的instance的新 DataSet
     dropped_dataset = dataset.drop(lambda ins:ins['a']<0, inplace=False)
     # 在dataset中删除满足条件的instance
-    dataset.drop(lambda ins:ins['a']<0)  # dataset的instance数量减少
+    dataset.drop(lambda ins:ins['a']<0)
     #  删除第3个instance
     dataset.delete_instance(2)
     #  删除名为'a'的field
     dataset.delete_field('a')
 
------------------------------
+
 简单的数据预处理
 -----------------------------
 
@@ -93,64 +112,61 @@ FastNLP 同样提供了多种删除数据的方法 :func:`~fastNLP.DataSet.drop`
 
     #  检查是否存在名为'a'的field
     dataset.has_field('a')  # 或 ('a' in dataset)
-    #  将名为'a'的field改名为'b'
-    dataset.rename_field('a', 'b')
+    #  将名为'c'的field改名为'b'
+    dataset.rename_field('c', 'b')
     #  DataSet的长度
     len(dataset)
 
 其次，我们可以使用 :func:`~fastNLP.DataSet.apply` 或 :func:`~fastNLP.DataSet.apply_field` 进行数据预处理操作操作。
-这两个方法通过传入一个对单一 :mod:`~fastNLP.core.instance` 操作的函数，
-自动地帮助你对一个 :mod:`~fastNLP.core.field` 中的每个 :mod:`~fastNLP.core.instance` 调用这个函数，完成整体的操作。
-这个传入的函数可以是 lambda 匿名函数，也可以是完整定义的函数。同时，你还可以用 ``new_field_name`` 参数指定数据处理后存储的 :mod:`~fastNLP.core.field` 的名称。
+使用以上的两个方法需要传入一个函数，函数可以是 lambda 匿名函数，也可以是完整定义的函数，fastNLP将对DataSet遍历地应用该函数。
+同时，你还可以用 ``new_field_name`` 参数指定函数返回值组成的新 :mod:`~fastNLP.core.field` 的名称。
 
 .. code-block:: python
 
     from fastNLP import DataSet
-    data = {'sentence':["This is the first instance .", "Second instance .", "Third instance ."]}
+    data = {'raw_words':["This is the first instance .", "Second instance .", "Third instance ."]}
     dataset = DataSet(data)
 
     # 将句子分成单词形式, 详见DataSet.apply()方法
-    dataset.apply(lambda ins: ins['sentence'].split(), new_field_name='words')
+    dataset.apply(lambda ins: ins['raw_words'].split(), new_field_name='words')
 
     # 或使用DataSet.apply_field()
-    dataset.apply_field(lambda sent:sent.split(), field_name='sentence', new_field_name='words')
+    dataset.apply_field(lambda sent:sent.split(), field_name='raw_words', new_field_name='words')
 
     # 除了匿名函数，也可以定义函数传递进去
     def get_words(instance):
-        sentence = instance['sentence']
+        sentence = instance['raw_words']
         words = sentence.split()
         return words
     dataset.apply(get_words, new_field_name='words')
 
-除了手动处理数据集之外，你还可以使用 fastNLP 提供的各种 :class:`~fastNLP.io.base_loader.DataSetLoader` 来进行数据处理。
-详细请参考这篇教程  :doc:`使用DataSetLoader加载数据集 </tutorials/tutorial_2_load_dataset>` 。
+除了手动处理数据集之外，你还可以使用 fastNLP 提供的各种 :class:`~fastNLP.io.Loader` 和 :class:`~fastNLP.io.Pipe` 来进行数据处理。
+详细请参考这篇教程  :doc:`使用Loader和Pipe处理数据 </tutorials/tutorial_4_load_dataset>` 。
 
+
+fastNLP中field的命名习惯
 -----------------------------
-DataSet与pad
------------------------------
 
-在fastNLP里，pad是与一个 :mod:`~fastNLP.core.field` 绑定的。即不同的 :mod:`~fastNLP.core.field` 可以使用不同的pad方式，比如在英文任务中word需要的pad和
-character的pad方式往往是不同的。fastNLP是通过一个叫做 :class:`~fastNLP.Padder` 的子类来完成的。
-默认情况下，所有field使用 :class:`~fastNLP.AutoPadder`
-。可以通过使用以下方式设置Padder(如果将padder设置为None，则该field不会进行pad操作)。
-大多数情况下直接使用 :class:`~fastNLP.AutoPadder` 就可以了。
-如果 :class:`~fastNLP.AutoPadder` 或 :class:`~fastNLP.EngChar2DPadder` 无法满足需求，
-也可以自己写一个 :class:`~fastNLP.Padder` 。
+在英文任务中，fastNLP常用的field名称有:
 
-.. code-block:: python
+    - **raw_words**: 表示的是原始的str。例如"This is a demo sentence ."。存在多个raw_words的情况，例如matching任务，它们会被定义为raw_words0, raw_words1。但在conll格式下，raw_words列也可能为["This", "is", "a", "demo", "sentence", "."]的形式。
+    - **words**: 表示的是已经tokenize后的词语。例如["This", "is", "a", "demo", "sentence"], 但由于str并不能直接被神经网络所使用，所以words中的内容往往被转换为int，如[3, 10, 4, 2, 7, ...]等。多列words的情况，会被命名为words0, words1
+    - **target**: 表示目标值。分类场景下，只有一个值；序列标注场景下是一个序列。
+    - **seq_len**: 一般用于表示words列的长度
 
-    from fastNLP import DataSet
-    from fastNLP import EngChar2DPadder
-    import random
-    dataset = DataSet()
-    max_chars, max_words, sent_num = 5, 10, 20
-    contents = [[
-                    [random.randint(1, 27) for _ in range(random.randint(1, max_chars))]
-                        for _ in range(random.randint(1, max_words))
-                ]  for _ in range(sent_num)]
-    #  初始化时传入
-    dataset.add_field('chars', contents, padder=EngChar2DPadder())
-    #  直接设置
-    dataset.set_padder('chars', EngChar2DPadder())
-    #  也可以设置pad的value
-    dataset.set_pad_val('chars', -1)
+在中文任务中，fastNLP常用的field名称有:
+
+    - **raw_words**: 如果原始汉字序列中已经包含了词语的边界，则该列称为raw_words。如"上海 浦东 开发 与 法制 建设 同步"。
+    - **words**: 表示单独的汉字词语序列。例如["上海", "", "浦东", "开发", "与", "法制", "建设", ...]或[2, 3, 4, ...]
+    - **raw_chars**: 表示的是原始的连续汉字序列。例如"这是一个示例。"
+    - **chars**: 表示已经切分为单独的汉字的序列。例如["这", "是", "一", "个", "示", "例", "。"]。但由于神经网络不能识别汉字，所以一般该列会被转为int形式，如[3, 4, 5, 6, ...]。
+    - **target**: 表示目标值。分类场景下，只有一个值；序列标注场景下是一个序列
+    - **seq_len**: 表示输入序列的长度
+
+----------------------------------
+代码下载
+----------------------------------
+
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_1_data_preprocess.ipynb" download="tutorial_1_data_preprocess.ipynb">点击下载 IPython Notebook 文件</a><hr>

@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -7,24 +7,33 @@ __all__ = [
     "ElmoEmbedding"
 ]
 
+import codecs
+import json
 import os
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import json
-import codecs
 
+from .contextual_embedding import ContextualEmbedding
+from ..core import logger
 from ..core.vocabulary import Vocabulary
 from ..io.file_utils import cached_path, _get_embedding_url, PRETRAINED_ELMO_MODEL_DIR
 from ..modules.encoder._elmo import ElmobiLm, ConvTokenEmbedder
-from .contextual_embedding import ContextualEmbedding
-from ..core import logger
+
 
 class ElmoEmbedding(ContextualEmbedding):
-    """
-    别名：:class:`fastNLP.embeddings.ElmoEmbedding`   :class:`fastNLP.embeddings.elmo_embedding.ElmoEmbedding`
-
-    使用ELMo的embedding。初始化之后，只需要传入words就可以得到对应的embedding。当前支持的使用名称初始化的模型有以下的这些(待补充)
+    r"""
+    使用ELMo的embedding。初始化之后，只需要传入words就可以得到对应的embedding。
+    当前支持的使用名称初始化的模型:
+    
+    .. code::
+    
+        en: 即en-medium hidden_size 1024; output_size 12
+        en-medium: hidden_size 2048; output_size 256
+        en-origial: hidden_size 4096; output_size 512
+        en-original-5.5b: hidden_size 4096; output_size 512
+        en-small: hidden_size 1024; output_size 128
 
     Example::
     
@@ -43,22 +52,25 @@ class ElmoEmbedding(ContextualEmbedding):
         >>> embed = ElmoEmbedding(vocab, model_dir_or_name='en', layers='mix', requires_grad=False)
         >>> embed.set_mix_weights_requires_grad()  # 使得weighted的权重是可以学习的，但ELMO的LSTM部分是不更新
 
-    :param vocab: 词表
-    :param model_dir_or_name: 可以有两种方式调用预训练好的ELMo embedding：第一种是传入ELMo所在文件夹，该文件夹下面应该有两个文件，
-        其中一个是以json为后缀的配置文件，另一个是以pkl为后缀的权重文件；第二种是传入ELMo版本的名称，将自动查看缓存中是否存在该模型，
-        没有的话将自动下载并缓存。
-    :param layers: str, 指定返回的层数(从0开始), 以,隔开不同的层。如果要返回第二层的结果'2', 返回后两层的结果'1,2'。不同的层的结果
-        按照这个顺序concat起来，默认为'2'。'mix'会使用可学习的权重结合不同层的表示(权重是否可训练与requires_grad保持一致，
-        初始化权重对三层结果进行mean-pooling, 可以通过ElmoEmbedding.set_mix_weights_requires_grad()方法只将mix weights设置为可学习。)
-    :param requires_grad: bool, 该层是否需要gradient, 默认为False.
-    :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
-    :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
-    :param cache_word_reprs: 可以选择对word的表示进行cache; 设置为True的话，将在初始化的时候为每个word生成对应的embedding，
-        并删除character encoder，之后将直接使用cache的embedding。默认为False。
     """
     
-    def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', layers: str = '2', requires_grad: bool = False,
+    def __init__(self, vocab: Vocabulary, model_dir_or_name: str = 'en', layers: str = '2', requires_grad: bool = True,
                  word_dropout=0.0, dropout=0.0, cache_word_reprs: bool = False):
+        r"""
+        
+        :param vocab: 词表
+        :param model_dir_or_name: 可以有两种方式调用预训练好的ELMo embedding：第一种是传入ELMo所在文件夹，该文件夹下面应该有两个文件，
+            其中一个是以json为后缀的配置文件，另一个是以pkl为后缀的权重文件；第二种是传入ELMo版本的名称，将自动查看缓存中是否存在该模型，
+            没有的话将自动下载并缓存。
+        :param layers: str, 指定返回的层数(从0开始), 以,隔开不同的层。如果要返回第二层的结果'2', 返回后两层的结果'1,2'。不同的层的结果
+            按照这个顺序concat起来，默认为'2'。'mix'会使用可学习的权重结合不同层的表示(权重是否可训练与requires_grad保持一致，
+            初始化权重对三层结果进行mean-pooling, 可以通过ElmoEmbedding.set_mix_weights_requires_grad()方法只将mix weights设置为可学习。)
+        :param requires_grad: bool, 该层是否需要gradient, 默认为False.
+        :param float word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
+        :param float dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
+        :param cache_word_reprs: 可以选择对word的表示进行cache; 设置为True的话，将在初始化的时候为每个word生成对应的embedding，
+            并删除character encoder，之后将直接使用cache的embedding。默认为False。
+        """
         super(ElmoEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         
         # 根据model_dir_or_name检查是否存在并下载
@@ -71,6 +83,7 @@ class ElmoEmbedding(ContextualEmbedding):
         else:
             raise ValueError(f"Cannot recognize {model_dir_or_name}.")
         self.model = _ElmoModel(model_dir, vocab, cache_word_reprs=cache_word_reprs)
+        num_layers = self.model.encoder.num_layers
         
         if layers == 'mix':
             self.layer_weights = nn.Parameter(torch.zeros(self.model.config['lstm']['n_layers'] + 1),
@@ -80,9 +93,9 @@ class ElmoEmbedding(ContextualEmbedding):
             self._embed_size = self.model.config['lstm']['projection_dim'] * 2
         else:
             layers = list(map(int, layers.split(',')))
-            assert len(layers) > 0, "Must choose one output"
+            assert len(layers) > 0, "Must choose at least one output, but got None."
             for layer in layers:
-                assert 0 <= layer <= 2, "Layer index should be in range [0, 2]."
+                assert 0 <= layer <= num_layers, f"Layer index should be in range [0, {num_layers}], but got {layer}."
             self.layers = layers
             self._get_outputs = self._get_layer_outputs
             self._embed_size = len(self.layers) * self.model.config['lstm']['projection_dim'] * 2
@@ -97,7 +110,7 @@ class ElmoEmbedding(ContextualEmbedding):
         return self.gamma.to(outputs) * outputs
     
     def set_mix_weights_requires_grad(self, flag=True):
-        """
+        r"""
         当初始化ElmoEmbedding时layers被设置为mix时，可以通过调用该方法设置mix weights是否可训练。如果layers不是mix，调用
         该方法没有用。
         
@@ -117,7 +130,7 @@ class ElmoEmbedding(ContextualEmbedding):
         return outputs
     
     def forward(self, words: torch.LongTensor):
-        """
+        r"""
         计算words的elmo embedding表示。根据elmo文章中介绍的ELMO实际上是有2L+1层结果，但是为了让结果比较容易拆分，token的
         被重复了一次，使得实际上layer=0的结果是[token_embedding;token_embedding], 而layer=1的结果是[forward_hiddens;
         backward_hiddens].
@@ -137,31 +150,10 @@ class ElmoEmbedding(ContextualEmbedding):
         for name in ['layers', 'model', 'layer_weights', 'gamma']:
             if hasattr(self, name):
                 delattr(self, name)
-    
-    @property
-    def requires_grad(self):
-        """
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
-
-        :return:
-        """
-        requires_grads = set([param.requires_grad for name, param in self.named_parameters()
-                              if 'words_to_chars_embedding' not in name and 'words_to_words' not in name])
-        if len(requires_grads) == 1:
-            return requires_grads.pop()
-        else:
-            return None
-    
-    @requires_grad.setter
-    def requires_grad(self, value):
-        for name, param in self.named_parameters():
-            if 'words_to_chars_embedding' in name or 'words_to_words' in name:  # 这个不能加入到requires_grad中
-                continue
-            param.requires_grad = value
 
 
 class _ElmoModel(nn.Module):
-    """
+    r"""
     该Module是ElmoEmbedding中进行所有的heavy lifting的地方。做的工作，包括
         (1) 根据配置，加载模型;
         (2) 根据vocab，对模型中的embedding进行调整. 并将其正确初始化
@@ -246,11 +238,9 @@ class _ElmoModel(nn.Module):
         logger.info(f"{found_char_count} out of {len(char_vocab)} characters were found in pretrained elmo embedding.")
         # 生成words到chars的映射
         max_chars = config['char_cnn']['max_characters_per_token']
-        
-        self.words_to_chars_embedding = nn.Parameter(torch.full((len(vocab) + 2, max_chars),
+        self.register_buffer('words_to_chars_embedding', torch.full((len(vocab) + 2, max_chars),
                                                                 fill_value=len(char_vocab),
-                                                                dtype=torch.long),
-                                                     requires_grad=False)
+                                                                dtype=torch.long))
         for word, index in list(iter(vocab)) + [(BOS_TAG, len(vocab)), (EOS_TAG, len(vocab) + 1)]:
             if len(word) + 2 > max_chars:
                 word = word[:max_chars - 2]
@@ -305,7 +295,7 @@ class _ElmoModel(nn.Module):
                 logger.info("There is no need to cache word representations, since no character information is used.")
     
     def forward(self, words):
-        """
+        r"""
 
         :param words: batch_size x max_len
         :return: num_layers x batch_size x max_len x hidden_size

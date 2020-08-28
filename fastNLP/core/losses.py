@@ -1,4 +1,4 @@
-"""
+r"""
 losses 模块定义了 fastNLP 中所需的各种损失函数，一般做为 :class:`~fastNLP.Trainer` 的参数使用。
 
 """
@@ -11,7 +11,11 @@ __all__ = [
     "CrossEntropyLoss",
     "BCELoss",
     "L1Loss",
-    "NLLLoss"
+    "NLLLoss",
+    "MSELoss",
+
+    "CMRC2018Loss"
+
 ]
 
 import inspect
@@ -20,7 +24,6 @@ from collections import defaultdict
 import torch
 import torch.nn.functional as F
 
-from ..core.const import Const
 from .utils import _CheckError
 from .utils import _CheckRes
 from .utils import _build_args
@@ -28,12 +31,12 @@ from .utils import _check_arg_dict_list
 from .utils import _check_function_or_method
 from .utils import _get_func_signature
 from .utils import seq_len_to_mask
-import warnings
+from ..core.const import Const
 
 
 class LossBase(object):
-    """
-    所有loss的基类。如果想了解其中的原理，请查看源码。
+    r"""
+    所有loss的基类。如果需要结合到Trainer之中需要实现get_loss方法
     """
     
     def __init__(self):
@@ -50,10 +53,16 @@ class LossBase(object):
         return self._param_map
 
     def get_loss(self, *args, **kwargs):
+        """
+
+        :param args:
+        :param kwargs:
+        :return: torch.Tensor
+        """
         raise NotImplementedError
     
     def _init_param_map(self, key_map=None, **kwargs):
-        """检查key_map和其他参数map，并将这些映射关系添加到self._param_map
+        r"""检查key_map和其他参数map，并将这些映射关系添加到self._param_map
 
         :param dict key_map: 表示key的映射关系
         :param kwargs: key word args里面的每一个的键-值对都会被构造成映射关系
@@ -100,7 +109,7 @@ class LossBase(object):
         #                     f"positional argument.).")
 
     def __call__(self, pred_dict, target_dict, check=False):
-        """
+        r"""
         :param dict pred_dict: 模型的forward函数返回的dict
         :param dict target_dict: DataSet.batch_y里的键-值对所组成的dict
         :param Boolean check: 每一次执行映射函数的时候是否检查映射表，默认为不检查
@@ -166,9 +175,7 @@ class LossBase(object):
 
 
 class LossFunc(LossBase):
-    """
-    别名：:class:`fastNLP.LossFunc` :class:`fastNLP.core.losses.LossFunc`
-
+    r"""
     提供给用户使用自定义损失函数的类
 
     :param func: 用户自行定义的损失函数，应当为一个函数或者callable(func)为True的ojbect
@@ -199,9 +206,7 @@ class LossFunc(LossBase):
 
 
 class CrossEntropyLoss(LossBase):
-    """
-    别名：:class:`fastNLP.CrossEntropyLoss` :class:`fastNLP.core.losses.CrossEntropyLoss`
-
+    r"""
     交叉熵损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -230,26 +235,25 @@ class CrossEntropyLoss(LossBase):
         self.class_in_dim = class_in_dim
     
     def get_loss(self, pred, target, seq_len=None):
+        if seq_len is not None and target.dim()>1:
+            mask = seq_len_to_mask(seq_len, max_len=target.size(1)).eq(False)
+            target = target.masked_fill(mask, self.padding_idx)
+
         if pred.dim() > 2:
             if self.class_in_dim == -1:
                 if pred.size(1) != target.size(1):  # 有可能顺序替换了
                     pred = pred.transpose(1, 2)
             else:
-                pred = pred.tranpose(-1, pred)
+                pred = pred.transpose(-1, self.class_in_dim)
             pred = pred.reshape(-1, pred.size(-1))
             target = target.reshape(-1)
-        if seq_len is not None:
-            mask = seq_len_to_mask(seq_len).reshape(-1).eq(0)
-            target = target.masked_fill(mask, self.padding_idx)
 
         return F.cross_entropy(input=pred, target=target,
                                ignore_index=self.padding_idx, reduction=self.reduction)
 
 
 class L1Loss(LossBase):
-    """
-    别名：:class:`fastNLP.L1Loss` :class:`fastNLP.core.losses.L1Loss`
-
+    r"""
     L1损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -268,10 +272,28 @@ class L1Loss(LossBase):
         return F.l1_loss(input=pred, target=target, reduction=self.reduction)
 
 
-class BCELoss(LossBase):
-    """
-    别名：:class:`fastNLP.BCELoss` :class:`fastNLP.core.losses.BCELoss`
+class MSELoss(LossBase):
+    r"""
+    MSE损失函数
 
+    :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+    :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` >`target`
+    :param str reduction: 支持'mean'，'sum'和'none'.
+
+    """
+
+    def __init__(self, pred=None, target=None, reduction='mean'):
+        super(MSELoss, self).__init__()
+        self._init_param_map(pred=pred, target=target)
+        assert reduction in ('mean', 'sum', 'none')
+        self.reduction = reduction
+
+    def get_loss(self, pred, target):
+        return F.mse_loss(input=pred, target=target, reduction=self.reduction)
+
+
+class BCELoss(LossBase):
+    r"""
     二分类交叉熵损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -290,19 +312,19 @@ class BCELoss(LossBase):
 
 
 class NLLLoss(LossBase):
-    """
-    别名：:class:`fastNLP.NLLLoss` :class:`fastNLP.core.losses.NLLLoss`
-    
+    r"""
     负对数似然损失函数
-    
-    :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
-    :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
-    :param ignore_idx: ignore的index，在计算loss时将忽略target中标号为ignore_idx的内容, 可以通过该值代替
-        传入seq_len.
-    :param str reduction: 支持 `mean` ，`sum` 和 `none` .
     """
     
     def __init__(self, pred=None, target=None, ignore_idx=-100, reduction='mean'):
+        r"""
+        
+        :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+        :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
+        :param ignore_idx: ignore的index，在计算loss时将忽略target中标号为ignore_idx的内容, 可以通过该值代替
+            传入seq_len.
+        :param str reduction: 支持 `mean` ，`sum` 和 `none` .
+        """
         super(NLLLoss, self).__init__()
         self._init_param_map(pred=pred, target=target)
         assert reduction in ('mean', 'sum', 'none')
@@ -314,15 +336,15 @@ class NLLLoss(LossBase):
 
 
 class LossInForward(LossBase):
-    """
-    别名：:class:`fastNLP.LossInForward` :class:`fastNLP.core.losses.LossInForward`
-
+    r"""
     从forward()函数返回结果中获取loss
-    
-    :param str loss_key: 在forward函数中loss的键名，默认为loss
     """
     
     def __init__(self, loss_key=Const.LOSS):
+        r"""
+        
+        :param str loss_key: 在forward函数中loss的键名，默认为loss
+        """
         super().__init__()
         if not isinstance(loss_key, str):
             raise TypeError(f"Only str allowed for loss_key, got {type(loss_key)}.")
@@ -353,6 +375,47 @@ class LossInForward(LossBase):
         return loss
 
 
+class CMRC2018Loss(LossBase):
+    r"""
+    用于计算CMRC2018中文问答任务。
+
+    """
+    def __init__(self, target_start=None, target_end=None, context_len=None, pred_start=None, pred_end=None,
+                  reduction='mean'):
+        super().__init__()
+
+        assert reduction in ('mean', 'sum')
+
+        self._init_param_map(target_start=target_start, target_end=target_end, context_len=context_len,
+                             pred_start=pred_start, pred_end=pred_end)
+        self.reduction = reduction
+
+    def get_loss(self, target_start, target_end, context_len, pred_start, pred_end):
+        r"""
+
+        :param target_start: batch_size
+        :param target_end: batch_size
+        :param context_len: batch_size
+        :param pred_start: batch_size x max_len
+        :param pred_end: batch_size x max_len
+        :return:
+        """
+        batch_size, max_len = pred_end.size()
+        mask = seq_len_to_mask(context_len, max_len).eq(False)
+
+        pred_start = pred_start.masked_fill(mask, float('-inf'))
+        pred_end = pred_end.masked_fill(mask, float('-inf'))
+
+        start_loss = F.cross_entropy(pred_start, target_start, reduction='sum')
+        end_loss = F.cross_entropy(pred_end, target_end, reduction='sum')
+
+        loss = start_loss + end_loss
+
+        if self.reduction == 'mean':
+            loss = loss / batch_size
+
+        return loss/2
+
 def _prepare_losser(losser):
     if losser is None:
         losser = LossInForward()
@@ -361,82 +424,3 @@ def _prepare_losser(losser):
         return losser
     else:
         raise TypeError(f"Type of loss should be `fastNLP.LossBase`, got {type(losser)}")
-
-
-def squash(predict, truth, **kwargs):
-    """To reshape tensors in order to fit loss functions in PyTorch.
-
-    :param predict: Tensor, model output
-    :param truth: Tensor, truth from dataset
-    :param kwargs: extra arguments
-    :return predict , truth: predict & truth after processing
-    """
-    return predict.view(-1, predict.size()[-1]), truth.view(-1, )
-
-
-def unpad(predict, truth, **kwargs):
-    """To process padded sequence output to get true loss.
-
-    :param predict: Tensor, [batch_size , max_len , tag_size]
-    :param truth: Tensor, [batch_size , max_len]
-    :param kwargs: kwargs["lens"] is a list or LongTensor, with size [batch_size]. The i-th element is true lengths of i-th sequence.
-
-    :return predict , truth: predict & truth after processing
-    """
-    if kwargs.get("lens") is None:
-        return predict, truth
-    lens = torch.LongTensor(kwargs["lens"])
-    lens, idx = torch.sort(lens, descending=True)
-    predict = torch.nn.utils.rnn.pack_padded_sequence(predict[idx], lens, batch_first=True).data
-    truth = torch.nn.utils.rnn.pack_padded_sequence(truth[idx], lens, batch_first=True).data
-    return predict, truth
-
-
-def unpad_mask(predict, truth, **kwargs):
-    """To process padded sequence output to get true loss.
-
-    :param predict: Tensor, [batch_size , max_len , tag_size]
-    :param truth: Tensor, [batch_size , max_len]
-    :param kwargs: kwargs["lens"] is a list or LongTensor, with size [batch_size]. The i-th element is true lengths of i-th sequence.
-
-    :return predict , truth: predict & truth after processing
-    """
-    if kwargs.get("lens") is None:
-        return predict, truth
-    mas = make_mask(kwargs["lens"], truth.size()[1])
-    return mask(predict, truth, mask=mas)
-
-
-def mask(predict, truth, **kwargs):
-    """To select specific elements from Tensor. This method calls ``squash()``.
-
-    :param predict: Tensor, [batch_size , max_len , tag_size]
-    :param truth: Tensor, [batch_size , max_len]
-    :param kwargs: extra arguments, kwargs["mask"]: ByteTensor, [batch_size , max_len], the mask Tensor. The position that is 1 will be selected.
-
-    :return predict , truth: predict & truth after processing
-    """
-    if kwargs.get("mask") is None:
-        return predict, truth
-    mask = kwargs["mask"]
-    
-    predict, truth = squash(predict, truth)
-    mask = mask.view(-1, )
-    
-    predict = torch.masked_select(predict.permute(1, 0), mask).view(predict.size()[-1], -1).permute(1, 0)
-    truth = torch.masked_select(truth, mask)
-    
-    return predict, truth
-
-
-def make_mask(lens, tar_len):
-    """To generate a mask over a sequence.
-
-    :param lens: list or LongTensor, [batch_size]
-    :param tar_len: int
-    :return mask: ByteTensor
-    """
-    lens = torch.LongTensor(lens)
-    mask = [torch.ge(lens, i + 1) for i in range(tar_len)]
-    mask = torch.stack(mask, 1)
-    return mask

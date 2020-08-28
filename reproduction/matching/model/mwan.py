@@ -91,7 +91,7 @@ class ConcatAttention_Param(nn.Module):
 
         s = self.v(tc.tanh(self.ln(tc.cat([h,vq],-1)))).squeeze(-1)    # (batch_size, len)
         
-        s = s - ((mask == 0).float() * 10000)
+        s = s - ((mask.eq(False)).float() * 10000)
         a = tc.softmax(s, dim=1)
 
         r = a.unsqueeze(-1) * h       # (batch_size, len, input_size)
@@ -121,7 +121,7 @@ def Attention(hq, hp, mask_hq, mask_hp, my_method):
 
     s = my_method(hq_mat, hp_mat)           # (batch_size, len_q, len_p)
 
-    s = s - ((mask_mat == 0).float() * 10000)
+    s = s - ((mask_mat.eq(False)).float() * 10000)
     a = tc.softmax(s, dim=1)
 
     q = a.unsqueeze(-1) * hq_mat            #(batch_size, len_q, len_p, input_size)
@@ -242,7 +242,7 @@ class BiLinearAttention(nn.Module):
 
         s = self.my_method(hq, hp, mask_hp)         # (batch_size, len_q, len_p)
 
-        s = s - ((mask_mat == 0).float() * 10000)
+        s = s - ((mask_mat.eq(False)).float() * 10000)
         a = tc.softmax(s, dim=1)
 
         hq_mat = hq.unsqueeze(2).expand(standard_size)
@@ -285,7 +285,7 @@ class AggAttention(nn.Module):
 
         s = self.v(tc.tanh(self.ln(tc.cat([hs,vq],-1)))).squeeze(-1)# (4, batch_size, len_q)
 
-        s = s - ((mask.unsqueeze(0) == 0).float() * 10000)
+        s = s - ((mask.unsqueeze(0).eq(False)).float() * 10000)
         a = tc.softmax(s, dim=0)
 
         x = a.unsqueeze(-1) * hs

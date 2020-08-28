@@ -4,7 +4,6 @@ import torch
 import torch.nn.functional as F
 
 import fastNLP as loss
-from fastNLP.core.losses import squash, unpad
 
 
 class TestLoss(unittest.TestCase):
@@ -14,6 +13,18 @@ class TestLoss(unittest.TestCase):
         b = torch.empty(3, dtype=torch.long).random_(5)
         ans = ce({"my_predict": a}, {"my_truth": b})
         self.assertEqual(ans, torch.nn.functional.cross_entropy(a, b))
+
+        ce = loss.CrossEntropyLoss(pred="my_predict", target="my_truth", class_in_dim=1)
+        a = torch.randn(3, 4, 3)
+        b = torch.randint(3, (3, 3))
+        ans = ce({"my_predict": a}, {"my_truth": b})
+        self.assertAlmostEqual(ans.item(), torch.nn.functional.cross_entropy(a, b).item(), places=4)
+
+        ce = loss.CrossEntropyLoss(pred="my_predict", target="my_truth", class_in_dim=2)
+        a = torch.randn(3, 4, 3)
+        b = torch.randint(3, (3, 4))
+        ans = ce({"my_predict": a}, {"my_truth": b})
+        self.assertAlmostEqual(ans.item(), torch.nn.functional.cross_entropy(a.transpose(1, 2), b).item(), places=4)
     
     def test_BCELoss(self):
         bce = loss.BCELoss(pred="my_predict", target="my_truth")
@@ -73,15 +84,3 @@ class TestLosserError(unittest.TestCase):
         
         with self.assertRaises(Exception):
             ans = l1({"my_predict": a}, {"truth": b, "my": a})
-
-
-class TestLossUtils(unittest.TestCase):
-    def test_squash(self):
-        a, b = squash(torch.randn(3, 5), torch.randn(3, 5))
-        self.assertEqual(tuple(a.size()), (3, 5))
-        self.assertEqual(tuple(b.size()), (15,))
-    
-    def test_unpad(self):
-        a, b = unpad(torch.randn(5, 8, 3), torch.randn(5, 8))
-        self.assertEqual(tuple(a.size()), (5, 8, 3))
-        self.assertEqual(tuple(b.size()), (5, 8))

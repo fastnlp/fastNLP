@@ -1,4 +1,4 @@
-"""undocumented
+r"""undocumented
 Star-Transformer 的encoder部分的 Pytorch 实现
 """
 
@@ -13,25 +13,25 @@ from torch.nn import functional as F
 
 
 class StarTransformer(nn.Module):
-    """
-    别名：:class:`fastNLP.modules.StarTransformer`  :class:`fastNLP.modules.encoder.StarTransformer`
-
-
+    r"""
     Star-Transformer 的encoder部分。 输入3d的文本输入, 返回相同长度的文本编码
 
     paper: https://arxiv.org/abs/1902.09113
 
-    :param int hidden_size: 输入维度的大小。同时也是输出维度的大小。
-    :param int num_layers: star-transformer的层数
-    :param int num_head: head的数量。
-    :param int head_dim: 每个head的维度大小。
-    :param float dropout: dropout 概率. Default: 0.1
-    :param int max_len: int or None, 如果为int，输入序列的最大长度，
-        模型会为输入序列加上position embedding。
-        若为`None`，忽略加上position embedding的步骤. Default: `None`
     """
 
     def __init__(self, hidden_size, num_layers, num_head, head_dim, dropout=0.1, max_len=None):
+        r"""
+        
+        :param int hidden_size: 输入维度的大小。同时也是输出维度的大小。
+        :param int num_layers: star-transformer的层数
+        :param int num_head: head的数量。
+        :param int head_dim: 每个head的维度大小。
+        :param float dropout: dropout 概率. Default: 0.1
+        :param int max_len: int or None, 如果为int，输入序列的最大长度，
+            模型会为输入序列加上position embedding。
+            若为`None`，忽略加上position embedding的步骤. Default: `None`
+        """
         super(StarTransformer, self).__init__()
         self.iters = num_layers
 
@@ -51,7 +51,7 @@ class StarTransformer(nn.Module):
             self.pos_emb = None
 
     def forward(self, data, mask):
-        """
+        r"""
         :param FloatTensor data: [batch, length, hidden] 输入的序列
         :param ByteTensor mask: [batch, length] 输入序列的padding mask, 在没有内容(padding 部分) 为 0,
             否则为 1
@@ -65,11 +65,11 @@ class StarTransformer(nn.Module):
             return f(x.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
 
         B, L, H = data.size()
-        mask = (mask == 0)  # flip the mask for masked_fill_
+        mask = (mask.eq(False))  # flip the mask for masked_fill_
         smask = torch.cat([torch.zeros(B, 1, ).byte().to(mask), mask], 1)
 
         embs = data.permute(0, 2, 1)[:, :, :, None]  # B H L 1
-        if self.pos_emb and False:
+        if self.pos_emb:
             P = self.pos_emb(torch.arange(L, dtype=torch.long, device=embs.device) \
                              .view(1, L)).permute(0, 2, 1).contiguous()[:, :, :, None]  # 1 H L 1
             embs = embs + P

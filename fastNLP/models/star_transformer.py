@@ -1,4 +1,4 @@
-"""
+r"""
 Star-Transformer 的 Pytorch 实现。
 """
 __all__ = [
@@ -11,31 +11,19 @@ __all__ = [
 import torch
 from torch import nn
 
-from ..modules.encoder.star_transformer import StarTransformer
+from ..core.const import Const
 from ..core.utils import seq_len_to_mask
 from ..embeddings.utils import get_embeddings
-from ..core.const import Const
+from ..modules.encoder.star_transformer import StarTransformer
 
 
 class StarTransEnc(nn.Module):
-    """
-    别名：:class:`fastNLP.models.StarTransEnc`  :class:`fastNLP.models.star_transformer.StarTransEnc`
-
+    r"""
     带word embedding的Star-Transformer Encoder
 
-    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
-        embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
-        此时就以传入的对象作为embedding
-    :param hidden_size: 模型中特征维度.
-    :param num_layers: 模型层数.
-    :param num_head: 模型中multi-head的head个数.
-    :param head_dim: 模型中multi-head中每个head特征维度.
-    :param max_len: 模型能接受的最大输入长度.
-    :param emb_dropout: 词嵌入的dropout概率.
-    :param dropout: 模型除词嵌入外的dropout概率.
     """
 
-    def __init__(self, init_embed,
+    def __init__(self, embed,
                  hidden_size,
                  num_layers,
                  num_head,
@@ -43,8 +31,20 @@ class StarTransEnc(nn.Module):
                  max_len,
                  emb_dropout,
                  dropout):
+        r"""
+        
+        :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+            embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,此时就以传入的对象作为embedding
+        :param hidden_size: 模型中特征维度.
+        :param num_layers: 模型层数.
+        :param num_head: 模型中multi-head的head个数.
+        :param head_dim: 模型中multi-head中每个head特征维度.
+        :param max_len: 模型能接受的最大输入长度.
+        :param emb_dropout: 词嵌入的dropout概率.
+        :param dropout: 模型除词嵌入外的dropout概率.
+        """
         super(StarTransEnc, self).__init__()
-        self.embedding = get_embeddings(init_embed)
+        self.embedding = get_embeddings(embed)
         emb_dim = self.embedding.embedding_dim
         self.emb_fc = nn.Linear(emb_dim, hidden_size)
         # self.emb_drop = nn.Dropout(emb_dropout)
@@ -56,7 +56,7 @@ class StarTransEnc(nn.Module):
                                        max_len=max_len)
 
     def forward(self, x, mask):
-        """
+        r"""
         :param FloatTensor x: [batch, length, hidden] 输入的序列
         :param ByteTensor mask: [batch, length] 输入序列的padding mask, 在没有内容(padding 部分) 为 0,
             否则为 1
@@ -103,26 +103,12 @@ class _NLICls(nn.Module):
 
 
 class STSeqLabel(nn.Module):
-    """
-    别名：:class:`fastNLP.models.STSeqLabel`  :class:`fastNLP.models.star_transformer.STSeqLabel`
-
+    r"""
     用于序列标注的Star-Transformer模型
 
-    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
-        embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
-        此时就以传入的对象作为embedding
-    :param num_cls: 输出类别个数
-    :param hidden_size: 模型中特征维度. Default: 300
-    :param num_layers: 模型层数. Default: 4
-    :param num_head: 模型中multi-head的head个数. Default: 8
-    :param head_dim: 模型中multi-head中每个head特征维度. Default: 32
-    :param max_len: 模型能接受的最大输入长度. Default: 512
-    :param cls_hidden_size: 分类器隐层维度. Default: 600
-    :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
-    :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
 
-    def __init__(self, init_embed, num_cls,
+    def __init__(self, embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
                  num_head=8,
@@ -131,8 +117,22 @@ class STSeqLabel(nn.Module):
                  cls_hidden_size=600,
                  emb_dropout=0.1,
                  dropout=0.1, ):
+        r"""
+        
+        :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+            embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象, 此时就以传入的对象作为embedding
+        :param num_cls: 输出类别个数
+        :param hidden_size: 模型中特征维度. Default: 300
+        :param num_layers: 模型层数. Default: 4
+        :param num_head: 模型中multi-head的head个数. Default: 8
+        :param head_dim: 模型中multi-head中每个head特征维度. Default: 32
+        :param max_len: 模型能接受的最大输入长度. Default: 512
+        :param cls_hidden_size: 分类器隐层维度. Default: 600
+        :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
+        :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
+        """
         super(STSeqLabel, self).__init__()
-        self.enc = StarTransEnc(init_embed=init_embed,
+        self.enc = StarTransEnc(embed=embed,
                                 hidden_size=hidden_size,
                                 num_layers=num_layers,
                                 num_head=num_head,
@@ -143,7 +143,7 @@ class STSeqLabel(nn.Module):
         self.cls = _Cls(hidden_size, num_cls, cls_hidden_size)
 
     def forward(self, words, seq_len):
-        """
+        r"""
 
         :param words: [batch, seq_len] 输入序列
         :param seq_len: [batch,] 输入序列的长度
@@ -156,7 +156,7 @@ class STSeqLabel(nn.Module):
         return {Const.OUTPUT: output}  # [bsz, n_cls, seq_len]
 
     def predict(self, words, seq_len):
-        """
+        r"""
 
         :param words: [batch, seq_len] 输入序列
         :param seq_len: [batch,] 输入序列的长度
@@ -168,26 +168,12 @@ class STSeqLabel(nn.Module):
 
 
 class STSeqCls(nn.Module):
-    """
-    别名：:class:`fastNLP.models.STSeqCls`  :class:`fastNLP.models.star_transformer.STSeqCls`
-
+    r"""
     用于分类任务的Star-Transformer
 
-    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
-        embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
-        此时就以传入的对象作为embedding
-    :param num_cls: 输出类别个数
-    :param hidden_size: 模型中特征维度. Default: 300
-    :param num_layers: 模型层数. Default: 4
-    :param num_head: 模型中multi-head的head个数. Default: 8
-    :param head_dim: 模型中multi-head中每个head特征维度. Default: 32
-    :param max_len: 模型能接受的最大输入长度. Default: 512
-    :param cls_hidden_size: 分类器隐层维度. Default: 600
-    :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
-    :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
 
-    def __init__(self, init_embed, num_cls,
+    def __init__(self, embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
                  num_head=8,
@@ -196,8 +182,22 @@ class STSeqCls(nn.Module):
                  cls_hidden_size=600,
                  emb_dropout=0.1,
                  dropout=0.1, ):
+        r"""
+        
+        :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+            embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象, 此时就以传入的对象作为embedding
+        :param num_cls: 输出类别个数
+        :param hidden_size: 模型中特征维度. Default: 300
+        :param num_layers: 模型层数. Default: 4
+        :param num_head: 模型中multi-head的head个数. Default: 8
+        :param head_dim: 模型中multi-head中每个head特征维度. Default: 32
+        :param max_len: 模型能接受的最大输入长度. Default: 512
+        :param cls_hidden_size: 分类器隐层维度. Default: 600
+        :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
+        :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
+        """
         super(STSeqCls, self).__init__()
-        self.enc = StarTransEnc(init_embed=init_embed,
+        self.enc = StarTransEnc(embed=embed,
                                 hidden_size=hidden_size,
                                 num_layers=num_layers,
                                 num_head=num_head,
@@ -208,7 +208,7 @@ class STSeqCls(nn.Module):
         self.cls = _Cls(hidden_size, num_cls, cls_hidden_size, dropout=dropout)
 
     def forward(self, words, seq_len):
-        """
+        r"""
 
         :param words: [batch, seq_len] 输入序列
         :param seq_len: [batch,] 输入序列的长度
@@ -221,7 +221,7 @@ class STSeqCls(nn.Module):
         return {Const.OUTPUT: output}
 
     def predict(self, words, seq_len):
-        """
+        r"""
 
         :param words: [batch, seq_len] 输入序列
         :param seq_len: [batch,] 输入序列的长度
@@ -233,26 +233,12 @@ class STSeqCls(nn.Module):
 
 
 class STNLICls(nn.Module):
-    """
-    别名：:class:`fastNLP.models.STNLICls`  :class:`fastNLP.models.star_transformer.STNLICls`
-    
+    r"""
     用于自然语言推断(NLI)的Star-Transformer
 
-    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
-        embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
-        此时就以传入的对象作为embedding
-    :param num_cls: 输出类别个数
-    :param hidden_size: 模型中特征维度. Default: 300
-    :param num_layers: 模型层数. Default: 4
-    :param num_head: 模型中multi-head的head个数. Default: 8
-    :param head_dim: 模型中multi-head中每个head特征维度. Default: 32
-    :param max_len: 模型能接受的最大输入长度. Default: 512
-    :param cls_hidden_size: 分类器隐层维度. Default: 600
-    :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
-    :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
     """
 
-    def __init__(self, init_embed, num_cls,
+    def __init__(self, embed, num_cls,
                  hidden_size=300,
                  num_layers=4,
                  num_head=8,
@@ -261,8 +247,22 @@ class STNLICls(nn.Module):
                  cls_hidden_size=600,
                  emb_dropout=0.1,
                  dropout=0.1, ):
+        r"""
+        
+        :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+            embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象, 此时就以传入的对象作为embedding
+        :param num_cls: 输出类别个数
+        :param hidden_size: 模型中特征维度. Default: 300
+        :param num_layers: 模型层数. Default: 4
+        :param num_head: 模型中multi-head的head个数. Default: 8
+        :param head_dim: 模型中multi-head中每个head特征维度. Default: 32
+        :param max_len: 模型能接受的最大输入长度. Default: 512
+        :param cls_hidden_size: 分类器隐层维度. Default: 600
+        :param emb_dropout: 词嵌入的dropout概率. Default: 0.1
+        :param dropout: 模型除词嵌入外的dropout概率. Default: 0.1
+        """
         super(STNLICls, self).__init__()
-        self.enc = StarTransEnc(init_embed=init_embed,
+        self.enc = StarTransEnc(embed=embed,
                                 hidden_size=hidden_size,
                                 num_layers=num_layers,
                                 num_head=num_head,
@@ -273,7 +273,7 @@ class STNLICls(nn.Module):
         self.cls = _NLICls(hidden_size, num_cls, cls_hidden_size)
 
     def forward(self, words1, words2, seq_len1, seq_len2):
-        """
+        r"""
 
         :param words1: [batch, seq_len] 输入序列1
         :param words2: [batch, seq_len] 输入序列2
@@ -294,7 +294,7 @@ class STNLICls(nn.Module):
         return {Const.OUTPUT: output}
 
     def predict(self, words1, words2, seq_len1, seq_len2):
-        """
+        r"""
 
         :param words1: [batch, seq_len] 输入序列1
         :param words2: [batch, seq_len] 输入序列2

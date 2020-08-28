@@ -7,7 +7,82 @@ from fastNLP.core.losses import CrossEntropyLoss
 from fastNLP.core.metrics import AccuracyMetric
 from fastNLP.io.loader import CSVLoader
 
+
 class TestTutorial(unittest.TestCase):
+    def test_tutorial_1_data_preprocess(self):
+        from fastNLP import DataSet
+        data = {'raw_words': ["This is the first instance .", "Second instance .", "Third instance ."],
+                'words': [['this', 'is', 'the', 'first', 'instance', '.'], ['Second', 'instance', '.'],
+                          ['Third', 'instance', '.']],
+                'seq_len': [6, 3, 3]}
+        dataset = DataSet(data)
+        # 传入的dict的每个key的value应该为具有相同长度的list
+
+        from fastNLP import DataSet
+        from fastNLP import Instance
+        dataset = DataSet()
+        instance = Instance(raw_words="This is the first instance",
+                            words=['this', 'is', 'the', 'first', 'instance', '.'],
+                            seq_len=6)
+        dataset.append(instance)
+
+        from fastNLP import DataSet
+        from fastNLP import Instance
+        dataset = DataSet([
+            Instance(raw_words="This is the first instance",
+                     words=['this', 'is', 'the', 'first', 'instance', '.'],
+                     seq_len=6),
+            Instance(raw_words="Second instance .",
+                     words=['Second', 'instance', '.'],
+                     seq_len=3)
+        ])
+
+        from fastNLP import DataSet
+        dataset = DataSet({'a': range(-5, 5), 'c': [0] * 10})
+
+        # 不改变dataset，生成一个删除了满足条件的instance的新 DataSet
+        dropped_dataset = dataset.drop(lambda ins: ins['a'] < 0, inplace=False)
+        # 在dataset中删除满足条件的instance
+        dataset.drop(lambda ins: ins['a'] < 0)
+        #  删除第3个instance
+        dataset.delete_instance(2)
+        #  删除名为'a'的field
+        dataset.delete_field('a')
+
+        #  检查是否存在名为'a'的field
+        print(dataset.has_field('a'))  # 或 ('a' in dataset)
+        #  将名为'a'的field改名为'b'
+        dataset.rename_field('c', 'b')
+        #  DataSet的长度
+        len(dataset)
+
+        from fastNLP import DataSet
+        data = {'raw_words': ["This is the first instance .", "Second instance .", "Third instance ."]}
+        dataset = DataSet(data)
+
+        # 将句子分成单词形式, 详见DataSet.apply()方法
+        dataset.apply(lambda ins: ins['raw_words'].split(), new_field_name='words')
+
+        # 或使用DataSet.apply_field()
+        dataset.apply_field(lambda sent: sent.split(), field_name='raw_words', new_field_name='words')
+
+        # 除了匿名函数，也可以定义函数传递进去
+        def get_words(instance):
+            sentence = instance['raw_words']
+            words = sentence.split()
+            return words
+
+        dataset.apply(get_words, new_field_name='words')
+        
+    def setUp(self):
+        import os
+        self._init_wd = os.path.abspath(os.curdir)
+
+    def tearDown(self):
+        import os
+        os.chdir(self._init_wd)
+        
+class TestOldTutorial(unittest.TestCase):
     def test_fastnlp_10min_tutorial(self):
         # 从csv读取数据到DataSet
         sample_path = "test/data_for_tests/tutorial_sample_dataset.csv"

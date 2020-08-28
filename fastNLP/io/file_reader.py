@@ -1,16 +1,17 @@
-"""undocumented
+r"""undocumented
 此模块用于给其它模块提供读取文件的函数，没有为用户提供 API
 """
 
 __all__ = []
 
 import json
+import csv
 
 from ..core import logger
 
 
 def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
-    """
+    r"""
     Construct a generator to read csv items.
 
     :param path: file path
@@ -21,23 +22,28 @@ def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
             :if False, raise ValueError when reading invalid data. default: True
     :return: generator, every time yield (line number, csv item)
     """
-    with open(path, 'r', encoding=encoding) as f:
+    with open(path, 'r', encoding=encoding) as csv_file:
+        f = csv.reader(csv_file, delimiter=sep)
         start_idx = 0
         if headers is None:
-            headers = f.readline().rstrip('\r\n')
-            headers = headers.split(sep)
+            headers = next(f)
             start_idx += 1
         elif not isinstance(headers, (list, tuple)):
             raise TypeError("headers should be list or tuple, not {}." \
                             .format(type(headers)))
         for line_idx, line in enumerate(f, start_idx):
-            contents = line.rstrip('\r\n').split(sep)
+            contents = line
             if len(contents) != len(headers):
                 if dropna:
                     continue
                 else:
-                    raise ValueError("Line {} has {} parts, while header has {} parts." \
-                                     .format(line_idx, len(contents), len(headers)))
+                    if "" in headers:
+                        raise ValueError(("Line {} has {} parts, while header has {} parts.\n" +
+                                          "Please check the empty parts or unnecessary '{}'s  in header.")
+                                         .format(line_idx, len(contents), len(headers), sep))
+                    else:
+                        raise ValueError("Line {} has {} parts, while header has {} parts." \
+                                         .format(line_idx, len(contents), len(headers)))
             _dict = {}
             for header, content in zip(headers, contents):
                 _dict[header] = content
@@ -45,7 +51,7 @@ def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
 
 
 def _read_json(path, encoding='utf-8', fields=None, dropna=True):
-    """
+    r"""
     Construct a generator to read json items.
 
     :param path: file path
@@ -75,18 +81,19 @@ def _read_json(path, encoding='utf-8', fields=None, dropna=True):
             yield line_idx, _res
 
 
-def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
-    """
+def _read_conll(path, encoding='utf-8',sep=None, indexes=None, dropna=True):
+    r"""
     Construct a generator to read conll items.
 
     :param path: file path
     :param encoding: file's encoding, default: utf-8
+    :param sep: seperator
     :param indexes: conll object's column indexes that needed, if None, all columns are needed. default: None
     :param dropna: weather to ignore and drop invalid data,
             :if False, raise ValueError when reading invalid data. default: True
     :return: generator, every time yield (line number, conll item)
     """
-    
+
     def parse_conll(sample):
         sample = list(map(list, zip(*sample)))
         sample = [sample[i] for i in indexes]
@@ -94,12 +101,12 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
             if len(f) <= 0:
                 raise ValueError('empty field')
         return sample
-    
+
     with open(path, 'r', encoding=encoding) as f:
         sample = []
         start = next(f).strip()
         if start != '':
-            sample.append(start.split())
+            sample.append(start.split(sep)) if sep else sample.append(start.split())
         for line_idx, line in enumerate(f, 1):
             line = line.strip()
             if line == '':
@@ -110,13 +117,14 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
                         yield line_idx, res
                     except Exception as e:
                         if dropna:
-                            logger.warn('Invalid instance which ends at line: {} has been dropped.'.format(line_idx))
+                            logger.warning('Invalid instance which ends at line: {} has been dropped.'.format(line_idx))
+                            sample = []
                             continue
                         raise ValueError('Invalid instance which ends at line: {}'.format(line_idx))
             elif line.startswith('#'):
                 continue
             else:
-                sample.append(line.split())
+                sample.append(line.split(sep)) if sep else sample.append(line.split())
         if len(sample) > 0:
             try:
                 res = parse_conll(sample)

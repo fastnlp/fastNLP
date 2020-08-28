@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "ConllLoader",
@@ -26,9 +26,7 @@ from ...core.instance import Instance
 
 
 class ConllLoader(Loader):
-    """
-    别名：:class:`fastNLP.io.ConllLoader` :class:`fastNLP.io.loader.ConllLoader`
-
+    r"""
     ConllLoader支持读取的数据格式: 以空行隔开两个sample，除了分割行，每一行用空格或者制表符隔开不同的元素。如下例所示:
 
     Example::
@@ -55,19 +53,23 @@ class ConllLoader(Loader):
 
     数据中以"-DOCSTART-"开头的行将被忽略，因为该符号在conll 2003中被用为文档分割符。
 
-    :param list headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
-    :param list indexes: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
-    :param bool dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
-
     """
     
-    def __init__(self, headers, indexes=None, dropna=True):
+    def __init__(self, headers, sep=None, indexes=None, dropna=True):
+        r"""
+        
+        :param list headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
+        :param list sep: 指定分隔符，默认为制表符
+        :param list indexes: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
+        :param bool dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
+        """
         super(ConllLoader, self).__init__()
         if not isinstance(headers, (list, tuple)):
             raise TypeError(
                 'invalid headers: {}, should be list of strings'.format(headers))
         self.headers = headers
         self.dropna = dropna
+        self.sep=sep
         if indexes is None:
             self.indexes = list(range(len(self.headers)))
         else:
@@ -76,21 +78,21 @@ class ConllLoader(Loader):
             self.indexes = indexes
     
     def _load(self, path):
-        """
+        r"""
         传入的一个文件路径，将该文件读入DataSet中，field由ConllLoader初始化时指定的headers决定。
 
         :param str path: 文件的路径
         :return: DataSet
         """
         ds = DataSet()
-        for idx, data in _read_conll(path, indexes=self.indexes, dropna=self.dropna):
+        for idx, data in _read_conll(path,sep=self.sep, indexes=self.indexes, dropna=self.dropna):
             ins = {h: data[i] for i, h in enumerate(self.headers)}
             ds.append(Instance(**ins))
         return ds
 
 
 class Conll2003Loader(ConllLoader):
-    """
+    r"""
     用于读取conll2003任务的数据。数据的内容应该类似与以下的内容, 第一列为raw_words, 第二列为pos, 第三列为chunking，第四列为ner。
 
     Example::
@@ -123,7 +125,7 @@ class Conll2003Loader(ConllLoader):
         super(Conll2003Loader, self).__init__(headers=headers)
     
     def _load(self, path):
-        """
+        r"""
         传入的一个文件路径，将该文件读入DataSet中，field由ConllLoader初始化时指定的headers决定。
 
         :param str path: 文件的路径
@@ -148,9 +150,10 @@ class Conll2003Loader(ConllLoader):
 
 
 class Conll2003NERLoader(ConllLoader):
-    """
-    用于读取conll2003任务的NER数据。
+    r"""
+    用于读取conll2003任务的NER数据。每一行有4列内容，空行意味着隔开两个句子
 
+    支持读取的内容如下
     Example::
 
         Nadim NNP B-NP B-PER
@@ -181,7 +184,7 @@ class Conll2003NERLoader(ConllLoader):
         super().__init__(headers=headers, indexes=[0, 3])
     
     def _load(self, path):
-        """
+        r"""
         传入的一个文件路径，将该文件读入DataSet中，field由ConllLoader初始化时指定的headers决定。
 
         :param str path: 文件的路径
@@ -199,6 +202,8 @@ class Conll2003NERLoader(ConllLoader):
                 continue
             ins = {h: data[i] for i, h in enumerate(self.headers)}
             ds.append(Instance(**ins))
+        if len(ds) == 0:
+            raise RuntimeError("No data found {}.".format(path))
         return ds
     
     def download(self):
@@ -206,17 +211,25 @@ class Conll2003NERLoader(ConllLoader):
 
 
 class OntoNotesNERLoader(ConllLoader):
-    """
+    r"""
     用以读取OntoNotes的NER数据，同时也是Conll2012的NER任务数据。将OntoNote数据处理为conll格式的过程可以参考
     https://github.com/yhcc/OntoNotes-5.0-NER。OntoNoteNERLoader将取第4列和第11列的内容。
 
+    读取的数据格式为：
+
+    Example::
+
+        bc/msnbc/00/msnbc_0000   0   0          Hi   UH   (TOP(FRAG(INTJ*)  -   -   -    Dan_Abrams  *   -
+        bc/msnbc/00/msnbc_0000   0   1    everyone   NN              (NP*)  -   -   -    Dan_Abrams  *   -
+        ...
+
     返回的DataSet的内容为
 
-    .. csv-table:: 下面是使用OntoNoteNERLoader读取的DataSet所具备的结构, target列是BIO编码
+    .. csv-table::
         :header: "raw_words", "target"
 
-        "[Nadim, Ladki]", "[B-PER, I-PER]"
-        "[AL-AIN, United, Arab, ...]", "[B-LOC, B-LOC, I-LOC, ...]"
+        "['Hi', 'everyone', '.']", "['O', 'O', 'O']"
+        "['first', 'up', 'on', 'the', 'docket']", "['O', 'O', 'O', 'O', 'O']"
         "[...]", "[...]"
 
     """
@@ -276,16 +289,60 @@ class OntoNotesNERLoader(ConllLoader):
 
 
 class CTBLoader(Loader):
+    r"""
+    支持加载的数据应该具备以下格式, 其中第二列为词语，第四列为pos tag，第七列为依赖树的head，第八列为依赖树的label
+
+    Example::
+
+        1       印度    _       NR      NR      _       3       nn      _       _
+        2       海军    _       NN      NN      _       3       nn      _       _
+        3       参谋长  _       NN      NN      _       5       nsubjpass       _       _
+        4       被      _       SB      SB      _       5       pass    _       _
+        5       解职    _       VV      VV      _       0       root    _       _
+
+        1       新华社  _       NR      NR      _       7       dep     _       _
+        2       新德里  _       NR      NR      _       7       dep     _       _
+        3       １２月  _       NT      NT      _       7       dep     _       _
+        ...
+
+    读取之后DataSet具备的格式为
+
+    .. csv-table::
+        :header: "raw_words", "pos", "dep_head", "dep_label"
+
+        "[印度, 海军, ...]", "[NR, NN, SB, ...]", "[3, 3, ...]", "[nn, nn, ...]"
+        "[新华社, 新德里, ...]", "[NR, NR, NT, ...]", "[7, 7, 7, ...]", "[dep, dep, dep, ...]"
+        "[...]", "[...]", "[...]", "[...]"
+
+    """
     def __init__(self):
         super().__init__()
+        headers = [
+            'raw_words', 'pos', 'dep_head', 'dep_label',
+        ]
+        indexes = [
+            1, 3, 6, 7,
+        ]
+        self.loader = ConllLoader(headers=headers, indexes=indexes)
     
     def _load(self, path: str):
-        pass
+        dataset = self.loader._load(path)
+        return dataset
+
+    def download(self):
+        r"""
+        由于版权限制，不能提供自动下载功能。可参考
+
+        https://catalog.ldc.upenn.edu/LDC2013T21
+
+        :return:
+        """
+        raise RuntimeError("CTB cannot be downloaded automatically.")
 
 
 class CNNERLoader(Loader):
     def _load(self, path: str):
-        """
+        r"""
         支持加载形如以下格式的内容，一行两列，以空格隔开两个sample
 
         Example::
@@ -323,27 +380,36 @@ class CNNERLoader(Loader):
 
 
 class MsraNERLoader(CNNERLoader):
-    """
+    r"""
     读取MSRA-NER数据，数据中的格式应该类似与下列的内容
 
     Example::
 
-        我 O
-        们 O
-        变 O
-        而 O
-        以 O
-        书 O
-        会 O
+        把	O
+        欧	B-LOC
+
+        美	B-LOC
+        、	O
+
+        港	B-LOC
+        台	B-LOC
+
+        流	O
+        行	O
+
+        的	O
+
+        食	O
+
         ...
 
     读取后的DataSet包含以下的field
 
-    .. csv-table:: target列是基于BIO的编码方式
+    .. csv-table::
         :header: "raw_chars", "target"
 
-        "[我, 们, 变...]", "[O, O, ...]"
-        "[中, 共, 中, ...]", "[B-ORG, I-ORG, I-ORG, ...]"
+        "['把', '欧'] ", "['O', 'B-LOC']"
+        "['美', '、']", "['B-LOC', 'O']"
         "[...]", "[...]"
 
     """
@@ -352,7 +418,7 @@ class MsraNERLoader(CNNERLoader):
         super().__init__()
     
     def download(self, dev_ratio: float = 0.1, re_download: bool = False) -> str:
-        """
+        r"""
         自动下载MSAR-NER的数据，如果你使用该数据，请引用 Gina-Anne Levow, 2006, The Third International Chinese Language
         Processing Bakeoff: Word Segmentation and Named Entity Recognition.
 
@@ -402,11 +468,35 @@ class MsraNERLoader(CNNERLoader):
 
 
 class WeiboNERLoader(CNNERLoader):
+    r"""
+    读取WeiboNER数据，数据中的格式应该类似与下列的内容
+
+    Example::
+
+        老	B-PER.NOM
+        百	I-PER.NOM
+        姓	I-PER.NOM
+
+        心	O
+
+        ...
+
+        读取后的DataSet包含以下的field
+
+        .. csv-table::
+
+            :header: "raw_chars", "target"
+
+            "['老', '百', '姓']", "['B-PER.NOM', 'I-PER.NOM', 'I-PER.NOM']"
+            "['心']", "['O']"
+            "[...]", "[...]"
+
+        """
     def __init__(self):
         super().__init__()
     
     def download(self) -> str:
-        """
+        r"""
         自动下载Weibo-NER的数据，如果你使用了该数据，请引用 Nanyun Peng and Mark Dredze, 2015, Named Entity Recognition for
         Chinese Social Media with Jointly Trained Embeddings.
 
@@ -419,28 +509,26 @@ class WeiboNERLoader(CNNERLoader):
 
 
 class PeopleDailyNERLoader(CNNERLoader):
-    """
+    r"""
     支持加载的数据格式如下
 
     Example::
 
-        当 O
-        希 O
-        望 O
-        工 O
-        程 O
-        救 O
-        助 O
-        的 O
-        百 O
+        中 B-ORG
+        共 I-ORG
+        中 I-ORG
+        央 I-ORG
+
+        致 O
+        中 B-ORG
+        ...
 
     读取后的DataSet包含以下的field
 
     .. csv-table:: target列是基于BIO的编码方式
         :header: "raw_chars", "target"
 
-        "[我, 们, 变...]", "[O, O, ...]"
-        "[中, 共, 中, ...]", "[B-ORG, I-ORG, I-ORG, ...]"
+        "['中', '共', '中', '央']", "['B-ORG', 'I-ORG', 'I-ORG', 'I-ORG']"
         "[...]", "[...]"
 
     """

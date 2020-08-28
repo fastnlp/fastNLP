@@ -1,4 +1,4 @@
-"""undocumented
+r"""undocumented
 轻量封装的 Pytorch LSTM 模块.
 可在 forward 时传入序列的长度, 自动对padding做合适的处理.
 """
@@ -13,24 +13,25 @@ import torch.nn.utils.rnn as rnn
 
 
 class LSTM(nn.Module):
-    """
-    别名：:class:`fastNLP.modules.LSTM`  :class:`fastNLP.modules.encoder.LSTM`
-
+    r"""
     LSTM 模块, 轻量封装的Pytorch LSTM. 在提供seq_len的情况下，将自动使用pack_padded_sequence; 同时默认将forget gate的bias初始化
-        为1; 且可以应对DataParallel中LSTM的使用问题。
+    为1; 且可以应对DataParallel中LSTM的使用问题。
 
-    :param input_size:  输入 `x` 的特征维度
-    :param hidden_size: 隐状态 `h` 的特征维度.
-    :param num_layers: rnn的层数. Default: 1
-    :param dropout: 层间dropout概率. Default: 0
-    :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``
-    :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
-        :(batch, seq, feature). Default: ``False``
-    :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
     """
 
     def __init__(self, input_size, hidden_size=100, num_layers=1, dropout=0.0, batch_first=True,
                  bidirectional=False, bias=True):
+        r"""
+        
+        :param input_size:  输入 `x` 的特征维度
+        :param hidden_size: 隐状态 `h` 的特征维度. 如果bidirectional为True，则输出的维度会是hidde_size*2
+        :param num_layers: rnn的层数. Default: 1
+        :param dropout: 层间dropout概率. Default: 0
+        :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``
+        :param batch_first: 若为 ``True``, 输入和输出 ``Tensor`` 形状为
+            :(batch, seq, feature). Default: ``False``
+        :param bias: 如果为 ``False``, 模型将不会使用bias. Default: ``True``
+        """
         super(LSTM, self).__init__()
         self.batch_first = batch_first
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, bias=bias, batch_first=batch_first,
@@ -49,14 +50,14 @@ class LSTM(nn.Module):
                 nn.init.xavier_uniform_(param)
 
     def forward(self, x, seq_len=None, h0=None, c0=None):
-        """
+        r"""
 
         :param x: [batch, seq_len, input_size] 输入序列
         :param seq_len: [batch, ] 序列长度, 若为 ``None``, 所有输入看做一样长. Default: ``None``
         :param h0: [batch, hidden_size] 初始隐状态, 若为 ``None`` , 设为全0向量. Default: ``None``
         :param c0: [batch, hidden_size] 初始Cell状态, 若为 ``None`` , 设为全0向量. Default: ``None``
-        :return (output, ht) 或 output: 若 ``get_hidden=True`` [batch, seq_len, hidden_size*num_direction] 输出序列
-            和 [batch, hidden_size*num_direction] 最后时刻隐状态.
+        :return (output, (ht, ct)): output: [batch, seq_len, hidden_size*num_direction] 输出序列
+            和 ht,ct: [num_layers*num_direction, batch, hidden_size] 最后时刻隐状态.
         """
         batch_size, max_len, _ = x.size()
         if h0 is not None and c0 is not None:
@@ -77,6 +78,7 @@ class LSTM(nn.Module):
                 output = output[unsort_idx]
             else:
                 output = output[:, unsort_idx]
+            hx = hx[0][:, unsort_idx], hx[1][:, unsort_idx]
         else:
             output, hx = self.lstm(x, hx)
         return output, hx

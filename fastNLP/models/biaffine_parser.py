@@ -1,4 +1,4 @@
-"""
+r"""
 Biaffine Dependency Parser 的 Pytorch 实现.
 """
 __all__ = [
@@ -6,27 +6,27 @@ __all__ = [
     "GraphParser"
 ]
 
+from collections import defaultdict
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from collections import defaultdict
-
+from .base_model import BaseModel
 from ..core.const import Const as C
 from ..core.losses import LossFunc
 from ..core.metrics import MetricBase
+from ..core.utils import seq_len_to_mask
+from ..embeddings.utils import get_embeddings
 from ..modules.dropout import TimestepDropout
 from ..modules.encoder.transformer import TransformerEncoder
 from ..modules.encoder.variational_rnn import VarLSTM
 from ..modules.utils import initial_parameter
-from ..embeddings.utils import get_embeddings
-from .base_model import BaseModel
-from ..core.utils import seq_len_to_mask
 
 
 def _mst(scores):
-    """
+    r"""
     with some modification to support parser output for MST decoding
     https://github.com/tdozat/Parser/blob/0739216129cd39d69997d28cbc4133b360ea3934/lib/models/nn.py#L692
     """
@@ -85,7 +85,7 @@ def _mst(scores):
 
 
 def _find_cycle(vertices, edges):
-    """
+    r"""
     https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
     https://github.com/tdozat/Parser/blob/0739216129cd39d69997d28cbc4133b360ea3934/lib/etc/tarjan.py
     """
@@ -129,9 +129,7 @@ def _find_cycle(vertices, edges):
 
 
 class GraphParser(BaseModel):
-    """
-    别名：:class:`fastNLP.models.GraphParser`  :class:`fastNLP.models.baffine_parser.GraphParser`
-
+    r"""
     基于图的parser base class, 支持贪婪解码和最大生成树解码
     """
     
@@ -140,7 +138,7 @@ class GraphParser(BaseModel):
     
     @staticmethod
     def greedy_decoder(arc_matrix, mask=None):
-        """
+        r"""
         贪心解码方式, 输入图, 输出贪心解码的parsing结果, 不保证合法的构成树
 
         :param arc_matrix: [batch, seq_len, seq_len] 输入图矩阵
@@ -150,7 +148,7 @@ class GraphParser(BaseModel):
         """
         _, seq_len, _ = arc_matrix.shape
         matrix = arc_matrix + torch.diag(arc_matrix.new(seq_len).fill_(-np.inf))
-        flip_mask = mask.eq(0)
+        flip_mask = mask.eq(False)
         matrix.masked_fill_(flip_mask.unsqueeze(1), -np.inf)
         _, heads = torch.max(matrix, dim=2)
         if mask is not None:
@@ -159,7 +157,7 @@ class GraphParser(BaseModel):
     
     @staticmethod
     def mst_decoder(arc_matrix, mask=None):
-        """
+        r"""
         用最大生成树算法, 计算parsing结果, 保证输出合法的树结构
 
         :param arc_matrix: [batch, seq_len, seq_len] 输入图矩阵
@@ -180,14 +178,17 @@ class GraphParser(BaseModel):
 
 
 class ArcBiaffine(nn.Module):
-    """
+    r"""
     Biaffine Dependency Parser 的子模块, 用于构建预测边的图
 
-    :param hidden_size: 输入的特征维度
-    :param bias: 是否使用bias. Default: ``True``
     """
     
     def __init__(self, hidden_size, bias=True):
+        r"""
+        
+        :param hidden_size: 输入的特征维度
+        :param bias: 是否使用bias. Default: ``True``
+        """
         super(ArcBiaffine, self).__init__()
         self.U = nn.Parameter(torch.Tensor(hidden_size, hidden_size), requires_grad=True)
         self.has_bias = bias
@@ -198,7 +199,7 @@ class ArcBiaffine(nn.Module):
         initial_parameter(self)
     
     def forward(self, head, dep):
-        """
+        r"""
 
         :param head: arc-head tensor [batch, length, hidden]
         :param dep: arc-dependent tensor [batch, length, hidden]
@@ -207,62 +208,49 @@ class ArcBiaffine(nn.Module):
         output = dep.matmul(self.U)
         output = output.bmm(head.transpose(-1, -2))
         if self.has_bias:
-            output += head.matmul(self.bias).unsqueeze(1)
+            output = output + head.matmul(self.bias).unsqueeze(1)
         return output
 
 
 class LabelBilinear(nn.Module):
-    """
+    r"""
     Biaffine Dependency Parser 的子模块, 用于构建预测边类别的图
 
-    :param in1_features: 输入的特征1维度
-    :param in2_features: 输入的特征2维度
-    :param num_label: 边类别的个数
-    :param bias: 是否使用bias. Default: ``True``
     """
     
     def __init__(self, in1_features, in2_features, num_label, bias=True):
+        r"""
+        
+        :param in1_features: 输入的特征1维度
+        :param in2_features: 输入的特征2维度
+        :param num_label: 边类别的个数
+        :param bias: 是否使用bias. Default: ``True``
+        """
         super(LabelBilinear, self).__init__()
         self.bilinear = nn.Bilinear(in1_features, in2_features, num_label, bias=bias)
         self.lin = nn.Linear(in1_features + in2_features, num_label, bias=False)
     
     def forward(self, x1, x2):
-        """
+        r"""
 
         :param x1: [batch, seq_len, hidden] 输入特征1, 即label-head
         :param x2: [batch, seq_len, hidden] 输入特征2, 即label-dep
         :return output: [batch, seq_len, num_cls] 每个元素对应类别的概率图
         """
         output = self.bilinear(x1, x2)
-        output += self.lin(torch.cat([x1, x2], dim=2))
+        output = output + self.lin(torch.cat([x1, x2], dim=2))
         return output
 
 
 class BiaffineParser(GraphParser):
-    """
-    别名：:class:`fastNLP.models.BiaffineParser`  :class:`fastNLP.models.baffine_parser.BiaffineParser`
-
+    r"""
     Biaffine Dependency Parser 实现.
     论文参考 `Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016) <https://arxiv.org/abs/1611.01734>`_ .
 
-    :param init_embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
-        embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
-        此时就以传入的对象作为embedding
-    :param pos_vocab_size: part-of-speech 词典大小
-    :param pos_emb_dim: part-of-speech 向量维度
-    :param num_label: 边的类别个数
-    :param rnn_layers: rnn encoder的层数
-    :param rnn_hidden_size: rnn encoder 的隐状态维度
-    :param arc_mlp_size: 边预测的MLP维度
-    :param label_mlp_size: 类别预测的MLP维度
-    :param dropout: dropout概率.
-    :param encoder: encoder类别, 可选 ('lstm', 'var-lstm', 'transformer'). Default: lstm
-    :param use_greedy_infer: 是否在inference时使用贪心算法.
-        若 ``False`` , 使用更加精确但相对缓慢的MST算法. Default: ``False``
     """
     
     def __init__(self,
-                 init_embed,
+                 embed,
                  pos_vocab_size,
                  pos_emb_dim,
                  num_label,
@@ -273,10 +261,27 @@ class BiaffineParser(GraphParser):
                  dropout=0.3,
                  encoder='lstm',
                  use_greedy_infer=False):
+        r"""
+        
+        :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
+            embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
+            此时就以传入的对象作为embedding
+        :param pos_vocab_size: part-of-speech 词典大小
+        :param pos_emb_dim: part-of-speech 向量维度
+        :param num_label: 边的类别个数
+        :param rnn_layers: rnn encoder的层数
+        :param rnn_hidden_size: rnn encoder 的隐状态维度
+        :param arc_mlp_size: 边预测的MLP维度
+        :param label_mlp_size: 类别预测的MLP维度
+        :param dropout: dropout概率.
+        :param encoder: encoder类别, 可选 ('lstm', 'var-lstm', 'transformer'). Default: lstm
+        :param use_greedy_infer: 是否在inference时使用贪心算法.
+            若 ``False`` , 使用更加精确但相对缓慢的MST算法. Default: ``False``
+        """
         super(BiaffineParser, self).__init__()
         rnn_out_size = 2 * rnn_hidden_size
         word_hid_dim = pos_hid_dim = rnn_hidden_size
-        self.word_embedding = get_embeddings(init_embed)
+        self.word_embedding = get_embeddings(embed)
         word_emb_dim = self.word_embedding.embedding_dim
         self.pos_embedding = nn.Embedding(num_embeddings=pos_vocab_size, embedding_dim=pos_emb_dim)
         self.word_fc = nn.Linear(word_emb_dim, word_hid_dim)
@@ -309,13 +314,8 @@ class BiaffineParser(GraphParser):
                 raise ValueError('unsupported rnn_out_size: {} for transformer'.format(rnn_out_size))
             self.position_emb = nn.Embedding(num_embeddings=self.max_len,
                                              embedding_dim=rnn_out_size, )
-            self.encoder = TransformerEncoder(num_layers=rnn_layers,
-                                              model_size=rnn_out_size,
-                                              inner_size=1024,
-                                              key_size=d_k,
-                                              value_size=d_v,
-                                              num_head=n_head,
-                                              dropout=dropout, )
+            self.encoder = TransformerEncoder( num_layers=rnn_layers, d_model=rnn_out_size,
+                                               n_head=n_head, dim_ff=1024, dropout=dropout)
         else:
             raise ValueError('unsupported encoder type: {}'.format(encoder))
         
@@ -342,7 +342,7 @@ class BiaffineParser(GraphParser):
                     nn.init.normal_(p, 0, 0.1)
     
     def forward(self, words1, words2, seq_len, target1=None):
-        """模型forward阶段
+        r"""模型forward阶段
 
         :param words1: [batch_size, seq_len] 输入word序列
         :param words2: [batch_size, seq_len] 输入pos序列
@@ -363,7 +363,7 @@ class BiaffineParser(GraphParser):
         # print('forward {} {}'.format(batch_size, seq_len))
         
         # get sequence mask
-        mask = seq_len_to_mask(seq_len).long()
+        mask = seq_len_to_mask(seq_len, max_len=length).long()
         
         word = self.word_embedding(words1)  # [N,L] -> [N,L,C_0]
         pos = self.pos_embedding(words2)  # [N,L] -> [N,L,C_1]
@@ -423,7 +423,7 @@ class BiaffineParser(GraphParser):
     
     @staticmethod
     def loss(pred1, pred2, target1, target2, seq_len):
-        """
+        r"""
         计算parser的loss
 
         :param pred1: [batch_size, seq_len, seq_len] 边预测logits
@@ -435,10 +435,10 @@ class BiaffineParser(GraphParser):
         """
         
         batch_size, length, _ = pred1.shape
-        mask = seq_len_to_mask(seq_len)
-        flip_mask = (mask == 0)
+        mask = seq_len_to_mask(seq_len, max_len=length)
+        flip_mask = (mask.eq(False))
         _arc_pred = pred1.clone()
-        _arc_pred.masked_fill_(flip_mask.unsqueeze(1), -float('inf'))
+        _arc_pred = _arc_pred.masked_fill(flip_mask.unsqueeze(1), -float('inf'))
         arc_logits = F.log_softmax(_arc_pred, dim=2)
         label_logits = F.log_softmax(pred2, dim=2)
         batch_index = torch.arange(batch_size, device=arc_logits.device, dtype=torch.long).unsqueeze(1)
@@ -446,15 +446,14 @@ class BiaffineParser(GraphParser):
         arc_loss = arc_logits[batch_index, child_index, target1]
         label_loss = label_logits[batch_index, child_index, target2]
         
-        byte_mask = flip_mask.byte()
-        arc_loss.masked_fill_(byte_mask, 0)
-        label_loss.masked_fill_(byte_mask, 0)
+        arc_loss = arc_loss.masked_fill(flip_mask, 0)
+        label_loss = label_loss.masked_fill(flip_mask, 0)
         arc_nll = -arc_loss.mean()
         label_nll = -label_loss.mean()
         return arc_nll + label_nll
     
     def predict(self, words1, words2, seq_len):
-        """模型预测API
+        r"""模型预测API
 
         :param words1: [batch_size, seq_len] 输入word序列
         :param words2: [batch_size, seq_len] 输入pos序列
@@ -475,22 +474,23 @@ class BiaffineParser(GraphParser):
 
 
 class ParserLoss(LossFunc):
-    """
-    别名：:class:`fastNLP.models.ParserLoss`  :class:`fastNLP.models.baffine_parser.ParserLoss`
-
+    r"""
     计算parser的loss
 
-    :param pred1: [batch_size, seq_len, seq_len] 边预测logits
-    :param pred2: [batch_size, seq_len, num_label] label预测logits
-    :param target1: [batch_size, seq_len] 真实边的标注
-    :param target2: [batch_size, seq_len] 真实类别的标注
-    :param seq_len: [batch_size, seq_len] 真实目标的长度
-    :return loss: scalar
     """
     
     def __init__(self, pred1=None, pred2=None,
                  target1=None, target2=None,
                  seq_len=None):
+        r"""
+        
+        :param pred1: [batch_size, seq_len, seq_len] 边预测logits
+        :param pred2: [batch_size, seq_len, num_label] label预测logits
+        :param target1: [batch_size, seq_len] 真实边的标注
+        :param target2: [batch_size, seq_len] 真实类别的标注
+        :param seq_len: [batch_size, seq_len] 真实目标的长度
+        :return loss: scalar
+        """
         super(ParserLoss, self).__init__(BiaffineParser.loss,
                                          pred1=pred1,
                                          pred2=pred2,
@@ -500,25 +500,25 @@ class ParserLoss(LossFunc):
 
 
 class ParserMetric(MetricBase):
-    """
-    别名：:class:`fastNLP.models.ParserMetric`  :class:`fastNLP.models.baffine_parser.ParserMetric`
-
+    r"""
     评估parser的性能
 
-    :param pred1: 边预测logits
-    :param pred2: label预测logits
-    :param target1: 真实边的标注
-    :param target2: 真实类别的标注
-    :param seq_len: 序列长度
-    :return dict: 评估结果::
-
-        UAS: 不带label时, 边预测的准确率
-        LAS: 同时预测边和label的准确率
     """
     
     def __init__(self, pred1=None, pred2=None,
                  target1=None, target2=None, seq_len=None):
+        r"""
         
+        :param pred1: 边预测logits
+        :param pred2: label预测logits
+        :param target1: 真实边的标注
+        :param target2: 真实类别的标注
+        :param seq_len: 序列长度
+        :return dict: 评估结果::
+    
+            UAS: 不带label时, 边预测的准确率
+            LAS: 同时预测边和label的准确率
+        """
         super().__init__()
         self._init_param_map(pred1=pred1, pred2=pred2,
                              target1=target1, target2=target2,
@@ -534,7 +534,7 @@ class ParserMetric(MetricBase):
         return res
     
     def evaluate(self, pred1, pred2, target1, target2, seq_len=None):
-        """Evaluate the performance of prediction.
+        r"""Evaluate the performance of prediction.
         """
         if seq_len is None:
             seq_mask = pred1.new_ones(pred1.size(), dtype=torch.long)
