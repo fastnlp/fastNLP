@@ -1,0 +1,5 @@
+prettytable==0.7.2
+allennlp==0.8.2
+scikit-learn==0.22.2
+pyhocon==0.3.50
+torch==1.1

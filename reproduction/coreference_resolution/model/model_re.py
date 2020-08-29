@@ -17,7 +17,6 @@ torch.cuda.manual_seed(0)  # gpu
 np.random.seed(0) # numpy
 random.seed(0)
 
-
 class ffnn(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(ffnn, self).__init__()
@@ -565,18 +564,36 @@ class Model(BaseModel):
 
         return ans
 
-    def predict(self, sentences, doc_np, speaker_ids_np, genre, char_index, seq_len):
+    def predict(self, words1 , words2, words3, words4, chars, seq_len):
+        """
+        实际输入都是tensor
+        :param sentences: 句子，被fastNLP转化成了numpy，
+        :param doc_np: 被fastNLP转化成了Tensor
+        :param speaker_ids_np: 被fastNLP转化成了Tensor
+        :param genre: 被fastNLP转化成了Tensor
+        :param char_index: 被fastNLP转化成了Tensor
+        :param seq_len: 被fastNLP转化成了Tensor
+        :return:
+        """
+    
+        sentences = words1
+        doc_np = words2
+        speaker_ids_np = words3
+        genre = words4
+        char_index = chars
+
+    # def predict(self, sentences, doc_np, speaker_ids_np, genre, char_index, seq_len):
         ans = self(sentences,
                    doc_np,
                    speaker_ids_np,
                    genre,
                    char_index,
                    seq_len)
-
-        predicted_antecedents = self.get_predicted_antecedents(ans["antecedents"], ans["antecedent_scores"])
-        predicted_clusters, mention_to_predicted = self.get_predicted_clusters(ans["mention_start_tensor"],
-                                                                               ans["mention_end_tensor"],
+        predicted_antecedents = self.get_predicted_antecedents(ans["antecedents"], ans["antecedent_scores"].cpu())
+        predicted_clusters, mention_to_predicted = self.get_predicted_clusters(ans["mention_start_tensor"].cpu(),
+                                                                               ans["mention_end_tensor"].cpu(),
                                                                                predicted_antecedents)
+
 
         return {'predicted':predicted_clusters,"mention_to_predicted":mention_to_predicted}
 
