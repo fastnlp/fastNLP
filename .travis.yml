@@ -14,3 +14,13 @@ script:
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
+
+notifications:
+  webhooks:
+    urls:
+      - https://open.feishu.cn/officialapp/notify/55ba4b15d04608e875c122f11484a4e2fa807c42b9ca074509bea654d1b99ca6
+    on_success: always # default: always
+    on_failure: always # default: always
+    on_start: never # default: never
+    on_cancel: always # default: always
+    on_error: always # default: always
