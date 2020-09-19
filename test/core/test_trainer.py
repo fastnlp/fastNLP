@@ -76,8 +76,19 @@ class TrainerTestGround(unittest.TestCase):
                           use_tqdm=True, check_code_level=2)
         trainer.train()
         import os
+        import shutil
+        self.assertTrue(os.path.exists(save_path))
         if os.path.exists(save_path):
-            import shutil
+            shutil.rmtree(save_path)
+
+        # 无dev_data的训练
+        trainer = Trainer(train_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                          batch_size=32, n_epochs=10, print_every=50, dev_data=None,
+                          metrics=None, validate_every=-1, save_path=save_path,
+                          use_tqdm=True, check_code_level=2)
+        trainer.train()
+        self.assertTrue(os.path.exists(save_path))
+        if os.path.exists(save_path):
             shutil.rmtree(save_path)
 
     def test_trainer_suggestion1(self):

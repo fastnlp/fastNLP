@@ -83,7 +83,7 @@ class GPT2Embedding(ContextualEmbedding):
 
         only_use_pretrain_bpe = kwargs.get('only_use_pretrain_bpe', False)
         truncate_embed = kwargs.get('truncate_embed', True)
-        min_freq = kwargs.get('min_freq', 2)
+        min_freq = kwargs.get('min_freq', 1)
 
         self.lm_loss =language_model
         self.model = _GPT2Model(model_dir_or_name=model_dir_or_name, vocab=vocab, layers=layers,
@@ -315,7 +315,7 @@ class GPT2WordPieceEncoder(nn.Module):
 
 class _GPT2Model(nn.Module):
     def __init__(self, model_dir_or_name, vocab, layers,  pool_method='first', auto_truncate=True, language_model=False,
-                 only_use_pretrain_bpe=False, min_freq=2, truncate_embed=False):
+                 only_use_pretrain_bpe=False, min_freq=1, truncate_embed=False):
         super().__init__()
 
         self.tokenzier = GPT2Tokenizer.from_pretrained(model_dir_or_name)

@@ -89,7 +89,7 @@ class BertEmbedding(ContextualEmbedding):
             word pieces后的内容，并将第512个word piece置为[SEP]。超过长度的部分的encode结果直接全部置零。一般仅有只使用[CLS]
             来进行分类的任务将auto_truncate置为True。
         :param kwargs:
-            int min_freq: 小于该次数的词会被unk代替
+            int min_freq: 小于该次数的词会被unk代替, 默认为1
         """
         super(BertEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
@@ -110,7 +110,7 @@ class BertEmbedding(ContextualEmbedding):
         if '[CLS]' in vocab:
             self._word_cls_index = vocab['CLS']
 
-        min_freq = kwargs.get('min_freq', 2)
+        min_freq = kwargs.get('min_freq', 1)
         self._min_freq = min_freq
         self.model = _BertWordModel(model_dir_or_name=model_dir_or_name, vocab=vocab, layers=layers,
                                     pool_method=pool_method, include_cls_sep=include_cls_sep,

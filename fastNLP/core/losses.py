@@ -178,7 +178,7 @@ class LossFunc(LossBase):
     r"""
     提供给用户使用自定义损失函数的类
 
-    :param func: 用户自行定义的损失函数，应当为一个函数或者callable(func)为True的ojbect
+    :param func: 用户自行定义的损失函数，应当为一个函数。
     :param dict key_map: 参数映射表。键为Model/DataSet参数名，值为损失函数参数名。
                          fastNLP的trainer将在训练时从模型返回值或者训练数据DataSet的target=True的field中
                          找到相对应的参数名为value的参数，并传入func中作为参数名为key的参数
@@ -186,8 +186,8 @@ class LossFunc(LossBase):
 
     使用方法::
 
-        func = torch.nn.CrossEntropyLoss()
-        loss_func = LossFunc(func, input="pred", target="label")
+        import torch.nn.functional as F
+        loss_func = LossFunc(F.cross_entropy, input="pred", target="label")
         # 这表示构建了一个损失函数类，由func计算损失函数，其中将从模型返回值或者DataSet的target=True的field
         # 当中找到一个参数名为`pred`的参数传入func一个参数名为`input`的参数；找到一个参数名为`label`的参数
         # 传入func作为一个名为`target`的参数
