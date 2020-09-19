@@ -177,7 +177,7 @@ class StaticEmbedding(TokenEmbedding):
             else:
                 unknown_idx = embedding.size(0) - 1  # 否则是最后一个为unknow
                 self.register_buffer('words_to_words', torch.arange(len(vocab)).long())
-            words_to_words = torch.full((len(vocab),), fill_value=unknown_idx).long()
+            words_to_words = torch.full((len(vocab),), fill_value=unknown_idx, dtype=torch.long).long()
             for word, index in vocab:
                 if word not in lowered_vocab:
                     word = word.lower()
@@ -306,7 +306,7 @@ class StaticEmbedding(TokenEmbedding):
                 vectors = torch.cat((vectors, torch.zeros(1, dim)), dim=0).contiguous()
             else:
                 unknown_idx = vocab.unknown_idx
-            self.register_buffer('words_to_words', torch.full((len(vocab), ), fill_value=unknown_idx).long())
+            self.register_buffer('words_to_words', torch.full((len(vocab), ), fill_value=unknown_idx, dtype=torch.long).long())
             index = 0
             for word, index_in_vocab in vocab:
                 if index_in_vocab in matrix:

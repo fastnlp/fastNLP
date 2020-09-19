@@ -81,9 +81,9 @@ class TestSequenceGenerator(unittest.TestCase):
         # greedy
         for beam_search in [1, 3]:
             decoder_output = torch.randn(2, 10, 5)
-            path = decoder_output.argmax(dim=-1)  # 2 x 4
+            path = decoder_output.argmax(dim=-1)  # 2 x 10
             decoder = GreedyDummyDecoder(decoder_output)
-            with self.subTest(beam_search=beam_search):
+            with self.subTest(msg=beam_search, beam_search=beam_search):
                 generator = SequenceGenerator(decoder=decoder, max_length=decoder_output.size(1), num_beams=beam_search,
                                                       do_sample=False, temperature=1, top_k=50, top_p=1, bos_token_id=1,
                                                       eos_token_id=None, repetition_penalty=1, length_penalty=1, pad_token_id=0)

@@ -254,6 +254,7 @@ class TestGPT2WordPieceEncoder(unittest.TestCase):
         self.assertTrue(ds.has_field('word_pieces'))
         result = embed(torch.LongTensor([[1, 2, 3, 4]]))
 
+    @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
     def test_generate(self):
         # weight_path = 'test/data_for_tests/embedding/small_gpt2'
         weight_path = 'en'
