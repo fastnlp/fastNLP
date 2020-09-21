@@ -202,6 +202,7 @@ class CWSPipe(Pipe):
                         subchar.append(c)
                         char.append(''.join(subchar))
                         subchar = []
+                        continue
                     if subchar:
                         subchar.append(c)
                     else:

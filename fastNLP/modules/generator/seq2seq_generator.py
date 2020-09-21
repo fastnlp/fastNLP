@@ -384,23 +384,23 @@ def _beam_search_generate(decoder: Seq2SeqDecoder, tokens=None, state=None, max_
             else:
                 flag = False
 
-        # 更改state状态, 重组token_ids
-        reorder_inds = (batch_inds_with_numbeams_interval + _from_which_beam).view(-1)  # flatten成一维
-        state.reorder_state(reorder_inds)
-        # 重新组织token_ids的状态
-        tokens = _next_tokens
-        token_ids = torch.cat([token_ids.index_select(index=reorder_inds, dim=0), tokens], dim=-1)
-
         if flag:
+            _token_ids = torch.cat([token_ids, _next_tokens], dim=-1)
             for batch_idx, beam_ind, beam_idx in zip(eos_batch_idx.tolist(), eos_beam_ind.tolist(),
                                                      eos_beam_idx.tolist()):
                 if not dones[batch_idx]:
                     score = next_scores[batch_idx, beam_ind].item()
                     # 之后需要在结尾新增一个eos
                     if _eos_token_id!=-1:
-                        hypos[batch_idx].add(token_ids[batch_idx * num_beams + beam_idx, :cur_len].clone(), score)
+                        hypos[batch_idx].add(_token_ids[batch_idx * num_beams + beam_idx, :cur_len].clone(), score)
                     else:
-                        hypos[batch_idx].add(token_ids[batch_idx * num_beams + beam_idx].clone(), score)
+                        hypos[batch_idx].add(_token_ids[batch_idx * num_beams + beam_idx].clone(), score)
+
+        # 更改state状态, 重组token_ids
+        reorder_inds = (batch_inds_with_numbeams_interval + _from_which_beam).view(-1)  # flatten成一维
+        state.reorder_state(reorder_inds)
+        # 重新组织token_ids的状态
+        token_ids = torch.cat([token_ids.index_select(index=reorder_inds, dim=0), _next_tokens], dim=-1)
 
         for batch_idx in range(batch_size):
             dones[batch_idx] = dones[batch_idx] or hypos[batch_idx].is_done(next_scores[batch_idx, 0].item()) or \
