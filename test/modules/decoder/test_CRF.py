@@ -220,3 +220,22 @@ class TestCRF(unittest.TestCase):
             if _%1000==0:
                 print(loss)
             self.assertGreater(loss.item(), 0, "CRF loss cannot be less than 0.")
+
+    def test_masking(self):
+        # 测试crf的pad masking正常运行
+        import torch
+        from fastNLP.modules.decoder.crf import ConditionalRandomField
+        max_len = 5
+        n_tags = 5
+        pad_len = 5
+
+        torch.manual_seed(4)
+        logit = torch.rand(1, max_len+pad_len, n_tags)
+        # logit[0, -1, :] = 0.0
+        mask = torch.ones(1, max_len+pad_len)
+        mask[0,-pad_len] = 0
+        model = ConditionalRandomField(n_tags)
+        pred, score = model.viterbi_decode(logit[:,:-pad_len], mask[:,:-pad_len])
+        mask_pred, mask_score = model.viterbi_decode(logit, mask)
+        self.assertEqual(pred[0].tolist(), mask_pred[0,:-pad_len].tolist())
+

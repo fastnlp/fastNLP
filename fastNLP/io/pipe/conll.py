@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "Conll2003NERPipe",
@@ -21,7 +21,7 @@ from ...core.vocabulary import Vocabulary
 
 
 class _NERPipe(Pipe):
-    """
+    r"""
     NER任务的处理Pipe, 该Pipe会（1）复制raw_words列，并命名为words; (2）在words, target列建立词表
     (创建 :class:`fastNLP.Vocabulary` 对象，所以在返回的DataBundle中将有两个Vocabulary); (3）将words，target列根据相应的
     Vocabulary转换为index。
@@ -31,7 +31,7 @@ class _NERPipe(Pipe):
     """
     
     def __init__(self, encoding_type: str = 'bio', lower: bool = False):
-        """
+        r"""
 
         :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
         :param bool lower: 是否将words小写化后再建立词表，绝大多数情况都不需要设置为True。
@@ -45,7 +45,7 @@ class _NERPipe(Pipe):
         self.lower = lower
     
     def process(self, data_bundle: DataBundle) -> DataBundle:
-        """
+        r"""
         支持的DataSet的field为
 
         .. csv-table::
@@ -80,7 +80,7 @@ class _NERPipe(Pipe):
 
 
 class Conll2003NERPipe(_NERPipe):
-    """
+    r"""
     Conll2003的NER任务的处理Pipe, 该Pipe会（1）复制raw_words列，并命名为words; (2）在words, target列建立词表
     (创建 :class:`fastNLP.Vocabulary` 对象，所以在返回的DataBundle中将有两个Vocabulary); (3）将words，target列根据相应的
     Vocabulary转换为index。
@@ -110,7 +110,7 @@ class Conll2003NERPipe(_NERPipe):
     """
     
     def process_from_file(self, paths) -> DataBundle:
-        """
+        r"""
 
         :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.ConllLoader` 的load函数。
         :return: DataBundle
@@ -123,7 +123,7 @@ class Conll2003NERPipe(_NERPipe):
 
 
 class Conll2003Pipe(Pipe):
-    """
+    r"""
     经过该Pipe后，DataSet中的内容如下
 
     .. csv-table::
@@ -148,7 +148,7 @@ class Conll2003Pipe(Pipe):
 
     """
     def __init__(self, chunk_encoding_type='bioes', ner_encoding_type='bioes', lower: bool = False):
-        """
+        r"""
 
         :param str chunk_encoding_type: 支持bioes, bio。
         :param str ner_encoding_type: 支持bioes, bio。
@@ -169,7 +169,7 @@ class Conll2003Pipe(Pipe):
         self.lower = lower
     
     def process(self, data_bundle) -> DataBundle:
-        """
+        r"""
         输入的DataSet应该类似于如下的形式
 
         .. csv-table::
@@ -210,7 +210,7 @@ class Conll2003Pipe(Pipe):
         return data_bundle
     
     def process_from_file(self, paths):
-        """
+        r"""
 
         :param paths:
         :return:
@@ -220,7 +220,7 @@ class Conll2003Pipe(Pipe):
 
 
 class OntoNotesNERPipe(_NERPipe):
-    """
+    r"""
     处理OntoNotes的NER数据，处理之后DataSet中的field情况为
 
     .. csv-table::
@@ -252,7 +252,7 @@ class OntoNotesNERPipe(_NERPipe):
 
 
 class _CNNERPipe(Pipe):
-    """
+    r"""
     中文NER任务的处理Pipe, 该Pipe会（1）复制raw_chars列，并命名为chars; (2）在chars, target列建立词表
     (创建 :class:`fastNLP.Vocabulary` 对象，所以在返回的DataBundle中将有两个Vocabulary); (3）将chars，target列根据相应的
     Vocabulary转换为index。
@@ -263,7 +263,7 @@ class _CNNERPipe(Pipe):
     """
     
     def __init__(self, encoding_type: str = 'bio', bigrams=False, trigrams=False):
-        """
+        r"""
         
         :param str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
         :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
@@ -284,7 +284,7 @@ class _CNNERPipe(Pipe):
         self.trigrams = trigrams
 
     def process(self, data_bundle: DataBundle) -> DataBundle:
-        """
+        r"""
         支持的DataSet的field为
 
         .. csv-table::
@@ -335,7 +335,7 @@ class _CNNERPipe(Pipe):
 
 
 class MsraNERPipe(_CNNERPipe):
-    """
+    r"""
     处理MSRA-NER的数据，处理之后的DataSet的field情况为
 
     .. csv-table::
@@ -367,7 +367,7 @@ class MsraNERPipe(_CNNERPipe):
 
 
 class PeopleDailyPipe(_CNNERPipe):
-    """
+    r"""
     处理people daily的ner的数据，处理之后的DataSet的field情况为
 
     .. csv-table::
@@ -399,7 +399,7 @@ class PeopleDailyPipe(_CNNERPipe):
 
 
 class WeiboNERPipe(_CNNERPipe):
-    """
+    r"""
     处理weibo的ner的数据，处理之后的DataSet的field情况为
 
     .. csv-table::

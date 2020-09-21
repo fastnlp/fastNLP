@@ -1,4 +1,4 @@
-"""
+r"""
 fastNLP 由 :mod:`~fastNLP.core` 、 :mod:`~fastNLP.io` 、:mod:`~fastNLP.embeddings` 、 :mod:`~fastNLP.modules`、
 :mod:`~fastNLP.models` 等子模块组成，你可以查看每个模块的文档。
 
@@ -24,6 +24,9 @@ __all__ = [
     
     "Trainer",
     "Tester",
+
+    "DistTrainer",
+    "get_local_rank",
     
     "Callback",
     "GradientClipCallback",
@@ -38,15 +41,21 @@ __all__ = [
     'SaveModelCallback',
     "CallbackException",
     "EarlyStopError",
-    
+    "CheckPointCallback",
+
     "Padder",
     "AutoPadder",
     "EngChar2DPadder",
-    
+
+    # "CollateFn",
+    "ConcatCollateFn",
+
+    "MetricBase",
     "AccuracyMetric",
     "SpanFPreRecMetric",
     "CMRC2018Metric",
     "ClassifyFPreRecMetric",
+    "ConfusionMatrixMetric",
     
     "Optimizer",
     "SGD",
@@ -57,19 +66,24 @@ __all__ = [
     "SequentialSampler",
     "BucketSampler",
     "RandomSampler",
+    "SortedSampler",
     
     "LossFunc",
     "CrossEntropyLoss",
+    "MSELoss",
     "L1Loss",
     "BCELoss",
     "NLLLoss",
     "LossInForward",
+    "LossBase",
+    "CMRC2018Loss",
     
     "cache_results",
     
-    'logger'
+    'logger',
+    "init_logger_dist",
 ]
-__version__ = '0.4.5'
+__version__ = '0.5.6'
 
 import sys
 

@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = []
 
@@ -8,7 +8,7 @@ from ..modules.decoder.mlp import MLP
 
 
 class BaseModel(torch.nn.Module):
-    """Base PyTorch model for all models.
+    r"""Base PyTorch model for all models.
     """
     
     def __init__(self):
@@ -22,7 +22,7 @@ class BaseModel(torch.nn.Module):
 
 
 class NaiveClassifier(BaseModel):
-    """
+    r"""
     一个简单的分类器例子，可用于各种测试
     """
     def __init__(self, in_feature_dim, out_feature_dim):

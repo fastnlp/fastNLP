@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -48,6 +48,18 @@ PRETRAINED_BERT_MODEL_DIR = {
     'cn-wwm-ext': "bert-chinese-wwm-ext.zip"
 }
 
+PRETRAINED_GPT2_MODEL_DIR = {
+    'en': 'gpt2.zip',
+    'en-medium': 'gpt2-medium.zip',
+    'en-large': 'gpt2-large.zip',
+    'en-xl': 'gpt2-xl.zip'
+}
+
+PRETRAINED_ROBERTA_MODEL_DIR = {
+    'en': 'roberta-base.zip',
+    'en-large': 'roberta-large.zip'
+}
+
 PRETRAINED_ELMO_MODEL_DIR = {
     'en': 'elmo_en_Medium.zip',
     'en-small': "elmo_en_Small.zip",
@@ -70,7 +82,7 @@ PRETRAIN_STATIC_FILES = {
     'en-glove-twitter-27b-100d': 'glove.twitter.27B.100d.zip',
     'en-glove-twitter-27b-200d': 'glove.twitter.27B.200d.zip',
 
-    'en-word2vec-300': "GoogleNews-vectors-negative300.txt.gz",
+    'en-word2vec-300d': "GoogleNews-vectors-negative300.txt.gz",
 
     'en-fasttext-wiki': "wiki-news-300d-1M.vec.zip",
     'en-fasttext-crawl': "crawl-300d-2M.vec.zip",
@@ -127,18 +139,22 @@ DATASET_DIR = {
 
 PRETRAIN_MAP = {'elmo': PRETRAINED_ELMO_MODEL_DIR,
                 "bert": PRETRAINED_BERT_MODEL_DIR,
-                "static": PRETRAIN_STATIC_FILES}
+                "static": PRETRAIN_STATIC_FILES,
+                'gpt2': PRETRAINED_GPT2_MODEL_DIR,
+                'roberta': PRETRAINED_ROBERTA_MODEL_DIR}
 
 #  用于扩展fastNLP的下载
 FASTNLP_EXTEND_DATASET_URL = 'fastnlp_dataset_url.txt'
 FASTNLP_EXTEND_EMBEDDING_URL = {'elmo': 'fastnlp_elmo_url.txt',
-                         'bert':'fastnlp_bert_url.txt',
-                         'static': 'fastnlp_static_url.txt'
-}
+                                'bert':'fastnlp_bert_url.txt',
+                                'static': 'fastnlp_static_url.txt',
+                                'gpt2': 'fastnlp_gpt2_url.txt',
+                                'roberta': 'fastnlp_roberta_url.txt'
+                                }
 
 
 def cached_path(url_or_filename: str, cache_dir: str = None, name=None) -> Path:
-    """
+    r"""
     给定一个url，尝试通过url中的解析出来的文件名字filename到{cache_dir}/{name}/{filename}下寻找这个文件，
     
     1. 如果cache_dir=None, 则cache_dir=~/.fastNLP/; 否则cache_dir=cache_dir
@@ -183,7 +199,7 @@ def cached_path(url_or_filename: str, cache_dir: str = None, name=None) -> Path:
 
 
 def get_filepath(filepath):
-    """
+    r"""
     如果filepath为文件夹，
     
         如果内含多个文件, 返回filepath
@@ -210,7 +226,7 @@ def get_filepath(filepath):
 
 
 def get_cache_path():
-    """
+    r"""
     获取fastNLP默认cache的存放路径, 如果将FASTNLP_CACHE_PATH设置在了环境变量中，将使用环境变量的值，使得不用每个用户都去下载。
 
     :return str:  存放路径
@@ -226,7 +242,7 @@ def get_cache_path():
 
 
 def _get_base_url(name):
-    """
+    r"""
     根据name返回下载的url地址。
 
     :param str name: 支持dataset和embedding两种
@@ -252,7 +268,7 @@ def _get_base_url(name):
 
 
 def _get_embedding_url(embed_type, name):
-    """
+    r"""
     给定embedding类似和名称，返回下载url
 
     :param str embed_type: 支持static, bert, elmo。即embedding的类型
@@ -273,15 +289,15 @@ def _get_embedding_url(embed_type, name):
             return url
         raise KeyError("There is no {}. Only supports {}.".format(name, list(embed_map.keys())))
     else:
-        raise KeyError(f"There is no {embed_type}. Only supports bert, elmo, static")
+        raise KeyError(f"There is no {embed_type}. Only supports bert, elmo, static, gpt2, roberta")
 
 def _read_extend_url_file(filename, name)->str:
-    """
+    r"""
     filename中的内容使用制表符隔开，第一列是名称，第二列是下载的url地址
 
     :param str filename: 在默认的路径下寻找file这个文件
     :param str name: 需要寻找的资源的名称
-    :return: str or None
+    :return: str,None
     """
     cache_dir = get_cache_path()
     filepath = os.path.join(cache_dir, filename)
@@ -297,7 +313,7 @@ def _read_extend_url_file(filename, name)->str:
     return None
 
 def _get_dataset_url(name):
-    """
+    r"""
     给定dataset的名称，返回下载url
 
     :param str name: 给定dataset的名称，比如imdb, sst-2等
@@ -317,7 +333,7 @@ def _get_dataset_url(name):
 
 
 def split_filename_suffix(filepath):
-    """
+    r"""
     给定filepath 返回对应的name和suffix. 如果后缀是多个点，仅支持.tar.gz类型
     
     :param filepath: 文件路径
@@ -330,7 +346,7 @@ def split_filename_suffix(filepath):
 
 
 def get_from_cache(url: str, cache_dir: Path = None) -> Path:
-    """
+    r"""
     尝试在cache_dir中寻找url定义的资源; 如果没有找到; 则从url下载并将结果放在cache_dir下，缓存的名称由url的结果推断而来。会将下载的
     文件解压，将解压后的文件全部放在cache_dir文件夹中。
 
@@ -432,7 +448,9 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
                             shutil.rmtree(cache_path)
                 os.close(fd)
                 os.remove(temp_filename)
-                if os.path.isdir(uncompress_temp_dir):
+                if uncompress_temp_dir is None:
+                    pass
+                elif os.path.isdir(uncompress_temp_dir):
                     shutil.rmtree(uncompress_temp_dir)
                 elif os.path.isfile(uncompress_temp_dir):
                     os.remove(uncompress_temp_dir)
@@ -467,7 +485,7 @@ def ungzip_file(file: str, to: str, filename:str):
 
 
 def match_file(dir_name: str, cache_dir: Path) -> str:
-    """
+    r"""
     匹配的原则是: 在cache_dir下的文件与dir_name完全一致, 或除了后缀以外和dir_name完全一致。
     如果找到了两个匹配的结果将报错. 如果找到了则返回匹配的文件的名称; 没有找到返回空字符串
 
@@ -486,3 +504,57 @@ def match_file(dir_name: str, cache_dir: Path) -> str:
         return matched_filenames[-1]
     else:
         raise RuntimeError(f"Duplicate matched files:{matched_filenames}, this should be caused by a bug.")
+
+
+def _get_bert_dir(model_dir_or_name: str = 'en-base-uncased'):
+    if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
+        model_url = _get_embedding_url('bert', model_dir_or_name.lower())
+        model_dir = cached_path(model_url, name='embedding')
+        # 检查是否存在
+    elif os.path.isdir(os.path.abspath(os.path.expanduser(model_dir_or_name))):
+        model_dir = os.path.abspath(os.path.expanduser(model_dir_or_name))
+    else:
+        logger.error(f"Cannot recognize BERT dir or name ``{model_dir_or_name}``.")
+        raise ValueError(f"Cannot recognize BERT dir or name ``{model_dir_or_name}``.")
+    return str(model_dir)
+
+
+def _get_gpt2_dir(model_dir_or_name: str = 'en'):
+    if model_dir_or_name.lower() in PRETRAINED_GPT2_MODEL_DIR:
+        model_url = _get_embedding_url('gpt2', model_dir_or_name.lower())
+        model_dir = cached_path(model_url, name='embedding')
+        # 检查是否存在
+    elif os.path.isdir(os.path.abspath(os.path.expanduser(model_dir_or_name))):
+        model_dir = os.path.abspath(os.path.expanduser(model_dir_or_name))
+    else:
+        logger.error(f"Cannot recognize GPT2 dir or name ``{model_dir_or_name}``.")
+        raise ValueError(f"Cannot recognize GPT2 dir or name ``{model_dir_or_name}``.")
+    return str(model_dir)
+
+
+def _get_roberta_dir(model_dir_or_name: str = 'en'):
+    if model_dir_or_name.lower() in PRETRAINED_ROBERTA_MODEL_DIR:
+        model_url = _get_embedding_url('roberta', model_dir_or_name.lower())
+        model_dir = cached_path(model_url, name='embedding')
+        # 检查是否存在
+    elif os.path.isdir(os.path.abspath(os.path.expanduser(model_dir_or_name))):
+        model_dir = os.path.abspath(os.path.expanduser(model_dir_or_name))
+    else:
+        logger.error(f"Cannot recognize RoBERTa dir or name ``{model_dir_or_name}``.")
+        raise ValueError(f"Cannot recognize RoBERTa dir or name ``{model_dir_or_name}``.")
+    return str(model_dir)
+
+
+def _get_file_name_base_on_postfix(dir_path, postfix):
+    r"""
+    在dir_path中寻找后缀为postfix的文件.
+    :param dir_path: str, 文件夹
+    :param postfix: 形如".bin", ".json"等
+    :return: str，文件的路径
+    """
+    files = list(filter(lambda filename: filename.endswith(postfix), os.listdir(os.path.join(dir_path))))
+    if len(files) == 0:
+        raise FileNotFoundError(f"There is no file endswith {postfix} file in {dir_path}")
+    elif len(files) > 1:
+        raise FileExistsError(f"There are multiple *{postfix} files in {dir_path}")
+    return os.path.join(dir_path, files[0])

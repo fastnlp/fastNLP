@@ -1,4 +1,4 @@
-"""
+r"""
 
 .. image:: figures/text_classification.png
 
@@ -49,7 +49,30 @@ __all__ = [
 
     "TimestepDropout",
 
-    'summary'
+    'summary',
+
+    "BertTokenizer",
+    "BertModel",
+
+    "RobertaTokenizer",
+    "RobertaModel",
+
+    "GPT2Model",
+    "GPT2Tokenizer",
+
+    "TransformerSeq2SeqEncoder",
+    "LSTMSeq2SeqEncoder",
+    "Seq2SeqEncoder",
+
+    "TransformerSeq2SeqDecoder",
+    "LSTMSeq2SeqDecoder",
+    "Seq2SeqDecoder",
+
+    "TransformerState",
+    "LSTMState",
+    "State",
+
+    "SequenceGenerator"
 ]
 
 import sys
@@ -59,7 +82,9 @@ from . import encoder
 from .decoder import *
 from .dropout import TimestepDropout
 from .encoder import *
+from .generator import *
 from .utils import summary
 from ..doc_utils import doc_process
+from .tokenizer import *
 
 doc_process(sys.modules[__name__])

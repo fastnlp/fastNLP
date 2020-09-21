@@ -17,7 +17,8 @@ class CRMetric(MetricBase):
         self.evaluators = [Evaluator(m) for m in (muc, b_cubed, ceafe)]
 
     # TODO 改名为evaluate，输入也
-    def evaluate(self, predicted, mention_to_predicted,clusters):
+    def evaluate(self, predicted, mention_to_predicted,target):
+        clusters = target
         for e in self.evaluators:
             e.update(predicted,mention_to_predicted, clusters)
 

@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "ConditionalRandomField",
@@ -16,7 +16,7 @@ from ...core.vocabulary import Vocabulary
 
 
 def allowed_transitions(tag_vocab:Union[Vocabulary, dict], encoding_type=None, include_start_end=False):
-    """
+    r"""
     给定一个id到label的映射表，返回所有可以跳转的(from_tag_id, to_tag_id)列表。
 
     :param ~fastNLP.Vocabulary,dict tag_vocab: 支持类型为tag或tag-label。只有tag的,比如"B", "M"; 也可以是"B-NN", "M-NN",
@@ -73,7 +73,7 @@ def allowed_transitions(tag_vocab:Union[Vocabulary, dict], encoding_type=None, i
 
 
 def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label):
-    """
+    r"""
 
     :param str encoding_type: 支持"BIO", "BMES", "BEMSO", 'bioes'。
     :param str from_tag: 比如"B", "M"之类的标注tag. 还包括start, end等两种特殊tag
@@ -86,7 +86,7 @@ def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label
         return False
     encoding_type = encoding_type.lower()
     if encoding_type == 'bio':
-        """
+        r"""
         第一行是to_tag, 第一列是from_tag. y任意条件下可转，-只有在label相同时可转，n不可转
         +-------+---+---+---+-------+-----+
         |       | B | I | O | start | end |
@@ -112,7 +112,7 @@ def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label
             raise ValueError("Unexpect tag {}. Expect only 'B', 'I', 'O'.".format(from_tag))
 
     elif encoding_type == 'bmes':
-        """
+        r"""
         第一行是to_tag, 第一列是from_tag，y任意条件下可转，-只有在label相同时可转，n不可转
         +-------+---+---+---+---+-------+-----+
         |       | B | M | E | S | start | end |
@@ -167,14 +167,14 @@ def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label
 
 
 class ConditionalRandomField(nn.Module):
-    """
+    r"""
     条件随机场。提供forward()以及viterbi_decode()两个方法，分别用于训练与inference。
 
     """
 
     def __init__(self, num_tags, include_start_end_trans=False, allowed_transitions=None,
                  initial_method=None):
-        """
+        r"""
         
         :param int num_tags: 标签的数量
         :param bool include_start_end_trans: 是否考虑各个tag作为开始以及结尾的分数。
@@ -205,7 +205,7 @@ class ConditionalRandomField(nn.Module):
         initial_parameter(self, initial_method)
 
     def _normalizer_likelihood(self, logits, mask):
-        """Computes the (batch_size,) denominator term for the log-likelihood, which is the
+        r"""Computes the (batch_size,) denominator term for the log-likelihood, which is the
         sum of the likelihoods across all possible state sequences.
 
         :param logits:FloatTensor, max_len x batch_size x num_tags
@@ -232,7 +232,7 @@ class ConditionalRandomField(nn.Module):
         return torch.logsumexp(alpha, 1)
 
     def _gold_score(self, logits, tags, mask):
-        """
+        r"""
         Compute the score for the gold path.
         :param logits: FloatTensor, max_len x batch_size x num_tags
         :param tags: LongTensor, max_len x batch_size
@@ -261,7 +261,7 @@ class ConditionalRandomField(nn.Module):
         return score
 
     def forward(self, feats, tags, mask):
-        """
+        r"""
         用于计算CRF的前向loss，返回值为一个batch_size的FloatTensor，可能需要mean()求得loss。
 
         :param torch.FloatTensor feats: batch_size x max_len x num_tags，特征矩阵。
@@ -278,7 +278,7 @@ class ConditionalRandomField(nn.Module):
         return all_path_score - gold_path_score
 
     def viterbi_decode(self, logits, mask, unpad=False):
-        """给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
+        r"""给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
 
         :param torch.FloatTensor logits: batch_size x max_len x num_tags，特征矩阵。
         :param torch.ByteTensor mask: batch_size x max_len, 为0的位置认为是pad；如果为None，则认为没有padding。
@@ -293,6 +293,7 @@ class ConditionalRandomField(nn.Module):
         batch_size, seq_len, n_tags = logits.size()
         logits = logits.transpose(0, 1).data  # L, B, H
         mask = mask.transpose(0, 1).data.eq(True)  # L, B
+        flip_mask = mask.eq(False)
 
         # dp
         vpath = logits.new_zeros((seq_len, batch_size, n_tags), dtype=torch.long)
@@ -307,12 +308,11 @@ class ConditionalRandomField(nn.Module):
         trans_score = transitions[:n_tags, :n_tags].view(1, n_tags, n_tags).data
         for i in range(1, seq_len):
             prev_score = vscore.view(batch_size, n_tags, 1)
-            cur_score = logits[i].view(batch_size, 1, n_tags)
-            score = prev_score + trans_score + cur_score
+            cur_score = logits[i].view(batch_size, 1, n_tags) + trans_score
+            score = prev_score + cur_score.masked_fill(flip_mask[i].view(batch_size, 1, 1), 0)
             best_score, best_dst = score.max(1)
             vpath[i] = best_dst
-            vscore = best_score.masked_fill(mask[i].eq(False).view(batch_size, 1), 0) + \
-                     vscore.masked_fill(mask[i].view(batch_size, 1), 0)
+            vscore = best_score
 
         if self.include_start_end_trans:
             vscore += transitions[:n_tags, n_tags + 1].view(1, -1)

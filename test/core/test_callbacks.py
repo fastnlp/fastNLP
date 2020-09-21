@@ -12,7 +12,7 @@ from fastNLP import Instance
 from fastNLP import SGD
 from fastNLP import Trainer
 from fastNLP.core.callback import EarlyStopCallback, GradientClipCallback, LRScheduler, ControlC, \
-    LRFinder, TensorboardCallback
+    LRFinder, TensorboardCallback, Callback
 from fastNLP.core.callback import EvaluateCallback, FitlogCallback, SaveModelCallback
 from fastNLP.core.callback import WarmupCallback
 from fastNLP.models.base_model import NaiveClassifier
@@ -41,8 +41,8 @@ class TestCallback(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp()
     
     def tearDown(self):
-        pass
-        # shutil.rmtree(self.tempdir)
+        import shutil
+        shutil.rmtree(self.tempdir)
     
     def test_gradient_clip(self):
         data_set, model = prepare_env()
@@ -134,7 +134,7 @@ class TestCallback(unittest.TestCase):
     
     def test_fitlog_callback(self):
         import fitlog
-        fitlog.set_log_dir(self.tempdir)
+        fitlog.set_log_dir(self.tempdir, new_log=True)
         data_set, model = prepare_env()
         from fastNLP import Tester
         tester = Tester(data=data_set, model=model, metrics=AccuracyMetric(pred="predict", target="y"))
@@ -145,7 +145,54 @@ class TestCallback(unittest.TestCase):
                           metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=True,
                           callbacks=fitlog_callback, check_code_level=2)
         trainer.train()
-    
+
+    def test_CheckPointCallback(self):
+
+        from fastNLP import CheckPointCallback, Callback
+        from fastNLP import Tester
+
+        class RaiseCallback(Callback):
+            def __init__(self, stop_step=10):
+                super().__init__()
+                self.stop_step = stop_step
+
+            def on_backward_begin(self, loss):
+                if self.step > self.stop_step:
+                    raise RuntimeError()
+
+        data_set, model = prepare_env()
+        tester = Tester(data=data_set, model=model, metrics=AccuracyMetric(pred="predict", target="y"))
+        import fitlog
+
+        fitlog.set_log_dir(self.tempdir, new_log=True)
+        tempfile_path = os.path.join(self.tempdir, 'chkt.pt')
+        callbacks = [CheckPointCallback(tempfile_path)]
+
+        fitlog_callback = FitlogCallback(data_set, tester)
+        callbacks.append(fitlog_callback)
+
+        callbacks.append(RaiseCallback(100))
+        try:
+            trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                              batch_size=32, n_epochs=5, print_every=50, dev_data=data_set,
+                              metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=True,
+                              callbacks=callbacks, check_code_level=2)
+            trainer.train()
+        except:
+            pass
+        #  用下面的代码模拟重新运行
+        data_set, model = prepare_env()
+        callbacks = [CheckPointCallback(tempfile_path)]
+        tester = Tester(data=data_set, model=model, metrics=AccuracyMetric(pred="predict", target="y"))
+        fitlog_callback = FitlogCallback(data_set, tester)
+        callbacks.append(fitlog_callback)
+
+        trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                          batch_size=32, n_epochs=5, print_every=50, dev_data=data_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=True,
+                          callbacks=callbacks, check_code_level=2)
+        trainer.train()
+
     def test_save_model_callback(self):
         data_set, model = prepare_env()
         top = 3
@@ -178,39 +225,32 @@ class TestCallback(unittest.TestCase):
                           metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=True,
                           callbacks=EarlyStopCallback(1), check_code_level=2)
         trainer.train()
-
-
-def test_control_C():
-    # 用于测试 ControlC , 再两次训练时用 Control+C 进行退出，如果最后不显示 "Test failed!" 则通过测试
-    from fastNLP import ControlC, Callback
-    import time
     
-    line1 = "\n\n\n\n\n*************************"
-    line2 = "*************************\n\n\n\n\n"
-    
-    class Wait(Callback):
-        def on_epoch_end(self):
-            time.sleep(5)
-    
-    data_set, model = prepare_env()
-    
-    print(line1 + "Test starts!" + line2)
-    trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
-                      batch_size=32, n_epochs=20, dev_data=data_set,
-                      metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=True,
-                      callbacks=[Wait(), ControlC(False)], check_code_level=2)
-    trainer.train()
-    
-    print(line1 + "Program goes on ..." + line2)
-    
-    trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
-                      batch_size=32, n_epochs=20, dev_data=data_set,
-                      metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=True,
-                      callbacks=[Wait(), ControlC(True)], check_code_level=2)
-    trainer.train()
-    
-    print(line1 + "Test failed!" + line2)
-
-
-if __name__ == "__main__":
-    test_control_C()
+    def test_control_C_callback(self):
+        
+        class Raise(Callback):
+            def on_epoch_end(self):
+                raise KeyboardInterrupt
+        
+        flags = [False]
+        
+        def set_flag():
+            flags[0] = not flags[0]
+            
+        data_set, model = prepare_env()
+        
+        trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                          batch_size=32, n_epochs=20, dev_data=data_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=True,
+                          callbacks=[Raise(), ControlC(False, set_flag)], check_code_level=2)
+        trainer.train()
+        
+        self.assertEqual(flags[0], False)
+        
+        trainer = Trainer(data_set, model, optimizer=SGD(lr=0.1), loss=BCELoss(pred="predict", target="y"),
+                          batch_size=32, n_epochs=20, dev_data=data_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), use_tqdm=True,
+                          callbacks=[Raise(), ControlC(True, set_flag)], check_code_level=2)
+        trainer.train()
+        
+        self.assertEqual(flags[0], True)

@@ -288,3 +288,28 @@ class TestUtils(unittest.TestCase):
 
         self.assertSequenceEqual(convert_tags, iob2bioes(tags))
 
+class TestConfusionMatrix(unittest.TestCase):
+    def test1(self):
+        # 测试能否正常打印
+        from fastNLP import Vocabulary
+        from fastNLP.core.utils import ConfusionMatrix
+        import numpy as np
+        vocab = Vocabulary(unknown=None, padding=None)
+        vocab.add_word_lst(list('abcdef'))
+        confusion_matrix = ConfusionMatrix(vocab)
+        for _ in range(3):
+            length = np.random.randint(1, 5)
+            pred = np.random.randint(0, 3, size=(length,))
+            target = np.random.randint(0, 3, size=(length,))
+            confusion_matrix.add_pred_target(pred, target)
+        print(confusion_matrix)
+
+        # 测试print_ratio
+        confusion_matrix = ConfusionMatrix(vocab, print_ratio=True)
+        for _ in range(3):
+            length = np.random.randint(1, 5)
+            pred = np.random.randint(0, 3, size=(length,))
+            target = np.random.randint(0, 3, size=(length,))
+            confusion_matrix.add_pred_target(pred, target)
+        print(confusion_matrix)
+

@@ -30,7 +30,7 @@ from .Encoder import Encoder
 from tools.PositionEmbedding import get_sinusoid_encoding_table
 
 from fastNLP.core.const import Const
-from fastNLP.modules.encoder.transformer import TransformerEncoder
+from fastNLP.modules.encoder.seq2seq_encoder import TransformerSeq2SeqEncoderLayer
 
 class TransformerModel(nn.Module):
     def __init__(self, hps, vocab):
@@ -68,7 +68,8 @@ class TransformerModel(nn.Module):
             get_sinusoid_encoding_table(hps.doc_max_timesteps + 1, self.hidden_size, padding_idx=0), freeze=True)
 
         self.layer_stack = nn.ModuleList([
-            TransformerEncoder.SubLayer(model_size=self.hidden_size, inner_size=self.d_inner, key_size=self.d_k, value_size=self.d_v,num_head=self.n_head, dropout=hps.atten_dropout_prob)
+            TransformerSeq2SeqEncoderLayer(d_model = self.hidden_size, n_head = self.n_head, dim_ff = self.d_inner,
+                 dropout = hps.atten_dropout_prob)
             for _ in range(self.num_layers)])
 
         self.wh = nn.Linear(self.hidden_size, 2)
@@ -109,7 +110,7 @@ class TransformerModel(nn.Module):
         for enc_layer in self.layer_stack:
             # enc_output = [batch_size, N, hidden_size = n_head * d_v]
             # enc_slf_attn = [n_head * batch_size, N, N]
-            enc_input = enc_layer(enc_input, seq_mask=self.non_pad_mask, atte_mask_out=self.slf_attn_mask)
+            enc_input = enc_layer(enc_input, encoder_mask=self.slf_attn_mask)
             enc_input_list += [enc_input]
 
         self.dec_output_state = torch.cat(enc_input_list[-4:])   # [4, batch_size, N, hidden_state]

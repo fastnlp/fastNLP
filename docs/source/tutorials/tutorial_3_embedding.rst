@@ -254,14 +254,14 @@ CNNCharEmbedding的使用例子如下：
 
 .. code-block:: python
 
-    from fastNLP.embeddings import LSTMCharEmbeddding
+    from fastNLP.embeddings import LSTMCharEmbedding
     from fastNLP import Vocabulary
 
     vocab = Vocabulary()
     vocab.add_word_lst("this is a demo .".split())
 
     # character的embedding维度大小为50，返回的embedding结果维度大小为64。
-    embed = LSTMCharEmbeddding(vocab, embed_size=64, char_emb_size=50)
+    embed = LSTMCharEmbedding(vocab, embed_size=64, char_emb_size=50)
     words = torch.LongTensor([[vocab.to_index(word) for word in "this is a demo .".split()]])
     print(embed(words).size())
 
@@ -451,3 +451,12 @@ fastNLP通过在 :class:`~fastNLP.embeddings.StaticEmbedding` 增加了一个min
     tensor([[ 0.6707, -0.5786, -0.6967,  0.0111,  0.1209]], grad_fn=<EmbeddingBackward>)  # unk
 
 可以看到a不再和最后一行的unknown共享一个表示了，这是由于a与A都算入了a的词频，且A的表示也是a的表示。
+
+
+----------------------------------
+代码下载
+----------------------------------
+
+.. raw:: html
+
+    <a href="../_static/notebooks/tutorial_3_embedding.ipynb" download="tutorial_3_embedding.ipynb">点击下载 IPython Notebook 文件</a><hr>

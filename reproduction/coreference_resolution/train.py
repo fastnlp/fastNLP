@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../..')
 
 import torch
 from torch.optim import Adam

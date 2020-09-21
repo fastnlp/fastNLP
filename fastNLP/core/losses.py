@@ -1,4 +1,4 @@
-"""
+r"""
 losses 模块定义了 fastNLP 中所需的各种损失函数，一般做为 :class:`~fastNLP.Trainer` 的参数使用。
 
 """
@@ -12,6 +12,7 @@ __all__ = [
     "BCELoss",
     "L1Loss",
     "NLLLoss",
+    "MSELoss",
 
     "CMRC2018Loss"
 
@@ -34,8 +35,8 @@ from ..core.const import Const
 
 
 class LossBase(object):
-    """
-    所有loss的基类。如果想了解其中的原理，请查看源码。
+    r"""
+    所有loss的基类。如果需要结合到Trainer之中需要实现get_loss方法
     """
     
     def __init__(self):
@@ -52,10 +53,16 @@ class LossBase(object):
         return self._param_map
 
     def get_loss(self, *args, **kwargs):
+        """
+
+        :param args:
+        :param kwargs:
+        :return: torch.Tensor
+        """
         raise NotImplementedError
     
     def _init_param_map(self, key_map=None, **kwargs):
-        """检查key_map和其他参数map，并将这些映射关系添加到self._param_map
+        r"""检查key_map和其他参数map，并将这些映射关系添加到self._param_map
 
         :param dict key_map: 表示key的映射关系
         :param kwargs: key word args里面的每一个的键-值对都会被构造成映射关系
@@ -102,7 +109,7 @@ class LossBase(object):
         #                     f"positional argument.).")
 
     def __call__(self, pred_dict, target_dict, check=False):
-        """
+        r"""
         :param dict pred_dict: 模型的forward函数返回的dict
         :param dict target_dict: DataSet.batch_y里的键-值对所组成的dict
         :param Boolean check: 每一次执行映射函数的时候是否检查映射表，默认为不检查
@@ -168,10 +175,10 @@ class LossBase(object):
 
 
 class LossFunc(LossBase):
-    """
+    r"""
     提供给用户使用自定义损失函数的类
 
-    :param func: 用户自行定义的损失函数，应当为一个函数或者callable(func)为True的ojbect
+    :param func: 用户自行定义的损失函数，应当为一个函数。
     :param dict key_map: 参数映射表。键为Model/DataSet参数名，值为损失函数参数名。
                          fastNLP的trainer将在训练时从模型返回值或者训练数据DataSet的target=True的field中
                          找到相对应的参数名为value的参数，并传入func中作为参数名为key的参数
@@ -179,8 +186,8 @@ class LossFunc(LossBase):
 
     使用方法::
 
-        func = torch.nn.CrossEntropyLoss()
-        loss_func = LossFunc(func, input="pred", target="label")
+        import torch.nn.functional as F
+        loss_func = LossFunc(F.cross_entropy, input="pred", target="label")
         # 这表示构建了一个损失函数类，由func计算损失函数，其中将从模型返回值或者DataSet的target=True的field
         # 当中找到一个参数名为`pred`的参数传入func一个参数名为`input`的参数；找到一个参数名为`label`的参数
         # 传入func作为一个名为`target`的参数
@@ -199,7 +206,7 @@ class LossFunc(LossBase):
 
 
 class CrossEntropyLoss(LossBase):
-    """
+    r"""
     交叉熵损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -246,7 +253,7 @@ class CrossEntropyLoss(LossBase):
 
 
 class L1Loss(LossBase):
-    """
+    r"""
     L1损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -265,8 +272,28 @@ class L1Loss(LossBase):
         return F.l1_loss(input=pred, target=target, reduction=self.reduction)
 
 
-class BCELoss(LossBase):
+class MSELoss(LossBase):
+    r"""
+    MSE损失函数
+
+    :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+    :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` >`target`
+    :param str reduction: 支持'mean'，'sum'和'none'.
+
     """
+
+    def __init__(self, pred=None, target=None, reduction='mean'):
+        super(MSELoss, self).__init__()
+        self._init_param_map(pred=pred, target=target)
+        assert reduction in ('mean', 'sum', 'none')
+        self.reduction = reduction
+
+    def get_loss(self, pred, target):
+        return F.mse_loss(input=pred, target=target, reduction=self.reduction)
+
+
+class BCELoss(LossBase):
+    r"""
     二分类交叉熵损失函数
     
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
@@ -285,12 +312,12 @@ class BCELoss(LossBase):
 
 
 class NLLLoss(LossBase):
-    """
+    r"""
     负对数似然损失函数
     """
     
     def __init__(self, pred=None, target=None, ignore_idx=-100, reduction='mean'):
-        """
+        r"""
         
         :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
         :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
@@ -309,12 +336,12 @@ class NLLLoss(LossBase):
 
 
 class LossInForward(LossBase):
-    """
+    r"""
     从forward()函数返回结果中获取loss
     """
     
     def __init__(self, loss_key=Const.LOSS):
-        """
+        r"""
         
         :param str loss_key: 在forward函数中loss的键名，默认为loss
         """
@@ -349,7 +376,7 @@ class LossInForward(LossBase):
 
 
 class CMRC2018Loss(LossBase):
-    """
+    r"""
     用于计算CMRC2018中文问答任务。
 
     """
@@ -364,7 +391,7 @@ class CMRC2018Loss(LossBase):
         self.reduction = reduction
 
     def get_loss(self, target_start, target_end, context_len, pred_start, pred_end):
-        """
+        r"""
 
         :param target_start: batch_size
         :param target_end: batch_size

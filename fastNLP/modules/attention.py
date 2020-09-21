@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "MultiHeadAttention",
@@ -12,11 +12,12 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from fastNLP.modules.utils import initial_parameter
+from .utils import initial_parameter
+from .decoder.seq2seq_state import TransformerState
 
 
 class DotAttention(nn.Module):
-    """
+    r"""
     Transformer当中的DotAttention
     """
 
@@ -29,7 +30,7 @@ class DotAttention(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, Q, K, V, mask_out=None):
-        """
+        r"""
 
         :param Q: [..., seq_len_q, key_size]
         :param K: [..., seq_len_k, key_size]
@@ -46,63 +47,152 @@ class DotAttention(nn.Module):
 
 class MultiHeadAttention(nn.Module):
     """
-    Transformer当中的MultiHeadAttention
+    Attention is all you need中提到的多头注意力
+
     """
-
-    def __init__(self, input_size, key_size, value_size, num_head, dropout=0.1):
-        """
-        
-        :param input_size: int, 输入维度的大小。同时也是输出维度的大小。
-        :param key_size: int, 每个head的维度大小。
-        :param value_size: int，每个head中value的维度。
-        :param num_head: int，head的数量。
-        :param dropout: float。
-        """
+    def __init__(self, d_model: int = 512, n_head: int = 8, dropout: float = 0.0, layer_idx: int = None):
         super(MultiHeadAttention, self).__init__()
-        self.input_size = input_size
-        self.key_size = key_size
-        self.value_size = value_size
-        self.num_head = num_head
+        self.d_model = d_model
+        self.n_head = n_head
+        self.dropout = dropout
+        self.head_dim = d_model // n_head
+        self.layer_idx = layer_idx
+        assert d_model % n_head == 0, "d_model should be divisible by n_head"
+        self.scaling = self.head_dim ** -0.5
 
-        in_size = key_size * num_head
-        self.q_in = nn.Linear(input_size, in_size)
-        self.k_in = nn.Linear(input_size, in_size)
-        self.v_in = nn.Linear(input_size, in_size)
-        self.attention = DotAttention(key_size=key_size, value_size=value_size, dropout=dropout)
-        self.out = nn.Linear(value_size * num_head, input_size)
+        self.q_proj = nn.Linear(d_model, d_model)
+        self.k_proj = nn.Linear(d_model, d_model)
+        self.v_proj = nn.Linear(d_model, d_model)
+        self.out_proj = nn.Linear(d_model, d_model)
+
         self.reset_parameters()
 
+    def forward(self, query, key, value, key_mask=None, attn_mask=None, state=None):
+        """
+
+        :param query: batch x seq x dim
+        :param key: batch x seq x dim
+        :param value: batch x seq x dim
+        :param key_mask: batch x seq 用于指示哪些key不要attend到；注意到mask为1的地方是要attend到的
+        :param attn_mask: seq x seq, 用于mask掉attention map。 主要是用在训练时decoder端的self attention，下三角为1
+        :param state: 过去的信息，在inference的时候会用到，比如encoder output、decoder的prev kv。这样可以减少计算。
+        :return:
+        """
+        assert key.size() == value.size()
+        if state is not None:
+            assert self.layer_idx is not None
+        qkv_same = query.data_ptr() == key.data_ptr() == value.data_ptr()
+
+        q = self.q_proj(query)  # batch x seq x dim
+        q *= self.scaling
+        k = v = None
+        prev_k = prev_v = None
+
+        # 从state中取kv
+        if isinstance(state, TransformerState):  # 说明此时在inference阶段
+            if qkv_same:  # 此时在decoder self attention
+                prev_k = state.decoder_prev_key[self.layer_idx]
+                prev_v = state.decoder_prev_value[self.layer_idx]
+            else:  # 此时在decoder-encoder attention，直接将保存下来的key装载起来即可
+                k = state.encoder_key[self.layer_idx]
+                v = state.encoder_value[self.layer_idx]
+
+        if k is None:
+            k = self.k_proj(key)
+            v = self.v_proj(value)
+
+        if prev_k is not None:
+            k = torch.cat((prev_k, k), dim=1)
+            v = torch.cat((prev_v, v), dim=1)
+
+        # 更新state
+        if isinstance(state, TransformerState):
+            if qkv_same:
+                state.decoder_prev_key[self.layer_idx] = k
+                state.decoder_prev_value[self.layer_idx] = v
+            else:
+                state.encoder_key[self.layer_idx] = k
+                state.encoder_value[self.layer_idx] = v
+
+        # 开始计算attention
+        batch_size, q_len, d_model = query.size()
+        k_len, v_len = k.size(1), v.size(1)
+        q = q.reshape(batch_size, q_len, self.n_head, self.head_dim)
+        k = k.reshape(batch_size, k_len, self.n_head, self.head_dim)
+        v = v.reshape(batch_size, v_len, self.n_head, self.head_dim)
+
+        attn_weights = torch.einsum('bqnh,bknh->bqkn', q, k)  # bs,q_len,k_len,n_head
+        if key_mask is not None:
+            _key_mask = ~key_mask[:, None, :, None].bool()  # batch,1,k_len,1
+            attn_weights = attn_weights.masked_fill(_key_mask, -float('inf'))
+
+        if attn_mask is not None:
+            _attn_mask = attn_mask[None, :, :, None].eq(0)  # 1,q_len,k_len,n_head
+            attn_weights = attn_weights.masked_fill(_attn_mask, -float('inf'))
+
+        attn_weights = F.softmax(attn_weights, dim=2)
+        attn_weights = F.dropout(attn_weights, p=self.dropout, training=self.training)
+
+        output = torch.einsum('bqkn,bknh->bqnh', attn_weights, v)  # batch,q_len,n_head,head_dim
+        output = output.reshape(batch_size, q_len, -1)
+        output = self.out_proj(output)  # batch,q_len,dim
+
+        return output, attn_weights
+
     def reset_parameters(self):
-        sqrt = math.sqrt
-        nn.init.normal_(self.q_in.weight, mean=0, std=sqrt(1.0 / self.input_size))
-        nn.init.normal_(self.k_in.weight, mean=0, std=sqrt(1.0 / self.input_size))
-        nn.init.normal_(self.v_in.weight, mean=0, std=sqrt(1.0 / self.input_size))
-        nn.init.normal_(self.out.weight, mean=0, std=sqrt(1.0 / self.input_size))
+        nn.init.xavier_uniform_(self.q_proj.weight)
+        nn.init.xavier_uniform_(self.k_proj.weight)
+        nn.init.xavier_uniform_(self.v_proj.weight)
+        nn.init.xavier_uniform_(self.out_proj.weight)
 
-    def forward(self, Q, K, V, atte_mask_out=None):
+    def set_layer_idx(self, layer_idx):
+        self.layer_idx = layer_idx
+
+
+class AttentionLayer(nn.Module):
+    def __init__(selfu, input_size, key_dim, value_dim, bias=False):
+        """
+        可用于LSTM2LSTM的序列到序列模型的decode过程中，该attention是在decode过程中根据上一个step的hidden计算对encoder结果的attention
+
+        :param int input_size: 输入的大小
+        :param int key_dim: 一般就是encoder_output输出的维度
+        :param int value_dim: 输出的大小维度, 一般就是decoder hidden的大小
+        :param bias:
+        """
+        super().__init__()
+
+        selfu.input_proj = nn.Linear(input_size, key_dim, bias=bias)
+        selfu.output_proj = nn.Linear(input_size + key_dim, value_dim, bias=bias)
+
+    def forward(self, input, encode_outputs, encode_mask):
         """
 
-        :param Q: [batch, seq_len_q, model_size]
-        :param K: [batch, seq_len_k, model_size]
-        :param V: [batch, seq_len_k, model_size]
-        :param seq_mask: [batch, seq_len]
+        :param input: batch_size x input_size
+        :param encode_outputs: batch_size x max_len x key_dim
+        :param encode_mask: batch_size x max_len, 为0的地方为padding
+        :return: hidden: batch_size x value_dim, scores: batch_size x max_len, normalized过的
         """
-        batch, sq, _ = Q.size()
-        sk = K.size(1)
-        d_k, d_v, n_head = self.key_size, self.value_size, self.num_head
-        # input linear
-        q = self.q_in(Q).view(batch, sq, n_head, d_k).transpose(1, 2)
-        k = self.k_in(K).view(batch, sk, n_head, d_k).transpose(1, 2)
-        v = self.v_in(V).view(batch, sk, n_head, d_v).transpose(1, 2)
 
-        if atte_mask_out is not None:
-            atte_mask_out = atte_mask_out[:,None,:,:] # [bsz,1,1,len]
-        atte = self.attention(q, k, v, atte_mask_out).view(batch, n_head, sq, d_v)
+        # x: bsz x encode_hidden_size
+        x = self.input_proj(input)
 
-        # concat all heads, do output linear
-        atte = atte.transpose(1, 2).contiguous().view(batch, sq, -1)
-        output = self.out(atte)
-        return output
+        # compute attention
+        attn_scores = torch.matmul(encode_outputs, x.unsqueeze(-1)).squeeze(-1)  # b x max_len
+
+        # don't attend over padding
+        if encode_mask is not None:
+            attn_scores = attn_scores.float().masked_fill_(
+                encode_mask.eq(0),
+                float('-inf')
+            ).type_as(attn_scores)  # FP16 support: cast to float and back
+
+        attn_scores = F.softmax(attn_scores, dim=-1)  # srclen x bsz
+
+        # sum weighted sources
+        x = torch.matmul(attn_scores.unsqueeze(1), encode_outputs).squeeze(1)  # b x encode_hidden_size
+
+        x = torch.tanh(self.output_proj(torch.cat((x, input), dim=1)))
+        return x, attn_scores
 
 
 def _masked_softmax(tensor, mask):
@@ -147,7 +237,7 @@ class BiAttention(nn.Module):
     """
 
     def forward(self, premise_batch, premise_mask, hypothesis_batch, hypothesis_mask):
-        """
+        r"""
         :param torch.Tensor premise_batch: [batch_size, a_seq_len, hidden_size]
         :param torch.Tensor premise_mask: [batch_size, a_seq_len]
         :param torch.Tensor hypothesis_batch: [batch_size, b_seq_len, hidden_size]
@@ -173,13 +263,13 @@ class BiAttention(nn.Module):
 
 
 class SelfAttention(nn.Module):
-    """
+    r"""
     这是一个基于论文 `A structured self-attentive sentence embedding <https://arxiv.org/pdf/1703.03130.pdf>`_
     的Self Attention Module.
     """
 
     def __init__(self, input_size, attention_unit=300, attention_hops=10, drop=0.5, initial_method=None, ):
-        """
+        r"""
         
         :param int input_size: 输入tensor的hidden维度
         :param int attention_unit: 输出tensor的hidden维度
@@ -199,7 +289,7 @@ class SelfAttention(nn.Module):
         initial_parameter(self, initial_method)
 
     def _penalization(self, attention):
-        """
+        r"""
         compute the penalization term for attention module
         """
         baz = attention.size(0)
@@ -213,7 +303,7 @@ class SelfAttention(nn.Module):
         return torch.sum(ret) / size[0]
 
     def forward(self, input, input_origin):
-        """
+        r"""
         :param torch.Tensor input: [batch_size, seq_len, hidden_size] 要做attention的矩阵
         :param torch.Tensor input_origin: [batch_size, seq_len] 原始token的index组成的矩阵，含有pad部分内容
         :return torch.Tensor output1: [batch_size, multi-head, hidden_size] 经过attention操作后输入矩阵的结果

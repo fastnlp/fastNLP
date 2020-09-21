@@ -1,4 +1,4 @@
-"""
+r"""
 .. todo::
     doc
 """
@@ -8,7 +8,6 @@ __all__ = [
     "summary"
 ]
 
-import os
 from functools import reduce
 
 import torch
@@ -17,7 +16,7 @@ import torch.nn.init as init
 
 
 def initial_parameter(net, initial_method=None):
-    """A method used to initialize the weights of PyTorch models.
+    r"""A method used to initialize the weights of PyTorch models.
 
     :param net: a PyTorch model
     :param str initial_method: one of the following initializations.
@@ -67,7 +66,10 @@ def initial_parameter(net, initial_method=None):
                     init.normal_(w.data)  # bias
         elif m is not None and hasattr(m, 'weight') and \
                 hasattr(m.weight, "requires_grad"):
-            init_method(m.weight.data)
+                if len(m.weight.size()) > 1:
+                    init_method(m.weight.data)
+                else:
+                    init.normal_(m.weight.data)  # batchnorm or layernorm
         else:
             for w in m.parameters():
                 if w.requires_grad:
@@ -81,7 +83,7 @@ def initial_parameter(net, initial_method=None):
 
 
 def summary(model: nn.Module):
-    """
+    r"""
     得到模型的总参数量
 
     :params model: Pytorch 模型
@@ -122,7 +124,7 @@ def summary(model: nn.Module):
 
 
 def get_dropout_mask(drop_p: float, tensor: torch.Tensor):
-    """
+    r"""
     根据tensor的形状，生成一个mask
 
     :param drop_p: float, 以多大的概率置为0。
@@ -133,18 +135,3 @@ def get_dropout_mask(drop_p: float, tensor: torch.Tensor):
     nn.functional.dropout(mask_x, p=drop_p,
                           training=False, inplace=True)
     return mask_x
-
-
-def _get_file_name_base_on_postfix(dir_path, postfix):
-    """
-    在dir_path中寻找后缀为postfix的文件.
-    :param dir_path: str, 文件夹
-    :param postfix: 形如".bin", ".json"等
-    :return: str，文件的路径
-    """
-    files = list(filter(lambda filename: filename.endswith(postfix), os.listdir(os.path.join(dir_path))))
-    if len(files) == 0:
-        raise FileNotFoundError(f"There is no file endswith *{postfix} file in {dir_path}")
-    elif len(files) > 1:
-        raise FileExistsError(f"There are multiple *{postfix} files in {dir_path}")
-    return os.path.join(dir_path, files[0])

@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "CWSPipe"
@@ -15,7 +15,7 @@ from ...core.const import Const
 
 
 def _word_lens_to_bmes(word_lens):
-    """
+    r"""
 
     :param list word_lens: List[int], 每个词语的长度
     :return: List[str], BMES的序列
@@ -32,7 +32,7 @@ def _word_lens_to_bmes(word_lens):
 
 
 def _word_lens_to_segapp(word_lens):
-    """
+    r"""
 
     :param list word_lens: List[int], 每个词语的长度
     :return: List[str], BMES的序列
@@ -48,7 +48,7 @@ def _word_lens_to_segapp(word_lens):
 
 
 def _alpha_span_to_special_tag(span):
-    """
+    r"""
     将span替换成特殊的字符
 
     :param str span:
@@ -63,7 +63,7 @@ def _alpha_span_to_special_tag(span):
 
 
 def _find_and_replace_alpha_spans(line):
-    """
+    r"""
     传入原始句子，替换其中的字母为特殊标记
 
     :param str line:原始数据
@@ -82,7 +82,7 @@ def _find_and_replace_alpha_spans(line):
 
 
 def _digit_span_to_special_tag(span):
-    """
+    r"""
 
     :param str span: 需要替换的str
     :return:
@@ -108,7 +108,7 @@ def _digit_span_to_special_tag(span):
 
 
 def _find_and_replace_digit_spans(line):
-    """
+    r"""
     only consider words start with number, contains '.', characters.
     
         If ends with space, will be processed
@@ -134,7 +134,7 @@ def _find_and_replace_digit_spans(line):
 
 
 class CWSPipe(Pipe):
-    """
+    r"""
     对CWS数据进行预处理, 处理之后的数据，具备以下的结构
 
     .. csv-table::
@@ -158,7 +158,7 @@ class CWSPipe(Pipe):
     """
     
     def __init__(self, dataset_name=None, encoding_type='bmes', replace_num_alpha=True, bigrams=False, trigrams=False):
-        """
+        r"""
         
         :param str,None dataset_name: 支持'pku', 'msra', 'cityu', 'as', None
         :param str encoding_type: 可以选择'bmes', 'segapp'两种。"我 来自 复旦大学...", bmes的tag为[S, B, E, B, M, M, E...]; segapp
@@ -178,7 +178,7 @@ class CWSPipe(Pipe):
         self.replace_num_alpha = replace_num_alpha
     
     def _tokenize(self, data_bundle):
-        """
+        r"""
         将data_bundle中的'chars'列切分成一个一个的word.
         例如输入是"共同  创造  美好.."->[[共, 同], [创, 造], [...], ]
 
@@ -216,7 +216,7 @@ class CWSPipe(Pipe):
         return data_bundle
     
     def process(self, data_bundle: DataBundle) -> DataBundle:
-        """
+        r"""
         可以处理的DataSet需要包含raw_words列
 
         .. csv-table::
@@ -268,7 +268,7 @@ class CWSPipe(Pipe):
         return data_bundle
     
     def process_from_file(self, paths=None) -> DataBundle:
-        """
+        r"""
         
         :param str paths:
         :return:

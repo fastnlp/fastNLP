@@ -1,13 +1,13 @@
 import unittest
+from collections import Counter
 
 import numpy as np
 import torch
-
 from fastNLP import AccuracyMetric
-from fastNLP.core.metrics import _pred_topk, _accuracy_topk
+from fastNLP.core.metrics import (ClassifyFPreRecMetric, CMRC2018Metric,
+                                  ConfusionMatrixMetric, SpanFPreRecMetric,
+                                  _accuracy_topk, _pred_topk)
 from fastNLP.core.vocabulary import Vocabulary
-from collections import Counter
-from fastNLP.core.metrics import SpanFPreRecMetric, CMRC2018Metric, ClassifyFPreRecMetric
 
 
 def _generate_tags(encoding_type, number_labels=4):
@@ -43,6 +43,122 @@ def _convert_res_to_fastnlp_res(metric_result):
                 key = '{}-{}'.format(key[:3], label)
         allen_result[key] = round(value, 6)
     return allen_result
+
+
+
+class TestConfusionMatrixMetric(unittest.TestCase):
+    def test_ConfusionMatrixMetric1(self):
+        pred_dict = {"pred": torch.zeros(4,3)}
+        target_dict = {'target': torch.zeros(4)}
+        metric = ConfusionMatrixMetric()
+
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        print(metric.get_metric())
+
+    def test_ConfusionMatrixMetric2(self):
+        # (2) with corrupted size
+
+        with self.assertRaises(Exception):
+            pred_dict = {"pred": torch.zeros(4, 3, 2)}
+            target_dict = {'target': torch.zeros(4)}
+            metric = ConfusionMatrixMetric()
+
+            metric(pred_dict=pred_dict, target_dict=target_dict, )
+            print(metric.get_metric())
+
+    def test_ConfusionMatrixMetric3(self):
+    # (3) the second batch is corrupted size
+        with self.assertRaises(Exception):
+            metric = ConfusionMatrixMetric()
+            pred_dict = {"pred": torch.zeros(4, 3, 2)}
+            target_dict = {'target': torch.zeros(4, 3)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+            
+            pred_dict = {"pred": torch.zeros(4, 3, 2)}
+            target_dict = {'target': torch.zeros(4)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+            
+            print(metric.get_metric())
+
+    def test_ConfusionMatrixMetric4(self):
+    # (4) check reset
+        metric = ConfusionMatrixMetric()
+        pred_dict = {"pred": torch.randn(4, 3, 2)}
+        target_dict = {'target': torch.ones(4, 3)}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        res = metric.get_metric()
+        self.assertTrue(isinstance(res, dict))
+        print(res)
+
+    def test_ConfusionMatrixMetric5(self):
+    # (5) check numpy array is not acceptable
+
+        with self.assertRaises(Exception):
+            metric = ConfusionMatrixMetric()
+            pred_dict = {"pred": np.zeros((4, 3, 2))}
+            target_dict = {'target': np.zeros((4, 3))}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+
+    def test_ConfusionMatrixMetric6(self):
+    # (6) check map, match
+        metric = ConfusionMatrixMetric(pred='predictions', target='targets')
+        pred_dict = {"predictions": torch.randn(4, 3, 2)}
+        target_dict = {'targets': torch.zeros(4, 3)}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        res = metric.get_metric()
+        print(res)
+
+    def test_ConfusionMatrixMetric7(self):
+        # (7) check map, include unused
+        metric = ConfusionMatrixMetric(pred='prediction', target='targets')
+        pred_dict = {"prediction": torch.zeros(4, 3, 2), 'unused': 1}
+        target_dict = {'targets': torch.zeros(4, 3)}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+
+    def test_ConfusionMatrixMetric8(self):
+        # (8) check _fast_metric
+        with self.assertRaises(Exception):
+            metric = ConfusionMatrixMetric()
+            pred_dict = {"predictions": torch.zeros(4, 3, 2), "seq_len": torch.ones(3) * 3}
+            target_dict = {'targets': torch.zeros(4, 3)}
+            metric(pred_dict=pred_dict, target_dict=target_dict)
+            print(metric.get_metric())
+
+
+    def test_duplicate(self):
+        # 0.4.1的潜在bug，不能出现形参重复的情况
+        metric = ConfusionMatrixMetric(pred='predictions', target='targets')
+        pred_dict = {"predictions": torch.zeros(4, 3, 2), "seq_len": torch.ones(4) * 3, 'pred':0}
+        target_dict = {'targets':torch.zeros(4, 3), 'target': 0}
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        print(metric.get_metric())
+
+
+    def test_seq_len(self):
+        N = 256
+        seq_len = torch.zeros(N).long()
+        seq_len[0] = 2
+        pred = {'pred': torch.ones(N, 2)}
+        target = {'target': torch.ones(N, 2), 'seq_len': seq_len}
+        metric = ConfusionMatrixMetric()
+        metric(pred_dict=pred, target_dict=target)
+        metric.get_metric(reset=False)
+        seq_len[1:] = 1
+        metric(pred_dict=pred, target_dict=target)
+        metric.get_metric()
+
+    def test_vocab(self):
+        vocab = Vocabulary()
+        word_list = "this is a word list".split()
+        vocab.update(word_list)
+        
+        pred_dict = {"pred": torch.zeros(4,3)}
+        target_dict = {'target': torch.zeros(4)}
+        metric = ConfusionMatrixMetric(vocab=vocab)
+        metric(pred_dict=pred_dict, target_dict=target_dict)
+        print(metric.get_metric())
+
+
 
 class TestAccuracyMetric(unittest.TestCase):
     def test_AccuracyMetric1(self):
@@ -133,7 +249,7 @@ class TestAccuracyMetric(unittest.TestCase):
     def test_AccuaryMetric8(self):
         try:
             metric = AccuracyMetric(pred='predictions', target='targets')
-            pred_dict = {"prediction": torch.zeros(4, 3, 2)}
+            pred_dict = {"predictions": torch.zeros(4, 3, 2)}
             target_dict = {'targets': torch.zeros(4, 3)}
             metric(pred_dict=pred_dict, target_dict=target_dict, )
             self.assertDictEqual(metric.get_metric(), {'acc': 1})
@@ -447,69 +563,75 @@ class TestUsefulFunctions(unittest.TestCase):
         # 跑通即可
 
 
+
 class TestClassfiyFPreRecMetric(unittest.TestCase):
     def test_case_1(self):
-        pred = torch.FloatTensor([[-0.1603, -1.3247,  0.2010,  0.9240, -0.6396],
-        [-0.7316, -1.6028,  0.2281,  0.3558,  1.2500],
-        [-1.2943, -1.7350, -0.7085,  1.1269,  1.0782],
-        [ 0.1314, -0.2578,  0.7200,  1.0920, -1.0819],
-        [-0.6787, -0.9081, -0.2752, -1.5818,  0.5538],
-        [-0.2925,  1.1320,  2.8709, -0.6225, -0.6279],
-        [-0.3320, -0.9009, -1.5762,  0.3810, -0.1220],
-        [ 0.4601, -1.0509,  1.4242,  0.3427,  2.7014],
-        [-0.5558,  1.0899, -1.9045,  0.3377,  1.3192],
-        [-0.8251, -0.1558, -0.0871, -0.6755, -0.5905],
-        [ 0.1019,  1.2504, -1.1627, -0.7062,  1.8654],
-        [ 0.9016, -0.1984, -0.0831, -0.7646,  1.5309],
-        [ 0.2073,  0.2250, -0.0879,  0.1608, -0.8915],
-        [ 0.3624,  0.3806,  0.3159, -0.3603, -0.6672],
-        [ 0.2714,  2.5086, -0.1053, -0.5188,  0.9229],
-        [ 0.3258, -0.0303,  1.1439, -0.9123,  1.5180],
-        [ 1.2496, -1.0298, -0.4463,  0.1186, -1.7089],
-        [ 0.0788,  0.6300, -1.3336, -0.7122,  1.0164],
-        [-1.1900, -0.9620, -0.3839,  0.1159, -1.2045],
-        [-0.9037, -0.1447,  1.1834, -0.2617,  2.6112],
-        [ 0.1507,  0.1686, -0.1535, -0.3669, -0.8425],
-        [ 1.0537,  1.1958, -1.2309,  1.0405,  1.3018],
-        [-0.9823, -0.9712,  1.1560, -0.6473,  1.0361],
-        [ 0.8659, -0.2166, -0.8335, -0.3557, -0.5660],
-        [-1.4742, -0.8773, -2.5237,  0.7410,  0.1506],
-        [-1.3032, -1.7157,  0.7479,  1.0755,  1.0817],
-        [-0.2988,  2.3745,  1.2072,  0.0054,  1.1877],
-        [-0.0123,  1.6513,  0.2741, -0.7791,  0.6161],
-        [ 1.6339, -1.0365,  0.3961, -0.9683,  0.2684],
-        [-0.0278, -2.0856, -0.5376,  0.5129, -0.3169],
-        [ 0.9386,  0.8317,  0.9518, -0.5050, -0.2808],
-        [-0.6907,  0.5020, -0.9039, -1.1061,  0.1656]])
-
-        arg_max_pred = torch.Tensor([3, 2, 3, 3, 4, 2, 3, 4, 4, 2, 4, 4, 1, 1,
-                                     1, 4, 0, 4, 3, 4, 1, 4, 2, 0,
-                                     3, 4, 1, 1, 0, 3, 2, 1])
-        target = torch.Tensor([3, 3, 3, 3, 4, 1, 0, 2, 1, 2, 4, 4, 1, 1,
-                               1, 4, 0, 4, 3, 4, 1, 4, 2, 0,
-                               3, 4, 1, 1, 0, 3, 2, 1])
-
+        pred= torch.tensor([[-0.4375, -0.1779, -1.0985, -1.1592,  0.4910],
+        [ 1.3410,  0.2889, -0.8667, -1.8580,  0.3029],
+        [ 0.7459, -1.1957,  0.3231,  0.0308, -0.1847],
+        [ 1.1439, -0.0057,  0.8203,  0.0312, -1.0051],
+        [-0.4870,  0.3215, -0.8290,  0.9221,  0.4683],
+        [ 0.9078,  1.0674, -0.5629,  0.3895,  0.8917],
+        [-0.7743, -0.4041, -0.9026,  0.2112,  1.0892],
+        [ 1.8232, -1.4188, -2.5615, -2.4187,  0.5907],
+        [-1.0592,  0.4164, -0.1192,  1.4238, -0.9258],
+        [-1.1137,  0.5773,  2.5778,  0.5398, -0.3323],
+        [-0.3868, -0.5165,  0.2286, -1.3876,  0.5561],
+        [-0.3304,  1.3619, -1.5744,  0.4902, -0.7661],
+        [ 1.8387,  0.5234,  0.4269,  1.3748, -1.2793],
+        [ 0.6692,  0.2571,  1.2425, -0.5894, -0.0184],
+        [ 0.4165,  0.4084, -0.1280,  1.4489, -2.3058],
+        [-0.5826, -0.5469,  1.5898, -0.2786, -0.9882],
+        [-1.5548, -2.2891,  0.2983, -1.2145, -0.1947],
+        [-0.7222,  2.3543, -0.5801, -0.0640, -1.5614],
+        [-1.4978,  1.9297, -1.3652, -0.2358,  2.5566],
+        [ 0.1561, -0.0316,  0.9331,  1.0363,  2.3949],
+        [ 0.2650, -0.8459,  1.3221,  0.1321, -1.1900],
+        [ 0.0664, -1.2353, -0.5242, -1.4491,  1.3300],
+        [-0.2744,  0.0941,  0.7157,  0.1404,  1.2046],
+        [ 0.9341, -0.6652,  1.4512,  0.9608, -0.3623],
+        [-1.1641,  0.0873,  0.1163, -0.2068, -0.7002],
+        [ 1.4775, -2.0025, -0.5634, -0.1589,  0.0247],
+        [ 1.0151,  1.0304, -0.1042, -0.6955, -0.0629],
+        [-0.3119, -0.4558,  0.7757,  0.0758, -1.6297],
+        [ 1.0654,  0.0313, -0.7716,  0.1194,  0.6913],
+        [-0.8088, -0.6648, -0.5018, -0.0230, -0.8207],
+        [-0.7753, -0.3508,  1.6163,  0.7158,  1.5207],
+        [ 0.8692,  0.7718, -0.6734,  0.6515,  0.0641]])
+        arg_max_pred = torch.argmax(pred,dim=-1)
+        target = torch.tensor([0, 2, 4, 1, 4, 0, 1, 3, 3, 3, 1, 3, 4, 4, 3, 4, 0, 2, 4, 4, 3, 4, 4, 3,
+        0, 3, 0, 0, 0, 1, 3, 1])
+        
         metric = ClassifyFPreRecMetric(f_type='macro')
         metric.evaluate(pred, target)
-        result_dict = metric.get_metric(reset=True)
-        ground_truth = {'f': 0.8362782, 'pre': 0.8269841, 'rec': 0.8668831}
+        result_dict = metric.get_metric() 
+        f1_score = 0.1882051282051282
+        recall = 0.1619047619047619
+        pre = 0.23928571428571427
+
+        ground_truth = {'f': f1_score, 'pre': pre, 'rec': recall}
         for keys in ['f', 'pre', 'rec']:
-            self.assertAlmostEqual(result_dict[keys], ground_truth[keys], delta=0.0001)
+            self.assertAlmostEqual(result_dict[keys], ground_truth[keys], delta=0.000001)
 
         metric = ClassifyFPreRecMetric(f_type='micro')
         metric.evaluate(pred, target)
-        result_dict = metric.get_metric(reset=True)
-        ground_truth = {'f': 0.84375, 'pre': 0.84375, 'rec': 0.84375}
-        for keys in ['f', 'pre', 'rec']:
-            self.assertAlmostEqual(result_dict[keys], ground_truth[keys], delta=0.0001)
+        result_dict = metric.get_metric() 
+        f1_score = 0.21875
+        recall = 0.21875
+        pre = 0.21875
 
-        metric = ClassifyFPreRecMetric(only_gross=False, f_type='micro')
+        ground_truth = {'f': f1_score, 'pre': pre, 'rec': recall}
+        for keys in ['f', 'pre', 'rec']:
+            self.assertAlmostEqual(result_dict[keys], ground_truth[keys], delta=0.000001)
+
+        metric = ClassifyFPreRecMetric(only_gross=False, f_type='macro')
         metric.evaluate(pred, target)
         result_dict = metric.get_metric(reset=True)
-        ground_truth = {'f-0': 0.857143, 'pre-0': 0.75, 'rec-0': 1.0, 'f-1': 0.875, 'pre-1': 0.777778, 'rec-1': 1.0,
-                        'f-2': 0.75, 'pre-2': 0.75, 'rec-2': 0.75, 'f-3': 0.857143, 'pre-3': 0.857143,
-                        'rec-3': 0.857143, 'f-4': 0.842105, 'pre-4': 1.0, 'rec-4': 0.727273, 'f': 0.84375,
-                        'pre': 0.84375, 'rec': 0.84375}
-        for keys in ground_truth.keys():
-            self.assertAlmostEqual(result_dict[keys], ground_truth[keys], delta=0.0001)
-
+        ground_truth = {'0': {'f1-score': 0.13333333333333333, 'precision': 0.125, 'recall': 0.14285714285714285, 'support': 7}, '1': {'f1-score': 0.0, 'precision': 0.0, 'recall': 0.0, 'support': 5}, '2': {'f1-score': 0.0, 'precision': 0.0, 'recall': 0.0, 'support': 2}, '3': {'f1-score': 0.30769230769230765, 'precision': 0.5, 'recall': 0.2222222222222222, 'support': 9}, '4': {'f1-score': 0.5, 'precision': 0.5714285714285714, 'recall': 0.4444444444444444, 'support': 9}, 'macro avg': {'f1-score': 0.1882051282051282, 'precision': 0.23928571428571427, 'recall': 0.1619047619047619, 'support': 32}, 'micro avg': {'f1-score': 0.21875, 'precision': 0.21875, 'recall': 0.21875, 'support': 32}, 'weighted avg': {'f1-score': 0.2563301282051282, 'precision': 0.3286830357142857, 'recall': 0.21875, 'support': 32}}
+        for keys in result_dict.keys():
+            if keys=="f" or "pre" or "rec":
+                continue
+            gl=str(keys[-1])
+            tmp_d={"p":"precision","r":"recall","f":"f1-score"}
+            gk=tmp_d[keys[0]]
+            self.assertAlmostEqual(result_dict[keys], ground_truth[gl][gk], delta=0.000001)

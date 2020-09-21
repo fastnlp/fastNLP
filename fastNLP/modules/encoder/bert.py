@@ -1,29 +1,28 @@
-"""undocumented
+r"""undocumented
 这个页面的代码很大程度上参考(复制粘贴)了https://github.com/huggingface/pytorch-pretrained-BERT的代码， 如果你发现该代码对你
     有用，也请引用一下他们。
 """
 
 __all__ = [
-    "BertModel"
+    "BertModel",
 ]
 
-import collections
 import copy
 import json
 import math
 import os
-import unicodedata
 
 import torch
 from torch import nn
 import numpy as np
 
-from ..utils import _get_file_name_base_on_postfix
-from ...io.file_utils import _get_embedding_url, cached_path, PRETRAINED_BERT_MODEL_DIR
+from ...io.file_utils import _get_file_name_base_on_postfix
+from ...io.file_utils import _get_bert_dir
 from ...core import logger
 
-CONFIG_FILE = 'bert_config.json'
-VOCAB_NAME = 'vocab.txt'
+
+CONFIG_FILE = 'config.json'
+WEIGHTS_NAME = 'pytorch_model.bin'
 
 BERT_KEY_RENAME_MAP_1 = {
     'gamma': 'weight',
@@ -45,7 +44,7 @@ BERT_KEY_RENAME_MAP_2 = {
 
 
 class BertConfig(object):
-    """Configuration class to store the configuration of a `BertModel`.
+    r"""Configuration class to store the configuration of a `BertModel`.
     """
 
     def __init__(self,
@@ -60,8 +59,9 @@ class BertConfig(object):
                  max_position_embeddings=512,
                  type_vocab_size=2,
                  initializer_range=0.02,
-                 layer_norm_eps=1e-12):
-        """Constructs BertConfig.
+                 layer_norm_eps=1e-12,
+                 architectures='bert'):
+        r"""Constructs BertConfig.
 
         Args:
             vocab_size_or_config_json_file: Vocabulary size of `inputs_ids` in `BertModel`.
@@ -104,13 +104,14 @@ class BertConfig(object):
             self.type_vocab_size = type_vocab_size
             self.initializer_range = initializer_range
             self.layer_norm_eps = layer_norm_eps
+            self.architectures = architectures
         else:
             raise ValueError("First argument must be either a vocabulary size (int)"
                              "or the path to a pretrained model config file (str)")
 
     @classmethod
     def from_dict(cls, json_object):
-        """Constructs a `BertConfig` from a Python dictionary of parameters."""
+        r"""Constructs a `BertConfig` from a Python dictionary of parameters."""
         config = BertConfig(vocab_size_or_config_json_file=-1)
         for key, value in json_object.items():
             config.__dict__[key] = value
@@ -118,7 +119,7 @@ class BertConfig(object):
 
     @classmethod
     def from_json_file(cls, json_file):
-        """Constructs a `BertConfig` from a json file of parameters."""
+        r"""Constructs a `BertConfig` from a json file of parameters."""
         with open(json_file, "r", encoding='utf-8') as reader:
             text = reader.read()
         return cls.from_dict(json.loads(text))
@@ -127,19 +128,23 @@ class BertConfig(object):
         return str(self.to_json_string())
 
     def to_dict(self):
-        """Serializes this instance to a Python dictionary."""
+        r"""Serializes this instance to a Python dictionary."""
         output = copy.deepcopy(self.__dict__)
         return output
 
     def to_json_string(self):
-        """Serializes this instance to a JSON string."""
+        r"""Serializes this instance to a JSON string."""
         return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
 
     def to_json_file(self, json_file_path):
-        """ Save this instance to a json file."""
+        r""" Save this instance to a json file."""
+        if os.path.isdir(json_file_path):
+            json_file_path = os.path.join(json_file_path, CONFIG_FILE)
         with open(json_file_path, "w", encoding='utf-8') as writer:
             writer.write(self.to_json_string())
 
+    def save_pretrained(self, save_directory):
+        self.to_json_file(save_directory)
 
 def gelu(x):
     return x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
@@ -152,33 +157,7 @@ def swish(x):
 ACT2FN = {"gelu": gelu, "relu": torch.nn.functional.relu, "swish": swish}
 
 
-def _get_bert_dir(model_dir_or_name: str = 'en-base-uncased'):
-    if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
-        model_url = _get_embedding_url('bert', model_dir_or_name.lower())
-        model_dir = cached_path(model_url, name='embedding')
-        # 检查是否存在
-    elif os.path.isdir(os.path.abspath(os.path.expanduser(model_dir_or_name))):
-        model_dir = os.path.abspath(os.path.expanduser(model_dir_or_name))
-    else:
-        logger.error(f"Cannot recognize BERT dir or name ``{model_dir_or_name}``.")
-        raise ValueError(f"Cannot recognize BERT dir or name ``{model_dir_or_name}``.")
-    return str(model_dir)
-
-
-class BertLayerNorm(nn.Module):
-    def __init__(self, hidden_size, eps=1e-12):
-        """Construct a layernorm module in the TF style (epsilon inside the square root).
-        """
-        super(BertLayerNorm, self).__init__()
-        self.weight = nn.Parameter(torch.ones(hidden_size))
-        self.bias = nn.Parameter(torch.zeros(hidden_size))
-        self.variance_epsilon = eps
-
-    def forward(self, x):
-        u = x.mean(-1, keepdim=True)
-        s = (x - u).pow(2).mean(-1, keepdim=True)
-        x = (x - u) / torch.sqrt(s + self.variance_epsilon)
-        return self.weight * x + self.bias
+BertLayerNorm = torch.nn.LayerNorm
 
 
 class DistilBertEmbeddings(nn.Module):
@@ -206,7 +185,7 @@ class DistilBertEmbeddings(nn.Module):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, input_ids, token_type_ids):
-        """
+        r"""
         Parameters
         ----------
         input_ids: torch.tensor(bs, max_seq_length)
@@ -231,7 +210,7 @@ class DistilBertEmbeddings(nn.Module):
 
 
 class BertEmbeddings(nn.Module):
-    """Construct the embeddings from word, position and token_type embeddings.
+    r"""Construct the embeddings from word, position and token_type embeddings.
     """
 
     def __init__(self, config):
@@ -245,14 +224,18 @@ class BertEmbeddings(nn.Module):
         self.LayerNorm = BertLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, input_ids, token_type_ids=None):
+    def forward(self, input_ids, token_type_ids=None, position_ids=None, words_embeddings=None):
         seq_length = input_ids.size(1)
-        position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
-        position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
+        if position_ids is None:
+            position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
+            position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
         if token_type_ids is None:
             token_type_ids = torch.zeros_like(input_ids)
 
-        words_embeddings = self.word_embeddings(input_ids)
+        if words_embeddings is None:
+            words_embeddings = self.word_embeddings(input_ids)
+        else:
+            assert input_ids.size() == words_embeddings.size()[: -1]
         position_embeddings = self.position_embeddings(position_ids)
         token_type_embeddings = self.token_type_embeddings(token_type_ids)
 
@@ -415,7 +398,7 @@ class BertPooler(nn.Module):
 
 
 class BertModel(nn.Module):
-    """
+    r"""
     BERT(Bidirectional Embedding Representations from Transformers).
 
     用预训练权重矩阵来建立BERT模型::
@@ -470,7 +453,7 @@ class BertModel(nn.Module):
         self.apply(self.init_bert_weights)
 
     def init_bert_weights(self, module):
-        """ Initialize the weights.
+        r""" Initialize the weights.
         """
         if isinstance(module, (nn.Linear, nn.Embedding)):
             # Slightly different from the TF version which uses truncated_normal for initialization
@@ -483,6 +466,17 @@ class BertModel(nn.Module):
             module.bias.data.zero_()
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, output_all_encoded_layers=True):
+        """
+
+        :param torch.LongTensor input_ids: bsz x max_len的输入id
+        :param torch.LongTensor token_type_ids: bsz x max_len，如果不输入认为全为0，一般第一个sep(含)及以前为0, 一个sep之后为1
+        :param attention_mask: 需要attend的为1，不需要为0
+        :param bool output_all_encoded_layers: 是否输出所有层，默认输出token embedding(包含bpe, position以及type embedding)
+            及每一层的hidden states。如果为False，只输出最后一层的结果
+        :return: encode_layers: 如果output_all_encoded_layers为True，返回list(共num_layers+1个元素)，每个元素为
+            bsz x max_len x hidden_size否则返回bsz x max_len x hidden_size的tensor;
+            pooled_output: bsz x hidden_size为cls的表示，可以用于句子的分类
+        """
         if attention_mask is None:
             attention_mask = torch.ones_like(input_ids)
         if token_type_ids is None:
@@ -514,6 +508,8 @@ class BertModel(nn.Module):
             pooled_output = sequence_output[:, 0]
         if not output_all_encoded_layers:
             encoded_layers = encoded_layers[-1]
+        else:
+            encoded_layers.insert(0, embedding_output)
         return encoded_layers, pooled_output
 
     @classmethod
@@ -538,6 +534,18 @@ class BertModel(nn.Module):
             raise RuntimeError(f'Cannot load parameters through `state_dict` variable.')
 
         model_type = 'BERT'
+        old_keys = []
+        new_keys = []
+        for key in state_dict.keys():
+            new_key = None
+            if 'bert' not in key:
+                new_key = 'bert.' + key
+            if new_key:
+                old_keys.append(key)
+                new_keys.append(new_key)
+        for old_key, new_key in zip(old_keys, new_keys):
+            state_dict[new_key] = state_dict.pop(old_key)
+
         old_keys = []
         new_keys = []
         for key in state_dict.keys():
@@ -593,438 +601,29 @@ class BertModel(nn.Module):
             logger.warning("Weights of {} not initialized from pretrained model: {}".format(
                 model.__class__.__name__, missing_keys))
         if len(unexpected_keys) > 0:
-            logger.warning("Weights from pretrained model not used in {}: {}".format(
+            logger.debug("Weights from pretrained model not used in {}: {}".format(
                 model.__class__.__name__, unexpected_keys))
 
         logger.info(f"Load pre-trained {model_type} parameters from file {weights_path}.")
         return model
 
-
-def whitespace_tokenize(text):
-    """Runs basic whitespace cleaning and splitting on a piece of text."""
-    text = text.strip()
-    if not text:
-        return []
-    tokens = text.split()
-    return tokens
-
-
-class WordpieceTokenizer(object):
-    """Runs WordPiece tokenization."""
-
-    def __init__(self, vocab, unk_token="[UNK]", max_input_chars_per_word=100):
-        self.vocab = vocab
-        self.unk_token = unk_token
-        self.max_input_chars_per_word = max_input_chars_per_word
-
-    def tokenize(self, text):
-        """Tokenizes a piece of text into its word pieces.
-
-        This uses a greedy longest-match-first algorithm to perform tokenization
-        using the given vocabulary.
-
-        For example:
-          input = "unaffable"
-          output = ["un", "##aff", "##able"]
-
-        Args:
-          text: A single token or whitespace separated tokens. This should have
-            already been passed through `BasicTokenizer`.
-
-        Returns:
-          A list of wordpiece tokens.
+    def save_pretrained(self, save_directory):
+        """ 保存模型到某个folder
         """
+        assert os.path.isdir(
+            save_directory
+        ), "Saving path should be a directory where the model and configuration can be saved"
 
-        output_tokens = []
-        for token in whitespace_tokenize(text):
-            chars = list(token)
-            if len(chars) > self.max_input_chars_per_word:
-                output_tokens.append(self.unk_token)
-                continue
+        # Only save the model itself if we are using distributed training
+        model_to_save = self.module if hasattr(self, "module") else self
 
-            is_bad = False
-            start = 0
-            sub_tokens = []
-            while start < len(chars):
-                end = len(chars)
-                cur_substr = None
-                while start < end:
-                    substr = "".join(chars[start:end])
-                    if start > 0:
-                        substr = "##" + substr
-                    if substr in self.vocab:
-                        cur_substr = substr
-                        break
-                    end -= 1
-                if cur_substr is None:
-                    is_bad = True
-                    break
-                sub_tokens.append(cur_substr)
-                start = end
+        # Attach architecture to the config
+        model_to_save.config.architectures = [model_to_save.__class__.__name__]
 
-            if is_bad:
-                output_tokens.append(self.unk_token)
-            else:
-                output_tokens.extend(sub_tokens)
-        if len(output_tokens) == 0:  # 防止里面全是空格或者回车符号
-            return [self.unk_token]
-        return output_tokens
+        # Save configuration file
+        model_to_save.config.save_pretrained(save_directory)
 
-
-def load_vocab(vocab_file):
-    """Loads a vocabulary file into a dictionary."""
-    vocab = collections.OrderedDict()
-    index = 0
-    with open(vocab_file, "r", encoding="utf-8") as reader:
-        while True:
-            token = reader.readline()
-            if not token:
-                break
-            token = token.strip()
-            vocab[token] = index
-            index += 1
-    return vocab
-
-
-class BasicTokenizer(object):
-    """Runs basic tokenization (punctuation splitting, lower casing, etc.)."""
-
-    def __init__(self,
-                 do_lower_case=True,
-                 never_split=("[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]")):
-        """Constructs a BasicTokenizer.
-
-        Args:
-          do_lower_case: Whether to lower case the input.
-        """
-        self.do_lower_case = do_lower_case
-        self.never_split = never_split
-
-    def tokenize(self, text):
-        """Tokenizes a piece of text."""
-        text = self._clean_text(text)
-        # This was added on November 1st, 2018 for the multilingual and Chinese
-        # models. This is also applied to the English models now, but it doesn't
-        # matter since the English models were not trained on any Chinese data
-        # and generally don't have any Chinese data in them (there are Chinese
-        # characters in the vocabulary because Wikipedia does have some Chinese
-        # words in the English Wikipedia.).
-        text = self._tokenize_chinese_chars(text)
-        orig_tokens = whitespace_tokenize(text)
-        split_tokens = []
-        for token in orig_tokens:
-            if self.do_lower_case and token not in self.never_split:
-                token = token.lower()
-                token = self._run_strip_accents(token)
-            split_tokens.extend(self._run_split_on_punc(token))
-
-        output_tokens = whitespace_tokenize(" ".join(split_tokens))
-        return output_tokens
-
-    def _run_strip_accents(self, text):
-        """Strips accents from a piece of text."""
-        text = unicodedata.normalize("NFD", text)
-        output = []
-        for char in text:
-            cat = unicodedata.category(char)
-            if cat == "Mn":
-                continue
-            output.append(char)
-        return "".join(output)
-
-    def _run_split_on_punc(self, text):
-        """Splits punctuation on a piece of text."""
-        if text in self.never_split:
-            return [text]
-        chars = list(text)
-        i = 0
-        start_new_word = True
-        output = []
-        while i < len(chars):
-            char = chars[i]
-            if _is_punctuation(char):
-                output.append([char])
-                start_new_word = True
-            else:
-                if start_new_word:
-                    output.append([])
-                start_new_word = False
-                output[-1].append(char)
-            i += 1
-
-        return ["".join(x) for x in output]
-
-    def _tokenize_chinese_chars(self, text):
-        """Adds whitespace around any CJK character."""
-        output = []
-        for char in text:
-            cp = ord(char)
-            if self._is_chinese_char(cp):
-                output.append(" ")
-                output.append(char)
-                output.append(" ")
-            else:
-                output.append(char)
-        return "".join(output)
-
-    def _is_chinese_char(self, cp):
-        """Checks whether CP is the codepoint of a CJK character."""
-        # This defines a "chinese character" as anything in the CJK Unicode block:
-        #   https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
-        #
-        # Note that the CJK Unicode block is NOT all Japanese and Korean characters,
-        # despite its name. The modern Korean Hangul alphabet is a different block,
-        # as is Japanese Hiragana and Katakana. Those alphabets are used to write
-        # space-separated words, so they are not treated specially and handled
-        # like the all of the other languages.
-        if (((cp >= 0x4E00) and (cp <= 0x9FFF)) or  #
-            ((cp >= 0x3400) and (cp <= 0x4DBF)) or  #
-            ((cp >= 0x20000) and (cp <= 0x2A6DF)) or  #
-            ((cp >= 0x2A700) and (cp <= 0x2B73F)) or  #
-            ((cp >= 0x2B740) and (cp <= 0x2B81F)) or  #
-            ((cp >= 0x2B820) and (cp <= 0x2CEAF)) or
-            ((cp >= 0xF900) and (cp <= 0xFAFF)) or  #
-            ((cp >= 0x2F800) and (cp <= 0x2FA1F))):  #
-            return True
-
-        return False
-
-    def _clean_text(self, text):
-        """Performs invalid character removal and whitespace cleanup on text."""
-        output = []
-        for char in text:
-            cp = ord(char)
-            if cp == 0 or cp == 0xfffd or _is_control(char):
-                continue
-            if _is_whitespace(char):
-                output.append(" ")
-            else:
-                output.append(char)
-        return "".join(output)
-
-
-def _is_whitespace(char):
-    """Checks whether `chars` is a whitespace character."""
-    # \t, \n, and \r are technically contorl characters but we treat them
-    # as whitespace since they are generally considered as such.
-    if char == " " or char == "\t" or char == "\n" or char == "\r":
-        return True
-    cat = unicodedata.category(char)
-    if cat == "Zs":
-        return True
-    return False
-
-
-def _is_control(char):
-    """Checks whether `chars` is a control character."""
-    # These are technically control characters but we count them as whitespace
-    # characters.
-    if char == "\t" or char == "\n" or char == "\r":
-        return False
-    cat = unicodedata.category(char)
-    if cat.startswith("C"):
-        return True
-    return False
-
-
-def _is_punctuation(char):
-    """Checks whether `chars` is a punctuation character."""
-    cp = ord(char)
-    # We treat all non-letter/number ASCII as punctuation.
-    # Characters such as "^", "$", and "`" are not in the Unicode
-    # Punctuation class but we treat them as punctuation anyways, for
-    # consistency.
-    if (((cp >= 33) and (cp <= 47)) or ((cp >= 58) and (cp <= 64)) or
-       ((cp >= 91) and (cp <= 96)) or ((cp >= 123) and (cp <= 126))):
-        return True
-    cat = unicodedata.category(char)
-    if cat.startswith("P"):
-        return True
-    return False
-
-
-class BertTokenizer(object):
-    """Runs end-to-end tokenization: punctuation splitting + wordpiece"""
-
-    def __init__(self, vocab_file, do_lower_case=True, max_len=None, do_basic_tokenize=True,
-                 never_split=("[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]")):
-        """Constructs a BertTokenizer.
-
-        Args:
-          vocab_file: Path to a one-wordpiece-per-line vocabulary file
-          do_lower_case: Whether to lower case the input
-                         Only has an effect when do_wordpiece_only=False
-          do_basic_tokenize: Whether to do basic tokenization before wordpiece.
-          max_len: An artificial maximum length to truncate tokenized sequences to;
-                         Effective maximum length is always the minimum of this
-                         value (if specified) and the underlying BERT model's
-                         sequence length.
-          never_split: List of tokens which will never be split during tokenization.
-                         Only has an effect when do_wordpiece_only=False
-        """
-        if not os.path.isfile(vocab_file):
-            raise ValueError(
-                "Can't find a vocabulary file at path '{}'. To load the vocabulary from a Google pretrained "
-                "model use `tokenizer = BertTokenizer.from_pretrained(PRETRAINED_MODEL_NAME)`".format(vocab_file))
-        self.vocab = load_vocab(vocab_file)
-        self.ids_to_tokens = collections.OrderedDict(
-            [(ids, tok) for tok, ids in self.vocab.items()])
-        self.do_basic_tokenize = do_basic_tokenize
-        if do_basic_tokenize:
-            self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case,
-                                                  never_split=never_split)
-        self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
-        self.max_len = max_len if max_len is not None else int(1e12)
-
-    def _reinit_on_new_vocab(self, vocab):
-        """
-        在load bert之后，可能会对vocab进行重新排列。重新排列之后调用这个函数重新初始化与vocab相关的性质
-
-        :param vocab:
-        :return:
-        """
-        self.vocab = vocab
-        self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
-
-    def tokenize(self, text):
-        split_tokens = []
-        if self.do_basic_tokenize:
-            for token in self.basic_tokenizer.tokenize(text):
-                for sub_token in self.wordpiece_tokenizer.tokenize(token):
-                    split_tokens.append(sub_token)
-        else:
-            split_tokens = self.wordpiece_tokenizer.tokenize(text)
-        return split_tokens
-
-    def convert_tokens_to_ids(self, tokens):
-        """Converts a sequence of tokens into ids using the vocab."""
-        ids = []
-        for token in tokens:
-            ids.append(self.vocab[token])
-        if len(ids) > self.max_len:
-            logger.warning(
-                "Token indices sequence length is longer than the specified maximum "
-                " sequence length for this BERT model ({} > {}). Running this"
-                " sequence through BERT will result in indexing errors".format(len(ids), self.max_len)
-            )
-        return ids
-
-    def convert_ids_to_tokens(self, ids):
-        """Converts a sequence of ids in wordpiece tokens using the vocab."""
-        tokens = []
-        for i in ids:
-            tokens.append(self.ids_to_tokens[i])
-        return tokens
-
-    def save_vocabulary(self, vocab_path):
-        """Save the tokenizer vocabulary to a directory or file."""
-        index = 0
-        if os.path.isdir(vocab_path):
-            vocab_file = os.path.join(vocab_path, VOCAB_NAME)
-        else:
-            vocab_file = vocab_path
-        with open(vocab_file, "w", encoding="utf-8") as writer:
-            for token, token_index in sorted(self.vocab.items(), key=lambda kv: kv[1]):
-                if index != token_index:
-                    logger.warning("Saving vocabulary to {}: vocabulary indices are not consecutive."
-                                   " Please check that the vocabulary is not corrupted!".format(vocab_file))
-                    index = token_index
-                writer.write(token + u'\n')
-                index += 1
-        return vocab_file
-
-    @classmethod
-    def from_pretrained(cls, model_dir_or_name, *inputs, **kwargs):
-        """
-        给定模型的名字或者路径，直接读取vocab.
-        """
-        model_dir = _get_bert_dir(model_dir_or_name)
-        pretrained_model_name_or_path = _get_file_name_base_on_postfix(model_dir, '.txt')
-        logger.info("loading vocabulary file {}".format(pretrained_model_name_or_path))
-        max_len = 512
-        kwargs['max_len'] = min(kwargs.get('max_position_embeddings', int(1e12)), max_len)
-        # Instantiate tokenizer.
-        tokenizer = cls(pretrained_model_name_or_path, *inputs, **kwargs)
-        return tokenizer
-
-
-class _WordPieceBertModel(nn.Module):
-    """
-    这个模块用于直接计算word_piece的结果.
-
-    """
-
-    def __init__(self, model_dir_or_name: str, layers: str = '-1', pooled_cls: bool=False):
-        super().__init__()
-
-        self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
-        self.encoder = BertModel.from_pretrained(model_dir_or_name)
-        #  检查encoder_layer_number是否合理
-        encoder_layer_number = len(self.encoder.encoder.layer)
-        self.layers = list(map(int, layers.split(',')))
-        for layer in self.layers:
-            if layer < 0:
-                assert -layer <= encoder_layer_number, f"The layer index:{layer} is out of scope for " \
-                    f"a bert model with {encoder_layer_number} layers."
-            else:
-                assert layer < encoder_layer_number, f"The layer index:{layer} is out of scope for " \
-                    f"a bert model with {encoder_layer_number} layers."
-
-        self._cls_index = self.tokenzier.vocab['[CLS]']
-        self._sep_index = self.tokenzier.vocab['[SEP]']
-        self._wordpiece_unknown_index = self.tokenzier.vocab['[UNK]']
-        self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
-        self.pooled_cls = pooled_cls
-
-    def index_dataset(self, *datasets, field_name, add_cls_sep=True):
-        """
-        使用bert的tokenizer新生成word_pieces列加入到datasets中，并将他们设置为input。如果首尾不是
-            [CLS]与[SEP]会在首尾额外加入[CLS]与[SEP], 且将word_pieces这一列的pad value设置为了bert的pad value。
-
-        :param datasets: DataSet对象
-        :param field_name: 基于哪一列index
-        :return:
-        """
-
-        def convert_words_to_word_pieces(words):
-            word_pieces = []
-            for word in words:
-                tokens = self.tokenzier.wordpiece_tokenizer.tokenize(word)
-                word_piece_ids = self.tokenzier.convert_tokens_to_ids(tokens)
-                word_pieces.extend(word_piece_ids)
-            if add_cls_sep:
-                if word_pieces[0] != self._cls_index:
-                    word_pieces.insert(0, self._cls_index)
-                if word_pieces[-1] != self._sep_index:
-                    word_pieces.insert(-1, self._sep_index)
-            return word_pieces
-
-        for index, dataset in enumerate(datasets):
-            try:
-                dataset.apply_field(convert_words_to_word_pieces, field_name=field_name, new_field_name='word_pieces',
-                                    is_input=True)
-                dataset.set_pad_val('word_pieces', self._wordpiece_pad_index)
-            except Exception as e:
-                logger.error(f"Exception happens when processing the {index} dataset.")
-                raise e
-
-    def forward(self, word_pieces, token_type_ids=None):
-        """
-
-        :param word_pieces: torch.LongTensor, batch_size x max_len
-        :param token_type_ids: torch.LongTensor, batch_size x max_len
-        :return: num_layers x batch_size x max_len x hidden_size或者num_layers x batch_size x (max_len+2) x hidden_size
-        """
-        batch_size, max_len = word_pieces.size()
-
-        attn_masks = word_pieces.ne(self._wordpiece_pad_index)
-        bert_outputs, pooled_cls = self.encoder(word_pieces, token_type_ids=token_type_ids, attention_mask=attn_masks,
-                                                output_all_encoded_layers=True)
-        # output_layers = [self.layers]  # len(self.layers) x batch_size x max_word_piece_length x hidden_size
-        outputs = bert_outputs[0].new_zeros((len(self.layers), batch_size, max_len, bert_outputs[0].size(-1)))
-        for l_index, l in enumerate(self.layers):
-            bert_output = bert_outputs[l]
-            if l in (len(bert_outputs)-1, -1) and self.pooled_cls:
-                bert_output[:, 0] = pooled_cls
-            outputs[l_index] = bert_output
-        return outputs
+        # If we save using the predefined names, we can load using `from_pretrained`
+        output_model_file = os.path.join(save_directory, WEIGHTS_NAME)
+        torch.save(model_to_save.state_dict(), output_model_file)
+        logger.debug("Model weights saved in {}".format(output_model_file))

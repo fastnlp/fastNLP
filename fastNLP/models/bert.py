@@ -1,4 +1,4 @@
-"""
+r"""
 fastNLP提供了BERT应用到五个下游任务的模型代码，可以直接调用。这五个任务分别为
 
     - 文本分类任务： :class:`~fastNLP.models.BertForSequenceClassification`
@@ -39,16 +39,16 @@ from torch import nn
 from .base_model import BaseModel
 from ..core._logger import logger
 from ..core.const import Const
-from ..embeddings import BertEmbedding
+from ..embeddings.bert_embedding import BertEmbedding
 
 
 class BertForSequenceClassification(BaseModel):
-    """
+    r"""
     BERT model for classification.
 
     """
     def __init__(self, embed: BertEmbedding, num_labels: int=2, dropout=0.1):
-        """
+        r"""
         
         :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
         :param int num_labels: 文本分类类别数目，默认值为2.
@@ -69,32 +69,38 @@ class BertForSequenceClassification(BaseModel):
             warnings.warn(warn_msg)
 
     def forward(self, words):
-        """
+        r"""
+        输入为 [[w1, w2, w3, ...], [...]], BERTEmbedding会在开头和结尾额外加入[CLS]与[SEP]
         :param torch.LongTensor words: [batch_size, seq_len]
         :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.Tensor [batch_size, num_labels]
         """
         hidden = self.dropout(self.bert(words))
         cls_hidden = hidden[:, 0]
         logits = self.classifier(cls_hidden)
+        if logits.size(-1) == 1:
+            logits = logits.squeeze(-1)
 
         return {Const.OUTPUT: logits}
 
     def predict(self, words):
-        """
+        r"""
         :param torch.LongTensor words: [batch_size, seq_len]
         :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.LongTensor [batch_size]
         """
         logits = self.forward(words)[Const.OUTPUT]
-        return {Const.OUTPUT: torch.argmax(logits, dim=-1)}
+        if self.num_labels > 1:
+            return {Const.OUTPUT: torch.argmax(logits, dim=-1)}
+        else:
+            return {Const.OUTPUT: logits}
 
 
 class BertForSentenceMatching(BaseModel):
-    """
+    r"""
     BERT model for sentence matching.
 
     """
     def __init__(self, embed: BertEmbedding, num_labels: int=2, dropout=0.1):
-        """
+        r"""
         
         :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
         :param int num_labels: Matching任务类别数目，默认值为2.
@@ -114,7 +120,9 @@ class BertForSentenceMatching(BaseModel):
             warnings.warn(warn_msg)
 
     def forward(self, words):
-        """
+        r"""
+        输入words的格式为 [sent1] + [SEP] + [sent2]（BertEmbedding会在开头加入[CLS]和在结尾加入[SEP]），输出为batch_size x num_labels
+
         :param torch.LongTensor words: [batch_size, seq_len]
         :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.Tensor [batch_size, num_labels]
         """
@@ -125,7 +133,7 @@ class BertForSentenceMatching(BaseModel):
         return {Const.OUTPUT: logits}
 
     def predict(self, words):
-        """
+        r"""
         :param torch.LongTensor words: [batch_size, seq_len]
         :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.LongTensor [batch_size]
         """
@@ -134,12 +142,12 @@ class BertForSentenceMatching(BaseModel):
 
 
 class BertForMultipleChoice(BaseModel):
-    """
+    r"""
     BERT model for multiple choice.
 
     """
     def __init__(self, embed: BertEmbedding, num_choices=2, dropout=0.1):
-        """
+        r"""
         
         :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
         :param int num_choices: 多选任务选项数目，默认值为2.
@@ -160,7 +168,7 @@ class BertForMultipleChoice(BaseModel):
             warnings.warn(warn_msg)
 
     def forward(self, words):
-        """
+        r"""
         :param torch.LongTensor words: [batch_size, num_choices, seq_len]
         :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.LongTensor [batch_size, num_choices]
         """
@@ -175,7 +183,7 @@ class BertForMultipleChoice(BaseModel):
         return {Const.OUTPUT: reshaped_logits}
 
     def predict(self, words):
-        """
+        r"""
         :param torch.LongTensor words: [batch_size, num_choices, seq_len]
         :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.LongTensor [batch_size]
         """
@@ -184,12 +192,12 @@ class BertForMultipleChoice(BaseModel):
 
 
 class BertForTokenClassification(BaseModel):
-    """
+    r"""
     BERT model for token classification.
 
     """
     def __init__(self, embed: BertEmbedding, num_labels, dropout=0.1):
-        """
+        r"""
         
         :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
         :param int num_labels: 序列标注标签数目，无默认值.
@@ -210,7 +218,7 @@ class BertForTokenClassification(BaseModel):
             warnings.warn(warn_msg)
 
     def forward(self, words):
-        """
+        r"""
         :param torch.LongTensor words: [batch_size, seq_len]
         :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.Tensor [batch_size, seq_len, num_labels]
         """
@@ -221,7 +229,7 @@ class BertForTokenClassification(BaseModel):
         return {Const.OUTPUT: logits}
 
     def predict(self, words):
-        """
+        r"""
         :param torch.LongTensor words: [batch_size, seq_len]
         :return: { :attr:`fastNLP.Const.OUTPUT` : logits}: torch.LongTensor [batch_size, seq_len]
         """
@@ -230,12 +238,12 @@ class BertForTokenClassification(BaseModel):
 
 
 class BertForQuestionAnswering(BaseModel):
-    """
+    r"""
     用于做Q&A的Bert模型，如果是Squad2.0请将BertEmbedding的include_cls_sep设置为True，Squad1.0或CMRC则设置为False
 
     """
     def __init__(self, embed: BertEmbedding):
-        """
+        r"""
         
         :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
         :param int num_labels: 抽取式QA列数，默认值为2(即第一列为start_span, 第二列为end_span).
@@ -246,7 +254,11 @@ class BertForQuestionAnswering(BaseModel):
         self.qa_outputs = nn.Linear(self.bert.embedding_dim, 2)
 
     def forward(self, words):
-        """
+        r"""
+        输入words为question + [SEP] + [paragraph]，BERTEmbedding在之后会额外加入开头的[CLS]和结尾的[SEP]. note:
+            如果BERTEmbedding中include_cls_sep=True，则输出的start和end index相对输入words会增加一位；如果为BERTEmbedding中
+            include_cls_sep=False, 则输出start和end index的位置与输入words的顺序完全一致
+
         :param torch.LongTensor words: [batch_size, seq_len]
         :return: 一个包含num_labels个logit的dict，每一个logit的形状都是[batch_size, seq_len + 2]
         """

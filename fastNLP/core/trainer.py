@@ -355,8 +355,9 @@ from .utils import _move_model_to_device
 from ._parallel_utils import _model_contains_inner_module
 from ._logger import logger
 
+
 class Trainer(object):
-    """
+    r"""
     Trainer在fastNLP中用于组织单任务的训练过程，可以避免用户在不同训练任务中重复撰写
         (1) epoch循环;
         (2) 将数据分成不同的Batch;
@@ -373,9 +374,8 @@ class Trainer(object):
                  dev_data=None, metrics=None, metric_key=None,
                  validate_every=-1, save_path=None, use_tqdm=True, device=None,
                  callbacks=None, check_code_level=0, **kwargs):
-        """
-        
-        :param train_data: 训练集， :class:`~fastNLP.DataSet` 类型。
+        r"""
+        :param train_data: 训练集， :class:`~fastNLP.DataSet` 类型或 :class:`~fastNLP.BatchIter` 的子类
         :param nn.modules model: 待训练的模型
         :param optimizer: `torch.optim.Optimizer` 优化器。如果为None，则Trainer使用默认的Adam(model.parameters(), lr=4e-3)这个优化器
         :param int batch_size: 训练和验证的时候的batch大小。
@@ -422,6 +422,9 @@ class Trainer(object):
             报告警告信息; 2: 有任何field没有被使用都报错. 检查的原理是通过使用很小的batch(默认2个sample)来运行代码，但是
             这个过程理论上不会修改任何参数，只是会检查能否运行。但如果(1)模型中存在将batch_size写为某个固定值的情况；
             (2)模型中存在累加前向计算次数的，可能会多计算1次。以上情况建议将check_code_level设置为-1。
+        :param kwargs: 支持配置可选参数
+            bool test_use_tqdm: 在dev上验证的时候是否开启tqdm
+            Sampler test_sampler: 在evaluate的时候使用的sampler
         """
         super(Trainer, self).__init__()
         if not isinstance(model, nn.Module):
@@ -487,11 +490,12 @@ class Trainer(object):
                 sampler.set_batch_size(batch_size)
 
         if isinstance(train_data, DataSet):
-            self.data_iterator = DataSetIter(
-                dataset=train_data, batch_size=batch_size, num_workers=num_workers, sampler=sampler, drop_last=drop_last)
+            self.data_iterator = DataSetIter(dataset=train_data, batch_size=batch_size, sampler=sampler,
+                                             num_workers=num_workers, drop_last=drop_last)
         elif isinstance(train_data, BatchIter):
             self.data_iterator = train_data
             train_data = train_data.dataset
+            check_code_level = -1  # 强制跳过校验
         else:
             raise TypeError("train_data type {} not support".format(type(train_data)))
 
@@ -560,9 +564,9 @@ class Trainer(object):
                                  batch_size=kwargs.get("dev_batch_size", self.batch_size),
                                  device=None,  # 由上面的部分处理device
                                  verbose=0,
-                                 use_tqdm=self.test_use_tqdm)
+                                 use_tqdm=self.test_use_tqdm,
+                                 sampler=kwargs.get('test_sampler', None))
 
-        self.step = 0
         self.start_time = None  # start timestamp
 
         if isinstance(callbacks, Callback):
@@ -572,7 +576,7 @@ class Trainer(object):
                                                 callbacks=callbacks)
 
     def train(self, load_best_model=True, on_exception='auto'):
-        """
+        r"""
         使用该函数使Trainer开始训练。
 
         :param bool load_best_model: 该参数只有在初始化提供了dev_data的情况下有效，如果True, trainer将在返回之前重新加载dev表现
@@ -600,10 +604,12 @@ class Trainer(object):
             self._model_device = _get_model_device(self.model)
             self._mode(self.model, is_test=False)
             self._load_best_model = load_best_model
-            self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+            # 加上millsecond，防止两个太接近的保存
+            self.start_time = str(datetime.now().strftime('%Y-%m-%d-%H-%M-%S-%f'))
             start_time = time.time()
             self.logger.info("training epochs started " + self.start_time)
-
+            self.step = 0
+            self.epoch = 1
             try:
                 self.callback_manager.on_train_begin()
                 self._train()
@@ -617,6 +623,19 @@ class Trainer(object):
                 elif on_exception == 'raise':
                     raise e
 
+            if self.dev_data is not None and self.best_dev_perf is not None and load_best_model:
+                model_name = "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time])
+                load_succeed = self._load_model(self.model, model_name)
+                if load_succeed:
+                    self.logger.info("Reloaded the best model.")
+                else:
+                    self.logger.info("Fail to reload best model.")
+
+            if self.dev_data is None and self.save_path is not None:
+                model_name = "_".join([self.model.__class__.__name__, self.start_time])
+                self._save_model(self.model, model_name)
+
+        finally:
             if self.dev_data is not None and self.best_dev_perf is not None:
                 self.logger.info(
                     "\nIn Epoch:{}/Step:{}, got best dev performance:".format(self.best_dev_epoch, self.best_dev_step))
@@ -624,15 +643,7 @@ class Trainer(object):
                 results['best_eval'] = self.best_dev_perf
                 results['best_epoch'] = self.best_dev_epoch
                 results['best_step'] = self.best_dev_step
-                if load_best_model:
-                    model_name = "best_" + "_".join([self.model.__class__.__name__, self.metric_key, self.start_time])
-                    load_succeed = self._load_model(self.model, model_name)
-                    if load_succeed:
-                        self.logger.info("Reloaded the best model.")
-                    else:
-                        self.logger.info("Fail to reload best model.")
-        finally:
-            pass
+
         results['seconds'] = round(time.time() - start_time, 2)
 
         return results
@@ -642,23 +653,21 @@ class Trainer(object):
             from .utils import _pseudo_tqdm as inner_tqdm
         else:
             inner_tqdm = tqdm
-        self.step = 0
-        self.epoch = 0
         start = time.time()
-        with inner_tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True) as pbar:
+        with inner_tqdm(total=self.n_steps, postfix='loss:{0:<6.5f}', leave=False, dynamic_ncols=True,
+                        initial=self.step) as pbar:
             self.pbar = pbar
             avg_loss = 0
-            data_iterator = self.data_iterator
-            self.batch_per_epoch = data_iterator.num_batches
-            for epoch in range(1, self.n_epochs + 1):
+            self.batch_per_epoch = self.data_iterator.num_batches
+            for epoch in range(self.epoch, self.n_epochs + 1):
                 self.epoch = epoch
                 pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
                 # early stopping
                 self.callback_manager.on_epoch_begin()
-                for batch_x, batch_y in data_iterator:
+                for batch_x, batch_y in self.data_iterator:
                     self.step += 1
                     _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
-                    indices = data_iterator.get_batch_indices()
+                    indices = self.data_iterator.get_batch_indices()
                     # negative sampling; replace unknown; re-weight batch_y
                     self.callback_manager.on_batch_begin(batch_x, batch_y, indices)
                     prediction = self._data_forward(self.model, batch_x)
@@ -691,8 +700,7 @@ class Trainer(object):
                         avg_loss = 0
                     self.callback_manager.on_batch_end()
 
-                    if ((self.validate_every > 0 and self.step % self.validate_every == 0) or
-                        (self.validate_every < 0 and self.step % len(data_iterator) == 0)) \
+                    if (self.validate_every > 0 and self.step % self.validate_every == 0) \
                             and self.dev_data is not None:
                         eval_res = self._do_validation(epoch=epoch, step=self.step)
                         eval_str = "Evaluation on dev at Epoch {}/{}. Step:{}/{}: ".format(epoch, self.n_epochs, self.step,
@@ -701,7 +709,13 @@ class Trainer(object):
                         self.logger.info(eval_str)
                         self.logger.info(self.tester._format_eval_results(eval_res)+'\n')
                 # ================= mini-batch end ==================== #
-
+                if self.validate_every<0 and self.dev_data is not None:  # 在epoch结束之后的evaluate
+                    eval_res = self._do_validation(epoch=epoch, step=self.step)
+                    eval_str = "Evaluation on dev at Epoch {}/{}. Step:{}/{}: ".format(epoch, self.n_epochs, self.step,
+                                                                                       self.n_steps)
+                    # pbar.write(eval_str + '\n')
+                    self.logger.info(eval_str)
+                    self.logger.info(self.tester._format_eval_results(eval_res) + '\n')
                 # lr decay; early stopping
                 self.callback_manager.on_epoch_end()
             # =============== epochs end =================== #
@@ -729,7 +743,7 @@ class Trainer(object):
         return res
 
     def _mode(self, model, is_test=False):
-        """Train mode or Test mode. This is for PyTorch currently.
+        r"""Train mode or Test mode. This is for PyTorch currently.
 
         :param model: a PyTorch model
         :param bool is_test: whether in test mode or not.
@@ -741,7 +755,7 @@ class Trainer(object):
             model.train()
 
     def _update(self):
-        """Perform weight update on a model.
+        r"""Perform weight update on a model.
 
         """
         if self.step % self.update_every == 0:
@@ -756,7 +770,7 @@ class Trainer(object):
         return y
 
     def _grad_backward(self, loss):
-        """Compute gradient with link rules.
+        r"""Compute gradient with link rules.
 
         :param loss: a scalar where back-prop starts
 
@@ -767,7 +781,7 @@ class Trainer(object):
         loss.backward()
 
     def _compute_loss(self, predict, truth):
-        """Compute loss given prediction and ground truth.
+        r"""Compute loss given prediction and ground truth.
 
         :param predict: prediction dict, produced by model.forward
         :param truth: ground truth dict, produced by batch_y
@@ -776,7 +790,7 @@ class Trainer(object):
         return self.losser(predict, truth)
 
     def _save_model(self, model, model_name, only_param=False):
-        """ 存储不含有显卡信息的state_dict或model
+        r""" 存储不含有显卡信息的state_dict或model
         :param model:
         :param model_name:
         :param only_param:
@@ -817,7 +831,7 @@ class Trainer(object):
         return True
 
     def _better_eval_result(self, metrics):
-        """Check if the current epoch yields better validation results.
+        r"""Check if the current epoch yields better validation results.
 
         :return bool value: True means current results on dev set is the best.
         """
@@ -843,7 +857,7 @@ class Trainer(object):
 
     @property
     def is_master(self):
-        """是否是主进程"""
+        r"""是否是主进程"""
         return True
 
 DEFAULT_CHECK_BATCH_SIZE = 2
@@ -867,34 +881,13 @@ def _get_value_info(_dict):
     return strs
 
 
-from numbers import Number
-from .batch import _to_tensor
-
-
 def _check_code(dataset, model, losser, metrics, forward_func, batch_size=DEFAULT_CHECK_BATCH_SIZE,
                 dev_data=None, metric_key=None, check_level=0):
     # check get_loss 方法
     model_device = _get_model_device(model=model)
-    def _iter():
-        start_idx = 0
-        while start_idx<len(dataset):
-            batch_x = {}
-            batch_y = {}
-            for field_name, field in dataset.get_all_fields().items():
-                indices = list(range(start_idx, min(start_idx+batch_size, len(dataset))))
-                if field.is_target or field.is_input:
-                    batch = field.get(indices)
-                    if field.dtype is not None and \
-                            issubclass(field.dtype, Number) and not isinstance(batch, torch.Tensor):
-                        batch, _ = _to_tensor(batch, field.dtype)
-                    if field.is_target:
-                        batch_y[field_name] = batch
-                    if field.is_input:
-                        batch_x[field_name] = batch
-            yield (batch_x, batch_y)
-            start_idx += batch_size
+    _iter = DataSetIter(dataset, batch_size=batch_size, sampler=None)
 
-    for batch_count, (batch_x, batch_y) in enumerate(_iter()):
+    for batch_count, (batch_x, batch_y) in enumerate(_iter):
         _move_dict_value_to_device(batch_x, batch_y, device=model_device)
         # forward check
         if batch_count == 0:

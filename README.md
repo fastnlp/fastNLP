@@ -6,7 +6,7 @@
 ![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)
 [![Documentation Status](https://readthedocs.org/projects/fastnlp/badge/?version=latest)](http://fastnlp.readthedocs.io/?badge=latest)
 
-fastNLP是一款轻量级的自然语言处理（NLP）工具包。你既可以用它来快速地完成一个NLP任务，也可以用它在研究中快速构建更复杂的模型。
+fastNLP是一款轻量级的自然语言处理（NLP）工具包，目标是快速实现NLP任务以及构建复杂模型。
 
 fastNLP具有如下的特性：
 
@@ -61,7 +61,8 @@ python -m spacy download en
 ### 扩展教程
 
 - [Extend-1. BertEmbedding的各种用法](https://fastnlp.readthedocs.io/zh/latest/tutorials/extend_1_bert_embedding.html)
-- [Extend-2. 使用fitlog 辅助 fastNLP 进行科研](https://fastnlp.readthedocs.io/zh/latest/tutorials/extend_2_fitlog.html)
+- [Extend-2. 分布式训练简介](https://fastnlp.readthedocs.io/zh/latest/tutorials/extend_2_dist.html)
+- [Extend-3. 使用fitlog 辅助 fastNLP 进行科研](https://fastnlp.readthedocs.io/zh/latest/tutorials/extend_3_fitlog.html)
 
 
 ## 内置组件
@@ -99,7 +100,9 @@ fastNLP 在 embeddings 模块中内置了几种不同的embedding：静态embedd
 
 ## 项目结构
 
-![](./docs/source/figures/workflow.png)
+<div align=center><img width="450" height="350" src="./docs/source/figures/workflow.png"/></div>
+
+
 
 fastNLP的大致工作流程如上图所示，而项目结构如下：
 

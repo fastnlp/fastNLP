@@ -1,4 +1,4 @@
-"""undocumented"""
+r"""undocumented"""
 
 __all__ = [
     "MaxPool",
@@ -12,13 +12,13 @@ import torch.nn as nn
 
 
 class MaxPool(nn.Module):
-    """
+    r"""
     Max-pooling模块。
     
     """
 
     def __init__(self, stride=None, padding=0, dilation=1, dimension=1, kernel_size=None, ceil_mode=False):
-        """
+        r"""
         
         :param stride: 窗口移动大小，默认为kernel_size
         :param padding: padding的内容，默认为0
@@ -61,7 +61,7 @@ class MaxPool(nn.Module):
 
 
 class MaxPoolWithMask(nn.Module):
-    """
+    r"""
     带mask矩阵的max pooling。在做max-pooling的时候不会考虑mask值为0的位置。
     """
 
@@ -70,7 +70,7 @@ class MaxPoolWithMask(nn.Module):
         self.inf = 10e12
 
     def forward(self, tensor, mask, dim=1):
-        """
+        r"""
         :param torch.FloatTensor tensor: [batch_size, seq_len, channels] 初始tensor
         :param torch.LongTensor mask: [batch_size, seq_len] 0/1的mask矩阵
         :param int dim: 需要进行max pooling的维度
@@ -82,14 +82,14 @@ class MaxPoolWithMask(nn.Module):
 
 
 class KMaxPool(nn.Module):
-    """K max-pooling module."""
+    r"""K max-pooling module."""
 
     def __init__(self, k=1):
         super(KMaxPool, self).__init__()
         self.k = k
 
     def forward(self, x):
-        """
+        r"""
         :param torch.Tensor x: [N, C, L] 初始tensor
         :return: torch.Tensor x: [N, C*k] k-max pool后的结果
         """
@@ -99,7 +99,7 @@ class KMaxPool(nn.Module):
 
 
 class AvgPool(nn.Module):
-    """
+    r"""
     给定形如[batch_size, max_len, hidden_size]的输入，在最后一维进行avg pooling. 输出为[batch_size, hidden_size]
     """
 
@@ -109,7 +109,7 @@ class AvgPool(nn.Module):
         self.padding = padding
 
     def forward(self, x):
-        """
+        r"""
         :param torch.Tensor x: [N, C, L] 初始tensor
         :return: torch.Tensor x: [N, C] avg pool后的结果
         """
@@ -124,7 +124,7 @@ class AvgPool(nn.Module):
 
 
 class AvgPoolWithMask(nn.Module):
-    """
+    r"""
     给定形如[batch_size, max_len, hidden_size]的输入，在最后一维进行avg pooling. 输出为[batch_size, hidden_size], pooling
     的时候只会考虑mask为1的位置
     """
@@ -134,7 +134,7 @@ class AvgPoolWithMask(nn.Module):
         self.inf = 10e12
 
     def forward(self, tensor, mask, dim=1):
-        """
+        r"""
         :param torch.FloatTensor tensor: [batch_size, seq_len, channels] 初始tensor
         :param torch.LongTensor mask: [batch_size, seq_len] 0/1的mask矩阵
         :param int dim: 需要进行max pooling的维度

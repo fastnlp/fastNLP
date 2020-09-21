@@ -1,4 +1,4 @@
-"""undocumented
+r"""undocumented
 轻量封装的 Pytorch LSTM 模块.
 可在 forward 时传入序列的长度, 自动对padding做合适的处理.
 """
@@ -13,7 +13,7 @@ import torch.nn.utils.rnn as rnn
 
 
 class LSTM(nn.Module):
-    """
+    r"""
     LSTM 模块, 轻量封装的Pytorch LSTM. 在提供seq_len的情况下，将自动使用pack_padded_sequence; 同时默认将forget gate的bias初始化
     为1; 且可以应对DataParallel中LSTM的使用问题。
 
@@ -21,10 +21,10 @@ class LSTM(nn.Module):
 
     def __init__(self, input_size, hidden_size=100, num_layers=1, dropout=0.0, batch_first=True,
                  bidirectional=False, bias=True):
-        """
+        r"""
         
         :param input_size:  输入 `x` 的特征维度
-        :param hidden_size: 隐状态 `h` 的特征维度.
+        :param hidden_size: 隐状态 `h` 的特征维度. 如果bidirectional为True，则输出的维度会是hidde_size*2
         :param num_layers: rnn的层数. Default: 1
         :param dropout: 层间dropout概率. Default: 0
         :param bidirectional: 若为 ``True``, 使用双向的RNN. Default: ``False``
@@ -50,7 +50,7 @@ class LSTM(nn.Module):
                 nn.init.xavier_uniform_(param)
 
     def forward(self, x, seq_len=None, h0=None, c0=None):
-        """
+        r"""
 
         :param x: [batch, seq_len, input_size] 输入序列
         :param seq_len: [batch, ] 序列长度, 若为 ``None``, 所有输入看做一样长. Default: ``None``
