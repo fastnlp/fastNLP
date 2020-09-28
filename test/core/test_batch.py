@@ -6,7 +6,7 @@ import torch
 from fastNLP import DataSetIter, TorchLoaderIter
 from fastNLP import DataSet
 from fastNLP import Instance
-from fastNLP import SequentialSampler
+from fastNLP import SequentialSampler, ConstantTokenNumSampler
 from fastNLP import ConcatCollateFn
 
 
@@ -396,6 +396,57 @@ class TestCase1(unittest.TestCase):
         num_samples = [len(ds)//2, len(ds)-len(ds)//2]
         for idx, (batch_x, batch_y) in enumerate(data_iter):
             self.assertEqual(num_samples[idx], len(batch_x['x']))
+
+    def test_ConstantTokenNumSampler(self):
+        num_samples = 100
+        ds = generate_fake_dataset(num_samples)
+        ds.set_input('1')
+        ds.add_seq_len('1', 'seq_len')
+        ds.set_input('seq_len')
+
+        # 测试token数量不超过
+        batch_sampler = ConstantTokenNumSampler(ds.get_field('seq_len'), max_token=120)
+        data_iter = DataSetIter(ds, batch_size=10, sampler=batch_sampler, as_numpy=False, num_workers=0,
+                                pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None,
+                                batch_sampler=batch_sampler)
+        sample_count = 0
+        for batch_x, batch_y in data_iter:
+            self.assertTrue(sum(batch_x['seq_len'])<120)
+            sample_count += len(batch_x['seq_len'])
+        self.assertEqual(sample_count, num_samples)
+
+        # 测试句子数量不超过
+        batch_sampler = ConstantTokenNumSampler(ds.get_field('seq_len'), max_token=120, max_sentence=1)
+        data_iter = DataSetIter(ds, batch_size=10, sampler=batch_sampler, as_numpy=False, num_workers=0,
+                                pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None,
+                                batch_sampler=batch_sampler)
+        sample_count = 0
+        for batch_x, batch_y in data_iter:
+            sample_count += len(batch_x['seq_len'])
+            self.assertTrue(sum(batch_x['seq_len'])<120 and len(batch_x['seq_len'])==1)
+        self.assertEqual(sample_count, num_samples)
+
+        # 测试need_be_multiple_of
+        sample_count = 0
+        batch_sampler = ConstantTokenNumSampler(ds.get_field('seq_len'), max_token=120, max_sentence=2, need_be_multiple_of=2)
+        data_iter = DataSetIter(ds, batch_size=10, sampler=batch_sampler, as_numpy=False, num_workers=0,
+                                pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None,
+                                batch_sampler=batch_sampler)
+        for batch_x, batch_y in data_iter:
+            sample_count += len(batch_x['seq_len'])
+            self.assertTrue(sum(batch_x['seq_len'])<120 and len(batch_x['seq_len'])==2)
+        self.assertEqual(sample_count, num_samples)
+
+        # 测试token数量不超过, bucket尽量接近
+        batch_sampler = ConstantTokenNumSampler(ds.get_field('seq_len'), max_token=120, num_bucket=10)
+        data_iter = DataSetIter(ds, batch_size=10, sampler=batch_sampler, as_numpy=False, num_workers=0,
+                                pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None,
+                                batch_sampler=batch_sampler)
+        sample_count = 0
+        for batch_x, batch_y in data_iter:
+            sample_count += len(batch_x['seq_len'])
+            self.assertTrue(sum(batch_x['seq_len'])<120)
+        self.assertEqual(sample_count, num_samples)
 
     """
     def test_multi_workers_batch(self):

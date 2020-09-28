@@ -67,6 +67,7 @@ __all__ = [
     "BucketSampler",
     "RandomSampler",
     "SortedSampler",
+    "ConstantTokenNumSampler",
     
     "LossFunc",
     "CrossEntropyLoss",
