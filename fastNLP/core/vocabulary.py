@@ -540,7 +540,7 @@ class Vocabulary(object):
 
         vocab = Vocabulary()
         for line in f:
-            line = line.strip()
+            line = line.strip('\n')
             if line:
                 name, value = line.split()
                 if name in ('max_size', 'min_freq'):
@@ -557,7 +557,7 @@ class Vocabulary(object):
         no_create_entry_counter = {}
         word2idx = {}
         for line in f:
-            line = line.strip()
+            line = line.strip('\n')
             if line:
                 parts = line.split('\t')
                 word,count,idx,no_create_entry = parts[0], int(parts[1]), int(parts[2]), int(parts[3])
