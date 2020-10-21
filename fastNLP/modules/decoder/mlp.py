@@ -71,8 +71,8 @@ class MLP(nn.Module):
                 f"the length of activation function list except {len(size_layer) - 2} but got {len(activation)}!")
         self.hidden_active = []
         for func in activation:
-            if callable(activation):
-                self.hidden_active.append(activation)
+            if callable(func):
+                self.hidden_active.append(func)
             elif func.lower() in actives:
                 self.hidden_active.append(actives[func])
             else:
