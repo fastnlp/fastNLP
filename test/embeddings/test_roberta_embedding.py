@@ -214,16 +214,8 @@ class TestRobertaEmbedding(unittest.TestCase):
         result = embed(words)
         self.assertEqual(result.size(), (1, 4, 16))
 
-        embed = RobertaEmbedding(vocab, model_dir_or_name=weight_path, word_dropout=0.1,
-                              only_use_pretrain_bpe=True)
-        embed.eval()
-        words = torch.LongTensor([[2, 3, 4, 1]])
-        result = embed(words)
-        self.assertEqual(result.size(), (1, 4, 16))
-
         # 自动截断而不报错
-        embed = RobertaEmbedding(vocab, model_dir_or_name=weight_path, word_dropout=0.1,
-                              only_use_pretrain_bpe=True, auto_truncate=True)
+        embed = RobertaEmbedding(vocab, model_dir_or_name=weight_path, word_dropout=0.1, auto_truncate=True)
         words = torch.LongTensor([[2, 3, 4, 1]*10,
                                   [2, 3]+[0]*38])
         result = embed(words)
@@ -234,7 +226,7 @@ class TestRobertaEmbedding(unittest.TestCase):
         Embedding = RobertaEmbedding
         weight_path = 'test/data_for_tests/embedding/small_roberta'
         vocab = Vocabulary().add_word_lst("this is a texta and".split())
-        embed1 = Embedding(vocab, model_dir_or_name=weight_path,layers=list(range(3)),
+        embed1 = Embedding(vocab, model_dir_or_name=weight_path, layers=list(range(3)),
                               only_use_pretrain_bpe=True, truncate_embed=True, min_freq=1)
         # embed_bpe_vocab_size = len(vocab)-1 + 2  # 排除NotInBERT, 额外加##a, [CLS]
         # self.assertEqual(embed_bpe_vocab_size, len(embed1.model.tokenzier.vocab))
