@@ -12,6 +12,9 @@ from ...embeddings import StaticEmbedding
 from ...embeddings.utils import get_embeddings
 
 
+__all__ = ['Seq2SeqEncoder', 'TransformerSeq2SeqEncoder', 'LSTMSeq2SeqEncoder']
+
+
 class Seq2SeqEncoder(nn.Module):
     """
     所有Sequence2Sequence Encoder的基类。需要实现forward函数
