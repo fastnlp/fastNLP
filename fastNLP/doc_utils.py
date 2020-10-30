@@ -23,9 +23,7 @@ def doc_process(m):
                     while 1:
                         defined_m = sys.modules[module_name]
                         try:
-                            if not hasattr(defined_m, "__all__"):
-                                print("Warning: Module {} lacks `__all__`".format(module_name))
-                            elif "undocumented" not in defined_m.__doc__ and name in defined_m.__all__:
+                            if "undocumented" not in defined_m.__doc__ and name in defined_m.__all__:
                                 obj.__doc__ = r"别名 :class:`" + m.__name__ + "." + name + "`" \
                                               + " :class:`" + module_name + "." + name + "`\n" + obj.__doc__
                                 break
@@ -36,7 +34,7 @@ def doc_process(m):
                         except:
                             print("Warning: Module {} lacks `__doc__`".format(module_name))
                             break
-                    
+
                     # 识别并标注基类，只有基类也在 fastNLP 中定义才显示
                     
                     if inspect.isclass(obj):
@@ -47,9 +45,7 @@ def doc_process(m):
                                 for i in range(len(parts) - 1):
                                     defined_m = sys.modules[module_name]
                                     try:
-                                        if not hasattr(defined_m, "__all__"):
-                                            print("Warning: Module {} lacks `__all__`".format(module_name))
-                                        elif "undocumented" not in defined_m.__doc__ and name in defined_m.__all__:
+                                        if "undocumented" not in defined_m.__doc__ and name in defined_m.__all__:
                                             obj.__doc__ = r"基类 :class:`" + defined_m.__name__ + "." + base.__name__ + "` \n\n" + obj.__doc__
                                             break
                                         module_name += "." + parts[i + 1]
