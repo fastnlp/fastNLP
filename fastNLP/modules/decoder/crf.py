@@ -198,8 +198,18 @@ class ConditionalRandomField(nn.Module):
             constrain = torch.zeros(num_tags + 2, num_tags + 2)
         else:
             constrain = torch.full((num_tags + 2, num_tags + 2), fill_value=-10000.0, dtype=torch.float)
+            has_start = False
+            has_end = False
             for from_tag_id, to_tag_id in allowed_transitions:
                 constrain[from_tag_id, to_tag_id] = 0
+                if from_tag_id==num_tags:
+                    has_start = True
+                if to_tag_id==num_tags+1:
+                    has_end = True
+            if not has_start:
+                constrain[num_tags, :].fill_(0)
+            if not has_end:
+                constrain[:, num_tags+1].fill_(0)
         self._constrain = nn.Parameter(constrain, requires_grad=False)
 
         initial_parameter(self, initial_method)
@@ -290,14 +300,15 @@ class ConditionalRandomField(nn.Module):
                     scores: torch.FloatTensor, size为(batch_size,), 对应每个最优路径的分数。
 
         """
-        batch_size, seq_len, n_tags = logits.size()
+        batch_size, max_len, n_tags = logits.size()
+        seq_len = mask.long().sum(1)
         logits = logits.transpose(0, 1).data  # L, B, H
         mask = mask.transpose(0, 1).data.eq(True)  # L, B
         flip_mask = mask.eq(False)
 
         # dp
-        vpath = logits.new_zeros((seq_len, batch_size, n_tags), dtype=torch.long)
-        vscore = logits[0]
+        vpath = logits.new_zeros((max_len, batch_size, n_tags), dtype=torch.long)
+        vscore = logits[0]  # bsz x n_tags
         transitions = self._constrain.data.clone()
         transitions[:n_tags, :n_tags] += self.trans_m.data
         if self.include_start_end_trans:
@@ -305,36 +316,44 @@ class ConditionalRandomField(nn.Module):
             transitions[:n_tags, n_tags + 1] += self.end_scores.data
 
         vscore += transitions[n_tags, :n_tags]
+
         trans_score = transitions[:n_tags, :n_tags].view(1, n_tags, n_tags).data
-        for i in range(1, seq_len):
+        end_trans_score = transitions[:n_tags, n_tags+1].view(1, 1, n_tags).repeat(batch_size, 1, 1) # bsz, 1, n_tags
+
+        # 针对长度为1的句子
+        vscore += transitions[:n_tags, n_tags+1].view(1, n_tags).repeat(batch_size, 1) \
+            .masked_fill(seq_len.ne(1).view(-1, 1), 0)
+        for i in range(1, max_len):
             prev_score = vscore.view(batch_size, n_tags, 1)
             cur_score = logits[i].view(batch_size, 1, n_tags) + trans_score
-            score = prev_score + cur_score.masked_fill(flip_mask[i].view(batch_size, 1, 1), 0)
+            score = prev_score + cur_score.masked_fill(flip_mask[i].view(batch_size, 1, 1), 0)  # bsz x n_tag x n_tag
+            # 需要考虑当前位置是该序列的最后一个
+            score += end_trans_score.masked_fill(seq_len.ne(i+1).view(-1, 1, 1), 0)
+
             best_score, best_dst = score.max(1)
             vpath[i] = best_dst
-            vscore = best_score
-
-        if self.include_start_end_trans:
-            vscore += transitions[:n_tags, n_tags + 1].view(1, -1)
+            # 由于最终是通过last_tags回溯，需要保持每个位置的vscore情况
+            vscore = best_score.masked_fill(flip_mask[i].view(batch_size, 1), 0) + \
+                     vscore.masked_fill(mask[i].view(batch_size, 1), 0)
 
         # backtrace
         batch_idx = torch.arange(batch_size, dtype=torch.long, device=logits.device)
-        seq_idx = torch.arange(seq_len, dtype=torch.long, device=logits.device)
-        lens = (mask.long().sum(0) - 1)
+        seq_idx = torch.arange(max_len, dtype=torch.long, device=logits.device)
+        lens = (seq_len - 1)
         # idxes [L, B], batched idx from seq_len-1 to 0
-        idxes = (lens.view(1, -1) - seq_idx.view(-1, 1)) % seq_len
+        idxes = (lens.view(1, -1) - seq_idx.view(-1, 1)) % max_len
 
-        ans = logits.new_empty((seq_len, batch_size), dtype=torch.long)
+        ans = logits.new_empty((max_len, batch_size), dtype=torch.long)
         ans_score, last_tags = vscore.max(1)
         ans[idxes[0], batch_idx] = last_tags
-        for i in range(seq_len - 1):
+        for i in range(max_len - 1):
             last_tags = vpath[idxes[i], batch_idx, last_tags]
             ans[idxes[i + 1], batch_idx] = last_tags
         ans = ans.transpose(0, 1)
         if unpad:
             paths = []
-            for idx, seq_len in enumerate(lens):
-                paths.append(ans[idx, :seq_len + 1].tolist())
+            for idx, max_len in enumerate(lens):
+                paths.append(ans[idx, :max_len + 1].tolist())
         else:
             paths = ans
         return paths, ans_score
