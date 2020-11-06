@@ -122,7 +122,7 @@ def _find_and_replace_digit_spans(line):
     otherwise unkdgt
     """
     new_line = ''
-    pattern = '\d[\d\\.﹒·]*(?=[\u4e00-\u9fff  ，％%,。！<－“])'
+    pattern = r'\d[\d\\.﹒·]*(?=[\u4e00-\u9fff  ，％%,。！<－“])'
     prev_end = 0
     for match in re.finditer(pattern, line):
         start, end = match.span()
