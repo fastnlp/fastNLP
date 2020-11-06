@@ -93,7 +93,7 @@ class BertEmbedding(ContextualEmbedding):
         """
         super(BertEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
-        if word_dropout>0:
+        if word_dropout > 0:
             assert vocab.unknown != None, "When word_drop>0, Vocabulary must contain the unknown token."
 
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
@@ -370,17 +370,29 @@ class _BertWordModel(nn.Module):
                  include_cls_sep: bool = False, pooled_cls: bool = False, auto_truncate: bool = False, min_freq=2):
         super().__init__()
 
-        self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
-        self.encoder = BertModel.from_pretrained(model_dir_or_name)
-        self._max_position_embeddings = self.encoder.config.max_position_embeddings
-        #  检查encoder_layer_number是否合理
-        encoder_layer_number = len(self.encoder.encoder.layer)
         if isinstance(layers, list):
             self.layers = [int(l) for l in layers]
         elif isinstance(layers, str):
             self.layers = list(map(int, layers.split(',')))
         else:
             raise TypeError("`layers` only supports str or list[int]")
+        assert len(self.layers) > 0, "There is no layer selected!"
+
+        neg_num_output_layer = -16384
+        pos_num_output_layer = 0
+        for layer in self.layers:
+            if layer < 0:
+                neg_num_output_layer = max(layer, neg_num_output_layer)
+            else:
+                pos_num_output_layer = max(layer, pos_num_output_layer)
+
+        self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
+        self.encoder = BertModel.from_pretrained(model_dir_or_name,
+                                                 neg_num_output_layer=neg_num_output_layer,
+                                                 pos_num_output_layer=pos_num_output_layer)
+        self._max_position_embeddings = self.encoder.config.max_position_embeddings
+        #  检查encoder_layer_number是否合理
+        encoder_layer_number = len(self.encoder.encoder.layer)
         for layer in self.layers:
             if layer < 0:
                 assert -layer <= encoder_layer_number, f"The layer index:{layer} is out of scope for " \
