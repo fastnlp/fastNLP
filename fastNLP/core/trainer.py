@@ -545,7 +545,10 @@ class Trainer(object):
         elif optimizer is None:
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=4e-3)
         else:
-            raise TypeError("optimizer can only be torch.optim.Optimizer type, not {}.".format(type(optimizer)))
+            if not (hasattr(optimizer, 'step') and callable(optimizer.step)):
+                raise TypeError("optimizer must have a callable step() function.")
+            else:
+                self.optimizer = optimizer
 
         self.logger = logger
 

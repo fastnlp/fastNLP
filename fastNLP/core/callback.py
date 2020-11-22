@@ -206,7 +206,7 @@ class Callback(object):
     def on_batch_begin(self, batch_x, batch_y, indices):
         r"""
         每次采集到一个batch的数据则调用一次。这里对batch_x或batch_y删除添加内容是可以影响到Trainer中内容的。所以在这一步
-        可以进行一些负采样之类的操作
+        可以进行一些负采样之类的操作。batch_x和batch_y中的tensor已经被放置到了模型所在的设备上。
 
         :param dict batch_x: DataSet中被设置为input的field的batch。
         :param dict batch_y: DataSet中被设置为target的field的batch。
@@ -1169,11 +1169,12 @@ class EchoCallback(Callback):
 
 
 class _TesterCallback(Callback):
-    def __init__(self, data, model, metrics, metric_key=None, batch_size=16, num_workers=None):
+    def __init__(self, data, model, metrics, metric_key=None, batch_size=16, num_workers=None, sampler=None,
+                 use_tqdm=True):
         super(_TesterCallback, self).__init__()
         self.tester = Tester(data, model,
                              metrics=metrics, batch_size=batch_size,
-                             num_workers=num_workers, verbose=0)
+                             num_workers=num_workers, verbose=0, sampler=sampler, use_tqdm=use_tqdm)
         if metric_key is not None:
             self.metric_key, self.increase_better = self._parse_metric_key(metric_key)
         else:
