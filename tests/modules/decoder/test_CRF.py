@@ -223,7 +223,7 @@ class TestCRF(unittest.TestCase):
         import torch
         from fastNLP import seq_len_to_mask
 
-        with open('test/data_for_tests/modules/decoder/crf.json', 'r') as f:
+        with open('tests/data_for_tests/modules/decoder/crf.json', 'r') as f:
             data = json.load(f)
 
         bio_logits = torch.FloatTensor(data['bio_logits'])

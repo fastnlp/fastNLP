@@ -21,7 +21,7 @@ class TestGPT2Embedding(unittest.TestCase):
             print(embed(words).size())
 
     def test_gpt2_embedding(self):
-        weight_path = 'test/data_for_tests/embedding/small_gpt2'
+        weight_path = 'tests/data_for_tests/embedding/small_gpt2'
         vocab = Vocabulary().add_word_lst("this is a texta sentence".split())
         embed = GPT2Embedding(vocab, model_dir_or_name=weight_path, word_dropout=0.1)
         requires_grad = embed.requires_grad
@@ -49,7 +49,7 @@ class TestGPT2Embedding(unittest.TestCase):
     def test_gpt2_ebembedding_2(self):
         # 测试only_use_pretrain_vocab与truncate_embed是否正常工作
         Embedding = GPT2Embedding
-        weight_path = 'test/data_for_tests/embedding/small_gpt2'
+        weight_path = 'tests/data_for_tests/embedding/small_gpt2'
         vocab = Vocabulary().add_word_lst("this is a texta and".split())
         embed1 = Embedding(vocab, model_dir_or_name=weight_path,layers=list(range(3)),
                               only_use_pretrain_bpe=True, truncate_embed=True, min_freq=1)
@@ -89,13 +89,13 @@ class TestGPT2Embedding(unittest.TestCase):
     def test_gpt2_tokenizer(self):
         from fastNLP.modules.tokenizer import GPT2Tokenizer
 
-        tokenizer = GPT2Tokenizer.from_pretrained('test/data_for_tests/embedding/small_gpt2')
+        tokenizer = GPT2Tokenizer.from_pretrained('tests/data_for_tests/embedding/small_gpt2')
         print(tokenizer.encode("this is a texta a sentence"))
         print(tokenizer.encode('this is'))
 
     def test_gpt2_embed_eq_gpt2_piece_encoder(self):
         # 主要检查一下embedding的结果与wordpieceencoder的结果是否一致
-        weight_path = 'test/data_for_tests/embedding/small_gpt2'
+        weight_path = 'tests/data_for_tests/embedding/small_gpt2'
         ds = DataSet({'words': ["this is a texta a sentence".split(), 'this is'.split()]})
         encoder = GPT2WordPieceEncoder(model_dir_or_name=weight_path)
         encoder.eval()
@@ -187,7 +187,7 @@ class TestGPT2WordPieceEncoder(unittest.TestCase):
 
         print(used_pairs)
         import json
-        with open('test/data_for_tests/embedding/small_gpt2/vocab.json', 'w') as f:
+        with open('tests/data_for_tests/embedding/small_gpt2/vocab.json', 'w') as f:
             new_used_vocab = {}
             for idx, key in enumerate(used_vocab.keys()):
                 new_used_vocab[key] = len(new_used_vocab)
@@ -201,12 +201,12 @@ class TestGPT2WordPieceEncoder(unittest.TestCase):
 
             json.dump(new_used_vocab, f)
 
-        with open('test/data_for_tests/embedding/small_gpt2/merges.txt', 'w') as f:
+        with open('tests/data_for_tests/embedding/small_gpt2/merges.txt', 'w') as f:
             f.write('#version: small\n')
             for k,v in sorted(sorted(used_pairs.items(), key=lambda kv:kv[1])):
                 f.write('{} {}\n'.format(k[0], k[1]))
 
-        new_tokenizer = GPT2Tokenizer.from_pretrained('test/data_for_tests/embedding/small_gpt2')
+        new_tokenizer = GPT2Tokenizer.from_pretrained('tests/data_for_tests/embedding/small_gpt2')
         new_all_tokens = []
         for sent in [sent1, sent2, sent3]:
             tokens = new_tokenizer.tokenize(sent, add_prefix_space=True)
@@ -227,21 +227,21 @@ class TestGPT2WordPieceEncoder(unittest.TestCase):
                       "n_positions": 20,
                       "vocab_size": len(new_used_vocab)
                     }
-        with open('test/data_for_tests/embedding/small_gpt2/config.json', 'w') as f:
+        with open('tests/data_for_tests/embedding/small_gpt2/config.json', 'w') as f:
             json.dump(config, f)
 
         # 生成更小的merges.txt与vocab.json, 方法是通过记录tokenizer中的值实现
         from fastNLP.modules.encoder.gpt2 import GPT2LMHeadModel, GPT2Config
 
-        config = GPT2Config.from_pretrained('test/data_for_tests/embedding/small_gpt2')
+        config = GPT2Config.from_pretrained('tests/data_for_tests/embedding/small_gpt2')
 
         model = GPT2LMHeadModel(config)
-        torch.save(model.state_dict(), 'test/data_for_tests/embedding/small_gpt2/small_pytorch_model.bin')
+        torch.save(model.state_dict(), 'tests/data_for_tests/embedding/small_gpt2/small_pytorch_model.bin')
         print(model(torch.LongTensor([[0,1,2,3]])))
 
     def test_gpt2_word_piece_encoder(self):
         # 主要检查可以运行
-        weight_path = 'test/data_for_tests/embedding/small_gpt2'
+        weight_path = 'tests/data_for_tests/embedding/small_gpt2'
         ds = DataSet({'words': ["this is a test sentence".split()]})
         embed = GPT2WordPieceEncoder(model_dir_or_name=weight_path, word_dropout=0.1)
         embed.index_datasets(ds, field_name='words')
@@ -256,7 +256,7 @@ class TestGPT2WordPieceEncoder(unittest.TestCase):
 
     @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
     def test_generate(self):
-        # weight_path = 'test/data_for_tests/embedding/small_gpt2'
+        # weight_path = 'tests/data_for_tests/embedding/small_gpt2'
         weight_path = 'en'
 
         encoder = GPT2WordPieceEncoder(model_dir_or_name=weight_path, language_model=True)

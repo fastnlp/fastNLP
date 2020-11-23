@@ -25,14 +25,14 @@ class TestMatchingDownload(unittest.TestCase):
 class TestMatchingLoad(unittest.TestCase):
     def test_load(self):
         data_set_dict = {
-            'RTE': ('test/data_for_tests/io/RTE', RTELoader, (5, 5, 5), True),
-            'SNLI': ('test/data_for_tests/io/SNLI', SNLILoader, (5, 5, 5), False),
-            'QNLI': ('test/data_for_tests/io/QNLI', QNLILoader, (5, 5, 5), True),
-            'MNLI': ('test/data_for_tests/io/MNLI', MNLILoader, (5, 5, 5, 5, 6), True),
-            'Quora': ('test/data_for_tests/io/Quora', QuoraLoader, (2, 2, 2), False),
-            'BQCorpus': ('test/data_for_tests/io/BQCorpus', BQCorpusLoader, (5, 5, 5), False),
-            'XNLI': ('test/data_for_tests/io/XNLI', CNXNLILoader, (6, 6, 8), False),
-            'LCQMC': ('test/data_for_tests/io/LCQMC', LCQMCLoader, (6, 5, 6), False),
+            'RTE': ('tests/data_for_tests/io/RTE', RTELoader, (5, 5, 5), True),
+            'SNLI': ('tests/data_for_tests/io/SNLI', SNLILoader, (5, 5, 5), False),
+            'QNLI': ('tests/data_for_tests/io/QNLI', QNLILoader, (5, 5, 5), True),
+            'MNLI': ('tests/data_for_tests/io/MNLI', MNLILoader, (5, 5, 5, 5, 6), True),
+            'Quora': ('tests/data_for_tests/io/Quora', QuoraLoader, (2, 2, 2), False),
+            'BQCorpus': ('tests/data_for_tests/io/BQCorpus', BQCorpusLoader, (5, 5, 5), False),
+            'XNLI': ('tests/data_for_tests/io/XNLI', CNXNLILoader, (6, 6, 8), False),
+            'LCQMC': ('tests/data_for_tests/io/LCQMC', LCQMCLoader, (6, 5, 6), False),
         }
         for k, v in data_set_dict.items():
             path, loader, instance, warns = v

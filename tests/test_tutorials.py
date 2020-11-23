@@ -85,7 +85,7 @@ class TestTutorial(unittest.TestCase):
 class TestOldTutorial(unittest.TestCase):
     def test_fastnlp_10min_tutorial(self):
         # 从csv读取数据到DataSet
-        sample_path = "test/data_for_tests/tutorial_sample_dataset.csv"
+        sample_path = "tests/data_for_tests/tutorial_sample_dataset.csv"
         dataset = CSVLoader(headers=['raw_sentence', 'label'], sep='	')._load(sample_path)
         print(len(dataset))
         print(dataset[0])
@@ -183,7 +183,7 @@ class TestOldTutorial(unittest.TestCase):
 
     def test_fastnlp_1min_tutorial(self):
         # tutorials/fastnlp_1min_tutorial.ipynb
-        data_path = "test/data_for_tests/tutorial_sample_dataset.csv"
+        data_path = "tests/data_for_tests/tutorial_sample_dataset.csv"
         ds = CSVLoader(headers=['raw_sentence', 'label'], sep='	')._load(data_path)
         print(ds[1])
 

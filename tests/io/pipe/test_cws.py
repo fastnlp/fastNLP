@@ -31,11 +31,11 @@ class TestRunCWSPipe(unittest.TestCase):
         for dataset_name in dataset_names:
             with self.subTest(dataset_name=dataset_name):
                 data_bundle = CWSPipe(bigrams=True, trigrams=True).\
-                    process_from_file(f'test/data_for_tests/io/cws_{dataset_name}')
+                    process_from_file(f'tests/data_for_tests/io/cws_{dataset_name}')
                 print(data_bundle)
 
     def test_replace_number(self):
         data_bundle = CWSPipe(bigrams=True, replace_num_alpha=True).\
-                    process_from_file(f'test/data_for_tests/io/cws_pku')
+                    process_from_file(f'tests/data_for_tests/io/cws_pku')
         for word in ['<', '>', '<NUM>']:
             self.assertNotEqual(data_bundle.get_vocab('chars').to_index(word), 1)

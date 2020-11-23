@@ -24,7 +24,7 @@ class TestRobertWordPieceEncoder(unittest.TestCase):
 
     def test_robert_word_piece_encoder(self):
         # 可正常运行即可
-        weight_path = 'test/data_for_tests/embedding/small_roberta'
+        weight_path = 'tests/data_for_tests/embedding/small_roberta'
         encoder = RobertaWordPieceEncoder(model_dir_or_name=weight_path, word_dropout=0.1)
         ds = DataSet({'words': ["this is a test . [SEP]".split()]})
         encoder.index_datasets(ds, field_name='words')
@@ -33,7 +33,7 @@ class TestRobertWordPieceEncoder(unittest.TestCase):
 
     def test_roberta_embed_eq_roberta_piece_encoder(self):
         # 主要检查一下embedding的结果与wordpieceencoder的结果是否一致
-        weight_path = 'test/data_for_tests/embedding/small_roberta'
+        weight_path = 'tests/data_for_tests/embedding/small_roberta'
         ds = DataSet({'words': ["this is a texta a sentence".split(), 'this is'.split()]})
         encoder = RobertaWordPieceEncoder(model_dir_or_name=weight_path)
         encoder.eval()
@@ -120,7 +120,7 @@ class TestRobertWordPieceEncoder(unittest.TestCase):
             used_vocab.update({t:i for t,i in zip(tokens, token_ids)})
 
         import json
-        with open('test/data_for_tests/embedding/small_roberta/vocab.json', 'w') as f:
+        with open('tests/data_for_tests/embedding/small_roberta/vocab.json', 'w') as f:
             new_used_vocab = {}
             for token in ['<s>', '<pad>', '</s>', '<unk>', '<mask>']:  # <pad>必须为1
                 new_used_vocab[token] = len(new_used_vocab)
@@ -135,7 +135,7 @@ class TestRobertWordPieceEncoder(unittest.TestCase):
                  new_used_vocab[key] = len(new_used_vocab)
             json.dump(new_used_vocab, f)
 
-        with open('test/data_for_tests/embedding/small_roberta/merges.txt', 'w') as f:
+        with open('tests/data_for_tests/embedding/small_roberta/merges.txt', 'w') as f:
             f.write('#version: tiny\n')
             for k,v in sorted(sorted(used_pairs.items(), key=lambda kv:kv[1])):
                 f.write('{} {}\n'.format(k[0], k[1]))
@@ -162,10 +162,10 @@ class TestRobertWordPieceEncoder(unittest.TestCase):
               "type_vocab_size": 1,
               "vocab_size": len(new_used_vocab)
             }
-        with open('test/data_for_tests/embedding/small_roberta/config.json', 'w') as f:
+        with open('tests/data_for_tests/embedding/small_roberta/config.json', 'w') as f:
             json.dump(config, f)
 
-        new_tokenizer = RobertaTokenizer.from_pretrained('test/data_for_tests/embedding/small_roberta')
+        new_tokenizer = RobertaTokenizer.from_pretrained('tests/data_for_tests/embedding/small_roberta')
         new_all_tokens = []
         for sent in [sent1, sent2, sent3]:
             tokens = new_tokenizer.tokenize(sent, add_prefix_space=True)
@@ -177,17 +177,17 @@ class TestRobertWordPieceEncoder(unittest.TestCase):
         # 生成更小的merges.txt与vocab.json, 方法是通过记录tokenizer中的值实现
         from fastNLP.modules.encoder.roberta import RobertaModel, BertConfig
 
-        config = BertConfig.from_json_file('test/data_for_tests/embedding/small_roberta/config.json')
+        config = BertConfig.from_json_file('tests/data_for_tests/embedding/small_roberta/config.json')
 
         model = RobertaModel(config)
-        torch.save(model.state_dict(), 'test/data_for_tests/embedding/small_roberta/small_pytorch_model.bin')
+        torch.save(model.state_dict(), 'tests/data_for_tests/embedding/small_roberta/small_pytorch_model.bin')
         print(model(torch.LongTensor([[0,1,2,3]])))
 
     def test_save_load(self):
         bert_save_test = 'roberta_save_test'
         try:
             os.makedirs(bert_save_test, exist_ok=True)
-            embed = RobertaWordPieceEncoder(model_dir_or_name='test/data_for_tests/embedding/small_roberta', word_dropout=0.0,
+            embed = RobertaWordPieceEncoder(model_dir_or_name='tests/data_for_tests/embedding/small_roberta', word_dropout=0.0,
                                          layers='-2')
             ds = DataSet({'words': ["this is a test . [SEP]".split()]})
             embed.index_datasets(ds, field_name='words')
@@ -204,7 +204,7 @@ class TestRobertWordPieceEncoder(unittest.TestCase):
 
 class TestRobertaEmbedding(unittest.TestCase):
     def test_roberta_embedding_1(self):
-        weight_path = 'test/data_for_tests/embedding/small_roberta'
+        weight_path = 'tests/data_for_tests/embedding/small_roberta'
         vocab = Vocabulary().add_word_lst("this is a test . [SEP] NotInRoberta".split())
         embed = RobertaEmbedding(vocab, model_dir_or_name=weight_path, word_dropout=0.1)
         requires_grad = embed.requires_grad
@@ -224,7 +224,7 @@ class TestRobertaEmbedding(unittest.TestCase):
     def test_roberta_ebembedding_2(self):
         # 测试only_use_pretrain_vocab与truncate_embed是否正常工作
         Embedding = RobertaEmbedding
-        weight_path = 'test/data_for_tests/embedding/small_roberta'
+        weight_path = 'tests/data_for_tests/embedding/small_roberta'
         vocab = Vocabulary().add_word_lst("this is a texta and".split())
         embed1 = Embedding(vocab, model_dir_or_name=weight_path, layers=list(range(3)),
                               only_use_pretrain_bpe=True, truncate_embed=True, min_freq=1)
@@ -266,7 +266,7 @@ class TestRobertaEmbedding(unittest.TestCase):
         try:
             os.makedirs(bert_save_test, exist_ok=True)
             vocab = Vocabulary().add_word_lst("this is a test . [SEP] NotInBERT".split())
-            embed = RobertaEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_roberta',
+            embed = RobertaEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_roberta',
                                      word_dropout=0.1,
                                      auto_truncate=True)
             embed.save(bert_save_test)

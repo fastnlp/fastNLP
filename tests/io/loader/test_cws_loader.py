@@ -19,6 +19,6 @@ class TestRunCWSLoader(unittest.TestCase):
         for dataset_name in dataset_names:
             with self.subTest(dataset_name=dataset_name):
                 data_bundle = CWSLoader(dataset_name=dataset_name).load(
-                    f'test/data_for_tests/io/cws_{dataset_name}'
+                    f'tests/data_for_tests/io/cws_{dataset_name}'
                 )
                 print(data_bundle)

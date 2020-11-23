@@ -27,9 +27,9 @@ from fastNLP.io.pipe.summarization import ExtCNNDMPipe
 class TestRunExtCNNDMPipe(unittest.TestCase):
 
     def test_load(self):
-        data_dir = 'test/data_for_tests/io/cnndm'
+        data_dir = 'tests/data_for_tests/io/cnndm'
         vocab_size = 100000
-        VOCAL_FILE = 'test/data_for_tests/io/cnndm/vocab'
+        VOCAL_FILE = 'tests/data_for_tests/io/cnndm/vocab'
         sent_max_len = 100
         doc_max_timesteps = 50
         dbPipe = ExtCNNDMPipe(vocab_size=vocab_size,

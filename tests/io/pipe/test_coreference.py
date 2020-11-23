@@ -11,7 +11,7 @@ class TestCR(unittest.TestCase):
             char_path = None
         config = Config()
 
-        file_root_path = "test/data_for_tests/io/coreference/"
+        file_root_path = "tests/data_for_tests/io/coreference/"
         train_path = file_root_path + "coreference_train.json"
         dev_path = file_root_path + "coreference_dev.json"
         test_path = file_root_path + "coreference_test.json"

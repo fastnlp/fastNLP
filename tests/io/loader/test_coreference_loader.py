@@ -5,7 +5,7 @@ import unittest
 class TestCR(unittest.TestCase):
     def test_load(self):
 
-        test_root = "test/data_for_tests/io/coreference/"
+        test_root = "tests/data_for_tests/io/coreference/"
         train_path = test_root+"coreference_train.json"
         dev_path = test_root+"coreference_dev.json"
         test_path = test_root+"coreference_test.json"

@@ -32,7 +32,7 @@ class TestDownload(unittest.TestCase):
 class TestBertEmbedding(unittest.TestCase):
     def test_bert_embedding_1(self):
         vocab = Vocabulary().add_word_lst("this is a test . [SEP] NotInBERT".split())
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert', word_dropout=0.1)
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert', word_dropout=0.1)
         requires_grad = embed.requires_grad
         embed.requires_grad = not requires_grad
         embed.train()
@@ -40,14 +40,14 @@ class TestBertEmbedding(unittest.TestCase):
         result = embed(words)
         self.assertEqual(result.size(), (1, 4, 16))
 
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert', word_dropout=0.1)
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert', word_dropout=0.1)
         embed.eval()
         words = torch.LongTensor([[2, 3, 4, 0]])
         result = embed(words)
         self.assertEqual(result.size(), (1, 4, 16))
 
         # 自动截断而不报错
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert', word_dropout=0.1,
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert', word_dropout=0.1,
                               auto_truncate=True)
 
         words = torch.LongTensor([[2, 3, 4, 1]*10,
@@ -60,7 +60,7 @@ class TestBertEmbedding(unittest.TestCase):
         try:
             os.makedirs(bert_save_test, exist_ok=True)
             vocab = Vocabulary().add_word_lst("this is a test . [SEP] NotInBERT".split())
-            embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert', word_dropout=0.1,
+            embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert', word_dropout=0.1,
                                   auto_truncate=True)
 
             embed.save(bert_save_test)
@@ -76,7 +76,7 @@ class TestBertEmbedding(unittest.TestCase):
 
 class TestBertWordPieceEncoder(unittest.TestCase):
     def test_bert_word_piece_encoder(self):
-        embed = BertWordPieceEncoder(model_dir_or_name='test/data_for_tests/embedding/small_bert', word_dropout=0.1)
+        embed = BertWordPieceEncoder(model_dir_or_name='tests/data_for_tests/embedding/small_bert', word_dropout=0.1)
         ds = DataSet({'words': ["this is a test . [SEP]".split()]})
         embed.index_datasets(ds, field_name='words')
         self.assertTrue(ds.has_field('word_pieces'))
@@ -84,7 +84,7 @@ class TestBertWordPieceEncoder(unittest.TestCase):
 
     def test_bert_embed_eq_bert_piece_encoder(self):
         ds = DataSet({'words': ["this is a texta model vocab".split(), 'this is'.split()]})
-        encoder = BertWordPieceEncoder(model_dir_or_name='test/data_for_tests/embedding/small_bert')
+        encoder = BertWordPieceEncoder(model_dir_or_name='tests/data_for_tests/embedding/small_bert')
         encoder.eval()
         encoder.index_datasets(ds, field_name='words')
         word_pieces = torch.LongTensor(ds['word_pieces'].get([0, 1]))
@@ -95,7 +95,7 @@ class TestBertWordPieceEncoder(unittest.TestCase):
         vocab.index_dataset(ds, field_name='words', new_field_name='words')
         ds.set_input('words')
         words = torch.LongTensor(ds['words'].get([0, 1]))
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert',
                               pool_method='first', include_cls_sep=True, pooled_cls=False, min_freq=1)
         embed.eval()
         words_res = embed(words)
@@ -109,7 +109,7 @@ class TestBertWordPieceEncoder(unittest.TestCase):
         bert_save_test = 'bert_save_test'
         try:
             os.makedirs(bert_save_test, exist_ok=True)
-            embed = BertWordPieceEncoder(model_dir_or_name='test/data_for_tests/embedding/small_bert', word_dropout=0.0,
+            embed = BertWordPieceEncoder(model_dir_or_name='tests/data_for_tests/embedding/small_bert', word_dropout=0.0,
                                          layers='-2')
             ds = DataSet({'words': ["this is a test . [SEP]".split()]})
             embed.index_datasets(ds, field_name='words')

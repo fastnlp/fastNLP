@@ -5,7 +5,7 @@ from fastNLP.modules.tokenizer import BertTokenizer
 class TestBertTokenizer(unittest.TestCase):
     def test_run(self):
         # 测试支持的两种encode方式
-        tokenizer = BertTokenizer.from_pretrained('test/data_for_tests/embedding/small_bert')
+        tokenizer = BertTokenizer.from_pretrained('tests/data_for_tests/embedding/small_bert')
 
         tokens1 = tokenizer.encode("This is a demo")
         tokens2 = tokenizer.encode("This is a demo", add_special_tokens=False)

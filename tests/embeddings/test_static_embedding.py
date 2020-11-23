@@ -10,7 +10,7 @@ class TestLoad(unittest.TestCase):
     def test_norm1(self):
         # 测试只对可以找到的norm
         vocab = Vocabulary().add_word_lst(['the', 'a', 'notinfile'])
-        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+        embed = StaticEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_static_embedding/'
                                                          'glove.6B.50d_test.txt',
                                 only_norm_found_vector=True)
         self.assertEqual(round(torch.norm(embed(torch.LongTensor([[2]]))).item(), 4), 1)
@@ -19,7 +19,7 @@ class TestLoad(unittest.TestCase):
     def test_norm2(self):
         # 测试对所有都norm
         vocab = Vocabulary().add_word_lst(['the', 'a', 'notinfile'])
-        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+        embed = StaticEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_static_embedding/'
                                                          'glove.6B.50d_test.txt',
                                 normalize=True)
         self.assertEqual(round(torch.norm(embed(torch.LongTensor([[2]]))).item(), 4), 1)
@@ -50,13 +50,13 @@ class TestLoad(unittest.TestCase):
                 v2 = embed_dict[word]
                 for v1i, v2i in zip(v1, v2):
                     self.assertAlmostEqual(v1i, v2i, places=4)
-        embed_dict = read_static_embed('test/data_for_tests/embedding/small_static_embedding/'
+        embed_dict = read_static_embed('tests/data_for_tests/embedding/small_static_embedding/'
                                                          'glove.6B.50d_test.txt')
 
         # 测试是否只使用pretrain的word
         vocab = Vocabulary().add_word_lst(['the', 'a', 'notinfile'])
         vocab.add_word('of', no_create_entry=True)
-        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+        embed = StaticEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_static_embedding/'
                                                          'glove.6B.50d_test.txt',
                                 only_use_pretrain_word=True)
         #   notinfile应该被置为unk
@@ -66,13 +66,13 @@ class TestLoad(unittest.TestCase):
         # 测试在大小写情况下的使用
         vocab = Vocabulary().add_word_lst(['The', 'a', 'notinfile'])
         vocab.add_word('Of', no_create_entry=True)
-        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+        embed = StaticEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_static_embedding/'
                                                          'glove.6B.50d_test.txt',
                                 only_use_pretrain_word=True)
         check_word_unk(['The', 'Of', 'notinfile'], vocab, embed)  # 这些词应该找不到
         check_vector_equal(['a'], vocab, embed, embed_dict)
 
-        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+        embed = StaticEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_static_embedding/'
                                                          'glove.6B.50d_test.txt',
                                 only_use_pretrain_word=True, lower=True)
         check_vector_equal(['The', 'Of', 'a'], vocab, embed, embed_dict, lower=True)
@@ -82,7 +82,7 @@ class TestLoad(unittest.TestCase):
         vocab = Vocabulary().add_word_lst(['The', 'a', 'notinfile1', 'A', 'notinfile2', 'notinfile2'])
         vocab.add_word('Of', no_create_entry=True)
 
-        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+        embed = StaticEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_static_embedding/'
                                                          'glove.6B.50d_test.txt',
                                 only_use_pretrain_word=True, lower=True, min_freq=2, only_train_min_freq=True)
 
@@ -92,12 +92,12 @@ class TestLoad(unittest.TestCase):
     def test_sequential_index(self):
         # 当不存在no_create_entry时，words_to_words应该是顺序的
         vocab = Vocabulary().add_word_lst(['The', 'a', 'notinfile1', 'A', 'notinfile2', 'notinfile2'])
-        embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+        embed = StaticEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_static_embedding/'
                                                          'glove.6B.50d_test.txt')
         for index,i in enumerate(embed.words_to_words):
             assert index==i
 
-        embed_dict = read_static_embed('test/data_for_tests/embedding/small_static_embedding/'
+        embed_dict = read_static_embed('tests/data_for_tests/embedding/small_static_embedding/'
                                                          'glove.6B.50d_test.txt')
 
         for word, index in vocab:
@@ -116,7 +116,7 @@ class TestLoad(unittest.TestCase):
 
             vocab = Vocabulary().add_word_lst(['The', 'a', 'notinfile1', 'A'])
             vocab.add_word_lst(['notinfile2', 'notinfile2'], no_create_entry=True)
-            embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+            embed = StaticEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_static_embedding/'
                                                              'glove.6B.50d_test.txt')
             embed.save(static_test_folder)
             load_embed = StaticEmbedding.load(static_test_folder)
@@ -125,7 +125,7 @@ class TestLoad(unittest.TestCase):
 
             # 测试不包含no_create_entry
             vocab = Vocabulary().add_word_lst(['The', 'a', 'notinfile1', 'A'])
-            embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+            embed = StaticEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_static_embedding/'
                                                              'glove.6B.50d_test.txt')
             embed.save(static_test_folder)
             load_embed = StaticEmbedding.load(static_test_folder)
@@ -134,7 +134,7 @@ class TestLoad(unittest.TestCase):
 
             # 测试lower, min_freq
             vocab = Vocabulary().add_word_lst(['The', 'the', 'the', 'A', 'a', 'B'])
-            embed = StaticEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_static_embedding/'
+            embed = StaticEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_static_embedding/'
                                                              'glove.6B.50d_test.txt', min_freq=2, lower=True)
             embed.save(static_test_folder)
             load_embed = StaticEmbedding.load(static_test_folder)

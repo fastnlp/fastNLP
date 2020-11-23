@@ -6,7 +6,7 @@ from fastNLP.io.loader.qa import CMRC2018Loader
 
 class CMRC2018PipeTest(unittest.TestCase):
     def test_process(self):
-        data_bundle = CMRC2018Loader().load('test/data_for_tests/io/cmrc/')
+        data_bundle = CMRC2018Loader().load('tests/data_for_tests/io/cmrc/')
         pipe = CMRC2018BertPipe()
         data_bundle = pipe.process(data_bundle)
 

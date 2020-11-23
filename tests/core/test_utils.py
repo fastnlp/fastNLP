@@ -120,8 +120,8 @@ class TestCache(unittest.TestCase):
     def test_cache_save(self):
         try:
             start_time = time.time()
-            embed, vocab, d = process_data_1('test/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
-                                             'test/data_for_tests/cws_train')
+            embed, vocab, d = process_data_1('tests/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
+                                             'tests/data_for_tests/cws_train')
             end_time = time.time()
             pre_time = end_time - start_time
             with open('test/demo1.pkl', 'rb') as f:
@@ -130,8 +130,8 @@ class TestCache(unittest.TestCase):
             for i in range(embed.shape[0]):
                 self.assertListEqual(embed[i].tolist(), _embed[i].tolist())
             start_time = time.time()
-            embed, vocab, d = process_data_1('test/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
-                                             'test/data_for_tests/cws_train')
+            embed, vocab, d = process_data_1('tests/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
+                                             'tests/data_for_tests/cws_train')
             end_time = time.time()
             read_time = end_time - start_time
             print("Read using {:.3f}, while prepare using:{:.3f}".format(read_time, pre_time))
@@ -142,7 +142,7 @@ class TestCache(unittest.TestCase):
     def test_cache_save_overwrite_path(self):
         try:
             start_time = time.time()
-            embed, vocab, d = process_data_1('test/data_for_tests/embedding/small_static_embedding/word2vec_test.txt', 'test/data_for_tests/cws_train',
+            embed, vocab, d = process_data_1('tests/data_for_tests/embedding/small_static_embedding/word2vec_test.txt', 'tests/data_for_tests/cws_train',
                                              _cache_fp='test/demo_overwrite.pkl')
             end_time = time.time()
             pre_time = end_time - start_time
@@ -152,8 +152,8 @@ class TestCache(unittest.TestCase):
             for i in range(embed.shape[0]):
                 self.assertListEqual(embed[i].tolist(), _embed[i].tolist())
             start_time = time.time()
-            embed, vocab, d = process_data_1('test/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
-                                             'test/data_for_tests/cws_train',
+            embed, vocab, d = process_data_1('tests/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
+                                             'tests/data_for_tests/cws_train',
                                              _cache_fp='test/demo_overwrite.pkl')
             end_time = time.time()
             read_time = end_time - start_time
@@ -165,8 +165,8 @@ class TestCache(unittest.TestCase):
     def test_cache_refresh(self):
         try:
             start_time = time.time()
-            embed, vocab, d = process_data_1('test/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
-                                             'test/data_for_tests/cws_train',
+            embed, vocab, d = process_data_1('tests/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
+                                             'tests/data_for_tests/cws_train',
                                              _refresh=True)
             end_time = time.time()
             pre_time = end_time - start_time
@@ -176,8 +176,8 @@ class TestCache(unittest.TestCase):
             for i in range(embed.shape[0]):
                 self.assertListEqual(embed[i].tolist(), _embed[i].tolist())
             start_time = time.time()
-            embed, vocab, d = process_data_1('test/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
-                                             'test/data_for_tests/cws_train',
+            embed, vocab, d = process_data_1('tests/data_for_tests/embedding/small_static_embedding/word2vec_test.txt',
+                                             'tests/data_for_tests/cws_train',
                                              _refresh=True)
             end_time = time.time()
             read_time = end_time - start_time

@@ -11,7 +11,7 @@ from fastNLP.embeddings.bert_embedding import BertEmbedding
 class TestBert(unittest.TestCase):
     def test_bert_1(self):
         vocab = Vocabulary().add_word_lst("this is a test .".split())
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert',
                               include_cls_sep=True)
 
         model = BertForSequenceClassification(embed, 2)
@@ -30,7 +30,7 @@ class TestBert(unittest.TestCase):
 
     def test_bert_1_w(self):
         vocab = Vocabulary().add_word_lst("this is a test .".split())
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert',
                               include_cls_sep=False)
 
         with self.assertWarns(Warning):
@@ -46,7 +46,7 @@ class TestBert(unittest.TestCase):
     def test_bert_2(self):
 
         vocab = Vocabulary().add_word_lst("this is a test [SEP] .".split())
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert',
                               include_cls_sep=True)
 
         model = BertForMultipleChoice(embed, 2)
@@ -62,7 +62,7 @@ class TestBert(unittest.TestCase):
     def test_bert_2_w(self):
 
         vocab = Vocabulary().add_word_lst("this is a test [SEP] .".split())
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert',
                               include_cls_sep=False)
 
         with self.assertWarns(Warning):
@@ -79,7 +79,7 @@ class TestBert(unittest.TestCase):
     def test_bert_3(self):
 
         vocab = Vocabulary().add_word_lst("this is a test [SEP] .".split())
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert',
                               include_cls_sep=False)
         model = BertForTokenClassification(embed, 7)
 
@@ -93,7 +93,7 @@ class TestBert(unittest.TestCase):
     def test_bert_3_w(self):
 
         vocab = Vocabulary().add_word_lst("this is a test [SEP] .".split())
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert',
                               include_cls_sep=True)
 
         with self.assertWarns(Warning):
@@ -108,7 +108,7 @@ class TestBert(unittest.TestCase):
 
     def test_bert_4(self):
         vocab = Vocabulary().add_word_lst("this is a test [SEP] .".split())
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert',
                               include_cls_sep=False)
         model = BertForQuestionAnswering(embed)
 
@@ -126,12 +126,12 @@ class TestBert(unittest.TestCase):
         from fastNLP.io import CMRC2018BertPipe
         from fastNLP import Trainer
 
-        data_bundle = CMRC2018BertPipe().process_from_file('test/data_for_tests/io/cmrc')
+        data_bundle = CMRC2018BertPipe().process_from_file('tests/data_for_tests/io/cmrc')
         data_bundle.rename_field('chars', 'words')
         train_data = data_bundle.get_dataset('train')
         vocab = data_bundle.get_vocab('words')
 
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert',
                               include_cls_sep=False, auto_truncate=True)
         model = BertForQuestionAnswering(embed)
         loss = CMRC2018Loss()
@@ -142,7 +142,7 @@ class TestBert(unittest.TestCase):
     def test_bert_5(self):
 
         vocab = Vocabulary().add_word_lst("this is a test [SEP] .".split())
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert',
                               include_cls_sep=True)
         model = BertForSentenceMatching(embed)
 
@@ -156,7 +156,7 @@ class TestBert(unittest.TestCase):
     def test_bert_5_w(self):
 
         vocab = Vocabulary().add_word_lst("this is a test [SEP] .".split())
-        embed = BertEmbedding(vocab, model_dir_or_name='test/data_for_tests/embedding/small_bert',
+        embed = BertEmbedding(vocab, model_dir_or_name='tests/data_for_tests/embedding/small_bert',
                               include_cls_sep=False)
 
         with self.assertWarns(Warning):

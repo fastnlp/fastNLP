@@ -21,7 +21,7 @@ class TestRunPipe(unittest.TestCase):
         for pipe in [Conll2003Pipe, Conll2003NERPipe]:
             with self.subTest(pipe=pipe):
                 print(pipe)
-                data_bundle = pipe().process_from_file('test/data_for_tests/conll_2003_example.txt')
+                data_bundle = pipe().process_from_file('tests/data_for_tests/conll_2003_example.txt')
                 print(data_bundle)
 
 
@@ -35,18 +35,18 @@ class TestNERPipe(unittest.TestCase):
         for k, v in data_dict.items():
             pipe = v
             with self.subTest(pipe=pipe):
-                data_bundle = pipe(bigrams=True, trigrams=True).process_from_file(f'test/data_for_tests/io/{k}')
+                data_bundle = pipe(bigrams=True, trigrams=True).process_from_file(f'tests/data_for_tests/io/{k}')
                 print(data_bundle)
-                data_bundle = pipe(encoding_type='bioes').process_from_file(f'test/data_for_tests/io/{k}')
+                data_bundle = pipe(encoding_type='bioes').process_from_file(f'tests/data_for_tests/io/{k}')
                 print(data_bundle)
 
 
 class TestConll2003Pipe(unittest.TestCase):
     def test_conll(self):
         with self.assertWarns(Warning):
-            data_bundle = Conll2003Pipe().process_from_file('test/data_for_tests/io/conll2003')
+            data_bundle = Conll2003Pipe().process_from_file('tests/data_for_tests/io/conll2003')
         print(data_bundle)
 
     def test_OntoNotes(self):
-        data_bundle = OntoNotesNERPipe().process_from_file('test/data_for_tests/io/OntoNotes')
+        data_bundle = OntoNotesNERPipe().process_from_file('tests/data_for_tests/io/OntoNotes')
         print(data_bundle)
