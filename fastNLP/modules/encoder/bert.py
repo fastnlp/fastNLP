@@ -366,18 +366,27 @@ class BertLayer(nn.Module):
 
 
 class BertEncoder(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, num_output_layer=-1):
         super(BertEncoder, self).__init__()
         layer = BertLayer(config)
         self.layer = nn.ModuleList([copy.deepcopy(layer) for _ in range(config.num_hidden_layers)])
+        num_output_layer = num_output_layer if num_output_layer >= 0 else (len(self.layer) + num_output_layer)
+        self.num_output_layer = max(min(num_output_layer, len(self.layer)), 0)
+        if self.num_output_layer + 1 < len(self.layer):
+            logger.info(f'The transformer encoder will early exit after layer-{self.num_output_layer} '
+                        f'(start from 0)!')
 
     def forward(self, hidden_states, attention_mask, output_all_encoded_layers=True):
         all_encoder_layers = []
-        for layer_module in self.layer:
+        for idx, layer_module in enumerate(self.layer):
+            if idx > self.num_output_layer:
+                break
             hidden_states = layer_module(hidden_states, attention_mask)
             if output_all_encoded_layers:
                 all_encoder_layers.append(hidden_states)
         if not output_all_encoded_layers:
+            all_encoder_layers.append(hidden_states)
+        if len(all_encoder_layers) == 0:
             all_encoder_layers.append(hidden_states)
         return all_encoder_layers
 
@@ -435,6 +444,9 @@ class BertModel(nn.Module):
         self.config = config
         self.hidden_size = self.config.hidden_size
         self.model_type = 'bert'
+        neg_num_output_layer = kwargs.get('neg_num_output_layer', -1)
+        pos_num_output_layer = kwargs.get('pos_num_output_layer', self.config.num_hidden_layers - 1)
+        self.num_output_layer = max(neg_num_output_layer + self.config.num_hidden_layers, pos_num_output_layer)
         if hasattr(config, 'sinusoidal_pos_embds'):
             self.model_type = 'distilbert'
         elif 'model_type' in kwargs:
@@ -445,7 +457,7 @@ class BertModel(nn.Module):
         else:
             self.embeddings = BertEmbeddings(config)
 
-        self.encoder = BertEncoder(config)
+        self.encoder = BertEncoder(config, num_output_layer=self.num_output_layer)
         if self.model_type != 'distilbert':
             self.pooler = BertPooler(config)
         else:
