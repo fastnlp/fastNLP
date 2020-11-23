@@ -14,7 +14,7 @@ install:
 # command to run tests
 script:
   - python -m spacy download en
-  - pytest --cov=fastNLP test/
+  - pytest --cov=fastNLP tests/
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

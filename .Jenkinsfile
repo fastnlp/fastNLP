@@ -29,7 +29,7 @@ pipeline {
                     steps {
                         sh 'python -m spacy download en'
                         sh 'pip install fitlog'
-                        sh 'pytest ./test --html=test_results.html --self-contained-html'
+                        sh 'pytest ./tests --html=test_results.html --self-contained-html'
                     }
                 }
             }

@@ -1,7 +1,7 @@
 include requirements.txt
 include LICENSE
 include README.md
-prune test/
+prune tests/
 prune reproduction/
 prune fastNLP/api
 prune fastNLP/automl
