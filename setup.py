@@ -16,13 +16,13 @@ print(pkgs)
 
 setup(
     name='FastNLP',
-    version='0.5.6',
-    url='https://github.com/fastnlp/fastNLP',
+    version='0.6.0',
+    url='https://gitee.com/fastnlp/fastNLP',
     description='fastNLP: Deep Learning Toolkit for NLP, developed by Fudan FastNLP Team',
     long_description=readme,
     long_description_content_type='text/markdown',
     license='Apache License',
-    author='FudanNLP',
+    author='Fudan FastNLP Team',
     python_requires='>=3.6',
     packages=pkgs,
     install_requires=reqs.strip().split('\n'),
