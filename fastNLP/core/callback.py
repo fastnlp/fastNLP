@@ -86,18 +86,12 @@ except:
 from .dataset import DataSet
 from .tester import Tester
 from ._logger import logger
-from .utils import _check_fp16
 from ._parallel_utils import _model_contains_inner_module
 
 try:
     import fitlog
 except:
     pass
-
-try:
-    from apex import amp
-except:
-    amp = None
 
 
 class Callback(object):
@@ -123,6 +117,20 @@ class Callback(object):
         该属性可以通过self.trainer获取到，一般情况下不需要使用这个属性。
         """
         return self._trainer
+
+    @property
+    def grad_scaler(self):
+        r"""
+        float16的gradient scaler
+        """
+        return self._trainer.grad_scaler
+
+    @property
+    def auto_cast(self):
+        r"""
+        float16用的auto cast环境
+        """
+        return self._trainer.auto_cast
     
     @property
     def step(self):
@@ -472,14 +480,9 @@ class GradientClipCallback(Callback):
     
     def on_backward_end(self):
         if self.step%self.update_every==0:
-            if self.parameters is None:
-                if getattr(self.trainer, 'fp16', ''):
-                    _check_fp16()
-                    self.clip_fun(amp.master_params(self.optimizer), self.clip_value)
-                else:
-                    self.clip_fun(self.model.parameters(), self.clip_value)
-            else:
-                self.clip_fun(self.parameters, self.clip_value)
+            if self.trainer.fp16:
+                self.grad_scaler.unscale_(self.optimizer)
+            self.clip_fun(self.parameters, self.clip_value)
 
 
 class EarlyStopCallback(Callback):
@@ -569,10 +572,10 @@ class FitlogCallback(Callback):
         if len(self.datasets) > 0:
             for key, data in self.datasets.items():
                 tester = Tester(data=data, model=self.model,
-                                batch_size=self.trainer.kwargs.get('dev_batch_size', self.batch_size),
+                                batch_size=self.trainer.kwargs.get('dev_batch_size', self.trainer.batch_size),
                                 metrics=self.trainer.metrics,
                                 verbose=0,
-                                use_tqdm=self.trainer.test_use_tqdm,
+                                use_tqdm=self.trainer.kwargs.get('test_use_tqdm', self.trainer.use_tqdm),
                                 sampler=self.trainer.kwargs.get('test_sampler', None))
                 self.testers[key] = tester
         fitlog.add_progress(total_steps=self.n_steps)
@@ -948,6 +951,7 @@ class CheckPointCallback(Callback):
                 model = model.module
             model.load_state_dict(states['model'])
             self.optimizer.load_state_dict(states['optimizer'])
+            self.grad_scaler.load_state_dict(states['grad_scaler'])
             self.trainer.epoch = states['epoch'] + 1 # 因为是结束储存的，所以需要从下一个epoch开始
             self.trainer.step = states['step']
             if 'best_dev_epoch' in states:

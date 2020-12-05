@@ -44,3 +44,11 @@ class TestSampler(unittest.TestCase):
         indices = sampler(data_set)
         self.assertEqual(len(indices), 10)
         # 跑通即可，不验证效果
+
+    def test_ConstantTokenNumSampler(self):
+        # 需要check的是，是否在number上是接近的
+        pass
+
+    def test_ConstTokenNumSampler(self):
+        # 需要check的是，是否可以直接运行
+        pass

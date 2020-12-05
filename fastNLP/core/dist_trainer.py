@@ -29,7 +29,6 @@ from .dataset import DataSet
 from .losses import _prepare_losser
 from .optimizer import Optimizer
 from .utils import _build_args
-from .utils import _check_fp16
 from .utils import _get_func_signature
 from .utils import _move_dict_value_to_device
 

@@ -53,6 +53,8 @@ from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
+from .utils import _build_fp16_env
+from .utils import _can_use_fp16
 from ._parallel_utils import _data_parallel_wrapper
 from ._parallel_utils import _model_contains_inner_module
 from functools import partial
@@ -70,7 +72,7 @@ class Tester(object):
     """
     
     def __init__(self, data, model, metrics, batch_size=16, num_workers=0, device=None, verbose=1, use_tqdm=True,
-                 **kwargs):
+                 fp16=False, **kwargs):
         r"""
         
         :param ~fastNLP.DataSet,~fastNLP.BatchIter data: 需要测试的数据集
@@ -93,7 +95,9 @@ class Tester(object):
             如果模型是通过predict()进行预测的话，那么将不能使用多卡(DataParallel)进行验证，只会使用第一张卡上的模型。
         :param int verbose: 如果为0不输出任何信息; 如果为1，打印出验证结果。
         :param bool use_tqdm: 是否使用tqdm来显示测试进度; 如果为False，则不会显示任何内容。
-        :param kwargs: 支持传入sampler控制测试顺序
+        :param bool fp16: 是否使用float16进行验证
+        :param kwargs:
+            Sampler sampler: 支持传入sampler控制测试顺序
         """
         super(Tester, self).__init__()
 
@@ -147,7 +151,11 @@ class Tester(object):
             else:
                 self._predict_func = self._model.forward
                 self._predict_func_wrapper = self._model.forward
-    
+
+        if fp16:
+            _can_use_fp16(model=model, device=device, func=self._predict_func)
+        self.auto_cast, _grad_scaler = _build_fp16_env(not fp16)
+
     def test(self):
         r"""开始进行验证，并返回验证结果。
 
@@ -172,12 +180,13 @@ class Tester(object):
 
                     for batch_x, batch_y in data_iterator:
                         _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
-                        pred_dict = self._data_forward(self._predict_func, batch_x)
-                        if not isinstance(pred_dict, dict):
-                            raise TypeError(f"The return value of {_get_func_signature(self._predict_func)} "
-                                            f"must be `dict`, got {type(pred_dict)}.")
-                        for metric in self.metrics:
-                            metric(pred_dict, batch_y)
+                        with self.auto_cast():
+                            pred_dict = self._data_forward(self._predict_func, batch_x)
+                            if not isinstance(pred_dict, dict):
+                                raise TypeError(f"The return value of {_get_func_signature(self._predict_func)} "
+                                                f"must be `dict`, got {type(pred_dict)}.")
+                            for metric in self.metrics:
+                                metric(pred_dict, batch_y)
 
                         if self.use_tqdm:
                             pbar.update()

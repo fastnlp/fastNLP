@@ -281,7 +281,9 @@ class StaticEmbedding(TokenEmbedding):
                     if word in vocab:
                         index = vocab.to_index(word)
                         if index in matrix:
-                            warnings.warn(f"Word:{word} occurs again in line:{idx}(starts from 0)")
+                            warnings.warn(f"Word has more than one vector in embedding file. Set logger level to "
+                                          f"DEBUG for detail.")
+                            logger.debug(f"Word:{word} occurs again in line:{idx}(starts from 0)")
                         matrix[index] = torch.from_numpy(np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim))
                         if self.only_norm_found_vector:
                             matrix[index] = matrix[index] / np.linalg.norm(matrix[index])

@@ -108,7 +108,7 @@ class BertEmbedding(ContextualEmbedding):
             self._word_sep_index = vocab['[SEP]']
         self._word_cls_index = -100
         if '[CLS]' in vocab:
-            self._word_cls_index = vocab['CLS']
+            self._word_cls_index = vocab['[CLS]']
 
         min_freq = kwargs.get('min_freq', 1)
         self._min_freq = min_freq

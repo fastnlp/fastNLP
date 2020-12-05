@@ -9,12 +9,12 @@ import torch
 
 from fastNLP import DataSet
 from fastNLP import Instance
-from fastNLP import BCELoss
+from fastNLP import BCELoss, BCEWithLogits
 from fastNLP import CrossEntropyLoss
 from fastNLP import AccuracyMetric
 from fastNLP import SGD
 from fastNLP import Trainer
-from fastNLP.models.base_model import NaiveClassifier
+from fastNLP.models.base_model import NaiveClassifier, NaiveClassifier2, NaiveClassifier3, NaiveClassifier4
 from fastNLP import TorchLoaderIter
 
 
@@ -575,3 +575,83 @@ class TrainerTestGround(unittest.TestCase):
         )
         trainer.train()
     """
+
+
+class Fp16TrainerTest(unittest.TestCase):
+    def test_raise_error(self):
+        data_set = prepare_fake_dataset()
+        data_set.set_input("x", flag=True)
+        data_set.set_target("y", flag=True)
+
+        train_set, dev_set = data_set.split(0.3)
+
+        model = NaiveClassifier2(2, 1)
+
+        with self.assertRaises(RuntimeError):
+            trainer = Trainer(train_set, model, optimizer=SGD(lr=0.1), loss=BCEWithLogits(pred="predict", target="y"),
+                              batch_size=32, n_epochs=10, print_every=50, dev_data=dev_set,
+                              metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
+                              use_tqdm=True, check_code_level=2, fp16=True)
+
+        with self.assertRaises(RuntimeError):
+            trainer = Trainer(train_set, model, optimizer=SGD(lr=0.1), loss=BCEWithLogits(pred="predict", target="y"),
+                              batch_size=32, n_epochs=10, print_every=50, dev_data=dev_set,
+                              metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
+                              use_tqdm=True, check_code_level=2, fp16=True, device='cpu')
+
+        with self.assertRaises(RuntimeError):
+            trainer = Trainer(train_set, model, optimizer=SGD(lr=0.1), loss=BCEWithLogits(pred="predict", target="y"),
+                              batch_size=32, n_epochs=10, print_every=50, dev_data=dev_set,
+                              metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
+                              use_tqdm=True, check_code_level=2, fp16=True, device=torch.device('cpu'))
+
+    @unittest.skipIf(torch.cuda.is_available()==False, "Skip when no cuda device detch")
+    def test_run_fp16(self):
+        data_set = prepare_fake_dataset()
+        data_set.set_input("x", flag=True)
+        data_set.set_target("y", flag=True)
+
+        train_set, dev_set = data_set.split(0.3)
+
+        model = NaiveClassifier2(2, 1)
+        trainer = Trainer(train_set, model, optimizer=SGD(lr=0.1), loss=BCEWithLogits(pred="predict", target="y"),
+                          batch_size=32, n_epochs=10, print_every=50, dev_data=dev_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
+                          use_tqdm=True, check_code_level=2, fp16=True, device=0)
+        trainer.train(load_best_model=False)
+
+        model = NaiveClassifier2(2, 1)
+        trainer = Trainer(train_set, model, optimizer=SGD(lr=0.1), loss=BCEWithLogits(pred="predict", target="y"),
+                          batch_size=32, n_epochs=10, print_every=50, dev_data=dev_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
+                          use_tqdm=True, check_code_level=2, fp16=True, device=0, test_use_fp16=False)
+        trainer.train(load_best_model=False)
+
+    @unittest.skipIf(torch.cuda.device_count()<2, "Skip when lower than 1 gpus.")
+    def test_run_data_parallel(self):
+        data_set = prepare_fake_dataset()
+        data_set.set_input("x", flag=True)
+        data_set.set_target("y", flag=True)
+
+        train_set, dev_set = data_set.split(0.3)
+
+        model = NaiveClassifier2(2, 1)
+        with self.assertRaises(RuntimeError):
+            trainer = Trainer(train_set, model, optimizer=SGD(lr=0.1), loss=BCEWithLogits(pred="predict", target="y"),
+                              batch_size=32, n_epochs=10, print_every=50, dev_data=dev_set,
+                              metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
+                              use_tqdm=True, check_code_level=2, fp16=True, device=[0, 1])
+
+        with self.assertRaises(RuntimeError):
+            model = NaiveClassifier3(2, 1)
+            trainer = Trainer(train_set, model, optimizer=SGD(lr=0.1), loss=BCEWithLogits(pred="predict", target="y"),
+                              batch_size=32, n_epochs=10, print_every=50, dev_data=dev_set,
+                              metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
+                              use_tqdm=True, check_code_level=2, fp16=True, device=[0, 1], test_use_fp16=True)
+
+        model = NaiveClassifier4(2, 1)
+        trainer = Trainer(train_set, model, optimizer=SGD(lr=0.1), loss=BCEWithLogits(pred="predict", target="y"),
+                          batch_size=32, n_epochs=10, print_every=50, dev_data=dev_set,
+                          metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
+                          use_tqdm=True, check_code_level=2, fp16=True, device=[0, 1], test_use_fp16=True)
+        trainer.train(load_best_model=False)
