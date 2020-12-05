@@ -482,7 +482,10 @@ class GradientClipCallback(Callback):
         if self.step%self.update_every==0:
             if self.trainer.fp16:
                 self.grad_scaler.unscale_(self.optimizer)
-            self.clip_fun(self.parameters, self.clip_value)
+            if self.parameters is not None:
+                self.clip_fun(self.parameters, self.clip_value)
+            else:
+                self.clip_fun(self.model.parameters(), self.clip_value)
 
 
 class EarlyStopCallback(Callback):

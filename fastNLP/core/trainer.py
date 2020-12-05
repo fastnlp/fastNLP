@@ -526,6 +526,7 @@ class Trainer(object):
 
         # check fp16相关的设置
         self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not fp16)
+        self.grad_scaler = _grad_scaler()
         if self.fp16:
             _can_use_fp16(device=device, model=model, func=self._forward_func)
             grad_scaler = kwargs.get('grad_scaler', None)
