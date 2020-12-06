@@ -376,7 +376,8 @@ PS: 基于词进行文本分类
 (1) 读取数据
 ~~~~~~~~~~~~~~~~~~~~
 
-这里我们继续以之前的数据为例，但这次我们不使用fastNLP自带的数据读取代码  
+这里我们继续以之前的数据为例，但这次我们不使用fastNLP自带的数据读取代码
+
 .. code-block:: python
 
     from fastNLP.io import ChnSentiCorpLoader
@@ -385,7 +386,9 @@ PS: 基于词进行文本分类
     data_dir = loader.download()         # 这一行代码将自动下载数据到默认的缓存地址, 并将该地址返回
 
 获取到的data_dir下应该有类似以下的文件
+
 .. code-block:: text
+
     - chn_senti_corp
         - train.tsv
         - dev.tsv
@@ -394,6 +397,7 @@ PS: 基于词进行文本分类
 如果打开任何一个文件查看，会发现里面的格式均为
 
 .. code-block:: text
+
     target  raw_chars
     1       这个宾馆比较陈旧了，特价的房间也很一般。总体来说一般
     0       怀着十分激动的心情放映...
@@ -401,6 +405,7 @@ PS: 基于词进行文本分类
 下面我们先定义一个read_file_to_dataset的函数, 即给定一个文件路径，读取其中的内容，并返回一个DataSet。然后我们将所有的DataSet放入到DataBundle对象中来方便接下来的预处理
 
 .. code-block:: python
+
     import os
     from fastNLP import DataSet, Instance
     from fastNLP.io import DataBundle
@@ -437,6 +442,7 @@ PS: 基于词进行文本分类
 .. _fastHan: https://gitee.com/fastnlp/fastHan
 
 .. code-block:: python
+
     from fastHan import FastHan
     from fastNLP import Vocabulary
 
@@ -497,6 +503,7 @@ PS: 基于词进行文本分类
 我们可以打印一下vocab看一下当前的词表内容
 
 .. code-block:: python
+
     print(data_bundle.get_vocab('words'))
     # Vocabulary([选择, 珠江, 花园, 的, 原因]...)
 
@@ -508,7 +515,9 @@ PS: 基于词进行文本分类
 .. _腾讯词向量: https://ai.tencent.com/ailab/nlp/en/embedding.html
 
 下面我们使用 :mod:`fastNLP.embeddings` 加载该词向量，fastNLP会抽取vocabulary中包含的词的向量，并随机初始化不包含在文件中的词语的词向量。
+
 .. code-block:: python
+
         from fastNLP.embeddings import StaticEmbedding
 
         word2vec_embed = StaticEmbedding(data_bundle.get_vocab('words'), model_dir_or_name='/path/to/Tencent_AILab_ChineseEmbedding.txt')
