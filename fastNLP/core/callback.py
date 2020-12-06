@@ -954,7 +954,8 @@ class CheckPointCallback(Callback):
                 model = model.module
             model.load_state_dict(states['model'])
             self.optimizer.load_state_dict(states['optimizer'])
-            self.grad_scaler.load_state_dict(states['grad_scaler'])
+            if 'grad_scaler' in states:
+                self.grad_scaler.load_state_dict(states['grad_scaler'])
             self.trainer.epoch = states['epoch'] + 1 # 因为是结束储存的，所以需要从下一个epoch开始
             self.trainer.step = states['step']
             if 'best_dev_epoch' in states:
@@ -977,6 +978,7 @@ class CheckPointCallback(Callback):
             model = model.module
         states['model'] = {name:param.cpu() for name, param in model.state_dict().items()}
         states['optimizer'] = self.optimizer.state_dict()
+        states['grad_scaler'] = self.grad_scaler.state_dict()
         states['epoch'] = self.epoch
         states['step'] = self.step
         if self.trainer.best_dev_epoch is not None:

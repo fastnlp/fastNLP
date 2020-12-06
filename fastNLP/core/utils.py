@@ -1040,10 +1040,10 @@ def _is_function_contains_autocast(func):
     lines = source.split('\n')
     for line in lines:
         line = line.strip()
-        if re.search(r'@[\w\.]*autocast\(\)', line):
+        if re.search(r'@[\w\.]*autocast\(\w*\)', line):
             raise RuntimeError("Please do not use `autocast()` decorator, use `with autocast():` instead. Please refer to"
                                " https://pytorch.org/docs/stable/notes/amp_examples.html#dataparallel-in-a-single-process ")
-        if re.search(r'with [\w\.]*autocast\(\):', line):
+        if re.search(r'with [\w\.]*autocast\(\w*\):', line):
             return True
     return False
 
