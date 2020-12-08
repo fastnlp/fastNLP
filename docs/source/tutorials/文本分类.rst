@@ -447,6 +447,7 @@ PS: 基于词进行文本分类
     from fastNLP import Vocabulary
 
     model=FastHan()
+    # model.set_device('cuda')  # 可以注视掉这一行增加速度
 
     # 定义分词处理操作
     def word_seg(ins):
