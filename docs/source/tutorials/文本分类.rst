@@ -459,6 +459,8 @@ PS: 基于词进行文本分类
         # apply函数将对内部的instance依次执行word_seg操作，并把其返回值放入到raw_words这个field
         ds.apply(word_seg, new_field_name='raw_words')
         # 除了apply函数，fastNLP还支持apply_field, apply_more(可同时创建多个field)等操作
+        # 同时我们增加一个seq_len的field
+        ds.add_seq_len('raw_words')
 
     vocab = Vocabulary()
 
@@ -500,11 +502,14 @@ PS: 基于词进行文本分类
     # | 0      | 15.4寸笔记本的键盘... | ['15.4', '寸', '笔... | [71, 72, 73, 74, ... |
     # +--------+-----------------------+-----------------------+----------------------+
 
+    # 由于之后需要使用之前定义的BiLSTMMaxPoolCls模型，所以需要将words这个field修改为chars
+    data_bundle.rename_field('words', 'chars')
+
 我们可以打印一下vocab看一下当前的词表内容
 
 .. code-block:: python
 
-    print(data_bundle.get_vocab('words'))
+    print(data_bundle.get_vocab('chars'))
     # Vocabulary([选择, 珠江, 花园, 的, 原因]...)
 
 (3) 选择预训练词向量
@@ -520,7 +525,7 @@ PS: 基于词进行文本分类
 
         from fastNLP.embeddings import StaticEmbedding
 
-        word2vec_embed = StaticEmbedding(data_bundle.get_vocab('words'), model_dir_or_name='/path/to/Tencent_AILab_ChineseEmbedding.txt')
+        word2vec_embed = StaticEmbedding(data_bundle.get_vocab('chars'), model_dir_or_name='/path/to/Tencent_AILab_ChineseEmbedding.txt')
 
 再之后的模型定义与训练过程与上面是一致的，这里就不再赘述了。
 
