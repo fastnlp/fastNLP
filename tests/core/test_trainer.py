@@ -14,8 +14,12 @@ from fastNLP import CrossEntropyLoss
 from fastNLP import AccuracyMetric
 from fastNLP import SGD
 from fastNLP import Trainer
-from fastNLP.models.base_model import NaiveClassifier, NaiveClassifier2, NaiveClassifier3, NaiveClassifier4
+from fastNLP.models.base_model import NaiveClassifier
 from fastNLP import TorchLoaderIter
+from fastNLP.models import BaseModel
+from fastNLP.modules import MLP
+from pkg_resources import parse_version
+
 
 
 def prepare_fake_dataset():
@@ -577,6 +581,22 @@ class TrainerTestGround(unittest.TestCase):
     """
 
 
+class NaiveClassifier2(BaseModel):
+    r"""
+    一个简单的分类器例子，可用于各种测试
+    """
+
+    def __init__(self, in_feature_dim, out_feature_dim):
+        super(NaiveClassifier2, self).__init__()
+        self.mlp = MLP([in_feature_dim, in_feature_dim, out_feature_dim])
+
+    def forward(self, x):
+        return {"predict": self.mlp(x)}
+
+    def predict(self, x):
+        return {"predict": torch.sigmoid(self.mlp(x)) > 0.5}
+
+
 class Fp16TrainerTest(unittest.TestCase):
     def test_raise_error(self):
         data_set = prepare_fake_dataset()
@@ -605,7 +625,7 @@ class Fp16TrainerTest(unittest.TestCase):
                               metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
                               use_tqdm=True, check_code_level=2, fp16=True, device=torch.device('cpu'))
 
-    @unittest.skipIf(torch.cuda.is_available()==False, "Skip when no cuda device detch")
+    @unittest.skipIf(torch.cuda.is_available()==False or parse_version(torch.__version__) < parse_version('1.6'), "Skip when no cuda device detch")
     def test_run_fp16(self):
         data_set = prepare_fake_dataset()
         data_set.set_input("x", flag=True)
@@ -627,13 +647,28 @@ class Fp16TrainerTest(unittest.TestCase):
                           use_tqdm=True, check_code_level=2, fp16=True, device=0, test_use_fp16=False)
         trainer.train(load_best_model=False)
 
-    @unittest.skipIf(torch.cuda.device_count()<2, "Skip when lower than 1 gpus.")
+    @unittest.skipIf(torch.cuda.device_count()<2 or parse_version(torch.__version__) < parse_version('1.6'), "Skip when lower than 1 gpus.")
     def test_run_data_parallel(self):
         data_set = prepare_fake_dataset()
         data_set.set_input("x", flag=True)
         data_set.set_target("y", flag=True)
 
         train_set, dev_set = data_set.split(0.3)
+
+        class NaiveClassifier2(BaseModel):
+            r"""
+            一个简单的分类器例子，可用于各种测试
+            """
+
+            def __init__(self, in_feature_dim, out_feature_dim):
+                super(NaiveClassifier2, self).__init__()
+                self.mlp = MLP([in_feature_dim, in_feature_dim, out_feature_dim])
+
+            def forward(self, x):
+                return {"predict": self.mlp(x)}
+
+            def predict(self, x):
+                return {"predict": torch.sigmoid(self.mlp(x)) > 0.5}
 
         model = NaiveClassifier2(2, 1)
         with self.assertRaises(RuntimeError):
@@ -643,11 +678,45 @@ class Fp16TrainerTest(unittest.TestCase):
                               use_tqdm=True, check_code_level=2, fp16=True, device=[0, 1])
 
         with self.assertRaises(RuntimeError):
+            class NaiveClassifier3(BaseModel):
+                r"""
+                一个简单的分类器例子，可用于各种测试
+                """
+
+                def __init__(self, in_feature_dim, out_feature_dim):
+                    super(NaiveClassifier3, self).__init__()
+                    self.mlp = MLP([in_feature_dim, in_feature_dim, out_feature_dim])
+
+                @torch.cuda.amp.autocast()
+                def forward(self, x):
+                    return {"predict": self.mlp(x)}
+
+                @torch.cuda.amp.autocast()
+                def predict(self, x):
+                    return {"predict": torch.sigmoid(self.mlp(x)) > 0.5}
+
             model = NaiveClassifier3(2, 1)
             trainer = Trainer(train_set, model, optimizer=SGD(lr=0.1), loss=BCEWithLogits(pred="predict", target="y"),
                               batch_size=32, n_epochs=10, print_every=50, dev_data=dev_set,
                               metrics=AccuracyMetric(pred="predict", target="y"), validate_every=-1, save_path=None,
                               use_tqdm=True, check_code_level=2, fp16=True, device=[0, 1], test_use_fp16=True)
+
+        class NaiveClassifier4(BaseModel):
+            r"""
+            一个简单的分类器例子，可用于各种测试
+            """
+
+            def __init__(self, in_feature_dim, out_feature_dim):
+                super(NaiveClassifier4, self).__init__()
+                self.mlp = MLP([in_feature_dim, in_feature_dim, out_feature_dim])
+
+            def forward(self, x):
+                with torch.cuda.amp.autocast():
+                    return {"predict": self.mlp(x)}
+
+            def predict(self, x):
+                with torch.cuda.amp.autocast():
+                    return {"predict": torch.sigmoid(self.mlp(x)) > 0.5}
 
         model = NaiveClassifier4(2, 1)
         trainer = Trainer(train_set, model, optimizer=SGD(lr=0.1), loss=BCEWithLogits(pred="predict", target="y"),

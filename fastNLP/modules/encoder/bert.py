@@ -477,7 +477,8 @@ class BertModel(nn.Module):
         if isinstance(module, nn.Linear) and module.bias is not None:
             module.bias.data.zero_()
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, output_all_encoded_layers=True):
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, output_all_encoded_layers=True,
+                position_ids=None):
         """
 
         :param torch.LongTensor input_ids: bsz x max_len的输入id
@@ -485,6 +486,7 @@ class BertModel(nn.Module):
         :param attention_mask: 需要attend的为1，不需要为0
         :param bool output_all_encoded_layers: 是否输出所有层，默认输出token embedding(包含bpe, position以及type embedding)
             及每一层的hidden states。如果为False，只输出最后一层的结果
+        :param torch.LongTensor position_ids: bsz x max_len, position的id
         :return: encode_layers: 如果output_all_encoded_layers为True，返回list(共num_layers+1个元素)，每个元素为
             bsz x max_len x hidden_size否则返回bsz x max_len x hidden_size的tensor;
             pooled_output: bsz x hidden_size为cls的表示，可以用于句子的分类
@@ -506,10 +508,11 @@ class BertModel(nn.Module):
         # positions we want to attend and -10000.0 for masked positions.
         # Since we are adding it to the raw scores before the softmax, this is
         # effectively the same as removing these entirely.
-        extended_attention_mask = extended_attention_mask.to(dtype=next(self.parameters()).dtype)  # fp16 compatibility
+        # this will case an issue when DataParallel: https://github.com/pytorch/pytorch/issues/40457#issuecomment-648396469
+        # extended_attention_mask = extended_attention_mask.to(dtype=next(self.parameters()).dtype)  # fp16 compatibility
         extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
 
-        embedding_output = self.embeddings(input_ids, token_type_ids)
+        embedding_output = self.embeddings(input_ids, token_type_ids=token_type_ids, position_ids=position_ids)
         encoded_layers = self.encoder(embedding_output,
                                       extended_attention_mask,
                                       output_all_encoded_layers=output_all_encoded_layers)

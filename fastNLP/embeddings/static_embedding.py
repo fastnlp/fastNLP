@@ -81,7 +81,7 @@ class StaticEmbedding(TokenEmbedding):
                  init_method=None, lower=False, dropout=0, word_dropout=0, normalize=False, min_freq=1, **kwargs):
         r"""
         
-        :param vocab: Vocabulary. 若该项为None则会读取所有的embedding。
+        :param Vocabulary vocab: 词表. StaticEmbedding只会加载包含在词表中的词的词向量，在预训练向量中没找到的使用随机初始化
         :param model_dir_or_name: 可以有两种方式调用预训练好的static embedding：第一种是传入embedding文件夹(文件夹下应该只有一个
             以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载。
             如果输入为None则使用embedding_dim的维度随机初始化一个embedding。

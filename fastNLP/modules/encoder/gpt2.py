@@ -834,7 +834,8 @@ class GPT2Model(GPT2PreTrainedModel):
             # positions we want to attend and -10000.0 for masked positions.
             # Since we are adding it to the raw scores before the softmax, this is
             # effectively the same as removing these entirely.
-            attention_mask = attention_mask.to(dtype=next(self.parameters()).dtype)  # fp16 compatibility
+            # this will case an issue when DataParallel: https://github.com/pytorch/pytorch/issues/40457#issuecomment-648396469
+            # attention_mask = attention_mask.to(dtype=next(self.parameters()).dtype)  # fp16 compatibility
             attention_mask = (1.0 - attention_mask) * -10000.0
             # attention_mask = attention_mask.masked_fill(attention_mask.eq(0), -10000.0)
 

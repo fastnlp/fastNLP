@@ -13,6 +13,7 @@ import torch
 from torch import nn as nn
 
 from .embedding import TokenEmbedding
+from .utils import _check_vocab_has_same_index
 
 
 class StackEmbedding(TokenEmbedding):
@@ -44,8 +45,9 @@ class StackEmbedding(TokenEmbedding):
                 vocabs.append(embed.get_word_vocab())
         _vocab = vocabs[0]
         for vocab in vocabs[1:]:
-            assert vocab == _vocab, "All embeddings in StackEmbedding should use the same word vocabulary."
-        
+            if _vocab!=vocab:
+                _check_vocab_has_same_index(_vocab, vocab)
+
         super(StackEmbedding, self).__init__(_vocab, word_dropout=word_dropout, dropout=dropout)
         assert isinstance(embeds, list)
         for embed in embeds:
@@ -60,6 +62,7 @@ class StackEmbedding(TokenEmbedding):
         :return:
         """
         assert isinstance(embed, TokenEmbedding)
+        _check_vocab_has_same_index(self.get_word_vocab(), embed.get_word_vocab())
         self._embed_size += embed.embed_size
         self.embeds.append(embed)
         return self
