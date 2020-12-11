@@ -74,6 +74,7 @@ class TestRunMatchingPipe(unittest.TestCase):
                 name, vocabs = y
                 self.assertEqual(x + 1 if name == 'words' else x, len(vocabs))
 
+    @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
     def test_spacy(self):
         data_set_dict = {
             'Quora': ('tests/data_for_tests/io/Quora', QuoraPipe, QuoraBertPipe, (2, 2, 2), (93, 2)),

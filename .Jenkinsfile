@@ -27,7 +27,6 @@ pipeline {
                 }
                 stage('Package Testing') {
                     steps {
-                        sh 'python -m spacy download en'
                         sh 'pip install fitlog'
                         sh 'pytest ./tests --html=test_results.html --self-contained-html'
                     }
