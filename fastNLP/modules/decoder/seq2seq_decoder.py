@@ -11,6 +11,9 @@ from ...embeddings.utils import get_embeddings
 from .seq2seq_state import State, LSTMState, TransformerState
 
 
+__all__ = ['Seq2SeqDecoder', 'TransformerSeq2SeqDecoder', 'LSTMSeq2SeqDecoder']
+
+
 class Seq2SeqDecoder(nn.Module):
     """
     Sequence-to-Sequence Decoder的基类。一定需要实现forward函数，剩下的函数根据需要实现。每个Seq2SeqDecoder都应该有相应的State对象

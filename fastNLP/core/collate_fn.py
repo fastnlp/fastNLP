@@ -7,6 +7,8 @@ from .field import _get_ele_type_and_dim
 from .utils import logger
 from copy import deepcopy
 
+__all__ = ['ConcatCollateFn']
+
 
 def _check_type(batch_dict, fields):
     if len(fields) == 0:

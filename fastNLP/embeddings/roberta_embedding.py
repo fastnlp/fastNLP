@@ -78,7 +78,7 @@ class RobertaEmbedding(ContextualEmbedding):
             word pieces后的内容，并将第512个word piece置为</s>。超过长度的部分的encode结果直接全部置零。一般仅有只使用<s>
             来进行分类的任务将auto_truncate置为True。
         :param kwargs:
-            int min_freq: 小于该次数的词会被unk代替
+            int min_freq: 小于该次数的词会被unk代替， 默认为1
         """
         super().__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
@@ -93,7 +93,7 @@ class RobertaEmbedding(ContextualEmbedding):
         if '<s>' in vocab:
             self._word_cls_index = vocab['<s>']
 
-        min_freq = kwargs.get('min_freq', 2)
+        min_freq = kwargs.get('min_freq', 1)
         self._min_freq = min_freq
 
         self.model = _RobertaWordModel(model_dir_or_name=model_dir_or_name, vocab=vocab, layers=layers,
@@ -196,20 +196,30 @@ class _RobertaWordModel(nn.Module):
                  include_cls_sep: bool = False, pooled_cls: bool = False, auto_truncate: bool = False, min_freq=2):
         super().__init__()
 
-        self.tokenzier = RobertaTokenizer.from_pretrained(model_dir_or_name)
-        self.encoder = RobertaModel.from_pretrained(model_dir_or_name)
-        # 由于RobertaEmbedding中设置了padding_idx为1, 且使用了非常神奇的position计算方式，所以-2
-        self._max_position_embeddings = self.encoder.config.max_position_embeddings - 2
-        #  检查encoder_layer_number是否合理
-        encoder_layer_number = len(self.encoder.encoder.layer)
-
         if isinstance(layers, list):
             self.layers = [int(l) for l in layers]
         elif isinstance(layers, str):
             self.layers = list(map(int, layers.split(',')))
         else:
             raise TypeError("`layers` only supports str or list[int]")
+        assert len(self.layers) > 0, "There is no layer selected!"
 
+        neg_num_output_layer = -16384
+        pos_num_output_layer = 0
+        for layer in self.layers:
+            if layer < 0:
+                neg_num_output_layer = max(layer, neg_num_output_layer)
+            else:
+                pos_num_output_layer = max(layer, pos_num_output_layer)
+
+        self.tokenizer = RobertaTokenizer.from_pretrained(model_dir_or_name)
+        self.encoder = RobertaModel.from_pretrained(model_dir_or_name,
+                                                    neg_num_output_layer=neg_num_output_layer,
+                                                    pos_num_output_layer=pos_num_output_layer)
+        # 由于RobertaEmbedding中设置了padding_idx为1, 且使用了非常神奇的position计算方式，所以-2
+        self._max_position_embeddings = self.encoder.config.max_position_embeddings - 2
+        #  检查encoder_layer_number是否合理
+        encoder_layer_number = len(self.encoder.encoder.layer)
         for layer in self.layers:
             if layer < 0:
                 assert -layer <= encoder_layer_number, f"The layer index:{layer} is out of scope for " \
@@ -233,14 +243,14 @@ class _RobertaWordModel(nn.Module):
                 word = '<unk>'
             elif vocab.word_count[word]<min_freq:
                 word = '<unk>'
-            word_pieces = self.tokenzier.tokenize(word)
-            word_pieces = self.tokenzier.convert_tokens_to_ids(word_pieces)
+            word_pieces = self.tokenizer.tokenize(word)
+            word_pieces = self.tokenizer.convert_tokens_to_ids(word_pieces)
             word_to_wordpieces.append(word_pieces)
             word_pieces_lengths.append(len(word_pieces))
-        self._cls_index = self.tokenzier.encoder['<s>']
-        self._sep_index = self.tokenzier.encoder['</s>']
+        self._cls_index = self.tokenizer.encoder['<s>']
+        self._sep_index = self.tokenizer.encoder['</s>']
         self._word_pad_index = vocab.padding_idx
-        self._wordpiece_pad_index = self.tokenzier.encoder['<pad>']  # 需要用于生成word_piece
+        self._wordpiece_pad_index = self.tokenizer.encoder['<pad>']  # 需要用于生成word_piece
         self.word_to_wordpieces = np.array(word_to_wordpieces)
         self.register_buffer('word_pieces_lengths', torch.LongTensor(word_pieces_lengths))
         logger.debug("Successfully generate word pieces.")
@@ -352,20 +362,19 @@ class _RobertaWordModel(nn.Module):
         return outputs
 
     def save(self, folder):
-        self.tokenzier.save_pretrained(folder)
+        self.tokenizer.save_pretrained(folder)
         self.encoder.save_pretrained(folder)
 
 
 class RobertaWordPieceEncoder(nn.Module):
     r"""
-    读取bert模型，读取之后调用index_dataset方法在dataset中生成word_pieces这一列。
+    读取roberta模型，读取之后调用index_dataset方法在dataset中生成word_pieces这一列。
 
     RobertaWordPieceEncoder可以支持自动下载权重，当前支持的模型:
         en: roberta-base
         en-large: roberta-large
 
     """
-
     def __init__(self, model_dir_or_name: str = 'en', layers: str = '-1', pooled_cls: bool = False,
                  word_dropout=0, dropout=0, requires_grad: bool = True, **kwargs):
         r"""
@@ -417,11 +426,10 @@ class RobertaWordPieceEncoder(nn.Module):
 
     def forward(self, word_pieces, token_type_ids=None):
         r"""
-        计算words的bert embedding表示。传入的words中应该自行包含[CLS]与[SEP]的tag。
+        计算words的bert embedding表示。传入的words中应该自行包含<s>与</s>>的tag。
 
         :param words: batch_size x max_len
-        :param token_type_ids: batch_size x max_len, 用于区分前一句和后一句话. 如果不传入，则自动生成(大部分情况，都不需要输入),
-            第一个[SEP]及之前为0, 第二个[SEP]及到第一个[SEP]之间为1; 第三个[SEP]及到第二个[SEP]之间为0，依次往后推。
+        :param token_type_ids: batch_size x max_len, 用于区分前一句和后一句话. 如果不传入，则自动生成(大部分情况，都不需要输入)。
         :return: torch.FloatTensor. batch_size x max_len x (768*len(self.layers))
         """
         word_pieces = self.drop_word(word_pieces)
@@ -464,7 +472,7 @@ class RobertaWordPieceEncoder(nn.Module):
 
         os.makedirs(os.path.join(folder, ROBERTA_ENCODER_FOLDER), exist_ok=True)
         self.model.save(os.path.join(folder, ROBERTA_ENCODER_FOLDER))
-        logger.debug(f"BertWordPieceEncoder has been saved in {folder}")
+        logger.debug(f"RobertaWordPieceEncoder has been saved in {folder}")
 
     @classmethod
     def load(cls, folder):
@@ -484,7 +492,7 @@ class _WordPieceRobertaModel(nn.Module):
     def __init__(self, model_dir_or_name: str, layers: str = '-1', pooled_cls: bool=False):
         super().__init__()
 
-        self.tokenzier = RobertaTokenizer.from_pretrained(model_dir_or_name)
+        self.tokenizer = RobertaTokenizer.from_pretrained(model_dir_or_name)
         self.encoder = RobertaModel.from_pretrained(model_dir_or_name)
         #  检查encoder_layer_number是否合理
         encoder_layer_number = len(self.encoder.encoder.layer)
@@ -504,25 +512,25 @@ class _WordPieceRobertaModel(nn.Module):
                 assert layer <= encoder_layer_number, f"The layer index:{layer} is out of scope for " \
                     f"a RoBERTa model with {encoder_layer_number} layers."
 
-        self._cls_index = self.tokenzier.encoder['<s>']
-        self._sep_index = self.tokenzier.encoder['</s>']
-        self._wordpiece_pad_index = self.tokenzier.encoder['<pad>']  # 需要用于生成word_piece
-        self._wordpiece_unknown_index = self.tokenzier.encoder['<unk>']
+        self._cls_index = self.tokenizer.encoder['<s>']
+        self._sep_index = self.tokenizer.encoder['</s>']
+        self._wordpiece_pad_index = self.tokenizer.encoder['<pad>']  # 需要用于生成word_piece
+        self._wordpiece_unknown_index = self.tokenizer.encoder['<unk>']
         self.pooled_cls = pooled_cls
 
     def index_datasets(self, *datasets, field_name, add_cls_sep=True, add_prefix_space=True):
         r"""
-        使用bert的tokenizer新生成word_pieces列加入到datasets中，并将他们设置为input。如果首尾不是
-            [CLS]与[SEP]会在首尾额外加入[CLS]与[SEP], 且将word_pieces这一列的pad value设置为了bert的pad value。
+        使用roberta的tokenizer新生成word_pieces列加入到datasets中，并将他们设置为input。如果首尾不是
+            <s>与</s>会在首尾额外加入<s>与</s>, 且将word_pieces这一列的pad value设置为了bert的pad value。
 
         :param datasets: DataSet对象
-        :param field_name: 基于哪一列index
+        :param field_name: 基于哪一列index, 这一列一般是raw_string
         :param bool add_cls_sep: 是否在句首句尾添加cls和sep的index
         :param bool add_prefix_space: 是否在句子开头添加空格，预训练时RoBERTa该值为True
         :return:
         """
 
-        encode_func = partial(self.tokenzier.encode, add_special_tokens=add_cls_sep, add_prefix_space=add_prefix_space)
+        encode_func = partial(self.tokenizer.encode, add_special_tokens=add_cls_sep, add_prefix_space=add_prefix_space)
 
         for index, dataset in enumerate(datasets):
             try:
@@ -555,5 +563,5 @@ class _WordPieceRobertaModel(nn.Module):
         return outputs
 
     def save(self, folder):
-        self.tokenzier.save_pretrained(folder)
+        self.tokenizer.save_pretrained(folder)
         self.encoder.save_pretrained(folder)

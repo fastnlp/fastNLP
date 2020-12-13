@@ -67,6 +67,7 @@ __all__ = [
     "BucketSampler",
     "RandomSampler",
     "SortedSampler",
+    "ConstantTokenNumSampler",
     
     "LossFunc",
     "CrossEntropyLoss",
@@ -83,7 +84,7 @@ __all__ = [
     'logger',
     "init_logger_dist",
 ]
-__version__ = '0.5.6'
+__version__ = '0.6.0'
 
 import sys
 

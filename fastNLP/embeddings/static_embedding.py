@@ -97,8 +97,8 @@ class StaticEmbedding(TokenEmbedding):
         :param int min_freq: Vocabulary词频数小于这个数量的word将被指向unk。
         :param dict kwargs:
                 bool only_train_min_freq: 仅对train中的词语使用min_freq筛选;
-                bool only_norm_found_vector: 是否仅对在预训练中找到的词语使用normalize;
-                bool only_use_pretrain_word: 仅使用出现在pretrain词表中的词，如果该词没有在预训练的词表中出现则为unk。如果embedding不需要更新建议设置为True。
+                bool only_norm_found_vector: 默认为False, 是否仅对在预训练中找到的词语使用normalize;
+                bool only_use_pretrain_word: 默认为False, 仅使用出现在pretrain词表中的词，如果该词没有在预训练的词表中出现则为unk。如果embedding不需要更新建议设置为True。
         """
         super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         if embedding_dim > 0:
@@ -177,7 +177,7 @@ class StaticEmbedding(TokenEmbedding):
             else:
                 unknown_idx = embedding.size(0) - 1  # 否则是最后一个为unknow
                 self.register_buffer('words_to_words', torch.arange(len(vocab)).long())
-            words_to_words = torch.full((len(vocab),), fill_value=unknown_idx).long()
+            words_to_words = torch.full((len(vocab),), fill_value=unknown_idx, dtype=torch.long).long()
             for word, index in vocab:
                 if word not in lowered_vocab:
                     word = word.lower()
@@ -280,6 +280,8 @@ class StaticEmbedding(TokenEmbedding):
                         found_unknown = True
                     if word in vocab:
                         index = vocab.to_index(word)
+                        if index in matrix:
+                            warnings.warn(f"Word:{word} occurs again in line:{idx}(starts from 0)")
                         matrix[index] = torch.from_numpy(np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim))
                         if self.only_norm_found_vector:
                             matrix[index] = matrix[index] / np.linalg.norm(matrix[index])
@@ -306,7 +308,7 @@ class StaticEmbedding(TokenEmbedding):
                 vectors = torch.cat((vectors, torch.zeros(1, dim)), dim=0).contiguous()
             else:
                 unknown_idx = vocab.unknown_idx
-            self.register_buffer('words_to_words', torch.full((len(vocab), ), fill_value=unknown_idx).long())
+            self.register_buffer('words_to_words', torch.full((len(vocab), ), fill_value=unknown_idx, dtype=torch.long).long())
             index = 0
             for word, index_in_vocab in vocab:
                 if index_in_vocab in matrix:

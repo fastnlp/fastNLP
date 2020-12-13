@@ -6,6 +6,9 @@ from .seq2seq_model import Seq2SeqModel
 from ..modules.generator.seq2seq_generator import SequenceGenerator
 
 
+__all__ = ['SequenceGeneratorModel']
+
+
 class SequenceGeneratorModel(nn.Module):
     """
     用于封装Seq2SeqModel使其可以做生成任务

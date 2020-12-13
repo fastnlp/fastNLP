@@ -89,11 +89,11 @@ class BertEmbedding(ContextualEmbedding):
             word pieces后的内容，并将第512个word piece置为[SEP]。超过长度的部分的encode结果直接全部置零。一般仅有只使用[CLS]
             来进行分类的任务将auto_truncate置为True。
         :param kwargs:
-            int min_freq: 小于该次数的词会被unk代替
+            int min_freq: 小于该次数的词会被unk代替, 默认为1
         """
         super(BertEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
-        if word_dropout>0:
+        if word_dropout > 0:
             assert vocab.unknown != None, "When word_drop>0, Vocabulary must contain the unknown token."
 
         if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
@@ -110,7 +110,7 @@ class BertEmbedding(ContextualEmbedding):
         if '[CLS]' in vocab:
             self._word_cls_index = vocab['CLS']
 
-        min_freq = kwargs.get('min_freq', 2)
+        min_freq = kwargs.get('min_freq', 1)
         self._min_freq = min_freq
         self.model = _BertWordModel(model_dir_or_name=model_dir_or_name, vocab=vocab, layers=layers,
                                     pool_method=pool_method, include_cls_sep=include_cls_sep,
@@ -294,8 +294,7 @@ class BertWordPieceEncoder(nn.Module):
                 sep_mask = word_pieces.eq(self._sep_index)  # batch_size x max_len
                 sep_mask_cumsum = sep_mask.long().flip(dims=[-1]).cumsum(dim=-1).flip(dims=[-1])
                 token_type_ids = sep_mask_cumsum.fmod(2)
-                if token_type_ids[0, 0].item():  # 如果开头是奇数，则需要flip一下结果，因为需要保证开头为0
-                    token_type_ids = token_type_ids.eq(0).long()
+                token_type_ids = token_type_ids[:, :1].__xor__(token_type_ids) # 如果开头是奇数，则需要flip一下结果，因为需要保证开头为0
 
         word_pieces = self.drop_word(word_pieces)
         outputs = self.model(word_pieces, token_type_ids)
@@ -371,17 +370,29 @@ class _BertWordModel(nn.Module):
                  include_cls_sep: bool = False, pooled_cls: bool = False, auto_truncate: bool = False, min_freq=2):
         super().__init__()
 
-        self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
-        self.encoder = BertModel.from_pretrained(model_dir_or_name)
-        self._max_position_embeddings = self.encoder.config.max_position_embeddings
-        #  检查encoder_layer_number是否合理
-        encoder_layer_number = len(self.encoder.encoder.layer)
         if isinstance(layers, list):
             self.layers = [int(l) for l in layers]
         elif isinstance(layers, str):
             self.layers = list(map(int, layers.split(',')))
         else:
             raise TypeError("`layers` only supports str or list[int]")
+        assert len(self.layers) > 0, "There is no layer selected!"
+
+        neg_num_output_layer = -16384
+        pos_num_output_layer = 0
+        for layer in self.layers:
+            if layer < 0:
+                neg_num_output_layer = max(layer, neg_num_output_layer)
+            else:
+                pos_num_output_layer = max(layer, pos_num_output_layer)
+
+        self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
+        self.encoder = BertModel.from_pretrained(model_dir_or_name,
+                                                 neg_num_output_layer=neg_num_output_layer,
+                                                 pos_num_output_layer=pos_num_output_layer)
+        self._max_position_embeddings = self.encoder.config.max_position_embeddings
+        #  检查encoder_layer_number是否合理
+        encoder_layer_number = len(self.encoder.encoder.layer)
         for layer in self.layers:
             if layer < 0:
                 assert -layer <= encoder_layer_number, f"The layer index:{layer} is out of scope for " \
@@ -465,8 +476,7 @@ class _BertWordModel(nn.Module):
                 sep_mask = word_pieces.eq(self._sep_index).long()  # batch_size x max_len
                 sep_mask_cumsum = sep_mask.flip(dims=[-1]).cumsum(dim=-1).flip(dims=[-1])
                 token_type_ids = sep_mask_cumsum.fmod(2)
-                if token_type_ids[0, 0].item():  # 如果开头是奇数，则需要flip一下结果，因为需要保证开头为0
-                    token_type_ids = token_type_ids.eq(0).long()
+                token_type_ids = token_type_ids[:, :1].__xor__(token_type_ids)  # 如果开头是奇数，则需要flip一下结果，因为需要保证开头为0
             else:
                 token_type_ids = torch.zeros_like(word_pieces)
         # 2. 获取hidden的结果，根据word_pieces进行对应的pool计算

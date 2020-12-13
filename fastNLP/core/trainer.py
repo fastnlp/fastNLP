@@ -630,6 +630,11 @@ class Trainer(object):
                     self.logger.info("Reloaded the best model.")
                 else:
                     self.logger.info("Fail to reload best model.")
+
+            if self.dev_data is None and self.save_path is not None:
+                model_name = "_".join([self.model.__class__.__name__, self.start_time])
+                self._save_model(self.model, model_name)
+
         finally:
             if self.dev_data is not None and self.best_dev_perf is not None:
                 self.logger.info(
