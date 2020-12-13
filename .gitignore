@@ -1,5 +1,4 @@
-.gitignore
-
+*.history 
 .DS_Store
 .ipynb_checkpoints
 *.pyc
@@ -16,3 +15,4 @@ logs/
 .fitconfig
 
 docs/build
+.history/fastNLP/core/dist_trainer_20200502131444.py

@@ -164,10 +164,13 @@ class DistTrainer():
 
         self.optimizer = optimizer
         self.sampler = DistributedSampler(self.train_data)
-        self.data_iterator = self._get_data_iter(self.train_data)
+        self.data_iteraitor = self._get_data_iter(self.train_data)
         self.batch_size = self.world_size * self.batch_size_per_gpu
         self.n_steps = self._get_n_steps()
-
+        self.dev_data = dev_data
+        self.metrics = metrics
+        self.test_use_tqdm = True
+        self.kwargs = dict() # 简而言之 这里使用了建立dict的讨巧的方法，鉴于fitlogcallback中使用了get以避免key 不存在，使用空的dict在callback中会默认返回get的default值
         # for evaluation, only run eval on master proc
         if dev_data and metrics:
             cb = _TesterCallback(
