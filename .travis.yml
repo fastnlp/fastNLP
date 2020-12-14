@@ -13,7 +13,7 @@ install:
   - pip install pytest-cov
 # command to run tests
 script:
-  - python -m spacy download en
+#  - python -m spacy download en
   - pytest --cov=fastNLP tests/
 
 after_success:
