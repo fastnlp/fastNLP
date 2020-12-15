@@ -164,7 +164,7 @@ class DistTrainer():
 
         self.optimizer = optimizer
         self.sampler = DistributedSampler(self.train_data)
-        self.data_iterator = self._get_data_iter(self.train_data)
+        self.data_iteraitor = self._get_data_iter(self.train_data)
         self.batch_size = self.world_size * self.batch_size_per_gpu
         self.n_steps = self._get_n_steps()
         self.dev_data = dev_data
