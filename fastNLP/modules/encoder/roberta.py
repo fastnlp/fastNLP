@@ -39,7 +39,7 @@ class RobertaEmbeddings(BertEmbeddings):
             config.max_position_embeddings, config.hidden_size, padding_idx=self.padding_idx
         )
 
-    def forward(self, input_ids, token_type_ids, words_embeddings=None):
+    def forward(self, input_ids, token_type_ids, words_embeddings=None, **kwargs):
         position_ids = self.create_position_ids_from_input_ids(input_ids)
 
         return super().forward(

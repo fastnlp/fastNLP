@@ -423,7 +423,7 @@ class _GPT2Model(nn.Module):
         self._word_pad_index = vocab.padding_idx
         self._endoftext_index = self.tokenzier.encoder.get('<|endoftext|>')
         self._wordpiece_pad_index = self.tokenzier.encoder.get('<|endoftext|>')  # 需要用于生成word_piece
-        self.word_to_wordpieces = np.array(word_to_wordpieces)
+        self.word_to_wordpieces = np.array(word_to_wordpieces, dtype=object)
         self.register_buffer('word_pieces_lengths', torch.LongTensor(word_pieces_lengths))
         logger.debug("Successfully generate word pieces.")
 

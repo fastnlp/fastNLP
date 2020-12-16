@@ -11,7 +11,7 @@
 
     1, 商务大床房，房间很大，床有2M宽，整体感觉经济实惠不错!
 
-其中开头的1是只这条评论的标签，表示是正面的情绪。我们将使用到的数据可以通过 `此链接 <http://212.129.155.247/dataset/chn_senti_corp.zip>`_
+其中开头的1是只这条评论的标签，表示是正面的情绪。我们将使用到的数据可以通过 `此链接 <http://download.fastnlp.top/dataset/chn_senti_corp.zip>`_
 下载并解压，当然也可以通过fastNLP自动下载该数据。
 
 数据中的内容如下图所示。接下来，我们将用fastNLP在这个数据上训练一个分类网络。
@@ -163,8 +163,7 @@ Vocabulary是一个记录着词语与index之间映射关系的类，比如
 (3) 选择预训练词向量
 ~~~~~~~~~~~~~~~~~~~~
 
-由于Word2vec, Glove, Elmo,
-Bert等预训练模型可以增强模型的性能，所以在训练具体任务前，选择合适的预训练词向量非常重要。
+由于Word2vec, Glove, Elmo, Bert等预训练模型可以增强模型的性能，所以在训练具体任务前，选择合适的预训练词向量非常重要。
 在fastNLP中我们提供了多种Embedding使得加载这些预训练模型的过程变得更加便捷。
 这里我们先给出一个使用word2vec的中文汉字预训练的示例，之后再给出一个使用Bert的文本分类。
 这里使用的预训练词向量为'cn-fastnlp-100d'，fastNLP将自动下载该embedding至本地缓存，
@@ -291,7 +290,7 @@ fastNLP提供了Trainer对象来组织训练过程，包括完成loss计算(所�
 
 
 
-使用Bert进行文本分类
+PS: 使用Bert进行文本分类
 ~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
@@ -368,6 +367,170 @@ fastNLP提供了Trainer对象来组织训练过程，包括完成loss计算(所�
     {'AccuracyMetric': {'acc': 0.919167}}
 
 
+PS: 基于词进行文本分类
+~~~~~~~~~~~~~~~~~~~~
+
+由于汉字中没有显示的字与字的边界，一般需要通过分词器先将句子进行分词操作。
+下面的例子演示了如何不基于fastNLP已有的数据读取、预处理代码进行文本分类。
+
+(1) 读取数据
+~~~~~~~~~~~~~~~~~~~~
+
+这里我们继续以之前的数据为例，但这次我们不使用fastNLP自带的数据读取代码
+
+.. code-block:: python
+
+    from fastNLP.io import ChnSentiCorpLoader
+    
+    loader = ChnSentiCorpLoader()        # 初始化一个中文情感分类的loader
+    data_dir = loader.download()         # 这一行代码将自动下载数据到默认的缓存地址, 并将该地址返回
+
+获取到的data_dir下应该有类似以下的文件
+
+.. code-block:: text
+
+    - chn_senti_corp
+        - train.tsv
+        - dev.tsv
+        - test.tsv
+
+如果打开任何一个文件查看，会发现里面的格式均为
+
+.. code-block:: text
+
+    target  raw_chars
+    1       这个宾馆比较陈旧了，特价的房间也很一般。总体来说一般
+    0       怀着十分激动的心情放映...
+
+下面我们先定义一个read_file_to_dataset的函数, 即给定一个文件路径，读取其中的内容，并返回一个DataSet。然后我们将所有的DataSet放入到DataBundle对象中来方便接下来的预处理
+
+.. code-block:: python
+
+    import os
+    from fastNLP import DataSet, Instance
+    from fastNLP.io import DataBundle
+
+
+    def read_file_to_dataset(fp):
+        ds = DataSet()
+        with open(fp, 'r') as f:
+            f.readline()  # 第一行是title名称，忽略掉
+            for line in f:
+                line = line.strip()
+                target, chars = line.split('\t')
+                ins = Instance(target=target, raw_chars=chars)
+                ds.append(ins)
+        return ds
+
+    data_bundle = DataBundle()
+    for name in ['train.tsv', 'dev.tsv', 'test.tsv']:
+        fp = os.path.join(data_dir, name)
+        ds = read_file_to_dataset(fp)
+        data_bundle.set_dataset(name=name.split('.')[0], dataset=ds)
+
+    print(data_bundle)  # 查看以下数据集的情况
+    # In total 3 datasets:
+    #    train has 9600 instances.
+    #    dev has 1200 instances.
+    #    test has 1200 instances.
+
+(2) 数据预处理
+~~~~~~~~~~~~~~~~~~~~
+
+在这里，我们首先把句子通过 fastHan_ 进行分词操作，然后创建词表，并将词语转换为序号。
+
+.. _fastHan: https://gitee.com/fastnlp/fastHan
+
+.. code-block:: python
+
+    from fastHan import FastHan
+    from fastNLP import Vocabulary
+
+    model=FastHan()
+    # model.set_device('cuda')  # 可以注视掉这一行增加速度
+
+    # 定义分词处理操作
+    def word_seg(ins):
+        raw_chars = ins['raw_chars']
+        # 由于有些句子比较长，我们只截取前128个汉字
+        raw_words = model(raw_chars[:128], target='CWS')[0]
+        return raw_words
+
+    for name, ds in data_bundle.iter_datasets():
+        # apply函数将对内部的instance依次执行word_seg操作，并把其返回值放入到raw_words这个field
+        ds.apply(word_seg, new_field_name='raw_words')
+        # 除了apply函数，fastNLP还支持apply_field, apply_more(可同时创建多个field)等操作
+        # 同时我们增加一个seq_len的field
+        ds.add_seq_len('raw_words')
+
+    vocab = Vocabulary()
+
+    # 对raw_words列创建词表, 建议把非训练集的dataset放在no_create_entry_dataset参数中
+    # 也可以通过add_word(), add_word_lst()等建立词表，请参考http://www.fastnlp.top/docs/fastNLP/tutorials/tutorial_2_vocabulary.html
+    vocab.from_dataset(data_bundle.get_dataset('train'), field_name='raw_words', 
+                    no_create_entry_dataset=[data_bundle.get_dataset('dev'), 
+                                                data_bundle.get_dataset('test')]) 
+
+    # 将建立好词表的Vocabulary用于对raw_words列建立词表，并把转为序号的列存入到words列
+    vocab.index_dataset(data_bundle.get_dataset('train'), data_bundle.get_dataset('dev'), 
+                    data_bundle.get_dataset('test'), field_name='raw_words', new_field_name='words')
+
+    # 建立target的词表，target的词表一般不需要padding和unknown
+    target_vocab = Vocabulary(padding=None, unknown=None) 
+    # 一般情况下我们可以只用训练集建立target的词表
+    target_vocab.from_dataset(data_bundle.get_dataset('train'), field_name='target') 
+    # 如果没有传递new_field_name, 则默认覆盖原词表
+    target_vocab.index_dataset(data_bundle.get_dataset('train'), data_bundle.get_dataset('dev'), 
+                    data_bundle.get_dataset('test'), field_name='target')
+
+    # 我们可以把词表保存到data_bundle中，方便之后使用
+    data_bundle.set_vocab(field_name='words', vocab=vocab)
+    data_bundle.set_vocab(field_name='target', vocab=target_vocab)
+
+    # 我们把words和target分别设置为input和target，这样它们才会在训练循环中被取出并自动padding, 有关这部分更多的内容参考
+    #  http://www.fastnlp.top/docs/fastNLP/tutorials/tutorial_6_datasetiter.html
+    data_bundle.set_target('target')
+    data_bundle.set_input('words')  # DataSet也有这两个接口
+    # 如果某些field，您希望它被设置为target或者input，但是不希望fastNLP自动padding或需要使用特定的padding方式，请参考
+    #  http://www.fastnlp.top/docs/fastNLP/fastNLP.core.dataset.html
+
+    print(data_bundle.get_dataset('train')[:2])  # 我们可以看一下当前dataset的内容
+
+    # +--------+-----------------------+-----------------------+----------------------+
+    # | target | raw_chars             | raw_words             | words                |
+    # +--------+-----------------------+-----------------------+----------------------+
+    # | 0      | 选择珠江花园的原因... | ['选择', '珠江', ...  | [2, 3, 4, 5, 6, 7... |
+    # | 0      | 15.4寸笔记本的键盘... | ['15.4', '寸', '笔... | [71, 72, 73, 74, ... |
+    # +--------+-----------------------+-----------------------+----------------------+
+
+    # 由于之后需要使用之前定义的BiLSTMMaxPoolCls模型，所以需要将words这个field修改为chars
+    data_bundle.rename_field('words', 'chars')
+
+我们可以打印一下vocab看一下当前的词表内容
+
+.. code-block:: python
+
+    print(data_bundle.get_vocab('chars'))
+    # Vocabulary([选择, 珠江, 花园, 的, 原因]...)
+
+(3) 选择预训练词向量
+~~~~~~~~~~~~~~~~~~~~
+
+这里我们选择腾讯的预训练中文词向量，可以在 腾讯词向量_ 处下载并解压。这里我们不能直接使用BERT，因为BERT是基于中文字进行预训练的。
+
+.. _腾讯词向量: https://ai.tencent.com/ailab/nlp/en/embedding.html
+
+下面我们使用 :mod:`fastNLP.embeddings` 加载该词向量，fastNLP会抽取vocabulary中包含的词的向量，并随机初始化不包含在文件中的词语的词向量。
+
+.. code-block:: python
+
+        from fastNLP.embeddings import StaticEmbedding
+
+        word2vec_embed = StaticEmbedding(data_bundle.get_vocab('chars'), model_dir_or_name='/path/to/Tencent_AILab_ChineseEmbedding.txt')
+
+再之后的模型定义与训练过程与上面是一致的，这里就不再赘述了。
+
+
 
 ----------------------------------
 代码下载
@@ -376,3 +539,4 @@ fastNLP提供了Trainer对象来组织训练过程，包括完成loss计算(所�
 .. raw:: html
 
     <a href="../_static/notebooks/%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB.ipynb" download="文本分类.ipynb">点击下载 IPython Notebook 文件 </a><hr>
+

@@ -251,7 +251,7 @@ class _RobertaWordModel(nn.Module):
         self._sep_index = self.tokenizer.encoder['</s>']
         self._word_pad_index = vocab.padding_idx
         self._wordpiece_pad_index = self.tokenizer.encoder['<pad>']  # 需要用于生成word_piece
-        self.word_to_wordpieces = np.array(word_to_wordpieces)
+        self.word_to_wordpieces = np.array(word_to_wordpieces, dtype=object)
         self.register_buffer('word_pieces_lengths', torch.LongTensor(word_pieces_lengths))
         logger.debug("Successfully generate word pieces.")
 

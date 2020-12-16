@@ -3,6 +3,5 @@ torch>=1.0.0
 tqdm>=4.28.1
 prettytable>=0.7.2
 requests
-spacy
 prettytable>=0.7.2
 regex!=2019.12.17

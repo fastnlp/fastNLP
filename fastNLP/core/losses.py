@@ -10,6 +10,7 @@ __all__ = [
     
     "CrossEntropyLoss",
     "BCELoss",
+    "BCEWithLogits",
     "L1Loss",
     "NLLLoss",
     "MSELoss",
@@ -309,6 +310,25 @@ class BCELoss(LossBase):
     
     def get_loss(self, pred, target):
         return F.binary_cross_entropy(input=pred, target=target, reduction=self.reduction)
+
+
+class BCEWithLogits(LossBase):
+    r"""
+    二分类交叉熵损失函数, 传入数据之前不需要做sigmoid操作
+
+    :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
+    :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
+    :param str reduction: 支持 `mean` ，`sum` 和 `none` .
+    """
+
+    def __init__(self, pred=None, target=None, reduction='mean'):
+        super(BCEWithLogits, self).__init__()
+        self._init_param_map(pred=pred, target=target)
+        assert reduction in ('mean', 'sum', 'none')
+        self.reduction = reduction
+
+    def get_loss(self, pred, target):
+        return F.binary_cross_entropy_with_logits(input=pred, target=target, reduction=self.reduction)
 
 
 class NLLLoss(LossBase):

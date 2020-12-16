@@ -108,7 +108,7 @@ class BertEmbedding(ContextualEmbedding):
             self._word_sep_index = vocab['[SEP]']
         self._word_cls_index = -100
         if '[CLS]' in vocab:
-            self._word_cls_index = vocab['CLS']
+            self._word_cls_index = vocab['[CLS]']
 
         min_freq = kwargs.get('min_freq', 1)
         self._min_freq = min_freq
@@ -427,7 +427,7 @@ class _BertWordModel(nn.Module):
         self._sep_index = self.tokenzier.vocab['[SEP]']
         self._word_pad_index = vocab.padding_idx
         self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
-        self.word_to_wordpieces = np.array(word_to_wordpieces)
+        self.word_to_wordpieces = np.array(word_to_wordpieces, dtype=object)
         self.register_buffer('word_pieces_lengths', torch.LongTensor(word_pieces_lengths))
         logger.debug("Successfully generate word pieces.")
 
