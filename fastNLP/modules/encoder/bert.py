@@ -184,21 +184,23 @@ class DistilBertEmbeddings(nn.Module):
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=1e-12)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, input_ids, token_type_ids):
+    def forward(self, input_ids, token_type_ids, position_ids=None):
         r"""
         Parameters
         ----------
         input_ids: torch.tensor(bs, max_seq_length)
             The token ids to embed.
         token_type_ids: no used.
+        position_ids: no used.
         Outputs
         -------
         embeddings: torch.tensor(bs, max_seq_length, dim)
             The embedded tokens (plus position embeddings, no token_type embeddings)
         """
         seq_length = input_ids.size(1)
-        position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device) # (max_seq_length)
-        position_ids = position_ids.unsqueeze(0).expand_as(input_ids)                      # (bs, max_seq_length)
+        if position_ids is None:
+            position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device) # (max_seq_length)
+            position_ids = position_ids.unsqueeze(0).expand_as(input_ids)                      # (bs, max_seq_length)
 
         word_embeddings = self.word_embeddings(input_ids)                   # (bs, max_seq_length, dim)
         position_embeddings = self.position_embeddings(position_ids)        # (bs, max_seq_length, dim)
