@@ -11,7 +11,8 @@ __all__ = ['SequenceGeneratorModel']
 
 class SequenceGeneratorModel(nn.Module):
     """
-    用于封装Seq2SeqModel使其可以做生成任务
+    通过使用本模型封装seq2seq_model使得其既可以用于训练也可以用于生成。训练的时候，本模型的forward函数会被调用，生成的时候本模型的predict
+        函数会被调用。
 
     """
 
@@ -46,7 +47,7 @@ class SequenceGeneratorModel(nn.Module):
 
     def forward(self, src_tokens, tgt_tokens, src_seq_len=None, tgt_seq_len=None):
         """
-        透传调用seq2seq_model的forward
+        透传调用seq2seq_model的forward。
 
         :param torch.LongTensor src_tokens: bsz x max_len
         :param torch.LongTensor tgt_tokens: bsz x max_len'
@@ -58,7 +59,7 @@ class SequenceGeneratorModel(nn.Module):
 
     def predict(self, src_tokens, src_seq_len=None):
         """
-        给定source的内容，输出generate的内容
+        给定source的内容，输出generate的内容。
 
         :param torch.LongTensor src_tokens: bsz x max_len
         :param torch.LongTensor src_seq_len: bsz

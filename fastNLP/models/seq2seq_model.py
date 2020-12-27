@@ -18,10 +18,16 @@ __all__ = ['Seq2SeqModel', 'TransformerSeq2SeqModel', 'LSTMSeq2SeqModel']
 class Seq2SeqModel(nn.Module):
     def __init__(self, encoder: Seq2SeqEncoder, decoder: Seq2SeqDecoder):
         """
-        可以用于在Trainer中训练的Seq2Seq模型。正常情况下，继承了该函数之后，只需要实现classmethod build_model即可。
+        可以用于在Trainer中训练的Seq2Seq模型。正常情况下，继承了该函数之后，只需要实现classmethod build_model即可。如果需要使用该模型
+            进行生成，需要把该模型输入到 :class:`~fastNLP.models.SequenceGeneratorModel` 中。在本模型中，forward()会把encoder后的
+            结果传入到decoder中，并将decoder的输出output出来。
 
-        :param encoder: Encoder
-        :param decoder: Decoder
+        :param encoder: Seq2SeqEncoder 对象，需要实现对应的forward()函数，接受两个参数，第一个为bsz x max_len的source tokens, 第二个为
+            bsz的source的长度；需要返回两个tensor: encoder_outputs: bsz x max_len x hidden_size, encoder_mask: bsz x max_len
+            为1的地方需要被attend。如果encoder的输出或者输入有变化，可以重载本模型的prepare_state()函数或者forward()函数
+        :param decoder: Seq2SeqDecoder 对象，需要实现init_state()函数，输出为两个参数，第一个为bsz x max_len x hidden_size是
+            encoder的输出; 第二个为bsz x max_len，为encoder输出的mask，为0的地方为pad。若decoder需要更多输入，请重载当前模型的
+            prepare_state()或forward()函数
         """
         super().__init__()
         self.encoder = encoder

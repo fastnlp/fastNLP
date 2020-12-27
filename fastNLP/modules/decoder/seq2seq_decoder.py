@@ -16,7 +16,7 @@ __all__ = ['Seq2SeqDecoder', 'TransformerSeq2SeqDecoder', 'LSTMSeq2SeqDecoder']
 
 class Seq2SeqDecoder(nn.Module):
     """
-    Sequence-to-Sequence Decoder的基类。一定需要实现forward函数，剩下的函数根据需要实现。每个Seq2SeqDecoder都应该有相应的State对象
+    Sequence-to-Sequence Decoder的基类。一定需要实现forward、decode函数，剩下的函数根据需要实现。每个Seq2SeqDecoder都应该有相应的State对象
         用来承载该Decoder所需要的Encoder输出、Decoder需要记录的历史信息(例如LSTM的hidden信息)。
 
     """
@@ -61,7 +61,7 @@ class Seq2SeqDecoder(nn.Module):
         """
         根据states中的内容，以及tokens中的内容进行之后的生成。
 
-        :param torch.LongTensor tokens: bsz x max_len, 上一个时刻的token输出。
+        :param torch.LongTensor tokens: bsz x max_len, 截止到上一个时刻所有的token输出。
         :param State state: 记录了encoder输出与decoder过去状态
         :return: torch.FloatTensor: bsz x vocab_size, 输出的是下一个时刻的分布
         """

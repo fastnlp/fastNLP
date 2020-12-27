@@ -259,8 +259,8 @@ def _get_base_url(name):
             return url + '/'
     else:
         URLS = {
-            'embedding': "http://212.129.155.247/embedding/",
-            "dataset": "http://212.129.155.247/dataset/"
+            'embedding': "http://download.fastnlp.top/embedding/",
+            "dataset": "http://download.fastnlp.top/dataset/"
         }
         if name.lower() not in URLS:
             raise KeyError(f"{name} is not recognized.")
