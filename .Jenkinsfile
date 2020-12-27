@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'ubuntu_tester'
-            args '-u root:root -v ${HOME}/html/docs:/docs -v ${HOME}/html/_ci:/ci'
+            args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci'
         }
     }
     environment {
