@@ -371,6 +371,10 @@ from .field import SetInputOrTargetException
 from .instance import Instance
 from .utils import pretty_table_printer
 from .collate_fn import Collater
+try:
+    from tqdm.auto import tqdm
+except:
+    from .utils import _pseudo_tqdm as tqdm
 
 
 class ApplyResultException(Exception):
@@ -860,6 +864,11 @@ class DataSet(object):
             2. is_target: bool, 如果为True则将名为 `new_field_name` 的field设置为target
 
             3. ignore_type: bool, 如果为True则将名为 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
+
+            4. use_tqdm: bool, 是否使用tqdm显示预处理进度
+
+            5. tqdm_desc: str, 当use_tqdm为True时，可以显示当前tqdm正在处理的名称
+
         :return List[Any]:   里面的元素为func的返回值，所以list长度为DataSet的长度
         """
         assert len(self) != 0, "Null DataSet cannot use apply_field()."
@@ -886,6 +895,10 @@ class DataSet(object):
             2. is_target: bool, 如果为True则将被修改的field设置为target
 
             3. ignore_type: bool, 如果为True则将被修改的field的ignore_type设置为true, 忽略其类型
+
+            4. use_tqdm: bool, 是否使用tqdm显示预处理进度
+
+            5. tqdm_desc: str, 当use_tqdm为True时，可以显示当前tqdm正在处理的名称
 
         :return Dict[str:Field]: 返回一个字典
         """
@@ -949,6 +962,10 @@ class DataSet(object):
 
             3. ignore_type: bool, 如果为True则将被修改的的field的ignore_type设置为true, 忽略其类型
 
+            4. use_tqdm: bool, 是否使用tqdm显示预处理进度
+
+            5. tqdm_desc: str, 当use_tqdm为True时，可以显示当前tqdm正在处理的名称
+
         :return Dict[str:Field]: 返回一个字典
         """
         # 返回 dict , 检查是否一直相同
@@ -957,7 +974,9 @@ class DataSet(object):
         idx = -1
         try:
             results = {}
-            for idx, ins in enumerate(self._inner_iter()):
+            for idx, ins in tqdm(enumerate(self._inner_iter()), total=len(self), dynamic_ncols=True,
+                                 desc=kwargs.get('tqdm_desc', ''),
+                                 leave=False, disable=not kwargs.get('use_tqdm', False)):
                 if "_apply_field" in kwargs:
                     res = func(ins[kwargs["_apply_field"]])
                 else:
@@ -1001,6 +1020,10 @@ class DataSet(object):
             2. is_target: bool, 如果为True则将 `new_field_name` 的field设置为target
 
             3. ignore_type: bool, 如果为True则将 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
+
+            4. use_tqdm: bool, 是否使用tqdm显示预处理进度
+
+            5. tqdm_desc: str, 当use_tqdm为True时，可以显示当前tqdm正在处理的名称
             
         :return List[Any]: 里面的元素为func的返回值，所以list长度为DataSet的长度
         """
@@ -1009,7 +1032,9 @@ class DataSet(object):
         idx = -1
         try:
             results = []
-            for idx, ins in enumerate(self._inner_iter()):
+            for idx, ins in tqdm(enumerate(self._inner_iter()), total=len(self), dynamic_ncols=True, leave=False,
+                                 desc=kwargs.get('tqdm_desc', ''),
+                                 disable=not kwargs.get('use_tqdm', False)):
                 if "_apply_field" in kwargs:
                     results.append(func(ins[kwargs["_apply_field"]]))
                 else:

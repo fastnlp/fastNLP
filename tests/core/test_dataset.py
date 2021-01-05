@@ -136,6 +136,14 @@ class TestDataSetMethods(unittest.TestCase):
         ds.apply(lambda ins: (len(ins["x"]), "hahaha"), new_field_name="k", ignore_type=True)
         # expect no exception raised
 
+    def test_apply_tqdm(self):
+        import time
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
+        def do_nothing(ins):
+            time.sleep(0.01)
+        ds.apply(do_nothing, use_tqdm=True)
+        ds.apply_field(do_nothing, field_name='x', use_tqdm=True)
+
     def test_apply_cannot_modify_instance(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
         def modify_inplace(instance):

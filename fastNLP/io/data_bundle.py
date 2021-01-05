@@ -321,8 +321,15 @@ class DataBundle:
             2. is_target: bool, 如果为True则将名为 `new_field_name` 的field设置为target
 
             3. ignore_type: bool, 如果为True则将名为 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
+
+            4. use_tqdm: bool, 是否显示tqdm进度条
+
+            5. tqdm_desc: str, 当use_tqdm为True时，可以显示当前tqdm正在处理的名称
         """
+        tqdm_desc = kwargs.get('tqdm_desc', '')
         for name, dataset in self.datasets.items():
+            if tqdm_desc != '':
+                kwargs['tqdm_desc'] = tqdm_desc + f' for `{name}`'
             if dataset.has_field(field_name=field_name):
                 dataset.apply_field(func=func, field_name=field_name, new_field_name=new_field_name, **kwargs)
             elif not ignore_miss_dataset:
@@ -350,10 +357,17 @@ class DataBundle:
 
             3. ignore_type: bool, 如果为True则将被修改的field的ignore_type设置为true, 忽略其类型
 
+            4. use_tqdm: bool, 是否显示tqdm进度条
+
+            5. tqdm_desc: str, 当use_tqdm为True时，可以显示当前tqdm正在处理的名称
+
         :return Dict[str:Dict[str:Field]]: 返回一个字典套字典，第一层的 key 是 dataset 的名字，第二层的 key 是 field 的名字
         """
         res = {}
+        tqdm_desc = kwargs.get('tqdm_desc', '')
         for name, dataset in self.datasets.items():
+            if tqdm_desc != '':
+                kwargs['tqdm_desc'] = tqdm_desc + f' for `{name}`'
             if dataset.has_field(field_name=field_name):
                 res[name] = dataset.apply_field_more(func=func, field_name=field_name, modify_fields=modify_fields, **kwargs)
             elif not ignore_miss_dataset:
@@ -376,8 +390,16 @@ class DataBundle:
             2. is_target: bool, 如果为True则将名为 `new_field_name` 的field设置为target
 
             3. ignore_type: bool, 如果为True则将名为 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
+
+            4. use_tqdm: bool, 是否显示tqdm进度条
+
+            5. tqdm_desc: str, 当use_tqdm为True时，可以显示当前tqdm正在处理的名称
+
         """
+        tqdm_desc = kwargs.get('tqdm_desc', '')
         for name, dataset in self.datasets.items():
+            if tqdm_desc != '':
+                kwargs['tqdm_desc'] = tqdm_desc + f' for `{name}`'
             dataset.apply(func, new_field_name=new_field_name, **kwargs)
         return self
 
@@ -399,10 +421,17 @@ class DataBundle:
 
             3. ignore_type: bool, 如果为True则将被修改的的field的ignore_type设置为true, 忽略其类型
 
+            4. use_tqdm: bool, 是否显示tqdm进度条
+
+            5. tqdm_desc: str, 当use_tqdm为True时，可以显示当前tqdm正在处理的名称
+
         :return Dict[str:Dict[str:Field]]: 返回一个字典套字典，第一层的 key 是 dataset 的名字，第二层的 key 是 field 的名字
         """
         res = {}
+        tqdm_desc = kwargs.get('tqdm_desc', '')
         for name, dataset in self.datasets.items():
+            if tqdm_desc!='':
+                kwargs['tqdm_desc'] = tqdm_desc + f' for `{name}`'
             res[name] = dataset.apply_more(func, modify_fields=modify_fields, **kwargs)
         return res
 
