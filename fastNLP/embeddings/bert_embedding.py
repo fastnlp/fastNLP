@@ -393,7 +393,7 @@ class _BertWordModel(nn.Module):
                 else:
                     pos_num_output_layer = max(layer, pos_num_output_layer)
 
-        self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
+        self.tokenizer = BertTokenizer.from_pretrained(model_dir_or_name)
         self.encoder = BertModel.from_pretrained(model_dir_or_name,
                                                  neg_num_output_layer=neg_num_output_layer,
                                                  pos_num_output_layer=pos_num_output_layer,
@@ -432,14 +432,14 @@ class _BertWordModel(nn.Module):
                 word = '[UNK]'
             elif vocab.word_count[word] < min_freq:
                 word = '[UNK]'
-            word_pieces = self.tokenzier.wordpiece_tokenizer.tokenize(word)
-            word_pieces = self.tokenzier.convert_tokens_to_ids(word_pieces)
+            word_pieces = self.tokenizer.wordpiece_tokenizer.tokenize(word)
+            word_pieces = self.tokenizer.convert_tokens_to_ids(word_pieces)
             word_to_wordpieces.append(word_pieces)
             word_pieces_lengths.append(len(word_pieces))
-        self._cls_index = self.tokenzier.vocab['[CLS]']
-        self._sep_index = self.tokenzier.vocab['[SEP]']
+        self._cls_index = self.tokenizer.vocab['[CLS]']
+        self._sep_index = self.tokenizer.vocab['[SEP]']
         self._word_pad_index = vocab.padding_idx
-        self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
+        self._wordpiece_pad_index = self.tokenizer.vocab['[PAD]']  # 需要用于生成word_piece
         self.word_to_wordpieces = np.array(word_to_wordpieces, dtype=object)
         self.register_buffer('word_pieces_lengths', torch.LongTensor(word_pieces_lengths))
         logger.debug("Successfully generate word pieces.")
@@ -566,7 +566,7 @@ class _BertWordModel(nn.Module):
         :param str folder:
         :return:
         """
-        self.tokenzier.save_pretrained(folder)
+        self.tokenizer.save_pretrained(folder)
         self.encoder.save_pretrained(folder)
 
 
@@ -579,7 +579,7 @@ class _BertWordPieceModel(nn.Module):
     def __init__(self, model_dir_or_name: str, layers: str = '-1', pooled_cls: bool=False):
         super().__init__()
 
-        self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
+        self.tokenizer = BertTokenizer.from_pretrained(model_dir_or_name)
         self.encoder = BertModel.from_pretrained(model_dir_or_name)
         #  检查encoder_layer_number是否合理
         encoder_layer_number = len(self.encoder.encoder.layer)
@@ -599,10 +599,10 @@ class _BertWordPieceModel(nn.Module):
                 assert layer <= encoder_layer_number, f"The layer index:{layer} is out of scope for " \
                     f"a bert model with {encoder_layer_number} layers."
 
-        self._cls_index = self.tokenzier.cls_index
-        self._sep_index = self.tokenzier.sep_index
-        self._wordpiece_unknown_index = self.tokenzier.unk_index
-        self._wordpiece_pad_index = self.tokenzier.pad_index  # 需要用于生成word_piece
+        self._cls_index = self.tokenizer.cls_index
+        self._sep_index = self.tokenizer.sep_index
+        self._wordpiece_unknown_index = self.tokenizer.unk_index
+        self._wordpiece_pad_index = self.tokenizer.pad_index  # 需要用于生成word_piece
         self.pooled_cls = pooled_cls
 
     def index_datasets(self, *datasets, field_name, add_cls_sep=True):
@@ -615,7 +615,7 @@ class _BertWordPieceModel(nn.Module):
         :return:
         """
 
-        encode_func = partial(self.tokenzier.encode, add_special_tokens=add_cls_sep)
+        encode_func = partial(self.tokenizer.encode, add_special_tokens=add_cls_sep)
 
         for index, dataset in enumerate(datasets):
             try:
@@ -654,5 +654,5 @@ class _BertWordPieceModel(nn.Module):
         :param folder:
         :return:
         """
-        self.tokenzier.save_pretrained(folder)
+        self.tokenizer.save_pretrained(folder)
         self.encoder.save_pretrained(folder)

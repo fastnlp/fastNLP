@@ -328,7 +328,7 @@ def _beam_search_generate(decoder: Seq2SeqDecoder, tokens=None, state=None, max_
             max_len_eos_mask = max_lengths.eq(cur_len+1)
             eos_scores = scores[:, _eos_token_id]
             # 如果已经达到最大长度，就把eos的分数加大
-            scores[:, _eos_token_id] = torch.where(max_len_eos_mask, eos_scores+1e12, eos_scores)
+            scores[:, _eos_token_id] = torch.where(max_len_eos_mask, eos_scores+1e32, eos_scores)
 
         if do_sample:
             if temperature > 0 and temperature != 1:

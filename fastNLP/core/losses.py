@@ -217,7 +217,7 @@ class CrossEntropyLoss(LossBase):
         或(batch_size, num_classes, max_len)， CrossEntropyLoss需要知道哪一维是class的维度以计算loss。如果为-1，就根据pred的第
         二维是否等于target的第二维来判断是否需要交换pred的第二维和第三维，因为target的第二维是length的维度，如果这一维度上和pred相等，
         那么pred可能第二维也是长度维(存在误判的可能，如果有误判的情况，请显示设置该值)。其它大于0的值则认为该维度是class的维度。
-    :param padding_idx: padding的index，在计算loss时将忽略target中标号为padding_idx的内容, 可以通过该值代替
+    :param ignore_idx: padding的index，在计算loss时将忽略target中标号为padding_idx的内容, 可以通过该值代替
         传入seq_len.
     :param str reduction: 支持 `mean` ，`sum` 和 `none` .
 
@@ -227,10 +227,11 @@ class CrossEntropyLoss(LossBase):
         
     """
     
-    def __init__(self, pred=None, target=None, seq_len=None, class_in_dim=-1, padding_idx=-100, reduction='mean'):
+    def __init__(self, pred=None, target=None, seq_len=None, class_in_dim=-1, ignore_idx=-100, reduction='mean', **kwargs):
         super(CrossEntropyLoss, self).__init__()
         self._init_param_map(pred=pred, target=target, seq_len=seq_len)
-        self.padding_idx = padding_idx
+        ignore_idx = kwargs.pop('padding_idx', ignore_idx)
+        self.ignore_idx = ignore_idx
         assert reduction in ('mean', 'sum', 'none')
         self.reduction = reduction
         self.class_in_dim = class_in_dim
@@ -238,7 +239,7 @@ class CrossEntropyLoss(LossBase):
     def get_loss(self, pred, target, seq_len=None):
         if seq_len is not None and target.dim()>1:
             mask = seq_len_to_mask(seq_len, max_len=target.size(1)).eq(False)
-            target = target.masked_fill(mask, self.padding_idx)
+            target = target.masked_fill(mask, self.ignore_idx)
 
         if pred.dim() > 2:
             if self.class_in_dim == -1:
@@ -250,7 +251,7 @@ class CrossEntropyLoss(LossBase):
             target = target.reshape(-1)
 
         return F.cross_entropy(input=pred, target=target,
-                               ignore_index=self.padding_idx, reduction=self.reduction)
+                               ignore_index=self.ignore_idx, reduction=self.reduction)
 
 
 class L1Loss(LossBase):
@@ -318,16 +319,30 @@ class BCEWithLogits(LossBase):
 
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
     :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
+    :param int class_in_dim: 在序列标注的场景中，pred可能的shape为(batch_size, max_len, num_classes)
+    或(batch_size, num_classes, max_len)， CrossEntropyLoss需要知道哪一维是class的维度以计算loss。如果为-1，就根据pred的第
+    二维是否等于target的第二维来判断是否需要交换pred的第二维和第三维，因为target的第二维是length的维度，如果这一维度上和pred相等，
+    那么pred可能第二维也是长度维(存在误判的可能，如果有误判的情况，请显示设置该值)。其它大于0的值则认为该维度是class的维度。
     :param str reduction: 支持 `mean` ，`sum` 和 `none` .
     """
 
-    def __init__(self, pred=None, target=None, reduction='mean'):
+    def __init__(self, pred=None, target=None, class_in_dim=-1, reduction='mean'):
         super(BCEWithLogits, self).__init__()
         self._init_param_map(pred=pred, target=target)
         assert reduction in ('mean', 'sum', 'none')
         self.reduction = reduction
+        self.class_in_dim = class_in_dim
 
     def get_loss(self, pred, target):
+        if pred.dim() > 2:
+            if self.class_in_dim == -1:
+                if pred.size(1) != target.size(1):  # 有可能顺序替换了
+                    pred = pred.transpose(1, 2)
+            else:
+                pred = pred.transpose(-1, self.class_in_dim)
+            pred = pred.reshape(-1, pred.size(-1))
+            target = target.reshape(-1)
+
         return F.binary_cross_entropy_with_logits(input=pred, target=target, reduction=self.reduction)
 
 
@@ -336,22 +351,41 @@ class NLLLoss(LossBase):
     负对数似然损失函数
     """
     
-    def __init__(self, pred=None, target=None, ignore_idx=-100, reduction='mean'):
+    def __init__(self, pred=None, target=None, seq_len=None, class_in_dim=-1, ignore_idx=-100, reduction='mean'):
         r"""
         
         :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
         :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
+        :param seq_len: 句子的长度, 长度之外的token不会计算loss。仅在输出为3d时需要
+        :param int class_in_dim: 在序列标注的场景中，pred可能的shape为(batch_size, max_len, num_classes)
+        或(batch_size, num_classes, max_len)， CrossEntropyLoss需要知道哪一维是class的维度以计算loss。如果为-1，就根据pred的第
+        二维是否等于target的第二维来判断是否需要交换pred的第二维和第三维，因为target的第二维是length的维度，如果这一维度上和pred相等，
+        那么pred可能第二维也是长度维(存在误判的可能，如果有误判的情况，请显示设置该值)。其它大于0的值则认为该维度是class的维度。
         :param ignore_idx: ignore的index，在计算loss时将忽略target中标号为ignore_idx的内容, 可以通过该值代替
             传入seq_len.
         :param str reduction: 支持 `mean` ，`sum` 和 `none` .
         """
         super(NLLLoss, self).__init__()
-        self._init_param_map(pred=pred, target=target)
+        self._init_param_map(pred=pred, target=target, seq_len=seq_len)
         assert reduction in ('mean', 'sum', 'none')
         self.reduction = reduction
         self.ignore_idx = ignore_idx
+        self.class_in_dim = class_in_dim
     
-    def get_loss(self, pred, target):
+    def get_loss(self, pred, target, seq_len=None):
+        if seq_len is not None and target.dim()>1:
+            mask = seq_len_to_mask(seq_len, max_len=target.size(1)).eq(False)
+            target = target.masked_fill(mask, self.ignore_idx)
+
+        if pred.dim() > 2:
+            if self.class_in_dim == -1:
+                if pred.size(1) != target.size(1):  # 有可能顺序替换了
+                    pred = pred.transpose(1, 2)
+            else:
+                pred = pred.transpose(-1, self.class_in_dim)
+            pred = pred.reshape(-1, pred.size(-1))
+            target = target.reshape(-1)
+
         return F.nll_loss(input=pred, target=target, ignore_index=self.ignore_idx, reduction=self.reduction)
 
 

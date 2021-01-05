@@ -523,6 +523,7 @@ class Trainer(object):
             self._forward_func = self.model.forward
 
         self.fp16 = fp16
+        self.verbose = kwargs.get('verbose', 0)
 
         # check fp16相关的设置
         self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not fp16)
@@ -608,7 +609,7 @@ class Trainer(object):
         self.callback_manager = CallbackManager(env={"trainer": self},
                                                 callbacks=callbacks)
 
-    def train(self, load_best_model=True, on_exception='auto'):
+    def train(self, load_best_model=True, on_exception='auto', **kwargs):
         r"""
         使用该函数使Trainer开始训练。
 
@@ -617,6 +618,8 @@ class Trainer(object):
         :param str on_exception: 在训练过程遭遇exception，并被 :py:class:Callback 的on_exception()处理后，是否继续抛出异常。
                 支持'ignore','raise', 'auto': 'ignore'将捕获异常，写在Trainer.train()后面的代码将继续运行; 'raise'将异常抛出;
                 'auto'将ignore以下两种Exception: CallbackException与KeyboardInterrupt, raise其它exception.
+       :param kwargs:
+                int verbose: 为1时在发生异常时会打印异常发生时batch中的数据在dataset中的index
         :return dict: 返回一个字典类型的数据,
                 内含以下内容::
 
@@ -629,6 +632,7 @@ class Trainer(object):
 
         """
         results = {}
+        verbose = kwargs.get('verbose', 0)
         if self.n_epochs <= 0:
             self.logger.info(f"training epoch is {self.n_epochs}, nothing was done.")
             results['seconds'] = 0.
@@ -650,6 +654,8 @@ class Trainer(object):
 
             except BaseException as e:
                 self.callback_manager.on_exception(e)
+                if verbose>0:
+                    self.logger.info(f"The data indices for current batch are: {self.data_iterator.cur_batch_indices}.")
                 if on_exception == 'auto':
                     if not isinstance(e, (CallbackException, KeyboardInterrupt)):
                         raise e

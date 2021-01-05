@@ -322,7 +322,8 @@ class SortedSampler(Sampler):
     def __init__(self, seq_len_field_name='seq_len', descending=True):
         """
 
-        :param str seq_len_field_name: 对应序列长度的 `field` 的名字
+        :param str seq_len_field_name: 按哪个field进行排序。如果传入的field是数字，则直接按照该数字大小排序；如果传入的field不是
+            数字，则使用该field的长度进行排序
         :param bool descending: 是否降序排列
         """
         self.seq_len_field_name = seq_len_field_name
@@ -330,6 +331,11 @@ class SortedSampler(Sampler):
 
     def __call__(self, data_set):
         seq_lens = data_set.get_field(self.seq_len_field_name).content
+        try:
+            seq_lens = list(map(len, seq_lens))
+        except:
+            pass
+
         orders = np.argsort(seq_lens).tolist()  # 从小到大的顺序
         if self.descending:
             orders = orders[::-1]
