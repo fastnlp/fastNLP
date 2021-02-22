@@ -268,7 +268,7 @@ def _prepare_cache_filepath(filepath):
         raise RuntimeError("The cache_file_path must be a file, not a directory.")
     cache_dir = os.path.dirname(_cache_filepath)
     if not os.path.exists(cache_dir):
-        os.makedirs(cache_dir)
+        os.makedirs(cache_dir, exist_ok=True)
 
 
 def cache_results(_cache_fp, _refresh=False, _verbose=1):
