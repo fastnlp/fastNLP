@@ -1,4 +1,7 @@
 import os
+# have to add this, otherwise cannot import fastNLP when check_call()
+import sys
+sys.path.append(os.sep.join(os.path.abspath(__file__).split(os.sep)[:-3]))
 import shutil
 import subprocess
 import unittest

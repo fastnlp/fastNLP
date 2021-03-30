@@ -933,7 +933,8 @@ class DataSet(object):
             if 'ignore_type' not in extra_param:
                 extra_param['ignore_type'] = old_field.ignore_type
             self.add_field(field_name=new_field_name, fields=results, is_input=extra_param["is_input"],
-                           is_target=extra_param["is_target"], ignore_type=extra_param['ignore_type'])
+                           is_target=extra_param["is_target"], ignore_type=extra_param['ignore_type'],
+                           padder=self.get_field(new_field_name).padder)
         else:
             self.add_field(field_name=new_field_name, fields=results, is_input=extra_param.get("is_input", None),
                            is_target=extra_param.get("is_target", None),

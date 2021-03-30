@@ -327,6 +327,23 @@ class TestDataSetMethods(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             ds3 = ds1.concat(ds2, field_mapping={'X':'x'})
 
+    def test_no_padder(self):
+        ds = DataSet()
+        ds.add_field('idx', [1, 2, 3], padder=None)
+        self.assertEqual(ds['idx'].padder, None)  # should be None, but AutoPadder
+
+    def test_copy_padder(self):
+        from fastNLP.core.field import AutoPadder
+        ds = DataSet()
+        ds.add_field('idx', [1, 2, 3])
+        ds['idx'].set_padder(None)  # workaround of problem 1
+        ds.apply_field(lambda x: x, 'idx', 'idx')
+        self.assertEqual(ds['idx'].padder, None)  # should be None, but AutoPadder
+
+        ds = DataSet()
+        ds.add_field('idx', [1, 2, 3])
+        ds.apply_field(lambda x: x, 'idx', 'idx')
+        self.assertTrue(isinstance(ds.get_field('idx').padder, AutoPadder))  # should be None, but AutoPadder
 
 class TestDataSetIter(unittest.TestCase):
     def test__repr__(self):
