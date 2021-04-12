@@ -445,7 +445,7 @@ class TestCase1(unittest.TestCase):
         sample_count = 0
         for batch_x, batch_y in data_iter:
             sample_count += len(batch_x['seq_len'])
-            self.assertTrue(sum(batch_x['seq_len'])<120)
+            self.assertTrue(sum(batch_x['seq_len'])<=120)
         self.assertEqual(sample_count, num_samples)
 
     """
