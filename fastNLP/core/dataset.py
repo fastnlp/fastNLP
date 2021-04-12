@@ -371,6 +371,10 @@ from .field import SetInputOrTargetException
 from .instance import Instance
 from .utils import pretty_table_printer
 from .collate_fn import Collater
+try:
+    from tqdm.auto import tqdm
+except:
+    from .utils import _pseudo_tqdm as tqdm
 
 
 class ApplyResultException(Exception):
@@ -531,11 +535,11 @@ class DataSet(object):
             |  pad_value  |   0   |       |
             +-------------+-------+-------+
 
-        :param field_names: DataSet中field的名称
-        :param is_input: field是否为input
-        :param is_target: field是否为target
-        :param ignore_type: 是否忽略该field的type, 一般仅在该field至少为input或target时才有意义
-        :param pad_value: 该field的pad的值，仅在该field为input或target时有意义
+        str field_names: DataSet中field的名称
+        bool is_input: field是否为input
+        bool is_target: field是否为target
+        bool ignore_type: 是否忽略该field的type, 一般仅在该field至少为input或target时才有意义
+        int pad_value: 该field的pad的值，仅在该field为input或target时有意义
         :return:
         """
         if len(self.field_arrays)>0:
@@ -860,6 +864,11 @@ class DataSet(object):
             2. is_target: bool, 如果为True则将名为 `new_field_name` 的field设置为target
 
             3. ignore_type: bool, 如果为True则将名为 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
+
+            4. use_tqdm: bool, 是否使用tqdm显示预处理进度
+
+            5. tqdm_desc: str, 当use_tqdm为True时，可以显示当前tqdm正在处理的名称
+
         :return List[Any]:   里面的元素为func的返回值，所以list长度为DataSet的长度
         """
         assert len(self) != 0, "Null DataSet cannot use apply_field()."
@@ -886,6 +895,10 @@ class DataSet(object):
             2. is_target: bool, 如果为True则将被修改的field设置为target
 
             3. ignore_type: bool, 如果为True则将被修改的field的ignore_type设置为true, 忽略其类型
+
+            4. use_tqdm: bool, 是否使用tqdm显示预处理进度
+
+            5. tqdm_desc: str, 当use_tqdm为True时，可以显示当前tqdm正在处理的名称
 
         :return Dict[str:Field]: 返回一个字典
         """
@@ -920,7 +933,8 @@ class DataSet(object):
             if 'ignore_type' not in extra_param:
                 extra_param['ignore_type'] = old_field.ignore_type
             self.add_field(field_name=new_field_name, fields=results, is_input=extra_param["is_input"],
-                           is_target=extra_param["is_target"], ignore_type=extra_param['ignore_type'])
+                           is_target=extra_param["is_target"], ignore_type=extra_param['ignore_type'],
+                           padder=self.get_field(new_field_name).padder)
         else:
             self.add_field(field_name=new_field_name, fields=results, is_input=extra_param.get("is_input", None),
                            is_target=extra_param.get("is_target", None),
@@ -949,6 +963,10 @@ class DataSet(object):
 
             3. ignore_type: bool, 如果为True则将被修改的的field的ignore_type设置为true, 忽略其类型
 
+            4. use_tqdm: bool, 是否使用tqdm显示预处理进度
+
+            5. tqdm_desc: str, 当use_tqdm为True时，可以显示当前tqdm正在处理的名称
+
         :return Dict[str:Field]: 返回一个字典
         """
         # 返回 dict , 检查是否一直相同
@@ -957,7 +975,9 @@ class DataSet(object):
         idx = -1
         try:
             results = {}
-            for idx, ins in enumerate(self._inner_iter()):
+            for idx, ins in tqdm(enumerate(self._inner_iter()), total=len(self), dynamic_ncols=True,
+                                 desc=kwargs.get('tqdm_desc', ''),
+                                 leave=False, disable=not kwargs.get('use_tqdm', False)):
                 if "_apply_field" in kwargs:
                     res = func(ins[kwargs["_apply_field"]])
                 else:
@@ -1001,6 +1021,10 @@ class DataSet(object):
             2. is_target: bool, 如果为True则将 `new_field_name` 的field设置为target
 
             3. ignore_type: bool, 如果为True则将 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
+
+            4. use_tqdm: bool, 是否使用tqdm显示预处理进度
+
+            5. tqdm_desc: str, 当use_tqdm为True时，可以显示当前tqdm正在处理的名称
             
         :return List[Any]: 里面的元素为func的返回值，所以list长度为DataSet的长度
         """
@@ -1009,7 +1033,9 @@ class DataSet(object):
         idx = -1
         try:
             results = []
-            for idx, ins in enumerate(self._inner_iter()):
+            for idx, ins in tqdm(enumerate(self._inner_iter()), total=len(self), dynamic_ncols=True, leave=False,
+                                 desc=kwargs.get('tqdm_desc', ''),
+                                 disable=not kwargs.get('use_tqdm', False)):
                 if "_apply_field" in kwargs:
                     results.append(func(ins[kwargs["_apply_field"]]))
                 else:
@@ -1146,3 +1172,40 @@ class DataSet(object):
 
     def _collate_batch(self, ins_list):
         return self.collater.collate_batch(ins_list)
+
+    def concat(self, dataset, inplace=True, field_mapping=None):
+        """
+        将当前dataset与输入的dataset结合成一个更大的dataset，需要保证两个dataset都包含了相同的field。结合后的dataset的input,target
+            以及collate_fn以当前dataset为准。当dataset中包含的field多于当前的dataset，则多余的field会被忽略；若dataset中未包含所有
+            当前dataset含有field，则会报错。
+
+        :param DataSet, dataset: 需要和当前dataset concat的dataset
+        :param bool, inplace: 是否直接将dataset组合到当前dataset中
+        :param dict, field_mapping: 当dataset中的field名称和当前dataset不一致时，需要通过field_mapping把输入的dataset中的field
+            名称映射到当前field. field_mapping为dict类型，key为dataset中的field名称，value是需要映射成的名称
+
+        :return: DataSet
+        """
+        assert isinstance(dataset, DataSet), "Can only concat two datasets."
+
+        fns_in_this_dataset = set(self.get_field_names())
+        fns_in_other_dataset = dataset.get_field_names()
+        reverse_field_mapping = {}
+        if field_mapping is not None:
+            fns_in_other_dataset = [field_mapping.get(fn, fn) for fn in fns_in_other_dataset]
+            reverse_field_mapping = {v:k for k, v in field_mapping.items()}
+        fns_in_other_dataset = set(fns_in_other_dataset)
+        fn_not_seen = list(fns_in_this_dataset - fns_in_other_dataset)
+
+        if fn_not_seen:
+            raise RuntimeError(f"The following fields are not provided in the dataset:{fn_not_seen}")
+
+        if inplace:
+            ds = self
+        else:
+            ds = deepcopy(self)
+
+        for fn in fns_in_this_dataset:
+            ds.get_field(fn).content.extend(deepcopy(dataset.get_field(reverse_field_mapping.get(fn, fn)).content))
+
+        return ds

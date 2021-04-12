@@ -108,13 +108,14 @@ class BertEmbedding(ContextualEmbedding):
             self._word_sep_index = vocab['[SEP]']
         self._word_cls_index = -100
         if '[CLS]' in vocab:
-            self._word_cls_index = vocab['CLS']
+            self._word_cls_index = vocab['[CLS]']
 
-        min_freq = kwargs.get('min_freq', 1)
+        min_freq = kwargs.pop('min_freq', 1)
         self._min_freq = min_freq
         self.model = _BertWordModel(model_dir_or_name=model_dir_or_name, vocab=vocab, layers=layers,
                                     pool_method=pool_method, include_cls_sep=include_cls_sep,
-                                    pooled_cls=pooled_cls, min_freq=min_freq, auto_truncate=auto_truncate)
+                                    pooled_cls=pooled_cls, min_freq=min_freq, auto_truncate=auto_truncate,
+                                    **kwargs)
 
         self.requires_grad = requires_grad
         self._embed_size = len(self.model.layers) * self.model.encoder.hidden_size
@@ -367,32 +368,44 @@ class BertWordPieceEncoder(nn.Module):
 
 class _BertWordModel(nn.Module):
     def __init__(self, model_dir_or_name: str, vocab: Vocabulary, layers: str = '-1', pool_method: str = 'first',
-                 include_cls_sep: bool = False, pooled_cls: bool = False, auto_truncate: bool = False, min_freq=2):
+                 include_cls_sep: bool = False, pooled_cls: bool = False, auto_truncate: bool = False, min_freq=2,
+                 **kwargs):
         super().__init__()
 
         if isinstance(layers, list):
             self.layers = [int(l) for l in layers]
         elif isinstance(layers, str):
-            self.layers = list(map(int, layers.split(',')))
+            if layers.lower() == 'all':
+                self.layers = None
+            else:
+                self.layers = list(map(int, layers.split(',')))
         else:
             raise TypeError("`layers` only supports str or list[int]")
-        assert len(self.layers) > 0, "There is no layer selected!"
 
         neg_num_output_layer = -16384
         pos_num_output_layer = 0
-        for layer in self.layers:
-            if layer < 0:
-                neg_num_output_layer = max(layer, neg_num_output_layer)
-            else:
-                pos_num_output_layer = max(layer, pos_num_output_layer)
+        if self.layers is None:
+            neg_num_output_layer = -1
+        else:
+            for layer in self.layers:
+                if layer < 0:
+                    neg_num_output_layer = max(layer, neg_num_output_layer)
+                else:
+                    pos_num_output_layer = max(layer, pos_num_output_layer)
 
-        self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
+        self.tokenizer = BertTokenizer.from_pretrained(model_dir_or_name)
         self.encoder = BertModel.from_pretrained(model_dir_or_name,
                                                  neg_num_output_layer=neg_num_output_layer,
-                                                 pos_num_output_layer=pos_num_output_layer)
+                                                 pos_num_output_layer=pos_num_output_layer,
+                                                 **kwargs)
         self._max_position_embeddings = self.encoder.config.max_position_embeddings
         #  检查encoder_layer_number是否合理
         encoder_layer_number = len(self.encoder.encoder.layer)
+        if self.layers is None:
+            self.layers = [idx for idx in range(encoder_layer_number + 1)]
+        logger.info(f'Bert Model will return {len(self.layers)} layers (layer-0 '
+                    f'is embedding result): {self.layers}')
+        assert len(self.layers) > 0, "There is no layer selected!"
         for layer in self.layers:
             if layer < 0:
                 assert -layer <= encoder_layer_number, f"The layer index:{layer} is out of scope for " \
@@ -417,17 +430,17 @@ class _BertWordModel(nn.Module):
                 word = '[PAD]'
             elif index == vocab.unknown_idx:
                 word = '[UNK]'
-            elif vocab.word_count[word]<min_freq:
+            elif vocab.word_count[word] < min_freq:
                 word = '[UNK]'
-            word_pieces = self.tokenzier.wordpiece_tokenizer.tokenize(word)
-            word_pieces = self.tokenzier.convert_tokens_to_ids(word_pieces)
+            word_pieces = self.tokenizer.wordpiece_tokenizer.tokenize(word)
+            word_pieces = self.tokenizer.convert_tokens_to_ids(word_pieces)
             word_to_wordpieces.append(word_pieces)
             word_pieces_lengths.append(len(word_pieces))
-        self._cls_index = self.tokenzier.vocab['[CLS]']
-        self._sep_index = self.tokenzier.vocab['[SEP]']
+        self._cls_index = self.tokenizer.vocab['[CLS]']
+        self._sep_index = self.tokenizer.vocab['[SEP]']
         self._word_pad_index = vocab.padding_idx
-        self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
-        self.word_to_wordpieces = np.array(word_to_wordpieces)
+        self._wordpiece_pad_index = self.tokenizer.vocab['[PAD]']  # 需要用于生成word_piece
+        self.word_to_wordpieces = np.array(word_to_wordpieces, dtype=object)
         self.register_buffer('word_pieces_lengths', torch.LongTensor(word_pieces_lengths))
         logger.debug("Successfully generate word pieces.")
 
@@ -481,14 +494,15 @@ class _BertWordModel(nn.Module):
                 token_type_ids = torch.zeros_like(word_pieces)
         # 2. 获取hidden的结果，根据word_pieces进行对应的pool计算
         # all_outputs: [batch_size x max_len x hidden_size, batch_size x max_len x hidden_size, ...]
-        bert_outputs, pooled_cls = self.encoder(word_pieces, token_type_ids=token_type_ids, attention_mask=attn_masks,
+        bert_outputs, pooled_cls = self.encoder(word_pieces, token_type_ids=token_type_ids,
+                                                attention_mask=attn_masks,
                                                 output_all_encoded_layers=True)
         # output_layers = [self.layers]  # len(self.layers) x batch_size x real_word_piece_length x hidden_size
 
         if self.include_cls_sep:
             s_shift = 1
             outputs = bert_outputs[-1].new_zeros(len(self.layers), batch_size, max_word_len + 2,
-                                                     bert_outputs[-1].size(-1))
+                                                 bert_outputs[-1].size(-1))
 
         else:
             s_shift = 0
@@ -552,7 +566,7 @@ class _BertWordModel(nn.Module):
         :param str folder:
         :return:
         """
-        self.tokenzier.save_pretrained(folder)
+        self.tokenizer.save_pretrained(folder)
         self.encoder.save_pretrained(folder)
 
 
@@ -565,7 +579,7 @@ class _BertWordPieceModel(nn.Module):
     def __init__(self, model_dir_or_name: str, layers: str = '-1', pooled_cls: bool=False):
         super().__init__()
 
-        self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
+        self.tokenizer = BertTokenizer.from_pretrained(model_dir_or_name)
         self.encoder = BertModel.from_pretrained(model_dir_or_name)
         #  检查encoder_layer_number是否合理
         encoder_layer_number = len(self.encoder.encoder.layer)
@@ -585,10 +599,10 @@ class _BertWordPieceModel(nn.Module):
                 assert layer <= encoder_layer_number, f"The layer index:{layer} is out of scope for " \
                     f"a bert model with {encoder_layer_number} layers."
 
-        self._cls_index = self.tokenzier.cls_index
-        self._sep_index = self.tokenzier.sep_index
-        self._wordpiece_unknown_index = self.tokenzier.unk_index
-        self._wordpiece_pad_index = self.tokenzier.pad_index  # 需要用于生成word_piece
+        self._cls_index = self.tokenizer.cls_index
+        self._sep_index = self.tokenizer.sep_index
+        self._wordpiece_unknown_index = self.tokenizer.unk_index
+        self._wordpiece_pad_index = self.tokenizer.pad_index  # 需要用于生成word_piece
         self.pooled_cls = pooled_cls
 
     def index_datasets(self, *datasets, field_name, add_cls_sep=True):
@@ -601,7 +615,7 @@ class _BertWordPieceModel(nn.Module):
         :return:
         """
 
-        encode_func = partial(self.tokenzier.encode, add_special_tokens=add_cls_sep)
+        encode_func = partial(self.tokenizer.encode, add_special_tokens=add_cls_sep)
 
         for index, dataset in enumerate(datasets):
             try:
@@ -640,5 +654,5 @@ class _BertWordPieceModel(nn.Module):
         :param folder:
         :return:
         """
-        self.tokenzier.save_pretrained(folder)
+        self.tokenizer.save_pretrained(folder)
         self.encoder.save_pretrained(folder)

@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'ubuntu_tester'
-            args '-u root:root -v ${HOME}/html/docs:/docs -v ${HOME}/html/_ci:/ci'
+            args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci'
         }
     }
     environment {
@@ -27,7 +27,6 @@ pipeline {
                 }
                 stage('Package Testing') {
                     steps {
-                        sh 'python -m spacy download en'
                         sh 'pip install fitlog'
                         sh 'pytest ./tests --html=test_results.html --self-contained-html'
                     }

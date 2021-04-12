@@ -342,7 +342,7 @@ from .losses import _prepare_losser
 from .metrics import _prepare_metrics
 from .optimizer import Optimizer
 from .sampler import Sampler
-from .sampler import RandomSampler
+from .sampler import RandomSampler, ConstTokenNumSampler
 from .tester import Tester
 from .utils import _CheckError
 from .utils import _build_args
@@ -352,6 +352,8 @@ from .utils import _move_dict_value_to_device
 from .utils import _get_func_signature
 from .utils import _get_model_device
 from .utils import _move_model_to_device
+from .utils import _build_fp16_env
+from .utils import _can_use_fp16
 from ._parallel_utils import _model_contains_inner_module
 from ._logger import logger
 
@@ -373,7 +375,7 @@ class Trainer(object):
                  num_workers=0, n_epochs=10, print_every=5,
                  dev_data=None, metrics=None, metric_key=None,
                  validate_every=-1, save_path=None, use_tqdm=True, device=None,
-                 callbacks=None, check_code_level=0, **kwargs):
+                 callbacks=None, check_code_level=0, fp16=False, **kwargs):
         r"""
         :param train_data: 训练集， :class:`~fastNLP.DataSet` 类型或 :class:`~fastNLP.BatchIter` 的子类
         :param nn.modules model: 待训练的模型
@@ -422,9 +424,14 @@ class Trainer(object):
             报告警告信息; 2: 有任何field没有被使用都报错. 检查的原理是通过使用很小的batch(默认2个sample)来运行代码，但是
             这个过程理论上不会修改任何参数，只是会检查能否运行。但如果(1)模型中存在将batch_size写为某个固定值的情况；
             (2)模型中存在累加前向计算次数的，可能会多计算1次。以上情况建议将check_code_level设置为-1。
+        :param bool fp16: 是否使用fp16进行训练。
         :param kwargs: 支持配置可选参数
             bool test_use_tqdm: 在dev上验证的时候是否开启tqdm
             Sampler test_sampler: 在evaluate的时候使用的sampler
+            bool test_use_fp16: evalute的时候是否使用fp16测试，默认与fp16相同的取值。
+            bool set_grad_to_none: 在zero_grad的时候是否将gradient设置为None，而不是设置为zero
+            GradScaler grad_scaler: 仅在fp16为True时有效，如果不使用torch.cuda.amp.GradScaler的初始化参数，可传入一个已经初始化后的
+                grad_scaler。
         """
         super(Trainer, self).__init__()
         if not isinstance(model, nn.Module):
@@ -488,6 +495,15 @@ class Trainer(object):
                 sampler = RandomSampler()
             elif hasattr(sampler, 'set_batch_size'):
                 sampler.set_batch_size(batch_size)
+            if isinstance(sampler, ConstTokenNumSampler):  # 直接使用固定token数量的Sampler
+                assert isinstance(train_data,
+                                  DataSet), f"When sampler is `ConstTokenNumSampler`, the train_data must" \
+                                            f" be `DataSet`."
+                sampler(train_data)
+                train_data = DataSetIter(train_data,
+                                         batch_size=1, sampler=None, as_numpy=False, num_workers=num_workers,
+                                         pin_memory=False, drop_last=drop_last, timeout=0, worker_init_fn=None,
+                                         batch_sampler=sampler)
 
         if isinstance(train_data, DataSet):
             self.data_iterator = DataSetIter(dataset=train_data, batch_size=batch_size, sampler=sampler,
@@ -505,6 +521,23 @@ class Trainer(object):
             self._forward_func = self.model.module.forward
         else:
             self._forward_func = self.model.forward
+
+        self.fp16 = fp16
+        self.verbose = kwargs.get('verbose', 0)
+
+        # check fp16相关的设置
+        self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not fp16)
+        self.grad_scaler = _grad_scaler()
+        if self.fp16:
+            _can_use_fp16(device=device, model=model, func=self._forward_func)
+            grad_scaler = kwargs.get('grad_scaler', None)
+            if grad_scaler is not None:
+                self.grad_scaler = grad_scaler
+            else:
+                self.grad_scaler = _grad_scaler()
+        self.test_use_fp16 = kwargs.get('test_use_fp16', fp16)
+        self.set_grad_to_none = kwargs.get('set_grad_to_none', True)
+
         if check_code_level > -1:
             # _check_code 是 fastNLP 帮助你检查代码是否正确的方法 。如果你在错误栈中看到这行注释，请认真检查你的field名与模型的输入
             #   名是否匹配
@@ -545,15 +578,15 @@ class Trainer(object):
         elif optimizer is None:
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=4e-3)
         else:
-            raise TypeError("optimizer can only be torch.optim.Optimizer type, not {}.".format(type(optimizer)))
+            if not (hasattr(optimizer, 'step') and callable(optimizer.step)):
+                raise TypeError("optimizer must have a callable step() function.")
+            else:
+                self.optimizer = optimizer
 
         self.logger = logger
 
         self.use_tqdm = use_tqdm
-        if 'test_use_tqdm' in kwargs:
-            self.test_use_tqdm = kwargs.get('test_use_tqdm')
-        else:
-            self.test_use_tqdm = self.use_tqdm
+        self.test_use_tqdm = kwargs.get('test_use_tqdm', self.use_tqdm)
         self.pbar = None
         self.print_every = abs(self.print_every)
         self.kwargs = kwargs
@@ -565,7 +598,8 @@ class Trainer(object):
                                  device=None,  # 由上面的部分处理device
                                  verbose=0,
                                  use_tqdm=self.test_use_tqdm,
-                                 sampler=kwargs.get('test_sampler', None))
+                                 sampler=kwargs.get('test_sampler', None),
+                                 fp16=self.test_use_fp16)
 
         self.start_time = None  # start timestamp
 
@@ -575,7 +609,7 @@ class Trainer(object):
         self.callback_manager = CallbackManager(env={"trainer": self},
                                                 callbacks=callbacks)
 
-    def train(self, load_best_model=True, on_exception='auto'):
+    def train(self, load_best_model=True, on_exception='auto', **kwargs):
         r"""
         使用该函数使Trainer开始训练。
 
@@ -584,6 +618,8 @@ class Trainer(object):
         :param str on_exception: 在训练过程遭遇exception，并被 :py:class:Callback 的on_exception()处理后，是否继续抛出异常。
                 支持'ignore','raise', 'auto': 'ignore'将捕获异常，写在Trainer.train()后面的代码将继续运行; 'raise'将异常抛出;
                 'auto'将ignore以下两种Exception: CallbackException与KeyboardInterrupt, raise其它exception.
+       :param kwargs:
+                int verbose: 为1时在发生异常时会打印异常发生时batch中的数据在dataset中的index
         :return dict: 返回一个字典类型的数据,
                 内含以下内容::
 
@@ -596,6 +632,7 @@ class Trainer(object):
 
         """
         results = {}
+        verbose = kwargs.get('verbose', 0)
         if self.n_epochs <= 0:
             self.logger.info(f"training epoch is {self.n_epochs}, nothing was done.")
             results['seconds'] = 0.
@@ -617,6 +654,8 @@ class Trainer(object):
 
             except BaseException as e:
                 self.callback_manager.on_exception(e)
+                if verbose>0:
+                    self.logger.info(f"The data indices for current batch are: {self.data_iterator.cur_batch_indices}.")
                 if on_exception == 'auto':
                     if not isinstance(e, (CallbackException, KeyboardInterrupt)):
                         raise e
@@ -674,7 +713,8 @@ class Trainer(object):
 
                     # edit prediction
                     self.callback_manager.on_loss_begin(batch_y, prediction)
-                    loss = self._compute_loss(prediction, batch_y).mean()
+                    with self.auto_cast():
+                        loss = self._compute_loss(prediction, batch_y).mean()
                     loss = loss / self.update_every
                     avg_loss += loss.item()
 
@@ -759,11 +799,13 @@ class Trainer(object):
 
         """
         if self.step % self.update_every == 0:
-            self.optimizer.step()
+            self.grad_scaler.step(self.optimizer)
+            self.grad_scaler.update()
 
     def _data_forward(self, network, x):
         x = _build_args(self._forward_func, **x)
-        y = network(**x)
+        with self.auto_cast():
+            y = network(**x)
         if not isinstance(y, dict):
             raise TypeError(
                 f"The return value of {_get_func_signature(self._forward_func)} should be dict, got {type(y)}.")
@@ -777,8 +819,22 @@ class Trainer(object):
         For PyTorch, just do "loss.backward()"
         """
         if (self.step-1) % self.update_every == 0:
-            self.model.zero_grad()
-        loss.backward()
+            self._clear_grad(self.optimizer, self.set_grad_to_none)
+        self.grad_scaler.scale(loss).backward()
+
+    def _clear_grad(self, optimizer, set_to_none=True):
+        param_groups = optimizer.param_groups
+        for group in param_groups:
+            for p in group['params']:
+                if p.grad is not None:
+                    if set_to_none:
+                        p.grad = None
+                    else:
+                        if p.grad.grad_fn is not None:
+                            p.grad.detach_()
+                        else:
+                            p.grad.requires_grad_(False)
+                        p.grad.zero_()
 
     def _compute_loss(self, predict, truth):
         r"""Compute loss given prediction and ground truth.

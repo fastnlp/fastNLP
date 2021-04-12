@@ -259,8 +259,8 @@ def _get_base_url(name):
             return url + '/'
     else:
         URLS = {
-            'embedding': "http://212.129.155.247/embedding/",
-            "dataset": "http://212.129.155.247/dataset/"
+            'embedding': "http://download.fastnlp.top/embedding/",
+            "dataset": "http://download.fastnlp.top/dataset/"
         }
         if name.lower() not in URLS:
             raise KeyError(f"{name} is not recognized.")
@@ -312,7 +312,8 @@ def _read_extend_url_file(filename, name)->str:
                             return parts[1]
     return None
 
-def _get_dataset_url(name):
+
+def _get_dataset_url(name, dataset_dir: dict = None):
     r"""
     给定dataset的名称，返回下载url
 
@@ -323,8 +324,9 @@ def _get_dataset_url(name):
     url = _read_extend_url_file(FASTNLP_EXTEND_DATASET_URL, name)
     if url:
         return url
-
-    filename = DATASET_DIR.get(name, None)
+    
+    dataset_dir = DATASET_DIR if dataset_dir is None else dataset_dir
+    filename = dataset_dir.get(name, None)
     if filename:
         url = _get_base_url('dataset') + filename
         return url

@@ -65,6 +65,8 @@ class TransformersEmbedding(ContextualEmbedding):
             来进行分类的任务将auto_truncate置为True。
         :param kwargs:
             int min_freq: 小于该次数的词会被unk代替， 默认为1
+            dict tokenizer_kwargs: 传递给tokenizer在调用tokenize()方法时所额外使用的参数，例如RoBERTaTokenizer需要传入
+                {'add_prefix_space':True}
         """
         super().__init__(vocab, word_dropout=word_dropout, dropout=dropout)
 
@@ -82,9 +84,10 @@ class TransformersEmbedding(ContextualEmbedding):
         min_freq = kwargs.get('min_freq', 1)
         self._min_freq = min_freq
 
+        tokenizer_kwargs = kwargs.get('tokenizer_kwargs', {})
         self.model = _TransformersWordModel(tokenizer=tokenizer, model=model, vocab=vocab, layers=layers,
-                                       pool_method=pool_method, include_cls_sep=include_cls_sep,
-                                            auto_truncate=auto_truncate, min_freq=min_freq)
+                                            pool_method=pool_method, include_cls_sep=include_cls_sep,
+                                            auto_truncate=auto_truncate, min_freq=min_freq, tokenizer_kwargs=tokenizer_kwargs)
 
         self.requires_grad = requires_grad
         self._embed_size = len(self.model.layers) * model.config.hidden_size
@@ -237,7 +240,7 @@ class TransformersWordPieceEncoder(nn.Module):
 
 class _TransformersWordModel(nn.Module):
     def __init__(self, tokenizer, model, vocab: Vocabulary, layers: str = '-1', pool_method: str = 'first',
-                 include_cls_sep: bool = False, auto_truncate: bool = False, min_freq=2):
+                 include_cls_sep: bool = False, auto_truncate: bool = False, min_freq=2, tokenizer_kwargs={}):
         super().__init__()
 
         self.tokenizer = tokenizer
@@ -283,7 +286,7 @@ class _TransformersWordModel(nn.Module):
                 word = tokenizer.unk_token
             elif vocab.word_count[word]<min_freq:
                 word = tokenizer.unk_token
-            word_pieces = self.tokenizer.tokenize(word, add_prefix_space=True)
+            word_pieces = self.tokenizer.tokenize(word, **tokenizer_kwargs)
             word_pieces = self.tokenizer.convert_tokens_to_ids(word_pieces)
             word_to_wordpieces.append(word_pieces)
             word_pieces_lengths.append(len(word_pieces))
@@ -291,7 +294,7 @@ class _TransformersWordModel(nn.Module):
         self._sep_index = self.tokenizer.sep_token_id
         self._word_pad_index = vocab.padding_idx
         self._wordpiece_pad_index = self.tokenizer.pad_token_id # 需要用于生成word_piece
-        self.word_to_wordpieces = np.array(word_to_wordpieces)
+        self.word_to_wordpieces = np.array(word_to_wordpieces, dtype=object)
         self.register_buffer('word_pieces_lengths', torch.LongTensor(word_pieces_lengths))
         logger.debug("Successfully generate word pieces.")
 

@@ -112,6 +112,108 @@ class BucketSampler(Sampler):
         return list(chain(*batchs))
 
 
+class ConstTokenNumSampler(Sampler):
+    """
+    尽量保证每个batch的输入token数量是接近的。
+
+    使用示例
+    >>> # 假设已经有了tr_data并有一个field叫做seq_len保存了每个instance的token数量
+    >>> from fastNLP import DataSetIter, Trainer
+    >>> sampler = ConstTokenNumSampler('src_seq_len', max_token=4096)
+    >>>
+    >>> # 直接将sampler传入Trainer中，此时batch_size参数的值会被忽略
+    >>> trainer = Trainer(tr_data, model, optimizer=optimizer, loss=TranslationLoss(),
+    >>>             batch_size=1, sampler=sampler, drop_last=False, update_every=1)
+    """
+    def __init__(self, seq_len_field_name, max_token=4096, max_sentence=-1, need_be_multiple_of=1, num_bucket=-1):
+        """
+
+        :param List[int] seq_len_field_name: 哪个field指示的sample的长度
+        :param int max_token: 每个batch的最大的token数量
+        :param int max_sentence: 每个batch最多多少个instance, -1表示根据max_token决定
+        :param int need_be_multiple_of: 生成的batch的instance的数量需要是几的倍数，在DataParallel场景下会用到
+        :param int num_bucket: 将数据按长度拆分为num_bucket个bucket，batch中的sample尽量在bucket之中进行组合，这样可以减少padding。
+        """
+        assert (max_sentence!=-1 and max_sentence>=need_be_multiple_of) or max_sentence<1
+        self.seq_len_field_name = seq_len_field_name
+        self.num_bucket = num_bucket
+        self.max_token = max_token
+        self._max_sentence = max_sentence
+        self.need_be_multiple_of = need_be_multiple_of
+
+    def __call__(self, data_set):
+        assert len(data_set)>self.num_bucket, "The number of samples should be larger than buckets."
+        seq_len = data_set.get_field(self.seq_len_field_name)
+        self.seq_len = seq_len
+        seq_len_indice = [(length, i) for i, length in enumerate(seq_len)]
+        seq_len_indice.sort(key=lambda x: x[0])
+        indice_in_buckets = []
+        if self.num_bucket>0:
+            sample_per_bucket = len(seq_len_indice)//self.num_bucket
+            i = 0
+            while len(indice_in_buckets)<len(seq_len_indice):
+                indice_in_buckets.append(seq_len_indice[i*sample_per_bucket:(i+1)*sample_per_bucket])
+                i += 1
+        else:
+            indice_in_buckets = [seq_len_indice]
+        self.indice_in_buckets = indice_in_buckets
+        self.get_new_order()
+
+    @property
+    def max_sentence(self):
+        if self._max_sentence<1:
+            return 100000000
+        return self._max_sentence
+
+    @max_sentence.setter
+    def max_sentence(self, max_sentence):
+        self._max_sentence = max_sentence
+
+    def get_new_order(self):
+        np.random.shuffle(self.indice_in_buckets)
+        for bucket in self.indice_in_buckets:
+            np.random.shuffle(bucket)
+        indices = list(chain(*self.indice_in_buckets))
+        batches = []
+        cur_max_len = 0
+        batch = []
+        for length, i in indices:
+            max_len = max(length, cur_max_len)
+            if max_len*(len(batch)+1)>self.max_token or len(batch)>=self.max_sentence:
+                left_sample = len(batch) % self.need_be_multiple_of
+                add_samples = batch.copy()
+                cur_max_len =length
+                if left_sample!=0:
+                    add_samples = add_samples[:-left_sample]
+                    batch = batch[-left_sample:]
+                    cur_max_len = max(cur_max_len, max(batch))
+                else:
+                    batch = []
+                if len(add_samples)==0:
+                    raise RuntimeError(f"The sample `{i}` is too long to make a batch with {self.need_be_multiple_of} samples.")
+                batches.append(add_samples)
+            else:
+                cur_max_len = max_len
+            batch.append(i)
+        if batch:
+            left_sample = len(batch) % self.need_be_multiple_of
+            add_samples = batch.copy()
+            if left_sample != 0:
+                add_samples = add_samples[:-left_sample].copy()
+            if add_samples:
+                batches.append(add_samples)
+        np.random.shuffle(batches)
+        self.batches = batches
+
+    def __iter__(self):
+        for batch in self.batches:
+            yield batch
+        self.get_new_order()
+
+    def __len__(self):
+        return len(self.batches)
+
+
 class ConstantTokenNumSampler:
     """
     尽量保证每个batch的输入token数量是接近的。
@@ -119,7 +221,7 @@ class ConstantTokenNumSampler:
     使用示例
     >>> # 假设已经有了tr_data并有一个field叫做seq_len保存了每个instance的token数量
     >>> from fastNLP import DataSetIter, Trainer
-    >>> sampler = BatchSampler(tr_data.get_field('seq_len').content, max_token=4096)
+    >>> sampler = ConstantTokenNumSampler(tr_data.get_field('seq_len').content, max_token=4096)
     >>> tr_iter = DataSetIter(tr_data,
     >>>                     batch_size=1, sampler=None, as_numpy=False, num_workers=0, pin_memory=False,
     >>>                     drop_last=False, timeout=0, worker_init_fn=None,
@@ -128,7 +230,6 @@ class ConstantTokenNumSampler:
     >>> # 直接将tr_iter传入Trainer中，此时batch_size参数的值会被忽略
     >>> trainer = Trainer(tr_iter, model, optimizer=optimizer, loss=TranslationLoss(),
     >>>             batch_size=1, sampler=None, drop_last=False, update_every=1)
-
     """
     def __init__(self, seq_len, max_token=4096, max_sentence=-1, need_be_multiple_of=1, num_bucket=-1):
         """
@@ -221,7 +322,8 @@ class SortedSampler(Sampler):
     def __init__(self, seq_len_field_name='seq_len', descending=True):
         """
 
-        :param str seq_len_field_name: 对应序列长度的 `field` 的名字
+        :param str seq_len_field_name: 按哪个field进行排序。如果传入的field是数字，则直接按照该数字大小排序；如果传入的field不是
+            数字，则使用该field的长度进行排序
         :param bool descending: 是否降序排列
         """
         self.seq_len_field_name = seq_len_field_name
@@ -229,6 +331,11 @@ class SortedSampler(Sampler):
 
     def __call__(self, data_set):
         seq_lens = data_set.get_field(self.seq_len_field_name).content
+        try:
+            seq_lens = list(map(len, seq_lens))
+        except:
+            pass
+
         orders = np.argsort(seq_lens).tolist()  # 从小到大的顺序
         if self.descending:
             orders = orders[::-1]

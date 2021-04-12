@@ -62,6 +62,7 @@ __all__ = [
     "CrossEntropyLoss",
     "L1Loss",
     "BCELoss",
+    "BCEWithLogits",
     "NLLLoss",
     "LossInForward",
     "CMRC2018Loss",
@@ -98,7 +99,7 @@ from .dataset import DataSet
 from .field import FieldArray, Padder, AutoPadder, EngChar2DPadder
 from .instance import Instance
 from .losses import LossFunc, CrossEntropyLoss, L1Loss, BCELoss, NLLLoss, \
-    LossInForward, CMRC2018Loss, LossBase, MSELoss
+    LossInForward, CMRC2018Loss, LossBase, MSELoss, BCEWithLogits
 from .metrics import AccuracyMetric, SpanFPreRecMetric, CMRC2018Metric, ClassifyFPreRecMetric, MetricBase,\
     ConfusionMatrixMetric
 from .optimizer import Optimizer, SGD, Adam, AdamW

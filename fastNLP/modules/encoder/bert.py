@@ -184,21 +184,23 @@ class DistilBertEmbeddings(nn.Module):
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=1e-12)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, input_ids, token_type_ids):
+    def forward(self, input_ids, token_type_ids, position_ids=None):
         r"""
         Parameters
         ----------
         input_ids: torch.tensor(bs, max_seq_length)
             The token ids to embed.
         token_type_ids: no used.
+        position_ids: no used.
         Outputs
         -------
         embeddings: torch.tensor(bs, max_seq_length, dim)
             The embedded tokens (plus position embeddings, no token_type embeddings)
         """
         seq_length = input_ids.size(1)
-        position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device) # (max_seq_length)
-        position_ids = position_ids.unsqueeze(0).expand_as(input_ids)                      # (bs, max_seq_length)
+        if position_ids is None:
+            position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device) # (max_seq_length)
+            position_ids = position_ids.unsqueeze(0).expand_as(input_ids)                      # (bs, max_seq_length)
 
         word_embeddings = self.word_embeddings(input_ids)                   # (bs, max_seq_length, dim)
         position_embeddings = self.position_embeddings(position_ids)        # (bs, max_seq_length, dim)
@@ -374,19 +376,17 @@ class BertEncoder(nn.Module):
         self.num_output_layer = max(min(num_output_layer, len(self.layer)), 0)
         if self.num_output_layer + 1 < len(self.layer):
             logger.info(f'The transformer encoder will early exit after layer-{self.num_output_layer} '
-                        f'(start from 0)!')
+                        f'(layer 0 means embedding layer)!')
 
     def forward(self, hidden_states, attention_mask, output_all_encoded_layers=True):
         all_encoder_layers = []
         for idx, layer_module in enumerate(self.layer):
-            if idx > self.num_output_layer:
+            if idx >= self.num_output_layer:
                 break
             hidden_states = layer_module(hidden_states, attention_mask)
             if output_all_encoded_layers:
                 all_encoder_layers.append(hidden_states)
         if not output_all_encoded_layers:
-            all_encoder_layers.append(hidden_states)
-        if len(all_encoder_layers) == 0:
             all_encoder_layers.append(hidden_states)
         return all_encoder_layers
 
@@ -445,8 +445,8 @@ class BertModel(nn.Module):
         self.hidden_size = self.config.hidden_size
         self.model_type = 'bert'
         neg_num_output_layer = kwargs.get('neg_num_output_layer', -1)
-        pos_num_output_layer = kwargs.get('pos_num_output_layer', self.config.num_hidden_layers - 1)
-        self.num_output_layer = max(neg_num_output_layer + self.config.num_hidden_layers, pos_num_output_layer)
+        pos_num_output_layer = kwargs.get('pos_num_output_layer', self.config.num_hidden_layers)
+        self.num_output_layer = max(neg_num_output_layer + 1 + self.config.num_hidden_layers, pos_num_output_layer)
         if hasattr(config, 'sinusoidal_pos_embds'):
             self.model_type = 'distilbert'
         elif 'model_type' in kwargs:
@@ -464,6 +464,24 @@ class BertModel(nn.Module):
             logger.info('DistilBert has NOT pooler, will use hidden states of [CLS] token as pooled output.')
         self.apply(self.init_bert_weights)
 
+    @property
+    def dtype(self):
+        """
+        :obj:`torch.dtype`: The dtype of the module (assuming that all the module parameters have the same dtype).
+        """
+        try:
+            return next(self.parameters()).dtype
+        except StopIteration:
+            # For nn.DataParallel compatibility in PyTorch 1.5
+
+            def find_tensor_attributes(module: nn.Module):
+                tuples = [(k, v) for k, v in module.__dict__.items() if torch.is_tensor(v)]
+                return tuples
+
+            gen = self._named_members(get_members_fn=find_tensor_attributes)
+            first_tuple = next(gen)
+            return first_tuple[1].dtype
+
     def init_bert_weights(self, module):
         r""" Initialize the weights.
         """
@@ -477,7 +495,8 @@ class BertModel(nn.Module):
         if isinstance(module, nn.Linear) and module.bias is not None:
             module.bias.data.zero_()
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, output_all_encoded_layers=True):
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, output_all_encoded_layers=True,
+                position_ids=None):
         """
 
         :param torch.LongTensor input_ids: bsz x max_len的输入id
@@ -485,6 +504,7 @@ class BertModel(nn.Module):
         :param attention_mask: 需要attend的为1，不需要为0
         :param bool output_all_encoded_layers: 是否输出所有层，默认输出token embedding(包含bpe, position以及type embedding)
             及每一层的hidden states。如果为False，只输出最后一层的结果
+        :param torch.LongTensor position_ids: bsz x max_len, position的id
         :return: encode_layers: 如果output_all_encoded_layers为True，返回list(共num_layers+1个元素)，每个元素为
             bsz x max_len x hidden_size否则返回bsz x max_len x hidden_size的tensor;
             pooled_output: bsz x hidden_size为cls的表示，可以用于句子的分类
@@ -506,13 +526,16 @@ class BertModel(nn.Module):
         # positions we want to attend and -10000.0 for masked positions.
         # Since we are adding it to the raw scores before the softmax, this is
         # effectively the same as removing these entirely.
-        extended_attention_mask = extended_attention_mask.to(dtype=next(self.parameters()).dtype)  # fp16 compatibility
+        # this will case an issue when DataParallel: https://github.com/pytorch/pytorch/issues/40457#issuecomment-648396469
+        # extended_attention_mask = extended_attention_mask.to(dtype=next(self.parameters()).dtype)  # fp16 compatibility
+        extended_attention_mask = extended_attention_mask.to(self.dtype)
         extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
 
-        embedding_output = self.embeddings(input_ids, token_type_ids)
+        embedding_output = self.embeddings(input_ids, token_type_ids=token_type_ids, position_ids=position_ids)
         encoded_layers = self.encoder(embedding_output,
                                       extended_attention_mask,
                                       output_all_encoded_layers=output_all_encoded_layers)
+        encoded_layers.insert(0, embedding_output)
         sequence_output = encoded_layers[-1]
         if self.model_type != 'distilbert':
             pooled_output = self.pooler(sequence_output)
@@ -520,8 +543,6 @@ class BertModel(nn.Module):
             pooled_output = sequence_output[:, 0]
         if not output_all_encoded_layers:
             encoded_layers = encoded_layers[-1]
-        else:
-            encoded_layers.insert(0, embedding_output)
         return encoded_layers, pooled_output
 
     @classmethod

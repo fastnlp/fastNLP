@@ -12,6 +12,7 @@ import warnings
 from ...core.const import Const
 from ...core.vocabulary import Vocabulary
 from ...core._logger import logger
+from pkg_resources import parse_version
 
 
 def iob2(tags: List[str]) -> List[str]:
@@ -82,7 +83,10 @@ def get_tokenizer(tokenize_method: str, lang='en'):
         spacy.prefer_gpu()
         if lang != 'en':
             raise RuntimeError("Spacy only supports en right right.")
-        en = spacy.load(lang)
+        if parse_version(spacy.__version__) >= parse_version('3.0'):
+            en = spacy.load('en_core_web_sm')
+        else:
+            en = spacy.load(lang)
         tokenizer = lambda x: [w.text for w in en.tokenizer(x)]
     elif tokenize_method in tokenizer_dict:
         tokenizer = tokenizer_dict[tokenize_method]

@@ -12,23 +12,20 @@ import inspect
 import os
 import warnings
 from collections import Counter, namedtuple
-from copy import deepcopy
 from typing import List
 
 import _pickle
 import numpy as np
-import torch
 import torch.nn as nn
 from prettytable import PrettyTable
 
 from ._logger import logger
 from ._parallel_utils import _model_contains_inner_module
 # from .vocabulary import Vocabulary
+import torch
+import contextlib
+from pkg_resources import parse_version
 
-try:
-    from apex import amp
-except:
-    amp = None
 
 _CheckRes = namedtuple('_CheckRes', ['missing', 'unused', 'duplicated', 'required', 'all_needed',
                                      'varargs'])
@@ -271,7 +268,7 @@ def _prepare_cache_filepath(filepath):
         raise RuntimeError("The cache_file_path must be a file, not a directory.")
     cache_dir = os.path.dirname(_cache_filepath)
     if not os.path.exists(cache_dir):
-        os.makedirs(cache_dir)
+        os.makedirs(cache_dir, exist_ok=True)
 
 
 def cache_results(_cache_fp, _refresh=False, _verbose=1):
@@ -1032,8 +1029,92 @@ def sub_column(string: str, c: int, c_size: int, title: str) -> str:
     return res
 
 
-def _check_fp16():
-    if amp is None:
-        raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
-    if not torch.backends.cudnn.enabled:
-        raise RuntimeError("Amp requires cudnn backend to be enabled.")
+def _is_function_contains_autocast(func):
+    """
+    检查func是否包含autocast，(1)是否使用了autocast的修饰器或, (2)使用使用with autocast()环境
+
+    :param func: 待检查的函数
+    """
+    import re
+    source = inspect.getsource(func)
+    lines = source.split('\n')
+    for line in lines:
+        line = line.strip()
+        if re.search(r'@[\w\.]*autocast\(\w*\)', line):
+            raise RuntimeError("Please do not use `autocast()` decorator, use `with autocast():` instead. Please refer to"
+                               " https://pytorch.org/docs/stable/notes/amp_examples.html#dataparallel-in-a-single-process ")
+        if re.search(r'with [\w\.]*autocast\(\w*\):', line):
+            return True
+    return False
+
+
+class DummyGradScaler:
+    """
+    用于Dummy pytorch的GradScaler对象，防止重复写大量的if判断
+
+    """
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def get_scale(self):
+        return 1.0
+
+    def is_enabled(self):
+        return False
+
+    def scale(self, outputs):
+        return outputs
+
+    def step(self, optimizer, *args, **kwargs):
+        optimizer.step(*args, **kwargs)
+
+    def update(self, new_scale=None):
+        pass
+
+    def unscale_(self, optimizer):
+        pass
+
+    def load_state_dict(self, state_dict):
+        pass
+
+    def state_dict(self):
+        return {}
+
+
+def _build_fp16_env(dummy=False):
+    if dummy:
+        autocast = contextlib.ExitStack
+        GradScaler = DummyGradScaler
+    else:
+        if not torch.cuda.is_available():
+            raise RuntimeError("No cuda")
+        if torch.cuda.get_device_capability(0)[0] < 7:
+            warnings.warn(
+                "NOTE: your device does NOT support faster training with fp16, "
+                "please switch to FP32 which is likely to be faster"
+            )
+        try:
+            from torch.cuda.amp import autocast, GradScaler
+        except ImportError:
+            raise RuntimeError("torch version too low (less than 1.6)")
+    return autocast, GradScaler
+
+
+def _can_use_fp16(device, model, func):
+    if parse_version(torch.__version__) < parse_version('1.6'):
+        raise RuntimeError("Pytorch supports float16 after version 1.6, please upgrade your pytorch version.")
+    model_device = _get_model_device(model)
+    if device is None and model_device is not None and model_device.type != 'cuda':
+        raise RuntimeError("You have to run in cuda device to use fp16.")
+    if isinstance(device, str):
+        if device=='cpu':
+            raise RuntimeError("You have to run in cuda device to use fp16.")
+    if isinstance(device, torch.device) and device.type=='cpu':
+        raise RuntimeError("You have to run in cuda device to use fp16.")
+
+    if (_model_contains_inner_module(model) or (isinstance(device, list) and len(device) > 1)):
+        # 需要提醒用户
+        if not _is_function_contains_autocast(func):
+            raise RuntimeError("When use fp16 in Parallel Training, you have to set autocast() in your forward "
+                               "function as described in "
+                               "https://pytorch.org/docs/stable/notes/amp_examples.html#dataparallel-in-a-single-process")

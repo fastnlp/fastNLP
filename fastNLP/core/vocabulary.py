@@ -125,7 +125,7 @@ class Vocabulary(object):
         r"""依次增加序列中词在词典中的出现频率
 
         :param list word_lst: a list of strings
-        :param bool no_create_entry: 在使用fastNLP.TokenEmbedding加载预训练模型时，没有从预训练词表中找到这个词的处理方式。
+        :param bool no_create_entry: 如果词语来自于非训练集建议设置为True。在使用fastNLP.TokenEmbedding加载预训练模型时，没有从预训练词表中找到这个词的处理方式。
             如果为True，则不会有这个词语创建一个单独的entry，它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独
             的entry。如果这个word来自于dev或者test，一般设置为True，如果来自与train一般设置为False。以下两种情况: 如果新
             加入一个word，且no_create_entry为True，但这个词之前已经在Vocabulary中且并不是no_create_entry的，则还是会为这
@@ -142,7 +142,7 @@ class Vocabulary(object):
         增加一个新词在词典中的出现频率
 
         :param str word: 新词
-        :param bool no_create_entry: 在使用fastNLP.TokenEmbedding加载预训练模型时，没有从预训练词表中找到这个词的处理方式。
+        :param bool no_create_entry: 如果词语来自于非训练集建议设置为True。在使用fastNLP.TokenEmbedding加载预训练模型时，没有从预训练词表中找到这个词的处理方式。
             如果为True，则不会有这个词语创建一个单独的entry，它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独
             的entry。如果这个word来自于dev或者test，一般设置为True，如果来自与train一般设置为False。以下两种情况: 如果新
             加入一个word，且no_create_entry为True，但这个词之前已经在Vocabulary中且并不是no_create_entry的，则还是会为这
@@ -175,7 +175,7 @@ class Vocabulary(object):
         增加一个新词在词典中的出现频率
 
         :param str word: 新词
-        :param bool no_create_entry: 在使用fastNLP.TokenEmbedding加载预训练模型时，没有从预训练词表中找到这个词的处理方式。
+        :param bool no_create_entry: 如果词语来自于非训练集建议设置为True。在使用fastNLP.TokenEmbedding加载预训练模型时，没有从预训练词表中找到这个词的处理方式。
             如果为True，则不会有这个词语创建一个单独的entry，它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独
             的entry。如果这个word来自于dev或者test，一般设置为True，如果来自与train一般设置为False。以下两种情况: 如果新
             加入一个word，且no_create_entry为True，但这个词之前已经在Vocabulary中且并不是no_create_entry的，则还是会为这
@@ -190,7 +190,7 @@ class Vocabulary(object):
         依次增加序列中词在词典中的出现频率
 
         :param list[str] word_lst: 词的序列
-        :param bool no_create_entry: 在使用fastNLP.TokenEmbedding加载预训练模型时，没有从预训练词表中找到这个词的处理方式。
+        :param bool no_create_entry: 如果词语来自于非训练集建议设置为True。在使用fastNLP.TokenEmbedding加载预训练模型时，没有从预训练词表中找到这个词的处理方式。
             如果为True，则不会有这个词语创建一个单独的entry，它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独
             的entry。如果这个word来自于dev或者test，一般设置为True，如果来自与train一般设置为False。以下两种情况: 如果新
             加入一个word，且no_create_entry为True，但这个词之前已经在Vocabulary中且并不是no_create_entry的，则还是会为这
@@ -344,7 +344,7 @@ class Vocabulary(object):
         :param str,List[str] field_name: 可为 ``str`` 或 ``List[str]`` .
             构建词典所使用的 field(s), 支持一个或多个field，若有多个 DataSet, 每个DataSet都必须有这些field. 目前支持的field结构
             : ``str`` , ``List[str]``
-        :param no_create_entry_dataset: 可以传入DataSet, List[DataSet]或者None(默认)，该选项用在接下来的模型会使用pretrain
+        :param no_create_entry_dataset: 可以传入DataSet, List[DataSet]或者None(默认), 建议直接将非训练数据都传入到这个参数。该选项用在接下来的模型会使用pretrain
             的embedding(包括glove, word2vec, elmo与bert)且会finetune的情况。如果仅使用来自于train的数据建立vocabulary，会导致test与dev
             中的数据无法充分利用到来自于预训练embedding的信息，所以在建立词表的时候将test与dev考虑进来会使得最终的结果更好。
             如果一个词出现在了train中，但是没在预训练模型中，embedding会为它用unk初始化，但它是单独的一个vector，如果

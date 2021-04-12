@@ -1,4 +1,7 @@
 import os
+# have to add this, otherwise cannot import fastNLP when check_call()
+import sys
+sys.path.append(os.sep.join(os.path.abspath(__file__).split(os.sep)[:-3]))
 import shutil
 import subprocess
 import unittest
@@ -6,13 +9,14 @@ from argparse import ArgumentParser
 
 import numpy as np
 import torch.cuda
+import torch.distributed as dist
 
 from fastNLP import AccuracyMetric
 from fastNLP import CrossEntropyLoss, BCELoss
 from fastNLP import DataSet
 from fastNLP import Instance
 from fastNLP import SGD
-from fastNLP.core.callback import EchoCallback
+from fastNLP.core.callback import EchoCallback, GradientClipCallback
 from fastNLP.core.dist_trainer import DistTrainer, get_local_rank
 from fastNLP.models.base_model import NaiveClassifier
 
@@ -103,7 +107,7 @@ class TestDistTrainer(unittest.TestCase):
             model=model, train_data=data_set, optimizer=SGD(lr=0.1),
             loss=CrossEntropyLoss(pred="predict", target="y"),
             batch_size_per_gpu=8, n_epochs=3, print_every=50, save_path=self.save_path,
-            fp16='O1'
+            fp16=True
         )
         trainer.train()
         """
@@ -113,18 +117,20 @@ class TestDistTrainer(unittest.TestCase):
             shutil.rmtree(self.save_path)
     
     def run3(self):
+        # test callbacks, especially clip-norm
         set_rng_seed(100)
         data_set, model = prepare_env()
         trainer = DistTrainer(
             data_set, model, optimizer=None,
             loss=BCELoss(pred="predict", target="y"),
             n_epochs=3, print_every=50,
-            callbacks_all=[EchoCallback('callbacks_all')],
+            callbacks_all=[GradientClipCallback()],
             callbacks_master=[EchoCallback('callbacks_master')]
         )
         trainer.train()
     
     def run4(self):
+        # test metrics, save, and others
         set_rng_seed(100)
         data_set, model = prepare_env()
         
@@ -173,4 +179,5 @@ if __name__ == '__main__':
     parser.add_argument('--test', type=int)
     args, _ = parser.parse_known_args()
     if args.test and hasattr(runner, 'run%s' % args.test):
+        dist.init_process_group("nccl")
         getattr(runner, 'run%s' % args.test)()

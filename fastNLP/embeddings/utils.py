@@ -89,3 +89,16 @@ def get_sinusoid_encoding_table(n_position, d_hid, padding_idx=None):
 
     return torch.FloatTensor(sinusoid_table)
 
+
+def _check_vocab_has_same_index(vocab, other_vocab):
+    """
+    检查两个vocabulary是否含有相同的word idx
+
+    :param Vocabulary vocab:
+    :param Vocabulary other_vocab:
+    :return:
+    """
+    if other_vocab != vocab:
+        for word, word_ix in vocab:
+            other_word_idx = other_vocab.to_index(word)
+            assert other_word_idx == word_ix, f"Word {word} has different index in vocabs, {word_ix} Vs. {other_word_idx}."
