@@ -599,7 +599,8 @@ class Trainer(object):
                                  verbose=0,
                                  use_tqdm=self.test_use_tqdm,
                                  sampler=kwargs.get('test_sampler', None),
-                                 fp16=self.test_use_fp16)
+                                 fp16=self.test_use_fp16,
+                                 num_workers=num_workers)
 
         self.start_time = None  # start timestamp
 
@@ -759,6 +760,13 @@ class Trainer(object):
                 # lr decay; early stopping
                 self.callback_manager.on_epoch_end()
             # =============== epochs end =================== #
+            if self.dev_data is not None and (self.validate_every>0 and self.n_steps%self.validate_every!=0):
+                eval_res = self._do_validation(epoch=epoch, step=self.step)
+                eval_str = "Evaluation on dev at Epoch {}/{}. Step:{}/{}: ".format(epoch, self.n_epochs, self.step,
+                                                                                   self.n_steps)
+                # pbar.write(eval_str + '\n')
+                self.logger.info(eval_str)
+                self.logger.info(self.tester._format_eval_results(eval_res) + '\n')
             pbar.close()
             self.pbar = None
         # ============ tqdm end ============== #
