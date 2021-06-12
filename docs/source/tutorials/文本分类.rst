@@ -204,7 +204,7 @@ fastNLP支持使用名字指定的Embedding以及相关说明可以参见 :mod:`
             # chars:[batch_size, max_len]
             # seq_len: [batch_size, ]
             chars = self.embed(chars)
-            outputs, _ = self.lstm(chars, seq_len)
+            outputs, _ = self.lstm(chars, seq_len.cpu())
             outputs = self.dropout_layer(outputs)
             outputs, _ = torch.max(outputs, dim=1)
             outputs = self.fc(outputs)
