@@ -432,6 +432,7 @@ class Trainer(object):
             bool set_grad_to_none: 在zero_grad的时候是否将gradient设置为None，而不是设置为zero
             GradScaler grad_scaler: 仅在fp16为True时有效，如果不使用torch.cuda.amp.GradScaler的初始化参数，可传入一个已经初始化后的
                 grad_scaler。
+            bool pin_memory: 是否将产生的tensor使用pin memory, 可能会加快数据速度。
         """
         super(Trainer, self).__init__()
         if not isinstance(model, nn.Module):
@@ -472,7 +473,7 @@ class Trainer(object):
                 warnings.warn("num_workers is ignored when train_data is BatchIter.")
             if drop_last:
                 warnings.warn("drop_last is ignored when train_data is BatchIter.")
-
+        self.pin_memory = kwargs.get('pin_memory', True)
         if isinstance(model, nn.parallel.DistributedDataParallel):  # 如果是分布式的
             # device为None
             if device is not None:
@@ -502,12 +503,13 @@ class Trainer(object):
                 sampler(train_data)
                 train_data = DataSetIter(train_data,
                                          batch_size=1, sampler=None, as_numpy=False, num_workers=num_workers,
-                                         pin_memory=False, drop_last=drop_last, timeout=0, worker_init_fn=None,
+                                         pin_memory=self.pin_memory, drop_last=drop_last, timeout=0, worker_init_fn=None,
                                          batch_sampler=sampler)
 
         if isinstance(train_data, DataSet):
             self.data_iterator = DataSetIter(dataset=train_data, batch_size=batch_size, sampler=sampler,
-                                             num_workers=num_workers, drop_last=drop_last)
+                                             num_workers=num_workers, drop_last=drop_last,
+                                             pin_memory=self.pin_memory)
         elif isinstance(train_data, BatchIter):
             self.data_iterator = train_data
             train_data = train_data.dataset
@@ -600,7 +602,8 @@ class Trainer(object):
                                  use_tqdm=self.test_use_tqdm,
                                  sampler=kwargs.get('test_sampler', None),
                                  fp16=self.test_use_fp16,
-                                 num_workers=num_workers)
+                                 num_workers=num_workers,
+                                 pin_memory=self.pin_memory)
 
         self.start_time = None  # start timestamp
 

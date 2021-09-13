@@ -98,6 +98,7 @@ class Tester(object):
         :param bool fp16: 是否使用float16进行验证
         :param kwargs:
             Sampler sampler: 支持传入sampler控制测试顺序
+            bool pin_memory: 是否将产生的tensor使用pin memory, 可能会加快数据速度。
         """
         super(Tester, self).__init__()
 
@@ -112,6 +113,7 @@ class Tester(object):
         self.verbose = verbose
         self.use_tqdm = use_tqdm
         self.logger = logger
+        self.pin_memory = kwargs.get('pin_memory', True)
 
         if isinstance(data, DataSet):
             sampler = kwargs.get('sampler', None)
@@ -122,7 +124,8 @@ class Tester(object):
             if hasattr(sampler, 'set_batch_size'):
                 sampler.set_batch_size(batch_size)
             self.data_iterator = DataSetIter(dataset=data, batch_size=batch_size, sampler=sampler,
-                                             num_workers=num_workers)
+                                             num_workers=num_workers,
+                                             pin_memory=self.pin_memory)
         elif isinstance(data, BatchIter):
             self.data_iterator = data
         else:
@@ -179,7 +182,8 @@ class Tester(object):
                     start_time = time.time()
 
                     for batch_x, batch_y in data_iterator:
-                        _move_dict_value_to_device(batch_x, batch_y, device=self._model_device)
+                        _move_dict_value_to_device(batch_x, batch_y, device=self._model_device,
+                                                   non_blocking=self.pin_memory)
                         with self.auto_cast():
                             pred_dict = self._data_forward(self._predict_func, batch_x)
                             if not isinstance(pred_dict, dict):
