@@ -334,6 +334,7 @@ try:
 except:
     from .utils import _pseudo_tqdm as tqdm
 import warnings
+from pkg_resources import parse_version
 
 from .batch import DataSetIter, BatchIter
 from .callback import CallbackManager, CallbackException, Callback
@@ -473,7 +474,8 @@ class Trainer(object):
                 warnings.warn("num_workers is ignored when train_data is BatchIter.")
             if drop_last:
                 warnings.warn("drop_last is ignored when train_data is BatchIter.")
-        self.pin_memory = kwargs.get('pin_memory', True)
+        # concerning issue from https://github.com/pytorch/pytorch/issues/57273
+        self.pin_memory = kwargs.get('pin_memory', False if parse_version(torch.__version__)==parse_version('1.9') else True)
         if isinstance(model, nn.parallel.DistributedDataParallel):  # 如果是分布式的
             # device为None
             if device is not None:

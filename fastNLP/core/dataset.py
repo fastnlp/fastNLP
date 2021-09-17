@@ -474,8 +474,8 @@ class DataSet(object):
             if idx.start is not None and (idx.start >= len(self) or idx.start <= -len(self)):
                 raise RuntimeError(f"Start index {idx.start} out of range 0-{len(self) - 1}")
             data_set = DataSet()
-            for field in self.field_arrays.values():
-                data_set.add_field(field_name=field.name, fields=field.content[idx], padder=field.padder,
+            for field_name, field in self.field_arrays.items():
+                data_set.add_field(field_name=field_name, fields=field.content[idx], padder=field.padder,
                                    is_input=field.is_input, is_target=field.is_target, ignore_type=field.ignore_type)
             data_set.collater = self.collater.copy_from(self.collater)
             return data_set
@@ -616,6 +616,7 @@ class DataSet(object):
         if len(self) != len(fieldarray):
             raise RuntimeError(f"The field to add must have the same size as dataset. "
                                f"Dataset size {len(self)} != field size {len(fieldarray)}")
+        fieldarray.name = field_name
         self.field_arrays[field_name] = fieldarray
 
     def add_field(self, field_name, fields, padder=AutoPadder(), is_input=False, is_target=False, ignore_type=False):
@@ -673,6 +674,7 @@ class DataSet(object):
         if not self.has_field(field_name):
             raise KeyError(f"Field:{field_name} not found in DataSet.")
         fieldarray = deepcopy(self.get_field(field_name))
+        fieldarray.name = new_field_name
         self.add_fieldarray(field_name=new_field_name, fieldarray=fieldarray)
         return self
 
