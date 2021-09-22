@@ -58,6 +58,8 @@ __all__ = [
     "ChnSentiCorpLoader",
     "THUCNewsLoader",
     "WeiboSenti100kLoader",
+    "MRLoader",
+    "R8Loader", "R52Loader", "OhsumedLoader", "_20ngLoader",
     
     'ConllLoader',
     'Conll2003Loader',
@@ -88,7 +90,7 @@ __all__ = [
 ]
 from .classification import CLSBaseLoader, YelpFullLoader, YelpPolarityLoader, AGsNewsLoader, IMDBLoader, \
     SSTLoader, SST2Loader, DBPediaLoader, \
-    ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader
+    ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader, MRLoader, R8Loader, R52Loader, OhsumedLoader, _20ngLoader
 from .conll import ConllLoader, Conll2003Loader, Conll2003NERLoader, OntoNotesNERLoader, CTBLoader
 from .conll import MsraNERLoader, PeopleDailyNERLoader, WeiboNERLoader
 from .coreference import CoReferenceLoader
