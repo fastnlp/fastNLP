@@ -170,7 +170,7 @@ class StaticEmbedding(TokenEmbedding):
             if model_path:
                 embedding = self._load_with_vocab(model_path, vocab=lowered_vocab, init_method=init_method)
             else:
-                embedding = self._randomly_init_embed(len(vocab), embedding_dim, init_method)
+                embedding = self._randomly_init_embed(len(lowered_vocab), embedding_dim, init_method)
                 self.register_buffer('words_to_words', torch.arange(len(vocab)).long())
             if lowered_vocab.unknown:
                 unknown_idx = lowered_vocab.unknown_idx
