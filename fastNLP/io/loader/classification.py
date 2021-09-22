@@ -11,7 +11,12 @@ __all__ = [
     "SST2Loader",
     "ChnSentiCorpLoader",
     "THUCNewsLoader",
-    "WeiboSenti100kLoader"
+    "WeiboSenti100kLoader",
+    "MRLoader",
+    "R8Loader",
+    "R52Loader",
+    "OhsumedLoader",
+    "_20ngLoader"
 ]
 
 

@@ -29,6 +29,7 @@ __all__ = [
     "ChnSentiCorpLoader",
     "THUCNewsLoader",
     "WeiboSenti100kLoader",
+    "MRLoader", "R8Loader", "R52Loader", "OhsumedLoader", "_20ngLoader",
 
     'ConllLoader',
     'Conll2003Loader',
@@ -68,6 +69,7 @@ __all__ = [
     "ChnSentiCorpPipe",
     "THUCNewsPipe",
     "WeiboSenti100kPipe",
+    "R8Pipe", "R52Pipe", "MRPipe", "OhsumedPipe", "_20ngPipe",
 
     "Conll2003Pipe",
     "Conll2003NERPipe",
