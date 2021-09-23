@@ -23,7 +23,7 @@ __all__ = [
     "ChnSentiCorpPipe",
     "THUCNewsPipe",
     "WeiboSenti100kPipe",
-    "MRPipe", "R52Pipe", "R8Pipe", "OhsumedPipe", "_20ngPipe",
+    "MRPipe", "R52Pipe", "R8Pipe", "OhsumedPipe", "NG20Loader",
     
     "Conll2003NERPipe",
     "OntoNotesNERPipe",
@@ -60,7 +60,7 @@ __all__ = [
 ]
 
 from .classification import CLSBasePipe, YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe, ChnSentiCorpPipe, THUCNewsPipe, \
-    WeiboSenti100kPipe, AGsNewsPipe, DBPediaPipe, MRPipe, R8Pipe, R52Pipe, OhsumedPipe, _20ngPipe
+    WeiboSenti100kPipe, AGsNewsPipe, DBPediaPipe, MRPipe, R8Pipe, R52Pipe, OhsumedPipe, NG20Loader
 from .conll import Conll2003NERPipe, OntoNotesNERPipe, MsraNERPipe, WeiboNERPipe, PeopleDailyPipe
 from .conll import Conll2003Pipe
 from .coreference import CoReferencePipe

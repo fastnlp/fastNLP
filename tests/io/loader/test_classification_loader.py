@@ -6,7 +6,7 @@ import os
 from fastNLP.io import DataBundle
 from fastNLP.io.loader.classification import YelpFullLoader, YelpPolarityLoader, IMDBLoader, \
     SSTLoader, SST2Loader, ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader, \
-    MRLoader, R8Loader, R52Loader, OhsumedLoader, _20ngLoader
+    MRLoader, R8Loader, R52Loader, OhsumedLoader, NG20Loader
 
 
 @unittest.skipIf('TRAVIS' in os.environ, "Skip in travis")
@@ -36,7 +36,7 @@ class TestLoad(unittest.TestCase):
             'R8': ('tests/data_for_tests/io/R8', R8Loader, (6, 6, 6), False),
             'R52': ('tests/data_for_tests/io/R52', R52Loader, (6, 6, 6), False),
             'ohsumed': ('tests/data_for_tests/io/R52', OhsumedLoader, (6, 6, 6), False),
-            '20ng': ('tests/data_for_tests/io/R52', _20ngLoader, (6, 6, 6), False),
+            '20ng': ('tests/data_for_tests/io/R52', NG20Loader, (6, 6, 6), False),
         }
         for k, v in data_set_dict.items():
             path, loader, data_set, warns = v

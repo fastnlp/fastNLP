@@ -12,7 +12,7 @@ __all__ = [
     "ChnSentiCorpPipe",
     "THUCNewsPipe",
     "WeiboSenti100kPipe",
-    "MRPipe", "R8Pipe", "R52Pipe", "OhsumedPipe", "_20ngPipe"
+    "MRPipe", "R8Pipe", "R52Pipe", "OhsumedPipe", "NG20Pipe"
 ]
 
 import re
@@ -29,7 +29,7 @@ from .utils import get_tokenizer, _indexize, _add_words_field, _add_chars_field,
 from ..data_bundle import DataBundle
 from ..loader.classification import ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader
 from ..loader.classification import IMDBLoader, YelpFullLoader, SSTLoader, SST2Loader, YelpPolarityLoader, \
-    AGsNewsLoader, DBPediaLoader, MRLoader, R52Loader, R8Loader, OhsumedLoader, _20ngLoader
+    AGsNewsLoader, DBPediaLoader, MRLoader, R52Loader, R8Loader, OhsumedLoader, NG20Loader
 from ...core._logger import logger
 from ...core.const import Const
 from ...core.dataset import DataSet
@@ -921,7 +921,7 @@ class OhsumedPipe(CLSBasePipe):
         return data_bundle
 
 
-class _20ngPipe(CLSBasePipe):
+class NG20Pipe(CLSBasePipe):
     def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
         r"""
 
@@ -938,7 +938,7 @@ class _20ngPipe(CLSBasePipe):
         :return: DataBundle
         """
         # 读取数据
-        data_bundle = _20ngLoader().load(paths)
+        data_bundle = NG20Loader().load(paths)
         data_bundle = self.process(data_bundle)
 
         return data_bundle

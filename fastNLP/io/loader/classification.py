@@ -17,7 +17,7 @@ __all__ = [
     "R8Loader",
     "R52Loader",
     "OhsumedLoader",
-    "_20ngLoader"
+    "NG20Loader",
 ]
 
 
@@ -591,9 +591,9 @@ class R52Loader(CLSBaseLoader):
                               suffix='csv')
         return data_dir
 
-class _20ngLoader(CLSBaseLoader):
+class NG20Loader(CLSBaseLoader):
     def __init__(self):
-        super(_20ngLoader, self).__init__()
+        super(NG20Loader, self).__init__()
 
     def download(self, dev_ratio: float = 0.0, re_download: bool = False) -> str:
         r"""
