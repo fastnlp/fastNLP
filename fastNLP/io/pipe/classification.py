@@ -11,7 +11,8 @@ __all__ = [
     'IMDBPipe',
     "ChnSentiCorpPipe",
     "THUCNewsPipe",
-    "WeiboSenti100kPipe"
+    "WeiboSenti100kPipe",
+    "MRPipe", "R8Pipe", "R52Pipe", "OhsumedPipe", "NG20Pipe"
 ]
 
 import re
@@ -28,7 +29,7 @@ from .utils import get_tokenizer, _indexize, _add_words_field, _add_chars_field,
 from ..data_bundle import DataBundle
 from ..loader.classification import ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader
 from ..loader.classification import IMDBLoader, YelpFullLoader, SSTLoader, SST2Loader, YelpPolarityLoader, \
-    AGsNewsLoader, DBPediaLoader
+    AGsNewsLoader, DBPediaLoader, MRLoader, R52Loader, R8Loader, OhsumedLoader, NG20Loader
 from ...core._logger import logger
 from ...core.const import Const
 from ...core.dataset import DataSet
@@ -826,4 +827,118 @@ class WeiboSenti100kPipe(CLSBasePipe):
         data_loader = WeiboSenti100kLoader()  # 此处需要实例化一个data_loader，否则传入load()的参数为None
         data_bundle = data_loader.load(paths)
         data_bundle = self.process(data_bundle)
+        return data_bundle
+
+class MRPipe(CLSBasePipe):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+        r"""
+
+        :param bool lower: 是否将words列的数据小写。
+        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
+        """
+        super().__init__(tokenizer=tokenizer, lang='en')
+        self.lower = lower
+
+    def process_from_file(self, paths=None):
+        r"""
+
+        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
+        :return: DataBundle
+        """
+        # 读取数据
+        data_bundle = MRLoader().load(paths)
+        data_bundle = self.process(data_bundle)
+
+        return data_bundle
+
+
+class R8Pipe(CLSBasePipe):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+        r"""
+
+        :param bool lower: 是否将words列的数据小写。
+        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
+        """
+        super().__init__(tokenizer=tokenizer, lang='en')
+        self.lower = lower
+
+    def process_from_file(self, paths=None):
+        r"""
+
+        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
+        :return: DataBundle
+        """
+        # 读取数据
+        data_bundle = R8Loader().load(paths)
+        data_bundle = self.process(data_bundle)
+
+        return data_bundle
+
+
+class R52Pipe(CLSBasePipe):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+        r"""
+
+        :param bool lower: 是否将words列的数据小写。
+        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
+        """
+        super().__init__(tokenizer=tokenizer, lang='en')
+        self.lower = lower
+
+    def process_from_file(self, paths=None):
+        r"""
+
+        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
+        :return: DataBundle
+        """
+        # 读取数据
+        data_bundle = R52Loader().load(paths)
+        data_bundle = self.process(data_bundle)
+
+        return data_bundle
+
+
+class OhsumedPipe(CLSBasePipe):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+        r"""
+
+        :param bool lower: 是否将words列的数据小写。
+        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
+        """
+        super().__init__(tokenizer=tokenizer, lang='en')
+        self.lower = lower
+
+    def process_from_file(self, paths=None):
+        r"""
+
+        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
+        :return: DataBundle
+        """
+        # 读取数据
+        data_bundle = OhsumedLoader().load(paths)
+        data_bundle = self.process(data_bundle)
+
+        return data_bundle
+
+
+class NG20Pipe(CLSBasePipe):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+        r"""
+
+        :param bool lower: 是否将words列的数据小写。
+        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
+        """
+        super().__init__(tokenizer=tokenizer, lang='en')
+        self.lower = lower
+
+    def process_from_file(self, paths=None):
+        r"""
+
+        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
+        :return: DataBundle
+        """
+        # 读取数据
+        data_bundle = NG20Loader().load(paths)
+        data_bundle = self.process(data_bundle)
+
         return data_bundle
