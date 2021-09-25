@@ -32,7 +32,7 @@ class DataBundle:
         
         :param vocabs: 从名称(字符串)到 :class:`~fastNLP.Vocabulary` 类型的dict
         :param datasets: 从名称(字符串)到 :class:`~fastNLP.DataSet` 类型的dict。建议不要将相同的DataSet对象重复传入，可能会在
-            使用Pipe处理数据的时候遇到问题。
+            使用Pipe处理数据的时候遇到问题，若多个数据集确需一致，请手动deepcopy后传入。
         """
         self.vocabs = vocabs or {}
         self.datasets = datasets or {}
