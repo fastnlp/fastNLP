@@ -56,7 +56,13 @@ __all__ = [
     
     "CoReferencePipe",
 
-    "CMRC2018BertPipe"
+    "CMRC2018BertPipe",
+
+    "R52PmiGraphPipe",
+    "R8PmiGraphPipe",
+    "OhsumedPmiGraphPipe",
+    "NG20PmiGraphPipe",
+    "MRPmiGraphPipe"
 ]
 
 from .classification import CLSBasePipe, YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe, ChnSentiCorpPipe, THUCNewsPipe, \
@@ -70,3 +76,5 @@ from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe
     LCQMCPipe, BQCorpusPipe, LCQMCBertPipe, RenamePipe, GranularizePipe, MachingTruncatePipe
 from .pipe import Pipe
 from .qa import CMRC2018BertPipe
+
+from .construct_graph import MRPmiGraphPipe, R8PmiGraphPipe, R52PmiGraphPipe, NG20PmiGraphPipe, OhsumedPmiGraphPipe
