@@ -32,6 +32,7 @@ from .utils import _build_args
 from .utils import _build_fp16_env
 from .utils import _get_func_signature
 from .utils import _move_dict_value_to_device
+from .sampler import Sampler
 
 __all__ = [
     'get_local_rank',
@@ -54,7 +55,7 @@ def get_local_rank():
     raise RuntimeError('Please use "python -m torch.distributed.launch --nproc_per_node=N train_script.py')
 
 
-class DistTrainer():
+class DistTrainer:
     r"""
     分布式的 Trainer，支持分布式训练和混合精度的训练。具体实现原理请阅读 pytorch 官方文档。
 
@@ -68,11 +69,11 @@ class DistTrainer():
                  dev_data=None, metrics=None, metric_key=None,
                  update_every=1, print_every=10, validate_every=-1,
                  save_path=None, device='auto',
-                 fp16=False, use_tqdm=True, **kwargs):
+                 fp16=False, use_tqdm=True, sampler=None, **kwargs):
         r"""
 
         :param train_data: 训练集， :class:`~fastNLP.DataSet` 类型。
-        :param nn.modules model: 待训练的模型
+        :param nn.modules, DDP model: 待训练的模型
         :param optimizer: `torch.optim.Optimizer` 优化器。如果为None，则Trainer使用默认的Adam(model.parameters(), lr=4e-3)这个优化器
         :param loss: 使用的 :class:`~fastNLP.core.losses.LossBase` 对象。当为None时，默认使用 :class:`~fastNLP.LossInForward`
         :param list callbacks_all: 用于在train过程中起调节作用的回调函数，作用于所有训练进程中。
@@ -101,13 +102,18 @@ class DistTrainer():
         :param str device: 指定 device，可以是 gpu，cpu 或 auto
         :param bool fp16: 指定是否使用半精度训练。
         :param bool use_tqdm: 是否使用tqdm来显示训练进度; 如果为False，则将loss打印在终端中。
+        :param Sampler sampler: 使用的sampler，如果不指定，默认使用的DistributedSampler。使用这个参数的情况一般为，明确修改了每个
+            rank的Dataset，使得每个rank上的dataset虽然sample数量一样多，但是sample其实不一样。
         :param kwargs: 支持配置可选参数
             bool test_use_tqdm: 在dev上验证的时候是否开启tqdm
             Sampler test_sampler: 在evaluate的时候使用的sampler
             int dev_batch_size: 在evaluate时，使用的evaluate的batch大小
             bool test_use_fp16: test时使用fp16
             bool set_grad_to_none: zero_grad时将grad设为None而不是0
-            GradScaler gradscaler: 自定义的梯度 scaler
+            GradScaler grad_scaler: 自定义的梯度 scaler
+            bool pin_memory: 是否将产生的tensor使用pin memory, 可能会加快数据速度。一般在tensor较多或tensor维度较大时，有速度增益。
+            bool find_unused_parameters: 在将model转化为DistributedDataParallel类型的时候，需要填入该参数，除非model内确实有
+                forward没用上的参数，否则应该不需要用到该参数。
         """
         assert device in ['auto', 'cuda', 'cpu'], "Please set correct device in [auto', 'cuda', 'cpu']"
         if device == 'auto':
@@ -126,6 +132,9 @@ class DistTrainer():
         self.rank = dist.get_rank() # unique id for each process
 
         self.train_data = train_data
+        self.kwargs = kwargs
+        if kwargs.get('batch_size', None):
+            batch_size_per_gpu = int(kwargs.get('batch_size'))
         self.batch_size_per_gpu = int(batch_size_per_gpu)
         self.n_epochs = int(n_epochs)
         self.num_data_workers = int(num_workers)
@@ -137,7 +146,6 @@ class DistTrainer():
         self.losser = _prepare_losser(loss)
         self.fp16 = fp16
         self.local_rank = get_local_rank()
-        self._forward_func = model.forward
         self.callback_manager = DistCallbackManager(
             env={"trainer": self}, callbacks_all=callbacks_all,
             callbacks_master=callbacks_master)
@@ -145,34 +153,50 @@ class DistTrainer():
         self.metric_key = metric_key
         self.use_tqdm = use_tqdm
 
-        model.to(self.device)
-
         # init fp16, must before DataParallel init
         autocast, GradScaler = _build_fp16_env(dummy=not self.fp16)
         self.auto_cast = autocast
-        user_grad_scaler = getattr(kwargs, 'gradscaler', None)
+        user_grad_scaler = kwargs.get('grad_scaler', None)
         if user_grad_scaler is not None:
-            assert self.fp16, "must set fp16=True to enable gradscaler"
+            assert self.fp16, "must set fp16=True to enable grad_scaler"
             grad_scaler = user_grad_scaler
         else:
             grad_scaler = GradScaler()
         self.grad_scaler = grad_scaler
 
-        self.set_grad_to_none = getattr(kwargs, 'set_grad_to_none', True)
-
+        self.set_grad_to_none = kwargs.get('set_grad_to_none', False)
         # init DataParallel
-        if parse_version(torch.__version__)>=parse_version('1.1'):
-            self.ddp_model = DDP(model, device_ids=[self.local_rank],
-                             output_device=self.local_rank, find_unused_parameters=True)
+        if isinstance(model, DDP):
+            self.ddp_model = model
         else:
-            self.ddp_model = DDP(model, device_ids=[self.local_rank],
-                             output_device=self.local_rank)
+            model.to(self.device)
+            if parse_version(torch.__version__)>=parse_version('1.1'):
+                self.ddp_model = DDP(model, device_ids=[self.local_rank],
+                                     output_device=self.local_rank,
+                                     find_unused_parameters=kwargs.get('find_unused_parameters', False))
+            else:
+                self.ddp_model = DDP(model, device_ids=[self.local_rank],
+                                 output_device=self.local_rank)
         self.model = self.ddp_model.module
+
+        self._forward_func = self.model.forward
+        self.model.to(self.device)
 
         optimizer = self._get_optimizer(optimizer)
         self.optimizer = optimizer
         if isinstance(self.train_data, DataSet):
-            self.sampler = DistributedSampler(self.train_data)
+            if sampler is None:
+                self.sampler = DistributedSampler(self.train_data)
+            else:
+                # sampler check
+                if sampler is not None and not isinstance(sampler, (Sampler, torch.utils.data.Sampler)):
+                    raise ValueError(
+                        f"The type of sampler should be fastNLP.BaseSampler or pytorch's Sampler, got {type(sampler)}")
+                elif hasattr(sampler, 'set_batch_size'):
+                    sampler.set_batch_size(batch_size_per_gpu)
+                self.sampler = sampler
+        # concerning issue from https://github.com/pytorch/pytorch/issues/57273
+        self.pin_memory = kwargs.get('pin_memory', False if parse_version(torch.__version__)==parse_version('1.9') else True)
         self.data_iterator = self._get_data_iter(self.train_data)
         self.batch_size = self.world_size * self.batch_size_per_gpu
         self.n_steps = self._get_n_steps()
@@ -180,18 +204,16 @@ class DistTrainer():
         self.dev_data = dev_data
         self.metrics = metrics
         self.test_use_tqdm = True
-        self.kwargs = kwargs
         self.test_use_tqdm = kwargs.get('test_use_tqdm', self.use_tqdm)
         dev_batch_size = kwargs.get('dev_batch_size', batch_size_per_gpu)
 
         # for evaluation, only run eval on master proc
         if dev_data and metrics:
             cb = _TesterCallback(
-                dev_data, model, metrics,
+                dev_data, self.model, metrics,
                 batch_size=dev_batch_size, num_workers=num_workers, sampler=kwargs.get('test_sampler', None),
                 use_tqdm=self.test_use_tqdm)
             self.test_manager.add_callback([cb], master=True)
-
         # Setup logging
         # 同步start_time
         sync_time = torch.tensor(time.time(), dtype=torch.double).to(self.device)
@@ -211,29 +233,14 @@ class DistTrainer():
         self.logger.info("Num of processes: {}".format(self.world_size))
         self.logger.info("Use device: {}".format(device))
 
-    def _maybe_no_sync(self):
-        """
-        Whenever *samples* contains more than one mini-batch, we
-        want to accumulate gradients locally and only call
-        all-reduce in the last backwards pass.
-        """
-        i = self.step % self.update_every
-        if (
-                self.world_size > 1
-                and hasattr(self.ddp_model, "no_sync")
-                and i != 0
-        ):
-            return self.ddp_model.no_sync()
-        else:
-            return contextlib.ExitStack()  # dummy contextmanager
-
     def _get_n_steps(self):
         return len(self.data_iterator) * self.n_epochs
 
     def _get_data_iter(self, dataset):
         if isinstance(dataset, DataSet):
             return DataSetIter(dataset=dataset, batch_size=self.batch_size_per_gpu, sampler=self.sampler,
-                               num_workers=self.num_data_workers, drop_last=self.drop_last)
+                               num_workers=self.num_data_workers, drop_last=self.drop_last,
+                               pin_memory=self.pin_memory)
         elif isinstance(dataset, BatchIter):
             return dataset
         else:
@@ -339,6 +346,7 @@ class DistTrainer():
         avg_loss = 0
         data_iterator = self.data_iterator
         self.ddp_model.zero_grad()
+        self.batch_per_epoch = self.data_iterator.num_batches
         for epoch in range(1, self.n_epochs + 1):
             self.epoch = epoch
             pbar.set_description_str(desc="Epoch {}/{}".format(epoch, self.n_epochs))
@@ -346,38 +354,42 @@ class DistTrainer():
             self.callback_manager.on_epoch_begin()
             for batch_x, batch_y in data_iterator:
                 self.step += 1
-                self.ddp_model.train()
-                _move_dict_value_to_device(batch_x, batch_y, device=self.device)
-                indices = data_iterator.get_batch_indices()
-                # negative sampling; replace unknown; re-weight batch_y
-                self.callback_manager.on_batch_begin(batch_x, batch_y, indices)
-                with self.auto_cast():
-                    prediction = self._data_forward(self.ddp_model, batch_x)
-                    # edit prediction
-                    self.callback_manager.on_loss_begin(batch_y, prediction)
-                    loss = self._compute_loss(prediction, batch_y)
+                if self.step%self.update_every!=0:
+                    no_sync = self.ddp_model.no_sync
+                else:
+                    no_sync = contextlib.ExitStack
+                with no_sync():
+                    self.ddp_model.train()
+                    _move_dict_value_to_device(batch_x, batch_y, device=self.device, non_blocking=self.pin_memory)
+                    indices = data_iterator.get_batch_indices()
+                    # negative sampling; replace unknown; re-weight batch_y
+                    self.callback_manager.on_batch_begin(batch_x, batch_y, indices)
+                    with self.auto_cast():
+                        prediction = self._data_forward(self.ddp_model, batch_x)
+                        # edit prediction
+                        self.callback_manager.on_loss_begin(batch_y, prediction)
+                        loss = self._compute_loss(prediction, batch_y)
 
-                avg_loss += loss.detach()
+                    avg_loss += loss.detach()
 
-                # Is loss NaN or inf? requires_grad = False
-                self.callback_manager.on_backward_begin(loss)
-                self.grad_scaler.scale(loss).backward()
-                self.callback_manager.on_backward_end()
-                if self.step % self.update_every == 0:
+                    # Is loss NaN or inf? requires_grad = False
+                    self.callback_manager.on_backward_begin(loss)
+                    self._grad_backward(loss)
+                    self.callback_manager.on_backward_end()
                     self._update()
-                self.callback_manager.on_step_end()
+                    self.callback_manager.on_step_end()
 
-                if self.step % self.print_every == 0:
-                    avg_loss = float(avg_loss) / self.print_every
-                    print_output = "loss:{:<6.5f}".format(avg_loss)
-                    pbar.update(self.print_every)
-                    pbar.set_postfix_str(print_output)
-                    avg_loss = 0
+                    if self.step % self.print_every == 0:
+                        avg_loss = float(avg_loss) / self.print_every
+                        print_output = "loss:{:<6.5f}".format(avg_loss)
+                        pbar.update(self.print_every)
+                        pbar.set_postfix_str(print_output)
+                        avg_loss = 0
 
-                self.callback_manager.on_batch_end()
+                    self.callback_manager.on_batch_end()
 
-                if (self.validate_every > 0 and self.step % self.validate_every == 0) and len(self.test_manager.callbacks):
-                    self._do_validation()
+                    if (self.validate_every > 0 and self.step % self.validate_every == 0) and len(self.test_manager.callbacks):
+                        self._do_validation()
 
             # ================= mini-batch end ==================== #
             if self.validate_every < 0 and len(self.test_manager.callbacks):
@@ -390,7 +402,7 @@ class DistTrainer():
         self.pbar = None
     # ============ tqdm end ============== #
 
-    def _clear_grad_opt(self, optimizer):
+    def _clear_grad(self, optimizer):
         if self.set_grad_to_none:
             for group in optimizer.param_groups:
                 for p in group['params']:
@@ -399,13 +411,24 @@ class DistTrainer():
         else:
             optimizer.zero_grad()
 
+    def _grad_backward(self, loss):
+        r"""Compute gradient with link rules.
+
+        :param loss: a scalar where back-prop starts
+
+        For PyTorch, just do "loss.backward()"
+        """
+        if (self.step-1) % self.update_every == 0:
+            self._clear_grad(self.optimizer)
+        self.grad_scaler.scale(loss).backward()
+
     def _update(self):
         r"""Perform weight update on a model.
 
         """
-        self.grad_scaler.step(self.optimizer)
-        self.grad_scaler.update()
-        self._clear_grad_opt(self.optimizer)
+        if self.step % self.update_every == 0:
+            self.grad_scaler.step(self.optimizer)
+            self.grad_scaler.update()
 
     def _data_forward(self, network, x):
         x = _build_args(self._forward_func, **x)

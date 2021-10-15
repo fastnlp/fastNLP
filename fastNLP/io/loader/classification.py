@@ -11,7 +11,13 @@ __all__ = [
     "SST2Loader",
     "ChnSentiCorpLoader",
     "THUCNewsLoader",
-    "WeiboSenti100kLoader"
+    "WeiboSenti100kLoader",
+
+    "MRLoader",
+    "R8Loader",
+    "R52Loader",
+    "OhsumedLoader",
+    "NG20Loader",
 ]
 
 
@@ -512,3 +518,123 @@ class WeiboSenti100kLoader(Loader):
         """
         output_dir = self._get_dataset_path('weibo-senti-100k')
         return output_dir
+
+class MRLoader(CLSBaseLoader):
+    def __init__(self):
+        super(MRLoader, self).__init__()
+
+    def download(self, dev_ratio: float = 0.0, re_download: bool = False) -> str:
+        r"""
+            自动下载数据集
+
+            如果dev_ratio不等于0,则根据dev_ratio的值随机将train中的数据取出一部分作为dev数据。
+            下载完成后在output_dir中有train.csv, test.csv, dev.csv三个文件。否则只有train.csv和test.csv
+
+            :param float dev_ratio: 如果路径中没有dev集，从train划分多少作为dev的数据. 如果为0，则不划分dev。
+            :param bool re_download: 是否重新下载数据，以重新切分数据。
+            :return: str, 数据集的目录地址
+        """
+        dataset_name = r'mr'
+        data_dir = self._get_dataset_path(dataset_name=dataset_name)
+        data_dir = _split_dev(dataset_name=dataset_name,
+                              data_dir=data_dir,
+                              dev_ratio=dev_ratio,
+                              re_download=re_download,
+                              suffix='csv')
+        return data_dir
+
+class R8Loader(CLSBaseLoader):
+    def __init__(self):
+        super(R8Loader, self).__init__()
+
+    def download(self, dev_ratio: float = 0.0, re_download: bool = False) -> str:
+        r"""
+            自动下载数据集
+
+            如果dev_ratio不等于0,则根据dev_ratio的值随机将train中的数据取出一部分作为dev数据。
+            下载完成后在output_dir中有train.csv, test.csv, dev.csv三个文件。否则只有train.csv和test.csv
+
+            :param float dev_ratio: 如果路径中没有dev集，从train划分多少作为dev的数据. 如果为0，则不划分dev。
+            :param bool re_download: 是否重新下载数据，以重新切分数据。
+            :return: str, 数据集的目录地址
+        """
+        dataset_name = r'R8'
+        data_dir = self._get_dataset_path(dataset_name=dataset_name)
+        data_dir = _split_dev(dataset_name=dataset_name,
+                              data_dir=data_dir,
+                              dev_ratio=dev_ratio,
+                              re_download=re_download,
+                              suffix='csv')
+        return data_dir
+
+class R52Loader(CLSBaseLoader):
+    def __init__(self):
+        super(R52Loader, self).__init__()
+
+    def download(self, dev_ratio: float = 0.0, re_download: bool = False) -> str:
+        r"""
+            自动下载数据集
+
+            如果dev_ratio不等于0,则根据dev_ratio的值随机将train中的数据取出一部分作为dev数据。
+            下载完成后在output_dir中有train.csv, test.csv, dev.csv三个文件。否则只有train.csv和test.csv
+
+            :param float dev_ratio: 如果路径中没有dev集，从train划分多少作为dev的数据. 如果为0，则不划分dev。
+            :param bool re_download: 是否重新下载数据，以重新切分数据。
+            :return: str, 数据集的目录地址
+        """
+        dataset_name = r'R52'
+        data_dir = self._get_dataset_path(dataset_name=dataset_name)
+        data_dir = _split_dev(dataset_name=dataset_name,
+                              data_dir=data_dir,
+                              dev_ratio=dev_ratio,
+                              re_download=re_download,
+                              suffix='csv')
+        return data_dir
+
+class NG20Loader(CLSBaseLoader):
+    def __init__(self):
+        super(NG20Loader, self).__init__()
+
+    def download(self, dev_ratio: float = 0.0, re_download: bool = False) -> str:
+        r"""
+            自动下载数据集
+
+            如果dev_ratio不等于0,则根据dev_ratio的值随机将train中的数据取出一部分作为dev数据。
+            下载完成后在output_dir中有train.csv, test.csv, dev.csv三个文件。否则只有train.csv和test.csv
+
+            :param float dev_ratio: 如果路径中没有dev集，从train划分多少作为dev的数据. 如果为0，则不划分dev。
+            :param bool re_download: 是否重新下载数据，以重新切分数据。
+            :return: str, 数据集的目录地址
+        """
+        dataset_name = r'20ng'
+        data_dir = self._get_dataset_path(dataset_name=dataset_name)
+        data_dir = _split_dev(dataset_name=dataset_name,
+                              data_dir=data_dir,
+                              dev_ratio=dev_ratio,
+                              re_download=re_download,
+                              suffix='csv')
+        return data_dir
+
+class OhsumedLoader(CLSBaseLoader):
+    def __init__(self):
+        super(OhsumedLoader, self).__init__()
+
+    def download(self, dev_ratio: float = 0.0, re_download: bool = False) -> str:
+        r"""
+            自动下载数据集
+
+            如果dev_ratio不等于0,则根据dev_ratio的值随机将train中的数据取出一部分作为dev数据。
+            下载完成后在output_dir中有train.csv, test.csv, dev.csv三个文件。否则只有train.csv和test.csv
+
+            :param float dev_ratio: 如果路径中没有dev集，从train划分多少作为dev的数据. 如果为0，则不划分dev。
+            :param bool re_download: 是否重新下载数据，以重新切分数据。
+            :return: str, 数据集的目录地址
+        """
+        dataset_name = r'ohsumed'
+        data_dir = self._get_dataset_path(dataset_name=dataset_name)
+        data_dir = _split_dev(dataset_name=dataset_name,
+                              data_dir=data_dir,
+                              dev_ratio=dev_ratio,
+                              re_download=re_download,
+                              suffix='csv')
+        return data_dir

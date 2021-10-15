@@ -345,6 +345,14 @@ class TestDataSetMethods(unittest.TestCase):
         ds.apply_field(lambda x: x, 'idx', 'idx')
         self.assertTrue(isinstance(ds.get_field('idx').padder, AutoPadder))  # should be None, but AutoPadder
 
+    def test_instance_field_disappear_bug(self):
+        data = DataSet({'raw_chars': [[0,1],[2]], 'target': [0, 1]})
+        data.copy_field(field_name='raw_chars', new_field_name='chars')
+        _data = data[:1]
+        for field_name in ['raw_chars', 'target', 'chars']:
+            self.assertTrue(_data.has_field(field_name))
+
+
 class TestDataSetIter(unittest.TestCase):
     def test__repr__(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})

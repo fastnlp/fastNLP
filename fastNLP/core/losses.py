@@ -320,7 +320,7 @@ class BCEWithLogits(LossBase):
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
     :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
     :param int class_in_dim: 在序列标注的场景中，pred可能的shape为(batch_size, max_len, num_classes)
-    或(batch_size, num_classes, max_len)， CrossEntropyLoss需要知道哪一维是class的维度以计算loss。如果为-1，就根据pred的第
+    或(batch_size, num_classes, max_len)， BCEWithLogits需要知道哪一维是class的维度以计算loss。如果为-1，就根据pred的第
     二维是否等于target的第二维来判断是否需要交换pred的第二维和第三维，因为target的第二维是length的维度，如果这一维度上和pred相等，
     那么pred可能第二维也是长度维(存在误判的可能，如果有误判的情况，请显示设置该值)。其它大于0的值则认为该维度是class的维度。
     :param str reduction: 支持 `mean` ，`sum` 和 `none` .
@@ -340,7 +340,7 @@ class BCEWithLogits(LossBase):
                     pred = pred.transpose(1, 2)
             else:
                 pred = pred.transpose(-1, self.class_in_dim)
-            pred = pred.reshape(-1, pred.size(-1))
+            pred = pred.reshape(-1)
             target = target.reshape(-1)
 
         return F.binary_cross_entropy_with_logits(input=pred, target=target, reduction=self.reduction)
