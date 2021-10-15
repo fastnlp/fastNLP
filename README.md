@@ -6,7 +6,7 @@
 ![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)
 [![Documentation Status](https://readthedocs.org/projects/fastnlp/badge/?version=latest)](http://fastnlp.readthedocs.io/?badge=latest)
 
-fastNLP是一款轻量级的自然语言处理（NLP）工具包，目标是快速实现NLP任务以及构建复杂模型。
+fastNLP是一款面向自然语言处理（NLP）的轻量级框架，目标是快速实现NLP任务以及构建复杂模型。
 
 fastNLP具有如下的特性：
 
