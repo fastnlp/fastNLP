@@ -16,14 +16,18 @@ print(pkgs)
 
 setup(
     name='FastNLP',
+<<<<<<< HEAD
     version='0.7.0',
+=======
+    version='0.7.1',
+>>>>>>> 9bfc75f4af0c7d635fb3c2ab5b2d47ac925c879b
     url='https://gitee.com/fastnlp/fastNLP',
     description='fastNLP: Deep Learning Toolkit for NLP, developed by Fudan FastNLP Team',
     long_description=readme,
     long_description_content_type='text/markdown',
     license='Apache License',
     author='Fudan FastNLP Team',
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     packages=pkgs,
     install_requires=reqs.strip().split('\n'),
 )
