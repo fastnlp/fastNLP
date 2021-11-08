@@ -13,7 +13,7 @@ try:
     from sklearn.pipeline import Pipeline
 except:
     raise ImportError("Fail to import networkx, sklearn, please use'pip install networkx==2.4 and "
-                 "pip install scikit-learn==0.23.1' to install package")
+                 "pip install scikit-learn==0.23.1'")
 from collections import defaultdict
 import itertools
 import math
