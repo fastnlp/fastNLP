@@ -103,6 +103,11 @@ DATASET_DIR = {
     "yelp-review-polarity": "yelp_review_polarity.tar.gz",
     "sst-2": "SST-2.zip",
     "sst": "SST.zip",
+    'mr': 'mr.zip',
+    "R8": "R8.zip",
+    "R52": "R52.zip",
+    "20ng": "20ng.zip",
+    "ohsumed": "ohsumed.zip",
 
     # Classification, Chinese
     "chn-senti-corp": "chn_senti_corp.zip",
