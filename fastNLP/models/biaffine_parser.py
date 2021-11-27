@@ -376,7 +376,7 @@ class BiaffineParser(GraphParser):
         if self.encoder_name.endswith('lstm'):
             sort_lens, sort_idx = torch.sort(seq_len, dim=0, descending=True)
             x = x[sort_idx]
-            x = nn.utils.rnn.pack_padded_sequence(x, sort_lens, batch_first=True)
+            x = nn.utils.rnn.pack_padded_sequence(x, sort_lens.cpu(), batch_first=True)
             feat, _ = self.encoder(x)  # -> [N,L,C]
             feat, _ = nn.utils.rnn.pad_packed_sequence(feat, batch_first=True)
             _, unsort_idx = torch.sort(sort_idx, dim=0, descending=False)
