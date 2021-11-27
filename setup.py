@@ -23,7 +23,7 @@ setup(
     long_description_content_type='text/markdown',
     license='Apache License',
     author='Fudan FastNLP Team',
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     packages=pkgs,
     install_requires=reqs.strip().split('\n'),
 )
