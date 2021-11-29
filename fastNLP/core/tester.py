@@ -113,7 +113,7 @@ class Tester(object):
         self.verbose = verbose
         self.use_tqdm = use_tqdm
         self.logger = logger
-        self.pin_memory = kwargs.get('pin_memory', True)
+        self.pin_memory = kwargs.get('pin_memory', False if parse_version(torch.__version__)==parse_version('1.9') else True)
 
         if isinstance(data, DataSet):
             sampler = kwargs.get('sampler', None)
