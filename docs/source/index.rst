@@ -4,6 +4,10 @@ fastNLP 中文文档
 `fastNLP <https://github.com/fastnlp/fastNLP/>`_ 是一款轻量级的自然语言处理（NLP）工具包。你既可以用它来快速地完成一个NLP任务，
 也可以用它在研究中快速构建更复杂的模型。
 
+.. hint::
+
+    如果你是从 readthedocs 访问的该文档，请跳转到我们的 `最新网站 <http://www.fastnlp.top/docs/fastNLP/>`_
+
 fastNLP具有如下的特性：
 
 - 统一的Tabular式数据容器，简化数据预处理过程;
@@ -41,7 +45,7 @@ API 文档
 fitlog文档
 ----------
 
-您可以 `点此 <https://fitlog.readthedocs.io/zh/latest/>`_  查看fitlog的文档。
+您可以 `点此 <http://www.fastnlp.top/docs/fitlog/>`_  查看fitlog的文档。
 fitlog 是由我们团队开发的日志记录+代码管理的工具。
 
 索引与搜索
