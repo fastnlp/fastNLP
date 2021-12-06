@@ -4,7 +4,7 @@
 
 本文介绍结合使用 fastNLP 和 fitlog 进行科研的方法。
 
-首先，我们需要安装 `fitlog <https://fitlog.readthedocs.io/>`_ 。你需要确认你的电脑中没有其它名为 `fitlog` 的命令。
+首先，我们需要安装 `fitlog <http://www.fastnlp.top/docs/fitlog/>`_ 。你需要确认你的电脑中没有其它名为 `fitlog` 的命令。
 
 我们从命令行中进入到一个文件夹，现在我们要在文件夹中创建我们的 fastNLP 项目。你可以在命令行输入 `fitlog init test1` ，
 然后你会看到如下提示::
@@ -15,7 +15,7 @@
     Fitlog project test1 is initialized.
 
 这表明你已经创建成功了项目文件夹，并且在项目文件夹中已经初始化了 Git。如果你不想初始化 Git，
-可以参考文档 `命令行工具 <https://fitlog.readthedocs.io/zh/latest/user/command_line.html>`_
+可以参考文档 `命令行工具 <http://www.fastnlp.top/docs/fitlog/user/command_line.html>`_
 
 现在我们进入你创建的项目文件夹 test1 中，可以看到有一个名为 logs 的文件夹，后面我们将会在里面存放你的实验记录。
 同时也有一个名为 main.py 的文件，这是我们推荐你使用的训练入口文件。文件的内容如下::
@@ -37,7 +37,7 @@
     fitlog.finish()                     # finish the logging
 
 我们推荐你保留除注释外的四行代码，它们有助于你的实验，
-他们的具体用处参见文档 `用户 API <https://fitlog.readthedocs.io/zh/latest/fitlog.html>`_
+他们的具体用处参见文档 `用户 API <http://www.fastnlp.top/docs/fitlog/>`_
 
 我们假定你要进行前两个教程中的实验，并已经把数据复制到了项目根目录下的 tutorial_sample_dataset.csv 文件中。
 现在我们编写如下的训练代码，使用 :class:`~fastNLP.core.callback.FitlogCallback` 进行实验记录保存::
