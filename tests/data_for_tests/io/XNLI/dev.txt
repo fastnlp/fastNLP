@@ -1,7 +1,0 @@
-language	gold_label	sentence1_binary_parse	sentence2_binary_parse	sentence1_parse	sentence2_parse	sentence1	sentence2	promptID	pairID	genre	label1	label2	label3	label4	label5	sentence1_tokenized	sentence2_tokenized	match
-zh	neutral					他说，妈妈，我回来了。	校车把他放下后，他立即给他妈妈打了电话。	1	1	facetoface	neutral	contradiction	neutral	neutral	neutral	他 说 ， 妈妈 ， 我 回来 了 。	校车 把 他 放下 后 ， 他 立即 给 他 妈妈 打 了 电话 。	True
-zh	contradiction					他说，妈妈，我回来了。	他没说一句话。	1	2	facetoface	contradiction	contradiction	contradiction	contradiction	contradiction	他 说 ， 妈妈 ， 我 回来 了 。	他 没 说 一 句 话 。	True
-zh	entailment					他说，妈妈，我回来了。	他告诉他的妈妈他已经回到家了。	1	3	facetoface	entailment	entailment	neutral	entailment	entailment	他 说 ， 妈妈 ， 我 回来 了 。	他 告诉 他 的 妈妈 他 已经 回到家 了 。	True
-zh	neutral					他们停止了跟这家交朋友，因为他们决定了当白人。	种族紧张局势开始时，他们不再探望这家人。	13	39	facetoface	neutral	entailment	entailment	entailment	entailment	他们 停止 了 跟 这家 交朋友 ， 因为 他们 决定 了 当 白人 。	种族 紧张 局势 开始 时 ， 他们 不再 探望 这家 人 。	False
-zh	contradiction					老太太以前常说她姐姐和姐丈是如何决定要搬到奥古斯塔城里去，并且被当做白人看待。	奶奶的妹妹是白人，搬到了德克萨斯州。	17	49	facetoface	contradiction	contradiction	contradiction	contradiction	neutral	老太太 以前 常 说 她 姐姐 和 姐丈 是 如何 决定 要 搬 到 奥古斯塔 城里 去 ， 并且 被 当做 白人 看待 。	奶奶 的 妹妹 是 白人 ， 搬 到 了 德克萨斯州 。	True
-zh	entailment					老太太以前常说她姐姐和姐丈是如何决定要搬到奥古斯塔城里去，并且被当做白人看待。	奶奶的姐姐不是白人。	17	50	facetoface	entailment	entailment	contradiction	neutral	entailment	老太太 以前 常 说 她 姐姐 和 姐丈 是 如何 决定 要 搬 到 奥古斯塔 城里 去 ， 并且 被 当做 白人 看待 。	奶奶 的 姐姐 不 是 白人 。	True

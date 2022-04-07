@@ -1,1 +1,0 @@
-{"architectures": ["GPT2LMHeadModel"], "initializer_range": 0.02, "layer_norm_epsilon": 1e-05, "n_ctx": 20, "n_embd": 16, "n_head": 4, "n_layer": 2, "n_positions": 20, "vocab_size": 64}

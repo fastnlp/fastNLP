@@ -1,7 +1,0 @@
-中 B-ORG
-共 I-ORG
-中 I-ORG
-央 I-ORG
-
-致 O
-中 B-ORG
