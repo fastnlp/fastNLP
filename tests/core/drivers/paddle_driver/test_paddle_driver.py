@@ -1,16 +1,10 @@
 import unittest
 
 import torch
-from fastNLP.envs.set_env import set_env
-from fastNLP.envs.set_env_on_import import set_env_on_import_paddle
-
-set_env_on_import_paddle()
-set_env("paddle")
-import paddle
-from paddle.io import Dataset, DataLoader
 
 from fastNLP.core.drivers.paddle_driver.paddle_driver import PaddleDriver
-
+import paddle
+from paddle.io import Dataset, DataLoader
 
 class Net(paddle.nn.Layer):
     def __init__(self):
