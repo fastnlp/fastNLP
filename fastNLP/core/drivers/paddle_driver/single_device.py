@@ -1,0 +1,161 @@
+from typing import Optional, Dict, Union
+
+from .paddle_driver import PaddleDriver
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+from fastNLP.core.utils import auto_param_call, get_paddle_gpu_str
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleIterator
+from fastNLP.core.log import logger
+
+if _NEED_IMPORT_PADDLE:
+    import paddle
+    from paddle.fluid.reader import _DatasetKind
+
+__all__ = [
+    "PaddleSingleDriver",
+]
+
+class PaddleSingleDriver(PaddleDriver):
+    def __init__(self, model, device: Optional[str], fp16: Optional[bool] = False, **kwargs):
+        super(PaddleSingleDriver, self).__init__(model, fp16=fp16, **kwargs)
+
+        if device is None:
+            raise ValueError("Parameter `device` can not be None in `PaddleSingleDriver`.")
+
+        if isinstance(device, int):
+            self.model_device = get_paddle_gpu_str(device)
+        else:
+            self.model_device = device
+
+        self.local_rank = 0
+        self.global_rank = 0
+        self.world_size = 1
+
+        if isinstance(model, paddle.DataParallel):
+            # 注意这里的 unwrap_model 调用的是具体子类的方法；
+            model = self.unwrap_model()
+            if hasattr(model, "train_step"):
+                logger.warning("Notice your model is a `paddle.DataParallel` model. And your model also "
+                                "implements the `train_step` method, which we can not call actually, we will "
+                                " call `forward` function instead of `train_step` and you should note that.")
+            self._train_step = self.model
+            self._train_signature_fn = model.forward
+
+            if hasattr(model, "validate_step"):
+                logger.warning("Notice your model is a `paddle.DataParallel` model. And your model also "
+                                "implements the `validate_step` method, which we can not call actually, we "
+                                "will call `forward` function instead of `validate_step` and you should note that.")
+            self._validate_step = self.model
+            self._validate_signature_fn = model.forward
+
+            if hasattr(model, "test_step"):
+                logger.warning("Notice your model is a `paddle.DataParallel` model. And your model also "
+                               "implements the `test_step` method, which we can not call actually, we will "
+                               "call `forward` function instead of `test_step` and you should note that.")
+            self._test_step = self.model
+            self._test_signature_fn = model.forward
+        else:
+            if hasattr(self.model, "train_step"):
+                self._train_step = self.model.train_step
+                self._train_signature_fn = None
+            else:
+                self._train_step = self.model
+                # 输入的模型是 `DataParallel`，我们需要保证其 signature_fn 是正确的；
+                model = self.unwrap_model()
+                self._train_signature_fn = model.forward
+
+            if hasattr(self.model, "validate_step"):
+                self._validate_step = self.model.validate_step
+                self._validate_signature_fn = None
+            elif hasattr(self.model, "test_step"):
+                self._validate_step = self.model.test_step
+                self._validate_signature_fn = self.model.test_step
+            else:
+                self._validate_step = self.model
+                model = self.unwrap_model()
+                self._validate_signature_fn = model.forward
+
+            if hasattr(self.model, "test_step"):
+                self._test_step = self.model.test_step
+                self._test_signature_fn = None
+            elif hasattr(self.model, "validate_step"):
+                self._test_step = self.model.validate_step
+                self._test_signature_fn = self.model.validate_step
+            else:
+                self._test_step = self.model
+                model = self.unwrap_model()
+                self._test_signature_fn = model.forward
+
+    def setup(self):
+        paddle.device.set_device(self.model_device)
+        self.model.to(self.model_device)
+
+    def train_step(self, batch) -> Dict:
+        # 如果 batch 是一个 Dict，我们就默认帮其做参数匹配，否则就直接传入到 `train_step` 函数中，让用户自己处理；
+        if isinstance(batch, Dict):
+            return auto_param_call(self._train_step, batch, signature_fn=self._train_signature_fn)
+        else:
+            return self._train_step(batch)
+
+    def backward(self, loss):
+        self.grad_scaler.scale(loss).backward()
+
+    def step(self):
+        for optimizer in self.optimizers:
+            self.grad_scaler.step(optimizer)
+            self.grad_scaler.update()
+
+    def validate_step(self, batch) -> Dict:
+        if isinstance(batch, Dict):
+            return auto_param_call(self._validate_step, batch, signature_fn=self._validate_signature_fn)
+        else:
+            return self._validate_step(batch)
+
+    def test_step(self, batch) -> Dict:
+        if isinstance(batch, Dict):
+            return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
+        else:
+            return self._test_step(batch)
+
+    def replace_sampler(self, dataloader, dist_sampler: Union[str, ReproducibleBatchSampler, ReproducibleIterator], reproducible: bool = False):
+        # 暂时不支持IteratorDataset
+        assert dataloader.dataset_kind != _DatasetKind.ITER, \
+                "FastNLP does not support `IteratorDataset` now."
+        if isinstance(dist_sampler, ReproducibleBatchSampler):
+            dataloader.batch_sampler = dist_sampler
+            return dataloader
+        if isinstance(dist_sampler, ReproducibleIterator):
+            dataloader.batch_sampler.sampler = dist_sampler
+            return dataloader            
+
+        if reproducible:
+            if isinstance(dataloader.batch_sampler.sampler, ReproducibleIterator):
+                return dataloader
+            elif isinstance(dataloader.batch_sampler, ReproducibleBatchSampler):
+                return dataloader
+            else:
+                # TODO
+                batch_sampler = ReproducibleBatchSampler(
+                    batch_sampler=dataloader.batch_sampler,
+                    batch_size=dataloader.batch_sampler.batch_size,
+                    drop_last=dataloader.drop_last
+                )
+                dataloader.batch_sampler = batch_sampler
+                return dataloader
+        else:
+            return dataloader
+
+    def unwrap_model(self):
+        if isinstance(self.model, paddle.DataParallel):
+            return self.model._layers
+        else:
+            return self.model
+
+    @property
+    def data_device(self):
+        """
+        单卡模式不支持 data_device；
+        """
+        return self.model_device
+
+    def is_distributed(self):
+        return False
