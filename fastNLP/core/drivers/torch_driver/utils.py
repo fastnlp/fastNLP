@@ -1,0 +1,374 @@
+import os
+
+from typing import Any, Dict, Optional
+from enum import IntEnum
+import contextlib
+import random
+import numpy as np
+import inspect
+
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+
+if _NEED_IMPORT_TORCH:
+    import torch
+    # import torch.nn as nn
+    from torch.nn import Module
+    from torch.utils.data import DataLoader, BatchSampler
+    from torch.utils.data.sampler import Sampler
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as Module
+
+
+__all__ = [
+    'torch_seed_everything',
+    'optimizer_state_to_device'
+]
+
+from fastNLP.core.utils import auto_param_call
+from fastNLP.envs import FASTNLP_GLOBAL_SEED, FASTNLP_SEED_WORKERS
+from fastNLP.core.log import logger
+
+
+def _select_seed_randomly(min_seed_value: int = 0, max_seed_value: int = 255) -> int:
+    return random.randint(min_seed_value, max_seed_value)
+
+
+def torch_seed_everything(seed: Optional[int] = None, workers: bool = False) -> int:
+    """Function that sets seed for pseudo-random number generators in: pytorch, numpy, python.random In addition,
+    sets the following environment variables:
+
+    - `PL_GLOBAL_SEED`: will be passed to spawned subprocesses (e.g. ddp_spawn backend).
+    - `PL_SEED_WORKERS`: (optional) is set to 1 if ``workers=True``.
+
+    Args:
+        seed: the integer value seed for global random state in Lightning.
+            If `None`, will read seed from `PL_GLOBAL_SEED` env variable
+            or select it randomly.
+        workers: if set to ``True``, will properly configure all dataloaders passed to the
+            Trainer with a ``worker_init_fn``. If the user already provides such a function
+            for their dataloaders, setting this argument will have no influence. See also:
+            :func:`~pytorch_lightning.utilities.seed.pl_worker_init_function`.
+    """
+    max_seed_value = np.iinfo(np.uint32).max
+    min_seed_value = np.iinfo(np.uint32).min
+
+    if seed is None:
+        env_seed = os.environ.get(FASTNLP_GLOBAL_SEED)
+        if env_seed is None:
+            seed = _select_seed_randomly(min_seed_value, max_seed_value)
+            # rank_zero_warn(f"No seed found, seed set to {seed}")
+        else:
+            try:
+                seed = int(env_seed)
+            except ValueError:
+                seed = _select_seed_randomly(min_seed_value, max_seed_value)
+                # rank_zero_warn(f"Invalid seed found: {repr(env_seed)}, seed set to {seed}")
+    elif not isinstance(seed, int):
+        seed = int(seed)
+
+    if not (min_seed_value <= seed <= max_seed_value):
+        logger.warning("Your seed value is two big or two small for numpy, we will choose a random seed for you.")
+
+        # rank_zero_warn(f"{seed} is not in bounds, numpy accepts from {min_seed_value} to {max_seed_value}")
+        seed = _select_seed_randomly(min_seed_value, max_seed_value)
+
+    # using `log.info` instead of `rank_zero_info`,
+    # so users can verify the seed is properly set in distributed training.
+    # log.info(f"Global seed set to {seed}")
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    os.environ[FASTNLP_SEED_WORKERS] = f"{int(workers)}"
+    return seed
+
+
+def reset_seed() -> None:
+    """
+    这个函数主要是给 ddp 用的，因为 ddp 会开启多个进程，因此当用户在脚本中指定 seed_everything 时，在开启多个脚本后，会在每个脚本内重新
+    进行随机数的设置；
+
+    If :func:`pytorch_lightning.utilities.seed.seed_everything` is unused, this function will do nothing.
+    """
+    seed = os.environ.get(FASTNLP_GLOBAL_SEED, None)
+    workers = os.environ.get(FASTNLP_SEED_WORKERS, "0")
+    if seed is not None:
+        torch_seed_everything(int(seed), workers=bool(int(workers)))
+
+
+class ForwardState(IntEnum):
+    TRAIN = 0
+    VALIDATE = 1
+    TEST = 2
+    PREDICT = 3
+
+
+_MODE_PARAMETER = "_forward_state"
+
+
+class _DDPWrappingModel(Module):
+    """
+    该函数用于 DDP 训练时处理用户自己定制的 train_step 等函数；
+    之所以要使用这一额外的包裹模型，是因为在使用 DDP 时，必须使用 DistributedDataParallel 的 forward 函数才能实现正常的运行；
+    另一方面，我们要求用户在使用我们的框架时，需要针对不用的模式实现不同的处理函数，例如 'train_step', 'validate_step' 等；
+    然而，当使用 DistributedDataParallel 包裹 model 后，模型看不见其除了 forward 之外的方法；并且当我们尝试在训练过程中主动提取
+    `model = model.module`，这同样会导致错误，会使得每一个gpu上的模型参数不同；
+
+    因此出于以上考虑，我们实现了这一函数；
+    对于更详细的解释，可以参考 'pytorch_lightning' 的 ddp 的设计；
+    """
+
+    def __init__(self, model: Module):
+        super(_DDPWrappingModel, self).__init__()
+        self.model = model
+
+        if hasattr(model, "train_step"):
+            self._train_step = model.train_step
+            self._train_signature_fn = None
+        else:
+            self._train_step = model
+            self._train_signature_fn = model.forward
+
+        if hasattr(model, "validate_step"):
+            self._validate_step = model.validate_step
+            self._validate_signature_fn = None
+        elif hasattr(model, "test_step"):
+            self._validate_step = model.test_step
+            self._validate_signature_fn = None
+        else:
+            self._validate_step = model
+            self._validate_signature_fn = model.forward
+
+        if hasattr(model, "test_step"):
+            self._test_step = model.test_step
+            self._test_signature_fn = None
+        elif hasattr(model, "validate_step"):
+            self._test_step = model.validate_step
+            self._test_signature_fn = None
+        else:
+            self._test_step = model
+            self._test_signature_fn = model.forward
+
+    def forward(self, batch, **kwargs) -> Dict:
+        """
+        pytorch lightning 实现了先 unwrapping_model 的操作，但是感觉对于我们来说没有什么必须要，先写个注释放这里，之后有需求了再看；
+        """
+
+        _forward_state = kwargs.pop(_MODE_PARAMETER)
+
+        if _forward_state == ForwardState.TRAIN:
+            if isinstance(batch, Dict):
+                return auto_param_call(self._train_step, batch, signature_fn=self._train_signature_fn)
+            else:
+                return self._train_step(batch)
+        elif _forward_state == ForwardState.VALIDATE:
+            if isinstance(batch, Dict):
+                return auto_param_call(self._validate_step, batch, signature_fn=self._validate_signature_fn)
+            else:
+                return self._validate_step(batch)
+        elif _forward_state == ForwardState.TEST:
+            if isinstance(batch, Dict):
+                return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
+            else:
+                return self._test_step(batch)
+        elif _forward_state == ForwardState.PREDICT:
+            raise NotImplementedError("'PREDICT' mode has not been implemented.")
+        else:
+            raise NotImplementedError("You should direct a concrete mode.")
+
+
+class DummyGradScaler:
+    """
+    用于Dummy pytorch的GradScaler对象，防止重复写大量的if判断
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def get_scale(self):
+        return 1.0
+
+    def is_enabled(self):
+        return False
+
+    def scale(self, outputs):
+        return outputs
+
+    def step(self, optimizer, *args, **kwargs):
+        optimizer.step(*args, **kwargs)
+
+    def update(self, new_scale=None):
+        pass
+
+    def unscale_(self, optimizer):
+        pass
+
+    def load_state_dict(self, state_dict):
+        pass
+
+    def state_dict(self):
+        return {}
+
+
+def _build_fp16_env(dummy=False):
+    if dummy:
+        autocast = contextlib.ExitStack
+        GradScaler = DummyGradScaler
+    else:
+        if not torch.cuda.is_available():
+            raise RuntimeError("No cuda")
+        if torch.cuda.get_device_capability(0)[0] < 7:
+            logger.warning(
+                "NOTE: your device does NOT support faster training with fp16, "
+                "please switch to FP32 which is likely to be faster"
+            )
+        try:
+            from torch.cuda.amp import autocast, GradScaler
+        except ImportError:
+            raise RuntimeError("torch version too low (less than 1.6)")
+    return autocast, GradScaler
+
+
+def replace_sampler(dataloader: "DataLoader", sampler):
+    """
+     替换 sampler （初始化一个新的 dataloader 的逻辑在于）：
+
+     用户可能继承了 dataloader，定制了自己的 dataloader 类，这也是我们为什么先 `inspect.signature(dataloader)` 而不是直接
+      `inspect.signature(DataLoader)` 的原因，因此同时注意到我们在外层重新初始化一个 dataloader 时也是使用的用户传进来的 dataloader
+      的类，而不是直接的 DataLoader；
+
+     如果需要定制自己的 dataloader，保证以下两点：
+         1. 在 __init__ 方法中加入 **kwargs，这是为了方便我们将 sampler 插入到具体的 DataLoader 的构造中；
+         2. 在 __init__ 方法中出现的参数，请务必挂为同样名字的实例属性，例如 self.one_arg_name = one_arg_name，这是因为我们只能通过属性
+         来获取实际的参数的值；
+     """
+
+    # 拿到实例属性；
+    instance_attrs = {k: v for k, v in vars(dataloader).items() if not k.startswith('_')}
+
+    # 'multiprocessing_context' 是 user-defined function;
+    instance_attrs["multiprocessing_context"] = dataloader.multiprocessing_context
+
+    # 拿到 dataloader '__init__' 函数的默认函数签名；
+    init_params = dict(inspect.signature(dataloader.__init__).parameters)
+
+    # 这里为什么要单独弄的原因在于，用户在定制自己的 dataloader 的同时可能为了方便只设定一些参数，而后面直接使用 **kwargs 的方式，这时如果
+    # 其在初始化自己的 dataloader 实例的时候加入了一些其它的新的参数（首先这一步是必要的，因为我们只能通过这样加 sampler；另一方面，用户
+    # 可能确实通过 **kwargs 加入了一些新的参数），如果假设用户是这样使用的： "super().__init__(**kwargs)"，那么我们就只能去 DataLoader
+    # 中寻找；
+    has_variadic_kwargs = any(v.kind is v.VAR_KEYWORD for k, v in init_params.items())
+    if has_variadic_kwargs:
+        init_params.update(dict(inspect.signature(DataLoader.__init__).parameters))
+        del init_params["self"]
+
+    # 因为我们刚才可能用 DataLoader 的默认参数将用户定制的 dataloader 的参数覆盖掉了，因此需要重新弄一遍；
+    non_default_params = {name for name, p in init_params.items() if
+                          name in instance_attrs and p.default != instance_attrs[name]}
+    # add `dataset` as it might have been replaced with `*args`
+    non_default_params.add("dataset")
+
+    reconstruct_args = {k: v for k, v in instance_attrs.items() if k in non_default_params}
+    reconstruct_args.update(_dataloader_init_kwargs_resolve_sampler(dataloader, sampler))
+
+    required_args = {
+        p.name
+        for p in init_params.values()
+        if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
+           and p.default is p.empty
+           and p.name not in reconstruct_args
+    }
+
+    # 这种错误针对的是 __init__ 中的参数没有用同样名字的 self 挂上；
+    if required_args:
+        required_args = sorted(required_args)
+        dataloader_self_name = dataloader.__class__.__name__
+        raise Exception(
+            f"Trying to inject `DistributedSampler` into the `{dataloader_self_name}` instance. "
+            "This would fail as some of the `__init__` arguments are not available as instance attributes. "
+            f"The missing attributes are {required_args}. "
+            f"HINT: If you wrote the `{dataloader_self_name}` class, define `self.missing_arg_name` or "
+            "manually add the `DistributedSampler` as: "
+            f"`{dataloader_self_name}(dataset, sampler=DistributedSampler(dataset))`."
+        )
+
+    # 这种错误针对的是传入的 dataloader 不是直接的 DataLoader，而是定制了 DataLoader，但是 __init__ 中没有 **kwargs；
+    if not has_variadic_kwargs:
+
+        # the dataloader signature does not allow keyword arguments that need to be passed
+        missing_kwargs = reconstruct_args.keys() - init_params.keys()
+        if missing_kwargs:
+            missing_kwargs = sorted(missing_kwargs)
+            dataloader_self_name = dataloader.__class__.__name__
+            raise Exception(
+                f"Trying to inject `DistributedSampler` into the `{dataloader_self_name}` instance. "
+                "This would fail as it doesn't expose all its attributes in the `__init__` signature. "
+                f"The missing arguments are {missing_kwargs}. "
+                f"HINT: If you wrote the `{dataloader_self_name}` class, add the `__init__` arguments or "
+                "manually add the `DistributedSampler` as: "
+                f"`{dataloader_self_name}(dataset, sampler=DistributedSampler(dataset))`."
+            )
+
+    return type(dataloader)(**reconstruct_args)
+
+
+def _dataloader_init_kwargs_resolve_sampler(
+        dataloader: "DataLoader", sampler: Optional["Sampler"]
+) -> Dict[str, Any]:
+    """
+    此函数用于处理与 DataLoader 关联的采样器、batch_sampler 参数重新实例化；
+    """
+    batch_sampler = getattr(dataloader, "batch_sampler")
+    # checking the batch sampler type is different than PyTorch default.
+    if batch_sampler is not None and type(batch_sampler) is not BatchSampler:
+        batch_sampler = type(batch_sampler)(
+            sampler,
+            batch_size=batch_sampler.batch_size,
+            drop_last=batch_sampler.drop_last,
+        )
+
+        return {
+            "sampler": None,
+            "shuffle": False,
+            "batch_sampler": batch_sampler,
+            "batch_size": 1,
+            "drop_last": False,
+        }
+
+    return {"sampler": sampler, "shuffle": False, "batch_sampler": None}
+
+
+def replace_batch_sampler(dataloader, new_batch_sampler):
+    """Helper function to replace current batch sampler of the dataloader by a new batch sampler. Function returns new
+    dataloader with new batch sampler.
+
+    Args:
+        dataloader: input dataloader
+        new_batch_sampler: new batch sampler to use
+
+    Returns:
+        DataLoader
+    """
+    params_keys = [k for k in dataloader.__dict__.keys() if not k.startswith("_")]
+    for k in ["batch_size", "sampler", "drop_last", "batch_sampler", "dataset_kind"]:
+        if k in params_keys:
+            params_keys.remove(k)
+    params = {k: getattr(dataloader, k) for k in params_keys}
+    params["batch_sampler"] = new_batch_sampler
+    return type(dataloader)(**params)
+
+
+def optimizer_state_to_device(state, device):
+    new_state = {}
+    for name, param in state.items():
+        if isinstance(param, dict):
+            new_state[name] = optimizer_state_to_device(param, device)
+        elif isinstance(param, torch.Tensor):
+            new_state[name] = param.to(device).clone()
+        else:
+            new_state[name] = param
+    return new_state
+
+
+
+
