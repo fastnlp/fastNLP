@@ -10,7 +10,7 @@ __all__ = [
     'all_rank_call'
 ]
 
-from fastNLP.core.envs import FASTNLP_GLOBAL_RANK
+from fastNLP.envs.env import FASTNLP_GLOBAL_RANK
 
 
 def is_cur_env_distributed() -> bool:

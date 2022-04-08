@@ -3,8 +3,8 @@ import os
 import operator
 
 
-from fastNLP.core.envs.env import FASTNLP_BACKEND
-from fastNLP.core.envs.utils import _module_available, _compare_version
+from fastNLP.envs.env import FASTNLP_BACKEND
+from fastNLP.envs.utils import _module_available, _compare_version
 
 
 SUPPORT_BACKENDS = ['torch', 'paddle', 'jittor']

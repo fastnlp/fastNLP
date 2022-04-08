@@ -8,9 +8,9 @@ import sys
 from collections import defaultdict
 
 
-from fastNLP.core.envs.env import FASTNLP_BACKEND, FASTNLP_GLOBAL_RANK, USER_CUDA_VISIBLE_DEVICES, FASTNLP_GLOBAL_SEED
-from fastNLP.core.envs import SUPPORT_BACKENDS
-from fastNLP.core.envs.utils import _module_available
+from fastNLP.envs.env import FASTNLP_BACKEND, FASTNLP_GLOBAL_RANK, USER_CUDA_VISIBLE_DEVICES, FASTNLP_GLOBAL_SEED
+from fastNLP.envs.imports import SUPPORT_BACKENDS
+from fastNLP.envs.utils import _module_available
 
 
 def _set_backend():

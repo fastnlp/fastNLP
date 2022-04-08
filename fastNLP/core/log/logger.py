@@ -32,8 +32,8 @@ __all__ = [
 ]
 
 from fastNLP.core.log.handler import StdoutStreamHandler, TqdmLoggingHandler
-from fastNLP.core.envs import FASTNLP_LOG_LEVEL, FASTNLP_GLOBAL_RANK, FASTNLP_LAUNCH_TIME, FASTNLP_BACKEND_LAUNCH
-from fastNLP.core.envs import  is_cur_env_distributed
+from fastNLP.envs.env import FASTNLP_LOG_LEVEL, FASTNLP_GLOBAL_RANK, FASTNLP_LAUNCH_TIME, FASTNLP_BACKEND_LAUNCH
+from fastNLP.envs.distributed import  is_cur_env_distributed
 
 
 ROOT_NAME = 'fastNLP'
