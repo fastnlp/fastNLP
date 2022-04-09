@@ -271,10 +271,10 @@ def get_device_from_visible(device: Union[str, int]):
         return idx
     else:
         # 利用 USER_CUDA_VISIBLDE_DEVICES 获取用户期望的设备
-        user_visiblde_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
-        if user_visiblde_devices is not None and user_visiblde_devices != "":
+        user_visible_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
+        if user_visible_devices is not None and user_visible_devices != "":
             # 不为空，说明用户设置了 CUDA_VISIBLDE_DEVICES
-            idx = user_visiblde_devices.split(",")[idx]
+            idx = user_visible_devices.split(",")[idx]
         else:
             idx = str(idx)
 
