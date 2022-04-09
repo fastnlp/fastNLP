@@ -164,4 +164,4 @@ class TestSingleDeviceFunction:
         """
         dataloader = DataLoader(PaddleDataset_MNIST("train"), batch_size=100, shuffle=True)
 
-        res = self.driver.replace_sampler(dataloader, dist_sampler, reproducible)
+        res = self.driver.set_dist_repro_dataloader(dataloader, dist_sampler, reproducible)

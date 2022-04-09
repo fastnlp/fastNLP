@@ -124,11 +124,7 @@ class Evaluator:
 
         self.dataloaders = {}
         for name, dl in dataloaders.items():  # 替换为正确的 sampler
-            dl = self.driver.replace_sampler(
-                dataloader=dl,
-                dist_sampler=self._dist_sampler,
-                reproducible=False
-            )
+            dl = self.driver.set_dist_repro_dataloader(dataloader=dl, dist=self._dist_sampler, reproducible=False)
             self.dataloaders[name] = dl
 
         self.progress_bar = kwargs.get('progress_bar', 'auto')
