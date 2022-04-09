@@ -122,7 +122,6 @@ class PaddleBackend(Backend):
 
     def move_tensor_to_device(self, tensor, device):
         # TODO 如果在这里处理的话，会不会在别的地方引起bug？
-        if is_in_paddle_dist():
-            device = get_device_from_visible(device)
+        device = get_device_from_visible(device)
         return paddle_to(tensor, device)
 
