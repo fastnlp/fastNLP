@@ -241,7 +241,6 @@ class PaddleFleetDriver(PaddleDriver):
             launcher = FleetLauncher(self.parallel_device, self.output_from_new_proc)
             launcher.launch()
         # 设置参数和初始化分布式环境
-        reset_seed()
         fleet.init(self.role_maker, self.is_collective, self.strategy)
         self.global_rank = int(os.getenv("PADDLE_TRAINER_ID"))
         self.world_size = int(os.getenv("PADDLE_TRAINERS_NUM"))
