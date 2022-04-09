@@ -4,16 +4,17 @@ __all__ = [
 
 from typing import Any
 from functools import wraps
-from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE, _NEED_IMPORT_TORCH
 from fastNLP.envs.utils import _module_available
 
 _IS_TORCHMETRICS_AVAILABLE = _module_available('torchmetrics')
-if _IS_TORCHMETRICS_AVAILABLE:
-    from torchmetrics import Metric as torchmetrics_Metric
-
 _IS_ALLENNLP_AVAILABLE = _module_available('allennlp')
 if _IS_ALLENNLP_AVAILABLE:
     from allennlp.training.metrics import Metric as allennlp_Metric
+
+if _NEED_IMPORT_TORCH and _IS_TORCHMETRICS_AVAILABLE:
+    if _IS_TORCHMETRICS_AVAILABLE:
+        from torchmetrics import Metric as torchmetrics_Metric
 
 if _NEED_IMPORT_PADDLE:
     from paddle.metric import Metric as paddle_Metric

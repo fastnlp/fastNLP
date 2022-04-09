@@ -9,6 +9,7 @@ __all__ = [
 ]
 
 import os
+import re
 from typing import Any, Optional, Union
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
@@ -42,10 +43,19 @@ def get_paddle_device_id(device: Union[str, int]):
     if isinstance(device, int):
         return device
 
+    device = device.lower()
     if device == "cpu":
         raise ValueError("Cannot get device id from `cpu`.")
 
-    return paddle.device._convert_to_place(device).get_device_id()
+    match_res = re.match(r"gpu:\d+", device)
+    if not match_res:
+        raise ValueError(
+            "The device must be a string which is like 'cpu', 'gpu', 'gpu:x'"
+        )
+    device_id = device.split(':', 1)[1]
+    device_id = int(device_id)
+
+    return device_id
 
 def paddle_move_data_to_device(batch: Any, device: Optional[str] = None,
                               data_device: Optional[str] = None) -> Any:

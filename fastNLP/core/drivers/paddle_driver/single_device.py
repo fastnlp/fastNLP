@@ -1,8 +1,14 @@
+import os
 from typing import Optional, Dict, Union
 
 from .paddle_driver import PaddleDriver
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
-from fastNLP.core.utils import auto_param_call, get_paddle_gpu_str
+from fastNLP.core.utils import (
+    auto_param_call,
+    get_paddle_gpu_str,
+    get_paddle_device_id,
+    paddle_move_data_to_device,
+)
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleIterator
 from fastNLP.core.log import logger
 
@@ -86,8 +92,9 @@ class PaddleSingleDriver(PaddleDriver):
                 self._test_signature_fn = model.forward
 
     def setup(self):
-        paddle.device.set_device(self.model_device)
-        self.model.to(self.model_device)
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(get_paddle_device_id(self.model_device))
+        paddle.device.set_device("gpu:0")
+        self.model.to("gpu:0")
 
     def train_step(self, batch) -> Dict:
         # 如果 batch 是一个 Dict，我们就默认帮其做参数匹配，否则就直接传入到 `train_step` 函数中，让用户自己处理；
@@ -115,6 +122,16 @@ class PaddleSingleDriver(PaddleDriver):
             return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
         else:
             return self._test_step(batch)
+
+    def move_data_to_device(self, batch: 'paddle.Tensor'):
+        r"""
+        将数据迁移到指定的机器上；batch 可能是 list 也可能 dict ，或其嵌套结构。
+        在 Paddle 中使用可能会引起因与设置的设备不一致而产生的问题，请注意。
+        在单卡时，由于 CUDA_VISIBLE_DEVICES 始终被限制在一个设备上，因此实际上只会迁移到 `gpu:0`
+
+        :return: 将移动到指定机器上的 batch 对象返回；
+        """
+        return paddle_move_data_to_device(batch, "gpu:0")
 
     def replace_sampler(self, dataloader, dist_sampler: Union[str, ReproducibleBatchSampler, ReproducibleIterator], reproducible: bool = False):
         # 暂时不支持IteratorDataset
