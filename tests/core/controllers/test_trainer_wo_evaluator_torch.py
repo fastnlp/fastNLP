@@ -77,15 +77,14 @@ def model_and_optimizers(request):
 
 # 测试一下 cpu；
 @pytest.mark.parametrize("driver,device", [("torch", "cpu")])
-@pytest.mark.parametrize("callbacks", [[RecordLossCallback(loss_threshold=0.1)]])
 @magic_argv_env_context
 def test_trainer_torch_without_evaluator(
         model_and_optimizers: TrainerParameters,
         driver,
         device,
-        callbacks,
         n_epochs=10,
 ):
+    callbacks = [RecordLossCallback(loss_threshold=0.1)]
     trainer = Trainer(
         model=model_and_optimizers.model,
         driver=driver,
@@ -108,8 +107,7 @@ def test_trainer_torch_without_evaluator(
         dist.destroy_process_group()
 
 
-@pytest.mark.parametrize("driver,device", [("torch", 4), ("torch", [4, 5])])  # ("torch", 4),
-@pytest.mark.parametrize("callbacks", [[RecordLossCallback(loss_threshold=0.1)]])
+@pytest.mark.parametrize("driver,device", [("torch", 1), ("torch", [1, 2])])  # ("torch", 4),
 @pytest.mark.parametrize("fp16", [False, True])
 @pytest.mark.parametrize("accumulation_steps", [1, 3])
 @magic_argv_env_context
@@ -117,11 +115,11 @@ def test_trainer_torch_without_evaluator_fp16_accumulation_steps(
         model_and_optimizers: TrainerParameters,
         driver,
         device,
-        callbacks,
         fp16,
         accumulation_steps,
         n_epochs=10,
 ):
+    callbacks = [RecordLossCallback(loss_threshold=0.1)]
     trainer = Trainer(
         model=model_and_optimizers.model,
         driver=driver,
@@ -148,7 +146,7 @@ def test_trainer_torch_without_evaluator_fp16_accumulation_steps(
 
 
 # 测试 accumulation_steps；
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", 4), ("torch", [4, 5])])
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", 1), ("torch", [1, 2])])
 @pytest.mark.parametrize("accumulation_steps", [1, 3])
 @magic_argv_env_context
 def test_trainer_torch_without_evaluator_accumulation_steps(
@@ -181,7 +179,7 @@ def test_trainer_torch_without_evaluator_accumulation_steps(
         dist.destroy_process_group()
 
 
-@pytest.mark.parametrize("driver,device", [("torch", [6, 7])])
+@pytest.mark.parametrize("driver,device", [("torch", [1, 2])])
 @pytest.mark.parametrize("output_from_new_proc", ["all", "ignore", "only_error", "test_log"])
 @magic_argv_env_context
 def test_trainer_output_from_new_proc(
@@ -244,7 +242,7 @@ def test_trainer_output_from_new_proc(
         synchronize_safe_rm(path)
 
 
-@pytest.mark.parametrize("driver,device", [("torch", [4, 5])])
+@pytest.mark.parametrize("driver,device", [("torch", [1, 2])])
 @pytest.mark.parametrize("cur_rank", [0])  # 依次测试如果是当前进程出现错误，是否能够正确地 kill 掉其他进程；  , 1, 2, 3
 @magic_argv_env_context
 def test_trainer_on_exception(
