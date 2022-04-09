@@ -34,20 +34,13 @@ def _select_seed_randomly(min_seed_value: int = 0, max_seed_value: int = 255) ->
 
 
 def torch_seed_everything(seed: Optional[int] = None, workers: bool = False) -> int:
-    """Function that sets seed for pseudo-random number generators in: pytorch, numpy, python.random In addition,
-    sets the following environment variables:
+    r"""
+    为伪随机数生成器设置种子的函数：pytorch、numpy、python.random 另外，
+    设置以下环境变量：
 
-    - `PL_GLOBAL_SEED`: will be passed to spawned subprocesses (e.g. ddp_spawn backend).
-    - `PL_SEED_WORKERS`: (optional) is set to 1 if ``workers=True``.
-
-    Args:
-        seed: the integer value seed for global random state in Lightning.
-            If `None`, will read seed from `PL_GLOBAL_SEED` env variable
-            or select it randomly.
-        workers: if set to ``True``, will properly configure all dataloaders passed to the
-            Trainer with a ``worker_init_fn``. If the user already provides such a function
-            for their dataloaders, setting this argument will have no influence. See also:
-            :func:`~pytorch_lightning.utilities.seed.pl_worker_init_function`.
+    :param seed: 全局随机状态的整数值种子。如果为“无”，将从 "FASTNLP_GLOBAL_SEED" 环境变量中读取种子或随机选择。
+    :param workers: 如果设置为“True”，将正确配置所有传递给带有“worker_init_fn”的培训师。如果用户已经提供了这样的功能对于他们的数据加载器，
+     设置此参数将没有影响;
     """
     max_seed_value = np.iinfo(np.uint32).max
     min_seed_value = np.iinfo(np.uint32).min
@@ -56,7 +49,6 @@ def torch_seed_everything(seed: Optional[int] = None, workers: bool = False) -> 
         env_seed = os.environ.get(FASTNLP_GLOBAL_SEED)
         if env_seed is None:
             seed = _select_seed_randomly(min_seed_value, max_seed_value)
-            # rank_zero_warn(f"No seed found, seed set to {seed}")
         else:
             try:
                 seed = int(env_seed)
@@ -69,12 +61,8 @@ def torch_seed_everything(seed: Optional[int] = None, workers: bool = False) -> 
     if not (min_seed_value <= seed <= max_seed_value):
         logger.warning("Your seed value is two big or two small for numpy, we will choose a random seed for you.")
 
-        # rank_zero_warn(f"{seed} is not in bounds, numpy accepts from {min_seed_value} to {max_seed_value}")
         seed = _select_seed_randomly(min_seed_value, max_seed_value)
 
-    # using `log.info` instead of `rank_zero_info`,
-    # so users can verify the seed is properly set in distributed training.
-    # log.info(f"Global seed set to {seed}")
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -84,11 +72,9 @@ def torch_seed_everything(seed: Optional[int] = None, workers: bool = False) -> 
 
 
 def reset_seed() -> None:
-    """
+    r"""
     这个函数主要是给 ddp 用的，因为 ddp 会开启多个进程，因此当用户在脚本中指定 seed_everything 时，在开启多个脚本后，会在每个脚本内重新
     进行随机数的设置；
-
-    If :func:`pytorch_lightning.utilities.seed.seed_everything` is unused, this function will do nothing.
     """
     seed = os.environ.get(FASTNLP_GLOBAL_SEED, None)
     workers = os.environ.get(FASTNLP_SEED_WORKERS, "0")
