@@ -181,7 +181,7 @@ def check_user_specific_params(user_params: Dict, fn: Callable):
     return user_params
 
 
-def dataclass_to_dict(data: "dataclass") -> Dict:
+def dataclass_to_dict(data: "dataclasses.dataclass") -> Dict:
     if not is_dataclass(data):
         raise TypeError(f"Parameter `data` can only be `dataclass` type instead of {type(data)}.")
     _dict = dict()
