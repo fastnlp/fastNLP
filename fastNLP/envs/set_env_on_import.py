@@ -36,8 +36,7 @@ def set_env_on_import_torch():
 
 # TODO paddle may need set this
 def set_env_on_import_paddle():
-    # todo 需要设置 FASTNLP_GLOBAL_RANK 和 FASTNLP_LAUNCH_PROCESS
-    if "PADDLE_TRANERS_NUM" in os.environ and "PADDLE_TRAINER_ID" in os.environ \
+    if "PADDLE_TRAINERS_NUM" in os.environ and "PADDLE_TRAINER_ID" in os.environ \
         and "PADDLE_RANK_IN_NODE" in os.environ:
         # 检测到了分布式环境的环境变量
         os.environ[FASTNLP_GLOBAL_RANK] = os.environ["PADDLE_TRAINER_ID"]
