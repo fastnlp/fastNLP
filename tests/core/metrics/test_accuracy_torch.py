@@ -118,7 +118,6 @@ class TestAccuracy:
     def test_v1(self, is_ddp: bool, dataset: DataSet, metric_class: Type['Metric'],
                 metric_kwargs: Dict[str, Any]) -> None:
         global pool
-        print(pool)
         if is_ddp:
             if sys.platform == "win32":
                 pytest.skip("DDP not supported on windows")

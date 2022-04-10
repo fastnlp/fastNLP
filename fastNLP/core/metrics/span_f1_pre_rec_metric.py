@@ -216,9 +216,9 @@ def _compute_f_pre_rec(beta_square, tp, fn, fp):
 
 class SpanFPreRecMetric(Metric):
 
-    def __init__(self, backend: Union[str, Backend, None] = 'auto', tag_vocab: Vocabulary = None,
-                 encoding_type: str = None, ignore_labels: List[str] = None, only_gross: bool = True, f_type='micro',
-                 beta=1, aggregate_when_get_metric: bool = True,) -> None:
+    def __init__(self, tag_vocab: Vocabulary, encoding_type: str = None, ignore_labels: List[str] = None,
+                 only_gross: bool = True, f_type='micro',
+                 beta=1, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = True,) -> None:
         super(SpanFPreRecMetric, self).__init__(backend=backend, aggregate_when_get_metric=aggregate_when_get_metric)
         if f_type not in ('micro', 'macro'):
             raise ValueError("f_type only supports `micro` or `macro`', got {}.".format(f_type))
@@ -249,9 +249,18 @@ class SpanFPreRecMetric(Metric):
         self.only_gross = only_gross
         self.tag_vocab = tag_vocab
 
-        self._true_positives = defaultdict(partial(self.register_element, aggregate_method='sum', name=None))
-        self._false_positives = defaultdict(partial(self.register_element, aggregate_method='sum', name=None))
-        self._false_negatives = defaultdict(partial(self.register_element, aggregate_method='sum', name=None))
+        self._true_positives = {}
+        self._false_positives = {}
+        self._false_negatives = {}
+        for word, _ in tag_vocab:
+            word = word.lower()
+            if word != 'o':
+                word = word.split('-')[1]
+            if word in self._true_positives:
+                continue
+            self._true_positives[word] = self.register_element(name=f'tp_{word}', aggregate_method='sum', backend=backend)
+            self._false_negatives[word] = self.register_element(name=f'fn_{word}', aggregate_method='sum', backend=backend)
+            self._false_positives[word] = self.register_element(name=f'fp_{word}', aggregate_method='sum', backend=backend)
 
     def get_metric(self) -> dict:
         evaluate_result = {}
@@ -284,10 +293,17 @@ class SpanFPreRecMetric(Metric):
                 evaluate_result['rec'] = rec_sum / len(tags)
 
         if self.f_type == 'micro':
+            tp, fn, fp = [], [], []
+            for val in self._true_positives.values():
+                tp.append(val.get_scalar())
+            for val in self._false_negatives.values():
+                fn.append(val.get_scalar())
+            for val in self._false_positives.values():
+                fp.append(val.get_scalar())
             f, pre, rec = _compute_f_pre_rec(self.beta_square,
-                                             sum(val.get_scalar() for val in self._true_positives.values()),
-                                             sum(val.get_scalar() for val in self._false_negatives.values()),
-                                             sum(val.get_scalar() for val in self._false_positives.values()))
+                                             sum(tp),
+                                             sum(fn),
+                                             sum(fp))
             evaluate_result['f'] = f
             evaluate_result['pre'] = pre
             evaluate_result['rec'] = rec

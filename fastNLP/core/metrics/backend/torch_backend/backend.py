@@ -34,6 +34,7 @@ class TorchBackend(Backend):
                 if method is None:
                     raise AggregateMethodError(should_have_aggregate_method=True)
                 tensor = self._gather_all(tensor)
+                # tensor = self.all_gather_object(tensor)
                 if isinstance(tensor[0], torch.Tensor):
                     tensor = torch.stack(tensor)
                 # 第一步, aggregate结果
