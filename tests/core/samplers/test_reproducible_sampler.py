@@ -6,7 +6,8 @@ import numpy as np
 from functools import partial
 from array import array
 
-from fastNLP.core.samplers.reproducible_sampler import RandomSampler, ReproducibleBatchSampler
+from fastNLP.core.samplers.reproducible_sampler import RandomSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler
 from fastNLP.core.drivers.torch_driver.utils import replace_batch_sampler
 from tests.helpers.datasets.torch_data import TorchNormalDataset
 
