@@ -416,7 +416,6 @@ class TestBucketedBatchSampler:
     @pytest.mark.parametrize('num_replica', [2, 3])
     def test_multi_same_bucket(self, shuffle, drop_last, pad, num_samples, num_replica):
     # def test_multi_same_bucket(self, shuffle=True, drop_last=True, pad=True, num_samples=623, num_replica=2):
-        # TODO 两个 rank 上的长度是要在同一个bucket的
         dataset = DatasetWithVaryLength(num_of_data=num_samples)
         batch_size = 6
         if num_replica*batch_size > num_samples:
