@@ -99,7 +99,7 @@ def _test(local_rank: int,
     assert my_result == sklearn_metric
 
 
-class SpanFPreRecMetricTest(unittest.TestCase):
+class TestSpanFPreRecMetric:
 
     def test_case1(self):
         from fastNLP.core.metrics.span_f1_pre_rec_metric import _bmes_tag_to_spans
@@ -136,33 +136,31 @@ class SpanFPreRecMetricTest(unittest.TestCase):
         fastnlp_bio_vocab = Vocabulary(unknown=None, padding=None)
         fastnlp_bio_vocab.word_count = Counter(_generate_tags('BIO', number_labels))
         fastnlp_bio_metric = SpanFPreRecMetric(tag_vocab=fastnlp_bio_vocab, only_gross=False)
-        bio_sequence = torch.FloatTensor([[[-0.4424, -0.4579, -0.7376, 1.8129, 0.1316, 1.6566, -1.2169,
-                                            -0.3782, 0.8240],
-                                           [-1.2348, -0.1876, -0.1462, -0.4834, -0.6692, -0.9735, 1.1563,
+        bio_sequence = torch.FloatTensor([[[-0.4424, -0.4579, -0.7376,  1.8129,  0.1316,  1.6566, -1.2169,
+                                            -0.3782,  0.8240],
+                                           [-1.2348, -0.1876, -0.1462, -0.4834, -0.6692, -0.9735,  1.1563,
                                             -0.3562, -1.4116],
-                                           [1.6550, -0.9555, 0.3782, -1.3160, -1.5835, -0.3443, -1.7858,
-                                            2.0023, 0.7075],
-                                           [-0.3772, -0.5447, -1.5631, 1.1614, 1.4598, -1.2764, 0.5186,
+                                           [ 1.6550, -0.9555,  0.3782, -1.3160, -1.5835, -0.3443, -1.7858,
+                                             2.0023,  0.7075],
+                                           [-0.3772, -0.5447, -1.5631,  1.1614,  1.4598, -1.2764,  0.5186,
                                             0.3832, -0.1540],
-                                           [-0.1011, 0.0600, 1.1090, -0.3545, 0.1284, 1.1484, -1.0120,
+                                           [-0.1011,  0.0600,  1.1090, -0.3545,  0.1284,  1.1484, -1.0120,
                                             -1.3508, -0.9513],
-                                           [1.8948, 0.8627, -2.1359, 1.3740, -0.7499, 1.5019, 0.6919,
-                                            -0.0842, -0.4294]],
-                                          [
-                                              [[-0.2802, 0.6941, -0.4788, -0.3845, 1.7752, 1.2950, -1.9490,
-                                                -1.4138, -0.8853],
-                                               [-1.3752, -0.5457, -0.5305, 0.4018, 0.2934, 0.7931, 2.3845,
-                                                -1.0726, 0.0364],
-                                               [0.3621, 0.2609, 0.1269, -0.5950, 0.7212, 0.5959, 1.6264,
-                                                -0.8836, -0.9320],
-                                               [0.2003, -1.0758, -1.1560, -0.6472, -1.7549, 0.1264, 0.6044,
-                                                -1.6857, 1.1571],
-                                               [1.4277, -0.4915, 0.4496, 2.2027, 0.0730, -3.1792, -0.5125,
-                                                -0.5837, 1.0184],
-                                               [1.9495, 1.7145, -0.2143, -0.1230, -0.2205, 0.8250, 0.4943,
-                                                -0.9025, 0.0864]]
-                                          ]
-                                          ])
+                                           [ 1.8948,  0.8627, -2.1359,  1.3740, -0.7499,  1.5019,  0.6919,
+                                             -0.0842, -0.4294]],
+
+                                          [[-0.2802,  0.6941, -0.4788, -0.3845,  1.7752,  1.2950, -1.9490,
+                                            -1.4138, -0.8853],
+                                           [-1.3752, -0.5457, -0.5305,  0.4018,  0.2934,  0.7931,  2.3845,
+                                            -1.0726,  0.0364],
+                                           [ 0.3621,  0.2609,  0.1269, -0.5950,  0.7212,  0.5959,  1.6264,
+                                             -0.8836, -0.9320],
+                                           [ 0.2003, -1.0758, -1.1560, -0.6472, -1.7549,  0.1264,  0.6044,
+                                             -1.6857,  1.1571],
+                                           [ 1.4277, -0.4915,  0.4496,  2.2027,  0.0730, -3.1792, -0.5125,
+                                             -0.5837,  1.0184],
+                                           [ 1.9495,  1.7145, -0.2143, -0.1230, -0.2205,  0.8250,  0.4943,
+                                             -0.9025,  0.0864]]])
         bio_target = torch.LongTensor([[3, 6, 0, 8, 2, 4], [4, 1, 7, 0, 4, 7]])
         fastnlp_bio_metric.update(bio_sequence, bio_target, [6, 6])
         expect_bio_res = {'pre-1': 0.333333, 'rec-1': 0.333333, 'f-1': 0.333333, 'pre-2': 0.5, 'rec-2': 0.5,
@@ -254,7 +252,7 @@ class SpanFPreRecMetricTest(unittest.TestCase):
         # print(expected_metric)
         metric_value = metric.get_metric()
         for key, value in expected_metric.items():
-            self.assertAlmostEqual(value, metric_value[key], places=5)
+            np.allclose(value, metric_value[key])
 
     def test_auto_encoding_type_infer(self):
         #  检查是否可以自动check encode的类型
@@ -271,9 +269,8 @@ class SpanFPreRecMetricTest(unittest.TestCase):
                         vocab.add_word('o')
             vocabs[encoding_type] = vocab
         for e in ['bio', 'bioes', 'bmeso']:
-            with self.subTest(e=e):
-                metric = SpanFPreRecMetric(tag_vocab=vocabs[e])
-                assert metric.encoding_type == e
+            metric = SpanFPreRecMetric(tag_vocab=vocabs[e])
+            assert metric.encoding_type == e
 
         bmes_vocab = _generate_tags('bmes')
         vocab = Vocabulary()
@@ -286,7 +283,7 @@ class SpanFPreRecMetricTest(unittest.TestCase):
         vocab = Vocabulary()
         for i in range(10):
             vocab.add_word(str(i))
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             metric = SpanFPreRecMetric(vocab)
 
     def test_encoding_type(self):
@@ -305,21 +302,20 @@ class SpanFPreRecMetricTest(unittest.TestCase):
                         vocab.add_word('o')
             vocabs[encoding_type] = vocab
         for e1, e2 in product(['bio', 'bioes', 'bmeso'], ['bio', 'bioes', 'bmeso']):
-            with self.subTest(e1=e1, e2=e2):
-                if e1 == e2:
+            if e1 == e2:
+                metric = SpanFPreRecMetric(tag_vocab=vocabs[e1], encoding_type=e2)
+            else:
+                s2 = set(e2)
+                s2.update(set(e1))
+                if s2 == set(e2):
+                    continue
+                with pytest.raises(AssertionError):
                     metric = SpanFPreRecMetric(tag_vocab=vocabs[e1], encoding_type=e2)
-                else:
-                    s2 = set(e2)
-                    s2.update(set(e1))
-                    if s2 == set(e2):
-                        continue
-                    with self.assertRaises(AssertionError):
-                        metric = SpanFPreRecMetric(tag_vocab=vocabs[e1], encoding_type=e2)
         for encoding_type in ['bio', 'bioes', 'bmeso']:
-            with self.assertRaises(AssertionError):
+            with pytest.raises(AssertionError):
                 metric = SpanFPreRecMetric(tag_vocab=vocabs[encoding_type], encoding_type='bmes')
 
-        with self.assertWarns(Warning):
+        with pytest.warns(Warning):
             vocab = Vocabulary(unknown=None, padding=None).add_word_lst(list('bmes'))
             metric = SpanFPreRecMetric(tag_vocab=vocab, encoding_type='bmeso')
             vocab = Vocabulary().add_word_lst(list('bmes'))

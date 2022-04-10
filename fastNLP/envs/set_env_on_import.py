@@ -48,7 +48,8 @@ def set_env_on_import_paddle():
 # TODO jittor may need set this
 def set_env_on_import_jittor():
     # todo 需要设置 FASTNLP_GLOBAL_RANK 和 FASTNLP_BACKEND_LAUNCH
-    pass
+    if 'log_silent' not in os.environ:
+        os.environ['log_silent'] = '1'
 
 
 def set_env_on_import():

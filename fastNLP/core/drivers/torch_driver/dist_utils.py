@@ -402,7 +402,7 @@ def fastnlp_torch_all_gather(obj:Any, device=None, group=None)->List:
     if _TORCH_GREATER_EQUAL_1_8:
         objs = [None for _ in range(dist.get_world_size(group))]
         dist.all_gather_object(objs, obj)
-        apply_to_collection(obj, torch.Tensor, _to_device, device=device)  # 保证如果有tensor的话，所有tensor都在当前卡上
+        objs = apply_to_collection(objs, torch.Tensor, _to_device, device=device)  # 保证如果有tensor的话，所有tensor都在当前卡上
         return objs
     group = group if group is not None else torch.distributed.group.WORLD
     data = convert_to_tensors(obj, device=device)
