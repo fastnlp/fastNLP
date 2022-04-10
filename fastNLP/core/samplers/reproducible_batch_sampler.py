@@ -1,20 +1,48 @@
+__all__ = [
+    'BucketedBatchSampler',
+    "ReproducibleBatchSampler"
+]
+
 import math
 from array import array
 from copy import deepcopy
-from itertools import chain
 from typing import Dict, Union, List
+from itertools import chain
 
 import numpy as np
 
 from fastNLP.core.dataset import DataSet
-from fastNLP.core.samplers import ReproducibleIterator
+from fastNLP.core.log import logger
+from abc import abstractmethod
 
 
+class ReproducibleBatchIterator:
+    @abstractmethod
+    def set_distributed(self, num_replicas, rank, pad=True):
+        raise NotImplementedError("Each specific batch_sampler should implement its own `set_distributed` method.")
+
+    @abstractmethod
+    def __len__(self):
+        raise NotImplementedError("Each specific batch_sampler should implement its own `__len__` method.")
+
+    @abstractmethod
+    def __iter__(self):
+        raise NotImplementedError("Each specific batch_sampler should implement its own `__iter__` method.")
+
+    @abstractmethod
+    def state_dict(self):
+        raise NotImplementedError("Each specific batch_sampler should implement its own `state_dict` method.")
+
+    @abstractmethod
+    def load_state_dict(self, states):
+        raise NotImplementedError("Each specific batch_sampler should implement its own `load_state_dict` method.")
+
+    @abstractmethod
+    def set_epoch(self, epoch):
+        pass
 
 
-
-
-class ReproducibleBatchSampler:
+class ReproducibleBatchSampler(ReproducibleBatchIterator):
     # 这两个参数的值应当交给 driver 的 get_dataloader_args 函数去拿；
     def __init__(self, batch_sampler, batch_size: int, drop_last: bool, **kwargs):
         """
@@ -94,7 +122,7 @@ class ReproducibleBatchSampler:
         self.data_idx = states["data_idx"]
         self.need_reinitialize = False
 
-    def set_distributed(self):
+    def set_distributed(self, num_replicas, rank, pad=True):
         raise RuntimeError(f"ReproduceBatchSampler does not support to change to distributed training.")
 
     def set_epoch(self, epoch):
@@ -110,7 +138,7 @@ class ReproducibleBatchSampler:
                    (len(self.index_list) - self.data_idx + self.batch_size - 1) // self.batch_size
 
 
-class BucketedBatchSampler(ReproducibleIterator):
+class BucketedBatchSampler(ReproducibleBatchIterator):
     def __init__(self, dataset, length: Union[List[int], str], batch_size:int = 32, num_batch_per_bucket:int = 10,
                  shuffle: bool = True, drop_last: bool = False, seed: int = 0, **kwargs):
         """
@@ -129,20 +157,20 @@ class BucketedBatchSampler(ReproducibleIterator):
         :param kwargs: fastNLP 保留使用
         """
         super().__init__()
-        if not isinstance(dataset, DataSet):
+        if isinstance(dataset, DataSet):
             length = dataset.get_field(length)
             if not isinstance(length[0], int):
                 length = list(map(len, length))
         else:
-            assert isinstance(length, List) and len(length)==len(dataset), "When the dataset is not fastNLP.DataSet, " \
-                                                                           "the length parameter can only be List[int]"
-        assert len(length) == len(dataset), "The length of `data` and `length` should be equal."
+            assert len(length) == len(dataset), "When the dataset is not fastNLP.DataSet, " \
+                                              "the length parameter can only be List[int]"
 
-        if drop_last:
-            assert len(dataset)>=batch_size, "The number of samplers must be larger than batch_size when `drop_last=True`."
+        assert len(length) == len(dataset), "The length of `data` and `length` should be equal."
 
         self.dataset = dataset
         self.length = np.array(length, dtype=int)  # 按照长到短排列的序号。
+        self.sorted_indices = np.argsort(self.length)[::-1]  # 按长度从高到低排序的
+
 
         self.batch_size = batch_size
         self.num_batch_per_bucket = num_batch_per_bucket
@@ -160,6 +188,10 @@ class BucketedBatchSampler(ReproducibleIterator):
 
         # 是否处于iteration之间，为True不允许调用 set_distributed()和load_state_dict()
         self.during_iter = kwargs.get("during_iter", False)
+
+        # 以下变量为内部使用恢复状态的变量。
+        self.old_batch_size = kwargs.get('old_batch_size', self.batch_size)
+        self.old_num_batch_per_bucket = kwargs.get('old_num_batch_per_bucket', self.num_batch_per_bucket)
 
     def set_distributed(self, num_replicas, rank, pad=True):
         assert self.during_iter is False, "Cannot set the sampler to be distributed when it is " \
@@ -217,92 +249,123 @@ class BucketedBatchSampler(ReproducibleIterator):
         if self.during_iter:  # 如果发现_during_iter为True，说明之前的还没结束，只有强制重新初始化了
             self.num_consumed_samples = 0
         self.during_iter = True
-        indices = self.generate_indices()
 
-        if self.pad:
-            # add extra samples to make it evenly divisible
-            padding_size = self.total_size - len(indices)
-            if padding_size <= len(indices):
-                indices += indices[:padding_size]
-            else:
-                indices += (indices * math.ceil(padding_size / len(indices)))[:padding_size]
-        else:
-            # remove tail of data to make it evenly divisible.
-            indices = indices[:self.total_size]
-
-        assert len(indices) == self.total_size
-
-        # subsample
-        indices = indices[self.num_consumed_samples:]
-        indices = indices[self.rank:len(indices):self.num_replicas]
-        assert len(indices) == self.num_left_samples
-
-        # 根据内部的长度进行排序
-        sub_length = self.length[indices]  # 取出这个 rank 中的长度
-        sorted_indices = np.argsort(sub_length)[::-1]  # 按长度从高到低排序的
+        sorted_indices = deepcopy(self.sorted_indices).tolist()  # 按长度从高到低排序的
 
         if self.shuffle:
-            # 实际的 bucket 大小
-            bucket_size = min(len(sorted_indices), self.batch_size * self.num_batch_per_bucket)
-            seed = self.seed + self.epoch
-            rng = np.random.default_rng(abs(seed))
-            num_buckets = (len(sorted_indices) + bucket_size - 1)//bucket_size
-            batches = []
-            batch_indices = []
-            for i in range(num_buckets):
-                bucket = sorted_indices[i*bucket_size:(i+1)*bucket_size]
-                rng.shuffle(bucket)  # bucket 内部 shuffle 一下
-                _indices = np.full(fill_value=self.batch_size, dtype=int,
-                                   shape=(len(bucket)//self.batch_size)).cumsum()
-                _batches = np.split(bucket, _indices)
-                batch_indices.extend(list(range(len(batches), len(batches)+len(_batches))))
-                batches.extend(_batches)
-            last_batches = []
-            if len(batches)>=1 and len(batches[-1])<self.batch_size:
-                last_batches = batches[-1].tolist()
-                batch_indices = batch_indices[:-1]
-                batches = batches[:-1]
-            if self.drop_last and len(last_batches)<self.batch_size:
-                last_batches = []
-            rng.shuffle(batch_indices)  # 不同的 batch 也 shuffle ，当前这种可以保证每张卡上每个 batch 长度都接近的。
-            batches = np.array(batches)[batch_indices]
-            indices = list(chain(*batches)) + last_batches
+            if self.num_consumed_samples > 0:  # 需要先按照原来的排序，删掉多余的
+                _batches = []
+                for _i in range(self.old_num_replicas):
+                    _sorted_indices = sorted_indices[_i:len(sorted_indices):self.old_num_replicas]
+                    __batches = self.bucketerize(_sorted_indices, self.old_batch_size, self.old_num_batch_per_bucket,
+                                               seed=self.seed+self.epoch)
+                    _batches.append(__batches)
+                batches = list(chain(*[_ for _ in zip(*_batches)]))
+                sorted_indices = list(chain(*batches))
+                sorted_indices = sorted_indices[self.num_consumed_samples:]
+                # 再进行排序
+                sub_length = self.length[sorted_indices]
+                sorted_indices = np.array(sorted_indices)[np.argsort(sub_length)[::-1]]  # 按长度从高到低排序的
+            # 取出这个 rank ，
+            sorted_indices = sorted_indices[self.rank:len(sorted_indices):self.num_replicas]
+            batches = self.bucketerize(sorted_indices, self.batch_size, self.num_batch_per_bucket,
+                                       seed=self.seed+self.epoch)
+            batches = list(map(list, batches))
         else:
-            indices = sorted_indices
-            if len(indices)<self.batch_size and self.drop_last:
-                indices = []
+            sorted_indices = sorted_indices[self.num_consumed_samples:]
+            sorted_indices = sorted_indices[self.rank:len(sorted_indices):self.num_replicas]
+            _num_batches = len(sorted_indices) // self.batch_size
+            if _num_batches == 0:
+                batches = [sorted_indices]
+            else:
+                batches = list(map(list, np.array_split(sorted_indices[:_num_batches*self.batch_size], _num_batches)))
+                if len(sorted_indices)%self.batch_size!=0:
+                    batches.append(sorted_indices[_num_batches*self.batch_size:])
 
-        for index in range(indices):
-            self.num_consumed_samples += self.num_replicas
-            yield index
+        need_pad_num = (len(self.dataset)-self.num_consumed_samples) % self.num_replicas
+        if self.pad and need_pad_num !=0 and need_pad_num<=self.rank:
+            if len(batches) > 0:
+                if len(batches[-1])<self.batch_size:
+                    batches[-1].append(batches[-1][0])  # 这里可以保证这个bucket的长度没被破坏。
+                else:
+                    batches.append([batches[-1][0]])
+        elif self.pad is False and need_pad_num !=0 and need_pad_num>self.rank:
+            if len(batches):
+                batches[-1].pop(-1)
+            if len(batches[-1])==0:
+                batches.pop(-1)
+
+        assert len(list(chain(*batches))) == self.num_left_samples
+
+        if self.drop_last and len(batches) >= 1 and len(batches[-1]) < self.batch_size:
+            batches = batches[:-1]
+
+        for batch in batches:
+            self.num_consumed_samples += self.num_replicas * len(batch)
+            yield list(map(int, batch))
         self.during_iter = False
         self.num_consumed_samples = 0
+        self.old_batch_size = self.batch_size
+        self.old_num_batch_per_bucket = self.num_batch_per_bucket
+        self.old_num_replicas = self.num_replicas
+        if self.epoch < 0:  # 防止用户没有修改epoch，导致每个epoch都一样了
+            self.epoch -= 1
 
-    def generate_indices(self) -> List[int]:
+    def bucketerize(self, sorted_indices, batch_size, num_batch_per_bucket, seed):
         """
-        生成随机序列，用于保证在所有卡的总和加起来是原来的数据量。
+        将 indices 分桶
 
-        :return:
+        :param sorted_indices: List[int]
+        :param batch_size: int
+        :param num_batch_per_bucket: int
+        :param seed: int
+        :return:  List[List[int]]
         """
-        if self.shuffle:
-            indices = list(range(len(self.dataset)))
-            seed = self.seed + self.epoch
-            rng = np.random.default_rng(abs(seed))
-            rng.shuffle(indices)
-            if self.epoch < 0:  # 防止用户忘记调用 set_epoch，至少这样可以保证每次epoch出来的index顺序不同。
-                self.epoch -= 1
-        else:
-            indices = list(range(len(self.dataset)))
-        return indices
+        # 实际的 bucket 大小
+        bucket_size = min(len(sorted_indices), batch_size * num_batch_per_bucket)
+        rng = np.random.default_rng(abs(seed))
+        num_buckets = (len(sorted_indices) + bucket_size - 1) // bucket_size
+        batches = []
+        batch_indices = []
+        for i in range(num_buckets):
+            bucket = sorted_indices[i * bucket_size:(i + 1) * bucket_size]
+            rng.shuffle(bucket)  # bucket 内部 shuffle 一下
+            _num_batches = len(bucket) // batch_size
+            if _num_batches == 0:
+                _batches = [bucket]
+            else:
+                _batches = np.array_split(bucket[:_num_batches*batch_size], _num_batches)
+                if len(bucket) % batch_size != 0:
+                    _batches.append(bucket[_num_batches*batch_size:])
+            batch_indices.extend(list(range(len(batches), len(batches) + len(_batches))))
+            batches.extend(_batches)
+        last_batches = []
+        # 最后一个batch 统一不参与shuffle，因为有的rank最后一个 batch 可能不足一个batch_size （不足的时候
+        #  一定要放在末尾，所以就干脆所有的rank都不对最后一个batch进行shuffle）。
+        if len(batches) >= 1:
+            last_batches = [list(batches[-1])]
+        batch_indices = list(batch_indices[:-1])
+        rng = np.random.default_rng(abs(seed))  # 这里防止由于bucket长度不同，对随机数状态有影响
+        rng.shuffle(batch_indices)  # 不同的 batch 也 shuffle ，当前这种可以保证每张卡上每个 batch 长度都接近的。
+        batches = (np.array(batches)[batch_indices]).tolist()
+        if last_batches:
+            batches = batches + last_batches
+        return batches
 
     def state_dict(self) -> Dict:
+        if self.old_batch_size != self.batch_size or self.old_num_batch_per_bucket != self.num_batch_per_bucket:
+            raise RuntimeError("BucketedBatchSampler does not support saving before last checkpoint states have been"
+                               " consumed. ")
         states = {
             'seed': self.seed,
             'epoch': self.epoch,
             'num_consumed_samples': self.num_consumed_samples,  # 注意该值是计算所有 rank 上训练的所有数据；
             'sampler_type': self.__class__.__name__,
             'length': len(self.dataset),
-            'shuffle': self.shuffle
+            'shuffle': self.shuffle,
+            'batch_size': self.batch_size,
+            'num_batch_per_bucket': self.num_batch_per_bucket,
+            'num_replicas': self.num_replicas
         }
         return states
 
@@ -322,4 +385,13 @@ class BucketedBatchSampler(ReproducibleIterator):
         self.num_consumed_samples = states['num_consumed_samples']
         if self.num_consumed_samples>=length:  # 如果保存的时候已经到达了最后一个sample了，则直接将结果重置为0
             self.num_consumed_samples = 0
+        if self.shuffle != states['shuffle']:
+            logger.info(f"The shuffle from the checkpoint is {states['shuffle']}, while set as {self.shuffle}, "
+                        f"we use shuffle={states['shuffle']}")
         self.shuffle = states["shuffle"]
+        self.old_batch_size = states['batch_size']
+        self.old_num_batch_per_bucket = states['num_batch_per_bucket']
+        self.old_num_replicas = states['num_replicas']
+
+    def set_epoch(self, epoch):
+        self.epoch = epoch

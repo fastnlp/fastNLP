@@ -2,13 +2,13 @@ from typing import Dict, List
 import math
 import numpy as np
 
+from fastNLP.core.log import logger
+
 __all__ = [
     'ReproducibleIterator',
     'RandomSampler',
     're_instantiate_sampler'
 ]
-
-from fastNLP.core.samplers import ReproducibleBatchSampler
 
 
 def re_instantiate_sampler(sampler):
@@ -164,6 +164,9 @@ class RandomSampler(ReproducibleIterator):
         self.num_consumed_samples = states['num_consumed_samples']
         if self.num_consumed_samples>=length:  # 如果保存的时候已经到达了最后一个sample了，则直接将结果重置为0
             self.num_consumed_samples = 0
+        if self.shuffle != states['shuffle']:
+            logger.info(f"The shuffle from the checkpoint is {states['shuffle']}, while set as {self.shuffle}, "
+                        f"we use shuffle={states['shuffle']}")
         self.shuffle = states["shuffle"]
 
     def set_epoch(self, epoch: int) -> None:
@@ -212,24 +215,8 @@ class RandomSampler(ReproducibleIterator):
             self.pad else math.floor(((len(self.dataset) - num_consumed_samples) / self.num_replicas))
 
 
-# todo
-# class SortedSampler(ReproducibleIterator):
-#     def __init__(self, dataset, key):
-#         pass
-#
-#
-# class BucketedSampler(ReproducibleIterator):
-#     def __init__(self, dataset, key):
-#         pass
 
-if __name__ == "__main__":
 
-    sampler = RandomSampler(1)
-
-    print(vars(sampler))
-
-    batch_sampler = ReproducibleBatchSampler(list(range(3)), 1, True)
-    print(vars(batch_sampler))
 
 
 
