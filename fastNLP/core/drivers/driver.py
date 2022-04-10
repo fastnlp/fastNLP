@@ -2,7 +2,7 @@ import os
 import signal
 import sys
 from typing import Any, Sequence, List, Optional, Callable, Dict, Union
-from abc import ABC
+from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 from io import BytesIO
@@ -14,7 +14,6 @@ __all__ = [
 from fastNLP.core.utils import nullcontext
 
 
-# todo 航总 check 一下哪一些方法需要 @abstractmethod；
 class Driver(ABC):
     r"""
     用来初始化 `Driver` 的基类，所有定制的 `driver` 都需要继承此类；
@@ -32,29 +31,33 @@ class Driver(ABC):
         # self._consensus_file: Optional[Union[str, Path]] = None
         self._pids: Optional[List[int]] = None
 
+    @abstractmethod
     def setup(self):
         r"""
         该函数用来初始化训练环境，例如将模型迁移到对应的设备上等；
         多卡的 driver 的该函数要更为复杂一些，例如其可能需要开启多进程之间的通信环境，以及设置一些环境变量和其余所需要的变量值；
         """
 
-    def replace_sampler(self, dataloader, dist_sampler: Optional[str], reproducible: bool = False):
+    def set_dist_repro_dataloader(self, dataloader, dist=None, reproducible: bool = False):
         r"""
-        因为一些特殊的情况需要替换 dataloader 的 sampler，而每一个 driver 中的该函数会提供该功能；例如在多卡训练的中，我们
-         需要将 sampler 替换为 distributed sampler；以及如果用户在 Trainer 中加入了断点重训的 callback，那么我们就需要将 sampler 替换
-         为 reproducible sampler；
+        根据输入的 dataloader 得到一个 支持分布式 （distributed） 与 可复现的 (reproducible) 的 dataloader。
 
-        :param dataloader: 由 trainer 中传入的原始的 dataloader；
-        :param dist_sampler: 应当为一个字符串，其值应当为以下之一：[None, "dist", "unrepeatdist"]；用于指定使用怎样的 sampler；
-         目前该参数被定制为分布式训练服务，其中 trainer 中 kwargs 的参数 `use_dist_sampler` 为 True 时，该值为 "dist"，否则为 None；
-         evaluator 中的 kwargs 的参数 `use_dist_sampler` 为 True 时，该值为 "unrepeatdist"，否则为 None；
-        :param reproducible: 用于在 `Trainer` 中指定是否替换为断点重训的 sampler（多卡） 或者 batch_sampler（单卡）；如果是单卡的 Driver，
-         并且该参数为 True，表示当前正在断点重训，那么我们就会使用我们的 `ReproducibleBatchSampler` 来替换 dataloader 原本的 batch_sampler；
-         如果是多卡的 Driver，那么我们就会用 `RandomSampler` 替换 dataloader 原本的 sampler；
-
-        :return: 应当返回一个被替换 sampler 后的新的 dataloader 对象 (注意此处一定需要返回一个新的 dataloader 对象) ；
+        :param dataloader: 根据 dataloader 设置其对应的分布式版本以及可复现版本
+        :param dist: 应当为一个字符串，其值应当为以下之一：[None, "dist", "unrepeatdist"]；为 None 时，表示不需要考虑当前 dataloader
+            切换为分布式状态；为 'dist' 时，表示该 dataloader 应该保证每个 gpu 上返回的 batch 的数量是一样多的，允许出现少量 sample ，在
+            不同 gpu 上出现重复；为 'unrepeatdist' 时，表示该 dataloader 应该保证所有 gpu 上迭代出来的数据合并起来应该刚好等于原始的
+            数据，允许不同 gpu 上 batch 的数量不一致。其中 trainer 中 kwargs 的参数 `use_dist_sampler` 为 True 时，该值为 "dist"；
+            否则为 None ，evaluator 中的 kwargs 的参数 `use_dist_sampler` 为 True 时，该值为 "unrepeatdist"，否则为 None；
+        :param reproducible: 如果为 False ，不要做任何考虑；如果为 True ，需要保证返回的 dataloader 可以保存当前的迭代状态，使得
+            可以可以加载。
+        :return: 应当返回一个被替换 sampler 后的新的 dataloader 对象 (注意此处一定需要返回一个新的 dataloader 对象) ；此外，
+            如果传入的 dataloader 中是 ReproducibleIterator 或者 ReproducibleBatchSampler 需要重新初始化一个放入返回的
+            dataloader 中。如果 dist 为空，且 reproducible 为 False，可直接返回原对象。
         """
-        raise NotImplementedError("Each specific driver should implemented its own `replace_sampler` function.")
+        if dist is None and reproducible is False:
+            return dataloader
+        raise NotImplementedError(f"Driver:{self.__class__.__name__} does not support `set_dist_repro_dataloader` "
+                                  f"function.")
 
     def set_deterministic_dataloader(self, dataloader):
         r"""
@@ -68,7 +71,7 @@ class Driver(ABC):
 
         :param cur_epoch_idx: 当前是第几个 epoch；
         """
-
+    @abstractmethod
     def train_step(self, batch):
         """
         通过调用模型自带的 `train_step` 或者 `forward` 方法来实现训练的前向过程；
@@ -103,7 +106,7 @@ class Driver(ABC):
         因此如果用户的 evaluator mode 是 validate，但是传入的 model 却没有实现 validate_step 函数，而是实现了 test_step 函数，那么
          我们应当提醒用户这一行为；
         """
-        raise NotImplementedError("Each specific driver should implemented its own `predict_step` function.")
+        raise NotImplementedError("Each specific driver should implemented its own `check_evaluator_mode` function.")
 
     @property
     def model(self):
@@ -234,6 +237,7 @@ class Driver(ABC):
         """
         self.optimizers = optimizers
 
+    @abstractmethod
     def backward(self, loss):
         """
         实现深度学习中的反向传播过程；
@@ -242,12 +246,14 @@ class Driver(ABC):
         """
         raise NotImplementedError("Each specific driver should implemented its own `backward` function.")
 
+    @abstractmethod
     def step(self):
         r"""
         实现深度学习中的参数的优化更新过程，应当直接通过优化器 optimizers 来更新参数；
         """
         raise NotImplementedError("Each specific driver should implemented its own `step` function.")
 
+    @abstractmethod
     def zero_grad(self, set_to_none: bool = False):
         r"""
         实现深度学习中的梯度的置零操作，应当直接通过优化器 optimizers 来将梯度置零；
@@ -286,6 +292,7 @@ class Driver(ABC):
     def auto_cast(self, auto_cast):
         self._auto_cast = auto_cast
 
+    @abstractmethod
     def save_model(self, filepath: Union[str, Path, BytesIO], only_state_dict: bool = True, **kwargs):
         r"""
         保存模型的函数；注意函数 `save` 是用来进行断点重训的函数；
@@ -296,6 +303,7 @@ class Driver(ABC):
         """
         raise NotImplementedError("Each specific driver should implemented its own `save_model` function.")
 
+    @abstractmethod
     def load_model(self, filepath: Union[str, Path, BytesIO], only_state_dict: bool = False, **kwargs):
         r"""
         加载模型的函数；将 filepath 中的模型加载并赋值给当前 model 。
@@ -307,7 +315,8 @@ class Driver(ABC):
         """
         raise NotImplementedError("Each specific driver should implemented its own `load_model` function.")
 
-    def save(self, folder, states: Dict, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
+    @abstractmethod
+    def save(self, folder, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
         r"""
         断点重训的保存函数，该函数会负责保存模型和 optimizers, fp16 的 state_dict；以及模型的保存（若 should_save_model 为 True）
 
@@ -317,12 +326,14 @@ class Driver(ABC):
         :param states: 由 trainer 传入的一个字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态，Driver 应该只需要保存
             该对象即可， Driver 应该不需要理解该对象，同时在 driver.load() 的时候，需要将 states 返回回去，load() 返回的值与这里的
             传入的值保持一致。
+        :param dataloader: 正在使用的 dataloader，需要保存里面的状态使得之后可以从当前迭代的位置恢复。
         :param only_state_dict: 是否只保存模型的参数，当 should_save_model 为 False ，该参数无效。
         :param should_save_model: 是否应该保存模型，如果为False，Driver 将不负责 model 的保存。
         """
         raise NotImplementedError("Each specific driver should implemented its own `save` function.")
 
-    def load(self, folder: Union[str, Path], only_state_dict: bool =True, should_load_model: bool = True,  **kwargs) -> Dict:
+    @abstractmethod
+    def load(self, folder: Union[str, Path], dataloader, only_state_dict: bool =True, should_load_model: bool = True,  **kwargs) -> Dict:
         r"""
         断点重训的加载函数，注意该函数会负责读取数据，并且恢复 optimizers , fp16 的 state_dict 和 模型（根据 should_load_model ）和；
             其它在 Driver.save() 函数中执行的保存操作，然后将一个 state 字典返回给 trainer （ 内容为Driver.save() 接受到的 states ）。
@@ -331,11 +342,22 @@ class Driver(ABC):
 
         :param folder: 读取该 folder 下的 FASTNLP_CHECKPOINT_FILENAME 文件与 FASTNLP_MODEL_FILENAME
             （如果 should_load_model 为True）。
+        :param dataloader: 当前给定 dataloader，需要根据 save 的 dataloader 状态合理设置。若该值为 None ，是不需要返回 'dataloader'
+            以及 'batch_idx_in_epoch' 这两个值。
         :param only_state_dict: 读取的，当 should_save_model 为 False ，该参数无效。如果为 True ，说明保存的内容为权重；如果为
             False 说明保存的是模型，但也是通过当前 Driver 的模型去加载保存的模型的权重，而不是使用保存的模型替换当前模型。
         :param should_load_model: 是否应该加载模型，如果为False，Driver 将不负责加载模型。若该参数为 True ，但在保存的状态中没有
             找到对应的模型状态，则报错。
-        :return: 需要返回 save 函数输入的 states 内容；
+        :return: 需要返回 save 函数输入的 states 内容
+            'dataloader'，返回的是根据传入的 dataloader 与 保存的状态一起设置为合理的状态，可以返回的对象与传入的dataloader是同一个。
+                在保存与当前传入 data sample 数目不一致时报错。
+            'batch_idx_in_epoch': int 类型的数据，表明当前 epoch 进行到了进行到了第几个 batch 了。 请注意，该值不能是只能通过保存的
+                数据中读取的，因为前后两次运行 batch_size 可能由变化。该数字的原则应该符合以下等式
+                '返回 dataloader 还会产生的batch数量' + 'batch_idx_in_epoch' = '原来不断点训练的batch的总数' 。
+                由于 '返回 dataloader 还会产生的batch数量' 这个数量在 batch_size 与 drop_last 参数给定的情况下，无法改变，因此
+                只能通过调整 batch_idx_in_epoch 这个值来使等式成立。一个简单的计算原则如下
+                当drop_last为True，等同于 floor(sample_in_this_rank/batch_size) - floor(num_left_samples/batch_size);
+                当drop_last为False，等同于 ceil(sample_in_this_rank/batch_size) - ceil(num_left_samples/batch_size)。
         """
         raise NotImplementedError("Each specific driver should implemented its own `load` function.")
 
@@ -352,6 +374,7 @@ class Driver(ABC):
         """
         raise NotImplementedError("Each specific driver should implemented its own `tensor_to_numeric` function.")
 
+    @abstractmethod
     def set_model_mode(self, mode: str):
         r"""
         设置模型为 `train` / `eval` 的模式；目的是为切换模型训练和推理（会关闭dropout等）模式；
@@ -378,6 +401,7 @@ class Driver(ABC):
          中，我们需要先将模型移到 cpu 后，又再移到 gpu 上，因此不适宜在该函数内部调用 `unwrap_model`，而是将 model 作为该函数的参数；
         """
 
+    @abstractmethod
     def move_data_to_device(self, batch):
         r"""
         将数据迁移到指定的机器上；batch 可能是 list 也可能 dict ，或其嵌套结构。
@@ -398,17 +422,6 @@ class Driver(ABC):
         用于在多进程工作时同步各进程的工作进度，运行快的进程运行到这里会等待运行慢的进程，只有所有进程都运行到此函数时，所有的进程才会继续运行；
         仅在多分布式训练场景中有使用。
         """
-
-    @staticmethod
-    def get_dataloader_args(dataloader):
-        """
-        用于从 dataloader 中抽取一些属性的值，返回的dataclass中必须包含以下的key：
-            sampler, batch_sampler, batch_size, drop_last；
-
-        :param dataloader:
-        :return: 返回一个 dataclass，其实例属性应当包括以上的各个属性，并且其名字也应当与这些属性相同，从而方便 trainer 或者其它对象调用；
-        """
-        raise NotImplementedError("Each specific driver should implemented its own `get_dataloader_args` function.")
 
     def is_distributed(self) -> bool:
         """

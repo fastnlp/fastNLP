@@ -52,21 +52,33 @@ def _set_backend():
     if backend == 'paddle':
         assert _module_available(backend), f"You must have {backend} available to use {backend} backend."
         assert 'paddle' not in sys.modules, "You have to use `set_backend()` before `import paddle`."
-        if 'CUDA_VISIBLE_DEVICES' not in os.environ and 'PADDLE_RANK_IN_NODE' not in os.environ \
-                and 'FLAGS_selected_gpus' not in os.environ:
-            os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-            os.environ[USER_CUDA_VISIBLE_DEVICES] = ''
+        user_visible_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
+        if 'PADDLE_RANK_IN_NODE' in os.environ and 'FLAGS_selected_gpus' in os.environ:
+            # 在分布式子进程下，根据 USER_VISIBLE_DEVICES 得到进程真正占有的设备
+            selected_gpus = os.environ['FLAGS_selected_gpus'].split(',')
+            if user_visible_devices is not None and user_visible_devices != "":
+                # 用户通过 CUDA_VISIBLE_DEVICES 启动了分布式训练
+                # 此时经过 set_backend，用户的设置会保存在 USER_CUDA_VISIBLE_DEVICES 中
+                # 我们需要从中找到真正使用的设备编号
+                user_visible_devices = user_visible_devices.split(",")
+                selected_gpus = ",".join([user_visible_devices[int(i)] for i in selected_gpus])
+            else:
+                # 设置 USER_CUDA_VISIBLE_DEVICES 表明用户视角中所有设备可见
+                os.environ[USER_CUDA_VISIBLE_DEVICES] = ""
+            # TODO 这里的 [0] 可能在单个节点多卡的时候有问题
+            os.environ['CUDA_VISIBLE_DEVICES'] = selected_gpus[0]
+            os.environ['FLAGS_selected_gpus'] = ",".join([str(g) for g in range(len(selected_gpus))])
+            os.environ['FLAGS_selected_accelerators'] = ",".join([str(g) for g in range(len(selected_gpus))])
         elif 'CUDA_VISIBLE_DEVICES' in os.environ:
+            # 主进程中，用户设置了 CUDA_VISIBLE_DEVICES
+            # 将用户设置的 CUDA_VISIBLE_DEVICES hack 掉
             CUDA_VISIBLE_DEVICES = os.environ['CUDA_VISIBLE_DEVICES']
             os.environ[USER_CUDA_VISIBLE_DEVICES] = CUDA_VISIBLE_DEVICES
             os.environ['CUDA_VISIBLE_DEVICES'] = CUDA_VISIBLE_DEVICES.split(',')[0]
-        elif 'PADDLE_RANK_IN_NODE' in os.environ and 'FLAGS_selected_gpus' in os.environ:
-            # TODO 这里由于fastNLP需要hack CUDA_VISIBLE_DEVICES，因此需要相应滴修改FLAGS等paddle变量 @xsh
-            CUDA_VISIBLE_DEVICES = os.environ['FLAGS_selected_gpus']
-            os.environ[USER_CUDA_VISIBLE_DEVICES] = CUDA_VISIBLE_DEVICES
-            os.environ['CUDA_VISIBLE_DEVICES'] = CUDA_VISIBLE_DEVICES.split(',')[0]
-            os.environ['FLAGS_selected_gpus'] = "0"
-            os.environ['FLAGS_selected_accelerators'] = "0"
+        else:
+            # 没有设置的话限制在单卡上，防止多进程时占用别的卡
+            os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+            os.environ[USER_CUDA_VISIBLE_DEVICES] = ''
 
     elif backend == 'jittor':
         assert _module_available(backend), f"You must have {backend} available to use {backend} backend."

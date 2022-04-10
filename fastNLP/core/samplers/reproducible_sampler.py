@@ -1,14 +1,12 @@
 from typing import Dict, List
 import math
 import numpy as np
-from array import array
-from copy import deepcopy
 
+from fastNLP.core.log import logger
 
 __all__ = [
     'ReproducibleIterator',
     'RandomSampler',
-    'ReproducibleBatchSampler',
     're_instantiate_sampler'
 ]
 
@@ -22,7 +20,8 @@ def re_instantiate_sampler(sampler):
 class ReproducibleIterator:
     """
     注意所有继承 `ReproducibleIterator` 的类的  `__init__` 方法中都需要加入参数 `**kwargs`，用来使我们再断点重训时重新实例化这个 sampler
-     或者 batch_sampler；
+     或者 batch_sampler；注意，所有在 init 中初始化的变量，都不能含有 _ 下横线作为开头；所有不在 init 中设置的变量都必须以下横线开头。
+
     """
 
     def set_distributed(self, num_replicas, rank, pad=True):
@@ -50,6 +49,14 @@ class ReproducibleIterator:
 
 class RandomSampler(ReproducibleIterator):
     def __init__(self, dataset, shuffle: bool = True, seed: int = 0, **kwargs):
+        """
+
+
+        :param dataset: 实现了 __len__ 方法的数据容器
+        :param shuffle: 是否在每次 iterate 的时候打乱顺序。
+        :param seed: 随机数种子。
+        :param kwargs: 用户不需要使用，fastNLP 内部使用
+        """
 
         self.dataset = dataset
         self.shuffle = shuffle
@@ -64,7 +71,7 @@ class RandomSampler(ReproducibleIterator):
         self.pad = kwargs.get("pad", False)  # 该参数在单卡上不具有任何意义；
 
         # 是否处于iteration之间，为True不允许调用 set_distributed()和load_state_dict()
-        self._during_iter = kwargs.get("_during_iter", False)
+        self.during_iter = kwargs.get("during_iter", False)
 
     def __len__(self):
         """
@@ -84,9 +91,9 @@ class RandomSampler(ReproducibleIterator):
             >>> next(iter2)  # 当前num_consumed_samples的数量会发生变化
         """
 
-        if self._during_iter:  # 如果发现_during_iter为True，说明之前的还没结束，只有强制重新初始化了
+        if self.during_iter:  # 如果发现_during_iter为True，说明之前的还没结束，只有强制重新初始化了
             self.num_consumed_samples = 0
-        self._during_iter = True
+        self.during_iter = True
         indices = self.generate_indices()
 
         if self.pad:
@@ -110,7 +117,7 @@ class RandomSampler(ReproducibleIterator):
         for index in indices:
             self.num_consumed_samples += self.num_replicas
             yield index
-        self._during_iter = False
+        self.during_iter = False
         self.num_consumed_samples = 0
 
     def generate_indices(self) -> List[int]:
@@ -142,8 +149,8 @@ class RandomSampler(ReproducibleIterator):
         return states
 
     def load_state_dict(self, states: Dict):
-        # 如果 self._during_iter 是 True，那么 data_idx 一定是 0；
-        assert self._during_iter is False, "Cannot call load_state_dict() when it is " \
+        # 如果 self.during_iter 是 True，那么 data_idx 一定是 0；
+        assert self.during_iter is False, "Cannot call load_state_dict() when it is " \
                                            "during an unfinished iteration."
 
         assert states['sampler_type'] == self.__class__.__name__, f"The sampler type in checkpoint is {states['sampler_type']}," \
@@ -157,6 +164,9 @@ class RandomSampler(ReproducibleIterator):
         self.num_consumed_samples = states['num_consumed_samples']
         if self.num_consumed_samples>=length:  # 如果保存的时候已经到达了最后一个sample了，则直接将结果重置为0
             self.num_consumed_samples = 0
+        if self.shuffle != states['shuffle']:
+            logger.info(f"The shuffle from the checkpoint is {states['shuffle']}, while set as {self.shuffle}, "
+                        f"we use shuffle={states['shuffle']}")
         self.shuffle = states["shuffle"]
 
     def set_epoch(self, epoch: int) -> None:
@@ -173,7 +183,7 @@ class RandomSampler(ReproducibleIterator):
         :return:
         """
 
-        assert self._during_iter is False, "Cannot set the sampler to be distributed when it is " \
+        assert self.during_iter is False, "Cannot set the sampler to be distributed when it is " \
                                            "during an unfinished iteration."
         assert num_replicas>0 and isinstance(num_replicas, int)
         assert isinstance(rank, int) and 0<=rank<num_replicas
@@ -196,7 +206,7 @@ class RandomSampler(ReproducibleIterator):
     @property
     def num_left_samples(self):
         """
-        返回当前 iteration 还有多少个 sample 结束
+        返回当前 iteration 还有多少个 sample 结束。表示的是当前 rank 的还剩多少
 
         :return:
         """
@@ -205,110 +215,8 @@ class RandomSampler(ReproducibleIterator):
             self.pad else math.floor(((len(self.dataset) - num_consumed_samples) / self.num_replicas))
 
 
-class ReproducibleBatchSampler:
-    # 这两个参数的值应当交给 driver 的 get_dataloader_args 函数去拿；
-    def __init__(self, batch_sampler, batch_size: int, drop_last: bool, **kwargs):
-        self.batch_sampler = batch_sampler
-        self.batch_size = batch_size
-        self.drop_last = drop_last
 
-        self.data_idx = kwargs.get("data_idx", 0)
 
-        self._index_list = kwargs.get("_index_list", self._iterate_sampler())
-        self.need_reinitialize = kwargs.get("need_reinitialize", False)
-
-    def _iterate_sampler(self):
-        _index_lst = []
-        for idx in self.batch_sampler:
-            if isinstance(idx, list):
-                _index_lst.extend(idx)
-            # 说明是在初始化时传入的是一个 sampler，理论上对应于 dataloader 在初始化时没有 batch_size，也没有 batch_sampler 的情况；
-            else:
-                _index_lst.append(idx)
-        # 64 位机器的 unsigned int 为 4 个字节，能表示的最大大小为 4294967295；
-        if len(_index_lst) > 4294967295:
-            # 注意 self._index_list 内存放的是全部数据的 index；
-            # unsigned long
-            _index_lst = array("L", _index_lst)
-        else:
-            # unsigned int
-            _index_lst = array("I", _index_lst)
-        return _index_lst
-
-    def __iter__(self):
-        if self.need_reinitialize:
-            self._index_list = self._iterate_sampler()
-            self.data_idx = 0
-        else:
-            self.need_reinitialize = True
-
-        batch = []
-        if self.data_idx:
-            index_list = self._index_list[self.data_idx:]
-        else:
-            index_list = self._index_list
-        for idx in index_list:
-            batch.append(idx)
-            self.data_idx += 1
-            if len(batch) == self.batch_size:
-                yield batch
-                batch = []
-        if len(batch) > 0 and not self.drop_last:
-            yield batch
-
-    def __len__(self) -> int:
-        if self.drop_last:
-            return len(self._index_list) // self.batch_size
-        else:
-            return (len(self._index_list) + self.batch_size - 1) // self.batch_size
-
-    def state_dict(self) -> Dict:
-        return {"index_list": deepcopy(self._index_list), "data_idx": self.data_idx, 'sampler_type': self.__class__.__name__}
-
-    def load_state_dict(self, states: Dict):
-        assert states['sampler_type'] == self.__class__.__name__, f"The sampler type in checkpoint is {states['sampler_type']}," \
-                                                               f"we cannot use {self.__class__.__name__} to load it."
-
-        _index_list = states["index_list"]
-        assert len(_index_list) == len(self._index_list), "The number of samples is different between the checkpoint " \
-                                                          "record and current dataset."
-        self._index_list = _index_list
-        self.data_idx = states["data_idx"]
-        self.need_reinitialize = False
-
-    def set_distributed(self):
-        raise RuntimeError(f"ReproduceBatchSampler does not support to change to distributed training.")
-
-    def set_epoch(self, epoch):
-        if hasattr(self.batch_sampler, "sampler") and hasattr(self.batch_sampler.sampler, 'set_epoch') and callable(self.batch_sampler.sampler.set_epoch):
-            self.batch_sampler.sampler.set_epoch(epoch)
-
-    @property
-    def batch_idx_in_epoch(self):
-        if self.drop_last:
-            return len(self._index_list) // self.batch_size - (len(self._index_list) - self.data_idx) // self.batch_size
-        else:
-            return (len(self._index_list) + self.batch_size - 1) // self.batch_size - \
-                (len(self._index_list) - self.data_idx + self.batch_size - 1) // self.batch_size
-
-# todo
-# class SortedSampler(ReproducibleIterator):
-#     def __init__(self, dataset, key):
-#         pass
-#
-#
-# class BucketedSampler(ReproducibleIterator):
-#     def __init__(self, dataset, key):
-#         pass
-
-if __name__ == "__main__":
-
-    sampler = RandomSampler(1)
-
-    print(vars(sampler))
-
-    batch_sampler = ReproducibleBatchSampler(list(range(3)), 1, True)
-    print(vars(batch_sampler))
 
 
 

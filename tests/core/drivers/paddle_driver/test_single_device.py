@@ -9,7 +9,8 @@ import paddle
 from paddle.io import DataLoader, BatchSampler
 
 from fastNLP.core.drivers.paddle_driver.single_device import PaddleSingleDriver
-from fastNLP.core.samplers.reproducible_sampler import ReproducibleBatchSampler, RandomSampler
+from fastNLP.core.samplers.reproducible_sampler import RandomSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification
 from tests.helpers.datasets.paddle_data import PaddleDataset_MNIST, PaddleRandomDataset
 from fastNLP.core import synchronize_safe_rm
@@ -164,4 +165,4 @@ class TestSingleDeviceFunction:
         """
         dataloader = DataLoader(PaddleDataset_MNIST("train"), batch_size=100, shuffle=True)
 
-        res = self.driver.replace_sampler(dataloader, dist_sampler, reproducible)
+        res = self.driver.set_dist_repro_dataloader(dataloader, dist_sampler, reproducible)

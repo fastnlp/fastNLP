@@ -1,12 +1,9 @@
 import pytest
-import sys
 import os
 import numpy as np
-from fastNLP.envs.set_backend import set_env
 from fastNLP.envs.set_env_on_import import set_env_on_import_paddle
 
 set_env_on_import_paddle()
-set_env("paddle")
 import paddle
 import paddle.distributed as dist
 from paddle.io import DataLoader
@@ -54,6 +51,7 @@ def test_move_data_to_device():
 
     dist.barrier()
 
+
 @magic_argv_env_context
 def test_is_distributed():
     print(os.getenv("CUDA_VISIBLE_DEVICES"))
@@ -64,6 +62,7 @@ def test_is_distributed():
         driver = PaddleFleetDriver(
             model=paddle_model,
             parallel_device=[0,1],
+            output_from_new_proc='all'
         )
         driver.set_optimizers(paddle_opt)
         # 区分launch和子进程setup的时候
@@ -78,6 +77,7 @@ def test_is_distributed():
     finally:
         synchronize_safe_rm("log")
     dist.barrier()
+
 
 @magic_argv_env_context
 def test_get_no_sync_context():
@@ -105,6 +105,7 @@ def test_get_no_sync_context():
         synchronize_safe_rm("log")
     dist.barrier()
 
+
 @magic_argv_env_context
 def test_is_global_zero():
     try:
@@ -127,6 +128,8 @@ def test_is_global_zero():
     finally:
         synchronize_safe_rm("log")
     dist.barrier()
+
+
 
 @magic_argv_env_context
 def test_unwrap_model():
@@ -204,7 +207,7 @@ def test_replace_sampler(dist_sampler, reproducible):
         else:
             driver.setup()
         dataloader = DataLoader(PaddleDataset_MNIST("train"), batch_size=100, shuffle=True)
-        driver.replace_sampler(dataloader, dist_sampler, reproducible)
+        driver.set_dist_repro_dataloader(dataloader, dist_sampler, reproducible)
     finally:
         synchronize_safe_rm("log")
     dist.barrier()
@@ -243,7 +246,7 @@ class SingleMachineMultiGPUTrainingTestCase:
             parallel_device=gpus,
         )
         driver.set_optimizers(paddle_opt)
-        dataloader = driver.replace_sampler(dataloader)
+        dataloader = driver.set_dist_repro_dataloader(dataloader, )
         driver.setup()
         # 检查model_device
         self.assertEqual(driver.model_device, f"gpu:{os.environ['PADDLE_LOCAL_DEVICE_IDS']}")

@@ -1,8 +1,15 @@
+import os
 from typing import Optional, Dict, Union
 
 from .paddle_driver import PaddleDriver
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
-from fastNLP.core.utils import auto_param_call, get_paddle_gpu_str
+from fastNLP.envs.env import USER_CUDA_VISIBLE_DEVICES
+from fastNLP.core.utils import (
+    auto_param_call,
+    get_paddle_gpu_str,
+    get_paddle_device_id,
+    paddle_move_data_to_device,
+)
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleIterator
 from fastNLP.core.log import logger
 
@@ -86,8 +93,14 @@ class PaddleSingleDriver(PaddleDriver):
                 self._test_signature_fn = model.forward
 
     def setup(self):
-        paddle.device.set_device(self.model_device)
-        self.model.to(self.model_device)
+        user_visible_devices = os.environ[USER_CUDA_VISIBLE_DEVICES]
+        device_id = get_paddle_device_id(self.model_device)
+        if user_visible_devices is not None and user_visible_devices != "":
+            # 不为空，说明用户设置了 CUDA_VISIBLDE_DEVICES
+            device_id = user_visible_devices.split(",")[device_id]
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(device_id)
+        paddle.device.set_device("gpu:0")
+        self.model.to("gpu:0")
 
     def train_step(self, batch) -> Dict:
         # 如果 batch 是一个 Dict，我们就默认帮其做参数匹配，否则就直接传入到 `train_step` 函数中，让用户自己处理；
@@ -116,15 +129,26 @@ class PaddleSingleDriver(PaddleDriver):
         else:
             return self._test_step(batch)
 
-    def replace_sampler(self, dataloader, dist_sampler: Union[str, ReproducibleBatchSampler, ReproducibleIterator], reproducible: bool = False):
+    def move_data_to_device(self, batch: 'paddle.Tensor'):
+        r"""
+        将数据迁移到指定的机器上；batch 可能是 list 也可能 dict ，或其嵌套结构。
+        在 Paddle 中使用可能会引起因与设置的设备不一致而产生的问题，请注意。
+        在单卡时，由于 CUDA_VISIBLE_DEVICES 始终被限制在一个设备上，因此实际上只会迁移到 `gpu:0`
+
+        :return: 将移动到指定机器上的 batch 对象返回；
+        """
+        return paddle_move_data_to_device(batch, "gpu:0")
+
+    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleIterator],
+                                  reproducible: bool = False, sampler_or_batch_sampler=None):
         # 暂时不支持IteratorDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                 "FastNLP does not support `IteratorDataset` now."
-        if isinstance(dist_sampler, ReproducibleBatchSampler):
-            dataloader.batch_sampler = dist_sampler
+        if isinstance(dist, ReproducibleBatchSampler):
+            dataloader.batch_sampler = dist
             return dataloader
-        if isinstance(dist_sampler, ReproducibleIterator):
-            dataloader.batch_sampler.sampler = dist_sampler
+        if isinstance(dist, ReproducibleIterator):
+            dataloader.batch_sampler.sampler = dist
             return dataloader            
 
         if reproducible:

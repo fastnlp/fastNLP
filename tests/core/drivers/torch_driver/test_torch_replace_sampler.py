@@ -33,11 +33,15 @@ def check_replace_sampler(driver):
     # dist_sampler 可以选择的有['dist', 'unrepeatdist', None]或者是ReproducibleSampler，ReproducibleBatchSampler
     # reproducible 是 True 和 False
 
+    # 需要 check 返回的 sampler 和 dataloader 都不同了
     assert driver.is_distributed() is False, "This test only for non distributed sampler."
     ds = SequenceDataSet(10)
     dataloader = DataLoader(dataset=ds, batch_size=2, collate_fn=lambda x:x, shuffle=True)
 
-    dl1 = driver.replace_sampler(dataloader, dist_sampler='dist', reproducible=True)
+    dl1 = driver.set_dist_repro_dataloader(dataloader, dist='dist', reproducible=True)
+
+    assert not (dl1.sampler is dataloader.sampler), "The sampler should not the same one."
+    assert not (dl1 is dataloader), "The dataloader should not the same one."
 
     # 迭代两个 batch
     already_seen_idx = set()
@@ -67,6 +71,23 @@ def check_replace_sampler(driver):
         for b in batch:
             assert b not in already_seen_idx
             assert b in left_idxes
+
+    # 需要 check 替换为 unrepeatdist 的时候没有问题:(1) 不会多pad；（2）所有卡互相不重复
+    ds = SequenceDataSet(11)
+    dataloader = DataLoader(dataset=ds, batch_size=2, collate_fn=lambda x:x, shuffle=True)
+    dl1 = driver.set_dist_repro_dataloader(dataloader, dist='unrepeatdist', reproducible=True)
+    world_size = 3
+    indices = []
+    for i in range(world_size):
+        dl1.sampler.set_distributed(num_replicas=world_size, rank=i)
+        for idx, batch in dl1:
+            indices.extend(batch)
+    assert len(indices)==len(ds)  # 应该没有任何重复
+    assert len(set(indices))==len(indices)  # 应该全是不一样的indice
+
+
+
+
 
 
 

@@ -15,7 +15,7 @@ def remove_local_rank_in_argv():
     """
     index = -1
     for i, v in enumerate(sys.argv):
-        if v.startswith('--rank='):
+        if v.startswith('--local_rank='):
             os.environ['LOCAL_RANK'] = v.split('=')[1]
             index = i
             break
@@ -36,8 +36,14 @@ def set_env_on_import_torch():
 
 # TODO paddle may need set this
 def set_env_on_import_paddle():
-    # todo 需要设置 FASTNLP_GLOBAL_RANK 和 FASTNLP_BACKEND_LAUNCH
-    pass
+    # todo 需要设置 FASTNLP_GLOBAL_RANK 和 FASTNLP_LAUNCH_PROCESS
+    if "PADDLE_TRANERS_NUM" in os.environ and "PADDLE_TRAINER_ID" in os.environ \
+        and "PADDLE_RANK_IN_NODE" in os.environ:
+        # 检测到了分布式环境的环境变量
+        os.environ[FASTNLP_GLOBAL_RANK] = os.environ["PADDLE_TRAINER_ID"]
+        # 如果不是由 fastnlp 启动的
+        if FASTNLP_DISTRIBUTED_CHECK not in os.environ:
+            os.environ[FASTNLP_BACKEND_LAUNCH] = "1"
 
 # TODO jittor may need set this
 def set_env_on_import_jittor():
