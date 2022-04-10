@@ -10,6 +10,7 @@ from .utils import (
     _MODE_PARAMETER,
     get_device_from_visible,
     reset_seed,
+    replace_sampler
 )
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
@@ -19,8 +20,13 @@ from fastNLP.core.utils import (
     paddle_move_data_to_device,
     is_in_paddle_dist,
 )
-from fastNLP.core.samplers import ReproducibleIterator, RandomSampler, UnrepeatedDistributedSampler
-from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK, USER_CUDA_VISIBLE_DEVICES
+from fastNLP.core.samplers import (
+    ReproducibleIterator,
+    RandomSampler,
+    UnrepeatedDistributedSampler,
+    re_instantiate_sampler,
+)
+from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_SEED
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -314,23 +320,15 @@ class PaddleFleetDriver(PaddleDriver):
 
     def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleIterator]],
                                   reproducible: bool = False, sampler_or_batch_sampler=None):
-        
         # 暂时不支持iterableDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                     "FastNLP does not support `IteratorDataset` now."
         if isinstance(dist, ReproducibleIterator):
-            dataloader.batch_sampler.sampler = dist
-            return dataloader
-
-        # paddle 的 BatchSampler 和 DataLoader 没有 shuffle 成员，只能根据 sampler 判断
-        # 但是其子类 DistributedBatchSampler 却有 shuffle 成员
-        # 因此用 type() 进行严格的判断
-        if type(dataloader.batch_sampler) == BatchSampler:
-            shuffle = isinstance(dataloader.batch_sampler.sampler, RandomSampler)
-        else:
-            shuffle = dataloader.batch_sampler.shuffle
+            dist = re_instantiate_sampler(dist)
+            return replace_sampler(dataloader, dist)
 
         # trainer, evaluator
+        # 自己初始化了分布式，什么都不做
         if dist is None:
             if reproducible:
                 raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize fleet out of our "
@@ -339,40 +337,40 @@ class PaddleFleetDriver(PaddleDriver):
                 return dataloader
         # trainer
         elif dist == "dist":
+            args = self.get_dataloader_args(dataloader)
             # 如果用户的 trainer.use_dist_sampler 为 True，那么此时其是否进行断点重训，不影响这里的行为；
-            if isinstance(dataloader.batch_sampler.sampler, ReproducibleIterator):
-                dataloader.batch_sampler.sampler.set_distributed(
+            if isinstance(args.sampler, ReproducibleIterator):
+                sampler = re_instantiate_sampler(args.sampler)
+                sampler.set_distributed(
                     num_replicas=self.world_size,
                     rank=self.global_rank,
                     pad=True
                 )
-                return dataloader
+                return replace_sampler(dataloader, sampler)
             else:
                 sampler = RandomSampler(
-                    dataset=dataloader.dataset,
-                    shuffle=shuffle,
-                    seed=int(os.environ.get("FASTNLP_SEED", 0))
+                    dataset=args.dataset,
+                    shuffle=args.shuffle,
+                    seed=int(os.environ.get(FASTNLP_GLOBAL_SEED, 0))
                 )
                 sampler.set_distributed(
                     num_replicas=self.world_size,
                     rank=self.global_rank,
                     pad=True
                 )
-                dataloader.batch_sampler.sampler = sampler
-                return dataloader
+                return replace_sampler(dataloader, sampler)
         # evaluator
         elif dist == "unrepeatdist":
+            args = self.get_dataloader_args(dataloader)
             sampler = UnrepeatedDistributedSampler(
-                dataset=dataloader.dataset,
-                shuffle=shuffle,
-                seed=int(os.environ.get("FASTNLP_SEED", 0))
+                dataset=args.dataset,
+                shuffle=args.shuffle,
             )
             sampler.set_distributed(
                 num_replicas=self.world_size,
                 rank=self.global_rank
             )
-            dataloader.batch_sampler.sampler = sampler
-            return dataloader
+            return replace_sampler(dataloader, sampler)
         else:
             raise ValueError("Parameter `dist_sampler` can only be one of three values: ('dist', 'unrepeatdist', None).")
 

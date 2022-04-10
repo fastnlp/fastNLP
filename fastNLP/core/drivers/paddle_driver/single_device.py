@@ -2,6 +2,7 @@ import os
 from typing import Optional, Dict, Union
 
 from .paddle_driver import PaddleDriver
+from .utils import replace_batch_sampler, replace_sampler
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.envs.env import USER_CUDA_VISIBLE_DEVICES
 from fastNLP.core.utils import (
@@ -10,7 +11,7 @@ from fastNLP.core.utils import (
     get_paddle_device_id,
     paddle_move_data_to_device,
 )
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleIterator
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleIterator, re_instantiate_sampler
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -93,11 +94,8 @@ class PaddleSingleDriver(PaddleDriver):
                 self._test_signature_fn = model.forward
 
     def setup(self):
-        user_visible_devices = os.environ[USER_CUDA_VISIBLE_DEVICES]
         device_id = get_paddle_device_id(self.model_device)
-        if user_visible_devices is not None and user_visible_devices != "":
-            # 不为空，说明用户设置了 CUDA_VISIBLDE_DEVICES
-            device_id = user_visible_devices.split(",")[device_id]
+        device_id = os.environ[USER_CUDA_VISIBLE_DEVICES].split(",")[device_id]
         os.environ["CUDA_VISIBLE_DEVICES"] = str(device_id)
         paddle.device.set_device("gpu:0")
         self.model.to("gpu:0")
@@ -145,26 +143,25 @@ class PaddleSingleDriver(PaddleDriver):
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                 "FastNLP does not support `IteratorDataset` now."
         if isinstance(dist, ReproducibleBatchSampler):
-            dataloader.batch_sampler = dist
-            return dataloader
-        if isinstance(dist, ReproducibleIterator):
-            dataloader.batch_sampler.sampler = dist
-            return dataloader            
+            return replace_batch_sampler(dataloader, dist)
+        elif isinstance(dist, ReproducibleIterator):
+            return replace_sampler(dataloader, dist)      
 
         if reproducible:
-            if isinstance(dataloader.batch_sampler.sampler, ReproducibleIterator):
-                return dataloader
+            args = self.get_dataloader_args(dataloader)
+            if isinstance(args.sampler, ReproducibleIterator):
+                sampler = re_instantiate_sampler(args.sampler)
+                return replace_sampler(dataloader, sampler)
             elif isinstance(dataloader.batch_sampler, ReproducibleBatchSampler):
-                return dataloader
+                batch_sampler = re_instantiate_sampler(dataloader.batch_sampler)
+                return replace_batch_sampler(dataloader, batch_sampler)
             else:
-                # TODO
                 batch_sampler = ReproducibleBatchSampler(
-                    batch_sampler=dataloader.batch_sampler,
-                    batch_size=dataloader.batch_sampler.batch_size,
-                    drop_last=dataloader.drop_last
+                    batch_sampler=args.batch_sampler,
+                    batch_size=args.batch_size,
+                    drop_last=args.drop_last
                 )
-                dataloader.batch_sampler = batch_sampler
-                return dataloader
+                return replace_batch_sampler(dataloader, batch_sampler)
         else:
             return dataloader
 
