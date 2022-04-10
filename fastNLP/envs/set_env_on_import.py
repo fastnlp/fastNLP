@@ -15,7 +15,7 @@ def remove_local_rank_in_argv():
     """
     index = -1
     for i, v in enumerate(sys.argv):
-        if v.startswith('--rank='):
+        if v.startswith('--local_rank='):
             os.environ['LOCAL_RANK'] = v.split('=')[1]
             index = i
             break

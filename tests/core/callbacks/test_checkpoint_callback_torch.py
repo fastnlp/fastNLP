@@ -316,7 +316,7 @@ def test_model_checkpoint_callback_2(
         dist.destroy_process_group()
 
 
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [6, 7]), ("torch", 7)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @pytest.mark.parametrize("only_state_dict", [True, False])
 @magic_argv_env_context
@@ -466,7 +466,7 @@ def test_trainer_checkpoint_callback_1(
 
 
 # 通过自己编写 model_save_fn 和 model_load_fn 来测试 huggingface 的 transformers 的模型的保存和加载；
-@pytest.mark.parametrize("driver,device", [("torch_ddp", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch_ddp", [6, 7]), ("torch", 7)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @magic_argv_env_context
 def test_trainer_checkpoint_callback_2(

@@ -312,13 +312,14 @@ class PaddleFleetDriver(PaddleDriver):
     def test_step(self, batch):
         return self._test_step(batch)
 
-    def replace_sampler(self, dataloader, dist_sampler: Optional[Union[str, ReproducibleIterator]] = "dist", reproducible: bool = False):
+    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleIterator]],
+                                  reproducible: bool = False, sampler_or_batch_sampler=None):
         
         # 暂时不支持iterableDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                     "FastNLP does not support `IteratorDataset` now."
-        if isinstance(dist_sampler, ReproducibleIterator):
-            dataloader.batch_sampler.sampler = dist_sampler
+        if isinstance(dist, ReproducibleIterator):
+            dataloader.batch_sampler.sampler = dist
             return dataloader
 
         # paddle 的 BatchSampler 和 DataLoader 没有 shuffle 成员，只能根据 sampler 判断
@@ -330,14 +331,14 @@ class PaddleFleetDriver(PaddleDriver):
             shuffle = dataloader.batch_sampler.shuffle
 
         # trainer, evaluator
-        if dist_sampler is None:
+        if dist is None:
             if reproducible:
                 raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize fleet out of our "
                                    "control.")
             else:
                 return dataloader
         # trainer
-        elif dist_sampler == "dist":
+        elif dist == "dist":
             # 如果用户的 trainer.use_dist_sampler 为 True，那么此时其是否进行断点重训，不影响这里的行为；
             if isinstance(dataloader.batch_sampler.sampler, ReproducibleIterator):
                 dataloader.batch_sampler.sampler.set_distributed(
@@ -360,7 +361,7 @@ class PaddleFleetDriver(PaddleDriver):
                 dataloader.batch_sampler.sampler = sampler
                 return dataloader
         # evaluator
-        elif dist_sampler == "unrepeatdist":
+        elif dist == "unrepeatdist":
             sampler = UnrepeatedDistributedSampler(
                 dataset=dataloader.dataset,
                 shuffle=shuffle,

@@ -445,21 +445,22 @@ class TorchDDPDriver(TorchDriver):
         # return self.model(batch, **{_MODE_PARAMETER: ForwardState.TEST})
         return self._test_step(batch)
 
-    def replace_sampler(self, dataloader, dist_sampler: Optional[Union[str, ReproducibleIterator]] = "dist", reproducible: bool = False):
-        if isinstance(dist_sampler, ReproducibleIterator):
+    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleIterator]],
+                                  reproducible: bool = False, sampler_or_batch_sampler=None):
+        if isinstance(dist, ReproducibleIterator):
             # 注意这里不需要调用 dist_sampler.set_distributed；因为如果用户使用的是 TorchDDPDriver，那么其在 Trainer 初始化的时候就已经调用了该函数；
-            dist_sampler = re_instantiate_sampler(dist_sampler)
-            return replace_sampler(dataloader, dist_sampler)
+            dist = re_instantiate_sampler(dist)
+            return replace_sampler(dataloader, dist)
 
         # trainer, evaluator
-        if dist_sampler is None:
+        if dist is None:
             if reproducible:
                 raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize ddp out of our "
                                    "control.")
             else:
                 return dataloader
         # trainer
-        elif dist_sampler == "dist":
+        elif dist == "dist":
             args = self.get_dataloader_args(dataloader)
             # 如果用户的 trainer.use_dist_sampler 为 True，那么此时其是否进行断点重训，不影响这里的行为；
             if isinstance(args.sampler, ReproducibleIterator):
@@ -485,7 +486,7 @@ class TorchDDPDriver(TorchDriver):
                 return replace_sampler(dataloader, sampler)
 
         # evaluator
-        elif dist_sampler == "unrepeatdist":
+        elif dist == "unrepeatdist":
             args = self.get_dataloader_args(dataloader)
             sampler = UnrepeatedDistributedSampler(
                 dataset=args.dataset,

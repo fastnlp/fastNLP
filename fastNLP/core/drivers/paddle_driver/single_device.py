@@ -139,15 +139,16 @@ class PaddleSingleDriver(PaddleDriver):
         """
         return paddle_move_data_to_device(batch, "gpu:0")
 
-    def replace_sampler(self, dataloader, dist_sampler: Union[str, ReproducibleBatchSampler, ReproducibleIterator], reproducible: bool = False):
+    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleIterator],
+                                  reproducible: bool = False, sampler_or_batch_sampler=None):
         # 暂时不支持IteratorDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                 "FastNLP does not support `IteratorDataset` now."
-        if isinstance(dist_sampler, ReproducibleBatchSampler):
-            dataloader.batch_sampler = dist_sampler
+        if isinstance(dist, ReproducibleBatchSampler):
+            dataloader.batch_sampler = dist
             return dataloader
-        if isinstance(dist_sampler, ReproducibleIterator):
-            dataloader.batch_sampler.sampler = dist_sampler
+        if isinstance(dist, ReproducibleIterator):
+            dataloader.batch_sampler.sampler = dist
             return dataloader            
 
         if reproducible:

@@ -50,6 +50,14 @@ class ReproducibleIterator:
 
 class RandomSampler(ReproducibleIterator):
     def __init__(self, dataset, shuffle: bool = True, seed: int = 0, **kwargs):
+        """
+
+
+        :param dataset: 实现了 __len__ 方法的数据容器
+        :param shuffle: 是否在每次 iterate 的时候打乱顺序。
+        :param seed: 随机数种子。
+        :param kwargs: 用户不需要使用，fastNLP 内部使用
+        """
 
         self.dataset = dataset
         self.shuffle = shuffle
@@ -208,6 +216,15 @@ class RandomSampler(ReproducibleIterator):
 class ReproducibleBatchSampler:
     # 这两个参数的值应当交给 driver 的 get_dataloader_args 函数去拿；
     def __init__(self, batch_sampler, batch_size: int, drop_last: bool, **kwargs):
+        """
+        可以使得 batch_sampler 对象状态恢复的 wrapper 。
+
+        :param batch_sampler: 可迭代出 数字 或 数字列表 的可迭代对象。ReproducibleBatchSampler 将首先遍历一边该对象，然后将迭代
+            出来的序号暂存起来，使用时按照 batch_size 的 batch 大小吐出序号列表。
+        :param batch_size: 每个 batch 的大小是多少。
+        :param drop_last: 如果最后一个 batch 无法构成 batch_size 那么多个 sample ，是否丢掉。
+        :param kwargs: fastNLP 内部使用。
+        """
         self.batch_sampler = batch_sampler
         self.batch_size = batch_size
         self.drop_last = drop_last

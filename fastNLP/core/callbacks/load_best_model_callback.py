@@ -81,7 +81,7 @@ class LoadBestModelCallback(Callback):
                                                                real_monitor=self._real_monitor,
                                                                res=results)
         if (monitor_value < self.monitor_value and self.larger_better is False) or \
-            (monitor_value > self.monitor_value  and self.larger_better):
+            (monitor_value > self.monitor_value and self.larger_better):
             self.monitor_value = monitor_value
             if self.real_save_folder:
                 trainer.save_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,

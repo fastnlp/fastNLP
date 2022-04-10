@@ -6,7 +6,7 @@ python -m torch.distributed.launch --nproc_per_node 2 tests/core/controllers/_te
 
 import argparse
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "4,5"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,2"
 
 import sys
 path = os.path.abspath(__file__)
@@ -101,7 +101,7 @@ def _test_trainer_torch_with_evaluator_fp16_accumulation_steps(
     )
 
     trainer.run()
-    dist.barrier()
+    # dist.barrier()
 
 
 if __name__ == "__main__":
