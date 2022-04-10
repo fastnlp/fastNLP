@@ -34,6 +34,7 @@ class Element:
         自动aggregate对应的元素
 
         """
+        self._check_value_initialized()
         try:
             self._value = self.backend.aggregate(self._value, self.aggregate_method)
         except AggregateMethodError as e:
