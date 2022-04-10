@@ -13,7 +13,7 @@ import re
 from typing import Any, Optional, Union
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
-from fastNLP.envs import FASTNLP_DISTRIBUTED_CHECK
+from fastNLP.envs import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_BACKEND_LAUNCH
 
 if _NEED_IMPORT_PADDLE:
     import paddle
@@ -94,6 +94,4 @@ def is_in_paddle_launch_dist():
     """
     判断是否处于 launch 启动的分布式进程中
     """
-    return 'PADDLE_RANK_IN_NODE' in os.environ and \
-            'FLAGS_selected_gpus' in os.environ and \
-            FASTNLP_DISTRIBUTED_CHECK not in os.environ
+    return FASTNLP_BACKEND_LAUNCH in os.environ

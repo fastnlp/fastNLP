@@ -7,7 +7,7 @@ from .single_device import PaddleSingleDriver
 from .fleet import PaddleFleetDriver
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
-from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK
+from fastNLP.core.utils import is_in_paddle_launch_dist
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -26,13 +26,14 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
     :return: 返回一个元组，元组的第一个值是具体的基于 pytorch 的 `Driver` 实例，元组的第二个值是该 driver 的名字（用于检测一个脚本中
      先后 driver 的次序的正确问题）；
     """
-    if "PADDLE_TRAINERS_NUM" in os.environ and "PADDLE_RANK_IN_NODE" in os.environ and FASTNLP_DISTRIBUTED_CHECK not in os.environ:
+    if is_in_paddle_launch_dist():
         if device is not None:
             logger.warning("Parameter `device` would be ignored when you are using `paddle.distributed.launch` to pull "
                            "up your script. And we will directly get the local device via "
-                           "`f'gpu:{os.environ['FLAGS_selected_gpus']}')`.")
-        device = [int(g) for g in os.environ["FLAGS_selected_gpus"].split(",")]
-        return PaddleFleetDriver(model, f"gpu:{os.environ['PADDLE_RANK_IN_NODE']}", True, **kwargs)
+                           "and `os.environ['CUDA_VISIBLE_DEVICES']``.")
+        device = [int(g) for g in os.environ["CUDA_VISIBLE_DEVICES"].split(",")]
+        # TODO 目前一个进程仅对应一个卡，所以暂时传入一个 int
+        return PaddleFleetDriver(model, device[0], True, **kwargs)
 
     if driver not in {"paddle", "fleet"}:
         raise ValueError("Parameter `driver` can only be one of these values: ['paddle', 'fleet'].")

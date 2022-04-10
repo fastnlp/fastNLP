@@ -70,7 +70,8 @@ class JittorMPIDriver(JittorDriver):
     def test_step(self, batch):
         return self._test_step(batch)
 
-    def replace_sampler(self, dataloader, dist_sampler: Optional[Union[str, ReproducibleIterator]] = "dist", reproducible: bool = False):
+    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleIterator]],
+                                  reproducible: bool = False, sampler_or_batch_sampler=None):
         pass
 
     def backward(self, loss):

@@ -3,6 +3,7 @@ from typing import Optional, Dict, Union
 
 from .paddle_driver import PaddleDriver
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+from fastNLP.envs.env import USER_CUDA_VISIBLE_DEVICES
 from fastNLP.core.utils import (
     auto_param_call,
     get_paddle_gpu_str,
@@ -92,7 +93,12 @@ class PaddleSingleDriver(PaddleDriver):
                 self._test_signature_fn = model.forward
 
     def setup(self):
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(get_paddle_device_id(self.model_device))
+        user_visible_devices = os.environ[USER_CUDA_VISIBLE_DEVICES]
+        device_id = get_paddle_device_id(self.model_device)
+        if user_visible_devices is not None and user_visible_devices != "":
+            # 不为空，说明用户设置了 CUDA_VISIBLDE_DEVICES
+            device_id = user_visible_devices.split(",")[device_id]
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(device_id)
         paddle.device.set_device("gpu:0")
         self.model.to("gpu:0")
 
@@ -133,15 +139,16 @@ class PaddleSingleDriver(PaddleDriver):
         """
         return paddle_move_data_to_device(batch, "gpu:0")
 
-    def replace_sampler(self, dataloader, dist_sampler: Union[str, ReproducibleBatchSampler, ReproducibleIterator], reproducible: bool = False):
+    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleIterator],
+                                  reproducible: bool = False, sampler_or_batch_sampler=None):
         # 暂时不支持IteratorDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                 "FastNLP does not support `IteratorDataset` now."
-        if isinstance(dist_sampler, ReproducibleBatchSampler):
-            dataloader.batch_sampler = dist_sampler
+        if isinstance(dist, ReproducibleBatchSampler):
+            dataloader.batch_sampler = dist
             return dataloader
-        if isinstance(dist_sampler, ReproducibleIterator):
-            dataloader.batch_sampler.sampler = dist_sampler
+        if isinstance(dist, ReproducibleIterator):
+            dataloader.batch_sampler.sampler = dist
             return dataloader            
 
         if reproducible:

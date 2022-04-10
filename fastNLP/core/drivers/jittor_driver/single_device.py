@@ -99,14 +99,15 @@ class JittorSingleDriver(JittorDriver):
     def is_distributed(self):
         return False
 
-    def replace_sampler(self, dataloader, dist_sampler: Union[str, ReproducibleBatchSampler, ReproducibleIterator], reproducible: bool = False):
+    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleIterator],
+                                  reproducible: bool = False, sampler_or_batch_sampler=None):
         # reproducible 的相关功能暂时没有实现
-        if isinstance(dist_sampler, ReproducibleBatchSampler):
+        if isinstance(dist, ReproducibleBatchSampler):
             raise NotImplementedError
             dataloader.batch_sampler = dist_sample
-        if isinstance(dist_sampler, ReproducibleIterator):
+        if isinstance(dist, ReproducibleIterator):
             raise NotImplementedError  
-            dataloader.batch_sampler.sampler = dist_sampler        
+            dataloader.batch_sampler.sampler = dist
 
         if reproducible:
             raise NotImplementedError

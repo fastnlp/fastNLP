@@ -130,12 +130,12 @@ class TorchSingleDriver(TorchDriver):
         else:
             return self._test_step(batch)
 
-    def replace_sampler(self, dataloader, dist_sampler: Union[str, ReproducibleBatchSampler, ReproducibleIterator],
-                        reproducible: bool = False):
-        if isinstance(dist_sampler, ReproducibleBatchSampler):
-            return replace_batch_sampler(dataloader, dist_sampler)
-        elif isinstance(dist_sampler, ReproducibleIterator):
-            return replace_sampler(dataloader, dist_sampler)
+    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleIterator],
+                                  reproducible: bool = False, sampler_or_batch_sampler=None):
+        if isinstance(dist, ReproducibleBatchSampler):
+            return replace_batch_sampler(dataloader, dist)
+        elif isinstance(dist, ReproducibleIterator):
+            return replace_sampler(dataloader, dist)
 
         if reproducible:
             args = self.get_dataloader_args(dataloader)
