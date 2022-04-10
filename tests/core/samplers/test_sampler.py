@@ -10,13 +10,6 @@ from fastNLP.core.drivers.torch_driver.utils import replace_batch_sampler
 from tests.helpers.datasets.torch_data import TorchNormalDataset
 
 
-
-
-
-
-
-
-
 class SamplerTest(unittest.TestCase):
 
     def test_sequentialsampler(self):
