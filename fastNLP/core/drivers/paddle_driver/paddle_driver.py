@@ -11,8 +11,13 @@ from .utils import _build_fp16_env, optimizer_state_to_device
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.core.drivers.driver import Driver
 from fastNLP.core.utils import apply_to_collection, paddle_move_data_to_device
-from fastNLP.envs import rank_zero_call
-from fastNLP.envs import FASTNLP_SEED_WORKERS, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
+from fastNLP.envs import (
+    FASTNLP_SEED_WORKERS,
+    FASTNLP_MODEL_FILENAME,
+    FASTNLP_CHECKPOINT_FILENAME,
+    FASTNLP_GLOBAL_RANK,
+    rank_zero_call,
+)
 from fastNLP.core.log import logger
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
 
@@ -91,7 +96,7 @@ class PaddleDriver(Driver):
                                          f"type, not {type(each_dataloader)}.")
                     if isinstance(each_dataloader.dataset, IterableDataset):
                         raise TypeError("`IterableDataset` is not allowed.")
-                    if dataloader.batch_sampler is None and dataloader.batch_size is None:
+                    if each_dataloader.batch_sampler is None and each_dataloader.batch_size is None:
                         raise ValueError(f"For each dataloader of parameter `{dataloader_name}`, at least one of "
                                          f"`batch_sampler` and `batch_size` should be set.")
 
@@ -171,56 +176,45 @@ class PaddleDriver(Driver):
     def save_model(self, filepath: str, only_state_dict: bool = True, **kwargs):
         r"""
         保存模型的函数；注意函数 `save` 是用来进行断点重训的函数；
-        如果 `model_save_fn` 是一个可调用的函数，那么我们会直接运行该函数；
 
         :param filepath: 保存文件的文件位置（需要包括文件名）；
-        :param only_state_dict: 是否只保存模型的 `state_dict`；
+        :param only_state_dict: 是否只保存模型的 `state_dict`；如果为 False，则会调用 `paddle.jit.save` 函数
+                                保存整个模型的参数，此时需要传入 `input_spec` 参数，否则在 load 时会报错。
         :param kwargs:
+                input_spec: 描述存储模型 forward 方法的输入，当 `only_state_dict` 为 False时必须传入，否则加载时会报错。
+                            可以通过 InputSpec 或者示例 Tensor 进行描述。详细的可以参考 paddle 关于`paddle.jit.save`
+                            的文档：
+                            https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/jit/save_cn.html#save
         :return:
         """
-        debug = kwargs.get("debug", False)
         model = self.unwrap_model()
         if only_state_dict:
             states = {name: param.cpu().detach().clone() for name, param in model.state_dict().items()}
             paddle.save(states, filepath)
-            if debug:
-                logger.debug("Save model state dict.")
         else:
             # paddle 在保存整个模型时需要传入额外参数
             input_spec = kwargs.get("input_spec", None)
             if input_spec is None:
                 raise ValueError("To save the whole Paddle Layer, parameter `input_spec` is needed.")
-            if self.model_device is not None:
-                if not self.is_distributed():
-                    self.move_model_to_device(model, "cpu")
-                paddle.jit.save(model, filepath, input_spec)
-                if not self.is_distributed():
-                    self.move_model_to_device(model, self.model_device)
-            else:
-                paddle.jit.save(model, filepath, input_spec)
-            if debug:
-                logger.debug("Save model.")
+            paddle.jit.save(model, filepath, input_spec)
 
     def load_model(self, filepath: str, only_state_dict: bool = True, **kwargs):
         r"""
         加载模型的函数；注意函数 `load` 是用来进行断点重训的函数；
 
         :param filepath: 需要被加载的对象的文件位置（需要包括文件名）；
-        :param load_dict: 是否加载state_dict，默认为True。当用户在save_model时将only_state_dict设置为False时，
-                          即保存了整个模型时，这个参数必须也为False
+        :param only_state_dict: 是否加载state_dict，默认为True。
         :param kwargs:
         :return:
         """
-        debug = kwargs.get("debug", False)
         model = self.unwrap_model()
-        if only_state_dict:
-            model.load_dict(paddle.load(filepath))
-            if debug:
-                logger.debug("Load model state dict.")
-        else:
-            model.load_dict(paddle.jit.load(filepath).state_dict())
-            if debug:
-                logger.debug("Load model.")
+        # paddle 中，通过 paddle.jit.save 函数保存的模型也可以通过 paddle.load 加载为相应的 state dict
+        # 但是此时对输入的 path 有要求，必须是 dir/filename 的形式，否则会报错。
+        dirname, filename = os.path.split(filepath)
+        if not only_state_dict and dirname == "":
+            # 如果传入的是单个文件，则加上相对路径
+            filepath = os.path.join(".", filepath)
+        model.load_dict(paddle.load(filepath))
 
     @rank_zero_call
     def save(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
@@ -261,7 +255,11 @@ class PaddleDriver(Driver):
 
         # 2. 保存模型的状态；
         if should_save_model:
-            self.save_model(folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict, debug=True, **kwargs)
+            self.save_model(folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict, **kwargs)
+            if only_state_dict:
+                logger.debug("Save model state dict.")
+            else:
+                logger.debug("Save model.")
 
         # 3. 保存 optimizers 的状态；
         optimizers_state_dict = {}
@@ -288,7 +286,11 @@ class PaddleDriver(Driver):
 
         # 2. 加载模型状态；
         if should_load_model:
-            self.load_model(folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict, debug=True)
+            self.load_model(folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict)
+            if only_state_dict:
+                logger.debug("Load model state dict.")
+            else:
+                logger.debug("Load model.")
 
         # 3. 恢复 sampler 的状态；
         dataloader_args = self.get_dataloader_args(dataloader)
@@ -359,7 +361,7 @@ class PaddleDriver(Driver):
         `randomness in DataLoaders <https://pytorch.org/docs/stable/notes/randomness.html#dataloader>`_.
         """
         # implementation notes: https://github.com/pytorch/pytorch/issues/5059#issuecomment-817392562
-        global_rank = rank if rank is not None else rank_zero_call.rank
+        global_rank = rank if rank is not None else int(os.environ.get(FASTNLP_GLOBAL_RANK, 0))
         # TODO gpu
         process_seed = paddle.fluid.core.default_cpu_generator().initial_seed()
         # back out the base seed so we can use all the bits

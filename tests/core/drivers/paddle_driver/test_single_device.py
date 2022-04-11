@@ -1,10 +1,11 @@
 import os
+from numpy import isin
 os.environ["FASTNLP_BACKEND"] = "paddle"
 import pytest
 
 from fastNLP.core.drivers.paddle_driver.single_device import PaddleSingleDriver
 from fastNLP.core.samplers.reproducible_sampler import RandomSampler
-from fastNLP.core.samplers import ReproducibleBatchSampler
+from fastNLP.core.samplers import RandomBatchSampler
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from tests.helpers.datasets.paddle_data import PaddleNormalDataset, PaddleRandomMaxDataset
 from tests.helpers.datasets.torch_data import TorchNormalDataset
@@ -30,6 +31,7 @@ def generate_random_driver(features, labels):
     opt = paddle.optimizer.Adam(parameters=model.parameters(), learning_rate=0.01)
     driver = PaddleSingleDriver(model, device="cpu")
     driver.set_optimizers(opt)
+    driver.setup()
 
     return driver
 
@@ -77,6 +79,7 @@ def test_save_and_load_state_dict(prepare_test_save_load):
         driver2.load_model(path)
 
         for batch in dataloader:
+            batch = driver1.move_data_to_device(batch)
             res1 = driver1.validate_step(batch)
             res2 = driver2.validate_step(batch)
 
@@ -93,10 +96,11 @@ def test_save_and_load_whole_model(prepare_test_save_load):
         path = "model"
         driver1, driver2, dataloader = prepare_test_save_load
 
-        driver1.save_model(path, only_state_dict=False, input_spec=[next(iter(dataloader))["x"]])
+        driver1.save_model(path, only_state_dict=False, input_spec=[paddle.ones((32, 10))])
         driver2.load_model(path, only_state_dict=False)
 
         for batch in dataloader:
+            batch = driver1.move_data_to_device(batch)
             res1 = driver1.validate_step(batch)
             res2 = driver2.validate_step(batch)
 
@@ -115,7 +119,7 @@ class TestSingleDeviceFunction:
     @classmethod
     def setup_class(cls):
         model = PaddleNormalModel_Classification_1(10, 784)
-        cls.driver = PaddleSingleDriver(model, device="gpu")
+        cls.driver = PaddleSingleDriver(model, device="cpu")
 
     def test_unwrap_model(self):
         """
@@ -130,22 +134,6 @@ class TestSingleDeviceFunction:
         self.driver.check_evaluator_mode("validate")
         self.driver.check_evaluator_mode("test")
 
-    def test_get_model_device_cpu(self):
-        """
-        测试get_model_device
-        """
-        self.driver = PaddleSingleDriver(PaddleNormalModel_Classification_1(10, 784), "cpu")
-        device = self.driver.get_model_device()
-        assert device == "cpu", device
-
-    def test_get_model_device_gpu(self):
-        """
-        测试get_model_device
-        """
-        self.driver = PaddleSingleDriver(PaddleNormalModel_Classification_1(10, 784), "gpu:0")
-        device = self.driver.get_model_device()
-        assert device == "gpu:0", device
-
     def test_is_distributed(self):
         assert self.driver.is_distributed() == False
 
@@ -156,24 +144,24 @@ class TestSingleDeviceFunction:
         """
         self.driver.move_data_to_device(paddle.rand((32, 64)))
 
-    @pytest.mark.parametrize(
-        "dist_sampler", [
-            "dist",
-            ReproducibleBatchSampler(BatchSampler(PaddleRandomMaxDataset(320, 10)), 32, False),
-            RandomSampler(PaddleRandomMaxDataset(320, 10))
-        ]
-    )
-    @pytest.mark.parametrize(
-        "reproducible",
-        [True, False]
-    )
-    def test_repalce_sampler(self, dist_sampler, reproducible):
-        """
-        测试set_dist_repro_dataloader函数
-        """
-        dataloader = DataLoader(PaddleRandomMaxDataset(320, 10), batch_size=100, shuffle=True)
+    # @pytest.mark.parametrize(
+    #     "dist_sampler", [
+    #         "dist",
+    #         RandomBatchSampler(BatchSampler(PaddleRandomMaxDataset(320, 10)), 32, False),
+    #         RandomSampler(PaddleRandomMaxDataset(320, 10))
+    #     ]
+    # )
+    # @pytest.mark.parametrize(
+    #     "reproducible",
+    #     [True, False]
+    # )
+    # def test_set_dist_repro_dataloader(self, dist_sampler, reproducible):
+    #     """
+    #     测试set_dist_repro_dataloader函数
+    #     """
+    #     dataloader = DataLoader(PaddleRandomMaxDataset(320, 10), batch_size=100, shuffle=True)
 
-        res = self.driver.set_dist_repro_dataloader(dataloader, dist_sampler, reproducible)
+    #     res = self.driver.set_dist_repro_dataloader(dataloader, dist_sampler, reproducible)
 
 class TestPaddleDriverFunctions:
     """
@@ -183,7 +171,7 @@ class TestPaddleDriverFunctions:
     @classmethod
     def setup_class(self):
         model = PaddleNormalModel_Classification_1(10, 32)
-        self.driver = PaddleSingleDriver(model, device="gpu")
+        self.driver = PaddleSingleDriver(model, device="cpu")
 
     def test_check_single_optimizer_legality(self):
         """
@@ -198,7 +186,7 @@ class TestPaddleDriverFunctions:
 
         optimizer = torch.optim.Adam(TorchNormalModel_Classification_1(10, 32).parameters(), 0.01)
         # 传入torch的optimizer时，应该报错ValueError
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError):
             self.driver.set_optimizers(optimizer)
 
     def test_check_optimizers_legality(self):
@@ -218,7 +206,7 @@ class TestPaddleDriverFunctions:
             torch.optim.Adam(TorchNormalModel_Classification_1(10, 32).parameters(), 0.01)
         ]
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError):
             self.driver.set_optimizers(optimizers)
 
     def test_check_dataloader_legality_in_train(self):
@@ -230,7 +218,7 @@ class TestPaddleDriverFunctions:
 
         # batch_size 和 batch_sampler 均为 None 的情形
         dataloader = paddle.io.DataLoader(PaddleNormalDataset(), batch_size=None)
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError):
             PaddleSingleDriver._check_dataloader_legality(dataloader, "dataloader", True)
 
         # 创建torch的dataloader
@@ -238,7 +226,7 @@ class TestPaddleDriverFunctions:
             TorchNormalDataset(),
             batch_size=32, shuffle=True
         )
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError):
             PaddleSingleDriver._check_dataloader_legality(dataloader, "dataloader", True)
 
     def test_check_dataloader_legacy_in_test(self):
@@ -257,11 +245,12 @@ class TestPaddleDriverFunctions:
             "train": paddle.io.DataLoader(PaddleNormalDataset()),
             "test":paddle.io.DataLoader(PaddleNormalDataset(), batch_size=None)
         }
-        PaddleSingleDriver._check_dataloader_legality(dataloader, "dataloader", False)
+        with pytest.raises(ValueError):
+            PaddleSingleDriver._check_dataloader_legality(dataloader, "dataloader", False)
 
         # 传入的不是dict，应该报错
         dataloader = paddle.io.DataLoader(PaddleNormalDataset())
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError):
             PaddleSingleDriver._check_dataloader_legality(dataloader, "dataloader", False)
 
         # 创建torch的dataloader
@@ -274,7 +263,7 @@ class TestPaddleDriverFunctions:
             batch_size=32, shuffle=True
         )
         dataloader = {"train": train_loader, "test": test_loader}
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError):
             PaddleSingleDriver._check_dataloader_legality(dataloader, "dataloader", False)
 
     def test_tensor_to_numeric(self):
@@ -284,25 +273,25 @@ class TestPaddleDriverFunctions:
         # 单个张量
         tensor = paddle.to_tensor(3)
         res = PaddleSingleDriver.tensor_to_numeric(tensor)
-        self.assertEqual(res, 3)
+        assert res == 3
 
         tensor = paddle.rand((3, 4))
         res = PaddleSingleDriver.tensor_to_numeric(tensor)
-        self.assertListEqual(res, tensor.tolist())
+        assert res == tensor.tolist()
 
         # 张量list
         tensor_list = [paddle.rand((6, 4, 2)) for i in range(10)]
         res = PaddleSingleDriver.tensor_to_numeric(tensor_list)
-        self.assertTrue(res, list)
+        assert isinstance(res, list)
         tensor_list = [t.tolist() for t in tensor_list]
-        self.assertListEqual(res, tensor_list)
+        assert res == tensor_list
 
         # 张量tuple
         tensor_tuple = tuple([paddle.rand((6, 4, 2)) for i in range(10)])
         res = PaddleSingleDriver.tensor_to_numeric(tensor_tuple)
-        self.assertTrue(res, tuple)
+        assert isinstance(res, tuple)
         tensor_tuple = tuple([t.tolist() for t in tensor_tuple])
-        self.assertTupleEqual(res, tensor_tuple)
+        assert res == tensor_tuple
 
         # 张量dict
         tensor_dict = {
@@ -317,29 +306,29 @@ class TestPaddleDriverFunctions:
         }
 
         res = PaddleSingleDriver.tensor_to_numeric(tensor_dict)
-        self.assertIsInstance(res, dict)
-        self.assertListEqual(res["tensor"], tensor_dict["tensor"].tolist())
-        self.assertIsInstance(res["list"], list)
+        assert isinstance(res, dict)
+        assert res["tensor"] == tensor_dict["tensor"].tolist()
+        assert isinstance(res["list"], list)
         for r, d in zip(res["list"], tensor_dict["list"]):
-            self.assertListEqual(r, d.tolist())
-        self.assertIsInstance(res["int"], int)
-        self.assertIsInstance(res["string"], str)
-        self.assertIsInstance(res["dict"], dict)
-        self.assertIsInstance(res["dict"]["list"], list)
+            assert r == d.tolist()
+        assert isinstance(res["int"], int)
+        assert isinstance(res["string"], str)
+        assert isinstance(res["dict"], dict)
+        assert isinstance(res["dict"]["list"], list)
         for r, d in zip(res["dict"]["list"], tensor_dict["dict"]["list"]):
-            self.assertListEqual(r, d.tolist())
-        self.assertListEqual(res["dict"]["tensor"], tensor_dict["dict"]["tensor"].tolist())
+            assert r == d.tolist()
+        assert res["dict"]["tensor"] == tensor_dict["dict"]["tensor"].tolist()
 
     def test_set_model_mode(self):
         """
         测试set_model_mode函数
         """
         self.driver.set_model_mode("train")
-        self.assertTrue(self.driver.model.training)
+        assert self.driver.model.training
         self.driver.set_model_mode("eval")
-        self.assertFalse(self.driver.model.training)
+        assert not self.driver.model.training
         # 应该报错
-        with self.assertRaises(AssertionError) as cm:
+        with pytest.raises(AssertionError):
             self.driver.set_model_mode("test")
 
     def test_move_model_to_device_cpu(self):
@@ -347,15 +336,15 @@ class TestPaddleDriverFunctions:
         测试move_model_to_device函数
         """
         PaddleSingleDriver.move_model_to_device(self.driver.model, "cpu")
-        self.assertTrue(self.driver.model.fc1.weight.place.is_cpu_place())
+        assert self.driver.model.linear1.weight.place.is_cpu_place()
 
     def test_move_model_to_device_gpu(self):
         """
         测试move_model_to_device函数
         """
-        PaddleSingleDriver.move_model_to_device(self.driver.model, "gpu:0")
-        self.assertTrue(self.driver.model.fc1.weight.place.is_gpu_place())
-        self.assertEqual(self.driver.model.fc1.weight.place.gpu_device_id(), 0)
+        PaddleSingleDriver.move_model_to_device(self.driver.model, "gpu")
+        assert self.driver.model.linear1.weight.place.is_gpu_place()
+        assert self.driver.model.linear1.weight.place.gpu_device_id() == 0
 
     def test_worker_init_function(self):
         """

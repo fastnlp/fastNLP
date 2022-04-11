@@ -2,7 +2,7 @@ import os
 from typing import Optional, Dict, Union
 
 from .paddle_driver import PaddleDriver
-from .utils import replace_batch_sampler, replace_sampler
+from .utils import replace_batch_sampler, replace_sampler, get_device_from_visible
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.envs.env import USER_CUDA_VISIBLE_DEVICES
 from fastNLP.core.utils import (
@@ -29,10 +29,7 @@ class PaddleSingleDriver(PaddleDriver):
         if device is None:
             raise ValueError("Parameter `device` can not be None in `PaddleSingleDriver`.")
 
-        if isinstance(device, int):
-            self.model_device = get_paddle_gpu_str(device)
-        else:
-            self.model_device = device
+        self.model_device = get_paddle_gpu_str(device)
 
         self.local_rank = 0
         self.global_rank = 0
@@ -94,11 +91,14 @@ class PaddleSingleDriver(PaddleDriver):
                 self._test_signature_fn = model.forward
 
     def setup(self):
-        device_id = get_paddle_device_id(self.model_device)
-        device_id = os.environ[USER_CUDA_VISIBLE_DEVICES].split(",")[device_id]
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(device_id)
-        paddle.device.set_device("gpu:0")
-        self.model.to("gpu:0")
+        device = self.model_device
+        if device != "cpu":
+            device_id = get_paddle_device_id(device)
+            device_id = os.environ[USER_CUDA_VISIBLE_DEVICES].split(",")[device_id]
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(device_id)
+            device = get_device_from_visible(device, output_type=str)
+        paddle.device.set_device(device)
+        self.model.to(device)
 
     def train_step(self, batch) -> Dict:
         # 如果 batch 是一个 Dict，我们就默认帮其做参数匹配，否则就直接传入到 `train_step` 函数中，让用户自己处理；
@@ -131,11 +131,11 @@ class PaddleSingleDriver(PaddleDriver):
         r"""
         将数据迁移到指定的机器上；batch 可能是 list 也可能 dict ，或其嵌套结构。
         在 Paddle 中使用可能会引起因与设置的设备不一致而产生的问题，请注意。
-        在单卡时，由于 CUDA_VISIBLE_DEVICES 始终被限制在一个设备上，因此实际上只会迁移到 `gpu:0`
 
         :return: 将移动到指定机器上的 batch 对象返回；
         """
-        return paddle_move_data_to_device(batch, "gpu:0")
+        device = get_device_from_visible(self.data_device)
+        return paddle_move_data_to_device(batch, device)
 
     def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler]=None,
                                   reproducible: bool = False):

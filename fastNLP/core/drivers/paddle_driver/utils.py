@@ -255,20 +255,23 @@ def get_host_name_ip():
     except:
         return None
 
-def get_device_from_visible(device: Union[str, int]):
+def get_device_from_visible(device: Union[str, int], output_type=int):
     """
     在有 CUDA_VISIBLE_DEVICES 的情况下，获取对应的设备。
     如 CUDA_VISIBLE_DEVICES=2,3 ，device=3 ，则返回1。
-    :param devices:未转化的设备名
+    :param devices: 未转化的设备名
+    :param output_type: 返回值的类型
     :return: 转化后的设备id
     """
+    if output_type not in [int, str]:
+        raise ValueError("Parameter `output_type` should be one of these types: [int, str]")
     if device == "cpu":
         return device
     cuda_visible_devices = os.getenv("CUDA_VISIBLE_DEVICES")
     idx = get_paddle_device_id(device)
     if cuda_visible_devices is None or cuda_visible_devices == "":
         # 这个判断一般不会发生，因为 fastnlp 会为 paddle 强行注入 CUDA_VISIBLE_DEVICES
-        return idx
+        raise RuntimeError("This situation should not happen, please report us this bug.")
     else:
         # 利用 USER_CUDA_VISIBLDE_DEVICES 获取用户期望的设备
         user_visible_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
@@ -277,11 +280,13 @@ def get_device_from_visible(device: Union[str, int]):
         idx = user_visible_devices.split(",")[idx]
 
         cuda_visible_devices_list = cuda_visible_devices.split(',')
-        assert idx in cuda_visible_devices_list, "Can't find "\
-            "your devices %s in CUDA_VISIBLE_DEVICES[%s]."\
-            % (idx, cuda_visible_devices)
+        if idx not in cuda_visible_devices_list:
+            raise ValueError(f"Can't find your devices {idx} in CUDA_VISIBLE_DEVICES[{cuda_visible_devices}].")
         res = cuda_visible_devices_list.index(idx)
-        return res
+        if output_type == int:
+            return res
+        else:
+            return f"gpu:{res}"
 
 def replace_batch_sampler(dataloader: "DataLoader", batch_sampler: "BatchSampler"):
     """
