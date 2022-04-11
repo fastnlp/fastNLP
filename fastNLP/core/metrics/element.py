@@ -75,6 +75,7 @@ class Element:
         return self._value
 
     def get_scalar(self) -> float:
+        self._check_value_initialized()
         return self.backend.get_scalar(self._value)
 
     def fill_value(self, value):
