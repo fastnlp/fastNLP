@@ -31,7 +31,7 @@ class LoadBestModelCallback(Callback):
             请在函数内完成对模型的保存。
         :param model_load_fn: 加载 model 的函数，与 model_save_fn 必须同时不为空。本函数的输入为一个已经创建好的文件夹，没有输出，
             请在函数内完成对模型的加载。
-        :param delete_after_train: 在加载了最佳模型之后是否删掉模型。
+        :param delete_after_train: 在训练结束后是否删掉模型。
         """
         if model_load_fn is not None:
             assert callable(model_load_fn), "`model_load_fn` must be a callable object."

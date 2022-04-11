@@ -68,9 +68,12 @@ class Driver(ABC):
     def set_sampler_epoch(self, dataloader, cur_epoch_idx):
         r"""
         对于分布式的 sampler，例如 torch 的 DistributedSampler，其需要在每一个 epoch 前设置随机数种子，来保证每一个进程上的 shuffle 是一样的；
+            dataloader 中可能真正发挥作用的是 batch_sampler 也可能是 sampler。
 
+        :param dataloader: 需要设置 epoch 的 dataloader 。
         :param cur_epoch_idx: 当前是第几个 epoch；
         """
+
     @abstractmethod
     def train_step(self, batch):
         """
