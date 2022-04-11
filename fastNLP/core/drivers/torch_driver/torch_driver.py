@@ -143,8 +143,6 @@ class TorchDriver(Driver):
 
         :param filepath: 保存到哪个文件夹；
         :param only_state_dict: 是否只保存权重；
-        :param model_save_fn:
-
         :return:
         """
         model = self.unwrap_model()
