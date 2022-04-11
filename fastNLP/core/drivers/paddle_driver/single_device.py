@@ -11,11 +11,7 @@ from fastNLP.core.utils import (
     get_paddle_device_id,
     paddle_move_data_to_device,
 )
-from fastNLP.core.samplers import (
-    ReproducibleBatchSampler,
-    ReproducibleIterator,
-    re_instantiate_sampler,
-)
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -141,12 +137,17 @@ class PaddleSingleDriver(PaddleDriver):
         """
         return paddle_move_data_to_device(batch, "gpu:0")
 
+<<<<<<< HEAD
     def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleIterator],
+=======
+    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler],
+>>>>>>> 388e426d78e8985a2f34dc83dfffe881274239a1
                                   reproducible: bool = False, sampler_or_batch_sampler=None):
         # 暂时不支持IteratorDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                 "FastNLP does not support `IteratorDataset` now."
         if isinstance(dist, ReproducibleBatchSampler):
+<<<<<<< HEAD
             return replace_batch_sampler(dataloader, dist)
         elif isinstance(dist, ReproducibleIterator):
             return replace_sampler(dataloader, dist)      
@@ -164,6 +165,25 @@ class PaddleSingleDriver(PaddleDriver):
                     batch_sampler=args.batch_sampler,
                     batch_size=args.batch_size,
                     drop_last=args.drop_last
+=======
+            dataloader.batch_sampler = dist
+            return dataloader
+        if isinstance(dist, ReproducibleSampler):
+            dataloader.batch_sampler.sampler = dist
+            return dataloader            
+
+        if reproducible:
+            if isinstance(dataloader.batch_sampler.sampler, ReproducibleSampler):
+                return dataloader
+            elif isinstance(dataloader.batch_sampler, ReproducibleBatchSampler):
+                return dataloader
+            else:
+                # TODO
+                batch_sampler = ReproducibleBatchSampler(
+                    batch_sampler=dataloader.batch_sampler,
+                    batch_size=dataloader.batch_sampler.batch_size,
+                    drop_last=dataloader.drop_last
+>>>>>>> 388e426d78e8985a2f34dc83dfffe881274239a1
                 )
                 return replace_batch_sampler(dataloader, batch_sampler)
         else:

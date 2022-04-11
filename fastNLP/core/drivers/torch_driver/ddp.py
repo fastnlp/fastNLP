@@ -28,7 +28,7 @@ from fastNLP.core.drivers.torch_driver.utils import (
 )
 from fastNLP.core.drivers.utils import distributed_open_proc
 from fastNLP.core.utils import auto_param_call, check_user_specific_params
-from fastNLP.core.samplers import ReproducibleSampler, RandomSampler, UnrepeatedSequentialSampler, RandomBatchSampler, \
+from fastNLP.core.samplers import ReproducibleSampler, RandomSampler, UnrepeatedSequentialSampler, ReproducibleBatchSampler, \
     re_instantiate_sampler, UnrepeatedSampler, conversion_between_reproducible_and_unrepeated_sampler
 from fastNLP.envs import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_RANK, FASTNLP_GLOBAL_SEED
 from fastNLP.core.log import logger
@@ -446,11 +446,11 @@ class TorchDDPDriver(TorchDriver):
         # return self.model(batch, **{_MODE_PARAMETER: ForwardState.TEST})
         return self._test_step(batch)
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler, RandomBatchSampler]]=None,
+    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler, ReproducibleBatchSampler]]=None,
                                   reproducible: bool = False):
-        # 如果 dist 为 RandomBatchSampler, ReproducibleIterator 说明是在断点重训时 driver.load 函数调用；
+        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleSampler 说明是在断点重训时 driver.load 函数调用；
         # 注意这里不需要调用 dist_sampler.set_distributed；因为如果用户使用的是 TorchDDPDriver，那么其在 Trainer 初始化的时候就已经调用了该函数；
-        if isinstance(dist, RandomBatchSampler):
+        if isinstance(dist, ReproducibleBatchSampler):
             dist.set_distributed(
                 num_replicas=self.world_size,
                 rank=self.global_rank,
@@ -472,7 +472,7 @@ class TorchDDPDriver(TorchDriver):
                 raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize ddp out of our "
                                    "control.")
             else:
-                if isinstance(dist, RandomBatchSampler):
+                if isinstance(dist, ReproducibleBatchSampler):
                     dist = re_instantiate_sampler(dist)
                     return replace_batch_sampler(dataloader, dist)
                 if isinstance(dist, ReproducibleSampler):
@@ -483,7 +483,7 @@ class TorchDDPDriver(TorchDriver):
         elif dist == "dist":
             args = self.get_dataloader_args(dataloader)
             # 如果用户的 trainer.use_dist_sampler 为 True，那么此时其是否进行断点重训，不影响这里的行为；
-            if isinstance(args.batch_sampler, RandomBatchSampler):
+            if isinstance(args.batch_sampler, ReproducibleBatchSampler):
                 batch_sampler = re_instantiate_sampler(args.batch_sampler)
                 batch_sampler.set_distributed(
                     num_replicas=self.world_size,

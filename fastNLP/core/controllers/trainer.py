@@ -23,7 +23,6 @@ from fastNLP.core.drivers import Driver
 from fastNLP.core.drivers.utils import choose_driver
 from fastNLP.core.utils import check_fn_not_empty_params, get_fn_arg_names, match_and_substitute_params, nullcontext
 from fastNLP.envs import rank_zero_call
-from fastNLP.core.samplers import ReproducibleSampler, RandomBatchSampler
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_MODEL_FILENAME
 

@@ -3,7 +3,7 @@ from typing import Dict, Union
 from .jittor_driver import JittorDriver
 from fastNLP.core.utils import auto_param_call
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
-from fastNLP.core.samplers import RandomBatchSampler, ReproducibleSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
 
 if _NEED_IMPORT_JITTOR:
     import jittor
@@ -99,10 +99,10 @@ class JittorSingleDriver(JittorDriver):
     def is_distributed(self):
         return False
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, RandomBatchSampler, ReproducibleSampler],
+    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler],
                                   reproducible: bool = False, sampler_or_batch_sampler=None):
         # reproducible 的相关功能暂时没有实现
-        if isinstance(dist, RandomBatchSampler):
+        if isinstance(dist, ReproducibleBatchSampler):
             raise NotImplementedError
             dataloader.batch_sampler = dist_sample
         if isinstance(dist, ReproducibleSampler):

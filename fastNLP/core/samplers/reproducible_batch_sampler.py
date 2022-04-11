@@ -17,6 +17,9 @@ from abc import abstractmethod
 
 
 class ReproducibleBatchSampler:
+    def __init__(self, **kwargs):
+        pass
+
     @abstractmethod
     def set_distributed(self, num_replicas, rank, pad=True):
         raise NotImplementedError("Each specific batch_sampler should implement its own `set_distributed` method.")
@@ -41,6 +44,10 @@ class ReproducibleBatchSampler:
     def set_epoch(self, epoch):
         pass
 
+    @property
+    def batch_idx_in_epoch(self):
+        raise NotImplementedError("Each specific batch_sampler should implement its own `batch_idx_in_epoch` property.")
+
 
 class RandomBatchSampler(ReproducibleBatchSampler):
     # 这两个参数的值应当交给 driver 的 get_dataloader_args 函数去拿；
@@ -54,6 +61,8 @@ class RandomBatchSampler(ReproducibleBatchSampler):
         :param drop_last: 如果最后一个 batch 无法构成 batch_size 那么多个 sample ，是否丢掉。
         :param kwargs: fastNLP 内部使用。
         """
+        super().__init__()
+
         self.batch_sampler = batch_sampler
         self.batch_size = batch_size
         self.drop_last = drop_last

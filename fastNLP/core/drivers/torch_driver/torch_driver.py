@@ -30,7 +30,7 @@ from fastNLP.core.utils import apply_to_collection, torch_move_data_to_device
 from fastNLP.envs import  rank_zero_call
 from fastNLP.envs import FASTNLP_SEED_WORKERS, FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.log import logger
-from fastNLP.core.samplers import RandomBatchSampler, ReproducibleIterator
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
 
 
 class TorchDriver(Driver):
@@ -183,9 +183,9 @@ class TorchDriver(Driver):
 
         # 1. sampler 的状态，因为我们支持 resume training，即精确恢复到具体的一个 batch；
         # 首先 pytorch 的 DataLoader 一定会有 sampler；另一方面，我们在断点重训的时候一定会在 `set_` 中将 dataloader 的
-        #  sampler 替换为 `ReproducibleSampler`；否则就是在单卡情况下将 batch_sampler 替换为 `RandomBatchSampler`；
+        #  sampler 替换为 `ReproducibleSampler`；否则就是在单卡情况下将 batch_sampler 替换为 `ReproducibleBatchSampler`；
         dataloader_args = self.get_dataloader_args(dataloader)
-        if isinstance(dataloader_args.batch_sampler, RandomBatchSampler):
+        if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
             sampler = dataloader_args.batch_sampler
         elif dataloader_args.sampler:
             sampler = dataloader_args.sampler
@@ -245,15 +245,14 @@ class TorchDriver(Driver):
 
         # 3. 恢复 sampler 的状态；
         dataloader_args = self.get_dataloader_args(dataloader)
-        if isinstance(dataloader_args.batch_sampler, RandomBatchSampler):
+        if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
             sampler = dataloader_args.batch_sampler
-        elif isinstance(dataloader_args.sampler, ReproducibleIterator):
+        elif isinstance(dataloader_args.sampler, ReproducibleSampler):
             sampler = dataloader_args.sampler
         elif self.is_distributed():
-            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our "
-                               "`RandomBatchSampler` or `ReproducibleIterator`.")
+            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or `ReproducibleSampler`.")
         else:
-            sampler = RandomBatchSampler(
+            sampler = ReproducibleBatchSampler(
                 batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
                 batch_size=dataloader_args.batch_size,
                 drop_last=dataloader_args.drop_last
@@ -263,7 +262,7 @@ class TorchDriver(Driver):
 
         # 4. 修改 trainer_state.batch_idx_in_epoch
         # sampler 是类似 RandomSampler 的sampler，不是 batch_sampler；
-        if not isinstance(sampler, RandomBatchSampler):
+        if not isinstance(sampler, ReproducibleBatchSampler):
             if dataloader_args.drop_last:
                 batch_idx_in_epoch = len(
                     sampler) // dataloader_args.batch_size - sampler.num_left_samples // dataloader_args.batch_size
