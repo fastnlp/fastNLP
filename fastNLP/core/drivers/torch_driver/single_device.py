@@ -132,25 +132,29 @@ class TorchSingleDriver(TorchDriver):
 
     def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleIterator]=None,
                                   reproducible: bool = False):
+
+        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleIterator 说明是在断点重训时 driver.load 函数调用；
         if isinstance(dist, ReproducibleBatchSampler):
-            dist = re_instantiate_sampler(dist)
             return replace_batch_sampler(dataloader, dist)
         elif isinstance(dist, ReproducibleIterator):
-            dist = re_instantiate_sampler(dist)
             return replace_sampler(dataloader, dist)
 
+        # 如果 dist 为 str 或者 None，说明是在 trainer 初试化时调用；
+        args = self.get_dataloader_args(dataloader)
+        if isinstance(args.batch_sampler, ReproducibleBatchSampler):
+            batch_sampler = re_instantiate_sampler(args.batch_sampler)
+            return replace_batch_sampler(dataloader, batch_sampler)
+        elif isinstance(args.sampler, ReproducibleIterator):
+            sampler = re_instantiate_sampler(args.sampler)
+            return replace_sampler(dataloader, sampler)
+
         if reproducible:
-            args = self.get_dataloader_args(dataloader)
-            if isinstance(args.sampler, ReproducibleIterator):
-                sampler = re_instantiate_sampler(args.sampler)
-                return replace_sampler(dataloader, sampler)
-            else:
-                batch_sampler = ReproducibleBatchSampler(
-                    batch_sampler=args.batch_sampler,
-                    batch_size=args.batch_size,
-                    drop_last=args.drop_last
-                )
-                return replace_batch_sampler(dataloader, batch_sampler)
+            batch_sampler = ReproducibleBatchSampler(
+                batch_sampler=args.batch_sampler,
+                batch_size=args.batch_size,
+                drop_last=args.drop_last
+            )
+            return replace_batch_sampler(dataloader, batch_sampler)
         else:
             return dataloader
 

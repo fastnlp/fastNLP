@@ -448,31 +448,26 @@ class TorchDDPDriver(TorchDriver):
 
     def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleIterator, ReproducibleBatchSampler]]=None,
                                   reproducible: bool = False):
+        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleIterator 说明是在断点重训时 driver.load 函数调用；
+        # 注意这里不需要调用 dist_sampler.set_distributed；因为如果用户使用的是 TorchDDPDriver，那么其在 Trainer 初始化的时候就已经调用了该函数；
         if isinstance(dist, ReproducibleBatchSampler):
-            dist = re_instantiate_sampler(dist)
-            dist.set_distributed(
-                num_replicas=self.world_size,
-                rank=self.global_rank,
-                pad=True
-            )
             return replace_batch_sampler(dataloader, dist)
-
         if isinstance(dist, ReproducibleIterator):
-            # 注意这里不需要调用 dist_sampler.set_distributed；因为如果用户使用的是 TorchDDPDriver，那么其在 Trainer 初始化的时候就已经调用了该函数；
-            dist = re_instantiate_sampler(dist)
-            dist.set_distributed(
-                num_replicas=self.world_size,
-                rank=self.global_rank,
-                pad=True
-            )
             return replace_sampler(dataloader, dist)
 
+        # 如果 dist 为 str 或者 None，说明是在 trainer 初试化时调用；
         # trainer, evaluator
         if dist is None:
             if reproducible:
                 raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize ddp out of our "
                                    "control.")
             else:
+                if isinstance(dist, ReproducibleBatchSampler):
+                    dist = re_instantiate_sampler(dist)
+                    return replace_batch_sampler(dataloader, dist)
+                if isinstance(dist, ReproducibleIterator):
+                    dist = re_instantiate_sampler(dist)
+                    return replace_sampler(dataloader, dist)
                 return dataloader
         # trainer
         elif dist == "dist":
@@ -506,7 +501,6 @@ class TorchDDPDriver(TorchDriver):
                     pad=True
                 )
                 return replace_sampler(dataloader, sampler)
-
         # evaluator
         elif dist == "unrepeatdist":
             # todo @yh，补充 unrepeatdist 相关内容；
