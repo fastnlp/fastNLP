@@ -1,4 +1,4 @@
-import unittest
+import pytest
 
 from fastNLP.core.dataloaders.paddle_dataloader.fdl import PaddleDataLoader
 from fastNLP.core.dataset import DataSet
@@ -17,7 +17,7 @@ class RandomDataset(Dataset):
         return 10
 
 
-class TestPaddle(unittest.TestCase):
+class TestPaddle:
 
     def test_init(self):
         # ds = DataSet({'x': [[1, 2], [2, 3, 4], [1]] * 10, 'y': [0, 1, 1] * 10})
