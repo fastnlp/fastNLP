@@ -30,7 +30,7 @@ from fastNLP.core.utils import apply_to_collection, torch_move_data_to_device
 from fastNLP.envs import  rank_zero_call
 from fastNLP.envs import FASTNLP_SEED_WORKERS, FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.log import logger
-from fastNLP.core.samplers import ReproducibleBatchSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleIterator
 
 
 class TorchDriver(Driver):
@@ -244,47 +244,21 @@ class TorchDriver(Driver):
                 logger.debug("Load model.")
 
         # 3. 恢复 sampler 的状态；
-        """
-        使用场景：
-        
-        现在sampler/batch_sampler的替换情况：
-        1. 单卡多卡；
-        2. 是否断点重训；
-        
-        3. 用户通过 dist 传入；
-        4. 用户自己直接在外面替换dataloader的sampler或者 batchsampler；
-        
-        应当确定的规则：
-        batchsampler 优先级高于 sampler；
-        
-        单卡：
-            不是断点重训：
-                用户自己
-        
-        
-        用户不自己在外面直接替换 sampler 或者 batchsampler
-        1. 单卡：
-        
-        """
         dataloader_args = self.get_dataloader_args(dataloader)
-
-        # todo 先捋一下；
-        # batch_sampler = dataloader_args.batch_sampler
-        # if not (hasattr(batch_sampler, 'load_state_dict') and callable(batch_sampler.load_state_dict)):
-
-        sampler = dataloader_args.sampler
-        if not (hasattr(sampler, 'load_state_dict') and callable(sampler.load_state_dict)):
-            # 说明这里需要使用 ReproduceSampler 来弄一下了
-            if self.is_distributed():
-                raise RuntimeError(
-                    "It is not allowed to use single device checkpoint retraining before but ddp now.")
+        if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
+            sampler = dataloader_args.batch_sampler
+        elif isinstance(dataloader_args.sampler, ReproducibleIterator):
+            sampler = dataloader_args.sampler
+        elif self.is_distributed():
+            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our "
+                               "`ReproducibleBatchSampler` or `ReproducibleIterator`.")
+        else:
             sampler = ReproducibleBatchSampler(
-                batch_sampler=sampler,
+                batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
                 batch_size=dataloader_args.batch_size,
                 drop_last=dataloader_args.drop_last
             )
         sampler.load_state_dict(states['sampler_states'])
-
         states["dataloader"] = self.set_dist_repro_dataloader(dataloader, sampler)
 
         # 4. 修改 trainer_state.batch_idx_in_epoch
