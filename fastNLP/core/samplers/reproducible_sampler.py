@@ -16,7 +16,6 @@ def re_instantiate_sampler(sampler):
     return type(sampler)(**all_attributes)
 
 
-
 class ReproducibleIterator:
     """
     注意所有继承 `ReproducibleIterator` 的类的  `__init__` 方法中都需要加入参数 `**kwargs`，用来使我们再断点重训时重新实例化这个 sampler
