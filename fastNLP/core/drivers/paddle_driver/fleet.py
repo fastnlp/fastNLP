@@ -19,7 +19,7 @@ from fastNLP.core.utils import (
     paddle_move_data_to_device,
     is_in_paddle_dist,
 )
-from fastNLP.core.samplers import ReproducibleIterator, RandomSampler, UnrepeatedDistributedSampler
+from fastNLP.core.samplers import ReproducibleIterator, RandomSampler, UnrepeatedSampler
 from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK, USER_CUDA_VISIBLE_DEVICES
 from fastNLP.core.log import logger
 
@@ -362,7 +362,7 @@ class PaddleFleetDriver(PaddleDriver):
                 return dataloader
         # evaluator
         elif dist == "unrepeatdist":
-            sampler = UnrepeatedDistributedSampler(
+            sampler = UnrepeatedSampler(
                 dataset=dataloader.dataset,
                 shuffle=shuffle,
                 seed=int(os.environ.get("FASTNLP_SEED", 0))

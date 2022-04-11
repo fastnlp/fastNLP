@@ -28,7 +28,7 @@ from fastNLP.core.drivers.torch_driver.utils import (
 )
 from fastNLP.core.drivers.utils import distributed_open_proc
 from fastNLP.core.utils import auto_param_call, check_user_specific_params
-from fastNLP.core.samplers import ReproducibleIterator, RandomSampler, UnrepeatedDistributedSampler, ReproducibleBatchSampler
+from fastNLP.core.samplers import ReproducibleIterator, RandomSampler, UnrepeatedSampler, ReproducibleBatchSampler
 from fastNLP.envs import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_RANK, FASTNLP_GLOBAL_SEED
 from fastNLP.core.log import logger
 from fastNLP.core.drivers.torch_driver.dist_utils import fastnlp_torch_all_gather, fastnlp_torch_broadcast_object
@@ -513,7 +513,7 @@ class TorchDDPDriver(TorchDriver):
             args = self.get_dataloader_args(dataloader)
 
             # todo 判断 batch_sampler；
-            sampler = UnrepeatedDistributedSampler(
+            sampler = UnrepeatedSampler(
                 dataset=args.dataset,
                 shuffle=args.shuffle,
             )
