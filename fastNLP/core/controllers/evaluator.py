@@ -133,17 +133,18 @@ class Evaluator:
 
         self.driver.barrier()
 
-    def run(self, num_eval_batch_per_dl: int = -1) -> Dict:
+    def run(self, num_eval_batch_per_dl: int = -1, **kwargs) -> Dict:
         """
         返回一个字典类型的数据，其中key为metric的名字，value为对应metric的结果。
-        如果存在多个metric，一个dataloader的情况，key的命名规则是
-            metric_indicator_name#metric_name
-        如果存在多个数据集，一个metric的情况，key的命名规则是
-            metric_indicator_name#dataloader_name (其中 # 是默认的 separator ，可以通过 Evaluator 初始化参数修改)。
-        如果存在多个metric，多个dataloader的情况，key的命名规则是
-            metric_indicator_name#metric_name#dataloader_name
-        :param num_eval_batch_per_dl: 每个 dataloader 测试多少个 batch 的数据，-1 为测试所有数据。
+            如果存在多个metric，一个dataloader的情况，key的命名规则是
+                metric_indicator_name#metric_name
+            如果存在多个数据集，一个metric的情况，key的命名规则是
+                metric_indicator_name#metric_name#dataloader_name (其中 # 是默认的 separator ，可以通过 Evaluator 初始化参数修改)。
+            如果存在多个metric，多个dataloader的情况，key的命名规则是
+                metric_indicator_name#metric_name#dataloader_name
+            其中 metric_indicator_name 可能不存在。
 
+        :param num_eval_batch_per_dl: 每个 dataloader 测试多少个 batch 的数据，-1 为测试所有数据。
         :return:
         """
         assert isinstance(num_eval_batch_per_dl, int), "num_eval_batch_per_dl must be of int type."
@@ -157,7 +158,6 @@ class Evaluator:
             assert self.driver.has_test_dataloaders()
 
         metric_results = {}
-
         self.reset()
         evaluate_context = self.driver.get_evaluate_context()
         self.driver.set_model_mode(mode='eval' if self.model_use_eval_mode else 'train')

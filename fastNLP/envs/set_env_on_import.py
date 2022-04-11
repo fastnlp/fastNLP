@@ -48,7 +48,8 @@ def set_env_on_import_paddle():
 # TODO jittor may need set this
 def set_env_on_import_jittor():
     # todo 需要设置 FASTNLP_GLOBAL_RANK 和 FASTNLP_BACKEND_LAUNCH
-    pass
+    if 'log_silent' not in os.environ:
+        os.environ['log_silent'] = '1'
 
 
 def set_env_on_import():
@@ -64,7 +65,7 @@ def set_env_on_import():
 
     # fastNLP 内部使用的一些变量
     if FASTNLP_LAUNCH_TIME not in os.environ:
-        cur_time = f"{datetime.datetime.now().strftime('%Y-%m-%d-%H_%M_%S_%M_%f')}"
+        cur_time = f"{datetime.datetime.now().strftime('%Y-%m-%d-%H_%M_%S_%f')}"
         os.environ[FASTNLP_LAUNCH_TIME] = cur_time
 
     # 设置对应的值

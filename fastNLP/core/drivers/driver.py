@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 from io import BytesIO
+import json
 
 __all__ = [
     'Driver'
@@ -68,9 +69,12 @@ class Driver(ABC):
     def set_sampler_epoch(self, dataloader, cur_epoch_idx):
         r"""
         对于分布式的 sampler，例如 torch 的 DistributedSampler，其需要在每一个 epoch 前设置随机数种子，来保证每一个进程上的 shuffle 是一样的；
+            dataloader 中可能真正发挥作用的是 batch_sampler 也可能是 sampler。
 
+        :param dataloader: 需要设置 epoch 的 dataloader 。
         :param cur_epoch_idx: 当前是第几个 epoch；
         """
+
     @abstractmethod
     def train_step(self, batch):
         """
@@ -444,13 +448,14 @@ class Driver(ABC):
 
             exc_type, exc_value, exc_traceback_obj = sys.exc_info()
             _write_exc_info = {
-                'exc_type': exc_type,
-                'exc_value': exc_value,
-                'time': str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')),
-                'global_rank': getattr(self, "global_rank", None),
-                'rank': self.get_local_rank(),
+                'exc_type': str(exc_type.__name__),
+                'exc_value': str(exc_value),
+                'exc_time': str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')),
+                'exc_global_rank': getattr(self, "global_rank", None),
+                'exc_local_rank': self.get_local_rank(),
             }
-            sys.stderr.write(str(_write_exc_info)+"\n")
+            sys.stderr.write("\nException info:\n")
+            sys.stderr.write(json.dumps(_write_exc_info, indent=2)+"\n")
 
             sys.stderr.write(f"Start to stop these pids:{self._pids}, please wait several seconds.\n")
             for pid in self._pids:

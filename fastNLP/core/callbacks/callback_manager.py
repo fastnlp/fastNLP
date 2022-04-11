@@ -8,7 +8,7 @@ __all__ = [
 
 from .callback_events import Events
 from .callback import Callback
-from .checkpoint_callback import CheckpointCallback
+from .checkpoint_callback import TrainerCheckpointCallback
 from .progress_callback import ProgressCallback, choose_progress_callback
 from fastNLP.core.log import logger
 
@@ -98,7 +98,7 @@ class CallbackManager:
         :return:
         """
         for each_callback in self.class_callbacks:
-            if isinstance(each_callback, CheckpointCallback) and each_callback.is_trainer_checkpoint:
+            if isinstance(each_callback, TrainerCheckpointCallback):
                 self._has_trainer_checkpoint = True
             self.dissect_one_callback(each_callback)
 
@@ -210,7 +210,7 @@ class CallbackManager:
                 each_callback.on_load_checkpoint(trainer, None)
 
     @property
-    def has_trainer_chechpoint(self) -> bool:
+    def has_trainer_checkpoint(self) -> bool:
         return self._has_trainer_checkpoint
 
     @_transfer

@@ -8,7 +8,7 @@ import torch.distributed as dist
 from pathlib import Path
 import re
 
-from fastNLP.core.callbacks.checkpoint_callback import CheckpointCallback
+from fastNLP.core.callbacks.checkpoint_callback import ModelCheckpointCallback, TrainerCheckpointCallback
 from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.envs import FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME, FASTNLP_LAUNCH_TIME, FASTNLP_DISTRIBUTED_CHECK
 
@@ -80,16 +80,23 @@ def test_model_checkpoint_callback_1(
     version,
     only_state_dict
 ):
+# def test_model_checkpoint_callback_1(
+#         model_and_optimizers: TrainerParameters,
+#         driver='torch_ddp',
+#         device=[0, 1],
+#         version=1,
+#         only_state_dict=True
+# ):
     path = Path.cwd().joinpath(f"test_model_checkpoint")
     path.mkdir(exist_ok=True, parents=True)
 
     if version == 0:
         callbacks = [
-            CheckpointCallback(
+            ModelCheckpointCallback(
                 monitor="acc",
                 save_folder=path,
                 save_every_n_epochs=1,
-                save_every_n_global_batches=123,  # 避免和 epoch 的保存重复；
+                save_every_n_batches=123,  # 避免和 epoch 的保存重复；
                 save_topk=None,
                 save_last=False,
                 save_on_exception=None,
@@ -98,11 +105,11 @@ def test_model_checkpoint_callback_1(
         ]
     elif version == 1:
         callbacks = [
-            CheckpointCallback(
+            ModelCheckpointCallback(
                 monitor="acc",
                 save_folder=path,
                 save_every_n_epochs=3,
-                save_every_n_global_batches=None,
+                save_every_n_batches=None,
                 save_topk=2,
                 save_last=True,
                 save_on_exception=None,
@@ -121,7 +128,6 @@ def test_model_checkpoint_callback_1(
             input_mapping=model_and_optimizers.input_mapping,
             output_mapping=model_and_optimizers.output_mapping,
             metrics=model_and_optimizers.metrics,
-
             n_epochs=10,
             callbacks=callbacks,
             output_from_new_proc="all"
@@ -134,31 +140,31 @@ def test_model_checkpoint_callback_1(
         if version == 0:
 
             if driver == "torch":
-                assert "epoch_10-global_batch_250-acc" in all_saved_model_paths
-                assert "epoch_4-global_batch_123-acc" in all_saved_model_paths
+                assert "model-epoch_10" in all_saved_model_paths
+                assert "model-epoch_4-batch_123" in all_saved_model_paths
 
-                epoch_save_path = all_saved_model_paths["epoch_10-global_batch_250-acc"]
-                step_save_path = all_saved_model_paths["epoch_4-global_batch_123-acc"]
+                epoch_save_path = all_saved_model_paths["model-epoch_10"]
+                step_save_path = all_saved_model_paths["model-epoch_4-batch_123"]
 
                 assert len(all_saved_model_paths) == 12
             # ddp 下的文件名不同，因为同样的数据，ddp 用了更少的步数跑完；
             else:
-                assert "epoch_6-global_batch_78-acc" in all_saved_model_paths
-                assert "epoch_9-global_batch_123-acc" in all_saved_model_paths
+                assert "model-epoch_6" in all_saved_model_paths
+                assert "model-epoch_9-batch_123" in all_saved_model_paths
 
-                epoch_save_path = all_saved_model_paths["epoch_6-global_batch_78-acc"]
-                step_save_path = all_saved_model_paths["epoch_9-global_batch_123-acc"]
+                epoch_save_path = all_saved_model_paths["model-epoch_6"]
+                step_save_path = all_saved_model_paths["model-epoch_9-batch_123"]
 
                 assert len(all_saved_model_paths) == 11
             all_state_dicts = [epoch_save_path, step_save_path]
 
         elif version == 1:
 
-            pattern = re.compile("epoch_[0-9]+-global_batch_[0-9]+-[a-z|A-Z]+_[0-9]*.?[0-9]*")
+            pattern = re.compile("model-epoch_[0-9]+-batch_[0-9]+-[a-zA-Z#]+_[0-9]*.?[0-9]*")
 
             if driver == "torch":
-                assert "epoch_9-global_batch_225-acc" in all_saved_model_paths
-                assert "last" in all_saved_model_paths
+                assert "model-epoch_9" in all_saved_model_paths
+                assert "model-last" in all_saved_model_paths
                 aLL_topk_folders = []
                 for each_folder_name in all_saved_model_paths:
                     each_folder_name = pattern.findall(each_folder_name)
@@ -166,15 +172,15 @@ def test_model_checkpoint_callback_1(
                         aLL_topk_folders.append(each_folder_name[0])
                 assert len(aLL_topk_folders) == 2
 
-                epoch_save_path = all_saved_model_paths["epoch_9-global_batch_225-acc"]
-                last_save_path = all_saved_model_paths["last"]
+                epoch_save_path = all_saved_model_paths["model-epoch_9"]
+                last_save_path = all_saved_model_paths["model-last"]
                 topk_save_path = all_saved_model_paths[aLL_topk_folders[0]]
 
                 assert len(all_saved_model_paths) == 6
             # ddp 下的文件名不同，因为同样的数据，ddp 用了更少的步数跑完；
             else:
-                assert "epoch_9-global_batch_117-acc" in all_saved_model_paths
-                assert "last" in all_saved_model_paths
+                assert "model-epoch_9" in all_saved_model_paths
+                assert "model-last" in all_saved_model_paths
 
                 aLL_topk_folders = []
                 for each_folder_name in all_saved_model_paths:
@@ -183,8 +189,8 @@ def test_model_checkpoint_callback_1(
                         aLL_topk_folders.append(each_folder_name[0])
                 assert len(aLL_topk_folders) == 2
 
-                epoch_save_path = all_saved_model_paths["epoch_9-global_batch_117-acc"]
-                last_save_path = all_saved_model_paths["last"]
+                epoch_save_path = all_saved_model_paths["model-epoch_9"]
+                last_save_path = all_saved_model_paths["model-last"]
                 topk_save_path = all_saved_model_paths[aLL_topk_folders[0]]
 
                 assert len(all_saved_model_paths) == 6
@@ -212,7 +218,7 @@ def test_model_checkpoint_callback_1(
 
     finally:
         synchronize_safe_rm(path)
-        # pass
+        pass
 
     if dist.is_initialized():
         dist.destroy_process_group()
@@ -238,11 +244,11 @@ def test_model_checkpoint_callback_2(
             raise NotImplementedError
 
     callbacks = [
-        CheckpointCallback(
+        ModelCheckpointCallback(
             monitor="acc1",
             save_folder=path,
             save_every_n_epochs=None,
-            save_every_n_global_batches=None,
+            save_every_n_batches=None,
             save_topk=None,
             save_last=False,
             save_on_exception=NotImplementedError,
@@ -279,12 +285,12 @@ def test_model_checkpoint_callback_2(
         all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
 
         if driver == "torch":
-            assert "epoch_4-global_batch_100-acc_NotImplementedError" in all_saved_model_paths
-            exception_model_path = all_saved_model_paths["epoch_4-global_batch_100-acc_NotImplementedError"]
+            assert "model-epoch_4-batch_100-exception_NotImplementedError" in all_saved_model_paths
+            exception_model_path = all_saved_model_paths["model-epoch_4-batch_100-exception_NotImplementedError"]
         # ddp 下的文件名不同，因为同样的数据，ddp 用了更少的步数跑完；
         else:
-            assert "epoch_4-global_batch_52-acc_NotImplementedError" in all_saved_model_paths
-            exception_model_path = all_saved_model_paths["epoch_4-global_batch_52-acc_NotImplementedError"]
+            assert "model-epoch_4-batch_52-exception_NotImplementedError" in all_saved_model_paths
+            exception_model_path = all_saved_model_paths["model-epoch_4-batch_52-exception_NotImplementedError"]
 
         assert len(all_saved_model_paths) == 1
         all_state_dicts = [exception_model_path]
@@ -332,12 +338,11 @@ def test_trainer_checkpoint_callback_1(
 
     if version == 0:
         callbacks = [
-            CheckpointCallback(
+            TrainerCheckpointCallback(
                 monitor="acc",
-                is_trainer_checkpoint=True,
                 save_folder=path,
                 save_every_n_epochs=7,
-                save_every_n_global_batches=123,  # 避免和 epoch 的保存重复；
+                save_every_n_batches=123,  # 避免和 epoch 的保存重复；
                 save_topk=None,
                 save_last=False,
                 save_on_exception=None,
@@ -346,12 +351,11 @@ def test_trainer_checkpoint_callback_1(
         ]
     elif version == 1:
         callbacks = [
-            CheckpointCallback(
+            TrainerCheckpointCallback(
                 monitor="acc",
-                is_trainer_checkpoint=True,
                 save_folder=path,
                 save_every_n_epochs=None,
-                save_every_n_global_batches=None,
+                save_every_n_batches=None,
                 save_topk=2,
                 save_last=True,
                 save_on_exception=None,
@@ -383,31 +387,31 @@ def test_trainer_checkpoint_callback_1(
         if version == 0:
 
             if driver == "torch":
-                assert "epoch_7-global_batch_175-acc" in all_saved_model_paths
-                assert "epoch_4-global_batch_123-acc" in all_saved_model_paths
+                assert "trainer-epoch_7" in all_saved_model_paths
+                assert "trainer-epoch_4-batch_123" in all_saved_model_paths
 
-                epoch_save_path = all_saved_model_paths["epoch_7-global_batch_175-acc"]
-                step_save_path = all_saved_model_paths["epoch_4-global_batch_123-acc"]
+                epoch_save_path = all_saved_model_paths["trainer-epoch_7"]
+                step_save_path = all_saved_model_paths["trainer-epoch_4-batch_123"]
 
                 assert len(all_saved_model_paths) == 3
             # ddp 下的文件名不同，因为同样的数据，ddp 用了更少的步数跑完；
             else:
-                assert "epoch_7-global_batch_91-acc" in all_saved_model_paths
-                assert "epoch_9-global_batch_123-acc" in all_saved_model_paths
+                assert "trainer-epoch_7" in all_saved_model_paths
+                assert "trainer-epoch_9-batch_123" in all_saved_model_paths
 
-                epoch_save_path = all_saved_model_paths["epoch_7-global_batch_91-acc"]
-                step_save_path = all_saved_model_paths["epoch_9-global_batch_123-acc"]
+                epoch_save_path = all_saved_model_paths["trainer-epoch_7"]
+                step_save_path = all_saved_model_paths["trainer-epoch_9-batch_123"]
 
                 assert len(all_saved_model_paths) == 2
             all_state_dicts = [epoch_save_path, step_save_path]
 
         elif version == 1:
 
-            pattern = re.compile("epoch_[0-9]+-global_batch_[0-9]+-[a-z|A-Z]+_[0-9]*.?[0-9]*")
+            pattern = re.compile("trainer-epoch_[0-9]+-batch_[0-9]+-[a-zA-Z#]+_[0-9]*.?[0-9]*")
 
             # all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
             if driver == "torch":
-                assert "last" in all_saved_model_paths
+                assert "trainer-last" in all_saved_model_paths
                 aLL_topk_folders = []
                 for each_folder_name in all_saved_model_paths:
                     each_folder_name = pattern.findall(each_folder_name)
@@ -415,13 +419,13 @@ def test_trainer_checkpoint_callback_1(
                         aLL_topk_folders.append(each_folder_name[0])
                 assert len(aLL_topk_folders) == 2
 
-                last_save_path = all_saved_model_paths["last"]
+                last_save_path = all_saved_model_paths["trainer-last"]
                 topk_save_path = all_saved_model_paths[aLL_topk_folders[0]]
 
                 assert len(all_saved_model_paths) == 3
             # ddp 下的文件名不同，因为同样的数据，ddp 用了更少的步数跑完；
             else:
-                assert "last" in all_saved_model_paths
+                assert "trainer-last" in all_saved_model_paths
 
                 aLL_topk_folders = []
                 for each_folder_name in all_saved_model_paths:
@@ -430,7 +434,7 @@ def test_trainer_checkpoint_callback_1(
                         aLL_topk_folders.append(each_folder_name[0])
                 assert len(aLL_topk_folders) == 2
 
-                last_save_path = all_saved_model_paths["last"]
+                last_save_path = all_saved_model_paths["trainer-last"]
                 topk_save_path = all_saved_model_paths[aLL_topk_folders[0]]
 
                 assert len(all_saved_model_paths) == 3
@@ -474,10 +478,11 @@ def test_trainer_checkpoint_callback_2(
     device,
     version
 ):
+    pytest.skip("Skip transformers test for now.")
     path = Path.cwd().joinpath(f"test_model_checkpoint")
     path.mkdir(exist_ok=True, parents=True)
 
-    import transformers
+    import transformers  # 版本4.16.2
     import torch
     from torchmetrics import Accuracy
     from transformers import AutoModelForSequenceClassification
@@ -587,12 +592,11 @@ def test_trainer_checkpoint_callback_2(
 
     if version == 0:
         callbacks = [
-            CheckpointCallback(
+            TrainerCheckpointCallback(
                 monitor="acc",
-                is_trainer_checkpoint=True,
                 save_folder=path,
                 save_every_n_epochs=None,
-                save_every_n_global_batches=50,
+                save_every_n_batches=50,
                 save_topk=None,
                 save_last=False,
                 save_on_exception=None,
@@ -601,12 +605,11 @@ def test_trainer_checkpoint_callback_2(
         ]
     elif version == 1:
         callbacks = [
-            CheckpointCallback(
+            TrainerCheckpointCallback(
                 monitor="acc",
-                is_trainer_checkpoint=True,
                 save_folder=path,
                 save_every_n_epochs=None,
-                save_every_n_global_batches=None,
+                save_every_n_batches=None,
                 save_topk=1,
                 save_last=True,
                 save_on_exception=None,
@@ -638,27 +641,27 @@ def test_trainer_checkpoint_callback_2(
         if version == 0:
 
             if driver == "torch":
-                assert "epoch_1-global_batch_200-acc" in all_saved_model_paths
+                assert "trainer-epoch_1-batch_200" in all_saved_model_paths
 
-                epoch_save_path = all_saved_model_paths["epoch_1-global_batch_200-acc"]
+                epoch_save_path = all_saved_model_paths["trainer-epoch_1-batch_200"]
 
                 assert len(all_saved_model_paths) == 4
             # ddp 下的文件名不同，因为同样的数据，ddp 用了更少的步数跑完；
             else:
-                assert "epoch_1-global_batch_100-acc" in all_saved_model_paths
+                assert "trainer-epoch_1-batch_100" in all_saved_model_paths
 
-                epoch_save_path = all_saved_model_paths["epoch_1-global_batch_100-acc"]
+                epoch_save_path = all_saved_model_paths["trainer-epoch_1-batch_100"]
 
                 assert len(all_saved_model_paths) == 2
             all_state_dicts = [epoch_save_path]
 
         elif version == 1:
 
-            pattern = re.compile("epoch_[0-9]+-global_batch_[0-9]+-[a-z|A-Z]+_[0-9]*.?[0-9]*")
+            pattern = re.compile("trainer-epoch_[0-9]+-batch_[0-9]+-[a-zA-Z#]+_[0-9]*.?[0-9]*")
 
             # all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
             if driver == "torch":
-                assert "last" in all_saved_model_paths
+                assert "trainer-last" in all_saved_model_paths
                 aLL_topk_folders = []
                 for each_folder_name in all_saved_model_paths:
                     each_folder_name = pattern.findall(each_folder_name)
@@ -666,13 +669,13 @@ def test_trainer_checkpoint_callback_2(
                         aLL_topk_folders.append(each_folder_name[0])
                 assert len(aLL_topk_folders) == 1
 
-                last_save_path = all_saved_model_paths["last"]
+                last_save_path = all_saved_model_paths["trainer-last"]
                 topk_save_path = all_saved_model_paths[aLL_topk_folders[0]]
 
                 assert len(all_saved_model_paths) == 2
             # ddp 下的文件名不同，因为同样的数据，ddp 用了更少的步数跑完；
             else:
-                assert "last" in all_saved_model_paths
+                assert "trainer-last" in all_saved_model_paths
 
                 aLL_topk_folders = []
                 for each_folder_name in all_saved_model_paths:
@@ -681,7 +684,7 @@ def test_trainer_checkpoint_callback_2(
                         aLL_topk_folders.append(each_folder_name[0])
                 assert len(aLL_topk_folders) == 1
 
-                last_save_path = all_saved_model_paths["last"]
+                last_save_path = all_saved_model_paths["trainer-last"]
                 topk_save_path = all_saved_model_paths[aLL_topk_folders[0]]
 
                 assert len(all_saved_model_paths) == 2

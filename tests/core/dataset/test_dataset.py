@@ -105,6 +105,20 @@ class TestDataSetMethods(unittest.TestCase):
         self.assertTrue(isinstance(field_array, FieldArray))
         self.assertEqual(len(field_array), 40)
 
+    def test_setitem(self):
+        ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})
+        ds.add_field('i', list(range(len(ds))))
+        assert ds.get_field('i').content == list(range(len(ds)))
+        import random
+        random.shuffle(ds)
+        import numpy as np
+        np.random.shuffle(ds)
+        assert ds.get_field('i').content != list(range(len(ds)))
+
+        ins1 = ds[1]
+        ds[2] = ds[1]
+        assert ds[2]['x'] == ins1['x'] and ds[2]['y'] == ins1['y']
+
     def test_get_item_error(self):
         with self.assertRaises(RuntimeError):
             ds = DataSet({"x": [[1, 2, 3, 4]] * 10, "y": [[5, 6]] * 10})

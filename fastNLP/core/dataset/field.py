@@ -46,9 +46,6 @@ class FieldArray:
 
     def __setitem__(self, idx: int, val: Any):
         assert isinstance(idx, int)
-        if idx == -1:
-            idx = len(self) - 1
-        assert 0 <= idx < len(self), f"0<= idx <{len(self)}, but idx is {idx}"
         self.content[idx] = val
 
     def get(self, indices: Union[int, List[int]]):
@@ -79,7 +76,7 @@ class FieldArray:
 
     def split(self, sep: str = None, inplace: bool = True):
         r"""
-        依次对自身的元素使用.split()方法，应该只有当本field的元素为str时，该方法才有用。将返回值
+        依次对自身的元素使用.split()方法，应该只有当本field的元素为str时，该方法才有用。
 
         :param sep: 分割符，如果为None则直接调用str.split()。
         :param inplace: 如果为True，则将新生成值替换本field。否则返回list。

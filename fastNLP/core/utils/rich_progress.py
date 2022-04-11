@@ -96,6 +96,7 @@ class FRichProgress(Progress, metaclass=Singleton):
 
         # start new
         self.start()
+        self.console.show_cursor(show=True)
         return self
 
     def set_transient(self, transient: bool = True):
@@ -149,6 +150,9 @@ class FRichProgress(Progress, metaclass=Singleton):
             super().stop_task(task_id)
             super().remove_task(task_id)
 
+    def start(self) -> None:
+        super().start()
+        self.console.show_cursor(show=True)
 
 if (sys.stdin and sys.stdin.isatty()) and get_global_rank() == 0:
     f_rich_progress = FRichProgress().new_progess(
@@ -161,7 +165,7 @@ if (sys.stdin and sys.stdin.isatty()) and get_global_rank() == 0:
         TextColumn("{task.fields[post_desc]}", justify="right"),
         transient=True,
         disable=False,
-        speed_estimate_period=10
+        speed_estimate_period=1
     )
 else:
     f_rich_progress = DummyFRichProgress()
