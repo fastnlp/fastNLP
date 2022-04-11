@@ -13,7 +13,7 @@ __all__ = [
 from .torch_driver import TorchDriver
 from fastNLP.core.drivers.torch_driver.utils import replace_sampler, replace_batch_sampler
 from fastNLP.core.utils import auto_param_call
-from fastNLP.core.samplers import RandomBatchSampler, ReproducibleSampler, re_instantiate_sampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, re_instantiate_sampler
 from fastNLP.core.log import logger
 
 
@@ -129,18 +129,18 @@ class TorchSingleDriver(TorchDriver):
         else:
             return self._test_step(batch)
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, RandomBatchSampler, ReproducibleSampler]=None,
+    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler]=None,
                                   reproducible: bool = False):
 
-        # 如果 dist 为 RandomBatchSampler, ReproducibleIterator 说明是在断点重训时 driver.load 函数调用；
-        if isinstance(dist, RandomBatchSampler):
+        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleIterator 说明是在断点重训时 driver.load 函数调用；
+        if isinstance(dist, ReproducibleBatchSampler):
             return replace_batch_sampler(dataloader, dist)
         elif isinstance(dist, ReproducibleSampler):
             return replace_sampler(dataloader, dist)
 
         # 如果 dist 为 str 或者 None，说明是在 trainer 初试化时调用；
         args = self.get_dataloader_args(dataloader)
-        if isinstance(args.batch_sampler, RandomBatchSampler):
+        if isinstance(args.batch_sampler, ReproducibleBatchSampler):
             batch_sampler = re_instantiate_sampler(args.batch_sampler)
             return replace_batch_sampler(dataloader, batch_sampler)
         elif isinstance(args.sampler, ReproducibleSampler):
@@ -148,7 +148,7 @@ class TorchSingleDriver(TorchDriver):
             return replace_sampler(dataloader, sampler)
 
         if reproducible:
-            batch_sampler = RandomBatchSampler(
+            batch_sampler = ReproducibleBatchSampler(
                 batch_sampler=args.batch_sampler,
                 batch_size=args.batch_size,
                 drop_last=args.drop_last
