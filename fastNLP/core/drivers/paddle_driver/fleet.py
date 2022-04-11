@@ -10,7 +10,8 @@ from .utils import (
     _MODE_PARAMETER,
     get_device_from_visible,
     reset_seed,
-    replace_sampler
+    replace_sampler,
+    replace_batch_sampler,
 )
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
@@ -23,10 +24,12 @@ from fastNLP.core.utils import (
 from fastNLP.core.samplers import (
     RandomBatchSampler,
     ReproducibleSampler,
-    ReproducibleIterator,
+    ReproducibleBatchSampler,
     RandomSampler,
-    UnrepeatedDistributedSampler,
+    UnrepeatedSampler,
+    UnrepeatedSequentialSampler,
     re_instantiate_sampler,
+    conversion_between_reproducible_and_unrepeated_sampler,
 )
 from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_SEED
 from fastNLP.core.log import logger
@@ -261,7 +264,6 @@ class PaddleFleetDriver(PaddleDriver):
         当用户使用了 `python -m paddle.distributed.launch xxx.py` 启动时，我们需要
         根据 paddle 设置的环境变量来获得各种属性
         """
-        print("set_from_env")
         self.world_size = dist.get_world_size()
         self.global_rank = dist.get_rank()
 
@@ -325,23 +327,50 @@ class PaddleFleetDriver(PaddleDriver):
         # 暂时不支持iterableDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                     "FastNLP does not support `IteratorDataset` now."
-        if isinstance(dist, ReproducibleIterator):
-            dist = re_instantiate_sampler(dist)
+        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleSampler 说明是在断点重训时 driver.load 函数调用；
+        # 注意这里不需要调用 dist_sampler.set_distributed；因为如果用户使用的是 TorchDDPDriver，那么其在 Trainer 初始化的时候就已经调用了该函数；
+        if isinstance(dist, ReproducibleBatchSampler):
+            dist.set_distributed(
+                num_replicas=self.world_size,
+                rank=self.global_rank,
+                pad=True
+            )
+            return replace_batch_sampler(dataloader, dist)
+        if isinstance(dist, ReproducibleSampler):
+            dist.set_distributed(
+                num_replicas=self.world_size,
+                rank=self.global_rank,
+                pad=True
+            )
             return replace_sampler(dataloader, dist)
 
+       # 如果 dist 为 str 或者 None，说明是在 trainer 初试化时调用；
         # trainer, evaluator
-        # 自己初始化了分布式，什么都不做
         if dist is None:
             if reproducible:
-                raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize fleet out of our "
+                raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize ddp out of our "
                                    "control.")
             else:
+                if isinstance(dist, ReproducibleBatchSampler):
+                    dist = re_instantiate_sampler(dist)
+                    return replace_batch_sampler(dataloader, dist)
+                if isinstance(dist, ReproducibleSampler):
+                    dist = re_instantiate_sampler(dist)
+                    return replace_sampler(dataloader, dist)
                 return dataloader
         # trainer
         elif dist == "dist":
             args = self.get_dataloader_args(dataloader)
             # 如果用户的 trainer.use_dist_sampler 为 True，那么此时其是否进行断点重训，不影响这里的行为；
-            if isinstance(args.sampler, ReproducibleIterator):
+            if isinstance(args.batch_sampler, ReproducibleBatchSampler):
+                batch_sampler = re_instantiate_sampler(args.batch_sampler)
+                batch_sampler.set_distributed(
+                    num_replicas=self.world_size,
+                    rank=self.global_rank,
+                    pad=True
+                )
+                return replace_batch_sampler(dataloader, batch_sampler)
+            elif isinstance(args.sampler, ReproducibleSampler):
                 sampler = re_instantiate_sampler(args.sampler)
                 sampler.set_distributed(
                     num_replicas=self.world_size,
@@ -364,10 +393,14 @@ class PaddleFleetDriver(PaddleDriver):
         # evaluator
         elif dist == "unrepeatdist":
             args = self.get_dataloader_args(dataloader)
-            sampler = UnrepeatedDistributedSampler(
-                dataset=args.dataset,
-                shuffle=args.shuffle,
-            )
+            if isinstance(args.sampler, ReproducibleSampler):
+                sampler = conversion_between_reproducible_and_unrepeated_sampler(args.sampler)
+            elif not isinstance(args.sampler, UnrepeatedSampler):
+                sampler = UnrepeatedSequentialSampler(
+                    dataset=args.dataset
+                )
+            else:
+                sampler = re_instantiate_sampler(args.sampler)
             sampler.set_distributed(
                 num_replicas=self.world_size,
                 rank=self.global_rank

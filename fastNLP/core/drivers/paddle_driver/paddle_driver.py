@@ -14,7 +14,7 @@ from fastNLP.core.utils import apply_to_collection, paddle_move_data_to_device
 from fastNLP.envs import rank_zero_call
 from fastNLP.envs import FASTNLP_SEED_WORKERS, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.log import logger
-from fastNLP.core.samplers import ReproducibleBatchSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
 
 if _NEED_IMPORT_PADDLE:
     import paddle
@@ -178,11 +178,13 @@ class PaddleDriver(Driver):
         :param kwargs:
         :return:
         """
+        debug = kwargs.get("debug", False)
         model = self.unwrap_model()
-
         if only_state_dict:
             states = {name: param.cpu().detach().clone() for name, param in model.state_dict().items()}
             paddle.save(states, filepath)
+            if debug:
+                logger.debug("Save model state dict.")
         else:
             # paddle 在保存整个模型时需要传入额外参数
             input_spec = kwargs.get("input_spec", None)
@@ -196,6 +198,8 @@ class PaddleDriver(Driver):
                     self.move_model_to_device(model, self.model_device)
             else:
                 paddle.jit.save(model, filepath, input_spec)
+            if debug:
+                logger.debug("Save model.")
 
     def load_model(self, filepath: str, only_state_dict: bool = True, **kwargs):
         r"""
@@ -207,11 +211,16 @@ class PaddleDriver(Driver):
         :param kwargs:
         :return:
         """
+        debug = kwargs.get("debug", False)
         model = self.unwrap_model()
         if only_state_dict:
             model.load_dict(paddle.load(filepath))
+            if debug:
+                logger.debug("Load model state dict.")
         else:
             model.load_dict(paddle.jit.load(filepath).state_dict())
+            if debug:
+                logger.debug("Load model.")
 
     @rank_zero_call
     def save(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
@@ -252,17 +261,7 @@ class PaddleDriver(Driver):
 
         # 2. 保存模型的状态；
         if should_save_model:
-            model = self.unwrap_model()
-            if only_state_dict:
-                model_state_dict = {name: param.cpu().detach().clone() for name, param in model.state_dict().items()}
-                paddle.save(model_state_dict, folder.joinpath(FASTNLP_MODEL_FILENAME))
-                logger.debug("Save model state dict")
-            else:
-                input_spec = kwargs.get("input_spec", None)
-                if input_spec is None:
-                    raise ValueError("To save the whole Paddle Layer, parameter `input_spec` is needed.")
-                paddle.jit.save(model, folder.joinpath(FASTNLP_MODEL_FILENAME), input_spec)
-                logger.debug("Save model")
+            self.save_model(folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict, debug=True, **kwargs)
 
         # 3. 保存 optimizers 的状态；
         optimizers_state_dict = {}
@@ -272,7 +271,7 @@ class PaddleDriver(Driver):
             optimizer_state["state"] = optimizer_state_to_device(optimizer_state, "cpu")
             optimizers_state_dict[f"optimizer{i}"] = optimizer_state  # 注意这里没有使用 deepcopy，测试是不需要的；
 
-        logger.debug("Save optimizer state dict")
+        logger.debug("Save optimizer state dict.")
         states["optimizers_state_dict"] = optimizers_state_dict
         paddle.save(states, Path(folder).joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
@@ -289,30 +288,23 @@ class PaddleDriver(Driver):
 
         # 2. 加载模型状态；
         if should_load_model:
-            model = self.unwrap_model()
-            if only_state_dict:
-                res = paddle.load(folder.joinpath(FASTNLP_MODEL_FILENAME))
-                model.load_dict(res)
-                logger.debug("Load model state dict.")
-            else:
-                model.load_dict(paddle.jit.load(folder.joinpath(FASTNLP_MODEL_FILENAME)).state_dict())
-                logger.debug("Load model.")
+            self.load_model(folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict, debug=True)
 
         # 3. 恢复 sampler 的状态；
         dataloader_args = self.get_dataloader_args(dataloader)
-        sampler = dataloader_args.sampler
-        if not (hasattr(sampler, 'load_state_dict') and callable(sampler.load_state_dict)):
-            # 说明这里需要使用 ReproduceSampler 来弄一下了
-            if self.is_distributed():
-                raise RuntimeError(
-                    "It is not allowed to use single device checkpoint retraining before but ddp now.")
+        if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
+            sampler = dataloader_args.batch_sampler
+        elif isinstance(dataloader_args.sampler, ReproducibleSampler):
+            sampler = dataloader_args.sampler
+        elif self.is_distributed():
+            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or `ReproducibleSampler`.")
+        else:
             sampler = ReproducibleBatchSampler(
-                batch_sampler=sampler,
-                batch_size=dataloader_args.batch_sampler.batch_size,
+                batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
+                batch_size=dataloader_args.batch_size,
                 drop_last=dataloader_args.drop_last
             )
         sampler.load_state_dict(states['sampler_states'])
-
         states["dataloader"] = self.set_dist_repro_dataloader(dataloader, sampler)
 
         # 4. 修改 trainer_state.batch_idx_in_epoch
@@ -420,6 +412,7 @@ class PaddleDriver(Driver):
         res.dataset = dataloader.dataset
 
         if dataloader.batch_sampler is not None:
+            # 不过在 paddle 中，我们限定了 batch_sampler 不能为 None
             res.batch_sampler = dataloader.batch_sampler
             if hasattr(dataloader.batch_sampler, "batch_size"):
                 res.batch_size = getattr(dataloader.batch_sampler, "batch_size")
