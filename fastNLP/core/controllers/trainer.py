@@ -23,7 +23,7 @@ from fastNLP.core.drivers import Driver
 from fastNLP.core.drivers.utils import choose_driver
 from fastNLP.core.utils import check_fn_not_empty_params, get_fn_arg_names, match_and_substitute_params, nullcontext
 from fastNLP.envs import rank_zero_call
-from fastNLP.core.samplers import ReproducibleIterator, ReproducibleBatchSampler
+from fastNLP.core.samplers import ReproducibleSampler, RandomBatchSampler
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_MODEL_FILENAME
 
@@ -610,7 +610,7 @@ class Trainer(TrainerEventTrigger):
         r"""
         用于断点重训的加载函数；
         注意在 fastNLP 中断点重训的保存和加载逻辑是分开的，因此可能存在一种情况：用户只希望加载一个断点重训的状态，而在之后不再进行断点重训的
-         保存；在这种情况下，dataloader 的 sampler 就不一定会被替换成我们的 ReproducibleIterator；
+         保存；在这种情况下，dataloader 的 sampler 就不一定会被替换成我们的 ReproducibleSampler；
 
         注意我们目前不支持单卡到多卡的断点重训；
 

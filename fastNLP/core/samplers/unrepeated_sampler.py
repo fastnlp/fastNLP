@@ -1,6 +1,8 @@
 __all__ = [
+    'UnrepeatedSampler',
     'UnrepeatedSortedSampler',
-    'UnrepeatedSampler'
+    'UnrepeatedRandomSampler',
+    "UnrepeatedSequentialSampler"
 ]
 
 from typing import List, Union
@@ -10,13 +12,21 @@ import numpy as np
 
 
 class UnrepeatedSampler:
+    """
+    在多卡场景下保证 indice 不重复的 sampler
+    """
+    pass
+
+
+class UnrepeatedRandomSampler(UnrepeatedSampler):
     def __init__(self, dataset, shuffle: bool = False, seed: int = 0, **kwargs):
         """
         考虑在多卡evaluate的场景下，不能重复sample。
 
-        :param dataset:
-        :param shuffle:
-        :param seed:
+        :param dataset: 实现了 __len__ 方法的数据容器。
+        :param shuffle: 如果为 True，将不进行 shuffle，实际上数据会以从长到短的方式输出。
+        :param seed: 设置的随机数种子
+        :param kwargs: fastNLP 保留使用
         """
         self.dataset = dataset
         self.shuffle = shuffle
@@ -33,8 +43,8 @@ class UnrepeatedSampler:
         :return:
         """
         num_common = len(self.dataset)//self.num_replicas
-        self.num_samples = num_common + int(self.rank < (len(self.dataset)-num_common*self.num_replicas))
-        return self.num_samples
+        num_samples = num_common + int(self.rank < (len(self.dataset)-num_common*self.num_replicas))
+        return num_samples
 
     def __iter__(self):
         indices = self.generate_indices()
@@ -83,8 +93,8 @@ class UnrepeatedSampler:
         return self
 
 
-class UnrepeatedSortedSampler(UnrepeatedSampler):
-    def __init__(self, dataset, length:Union[str, List], seed: int = 0):
+class UnrepeatedSortedSampler(UnrepeatedRandomSampler):
+    def __init__(self, dataset, length:Union[str, List], **kwargs):
         """
         将 dataset 中的数据根据 length 从长到短进行迭代，并且保证在多卡场景下数据不重复。本 sampler 可能导致各个机器上的
             batch 数量不完全一致。
@@ -92,11 +102,9 @@ class UnrepeatedSortedSampler(UnrepeatedSampler):
         :param dataset: 实现了 __len__ 方法的数据容器。
         :param length: 如果为 List，应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；仅当传入的 dataset 为 fastNLP 的
             DataSet 时支持传入 str，会将该str理解为 dataset 的 field 名称，若 field 中的元素为 int，则认为该值是 sample 的长度。
-        :param shuffle: 如果为 True，将不进行 shuffle，实际上数据会以从长到短的方式输出。
-        :param seed: 设置的随机数种子
         :param kwargs: fastNLP 保留使用
         """
-        super().__init__(dataset=dataset, shuffle=False, seed=seed)
+        super().__init__(dataset=dataset, shuffle=False, seed=0, **kwargs)
         if isinstance(dataset, DataSet):
             length = dataset.get_field(length)
             if not isinstance(length[0], int):
@@ -107,8 +115,29 @@ class UnrepeatedSortedSampler(UnrepeatedSampler):
 
         assert len(length) == len(dataset), "The length of `data` and `length` should be equal."
 
-        self.length = np.array(length, dtype=int)  # 按照长到短排列的序号。
-        self.sorted_indices = np.argsort(self.length)[::-1].tolist()  # 按长度从高到低排序的
+        length = np.array(length, dtype=int)  # 按照长到短排列的序号。
+        self.sorted_indices = np.argsort(length)[::-1].tolist()  # 按长度从高到低排序的
 
     def generate_indices(self) -> List[int]:
         return self.sorted_indices
+
+
+class UnrepeatedSequentialSampler(UnrepeatedRandomSampler):
+    def __init__(self, dataset, **kwargs):
+        """
+        按照顺序读取 dataset。在多卡情况下，间隔读取，例如，在两卡情况下，卡0取 [0,2,4,..], 卡1取 [1,3,5...]。
+
+        :param dataset: 实现了 __len__ 方法的数据容器。
+        :param kwargs:
+        """
+        super(UnrepeatedSequentialSampler, self).__init__(dataset, shuffle=False, seed=0, **kwargs)
+
+    def __iter__(self):
+        indices = self.generate_indices()
+        indices = indices[self.rank:len(indices):self.num_replicas]
+        for index in indices:
+            yield index
+
+    def generate_indices(self) -> List[int]:
+        return list(range(len(self.dataset)))
+

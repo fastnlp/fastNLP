@@ -10,7 +10,7 @@ from fastNLP.core.utils import (
     get_paddle_device_id,
     paddle_move_data_to_device,
 )
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleIterator
+from fastNLP.core.samplers import RandomBatchSampler, ReproducibleSampler
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -139,26 +139,26 @@ class PaddleSingleDriver(PaddleDriver):
         """
         return paddle_move_data_to_device(batch, "gpu:0")
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleIterator],
+    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, RandomBatchSampler, ReproducibleSampler],
                                   reproducible: bool = False, sampler_or_batch_sampler=None):
         # 暂时不支持IteratorDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                 "FastNLP does not support `IteratorDataset` now."
-        if isinstance(dist, ReproducibleBatchSampler):
+        if isinstance(dist, RandomBatchSampler):
             dataloader.batch_sampler = dist
             return dataloader
-        if isinstance(dist, ReproducibleIterator):
+        if isinstance(dist, ReproducibleSampler):
             dataloader.batch_sampler.sampler = dist
             return dataloader            
 
         if reproducible:
-            if isinstance(dataloader.batch_sampler.sampler, ReproducibleIterator):
+            if isinstance(dataloader.batch_sampler.sampler, ReproducibleSampler):
                 return dataloader
-            elif isinstance(dataloader.batch_sampler, ReproducibleBatchSampler):
+            elif isinstance(dataloader.batch_sampler, RandomBatchSampler):
                 return dataloader
             else:
                 # TODO
-                batch_sampler = ReproducibleBatchSampler(
+                batch_sampler = RandomBatchSampler(
                     batch_sampler=dataloader.batch_sampler,
                     batch_size=dataloader.batch_sampler.batch_size,
                     drop_last=dataloader.drop_last

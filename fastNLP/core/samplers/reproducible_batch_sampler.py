@@ -1,6 +1,6 @@
 __all__ = [
     'BucketedBatchSampler',
-    "ReproducibleBatchSampler"
+    "RandomBatchSampler"
 ]
 
 import math
@@ -16,7 +16,7 @@ from fastNLP.core.log import logger
 from abc import abstractmethod
 
 
-class ReproducibleBatchIterator:
+class ReproducibleBatchSampler:
     @abstractmethod
     def set_distributed(self, num_replicas, rank, pad=True):
         raise NotImplementedError("Each specific batch_sampler should implement its own `set_distributed` method.")
@@ -42,13 +42,13 @@ class ReproducibleBatchIterator:
         pass
 
 
-class ReproducibleBatchSampler(ReproducibleBatchIterator):
+class RandomBatchSampler(ReproducibleBatchSampler):
     # 这两个参数的值应当交给 driver 的 get_dataloader_args 函数去拿；
     def __init__(self, batch_sampler, batch_size: int, drop_last: bool, **kwargs):
         """
         可以使得 batch_sampler 对象状态恢复的 wrapper 。
 
-        :param batch_sampler: 可迭代出 数字 或 数字列表 的可迭代对象。ReproducibleBatchSampler 将首先遍历一边该对象，然后将迭代
+        :param batch_sampler: 可迭代出 数字 或 数字列表 的可迭代对象。RandomBatchSampler 将首先遍历一边该对象，然后将迭代
             出来的序号暂存起来，使用时按照 batch_size 的 batch 大小吐出序号列表。
         :param batch_size: 每个 batch 的大小是多少。
         :param drop_last: 如果最后一个 batch 无法构成 batch_size 那么多个 sample ，是否丢掉。
@@ -138,7 +138,7 @@ class ReproducibleBatchSampler(ReproducibleBatchIterator):
                    (len(self.index_list) - self.data_idx + self.batch_size - 1) // self.batch_size
 
 
-class BucketedBatchSampler(ReproducibleBatchIterator):
+class BucketedBatchSampler(ReproducibleBatchSampler):
     def __init__(self, dataset, length: Union[List[int], str], batch_size:int = 32, num_batch_per_bucket:int = 10,
                  shuffle: bool = True, drop_last: bool = False, seed: int = 0, **kwargs):
         """
