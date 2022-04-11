@@ -23,7 +23,7 @@ __all__ = [
 ]
 
 class PaddleSingleDriver(PaddleDriver):
-    def __init__(self, model, device: Optional[str], fp16: Optional[bool] = False, **kwargs):
+    def __init__(self, model, device: str, fp16: Optional[bool] = False, **kwargs):
         super(PaddleSingleDriver, self).__init__(model, fp16=fp16, **kwargs)
 
         if device is None:
