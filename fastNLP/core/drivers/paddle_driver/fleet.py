@@ -21,6 +21,8 @@ from fastNLP.core.utils import (
     is_in_paddle_dist,
 )
 from fastNLP.core.samplers import (
+    RandomBatchSampler,
+    ReproducibleSampler,
     ReproducibleIterator,
     RandomSampler,
     UnrepeatedDistributedSampler,
@@ -318,7 +320,7 @@ class PaddleFleetDriver(PaddleDriver):
     def test_step(self, batch):
         return self._test_step(batch)
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleIterator]],
+    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler, RandomBatchSampler]],
                                   reproducible: bool = False, sampler_or_batch_sampler=None):
         # 暂时不支持iterableDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \

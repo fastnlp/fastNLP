@@ -11,12 +11,12 @@ from fastNLP.envs.env import FASTNLP_GLOBAL_RANK
 
 
 class Element:
-    def __init__(self, value: float, aggregate_method, backend: Backend, name=None):
+    def __init__(self, name, value: float, aggregate_method, backend: Backend):
+        self.name = name
         self.init_value = value
         self.aggregate_method = aggregate_method
-        self.name = name
         if backend == 'auto':
-            raise RuntimeError("You have to specify the backend.")
+            raise RuntimeError(f"You have to specify the backend for Element:{self.name}.")
         elif isinstance(backend, AutoBackend):
             self.backend = backend
         else:
@@ -34,19 +34,15 @@ class Element:
         自动aggregate对应的元素
 
         """
+        self._check_value_initialized()
         try:
             self._value = self.backend.aggregate(self._value, self.aggregate_method)
         except AggregateMethodError as e:
             msg = 'If you see this message, please report a bug.'
             if self.name and e.should_have_aggregate_method:
                 msg = f"Element:{self.name} has no specified `aggregate_method`."
-            elif e.should_have_aggregate_method:
-                msg = "Element has no specified `aggregate_method`."
             elif self.name and not e.should_have_aggregate_method:
                 msg = f"Element:{self.name}'s backend:{self.backend.__class__.__name__} does not support " \
-                      f'aggregate_method:{self.aggregate_method}.'
-            elif not e.should_have_aggregate_method:
-                msg = f"Element's backend:{self.backend.__class__.__name__} does not support " \
                       f'aggregate_method:{self.aggregate_method}.'
             if e.only_warn:
                 if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
@@ -74,6 +70,7 @@ class Element:
         return self._value
 
     def get_scalar(self) -> float:
+        self._check_value_initialized()
         return self.backend.get_scalar(self._value)
 
     def fill_value(self, value):
@@ -95,7 +92,7 @@ class Element:
 
     def _check_value_when_call(self):
         if self.value is None:
-            prefix = f'Element:`{self.name}`' if self.name else 'Element'
+            prefix = f'Element:`{self.name}`'
             raise RuntimeError(prefix + " is not initialized. Please either specify backend when creating this "
                                         "element, or use it after it being used by the `Metric.compute()` method.")
 
@@ -273,9 +270,10 @@ class Element:
         """
         try:
             if self._value is None:
-                prefix = f'Element:`{self.name}`' if self.name else 'Element'
+                prefix = f'Element:`{self.name}`'
                 raise RuntimeError(prefix + " is not initialized. Please either specify backend when creating this "
                                             "element, or use it after it being used by the `Metric.compute()` method.")
             return getattr(self._value, item)
         except AttributeError as e:
+            logger.error(f"Element:{self.name} has no `{item}` attribute.")
             raise e

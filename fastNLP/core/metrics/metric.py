@@ -35,7 +35,7 @@ class Metric:
     def elements(self) -> dict:
         return self._elements
 
-    def register_element(self, name=None, value: float = 0, aggregate_method=None, backend='auto') -> Element:
+    def register_element(self, name, value: float = 0, aggregate_method=None, backend='auto') -> Element:
         """
         注册一个 element 对象，注册之后便可以通过在 Metric 中直接通过 self.{name} 进行调用，可以认为该对象即为对应 backend 的
             tensor 直接进行加减乘除计算即可。
@@ -57,11 +57,9 @@ class Metric:
         else:
             backend = AutoBackend(backend)
 
-        # 当name为None，默认为变量取得变量名
-        if name is None:
-            name = f'ele_var_{len(self._elements)}'
+        assert name is not None and name not in self.elements
 
-        element = Element(value=value, aggregate_method=aggregate_method, backend=backend, name=name)
+        element = Element(name=name, value=value, aggregate_method=aggregate_method, backend=backend)
         self.elements[name] = element
         setattr(self, name, element)
         return element

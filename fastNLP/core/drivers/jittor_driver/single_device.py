@@ -3,7 +3,7 @@ from typing import Dict, Union
 from .jittor_driver import JittorDriver
 from fastNLP.core.utils import auto_param_call
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleIterator
+from fastNLP.core.samplers import RandomBatchSampler, ReproducibleSampler
 
 if _NEED_IMPORT_JITTOR:
     import jittor
@@ -99,25 +99,25 @@ class JittorSingleDriver(JittorDriver):
     def is_distributed(self):
         return False
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleIterator],
+    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, RandomBatchSampler, ReproducibleSampler],
                                   reproducible: bool = False, sampler_or_batch_sampler=None):
         # reproducible 的相关功能暂时没有实现
-        if isinstance(dist, ReproducibleBatchSampler):
+        if isinstance(dist, RandomBatchSampler):
             raise NotImplementedError
             dataloader.batch_sampler = dist_sample
-        if isinstance(dist, ReproducibleIterator):
+        if isinstance(dist, ReproducibleSampler):
             raise NotImplementedError  
             dataloader.batch_sampler.sampler = dist
 
         if reproducible:
             raise NotImplementedError
-            if isinstance(dataloader.batch_sampler.sampler, ReproducibleIterator):
+            if isinstance(dataloader.batch_sampler.sampler, ReproducibleSampler):
                 return dataloader
-            elif isinstance(dataloader.batch_sampler, ReproducibleBatchSampler):
+            elif isinstance(dataloader.batch_sampler, RandomBatchSampler):
                 return dataloader
             else:
                 # TODO
-                batch_sampler = ReproducibleBatchSampler(
+                batch_sampler = RandomBatchSampler(
                     batch_sampler=dataloader.batch_sampler,
                     batch_size=dataloader.batch_sampler.batch_size,
                     drop_last=dataloader.drop_last

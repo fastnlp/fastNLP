@@ -23,7 +23,7 @@ from fastNLP.core.drivers import Driver
 from fastNLP.core.drivers.utils import choose_driver
 from fastNLP.core.utils import check_fn_not_empty_params, get_fn_arg_names, match_and_substitute_params, nullcontext
 from fastNLP.envs import rank_zero_call
-from fastNLP.core.samplers import ReproducibleIterator, ReproducibleBatchSampler
+from fastNLP.core.samplers import ReproducibleSampler, RandomBatchSampler
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_MODEL_FILENAME
 
@@ -251,7 +251,7 @@ class Trainer(TrainerEventTrigger):
         self.driver.set_deterministic_dataloader(self.dataloader)
 
         self.dataloader = self.driver.set_dist_repro_dataloader(dataloader=self.train_dataloader, dist=_dist_sampler,
-                                                                reproducible=self.callback_manager.has_trainer_chechpoint)
+                                                                reproducible=self.callback_manager.has_trainer_checkpoint)
 
         self.set_grad_to_none = kwargs.get("set_grad_to_none", True)
         self.on_after_trainer_initialized(self.driver)
@@ -291,6 +291,7 @@ class Trainer(TrainerEventTrigger):
                 raise FileNotFoundError("You are using `resume_from`, but we can not find your specific file.")
 
         if self.evaluator is not None and num_eval_sanity_batch > 0:
+            logger.info(f"Running evaluator sanity check for {num_eval_sanity_batch} batches.")
             self.on_sanity_check_begin()
             sanity_check_res = self.evaluator.run(num_eval_batch_per_dl=num_eval_sanity_batch)
             self.on_sanity_check_end(sanity_check_res)
@@ -509,7 +510,7 @@ class Trainer(TrainerEventTrigger):
 
         :param folder: 保存模型的地址；
         :param only_state_dict: 是否只保存模型的 `state_dict`；
-        :param save_fn: 用户自己定制的用来替换该保存函数本身保存逻辑的函数；
+        :param model_save_fn: 用户自己定制的用来替换该保存函数本身保存逻辑的函数；
         :param kwargs: 一些 driver 的保存模型的函数的参数另有其它；
         """
 
@@ -534,7 +535,16 @@ class Trainer(TrainerEventTrigger):
 
     def load_model(self, folder: Union[str, Path, BinaryIO, io.BytesIO], only_state_dict: bool = False,
                    model_load_fn: Optional[Callable] = None, **kwargs):
+        """
+        加载模型
 
+        :param folder: 读取 model 的文件夹，默认会尝试读取该文件夹下的 fastnlp_model.pkl.tar 文件。在 model_load_fn 不为空时，
+            直接将该 folder 传递到 model_load_fn 中。
+        :param only_state_dict: 要读取的文件中是否仅包含模型权重。在 model_load_fn 不为 None 时，该参数无意义。
+        :param model_load_fn: callable 的函数，接受一个 folder 作为参数，不返回任何内容。
+        :param kwargs:
+        :return:
+        """
         self.on_load_model()
         self.driver.barrier()
         if not isinstance(folder, (io.BytesIO, BinaryIO)):
@@ -555,7 +565,13 @@ class Trainer(TrainerEventTrigger):
 
     def save(self, folder: Union[str, Path], only_state_dict: bool = True, model_save_fn: Optional[Callable] = None, **kwargs):
         r"""
-        用于断点重训的保存函数;
+        用于断点重训 Trainer 的保存函数;
+
+        :param folder:
+        :param only_state_dict:
+        :param model_save_fn:
+        :param kwargs:
+        :return:
         """
         self.driver.barrier()
 
@@ -594,7 +610,7 @@ class Trainer(TrainerEventTrigger):
         r"""
         用于断点重训的加载函数；
         注意在 fastNLP 中断点重训的保存和加载逻辑是分开的，因此可能存在一种情况：用户只希望加载一个断点重训的状态，而在之后不再进行断点重训的
-         保存；在这种情况下，dataloader 的 sampler 就不一定会被替换成我们的 ReproducibleIterator；
+         保存；在这种情况下，dataloader 的 sampler 就不一定会被替换成我们的 ReproducibleSampler；
 
         注意我们目前不支持单卡到多卡的断点重训；
 

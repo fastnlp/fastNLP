@@ -1,25 +1,21 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 import math
 import numpy as np
 
 from fastNLP.core.log import logger
+from fastNLP.core.dataset import DataSet
 
 __all__ = [
-    'ReproducibleIterator',
+    'ReproducibleSampler',
     'RandomSampler',
-    're_instantiate_sampler'
+    "SortedSampler",
+    "SequentialSampler"
 ]
 
 
-def re_instantiate_sampler(sampler):
-    all_attributes = vars(sampler)
-    return type(sampler)(**all_attributes)
-
-
-
-class ReproducibleIterator:
+class ReproducibleSampler:
     """
-    注意所有继承 `ReproducibleIterator` 的类的  `__init__` 方法中都需要加入参数 `**kwargs`，用来使我们再断点重训时重新实例化这个 sampler
+    注意所有继承 `ReproducibleSampler` 的类的  `__init__` 方法中都需要加入参数 `**kwargs`，用来使我们再断点重训时重新实例化这个 sampler
      或者 batch_sampler；注意，所有在 init 中初始化的变量，都不能含有 _ 下横线作为开头；所有不在 init 中设置的变量都必须以下横线开头。
 
     """
@@ -47,7 +43,7 @@ class ReproducibleIterator:
         pass
 
 
-class RandomSampler(ReproducibleIterator):
+class RandomSampler(ReproducibleSampler):
     def __init__(self, dataset, shuffle: bool = True, seed: int = 0, **kwargs):
         """
 
@@ -157,8 +153,8 @@ class RandomSampler(ReproducibleIterator):
                                                                   f"we cannot use {self.__class__.__name__} to load it."
 
         length = states['length']
-        assert length == len(self.dataset), "The number of samples is different between the checkpoint record " \
-                                            "and current dataset."
+        assert length == len(self.dataset), f"The number of samples is different between the checkpoint record({length}) " \
+                                            f"and current dataset({len(self.dataset)})."
         self.seed = states['seed']
         self.epoch = states['epoch']
         self.num_consumed_samples = states['num_consumed_samples']
@@ -215,9 +211,132 @@ class RandomSampler(ReproducibleIterator):
             self.pad else math.floor(((len(self.dataset) - num_consumed_samples) / self.num_replicas))
 
 
+class SequentialSampler(RandomSampler):
+    def __init__(self, dataset, dist_mode:str='interval', **kwargs):
+        """
+        按照顺序读取 dataset 。在多卡情况下，间隔读取，例如，在两卡情况下，卡0取 [0,2,4,..], 卡1取 [1,3,5...]。
+
+        :param dataset: 实现了 __len__ 方法的数据容器。
+        :param kwargs:
+        """
+        super().__init__(dataset=dataset, shuffle=False, seed=0, **kwargs)
+
+    def __iter__(self):
+        if self.during_iter:  # 如果发现_during_iter为True，说明之前的还没结束，只有强制重新初始化了
+            self.num_consumed_samples = 0
+        self.during_iter = True
+        indices = self.generate_indices()
+
+        if self.pad:
+            # add extra samples to make it evenly divisible
+            padding_size = self.total_size - len(indices)
+            if padding_size <= len(indices):
+                indices += indices[:padding_size]
+            else:
+                indices += (indices * math.ceil(padding_size / len(indices)))[:padding_size]
+        else:
+            # remove tail of data to make it evenly divisible.
+            indices = indices[:self.total_size]
+
+        assert len(indices) == self.total_size
+
+        # subsample
+        indices = indices[self.num_consumed_samples:]
+        indices = indices[self.rank:len(indices):self.num_replicas]
+        assert len(indices) == self.num_left_samples
+
+        for index in indices:
+            self.num_consumed_samples += self.num_replicas
+            yield index
+        self.during_iter = False
+        self.num_consumed_samples = 0
+
+    def generate_indices(self) -> List[int]:
+        """
+        生成随机序列
+
+        :return:
+        """
+        return list(range(len(self.dataset)))
+
+    def state_dict(self) -> Dict:
+        states = {
+            'num_consumed_samples': self.num_consumed_samples,  # 注意该值是计算所有 rank 上训练的所有数据；
+            'sampler_type': self.__class__.__name__,
+            'length': len(self.dataset),
+        }
+        return states
+
+    def load_state_dict(self, states: Dict):
+        # 如果 self.during_iter 是 True，那么 data_idx 一定是 0；
+        assert self.during_iter is False, "Cannot call load_state_dict() when it is " \
+                                          "during an unfinished iteration."
+
+        assert states['sampler_type'] == self.__class__.__name__, f"The sampler type in checkpoint is {states['sampler_type']}," \
+                                                                  f"we cannot use {self.__class__.__name__} to load it."
+
+        length = states['length']
+        assert length == len(self.dataset), f"The number of samples is different between the checkpoint record({length}) " \
+                                            f"and current dataset({len(self.dataset)})."
+        self.num_consumed_samples = states['num_consumed_samples']
+        if self.num_consumed_samples >= length:  # 如果保存的时候已经到达了最后一个sample了，则直接将结果重置为0
+            self.num_consumed_samples = 0
 
 
+class SortedSampler(SequentialSampler):
+    def __init__(self, dataset, length:Union[str, List], **kwargs):
+        """
+        将 dataset 中的数据根据 length 从长到短进行迭代。在多卡情况下，由于padding 最后一个 sample 可能是最长的那个 sample。
 
+        :param dataset: 实现了 __len__ 方法的数据容器。
+        :param length: 如果为 List，应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；仅当传入的 dataset 为 fastNLP 的
+            DataSet 时支持传入 str，会将该str理解为 dataset 的 field 名称，若 field 中的元素为 int，则认为该值是 sample 的长度。
+        :param seed: 设置的随机数种子
+        :param kwargs: fastNLP 保留使用
+        """
+        super().__init__(dataset=dataset, **kwargs)
+        if isinstance(dataset, DataSet):
+            length = dataset.get_field(length)
+            if not isinstance(length[0], int):
+                length = list(map(len, length))
+        else:
+            assert len(length) == len(dataset), "When the dataset is not fastNLP.DataSet, " \
+                                                "the length parameter can only be List[int]"
 
+        assert len(length) == len(dataset), "The length of `data` and `length` should be equal."
 
+        self.length = np.array(length, dtype=int)  # 按照长到短排列的序号。
+        self.sorted_indices = np.argsort(self.length)[::-1].tolist()  # 按长度从高到低排序的
+
+    def generate_indices(self) -> List[int]:
+        return self.sorted_indices
+
+    def __iter__(self):
+        if self.during_iter:  # 如果发现_during_iter为True，说明之前的还没结束，只有强制重新初始化了
+            self.num_consumed_samples = 0
+        self.during_iter = True
+        indices = self.generate_indices()
+
+        if self.pad:
+            padding_size = self.total_size - len(indices)
+            if padding_size <= len(indices):
+                indices += indices[:padding_size]
+            else:
+                indices += (indices * math.ceil(padding_size / len(indices)))[:padding_size]
+        else:
+            # remove tail of data to make it evenly divisible.
+            indices = indices[:self.total_size]
+
+        assert len(indices) == self.total_size
+
+        # subsample
+        indices = indices[self.num_consumed_samples:]
+        indices = indices[self.rank:len(indices):self.num_replicas]
+        assert len(indices) == self.num_left_samples
+
+        for index in indices:
+            self.num_consumed_samples += self.num_replicas
+            yield index
+        self.during_iter = False
+        self.num_consumed_samples = 0
 

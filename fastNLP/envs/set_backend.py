@@ -153,7 +153,7 @@ def seed_jittor_global_seed(global_seed):
     pass
 
 
-def dump_fastnlp_backend(default:bool = False):
+def dump_fastnlp_backend(default:bool = False, backend=None):
     """
     将 fastNLP 的设置写入到 ~/.fastNLP/envs/ 文件夹下，
         若 default 为 True，则保存的文件为 ~/.fastNLP/envs/default.json 。
@@ -165,6 +165,7 @@ def dump_fastnlp_backend(default:bool = False):
     会保存的环境变量为 FASTNLP_BACKEND 。
 
     :param default:
+    :param backend: 保存使用的 backend 为哪个值，允许的值有 ['torch', 'paddle', 'jittor']。如果为 None ，则使用环境变量中的值。
     :return:
     """
     if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
@@ -179,10 +180,16 @@ def dump_fastnlp_backend(default:bool = False):
         os.makedirs(os.path.dirname(env_path), exist_ok=True)
 
         envs = {}
-        if FASTNLP_BACKEND in os.environ:
-            envs[FASTNLP_BACKEND] = os.environ[FASTNLP_BACKEND]
+        assert backend in SUPPORT_BACKENDS, f"fastNLP only supports {SUPPORT_BACKENDS} right now."
+        if backend is None:
+            if FASTNLP_BACKEND in os.environ:
+                envs[FASTNLP_BACKEND] = os.environ[FASTNLP_BACKEND]
+        else:
+            envs[FASTNLP_BACKEND] = backend
         if len(envs):
             with open(env_path, 'w', encoding='utf8') as f:
                 json.dump(fp=f, obj=envs)
 
             print(f"Writing the default fastNLP backend:{envs[FASTNLP_BACKEND]} to {env_path}.")
+        else:
+            raise RuntimeError("No backend specified.")

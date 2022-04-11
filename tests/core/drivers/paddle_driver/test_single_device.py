@@ -6,7 +6,7 @@ from fastNLP.core.drivers.paddle_driver.single_device import PaddleSingleDriver
 from fastNLP.core.samplers.reproducible_sampler import RandomSampler
 from fastNLP.core.samplers import ReproducibleBatchSampler
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
-from tests.helpers.datasets.paddle_data import PaddleRandomMaxDataset
+from tests.helpers.datasets.paddle_data import PaddleNormalDataset, PaddleRandomMaxDataset
 from tests.helpers.datasets.torch_data import TorchNormalDataset
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from fastNLP.core import synchronize_safe_rm

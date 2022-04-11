@@ -7,7 +7,6 @@ __all__ = [
     "SortedSampler",
     'ConstTokenNumSampler',
     "ConstantTokenNumSampler",
-    "UnrepeatedDistributedSampler",
 ]
 
 from itertools import chain
@@ -18,7 +17,7 @@ import numpy as np
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 
 if _NEED_IMPORT_TORCH:
-    from torch.utils.data import SequentialSampler, Sampler, RandomSampler
+    from torch.utils.data import Sampler
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Sampler
 
@@ -727,87 +726,3 @@ def k_means_bucketing(lengths, buckets):
         if buckets[bucket_id] is None or lengths[idx] <= buckets[bucket_id]:
             bucket_data[bucket_id].append(idx)
     return bucket_data
-
-
-class UnrepeatedDistributedSampler:
-    def __init__(self, dataset, shuffle: bool = False, seed: int = 0):
-        """
-        考虑在多卡evaluate的场景下，不能重复sample。
-
-        :param dataset:
-        :param shuffle:
-        :param seed:
-        """
-        self.dataset = dataset
-        self.shuffle = shuffle
-        self.seed = seed
-
-        # 多卡的相关的参数
-        self.num_replicas = 1
-        self.rank = 0
-        self.epoch = -1
-
-    def __len__(self):
-        """
-        返回 sampler 一次完整的迭代过程会产生多少个index。多卡的情况下，只考虑当前rank；
-        :return:
-        """
-        num_common = len(self.dataset)//self.num_replicas
-        self.num_samples = num_common + int(self.rank < (len(self.dataset)-num_common*self.num_replicas))
-        return self.num_samples
-
-    def __iter__(self):
-        r"""
-        当前使用num_consumed_samples做法会在交替使用的时候遇到问题；
-        Example:
-            >>> sampler = RandomSampler()
-            >>> iter1 = iter(sampler)
-            >>> iter2 = iter(sampler)
-            >>> next(iter1)
-            >>> next(iter2)  # 当前num_consumed_samples的数量会发生变化
-        """
-
-        indices = self.generate_indices()
-
-        # subsample
-        indices = indices[self.rank:len(indices):self.num_replicas]
-        assert len(indices) == len(self)
-
-        for index in indices:
-            yield index
-
-    def generate_indices(self) -> List[int]:
-        """
-        生成随机序列
-
-        :return:
-        """
-        if self.shuffle:
-            indices = list(range(len(self.dataset)))
-            seed = self.seed + self.epoch
-            rng = np.random.default_rng(abs(seed))
-            rng.shuffle(indices)
-            if self.epoch < 0:  # 防止用户忘记调用 set_epoch，至少这样可以保证每次epoch出来的index顺序不同。
-                self.epoch -= 1
-        else:
-            indices = list(range(len(self.dataset)))
-        return indices
-
-    def set_epoch(self, epoch: int) -> None:
-        self.epoch = epoch
-
-    def set_distributed(self, num_replicas, rank):
-        """
-        该方法本质上等同于 ddp 情形下的没有完成的初始化，应当在初始化该 sampler 本身后立即被调用；
-
-        :param num_replicas:
-        :param rank:
-        :return:
-        """
-        assert num_replicas>0 and isinstance(num_replicas, int)
-        assert isinstance(rank, int) and 0<=rank<num_replicas
-        # 注意初始化该函数时，所有的状态都应当默认是一个 epoch 刚开始训练的状态；
-        self.num_replicas = num_replicas
-        self.rank = rank
-
-        return self

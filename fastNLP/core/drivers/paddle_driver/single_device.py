@@ -11,7 +11,11 @@ from fastNLP.core.utils import (
     get_paddle_device_id,
     paddle_move_data_to_device,
 )
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleIterator, re_instantiate_sampler
+from fastNLP.core.samplers import (
+    ReproducibleBatchSampler,
+    ReproducibleIterator,
+    re_instantiate_sampler,
+)
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:

@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 from io import BytesIO
+import json
 
 __all__ = [
     'Driver'
@@ -48,10 +49,13 @@ class Driver(ABC):
             不同 gpu 上出现重复；为 'unrepeatdist' 时，表示该 dataloader 应该保证所有 gpu 上迭代出来的数据合并起来应该刚好等于原始的
             数据，允许不同 gpu 上 batch 的数量不一致。其中 trainer 中 kwargs 的参数 `use_dist_sampler` 为 True 时，该值为 "dist"；
             否则为 None ，evaluator 中的 kwargs 的参数 `use_dist_sampler` 为 True 时，该值为 "unrepeatdist"，否则为 None；
+        注意当 dist 为 ReproducibleIterator, RandomBatchSampler 时，是断点重训加载时 driver.load 函数在调用；
+        当 dist 为 str 或者 None 时，是 trainer 在初始化时调用该函数；
+
         :param reproducible: 如果为 False ，不要做任何考虑；如果为 True ，需要保证返回的 dataloader 可以保存当前的迭代状态，使得
             可以可以加载。
         :return: 应当返回一个被替换 sampler 后的新的 dataloader 对象 (注意此处一定需要返回一个新的 dataloader 对象) ；此外，
-            如果传入的 dataloader 中是 ReproducibleIterator 或者 ReproducibleBatchSampler 需要重新初始化一个放入返回的
+            如果传入的 dataloader 中是 ReproducibleSampler 或者 RandomBatchSampler 需要重新初始化一个放入返回的
             dataloader 中。如果 dist 为空，且 reproducible 为 False，可直接返回原对象。
         """
         if dist is None and reproducible is False:
@@ -68,9 +72,12 @@ class Driver(ABC):
     def set_sampler_epoch(self, dataloader, cur_epoch_idx):
         r"""
         对于分布式的 sampler，例如 torch 的 DistributedSampler，其需要在每一个 epoch 前设置随机数种子，来保证每一个进程上的 shuffle 是一样的；
+            dataloader 中可能真正发挥作用的是 batch_sampler 也可能是 sampler。
 
+        :param dataloader: 需要设置 epoch 的 dataloader 。
         :param cur_epoch_idx: 当前是第几个 epoch；
         """
+
     @abstractmethod
     def train_step(self, batch):
         """
@@ -444,13 +451,14 @@ class Driver(ABC):
 
             exc_type, exc_value, exc_traceback_obj = sys.exc_info()
             _write_exc_info = {
-                'exc_type': exc_type,
-                'exc_value': exc_value,
-                'time': str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')),
-                'global_rank': getattr(self, "global_rank", None),
-                'rank': self.get_local_rank(),
+                'exc_type': str(exc_type.__name__),
+                'exc_value': str(exc_value),
+                'exc_time': str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')),
+                'exc_global_rank': getattr(self, "global_rank", None),
+                'exc_local_rank': self.get_local_rank(),
             }
-            sys.stderr.write(str(_write_exc_info)+"\n")
+            sys.stderr.write("\nException info:\n")
+            sys.stderr.write(json.dumps(_write_exc_info, indent=2)+"\n")
 
             sys.stderr.write(f"Start to stop these pids:{self._pids}, please wait several seconds.\n")
             for pid in self._pids:
