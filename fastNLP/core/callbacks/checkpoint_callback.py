@@ -1,5 +1,6 @@
 __all__ = [
-    'CheckpointCallback'
+    'ModelCheckpointCallback',
+    'TrainerCheckpointCallback'
 ]
 import os
 from typing import Union, Optional, Callable, Dict, Sequence, Any, Mapping

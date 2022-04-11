@@ -291,6 +291,7 @@ class Trainer(TrainerEventTrigger):
                 raise FileNotFoundError("You are using `resume_from`, but we can not find your specific file.")
 
         if self.evaluator is not None and num_eval_sanity_batch > 0:
+            logger.info(f"Running evaluator sanity check for {num_eval_sanity_batch} batches.")
             self.on_sanity_check_begin()
             sanity_check_res = self.evaluator.run(num_eval_batch_per_dl=num_eval_sanity_batch)
             self.on_sanity_check_end(sanity_check_res)

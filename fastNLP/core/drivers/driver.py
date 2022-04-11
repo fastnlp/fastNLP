@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 from io import BytesIO
+import json
 
 __all__ = [
     'Driver'
@@ -447,13 +448,14 @@ class Driver(ABC):
 
             exc_type, exc_value, exc_traceback_obj = sys.exc_info()
             _write_exc_info = {
-                'exc_type': exc_type,
-                'exc_value': exc_value,
-                'time': str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')),
-                'global_rank': getattr(self, "global_rank", None),
-                'rank': self.get_local_rank(),
+                'exc_type': str(exc_type.__name__),
+                'exc_value': str(exc_value),
+                'exc_time': str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')),
+                'exc_global_rank': getattr(self, "global_rank", None),
+                'exc_local_rank': self.get_local_rank(),
             }
-            sys.stderr.write(str(_write_exc_info)+"\n")
+            sys.stderr.write("\nException info:\n")
+            sys.stderr.write(json.dumps(_write_exc_info, indent=2)+"\n")
 
             sys.stderr.write(f"Start to stop these pids:{self._pids}, please wait several seconds.\n")
             for pid in self._pids:

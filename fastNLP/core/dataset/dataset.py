@@ -8,9 +8,8 @@ __all__ = [
 
 import _pickle as pickle
 from copy import deepcopy
-from typing import Optional, List, Callable, Union, Dict, Any
+from typing import Optional, List, Callable, Union, Dict, Any, Mapping
 from functools import partial
-import warnings
 
 import numpy as np
 from threading import Thread
@@ -196,6 +195,20 @@ class DataSet:
             return dataset
         else:
             raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
+
+    def __setitem__(self, key, value):
+        assert isinstance(key, int) and key<len(self)
+        assert isinstance(value, Instance) or isinstance(value, Mapping)
+        ins_keys = set(value.keys())
+        ds_keys = set(self.get_field_names())
+
+        if len(ins_keys - ds_keys) != 0:
+            raise KeyError(f"The following keys are not found in the Dataset:{list(ins_keys - ds_keys)}.")
+        if len(ds_keys - ins_keys) != 0:
+            raise KeyError(f"The following keys are not found in the Instance:{list(ds_keys - ins_keys)}.")
+
+        for field_name, field in self.field_arrays.items():
+            field[key] = value[field_name]
 
     def __getattribute__(self, item):
         return object.__getattribute__(self, item)
@@ -812,7 +825,4 @@ class DataSet:
         """
         self.collate_fns.set_input(*field_names)
 
-
-class IterableDataset:
-    pass
 
