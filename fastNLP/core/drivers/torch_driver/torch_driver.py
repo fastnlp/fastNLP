@@ -244,7 +244,33 @@ class TorchDriver(Driver):
                 logger.debug("Load model.")
 
         # 3. 恢复 sampler 的状态；
+        """
+        使用场景：
+        
+        现在sampler/batch_sampler的替换情况：
+        1. 单卡多卡；
+        2. 是否断点重训；
+        
+        3. 用户通过 dist 传入；
+        4. 用户自己直接在外面替换dataloader的sampler或者 batchsampler；
+        
+        应当确定的规则：
+        batchsampler 优先级高于 sampler；
+        
+        单卡：
+            不是断点重训：
+                用户自己
+        
+        
+        用户不自己在外面直接替换 sampler 或者 batchsampler
+        1. 单卡：
+        
+        """
         dataloader_args = self.get_dataloader_args(dataloader)
+
+        # todo 先捋一下；
+        # batch_sampler = dataloader_args.batch_sampler
+        # if not (hasattr(batch_sampler, 'load_state_dict') and callable(batch_sampler.load_state_dict)):
 
         sampler = dataloader_args.sampler
         if not (hasattr(sampler, 'load_state_dict') and callable(sampler.load_state_dict)):

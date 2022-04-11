@@ -133,8 +133,10 @@ class TorchSingleDriver(TorchDriver):
     def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleIterator]=None,
                                   reproducible: bool = False):
         if isinstance(dist, ReproducibleBatchSampler):
+            dist = re_instantiate_sampler(dist)
             return replace_batch_sampler(dataloader, dist)
         elif isinstance(dist, ReproducibleIterator):
+            dist = re_instantiate_sampler(dist)
             return replace_sampler(dataloader, dist)
 
         if reproducible:

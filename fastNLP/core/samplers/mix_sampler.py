@@ -4,7 +4,6 @@ from typing import Union, List, Iterable, Dict
 
 __all__ = [
     'MixSampler',
-    'InnerSampler',
     'DopedSampler',
     'MixSequentialSampler',
     'PollingSampler'
