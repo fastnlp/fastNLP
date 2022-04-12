@@ -1,18 +1,14 @@
-import unittest
-
-from itertools import product
 import numpy as np
+import pytest
 
 from functools import partial
-from array import array
+from itertools import chain
 
-from fastNLP.core.samplers.reproducible_sampler import RandomSampler
-from fastNLP.core.drivers.torch_driver.utils import replace_batch_sampler
+from fastNLP.core.samplers.reproducible_sampler import RandomSampler, SortedSampler, SequentialSampler
 from tests.helpers.datasets.torch_data import TorchNormalDataset
 
 
-
-class TestRandomSamplerYh(unittest.TestCase):
+class TestRandomSamplerYh:
     def test_init(self):
         # 测试能否正确初始化
         dataset = TorchNormalDataset(num_of_data=100)
@@ -24,7 +20,7 @@ class TestRandomSamplerYh(unittest.TestCase):
         dataset = TorchNormalDataset(num_of_data=100)
         sampler = RandomSampler(dataset)
         for i in sampler:
-            with self.assertRaises(AssertionError):
+            with pytest.raises(AssertionError):
                 sampler.set_distributed(1, 0)
             break
 
@@ -37,39 +33,39 @@ class TestRandomSamplerYh(unittest.TestCase):
         dataset = TorchNormalDataset(num_of_data=100)
         sampler = RandomSampler(dataset, shuffle=False)
         sampler.set_distributed(num_replicas=2, rank=0, pad=False)
-        self.assertEqual(len(sampler), 50)
+        assert len(sampler)==50
         count = 0
         for i in sampler:
-            self.assertEqual(i%2, 0)
+            assert i%2==0
             count += 1
-        self.assertEqual(count, 50)
+        assert count == 50
 
         sampler.set_distributed(num_replicas=2, rank=1, pad=False)
-        self.assertEqual(len(sampler), 50)
+        assert len(sampler)==50
         count = 0
         for i in sampler:
-            self.assertEqual(i%2, 1)
+            assert i%2==1
             count += 1
-        self.assertEqual(count, 50)
+        assert count==50
 
         dataset = TorchNormalDataset(num_of_data=101)
         sampler = RandomSampler(dataset, shuffle=False)
         sampler.set_distributed(num_replicas=2, rank=0, pad=True)
-        self.assertEqual(len(sampler), 51)
+        assert len(sampler)==51
         count = 0
         for i in sampler:
-            self.assertEqual(i%2, 0)
+            assert i%2==0
             count += 1
-        self.assertEqual(count, 51)
+        assert count == 51
 
         sampler.set_distributed(num_replicas=2, rank=1, pad=True)
-        self.assertEqual(len(sampler), 51)
+        assert len(sampler) == 51
         count = 0
         for i in sampler:
             if i!=0:
-                self.assertEqual(i%2, 1)
+                assert i%2==1
             count += 1
-        self.assertEqual(count, 51)
+        assert count == 51
 
     def test_state_dict_check_length(self):
         dataset = TorchNormalDataset(num_of_data=100)
@@ -77,7 +73,7 @@ class TestRandomSamplerYh(unittest.TestCase):
         states = sampler.state_dict()
 
         new_ds = TorchNormalDataset(num_of_data=10)
-        with self.assertRaises(AssertionError):
+        with pytest.raises(AssertionError):
             new_sampler = RandomSampler(new_ds)
             new_sampler.load_state_dict(states)
 
@@ -85,99 +81,107 @@ class TestRandomSamplerYh(unittest.TestCase):
         new_sampler = RandomSampler(new_ds)
         new_sampler.load_state_dict(states)
 
-    def test_state_dict(self):
+    @pytest.mark.parametrize('pad', [True, False])
+    @pytest.mark.parametrize('pre_shuffle', [True, False])
+    @pytest.mark.parametrize('post_shuffle', [True, False])
+    @pytest.mark.parametrize('num_consumed_samples', [0]+np.random.randint(1, 100, size=3).tolist())
+    def test_state_dict(self, pad, pre_shuffle, post_shuffle, num_consumed_samples):
         num_samples = 100
         dataset = TorchNormalDataset(num_of_data=num_samples)
         # 测试使用 前后shuffle不一致的load操作
-        lst = [0]+np.random.randint(1, num_samples, size=3).tolist()
-        for pre_shuffle, post_shuffle, num_consumed_samples in product([True, False], [True, False],
-                                                                       lst):
-            with self.subTest(pre_shuffle=pre_shuffle, post_shuffle=post_shuffle, num_consumed_samples=num_consumed_samples):
-                sampler = RandomSampler(dataset, shuffle=pre_shuffle)
-                sampler.set_epoch(0)
-                already_numbers = set()
-                if num_consumed_samples>0:
-                    for i, j in enumerate(sampler, start=1):
-                        already_numbers.add(j)
-                        if i == num_consumed_samples:
-                            break
-                self.assertEqual(len(already_numbers), num_consumed_samples)
+        sampler = RandomSampler(dataset, shuffle=pre_shuffle)
+        sampler.set_epoch(0)
+        already_numbers = set()
+        if num_consumed_samples>0:
+            for i, j in enumerate(sampler, start=1):
+                already_numbers.add(j)
+                if i == num_consumed_samples:
+                    break
+        assert len(already_numbers) == num_consumed_samples
 
-                states = sampler.state_dict()
+        states = sampler.state_dict()
 
-                new_sampler = RandomSampler(dataset, shuffle=post_shuffle)
-                new_sampler.load_state_dict(states)
-                new_sampler.set_epoch(0)
-                for i in new_sampler:
-                    self.assertNotIn(i, already_numbers)
+        new_sampler = RandomSampler(dataset, shuffle=post_shuffle)
+        new_sampler.load_state_dict(states)
+        new_sampler.set_epoch(0)
+        for i in new_sampler:
+            assert i not in already_numbers
 
-                # 测试切换成多卡也没有问题
-                other_rank_number = set()
-                for rank in range(3):
-                    new_sampler = RandomSampler(dataset, shuffle=post_shuffle)
-                    new_sampler.load_state_dict(states)
-                    new_sampler.set_distributed(num_replicas=3, rank=rank, pad=False)
-                    new_sampler.set_epoch(0)
-                    count = 0
-                    for i in new_sampler:
-                        self.assertNotIn(i, other_rank_number)
-                        other_rank_number.add(i)
-                        self.assertNotIn(i, already_numbers)
-                        count += 1
+        # 测试切换成多卡也没有问题
+        other_rank_number = set()
+        for rank in range(3):
+            new_sampler = RandomSampler(dataset, shuffle=post_shuffle)
+            new_sampler.load_state_dict(states)
+            new_sampler.set_distributed(num_replicas=3, rank=rank, pad=pad)
+            new_sampler.set_epoch(0)
+            count = 0
+            seen = 0
+            seen_in_other_rank = 0
+            for i in new_sampler:
+                seen_in_other_rank += int(i in other_rank_number)
+                other_rank_number.add(i)
+                seen += int(i in already_numbers)
+                count += 1
+            assert seen <= 1 if pad else seen == 0
+            assert seen_in_other_rank<=1  # 因为pad可能重复
 
-    def test_state_dict_2(self):
+    @pytest.mark.parametrize('pad', [True, False])
+    @pytest.mark.parametrize('pre_shuffle', [True, False])
+    @pytest.mark.parametrize('post_shuffle', [True, False])
+    @pytest.mark.parametrize('num_consumed_samples', [0]+np.random.randint(1, 100//2, size=3).tolist())
+    def test_state_dict_2(self, pad, pre_shuffle, post_shuffle, num_consumed_samples):
         # 测试一下从多卡切换到单卡，或者切换到不同卡数量的多卡
         num_samples = 100
         dataset = TorchNormalDataset(num_of_data=num_samples)
         # 测试使用 前后shuffle不一致的load操作
-        lst = [0]+np.random.randint(1, num_samples//2, size=3).tolist()
         # lst = [30]
-        for pre_shuffle, post_shuffle, num_consumed_samples in product([True, False], [True, False],
-                                                                       lst):
-            with self.subTest(pre_shuffle=pre_shuffle, post_shuffle=post_shuffle, num_consumed_samples=num_consumed_samples):
-                already_numbers = set()
-                sampler = RandomSampler(dataset, shuffle=pre_shuffle, seed=0)
-                sampler.set_distributed(num_replicas=2, rank=0)
-                sampler.set_epoch(0)
-                if num_consumed_samples>0:
-                    for i, j in enumerate(sampler, start=1):
-                        already_numbers.add(j)
-                        if i == num_consumed_samples:
-                            break
-                sampler = RandomSampler(dataset, shuffle=pre_shuffle, seed=0)
-                sampler.set_epoch(0)
-                sampler.set_distributed(num_replicas=2, rank=1)
-                if num_consumed_samples>0:
-                    for i, j in enumerate(sampler, start=1):
-                        already_numbers.add(j)
-                        if i == num_consumed_samples:
-                            break
-                self.assertEqual(len(already_numbers), num_consumed_samples*2)
+        already_numbers = set()
+        sampler = RandomSampler(dataset, shuffle=pre_shuffle, seed=0)
+        sampler.set_distributed(num_replicas=2, rank=0)
+        sampler.set_epoch(0)
+        if num_consumed_samples>0:
+            for i, j in enumerate(sampler, start=1):
+                already_numbers.add(j)
+                if i == num_consumed_samples:
+                    break
+        sampler = RandomSampler(dataset, shuffle=pre_shuffle, seed=0)
+        sampler.set_epoch(0)
+        sampler.set_distributed(num_replicas=2, rank=1)
+        if num_consumed_samples>0:
+            for i, j in enumerate(sampler, start=1):
+                already_numbers.add(j)
+                if i == num_consumed_samples:
+                    break
+        assert len(already_numbers) == num_consumed_samples*2
 
-                states = sampler.state_dict()
+        states = sampler.state_dict()
 
-                new_sampler = RandomSampler(dataset, shuffle=post_shuffle)
-                new_sampler.load_state_dict(states)
-                new_sampler.set_epoch(0)
-                for i in new_sampler:
-                    self.assertNotIn(i, already_numbers)
+        new_sampler = RandomSampler(dataset, shuffle=post_shuffle)
+        new_sampler.load_state_dict(states)
+        new_sampler.set_epoch(0)
+        for i in new_sampler:
+            assert i not in already_numbers
 
-                # 测试切换成多卡也没有问题
-                other_rank_number = set()
-                for rank in range(3):
-                    new_sampler = RandomSampler(dataset, shuffle=post_shuffle)
-                    new_sampler.load_state_dict(states)
-                    new_sampler.set_epoch(0)
-                    new_sampler.set_distributed(num_replicas=3, rank=rank, pad=False)
-                    count = 0
-                    for i in new_sampler:
-                        self.assertNotIn(i, other_rank_number)
-                        other_rank_number.add(i)
-                        self.assertNotIn(i, already_numbers)
-                        count += 1
+        # 测试切换成多卡也没有问题
+        other_rank_number = set()
+        for rank in range(3):
+            new_sampler = RandomSampler(dataset, shuffle=post_shuffle)
+            new_sampler.load_state_dict(states)
+            new_sampler.set_epoch(0)
+            new_sampler.set_distributed(num_replicas=3, rank=rank, pad=pad)
+            count = 0
+            seen = 0
+            seen_in_other_rank = 0
+            for i in new_sampler:
+                seen_in_other_rank += int(i in other_rank_number)
+                other_rank_number.add(i)
+                seen += int(i in already_numbers)
+                count += 1
+            assert seen <= 1 if pad else seen == 0
+            assert seen_in_other_rank<=1  # 因为pad可能重复
 
 
-class TestRandomSampler(unittest.TestCase):
+class TestRandomSampler:
     # 测试单卡；
     def test_seed_work_when_shuffle_is_true(self):
         data_length = 100
@@ -359,5 +363,325 @@ class TestRandomSampler(unittest.TestCase):
     def test_5(self):
         ...
 
+
+class DatasetWithVaryLength:
+    def __init__(self, num_of_data=100, reverse=False):
+        self.data = np.arange(num_of_data)
+        if reverse:
+            self.data = self.data[::-1]
+
+    def __getitem__(self, item):
+        return self.data[item]
+
+    def __len__(self):
+        return len(self.data)
+
+
+class TestSortedSampler:
+    def test_single(self):
+        num_of_data = 100
+        data = DatasetWithVaryLength(num_of_data)
+        sampler = SortedSampler(data, length=data.data)
+        indexes = list(sampler)
+        assert indexes==list(range(num_of_data-1, -1, -1))
+
+    @pytest.mark.parametrize('pad', [True, False])
+    @pytest.mark.parametrize('num_replica', [2, 3])
+    @pytest.mark.parametrize('num_of_data', [2, 3, 4, 100])
+    def test_multi(self, pad, num_replica, num_of_data):
+        data = DatasetWithVaryLength(num_of_data=num_of_data)
+        samplers = []
+        for i in range(num_replica):
+            sampler = SortedSampler(dataset=data, length=data.data)
+            sampler.set_distributed(num_replica, rank=i, pad=pad)
+            samplers.append(sampler)
+
+        # 保证顺序是没乱的
+        already_seen_index = set()
+        for sampler in samplers:
+            larger_count = 0  # 这里为 0 就可以，因为最后补充的index一定是比较大的数。
+            prev_index = float('inf')
+            cur_set = set()
+            seen_in_other_rank = 0
+            for index in sampler:
+                seen_in_other_rank += int(index in already_seen_index)  # 不同的卡不交叉
+                cur_set.add(index)
+                larger_count += int(index <= prev_index)
+                prev_index = index
+            assert larger_count+1 >= len(sampler)  # 除了最后一个可能乱掉，其它都必须要保持这个顺序
+            assert seen_in_other_rank <= 1 if pad else seen_in_other_rank == 0
+            already_seen_index.update(cur_set)
+
+        indexes = list(chain(*samplers))
+        indexes = set(indexes)
+        if pad:
+            assert indexes == set(range(num_of_data))
+        else:
+            assert len(indexes) <= num_of_data
+
+    @pytest.mark.parametrize('pad', [True, False])
+    @pytest.mark.parametrize('num_consumed_samples', [0]+np.random.randint(1, 100, size=3).tolist())
+    def test_state_dict(self, pad, num_consumed_samples):
+        num_samples = 100
+        dataset = DatasetWithVaryLength(num_of_data=num_samples)
+        # 测试使用 前后shuffle不一致的load操作
+        sampler = SortedSampler(dataset, length=dataset.data)
+        sampler.set_epoch(0)
+        already_numbers = set()
+        if num_consumed_samples>0:
+            for i, j in enumerate(sampler, start=1):
+                if already_numbers:
+                    assert j<max(already_numbers)
+                already_numbers.add(j)
+                if i == num_consumed_samples:
+                    break
+        assert len(already_numbers) == num_consumed_samples
+
+        states = sampler.state_dict()
+
+        new_sampler = SortedSampler(dataset, length=dataset.data)
+        new_sampler.load_state_dict(states)
+        new_sampler.set_epoch(0)
+        for i in new_sampler:
+            if already_numbers:
+                assert i < max(already_numbers)
+            assert i not in already_numbers
+
+        # 测试切换成多卡也没有问题
+        other_rank_number = set()
+        for rank in range(3):
+            new_sampler = SortedSampler(dataset, length=dataset.data)
+            new_sampler.load_state_dict(states)
+            new_sampler.set_distributed(num_replicas=3, rank=rank, pad=pad)
+            new_sampler.set_epoch(0)
+            count = 0
+            seen = 0
+            seen_in_other_rank = 0
+            smaller = 0
+            for i in new_sampler:
+                if already_numbers:
+                    smaller += int(i >= max(already_numbers))
+                seen_in_other_rank += int(i in other_rank_number)
+                other_rank_number.add(i)
+                seen += int(i in already_numbers)
+                count += 1
+            assert seen <= 1 if pad else seen == 0
+            assert seen_in_other_rank<=1  # 因为pad可能重复
+            assert smaller<=1 if pad else smaller==0
+
+    @pytest.mark.parametrize('pad', [True, False])
+    @pytest.mark.parametrize('num_consumed_samples', [0]+np.random.randint(1, 100//2, size=3).tolist())
+    def test_state_dict_2(self, pad, num_consumed_samples):
+        # 测试一下从多卡切换到单卡，或者切换到不同卡数量的多卡
+        num_samples = 100
+        dataset = DatasetWithVaryLength(num_of_data=num_samples)
+        # 测试使用 前后shuffle不一致的load操作
+        # lst = [30]
+        already_numbers = set()
+        sampler = SortedSampler(dataset, length=dataset.data)
+        sampler.set_distributed(num_replicas=2, rank=0)
+        sampler.set_epoch(0)
+        if num_consumed_samples>0:
+            for i, j in enumerate(sampler, start=1):
+                if already_numbers:
+                    assert j<=max(already_numbers)
+                already_numbers.add(j)
+                if i == num_consumed_samples:
+                    break
+        sampler = SortedSampler(dataset, length=dataset.data)
+        sampler.set_epoch(0)
+        sampler.set_distributed(num_replicas=2, rank=1)
+        if num_consumed_samples>0:
+            for i, j in enumerate(sampler, start=1):
+                already_numbers.add(j)
+                if i == num_consumed_samples:
+                    break
+        assert len(already_numbers) == num_consumed_samples*2
+
+        states = sampler.state_dict()
+
+        new_sampler = SortedSampler(dataset, length=dataset.data)
+        new_sampler.load_state_dict(states)
+        new_sampler.set_epoch(0)
+        for i in new_sampler:
+            if already_numbers:
+                assert i < max(already_numbers)
+            assert i not in already_numbers
+
+        # 测试切换成多卡也没有问题
+        other_rank_number = set()
+        for rank in range(3):
+            new_sampler = SortedSampler(dataset, length=dataset.data)
+            new_sampler.load_state_dict(states)
+            new_sampler.set_epoch(0)
+            new_sampler.set_distributed(num_replicas=3, rank=rank, pad=pad)
+            count = 0
+            seen = 0
+            seen_in_other_rank = 0
+            smaller = 0
+            for i in new_sampler:
+                if already_numbers:
+                    smaller += int(i>=max(already_numbers))
+                seen_in_other_rank += int(i in other_rank_number)
+                other_rank_number.add(i)
+                seen += int(i in already_numbers)
+                count += 1
+            assert seen <= 1 if pad else seen == 0
+            assert seen_in_other_rank<=1  # 因为pad可能重复
+            assert smaller <= 1 if pad else smaller == 0
+
+
+class TestSequentialSampler:
+    def test_single(self):
+        num_of_data = 100
+        data = DatasetWithVaryLength(num_of_data)
+        sampler = SequentialSampler(data)
+        indexes = list(sampler)
+        assert indexes==list(range(num_of_data))
+
+    @pytest.mark.parametrize('pad', [True, False])
+    @pytest.mark.parametrize('num_replica', [2, 3])
+    @pytest.mark.parametrize('num_of_data', [2, 3, 4, 100])
+    def test_multi(self, pad, num_replica, num_of_data):
+        data = DatasetWithVaryLength(num_of_data=num_of_data)
+        samplers = []
+        for i in range(num_replica):
+            sampler = SequentialSampler(dataset=data)
+            sampler.set_distributed(num_replica, rank=i, pad=pad)
+            samplers.append(sampler)
+
+        # 保证顺序是没乱的
+        already_seen_index = set()
+        for idx, sampler in enumerate(samplers):
+            larger_count = 1
+            prev_index = float('inf')
+            cur_set = set()
+            seen_in_other_rank = 0
+            for index in sampler:
+                seen_in_other_rank += int(index in already_seen_index)  # 不同的卡不交叉
+                cur_set.add(index)
+                larger_count += int(index >= prev_index)
+                prev_index = index
+            assert larger_count+1 >= len(sampler)  # 除了最后一个可能乱掉，其它都必须要保持这个顺序
+            assert seen_in_other_rank <= idx if pad else seen_in_other_rank == 0
+            already_seen_index.update(cur_set)
+
+        indexes = list(chain(*samplers))
+        indexes = set(indexes)
+        if pad:
+            assert indexes == set(range(num_of_data))
+        else:
+            assert len(indexes) <= num_of_data
+
+    @pytest.mark.parametrize('pad', [True, False])
+    @pytest.mark.parametrize('num_consumed_samples', [0]+np.random.randint(1, 100, size=3).tolist())
+    def test_state_dict(self, pad, num_consumed_samples):
+        num_samples = 100
+        dataset = DatasetWithVaryLength(num_of_data=num_samples)
+        # 测试使用 前后shuffle不一致的load操作
+        sampler = SequentialSampler(dataset=dataset)
+        sampler.set_epoch(0)
+        already_numbers = set()
+        if num_consumed_samples>0:
+            for i, j in enumerate(sampler, start=1):
+                if already_numbers:
+                    assert j>max(already_numbers)
+                already_numbers.add(j)
+                if i == num_consumed_samples:
+                    break
+        assert len(already_numbers) == num_consumed_samples
+
+        states = sampler.state_dict()
+
+        new_sampler = SequentialSampler(dataset=dataset)
+        new_sampler.load_state_dict(states)
+        new_sampler.set_epoch(0)
+        for i in new_sampler:
+            if already_numbers:
+                assert i > max(already_numbers)
+            assert i not in already_numbers
+
+        # 测试切换成多卡也没有问题
+        other_rank_number = set()
+        for rank in range(3):
+            new_sampler = SequentialSampler(dataset=dataset)
+            new_sampler.load_state_dict(states)
+            new_sampler.set_distributed(num_replicas=3, rank=rank, pad=pad)
+            new_sampler.set_epoch(0)
+            count = 0
+            seen = 0
+            seen_in_other_rank = 0
+            smaller = 0
+            for i in new_sampler:
+                if already_numbers:
+                    smaller += int(i <= max(already_numbers))
+                seen_in_other_rank += int(i in other_rank_number)
+                other_rank_number.add(i)
+                seen += int(i in already_numbers)
+                count += 1
+            assert seen <= 1 if pad else seen == 0
+            assert seen_in_other_rank<=rank  # 因为pad可能重复
+            assert smaller<=1 if pad else smaller==0
+
+    @pytest.mark.parametrize('pad', [True, False])
+    @pytest.mark.parametrize('num_consumed_samples', [0]+np.random.randint(1, 100//2, size=3).tolist())
+    def test_state_dict_2(self, pad, num_consumed_samples):
+        # 测试一下从多卡切换到单卡，或者切换到不同卡数量的多卡
+        num_samples = 100
+        dataset = DatasetWithVaryLength(num_of_data=num_samples)
+        # 测试使用 前后shuffle不一致的load操作
+        # lst = [30]
+        already_numbers = set()
+        sampler = SequentialSampler(dataset=dataset)
+        sampler.set_distributed(num_replicas=2, rank=0)
+        sampler.set_epoch(0)
+        if num_consumed_samples>0:
+            for i, j in enumerate(sampler, start=1):
+                if already_numbers:
+                    assert j>max(already_numbers)
+                already_numbers.add(j)
+                if i == num_consumed_samples:
+                    break
+        sampler = SequentialSampler(dataset=dataset)
+        sampler.set_epoch(0)
+        sampler.set_distributed(num_replicas=2, rank=1)
+        if num_consumed_samples>0:
+            for i, j in enumerate(sampler, start=1):
+                already_numbers.add(j)
+                if i == num_consumed_samples:
+                    break
+        assert len(already_numbers) == num_consumed_samples*2
+
+        states = sampler.state_dict()
+
+        new_sampler = SequentialSampler(dataset=dataset)
+        new_sampler.load_state_dict(states)
+        new_sampler.set_epoch(0)
+        for i in new_sampler:
+            if already_numbers:
+                assert i > max(already_numbers)
+            assert i not in already_numbers
+
+        # 测试切换成多卡也没有问题
+        other_rank_number = set()
+        for rank in range(3):
+            new_sampler = SequentialSampler(dataset=dataset)
+            new_sampler.load_state_dict(states)
+            new_sampler.set_epoch(0)
+            new_sampler.set_distributed(num_replicas=3, rank=rank, pad=pad)
+            count = 0
+            seen = 0
+            seen_in_other_rank = 0
+            smaller = 0
+            for i in new_sampler:
+                if already_numbers:
+                    smaller += int(i<max(already_numbers))
+                seen_in_other_rank += int(i in other_rank_number)
+                other_rank_number.add(i)
+                seen += int(i in already_numbers)
+                count += 1
+            assert seen <= 1 if pad else seen == 0
+            assert seen_in_other_rank<=1  # 因为pad可能重复
+            assert smaller <= rank if pad else smaller == 0
 
 

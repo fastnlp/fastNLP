@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from itertools import chain
 
-from fastNLP.core.samplers import ReproducibleBatchSampler, BucketedBatchSampler
+from fastNLP.core.samplers import RandomBatchSampler, BucketedBatchSampler
 from fastNLP.core.drivers.torch_driver.utils import replace_batch_sampler
 from tests.helpers.datasets.torch_data import TorchNormalDataset
 
@@ -18,7 +18,7 @@ class TestReproducibleBatchSampler:
         before_batch_size = 7
         dataset = TorchNormalDataset(num_of_data=100)
         dataloader = DataLoader(dataset, batch_size=before_batch_size)
-        re_batchsampler = ReproducibleBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
+        re_batchsampler = RandomBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
         dataloader = replace_batch_sampler(dataloader, re_batchsampler)
 
         forward_steps = 3
@@ -28,15 +28,15 @@ class TestReproducibleBatchSampler:
 
         # 1. 保存状态
         _get_re_batchsampler = dataloader.batch_sampler
-        assert isinstance(_get_re_batchsampler, ReproducibleBatchSampler)
+        assert isinstance(_get_re_batchsampler, RandomBatchSampler)
         state = _get_re_batchsampler.state_dict()
         assert state == {"index_list": array("I", list(range(100))), "data_idx": forward_steps*before_batch_size,
-                         "sampler_type": "ReproducibleBatchSampler"}
+                         "sampler_type": "RandomBatchSampler"}
 
         # 2. 断点重训，重新生成一个 dataloader；
         # 不改变 batch_size；
         dataloader = DataLoader(dataset, batch_size=before_batch_size)
-        re_batchsampler = ReproducibleBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
+        re_batchsampler = RandomBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
         re_batchsampler.load_state_dict(state)
         dataloader = replace_batch_sampler(dataloader, re_batchsampler)
 
@@ -53,7 +53,7 @@ class TestReproducibleBatchSampler:
         # 改变 batch_size；
         after_batch_size = 3
         dataloader = DataLoader(dataset, batch_size=after_batch_size)
-        re_batchsampler = ReproducibleBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
+        re_batchsampler = RandomBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
         re_batchsampler.load_state_dict(state)
         dataloader = replace_batch_sampler(dataloader, re_batchsampler)
 
@@ -99,7 +99,7 @@ class TestReproducibleBatchSampler:
         dataset = TorchNormalDataset(num_of_data=100)
         # 开启 shuffle，来检验断点重训后的第二轮的 index list 是不是重新生成的；
         dataloader = DataLoader(dataset, batch_size=before_batch_size, shuffle=True)
-        re_batchsampler = ReproducibleBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
+        re_batchsampler = RandomBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
         dataloader = replace_batch_sampler(dataloader, re_batchsampler)
 
         # 将一轮的所有数据保存下来，看是否恢复的是正确的；
@@ -111,13 +111,13 @@ class TestReproducibleBatchSampler:
 
         # 1. 保存状态
         _get_re_batchsampler = dataloader.batch_sampler
-        assert isinstance(_get_re_batchsampler, ReproducibleBatchSampler)
+        assert isinstance(_get_re_batchsampler, RandomBatchSampler)
         state = _get_re_batchsampler.state_dict()
 
         # 2. 断点重训，重新生成一个 dataloader；
         # 不改变 batch_size；
         dataloader = DataLoader(dataset, batch_size=before_batch_size, shuffle=True)
-        re_batchsampler = ReproducibleBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
+        re_batchsampler = RandomBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
         re_batchsampler.load_state_dict(state)
         dataloader = replace_batch_sampler(dataloader, re_batchsampler)
 

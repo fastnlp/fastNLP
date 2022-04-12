@@ -10,7 +10,8 @@ __all__ = [
     'ProgressCallback',
     'RichCallback',
     "LRSchedCallback",
-    'LoadBestModelCallback'
+    'LoadBestModelCallback',
+    "EarlyStopCallback"
 ]
 
 
@@ -21,4 +22,5 @@ from .checkpoint_callback import ModelCheckpointCallback, TrainerCheckpointCallb
 from .progress_callback import choose_progress_callback, ProgressCallback, RichCallback
 from .lr_scheduler_callback import LRSchedCallback
 from .load_best_model_callback import LoadBestModelCallback
+from .early_stop_callback import EarlyStopCallback
 

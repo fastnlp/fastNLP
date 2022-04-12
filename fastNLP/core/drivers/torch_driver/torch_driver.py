@@ -30,7 +30,7 @@ from fastNLP.core.utils import apply_to_collection, torch_move_data_to_device
 from fastNLP.envs import  rank_zero_call
 from fastNLP.envs import FASTNLP_SEED_WORKERS, FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.log import logger
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleIterator
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
 
 
 class TorchDriver(Driver):
@@ -182,8 +182,8 @@ class TorchDriver(Driver):
         #  trainer.dataloader 来改变 dataloader 的状态，从而适配训练或者评测环境；
 
         # 1. sampler 的状态，因为我们支持 resume training，即精确恢复到具体的一个 batch；
-        # 首先 pytorch 的 DataLoader 一定会有 sampler；另一方面，我们在断点重训的时候一定会在 `replace_sampler` 中将 dataloader 的
-        #  sampler 替换为 `ReproducibleIterator`；否则就是在单卡情况下将 batch_sampler 替换为 `ReproducibleBatchSampler`；
+        # 首先 pytorch 的 DataLoader 一定会有 sampler；另一方面，我们在断点重训的时候一定会在 `set_` 中将 dataloader 的
+        #  sampler 替换为 `ReproducibleSampler`；否则就是在单卡情况下将 batch_sampler 替换为 `ReproducibleBatchSampler`；
         dataloader_args = self.get_dataloader_args(dataloader)
         if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
             sampler = dataloader_args.batch_sampler
@@ -247,11 +247,10 @@ class TorchDriver(Driver):
         dataloader_args = self.get_dataloader_args(dataloader)
         if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
             sampler = dataloader_args.batch_sampler
-        elif isinstance(dataloader_args.sampler, ReproducibleIterator):
+        elif isinstance(dataloader_args.sampler, ReproducibleSampler):
             sampler = dataloader_args.sampler
         elif self.is_distributed():
-            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our "
-                               "`ReproducibleBatchSampler` or `ReproducibleIterator`.")
+            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or `ReproducibleSampler`.")
         else:
             sampler = ReproducibleBatchSampler(
                 batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
@@ -291,7 +290,7 @@ class TorchDriver(Driver):
 
     @staticmethod
     def worker_init_function(worker_id: int, rank: Optional[int] = None) -> None:  # pragma: no cover
-        """The worker_init_fn that Lightning automatically adds to your dataloader if you previously set set the seed
+        """The worker_init_fn that Lightning automatically adds to your dataloader if you previously set the seed
         with ``seed_everything(seed, workers=True)``.
 
         See also the PyTorch documentation on

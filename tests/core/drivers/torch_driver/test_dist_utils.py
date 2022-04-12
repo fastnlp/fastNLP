@@ -7,36 +7,8 @@ import numpy as np
 # print(isinstance((1,), tuple))
 # exit()
 
-from fastNLP.core.drivers.torch_driver.dist_utils import fastnlp_torch_all_gather, convert_to_tensors, fastnlp_torch_broadcast_object
+from fastNLP.core.drivers.torch_driver.dist_utils import fastnlp_torch_all_gather, fastnlp_torch_broadcast_object
 from tests.helpers.utils import re_run_current_cmd_for_torch, magic_argv_env_context
-
-
-
-def test_convert_to_tensors():
-    local_rank = 0
-    obj = {
-        'tensor': torch.full(size=(2,), fill_value=local_rank),
-        'numpy': np.full(shape=(1,), fill_value=local_rank),
-        'bool': local_rank % 2 == 0,
-        'float': local_rank + 0.1,
-        'int': local_rank,
-        'dict': {
-            'rank': local_rank
-        },
-        'list': [local_rank] * 2,
-        'str': 'xxx'
-    }
-    data = convert_to_tensors(obj)
-    assert len(data) == len(obj)
-    assert (data['tensor'] == obj['tensor']).sum() == 2
-    for name in ['list', 'str']:
-        assert len(data[name])==2 and isinstance(data[name][0], torch.Tensor) and \
-               isinstance(data[name][1], torch.Tensor) and data[name][1].ndim==1
-
-    for name in ['numpy', 'bool', 'float', 'int']:
-        assert isinstance(data[name][0], torch.Tensor) and data[name][0].numel()==1
-
-    assert isinstance(data['dict']['rank'][0], torch.Tensor) and data[name][0].numel() == 1
 
 
 @magic_argv_env_context
@@ -66,7 +38,7 @@ def test_fastnlp_torch_all_gather():
         'tensors': [torch.full(size=(2,), fill_value=local_rank).cuda(),
                     torch.full(size=(2,), fill_value=local_rank).cuda()]
     }
-    data = fastnlp_torch_all_gather(obj, device=torch.cuda.current_device())
+    data = fastnlp_torch_all_gather(obj)
     world_size = int(os.environ['WORLD_SIZE'])
     assert len(data) == world_size
     for i in range(world_size):
@@ -81,9 +53,11 @@ def test_fastnlp_torch_all_gather():
         assert data[i]['tensors'][0][0] == i
 
     for obj in [1, True, 'xxx']:
-        data = fastnlp_torch_all_gather(obj, device=torch.cuda.current_device())
+        data = fastnlp_torch_all_gather(obj)
         assert len(data)==world_size
         assert data[0]==data[1]
+
+    dist.destroy_process_group()
 
 @magic_argv_env_context
 def test_fastnlp_torch_broadcast_object():
@@ -130,3 +104,4 @@ def test_fastnlp_torch_broadcast_object():
     for obj in [int(os.environ['LOCAL_RANK']), bool(os.environ['LOCAL_RANK']=='1'), os.environ['LOCAL_RANK']]:
         data = fastnlp_torch_broadcast_object(obj, src=0, device=torch.cuda.current_device())
         assert int(data)==0
+    dist.destroy_process_group()

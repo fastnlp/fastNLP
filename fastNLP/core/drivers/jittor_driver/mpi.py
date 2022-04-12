@@ -3,7 +3,7 @@ from typing import Optional, Union
 
 from .jittor_driver import JittorDriver
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
-from fastNLP.core.samplers import ReproducibleIterator
+from fastNLP.core.samplers import ReproducibleSampler
 
 if _NEED_IMPORT_JITTOR:
     import jittor
@@ -70,7 +70,7 @@ class JittorMPIDriver(JittorDriver):
     def test_step(self, batch):
         return self._test_step(batch)
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleIterator]],
+    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler]],
                                   reproducible: bool = False, sampler_or_batch_sampler=None):
         pass
 
