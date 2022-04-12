@@ -47,6 +47,7 @@ class Trainer(TrainerEventTrigger):
             validate_every: Optional[Union[int, callable]] = -1,
             input_mapping: Optional[Union[Callable, Dict]] = None,
             output_mapping: Optional[Union[Callable, Dict]] = None,
+            model_wo_auto_param_call: bool = False,
             accumulation_steps: int = 1,
             fp16: bool = False,
             marker: Optional[str] = None,
@@ -99,7 +100,10 @@ class Trainer(TrainerEventTrigger):
         :param output_mapping: 应当为一个字典或者函数。作用和 input_mapping 类似，区别在于其用于转换输出；如果 output_mapping 是一个
          函数，那么我们将会直接将模型的输出传给该函数；如果其是一个 `Dict`，那么我们需要 batch 必须是 `Dict` 或者 `dataclass` 类型，
          如果 batch 是一个 `Dict`，那么我们会把 batch 中同样在 output_mapping 中的 key 修改为 output_mapping 的对应 key 的 value；
-         如果 batch 是一个 `dataclass`，那么我们会先将该 dataclass 转换为一个 Dict，然后再进行上述转换
+         如果 batch 是一个 `dataclass`，那么我们会先将该 dataclass 转换为一个 Dict，然后再进行上述转换；
+        :param model_wo_auto_param_call: 是否关闭在训练时调用我们的 auto_param_call 来自动匹配 batch 和 forward 函数的参数的行为；
+         如果该值为 True，并且当 batch 为字典时，我们会根据 forward 所需要的参数从 batch 中提取对应的对象，传入到 forward 函数中；如果该值
+         为 False，那么我们会将 batch 直接透传给 forward 函数。注意上述逻辑同样应用于 `train_step`, `validate_step` 和 `test_step`；
         :param accumulation_steps: 梯度累积的步数，表示每隔几个 batch 优化器迭代一次；默认为 1；
         :param fp16: 是否开启混合精度训练；默认为 False；
         :param marker: 用于标记一个 Trainer 实例，从而在用户调用 `Trainer.on` 函数时，标记该 callback 函数属于哪一个具体的 'trainer' 实例；默认为 None；
@@ -120,9 +124,7 @@ class Trainer(TrainerEventTrigger):
 
         """
 
-        # TODO 是不是可以加一个参数让用户现在关掉参数匹配。
         self.marker = marker
-        self.model = model
         self.driver_name = driver
         self.device = device
         self.fp16 = fp16
@@ -164,6 +166,7 @@ class Trainer(TrainerEventTrigger):
             validate_every=validate_every,
             input_mapping=input_mapping,
             output_mapping=output_mapping,
+            model_wo_auto_param_call=model_wo_auto_param_call,
             accumulation_steps=accumulation_steps,
             fp16=fp16,
             marker=marker,
@@ -484,8 +487,6 @@ class Trainer(TrainerEventTrigger):
 
     @driver.setter
     def driver(self, driver: Driver):
-        driver.trainer = self
-        driver.model = self.model
         self._driver = driver
 
     @property
@@ -781,5 +782,22 @@ class Trainer(TrainerEventTrigger):
     @total_batches.setter
     def total_batches(self, total_batches: int):
         self.trainer_state.total_batches = total_batches
+
+    """ driver property """
+
+    @property
+    def model_device(self):
+        return self.driver.model_device
+
+    @property
+    def data_device(self):
+        return self.driver.data_device
+
+    @property
+    def model(self):
+        # 返回 driver 中的 model，注意该 model 可能被分布式的模型包裹，例如 `DistributedDataParallel`；
+        return self.driver.model
+
+
 
 

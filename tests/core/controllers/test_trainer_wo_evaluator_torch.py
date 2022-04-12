@@ -10,7 +10,7 @@ from typing import Any
 from pathlib import Path
 
 from fastNLP.core.controllers.trainer import Trainer
-from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
+from tests.helpers.models.torch_model import TorchNormalModel_Classification_1, TorchNormalModel_Classification_3
 from tests.helpers.datasets.torch_data import TorchNormalDataset_Classification
 from tests.helpers.callbacks.helper_callbacks import RecordLossCallback
 from tests.helpers.callbacks.helper_callbacks_torch import RecordAccumulationStepsCallback_Torch
@@ -70,7 +70,7 @@ def model_and_optimizers(request):
         trainer_params.output_mapping = None
 
     # elif request.param == 1:
-    #     model =
+
 
     return trainer_params
 
@@ -307,10 +307,47 @@ def test_torch_distributed_launch_2(version):
     subprocess.check_call(command)
 
 
+@pytest.mark.parametrize("driver,device", [("torch", 0), ("torch_ddp", [0, 1])])
+@magic_argv_env_context
+def test_torch_wo_auto_param_call(
+    driver,
+    device,
+    n_epochs=10,
+):
 
+    model = TorchNormalModel_Classification_3(
+        num_labels=NormalClassificationTrainTorchConfig.num_labels,
+        feature_dimension=NormalClassificationTrainTorchConfig.feature_dimension
+    )
+    optimizers = SGD(model.parameters(), lr=0.001)
+    dataset = TorchNormalDataset_Classification(
+        num_labels=NormalClassificationTrainTorchConfig.num_labels,
+        feature_dimension=NormalClassificationTrainTorchConfig.feature_dimension,
+        each_label_data=NormalClassificationTrainTorchConfig.each_label_data,
+        seed=NormalClassificationTrainTorchConfig.seed
+    )
+    train_dataloader = DataLoader(
+        dataset=dataset,
+        batch_size=NormalClassificationTrainTorchConfig.batch_size,
+        shuffle=True
+    )
 
+    trainer = Trainer(
+        model=model,
+        driver=driver,
+        device=device,
+        optimizers=optimizers,
+        train_dataloader=train_dataloader,
+        n_epochs=n_epochs,
 
+        model_wo_auto_param_call=True,
+        output_from_new_proc="all"
+    )
 
+    trainer.run()
+
+    if dist.is_initialized():
+        dist.destroy_process_group()
 
 
 

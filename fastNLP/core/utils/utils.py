@@ -96,6 +96,7 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
     :param signature_fn: 函数，用来替换 `fn` 的函数签名，如果该参数不为 None，那么我们首先会从该函数中提取函数签名，然后通过该函数签名提取
      参数值后，再传给 `fn` 进行实际的运算；
     :param mapping: 一个字典，用来更改其前面的字典的键值；
+    :param wo_auto_param_call: 是否关闭默认的参数匹配行为；
 
     :return: 返回 `fn` 运行的结果；
 
@@ -113,6 +114,7 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
         >>> print(auto_param_call(partial(test_fn, a=100), {"x": 10}, {"y": 20}))  # res: 140
         >>> print(auto_param_call(partial(test_fn, a=100), {"x": 10}, {"y": 20, "a": 200}))  # res: 240
     """
+
     if signature_fn is not None:
         if not callable(signature_fn):
             raise ValueError(f"Parameter `signature_fn` should be `Callable`.")

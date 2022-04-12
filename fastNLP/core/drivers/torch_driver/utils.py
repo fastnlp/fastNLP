@@ -140,24 +140,25 @@ class _DDPWrappingModel(Module):
         pytorch lightning 实现了先 unwrapping_model 的操作，但是感觉对于我们来说没有什么必须要，先写个注释放这里，之后有需求了再看；
         """
 
-        _forward_state = kwargs.pop(_MODE_PARAMETER)
+        forward_state = kwargs.pop(_MODE_PARAMETER)
+        wo_auto_param_call = kwargs.pop("wo_auto_param_call")
 
-        if _forward_state == ForwardState.TRAIN:
-            if isinstance(batch, Dict):
+        if forward_state == ForwardState.TRAIN:
+            if isinstance(batch, Dict) and not wo_auto_param_call:
                 return auto_param_call(self._train_step, batch, signature_fn=self._train_signature_fn)
             else:
                 return self._train_step(batch)
-        elif _forward_state == ForwardState.VALIDATE:
-            if isinstance(batch, Dict):
+        elif forward_state == ForwardState.VALIDATE:
+            if isinstance(batch, Dict) and not wo_auto_param_call:
                 return auto_param_call(self._validate_step, batch, signature_fn=self._validate_signature_fn)
             else:
                 return self._validate_step(batch)
-        elif _forward_state == ForwardState.TEST:
-            if isinstance(batch, Dict):
+        elif forward_state == ForwardState.TEST:
+            if isinstance(batch, Dict) and not wo_auto_param_call:
                 return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
             else:
                 return self._test_step(batch)
-        elif _forward_state == ForwardState.PREDICT:
+        elif forward_state == ForwardState.PREDICT:
             raise NotImplementedError("'PREDICT' mode has not been implemented.")
         else:
             raise NotImplementedError("You should direct a concrete mode.")
