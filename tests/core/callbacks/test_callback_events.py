@@ -1,7 +1,7 @@
 import pytest
 from functools import reduce
 
-from fastNLP.core.callbacks.callback_events import Filter
+from fastNLP.core.callbacks.callback_events import Events, Filter
 
 
 class TestFilter:
