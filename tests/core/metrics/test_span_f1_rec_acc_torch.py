@@ -14,6 +14,7 @@ from torch.multiprocessing import Pool, set_start_method
 from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.core.metrics import SpanFPreRecMetric
 from fastNLP.core.dataset import DataSet
+from .utils import find_free_network_port, setup_ddp
 
 set_start_method("spawn", force=True)
 
@@ -39,40 +40,6 @@ def _generate_tags(encoding_type, number_labels=4):
 
 NUM_PROCESSES = 2
 pool = None
-
-
-def setup_ddp(rank: int, world_size: int, master_port: int) -> None:
-    """Setup ddp environment."""
-
-    os.environ["MASTER_ADDR"] = "localhost"
-    os.environ["MASTER_PORT"] = str(master_port)
-    if torch.distributed.is_available() and sys.platform not in ("win32", "cygwin"):
-        torch.distributed.init_process_group("gloo", rank=rank, world_size=world_size)
-
-
-def find_free_network_port() -> int:
-    """Finds a free port on localhost.
-
-    It is useful in single-node training when we don't want to connect to a real master node but have to set the
-    `MASTER_PORT` environment variable.
-    """
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(("", 0))
-    s.listen(1)
-    port = s.getsockname()[1]
-    s.close()
-    return port
-
-
-# @pytest.fixture(scope='class', autouse=True)
-# def pre_process():
-#     global pool
-#     pool = Pool(processes=NUM_PROCESSES)
-#     master_port = find_free_network_port()
-#     pool.starmap(setup_ddp, [(rank, NUM_PROCESSES, master_port) for rank in range(NUM_PROCESSES)])
-#     yield
-#     pool.close()
-#     pool.join()
 
 
 def _test(local_rank: int,

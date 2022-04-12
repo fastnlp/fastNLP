@@ -19,23 +19,31 @@ def _get_monitor_value(monitor: str, real_monitor: Optional[str], res: dict) ->(
     if monitor in res:
         return monitor, res[monitor]
 
+    if real_monitor in res:
+        return real_monitor, res[real_monitor]
+
     pairs = []
     for idx, (key, value) in enumerate(res.items()):
-        match = SequenceMatcher(None, key, monitor).find_longest_match(0, len(key), 0, len(monitor))
-        pairs.append((key, value, match.size, idx))
+        match_size = _match_length(monitor, key)
+        pairs.append((key, value, match_size, idx))
 
     pairs.sort(key=lambda pair: (pair[2], -pair[3]), reverse=True)
     key, value, match_size = pairs[0][:3]
 
-    if real_monitor is not None and real_monitor in res and real_monitor != key:
-        # 如果 real_monitor 比新找的更长就继续用之前的。
-        match = SequenceMatcher(None, real_monitor, monitor).find_longest_match(0, len(real_monitor), 0, len(monitor))
-        if match.size > match_size:
-            return real_monitor, res[real_monitor]
+    return key, value
 
-        logger.warning(f"We can not find `{monitor}` in the evaluation result (with keys as {list(res.keys())}), "
-                       f"we use the `{key}` as the monitor.")
-    real_monitor = key
-    return real_monitor, value
+
+def _match_length(a:str, b:str)->int:
+    """
+    需要把长度短的放在前面
+
+    :param a:
+    :param b:
+    :return:
+    """
+    short = a if len(a) < len(b) else b
+    long = a if len(a)>=len(b) else b
+    match = SequenceMatcher(None, short, long).find_longest_match(0, len(short), 0, len(long))
+    return match.size
 
 
