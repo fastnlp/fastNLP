@@ -599,7 +599,7 @@ class TorchDDPDriver(TorchDriver):
         :param group:
         :return:
         """
-        return fastnlp_torch_all_gather(obj, device=self.data_device, group=group)
+        return fastnlp_torch_all_gather(obj, group=group)
 
 
 def find_free_network_port() -> str:

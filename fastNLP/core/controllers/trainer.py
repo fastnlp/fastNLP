@@ -25,6 +25,7 @@ from fastNLP.core.utils import check_fn_not_empty_params, get_fn_arg_names, matc
 from fastNLP.envs import rank_zero_call
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_MODEL_FILENAME
+from fastNLP.core.utils.exceptions import EarlyStopException
 
 
 class Trainer(TrainerEventTrigger):
@@ -49,6 +50,8 @@ class Trainer(TrainerEventTrigger):
             output_mapping: Optional[Union[Callable, Dict]] = None,
             accumulation_steps: int = 1,
             fp16: bool = False,
+            monitor: str = None,
+            larger_better: bool = True,
             marker: Optional[str] = None,
             **kwargs
     ):
@@ -102,6 +105,10 @@ class Trainer(TrainerEventTrigger):
          如果 batch 是一个 `dataclass`，那么我们会先将该 dataclass 转换为一个 Dict，然后再进行上述转换
         :param accumulation_steps: 梯度累积的步数，表示每隔几个 batch 优化器迭代一次；默认为 1；
         :param fp16: 是否开启混合精度训练；默认为 False；
+        :param monitor: 当存在 validate_dataloaders 时，默认的 monitor metric 的名字。传入的 callback 如果有 monitor 参数且没有
+            在 callback 初始化设定的，将采取这个值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+            的那个作为 monitor 。
+        :param larger_better: monitor 的值是否是越大越好。
         :param marker: 用于标记一个 Trainer 实例，从而在用户调用 `Trainer.on` 函数时，标记该 callback 函数属于哪一个具体的 'trainer' 实例；默认为 None；
         :param kwargs: 一些其它的可能需要的参数；
             torch_non_blocking: 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
@@ -210,6 +217,8 @@ class Trainer(TrainerEventTrigger):
         self.evaluator = None
         self.epoch_validate = lambda *args, **kwargs: ...
         self.step_validate = lambda *args, **kwargs: ...
+        self.monitor = monitor
+        self.larger_better = larger_better
         if metrics is not None and validate_dataloaders is not None:
             if not callable(validate_every) and (not isinstance(validate_every, int) or validate_every == 0):
                 raise ValueError("Parameter 'validate_every' should be set to 'int' type and either < 0 or > 0.")
@@ -239,6 +248,7 @@ class Trainer(TrainerEventTrigger):
             else:
                 # validate_every > 0
                 self._step_validate_filter = Filter(every=validate_every)
+
         self.metrics = metrics
         self.validate_every = validate_every
 
@@ -320,6 +330,10 @@ class Trainer(TrainerEventTrigger):
                 self.driver.barrier()
             self.on_train_end()
             self.driver.barrier()
+
+        except EarlyStopException as e:
+            logger.info(f"Catch early stop exception: {e.msg}.")
+            self.on_exception(e)
         except KeyboardInterrupt as e:
             self.driver.on_exception()
             self.on_exception(e)

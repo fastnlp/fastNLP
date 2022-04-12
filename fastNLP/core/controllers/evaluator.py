@@ -219,6 +219,7 @@ class Evaluator:
     def remove_progress_bar(self, dataloader_name):
         if self.progress_bar == 'rich' and hasattr(self, '_rich_task_id'):
             f_rich_progress.destroy_task(self._rich_task_id)
+            f_rich_progress.refresh()  # 使得最终的bar可以消失
             delattr(self, '_rich_task_id')
         elif self.progress_bar == 'raw':
             desc = 'Evaluation ends'
@@ -229,6 +230,7 @@ class Evaluator:
     def finally_progress_bar(self):
         if self.progress_bar == 'rich' and hasattr(self, '_rich_task_id'):
             f_rich_progress.destroy_task(self._rich_task_id)
+            f_rich_progress.refresh()
             delattr(self, '_rich_task_id')
 
     @property
