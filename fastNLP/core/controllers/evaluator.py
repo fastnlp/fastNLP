@@ -41,6 +41,7 @@ class Evaluator:
             mode: str = "validate",
             input_mapping: Optional[Union[Callable, Dict]] = None,
             output_mapping: Optional[Union[Callable, Dict]] = None,
+            model_wo_auto_param_call: bool = False,
             fp16: Optional[bool] = False,
             verbose: int = 1,
             **kwargs
@@ -61,6 +62,9 @@ class Evaluator:
             没有的话尝试 "validate_step"  函数，都没找到则使用 model 的前向运算函数。
         :param input_mapping: 对 dataloader 中输出的内容将通过 input_mapping 处理之后再输入到 model 以及 metric 中
         :param output_mapping: 对 model 输出的内容，将通过 output_mapping 处理之后再输入到 metric 中。
+        :param model_wo_auto_param_call: 是否关闭在训练时调用我们的 auto_param_call 来自动匹配 batch 和 forward 函数的参数的行为；
+         如果该值为 True，并且当 batch 为字典时，我们会根据 forward 所需要的参数从 batch 中提取对应的对象，传入到 forward 函数中；如果该值
+         为 False，那么我们会将 batch 直接透传给 forward 函数。注意上述逻辑同样应用于 `train_step`, `validate_step` 和 `test_step`；
         :param fp16: 是否使用 fp16 。
         :param verbose: 是否打印 evaluate 的结果。
         :param kwargs:
@@ -83,7 +87,7 @@ class Evaluator:
         self.model = model
         self.metrics = metrics
 
-        self.driver = choose_driver(model, driver, device, fp16=fp16, **kwargs)
+        self.driver = choose_driver(model, driver, device, fp16=fp16, model_wo_auto_param_call=model_wo_auto_param_call, **kwargs)
 
         self.device = device
         self.verbose = verbose

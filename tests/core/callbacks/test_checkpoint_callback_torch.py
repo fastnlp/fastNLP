@@ -10,7 +10,7 @@ import re
 
 from fastNLP.core.callbacks.checkpoint_callback import ModelCheckpointCallback, TrainerCheckpointCallback
 from fastNLP.core.controllers.trainer import Trainer
-from fastNLP.envs import FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME, FASTNLP_LAUNCH_TIME, FASTNLP_DISTRIBUTED_CHECK
+from fastNLP.envs import FASTNLP_LAUNCH_TIME, FASTNLP_DISTRIBUTED_CHECK
 
 from tests.helpers.utils import magic_argv_env_context
 from fastNLP.core import synchronize_safe_rm

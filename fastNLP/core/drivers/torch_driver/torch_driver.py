@@ -30,7 +30,7 @@ from fastNLP.core.utils import apply_to_collection, torch_move_data_to_device
 from fastNLP.envs import  rank_zero_call
 from fastNLP.envs import FASTNLP_SEED_WORKERS, FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.log import logger
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, RandomBatchSampler
 
 
 class TorchDriver(Driver):
@@ -50,6 +50,9 @@ class TorchDriver(Driver):
 
         # 用来设置 `torch_move_data_to_device` 中的 `non_blocking` 参数；
         self.non_blocking = kwargs.get("torch_non_blocking", True)
+
+        # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
+        self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
 
     def zero_grad(self, set_to_none: bool = False):
         for optimizer in self.optimizers:
@@ -252,7 +255,7 @@ class TorchDriver(Driver):
         elif self.is_distributed():
             raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or `ReproducibleSampler`.")
         else:
-            sampler = ReproducibleBatchSampler(
+            sampler = RandomBatchSampler(
                 batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
                 batch_size=dataloader_args.batch_size,
                 drop_last=dataloader_args.drop_last
