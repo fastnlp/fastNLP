@@ -44,15 +44,11 @@ __all__ = [
 ]
 
 
-
-
-
 def get_fn_arg_names(fn: Callable) -> List[str]:
     r"""
     返回一个函数的所有参数的名字；
 
     :param fn: 需要查询的函数；
-
     :return: 一个列表，其中的元素则是查询函数的参数的字符串名字；
     """
     return list(inspect.signature(fn).parameters)

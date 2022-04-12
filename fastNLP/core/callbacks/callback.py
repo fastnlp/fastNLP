@@ -71,7 +71,7 @@ class Callback:
         """
         pass
 
-    def on_train_batch_begin(self, trainer, batch, indices=None):
+    def on_train_batch_begin(self, trainer, batch, indices):
         r"""
         在训练过程中开始具体的一个 batch 前会被触发；
 
