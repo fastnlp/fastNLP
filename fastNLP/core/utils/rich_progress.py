@@ -94,9 +94,6 @@ class FRichProgress(Progress, metaclass=Singleton):
         self.print = self.console.print
         self.log = self.console.log
 
-        # start new
-        self.start()
-        self.console.show_cursor(show=True)
         return self
 
     def set_transient(self, transient: bool = True):
@@ -153,6 +150,7 @@ class FRichProgress(Progress, metaclass=Singleton):
     def start(self) -> None:
         super().start()
         self.console.show_cursor(show=True)
+
 
 if (sys.stdin and sys.stdin.isatty()) and get_global_rank() == 0:
     f_rich_progress = FRichProgress().new_progess(

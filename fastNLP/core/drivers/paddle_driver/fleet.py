@@ -19,7 +19,7 @@ from fastNLP.core.utils import (
     paddle_move_data_to_device,
     is_in_paddle_dist,
 )
-from fastNLP.core.samplers import ReproducibleIterator, RandomSampler, UnrepeatedSampler
+from fastNLP.core.samplers import ReproducibleSampler, RandomSampler, UnrepeatedRandomSampler
 from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK, USER_CUDA_VISIBLE_DEVICES
 from fastNLP.core.log import logger
 
@@ -312,13 +312,13 @@ class PaddleFleetDriver(PaddleDriver):
     def test_step(self, batch):
         return self._test_step(batch)
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleIterator]],
+    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler]],
                                   reproducible: bool = False, sampler_or_batch_sampler=None):
         
         # 暂时不支持iterableDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                     "FastNLP does not support `IteratorDataset` now."
-        if isinstance(dist, ReproducibleIterator):
+        if isinstance(dist, ReproducibleSampler):
             dataloader.batch_sampler.sampler = dist
             return dataloader
 
@@ -340,7 +340,7 @@ class PaddleFleetDriver(PaddleDriver):
         # trainer
         elif dist == "dist":
             # 如果用户的 trainer.use_dist_sampler 为 True，那么此时其是否进行断点重训，不影响这里的行为；
-            if isinstance(dataloader.batch_sampler.sampler, ReproducibleIterator):
+            if isinstance(dataloader.batch_sampler.sampler, ReproducibleSampler):
                 dataloader.batch_sampler.sampler.set_distributed(
                     num_replicas=self.world_size,
                     rank=self.global_rank,
@@ -362,7 +362,7 @@ class PaddleFleetDriver(PaddleDriver):
                 return dataloader
         # evaluator
         elif dist == "unrepeatdist":
-            sampler = UnrepeatedSampler(
+            sampler = UnrepeatedRandomSampler(
                 dataset=dataloader.dataset,
                 shuffle=shuffle,
                 seed=int(os.environ.get("FASTNLP_SEED", 0))

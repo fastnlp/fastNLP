@@ -28,11 +28,11 @@ from fastNLP.core.drivers.torch_driver.utils import (
 )
 from fastNLP.core.drivers.utils import distributed_open_proc
 from fastNLP.core.utils import auto_param_call, check_user_specific_params
-from fastNLP.core.samplers import ReproducibleIterator, RandomSampler, UnrepeatedSampler, ReproducibleBatchSampler
+from fastNLP.core.samplers import ReproducibleSampler, RandomSampler, UnrepeatedSequentialSampler, ReproducibleBatchSampler, \
+    re_instantiate_sampler, UnrepeatedSampler, conversion_between_reproducible_and_unrepeated_sampler
 from fastNLP.envs import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_RANK, FASTNLP_GLOBAL_SEED
 from fastNLP.core.log import logger
 from fastNLP.core.drivers.torch_driver.dist_utils import fastnlp_torch_all_gather, fastnlp_torch_broadcast_object
-from fastNLP.core.samplers import re_instantiate_sampler
 
 
 class TorchDDPDriver(TorchDriver):
@@ -446,13 +446,23 @@ class TorchDDPDriver(TorchDriver):
         # return self.model(batch, **{_MODE_PARAMETER: ForwardState.TEST})
         return self._test_step(batch)
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleIterator, ReproducibleBatchSampler]]=None,
+    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler, ReproducibleBatchSampler]]=None,
                                   reproducible: bool = False):
-        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleIterator 说明是在断点重训时 driver.load 函数调用；
+        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleSampler 说明是在断点重训时 driver.load 函数调用；
         # 注意这里不需要调用 dist_sampler.set_distributed；因为如果用户使用的是 TorchDDPDriver，那么其在 Trainer 初始化的时候就已经调用了该函数；
         if isinstance(dist, ReproducibleBatchSampler):
+            dist.set_distributed(
+                num_replicas=self.world_size,
+                rank=self.global_rank,
+                pad=True
+            )
             return replace_batch_sampler(dataloader, dist)
-        if isinstance(dist, ReproducibleIterator):
+        if isinstance(dist, ReproducibleSampler):
+            dist.set_distributed(
+                num_replicas=self.world_size,
+                rank=self.global_rank,
+                pad=True
+            )
             return replace_sampler(dataloader, dist)
 
         # 如果 dist 为 str 或者 None，说明是在 trainer 初试化时调用；
@@ -465,7 +475,7 @@ class TorchDDPDriver(TorchDriver):
                 if isinstance(dist, ReproducibleBatchSampler):
                     dist = re_instantiate_sampler(dist)
                     return replace_batch_sampler(dataloader, dist)
-                if isinstance(dist, ReproducibleIterator):
+                if isinstance(dist, ReproducibleSampler):
                     dist = re_instantiate_sampler(dist)
                     return replace_sampler(dataloader, dist)
                 return dataloader
@@ -481,7 +491,7 @@ class TorchDDPDriver(TorchDriver):
                     pad=True
                 )
                 return replace_batch_sampler(dataloader, batch_sampler)
-            elif isinstance(args.sampler, ReproducibleIterator):
+            elif isinstance(args.sampler, ReproducibleSampler):
                 sampler = re_instantiate_sampler(args.sampler)
                 sampler.set_distributed(
                     num_replicas=self.world_size,
@@ -503,14 +513,15 @@ class TorchDDPDriver(TorchDriver):
                 return replace_sampler(dataloader, sampler)
         # evaluator
         elif dist == "unrepeatdist":
-            # todo @yh，补充 unrepeatdist 相关内容；
             args = self.get_dataloader_args(dataloader)
-
-            # todo 判断 batch_sampler；
-            sampler = UnrepeatedSampler(
-                dataset=args.dataset,
-                shuffle=args.shuffle,
-            )
+            if isinstance(args.sampler, ReproducibleSampler):
+                sampler = conversion_between_reproducible_and_unrepeated_sampler(args.sampler)
+            elif not isinstance(args.sampler, UnrepeatedSampler):
+                sampler = UnrepeatedSequentialSampler(
+                    dataset=args.dataset
+                )
+            else:
+                sampler = re_instantiate_sampler(args.sampler)
             sampler.set_distributed(
                 num_replicas=self.world_size,
                 rank=self.global_rank
@@ -588,7 +599,7 @@ class TorchDDPDriver(TorchDriver):
         :param group:
         :return:
         """
-        return fastnlp_torch_all_gather(obj, device=self.data_device, group=group)
+        return fastnlp_torch_all_gather(obj, group=group)
 
 
 def find_free_network_port() -> str:

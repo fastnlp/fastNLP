@@ -1,11 +1,11 @@
-import unittest
+import pytest
 
 from fastNLP.core.dataloaders.torch_dataloader import TorchDataLoader, prepare_torch_dataloader
 from fastNLP.core.dataset import DataSet
 from fastNLP.io.data_bundle import DataBundle
 
 
-class TestFdl(unittest.TestCase):
+class TestFdl:
 
     def test_init_v1(self):
         ds = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})

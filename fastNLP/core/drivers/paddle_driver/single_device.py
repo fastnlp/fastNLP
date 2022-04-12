@@ -10,7 +10,7 @@ from fastNLP.core.utils import (
     get_paddle_device_id,
     paddle_move_data_to_device,
 )
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleIterator
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -139,7 +139,7 @@ class PaddleSingleDriver(PaddleDriver):
         """
         return paddle_move_data_to_device(batch, "gpu:0")
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleIterator],
+    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler],
                                   reproducible: bool = False, sampler_or_batch_sampler=None):
         # 暂时不支持IteratorDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
@@ -147,12 +147,12 @@ class PaddleSingleDriver(PaddleDriver):
         if isinstance(dist, ReproducibleBatchSampler):
             dataloader.batch_sampler = dist
             return dataloader
-        if isinstance(dist, ReproducibleIterator):
+        if isinstance(dist, ReproducibleSampler):
             dataloader.batch_sampler.sampler = dist
             return dataloader            
 
         if reproducible:
-            if isinstance(dataloader.batch_sampler.sampler, ReproducibleIterator):
+            if isinstance(dataloader.batch_sampler.sampler, ReproducibleSampler):
                 return dataloader
             elif isinstance(dataloader.batch_sampler, ReproducibleBatchSampler):
                 return dataloader
