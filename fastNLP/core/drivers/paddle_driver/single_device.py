@@ -11,7 +11,12 @@ from fastNLP.core.utils import (
     get_paddle_device_id,
     paddle_move_data_to_device,
 )
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, re_instantiate_sampler
+from fastNLP.core.samplers import (
+    ReproducibleBatchSampler,
+    RandomBatchSampler,
+    ReproducibleSampler,
+    re_instantiate_sampler,
+)
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -102,7 +107,7 @@ class PaddleSingleDriver(PaddleDriver):
 
     def train_step(self, batch) -> Dict:
         # 如果 batch 是一个 Dict，我们就默认帮其做参数匹配，否则就直接传入到 `train_step` 函数中，让用户自己处理；
-        if isinstance(batch, Dict):
+        if isinstance(batch, Dict) and not self.wo_auto_param_call:
             return auto_param_call(self._train_step, batch, signature_fn=self._train_signature_fn)
         else:
             return self._train_step(batch)
@@ -116,13 +121,13 @@ class PaddleSingleDriver(PaddleDriver):
             self.grad_scaler.update()
 
     def validate_step(self, batch) -> Dict:
-        if isinstance(batch, Dict):
+        if isinstance(batch, Dict) and not self.wo_auto_param_call:
             return auto_param_call(self._validate_step, batch, signature_fn=self._validate_signature_fn)
         else:
             return self._validate_step(batch)
 
     def test_step(self, batch) -> Dict:
-        if isinstance(batch, Dict):
+        if isinstance(batch, Dict) and not self.wo_auto_param_call:
             return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
         else:
             return self._test_step(batch)
@@ -159,7 +164,7 @@ class PaddleSingleDriver(PaddleDriver):
             return replace_sampler(dataloader, sampler)
 
         if reproducible:
-            batch_sampler = ReproducibleBatchSampler(
+            batch_sampler = RandomBatchSampler(
                 batch_sampler=args.batch_sampler,
                 batch_size=args.batch_size,
                 drop_last=args.drop_last

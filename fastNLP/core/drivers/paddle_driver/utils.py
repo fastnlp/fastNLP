@@ -85,7 +85,7 @@ class ForwardState(IntEnum):
     TEST = 2
     PREDICT = 3
 
-_MODE_PARAMETER = "_forward_state"
+_MODE_PARAMETER = "forward_state"
 
 class _FleetWrappingModel(Layer):
     """
@@ -151,24 +151,25 @@ class _FleetWrappingModel(Layer):
 
     def forward(self, batch, **kwargs) -> Dict:
 
-        _forward_state = kwargs.pop(_MODE_PARAMETER)
+        forward_state = kwargs.pop(_MODE_PARAMETER)
+        wo_auto_param_call = kwargs.pop("wo_auto_param_call")
 
-        if _forward_state == ForwardState.TRAIN:
-            if isinstance(batch, Dict):
+        if forward_state == ForwardState.TRAIN:
+            if isinstance(batch, Dict) and not wo_auto_param_call:
                 return auto_param_call(self._train_step, batch, signature_fn=self._train_signature_fn)
             else:
                 return self._train_step(batch)
-        elif _forward_state == ForwardState.VALIDATE:
-            if isinstance(batch, Dict):
+        elif forward_state == ForwardState.VALIDATE:
+            if isinstance(batch, Dict) and not wo_auto_param_call:
                 return auto_param_call(self._validate_step, batch, signature_fn=self._validate_signature_fn)
             else:
                 return self._validate_step(batch)
-        elif _forward_state == ForwardState.TEST:
-            if isinstance(batch, Dict):
+        elif forward_state == ForwardState.TEST:
+            if isinstance(batch, Dict) and not wo_auto_param_call:
                 return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
             else:
                 return self._test_step(batch)
-        elif _forward_state == ForwardState.PREDICT:
+        elif forward_state == ForwardState.PREDICT:
             raise NotImplementedError("'PREDICT' mode has not been implemented.")
         else:
             raise NotImplementedError("You should direct a concrete mode.")

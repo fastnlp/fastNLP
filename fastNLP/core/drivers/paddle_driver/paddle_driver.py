@@ -19,7 +19,7 @@ from fastNLP.envs import (
     rank_zero_call,
 )
 from fastNLP.core.log import logger
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, RandomBatchSampler
 
 if _NEED_IMPORT_PADDLE:
     import paddle
@@ -55,6 +55,9 @@ class PaddleDriver(Driver):
         # scaler的参数
         self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not fp16)
         self.grad_scaler = _grad_scaler()
+
+        # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
+        self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
 
     def zero_grad(self, set_to_none: bool = False):
         r"""
@@ -301,7 +304,7 @@ class PaddleDriver(Driver):
         elif self.is_distributed():
             raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or `ReproducibleSampler`.")
         else:
-            sampler = ReproducibleBatchSampler(
+            sampler = RandomBatchSampler(
                 batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
                 batch_size=dataloader_args.batch_size,
                 drop_last=dataloader_args.drop_last

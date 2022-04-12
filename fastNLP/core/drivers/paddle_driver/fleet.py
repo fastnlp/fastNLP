@@ -104,8 +104,8 @@ class PaddleFleetDriver(PaddleDriver):
             #  我们就直接将 model_device 置为 None；
             self._model_device = None
 
-            def _running_fn_(batch, step_fn, signature_fn):
-                if isinstance(batch, Dict):
+            def _running_fn_(batch, step_fn, signature_fn, wo_auto_param_call):
+                if isinstance(batch, Dict) and not wo_auto_param_call:
                     return auto_param_call(step_fn, batch, signature_fn=signature_fn)
                 else:
                     return self._validate_step(batch)
@@ -116,23 +116,21 @@ class PaddleFleetDriver(PaddleDriver):
                     "Notice your model is a `paddle.DataParallel` model. And your "
                     "model also implements the `train_step` method, which we can not call actually, we will"
                     " call `forward` function instead of `train_step` and you should note that.")
-            self._train_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward)
-            # self._train_signature_fn = model.forward
+            self._train_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
 
             if hasattr(model, "validate_step"):
                 logger.warning(
                     "Notice your model is a `paddle.DataParallel` model. And your "
                     "model also implements the `validate_step` method, which we can not call actually, "
                     "we will call `forward` function instead of `validate_step` and you should note that.")
-            self._validate_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward)
-            # self._validate_signature_fn = model.forward
+            self._validate_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
 
             if hasattr(model, "test_step"):
                 logger.warning(
                     "Notice your model is a `paddle.DataParallel` model. And your "
                     "model also implements the `test_step` method, which we can not call actually, we will"
                     " call `forward` function instead of `test_step` and you should note that.")
-            self._test_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward)
+            self._test_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
 
         # 当参数 `device` 为 None 时并且该参数不为 None，表示将对应的数据移到指定的机器上；
         self._data_device = kwargs.get("data_device", None)
@@ -277,9 +275,9 @@ class PaddleFleetDriver(PaddleDriver):
                 **self._fleet_kwargs
             )
 
-            self._train_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TRAIN})
-            self._validate_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.VALIDATE})
-            self._test_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TEST})
+            self._train_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TRAIN}, wo_auto_param_call=self.wo_auto_param_call)
+            self._validate_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.VALIDATE}, wo_auto_param_call=self.wo_auto_param_call)
+            self._test_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TEST}, wo_auto_param_call=self.wo_auto_param_call)
 
         self._configured = True
 
