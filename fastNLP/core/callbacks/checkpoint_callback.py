@@ -5,12 +5,12 @@ __all__ = [
 import os
 from typing import Union, Optional, Callable, Dict, Sequence, Any, Mapping
 from pathlib import Path
-from abc import ABC
 import sys
+from copy import deepcopy
 
 
 import fastNLP
-from .callback import Callback, Filter
+from .callback import Callback, HasMonitorCallback
 from fastNLP.core.callbacks.utils import _get_monitor_value
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_LAUNCH_TIME
@@ -18,22 +18,7 @@ from fastNLP.core.utils import synchronize_safe_rm, synchronize_mkdir
 from fastNLP.core.utils import apply_to_collection
 
 
-class CanItemDataType(ABC):
-    """
-    检测可以进行传输的对象。
-
-    """
-
-    @classmethod
-    def __subclasshook__(cls, subclass: Any) -> Union[bool, Any]:
-        if cls is CanItemDataType:
-            item = getattr(subclass, 'item', None)
-            return callable(item)
-        return NotImplemented
-
-
-
-class CheckpointCallback(Callback):
+class CheckpointCallback(HasMonitorCallback):
     def __init__(
             self,
             monitor,
@@ -48,13 +33,8 @@ class CheckpointCallback(Callback):
             model_save_fn: Optional[Callable] = None,
             **kwargs,
     ):
-        # 我们新加了逻辑，如果 checkpoint callback 自己没有设置 monitor 和 larger_better，那么我们会将其在 trainer 中的设置赋值给它们；
-        # if monitor is None and save_topk is not None:
-        #     raise ValueError("Parameter `monitor` must be set when you want to use 'save_topk'.")
-
-        if monitor is not None and not isinstance(monitor, str):
-            raise ValueError("Parameter `monitor` should be of 'str' type.")
-
+        super().__init__(monitor=monitor, larger_better=larger_better,
+                         must_have_monitor=save_topk is not None)
         if save_folder is None:
             logger.warning(
                 "Parameter `path` is None, and we will use the current work directory to find and load your model.")
@@ -92,13 +72,12 @@ class CheckpointCallback(Callback):
                                     "`BaseException` type.")
         else:
             save_on_exception = []
-        self.monitor = monitor
+
         self.save_folder = Path(save_folder)
         self.save_every_n_epochs = save_every_n_epochs
         self.save_every_n_batches = save_every_n_batches
         self.save_last = save_last
         self.save_topk = save_topk
-        self.larger_better = larger_better
         self.only_state_dict = only_state_dict
         self.model_save_fn = model_save_fn
         self.save_on_exception = save_on_exception
@@ -108,12 +87,6 @@ class CheckpointCallback(Callback):
         self._topk_model = {}
         self._topn = 0  # 表示目前已经保存了几个最好的模型；
 
-        # 因为我们在 `_get_validate_metric` 函数中，当在返回的 `validate_res` 字典中找不到 `monitor` 时，是使用匹配找到的
-        #  key 对应的 value 当做结果；但是这样存在的一个问题在于如果用户传入的 metric 返回的 sub_metric 的名字可能会混淆，并且其在下一次
-        #  训练的代码中修改了这些 sub_metric 返回的顺序，那么就会导致模糊匹配拿到的 key 和 value 与之前的不是同一个，这显然不是合理的行为；
-        # 因此我们通过该变量来表示我们通过模糊匹配拿到的 key；
-        self._real_monitor = self.monitor
-
         # 注意这里应当保证只有进程 0 在执行这个操作，因为当用户使用 python -m torch.distributed.launch 来拉起进程的时候，
         #  FASTNLP_LAUNCH_TIME 在每一个进程上的值是不一样的；
         self.timestamp_path = self.save_folder.joinpath(os.environ[FASTNLP_LAUNCH_TIME])
@@ -121,20 +94,15 @@ class CheckpointCallback(Callback):
         synchronize_mkdir(self.timestamp_path)
 
     def on_after_trainer_initialized(self, trainer, driver):
-        if self.monitor is None:
-            if trainer.monitor is not None:
-                self.monitor = trainer.monitor
-                self.larger_better = trainer.larger_better
-            elif self.save_topk is not None:
-                raise RuntimeError("You are using `topk` mode, but you have not set the `monitor` value either in this"
-                                   "callback or in trainer.")
-            else:
-                self.monitor = None
+        if self.save_topk is not None:
+            super().on_after_trainer_initialized(trainer, driver)
         if self.save_topk is not None and trainer.evaluator is None:
-            raise RuntimeError("You are using `topk` mode, but there is no `evaluator` in trainer.")
+            logger.warning("You set `save_topk`, but `validate_dataloaders` is not set in Trainer.")
 
-    def on_validate_end(self, trainer, validate_res):
-        self._save_topk(trainer, validate_res)
+    def on_validate_end(self, trainer, results):
+        if len(results) == 0:
+            return
+        self._save_topk(trainer, results)
 
     def on_train_epoch_end(self, trainer: "fastNLP.Trainer"):
         if trainer.cur_epoch_idx % self.save_every_n_epochs == 0:
@@ -157,7 +125,7 @@ class CheckpointCallback(Callback):
 
     def on_sanity_check_end(self, trainer, sanity_check_res):
         # 主要核对一下 monitor 是否存在。
-        self._get_validate_metric(sanity_check_res)
+        self.get_monitor_value(results=sanity_check_res)
 
     def on_save_checkpoint(self, trainer) -> Dict:
         """
@@ -168,8 +136,7 @@ class CheckpointCallback(Callback):
 
         states = {}
         states['timestamp_path'] = str(self.timestamp_path.absolute())
-        states['_topk_model'] = apply_to_collection(self._topk_model, dtype=CanItemDataType,
-                                                    function=lambda x:x.item())
+        states['_topk_model'] = deepcopy(self._topk_model)
         states['save_topk'] = 0 if self.save_topk is None else self.save_topk
         states['_real_monitor'] = self._real_monitor
         return states
@@ -190,30 +157,30 @@ class CheckpointCallback(Callback):
             self._topk_model.update(self._topk_model)
         self._real_monitor = states["real_monitor"]
 
-    def _save_topk(self, trainer: "fastNLP.Trainer", validate_res: Dict):
+    def _save_topk(self, trainer: "fastNLP.Trainer", results: Dict):
         """
         根据validate_res决定保存哪些model的函数。会自动移除掉不满足topk的文件夹。
 
         :param trainer:
-        :param validate_res:
+        :param results:
         :return:
         """
         if self.save_topk is not None:
-            _metric_value = self._get_validate_metric(validate_res)
+            monitor_value = self.get_monitor_value(results=results)
             folder_name = f"{self.folder_prefix}-epoch_{trainer.cur_epoch_idx}-batch_{trainer.global_forward_batches}" \
-                         f"-{self._real_monitor}_{_metric_value}"
+                         f"-{self._real_monitor}_{monitor_value}"
 
             _should_save = False
             if self._topn < self.save_topk:
-                self._topk_model[folder_name] = _metric_value
+                self._topk_model[folder_name] = monitor_value
                 self._topn += 1
                 _should_save = True
             else:
                 _least_valuable_model = (min if self.larger_better else max)(self._topk_model,
                                                                              key=lambda x: self._topk_model[x])
-                if (self.larger_better and _metric_value > self._topk_model[_least_valuable_model]) or \
-                        (self.larger_better is False and _metric_value < self._topk_model[_least_valuable_model]):
-                    self._topk_model[folder_name] = _metric_value
+                if (self.larger_better and monitor_value > self._topk_model[_least_valuable_model]) or \
+                        (self.larger_better is False and monitor_value < self._topk_model[_least_valuable_model]):
+                    self._topk_model[folder_name] = monitor_value
                     _should_save = True
                     self._topk_model.pop(_least_valuable_model)
                     synchronize_safe_rm(self.timestamp_path.joinpath(_least_valuable_model))
@@ -249,7 +216,11 @@ class CheckpointCallback(Callback):
         :return:
         """
         use_monitor, value = _get_monitor_value(monitor=self.monitor, real_monitor=self._real_monitor, res=res)
+        if self._real_monitor != use_monitor:
+            logger.warning(f"We can not find `{self._real_monitor}` in the evaluation result (with keys as {list(res.keys())}), "
+                           f"we use the `{use_monitor}` as the monitor for {self.__class__.__name__}.")
         self._real_monitor = use_monitor
+
         return value
 
     @property
@@ -277,7 +248,7 @@ class ModelCheckpointCallback(CheckpointCallback):
     若 model_save_fn 不为 None，则 fastNLP 将 folder 绝对路径传递给该函数，fastNLP 不在该 folder 下创建任何文件。
 
     :param monitor: 监控的 metric 的名称。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
-        的那个作为 monitor 。
+        的那个作为 monitor 。如果为 None 将尝试从 Trainer 中获取该值。
     :param save_folder: 保存的文件夹，fastNLP 将在该文件下以时间戳创建子文件夹，并在里面保存。因此不同次运行可以将被保存到不同的
         时间戳文件夹中。如果为 None ，默认使用当前文件夹。
     :param save_every_n_epochs: 多少个 epoch 保存一次。
@@ -324,7 +295,7 @@ class TrainerCheckpointCallback(CheckpointCallback):
     若 model_save_fn 不为 None，则 fastNLP 只会在每个 folder 下生成 fastnlp_trainer.pkl.tar 文件。
 
     :param monitor: 监控的 metric 的名称。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
-        的那个作为 monitor 。
+        的那个作为 monitor 。如果为 None 将尝试从 Trainer 中获取该值。
     :param save_folder: 保存的文件夹，fastNLP 将在该文件下以时间戳创建子文件夹，并在里面保存。因此不同次运行可以将被保存到不同的
         时间戳文件夹中。如果为 None ，默认使用当前文件夹。
     :param save_every_n_epochs: 多少个 epoch 保存一次。

@@ -4,8 +4,7 @@ __all__ = [
 
 import os
 from typing import Optional, Callable
-from .callback import Callback
-from .utils import _get_monitor_value
+from .callback import HasMonitorCallback
 from io import BytesIO
 import shutil
 
@@ -14,15 +13,15 @@ from fastNLP.core.log import logger
 from fastNLP.envs import all_rank_call
 
 
-class LoadBestModelCallback(Callback):
-    def __init__(self, monitor:str, larger_better:bool = True, only_state_dict:bool = True,
+class LoadBestModelCallback(HasMonitorCallback):
+    def __init__(self, monitor:str=None, larger_better:bool = True, only_state_dict:bool = True,
                  save_folder:Optional[str] = None, model_save_fn:Optional[Callable] = None,
                  model_load_fn:Optional[Callable] = None,
                  delete_after_train:bool = True):
         """
         保存最佳的 monitor 值最佳的模型，并在训练结束的时候重新加载模型。仅在训练正常结束的时候才能加载最好的模型。
 
-        :param str monitor: 监控的 metric 值。
+        :param str monitor: 监控的 metric 值。如果为 None，将尝试使用 Trainer 设置的 monitor 。
         :param larger_better: 该 metric 值是否是越大越好。
         :param save_folder: 保存的文件夹，如果为空，则保存在内存中。不为空，则保存一份权重到文件中，当为多机训练，且本值不为空时，请确保
             不同的机器均可访问当该路径。当 model_save_fn 不为 None 时该值一定不能为空。
@@ -33,6 +32,7 @@ class LoadBestModelCallback(Callback):
             请在函数内完成对模型的加载。
         :param delete_after_train: 在训练结束后是否删掉模型。
         """
+        super().__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=True)
         if model_load_fn is not None:
             assert callable(model_load_fn), "`model_load_fn` must be a callable object."
             assert model_save_fn is not None, "`model_load_fn` and `model_save_fn` must be passed at the same time."
@@ -56,15 +56,11 @@ class LoadBestModelCallback(Callback):
             self.real_save_folder = None
             self.buffer = BytesIO()
 
-        self.monitor = monitor
-        self.larger_better = larger_better
         self.save_folder = save_folder
         self.only_state_dict = only_state_dict
         self.model_save_fn = model_save_fn
         self.model_load_fn = model_load_fn
         self.delete_after_after = delete_after_train
-        self._real_monitor = None
-        self.monitor_value = float('-inf') if larger_better else float('inf')
 
     def on_after_trainer_initialized(self, trainer, driver):
         if self.save_folder is not None and driver.is_distributed() and int(os.environ.get(FASTNLP_BACKEND_LAUNCH, 0))==1:
@@ -76,13 +72,16 @@ class LoadBestModelCallback(Callback):
                 raise RuntimeError(f"Currently {driver.__class__.__name__} does not support using `save_folder` to "
                                    f"save best model when launch using script.")
 
+        super().on_after_trainer_initialized(trainer, driver)
+
+    def on_sanity_check_end(self, trainer, sanity_check_res):
+        self.get_monitor_value(sanity_check_res)
+
     def on_validate_end(self, trainer, results):
-        self._real_monitor, monitor_value = _get_monitor_value(monitor=self.monitor,
-                                                               real_monitor=self._real_monitor,
-                                                               res=results)
-        if (monitor_value < self.monitor_value and self.larger_better is False) or \
-            (monitor_value > self.monitor_value and self.larger_better):
-            self.monitor_value = monitor_value
+        if len(results)==0:
+            return
+        monitor_value = self.get_monitor_value(results)
+        if self.is_better_monitor_value(monitor_value, keep_if_better=True):
             if self.real_save_folder:
                 trainer.save_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,
                                    model_save_fn=self.model_save_fn)

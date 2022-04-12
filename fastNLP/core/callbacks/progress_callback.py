@@ -8,7 +8,7 @@ __all__ = [
     'RichCallback'
 ]
 
-from .callback import Callback
+from .callback import HasMonitorCallback
 from fastNLP.core.callbacks.utils import _get_monitor_value
 from fastNLP.core.utils import f_rich_progress
 from fastNLP.core.log import logger
@@ -28,15 +28,13 @@ def choose_progress_callback(progress_bar:str):
         return None
 
 
-class ProgressCallback(Callback):
+class ProgressCallback(HasMonitorCallback):
     def on_train_end(self, trainer):
         f_rich_progress.stop()
 
     def on_sanity_check_end(self, trainer, sanity_check_res):
         if len(sanity_check_res) and getattr(self, 'monitor', None) is not None:
-            self._real_monitor, monitor_value = _get_monitor_value(monitor=self.monitor,
-                                                                   real_monitor=self._real_monitor,
-                                                                   res=sanity_check_res)
+            self.get_monitor_value(sanity_check_res)
 
 
 class RichCallback(ProgressCallback):
@@ -46,28 +44,22 @@ class RichCallback(ProgressCallback):
 
         :param print_every: 多少个 batch 更新一次显示。
         :param loss_round_ndigit: 显示的 loss 保留多少位有效数字
-        :param monitor: 当检测到这个key的结果更好时，会打印出不同的颜色进行提示。
+        :param monitor: 当检测到这个key的结果更好时，会打印出不同的颜色进行提示。如果为 None ，会尝试使用 trainer 中设置的 monitor 。
         :param larger_better: 是否是monitor的结果越大越好。
         :param format_json: 是否format json再打印
         """
-        super().__init__()
+        super().__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=False)
         self.print_every = print_every
         self.progress_bar = f_rich_progress
         self.task2id = {}
         self.loss = 0
         self.loss_round_ndigit = loss_round_ndigit
-        self.monitor = monitor
-        self.larger_better = larger_better
-        if larger_better:
-            self.monitor_value = float('-inf')
-        else:
-            self.monitor_value = float('inf')
-        self._real_monitor = monitor
         self.format_json = format_json
 
     def on_after_trainer_initialized(self, trainer, driver):
         if not self.progress_bar.disable:
             self.progress_bar.set_disable(flag=trainer.driver.get_local_rank() != 0)
+        super(RichCallback, self).on_after_trainer_initialized(trainer, driver)
 
     def on_train_begin(self, trainer):
         self.task2id['epoch'] = self.progress_bar.add_task(description='Epoch:0', total=trainer.n_epochs,
@@ -109,16 +101,12 @@ class RichCallback(ProgressCallback):
         text_style = ''
         characters = '-'
         if self.monitor is not None:
-            self._real_monitor, monitor_value = _get_monitor_value(monitor=self.monitor,
-                                                                    real_monitor=self._real_monitor,
-                                                                    res=results)
-            if (self.larger_better and monitor_value > self.monitor_value) or \
-                    (not self.larger_better and monitor_value < self.monitor_value):
+            monitor_value = self.get_monitor_value(results)
+            if self.is_better_monitor_value(monitor_value, keep_if_better=True):
                 if abs(self.monitor_value) != float('inf'):
                     rule_style = 'spring_green3'
                     text_style = '[bold]'
                     characters = '+'
-                self.monitor_value = monitor_value
         self.progress_bar.print()
         self.progress_bar.console.rule(text_style+f"Eval. results on Epoch:{trainer.cur_epoch_idx}, "
                                                   f"Batch:{trainer.batch_idx_in_epoch}",
@@ -151,18 +139,12 @@ class RawTextCallback(ProgressCallback):
         :param larger_better: 是否是monitor的结果越大越好。
         :param format_json: 是否format json再打印
         """
-        super().__init__()
+        super().__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=False)
         self.print_every = print_every
         self.task2id = {}
         self.loss = 0
         self.loss_round_ndigit = loss_round_ndigit
-        self.monitor = monitor
-        self.larger_better = larger_better
-        if larger_better:
-            self.monitor_value = float('-inf')
-        else:
-            self.monitor_value = float('inf')
-        self._real_monitor = monitor
+        self.set_monitor(monitor, larger_better)
         self.format_json = format_json
         self.num_signs = 10
 
@@ -189,14 +171,10 @@ class RawTextCallback(ProgressCallback):
         base_text = f'Eval. results on Epoch:{trainer.cur_epoch_idx}, Batch:{trainer.batch_idx_in_epoch}'
         text = ''
         if self.monitor is not None:
-            self._real_monitor, monitor_value = _get_monitor_value(monitor=self.monitor,
-                                                                   real_monitor=self._real_monitor,
-                                                                   res=results)
-            if (self.larger_better and monitor_value > self.monitor_value) or \
-                    (not self.larger_better and monitor_value < self.monitor_value):
+            monitor_value = self.get_monitor_value(results)
+            if self.is_better_monitor_value(monitor_value, keep_if_better=True):
                 if abs(self.monitor_value) != float('inf'):
                     text = '+'*self.num_signs + base_text + '+'*self.num_signs
-                self.monitor_value = monitor_value
         if len(text) == 0:
             text = '-'*self.num_signs + base_text + '-'*self.num_signs
 
