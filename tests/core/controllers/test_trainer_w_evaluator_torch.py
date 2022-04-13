@@ -143,7 +143,7 @@ def test_trainer_torch_with_evaluator_fp16_accumulation_steps(
         accumulation_steps,
         n_epochs=6,
 ):
-    callbacks = [RecordMetricCallback(monitor="acc", metric_threshold=0.3, larger_better=True)]
+    callbacks = [RecordMetricCallback(monitor="acc", metric_threshold=0.1, larger_better=True)]
     trainer = Trainer(
         model=model_and_optimizers.model,
         driver=driver,
