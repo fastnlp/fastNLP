@@ -254,7 +254,7 @@ def test_trainer_on_exception(
 ):
     from fastNLP.core.callbacks.callback_events import Events
 
-    @Trainer.on(Events.ON_TRAIN_EPOCH_END)
+    @Trainer.on(Events.on_train_epoch_end)
     def raise_exception(trainer):
         if trainer.driver.get_local_rank() == cur_rank:
             raise NotImplementedError
