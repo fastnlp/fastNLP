@@ -98,14 +98,16 @@ def model_and_optimizers(request):
 
 
 # 测试一下普通的情况；
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", 1), ("torch", [0, 1])])  #, ("torch", 1), ("torch", [0, 1])
+@pytest.mark.parametrize("driver,device", [("torch", [0, 1])])  #  ("torch", "cpu"), ("torch", 1), ("torch", [0, 1])
 @pytest.mark.parametrize("callbacks", [[RecordMetricCallback(monitor="acc", metric_threshold=0.2, larger_better=True)]])
+@pytest.mark.parametrize("validate_every", [-3])
 @magic_argv_env_context
 def test_trainer_torch_with_evaluator(
         model_and_optimizers: TrainerParameters,
         driver,
         device,
         callbacks,
+        validate_every,
         n_epochs=10,
 ):
     trainer = Trainer(
@@ -118,11 +120,11 @@ def test_trainer_torch_with_evaluator(
         input_mapping=model_and_optimizers.input_mapping,
         output_mapping=model_and_optimizers.output_mapping,
         metrics=model_and_optimizers.metrics,
+        validate_every=validate_every,
 
         n_epochs=n_epochs,
         callbacks=callbacks,
         output_from_new_proc="all"
-
     )
 
     trainer.run()
@@ -161,6 +163,44 @@ def test_trainer_torch_with_evaluator_fp16_accumulation_steps(
         accumulation_steps=accumulation_steps,
         output_from_new_proc="all"
 
+    )
+
+    trainer.run()
+
+    if dist.is_initialized():
+        dist.destroy_process_group()
+
+
+@pytest.mark.parametrize("driver,device", [("torch", 1)])  # ("torch", [0, 1]),("torch", 1)
+@magic_argv_env_context
+def test_trainer_validate_every(
+        model_and_optimizers: TrainerParameters,
+        driver,
+        device,
+        n_epochs=6,
+):
+
+    def validate_every(trainer):
+        if trainer.global_forward_batches % 10 == 0:
+            print(trainer)
+            print("\nfastNLP test validate every.\n")
+            print(trainer.global_forward_batches)
+            return True
+
+    trainer = Trainer(
+        model=model_and_optimizers.model,
+        driver=driver,
+        device=device,
+        optimizers=model_and_optimizers.optimizers,
+        train_dataloader=model_and_optimizers.train_dataloader,
+        validate_dataloaders=model_and_optimizers.validate_dataloaders,
+        input_mapping=model_and_optimizers.input_mapping,
+        output_mapping=model_and_optimizers.output_mapping,
+        metrics=model_and_optimizers.metrics,
+
+        n_epochs=n_epochs,
+        output_from_new_proc="all",
+        validate_every=validate_every
     )
 
     trainer.run()

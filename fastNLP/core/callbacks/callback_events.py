@@ -171,20 +171,8 @@ class Filter:
             self.num_called += 1
 
             # 因为我们的 callback 函数的输入是固定的，而且我们能够保证第一个参数一定是 trainer；
-            # 因此我们就可以这样进行操作，将 trainer 从 callback 函数的输入中取出来，送到我们的 trainer 里去，从而实现一些复杂的逻辑；
-            # 与此同时，当我们发现 Filter 所修饰的函数的输入第一个参数不是 trainer 时，我们就只传入一个 self 到 _filter 函数中；
-
-            # 提取参数的逻辑；
-            trainer = kwargs.get("trainer", None)
-
-            if trainer is None and len(args) > 0:
-                trainer = args[0]
-            if isinstance(trainer, fastNLP.Trainer):  # 这里因为重复调用的问题，我们不能直接使用 fastNLP.Trainer，因为 Trainer
-                # 也会调用这个 module，但是 Controller 不会；
-                param = (self, trainer)
-            else:
-                param = (self, )
-            if self._filter(*param):
+            trainer = args[0]
+            if self._filter(self, trainer):
                 self.num_executed += 1
                 return fn(*args, **kwargs)
 
