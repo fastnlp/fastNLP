@@ -244,7 +244,6 @@ class PaddleFleetDriver(PaddleDriver):
         """
         if self.local_rank == 0:
             # 是 rank0 的话，则拉起其它子进程
-            print("in launcher")
             launcher = FleetLauncher(self.parallel_device, self.output_from_new_proc)
             launcher.launch()
         # 设置参数和初始化分布式环境
