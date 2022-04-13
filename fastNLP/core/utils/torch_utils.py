@@ -1,9 +1,11 @@
 from abc import ABC
 from typing import Any, Union, Optional
-from fastNLP.envs.imports import _NEED_IMPORT_TORCH
-
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _TORCH_GREATER_EQUAL_1_8
+DEFAULT_TORCH_GROUP = None
 if _NEED_IMPORT_TORCH:
     import torch
+    if not _TORCH_GREATER_EQUAL_1_8:
+        DEFAULT_TORCH_GROUP = torch.distributed.distributed_c10d.group.WORLD
 
 __all__ = [
     'torch_move_data_to_device'

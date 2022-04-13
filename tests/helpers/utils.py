@@ -13,6 +13,7 @@ import numpy as np
 
 from fastNLP.envs.env import FASTNLP_GLOBAL_RANK
 from fastNLP.core.drivers.utils import distributed_open_proc
+from fastNLP.core.log import logger
 
 
 def get_class_that_defined_method(meth):
@@ -30,6 +31,20 @@ def get_class_that_defined_method(meth):
         if isinstance(cls, type):
             return cls
     return getattr(meth, '__objclass__', None)  # handle special descriptor objects
+
+
+def recover_logger(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        # 保存logger的状态
+        handlers = [handler for handler in logger.handlers]
+        level = logger.level
+        res = fn(*args, **kwargs)
+        logger.handlers = handlers
+        logger.setLevel(level)
+        return res
+
+    return wrapper
 
 
 def magic_argv_env_context(fn):
