@@ -12,6 +12,7 @@ if _NEED_IMPORT_TORCH:
     import torch
     import torch.distributed as dist
     from torch.nn.parallel import DistributedDataParallel
+    from torch.utils.data import BatchSampler
 
 __all__ = [
     'TorchDDPDriver'
@@ -524,7 +525,8 @@ class TorchDDPDriver(TorchDriver):
                 num_replicas=self.world_size,
                 rank=self.global_rank
             )
-            return replace_sampler(dataloader, sampler)
+            batch_sampler = BatchSampler(sampler, args.batch_size, drop_last=False)
+            return replace_batch_sampler(dataloader, batch_sampler)
         else:
             raise ValueError("Parameter `dist_sampler` can only be one of three values: ('dist', 'unrepeatdist', None).")
 

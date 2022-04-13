@@ -15,7 +15,6 @@ from fastNLP.core.callbacks.utils import _get_monitor_value
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_LAUNCH_TIME
 from fastNLP.core.utils import synchronize_safe_rm, synchronize_mkdir
-from fastNLP.core.utils import apply_to_collection
 
 
 class CheckpointCallback(HasMonitorCallback):
@@ -178,8 +177,7 @@ class CheckpointCallback(HasMonitorCallback):
             else:
                 _least_valuable_model = (min if self.larger_better else max)(self._topk_model,
                                                                              key=lambda x: self._topk_model[x])
-                if (self.larger_better and monitor_value > self._topk_model[_least_valuable_model]) or \
-                        (self.larger_better is False and monitor_value < self._topk_model[_least_valuable_model]):
+                if self.is_former_monitor_value_better(monitor_value, self._topk_model[_least_valuable_model]):
                     self._topk_model[folder_name] = monitor_value
                     _should_save = True
                     self._topk_model.pop(_least_valuable_model)
@@ -207,21 +205,6 @@ class CheckpointCallback(HasMonitorCallback):
             model_save_fn=self.model_save_fn,
             **self.kwargs
         )
-
-    def _get_validate_metric(self, res: Dict):
-        """
-        该函数用于从 `Evaluator` 的结果中找到属于当前 CheckpointCallback 的 metric result（根据 monitor）；
-        如果用户输入在 res 中没有找到，我们会查询所有的 validate 结果字典的键值，根据 最长公共字符串 匹配，使用最长匹配的结果值；
-        :param res:
-        :return:
-        """
-        use_monitor, value = _get_monitor_value(monitor=self.monitor, real_monitor=self._real_monitor, res=res)
-        if self._real_monitor != use_monitor:
-            logger.warning(f"We can not find `{self._real_monitor}` in the evaluation result (with keys as {list(res.keys())}), "
-                           f"we use the `{use_monitor}` as the monitor for {self.__class__.__name__}.")
-        self._real_monitor = use_monitor
-
-        return value
 
     @property
     def folder_prefix(self):

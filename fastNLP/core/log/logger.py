@@ -51,6 +51,7 @@ class LoggerSingleton(type):
 class FastNLPLogger(logging.Logger, metaclass=LoggerSingleton):
     def __init__(self, name):
         super().__init__(name)
+        self._warning_msgs = set()
 
     def add_file(self, path: Optional[Union[str, Path]] = None, level='AUTO', remove_other_handlers: bool = False,
                  mode: str = "w"):
@@ -107,6 +108,21 @@ class FastNLPLogger(logging.Logger, metaclass=LoggerSingleton):
         if self.isEnabledFor(WARNING):
             kwargs = self._add_rank_info(kwargs)
             self._log(WARNING, msg, args, **kwargs)
+
+    def warning_once(self, msg, *args, **kwargs):
+        """
+        通过 warning 内容只会 warning 一次
+
+        :param msg:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        if msg not in self._warning_msgs:
+            if self.isEnabledFor(WARNING):
+                kwargs = self._add_rank_info(kwargs)
+                self._log(WARNING, msg, args, **kwargs)
+            self._warning_msgs.add(msg)
 
     def warn(self, msg, *args, **kwargs):
         warnings.warn("The 'warn' method is deprecated, "

@@ -223,7 +223,6 @@ class Evaluator:
     def remove_progress_bar(self, dataloader_name):
         if self.progress_bar == 'rich' and hasattr(self, '_rich_task_id'):
             f_rich_progress.destroy_task(self._rich_task_id)
-            f_rich_progress.refresh()  # 使得最终的bar可以消失
             delattr(self, '_rich_task_id')
         elif self.progress_bar == 'raw':
             desc = 'Evaluation ends'
@@ -234,7 +233,6 @@ class Evaluator:
     def finally_progress_bar(self):
         if self.progress_bar == 'rich' and hasattr(self, '_rich_task_id'):
             f_rich_progress.destroy_task(self._rich_task_id)
-            f_rich_progress.refresh()
             delattr(self, '_rich_task_id')
 
     @property
@@ -359,20 +357,23 @@ class _MetricsWrapper:
         if is_dataclass(outputs):
             outputs = dataclass_to_dict(outputs)
         for metric in self._metrics:
+            args = []
             if not isinstance(batch, dict):
-                raise RuntimeError(f"When the output of the DataLoader is of type:`{type(batch)}`, please either directly"
-                                   f" return a dict from your DataLoader or use `input_mapping` to convert it into dict type.")
+                logger.warning_once(f"The output of the DataLoader is of type:`{type(batch)}`, fastNLP will only depend on "
+                                    f"the output of model to update metric.")
+            else:
+                args.append(batch)
             if not isinstance(outputs, dict):
-                raise RuntimeError(f"When the output of your model is of type:`{type(batch)}`, please either directly"
+                raise RuntimeError(f"The output of your model is of type:`{type(batch)}`, please either directly"
                                    f" return a dict from your model or use `output_mapping` to convert it into dict type.")
             if isinstance(metric, Metric):
-                auto_param_call(metric.update, batch, outputs)
+                auto_param_call(metric.update, batch, *args)
             elif _is_torchmetrics_metric(metric):
-                auto_param_call(metric.update, batch, outputs)
+                auto_param_call(metric.update, batch, *args)
             elif _is_allennlp_metric(metric):
-                auto_param_call(metric.__call__, batch, outputs)
+                auto_param_call(metric.__call__, batch, *args)
             elif _is_paddle_metric(metric):
-                res = auto_param_call(metric.compute, batch, outputs)
+                res = auto_param_call(metric.compute, batch, *args)
                 metric.update(res)
 
     def reset(self):

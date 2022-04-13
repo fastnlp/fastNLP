@@ -7,6 +7,7 @@ from typing import Optional, Callable
 from .loop import Loop
 from fastNLP.core.log import logger
 from fastNLP.core.utils import match_and_substitute_params
+from fastNLP.core.utils.exceptions import EarlyStopException
 
 
 class TrainBatchLoop(Loop):
@@ -23,13 +24,15 @@ class TrainBatchLoop(Loop):
             try:
                 trainer.on_fetch_data_begin()
                 batch = next(dataloader)
-                batch = match_and_substitute_params(trainer.input_mapping, batch)
                 indices = get_batch_indices()
-                batch = trainer.move_data_to_device(batch)
                 trainer.on_fetch_data_end()
+                batch = match_and_substitute_params(trainer.input_mapping, batch)
+                batch = trainer.move_data_to_device(batch)
             except StopIteration:
                 break
-            except BaseException as e:  # TODO 把这里的信息写入进去
+            except EarlyStopException:  # 在 Trainer 处理 earlystop 的 exception
+                break
+            except BaseException as e:
                 if indices:
                     logger.debug(f"The following exception happens when running on samples: {indices}")
                 raise e
