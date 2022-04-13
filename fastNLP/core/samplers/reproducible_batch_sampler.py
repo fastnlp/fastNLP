@@ -4,16 +4,18 @@ __all__ = [
 ]
 
 import math
-from array import array
 from copy import deepcopy
 from typing import Dict, Union, List
 from itertools import chain
+import os
 
 import numpy as np
 
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.log import logger
+from .utils import create_array, NumConsumedSamplesArray
 from abc import abstractmethod
+from fastNLP.envs.env import FASTNLP_DEQUE_SIZE
 
 
 class ReproducibleBatchSampler:
@@ -34,6 +36,13 @@ class ReproducibleBatchSampler:
 
     @abstractmethod
     def state_dict(self):
+        """
+        由于现在的DataLoader都存在预取数据的功能，因此请参考 RandomBatchSampler 中 states 里面 num_consumed_samples_array 的实现
+            正确设置该值。其思想是记录每个 index 对应的 num_consumed_samples ,在 Trainer.save 时会根据 Trainer 中的真实 forward
+            了多少个 sample 从 num_consumed_samples_array 取出对应的 num_consumed_samples 进行存储。
+
+        :return:
+        """
         raise NotImplementedError("Each specific batch_sampler should implement its own `state_dict` method.")
 
     @abstractmethod
@@ -67,7 +76,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
         self.batch_size = batch_size
         self.drop_last = drop_last
 
-        self.data_idx = kwargs.get("data_idx", 0)
+        self.num_consumed_samples = kwargs.get("num_consumed_samples", 0)
 
         self.index_list = kwargs.get("index_list", self._iterate_sampler())
         self.need_reinitialize = kwargs.get("need_reinitialize", False)
@@ -80,36 +89,40 @@ class RandomBatchSampler(ReproducibleBatchSampler):
             # 说明是在初始化时传入的是一个 sampler，理论上对应于 dataloader 在初始化时没有 batch_size，也没有 batch_sampler 的情况；
             else:
                 _index_lst.append(idx)
-        # 64 位机器的 unsigned int 为 4 个字节，能表示的最大大小为 4294967295；
-        if len(_index_lst) > 4294967295:
-            # 注意 self.index_list 内存放的是全部数据的 index；
-            # unsigned long
-            _index_lst = array("L", _index_lst)
-        else:
-            # unsigned int
-            _index_lst = array("I", _index_lst)
+        _index_lst = create_array(len(_index_lst), _index_lst)
         return _index_lst
 
     def __iter__(self):
         if self.need_reinitialize:
             self.index_list = self._iterate_sampler()
-            self.data_idx = 0
+            self.num_consumed_samples = 0
         else:
             self.need_reinitialize = True
 
         batch = []
-        if self.data_idx:
-            index_list = self.index_list[self.data_idx:]
+        if self.num_consumed_samples:
+            index_list = self.index_list[self.num_consumed_samples:]
         else:
             index_list = self.index_list
+
+        # 记住每个 batch 对应的 consumed_samples, 需要这个原因是由于现在的 dataloader 都存在预取数据的设计，需要再结合Trainer中
+        #  batch_idx_in_epoch 才能最终确定实际消耗的数据。这个变量需要记录每次yield出去时的真实 num_consumed_samples 的数值。
+        self.num_consumed_samples_array = NumConsumedSamplesArray(buffer_size=os.environ.get(FASTNLP_DEQUE_SIZE, 30),
+                                                                  num_consumed_samples=self.num_consumed_samples)
         for idx in index_list:
             batch.append(idx)
-            self.data_idx += 1
             if len(batch) == self.batch_size:
+                self.num_consumed_samples += self.batch_size  # [16, 32, 48, 64,..., ]
+                self.num_consumed_samples_array.push(self.num_consumed_samples)
                 yield batch
                 batch = []
         if len(batch) > 0 and not self.drop_last:
+            self.num_consumed_samples += len(batch)
+            self.num_consumed_samples_array.push(self.num_consumed_samples)
             yield batch
+        # 需要重置防止边界条件问题
+        self.num_consumed_samples = 0
+        delattr(self, 'num_consumed_samples_array')
 
     def __len__(self) -> int:
         if self.drop_last:
@@ -118,7 +131,13 @@ class RandomBatchSampler(ReproducibleBatchSampler):
             return (len(self.index_list) + self.batch_size - 1) // self.batch_size
 
     def state_dict(self) -> Dict:
-        return {"index_list": deepcopy(self.index_list), "data_idx": self.data_idx, 'sampler_type': self.__class__.__name__}
+        states = {
+            "index_list": deepcopy(self.index_list),
+            "num_consumed_samples": self.num_consumed_samples,
+            'sampler_type': self.__class__.__name__
+        }
+        states['num_consumed_samples_array'] = getattr(self, 'num_consumed_samples_array', None)
+        return states
 
     def load_state_dict(self, states: Dict):
         assert states['sampler_type'] == self.__class__.__name__, f"The sampler type in checkpoint is {states['sampler_type']}," \
@@ -128,7 +147,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
         assert len(_index_list) == len(self.index_list), "The number of samples is different between the checkpoint " \
                                                           "record and current dataset."
         self.index_list = _index_list
-        self.data_idx = states["data_idx"]
+        self.num_consumed_samples = states["num_consumed_samples"]
         self.need_reinitialize = False
 
     def set_distributed(self, num_replicas, rank, pad=True):
@@ -141,10 +160,10 @@ class RandomBatchSampler(ReproducibleBatchSampler):
     @property
     def batch_idx_in_epoch(self):
         if self.drop_last:
-            return len(self.index_list) // self.batch_size - (len(self.index_list) - self.data_idx) // self.batch_size
+            return len(self.index_list) // self.batch_size - (len(self.index_list) - self.num_consumed_samples) // self.batch_size
         else:
             return (len(self.index_list) + self.batch_size - 1) // self.batch_size - \
-                   (len(self.index_list) - self.data_idx + self.batch_size - 1) // self.batch_size
+                   (len(self.index_list) - self.num_consumed_samples + self.batch_size - 1) // self.batch_size
 
 
 class BucketedBatchSampler(ReproducibleBatchSampler):
@@ -180,7 +199,6 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
         self.length = np.array(length, dtype=int)  # 按照长到短排列的序号。
         self.sorted_indices = np.argsort(self.length)[::-1]  # 按长度从高到低排序的
 
-
         self.batch_size = batch_size
         self.num_batch_per_bucket = num_batch_per_bucket
         self.shuffle = shuffle
@@ -212,13 +230,13 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
         self.rank = rank
         self.pad = pad
 
-        num_samples = (len(self.dataset)+self.num_replicas-1)//self.num_replicas*self.num_replicas if pad \
-            else len(self.dataset)
-
-        if self.drop_last:
-            assert self.num_replicas*self.batch_size<=num_samples, "The number of samples should be greater " \
-                                                                    "than the number of replicates multiplied " \
-                                                                    "with batch_size when drop_last=True."
+        # num_samples = (len(self.dataset)+self.num_replicas-1)//self.num_replicas*self.num_replicas if pad \
+        #     else len(self.dataset)
+        #
+        # if self.drop_last:
+        #     assert self.num_replicas*self.batch_size<=num_samples, "The number of samples should be greater " \
+        #                                                             "than the number of replicates multiplied " \
+        #                                                             "with batch_size when drop_last=True."
 
         return self
 
@@ -243,7 +261,7 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
         return math.ceil((len(self.dataset) - num_consumed_samples) / self.num_replicas) if \
             self.pad else math.floor(((len(self.dataset) - num_consumed_samples) / self.num_replicas))
 
-    def __len__(self):
+    def __len__(self)->int:
         """
         返回当前 sampler 还会返回多少个 batch 的数据
 
@@ -309,11 +327,15 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
         if self.drop_last and len(batches) >= 1 and len(batches[-1]) < self.batch_size:
             batches = batches[:-1]
 
+        self.num_consumed_samples_array = NumConsumedSamplesArray(buffer_size=os.environ.get(FASTNLP_DEQUE_SIZE, 30),
+                                                                  num_consumed_samples=self.num_consumed_samples)
         for batch in batches:
             self.num_consumed_samples += self.num_replicas * len(batch)
+            self.num_consumed_samples_array.push(self.num_consumed_samples)
             yield list(map(int, batch))
         self.during_iter = False
         self.num_consumed_samples = 0
+        delattr(self, 'num_consumed_samples_array')
         self.old_batch_size = self.batch_size
         self.old_num_batch_per_bucket = self.num_batch_per_bucket
         self.old_num_replicas = self.num_replicas
@@ -376,10 +398,12 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
             'num_batch_per_bucket': self.num_batch_per_bucket,
             'num_replicas': self.num_replicas
         }
+
+        states['num_consumed_samples_array'] = getattr(self, 'num_consumed_samples_array', None)
         return states
 
     def load_state_dict(self, states: Dict):
-        # 如果 self.during_iter 是 True，那么 data_idx 一定是 0；
+        # 如果 self.during_iter 是 True，那么 num_consumed_samples 一定是 0；
         assert self.during_iter is False, "Cannot call load_state_dict() when it is " \
                                           "during an unfinished iteration."
 

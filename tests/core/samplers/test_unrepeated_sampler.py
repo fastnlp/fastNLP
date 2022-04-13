@@ -25,7 +25,7 @@ class TestUnrepeatedSampler:
         indexes = set(sampler)
         assert indexes==set(range(num_of_data))
 
-    @pytest.mark.parametrize('num_replica', [2, 3])
+    @pytest.mark.parametrize('num_replicas', [2, 3])
     @pytest.mark.parametrize('num_of_data', [2, 3, 4, 100])
     @pytest.mark.parametrize('shuffle', [False, True])
     def test_multi(self, num_replica, num_of_data, shuffle):
@@ -50,7 +50,7 @@ class TestUnrepeatedSortedSampler:
         indexes = list(sampler)
         assert indexes==list(range(num_of_data-1, -1, -1))
 
-    @pytest.mark.parametrize('num_replica', [2, 3])
+    @pytest.mark.parametrize('num_replicas', [2, 3])
     @pytest.mark.parametrize('num_of_data', [2, 3, 4, 100])
     def test_multi(self, num_replica, num_of_data):
         data = DatasetWithVaryLength(num_of_data=num_of_data)
@@ -81,7 +81,7 @@ class TestUnrepeatedSequentialSampler:
         indexes = list(sampler)
         assert indexes==list(range(num_of_data))
 
-    @pytest.mark.parametrize('num_replica', [2, 3])
+    @pytest.mark.parametrize('num_replicas', [2, 3])
     @pytest.mark.parametrize('num_of_data', [2, 3, 4, 100])
     def test_multi(self, num_replica, num_of_data):
         data = DatasetWithVaryLength(num_of_data=num_of_data)

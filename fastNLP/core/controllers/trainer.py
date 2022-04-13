@@ -105,8 +105,8 @@ class Trainer(TrainerEventTrigger):
          如果 batch 是一个 `Dict`，那么我们会把 batch 中同样在 output_mapping 中的 key 修改为 output_mapping 的对应 key 的 value；
          如果 batch 是一个 `dataclass`，那么我们会先将该 dataclass 转换为一个 Dict，然后再进行上述转换；
         :param model_wo_auto_param_call: 是否关闭在训练时调用我们的 auto_param_call 来自动匹配 batch 和 forward 函数的参数的行为；
-         如果该值为 True，并且当 batch 为字典时，我们会根据 forward 所需要的参数从 batch 中提取对应的对象，传入到 forward 函数中；如果该值
-         为 False，那么我们会将 batch 直接透传给 forward 函数。注意上述逻辑同样应用于 `train_step`, `validate_step` 和 `test_step`；
+         如果该值为 False，并且当 batch 为字典时，我们会根据 forward 所需要的参数从 batch 中提取对应的对象，传入到 forward 函数中；如果该值
+         为 True，那么我们会将 batch 直接透传给模型。注意该参数应用于 `train_step`, `validate_step` 和 `test_step`；
         :param accumulation_steps: 梯度累积的步数，表示每隔几个 batch 优化器迭代一次；默认为 1；
         :param fp16: 是否开启混合精度训练；默认为 False；
         :param monitor: 当存在 validate_dataloaders 时，默认的 monitor metric 的名字。传入的 callback 如果有 monitor 参数且没有
@@ -325,6 +325,8 @@ class Trainer(TrainerEventTrigger):
 
         try:
             while self.cur_epoch_idx < self.n_epochs:
+                # 这个是防止在 Trainer.load 之后还没结束当前 epoch 又继续 save
+                self.start_batch_idx_in_epoch = self.trainer_state.batch_idx_in_epoch
                 self.driver.set_model_mode("train")
                 self.on_train_epoch_begin()
                 self.driver.set_sampler_epoch(self.dataloader, self.cur_epoch_idx)
@@ -598,7 +600,9 @@ class Trainer(TrainerEventTrigger):
         # 1. callback states 和 每一个callback的具体 callback 函数的 filter 的状态；
         # 2. trainer_state；
         states = {"callback_states": self.on_save_checkpoint(),
-                  "trainer_state": self.trainer_state.state_dict()}
+                  "trainer_state": self.trainer_state.state_dict(),
+                  'num_consumed_batches': self.batch_idx_in_epoch - getattr(self, 'start_batch_idx_in_epoch', 0)
+                  }
 
         # 3. validate filter state；
         if self.evaluator is not None:
@@ -675,9 +679,13 @@ class Trainer(TrainerEventTrigger):
         # 这里的原则就是应当使得    '还会产生的batch数量' + 'batch_idx_in_epoch' = '原来不断点训练的batch的总数'。其中由于
         #    '还会产生的batch数量' 是由还剩多少 sample 决定的，因此只能通过调整 'batch_idx_in_epoch' 使得等式成立
         self.trainer_state.batch_idx_in_epoch = states.pop('batch_idx_in_epoch')
+        self.trainer_state.global_forward_batches = self.num_batches_per_epoch * self.cur_epoch_idx + \
+                                                    self.batch_idx_in_epoch
+        # 这个是防止用户在 Trainer.load 之后还没结束当前 epoch 又继续 save
+        self.start_batch_idx_in_epoch = self.trainer_state.batch_idx_in_epoch
 
         # 5. 恢复所有 callback 的状态；
-        self.train_stepeckpoint(states["callback_states"])
+        self.on_load_checkpoint(states["callback_states"])
 
         self.driver.barrier()
 
