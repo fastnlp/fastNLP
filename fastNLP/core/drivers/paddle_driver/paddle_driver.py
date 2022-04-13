@@ -191,6 +191,8 @@ class PaddleDriver(Driver):
         :return:
         """
         model = self.unwrap_model()
+        if isinstance(filepath, Path):
+            filepath = str(filepath)
         if only_state_dict:
             states = {name: param.cpu().detach().clone() for name, param in model.state_dict().items()}
             paddle.save(states, filepath)
@@ -211,6 +213,8 @@ class PaddleDriver(Driver):
         :return:
         """
         model = self.unwrap_model()
+        if isinstance(filepath, Path):
+            filepath = str(filepath)
         # paddle 中，通过 paddle.jit.save 函数保存的模型也可以通过 paddle.load 加载为相应的 state dict
         # 但是此时对输入的 path 有要求，必须是 dir/filename 的形式，否则会报错。
         dirname, filename = os.path.split(filepath)
@@ -274,11 +278,11 @@ class PaddleDriver(Driver):
 
         logger.debug("Save optimizer state dict.")
         states["optimizers_state_dict"] = optimizers_state_dict
-        paddle.save(states, Path(folder).joinpath(FASTNLP_CHECKPOINT_FILENAME))
+        paddle.save(states, str(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME)))
 
     def load(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
         
-        states = paddle.load(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME))
+        states = paddle.load(str(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME)))
 
         # 1. 加载 optimizers 的状态；
         optimizers_state_dict = states["optimizers_state_dict"]
@@ -432,6 +436,16 @@ class PaddleDriver(Driver):
                 if hasattr(dataloader.batch_sampler.sampler, "shuffle"):
                     res.shuffle = dataloader.batch_sampler.sampler.shuffle
                 elif isinstance(dataloader.batch_sampler.sampler, RandomSampler):
+                    res.shuffle = True
+                else:
+                    res.shuffle = False
+            # RandomBatchSampler 的情况
+            elif hasattr(dataloader.batch_sampler, "batch_sampler"):
+                batch_sampler = dataloader.batch_sampler.batch_sampler
+                res.sampler = batch_sampler.sampler
+                if hasattr(batch_sampler.sampler, "shuffle"):
+                    res.shuffle = dataloader.batch_sampler.sampler.shuffle
+                elif isinstance(batch_sampler.sampler, RandomSampler):
                     res.shuffle = True
                 else:
                     res.shuffle = False

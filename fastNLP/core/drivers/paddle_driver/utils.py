@@ -4,12 +4,14 @@ import struct
 import random
 import inspect
 import numpy as np
+from copy import deepcopy
 from contextlib import ExitStack, closing
 from enum import IntEnum
 from typing import Dict, Optional, Union
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.core.utils import get_paddle_device_id, auto_param_call, paddle_to
+from fastNLP.core.samplers import RandomSampler
 from fastNLP.envs.env import FASTNLP_GLOBAL_SEED, FASTNLP_SEED_WORKERS, USER_CUDA_VISIBLE_DEVICES
 from fastNLP.core.log import logger
 
@@ -18,7 +20,7 @@ if _NEED_IMPORT_PADDLE:
     import paddle
     from paddle import nn
     from paddle.nn import Layer
-    from paddle.io import DataLoader, BatchSampler
+    from paddle.io import DataLoader, BatchSampler, Dataset
     from paddle.amp import auto_cast, GradScaler
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Layer
@@ -206,7 +208,6 @@ class DummyGradScaler:
     def state_dict(self):
         return {}
 
-
 def _build_fp16_env(dummy=False):
     if dummy:
         auto_cast = ExitStack
@@ -260,7 +261,7 @@ def get_device_from_visible(device: Union[str, int], output_type=int):
     """
     在有 CUDA_VISIBLE_DEVICES 的情况下，获取对应的设备。
     如 CUDA_VISIBLE_DEVICES=2,3 ，device=3 ，则返回1。
-    :param devices: 未转化的设备名
+    :param device: 未转化的设备名
     :param output_type: 返回值的类型
     :return: 转化后的设备id
     """
@@ -365,13 +366,8 @@ def replace_sampler(dataloader, new_sampler):
     """
     使用 `new_sampler` 重新构建一个 BatchSampler，并替换到 `dataloader` 中
     """
-    new_batch_sampler = BatchSampler(
-        dataset=dataloader.batch_sampler.dataset,
-        sampler=new_sampler,
-        shuffle=isinstance(dataloader.batch_sampler.sampler, paddle.io.RandomSampler),
-        batch_size=dataloader.batch_sampler.batch_size,
-        drop_last=dataloader.batch_sampler.drop_last
-    )
+    new_batch_sampler = deepcopy(dataloader.batch_sampler)
+    new_batch_sampler.sampler = new_sampler
     return replace_batch_sampler(dataloader, new_batch_sampler)
 
 def optimizer_state_to_device(state, device):
