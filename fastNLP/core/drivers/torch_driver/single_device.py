@@ -107,14 +107,6 @@ class TorchSingleDriver(TorchDriver):
         else:
             return self._train_step(batch)
 
-    def backward(self, loss):
-        self.grad_scaler.scale(loss).backward()
-
-    def step(self):
-        for optimizer in self.optimizers:
-            self.grad_scaler.step(optimizer)
-            self.grad_scaler.update()
-
     def validate_step(self, batch) -> Dict:
         # 因为我们 Tester 的逻辑就是将所有的 metric 传给 tester，然后 tester 控制具体 metric 的 update 和 compute；因此不管用户是否
         # 实现 validate_step 函数，其都应该返回一个字典，具体使用哪些东西则是在 validate_batch_loop 中每一个具体的 metric 自己去拿的；

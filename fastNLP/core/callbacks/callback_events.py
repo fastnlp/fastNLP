@@ -92,8 +92,10 @@ class Events(EventEnum):
     ON_LOAD_CHECKPOINT = "on_load_checkpoint"
     ON_BEFORE_BACKWARD = "on_before_backward"
     ON_AFTER_BACKWARD = "on_after_backward"
-    ON_BEFORE_OPTIMIZER_STEP = "on_before_optimizer_step"
+    ON_BEFORE_OPTIMIZERS_STEP = "on_before_optimizers_step"
+    ON_AFTER_OPTIMIZERS_STEP = "on_after_optimizers_step"
     ON_BEFORE_ZERO_GRAD = "on_before_zero_grad"
+    ON_AFTER_ZERO_GRAD = "on_after_zero_grad"
     ON_VALIDATE_BEGIN = "on_validate_begin"
     ON_VALIDATE_END = "on_validate_end"
 

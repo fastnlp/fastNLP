@@ -530,14 +530,6 @@ class TorchDDPDriver(TorchDriver):
         else:
             raise ValueError("Parameter `dist_sampler` can only be one of three values: ('dist', 'unrepeatdist', None).")
 
-    def backward(self, loss):
-        self.grad_scaler.scale(loss).backward()
-
-    def step(self):
-        for optimizer in self.optimizers:
-            self.grad_scaler.step(optimizer)
-            self.grad_scaler.update()
-
     def is_global_zero(self):
         return self.global_rank == 0
 

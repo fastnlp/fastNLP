@@ -72,6 +72,14 @@ class TorchDriver(Driver):
                             p.grad.requires_grad_(False)
                         p.grad.zero_()
 
+    def backward(self, loss):
+        self.grad_scaler.scale(loss).backward()
+
+    def step(self):
+        for optimizer in self.optimizers:
+            self.grad_scaler.step(optimizer)
+            self.grad_scaler.update()
+
     @staticmethod
     def _check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
         if is_train:
