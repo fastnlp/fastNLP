@@ -197,7 +197,7 @@ class _MultiCollator:
                 collator.set_input(*field_names)
                 flag = False
         if flag:
-            warnings.warn("AutoCollator is remove, set_input is unavailable!!")
+            warnings.warn("AutoCollator is removed, set_input is unavailable!!")
         return self
 
 

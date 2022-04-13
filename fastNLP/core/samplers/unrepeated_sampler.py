@@ -105,8 +105,8 @@ class UnrepeatedSortedSampler(UnrepeatedRandomSampler):
         :param kwargs: fastNLP 保留使用
         """
         super().__init__(dataset=dataset, shuffle=False, seed=0, **kwargs)
-        if isinstance(dataset, DataSet):
-            length = dataset.get_field(length)
+        if isinstance(dataset, DataSet) and isinstance(length, str):
+            length = dataset.get_field(length).content
             if not isinstance(length[0], int):
                 length = list(map(len, length))
         else:

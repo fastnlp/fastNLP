@@ -788,13 +788,14 @@ class DataSet:
 
     def set_pad_val(self, *field_names, val: Optional[int] = 0) -> None:
         """
-        设置每个field_name的padding值，默认为0，只有当Auto_collate存在时该方法有效
+        设置每个field_name的padding值，默认为0，只有当AutoCollator存在时该方法有效
         当val=None时，意味着给定的field_names都不需要尝试padding
 
         :param field_names: dataset存在的field_name
-        :param val: 默认为0
+        :param val: 默认为0。如果为 None ，则为不对 field 进行 padding 。
         :return:
         """
+        # TODO 需要去重复
         for field_name in field_names:
             self.collate_fns.set_pad_val(field_name, val=val)
 
@@ -805,6 +806,7 @@ class DataSet:
         :param field_names:
         :return:
         """
+        #
         self.collate_fns.set_input(*field_names)
 
     def get_collator(self) -> _MultiCollator:

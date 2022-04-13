@@ -677,7 +677,7 @@ class Trainer(TrainerEventTrigger):
         self.trainer_state.batch_idx_in_epoch = states.pop('batch_idx_in_epoch')
 
         # 5. 恢复所有 callback 的状态；
-        self.on_load_checkpoint(states["callback_states"])
+        self.train_stepeckpoint(states["callback_states"])
 
         self.driver.barrier()
 

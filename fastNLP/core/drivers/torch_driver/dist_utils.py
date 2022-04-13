@@ -3,28 +3,20 @@ import pickle
 _pickler = pickle.Pickler
 _unpickler = pickle.Unpickler
 from typing import Any, List
+
 from fastNLP.envs.imports import _TORCH_GREATER_EQUAL_1_8
-
-
+from fastNLP.core.utils.torch_utils import DEFAULT_TORCH_GROUP
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 if _NEED_IMPORT_TORCH:
     import torch
     from torch import distributed as dist
-    try:
-        from torch._C._distributed_c10d import ProcessGroupMPI
-    except ImportError:
-        _MPI_AVAILABLE = False
+    if _TORCH_GREATER_EQUAL_1_8:
+        try:
+            from torch._C._distributed_c10d import ProcessGroupGloo
+            from torch._C._distributed_c10d import _ProcessGroupWrapper
+        except ImportError:
+            pass
 
-    try:
-        from torch._C._distributed_c10d import ProcessGroupNCCL
-    except ImportError:
-        _NCCL_AVAILABLE = False
-
-    try:
-        from torch._C._distributed_c10d import ProcessGroupGloo
-        from torch._C._distributed_c10d import _ProcessGroupWrapper
-    except ImportError:
-        _GLOO_AVAILABLE = False
 
 from fastNLP.core.utils import apply_to_collection
 
@@ -42,7 +34,7 @@ def _validate_output_list_for_rank(my_rank, dst, gather_list):
         )
 
 
-def fastnlp_torch_gather_object(obj, object_gather_list=None, dst=0, group=None):
+def fastnlp_torch_gather_object(obj, object_gather_list=None, dst=0, group=DEFAULT_TORCH_GROUP):
     """
     从其它 rank gather 东西到 dst rank 。
 
@@ -91,6 +83,9 @@ def fastnlp_torch_gather_object(obj, object_gather_list=None, dst=0, group=None)
         >>> output
         ['foo', 12, {1: 2}]
     """
+    if group is None:
+        group = DEFAULT_TORCH_GROUP
+
     if dist.distributed_c10d._rank_not_in_group(group):
         return
 
@@ -193,7 +188,7 @@ def _to_device(tensor, device):
     return tensor.contiguous().to(device)
 
 
-def fastnlp_torch_all_gather(obj: Any, device=None, group=None) ->List:
+def fastnlp_torch_all_gather(obj: Any, device=None, group=DEFAULT_TORCH_GROUP) ->List:
     """
     实现任何类型的数据都使用该接口可以进行 all_gather 操作。对于非 tensor 类型的数据，通过 pickle 序列化再反序列化的方式进行传输。
 
@@ -217,7 +212,8 @@ def fastnlp_torch_all_gather(obj: Any, device=None, group=None) ->List:
     :param group:
     :return: 返回的结果是 [obj0, obj1, ...]，其中 obj_i 即为第 i 个 rank 上的 obj 。
     """
-    # # 首先将所有的都移动到cpu上并且连续，防止有 pickle 出问题
+    if group is None:
+        group = DEFAULT_TORCH_GROUP
     if isinstance(obj, torch.Tensor):
         objs = [torch.zeros_like(obj) for _ in range(dist.get_world_size(group))]
         dist.all_gather(objs, obj, group=group)
@@ -232,7 +228,7 @@ def fastnlp_torch_all_gather(obj: Any, device=None, group=None) ->List:
     return objs
 
 
-def fastnlp_torch_broadcast_object(obj, src, device=None, group=None):
+def fastnlp_torch_broadcast_object(obj, src, device=None, group=DEFAULT_TORCH_GROUP):
     """
     将 src 上的 obj 对象广播到其它 rank 上。
 
@@ -242,6 +238,8 @@ def fastnlp_torch_broadcast_object(obj, src, device=None, group=None):
     :param group:
     :return:
     """
+    if group is None:
+        group = DEFAULT_TORCH_GROUP
     cur_rank = dist.get_rank(group)
     if cur_rank == src:
         # 如果有 tensor 全部移动到 cpu 上，方便 pickle , 不然 unpickle 的时候可能会 pickle 到发送过来的卡那里
@@ -339,15 +337,18 @@ def all_gather_object(object_list, obj, group=None):
         return
 
     input_tensor, local_size = _object_to_tensor(obj)
-    current_device = torch.device("cpu")
-    is_nccl_backend = _check_for_nccl_backend(group)
-    if is_nccl_backend:
-        # See note about using torch.cuda.current_device() here in docstring.
-        # We cannot simply use my_rank since rank == device is not necessarily
-        # true.
-        current_device = torch.device("cuda", torch.cuda.current_device())
-        input_tensor = input_tensor.to(current_device)
-        local_size = local_size.to(current_device)
+    if _TORCH_GREATER_EQUAL_1_8:
+        current_device = torch.device("cpu")
+        is_nccl_backend = _check_for_nccl_backend(group)
+        if is_nccl_backend:
+            # See note about using torch.cuda.current_device() here in docstring.
+            # We cannot simply use my_rank since rank == device is not necessarily
+            # true.
+            current_device = torch.device("cuda", torch.cuda.current_device())
+            input_tensor = input_tensor.to(current_device)
+            local_size = local_size.to(current_device)
+    else:
+        current_device = torch.cuda.current_device()
     # Gather all local sizes. This is so that we can find the max size, and index
     # until the correct size when deserializing the tensors.
     group_size = dist.get_world_size(group=group)
