@@ -184,9 +184,19 @@ class Callback:
         """
         pass
 
-    def on_before_optimizer_step(self, trainer, optimizers):
+    def on_before_optimizers_step(self, trainer, optimizers):
         """
         在进行 optimizer 优化进行前调用。该接口不一定每次前向计算都会触发，实际调用会受到 accumulation_steps 的影响。
+
+        :param trainer:
+        :param optimizers: 优化器，内容为在 Trainer 初始化时传入的值。
+        :return:
+        """
+        pass
+
+    def on_after_optimizers_step(self, trainer, optimizers):
+        """
+        在进行 optimizer 优化进行后调用。该接口不一定每次前向计算都会触发，实际调用会受到 accumulation_steps 的影响。
 
         :param trainer:
         :param optimizers: 优化器，内容为在 Trainer 初始化时传入的值。
@@ -197,6 +207,16 @@ class Callback:
     def on_before_zero_grad(self, trainer, optimizers):
         """
         在进行模型梯度置零前调用。该接口不一定每次前向计算都会触发，实际调用会受到 accumulation_steps 的影响。
+
+        :param trainer:
+        :param optimizers: 优化器，内容为在 Trainer 初始化时传入的值。
+        :return:
+        """
+        pass
+
+    def on_after_zero_grad(self, trainer, optimizers):
+        """
+        在进行模型梯度置零后调用。该接口不一定每次前向计算都会触发，实际调用会受到 accumulation_steps 的影响。
 
         :param trainer:
         :param optimizers: 优化器，内容为在 Trainer 初始化时传入的值。

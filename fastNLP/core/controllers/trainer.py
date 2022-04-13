@@ -137,6 +137,7 @@ class Trainer(TrainerEventTrigger):
         else:
             self.driver_name = driver.__class__.__name__
         self.device = device
+        self.optimizers = optimizers
         self.fp16 = fp16
         self.input_mapping = input_mapping
         self.output_mapping = output_mapping
@@ -442,9 +443,11 @@ class Trainer(TrainerEventTrigger):
 
         2. 函数作用
             这一函数的作用在于检查用户定制的 batch_step_fn / TrainBatchLoop 是否能够正确地调用 callback 函数，更准确地说，当用户实际
-            定制了 ("on_before_backward", "on_after_backward", "on_before_optimizer_step", "on_before_zero_grad") /
+            定制了 ("on_before_backward", "on_after_backward", "on_before_optimizers_step", "on_after_optimizers_step", "on_before_zero_grad",
+            "on_after_zero_grad") /
             ("on_fetch_data_begin", "on_fetch_data_end", "on_train_batch_begin", "on_train_batch_end",
-             "on_before_backward", "on_after_backward", "on_before_optimizer_step", "on_before_zero_grad")
+             "on_before_backward", "on_after_backward", "on_before_optimizers_step", "on_after_optimizers_step", "on_before_zero_grad",
+             "on_after_zero_grad")
             这些 callabck_fn 后，如果其同样也定制了 batch_step_fn / TrainBatchLoop，那么其有可能忘记了在自己的 batch_step_fn 中
             上述的这些 callback 函数，而这个函数的作用就在于检测用户是否产生了这一行为；
 
@@ -454,10 +457,12 @@ class Trainer(TrainerEventTrigger):
          'batch_step_fn'，为 False 时表示检测 'TrainBatchLoop'；
         """
         if check_mode:
-            callbacks = ("on_before_backward", "on_after_backward", "on_before_optimizer_step", "on_before_zero_grad")
+            callbacks = ("on_before_backward", "on_after_backward", "on_before_optimizers_step", "on_after_optimizers_step",
+                         "on_before_zero_grad", "on_after_zero_grad")
         else:
             callbacks = ("on_fetch_data_begin", "on_fetch_data_end", "on_train_batch_begin", "on_train_batch_end",
-                         "on_before_backward", "on_after_backward", "on_before_optimizer_step", "on_before_zero_grad")
+                         "on_before_backward", "on_after_backward", "on_before_optimizers_step", "on_after_optimizers_step",
+                         "on_before_zero_grad", "on_after_zero_grad")
         _not_called_callback_fns = []
         for each_callback_fn in callbacks:
             if each_callback_fn in self.callback_manager.callback_fns:
@@ -707,13 +712,15 @@ class Trainer(TrainerEventTrigger):
 
     def zero_grad(self):
         if (self.global_forward_batches + 1) % self.accumulation_steps == 0:
-            self.on_before_zero_grad(self.driver.optimizers)
+            self.on_before_zero_grad(self.optimizers)
             self.driver.zero_grad(self.set_grad_to_none)
+            self.on_after_zero_grad(self.optimizers)
 
     def step(self):
         if (self.global_forward_batches + 1) % self.accumulation_steps == 0:
-            self.on_before_optimizer_step(self.driver.optimizers)
+            self.on_before_optimizers_step(self.optimizers)
             self.driver.step()
+            self.on_after_optimizers_step(self.optimizers)
 
     def move_data_to_device(self, batch):
         return self.driver.move_data_to_device(batch)
@@ -820,6 +827,8 @@ class Trainer(TrainerEventTrigger):
     @property
     def data_device(self):
         return self.driver.data_device
+
+
 
 
 

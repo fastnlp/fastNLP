@@ -46,11 +46,14 @@ def get_paddle_device_id(device: Union[str, int]):
     device = device.lower()
     if device == "cpu":
         raise ValueError("Cannot get device id from `cpu`.")
+    elif device == "gpu":
+        return 0
 
     match_res = re.match(r"gpu:\d+", device)
     if not match_res:
         raise ValueError(
-            "The device must be a string which is like 'cpu', 'gpu', 'gpu:x'"
+            "The device must be a string which is like 'cpu', 'gpu', 'gpu:x', "
+            f"not '{device}'"
         )
     device_id = device.split(':', 1)[1]
     device_id = int(device_id)

@@ -3,6 +3,7 @@ from typing import Callable
 import importlib
 from pkg_resources import DistributionNotFound
 from packaging.version import Version
+import subprocess
 import pkg_resources
 
 
@@ -46,3 +47,15 @@ def _compare_version(package: str, op: Callable, version: str, use_base_version:
     if use_base_version:
         pkg_version = Version(pkg_version.base_version)
     return op(pkg_version, Version(version))
+
+def get_gpu_count():
+    """
+    利用命令行获取gpu数目的函数
+    :return: gpu数目，如果没有显卡设备则为-1
+    """
+    try:
+        lines = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used', '--format=csv'])
+        # 经分割后还要除去头部和尾部的换行符
+        return len(lines.split(b"\n")) - 2
+    except:
+        return -1
