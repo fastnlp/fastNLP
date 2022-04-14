@@ -118,11 +118,11 @@ class PaddleFleetDriver(PaddleDriver):
                     " call `forward` function instead of `train_step` and you should note that.")
             self._train_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
 
-            if hasattr(model, "validate_step"):
+            if hasattr(model, "evaluate_step"):
                 logger.warning(
                     "Notice your model is a `paddle.DataParallel` model. And your "
-                    "model also implements the `validate_step` method, which we can not call actually, "
-                    "we will call `forward` function instead of `validate_step` and you should note that.")
+                    "model also implements the `evaluate_step` method, which we can not call actually, "
+                    "we will call `forward` function instead of `evaluate_step` and you should note that.")
             self._validate_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
 
             if hasattr(model, "test_step"):

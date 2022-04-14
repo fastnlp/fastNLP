@@ -20,7 +20,7 @@ class TrainBatchLoop(Loop):
             else lambda *args, **kwargs: None
         dataloader = iter(dataloader)
         indices = None
-        while True:
+        while trainer.batch_idx_in_epoch<=trainer.num_batches_per_epoch:
             try:
                 trainer.on_fetch_data_begin()
                 batch = next(dataloader)
@@ -30,10 +30,8 @@ class TrainBatchLoop(Loop):
                 batch = trainer.move_data_to_device(batch)
             except StopIteration:
                 break
-            except EarlyStopException:  # 在 Trainer 处理 earlystop 的 exception
-                break
             except BaseException as e:
-                if indices:
+                if indices and not isinstance(e, EarlyStopException):
                     logger.debug(f"The following exception happens when running on samples: {indices}")
                 raise e
 

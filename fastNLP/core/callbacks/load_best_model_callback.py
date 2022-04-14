@@ -21,8 +21,9 @@ class LoadBestModelCallback(HasMonitorCallback):
         """
         保存最佳的 monitor 值最佳的模型，并在训练结束的时候重新加载模型。仅在训练正常结束的时候才能加载最好的模型。
 
-        :param str monitor: 监控的 metric 值。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为
-            evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果。
+        :param str monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+            的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
+            果(字典类型)，返回一个 float 值作为 monitor 的结果。
         :param larger_better: 该 metric 值是否是越大越好。
         :param save_folder: 保存的文件夹，如果为空，则保存在内存中。不为空，则保存一份权重到文件中，当为多机训练，且本值不为空时，请确保
             不同的机器均可访问当该路径。当 model_save_fn 不为 None 时该值一定不能为空。

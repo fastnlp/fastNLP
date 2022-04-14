@@ -4,7 +4,7 @@ import __main__
 import socket
 import numpy as np
 from time import sleep
-from typing import List, Optional, Union, Dict
+from typing import List, Optional, Union, Dict, Tuple, Callable
 from functools import partial
 
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
@@ -21,8 +21,6 @@ __all__ = [
 from .torch_driver import TorchDriver
 from fastNLP.core.drivers.torch_driver.utils import (
     _DDPWrappingModel,
-    ForwardState,
-    _MODE_PARAMETER,
     reset_seed,
     replace_sampler,
     replace_batch_sampler
@@ -158,10 +156,10 @@ class TorchDDPDriver(TorchDriver):
           ————————————————————————————————————————————————————————————————————————————————————————————————————————
 
             3. _DDPWrappingModel 的作用；
-            因为我们即需要调用模型的 `train_step`、`validate_step`、`test_step` 方法，又需要通过 `DistributedDataParallel` 的
+            因为我们即需要调用模型的 `train_step`、`evaluate_step`、`test_step` 方法，又需要通过 `DistributedDataParallel` 的
              forward 函数来帮助我们同步各个设备上的梯度，因此我们需要先将模型单独包裹一层，然后在 forward 的时候，其先经过 `DistributedDataParallel`
              的 forward 方法，然后再经过 `_DDPWrappingModel` 的 forward 方法，我们会在该 forward 函数中进行判断，确定调用的是模型自己的
-             forward 函数，还是 `train_step`、`validate_step`、`test_step` 方法。
+             forward 函数，还是 `train_step`、`evaluate_step`、`test_step` 方法。
 
             4. 当某一个进程出现 exception 后，`TorchDDPDriver` 的处理；
 
@@ -204,37 +202,6 @@ class TorchDDPDriver(TorchDriver):
             #  我们就直接将 model_device 置为 None；
             self.model_device = None
 
-            def _running_fn_(batch, step_fn, signature_fn, wo_auto_param_call):
-                if isinstance(batch, Dict) and not wo_auto_param_call:
-                    return auto_param_call(step_fn, batch, signature_fn=signature_fn)
-                else:
-                    return step_fn(batch)
-
-            model = model.module
-            if hasattr(model, "train_step"):
-                logger.warning(
-                    "Notice your model is a `DistributedDataParallel` model. And your "
-                    "model also implements the `train_step` method, which we can not call actually, we will"
-                    " call `forward` function instead of `train_step` and you should note that.")
-            self._train_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
-            # self._train_signature_fn = model.forward
-
-            if hasattr(model, "validate_step"):
-                logger.warning(
-                    "Notice your model is a `DistributedDataParallel` model. And your "
-                    "model also implements the `validate_step` method, which we can not call actually, "
-                    "we will call `forward` function instead of `validate_step` and you should note that.")
-            self._validate_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
-            # self._validate_signature_fn = model.forward
-
-            if hasattr(model, "test_step"):
-                logger.warning(
-                    "Notice your model is a `DistributedDataParallel` model. And your "
-                    "model also implements the `test_step` method, which we can not call actually, we will"
-                    " call `forward` function instead of `test_step` and you should note that.")
-            self._test_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
-            # self._test_signature_fn = model.forward
-
         # 当用户自己在外面初始化 DDP 时我们会将 model_device 置为 None，这是用户可以通过 `data_device` 将对应的数据移到指定的机器上;
         self._data_device = kwargs.get("data_device", None)
         if isinstance(self._data_device, int):
@@ -253,7 +220,6 @@ class TorchDDPDriver(TorchDriver):
         # world_size 表示的就是全局的显卡的数量；
         self.world_size = None  # int(os.environ.get("WORLD_SIZE"))  len(self.parallel_device)
         self.global_rank = 0
-        self._configured = False  # 防止重复调用 configure_ddp() 函数使用的
 
         self._ddp_kwargs = kwargs.get("torch_ddp_kwargs", {})
         check_user_specific_params(self._ddp_kwargs, DistributedDataParallel.__init__)
@@ -268,8 +234,8 @@ class TorchDDPDriver(TorchDriver):
             os.makedirs(name=self.output_from_new_proc, exist_ok=True)
             self.output_from_new_proc = os.path.abspath(self.output_from_new_proc)
 
-        # 设置这一参数是因为 evaluator 中也会进行 setup 操作，但是显然是不需要的也不应该的；
-        self._has_setup = False
+        self._has_setup = False # 设置这一参数是因为 evaluator 中也会进行 setup 操作，但是显然是不需要的也不应该的；
+        self._has_ddpwrapped = False  # 判断传入的模型是否经过 _has_ddpwrapped 包裹；
 
     def setup(self):
         if self._has_setup:
@@ -341,24 +307,16 @@ class TorchDDPDriver(TorchDriver):
         self._pids = self.tensor_to_numeric(self._pids)
 
     def configure_ddp(self):
-        if not self._configured and not isinstance(self.model, DistributedDataParallel):
+        if not isinstance(self.model, DistributedDataParallel):
             self.model = DistributedDataParallel(
                 # 注意这里的 self.model_device 是 `torch.device` type，因此 self.model_device.index；
                 _DDPWrappingModel(self.model), device_ids=[self.model_device.index],
                 **self._ddp_kwargs
             )
-
-            self._train_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TRAIN}, wo_auto_param_call=self.wo_auto_param_call)
-            self._validate_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.VALIDATE}, wo_auto_param_call=self.wo_auto_param_call)
-            self._test_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TEST}, wo_auto_param_call=self.wo_auto_param_call)
-
-        self._configured = True
+            self._has_ddpwrapped = True
 
     def open_subprocess(self):
         if self.local_rank == 0:
-            # self._consensus_file = Path(tempfile.mkstemp()[1])
-            # self._consensus_file.unlink()
-
             # Script called as `python a/b/c.py`
             if __main__.__spec__ is None:  # pragma: no-cover
                 # pull out the commands used to run the script and resolve the abs file path
@@ -432,18 +390,39 @@ class TorchDDPDriver(TorchDriver):
             return self._data_device
         return self.model_device
 
-    def train_step(self, batch):
-        # 注意这里的 self.model 已经是 'fastNLP.drivers.utils._DDPWrappingModel'；
-        # return self.model(batch, **{_MODE_PARAMETER: ForwardState.TRAIN})
-        return self._train_step(batch)
+    def model_call(self, batch, fn: Callable, signature_fn: Optional[Callable]) -> Dict:
+        if self._has_ddpwrapped:
+            return self.model(batch, fastnlp_fn=fn, fastnlp_signature_fn=signature_fn,
+                              wo_auto_param_call=self.wo_auto_param_call)
+        else:
+            if isinstance(batch, Dict) and not self.wo_auto_param_call:
+                return auto_param_call(fn, batch, signature_fn=signature_fn)
+            else:
+                return fn(batch)
 
-    def validate_step(self, batch):
-        # return self.model(batch, **{_MODE_PARAMETER: ForwardState.VALIDATE})
-        return self._validate_step(batch)
+    def get_model_call_fn(self, fn: str) -> Tuple:
+        model = self.unwrap_model()
+        if self._has_ddpwrapped:
+            if hasattr(model, fn):
+                fn = getattr(model, fn)
+                if not callable(fn):
+                    raise RuntimeError(f"The `{fn}` attribute of model is not `Callable`.")
+                return fn, None
+            elif fn in {"train_step", "evaluate_step"}:
+                return model, model.forward
+            else:
+                raise RuntimeError(f"There is no `{fn}` method in your model.")
+        else:
+            if hasattr(model, fn):
+                logger.warning("Notice your model is a `DistributedDataParallel` model. And your model also implements "
+                               f"the `{fn}` method, which we can not call actually, we will"
+                               " call `forward` function instead of `train_step` and you should note that.")
+            elif fn not in {"train_step", "evaluate_step"}:
+                raise RuntimeError(f"There is no `{fn}` method in your model. And also notice that your model is a "
+                                   "`DistributedDataParallel` model, which means that we will only call model.forward "
+                                   "function when we are in forward propagation.")
 
-    def test_step(self, batch):
-        # return self.model(batch, **{_MODE_PARAMETER: ForwardState.TEST})
-        return self._test_step(batch)
+            return self.model, model.forward
 
     def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler, ReproducibleBatchSampler]]=None,
                                   reproducible: bool = False):

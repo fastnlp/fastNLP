@@ -108,11 +108,11 @@ class _FleetWrappingModel(Layer):
             self._train_step = self.model
             self._train_signature_fn = model.forward
 
-            if hasattr(model, "validate_step"):
+            if hasattr(model, "evaluate_step"):
                 logger.warning(
                     "Notice your model is a `paddle.DataParallel` model. And your "
-                    "model also implements the `validate_step` method, which we can not call actually, "
-                    "we will call `forward` function instead of `validate_step` and you should note that.")
+                    "model also implements the `evaluate_step` method, which we can not call actually, "
+                    "we will call `forward` function instead of `evaluate_step` and you should note that.")
             self._validate_step = self.model
             self._validate_signature_fn = model.forward
 
@@ -131,7 +131,7 @@ class _FleetWrappingModel(Layer):
                 self._train_step = model
                 self._train_signature_fn = model.forward
 
-            if hasattr(model, "validate_step"):
+            if hasattr(model, "evaluate_step"):
                 self._validate_step = model.validate_step
                 self._validate_signature_fn = None
             elif hasattr(model, "test_step"):
@@ -144,7 +144,7 @@ class _FleetWrappingModel(Layer):
             if hasattr(model, "test_step"):
                 self._test_step = model.test_step
                 self._test_signature_fn = None
-            elif hasattr(model, "validate_step"):
+            elif hasattr(model, "evaluate_step"):
                 self._test_step = model.validate_step
                 self._test_signature_fn = None
             else:
@@ -172,9 +172,9 @@ class _FleetWrappingModel(Layer):
             else:
                 return self._test_step(batch)
         elif forward_state == ForwardState.PREDICT:
-            raise NotImplementedError("'PREDICT' mode has not been implemented.")
+            raise NotImplementedError("'PREDICT' evaluate_fn has not been implemented.")
         else:
-            raise NotImplementedError("You should direct a concrete mode.")
+            raise NotImplementedError("You should direct a concrete evaluate_fn.")
 
 class DummyGradScaler:
     """

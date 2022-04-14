@@ -41,19 +41,20 @@ class Trainer(TrainerEventTrigger):
             optimizers,
             device: Optional[Union[int, List[int], str]] = "cpu",
             n_epochs: int = 20,
-            validate_dataloaders=None,
+            evaluate_dataloaders=None,
             batch_step_fn: Optional[Callable] = None,
-            validate_batch_step_fn: Optional[Callable] = None,
-            validate_mode: Union[str, callable] = 'validate',
+            evaluate_batch_step_fn: Optional[Callable] = None,
+            train_fn: Optional[str] = None,
+            evaluate_fn: Optional[str] = None,
             callbacks: Union[List[Callback], Callback, None] = None,
             metrics: Optional[dict] = None,
-            validate_every: Optional[Union[int, callable]] = -1,
+            evaluate_every: Optional[Union[int, Callable]] = -1,
             input_mapping: Optional[Union[Callable, Dict]] = None,
             output_mapping: Optional[Union[Callable, Dict]] = None,
             model_wo_auto_param_call: bool = False,
             accumulation_steps: int = 1,
             fp16: bool = False,
-            monitor: Union[str, callable] = None,
+            monitor: Union[str, Callable] = None,
             larger_better: bool = True,
             marker: Optional[str] = None,
             **kwargs
@@ -79,19 +80,19 @@ class Trainer(TrainerEventTrigger):
             4. list(int)：如果多于1个device，应当通过该种方式进行设定；当 `device` 为一个 list 时，我们默认使用 `TorchDDPDriver`；
             5. None： 为None则不对模型进行任何处理；
         :param n_epochs: 训练总共的 epoch 的数量，默认为 20；
-        :param validate_dataloaders: 验证数据集，其可以是单独的一个数据集，也可以是多个数据集；当为多个数据集时，注意其必须是 Dict；默认
+        :param evaluate_dataloaders: 验证数据集，其可以是单独的一个数据集，也可以是多个数据集；当为多个数据集时，注意其必须是 Dict；默认
          为 None；
         :param batch_step_fn: 用来替换 `TrainBatchLoop` 中的 `batch_step_fn` 函数，注意该函数的两个参数必须为 `trainer` 和
          `batch`；默认为 None；
-        :param validate_batch_step_fn: 用来替换 'Evaluator' 中的 `EvaluateBatchLoop` 中的 `batch_step_fn` 函数，注意该函数的
+        :param evaluate_batch_step_fn: 用来替换 'Evaluator' 中的 `EvaluateBatchLoop` 中的 `batch_step_fn` 函数，注意该函数的
          两个参数必须为 `evaluator` 和 `batch`；默认为 None；
-        :param validate_mode: 用来控制 `Trainer` 中内置的 `Evaluator` 的模式，其值应当为以下之一：["validate", "test"]；
-            默认为 "validate"；当为 "validate" 时将首先尝试寻找 model 是否有 validate_step 函数，没有的话则尝试
-            寻找 test_step 函数，都没找到则使用 model 的前向运算函数。当为 "test" 是将首先尝试寻找 model 是否有 test_step 函数，
-            没有的话尝试 "validate_step"  函数，都没找到则使用 model 的前向运算函数。
+        :param train_fn: 用来控制 `Trainer` 在训练的前向传播过程中是调用哪一个函数，例如是 `model.train_step` 还是 `model.forward`；
+         默认为 None，如果该值是 None，那么我们会默认使用 `train_step` 当做前向传播的函数，如果在模型中没有找到该方法，则使用 `model.forward` 函数；
+        :param evaluate_fn: 用来控制 `Trainer` 中内置的 `Evaluator` 的模式，应当为 None 或者一个字符串；其使用方式和 train_fn 类似；
+         注意该参数我们会直接传给 Trainer 中内置的 Evaluator（如果不为 None）；
         :param callbacks: 训练当中触发的 callback 类，该参数应当为一个列表，其中的每一个元素都应当继承 `Callback` 类；
         :param metrics: 应当为一个字典，其中 key 表示 monitor，例如 {"acc1": AccMetric(), "acc2": AccMetric()}；
-        :param validate_every: 可以为负数、正数或者函数；为负数时表示每隔几个 epoch validate 一次；为正数则表示每隔几个 batch validate 一次；
+        :param evaluate_every: 可以为负数、正数或者函数；为负数时表示每隔几个 epoch validate 一次；为正数则表示每隔几个 batch validate 一次；
          为函数时表示用户自己传入的用于控制 Trainer 中的 validate 的频率的函数，该函数的应该接受当前 trainer 对象作为参数，并
          返回一个 bool 值，返回为 True 说明需要进行 validate ；将在每个 batch 结束后调用该函数判断是否需要 validate 。
         :param input_mapping: 应当为一个字典或者一个函数，表示在当前 step 拿到一个 batch 的训练数据后，应当做怎样的映射处理；如果其是
@@ -105,10 +106,10 @@ class Trainer(TrainerEventTrigger):
          如果 batch 是一个 `dataclass`，那么我们会先将该 dataclass 转换为一个 Dict，然后再进行上述转换；
         :param model_wo_auto_param_call: 是否关闭在训练时调用我们的 auto_param_call 来自动匹配 batch 和 forward 函数的参数的行为；
          如果该值为 False，并且当 batch 为字典时，我们会根据 forward 所需要的参数从 batch 中提取对应的对象，传入到 forward 函数中；如果该值
-         为 True，那么我们会将 batch 直接透传给模型。注意该参数应用于 `train_step`, `validate_step` 和 `test_step`；
+         为 True，那么我们会将 batch 直接透传给模型。注意该参数应用于 `train_step`, `evaluate_step` 和 `test_step`；
         :param accumulation_steps: 梯度累积的步数，表示每隔几个 batch 优化器迭代一次；默认为 1；
         :param fp16: 是否开启混合精度训练；默认为 False；
-        :param monitor: 当存在 validate_dataloaders 时，默认的 monitor metric 的名字。传入的 callback 如果有 monitor 参数且没有
+        :param monitor: 当存在 evaluate_dataloaders 时，默认的 monitor metric 的名字。传入的 callback 如果有 monitor 参数且没有
             在 callback 初始化设定的，将采取这个值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
             的那个作为 monitor 。也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果。
         :param larger_better: monitor 的值是否是越大越好。
@@ -136,10 +137,15 @@ class Trainer(TrainerEventTrigger):
         else:
             self.driver_name = driver.__class__.__name__
         self.device = device
+        if train_dataloader is None:
+            raise ValueError("Parameter `train_dataloader` can not be None.")
+        self.train_dataloader = train_dataloader
+        self.evaluate_dataloaders = evaluate_dataloaders
         self.optimizers = optimizers
         self.fp16 = fp16
         self.input_mapping = input_mapping
         self.output_mapping = output_mapping
+        self.evaluate_fn = evaluate_fn
 
         self.batch_step_fn = batch_step_fn
         if batch_step_fn is not None:
@@ -168,13 +174,12 @@ class Trainer(TrainerEventTrigger):
             optimizers=optimizers,
             device=device,
             n_epochs=n_epochs,
-            validate_dataloaders=validate_dataloaders,
             batch_step_fn=batch_step_fn,
-            validate_batch_step_fn=validate_batch_step_fn,
-            validate_mode=validate_mode,
+            z=evaluate_batch_step_fn,
+            evaluate_fn=evaluate_fn,
             callbacks=callbacks,
             metrics=metrics,
-            validate_every=validate_every,
+            validate_every=evaluate_every,
             input_mapping=input_mapping,
             output_mapping=output_mapping,
             model_wo_auto_param_call=model_wo_auto_param_call,
@@ -184,9 +189,6 @@ class Trainer(TrainerEventTrigger):
             **kwargs
         )
         self.driver.set_optimizers(optimizers=optimizers)
-
-        if train_dataloader is not None:
-            self.driver.set_dataloader(train_dataloader=train_dataloader)
 
         # 初始化 callback manager；
         self.callback_manager = CallbackManager(callbacks, kwargs.get('progress_bar', 'auto'))
@@ -213,25 +215,25 @@ class Trainer(TrainerEventTrigger):
             _dist_sampler = None
 
         """ 设置内部的 Evaluator """
-        if metrics is None and validate_dataloaders is not None:
+        if metrics is None and evaluate_dataloaders is not None:
             raise ValueError("You have set 'validate_dataloader' but forget to set 'metrics'.")
 
-        if metrics is not None and validate_dataloaders is None:
+        if metrics is not None and evaluate_dataloaders is None:
             raise ValueError("You have set 'metrics' but forget to set 'validate_dataloader'.")
 
         self.evaluator = None
         self.monitor = monitor
         self.larger_better = larger_better
-        if metrics is not None and validate_dataloaders is not None:
-            check_validate_every(validate_every)
+        if metrics is not None and evaluate_dataloaders is not None:
+            check_validate_every(evaluate_every)
             self.evaluator = Evaluator(
                 model=model,
-                dataloaders=validate_dataloaders,
+                dataloaders=evaluate_dataloaders,
                 metrics=metrics,
                 driver=self.driver,
                 device=device,
-                batch_step_fn=validate_batch_step_fn,
-                mode=validate_mode,
+                batch_step_fn=evaluate_batch_step_fn,
+                evaluate_fn=evaluate_fn,
                 input_mapping=input_mapping,
                 output_mapping=output_mapping,
                 fp16=fp16,
@@ -241,11 +243,15 @@ class Trainer(TrainerEventTrigger):
             )
 
         self.metrics = metrics
-        self.validate_every = validate_every
+        self.validate_every = evaluate_every
 
-        assert self.driver.has_train_dataloader()
         self.driver.setup()
         self.driver.barrier()
+
+        if train_fn is not None and not isinstance(train_fn, str):
+            raise TypeError("Parameter `train_fn` can only be `str` type when it is not None.")
+        self._train_step, self._train_step_signature_fn = self.driver.get_model_call_fn("train_step" if train_fn is None else train_fn)
+        self.train_fn = train_fn
 
         self.dataloader = self.train_dataloader
         self.driver.set_deterministic_dataloader(self.dataloader)
@@ -273,6 +279,7 @@ class Trainer(TrainerEventTrigger):
             行。默认如果非 distributed 的 driver 会 catch ，distributed 不会 catch （无法 catch ）
         :return:
         """
+
         if catch_KeyboardInterrupt is None:
             catch_KeyboardInterrupt = not self.driver.is_distributed()
         else:
@@ -301,7 +308,7 @@ class Trainer(TrainerEventTrigger):
 
         self.num_batches_per_epoch = len(self.dataloader)
         self.total_batches = self.num_batches_per_epoch * self.n_epochs
-
+        self.global_forward_batches = self.num_batches_per_epoch * self.cur_epoch_idx + self.batch_idx_in_epoch
         self.on_train_begin()
         self.driver.barrier()
         self.driver.zero_grad(self.set_grad_to_none)
@@ -343,7 +350,8 @@ class Trainer(TrainerEventTrigger):
             _validate_res: dict = validate_fn()
             trainer.on_validate_end(_validate_res)
 
-        self.run_evaluate = partial(_validate_fn, self, partial(self.evaluator.run, num_eval_batch_per_dl))
+        if self.evaluator is not None:
+            self.run_evaluate = partial(_validate_fn, self, partial(self.evaluator.run, num_eval_batch_per_dl))
 
     def step_validate(self):
         """
@@ -489,11 +497,6 @@ class Trainer(TrainerEventTrigger):
         self.has_checked_train_batch_loop = True
 
     """ Trainer 需要的一些 property """
-
-    @property
-    def train_dataloader(self):
-        return self.driver.train_dataloader
-
     @property
     def driver(self):
         return self._driver
@@ -632,6 +635,8 @@ class Trainer(TrainerEventTrigger):
         :param folder: 保存断点重训 states 的文件地址；
         :param resume_training: 是否从上次的 batch 开始训练，或者只从最近的 epoch 开始训练；注意如果 resume_training=True，那么我们
          只会加载 model 和 optimizers 的状态；而其余的对象的值则根据用户的 Trainer 的初始化直接重置；
+        :param only_state_dict: 保存的 model 是否只包含了权重。
+        :param model_load_fn: 使用的模型加载函数，参数应为一个 文件夹，不返回任何内容。
         """
         self.driver.barrier()
         if isinstance(folder, str):
@@ -670,8 +675,6 @@ class Trainer(TrainerEventTrigger):
         # 这里的原则就是应当使得    '还会产生的batch数量' + 'batch_idx_in_epoch' = '原来不断点训练的batch的总数'。其中由于
         #    '还会产生的batch数量' 是由还剩多少 sample 决定的，因此只能通过调整 'batch_idx_in_epoch' 使得等式成立
         self.trainer_state.batch_idx_in_epoch = states.pop('batch_idx_in_epoch')
-        self.trainer_state.global_forward_batches = self.num_batches_per_epoch * self.cur_epoch_idx + \
-                                                    self.batch_idx_in_epoch
         # 这个是防止用户在 Trainer.load 之后还没结束当前 epoch 又继续 save
         self.start_batch_idx_in_epoch = self.trainer_state.batch_idx_in_epoch
 
@@ -684,7 +687,7 @@ class Trainer(TrainerEventTrigger):
 
     def train_step(self, batch):
         with self.driver.auto_cast():
-            outputs = self.driver.train_step(batch)
+            outputs = self.driver.model_call(batch, self._train_step, self._train_step_signature_fn)
             outputs = match_and_substitute_params(self.output_mapping, outputs)
             return outputs
 
@@ -813,6 +816,24 @@ class Trainer(TrainerEventTrigger):
     @property
     def data_device(self):
         return self.driver.data_device
+
+    """ dataloader property """
+
+    @property
+    def train_dataloader(self):
+        return self._train_dataloader
+
+    @train_dataloader.setter
+    def train_dataloader(self, train_dataloader):
+        self._train_dataloader = train_dataloader
+
+    @property
+    def evaluate_dataloaders(self):
+        return self._evaluate_dataloaders
+
+    @evaluate_dataloaders.setter
+    def evaluate_dataloaders(self, evaluate_dataloaders):
+        self._evaluate_dataloaders = evaluate_dataloaders
 
 
 

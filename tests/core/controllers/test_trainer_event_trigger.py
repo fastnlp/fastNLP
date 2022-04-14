@@ -82,7 +82,7 @@ def test_trainer_event_trigger(
                 device=device,
                 optimizers=model_and_optimizers.optimizers,
                 train_dataloader=model_and_optimizers.train_dataloader,
-                validate_dataloaders=model_and_optimizers.validate_dataloaders,
+                evaluate_dataloaders=model_and_optimizers.validate_dataloaders,
                 input_mapping=model_and_optimizers.input_mapping,
                 output_mapping=model_and_optimizers.output_mapping,
                 metrics=model_and_optimizers.metrics,
