@@ -244,7 +244,6 @@ class PaddleFleetDriver(PaddleDriver):
         """
         if self.local_rank == 0:
             # 是 rank0 的话，则拉起其它子进程
-            print("in launcher")
             launcher = FleetLauncher(self.parallel_device, self.output_from_new_proc)
             launcher.launch()
         # 设置参数和初始化分布式环境
@@ -326,7 +325,6 @@ class PaddleFleetDriver(PaddleDriver):
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                     "FastNLP does not support `IteratorDataset` now."
         # 如果 dist 为 ReproducibleBatchSampler, ReproducibleSampler 说明是在断点重训时 driver.load 函数调用；
-        # 注意这里不需要调用 dist_sampler.set_distributed；因为如果用户使用的是 TorchDDPDriver，那么其在 Trainer 初始化的时候就已经调用了该函数；
         if isinstance(dist, ReproducibleBatchSampler):
             dist.set_distributed(
                 num_replicas=self.world_size,
@@ -346,15 +344,16 @@ class PaddleFleetDriver(PaddleDriver):
         # trainer, evaluator
         if dist is None:
             if reproducible:
-                raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize ddp out of our "
+                raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize fleet out of our "
                                    "control.")
             else:
-                if isinstance(dist, ReproducibleBatchSampler):
-                    dist = re_instantiate_sampler(dist)
-                    return replace_batch_sampler(dataloader, dist)
-                if isinstance(dist, ReproducibleSampler):
-                    dist = re_instantiate_sampler(dist)
-                    return replace_sampler(dataloader, dist)
+                args = self.get_dataloader_args(dataloader)
+                if isinstance(args.batch_sampler, ReproducibleBatchSampler):
+                    batch_sampler = re_instantiate_sampler(args.batch_sampler)
+                    return replace_batch_sampler(dataloader, batch_sampler)
+                if isinstance(args.sampler, ReproducibleSampler):
+                    sampler = re_instantiate_sampler(args.sampler)
+                    return replace_sampler(dataloader, sampler)
                 return dataloader
         # trainer
         elif dist == "dist":
