@@ -406,7 +406,7 @@ class TorchDDPDriver(TorchDriver):
             if hasattr(model, fn):
                 fn = getattr(model, fn)
                 if not callable(fn):
-                    raise RuntimeError(f"The `{fn}` attribute is not `Callable`.")
+                    raise RuntimeError(f"The `{fn}` attribute of model is not `Callable`.")
                 return fn, None
             elif fn in {"train_step", "evaluate_step"}:
                 return model, model.forward

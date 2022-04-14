@@ -86,7 +86,7 @@ class Driver(ABC):
         函数；
 
         :param batch: 当前的一个 batch 的数据；可以为字典或者其它类型；
-        :param fn: 由 Trainer 传入的用于网络前向传播一次的函数；
+        :param fn: 调用该函数进行一次计算。
         :param signature_fn: 由 Trainer 传入的用于网络前向传播一次的签名函数，因为当 batch 是一个 Dict 的时候，我们会自动调用 auto_param_call
         函数，而一些被包裹的模型需要暴露其真正的函数签名，例如 DistributedDataParallel 的调用函数是 forward，但是需要其函数签名为 model.module.forward；
         :return: 返回由 `fn` 返回的结果（应当为一个 dict 或者 dataclass，但是不需要我们去检查）；
@@ -125,17 +125,6 @@ class Driver(ABC):
     @model.setter
     def model(self, model):
         self._model = model
-
-    @staticmethod
-    def check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
-        r"""
-        该函数会在 trainer 或者 evaluator 设置 dataloader 后检测 dataloader 的合法性，因为不同的深度学习的框架需要的 dataloader 的
-         行为是不相同的；
-
-        :param dataloader: 需要检测的输入的 `dataloader`；
-        :param dataloader_name:
-        """
-        raise NotImplementedError("Each specific driver should implemented its own `check_dataloader_legality` function.")
 
     @property
     def optimizers(self) -> List:

@@ -199,6 +199,7 @@ class TorchDriver(Driver):
                         num_consumed_batches = sampler_states['num_consumed_samples']
                 sampler_states['num_consumed_samples'] = num_consumed_samples_array[num_consumed_batches]
                 assert sampler_states['num_consumed_samples'] != -1, "This is a bug, please report."
+            states['sampler_states'] = sampler_states
         else:
             raise RuntimeError(
                 'The sampler has no `state_dict()` method, it will fail to recover to the specific batch.')

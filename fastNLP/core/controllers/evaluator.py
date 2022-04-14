@@ -36,7 +36,7 @@ class Evaluator:
             model,
             dataloaders,
             metrics: Optional[Union[Dict, Metric]] = None,
-            driver: Union[str, Driver] = 'single',
+            driver: Union[str, Driver] = 'torch',
             device: Optional[Union[int, List[int], str]] = None,
             batch_step_fn: Optional[callable] = None,
             evaluate_fn: Optional[str] = None,  # 首先尝试找 evaluate_step, 找不到 forward, callable
@@ -49,8 +49,8 @@ class Evaluator:
     ):
         """
 
-        :param dataloaders:
         :param model:
+        :param dataloaders:
         :param metrics: 使用的 metric 。必须为 dict 类型，其中 key 为 metric 的名称，value 为一个 Metric 对象。支持 fastNLP 的
             metric ，torchmetrics，allennlpmetrics等。
         :param driver: 使用 driver 。
@@ -120,7 +120,8 @@ class Evaluator:
 
         if evaluate_fn is not None and not isinstance(evaluate_fn, str):
             raise TypeError("Parameter `train_fn` can only be `str` type when it is not None.")
-        self._evaluate_step, self._evaluate_step_signature_fn = self.driver.get_model_call_fn("evaluate_step" if evaluate_fn is None else evaluate_fn)
+        self._evaluate_step, self._evaluate_step_signature_fn = \
+            self.driver.get_model_call_fn("evaluate_step" if evaluate_fn is None else evaluate_fn)
         self.evaluate_fn = evaluate_fn
 
         self.dataloaders = {}
@@ -133,8 +134,6 @@ class Evaluator:
             self.progress_bar = 'rich' if (sys.stdin and sys.stdin.isatty()) else 'raw'
 
         self.driver.barrier()
-
-        self.driver.check_dataloader_legality(self.dataloaders, "dataloaders", is_train=False)
 
     def run(self, num_eval_batch_per_dl: int = -1, **kwargs) -> Dict:
         """
