@@ -98,6 +98,7 @@ class TorchDataLoader(DataLoader):
     def __getattr__(self, item):
         """
         为FDataLoader提供dataset的方法和属性，实现该方法后，用户可以在FDataLoader实例化后使用apply等dataset的方法
+
         :param item:
         :return:
         """
@@ -119,6 +120,7 @@ class TorchDataLoader(DataLoader):
         """
         设置每个field_name的padding值，默认为0，只有当autocollate存在时该方法有效， 若没有则会添加auto_collator函数
         当val=None时，意味着给定的field_names都不需要尝试padding
+
         :param field_names:
         :param val: padding值，默认为0
         :return:
