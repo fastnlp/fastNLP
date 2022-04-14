@@ -1,3 +1,4 @@
+import functools
 import inspect
 from inspect import Parameter
 import dataclasses
@@ -24,10 +25,8 @@ from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_GLOBAL_RANK
 
 
-
 __all__ = [
     'get_fn_arg_names',
-    'check_fn_not_empty_params',
     'auto_param_call',
     'check_user_specific_params',
     'dataclass_to_dict',
@@ -44,48 +43,23 @@ __all__ = [
 ]
 
 
-
-
-
 def get_fn_arg_names(fn: Callable) -> List[str]:
     r"""
     返回一个函数的所有参数的名字；
 
     :param fn: 需要查询的函数；
-
     :return: 一个列表，其中的元素则是查询函数的参数的字符串名字；
     """
     return list(inspect.signature(fn).parameters)
 
 
-def check_fn_not_empty_params(fn: Optional[Callable] = None, param_num: Optional[int] = None) -> bool:
-    r"""
-    检查传入的batch_step_fn是否是合法的：(1) 是否是 callable 的; (2) 没有默认值的参数是否只有指定个数；
-    用户也可以传进一个 partial 的函数进来，只要其保证留有 `trainer` 和 `batch` 的参数位置即可；
-
-    :param fn: 传入的用以代替 Loop 中 'step' 函数的函数；
-    :param param_num: 检测的函数的应当的没有默认值的参数的个数；
-
-    :return: bool，表示传入的 `batch_step_fn` 是否正确；
-    """
-
-    if fn is None:
-        return True
-    if not callable(fn):
-        return False
-    else:
-        params = inspect.signature(fn).parameters
-        not_default_params = {}
-        for _name, _param in params.items():
-            if _param.default == Parameter.empty:
-                not_default_params[_name] = _param
-        return len(not_default_params) == param_num
-
-
 def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None,
                     mapping: Optional[Dict[AnyStr, AnyStr]] = None) -> Any:
     r"""
-    1.该函数用来提供给用户根据字符串匹配从而实现自动计算；
+    该函数会根据输入函数的形参名从*args（因此都需要是dict类型）中找到匹配的值进行调用，如果传入的数据与fn的形参不匹配，可以通过mapping
+        参数进行转换。mapping参数中的一对（key，value）表示以这个key在*args中找到值，并将这个值传递给形参名为value的参数。
+
+    1.该函数用来提供给用户根据字符串匹配从而实现自动调用；
     2.注意 mapping 默认为 None，如果你希望指定输入和运行函数的参数的对应方式，那么你应当让 mapping 为一个这样的字典传入进来；
      如果 mapping 不为 None，那么我们一定会先使用 mapping 将输入的字典的 keys 修改过来，因此请务必亲自检查 mapping 的正确性；
     3.如果输入的函数的参数有默认值，那么如果之后的输入中没有该参数对应的值，我们就会使用该参数对应的默认值，否则也会使用之后的输入的值；
@@ -113,6 +87,7 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
         >>> print(auto_param_call(partial(test_fn, a=100), {"x": 10}, {"y": 20}))  # res: 140
         >>> print(auto_param_call(partial(test_fn, a=100), {"x": 10}, {"y": 20, "a": 200}))  # res: 240
     """
+
     if signature_fn is not None:
         if not callable(signature_fn):
             raise ValueError(f"Parameter `signature_fn` should be `Callable`.")
@@ -122,7 +97,8 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
     _kwargs = None
     for _name, _param in _need_params.items():
         if _param.kind == Parameter.VAR_POSITIONAL:
-            raise ValueError(f"It is not allowed to have parameter `*args` in your function:{fn.__name__}.")
+            fn_msg = _get_fun_msg(fn if signature_fn is None else signature_fn)
+            raise ValueError(f"It is not allowed to have parameter `*args` in your function:{fn_msg}.")
         if _param.kind == Parameter.VAR_KEYWORD:
             _kwargs = (_name, _param)
 
@@ -135,12 +111,17 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
             _default_params[_name] = _param.default
 
     if mapping is not None:
-        assert isinstance(mapping, Dict), f"Parameter `mapping` should be of 'Dict' type, instead of {type(mapping)}."
+        fn_msg = _get_fun_msg(fn if signature_fn is None else signature_fn)
+        assert isinstance(mapping, Dict), f"Exception happens when calling {fn_msg}. " \
+                                          f"Parameter `mapping` should be of 'Dict' type, instead of {type(mapping)}."
 
     _has_params = {}
     duplicate_names = []
     for arg in args:
-        assert isinstance(arg, Dict), "The input part of function `auto_param_call` can only be `Dict` type."
+        if not isinstance(arg, Dict):
+            fn_msg = _get_fun_msg(fn if signature_fn is None else signature_fn)
+            raise TypeError(f"Exception happens when calling {fn_msg}. "
+                            f"The input part of function `auto_param_call` must be `Dict` type, instead of {type(arg)}.")
         for _name, _value in arg.items():
             if mapping is not None and _name in mapping:
                 _name = mapping[_name]
@@ -152,7 +133,8 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
             elif _name in _need_params and not (_has_params[_name] is _value):
                 duplicate_names.append(_name)
     if duplicate_names:
-        raise ValueError(f"The following key present in several inputs:{duplicate_names}")
+        fn_msg = _get_fun_msg(fn if signature_fn is None else signature_fn)
+        raise ValueError(f"The following key present in several inputs:{duplicate_names} when calling {fn_msg}.")
 
     # 将具有默认值但是没有被输入修改过的参数值传进去；
     for _name, _value in _default_params.items():
@@ -161,9 +143,87 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
 
     if len(_has_params)<len(_need_params):
         miss_params = list(set(_need_params.keys()) - set(_has_params.keys()))
-        raise ValueError(f"The parameters:`{miss_params}` needed by function:{fn.__name__} are not found in the input.")
+        fn_msg = _get_fun_msg(fn if signature_fn is None else signature_fn)
+        _provided_keys = _get_keys(args)
+        raise ValueError(f"The parameters:`{miss_params}` needed by function:{fn_msg} "
+                         f"are not found in the input keys({_provided_keys}).")
 
     return fn(**_has_params)
+
+
+def _get_keys(args:List[Dict]) -> List[List[str]]:
+    """
+    返回每个 dict 的 keys
+
+    :param args:
+    :return:
+    """
+    _provided_keys = []
+    for arg in args:
+        _provided_keys.append(list(arg.keys()))
+    return _provided_keys
+
+
+def _get_fun_msg(fn)->str:
+    """
+    获取函数的基本信息，帮助报错。
+    ex:
+        print(_get_fun_msg(_get_fun_msg))
+        # `_get_fun_msg(fn) -> str`(In file:/Users/hnyan/Desktop/projects/fastNLP/fastNLP/fastNLP/core/utils/utils.py)
+
+    :param callable fn:
+    :return:
+    """
+    if isinstance(fn, functools.partial):
+        return _get_fun_msg(fn.func)
+    try:
+        fn_name = fn.__qualname__ + str(inspect.signature(fn))
+    except:
+        fn_name = str(fn)
+    try:
+        fp = '(In file:' + os.path.abspath(inspect.getfile(fn)) + ')'
+    except:
+        fp = ''
+    msg = f'`{fn_name}`' + fp
+    return msg
+
+
+def _check_valid_parameters_number(fn, expected_params:List[str], fn_name=None):
+    """
+    检查一个函数是否需要 expected_params 参数(检测数量是否匹配)。除掉 self （如果是method），给定默认值的参数等。如果匹配不上，就会
+        进行报错。
+
+    :param fn: 需要检测的函数，可以是 method 或者 function 。
+    :param expected_params: 期待应该支持的参数。
+    :param fn_name: fn 的名字，当传入的 fn 不是 callable 的时候方便报错。
+    :return:
+    """
+    if fn_name is not None:
+        assert callable(fn), f"{fn_name} should be callable, instead of {type(fn)}."
+
+    parameters = list(inspect.signature(fn).parameters.values())
+    if inspect.ismethod(fn):
+        if len(parameters)>0 and parameters[0].name == 'self':
+            parameters = parameters[1:]  # 去掉self
+
+    no_var_param = True  # 没有 * 这种参数
+    number_param_need_value = 0
+    for param in parameters:
+        if param.kind is param.VAR_POSITIONAL:
+            no_var_param = False
+        elif param.kind is param.VAR_KEYWORD:
+            no_var_param = False
+        else:
+            if param.default is param.empty:
+                number_param_need_value += 1
+
+    if len(parameters)<len(expected_params) and no_var_param:
+        raise RuntimeError(f"The function:{_get_fun_msg(fn)} accepts {len(parameters)} parameters, "
+                           f"but {len(expected_params)} parameters:{expected_params} will be provided.")
+
+    if number_param_need_value>len(expected_params):
+        raise RuntimeError(f"The function:{_get_fun_msg(fn)} expects {len(parameters)} parameters, but only"
+                           f" {len(expected_params)} parameters:{expected_params} will be provided.")
 
 
 def check_user_specific_params(user_params: Dict, fn: Callable):
@@ -184,7 +244,7 @@ def check_user_specific_params(user_params: Dict, fn: Callable):
     return user_params
 
 
-def dataclass_to_dict(data: "dataclass") -> Dict:
+def dataclass_to_dict(data: "dataclasses.dataclass") -> Dict:
     if not is_dataclass(data):
         raise TypeError(f"Parameter `data` can only be `dataclass` type instead of {type(data)}.")
     _dict = dict()
@@ -591,4 +651,24 @@ def synchronize_mkdir(path: Optional[Union[str, Path]]):
     wait_to_success(path.exists)
 
 
+def get_class_that_defined_method(method):
+    """
+    给定一个method，返回这个 method 的 class 的对象
 
+    :param method:
+    :return:
+    """
+    if isinstance(method, functools.partial):
+        return get_class_that_defined_method(method.func)
+    if inspect.ismethod(method) or (inspect.isbuiltin(method) and getattr(method, '__self__', None) is not None and getattr(method.__self__, '__class__', None)):
+        for cls in inspect.getmro(method.__self__.__class__):
+            if method.__name__ in cls.__dict__:
+                return cls
+        method = getattr(method, '__func__', method)  # fallback to __qualname__ parsing
+    if inspect.isfunction(method):
+        cls = getattr(inspect.getmodule(method),
+                      method.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0],
+                      None)
+        if isinstance(cls, type):
+            return cls
+    return getattr(method, '__objclass__', None)  # handle special descriptor objects

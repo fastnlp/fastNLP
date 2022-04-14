@@ -30,7 +30,7 @@ from fastNLP.core.utils import apply_to_collection, torch_move_data_to_device
 from fastNLP.envs import  rank_zero_call
 from fastNLP.envs import FASTNLP_SEED_WORKERS, FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.log import logger
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, RandomBatchSampler
 
 
 class TorchDriver(Driver):
@@ -51,6 +51,9 @@ class TorchDriver(Driver):
         # 用来设置 `torch_move_data_to_device` 中的 `non_blocking` 参数；
         self.non_blocking = kwargs.get("torch_non_blocking", True)
 
+        # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
+        self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
+
     def zero_grad(self, set_to_none: bool = False):
         for optimizer in self.optimizers:
             self._clear_grad(optimizer, set_to_none)
@@ -68,6 +71,14 @@ class TorchDriver(Driver):
                         else:
                             p.grad.requires_grad_(False)
                         p.grad.zero_()
+
+    def backward(self, loss):
+        self.grad_scaler.scale(loss).backward()
+
+    def step(self):
+        for optimizer in self.optimizers:
+            self.grad_scaler.step(optimizer)
+            self.grad_scaler.update()
 
     @staticmethod
     def _check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
@@ -102,7 +113,7 @@ class TorchDriver(Driver):
         if mode == "validate":
             if not hasattr(model, "validate_step"):
                 if hasattr(model, "test_step"):
-                    logger.warning(
+                    logger.warning_once(
                         "Your model does not have 'validate_step' method but has 'test_step' method, but you"
                         "are using 'mode=validate', we are going to use 'test_step' to substitute for"
                         "'validate_step'.")
@@ -191,9 +202,20 @@ class TorchDriver(Driver):
             sampler = dataloader_args.sampler
         else:
             raise RuntimeError("This condition is not supposed to appear. Please report a bug to us.")
-
+        num_consumed_batches = states.pop('num_consumed_batches')
         if hasattr(sampler, 'state_dict') and callable(sampler.state_dict):
-            states['sampler_states'] = sampler.state_dict()
+            sampler_states = sampler.state_dict()
+            # 如果有，需要针对 num_consumed_samples 做特殊的处理。因为DataLoader存在预取行为，直接使用sampler中的num_consumed_samples
+            #   会造成多余实际消耗的问题。
+            num_consumed_samples_array = sampler_states.pop('num_consumed_samples_array', None)
+            if num_consumed_samples_array is not None:
+                if isinstance(sampler, ReproducibleSampler):  # 如果是 sampler 的话，需要考虑 batch_size 。
+                    try:
+                        num_consumed_batches = num_consumed_batches * dataloader_args.batch_size
+                    except:  # 有可能 batch_size 为 None，就只有损失精度了
+                        num_consumed_batches = sampler_states['num_consumed_samples']
+                sampler_states['num_consumed_samples'] = num_consumed_samples_array[num_consumed_batches]
+                assert sampler_states['num_consumed_samples'] != -1, "This is a bug, please report."
         else:
             raise RuntimeError(
                 'The sampler has no `state_dict()` method, it will fail to recover to the specific batch.')
@@ -252,7 +274,7 @@ class TorchDriver(Driver):
         elif self.is_distributed():
             raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or `ReproducibleSampler`.")
         else:
-            sampler = ReproducibleBatchSampler(
+            sampler = RandomBatchSampler(
                 batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
                 batch_size=dataloader_args.batch_size,
                 drop_last=dataloader_args.drop_last

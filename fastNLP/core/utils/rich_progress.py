@@ -6,7 +6,7 @@
 import sys
 from typing import Any, Union, Optional
 
-from rich.progress import Progress, Console, GetTimeCallable, get_console, TaskID, Live
+from rich.progress import Progress, Console, GetTimeCallable, get_console, TaskID, Live, Text, ProgressSample
 from rich.progress import ProgressColumn, TimeRemainingColumn, BarColumn, TimeElapsedColumn, TextColumn
 
 __all__ = [
@@ -146,10 +146,84 @@ class FRichProgress(Progress, metaclass=Singleton):
         if task_id in self._tasks:
             super().stop_task(task_id)
             super().remove_task(task_id)
+            self.refresh()  # 使得bar不残留
 
     def start(self) -> None:
         super().start()
         self.console.show_cursor(show=True)
+
+    def update(
+            self,
+            task_id: TaskID,
+            *,
+            total: Optional[float] = None,
+            completed: Optional[float] = None,
+            advance: Optional[float] = None,
+            description: Optional[str] = None,
+            visible: Optional[bool] = None,
+            refresh: bool = False,
+            **fields: Any,
+    ) -> None:
+        """Update information associated with a task.
+
+        Args:
+            task_id (TaskID): Task id (returned by add_task).
+            total (float, optional): Updates task.total if not None.
+            completed (float, optional): Updates task.completed if not None.
+            advance (float, optional): Add a value to task.completed if not None.
+            description (str, optional): Change task description if not None.
+            visible (bool, optional): Set visible flag if not None.
+            refresh (bool): Force a refresh of progress information. Default is False.
+            **fields (Any): Additional data fields required for rendering.
+        """
+        with self._lock:
+            task = self._tasks[task_id]
+            completed_start = task.completed
+
+            if total is not None and total != task.total:
+                task.total = total
+                task._reset()
+            if advance is not None:
+                task.completed += advance
+            if completed is not None:
+                task.completed = completed
+            if description is not None:
+                task.description = description
+            if visible is not None:
+                task.visible = visible
+            task.fields.update(fields)
+            update_completed = task.completed - completed_start
+
+            current_time = self.get_time()
+            old_sample_time = current_time - self.speed_estimate_period
+            _progress = task._progress
+
+            popleft = _progress.popleft
+            # 这里修改为至少保留一个，防止超长时间的迭代影响判断
+            while len(_progress)>1 and _progress[0].timestamp < old_sample_time:
+                popleft()
+            if update_completed > 0:
+                _progress.append(ProgressSample(current_time, update_completed))
+            if task.completed >= task.total and task.finished_time is None:
+                task.finished_time = task.elapsed
+
+        if refresh:
+            self.refresh()
+
+
+class SpeedColumn(ProgressColumn):
+    """
+    显示 task 的速度。
+
+    """
+    def render(self, task: "Task"):
+        speed = task.speed
+        if speed is None:
+            return Text('-- it./s', style='progress.data.speed')
+        if speed > 0.1:
+            return Text(str(round(speed, 2))+' it./s', style='progress.data.speed')
+        else:
+            return Text(str(round(1/speed, 2))+' s/it.', style='progress.data.speed')
 
 
 if (sys.stdin and sys.stdin.isatty()) and get_global_rank() == 0:
@@ -157,13 +231,14 @@ if (sys.stdin and sys.stdin.isatty()) and get_global_rank() == 0:
         "[progress.description]{task.description}",
         "[progress.percentage]{task.percentage:>3.0f}%",
         BarColumn(),
+        SpeedColumn(),
         TimeElapsedColumn(),
         "/",
         TimeRemainingColumn(),
         TextColumn("{task.fields[post_desc]}", justify="right"),
         transient=True,
         disable=False,
-        speed_estimate_period=1
+        speed_estimate_period=30
     )
 else:
     f_rich_progress = DummyFRichProgress()

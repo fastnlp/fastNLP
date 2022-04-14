@@ -54,7 +54,7 @@ class TorchDataLoader(DataLoader):
                  pin_memory: bool = False, drop_last: bool = False,
                  timeout: float = 0, worker_init_fn: Optional[Callable] = None,
                  multiprocessing_context=None, generator=None, prefetch_factor: int = 2,
-                 persistent_workers: bool = False, as_numpy: bool = False) -> None:
+                 persistent_workers: bool = False, as_numpy: bool = False, **kwargs) -> None:
         """
 
         :param dataset: 实现了__getitem__和__len__的数据容器

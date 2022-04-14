@@ -14,6 +14,7 @@ __all__ = [
 
 from .loops import Loop, TrainBatchLoop
 from .utils import State, TrainerState
+from .utils.utils import check_validate_every
 from .evaluator import Evaluator
 from fastNLP.core.controllers.utils.utils import TrainerEventTrigger, _TruncatedDataLoader
 from fastNLP.core.callbacks import Callback, CallbackManager, Events, EventsList, Filter
@@ -21,7 +22,8 @@ from fastNLP.core.callbacks.callback import _CallbackWrapper
 from fastNLP.core.callbacks.callback_events import _SingleEventState
 from fastNLP.core.drivers import Driver
 from fastNLP.core.drivers.utils import choose_driver
-from fastNLP.core.utils import check_fn_not_empty_params, get_fn_arg_names, match_and_substitute_params, nullcontext
+from fastNLP.core.utils import get_fn_arg_names, match_and_substitute_params, nullcontext
+from fastNLP.core.utils.utils import _check_valid_parameters_number
 from fastNLP.envs import rank_zero_call
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_MODEL_FILENAME
@@ -42,15 +44,16 @@ class Trainer(TrainerEventTrigger):
             validate_dataloaders=None,
             batch_step_fn: Optional[Callable] = None,
             validate_batch_step_fn: Optional[Callable] = None,
-            validate_mode: str = "validate",
+            validate_mode: Union[str, callable] = 'validate',
             callbacks: Union[List[Callback], Callback, None] = None,
             metrics: Optional[dict] = None,
             validate_every: Optional[Union[int, callable]] = -1,
             input_mapping: Optional[Union[Callable, Dict]] = None,
             output_mapping: Optional[Union[Callable, Dict]] = None,
+            model_wo_auto_param_call: bool = False,
             accumulation_steps: int = 1,
             fp16: bool = False,
-            monitor: str = None,
+            monitor: Union[str, callable] = None,
             larger_better: bool = True,
             marker: Optional[str] = None,
             **kwargs
@@ -89,11 +92,8 @@ class Trainer(TrainerEventTrigger):
         :param callbacks: 训练当中触发的 callback 类，该参数应当为一个列表，其中的每一个元素都应当继承 `Callback` 类；
         :param metrics: 应当为一个字典，其中 key 表示 monitor，例如 {"acc1": AccMetric(), "acc2": AccMetric()}；
         :param validate_every: 可以为负数、正数或者函数；为负数时表示每隔几个 epoch validate 一次；为正数则表示每隔几个 batch validate 一次；
-         为函数时表示用户自己传入的用于控制 Trainer 中的 validate 的频率的函数，该函数的参数应该为 (filter, trainer) , 其中的 filter 对象
-         中自动记录了两个变量： filter.num_called 表示有多少次尝试 validate （实际等同于到当前时刻 batch 的总数）， filter.num_executed
-         表示 validate 实际被执行了多少次；trainer 参数即为 Trainer 对象。 函数返回值应为 bool ，返回为 True 说明需要进行 validate 。
-         例如： (filter.num_called % trainer.num_batches_per_epoch == 0 and trainer.cur_epoch_idx > 10) 表示在第 10 个 epoch
-         之后，每个 epoch 结束进行一次 validate 。
+         为函数时表示用户自己传入的用于控制 Trainer 中的 validate 的频率的函数，该函数的应该接受当前 trainer 对象作为参数，并
+         返回一个 bool 值，返回为 True 说明需要进行 validate ；将在每个 batch 结束后调用该函数判断是否需要 validate 。
         :param input_mapping: 应当为一个字典或者一个函数，表示在当前 step 拿到一个 batch 的训练数据后，应当做怎样的映射处理；如果其是
          一个字典，并且 batch 也是一个 `Dict`，那么我们会把 batch 中同样在 input_mapping 中的 key 修改为 input_mapping 的对应 key 的
          value；如果 batch 是一个 `dataclass`，那么我们会先将该 dataclass 转换为一个 Dict，然后再进行上述转换；如果 batch 此时是其它
@@ -102,12 +102,15 @@ class Trainer(TrainerEventTrigger):
         :param output_mapping: 应当为一个字典或者函数。作用和 input_mapping 类似，区别在于其用于转换输出；如果 output_mapping 是一个
          函数，那么我们将会直接将模型的输出传给该函数；如果其是一个 `Dict`，那么我们需要 batch 必须是 `Dict` 或者 `dataclass` 类型，
          如果 batch 是一个 `Dict`，那么我们会把 batch 中同样在 output_mapping 中的 key 修改为 output_mapping 的对应 key 的 value；
-         如果 batch 是一个 `dataclass`，那么我们会先将该 dataclass 转换为一个 Dict，然后再进行上述转换
+         如果 batch 是一个 `dataclass`，那么我们会先将该 dataclass 转换为一个 Dict，然后再进行上述转换；
+        :param model_wo_auto_param_call: 是否关闭在训练时调用我们的 auto_param_call 来自动匹配 batch 和 forward 函数的参数的行为；
+         如果该值为 False，并且当 batch 为字典时，我们会根据 forward 所需要的参数从 batch 中提取对应的对象，传入到 forward 函数中；如果该值
+         为 True，那么我们会将 batch 直接透传给模型。注意该参数应用于 `train_step`, `validate_step` 和 `test_step`；
         :param accumulation_steps: 梯度累积的步数，表示每隔几个 batch 优化器迭代一次；默认为 1；
         :param fp16: 是否开启混合精度训练；默认为 False；
         :param monitor: 当存在 validate_dataloaders 时，默认的 monitor metric 的名字。传入的 callback 如果有 monitor 参数且没有
             在 callback 初始化设定的，将采取这个值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
-            的那个作为 monitor 。
+            的那个作为 monitor 。也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果。
         :param larger_better: monitor 的值是否是越大越好。
         :param marker: 用于标记一个 Trainer 实例，从而在用户调用 `Trainer.on` 函数时，标记该 callback 函数属于哪一个具体的 'trainer' 实例；默认为 None；
         :param kwargs: 一些其它的可能需要的参数；
@@ -126,20 +129,21 @@ class Trainer(TrainerEventTrigger):
                 auto 表示如果检测到当前 terminal 为交互型 则使用 rich，否则使用 raw。
 
         """
-
-        # TODO 是不是可以加一个参数让用户现在关掉参数匹配。
-        self.marker = marker
         self.model = model
-        self.driver_name = driver
+        self.marker = marker
+        if isinstance(driver, str):
+            self.driver_name = driver
+        else:
+            self.driver_name = driver.__class__.__name__
         self.device = device
+        self.optimizers = optimizers
         self.fp16 = fp16
         self.input_mapping = input_mapping
         self.output_mapping = output_mapping
 
-        assert check_fn_not_empty_params(batch_step_fn, 2), "`batch_step_fn` should be a callable object with " \
-                                                                  "two parameters."
         self.batch_step_fn = batch_step_fn
         if batch_step_fn is not None:
+            _check_valid_parameters_number(batch_step_fn, ['trainer', 'batch'], fn_name='batch_step_fn')
             self.check_batch_step_fn = partial(self._check_callback_called_legality, check_mode=True)
         else:
             self.check_batch_step_fn = lambda *args, **kwargs: ...
@@ -155,6 +159,8 @@ class Trainer(TrainerEventTrigger):
         elif accumulation_steps < 0:
             raise ValueError("Parameter `accumulation_steps` can only be bigger than 0.")
         self.accumulation_steps = accumulation_steps
+
+        # todo 思路大概是，每个driver提供一下自己的参数是啥（需要对应回初始化的那个），然后trainer/evalutor在初始化的时候，就检测一下自己手上的参数和driver的是不是一致的，不一致的地方需要warn用户说这些值driver不太一样。感觉可以留到后面做吧
         self.driver = choose_driver(
             model=model,
             driver=driver,
@@ -171,6 +177,7 @@ class Trainer(TrainerEventTrigger):
             validate_every=validate_every,
             input_mapping=input_mapping,
             output_mapping=output_mapping,
+            model_wo_auto_param_call=model_wo_auto_param_call,
             accumulation_steps=accumulation_steps,
             fp16=fp16,
             marker=marker,
@@ -212,17 +219,11 @@ class Trainer(TrainerEventTrigger):
         if metrics is not None and validate_dataloaders is None:
             raise ValueError("You have set 'metrics' but forget to set 'validate_dataloader'.")
 
-        # 为了在 train 的循环中每次都检查是否需要进行 validate，这里我们提前在 trainer 初始化的时候就将对应时间点需要运行的函数确定下来；
-        #  _epoch_validate 表示每隔几个 epoch validate 一次；_step_validate 表示每隔几个 step validate 一次；
         self.evaluator = None
-        self.epoch_validate = lambda *args, **kwargs: ...
-        self.step_validate = lambda *args, **kwargs: ...
         self.monitor = monitor
         self.larger_better = larger_better
         if metrics is not None and validate_dataloaders is not None:
-            if not callable(validate_every) and (not isinstance(validate_every, int) or validate_every == 0):
-                raise ValueError("Parameter 'validate_every' should be set to 'int' type and either < 0 or > 0.")
-
+            check_validate_every(validate_every)
             self.evaluator = Evaluator(
                 model=model,
                 dataloaders=validate_dataloaders,
@@ -238,16 +239,6 @@ class Trainer(TrainerEventTrigger):
                 use_dist_sampler=kwargs.get("use_eval_dist_sampler", use_dist_sampler),
                 progress_bar=kwargs.get('progress_bar', 'auto')
             )
-
-            if callable(validate_every):
-                self._step_validate_filter = Filter(filter_fn=validate_every)
-                logger.info("Notice you are using a 'filter function' as the value of parameter `validate_every`, "
-                            "and in this way, the kind of controlling frequency is depending on the 'step'.")
-            elif validate_every < 0:
-                self._epoch_validate_filter = Filter(every=-validate_every)
-            else:
-                # validate_every > 0
-                self._step_validate_filter = Filter(every=validate_every)
 
         self.metrics = metrics
         self.validate_every = validate_every
@@ -317,6 +308,8 @@ class Trainer(TrainerEventTrigger):
 
         try:
             while self.cur_epoch_idx < self.n_epochs:
+                # 这个是防止在 Trainer.load 之后还没结束当前 epoch 又继续 save
+                self.start_batch_idx_in_epoch = self.trainer_state.batch_idx_in_epoch
                 self.driver.set_model_mode("train")
                 self.on_train_epoch_begin()
                 self.driver.set_sampler_epoch(self.dataloader, self.cur_epoch_idx)
@@ -345,31 +338,37 @@ class Trainer(TrainerEventTrigger):
             raise e
 
     def _set_num_eval_batch_per_dl(self, num_eval_batch_per_dl):
-        def _validate_fn(validate_fn: Callable, trainer: Trainer) -> None:
+        def _validate_fn(trainer: Trainer, validate_fn: Callable) -> None:
             trainer.on_validate_begin()
             _validate_res: dict = validate_fn()
             trainer.on_validate_end(_validate_res)
 
+        self.run_evaluate = partial(_validate_fn, self, partial(self.evaluator.run, num_eval_batch_per_dl))
+
+    def step_validate(self):
+        """
+        在每个 batch 结束后调用，根据设置执行 evaluate 。
+
+        :return:
+        """
         if self.evaluator is not None:
             if callable(self.validate_every):
-                self.step_validate = self._step_validate_filter(partial(
-                    _validate_fn,
-                    partial(self.evaluator.run, num_eval_batch_per_dl),
-                    self
-                ))
-            elif self.validate_every < 0:
-                self.epoch_validate = self._epoch_validate_filter(partial(
-                    _validate_fn,
-                    partial(self.evaluator.run, num_eval_batch_per_dl),
-                    self
-                ))
-            else:
-                # validate_every > 0
-                self.step_validate = self._step_validate_filter(partial(
-                    _validate_fn,
-                    partial(self.evaluator.run, num_eval_batch_per_dl),
-                    self
-                ))
+                if self.validate_every(self):
+                    self.run_evaluate()
+            elif self.validate_every > 0 and self.global_forward_batches % self.validate_every == 0:
+                self.run_evaluate()
+
+    def epoch_validate(self):
+        """
+        在每个 epoch 结束后调用，根据设置执行 evaluate 。
+
+        :return:
+        """
+        if self.evaluator is not None:
+            if isinstance(self.validate_every, int) and self.validate_every < 0:
+                validate_every = -self.validate_every
+                if self.cur_epoch_idx % validate_every == 0:
+                    self.run_evaluate()
 
     def add_callback_fn(self, event: Optional[Union[Events, EventsList]], fn: Callable):
         r"""
@@ -400,9 +399,8 @@ class Trainer(TrainerEventTrigger):
 
         def wrapper(fn: Callable) -> Callable:
             cls._custom_callbacks[marker].append((event, fn))
-            assert check_fn_not_empty_params(fn, len(get_fn_arg_names(getattr(Callback, event.value))) - 1), "Your " \
-                                                                                                             "callback fn's allowed parameters seem not to be equal with the origin callback fn in class " \
-                                                                                                             "`Callback` with the same callback time."
+            callback_fn_args = get_fn_arg_names(getattr(Callback, event.value))[1:]
+            _check_valid_parameters_number(fn, callback_fn_args)
             return fn
 
         return wrapper
@@ -431,9 +429,11 @@ class Trainer(TrainerEventTrigger):
 
         2. 函数作用
             这一函数的作用在于检查用户定制的 batch_step_fn / TrainBatchLoop 是否能够正确地调用 callback 函数，更准确地说，当用户实际
-            定制了 ("on_before_backward", "on_after_backward", "on_before_optimizer_step", "on_before_zero_grad") /
+            定制了 ("on_before_backward", "on_after_backward", "on_before_optimizers_step", "on_after_optimizers_step", "on_before_zero_grad",
+            "on_after_zero_grad") /
             ("on_fetch_data_begin", "on_fetch_data_end", "on_train_batch_begin", "on_train_batch_end",
-             "on_before_backward", "on_after_backward", "on_before_optimizer_step", "on_before_zero_grad")
+             "on_before_backward", "on_after_backward", "on_before_optimizers_step", "on_after_optimizers_step", "on_before_zero_grad",
+             "on_after_zero_grad")
             这些 callabck_fn 后，如果其同样也定制了 batch_step_fn / TrainBatchLoop，那么其有可能忘记了在自己的 batch_step_fn 中
             上述的这些 callback 函数，而这个函数的作用就在于检测用户是否产生了这一行为；
 
@@ -443,10 +443,12 @@ class Trainer(TrainerEventTrigger):
          'batch_step_fn'，为 False 时表示检测 'TrainBatchLoop'；
         """
         if check_mode:
-            callbacks = ("on_before_backward", "on_after_backward", "on_before_optimizer_step", "on_before_zero_grad")
+            callbacks = ("on_before_backward", "on_after_backward", "on_before_optimizers_step", "on_after_optimizers_step",
+                         "on_before_zero_grad", "on_after_zero_grad")
         else:
             callbacks = ("on_fetch_data_begin", "on_fetch_data_end", "on_train_batch_begin", "on_train_batch_end",
-                         "on_before_backward", "on_after_backward", "on_before_optimizer_step", "on_before_zero_grad")
+                         "on_before_backward", "on_after_backward", "on_before_optimizers_step", "on_after_optimizers_step",
+                         "on_before_zero_grad", "on_after_zero_grad")
         _not_called_callback_fns = []
         for each_callback_fn in callbacks:
             if each_callback_fn in self.callback_manager.callback_fns:
@@ -498,8 +500,6 @@ class Trainer(TrainerEventTrigger):
 
     @driver.setter
     def driver(self, driver: Driver):
-        driver.trainer = self
-        driver.model = self.model
         self._driver = driver
 
     @property
@@ -591,7 +591,9 @@ class Trainer(TrainerEventTrigger):
         # 1. callback states 和 每一个callback的具体 callback 函数的 filter 的状态；
         # 2. trainer_state；
         states = {"callback_states": self.on_save_checkpoint(),
-                  "trainer_state": self.trainer_state.state_dict()}
+                  "trainer_state": self.trainer_state.state_dict(),
+                  'num_consumed_batches': self.batch_idx_in_epoch - getattr(self, 'start_batch_idx_in_epoch', 0)
+                  }
 
         # 3. validate filter state；
         if self.evaluator is not None:
@@ -668,6 +670,10 @@ class Trainer(TrainerEventTrigger):
         # 这里的原则就是应当使得    '还会产生的batch数量' + 'batch_idx_in_epoch' = '原来不断点训练的batch的总数'。其中由于
         #    '还会产生的batch数量' 是由还剩多少 sample 决定的，因此只能通过调整 'batch_idx_in_epoch' 使得等式成立
         self.trainer_state.batch_idx_in_epoch = states.pop('batch_idx_in_epoch')
+        self.trainer_state.global_forward_batches = self.num_batches_per_epoch * self.cur_epoch_idx + \
+                                                    self.batch_idx_in_epoch
+        # 这个是防止用户在 Trainer.load 之后还没结束当前 epoch 又继续 save
+        self.start_batch_idx_in_epoch = self.trainer_state.batch_idx_in_epoch
 
         # 5. 恢复所有 callback 的状态；
         self.on_load_checkpoint(states["callback_states"])
@@ -692,13 +698,15 @@ class Trainer(TrainerEventTrigger):
 
     def zero_grad(self):
         if (self.global_forward_batches + 1) % self.accumulation_steps == 0:
-            self.on_before_zero_grad(self.driver.optimizers)
+            self.on_before_zero_grad(self.optimizers)
             self.driver.zero_grad(self.set_grad_to_none)
+            self.on_after_zero_grad(self.optimizers)
 
     def step(self):
         if (self.global_forward_batches + 1) % self.accumulation_steps == 0:
-            self.on_before_optimizer_step(self.driver.optimizers)
+            self.on_before_optimizers_step(self.optimizers)
             self.driver.step()
+            self.on_after_optimizers_step(self.optimizers)
 
     def move_data_to_device(self, batch):
         return self.driver.move_data_to_device(batch)
@@ -795,5 +803,20 @@ class Trainer(TrainerEventTrigger):
     @total_batches.setter
     def total_batches(self, total_batches: int):
         self.trainer_state.total_batches = total_batches
+
+    """ driver property """
+
+    @property
+    def model_device(self):
+        return self.driver.model_device
+
+    @property
+    def data_device(self):
+        return self.driver.data_device
+
+
+
+
+
 
 

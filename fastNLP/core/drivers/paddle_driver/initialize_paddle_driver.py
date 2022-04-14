@@ -38,23 +38,19 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
     if driver not in {"paddle", "fleet"}:
         raise ValueError("Parameter `driver` can only be one of these values: ['paddle', 'fleet'].")
 
-    cuda_visible_devices = os.getenv("CUDA_VISIBLE_DEVICES")
     user_visible_devices = os.getenv("USER_CUDA_VISIBLE_DEVICES")
-    # 优先级 user > cuda
-    # 判断单机情况 device 的合法性
-    # 分布式情况下通过 world_device 判断
-    if user_visible_devices != "":
-        _could_use_device_num = len(user_visible_devices.split(","))
-    elif cuda_visible_devices is not None:
-        _could_use_device_num = len(cuda_visible_devices.split(","))
-    else:
-        _could_use_device_num = paddle.device.cuda.device_count()
+    if user_visible_devices is None:
+        raise RuntimeError("This situation cannot happen, please report a bug to us.")
+    _could_use_device_num = len(user_visible_devices.split(","))
     if isinstance(device, int):
         if device < 0 and device != -1:
             raise ValueError("Parameter `device` can only be '-1' when it is smaller than 0.")
-        # if device >= _could_use_device_num:
-        #     raise ValueError("The gpu device that parameter `device` specifies is not existed.")
-        device = f"gpu:{device}"
+        if device >= _could_use_device_num:
+            raise ValueError("The gpu device that parameter `device` specifies is not existed.")
+        if device != -1:
+            device = f"gpu:{device}"
+        else:
+            device = list(range(_could_use_device_num))
     elif isinstance(device, Sequence) and not isinstance(device, str):
         device = list(set(device))
         for each in device:
@@ -62,6 +58,9 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
                 raise ValueError("When parameter `device` is 'Sequence' type, the value in it should be 'int' type.")
             elif each < 0:
                 raise ValueError("When parameter `device` is 'Sequence' type, the value in it should be bigger than 0.")
+            elif each >= _could_use_device_num:
+                raise ValueError("When parameter `device` is 'Sequence' type, the value in it should not be bigger than"
+                                 " the available gpu number.")
         if len(device) == 1:
             # 传入了 [1] 这样的，视为单卡。
             device = device[0]

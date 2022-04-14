@@ -1,21 +1,36 @@
 import os
 import random
-from typing import Union, Optional, Callable, Dict
+from typing import Union, Optional, Dict
+from pathlib import Path
 from functools import partial
+from dataclasses import dataclass
 
 import numpy as np
 
-from .utils import _build_fp16_env
+from .utils import _build_fp16_env, optimizer_state_to_device
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.core.drivers.driver import Driver
 from fastNLP.core.utils import apply_to_collection, paddle_move_data_to_device
-from fastNLP.envs import rank_zero_call
-from fastNLP.envs import FASTNLP_SEED_WORKERS
+from fastNLP.envs import (
+    FASTNLP_SEED_WORKERS,
+    FASTNLP_MODEL_FILENAME,
+    FASTNLP_CHECKPOINT_FILENAME,
+    FASTNLP_GLOBAL_RANK,
+    rank_zero_call,
+)
 from fastNLP.core.log import logger
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, RandomBatchSampler
 
 if _NEED_IMPORT_PADDLE:
     import paddle
-    from paddle.io import DataLoader, IterableDataset
+    from paddle.io import (
+        DataLoader,
+        IterableDataset,
+        Dataset,
+        Sampler,
+        BatchSampler,
+        RandomSampler,
+    )
     from paddle.optimizer import Optimizer
 
     _reduces = {
@@ -41,6 +56,9 @@ class PaddleDriver(Driver):
         self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not fp16)
         self.grad_scaler = _grad_scaler()
 
+        # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
+        self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
+
     def zero_grad(self, set_to_none: bool = False):
         r"""
         实现深度学习中的梯度的置零操作，应当直接通过优化器 optimizers 来将梯度置零；
@@ -48,8 +66,8 @@ class PaddleDriver(Driver):
 
         :param set_to_none: 用来判断是否需要将梯度直接置为 None；Paddle中这个参数无效。
         """
-        # if set_to_none:
-        #     log.warning("Parameter `set_to_none` does nothing in paddle since grad cannot be set directly.")
+        if set_to_none:
+            logger.warning_once("Parameter `set_to_none` does nothing in paddle since grad cannot be set directly.")
         for optimizer in self.optimizers:
             optimizer.clear_grad()
 
@@ -69,6 +87,8 @@ class PaddleDriver(Driver):
             # TODO 我们先禁止 dataloader 的 dataset 是 IterableDataset 种类；
             if isinstance(dataloader.dataset, IterableDataset):
                 raise TypeError("`IterableDataset` is not allowed.")
+            if dataloader.batch_sampler is None and dataloader.batch_size is None:
+                raise ValueError(f"At least one of `{dataloader_name}`'s `batch_sampler` and `batch_size` should be set.")
         else:
             if not isinstance(dataloader, Dict):
                 raise ValueError(f"Parameter `{dataloader_name}` should be 'Dict' type, not {type(dataloader)}.")
@@ -79,6 +99,9 @@ class PaddleDriver(Driver):
                                          f"type, not {type(each_dataloader)}.")
                     if isinstance(each_dataloader.dataset, IterableDataset):
                         raise TypeError("`IterableDataset` is not allowed.")
+                    if each_dataloader.batch_sampler is None and each_dataloader.batch_size is None:
+                        raise ValueError(f"For each dataloader of parameter `{dataloader_name}`, at least one of "
+                                         f"`batch_sampler` and `batch_size` should be set.")
 
     @staticmethod
     def _check_optimizer_legality(optimizers):
@@ -110,7 +133,7 @@ class PaddleDriver(Driver):
         else:
             if not hasattr(model, "test_step"):
                 if hasattr(model, "validate_step"):
-                    logger.warning("Your model does not have 'test_step' method but has 'validate' method, but you"
+                    logger.warning_once("Your model does not have 'test_step' method but has 'validate' method, but you"
                                     "are using 'Evaluator.test', we are going to use 'validate_step' to substitute for"
                                     "'test_step'.")
 
@@ -153,45 +176,55 @@ class PaddleDriver(Driver):
         getattr(self.model, mode)()
 
     @rank_zero_call
-    def save_model(self, filepath: str, only_state_dict: bool = True, model_save_fn: Optional[Callable]=None, **kwargs):
+    def save_model(self, filepath: str, only_state_dict: bool = True, **kwargs):
         r"""
         保存模型的函数；注意函数 `save` 是用来进行断点重训的函数；
-        如果 `model_save_fn` 是一个可调用的函数，那么我们会直接运行该函数；
 
         :param filepath: 保存文件的文件位置（需要包括文件名）；
-        :param only_state_dict: 是否只保存模型的 `state_dict`；注意该参数仅当 `model_save_fn` 为 None 时有效；
-        :param model_save_fn: 用户传入的用来代替该函数本身保存逻辑的函数；如果该参数不为 None，那么我们会调用 model_save_fn(path)；
+        :param only_state_dict: 是否只保存模型的 `state_dict`；如果为 False，则会调用 `paddle.jit.save` 函数
+                                保存整个模型的参数，此时需要传入 `input_spec` 参数，否则在 load 时会报错。
+        :param kwargs:
+                input_spec: 描述存储模型 forward 方法的输入，当 `only_state_dict` 为 False时必须传入，否则加载时会报错。
+                            可以通过 InputSpec 或者示例 Tensor 进行描述。详细的可以参考 paddle 关于`paddle.jit.save`
+                            的文档：
+                            https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/jit/save_cn.html#save
+        :return:
         """
-        if model_save_fn is not None:
-            model_save_fn(filepath)
+        model = self.unwrap_model()
+        if isinstance(filepath, Path):
+            filepath = str(filepath)
+        if only_state_dict:
+            states = {name: param.cpu().detach().clone() for name, param in model.state_dict().items()}
+            paddle.save(states, filepath)
         else:
-            model = self.unwrap_model()
-            if only_state_dict:
-                paddle.save(model.state_dict(), filepath)
-            else:
-                input_spec = kwargs.get("input_spec", None)
-                if input_spec is None:
-                    raise Exception("To save the whole Paddle Layer, parameter 'input_spec' is needed.")
-                paddle.jit.save(model, filepath, input_spec)
+            # paddle 在保存整个模型时需要传入额外参数
+            input_spec = kwargs.get("input_spec", None)
+            if input_spec is None:
+                raise ValueError("To save the whole Paddle Layer, parameter `input_spec` is needed.")
+            paddle.jit.save(model, filepath, input_spec)
 
-    @staticmethod
-    @rank_zero_call
-    def load_model(filepath: str, load_dict: bool = True):
+    def load_model(self, filepath: str, only_state_dict: bool = True, **kwargs):
         r"""
         加载模型的函数；注意函数 `load` 是用来进行断点重训的函数；
 
         :param filepath: 需要被加载的对象的文件位置（需要包括文件名）；
-        :param load_dict: 是否加载state_dict，默认为True。当用户在save_model时将only_state_dict设置为False时，
-                          即保存了整个模型时，这个参数必须也为False
-        :return: 返回加载指定文件后的结果；
+        :param only_state_dict: 是否加载state_dict，默认为True。
+        :param kwargs:
+        :return:
         """
-        if load_dict:
-            return paddle.load(filepath)
-        else:
-            return paddle.jit.load(filepath)
+        model = self.unwrap_model()
+        if isinstance(filepath, Path):
+            filepath = str(filepath)
+        # paddle 中，通过 paddle.jit.save 函数保存的模型也可以通过 paddle.load 加载为相应的 state dict
+        # 但是此时对输入的 path 有要求，必须是 dir/filename 的形式，否则会报错。
+        dirname, filename = os.path.split(filepath)
+        if not only_state_dict and dirname == "":
+            # 如果传入的是单个文件，则加上相对路径
+            filepath = os.path.join(".", filepath)
+        model.load_dict(paddle.load(filepath))
 
     @rank_zero_call
-    def save(self, folder, states: Dict):
+    def save(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
         r"""
         断点重训的保存函数，该函数会负责保存模型和 optimizers 的 state_dict；
         需要注意 driver 应当是无状态的，即不管什么时候调用 driver 的接口函数，其返回的结果应该都是一样的；因此，断点重训不需要保存 driver
@@ -203,48 +236,114 @@ class PaddleDriver(Driver):
         :param states: 由 trainer 传入的一个字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态，Driver 应该只需要保存
             该对象即可， Driver 应该不需要理解该对象，同时在 driver.load() 的时候，需要将 states 返回回去，load()返回的值与这里的
             传入的值保持一致。
+        :param dataloader: 正在使用的 dataloader，需要保存里面的状态使得之后可以从当前迭代的位置恢复。
+        :param only_state_dict: 是否只保存模型的参数，当 should_save_model 为 False ，该参数无效。
+        :param should_save_model: 是否应该保存模型，如果为False，Driver 将不负责 model 的保存。
+        :return:
         """
-        # 1. 保存模型的状态；
-        model = self.unwrap_model()
-        model_state_dict = {name: param.cpu().detach().clone() for name, param in model.state_dict().items()}
-        # 对于单卡的 driver 来讲，我们实际上（现在）不应该考虑用户在DDP环境下使用单卡模式，从而造成效率损失；
-        states["model_state_dict"] = model_state_dict
+        # 传入的 dataloader 参数是 trainer 的 dataloader 属性，因为 driver 的所有 dataloader 我们是不会去改变它的，而是通过改变
+        #  trainer.dataloader 来改变 dataloader 的状态，从而适配训练或者评测环境；
 
-        # 2. 保存 optimizers 的状态；
+        # 1. sampler 的状态，因为我们支持 resume training，即精确恢复到具体的一个 batch；
+        # paddle 的 DataLoader 在初始化之后 batch_sampler 可能为 None，也可能为用户设置的 batch_sampler
+        dataloader_args = self.get_dataloader_args(dataloader)
+        if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
+            sampler = dataloader_args.batch_sampler
+        elif dataloader_args.sampler:
+            sampler = dataloader_args.sampler
+        else:
+            raise RuntimeError("This condition is not supposed to appear. Please report a bug to us.")
+
+        num_consumed_batches = states.pop('num_consumed_batches')
+        if hasattr(sampler, 'state_dict') and callable(sampler.state_dict):
+            sampler_states = sampler.state_dict()
+            # 如果有，需要针对 num_consumed_samples 做特殊的处理。因为DataLoader存在预取行为，直接使用sampler中的num_consumed_samples
+            #   会造成多余实际消耗的问题。
+            num_consumed_samples_array = sampler_states.pop('num_consumed_samples_array', None)
+            if num_consumed_samples_array is not None:
+                if isinstance(sampler, ReproducibleSampler):  # 如果是 sampler 的话，需要考虑 batch_size 。
+                    try:
+                        num_consumed_batches = num_consumed_batches * dataloader_args.batch_size
+                    except:  # 有可能 batch_size 为 None，就只有损失精度了
+                        num_consumed_batches = sampler_states['num_consumed_samples']
+                sampler_states['num_consumed_samples'] = num_consumed_samples_array[num_consumed_batches]
+                assert sampler_states['num_consumed_samples'] != -1, "This is a bug, please report."
+            
+        else:
+            raise RuntimeError(
+                'The sampler has no `state_dict()` method, it will fail to recover to the specific batch.')
+
+        # 2. 保存模型的状态；
+        if should_save_model:
+            self.save_model(folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict, **kwargs)
+            if only_state_dict:
+                logger.debug("Save model state dict.")
+            else:
+                logger.debug("Save model.")
+
+        # 3. 保存 optimizers 的状态；
         optimizers_state_dict = {}
         for i in range(len(self.optimizers)):
             optimizer: Optimizer = self.optimizers[i]
             optimizer_state = optimizer.state_dict()
-            optimizer_state = {name: param.cpu().detach().clone() for name, param in optimizer_state.items()}
+            optimizer_state["state"] = optimizer_state_to_device(optimizer_state, "cpu")
             optimizers_state_dict[f"optimizer{i}"] = optimizer_state  # 注意这里没有使用 deepcopy，测试是不需要的；
+
+        logger.debug("Save optimizer state dict.")
         states["optimizers_state_dict"] = optimizers_state_dict
+        paddle.save(states, str(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME)))
 
-        paddle.save(states, folder)
-
-    def load(self, filepath) -> Dict:
-        r"""
-        断点重训的加载函数，注意该函数会负责读取数据，并且恢复模型和 optimizers 的 state_dict 等；
-            driver 实例需要在该函数中先加载模型和 optimizers 的 state_dict，然后将一个 state 字典返回给 trainer 。
-            因此 save 函数和 load 函数的接受和返回值应该是对应的；
-
-        该函数需要在所有 rank 上执行。
-
-        :param filepath: 保存断点重训的状态的文件名；
-        :return: 需要返回 save 函数输入的 states 内容；
-        """
-        states = paddle.load(filepath)
+    def load(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
+        
+        states = paddle.load(str(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME)))
 
         # 1. 加载 optimizers 的状态；
         optimizers_state_dict = states["optimizers_state_dict"]
         for i in range(len(self.optimizers)):
-            optimizer: paddle.optimizer.Optimizer = self.optimizers[i]
+            optimizer: Optimizer = self.optimizers[i]
             optimizer.set_state_dict(optimizers_state_dict[f"optimizer{i}"])
+        logger.debug("Load optimizer state dict.")
 
         # 2. 加载模型状态；
-        model = self.unwrap_model()
-        model.load_dict(states["model_state_dict"])
+        if should_load_model:
+            self.load_model(folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict)
+            if only_state_dict:
+                logger.debug("Load model state dict.")
+            else:
+                logger.debug("Load model.")
 
-        self.barrier()
+        # 3. 恢复 sampler 的状态；
+        dataloader_args = self.get_dataloader_args(dataloader)
+        if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
+            sampler = dataloader_args.batch_sampler
+        elif isinstance(dataloader_args.sampler, ReproducibleSampler):
+            sampler = dataloader_args.sampler
+        elif self.is_distributed():
+            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or `ReproducibleSampler`.")
+        else:
+            sampler = RandomBatchSampler(
+                batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
+                batch_size=dataloader_args.batch_size,
+                drop_last=dataloader_args.drop_last
+            )
+        sampler.load_state_dict(states['sampler_states'])
+        states["dataloader"] = self.set_dist_repro_dataloader(dataloader, sampler)
+
+        # 4. 修改 trainer_state.batch_idx_in_epoch
+        # sampler 是类似 RandomSampler 的sampler，不是 batch_sampler；
+        if not isinstance(sampler, ReproducibleBatchSampler):
+            if dataloader_args.drop_last:
+                batch_idx_in_epoch = len(
+                    sampler) // dataloader_args.batch_size - sampler.num_left_samples // dataloader_args.batch_size
+            else:
+                batch_idx_in_epoch = (len(sampler) + dataloader_args.batch_size - 1) // dataloader_args.batch_size - \
+                    (sampler.num_left_samples + dataloader_args.batch_size - 1) // dataloader_args.batch_size
+        # sampler 是 batch_sampler；
+        else:
+            batch_idx_in_epoch = sampler.batch_idx_in_epoch
+
+        states["batch_idx_in_epoch"] = batch_idx_in_epoch
+
         return states
 
     def get_evaluate_context(self):
@@ -282,7 +381,7 @@ class PaddleDriver(Driver):
         `randomness in DataLoaders <https://pytorch.org/docs/stable/notes/randomness.html#dataloader>`_.
         """
         # implementation notes: https://github.com/pytorch/pytorch/issues/5059#issuecomment-817392562
-        global_rank = rank if rank is not None else rank_zero_call.rank
+        global_rank = rank if rank is not None else int(os.environ.get(FASTNLP_GLOBAL_RANK, 0))
         # TODO gpu
         process_seed = paddle.fluid.core.default_cpu_generator().initial_seed()
         # back out the base seed so we can use all the bits
@@ -313,3 +412,64 @@ class PaddleDriver(Driver):
         """
         if callable(getattr(dataloader.batch_sampler, "set_epoch", None)):
             dataloader.batch_sampler.set_epoch(cur_epoch_idx)
+
+    @staticmethod
+    def get_dataloader_args(dataloader: "DataLoader"):
+        """
+        获取 dataloader 的 shuffle 和 drop_last 属性；
+        """
+
+        @dataclass
+        class Res:
+            dataset: Optional[Dataset] = None
+            batch_sampler: Optional[BatchSampler] = None
+            sampler: Optional[Sampler] = None
+            batch_size: Optional[int] = None
+            shuffle: Optional[bool] = None
+            drop_last: Optional[bool] = None
+
+        res = Res()
+
+        # paddle 的 DataLoader 一定会有 dataset 属性；
+        res.dataset = dataloader.dataset
+
+        if dataloader.batch_sampler is not None:
+            # 不过在 paddle 中，我们限定了 batch_sampler 不能为 None
+            res.batch_sampler = dataloader.batch_sampler
+            if hasattr(dataloader.batch_sampler, "batch_size"):
+                res.batch_size = getattr(dataloader.batch_sampler, "batch_size")
+            # 用户使用的是自己的 batch_sampler 并且其没有 "batch_size" 属性；
+            else:
+                dataloader_iter = iter(dataloader)
+                pre_sample = next(dataloader_iter)
+                res.batch_size = pre_sample.shape[0]
+
+            if hasattr(dataloader.batch_sampler, "sampler"):
+                res.sampler = dataloader.batch_sampler.sampler
+                if hasattr(dataloader.batch_sampler.sampler, "shuffle"):
+                    res.shuffle = dataloader.batch_sampler.sampler.shuffle
+                elif isinstance(dataloader.batch_sampler.sampler, RandomSampler):
+                    res.shuffle = True
+                else:
+                    res.shuffle = False
+            # RandomBatchSampler 的情况
+            elif hasattr(dataloader.batch_sampler, "batch_sampler"):
+                batch_sampler = dataloader.batch_sampler.batch_sampler
+                res.sampler = batch_sampler.sampler
+                if hasattr(batch_sampler.sampler, "shuffle"):
+                    res.shuffle = dataloader.batch_sampler.sampler.shuffle
+                elif isinstance(batch_sampler.sampler, RandomSampler):
+                    res.shuffle = True
+                else:
+                    res.shuffle = False
+            else:
+                res.sampler = None
+                res.shuffle = False
+
+            if hasattr(dataloader.batch_sampler, "drop_last"):
+                res.drop_last = getattr(dataloader.batch_sampler, "drop_last")
+            # 用户使用的是自己的 batch_sampler 并且其没有 "drop_last" 属性；
+            else:
+                res.drop_last = False
+
+        return res

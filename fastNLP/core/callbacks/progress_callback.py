@@ -45,6 +45,7 @@ class RichCallback(ProgressCallback):
         :param print_every: 多少个 batch 更新一次显示。
         :param loss_round_ndigit: 显示的 loss 保留多少位有效数字
         :param monitor: 当检测到这个key的结果更好时，会打印出不同的颜色进行提示。如果为 None ，会尝试使用 trainer 中设置的 monitor 。
+            也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果。
         :param larger_better: 是否是monitor的结果越大越好。
         :param format_json: 是否format json再打印
         """
@@ -135,7 +136,8 @@ class RawTextCallback(ProgressCallback):
 
         :param print_every: 多少个 batch 更新一次显示。
         :param loss_round_ndigit: 显示的 loss 保留多少位有效数字
-        :param monitor: 当检测到这个key的结果更好时，会打印出不同的颜色进行提示。
+        :param monitor: 当检测到这个key的结果更好时，会打印出不同的颜色进行提示。也可以传入一个函数，接受参数为 evaluation 的结果(
+            字典类型)，返回一个 float 值作为 monitor 的结果。
         :param larger_better: 是否是monitor的结果越大越好。
         :param format_json: 是否format json再打印
         """

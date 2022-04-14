@@ -11,11 +11,12 @@ __all__ = [
 from fastNLP.core.drivers import Driver
 from fastNLP.core.drivers.utils import choose_driver
 from .loops import Loop, EvaluateBatchLoop
-from fastNLP.core.utils import check_fn_not_empty_params, auto_param_call, dataclass_to_dict, \
+from fastNLP.core.utils import auto_param_call, dataclass_to_dict, \
     match_and_substitute_params, f_rich_progress
 from fastNLP.core.metrics import Metric
 from fastNLP.core.metrics.utils import _is_torchmetrics_metric, _is_paddle_metric, _is_allennlp_metric
 from fastNLP.core.controllers.utils.utils import _TruncatedDataLoader
+from fastNLP.core.utils.utils import _check_valid_parameters_number
 from fastNLP.core.log import logger
 
 
@@ -38,10 +39,11 @@ class Evaluator:
             driver: Union[str, Driver] = 'single',
             device: Optional[Union[int, List[int], str]] = None,
             batch_step_fn: Optional[callable] = None,
-            mode: str = "validate",
+            mode: Optional[Union[str, callable]] = 'validate',  # 首先尝试找 evaluate_step, 找不到 forward, callable
             input_mapping: Optional[Union[Callable, Dict]] = None,
             output_mapping: Optional[Union[Callable, Dict]] = None,
-            fp16: Optional[bool] = False,
+            model_wo_auto_param_call: bool = False,
+            fp16: bool = False,
             verbose: int = 1,
             **kwargs
     ):
@@ -61,6 +63,9 @@ class Evaluator:
             没有的话尝试 "validate_step"  函数，都没找到则使用 model 的前向运算函数。
         :param input_mapping: 对 dataloader 中输出的内容将通过 input_mapping 处理之后再输入到 model 以及 metric 中
         :param output_mapping: 对 model 输出的内容，将通过 output_mapping 处理之后再输入到 metric 中。
+        :param model_wo_auto_param_call: 是否关闭在训练时调用我们的 auto_param_call 来自动匹配 batch 和 forward 函数的参数的行为；
+         如果该值为 True，并且当 batch 为字典时，我们会根据 forward 所需要的参数从 batch 中提取对应的对象，传入到 forward 函数中；如果该值
+         为 False，那么我们会将 batch 直接透传给 forward 函数。注意上述逻辑同样应用于 `train_step`, `validate_step` 和 `test_step`；
         :param fp16: 是否使用 fp16 。
         :param verbose: 是否打印 evaluate 的结果。
         :param kwargs:
@@ -83,13 +88,13 @@ class Evaluator:
         self.model = model
         self.metrics = metrics
 
-        self.driver = choose_driver(model, driver, device, fp16=fp16, **kwargs)
+        self.driver = choose_driver(model, driver, device, fp16=fp16, model_wo_auto_param_call=model_wo_auto_param_call, **kwargs)
 
         self.device = device
         self.verbose = verbose
 
-        assert check_fn_not_empty_params(batch_step_fn, 2), "Parameter `batch_step_fn` should be a callable object with " \
-                                                             "two parameters."
+        if batch_step_fn is not None:
+            _check_valid_parameters_number(batch_step_fn, ['trainer', 'batch'], fn_name='batch_step_fn')
         self.batch_step_fn = batch_step_fn
 
         self.mode = mode
@@ -131,6 +136,7 @@ class Evaluator:
         if self.progress_bar == 'auto':
             self.progress_bar = 'rich' if (sys.stdin and sys.stdin.isatty()) else 'raw'
 
+        self.driver.check_evaluator_mode(self.mode)
         self.driver.barrier()
 
     def run(self, num_eval_batch_per_dl: int = -1, **kwargs) -> Dict:
@@ -149,8 +155,6 @@ class Evaluator:
         """
         assert isinstance(num_eval_batch_per_dl, int), "num_eval_batch_per_dl must be of int type."
         assert num_eval_batch_per_dl > 0 or num_eval_batch_per_dl == -1, "num_eval_batch_per_dl must be -1 or larger than 0."
-
-        self.driver.check_evaluator_mode(self.mode)
 
         if self.mode == 'validate':
             assert self.driver.has_validate_dataloaders()
@@ -219,7 +223,6 @@ class Evaluator:
     def remove_progress_bar(self, dataloader_name):
         if self.progress_bar == 'rich' and hasattr(self, '_rich_task_id'):
             f_rich_progress.destroy_task(self._rich_task_id)
-            f_rich_progress.refresh()  # 使得最终的bar可以消失
             delattr(self, '_rich_task_id')
         elif self.progress_bar == 'raw':
             desc = 'Evaluation ends'
@@ -230,7 +233,6 @@ class Evaluator:
     def finally_progress_bar(self):
         if self.progress_bar == 'rich' and hasattr(self, '_rich_task_id'):
             f_rich_progress.destroy_task(self._rich_task_id)
-            f_rich_progress.refresh()
             delattr(self, '_rich_task_id')
 
     @property
@@ -355,20 +357,24 @@ class _MetricsWrapper:
         if is_dataclass(outputs):
             outputs = dataclass_to_dict(outputs)
         for metric in self._metrics:
+            args = []
             if not isinstance(batch, dict):
-                raise RuntimeError(f"When the output of the DataLoader is of type:`{type(batch)}`, please either directly"
-                                   f" return a dict from your DataLoader or use `input_mapping` to convert it into dict type.")
+                logger.warning_once(f"The output of the DataLoader is of type:`{type(batch)}`, fastNLP will only depend on "
+                                    f"the output of model to update metric.")
+            else:
+                args.append(batch)
             if not isinstance(outputs, dict):
-                raise RuntimeError(f"When the output of your model is of type:`{type(batch)}`, please either directly"
+                raise RuntimeError(f"The output of your model is of type:`{type(outputs)}`, please either directly"
                                    f" return a dict from your model or use `output_mapping` to convert it into dict type.")
             if isinstance(metric, Metric):
-                auto_param_call(metric.update, batch, outputs)
+                # 这样在 auto_param_call 报错的时候才清晰。
+                auto_param_call(metric.update, outputs, *args, signature_fn=metric.update.__wrapped__)
             elif _is_torchmetrics_metric(metric):
-                auto_param_call(metric.update, batch, outputs)
+                auto_param_call(metric.update, outputs, *args, signature_fn=metric.update.__wrapped__)
             elif _is_allennlp_metric(metric):
-                auto_param_call(metric.__call__, batch, outputs)
+                auto_param_call(metric.__call__, outputs, *args)
             elif _is_paddle_metric(metric):
-                res = auto_param_call(metric.compute, batch, outputs)
+                res = auto_param_call(metric.compute, outputs, *args)
                 metric.update(res)
 
     def reset(self):

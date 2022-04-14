@@ -10,7 +10,7 @@ import re
 
 from fastNLP.core.callbacks.checkpoint_callback import ModelCheckpointCallback, TrainerCheckpointCallback
 from fastNLP.core.controllers.trainer import Trainer
-from fastNLP.envs import FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME, FASTNLP_LAUNCH_TIME, FASTNLP_DISTRIBUTED_CHECK
+from fastNLP.envs import FASTNLP_LAUNCH_TIME, FASTNLP_DISTRIBUTED_CHECK
 
 from tests.helpers.utils import magic_argv_env_context
 from fastNLP.core import synchronize_safe_rm
@@ -238,7 +238,7 @@ def test_model_checkpoint_callback_2(
 
     from fastNLP.core.callbacks.callback_events import Events
 
-    @Trainer.on(Events.ON_TRAIN_EPOCH_END)
+    @Trainer.on(Events.on_train_epoch_end)
     def raise_exception(trainer):
         if trainer.driver.get_local_rank() == 0 and trainer.cur_epoch_idx == 4:
             raise NotImplementedError

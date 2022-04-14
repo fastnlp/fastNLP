@@ -1,16 +1,21 @@
-from typing import Dict, List, Union
-import math
-import numpy as np
-
-from fastNLP.core.log import logger
-from fastNLP.core.dataset import DataSet
-
 __all__ = [
     'ReproducibleSampler',
     'RandomSampler',
     "SortedSampler",
     "SequentialSampler"
 ]
+
+from typing import Dict, List, Union
+import math
+import os
+
+import numpy as np
+
+from fastNLP.core.log import logger
+from fastNLP.core.dataset import DataSet
+from fastNLP.envs.env import FASTNLP_DEQUE_SIZE
+from .utils import NumConsumedSamplesArray
+
 
 
 class ReproducibleSampler:
@@ -30,6 +35,13 @@ class ReproducibleSampler:
         raise NotImplementedError("Each specific sampler should implement its own `__iter__` method.")
 
     def state_dict(self):
+        """
+        由于现在的DataLoader都存在预取数据的功能，因此请参考 RandomSampler 中 states 里面 num_consumed_samples_array 的实现
+            正确设置该值。其思想是记录每个 index 对应的 num_consumed_samples ,在 Trainer.save 时会根据 Trainer 中的真实 forward
+            了多少个 sample 从 num_consumed_samples_array 取出对应的 num_consumed_samples 进行存储。
+
+        :return:
+        """
         raise NotImplementedError("Each specific sampler should implement its own `state_dict` method.")
 
     def load_state_dict(self, states):
@@ -109,12 +121,15 @@ class RandomSampler(ReproducibleSampler):
         indices = indices[self.num_consumed_samples:]
         indices = indices[self.rank:len(indices):self.num_replicas]
         assert len(indices) == self.num_left_samples
-
-        for index in indices:
+        self.num_consumed_samples_array = NumConsumedSamplesArray(buffer_size=os.environ.get(FASTNLP_DEQUE_SIZE, 2000),
+                                                                  num_consumed_samples=self.num_consumed_samples)
+        for idx, index in enumerate(indices, start=1):
             self.num_consumed_samples += self.num_replicas
+            self.num_consumed_samples_array.push(self.num_consumed_samples)
             yield index
         self.during_iter = False
         self.num_consumed_samples = 0
+        delattr(self, 'num_consumed_samples_array')
 
     def generate_indices(self) -> List[int]:
         """
@@ -134,18 +149,13 @@ class RandomSampler(ReproducibleSampler):
         return indices
 
     def state_dict(self) -> Dict:
-        states = {
-            'seed': self.seed,
-            'epoch': self.epoch,
-            'num_consumed_samples': self.num_consumed_samples,  # 注意该值是计算所有 rank 上训练的所有数据；
-            'sampler_type': self.__class__.__name__,
-            'length': len(self.dataset),
-            'shuffle': self.shuffle
-        }
+        states = {'seed': self.seed, 'epoch': self.epoch, 'num_consumed_samples': self.num_consumed_samples,
+                  'sampler_type': self.__class__.__name__, 'length': len(self.dataset), 'shuffle': self.shuffle,
+                  'num_consumed_samples_array': getattr(self, 'num_consumed_samples_array', None)}
         return states
 
     def load_state_dict(self, states: Dict):
-        # 如果 self.during_iter 是 True，那么 data_idx 一定是 0；
+        # 如果 self.during_iter 是 True，那么 num_consumed_samples 一定是 0；
         assert self.during_iter is False, "Cannot call load_state_dict() when it is " \
                                            "during an unfinished iteration."
 
@@ -158,7 +168,7 @@ class RandomSampler(ReproducibleSampler):
         self.seed = states['seed']
         self.epoch = states['epoch']
         self.num_consumed_samples = states['num_consumed_samples']
-        if self.num_consumed_samples>=length:  # 如果保存的时候已经到达了最后一个sample了，则直接将结果重置为0
+        if self.num_consumed_samples >= length:  # 如果保存的时候已经到达了最后一个sample了，则直接将结果重置为0
             self.num_consumed_samples = 0
         if self.shuffle != states['shuffle']:
             logger.info(f"The shuffle from the checkpoint is {states['shuffle']}, while set as {self.shuffle}, "
@@ -245,11 +255,15 @@ class SequentialSampler(RandomSampler):
         indices = indices[self.rank:len(indices):self.num_replicas]
         assert len(indices) == self.num_left_samples
 
-        for index in indices:
+        self.num_consumed_samples_array = NumConsumedSamplesArray(buffer_size=os.environ.get(FASTNLP_DEQUE_SIZE, 2000),
+                                                                  num_consumed_samples=self.num_consumed_samples)
+        for idx, index in enumerate(indices, start=1):
             self.num_consumed_samples += self.num_replicas
+            self.num_consumed_samples_array.push(self.num_consumed_samples)
             yield index
         self.during_iter = False
         self.num_consumed_samples = 0
+        delattr(self, 'num_consumed_samples_array')
 
     def generate_indices(self) -> List[int]:
         """
@@ -260,15 +274,13 @@ class SequentialSampler(RandomSampler):
         return list(range(len(self.dataset)))
 
     def state_dict(self) -> Dict:
-        states = {
-            'num_consumed_samples': self.num_consumed_samples,  # 注意该值是计算所有 rank 上训练的所有数据；
-            'sampler_type': self.__class__.__name__,
-            'length': len(self.dataset),
-        }
+        states = {'num_consumed_samples': self.num_consumed_samples, 'sampler_type': self.__class__.__name__,
+                  'length': len(self.dataset),
+                  'num_consumed_samples_array': getattr(self, 'num_consumed_samples_array', None)}
         return states
 
     def load_state_dict(self, states: Dict):
-        # 如果 self.during_iter 是 True，那么 data_idx 一定是 0；
+        # 如果 self.during_iter 是 True，那么 num_consumed_samples 一定是 0；
         assert self.during_iter is False, "Cannot call load_state_dict() when it is " \
                                           "during an unfinished iteration."
 
@@ -295,8 +307,8 @@ class SortedSampler(SequentialSampler):
         :param kwargs: fastNLP 保留使用
         """
         super().__init__(dataset=dataset, **kwargs)
-        if isinstance(dataset, DataSet):
-            length = dataset.get_field(length)
+        if isinstance(dataset, DataSet) and isinstance(length, str):
+            length = dataset.get_field(length).content
             if not isinstance(length[0], int):
                 length = list(map(len, length))
         else:
@@ -334,9 +346,13 @@ class SortedSampler(SequentialSampler):
         indices = indices[self.rank:len(indices):self.num_replicas]
         assert len(indices) == self.num_left_samples
 
-        for index in indices:
+        self.num_consumed_samples_array = NumConsumedSamplesArray(buffer_size=os.environ.get(FASTNLP_DEQUE_SIZE, 2000),
+                                                                  num_consumed_samples=self.num_consumed_samples)
+        for idx, index in enumerate(indices, start=1):
             self.num_consumed_samples += self.num_replicas
+            self.num_consumed_samples_array.push(self.num_consumed_samples)
             yield index
         self.during_iter = False
         self.num_consumed_samples = 0
+        delattr(self, 'num_consumed_samples_array')
 

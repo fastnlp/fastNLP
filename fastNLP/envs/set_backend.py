@@ -5,13 +5,13 @@
 import os
 import json
 import sys
+import subprocess
 from collections import defaultdict
 
 
 from fastNLP.envs.env import FASTNLP_BACKEND, FASTNLP_GLOBAL_RANK, USER_CUDA_VISIBLE_DEVICES, FASTNLP_GLOBAL_SEED
 from fastNLP.envs.imports import SUPPORT_BACKENDS
-from fastNLP.envs.utils import _module_available
-
+from fastNLP.envs.utils import _module_available, get_gpu_count
 
 def _set_backend():
     """
@@ -56,17 +56,18 @@ def _set_backend():
         if 'PADDLE_RANK_IN_NODE' in os.environ and 'FLAGS_selected_gpus' in os.environ:
             # 在分布式子进程下，根据 USER_VISIBLE_DEVICES 得到进程真正占有的设备
             selected_gpus = os.environ['FLAGS_selected_gpus'].split(',')
-            if user_visible_devices is not None and user_visible_devices != "":
+            if user_visible_devices is not None:
                 # 用户通过 CUDA_VISIBLE_DEVICES 启动了分布式训练
                 # 此时经过 set_backend，用户的设置会保存在 USER_CUDA_VISIBLE_DEVICES 中
                 # 我们需要从中找到真正使用的设备编号
                 user_visible_devices = user_visible_devices.split(",")
                 selected_gpus = ",".join([user_visible_devices[int(i)] for i in selected_gpus])
             else:
-                # 设置 USER_CUDA_VISIBLE_DEVICES 表明用户视角中所有设备可见
-                os.environ[USER_CUDA_VISIBLE_DEVICES] = ""
-            # TODO 这里的 [0] 可能在单个节点多卡的时候有问题
-            os.environ['CUDA_VISIBLE_DEVICES'] = selected_gpus[0]
+                # 没有找到 USER_CUDA_VISIBLE_DEVICES，则将之设置为所有的设备
+                os.environ[USER_CUDA_VISIBLE_DEVICES] = ",".join(map(str, list(
+                    range(get_gpu_count())
+                )))
+            os.environ['CUDA_VISIBLE_DEVICES'] = ",".join(selected_gpus)
             os.environ['FLAGS_selected_gpus'] = ",".join([str(g) for g in range(len(selected_gpus))])
             os.environ['FLAGS_selected_accelerators'] = ",".join([str(g) for g in range(len(selected_gpus))])
         elif 'CUDA_VISIBLE_DEVICES' in os.environ:
@@ -78,7 +79,9 @@ def _set_backend():
         else:
             # 没有设置的话限制在单卡上，防止多进程时占用别的卡
             os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-            os.environ[USER_CUDA_VISIBLE_DEVICES] = ''
+            os.environ[USER_CUDA_VISIBLE_DEVICES] = ",".join(map(str, list(
+                range(get_gpu_count())
+            )))
 
     elif backend == 'jittor':
         assert _module_available(backend), f"You must have {backend} available to use {backend} backend."

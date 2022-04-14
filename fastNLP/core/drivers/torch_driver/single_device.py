@@ -13,7 +13,7 @@ __all__ = [
 from .torch_driver import TorchDriver
 from fastNLP.core.drivers.torch_driver.utils import replace_sampler, replace_batch_sampler
 from fastNLP.core.utils import auto_param_call
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, re_instantiate_sampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, re_instantiate_sampler, RandomBatchSampler
 from fastNLP.core.log import logger
 
 
@@ -102,29 +102,21 @@ class TorchSingleDriver(TorchDriver):
 
     def train_step(self, batch) -> Dict:
         # 如果 batch 是一个 Dict，我们就默认帮其做参数匹配，否则就直接传入到 `train_step` 函数中，让用户自己处理；
-        if isinstance(batch, Dict):
+        if isinstance(batch, Dict) and not self.wo_auto_param_call:
             return auto_param_call(self._train_step, batch, signature_fn=self._train_signature_fn)
         else:
             return self._train_step(batch)
 
-    def backward(self, loss):
-        self.grad_scaler.scale(loss).backward()
-
-    def step(self):
-        for optimizer in self.optimizers:
-            self.grad_scaler.step(optimizer)
-            self.grad_scaler.update()
-
     def validate_step(self, batch) -> Dict:
         # 因为我们 Tester 的逻辑就是将所有的 metric 传给 tester，然后 tester 控制具体 metric 的 update 和 compute；因此不管用户是否
         # 实现 validate_step 函数，其都应该返回一个字典，具体使用哪些东西则是在 validate_batch_loop 中每一个具体的 metric 自己去拿的；
-        if isinstance(batch, Dict):
+        if isinstance(batch, Dict) and not self.wo_auto_param_call:
             return auto_param_call(self._validate_step, batch, signature_fn=self._validate_signature_fn)
         else:
             return self._validate_step(batch)
 
     def test_step(self, batch) -> Dict:
-        if isinstance(batch, Dict):
+        if isinstance(batch, Dict) and not self.wo_auto_param_call:
             return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
         else:
             return self._test_step(batch)
@@ -148,7 +140,7 @@ class TorchSingleDriver(TorchDriver):
             return replace_sampler(dataloader, sampler)
 
         if reproducible:
-            batch_sampler = ReproducibleBatchSampler(
+            batch_sampler = RandomBatchSampler(
                 batch_sampler=args.batch_sampler,
                 batch_size=args.batch_size,
                 drop_last=args.drop_last

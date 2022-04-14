@@ -101,11 +101,17 @@ class RecordTrainerEventTriggerCallback(Callback):
     def on_after_backward(self, trainer):
         print("on_after_backward")
 
-    def on_before_optimizer_step(self, trainer, optimizers):
-        print("on_before_optimizer_step")
+    def on_before_optimizers_step(self, trainer, optimizers):
+        print("on_before_optimizers_step")
+
+    def on_after_optimizers_step(self, trainer, optimizers):
+        print("on_after_optimizers_step")
 
     def on_before_zero_grad(self, trainer, optimizers):
         print("on_before_zero_grad")
+
+    def on_after_zero_grad(self, trainer, optimizers):
+        print("on_after_zero_grad")
 
     def on_validate_begin(self, trainer):
         print("on_validate_begin")

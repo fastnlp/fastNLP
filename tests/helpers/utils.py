@@ -2,34 +2,31 @@ import os
 import sys
 import __main__
 from functools import wraps
-import inspect
 from inspect import ismethod
-import functools
 from copy import deepcopy
 from io import StringIO
 import time
 
 import numpy as np
 
+from fastNLP.core.utils.utils import get_class_that_defined_method
 from fastNLP.envs.env import FASTNLP_GLOBAL_RANK
 from fastNLP.core.drivers.utils import distributed_open_proc
+from fastNLP.core.log import logger
 
 
-def get_class_that_defined_method(meth):
-    if isinstance(meth, functools.partial):
-        return get_class_that_defined_method(meth.func)
-    if inspect.ismethod(meth) or (inspect.isbuiltin(meth) and getattr(meth, '__self__', None) is not None and getattr(meth.__self__, '__class__', None)):
-        for cls in inspect.getmro(meth.__self__.__class__):
-            if meth.__name__ in cls.__dict__:
-                return cls
-        meth = getattr(meth, '__func__', meth)  # fallback to __qualname__ parsing
-    if inspect.isfunction(meth):
-        cls = getattr(inspect.getmodule(meth),
-                      meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0],
-                      None)
-        if isinstance(cls, type):
-            return cls
-    return getattr(meth, '__objclass__', None)  # handle special descriptor objects
+def recover_logger(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        # 保存logger的状态
+        handlers = [handler for handler in logger.handlers]
+        level = logger.level
+        res = fn(*args, **kwargs)
+        logger.handlers = handlers
+        logger.setLevel(level)
+        return res
+
+    return wrapper
 
 
 def magic_argv_env_context(fn):

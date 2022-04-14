@@ -278,11 +278,19 @@ class CallbackManager:
         pass
 
     @_transfer
-    def on_before_optimizer_step(self, trainer, optimizers):
+    def on_before_optimizers_step(self, trainer, optimizers):
+        pass
+
+    @_transfer
+    def on_after_optimizers_step(self, trainer, optimizers):
         pass
 
     @_transfer
     def on_before_zero_grad(self, trainer, optimizers):
+        pass
+
+    @_transfer
+    def on_after_zero_grad(self, trainer, optimizers):
         pass
 
     @_transfer

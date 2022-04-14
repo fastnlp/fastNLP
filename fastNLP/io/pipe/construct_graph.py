@@ -164,7 +164,7 @@ class GraphBuilderBase:
 
     def build_graph_from_file(self, path: str):
         r"""
-            传入文件路径，生成处理好的scipy_sparse_matrix对象。paths支持的路径形式可以参考 ：:meth:`fastNLP.io.Loader.load()`
+            传入文件路径，生成处理好的scipy_sparse_matrix对象。paths支持的路径形式可以参考 ：:method:`fastNLP.io.Loader.load()`
 
             :param path:
             :return: scipy_sparse_matrix

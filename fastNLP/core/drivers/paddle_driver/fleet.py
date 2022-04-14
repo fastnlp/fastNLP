@@ -10,6 +10,8 @@ from .utils import (
     _MODE_PARAMETER,
     get_device_from_visible,
     reset_seed,
+    replace_sampler,
+    replace_batch_sampler,
 )
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
@@ -19,8 +21,17 @@ from fastNLP.core.utils import (
     paddle_move_data_to_device,
     is_in_paddle_dist,
 )
-from fastNLP.core.samplers import ReproducibleSampler, RandomSampler, UnrepeatedRandomSampler
-from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK, USER_CUDA_VISIBLE_DEVICES
+from fastNLP.core.samplers import (
+    RandomBatchSampler,
+    ReproducibleSampler,
+    ReproducibleBatchSampler,
+    RandomSampler,
+    UnrepeatedSampler,
+    UnrepeatedSequentialSampler,
+    re_instantiate_sampler,
+    conversion_between_reproducible_and_unrepeated_sampler,
+)
+from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_SEED
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -93,8 +104,8 @@ class PaddleFleetDriver(PaddleDriver):
             #  我们就直接将 model_device 置为 None；
             self._model_device = None
 
-            def _running_fn_(batch, step_fn, signature_fn):
-                if isinstance(batch, Dict):
+            def _running_fn_(batch, step_fn, signature_fn, wo_auto_param_call):
+                if isinstance(batch, Dict) and not wo_auto_param_call:
                     return auto_param_call(step_fn, batch, signature_fn=signature_fn)
                 else:
                     return self._validate_step(batch)
@@ -105,23 +116,21 @@ class PaddleFleetDriver(PaddleDriver):
                     "Notice your model is a `paddle.DataParallel` model. And your "
                     "model also implements the `train_step` method, which we can not call actually, we will"
                     " call `forward` function instead of `train_step` and you should note that.")
-            self._train_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward)
-            # self._train_signature_fn = model.forward
+            self._train_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
 
             if hasattr(model, "validate_step"):
                 logger.warning(
                     "Notice your model is a `paddle.DataParallel` model. And your "
                     "model also implements the `validate_step` method, which we can not call actually, "
                     "we will call `forward` function instead of `validate_step` and you should note that.")
-            self._validate_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward)
-            # self._validate_signature_fn = model.forward
+            self._validate_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
 
             if hasattr(model, "test_step"):
                 logger.warning(
                     "Notice your model is a `paddle.DataParallel` model. And your "
                     "model also implements the `test_step` method, which we can not call actually, we will"
                     " call `forward` function instead of `test_step` and you should note that.")
-            self._test_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward)
+            self._test_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
 
         # 当参数 `device` 为 None 时并且该参数不为 None，表示将对应的数据移到指定的机器上；
         self._data_device = kwargs.get("data_device", None)
@@ -235,7 +244,6 @@ class PaddleFleetDriver(PaddleDriver):
         """
         if self.local_rank == 0:
             # 是 rank0 的话，则拉起其它子进程
-            print("in launcher")
             launcher = FleetLauncher(self.parallel_device, self.output_from_new_proc)
             launcher.launch()
         # 设置参数和初始化分布式环境
@@ -253,7 +261,6 @@ class PaddleFleetDriver(PaddleDriver):
         当用户使用了 `python -m paddle.distributed.launch xxx.py` 启动时，我们需要
         根据 paddle 设置的环境变量来获得各种属性
         """
-        print("set_from_env")
         self.world_size = dist.get_world_size()
         self.global_rank = dist.get_rank()
 
@@ -267,9 +274,9 @@ class PaddleFleetDriver(PaddleDriver):
                 **self._fleet_kwargs
             )
 
-            self._train_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TRAIN})
-            self._validate_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.VALIDATE})
-            self._test_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TEST})
+            self._train_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TRAIN}, wo_auto_param_call=self.wo_auto_param_call)
+            self._validate_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.VALIDATE}, wo_auto_param_call=self.wo_auto_param_call)
+            self._test_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TEST}, wo_auto_param_call=self.wo_auto_param_call)
 
         self._configured = True
 
@@ -312,67 +319,90 @@ class PaddleFleetDriver(PaddleDriver):
     def test_step(self, batch):
         return self._test_step(batch)
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler]],
+    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler, RandomBatchSampler]],
                                   reproducible: bool = False, sampler_or_batch_sampler=None):
-        
         # 暂时不支持iterableDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                     "FastNLP does not support `IteratorDataset` now."
+        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleSampler 说明是在断点重训时 driver.load 函数调用；
+        if isinstance(dist, ReproducibleBatchSampler):
+            dist.set_distributed(
+                num_replicas=self.world_size,
+                rank=self.global_rank,
+                pad=True
+            )
+            return replace_batch_sampler(dataloader, dist)
         if isinstance(dist, ReproducibleSampler):
-            dataloader.batch_sampler.sampler = dist
-            return dataloader
+            dist.set_distributed(
+                num_replicas=self.world_size,
+                rank=self.global_rank,
+                pad=True
+            )
+            return replace_sampler(dataloader, dist)
 
-        # paddle 的 BatchSampler 和 DataLoader 没有 shuffle 成员，只能根据 sampler 判断
-        # 但是其子类 DistributedBatchSampler 却有 shuffle 成员
-        # 因此用 type() 进行严格的判断
-        if type(dataloader.batch_sampler) == BatchSampler:
-            shuffle = isinstance(dataloader.batch_sampler.sampler, RandomSampler)
-        else:
-            shuffle = dataloader.batch_sampler.shuffle
-
+       # 如果 dist 为 str 或者 None，说明是在 trainer 初试化时调用；
         # trainer, evaluator
         if dist is None:
             if reproducible:
                 raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize fleet out of our "
                                    "control.")
             else:
+                args = self.get_dataloader_args(dataloader)
+                if isinstance(args.batch_sampler, ReproducibleBatchSampler):
+                    batch_sampler = re_instantiate_sampler(args.batch_sampler)
+                    return replace_batch_sampler(dataloader, batch_sampler)
+                if isinstance(args.sampler, ReproducibleSampler):
+                    sampler = re_instantiate_sampler(args.sampler)
+                    return replace_sampler(dataloader, sampler)
                 return dataloader
         # trainer
         elif dist == "dist":
+            args = self.get_dataloader_args(dataloader)
             # 如果用户的 trainer.use_dist_sampler 为 True，那么此时其是否进行断点重训，不影响这里的行为；
-            if isinstance(dataloader.batch_sampler.sampler, ReproducibleSampler):
-                dataloader.batch_sampler.sampler.set_distributed(
+            if isinstance(args.batch_sampler, ReproducibleBatchSampler):
+                batch_sampler = re_instantiate_sampler(args.batch_sampler)
+                batch_sampler.set_distributed(
                     num_replicas=self.world_size,
                     rank=self.global_rank,
                     pad=True
                 )
-                return dataloader
+                return replace_batch_sampler(dataloader, batch_sampler)
+            elif isinstance(args.sampler, ReproducibleSampler):
+                sampler = re_instantiate_sampler(args.sampler)
+                sampler.set_distributed(
+                    num_replicas=self.world_size,
+                    rank=self.global_rank,
+                    pad=True
+                )
+                return replace_sampler(dataloader, sampler)
             else:
                 sampler = RandomSampler(
-                    dataset=dataloader.dataset,
-                    shuffle=shuffle,
-                    seed=int(os.environ.get("FASTNLP_SEED", 0))
+                    dataset=args.dataset,
+                    shuffle=args.shuffle,
+                    seed=int(os.environ.get(FASTNLP_GLOBAL_SEED, 0))
                 )
                 sampler.set_distributed(
                     num_replicas=self.world_size,
                     rank=self.global_rank,
                     pad=True
                 )
-                dataloader.batch_sampler.sampler = sampler
-                return dataloader
+                return replace_sampler(dataloader, sampler)
         # evaluator
         elif dist == "unrepeatdist":
-            sampler = UnrepeatedRandomSampler(
-                dataset=dataloader.dataset,
-                shuffle=shuffle,
-                seed=int(os.environ.get("FASTNLP_SEED", 0))
-            )
+            args = self.get_dataloader_args(dataloader)
+            if isinstance(args.sampler, ReproducibleSampler):
+                sampler = conversion_between_reproducible_and_unrepeated_sampler(args.sampler)
+            elif not isinstance(args.sampler, UnrepeatedSampler):
+                sampler = UnrepeatedSequentialSampler(
+                    dataset=args.dataset
+                )
+            else:
+                sampler = re_instantiate_sampler(args.sampler)
             sampler.set_distributed(
                 num_replicas=self.world_size,
                 rank=self.global_rank
             )
-            dataloader.batch_sampler.sampler = sampler
-            return dataloader
+            return replace_sampler(dataloader, sampler)
         else:
             raise ValueError("Parameter `dist_sampler` can only be one of three values: ('dist', 'unrepeatdist', None).")
 

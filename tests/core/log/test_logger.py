@@ -6,13 +6,16 @@ import logging
 import re
 
 from fastNLP.envs.env import FASTNLP_LAUNCH_TIME
-from tests.helpers.utils import magic_argv_env_context
 from fastNLP.core import synchronize_safe_rm
+from fastNLP.core.log.logger import logger
+
+from tests.helpers.utils import magic_argv_env_context, recover_logger
 
 
 # 测试 TorchDDPDriver；
 @magic_argv_env_context
-def test_add_file_ddp_1():
+@recover_logger
+def test_add_file_ddp_1_torch():
     """
     测试 path 是一个文件的地址，但是这个文件所在的文件夹存在；
 
@@ -56,11 +59,11 @@ def test_add_file_ddp_1():
     synchronize_safe_rm(filepath)
     dist.barrier()
     dist.destroy_process_group()
-    logger.removeHandler(handler)
 
 
 @magic_argv_env_context
-def test_add_file_ddp_2():
+@recover_logger
+def test_add_file_ddp_2_torch():
     """
     测试 path 是一个文件的地址，但是这个文件所在的文件夹不存在；
     """
@@ -103,14 +106,14 @@ def test_add_file_ddp_2():
         assert len(pattern.findall(line)) == 1
     finally:
         synchronize_safe_rm(path)
-        logger.removeHandler(handler)
 
     dist.barrier()
     dist.destroy_process_group()
 
 
 @magic_argv_env_context
-def test_add_file_ddp_3():
+@recover_logger
+def test_add_file_ddp_3_torch():
     """
     path = None;
 
@@ -155,10 +158,10 @@ def test_add_file_ddp_3():
     synchronize_safe_rm(file)
     dist.barrier()
     dist.destroy_process_group()
-    logger.removeHandler(handler)
 
 @magic_argv_env_context
-def test_add_file_ddp_4():
+@recover_logger
+def test_add_file_ddp_4_torch():
     """
     测试 path 是文件夹；
     """
@@ -200,7 +203,6 @@ def test_add_file_ddp_4():
         assert len(pattern.findall(line)) == 1
     finally:
         synchronize_safe_rm(path)
-        logger.removeHandler(handler)
 
     dist.barrier()
     dist.destroy_process_group()
@@ -209,12 +211,11 @@ def test_add_file_ddp_4():
 class TestLogger:
     msg = 'some test log msg'
 
+    @recover_logger
     def test_add_file_1(self):
         """
         测试 path 是一个文件的地址，但是这个文件所在的文件夹存在；
         """
-        from fastNLP.core.log.logger import logger
-
         path = Path(tempfile.mkdtemp())
         try:
             filepath = path.joinpath('log.txt')
@@ -225,14 +226,12 @@ class TestLogger:
             assert self.msg in line
         finally:
             synchronize_safe_rm(path)
-            logger.removeHandler(handler)
 
+    @recover_logger
     def test_add_file_2(self):
         """
         测试 path 是一个文件的地址，但是这个文件所在的文件夹不存在；
         """
-        from fastNLP.core.log.logger import logger
-
         origin_path = Path(tempfile.mkdtemp())
 
         try:
@@ -245,14 +244,12 @@ class TestLogger:
             assert self.msg in line
         finally:
             synchronize_safe_rm(origin_path)
-            logger.removeHandler(handler)
 
+    @recover_logger
     def test_add_file_3(self):
         """
         测试 path 是 None；
         """
-        from fastNLP.core.log.logger import logger
-
         handler = logger.add_file()
         logger.info(self.msg)
 
@@ -264,14 +261,12 @@ class TestLogger:
                     line = ''.join([l for l in f])
                 assert self.msg in line
                 file.unlink()
-        logger.removeHandler(handler)
 
+    @recover_logger
     def test_add_file_4(self):
         """
         测试 path 是文件夹；
         """
-        from fastNLP.core.log.logger import logger
-
         path = Path(tempfile.mkdtemp())
         try:
             handler = logger.add_file(path)
@@ -285,16 +280,21 @@ class TestLogger:
                     assert self.msg in line
         finally:
             synchronize_safe_rm(path)
-            logger.removeHandler(handler)
 
+    @recover_logger
     def test_stdout(self, capsys):
-        from fastNLP.core.log.logger import logger
-
         handler = logger.set_stdout(stdout="raw")
         logger.info(self.msg)
         logger.debug('aabbc')
         captured = capsys.readouterr()
         assert "some test log msg\n" == captured.out
 
-        logger.removeHandler(handler)
+    @recover_logger
+    def test_warning_once(self, capsys):
+        logger.warning_once('#')
+        logger.warning_once('#')
+        logger.warning_once('@')
+        captured = capsys.readouterr()
+        assert captured.out.count('#') == 1
+        assert captured.out.count('@') == 1
 

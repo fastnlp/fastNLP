@@ -3,6 +3,7 @@ from array import array
 import numpy as np
 import pytest
 from itertools import chain
+from copy import deepcopy
 
 from fastNLP.core.samplers import RandomBatchSampler, BucketedBatchSampler
 from fastNLP.core.drivers.torch_driver.utils import replace_batch_sampler
@@ -30,7 +31,7 @@ class TestReproducibleBatchSampler:
         _get_re_batchsampler = dataloader.batch_sampler
         assert isinstance(_get_re_batchsampler, RandomBatchSampler)
         state = _get_re_batchsampler.state_dict()
-        assert state == {"index_list": array("I", list(range(100))), "data_idx": forward_steps*before_batch_size,
+        assert state == {"index_list": array("I", list(range(100))), "num_consumed_samples": forward_steps*before_batch_size,
                          "sampler_type": "RandomBatchSampler"}
 
         # 2. 断点重训，重新生成一个 dataloader；
@@ -413,26 +414,102 @@ class TestBucketedBatchSampler:
     @pytest.mark.parametrize('drop_last', [True, False])
     @pytest.mark.parametrize('pad', [True, False])
     @pytest.mark.parametrize('num_samples', [13, 100, 623, 1000])
-    @pytest.mark.parametrize('num_replica', [2, 3])
-    def test_multi_same_bucket(self, shuffle, drop_last, pad, num_samples, num_replica):
-    # def test_multi_same_bucket(self, shuffle=True, drop_last=True, pad=True, num_samples=623, num_replica=2):
+    @pytest.mark.parametrize('num_replicas', [2, 3])
+    def test_multi_same_bucket(self, shuffle, drop_last, pad, num_samples, num_replicas):
+    # def test_multi_same_bucket(self, shuffle=True, drop_last=True, pad=True, num_samples=623, num_replicas=2):
         dataset = DatasetWithVaryLength(num_of_data=num_samples)
         batch_size = 6
-        if num_replica*batch_size > num_samples:
+        if num_replicas*batch_size > num_samples:
             return
         num_batch_per_bucket = 10
         samplers = []
         lengths = []
-        for i in range(num_replica):
+        for i in range(num_replicas):
             sampler = BucketedBatchSampler(dataset, length=dataset.data, batch_size=batch_size,
                                             num_batch_per_bucket=num_batch_per_bucket, shuffle=shuffle, drop_last=drop_last)
-            sampler.set_distributed(num_replica, rank=i, pad=pad)
+            sampler.set_distributed(num_replicas, rank=i, pad=pad)
             sampler.set_epoch(0)
             samplers.append(sampler)
             lengths.append(len(list(iter(sampler))))
         assert len(set(lengths))==1
-        bucket_diff = batch_size * num_batch_per_bucket * num_replica
+        bucket_diff = batch_size * num_batch_per_bucket * num_replicas
 
         for bs in zip(*samplers):
             diff = max(chain(*bs)) - min(chain(*bs))
             assert diff <= bucket_diff
+
+    @pytest.mark.parametrize('shuffle', [True, False])
+    @pytest.mark.parametrize('drop_last', [True, False])
+    @pytest.mark.parametrize('pad', [True, False])
+    @pytest.mark.parametrize('num_samples', [13, 100, 623, 1000])
+    @pytest.mark.parametrize('num_replicas', [1, 2, 3])
+    def test_multi_save_load(self, shuffle, drop_last, pad, num_samples, num_replicas):
+        """
+        测试是否能够正确地恢复使用过的（forward）数据，由于 DataLoader 存在预取，所以 Sampler 自身的 num_consumed_samples 可能
+            偏多
+
+        :return:
+        """
+        batch_size = 6
+        num_batch_per_bucket = 10
+        dataset = DatasetWithVaryLength(num_of_data=num_samples)
+        samplers = []
+        for i in range(num_replicas):
+            sampler = BucketedBatchSampler(dataset, length=dataset.data, batch_size=batch_size,
+                                           num_batch_per_bucket=num_batch_per_bucket, shuffle=shuffle, drop_last=drop_last)
+
+            sampler.set_distributed(num_replicas=num_replicas, rank=i, pad=pad)
+            samplers.append(sampler)
+        count = 0
+        already_seen_sets = [set()]
+        already_seen_set = set()
+        for batchs in zip(*samplers):
+            batch = chain(*batchs)
+            already_seen_set.update(batch)
+            already_seen_sets.append(deepcopy(already_seen_set))
+            count += 1
+            if count > 3:
+                break
+        states = samplers[0].state_dict()
+        for i in range(len(already_seen_sets)):
+            if states['num_consumed_samples_array'] is not None:
+                states['num_consumed_samples'] = states['num_consumed_samples_array'][i]
+            sampler = BucketedBatchSampler(dataset, length=dataset.data, batch_size=batch_size+1,
+                                           num_batch_per_bucket=num_batch_per_bucket, shuffle=shuffle,
+                                           drop_last=drop_last)
+            sampler.set_epoch(0)
+            already_seen_set = deepcopy(already_seen_sets[i])
+            for batch in sampler:
+                already_seen_set.update(batch)
+            assert len(already_seen_set) == len(dataset) if drop_last is False else len(already_seen_set) <= len(
+                dataset)
+
+        # 测试保存之后再次保存
+        sampler = BucketedBatchSampler(dataset, length=dataset.data, batch_size=batch_size + 1,
+                                       num_batch_per_bucket=num_batch_per_bucket, shuffle=shuffle,
+                                       drop_last=drop_last)
+        sampler.set_epoch(0)
+        if states['num_consumed_samples_array'] is not None:
+            states['num_consumed_samples'] = states['num_consumed_samples_array'][2]
+        if len(already_seen_sets)<3:
+            return
+        already_seen_set = already_seen_sets[2]
+        count = 0
+        for batch in sampler:
+            already_seen_set.update(batch)
+            count += 1
+            if count > 6:
+                break
+
+        states = sampler.state_dict()
+        if states['num_consumed_samples_array'] is not None:
+            states['num_consumed_samples'] = states['num_consumed_samples_array'][count]
+        sampler = BucketedBatchSampler(dataset, length=dataset.data, batch_size=batch_size//2,
+                                       num_batch_per_bucket=num_batch_per_bucket, shuffle=shuffle,
+                                       drop_last=drop_last)
+        sampler.load_state_dict(states)
+        sampler.set_epoch(0)
+        for batch in sampler:
+            already_seen_set.update(batch)
+
+        assert len(already_seen_set)==len(dataset) if drop_last is False else len(already_seen_set)<=len(dataset)

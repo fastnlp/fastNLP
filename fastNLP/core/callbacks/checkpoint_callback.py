@@ -10,12 +10,10 @@ from copy import deepcopy
 
 
 import fastNLP
-from .callback import Callback, HasMonitorCallback
-from fastNLP.core.callbacks.utils import _get_monitor_value
+from .callback import HasMonitorCallback
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_LAUNCH_TIME
 from fastNLP.core.utils import synchronize_safe_rm, synchronize_mkdir
-from fastNLP.core.utils import apply_to_collection
 
 
 class CheckpointCallback(HasMonitorCallback):
@@ -167,6 +165,8 @@ class CheckpointCallback(HasMonitorCallback):
         """
         if self.save_topk is not None:
             monitor_value = self.get_monitor_value(results=results)
+            if monitor_value is None:
+                return
             folder_name = f"{self.folder_prefix}-epoch_{trainer.cur_epoch_idx}-batch_{trainer.global_forward_batches}" \
                          f"-{self._real_monitor}_{monitor_value}"
 
@@ -178,8 +178,7 @@ class CheckpointCallback(HasMonitorCallback):
             else:
                 _least_valuable_model = (min if self.larger_better else max)(self._topk_model,
                                                                              key=lambda x: self._topk_model[x])
-                if (self.larger_better and monitor_value > self._topk_model[_least_valuable_model]) or \
-                        (self.larger_better is False and monitor_value < self._topk_model[_least_valuable_model]):
+                if self.is_former_monitor_value_better(monitor_value, self._topk_model[_least_valuable_model]):
                     self._topk_model[folder_name] = monitor_value
                     _should_save = True
                     self._topk_model.pop(_least_valuable_model)
@@ -208,21 +207,6 @@ class CheckpointCallback(HasMonitorCallback):
             **self.kwargs
         )
 
-    def _get_validate_metric(self, res: Dict):
-        """
-        该函数用于从 `Evaluator` 的结果中找到属于当前 CheckpointCallback 的 metric result（根据 monitor）；
-        如果用户输入在 res 中没有找到，我们会查询所有的 validate 结果字典的键值，根据 最长公共字符串 匹配，使用最长匹配的结果值；
-        :param res:
-        :return:
-        """
-        use_monitor, value = _get_monitor_value(monitor=self.monitor, real_monitor=self._real_monitor, res=res)
-        if self._real_monitor != use_monitor:
-            logger.warning(f"We can not find `{self._real_monitor}` in the evaluation result (with keys as {list(res.keys())}), "
-                           f"we use the `{use_monitor}` as the monitor for {self.__class__.__name__}.")
-        self._real_monitor = use_monitor
-
-        return value
-
     @property
     def folder_prefix(self):
         raise NotImplementedError("The `folder_prefix` is not specified")
@@ -248,7 +232,8 @@ class ModelCheckpointCallback(CheckpointCallback):
     若 model_save_fn 不为 None，则 fastNLP 将 folder 绝对路径传递给该函数，fastNLP 不在该 folder 下创建任何文件。
 
     :param monitor: 监控的 metric 的名称。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
-        的那个作为 monitor 。如果为 None 将尝试从 Trainer 中获取该值。
+        的那个作为 monitor 。如果为 None 将尝试从 Trainer 中获取该值。也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，
+        返回一个 float 值作为 monitor 的结果。
     :param save_folder: 保存的文件夹，fastNLP 将在该文件下以时间戳创建子文件夹，并在里面保存。因此不同次运行可以将被保存到不同的
         时间戳文件夹中。如果为 None ，默认使用当前文件夹。
     :param save_every_n_epochs: 多少个 epoch 保存一次。
@@ -295,7 +280,8 @@ class TrainerCheckpointCallback(CheckpointCallback):
     若 model_save_fn 不为 None，则 fastNLP 只会在每个 folder 下生成 fastnlp_trainer.pkl.tar 文件。
 
     :param monitor: 监控的 metric 的名称。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
-        的那个作为 monitor 。如果为 None 将尝试从 Trainer 中获取该值。
+        的那个作为 monitor 。如果为 None 将尝试从 Trainer 中获取该值。也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，
+        返回一个 float 值作为 monitor 的结果。
     :param save_folder: 保存的文件夹，fastNLP 将在该文件下以时间戳创建子文件夹，并在里面保存。因此不同次运行可以将被保存到不同的
         时间戳文件夹中。如果为 None ，默认使用当前文件夹。
     :param save_every_n_epochs: 多少个 epoch 保存一次。

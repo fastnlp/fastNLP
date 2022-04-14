@@ -74,28 +74,30 @@ class EventEnum(_SingleEventState, Enum):
 
 @unique
 class Events(EventEnum):
-    ON_AFTER_TRAINER_INITIALIZED = "on_after_trainer_initialized"
-    ON_SANITY_CHECK_BEGIN = "on_sanity_check_begin"
-    ON_SANITY_CHECK_END = "on_sanity_check_end"
-    ON_TRAIN_BEGIN = "on_train_begin"
-    ON_TRAIN_END = "on_train_end"
-    ON_TRAIN_EPOCH_BEGIN = "on_train_epoch_begin"
-    ON_TRAIN_EPOCH_END = "on_train_epoch_end"
-    ON_FETCH_DATA_BEGIN = "on_fetch_data_begin"
-    ON_FETCH_DATA_END = "on_fetch_data_end"
-    ON_TRAIN_BATCH_BEGIN = "on_train_batch_begin"
-    ON_TRAIN_BATCH_END = "on_train_batch_end"
-    ON_EXCEPTION = "on_exception"
-    ON_SAVE_MODEL = "on_save_model"
-    ON_LOAD_MODEL = "on_load_model"
-    ON_SAVE_CHECKPOINT = "on_save_checkpoint"
-    ON_LOAD_CHECKPOINT = "on_load_checkpoint"
-    ON_BEFORE_BACKWARD = "on_before_backward"
-    ON_AFTER_BACKWARD = "on_after_backward"
-    ON_BEFORE_OPTIMIZER_STEP = "on_before_optimizer_step"
-    ON_BEFORE_ZERO_GRAD = "on_before_zero_grad"
-    ON_VALIDATE_BEGIN = "on_validate_begin"
-    ON_VALIDATE_END = "on_validate_end"
+    on_after_trainer_initialized = "on_after_trainer_initialized"
+    on_sanity_check_begin = "on_sanity_check_begin"
+    on_sanity_check_end = "on_sanity_check_end"
+    on_train_begin = "on_train_begin"
+    on_train_end = "on_train_end"
+    on_train_epoch_begin = "on_train_epoch_begin"
+    on_train_epoch_end = "on_train_epoch_end"
+    on_fetch_data_begin = "on_fetch_data_begin"
+    on_fetch_data_end = "on_fetch_data_end"
+    on_train_batch_begin = "on_train_batch_begin"
+    on_train_batch_end = "on_train_batch_end"
+    on_exception = "on_exception"
+    on_save_model = "on_save_model"
+    on_load_model = "on_load_model"
+    on_save_checkpoint = "on_save_checkpoint"
+    on_load_checkpoint = "on_load_checkpoint"
+    on_before_backward = "on_before_backward"
+    on_after_backward = "on_after_backward"
+    on_before_optimizers_step = "on_before_optimizers_step"
+    on_after_optimizers_step = "on_after_optimizers_step"
+    on_before_zero_grad = "on_before_zero_grad"
+    on_after_zero_grad = "on_after_zero_grad"
+    on_validate_begin = "on_validate_begin"
+    on_validate_end = "on_validate_end"
 
 
 class EventsList:
@@ -169,20 +171,8 @@ class Filter:
             self.num_called += 1
 
             # 因为我们的 callback 函数的输入是固定的，而且我们能够保证第一个参数一定是 trainer；
-            # 因此我们就可以这样进行操作，将 trainer 从 callback 函数的输入中取出来，送到我们的 trainer 里去，从而实现一些复杂的逻辑；
-            # 与此同时，当我们发现 Filter 所修饰的函数的输入第一个参数不是 trainer 时，我们就只传入一个 self 到 _filter 函数中；
-
-            # 提取参数的逻辑；
-            trainer = kwargs.get("trainer", None)
-
-            if trainer is None and len(args) > 0:
-                trainer = args[0]
-            if isinstance(trainer, fastNLP.Trainer):  # 这里因为重复调用的问题，我们不能直接使用 fastNLP.Trainer，因为 Trainer
-                # 也会调用这个 module，但是 Controller 不会；
-                param = (self, trainer)
-            else:
-                param = (self, )
-            if self._filter(*param):
+            trainer = args[0]
+            if self._filter(self, trainer):
                 self.num_executed += 1
                 return fn(*args, **kwargs)
 

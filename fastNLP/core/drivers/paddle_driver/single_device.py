@@ -2,6 +2,7 @@ import os
 from typing import Optional, Dict, Union
 
 from .paddle_driver import PaddleDriver
+from .utils import replace_batch_sampler, replace_sampler, get_device_from_visible
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.envs.env import USER_CUDA_VISIBLE_DEVICES
 from fastNLP.core.utils import (
@@ -10,7 +11,12 @@ from fastNLP.core.utils import (
     get_paddle_device_id,
     paddle_move_data_to_device,
 )
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
+from fastNLP.core.samplers import (
+    ReproducibleBatchSampler,
+    RandomBatchSampler,
+    ReproducibleSampler,
+    re_instantiate_sampler,
+)
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -22,16 +28,13 @@ __all__ = [
 ]
 
 class PaddleSingleDriver(PaddleDriver):
-    def __init__(self, model, device: Optional[str], fp16: Optional[bool] = False, **kwargs):
+    def __init__(self, model, device: str, fp16: Optional[bool] = False, **kwargs):
         super(PaddleSingleDriver, self).__init__(model, fp16=fp16, **kwargs)
 
         if device is None:
             raise ValueError("Parameter `device` can not be None in `PaddleSingleDriver`.")
 
-        if isinstance(device, int):
-            self.model_device = get_paddle_gpu_str(device)
-        else:
-            self.model_device = device
+        self.model_device = get_paddle_gpu_str(device)
 
         self.local_rank = 0
         self.global_rank = 0
@@ -93,18 +96,18 @@ class PaddleSingleDriver(PaddleDriver):
                 self._test_signature_fn = model.forward
 
     def setup(self):
-        user_visible_devices = os.environ[USER_CUDA_VISIBLE_DEVICES]
-        device_id = get_paddle_device_id(self.model_device)
-        if user_visible_devices is not None and user_visible_devices != "":
-            # 不为空，说明用户设置了 CUDA_VISIBLDE_DEVICES
-            device_id = user_visible_devices.split(",")[device_id]
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(device_id)
-        paddle.device.set_device("gpu:0")
-        self.model.to("gpu:0")
+        device = self.model_device
+        if device != "cpu":
+            device_id = get_paddle_device_id(device)
+            device_id = os.environ[USER_CUDA_VISIBLE_DEVICES].split(",")[device_id]
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(device_id)
+            device = get_device_from_visible(device, output_type=str)
+        paddle.device.set_device(device)
+        self.model.to(device)
 
     def train_step(self, batch) -> Dict:
         # 如果 batch 是一个 Dict，我们就默认帮其做参数匹配，否则就直接传入到 `train_step` 函数中，让用户自己处理；
-        if isinstance(batch, Dict):
+        if isinstance(batch, Dict) and not self.wo_auto_param_call:
             return auto_param_call(self._train_step, batch, signature_fn=self._train_signature_fn)
         else:
             return self._train_step(batch)
@@ -118,13 +121,13 @@ class PaddleSingleDriver(PaddleDriver):
             self.grad_scaler.update()
 
     def validate_step(self, batch) -> Dict:
-        if isinstance(batch, Dict):
+        if isinstance(batch, Dict) and not self.wo_auto_param_call:
             return auto_param_call(self._validate_step, batch, signature_fn=self._validate_signature_fn)
         else:
             return self._validate_step(batch)
 
     def test_step(self, batch) -> Dict:
-        if isinstance(batch, Dict):
+        if isinstance(batch, Dict) and not self.wo_auto_param_call:
             return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
         else:
             return self._test_step(batch)
@@ -133,38 +136,40 @@ class PaddleSingleDriver(PaddleDriver):
         r"""
         将数据迁移到指定的机器上；batch 可能是 list 也可能 dict ，或其嵌套结构。
         在 Paddle 中使用可能会引起因与设置的设备不一致而产生的问题，请注意。
-        在单卡时，由于 CUDA_VISIBLE_DEVICES 始终被限制在一个设备上，因此实际上只会迁移到 `gpu:0`
 
         :return: 将移动到指定机器上的 batch 对象返回；
         """
-        return paddle_move_data_to_device(batch, "gpu:0")
+        device = get_device_from_visible(self.data_device)
+        return paddle_move_data_to_device(batch, device)
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler],
-                                  reproducible: bool = False, sampler_or_batch_sampler=None):
-        # 暂时不支持IteratorDataset
+    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler]=None,
+                                  reproducible: bool = False):
+
+        # 暂时不支持iterableDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
-                "FastNLP does not support `IteratorDataset` now."
+                    "FastNLP does not support `IteratorDataset` now."
+        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleIterator 说明是在断点重训时 driver.load 函数调用；
         if isinstance(dist, ReproducibleBatchSampler):
-            dataloader.batch_sampler = dist
-            return dataloader
-        if isinstance(dist, ReproducibleSampler):
-            dataloader.batch_sampler.sampler = dist
-            return dataloader            
+            return replace_batch_sampler(dataloader, dist)
+        elif isinstance(dist, ReproducibleSampler):
+            return replace_sampler(dataloader, dist)
+
+        # 如果 dist 为 str 或者 None，说明是在 trainer 初试化时调用；
+        args = self.get_dataloader_args(dataloader)
+        if isinstance(args.batch_sampler, ReproducibleBatchSampler):
+            batch_sampler = re_instantiate_sampler(args.batch_sampler)
+            return replace_batch_sampler(dataloader, batch_sampler)
+        elif isinstance(args.sampler, ReproducibleSampler):
+            sampler = re_instantiate_sampler(args.sampler)
+            return replace_sampler(dataloader, sampler)
 
         if reproducible:
-            if isinstance(dataloader.batch_sampler.sampler, ReproducibleSampler):
-                return dataloader
-            elif isinstance(dataloader.batch_sampler, ReproducibleBatchSampler):
-                return dataloader
-            else:
-                # TODO
-                batch_sampler = ReproducibleBatchSampler(
-                    batch_sampler=dataloader.batch_sampler,
-                    batch_size=dataloader.batch_sampler.batch_size,
-                    drop_last=dataloader.drop_last
-                )
-                dataloader.batch_sampler = batch_sampler
-                return dataloader
+            batch_sampler = RandomBatchSampler(
+                batch_sampler=args.batch_sampler,
+                batch_size=args.batch_size,
+                drop_last=args.drop_last
+            )
+            return replace_batch_sampler(dataloader, batch_sampler)
         else:
             return dataloader
 

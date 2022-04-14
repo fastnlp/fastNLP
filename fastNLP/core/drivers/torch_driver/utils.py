@@ -8,6 +8,7 @@ import numpy as np
 import inspect
 
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from fastNLP.core.samplers import re_instantiate_sampler
 
 if _NEED_IMPORT_TORCH:
     import torch
@@ -140,24 +141,25 @@ class _DDPWrappingModel(Module):
         pytorch lightning 实现了先 unwrapping_model 的操作，但是感觉对于我们来说没有什么必须要，先写个注释放这里，之后有需求了再看；
         """
 
-        _forward_state = kwargs.pop(_MODE_PARAMETER)
+        forward_state = kwargs.pop(_MODE_PARAMETER)
+        wo_auto_param_call = kwargs.pop("wo_auto_param_call")
 
-        if _forward_state == ForwardState.TRAIN:
-            if isinstance(batch, Dict):
+        if forward_state == ForwardState.TRAIN:
+            if isinstance(batch, Dict) and not wo_auto_param_call:
                 return auto_param_call(self._train_step, batch, signature_fn=self._train_signature_fn)
             else:
                 return self._train_step(batch)
-        elif _forward_state == ForwardState.VALIDATE:
-            if isinstance(batch, Dict):
+        elif forward_state == ForwardState.VALIDATE:
+            if isinstance(batch, Dict) and not wo_auto_param_call:
                 return auto_param_call(self._validate_step, batch, signature_fn=self._validate_signature_fn)
             else:
                 return self._validate_step(batch)
-        elif _forward_state == ForwardState.TEST:
-            if isinstance(batch, Dict):
+        elif forward_state == ForwardState.TEST:
+            if isinstance(batch, Dict) and not wo_auto_param_call:
                 return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
             else:
                 return self._test_step(batch)
-        elif _forward_state == ForwardState.PREDICT:
+        elif forward_state == ForwardState.PREDICT:
             raise NotImplementedError("'PREDICT' mode has not been implemented.")
         else:
             raise NotImplementedError("You should direct a concrete mode.")
@@ -294,7 +296,6 @@ def replace_sampler(dataloader: "DataLoader", sampler):
                 "manually add the `DistributedSampler` as: "
                 f"`{dataloader_self_name}(dataset, sampler=DistributedSampler(dataset))`."
             )
-
     return type(dataloader)(**reconstruct_args)
 
 
@@ -306,12 +307,8 @@ def _dataloader_init_kwargs_resolve_sampler(
     """
     batch_sampler = getattr(dataloader, "batch_sampler")
     # checking the batch sampler type is different than PyTorch default.
-    if batch_sampler is not None and type(batch_sampler) is not BatchSampler:
-        batch_sampler = type(batch_sampler)(
-            sampler,
-            batch_size=batch_sampler.batch_size,
-            drop_last=batch_sampler.drop_last,
-        )
+    if batch_sampler is not None and not isinstance(batch_sampler, BatchSampler):
+        batch_sampler = re_instantiate_sampler(batch_sampler)
 
         return {
             "sampler": None,
@@ -342,6 +339,9 @@ def replace_batch_sampler(dataloader, new_batch_sampler):
     params = {k: getattr(dataloader, k) for k in params_keys}
     params["batch_sampler"] = new_batch_sampler
     return type(dataloader)(**params)
+    # TODO 这里是否可以auto_param_call一下
+    # return auto_param_call(type(dataloader), params, {'self': type(dataloader).__new__()},
+    #                        signature_fn=type(dataloader).__init__)
 
 
 def optimizer_state_to_device(state, device):

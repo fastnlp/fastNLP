@@ -12,6 +12,7 @@ if _NEED_IMPORT_TORCH:
     import torch
     import torch.distributed as dist
     from torch.nn.parallel import DistributedDataParallel
+    from torch.utils.data import BatchSampler
 
 __all__ = [
     'TorchDDPDriver'
@@ -167,6 +168,7 @@ class TorchDDPDriver(TorchDriver):
             不管是什么情况，`TorchDDPDriver` 在 `setup` 函数的最后，都会将所有进程的 pid 主动记录下来，这样当一个进程出现 exception 后，
              driver 的 on_exception 函数就会被 trainer 调用，其会调用 os.kill 指令将其它进程 kill 掉；
         """
+        # 在加入很多东西后，需要注意这里调用 super 函数的位置；
         super(TorchDDPDriver, self).__init__(model, fp16=fp16, **kwargs)
 
         if isinstance(model, torch.nn.DataParallel):
@@ -202,8 +204,8 @@ class TorchDDPDriver(TorchDriver):
             #  我们就直接将 model_device 置为 None；
             self.model_device = None
 
-            def _running_fn_(batch, step_fn, signature_fn):
-                if isinstance(batch, Dict):
+            def _running_fn_(batch, step_fn, signature_fn, wo_auto_param_call):
+                if isinstance(batch, Dict) and not wo_auto_param_call:
                     return auto_param_call(step_fn, batch, signature_fn=signature_fn)
                 else:
                     return step_fn(batch)
@@ -214,7 +216,7 @@ class TorchDDPDriver(TorchDriver):
                     "Notice your model is a `DistributedDataParallel` model. And your "
                     "model also implements the `train_step` method, which we can not call actually, we will"
                     " call `forward` function instead of `train_step` and you should note that.")
-            self._train_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward)
+            self._train_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
             # self._train_signature_fn = model.forward
 
             if hasattr(model, "validate_step"):
@@ -222,7 +224,7 @@ class TorchDDPDriver(TorchDriver):
                     "Notice your model is a `DistributedDataParallel` model. And your "
                     "model also implements the `validate_step` method, which we can not call actually, "
                     "we will call `forward` function instead of `validate_step` and you should note that.")
-            self._validate_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward)
+            self._validate_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
             # self._validate_signature_fn = model.forward
 
             if hasattr(model, "test_step"):
@@ -230,14 +232,11 @@ class TorchDDPDriver(TorchDriver):
                     "Notice your model is a `DistributedDataParallel` model. And your "
                     "model also implements the `test_step` method, which we can not call actually, we will"
                     " call `forward` function instead of `test_step` and you should note that.")
-            self._test_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward)
+            self._test_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
             # self._test_signature_fn = model.forward
 
         # 当用户自己在外面初始化 DDP 时我们会将 model_device 置为 None，这是用户可以通过 `data_device` 将对应的数据移到指定的机器上;
         self._data_device = kwargs.get("data_device", None)
-        # if self.outside_ddp and self._data_device is None:
-        #     raise RuntimeError("When you initialize your ddp out of our control, the parameter "
-        #                        "`data_device` can not be None.")
         if isinstance(self._data_device, int):
             if self._data_device < 0:
                 raise ValueError("Parameter `data_device` can not be smaller than 0.")
@@ -349,9 +348,9 @@ class TorchDDPDriver(TorchDriver):
                 **self._ddp_kwargs
             )
 
-            self._train_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TRAIN})
-            self._validate_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.VALIDATE})
-            self._test_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TEST})
+            self._train_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TRAIN}, wo_auto_param_call=self.wo_auto_param_call)
+            self._validate_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.VALIDATE}, wo_auto_param_call=self.wo_auto_param_call)
+            self._test_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TEST}, wo_auto_param_call=self.wo_auto_param_call)
 
         self._configured = True
 
@@ -472,12 +471,11 @@ class TorchDDPDriver(TorchDriver):
                 raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize ddp out of our "
                                    "control.")
             else:
-                if isinstance(dist, ReproducibleBatchSampler):
-                    dist = re_instantiate_sampler(dist)
-                    return replace_batch_sampler(dataloader, dist)
-                if isinstance(dist, ReproducibleSampler):
-                    dist = re_instantiate_sampler(dist)
-                    return replace_sampler(dataloader, dist)
+                args = self.get_dataloader_args(dataloader)
+                if isinstance(args.batch_sampler, ReproducibleBatchSampler):
+                    return replace_batch_sampler(dataloader, re_instantiate_sampler(args.batch_sampler))
+                if isinstance(args.sampler, ReproducibleSampler):
+                    return replace_sampler(dataloader, re_instantiate_sampler(args.sampler))
                 return dataloader
         # trainer
         elif dist == "dist":
@@ -526,17 +524,10 @@ class TorchDDPDriver(TorchDriver):
                 num_replicas=self.world_size,
                 rank=self.global_rank
             )
-            return replace_sampler(dataloader, sampler)
+            batch_sampler = BatchSampler(sampler, args.batch_size, drop_last=False)
+            return replace_batch_sampler(dataloader, batch_sampler)
         else:
             raise ValueError("Parameter `dist_sampler` can only be one of three values: ('dist', 'unrepeatdist', None).")
-
-    def backward(self, loss):
-        self.grad_scaler.scale(loss).backward()
-
-    def step(self):
-        for optimizer in self.optimizers:
-            self.grad_scaler.step(optimizer)
-            self.grad_scaler.update()
 
     def is_global_zero(self):
         return self.global_rank == 0

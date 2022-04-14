@@ -1,8 +1,9 @@
-from collections.abc import Iterator
+import inspect
 from typing import Dict
 
 from fastNLP.core.callbacks import CallbackManager
 from .state import TrainerState
+from fastNLP.core.utils.utils import _check_valid_parameters_number
 
 
 class TrainerEventTrigger:
@@ -68,11 +69,17 @@ class TrainerEventTrigger:
     def on_after_backward(self):
         self.callback_manager.on_after_backward(self)
 
-    def on_before_optimizer_step(self, optimizers):
-        self.callback_manager.on_before_optimizer_step(self, optimizers)
+    def on_before_optimizers_step(self, optimizers):
+        self.callback_manager.on_before_optimizers_step(self, optimizers)
+
+    def on_after_optimizers_step(self, optimizers):
+        self.callback_manager.on_after_optimizers_step(self, optimizers)
 
     def on_before_zero_grad(self, optimizers):
         self.callback_manager.on_before_zero_grad(self, optimizers)
+
+    def on_after_zero_grad(self, optimizers):
+        self.callback_manager.on_after_zero_grad(self, optimizers)
 
     def on_validate_begin(self):
         self.callback_manager.on_validate_begin(self)
@@ -119,5 +126,8 @@ class _TruncatedDataLoader:
         return getattr(self.dataloader, item)
 
 
-
-
+def check_validate_every(validate_every):
+    if not callable(validate_every) and (not isinstance(validate_every, int) or validate_every == 0):
+        raise ValueError("Parameter 'validate_every' should be set to 'int' type and either < 0 or > 0.")
+    if callable(validate_every):
+        _check_valid_parameters_number(validate_every, expected_params=['trainer'])
