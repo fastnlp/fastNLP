@@ -2,17 +2,18 @@ __all__ = [
     'EarlyStopCallback'
 ]
 
-from typing import Dict
+from typing import Dict, Union, Callable
 
 from .callback import HasMonitorCallback
 from fastNLP.core.utils.exceptions import EarlyStopException
 
 
 class EarlyStopCallback(HasMonitorCallback):
-    def __init__(self, monitor:str=None, larger_better:bool=True, patience:int=10):
+    def __init__(self, monitor:Union[str, Callable]=None, larger_better:bool=True, patience:int=10):
         """
 
-        :param str monitor: 监控的 metric 值。如果为 None，将尝试使用 Trainer 设置的 monitor 。
+        :param str monitor: 监控的 metric 值。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为
+            evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果。
         :param larger_better: monitor 的值是否是越大越好。
         :param patience: 多少次 validate 不没有提升就停止。
         """
@@ -21,9 +22,9 @@ class EarlyStopCallback(HasMonitorCallback):
         self.patience = patience
 
     def on_validate_end(self, trainer, results):
-        if len(results)==0:
-            return
         monitor_value = self.get_monitor_value(results)
+        if monitor_value is None:
+            return
         if self.is_better_monitor_value(monitor_value, keep_if_better=True):
             self.wait = 0
         else:

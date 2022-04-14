@@ -5,7 +5,7 @@ __all__ = [
 
 
 from abc import ABCMeta, abstractmethod
-from typing import Any, Dict, List, Callable, Union
+from typing import Any, Dict, List, Callable, Union, Tuple
 from numbers import Number
 import warnings
 
@@ -35,7 +35,7 @@ class SetInputOrTargetException(Exception):
         self.field_name = field_name  # 标示当前 field 的名称
 
 
-def _get_ele_type_and_dim(cell: Any, dim=0):
+def _get_ele_type_and_dim(cell: Any, dim=0) -> Tuple[Any, int]:
     r"""
     识别cell的类别与dimension的数量
 
@@ -206,7 +206,7 @@ class AutoCollator(Collator):
     def __init__(self, as_numpy: bool):
         super(AutoCollator, self).__init__()
         self.pad_field_value = {}  # field padding 自定义的 padding 值, 默认为0
-        self.need_inputs = []  # 需要的 field name
+        self.need_inputs = set()  # 需要的 field name
         self.field_dtypes = None  # 每列数据单元的 dtype 类型
         self.field_dims = None  # 每列数据单元维度
         self.as_numpy = as_numpy
@@ -214,10 +214,17 @@ class AutoCollator(Collator):
     def __call__(self, ins_lst: List[Dict]) -> dict:
         if len(self.need_inputs) == 0:
             raise ValueError({"set_inputs is None, you should use set_inputs method first!!"})
+        # TODO 这里应该是先 check 有哪些需要 padding，然后check这些是否是可以pad的
+
         # 第一种情况，设置了 set_input 的值
         # 第二种情况， 根据数据的类型的判断是否 padding
         if self.field_dtypes is None and self.field_dims is None:
-            self.field_dtypes, self.field_dims = _get_ds_type_dim(ins_lst[0])
+            field_dtypes, field_dims = {}, {}
+            for key, value in ins_lst[0].items():
+                if key in self.need_inputs and self.pad_field_value.get(key, 0) is not None:
+                    field_dtypes[key], field_dims[key] = _get_ele_type_and_dim(value)
+            self.field_dtypes = field_dtypes
+            self.field_dims = field_dims
 
         pack_ins_lst, pad_ins_lst = {field_name: []
                                      for field_name in ins_lst[0].keys() if field_name in self.need_inputs}, {}
@@ -233,13 +240,13 @@ class AutoCollator(Collator):
 
         if len(self.pad_field_value.keys()) > 0:
             # 去掉不需要 pad 的列，如果 set_input 的列不存在则忽略
-            drop_field_names = []
+            non_pad_field_names = []
             for k, v in self.pad_field_value.items():
                 if v is None:
-                    drop_field_names.append(k)
+                    non_pad_field_names.append(k)
 
             # drop_field_names = list(set(list(ins_lst[0].keys())) - set(drop_fields))
-            for field_name in drop_field_names:
+            for field_name in non_pad_field_names:
                 field_array = pack_ins_lst.pop(field_name)
                 pad_ins_lst[field_name] = np.array(field_array)
 
@@ -269,7 +276,7 @@ class AutoCollator(Collator):
 
     def set_input(self, *field_names):
         for field_name in field_names:
-            self.need_inputs.append(field_name)
+            self.need_inputs.add(field_name)
 
 
 def pad_content(content, field_name: str, field_type, field_dim: int, pad_val: int, as_numpy: bool):

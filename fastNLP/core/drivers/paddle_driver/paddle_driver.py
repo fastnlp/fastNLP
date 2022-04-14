@@ -133,7 +133,7 @@ class PaddleDriver(Driver):
         else:
             if not hasattr(model, "test_step"):
                 if hasattr(model, "validate_step"):
-                    logger.warning("Your model does not have 'test_step' method but has 'validate' method, but you"
+                    logger.warning_once("Your model does not have 'test_step' method but has 'validate' method, but you"
                                     "are using 'Evaluator.test', we are going to use 'validate_step' to substitute for"
                                     "'test_step'.")
 

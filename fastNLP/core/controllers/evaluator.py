@@ -11,11 +11,12 @@ __all__ = [
 from fastNLP.core.drivers import Driver
 from fastNLP.core.drivers.utils import choose_driver
 from .loops import Loop, EvaluateBatchLoop
-from fastNLP.core.utils import check_fn_not_empty_params, auto_param_call, dataclass_to_dict, \
+from fastNLP.core.utils import auto_param_call, dataclass_to_dict, \
     match_and_substitute_params, f_rich_progress
 from fastNLP.core.metrics import Metric
 from fastNLP.core.metrics.utils import _is_torchmetrics_metric, _is_paddle_metric, _is_allennlp_metric
 from fastNLP.core.controllers.utils.utils import _TruncatedDataLoader
+from fastNLP.core.utils.utils import _check_valid_parameters_number
 from fastNLP.core.log import logger
 
 
@@ -38,11 +39,11 @@ class Evaluator:
             driver: Union[str, Driver] = 'single',
             device: Optional[Union[int, List[int], str]] = None,
             batch_step_fn: Optional[callable] = None,
-            mode: str = "validate",
+            mode: Optional[Union[str, callable]] = 'validate',  # 首先尝试找 evaluate_step, 找不到 forward, callable
             input_mapping: Optional[Union[Callable, Dict]] = None,
             output_mapping: Optional[Union[Callable, Dict]] = None,
             model_wo_auto_param_call: bool = False,
-            fp16: Optional[bool] = False,
+            fp16: bool = False,
             verbose: int = 1,
             **kwargs
     ):
@@ -92,8 +93,8 @@ class Evaluator:
         self.device = device
         self.verbose = verbose
 
-        assert check_fn_not_empty_params(batch_step_fn, 2), "Parameter `batch_step_fn` should be a callable object with " \
-                                                             "two parameters."
+        if batch_step_fn is not None:
+            _check_valid_parameters_number(batch_step_fn, ['trainer', 'batch'], fn_name='batch_step_fn')
         self.batch_step_fn = batch_step_fn
 
         self.mode = mode
@@ -135,6 +136,7 @@ class Evaluator:
         if self.progress_bar == 'auto':
             self.progress_bar = 'rich' if (sys.stdin and sys.stdin.isatty()) else 'raw'
 
+        self.driver.check_evaluator_mode(self.mode)
         self.driver.barrier()
 
     def run(self, num_eval_batch_per_dl: int = -1, **kwargs) -> Dict:
@@ -153,8 +155,6 @@ class Evaluator:
         """
         assert isinstance(num_eval_batch_per_dl, int), "num_eval_batch_per_dl must be of int type."
         assert num_eval_batch_per_dl > 0 or num_eval_batch_per_dl == -1, "num_eval_batch_per_dl must be -1 or larger than 0."
-
-        self.driver.check_evaluator_mode(self.mode)
 
         if self.mode == 'validate':
             assert self.driver.has_validate_dataloaders()
@@ -367,9 +367,10 @@ class _MetricsWrapper:
                 raise RuntimeError(f"The output of your model is of type:`{type(outputs)}`, please either directly"
                                    f" return a dict from your model or use `output_mapping` to convert it into dict type.")
             if isinstance(metric, Metric):
-                auto_param_call(metric.update, outputs, *args)
+                # 这样在 auto_param_call 报错的时候才清晰。
+                auto_param_call(metric.update, outputs, *args, signature_fn=metric.update.__wrapped__)
             elif _is_torchmetrics_metric(metric):
-                auto_param_call(metric.update, outputs, *args)
+                auto_param_call(metric.update, outputs, *args, signature_fn=metric.update.__wrapped__)
             elif _is_allennlp_metric(metric):
                 auto_param_call(metric.__call__, outputs, *args)
             elif _is_paddle_metric(metric):

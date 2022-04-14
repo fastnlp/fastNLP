@@ -14,8 +14,7 @@ from fastNLP.core.utils.utils import seq_len_to_mask
 
 class Accuracy(Metric):
 
-    def __init__(self, backend: Union[str, Backend, None] = 'auto',
-                 aggregate_when_get_metric: bool = True):
+    def __init__(self, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = True):
         super(Accuracy, self).__init__(backend=backend, aggregate_when_get_metric=aggregate_when_get_metric)
         self.register_element(name='correct', value=0, aggregate_method='sum', backend=backend)
         self.register_element(name='total', value=0, aggregate_method="sum", backend=backend)
@@ -64,7 +63,7 @@ class Accuracy(Metric):
                 warnings.warn("You are not passing `seq_len` to exclude pad when calculate accuracy.")
 
         else:
-            raise RuntimeError(f"when pred havesize:{pred.shape}, target should have size: {pred.shape} or "
+            raise RuntimeError(f"when pred have size:{pred.shape}, target should have size: {pred.shape} or "
                                f"{pred.shape[:-1]}, got {target.shape}.")
 
         if masks is not None:

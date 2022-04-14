@@ -333,10 +333,8 @@ def all_gather_object(object_list, obj, group=None):
         >>> output
         ['foo', 12, {1: 2}]
     """
-    if dist._rank_not_in_group(group):
+    if dist.distributed_c10d._rank_not_in_group(group):
         return
-
-    input_tensor, local_size = _object_to_tensor(obj)
     if _TORCH_GREATER_EQUAL_1_8:
         current_device = torch.device("cpu")
         is_nccl_backend = _check_for_nccl_backend(group)
@@ -345,10 +343,11 @@ def all_gather_object(object_list, obj, group=None):
             # We cannot simply use my_rank since rank == device is not necessarily
             # true.
             current_device = torch.device("cuda", torch.cuda.current_device())
-            input_tensor = input_tensor.to(current_device)
-            local_size = local_size.to(current_device)
     else:
         current_device = torch.cuda.current_device()
+
+    input_tensor, local_size = _object_to_tensor(obj, device=current_device)
+
     # Gather all local sizes. This is so that we can find the max size, and index
     # until the correct size when deserializing the tensors.
     group_size = dist.get_world_size(group=group)
@@ -379,3 +378,4 @@ def all_gather_object(object_list, obj, group=None):
             tensor = tensor.cpu()
         tensor_size = object_size_list[i]
         object_list[i] = _tensor_to_object(tensor, tensor_size)
+    return object_list

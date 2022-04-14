@@ -251,10 +251,10 @@ class DataBundle:
     def apply_field_more(self, func: Callable, field_name: str, num_proc: int = 0, modify_fields=True,
                          ignore_miss_dataset=True, progress_desc: str = '', show_progress_bar: bool = True):
         r"""
-        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.DataSet.apply_field_more` 方法
+        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :method:`~fastNLP.DataSet.apply_field_more` 方法
 
         .. note::
-            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :meth:`fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
+            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :method:`fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
             ``apply`` 区别的介绍。
 
         :param callable func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
@@ -285,7 +285,7 @@ class DataBundle:
     def apply(self, func: Callable, new_field_name: str, num_proc: int = 0,
               progress_desc: str = '', show_progress_bar: bool = True, _apply_field: str = None):
         r"""
-        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.DataSet.apply` 方法
+        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :method:`~fastNLP.DataSet.apply` 方法
 
         对DataBundle中所有的dataset使用apply方法
 
@@ -309,10 +309,10 @@ class DataBundle:
     def apply_more(self, func: Callable, modify_fields=True, num_proc: int = 0,
                    progress_desc: str = '', show_progress_bar: bool = True):
         r"""
-        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.DataSet.apply_more` 方法
+        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :method:`~fastNLP.DataSet.apply_more` 方法
 
         .. note::
-            ``apply_more`` 与 ``apply`` 的区别参考 :meth:`fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
+            ``apply_more`` 与 ``apply`` 的区别参考 :method:`fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
             ``apply`` 区别的介绍。
 
         :param callable func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果

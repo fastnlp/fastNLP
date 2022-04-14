@@ -10,6 +10,7 @@ from .utils import _get_monitor_value
 from fastNLP.core.callbacks.callback_events import _SingleEventState
 from fastNLP.core.log import logger
 from fastNLP.core.utils import apply_to_collection
+from fastNLP.core.utils.utils import _check_valid_parameters_number
 
 
 class Callback:
@@ -299,7 +300,11 @@ class HasMonitorCallback(Callback):
         self.must_have_moinitor = must_have_monitor
 
     def set_monitor(self, monitor, larger_better):
-        self.monitor = str(monitor) if monitor is not None else None
+        if callable(monitor):  # 检查是否能够接受一个参数
+            _check_valid_parameters_number(monitor, expected_params=['results'], fn_name='monitor')
+            self.monitor = monitor
+        else:
+            self.monitor = str(monitor) if monitor is not None else None
         self.larger_better = bool(larger_better)
         if larger_better:
             self.monitor_value = float('-inf')
@@ -322,24 +327,33 @@ class HasMonitorCallback(Callback):
             raise RuntimeError(f"No `monitor` is set for {self.__class__.__name__}. "
                                f"You can set it in the initialization or through Trainer.")
 
-    def get_monitor_value(self, results:Dict)->float:
+    def get_monitor_value(self, results:Dict)->Union[float, None]:
         """
         获取 monitor 的值，如果 monitor 没有直接找到，会尝试使用匹配的方式寻找，并把匹配到的设置到 self._real_monitor 属性上。
 
         :param results:
-        :return:
+        :return: 如果为 None ，表明此次没有找到合适的monitor
         """
         if len(results)==0:
-            return 0
+            return None
         # 保证所有的 tensor 都被转换为了 python 特定的类型
         results = apply_to_collection(results, dtype=CanItemDataType, function=lambda x: x.item())
         use_monitor, monitor_value = _get_monitor_value(monitor=self.monitor,
                                                         real_monitor=self._real_monitor,
                                                         res=results)
-        if self._real_monitor != use_monitor:  # 发生了替换需要打印
-            logger.warning(
-                f"We can not find `{self.monitor}` in the evaluation result (with keys as {list(results.keys())}), "
-                f"we use the `{use_monitor}` as the monitor for {self.__class__.__name__}.")
+        if monitor_value is None:
+            return monitor_value
+        # 第一次运行
+        if isinstance(self.monitor, str) and self._real_monitor == self.monitor and use_monitor != self.monitor:
+            logger.warning(f"We can not find `{self.monitor}` in the evaluation result (with keys as {list(results.keys())}), "
+                f"we use the `{use_monitor}` as the monitor for `{self.__class__.__name__}`.")
+        # 检测到此次和上次不同。
+        elif isinstance(self.monitor, str) and self._real_monitor != self.monitor and use_monitor != self._real_monitor:
+            logger.warning(f"Change of monitor detected for `{self.__class__.__name__}`. "
+                           f"The expected monitor is:`{self.monitor}`, last used monitor is:"
+                           f"`{self._real_monitor}` and current monitor is:`{use_monitor}`. Please consider using a "
+                           f"customized monitor function when the evaluation results are varying between validation.")
+
         self._real_monitor = use_monitor
         return monitor_value
 
@@ -347,10 +361,12 @@ class HasMonitorCallback(Callback):
         """
         检测 monitor_value 是否是更好的
 
-        :param monitor_value:
+        :param monitor_value: 待检查的 monitor_value 。如果为 None ，返回 False
         :param keep_if_better: 如果传入的 monitor_value 值更好，则将其保存下来。
         :return:
         """
+        if monitor_value is None:
+            return False
         better = self.is_former_monitor_value_better(monitor_value, self.monitor_value)
         if keep_if_better and better:
             self.monitor_value = monitor_value
@@ -364,6 +380,12 @@ class HasMonitorCallback(Callback):
         :param monitor_value2:
         :return:
         """
+        if monitor_value1 is None and monitor_value2 is None:
+            return True
+        if monitor_value1 is None:
+            return False
+        if monitor_value2 is None:
+            return True
         better = False
         if (self.larger_better and monitor_value1 > monitor_value2) or \
                 (not self.larger_better and monitor_value1 < monitor_value2):

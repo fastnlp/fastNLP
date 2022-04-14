@@ -14,6 +14,7 @@ __all__ = [
 
 from .loops import Loop, TrainBatchLoop
 from .utils import State, TrainerState
+from .utils.utils import check_validate_every
 from .evaluator import Evaluator
 from fastNLP.core.controllers.utils.utils import TrainerEventTrigger, _TruncatedDataLoader
 from fastNLP.core.callbacks import Callback, CallbackManager, Events, EventsList, Filter
@@ -21,7 +22,8 @@ from fastNLP.core.callbacks.callback import _CallbackWrapper
 from fastNLP.core.callbacks.callback_events import _SingleEventState
 from fastNLP.core.drivers import Driver
 from fastNLP.core.drivers.utils import choose_driver
-from fastNLP.core.utils import check_fn_not_empty_params, get_fn_arg_names, match_and_substitute_params, nullcontext
+from fastNLP.core.utils import get_fn_arg_names, match_and_substitute_params, nullcontext
+from fastNLP.core.utils.utils import _check_valid_parameters_number
 from fastNLP.envs import rank_zero_call
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_MODEL_FILENAME
@@ -42,7 +44,7 @@ class Trainer(TrainerEventTrigger):
             validate_dataloaders=None,
             batch_step_fn: Optional[Callable] = None,
             validate_batch_step_fn: Optional[Callable] = None,
-            validate_mode: str = "validate",
+            validate_mode: Union[str, callable] = 'validate',
             callbacks: Union[List[Callback], Callback, None] = None,
             metrics: Optional[dict] = None,
             validate_every: Optional[Union[int, callable]] = -1,
@@ -51,7 +53,7 @@ class Trainer(TrainerEventTrigger):
             model_wo_auto_param_call: bool = False,
             accumulation_steps: int = 1,
             fp16: bool = False,
-            monitor: str = None,
+            monitor: Union[str, callable] = None,
             larger_better: bool = True,
             marker: Optional[str] = None,
             **kwargs
@@ -90,11 +92,8 @@ class Trainer(TrainerEventTrigger):
         :param callbacks: 训练当中触发的 callback 类，该参数应当为一个列表，其中的每一个元素都应当继承 `Callback` 类；
         :param metrics: 应当为一个字典，其中 key 表示 monitor，例如 {"acc1": AccMetric(), "acc2": AccMetric()}；
         :param validate_every: 可以为负数、正数或者函数；为负数时表示每隔几个 epoch validate 一次；为正数则表示每隔几个 batch validate 一次；
-         为函数时表示用户自己传入的用于控制 Trainer 中的 validate 的频率的函数，该函数的参数应该为 (filter, trainer) , 其中的 filter 对象
-         中自动记录了两个变量： filter.num_called 表示有多少次尝试 validate （实际等同于到当前时刻 batch 的总数）， filter.num_executed
-         表示 validate 实际被执行了多少次；trainer 参数即为 Trainer 对象。 函数返回值应为 bool ，返回为 True 说明需要进行 validate 。
-         例如： (filter.num_called % trainer.num_batches_per_epoch == 0 and trainer.cur_epoch_idx > 10) 表示在第 10 个 epoch
-         之后，每个 epoch 结束进行一次 validate 。
+         为函数时表示用户自己传入的用于控制 Trainer 中的 validate 的频率的函数，该函数的应该接受当前 trainer 对象作为参数，并
+         返回一个 bool 值，返回为 True 说明需要进行 validate ；将在每个 batch 结束后调用该函数判断是否需要 validate 。
         :param input_mapping: 应当为一个字典或者一个函数，表示在当前 step 拿到一个 batch 的训练数据后，应当做怎样的映射处理；如果其是
          一个字典，并且 batch 也是一个 `Dict`，那么我们会把 batch 中同样在 input_mapping 中的 key 修改为 input_mapping 的对应 key 的
          value；如果 batch 是一个 `dataclass`，那么我们会先将该 dataclass 转换为一个 Dict，然后再进行上述转换；如果 batch 此时是其它
@@ -111,7 +110,7 @@ class Trainer(TrainerEventTrigger):
         :param fp16: 是否开启混合精度训练；默认为 False；
         :param monitor: 当存在 validate_dataloaders 时，默认的 monitor metric 的名字。传入的 callback 如果有 monitor 参数且没有
             在 callback 初始化设定的，将采取这个值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
-            的那个作为 monitor 。
+            的那个作为 monitor 。也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果。
         :param larger_better: monitor 的值是否是越大越好。
         :param marker: 用于标记一个 Trainer 实例，从而在用户调用 `Trainer.on` 函数时，标记该 callback 函数属于哪一个具体的 'trainer' 实例；默认为 None；
         :param kwargs: 一些其它的可能需要的参数；
@@ -142,10 +141,9 @@ class Trainer(TrainerEventTrigger):
         self.input_mapping = input_mapping
         self.output_mapping = output_mapping
 
-        assert check_fn_not_empty_params(batch_step_fn, 2), "`batch_step_fn` should be a callable object with " \
-                                                                  "two parameters."
         self.batch_step_fn = batch_step_fn
         if batch_step_fn is not None:
+            _check_valid_parameters_number(batch_step_fn, ['trainer', 'batch'], fn_name='batch_step_fn')
             self.check_batch_step_fn = partial(self._check_callback_called_legality, check_mode=True)
         else:
             self.check_batch_step_fn = lambda *args, **kwargs: ...
@@ -221,18 +219,11 @@ class Trainer(TrainerEventTrigger):
         if metrics is not None and validate_dataloaders is None:
             raise ValueError("You have set 'metrics' but forget to set 'validate_dataloader'.")
 
-        # 为了在 train 的循环中每次都检查是否需要进行 validate，这里我们提前在 trainer 初始化的时候就将对应时间点需要运行的函数确定下来；
-        #  _epoch_validate 表示每隔几个 epoch validate 一次；_step_validate 表示每隔几个 step validate 一次；
         self.evaluator = None
         self.monitor = monitor
         self.larger_better = larger_better
         if metrics is not None and validate_dataloaders is not None:
-            if not callable(validate_every) and (not isinstance(validate_every, int) or validate_every == 0):
-                raise ValueError("Parameter 'validate_every' should be set to 'int' type and either < 0 or > 0.")
-            if callable(validate_every):
-                logger.info("Notice you are using a 'filter function' as the value of parameter `validate_every`, "
-                            "and in this way, the kind of controlling frequency is depending on the 'step'.")
-
+            check_validate_every(validate_every)
             self.evaluator = Evaluator(
                 model=model,
                 dataloaders=validate_dataloaders,
@@ -352,33 +343,32 @@ class Trainer(TrainerEventTrigger):
             _validate_res: dict = validate_fn()
             trainer.on_validate_end(_validate_res)
 
-        self.validate_fn = partial(_validate_fn, self, partial(self.evaluator.run, num_eval_batch_per_dl))
+        self.run_evaluate = partial(_validate_fn, self, partial(self.evaluator.run, num_eval_batch_per_dl))
 
     def step_validate(self):
-        if self.evaluator is not None:
-            should_run_validate = False
+        """
+        在每个 batch 结束后调用，根据设置执行 evaluate 。
 
+        :return:
+        """
+        if self.evaluator is not None:
             if callable(self.validate_every):
                 if self.validate_every(self):
-                    should_run_validate = True
-            elif self.validate_every > 0:
-                if self.global_forward_batches % self.validate_every == 0:
-                    should_run_validate = True
-
-            if should_run_validate:
-                self.validate_fn()
+                    self.run_evaluate()
+            elif self.validate_every > 0 and self.global_forward_batches % self.validate_every == 0:
+                self.run_evaluate()
 
     def epoch_validate(self):
-        if self.evaluator is not None:
-            should_run_validate = False
+        """
+        在每个 epoch 结束后调用，根据设置执行 evaluate 。
 
+        :return:
+        """
+        if self.evaluator is not None:
             if isinstance(self.validate_every, int) and self.validate_every < 0:
                 validate_every = -self.validate_every
                 if self.cur_epoch_idx % validate_every == 0:
-                    should_run_validate = True
-
-            if should_run_validate:
-                self.validate_fn()
+                    self.run_evaluate()
 
     def add_callback_fn(self, event: Optional[Union[Events, EventsList]], fn: Callable):
         r"""
@@ -410,9 +400,7 @@ class Trainer(TrainerEventTrigger):
         def wrapper(fn: Callable) -> Callable:
             cls._custom_callbacks[marker].append((event, fn))
             callback_fn_args = get_fn_arg_names(getattr(Callback, event.value))[1:]
-            assert check_fn_not_empty_params(fn, len(callback_fn_args)), \
-                f"The callback function at `{event.value.lower()}`'s parameters should be {callback_fn_args}, but your "\
-                f"function {fn.__name__} only has these parameters: {get_fn_arg_names(fn)}."
+            _check_valid_parameters_number(fn, callback_fn_args)
             return fn
 
         return wrapper

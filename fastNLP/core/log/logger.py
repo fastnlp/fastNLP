@@ -125,9 +125,9 @@ class FastNLPLogger(logging.Logger, metaclass=LoggerSingleton):
             self._warning_msgs.add(msg)
 
     def warn(self, msg, *args, **kwargs):
-        warnings.warn("The 'warn' method is deprecated, "
-            "use 'warning' instead", DeprecationWarning, 2)
-        self.warning(msg, *args, **kwargs)
+        if self.isEnabledFor(WARNING):
+            kwargs = self._add_rank_info(kwargs)
+            self._log(WARNING, msg, args, **kwargs)
 
     def error(self, msg, *args, **kwargs):
         """

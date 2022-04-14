@@ -378,7 +378,7 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
         batch_indices = list(batch_indices[:-1])
         rng = np.random.default_rng(abs(seed))  # 这里防止由于bucket长度不同，对随机数状态有影响
         rng.shuffle(batch_indices)  # 不同的 batch 也 shuffle ，当前这种可以保证每张卡上每个 batch 长度都接近的。
-        batches = (np.array(batches)[batch_indices]).tolist()
+        batches = (np.array(batches, dtype=object)[batch_indices]).tolist()
         if last_batches:
             batches = batches + last_batches
         return batches
@@ -387,19 +387,12 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
         if self.old_batch_size != self.batch_size or self.old_num_batch_per_bucket != self.num_batch_per_bucket:
             raise RuntimeError("BucketedBatchSampler does not support saving before last checkpoint states have been"
                                " consumed. ")
-        states = {
-            'seed': self.seed,
-            'epoch': self.epoch,
-            'num_consumed_samples': self.num_consumed_samples,  # 注意该值是计算所有 rank 上训练的所有数据；
-            'sampler_type': self.__class__.__name__,
-            'length': len(self.dataset),
-            'shuffle': self.shuffle,
-            'batch_size': self.batch_size,
-            'num_batch_per_bucket': self.num_batch_per_bucket,
-            'num_replicas': self.num_replicas
-        }
+        states = {'seed': self.seed, 'epoch': self.epoch, 'num_consumed_samples': self.num_consumed_samples,
+                  'sampler_type': self.__class__.__name__, 'length': len(self.dataset), 'shuffle': self.shuffle,
+                  'batch_size': self.batch_size, 'num_batch_per_bucket': self.num_batch_per_bucket,
+                  'num_replicas': self.num_replicas,
+                  'num_consumed_samples_array': getattr(self, 'num_consumed_samples_array', None)}
 
-        states['num_consumed_samples_array'] = getattr(self, 'num_consumed_samples_array', None)
         return states
 
     def load_state_dict(self, states: Dict):

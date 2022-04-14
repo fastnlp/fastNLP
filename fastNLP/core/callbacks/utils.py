@@ -1,9 +1,10 @@
-from typing import Optional
+from typing import Optional, Union
 from fastNLP.core.log.logger import logger
 from difflib import SequenceMatcher
+from fastNLP.core.utils.utils import _get_fun_msg
 
 
-def _get_monitor_value(monitor: str, real_monitor: Optional[str], res: dict) ->(str, float):
+def _get_monitor_value(monitor: Union[callable, str], real_monitor: Optional[str], res: dict) ->(str, float):
     """
     从res中寻找 monitor 并返回。如果 monitor 没找到则尝试用 _real_monitor ,若 _real_monitor 为 None 则尝试使用 monitor 的值进行
         匹配。
@@ -11,10 +12,19 @@ def _get_monitor_value(monitor: str, real_monitor: Optional[str], res: dict) ->(
     :param monitor:
     :param real_monitor:
     :param res:
-    :return: 返回两个值（str, value)，其中str就是最终要到的key，value就是这个key对应的value
+    :return: 返回两个值（str, value)，其中str就是最终要到的key，value就是这个key对应的value。如果value为None说明当前results中没有
+        找到对应的 monitor
     """
     if len(res)==0:
-        return monitor, 0
+        return monitor, None
+
+    if callable(monitor):
+        try:
+            monitor_value = monitor(res)
+        except BaseException as e:
+            logger.error(f"Exception happens when calling customized monitor function:{_get_fun_msg(monitor)}.")
+            raise e
+        return monitor, monitor_value
 
     if monitor in res:
         return monitor, res[monitor]

@@ -113,7 +113,7 @@ class TorchDriver(Driver):
         if mode == "validate":
             if not hasattr(model, "validate_step"):
                 if hasattr(model, "test_step"):
-                    logger.warning(
+                    logger.warning_once(
                         "Your model does not have 'validate_step' method but has 'test_step' method, but you"
                         "are using 'mode=validate', we are going to use 'test_step' to substitute for"
                         "'validate_step'.")

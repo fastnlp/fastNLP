@@ -3,7 +3,7 @@ __all__ = [
 ]
 
 import os
-from typing import Optional, Callable
+from typing import Optional, Callable, Union
 from .callback import HasMonitorCallback
 from io import BytesIO
 import shutil
@@ -14,14 +14,15 @@ from fastNLP.envs import all_rank_call
 
 
 class LoadBestModelCallback(HasMonitorCallback):
-    def __init__(self, monitor:str=None, larger_better:bool = True, only_state_dict:bool = True,
+    def __init__(self, monitor:Union[str, Callable]=None, larger_better:bool = True, only_state_dict:bool = True,
                  save_folder:Optional[str] = None, model_save_fn:Optional[Callable] = None,
                  model_load_fn:Optional[Callable] = None,
                  delete_after_train:bool = True):
         """
         保存最佳的 monitor 值最佳的模型，并在训练结束的时候重新加载模型。仅在训练正常结束的时候才能加载最好的模型。
 
-        :param str monitor: 监控的 metric 值。如果为 None，将尝试使用 Trainer 设置的 monitor 。
+        :param str monitor: 监控的 metric 值。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为
+            evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果。
         :param larger_better: 该 metric 值是否是越大越好。
         :param save_folder: 保存的文件夹，如果为空，则保存在内存中。不为空，则保存一份权重到文件中，当为多机训练，且本值不为空时，请确保
             不同的机器均可访问当该路径。当 model_save_fn 不为 None 时该值一定不能为空。
@@ -78,9 +79,9 @@ class LoadBestModelCallback(HasMonitorCallback):
         self.get_monitor_value(sanity_check_res)
 
     def on_validate_end(self, trainer, results):
-        if len(results)==0:
-            return
         monitor_value = self.get_monitor_value(results)
+        if monitor_value is None:
+            return
         if self.is_better_monitor_value(monitor_value, keep_if_better=True):
             if self.real_save_folder:
                 trainer.save_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,

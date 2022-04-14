@@ -1,3 +1,10 @@
+__all__ = [
+    'ReproducibleSampler',
+    'RandomSampler',
+    "SortedSampler",
+    "SequentialSampler"
+]
+
 from typing import Dict, List, Union
 import math
 import os
@@ -9,13 +16,6 @@ from fastNLP.core.dataset import DataSet
 from fastNLP.envs.env import FASTNLP_DEQUE_SIZE
 from .utils import NumConsumedSamplesArray
 
-
-__all__ = [
-    'ReproducibleSampler',
-    'RandomSampler',
-    "SortedSampler",
-    "SequentialSampler"
-]
 
 
 class ReproducibleSampler:

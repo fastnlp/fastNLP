@@ -178,10 +178,11 @@ class DataSet:
         elif isinstance(idx, slice):
             if idx.start is not None and (idx.start >= len(self) or idx.start <= -len(self)):
                 raise RuntimeError(f"Start index {idx.start} out of range 0-{len(self) - 1}")
-            data_set = DataSet()
+            dataset = DataSet()
             for field_name, field in self.field_arrays.items():
-                data_set.add_field(field_name=field_name, fields=field.content[idx])
-            return data_set
+                dataset.add_field(field_name=field_name, fields=field.content[idx])
+            dataset.collate_fns = deepcopy(self.collate_fns)
+            return dataset
         elif isinstance(idx, str):
             if idx not in self:
                 raise KeyError("No such field called {} in DataSet.".format(idx))
@@ -192,6 +193,7 @@ class DataSet:
                 assert isinstance(i, int), "Only int index allowed."
                 instance = self[i]
                 dataset.append(instance)
+            dataset.collate_fns = deepcopy(self.collate_fns)
             return dataset
         else:
             raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
@@ -674,6 +676,8 @@ class DataSet:
             dev_set.append(self[idx])
         for idx in train_indices:
             train_set.append(self[idx])
+        dev_set.collate_fns = deepcopy(self.collate_fns)
+        train_set.collate_fns = deepcopy(self.collate_fns)
 
         return dev_set, train_set
 
@@ -795,7 +799,7 @@ class DataSet:
         :param val: 默认为0。如果为 None ，则为不对 field 进行 padding 。
         :return:
         """
-        # TODO 需要去重复
+        # TODO 不能为空
         for field_name in field_names:
             self.collate_fns.set_pad_val(field_name, val=val)
 
