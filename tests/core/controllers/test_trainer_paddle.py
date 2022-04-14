@@ -68,13 +68,13 @@ class TrainerParameters:
 #             shuffle=True
 #         )
 #         val_dataloader = DataLoader(
-#             dataset=PaddleDataset_MNIST(mode="test"),
+#             dataset=PaddleDataset_MNIST(evaluate_fn="test"),
 #             batch_size=MNISTTrainPaddleConfig.batch_size,
 #             shuffle=True
 #         )
 #         trainer_params.train_dataloader = train_dataloader
-#         trainer_params.validate_dataloaders = val_dataloader
-#         trainer_params.validate_every = MNISTTrainPaddleConfig.validate_every
+#         trainer_params.evaluate_dataloaders = val_dataloader
+#         trainer_params.evaluate_every = MNISTTrainPaddleConfig.evaluate_every
 #         trainer_params.metrics = {"acc": Accuracy()}
 
 #     return trainer_params
@@ -121,8 +121,8 @@ def test_trainer_paddle(
                 device=device,
                 optimizers=trainer_params.optimizers,
                 train_dataloader=trainer_params.train_dataloader,
-                validate_dataloaders=trainer_params.validate_dataloaders,
-                validate_every=trainer_params.validate_every,
+                evaluate_dataloaders=trainer_params.validate_dataloaders,
+                evaluate_every=trainer_params.validate_every,
                 input_mapping=trainer_params.input_mapping,
                 output_mapping=trainer_params.output_mapping,
                 metrics=trainer_params.metrics,
@@ -139,8 +139,8 @@ def test_trainer_paddle(
             device=device,
             optimizers=trainer_params.optimizers,
             train_dataloader=trainer_params.train_dataloader,
-            validate_dataloaders=trainer_params.validate_dataloaders,
-            validate_every=trainer_params.validate_every,
+            evaluate_dataloaders=trainer_params.validate_dataloaders,
+            evaluate_every=trainer_params.validate_every,
             input_mapping=trainer_params.input_mapping,
             output_mapping=trainer_params.output_mapping,
             metrics=trainer_params.metrics,

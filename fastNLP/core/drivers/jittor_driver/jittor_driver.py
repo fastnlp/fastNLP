@@ -39,7 +39,7 @@ class JittorDriver(Driver):
         self.grad_scaler = _grad_scaler()
 
     @staticmethod
-    def _check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
+    def check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
         # 在fastnlp中实现了JittorDataLoader
         # TODO: 是否允许传入Dataset？
         if is_train:
@@ -64,18 +64,18 @@ class JittorDriver(Driver):
     def check_evaluator_mode(self, mode: str):
         model = self.unwrap_model()
         if mode == "validate":
-            if not hasattr(model, "validate_step"):
+            if not hasattr(model, "evaluate_step"):
                 if hasattr(model, "test_step"):
                     logger.warning_once(
-                        "Your model does not have 'validate_step' method but has 'test_step' method, but you"
-                        "are using 'mode=validate', we are going to use 'test_step' to substitute for"
-                        "'validate_step'.")
+                        "Your model does not have 'evaluate_step' method but has 'test_step' method, but you"
+                        "are using 'evaluate_fn=validate', we are going to use 'test_step' to substitute for"
+                        "'evaluate_step'.")
 
         else:
             if not hasattr(model, "test_step"):
-                if hasattr(model, "validate_step"):
+                if hasattr(model, "evaluate_step"):
                     logger.warning_once("Your model does not have 'test_step' method but has 'validate' method, but you"
-                                   "are using 'mode=test', we are going to use 'validate_step' to substitute for"
+                                   "are using 'evaluate_fn=test', we are going to use 'evaluate_step' to substitute for"
                                    "'test_step'.")
 
     def save_model(self, filepath: str, only_state_dict: bool = False, model_save_fn: Optional[Callable]=None):

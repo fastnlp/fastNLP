@@ -1,7 +1,7 @@
 import os
 import signal
 import sys
-from typing import Any, Sequence, List, Optional, Callable, Dict, Union
+from typing import Any, Sequence, List, Optional, Callable, Dict, Union, Tuple
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
@@ -79,41 +79,44 @@ class Driver(ABC):
         """
 
     @abstractmethod
-    def train_step(self, batch):
+    def model_call(self, batch, fn: Callable, signature_fn: Optional[Callable]) -> Dict:
         """
-        通过调用模型自带的 `train_step` 或者 `forward` 方法来实现训练的前向过程；
-        如果检测到用户模型实现了 train_step
+        通过调用 `fn` 来实现训练时的前向传播过程；
+        注意 Trainer 和 Evaluator 会调用该函数来实现网络的前向传播过程，其中传入该函数的参数 `fn` 是函数 `get_model_call_fn` 所返回的
+        函数；
 
         :param batch: 当前的一个 batch 的数据；可以为字典或者其它类型；
-        :return: 返回由模型的 `train_step` 或者 `forward` 方法返回的结果（应当为一个 dict 或者 dataclass，但是不需要我们去检查）；
+        :param fn: 由 Trainer 传入的用于网络前向传播一次的函数；
+        :param signature_fn: 由 Trainer 传入的用于网络前向传播一次的签名函数，因为当 batch 是一个 Dict 的时候，我们会自动调用 auto_param_call
+        函数，而一些被包裹的模型需要暴露其真正的函数签名，例如 DistributedDataParallel 的调用函数是 forward，但是需要其函数签名为 model.module.forward；
+        :return: 返回由 `fn` 返回的结果（应当为一个 dict 或者 dataclass，但是不需要我们去检查）；
         """
-        raise NotImplementedError("Each specific driver should implemented its own `train_step` function.")
+        raise NotImplementedError("Each specific driver should implemented its own `model_call` function.")
 
-    def validate_step(self, batch):
+    @abstractmethod
+    def get_model_call_fn(self, fn: str) -> Tuple:
         """
-        通过调用模型自带的 `validate_step` 或者 `forward` 方法来实现模型评测的前向过程；
+        该函数会接受 Trainer 的 train_fn 或者 Evaluator 的 evaluate_fn，返回一个实际用于调用 driver.model_call 时传入的函数参数；
+        该函数会在 Trainer 和 Evaluator 在 driver.setup 函数之后调用；
 
-        :param batch: 当前的一个 batch 的数据；可以为字典或者其它类型；
-        :return: 返回由模型的 `validate_step` 或者 `forward` 方法返回的结果（应当为一个 dict 或者 dataclass，但是不需要我们去检查）；
-        """
-        raise NotImplementedError("Each specific driver should implemented its own `validate_step` function.")
+        之所以设置该函数的目的在于希望将具体的 model_call function 从 driver 中抽离出来，然后将其附着在 Trainer 或者 Evaluator 身上；
+        这样是因为在新版的设计中，使用 model 的哪种方法来进行 `train step` 或者 `evaluate step` 是通过额外的参数 `train_fn` 和
+         `evaluate_fn` 来确定的，而二者又分别是通过 Trainer 和 Evaluator 来控制的；因此不能将确定具体的 `train step fn` 和
+         `evaluate step fn` 的逻辑放在每一个 driver 的初始化的时候（因此在 Trainer 初始化第一个 driver 时，Evaluator 还没有初始化，但是
+         `evaluate step fn` 的确定却需要 Evaluator 的初始化），因此我们将这一逻辑抽象到这一函数当中；
 
-    def test_step(self, batch):
-        """
-        通过调用模型自带的 `test_step` 或者 `forward` 方法来实现模型评测的前向过程；
+        这一函数应当通过参数 `fn` 来判断应当返回的实际的调用的函数，具体逻辑如下所示：
+            1. 如果 fn == "train_step" or "evaluate_step"，那么对传入的模型进行检测，如果模型没有定义方法 `fn`，则默认调用模型的 `forward`
+             函数，然后给出 warning；
+            2. 如果 fn 是其他字符串，那么如果模型没有定义方法 `fn` 则直接报错；
+        注意不同的 driver 需要做额外的检测处理，例如在 DDPDriver 中，当传入的模型本身就是 DistributedDataParallel 中，我们只能调用模型的
+         forward 函数，因此需要额外的 warning；这一点特别需要注意的问题在于 driver 自己在 setup 时也会对模型进行改变（DDPDriver），因此
+         可能需要额外标记最初传入 driver 的模型是哪种形式的；
 
-        :param batch: 当前的一个 batch 的数据；可以为字典或者其它类型；
-        :return: 返回由模型的 `test_step` 或者 `forward` 方法返回的结果（应当为一个 dict 或者 dataclass，但是不需要我们去检查）；
+        :param fn: 应当为一个字符串，该函数通过该字符串判断要返回模型的哪种方法；
+        :return: 返回一个元组，包含两个函数，用于在调用 driver.model_call 时传入；
         """
-        raise NotImplementedError("Each specific driver should implemented its own `test_step` function.")
-
-    def check_evaluator_mode(self, mode: str):
-        r"""
-        因为我们在具体的 driver 的 validate_step 和 test_step 的逻辑是如果模型没有实现本函数，那么就去检测模型是否实现了另一个函数；
-        因此如果用户的 evaluator mode 是 validate，但是传入的 model 却没有实现 validate_step 函数，而是实现了 test_step 函数，那么
-         我们应当提醒用户这一行为；
-        """
-        raise NotImplementedError("Each specific driver should implemented its own `check_evaluator_mode` function.")
+        raise NotImplementedError("Each specific driver should implemented its own `get_model_call_fn` function.")
 
     @property
     def model(self):
@@ -123,59 +126,8 @@ class Driver(ABC):
     def model(self, model):
         self._model = model
 
-    @property
-    def train_dataloader(self):
-        return self._train_dataloader
-
-    @train_dataloader.setter
-    def train_dataloader(self, train_dataloader: Any):
-        self._train_dataloader = train_dataloader
-
-    @property
-    def validate_dataloaders(self):
-        return self._validate_dataloaders
-
-    @validate_dataloaders.setter
-    def validate_dataloaders(self, validate_dataloaders: Any):
-        self._validate_dataloaders = validate_dataloaders
-
-    @property
-    def test_dataloaders(self):
-        return self._test_dataloaders
-
-    @test_dataloaders.setter
-    def test_dataloaders(self, test_dataloaders: Any):
-        self._test_dataloaders = test_dataloaders
-
-    @property
-    def predict_dataloaders(self):
-        return self._predict_dataloaders
-
-    @predict_dataloaders.setter
-    def predict_dataloaders(self, predict_dataloaders: Any):
-        self._predict_dataloaders = predict_dataloaders
-
-    def set_dataloader(self, **kwargs):
-        r"""
-        设置训练或者检验过程中的数据；用于在 trainer 和 evaluator 中将数据 dataloader 挂载到每一个具体的 driver 上；
-
-        :param kwargs: 输入的数据，应当使用 'keyword-only' 的参数进行设置；
-        """
-        if "train_dataloader" in kwargs:
-            self.train_dataloader = kwargs["train_dataloader"]
-            self._check_dataloader_legality(self.train_dataloader, "train_dataloader", is_train=True)
-        if "validate_dataloaders" in kwargs:
-            self.validate_dataloaders = kwargs["validate_dataloaders"]
-            self._check_dataloader_legality(self.validate_dataloaders, "validate_dataloaders", is_train=False)
-        if "test_dataloaders" in kwargs:
-            self.test_dataloaders = kwargs["test_dataloaders"]
-            self._check_dataloader_legality(self.test_dataloaders, "test_dataloaders", is_train=False)
-        if "predict_dataloaders" in kwargs:
-            self.predict_dataloaders = kwargs["predict_dataloaders"]
-            self._check_dataloader_legality(self.predict_dataloaders, "predict_dataloaders", is_train=False)
-
     @staticmethod
-    def _check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
+    def check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
         r"""
         该函数会在 trainer 或者 evaluator 设置 dataloader 后检测 dataloader 的合法性，因为不同的深度学习的框架需要的 dataloader 的
          行为是不相同的；
@@ -183,19 +135,7 @@ class Driver(ABC):
         :param dataloader: 需要检测的输入的 `dataloader`；
         :param dataloader_name:
         """
-        raise NotImplementedError("Each specific driver should implemented its own `_check_dataloader_legality` function.")
-
-    def has_train_dataloader(self):
-        return "_train_dataloader" in self.__dict__
-
-    def has_validate_dataloaders(self):
-        return "_validate_dataloaders" in self.__dict__
-
-    def has_test_dataloaders(self):
-        return "_test_dataloaders" in self.__dict__
-
-    def has_predict_dataloaders(self):
-        return "_predict_dataloaders" in self.__dict__
+        raise NotImplementedError("Each specific driver should implemented its own `check_dataloader_legality` function.")
 
     @property
     def optimizers(self) -> List:

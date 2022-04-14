@@ -95,7 +95,7 @@ class CheckpointCallback(HasMonitorCallback):
         if self.save_topk is not None:
             super().on_after_trainer_initialized(trainer, driver)
         if self.save_topk is not None and trainer.evaluator is None:
-            logger.warning("You set `save_topk`, but `validate_dataloaders` is not set in Trainer.")
+            logger.warning("You set `save_topk`, but `evaluate_dataloaders` is not set in Trainer.")
 
     def on_validate_end(self, trainer, results):
         if len(results) == 0:

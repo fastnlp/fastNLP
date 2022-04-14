@@ -98,16 +98,16 @@ def model_and_optimizers(request):
 
 
 # 测试一下普通的情况；
-@pytest.mark.parametrize("driver,device", [("torch", [0, 1])])  #  ("torch", "cpu"), ("torch", 1), ("torch", [0, 1])
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", 1), ("torch", [0, 1])])  #  ("torch", "cpu"), ("torch", 1), ("torch", [0, 1])
 @pytest.mark.parametrize("callbacks", [[RecordMetricCallback(monitor="acc", metric_threshold=0.2, larger_better=True)]])
-@pytest.mark.parametrize("validate_every", [-3])
+@pytest.mark.parametrize("evaluate_every", [-3, -1, 100])
 @magic_argv_env_context
 def test_trainer_torch_with_evaluator(
         model_and_optimizers: TrainerParameters,
         driver,
         device,
         callbacks,
-        validate_every,
+        evaluate_every,
         n_epochs=10,
 ):
     trainer = Trainer(
@@ -116,11 +116,11 @@ def test_trainer_torch_with_evaluator(
         device=device,
         optimizers=model_and_optimizers.optimizers,
         train_dataloader=model_and_optimizers.train_dataloader,
-        validate_dataloaders=model_and_optimizers.validate_dataloaders,
+        evaluate_dataloaders=model_and_optimizers.validate_dataloaders,
         input_mapping=model_and_optimizers.input_mapping,
         output_mapping=model_and_optimizers.output_mapping,
         metrics=model_and_optimizers.metrics,
-        validate_every=validate_every,
+        evaluate_every=evaluate_every,
 
         n_epochs=n_epochs,
         callbacks=callbacks,
@@ -152,7 +152,7 @@ def test_trainer_torch_with_evaluator_fp16_accumulation_steps(
         device=device,
         optimizers=model_and_optimizers.optimizers,
         train_dataloader=model_and_optimizers.train_dataloader,
-        validate_dataloaders=model_and_optimizers.validate_dataloaders,
+        evaluate_dataloaders=model_and_optimizers.validate_dataloaders,
         input_mapping=model_and_optimizers.input_mapping,
         output_mapping=model_and_optimizers.output_mapping,
         metrics=model_and_optimizers.metrics,
@@ -193,14 +193,14 @@ def test_trainer_validate_every(
         device=device,
         optimizers=model_and_optimizers.optimizers,
         train_dataloader=model_and_optimizers.train_dataloader,
-        validate_dataloaders=model_and_optimizers.validate_dataloaders,
+        evaluate_dataloaders=model_and_optimizers.validate_dataloaders,
         input_mapping=model_and_optimizers.input_mapping,
         output_mapping=model_and_optimizers.output_mapping,
         metrics=model_and_optimizers.metrics,
 
         n_epochs=n_epochs,
         output_from_new_proc="all",
-        validate_every=validate_every
+        evaluate_every=validate_every
     )
 
     trainer.run()

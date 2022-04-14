@@ -55,8 +55,8 @@ class TorchPaddleDriver(Driver):
             self._train_step = self.model
             self._train_signature_fn = self.model.forward
 
-        if hasattr(self.model, "validate_step"):
-            self._validate_step = self.model.validate_step
+        if hasattr(self.model, "evaluate_step"):
+            self._validate_step = self.model.evaluate_step
             self._validate_signature_fn = None
         elif hasattr(self.model, "test_step"):
             self._validate_step = self.model.test_step
@@ -68,8 +68,8 @@ class TorchPaddleDriver(Driver):
         if hasattr(self.model, "test_step"):
             self._test_step = self.model.test_step
             self._test_signature_fn = None
-        elif hasattr(self.model, "validate_step"):
-            self._test_step = self.model.validate_step
+        elif hasattr(self.model, "evaluate_step"):
+            self._test_step = self.model.evaluate_step
             self._test_signature_fn = self.model.forward
         else:
             self._test_step = self.model
@@ -81,7 +81,7 @@ class TorchPaddleDriver(Driver):
             self.model.to(self.model_device)
 
     @staticmethod
-    def _check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
+    def check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
         if is_train:
             if not isinstance(dataloader, (TorchDataLoader, PaddleDataLoader)):
                 raise ValueError(f"Parameter `{dataloader_name}` should be 'torch.util.data.DataLoader' or `paddle.io.dataloader` type, not {type(dataloader)}.")

@@ -89,7 +89,7 @@ def _test_trainer_torch_with_evaluator_fp16_accumulation_steps(
         device=None,
         optimizers=optimizers,
         train_dataloader=train_dataloader,
-        validate_dataloaders=validate_dataloaders,
+        evaluate_dataloaders=validate_dataloaders,
         metrics=metrics,
 
         n_epochs=2,

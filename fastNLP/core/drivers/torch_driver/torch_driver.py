@@ -81,7 +81,7 @@ class TorchDriver(Driver):
             self.grad_scaler.update()
 
     @staticmethod
-    def _check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
+    def check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
         if is_train:
             if not isinstance(dataloader, DataLoader):
                 raise ValueError(f"Parameter `{dataloader_name}` should be 'DataLoader' type, not {type(dataloader)}.")
@@ -107,23 +107,6 @@ class TorchDriver(Driver):
             if not isinstance(each_optimizer, Optimizer):
                 raise ValueError(f"Each optimizer of parameter `optimizers` should be 'Optimizer' type, "
                                  f"not {type(each_optimizer)}.")
-
-    def check_evaluator_mode(self, mode: str):
-        model = self.unwrap_model()
-        if mode == "validate":
-            if not hasattr(model, "validate_step"):
-                if hasattr(model, "test_step"):
-                    logger.warning_once(
-                        "Your model does not have 'validate_step' method but has 'test_step' method, but you"
-                        "are using 'mode=validate', we are going to use 'test_step' to substitute for"
-                        "'validate_step'.")
-
-        else:
-            if not hasattr(model, "test_step"):
-                if hasattr(model, "validate_step"):
-                    logger.warning("Your model does not have 'test_step' method but has 'validate' method, but you"
-                                   "are using 'mode=test', we are going to use 'validate_step' to substitute for"
-                                   "'test_step'.")
 
     @staticmethod
     def tensor_to_numeric(tensor, reduce=None):

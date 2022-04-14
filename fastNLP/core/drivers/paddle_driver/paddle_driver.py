@@ -72,7 +72,7 @@ class PaddleDriver(Driver):
             optimizer.clear_grad()
 
     @staticmethod
-    def _check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
+    def check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
         r"""
         该函数会在 trainer 或者 evaluator 设置 dataloader 后检测 dataloader 的合法性。
         要求传入的 dataloader 必须为 `paddle.io.DataLoader` 或包含该类型的字典。
@@ -117,24 +117,24 @@ class PaddleDriver(Driver):
 
     def check_evaluator_mode(self, mode: str):
         r"""
-        因为我们在具体的 driver 的 validate_step 和 test_step 的逻辑是如果模型没有实现本函数，那么就去检测模型是否实现了另一个函数；
-        因此如果用户的 evaluator mode 是 validate，但是传入的 model 却没有实现 validate_step 函数，而是实现了 test_step 函数，那么
+        因为我们在具体的 driver 的 evaluate_step 和 test_step 的逻辑是如果模型没有实现本函数，那么就去检测模型是否实现了另一个函数；
+        因此如果用户的 evaluator evaluate_fn 是 validate，但是传入的 model 却没有实现 evaluate_step 函数，而是实现了 test_step 函数，那么
          我们应当提醒用户这一行为；
         """
         model = self.unwrap_model()
         if mode == "validate":
-            if not hasattr(model, "validate_step"):
+            if not hasattr(model, "evaluate_step"):
                 if hasattr(model, "test_step"):
                     logger.warning(
-                        "Your model does not have 'validate_step' method but has 'test_step' method, but you"
+                        "Your model does not have 'evaluate_step' method but has 'test_step' method, but you"
                         "are using 'Evaluator.validate', we are going to use 'test_step' to substitute for"
-                        "'validate_step'.")
+                        "'evaluate_step'.")
 
         else:
             if not hasattr(model, "test_step"):
-                if hasattr(model, "validate_step"):
+                if hasattr(model, "evaluate_step"):
                     logger.warning_once("Your model does not have 'test_step' method but has 'validate' method, but you"
-                                    "are using 'Evaluator.test', we are going to use 'validate_step' to substitute for"
+                                    "are using 'Evaluator.test', we are going to use 'evaluate_step' to substitute for"
                                     "'test_step'.")
 
     @staticmethod

@@ -39,7 +39,7 @@ class Evaluator:
             driver: Union[str, Driver] = 'single',
             device: Optional[Union[int, List[int], str]] = None,
             batch_step_fn: Optional[callable] = None,
-            mode: Optional[Union[str, callable]] = 'validate',  # 首先尝试找 evaluate_step, 找不到 forward, callable
+            evaluate_fn: Optional[str] = None,  # 首先尝试找 evaluate_step, 找不到 forward, callable
             input_mapping: Optional[Union[Callable, Dict]] = None,
             output_mapping: Optional[Union[Callable, Dict]] = None,
             model_wo_auto_param_call: bool = False,
@@ -58,14 +58,13 @@ class Evaluator:
         :param batch_step_fn: callable的对象，接受 (evaluator, batch) 作为参数，其中 evaluator 为 Evaluator 对象，batch 为
             DataLoader 中返回的对象。一个 batch_step_fn 的例子可参考 fastNLP.core.controller.loops.evaluate_batch_loop 的
             batch_step_fn 函数。
-        :param mode: 可选 ["validate", "test"], 当为 "validate" 时将首先尝试寻找 model 是否有 validate_step 函数，没有的话则尝试
-            寻找 test_step 函数，都没找到则使用 model 的前向运算函数。当为 "test" 是将首先尝试寻找 model 是否有 test_step 函数，
-            没有的话尝试 "validate_step"  函数，都没找到则使用 model 的前向运算函数。
+        :param evaluate_fn: 用来控制 `Evaluator` 在评测的前向传播过程中是调用哪一个函数，例如是 `model.evaluate_step` 还是 `model.forward`；
+         默认为 None，如果该值是 None，那么我们会默认使用 `evaluate_step` 当做前向传播的函数，如果在模型中没有找到该方法，则使用 `model.forward` 函数；
         :param input_mapping: 对 dataloader 中输出的内容将通过 input_mapping 处理之后再输入到 model 以及 metric 中
         :param output_mapping: 对 model 输出的内容，将通过 output_mapping 处理之后再输入到 metric 中。
         :param model_wo_auto_param_call: 是否关闭在训练时调用我们的 auto_param_call 来自动匹配 batch 和 forward 函数的参数的行为；
          如果该值为 True，并且当 batch 为字典时，我们会根据 forward 所需要的参数从 batch 中提取对应的对象，传入到 forward 函数中；如果该值
-         为 False，那么我们会将 batch 直接透传给 forward 函数。注意上述逻辑同样应用于 `train_step`, `validate_step` 和 `test_step`；
+         为 False，那么我们会将 batch 直接透传给 forward 函数。注意上述逻辑同样应用于 `train_step`, `evaluate_step` 和 `test_step`；
         :param fp16: 是否使用 fp16 。
         :param verbose: 是否打印 evaluate 的结果。
         :param kwargs:
@@ -87,9 +86,11 @@ class Evaluator:
 
         self.model = model
         self.metrics = metrics
-
         self.driver = choose_driver(model, driver, device, fp16=fp16, model_wo_auto_param_call=model_wo_auto_param_call, **kwargs)
 
+        if dataloaders is None:
+            raise ValueError("Parameter `dataloaders` can not be None.")
+        self.dataloaders = dataloaders
         self.device = device
         self.verbose = verbose
 
@@ -97,21 +98,12 @@ class Evaluator:
             _check_valid_parameters_number(batch_step_fn, ['trainer', 'batch'], fn_name='batch_step_fn')
         self.batch_step_fn = batch_step_fn
 
-        self.mode = mode
-        assert mode in {'validate', 'test'}, "Parameter `mode` should only be 'validate' or 'test'."
-
         self.input_mapping = input_mapping
         self.output_mapping = output_mapping
 
         if not isinstance(dataloaders, dict):
             dataloaders = {None: dataloaders}
-        if mode == "validate":
-            self._evaluate_step = self.driver.validate_step
-            self.driver.set_dataloader(validate_dataloaders=dataloaders)
-        else:
-            self._evaluate_step = self.driver.test_step
-            self.driver.set_dataloader(test_dataloaders=dataloaders)
-        self.mode = mode
+
         self.evaluate_batch_loop = EvaluateBatchLoop(batch_step_fn=batch_step_fn)
         self.separator = kwargs.get('separator', '#')
         self.model_use_eval_mode = kwargs.get('model_use_eval_mode', True)
@@ -123,9 +115,13 @@ class Evaluator:
         self._metric_wrapper = None
         _ = self.metrics_wrapper  # 触发检查
 
-        assert self.driver.has_validate_dataloaders() or self.driver.has_test_dataloaders()
         self.driver.setup()
         self.driver.barrier()
+
+        if evaluate_fn is not None and not isinstance(evaluate_fn, str):
+            raise TypeError("Parameter `train_fn` can only be `str` type when it is not None.")
+        self._evaluate_step, self._evaluate_step_signature_fn = self.driver.get_model_call_fn("evaluate_step" if evaluate_fn is None else evaluate_fn)
+        self.evaluate_fn = evaluate_fn
 
         self.dataloaders = {}
         for name, dl in dataloaders.items():  # 替换为正确的 sampler
@@ -136,8 +132,9 @@ class Evaluator:
         if self.progress_bar == 'auto':
             self.progress_bar = 'rich' if (sys.stdin and sys.stdin.isatty()) else 'raw'
 
-        self.driver.check_evaluator_mode(self.mode)
         self.driver.barrier()
+
+        self.driver.check_dataloader_legality(self.dataloaders, "dataloaders", is_train=False)
 
     def run(self, num_eval_batch_per_dl: int = -1, **kwargs) -> Dict:
         """
@@ -155,11 +152,6 @@ class Evaluator:
         """
         assert isinstance(num_eval_batch_per_dl, int), "num_eval_batch_per_dl must be of int type."
         assert num_eval_batch_per_dl > 0 or num_eval_batch_per_dl == -1, "num_eval_batch_per_dl must be -1 or larger than 0."
-
-        if self.mode == 'validate':
-            assert self.driver.has_validate_dataloaders()
-        else:
-            assert self.driver.has_test_dataloaders()
 
         metric_results = {}
         self.reset()
@@ -236,13 +228,6 @@ class Evaluator:
             delattr(self, '_rich_task_id')
 
     @property
-    def eval_dataloaders(self):
-        if self.mode == "validate":
-            return self.driver.validate_dataloaders
-        else:
-            return self.driver.test_dataloaders
-
-    @property
     def evaluate_batch_loop(self):
         return self._evaluate_batch_loop
 
@@ -296,13 +281,13 @@ class Evaluator:
 
     def evaluate_step(self, batch):
         """
-        将 batch 传递到model中进行处理，根据当前 mode 选择进行 evaluate 还是 test 。会将返回结果经过 output_mapping 处理后再
+        将 batch 传递到model中进行处理，根据当前 evaluate_fn 选择进行 evaluate 还是 test 。会将返回结果经过 output_mapping 处理后再
             返回。
 
         :param batch:
         :return:
         """
-        outputs = self._evaluate_step(batch)
+        outputs = self.driver.model_call(batch, self._evaluate_step, self._evaluate_step_signature_fn)
         outputs = match_and_substitute_params(self.output_mapping, outputs)
         return outputs
 

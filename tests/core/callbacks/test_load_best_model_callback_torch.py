@@ -92,7 +92,7 @@ def test_load_best_model_callback(
         device=device,
         optimizers=model_and_optimizers.optimizers,
         train_dataloader=model_and_optimizers.train_dataloader,
-        validate_dataloaders=model_and_optimizers.validate_dataloaders,
+        evaluate_dataloaders=model_and_optimizers.validate_dataloaders,
         input_mapping=model_and_optimizers.input_mapping,
         output_mapping=lambda output: output if ('loss' in output) else {'pred':output['preds'], 'target': output['target']},
         metrics=model_and_optimizers.metrics,

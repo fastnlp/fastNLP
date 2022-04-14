@@ -28,7 +28,7 @@ class TorchNormalModel_Classification_1(nn.Module):
         x = self(x)
         return {"loss": self.loss_fn(x, y)}
 
-    def validate_step(self, x, y):
+    def evaluate_step(self, x, y):
         """
         如果不加参数 y，那么应该在 trainer 中设置 output_mapping = {"y": "target"}；
         """
