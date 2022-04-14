@@ -151,7 +151,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
         self.need_reinitialize = False
 
     def set_distributed(self, num_replicas, rank, pad=True):
-        raise RuntimeError(f"ReproduceBatchSampler does not support to change to distributed training.")
+        raise RuntimeError(f"RandomBatchSampler does not support to change to distributed training.")
 
     def set_epoch(self, epoch):
         if hasattr(self.batch_sampler, "sampler") and hasattr(self.batch_sampler.sampler, 'set_epoch') and callable(self.batch_sampler.sampler.set_epoch):
