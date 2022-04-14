@@ -264,7 +264,6 @@ class Trainer(TrainerEventTrigger):
         self.on_after_trainer_initialized(self.driver)
 
         self.driver.barrier()
-        self.driver.check_dataloader_legality(self.train_dataloader, "train_dataloader", is_train=True)
 
     def run(self, num_train_batch_per_epoch: int = -1, num_eval_batch_per_dl: int = -1,
             num_eval_sanity_batch: int = 2, resume_from: str = None, resume_training: bool = True,
@@ -310,7 +309,7 @@ class Trainer(TrainerEventTrigger):
 
         self.num_batches_per_epoch = len(self.dataloader)
         self.total_batches = self.num_batches_per_epoch * self.n_epochs
-
+        self.global_forward_batches = self.num_batches_per_epoch * self.cur_epoch_idx + self.batch_idx_in_epoch
         self.on_train_begin()
         self.driver.barrier()
         self.driver.zero_grad(self.set_grad_to_none)
@@ -637,6 +636,8 @@ class Trainer(TrainerEventTrigger):
         :param folder: 保存断点重训 states 的文件地址；
         :param resume_training: 是否从上次的 batch 开始训练，或者只从最近的 epoch 开始训练；注意如果 resume_training=True，那么我们
          只会加载 model 和 optimizers 的状态；而其余的对象的值则根据用户的 Trainer 的初始化直接重置；
+        :param only_state_dict: 保存的 model 是否只包含了权重。
+        :param model_load_fn: 使用的模型加载函数，参数应为一个 文件夹，不返回任何内容。
         """
         self.driver.barrier()
         if isinstance(folder, str):
@@ -675,8 +676,6 @@ class Trainer(TrainerEventTrigger):
         # 这里的原则就是应当使得    '还会产生的batch数量' + 'batch_idx_in_epoch' = '原来不断点训练的batch的总数'。其中由于
         #    '还会产生的batch数量' 是由还剩多少 sample 决定的，因此只能通过调整 'batch_idx_in_epoch' 使得等式成立
         self.trainer_state.batch_idx_in_epoch = states.pop('batch_idx_in_epoch')
-        self.trainer_state.global_forward_batches = self.num_batches_per_epoch * self.cur_epoch_idx + \
-                                                    self.batch_idx_in_epoch
         # 这个是防止用户在 Trainer.load 之后还没结束当前 epoch 又继续 save
         self.start_batch_idx_in_epoch = self.trainer_state.batch_idx_in_epoch
 

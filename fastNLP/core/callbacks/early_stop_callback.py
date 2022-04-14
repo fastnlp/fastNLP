@@ -12,8 +12,9 @@ class EarlyStopCallback(HasMonitorCallback):
     def __init__(self, monitor:Union[str, Callable]=None, larger_better:bool=True, patience:int=10):
         """
 
-        :param str monitor: 监控的 metric 值。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为
-            evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果。
+        :param str monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+            的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
+            果(字典类型)，返回一个 float 值作为 monitor 的结果。
         :param larger_better: monitor 的值是否是越大越好。
         :param patience: 多少次 validate 不没有提升就停止。
         """
@@ -46,17 +47,20 @@ class EarlyStopCallback(HasMonitorCallback):
         states = {
             'patience': self.patience,
             'wait': self.wait,
-            'monitor': self.monitor,
             'monitor_value': self.monitor_value
         }
+        if not callable(self._real_monitor):
+            states['_real_monitor'] = self._real_monitor
         return states
 
     def on_load_checkpoint(self, trainer, states):
         self.patience = states['patience']
         self.wait = states['wait']
-        self.monitor = states['monitor']
         self.monitor_value = float(states['monitor_value'])
+        if '_real_monitor' in states:
+            self._real_monitor = states['_real_monitor']
 
+    @property
     def callback_name(self):
-        return f'EarlyStopCallback#monitor-{self.monitor}#patience-{self.patience}'
+        return f'EarlyStopCallback#monitor-{self.monitor_name}#patience-{self.patience}'
 

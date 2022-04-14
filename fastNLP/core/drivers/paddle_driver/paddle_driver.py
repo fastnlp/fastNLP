@@ -34,10 +34,10 @@ if _NEED_IMPORT_PADDLE:
     from paddle.optimizer import Optimizer
 
     _reduces = {
-        'max': paddle.max,
-        'min': paddle.min,
-        'mean': paddle.mean,
-        'sum': paddle.sum
+        "max": paddle.max,
+        "min": paddle.min,
+        "mean": paddle.mean,
+        "sum": paddle.sum
     }
 
 class PaddleDriver(Driver):
@@ -254,24 +254,24 @@ class PaddleDriver(Driver):
         else:
             raise RuntimeError("This condition is not supposed to appear. Please report a bug to us.")
 
-        num_consumed_batches = states.pop('num_consumed_batches')
-        if hasattr(sampler, 'state_dict') and callable(sampler.state_dict):
+        num_consumed_batches = states.pop("num_consumed_batches")
+        if hasattr(sampler, "state_dict") and callable(sampler.state_dict):
             sampler_states = sampler.state_dict()
             # 如果有，需要针对 num_consumed_samples 做特殊的处理。因为DataLoader存在预取行为，直接使用sampler中的num_consumed_samples
-            #   会造成多余实际消耗的问题。
-            num_consumed_samples_array = sampler_states.pop('num_consumed_samples_array', None)
+            # 会造成多余实际消耗的问题。
+            num_consumed_samples_array = sampler_states.pop("num_consumed_samples_array", None)
             if num_consumed_samples_array is not None:
-                if isinstance(sampler, ReproducibleSampler):  # 如果是 sampler 的话，需要考虑 batch_size 。
-                    try:
-                        num_consumed_batches = num_consumed_batches * dataloader_args.batch_size
-                    except:  # 有可能 batch_size 为 None，就只有损失精度了
-                        num_consumed_batches = sampler_states['num_consumed_samples']
-                sampler_states['num_consumed_samples'] = num_consumed_samples_array[num_consumed_batches]
-                assert sampler_states['num_consumed_samples'] != -1, "This is a bug, please report."
-            
+                sampler_states["num_consumed_samples"] = num_consumed_samples_array[num_consumed_batches]
+            else:
+                try:
+                    sampler_states["num_consumed_samples"] = num_consumed_batches * dataloader_args.batch_size
+                except:  # 有可能 batch_size 为 None，就只有损失精度了
+                    pass
+            assert sampler_states["num_consumed_samples"] != -1, "This is a bug, please report."
         else:
             raise RuntimeError(
-                'The sampler has no `state_dict()` method, it will fail to recover to the specific batch.')
+                "The sampler has no `state_dict()` method, it will fail to recover to the specific batch.")
+        states["sampler_states"] = sampler_states
 
         # 2. 保存模型的状态；
         if should_save_model:
@@ -326,7 +326,7 @@ class PaddleDriver(Driver):
                 batch_size=dataloader_args.batch_size,
                 drop_last=dataloader_args.drop_last
             )
-        sampler.load_state_dict(states['sampler_states'])
+        sampler.load_state_dict(states["sampler_states"])
         states["dataloader"] = self.set_dist_repro_dataloader(dataloader, sampler)
 
         # 4. 修改 trainer_state.batch_idx_in_epoch
@@ -355,7 +355,7 @@ class PaddleDriver(Driver):
         return paddle.no_grad
 
     @staticmethod
-    def move_model_to_device(model: 'paddle.nn.Layer', device: Union[str, int, 'paddle.CUDAPlace', 'paddle.CPUPlace']):
+    def move_model_to_device(model: "paddle.nn.Layer", device: Union[str, int, "paddle.CUDAPlace", "paddle.CPUPlace"]):
         r"""
         用来将模型转移到指定的 device 上；
         在 Paddle 中使用可能会引起因与设置的设备不一致而产生的问题，请注意。
@@ -363,7 +363,7 @@ class PaddleDriver(Driver):
         if device is not None:
             model.to(device)
 
-    def move_data_to_device(self, batch: 'paddle.Tensor'):
+    def move_data_to_device(self, batch: "paddle.Tensor"):
         r"""
         将数据迁移到指定的机器上；batch 可能是 list 也可能 dict ，或其嵌套结构。
         在 Paddle 中使用可能会引起因与设置的设备不一致而产生的问题，请注意。
@@ -404,7 +404,7 @@ class PaddleDriver(Driver):
         if int(os.environ.get(FASTNLP_SEED_WORKERS, 0)) and dataloader.worker_init_fn is None:
             dataloader.worker_init_fn = partial(self.worker_init_function, rank=self.global_rank)
 
-    def set_sampler_epoch(self, dataloader: 'DataLoader', cur_epoch_idx):
+    def set_sampler_epoch(self, dataloader: "DataLoader", cur_epoch_idx):
         r"""
         对于分布式的 sampler，dataloader 需要在每一个 epoch 前设置随机数种子，来保证每一个进程上的 shuffle 是一样的；
 

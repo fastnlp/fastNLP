@@ -181,6 +181,7 @@ class TestCheckNumberOfParameters:
 
 
 def test_get_fun_msg():
+    # 测试运行
     def demo(x):
         pass
 
