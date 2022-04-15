@@ -21,11 +21,12 @@ class TestFdl:
         ds.set_pad_val("x", val=-1)
         fdl = TorchDataLoader(ds, batch_size=3)
         fdl.set_input("x", "y")
+        fdl.set_pad_val("x", val=None)
         for batch in fdl:
             print(batch)
-        fdl.set_pad_val("x", val=-2)
-        for batch in fdl:
-            print(batch)
+        # fdl.set_pad_val("x", val=-2)
+        # for batch in fdl:
+        #     print(batch)
 
     def test_add_collator(self):
         ds = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
@@ -38,6 +39,7 @@ class TestFdl:
 
         fdl = TorchDataLoader(ds, batch_size=3, as_numpy=True)
         fdl.set_input("x", "y")
+        # fdl.set_pad_val("x", val=None)
         fdl.add_collator(collate_fn)
         for batch in fdl:
             print(batch)

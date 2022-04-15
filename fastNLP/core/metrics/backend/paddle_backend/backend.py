@@ -14,10 +14,12 @@ if _NEED_IMPORT_PADDLE:
     import paddle.distributed as dist
     from paddle.fluid.dygraph import parallel_helper
 
+
 def _simple_gather_all_tensors(result, group: Any, world_size: int) -> List:
     gathered_result = [paddle.zeros_like(result) for _ in range(world_size)]
     dist.all_gather(gathered_result, result, group)
     return gathered_result
+
 
 class PaddleBackend(Backend):
     def __init__(self):
@@ -124,4 +126,3 @@ class PaddleBackend(Backend):
         # TODO 如果在这里处理的话，会不会在别的地方引起bug？
         device = get_device_from_visible(device)
         return paddle_to(tensor, device)
-
