@@ -28,7 +28,7 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
     """
     if is_in_paddle_launch_dist():
         if device is not None:
-            logger.warning("Parameter `device` would be ignored when you are using `paddle.distributed.launch` to pull "
+            logger.warning_once("Parameter `device` would be ignored when you are using `paddle.distributed.launch` to pull "
                            "up your script. And we will directly get the local device via "
                            "and `os.environ['CUDA_VISIBLE_DEVICES']``.")
         device = [int(g) for g in os.environ["CUDA_VISIBLE_DEVICES"].split(",")]
