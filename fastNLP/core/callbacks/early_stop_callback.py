@@ -4,7 +4,7 @@ __all__ = [
 
 from typing import Dict, Union, Callable
 
-from .callback import HasMonitorCallback
+from .has_monitor_callback import HasMonitorCallback
 from fastNLP.core.utils.exceptions import EarlyStopException
 
 

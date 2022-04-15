@@ -25,7 +25,7 @@ __all__ = [
 
 from .utils import optimizer_state_to_device
 from fastNLP.core.drivers.driver import Driver
-from fastNLP.core.drivers.torch_driver.utils import _build_fp16_env
+from fastNLP.core.drivers.torch_driver.utils import _build_fp16_env, DummyGradScaler
 from fastNLP.core.utils import apply_to_collection, torch_move_data_to_device
 from fastNLP.envs import  rank_zero_call
 from fastNLP.envs import FASTNLP_SEED_WORKERS, FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
@@ -224,6 +224,11 @@ class TorchDriver(Driver):
             optimizer_state["state"] = optimizer_state_to_device(optimizer_state["state"], torch.device("cpu"))
             optimizers_state_dict[f"optimizer{i}"] = optimizer_state  # 注意这里没有使用 deepcopy，测试是不需要的；
 
+        # 4. 保存fp16的状态
+        if not isinstance(self.grad_scaler, DummyGradScaler):
+            grad_scaler_state_dict = self.grad_scaler.state_dict()
+            states['grad_scaler_state_dict'] = grad_scaler_state_dict
+
         logger.debug("Save optimizer state dict")
         states["optimizers_state_dict"] = optimizers_state_dict
         torch.save(states, Path(folder).joinpath(FASTNLP_CHECKPOINT_FILENAME))
@@ -232,7 +237,7 @@ class TorchDriver(Driver):
         states = torch.load(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
         # 1. 加载 optimizers 的状态；
-        optimizers_state_dict = states["optimizers_state_dict"]
+        optimizers_state_dict = states.pop("optimizers_state_dict")
         for i in range(len(self.optimizers)):
             optimizer: torch.optim.Optimizer = self.optimizers[i]
             optimizer.load_state_dict(optimizers_state_dict[f"optimizer{i}"])
@@ -244,26 +249,37 @@ class TorchDriver(Driver):
             res = torch.load(folder.joinpath(FASTNLP_MODEL_FILENAME), map_location='cpu')
             if only_state_dict:
                 model.load_state_dict(res)
-                logger.debug("Load model state dict.")
+                logger.debug("Load model state dict...")
             else:
                 model.load_state_dict(res.state_dict())
-                logger.debug("Load model.")
+                logger.debug("Load model...")
 
-        # 3. 恢复 sampler 的状态；
+        # 3. 加载fp16的状态
+        if 'grad_scaler_state_dict' in states:
+            grad_scaler_state_dict = states.pop('grad_scaler_state_dict')
+            if not isinstance(self.grad_scaler, DummyGradScaler):
+                self.grad_scaler.load_state_dict(grad_scaler_state_dict)
+                logger.debug("Load grad_scaler state dict...")
+        elif not isinstance(self.grad_scaler, DummyGradScaler):
+            logger.warning(f"Checkpoint {folder} is not trained with fp16=True, while resume to a fp16=True training, "
+                           f"the training process may be unstable.")
+
+        # 4. 恢复 sampler 的状态；
         dataloader_args = self.get_dataloader_args(dataloader)
         if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
             sampler = dataloader_args.batch_sampler
         elif isinstance(dataloader_args.sampler, ReproducibleSampler):
             sampler = dataloader_args.sampler
         elif self.is_distributed():
-            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or `ReproducibleSampler`.")
+            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or "
+                               "`ReproducibleSampler`.")
         else:
             sampler = RandomBatchSampler(
                 batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
                 batch_size=dataloader_args.batch_size,
                 drop_last=dataloader_args.drop_last
             )
-        sampler.load_state_dict(states['sampler_states'])
+        sampler.load_state_dict(states.pop('sampler_states'))
         states["dataloader"] = self.set_dist_repro_dataloader(dataloader, sampler)
 
         # 4. 修改 trainer_state.batch_idx_in_epoch

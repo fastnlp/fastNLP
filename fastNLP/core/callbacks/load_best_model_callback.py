@@ -4,7 +4,7 @@ __all__ = [
 
 import os
 from typing import Optional, Callable, Union
-from .callback import HasMonitorCallback
+from .has_monitor_callback import HasMonitorCallback
 from io import BytesIO
 import shutil
 
@@ -80,10 +80,7 @@ class LoadBestModelCallback(HasMonitorCallback):
         self.get_monitor_value(sanity_check_res)
 
     def on_validate_end(self, trainer, results):
-        monitor_value = self.get_monitor_value(results)
-        if monitor_value is None:
-            return
-        if self.is_better_monitor_value(monitor_value, keep_if_better=True):
+        if self.is_better_results(results, keep_if_better=True):
             if self.real_save_folder:
                 trainer.save_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,
                                    model_save_fn=self.model_save_fn)
