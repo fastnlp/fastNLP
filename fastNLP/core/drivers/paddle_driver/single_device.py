@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, Callable, Tuple
 
 from .paddle_driver import PaddleDriver
 from .utils import replace_batch_sampler, replace_sampler, get_device_from_visible
@@ -11,16 +11,19 @@ from fastNLP.core.utils import (
     get_paddle_device_id,
     paddle_move_data_to_device,
 )
+from fastNLP.core.utils.utils import _get_fun_msg
 from fastNLP.core.samplers import (
     ReproducibleBatchSampler,
     RandomBatchSampler,
     ReproducibleSampler,
+    RandomSampler,
     re_instantiate_sampler,
 )
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
     import paddle
+    from paddle import DataParallel
     from paddle.fluid.reader import _DatasetKind
 
 __all__ = [
@@ -28,109 +31,57 @@ __all__ = [
 ]
 
 class PaddleSingleDriver(PaddleDriver):
-    def __init__(self, model, device: str, fp16: Optional[bool] = False, **kwargs):
+    def __init__(self, model, device: Union[str, int], fp16: Optional[bool] = False, **kwargs):
+        if isinstance(model, DataParallel):
+            raise ValueError("`paddle.DataParallel` is not supported in `PaddleSingleDriver`")
+
+        cuda_visible_devices = os.environ.get(USER_CUDA_VISIBLE_DEVICES, None)
+        if cuda_visible_devices == "":
+            device = "cpu"
+            logger.info("You have set `CUDA_VISIBLE_DEVICES` to '' in system environment variable, and we are gonna to"
+                        "use `cpu` instead of `gpu` device.")
+
         super(PaddleSingleDriver, self).__init__(model, fp16=fp16, **kwargs)
 
         if device is None:
             raise ValueError("Parameter `device` can not be None in `PaddleSingleDriver`.")
 
+        if device != "cpu":
+            if isinstance(device, int):
+                device_id = device
+            else:
+                device_id = get_paddle_device_id(device)
+            os.environ["CUDA_VISIBLE_DEVICES"] = os.environ[USER_CUDA_VISIBLE_DEVICES].split(",")[device_id]
         self.model_device = get_paddle_gpu_str(device)
 
         self.local_rank = 0
         self.global_rank = 0
         self.world_size = 1
 
-        if isinstance(model, paddle.DataParallel):
-            # 注意这里的 unwrap_model 调用的是具体子类的方法；
-            model = self.unwrap_model()
-            if hasattr(model, "train_step"):
-                logger.warning("Notice your model is a `paddle.DataParallel` model. And your model also "
-                                "implements the `train_step` method, which we can not call actually, we will "
-                                " call `forward` function instead of `train_step` and you should note that.")
-            self._train_step = self.model
-            self._train_signature_fn = model.forward
-
-            if hasattr(model, "evaluate_step"):
-                logger.warning("Notice your model is a `paddle.DataParallel` model. And your model also "
-                                "implements the `evaluate_step` method, which we can not call actually, we "
-                                "will call `forward` function instead of `evaluate_step` and you should note that.")
-            self._validate_step = self.model
-            self._validate_signature_fn = model.forward
-
-            if hasattr(model, "test_step"):
-                logger.warning("Notice your model is a `paddle.DataParallel` model. And your model also "
-                               "implements the `test_step` method, which we can not call actually, we will "
-                               "call `forward` function instead of `test_step` and you should note that.")
-            self._test_step = self.model
-            self._test_signature_fn = model.forward
-        else:
-            if hasattr(self.model, "train_step"):
-                self._train_step = self.model.train_step
-                self._train_signature_fn = None
-            else:
-                self._train_step = self.model
-                # 输入的模型是 `DataParallel`，我们需要保证其 signature_fn 是正确的；
-                model = self.unwrap_model()
-                self._train_signature_fn = model.forward
-
-            if hasattr(self.model, "evaluate_step"):
-                self._validate_step = self.model.evaluate_step
-                self._validate_signature_fn = None
-            elif hasattr(self.model, "test_step"):
-                self._validate_step = self.model.test_step
-                self._validate_signature_fn = self.model.test_step
-            else:
-                self._validate_step = self.model
-                model = self.unwrap_model()
-                self._validate_signature_fn = model.forward
-
-            if hasattr(self.model, "test_step"):
-                self._test_step = self.model.test_step
-                self._test_signature_fn = None
-            elif hasattr(self.model, "evaluate_step"):
-                self._test_step = self.model.evaluate_step
-                self._test_signature_fn = self.model.evaluate_step
-            else:
-                self._test_step = self.model
-                model = self.unwrap_model()
-                self._test_signature_fn = model.forward
-
     def setup(self):
         device = self.model_device
-        if device != "cpu":
-            device_id = get_paddle_device_id(device)
-            device_id = os.environ[USER_CUDA_VISIBLE_DEVICES].split(",")[device_id]
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(device_id)
-            device = get_device_from_visible(device, output_type=str)
+        device = get_device_from_visible(device, output_type=str)
         paddle.device.set_device(device)
         self.model.to(device)
 
-    def train_step(self, batch) -> Dict:
-        # 如果 batch 是一个 Dict，我们就默认帮其做参数匹配，否则就直接传入到 `train_step` 函数中，让用户自己处理；
+    def model_call(self, batch, fn: Callable, signature_fn: Optional[Callable]) -> Dict:
         if isinstance(batch, Dict) and not self.wo_auto_param_call:
-            return auto_param_call(self._train_step, batch, signature_fn=self._train_signature_fn)
+            return auto_param_call(fn, batch, signature_fn=signature_fn)
         else:
-            return self._train_step(batch)
+            return fn(batch)
 
-    def backward(self, loss):
-        self.grad_scaler.scale(loss).backward()
-
-    def step(self):
-        for optimizer in self.optimizers:
-            self.grad_scaler.step(optimizer)
-            self.grad_scaler.update()
-
-    def validate_step(self, batch) -> Dict:
-        if isinstance(batch, Dict) and not self.wo_auto_param_call:
-            return auto_param_call(self._validate_step, batch, signature_fn=self._validate_signature_fn)
+    def get_model_call_fn(self, fn: str) -> Tuple:
+        if hasattr(self.model, fn):
+            fn = getattr(self.model, fn)
+            if not callable(fn):
+                raise RuntimeError(f"The `{fn}` attribute is not `Callable`.")
+            logger.debug(f'Use {_get_fun_msg(fn, with_fp=False)}...')
+            return fn, None
+        elif fn in {"train_step", "evaluate_step"}:
+            logger.debug(f'Use {_get_fun_msg(self.model.forward, with_fp=False)}...')
+            return self.model, self.model.forward
         else:
-            return self._validate_step(batch)
-
-    def test_step(self, batch) -> Dict:
-        if isinstance(batch, Dict) and not self.wo_auto_param_call:
-            return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
-        else:
-            return self._test_step(batch)
+            raise RuntimeError(f"There is no `{fn}` method in your {type(self.model)}.")
 
     def move_data_to_device(self, batch: 'paddle.Tensor'):
         r"""
@@ -164,12 +115,18 @@ class PaddleSingleDriver(PaddleDriver):
             return replace_sampler(dataloader, sampler)
 
         if reproducible:
-            batch_sampler = RandomBatchSampler(
-                batch_sampler=args.batch_sampler,
-                batch_size=args.batch_size,
-                drop_last=args.drop_last
-            )
-            return replace_batch_sampler(dataloader, batch_sampler)
+            if isinstance(args.sampler, paddle.io.RandomSampler):
+                # 如果本来就是随机的，直接替换
+                sampler = RandomSampler(args.sampler.data_source)
+                logger.debug("Replace paddle RandomSampler into fastNLP RandomSampler.")
+                return replace_sampler(dataloader, sampler)
+            else:
+                batch_sampler = RandomBatchSampler(
+                    batch_sampler=args.batch_sampler,
+                    batch_size=args.batch_size,
+                    drop_last=args.drop_last
+                )
+                return replace_batch_sampler(dataloader, batch_sampler)
         else:
             return dataloader
 

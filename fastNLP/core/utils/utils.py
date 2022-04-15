@@ -203,7 +203,7 @@ def _check_valid_parameters_number(fn, expected_params:List[str], fn_name=None):
     :return:
     """
     if fn_name is not None:
-        assert callable(fn), f"{fn_name} should be callable, instead of {type(fn)}."
+        assert callable(fn), f"`{fn_name}` should be callable, instead of `{type(fn)}`."
 
     parameters = list(inspect.signature(fn).parameters.values())
     if inspect.ismethod(fn):
@@ -606,16 +606,38 @@ def seq_len_to_mask(seq_len, max_len=None):
     return mask
 
 
-def wait_to_success(fn, no=False):
+def wait_filepath(path, exist=True):
+    """
+    等待当 path 的存在状态为 {exist} 时返回
+
+    :param path: 待检测的 path
+    :param exist: 为 True 时表明检测这个 path 存在就返回; 为 False 表明检测到这个 path 不存在 返回。
+    :return:
+    """
+    if isinstance(path, str):
+        path = Path(path)
+    assert isinstance(path, Path)
+    count = 0
     while True:
         sleep(0.01)
-        if (no and not fn()) or (not no and fn()):
+        if path.exists() == exist:
             break
+        count += 1
+        if count % 1000 == 0:
+            msg = 'create' if exist else 'delete'
+            logger.warning(f"Waiting path:{path} to {msg} for {count*0.01} seconds...")
 
 
-# 这个是因为在分布式文件系统中可能会发生错误，rank0下发删除成功后就运行走了，但实际的删除需要rank0的机器发送到远程文件系统再去执行，这个时候
-# 在rank0那里，确实已经删除成功了，但是在远程文件系统那里这个操作还没完成，rank1读取的时候还是读取到存在这个文件；
+
 def synchronize_safe_rm(path: Optional[Union[str, Path]]):
+    """
+    这个是因为在分布式文件系统中可能会发生错误，rank0下发删除成功后就运行走了，但实际的删除需要rank0的机器发送到远程文件系统再去执行，这个时候
+        在rank0那里，确实已经删除成功了，但是在远程文件系统那里这个操作还没完成，rank1读取的时候还是读取到存在这个文件；
+    该函数会保证所有进程都检测到 path 删除之后才退出，请保证不同进程上 path 是完全一样的，否则会陷入死锁状态。
+
+    :param path:
+    :return:
+    """
     if path is None:
         return
     if isinstance(path, str):
@@ -624,7 +646,7 @@ def synchronize_safe_rm(path: Optional[Union[str, Path]]):
         return
     if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
         _recursive_rm(path)
-    wait_to_success(path.exists, no=True)
+    wait_filepath(path, exist=False)
 
 
 def _recursive_rm(path: Path):
@@ -643,6 +665,8 @@ def _recursive_rm(path: Path):
 def synchronize_mkdir(path: Optional[Union[str, Path]]):
     """
     注意该函数是用来创建文件夹，如果需要创建一个文件，不要使用该函数；
+    该函数会保证所有进程都检测到 path 创建之后才退出，请保证不同进程上 path 是完全一样的，否则会陷入死锁状态。
+
     """
     if path is None:
         return
@@ -652,7 +676,7 @@ def synchronize_mkdir(path: Optional[Union[str, Path]]):
     if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
         path.mkdir(parents=True, exist_ok=True)
 
-    wait_to_success(path.exists)
+    wait_filepath(path, exist=True)
 
 
 def get_class_that_defined_method(method):

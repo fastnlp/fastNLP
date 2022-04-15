@@ -85,7 +85,7 @@ class MixModule:
     def test_step(self, batch):
         raise NotImplementedError
 
-    def validate_step(self, batch):
+    def evaluate_step(self, batch):
         raise NotImplementedError
 
     def train(self):

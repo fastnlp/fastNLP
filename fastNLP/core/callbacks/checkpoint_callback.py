@@ -10,9 +10,9 @@ from copy import deepcopy
 
 
 import fastNLP
-from .callback import HasMonitorCallback
+from .has_monitor_callback import HasMonitorCallback
 from fastNLP.core.log import logger
-from fastNLP.envs import FASTNLP_LAUNCH_TIME
+from fastNLP.envs import FASTNLP_LAUNCH_TIME, FASTNLP_GLOBAL_RANK
 from fastNLP.core.utils import synchronize_safe_rm, synchronize_mkdir
 
 
@@ -217,7 +217,8 @@ class CheckpointCallback(HasMonitorCallback):
         :return:
         """
         folder = self.timestamp_path.joinpath(folder_name)
-        synchronize_mkdir(folder)
+        if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:  # 只在进程0上创建
+            synchronize_mkdir(folder)
         _fn = getattr(trainer, self.save_fn_name)
         _fn(
             folder=folder,

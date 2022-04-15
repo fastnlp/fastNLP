@@ -71,6 +71,14 @@ class PaddleDriver(Driver):
         for optimizer in self.optimizers:
             optimizer.clear_grad()
 
+    def backward(self, loss):
+        self.grad_scaler.scale(loss).backward()
+
+    def step(self):
+        for optimizer in self.optimizers:
+            self.grad_scaler.step(optimizer)
+            self.grad_scaler.update()
+
     @staticmethod
     def check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
         r"""
@@ -114,28 +122,6 @@ class PaddleDriver(Driver):
             if not isinstance(each_optimizer, Optimizer):
                 raise ValueError(f"Each optimizer of parameter `optimizers` should be 'paddle.optimizer.Optimizer' type, "
                                  f"not {type(each_optimizer)}.")
-
-    def check_evaluator_mode(self, mode: str):
-        r"""
-        因为我们在具体的 driver 的 evaluate_step 和 test_step 的逻辑是如果模型没有实现本函数，那么就去检测模型是否实现了另一个函数；
-        因此如果用户的 evaluator evaluate_fn 是 validate，但是传入的 model 却没有实现 evaluate_step 函数，而是实现了 test_step 函数，那么
-         我们应当提醒用户这一行为；
-        """
-        model = self.unwrap_model()
-        if mode == "validate":
-            if not hasattr(model, "evaluate_step"):
-                if hasattr(model, "test_step"):
-                    logger.warning(
-                        "Your model does not have 'evaluate_step' method but has 'test_step' method, but you"
-                        "are using 'Evaluator.validate', we are going to use 'test_step' to substitute for"
-                        "'evaluate_step'.")
-
-        else:
-            if not hasattr(model, "test_step"):
-                if hasattr(model, "evaluate_step"):
-                    logger.warning_once("Your model does not have 'test_step' method but has 'validate' method, but you"
-                                    "are using 'Evaluator.test', we are going to use 'evaluate_step' to substitute for"
-                                    "'test_step'.")
 
     @staticmethod
     def tensor_to_numeric(tensor, reduce=None):
@@ -258,20 +244,21 @@ class PaddleDriver(Driver):
         if hasattr(sampler, "state_dict") and callable(sampler.state_dict):
             sampler_states = sampler.state_dict()
             # 如果有，需要针对 num_consumed_samples 做特殊的处理。因为DataLoader存在预取行为，直接使用sampler中的num_consumed_samples
-            # 会造成多余实际消耗的问题。
-            num_consumed_samples_array = sampler_states.pop("num_consumed_samples_array", None)
+            #  会造成多余实际消耗的问题。
+            num_consumed_samples_array = sampler_states.pop('num_consumed_samples_array', None)
             if num_consumed_samples_array is not None:
-                sampler_states["num_consumed_samples"] = num_consumed_samples_array[num_consumed_batches]
-            else:
-                try:
-                    sampler_states["num_consumed_samples"] = num_consumed_batches * dataloader_args.batch_size
-                except:  # 有可能 batch_size 为 None，就只有损失精度了
-                    pass
-            assert sampler_states["num_consumed_samples"] != -1, "This is a bug, please report."
+                if isinstance(sampler, ReproducibleSampler):  
+                    # 如果是 sampler 的话，需要计算出实际的 sample 数目
+                    try:
+                        num_consumed_batches = num_consumed_batches * dataloader_args.batch_size
+                    except:  # 有可能 batch_size 为 None，就只有损失精度了
+                        num_consumed_batches = sampler_states['num_consumed_samples']
+                sampler_states['num_consumed_samples'] = num_consumed_samples_array[num_consumed_batches]
+                assert sampler_states['num_consumed_samples'] != -1, "This is a bug, please report."
+            states['sampler_states'] = sampler_states
         else:
             raise RuntimeError(
                 "The sampler has no `state_dict()` method, it will fail to recover to the specific batch.")
-        states["sampler_states"] = sampler_states
 
         # 2. 保存模型的状态；
         if should_save_model:

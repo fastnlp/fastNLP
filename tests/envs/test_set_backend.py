@@ -1,6 +1,6 @@
 import os
 
-from fastNLP.envs.set_env import dump_fastnlp_backend
+from fastNLP.envs.set_backend import dump_fastnlp_backend
 from tests.helpers.utils import Capturing
 from fastNLP.core import synchronize_safe_rm
 

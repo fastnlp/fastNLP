@@ -37,7 +37,12 @@ class TorchSingleDriver(TorchDriver):
         super(TorchSingleDriver, self).__init__(model, fp16=fp16, **kwargs)
 
         if device is None:
-            raise ValueError("Parameter `device` can not be None in `TorchSingleDriver`.")
+            logger.debug("device is not set, fastNLP will try to automatically get it.")
+            try:
+                device = next(model.parameters()).device
+                assert isinstance(device, torch.device)
+            except:
+                raise ValueError("fastNLP cannot get device automatically, please set device explicitly.")
 
         self.model_device = device
 
@@ -70,6 +75,7 @@ class TorchSingleDriver(TorchDriver):
 
             return self.model, model.forward
         else:
+            # TODO 这种直接调用模型某个接口的方法无法触发hook，也许需要做一个warning，如果用户有钩子，提醒他train_step无法触发。
             if hasattr(self.model, fn):
                 fn = getattr(self.model, fn)
                 if not callable(fn):

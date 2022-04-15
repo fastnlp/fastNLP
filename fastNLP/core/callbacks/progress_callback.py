@@ -8,7 +8,7 @@ __all__ = [
     'RichCallback'
 ]
 
-from .callback import HasMonitorCallback
+from .has_monitor_callback import HasMonitorCallback
 from fastNLP.core.callbacks.utils import _get_monitor_value
 from fastNLP.core.utils import f_rich_progress
 from fastNLP.core.log import logger

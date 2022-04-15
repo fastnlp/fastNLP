@@ -50,8 +50,6 @@ class ConllLoader(Loader):
 
     ConllLoader返回的DataSet的field由传入的headers确定。
 
-    数据中以"-DOCSTART-"开头的行将被忽略，因为该符号在conll 2003中被用为文档分割符。
-
     """
     
     def __init__(self, headers, sep=None, indexes=None, dropna=True):
@@ -93,6 +91,7 @@ class ConllLoader(Loader):
 class Conll2003Loader(ConllLoader):
     r"""
     用于读取conll2003任务的数据。数据的内容应该类似与以下的内容, 第一列为raw_words, 第二列为pos, 第三列为chunking，第四列为ner。
+    数据中以"-DOCSTART-"开头的行将被忽略，因为该符号在conll 2003中被用为文档分割符。
 
     Example::
 
