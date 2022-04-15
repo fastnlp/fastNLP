@@ -72,7 +72,7 @@ class RecordTrainerEventTriggerCallback(Callback):
         print("on_train_end")
 
     def on_train_epoch_begin(self, trainer):
-        if trainer.current_epoch_idx >= 1:
+        if trainer.cur_epoch_idx >= 1:
             # 触发 on_exception；
             raise Exception
         print("on_train_epoch_begin")

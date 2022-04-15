@@ -1,4 +1,5 @@
 import os
+from re import S
 os.environ["FASTNLP_BACKEND"] = "paddle"
 import pytest
 from pathlib import Path
@@ -56,34 +57,57 @@ def test_save_and_load_with_randombatchsampler(only_state_dict):
             dataset=dataset,
             batch_sampler=RandomBatchSampler(BatchSampler(dataset, batch_size=4), 4, False)
         )
+        num_consumed_batches = 2
 
         # TODO 断点重训完善后在这里迭代几次
+        already_seen_set = set()
+        for idx, batch in enumerate(dataloader):
+            if idx >= num_consumed_batches:
+                break
+            already_seen_set.update(batch)
 
         sampler_states = dataloader.batch_sampler.state_dict()
+        save_states = {"num_consumed_batches": num_consumed_batches}
         if only_state_dict:
-            driver1.save(Path(path), {}, dataloader, only_state_dict, should_save_model=True)
+            driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
         else:
-            driver1.save(Path(path), {}, dataloader, only_state_dict, should_save_model=True, input_spec=[paddle.ones((16, 10))])
-        states = driver2.load(Path(path), dataloader, only_state_dict, should_load_model=True)
+            driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True, input_spec=[paddle.ones((16, 10))])
+        
+        # 加载
+        # 更改 batch_size
+        dataloader = DataLoader(
+            dataset=dataset,
+            batch_sampler=RandomBatchSampler(BatchSampler(dataset, batch_size=2), 2, False)
+        )
+        load_states = driver2.load(Path(path), dataloader, only_state_dict, should_load_model=True)
+        replaced_loader = load_states.pop("dataloader")
 
         # 1. 检查 optimizer 的状态
         # TODO optimizer 的 state_dict 总是为空
 
         # 2. 检查 batch_sampler 是否被正确地加载和替换
-        replaced_loader = states["dataloader"]
         assert isinstance(replaced_loader.batch_sampler, RandomBatchSampler)
         assert replaced_loader.batch_sampler.index_list == sampler_states["index_list"]
         assert replaced_loader.batch_sampler.data_idx == sampler_states["data_idx"]
 
         # 3. 检查 model 的参数是否被正确加载
         for batch in dataloader:
-            res1 = driver1.validate_step(batch)
-            res2 = driver2.validate_step(batch)
+            res1 = driver1.model.evaluate_step(**batch)
+            res2 = driver2.model.evaluate_step(**batch)
 
             assert paddle.equal_all(res1["pred"], res2["pred"])
 
         # 4. 检查 batch_idx
-        # TODO
+        start_batch = load_states.pop('batch_idx_in_epoch')
+        assert start_batch == 2 * num_consumed_batches
+        left_batches = set()
+        for idx, batch in enumerate(replaced_loader):
+            left_batches.update(batch)
+
+        assert len(left_batches) + len(already_seen_set) == len(dataset)
+        assert len(left_batches | already_seen_set) == len(dataset)
+
+
     finally:
         synchronize_safe_rm(path)
 
@@ -104,21 +128,36 @@ def test_save_and_load_with_randomsampler(only_state_dict):
             dataset,
             batch_sampler=batch_sampler
         )
+        num_consumed_batches = 2
 
         # TODO 断点重训完善后在这里迭代几次
+        already_seen_set = set()
+        for idx, batch in enumerate(dataloader):
+            if idx >= num_consumed_batches:
+                break
+            already_seen_set.update(batch)
 
         sampler_states = dataloader.batch_sampler.sampler.state_dict()
+        save_states = {"num_consumed_batches": num_consumed_batches}
         if only_state_dict:
-            driver1.save(Path(path), {}, dataloader, only_state_dict, should_save_model=True)
+            driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
         else:
-            driver1.save(Path(path), {}, dataloader, only_state_dict, should_save_model=True, input_spec=[paddle.ones((16, 10))])
-        states = driver2.load(Path(path), dataloader, only_state_dict, should_load_model=True)
+            driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True, input_spec=[paddle.ones((16, 10))])
+
+        # 加载
+        # 更改 batch_size
+        dataloader = DataLoader(
+            dataset=dataset,
+            batch_sampler=RandomBatchSampler(BatchSampler(dataset, batch_size=2), 2, False)
+        )
+        load_states = driver2.load(Path(path), dataloader, only_state_dict, should_load_model=True)
+        replaced_loader = load_states.pop("dataloader")
 
         # 1. 检查 optimizer 的状态
         # TODO optimizer 的 state_dict 总是为空
 
         # 2. 检查 sampler 是否被正确地加载和替换
-        replaced_loader = states["dataloader"]
+        replaced_loader = load_states["dataloader"]
 
         assert isinstance(replaced_loader.batch_sampler.sampler, RandomSampler)
         assert replaced_loader.batch_sampler.sampler.seed == sampler_states["seed"]
@@ -129,60 +168,51 @@ def test_save_and_load_with_randomsampler(only_state_dict):
 
         # 3. 检查 model 的参数是否被正确加载
         for batch in dataloader:
-            res1 = driver1.validate_step(batch)
-            res2 = driver2.validate_step(batch)
+            res1 = driver1.model.evaluate_step(**batch)
+            res2 = driver2.model.evaluate_step(**batch)
 
             assert paddle.equal_all(res1["pred"], res2["pred"])
 
         # 4. 检查 batch_idx
-        # TODO
+        start_batch = load_states.pop('batch_idx_in_epoch')
+        assert start_batch == 2 * num_consumed_batches
+        left_batches = set()
+        for idx, batch in enumerate(replaced_loader):
+            left_batches.update(batch)
+
+        assert len(left_batches) + len(already_seen_set) == len(dataset)
+        assert len(left_batches | already_seen_set) == len(dataset)
     finally:
         synchronize_safe_rm(path)
 
-def test_save_and_load_state_dict(prepare_test_save_load):
+@pytest.mark.parametrize("only_state_dict", ([True, False]))
+def test_save_and_load_model(prepare_test_save_load, only_state_dict):
     """
-    测试save和load函数
-    TODO optimizer的state_dict为空，暂时不测试
-    """
-    try:
-        path = "dict"
-        driver1, driver2, dataloader = prepare_test_save_load
-
-        driver1.save_model(path)
-        driver2.load_model(path)
-
-        for batch in dataloader:
-            batch = driver1.move_data_to_device(batch)
-            res1 = driver1.validate_step(batch)
-            res2 = driver2.validate_step(batch)
-
-            assert paddle.equal_all(res1["pred"], res2["pred"])
-    finally:
-        synchronize_safe_rm(path)
-
-def test_save_and_load_whole_model(prepare_test_save_load):
-    """
-    测试save和load函数
-    TODO optimizer的state_dict为空，暂时不测试
+    测试 save_model 和 load_model 函数
     """
     try:
         path = "model"
         driver1, driver2, dataloader = prepare_test_save_load
 
-        driver1.save_model(path, only_state_dict=False, input_spec=[paddle.ones((32, 10))])
-        driver2.load_model(path, only_state_dict=False)
+        if only_state_dict:
+            driver1.save_model(path, only_state_dict)
+        else:
+            driver1.save_model(path, only_state_dict, input_spec=[paddle.ones((32, 10))])
+        driver2.load_model(path, only_state_dict)
 
         for batch in dataloader:
             batch = driver1.move_data_to_device(batch)
-            res1 = driver1.validate_step(batch)
-            res2 = driver2.validate_step(batch)
+            res1 = driver1.model.evaluate_step(**batch)
+            res2 = driver2.model.evaluate_step(**batch)
 
             assert paddle.equal_all(res1["pred"], res2["pred"])
     finally:
-        synchronize_safe_rm(path + ".pdiparams")
-        synchronize_safe_rm(path + ".pdiparams.info")
-        synchronize_safe_rm(path + ".pdmodel")
-
+        if only_state_dict:
+            synchronize_safe_rm(path)
+        else:
+            synchronize_safe_rm(path + ".pdiparams")
+            synchronize_safe_rm(path + ".pdiparams.info")
+            synchronize_safe_rm(path + ".pdmodel")
 
 class TestSingleDeviceFunction:
     """
@@ -199,13 +229,7 @@ class TestSingleDeviceFunction:
         测试能否运行
         """
         res = self.driver.unwrap_model()
-
-    def test_check_evaluator_mode(self):
-        """
-        这两个函数没有返回值和抛出异常，仅检查是否有import错误等影响运行的因素
-        """
-        self.driver.check_evaluator_mode("validate")
-        self.driver.check_evaluator_mode("test")
+        assert res is self.driver.model
 
     def test_is_distributed(self):
         assert self.driver.is_distributed() == False
@@ -237,44 +261,55 @@ class TestSetDistReproDataloder:
 
         assert replaced_loader is dataloader
 
-    def test_set_dist_repro_dataloader_with_reproducible_true(self):
+    @pytest.mark.parametrize("shuffle", [True, False])
+    def test_set_dist_repro_dataloader_with_reproducible_true(self, shuffle):
         """
         测试 set_dist_repro_dataloader 参数 `reproducible` 为 True 时的表现
-        当dist为字符串时，此时应该返回新的 dataloader，且 batch_sampler 为 RandomBatchSampler
+        当dist为字符串时，此时应该返回新的 dataloader，且如果原 sampler 为 paddle.io.RandomSampler（shuffle=True），
+        只会替换 Sampler 为 RandomSampler；否则会替换 batch_sampler 为 RandomBatchSampler
         """
-        dataloader = DataLoader(self.dataset, batch_size=2, shuffle=True)
+        dataloader = DataLoader(self.dataset, batch_size=2, shuffle=shuffle)
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, dist="dist", reproducible=True)
 
         assert not (replaced_loader is dataloader)
-        assert isinstance(replaced_loader.batch_sampler, RandomBatchSampler)
-        assert isinstance(replaced_loader.batch_sampler.batch_sampler, BatchSampler)
+        if shuffle:
+            # 此时会替换 sampler
+            assert isinstance(replaced_loader.batch_sampler, paddle.io.BatchSampler)
+            assert not (replaced_loader.batch_sampler is dataloader.batch_sampler)
+            assert isinstance(replaced_loader.batch_sampler.sampler, RandomSampler)
+        else:
+            # 此时会替换 batch_sampler
+            assert isinstance(replaced_loader.batch_sampler, RandomBatchSampler)
+            assert isinstance(replaced_loader.batch_sampler.batch_sampler, BatchSampler)
         assert replaced_loader.batch_sampler.batch_size == dataloader.batch_sampler.batch_size
         assert replaced_loader.drop_last == dataloader.drop_last
 
-        # self.check_set_dist_repro_dataloader(dataloader, replaced_loader)
+        self.check_set_dist_repro_dataloader(dataloader, replaced_loader, shuffle)
 
-    def test_set_dist_repro_dataloader_with_dist_batch_sampler(self):
+    @pytest.mark.parametrize("shuffle", ([True, False]))
+    def test_set_dist_repro_dataloader_with_dist_batch_sampler(self, shuffle):
         """
         测试 set_dist_repro_dataloader 参数 dist 不是字符串时的表现，且 dist 是 ReproducibleBatchSampler
         应该返回新的 dataloader，并将 batch_sampler 替换为 dist 对应的 Sampler
         """
-        dataloader = DataLoader(self.dataset, batch_size=2, shuffle=True)
-        dist = RandomBatchSampler(BatchSampler(self.dataset, batch_size=4), 4, False)
+        dataloader = DataLoader(self.dataset, batch_size=2, shuffle=not shuffle)
+        dist = RandomBatchSampler(BatchSampler(self.dataset, batch_size=4, shuffle=shuffle), 4, False)
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, dist=dist, reproducible=False)
 
         assert not (replaced_loader is dataloader)
         assert isinstance(replaced_loader.batch_sampler, RandomBatchSampler)
         assert replaced_loader.batch_sampler is dist
 
-        self.check_set_dist_repro_dataloader(dataloader, replaced_loader)
+        self.check_set_dist_repro_dataloader(dataloader, replaced_loader, shuffle)
 
-    def test_set_dist_repro_dataloader_with_dist_sampler(self):
+    @pytest.mark.parametrize("shuffle", ([True, False]))
+    def test_set_dist_repro_dataloader_with_dist_sampler(self, shuffle):
         """
         测试 set_dist_repro_dataloader 参数 dist 不是字符串时的表现
         应该返回新的 dataloader，并将 batch_sampler.sampler 替换为 dist 对应的 Sampler
         """
-        dataloader = DataLoader(self.dataset, batch_size=2, shuffle=True)
-        dist = RandomSampler(self.dataset, shuffle=True)
+        dataloader = DataLoader(self.dataset, batch_size=2, shuffle=not shuffle)
+        dist = RandomSampler(self.dataset, shuffle=shuffle)
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, dist=dist, reproducible=False)
 
         assert not (replaced_loader is dataloader)
@@ -284,16 +319,21 @@ class TestSetDistReproDataloder:
         assert replaced_loader.batch_sampler.sampler is dist
         assert replaced_loader.batch_sampler.batch_size == dataloader.batch_sampler.batch_size
 
-        self.check_set_dist_repro_dataloader(dataloader, replaced_loader)
+        self.check_set_dist_repro_dataloader(dataloader, replaced_loader, shuffle)
 
-    def test_set_dist_repro_dataloader_with_dataloader_reproducible_batch_sampler(self):
+    @pytest.mark.parametrize("shuffle", ([True, False]))
+    def test_set_dist_repro_dataloader_with_dataloader_reproducible_batch_sampler(self, shuffle):
         """
         测试 set_dist_repro_dataloader 参数 dataloader 已经支持断点重训时的表现
         应该返回新的 dataloader，且其余各项设置和原来相同
         """
         dataloader = DataLoader(
             dataset=self.dataset,
-            batch_sampler=RandomBatchSampler(BatchSampler(self.dataset, batch_size=4), 4, False)
+            batch_sampler=RandomBatchSampler(
+                BatchSampler(self.dataset, batch_size=4, shuffle=shuffle),
+                batch_size=4,
+                drop_last=False,
+            )
         )
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, dist="dist", reproducible=False)
 
@@ -303,15 +343,16 @@ class TestSetDistReproDataloder:
         assert replaced_loader.batch_sampler.batch_size == dataloader.batch_sampler.batch_size
         assert replaced_loader.drop_last == dataloader.drop_last
 
-        self.check_set_dist_repro_dataloader(dataloader, replaced_loader)
+        self.check_set_dist_repro_dataloader(dataloader, replaced_loader, shuffle)
 
-    def test_set_dist_repro_dataloader_with_dataloader_reproducible_sampler(self):
+    @pytest.mark.parametrize("shuffle", ([True, False]))
+    def test_set_dist_repro_dataloader_with_dataloader_reproducible_sampler(self, shuffle):
         """
         测试 set_dist_repro_dataloader 参数 dataloader 已经支持断点重训时的表现
         应该返回新的 dataloader，且其余各项设置和原来相同
         """
-        batch_sampler = BatchSampler(dataset=self.dataset, batch_size=2)
-        batch_sampler.sampler = RandomSampler(self.dataset, True)
+        batch_sampler = BatchSampler(dataset=self.dataset, batch_size=2, shuffle=shuffle)
+        batch_sampler.sampler = RandomSampler(self.dataset, shuffle)
         dataloader = DataLoader(
             self.dataset,
             batch_sampler=batch_sampler
@@ -323,11 +364,11 @@ class TestSetDistReproDataloder:
         assert isinstance(replaced_loader.batch_sampler.sampler, RandomSampler)
         assert not (replaced_loader.batch_sampler.sampler is dataloader.batch_sampler.sampler)
         assert replaced_loader.batch_sampler.batch_size == 2
-        assert replaced_loader.batch_sampler.sampler.shuffle == True
+        assert replaced_loader.batch_sampler.sampler.shuffle == shuffle
 
-        self.check_set_dist_repro_dataloader(dataloader, replaced_loader)
+        self.check_set_dist_repro_dataloader(dataloader, replaced_loader, shuffle)
 
-    def check_set_dist_repro_dataloader(self, dataloader, replaced_loader):
+    def check_set_dist_repro_dataloader(self, dataloader, replaced_loader, shuffle):
         """
         测试单卡下 set_dist_repro_dataloader 函数的执行结果是否正确
         """
@@ -346,9 +387,6 @@ class TestSetDistReproDataloder:
         # 加载 num_consumed_samples_array，设置正确取出的 batch 数目
         num_consumed_samples_array = sampler_states.pop('num_consumed_samples_array', None)
 
-        import time
-        time.sleep(5)
-
         # 重新加载，应该可以输出剩下的内容，且对于 PaddleNormalDataset 来说，排序后应该是一个 range
         left_idxes = set()
         if isinstance(replaced_loader.batch_sampler, RandomBatchSampler):
@@ -357,16 +395,29 @@ class TestSetDistReproDataloder:
                 sampler_states["num_consumed_samples"] = num_consumed_samples_array[num_consumed_batches]
             else:
                 sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size
-            replaced_loader.batch_sampler.load_state_dict(sampler_states)
+            # 重新改造 dataloader
+            new_loader = DataLoader(
+                dataset=replaced_loader.dataset,
+                batch_sampler=RandomBatchSampler(
+                    BatchSampler(replaced_loader.dataset, shuffle=shuffle, batch_size=batch_size),
+                    batch_size=batch_size,
+                    drop_last=False,
+                )
+            )
+            new_loader.batch_sampler.load_state_dict(sampler_states)
         else:
             batch_size = replaced_loader.batch_sampler.batch_size
+            num_consumed_batches = num_consumed_batches * batch_size
             if num_consumed_samples_array is not None:
                 sampler_states["num_consumed_samples"] = num_consumed_samples_array[num_consumed_batches]
             else:
                 sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size
-            replaced_loader.batch_sampler.sampler.load_state_dict(sampler_states)
-            replaced_loader.batch_sampler.sampler.set_epoch(0)
-        for idx, batch in enumerate(replaced_loader):
+            # 重新构造 dataloader
+            batch_sampler = BatchSampler(replaced_loader.dataset, shuffle=shuffle, batch_size=batch_size)
+            batch_sampler.sampler = RandomSampler(replaced_loader.dataset, shuffle=shuffle)
+            new_loader = DataLoader(replaced_loader.dataset, batch_sampler=batch_sampler)
+            new_loader.batch_sampler.sampler.load_state_dict(sampler_states)
+        for idx, batch in enumerate(new_loader):
             left_idxes.update(batch)
 
         assert len(left_idxes) + len(already_seen_idx) == len(self.dataset)

@@ -11,7 +11,6 @@ from typing import Dict, Optional, Union
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.core.utils import get_paddle_device_id, auto_param_call, paddle_to
-from fastNLP.core.samplers import RandomSampler
 from fastNLP.envs.env import FASTNLP_GLOBAL_SEED, FASTNLP_SEED_WORKERS, USER_CUDA_VISIBLE_DEVICES
 from fastNLP.core.log import logger
 
@@ -87,8 +86,6 @@ class ForwardState(IntEnum):
     TEST = 2
     PREDICT = 3
 
-_MODE_PARAMETER = "forward_state"
-
 class _FleetWrappingModel(Layer):
     """
     参考_DDPWrappingModel，paddle的分布式训练也需要用paddle.nn.DataParallel进行包装，采用和
@@ -98,83 +95,16 @@ class _FleetWrappingModel(Layer):
         super(_FleetWrappingModel, self).__init__()
         self.model = model
 
-        if isinstance(model, paddle.DataParallel):
-            model = model._layers
-            if hasattr(model, "train_step"):
-                logger.warning(
-                    "Notice your model is a `paddle.DataParallel` model. And your "
-                    "model also implements the `train_step` method, which we can not call actually, we will"
-                    " call `forward` function instead of `train_step` and you should note that.")
-            self._train_step = self.model
-            self._train_signature_fn = model.forward
-
-            if hasattr(model, "evaluate_step"):
-                logger.warning(
-                    "Notice your model is a `paddle.DataParallel` model. And your "
-                    "model also implements the `evaluate_step` method, which we can not call actually, "
-                    "we will call `forward` function instead of `evaluate_step` and you should note that.")
-            self._validate_step = self.model
-            self._validate_signature_fn = model.forward
-
-            if hasattr(model, "test_step"):
-                logger.warning(
-                    "Notice your model is a `paddle.DataParallel` model. And your "
-                    "model also implements the `test_step` method, which we can not call actually, we will"
-                    " call `forward` function instead of `test_step` and you should note that.")
-            self._test_step = self.model
-            self._test_signature_fn = model.forward
-        else:
-            if hasattr(model, "train_step"):
-                self._train_step = model.train_step
-                self._train_signature_fn = None
-            else:
-                self._train_step = model
-                self._train_signature_fn = model.forward
-
-            if hasattr(model, "evaluate_step"):
-                self._validate_step = model.validate_step
-                self._validate_signature_fn = None
-            elif hasattr(model, "test_step"):
-                self._validate_step = model.test_step
-                self._validate_signature_fn = None
-            else:
-                self._validate_step = model
-                self._validate_signature_fn = model.forward
-
-            if hasattr(model, "test_step"):
-                self._test_step = model.test_step
-                self._test_signature_fn = None
-            elif hasattr(model, "evaluate_step"):
-                self._test_step = model.validate_step
-                self._test_signature_fn = None
-            else:
-                self._test_step = model
-                self._test_signature_fn = model.forward
-
     def forward(self, batch, **kwargs) -> Dict:
 
-        forward_state = kwargs.pop(_MODE_PARAMETER)
+        fn = kwargs.pop("fastnlp_fn")
+        signature_fn = kwargs.pop("fastnlp_signature_fn")
         wo_auto_param_call = kwargs.pop("wo_auto_param_call")
 
-        if forward_state == ForwardState.TRAIN:
-            if isinstance(batch, Dict) and not wo_auto_param_call:
-                return auto_param_call(self._train_step, batch, signature_fn=self._train_signature_fn)
-            else:
-                return self._train_step(batch)
-        elif forward_state == ForwardState.VALIDATE:
-            if isinstance(batch, Dict) and not wo_auto_param_call:
-                return auto_param_call(self._validate_step, batch, signature_fn=self._validate_signature_fn)
-            else:
-                return self._validate_step(batch)
-        elif forward_state == ForwardState.TEST:
-            if isinstance(batch, Dict) and not wo_auto_param_call:
-                return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
-            else:
-                return self._test_step(batch)
-        elif forward_state == ForwardState.PREDICT:
-            raise NotImplementedError("'PREDICT' evaluate_fn has not been implemented.")
+        if isinstance(batch, Dict) and not wo_auto_param_call:
+            return auto_param_call(fn, batch, signature_fn=signature_fn)
         else:
-            raise NotImplementedError("You should direct a concrete evaluate_fn.")
+            return fn(batch)
 
 class DummyGradScaler:
     """
