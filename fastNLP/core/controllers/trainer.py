@@ -219,10 +219,10 @@ class Trainer(TrainerEventTrigger):
 
         """ 设置内部的 Evaluator """
         if metrics is None and evaluate_dataloaders is not None:
-            raise ValueError("You have set 'validate_dataloader' but forget to set 'metrics'.")
+            raise ValueError("You have set 'evaluate_dataloader' but forget to set 'metrics'.")
 
         if metrics is not None and evaluate_dataloaders is None:
-            raise ValueError("You have set 'metrics' but forget to set 'validate_dataloader'.")
+            raise ValueError("You have set 'metrics' but forget to set 'evaluate_dataloader'.")
 
         self.evaluator = None
         self.monitor = monitor
