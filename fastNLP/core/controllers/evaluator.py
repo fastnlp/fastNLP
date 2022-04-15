@@ -49,8 +49,8 @@ class Evaluator:
     ):
         """
 
-        :param model:
-        :param dataloaders:
+        :param model: 待测试的模型，如果传入的 driver 为 Driver 实例，该参数将被忽略。
+        :param dataloaders: 待评测的数据集。
         :param metrics: 使用的 metric 。必须为 dict 类型，其中 key 为 metric 的名称，value 为一个 Metric 对象。支持 fastNLP 的
             metric ，torchmetrics，allennlpmetrics等。
         :param driver: 使用 driver 。
@@ -119,7 +119,7 @@ class Evaluator:
         self.driver.barrier()
 
         if evaluate_fn is not None and not isinstance(evaluate_fn, str):
-            raise TypeError("Parameter `train_fn` can only be `str` type when it is not None.")
+            raise TypeError("Parameter `evaluate_fn` can only be `str` type when it is not None.")
         self._evaluate_step, self._evaluate_step_signature_fn = \
             self.driver.get_model_call_fn("evaluate_step" if evaluate_fn is None else evaluate_fn)
         self.evaluate_fn = evaluate_fn

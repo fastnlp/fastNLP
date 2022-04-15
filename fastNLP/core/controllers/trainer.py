@@ -86,10 +86,12 @@ class Trainer(TrainerEventTrigger):
          `batch`；默认为 None；
         :param evaluate_batch_step_fn: 用来替换 'Evaluator' 中的 `EvaluateBatchLoop` 中的 `batch_step_fn` 函数，注意该函数的
          两个参数必须为 `evaluator` 和 `batch`；默认为 None；
-        :param train_fn: 用来控制 `Trainer` 在训练的前向传播过程中是调用哪一个函数，例如是 `model.train_step` 还是 `model.forward`；
-         默认为 None，如果该值是 None，那么我们会默认使用 `train_step` 当做前向传播的函数，如果在模型中没有找到该方法，则使用 `model.forward` 函数；
+        :param train_fn: 用来控制 `Trainer` 在训练的前向传播过程中是调用模型的哪一个函数，例如是 `train_step` 还是 `forward`；
+         默认为 None，如果该值是 None，那么我们会默认使用 `train_step` 当做前向传播的函数，如果在模型中没有找到该方法，
+         则使用模型默认的前向传播函数。
         :param evaluate_fn: 用来控制 `Trainer` 中内置的 `Evaluator` 的模式，应当为 None 或者一个字符串；其使用方式和 train_fn 类似；
-         注意该参数我们会直接传给 Trainer 中内置的 Evaluator（如果不为 None）；
+         注意该参数我们会直接传给 Trainer 中内置的 Evaluator（如果不为 None）；如果该值为 None ，将首先尝试寻找模型中是否有
+         evaluate_step 这个函数，如果没有则使用 forward 函数。
         :param callbacks: 训练当中触发的 callback 类，该参数应当为一个列表，其中的每一个元素都应当继承 `Callback` 类；
         :param metrics: 应当为一个字典，其中 key 表示 monitor，例如 {"acc1": AccMetric(), "acc2": AccMetric()}；
         :param evaluate_every: 可以为负数、正数或者函数；为负数时表示每隔几个 epoch validate 一次；为正数则表示每隔几个 batch validate 一次；

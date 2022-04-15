@@ -5,6 +5,7 @@ if _NEED_IMPORT_TORCH:
     import torch
     from torch.nn import DataParallel
     from torch.nn.parallel import DistributedDataParallel
+    from torch.utils.data import RandomSampler as TorchRandomSampler
 
 __all__ = [
     'TorchSingleDriver'
@@ -13,7 +14,9 @@ __all__ = [
 from .torch_driver import TorchDriver
 from fastNLP.core.drivers.torch_driver.utils import replace_sampler, replace_batch_sampler
 from fastNLP.core.utils import auto_param_call
+from fastNLP.core.utils.utils import _get_fun_msg
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, re_instantiate_sampler, RandomBatchSampler
+from fastNLP.core.samplers import RandomSampler
 from fastNLP.core.log import logger
 
 
@@ -71,11 +74,13 @@ class TorchSingleDriver(TorchDriver):
                 fn = getattr(self.model, fn)
                 if not callable(fn):
                     raise RuntimeError(f"The `{fn}` attribute is not `Callable`.")
+                logger.debug(f'Use {_get_fun_msg(fn, with_fp=False)}...')
                 return fn, None
             elif fn in {"train_step", "evaluate_step"}:
+                logger.debug(f'Use {_get_fun_msg(self.model.forward, with_fp=False)}...')
                 return self.model, self.model.forward
             else:
-                raise RuntimeError(f"There is no `{fn}` method in your model.")
+                raise RuntimeError(f"There is no `{fn}` method in your {type(self.model)}.")
 
     def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler]=None,
                                   reproducible: bool = False):
@@ -96,12 +101,18 @@ class TorchSingleDriver(TorchDriver):
             return replace_sampler(dataloader, sampler)
 
         if reproducible:
-            batch_sampler = RandomBatchSampler(
-                batch_sampler=args.batch_sampler,
-                batch_size=args.batch_size,
-                drop_last=args.drop_last
-            )
-            return replace_batch_sampler(dataloader, batch_sampler)
+            if isinstance(args.sampler, TorchRandomSampler):
+                # 如果本来就是随机的，直接替换掉吧。
+                sampler = RandomSampler(args.sampler.data_source)
+                logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
+                return replace_sampler(dataloader, sampler)
+            else:
+                batch_sampler = RandomBatchSampler(
+                    batch_sampler=args.batch_sampler,
+                    batch_size=args.batch_size,
+                    drop_last=args.drop_last
+                )
+                return replace_batch_sampler(dataloader, batch_sampler)
         else:
             return dataloader
 

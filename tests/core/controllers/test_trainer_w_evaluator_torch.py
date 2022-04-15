@@ -43,7 +43,7 @@ class TrainerParameters:
     model: Any = None
     optimizers: Any = None
     train_dataloader: Any = None
-    validate_dataloaders: Any = None
+    evaluate_dataloaders: Any = None
     input_mapping: Any = None
     output_mapping: Any = None
     metrics: Any = None
@@ -71,7 +71,7 @@ def model_and_optimizers(request):
             shuffle=True
         )
         trainer_params.train_dataloader = _dataloader
-        trainer_params.validate_dataloaders = _dataloader
+        trainer_params.evaluate_dataloaders = _dataloader
         trainer_params.metrics = {"acc": Accuracy()}
 
     elif request.param == 1:
@@ -91,7 +91,7 @@ def model_and_optimizers(request):
             shuffle=True
         )
         trainer_params.train_dataloader = _dataloader
-        trainer_params.validate_dataloaders = _dataloader
+        trainer_params.evaluate_dataloaders = _dataloader
         trainer_params.metrics = {"acc": Accuracy()}
 
     return trainer_params
@@ -116,7 +116,7 @@ def test_trainer_torch_with_evaluator(
         device=device,
         optimizers=model_and_optimizers.optimizers,
         train_dataloader=model_and_optimizers.train_dataloader,
-        evaluate_dataloaders=model_and_optimizers.validate_dataloaders,
+        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
         input_mapping=model_and_optimizers.input_mapping,
         output_mapping=model_and_optimizers.output_mapping,
         metrics=model_and_optimizers.metrics,
@@ -152,7 +152,7 @@ def test_trainer_torch_with_evaluator_fp16_accumulation_steps(
         device=device,
         optimizers=model_and_optimizers.optimizers,
         train_dataloader=model_and_optimizers.train_dataloader,
-        evaluate_dataloaders=model_and_optimizers.validate_dataloaders,
+        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
         input_mapping=model_and_optimizers.input_mapping,
         output_mapping=model_and_optimizers.output_mapping,
         metrics=model_and_optimizers.metrics,
@@ -193,7 +193,7 @@ def test_trainer_validate_every(
         device=device,
         optimizers=model_and_optimizers.optimizers,
         train_dataloader=model_and_optimizers.train_dataloader,
-        evaluate_dataloaders=model_and_optimizers.validate_dataloaders,
+        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
         input_mapping=model_and_optimizers.input_mapping,
         output_mapping=model_and_optimizers.output_mapping,
         metrics=model_and_optimizers.metrics,

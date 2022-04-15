@@ -164,7 +164,7 @@ def _get_keys(args:List[Dict]) -> List[List[str]]:
     return _provided_keys
 
 
-def _get_fun_msg(fn)->str:
+def _get_fun_msg(fn, with_fp=True)->str:
     """
     获取函数的基本信息，帮助报错。
     ex:
@@ -172,6 +172,7 @@ def _get_fun_msg(fn)->str:
         # `_get_fun_msg(fn) -> str`(In file:/Users/hnyan/Desktop/projects/fastNLP/fastNLP/fastNLP/core/utils/utils.py)
 
     :param callable fn:
+    :param with_fp: 是否包含函数所在的文件信息。
     :return:
     """
     if isinstance(fn, functools.partial):
@@ -180,9 +181,12 @@ def _get_fun_msg(fn)->str:
         fn_name = fn.__qualname__ + str(inspect.signature(fn))
     except:
         fn_name = str(fn)
-    try:
-        fp = '(In file:' + os.path.abspath(inspect.getfile(fn)) + ')'
-    except:
+    if with_fp:
+        try:
+            fp = '(In file:' + os.path.abspath(inspect.getfile(fn)) + ')'
+        except:
+            fp = ''
+    else:
         fp = ''
     msg = f'`{fn_name}`' + fp
     return msg
