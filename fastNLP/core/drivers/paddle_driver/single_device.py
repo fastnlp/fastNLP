@@ -50,10 +50,10 @@ class PaddleSingleDriver(PaddleDriver):
             self._train_step = self.model
             self._train_signature_fn = model.forward
 
-            if hasattr(model, "validate_step"):
+            if hasattr(model, "evaluate_step"):
                 logger.warning("Notice your model is a `paddle.DataParallel` model. And your model also "
-                                "implements the `validate_step` method, which we can not call actually, we "
-                                "will call `forward` function instead of `validate_step` and you should note that.")
+                                "implements the `evaluate_step` method, which we can not call actually, we "
+                                "will call `forward` function instead of `evaluate_step` and you should note that.")
             self._validate_step = self.model
             self._validate_signature_fn = model.forward
 
@@ -73,8 +73,8 @@ class PaddleSingleDriver(PaddleDriver):
                 model = self.unwrap_model()
                 self._train_signature_fn = model.forward
 
-            if hasattr(self.model, "validate_step"):
-                self._validate_step = self.model.validate_step
+            if hasattr(self.model, "evaluate_step"):
+                self._validate_step = self.model.evaluate_step
                 self._validate_signature_fn = None
             elif hasattr(self.model, "test_step"):
                 self._validate_step = self.model.test_step
@@ -87,9 +87,9 @@ class PaddleSingleDriver(PaddleDriver):
             if hasattr(self.model, "test_step"):
                 self._test_step = self.model.test_step
                 self._test_signature_fn = None
-            elif hasattr(self.model, "validate_step"):
-                self._test_step = self.model.validate_step
-                self._test_signature_fn = self.model.validate_step
+            elif hasattr(self.model, "evaluate_step"):
+                self._test_step = self.model.evaluate_step
+                self._test_signature_fn = self.model.evaluate_step
             else:
                 self._test_step = self.model
                 model = self.unwrap_model()

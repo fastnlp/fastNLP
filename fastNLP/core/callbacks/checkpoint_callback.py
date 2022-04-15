@@ -19,11 +19,11 @@ from fastNLP.core.utils import synchronize_safe_rm, synchronize_mkdir
 class CheckpointCallback(HasMonitorCallback):
     def __init__(
             self,
-            monitor,
+            monitor:Optional[Union[str, Callable]]=None,
             save_folder: Optional[Union[str, Path]] = None,
             save_every_n_epochs: Optional[int] = None,
             save_every_n_batches: Optional[int] = None,
-            save_last: bool = True,
+            save_last: bool = False,
             save_topk: Optional[int] = None,
             save_on_exception: Optional[Union[BaseException, Sequence[BaseException]]] = None,
             larger_better: bool = True,
@@ -31,12 +31,32 @@ class CheckpointCallback(HasMonitorCallback):
             model_save_fn: Optional[Callable] = None,
             **kwargs,
     ):
+        """
+        请使用 ModelCheckpointCallback 与 TrainerCheckpointCallback 。
+
+        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+                的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
+                果(字典类型)，返回一个 float 值作为 monitor 的结果。
+        :param save_folder: 保存的文件夹，fastNLP 将在该文件下以时间戳创建子文件夹，并在里面保存。因此不同次运行可以将被保存到不同的
+            时间戳文件夹中。如果为 None ，默认使用当前文件夹。
+        :param save_every_n_epochs: 多少个 epoch 保存一次。
+        :param save_every_n_batches: 多少个 batch 保存一次。
+        :param save_last: 如果为 True ，将在每次 epoch 运行结束都保存一次，会覆盖之前的保存。
+        :param save_topk: 保存 monitor 结果 topK 个。
+        :param save_on_exception: 在出异常信息时，是否保存。传入需要捕获的异常的类。
+        :param larger_better: monitor 的值是否时越大越好。
+        :param only_state_dict: 保存模型时是否只保存 state_dict 。当 model_save_fn 不为 None 时，该参数无效。
+        :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函数应当接受一个文件夹作为参数，不返回任何东西。
+            如果传入了 model_save_fn 函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运行该函数。
+        :param kwargs:
+        """
         super().__init__(monitor=monitor, larger_better=larger_better,
                          must_have_monitor=save_topk is not None)
         if save_folder is None:
             logger.warning(
                 "Parameter `path` is None, and we will use the current work directory to find and load your model.")
             save_folder = Path.cwd()
+        save_folder = Path(save_folder)
         if not save_folder.exists():
             raise NotADirectoryError(f"Path '{save_folder.absolute()}' is not existed!")
         elif save_folder.is_file():
@@ -71,7 +91,7 @@ class CheckpointCallback(HasMonitorCallback):
         else:
             save_on_exception = []
 
-        self.save_folder = Path(save_folder)
+        self.save_folder = save_folder
         self.save_every_n_epochs = save_every_n_epochs
         self.save_every_n_batches = save_every_n_batches
         self.save_last = save_last
@@ -88,18 +108,15 @@ class CheckpointCallback(HasMonitorCallback):
         # 注意这里应当保证只有进程 0 在执行这个操作，因为当用户使用 python -m torch.distributed.launch 来拉起进程的时候，
         #  FASTNLP_LAUNCH_TIME 在每一个进程上的值是不一样的；
         self.timestamp_path = self.save_folder.joinpath(os.environ[FASTNLP_LAUNCH_TIME])
-        # 我们只需要保证这个创建文件夹的操作只在进程 0 上进行即可；因为后续的实际的保存操作，其它进程实际并不会去执行；
-        synchronize_mkdir(self.timestamp_path)
+        # 该 folder 只在保存真的要发生的时候再创建。
 
     def on_after_trainer_initialized(self, trainer, driver):
         if self.save_topk is not None:
             super().on_after_trainer_initialized(trainer, driver)
         if self.save_topk is not None and trainer.evaluator is None:
-            logger.warning("You set `save_topk`, but `validate_dataloaders` is not set in Trainer.")
+            logger.warning("You set `save_topk`, but `evaluate_dataloaders` is not set in Trainer.")
 
     def on_validate_end(self, trainer, results):
-        if len(results) == 0:
-            return
         self._save_topk(trainer, results)
 
     def on_train_epoch_end(self, trainer: "fastNLP.Trainer"):
@@ -136,16 +153,17 @@ class CheckpointCallback(HasMonitorCallback):
         states['timestamp_path'] = str(self.timestamp_path.absolute())
         states['_topk_model'] = deepcopy(self._topk_model)
         states['save_topk'] = 0 if self.save_topk is None else self.save_topk
-        states['_real_monitor'] = self._real_monitor
+        if isinstance(self._real_monitor, str):
+            states['_real_monitor'] = self._real_monitor
         return states
 
     def on_load_checkpoint(self, trainer, states: Optional[Dict]):
         timestamp_path = states['timestamp_path']
         if not os.path.exists(timestamp_path):
-            logger.info(f"The resuming save folder {timestamp_path} is not exists, will checkpoint save to "
+            logger.info(f"The resuming checkpoint folder {timestamp_path} is not exists, will checkpoint save to "
                         f" {self.timestamp_path.absolute()}.")
         else:
-            logger.info(f"Resume to save in path: {timestamp_path}.")
+            logger.info(f"Resume to checkpoint in path: {timestamp_path}.")
             self.timestamp_path = Path(timestamp_path)
             _topk_model = states['_topk_model']
             save_topk = None if int(states['save_topk']) == 0 else int(states['save_topk'])
@@ -153,7 +171,8 @@ class CheckpointCallback(HasMonitorCallback):
                 assert self.save_topk == save_topk, f"The checkpoint set save_topk={save_topk}, while this callback set it " \
                                                     f"as {save_topk}."
             self._topk_model.update(self._topk_model)
-        self._real_monitor = states["real_monitor"]
+
+        self._real_monitor = states["_real_monitor"]
 
     def _save_topk(self, trainer: "fastNLP.Trainer", results: Dict):
         """
@@ -231,9 +250,9 @@ class ModelCheckpointCallback(CheckpointCallback):
     model_save_fn 为 None ，则以上每个 folder 中，将生成 fastnlp_model.pkl.tar 文件。
     若 model_save_fn 不为 None，则 fastNLP 将 folder 绝对路径传递给该函数，fastNLP 不在该 folder 下创建任何文件。
 
-    :param monitor: 监控的 metric 的名称。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
-        的那个作为 monitor 。如果为 None 将尝试从 Trainer 中获取该值。也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，
-        返回一个 float 值作为 monitor 的结果。
+    :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+            的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
+            果(字典类型)，返回一个 float 值作为 monitor 的结果。
     :param save_folder: 保存的文件夹，fastNLP 将在该文件下以时间戳创建子文件夹，并在里面保存。因此不同次运行可以将被保存到不同的
         时间戳文件夹中。如果为 None ，默认使用当前文件夹。
     :param save_every_n_epochs: 多少个 epoch 保存一次。
@@ -249,6 +268,11 @@ class ModelCheckpointCallback(CheckpointCallback):
     """
     @property
     def save_fn_name(self):
+        """
+        调用 Trainer 中的哪个函数。
+
+        :return:
+        """
         return 'save_model'
 
     @property
@@ -257,7 +281,7 @@ class ModelCheckpointCallback(CheckpointCallback):
         通过该值决定两个 CheckpointCallback 实例是否可以共用断点重训的状态；
         :return:
         """
-        return f"model_checkpoint#monitor-{self.monitor}#topK-{self.save_topk}#only_state_dict-{self.only_state_dict}"
+        return f"model_checkpoint#monitor-{self.monitor_name}#topK-{self.save_topk}#only_state_dict-{self.only_state_dict}"
 
     @property
     def folder_prefix(self):
@@ -279,9 +303,9 @@ class TrainerCheckpointCallback(CheckpointCallback):
     model_save_fn 为 None ，则以上每个 folder 中，将生成两个文件：fastnlp_trainer.pkl.tar 以及 fastnlp_model.pkl.tar 。
     若 model_save_fn 不为 None，则 fastNLP 只会在每个 folder 下生成 fastnlp_trainer.pkl.tar 文件。
 
-    :param monitor: 监控的 metric 的名称。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
-        的那个作为 monitor 。如果为 None 将尝试从 Trainer 中获取该值。也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，
-        返回一个 float 值作为 monitor 的结果。
+    :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+            的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
+            果(字典类型)，返回一个 float 值作为 monitor 的结果。
     :param save_folder: 保存的文件夹，fastNLP 将在该文件下以时间戳创建子文件夹，并在里面保存。因此不同次运行可以将被保存到不同的
         时间戳文件夹中。如果为 None ，默认使用当前文件夹。
     :param save_every_n_epochs: 多少个 epoch 保存一次。
@@ -297,6 +321,11 @@ class TrainerCheckpointCallback(CheckpointCallback):
     """
     @property
     def save_fn_name(self):
+        """
+        调用 Trainer 中的哪个函数。
+
+        :return:
+        """
         return 'save'
 
     @property
@@ -305,7 +334,8 @@ class TrainerCheckpointCallback(CheckpointCallback):
         通过该值决定两个 CheckpointCallback 实例是否可以共用断点重训的状态；
         :return:
         """
-        return f"trainer_checkpoint#monitor-{self.monitor}#topK-{self.save_topk}#only_state_dict-{self.only_state_dict}"
+
+        return f"trainer_checkpoint#monitor-{self.monitor_name}#topK-{self.save_topk}#only_state_dict-{self.only_state_dict}"
 
     @property
     def folder_prefix(self):

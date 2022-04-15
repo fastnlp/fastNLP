@@ -37,7 +37,7 @@ class TrainerParameters:
     model: Any = None
     optimizers: Any = None
     train_dataloader: Any = None
-    validate_dataloaders: Any = None
+    evaluate_dataloaders: Any = None
     input_mapping: Any = None
     output_mapping: Any = None
     metrics: Any = None
@@ -63,7 +63,7 @@ def model_and_optimizers(request):
         shuffle=True
     )
     trainer_params.train_dataloader = _dataloader
-    trainer_params.validate_dataloaders = _dataloader
+    trainer_params.evaluate_dataloaders = _dataloader
     trainer_params.metrics = {"acc": Accuracy()}
 
     return trainer_params
@@ -124,7 +124,7 @@ def test_model_checkpoint_callback_1(
             device=device,
             optimizers=model_and_optimizers.optimizers,
             train_dataloader=model_and_optimizers.train_dataloader,
-            validate_dataloaders=model_and_optimizers.validate_dataloaders,
+            evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
             input_mapping=model_and_optimizers.input_mapping,
             output_mapping=model_and_optimizers.output_mapping,
             metrics=model_and_optimizers.metrics,
@@ -204,7 +204,7 @@ def test_model_checkpoint_callback_1(
                 device=device,
                 optimizers=model_and_optimizers.optimizers,
                 train_dataloader=model_and_optimizers.train_dataloader,
-                validate_dataloaders=model_and_optimizers.validate_dataloaders,
+                evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
                 input_mapping=model_and_optimizers.input_mapping,
                 output_mapping=model_and_optimizers.output_mapping,
                 metrics=model_and_optimizers.metrics,
@@ -264,7 +264,7 @@ def test_model_checkpoint_callback_2(
                 device=device,
                 optimizers=model_and_optimizers.optimizers,
                 train_dataloader=model_and_optimizers.train_dataloader,
-                validate_dataloaders=model_and_optimizers.validate_dataloaders,
+                evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
                 input_mapping=model_and_optimizers.input_mapping,
                 output_mapping=model_and_optimizers.output_mapping,
                 metrics=model_and_optimizers.metrics,
@@ -302,7 +302,7 @@ def test_model_checkpoint_callback_2(
                 device=4,
                 optimizers=model_and_optimizers.optimizers,
                 train_dataloader=model_and_optimizers.train_dataloader,
-                validate_dataloaders=model_and_optimizers.validate_dataloaders,
+                evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
                 input_mapping=model_and_optimizers.input_mapping,
                 output_mapping=model_and_optimizers.output_mapping,
                 metrics=model_and_optimizers.metrics,
@@ -370,7 +370,7 @@ def test_trainer_checkpoint_callback_1(
             device=device,
             optimizers=model_and_optimizers.optimizers,
             train_dataloader=model_and_optimizers.train_dataloader,
-            validate_dataloaders=model_and_optimizers.validate_dataloaders,
+            evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
             input_mapping=model_and_optimizers.input_mapping,
             output_mapping=model_and_optimizers.output_mapping,
             metrics=model_and_optimizers.metrics,
@@ -448,7 +448,7 @@ def test_trainer_checkpoint_callback_1(
                 device=device,
                 optimizers=model_and_optimizers.optimizers,
                 train_dataloader=model_and_optimizers.train_dataloader,
-                validate_dataloaders=model_and_optimizers.validate_dataloaders,
+                evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
                 input_mapping=model_and_optimizers.input_mapping,
                 output_mapping=model_and_optimizers.output_mapping,
                 metrics=model_and_optimizers.metrics,
@@ -473,12 +473,12 @@ def test_trainer_checkpoint_callback_1(
 @pytest.mark.parametrize("driver,device", [("torch_ddp", [6, 7]), ("torch", 7)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @magic_argv_env_context
+@pytest.mark.skip("Skip transformers test for now.")
 def test_trainer_checkpoint_callback_2(
     driver,
     device,
     version
 ):
-    pytest.skip("Skip transformers test for now.")
     path = Path.cwd().joinpath(f"test_model_checkpoint")
     path.mkdir(exist_ok=True, parents=True)
 
@@ -626,7 +626,7 @@ def test_trainer_checkpoint_callback_2(
             train_dataloader=test_bert_dataloader_train,
             optimizers=test_bert_optimizers,
 
-            validate_dataloaders=test_bert_dataloader_validate,
+            evaluate_dataloaders=test_bert_dataloader_validate,
             input_mapping=bert_input_mapping,
             output_mapping=bert_output_mapping,
             metrics={"acc": acc},
@@ -700,7 +700,7 @@ def test_trainer_checkpoint_callback_2(
                 train_dataloader=test_bert_dataloader_train,
                 optimizers=test_bert_optimizers,
 
-                validate_dataloaders=test_bert_dataloader_validate,
+                evaluate_dataloaders=test_bert_dataloader_validate,
                 input_mapping=bert_input_mapping,
                 output_mapping=bert_output_mapping,
                 metrics={"acc": acc},

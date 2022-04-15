@@ -391,3 +391,22 @@ class HasMonitorCallback(Callback):
                 (not self.larger_better and monitor_value1 < monitor_value2):
             better = True
         return better
+
+    @property
+    def monitor_name(self):
+        """
+        返回 monitor 的名字，如果 monitor 是个 callable 的函数，则返回该函数的名称。
+
+        :return:
+        """
+        if callable(self.monitor):
+            try:
+                monitor_name = self.monitor.__qualname__
+            except:
+                monitor_name = self.monitor.__name__
+        elif self.monitor is None:
+            return None
+        else:
+            # 这里是能是monitor，而不能是real_monitor，因为用户再次运行的时候real_monitor被初始化为monitor了
+            monitor_name = str(self.monitor)
+        return monitor_name

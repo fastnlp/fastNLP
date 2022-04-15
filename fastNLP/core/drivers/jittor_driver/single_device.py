@@ -35,8 +35,8 @@ class JittorSingleDriver(JittorDriver):
             model = self.unwrap_model()
             self._train_signature_fn = model.execute
 
-        if hasattr(self.model, "validate_step"):
-            self._validate_step = self.model.validate_step
+        if hasattr(self.model, "evaluate_step"):
+            self._validate_step = self.model.evaluate_step
             self._validate_signature_fn = None
         elif hasattr(self.model, "test_step"):
             self._validate_step = self.model.test_step
@@ -49,9 +49,9 @@ class JittorSingleDriver(JittorDriver):
         if hasattr(self.model, "test_step"):
             self._test_step = self.model.test_step
             self._test_signature_fn = None
-        elif hasattr(self.model, "validate_step"):
-            self._test_step = self.model.validate_step
-            self._test_signature_fn = self.model.validate_step
+        elif hasattr(self.model, "evaluate_step"):
+            self._test_step = self.model.evaluate_step
+            self._test_signature_fn = self.model.evaluate_step
         else:
             self._test_step = self.model
             model = self.unwrap_model()

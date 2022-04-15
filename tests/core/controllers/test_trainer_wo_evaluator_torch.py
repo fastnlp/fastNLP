@@ -38,7 +38,7 @@ class TrainerParameters:
     model: Any = None
     optimizers: Any = None
     train_dataloader: Any = None
-    validate_dataloaders: Any = None
+    evaluate_dataloaders: Any = None
     input_mapping: Any = None
     output_mapping: Any = None
     metrics: Any = None
@@ -65,7 +65,7 @@ def model_and_optimizers(request):
             batch_size=NormalClassificationTrainTorchConfig.batch_size,
             shuffle=True
         )
-        trainer_params.validate_dataloaders = None
+        trainer_params.evaluate_dataloaders = None
         trainer_params.input_mapping = None
         trainer_params.output_mapping = None
 
@@ -91,7 +91,7 @@ def test_trainer_torch_without_evaluator(
         device=device,
         optimizers=model_and_optimizers.optimizers,
         train_dataloader=model_and_optimizers.train_dataloader,
-        validate_dataloaders=model_and_optimizers.validate_dataloaders,
+        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
         input_mapping=model_and_optimizers.input_mapping,
         output_mapping=model_and_optimizers.output_mapping,
         metrics=model_and_optimizers.metrics,
@@ -126,7 +126,7 @@ def test_trainer_torch_without_evaluator_fp16_accumulation_steps(
         device=device,
         optimizers=model_and_optimizers.optimizers,
         train_dataloader=model_and_optimizers.train_dataloader,
-        validate_dataloaders=model_and_optimizers.validate_dataloaders,
+        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
         input_mapping=model_and_optimizers.input_mapping,
         output_mapping=model_and_optimizers.output_mapping,
         metrics=model_and_optimizers.metrics,
@@ -163,7 +163,7 @@ def test_trainer_torch_without_evaluator_accumulation_steps(
 
         optimizers=model_and_optimizers.optimizers,
         train_dataloader=model_and_optimizers.train_dataloader,
-        validate_dataloaders=model_and_optimizers.validate_dataloaders,
+        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
         input_mapping=model_and_optimizers.input_mapping,
         output_mapping=model_and_optimizers.output_mapping,
         metrics=model_and_optimizers.metrics,
@@ -202,7 +202,7 @@ def test_trainer_output_from_new_proc(
 
             optimizers=model_and_optimizers.optimizers,
             train_dataloader=model_and_optimizers.train_dataloader,
-            validate_dataloaders=model_and_optimizers.validate_dataloaders,
+            evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
             input_mapping=model_and_optimizers.input_mapping,
             output_mapping=model_and_optimizers.output_mapping,
             metrics=model_and_optimizers.metrics,
@@ -267,7 +267,7 @@ def test_trainer_on_exception(
 
             optimizers=model_and_optimizers.optimizers,
             train_dataloader=model_and_optimizers.train_dataloader,
-            validate_dataloaders=model_and_optimizers.validate_dataloaders,
+            evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
             input_mapping=model_and_optimizers.input_mapping,
             output_mapping=model_and_optimizers.output_mapping,
             metrics=model_and_optimizers.metrics,

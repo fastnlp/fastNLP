@@ -90,14 +90,11 @@ class ForwardState(IntEnum):
     PREDICT = 3
 
 
-_MODE_PARAMETER = "_forward_state"
-
-
 class _DDPWrappingModel(Module):
     """
     该函数用于 DDP 训练时处理用户自己定制的 train_step 等函数；
     之所以要使用这一额外的包裹模型，是因为在使用 DDP 时，必须使用 DistributedDataParallel 的 forward 函数才能实现正常的运行；
-    另一方面，我们要求用户在使用我们的框架时，需要针对不用的模式实现不同的处理函数，例如 'train_step', 'validate_step' 等；
+    另一方面，我们要求用户在使用我们的框架时，需要针对不用的模式实现不同的处理函数，例如 'train_step', 'evaluate_step' 等；
     然而，当使用 DistributedDataParallel 包裹 model 后，模型看不见其除了 forward 之外的方法；并且当我们尝试在训练过程中主动提取
     `model = model.module`，这同样会导致错误，会使得每一个gpu上的模型参数不同；
 
@@ -109,60 +106,18 @@ class _DDPWrappingModel(Module):
         super(_DDPWrappingModel, self).__init__()
         self.model = model
 
-        if hasattr(model, "train_step"):
-            self._train_step = model.train_step
-            self._train_signature_fn = None
-        else:
-            self._train_step = model
-            self._train_signature_fn = model.forward
-
-        if hasattr(model, "validate_step"):
-            self._validate_step = model.validate_step
-            self._validate_signature_fn = None
-        elif hasattr(model, "test_step"):
-            self._validate_step = model.test_step
-            self._validate_signature_fn = None
-        else:
-            self._validate_step = model
-            self._validate_signature_fn = model.forward
-
-        if hasattr(model, "test_step"):
-            self._test_step = model.test_step
-            self._test_signature_fn = None
-        elif hasattr(model, "validate_step"):
-            self._test_step = model.validate_step
-            self._test_signature_fn = None
-        else:
-            self._test_step = model
-            self._test_signature_fn = model.forward
-
     def forward(self, batch, **kwargs) -> Dict:
         """
         pytorch lightning 实现了先 unwrapping_model 的操作，但是感觉对于我们来说没有什么必须要，先写个注释放这里，之后有需求了再看；
         """
-
-        forward_state = kwargs.pop(_MODE_PARAMETER)
+        fn = kwargs.pop("fastnlp_fn")
+        signature_fn = kwargs.pop("fastnlp_signature_fn")
         wo_auto_param_call = kwargs.pop("wo_auto_param_call")
 
-        if forward_state == ForwardState.TRAIN:
-            if isinstance(batch, Dict) and not wo_auto_param_call:
-                return auto_param_call(self._train_step, batch, signature_fn=self._train_signature_fn)
-            else:
-                return self._train_step(batch)
-        elif forward_state == ForwardState.VALIDATE:
-            if isinstance(batch, Dict) and not wo_auto_param_call:
-                return auto_param_call(self._validate_step, batch, signature_fn=self._validate_signature_fn)
-            else:
-                return self._validate_step(batch)
-        elif forward_state == ForwardState.TEST:
-            if isinstance(batch, Dict) and not wo_auto_param_call:
-                return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
-            else:
-                return self._test_step(batch)
-        elif forward_state == ForwardState.PREDICT:
-            raise NotImplementedError("'PREDICT' mode has not been implemented.")
+        if isinstance(batch, Dict) and not wo_auto_param_call:
+            return auto_param_call(fn, batch, signature_fn=signature_fn)
         else:
-            raise NotImplementedError("You should direct a concrete mode.")
+            return fn(batch)
 
 
 class DummyGradScaler:

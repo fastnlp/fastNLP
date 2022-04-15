@@ -65,10 +65,10 @@ class TrainerState:
     """
     n_epochs: Optional[int] = None  # 无论如何重新算
 
-    cur_epoch_idx: Optional[int] = None  # 断点重训; 仅当 resume=False 时为0；
-    global_forward_batches: Optional[int] = None  # 断点重训
+    cur_epoch_idx: Optional[int] = 0  # 断点重训; 仅当 resume=False 时为0；
+    global_forward_batches: Optional[int] = 0  # 断点重训
 
-    batch_idx_in_epoch: Optional[int] = None  # 断点重训
+    batch_idx_in_epoch: Optional[int] = 0  # 断点重训
 
     num_batches_per_epoch: Optional[int] = None  # 无论如何重新算
 

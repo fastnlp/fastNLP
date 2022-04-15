@@ -211,9 +211,9 @@ def _add_file_handler(_logger: logging.Logger, path: Optional[Union[str, Path]] 
         raise TypeError("Parameter `remove_other_handlers` can only be `bool` type.")
 
     if not isinstance(mode, str):
-        raise TypeError("Parameter 'mode' can only be `str` type.")
+        raise TypeError("Parameter 'evaluate_fn' can only be `str` type.")
     if mode not in {"w", "a"}:
-        raise ValueError("Parameter `mode` can only be one of these values: ('w', 'a').")
+        raise ValueError("Parameter `evaluate_fn` can only be one of these values: ('w', 'a').")
 
     for h in _logger.handlers:
         if isinstance(h, logging.FileHandler):
@@ -230,7 +230,7 @@ def _add_file_handler(_logger: logging.Logger, path: Optional[Union[str, Path]] 
     dirname = os.path.abspath(os.path.dirname(path))
     os.makedirs(dirname, exist_ok=True)
 
-    # 这里只要检测到是分布式训练，我们就将 mode 改为 "a"；这样会导致的一个问题在于，如果第二次训练也是分布式训练，logger记录的log不会重新
+    # 这里只要检测到是分布式训练，我们就将 evaluate_fn 改为 "a"；这样会导致的一个问题在于，如果第二次训练也是分布式训练，logger记录的log不会重新
     #  覆盖掉原文件，而是会接着上一次的 log 继续添加；
     # 这样做主要是为了解决这样的情形所导致的问题：在分布式训练中，进程 1 比 进程 0 先运行到这里，然后使得进程 0 将进程 1 的 log 覆盖掉；
     if is_cur_env_distributed():# and int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) != 0:

@@ -6,7 +6,7 @@ python -m torch.distributed.launch --nproc_per_node 2 tests/core/controllers/_te
 
 import argparse
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1,2"
+
 
 import sys
 path = os.path.abspath(__file__)
@@ -63,7 +63,7 @@ _dataloader = DataLoader(
     shuffle=True
 )
 train_dataloader = _dataloader
-validate_dataloaders = _dataloader
+evaluate_dataloaders = _dataloader
 metrics = {"acc": Accuracy()}
 
 
@@ -77,7 +77,7 @@ def _test_trainer_torch_with_evaluator_fp16_accumulation_steps(
         device=None,
         optimizers=optimizers,
         train_dataloader=train_dataloader,
-        validate_dataloaders=validate_dataloaders,
+        evaluate_dataloaders=evaluate_dataloaders,
         metrics=metrics,
 
         n_epochs=2,

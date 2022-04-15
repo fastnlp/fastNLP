@@ -1,10 +1,11 @@
 import os
-from typing import Dict, Union
+from typing import Dict, Union, Callable, Tuple, Optional
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 if _NEED_IMPORT_TORCH:
     import torch
     from torch.nn import DataParallel
     from torch.nn.parallel import DistributedDataParallel
+    from torch.utils.data import RandomSampler as TorchRandomSampler
 
 __all__ = [
     'TorchSingleDriver'
@@ -13,7 +14,9 @@ __all__ = [
 from .torch_driver import TorchDriver
 from fastNLP.core.drivers.torch_driver.utils import replace_sampler, replace_batch_sampler
 from fastNLP.core.utils import auto_param_call
+from fastNLP.core.utils.utils import _get_fun_msg
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, re_instantiate_sampler, RandomBatchSampler
+from fastNLP.core.samplers import RandomSampler
 from fastNLP.core.log import logger
 
 
@@ -42,84 +45,42 @@ class TorchSingleDriver(TorchDriver):
         self.global_rank = 0
         self.world_size = 1
 
-        if isinstance(model, DataParallel):
-            model = self.unwrap_model()
-            if hasattr(model, "train_step"):
-                logger.warning("Notice your model is a `DataParallel` or `DistributedDataParallel` model. And your "
-                               "model also implements the `train_step` method, which we can not call actually, we will"
-                               " call `forward` function instead of `train_step` and you should note that.")
-            self._train_step = self.model
-            self._train_signature_fn = model.forward
-
-            if hasattr(model, "validate_step"):
-                logger.warning("Notice your model is a `DataParallel` or `DistributedDataParallel` model. And your "
-                               "model also implements the `validate_step` method, which we can not call actually, "
-                               "we will call `forward` function instead of `validate_step` and you should note that.")
-            self._validate_step = self.model
-            self._validate_signature_fn = model.forward
-
-            if hasattr(model, "test_step"):
-                logger.warning("Notice your model is a `DataParallel` or `DistributedDataParallel` model. And your "
-                               "model also implements the `test_step` method, which we can not call actually, we will"
-                               " call `forward` function instead of `test_step` and you should note that.")
-            self._test_step = self.model
-            self._test_signature_fn = model.forward
-        else:
-            if hasattr(self.model, "train_step"):
-                self._train_step = self.model.train_step
-                self._train_signature_fn = None
-            else:
-                self._train_step = self.model
-                # 输入的模型是 `DataParallel` 或者 `DistributedDataParallel`，我们需要保证其 signature_fn 是正确的；
-                model = self.unwrap_model()
-                self._train_signature_fn = model.forward
-
-            if hasattr(self.model, "validate_step"):
-                self._validate_step = self.model.validate_step
-                self._validate_signature_fn = None
-            elif hasattr(self.model, "test_step"):
-                self._validate_step = self.model.test_step
-                self._validate_signature_fn = self.model.test_step
-            else:
-                self._validate_step = self.model
-                model = self.unwrap_model()
-                self._validate_signature_fn = model.forward
-
-            if hasattr(self.model, "test_step"):
-                self._test_step = self.model.test_step
-                self._test_signature_fn = None
-            elif hasattr(self.model, "validate_step"):
-                self._test_step = self.model.validate_step
-                self._test_signature_fn = self.model.validate_step
-            else:
-                self._test_step = self.model
-                model = self.unwrap_model()
-                self._test_signature_fn = model.forward
-
     def setup(self):
         if self.model_device is not None:
             self.model.to(self.model_device)
 
-    def train_step(self, batch) -> Dict:
-        # 如果 batch 是一个 Dict，我们就默认帮其做参数匹配，否则就直接传入到 `train_step` 函数中，让用户自己处理；
+    def model_call(self, batch, fn: Callable, signature_fn: Optional[Callable]) -> Dict:
         if isinstance(batch, Dict) and not self.wo_auto_param_call:
-            return auto_param_call(self._train_step, batch, signature_fn=self._train_signature_fn)
+            return auto_param_call(fn, batch, signature_fn=signature_fn)
         else:
-            return self._train_step(batch)
+            return fn(batch)
 
-    def validate_step(self, batch) -> Dict:
-        # 因为我们 Tester 的逻辑就是将所有的 metric 传给 tester，然后 tester 控制具体 metric 的 update 和 compute；因此不管用户是否
-        # 实现 validate_step 函数，其都应该返回一个字典，具体使用哪些东西则是在 validate_batch_loop 中每一个具体的 metric 自己去拿的；
-        if isinstance(batch, Dict) and not self.wo_auto_param_call:
-            return auto_param_call(self._validate_step, batch, signature_fn=self._validate_signature_fn)
-        else:
-            return self._validate_step(batch)
+    def get_model_call_fn(self, fn: str) -> Tuple:
+        if isinstance(self.model, DataParallel):
+            model = self.unwrap_model()
+            if hasattr(model, fn):
+                logger.warning("Notice your model is a `DataParallel` model. And your model also implements the "
+                               f"`{fn}` method, which we can not call actually, we will"
+                               " call `forward` function instead of `train_step` and you should note that.")
 
-    def test_step(self, batch) -> Dict:
-        if isinstance(batch, Dict) and not self.wo_auto_param_call:
-            return auto_param_call(self._test_step, batch, signature_fn=self._test_signature_fn)
+            elif fn not in {"train_step", "evaluate_step"}:
+                raise RuntimeError(f"There is no `{fn}` method in your model. And also notice that your model is a "
+                                   f"`DataParallel` model, which means that we will only call model.forward function "
+                                   f"when we are in forward propagation.")
+
+            return self.model, model.forward
         else:
-            return self._test_step(batch)
+            if hasattr(self.model, fn):
+                fn = getattr(self.model, fn)
+                if not callable(fn):
+                    raise RuntimeError(f"The `{fn}` attribute is not `Callable`.")
+                logger.debug(f'Use {_get_fun_msg(fn, with_fp=False)}...')
+                return fn, None
+            elif fn in {"train_step", "evaluate_step"}:
+                logger.debug(f'Use {_get_fun_msg(self.model.forward, with_fp=False)}...')
+                return self.model, self.model.forward
+            else:
+                raise RuntimeError(f"There is no `{fn}` method in your {type(self.model)}.")
 
     def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler]=None,
                                   reproducible: bool = False):
@@ -140,12 +101,18 @@ class TorchSingleDriver(TorchDriver):
             return replace_sampler(dataloader, sampler)
 
         if reproducible:
-            batch_sampler = RandomBatchSampler(
-                batch_sampler=args.batch_sampler,
-                batch_size=args.batch_size,
-                drop_last=args.drop_last
-            )
-            return replace_batch_sampler(dataloader, batch_sampler)
+            if isinstance(args.sampler, TorchRandomSampler):
+                # 如果本来就是随机的，直接替换掉吧。
+                sampler = RandomSampler(args.sampler.data_source)
+                logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
+                return replace_sampler(dataloader, sampler)
+            else:
+                batch_sampler = RandomBatchSampler(
+                    batch_sampler=args.batch_sampler,
+                    batch_size=args.batch_size,
+                    drop_last=args.drop_last
+                )
+                return replace_batch_sampler(dataloader, batch_sampler)
         else:
             return dataloader
 
