@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .utils import _build_fp16_env, optimizer_state_to_device
+from .utils import _build_fp16_env, optimizer_state_to_device, DummyGradScaler
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.core.drivers.driver import Driver
 from fastNLP.core.utils import apply_to_collection, paddle_move_data_to_device
@@ -278,6 +278,12 @@ class PaddleDriver(Driver):
 
         logger.debug("Save optimizer state dict.")
         states["optimizers_state_dict"] = optimizers_state_dict
+
+        # 4.保存fp16的状态
+        if not isinstance(self.grad_scaler, DummyGradScaler):
+            grad_scaler_state_dict = self.grad_scaler.state_dict()
+            states['grad_scaler_state_dict'] = grad_scaler_state_dict
+
         paddle.save(states, str(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME)))
 
     def load(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
@@ -285,7 +291,7 @@ class PaddleDriver(Driver):
         states = paddle.load(str(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME)))
 
         # 1. 加载 optimizers 的状态；
-        optimizers_state_dict = states["optimizers_state_dict"]
+        optimizers_state_dict = states.pop("optimizers_state_dict")
         for i in range(len(self.optimizers)):
             optimizer: Optimizer = self.optimizers[i]
             optimizer.set_state_dict(optimizers_state_dict[f"optimizer{i}"])
@@ -295,18 +301,32 @@ class PaddleDriver(Driver):
         if should_load_model:
             self.load_model(folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict)
             if only_state_dict:
-                logger.debug("Load model state dict.")
+                logger.debug("Load model state dict...")
             else:
-                logger.debug("Load model.")
+                logger.debug("Load model...")
 
-        # 3. 恢复 sampler 的状态；
+        # 3. 加载fp16的状态；
+        if "grad_scaler_state_dict" in states:
+            grad_scaler_state_dict = states.pop("grad_scaler_state_dict")
+            if isinstance(self.grad_scaler, DummyGradScaler):
+                self.auto_cast, _grad_scaler = _build_fp16_env(dummy=False)
+                self.grad_scaler = _grad_scaler()
+                self.fp16 = True
+            self.grad_scaler.load_state_dict(grad_scaler_state_dict)
+            logger.debug("Load grad_scaler state dict...")
+        elif not isinstance(self.grad_scaler, DummyGradScaler):
+            logger.warning(f"Checkpoint {folder} is not trained with fp16=True, while resume to a fp16=True training, "
+                           f"the training process may be unstable.")
+
+        # 4. 恢复 sampler 的状态；
         dataloader_args = self.get_dataloader_args(dataloader)
         if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
             sampler = dataloader_args.batch_sampler
         elif isinstance(dataloader_args.sampler, ReproducibleSampler):
             sampler = dataloader_args.sampler
         elif self.is_distributed():
-            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or `ReproducibleSampler`.")
+            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or "
+                               "`ReproducibleSampler`.")
         else:
             sampler = RandomBatchSampler(
                 batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
@@ -316,7 +336,7 @@ class PaddleDriver(Driver):
         sampler.load_state_dict(states["sampler_states"])
         states["dataloader"] = self.set_dist_repro_dataloader(dataloader, sampler)
 
-        # 4. 修改 trainer_state.batch_idx_in_epoch
+        # 5. 修改 trainer_state.batch_idx_in_epoch
         # sampler 是类似 RandomSampler 的sampler，不是 batch_sampler；
         if not isinstance(sampler, ReproducibleBatchSampler):
             if dataloader_args.drop_last:
