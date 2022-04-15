@@ -32,10 +32,6 @@ class ProgressCallback(HasMonitorCallback):
     def on_train_end(self, trainer):
         f_rich_progress.stop()
 
-    def on_sanity_check_end(self, trainer, sanity_check_res):
-        if len(sanity_check_res) and getattr(self, 'monitor', None) is not None:
-            self.get_monitor_value(sanity_check_res)
-
 
 class RichCallback(ProgressCallback):
     def __init__(self, print_every:int = 1, loss_round_ndigit:int = 6, monitor:str=None, larger_better:bool=True,

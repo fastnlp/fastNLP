@@ -35,6 +35,8 @@ class Element:
 
         """
         self._check_value_initialized()
+        if self.aggregate_method is None:  # 如果没有 aggregate 则不进行聚合。
+            return
         try:
             self._value = self.backend.aggregate(self._value, self.aggregate_method)
         except AggregateMethodError as e:

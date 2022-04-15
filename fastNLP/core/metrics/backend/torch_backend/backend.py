@@ -11,7 +11,6 @@ from fastNLP.core.drivers.torch_driver.dist_utils import fastnlp_torch_all_gathe
 if _NEED_IMPORT_TORCH:
     import torch
     import torch.distributed as dist
-    import torch.nn.functional as F
 
 
 def _simple_gather_all_tensors(result, group: Any, world_size: int) -> List:

@@ -6,8 +6,9 @@ __all__ = [
     'is_cur_env_distributed',
     'get_global_rank',
     'rank_zero_call',
-    'all_rank_call',
-    'get_gpu_count'
+    'all_rank_call_context',
+    'get_gpu_count',
+    'fastnlp_no_sync_context'
 ]
 
 

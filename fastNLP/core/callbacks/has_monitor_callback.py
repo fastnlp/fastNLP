@@ -49,7 +49,8 @@ class HasMonitorCallback(Callback):
             self.monitor = monitor
         else:
             self.monitor = str(monitor) if monitor is not None else None
-        self.larger_better = bool(larger_better)
+        if self.monitor is not None:
+            self.larger_better = bool(larger_better)
         if larger_better:
             self.monitor_value = float('-inf')
         else:
@@ -70,6 +71,12 @@ class HasMonitorCallback(Callback):
         if self.must_have_moinitor and self.monitor is None:
             raise RuntimeError(f"No `monitor` is set for {self.__class__.__name__}. "
                                f"You can set it in the initialization or through Trainer.")
+
+
+    def on_sanity_check_end(self, trainer, sanity_check_res):
+        # 主要核对一下 monitor 是否存在。
+        if self.monitor is not None:
+            self.get_monitor_value(results=sanity_check_res)
 
     def get_monitor_value(self, results:Dict)->Union[float, None]:
         """

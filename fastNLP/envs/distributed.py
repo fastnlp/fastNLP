@@ -7,10 +7,11 @@ __all__ = [
     'is_cur_env_distributed',
     'get_global_rank',
     'rank_zero_call',
-    'all_rank_call'
+    'all_rank_call_context',
+    'fastnlp_no_sync_context'
 ]
 
-from fastNLP.envs.env import FASTNLP_GLOBAL_RANK
+from fastNLP.envs.env import FASTNLP_GLOBAL_RANK, FASTNLP_NO_SYNC
 
 
 def is_cur_env_distributed() -> bool:
@@ -41,24 +42,46 @@ def rank_zero_call(fn: Callable):
             return a+b
         rank_zero_call(add)(1, 2)
 
+    同时，该函数还会设置 FASTNLP_NO_SYNC 为 2，在这个环境下，所有的 fastNLP 内置的 barrier 接口，gather/broadcast 操作都没有任何
+        意义。
+
     :param fn: 需要包裹的可执行的函数。
     :return:
     """
     @wraps(fn)
     def wrapped_fn(*args: Any, **kwargs: Any) -> Optional[Any]:
         if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
-            return fn(*args, **kwargs)
+            with fastnlp_no_sync_context(level=2):
+                return fn(*args, **kwargs)
         return None
     return wrapped_fn
 
 
 @contextmanager
-def all_rank_call():
+def fastnlp_no_sync_context(level=2):
+    """
+    用于让 fastNLP 的 barrier 以及 gather/broadcast等操作等同于只有1卡的多卡程序。如果为 1 表示 fastNLP 里的barrier 操作失效；
+        如果为 2 表示 barrier 与 gather/broadcast 都失效。
+
+    :param int level: 可选 [0, 1, 2]
+    :return:
+    """
+    old_level = os.environ.get(FASTNLP_NO_SYNC, None)
+    os.environ[FASTNLP_NO_SYNC] = f'{level}'
+    yield
+    if old_level is None:
+        os.environ.pop(FASTNLP_NO_SYNC)
+    else:
+        os.environ[FASTNLP_NO_SYNC] = old_level
+
+
+@contextmanager
+def all_rank_call_context():
     """
     在多卡模式下，该环境内，会暂时地将 FASTNLP_GLOBAL_RANK 设置为 "0"，使得 rank_zero_call 函数失效，使得每个进程都会运行该函数。
 
     # 使用方式
-    with all_rank_run():
+    with all_rank_call_context():
         do_something  # all rank will do
 
     :param fn:

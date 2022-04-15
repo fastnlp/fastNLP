@@ -3,7 +3,6 @@ from functools import partial
 from dataclasses import is_dataclass
 import sys
 
-
 __all__ = [
     'Evaluator'
 ]
@@ -75,8 +74,8 @@ class Evaluator:
              当 auto_tensor_conversion_for_metric 为True时，fastNLP 将自动将输出中 paddle 的 tensor （其它非 tensor 的参数
              不做任何处理）转换为 pytorch 的 tensor 再输入到 metrics 中进行评测。 model 的输出 tensor 类型通过 driver 来决定，
              metrics 支持的输入类型由 metrics 决定。如果需要更复杂的转换，请使用 input_mapping、output_mapping 参数进行。
-            use_dist_sampler: 是否使用分布式evaluate的方式。仅当 driver 为分布式类型时，该参数才有效。如果为True，将使得每个进程上
-             的 dataloader 自动使用不同数据，所有进程的数据并集是整个数据集。请确保使用的 metrics 支持自动分布式累积。
+            use_dist_sampler: 是否使用分布式evaluate的方式。仅当 driver 为分布式类型时，该参数才有效。默认为根据 driver 是否支持
+                分布式进行设置。如果为True，将使得每个进程上的 dataloader 自动使用不同数据，所有进程的数据并集是整个数据集。
             output_from_new_proc: 应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
              ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
              log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
@@ -86,7 +85,8 @@ class Evaluator:
 
         self.model = model
         self.metrics = metrics
-        self.driver = choose_driver(model, driver, device, fp16=fp16, model_wo_auto_param_call=model_wo_auto_param_call, **kwargs)
+        self.driver = choose_driver(model, driver, device, fp16=fp16, model_wo_auto_param_call=model_wo_auto_param_call,
+                                    **kwargs)
 
         if dataloaders is None:
             raise ValueError("Parameter `dataloaders` can not be None.")
@@ -105,9 +105,13 @@ class Evaluator:
             dataloaders = {None: dataloaders}
 
         self.evaluate_batch_loop = EvaluateBatchLoop(batch_step_fn=batch_step_fn)
+
+        self.driver.setup()
+        self.driver.barrier()
+
         self.separator = kwargs.get('separator', '#')
         self.model_use_eval_mode = kwargs.get('model_use_eval_mode', True)
-        use_dist_sampler = kwargs.get("use_dist_sampler", False)  # 如果是 Evaluator 自身的默认值的话，应当为 False；
+        use_dist_sampler = kwargs.get("use_dist_sampler", driver.is_distributed())
         if use_dist_sampler:
             self._dist_sampler = "unrepeatdist"
         else:
@@ -115,8 +119,9 @@ class Evaluator:
         self._metric_wrapper = None
         _ = self.metrics_wrapper  # 触发检查
 
-        self.driver.setup()
-        self.driver.barrier()
+        if self._dist_sampler is not None and not self.driver.is_distributed():
+            logger.warning_once("Running in a non-distributed driver, but with distributed sampler, it may cause "
+                                "different process evaluating on different data.")
 
         if evaluate_fn is not None and not isinstance(evaluate_fn, str):
             raise TypeError("Parameter `evaluate_fn` can only be `str` type when it is not None.")
@@ -183,7 +188,7 @@ class Evaluator:
 
         return metric_results
 
-    def start_progress_bar(self, total:int, dataloader_name):
+    def start_progress_bar(self, total: int, dataloader_name):
         if self.progress_bar == 'rich':
             if dataloader_name is None:
                 desc = f'Eval. Batch:0'
@@ -208,7 +213,7 @@ class Evaluator:
                                    advance=kwargs.get('advance', 1), refresh=kwargs.get('refresh', True),
                                    visible=kwargs.get('visible', True))
         elif self.progress_bar == 'raw':
-            if self.verbose>1:
+            if self.verbose > 1:
                 logger.info(desc)
 
     def remove_progress_bar(self, dataloader_name):
@@ -256,7 +261,7 @@ class Evaluator:
         """
         self.metrics_wrapper.update(*args, **kwargs)
 
-    def get_dataloader_metric(self, dataloader_name:Optional[str]='') -> Dict:
+    def get_dataloader_metric(self, dataloader_name: Optional[str] = '') -> Dict:
         """
         获取当前dataloader的metric结果
 
@@ -313,6 +318,7 @@ class _MetricsWrapper:
     并且通过对 update() , reset() , get_metric() 函数的封装，实现支持 fastNLP 的 metric 以及 torchmetrics 或者更多。
 
     """
+
     def __init__(self, metrics, evaluator):
         self.evaluator = evaluator
         self._metrics = []
@@ -326,13 +332,14 @@ class _MetricsWrapper:
                     # torchmetrics 是默认自动开启了多卡的
                     evaluator.driver.move_model_to_device(metric, evaluator.driver.data_device)
                 elif isinstance(metric, Metric):
-                    if evaluator._dist_sampler is not None and evaluator.driver.is_distributed() \
-                            and metric.aggregate_when_get_metric is False:
-                        logger.warning("You have replace the sampler as distributed sampler when evaluation, but your "
-                                       f"metric:{metric_name}' `aggregate_when_get_metric` is False.")
-                    if evaluator._dist_sampler is None and evaluator.driver.is_distributed() \
-                        and metric.aggregate_when_get_metric is True:
-                        pass  # 这种情况无所谓，因为
+                    # 如果数据是分布式的，但是不aggregate的话可能有问题
+                    if evaluator._dist_sampler is not None and metric.aggregate_when_get_metric is False:
+                        logger.warning_once(
+                            "You have replace the sampler as distributed sampler when evaluation, but your "
+                            f"metric {metric_name}:{metric.__class__.__name__}' `aggregate_when_get_metric` is False.")
+                    if metric.aggregate_when_get_metric is None:
+                        metric.aggregate_when_get_metric = evaluator._dist_sampler is not None
+
                     metric.to(evaluator.driver.data_device)
                 self._metric_names.append(metric_name)
                 self._metrics.append(metric)
@@ -343,8 +350,9 @@ class _MetricsWrapper:
         for metric in self._metrics:
             args = []
             if not isinstance(batch, dict):
-                logger.warning_once(f"The output of the DataLoader is of type:`{type(batch)}`, fastNLP will only depend on "
-                                    f"the output of model to update metric.")
+                logger.warning_once(
+                    f"The output of the DataLoader is of type:`{type(batch)}`, fastNLP will only depend on "
+                    f"the output of model to update metric.")
             else:
                 args.append(batch)
             if not isinstance(outputs, dict):
@@ -368,7 +376,7 @@ class _MetricsWrapper:
             elif _is_torchmetrics_metric(metric) or _is_paddle_metric(metric) or isinstance(metric, Metric):
                 metric.reset()
 
-    def get_metric(self, dataloader_name:str, separator:str) -> Dict:
+    def get_metric(self, dataloader_name: str, separator: str) -> Dict:
         """
         将所有 metric 结果展平到一个一级的字典中，这个字典中 key 的命名规则是
             indicator_name{separator}metric_name{separator}dataloader_name

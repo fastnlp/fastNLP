@@ -222,14 +222,14 @@ class RandomSampler(ReproducibleSampler):
 
 
 class SequentialSampler(RandomSampler):
-    def __init__(self, dataset, dist_mode:str='interval', **kwargs):
+    def __init__(self, dataset, **kwargs):
         """
         按照顺序读取 dataset 。在多卡情况下，间隔读取，例如，在两卡情况下，卡0取 [0,2,4,..], 卡1取 [1,3,5...]。
 
         :param dataset: 实现了 __len__ 方法的数据容器。
         :param kwargs:
         """
-        super().__init__(dataset=dataset, shuffle=False, seed=0, **kwargs)
+        super().__init__(dataset=dataset, **kwargs)
 
     def __iter__(self):
         if self.during_iter:  # 如果发现_during_iter为True，说明之前的还没结束，只有强制重新初始化了

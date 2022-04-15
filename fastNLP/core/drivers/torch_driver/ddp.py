@@ -5,7 +5,6 @@ import socket
 import numpy as np
 from time import sleep
 from typing import List, Optional, Union, Dict, Tuple, Callable
-from functools import partial
 
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 if _NEED_IMPORT_TORCH:
@@ -29,7 +28,7 @@ from fastNLP.core.drivers.utils import distributed_open_proc
 from fastNLP.core.utils import auto_param_call, check_user_specific_params
 from fastNLP.core.samplers import ReproducibleSampler, RandomSampler, UnrepeatedSequentialSampler, ReproducibleBatchSampler, \
     re_instantiate_sampler, UnrepeatedSampler, conversion_between_reproducible_and_unrepeated_sampler
-from fastNLP.envs import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_RANK, FASTNLP_GLOBAL_SEED
+from fastNLP.envs import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_RANK, FASTNLP_GLOBAL_SEED, FASTNLP_NO_SYNC
 from fastNLP.core.log import logger
 from fastNLP.core.drivers.torch_driver.dist_utils import fastnlp_torch_all_gather, fastnlp_torch_broadcast_object
 
@@ -511,7 +510,7 @@ class TorchDDPDriver(TorchDriver):
     def is_global_zero(self):
         return self.global_rank == 0
 
-    def get_no_sync_context(self):
+    def get_model_no_sync_context(self):
         # 注意此时的 model 是 "DistributedDataParallel" 对象；
         return self.model.no_sync
 
@@ -526,7 +525,8 @@ class TorchDDPDriver(TorchDriver):
         return self.local_rank
 
     def barrier(self):
-        torch.distributed.barrier(async_op=True)
+        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) < 1:  # 当 FASTNLP_NO_SYNC 小于 1 时实际执行
+            torch.distributed.barrier(async_op=True)
 
     def is_distributed(self):
         return True
@@ -544,6 +544,8 @@ class TorchDDPDriver(TorchDriver):
         :return: 如果当前不是分布式 driver 直接返回输入的 obj 。如果当前 rank 是接收端（其 global rank 包含在了 dst 中），则返回
             接收到的参数；如果是 source 端则返回发射的内容；既不是发送端、又不是接收端，则返回 None 。
         """
+        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) == 2:  # 如果 FASTNLP_NO_SYNC == 2 直接返回。
+            return
         return fastnlp_torch_broadcast_object(obj, src, device=self.data_device, group=group)
 
     def all_gather(self, obj, group) -> List:
@@ -569,6 +571,8 @@ class TorchDDPDriver(TorchDriver):
         :param group:
         :return:
         """
+        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) == 2:  # 如果 FASTNLP_NO_SYNC 表示不执行
+            return [obj]
         return fastnlp_torch_all_gather(obj, group=group)
 
 

@@ -1,5 +1,6 @@
 import io
 import pickle
+import os
 _pickler = pickle.Pickler
 _unpickler = pickle.Unpickler
 from typing import Any, List
@@ -7,6 +8,7 @@ from typing import Any, List
 from fastNLP.envs.imports import _TORCH_GREATER_EQUAL_1_8
 from fastNLP.core.utils.torch_utils import DEFAULT_TORCH_GROUP
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from fastNLP.envs.env import FASTNLP_NO_SYNC
 if _NEED_IMPORT_TORCH:
     import torch
     from torch import distributed as dist
@@ -34,47 +36,15 @@ def _validate_output_list_for_rank(my_rank, dst, gather_list):
         )
 
 
-def fastnlp_torch_gather_object(obj, object_gather_list=None, dst=0, group=DEFAULT_TORCH_GROUP):
+def fastnlp_torch_gather_object(obj, dst=0, group=DEFAULT_TORCH_GROUP):
     """
     从其它 rank gather 东西到 dst rank 。
 
-    Gathers picklable objects from the whole group in a single process.
-    Similar to :func:`gather`, but Python objects can be passed in. Note that the
-    object must be picklable in order to be gathered.
-
-    Args:
-        obj (Any): Input object. Must be picklable.
-        object_gather_list (list[Any]): Output list. On the ``dst`` rank, it
-            should be correctly sized as the size of the group for this
-            collective and will contain the output. Must be ``None`` on non-dst
-            ranks. (default is ``None``)
-        dst (int, optional): Destination rank. (default is 0)
-        group: (ProcessGroup, optional): The process group to work on. If None,
-            the default process group will be used. Default is ``None``.
-
-    Returns:
-        None. On the ``dst`` rank, ``object_gather_list`` will contain the
-        output of the collective.
-
-    .. note:: Note that this API differs slightly from the gather collective
-        since it does not provide an async_op handle and thus will be a blocking
-        call.
-
-    .. note:: Note that this API is not supported when using the NCCL backend.
-
-    .. warning::
-        :func:`gather_object` uses ``pickle`` module implicitly, which is
-        known to be insecure. It is possible to construct malicious pickle data
-        which will execute arbitrary code during unpickling. Only call this
-        function with data you trust.
-
     Example::
-        >>> # Note: Process group initialization omitted on each rank.
-        >>> import torch.distributed as dist
         >>> # Assumes world_size of 3.
         >>> gather_objects = ["foo", 12, {1: 2}] # any picklable object
         >>> output = [None for _ in gather_objects]
-        >>> dist.gather_object(
+        >>> fastnlp_torch_gather_object(
                 gather_objects[dist.get_rank()],
                 output if dist.get_rank() == 0 else None,
                 dst=0
@@ -82,7 +52,20 @@ def fastnlp_torch_gather_object(obj, object_gather_list=None, dst=0, group=DEFAU
         >>> # On rank 0
         >>> output
         ['foo', 12, {1: 2}]
+
+    :param obj: 需要发送的 obj 对象，需要是可以 pickable 的对象
+    :param dst: 目标的 rank 。
+    :param group: 在哪个 group 执行该函数。
+    :return: 在 dst 上面返回 world_size 的 list，依次为 rank 0；rank 1...上 obj
     """
+    if int(os.environ.get(FASTNLP_NO_SYNC, '0')) == 2:
+        return [obj]
+
+    if dist.get_rank() == dst:
+        object_gather_list = [None for _ in range(dist.get_world_size(group))]
+    else:
+        object_gather_list = None
+
     if group is None:
         group = DEFAULT_TORCH_GROUP
 
@@ -212,6 +195,9 @@ def fastnlp_torch_all_gather(obj: Any, device=None, group=DEFAULT_TORCH_GROUP) -
     :param group:
     :return: 返回的结果是 [obj0, obj1, ...]，其中 obj_i 即为第 i 个 rank 上的 obj 。
     """
+    if int(os.environ.get(FASTNLP_NO_SYNC, '0')) == 2:
+        return [obj]
+
     if group is None:
         group = DEFAULT_TORCH_GROUP
     if isinstance(obj, torch.Tensor):
@@ -232,12 +218,18 @@ def fastnlp_torch_broadcast_object(obj, src, device=None, group=DEFAULT_TORCH_GR
     """
     将 src 上的 obj 对象广播到其它 rank 上。
 
-    :param obj:
-    :param src:
+    :param obj: 需要发送的对象
+    :param src: 从哪里发出。
     :param device:
-    :param group:
+    :param group: 属于哪个通信 group
     :return:
     """
+    if int(os.environ.get(FASTNLP_NO_SYNC, '0')) == 2:
+        if src == dist.get_rank(group):
+            return obj
+        else:
+            return None
+
     if group is None:
         group = DEFAULT_TORCH_GROUP
     cur_rank = dist.get_rank(group)
@@ -289,50 +281,23 @@ def all_gather_object(object_list, obj, group=None):
     """
     复制 pytorch 的代码，使得可以版本兼容低版本的 pytorch 。
 
-    Gathers picklable objects from the whole group into a list. Similar to
-    :func:`all_gather`, but Python objects can be passed in. Note that the object
-    must be picklable in order to be gathered.
-
-    Args:
-        object_list (list[Any]): Output list. It should be correctly sized as the
-            size of the group for this collective and will contain the output.
-        object (Any): Pickable Python object to be broadcast from current process.
-        group (ProcessGroup, optional): The process group to work on. If None,
-            the default process group will be used. Default is ``None``.
-
-    Returns:
-        None. If the calling rank is part of this group, the output of the
-        collective will be populated into the input ``object_list``. If the
-        calling rank is not part of the group, the passed in ``object_list`` will
-        be unmodified.
-
-    .. note:: Note that this API differs slightly from the :func:`all_gather`
-        collective since it does not provide an ``async_op`` handle and thus
-        will be a blocking call.
-
-    .. note:: For NCCL-based processed groups, internal tensor representations
-        of objects must be moved to the GPU device before communication takes
-        place. In this case, the device used is given by
-        ``torch.cuda.current_device()`` and it is the user's responsiblity to
-        ensure that this is set so that each rank has an individual GPU, via
-        ``torch.cuda.set_device()``.
-
-    .. warning::
-        :func:`all_gather_object` uses ``pickle`` module implicitly, which is
-        known to be insecure. It is possible to construct malicious pickle data
-        which will execute arbitrary code during unpickling. Only call this
-        function with data you trust.
-
     Example::
         >>> # Note: Process group initialization omitted on each rank.
-        >>> import torch.distributed as dist
         >>> # Assumes world_size of 3.
         >>> gather_objects = ["foo", 12, {1: 2}] # any picklable object
         >>> output = [None for _ in gather_objects]
-        >>> dist.all_gather_object(output, gather_objects[dist.get_rank()])
+        >>> all_gather_object(output, gather_objects[dist.get_rank()])
         >>> output
         ['foo', 12, {1: 2}]
+
+    :param object_list:
+    :param obj:
+    :param group:
+    :return:
     """
+    if int(os.environ.get(FASTNLP_NO_SYNC, '0')) == 2:
+        return [obj]
+
     if dist.distributed_c10d._rank_not_in_group(group):
         return
     if _TORCH_GREATER_EQUAL_1_8:
