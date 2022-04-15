@@ -129,7 +129,7 @@ class Driver(ABC):
     @property
     def optimizers(self) -> List:
         r"""
-        如下所示，driver 返回的 optimizers 一定是一个 List，如果用户直接向 Trainer 传入一个单独的 optimzer，我们会使用一个 List 将其
+        如下所示，driver 返回的 optimizers 一定是一个 List，如果用户直接向 Trainer 传入一个单独的 optimizer，我们会使用一个 List 将其
         包裹；
 
         :return: List[optimizer0, optimizer1, optimizer2, ...]
