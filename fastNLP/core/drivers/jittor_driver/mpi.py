@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Union
+from typing import Optional, Union, Callable, Dict, Tuple
 
 from .jittor_driver import JittorDriver
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
@@ -61,14 +61,11 @@ class JittorMPIDriver(JittorDriver):
             return self._data_device
         return self.model_device
 
-    def train_step(self, batch):
-        return self._train_step(batch)
+    def model_call(self, batch, fn: Callable, signature_fn: Optional[Callable]) -> Dict:
+        pass
 
-    def validate_step(self, batch):
-        return self._validate_step(batch)
-
-    def test_step(self, batch):
-        return self._test_step(batch)
+    def get_model_call_fn(self, fn: str) -> Tuple:
+        pass
 
     def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler]],
                                   reproducible: bool = False, sampler_or_batch_sampler=None):

@@ -1,6 +1,7 @@
-from typing import Optional, Dict, Union, Callable
+from typing import Optional, Dict, Union, Callable, Tuple
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE, _NEED_IMPORT_TORCH
+from fastNLP.core.utils.utils import _get_fun_msg
 
 
 if _NEED_IMPORT_PADDLE:
@@ -48,33 +49,6 @@ class TorchPaddleDriver(Driver):
         elif self._data_device is not None:
             raise ValueError("Parameter `device` is wrong type, please check our documentation for the right use.")
 
-        if hasattr(self.model, "train_step"):
-            self._train_step = self.model.train_step
-            self._train_signature_fn = None
-        else:
-            self._train_step = self.model
-            self._train_signature_fn = self.model.forward
-
-        if hasattr(self.model, "evaluate_step"):
-            self._validate_step = self.model.evaluate_step
-            self._validate_signature_fn = None
-        elif hasattr(self.model, "test_step"):
-            self._validate_step = self.model.test_step
-            self._validate_signature_fn = self.model.forward
-        else:
-            self._validate_step = self.model
-            self._validate_signature_fn = self.model.forward
-
-        if hasattr(self.model, "test_step"):
-            self._test_step = self.model.test_step
-            self._test_signature_fn = None
-        elif hasattr(self.model, "evaluate_step"):
-            self._test_step = self.model.evaluate_step
-            self._test_signature_fn = self.model.forward
-        else:
-            self._test_step = self.model
-            self._test_signature_fn = self.model.forward
-
     def setup(self):
         if self.model_device is not None:
             paddle.device.set_device(self.model_device.replace("cuda", "gpu"))
@@ -103,12 +77,6 @@ class TorchPaddleDriver(Driver):
                                  f"'torch.optim.Optimizer' or 'paddle.optimizers.Optimizer' type, "
                                  f"not {type(each_optimizer)}.")
 
-    def train_step(self, batch) -> Dict:
-        if isinstance(batch, Dict):
-            return auto_param_call(self._train_step, batch)
-        else:
-            return self._train_step(batch)
-
     def step(self):
         for optimizer in self.optimizers:
             optimizer.step()
@@ -125,17 +93,24 @@ class TorchPaddleDriver(Driver):
             else:
                 raise ValueError("Unknown optimizers type.")
 
-    def validate_step(self, batch):
-        if isinstance(batch, Dict):
-            return auto_param_call(self._validate_step, batch)
+    def model_call(self, batch, fn: Callable, signature_fn: Optional[Callable]) -> Dict:
+        if isinstance(batch, Dict) and not self.wo_auto_param_call:
+            return auto_param_call(fn, batch, signature_fn=signature_fn)
         else:
-            return self._validate_step(batch)
+            return fn(batch)
 
-    def test_step(self, batch):
-        if isinstance(batch, Dict):
-            return auto_param_call(self._test_step, batch)
+    def get_model_call_fn(self, fn: str) -> Tuple:
+        if hasattr(self.model, fn):
+            fn = getattr(self.model, fn)
+            if not callable(fn):
+                raise RuntimeError(f"The `{fn}` attribute is not `Callable`.")
+            logger.debug(f'Use {_get_fun_msg(fn, with_fp=False)}...')
+            return fn, None
+        elif fn in {"train_step", "evaluate_step"}:
+            logger.debug(f'Use {_get_fun_msg(self.model.forward, with_fp=False)}...')
+            return self.model, self.model.forward
         else:
-            return self._test_step(batch)
+            raise RuntimeError(f"There is no `{fn}` method in your {type(self.model)}.")
 
     def predict_step(self, batch):
         if isinstance(batch, Dict):

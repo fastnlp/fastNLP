@@ -26,7 +26,7 @@ class PaddleNormalModel_Classification_1(paddle.nn.Layer):
         x = self(x)
         return {"loss": self.loss_fn(x, y)}
 
-    def validate_step(self, x, y):
+    def evaluate_step(self, x, y):
 
         x = self(x)
         return {"pred": x, "target": y.reshape((-1,))}

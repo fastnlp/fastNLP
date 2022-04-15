@@ -1,13 +1,12 @@
 import os
+import shutil
 from functools import partial
-from typing import List, Union, Optional, Dict
+from typing import List, Union, Optional, Dict, Tuple, Callable
 
 from .paddle_driver import PaddleDriver
 from .fleet_launcher import FleetLauncher
 from .utils import (
     _FleetWrappingModel, 
-    ForwardState, 
-    _MODE_PARAMETER,
     get_device_from_visible,
     reset_seed,
     replace_sampler,
@@ -47,8 +46,7 @@ if _NEED_IMPORT_PADDLE:
 __all__ = [
     "PaddleFleetDriver",
 ]
-# if os.path.exists(self.gloo_rendezvous_dir):
-#             shutil.rmtree(self.gloo_rendezvous_dir)
+
 class PaddleFleetDriver(PaddleDriver):
     def __init__(
             self, 
@@ -104,34 +102,6 @@ class PaddleFleetDriver(PaddleDriver):
             #  我们就直接将 model_device 置为 None；
             self._model_device = None
 
-            def _running_fn_(batch, step_fn, signature_fn, wo_auto_param_call):
-                if isinstance(batch, Dict) and not wo_auto_param_call:
-                    return auto_param_call(step_fn, batch, signature_fn=signature_fn)
-                else:
-                    return self._validate_step(batch)
-
-            model = model._layers
-            if hasattr(model, "train_step"):
-                logger.warning(
-                    "Notice your model is a `paddle.DataParallel` model. And your "
-                    "model also implements the `train_step` method, which we can not call actually, we will"
-                    " call `forward` function instead of `train_step` and you should note that.")
-            self._train_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
-
-            if hasattr(model, "evaluate_step"):
-                logger.warning(
-                    "Notice your model is a `paddle.DataParallel` model. And your "
-                    "model also implements the `evaluate_step` method, which we can not call actually, "
-                    "we will call `forward` function instead of `evaluate_step` and you should note that.")
-            self._validate_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
-
-            if hasattr(model, "test_step"):
-                logger.warning(
-                    "Notice your model is a `paddle.DataParallel` model. And your "
-                    "model also implements the `test_step` method, which we can not call actually, we will"
-                    " call `forward` function instead of `test_step` and you should note that.")
-            self._test_step = partial(_running_fn_, step_fn=self.model, signature_fn=model.forward, wo_auto_param_call=self.wo_auto_param_call)
-
         # 当参数 `device` 为 None 时并且该参数不为 None，表示将对应的数据移到指定的机器上；
         self._data_device = kwargs.get("data_device", None)
         if self._data_device is not None:
@@ -150,8 +120,6 @@ class PaddleFleetDriver(PaddleDriver):
 
         self.world_size = None
         self.global_rank = 0
-        self._configured = False  # 防止重复调用 configure_ddp() 函数使用
-        self._has_setup = False # 防止重复调用 setup() 函数
 
         self._fleet_kwargs = kwargs.get("paddle_fleet_kwargs", {})
         check_user_specific_params(self._fleet_kwargs, DataParallel.__init__)
@@ -172,6 +140,9 @@ class PaddleFleetDriver(PaddleDriver):
         if self.output_from_new_proc not in {"all", "ignore", "only_error"}:
             os.makedirs(name=self.output_from_new_proc, exist_ok=True)
             self.output_from_new_proc = os.path.abspath(self.output_from_new_proc)
+
+        self._has_setup = False # 设置这一参数是因为 evaluator 中也会进行 setup 操作，但是显然是不需要的也不应该的；
+        self._has_fleetwrapped = False  # 判断传入的模型是否经过 _has_fleetwrapped 包裹；
 
     def setup(self):
         """
@@ -268,17 +239,17 @@ class PaddleFleetDriver(PaddleDriver):
         dist.barrier()
 
     def configure_fleet(self):
-        if not self._configured and not isinstance(self.model, DataParallel):
+        if not self._has_fleetwrapped and not isinstance(self.model, DataParallel):
             self.model = DataParallel(
                 _FleetWrappingModel(self.model),
                 **self._fleet_kwargs
             )
+            self._has_fleetwrapped = True
 
-            self._train_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TRAIN}, wo_auto_param_call=self.wo_auto_param_call)
-            self._validate_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.VALIDATE}, wo_auto_param_call=self.wo_auto_param_call)
-            self._test_step = partial(self.model, **{_MODE_PARAMETER: ForwardState.TEST}, wo_auto_param_call=self.wo_auto_param_call)
-
-        self._configured = True
+    def on_exception(self):
+        if os.path.exists(self.gloo_rendezvous_dir):
+            shutil.rmtree(self.gloo_rendezvous_dir)
+        super().on_exception()
 
     @property
     def world_size(self) -> int:
@@ -310,14 +281,39 @@ class PaddleFleetDriver(PaddleDriver):
             return self._data_device
         return self.model_device
 
-    def train_step(self, batch):
-        return self._train_step(batch)
+    def model_call(self, batch, fn: Callable, signature_fn: Optional[Callable]) -> Dict:
+        if self._has_fleetwrapped:
+            return self.model(batch, fastnlp_fn=fn, fastnlp_signature_fn=signature_fn,
+                              wo_auto_param_call=self.wo_auto_param_call)
+        else:
+            if isinstance(batch, Dict) and not self.wo_auto_param_call:
+                return auto_param_call(fn, batch, signature_fn=signature_fn)
+            else:
+                return fn(batch)
 
-    def validate_step(self, batch):
-        return self._validate_step(batch)
+    def get_model_call_fn(self, fn: str) -> Tuple:
+        model = self.unwrap_model()
+        if self._has_fleetwrapped:
+            if hasattr(model, fn):
+                fn = getattr(model, fn)
+                if not callable(fn):
+                    raise RuntimeError(f"The `{fn}` attribute of model is not `Callable`.")
+                return fn, None
+            elif fn in {"train_step", "evaluate_step"}:
+                return model, model.forward
+            else:
+                raise RuntimeError(f"There is no `{fn}` method in your model.")
+        else:
+            if hasattr(model, fn):
+                logger.warning("Notice your model is a `DistributedDataParallel` model. And your model also implements "
+                               f"the `{fn}` method, which we can not call actually, we will"
+                               " call `forward` function instead of `train_step` and you should note that.")
+            elif fn not in {"train_step", "evaluate_step"}:
+                raise RuntimeError(f"There is no `{fn}` method in your model. And also notice that your model is a "
+                                   "`DistributedDataParallel` model, which means that we will only call model.forward "
+                                   "function when we are in forward propagation.")
 
-    def test_step(self, batch):
-        return self._test_step(batch)
+            return self.model, model.forward
 
     def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler, RandomBatchSampler]],
                                   reproducible: bool = False, sampler_or_batch_sampler=None):
@@ -406,14 +402,6 @@ class PaddleFleetDriver(PaddleDriver):
         else:
             raise ValueError("Parameter `dist_sampler` can only be one of three values: ('dist', 'unrepeatdist', None).")
 
-    def backward(self, loss):
-        self.grad_scaler.scale(loss).backward()
-
-    def step(self):
-        for optimizer in self.optimizers:
-            self.grad_scaler.step(optimizer)
-            self.grad_scaler.update()
-
     def is_global_zero(self):
         return self.global_rank == 0
 
@@ -450,3 +438,45 @@ class PaddleFleetDriver(PaddleDriver):
             if not isinstance(each_optimizer, (Optimizer, DistribuedOptimizer)):
                 raise ValueError(f"Each optimizer of parameter `optimizers` should be 'paddle.optimizer.Optimizer' type, "
                                 f"not {type(each_optimizer)}.")
+
+    def broadcast_object(self, obj, src:int=0, group=None, **kwargs):
+        """
+        从 src 端将 obj 对象（可能是 tensor ，可能是 object ）发送到 dst 处。如果是非 tensor 的对象会尝试使用 pickle 进行打包进行
+            传输，然后再 dst 处再加载回来。仅在分布式的 driver 中有实际意义。
+
+        :param obj: obj，可能是 Tensor 或 嵌套类型的数据
+        :param int src: source 的 global rank 。
+        :param int dst: target 的 global rank，可以是多个目标 rank
+        :param group: 所属的 group
+        :param kwargs:
+        :return: 如果当前不是分布式 driver 直接返回输入的 obj 。如果当前 rank 是接收端（其 global rank 包含在了 dst 中），则返回
+            接收到的参数；如果是 source 端则返回发射的内容；既不是发送端、又不是接收端，则返回 None 。
+        """
+        return
+        return fastnlp_paddle_broadcast_object(obj, src, device=self.data_device, group=group)
+
+    def all_gather(self, obj, group) -> List:
+        """
+        将 obj 互相传送到其它所有的 rank 上，其中 obj 可能是 Tensor，也可能是嵌套结构的 object 。如果不是基础类型的数据，尝试通过
+            pickle 进行序列化，接收到之后再反序列化。
+
+        example:
+            obj = {
+                'a': [1, 1],
+                'b': [[1, 2], [1, 2]],
+                'c': {
+                    'd': [1, 2]
+                }
+            }
+            ->
+            [
+                {'a': 1, 'b':[1, 2], 'c':{'d': 1}},
+                {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
+            ]
+
+        :param obj: 需要传输的对象，在每个rank上都应该保持相同的结构。
+        :param group:
+        :return:
+        """
+        return
+        return fastnlp_paddle_all_gather(obj, group=group)
