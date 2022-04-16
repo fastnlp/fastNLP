@@ -1,6 +1,5 @@
 import os
 import shutil
-from functools import partial
 from typing import List, Union, Optional, Dict, Tuple, Callable
 
 from .paddle_driver import PaddleDriver
@@ -38,7 +37,6 @@ if _NEED_IMPORT_PADDLE:
     from paddle import DataParallel
     import paddle.distributed.fleet as fleet
     import paddle.distributed as paddledist
-    from paddle.io import BatchSampler
     from paddle.optimizer import Optimizer
     from paddle.fluid.reader import _DatasetKind
     from paddle.fluid.dygraph import parallel_helper
@@ -305,7 +303,7 @@ class PaddleFleetDriver(PaddleDriver):
                 raise RuntimeError(f"There is no `{fn}` method in your model.")
         else:
             if hasattr(model, fn):
-                logger.warning("Notice your model is a `DistributedDataParallel` model. And your model also implements "
+                logger.warning("Notice your model is a `DataParallel` model. And your model also implements "
                                f"the `{fn}` method, which we can not call actually, we will"
                                " call `forward` function instead of `train_step` and you should note that.")
             elif fn not in {"train_step", "evaluate_step"}:
