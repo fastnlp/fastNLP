@@ -45,9 +45,6 @@ FASTNLP_REMOVE_LOCAL_RANK = 'FASTNLP_REMOVE_LOCAL_RANK'
 # todo 注释
 FASTNLP_BACKEND_LAUNCH = "FASTNLP_BACKEND_LAUNCH"
 
-# fastNLP 中初始化deque的默认大小
-FASTNLP_DEQUE_SIZE = 'FASTNLP_DEQUE_SIZE'
-
 # fastNLP中用于关闭 fastNLP 1.barrier 与 2.gather/broadcast 。默认为 '0' 表示不关闭；为 '1' 表示 fastNLP 的 barrier 不执行；
 #  为 '2' 表示 barrier 与 gather/broadcast 都关闭。
 FASTNLP_NO_SYNC = 'FASTNLP_NO_SYNC'

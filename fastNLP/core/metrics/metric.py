@@ -4,7 +4,7 @@ __all__ = [
 
 from abc import abstractmethod
 
-from typing import Union
+from typing import Union, List
 import functools
 from contextlib import contextmanager
 import numpy as np
@@ -180,3 +180,15 @@ class Metric:
         """
         for element in self.elements.values():
             element.to(device)
+
+    def all_gather_object(self, obj, group=None)->List:
+        """
+        给定 obj 将各个 rank 上的 obj 汇总到每个 obj 上。返回一个 list 对象，里面依次为各个 rank 对应的 obj 。
+
+        :param obj: 需要汇总的对象，必须是个 pickable 的对象。
+        :param group:
+        :return: -> List[obj0, obj1, ...] 其中 obj0 是rank 0 上的 obj；obj1 是 rank 1 上的 obj...
+        """
+        if self.aggregate_when_get_metric:
+            return self.backend.all_gather_object(obj, group=group)
+        return [obj]

@@ -7,15 +7,11 @@ __all__ = [
 
 from typing import Dict, List, Union
 import math
-import os
 
 import numpy as np
 
 from fastNLP.core.log import logger
 from fastNLP.core.dataset import DataSet
-from fastNLP.envs.env import FASTNLP_DEQUE_SIZE
-from .utils import NumConsumedSamplesArray
-
 
 
 class ReproducibleSampler:
@@ -36,9 +32,6 @@ class ReproducibleSampler:
 
     def state_dict(self):
         """
-        由于现在的DataLoader都存在预取数据的功能，因此请参考 RandomSampler 中 states 里面 num_consumed_samples_array 的实现
-            正确设置该值。其思想是记录每个 index 对应的 num_consumed_samples ,在 Trainer.save 时会根据 Trainer 中的真实 forward
-            了多少个 sample 从 num_consumed_samples_array 取出对应的 num_consumed_samples 进行存储。
 
         :return:
         """
@@ -53,6 +46,14 @@ class ReproducibleSampler:
 
     def set_epoch(self, epoch):
         pass
+
+    @property
+    def num_repliacs(self):
+        return self._num_replicas
+
+    @num_repliacs.setter
+    def num_repliacs(self, value):
+        self._num_replicas = value
 
 
 class RandomSampler(ReproducibleSampler):
@@ -121,15 +122,11 @@ class RandomSampler(ReproducibleSampler):
         indices = indices[self.num_consumed_samples:]
         indices = indices[self.rank:len(indices):self.num_replicas]
         assert len(indices) == self.num_left_samples
-        self.num_consumed_samples_array = NumConsumedSamplesArray(buffer_size=os.environ.get(FASTNLP_DEQUE_SIZE, 2000),
-                                                                  num_consumed_samples=self.num_consumed_samples)
         for idx, index in enumerate(indices, start=1):
             self.num_consumed_samples += self.num_replicas
-            self.num_consumed_samples_array.push(self.num_consumed_samples)
             yield index
         self.during_iter = False
         self.num_consumed_samples = 0
-        delattr(self, 'num_consumed_samples_array')
 
     def generate_indices(self) -> List[int]:
         """
@@ -150,8 +147,7 @@ class RandomSampler(ReproducibleSampler):
 
     def state_dict(self) -> Dict:
         states = {'seed': self.seed, 'epoch': self.epoch, 'num_consumed_samples': self.num_consumed_samples,
-                  'sampler_type': self.__class__.__name__, 'length': len(self.dataset), 'shuffle': self.shuffle,
-                  'num_consumed_samples_array': getattr(self, 'num_consumed_samples_array', None)}
+                  'sampler_type': self.__class__.__name__, 'length': len(self.dataset), 'shuffle': self.shuffle}
         return states
 
     def load_state_dict(self, states: Dict):
@@ -255,15 +251,11 @@ class SequentialSampler(RandomSampler):
         indices = indices[self.rank:len(indices):self.num_replicas]
         assert len(indices) == self.num_left_samples
 
-        self.num_consumed_samples_array = NumConsumedSamplesArray(buffer_size=os.environ.get(FASTNLP_DEQUE_SIZE, 2000),
-                                                                  num_consumed_samples=self.num_consumed_samples)
         for idx, index in enumerate(indices, start=1):
             self.num_consumed_samples += self.num_replicas
-            self.num_consumed_samples_array.push(self.num_consumed_samples)
             yield index
         self.during_iter = False
         self.num_consumed_samples = 0
-        delattr(self, 'num_consumed_samples_array')
 
     def generate_indices(self) -> List[int]:
         """
@@ -275,8 +267,8 @@ class SequentialSampler(RandomSampler):
 
     def state_dict(self) -> Dict:
         states = {'num_consumed_samples': self.num_consumed_samples, 'sampler_type': self.__class__.__name__,
-                  'length': len(self.dataset),
-                  'num_consumed_samples_array': getattr(self, 'num_consumed_samples_array', None)}
+                  'length': len(self.dataset)
+                  }
         return states
 
     def load_state_dict(self, states: Dict):
@@ -346,13 +338,9 @@ class SortedSampler(SequentialSampler):
         indices = indices[self.rank:len(indices):self.num_replicas]
         assert len(indices) == self.num_left_samples
 
-        self.num_consumed_samples_array = NumConsumedSamplesArray(buffer_size=os.environ.get(FASTNLP_DEQUE_SIZE, 2000),
-                                                                  num_consumed_samples=self.num_consumed_samples)
         for idx, index in enumerate(indices, start=1):
             self.num_consumed_samples += self.num_replicas
-            self.num_consumed_samples_array.push(self.num_consumed_samples)
             yield index
         self.during_iter = False
         self.num_consumed_samples = 0
-        delattr(self, 'num_consumed_samples_array')
 

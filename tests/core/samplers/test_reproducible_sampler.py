@@ -186,9 +186,11 @@ class TestRandomSamplerYh:
     @pytest.mark.parametrize('num_samples', [13, 100, 623, 1000])
     @pytest.mark.parametrize('num_replicas', [1, 2, 3])
     def test_num_consumed_samples_array(self, shuffle, pad, num_samples, num_replicas):
+    # def test_num_consumed_samples_array(self, shuffle=True, pad=True, num_samples=100, num_replicas=2):
         # 测试在 sampler 多生成的时候，可以仍然可以恢复
         dataset = DatasetWithVaryLength(num_of_data=num_samples)
         samplers = []
+        num_consumed_samples_array = list(range(0, len(dataset)+num_replicas, num_replicas))
         for i in range(num_replicas):
             sampler = RandomSampler(dataset, shuffle=shuffle)
             sampler.set_epoch(0)
@@ -205,8 +207,7 @@ class TestRandomSamplerYh:
                 break
         states = samplers[0].state_dict()
         for i in range(len(already_seen_sets)):
-            if states['num_consumed_samples_array'] is not None:
-                states['num_consumed_samples'] = states['num_consumed_samples_array'][i]
+            states['num_consumed_samples'] = num_consumed_samples_array[i]
             sampler = RandomSampler(dataset, shuffle=shuffle)
             already_seen_set = deepcopy(already_seen_sets[i])
             for batch in sampler:
@@ -215,12 +216,11 @@ class TestRandomSamplerYh:
         # 测试保存之后再次保存
         sampler = RandomSampler(dataset, shuffle=shuffle)
         sampler.set_epoch(0)
-        if states['num_consumed_samples_array'] is not None:
-            states['num_consumed_samples'] = states['num_consumed_samples_array'][2]
         if len(already_seen_sets)<3:
             return
         already_seen_set = already_seen_sets[2]
         count = 0
+        num_consumed_samples_array = list(range(0, num_samples))
         for idx in sampler:
             already_seen_set.add(idx)
             count += 1
@@ -228,8 +228,7 @@ class TestRandomSamplerYh:
                 break
 
         states = sampler.state_dict()
-        if states['num_consumed_samples_array'] is not None:
-            states['num_consumed_samples'] = states['num_consumed_samples_array'][count]
+        states['num_consumed_samples'] = num_consumed_samples_array[count]
         sampler = RandomSampler(dataset, shuffle=shuffle)
         sampler.load_state_dict(states)
         sampler.set_epoch(0)
@@ -446,12 +445,12 @@ class TestSortedSampler:
     @pytest.mark.parametrize('pad', [True, False])
     @pytest.mark.parametrize('num_replicas', [2, 3])
     @pytest.mark.parametrize('num_of_data', [2, 3, 4, 100])
-    def test_multi(self, pad, num_replica, num_of_data):
+    def test_multi(self, pad, num_replicas, num_of_data):
         data = DatasetWithVaryLength(num_of_data=num_of_data)
         samplers = []
-        for i in range(num_replica):
+        for i in range(num_replicas):
             sampler = SortedSampler(dataset=data, length=data.data)
-            sampler.set_distributed(num_replica, rank=i, pad=pad)
+            sampler.set_distributed(num_replicas, rank=i, pad=pad)
             samplers.append(sampler)
 
         # 保证顺序是没乱的
@@ -600,12 +599,12 @@ class TestSequentialSampler:
     @pytest.mark.parametrize('pad', [True, False])
     @pytest.mark.parametrize('num_replicas', [2, 3])
     @pytest.mark.parametrize('num_of_data', [2, 3, 4, 100])
-    def test_multi(self, pad, num_replica, num_of_data):
+    def test_multi(self, pad, num_replicas, num_of_data):
         data = DatasetWithVaryLength(num_of_data=num_of_data)
         samplers = []
-        for i in range(num_replica):
+        for i in range(num_replicas):
             sampler = SequentialSampler(dataset=data)
-            sampler.set_distributed(num_replica, rank=i, pad=pad)
+            sampler.set_distributed(num_replicas, rank=i, pad=pad)
             samplers.append(sampler)
 
         # 保证顺序是没乱的

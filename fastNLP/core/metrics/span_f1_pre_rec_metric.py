@@ -264,15 +264,12 @@ class SpanFPreRecMetric(Metric):
         evaluate_result = {}
 
         # 通过 all_gather_object 将各个卡上的结果收集过来，并加和。
-        if self.aggregate_when_get_metric:
-            ls = self.backend.all_gather_object([self._tp, self._fp, self._fn])
-            tps, fps, fns = zip(*ls)
-            _tp, _fp, _fn = Counter(), Counter(), Counter()
-            for c, cs in zip([_tp, _fp, _fn], [tps, fps, fns]):
-                for _c in cs:
-                    c.update(_c)
-        else:
-            _tp, _fp, _fn = self._tp, self._fp, self._tp
+        ls = self.all_gather_object([self._tp, self._fp, self._fn])
+        tps, fps, fns = zip(*ls)
+        _tp, _fp, _fn = Counter(), Counter(), Counter()
+        for c, cs in zip([_tp, _fp, _fn], [tps, fps, fns]):
+            for _c in cs:
+                c.update(_c)
 
         if not self.only_gross or self.f_type == 'macro':
             tags = set(_fn.keys())
