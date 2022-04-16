@@ -1,5 +1,4 @@
 __all__ = [
-    'func_post_proc'
 ]
 
 from typing import Any
@@ -59,34 +58,23 @@ def _is_paddle_metric(metric: Any) -> bool:
         return False
 
 
-def func_post_proc(metric: 'Metric', fn: callable, method_name: str) -> 'Metric':
-    """
-    将fn函数作用包裹在 metric 对象的 {method_name} 方法上，使得 metric.{method_name} 函数的返回结果先经过 fn 函数处理
-        后再返回。注意对 metric 的 {method_name} 函数的修改是 inplace 的。
-
-    :param metric: metric对象
-    :param fn: 作用于 metric 的 accumulate 方法的返回值
-    :param method_name: 一般来说，对于
-    :return: metric
-    """
-    assert hasattr(metric, method_name) and callable(getattr(metric, method_name)), \
-        f"Parameter `metric` must have a {method_name} function."
-    assert callable(fn), "Parameter `fn` must be callable."
-
-    func = getattr(metric, method_name)
-
-    @wraps(func)
-    def wrap_method(*args, **kwargs):
-        res = func(*args, **kwargs)
-        return fn(res)
-
-    wrap_method.__wrapped_by_func_post_proc__ = True
-    setattr(metric, method_name, wrap_method)
-    return metric
-
-
 class AggregateMethodError(BaseException):
     def __init__(self, should_have_aggregate_method, only_warn=False):
         super(AggregateMethodError, self).__init__(self)
         self.should_have_aggregate_method = should_have_aggregate_method
         self.only_warn = only_warn
+
+
+def _compute_f_pre_rec(beta_square, tp, fn, fp):
+    r"""
+
+    :param tp: int, true positive
+    :param fn: int, false negative
+    :param fp: int, false positive
+    :return: (f, pre, rec)
+    """
+    pre = tp / (fp + tp + 1e-13)
+    rec = tp / (fn + tp + 1e-13)
+    f = (1 + beta_square) * pre * rec / (beta_square * pre + rec + 1e-13)
+
+    return f, pre, rec

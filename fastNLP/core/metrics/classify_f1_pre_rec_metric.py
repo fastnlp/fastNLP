@@ -3,40 +3,24 @@ __all__ = [
 ]
 
 from typing import Union, List
-from collections import defaultdict
-from functools import partial
+from collections import Counter
 import warnings
 
 from .metric import Metric
 from .backend import Backend
 from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.core.utils.utils import seq_len_to_mask
-
-
-def _compute_f_pre_rec(beta_square, tp, fn, fp):
-    r"""
-
-    :param tp: int, true positive
-    :param fn: int, false negative
-    :param fp: int, false positive
-    :return: (f, pre, rec)
-    """
-    pre = tp / (fp + tp + 1e-13)
-    rec = tp / (fn + tp + 1e-13)
-    f = (1 + beta_square) * pre * rec / (beta_square * pre + rec + 1e-13)
-
-    return f, pre, rec
+from .utils import _compute_f_pre_rec
 
 
 class ClassifyFPreRecMetric(Metric):
-    def __init__(self, tag_vocab: Vocabulary = None, ignore_labels: List[str] = None, num_class: int = 0,
+    def __init__(self, tag_vocab: Vocabulary = None, ignore_labels: List[str] = None,
                  only_gross: bool = True, f_type='micro', beta=1, backend: Union[str, Backend, None] = 'auto',
                  aggregate_when_get_metric: bool = None) -> None:
         """
 
         :param tag_vocab:
         :param ignore_labels:
-        :param num_class:
         :param only_gross:
         :param f_type:
         :param beta:
@@ -60,32 +44,15 @@ class ClassifyFPreRecMetric(Metric):
 
         self.tag_vocab = tag_vocab
 
-        self._tp = {}
-        self._fp = {}
-        self._fn = {}
-        if tag_vocab:
-            for word, _ in tag_vocab:
-                word = word.lower()
-                if word != 'o':
-                    word = word[2:]
-                if word in self._true_positives:
-                    continue
-                self._tp[word] = self.register_element(name=f'tp_{word}', aggregate_method='sum',
-                                                       backend=backend)
-                self._fn[word] = self.register_element(name=f'fn_{word}', aggregate_method='sum',
-                                                       backend=backend)
-                self._fp[word] = self.register_element(name=f'fp_{word}', aggregate_method='sum',
-                                                       backend=backend)
-        elif num_class > 0:
-            for word in range(num_class):
-                self._tp[word] = self.register_element(name=f'tp_{word}', aggregate_method='sum',
-                                                       backend=backend)
-                self._fn[word] = self.register_element(name=f'fn_{word}', aggregate_method='sum',
-                                                       backend=backend)
-                self._fp[word] = self.register_element(name=f'fp_{word}', aggregate_method='sum',
-                                                       backend=backend)
-        else:
-            raise ValueError()
+        self._tp = Counter()
+        self._fp = Counter()
+        self._fn = Counter()
+
+    def reset(self):
+        # 由于不是 element 了，需要自己手动清零一下
+        self._tp.clear()
+        self._fp.clear()
+        self._fn.clear()
 
     def get_metric(self) -> dict:
         r"""
@@ -94,10 +61,22 @@ class ClassifyFPreRecMetric(Metric):
         :return dict evaluate_result: {"acc": float}
         """
         evaluate_result = {}
+
+        # 通过 all_gather_object 将各个卡上的结果收集过来，并加和。
+        if self.aggregate_when_get_metric:
+            ls = self.backend.all_gather_object([self._tp, self._fp, self._fn])
+            tps, fps, fns = zip(*ls)
+            _tp, _fp, _fn = Counter(), Counter(), Counter()
+            for c, cs in zip([_tp, _fp, _fn], [tps, fps, fns]):
+                for _c in cs:
+                    c.update(_c)
+        else:
+            _tp, _fp, _fn = self._tp, self._fp, self._tp
+
         if not self.only_gross or self.f_type == 'macro':
-            tags = set(self._fn.keys())
-            tags.update(set(self._fp.keys()))
-            tags.update(set(self._tp.keys()))
+            tags = set(_fn.keys())
+            tags.update(set(_fp.keys()))
+            tags.update(set(_tp.keys()))
             f_sum = 0
             pre_sum = 0
             rec_sum = 0
@@ -106,9 +85,9 @@ class ClassifyFPreRecMetric(Metric):
                     tag_name = self.tag_vocab.to_word(tag)
                 else:
                     tag_name = int(tag)
-                tp = self._tp[tag].get_scalar()
-                fn = self._fn[tag].get_scalar()
-                fp = self._fp[tag].get_scalar()
+                tp = _tp[tag]
+                fn = _fn[tag]
+                fp = _fp[tag]
                 if tp == fn == fp == 0:
                     continue
                 f, pre, rec = _compute_f_pre_rec(self.beta_square, tp, fn, fp)
@@ -129,10 +108,7 @@ class ClassifyFPreRecMetric(Metric):
                 evaluate_result['rec'] = rec_sum / len(tags)
 
         if self.f_type == 'micro':
-            f, pre, rec = _compute_f_pre_rec(self.beta_square,
-                                             sum(val.get_scalar() for val in self._tp.values()),
-                                             sum(val.get_scalar() for val in self._fn.values()),
-                                             sum(val.get_scalar() for val in self._fp.values()))
+            f, pre, rec = _compute_f_pre_rec(self.beta_square, sum(_tp.values()), sum(_fn.values()), sum(_fp.values()))
             evaluate_result['f'] = f
             evaluate_result['pre'] = pre
             evaluate_result['rec'] = rec

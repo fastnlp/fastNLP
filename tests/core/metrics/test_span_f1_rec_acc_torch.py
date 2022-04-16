@@ -102,7 +102,8 @@ class TestSpanFPreRecMetric:
         # bio tag
         fastnlp_bio_vocab = Vocabulary(unknown=None, padding=None)
         fastnlp_bio_vocab.word_count = Counter(_generate_tags('BIO', number_labels))
-        fastnlp_bio_metric = SpanFPreRecMetric(tag_vocab=fastnlp_bio_vocab, only_gross=False)
+        fastnlp_bio_metric = SpanFPreRecMetric(tag_vocab=fastnlp_bio_vocab, only_gross=False,
+                                               aggregate_when_get_metric=True)
         bio_sequence = torch.FloatTensor([[[-0.4424, -0.4579, -0.7376,  1.8129,  0.1316,  1.6566, -1.2169,
                                             -0.3782,  0.8240],
                                            [-1.2348, -0.1876, -0.1462, -0.4834, -0.6692, -0.9735,  1.1563,
