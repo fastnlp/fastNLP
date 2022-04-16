@@ -513,11 +513,11 @@ class TestSetDistReproDataloder:
             new_loader.batch_sampler.load_state_dict(sampler_states)
         else:
             batch_size = replaced_loader.batch_sampler.batch_size
-            num_consumed_batches = num_consumed_batches * batch_size
+            num_consumed_samples = num_consumed_batches * batch_size
             if num_consumed_samples_array is not None:
-                sampler_states["num_consumed_samples"] = num_consumed_samples_array[num_consumed_batches]
+                sampler_states["num_consumed_samples"] = num_consumed_samples_array[num_consumed_samples]
             else:
-                sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size
+                sampler_states["num_consumed_samples"] = num_consumed_samples
             # 重新构造 dataloader
             batch_sampler = BatchSampler(replaced_loader.dataset, shuffle=shuffle, batch_size=batch_size)
             batch_sampler.sampler = RandomSampler(replaced_loader.dataset, shuffle=shuffle)
