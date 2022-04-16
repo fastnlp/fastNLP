@@ -10,7 +10,7 @@ import shutil
 
 from fastNLP.envs.env import FASTNLP_LAUNCH_TIME, FASTNLP_GLOBAL_RANK, FASTNLP_BACKEND_LAUNCH
 from fastNLP.core.log import logger
-from fastNLP.envs import all_rank_call
+from fastNLP.envs import all_rank_call_context
 
 
 class LoadBestModelCallback(HasMonitorCallback):
@@ -76,9 +76,6 @@ class LoadBestModelCallback(HasMonitorCallback):
 
         super().on_after_trainer_initialized(trainer, driver)
 
-    def on_sanity_check_end(self, trainer, sanity_check_res):
-        self.get_monitor_value(sanity_check_res)
-
     def on_validate_end(self, trainer, results):
         if self.is_better_results(results, keep_if_better=True):
             if self.real_save_folder:
@@ -86,7 +83,7 @@ class LoadBestModelCallback(HasMonitorCallback):
                                    model_save_fn=self.model_save_fn)
             else:
                 self.buffer.seek(0)
-                with all_rank_call():
+                with all_rank_call_context():
                     trainer.save_model(folder=self.buffer, only_state_dict=self.only_state_dict)
 
     def on_train_end(self, trainer):

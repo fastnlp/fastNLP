@@ -138,10 +138,6 @@ class CheckpointCallback(HasMonitorCallback):
                      f'exception_{exception.__class__.__name__}'
             self.save(trainer=trainer, folder_name=folder_name)
 
-    def on_sanity_check_end(self, trainer, sanity_check_res):
-        # 主要核对一下 monitor 是否存在。
-        self.get_monitor_value(results=sanity_check_res)
-
     def on_save_checkpoint(self, trainer) -> Dict:
         """
         保存 timestamp_path 使得之后可以继续训练并保存到该文件夹。

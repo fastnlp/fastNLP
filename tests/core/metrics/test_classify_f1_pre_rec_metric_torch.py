@@ -67,7 +67,7 @@ class TestClassfiyFPreRecMetric:
         target = torch.tensor([0, 2, 4, 1, 4, 0, 1, 3, 3, 3, 1, 3, 4, 4, 3, 4, 0, 2, 4, 4, 3, 4, 4, 3,
                                0, 3, 0, 0, 0, 1, 3, 1])
 
-        metric = ClassifyFPreRecMetric(f_type='macro', num_class=5)
+        metric = ClassifyFPreRecMetric(f_type='macro')
         metric.update(pred, target)
         result_dict = metric.get_metric()
         f1_score = 0.1882051282051282
@@ -78,7 +78,7 @@ class TestClassfiyFPreRecMetric:
         for keys in ['f', 'pre', 'rec']:
             np.allclose(result_dict[keys], ground_truth[keys], atol=0.000001)
 
-        metric = ClassifyFPreRecMetric(f_type='micro', num_class=5)
+        metric = ClassifyFPreRecMetric(f_type='micro')
         metric.update(pred, target)
         result_dict = metric.get_metric()
         f1_score = 0.21875
@@ -89,7 +89,7 @@ class TestClassfiyFPreRecMetric:
         for keys in ['f', 'pre', 'rec']:
             np.allclose(result_dict[keys], ground_truth[keys], atol=0.000001)
 
-        metric = ClassifyFPreRecMetric(only_gross=False, f_type='macro', num_class=5)
+        metric = ClassifyFPreRecMetric(only_gross=False, f_type='macro')
         metric.update(pred, target)
         result_dict = metric.get_metric()
         ground_truth = {
@@ -157,7 +157,6 @@ class TestClassfiyFPreRecMetric:
         })
         metric_kwargs = {
             'f_type': f_type,
-            'num_class': 5,
             'only_gross': False,
             'aggregate_when_get_metric': True
         }

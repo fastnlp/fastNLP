@@ -199,9 +199,10 @@ class Driver(ABC):
         """
         raise NotImplementedError("Each specific driver should implemented its own `zero_grad` function.")
 
-    def get_no_sync_context(self):
+    def get_model_no_sync_context(self):
         r"""
-        返回一个用于关闭多进程之间互相同步操作的 context 上下文对象；只有多卡的 driver 需要单独实现该函数，单卡的 driver 不需要；
+        返回一个用于关闭多进程之间 model 中的自动互相同步操作的 context 上下文对象；只有多卡的 driver 需要单独实现该函数，
+            单卡的 driver 不需要；
 
         :return: 返回一个类似于 DistributedDataParallel(model).no_sync 的 context 上下文对象；
         """
@@ -357,6 +358,8 @@ class Driver(ABC):
         r"""
         用于在多进程工作时同步各进程的工作进度，运行快的进程运行到这里会等待运行慢的进程，只有所有进程都运行到此函数时，所有的进程才会继续运行；
         仅在多分布式训练场景中有使用。
+
+        注意，该函数的行为会受到 FASTNLP_NO_SYNC 的影响。仅当 FASTNLP_NO_SYNC 在 os.environ 中不存在，或小于 1 时才真的执行 barrier 。
         """
 
     def is_distributed(self) -> bool:

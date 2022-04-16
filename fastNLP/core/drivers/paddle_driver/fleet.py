@@ -403,7 +403,7 @@ class PaddleFleetDriver(PaddleDriver):
     def is_global_zero(self):
         return self.global_rank == 0
 
-    def get_no_sync_context(self):
+    def get_model_no_sync_context(self):
         return self.model.no_sync
 
     def unwrap_model(self):

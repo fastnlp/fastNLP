@@ -1,6 +1,6 @@
 import os
 
-from fastNLP.envs.distributed import rank_zero_call, all_rank_call
+from fastNLP.envs.distributed import rank_zero_call, all_rank_call_context
 from tests.helpers.utils import re_run_current_cmd_for_torch, Capturing, magic_argv_env_context
 
 
@@ -70,7 +70,7 @@ class TestTorch:
         re_run_current_cmd_for_torch(1, output_from_new_proc='all')
         # torch.distributed.init_process_group(backend='nccl')
         # torch.distributed.barrier()
-        with all_rank_call():
+        with all_rank_call_context():
             with Capturing(no_del=True) as output:
                 write_something()
         output = output[0]
@@ -80,7 +80,7 @@ class TestTorch:
         else:
             assert '11111' in output
 
-        with all_rank_call():
+        with all_rank_call_context():
             with Capturing(no_del=True) as output:
                 rank_zero_call(write_other_thing)()
 

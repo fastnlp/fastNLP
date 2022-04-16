@@ -35,7 +35,6 @@ def choose_driver(model, driver: Union[str, Driver], device: Optional[Union[int,
                          "'jittor', 'paddle', 'fleet'].")
 
 
-
 def distributed_open_proc(output_from_new_proc:str, command:List[str], env_copy:dict, rank:int=None):
     """
     使用 command 通过 subprocess.Popen 开启新的进程。
@@ -60,30 +59,3 @@ def distributed_open_proc(output_from_new_proc:str, command:List[str], env_copy:
         err_f = open(output_from_new_proc + f'/{rank}_err.log', 'w')
         proc = subprocess.Popen(command, env=env_copy, stdout=std_f, stderr=err_f)
     return proc
-
-
-def load_model(filepath: Union[str, Path], backend: str = "torch", **kwargs):
-    r"""
-    对应 `load_model`，用来帮助用户加载之前通过 `load_model` 所保存的模型；
-
-    :param filepath: 加载的文件的位置；
-    :param backend: 使用哪种 backend 来加载该 filepath， 目前支持 ["torch", "paddle", "jittor"] 。
-    """
-
-    if filepath is None:
-        raise ValueError("Parameter `path` can not be None.")
-
-    assert backend is not None, "Parameter `backend` can not be None."
-
-    if backend == "torch":
-        import torch
-        _res = torch.load(filepath)
-        return _res
-    elif backend == "jittor":
-        raise NotImplementedError
-    elif backend == "paddle":
-        raise NotImplementedError
-    else:
-        raise ValueError("Parameter `backend` could only be one of these values: ['torch', 'jittor', 'paddle']")
-
-

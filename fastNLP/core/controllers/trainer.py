@@ -122,7 +122,8 @@ class Trainer(TrainerEventTrigger):
              注意如果 model_device 为 None，那么 data_device 不会起作用；
             torch_ddp_kwargs: 用于配置 pytorch 的 DistributedDataParallel 初始化时的参数；
             set_grad_to_none: 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
-            use_dist_sampler: 表示在使用 TorchDDPDriver 的时候是否将 dataloader 的 sampler 替换为分布式的 sampler；默认为 True；
+            use_dist_sampler: 表示是否使用分布式的 sampler 。在多卡时，分布式 sampler 将自动决定每张卡上读取的 sample ，使得一个epoch
+                内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
             use_eval_dist_sampler: 表示在 Evaluator 中在使用 TorchDDPDriver 的时候是否将 dataloader 的 sampler 替换为分布式的 sampler；默认为 True；
             output_from_new_proc: 应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
              ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
@@ -211,18 +212,24 @@ class Trainer(TrainerEventTrigger):
             total_batches=None
         )
 
-        use_dist_sampler = kwargs.get("use_dist_sampler", True)
-        if use_dist_sampler:
-            _dist_sampler = "dist"
-        else:
-            _dist_sampler = None
-
         """ 设置内部的 Evaluator """
         if metrics is None and evaluate_dataloaders is not None:
             raise ValueError("You have set 'evaluate_dataloader' but forget to set 'metrics'.")
 
         if metrics is not None and evaluate_dataloaders is None:
             raise ValueError("You have set 'metrics' but forget to set 'evaluate_dataloader'.")
+
+        self.metrics = metrics
+        self.validate_every = evaluate_every
+
+        self.driver.setup()
+        self.driver.barrier()
+
+        use_dist_sampler = kwargs.get("use_dist_sampler", self.driver.is_distributed())
+        if use_dist_sampler:
+            _dist_sampler = "dist"
+        else:
+            _dist_sampler = None
 
         self.evaluator = None
         self.monitor = monitor
@@ -241,15 +248,9 @@ class Trainer(TrainerEventTrigger):
                 output_mapping=output_mapping,
                 fp16=fp16,
                 verbose=0,
-                use_dist_sampler=kwargs.get("use_eval_dist_sampler", use_dist_sampler),
+                use_dist_sampler=kwargs.get("use_eval_dist_sampler", None),
                 progress_bar=kwargs.get('progress_bar', 'auto')
             )
-
-        self.metrics = metrics
-        self.validate_every = evaluate_every
-
-        self.driver.setup()
-        self.driver.barrier()
 
         if train_fn is not None and not isinstance(train_fn, str):
             raise TypeError("Parameter `train_fn` can only be `str` type when it is not None.")
@@ -753,7 +754,7 @@ class Trainer(TrainerEventTrigger):
         """
 
         if (self.global_forward_batches + 1) % self.accumulation_steps != 0:
-            _no_sync_context = self.driver.get_no_sync_context()
+            _no_sync_context = self.driver.get_model_no_sync_context()
         else:
             _no_sync_context = nullcontext
 

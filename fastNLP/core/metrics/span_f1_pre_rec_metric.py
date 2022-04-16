@@ -4,12 +4,12 @@ __all__ = [
 
 from typing import Union, List, Optional
 import warnings
-from collections import defaultdict
-from functools import partial
+from collections import Counter
 
 from fastNLP.core.metrics.backend import Backend
 from fastNLP.core.metrics.metric import Metric
 from fastNLP.core.vocabulary import Vocabulary
+from .utils import _compute_f_pre_rec
 
 
 def _check_tag_vocab_and_encoding_type(tag_vocab: Union[Vocabulary, dict], encoding_type: str):
@@ -199,26 +199,11 @@ def _bio_tag_to_spans(tags, ignore_labels=None):
     return [(span[0], (span[1][0], span[1][1] + 1)) for span in spans if span[0] not in ignore_labels]
 
 
-def _compute_f_pre_rec(beta_square, tp, fn, fp):
-    r"""
-
-    :param tp: int, true positive
-    :param fn: int, false negative
-    :param fp: int, false positive
-    :return: (f, pre, rec)
-    """
-    pre = tp / (fp + tp + 1e-13)
-    rec = tp / (fn + tp + 1e-13)
-    f = (1 + beta_square) * pre * rec / (beta_square * pre + rec + 1e-13)
-
-    return f, pre, rec
-
-
 class SpanFPreRecMetric(Metric):
 
     def __init__(self, tag_vocab: Vocabulary, encoding_type: str = None, ignore_labels: List[str] = None,
                  only_gross: bool = True, f_type='micro',
-                 beta=1, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = True,) -> None:
+                 beta=1, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = None) -> None:
         r"""
 
         :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` 。支持的标签为"B"(没有label)；或"B-xxx"(xxx为某种label，比如POS中的NN)，
@@ -234,7 +219,7 @@ class SpanFPreRecMetric(Metric):
         :param str backend: 目前支持四种类型的backend, ['auto', 'torch', 'paddle', 'jittor']。其中 auto 表示根据实际调用 Metric.update()
             函数时传入的参数决定具体的 backend ，一般情况下直接使用 'auto' 即可。
         :param bool aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到metric，
-            当 backend 不支持分布式时，该参数无意义。
+            当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 Evaluator 中根据 sampler 是否使用分布式进行自动设置。
         """
         super(SpanFPreRecMetric, self).__init__(backend=backend, aggregate_when_get_metric=aggregate_when_get_metric)
         if f_type not in ('micro', 'macro'):
@@ -266,32 +251,40 @@ class SpanFPreRecMetric(Metric):
         self.only_gross = only_gross
         self.tag_vocab = tag_vocab
 
-        self._true_positives = {}
-        self._false_positives = {}
-        self._false_negatives = {}
-        for word, _ in tag_vocab:
-            word = word.lower()
-            if word != 'o':
-                word = word[2:]
-            if word in self._true_positives:
-                continue
-            self._true_positives[word] = self.register_element(name=f'tp_{word}', aggregate_method='sum', backend=backend)
-            self._false_negatives[word] = self.register_element(name=f'fn_{word}', aggregate_method='sum', backend=backend)
-            self._false_positives[word] = self.register_element(name=f'fp_{word}', aggregate_method='sum', backend=backend)
+        self._tp = Counter()
+        self._fp = Counter()
+        self._fn = Counter()
+
+    def reset(self):
+        self._tp.clear()
+        self._fp.clear()
+        self._fn.clear()
 
     def get_metric(self) -> dict:
         evaluate_result = {}
+
+        # 通过 all_gather_object 将各个卡上的结果收集过来，并加和。
+        if self.aggregate_when_get_metric:
+            ls = self.backend.all_gather_object([self._tp, self._fp, self._fn])
+            tps, fps, fns = zip(*ls)
+            _tp, _fp, _fn = Counter(), Counter(), Counter()
+            for c, cs in zip([_tp, _fp, _fn], [tps, fps, fns]):
+                for _c in cs:
+                    c.update(_c)
+        else:
+            _tp, _fp, _fn = self._tp, self._fp, self._tp
+
         if not self.only_gross or self.f_type == 'macro':
-            tags = set(self._false_negatives.keys())
-            tags.update(self._false_positives.keys())
-            tags.update(self._true_positives.keys())
+            tags = set(_fn.keys())
+            tags.update(_fp.keys())
+            tags.update(_tp.keys())
             f_sum = 0
             pre_sum = 0
             rec_sum = 0
             for tag in tags:
-                tp = self._true_positives[tag].get_scalar()
-                fn = self._false_negatives[tag].get_scalar()
-                fp = self._false_positives[tag].get_scalar()
+                tp = _tp[tag]
+                fn = _fn[tag]
+                fp = _fp[tag]
                 if tp == fn == fp == 0:
                     continue
 
@@ -313,17 +306,7 @@ class SpanFPreRecMetric(Metric):
                 evaluate_result['rec'] = rec_sum / len(tags)
 
         if self.f_type == 'micro':
-            tp, fn, fp = [], [], []
-            for val in self._true_positives.values():
-                tp.append(val.get_scalar())
-            for val in self._false_negatives.values():
-                fn.append(val.get_scalar())
-            for val in self._false_positives.values():
-                fp.append(val.get_scalar())
-            f, pre, rec = _compute_f_pre_rec(self.beta_square,
-                                             sum(tp),
-                                             sum(fn),
-                                             sum(fp))
+            f, pre, rec = _compute_f_pre_rec(self.beta_square, sum(_tp.values()), sum(_fn.values()), sum(_fp.values()))
             evaluate_result['f'] = f
             evaluate_result['pre'] = pre
             evaluate_result['rec'] = rec
@@ -372,9 +355,9 @@ class SpanFPreRecMetric(Metric):
 
             for span in pred_spans:
                 if span in gold_spans:
-                    self._true_positives[span[0]] += 1
+                    self._tp[span[0]] += 1
                     gold_spans.remove(span)
                 else:
-                    self._false_positives[span[0]] += 1
+                    self._fp[span[0]] += 1
             for span in gold_spans:
-                self._false_negatives[span[0]] += 1
+                self._fn[span[0]] += 1

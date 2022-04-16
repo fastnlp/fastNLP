@@ -14,13 +14,13 @@ from fastNLP.core.metrics.element import Element
 
 
 class Metric:
-    def __init__(self, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = True):
+    def __init__(self, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = None):
         """
 
         :param str backend: 目前支持四种类型的backend, [torch, paddle, jittor, auto]。其中 auto 表示根据实际调用 Metric.update()
             函数时传入的参数决定具体的 backend ，大部分情况下直接使用 auto 即可。
         :param bool aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到metric，
-            当 backend 不支持分布式时，该参数无意义。
+            当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 Evaluator 中根据 sampler 是否使用分布式进行自动设置。
         """
         self.backend = AutoBackend(backend)
         self._updated = False
@@ -43,7 +43,7 @@ class Metric:
 
         :param name: 当前 element 的名字，注册后，在 Metric 中可以通过 self.{name} 访问该变量。
         :param value: 初始化的值。在调用 Metric.reset() 方法时也将自动设置为该值
-        :param aggregate_method: 如何聚合多卡上的结果，如果为单卡执行，该值无意义。
+        :param aggregate_method: 如何聚合多卡上的结果，如果为单卡执行，该值无意义。如果设置为 None 则表示该 element 不进行聚合。
         :param backend: 使用的 backend 。Element 的类型会根据 backend 进行实际的初始化。例如 backend 为 torch 则该对象为
             Torch.tensor ； 如果backend 为 paddle 则该对象为 paddle.tensor ；如果 backend 为 jittor , 则该对象为 jittor.Var 。
             一般情况下直接默认为 auto 就行了，fastNLP 会根据实际调用 Metric.update() 函数时传入的参数进行合理的初始化，例如当传入

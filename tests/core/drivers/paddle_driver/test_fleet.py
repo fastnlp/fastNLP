@@ -85,7 +85,7 @@ class TestFleetDriverFunction:
         """
         测试 get_no_sync_context 函数
         """
-        res = self.driver.get_no_sync_context()
+        res = self.driver.get_model_no_sync_context()
         dist.barrier()
 
     @magic_argv_env_context
