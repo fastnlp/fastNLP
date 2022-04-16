@@ -43,6 +43,8 @@ class NumConsumedSamplesArray:
             array[9]  # 输出为9，表示这个位置真实的 num_consumed_samples 是多少。
             array[6]  # 报错，因为只保留了3个最近的数据，6超过了最大buffer的记录了，即 [7, 8, 9]
 
+        暂时由于 sampler 的 batch 都是规整的，先保留
+
         :param buffer_size: 报错多少个历史。
         :param num_consumed_samples: 第一个 num_consumed_samples 是多少。
         """

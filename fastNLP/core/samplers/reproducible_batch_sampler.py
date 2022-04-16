@@ -13,9 +13,8 @@ import numpy as np
 
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.log import logger
-from .utils import create_array, NumConsumedSamplesArray
+from .utils import create_array
 from abc import abstractmethod
-from fastNLP.envs.env import FASTNLP_DEQUE_SIZE
 
 
 class ReproducibleBatchSampler:
@@ -37,9 +36,6 @@ class ReproducibleBatchSampler:
     @abstractmethod
     def state_dict(self):
         """
-        由于现在的DataLoader都存在预取数据的功能，因此请参考 RandomBatchSampler 中 states 里面 num_consumed_samples_array 的实现
-            正确设置该值。其思想是记录每个 index 对应的 num_consumed_samples ,在 Trainer.save 时会根据 Trainer 中的真实 forward
-            了多少个 sample 从 num_consumed_samples_array 取出对应的 num_consumed_samples 进行存储。
 
         :return:
         """
@@ -56,6 +52,14 @@ class ReproducibleBatchSampler:
     @property
     def batch_idx_in_epoch(self):
         raise NotImplementedError("Each specific batch_sampler should implement its own `batch_idx_in_epoch` property.")
+
+    @property
+    def num_replicas(self):
+        return self._num_replicas
+
+    @num_replicas.setter
+    def num_replicas(self, value):
+        self._num_replicas = value
 
 
 class RandomBatchSampler(ReproducibleBatchSampler):
@@ -105,24 +109,21 @@ class RandomBatchSampler(ReproducibleBatchSampler):
         else:
             index_list = self.index_list
 
-        # 记住每个 batch 对应的 consumed_samples, 需要这个原因是由于现在的 dataloader 都存在预取数据的设计，需要再结合Trainer中
+        # 暂时弃用。记住每个 batch 对应的 consumed_samples, 需要这个原因是由于现在的 dataloader 都存在预取数据的设计，需要再结合Trainer中
         #  batch_idx_in_epoch 才能最终确定实际消耗的数据。这个变量需要记录每次yield出去时的真实 num_consumed_samples 的数值。
-        self.num_consumed_samples_array = NumConsumedSamplesArray(buffer_size=os.environ.get(FASTNLP_DEQUE_SIZE, 30),
-                                                                  num_consumed_samples=self.num_consumed_samples)
+        # self.num_consumed_samples_array = NumConsumedSamplesArray(buffer_size=os.environ.get(FASTNLP_DEQUE_SIZE, 30),
+        #                                                          num_consumed_samples=self.num_consumed_samples)
         for idx in index_list:
             batch.append(idx)
             if len(batch) == self.batch_size:
                 self.num_consumed_samples += self.batch_size  # [16, 32, 48, 64,..., ]
-                self.num_consumed_samples_array.push(self.num_consumed_samples)
                 yield batch
                 batch = []
         if len(batch) > 0 and not self.drop_last:
             self.num_consumed_samples += len(batch)
-            self.num_consumed_samples_array.push(self.num_consumed_samples)
             yield batch
         # 需要重置防止边界条件问题
         self.num_consumed_samples = 0
-        delattr(self, 'num_consumed_samples_array')
 
     def __len__(self) -> int:
         if self.drop_last:
@@ -136,7 +137,6 @@ class RandomBatchSampler(ReproducibleBatchSampler):
             "num_consumed_samples": self.num_consumed_samples,
             'sampler_type': self.__class__.__name__
         }
-        states['num_consumed_samples_array'] = getattr(self, 'num_consumed_samples_array', None)
         return states
 
     def load_state_dict(self, states: Dict):
@@ -327,15 +327,14 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
         if self.drop_last and len(batches) >= 1 and len(batches[-1]) < self.batch_size:
             batches = batches[:-1]
 
-        self.num_consumed_samples_array = NumConsumedSamplesArray(buffer_size=os.environ.get(FASTNLP_DEQUE_SIZE, 30),
-                                                                  num_consumed_samples=self.num_consumed_samples)
+        # 暂时弃用
+        # self.num_consumed_samples_array = NumConsumedSamplesArray(buffer_size=os.environ.get(FASTNLP_DEQUE_SIZE, 30),
+        #                                                          num_consumed_samples=self.num_consumed_samples)
         for batch in batches:
             self.num_consumed_samples += self.num_replicas * len(batch)
-            self.num_consumed_samples_array.push(self.num_consumed_samples)
             yield list(map(int, batch))
         self.during_iter = False
         self.num_consumed_samples = 0
-        delattr(self, 'num_consumed_samples_array')
         self.old_batch_size = self.batch_size
         self.old_num_batch_per_bucket = self.num_batch_per_bucket
         self.old_num_replicas = self.num_replicas
@@ -390,8 +389,8 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
         states = {'seed': self.seed, 'epoch': self.epoch, 'num_consumed_samples': self.num_consumed_samples,
                   'sampler_type': self.__class__.__name__, 'length': len(self.dataset), 'shuffle': self.shuffle,
                   'batch_size': self.batch_size, 'num_batch_per_bucket': self.num_batch_per_bucket,
-                  'num_replicas': self.num_replicas,
-                  'num_consumed_samples_array': getattr(self, 'num_consumed_samples_array', None)}
+                  'num_replicas': self.num_replicas
+                  }
 
         return states
 

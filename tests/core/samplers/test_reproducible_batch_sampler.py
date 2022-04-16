@@ -445,8 +445,7 @@ class TestBucketedBatchSampler:
     @pytest.mark.parametrize('num_replicas', [1, 2, 3])
     def test_multi_save_load(self, shuffle, drop_last, pad, num_samples, num_replicas):
         """
-        测试是否能够正确地恢复使用过的（forward）数据，由于 DataLoader 存在预取，所以 Sampler 自身的 num_consumed_samples 可能
-            偏多
+        测试是否能够正确地恢复使用过的（forward）数据
 
         :return:
         """
@@ -454,6 +453,7 @@ class TestBucketedBatchSampler:
         num_batch_per_bucket = 10
         dataset = DatasetWithVaryLength(num_of_data=num_samples)
         samplers = []
+        num_consumed_samples_array = list(range(0, num_samples+num_replicas, num_replicas))
         for i in range(num_replicas):
             sampler = BucketedBatchSampler(dataset, length=dataset.data, batch_size=batch_size,
                                            num_batch_per_bucket=num_batch_per_bucket, shuffle=shuffle, drop_last=drop_last)
@@ -472,8 +472,7 @@ class TestBucketedBatchSampler:
                 break
         states = samplers[0].state_dict()
         for i in range(len(already_seen_sets)):
-            if states['num_consumed_samples_array'] is not None:
-                states['num_consumed_samples'] = states['num_consumed_samples_array'][i]
+            states['num_consumed_samples'] = num_consumed_samples_array[i]
             sampler = BucketedBatchSampler(dataset, length=dataset.data, batch_size=batch_size+1,
                                            num_batch_per_bucket=num_batch_per_bucket, shuffle=shuffle,
                                            drop_last=drop_last)
@@ -489,8 +488,7 @@ class TestBucketedBatchSampler:
                                        num_batch_per_bucket=num_batch_per_bucket, shuffle=shuffle,
                                        drop_last=drop_last)
         sampler.set_epoch(0)
-        if states['num_consumed_samples_array'] is not None:
-            states['num_consumed_samples'] = states['num_consumed_samples_array'][2]
+        states['num_consumed_samples'] = num_consumed_samples_array[2]
         if len(already_seen_sets)<3:
             return
         already_seen_set = already_seen_sets[2]
@@ -502,8 +500,8 @@ class TestBucketedBatchSampler:
                 break
 
         states = sampler.state_dict()
-        if states['num_consumed_samples_array'] is not None:
-            states['num_consumed_samples'] = states['num_consumed_samples_array'][count]
+        num_consumed_samples_array = list(range(len(dataset)))
+        states['num_consumed_samples'] = num_consumed_samples_array[count]
         sampler = BucketedBatchSampler(dataset, length=dataset.data, batch_size=batch_size//2,
                                        num_batch_per_bucket=num_batch_per_bucket, shuffle=shuffle,
                                        drop_last=drop_last)
