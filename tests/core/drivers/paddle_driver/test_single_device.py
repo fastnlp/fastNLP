@@ -348,7 +348,7 @@ class TestSingleDeviceFunction:
 #
 ############################################################################
 
-class TestSetDistReproDataloder:
+class TestSetDistReproDataloader:
     """
     专门测试 set_dist_repro_dataloader 函数的类
     """
@@ -357,7 +357,7 @@ class TestSetDistReproDataloder:
         model = PaddleNormalModel_Classification_1(10, 32)
         self.driver = PaddleSingleDriver(model, device="cpu")
     
-    def test_set_dist_repro_dataloader_with_reproducible_false(self):
+    def test_with_reproducible_false(self):
         """
         测试 set_dist_repro_dataloader 参数 `reproducible` 为 False 时的表现
         当dist为字符串时，此时应该返回原来的 dataloader
@@ -368,7 +368,7 @@ class TestSetDistReproDataloder:
         assert replaced_loader is dataloader
 
     @pytest.mark.parametrize("shuffle", [True, False])
-    def test_set_dist_repro_dataloader_with_reproducible_true(self, shuffle):
+    def test_with_reproducible_true(self, shuffle):
         """
         测试 set_dist_repro_dataloader 参数 `reproducible` 为 True 时的表现
         当dist为字符串时，此时应该返回新的 dataloader，且如果原 sampler 为 paddle.io.RandomSampler（shuffle=True），
@@ -393,7 +393,7 @@ class TestSetDistReproDataloder:
         self.check_set_dist_repro_dataloader(dataloader, replaced_loader, shuffle)
 
     @pytest.mark.parametrize("shuffle", ([True, False]))
-    def test_set_dist_repro_dataloader_with_dist_batch_sampler(self, shuffle):
+    def test_with_dist_batch_sampler(self, shuffle):
         """
         测试 set_dist_repro_dataloader 参数 dist 不是字符串时的表现，且 dist 是 ReproducibleBatchSampler
         应该返回新的 dataloader，并将 batch_sampler 替换为 dist 对应的 Sampler
@@ -409,7 +409,7 @@ class TestSetDistReproDataloder:
         self.check_set_dist_repro_dataloader(dataloader, replaced_loader, shuffle)
 
     @pytest.mark.parametrize("shuffle", ([True, False]))
-    def test_set_dist_repro_dataloader_with_dist_sampler(self, shuffle):
+    def test_with_dist_sampler(self, shuffle):
         """
         测试 set_dist_repro_dataloader 参数 dist 不是字符串时的表现
         应该返回新的 dataloader，并将 batch_sampler.sampler 替换为 dist 对应的 Sampler
@@ -428,7 +428,7 @@ class TestSetDistReproDataloder:
         self.check_set_dist_repro_dataloader(dataloader, replaced_loader, shuffle)
 
     @pytest.mark.parametrize("shuffle", ([True, False]))
-    def test_set_dist_repro_dataloader_with_dataloader_reproducible_batch_sampler(self, shuffle):
+    def test_with_dataloader_reproducible_batch_sampler(self, shuffle):
         """
         测试 set_dist_repro_dataloader 参数 dataloader 已经支持断点重训时的表现
         应该返回新的 dataloader，且其余各项设置和原来相同
@@ -452,7 +452,7 @@ class TestSetDistReproDataloder:
         self.check_set_dist_repro_dataloader(dataloader, replaced_loader, shuffle)
 
     @pytest.mark.parametrize("shuffle", ([True, False]))
-    def test_set_dist_repro_dataloader_with_dataloader_reproducible_sampler(self, shuffle):
+    def test_with_dataloader_reproducible_sampler(self, shuffle):
         """
         测试 set_dist_repro_dataloader 参数 dataloader 已经支持断点重训时的表现
         应该返回新的 dataloader，且其余各项设置和原来相同
@@ -497,10 +497,7 @@ class TestSetDistReproDataloder:
         left_idxes = set()
         if isinstance(replaced_loader.batch_sampler, RandomBatchSampler):
             batch_size = replaced_loader.batch_sampler.batch_size
-            if num_consumed_samples_array is not None:
-                sampler_states["num_consumed_samples"] = num_consumed_samples_array[num_consumed_batches]
-            else:
-                sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size
+            sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size
             # 重新改造 dataloader
             new_loader = DataLoader(
                 dataset=replaced_loader.dataset,
@@ -514,10 +511,7 @@ class TestSetDistReproDataloder:
         else:
             batch_size = replaced_loader.batch_sampler.batch_size
             num_consumed_samples = num_consumed_batches * batch_size
-            if num_consumed_samples_array is not None:
-                sampler_states["num_consumed_samples"] = num_consumed_samples_array[num_consumed_samples]
-            else:
-                sampler_states["num_consumed_samples"] = num_consumed_samples
+            sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size
             # 重新构造 dataloader
             batch_sampler = BatchSampler(replaced_loader.dataset, shuffle=shuffle, batch_size=batch_size)
             batch_sampler.sampler = RandomSampler(replaced_loader.dataset, shuffle=shuffle)
