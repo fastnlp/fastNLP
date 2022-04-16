@@ -29,7 +29,7 @@ from fastNLP.core.samplers import (
     re_instantiate_sampler,
     conversion_between_reproducible_and_unrepeated_sampler,
 )
-from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_SEED
+from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_SEED, FASTNLP_NO_SYNC
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -234,7 +234,8 @@ class PaddleFleetDriver(PaddleDriver):
         self.global_rank = paddledist.get_rank()
 
     def barrier(self):
-        paddledist.barrier()
+        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) < 1:  # 当 FASTNLP_NO_SYNC 小于 1 时实际执行
+            paddledist.barrier()
 
     def configure_fleet(self):
         if not self._has_fleetwrapped and not isinstance(self.model, DataParallel):
@@ -451,6 +452,8 @@ class PaddleFleetDriver(PaddleDriver):
             接收到的参数；如果是 source 端则返回发射的内容；既不是发送端、又不是接收端，则返回 None 。
         """
         return
+        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) == 2:  # 如果 FASTNLP_NO_SYNC == 2 直接返回。
+            return
         return fastnlp_paddle_broadcast_object(obj, src, device=self.data_device, group=group)
 
     def all_gather(self, obj, group) -> List:
@@ -477,4 +480,6 @@ class PaddleFleetDriver(PaddleDriver):
         :return:
         """
         return
+        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) == 2:  # 如果 FASTNLP_NO_SYNC 表示不执行
+            return [obj]
         return fastnlp_paddle_all_gather(obj, group=group)
