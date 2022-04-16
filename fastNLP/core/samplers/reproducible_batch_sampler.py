@@ -412,3 +412,11 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
 
     def set_epoch(self, epoch):
         self.epoch = epoch
+
+    @property
+    def batch_idx_in_epoch(self):
+        if self.drop_last:
+            return len(self.dataset) // self.batch_size - (len(self.dataset) - self.num_consumed_samples) // self.batch_size
+        else:
+            return (len(self.dataset) + self.batch_size - 1) // self.batch_size - \
+                   (len(self.dataset) - self.num_consumed_samples + self.batch_size - 1) // self.batch_size
