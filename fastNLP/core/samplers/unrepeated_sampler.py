@@ -84,6 +84,8 @@ class UnrepeatedRandomSampler(UnrepeatedSampler):
         :param rank:
         :return:
         """
+        assert num_replicas<=len(self.dataset), f"The number of replicas({num_replicas}) should be lesser than the " \
+                                                f"number of samples({len(self.dataset)})."
         assert num_replicas>0 and isinstance(num_replicas, int)
         assert isinstance(rank, int) and 0<=rank<num_replicas
         # 注意初始化该函数时，所有的状态都应当默认是一个 epoch 刚开始训练的状态；

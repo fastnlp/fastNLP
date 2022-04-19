@@ -14,10 +14,10 @@ __all__ = [
 
 from .loops import Loop, TrainBatchLoop
 from .utils import State, TrainerState
-from .utils.utils import check_validate_every
+from .utils.utils import check_evaluate_every
 from .evaluator import Evaluator
 from fastNLP.core.controllers.utils.utils import TrainerEventTrigger, _TruncatedDataLoader
-from fastNLP.core.callbacks import Callback, CallbackManager, Events, EventsList, Filter
+from fastNLP.core.callbacks import Callback, CallbackManager, Events, EventsList
 from fastNLP.core.callbacks.callback import _CallbackWrapper
 from fastNLP.core.callbacks.callback_events import _SingleEventState
 from fastNLP.core.drivers import Driver
@@ -26,7 +26,7 @@ from fastNLP.core.utils import get_fn_arg_names, match_and_substitute_params, nu
 from fastNLP.core.utils.utils import _check_valid_parameters_number
 from fastNLP.envs import rank_zero_call
 from fastNLP.core.log import logger
-from fastNLP.envs import FASTNLP_MODEL_FILENAME
+from fastNLP.envs import FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.utils.exceptions import EarlyStopException
 
 
@@ -94,9 +94,9 @@ class Trainer(TrainerEventTrigger):
          evaluate_step 这个函数，如果没有则使用 forward 函数。
         :param callbacks: 训练当中触发的 callback 类，该参数应当为一个列表，其中的每一个元素都应当继承 `Callback` 类；
         :param metrics: 应当为一个字典，其中 key 表示 monitor，例如 {"acc1": AccMetric(), "acc2": AccMetric()}；
-        :param evaluate_every: 可以为负数、正数或者函数；为负数时表示每隔几个 epoch validate 一次；为正数则表示每隔几个 batch validate 一次；
-         为函数时表示用户自己传入的用于控制 Trainer 中的 validate 的频率的函数，该函数的应该接受当前 trainer 对象作为参数，并
-         返回一个 bool 值，返回为 True 说明需要进行 validate ；将在每个 batch 结束后调用该函数判断是否需要 validate 。
+        :param evaluate_every: 可以为负数、正数或者函数；为负数时表示每隔几个 epoch evaluate 一次；为正数则表示每隔几个 batch evaluate 一次；
+         为函数时表示用户自己传入的用于控制 Trainer 中的 evaluate 的频率的函数，该函数的应该接受当前 trainer 对象作为参数，并
+         返回一个 bool 值，返回为 True 说明需要进行 evaluate ；将在每个 batch 结束后调用该函数判断是否需要 evaluate 。
         :param input_mapping: 应当为一个字典或者一个函数，表示在当前 step 拿到一个 batch 的训练数据后，应当做怎样的映射处理；如果其是
          一个字典，并且 batch 也是一个 `Dict`，那么我们会把 batch 中同样在 input_mapping 中的 key 修改为 input_mapping 的对应 key 的
          value；如果 batch 是一个 `dataclass`，那么我们会先将该 dataclass 转换为一个 Dict，然后再进行上述转换；如果 batch 此时是其它
@@ -124,7 +124,7 @@ class Trainer(TrainerEventTrigger):
             set_grad_to_none: 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
             use_dist_sampler: 表示是否使用分布式的 sampler 。在多卡时，分布式 sampler 将自动决定每张卡上读取的 sample ，使得一个epoch
                 内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
-            use_eval_dist_sampler: 表示在 Evaluator 中在使用 TorchDDPDriver 的时候是否将 dataloader 的 sampler 替换为分布式的 sampler；默认为 True；
+            eval_use_dist_sampler: 表示在 Evaluator 中在使用 TorchDDPDriver 的时候是否将 dataloader 的 sampler 替换为分布式的 sampler；默认为 True；
             output_from_new_proc: 应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
              ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
              log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
@@ -214,13 +214,13 @@ class Trainer(TrainerEventTrigger):
 
         """ 设置内部的 Evaluator """
         if metrics is None and evaluate_dataloaders is not None:
-            raise ValueError("You have set 'evaluate_dataloader' but forget to set 'metrics'.")
+            raise ValueError("You have set 'evaluate_dataloaders' but forget to set 'metrics'.")
 
         if metrics is not None and evaluate_dataloaders is None:
-            raise ValueError("You have set 'metrics' but forget to set 'evaluate_dataloader'.")
+            raise ValueError("You have set 'metrics' but forget to set 'evaluate_dataloaders'.")
 
         self.metrics = metrics
-        self.validate_every = evaluate_every
+        self.evaluate_every = evaluate_every
 
         self.driver.setup()
         self.driver.barrier()
@@ -235,7 +235,7 @@ class Trainer(TrainerEventTrigger):
         self.monitor = monitor
         self.larger_better = larger_better
         if metrics is not None and evaluate_dataloaders is not None:
-            check_validate_every(evaluate_every)
+            check_evaluate_every(evaluate_every)
             self.evaluator = Evaluator(
                 model=model,
                 dataloaders=evaluate_dataloaders,
@@ -248,7 +248,7 @@ class Trainer(TrainerEventTrigger):
                 output_mapping=output_mapping,
                 fp16=fp16,
                 verbose=0,
-                use_dist_sampler=kwargs.get("use_eval_dist_sampler", None),
+                use_dist_sampler=kwargs.get("eval_use_dist_sampler", None),
                 progress_bar=kwargs.get('progress_bar', 'auto')
             )
 
@@ -261,11 +261,14 @@ class Trainer(TrainerEventTrigger):
         self.driver.set_deterministic_dataloader(self.dataloader)
 
         self.dataloader = self.driver.set_dist_repro_dataloader(dataloader=self.train_dataloader, dist=_dist_sampler,
-                                                                reproducible=self.callback_manager.has_trainer_checkpoint)
+                                                                reproducible=self.callback_manager._need_reproducible_sampler)
 
         self.set_grad_to_none = kwargs.get("set_grad_to_none", True)
-        self.on_after_trainer_initialized(self.driver)
 
+        self.evaluate_batch_step_fn = evaluate_batch_step_fn
+        self.kwargs = kwargs
+
+        self.on_after_trainer_initialized(self.driver)
         self.driver.barrier()
 
     def run(self, num_train_batch_per_epoch: int = -1, num_eval_batch_per_dl: int = -1,
@@ -364,10 +367,10 @@ class Trainer(TrainerEventTrigger):
         :return:
         """
         if self.evaluator is not None:
-            if callable(self.validate_every):
-                if self.validate_every(self):
+            if callable(self.evaluate_every):
+                if self.evaluate_every(self):
                     self.run_evaluate()
-            elif self.validate_every > 0 and self.global_forward_batches % self.validate_every == 0:
+            elif self.evaluate_every > 0 and self.global_forward_batches % self.evaluate_every == 0:
                 self.run_evaluate()
 
     def epoch_validate(self):
@@ -377,8 +380,8 @@ class Trainer(TrainerEventTrigger):
         :return:
         """
         if self.evaluator is not None:
-            if isinstance(self.validate_every, int) and self.validate_every < 0:
-                validate_every = -self.validate_every
+            if isinstance(self.evaluate_every, int) and self.evaluate_every < 0:
+                validate_every = -self.evaluate_every
                 if self.cur_epoch_idx % validate_every == 0:
                     self.run_evaluate()
 
@@ -427,7 +430,7 @@ class Trainer(TrainerEventTrigger):
         self._custom_callbacks[None] = []
         if self.marker is not None:
             if len(self._custom_callbacks[self.marker]) == 0:
-                print(f"You have set `trainer.marker = {self.marker}`, but there are no callback function matched "
+                logger.info(f"You have set `trainer.marker = {self.marker}`, but there are no callback function matched "
                       f"`{self.marker}` that is added through function `Trainer.on`")
             _own_callbacks += self._custom_callbacks[self.marker]
         for each_callback in _own_callbacks:
@@ -528,10 +531,10 @@ class Trainer(TrainerEventTrigger):
         r"""
         用于帮助用户保存模型的辅助函数，具体实际的保存模型的操作由具体的 driver 实现；
 
-        :param folder: 保存模型的地址；
-        :param only_state_dict: 是否只保存模型的 `state_dict`；
+        :param folder: 保存模型的文件夹。如果没有传入 model_save_fn 参数，则在这个文件夹下创建 fastnlp_model.pkl.tar 文件。
+        :param only_state_dict: 仅在 model_save_fn 为空时，有效。是否只保存模型的 `state_dict`；
         :param model_save_fn: 用户自己定制的用来替换该保存函数本身保存逻辑的函数；
-        :param kwargs: 一些 driver 的保存模型的函数的参数另有其它；
+        :param kwargs:
         """
 
         self.on_save_model()
@@ -568,14 +571,19 @@ class Trainer(TrainerEventTrigger):
         self.on_load_model()
         self.driver.barrier()
         if not isinstance(folder, (io.BytesIO, BinaryIO)):
-            if model_load_fn is not None:
-                if not callable(model_load_fn):
-                    raise ValueError("Parameter `model_save_fn` should be `Callable` type when it is not None.")
-                rank_zero_call(model_load_fn)(folder)
-            else:
-                if isinstance(folder, str):
-                    folder = Path(folder)
-                self.driver.load_model(folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict, **kwargs)
+            try:
+                if model_load_fn is not None:
+                    if not callable(model_load_fn):
+                        raise ValueError("Parameter `model_save_fn` should be `Callable` type when it is not None.")
+                    rank_zero_call(model_load_fn)(folder)
+                else:
+                    if isinstance(folder, str):
+                        folder = Path(folder)
+                    self.driver.load_model(folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict, **kwargs)
+            except FileNotFoundError as e:
+                if FASTNLP_MODEL_FILENAME not in os.listdir(folder):
+                    logger.error(f"fastNLP model checkpoint file:{FASTNLP_MODEL_FILENAME} is not found in {folder}.")
+                raise e
         else:
             if model_load_fn is not None:
                 raise RuntimeError("It is not allowed to specify a `model_save_fn` parameter with `folder` being "
@@ -585,11 +593,13 @@ class Trainer(TrainerEventTrigger):
 
     def save(self, folder: Union[str, Path], only_state_dict: bool = True, model_save_fn: Optional[Callable] = None, **kwargs):
         r"""
-        用于断点重训 Trainer 的保存函数;
+        用于断点重训 Trainer 的保存函数。
 
-        :param folder:
-        :param only_state_dict:
-        :param model_save_fn:
+        :param folder: 保存在哪个文件夹下，会在该文件下声称两个文件：fastnlp_checkpoint.pkl.tar 与 fastnlp_model.pkl.tar 。
+            如果 model_save_fn 不为空，则没有 fastnlp_model.pkl.tar 文件。
+        :param only_state_dict: 当 model_save_fn 为空时有效，表明是否仅保存模型的权重。
+        :param model_save_fn: 如果模型保存比较特殊，可以传入该函数自定义保存过程，输入应该接受一个文件夹（实际上就是接受上面的 folder
+            参数），不必返回任何东西。
         :param kwargs:
         :return:
         """
@@ -601,17 +611,6 @@ class Trainer(TrainerEventTrigger):
                   "trainer_state": self.trainer_state.state_dict(),
                   'num_consumed_batches': self.batch_idx_in_epoch - getattr(self, 'start_batch_idx_in_epoch', 0)
                   }
-
-        # 3. validate filter state；
-        if self.evaluator is not None:
-            val_filter_state = {}
-            if hasattr(self.step_validate, "__fastNLP_filter__"):
-                val_filter_state["step_validate"] = self.step_validate.__fastNLP_filter__.state_dict()
-            if hasattr(self.epoch_validate, "__fastNLP_filter__"):
-                val_filter_state["epoch_validate"] = self.epoch_validate.__fastNLP_filter__.state_dict()
-            states["val_filter_state"] = val_filter_state
-        else:
-            states["val_filter_state"] = None
 
         if isinstance(folder, str):
             folder = Path(folder)
@@ -649,32 +648,30 @@ class Trainer(TrainerEventTrigger):
         dataloader = self.dataloader
         if not resume_training:
             dataloader = None
-
-        if model_load_fn is not None:
-            if not callable(model_load_fn):
-                raise ValueError("Parameter `model_save_fn` should be `Callable`.")
-            rank_zero_call(model_load_fn)(folder)
-            states = self.driver.load(folder=folder, dataloader=dataloader, should_load_model=False, **kwargs)
-        else:
-            states = self.driver.load(folder=folder, dataloader=dataloader, only_state_dict=only_state_dict, should_load_model=True, **kwargs)
+        try:
+            if model_load_fn is not None:
+                if not callable(model_load_fn):
+                    raise ValueError("Parameter `model_save_fn` should be `Callable`.")
+                rank_zero_call(model_load_fn)(folder)
+                states = self.driver.load(folder=folder, dataloader=dataloader, should_load_model=False, **kwargs)
+            else:
+                states = self.driver.load(folder=folder, dataloader=dataloader, only_state_dict=only_state_dict, should_load_model=True, **kwargs)
+        except FileNotFoundError as e:
+            if FASTNLP_CHECKPOINT_FILENAME not in os.listdir(folder) and FASTNLP_MODEL_FILENAME in os.listdir(folder):
+                logger.error("It seems that you are trying to load the trainer checkpoint from a model checkpoint folder.")
+            elif FASTNLP_CHECKPOINT_FILENAME not in os.listdir(folder):
+                logger.error(f"fastNLP Trainer checkpoint file:{FASTNLP_CHECKPOINT_FILENAME} is not found in {folder}.")
+            raise e
 
         if not resume_training:
             return
 
         self.dataloader = states.pop('dataloader')
 
-        # 2. validate filter state；
-        if self.evaluator is not None:
-            val_filter_state = states["val_filter_state"]
-            if hasattr(self.step_validate, "__fastNLP_filter__"):
-                self.step_validate.__fastNLP_filter__.load_state_dict(val_filter_state["step_validate"])
-            if hasattr(self.epoch_validate, "__fastNLP_filter__"):
-                self.epoch_validate.__fastNLP_filter__.load_state_dict(val_filter_state["epoch_validate"])
-
-        # 3. 恢复 trainer_state 的状态；
+        # 1. 恢复 trainer_state 的状态；
         self.trainer_state.load_state_dict(states["trainer_state"])
 
-        # 4. 修改 trainer_state.batch_idx_in_epoch
+        # 2. 修改 trainer_state.batch_idx_in_epoch
         # sampler 是类似 RandomSampler 的sampler，不是 batch_sampler；
         # 这里的原则就是应当使得    '还会产生的batch数量' + 'batch_idx_in_epoch' = '原来不断点训练的batch的总数'。其中由于
         #    '还会产生的batch数量' 是由还剩多少 sample 决定的，因此只能通过调整 'batch_idx_in_epoch' 使得等式成立

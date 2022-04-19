@@ -9,7 +9,7 @@ import numpy as np
 
 from fastNLP.modules.mix_modules.mix_module import MixModule
 from fastNLP.modules.mix_modules.utils import paddle2torch, torch2paddle
-from fastNLP.core import synchronize_safe_rm
+from fastNLP.core import rank_zero_rm
 
 
 ############################################################################
@@ -227,7 +227,7 @@ class TorchPaddleMixModuleTestCase(unittest.TestCase):
 
             self.assertDictEqual(state_dict, new_state_dict)
         finally:
-            synchronize_safe_rm(path)
+            rank_zero_rm(path)
 
     def if_device_correct(self, device):
 

@@ -8,7 +8,7 @@ import sys
 from fastNLP.core.utils.cache_results import cache_results
 from tests.helpers.common.utils import check_time_elapse
 
-from fastNLP.core import synchronize_safe_rm
+from fastNLP.core import rank_zero_rm
 
 
 def get_subprocess_results(cmd):
@@ -56,7 +56,7 @@ class TestCacheResults:
                 res = demo()
 
         finally:
-            synchronize_safe_rm(cache_fp)
+            rank_zero_rm(cache_fp)
 
     def test_cache_save_refresh(self):
         cache_fp = 'demo.pkl'
@@ -70,7 +70,7 @@ class TestCacheResults:
             with check_time_elapse(1, op='ge'):
                 res = demo()
         finally:
-            synchronize_safe_rm(cache_fp)
+            rank_zero_rm(cache_fp)
 
     def test_cache_no_func_change(self):
         cache_fp = os.path.abspath('demo.pkl')
@@ -91,7 +91,7 @@ class TestCacheResults:
             with check_time_elapse(1, op='lt'):
                 res = demo()
         finally:
-            synchronize_safe_rm('demo.pkl')
+            rank_zero_rm('demo.pkl')
 
     def test_cache_func_change(self, capsys):
         cache_fp = 'demo.pkl'
@@ -121,7 +121,7 @@ class TestCacheResults:
                 assert 'is different from its last cache' not in output[0]
 
         finally:
-            synchronize_safe_rm('demo.pkl')
+            rank_zero_rm('demo.pkl')
 
     def test_cache_check_hash(self):
         cache_fp = 'demo.pkl'
@@ -152,7 +152,7 @@ class TestCacheResults:
                 assert 'is different from its last cache' in output[0]
 
         finally:
-            synchronize_safe_rm('demo.pkl')
+            rank_zero_rm('demo.pkl')
 
     # 外部 function 改变也会 导致改变
     def test_refer_fun_change(self):
@@ -177,7 +177,7 @@ class TestCacheResults:
                 assert 'is different from its last cache' in res
 
         finally:
-            synchronize_safe_rm(cache_fp)
+            rank_zero_rm(cache_fp)
 
     # 外部 method 改变也会 导致改变
     def test_refer_class_method_change(self):
@@ -202,7 +202,7 @@ class TestCacheResults:
                 assert 'is different from its last cache' in res
 
         finally:
-            synchronize_safe_rm(cache_fp)
+            rank_zero_rm(cache_fp)
 
     def test_duplicate_keyword(self):
         with pytest.raises(RuntimeError):
@@ -240,7 +240,7 @@ class TestCacheResults:
             results = cache()
             assert (1, 2) == results
         finally:
-            synchronize_safe_rm('demo/')
+            rank_zero_rm('demo/')
 
     def test_result_none_error(self):
         @cache_results('demo.pkl')
@@ -251,7 +251,7 @@ class TestCacheResults:
             with pytest.raises(RuntimeError):
                 results = cache()
         finally:
-            synchronize_safe_rm('demo.pkl')
+            rank_zero_rm('demo.pkl')
 
 
 if __name__ == '__main__':

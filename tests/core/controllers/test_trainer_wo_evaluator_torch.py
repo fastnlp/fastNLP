@@ -15,7 +15,7 @@ from tests.helpers.datasets.torch_data import TorchNormalDataset_Classification
 from tests.helpers.callbacks.helper_callbacks import RecordLossCallback
 from tests.helpers.callbacks.helper_callbacks_torch import RecordAccumulationStepsCallback_Torch
 from tests.helpers.utils import magic_argv_env_context, Capturing
-from fastNLP.core import synchronize_safe_rm
+from fastNLP.core import rank_zero_rm
 
 
 @dataclass
@@ -239,7 +239,7 @@ def test_trainer_output_from_new_proc(
         assert err_path.exists()
 
         path = Path(os.path.abspath(output_from_new_proc))
-        synchronize_safe_rm(path)
+        rank_zero_rm(path)
 
 
 @pytest.mark.parametrize("driver,device", [("torch", [1, 2])])

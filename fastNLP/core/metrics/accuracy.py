@@ -19,7 +19,7 @@ class Accuracy(Metric):
 
         :param str backend: 目前支持四种类型的backend, ['auto', 'torch', 'paddle', 'jittor']。其中 auto 表示根据实际调用 Metric.update()
             函数时传入的参数决定具体的 backend ，一般情况下直接使用 'auto' 即可。
-        :param bool aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到metric，
+        :param bool aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到 metric，
             当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 Evaluator 中根据 sampler 是否使用分布式进行自动设置。
         """
         super(Accuracy, self).__init__(backend=backend, aggregate_when_get_metric=aggregate_when_get_metric)

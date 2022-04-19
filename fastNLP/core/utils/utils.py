@@ -38,8 +38,8 @@ __all__ = [
     'indice_collate_wrapper',
     'deprecated',
     'seq_len_to_mask',
-    'synchronize_safe_rm',
-    'synchronize_mkdir'
+    'rank_zero_rm',
+    'rank_zero_mkdir'
 ]
 
 
@@ -629,7 +629,7 @@ def wait_filepath(path, exist=True):
 
 
 
-def synchronize_safe_rm(path: Optional[Union[str, Path]]):
+def rank_zero_rm(path: Optional[Union[str, Path]]):
     """
     这个是因为在分布式文件系统中可能会发生错误，rank0下发删除成功后就运行走了，但实际的删除需要rank0的机器发送到远程文件系统再去执行，这个时候
         在rank0那里，确实已经删除成功了，但是在远程文件系统那里这个操作还没完成，rank1读取的时候还是读取到存在这个文件；
@@ -638,15 +638,14 @@ def synchronize_safe_rm(path: Optional[Union[str, Path]]):
     :param path:
     :return:
     """
-    if path is None:
-        return
-    if isinstance(path, str):
-        path = Path(path)
-    if not path.exists():
-        return
     if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
+        if path is None:
+            return
+        if isinstance(path, str):
+            path = Path(path)
+        if not path.exists():
+            return
         _recursive_rm(path)
-    wait_filepath(path, exist=False)
 
 
 def _recursive_rm(path: Path):
@@ -662,21 +661,19 @@ def _recursive_rm(path: Path):
     path.rmdir()
 
 
-def synchronize_mkdir(path: Optional[Union[str, Path]]):
+def rank_zero_mkdir(path: Optional[Union[str, Path]]):
     """
     注意该函数是用来创建文件夹，如果需要创建一个文件，不要使用该函数；
     该函数会保证所有进程都检测到 path 创建之后才退出，请保证不同进程上 path 是完全一样的，否则会陷入死锁状态。
 
     """
-    if path is None:
-        return
-    if isinstance(path, str):
-        path = Path(path)
-
     if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
-        path.mkdir(parents=True, exist_ok=True)
+        if path is None:
+            return
+        if isinstance(path, str):
+            path = Path(path)
 
-    wait_filepath(path, exist=True)
+        path.mkdir(parents=True, exist_ok=True)
 
 
 def get_class_that_defined_method(method):

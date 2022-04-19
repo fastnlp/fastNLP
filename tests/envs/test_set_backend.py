@@ -2,7 +2,7 @@ import os
 
 from fastNLP.envs.set_backend import dump_fastnlp_backend
 from tests.helpers.utils import Capturing
-from fastNLP.core import synchronize_safe_rm
+from fastNLP.core import rank_zero_rm
 
 
 def test_dump_fastnlp_envs():
@@ -14,4 +14,4 @@ def test_dump_fastnlp_envs():
         assert filepath in output[0]
         assert os.path.exists(filepath)
     finally:
-        synchronize_safe_rm(filepath)
+        rank_zero_rm(filepath)

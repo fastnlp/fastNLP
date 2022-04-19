@@ -526,7 +526,7 @@ class TorchDDPDriver(TorchDriver):
 
     def barrier(self):
         if int(os.environ.get(FASTNLP_NO_SYNC, 0)) < 1:  # 当 FASTNLP_NO_SYNC 小于 1 时实际执行
-            torch.distributed.barrier(async_op=True)
+            torch.distributed.barrier(async_op=False)
 
     def is_distributed(self):
         return True

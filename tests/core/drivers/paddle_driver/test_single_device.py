@@ -11,7 +11,7 @@ from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from tests.helpers.datasets.paddle_data import PaddleNormalDataset, PaddleRandomMaxDataset
 from tests.helpers.datasets.torch_data import TorchNormalDataset
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
-from fastNLP.core import synchronize_safe_rm
+from fastNLP.core import rank_zero_rm
 
 import paddle
 from paddle.io import DataLoader, BatchSampler
@@ -578,11 +578,11 @@ def test_save_and_load_model(prepare_test_save_load, only_state_dict):
             assert paddle.equal_all(res1["pred"], res2["pred"])
     finally:
         if only_state_dict:
-            synchronize_safe_rm(path)
+            rank_zero_rm(path)
         else:
-            synchronize_safe_rm(path + ".pdiparams")
-            synchronize_safe_rm(path + ".pdiparams.info")
-            synchronize_safe_rm(path + ".pdmodel")
+            rank_zero_rm(path + ".pdiparams")
+            rank_zero_rm(path + ".pdiparams.info")
+            rank_zero_rm(path + ".pdmodel")
 
 @pytest.mark.parametrize("only_state_dict", ([True, False]))
 def test_save_and_load_with_randombatchsampler(only_state_dict):
@@ -652,7 +652,7 @@ def test_save_and_load_with_randombatchsampler(only_state_dict):
         assert len(left_y_batches) + len(already_seen_y_set) == len(dataset)
         assert len(left_y_batches | already_seen_y_set) == len(dataset)
     finally:
-        synchronize_safe_rm(path)
+        rank_zero_rm(path)
 
 @pytest.mark.parametrize("only_state_dict", ([True, False]))
 def test_save_and_load_with_randomsampler(only_state_dict):
@@ -730,4 +730,4 @@ def test_save_and_load_with_randomsampler(only_state_dict):
         assert len(left_y_batches) + len(already_seen_y_set) == len(dataset)
         assert len(left_y_batches | already_seen_y_set) == len(dataset)
     finally:
-        synchronize_safe_rm(path)
+        rank_zero_rm(path)

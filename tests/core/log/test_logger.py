@@ -6,7 +6,7 @@ import logging
 import re
 
 from fastNLP.envs.env import FASTNLP_LAUNCH_TIME
-from fastNLP.core import synchronize_safe_rm
+from fastNLP.core import rank_zero_rm
 from fastNLP.core.log.logger import logger
 
 from tests.helpers.utils import magic_argv_env_context, recover_logger
@@ -56,7 +56,7 @@ def test_add_file_ddp_1_torch():
     pattern = re.compile(msg)
     assert len(pattern.findall(line)) == 1
 
-    synchronize_safe_rm(filepath)
+    rank_zero_rm(filepath)
     dist.barrier()
     dist.destroy_process_group()
 
@@ -105,7 +105,7 @@ def test_add_file_ddp_2_torch():
         pattern = re.compile(msg)
         assert len(pattern.findall(line)) == 1
     finally:
-        synchronize_safe_rm(path)
+        rank_zero_rm(path)
 
     dist.barrier()
     dist.destroy_process_group()
@@ -155,7 +155,7 @@ def test_add_file_ddp_3_torch():
     pattern = re.compile(msg)
     assert len(pattern.findall(line)) == 1
 
-    synchronize_safe_rm(file)
+    rank_zero_rm(file)
     dist.barrier()
     dist.destroy_process_group()
 
@@ -202,7 +202,7 @@ def test_add_file_ddp_4_torch():
         pattern = re.compile(msg)
         assert len(pattern.findall(line)) == 1
     finally:
-        synchronize_safe_rm(path)
+        rank_zero_rm(path)
 
     dist.barrier()
     dist.destroy_process_group()
@@ -225,7 +225,7 @@ class TestLogger:
                 line = ''.join([l for l in f])
             assert self.msg in line
         finally:
-            synchronize_safe_rm(path)
+            rank_zero_rm(path)
 
     @recover_logger
     def test_add_file_2(self):
@@ -243,7 +243,7 @@ class TestLogger:
                 line = ''.join([l for l in f])
             assert self.msg in line
         finally:
-            synchronize_safe_rm(origin_path)
+            rank_zero_rm(origin_path)
 
     @recover_logger
     def test_add_file_3(self):
@@ -279,7 +279,7 @@ class TestLogger:
                         line = ''.join([l for l in f])
                     assert self.msg in line
         finally:
-            synchronize_safe_rm(path)
+            rank_zero_rm(path)
 
     @recover_logger
     def test_stdout(self, capsys):

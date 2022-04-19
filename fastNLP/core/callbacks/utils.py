@@ -1,4 +1,6 @@
 from typing import Optional, Union
+import os
+
 from fastNLP.core.log.logger import logger
 from difflib import SequenceMatcher
 from fastNLP.core.utils.utils import _get_fun_msg
@@ -15,7 +17,7 @@ def _get_monitor_value(monitor: Union[callable, str], real_monitor: Optional[str
     :return: 返回两个值（str, value)，其中str就是最终要到的key，value就是这个key对应的value。如果value为None说明当前results中没有
         找到对应的 monitor
     """
-    if len(res)==0:
+    if len(res) == 0 or monitor is None:
         return monitor, None
 
     if callable(monitor):
@@ -55,5 +57,4 @@ def _match_length(a:str, b:str)->int:
     long = a if len(a)>=len(b) else b
     match = SequenceMatcher(None, short, long).find_longest_match(0, len(short), 0, len(long))
     return match.size
-
 

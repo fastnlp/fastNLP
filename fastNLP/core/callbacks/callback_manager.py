@@ -8,7 +8,6 @@ __all__ = [
 
 from .callback_events import Events
 from .callback import Callback
-from .checkpoint_callback import TrainerCheckpointCallback
 from .progress_callback import ProgressCallback, choose_progress_callback
 from fastNLP.core.log import logger
 
@@ -45,7 +44,7 @@ class CallbackManager:
 
         :param callbacks: 初始化时可以传入的一系列 callback 类，通常为用户在初始化 'Trainer' 时直接传入的 callback 类；
         """
-        self._has_trainer_checkpoint = False
+        self._need_reproducible_sampler = False
 
         _has_progress_callback = False
         _callbacks = []
@@ -98,8 +97,7 @@ class CallbackManager:
         :return:
         """
         for each_callback in self.class_callbacks:
-            if isinstance(each_callback, TrainerCheckpointCallback):
-                self._has_trainer_checkpoint = True
+            self._need_reproducible_sampler |= each_callback.need_reproducible_sampler
             self.dissect_one_callback(each_callback)
 
     def dissect_one_callback(self, callback: Callback):
@@ -211,7 +209,7 @@ class CallbackManager:
 
     @property
     def has_trainer_checkpoint(self) -> bool:
-        return self._has_trainer_checkpoint
+        return self._need_reproducible_sampler
 
     @_transfer
     def on_after_trainer_initialized(self, trainer):

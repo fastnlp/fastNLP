@@ -23,7 +23,7 @@ class LoadBestModelCallback(HasMonitorCallback):
 
         :param str monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
             的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
-            果(字典类型)，返回一个 float 值作为 monitor 的结果。
+            果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有相关的 monitor 值请返回 None 。
         :param larger_better: 该 metric 值是否是越大越好。
         :param save_folder: 保存的文件夹，如果为空，则保存在内存中。不为空，则保存一份权重到文件中，当为多机训练，且本值不为空时，请确保
             不同的机器均可访问当该路径。当 model_save_fn 不为 None 时该值一定不能为空。
@@ -72,7 +72,7 @@ class LoadBestModelCallback(HasMonitorCallback):
                 logger.debug(f"Synchronize best model save folder: {self.real_save_folder} for LoadBestModelCallback.")
             except NotImplementedError:
                 raise RuntimeError(f"Currently {driver.__class__.__name__} does not support using `save_folder` to "
-                                   f"save best model when launch using script.")
+                                   f"save best model when launch using module.")
 
         super().on_after_trainer_initialized(trainer, driver)
 
@@ -87,7 +87,7 @@ class LoadBestModelCallback(HasMonitorCallback):
                     trainer.save_model(folder=self.buffer, only_state_dict=self.only_state_dict)
 
     def on_train_end(self, trainer):
-        logger.info(f"Loading best model with {self._real_monitor}: {self.monitor_value}...")
+        logger.info(f"Loading best model with {self.monitor_name}: {self.monitor_value}...")
         if self.real_save_folder:
             trainer.load_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,
                                model_load_fn=self.model_load_fn)

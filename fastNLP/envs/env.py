@@ -49,7 +49,7 @@ FASTNLP_BACKEND_LAUNCH = "FASTNLP_BACKEND_LAUNCH"
 #  为 '2' 表示 barrier 与 gather/broadcast 都关闭。
 FASTNLP_NO_SYNC = 'FASTNLP_NO_SYNC'
 
-# todo 注释 直接使用的变量
+# 保存各种内容时的默认名称
 FASTNLP_MODEL_FILENAME = "fastnlp_model.pkl.tar"
 FASTNLP_CHECKPOINT_FILENAME = "fastnlp_checkpoint.pkl.tar"
-
+FASTNLP_EVALUATE_RESULT_FILENAME = 'fastnlp_evaluate_results.json'

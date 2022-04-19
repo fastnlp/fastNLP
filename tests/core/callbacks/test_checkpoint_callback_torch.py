@@ -7,13 +7,14 @@ from torch.optim import SGD
 import torch.distributed as dist
 from pathlib import Path
 import re
+import time
 
-from fastNLP.core.callbacks.checkpoint_callback import ModelCheckpointCallback, TrainerCheckpointCallback
+from fastNLP.core.callbacks.checkpoint_callback import CheckpointCallback
 from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.envs import FASTNLP_LAUNCH_TIME, FASTNLP_DISTRIBUTED_CHECK
 
 from tests.helpers.utils import magic_argv_env_context
-from fastNLP.core import synchronize_safe_rm
+from fastNLP.core import rank_zero_rm
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchArgMaxDatset
 from torchmetrics import Accuracy
@@ -80,44 +81,21 @@ def test_model_checkpoint_callback_1(
     version,
     only_state_dict
 ):
-# def test_model_checkpoint_callback_1(
-#         model_and_optimizers: TrainerParameters,
-#         driver='torch_ddp',
-#         device=[0, 1],
-#         version=1,
-#         only_state_dict=True
-# ):
-    path = Path.cwd().joinpath(f"test_model_checkpoint")
-    path.mkdir(exist_ok=True, parents=True)
-
-    if version == 0:
-        callbacks = [
-            ModelCheckpointCallback(
-                monitor="acc",
-                save_folder=path,
-                save_every_n_epochs=1,
-                save_every_n_batches=123,  # 避免和 epoch 的保存重复；
-                save_topk=None,
-                save_last=False,
-                save_on_exception=None,
-                only_state_dict=only_state_dict
-            )
-        ]
-    elif version == 1:
-        callbacks = [
-            ModelCheckpointCallback(
-                monitor="acc",
-                save_folder=path,
-                save_every_n_epochs=3,
-                save_every_n_batches=None,
-                save_topk=2,
-                save_last=True,
-                save_on_exception=None,
-                only_state_dict=only_state_dict
-            )
-        ]
-
     try:
+        path = Path.cwd().joinpath(f"test_model_checkpoint")
+        path.mkdir(exist_ok=True, parents=True)
+
+        if version == 0:
+            callbacks = [
+                CheckpointCallback(folder=path, every_n_epochs=1, every_n_batches=123, last=False, on_exceptions=None, topk=0,
+                                   monitor=None, only_state_dict=only_state_dict, save_object='model')
+            ]
+        elif version == 1:
+            callbacks = [
+                CheckpointCallback(folder=path, every_n_epochs=3, every_n_batches=None, last=True, on_exceptions=None, topk=2,
+                                   monitor="acc", only_state_dict=only_state_dict, save_object='model')
+            ]
+
         trainer = Trainer(
             model=model_and_optimizers.model,
             driver=driver,
@@ -134,7 +112,7 @@ def test_model_checkpoint_callback_1(
         )
 
         trainer.run()
-
+        print("Finish train")
         all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
         # 检查生成保存模型文件的数量是不是正确的；
         if version == 0:
@@ -217,8 +195,7 @@ def test_model_checkpoint_callback_1(
             trainer.run()
 
     finally:
-        synchronize_safe_rm(path)
-        pass
+        rank_zero_rm(path)
 
     if dist.is_initialized():
         dist.destroy_process_group()
@@ -233,30 +210,23 @@ def test_model_checkpoint_callback_2(
         device,
         only_state_dict
 ):
-    path = Path.cwd().joinpath("test_model_checkpoint")
-    path.mkdir(exist_ok=True, parents=True)
-
-    from fastNLP.core.callbacks.callback_events import Events
-
-    @Trainer.on(Events.on_train_epoch_end)
-    def raise_exception(trainer):
-        if trainer.driver.get_local_rank() == 0 and trainer.cur_epoch_idx == 4:
-            raise NotImplementedError
-
-    callbacks = [
-        ModelCheckpointCallback(
-            monitor="acc1",
-            save_folder=path,
-            save_every_n_epochs=None,
-            save_every_n_batches=None,
-            save_topk=None,
-            save_last=False,
-            save_on_exception=NotImplementedError,
-            only_state_dict=only_state_dict
-        ),
-    ]
-
     try:
+        path = Path.cwd().joinpath("test_model_checkpoint")
+        path.mkdir(exist_ok=True, parents=True)
+
+        from fastNLP.core.callbacks.callback_events import Events
+
+        @Trainer.on(Events.on_train_epoch_end)
+        def raise_exception(trainer):
+            if trainer.driver.get_local_rank() == 0 and trainer.cur_epoch_idx == 4:
+                raise NotImplementedError
+
+        callbacks = [
+            CheckpointCallback(folder=path, every_n_epochs=None, every_n_batches=None, last=False,
+                               on_exceptions=NotImplementedError, topk=None, monitor=None, only_state_dict=only_state_dict,
+                               save_object='model'),
+        ]
+
         with pytest.raises(NotImplementedError):
             trainer = Trainer(
                 model=model_and_optimizers.model,
@@ -315,14 +285,14 @@ def test_model_checkpoint_callback_2(
             trainer.run()
 
     finally:
-        synchronize_safe_rm(path)
+        rank_zero_rm(path)
         # pass
 
     if dist.is_initialized():
         dist.destroy_process_group()
 
 
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [6, 7]), ("torch", 7)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 0)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @pytest.mark.parametrize("only_state_dict", [True, False])
 @magic_argv_env_context
@@ -333,37 +303,21 @@ def test_trainer_checkpoint_callback_1(
     version,
     only_state_dict
 ):
-    path = Path.cwd().joinpath(f"test_model_checkpoint")
-    path.mkdir(exist_ok=True, parents=True)
-
-    if version == 0:
-        callbacks = [
-            TrainerCheckpointCallback(
-                monitor="acc",
-                save_folder=path,
-                save_every_n_epochs=7,
-                save_every_n_batches=123,  # 避免和 epoch 的保存重复；
-                save_topk=None,
-                save_last=False,
-                save_on_exception=None,
-                only_state_dict=only_state_dict
-            )
-        ]
-    elif version == 1:
-        callbacks = [
-            TrainerCheckpointCallback(
-                monitor="acc",
-                save_folder=path,
-                save_every_n_epochs=None,
-                save_every_n_batches=None,
-                save_topk=2,
-                save_last=True,
-                save_on_exception=None,
-                only_state_dict=only_state_dict
-            )
-        ]
-
     try:
+        path = Path.cwd().joinpath(f"test_model_checkpoint")
+        path.mkdir(exist_ok=True, parents=True)
+
+        if version == 0:
+            callbacks = [
+                CheckpointCallback(folder=path, every_n_epochs=7, every_n_batches=123, last=False, on_exceptions=None, topk=0,
+                                   monitor=None, only_state_dict=only_state_dict, save_object='trainer')
+            ]
+        elif version == 1:
+            callbacks = [
+                CheckpointCallback(folder=path, every_n_epochs=None, every_n_batches=None, last=True, on_exceptions=None,
+                                   topk=2, monitor="acc", only_state_dict=only_state_dict, save_object='trainer')
+            ]
+
         trainer = Trainer(
             model=model_and_optimizers.model,
             driver=driver,
@@ -461,8 +415,7 @@ def test_trainer_checkpoint_callback_1(
             trainer.run()
 
     finally:
-        synchronize_safe_rm(path)
-        pass
+        rank_zero_rm(path)
 
     if dist.is_initialized():
         dist.destroy_process_group()
@@ -594,12 +547,12 @@ def test_trainer_checkpoint_callback_2(
         callbacks = [
             TrainerCheckpointCallback(
                 monitor="acc",
-                save_folder=path,
-                save_every_n_epochs=None,
-                save_every_n_batches=50,
-                save_topk=None,
-                save_last=False,
-                save_on_exception=None,
+                folder=path,
+                every_n_epochs=None,
+                every_n_batches=50,
+                topk=None,
+                last=False,
+                on_exception=None,
                 model_save_fn=model_save_fn
             )
         ]
@@ -607,12 +560,12 @@ def test_trainer_checkpoint_callback_2(
         callbacks = [
             TrainerCheckpointCallback(
                 monitor="acc",
-                save_folder=path,
-                save_every_n_epochs=None,
-                save_every_n_batches=None,
-                save_topk=1,
-                save_last=True,
-                save_on_exception=None,
+                folder=path,
+                every_n_epochs=None,
+                every_n_batches=None,
+                topk=1,
+                last=True,
+                on_exception=None,
                 model_save_fn=model_save_fn
             )
         ]
@@ -710,7 +663,7 @@ def test_trainer_checkpoint_callback_2(
             trainer.run()
 
     finally:
-        synchronize_safe_rm(path)
+        rank_zero_rm(path)
         # pass
 
     if dist.is_initialized():

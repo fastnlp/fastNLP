@@ -380,7 +380,6 @@ class Driver(ABC):
         """
         # 单卡 driver 不需要这个函数；
         if self._pids is not None:
-
             exc_type, exc_value, exc_traceback_obj = sys.exc_info()
             _write_exc_info = {
                 'exc_type': str(exc_type.__name__),

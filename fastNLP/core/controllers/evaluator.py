@@ -38,7 +38,7 @@ class Evaluator:
             driver: Union[str, Driver] = 'torch',
             device: Optional[Union[int, List[int], str]] = None,
             batch_step_fn: Optional[callable] = None,
-            evaluate_fn: Optional[str] = None,  # 首先尝试找 evaluate_step, 找不到 forward, callable
+            evaluate_fn: Optional[str] = None,
             input_mapping: Optional[Union[Callable, Dict]] = None,
             output_mapping: Optional[Union[Callable, Dict]] = None,
             model_wo_auto_param_call: bool = False,
@@ -57,8 +57,9 @@ class Evaluator:
         :param batch_step_fn: callable的对象，接受 (evaluator, batch) 作为参数，其中 evaluator 为 Evaluator 对象，batch 为
             DataLoader 中返回的对象。一个 batch_step_fn 的例子可参考 fastNLP.core.controller.loops.evaluate_batch_loop 的
             batch_step_fn 函数。
-        :param evaluate_fn: 用来控制 `Evaluator` 在评测的前向传播过程中是调用哪一个函数，例如是 `model.evaluate_step` 还是 `model.forward`；
-         默认为 None，如果该值是 None，那么我们会默认使用 `evaluate_step` 当做前向传播的函数，如果在模型中没有找到该方法，则使用 `model.forward` 函数；
+        :param evaluate_fn: 用来控制 `Evaluator` 在评测的前向传播过程中是调用哪一个函数，例如是 `model.evaluate_step` 还是
+            `model.forward`；(1) 如果该值是 None，那么我们会默认使用 `evaluate_step` 当做前向传播的函数，如果在模型中没有
+            找到该方法，则使用 `model.forward` 函数；(2) 如果为 str 类型，则尝试从 model 中寻找该方法，找不到则报错。
         :param input_mapping: 对 dataloader 中输出的内容将通过 input_mapping 处理之后再输入到 model 以及 metric 中
         :param output_mapping: 对 model 输出的内容，将通过 output_mapping 处理之后再输入到 metric 中。
         :param model_wo_auto_param_call: 是否关闭在训练时调用我们的 auto_param_call 来自动匹配 batch 和 forward 函数的参数的行为；
@@ -69,6 +70,7 @@ class Evaluator:
         :param kwargs:
             bool model_use_eval_mode: 是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的dropout
              与 batch normalization 将会关闭。默认为True。
+            TODO 还没完成。
             Union[bool] auto_tensor_conversion_for_metric: 是否自动将输出中的
              tensor 适配到 metrics 支持的。例如 model 输出是 paddlepaddle 的 tensor ，但是想利用 torchmetrics 的metric对象，
              当 auto_tensor_conversion_for_metric 为True时，fastNLP 将自动将输出中 paddle 的 tensor （其它非 tensor 的参数
@@ -118,10 +120,6 @@ class Evaluator:
             self._dist_sampler = None
         self._metric_wrapper = None
         _ = self.metrics_wrapper  # 触发检查
-
-        if self._dist_sampler is not None and not self.driver.is_distributed():
-            logger.warning_once("Running in a non-distributed driver, but with distributed sampler, it may cause "
-                                "different process evaluating on different data.")
 
         if evaluate_fn is not None and not isinstance(evaluate_fn, str):
             raise TypeError("Parameter `evaluate_fn` can only be `str` type when it is not None.")

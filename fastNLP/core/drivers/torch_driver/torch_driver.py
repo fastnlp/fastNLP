@@ -9,8 +9,9 @@ from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from pathlib import Path
 if _NEED_IMPORT_TORCH:
     import torch
-    from torch.utils.data import DataLoader, IterableDataset, RandomSampler, Sampler, BatchSampler, Dataset
+    from torch.utils.data import DataLoader, IterableDataset, Sampler, BatchSampler, Dataset
     from torch.optim import Optimizer
+    from torch.utils.data import RandomSampler as TorchRandomSampler
     _reduces = {
         'sum': torch.max,
         'min': torch.min,
@@ -30,7 +31,7 @@ from fastNLP.core.utils import apply_to_collection, torch_move_data_to_device
 from fastNLP.envs import  rank_zero_call
 from fastNLP.envs import FASTNLP_SEED_WORKERS, FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.log import logger
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, RandomBatchSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, RandomBatchSampler, RandomSampler
 
 
 class TorchDriver(Driver):
@@ -211,8 +212,8 @@ class TorchDriver(Driver):
 
             states['sampler_states'] = sampler_states
         else:
-            raise RuntimeError(
-                'The sampler has no `state_dict()` method, it will fail to recover to the specific batch.')
+            raise RuntimeError('The sampler has no `state_dict()` method, fastNLP cannot save the training '
+                               'state.')
 
         # 2. 保存模型的状态；
         if should_save_model:
@@ -283,6 +284,9 @@ class TorchDriver(Driver):
             sampler = dataloader_args.batch_sampler
         elif isinstance(dataloader_args.sampler, ReproducibleSampler):
             sampler = dataloader_args.sampler
+        elif isinstance(dataloader_args.sampler, TorchRandomSampler):
+            sampler = RandomSampler(dataloader_args.sampler.data_source)
+            logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
         elif self.is_distributed():
             raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or "
                                "`ReproducibleSampler`.")

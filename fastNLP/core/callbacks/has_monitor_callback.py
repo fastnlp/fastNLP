@@ -1,10 +1,12 @@
 __all__ = [
     'HasMonitorCallback',
-    'ExecuteOnceBetterMonitor'
+    'ExecuteOnceBetterMonitor',
+    'MonitorUtility'
 ]
 
 from typing import Dict, Union, Any
 from abc import ABC
+import functools
 
 from fastNLP.core.utils import apply_to_collection
 from fastNLP.core.callbacks import Callback
@@ -27,21 +29,13 @@ class CanItemDataType(ABC):
         return NotImplemented
 
 
+class MonitorUtility:
+    """
+    计算 monitor 的相关函数
 
-class HasMonitorCallback(Callback):
-    def __init__(self, monitor, larger_better, must_have_monitor=False):
-        """
-        该 callback 不直接进行使用，作为其它相关 callback 的父类使用，如果 callback 有使用 monitor 可以继承该函数里面实现了
-        （1）判断monitor合法性；（2）在需要时， 根据trainer的monitor设置自己的monitor名称。
-
-        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
-                的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
-                果(字典类型)，返回一个 float 值作为 monitor 的结果。
-        :param larger_better: monitor 是否时越大越好
-        :param must_have_monitor: 这个 callback 是否必须有 monitor 设置。如果设置为 True ，且没检测到设置 monitor 会报错。
-        """
+    """
+    def __init__(self, monitor, larger_better):
         self.set_monitor(monitor, larger_better)
-        self.must_have_moinitor = must_have_monitor
 
     def set_monitor(self, monitor, larger_better):
         if callable(monitor):  # 检查是否能够接受一个参数
@@ -57,26 +51,14 @@ class HasMonitorCallback(Callback):
             self.monitor_value = float('inf')
         self._real_monitor = self.monitor
 
-    def on_after_trainer_initialized(self, trainer, driver):
+    def itemize_results(self, results):
         """
-        如果本身的 monitor 没有设置，则根据 Trainer 中的 monitor 设置 monitor 。
-        同时对于必须要有 monitor 设置的 callback ，该函数会进行检查。
+        将结果中有 .item() 方法的都调用一下，使得可以结果可以保存
 
-        :param trainer:
-        :param driver:
+        :param results:
         :return:
         """
-        if self.monitor is None and trainer.monitor is not None:
-            self.set_monitor(monitor=trainer.monitor, larger_better=trainer.larger_better)
-        if self.must_have_moinitor and self.monitor is None:
-            raise RuntimeError(f"No `monitor` is set for {self.__class__.__name__}. "
-                               f"You can set it in the initialization or through Trainer.")
-
-
-    def on_sanity_check_end(self, trainer, sanity_check_res):
-        # 主要核对一下 monitor 是否存在。
-        if self.monitor is not None:
-            self.get_monitor_value(results=sanity_check_res)
+        return apply_to_collection(results, dtype=CanItemDataType, function=lambda x: x.item())
 
     def get_monitor_value(self, results:Dict)->Union[float, None]:
         """
@@ -85,10 +67,10 @@ class HasMonitorCallback(Callback):
         :param results:
         :return: 如果为 None ，表明此次没有找到合适的monitor
         """
-        if len(results)==0:
+        if len(results) == 0 or self.monitor is None:
             return None
         # 保证所有的 tensor 都被转换为了 python 特定的类型
-        results = apply_to_collection(results, dtype=CanItemDataType, function=lambda x: x.item())
+        results = self.itemize_results(results)
         use_monitor, monitor_value = _get_monitor_value(monitor=self.monitor,
                                                         real_monitor=self._real_monitor,
                                                         res=results)
@@ -97,7 +79,7 @@ class HasMonitorCallback(Callback):
         # 第一次运行
         if isinstance(self.monitor, str) and self._real_monitor == self.monitor and use_monitor != self.monitor:
             logger.warning(f"We can not find `{self.monitor}` in the evaluation result (with keys as {list(results.keys())}), "
-                f"we use the `{use_monitor}` as the monitor for `{self.__class__.__name__}`.")
+                           f"we use the `{use_monitor}` as the monitor for `{self.__class__.__name__}`.")
         # 检测到此次和上次不同。
         elif isinstance(self.monitor, str) and self._real_monitor != self.monitor and use_monitor != self._real_monitor:
             logger.warning(f"Change of monitor detected for `{self.__class__.__name__}`. "
@@ -165,7 +147,10 @@ class HasMonitorCallback(Callback):
         """
         if callable(self.monitor):
             try:
-                monitor_name = self.monitor.__qualname__
+                monitor = self.monitor
+                while isinstance(monitor, functools.partial):
+                    monitor = monitor.func
+                monitor_name = monitor.__qualname__
             except:
                 monitor_name = self.monitor.__name__
         elif self.monitor is None:
@@ -176,6 +161,46 @@ class HasMonitorCallback(Callback):
         return monitor_name
 
 
+
+class HasMonitorCallback(MonitorUtility, Callback):
+    def __init__(self, monitor, larger_better, must_have_monitor=False):
+        """
+        该 callback 不直接进行使用，作为其它相关 callback 的父类使用，如果 callback 有使用 monitor 可以继承该函数里面实现了
+        （1）判断monitor合法性；（2）在需要时， 根据trainer的monitor设置自己的monitor名称。
+
+        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+                的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
+                果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有相关的 monitor 值请返回 None 。
+        :param larger_better: monitor 是否时越大越好
+        :param must_have_monitor: 这个 callback 是否必须有 monitor 设置。如果设置为 True ，且没检测到设置 monitor 会报错。
+        """
+        super().__init__(monitor, larger_better)
+        self.must_have_monitor = must_have_monitor
+
+    def on_after_trainer_initialized(self, trainer, driver):
+        """
+        如果本身的 monitor 没有设置，则根据 Trainer 中的 monitor 设置 monitor 。
+        同时对于必须要有 monitor 设置的 callback ，该函数会进行检查。
+
+        :param trainer:
+        :param driver:
+        :return:
+        """
+        if self.monitor is None and trainer.monitor is not None:
+            self.set_monitor(monitor=trainer.monitor, larger_better=trainer.larger_better)
+        if self.must_have_monitor and self.monitor is None:
+            raise RuntimeError(f"No `monitor` is set for {self.__class__.__name__}. "
+                               f"You can set it in the initialization or through Trainer.")
+        if self.must_have_monitor and self.monitor is not None and trainer.evaluator is None:
+            raise RuntimeError(f"No `evaluate_dataloaders` is set for Trainer. But Callback: {self.__class__.__name__}"
+                               f" need to watch the monitor:`{self.monitor_name}`.")
+
+    def on_sanity_check_end(self, trainer, sanity_check_res):
+        # 主要核对一下 monitor 是否存在。
+        if self.monitor is not None:
+            self.get_monitor_value(results=sanity_check_res)
+
+
 class ExecuteOnceBetterMonitor(HasMonitorCallback):
     def __init__(self, monitor, larger_better, execute_fn):
         """
@@ -183,13 +208,13 @@ class ExecuteOnceBetterMonitor(HasMonitorCallback):
 
         :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
                 的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
-                果(字典类型)，返回一个 float 值作为 monitor 的结果。
+                果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有相关的 monitor 值请返回 None 。
         :param larger_better: monitor 是否时越大越好
         :param execute_fn: 一个可执行的函数，不接受任何参数，不反回值。在 monitor 取得更好结果的时候会调用。
         """
         super().__init__(monitor, larger_better, must_have_monitor=True)
         _check_valid_parameters_number(execute_fn, expected_params=[], fn_name='execute_fn')
-        self.execute_fn = execute_fn()
+        self.execute_fn = execute_fn
 
     def on_validate_end(self, trainer, results):
         if self.is_better_results(results):

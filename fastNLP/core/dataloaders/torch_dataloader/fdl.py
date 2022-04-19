@@ -11,6 +11,7 @@ from fastNLP.core.collators.collator import _MultiCollator
 from fastNLP.core.utils.utils import indice_collate_wrapper
 from fastNLP.io.data_bundle import DataBundle
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, UnrepeatedSampler
 
 if _NEED_IMPORT_TORCH:
     from torch.utils.data import DataLoader, Sampler
@@ -48,8 +49,8 @@ class TorchDataLoader(DataLoader):
     """
 
     def __init__(self, dataset, batch_size: int = 1,
-                 shuffle: bool = False, sampler: Optional["Sampler[int]"] = None,
-                 batch_sampler: Optional["Sampler[Sequence[int]]"] = None,
+                 shuffle: bool = False, sampler: Union["Sampler[int]", ReproducibleSampler, UnrepeatedSampler] = None,
+                 batch_sampler: Union["Sampler[Sequence[int]]", ReproducibleBatchSampler] = None,
                  num_workers: int = 0, collate_fn: Optional[Callable] = None,
                  pin_memory: bool = False, drop_last: bool = False,
                  timeout: float = 0, worker_init_fn: Optional[Callable] = None,

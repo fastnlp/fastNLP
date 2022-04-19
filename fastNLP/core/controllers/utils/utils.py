@@ -126,7 +126,7 @@ class _TruncatedDataLoader:
         return getattr(self.dataloader, item)
 
 
-def check_validate_every(validate_every):
+def check_evaluate_every(validate_every):
     if not callable(validate_every) and (not isinstance(validate_every, int) or validate_every == 0):
         raise ValueError("Parameter 'evaluate_every' should be set to 'int' type and either < 0 or > 0.")
     if callable(validate_every):

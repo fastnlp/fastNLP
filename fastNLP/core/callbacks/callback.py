@@ -236,7 +236,7 @@ class Callback:
         结束 validate 时调用，并把 validate 的结果传入。
 
         :param trainer:
-        :param results:
+        :param results: Evaluate 的结果，一般是个 dict 。
         :return:
         """
         pass
@@ -249,6 +249,15 @@ class Callback:
         :return:
         """
         return self.__class__.__name__
+
+    @property
+    def need_reproducible_sampler(self) -> bool:
+        """
+        当前 callback 是否需要能够复现的 sampler 。一般用于 checkpoint 类的 callback 。
+
+        :return:
+        """
+        return False
 
 
 class _CallbackWrapper(Callback):
