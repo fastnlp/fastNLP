@@ -1,6 +1,5 @@
 import os
 import shutil
-from functools import partial
 from typing import List, Union, Optional, Dict, Tuple, Callable
 
 from .paddle_driver import PaddleDriver
@@ -30,7 +29,7 @@ from fastNLP.core.samplers import (
     re_instantiate_sampler,
     conversion_between_reproducible_and_unrepeated_sampler,
 )
-from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_SEED
+from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_SEED, FASTNLP_NO_SYNC
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -38,7 +37,6 @@ if _NEED_IMPORT_PADDLE:
     from paddle import DataParallel
     import paddle.distributed.fleet as fleet
     import paddle.distributed as paddledist
-    from paddle.io import BatchSampler
     from paddle.optimizer import Optimizer
     from paddle.fluid.reader import _DatasetKind
     from paddle.fluid.dygraph import parallel_helper
@@ -236,7 +234,8 @@ class PaddleFleetDriver(PaddleDriver):
         self.global_rank = paddledist.get_rank()
 
     def barrier(self):
-        paddledist.barrier()
+        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) < 1:  # 当 FASTNLP_NO_SYNC 小于 1 时实际执行
+            paddledist.barrier()
 
     def configure_fleet(self):
         if not self._has_fleetwrapped and not isinstance(self.model, DataParallel):
@@ -305,7 +304,7 @@ class PaddleFleetDriver(PaddleDriver):
                 raise RuntimeError(f"There is no `{fn}` method in your model.")
         else:
             if hasattr(model, fn):
-                logger.warning("Notice your model is a `DistributedDataParallel` model. And your model also implements "
+                logger.warning("Notice your model is a `DataParallel` model. And your model also implements "
                                f"the `{fn}` method, which we can not call actually, we will"
                                " call `forward` function instead of `train_step` and you should note that.")
             elif fn not in {"train_step", "evaluate_step"}:
@@ -453,6 +452,8 @@ class PaddleFleetDriver(PaddleDriver):
             接收到的参数；如果是 source 端则返回发射的内容；既不是发送端、又不是接收端，则返回 None 。
         """
         return
+        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) == 2:  # 如果 FASTNLP_NO_SYNC == 2 直接返回。
+            return
         return fastnlp_paddle_broadcast_object(obj, src, device=self.data_device, group=group)
 
     def all_gather(self, obj, group) -> List:
@@ -479,4 +480,6 @@ class PaddleFleetDriver(PaddleDriver):
         :return:
         """
         return
+        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) == 2:  # 如果 FASTNLP_NO_SYNC 表示不执行
+            return [obj]
         return fastnlp_paddle_all_gather(obj, group=group)

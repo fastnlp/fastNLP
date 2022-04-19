@@ -19,7 +19,7 @@ if _NEED_IMPORT_PADDLE:
     import paddle
     from paddle import nn
     from paddle.nn import Layer
-    from paddle.io import DataLoader, BatchSampler, Dataset
+    from paddle.io import DataLoader, BatchSampler
     from paddle.amp import auto_cast, GradScaler
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Layer
@@ -140,8 +140,7 @@ class DummyGradScaler:
 
 def _build_fp16_env(dummy=False):
     if dummy:
-        auto_cast = ExitStack
-        GradScaler = DummyGradScaler
+        return ExitStack, DummyGradScaler
     else:
         if not paddle.device.is_compiled_with_cuda():
             raise RuntimeError("No cuda")
@@ -150,7 +149,7 @@ def _build_fp16_env(dummy=False):
                 "NOTE: your device does NOT support faster training with fp16, "
                 "please switch to FP32 which is likely to be faster"
             )
-    return auto_cast, GradScaler
+            return auto_cast, GradScaler
 
 def find_free_ports(num):
     def __free_port():

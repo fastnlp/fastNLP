@@ -20,6 +20,8 @@ class ReproducibleSampler:
      或者 batch_sampler；注意，所有在 init 中初始化的变量，都不能含有 _ 下横线作为开头；所有不在 init 中设置的变量都必须以下横线开头。
 
     """
+    def __init__(self, **kwargs):
+        self.num_replicas = 1
 
     def set_distributed(self, num_replicas, rank, pad=True):
         raise NotImplementedError("Each specific sampler should implement its own `set_distributed` method.")
@@ -46,14 +48,6 @@ class ReproducibleSampler:
 
     def set_epoch(self, epoch):
         pass
-
-    @property
-    def num_repliacs(self):
-        return self._num_replicas
-
-    @num_repliacs.setter
-    def num_repliacs(self, value):
-        self._num_replicas = value
 
 
 class RandomSampler(ReproducibleSampler):
