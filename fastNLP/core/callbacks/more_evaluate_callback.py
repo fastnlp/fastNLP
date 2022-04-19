@@ -146,7 +146,7 @@ class MoreEvaluateCallback(HasMonitorCallback):
         if self.watch_monitor is not None:
             return
         if callable(self.evaluate_every):
-            if self.evaluate_every(self):
+            if self.evaluate_every(trainer):
                 results = self.evaluator.run()
                 self.topk_saver.save_topk(trainer, results)
         elif self.evaluate_every > 0 and trainer.global_forward_batches % self.evaluate_every == 0:
