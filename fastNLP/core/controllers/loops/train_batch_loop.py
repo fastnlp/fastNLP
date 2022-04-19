@@ -36,7 +36,8 @@ class TrainBatchLoop(Loop):
                 raise e
 
             trainer.on_train_batch_begin(batch, indices)
-            self.batch_step_fn(trainer, batch)
+            with trainer.get_no_sync_context():  # 在多卡的时候可能需要关闭 sync
+                self.batch_step_fn(trainer, batch)
             trainer.global_forward_batches += 1
             trainer.batch_idx_in_epoch += 1
 

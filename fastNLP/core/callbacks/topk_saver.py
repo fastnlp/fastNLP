@@ -31,7 +31,7 @@ class Saver:
             folder = Path.cwd()
         folder = Path(folder)
         if not folder.exists():
-            raise NotADirectoryError(f"Path '{folder.absolute()}' is not existed!")
+            folder.mkdir(parents=True, exist_ok=True)
         elif folder.is_file():
             raise ValueError("Parameter `folder` should be a directory instead of a file.")
 
