@@ -120,7 +120,8 @@ class Trainer(TrainerEventTrigger):
             torch_non_blocking: 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
             data_device: 表示如果用户的模型 device （在 Driver 中对应为参数 model_device）为 None 时，我们会将数据迁移到 data_device 上；
              注意如果 model_device 为 None，那么 data_device 不会起作用；
-            torch_ddp_kwargs: 用于配置 pytorch 的 DistributedDataParallel 初始化时的参数；
+            torch_ddp_kwargs: 用于配置 pytorch 的 DistributedDataParallel 初始化时的参数；仅用于 pytorch ddp 训练。例如传入
+                {'find_unused_parameters': True} 来解决有有参数不参与前向运算导致的报错等。
             set_grad_to_none: 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
             use_dist_sampler: 表示是否使用分布式的 sampler 。在多卡时，分布式 sampler 将自动决定每张卡上读取的 sample ，使得一个epoch
                 内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
