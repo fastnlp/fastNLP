@@ -11,6 +11,7 @@ from .utils import (
     replace_sampler,
     replace_batch_sampler,
 )
+from .dist_utils import fastnlp_paddle_all_gather, fastnlp_paddle_broadcast_object
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.core.utils import (
@@ -451,12 +452,12 @@ class PaddleFleetDriver(PaddleDriver):
         :return: 如果当前不是分布式 driver 直接返回输入的 obj 。如果当前 rank 是接收端（其 global rank 包含在了 dst 中），则返回
             接收到的参数；如果是 source 端则返回发射的内容；既不是发送端、又不是接收端，则返回 None 。
         """
-        return
-        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) == 2:  # 如果 FASTNLP_NO_SYNC == 2 直接返回。
-            return
-        return fastnlp_paddle_broadcast_object(obj, src, device=self.data_device, group=group)
+        device = self.data_device
+        # 因为设置了CUDA_VISIBLE_DEVICES，可能会引起错误
+        device = get_device_from_visible(device)
+        return fastnlp_paddle_broadcast_object(obj, src, device=device, group=group)
 
-    def all_gather(self, obj, group) -> List:
+    def all_gather(self, obj, group=None) -> List:
         """
         将 obj 互相传送到其它所有的 rank 上，其中 obj 可能是 Tensor，也可能是嵌套结构的 object 。如果不是基础类型的数据，尝试通过
             pickle 进行序列化，接收到之后再反序列化。
@@ -479,7 +480,4 @@ class PaddleFleetDriver(PaddleDriver):
         :param group:
         :return:
         """
-        return
-        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) == 2:  # 如果 FASTNLP_NO_SYNC 表示不执行
-            return [obj]
         return fastnlp_paddle_all_gather(obj, group=group)
