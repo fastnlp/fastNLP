@@ -91,9 +91,10 @@ class CheckpointCallback(Callback):
         else:
             on_exceptions = []
 
-        self.topk_saver = TopkSaver(topk, monitor, larger_better, folder, only_state_dict,
-                                    model_save_fn, save_evaluate_results,
-                                    save_object, **kwargs)
+        self.topk_saver = TopkSaver(topk=topk, monitor=monitor, larger_better=larger_better, folder=folder,
+                                    save_object=save_object, only_state_dict=only_state_dict, model_save_fn=model_save_fn,
+                                    save_evaluate_results=save_evaluate_results, **kwargs)
+
         self.topk = topk
         self.save_object = save_object
 

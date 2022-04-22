@@ -169,11 +169,11 @@ class TopkQueue:
 
 
 class TopkSaver(MonitorUtility, Saver):
-    def __init__(self, topk:int, monitor:str, larger_better:bool=True, folder:str=None, save_object:str='model',
+    def __init__(self, topk:int=0, monitor:str=None, larger_better:bool=True, folder:str=None, save_object:str='model',
                  only_state_dict:bool=True, model_save_fn:Callable=None, save_evaluate_results:bool=True,
                  **kwargs):
         """
-        用来保存识别 topk 模型并保存，也可以仅当一个保存 saver 使用。保存路径为
+        用来识别 topk 模型并保存，也可以仅当一个保存 Saver 使用。保存路径为
         - folder/
             - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
                  - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}-{topk_monitor}_{monitor_value}/  # 满足topk条件存储文件名
