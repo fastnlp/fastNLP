@@ -20,6 +20,7 @@ from fastNLP.core.controllers.utils.utils import TrainerEventTrigger, _Truncated
 from fastNLP.core.callbacks import Callback, CallbackManager, Events, EventsList
 from fastNLP.core.callbacks.callback import _CallbackWrapper
 from fastNLP.core.callbacks.callback_events import _SingleEventState
+from fastNLP.core.callbacks.progress_callback import choose_progress_callback
 from fastNLP.core.drivers import Driver
 from fastNLP.core.drivers.utils import choose_driver
 from fastNLP.core.utils import get_fn_arg_names, match_and_substitute_params, nullcontext
@@ -125,14 +126,13 @@ class Trainer(TrainerEventTrigger):
             set_grad_to_none: 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
             use_dist_sampler: 表示是否使用分布式的 sampler 。在多卡时，分布式 sampler 将自动决定每张卡上读取的 sample ，使得一个epoch
                 内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
-            eval_use_dist_sampler: 表示在 Evaluator 中在使用 TorchDDPDriver 的时候是否将 dataloader 的 sampler 替换为分布式的 sampler；默认为 True；
+            evaluate_use_dist_sampler: 表示在 Evaluator 中在使用 分布式 的时候是否将 dataloader 的 sampler 替换为分布式的 sampler；默认为 True；
             output_from_new_proc: 应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
              ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
              log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
-            progress_bar: 以哪种方式显示 progress ，目前支持[None, 'raw', 'rich', 'auto']，默认为 auto 。progress 的实现是通过
-                callback 实现的，若在输入的 callback 中检测到了 ProgressCallback 类型的 callback ，则该参数对 Trainer 无效。
-                auto 表示如果检测到当前 terminal 为交互型 则使用 rich，否则使用 raw。
-
+            progress_bar: 以哪种方式显示 progress ，目前支持[None, 'raw', 'rich', 'auto'] 或者 RichCallback, RawTextCallback对象，
+                默认为 auto , auto 表示如果检测到当前 terminal 为交互型 则使用 RichCallback，否则使用 RawTextCallback对象。如果
+                需要定制 progress bar 的参数，例如打印频率等，可以传入 RichCallback, RawTextCallback 对象。
         """
         self.model = model
         self.marker = marker
@@ -195,8 +195,20 @@ class Trainer(TrainerEventTrigger):
         )
         self.driver.set_optimizers(optimizers=optimizers)
 
+        # 根据 progress_bar 参数选择 ProgressBarCallback
+        progress_bar_callback = choose_progress_callback(kwargs.get('progress_bar', 'auto'))
+        if progress_bar_callback is not None:
+            if callbacks is None:
+                callbacks = []
+            elif not isinstance(callbacks, Sequence):
+                callbacks = [callbacks]
+
+            callbacks = list(callbacks) + [progress_bar_callback]
+        else:
+            rank_zero_call(logger.warning)("No progress bar is provided, there will have no information output "
+                                           "during training.")
         # 初始化 callback manager；
-        self.callback_manager = CallbackManager(callbacks, kwargs.get('progress_bar', 'auto'))
+        self.callback_manager = CallbackManager(callbacks)
         # 添加所有的函数式 callbacks；
         self._fetch_matched_fn_callbacks()
         # 添加所有的类 callbacks；
@@ -237,6 +249,9 @@ class Trainer(TrainerEventTrigger):
         self.larger_better = larger_better
         if metrics is not None and evaluate_dataloaders is not None:
             check_evaluate_every(evaluate_every)
+            progress_bar = kwargs.get('progress_bar', 'auto')  # 如果不为
+            if not (isinstance(progress_bar, str) or progress_bar is None): # 应该是ProgressCallback，获取其名称。
+                progress_bar = progress_bar.name
             self.evaluator = Evaluator(
                 model=model,
                 dataloaders=evaluate_dataloaders,
@@ -249,8 +264,8 @@ class Trainer(TrainerEventTrigger):
                 output_mapping=output_mapping,
                 fp16=fp16,
                 verbose=0,
-                use_dist_sampler=kwargs.get("eval_use_dist_sampler", None),
-                progress_bar=kwargs.get('progress_bar', 'auto')
+                use_dist_sampler=kwargs.get("evaluate_use_dist_sampler", None),
+                progress_bar=progress_bar
             )
 
         if train_fn is not None and not isinstance(train_fn, str):

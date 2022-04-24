@@ -697,3 +697,22 @@ def get_class_that_defined_method(method):
         if isinstance(cls, type):
             return cls
     return getattr(method, '__objclass__', None)  # handle special descriptor objects
+
+
+def is_notebook():
+    """
+    检查当前运行环境是否为 jupyter
+
+    :return:
+    """
+    try:
+        from IPython import get_ipython
+
+        if "IPKernelApp" not in get_ipython().config:  # pragma: no cover
+            raise ImportError("console")
+        if "VSCODE_PID" in os.environ:  # pragma: no cover
+            raise ImportError("vscode")
+    except:
+        return False
+    else:  # pragma: no cover
+        return True

@@ -134,7 +134,7 @@ class Evaluator:
 
         self.progress_bar = kwargs.get('progress_bar', 'auto')
         if self.progress_bar == 'auto':
-            self.progress_bar = 'rich' if (sys.stdin and sys.stdin.isatty()) else 'raw'
+            self.progress_bar = 'raw' if f_rich_progress.dummy_rich else 'rich'
 
         self.driver.barrier()
 

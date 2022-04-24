@@ -8,7 +8,6 @@ __all__ = [
 
 from .callback_events import Events
 from .callback import Callback
-from .progress_callback import ProgressCallback, choose_progress_callback
 from fastNLP.core.log import logger
 
 
@@ -35,7 +34,7 @@ class CallbackManager:
     class_callbacks: Optional[List[Callback]]  # 用来保留原始的类callback；
     callback_fns: dict
 
-    def __init__(self, callbacks: Optional[List[Callback]], progress_bar='auto'):
+    def __init__(self, callbacks: Optional[List[Callback]]):
         r"""
         注意 callback 的调用顺序：
             1. 通过函数修饰器 `Trainer.on` 添加的 callback 函数；
@@ -46,7 +45,6 @@ class CallbackManager:
         """
         self._need_reproducible_sampler = False
 
-        _has_progress_callback = False
         _callbacks = []
         if callbacks is not None:
             if isinstance(callbacks, Callback):
@@ -57,16 +55,7 @@ class CallbackManager:
             for _callback in callbacks:
                 if not isinstance(_callback, Callback):
                     raise TypeError(f"callbacks must be of Callback type, instead of `{type(_callback)}`")
-                if isinstance(_callback, ProgressCallback):
-                    _has_progress_callback = True
             _callbacks += callbacks
-        if not _has_progress_callback:
-            # 添加 progress callback
-            progress_callback = choose_progress_callback(progress_bar=progress_bar)
-            if progress_callback is None:
-                logger.info("There is no progress bar, Trainer will not output training progress.")
-            else:
-                _callbacks.append(progress_callback)
         self.callback_fns = defaultdict(list)
         # 因为理论上用户最多只能通过 'trainer.on_train_begin' 或者 'trainer.callback_manager.on_train_begin' 来调用，即其是没办法
         #  直接调用具体的某一个 callback 函数，而不调用其余的同名的 callback 函数的，因此我们只需要记录具体 Event 的时机即可；
