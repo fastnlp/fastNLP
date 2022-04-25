@@ -19,7 +19,7 @@ def test_incorrect_driver():
 
 @pytest.mark.parametrize(
     "device", 
-    ["cpu", "gpu:0", 0, [1]]
+    ["cpu", "gpu:0", 0]
 )
 @pytest.mark.parametrize(
     "driver", 
@@ -27,7 +27,7 @@ def test_incorrect_driver():
 )
 def test_get_single_device(driver, device):
     """
-    测试正常情况下初始化PaddleSingleDriver的情况
+    测试正常情况下初始化 PaddleSingleDriver 的情况
     """
 
     model = PaddleNormalModel_Classification_1(2, 100)
@@ -36,7 +36,7 @@ def test_get_single_device(driver, device):
 
 @pytest.mark.parametrize(
     "device", 
-    [0, 1]
+    [0, 1, [1]]
 )
 @pytest.mark.parametrize(
     "driver", 
@@ -45,7 +45,7 @@ def test_get_single_device(driver, device):
 @magic_argv_env_context
 def test_get_fleet_2(driver, device):
     """
-    测试 fleet 多卡的初始化情况
+    测试 fleet 多卡的初始化情况，但传入了单个 gpu
     """
 
     model = PaddleNormalModel_Classification_1(64, 10)

@@ -47,9 +47,7 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
             raise ValueError("Parameter `device` can only be '-1' when it is smaller than 0.")
         if device >= _could_use_device_num:
             raise ValueError("The gpu device that parameter `device` specifies is not existed.")
-        if device != -1:
-            device = f"gpu:{device}"
-        else:
+        if device == -1:
             device = list(range(_could_use_device_num))
     elif isinstance(device, Sequence) and not isinstance(device, str):
         device = list(set(device))
@@ -61,9 +59,6 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
             elif each >= _could_use_device_num:
                 raise ValueError("When parameter `device` is 'Sequence' type, the value in it should not be bigger than"
                                  " the available gpu number.")
-        if len(device) == 1:
-            # 传入了 [1] 这样的，视为单卡。
-            device = device[0]
     elif device is not None and not isinstance(device, str):
         raise ValueError("Parameter `device` is wrong type, please check our documentation for the right use.")
 
@@ -82,6 +77,6 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
             logger.warning("Notice you are using `fleet` driver, but your chosen `device` is only one gpu, we will"
                             "still use `PaddleFleetDriver` for you, but if you mean using `PaddleSingleDriver`, you should "
                             "choose `paddle` driver.")
-            return PaddleFleetDriver(model, device, **kwargs)
+            return PaddleFleetDriver(model, [device], **kwargs)
         else:
             return PaddleFleetDriver(model, device, **kwargs)

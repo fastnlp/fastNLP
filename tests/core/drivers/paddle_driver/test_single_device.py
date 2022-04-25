@@ -34,7 +34,7 @@ class TestPaddleDriverFunctions:
 
     def test_check_single_optimizer_legality(self):
         """
-        测试传入单个optimizer时的表现
+        测试传入单个 optimizer 时的表现
         """
         optimizer = paddle.optimizer.Adam(
             parameters=self.driver.model.parameters(),
@@ -50,7 +50,7 @@ class TestPaddleDriverFunctions:
 
     def test_check_optimizers_legality(self):
         """
-        测试传入optimizer list的表现
+        测试传入 optimizer list 的表现
         """
         optimizers = [
             paddle.optimizer.Adam(
@@ -70,13 +70,13 @@ class TestPaddleDriverFunctions:
 
     def test_check_dataloader_legality_in_train(self):
         """
-        测试is_train参数为True时，_check_dataloader_legality函数的表现
+        测试 `is_train` 参数为 True 时，_check_dataloader_legality 函数的表现
         """
-        dataloader = paddle.io.DataLoader(PaddleNormalDataset())
+        dataloader = DataLoader(PaddleNormalDataset())
         PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader", True)
 
         # batch_size 和 batch_sampler 均为 None 的情形
-        dataloader = paddle.io.DataLoader(PaddleNormalDataset(), batch_size=None)
+        dataloader = DataLoader(PaddleNormalDataset(), batch_size=None)
         with pytest.raises(ValueError):
             PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader", True)
 
@@ -90,29 +90,29 @@ class TestPaddleDriverFunctions:
 
     def test_check_dataloader_legality_in_test(self):
         """
-        测试is_train参数为False时，_check_dataloader_legality函数的表现
+        测试 `is_train` 参数为 False 时，_check_dataloader_legality 函数的表现
         """
         # 此时传入的应该是dict
         dataloader = {
-            "train": paddle.io.DataLoader(PaddleNormalDataset()),
-            "test":paddle.io.DataLoader(PaddleNormalDataset())
+            "train": DataLoader(PaddleNormalDataset()),
+            "test":DataLoader(PaddleNormalDataset())
         }
         PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader", False)
 
         # batch_size 和 batch_sampler 均为 None 的情形
         dataloader = {
-            "train": paddle.io.DataLoader(PaddleNormalDataset()),
-            "test":paddle.io.DataLoader(PaddleNormalDataset(), batch_size=None)
+            "train": DataLoader(PaddleNormalDataset()),
+            "test":DataLoader(PaddleNormalDataset(), batch_size=None)
         }
         with pytest.raises(ValueError):
             PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader", False)
 
-        # 传入的不是dict，应该报错
-        dataloader = paddle.io.DataLoader(PaddleNormalDataset())
+        # 传入的不是 dict ，应该报错
+        dataloader = DataLoader(PaddleNormalDataset())
         with pytest.raises(ValueError):
             PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader", False)
 
-        # 创建torch的dataloader
+        # 创建 torch 的 dataloader
         train_loader = torch.utils.data.DataLoader(
             TorchNormalDataset(),
             batch_size=32, shuffle=True
@@ -127,7 +127,7 @@ class TestPaddleDriverFunctions:
 
     def test_tensor_to_numeric(self):
         """
-        测试tensor_to_numeric函数
+        测试 tensor_to_numeric 函数
         """
         # 单个张量
         tensor = paddle.to_tensor(3)
@@ -180,7 +180,7 @@ class TestPaddleDriverFunctions:
 
     def test_set_model_mode(self):
         """
-        测试set_model_mode函数
+        测试 set_model_mode 函数
         """
         self.driver.set_model_mode("train")
         assert self.driver.model.training
@@ -192,14 +192,14 @@ class TestPaddleDriverFunctions:
 
     def test_move_model_to_device_cpu(self):
         """
-        测试move_model_to_device函数
+        测试 move_model_to_device 函数
         """
         PaddleSingleDriver.move_model_to_device(self.driver.model, "cpu")
         assert self.driver.model.linear1.weight.place.is_cpu_place()
 
     def test_move_model_to_device_gpu(self):
         """
-        测试move_model_to_device函数
+        测试 move_model_to_device 函数
         """
         PaddleSingleDriver.move_model_to_device(self.driver.model, "gpu")
         assert self.driver.model.linear1.weight.place.is_gpu_place()
@@ -207,7 +207,7 @@ class TestPaddleDriverFunctions:
 
     def test_worker_init_function(self):
         """
-        测试worker_init_function
+        测试 worker_init_function
         """
         # 先确保不影响运行
         # TODO：正确性
@@ -215,7 +215,7 @@ class TestPaddleDriverFunctions:
 
     def test_set_deterministic_dataloader(self):
         """
-        测试set_deterministic_dataloader
+        测试 set_deterministic_dataloader
         """
         # 先确保不影响运行
         # TODO：正确性
@@ -224,7 +224,7 @@ class TestPaddleDriverFunctions:
 
     def test_set_sampler_epoch(self):
         """
-        测试set_sampler_epoch
+        测试 set_sampler_epoch
         """
         # 先确保不影响运行
         # TODO：正确性
@@ -336,7 +336,7 @@ class TestSingleDeviceFunction:
 
     def test_move_data_to_device(self):
         """
-        这个函数仅调用了paddle_move_data_to_device，测试例在tests/core/utils/test_paddle_utils.py中
+        这个函数仅调用了 paddle_move_data_to_device ，测试例在 tests/core/utils/test_paddle_utils.py 中
         就不重复测试了
         """
         self.driver.move_data_to_device(paddle.rand((32, 64)))
@@ -490,9 +490,6 @@ class TestSetDistReproDataloader:
         else:
             sampler_states = replaced_loader.batch_sampler.sampler.state_dict()
 
-        # 加载 num_consumed_samples_array，设置正确取出的 batch 数目
-        num_consumed_samples_array = sampler_states.pop('num_consumed_samples_array', None)
-
         # 重新加载，应该可以输出剩下的内容，且对于 PaddleNormalDataset 来说，排序后应该是一个 range
         left_idxes = set()
         if isinstance(replaced_loader.batch_sampler, RandomBatchSampler):
@@ -510,7 +507,6 @@ class TestSetDistReproDataloader:
             new_loader.batch_sampler.load_state_dict(sampler_states)
         else:
             batch_size = replaced_loader.batch_sampler.batch_size
-            num_consumed_samples = num_consumed_batches * batch_size
             sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size
             # 重新构造 dataloader
             batch_sampler = BatchSampler(replaced_loader.dataset, shuffle=shuffle, batch_size=batch_size)
