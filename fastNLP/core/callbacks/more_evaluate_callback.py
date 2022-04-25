@@ -108,7 +108,7 @@ class MoreEvaluateCallback(HasMonitorCallback):
             'metrics': self.metrics,
             'driver': self.kwargs.get('driver', trainer.driver),
             'device': self.kwargs.get('device', trainer.device),
-            'batch_step_fn': self.kwargs.get('batch_step_fn', trainer.evaluate_batch_step_fn),
+            'evaluate_batch_step_fn': self.kwargs.get('evaluate_batch_step_fn', trainer.evaluate_batch_step_fn),
             'evaluate_fn': self.evaluate_fn,
             'input_mapping': self.kwargs.get('input_mapping', trainer.input_mapping),
             'output_mapping': self.kwargs.get('output_mapping', trainer.output_mapping),

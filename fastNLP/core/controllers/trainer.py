@@ -83,10 +83,10 @@ class Trainer(TrainerEventTrigger):
         :param n_epochs: 训练总共的 epoch 的数量，默认为 20；
         :param evaluate_dataloaders: 验证数据集，其可以是单独的一个数据集，也可以是多个数据集；当为多个数据集时，注意其必须是 Dict；默认
          为 None；
-        :param batch_step_fn: 用来替换 `TrainBatchLoop` 中的 `batch_step_fn` 函数，注意该函数的两个参数必须为 `trainer` 和
-         `batch`；默认为 None；
-        :param evaluate_batch_step_fn: 用来替换 'Evaluator' 中的 `EvaluateBatchLoop` 中的 `batch_step_fn` 函数，注意该函数的
-         两个参数必须为 `evaluator` 和 `batch`；默认为 None；
+        :param batch_step_fn: 定制每次 train batch 执行的函数。该函数应接受两个参数为 `trainer` 和`batch`，不需要要返回值；可以
+            参考 fastNLP.core.controllers.loops.train_batch_loop.TrainBatchLoop中的batch_step_fn函数。
+        :param evaluate_batch_step_fn: 定制每次 evaluate batch 执行的函数。该函数应接受的两个参数为 `evaluator` 和 `batch`，
+            不需要有返回值；可以参考 fastNLP.core.controllers.loops.evaluate_batch_loop.EvaluateBatchLoop中的batch_step_fn函数。
         :param train_fn: 用来控制 `Trainer` 在训练的前向传播过程中是调用模型的哪一个函数，例如是 `train_step` 还是 `forward`；
          默认为 None，如果该值是 None，那么我们会默认使用 `train_step` 当做前向传播的函数，如果在模型中没有找到该方法，
          则使用模型默认的前向传播函数。
@@ -136,9 +136,9 @@ class Trainer(TrainerEventTrigger):
                 默认为 auto , auto 表示如果检测到当前 terminal 为交互型 则使用 RichCallback，否则使用 RawTextCallback对象。如果
                 需要定制 progress bar 的参数，例如打印频率等，可以传入 RichCallback, RawTextCallback 对象。
             train_input_mapping: 与 input_mapping 一致，但是只用于 train 中。与 input_mapping 互斥。
-            train_output_mapping: 与 output_mapping 一致，但是只用于 train 中。与 input_mapping 互斥。
+            train_output_mapping: 与 output_mapping 一致，但是只用于 train 中。与 output_mapping 互斥。
             evaluate_input_mapping: 与 input_mapping 一致，但是只用于 evaluate 中。与 input_mapping 互斥。
-            evaluate_output_mapping: 与 output_mapping 一致，但是只用于 evaluate 中。与 input_mapping 互斥。
+            evaluate_output_mapping: 与 output_mapping 一致，但是只用于 evaluate 中。与 output_mapping 互斥。
         """
         self.model = model
         self.marker = marker
@@ -268,21 +268,12 @@ class Trainer(TrainerEventTrigger):
             progress_bar = kwargs.get('progress_bar', 'auto')  # 如果不为
             if not (isinstance(progress_bar, str) or progress_bar is None): # 应该是ProgressCallback，获取其名称。
                 progress_bar = progress_bar.name
-            self.evaluator = Evaluator(
-                model=model,
-                dataloaders=evaluate_dataloaders,
-                metrics=metrics,
-                driver=self.driver,
-                device=device,
-                batch_step_fn=evaluate_batch_step_fn,
-                evaluate_fn=evaluate_fn,
-                input_mapping=input_mapping,
-                output_mapping=output_mapping,
-                fp16=fp16,
-                verbose=0,
-                use_dist_sampler=kwargs.get("evaluate_use_dist_sampler", None),
-                progress_bar=progress_bar
-            )
+            self.evaluator = Evaluator(model=model, dataloaders=evaluate_dataloaders, metrics=metrics,
+                                       driver=self.driver, device=device, evaluate_batch_step_fn=evaluate_batch_step_fn,
+                                       evaluate_fn=evaluate_fn, input_mapping=input_mapping,
+                                       output_mapping=output_mapping, fp16=fp16, verbose=0,
+                                       use_dist_sampler=kwargs.get("evaluate_use_dist_sampler", None),
+                                       progress_bar=progress_bar)
 
         if train_fn is not None and not isinstance(train_fn, str):
             raise TypeError("Parameter `train_fn` can only be `str` type when it is not None.")
