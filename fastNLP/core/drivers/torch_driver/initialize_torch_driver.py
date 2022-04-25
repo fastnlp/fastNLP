@@ -76,7 +76,7 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, torch.devic
             logger.info("Notice you are using `torch_ddp` driver, but your chosen `device` is only one gpu, we will "
                         "still use `TorchDDPDriver` for you, but if you mean using `torch_ddp`, you should "
                         "choose `torch` driver.")
-            return TorchDDPDriver(model, device, **kwargs)
+            return TorchDDPDriver(model, [device], **kwargs)
         else:
             return TorchDDPDriver(model, device, **kwargs)
     elif driver == "fairscale":
