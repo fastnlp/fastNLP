@@ -20,7 +20,7 @@ from .utils import (
 # 记录各个进程信息
 class SubTrainer(object):
     """
-    和fastnlp的Triainer没有关系，仅用于统计节点内不同训练的一些信息
+    用于统计节点内不同训练进程的信息，和 fastnlp 的 Triainer 没有关系
     """
     def __init__(self, endpoint=None, rank=None):
         self.devices = []
@@ -30,8 +30,8 @@ class SubTrainer(object):
 
 class FleetLauncher:
     """
-    复原了 paddle 的 launch_collective 函数，将其集成到一个类里
-    仅支持单机多卡的启动
+    复原了 paddle 的 launch_collective 函数，将其简化后集成到一个类里
+    仅支持每个机器单卡的情况。
     """
     def __init__(
         self,
@@ -45,17 +45,26 @@ class FleetLauncher:
         self.setup()
 
     def setup(self):
-
+        """
+        进行初始化设置的函数，根据传入的设备找到分布式训练使用的端口号
+        """
         self.set_endpoints()
         self.sub_trainers = self.get_process_info()
 
-    def launch(self) -> int:
+    def launch(self):
+        """
+        用于启动分布式进程。
+        首先设置 PaddlePaddle 分布式训练需要设置的环境变量，然后建立新的子进程
+        """
         # 设置环境变量
         self.global_envs = self.get_global_env()
         self.open_subprocess()
         reset_seed()
 
     def open_subprocess(self):
+        """
+        从 sub_trainers 中获取各个 rank 的信息，并且使用 subprocess.Popen 建立新的子进程。
+        """
 
         if __main__.__spec__ is None:
             # Script called as `python a/b/c.py`
@@ -77,6 +86,7 @@ class FleetLauncher:
 
         current_env = copy.copy(self.global_envs)
         for idx, t in enumerate(self.sub_trainers):
+            # 根据不同的 rank 设置环境变量
             proc_env = {
                 # global_rank
                 "PADDLE_TRAINER_ID": f"{t.rank}",
@@ -108,6 +118,14 @@ class FleetLauncher:
                 os.environ.update(current_env)
 
     def get_global_env(self):
+        """
+        设置分布式训练需要的全局变量，包括：
+        1、GLOO 相关的设置
+        2、`PADDLE_TRAINERS_NUM` ：所有的进程数目
+        3、`PADDLE_TRAINER_ENDPOINTS` ：使用的所有地址及其端口
+        4、`PADDLE_WORLD_DEVICE_IDS` ：使用的所有设备
+        5、FASTNLP_DISTRIBUTED_CHECK：通过 fastNLP 建立子进程的标志，保存分布式训练使用的设备
+        """
 
         global_envs = copy.copy(os.environ.copy())
         self.gloo_rendezvous_dir = tempfile.mkdtemp()
@@ -137,7 +155,7 @@ class FleetLauncher:
 
     def set_endpoints(self):
         """
-        Reference to `get_cluster_from_args`
+        寻找用户设置的端口或是空闲端口用于分布式训练，参考了 PaddlePaddle 中的 `get_cluster_from_args` 函数
         """
         self.node_ip = "127.0.0.1"
 
@@ -157,7 +175,7 @@ class FleetLauncher:
 
     def get_process_info(self):
         """
-        Reference to `get_cluster`
+        获取各个训练进程的设备、rank 和端口信息，参考 PaddlePaddle 的 `get_cluster` 函数。
         """
         sub_trainers = []
         assert len(self.endpoints) >= len(

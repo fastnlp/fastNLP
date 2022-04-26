@@ -22,6 +22,13 @@ from .utils import apply_to_collection
 
 
 def paddle_to(data, device: Union[str, int]):
+    """
+    将 `data` 迁移到指定的 `device` 上
+
+    :param data: 要迁移的张量
+    :param device: 目标设备，可以是 `str` 或 `int`
+    :return: 迁移后的张量
+    """
 
     if device == "cpu":
         return data.cpu()
@@ -31,6 +38,9 @@ def paddle_to(data, device: Union[str, int]):
 def get_paddle_gpu_str(device: Union[str, int]):
     """
     获得 `gpu:x` 类型的设备名
+
+    :param device: 设备编号或设备名
+    :return: 返回对应的 `gpu:x` 格式的设备名
     """
     if isinstance(device, str):
         return device.replace("cuda", "gpu")
@@ -38,7 +48,10 @@ def get_paddle_gpu_str(device: Union[str, int]):
 
 def get_paddle_device_id(device: Union[str, int]):
     """
-    获得 gpu 的设备id，注意不要传入 `cpu` 。
+    获得 gpu 的设备id
+
+    :param: device: 设备编号或设备名
+    :return: 设备对应的编号
     """
     if isinstance(device, int):
         return device

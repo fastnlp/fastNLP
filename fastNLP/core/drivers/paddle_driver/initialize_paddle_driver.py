@@ -17,14 +17,16 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
                             model: paddle.nn.Layer, **kwargs) -> PaddleDriver:
     r"""
     用来根据参数 `driver` 和 `device` 来确定并且初始化一个具体的 `Driver` 实例然后返回回去；
-    注意如果输入的 `device` 如果和 `driver` 对应不上就直接报错；
+    1、如果检测到当前进程为用户通过 `python -m paddle.distributed.launch xxx.py` 方式拉起的，则将
+    设备自动设置为用户指定的设备（由于我们在引入 fastNLP 进行了特殊的设置，因此可以通过 `CUDA_VISIBLE_DEVICES` 获取）
+    2、如果检测到输入的 `driver` 是 `paddle` 但 `device` 包含了多个设备，那么我们会给出警告并且自动返回多卡的 Driver
+    3、如果检测到输入的 `driver` 是 `fleet` 但 `device` 仅有一个设备，那么我们会给出警告但仍旧返回多卡的 Driver
 
     :param driver: 该参数的值应为以下之一：["paddle", "fleet"]；
     :param device: 该参数的格式与 `Trainer` 对参数 `device` 的要求一致；
     :param model: 训练或者评测的具体的模型；
 
-    :return: 返回一个元组，元组的第一个值是具体的基于 pytorch 的 `Driver` 实例，元组的第二个值是该 driver 的名字（用于检测一个脚本中
-     先后 driver 的次序的正确问题）；
+    :return: 返回构造的 `Driver` 实例。
     """
     if is_in_paddle_launch_dist():
         if device is not None:
