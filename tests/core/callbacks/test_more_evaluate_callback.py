@@ -24,7 +24,7 @@ from fastNLP.envs import FASTNLP_LAUNCH_TIME, FASTNLP_DISTRIBUTED_CHECK
 from tests.helpers.utils import magic_argv_env_context
 from fastNLP.core import rank_zero_rm
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
-from tests.helpers.datasets.torch_data import TorchArgMaxDatset
+from tests.helpers.datasets.torch_data import TorchArgMaxDataset
 from torchmetrics import Accuracy
 from fastNLP.core.metrics import Metric
 from fastNLP.core.log import logger
@@ -64,7 +64,7 @@ def model_and_optimizers(request):
         feature_dimension=ArgMaxDatasetConfig.feature_dimension
     )
     trainer_params.optimizers = SGD(trainer_params.model.parameters(), lr=0.001)
-    dataset = TorchArgMaxDatset(
+    dataset = TorchArgMaxDataset(
         feature_dimension=ArgMaxDatasetConfig.feature_dimension,
         data_num=ArgMaxDatasetConfig.data_num,
         seed=ArgMaxDatasetConfig.seed

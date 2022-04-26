@@ -38,7 +38,7 @@ class TorchNormalDataset_Classification(Dataset):
         return {"x": self.x[item], "y": self.y[item]}
 
 
-class TorchArgMaxDatset(Dataset):
+class TorchArgMaxDataset(Dataset):
     def __init__(self, feature_dimension=10, data_num=1000, seed=0):
         self.num_labels = feature_dimension
         self.feature_dimension = feature_dimension
