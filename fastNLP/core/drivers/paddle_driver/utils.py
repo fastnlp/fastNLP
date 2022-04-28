@@ -69,7 +69,6 @@ def paddle_seed_everything(seed: Optional[int] = None, workers: bool = False) ->
     os.environ[FASTNLP_SEED_WORKERS] = f"{int(workers)}"
     return seed
 
-
 def reset_seed() -> None:
     """
     fleet 会开启多个进程，因此当用户在脚本中指定 seed_everything 时，在开启多个脚本后，会在每个脚本内重新
@@ -80,16 +79,10 @@ def reset_seed() -> None:
     if seed is not None:
         paddle_seed_everything(int(seed), workers=bool(int(workers)))
 
-class ForwardState(IntEnum):
-    TRAIN = 0
-    VALIDATE = 1
-    TEST = 2
-    PREDICT = 3
-
 class _FleetWrappingModel(Layer):
     """
-    参考_DDPWrappingModel，paddle的分布式训练也需要用paddle.nn.DataParallel进行包装，采用和
-    pytorch相似的处理方式
+    参考 _DDPWrappingModel ， paddle 的分布式训练也需要用 paddle.nn.DataParallel 进行包装，采用和
+    pytorch 相似的处理方式
     """
     def __init__(self, model: 'nn.Layer'):
         super(_FleetWrappingModel, self).__init__()
@@ -109,7 +102,6 @@ class _FleetWrappingModel(Layer):
 class DummyGradScaler:
     """
     用于仿造的GradScaler对象，防止重复写大量的if判断
-
     """
     def __init__(self, *args, **kwargs):
         pass
@@ -152,6 +144,9 @@ def _build_fp16_env(dummy=False):
             return auto_cast, GradScaler
 
 def find_free_ports(num):
+    """
+    在空闲的端口中找到 num 个端口
+    """
     def __free_port():
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
@@ -178,18 +173,11 @@ def find_free_ports(num):
 
     return None
 
-def get_host_name_ip():
-    try:
-        host_name = socket.gethostname()
-        host_ip = socket.gethostbyname(host_name)
-        return host_name, host_ip
-    except:
-        return None
-
 def get_device_from_visible(device: Union[str, int], output_type=int):
     """
     在有 CUDA_VISIBLE_DEVICES 的情况下，获取对应的设备。
     如 CUDA_VISIBLE_DEVICES=2,3 ，device=3 ，则返回1。
+
     :param device: 未转化的设备名
     :param output_type: 返回值的类型
     :return: 转化后的设备id
