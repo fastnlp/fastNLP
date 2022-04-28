@@ -95,6 +95,8 @@ class LoadBestModelCallback(HasMonitorCallback):
             self.buffer.seek(0)
             trainer.load_model(folder=self.buffer, only_state_dict=self.only_state_dict)
 
+        trainer.driver.barrier()
+
         if self.delete_after_after:
             if self.real_save_folder and int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
                 # 只需要 rank 0 执行删除。

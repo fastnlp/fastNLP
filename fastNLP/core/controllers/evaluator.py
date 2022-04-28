@@ -20,13 +20,6 @@ from fastNLP.core.log import logger
 
 
 class Evaluator:
-    """
-    1. 我们目前不直接提供每一个 metric 对应一个或者特殊的多个 dataloader 的功能，默认就是所有 metric 处理所有 dataloader，如果用户有这种
-    需求，请使用多个 Tester 进行操作；
-    2. Trainer 的 validate dataloader 只允许传进去一个，而 Tester 则可以多个；因为 Trainer 涉及到保存 topk 模型的逻辑，而 Tester
-    则只需要给出评测的结果即可；
-
-    """
     driver: Driver
     _evaluate_batch_loop: Loop
 
@@ -37,11 +30,12 @@ class Evaluator:
                  output_mapping: Optional[Union[Callable, Dict]] = None, model_wo_auto_param_call: bool = False,
                  fp16: bool = False, verbose: int = 1, **kwargs):
         """
+        用于对数据进行评测。
 
         :param model: 待测试的模型，如果传入的 driver 为 Driver 实例，该参数将被忽略。
-        :param dataloaders: 待评测的数据集。
+        :param dataloaders: 待评测的数据集。如果为多个，请使用 dict 传入。
         :param metrics: 使用的 metric 。必须为 dict 类型，其中 key 为 metric 的名称，value 为一个 Metric 对象。支持 fastNLP 的
-            metric ，torchmetrics，allennlpmetrics等。
+            metric ，torchmetrics，allennlpmetrics 等。
         :param driver: 使用 driver 。
         :param device: 使用的设备。
         :param evaluate_batch_step_fn: 定制每次 evaluate batch 执行的函数。该函数应接受的两个参数为 `evaluator` 和 `batch`，
@@ -59,7 +53,8 @@ class Evaluator:
         :param verbose: 是否打印 evaluate 的结果。
         :param kwargs:
             bool model_use_eval_mode: 是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的dropout
-             与 batch normalization 将会关闭。默认为True。
+             与 batch normalization 将会关闭。默认为True。如果为 False，fastNLP 不会对 model 的 evaluate 状态做任何设置。无论
+             该值是什么，fastNLP 都会在 evaluate 接受后将 model 的状态设置为 train 。
             TODO 还没完成。
             Union[bool] auto_tensor_conversion_for_metric: 是否自动将输出中的
              tensor 适配到 metrics 支持的。例如 model 输出是 paddlepaddle 的 tensor ，但是想利用 torchmetrics 的metric对象，
