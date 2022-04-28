@@ -81,12 +81,12 @@ class TrainerEventTrigger:
     def on_after_zero_grad(self, optimizers):
         self.callback_manager.on_after_zero_grad(self, optimizers)
 
-    def on_validate_begin(self):
-        self.callback_manager.on_validate_begin(self)
+    def on_evaluate_begin(self):
+        self.callback_manager.on_evaluate_begin(self)
 
-    def on_validate_end(self, results):
+    def on_evaluate_end(self, results):
         self.trainer_state.save_on_this_step = True
-        self.callback_manager.on_validate_end(self, results)
+        self.callback_manager.on_evaluate_end(self, results)
 
 
 class _TruncatedDataLoader:
@@ -126,8 +126,8 @@ class _TruncatedDataLoader:
         return getattr(self.dataloader, item)
 
 
-def check_evaluate_every(validate_every):
-    if not callable(validate_every) and (not isinstance(validate_every, int) or validate_every == 0):
+def check_evaluate_every(evaluate_every):
+    if not callable(evaluate_every) and (not isinstance(evaluate_every, int) or evaluate_every == 0):
         raise ValueError("Parameter 'evaluate_every' should be set to 'int' type and either < 0 or > 0.")
-    if callable(validate_every):
-        _check_valid_parameters_number(validate_every, expected_params=['trainer'])
+    if callable(evaluate_every):
+        _check_valid_parameters_number(evaluate_every, expected_params=['trainer'])

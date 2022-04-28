@@ -100,7 +100,7 @@ class RichCallback(ProgressCallback):
             self.progress_bar.update(self.task2id['epoch'], description=f'Epoch:{trainer.cur_epoch_idx}',
                                      advance=self.epoch_bar_update_advance, refresh=True)
 
-    def on_validate_end(self, trainer, results):
+    def on_evaluate_end(self, trainer, results):
         if len(results)==0:
             return
         rule_style = ''
@@ -121,9 +121,6 @@ class RichCallback(ProgressCallback):
             self.progress_bar.console.print_json(json.dumps(trainer.driver.tensor_to_numeric(results)))
         else:
             self.progress_bar.print(results)
-
-    def on_exception(self, trainer, exception):
-        self.clear_tasks()
 
     def clear_tasks(self):
         for key, taskid in self.task2id.items():
@@ -178,7 +175,7 @@ class RawTextCallback(ProgressCallback):
                    f'finished {round(trainer.global_forward_batches/trainer.total_batches*100, 2)}%.'
             logger.info(text)
 
-    def on_validate_end(self, trainer, results):
+    def on_evaluate_end(self, trainer, results):
         if len(results)==0:
             return
         base_text = f'Eval. results on Epoch:{trainer.cur_epoch_idx}, Batch:{trainer.batch_idx_in_epoch}'

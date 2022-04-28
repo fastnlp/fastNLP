@@ -339,11 +339,11 @@ class Trainer(TrainerEventTrigger):
         self.num_batches_per_epoch = len(self.dataloader)
         self.total_batches = self.num_batches_per_epoch * self.n_epochs
         self.global_forward_batches = self.num_batches_per_epoch * self.cur_epoch_idx + self.batch_idx_in_epoch
-        self.on_train_begin()
-        self.driver.barrier()
-        self.driver.zero_grad(self.set_grad_to_none)
 
         try:
+            self.on_train_begin()
+            self.driver.barrier()
+            self.driver.zero_grad(self.set_grad_to_none)
             while self.cur_epoch_idx < self.n_epochs:
                 # 这个是防止在 Trainer.load 之后还没结束当前 epoch 又继续 save
                 self.start_batch_idx_in_epoch = self.trainer_state.batch_idx_in_epoch
@@ -356,10 +356,8 @@ class Trainer(TrainerEventTrigger):
                 self.cur_epoch_idx += 1
                 self.on_train_epoch_end()
                 self.driver.barrier()
-                self.epoch_validate()
+                self.epoch_evaluate()
                 self.driver.barrier()
-            self.on_train_end()
-            self.driver.barrier()
 
         except EarlyStopException as e:
             logger.info(f"Catch early stop exception: {e.msg}.")
@@ -373,17 +371,20 @@ class Trainer(TrainerEventTrigger):
             self.driver.on_exception()
             self.on_exception(e)
             raise e
+        finally:
+            self.on_train_end()
+            self.driver.barrier()
 
     def _set_num_eval_batch_per_dl(self, num_eval_batch_per_dl):
-        def _validate_fn(trainer: Trainer, validate_fn: Callable) -> None:
-            trainer.on_validate_begin()
-            _validate_res: dict = validate_fn()
-            trainer.on_validate_end(_validate_res)
+        def _evaluate_fn(trainer: Trainer, evaluate_fn: Callable) -> None:
+            trainer.on_evaluate_begin()
+            _evaluate_res: dict = evaluate_fn()
+            trainer.on_evaluate_end(_evaluate_res)
 
         if self.evaluator is not None:
-            self.run_evaluate = partial(_validate_fn, self, partial(self.evaluator.run, num_eval_batch_per_dl))
+            self.run_evaluate = partial(_evaluate_fn, self, partial(self.evaluator.run, num_eval_batch_per_dl))
 
-    def step_validate(self):
+    def step_evaluate(self):
         """
         在每个 batch 结束后调用，根据设置执行 evaluate 。
 
@@ -396,7 +397,7 @@ class Trainer(TrainerEventTrigger):
             elif self.evaluate_every > 0 and self.global_forward_batches % self.evaluate_every == 0:
                 self.run_evaluate()
 
-    def epoch_validate(self):
+    def epoch_evaluate(self):
         """
         在每个 epoch 结束后调用，根据设置执行 evaluate 。
 
@@ -404,8 +405,8 @@ class Trainer(TrainerEventTrigger):
         """
         if self.evaluator is not None:
             if isinstance(self.evaluate_every, int) and self.evaluate_every < 0:
-                validate_every = -self.evaluate_every
-                if self.cur_epoch_idx % validate_every == 0:
+                evaluate_every = -self.evaluate_every
+                if self.cur_epoch_idx % evaluate_every == 0:
                     self.run_evaluate()
 
     def add_callback_fn(self, event: Optional[Union[Events, EventsList]], fn: Callable):

@@ -16,13 +16,13 @@ class EarlyStopCallback(HasMonitorCallback):
             的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
             果(字典类型)，返回一个 float 值作为 monitor 的结果。
         :param larger_better: monitor 的值是否是越大越好。
-        :param patience: 多少次 validate 不没有提升就停止。
+        :param patience: 多少次 evaluate 不没有提升就停止。
         """
         super(EarlyStopCallback, self).__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=True)
         self.wait = 0
         self.patience = patience
 
-    def on_validate_end(self, trainer, results):
+    def on_evaluate_end(self, trainer, results):
         monitor_value = self.get_monitor_value(results)
         if monitor_value is None:
             return
@@ -32,13 +32,13 @@ class EarlyStopCallback(HasMonitorCallback):
             self.wait += 1
 
     def on_fetch_data_begin(self, trainer):
-        # 当是 step validate 的时候，下一步执行的就是这个， 所以在这里检查。
+        # 当是 step evaluate 的时候，下一步执行的就是这个， 所以在这里检查。
         if self.wait >= self.patience:
             raise EarlyStopException(f"After {self.wait} validations, no improvement for "
                                  f"metric `{self._real_monitor}`")
 
     def on_train_epoch_begin(self, trainer):
-        # 当是 epoch validate 的时候，下一步执行的就是这个， 所以在这里检查。
+        # 当是 epoch evaluate 的时候，下一步执行的就是这个， 所以在这里检查。
         if self.wait >= self.patience:
             raise EarlyStopException(f"After {self.wait} validations, no improvement for "
                                      f"metric `{self._real_monitor}`(best value: {self.monitor_value})")

@@ -43,7 +43,7 @@ class TrainBatchLoop(Loop):
 
             trainer.check_batch_step_fn()
             trainer.on_train_batch_end()
-            trainer.step_validate()
+            trainer.step_evaluate()
         trainer.batch_idx_in_epoch = 0
 
     @staticmethod

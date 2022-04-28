@@ -63,7 +63,7 @@ class JittorDriver(Driver):
 
     def check_evaluator_mode(self, mode: str):
         model = self.unwrap_model()
-        if mode == "validate":
+        if mode == "evaluate":
             if not hasattr(model, "evaluate_step"):
                 if hasattr(model, "test_step"):
                     logger.warning_once(

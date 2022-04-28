@@ -281,9 +281,9 @@ class CallbackManager:
         pass
 
     @_transfer
-    def on_validate_begin(self, trainer):
+    def on_evaluate_begin(self, trainer):
         pass
 
     @_transfer
-    def on_validate_end(self, trainer, results):
+    def on_evaluate_end(self, trainer, results):
         pass

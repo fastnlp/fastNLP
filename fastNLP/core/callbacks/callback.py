@@ -12,6 +12,34 @@ from fastNLP.core.callbacks.callback_events import _SingleEventState
 class Callback:
     r"""
     实际使用的 callback 类，不管是我们 fastNLP 默认提供的一些 callback 类，还是用户自己定制的 callback 类，都应该继承该基类；
+    callback 调用时机顺序大概如下
+    Trainer.__init__():
+        on_after_trainer_initialized()
+    Trainer.run():
+        if num_eval_sanity_batch>0:
+            on_sanity_check_begin()  # 如果设置了num_eval_sanity_batch
+            on_sanity_check_end()
+        try:
+            on_train_begin()
+            while cur_epoch_idx < n_epochs:
+                on_train_epoch_begin()
+                while batch_idx_in_epoch<=num_batches_per_epoch:
+                    on_fetch_data_begin()
+                    on_fetch_data_end()
+                    on_train_batch_begin()
+                    on_before_backward()
+                    on_after_backward()
+                    on_before_zero_grad()  # 实际调用受到 accumulation_steps 影响
+                    on_after_zero_grad()  # 实际调用受到 accumulation_steps 影响
+                    on_before_optimizers_step()  # 实际调用受到 accumulation_steps 影响
+                    on_after_optimizers_step()  # 实际调用受到 accumulation_steps 影响
+                    on_train_batch_end()
+                on_train_epoch_end()
+        except BaseException:
+            self.on_exception()
+        finally:
+            on_train_end()
+    其它 callback 例如 on_evaluate_begin()/on_evaluate_end()将
     """
 
     def on_after_trainer_initialized(self, trainer, driver):
@@ -221,9 +249,9 @@ class Callback:
         """
         pass
 
-    def on_validate_begin(self, trainer):
+    def on_evaluate_begin(self, trainer):
         """
-        在将要进行 validate 时调用。如果是设置的以 step 数量 或 自定义地 决定 validate 的频率，该接口是在 on_train_batch_end 之后
+        在将要进行 evaluate 时调用。如果是设置的以 step 数量 或 自定义地 决定 evaluate 的频率，该接口是在 on_train_batch_end 之后
             进行调用。如果是以 epoch 数量决定调用，该接口是在 on_train_epoch_end 之后调用。
 
         :param trainer:
@@ -231,9 +259,9 @@ class Callback:
         """
         pass
 
-    def on_validate_end(self, trainer, results):
+    def on_evaluate_end(self, trainer, results):
         """
-        结束 validate 时调用，并把 validate 的结果传入。
+        结束 evaluate 时调用，并把 evaluate 的结果传入。
 
         :param trainer:
         :param results: Evaluate 的结果，一般是个 dict 。

@@ -76,7 +76,7 @@ class LoadBestModelCallback(HasMonitorCallback):
 
         super().on_after_trainer_initialized(trainer, driver)
 
-    def on_validate_end(self, trainer, results):
+    def on_evaluate_end(self, trainer, results):
         if self.is_better_results(results, keep_if_better=True):
             if self.real_save_folder:
                 trainer.save_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,
@@ -95,27 +95,14 @@ class LoadBestModelCallback(HasMonitorCallback):
             self.buffer.seek(0)
             trainer.load_model(folder=self.buffer, only_state_dict=self.only_state_dict)
 
+        self._delete_after_after(trainer)
+
+    def _delete_after_after(self, trainer):
         trainer.driver.barrier()
-
         if self.delete_after_after:
-            if self.real_save_folder and int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
-                # 只需要 rank 0 执行删除。
+            if self.real_save_folder:
                 logger.info(f"Deleting {self.real_save_folder}...")
-                shutil.rmtree(self.real_save_folder)
-                try:
-                    # 如果是 emtpy 的，就会被删除掉
-                    os.rmdir(self.save_folder)
-                except:
-                    pass
-            elif hasattr(self, 'buffer'):
-                self.buffer.close()
-                del self.buffer
-
-    def on_exception(self, trainer, exception):
-        if self.delete_after_after:
-            if self.real_save_folder: # 这里，谁处异常，谁删除
-                logger.info(f"Deleting {self.real_save_folder}...")
-                shutil.rmtree(self.real_save_folder)
+                shutil.rmtree(self.real_save_folder, ignore_errors=True)
                 try:
                     # 如果是 emtpy 的，就会被删除掉
                     os.rmdir(self.save_folder)
