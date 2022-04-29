@@ -1,6 +1,6 @@
 import json
 import sys
-
+from typing import Union
 
 __all__ = [
     'choose_progress_callback',
@@ -11,11 +11,22 @@ __all__ = [
 from .has_monitor_callback import HasMonitorCallback
 from fastNLP.core.utils import f_rich_progress
 from fastNLP.core.log import logger
+from fastNLP.core.utils.utils import is_notebook
 
 
-def choose_progress_callback(progress_bar:str):
+
+class ProgressCallback(HasMonitorCallback):
+    def on_train_end(self, trainer):
+        f_rich_progress.stop()
+
+    @property
+    def name(self):  # progress bar的名称
+        return 'auto'
+
+
+def choose_progress_callback(progress_bar: Union[str, ProgressCallback]) -> ProgressCallback:
     if progress_bar == 'auto':
-        if (sys.stdin and sys.stdin.isatty()):
+        if not f_rich_progress.dummy_rich:
             progress_bar = 'rich'
         else:
             progress_bar = 'raw'
@@ -23,13 +34,10 @@ def choose_progress_callback(progress_bar:str):
         return RichCallback()
     elif progress_bar == 'raw':
         return RawTextCallback()
+    elif isinstance(progress_bar, ProgressCallback):
+        return progress_bar
     else:
         return None
-
-
-class ProgressCallback(HasMonitorCallback):
-    def on_train_end(self, trainer):
-        f_rich_progress.stop()
 
 
 class RichCallback(ProgressCallback):
@@ -92,7 +100,7 @@ class RichCallback(ProgressCallback):
             self.progress_bar.update(self.task2id['epoch'], description=f'Epoch:{trainer.cur_epoch_idx}',
                                      advance=self.epoch_bar_update_advance, refresh=True)
 
-    def on_validate_end(self, trainer, results):
+    def on_evaluate_end(self, trainer, results):
         if len(results)==0:
             return
         rule_style = ''
@@ -114,15 +122,16 @@ class RichCallback(ProgressCallback):
         else:
             self.progress_bar.print(results)
 
-    def on_exception(self, trainer, exception):
-        self.clear_tasks()
-
     def clear_tasks(self):
         for key, taskid in self.task2id.items():
             self.progress_bar.destroy_task(taskid)
         self.progress_bar.stop()
         self.task2id = {}
         self.loss = 0
+
+    @property
+    def name(self):  # progress bar的名称
+        return 'rich'
 
 
 class RawTextCallback(ProgressCallback):
@@ -166,7 +175,7 @@ class RawTextCallback(ProgressCallback):
                    f'finished {round(trainer.global_forward_batches/trainer.total_batches*100, 2)}%.'
             logger.info(text)
 
-    def on_validate_end(self, trainer, results):
+    def on_evaluate_end(self, trainer, results):
         if len(results)==0:
             return
         base_text = f'Eval. results on Epoch:{trainer.cur_epoch_idx}, Batch:{trainer.batch_idx_in_epoch}'
@@ -184,3 +193,7 @@ class RawTextCallback(ProgressCallback):
             logger.info(json.dumps(trainer.driver.tensor_to_numeric(results)))
         else:
             logger.info(results)
+
+    @property
+    def name(self):  # progress bar的名称
+        return 'raw'

@@ -14,6 +14,7 @@ __all__ = [
 ]
 
 from fastNLP.envs import get_global_rank
+from .utils import is_notebook
 
 
 class Singleton(type):
@@ -34,6 +35,14 @@ class DummyFRichProgress:
         # 防止用户通过 DummyFRichProgress.console.print() 这种调用
         return None
 
+    @property
+    def dummy_rich(self)->bool:
+        """
+        当前对象是否是 dummy 的 rich 对象。
+
+        :return:
+        """
+        return True
 
 class FRichProgress(Progress, metaclass=Singleton):
     """
@@ -147,6 +156,8 @@ class FRichProgress(Progress, metaclass=Singleton):
             super().stop_task(task_id)
             super().remove_task(task_id)
             self.refresh()  # 使得bar不残留
+        if len(self._tasks) == 0:
+            super().stop()
 
     def start(self) -> None:
         super().start()
@@ -210,6 +221,15 @@ class FRichProgress(Progress, metaclass=Singleton):
         if refresh:
             self.refresh()
 
+    @property
+    def dummy_rich(self) -> bool:
+        """
+        当前对象是否是 dummy 的 rich 对象。
+
+        :return:
+        """
+        return False
+
 
 class SpeedColumn(ProgressColumn):
     """
@@ -226,7 +246,8 @@ class SpeedColumn(ProgressColumn):
             return Text(str(round(1/speed, 2))+' s/it.', style='progress.data.speed')
 
 
-if (sys.stdin and sys.stdin.isatty()) and get_global_rank() == 0:
+if ((sys.stdin and sys.stdin.isatty()) or is_notebook()) and \
+        get_global_rank() == 0:
     f_rich_progress = FRichProgress().new_progess(
         "[progress.description]{task.description}",
         "[progress.percentage]{task.percentage:>3.0f}%",

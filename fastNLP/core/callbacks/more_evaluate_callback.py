@@ -31,8 +31,8 @@ class MoreEvaluateCallback(HasMonitorCallback):
 
         :param dataloaders: 需要评估的数据
         :param metrics: 使用的 metrics 。
-        :param evaluate_every: 可以为负数、正数和函数；(1) 为负整数时表示每隔几个 epoch validate 一次；(2) 为正整数则表示每隔几个 batch
-            evaluate 一次；(3) 为函数时表示用户自己传入的用于控制 validate 的频率的函数，该函数的应该接受 trainer 对象作为参数，并返回
+        :param evaluate_every: 可以为负数、正数和函数；(1) 为负整数时表示每隔几个 epoch evaluate 一次；(2) 为正整数则表示每隔几个 batch
+            evaluate 一次；(3) 为函数时表示用户自己传入的用于控制 evaluate 的频率的函数，该函数的应该接受 trainer 对象作为参数，并返回
             一个 bool 值，返回为 True 说明需要进行 evaluate ；将在每个 batch 结束后调用该函数判断是否需要 evaluate 。
         :param watch_monitor: 这个值用来表示监控的 Trainer 中的 evaluate 结果的，当该值不为 None ，evaluate_every 失效。本参数的
             意义是，当检测到 Trainer 中 evaluate results 的 {watch_monitor} 的结果更好时，则进行一次 evaluate 。该参数有两种
@@ -108,7 +108,7 @@ class MoreEvaluateCallback(HasMonitorCallback):
             'metrics': self.metrics,
             'driver': self.kwargs.get('driver', trainer.driver),
             'device': self.kwargs.get('device', trainer.device),
-            'batch_step_fn': self.kwargs.get('batch_step_fn', trainer.evaluate_batch_step_fn),
+            'evaluate_batch_step_fn': self.kwargs.get('evaluate_batch_step_fn', trainer.evaluate_batch_step_fn),
             'evaluate_fn': self.evaluate_fn,
             'input_mapping': self.kwargs.get('input_mapping', trainer.input_mapping),
             'output_mapping': self.kwargs.get('output_mapping', trainer.output_mapping),
@@ -128,7 +128,7 @@ class MoreEvaluateCallback(HasMonitorCallback):
             results = self.evaluator.run(num_eval_batch_per_dl=self.num_eval_sanity_batch)
             self.topk_saver.get_monitor_value(results)
 
-    def on_validate_end(self, trainer, results):
+    def on_evaluate_end(self, trainer, results):
         if self.is_better_results(results, keep_if_better=True):
             results = self.evaluator.run()
             self.topk_saver.save_topk(trainer, results)
@@ -137,8 +137,8 @@ class MoreEvaluateCallback(HasMonitorCallback):
         if self.watch_monitor is not None:
             return
         if isinstance(self.evaluate_every, int) and self.evaluate_every < 0:
-            validate_every = -self.evaluate_every
-            if trainer.cur_epoch_idx % validate_every == 0:
+            evaluate_every = -self.evaluate_every
+            if trainer.cur_epoch_idx % evaluate_every == 0:
                 results = self.evaluator.run()
                 self.topk_saver.save_topk(trainer, results)
 

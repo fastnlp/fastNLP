@@ -19,7 +19,12 @@ from fastNLP.envs import (
     rank_zero_call,
 )
 from fastNLP.core.log import logger
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, RandomBatchSampler
+from fastNLP.core.samplers import (
+    ReproducibleBatchSampler,
+    ReproducibleSampler,
+    RandomBatchSampler,
+    RandomSampler,
+)
 
 if _NEED_IMPORT_PADDLE:
     import paddle
@@ -29,7 +34,7 @@ if _NEED_IMPORT_PADDLE:
         Dataset,
         Sampler,
         BatchSampler,
-        RandomSampler,
+        RandomSampler as PaddleRandomSampler,
     )
     from paddle.optimizer import Optimizer
 
@@ -333,6 +338,9 @@ class PaddleDriver(Driver):
             sampler = dataloader_args.batch_sampler
         elif isinstance(dataloader_args.sampler, ReproducibleSampler):
             sampler = dataloader_args.sampler
+        elif isinstance(dataloader_args.sampler, PaddleRandomSampler):
+            sampler = RandomSampler(dataloader_args.sampler.data_source)
+            logger.debug("Replace paddle RandomSampler into fastNLP RandomSampler.")
         elif self.is_distributed():
             raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or "
                                "`ReproducibleSampler`.")
@@ -464,7 +472,7 @@ class PaddleDriver(Driver):
                 res.sampler = dataloader.batch_sampler.sampler
                 if hasattr(dataloader.batch_sampler.sampler, "shuffle"):
                     res.shuffle = dataloader.batch_sampler.sampler.shuffle
-                elif isinstance(dataloader.batch_sampler.sampler, RandomSampler):
+                elif isinstance(dataloader.batch_sampler.sampler, PaddleRandomSampler):
                     res.shuffle = True
                 else:
                     res.shuffle = False
@@ -474,7 +482,7 @@ class PaddleDriver(Driver):
                 res.sampler = batch_sampler.sampler
                 if hasattr(batch_sampler.sampler, "shuffle"):
                     res.shuffle = dataloader.batch_sampler.sampler.shuffle
-                elif isinstance(batch_sampler.sampler, RandomSampler):
+                elif isinstance(batch_sampler.sampler, PaddleRandomSampler):
                     res.shuffle = True
                 else:
                     res.shuffle = False

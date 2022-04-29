@@ -216,6 +216,6 @@ class ExecuteOnceBetterMonitor(HasMonitorCallback):
         _check_valid_parameters_number(execute_fn, expected_params=[], fn_name='execute_fn')
         self.execute_fn = execute_fn
 
-    def on_validate_end(self, trainer, results):
+    def on_evaluate_end(self, trainer, results):
         if self.is_better_results(results):
             self.execute_fn()

@@ -2,8 +2,8 @@ import pytest
 import os
 from pathlib import Path
 
-os.environ["FASTNLP_BACKEND"] = "paddle"
-from fastNLP.core.drivers.paddle_driver.fleet import PaddleFleetDriver
+os.environ["FASTNLP_BACKEND"] = "torch"
+from fastNLP.core.drivers.torch_driver.ddp import TorchDDPDriver
 from fastNLP.core.samplers import (
     RandomSampler,
     UnrepeatedSampler,
@@ -11,38 +11,72 @@ from fastNLP.core.samplers import (
     UnrepeatedRandomSampler,
     UnrepeatedSequentialSampler,
 )
-from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
-from tests.helpers.datasets.paddle_data import PaddleNormalDataset, PaddleRandomMaxDataset
+from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
+from tests.helpers.datasets.torch_data import TorchNormalDataset, TorchArgMaxDataset
 from tests.helpers.utils import magic_argv_env_context
 from fastNLP.core import rank_zero_rm
 
-import paddle
-import paddle.distributed as dist
-from paddle.io import DataLoader, BatchSampler
+import torch
+import torch.distributed as dist
+from torch.utils.data import DataLoader, BatchSampler
 
 def generate_driver(num_labels, feature_dimension, device=[0,1], fp16=False, output_from_new_proc="only_error"):
-    paddle_model = PaddleNormalModel_Classification_1(num_labels, feature_dimension)
-    paddle_opt = paddle.optimizer.Adam(parameters=paddle_model.parameters(), learning_rate=0.01)
-    driver = PaddleFleetDriver(
-        model=paddle_model,
+    torch_model = TorchNormalModel_Classification_1(num_labels, feature_dimension)
+    torch_opt = torch.optim.Adam(params=torch_model.parameters(), lr=0.01)
+    device = [torch.device(i) for i in device]
+    driver = TorchDDPDriver(
+        model=torch_model,
         parallel_device=device,
         fp16=fp16,
         output_from_new_proc=output_from_new_proc
     )
-    driver.set_optimizers(paddle_opt)
+    driver.set_optimizers(torch_opt)
     driver.setup()
 
     return driver
 
+def dataloader_with_bucketedbatchsampler(dataset, length, batch_size, shuffle, drop_last):
+    """
+    建立一个 batch_sampler 为 BucketedBatchSampler 的 dataloader
+    """
+    dataloader = DataLoader(
+        dataset=dataset,
+        batch_sampler=BucketedBatchSampler(
+            dataset,
+            length,
+            batch_size,
+            shuffle=shuffle,
+            drop_last=drop_last,
+        ),
+    )
+
+    return dataloader
+
+def dataloader_with_randomsampler(dataset, batch_size, shuffle, drop_last, seed=0, unrepeated=False):
+    """
+    建立一个 sampler 为 RandomSampler 的 dataloader
+    """
+    if unrepeated:
+        sampler = UnrepeatedRandomSampler(dataset, shuffle, seed)
+    else:
+        sampler = RandomSampler(dataset, shuffle, seed=seed)
+    dataloader = DataLoader(
+        dataset,
+        sampler=sampler,
+        drop_last=drop_last,
+        batch_size=batch_size
+    )
+    return dataloader
+
 ############################################################################
 #
-# 测试 PaddleFleetDriver 的一些函数
+# 测试 TorchDDPDriver 的一些函数
 #
 ############################################################################
 
-class TestFleetDriverFunction:
+class TestDDPDriverFunction:
     """
-    测试 PaddleFleetDriver 一些简单函数的测试类，基本都是测试能否运行、是否存在 import 错误等问题
+    测试 TorchDDPDriver 一些简单函数的测试类，基本都是测试能否运行、是否存在 import 错误等问题
     """
 
     @classmethod
@@ -52,23 +86,24 @@ class TestFleetDriverFunction:
     @magic_argv_env_context
     def test_multi_drivers(self):
         """
-        测试使用了多个 PaddleFleetDriver 的情况。
+        测试使用了多个 TorchDDPDriver 的情况。
         """
+        
         driver2 = generate_driver(20, 10)
-
+        
         with pytest.raises(RuntimeError):
             # 设备设置不同，应该报错
-            driver3 = generate_driver(20, 3, device=[0,2])
-
+            driver3 = generate_driver(20, 3, device=[0,1,2])
+            assert False
         dist.barrier()
 
     @magic_argv_env_context
     def test_move_data_to_device(self):
         """
-        这个函数仅调用了paddle_move_data_to_device，测试例在tests/core/utils/test_paddle_utils.py中
+        这个函数仅调用了torch_move_data_to_device，测试例在tests/core/utils/test_torch_utils.py中
         就不重复测试了
         """
-        self.driver.move_data_to_device(paddle.rand((32, 64)))
+        self.driver.move_data_to_device(torch.rand((32, 64)))
 
         dist.barrier()
 
@@ -155,7 +190,7 @@ class TestSetDistReproDataloader:
         cls.driver = generate_driver(10, 10, device=cls.device)
 
     def setup_method(self):
-        self.dataset = PaddleNormalDataset(40)
+        self.dataset = TorchNormalDataset(40)
 
     """
     传入的 `dist` 参数为具体的 ReproducibleSampler 或 ReproducibleBatchSampler 的情况
@@ -233,10 +268,7 @@ class TestSetDistReproDataloader:
         此时传入的 dataloader 的 batch_sampler 应该已经执行了 set_distributed，产生一个新的 dataloader，其 batch_sampler
         和原 dataloader 相同
         """
-        dataloader = DataLoader(
-            self.dataset,
-            batch_sampler = BucketedBatchSampler(self.dataset, self.dataset._data, batch_size=4, shuffle=shuffle),
-        )
+        dataloader = dataloader_with_bucketedbatchsampler(self.dataset, self.dataset._data, 4, shuffle, False)
         dataloader.batch_sampler.set_distributed(
             num_replicas=self.driver.world_size,
             rank=self.driver.global_rank,
@@ -260,15 +292,10 @@ class TestSetDistReproDataloader:
         此时传入的 dataloader 的 batch_sampler.sampler 应该已经执行了 set_distributed，产生一个新的 dataloader，其
         batch_sampler.sampler 和原 dataloader 相同
         """
-        batch_sampler = BatchSampler(dataset=self.dataset, batch_size=4)
-        batch_sampler.sampler = RandomSampler(self.dataset, shuffle)
-        batch_sampler.sampler.set_distributed(
+        dataloader = dataloader_with_randomsampler(self.dataset, 4, shuffle, False, unrepeated=False)
+        dataloader.batch_sampler.sampler.set_distributed(
             num_replicas=self.driver.world_size,
             rank=self.driver.global_rank
-        )
-        dataloader = DataLoader(
-            self.dataset,
-            batch_sampler=batch_sampler
         )
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, None, False)
 
@@ -314,6 +341,7 @@ class TestSetDistReproDataloader:
             dataset=self.dataset,
             batch_sampler=BucketedBatchSampler(self.dataset, self.dataset._data, batch_size=4, shuffle=shuffle)
         )
+        dataloader = dataloader_with_bucketedbatchsampler(self.dataset, self.dataset._data, 4, shuffle, False)
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, "dist", False)
 
         assert not (replaced_loader is dataloader)
@@ -333,12 +361,7 @@ class TestSetDistReproDataloader:
         此时应该返回一个新的 dataloader，其 batch_sampler.sampler 和原 dataloader 相同，且应该正确地设置了分布式相关
         的属性
         """
-        batch_sampler = BatchSampler(dataset=self.dataset, batch_size=4, shuffle=shuffle)
-        batch_sampler.sampler = RandomSampler(self.dataset, shuffle)
-        dataloader = DataLoader(
-            self.dataset,
-            batch_sampler=batch_sampler
-        )
+        dataloader = dataloader_with_randomsampler(self.dataset, 4, shuffle, False, unrepeated=False)
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, "dist", False)
 
         assert not (replaced_loader is dataloader)
@@ -384,12 +407,7 @@ class TestSetDistReproDataloader:
         此时应该返回一个新的 dataloader，且将原来的 Sampler 替换为 UnrepeatedRandomSampler，且正确地设置了分布式相关
         的属性
         """
-        batch_sampler = BatchSampler(dataset=self.dataset, batch_size=4)
-        batch_sampler.sampler = RandomSampler(self.dataset, shuffle)
-        dataloader = DataLoader(
-            self.dataset,
-            batch_sampler=batch_sampler
-        )
+        dataloader = dataloader_with_randomsampler(self.dataset, 4, shuffle, False, unrepeated=False)
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, "unrepeatdist", False)
 
         assert not (replaced_loader is dataloader)
@@ -409,12 +427,7 @@ class TestSetDistReproDataloader:
         的表现
         此时应该返回一个新的 dataloader，且重新实例化了原来的 Sampler
         """
-        batch_sampler = BatchSampler(dataset=self.dataset, batch_size=4)
-        batch_sampler.sampler = UnrepeatedRandomSampler(self.dataset, shuffle)
-        dataloader = DataLoader(
-            self.dataset,
-            batch_sampler=batch_sampler
-        )
+        dataloader = dataloader_with_randomsampler(self.dataset, 4, shuffle, False, unrepeated=True)
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, "unrepeatdist", False)
 
         assert not (replaced_loader is dataloader)
@@ -474,20 +487,18 @@ class TestSetDistReproDataloader:
         else:
             sampler_states = replaced_loader.batch_sampler.sampler.state_dict()
 
-        # 重新加载，应该可以输出剩下的内容，且对于 PaddleNormalDataset 来说，排序后应该是一个 range
+        # 重新加载，应该可以输出剩下的内容，且对于 TorchNormalDataset 来说，排序后应该是一个 range
         left_idxes = set()
         if isinstance(replaced_loader.batch_sampler, BucketedBatchSampler):
             batch_size = replaced_loader.batch_sampler.batch_size
             sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size * num_replicas
             # 重新改造 dataloader
-            new_loader = DataLoader(
-                dataset=replaced_loader.dataset,
-                batch_sampler=BucketedBatchSampler(
-                    replaced_loader.dataset,
-                    length=replaced_loader.dataset._data,
-                    batch_size=batch_size,
-                    shuffle=shuffle,
-                )
+            new_loader = dataloader_with_bucketedbatchsampler(
+                replaced_loader.dataset,
+                length=replaced_loader.dataset._data,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                drop_last=False,
             )
             new_loader.batch_sampler.set_distributed(
                 num_replicas=self.driver.world_size,
@@ -499,13 +510,11 @@ class TestSetDistReproDataloader:
             batch_size = replaced_loader.batch_sampler.batch_size
             sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size * num_replicas
             # 重新构造 dataloader
-            batch_sampler = BatchSampler(replaced_loader.dataset, shuffle=shuffle, batch_size=batch_size)
-            batch_sampler.sampler = RandomSampler(replaced_loader.dataset, shuffle=shuffle)
-            batch_sampler.sampler.set_distributed(
+            new_loader = dataloader_with_randomsampler(replaced_loader.dataset, batch_size, shuffle, drop_last=False)
+            new_loader.batch_sampler.sampler.set_distributed(
                 num_replicas=self.driver.world_size,
                 rank=self.driver.global_rank
             )
-            new_loader = DataLoader(replaced_loader.dataset, batch_sampler=batch_sampler)
             new_loader.batch_sampler.sampler.load_state_dict(sampler_states)
         for idx, batch in enumerate(new_loader):
             left_idxes.update(batch)
@@ -527,10 +536,10 @@ class TestSaveLoad:
     @classmethod
     def setup_class(cls):
         # 不在这里 setup 的话会报错
-        cls.driver = generate_driver(10, 10, device=[0,1])
+        cls.driver = generate_driver(10, 10)
 
     def setup_method(self):
-        self.dataset = PaddleRandomMaxDataset(20, 10)
+        self.dataset = TorchArgMaxDataset(10, 20)
 
     @magic_argv_env_context
     @pytest.mark.parametrize("only_state_dict", ([True, False]))
@@ -544,10 +553,7 @@ class TestSaveLoad:
             dataloader = DataLoader(self.dataset, batch_size=2)
             self.driver1, self.driver2 = generate_driver(10, 10), generate_driver(10, 10)
 
-            if only_state_dict:
-                self.driver1.save_model(path, only_state_dict)
-            else:
-                self.driver1.save_model(path, only_state_dict, input_spec=[paddle.ones((4, 10))])
+            self.driver1.save_model(path, only_state_dict)
 
             # 同步
             dist.barrier()
@@ -557,26 +563,21 @@ class TestSaveLoad:
                 batch = self.driver1.move_data_to_device(batch)
                 res1 = self.driver1.model(
                     batch,
-                    fastnlp_fn=self.driver1.model._layers.model.evaluate_step,
-                    # Driver.model -> DataParallel._layers -> _FleetWrappingModel.model
+                    fastnlp_fn=self.driver1.model.module.model.evaluate_step,
+                    # Driver.model -> DataParallel.module -> _FleetWrappingModel.model
                     fastnlp_signature_fn=None,
                     wo_auto_param_call=False,
                 )
                 res2 = self.driver2.model(
                     batch,
-                    fastnlp_fn=self.driver2.model._layers.model.evaluate_step,
+                    fastnlp_fn=self.driver2.model.module.model.evaluate_step,
                     fastnlp_signature_fn=None,
                     wo_auto_param_call=False,
                 )
 
-                assert paddle.equal_all(res1["pred"], res2["pred"])
+                assert torch.equal(res1["preds"], res2["preds"])
         finally:
-            if only_state_dict:
-                rank_zero_rm(path)
-            else:
-                rank_zero_rm(path + ".pdiparams")
-                rank_zero_rm(path + ".pdiparams.info")
-                rank_zero_rm(path + ".pdmodel")
+            rank_zero_rm(path)
 
     @magic_argv_env_context
     @pytest.mark.parametrize("only_state_dict", ([True, False]))
@@ -593,13 +594,12 @@ class TestSaveLoad:
 
             self.driver1, self.driver2 = generate_driver(10, 10, device=device, fp16=fp16), \
                                             generate_driver(10, 10, device=device, fp16=False)
-            dataloader = DataLoader(
-                dataset=self.dataset,
-                batch_sampler=BucketedBatchSampler(
-                    self.dataset,
-                    length=[10 for i in range(len(self.dataset))],
-                    batch_size=4,
-                )
+            dataloader = dataloader_with_bucketedbatchsampler(
+                self.dataset,
+                length=[10 for i in range(len(self.dataset))],
+                batch_size=4,
+                shuffle=True,
+                drop_last=False
             )
             dataloader.batch_sampler.set_distributed(
                 num_replicas=self.driver1.world_size,
@@ -622,19 +622,15 @@ class TestSaveLoad:
             # 保存状态
             sampler_states = dataloader.batch_sampler.state_dict()
             save_states = {"num_consumed_batches": num_consumed_batches}
-            if only_state_dict:
-                self.driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
-            else:
-                self.driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True, input_spec=[paddle.ones((16, 10))])
+            self.driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
             # 加载
             # 更改 batch_size
-            dataloader = DataLoader(
-                dataset=self.dataset,
-                batch_sampler=BucketedBatchSampler(
-                    self.dataset,
-                    length=[10 for i in range(len(self.dataset))],
-                    batch_size=2,
-                )
+            dataloader = dataloader_with_bucketedbatchsampler(
+                self.dataset,
+                length=[10 for i in range(len(self.dataset))],
+                batch_size=2,
+                shuffle=True,
+                drop_last=False
             )
             dataloader.batch_sampler.set_distributed(
                 num_replicas=self.driver2.world_size,
@@ -655,7 +651,7 @@ class TestSaveLoad:
 
             # 3. 检查 fp16 是否被加载
             if fp16:
-                assert isinstance(self.driver2.grad_scaler, paddle.amp.GradScaler)
+                assert isinstance(self.driver2.grad_scaler, torch.cuda.amp.GradScaler)
 
             # 4. 检查 model 的参数是否正确
             # 5. 检查 batch_idx
@@ -669,18 +665,18 @@ class TestSaveLoad:
                 left_y_batches.update(batch["y"])
                 res1 = self.driver1.model(
                     batch,
-                    fastnlp_fn=self.driver1.model._layers.model.evaluate_step,
-                    # Driver.model -> DataParallel._layers -> _FleetWrappingModel.model
+                    fastnlp_fn=self.driver1.model.module.model.evaluate_step,
+                    # Driver.model -> DataParallel.module -> _FleetWrappingModel.model
                     fastnlp_signature_fn=None,
                     wo_auto_param_call=False,
                 )
                 res2 = self.driver2.model(
                     batch,
-                    fastnlp_fn=self.driver2.model._layers.model.evaluate_step,
+                    fastnlp_fn=self.driver2.model.module.model.evaluate_step,
                     fastnlp_signature_fn=None,
                     wo_auto_param_call=False,
                 )
-                assert paddle.equal_all(res1["pred"], res2["pred"])
+                assert torch.equal(res1["preds"], res2["preds"])
 
             assert len(left_x_batches) + len(already_seen_x_set) == len(self.dataset) / num_replicas
             assert len(left_x_batches | already_seen_x_set) == len(self.dataset) / num_replicas
@@ -705,16 +701,12 @@ class TestSaveLoad:
 
             self.driver1 = generate_driver(10, 10, device=device, fp16=fp16)
             self.driver2 = generate_driver(10, 10, device=device, fp16=False)
-            batch_sampler = BatchSampler(dataset=self.dataset, batch_size=4)
-            batch_sampler.sampler = RandomSampler(self.dataset, True)
-            batch_sampler.sampler.set_distributed(
+
+            dataloader = dataloader_with_randomsampler(self.dataset, 4, True, False, unrepeated=False)
+            dataloader.batch_sampler.sampler.set_distributed(
                 num_replicas=self.driver1.world_size,
                 rank=self.driver1.global_rank,
                 pad=True
-            )
-            dataloader = DataLoader(
-                self.dataset,
-                batch_sampler=batch_sampler
             )
             num_consumed_batches = 2
 
@@ -735,19 +727,14 @@ class TestSaveLoad:
             if only_state_dict:
                 self.driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
             else:
-                self.driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True, input_spec=[paddle.ones((16, 10))])
+                self.driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True, input_spec=[torch.ones((16, 10))])
             # 加载
             # 更改 batch_size
-            batch_sampler = BatchSampler(dataset=self.dataset, batch_size=2)
-            batch_sampler.sampler = RandomSampler(self.dataset, True)
-            batch_sampler.sampler.set_distributed(
+            dataloader = dataloader_with_randomsampler(self.dataset, 2, True, False, unrepeated=False)
+            dataloader.batch_sampler.sampler.set_distributed(
                 num_replicas=self.driver2.world_size,
                 rank=self.driver2.global_rank,
                 pad=True
-            )
-            dataloader = DataLoader(
-                self.dataset,
-                batch_sampler=batch_sampler
             )
             load_states = self.driver2.load(Path(path), dataloader, only_state_dict, should_load_model=True)
             replaced_loader = load_states.pop("dataloader")
@@ -765,7 +752,7 @@ class TestSaveLoad:
             assert replaced_loader.batch_sampler.sampler.shuffle == sampler_states["shuffle"]
             # 3. 检查 fp16 是否被加载
             if fp16:
-                assert isinstance(self.driver2.grad_scaler, paddle.amp.GradScaler)
+                assert isinstance(self.driver2.grad_scaler, torch.cuda.amp.GradScaler)
 
             # 4. 检查 model 的参数是否正确
             # 5. 检查 batch_idx
@@ -779,18 +766,18 @@ class TestSaveLoad:
                 left_y_batches.update(batch["y"])
                 res1 = self.driver1.model(
                     batch,
-                    fastnlp_fn=self.driver1.model._layers.model.evaluate_step,
-                    # Driver.model -> DataParallel._layers -> _FleetWrappingModel.model
+                    fastnlp_fn=self.driver1.model.module.model.evaluate_step,
+                    # Driver.model -> DataParallel.module -> _FleetWrappingModel.model
                     fastnlp_signature_fn=None,
                     wo_auto_param_call=False,
                 )
                 res2 = self.driver2.model(
                     batch,
-                    fastnlp_fn=self.driver2.model._layers.model.evaluate_step,
+                    fastnlp_fn=self.driver2.model.module.model.evaluate_step,
                     fastnlp_signature_fn=None,
                     wo_auto_param_call=False,
                 )
-                assert paddle.equal_all(res1["pred"], res2["pred"])
+                assert torch.equal(res1["preds"], res2["preds"])
 
             assert len(left_x_batches) + len(already_seen_x_set) == len(self.dataset) / num_replicas
             assert len(left_x_batches | already_seen_x_set) == len(self.dataset) / num_replicas

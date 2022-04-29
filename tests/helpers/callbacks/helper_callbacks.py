@@ -38,7 +38,7 @@ class RecordMetricCallback(Callback):
         self.metric_threshold = metric_threshold
         self.metric_begin_value = None
 
-    def on_validate_end(self, trainer, results):
+    def on_evaluate_end(self, trainer, results):
         self.metric = results[self.monitor]
         if self.metric_begin_value is None:
             self.metric_begin_value = self.metric
@@ -113,11 +113,11 @@ class RecordTrainerEventTriggerCallback(Callback):
     def on_after_zero_grad(self, trainer, optimizers):
         print("on_after_zero_grad")
 
-    def on_validate_begin(self, trainer):
-        print("on_validate_begin")
+    def on_evaluate_begin(self, trainer):
+        print("on_evaluate_begin")
 
-    def on_validate_end(self, trainer, results):
-        print("on_validate_end")
+    def on_evaluate_end(self, trainer, results):
+        print("on_evaluate_end")
 
 
 

@@ -19,7 +19,7 @@ from fastNLP.core import Evaluator
 from fastNLP.core.utils.utils import safe_rm
 from fastNLP.core.drivers.torch_driver import TorchSingleDriver
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
-from tests.helpers.datasets.torch_data import TorchArgMaxDatset
+from tests.helpers.datasets.torch_data import TorchArgMaxDataset
 from tests.helpers.utils import magic_argv_env_context
 
 
@@ -55,7 +55,7 @@ def model_and_optimizers(request):
         feature_dimension=ArgMaxDatasetConfig.feature_dimension
     )
     trainer_params.optimizers = optim.SGD(trainer_params.model.parameters(), lr=0.01)
-    dataset = TorchArgMaxDatset(
+    dataset = TorchArgMaxDataset(
         feature_dimension=ArgMaxDatasetConfig.feature_dimension,
         data_num=ArgMaxDatasetConfig.data_num,
         seed=ArgMaxDatasetConfig.seed

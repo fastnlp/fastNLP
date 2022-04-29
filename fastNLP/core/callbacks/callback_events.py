@@ -96,8 +96,8 @@ class Events(EventEnum):
     on_after_optimizers_step = "on_after_optimizers_step"
     on_before_zero_grad = "on_before_zero_grad"
     on_after_zero_grad = "on_after_zero_grad"
-    on_validate_begin = "on_validate_begin"
-    on_validate_end = "on_validate_end"
+    on_evaluate_begin = "on_evaluate_begin"
+    on_evaluate_end = "on_evaluate_end"
 
 
 class EventsList:

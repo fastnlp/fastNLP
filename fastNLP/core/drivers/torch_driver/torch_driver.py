@@ -218,6 +218,8 @@ class TorchDriver(Driver):
         # 2. 保存模型的状态；
         if should_save_model:
             model = self.unwrap_model()
+            if not os.path.exists(folder):
+                os.mkdir(folder)
             if only_state_dict:
                 model_state_dict = {name: param.cpu().detach().clone() for name, param in model.state_dict().items()}
                 # 对于单卡的 driver 来讲，我们实际上（现在）不应该考虑用户在DDP环境下使用单卡模式，从而造成效率损失；
@@ -401,7 +403,17 @@ class TorchDriver(Driver):
                 res.sampler = dataloader.batch_sampler.sampler
                 if hasattr(dataloader.batch_sampler.sampler, "shuffle"):
                     res.shuffle = dataloader.batch_sampler.sampler.shuffle
-                elif isinstance(dataloader.batch_sampler.sampler, RandomSampler):
+                elif isinstance(dataloader.batch_sampler.sampler, TorchRandomSampler):
+                    res.shuffle = True
+                else:
+                    res.shuffle = False
+            # RandomBatchSampler 的情况
+            elif hasattr(dataloader.batch_sampler, "batch_sampler"):
+                batch_sampler = dataloader.batch_sampler.batch_sampler
+                res.sampler = batch_sampler.sampler
+                if hasattr(batch_sampler.sampler, "shuffle"):
+                    res.shuffle = dataloader.batch_sampler.sampler.shuffle
+                elif isinstance(batch_sampler.sampler, TorchRandomSampler):
                     res.shuffle = True
                 else:
                     res.shuffle = False

@@ -20,6 +20,7 @@ from fastNLP.core.controllers.utils.utils import TrainerEventTrigger, _Truncated
 from fastNLP.core.callbacks import Callback, CallbackManager, Events, EventsList
 from fastNLP.core.callbacks.callback import _CallbackWrapper
 from fastNLP.core.callbacks.callback_events import _SingleEventState
+from fastNLP.core.callbacks.progress_callback import choose_progress_callback
 from fastNLP.core.drivers import Driver
 from fastNLP.core.drivers.utils import choose_driver
 from fastNLP.core.utils import get_fn_arg_names, match_and_substitute_params, nullcontext
@@ -82,10 +83,10 @@ class Trainer(TrainerEventTrigger):
         :param n_epochs: 训练总共的 epoch 的数量，默认为 20；
         :param evaluate_dataloaders: 验证数据集，其可以是单独的一个数据集，也可以是多个数据集；当为多个数据集时，注意其必须是 Dict；默认
          为 None；
-        :param batch_step_fn: 用来替换 `TrainBatchLoop` 中的 `batch_step_fn` 函数，注意该函数的两个参数必须为 `trainer` 和
-         `batch`；默认为 None；
-        :param evaluate_batch_step_fn: 用来替换 'Evaluator' 中的 `EvaluateBatchLoop` 中的 `batch_step_fn` 函数，注意该函数的
-         两个参数必须为 `evaluator` 和 `batch`；默认为 None；
+        :param batch_step_fn: 定制每次 train batch 执行的函数。该函数应接受两个参数为 `trainer` 和`batch`，不需要要返回值；可以
+            参考 fastNLP.core.controllers.loops.train_batch_loop.TrainBatchLoop中的batch_step_fn函数。
+        :param evaluate_batch_step_fn: 定制每次 evaluate batch 执行的函数。该函数应接受的两个参数为 `evaluator` 和 `batch`，
+            不需要有返回值；可以参考 fastNLP.core.controllers.loops.evaluate_batch_loop.EvaluateBatchLoop中的batch_step_fn函数。
         :param train_fn: 用来控制 `Trainer` 在训练的前向传播过程中是调用模型的哪一个函数，例如是 `train_step` 还是 `forward`；
          默认为 None，如果该值是 None，那么我们会默认使用 `train_step` 当做前向传播的函数，如果在模型中没有找到该方法，
          则使用模型默认的前向传播函数。
@@ -102,10 +103,12 @@ class Trainer(TrainerEventTrigger):
          value；如果 batch 是一个 `dataclass`，那么我们会先将该 dataclass 转换为一个 Dict，然后再进行上述转换；如果 batch 此时是其它
          类型，那么我们将会直接报错；如果 input_mapping 是一个函数，那么对于取出的 batch，我们将不会做任何处理，而是直接将其传入该函数里；
          注意该参数会被传进 `Evaluator` 中；因此你可以通过该参数来实现将训练数据 batch 移到对应机器上的工作（例如当参数 `device` 为 None 时）；
+         如果 train 和 evaluate 需要使用不同的 input_mapping, 请使用 train_input_mapping 与 evaluate_input_mapping 设置。
         :param output_mapping: 应当为一个字典或者函数。作用和 input_mapping 类似，区别在于其用于转换输出；如果 output_mapping 是一个
          函数，那么我们将会直接将模型的输出传给该函数；如果其是一个 `Dict`，那么我们需要 batch 必须是 `Dict` 或者 `dataclass` 类型，
          如果 batch 是一个 `Dict`，那么我们会把 batch 中同样在 output_mapping 中的 key 修改为 output_mapping 的对应 key 的 value；
          如果 batch 是一个 `dataclass`，那么我们会先将该 dataclass 转换为一个 Dict，然后再进行上述转换；
+         如果 train 和 evaluate 需要使用不同的 output_mapping, 请使用 train_output_mapping 与 evaluate_output_mapping 设置。
         :param model_wo_auto_param_call: 是否关闭在训练时调用我们的 auto_param_call 来自动匹配 batch 和 forward 函数的参数的行为；
          如果该值为 False，并且当 batch 为字典时，我们会根据 forward 所需要的参数从 batch 中提取对应的对象，传入到 forward 函数中；如果该值
          为 True，那么我们会将 batch 直接透传给模型。注意该参数应用于 `train_step`, `evaluate_step` 和 `test_step`；
@@ -125,14 +128,17 @@ class Trainer(TrainerEventTrigger):
             set_grad_to_none: 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
             use_dist_sampler: 表示是否使用分布式的 sampler 。在多卡时，分布式 sampler 将自动决定每张卡上读取的 sample ，使得一个epoch
                 内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
-            eval_use_dist_sampler: 表示在 Evaluator 中在使用 TorchDDPDriver 的时候是否将 dataloader 的 sampler 替换为分布式的 sampler；默认为 True；
+            evaluate_use_dist_sampler: 表示在 Evaluator 中在使用 分布式 的时候是否将 dataloader 的 sampler 替换为分布式的 sampler；默认为 True；
             output_from_new_proc: 应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
              ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
              log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
-            progress_bar: 以哪种方式显示 progress ，目前支持[None, 'raw', 'rich', 'auto']，默认为 auto 。progress 的实现是通过
-                callback 实现的，若在输入的 callback 中检测到了 ProgressCallback 类型的 callback ，则该参数对 Trainer 无效。
-                auto 表示如果检测到当前 terminal 为交互型 则使用 rich，否则使用 raw。
-
+            progress_bar: 以哪种方式显示 progress ，目前支持[None, 'raw', 'rich', 'auto'] 或者 RichCallback, RawTextCallback对象，
+                默认为 auto , auto 表示如果检测到当前 terminal 为交互型 则使用 RichCallback，否则使用 RawTextCallback对象。如果
+                需要定制 progress bar 的参数，例如打印频率等，可以传入 RichCallback, RawTextCallback 对象。
+            train_input_mapping: 与 input_mapping 一致，但是只用于 train 中。与 input_mapping 互斥。
+            train_output_mapping: 与 output_mapping 一致，但是只用于 train 中。与 output_mapping 互斥。
+            evaluate_input_mapping: 与 input_mapping 一致，但是只用于 evaluate 中。与 input_mapping 互斥。
+            evaluate_output_mapping: 与 output_mapping 一致，但是只用于 evaluate 中。与 output_mapping 互斥。
         """
         self.model = model
         self.marker = marker
@@ -147,8 +153,18 @@ class Trainer(TrainerEventTrigger):
         self.evaluate_dataloaders = evaluate_dataloaders
         self.optimizers = optimizers
         self.fp16 = fp16
-        self.input_mapping = input_mapping
-        self.output_mapping = output_mapping
+
+        train_input_mapping = kwargs.get('train_input_mapping', None)
+        train_output_mapping = kwargs.get('train_output_mapping', None)
+        evaluate_input_mapping = kwargs.get('evaluate_input_mapping', None)
+        evaluate_output_mapping = kwargs.get('evaluate_output_mapping', None)
+
+        train_input_mapping, train_output_mapping, evaluate_input_mapping, evaluate_output_mapping  = \
+            _get_input_output_mapping(input_mapping, output_mapping, train_input_mapping, train_output_mapping,
+                                      evaluate_input_mapping, evaluate_output_mapping)
+
+        self.input_mapping = train_input_mapping
+        self.output_mapping = train_output_mapping
         self.evaluate_fn = evaluate_fn
 
         self.batch_step_fn = batch_step_fn
@@ -185,8 +201,8 @@ class Trainer(TrainerEventTrigger):
             callbacks=callbacks,
             metrics=metrics,
             evaluate_every=evaluate_every,
-            input_mapping=input_mapping,
-            output_mapping=output_mapping,
+            input_mapping=evaluate_input_mapping,
+            output_mapping=evaluate_output_mapping,
             model_wo_auto_param_call=model_wo_auto_param_call,
             accumulation_steps=accumulation_steps,
             fp16=fp16,
@@ -195,8 +211,20 @@ class Trainer(TrainerEventTrigger):
         )
         self.driver.set_optimizers(optimizers=optimizers)
 
+        # 根据 progress_bar 参数选择 ProgressBarCallback
+        progress_bar_callback = choose_progress_callback(kwargs.get('progress_bar', 'auto'))
+        if progress_bar_callback is not None:
+            if callbacks is None:
+                callbacks = []
+            elif not isinstance(callbacks, Sequence):
+                callbacks = [callbacks]
+
+            callbacks = list(callbacks) + [progress_bar_callback]
+        else:
+            rank_zero_call(logger.warning)("No progress bar is provided, there will have no information output "
+                                           "during training.")
         # 初始化 callback manager；
-        self.callback_manager = CallbackManager(callbacks, kwargs.get('progress_bar', 'auto'))
+        self.callback_manager = CallbackManager(callbacks)
         # 添加所有的函数式 callbacks；
         self._fetch_matched_fn_callbacks()
         # 添加所有的类 callbacks；
@@ -237,21 +265,15 @@ class Trainer(TrainerEventTrigger):
         self.larger_better = larger_better
         if metrics is not None and evaluate_dataloaders is not None:
             check_evaluate_every(evaluate_every)
-            self.evaluator = Evaluator(
-                model=model,
-                dataloaders=evaluate_dataloaders,
-                metrics=metrics,
-                driver=self.driver,
-                device=device,
-                batch_step_fn=evaluate_batch_step_fn,
-                evaluate_fn=evaluate_fn,
-                input_mapping=input_mapping,
-                output_mapping=output_mapping,
-                fp16=fp16,
-                verbose=0,
-                use_dist_sampler=kwargs.get("eval_use_dist_sampler", None),
-                progress_bar=kwargs.get('progress_bar', 'auto')
-            )
+            progress_bar = kwargs.get('progress_bar', 'auto')  # 如果不为
+            if not (isinstance(progress_bar, str) or progress_bar is None): # 应该是ProgressCallback，获取其名称。
+                progress_bar = progress_bar.name
+            self.evaluator = Evaluator(model=model, dataloaders=evaluate_dataloaders, metrics=metrics,
+                                       driver=self.driver, device=device, evaluate_batch_step_fn=evaluate_batch_step_fn,
+                                       evaluate_fn=evaluate_fn, input_mapping=input_mapping,
+                                       output_mapping=output_mapping, fp16=fp16, verbose=0,
+                                       use_dist_sampler=kwargs.get("evaluate_use_dist_sampler", None),
+                                       progress_bar=progress_bar)
 
         if train_fn is not None and not isinstance(train_fn, str):
             raise TypeError("Parameter `train_fn` can only be `str` type when it is not None.")
@@ -317,11 +339,11 @@ class Trainer(TrainerEventTrigger):
         self.num_batches_per_epoch = len(self.dataloader)
         self.total_batches = self.num_batches_per_epoch * self.n_epochs
         self.global_forward_batches = self.num_batches_per_epoch * self.cur_epoch_idx + self.batch_idx_in_epoch
-        self.on_train_begin()
-        self.driver.barrier()
-        self.driver.zero_grad(self.set_grad_to_none)
 
         try:
+            self.on_train_begin()
+            self.driver.barrier()
+            self.driver.zero_grad(self.set_grad_to_none)
             while self.cur_epoch_idx < self.n_epochs:
                 # 这个是防止在 Trainer.load 之后还没结束当前 epoch 又继续 save
                 self.start_batch_idx_in_epoch = self.trainer_state.batch_idx_in_epoch
@@ -334,10 +356,8 @@ class Trainer(TrainerEventTrigger):
                 self.cur_epoch_idx += 1
                 self.on_train_epoch_end()
                 self.driver.barrier()
-                self.epoch_validate()
+                self.epoch_evaluate()
                 self.driver.barrier()
-            self.on_train_end()
-            self.driver.barrier()
 
         except EarlyStopException as e:
             logger.info(f"Catch early stop exception: {e.msg}.")
@@ -351,17 +371,20 @@ class Trainer(TrainerEventTrigger):
             self.driver.on_exception()
             self.on_exception(e)
             raise e
+        finally:
+            self.on_train_end()
+            self.driver.barrier()
 
     def _set_num_eval_batch_per_dl(self, num_eval_batch_per_dl):
-        def _validate_fn(trainer: Trainer, validate_fn: Callable) -> None:
-            trainer.on_validate_begin()
-            _validate_res: dict = validate_fn()
-            trainer.on_validate_end(_validate_res)
+        def _evaluate_fn(trainer: Trainer, evaluate_fn: Callable) -> None:
+            trainer.on_evaluate_begin()
+            _evaluate_res: dict = evaluate_fn()
+            trainer.on_evaluate_end(_evaluate_res)
 
         if self.evaluator is not None:
-            self.run_evaluate = partial(_validate_fn, self, partial(self.evaluator.run, num_eval_batch_per_dl))
+            self.run_evaluate = partial(_evaluate_fn, self, partial(self.evaluator.run, num_eval_batch_per_dl))
 
-    def step_validate(self):
+    def step_evaluate(self):
         """
         在每个 batch 结束后调用，根据设置执行 evaluate 。
 
@@ -374,7 +397,7 @@ class Trainer(TrainerEventTrigger):
             elif self.evaluate_every > 0 and self.global_forward_batches % self.evaluate_every == 0:
                 self.run_evaluate()
 
-    def epoch_validate(self):
+    def epoch_evaluate(self):
         """
         在每个 epoch 结束后调用，根据设置执行 evaluate 。
 
@@ -382,8 +405,8 @@ class Trainer(TrainerEventTrigger):
         """
         if self.evaluator is not None:
             if isinstance(self.evaluate_every, int) and self.evaluate_every < 0:
-                validate_every = -self.evaluate_every
-                if self.cur_epoch_idx % validate_every == 0:
+                evaluate_every = -self.evaluate_every
+                if self.cur_epoch_idx % evaluate_every == 0:
                     self.run_evaluate()
 
     def add_callback_fn(self, event: Optional[Union[Events, EventsList]], fn: Callable):
@@ -576,7 +599,7 @@ class Trainer(TrainerEventTrigger):
                 if model_load_fn is not None:
                     if not callable(model_load_fn):
                         raise ValueError("Parameter `model_save_fn` should be `Callable` type when it is not None.")
-                    rank_zero_call(model_load_fn)(folder)
+                    model_load_fn(folder)
                 else:
                     if isinstance(folder, str):
                         folder = Path(folder)
@@ -653,7 +676,7 @@ class Trainer(TrainerEventTrigger):
             if model_load_fn is not None:
                 if not callable(model_load_fn):
                     raise ValueError("Parameter `model_save_fn` should be `Callable`.")
-                rank_zero_call(model_load_fn)(folder)
+                model_load_fn(folder)
                 states = self.driver.load(folder=folder, dataloader=dataloader, should_load_model=False, **kwargs)
             else:
                 states = self.driver.load(folder=folder, dataloader=dataloader, only_state_dict=only_state_dict, should_load_model=True, **kwargs)
@@ -838,6 +861,32 @@ class Trainer(TrainerEventTrigger):
     def evaluate_dataloaders(self, evaluate_dataloaders):
         self._evaluate_dataloaders = evaluate_dataloaders
 
+
+def _get_input_output_mapping(input_mapping, output_mapping, train_input_mapping, train_output_mapping,
+                              evaluate_input_mapping, evaluate_output_mapping):
+    if train_input_mapping is not None and input_mapping is not None:
+        raise ValueError("Parameter `input_mapping` and `train_input_mapping` cannot be set simultaneously.")
+
+    if evaluate_input_mapping is not None and input_mapping is not None:
+        raise ValueError("Parameter `input_mapping` and `evaluate_input_mapping` cannot be set simultaneously.")
+
+    if train_output_mapping is not None and output_mapping is not None:
+        raise ValueError("Parameter `output_mapping` and `train_output_mapping` cannot be set simultaneously.")
+
+    if evaluate_output_mapping is not None and output_mapping is not None:
+        raise ValueError("Parameter `output_mapping` and `evaluate_output_mapping` cannot be set simultaneously.")
+
+    if train_input_mapping is None:
+        train_input_mapping = input_mapping
+    if evaluate_input_mapping is None:
+        evaluate_input_mapping = input_mapping
+
+    if train_output_mapping is None:
+        train_output_mapping = output_mapping
+    if evaluate_output_mapping is None:
+        evaluate_output_mapping = output_mapping
+
+    return train_input_mapping, train_output_mapping, evaluate_input_mapping, evaluate_output_mapping
 
 
 

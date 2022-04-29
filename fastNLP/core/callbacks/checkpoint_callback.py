@@ -114,7 +114,7 @@ class CheckpointCallback(Callback):
         if self.topk_saver.topk_queue and trainer.evaluator is None:
             logger.warning(f"You set `topk={self.topk}`, but `evaluate_dataloaders` is not set in Trainer.")
 
-    def on_validate_end(self, trainer, results):
+    def on_evaluate_end(self, trainer, results):
         # 如果发生了保存，则返回的 folder 不为 None
         folder = self.topk_saver.save_topk(trainer, results)
 

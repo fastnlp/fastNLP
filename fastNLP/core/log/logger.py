@@ -173,6 +173,19 @@ class FastNLPLogger(logging.Logger, metaclass=LoggerSingleton):
             kwargs["extra"] = extra
         return kwargs
 
+    def setLevel(self, level) -> None:
+        """
+        设置当前 logger 以及其 handler 的 log 级别
+
+        :param level:
+        :return:
+        """
+        if isinstance(level, str):
+            level = level.upper()
+        super().setLevel(level)
+        for handler in self.handlers:
+            handler.setLevel(level)
+
 
 def _get_level(level):
     if not isinstance(level, int):
