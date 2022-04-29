@@ -98,7 +98,7 @@ class Evaluator:
 
         self.separator = kwargs.get('separator', '#')
         self.model_use_eval_mode = kwargs.get('model_use_eval_mode', True)
-        use_dist_sampler = kwargs.get("use_dist_sampler", driver.is_distributed())
+        use_dist_sampler = kwargs.get("use_dist_sampler", self.driver.is_distributed())
         if use_dist_sampler:
             self._dist_sampler = "unrepeatdist"
         else:
