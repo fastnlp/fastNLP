@@ -22,7 +22,7 @@ import weakref
 from copy import deepcopy
 from functools import partialmethod
 
-from .dependency_versions_check import dep_version_check
+from .utils.versions import require_version
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from fastNLP.core.log import logger
 
@@ -55,7 +55,7 @@ class HfDeepSpeedConfig:
         # set global weakref object
         set_hf_deepspeed_config(self)
 
-        dep_version_check("deepspeed")
+        require_version("deepspeed>=0.5.3")
 
         if isinstance(config_file_or_dict, dict):
             # Don't modify user's data should they want to reuse it (e.g. in tests), because once we
