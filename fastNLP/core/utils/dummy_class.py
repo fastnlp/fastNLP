@@ -1,4 +1,5 @@
-
+import functools
 
 class DummyClass:
-    pass
+    def __call__(self, *args, **kwargs):
+        return
