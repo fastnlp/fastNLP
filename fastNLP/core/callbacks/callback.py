@@ -126,7 +126,8 @@ class Callback:
 
         :param trainer: `fastNLP.Trainer`
         :param batch: batch 的数据，已经经过 input_mapping (如果有) 以及 移动到指定设备 。
-        :param list[int] indices: 当前的 batch 是 dataset 中的哪些数据
+        :param list[int] indices: 当前的 batch 是 dataset 中的哪些数据。仅在 DataLoader 支持得到当前 batch index 的时候有值，
+            其它时候为 None 。
         """
         pass
 

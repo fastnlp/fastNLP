@@ -94,20 +94,21 @@ class LoadBestModelCallback(HasMonitorCallback):
         else:
             self.buffer.seek(0)
             trainer.load_model(folder=self.buffer, only_state_dict=self.only_state_dict)
-
-        self._delete_after_after(trainer)
-
-    def _delete_after_after(self, trainer):
-        trainer.driver.barrier()
         if self.delete_after_after:
-            if self.real_save_folder:
-                logger.info(f"Deleting {self.real_save_folder}...")
-                shutil.rmtree(self.real_save_folder, ignore_errors=True)
-                try:
-                    # 如果是 emtpy 的，就会被删除掉
-                    os.rmdir(self.save_folder)
-                except:
-                    pass
-            elif hasattr(self, 'buffer'):
-                self.buffer.close()
-                del self.buffer
+            trainer.driver.barrier()
+            self._delete_folder()
+            trainer.driver.barrier()
+
+    def _delete_folder(self):
+        if self.real_save_folder:
+            logger.info(f"Deleting {self.real_save_folder}...")
+            shutil.rmtree(self.real_save_folder, ignore_errors=True)
+            try:
+                # 如果是 emtpy 的，就会被删除掉
+                os.rmdir(self.save_folder)
+                logger.debug(f"Since {self.save_folder} is an empty folder, it has been removed.")
+            except:
+                pass
+        elif hasattr(self, 'buffer'):
+            self.buffer.close()
+            del self.buffer

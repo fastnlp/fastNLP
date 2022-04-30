@@ -158,7 +158,7 @@ class TestCollator:
 
         # 测试 ignore
         collator = Collator(backend='raw')
-        collator.set_ignore('str', 'int', 'lst_int', 'nested_dict@@a')
+        collator.set_ignore('str', 'int', 'lst_int', ('nested_dict', 'a'))
         raw_pad_batch = {'lst_str': [['1'], ['2', '2']], 'nest_lst_int': [[[1, 0], [0, 0]], [[1, 0], [1, 2]]], 'float': [1.1, 2.1], 'lst_float': [[1.1], [2.1]], 'bool': [True, False], 'numpy': [np.array([1.]), np.array([0.])], 'dict': {'1': ['1', '2']}, 'set': [{'1'}, {'2'}], 'nested_dict': {'b': [[1, 2], [1, 2]]}}
         findDictDiff(raw_pad_batch, collator(dict_batch))
 
@@ -171,7 +171,7 @@ class TestCollator:
         # 测试设置 pad 值
         collator = Collator(backend='raw')
         collator.set_pad('nest_lst_int', pad_val=100)
-        collator.set_ignore('str', 'int', 'lst_int', 'nested_dict@@a')
+        collator.set_ignore('str', 'int', 'lst_int', ('nested_dict','a'))
         raw_pad_batch = {'lst_str': [['1'], ['2', '2']], 'nest_lst_int': [[[1, 100], [100, 100]], [[1, 100], [1, 2]]],
                          'float': [1.1, 2.1], 'lst_float': [[1.1], [2.1]], 'bool': [True, False], 'numpy': [np.array([1.]), np.array([0.])], 'dict': {'1': ['1', '2']}, 'set': [{'1'}, {'2'}], 'nested_dict': {'b': [[1, 2], [1, 2]]}}
         findDictDiff(raw_pad_batch, collator(dict_batch))
@@ -217,6 +217,72 @@ class TestCollator:
         collator.set_pad('_single')
         findListDiff(list_batch, collator(list_batch))
 
+    def test_nest_ignore(self):
+        dict_batch = [{
+            'str': '1',
+            'lst_str': ['1'],
+            'int': 1,
+            'lst_int': [1],
+            'nest_lst_int': [[1]],
+            'float': 1.1,
+            'lst_float': [1.1],
+            'bool': True,
+            'numpy': np.ones(1),
+            'dict': {'1': '1'},
+            'set': {'1'},
+            'nested_dict': {'int': 1, 'lst_int':[1, 2], 'c': {'int': 1}}
+        },
+            {
+                'str': '2',
+                'lst_str': ['2', '2'],
+                'int': 2,
+                'lst_int': [1, 2],
+                'nest_lst_int': [[1], [1, 2]],
+                'float': 2.1,
+                'lst_float': [2.1],
+                'bool': False,
+                'numpy': np.zeros(1),
+                'dict': {'1': '2'},
+                'set': {'2'},
+                'nested_dict': {'int': 1, 'lst_int': [1, 2], 'c': {'int': 1}}
+            }
+        ]
+        # 测试 ignore
+        collator = Collator(backend='raw')
+        collator.set_ignore('str', 'int', 'lst_int', ('nested_dict', 'int'))
+        raw_pad_batch = {'lst_str': [['1'], ['2', '2']], 'nest_lst_int': [[[1, 0], [0, 0]], [[1, 0], [1, 2]]],
+                         'float': [1.1, 2.1], 'lst_float': [[1.1], [2.1]], 'bool': [True, False],
+                         'numpy': [np.array([1.]), np.array([0.])], 'dict': {'1': ['1', '2']},
+                         'set': [{'1'}, {'2'}], 'nested_dict': {'lst_int': [[1, 2], [1, 2]],
+                                                                'c': {'int':[1, 1]}}}
+        findDictDiff(raw_pad_batch, collator(dict_batch))
+
+        collator = Collator(backend='raw')
+        collator.set_pad(('nested_dict', 'c'), pad_val=None)
+        collator.set_ignore('str', 'int', 'lst_int')
+        raw_pad_batch = {'lst_str': [['1'], ['2', '2']], 'nest_lst_int': [[[1, 0], [0, 0]], [[1, 0], [1, 2]]],
+                         'float': [1.1, 2.1], 'lst_float': [[1.1], [2.1]], 'bool': [True, False],
+                         'numpy': [np.array([1.]), np.array([0.])], 'dict': {'1': ['1', '2']},
+                         'set': [{'1'}, {'2'}], 'nested_dict': {'lst_int': [[1, 2], [1, 2]],
+                                                                'c': [{'int':1}, {'int':1}]}}
+        pad_batch = collator(dict_batch)
+        findDictDiff(raw_pad_batch, pad_batch)
+
+        collator = Collator(backend='raw')
+        collator.set_pad(('nested_dict', 'c'), pad_val=1)
+        with pytest.raises(BaseException):
+            collator(dict_batch)
+
+        collator = Collator(backend='raw')
+        collator.set_ignore('str', 'int', 'lst_int')
+        collator.set_pad(('nested_dict', 'c'), pad_fn=lambda x: [d['int'] for d in x])
+        pad_batch = collator(dict_batch)
+        raw_pad_batch = {'lst_str': [['1'], ['2', '2']], 'nest_lst_int': [[[1, 0], [0, 0]], [[1, 0], [1, 2]]],
+                         'float': [1.1, 2.1], 'lst_float': [[1.1], [2.1]], 'bool': [True, False],
+                         'numpy': [np.array([1.]), np.array([0.])], 'dict': {'1': ['1', '2']},
+                         'set': [{'1'}, {'2'}], 'nested_dict': {'lst_int': [[1, 2], [1, 2]],
+                                                                'c': [1, 1]}}
+        findDictDiff(raw_pad_batch, pad_batch)
 
 
 
