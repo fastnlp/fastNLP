@@ -56,7 +56,7 @@ class ClassifyFPreRecMetric(Metric):
 
     def get_metric(self) -> dict:
         r"""
-        get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果.
+        get_metric函数将根据update函数累计的评价指标统计量来计算最终的评价结果.
 
         :return dict evaluate_result: {"acc": float}
         """
@@ -117,7 +117,7 @@ class ClassifyFPreRecMetric(Metric):
 
     def update(self, pred, target, seq_len=None):
         r"""
-        evaluate函数将针对一个批次的预测结果做评价指标的累计
+        update 函数将针对一个批次的预测结果做评价指标的累计
 
         :param torch.Tensor pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
                 torch.Size([B, max_len]), 或者torch.Size([B, max_len, n_classes])
