@@ -16,7 +16,6 @@ from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.core.metrics.accuracy import Accuracy
 from fastNLP.core.callbacks.load_best_model_callback import LoadBestModelCallback
 from fastNLP.core import Evaluator
-from fastNLP.core.utils.utils import safe_rm
 from fastNLP.core.drivers.torch_driver import TorchSingleDriver
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchArgMaxDataset
@@ -112,7 +111,8 @@ def test_load_best_model_callback(
     results = evaluator.run()
     assert np.allclose(callbacks[0].monitor_value, results['acc#acc#dl1'])
     if save_folder:
-        safe_rm(save_folder)
+        import shutil
+        shutil.rmtree(save_folder, ignore_errors=True)
     if dist.is_initialized():
         dist.destroy_process_group()
 

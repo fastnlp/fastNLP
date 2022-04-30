@@ -171,7 +171,7 @@ def test_model_more_evaluate_callback_1(
             trainer.load_model(folder, only_state_dict=only_state_dict)
 
             trainer.run()
-
+            trainer.driver.barrier()
     finally:
         rank_zero_rm(path)
 
@@ -255,6 +255,7 @@ def test_trainer_checkpoint_callback_1(
             trainer.load(folder, only_state_dict=only_state_dict)
 
             trainer.run()
+            trainer.driver.barrier()
 
     finally:
         rank_zero_rm(path)
