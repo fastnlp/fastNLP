@@ -1,6 +1,3 @@
-import os
-from re import S
-os.environ["FASTNLP_BACKEND"] = "paddle"
 import pytest
 from pathlib import Path
 

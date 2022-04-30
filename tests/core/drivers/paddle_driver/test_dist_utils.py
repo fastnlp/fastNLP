@@ -3,7 +3,6 @@ import sys
 import signal
 import pytest
 import traceback
-os.environ["FASTNLP_BACKEND"] = "paddle"
 
 import numpy as np
 

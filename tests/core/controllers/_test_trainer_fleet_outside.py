@@ -4,7 +4,6 @@
 python -m paddle.distributed.launch --gpus=0,2,3 test_trainer_fleet_outside.py
 """
 import os
-os.environ["FASTNLP_BACKEND"] = "paddle"
 import sys
 sys.path.append("../../../")
 
