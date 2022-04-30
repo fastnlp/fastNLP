@@ -1,10 +1,9 @@
 """
 这个文件测试用户以python -m paddle.distributed.launch 启动的情况
-并且自己初始化了 fleet
-python -m paddle.distributed.launch --gpus=0,2,3 test_trainer_fleet_outside.py
+看看有没有用pytest执行的机会
+python -m paddle.distributed.launch --gpus=0,2,3 test_trainer_fleet.py
 """
 import os
-os.environ["FASTNLP_BACKEND"] = "paddle"
 import sys
 sys.path.append("../../../")
 
@@ -18,9 +17,8 @@ from fastNLP.core.callbacks import Callback
 import paddle
 from paddle.optimizer import Adam
 from paddle.io import DataLoader
-import paddle.distributed.fleet as fleet
 
-from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_2
+from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from tests.helpers.datasets.paddle_data import PaddleRandomMaxDataset
 from tests.helpers.callbacks.helper_callbacks import RecordMetricCallback
 
@@ -38,17 +36,12 @@ def test_trainer_fleet(
         device,
         callbacks,
         n_epochs,
-):    
-    fleet.init(is_collective=True)
-
-    model = PaddleNormalModel_Classification_2(
+):
+    model = PaddleNormalModel_Classification_1(
         num_labels=MNISTTrainFleetConfig.num_labels,
-        feature_dimension=MNISTTrainFleetConfig.feature_dimension,
+        feature_dimension=MNISTTrainFleetConfig.feature_dimension
     )
     optimizers = Adam(parameters=model.parameters(), learning_rate=0.0001)
-
-    model = fleet.distributed_model(model)
-    optimizers = fleet.distributed_optimizer(optimizers)
 
     train_dataloader = DataLoader(
         dataset=PaddleRandomMaxDataset(6400, MNISTTrainFleetConfig.feature_dimension),
@@ -79,13 +72,14 @@ def test_trainer_fleet(
         n_epochs=n_epochs,
         callbacks=callbacks,
         output_from_new_proc="logs",
-        data_device=f"gpu:{os.environ['CUDA_VISIBLE_DEVICES']}"
     )
     trainer.run()
 
 if __name__ == "__main__":
     driver = "fleet"
     device = [0,2,3]
+    # driver = "paddle"
+    # device = 2
     callbacks = [
         # RecordMetricCallback(monitor="acc#acc", metric_threshold=0.0, larger_better=True), 
         RichCallback(5),
@@ -94,5 +88,5 @@ if __name__ == "__main__":
         driver=driver,
         device=device,
         callbacks=callbacks,
-        n_epochs=30,
+        n_epochs=5,
     )

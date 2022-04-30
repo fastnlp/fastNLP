@@ -14,7 +14,7 @@ if _NEED_IMPORT_PADDLE:
     import paddle
 
 def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[int]]],
-                            model: paddle.nn.Layer, **kwargs) -> PaddleDriver:
+                            model: "paddle.nn.Layer", **kwargs) -> PaddleDriver:
     r"""
     用来根据参数 `driver` 和 `device` 来确定并且初始化一个具体的 `Driver` 实例然后返回回去；
     1、如果检测到当前进程为用户通过 `python -m paddle.distributed.launch xxx.py` 方式拉起的，则将

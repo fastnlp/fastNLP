@@ -1,5 +1,3 @@
-import os
-os.environ["FASTNLP_BACKEND"] = "torch"
 import pytest
 from pathlib import Path
 

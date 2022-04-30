@@ -1,7 +1,4 @@
-import os
 import pytest
-
-os.environ["FASTNLP_BACKEND"] = "torch"
 
 from fastNLP.core.drivers import TorchSingleDriver, TorchDDPDriver
 from fastNLP.core.drivers.torch_driver.initialize_torch_driver import initialize_torch_driver
