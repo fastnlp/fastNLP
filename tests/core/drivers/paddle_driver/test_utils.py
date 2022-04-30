@@ -1,6 +1,4 @@
-import os
 import pytest
-os.environ["FASTNLP_BACKEND"] = "paddle"
 
 from fastNLP.core.drivers.paddle_driver.utils import (
     get_device_from_visible,

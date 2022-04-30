@@ -1,8 +1,6 @@
 import pytest
-import os
 from pathlib import Path
 
-os.environ["FASTNLP_BACKEND"] = "torch"
 from fastNLP.core.drivers.torch_driver.ddp import TorchDDPDriver
 from fastNLP.core.samplers import (
     RandomSampler,

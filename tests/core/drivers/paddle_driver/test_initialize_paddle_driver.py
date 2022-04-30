@@ -1,7 +1,4 @@
-import os
 import pytest
-
-os.environ["FASTNLP_BACKEND"] = "paddle"
 
 from fastNLP.core.drivers import PaddleSingleDriver, PaddleFleetDriver
 from fastNLP.core.drivers.paddle_driver.initialize_paddle_driver import initialize_paddle_driver
