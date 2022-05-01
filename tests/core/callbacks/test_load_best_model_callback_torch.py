@@ -70,8 +70,8 @@ def model_and_optimizers(request):
 
     return trainer_params
 
-# pytest test_load_best_model_callback_torch.py::test_load_best_model_callback -s
 
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch_ddp", [4, 5]), ("torch", 1), ("torch", "cpu")])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("save_folder", ['save_models', None])
 @pytest.mark.parametrize("only_state_dict", [True, False])

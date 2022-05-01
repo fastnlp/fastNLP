@@ -1,6 +1,7 @@
 import unittest
 
 import paddle
+import pytest
 import torch
 
 from fastNLP.core.utils.torch_paddle_utils import torch_paddle_move_data_to_device
@@ -11,6 +12,8 @@ from fastNLP.core.utils.torch_paddle_utils import torch_paddle_move_data_to_devi
 #
 ############################################################################
 
+# @pytest.mark.paddle
+# @pytest.mark.torch
 class TorchPaddleMoveDataToDeviceTestCase(unittest.TestCase):
 
     def check_gpu(self, tensor, idx):

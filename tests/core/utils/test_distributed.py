@@ -1,4 +1,5 @@
 import os
+import pytest
 
 from fastNLP.envs.distributed import rank_zero_call, all_rank_call_context
 from tests.helpers.utils import re_run_current_cmd_for_torch, Capturing, magic_argv_env_context
@@ -30,7 +31,7 @@ class JittorTest:
     def test_all_rank_run(self):
         pass
 
-
+@pytest.mark.torch
 class TestTorch:
     @magic_argv_env_context
     def test_rank_zero_call(self):

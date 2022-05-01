@@ -70,6 +70,7 @@ def model_and_optimizers(request):
     return trainer_params
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @pytest.mark.parametrize("only_state_dict", [True, False])
@@ -201,6 +202,7 @@ def test_model_checkpoint_callback_1(
         dist.destroy_process_group()
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("only_state_dict", [True])
 @magic_argv_env_context(timeout=100)
@@ -293,6 +295,7 @@ def test_model_checkpoint_callback_2(
         dist.destroy_process_group()
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 0)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @pytest.mark.parametrize("only_state_dict", [True, False])
@@ -423,7 +426,7 @@ def test_trainer_checkpoint_callback_1(
         dist.destroy_process_group()
 
 
-
+@pytest.mark.torch
 # 通过自己编写 model_save_fn 和 model_load_fn 来测试 huggingface 的 transformers 的模型的保存和加载；
 @pytest.mark.parametrize("driver,device", [("torch_ddp", [6, 7]), ("torch", 7)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])

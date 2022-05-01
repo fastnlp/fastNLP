@@ -25,6 +25,7 @@ class CheckClipCallback(Callback):
                 assert np.linalg.norm(param.grad.cpu().view(-1).numpy())<=self.clip_value
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize('accumulation_steps', [1, 3, 5])
 @pytest.mark.parametrize('fp16', [True, False])
 @pytest.mark.parametrize('clip_type', ['norm', 'value'])

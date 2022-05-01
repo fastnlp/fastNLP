@@ -9,6 +9,8 @@ from torch.utils.data import DataLoader, BatchSampler
 
 from tests.helpers.datasets.torch_data import TorchNormalDataset
 
+
+@pytest.mark.torch
 def test_replace_batch_sampler():
     dataset = TorchNormalDataset(10)
     dataloader = DataLoader(dataset, batch_size=32)
@@ -22,6 +24,8 @@ def test_replace_batch_sampler():
     assert len(replaced_loader.dataset) == len(dataset)
     assert replaced_loader.batch_sampler.batch_size == 16
 
+
+@pytest.mark.torch
 def test_replace_sampler():
     dataset = TorchNormalDataset(10)
     dataloader = DataLoader(dataset, batch_size=32)

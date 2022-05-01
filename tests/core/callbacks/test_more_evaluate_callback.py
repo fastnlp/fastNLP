@@ -95,6 +95,7 @@ def model_and_optimizers(request):
     return trainer_params
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @pytest.mark.parametrize("only_state_dict", [True, False])
@@ -179,6 +180,7 @@ def test_model_more_evaluate_callback_1(
         dist.destroy_process_group()
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 0)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @pytest.mark.parametrize("only_state_dict", [True, False])
