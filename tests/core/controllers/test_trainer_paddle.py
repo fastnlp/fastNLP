@@ -1,6 +1,4 @@
 import pytest
-import os
-os.environ["FASTNLP_BACKEND"] = "paddle"
 from dataclasses import dataclass
 
 from fastNLP.core.controllers.trainer import Trainer
@@ -25,7 +23,7 @@ class TrainPaddleConfig:
     shuffle: bool = True
     evaluate_every = 2
 
-@pytest.mark.parametrize("driver,device", [("paddle", "cpu"), ("paddle", 1)])
+@pytest.mark.parametrize("driver,device", [("paddle", "cpu"), ("paddle", 1), ("fleet", [0, 1])])
 # @pytest.mark.parametrize("driver,device", [("fleet", [0, 1])])
 @pytest.mark.parametrize("callbacks", [[RecordMetricCallback(monitor="acc#acc", metric_threshold=0.0, larger_better=True), 
                                         RichCallback(5)]])

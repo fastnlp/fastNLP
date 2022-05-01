@@ -149,6 +149,7 @@ def is_number(dtype):
         if dtype in (float, int, complex, bool) and not is_numpy_generic_class(dtype) \
                 and not is_numpy_number_dtype(dtype):
             return True
+        return False
     except:
         return False
 
@@ -161,6 +162,7 @@ if __name__ == '__main__':
     # print(type(b[0]))
     # print(b)
     # import torch
+    print(is_number(type('a')))
     print(is_number_or_numpy_number(type(3)))  # True
     print(is_number_or_numpy_number(type(3.1)))  # True
     print(is_number_or_numpy_number(type('3'))) # False

@@ -1,6 +1,4 @@
-import os
 import pytest
-os.environ["FASTNLP_BACKEND"] = "torch"
 
 from fastNLP.core.drivers.torch_driver.utils import (
     replace_batch_sampler,

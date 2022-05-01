@@ -1,8 +1,6 @@
 import pytest
-import os
 from pathlib import Path
 
-os.environ["FASTNLP_BACKEND"] = "paddle"
 from fastNLP.core.drivers.paddle_driver.fleet import PaddleFleetDriver
 from fastNLP.core.samplers import (
     RandomSampler,

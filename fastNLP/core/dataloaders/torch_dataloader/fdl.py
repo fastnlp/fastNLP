@@ -17,7 +17,7 @@ if _NEED_IMPORT_TORCH:
     from torch.utils.data import DataLoader, Sampler
     from torch.utils.data._utils.collate import default_collate
 else:
-    from ..fdataloader import FDataLoader as DataLoader
+    from fastNLP.core.utils.dummy_class import DummyClass as DataLoader
 
 
 class _FDataSet:

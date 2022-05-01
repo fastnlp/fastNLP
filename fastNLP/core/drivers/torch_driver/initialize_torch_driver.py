@@ -11,8 +11,8 @@ from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_BACKEND_LAUNCH
 
 
-def initialize_torch_driver(driver: str, device: Optional[Union[str, torch.device, int, List[int]]],
-                            model: torch.nn.Module, **kwargs) -> TorchDriver:
+def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.device", int, List[int]]],
+                            model: "torch.nn.Module", **kwargs) -> TorchDriver:
     r"""
     用来根据参数 `driver` 和 `device` 来确定并且初始化一个具体的 `Driver` 实例然后返回回去；
     注意如果输入的 `device` 如果和 `driver` 对应不上就直接报错；

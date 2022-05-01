@@ -19,8 +19,8 @@ from .evaluator import Evaluator
 from fastNLP.core.controllers.utils.utils import TrainerEventTrigger, _TruncatedDataLoader
 from fastNLP.core.callbacks import Callback, CallbackManager, Events, EventsList
 from fastNLP.core.callbacks.callback import _CallbackWrapper
+from fastNLP.core.callbacks.callback_manager import prepare_callbacks
 from fastNLP.core.callbacks.callback_events import _SingleEventState
-from fastNLP.core.callbacks.progress_callback import choose_progress_callback
 from fastNLP.core.drivers import Driver
 from fastNLP.core.drivers.utils import choose_driver
 from fastNLP.core.utils import get_fn_arg_names, match_and_substitute_params, nullcontext
@@ -133,7 +133,7 @@ class Trainer(TrainerEventTrigger):
              ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
              log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
             progress_bar: 以哪种方式显示 progress ，目前支持[None, 'raw', 'rich', 'auto'] 或者 RichCallback, RawTextCallback对象，
-                默认为 auto , auto 表示如果检测到当前 terminal 为交互型 则使用 RichCallback，否则使用 RawTextCallback对象。如果
+                默认为 auto , auto 表示如果检测到当前 terminal 为交互型则使用 RichCallback，否则使用 RawTextCallback对象。如果
                 需要定制 progress bar 的参数，例如打印频率等，可以传入 RichCallback, RawTextCallback 对象。
             train_input_mapping: 与 input_mapping 一致，但是只用于 train 中。与 input_mapping 互斥。
             train_output_mapping: 与 output_mapping 一致，但是只用于 train 中。与 output_mapping 互斥。
@@ -212,17 +212,7 @@ class Trainer(TrainerEventTrigger):
         self.driver.set_optimizers(optimizers=optimizers)
 
         # 根据 progress_bar 参数选择 ProgressBarCallback
-        progress_bar_callback = choose_progress_callback(kwargs.get('progress_bar', 'auto'))
-        if progress_bar_callback is not None:
-            if callbacks is None:
-                callbacks = []
-            elif not isinstance(callbacks, Sequence):
-                callbacks = [callbacks]
-
-            callbacks = list(callbacks) + [progress_bar_callback]
-        else:
-            rank_zero_call(logger.warning)("No progress bar is provided, there will have no information output "
-                                           "during training.")
+        callbacks = prepare_callbacks(callbacks, kwargs.get('progress_bar', 'auto'))
         # 初始化 callback manager；
         self.callback_manager = CallbackManager(callbacks)
         # 添加所有的函数式 callbacks；

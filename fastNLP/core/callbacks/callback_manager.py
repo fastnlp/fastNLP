@@ -9,6 +9,8 @@ __all__ = [
 from .callback_events import Events
 from .callback import Callback
 from fastNLP.core.log import logger
+from .progress_callback import ProgressCallback, choose_progress_callback
+from fastNLP.envs import rank_zero_call
 
 
 def _transfer(func):
@@ -24,6 +26,43 @@ def _transfer(func):
             returns.append(callback_fn(*arg, **kwargs))
         return returns
     return wrapper
+
+
+def prepare_callbacks(callbacks, progress_bar):
+    """
+
+    :param callbacks:
+    :param progress_bar:
+    :return:
+    """
+    _callbacks = []
+    if callbacks is not None:
+        if isinstance(callbacks, Callback):
+            callbacks = [callbacks]
+        if not isinstance(callbacks, Sequence):
+            raise ValueError("Parameter `callbacks` should be type 'List' or 'Tuple'.")
+        callbacks = list(callbacks)
+        for _callback in callbacks:
+            if not isinstance(_callback, Callback):
+                raise TypeError(f"callbacks must be of Callback type, instead of `{type(_callback)}`")
+        _callbacks += callbacks
+
+    has_no_progress = False
+    for _callback in _callbacks:
+        if isinstance(_callback, ProgressCallback):
+            has_no_progress = True
+    if not has_no_progress:
+        callback = choose_progress_callback(progress_bar)
+        if callback is not None:
+            _callbacks.append(callback)
+    elif progress_bar is not None and progress_bar != 'auto':
+        logger.warning(f"Since you have passed in ProgressBar callback, progress_bar will be ignored.")
+
+    if has_no_progress and progress_bar is None:
+        rank_zero_call(logger.warning)("No progress bar is provided, there will have no information output "
+                                       "during training.")
+
+    return _callbacks
 
 
 class CallbackManager:
@@ -45,24 +84,13 @@ class CallbackManager:
         """
         self._need_reproducible_sampler = False
 
-        _callbacks = []
-        if callbacks is not None:
-            if isinstance(callbacks, Callback):
-                callbacks = [callbacks]
-            if not isinstance(callbacks, Sequence):
-                raise ValueError("Parameter `callbacks` should be type 'List' or 'Tuple'.")
-            callbacks = list(callbacks)
-            for _callback in callbacks:
-                if not isinstance(_callback, Callback):
-                    raise TypeError(f"callbacks must be of Callback type, instead of `{type(_callback)}`")
-            _callbacks += callbacks
         self.callback_fns = defaultdict(list)
         # 因为理论上用户最多只能通过 'trainer.on_train_begin' 或者 'trainer.callback_manager.on_train_begin' 来调用，即其是没办法
         #  直接调用具体的某一个 callback 函数，而不调用其余的同名的 callback 函数的，因此我们只需要记录具体 Event 的时机即可；
         self.callback_counter = defaultdict(lambda: 0)
-        if len(_callbacks):
+        if len(callbacks):
             # 这一对象是为了保存原始的类 callback 对象来帮助用户进行 debug，理论上在正常的使用中你并不会需要它；
-            self.class_callbacks = _callbacks
+            self.class_callbacks = callbacks
         else:
             self.class_callbacks: Optional[List[Callback]] = []
 

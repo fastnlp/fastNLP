@@ -10,7 +10,7 @@ class TestNumpyNumberPadder:
     def test_run(self):
         padder = NumpyNumberPadder(ele_dtype=int, dtype=int, pad_val=-1)
         a = [1, 2, 3]
-        assert isinstance(a, np.ndarray)
+        assert isinstance(padder(a), np.ndarray)
         assert (padder(a) == np.array(a)).sum() == 3
 
 

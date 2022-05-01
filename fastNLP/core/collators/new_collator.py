@@ -6,7 +6,7 @@ from .padders.get_padder import get_padder
 import re
 
 from .utils import unpack_batch_mapping, unpack_batch_nested_mapping, pack_batch_nested_mapping, unpack_batch_sequence, \
-    pack_batch_sequence, NESTED_DICT_SEPARATOR
+    pack_batch_sequence
 
 sequence_idx_str = re.compile(r'^_\d+$')  # 形如_0, _1
 SUPPORTED_BACKENDS = ['torch', 'jittor', 'paddle', 'numpy', 'raw', None]
@@ -16,10 +16,11 @@ class Collator:
     def __init__(self, backend='torch'):
         """
         用于 pad 数据的对象。会自动将所有能够 pad （由 fastNLP 根据数据判定能否 pad ）的数据都进行 pad 操作，默认 pad 的值为 0。
-            可使用 set_pad() 函数调整。如果有些 field 不想输出，可以使用 set_ignore() 函数进行设置。
+            可使用 set_pad() 函数调整。如果有些 field 不想输出，可以使用 set_ignore() 函数进行设置。Collator 在第一次进行 pad 的
+            时候自动根据设置以及数据情况，为每个 field 获取一个 padder ，在之后的每次调用中，都将使用对应的 Padder 给对应的 field 。
 
-        :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ['torch','jittor','paddle','numpy','raw',None]，
-            若为 None ，则不进行 padding 。
+        :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ['torch','jittor','paddle','numpy','raw',None]。
+            若为 None ，则不进行 padding 。该参数对本身就不能进行 pad 的数据没用影响，不能 pad 的数据返回一定是 list 。
         """
         self.unpack_batch_func = None
         self.pack_batch_func = None
@@ -54,22 +55,25 @@ class Collator:
                 else:
                     self.batch_data_type = 's'
                 logger.debug(f"Since batch[0] has type:{type(batch[0])}, so the batch_data_type "
-                             f"is {self.batch_data_type}")
+                             f"is `{self.batch_data_type}`.")
             if self.batch_data_type == 's':
-                self.unpack_batch_func = lambda x:{'_single': x}  # 不需要做任何调整
-                self.pack_batch_func = lambda x:x['_single']
+                self.unpack_batch_func = lambda batch, ignore_fields: {'_single': batch}  # 不需要做任何调整
+                self.pack_batch_func = lambda x: x['_single']
             elif self.batch_data_type == 'l':
                 self.unpack_batch_func = unpack_batch_sequence
                 self.pack_batch_func = pack_batch_sequence
             elif self.batch_data_type == 'd':
-                if any([isinstance(v, Mapping) for v in batch[0].values()]):  # 可能存在 nested 的dict。{'a': {'b': xx}}->{'a@@b': value}
+                if any([isinstance(v, Mapping) for v in batch[0].values()]):  # 可能存在 nested 的dict。{'a': {'b': xx}}->{('a', 'b'): value}
                     self.unpack_batch_func = unpack_batch_nested_mapping
                     self.pack_batch_func = pack_batch_nested_mapping
                 else:
                     self.unpack_batch_func = unpack_batch_mapping
                     self.pack_batch_func = lambda x:x
 
-        unpack_batch:Dict = self.unpack_batch_func(batch)  # 将各自 field 组成 batch 形式。
+        if self.unpack_batch_func is unpack_batch_nested_mapping:  # 比较特殊，需要防止继续往下延伸
+            unpack_batch: Dict = self.unpack_batch_func(batch, self.ignore_fields, set(self.input_fields.keys()))
+        else:
+            unpack_batch:Dict = self.unpack_batch_func(batch, self.ignore_fields)  # 将各自 field 组成 batch 形式。
 
         pad_batch = {}
         if len(self.padders)==0:  # 第一次运行，准备 padder
@@ -96,13 +100,13 @@ class Collator:
 
         return self.pack_batch_func(pad_batch)  # 根据情况恢复成与输入一致的类型
 
-    def set_pad(self, field_name:str, pad_val:Union[int, float, None]=0, dtype=None, backend=None,
+    def set_pad(self, field_name:Union[str, tuple], pad_val:Union[int, float, None]=0, dtype=None, backend=None,
                 pad_fn:Callable=None) -> "Collator":
         """
         如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
         :param field_name: 需要调整的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
-            field 的 key 来表示，如果是 nested 的 dict，可以使用 @@ 来连接不同层次的 key，例如 {'a': {'b': 1}} 中的使用 a@@b;
+            field 的 key 来表示，如果是 nested 的 dict，可以使用元组表示多层次的 key，例如 {'a': {'b': 1}} 中的使用 ('a', 'b');
             如果 __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。如果该 field 在数据中没
             有找到，则报错；如果 __getitem__ 返回的是就是整体内容，请使用 "_single" 。
         :param pad_val: 这个 field 的默认 pad 值。如果设置为 None，则表示该 field 不需要 pad , fastNLP 默认只会对可以 pad 的
@@ -126,11 +130,11 @@ class Collator:
                                                            f"index, but other field is set as dict mode."
             elif self.batch_data_type == 'l':
                 assert sequence_idx_str.match(field_name) is not None, f"Other field is set as list mode. But the new " \
-                                                                       f"field name is {field_name}"
+                                                                       f"field name is {field_name}."
 
         if field_name == '_single':
             self.batch_data_type = 's'
-        elif sequence_idx_str.match(field_name):
+        elif isinstance(field_name, str) and sequence_idx_str.match(field_name):
             self.batch_data_type = 'l'
         else:
             self.batch_data_type = 'd'
@@ -165,8 +169,8 @@ class Collator:
             collator.set_ignore('field1', 'field2')
 
         :param field_names: 需要忽略的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
-            field 的 key 来表示，如果是 nested 的 dict，可以使用 @@ 来连接不同层次的 key，例如 {'a': {'b': 1}} 中的使用 a@@b;
-            如果 __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。
+            field 的 key 来表示，如果是 nested 的 dict，可以使用元组来表示，例如 {'a': {'b': 1}} 中的使用 ('a', 'b'); 如果
+            __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。
         :return: 返回 Collator 自身
         """
         for field_name in field_names:
