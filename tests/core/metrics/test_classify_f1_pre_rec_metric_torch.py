@@ -29,6 +29,7 @@ def _test(local_rank: int, world_size: int, device: torch.device,
         np.allclose(my_result[keys], metric_result[keys], atol=0.000001)
 
 
+@pytest.mark.torch
 class TestClassfiyFPreRecMetric:
     def test_case_1(self):
         pred = torch.tensor([[-0.4375, -0.1779, -1.0985, -1.1592, 0.4910],

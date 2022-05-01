@@ -66,6 +66,7 @@ def _test(local_rank: int,
     assert my_result == sklearn_metric
 
 
+@pytest.mark.torch
 class TestSpanFPreRecMetric:
 
     def test_case1(self):

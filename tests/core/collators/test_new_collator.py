@@ -42,6 +42,8 @@ def findListDiff(d1, d2):
 
 
 class TestCollator:
+
+    @pytest.mark.torch
     def test_run(self):
         dict_batch = [{
             'str': '1',

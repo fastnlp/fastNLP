@@ -69,6 +69,7 @@ def pre_process():
     pool.join()
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize('dataset', [
     DataSet({'pred': np.random.randint(low=0, high=1, size=(36, 32)),
              'target': np.random.randint(low=0, high=1, size=(36, 32))}),

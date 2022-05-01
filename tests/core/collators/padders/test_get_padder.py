@@ -15,6 +15,8 @@ def test_get_element_shape_dtype():
 
 
 @pytest.mark.parametrize('backend', ['raw', None, 'numpy', 'torch', 'jittor', 'paddle'])
+@pytest.mark.torch
+@pytest.mark.paddle
 def test_get_padder_run(backend):
     if not _NEED_IMPORT_TORCH and backend == 'torch':
         pytest.skip("No torch")
@@ -100,6 +102,7 @@ def test_numpy_padder():
         padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
 
 
+@pytest.mark.torch
 def test_torch_padder():
     if not _NEED_IMPORT_TORCH:
         pytest.skip("No torch.")

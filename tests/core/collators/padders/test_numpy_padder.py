@@ -14,6 +14,7 @@ class TestNumpyNumberPadder:
         assert (padder(a) == np.array(a)).sum() == 3
 
 
+@pytest.mark.torch
 class TestNumpySequencePadder:
     def test_run(self):
         padder = NumpySequencePadder(ele_dtype=int, dtype=int, pad_val=-1)

@@ -45,6 +45,7 @@ def test_get_padded_nest_list():
     assert np.shape(a) == (2, 3, 2)
 
 
+@pytest.mark.torch
 def test_is_number_or_numpy_number():
     assert is_number_or_numpy_number(type(3)) is True
     assert is_number_or_numpy_number(type(3.1)) is True
@@ -60,6 +61,7 @@ def test_is_number_or_numpy_number():
         assert is_number_or_numpy_number(dtype) is False
 
 
+@pytest.mark.torch
 def test_is_number():
     assert is_number(type(3)) is True
     assert is_number(type(3.1)) is True
@@ -75,6 +77,7 @@ def test_is_number():
         assert is_number(dtype) is False
 
 
+@pytest.mark.torch
 def test_is_numpy_number():
     assert is_numpy_number_dtype(type(3)) is False
     assert is_numpy_number_dtype(type(3.1)) is False

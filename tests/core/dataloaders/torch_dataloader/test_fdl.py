@@ -5,6 +5,7 @@ from fastNLP.core.dataset import DataSet
 from fastNLP.io.data_bundle import DataBundle
 
 
+@pytest.mark.torch
 class TestFdl:
 
     def test_init_v1(self):

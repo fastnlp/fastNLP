@@ -8,11 +8,13 @@ import paddle.distributed.fleet as fleet
 from fastNLP.core.metrics import Accuracy
 from fastNLP.core.drivers.paddle_driver.fleet_launcher import FleetLauncher
 
+
 ############################################################################
 #
 # 测试 单机单卡情况下的Accuracy
 #
 ############################################################################
+@pytest.mark.paddle
 def test_accuracy_single():
     pred = paddle.to_tensor([[1.19812393, -0.82041764, -0.53517765, -0.73061031, -1.45006669,
                               0.46514302],
@@ -56,4 +58,3 @@ def test_accuracy_ddp():
         pass
     elif fleet.is_worker():
         print(os.getenv("PADDLE_TRAINER_ID"))
-

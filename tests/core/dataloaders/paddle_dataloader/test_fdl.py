@@ -17,6 +17,7 @@ class RandomDataset(Dataset):
         return 10
 
 
+@pytest.mark.paddle
 class TestPaddle:
 
     def test_init(self):

@@ -9,6 +9,7 @@ if _NEED_IMPORT_TORCH:
     import torch
 
 
+@pytest.mark.torch
 class TestTorchNumberPadder:
     def test_run(self):
         padder = TorchNumberPadder(ele_dtype=int, dtype=int, pad_val=-1)
@@ -18,6 +19,7 @@ class TestTorchNumberPadder:
         assert (t_a == torch.LongTensor(a)).sum() == 3
 
 
+@pytest.mark.torch
 class TestTorchSequencePadder:
     def test_run(self):
         padder = TorchSequencePadder(ele_dtype=int, dtype=int, pad_val=-1)
@@ -40,7 +42,7 @@ class TestTorchSequencePadder:
         padder = TorchSequencePadder(ele_dtype=np.zeros(2).dtype, dtype=None, pad_val=-1)
 
 
-
+@pytest.mark.torch
 class TestTorchTensorPadder:
     def test_run(self):
         padder = TorchTensorPadder(ele_dtype=torch.zeros(3).dtype, dtype=int, pad_val=-1)
