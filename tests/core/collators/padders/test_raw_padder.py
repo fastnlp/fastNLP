@@ -7,14 +7,14 @@ from fastNLP.core.collators.padders.exceptions import DtypeError
 
 class TestRawNumberPadder:
     def test_run(self):
-        padder = RawNumberPadder(ele_dtype=int, dtype=int, pad_val=-1)
+        padder = RawNumberPadder(pad_val=-1, ele_dtype=int, dtype=int)
         a = [1, 2, 3]
         assert padder(a) == a
 
 
 class TestRawSequencePadder:
     def test_run(self):
-        padder = RawSequencePadder(ele_dtype=int, dtype=int, pad_val=-1)
+        padder = RawSequencePadder(pad_val=-1, ele_dtype=int, dtype=int)
         a = [[1, 2, 3], [3]]
         a = padder(a)
         shape = np.shape(a)
@@ -24,6 +24,6 @@ class TestRawSequencePadder:
 
     def test_dtype_check(self):
         with pytest.raises(DtypeError):
-            padder = RawSequencePadder(ele_dtype=np.zeros(3, dtype=np.int8).dtype, dtype=int, pad_val=-1)
+            padder = RawSequencePadder(pad_val=-1, ele_dtype=np.zeros(3, dtype=np.int8).dtype, dtype=int)
         with pytest.raises(DtypeError):
-            padder = RawSequencePadder(ele_dtype=str, dtype=int, pad_val=-1)
+            padder = RawSequencePadder(pad_val=-1, ele_dtype=str, dtype=int)

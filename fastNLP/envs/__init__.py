@@ -14,7 +14,11 @@ __all__ = [
 
 from .env import *
 from .set_env_on_import import set_env_on_import
-from .set_backend import dump_fastnlp_backend
+# 首先保证 FASTNLP_GLOBAL_RANK 正确设置
+set_env_on_import()
+from .set_backend import dump_fastnlp_backend, _set_backend
+# 再设置 backend 相关
+_set_backend()
 from .imports import *
 from .utils import _module_available, get_gpu_count
 from .distributed import *

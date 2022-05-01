@@ -1,7 +1,3 @@
-"""
-这个文件用于自动以及手动设置某些环境变量的，该文件中的set_env()函数会在 fastNLP 被 import 的时候在set_env_on_import之后运行。可以
-    用于设置某些必要的环境变量。同时用户在使用时set_env()修改环境变量时，也应该保证set_env()函数在所有其它代码之前被运行。
-"""
 import os
 import json
 import sys
@@ -9,8 +5,11 @@ from collections import defaultdict
 
 
 from fastNLP.envs.env import FASTNLP_BACKEND, FASTNLP_GLOBAL_RANK, USER_CUDA_VISIBLE_DEVICES, FASTNLP_GLOBAL_SEED
-from fastNLP.envs.imports import SUPPORT_BACKENDS
 from fastNLP.envs.utils import _module_available, get_gpu_count
+
+
+SUPPORT_BACKENDS = ['torch', 'paddle', 'jittor']
+
 
 def _set_backend():
     """

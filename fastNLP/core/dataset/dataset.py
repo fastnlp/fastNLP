@@ -760,8 +760,7 @@ class DataSet:
         dict_ = {key: value.content for key, value in self.field_arrays.items()}
         return pd.DataFrame.from_dict(dict_)
 
-    # TODO 应该有返回值的吧
-    def to_csv(self, path: str) -> None:
+    def to_csv(self, path: str):
         """
         将dataset保存为csv文件
 
@@ -770,7 +769,7 @@ class DataSet:
         """
 
         df = self.to_pandas()
-        df.to_csv(path, encoding="utf-8")
+        return df.to_csv(path, encoding="utf-8")
 
     def add_collate_fn(self, collate_fn: Callable) -> None:
         """
@@ -831,4 +830,8 @@ class DataSet:
         """
         self.collate_fns.set_input(*field_names)
 
-
+    @property
+    def collator(self):
+        if self._collator is None:
+            self._collator = Collator()
+        return self._collator

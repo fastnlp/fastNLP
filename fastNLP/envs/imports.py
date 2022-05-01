@@ -5,9 +5,9 @@ import operator
 
 from fastNLP.envs.env import FASTNLP_BACKEND
 from fastNLP.envs.utils import _module_available, _compare_version
+from fastNLP.envs.set_backend import SUPPORT_BACKENDS
 
 
-SUPPORT_BACKENDS = ['torch', 'paddle', 'jittor']
 backend = os.environ.get(FASTNLP_BACKEND, 'all')
 if backend == 'all':
     need_import = SUPPORT_BACKENDS

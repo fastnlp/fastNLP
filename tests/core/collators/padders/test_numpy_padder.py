@@ -8,7 +8,7 @@ from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 
 class TestNumpyNumberPadder:
     def test_run(self):
-        padder = NumpyNumberPadder(ele_dtype=int, dtype=int, pad_val=-1)
+        padder = NumpyNumberPadder(pad_val=-1, ele_dtype=int, dtype=int)
         a = [1, 2, 3]
         assert isinstance(padder(a), np.ndarray)
         assert (padder(a) == np.array(a)).sum() == 3
@@ -17,7 +17,7 @@ class TestNumpyNumberPadder:
 @pytest.mark.torch
 class TestNumpySequencePadder:
     def test_run(self):
-        padder = NumpySequencePadder(ele_dtype=int, dtype=int, pad_val=-1)
+        padder = NumpySequencePadder(pad_val=-1, ele_dtype=int, dtype=int)
         a = [[1, 2, 3], [3]]
         a = padder(a)
         shape = np.shape(a)
@@ -27,18 +27,18 @@ class TestNumpySequencePadder:
         assert (a == b).sum().item() == shape[0]*shape[1]
 
     def test_dtype_check(self):
-        padder = NumpySequencePadder(ele_dtype=np.zeros(3, dtype=np.int8).dtype, dtype=int, pad_val=-1)
+        padder = NumpySequencePadder(pad_val=-1, ele_dtype=np.zeros(3, dtype=np.int8).dtype, dtype=int)
         with pytest.raises(DtypeError):
-            padder = NumpySequencePadder(ele_dtype=str, dtype=int, pad_val=-1)
+            padder = NumpySequencePadder(pad_val=-1, ele_dtype=str, dtype=int)
         if _NEED_IMPORT_TORCH:
             import torch
             with pytest.raises(DtypeError):
-                padder = NumpySequencePadder(ele_dtype=torch.long, dtype=int, pad_val=-1)
+                padder = NumpySequencePadder(pad_val=-1, ele_dtype=torch.long, dtype=int)
 
 
 class TestNumpyTensorPadder:
     def test_run(self):
-        padder = NumpyTensorPadder(ele_dtype=np.zeros(3).dtype, dtype=int, pad_val=-1)
+        padder = NumpyTensorPadder(pad_val=-1, ele_dtype=np.zeros(3).dtype, dtype=int)
         a = [np.zeros(3), np.zeros(2), np.zeros(0)]
         a = padder(a)
         shape = np.shape(a)
@@ -68,15 +68,15 @@ class TestNumpyTensorPadder:
         assert (a == b).sum().item() == shape[0]*shape[1]*shape[2]
 
     def test_dtype_check(self):
-        padder = NumpyTensorPadder(ele_dtype=np.zeros(3, dtype=np.int8).dtype, dtype=int, pad_val=-1)
+        padder = NumpyTensorPadder(pad_val=-1, ele_dtype=np.zeros(3, dtype=np.int8).dtype, dtype=int)
         with pytest.raises(DtypeError):
-            padder = NumpyTensorPadder(ele_dtype=str, dtype=int, pad_val=-1)
+            padder = NumpyTensorPadder(pad_val=-1, ele_dtype=str, dtype=int)
         if _NEED_IMPORT_TORCH:
             import torch
             with pytest.raises(DtypeError):
-                padder = NumpyTensorPadder(ele_dtype=torch.long, dtype=int, pad_val=-1)
+                padder = NumpyTensorPadder(pad_val=-1, ele_dtype=torch.long, dtype=int)
             with pytest.raises(DtypeError):
-                padder = NumpyTensorPadder(ele_dtype=int, dtype=torch.long, pad_val=-1)
+                padder = NumpyTensorPadder(pad_val=-1, ele_dtype=int, dtype=torch.long)
 
 
 

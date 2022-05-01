@@ -64,7 +64,7 @@ class TorchDataLoader(DataLoader):
         :param sampler: sampler实例化对象
         :param batch_sampler: batch_sampler实例化对象，其能迭代返回一个list的index数据
         :param num_workers: 进程的数量，当num_worker=0时不开启多进程
-        :param collate_fn: 对取得到的数据进行打包的callable函数
+        :param collate_fn: 对取得到的数据进行打包的callable函数。[None, auto, callable]
         :param pin_memory:
         :param drop_last: 是否去掉最后一个不符合batch_size的数据
         :param timeout:
@@ -177,6 +177,16 @@ class TorchDataLoader(DataLoader):
         :return:
         """
         return self.cur_batch_indices
+
+    def set_pad(self):
+        pass
+
+    def set_ignore(self):
+        pass
+
+    def set_backend(self):
+        pass
+
 
 
 def prepare_torch_dataloader(ds_or_db: Union[DataSet, DataBundle, Sequence[DataSet], Mapping[str, DataSet]],

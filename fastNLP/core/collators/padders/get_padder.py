@@ -84,25 +84,25 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
     try:
         if depth == 1 and shape_len == 0:  # 形如 [0, 1, 2] 或 [True, False, True]
             if backend == 'raw':
-                return RawNumberPadder(ele_dtype=ele_dtype, pad_val=pad_val, dtype=dtype)
+                return RawNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'numpy':
-                return NumpyNumberPadder(ele_dtype=ele_dtype, pad_val=pad_val, dtype=dtype)
+                return NumpyNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'torch':
-                return TorchNumberPadder(ele_dtype=ele_dtype, pad_val=pad_val, dtype=dtype)
+                return TorchNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
 
         if depth > 1 and shape_len == 0:  # 形如 [[0, 1], [2]] 这种
             if backend == 'raw':
-                return RawSequencePadder(ele_dtype=ele_dtype, pad_val=pad_val, dtype=dtype)
+                return RawSequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'numpy':
-                return NumpySequencePadder(ele_dtype=ele_dtype, pad_val=pad_val, dtype=dtype)
+                return NumpySequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'torch':
-                return TorchSequencePadder(ele_dtype=ele_dtype, pad_val=pad_val, dtype=dtype)
+                return TorchSequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
 
         if depth == 1 and shape_len != 0:
             if backend == 'numpy':
-                return NumpyTensorPadder(ele_dtype=ele_dtype, pad_val=pad_val, dtype=dtype)
+                return NumpyTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'torch':
-                return TorchTensorPadder(ele_dtype=ele_dtype, pad_val=pad_val, dtype=dtype)
+                return TorchTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
 
         if shape_len != 0 and depth>1:
             msg = "Does not support pad tensor under nested list. If you need this, please report."

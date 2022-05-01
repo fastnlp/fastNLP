@@ -37,7 +37,7 @@ def is_torch_tensor(dtype):
 
 
 def _get_dtype(ele_dtype, dtype, class_name):
-    if not (is_number_or_numpy_number(ele_dtype) or is_torch_tensor(ele_dtype)):
+    if not (ele_dtype is not None and (is_number_or_numpy_number(ele_dtype) or is_torch_tensor(ele_dtype))):
         raise EleDtypeUnsupportedError(f"`{class_name}` only supports padding python numbers "
                                        f"or numpy numbers or torch.Tensor but get `{ele_dtype}`.")
 
@@ -47,20 +47,27 @@ def _get_dtype(ele_dtype, dtype, class_name):
                                         f"or torch.dtype but get `{dtype}`.")
         dtype = number_to_torch_dtype_dict.get(dtype, dtype)
     else:
-        if (is_number(ele_dtype) or is_torch_tensor(ele_dtype)):
-            ele_dtype = number_to_torch_dtype_dict.get(ele_dtype, ele_dtype)
-            dtype = ele_dtype
-        elif is_numpy_number_dtype(ele_dtype): # 存在一个转换的问题了
-            dtype = numpy_to_torch_dtype_dict.get(ele_dtype.type)
-        elif is_numpy_generic_class(ele_dtype):
-            dtype = numpy_to_torch_dtype_dict.get(ele_dtype)
+        if ele_dtype is not None:
+            if (is_number(ele_dtype) or is_torch_tensor(ele_dtype)):
+                ele_dtype = number_to_torch_dtype_dict.get(ele_dtype, ele_dtype)
+                dtype = ele_dtype
+            elif is_numpy_number_dtype(ele_dtype): # 存在一个转换的问题了
+                dtype = numpy_to_torch_dtype_dict.get(ele_dtype.type)
+            elif is_numpy_generic_class(ele_dtype):
+                dtype = numpy_to_torch_dtype_dict.get(ele_dtype)
 
     return dtype
 
 
 class TorchNumberPadder(Padder):
-    def __init__(self, ele_dtype, pad_val=0, dtype=None):
-        # 仅当 ele_dtype 是 python number/ numpy number 或者 tensor
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
+        """
+        可以将形如 [1, 2, 3] 这类的数据转为 torch.Tensor([1, 2, 3])
+
+        :param pad_val: 该值无意义
+        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
+        :param dtype: 输出的数据的 dtype 是什么。如 torch.long, torch.float32, int, float 等
+        """
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
 
@@ -70,7 +77,14 @@ class TorchNumberPadder(Padder):
 
 
 class TorchSequencePadder(Padder):
-    def __init__(self, ele_dtype, pad_val=0, dtype=None):
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
+        """
+        将类似于 [[1], [1, 2]] 的内容 pad 为 torch.Tensor([[1, 0], [1, 2]]) 可以 pad 多重嵌套的数据。
+
+        :param pad_val: 需要 pad 的值。
+        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
+        :param dtype: 输出的数据的 dtype 是什么。如 torch.long, torch.float32, int, float 等
+        """
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
 
@@ -81,13 +95,13 @@ class TorchSequencePadder(Padder):
 
 
 class TorchTensorPadder(Padder):
-    def __init__(self, ele_dtype, pad_val=0, dtype=None):
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         """
         目前仅支持 [torch.tensor([3, 2], torch.tensor([1])] 类似的
 
-        :param ele_dtype:
-        :param pad_val:
-        :param dtype:
+        :param pad_val: 需要 pad 的值。
+        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
+        :param dtype: 输出的数据的 dtype 是什么。如 torch.long, torch.float32, int, float 等
         """
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
@@ -96,8 +110,6 @@ class TorchTensorPadder(Padder):
     def pad(batch_field, pad_val, dtype):
         shapes = [field.shape for field in batch_field]
         max_shape = [len(batch_field)] + [max(*_) for _ in zip(*shapes)]
-        if isinstance(dtype, np.dtype):
-            print(dtype)
         tensor = torch.full(max_shape, fill_value=pad_val, dtype=dtype)
         for i, field in enumerate(batch_field):
             slices = (i, ) + tuple(slice(0, s) for s in shapes[i])
