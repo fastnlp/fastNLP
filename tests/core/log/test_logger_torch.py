@@ -4,6 +4,7 @@ import datetime
 from pathlib import Path
 import logging
 import re
+import pytest
 
 from fastNLP.envs.env import FASTNLP_LAUNCH_TIME
 from fastNLP.core import rank_zero_rm
@@ -12,6 +13,7 @@ from fastNLP.core.log.logger import logger
 from tests.helpers.utils import magic_argv_env_context, recover_logger
 
 
+@pytest.mark.torch
 # 测试 TorchDDPDriver；
 @magic_argv_env_context
 @recover_logger
@@ -61,6 +63,7 @@ def test_add_file_ddp_1_torch():
     dist.destroy_process_group()
 
 
+@pytest.mark.torch
 @magic_argv_env_context
 @recover_logger
 def test_add_file_ddp_2_torch():
@@ -111,6 +114,7 @@ def test_add_file_ddp_2_torch():
     dist.destroy_process_group()
 
 
+@pytest.mark.torch
 @magic_argv_env_context
 @recover_logger
 def test_add_file_ddp_3_torch():
@@ -159,6 +163,8 @@ def test_add_file_ddp_3_torch():
     dist.barrier()
     dist.destroy_process_group()
 
+
+@pytest.mark.torch
 @magic_argv_env_context
 @recover_logger
 def test_add_file_ddp_4_torch():
@@ -208,6 +214,7 @@ def test_add_file_ddp_4_torch():
     dist.destroy_process_group()
 
 
+@pytest.mark.torch
 class TestLogger:
     msg = 'some test log msg'
 

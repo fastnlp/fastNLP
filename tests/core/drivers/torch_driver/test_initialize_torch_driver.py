@@ -8,12 +8,16 @@ from tests.helpers.utils import magic_argv_env_context
 
 import torch
 
+
+@pytest.mark.torch
 def test_incorrect_driver():
 
     model = TorchNormalModel_Classification_1(2, 100)
     with pytest.raises(ValueError):
         driver = initialize_torch_driver("paddle", 0, model)
 
+
+@pytest.mark.torch
 @pytest.mark.parametrize(
     "device", 
     ["cpu", "cuda:0", 0, torch.device("cuda:0")]
@@ -31,6 +35,8 @@ def test_get_single_device(driver, device):
     driver = initialize_torch_driver(driver, device, model)
     assert isinstance(driver, TorchSingleDriver)
 
+
+@pytest.mark.torch
 @pytest.mark.parametrize(
     "device", 
     [0, 1]
@@ -50,6 +56,8 @@ def test_get_ddp_2(driver, device):
 
     assert isinstance(driver, TorchDDPDriver)
 
+
+@pytest.mark.torch
 @pytest.mark.parametrize(
     "device", 
     [[0, 2, 3], -1]
@@ -69,6 +77,8 @@ def test_get_ddp(driver, device):
 
     assert isinstance(driver, TorchDDPDriver)
 
+
+@pytest.mark.torch
 @pytest.mark.parametrize(
     ("driver", "device"), 
     [("torch_ddp", "cpu")]
@@ -82,6 +92,8 @@ def test_get_ddp_cpu(driver, device):
     with pytest.raises(ValueError):
         driver = initialize_torch_driver(driver, device, model)
 
+
+@pytest.mark.torch
 @pytest.mark.parametrize(
     "device", 
     [-2, [0, torch.cuda.device_count() + 1, 3], [-2], torch.cuda.device_count() + 1]

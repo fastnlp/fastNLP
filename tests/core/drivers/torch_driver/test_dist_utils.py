@@ -11,6 +11,7 @@ from fastNLP.core.drivers.torch_driver.dist_utils import fastnlp_torch_all_gathe
 from tests.helpers.utils import re_run_current_cmd_for_torch, magic_argv_env_context
 
 
+@pytest.mark.torch
 @magic_argv_env_context
 def test_fastnlp_torch_all_gather():
     os.environ['MASTER_ADDR'] = '127.0.0.1'
@@ -59,6 +60,7 @@ def test_fastnlp_torch_all_gather():
 
     dist.destroy_process_group()
 
+@pytest.mark.torch
 @magic_argv_env_context
 def test_fastnlp_torch_broadcast_object():
     os.environ['MASTER_ADDR'] = '127.0.0.1'

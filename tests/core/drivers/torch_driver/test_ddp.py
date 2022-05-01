@@ -72,6 +72,7 @@ def dataloader_with_randomsampler(dataset, batch_size, shuffle, drop_last, seed=
 #
 ############################################################################
 
+@pytest.mark.torch
 class TestDDPDriverFunction:
     """
     测试 TorchDDPDriver 一些简单函数的测试类，基本都是测试能否运行、是否存在 import 错误等问题
@@ -180,6 +181,7 @@ class TestDDPDriverFunction:
 #
 ############################################################################
 
+@pytest.mark.torch
 class TestSetDistReproDataloader:
 
     @classmethod
@@ -526,6 +528,7 @@ class TestSetDistReproDataloader:
 # 测试 save 和 load 相关的功能
 #
 ############################################################################
+@pytest.mark.torch
 class TestSaveLoad:
     """
     测试多卡情况下 save 和 load 相关函数的表现

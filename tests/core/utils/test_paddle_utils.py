@@ -1,5 +1,5 @@
 import unittest
-
+import pytest
 import paddle
 
 from fastNLP.core.utils.paddle_utils import paddle_to, paddle_move_data_to_device
@@ -11,6 +11,7 @@ from fastNLP.core.utils.paddle_utils import paddle_to, paddle_move_data_to_devic
 #
 ############################################################################
 
+@pytest.mark.paddle
 class PaddleToDeviceTestCase(unittest.TestCase):
     def test_case(self):
         tensor = paddle.rand((4, 5))

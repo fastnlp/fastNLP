@@ -15,6 +15,7 @@ class RecordLrCallback(Callback):
         self.lrs.append(trainer.driver.optimizers[0].param_groups[0]['lr'])
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize('warmup', [5, 0.1])
 @pytest.mark.parametrize('schedule', ['constant', 'linear'])
 @pytest.mark.parametrize('accumulation_steps', [1, 3, 4])
