@@ -74,7 +74,7 @@ def model_and_optimizers(request):
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @pytest.mark.parametrize("only_state_dict", [True, False])
-@magic_argv_env_context
+@magic_argv_env_context(timeout=100)
 def test_model_checkpoint_callback_1(
     model_and_optimizers: TrainerParameters,
     driver,
@@ -194,7 +194,7 @@ def test_model_checkpoint_callback_1(
             trainer.load_model(folder, only_state_dict=only_state_dict)
 
             trainer.run()
-
+            trainer.driver.barrier()
     finally:
         rank_zero_rm(path)
 
@@ -205,7 +205,7 @@ def test_model_checkpoint_callback_1(
 @pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("only_state_dict", [True])
-@magic_argv_env_context
+@magic_argv_env_context(timeout=100)
 def test_model_checkpoint_callback_2(
         model_and_optimizers: TrainerParameters,
         driver,
@@ -285,6 +285,7 @@ def test_model_checkpoint_callback_2(
 
             trainer.load_model(folder, only_state_dict=only_state_dict)
             trainer.run()
+            trainer.driver.barrier()
 
     finally:
         rank_zero_rm(path)
@@ -298,7 +299,7 @@ def test_model_checkpoint_callback_2(
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 0)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @pytest.mark.parametrize("only_state_dict", [True, False])
-@magic_argv_env_context
+@magic_argv_env_context(timeout=100)
 def test_trainer_checkpoint_callback_1(
     model_and_optimizers: TrainerParameters,
     driver,
@@ -416,6 +417,7 @@ def test_trainer_checkpoint_callback_1(
             trainer.load(folder, only_state_dict=only_state_dict)
 
             trainer.run()
+            trainer.driver.barrier()
 
     finally:
         rank_zero_rm(path)
@@ -664,6 +666,7 @@ def test_trainer_checkpoint_callback_2(
             trainer.load(folder, model_load_fn=model_load_fn)
 
             trainer.run()
+            trainer.driver.barrier()
 
     finally:
         rank_zero_rm(path)

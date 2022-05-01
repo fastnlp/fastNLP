@@ -11,8 +11,6 @@ __all__ = [
 from .has_monitor_callback import HasMonitorCallback
 from fastNLP.core.utils import f_rich_progress
 from fastNLP.core.log import logger
-from fastNLP.core.utils.utils import is_notebook
-
 
 
 class ProgressCallback(HasMonitorCallback):
