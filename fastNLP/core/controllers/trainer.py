@@ -363,7 +363,6 @@ class Trainer(TrainerEventTrigger):
             raise e
         finally:
             self.on_train_end()
-            self.driver.barrier()
 
     def _set_num_eval_batch_per_dl(self, num_eval_batch_per_dl):
         def _evaluate_fn(trainer: Trainer, evaluate_fn: Callable) -> None:
