@@ -30,12 +30,12 @@ def recover_logger(fn):
     return wrapper
 
 
-def magic_argv_env_context(fn=None, timeout=600):
+def magic_argv_env_context(fn=None, timeout=300):
     """
     用来在测试时包裹每一个单独的测试函数，使得 ddp 测试正确；
     会丢掉 pytest 中的 arg 参数。
 
-    :param timeout: 表示一个测试如果经过多久还没有通过的话就主动将其 kill 掉，默认为 10 分钟，单位为秒；
+    :param timeout: 表示一个测试如果经过多久还没有通过的话就主动将其 kill 掉，默认为 5 分钟，单位为秒；
     :return:
     """
     # 说明是通过 @magic_argv_env_context(timeout=600) 调用；

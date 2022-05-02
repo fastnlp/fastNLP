@@ -13,7 +13,6 @@ if _NEED_IMPORT_PADDLE:
 
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from tests.helpers.datasets.paddle_data import PaddleRandomMaxDataset
-from tests.helpers.callbacks.helper_callbacks import RecordLossCallback, RecordMetricCallback
 from tests.helpers.utils import magic_argv_env_context
 
 @dataclass
