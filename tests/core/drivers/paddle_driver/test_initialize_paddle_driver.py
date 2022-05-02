@@ -5,8 +5,9 @@ from fastNLP.core.drivers.paddle_driver.initialize_paddle_driver import initiali
 from fastNLP.envs import get_gpu_count
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from tests.helpers.utils import magic_argv_env_context
-
-import paddle
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+if _NEED_IMPORT_PADDLE:
+    import paddle
 
 @pytest.mark.paddle
 def test_incorrect_driver():

@@ -1,10 +1,14 @@
 import pytest
+import numpy as np
 
 from fastNLP.core.dataloaders.paddle_dataloader.fdl import PaddleDataLoader
 from fastNLP.core.dataset import DataSet
-from paddle.io import Dataset, DataLoader
-import numpy as np
-import paddle
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+if _NEED_IMPORT_PADDLE:
+    from paddle.io import Dataset, DataLoader
+    import paddle
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as Dataset
 
 
 class RandomDataset(Dataset):

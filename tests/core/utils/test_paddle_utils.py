@@ -1,7 +1,9 @@
 import pytest
-import paddle
 
 from fastNLP.core.utils.paddle_utils import paddle_to, paddle_move_data_to_device
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+if _NEED_IMPORT_PADDLE:
+    import paddle
 
 
 ############################################################################

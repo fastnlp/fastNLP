@@ -8,10 +8,12 @@ from tests.helpers.datasets.torch_data import TorchNormalDataset, TorchArgMaxDat
 from tests.helpers.datasets.paddle_data import PaddleNormalDataset
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from fastNLP.core import rank_zero_rm
-
-import torch
-from torch.utils.data import DataLoader, BatchSampler
-import paddle
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE, _NEED_IMPORT_TORCH
+if _NEED_IMPORT_TORCH:
+    import torch
+    from torch.utils.data import DataLoader, BatchSampler
+if _NEED_IMPORT_PADDLE:
+    import paddle
 
 def dataloader_with_randombatchsampler(dataset, batch_size, shuffle, drop_last):
     """
