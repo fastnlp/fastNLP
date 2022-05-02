@@ -86,12 +86,12 @@ class TorchDataLoader(DataLoader):
             if collate_fn == 'auto':
                 if isinstance(dataset.dataset, DataSet):  # 使用了 fastnlp dataset
                     self._collate_fn = dataset.dataset.collator
-                    self._collate_fn.set_backend(backend="torch")
+                    self._collate_fn.set_backend()
                     # if collate_fn is not None and collate_fn is not default_collate:
                     #     # 防止ddp重新初始化时候将torch dataloader的默认collate加进来
                     #     self._collate_fn.add_collator(collate_fn)
                 else:
-                    self._collate_fn = Collator(backend='torch')
+                    self._collate_fn = Collator()
             else:
                 raise ValueError(f"collate_fn: {collate_fn} must be 'auto'")
         elif isinstance(collate_fn, Callable):
@@ -160,6 +160,7 @@ class TorchDataLoader(DataLoader):
         :return:
         """
         return self.cur_batch_indices
+
 
 
 def prepare_torch_dataloader(ds_or_db: Union[DataSet, DataBundle, Sequence[DataSet], Mapping[str, DataSet]],

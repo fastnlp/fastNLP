@@ -10,7 +10,7 @@ class Test_WrapDataLoader:
         all_sanity_batches = [4, 20, 100]
         for sanity_batches in all_sanity_batches:
             data = NormalIterator(num_of_data=1000)
-            wrapper = _TruncatedDataLoader(num_batches=sanity_batches)
+            wrapper = _TruncatedDataLoader(dataloader=data, num_batches=sanity_batches)
             dataloader = iter(wrapper(dataloader=data))
             mark = 0
             while True:
@@ -31,7 +31,7 @@ class Test_WrapDataLoader:
             for sanity_batches in all_sanity_batches:
                 dataset = TorchNormalDataset(num_of_data=1000)
                 dataloader = DataLoader(dataset, batch_size=bs, shuffle=True)
-                wrapper = _TruncatedDataLoader(num_batches=sanity_batches)
+                wrapper = _TruncatedDataLoader(dataloader, num_batches=sanity_batches)
                 dataloader = wrapper(dataloader)
                 dataloader = iter(dataloader)
                 all_supposed_running_data_num = 0
@@ -54,7 +54,7 @@ class Test_WrapDataLoader:
             for sanity_batches in all_sanity_batches:
                 dataset = TorchNormalDataset(num_of_data=1000)
                 dataloader = DataLoader(dataset, batch_size=bs, shuffle=True)
-                wrapper = _TruncatedDataLoader(num_batches=sanity_batches)
+                wrapper = _TruncatedDataLoader(dataloader, num_batches=sanity_batches)
                 dataloader = wrapper(dataloader)
                 length.append(len(dataloader))
         assert length == reduce(lambda x, y: x+y, [all_sanity_batches for _ in range(len(bses))])

@@ -98,6 +98,7 @@ def model_and_optimizers(request):
 
 
 # 测试一下普通的情况；
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", 1), ("torch", [0, 1])])  #  ("torch", "cpu"), ("torch", 1), ("torch", [0, 1])
 @pytest.mark.parametrize("callbacks", [[RecordMetricCallback(monitor="acc", metric_threshold=0.2, larger_better=True)]])
 @pytest.mark.parametrize("evaluate_every", [-3, -1, 100])
@@ -133,6 +134,7 @@ def test_trainer_torch_with_evaluator(
         dist.destroy_process_group()
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", [0, 1]), ("torch", 1)])  # ("torch", [0, 1]),("torch", 1)
 @pytest.mark.parametrize("fp16", [True, False])
 @pytest.mark.parametrize("accumulation_steps", [1, 3])

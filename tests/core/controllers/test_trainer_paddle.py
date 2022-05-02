@@ -25,8 +25,8 @@ class TrainPaddleConfig:
 
 @pytest.mark.parametrize("driver,device", [("paddle", "cpu"), ("paddle", 1), ("fleet", [0, 1])])
 # @pytest.mark.parametrize("driver,device", [("fleet", [0, 1])])
-@pytest.mark.parametrize("callbacks", [[RecordMetricCallback(monitor="acc#acc", metric_threshold=0.0, larger_better=True), 
-                                        RichCallback(5)]])
+@pytest.mark.parametrize("callbacks", [[RichCallback(5)]])
+@pytest.mark.paddle
 @magic_argv_env_context
 def test_trainer_paddle(
         driver,

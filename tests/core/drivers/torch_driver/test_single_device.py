@@ -62,6 +62,7 @@ class TestTorchDriverFunctions:
         model = TorchNormalModel_Classification_1(10, 32)
         self.driver = TorchSingleDriver(model, device="cpu")
 
+    @pytest.mark.torchpaddle
     def test_check_single_optimizer_legality(self):
         """
         测试传入单个 optimizer 时的表现
@@ -81,6 +82,7 @@ class TestTorchDriverFunctions:
         with pytest.raises(ValueError):
             self.driver.set_optimizers(optimizer)
 
+    @pytest.mark.torchpaddle
     def test_check_optimizers_legality(self):
         """
         测试传入 optimizer list 的表现
@@ -104,6 +106,7 @@ class TestTorchDriverFunctions:
         with pytest.raises(ValueError):
             self.driver.set_optimizers(optimizers)
 
+    @pytest.mark.torchpaddle
     def test_check_dataloader_legality_in_train(self):
         """
         测试 `is_train` 参数为 True 时，_check_dataloader_legality 函数的表现
@@ -119,6 +122,7 @@ class TestTorchDriverFunctions:
         with pytest.raises(ValueError):
             TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader", True)
 
+    @pytest.mark.torchpaddle
     def test_check_dataloader_legality_in_test(self):
         """
         测试 `is_train` 参数为 False 时，_check_dataloader_legality 函数的表现
@@ -148,6 +152,7 @@ class TestTorchDriverFunctions:
         with pytest.raises(ValueError):
             TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader", False)
 
+    @pytest.mark.torch
     def test_tensor_to_numeric(self):
         """
         测试 tensor_to_numeric 函数
@@ -201,6 +206,7 @@ class TestTorchDriverFunctions:
             assert r == d.tolist()
         assert res["dict"]["tensor"] == tensor_dict["dict"]["tensor"].tolist()
 
+    @pytest.mark.torch
     def test_set_model_mode(self):
         """
         测试set_model_mode函数
@@ -213,6 +219,7 @@ class TestTorchDriverFunctions:
         with pytest.raises(AssertionError):
             self.driver.set_model_mode("test")
 
+    @pytest.mark.torch
     def test_move_model_to_device_cpu(self):
         """
         测试move_model_to_device函数
@@ -220,6 +227,7 @@ class TestTorchDriverFunctions:
         TorchSingleDriver.move_model_to_device(self.driver.model, "cpu")
         assert self.driver.model.linear1.weight.device.type == "cpu"
 
+    @pytest.mark.torch
     def test_move_model_to_device_gpu(self):
         """
         测试move_model_to_device函数
@@ -228,6 +236,7 @@ class TestTorchDriverFunctions:
         assert self.driver.model.linear1.weight.device.type == "cuda"
         assert self.driver.model.linear1.weight.device.index == 0
 
+    @pytest.mark.torch
     def test_worker_init_function(self):
         """
         测试worker_init_function
@@ -236,6 +245,7 @@ class TestTorchDriverFunctions:
         # TODO：正确性
         TorchSingleDriver.worker_init_function(0)
 
+    @pytest.mark.torch
     def test_set_deterministic_dataloader(self):
         """
         测试set_deterministic_dataloader
@@ -245,6 +255,7 @@ class TestTorchDriverFunctions:
         dataloader = DataLoader(TorchNormalDataset())
         self.driver.set_deterministic_dataloader(dataloader)
 
+    @pytest.mark.torch
     def test_set_sampler_epoch(self):
         """
         测试set_sampler_epoch
@@ -254,6 +265,7 @@ class TestTorchDriverFunctions:
         dataloader = DataLoader(TorchNormalDataset())
         self.driver.set_sampler_epoch(dataloader, 0)
 
+    @pytest.mark.torch
     @pytest.mark.parametrize("batch_size", [16])
     @pytest.mark.parametrize("shuffle", [True, False])
     @pytest.mark.parametrize("drop_last", [True, False])
@@ -279,6 +291,7 @@ class TestTorchDriverFunctions:
         assert res.batch_size == batch_size
         assert res.drop_last == drop_last
 
+    @pytest.mark.torch
     @pytest.mark.parametrize("batch_size", [16])
     @pytest.mark.parametrize("shuffle", [True, False])
     @pytest.mark.parametrize("drop_last", [True, False])
@@ -300,6 +313,7 @@ class TestTorchDriverFunctions:
         assert res.batch_size == batch_size
         assert res.drop_last == drop_last
 
+    @pytest.mark.torch
     @pytest.mark.parametrize("batch_size", [16])
     @pytest.mark.parametrize("shuffle", [True, False])
     @pytest.mark.parametrize("drop_last", [True, False])
@@ -325,6 +339,7 @@ class TestTorchDriverFunctions:
 #
 ############################################################################
 
+@pytest.mark.torch
 class TestSingleDeviceFunction:
     """
     测试其它函数的测试例
@@ -359,6 +374,7 @@ class TestSingleDeviceFunction:
 #
 ############################################################################
 
+@pytest.mark.torch
 class TestSetDistReproDataloader:
     """
     专门测试 set_dist_repro_dataloader 函数的类
@@ -534,6 +550,7 @@ def prepare_test_save_load():
     driver1, driver2 = generate_random_driver(10, 10), generate_random_driver(10, 10)
     return driver1, driver2, dataloader
 
+@pytest.mark.torch
 @pytest.mark.parametrize("only_state_dict", ([True, False]))
 def test_save_and_load_model(prepare_test_save_load, only_state_dict):
     """
@@ -555,6 +572,7 @@ def test_save_and_load_model(prepare_test_save_load, only_state_dict):
     finally:
         rank_zero_rm(path)
 
+@pytest.mark.torch
 @pytest.mark.parametrize("only_state_dict", ([True, False]))
 @pytest.mark.parametrize("fp16", ([True, False]))
 def test_save_and_load_with_randombatchsampler(only_state_dict, fp16):
@@ -623,6 +641,7 @@ def test_save_and_load_with_randombatchsampler(only_state_dict, fp16):
     finally:
         rank_zero_rm(path)
 
+@pytest.mark.torch
 @pytest.mark.parametrize("only_state_dict", ([True, False]))
 @pytest.mark.parametrize("fp16", ([True, False]))
 def test_save_and_load_with_randomsampler(only_state_dict, fp16):

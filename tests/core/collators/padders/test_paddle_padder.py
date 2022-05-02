@@ -59,9 +59,9 @@ class TestpaddleTensorPadder:
         shape = a.shape
         assert isinstance(a, paddle.Tensor)
         assert tuple(shape) == (3, 3, 2)
-        b = paddle.LongTensor([[[0, 0], [0, 0], [0, 0]],
+        b = paddle.to_tensor([[[0, 0], [0, 0], [0, 0]],
                       [[0, 0], [0, 0], [-1, -1]],
-                      [[0, 0], [-1, -1], [-1, -1]]])
+                      [[0, 0], [-1, -1], [-1, -1]]], dtype='in')
         assert (a == b).sum().item() == shape[0]*shape[1]*shape[2]
 
         a = [paddle.zeros((3, 2)), paddle.zeros((2, 2)), paddle.zeros((1, 1))]
@@ -69,7 +69,7 @@ class TestpaddleTensorPadder:
         shape = a.shape
         assert isinstance(a, paddle.Tensor)
         assert tuple(shape) == (3, 3, 2)
-        b = paddle.LongTensor([[[0, 0], [0, 0], [0, 0]],
+        b = paddle.to_tensor([[[0, 0], [0, 0], [0, 0]],
                               [[0, 0], [0, 0], [-1, -1]],
                               [[0, -1], [-1, -1], [-1, -1]]])
         assert (a == b).sum().item() == shape[0]*shape[1]*shape[2]
@@ -80,7 +80,7 @@ class TestpaddleTensorPadder:
         shape = a.shape
         assert isinstance(a, paddle.Tensor)
         assert tuple(shape) == (3, 3, 2)
-        b = paddle.LongTensor([[[0, 0], [0, 0], [0, 0]],
+        b = paddle.to_tensor([[[0, 0], [0, 0], [0, 0]],
                               [[0, 0], [0, 0], [-1, -1]],
                               [[-1, -1], [-1, -1], [-1, -1]]])
         assert (a == b).sum().item() == shape[0]*shape[1]*shape[2]
@@ -91,17 +91,17 @@ class TestpaddleTensorPadder:
         shape = a.shape
         assert isinstance(a, paddle.Tensor)
         assert tuple(shape) == (3, 3, 2)
-        b = paddle.FloatTensor([[[0, 0], [0, 0], [0, 0]],
+        b = paddle.to_tensor([[[0, 0], [0, 0], [0, 0]],
                               [[0, 0], [0, 0], [-1, -1]],
-                              [[-1, -1], [-1, -1], [-1, -1]]])
+                              [[-1, -1], [-1, -1], [-1, -1]]], dtype='float32')
         assert (a == b).sum().item() == shape[0]*shape[1]*shape[2]
 
     def test_dtype_check(self):
         padder = paddleTensorPadder(ele_dtype=np.zeros(3, dtype=np.int8).dtype, dtype=int, pad_val=-1)
         with pytest.raises(DtypeError):
             padder = paddleTensorPadder(ele_dtype=str, dtype=int, pad_val=-1)
-        padder = paddleTensorPadder(ele_dtype=paddle.long, dtype=int, pad_val=-1)
-        padder = paddleTensorPadder(ele_dtype=int, dtype=paddle.long, pad_val=-1)
+        padder = paddleTensorPadder(ele_dtype='int64', dtype=int, pad_val=-1)
+        padder = paddleTensorPadder(ele_dtype=int, dtype='int64', pad_val=-1)
 
 
 

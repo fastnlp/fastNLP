@@ -29,6 +29,8 @@ class TestUnrepeatedSampler:
     @pytest.mark.parametrize('num_of_data', [2, 3, 4, 100])
     @pytest.mark.parametrize('shuffle', [False, True])
     def test_multi(self, num_replicas, num_of_data, shuffle):
+        if num_replicas > num_of_data:
+            pytest.skip("num_replicas > num_of_data")
         data = DatasetWithVaryLength(num_of_data=num_of_data)
         samplers = []
         for i in range(num_replicas):
@@ -53,6 +55,8 @@ class TestUnrepeatedSortedSampler:
     @pytest.mark.parametrize('num_replicas', [2, 3])
     @pytest.mark.parametrize('num_of_data', [2, 3, 4, 100])
     def test_multi(self, num_replicas, num_of_data):
+        if num_replicas > num_of_data:
+            pytest.skip("num_replicas > num_of_data")
         data = DatasetWithVaryLength(num_of_data=num_of_data)
         samplers = []
         for i in range(num_replicas):
@@ -84,6 +88,8 @@ class TestUnrepeatedSequentialSampler:
     @pytest.mark.parametrize('num_replicas', [2, 3])
     @pytest.mark.parametrize('num_of_data', [2, 3, 4, 100])
     def test_multi(self, num_replicas, num_of_data):
+        if num_replicas > num_of_data:
+            pytest.skip("num_replicas > num_of_data")
         data = DatasetWithVaryLength(num_of_data=num_of_data)
         samplers = []
         for i in range(num_replicas):

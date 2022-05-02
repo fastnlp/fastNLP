@@ -1,12 +1,16 @@
 import pytest
-from jittor.dataset import Dataset
-import jittor
 import numpy as np
 from datasets import Dataset as HfDataset
 from datasets import load_dataset
 
 from fastNLP.core.dataloaders.jittor_dataloader import JittorDataLoader
 from fastNLP.core.dataset import DataSet as Fdataset
+from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
+if _NEED_IMPORT_JITTOR:
+    from jittor.dataset import Dataset
+    import jittor
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as Dataset
 
 
 class MyDataset(Dataset):
@@ -25,7 +29,7 @@ class MyDataset(Dataset):
     # def __len__(self):
     #     return self.dataset_len
 
-
+@pytest.mark.jittor
 class TestJittor:
 
     def test_v1(self):

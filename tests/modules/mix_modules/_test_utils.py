@@ -26,9 +26,9 @@ class Paddle2TorchTestCase(unittest.TestCase):
         检查张量设备和梯度情况的工具函数
         """
 
-        self.assertIsInstance(tensor, torch.Tensor)
-        self.assertEqual(tensor.device, torch.device(device))
-        self.assertEqual(tensor.requires_grad, requires_grad)
+        assert isinstance(tensor, torch.Tensor)
+        assert tensor.device == torch.device(device)
+        assert tensor.requires_grad == requires_grad
 
     def test_gradient(self):
         """
@@ -39,7 +39,7 @@ class Paddle2TorchTestCase(unittest.TestCase):
         y = paddle2torch(x)
         z = 3 * (y ** 2)
         z.sum().backward()
-        self.assertListEqual(y.grad.tolist(), [6, 12, 18, 24, 30])
+        assert y.grad.tolist() == [6, 12, 18, 24, 30]
 
     def test_tensor_transfer(self):
         """
@@ -66,12 +66,12 @@ class Paddle2TorchTestCase(unittest.TestCase):
 
         paddle_list = [paddle.rand((6, 4, 2)).cuda(1) for i in range(10)]
         res = paddle2torch(paddle_list)
-        self.assertIsInstance(res, list)
+        assert isinstance(res, list)
         for t in res:
             self.check_torch_tensor(t, "cuda:1", False)
 
         res = paddle2torch(paddle_list, target_device="cpu", no_gradient=False)
-        self.assertIsInstance(res, list)
+        assert isinstance(res, list)
         for t in res:
             self.check_torch_tensor(t, "cpu", True)
 
@@ -83,7 +83,7 @@ class Paddle2TorchTestCase(unittest.TestCase):
         paddle_list = [paddle.rand((6, 4, 2)).cuda(1) for i in range(10)]
         paddle_tuple = tuple(paddle_list)
         res = paddle2torch(paddle_tuple)
-        self.assertIsInstance(res, tuple)
+        assert isinstance(res, tuple)
         for t in res:
             self.check_torch_tensor(t, "cuda:1", False)
 
@@ -103,15 +103,15 @@ class Paddle2TorchTestCase(unittest.TestCase):
             "string": "test string"
         }
         res = paddle2torch(paddle_dict)
-        self.assertIsInstance(res, dict)
+        assert isinstance(res, dict)
         self.check_torch_tensor(res["tensor"], "cuda:0", False)
-        self.assertIsInstance(res["list"], list)
+        assert isinstance(res["list"], list)
         for t in res["list"]:
             self.check_torch_tensor(t, "cuda:0", False)
-        self.assertIsInstance(res["int"], int)
-        self.assertIsInstance(res["string"], str)
-        self.assertIsInstance(res["dict"], dict)
-        self.assertIsInstance(res["dict"]["list"], list)
+        assert isinstance(res["int"], int)
+        assert isinstance(res["string"], str)
+        assert isinstance(res["dict"], dict)
+        assert isinstance(res["dict"]["list"], list)
         for t in res["dict"]["list"]:
             self.check_torch_tensor(t, "cuda:0", False)
         self.check_torch_tensor(res["dict"]["tensor"], "cuda:0", False)
@@ -130,24 +130,24 @@ class Torch2PaddleTestCase(unittest.TestCase):
         检查得到的paddle张量设备和梯度情况的工具函数
         """
 
-        self.assertIsInstance(tensor, paddle.Tensor)
+        assert isinstance(tensor, paddle.Tensor)
         if device == "cpu":
-            self.assertTrue(tensor.place.is_cpu_place())
+            assert tensor.place.is_cpu_place()
         elif device.startswith("gpu"):
             paddle_device = paddle.device._convert_to_place(device)
-            self.assertTrue(tensor.place.is_gpu_place())
+            assert tensor.place.is_gpu_place()
             if hasattr(tensor.place, "gpu_device_id"):
                 # paddle中，有两种Place
                 # paddle.fluid.core.Place是创建Tensor时使用的类型
                 # 有函数gpu_device_id获取设备
-                self.assertEqual(tensor.place.gpu_device_id(), paddle_device.get_device_id())
+                assert tensor.place.gpu_device_id() == paddle_device.get_device_id()
             else:
                 # 通过_convert_to_place得到的是paddle.CUDAPlace
                 # 通过get_device_id获取设备
-                self.assertEqual(tensor.place.get_device_id(), paddle_device.get_device_id())
+                assert tensor.place.get_device_id() == paddle_device.get_device_id()
         else:
             raise NotImplementedError
-        self.assertEqual(tensor.stop_gradient, stop_gradient)
+        assert tensor.stop_gradient == stop_gradient
 
     def test_gradient(self):
         """
@@ -158,7 +158,7 @@ class Torch2PaddleTestCase(unittest.TestCase):
         y = torch2paddle(x)
         z = 3 * (y ** 2)
         z.sum().backward()
-        self.assertListEqual(y.grad.tolist(), [6, 12, 18, 24, 30])
+        assert y.grad.tolist() == [6, 12, 18, 24, 30]
 
     def test_tensor_transfer(self):
         """
@@ -185,12 +185,12 @@ class Torch2PaddleTestCase(unittest.TestCase):
 
         torch_list = [torch.rand(6, 4, 2) for i in range(10)]
         res = torch2paddle(torch_list)
-        self.assertIsInstance(res, list)
+        assert isinstance(res, list)
         for t in res:
             self.check_paddle_tensor(t, "cpu", True)
 
         res = torch2paddle(torch_list, target_device="gpu:1", no_gradient=False)
-        self.assertIsInstance(res, list)
+        assert isinstance(res, list)
         for t in res:
             self.check_paddle_tensor(t, "gpu:1", False)
 
@@ -202,7 +202,7 @@ class Torch2PaddleTestCase(unittest.TestCase):
         torch_list = [torch.rand(6, 4, 2) for i in range(10)]
         torch_tuple = tuple(torch_list)
         res = torch2paddle(torch_tuple, target_device="cpu")
-        self.assertIsInstance(res, tuple)
+        assert isinstance(res, tuple)
         for t in res:
             self.check_paddle_tensor(t, "cpu", True)
 
@@ -222,15 +222,15 @@ class Torch2PaddleTestCase(unittest.TestCase):
             "string": "test string"
         }
         res = torch2paddle(torch_dict)
-        self.assertIsInstance(res, dict)
+        assert isinstance(res, dict)
         self.check_paddle_tensor(res["tensor"], "cpu", True)
-        self.assertIsInstance(res["list"], list)
+        assert isinstance(res["list"], list)
         for t in res["list"]:
             self.check_paddle_tensor(t, "cpu", True)
-        self.assertIsInstance(res["int"], int)
-        self.assertIsInstance(res["string"], str)
-        self.assertIsInstance(res["dict"], dict)
-        self.assertIsInstance(res["dict"]["list"], list)
+        assert isinstance(res["int"], int)
+        assert isinstance(res["string"], str)
+        assert isinstance(res["dict"], dict)
+        assert isinstance(res["dict"]["list"], list)
         for t in res["dict"]["list"]:
             self.check_paddle_tensor(t, "cpu", True)
         self.check_paddle_tensor(res["dict"]["tensor"], "cpu", True)
@@ -249,12 +249,12 @@ class Jittor2TorchTestCase(unittest.TestCase):
         检查得到的torch张量的工具函数
         """
 
-        self.assertIsInstance(tensor, torch.Tensor)
+        assert isinstance(tensor, torch.Tensor)
         if device == "cpu":
-            self.assertFalse(tensor.is_cuda)
+            assert not tensor.is_cuda
         else:
-            self.assertEqual(tensor.device, torch.device(device))
-        self.assertEqual(tensor.requires_grad, requires_grad)
+            assert tensor.device == torch.device(device)
+        assert tensor.requires_grad == requires_grad
 
     def test_var_transfer(self):
         """
@@ -281,12 +281,12 @@ class Jittor2TorchTestCase(unittest.TestCase):
 
         jittor_list = [jittor.rand((6, 4, 2)) for i in range(10)]
         res = jittor2torch(jittor_list)
-        self.assertIsInstance(res, list)
+        assert isinstance(res, list)
         for t in res:
             self.check_torch_tensor(t, "cpu", True)
 
         res = jittor2torch(jittor_list, target_device="cuda:1", no_gradient=False)
-        self.assertIsInstance(res, list)
+        assert isinstance(res, list)
         for t in res:
             self.check_torch_tensor(t, "cuda:1", True)
 
@@ -298,7 +298,7 @@ class Jittor2TorchTestCase(unittest.TestCase):
         jittor_list = [jittor.rand((6, 4, 2)) for i in range(10)]
         jittor_tuple = tuple(jittor_list)
         res = jittor2torch(jittor_tuple, target_device="cpu")
-        self.assertIsInstance(res, tuple)
+        assert isinstance(res, tuple)
         for t in res:
             self.check_torch_tensor(t, "cpu", True)
 
@@ -318,15 +318,15 @@ class Jittor2TorchTestCase(unittest.TestCase):
             "string": "test string"
         }
         res = jittor2torch(jittor_dict)
-        self.assertIsInstance(res, dict)
+        assert isinstance(res, dict)
         self.check_torch_tensor(res["tensor"], "cpu", True)
-        self.assertIsInstance(res["list"], list)
+        assert isinstance(res["list"], list)
         for t in res["list"]:
             self.check_torch_tensor(t, "cpu", True)
-        self.assertIsInstance(res["int"], int)
-        self.assertIsInstance(res["string"], str)
-        self.assertIsInstance(res["dict"], dict)
-        self.assertIsInstance(res["dict"]["list"], list)
+        assert isinstance(res["int"], int)
+        assert isinstance(res["string"], str)
+        assert isinstance(res["dict"], dict)
+        assert isinstance(res["dict"]["list"], list)
         for t in res["dict"]["list"]:
             self.check_torch_tensor(t, "cpu", True)
         self.check_torch_tensor(res["dict"]["tensor"], "cpu", True)
@@ -345,8 +345,8 @@ class Torch2JittorTestCase(unittest.TestCase):
         检查得到的Jittor Var梯度情况的工具函数
         """
 
-        self.assertIsInstance(var, jittor.Var)
-        self.assertEqual(var.requires_grad, requires_grad)
+        assert isinstance(var, jittor.Var)
+        assert var.requires_grad == requires_grad
 
     def test_gradient(self):
         """
@@ -357,7 +357,7 @@ class Torch2JittorTestCase(unittest.TestCase):
         y = torch2jittor(x)
         z = 3 * (y ** 2)
         grad = jittor.grad(z, y)
-        self.assertListEqual(grad.tolist(), [6.0, 12.0, 18.0, 24.0, 30.0])
+        assert grad.tolist() == [6.0, 12.0, 18.0, 24.0, 30.0]
 
     def test_tensor_transfer(self):
         """
@@ -384,12 +384,12 @@ class Torch2JittorTestCase(unittest.TestCase):
 
         torch_list = [torch.rand((6, 4, 2)) for i in range(10)]
         res = torch2jittor(torch_list)
-        self.assertIsInstance(res, list)
+        assert isinstance(res, list)
         for t in res:
             self.check_jittor_var(t, False)
 
         res = torch2jittor(torch_list, no_gradient=False)
-        self.assertIsInstance(res, list)
+        assert isinstance(res, list)
         for t in res:
             self.check_jittor_var(t, True)
 
@@ -401,7 +401,7 @@ class Torch2JittorTestCase(unittest.TestCase):
         torch_list = [torch.rand((6, 4, 2)) for i in range(10)]
         torch_tuple = tuple(torch_list)
         res = torch2jittor(torch_tuple)
-        self.assertIsInstance(res, tuple)
+        assert isinstance(res, tuple)
         for t in res:
             self.check_jittor_var(t, False)
 
@@ -421,15 +421,15 @@ class Torch2JittorTestCase(unittest.TestCase):
             "string": "test string"
         }
         res = torch2jittor(torch_dict)
-        self.assertIsInstance(res, dict)
+        assert isinstance(res, dict)
         self.check_jittor_var(res["tensor"], False)
-        self.assertIsInstance(res["list"], list)
+        assert isinstance(res["list"], list)
         for t in res["list"]:
             self.check_jittor_var(t, False)
-        self.assertIsInstance(res["int"], int)
-        self.assertIsInstance(res["string"], str)
-        self.assertIsInstance(res["dict"], dict)
-        self.assertIsInstance(res["dict"]["list"], list)
+        assert isinstance(res["int"], int)
+        assert isinstance(res["string"], str)
+        assert isinstance(res["dict"], dict)
+        assert isinstance(res["dict"]["list"], list)
         for t in res["dict"]["list"]:
             self.check_jittor_var(t, False)
         self.check_jittor_var(res["dict"]["tensor"], False)

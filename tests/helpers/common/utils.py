@@ -3,11 +3,11 @@ from contextlib import contextmanager
 
 
 @contextmanager
-def check_time_elapse(seconds, op='lt'):
+def check_time_elapse(seconds:float, op='lt'):
     """
     检测某一段程序所花费的时间，是否 op 给定的seconds
 
-    :param int seconds:
+    :param seconds:
     :param str op:
     :return:
     """
@@ -15,19 +15,15 @@ def check_time_elapse(seconds, op='lt'):
     yield
     end = time.time()
     if op == 'lt':
-        assert end-start < seconds
+        assert end-start < seconds, (end-start, seconds)
     elif op == 'gt':
-        assert end-start > seconds
+        assert end-start > seconds, (end-start, seconds)
     elif op == 'eq':
-        assert end - start == seconds
+        assert end - start == seconds, (end-start, seconds)
     elif op == 'le':
-        assert end - start <= seconds
+        assert end - start <= seconds, (end-start, seconds)
     elif op == 'ge':
-        assert end - start >= seconds
+        assert end - start >= seconds, (end-start, seconds)
     else:
         raise ValueError("Only supports lt,gt,eq,le,ge.")
-
-
-
-
 
