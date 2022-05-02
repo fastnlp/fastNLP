@@ -4,6 +4,8 @@ from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 if _NEED_IMPORT_PADDLE:
     import paddle
     from paddle.io import Dataset
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as Dataset
 
 
 class PaddleNormalDataset(Dataset):
