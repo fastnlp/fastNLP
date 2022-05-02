@@ -23,9 +23,8 @@ except:
 from .field import FieldArray
 from .instance import Instance
 from fastNLP.core.utils.utils import pretty_table_printer, deprecated
-from fastNLP.core.collators import AutoCollator
+from fastNLP.core.collators import Collator
 from fastNLP.core.utils.rich_progress import f_rich_progress
-from fastNLP.core.collators.collator import _MultiCollator
 
 
 class ApplyResultException(Exception):
@@ -114,7 +113,7 @@ class DataSet:
             每个元素应该为具有相同field的 :class:`~fastNLP.Instance` 。
         """
         self.field_arrays = {}
-        self.collate_fns: _MultiCollator = _MultiCollator(AutoCollator(as_numpy=False))
+        self._collator = Collator(backend="numpy")
         if data is not None:
             if isinstance(data, Dict):
                 length_set = set()
@@ -181,7 +180,7 @@ class DataSet:
             dataset = DataSet()
             for field_name, field in self.field_arrays.items():
                 dataset.add_field(field_name=field_name, fields=field.content[idx])
-            dataset.collate_fns = deepcopy(self.collate_fns)
+            dataset._collator = deepcopy(self.collator)
             return dataset
         elif isinstance(idx, str):
             if idx not in self:
@@ -193,7 +192,7 @@ class DataSet:
                 assert isinstance(i, int), "Only int index allowed."
                 instance = self[i]
                 dataset.append(instance)
-            dataset.collate_fns = deepcopy(self.collate_fns)
+            dataset._collator = deepcopy(self.collator)
             return dataset
         else:
             raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
@@ -676,8 +675,8 @@ class DataSet:
             dev_set.append(self[idx])
         for idx in train_indices:
             train_set.append(self[idx])
-        dev_set.collate_fns = deepcopy(self.collate_fns)
-        train_set.collate_fns = deepcopy(self.collate_fns)
+        dev_set._collator = deepcopy(self.collator)
+        train_set._collator = deepcopy(self.collator)
 
         return dev_set, train_set
 
@@ -772,63 +771,17 @@ class DataSet:
         df = self.to_pandas()
         df.to_csv(path, encoding="utf-8")
 
-    def add_collate_fn(self, collate_fn: Callable) -> None:
-        """
-        添加collate_fn函数，调用该函数后会将其添加到已有的collate_fn后面
-
-        :param collate_fn: Callable的函数
-        :return:
-        """
-        self.collate_fns.add_collator(collate_fn)
-
-    def set_collate_fn(self, collate_fn: Callable) -> None:
-        """
-        设置collate_fn函数，调用该函数后覆盖当前所有的collate_fn，包括Auto_Collate
-
-        :param collate_fn:
-        :return:
-        """
-        self.collate_fns = _MultiCollator(collate_fn)
-
-    def set_pad_val(self, *field_names, val: Optional[int] = 0) -> None:
-        """
-        设置每个field_name的padding值，默认为0，只有当AutoCollator存在时该方法有效
-        当val=None时，意味着给定的field_names都不需要尝试padding
-
-        :param field_names: dataset存在的field_name
-        :param val: 默认为0。如果为 None ，则为不对 field 进行 padding 。
-        :return:
-        """
-        # TODO 不能为空
-        for field_name in field_names:
-            self.collate_fns.set_pad_val(field_name, val=val)
-
-    def set_input(self, *field_names) -> None:
+    def set_ignore(self, *field_names) -> None:
         """
         被设置为inputs的field_names，会输入到AutoCollator中，未被设置默认过滤掉
 
         :param field_names:
         :return:
         """
-        #
-        self.collate_fns.set_input(*field_names)
+        self.collator.set_ignore(*field_names)
 
-    def get_collator(self) -> _MultiCollator:
-        """
-        获取dataset绑定的collate_fn，其中包括auto_collate
-
-        :return:
-        """
-        return self.collate_fns
-
-    @deprecated()
-    def set_target(self, *field_names) -> None:
-        """
-        被设置为inputs的field_names，会输入到AutoCollator中，未被设置默认过滤掉
-
-        :param field_names:
-        :return:
-        """
-        self.collate_fns.set_input(*field_names)
-
-
+    @property
+    def collator(self):
+        if self._collator is None:
+            self._collator = Collator()
+        return self._collator

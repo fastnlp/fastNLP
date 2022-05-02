@@ -7,11 +7,11 @@ from collections.abc import Mapping, Callable
 from functools import wraps
 
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
+
 if _NEED_IMPORT_JITTOR:
     import jittor as jt
 
 from fastNLP.core.dataset import Instance
-
 
 
 def is_jittor_dataset(dataset) -> bool:
@@ -32,6 +32,7 @@ def jittor_collate_wraps(func, auto_collator: Callable):
     :param auto_collator:
     :return:
     """
+
     @wraps(func)
     def wrapper(batch):
         if isinstance(batch[0], Instance):

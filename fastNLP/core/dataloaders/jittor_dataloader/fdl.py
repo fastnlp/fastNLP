@@ -3,16 +3,17 @@ __all__ = [
     'prepare_jittor_dataloader'
 ]
 
-from typing import Callable, Optional, List
+from typing import Callable, Optional, List, Union
 
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
+
 if _NEED_IMPORT_JITTOR:
     from jittor.dataset.utils import collate_batch
     from jittor.dataset import Dataset
 else:
     from fastNLP.core.dataset import DataSet as Dataset
 from fastNLP.core.utils.jittor_utils import jittor_collate_wraps
-from fastNLP.core.collators import AutoCollator
+from fastNLP.core.collators import Collator
 from fastNLP.core.utils.utils import indice_collate_wrapper
 from fastNLP.core.dataset import DataSet as FDataSet
 
@@ -48,7 +49,7 @@ class JittorDataLoader:
     def __init__(self, dataset, batch_size: int = 16, shuffle: bool = False,
                  drop_last: bool = False, num_workers: int = 0, buffer_size: int = 512 * 1024 * 1024,
                  stop_grad: bool = True, keep_numpy_array: bool = False, endless: bool = False,
-                 collate_fn: Callable = None) -> None:
+                 collate_fn: Union[None, str, Callable] = "auto") -> None:
         """
 
         :param dataset: 实现__getitem__和__len__的dataset
@@ -66,11 +67,20 @@ class JittorDataLoader:
         # TODO 支持fastnlp dataset
         # TODO 验证支持replacesampler （以后完成）
         # 是否为 jittor 类型的 dataset
-
-        if isinstance(dataset, FDataSet):
-            collator = dataset.get_collator().set_as_numpy(as_numpy=True)
+        if isinstance(collate_fn, str):
+            if collate_fn == "auto":
+                if isinstance(dataset, FDataSet):
+                    self._collate_fn = dataset.collator
+                    self._collate_fn.set_backend(backend="jittor")
+                else:
+                    self._collate_fn = Collator(backend="jittor")
+            else:
+                raise ValueError(f"collate_fn: {collate_fn} must be 'auto'")
+        elif isinstance(collate_fn, Callable):
+            if collate_fn is not collate_batch:
+                self._collate_fn = collate_fn
         else:
-            collator = None
+            self._collate_fn = collate_batch
 
         self.dataset = _JittorDataset(dataset)
 
@@ -80,17 +90,13 @@ class JittorDataLoader:
         if isinstance(self.dataset.dataset, Dataset):
             self.dataset.dataset.set_attrs(batch_size=1)
         # 用户提供了 collate_fn，则会自动代替 jittor 提供 collate_batch 函数
-        self.collate_fn = collate_fn
-        if self.collate_fn is None:
-            self.collate_fn = collate_batch
-        self.auto_collator = collator
-        self.cur_batch_indices = None
+        # self._collate_fn = _collate_fn
 
     def __iter__(self):
         # TODO 第一次迭代后不能设置collate_fn，设置是无效的
+        self.collate_fn = self._collate_fn
         if self.cur_batch_indices is None:
-            self.dataset.set_attrs(collate_batch=indice_collate_wrapper(jittor_collate_wraps(self.collate_fn,
-                                                                                             self.auto_collator)))
+            self.dataset.set_attrs(collate_batch=indice_collate_wrapper(self.collate_fn))
         for indices, data in self.dataset.__iter__():
             self.cur_batch_indices = indices
             yield data
@@ -100,30 +106,48 @@ class JittorDataLoader:
             return len(self.dataset) // self.dataset.batch_size
         return (len(self.dataset) - 1) // self.dataset.batch_size + 1
 
-    def set_pad_val(self, *field_names, val: Optional[int] = 0) -> None:
+    def set_pad(self, field_name: Union[str, tuple], pad_val: Union[int, float, None] = 0, dtype=None, backend=None,
+                pad_fn: Callable = None) -> "JittorDataLoader":
         """
-        设置每个field_name的padding值，默认为0，只有当autocollate存在时该方法有效， 若没有则会添加auto_collator函数
-        当val=None时，意味着给定的field_names都不需要尝试padding
+            如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
-        :param field_names:
-        :param val: padding值，默认为0
-        :return:
+            :param field_name: 需要调整的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
+                field 的 key 来表示，如果是 nested 的 dict，可以使用元组表示多层次的 key，例如 {'a': {'b': 1}} 中的使用 ('a', 'b');
+                如果 __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。如果该 field 在数据中没
+                有找到，则报错；如果 __getitem__ 返回的是就是整体内容，请使用 "_single" 。
+            :param pad_val: 这个 field 的默认 pad 值。如果设置为 None，则表示该 field 不需要 pad , fastNLP 默认只会对可以 pad 的
+                field 进行 pad，所以如果对应 field 本身就不是可以 pad 的形式，可以不需要主动设置为 None 。
+            :param dtype: 对于需要 pad 的 field ，该 field 的数据 dtype 应该是什么。
+            :param backend: 可选[None, 'numpy', 'torch', 'paddle', 'jittor']，分别代表，输出为 list, numpy.ndarray, torch.Tensor,
+                paddle.Tensor, jittor.Var 类型。若 pad_val 为 None ，该值只能为 None 或 numpy 。
+            :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 pad_val, dtype, backend 等参数失效。pad_fn 的输入为当前 field 的
+                batch 形式。 Collator 将自动 unbatch 数据，然后将各个 field 组成各自的 batch 。pad_func 的输入即为 field 的 batch
+                形式，输出将被直接作为结果输出。
+            :return: 返回 Collator 自身
         """
-        if self.auto_collator is None:
-            self.auto_collator = AutoCollator(as_numpy=True)
-        self.auto_collator.set_pad_val(*field_names, val=val)
+        if isinstance(self._collate_fn, Collator):
+            self._collate_fn.set_pad(field_name=field_name, pad_val=pad_val, dtype=dtype, pad_fn=pad_fn,
+                                     backend=backend)
+            return self
+        else:
+            raise ValueError(f"collate_fn is not fastnlp collator")
 
-    def set_input(self, *field_names) -> None:
+    def set_ignore(self, *field_names) -> "JittorDataLoader":
         """
-        被设置为inputs的field_names，会输入到AutoCollator中，未被设置默认过滤掉
+        如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略。
+        Ex::
+            collator.set_ignore('field1', 'field2')
 
-        :param field_names:
-        :return:
+        :param field_names: 需要忽略的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
+            field 的 key 来表示，如果是 nested 的 dict，可以使用元组来表示，例如 {'a': {'b': 1}} 中的使用 ('a', 'b'); 如果
+            __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。
+        :return: 返回 Collator 自身
         """
-        if self.auto_collator is None:
-            self.auto_collator = AutoCollator(as_numpy=True)
-
-        self.auto_collator.set_input(*field_names)
+        if isinstance(self._collate_fn, Collator):
+            self._collate_fn.set_ignore(*field_names)
+            return self
+        else:
+            raise ValueError(f"collate_fn is not fastnlp collator")
 
     def get_batch_indices(self) -> List[int]:
         """

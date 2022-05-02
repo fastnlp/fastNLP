@@ -27,7 +27,7 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
     :param field_name: 方便报错的。
     :return:
     """
-    logger.debug(f"The content in the field:`{field_name}` is:\n", str(batch_field))
+    logger.debug(f"The content in the field:`{field_name}` is:\n" + str(batch_field))
     if pad_val is None:
         logger.debug(f"The pad_val for field:{field_name} is None, not padding this field.")
         return NullPadder()

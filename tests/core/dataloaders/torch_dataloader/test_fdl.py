@@ -13,42 +13,23 @@ class TestFdl:
         fdl = TorchDataLoader(ds, batch_size=3, shuffle=True, drop_last=True)
         # for batch in fdl:
         #     print(batch)
-        fdl1 = TorchDataLoader(ds, batch_size=3, shuffle=True, drop_last=True, as_numpy=True)
+        fdl1 = TorchDataLoader(ds, batch_size=3, shuffle=True, drop_last=True)
         # for batch in fdl1:
         #     print(batch)
 
     def test_set_padding(self):
         ds = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
-        ds.set_pad_val("x", val=-1)
         fdl = TorchDataLoader(ds, batch_size=3)
-        fdl.set_input("x", "y")
-        fdl.set_pad_val("x", val=None)
+        fdl.set_pad("x", -1)
         for batch in fdl:
             print(batch)
         # fdl.set_pad_val("x", val=-2)
         # for batch in fdl:
         #     print(batch)
 
-    def test_add_collator(self):
-        ds = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
-
-        def collate_fn(ins_list):
-            _dict = {"Y": []}
-            for ins in ins_list:
-                _dict["Y"].append(ins['y'])
-            return _dict
-
-        fdl = TorchDataLoader(ds, batch_size=3, as_numpy=True)
-        fdl.set_input("x", "y")
-        # fdl.set_pad_val("x", val=None)
-        fdl.add_collator(collate_fn)
-        for batch in fdl:
-            print(batch)
-
     def test_get_batch_indices(self):
         ds = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
         fdl = TorchDataLoader(ds, batch_size=3, shuffle=True)
-        fdl.set_input("y", "x")
         for batch in fdl:
             print(fdl.get_batch_indices())
 
