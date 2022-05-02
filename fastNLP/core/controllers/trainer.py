@@ -363,7 +363,6 @@ class Trainer(TrainerEventTrigger):
             raise e
         finally:
             self.on_train_end()
-            self.driver.barrier()
 
     def _set_num_eval_batch_per_dl(self, num_eval_batch_per_dl):
         def _evaluate_fn(trainer: Trainer, evaluate_fn: Callable) -> None:
@@ -441,6 +440,7 @@ class Trainer(TrainerEventTrigger):
         """
         _own_callbacks: List = copy.deepcopy(self._custom_callbacks["all"])
         _own_callbacks.extend(self._custom_callbacks[None])
+        logger.debug(f"Get {len(_own_callbacks)} callback fns through Trainer.on().")
         self._custom_callbacks[None] = []
         if self.marker is not None:
             if len(self._custom_callbacks[self.marker]) == 0:

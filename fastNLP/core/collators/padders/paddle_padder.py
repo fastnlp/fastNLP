@@ -74,7 +74,7 @@ def _get_dtype(ele_dtype, dtype, class_name):
         elif is_numpy_generic_class(ele_dtype):
             dtype = numpy_to_paddle_dtype_dict.get(ele_dtype)
         else:
-            dtype == ele_dtype
+            dtype = ele_dtype
 
     return dtype
 
@@ -174,6 +174,5 @@ def get_padded_paddle_tensor(batch_field, dtype=None, pad_val=0):
     """
     shapes = get_shape(batch_field)
     tensor = paddle.to_tensor(np.full(shape=shapes, fill_value=pad_val), dtype=dtype)
-    # tensor = paddle.full(shape=shapes, dtype=dtype, fill_value=pad_val)
     tensor = fill_tensor(batch_field, tensor, dtype=dtype)
     return tensor

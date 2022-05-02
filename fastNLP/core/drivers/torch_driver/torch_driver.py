@@ -31,7 +31,7 @@ from fastNLP.core.utils import apply_to_collection, torch_move_data_to_device
 from fastNLP.envs import  rank_zero_call
 from fastNLP.envs import FASTNLP_SEED_WORKERS, FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.log import logger
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, RandomBatchSampler, RandomSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, ReproduceBatchSampler, RandomSampler
 
 
 class TorchDriver(Driver):
@@ -293,7 +293,7 @@ class TorchDriver(Driver):
             raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or "
                                "`ReproducibleSampler`.")
         else:
-            sampler = RandomBatchSampler(
+            sampler = ReproduceBatchSampler(
                 batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
                 batch_size=dataloader_args.batch_size,
                 drop_last=dataloader_args.drop_last
@@ -407,7 +407,7 @@ class TorchDriver(Driver):
                     res.shuffle = True
                 else:
                     res.shuffle = False
-            # RandomBatchSampler 的情况
+            # ReproduceBatchSampler 的情况
             elif hasattr(dataloader.batch_sampler, "batch_sampler"):
                 batch_sampler = dataloader.batch_sampler.batch_sampler
                 res.sampler = batch_sampler.sampler

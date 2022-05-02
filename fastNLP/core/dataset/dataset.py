@@ -780,7 +780,7 @@ class DataSet:
         self.collator.set_ignore(*field_names)
 
     @property
-    def collator(self):
+    def collator(self) -> Collator:
         if self._collator is None:
             self._collator = Collator()
         return self._collator

@@ -1,5 +1,6 @@
 __all__ = [
     'BucketedBatchSampler',
+    "ReproduceBatchSampler",
     "RandomBatchSampler"
 ]
 
@@ -54,13 +55,13 @@ class ReproducibleBatchSampler:
         raise NotImplementedError("Each specific batch_sampler should implement its own `batch_idx_in_epoch` property.")
 
 
-class RandomBatchSampler(ReproducibleBatchSampler):
+class ReproduceBatchSampler(ReproducibleBatchSampler):
     # 这两个参数的值应当交给 driver 的 get_dataloader_args 函数去拿；
     def __init__(self, batch_sampler, batch_size: int, drop_last: bool, **kwargs):
         """
         可以使得 batch_sampler 对象状态恢复的 wrapper 。
 
-        :param batch_sampler: 可迭代出 数字 或 数字列表 的可迭代对象。RandomBatchSampler 将首先遍历一边该对象，然后将迭代
+        :param batch_sampler: 可迭代出 数字 或 数字列表 的可迭代对象。ReproduceBatchSampler 将首先遍历一边该对象，然后将迭代
             出来的序号暂存起来，使用时按照 batch_size 的 batch 大小吐出序号列表。
         :param batch_size: 每个 batch 的大小是多少。
         :param drop_last: 如果最后一个 batch 无法构成 batch_size 那么多个 sample ，是否丢掉。
@@ -143,7 +144,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
         self.need_reinitialize = False
 
     def set_distributed(self, num_replicas, rank, pad=True):
-        raise RuntimeError(f"RandomBatchSampler does not support to change to distributed training.")
+        raise RuntimeError(f"ReproduceBatchSampler does not support to change to distributed training.")
 
     def set_epoch(self, epoch):
         if hasattr(self.batch_sampler, "sampler") and hasattr(self.batch_sampler.sampler, 'set_epoch') and callable(self.batch_sampler.sampler.set_epoch):
@@ -156,6 +157,211 @@ class RandomBatchSampler(ReproducibleBatchSampler):
         else:
             return (len(self.index_list) + self.batch_size - 1) // self.batch_size - \
                    (len(self.index_list) - self.num_consumed_samples + self.batch_size - 1) // self.batch_size
+
+
+class RandomBatchSampler(ReproducibleBatchSampler):
+    def __init__(self, dataset, batch_size:int = 32, shuffle: bool = True,
+                 drop_last: bool = False, seed: int = 0, **kwargs):
+        """
+        随机分 batch 的 batch_sampler 。
+
+        :param dataset: 实现了 __len__ 方法的数据容器。
+        :param batch_size: 每个 batch 的大小
+        :param shuffle: 如果为 True，将不进行 shuffle，实际上数据会以从长到短的方式输出。
+        :param drop_last: 如果最后一个 batch 的 sample 数量无法凑齐 batch_size 这么多，是否需要丢掉。
+        :param seed: 设置的随机数种子
+        :param kwargs: fastNLP 保留使用
+        """
+        super().__init__()
+
+        self.dataset = dataset
+
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.drop_last = drop_last
+        self.seed = seed
+
+        self.num_consumed_samples = kwargs.get("num_consumed_samples", 0)  # 总共迭代了多少数据了，包括多卡情况下的其它卡上的输出的数量
+
+        # 多卡的相关的参数
+        self.num_replicas = kwargs.get("num_replicas", 1)
+        self.rank = kwargs.get("rank", 0)
+        self.epoch = kwargs.get("epoch", -1)
+        self.pad = kwargs.get("pad", False)  # 该参数在单卡上不具有任何意义；
+
+        # 是否处于iteration之间，为True不允许调用 set_distributed()和load_state_dict()
+        self.during_iter = kwargs.get("during_iter", False)
+
+        # 以下变量为内部使用恢复状态的变量。
+        self.old_batch_size = kwargs.get('old_batch_size', self.batch_size)
+
+    def set_distributed(self, num_replicas, rank, pad=True):
+        assert self.during_iter is False, "Cannot set the sampler to be distributed when it is " \
+                                          "during an unfinished iteration."
+        assert num_replicas > 0 and isinstance(num_replicas, int)
+        assert isinstance(rank, int) and 0 <= rank < num_replicas
+        # 注意初始化该函数时，所有的状态都应当默认是一个 epoch 刚开始训练的状态；
+        self.num_replicas = num_replicas
+        self.rank = rank
+        self.pad = pad
+
+        return self
+
+    def __iter__(self):
+        if self.during_iter:  # 如果发现_during_iter为True，说明之前的还没结束，只有强制重新初始化了
+            self.num_consumed_samples = 0
+        self.during_iter = True
+
+        indices = list(range(len(self.dataset)))
+
+        if self.shuffle:
+            if self.num_consumed_samples > 0:  # 需要先按照原来的排序，删掉多余的
+                _batches = []
+                for _i in range(self.old_num_replicas):
+                    _indices = indices[_i:len(indices):self.old_num_replicas]
+                    __batches = self.batchify(_indices, self.old_batch_size, seed=self.seed + self.epoch)
+                    _batches.append(__batches)
+                batches = list(chain(*[_ for _ in zip(*_batches)]))
+                indices = list(chain(*batches))
+                indices = indices[self.num_consumed_samples:]
+            # 取出这个 rank ，
+            indices = indices[self.rank:len(indices):self.num_replicas]
+            batches = self.batchify(indices, self.batch_size, seed=self.seed + self.epoch)
+            batches = list(map(list, batches))
+        else:
+            indices = indices[self.num_consumed_samples:]
+            indices = indices[self.rank:len(indices):self.num_replicas]
+            _num_batches = len(indices) // self.batch_size
+            if _num_batches == 0:
+                batches = [indices]
+            else:
+                batches = list(map(list, np.array_split(indices[:_num_batches*self.batch_size], _num_batches)))
+                if len(indices)%self.batch_size!=0:
+                    batches.append(indices[_num_batches*self.batch_size:])
+
+        need_pad_num = (len(self.dataset)-self.num_consumed_samples) % self.num_replicas
+        if self.pad and need_pad_num !=0 and need_pad_num<=self.rank:
+            if len(batches) > 0:
+                if len(batches[-1])<self.batch_size:
+                    batches[-1].append(batches[-1][0])  # 这里可以保证这个bucket的长度没被破坏。
+                else:
+                    batches.append([batches[-1][0]])
+        elif self.pad is False and need_pad_num !=0 and need_pad_num>self.rank:
+            if len(batches):
+                batches[-1].pop(-1)
+            if len(batches[-1])==0:
+                batches.pop(-1)
+
+        assert sum(map(len, batches)) == self.num_left_samples
+
+        if self.drop_last and len(batches) >= 1 and len(batches[-1]) < self.batch_size:
+            batches = batches[:-1]
+
+        for batch in batches:
+            self.num_consumed_samples += self.num_replicas * len(batch)
+            yield list(map(int, batch))
+        self.during_iter = False
+        self.num_consumed_samples = 0
+        self.old_batch_size = self.batch_size
+        self.old_num_replicas = self.num_replicas
+        if self.epoch < 0:  # 防止用户没有修改epoch，导致每个epoch都一样了
+            self.epoch -= 1
+
+    def batchify(self, indices, batch_size, seed):
+        """
+        将 indices 分为 batches
+
+        :param sorted_indices: List[int]
+        :param batch_size: int
+        :param seed: int
+        :return:  List[List[int]]
+        """
+        # 实际的 bucket 大小
+        rng = np.random.default_rng(abs(seed))
+        rng.shuffle(indices)
+        num_samples = 0
+        batches = []
+        while num_samples<len(indices):
+            batches.append(indices[num_samples:num_samples+batch_size])
+            num_samples += batch_size
+        return batches
+
+    def set_epoch(self, epoch):
+        self.epoch = epoch
+
+    @property
+    def batch_idx_in_epoch(self):
+        if self.drop_last:
+            return len(self.dataset) // self.num_replicas // self.batch_size - self.num_left_samples // self.batch_size
+        else:
+            return (len(self.dataset) // self.num_replicas + self.batch_size - 1) // self.batch_size - \
+                   (self.num_left_samples + self.batch_size - 1) // self.batch_size
+
+    @property
+    def total_size(self):
+        """
+        这个变量代表的含义是当前这个sampler会最终产生出的index数量（包括了其它rank的），因为replica和pad的原因，这个值可能等于、
+            大于或者小于len(dataset)
+
+        :return:
+        """
+        return self.num_consumed_samples + self.num_replicas*self.num_left_samples
+
+    @property
+    def num_left_samples(self):
+        """
+        返回当前 iteration 还有多少个 sample 结束，表示的是当前 rank 的还剩多少。
+
+        :return:
+        """
+        num_consumed_samples = self.num_consumed_samples
+        return math.ceil((len(self.dataset) - num_consumed_samples) / self.num_replicas) if \
+            self.pad else math.floor(((len(self.dataset) - num_consumed_samples) / self.num_replicas))
+
+    def __len__(self)->int:
+        """
+        返回当前 sampler 还会返回多少个 batch 的数据
+
+        :return:
+        """
+        num_sampler_per_rank = self.total_size//self.num_replicas
+        num_batches = num_sampler_per_rank//self.batch_size if self.drop_last else \
+            (num_sampler_per_rank+self.batch_size-1)//self.batch_size
+        return num_batches
+
+    def state_dict(self) -> Dict:
+        if self.old_batch_size != self.batch_size:
+            raise RuntimeError("BucketedBatchSampler does not support saving before last checkpoint states have been"
+                               " consumed. ")
+        states = {'seed': self.seed, 'epoch': self.epoch, 'num_consumed_samples': self.num_consumed_samples,
+                  'sampler_type': self.__class__.__name__, 'length': len(self.dataset), 'shuffle': self.shuffle,
+                  'batch_size': self.batch_size,
+                  'num_replicas': self.num_replicas}
+
+        return states
+
+    def load_state_dict(self, states: Dict):
+        # 如果 self.during_iter 是 True，那么 num_consumed_samples 一定是 0；
+        assert self.during_iter is False, "Cannot call load_state_dict() when it is " \
+                                          "during an unfinished iteration."
+
+        assert states['sampler_type'] == self.__class__.__name__, f"The sampler type in checkpoint is {states['sampler_type']}," \
+                                                                  f"we cannot use {self.__class__.__name__} to load it."
+
+        length = states['length']
+        assert length == len(self.dataset), "The number of samples is different between the checkpoint record " \
+                                            "and current dataset."
+        self.seed = states['seed']
+        self.epoch = states['epoch']
+        self.num_consumed_samples = states['num_consumed_samples']
+        if self.num_consumed_samples>=length:  # 如果保存的时候已经到达了最后一个sample了，则直接将结果重置为0
+            self.num_consumed_samples = 0
+        if self.shuffle != states['shuffle']:
+            logger.info(f"The shuffle from the checkpoint is {states['shuffle']}, while set as {self.shuffle}, "
+                        f"we use shuffle={states['shuffle']}")
+        self.shuffle = states["shuffle"]
+        self.old_batch_size = states['batch_size']
+        self.old_num_replicas = states['num_replicas']
 
 
 class BucketedBatchSampler(ReproducibleBatchSampler):

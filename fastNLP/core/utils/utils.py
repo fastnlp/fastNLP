@@ -6,7 +6,7 @@ import warnings
 from dataclasses import is_dataclass
 from copy import deepcopy
 from collections import defaultdict, OrderedDict
-from typing import Callable, List, Any, Dict, AnyStr, Union, Mapping, Sequence, Optional
+from typing import Callable, List, Any, Dict, AnyStr, Union, Mapping, Sequence
 from typing import Tuple, Optional
 from time import sleep
 
@@ -35,7 +35,6 @@ __all__ = [
     'nullcontext',
     'pretty_table_printer',
     'Option',
-    'indice_collate_wrapper',
     'deprecated',
     'seq_len_to_mask',
     'rank_zero_rm',
@@ -511,24 +510,6 @@ class Option(dict):
 
     def __setstate__(self, state):
         self.update(state)
-
-
-def indice_collate_wrapper(func):
-    """
-    其功能是封装一层collate_fn,将dataset取到的tuple数据分离开，将idx打包为indices。
-
-    :param func: 需要修饰的函数
-    :return:
-    """
-
-    def wrapper(tuple_data):
-        indice, ins_list = [], []
-        for idx, ins in tuple_data:
-            indice.append(idx)
-            ins_list.append(ins)
-        return indice, func(ins_list)
-
-    return wrapper
 
 
 _emitted_deprecation_warnings = set()

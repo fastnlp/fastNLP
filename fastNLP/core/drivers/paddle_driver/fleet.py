@@ -22,7 +22,7 @@ from fastNLP.core.utils import (
     rank_zero_rm
 )
 from fastNLP.core.samplers import (
-    RandomBatchSampler,
+    ReproduceBatchSampler,
     ReproducibleSampler,
     ReproducibleBatchSampler,
     RandomSampler,
@@ -485,7 +485,7 @@ class PaddleFleetDriver(PaddleDriver):
 
             return self.model, model.forward
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler, RandomBatchSampler]],
+    def set_dist_repro_dataloader(self, dataloader, dist: Optional[Union[str, ReproducibleSampler, ReproduceBatchSampler]],
                                   reproducible: bool = False):
         r"""
         根据输入的 dataloader 得到一个 支持分布式 （distributed） 与 可复现的 (reproducible) 的 dataloader。
