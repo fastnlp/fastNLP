@@ -1,4 +1,8 @@
-
+__all__ = [
+    "PaddleNumberPadder",
+    "PaddleTensorPadder",
+    "PaddleSequencePadder"
+]
 from inspect import isclass
 import numpy as np
 
@@ -75,7 +79,7 @@ def _get_dtype(ele_dtype, dtype, class_name):
     return dtype
 
 
-class paddleNumberPadder(Padder):
+class PaddleNumberPadder(Padder):
     def __init__(self, ele_dtype, pad_val=0, dtype=None):
         # 仅当 ele_dtype 是 python number/ numpy number 或者 tensor
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
@@ -86,7 +90,7 @@ class paddleNumberPadder(Padder):
         return paddle.to_tensor(batch_field, dtype=dtype)
 
 
-class paddleSequencePadder(Padder):
+class PaddleSequencePadder(Padder):
     def __init__(self, ele_dtype, pad_val=0, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
@@ -97,7 +101,7 @@ class paddleSequencePadder(Padder):
         return tensor
 
 
-class paddleTensorPadder(Padder):
+class PaddleTensorPadder(Padder):
     def __init__(self, ele_dtype, pad_val=0, dtype=None):
         """
         目前仅支持 [paddle.tensor([3, 2], paddle.tensor([1])] 类似的
@@ -136,11 +140,11 @@ def fill_tensor(batch_field, padded_batch, dtype):
     """
     if padded_batch.ndim == 2:
         for i, content_i in enumerate(batch_field):
-            padded_batch[i, :len(content_i)] = paddle.Tensor(content_i, dtype=dtype)
+            padded_batch[i, :len(content_i)] = paddle.to_tensor(content_i, dtype=dtype)
     elif padded_batch.ndim == 3:
         for i, content_i in enumerate(batch_field):
             for j, content_ii in enumerate(content_i):
-                padded_batch[i, j, :len(content_ii)] = paddle.Tensor(content_ii, dtype=dtype)
+                padded_batch[i, j, :len(content_ii)] = paddle.to_tensor(content_ii, dtype=dtype)
     elif padded_batch.ndim == 4:
         try:  # 应该是图像，所以直接应该就 ok 了。
             padded_batch = np.array(batch_field)
@@ -148,9 +152,9 @@ def fill_tensor(batch_field, padded_batch, dtype):
             for i, content_i in enumerate(batch_field):
                 for j, content_ii in enumerate(content_i):
                     for k, content_iii in enumerate(content_ii):
-                        padded_batch[i, j, k, :len(content_iii)] = paddle.Tensor(content_iii, dtype=dtype)
+                        padded_batch[i, j, k, :len(content_iii)] = paddle.to_tensor(content_iii, dtype=dtype)
     elif padded_batch.ndim == 1:
-        padded_batch[:] = paddle.Tensor(batch_field, dtype=dtype)
+        padded_batch[:] = paddle.to_tensor(batch_field, dtype=dtype)
     else:
         raise RuntimeError("fastNLP does not support padding for more than 3 dimensions. If you need this, please "
                            "report.")
@@ -169,6 +173,7 @@ def get_padded_paddle_tensor(batch_field, dtype=None, pad_val=0):
     :return:
     """
     shapes = get_shape(batch_field)
-    tensor = paddle.full(shapes, dtype=dtype, fill_value=pad_val)
+    tensor = paddle.to_tensor(np.full(shape=shapes, fill_value=pad_val), dtype=dtype)
+    # tensor = paddle.full(shape=shapes, dtype=dtype, fill_value=pad_val)
     tensor = fill_tensor(batch_field, tensor, dtype=dtype)
     return tensor

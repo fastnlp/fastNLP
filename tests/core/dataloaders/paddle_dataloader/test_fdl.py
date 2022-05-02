@@ -48,7 +48,7 @@ class TestPaddle:
             assert batch['image'].shape == [2, 10, 5]
             print(batch)
         fdl1 = PaddleDataLoader(ds, batch_size=4, drop_last=True)
-        fdl1.set_ignore('image')
+        fdl1.set_ignore('label')
         for batch in fdl1:
             assert batch['image'].shape == [4, 10, 5]
             print(batch)
