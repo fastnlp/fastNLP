@@ -15,7 +15,7 @@ from .torch_driver import TorchDriver
 from fastNLP.core.drivers.torch_driver.utils import replace_sampler, replace_batch_sampler
 from fastNLP.core.utils import auto_param_call
 from fastNLP.core.utils.utils import _get_fun_msg
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, re_instantiate_sampler, RandomBatchSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, re_instantiate_sampler, ReproduceBatchSampler
 from fastNLP.core.samplers import RandomSampler
 from fastNLP.core.log import logger
 
@@ -113,7 +113,7 @@ class TorchSingleDriver(TorchDriver):
                 logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
                 return replace_sampler(dataloader, sampler)
             else:
-                batch_sampler = RandomBatchSampler(
+                batch_sampler = ReproduceBatchSampler(
                     batch_sampler=args.batch_sampler,
                     batch_size=args.batch_size,
                     drop_last=args.drop_last

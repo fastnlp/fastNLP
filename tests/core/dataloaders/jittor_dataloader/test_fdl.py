@@ -40,8 +40,8 @@ class TestJittor:
         """
         dataset = MyDataset()
         jtl = JittorDataLoader(dataset, keep_numpy_array=True, batch_size=4)
-        jtl.set_pad_val('x', 'y')
-        jtl.set_input('x')
+        # jtl.set_pad_val('x', 'y')
+        # jtl.set_input('x')
         for batch in jtl:
             print(batch)
             print(jtl.get_batch_indices())
@@ -54,15 +54,17 @@ class TestJittor:
         """
         dataset = Fdataset({'x': [[1, 2], [0], [2, 3, 4, 5]] * 100, 'y': [0, 1, 2] * 100})
         jtl = JittorDataLoader(dataset, batch_size=16, drop_last=True)
-        jtl.set_pad_val('x', val=-1)
-        jtl.set_input('x', 'y')
+        jtl.set_pad("x", -1)
+        jtl.set_ignore("y")
+        # jtl.set_pad_val('x', val=-1)
+        # jtl.set_input('x', 'y')
         for batch in jtl:
             assert batch['x'].size() == (16, 4)
 
     def test_v3(self):
         dataset = HfDataset.from_dict({'x': [[1, 2], [0], [2, 3, 4, 5]] * 100, 'y': [0, 1, 2] * 100})
         jtl = JittorDataLoader(dataset, batch_size=4, drop_last=True)
-        jtl.set_input('x', 'y')
+        # jtl.set_input('x', 'y')
         for batch in jtl:
             print(batch)
 

@@ -13,6 +13,7 @@ from .padder import Padder, NullPadder
 from .numpy_padder import NumpyNumberPadder, NumpySequencePadder, NumpyTensorPadder
 from .torch_padder import TorchNumberPadder, TorchSequencePadder, TorchTensorPadder
 from .raw_padder import RawNumberPadder, RawSequencePadder
+from .paddle_padder import PaddleTensorPadder, PaddleSequencePadder, PaddleNumberPadder
 from .exceptions import *
 
 
@@ -27,7 +28,8 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
     :param field_name: 方便报错的。
     :return:
     """
-    logger.debug(f"The content in the field:`{field_name}` is:\n"+str(batch_field))
+
+    logger.debug(f"The content in the field:`{field_name}` is:\n" + str(batch_field))
     if pad_val is None:
         logger.debug(f"The pad_val for field:{field_name} is None, not padding this field.")
         return NullPadder()
@@ -89,6 +91,8 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
                 return NumpyNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'torch':
                 return TorchNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+            elif backend == 'paddle':
+                return PaddleNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
 
         if depth > 1 and shape_len == 0:  # 形如 [[0, 1], [2]] 这种
             if backend == 'raw':
@@ -97,12 +101,16 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
                 return NumpySequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'torch':
                 return TorchSequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+            elif backend == 'paddle':
+                return PaddleSequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
 
         if depth == 1 and shape_len != 0:
             if backend == 'numpy':
                 return NumpyTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'torch':
                 return TorchTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+            elif backend == 'paddle':
+                return PaddleTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
 
         if shape_len != 0 and depth>1:
             msg = "Does not support pad tensor under nested list. If you need this, please report."

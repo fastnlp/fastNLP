@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 
 from fastNLP.core.drivers.paddle_driver.single_device import PaddleSingleDriver
-from fastNLP.core.samplers import RandomBatchSampler, RandomSampler
+from fastNLP.core.samplers import ReproduceBatchSampler, RandomSampler
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from tests.helpers.datasets.paddle_data import PaddleNormalDataset, PaddleRandomMaxDataset
 from tests.helpers.datasets.torch_data import TorchNormalDataset
@@ -278,7 +278,7 @@ class TestPaddleDriverFunctions:
         dataset = PaddleNormalDataset()
         dataloader = DataLoader(
             dataset,
-            batch_sampler=RandomBatchSampler(
+            batch_sampler=ReproduceBatchSampler(
                 BatchSampler(dataset, batch_size=batch_size, shuffle=shuffle),
                 batch_size, 
                 drop_last,
@@ -287,7 +287,7 @@ class TestPaddleDriverFunctions:
         res = PaddleSingleDriver.get_dataloader_args(dataloader)
 
         assert isinstance(res.dataset, PaddleNormalDataset)
-        assert isinstance(res.batch_sampler, RandomBatchSampler)
+        assert isinstance(res.batch_sampler, ReproduceBatchSampler)
         if shuffle:
             assert isinstance(res.sampler, paddle.io.RandomSampler)
         else:
@@ -387,7 +387,7 @@ class TestSetDistReproDataloader:
         """
         测试 set_dist_repro_dataloader 参数 `reproducible` 为 True 时的表现
         当dist为字符串时，此时应该返回新的 dataloader，且如果原 sampler 为 paddle.io.RandomSampler（shuffle=True），
-        只会替换 Sampler 为 RandomSampler；否则会替换 batch_sampler 为 RandomBatchSampler
+        只会替换 Sampler 为 RandomSampler；否则会替换 batch_sampler 为 ReproduceBatchSampler
         """
         dataloader = DataLoader(self.dataset, batch_size=2, shuffle=shuffle)
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, dist="dist", reproducible=True)
@@ -400,7 +400,7 @@ class TestSetDistReproDataloader:
             assert isinstance(replaced_loader.batch_sampler.sampler, RandomSampler)
         else:
             # 此时会替换 batch_sampler
-            assert isinstance(replaced_loader.batch_sampler, RandomBatchSampler)
+            assert isinstance(replaced_loader.batch_sampler, ReproduceBatchSampler)
             assert isinstance(replaced_loader.batch_sampler.batch_sampler, BatchSampler)
         assert replaced_loader.batch_sampler.batch_size == dataloader.batch_sampler.batch_size
         assert replaced_loader.drop_last == dataloader.drop_last
@@ -414,11 +414,11 @@ class TestSetDistReproDataloader:
         应该返回新的 dataloader，并将 batch_sampler 替换为 dist 对应的 Sampler
         """
         dataloader = DataLoader(self.dataset, batch_size=2, shuffle=not shuffle)
-        dist = RandomBatchSampler(BatchSampler(self.dataset, batch_size=4, shuffle=shuffle), 4, False)
+        dist = ReproduceBatchSampler(BatchSampler(self.dataset, batch_size=4, shuffle=shuffle), 4, False)
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, dist=dist, reproducible=False)
 
         assert not (replaced_loader is dataloader)
-        assert isinstance(replaced_loader.batch_sampler, RandomBatchSampler)
+        assert isinstance(replaced_loader.batch_sampler, ReproduceBatchSampler)
         assert replaced_loader.batch_sampler is dist
 
         self.check_set_dist_repro_dataloader(dataloader, replaced_loader, shuffle)
@@ -450,7 +450,7 @@ class TestSetDistReproDataloader:
         """
         dataloader = DataLoader(
             dataset=self.dataset,
-            batch_sampler=RandomBatchSampler(
+            batch_sampler=ReproduceBatchSampler(
                 BatchSampler(self.dataset, batch_size=4, shuffle=shuffle),
                 batch_size=4,
                 drop_last=False,
@@ -459,7 +459,7 @@ class TestSetDistReproDataloader:
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, dist="dist", reproducible=False)
 
         assert not (replaced_loader is dataloader)
-        assert isinstance(replaced_loader.batch_sampler, RandomBatchSampler)
+        assert isinstance(replaced_loader.batch_sampler, ReproduceBatchSampler)
         assert not (replaced_loader.batch_sampler is dataloader.batch_sampler)
         assert replaced_loader.batch_sampler.batch_size == dataloader.batch_sampler.batch_size
         assert replaced_loader.drop_last == dataloader.drop_last
@@ -500,20 +500,20 @@ class TestSetDistReproDataloader:
             if idx >= num_consumed_batches:
                 break
             already_seen_idx.update(batch)
-        if isinstance(replaced_loader.batch_sampler, RandomBatchSampler):
+        if isinstance(replaced_loader.batch_sampler, ReproduceBatchSampler):
             sampler_states = replaced_loader.batch_sampler.state_dict()
         else:
             sampler_states = replaced_loader.batch_sampler.sampler.state_dict()
 
         # 重新加载，应该可以输出剩下的内容，且对于 PaddleNormalDataset 来说，排序后应该是一个 range
         left_idxes = set()
-        if isinstance(replaced_loader.batch_sampler, RandomBatchSampler):
+        if isinstance(replaced_loader.batch_sampler, ReproduceBatchSampler):
             batch_size = replaced_loader.batch_sampler.batch_size
             sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size
             # 重新改造 dataloader
             new_loader = DataLoader(
                 dataset=replaced_loader.dataset,
-                batch_sampler=RandomBatchSampler(
+                batch_sampler=ReproduceBatchSampler(
                     BatchSampler(replaced_loader.dataset, shuffle=shuffle, batch_size=batch_size),
                     batch_size=batch_size,
                     drop_last=False,
@@ -603,7 +603,7 @@ def test_save_and_load_with_randombatchsampler(only_state_dict, fp16):
         dataset = PaddleRandomMaxDataset(40, 10)
         dataloader = DataLoader(
             dataset=dataset,
-            batch_sampler=RandomBatchSampler(BatchSampler(dataset, batch_size=4), 4, False)
+            batch_sampler=ReproduceBatchSampler(BatchSampler(dataset, batch_size=4), 4, False)
         )
         driver1, driver2 = generate_random_driver(10, 10, fp16, "gpu"), generate_random_driver(10, 10, False, "gpu")
 
@@ -627,7 +627,7 @@ def test_save_and_load_with_randombatchsampler(only_state_dict, fp16):
         # 更改 batch_size
         dataloader = DataLoader(
             dataset=dataset,
-            batch_sampler=RandomBatchSampler(BatchSampler(dataset, batch_size=2, shuffle=True), 2, False)
+            batch_sampler=ReproduceBatchSampler(BatchSampler(dataset, batch_size=2, shuffle=True), 2, False)
         )
         load_states = driver2.load(Path(path), dataloader, only_state_dict, should_load_model=True)
         replaced_loader = load_states.pop("dataloader")
@@ -637,7 +637,7 @@ def test_save_and_load_with_randombatchsampler(only_state_dict, fp16):
         # 2. 检查 batch_sampler 是否被正确地加载和替换
         assert not (replaced_loader is dataloader)
         assert replaced_loader.batch_sampler is dataloader.batch_sampler
-        assert isinstance(replaced_loader.batch_sampler, RandomBatchSampler)
+        assert isinstance(replaced_loader.batch_sampler, ReproduceBatchSampler)
         assert replaced_loader.batch_sampler.index_list == sampler_states["index_list"]
         assert replaced_loader.batch_sampler.num_consumed_samples == num_consumed_batches * 4
 

@@ -14,9 +14,10 @@ __all__ = [
     "UnrepeatedSortedSampler",
     "UnrepeatedSequentialSampler",
 
-    "RandomBatchSampler",
+    "ReproduceBatchSampler",
     "BucketedBatchSampler",
     "ReproducibleBatchSampler",
+    "RandomBatchSampler",
 
     "re_instantiate_sampler"
 ]
@@ -26,5 +27,5 @@ from .mix_sampler import MixSampler, DopedSampler, MixSequentialSampler, Polling
 from .reproducible_sampler import ReproducibleSampler, RandomSampler, SequentialSampler, SortedSampler
 from .utils import re_instantiate_sampler
 from .conversion_utils import conversion_between_reproducible_and_unrepeated_sampler
-from .reproducible_batch_sampler import RandomBatchSampler, BucketedBatchSampler, ReproducibleBatchSampler
+from .reproducible_batch_sampler import ReproduceBatchSampler, BucketedBatchSampler, ReproducibleBatchSampler, RandomBatchSampler
 

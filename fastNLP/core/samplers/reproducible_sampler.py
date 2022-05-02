@@ -54,13 +54,12 @@ class RandomSampler(ReproducibleSampler):
     def __init__(self, dataset, shuffle: bool = True, seed: int = 0, **kwargs):
         """
 
-
         :param dataset: 实现了 __len__ 方法的数据容器
         :param shuffle: 是否在每次 iterate 的时候打乱顺序。
         :param seed: 随机数种子。
         :param kwargs: 用户不需要使用，fastNLP 内部使用
         """
-
+        super(RandomSampler, self).__init__()
         self.dataset = dataset
         self.shuffle = shuffle
         self.seed = seed
