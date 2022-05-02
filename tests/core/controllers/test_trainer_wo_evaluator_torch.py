@@ -286,6 +286,7 @@ def test_trainer_on_exception(
         dist.destroy_process_group()
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("version", [0, 1, 2, 3])
 @magic_argv_env_context
 def test_torch_distributed_launch_1(version):
