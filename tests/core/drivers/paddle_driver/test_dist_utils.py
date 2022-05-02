@@ -18,6 +18,7 @@ from tests.helpers.utils import magic_argv_env_context
 import paddle
 import paddle.distributed as dist
 
+@pytest.mark.paddle
 class TestDistUtilsTools:
     """
     测试一些工具函数
@@ -78,6 +79,7 @@ class TestDistUtilsTools:
         assert res["string"] == paddle_dict["string"]
 
 
+@pytest.mark.paddle
 class TestAllGatherAndBroadCast:
 
     @classmethod

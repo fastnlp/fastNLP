@@ -8,12 +8,14 @@ from tests.helpers.utils import magic_argv_env_context
 
 import paddle
 
+@pytest.mark.paddle
 def test_incorrect_driver():
 
     model = PaddleNormalModel_Classification_1(2, 100)
     with pytest.raises(ValueError):
         driver = initialize_paddle_driver("torch", 0, model)
 
+@pytest.mark.paddle
 @pytest.mark.parametrize(
     "device", 
     ["cpu", "gpu:0", 0]
@@ -31,6 +33,7 @@ def test_get_single_device(driver, device):
     driver = initialize_paddle_driver(driver, device, model)
     assert isinstance(driver, PaddleSingleDriver)
 
+@pytest.mark.paddle
 @pytest.mark.parametrize(
     "device", 
     [0, 1, [1]]
@@ -50,6 +53,7 @@ def test_get_fleet_2(driver, device):
 
     assert isinstance(driver, PaddleFleetDriver)
 
+@pytest.mark.paddle
 @pytest.mark.parametrize(
     "device", 
     [[0, 2, 3], -1]
@@ -69,6 +73,7 @@ def test_get_fleet(driver, device):
 
     assert isinstance(driver, PaddleFleetDriver)
 
+@pytest.mark.paddle
 @pytest.mark.parametrize(
     ("driver", "device"), 
     [("fleet", "cpu")]
@@ -82,6 +87,7 @@ def test_get_fleet_cpu(driver, device):
     with pytest.raises(ValueError):
         driver = initialize_paddle_driver(driver, device, model)
 
+@pytest.mark.paddle
 @pytest.mark.parametrize(
     "device", 
     [-2, [0, get_gpu_count() + 1, 3], [-2], get_gpu_count() + 1]
@@ -97,4 +103,4 @@ def test_device_out_of_range(driver, device):
     """
     model = PaddleNormalModel_Classification_1(2, 100)
     with pytest.raises(ValueError):
-        driver = initialize_paddle_driver(driver, device, model) 
+        driver = initialize_paddle_driver(driver, device, model)

@@ -65,6 +65,7 @@ def model_and_optimizers():
 
 @pytest.mark.parametrize("driver,device", [("torch", "cpu")])  # , ("torch", 6), ("torch", [6, 7])
 @pytest.mark.parametrize("callbacks", [[RecordTrainerEventTriggerCallback()]])
+@pytest.mark.torch
 @magic_argv_env_context
 def test_trainer_event_trigger(
         model_and_optimizers: TrainerParameters,

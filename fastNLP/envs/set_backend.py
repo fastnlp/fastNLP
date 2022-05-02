@@ -178,11 +178,11 @@ def dump_fastnlp_backend(default:bool = False, backend=None):
         os.makedirs(os.path.dirname(env_path), exist_ok=True)
 
         envs = {}
-        assert backend in SUPPORT_BACKENDS, f"fastNLP only supports {SUPPORT_BACKENDS} right now."
         if backend is None:
             if FASTNLP_BACKEND in os.environ:
                 envs[FASTNLP_BACKEND] = os.environ[FASTNLP_BACKEND]
         else:
+            assert backend in SUPPORT_BACKENDS, f"fastNLP only supports {SUPPORT_BACKENDS} right now."
             envs[FASTNLP_BACKEND] = backend
         if len(envs):
             with open(env_path, 'w', encoding='utf8') as f:

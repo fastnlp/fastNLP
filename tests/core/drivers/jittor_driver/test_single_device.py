@@ -1,13 +1,18 @@
-import unittest
+import pytest
 import os
 
 import numpy as np
-import jittor as jt  # 将 jittor 引入
-from jittor import nn, Module  # 引入相关的模块
-from jittor import init
-from jittor.dataset import MNIST
 
 from fastNLP.core.drivers.jittor_driver.single_device import JittorSingleDriver
+from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
+if _NEED_IMPORT_JITTOR:
+    import jittor as jt  # 将 jittor 引入
+    from jittor import nn, Module  # 引入相关的模块
+    from jittor import init
+    from jittor.dataset import MNIST
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as Module
+
 
 
 class Model (Module):
@@ -39,7 +44,8 @@ class Model (Module):
         x = self.fc2 (x)
         return x
 
-class SingleDeviceTestCase(unittest.TestCase):
+@pytest.mark.jittor
+class TestSingleDevice:
 
     def test_on_gpu_without_fp16(self):
         # TODO get_dataloader
@@ -82,7 +88,7 @@ class SingleDeviceTestCase(unittest.TestCase):
             total_acc += acc
             total_num += batch_size
             acc = acc / batch_size  	
-        self.assertGreater(total_acc / total_num, 0.95)
+        assert total_acc / total_num > 0.95
 
 
     def test_on_cpu_without_fp16(self):

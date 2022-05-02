@@ -1,5 +1,3 @@
-import unittest
-
 import paddle
 import pytest
 import torch
@@ -12,9 +10,8 @@ from fastNLP.core.utils.torch_paddle_utils import torch_paddle_move_data_to_devi
 #
 ############################################################################
 
-# @pytest.mark.paddle
-# @pytest.mark.torch
-class TorchPaddleMoveDataToDeviceTestCase(unittest.TestCase):
+@pytest.mark.torchpaddle
+class TestTorchPaddleMoveDataToDevice:
 
     def check_gpu(self, tensor, idx):
         """
@@ -22,17 +19,17 @@ class TorchPaddleMoveDataToDeviceTestCase(unittest.TestCase):
         """
 
         if isinstance(tensor, paddle.Tensor):
-            self.assertTrue(tensor.place.is_gpu_place())
-            self.assertEqual(tensor.place.gpu_device_id(), idx)
+            assert tensor.place.is_gpu_place()
+            assert tensor.place.gpu_device_id() == idx
         elif isinstance(tensor, torch.Tensor):
-            self.assertTrue(tensor.is_cuda)
-            self.assertEqual(tensor.device.index, idx)
+            assert tensor.is_cuda
+            assert tensor.device.index == idx
 
     def check_cpu(self, tensor):
         if isinstance(tensor, paddle.Tensor):
-            self.assertTrue(tensor.place.is_cpu_place())
+            assert tensor.place.is_cpu_place()
         elif isinstance(tensor, torch.Tensor):
-            self.assertFalse(tensor.is_cuda)
+            assert not tensor.is_cuda
 
     def test_tensor_transfer(self):
         """
@@ -63,7 +60,6 @@ class TorchPaddleMoveDataToDeviceTestCase(unittest.TestCase):
         self.check_cpu(res)
 
         res = torch_paddle_move_data_to_device(torch_tensor, device="gpu:0", data_device=None)
-        print(res.device)
         self.check_gpu(res, 0)
 
         res = torch_paddle_move_data_to_device(torch_tensor, device="gpu:1", data_device=None)
@@ -85,22 +81,22 @@ class TorchPaddleMoveDataToDeviceTestCase(unittest.TestCase):
 
         paddle_list = [paddle.rand((6, 4, 2)) for i in range(5)] + [torch.rand((6, 4, 2)) for i in range(5)]
         res = torch_paddle_move_data_to_device(paddle_list, device=None, data_device="gpu:1")
-        self.assertIsInstance(res, list)
+        assert isinstance(res, list)
         for r in res:
             self.check_gpu(r, 1)
 
         res = torch_paddle_move_data_to_device(paddle_list, device="cpu", data_device="gpu:1")
-        self.assertIsInstance(res, list)
+        assert isinstance(res, list)
         for r in res:
             self.check_cpu(r)
 
         res = torch_paddle_move_data_to_device(paddle_list, device="gpu:0", data_device=None)
-        self.assertIsInstance(res, list)
+        assert isinstance(res, list)
         for r in res:
             self.check_gpu(r, 0)
 
         res = torch_paddle_move_data_to_device(paddle_list, device="gpu:1", data_device="cpu")
-        self.assertIsInstance(res, list)
+        assert isinstance(res, list)
         for r in res:
             self.check_gpu(r, 1)
 
@@ -112,22 +108,22 @@ class TorchPaddleMoveDataToDeviceTestCase(unittest.TestCase):
         paddle_list = [paddle.rand((6, 4, 2)) for i in range(10)] + [torch.rand((6, 4, 2)) for i in range(5)]
         paddle_tuple = tuple(paddle_list)
         res = torch_paddle_move_data_to_device(paddle_tuple, device=None, data_device="gpu:1")
-        self.assertIsInstance(res, tuple)
+        assert isinstance(res, tuple)
         for r in res:
             self.check_gpu(r, 1)
 
         res = torch_paddle_move_data_to_device(paddle_tuple, device="cpu", data_device="gpu:1")
-        self.assertIsInstance(res, tuple)
+        assert isinstance(res, tuple)
         for r in res:
             self.check_cpu(r)
 
         res = torch_paddle_move_data_to_device(paddle_tuple, device="gpu:0", data_device=None)
-        self.assertIsInstance(res, tuple)
+        assert isinstance(res, tuple)
         for r in res:
             self.check_gpu(r, 0)
 
         res = torch_paddle_move_data_to_device(paddle_tuple, device="gpu:1", data_device="cpu")
-        self.assertIsInstance(res, tuple)
+        assert isinstance(res, tuple)
         for r in res:
             self.check_gpu(r, 1)
 
@@ -151,57 +147,57 @@ class TorchPaddleMoveDataToDeviceTestCase(unittest.TestCase):
         }
 
         res = torch_paddle_move_data_to_device(paddle_dict, device="gpu:0", data_device=None)
-        self.assertIsInstance(res, dict)
+        assert isinstance(res, dict)
         self.check_gpu(res["torch_tensor"], 0)
         self.check_gpu(res["paddle_tensor"], 0)
-        self.assertIsInstance(res["torch_list"], list)
+        assert isinstance(res["torch_list"], list)
         for t in res["torch_list"]:
             self.check_gpu(t, 0)
-        self.assertIsInstance(res["list"], list)
+        assert isinstance(res["list"], list)
         for t in res["list"]:
             self.check_gpu(t, 0)
-        self.assertIsInstance(res["int"], int)
-        self.assertIsInstance(res["string"], str)
-        self.assertIsInstance(res["dict"], dict)
-        self.assertIsInstance(res["dict"]["list"], list)
+        assert isinstance(res["int"], int)
+        assert isinstance(res["string"], str)
+        assert isinstance(res["dict"], dict)
+        assert isinstance(res["dict"]["list"], list)
         for t in res["dict"]["list"]:
             self.check_gpu(t, 0)
         self.check_gpu(res["dict"]["torch_tensor"], 0)
         self.check_gpu(res["dict"]["paddle_tensor"], 0)
 
         res = torch_paddle_move_data_to_device(paddle_dict, device=None, data_device="gpu:1")
-        self.assertIsInstance(res, dict)
+        assert isinstance(res, dict)
         self.check_gpu(res["torch_tensor"], 1)
         self.check_gpu(res["paddle_tensor"], 1)
-        self.assertIsInstance(res["torch_list"], list)
+        assert isinstance(res["torch_list"], list)
         for t in res["torch_list"]:
             self.check_gpu(t, 1)
-        self.assertIsInstance(res["list"], list)
+        assert isinstance(res["list"], list)
         for t in res["list"]:
             self.check_gpu(t, 1)
-        self.assertIsInstance(res["int"], int)
-        self.assertIsInstance(res["string"], str)
-        self.assertIsInstance(res["dict"], dict)
-        self.assertIsInstance(res["dict"]["list"], list)
+        assert isinstance(res["int"], int)
+        assert isinstance(res["string"], str)
+        assert isinstance(res["dict"], dict)
+        assert isinstance(res["dict"]["list"], list)
         for t in res["dict"]["list"]:
             self.check_gpu(t, 1)
         self.check_gpu(res["dict"]["torch_tensor"], 1)
         self.check_gpu(res["dict"]["paddle_tensor"], 1)
 
         res = torch_paddle_move_data_to_device(paddle_dict, device="cpu", data_device="gpu:0")
-        self.assertIsInstance(res, dict)
+        assert isinstance(res, dict)
         self.check_cpu(res["torch_tensor"])
         self.check_cpu(res["paddle_tensor"])
-        self.assertIsInstance(res["torch_list"], list)
+        assert isinstance(res["torch_list"], list)
         for t in res["torch_list"]:
             self.check_cpu(t)
-        self.assertIsInstance(res["list"], list)
+        assert isinstance(res["list"], list)
         for t in res["list"]:
             self.check_cpu(t)
-        self.assertIsInstance(res["int"], int)
-        self.assertIsInstance(res["string"], str)
-        self.assertIsInstance(res["dict"], dict)
-        self.assertIsInstance(res["dict"]["list"], list)
+        assert isinstance(res["int"], int)
+        assert isinstance(res["string"], str)
+        assert isinstance(res["dict"], dict)
+        assert isinstance(res["dict"]["list"], list)
         for t in res["dict"]["list"]:
             self.check_cpu(t)
         self.check_cpu(res["dict"]["torch_tensor"])
