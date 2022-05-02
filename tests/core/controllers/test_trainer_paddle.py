@@ -4,14 +4,15 @@ from dataclasses import dataclass
 from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.core.metrics.accuracy import Accuracy
 from fastNLP.core.callbacks.progress_callback import RichCallback
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 
-from paddle.optimizer import Adam
-from paddle.io import DataLoader
+if _NEED_IMPORT_PADDLE:
+    from paddle.optimizer import Adam
+    from paddle.io import DataLoader
 
 
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from tests.helpers.datasets.paddle_data import PaddleRandomMaxDataset
-from tests.helpers.callbacks.helper_callbacks import RecordLossCallback, RecordMetricCallback
 from tests.helpers.utils import magic_argv_env_context
 
 @dataclass

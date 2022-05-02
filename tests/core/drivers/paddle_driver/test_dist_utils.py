@@ -14,9 +14,10 @@ from fastNLP.core.drivers.paddle_driver.dist_utils import (
 )
 from fastNLP.core.drivers.paddle_driver.fleet_launcher import FleetLauncher
 from tests.helpers.utils import magic_argv_env_context
-
-import paddle
-import paddle.distributed as dist
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+if _NEED_IMPORT_PADDLE:
+    import paddle
+    import paddle.distributed as dist
 
 @pytest.mark.paddle
 class TestDistUtilsTools:

@@ -7,9 +7,10 @@ from fastNLP.core.drivers.paddle_driver.utils import (
     replace_sampler,
 )
 from fastNLP.core.samplers import RandomBatchSampler, RandomSampler
-
-import paddle
-from paddle.io import DataLoader, BatchSampler
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+if _NEED_IMPORT_PADDLE:
+    import paddle
+    from paddle.io import DataLoader, BatchSampler
 
 from tests.helpers.datasets.paddle_data import PaddleNormalDataset
 

@@ -4,8 +4,6 @@ from types import DynamicClassAttribute
 from functools import wraps
 
 
-import fastNLP
-
 __all__ = [
     'Events',
     'EventsList',

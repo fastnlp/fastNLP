@@ -1,12 +1,14 @@
 import os
 
 import pytest
-import paddle
-import paddle.distributed
-import paddle.distributed.fleet.base.role_maker as role_maker
-import paddle.distributed.fleet as fleet
 from fastNLP.core.metrics import Accuracy
 from fastNLP.core.drivers.paddle_driver.fleet_launcher import FleetLauncher
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+if _NEED_IMPORT_PADDLE:
+    import paddle
+    import paddle.distributed
+    import paddle.distributed.fleet.base.role_maker as role_maker
+    import paddle.distributed.fleet as fleet
 
 
 ############################################################################
