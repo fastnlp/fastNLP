@@ -1,4 +1,4 @@
-import unittest
+import pytest
 
 from fastNLP.modules.mix_modules.mix_module import MixModule
 from fastNLP.core.drivers.torch_paddle_driver.torch_paddle_driver import TorchPaddleDriver
@@ -56,10 +56,11 @@ class MixMNISTModel(MixModule):
     def test_step(self, x):
         return self.forward(x)
 
-class TestMNIST(unittest.TestCase):
+@pytest.mark.torchpaddle
+class TestMNIST:
 
     @classmethod
-    def setUpClass(self):
+    def setup_class(self):
 
         self.train_dataset = paddle.vision.datasets.MNIST(mode='train')
         self.test_dataset = paddle.vision.datasets.MNIST(mode='test')
@@ -70,7 +71,7 @@ class TestMNIST(unittest.TestCase):
 
         self.dataloader = DataLoader(self.train_dataset, batch_size=100, shuffle=True)
 
-    def setUp(self):
+    def setup_method(self):
         
         model = MixMNISTModel()
         self.torch_loss_func = torch.nn.CrossEntropyLoss()
@@ -118,4 +119,4 @@ class TestMNIST(unittest.TestCase):
                 correct += 1
 
         acc = correct / len(self.test_dataset)
-        self.assertGreater(acc, 0.85)
+        assert acc > 0.85

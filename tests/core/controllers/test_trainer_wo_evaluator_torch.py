@@ -76,6 +76,7 @@ def model_and_optimizers(request):
 
 
 # 测试一下 cpu；
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", "cpu")])
 @magic_argv_env_context
 def test_trainer_torch_without_evaluator(
@@ -107,6 +108,7 @@ def test_trainer_torch_without_evaluator(
         dist.destroy_process_group()
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", 1), ("torch", [1, 2])])  # ("torch", 4),
 @pytest.mark.parametrize("fp16", [False, True])
 @pytest.mark.parametrize("accumulation_steps", [1, 3])
@@ -146,6 +148,7 @@ def test_trainer_torch_without_evaluator_fp16_accumulation_steps(
 
 
 # 测试 accumulation_steps；
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", 1), ("torch", [1, 2])])
 @pytest.mark.parametrize("accumulation_steps", [1, 3])
 @magic_argv_env_context
@@ -179,6 +182,7 @@ def test_trainer_torch_without_evaluator_accumulation_steps(
         dist.destroy_process_group()
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", [1, 2])])
 @pytest.mark.parametrize("output_from_new_proc", ["all", "ignore", "only_error", "test_log"])
 @magic_argv_env_context
@@ -242,6 +246,7 @@ def test_trainer_output_from_new_proc(
         rank_zero_rm(path)
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", [1, 2])])
 @pytest.mark.parametrize("cur_rank", [0])  # 依次测试如果是当前进程出现错误，是否能够正确地 kill 掉其他进程；  , 1, 2, 3
 @magic_argv_env_context
@@ -294,6 +299,7 @@ def test_torch_distributed_launch_1(version):
     subprocess.check_call(command)
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("version", [0, 1, 2, 3])
 @magic_argv_env_context
 def test_torch_distributed_launch_2(version):
@@ -307,6 +313,7 @@ def test_torch_distributed_launch_2(version):
     subprocess.check_call(command)
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", 0), ("torch_ddp", [0, 1])])
 @magic_argv_env_context
 def test_torch_wo_auto_param_call(

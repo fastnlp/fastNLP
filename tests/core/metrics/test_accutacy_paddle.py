@@ -49,12 +49,12 @@ def test_accuracy_single():
 # 测试 单机多卡情况下的Accuracy
 #
 ############################################################################
-def test_accuracy_ddp():
-    launcher = FleetLauncher(devices=[0, 1])
-    launcher.launch()
-    role = role_maker.PaddleCloudRoleMaker(is_collective=True)
-    fleet.init(role)
-    if fleet.is_server():
-        pass
-    elif fleet.is_worker():
-        print(os.getenv("PADDLE_TRAINER_ID"))
+# def test_accuracy_ddp():
+#     launcher = FleetLauncher(devices=[0, 1])
+#     launcher.launch()
+#     role = role_maker.PaddleCloudRoleMaker(is_collective=True)
+#     fleet.init(role)
+#     if fleet.is_server():
+#         pass
+#     elif fleet.is_worker():
+#         print(os.getenv("PADDLE_TRAINER_ID"))

@@ -1,3 +1,4 @@
+import os
 import pytest
 
 from fastNLP.core.drivers.paddle_driver.utils import (
@@ -23,12 +24,14 @@ from tests.helpers.datasets.paddle_data import PaddleNormalDataset
         ("3,6,7,8", "6,7,8", "gpu:2", str, "gpu:1"),
     )
 )
+@pytest.mark.paddle
 def test_get_device_from_visible_str(user_visible_devices, cuda_visible_devices, device, output_type, correct):
     os.environ["CUDA_VISIBLE_DEVICES"] = cuda_visible_devices
     os.environ["USER_CUDA_VISIBLE_DEVICES"] = user_visible_devices
     res = get_device_from_visible(device, output_type)
     assert res == correct
 
+@pytest.mark.paddle
 def test_replace_batch_sampler():
     dataset = PaddleNormalDataset(10)
     dataloader = DataLoader(dataset, batch_size=32)
@@ -42,6 +45,7 @@ def test_replace_batch_sampler():
     assert len(replaced_loader.dataset) == len(dataset)
     assert replaced_loader.batch_sampler.batch_size == 16
 
+@pytest.mark.paddle
 def test_replace_sampler():
     dataset = PaddleNormalDataset(10)
     dataloader = DataLoader(dataset, batch_size=32)
