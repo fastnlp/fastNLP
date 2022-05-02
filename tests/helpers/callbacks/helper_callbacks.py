@@ -36,12 +36,10 @@ class RecordMetricCallback(Callback):
         self.larger_better = larger_better
         self.metric = None
         self.metric_threshold = metric_threshold
-        self.metric_begin_value = None
+        self.metric_begin_value = float('-inf') if larger_better else float('inf')
 
     def on_evaluate_end(self, trainer, results):
         self.metric = results[self.monitor]
-        if self.metric_begin_value is None:
-            self.metric_begin_value = self.metric
 
     def on_train_end(self, trainer):
         if self.larger_better:
