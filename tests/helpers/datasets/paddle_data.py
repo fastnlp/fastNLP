@@ -1,6 +1,9 @@
-import paddle
-from paddle.io import Dataset
 import numpy as np
+
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+if _NEED_IMPORT_PADDLE:
+    import paddle
+    from paddle.io import Dataset
 
 
 class PaddleNormalDataset(Dataset):

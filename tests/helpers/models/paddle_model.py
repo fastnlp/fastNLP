@@ -1,5 +1,7 @@
-import paddle
-import paddle.nn as nn
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+if _NEED_IMPORT_PADDLE:
+    import paddle
+    import paddle.nn as nn
 
 class PaddleNormalModel_Classification_1(paddle.nn.Layer):
     """
