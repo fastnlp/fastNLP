@@ -1,29 +1,16 @@
-import time
 import os
 import pytest
-from subprocess import Popen, PIPE
+import subprocess
 from io import StringIO
 import sys
 
 from fastNLP.core.utils.cache_results import cache_results
-from tests.helpers.common.utils import check_time_elapse
-
 from fastNLP.core import rank_zero_rm
 
 
 def get_subprocess_results(cmd):
-    pipe = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-    output, err = pipe.communicate()
-    if output:
-        output = output.decode('utf8')
-    else:
-        output = ''
-    if err:
-        err = err.decode('utf8')
-    else:
-        err = ''
-    res = output + err
-    return res
+    output = subprocess.check_output(cmd, shell=True)
+    return output.decode('utf8')
 
 
 class Capturing(list):
@@ -48,12 +35,12 @@ class TestCacheResults:
         try:
             @cache_results(cache_fp)
             def demo():
-                time.sleep(1)
+                print("¥")
                 return 1
-
             res = demo()
-            with check_time_elapse(1, op='lt'):
+            with Capturing() as output:
                 res = demo()
+            assert '¥' not in output[0]
 
         finally:
             rank_zero_rm(cache_fp)
@@ -63,12 +50,13 @@ class TestCacheResults:
         try:
             @cache_results(cache_fp, _refresh=True)
             def demo():
-                time.sleep(1.5)
+                print("¥")
                 return 1
 
             res = demo()
-            with check_time_elapse(1, op='ge'):
+            with Capturing() as output:
                 res = demo()
+            assert '¥' in output[0]
         finally:
             rank_zero_rm(cache_fp)
 
@@ -77,19 +65,21 @@ class TestCacheResults:
         try:
             @cache_results(cache_fp)
             def demo():
-                time.sleep(2)
+                print('¥')
                 return 1
 
-            with check_time_elapse(1, op='gt'):
+            with Capturing() as output:
                 res = demo()
+            assert '¥' in output[0]
 
             @cache_results(cache_fp)
             def demo():
-                time.sleep(2)
+                print('¥')
                 return 1
 
-            with check_time_elapse(1, op='lt'):
+            with Capturing() as output:
                 res = demo()
+            assert '¥' not in output[0]
         finally:
             rank_zero_rm('demo.pkl')
 
@@ -98,27 +88,28 @@ class TestCacheResults:
         try:
             @cache_results(cache_fp)
             def demo():
-                time.sleep(2)
+                print('¥')
                 return 1
 
-            with check_time_elapse(1, op='gt'):
+            with Capturing() as output:
                 res = demo()
+            assert '¥' in output[0]
 
             @cache_results(cache_fp)
             def demo():
-                time.sleep(1)
+                print('¥¥')
                 return 1
 
-            with check_time_elapse(1, op='lt'):
-                with Capturing() as output:
-                    res = demo()
-                assert 'is different from its last cache' in output[0]
+            with Capturing() as output:
+                res = demo()
+            assert 'different' in output[0]
+            assert '¥' not in output[0]
 
             # 关闭check_hash应该不warning的
-            with check_time_elapse(1, op='lt'):
-                with Capturing() as output:
-                    res = demo(_check_hash=0)
-                assert 'is different from its last cache' not in output[0]
+            with Capturing() as output:
+                res = demo(_check_hash=0)
+            assert 'different' not in output[0]
+            assert '¥' not in output[0]
 
         finally:
             rank_zero_rm('demo.pkl')
@@ -128,28 +119,29 @@ class TestCacheResults:
         try:
             @cache_results(cache_fp, _check_hash=False)
             def demo():
-                time.sleep(2)
+                print('¥')
                 return 1
 
-            with check_time_elapse(1, op='gt'):
-                res = demo()
+            with Capturing() as output:
+                res = demo(_check_hash=0)
+            assert '¥' in output[0]
 
             @cache_results(cache_fp, _check_hash=False)
             def demo():
-                time.sleep(1)
+                print('¥¥')
                 return 1
 
             # 默认不会check
-            with check_time_elapse(1, op='lt'):
-                with Capturing() as output:
-                    res = demo()
-                assert 'is different from its last cache' not in output[0]
+            with Capturing() as output:
+                res = demo()
+            assert 'different' not in output[0]
+            assert '¥' not in output[0]
 
             # check也可以
-            with check_time_elapse(1, op='lt'):
-                with Capturing() as output:
-                    res = demo(_check_hash=True)
-                assert 'is different from its last cache' in output[0]
+            with Capturing() as output:
+                res = demo(_check_hash=True)
+            assert 'different' in output[0]
+            assert '¥' not in output[0]
 
         finally:
             rank_zero_rm('demo.pkl')
@@ -159,22 +151,22 @@ class TestCacheResults:
         cache_fp = 'demo.pkl'
         test_type = 'func_refer_fun_change'
         try:
-            with check_time_elapse(3, op='gt'):
-                cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 0'
-                res = get_subprocess_results(cmd)
-
+            cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 0'
+            res = get_subprocess_results(cmd)
+            assert "¥" in res
             # 引用的function没有变化
-            with check_time_elapse(2, op='lt'):
-                cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 0'
-                res = get_subprocess_results(cmd)
-                assert 'Read cache from' in res
-                assert 'is different from its last cache' not in res
+            cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 0'
+            res = get_subprocess_results(cmd)
+            assert "¥" not in res
+
+            assert 'Read' in res
+            assert 'different' not in res
 
             # 引用的function有变化
-            with check_time_elapse(2, op='lt'):
-                cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 1'
-                res = get_subprocess_results(cmd)
-                assert 'is different from its last cache' in res
+            cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 1'
+            res = get_subprocess_results(cmd)
+            assert "¥" not in res
+            assert 'different' in res
 
         finally:
             rank_zero_rm(cache_fp)
@@ -184,22 +176,21 @@ class TestCacheResults:
         cache_fp = 'demo.pkl'
         test_type = 'refer_class_method_change'
         try:
-            with check_time_elapse(3, op='gt'):
-                cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 0'
-                res = get_subprocess_results(cmd)
+            cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 0'
+            res = get_subprocess_results(cmd)
+            assert "¥" in res
 
             # 引用的class没有变化
-            with check_time_elapse(2, op='lt'):
-                cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 0'
-                res = get_subprocess_results(cmd)
-                assert 'Read cache from' in res
-                assert 'is different from its last cache' not in res
+            cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 0'
+            res = get_subprocess_results(cmd)
+            assert 'Read' in res
+            assert 'different' not in res
+            assert "¥" not in res
 
-            # 引用的class有变化
-            with check_time_elapse(2, op='lt'):
-                cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 1'
-                res = get_subprocess_results(cmd)
-                assert 'is different from its last cache' in res
+            cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 1'
+            res = get_subprocess_results(cmd)
+            assert 'different' in res
+            assert "¥" not in res
 
         finally:
             rank_zero_rm(cache_fp)
@@ -278,8 +269,8 @@ if __name__ == '__main__':
 
         @cache_results(cache_fp)
         def demo_refer_other_func():
-            time.sleep(3)
             b = demo()
+            print("¥")
             return b
 
         res = demo_refer_other_func()
@@ -296,7 +287,7 @@ if __name__ == '__main__':
         # pdb.set_trace()
         @cache_results(cache_fp)
         def demo_func():
-            time.sleep(3)
+            print("¥")
             b = demo.demo()
             return b
 
