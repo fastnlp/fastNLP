@@ -92,7 +92,6 @@ def test_multi_drivers():
         dist.destroy_process_group()
 
 @pytest.mark.torch
-@pytest.mark.torchtemp
 class TestDDPDriverFunction:
     """
     测试 TorchDDPDriver 一些简单函数的测试类，基本都是测试能否运行、是否存在 import 错误等问题
@@ -176,7 +175,6 @@ class TestDDPDriverFunction:
 ############################################################################
 
 @pytest.mark.torch
-@pytest.mark.torchtemp
 class TestSetDistReproDataloader:
 
     @classmethod

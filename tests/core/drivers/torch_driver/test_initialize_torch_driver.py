@@ -8,6 +8,9 @@ from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 if _NEED_IMPORT_TORCH:
     import torch
     import torch.distributed as dist
+    from torch import device as torchdevice
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as torchdevice
 
 @pytest.mark.torch
 def test_incorrect_driver():
@@ -20,7 +23,7 @@ def test_incorrect_driver():
 @pytest.mark.torch
 @pytest.mark.parametrize(
     "device", 
-    ["cpu", "cuda:0", 0, torch.device("cuda:0")]
+    ["cpu", "cuda:0", 0, torchdevice("cuda:0")]
 )
 @pytest.mark.parametrize(
     "driver", 
@@ -101,7 +104,7 @@ def test_get_ddp_cpu(driver, device):
 @pytest.mark.torch
 @pytest.mark.parametrize(
     "device", 
-    [-2, [0, torch.cuda.device_count() + 1, 3], [-2], torch.cuda.device_count() + 1]
+    [-2, [0, 20, 3], [-2], 20]
 )
 @pytest.mark.parametrize(
     "driver", 

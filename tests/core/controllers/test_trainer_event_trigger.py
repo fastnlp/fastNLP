@@ -1,10 +1,7 @@
 import pytest
 from typing import Any
 from dataclasses import dataclass
-from torch.optim import SGD
-from torch.utils.data import DataLoader
-from torchmetrics import Accuracy
-import torch.distributed as dist
+
 
 from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.core.callbacks.callback_events import Events
@@ -12,6 +9,12 @@ from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchNormalDataset_Classification
 from tests.helpers.callbacks.helper_callbacks import RecordTrainerEventTriggerCallback
 from tests.helpers.utils import magic_argv_env_context, Capturing
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+if _NEED_IMPORT_TORCH:
+    from torch.optim import SGD
+    from torch.utils.data import DataLoader
+    from torchmetrics import Accuracy
+    import torch.distributed as dist
 
 
 @dataclass

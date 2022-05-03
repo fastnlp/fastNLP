@@ -1,7 +1,11 @@
 import torch
 from functools import reduce
-from torch.utils.data import Dataset, DataLoader, DistributedSampler
-from torch.utils.data.sampler import SequentialSampler, BatchSampler
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+if _NEED_IMPORT_TORCH:
+    from torch.utils.data import Dataset, DataLoader, DistributedSampler
+    from torch.utils.data.sampler import SequentialSampler, BatchSampler
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as Dataset
 
 
 class TorchNormalDataset(Dataset):

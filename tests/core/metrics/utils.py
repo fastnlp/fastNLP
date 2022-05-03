@@ -2,9 +2,11 @@ import os, sys
 import socket
 from typing import Union
 
-import torch
-from torch import distributed
 import numpy as np
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+if _NEED_IMPORT_TORCH:
+    import torch
+    from torch import distributed
 
 
 def setup_ddp(rank: int, world_size: int, master_port: int) -> None:
