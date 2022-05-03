@@ -161,7 +161,6 @@ class MonitorUtility:
         return monitor_name
 
 
-
 class HasMonitorCallback(MonitorUtility, Callback):
     def __init__(self, monitor, larger_better, must_have_monitor=False):
         """

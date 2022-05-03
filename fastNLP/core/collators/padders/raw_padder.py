@@ -1,6 +1,7 @@
 __all__ = [
     "RawNumberPadder",
-    "RawSequencePadder"
+    "RawSequencePadder",
+    "RawTensorPadder"
 ]
 
 from .padder import Padder
@@ -65,4 +66,35 @@ class RawSequencePadder(Padder):
         :param dtype: 该参数无意义。
         :return:
         """
+        return get_padded_numpy_array(batch_field, dtype=dtype, pad_val=pad_val).tolist()
+
+
+class RawTensorPadder(Padder):
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
+        """
+        将类似于 [[1], [1, 2]] 的内容 pad 为 [[1, 0], [1, 2]] 。可以 pad 多重嵌套的数据。
+
+        :param pad_val: pad 的值
+        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 np.array 类型。
+        :param dtype: 输出的数据的 dtype 是什么
+        """
+        dtype = _get_dtype(ele_dtype, dtype, self.__class__.__name__)
+        super().__init__(pad_val=pad_val, dtype=dtype)
+
+    @staticmethod
+    def pad(batch_field, pad_val, dtype):
+        """
+
+        :param batch_field:
+        :param pad_val:
+        :param dtype: 该参数无意义。
+        :return:
+        """
+        try:
+            if not isinstance(batch_field[0], (list, tuple)):
+                batch_field = [field.tolist() for field in batch_field]
+        except AttributeError:
+            raise RuntimeError(f"If the field is not a list or tuple(it is {type(batch_field[0])}), "
+                               f"it must have tolist() method.")
+
         return get_padded_numpy_array(batch_field, dtype=dtype, pad_val=pad_val).tolist()

@@ -66,7 +66,7 @@ class NumpySequencePadder(Padder):
 class NumpyTensorPadder(Padder):
     def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         """
-        pad 类似于 [np.array([3, 4], np.array([1])] 的 field
+        pad 类似于 [np.array([3, 4], np.array([1])] 的 field 。若内部元素不为 np.ndarray ，则必须含有 tolist() 方法。
 
         :param pad_val: pad 的值是多少。
         :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 np.array 类型。
@@ -77,6 +77,13 @@ class NumpyTensorPadder(Padder):
 
     @staticmethod
     def pad(batch_field, pad_val, dtype):
+        try:
+            if not isinstance(batch_field[0], np.ndarray):
+                batch_field = [np.array(field.tolist()) for field in batch_field]
+        except AttributeError:
+            raise RuntimeError(f"If the field is not a np.ndarray (it is {type(batch_field[0])}), "
+                               f"it must have tolist() method.")
+
         shapes = [field.shape for field in batch_field]
         max_shape = [len(batch_field)] + [max(*_) for _ in zip(*shapes)]
         array = np.full(max_shape, fill_value=pad_val, dtype=dtype)

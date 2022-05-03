@@ -23,7 +23,7 @@ def test_get_padder_run(backend):
         pytest.skip("No torch")
     if not _NEED_IMPORT_PADDLE and backend == 'paddle':
         pytest.skip("No paddle")
-    if not _NEED_IMPORT_PADDLE and backend == 'jittor':
+    if not _NEED_IMPORT_JITTOR and backend == 'jittor':
         pytest.skip("No jittor")
     batch_field = [1, 2, 3]
     padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
@@ -66,6 +66,13 @@ def test_raw_padder():
     padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
     pad_batch = padder(batch_field)
     assert np.shape(pad_batch) == (3, 3, 2)
+
+    batch_field = [np.ones((3,3)), np.ones((2,3)), np.ones((1,0))]
+    padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
+    pad_batch = padder(batch_field)
+    assert isinstance(pad_batch, list)
+    assert np.shape(pad_batch) == (3, 3, 3)
+    assert (pad_batch == np.zeros(np.shape(pad_batch))).sum()==12
 
 
 def test_numpy_padder():
@@ -141,3 +148,18 @@ def test_torch_padder():
     with pytest.raises(InconsistencyError):
         padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
 
+    # 可以是 numpy.ndarray
+    batch_field = [np.ones((3,3)), np.ones((2,3)), np.ones((1,0))]
+    padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
+    pad_batch = padder(batch_field)
+    assert isinstance(pad_batch, target_type)
+    assert pad_batch.shape == (3, 3, 3)
+    assert (pad_batch == torch.zeros(pad_batch.shape)).sum()==12
+
+    # 测试 to numpy
+    batch_field = [torch.ones((3,3)), torch.ones((2,3)), torch.ones((1,0))]
+    padder = get_padder(batch_field, pad_val=0, backend='numpy', dtype=int, field_name='test')
+    pad_batch = padder(batch_field)
+    assert isinstance(pad_batch, np.ndarray)
+    assert np.shape(pad_batch) == (3, 3, 3)
+    assert (pad_batch == np.zeros(np.shape(pad_batch))).sum()==12

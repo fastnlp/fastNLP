@@ -7,7 +7,7 @@ from fastNLP.core.log import logger
 from .padder import Padder, NullPadder
 from .numpy_padder import NumpyNumberPadder, NumpySequencePadder, NumpyTensorPadder
 from .torch_padder import TorchNumberPadder, TorchSequencePadder, TorchTensorPadder
-from .raw_padder import RawNumberPadder, RawSequencePadder
+from .raw_padder import RawNumberPadder, RawSequencePadder, RawTensorPadder
 from .paddle_padder import PaddleTensorPadder, PaddleSequencePadder, PaddleNumberPadder
 from .exceptions import *
 
@@ -23,7 +23,7 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
     :param field_name: 方便报错的。
     :return:
     """
-
+    assert len(batch_field)!=0, "Empty batch encountered."
     logger.debug(f"The content in the field:`{field_name}` is:\n" + str(batch_field))
     if pad_val is None:
         logger.debug(f"The pad_val for field:{field_name} is None, not padding this field.")
@@ -63,7 +63,10 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
         return NullPadder()
 
     # 再检查所有的元素 type 是否一致
-    ele_dtypes = set([v[1] for v in catalog.values()])
+    try:
+        ele_dtypes = set([v[1] for v in catalog.values()])
+    except TypeError:
+        ele_dtypes = set([str(v[1]) for v in catalog.values()])
     num_eletypes = len(ele_dtypes)
     if num_eletypes != 1:
         msg = f'Field:`{field_name}` cannot pad, since it has various types({ele_dtypes}) of data. To view more ' \
@@ -75,7 +78,7 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
 
     depth = depths.pop()
     shape_len = shape_lens.pop()
-    ele_dtype = ele_dtypes.pop()
+    ele_dtype = list(catalog.values())[0][1]  # 因为上面有except的情况，所以这样处理了
 
     # 需要由 padder 自己决定是否能够 pad 。
     try:
@@ -103,13 +106,16 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
             else:
                 raise ValueError(f"backend={backend} is not supported for nested list(Field:{field_name}).")
 
-        if depth == 1 and shape_len != 0:
-            if backend == 'numpy':
-                return NumpyTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+        # 如果有有 shape 的话，只有当该对象拥有 tolist() 方法才行
+        if depth == 1 and shape_len != 0 and callable(getattr(batch_field[0], 'tolist', None)):
+            if backend == 'raw':
+                return RawTensorPadder(pad_val=pad_val, ele_dtype=None, dtype=dtype)
+            elif backend == 'numpy':
+                return NumpyTensorPadder(pad_val=pad_val, ele_dtype=None, dtype=dtype)
             elif backend == 'torch':
-                return TorchTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+                return TorchTensorPadder(pad_val=pad_val, ele_dtype=None, dtype=dtype)
             elif backend == 'paddle':
-                return PaddleTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+                return PaddleTensorPadder(pad_val=pad_val, ele_dtype=None, dtype=dtype)
             else:
                 raise ValueError(f"backend={backend} is not supported for tensors(Field:{field_name}).")
 
