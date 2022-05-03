@@ -4,7 +4,7 @@ import pytest
 
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _NEED_IMPORT_PADDLE, _NEED_IMPORT_JITTOR
 
-from fastNLP.core.collators.new_collator import Collator
+from fastNLP.core.collators.collator import Collator
 
 
 def _assert_equal(d1, d2):

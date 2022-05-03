@@ -23,7 +23,6 @@ class TestRawSequencePadder:
         assert (a == b).sum().item() == shape[0]*shape[1]
 
     def test_dtype_check(self):
-        with pytest.raises(DtypeError):
-            padder = RawSequencePadder(pad_val=-1, ele_dtype=np.zeros(3, dtype=np.int8).dtype, dtype=int)
+        padder = RawSequencePadder(pad_val=-1, ele_dtype=np.zeros(3, dtype=np.int8).dtype, dtype=int)
         with pytest.raises(DtypeError):
             padder = RawSequencePadder(pad_val=-1, ele_dtype=str, dtype=int)

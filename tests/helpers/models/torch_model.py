@@ -1,9 +1,14 @@
-import torch
-import torch.nn as nn
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+if _NEED_IMPORT_TORCH:
+    import torch
+    from torch.nn import Module
+    import torch.nn as nn
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as Module
 
 
 # 1. 最为基础的分类模型
-class TorchNormalModel_Classification_1(nn.Module):
+class TorchNormalModel_Classification_1(Module):
     """
     单独实现 train_step 和 evaluate_step；
     """
@@ -38,7 +43,7 @@ class TorchNormalModel_Classification_1(nn.Module):
         return {"preds": x, "target": y}
 
 
-class TorchNormalModel_Classification_2(nn.Module):
+class TorchNormalModel_Classification_2(Module):
     """
     只实现一个 forward 函数，来测试用户自己在外面初始化 DDP 的场景；
     """
@@ -62,7 +67,7 @@ class TorchNormalModel_Classification_2(nn.Module):
         return {"loss": loss, "preds": x, "target": y}
 
 
-class TorchNormalModel_Classification_3(nn.Module):
+class TorchNormalModel_Classification_3(Module):
     """
     只实现一个 forward 函数，来测试用户自己在外面初始化 DDP 的场景；
     关闭 auto_param_call，forward 只有一个 batch 参数；

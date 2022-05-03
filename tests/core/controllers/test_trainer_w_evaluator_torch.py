@@ -2,9 +2,7 @@
 注意这一文件中的测试函数都应当是在 `test_trainer_w_evaluator_torch.py` 中已经测试过的测试函数的基础上加上 metrics 和 evaluator 修改而成；
 """
 import pytest
-from torch.optim import SGD
-from torch.utils.data import DataLoader
-import torch.distributed as dist
+
 from dataclasses import dataclass
 from typing import Any
 from torchmetrics import Accuracy
@@ -14,7 +12,11 @@ from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchNormalDataset_Classification, TorchArgMaxDataset
 from tests.helpers.callbacks.helper_callbacks import RecordLossCallback, RecordMetricCallback
 from tests.helpers.utils import magic_argv_env_context
-
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+if _NEED_IMPORT_TORCH:
+    from torch.optim import SGD
+    from torch.utils.data import DataLoader
+    import torch.distributed as dist
 
 @dataclass
 class NormalClassificationTrainTorchConfig:

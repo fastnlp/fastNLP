@@ -2,9 +2,7 @@ import os.path
 import subprocess
 import sys
 import pytest
-import torch.distributed as dist
-from torch.optim import SGD
-from torch.utils.data import DataLoader
+
 from dataclasses import dataclass
 from typing import Any
 from pathlib import Path
@@ -16,6 +14,11 @@ from tests.helpers.callbacks.helper_callbacks import RecordLossCallback
 from tests.helpers.callbacks.helper_callbacks_torch import RecordAccumulationStepsCallback_Torch
 from tests.helpers.utils import magic_argv_env_context, Capturing
 from fastNLP.core import rank_zero_rm
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+if _NEED_IMPORT_TORCH:
+    import torch.distributed as dist
+    from torch.optim import SGD
+    from torch.utils.data import DataLoader
 
 
 @dataclass
@@ -286,6 +289,7 @@ def test_trainer_on_exception(
         dist.destroy_process_group()
 
 
+@pytest.mark.torch
 @pytest.mark.parametrize("version", [0, 1, 2, 3])
 @magic_argv_env_context
 def test_torch_distributed_launch_1(version):

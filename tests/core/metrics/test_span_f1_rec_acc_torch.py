@@ -5,16 +5,21 @@ import os, sys
 import copy
 from functools import partial
 
-import torch
-import torch.distributed
 import numpy as np
 import socket
-from torch.multiprocessing import Pool, set_start_method
+
 # from multiprocessing import Pool, set_start_method
 from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.core.metrics import SpanFPreRecMetric
 from fastNLP.core.dataset import DataSet
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from .utils import find_free_network_port, setup_ddp
+if _NEED_IMPORT_TORCH:
+    import torch
+    import torch.distributed
+    from torch.multiprocessing import Pool, set_start_method
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as set_start_method
 
 set_start_method("spawn", force=True)
 
@@ -44,7 +49,7 @@ pool = None
 
 def _test(local_rank: int,
           world_size: int,
-          device: torch.device,
+          device: "torch.device",
           dataset: DataSet,
           metric_class,
           metric_kwargs,
