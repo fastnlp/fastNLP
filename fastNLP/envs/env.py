@@ -22,7 +22,7 @@ FASTNLP_GLOBAL_RANK = "FASTNLP_GLOBAL_RANK"
 FASTNLP_LOG_LEVEL = "FASTNLP_LOG_LEVEL"
 
 
-# todo 每一个分布式的 driver 都应当正确地设立该值；具体可见 ddp；
+# 每一个分布式的 driver 都应当正确地设立该值；具体可见 ddp；
 # FASTNLP_LAUNCH_TIME 记录了当前 fastNLP 脚本启动的时间。
 FASTNLP_LAUNCH_TIME = "FASTNLP_LAUNCH_TIME"
 
@@ -42,7 +42,7 @@ USER_CUDA_VISIBLE_DEVICES = 'USER_CUDA_VISIBLE_DEVICES'
 # 用于在 torch.distributed.launch 时移除传入的 rank ，在 pytorch 中有使用。值的可选为 [0, 1]
 FASTNLP_REMOVE_LOCAL_RANK = 'FASTNLP_REMOVE_LOCAL_RANK'
 
-# todo 注释
+# 检测到当前脚本是通过类似 python -m torch.launch 启动的话设置这个变量为1
 FASTNLP_BACKEND_LAUNCH = "FASTNLP_BACKEND_LAUNCH"
 
 # fastNLP中用于关闭 fastNLP 1.barrier 与 2.gather/broadcast 。默认为 '0' 表示不关闭；为 '1' 表示 fastNLP 的 barrier 不执行；

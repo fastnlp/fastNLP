@@ -131,7 +131,7 @@ class PaddleTensorPadder(Padder):
     def pad(batch_field, pad_val, dtype):
         try:
             if not isinstance(batch_field[0], paddle.Tensor):
-                batch_field = [paddle.to_tensor(field.tolist()) for field in batch_field]
+                batch_field = [paddle.to_tensor(field.tolist(), dtype=dtype) for field in batch_field]
         except AttributeError:
             raise RuntimeError(f"If the field is not a paddle.Tensor (it is {type(batch_field[0])}), "
                                f"it must have tolist() method.")
@@ -143,8 +143,6 @@ class PaddleTensorPadder(Padder):
         tensor = paddle.full(max_shape, fill_value=pad_val, dtype=dtype)
         for i, field in enumerate(batch_field):
             slices = (i, ) + tuple(slice(0, s) for s in shapes[i])
-            if isinstance(field, np.ndarray):
-                field = paddle.to_tensor(field)
             tensor[slices] = field
         return tensor
 

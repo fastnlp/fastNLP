@@ -7,7 +7,7 @@ import re
 import pytest
 
 from fastNLP.envs.env import FASTNLP_LAUNCH_TIME
-from fastNLP.core import rank_zero_rm
+from fastNLP.envs.distributed import rank_zero_rm
 from fastNLP.core.log.logger import logger
 
 from tests.helpers.utils import magic_argv_env_context, recover_logger

@@ -9,6 +9,7 @@ __all__ = [
 
     "RawNumberPadder",
     "RawSequencePadder",
+    "RawTensorPadder",
 
     'TorchNumberPadder',
     'TorchSequencePadder',

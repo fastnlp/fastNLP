@@ -20,7 +20,7 @@ from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.envs import FASTNLP_LAUNCH_TIME, FASTNLP_DISTRIBUTED_CHECK
 
 from tests.helpers.utils import magic_argv_env_context
-from fastNLP.core import rank_zero_rm
+from fastNLP.envs.distributed import rank_zero_rm
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchArgMaxDataset
 from torchmetrics import Accuracy
