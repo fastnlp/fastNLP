@@ -38,7 +38,7 @@ class PaddleSingleDriver(PaddleDriver):
         if isinstance(model, DataParallel):
             raise ValueError("`paddle.DataParallel` is not supported in `PaddleSingleDriver`")
 
-        cuda_visible_devices = os.environ.get(USER_CUDA_VISIBLE_DEVICES, None)
+        cuda_visible_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
         if cuda_visible_devices is None:
             raise RuntimeError("`USER_CUDA_VISIBLE_DEVICES` cannot be None, please check if you have set "
                             "`FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
