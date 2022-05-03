@@ -1,7 +1,9 @@
-import torch
 from copy import deepcopy
 
 from fastNLP.core.callbacks.callback import Callback
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+if _NEED_IMPORT_TORCH:
+    import torch
 
 
 class RecordAccumulationStepsCallback_Torch(Callback):

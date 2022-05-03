@@ -1,4 +1,8 @@
-
+__all__ = [
+    'TorchNumberPadder',
+    'TorchSequencePadder',
+    'TorchTensorPadder'
+]
 from inspect import isclass
 import numpy as np
 
@@ -37,7 +41,7 @@ def is_torch_tensor(dtype):
 
 
 def _get_dtype(ele_dtype, dtype, class_name):
-    if not (ele_dtype is not None and (is_number_or_numpy_number(ele_dtype) or is_torch_tensor(ele_dtype))):
+    if not (ele_dtype is None or (is_number_or_numpy_number(ele_dtype) or is_torch_tensor(ele_dtype))):
         raise EleDtypeUnsupportedError(f"`{class_name}` only supports padding python numbers "
                                        f"or numpy numbers or torch.Tensor but get `{ele_dtype}`.")
 
@@ -97,7 +101,7 @@ class TorchSequencePadder(Padder):
 class TorchTensorPadder(Padder):
     def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         """
-        目前仅支持 [torch.tensor([3, 2], torch.tensor([1])] 类似的
+        目前支持 [torch.tensor([3, 2], torch.tensor([1])] 类似的。若内部元素不为 torch.tensor ，则必须含有 tolist() 方法。
 
         :param pad_val: 需要 pad 的值。
         :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
@@ -108,6 +112,13 @@ class TorchTensorPadder(Padder):
 
     @staticmethod
     def pad(batch_field, pad_val, dtype):
+        try:
+            if not isinstance(batch_field[0], torch.Tensor):
+                batch_field = [torch.tensor(field.tolist()) for field in batch_field]
+        except AttributeError:
+            raise RuntimeError(f"If the field is not a torch.Tensor (it is {type(batch_field[0])}), "
+                               f"it must have tolist() method.")
+
         shapes = [field.shape for field in batch_field]
         max_shape = [len(batch_field)] + [max(*_) for _ in zip(*shapes)]
         tensor = torch.full(max_shape, fill_value=pad_val, dtype=dtype)

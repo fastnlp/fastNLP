@@ -16,6 +16,8 @@ from fastNLP.core.dataset import DataSet
 
 class ReproducibleSampler:
     """
+    可复现的 Sampler 对象。
+
     注意所有继承 `ReproducibleSampler` 的类的  `__init__` 方法中都需要加入参数 `**kwargs`，用来使我们再断点重训时重新实例化这个 sampler
      或者 batch_sampler；注意，所有在 init 中初始化的变量，都不能含有 _ 下横线作为开头；所有不在 init 中设置的变量都必须以下横线开头。
 
@@ -54,13 +56,12 @@ class RandomSampler(ReproducibleSampler):
     def __init__(self, dataset, shuffle: bool = True, seed: int = 0, **kwargs):
         """
 
-
         :param dataset: 实现了 __len__ 方法的数据容器
         :param shuffle: 是否在每次 iterate 的时候打乱顺序。
         :param seed: 随机数种子。
         :param kwargs: 用户不需要使用，fastNLP 内部使用
         """
-
+        super(RandomSampler, self).__init__()
         self.dataset = dataset
         self.shuffle = shuffle
         self.seed = seed

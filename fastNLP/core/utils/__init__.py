@@ -21,7 +21,6 @@ __all__ = [
     'nullcontext',
     'pretty_table_printer',
     'Option',
-    'indice_collate_wrapper',
     'deprecated',
     'seq_len_to_mask',
     'rank_zero_rm',
@@ -37,6 +36,7 @@ from .torch_paddle_utils import torch_paddle_move_data_to_device
 from .torch_utils import torch_move_data_to_device
 from .utils import get_fn_arg_names, auto_param_call, check_user_specific_params, \
     dataclass_to_dict, match_and_substitute_params, apply_to_collection, nullcontext, pretty_table_printer, Option, \
-    indice_collate_wrapper, deprecated, seq_len_to_mask, rank_zero_rm, rank_zero_mkdir
+    deprecated, seq_len_to_mask, rank_zero_rm, rank_zero_mkdir
+from ..dataloaders.utils import indice_collate_wrapper
 
 

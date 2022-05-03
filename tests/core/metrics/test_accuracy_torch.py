@@ -7,15 +7,20 @@ import copy
 import socket
 import pytest
 import numpy as np
-import torch
-import torch.distributed
-from torch.multiprocessing import Pool, set_start_method
+
 from sklearn.metrics import accuracy_score as sklearn_accuracy
 
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.metrics.accuracy import Accuracy
 from fastNLP.core.metrics.metric import Metric
 from .utils import find_free_network_port, setup_ddp, _assert_allclose
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+if _NEED_IMPORT_TORCH:
+    import torch
+    import torch.distributed
+    from torch.multiprocessing import Pool, set_start_method
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as set_start_method
 
 set_start_method("spawn", force=True)
 
@@ -26,7 +31,7 @@ pool = None
 
 def _test(local_rank: int,
           world_size: int,
-          device: torch.device,
+          device: "torch.device",
           dataset: DataSet,
           metric_class: Type[Metric],
           metric_kwargs: Dict[str, Any],

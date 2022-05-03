@@ -17,10 +17,10 @@ from .utils import State, TrainerState
 from .utils.utils import check_evaluate_every
 from .evaluator import Evaluator
 from fastNLP.core.controllers.utils.utils import TrainerEventTrigger, _TruncatedDataLoader
-from fastNLP.core.callbacks import Callback, CallbackManager, Events, EventsList
+from fastNLP.core.callbacks import Callback, CallbackManager
 from fastNLP.core.callbacks.callback import _CallbackWrapper
 from fastNLP.core.callbacks.callback_manager import prepare_callbacks
-from fastNLP.core.callbacks.callback_events import _SingleEventState
+from fastNLP.core.callbacks.callback_event import Event
 from fastNLP.core.drivers import Driver
 from fastNLP.core.drivers.utils import choose_driver
 from fastNLP.core.utils import get_fn_arg_names, match_and_substitute_params, nullcontext
@@ -363,7 +363,6 @@ class Trainer(TrainerEventTrigger):
             raise e
         finally:
             self.on_train_end()
-            self.driver.barrier()
 
     def _set_num_eval_batch_per_dl(self, num_eval_batch_per_dl):
         def _evaluate_fn(trainer: Trainer, evaluate_fn: Callable) -> None:
@@ -399,7 +398,7 @@ class Trainer(TrainerEventTrigger):
                 if self.cur_epoch_idx % evaluate_every == 0:
                     self.run_evaluate()
 
-    def add_callback_fn(self, event: Optional[Union[Events, EventsList]], fn: Callable):
+    def add_callback_fn(self, event: Event, fn: Callable):
         r"""
         在初始化一个 trainer 实例后，用户可以使用这一函数来方便地添加 callback 函数；
         这一函数应当交给具体的 trainer 实例去做，因此不需要 `mark` 参数；
@@ -407,19 +406,69 @@ class Trainer(TrainerEventTrigger):
         :param event: 特定的 callback 时机，用户需要为该 callback 函数指定其属于哪一个 callback 时机；
         :param fn: 具体的 callback 函数；
         """
-        if not isinstance(event, (_SingleEventState, EventsList)):
-            raise ValueError("parameter event should only be `Events` or `EventsList` type.")
+        if not isinstance(event, Event):
+            raise ValueError("parameter event should only be `Event` type.")
 
         _custom_callback = _CallbackWrapper(event, fn)
         self.callback_manager.dissect_one_callback(_custom_callback)
 
     @classmethod
-    def on(cls, event: Optional[Union[Events, EventsList]], marker: Optional[str] = None):
+    def on(cls, event: Event, marker: Optional[str] = None):
         r"""
         函数修饰器，用户可以使用该函数来方便地将一个函数转变为 callback 函数，从而进行训练流程中的控制；
+        支持的 event 时机有以下这些，其执行的时机顺序也如下所示。每个时机装饰的函数应该接受的参数列表也如下所示，例如
+        Trainer.__init__():
+            on_after_trainer_initialized(trainer, driver)
+        Trainer.run():
+            if num_eval_sanity_batch>0:
+                on_sanity_check_begin(trainer)  # 如果设置了num_eval_sanity_batch
+                on_sanity_check_end(trainer, sanity_check_res)
+            try:
+                on_train_begin(trainer)
+                while cur_epoch_idx < n_epochs:
+                    on_train_epoch_begin(trainer)
+                    while batch_idx_in_epoch<=num_batches_per_epoch:
+                        on_fetch_data_begin(trainer)
+                        batch = next(dataloader)
+                        on_fetch_data_end(trainer)
+                        on_train_batch_begin(trainer, batch, indices)
+                        on_before_backward(trainer, outputs)  # 其中 outputs 是经过 output_mapping（如果设置了） 后的，否则即为 model 的输出。
+                        on_after_backward(trainer)
+                        on_before_zero_grad(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                        on_after_zero_grad(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                        on_before_optimizers_step(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                        on_after_optimizers_step(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                        on_train_batch_end(trainer)
+                    on_train_epoch_end(trainer)
+            except BaseException:
+                self.on_exception(trainer, exception)
+            finally:
+                on_train_end(trainer)
+            其它 callback 例如 on_evaluate_begin(trainer)/on_evaluate_end(trainer, results)/on_save_model(trainer)/
+                on_load_model(trainer)/on_save_checkpoint(trainer)/on_load_checkpoint(trainer)将根据需要在Trainer.run()中
+                特定的时间调用。
+
+        Example::
+            from fastNLP import Event
+            @Trainer.on(Event.on_save_model())
+            def do_something_1(trainer):
+                # do something
+            # 以上函数会在 Trainer 保存模型时执行。
+
+            @Trainer.on(Event.on_save_model(once=True))
+            def do_something_2(trainer):
+                # do something
+            # 以上函数会在 Trainer 保存模型时执行，但只执行一次。
+
+            @Trainer.on(Event.on_train_batch_begin(every=2))
+            def do_something_3(trainer, batch, indices):
+                # do something
+            # 以上函数会在 Trainer 每个新的 batch 开始的时候执行，但是是两个 batch 才执行一次。
+
         注意如果你使用该函数修饰器来为你的训练添加 callback，请务必保证你加入 callback 函数的代码在实例化 `Trainer` 之前；
 
-        :param event: 特定的 callback 时机，用户需要为该 callback 函数指定其属于哪一个 callback 时机；
+        :param event: 特定的 callback 时机，用户需要为该 callback 函数指定其属于哪一个 callback 时机。每个时机运行的函数应该包含
+            特定的参数，可以通过上述说明查阅。
         :param marker: 用来标记该 callback 函数属于哪几个具体的 trainer 实例；两个特殊情况：1.当 `marker` 为 None（默认情况）时，
          表示该 callback 函数只属于代码下方最近的一个 trainer 实例；2.当 `marker` 为 'all' 时，该 callback 函数会被所有的 trainer
          实例使用；
@@ -427,9 +476,9 @@ class Trainer(TrainerEventTrigger):
         """
 
         def wrapper(fn: Callable) -> Callable:
-            cls._custom_callbacks[marker].append((event, fn))
             callback_fn_args = get_fn_arg_names(getattr(Callback, event.value))[1:]
             _check_valid_parameters_number(fn, callback_fn_args)
+            cls._custom_callbacks[marker].append((event, fn))
             return fn
 
         return wrapper
@@ -441,6 +490,7 @@ class Trainer(TrainerEventTrigger):
         """
         _own_callbacks: List = copy.deepcopy(self._custom_callbacks["all"])
         _own_callbacks.extend(self._custom_callbacks[None])
+        logger.debug(f"Get {len(_own_callbacks)} callback fns through Trainer.on().")
         self._custom_callbacks[None] = []
         if self.marker is not None:
             if len(self._custom_callbacks[self.marker]) == 0:

@@ -12,9 +12,7 @@ import os
 import pytest
 from typing import Any
 from dataclasses import dataclass
-from torch.utils.data import DataLoader
-from torch.optim import SGD
-import torch.distributed as dist
+
 from pathlib import Path
 import re
 
@@ -29,7 +27,11 @@ from torchmetrics import Accuracy
 from fastNLP.core.metrics import Metric
 from fastNLP.core.log import logger
 from fastNLP.core.callbacks import MoreEvaluateCallback
-
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+if _NEED_IMPORT_TORCH:
+    from torch.utils.data import DataLoader
+    from torch.optim import SGD
+    import torch.distributed as dist
 
 @dataclass
 class ArgMaxDatasetConfig:

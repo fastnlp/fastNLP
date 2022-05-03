@@ -56,7 +56,7 @@ def is_paddle_dtype_str(dtype):
 
 
 def _get_dtype(ele_dtype, dtype, class_name):
-    if not (is_number_or_numpy_number(ele_dtype) or is_paddle_tensor(ele_dtype) or is_paddle_dtype_str(ele_dtype)):
+    if not (ele_dtype is not None or is_number_or_numpy_number(ele_dtype) or is_paddle_tensor(ele_dtype) or is_paddle_dtype_str(ele_dtype)):
         raise EleDtypeUnsupportedError(f"`{class_name}` only supports padding python numbers "
                                        f"or numpy numbers or paddle.Tensor but get `{ele_dtype}`.")
 
@@ -74,13 +74,20 @@ def _get_dtype(ele_dtype, dtype, class_name):
         elif is_numpy_generic_class(ele_dtype):
             dtype = numpy_to_paddle_dtype_dict.get(ele_dtype)
         else:
-            dtype == ele_dtype
+            dtype = ele_dtype
 
     return dtype
 
 
 class PaddleNumberPadder(Padder):
-    def __init__(self, ele_dtype, pad_val=0, dtype=None):
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
+        """
+        可以将形如 [1, 2, 3] 这类的数据转为 paddle.Tensor([1, 2, 3])
+
+        :param pad_val: 该值无意义
+        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 paddle.tensor 类型。
+        :param dtype: 输出的数据的 dtype 是什么。如 int, float, 'int32' 等
+        """
         # 仅当 ele_dtype 是 python number/ numpy number 或者 tensor
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
@@ -91,7 +98,14 @@ class PaddleNumberPadder(Padder):
 
 
 class PaddleSequencePadder(Padder):
-    def __init__(self, ele_dtype, pad_val=0, dtype=None):
+    def __init__(self, ele_dtype=None, pad_val=0, dtype=None):
+        """
+        将类似于 [[1], [1, 2]] 的内容 pad 为 paddle.Tensor([[1, 0], [1, 2]]) 可以 pad 多重嵌套的数据。
+
+        :param pad_val: pad 的值。
+        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 paddle.tensor 类型。
+        :param dtype: 输出的数据的 dtype 是什么。如 int, float, 'int32' 等
+        """
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
 
@@ -102,19 +116,26 @@ class PaddleSequencePadder(Padder):
 
 
 class PaddleTensorPadder(Padder):
-    def __init__(self, ele_dtype, pad_val=0, dtype=None):
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         """
-        目前仅支持 [paddle.tensor([3, 2], paddle.tensor([1])] 类似的
+        目前支持 [paddle.tensor([3, 2], paddle.tensor([2, 1])] 类似的，若内部元素不为 paddle.tensor ，则必须含有 tolist() 方法。
 
-        :param ele_dtype:
-        :param pad_val:
-        :param dtype:
+        :param pad_val: pad 的值。
+        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 paddle.tensor 类型。
+        :param dtype: 输出的数据的 dtype 是什么。如 int, float, 'int32' 等
         """
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
 
     @staticmethod
     def pad(batch_field, pad_val, dtype):
+        try:
+            if not isinstance(batch_field[0], paddle.Tensor):
+                batch_field = [paddle.to_tensor(field.tolist()) for field in batch_field]
+        except AttributeError:
+            raise RuntimeError(f"If the field is not a paddle.Tensor (it is {type(batch_field[0])}), "
+                               f"it must have tolist() method.")
+
         shapes = [field.shape for field in batch_field]
         max_shape = [len(batch_field)] + [max(*_) for _ in zip(*shapes)]
         if isinstance(dtype, np.dtype):
@@ -174,6 +195,5 @@ def get_padded_paddle_tensor(batch_field, dtype=None, pad_val=0):
     """
     shapes = get_shape(batch_field)
     tensor = paddle.to_tensor(np.full(shape=shapes, fill_value=pad_val), dtype=dtype)
-    # tensor = paddle.full(shape=shapes, dtype=dtype, fill_value=pad_val)
     tensor = fill_tensor(batch_field, tensor, dtype=dtype)
     return tensor

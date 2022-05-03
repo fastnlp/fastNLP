@@ -14,7 +14,7 @@ from fastNLP.core.utils import (
 from fastNLP.core.utils.utils import _get_fun_msg
 from fastNLP.core.samplers import (
     ReproducibleBatchSampler,
-    RandomBatchSampler,
+    ReproduceBatchSampler,
     ReproducibleSampler,
     RandomSampler,
     re_instantiate_sampler,
@@ -177,7 +177,7 @@ class PaddleSingleDriver(PaddleDriver):
                 logger.debug("Replace paddle RandomSampler into fastNLP RandomSampler.")
                 return replace_sampler(dataloader, sampler)
             else:
-                batch_sampler = RandomBatchSampler(
+                batch_sampler = ReproduceBatchSampler(
                     batch_sampler=args.batch_sampler,
                     batch_size=args.batch_size,
                     drop_last=args.drop_last

@@ -2,12 +2,14 @@ import pytest
 
 from fastNLP.core.drivers import TorchSingleDriver, TorchDDPDriver
 from fastNLP.core.drivers.torch_driver.initialize_torch_driver import initialize_torch_driver
-from fastNLP.envs import get_gpu_count
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.utils import magic_argv_env_context
-
-import torch
-
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+if _NEED_IMPORT_TORCH:
+    import torch
+    from torch import device as torchdevice
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as torchdevice
 
 @pytest.mark.torch
 def test_incorrect_driver():
@@ -20,7 +22,7 @@ def test_incorrect_driver():
 @pytest.mark.torch
 @pytest.mark.parametrize(
     "device", 
-    ["cpu", "cuda:0", 0, torch.device("cuda:0")]
+    ["cpu", "cuda:0", 0, torchdevice("cuda:0")]
 )
 @pytest.mark.parametrize(
     "driver", 
@@ -83,7 +85,6 @@ def test_get_ddp(driver, device):
     ("driver", "device"), 
     [("torch_ddp", "cpu")]
 )
-@magic_argv_env_context
 def test_get_ddp_cpu(driver, device):
     """
     测试试图在 cpu 上初始化分布式训练的情况
@@ -96,13 +97,12 @@ def test_get_ddp_cpu(driver, device):
 @pytest.mark.torch
 @pytest.mark.parametrize(
     "device", 
-    [-2, [0, torch.cuda.device_count() + 1, 3], [-2], torch.cuda.device_count() + 1]
+    [-2, [0, 20, 3], [-2], 20]
 )
 @pytest.mark.parametrize(
     "driver", 
     ["torch", "torch_ddp"]
 )
-@magic_argv_env_context
 def test_device_out_of_range(driver, device):
     """
     测试传入的device超过范围的情况

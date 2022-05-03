@@ -15,7 +15,7 @@ else:
 
 
 
-class Model (Module):
+class Model(Module):
     def __init__ (self):
         super (Model, self).__init__()
         self.conv1 = nn.Conv (3, 32, 3, 1) # no padding
@@ -45,6 +45,7 @@ class Model (Module):
         return x
 
 @pytest.mark.jittor
+@pytest.mark.skip("Skip jittor tests now.")
 class TestSingleDevice:
 
     def test_on_gpu_without_fp16(self):

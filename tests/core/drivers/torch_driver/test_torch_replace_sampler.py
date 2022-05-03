@@ -30,7 +30,7 @@ class SequenceDataSet:
 
 
 def check_replace_sampler(driver):
-    # dist_sampler 可以选择的有['dist', 'unrepeatdist', None]或者是ReproducibleSampler，RandomBatchSampler
+    # dist_sampler 可以选择的有['dist', 'unrepeatdist', None]或者是ReproducibleSampler，ReproduceBatchSampler
     # reproducible 是 True 和 False
 
     # 需要 check 返回的 sampler 和 dataloader 都不同了

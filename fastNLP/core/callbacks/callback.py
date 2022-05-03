@@ -3,10 +3,9 @@ __all__ = [
     'Callback',
 ]
 
-from typing import Union, Callable, Dict, Optional, Any
+from typing import Callable, Dict, Optional
 
-from .callback_events import Events, EventsList, Filter
-from fastNLP.core.callbacks.callback_events import _SingleEventState
+from .callback_event import Event, Filter
 
 
 class Callback:
@@ -14,32 +13,35 @@ class Callback:
     实际使用的 callback 类，不管是我们 fastNLP 默认提供的一些 callback 类，还是用户自己定制的 callback 类，都应该继承该基类；
     callback 调用时机顺序大概如下
     Trainer.__init__():
-        on_after_trainer_initialized()
+        on_after_trainer_initialized(trainer, driver)
     Trainer.run():
         if num_eval_sanity_batch>0:
-            on_sanity_check_begin()  # 如果设置了num_eval_sanity_batch
-            on_sanity_check_end()
+            on_sanity_check_begin(trainer)  # 如果设置了num_eval_sanity_batch
+            on_sanity_check_end(trainer, sanity_check_res)
         try:
-            on_train_begin()
+            on_train_begin(trainer)
             while cur_epoch_idx < n_epochs:
-                on_train_epoch_begin()
+                on_train_epoch_begin(trainer)
                 while batch_idx_in_epoch<=num_batches_per_epoch:
-                    on_fetch_data_begin()
-                    on_fetch_data_end()
-                    on_train_batch_begin()
-                    on_before_backward()
-                    on_after_backward()
-                    on_before_zero_grad()  # 实际调用受到 accumulation_steps 影响
-                    on_after_zero_grad()  # 实际调用受到 accumulation_steps 影响
-                    on_before_optimizers_step()  # 实际调用受到 accumulation_steps 影响
-                    on_after_optimizers_step()  # 实际调用受到 accumulation_steps 影响
-                    on_train_batch_end()
-                on_train_epoch_end()
+                    on_fetch_data_begin(trainer)
+                    batch = next(dataloader)
+                    on_fetch_data_end(trainer)
+                    on_train_batch_begin(trainer, batch, indices)
+                    on_before_backward(trainer, outputs)  # 其中 outputs 是经过 output_mapping（如果设置了） 后的，否则即为 model 的输出。
+                    on_after_backward(trainer)
+                    on_before_zero_grad(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                    on_after_zero_grad(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                    on_before_optimizers_step(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                    on_after_optimizers_step(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                    on_train_batch_end(trainer)
+                on_train_epoch_end(trainer)
         except BaseException:
-            self.on_exception()
+            self.on_exception(trainer, exception)
         finally:
-            on_train_end()
-    其它 callback 例如 on_evaluate_begin()/on_evaluate_end()将
+            on_train_end(trainer)
+    其它 callback 例如 on_evaluate_begin(trainer)/on_evaluate_end(trainer, results)/on_save_model(trainer)/
+        on_load_model(trainer)/on_save_checkpoint(trainer)/on_load_checkpoint(trainer)将根据需要在Trainer.run()中特定
+        的时间调用。
     """
 
     def on_after_trainer_initialized(self, trainer, driver):
@@ -294,18 +296,14 @@ class _CallbackWrapper(Callback):
     对于用户使用函数修饰器加入的 callback 函数，使用该 _CallbackWrapper 类为其进行定制，这一个类只保留用户的
      这一个 callback 函数；
     """
-    def __init__(self, event: Union[Events, EventsList], fn: Callable):
+    def __init__(self, event: Event, fn: Callable):
         r"""
-        :param event: 具体的 callback 时机，例如 'on_train_begin' 等；可以多个时机，此时 `event` 的 type 应当为 'EventsList'；
+        :param event: 具体的 callback 时机，例如 'on_train_begin' 等；
         :param fn: 用户定制的 callback 函数；
         """
 
         self.fn = fn
-        if isinstance(event, EventsList):
-            for each_event in event:
-                _filter = Filter(each_event.every, each_event.once, each_event.filter_fn)
-                setattr(self, each_event.value, _filter(fn))
-        elif isinstance(event, _SingleEventState):
+        if isinstance(event, Event):
             _filter = Filter(event.every, event.once, event.filter_fn)
             setattr(self, event.value, _filter(fn))
 

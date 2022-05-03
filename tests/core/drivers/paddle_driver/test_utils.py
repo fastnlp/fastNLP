@@ -6,7 +6,7 @@ from fastNLP.core.drivers.paddle_driver.utils import (
     replace_batch_sampler,
     replace_sampler,
 )
-from fastNLP.core.samplers import RandomBatchSampler, RandomSampler
+from fastNLP.core.samplers import ReproduceBatchSampler, RandomSampler
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 if _NEED_IMPORT_PADDLE:
     import paddle
@@ -36,12 +36,12 @@ def test_get_device_from_visible_str(user_visible_devices, cuda_visible_devices,
 def test_replace_batch_sampler():
     dataset = PaddleNormalDataset(10)
     dataloader = DataLoader(dataset, batch_size=32)
-    batch_sampler = RandomBatchSampler(dataloader.batch_sampler, batch_size=16, drop_last=False)
+    batch_sampler = ReproduceBatchSampler(dataloader.batch_sampler, batch_size=16, drop_last=False)
 
     replaced_loader = replace_batch_sampler(dataloader, batch_sampler)
 
     assert not (replaced_loader is dataloader)
-    assert isinstance(replaced_loader.batch_sampler, RandomBatchSampler)
+    assert isinstance(replaced_loader.batch_sampler, ReproduceBatchSampler)
     assert isinstance(replaced_loader.dataset, PaddleNormalDataset)
     assert len(replaced_loader.dataset) == len(dataset)
     assert replaced_loader.batch_sampler.batch_size == 16

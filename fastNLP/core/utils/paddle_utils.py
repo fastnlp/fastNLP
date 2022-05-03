@@ -35,6 +35,7 @@ def paddle_to(data, device: Union[str, int]):
     else:
         return data.cuda(get_paddle_device_id(device))
 
+
 def get_paddle_gpu_str(device: Union[str, int]):
     """
     获得 `gpu:x` 类型的设备名
@@ -45,6 +46,7 @@ def get_paddle_gpu_str(device: Union[str, int]):
     if isinstance(device, str):
         return device.replace("cuda", "gpu")
     return f"gpu:{device}"
+
 
 def get_paddle_device_id(device: Union[str, int]):
     """
@@ -94,17 +96,20 @@ def paddle_move_data_to_device(batch: Any, device: Optional[str] = None,
 
     return apply_to_collection(batch, dtype=paddle.Tensor, function=batch_to)
 
+
 def is_in_paddle_dist():
     """
     判断是否处于分布式的进程下，使用 global_rank 和 selected_gpus 判断
     """
     return ('PADDLE_RANK_IN_NODE' in os.environ and 'FLAGS_selected_gpus' in os.environ)
 
+
 def is_in_fnlp_paddle_dist():
     """
     判断是否处于 FastNLP 拉起的分布式进程中
     """
     return FASTNLP_DISTRIBUTED_CHECK in os.environ
+
 
 def is_in_paddle_launch_dist():
     """

@@ -2,18 +2,23 @@ from functools import partial
 import copy
 
 import pytest
-import torch
+
 import numpy as np
-from torch.multiprocessing import Pool, set_start_method
 
 from fastNLP.core.metrics import ClassifyFPreRecMetric
 from fastNLP.core.dataset import DataSet
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from .utils import find_free_network_port, setup_ddp
+if _NEED_IMPORT_TORCH:
+    import torch
+    from torch.multiprocessing import Pool, set_start_method
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as set_start_method
 
 set_start_method("spawn", force=True)
 
 
-def _test(local_rank: int, world_size: int, device: torch.device,
+def _test(local_rank: int, world_size: int, device: "torch.device",
           dataset: DataSet, metric_class, metric_kwargs, metric_result):
     metric = metric_class(**metric_kwargs)
     # dataset 也类似（每个进程有自己的一个）

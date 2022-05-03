@@ -65,12 +65,16 @@ def _get_backend() -> str:
         return catch_backend[0]
 
     # 方式 (2)
+    for backend in CHECK_BACKEND:
+        if backend in sys.modules:
+            logger.debug(f"sys.modules contains backend:{catch_backend[0]}.")
+            return backend
     for key, module in sys.modules.items():
         catch_backend = _check_module(module)
         if catch_backend:
             break
     if len(catch_backend):
-        logger.debug(f"Find a file named:{catch_backend[1]} from sys.modules contains backend:{catch_backend[0]}.")
+        logger.debug(f"Find a module file named:{catch_backend[1]} from sys.modules contains backend:{catch_backend[0]}.")
         return catch_backend[0]
 
     return 'numpy'
@@ -227,7 +231,7 @@ class Collator:
         设置可以 pad 的 field 默认 pad 为什么类型的 tensor
 
         :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ['torch','jittor','paddle','numpy','raw', 'auto', None]，
-            若为 auto ，则在进行 pad 的时候会根据调用的环境决定其 backend 。
+            若为 auto ，则在进行 pad 的时候会自动根据调用的环境决定其 backend 。
         :return:
         """
         assert backend in SUPPORTED_BACKENDS

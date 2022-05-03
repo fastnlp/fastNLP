@@ -3,6 +3,7 @@ import pytest
 import subprocess
 from io import StringIO
 import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 
 from fastNLP.core.utils.cache_results import cache_results
 from fastNLP.core import rank_zero_rm
