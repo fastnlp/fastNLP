@@ -1,3 +1,8 @@
+__all__ = [
+    "indice_collate_wrapper"
+]
+
+
 def indice_collate_wrapper(func):
     """
     其功能是封装一层collate_fn,将dataset取到的tuple数据分离开，将idx打包为indices。
