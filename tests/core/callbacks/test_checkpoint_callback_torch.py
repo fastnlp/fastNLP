@@ -218,9 +218,9 @@ def test_model_checkpoint_callback_2(
         path = Path.cwd().joinpath("test_model_checkpoint")
         path.mkdir(exist_ok=True, parents=True)
 
-        from fastNLP.core.callbacks.callback_events import Events
+        from fastNLP.core.callbacks.callback_event import Event
 
-        @Trainer.on(Events.on_train_epoch_end)
+        @Trainer.on(Event.on_train_epoch_end())
         def raise_exception(trainer):
             if trainer.driver.get_local_rank() == 0 and trainer.cur_epoch_idx == 4:
                 raise NotImplementedError

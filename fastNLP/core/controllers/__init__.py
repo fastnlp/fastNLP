@@ -2,8 +2,6 @@ __all__ = [
     'Loop',
     'EvaluateBatchLoop',
     'TrainBatchLoop',
-    'State',
-    'TrainerState',
     'Evaluator',
     'Trainer',
 ]

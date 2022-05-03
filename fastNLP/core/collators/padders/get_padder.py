@@ -1,8 +1,3 @@
-
-from typing import Dict
-
-
-
 from typing import Sequence, Any, Union, Dict
 from abc import ABC
 
@@ -93,6 +88,8 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
                 return TorchNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'paddle':
                 return PaddleNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+            else:
+                raise ValueError(f"backend={backend} is not supported for list(Field:{field_name}).")
 
         if depth > 1 and shape_len == 0:  # 形如 [[0, 1], [2]] 这种
             if backend == 'raw':
@@ -103,6 +100,8 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
                 return TorchSequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'paddle':
                 return PaddleSequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+            else:
+                raise ValueError(f"backend={backend} is not supported for nested list(Field:{field_name}).")
 
         if depth == 1 and shape_len != 0:
             if backend == 'numpy':
@@ -111,6 +110,8 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
                 return TorchTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'paddle':
                 return PaddleTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+            else:
+                raise ValueError(f"backend={backend} is not supported for tensors(Field:{field_name}).")
 
         if shape_len != 0 and depth>1:
             msg = "Does not support pad tensor under nested list. If you need this, please report."
@@ -179,23 +180,3 @@ def _get_element_shape_dtype(content, parent=None, catalog=None)->Dict:
     else:  # 包括 int/float/bool/dict 以及 其它无法pad 的等
         catalog[parent] = ((), type(content))  # () 表示 shape 的长度为 0，后面表示其类别
     return catalog
-
-
-
-
-"""
-from numbers import Number
-
-issubclass(type(3), Number)  # True
-issubclass(type(3.1), Number)  # True
-issubclass(type('3'), Number)  # False
-issubclass(type(True), Number)  # True
-issubclass(type(np.zeros(3)[0]), Number)  # True
-isinstance(np.zeros(3, dtype=float).dtype, np.dtype)  # True
-isinstance(np.zeros(3, dtype=int).dtype, np.dtype)  # True
-isinstance(np.zeros(3, dtype=str).dtype, np.dtype)  # True, 需要通过和来判定
-is_torch_tensor_dtype()  # 可以通过isinstance(torch.zeros(3).dtype, torch.dtype)
-"""
-
-
-

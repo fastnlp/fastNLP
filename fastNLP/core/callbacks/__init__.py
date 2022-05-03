@@ -1,7 +1,6 @@
 __all__ = [
     'Callback',
-    'Events',
-    'EventsList',
+    'Event',
     'Filter',
     'CallbackManager',
     'CheckpointCallback',
@@ -20,7 +19,7 @@ __all__ = [
 
 
 from .callback import Callback
-from .callback_events import EventsList, Events, Filter
+from .callback_event import Event, Filter
 from .callback_manager import CallbackManager
 from .checkpoint_callback import CheckpointCallback
 from .progress_callback import choose_progress_callback, ProgressCallback, RichCallback

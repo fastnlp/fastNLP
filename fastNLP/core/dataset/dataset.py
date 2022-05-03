@@ -770,15 +770,6 @@ class DataSet:
         df = self.to_pandas()
         return df.to_csv(path, encoding="utf-8")
 
-    def set_ignore(self, *field_names) -> None:
-        """
-        被设置为inputs的field_names，会输入到AutoCollator中，未被设置默认过滤掉
-
-        :param field_names:
-        :return:
-        """
-        self.collator.set_ignore(*field_names)
-
     @property
     def collator(self) -> Collator:
         if self._collator is None:

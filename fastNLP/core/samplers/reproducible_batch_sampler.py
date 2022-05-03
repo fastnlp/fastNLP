@@ -55,7 +55,6 @@ class ReproducibleBatchSampler:
 
 
 class ReproduceBatchSampler(ReproducibleBatchSampler):
-    # 这两个参数的值应当交给 driver 的 get_dataloader_args 函数去拿；
     def __init__(self, batch_sampler, batch_size: int, drop_last: bool, **kwargs):
         """
         可以使得 batch_sampler 对象状态恢复的 wrapper 。
