@@ -14,10 +14,10 @@ def test_get_element_shape_dtype():
     catalog = _get_element_shape_dtype([np.zeros(3), np.zeros((2, 1))])
 
 
-@pytest.mark.parametrize('backend', ['raw', None, 'numpy', 'torch', 'jittor', 'paddle'])
+# @pytest.mark.parametrize('backend', ['raw', None, 'numpy', 'torch', 'jittor', 'paddle'])
+@pytest.mark.parametrize('backend', ['raw', None, 'numpy', 'torch', 'paddle'])
 @pytest.mark.torch
 @pytest.mark.paddle
-@pytest.mark.jittor
 def test_get_padder_run(backend):
     if not _NEED_IMPORT_TORCH and backend == 'torch':
         pytest.skip("No torch")
