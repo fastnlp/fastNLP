@@ -127,11 +127,12 @@ class CallbackManager:
         :param callback: 一个具体的 callback 实例；
         """
         self.all_callbacks.append(callback)
-        for name, member in Event.__members__.items():
-            _fn = getattr(callback, member.value)
-            if inspect.getsource(_fn) != inspect.getsource(getattr(Callback, member.value)):
-                self.callback_fns[member.value].append(_fn)
-                self.extract_callback_filter_state(callback.callback_name, _fn)
+        for name, member in Event.__dict__.items():
+            if isinstance(member, staticmethod):
+                _fn = getattr(callback, name)
+                if inspect.getsource(_fn) != inspect.getsource(getattr(Callback, name)):
+                    self.callback_fns[name].append(_fn)
+                    self.extract_callback_filter_state(callback.callback_name, _fn)
 
     def extract_callback_filter_state(self, callback_name, callback_fn):
         r"""
