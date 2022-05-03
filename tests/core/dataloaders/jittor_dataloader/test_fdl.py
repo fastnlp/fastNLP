@@ -42,6 +42,7 @@ class TestJittor:
         jtl = JittorDataLoader(dataset, keep_numpy_array=True, batch_size=4)
         # jtl.set_pad_val('x', 'y')
         # jtl.set_input('x')
+        print(str(jittor.Var([0])))
         for batch in jtl:
             print(batch)
             print(jtl.get_batch_indices())

@@ -91,6 +91,7 @@ class JittorDataLoader:
             self.dataset.dataset.set_attrs(batch_size=1)
         # 用户提供了 collate_fn，则会自动代替 jittor 提供 collate_batch 函数
         # self._collate_fn = _collate_fn
+        self.cur_batch_indices = None
 
     def __iter__(self):
         # TODO 第一次迭代后不能设置collate_fn，设置是无效的
