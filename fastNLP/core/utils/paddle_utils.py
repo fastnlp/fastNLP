@@ -1,4 +1,5 @@
 __all__ = [
+    "get_device_from_visible",
     "paddle_to",
     "paddle_move_data_to_device",
     "get_paddle_gpu_str",
@@ -13,13 +14,45 @@ import re
 from typing import Any, Optional, Union
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
-from fastNLP.envs import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_BACKEND_LAUNCH
+from fastNLP.envs import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_BACKEND_LAUNCH, USER_CUDA_VISIBLE_DEVICES
 
 if _NEED_IMPORT_PADDLE:
     import paddle
 
 from .utils import apply_to_collection
 
+def get_device_from_visible(device: Union[str, int], output_type=int):
+    """
+    在有 CUDA_VISIBLE_DEVICES 的情况下，获取对应的设备。
+    如 CUDA_VISIBLE_DEVICES=2,3 ，device=3 ，则返回1。
+
+    :param device: 未转化的设备名
+    :param output_type: 返回值的类型
+    :return: 转化后的设备id
+    """
+    if output_type not in [int, str]:
+        raise ValueError("Parameter `output_type` should be one of these types: [int, str]")
+    if device == "cpu":
+        return device
+    cuda_visible_devices = os.getenv("CUDA_VISIBLE_DEVICES")
+    user_visible_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
+    if user_visible_devices is None:
+        raise RuntimeError("`USER_CUDA_VISIBLE_DEVICES` is None, please check if you have set "
+                            "`FASTNLP_BACKEND` to 'paddle' before 'import fastNLP'.")
+    idx = get_paddle_device_id(device)
+    # 利用 USER_CUDA_VISIBLDE_DEVICES 获取用户期望的设备
+    if user_visible_devices is None:
+        raise RuntimeError("This situation cannot happen, please report a bug to us.")
+    idx = user_visible_devices.split(",")[idx]
+
+    cuda_visible_devices_list = cuda_visible_devices.split(',')
+    if idx not in cuda_visible_devices_list:
+        raise ValueError(f"Can't find your devices {idx} in CUDA_VISIBLE_DEVICES[{cuda_visible_devices}]. ")
+    res = cuda_visible_devices_list.index(idx)
+    if output_type == int:
+        return res
+    else:
+        return f"gpu:{res}"
 
 def paddle_to(data, device: Union[str, int]):
     """
@@ -33,6 +66,7 @@ def paddle_to(data, device: Union[str, int]):
     if device == "cpu":
         return data.cpu()
     else:
+        # device = get_device_from_visible(device, output_type=int)
         return data.cuda(get_paddle_device_id(device))
 
 

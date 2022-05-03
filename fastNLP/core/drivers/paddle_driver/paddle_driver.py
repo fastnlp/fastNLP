@@ -10,7 +10,7 @@ import numpy as np
 from .utils import _build_fp16_env, optimizer_state_to_device, DummyGradScaler
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.core.drivers.driver import Driver
-from fastNLP.core.utils import apply_to_collection, paddle_move_data_to_device
+from fastNLP.core.utils import apply_to_collection, paddle_move_data_to_device, get_device_from_visible
 from fastNLP.envs import (
     FASTNLP_SEED_WORKERS,
     FASTNLP_MODEL_FILENAME,
@@ -394,7 +394,8 @@ class PaddleDriver(Driver):
 
         :return: 将移动到指定机器上的 batch 对象返回；
         """
-        return paddle_move_data_to_device(batch, self.data_device)
+        device = get_device_from_visible(self.data_device)
+        return paddle_move_data_to_device(batch, device)
 
     @staticmethod
     def worker_init_function(worker_id: int, rank: Optional[int] = None) -> None:  # pragma: no cover
