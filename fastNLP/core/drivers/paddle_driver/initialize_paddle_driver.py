@@ -42,7 +42,8 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
 
     user_visible_devices = os.getenv("USER_CUDA_VISIBLE_DEVICES")
     if user_visible_devices is None:
-        raise RuntimeError("This situation cannot happen, please report a bug to us.")
+        raise RuntimeError("`USER_CUDA_VISIBLE_DEVICES` cannot be None, please check if you have set "
+                            "`FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
     _could_use_device_num = len(user_visible_devices.split(","))
     if isinstance(device, int):
         if device < 0 and device != -1:

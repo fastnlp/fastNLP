@@ -37,8 +37,8 @@ def get_device_from_visible(device: Union[str, int], output_type=int):
     cuda_visible_devices = os.getenv("CUDA_VISIBLE_DEVICES")
     user_visible_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
     if user_visible_devices is None:
-        raise RuntimeError("`USER_CUDA_VISIBLE_DEVICES` is None, please check if you have set "
-                            "`FASTNLP_BACKEND` to 'paddle' before 'import fastNLP'.")
+        raise RuntimeError("`USER_CUDA_VISIBLE_DEVICES` cannot be None, please check if you have set "
+                            "`FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
     idx = get_paddle_device_id(device)
     # 利用 USER_CUDA_VISIBLDE_DEVICES 获取用户期望的设备
     if user_visible_devices is None:

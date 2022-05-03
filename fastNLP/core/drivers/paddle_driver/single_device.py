@@ -39,6 +39,9 @@ class PaddleSingleDriver(PaddleDriver):
             raise ValueError("`paddle.DataParallel` is not supported in `PaddleSingleDriver`")
 
         cuda_visible_devices = os.environ.get(USER_CUDA_VISIBLE_DEVICES, None)
+        if cuda_visible_devices is None:
+            raise RuntimeError("`USER_CUDA_VISIBLE_DEVICES` cannot be None, please check if you have set "
+                            "`FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
         if cuda_visible_devices == "":
             device = "cpu"
             logger.info("You have set `CUDA_VISIBLE_DEVICES` to '' in system environment variable, and we are gonna to"
@@ -54,7 +57,7 @@ class PaddleSingleDriver(PaddleDriver):
                 device_id = device
             else:
                 device_id = get_paddle_device_id(device)
-            os.environ["CUDA_VISIBLE_DEVICES"] = os.environ[USER_CUDA_VISIBLE_DEVICES].split(",")[device_id]
+            os.environ["CUDA_VISIBLE_DEVICES"] = cuda_visible_devices.split(",")[device_id]
         self.model_device = get_paddle_gpu_str(device)
 
         self.local_rank = 0
