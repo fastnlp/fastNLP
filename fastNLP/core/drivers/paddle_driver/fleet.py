@@ -1,6 +1,8 @@
 import os
 from typing import List, Union, Optional, Dict, Tuple, Callable
 
+from fastNLP.core.utils.paddle_utils import get_device_from_visible
+
 from .paddle_driver import PaddleDriver
 from .fleet_launcher import FleetLauncher
 from .utils import (
@@ -630,7 +632,8 @@ class PaddleFleetDriver(PaddleDriver):
             接收到的参数；如果是 source 端则返回发射的内容；既不是发送端、又不是接收端，则返回 None 。
         """
         # 因为设置了CUDA_VISIBLE_DEVICES，可能会引起错误
-        return fastnlp_paddle_broadcast_object(obj, src, device=self.data_device, group=group)
+        device = get_device_from_visible(self.data_device)
+        return fastnlp_paddle_broadcast_object(obj, src, device=device, group=group)
 
     def all_gather(self, obj, group=None) -> List:
         """
