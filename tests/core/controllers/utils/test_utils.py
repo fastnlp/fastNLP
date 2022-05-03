@@ -1,7 +1,7 @@
 from functools import reduce
 
 from fastNLP.core.controllers.utils.utils import _TruncatedDataLoader  # TODO: 该类修改过，记得将 test 也修改；
-from tests.helpers.datasets.normal_data import NormalIterator
+from tests.helpers.datasets.normal_data import NormalSampler
 
 
 class Test_WrapDataLoader:
@@ -9,7 +9,7 @@ class Test_WrapDataLoader:
     def test_normal_generator(self):
         all_sanity_batches = [4, 20, 100]
         for sanity_batches in all_sanity_batches:
-            data = NormalIterator(num_of_data=1000)
+            data = NormalSampler(num_of_data=1000)
             wrapper = _TruncatedDataLoader(dataloader=data, num_batches=sanity_batches)
             dataloader = iter(wrapper)
             mark = 0
