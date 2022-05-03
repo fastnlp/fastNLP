@@ -16,7 +16,6 @@ from fastNLP.core.utils import (
     auto_param_call,
     check_user_specific_params,
     is_in_paddle_dist,
-    rank_zero_rm,
     is_in_paddle_dist,
 )
 from fastNLP.envs.distributed import rank_zero_rm
