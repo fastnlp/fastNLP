@@ -114,7 +114,7 @@ class TorchTensorPadder(Padder):
     def pad(batch_field, pad_val, dtype):
         try:
             if not isinstance(batch_field[0], torch.Tensor):
-                batch_field = [torch.tensor(field.tolist()) for field in batch_field]
+                batch_field = [torch.tensor(field.tolist(), dtype=dtype) for field in batch_field]
         except AttributeError:
             raise RuntimeError(f"If the field is not a torch.Tensor (it is {type(batch_field[0])}), "
                                f"it must have tolist() method.")
@@ -124,8 +124,6 @@ class TorchTensorPadder(Padder):
         tensor = torch.full(max_shape, fill_value=pad_val, dtype=dtype)
         for i, field in enumerate(batch_field):
             slices = (i, ) + tuple(slice(0, s) for s in shapes[i])
-            if isinstance(field, np.ndarray):
-                field = torch.from_numpy(field)
             tensor[slices] = field
         return tensor
 

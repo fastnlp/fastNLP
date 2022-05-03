@@ -7,7 +7,7 @@ from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from tests.helpers.datasets.paddle_data import PaddleNormalDataset, PaddleRandomMaxDataset
 from tests.helpers.datasets.torch_data import TorchNormalDataset
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
-from fastNLP.core import rank_zero_rm
+from fastNLP.envs.distributed import rank_zero_rm
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE, _NEED_IMPORT_TORCH
 if _NEED_IMPORT_PADDLE:
     import paddle

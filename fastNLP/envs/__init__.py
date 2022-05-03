@@ -3,12 +3,17 @@ r"""
 """
 __all__ = [
     'dump_fastnlp_backend',
-    'is_cur_env_distributed',
-    'get_global_rank',
-    'rank_zero_call',
-    'all_rank_call_context',
+
+    # utils
     'get_gpu_count',
-    'fastnlp_no_sync_context'
+
+    # distributed
+    "rank_zero_rm",
+    'rank_zero_call',
+    'get_global_rank',
+    'fastnlp_no_sync_context',
+    'all_rank_call_context',
+    'is_cur_env_distributed',
 ]
 
 

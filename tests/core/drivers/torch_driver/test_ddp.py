@@ -12,7 +12,7 @@ from fastNLP.core.samplers import (
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchNormalDataset, TorchArgMaxDataset
 from tests.helpers.utils import magic_argv_env_context
-from fastNLP.core import rank_zero_rm
+from fastNLP.envs.distributed import rank_zero_rm
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 if _NEED_IMPORT_TORCH:
     import torch

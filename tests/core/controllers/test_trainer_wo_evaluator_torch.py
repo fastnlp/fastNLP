@@ -13,7 +13,7 @@ from tests.helpers.datasets.torch_data import TorchNormalDataset_Classification
 from tests.helpers.callbacks.helper_callbacks import RecordLossCallback
 from tests.helpers.callbacks.helper_callbacks_torch import RecordAccumulationStepsCallback_Torch
 from tests.helpers.utils import magic_argv_env_context, Capturing
-from fastNLP.core import rank_zero_rm
+from fastNLP.envs.distributed import rank_zero_rm
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 if _NEED_IMPORT_TORCH:
     import torch.distributed as dist

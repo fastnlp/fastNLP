@@ -79,7 +79,7 @@ class NumpyTensorPadder(Padder):
     def pad(batch_field, pad_val, dtype):
         try:
             if not isinstance(batch_field[0], np.ndarray):
-                batch_field = [np.array(field.tolist()) for field in batch_field]
+                batch_field = [np.array(field.tolist(), dtype=dtype) for field in batch_field]
         except AttributeError:
             raise RuntimeError(f"If the field is not a np.ndarray (it is {type(batch_field[0])}), "
                                f"it must have tolist() method.")
