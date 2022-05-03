@@ -8,6 +8,7 @@ __all__ = [
     "NullPadder",
     "RawNumberPadder",
     "RawSequencePadder",
+    "RawTensorPadder",
     'TorchNumberPadder',
     'TorchSequencePadder',
     'TorchTensorPadder',

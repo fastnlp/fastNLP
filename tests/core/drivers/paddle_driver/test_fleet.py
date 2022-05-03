@@ -12,7 +12,7 @@ from fastNLP.core.samplers import (
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from tests.helpers.datasets.paddle_data import PaddleNormalDataset, PaddleRandomMaxDataset
 from tests.helpers.utils import magic_argv_env_context
-from fastNLP.core import rank_zero_rm
+from fastNLP.envs.distributed import rank_zero_rm
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 if _NEED_IMPORT_PADDLE:
     import paddle

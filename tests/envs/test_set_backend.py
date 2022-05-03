@@ -3,7 +3,7 @@ import pytest
 
 from fastNLP.envs.set_backend import dump_fastnlp_backend
 from tests.helpers.utils import Capturing
-from fastNLP.core import rank_zero_rm
+from fastNLP.envs.distributed import rank_zero_rm
 
 
 def test_dump_fastnlp_envs():

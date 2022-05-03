@@ -83,7 +83,7 @@ class TestCollator:
         assert raw_pad_batch == collator(dict_batch)
         collator = Collator(backend='raw')
         raw_pad_lst = [['1', '2'], [['1'], ['2', '2']], [1, 2], [[1, 0], [2, 2]], [[[1, 0], [0, 0]], [[1, 0], [1, 2]]],
-                       [1.1, 2.1], [[1.1], [2.1]], [True, False], [np.ones(1), np.ones(2)], [{'1': '1'}, {'2': '2'}],
+                       [1.1, 2.1], [[1.1], [2.1]], [True, False], [[1, 0], [1, 1]], [{'1': '1'}, {'2': '2'}],
                        [{'1'}, {'2'}]]
         findListDiff(raw_pad_lst, collator(list_batch))
 
@@ -194,7 +194,7 @@ class TestCollator:
         collator.set_ignore('_0', '_3', '_1')
         collator.set_pad('_4', pad_val=None)
         raw_pad_lst = [[1, 2], [[[1]], [[1], [1, 2]]],
-                       [1.1, 2.1], [[1.1], [2.1]], [True, False], [np.ones(1), np.ones(2)], [{'1': '1'}, {'2': '2'}],
+                       [1.1, 2.1], [[1.1], [2.1]], [True, False], [[1, 0], [1, 1]], [{'1': '1'}, {'2': '2'}],
                        [{'1'}, {'2'}]]
         findListDiff(raw_pad_lst, collator(list_batch))
 
@@ -210,7 +210,7 @@ class TestCollator:
         collator.set_pad('_2', backend='numpy')
         collator.set_pad('_4', backend='numpy', pad_val=100)
         raw_pad_lst = [np.array([1, 2]), np.array([[[1, 100], [100, 100]], [[1, 100], [1, 2]]]),
-                       [1.1, 2.1], [[1.1], [2.1]], [True, False], [np.ones(1), np.ones(2)], [{'1': '1'}, {'2': '2'}],
+                       [1.1, 2.1], [[1.1], [2.1]], [True, False], [[1, 0], [1, 1]], [{'1': '1'}, {'2': '2'}],
                        [{'1'}, {'2'}]]
         findListDiff(raw_pad_lst, collator(list_batch))
 

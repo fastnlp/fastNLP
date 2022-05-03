@@ -7,7 +7,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Optional, Dict, Tuple, Callable, Union
 
-from fastNLP.core.utils import rank_zero_rm
+from ...envs.distributed import rank_zero_rm
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_LAUNCH_TIME
 from fastNLP.envs import rank_zero_call

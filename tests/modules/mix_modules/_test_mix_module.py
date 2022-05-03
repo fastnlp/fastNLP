@@ -9,7 +9,7 @@ import numpy as np
 
 from fastNLP.modules.mix_modules.mix_module import MixModule
 from fastNLP.modules.mix_modules.utils import paddle2torch, torch2paddle
-from fastNLP.core import rank_zero_rm
+from fastNLP.envs.distributed import rank_zero_rm
 
 
 ############################################################################

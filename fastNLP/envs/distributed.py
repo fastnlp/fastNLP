@@ -1,6 +1,7 @@
 import os
 from functools import wraps
-from typing import Callable, Any, Optional
+from pathlib import Path
+from typing import Callable, Any, Optional, Union
 from contextlib import contextmanager
 
 __all__ = [
@@ -8,7 +9,8 @@ __all__ = [
     'get_global_rank',
     'rank_zero_call',
     'all_rank_call_context',
-    'fastnlp_no_sync_context'
+    'fastnlp_no_sync_context',
+    "rank_zero_rm"
 ]
 
 from fastNLP.envs.env import FASTNLP_GLOBAL_RANK, FASTNLP_NO_SYNC
@@ -96,3 +98,35 @@ def all_rank_call_context():
         os.environ[FASTNLP_GLOBAL_RANK] = old_fastnlp_global_rank
     else:
         os.environ.pop(FASTNLP_GLOBAL_RANK)
+
+
+def rank_zero_rm(path: Optional[Union[str, Path]]):
+    """
+    这个是因为在分布式文件系统中可能会发生错误，rank0下发删除成功后就运行走了，但实际的删除需要rank0的机器发送到远程文件系统再去执行，这个时候
+        在rank0那里，确实已经删除成功了，但是在远程文件系统那里这个操作还没完成，rank1读取的时候还是读取到存在这个文件；
+    该函数会保证所有进程都检测到 path 删除之后才退出，请保证不同进程上 path 是完全一样的，否则会陷入死锁状态。
+
+    :param path:
+    :return:
+    """
+    if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
+        if path is None:
+            return
+        if isinstance(path, str):
+            path = Path(path)
+        if not path.exists():
+            return
+        _recursive_rm(path)
+
+
+def _recursive_rm(path: Path):
+    if path.is_file() or path.is_symlink():
+        if path.exists():
+            try:
+                path.unlink()
+            except Exception:
+                pass
+        return
+    for sub_path in list(path.iterdir()):
+        _recursive_rm(sub_path)
+    path.rmdir()

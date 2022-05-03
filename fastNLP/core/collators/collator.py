@@ -67,7 +67,7 @@ def _get_backend() -> str:
     # 方式 (2)
     for backend in CHECK_BACKEND:
         if backend in sys.modules:
-            logger.debug(f"sys.modules contains backend:{catch_backend[0]}.")
+            logger.debug(f"sys.modules contains backend:{backend}.")
             return backend
     for key, module in sys.modules.items():
         catch_backend = _check_module(module)
