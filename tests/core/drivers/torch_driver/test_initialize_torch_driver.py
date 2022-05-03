@@ -2,12 +2,12 @@ import pytest
 
 from fastNLP.core.drivers import TorchSingleDriver, TorchDDPDriver
 from fastNLP.core.drivers.torch_driver.initialize_torch_driver import initialize_torch_driver
-from fastNLP.envs import get_gpu_count
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.utils import magic_argv_env_context
-
-import torch
-
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+if _NEED_IMPORT_TORCH:
+    import torch
+    import torch.distributed as dist
 
 @pytest.mark.torch
 def test_incorrect_driver():
@@ -55,6 +55,9 @@ def test_get_ddp_2(driver, device):
     driver = initialize_torch_driver(driver, device, model)
 
     assert isinstance(driver, TorchDDPDriver)
+    dist.barrier()
+    if dist.is_initialized():
+        dist.destroy_process_group()
 
 
 @pytest.mark.torch
@@ -76,6 +79,9 @@ def test_get_ddp(driver, device):
     driver = initialize_torch_driver(driver, device, model)
 
     assert isinstance(driver, TorchDDPDriver)
+    dist.barrier()
+    if dist.is_initialized():
+        dist.destroy_process_group()
 
 
 @pytest.mark.torch
@@ -83,7 +89,6 @@ def test_get_ddp(driver, device):
     ("driver", "device"), 
     [("torch_ddp", "cpu")]
 )
-@magic_argv_env_context
 def test_get_ddp_cpu(driver, device):
     """
     测试试图在 cpu 上初始化分布式训练的情况
@@ -102,7 +107,6 @@ def test_get_ddp_cpu(driver, device):
     "driver", 
     ["torch", "torch_ddp"]
 )
-@magic_argv_env_context
 def test_device_out_of_range(driver, device):
     """
     测试传入的device超过范围的情况
