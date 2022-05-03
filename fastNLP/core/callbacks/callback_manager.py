@@ -6,7 +6,7 @@ __all__ = [
     'CallbackManager'
 ]
 
-from .callback_events import Events
+from .callback_event import Event
 from .callback import Callback
 from fastNLP.core.log import logger
 from .progress_callback import ProgressCallback, choose_progress_callback
@@ -110,7 +110,7 @@ class CallbackManager:
     def initialize_class_callbacks(self):
         r"""
         在实际的运行过程中，我们是将具体的一个 callback 实例拆分为单独的一个个 callback 函数，然后将它们加在一个字典里，该字典的键值就是
-         一个个 callback 时机，也就是 `Events` 的类别；
+         一个个 callback 时机，也就是 `Event` 的类别；
         如果一个 callback 类的 callback 函数并不具备任何作用，我们实际并不会将其加在字典当中；
 
         :param callbacks:
@@ -127,7 +127,7 @@ class CallbackManager:
         :param callback: 一个具体的 callback 实例；
         """
         self.all_callbacks.append(callback)
-        for name, member in Events.__members__.items():
+        for name, member in Event.__members__.items():
             _fn = getattr(callback, member.value)
             if inspect.getsource(_fn) != inspect.getsource(getattr(Callback, member.value)):
                 self.callback_fns[member.value].append(_fn)

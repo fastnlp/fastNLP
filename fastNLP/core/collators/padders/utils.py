@@ -1,6 +1,10 @@
 
+__all__ = [
+    'get_padded_numpy_array'
+]
+
+
 from typing import Sequence, List
-from numbers import Number
 import re
 from inspect import isclass
 

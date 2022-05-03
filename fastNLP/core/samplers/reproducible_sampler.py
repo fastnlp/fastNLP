@@ -16,6 +16,8 @@ from fastNLP.core.dataset import DataSet
 
 class ReproducibleSampler:
     """
+    可复现的 Sampler 对象。
+
     注意所有继承 `ReproducibleSampler` 的类的  `__init__` 方法中都需要加入参数 `**kwargs`，用来使我们再断点重训时重新实例化这个 sampler
      或者 batch_sampler；注意，所有在 init 中初始化的变量，都不能含有 _ 下横线作为开头；所有不在 init 中设置的变量都必须以下横线开头。
 
