@@ -165,8 +165,8 @@ class TorchDataLoader(DataLoader):
 
 
 def prepare_torch_dataloader(ds_or_db: Union[DataSet, DataBundle, Sequence[DataSet], Mapping[str, DataSet]],
-                             batch_size: int = 1,
-                             shuffle: bool = False, sampler: Union["Sampler[int]", ReproducibleSampler, UnrepeatedSampler] = None,
+                             batch_size: int = 16,
+                             shuffle: bool = True, sampler: Union["Sampler[int]", ReproducibleSampler, UnrepeatedSampler] = None,
                              batch_sampler: Union["Sampler[Sequence[int]]", ReproducibleBatchSampler] = None,
                              num_workers: int = 0, collate_fn: Union[str, Callable, None] = None,
                              pin_memory: bool = False, drop_last: bool = False,
