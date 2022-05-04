@@ -66,7 +66,6 @@ class MoreEvaluateCallback(HasMonitorCallback):
             raise RuntimeError("`evaluate_every` and `watch_monitor` cannot be None at the same time.")
         if watch_monitor is not None and evaluate_every is not None:
             raise RuntimeError("`evaluate_every` and `watch_monitor` cannot be set at the same time.")
-        self.watch_monitor = watch_monitor
 
         if topk_monitor is not None and topk == 0:
             raise RuntimeError("`topk_monitor` is set, but `topk` is 0.")
@@ -93,8 +92,8 @@ class MoreEvaluateCallback(HasMonitorCallback):
 
     def on_after_trainer_initialized(self, trainer, driver):
         # 如果是需要 watch 的，不能没有 evaluator
-        if self.watch_monitor is not None:
-            assert trainer.evaluator is not None, f"You set `watch_monitor={self.watch_monitor}`, but no " \
+        if self.monitor is not None:
+            assert trainer.evaluator is not None, f"You set `watch_monitor={self.monitor}`, but no " \
                                                   f"evaluate_dataloaders is provided in Trainer."
 
         if trainer.evaluate_fn is self.evaluate_fn:
@@ -134,7 +133,7 @@ class MoreEvaluateCallback(HasMonitorCallback):
             self.topk_saver.save_topk(trainer, results)
 
     def on_train_epoch_end(self, trainer):
-        if self.watch_monitor is not None:
+        if self.monitor is not None:
             return
         if isinstance(self.evaluate_every, int) and self.evaluate_every < 0:
             evaluate_every = -self.evaluate_every
@@ -143,7 +142,7 @@ class MoreEvaluateCallback(HasMonitorCallback):
                 self.topk_saver.save_topk(trainer, results)
 
     def on_train_batch_end(self, trainer):
-        if self.watch_monitor is not None:
+        if self.monitor is not None:
             return
         if callable(self.evaluate_every):
             if self.evaluate_every(trainer):

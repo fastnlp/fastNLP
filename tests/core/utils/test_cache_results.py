@@ -246,6 +246,106 @@ class TestCacheResults:
             rank_zero_rm('demo.pkl')
 
 
+def remove_postfix(folder='.', post_fix='.pkl'):
+    import os
+    for f in os.listdir(folder):
+        if os.path.isfile(f) and f.endswith(post_fix):
+            os.remove(os.path.join(folder, f))
+
+
+class TestCacheResultsWithParam:
+    @pytest.mark.parametrize('_refresh', [True, False])
+    @pytest.mark.parametrize('_hash_param', [True, False])
+    @pytest.mark.parametrize('_verbose', [0, 1])
+    @pytest.mark.parametrize('_check_hash', [True, False])
+    def test_cache_save(self, _refresh, _hash_param, _verbose, _check_hash):
+        cache_fp = 'demo.pkl'
+        try:
+            @cache_results(cache_fp, _refresh=_refresh, _hash_param=_hash_param, _verbose=_verbose,
+                           _check_hash=_check_hash)
+            def demo(a=1):
+                print("¥")
+                return 1
+            res = demo()
+
+            with Capturing() as output:
+                res = demo(a=1)
+            if _refresh is False:
+                assert '¥' not in output[0]
+            if _verbose is 0:
+                assert 'read' not in output[0]
+
+            with Capturing() as output:
+                res = demo(1)
+            if _refresh is False:
+                assert '¥' not in output[0]
+
+            with Capturing() as output:
+                res = demo(a=2)
+            if _hash_param is True:  # 一定对不上，需要重新生成
+                assert '¥' in output[0]
+
+        finally:
+            remove_postfix('.')
+
+    def test_cache_complex_param(self):
+        cache_fp = 'demo.pkl'
+        try:
+            @cache_results(cache_fp, _refresh=False)
+            def demo(*args, s=1, **kwargs):
+                print("¥")
+                return 1
+
+            res = demo(1,2,3, s=4, d=4)
+            with Capturing() as output:
+                res = demo(1,2,3,d=4, s=4)
+            assert '¥' not in output[0]
+        finally:
+            remove_postfix('.')
+
+    def test_wrapper_change(self):
+        cache_fp = 'demo.pkl'
+        test_type = 'wrapper_change'
+        try:
+            cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 0'
+            res = get_subprocess_results(cmd)
+            assert "¥" in res
+            cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 1'
+            res = get_subprocess_results(cmd)
+            assert "¥" not in res
+            assert 'Read' in res
+            assert 'different' not in res
+
+        finally:
+            remove_postfix('.')
+
+    def test_param_change(self):
+        cache_fp = 'demo.pkl'
+        test_type = 'param_change'
+        try:
+            cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 0'
+            res = get_subprocess_results(cmd)
+            assert "¥" in res
+            cmd = f'python {__file__} --cache_fp {cache_fp} --test_type {test_type} --turn 1'
+            res = get_subprocess_results(cmd)
+            assert "¥" in res
+            assert 'Read' not in res
+        finally:
+            remove_postfix('.')
+
+    def test_create_cache_dir(self):
+        @cache_results('demo/demo.pkl')
+        def cache(s):
+            return 1, 2
+
+        try:
+            results = cache(s=1)
+            assert (1, 2) == results
+        finally:
+            import shutil
+            shutil.rmtree('demo/')
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
@@ -293,4 +393,32 @@ if __name__ == '__main__':
             return b
 
         res = demo_func()
+
+    if test_type == 'wrapper_change':
+        if turn == 0:
+            @cache_results(cache_fp, _refresh=True)
+            def demo_wrapper_change():
+                print("¥")
+                return 1
+        else:
+            @cache_results(cache_fp, _refresh=False)
+            def demo_wrapper_change():
+                print("¥")
+                return 1
+
+        res = demo_wrapper_change()
+
+    if test_type == 'param_change':
+        if turn == 0:
+            @cache_results(cache_fp, _refresh=False)
+            def demo_param_change():
+                print("¥")
+                return 1
+        else:
+            @cache_results(cache_fp, _refresh=False)
+            def demo_param_change(a=1):
+                print("¥")
+                return 1
+
+        res = demo_param_change()
 
