@@ -19,7 +19,7 @@ if _NEED_IMPORT_PADDLE:
     import paddle
     import paddle.distributed as dist
 
-@pytest.mark.paddle
+@pytest.mark.paddledist
 class TestDistUtilsTools:
     """
     测试一些工具函数
@@ -79,14 +79,13 @@ class TestDistUtilsTools:
         assert res["int"] == paddle_dict["int"]
         assert res["string"] == paddle_dict["string"]
 
-
-@pytest.mark.paddle
+@pytest.mark.paddledist
 class TestAllGatherAndBroadCast:
 
     @classmethod
     def setup_class(cls):
         devices = [0,1,2]
-        output_from_new_proc = "only_error"
+        output_from_new_proc = "all"
 
         launcher = FleetLauncher(devices=devices, output_from_new_proc=output_from_new_proc)
         cls.local_rank = int(os.getenv("PADDLE_RANK_IN_NODE", "0"))

@@ -1,7 +1,7 @@
 """
 这个文件测试用户以python -m paddle.distributed.launch 启动的情况
 看看有没有用pytest执行的机会
-python -m paddle.distributed.launch --gpus=0,2,3 test_trainer_fleet.py
+FASTNLP_BACKEND=paddle python -m paddle.distributed.launch --gpus=0,2,3 _test_trainer_fleet.py
 """
 import os
 import sys

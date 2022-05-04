@@ -2,14 +2,14 @@ import os
 from typing import Optional, Dict, Union, Callable, Tuple
 
 from .paddle_driver import PaddleDriver
-from .utils import replace_batch_sampler, replace_sampler, get_device_from_visible
+from .utils import replace_batch_sampler, replace_sampler
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.envs.env import USER_CUDA_VISIBLE_DEVICES
 from fastNLP.core.utils import (
     auto_param_call,
+    get_device_from_visible,
     get_paddle_gpu_str,
     get_paddle_device_id,
-    paddle_move_data_to_device,
 )
 from fastNLP.core.utils.utils import _get_fun_msg
 from fastNLP.core.samplers import (
@@ -39,6 +39,9 @@ class PaddleSingleDriver(PaddleDriver):
             raise ValueError("`paddle.DataParallel` is not supported in `PaddleSingleDriver`")
 
         cuda_visible_devices = os.environ.get(USER_CUDA_VISIBLE_DEVICES, None)
+        if cuda_visible_devices is None:
+            raise RuntimeError("`USER_CUDA_VISIBLE_DEVICES` cannot be None, please check if you have set "
+                            "`FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
         if cuda_visible_devices == "":
             device = "cpu"
             logger.info("You have set `CUDA_VISIBLE_DEVICES` to '' in system environment variable, and we are gonna to"
@@ -54,7 +57,7 @@ class PaddleSingleDriver(PaddleDriver):
                 device_id = device
             else:
                 device_id = get_paddle_device_id(device)
-            os.environ["CUDA_VISIBLE_DEVICES"] = os.environ[USER_CUDA_VISIBLE_DEVICES].split(",")[device_id]
+            os.environ["CUDA_VISIBLE_DEVICES"] = cuda_visible_devices.split(",")[device_id]
         self.model_device = get_paddle_gpu_str(device)
 
         self.local_rank = 0
@@ -65,8 +68,7 @@ class PaddleSingleDriver(PaddleDriver):
         r"""
         该函数用来初始化训练环境，用于设置当前训练的设备，并将模型迁移到对应设备上。
         """
-        device = self.model_device
-        device = get_device_from_visible(device, output_type=str)
+        device = get_device_from_visible(self.model_device, output_type=str)
         paddle.device.set_device(device)
         self.model.to(device)
 
@@ -120,16 +122,6 @@ class PaddleSingleDriver(PaddleDriver):
             return self.model, self.model.forward
         else:
             raise RuntimeError(f"There is no `{fn}` method in your {type(self.model)}.")
-
-    def move_data_to_device(self, batch: 'paddle.Tensor'):
-        r"""
-        将数据迁移到指定的机器上；batch 可能是 list 也可能 dict ，或其嵌套结构。
-        在 Paddle 中使用可能会引起因与设置的设备不一致而产生的问题，请注意。
-
-        :return: 将移动到指定机器上的 batch 对象返回；
-        """
-        device = get_device_from_visible(self.data_device)
-        return paddle_move_data_to_device(batch, device)
 
     def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler]=None,
                                   reproducible: bool = False):

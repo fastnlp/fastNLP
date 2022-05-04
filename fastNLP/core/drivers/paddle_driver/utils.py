@@ -6,12 +6,11 @@ import inspect
 import numpy as np
 from copy import deepcopy
 from contextlib import ExitStack, closing
-from enum import IntEnum
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
-from fastNLP.core.utils import get_paddle_device_id, auto_param_call, paddle_to
-from fastNLP.envs.env import FASTNLP_GLOBAL_SEED, FASTNLP_SEED_WORKERS, USER_CUDA_VISIBLE_DEVICES
+from fastNLP.core.utils import auto_param_call, paddle_to
+from fastNLP.envs.env import FASTNLP_GLOBAL_SEED, FASTNLP_SEED_WORKERS
 from fastNLP.core.log import logger
 
 
@@ -172,40 +171,6 @@ def find_free_ports(num):
             return None
 
     return None
-
-def get_device_from_visible(device: Union[str, int], output_type=int):
-    """
-    在有 CUDA_VISIBLE_DEVICES 的情况下，获取对应的设备。
-    如 CUDA_VISIBLE_DEVICES=2,3 ，device=3 ，则返回1。
-
-    :param device: 未转化的设备名
-    :param output_type: 返回值的类型
-    :return: 转化后的设备id
-    """
-    if output_type not in [int, str]:
-        raise ValueError("Parameter `output_type` should be one of these types: [int, str]")
-    if device == "cpu":
-        return device
-    cuda_visible_devices = os.getenv("CUDA_VISIBLE_DEVICES")
-    idx = get_paddle_device_id(device)
-    if cuda_visible_devices is None or cuda_visible_devices == "":
-        # 这个判断一般不会发生，因为 fastnlp 会为 paddle 强行注入 CUDA_VISIBLE_DEVICES
-        raise RuntimeError("This situation should not happen, please report us this bug.")
-    else:
-        # 利用 USER_CUDA_VISIBLDE_DEVICES 获取用户期望的设备
-        user_visible_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
-        if user_visible_devices is None:
-            raise RuntimeError("This situation cannot happen, please report a bug to us.")
-        idx = user_visible_devices.split(",")[idx]
-
-        cuda_visible_devices_list = cuda_visible_devices.split(',')
-        if idx not in cuda_visible_devices_list:
-            raise ValueError(f"Can't find your devices {idx} in CUDA_VISIBLE_DEVICES[{cuda_visible_devices}].")
-        res = cuda_visible_devices_list.index(idx)
-        if output_type == int:
-            return res
-        else:
-            return f"gpu:{res}"
 
 def replace_batch_sampler(dataloader: "DataLoader", batch_sampler: "BatchSampler"):
     """

@@ -1,7 +1,7 @@
 """
 这个文件测试用户以python -m paddle.distributed.launch 启动的情况
 并且自己初始化了 fleet
-python -m paddle.distributed.launch --gpus=0,2,3 test_trainer_fleet_outside.py
+FASTNLP_BACKEND=paddle python -m paddle.distributed.launch --gpus=0,2,3 _test_trainer_fleet_outside.py
 """
 import os
 import sys
@@ -93,5 +93,5 @@ if __name__ == "__main__":
         driver=driver,
         device=device,
         callbacks=callbacks,
-        n_epochs=30,
+        n_epochs=5,
     )

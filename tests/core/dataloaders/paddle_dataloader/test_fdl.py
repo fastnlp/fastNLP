@@ -58,11 +58,3 @@ class TestPaddle:
         for batch in fdl1:
             assert batch['image'].shape == [4, 10, 5]
             print(batch)
-
-    def test_v2(self):
-        from fastNLP.core.collators import Collator
-        logger.setLevel("DEBUG")
-        data = [paddle.Tensor(np.random.random((10, 5)).astype('float32')), paddle.Tensor(np.random.random((10, 5)).astype('float32'))]
-        col = Collator(backend="jittor")
-        res = col(data)
-        print(res)
