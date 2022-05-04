@@ -39,7 +39,7 @@ def generate_driver(num_labels, feature_dimension, device=[0,1], fp16=False, out
 #
 ############################################################################
 
-@pytest.mark.paddle
+@pytest.mark.paddledist
 class TestFleetDriverFunction:
     """
     测试 PaddleFleetDriver 一些简单函数的测试类，基本都是测试能否运行、是否存在 import 错误等问题
@@ -147,7 +147,7 @@ class TestFleetDriverFunction:
 #
 ############################################################################
 
-@pytest.mark.paddle
+@pytest.mark.paddledist
 class TestSetDistReproDataloader:
 
     @classmethod
@@ -521,7 +521,7 @@ class TestSetDistReproDataloader:
 #
 ############################################################################
 
-@pytest.mark.paddle
+@pytest.mark.paddledist
 class TestSaveLoad:
     """
     测试多卡情况下 save 和 load 相关函数的表现

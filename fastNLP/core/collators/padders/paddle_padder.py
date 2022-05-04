@@ -56,7 +56,7 @@ def is_paddle_dtype_str(dtype):
 
 
 def _get_dtype(ele_dtype, dtype, class_name):
-    if not (ele_dtype is not None or is_number_or_numpy_number(ele_dtype) or is_paddle_tensor(ele_dtype) or is_paddle_dtype_str(ele_dtype)):
+    if not (ele_dtype is None or is_number_or_numpy_number(ele_dtype) or is_paddle_tensor(ele_dtype) or is_paddle_dtype_str(ele_dtype)):
         raise EleDtypeUnsupportedError(f"`{class_name}` only supports padding python numbers "
                                        f"or numpy numbers or paddle.Tensor but get `{ele_dtype}`.")
 

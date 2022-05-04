@@ -3,6 +3,7 @@ import hashlib
 import _pickle
 import functools
 import os
+import re
 from typing import Callable, List, Any, Optional
 import inspect
 import ast
@@ -126,7 +127,10 @@ def _get_func_and_its_called_func_source_code(func) -> List[str]:
             # some failure
             pass
     del last_frame  #
-    sources.append(inspect.getsource(func))
+    func_source_code = inspect.getsource(func)  # 将这个函数中的 cache_results 装饰删除掉。
+    for match in list(re.finditer('@cache_results\(.*\)\\n', func_source_code))[::-1]:
+        func_source_code = func_source_code[:match.start()] + func_source_code[match.end():]
+    sources.append(func_source_code)
     return sources
 
 
@@ -163,11 +167,12 @@ def cal_fn_hash_code(fn: Optional[Callable] = None, fn_kwargs: Optional[dict] = 
     if fn_kwargs is None:
         fn_kwargs = {}
     hasher = Hasher()
-    try:
-        sources = _get_func_and_its_called_func_source_code(fn)
-        hasher.update(sources)
-    except:
-        return "can't be hashed"
+    if fn is not None:
+        try:
+            sources = _get_func_and_its_called_func_source_code(fn)
+            hasher.update(sources)
+        except:
+            return "can't be hashed"
     for key in sorted(fn_kwargs):
         hasher.update(key)
         try:
@@ -177,7 +182,7 @@ def cal_fn_hash_code(fn: Optional[Callable] = None, fn_kwargs: Optional[dict] = 
     return hasher.hexdigest()
 
 
-def cache_results(_cache_fp, _refresh=False, _verbose=1, _check_hash=True):
+def cache_results(_cache_fp, _hash_param=True, _refresh=False, _verbose=1, _check_hash=True):
     r"""
     cache_results是fastNLP中用于cache数据的装饰器。通过下面的例子看一下如何使用::
 
@@ -186,9 +191,9 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1, _check_hash=True):
         from fastNLP import cache_results
 
         @cache_results('cache.pkl')
-        def process_data():
+        def process_data(second=1):
             # 一些比较耗时的工作，比如读取数据，预处理数据等，这里用time.sleep()代替耗时
-            time.sleep(1)
+            time.sleep(second)
             return np.random.randint(10, size=(5,))
 
         start_time = time.time()
@@ -199,49 +204,49 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1, _check_hash=True):
         print("res =",process_data())
         print(time.time() - start_time)
 
-        # 输出内容如下，可以看到两次结果相同，且第二次几乎没有花费时间
-        # Save cache to cache.pkl.
+        start_time = time.time()
+        print("res =",process_data(second=2))
+        print(time.time() - start_time)
+
+        # 输出内容如下，可以看到前两次结果相同，且第二次几乎没有花费时间。第三次由于参数变化了，所以cache的结果也就自然变化了。
+        # Save cache to 2d145aeb_cache.pkl.
         # res = [5 4 9 1 8]
-        # 1.0042750835418701
-        # Read cache from cache.pkl.
+        # 1.0134737491607666
+        # Read cache from 2d145aeb_cache.pkl (Saved on xxxx).
         # res = [5 4 9 1 8]
         # 0.0040721893310546875
+        # Save cache to 0ead3093_cache.pkl.
+        # res = [1 8 2 5 1]
+        # 2.0086121559143066
 
-    可以看到第二次运行的时候，只用了0.0001s左右，是由于第二次运行将直接从cache.pkl这个文件读取数据，而不会经过再次预处理::
-
-        # 还是以上面的例子为例，如果需要重新生成另一个cache，比如另一个数据集的内容，通过如下的方式调用即可
-        process_data(_cache_fp='cache2.pkl')  # 完全不影响之前的‘cache.pkl'
-
-    上面的_cache_fp是cache_results会识别的参数，它将从'cache2.pkl'这里缓存/读取数据，即这里的'cache2.pkl'覆盖默认的
-    'cache.pkl'。如果在你的函数前面加上了@cache_results()则你的函数会增加三个参数[_cache_fp, _refresh, _verbose]。
-    上面的例子即为使用_cache_fp的情况，这三个参数不会传入到你的函数中，当然你写的函数参数名也不可能包含这三个名称::
-
-        process_data(_cache_fp='cache2.pkl', _refresh=True)  # 这里强制重新生成一份对预处理的cache。
-        #  _verbose是用于控制输出信息的，如果为0,则不输出任何内容;如果为1,则会提醒当前步骤是读取的cache还是生成了新的cache
+    可以看到第二次运行的时候，只用了0.0001s左右，是由于第二次运行将直接从cache.pkl这个文件读取数据，而不会经过再次预处理。
+    如果在函数加上了装饰器@cache_results()，则函数会增加五个参数[_cache_fp, _hash_param, _refresh, _verbose,
+    _check_hash]。上面的例子即为使用_cache_fp的情况，这五个参数不会传入到被装饰函数中，当然被装饰函数参数名也不能包含这五个名称::
 
     :param str _cache_fp: 将返回结果缓存到什么位置;或从什么位置读取缓存。如果为None，cache_results没有任何效用，除非在
-        函数调用的时候传入_cache_fp这个参数。
-    :param bool _refresh: 是否重新生成cache。
+        函数调用的时候传入 _cache_fp 这个参数。保存文件的名称会受到
+    :param bool _hash_param: 是否将传入给被装饰函数的 parameter 进行 str 之后的 hash 结果加入到 _cache_fp 中，这样每次函数的
+        parameter 改变的时候，cache 文件就自动改变了。
+    :param bool _refresh: 强制重新生成新的 cache 。
     :param int _verbose: 是否打印cache的信息。
     :param bool _check_hash: 如果为 True 将尝试对比修饰的函数的源码以及该函数内部调用的函数的源码的hash值。如果发现保存时的hash值
         与当前的hash值有差异，会报warning。但该warning可能出现实质上并不影响结果的误报（例如增删空白行）；且在修改不涉及源码时，虽然
         该修改对结果有影响，但无法做出warning。
-
     :return:
     """
 
     def wrapper_(func):
         signature = inspect.signature(func)
         for key, _ in signature.parameters.items():
-            if key in ('_cache_fp', '_refresh', '_verbose', '_check_hash'):
+            if key in ('_cache_fp', "_hash_param", '_refresh', '_verbose', '_check_hash'):
                 raise RuntimeError("The function decorated by cache_results cannot have keyword `{}`.".format(key))
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            fn_param = kwargs.copy()
-            if args:
-                params = [p.name for p in inspect.signature(func).parameters.values()]
-                fn_param.update(zip(params, args))
+            # fn_param = kwargs.copy()
+            # if args:
+            #     params = [p.name for p in inspect.signature(func).parameters.values()]
+            #     fn_param.update(zip(params, args))
             if '_cache_fp' in kwargs:
                 cache_filepath = kwargs.pop('_cache_fp')
                 assert isinstance(cache_filepath, str), "_cache_fp can only be str."
@@ -263,10 +268,31 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1, _check_hash=True):
             else:
                 check_hash = _check_hash
 
+            if '_hash_param' in kwargs:
+                hash_param = kwargs.pop('_hash_param')
+                assert isinstance(hash_param, bool), "_hash_param can only be bool."
+            else:
+                hash_param = _hash_param
+
+            if hash_param and cache_filepath is not None:  # 尝试将parameter给hash一下
+                try:
+                    params = dict(inspect.getcallargs(func, *args, **kwargs))
+                    if inspect.ismethod(func):  # 如果是 method 的话第一个参数（一般就是 self ）就不考虑了
+                        first_key = next(iter(params.items()))
+                        params.pop(first_key)
+                    if len(params):
+                        # sort 一下防止顺序改变
+                        params = {k: str(v) for k, v in sorted(params.items(), key=lambda item: item[0])}
+                        param_hash = cal_fn_hash_code(None, params)[:8]
+                        head, tail = os.path.split(cache_filepath)
+                        cache_filepath = os.path.join(head, param_hash + '_' + tail)
+                except BaseException as e:
+                    logger.debug(f"Fail to add parameter hash to cache path, because of Exception:{e}")
+
             refresh_flag = True
             new_hash_code = None
             if check_hash:
-                new_hash_code = cal_fn_hash_code(func, fn_param)
+                new_hash_code = cal_fn_hash_code(func, None)
 
             if cache_filepath is not None and refresh is False:
                 # load data
@@ -281,13 +307,13 @@ def cache_results(_cache_fp, _refresh=False, _verbose=1, _check_hash=True):
                         logger.info("Read cache from {} (Saved on {}).".format(cache_filepath, save_time))
                     if check_hash and old_hash_code != new_hash_code:
                         logger.warning(f"The function `{func.__name__}` is different from its last cache (Save on {save_time}). The "
-                                      f"difference may caused by the sourcecode change of the functions by this function.",
+                                      f"difference may caused by the sourcecode change.",
                                        extra={'highlighter': ColorHighlighter('red')})
                     refresh_flag = False
 
             if refresh_flag:
                 if new_hash_code is None:
-                    new_hash_code = cal_fn_hash_code(func, fn_param)
+                    new_hash_code = cal_fn_hash_code(func, None)
                 results = func(*args, **kwargs)
                 if cache_filepath is not None:
                     if results is None:

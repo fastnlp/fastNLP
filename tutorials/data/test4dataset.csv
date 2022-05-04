@@ -1,0 +1,7 @@
+,SentenceId,Sentence,Sentiment
+0,1,"['a', 'series', 'of', 'escapades', 'demonstrating', 'the', 'adage', 'that', 'what', 'is', 'good', 'for', 'the', 'goose', 'is', 'also', 'good', 'for', 'the', 'gander', ',', 'some', 'of', 'which', 'occasionally', 'amuses', 'but', 'none', 'of', 'which', 'amounts', 'to', 'much', 'of', 'a', 'story', '.']",negative
+1,2,"['this', 'quiet', ',', 'introspective', 'and', 'entertaining', 'independent', 'is', 'worth', 'seeking', '.']",positive
+2,3,"['even', 'fans', 'of', 'ismail', 'merchant', ""'s"", 'work', ',', 'i', 'suspect', ',', 'would', 'have', 'a', 'hard', 'time', 'sitting', 'through', 'this', 'one', '.']",negative
+3,4,"['a', 'positively', 'thrilling', 'combination', 'of', 'ethnography', 'and', 'all', 'the', 'intrigue', ',', 'betrayal', ',', 'deceit', 'and', 'murder', 'of', 'a', 'shakespearean', 'tragedy', 'or', 'a', 'juicy', 'soap', 'opera', '.']",neutral
+4,5,"['a', 'comedy-drama', 'of', 'nearly', 'epic', 'proportions', 'rooted', 'in', 'a', 'sincere', 'performance', 'by', 'the', 'title', 'character', 'undergoing', 'midlife', 'crisis', '.']",positive
+5,6,"['the', 'importance', 'of', 'being', 'earnest', ',', 'so', 'thick', 'with', 'wit', 'it', 'plays', 'like', 'a', 'reading', 'from', 'bartlett', ""'s"", 'familiar', 'quotations']",neutral

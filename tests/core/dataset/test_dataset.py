@@ -370,28 +370,10 @@ class TestDataSetMethods:
         assert os.path.exists("1.csv") == True
         os.remove("1.csv")
 
-    def test_add_collate_fn(self):
-        ds = DataSet({'x': [1, 2, 3], 'y': [4, 5, 6]})
-
-        def collate_fn(item):
-            return item
-
-        ds.add_collate_fn(collate_fn)
-
-    def test_get_collator(self):
-        from typing import Callable
-        ds = DataSet({'x': [1, 2, 3], 'y': [4, 5, 6]})
-        collate_fn = ds.get_collator()
-        assert isinstance(collate_fn, Callable) == True
-
     def test_add_seq_len(self):
         ds = DataSet({'x': [[1, 2], [2, 3, 4], [3]], 'y': [4, 5, 6]})
         ds.add_seq_len('x')
         print(ds)
-
-    def test_set_target(self):
-        ds = DataSet({'x': [[1, 2], [2, 3, 4], [3]], 'y': [4, 5, 6]})
-        ds.set_target('x')
 
 
 class TestFieldArrayInit:

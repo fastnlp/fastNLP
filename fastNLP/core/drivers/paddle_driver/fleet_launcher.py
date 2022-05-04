@@ -10,7 +10,6 @@ from fastNLP.envs.env import (
     FASTNLP_DISTRIBUTED_CHECK,
     FASTNLP_LOG_LEVEL,
     FASTNLP_GLOBAL_SEED,
-    USER_CUDA_VISIBLE_DEVICES,
 )
 from .utils import (
     find_free_ports,

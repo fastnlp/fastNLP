@@ -1,12 +1,12 @@
 import os
-import shutil
 from typing import List, Union, Optional, Dict, Tuple, Callable
+
+from fastNLP.core.utils.paddle_utils import get_device_from_visible
 
 from .paddle_driver import PaddleDriver
 from .fleet_launcher import FleetLauncher
 from .utils import (
     _FleetWrappingModel, 
-    get_device_from_visible,
     reset_seed,
     replace_sampler,
     replace_batch_sampler,
@@ -17,8 +17,8 @@ from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.core.utils import (
     auto_param_call,
     check_user_specific_params,
-    paddle_move_data_to_device,
-    is_in_paddle_dist
+    is_in_paddle_dist,
+    is_in_paddle_dist,
 )
 from fastNLP.envs.distributed import rank_zero_rm
 from fastNLP.core.samplers import (
@@ -609,12 +609,6 @@ class PaddleFleetDriver(PaddleDriver):
     def is_distributed(self):
         return True
 
-    def move_data_to_device(self, batch: 'paddle.Tensor'):
-        device = self.data_device
-        # 因为设置了CUDA_VISIBLE_DEVICES，可能会引起错误
-        device = get_device_from_visible(device)
-        return paddle_move_data_to_device(batch, device)
-
     @staticmethod
     def _check_optimizer_legality(optimizers):
         # paddle 存在设置分布式 optimizers 的函数，返回值为 fleet.meta_optimizers.HybridParallelOptimizer
@@ -637,9 +631,8 @@ class PaddleFleetDriver(PaddleDriver):
         :return: 如果当前不是分布式 driver 直接返回输入的 obj 。如果当前 rank 是接收端（其 global rank 包含在了 dst 中），则返回
             接收到的参数；如果是 source 端则返回发射的内容；既不是发送端、又不是接收端，则返回 None 。
         """
-        device = self.data_device
         # 因为设置了CUDA_VISIBLE_DEVICES，可能会引起错误
-        device = get_device_from_visible(device)
+        device = get_device_from_visible(self.data_device)
         return fastnlp_paddle_broadcast_object(obj, src, device=device, group=group)
 
     def all_gather(self, obj, group=None) -> List:

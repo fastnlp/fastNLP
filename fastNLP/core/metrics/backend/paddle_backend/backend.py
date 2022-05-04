@@ -1,11 +1,10 @@
-from typing import List, Optional, Any
+from typing import List, Any
 
 import numpy as np
 
 from fastNLP.core.metrics.backend import Backend
-from fastNLP.core.utils.paddle_utils import paddle_to
+from fastNLP.core.utils.paddle_utils import paddle_to, get_device_from_visible
 from fastNLP.core.metrics.utils import AggregateMethodError
-from fastNLP.core.drivers.paddle_driver.utils import get_device_from_visible
 from fastNLP.core.drivers.paddle_driver.dist_utils import fastnlp_paddle_all_gather
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 
@@ -80,7 +79,6 @@ class PaddleBackend(Backend):
             raise ValueError(f"tensor: {tensor} can not convert to ndarray!")
 
     def move_tensor_to_device(self, tensor, device):
-        # TODO 如果在这里处理的话，会不会在别的地方引起bug？
         device = get_device_from_visible(device)
         return paddle_to(tensor, device)
 
