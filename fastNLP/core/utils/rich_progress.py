@@ -156,8 +156,9 @@ class FRichProgress(Progress, metaclass=Singleton):
             super().stop_task(task_id)
             super().remove_task(task_id)
             self.refresh()  # 使得bar不残留
-        if len(self._tasks) == 0:
-            super().stop()
+        # 这里需要注释掉的原因是由于，在dataset多次apply的过程中会出现自动换行的问题。以前保留这个的原因应该是由于evaluate结束bar不消失。
+        # if len(self._tasks) == 0:
+        #     self.live.stop()
 
     def start(self) -> None:
         super().start()

@@ -29,6 +29,7 @@ import warnings
 
 from .loader import Loader
 from fastNLP.core.dataset import Instance, DataSet
+from ...core import logger
 
 
 # from ...core._logger import log
@@ -86,7 +87,8 @@ class CLSBaseLoader(Loader):
                     if raw_words:
                         ds.append(Instance(raw_words=raw_words, target=target))
         except Exception as e:
-            print(f'Load file `{path}` failed for `{e}`')
+            logger.error(f'Fail to load `{path}`.')
+            raise e
         return ds
 
 

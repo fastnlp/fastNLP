@@ -4,11 +4,11 @@ __all__ = [
 ]
 
 from typing import Optional, Callable, Sequence, Union, Tuple, Dict, Mapping, List
+import inspect
 
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.collators import Collator
 from fastNLP.core.dataloaders.utils import indice_collate_wrapper
-# from fastNLP.io.data_bundle import DataBundle
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, UnrepeatedSampler, RandomSampler
 
@@ -79,35 +79,30 @@ class TorchDataLoader(DataLoader):
         if sampler is None and batch_sampler is None:
             sampler = RandomSampler(dataset, shuffle=shuffle)
             shuffle=False
+        if isinstance(collate_fn, str):
+            if collate_fn == 'auto':
+                if isinstance(dataset.dataset, DataSet):  # 使用了 fastnlp dataset
+                    collate_fn = dataset.dataset.collator
+                    collate_fn.set_backend(backend="torch")
+                else:
+                    collate_fn = Collator(backend="torch")
+            else:
+                raise ValueError(f"collate_fn: {collate_fn} must be 'auto'")
 
         super().__init__(dataset=dataset, batch_size=batch_size, shuffle=shuffle, sampler=sampler,
-                         batch_sampler=batch_sampler, num_workers=num_workers, collate_fn=None,
+                         batch_sampler=batch_sampler, num_workers=num_workers, collate_fn=collate_fn,
                          pin_memory=pin_memory, drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
                          multiprocessing_context=multiprocessing_context, generator=generator,
                          prefetch_factor=prefetch_factor,
                          persistent_workers=persistent_workers)
-        if isinstance(collate_fn, str):
-            if collate_fn == 'auto':
-                if isinstance(dataset.dataset, DataSet):  # 使用了 fastnlp dataset
-                    self._collate_fn = dataset.dataset.collator
-                    self._collate_fn.set_backend(backend="torch")
-                else:
-                    self._collate_fn = Collator(backend="torch")
-            else:
-                raise ValueError(f"collate_fn: {collate_fn} must be 'auto'")
-        elif isinstance(collate_fn, Callable):
-            if collate_fn is not default_collate:
-                self._collate_fn = collate_fn
-        else:
-            self._collate_fn = default_collate
 
-        self.cur_indices_batch = None
+        self.cur_batch_indices = None
 
     def __iter__(self):
         # 如果没有auto_collator 也没有自定义collate_fn， 那么此时采用dataloader自带的collate_fn， 将数据打包即可。
         # if len(self._collate_fn.get_collators()) == 0:
         #     self._collate_fn.add_collator(self.collate_fn)
-        self.collate_fn = indice_collate_wrapper(self._collate_fn)
+        self.collate_fn = indice_collate_wrapper(self.collate_fn)
         for indices, data in super().__iter__():
             self.cur_batch_indices = indices
             yield data
@@ -132,11 +127,25 @@ class TorchDataLoader(DataLoader):
             形式，输出将被直接作为结果输出。
         :return: 返回 Collator 自身
         """
-        if isinstance(self._collate_fn, Collator):
-            self._collate_fn.set_pad(field_name=field_name, pad_val=pad_val, dtype=dtype, pad_fn=pad_fn, backend=backend)
-            return self._collate_fn
+        collator = self._get_collator()
+        if isinstance(collator, Collator):
+            collator.set_pad(field_name=field_name, pad_val=pad_val, dtype=dtype, pad_fn=pad_fn, backend=backend)
+            return collator
         else:
             raise ValueError(f"Only when the collate_fn is a fastNLP Collator, set_pad() is allowed.")
+
+    def _get_collator(self):
+        """
+        如果 collate_fn 是 Collator 对象，得到该对象。如果没有的话，返回 None
+
+        :return:
+        """
+        collator = None
+        if hasattr(self.collate_fn, '__wrapped__') and isinstance(self.collate_fn.__wrapped__, Collator):
+            collator = self.collate_fn.__wrapped__
+        elif isinstance(self.collate_fn, Collator):
+            collator = self.collate_fn
+        return collator
 
     def set_ignore(self, *field_names) -> Collator:
         """
@@ -149,9 +158,10 @@ class TorchDataLoader(DataLoader):
             __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。
         :return: 返回 Collator 自身
         """
-        if isinstance(self._collate_fn, Collator):
-            self._collate_fn.set_ignore(*field_names)
-            return self._collate_fn
+        collator = self._get_collator()
+        if isinstance(collator, Collator):
+            collator.set_ignore(*field_names)
+            return collator
         else:
             raise ValueError(f"Only when the collate_fn is a fastNLP Collator, set_ignore() is allowed.")
 
@@ -164,7 +174,8 @@ class TorchDataLoader(DataLoader):
         return self.cur_batch_indices
 
 
-def prepare_torch_dataloader(ds_or_db,
+
+def prepare_torch_dataloader(ds_or_db: Union[DataSet, Sequence[DataSet], Mapping[str, DataSet]],
                              batch_size: int = 16,
                              shuffle: bool = True, sampler: Union["Sampler[int]", ReproducibleSampler, UnrepeatedSampler] = None,
                              batch_sampler: Union["Sampler[Sequence[int]]", ReproducibleBatchSampler] = None,
@@ -197,7 +208,8 @@ def prepare_torch_dataloader(ds_or_db,
     :param non_train_sampler: 非 'train' 数据使用的 Sampler, 以及Sequence的第二个以上的ds使用的 Sampler
     :param non_train_batch_size:
     """
-    from fastNLP.io.data_bundle import DataBundle
+
+    from fastNLP.io import DataBundle
     if isinstance(ds_or_db, DataSet):
         dl = TorchDataLoader(dataset=ds_or_db, batch_size=batch_size,
                              shuffle=shuffle, sampler=sampler, batch_sampler=batch_sampler,
@@ -208,7 +220,7 @@ def prepare_torch_dataloader(ds_or_db,
                              )
         return dl
 
-    elif isinstance(ds_or_db, DataBundle):
+    elif type(ds_or_db, DataBundle):
         dl_bundle = {}
         for name, ds in ds_or_db.iter_datasets():
             if 'train' in name:
