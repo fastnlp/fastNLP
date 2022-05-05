@@ -8,7 +8,7 @@ from typing import Optional, Callable, Sequence, Union, Tuple, Dict, Mapping, Li
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.collators import Collator
 from fastNLP.core.dataloaders.utils import indice_collate_wrapper
-from fastNLP.io.data_bundle import DataBundle
+# from fastNLP.io.data_bundle import DataBundle
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, UnrepeatedSampler, RandomSampler
 
@@ -164,7 +164,7 @@ class TorchDataLoader(DataLoader):
         return self.cur_batch_indices
 
 
-def prepare_torch_dataloader(ds_or_db: Union[DataSet, DataBundle, Sequence[DataSet], Mapping[str, DataSet]],
+def prepare_torch_dataloader(ds_or_db,
                              batch_size: int = 16,
                              shuffle: bool = True, sampler: Union["Sampler[int]", ReproducibleSampler, UnrepeatedSampler] = None,
                              batch_sampler: Union["Sampler[Sequence[int]]", ReproducibleBatchSampler] = None,
@@ -197,7 +197,7 @@ def prepare_torch_dataloader(ds_or_db: Union[DataSet, DataBundle, Sequence[DataS
     :param non_train_sampler: 非 'train' 数据使用的 Sampler, 以及Sequence的第二个以上的ds使用的 Sampler
     :param non_train_batch_size:
     """
-
+    from fastNLP.io.data_bundle import DataBundle
     if isinstance(ds_or_db, DataSet):
         dl = TorchDataLoader(dataset=ds_or_db, batch_size=batch_size,
                              shuffle=shuffle, sampler=sampler, batch_sampler=batch_sampler,
