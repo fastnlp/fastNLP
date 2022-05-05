@@ -4,6 +4,7 @@ from fastNLP.core.dataloaders.torch_dataloader import TorchDataLoader, prepare_t
 from fastNLP.core.dataset import DataSet
 from fastNLP.io.data_bundle import DataBundle
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from fastNLP.core import Trainer
 
 if _NEED_IMPORT_TORCH:
     import torch
