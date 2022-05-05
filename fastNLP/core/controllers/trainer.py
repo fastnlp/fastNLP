@@ -62,8 +62,8 @@ class Trainer(TrainerEventTrigger):
     ):
         r"""
         `Trainer` 是 fastNLP 用于训练模型的专门的训练器，其支持多种不同的驱动模式，不仅包括最为经常使用的 DDP，而且还支持 jittor 等国产
-         的训练框架；新版的 fastNLP 新加入了方便的 callback 函数修饰器，并且支持定制用户自己特定的训练循环过程；通过使用该训练器，用户只需
-         要自己实现模型部分，而将训练层面的逻辑完全地交给 fastNLP；
+        的训练框架；新版的 fastNLP 新加入了方便的 callback 函数修饰器，并且支持定制用户自己特定的训练循环过程；通过使用该训练器，用户只需
+        要自己实现模型部分，而将训练层面的逻辑完全地交给 fastNLP；
 
         :param model: 训练所需要的模型，目前支持 pytorch；
         :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：["torch", "torch_ddp", ]，之后我们会加入 jittor、paddle

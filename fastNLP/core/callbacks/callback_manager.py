@@ -110,7 +110,7 @@ class CallbackManager:
     def initialize_class_callbacks(self):
         r"""
         在实际的运行过程中，我们是将具体的一个 callback 实例拆分为单独的一个个 callback 函数，然后将它们加在一个字典里，该字典的键值就是
-         一个个 callback 时机，也就是 `Event` 的类别；
+        一个个 callback 时机，也就是 `Event` 的类别；
         如果一个 callback 类的 callback 函数并不具备任何作用，我们实际并不会将其加在字典当中；
 
         :param callbacks:
@@ -150,7 +150,8 @@ class CallbackManager:
              断点重训应当保存的状态；
             2. 每一个具体的 callback 函数的 filter 的状态；
 
-        :return: 一个包含上述内容的字典；
+        :return: 一个包含上述内容的字典::
+
             {
                 "callback_name_1": {
                     "states": {...},

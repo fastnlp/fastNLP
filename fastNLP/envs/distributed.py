@@ -20,7 +20,7 @@ def is_cur_env_distributed() -> bool:
     """
     单卡模式该函数一定返回 False；
     注意进程 0 在多卡的训练模式下前后的值是不一样的，例如在开启多卡的 driver 之前，在进程 0 上的该函数返回 False；但是在开启后，在进程 0 上
-     的该函数返回的值是 True；
+    的该函数返回的值是 True；
     多卡模式下除了进程 0 外的其它进程返回的值一定是 True；
     """
     return FASTNLP_GLOBAL_RANK in os.environ
@@ -34,12 +34,14 @@ def rank_zero_call(fn: Callable):
     """
     通过该函数包裹的函数，在单卡模式下该方法不影响任何东西，在多卡状态下仅会在 global rank 为 0 的进程下执行。使用方式有两种
 
-    # 使用方式1
+    使用方式1::
+
         @rank_zero_call
         def save_model():
             do_something # will only run in global rank 0
 
-    # 使用方式2
+    使用方式2::
+
         def add(a, b):
             return a+b
         rank_zero_call(add)(1, 2)
@@ -103,7 +105,7 @@ def all_rank_call_context():
 def rank_zero_rm(path: Optional[Union[str, Path]]):
     """
     这个是因为在分布式文件系统中可能会发生错误，rank0下发删除成功后就运行走了，但实际的删除需要rank0的机器发送到远程文件系统再去执行，这个时候
-        在rank0那里，确实已经删除成功了，但是在远程文件系统那里这个操作还没完成，rank1读取的时候还是读取到存在这个文件；
+    在rank0那里，确实已经删除成功了，但是在远程文件系统那里这个操作还没完成，rank1读取的时候还是读取到存在这个文件；
     该函数会保证所有进程都检测到 path 删除之后才退出，请保证不同进程上 path 是完全一样的，否则会陷入死锁状态。
 
     :param path:

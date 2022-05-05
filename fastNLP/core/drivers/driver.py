@@ -49,8 +49,8 @@ class Driver(ABC):
             不同 gpu 上出现重复；为 'unrepeatdist' 时，表示该 dataloader 应该保证所有 gpu 上迭代出来的数据合并起来应该刚好等于原始的
             数据，允许不同 gpu 上 batch 的数量不一致。其中 trainer 中 kwargs 的参数 `use_dist_sampler` 为 True 时，该值为 "dist"；
             否则为 None ，evaluator 中的 kwargs 的参数 `use_dist_sampler` 为 True 时，该值为 "unrepeatdist"，否则为 None；
-        注意当 dist 为 ReproducibleSampler, ReproducibleBatchSampler 时，是断点重训加载时 driver.load 函数在调用；
-        当 dist 为 str 或者 None 时，是 trainer 在初始化时调用该函数；
+            注意当 dist 为 ReproducibleSampler, ReproducibleBatchSampler 时，是断点重训加载时 driver.load 函数在调用；
+            当 dist 为 str 或者 None 时，是 trainer 在初始化时调用该函数；
 
         :param reproducible: 如果为 False ，不要做任何考虑；如果为 True ，需要保证返回的 dataloader 可以保存当前的迭代状态，使得
             可以可以加载。
@@ -66,13 +66,13 @@ class Driver(ABC):
     def set_deterministic_dataloader(self, dataloader):
         r"""
         为了确定性训练要对 dataloader 进行修改，保证在确定随机数种子后，每次重新训练得到的结果是一样的；例如对于 torch 的 dataloader，其
-         需要将 worker_init_fn 替换；
+        需要将 worker_init_fn 替换；
         """
 
     def set_sampler_epoch(self, dataloader, cur_epoch_idx):
         r"""
         对于分布式的 sampler，例如 torch 的 DistributedSampler，其需要在每一个 epoch 前设置随机数种子，来保证每一个进程上的 shuffle 是一样的；
-            dataloader 中可能真正发挥作用的是 batch_sampler 也可能是 sampler。
+        dataloader 中可能真正发挥作用的是 batch_sampler 也可能是 sampler。
 
         :param dataloader: 需要设置 epoch 的 dataloader 。
         :param cur_epoch_idx: 当前是第几个 epoch；
@@ -101,17 +101,17 @@ class Driver(ABC):
 
         之所以设置该函数的目的在于希望将具体的 model_call function 从 driver 中抽离出来，然后将其附着在 Trainer 或者 Evaluator 身上；
         这样是因为在新版的设计中，使用 model 的哪种方法来进行 `train step` 或者 `evaluate step` 是通过额外的参数 `train_fn` 和
-         `evaluate_fn` 来确定的，而二者又分别是通过 Trainer 和 Evaluator 来控制的；因此不能将确定具体的 `train step fn` 和
-         `evaluate step fn` 的逻辑放在每一个 driver 的初始化的时候（因此在 Trainer 初始化第一个 driver 时，Evaluator 还没有初始化，但是
-         `evaluate step fn` 的确定却需要 Evaluator 的初始化），因此我们将这一逻辑抽象到这一函数当中；
+        `evaluate_fn` 来确定的，而二者又分别是通过 Trainer 和 Evaluator 来控制的；因此不能将确定具体的 `train step fn` 和
+        `evaluate step fn` 的逻辑放在每一个 driver 的初始化的时候（因此在 Trainer 初始化第一个 driver 时，Evaluator 还没有初始化，但是
+        `evaluate step fn` 的确定却需要 Evaluator 的初始化），因此我们将这一逻辑抽象到这一函数当中；
 
         这一函数应当通过参数 `fn` 来判断应当返回的实际的调用的函数，具体逻辑如下所示：
             1. 如果 fn == "train_step" or "evaluate_step"，那么对传入的模型进行检测，如果模型没有定义方法 `fn`，则默认调用模型的 `forward`
              函数，然后给出 warning；
             2. 如果 fn 是其他字符串，那么如果模型没有定义方法 `fn` 则直接报错；
         注意不同的 driver 需要做额外的检测处理，例如在 DDPDriver 中，当传入的模型本身就是 DistributedDataParallel 中，我们只能调用模型的
-         forward 函数，因此需要额外的 warning；这一点特别需要注意的问题在于 driver 自己在 setup 时也会对模型进行改变（DDPDriver），因此
-         可能需要额外标记最初传入 driver 的模型是哪种形式的；
+        forward 函数，因此需要额外的 warning；这一点特别需要注意的问题在于 driver 自己在 setup 时也会对模型进行改变（DDPDriver），因此
+        可能需要额外标记最初传入 driver 的模型是哪种形式的；
 
         :param fn: 应当为一个字符串，该函数通过该字符串判断要返回模型的哪种方法；
         :return: 返回一个元组，包含两个函数，用于在调用 driver.model_call 时传入；
@@ -202,7 +202,7 @@ class Driver(ABC):
     def get_model_no_sync_context(self):
         r"""
         返回一个用于关闭多进程之间 model 中的自动互相同步操作的 context 上下文对象；只有多卡的 driver 需要单独实现该函数，
-            单卡的 driver 不需要；
+        单卡的 driver 不需要；
 
         :return: 返回一个类似于 DistributedDataParallel(model).no_sync 的 context 上下文对象；
         """
@@ -273,7 +273,7 @@ class Driver(ABC):
     def load(self, folder: Union[str, Path], dataloader, only_state_dict: bool =True, should_load_model: bool = True,  **kwargs) -> Dict:
         r"""
         断点重训的加载函数，注意该函数会负责读取数据，并且恢复 optimizers , fp16 的 state_dict 和 模型（根据 should_load_model ）和；
-            其它在 Driver.save() 函数中执行的保存操作，然后将一个 state 字典返回给 trainer （ 内容为Driver.save() 接受到的 states ）。
+        其它在 Driver.save() 函数中执行的保存操作，然后将一个 state 字典返回给 trainer （ 内容为Driver.save() 接受到的 states ）。
 
         该函数应该在所有 rank 上执行。
 
@@ -302,7 +302,7 @@ class Driver(ABC):
     def tensor_to_numeric(tensor, reduce: Optional[str]=None):
         r"""
         将一个 `tensor` 对象（仅处理当前 driver 使用的 tensor 即可）转换为 python 的 `numeric` 对象；如果 tensor 只包含一个
-            元素则返回 float 或 int 。
+        元素则返回 float 或 int 。
 
         :param tensor: 需要被转换的 `tensor` 对象
         :param reduce: 可选 ['sum', 'max', 'mea', 'min']，如果不为 None 将使用该 reduce 方法来处理当前 tensor 再返回
@@ -323,7 +323,7 @@ class Driver(ABC):
         """
         保证用户拿到的模型一定是最原始的模型；
         注意因为我们把保存模型的主要逻辑和代码移到了 `Driver` 中，因此在 `save_model` 函数中，一定要先调用此函数来保证我们保存的模型一定是
-         最为原始的模型；
+        最为原始的模型；
         需要注意用户本身传入的模型就是经过类似 `torch.nn.DataParallel` 或者 `torch.nn.parallel.DistributedDataParallel` 包裹的模型，
         因此在该函数内需要先判断模型的类别；
 
@@ -335,7 +335,7 @@ class Driver(ABC):
         r"""
         用来将模型转移到指定的 device 上；
         之所以写成 `staticmethod`，是因为一方面在 `Driver` 中我们要使用 `unwrap_model` 来拿到最原始的模型，另一方面，在 `save_model`
-         中，我们需要先将模型移到 cpu 后，又再移到 gpu 上，因此不适宜在该函数内部调用 `unwrap_model`，而是将 model 作为该函数的参数；
+        中，我们需要先将模型移到 cpu 后，又再移到 gpu 上，因此不适宜在该函数内部调用 `unwrap_model`，而是将 model 作为该函数的参数；
         """
 
     @abstractmethod
@@ -373,7 +373,7 @@ class Driver(ABC):
     def on_exception(self):
         """
         该函数用于在训练或者预测过程中出现错误时正确地关掉其它的进程，这一点是通过在多进程 driver 调用 open_subprocess 的时候将每一个进程
-         的 pid 记录下来，然后在出现错误后，由出现错误的进程手动地将其它进程 kill 掉；
+        的 pid 记录下来，然后在出现错误后，由出现错误的进程手动地将其它进程 kill 掉；
 
         因此，每一个多进程 driver 如果想要该函数能够正确地执行，其需要在自己的 open_subprocess（开启多进程的函数）中正确地记录每一个进程的
          pid 的信息；
@@ -399,7 +399,7 @@ class Driver(ABC):
     def broadcast_object(self, obj, src:int=0, group=None, **kwargs):
         """
         从 src 端将 obj 对象（可能是 tensor ，可能是 object ）broadcast 到其它所有进程。如果是非 tensor 的对象会尝试使用 pickle 进行打包进行
-            传输，然后再 dst 处再加载回来。仅在分布式的 driver 中有实际意义。
+        传输，然后再 dst 处再加载回来。仅在分布式的 driver 中有实际意义。
 
         :param obj: obj，可能是 Tensor 或 嵌套类型的数据
         :param int src: source 的 global rank 。
@@ -415,7 +415,7 @@ class Driver(ABC):
     def all_gather(self, obj, group)->List:
         """
         将 obj 互相传送到其它所有的 rank 上，其中 obj 可能是 Tensor，也可能是嵌套结构的 object 。如果不是基础类型的数据，尝试通过
-            pickle 进行序列化，接收到之后再反序列化。
+        pickle 进行序列化，接收到之后再反序列化。
 
         :param obj: 可以是 float/int/bool/np.ndarray/{}/[]/Tensor等。
         :param group:

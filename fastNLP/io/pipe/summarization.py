@@ -53,7 +53,7 @@ class ExtCNNDMPipe(Pipe):
 
         :param data_bundle:
         :return: 处理得到的数据包括
-         .. csv-table::
+        .. csv-table::
            :header: "text_wd", "words", "seq_len", "target"
 
            [["I","got",..."."],...,["..."]], [[54,89,...,5],...,[9,43,..,0]], [1,1,...,0], [0,1,...,0]

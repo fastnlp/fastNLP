@@ -99,7 +99,7 @@ class UnrepeatedSortedSampler(UnrepeatedRandomSampler):
     def __init__(self, dataset, length:Union[str, List], **kwargs):
         """
         将 dataset 中的数据根据 length 从长到短进行迭代，并且保证在多卡场景下数据不重复。本 sampler 可能导致各个机器上的
-            batch 数量不完全一致。
+        batch 数量不完全一致。
 
         :param dataset: 实现了 __len__ 方法的数据容器。
         :param length: 如果为 List，应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；仅当传入的 dataset 为 fastNLP 的
