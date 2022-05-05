@@ -184,7 +184,7 @@ class TestDataSetMethods:
         ds.apply(lambda ins: len(ins["y"]), new_field_name="y", show_progress_bar=False)
         assert ds.field_arrays["y"].content[0] == 2
 
-        res = ds.apply(lambda ins: len(ins["x"]), num_proc=0, progress_desc="len")
+        res = ds.apply(lambda ins: len(ins["x"]), num_proc=2, progress_desc="len")
         assert (isinstance(res, list) and len(res) > 0) == True
         assert res[0] == 4
 
@@ -374,6 +374,10 @@ class TestDataSetMethods:
         ds = DataSet({'x': [[1, 2], [2, 3, 4], [3]], 'y': [4, 5, 6]})
         ds.add_seq_len('x')
         print(ds)
+
+    def test_apply_proc(self):
+        data = DataSet({'x': ['xxxxas1w xw zxw xz', 'xxxxas1w xw zxw xz'] * 100, 'y': [0, 1] * 100})
+        data.apply_field(lambda x: len(x), field_name='x', new_field_name='len_x', num_proc=2)
 
 
 class TestFieldArrayInit:
