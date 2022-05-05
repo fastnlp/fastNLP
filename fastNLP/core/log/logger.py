@@ -302,6 +302,7 @@ def _set_stdout_handler(_logger, stdout='raw', level='INFO'):
             break
     if stream_handler is not None:
         _logger.removeHandler(stream_handler)
+        del stream_handler
 
     # Stream Handler
     if stdout == 'raw':
