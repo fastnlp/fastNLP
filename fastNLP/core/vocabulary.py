@@ -15,6 +15,7 @@ from functools import wraps
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.utils.utils import Option
 from fastNLP.core.utils.utils import _is_iterable
+from .log import logger
 import io
 
 
@@ -56,7 +57,7 @@ def _check_build_status(func):
         if self.rebuild is False:
             self.rebuild = True
             if self.max_size is not None and len(self.word_count) >= self.max_size:
-                print("[Warning] Vocabulary has reached the max size {} when calling {} method. "
+                logger.warning("Vocabulary has reached the max size {} when calling {} method. "
                             "Adding more words may cause unexpected behaviour of Vocabulary. ".format(
                     self.max_size, func.__name__))
         return func(self, *args, **kwargs)
@@ -322,7 +323,7 @@ class Vocabulary(object):
                     for f_n, n_f_n in zip(field_name, new_field_name):
                         dataset.apply_field(index_instance, field_name=f_n, new_field_name=n_f_n)
                 except Exception as e:
-                    print("When processing the `{}` dataset, the following error occurred.".format(idx))
+                    logger.error("When processing the `{}` dataset, the following error occurred.".format(idx))
                     raise e
             else:
                 raise RuntimeError("Only DataSet type is allowed.")
@@ -378,7 +379,7 @@ class Vocabulary(object):
                 try:
                     dataset.apply(construct_vocab)
                 except BaseException as e:
-                    print("When processing the `{}` dataset, the following error occurred:".format(idx))
+                    logger.error("When processing the `{}` dataset, the following error occurred:".format(idx))
                     raise e
             else:
                 raise TypeError("Only DataSet type is allowed.")

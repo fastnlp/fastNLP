@@ -117,7 +117,7 @@ def _read_conll(path, encoding='utf-8',sep=None, indexes=None, dropna=True):
                         yield line_idx, res
                     except Exception as e:
                         if dropna:
-                            print('Invalid instance which ends at line: {} has been dropped.'.format(line_idx))
+                            logger.error('Invalid instance which ends at line: {} has been dropped.'.format(line_idx))
                             sample = []
                             continue
                         raise ValueError('Invalid instance which ends at line: {}'.format(line_idx))
@@ -132,5 +132,5 @@ def _read_conll(path, encoding='utf-8',sep=None, indexes=None, dropna=True):
             except Exception as e:
                 if dropna:
                     return
-                print('invalid instance ends at line: {}'.format(line_idx))
+                logger.error('invalid instance ends at line: {}'.format(line_idx))
                 raise e

@@ -10,7 +10,7 @@ from typing import Union, List, Callable
 
 from ..core.dataset import DataSet
 from fastNLP.core.vocabulary import Vocabulary
-# from ..core._logger import _logger
+from fastNLP.core import logger
 
 
 class DataBundle:
@@ -72,7 +72,7 @@ class DataBundle:
         else:
             error_msg = f'DataBundle do NOT have DataSet named {name}. ' \
                         f'It should be one of {self.datasets.keys()}.'
-            print(error_msg)
+            logger.error(error_msg)
             raise KeyError(error_msg)
 
     def delete_dataset(self, name: str):
@@ -97,7 +97,7 @@ class DataBundle:
         else:
             error_msg = f'DataBundle do NOT have Vocabulary named {field_name}. ' \
                         f'It should be one of {self.vocabs.keys()}.'
-            print(error_msg)
+            logger.error(error_msg)
             raise KeyError(error_msg)
 
     def delete_vocab(self, field_name: str):
