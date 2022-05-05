@@ -239,7 +239,7 @@ def check_user_specific_params(user_params: Dict, fn: Callable):
     fn_arg_names = get_fn_arg_names(fn)
     for arg_name, arg_value in user_params.items():
         if arg_name not in fn_arg_names:
-            logger.warning(f"Notice your specific parameter `{arg_name}` is not used by function `{fn.__name__}`.")
+            logger.rank_zero_warning(f"Notice your specific parameter `{arg_name}` is not used by function `{fn.__name__}`.")
     return user_params
 
 

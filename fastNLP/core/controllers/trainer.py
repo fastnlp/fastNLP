@@ -305,7 +305,7 @@ class Trainer(TrainerEventTrigger):
         else:
             if self.driver.is_distributed():
                 if catch_KeyboardInterrupt:
-                    logger.warning("Parameter `catch_KeyboardInterrupt` can only be False when you are using multi-device "
+                    logger.rank_zero_warning("Parameter `catch_KeyboardInterrupt` can only be False when you are using multi-device "
                                    "driver. And we are gonna to set it to False.")
                 catch_KeyboardInterrupt = False
 
@@ -535,7 +535,7 @@ class Trainer(TrainerEventTrigger):
                     _not_called_callback_fns.append(each_callback_fn)
 
         if check_mode:
-            logger.warning("You have customized your 'batch_step_fn' in the 'train_batch_loop' and also use these "
+            logger.rank_zero_warning("You have customized your 'batch_step_fn' in the 'train_batch_loop' and also use these "
                            f"callback_fns: {_not_called_callback_fns}, but it seems that"
                            "you don't call the corresponding callback hook explicitly in your 'batch_step_fn'.")
             # 对于 'batch_step_fn' 来讲，其只需要在第一次的 step 后进行检测即可，因此在第一次检测后将 check_batch_step_fn 置为 pass

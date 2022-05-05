@@ -15,6 +15,7 @@ __all__ = [
 
 from fastNLP.core.log.logger import logger
 from fastNLP.core.log.highlighter import ColorHighlighter
+from .utils import _get_fun_msg
 
 
 class FuncCallVisitor(ast.NodeVisitor):
@@ -306,7 +307,7 @@ def cache_results(_cache_fp, _hash_param=True, _refresh=False, _verbose=1, _chec
                     if verbose == 1:
                         logger.info("Read cache from {} (Saved on {}).".format(cache_filepath, save_time))
                     if check_hash and old_hash_code != new_hash_code:
-                        logger.warning(f"The function `{func.__name__}` is different from its last cache (Save on {save_time}). The "
+                        logger.warning(f"The function {_get_fun_msg(func)} is different from its last cache (Save on {save_time}). The "
                                       f"difference may caused by the sourcecode change.",
                                        extra={'highlighter': ColorHighlighter('red')})
                     refresh_flag = False

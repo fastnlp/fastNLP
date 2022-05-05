@@ -51,7 +51,7 @@ def paddle_seed_everything(seed: Optional[int] = None, workers: bool = False) ->
         seed = int(seed)
 
     if not (min_seed_value <= seed <= max_seed_value):
-        logger.warning("Your seed value is two big or two small for numpy, we will choose a random seed for "
+        logger.rank_zero_warning("Your seed value is two big or two small for numpy, we will choose a random seed for "
                         "you.")
 
         # rank_zero_warn(f"{seed} is not in bounds, numpy accepts from {min_seed_value} to {max_seed_value}")

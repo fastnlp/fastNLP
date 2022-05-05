@@ -221,7 +221,7 @@ class Evaluator:
     @evaluate_batch_loop.setter
     def evaluate_batch_loop(self, loop: Loop):
         if self.evaluate_batch_step_fn is not None:
-            logger.warning("`evaluate_batch_step_fn` was customized in the Evaluator initialization, it will be ignored "
+            logger.rank_zero_warning("`evaluate_batch_step_fn` was customized in the Evaluator initialization, it will be ignored "
                            "when the `evaluate_batch_loop` is also customized.")
         self._evaluate_batch_loop = loop
 
