@@ -50,20 +50,20 @@ def prepare_callbacks(callbacks, progress_bar):
                 raise TypeError(f"callbacks must be of Callback type, instead of `{type(_callback)}`")
         _callbacks += callbacks
 
-    has_no_progress = False
+    has_no_progress = True
     for _callback in _callbacks:
         if isinstance(_callback, ProgressCallback):
-            has_no_progress = True
-    if not has_no_progress:
+            has_no_progress = False
+    if has_no_progress and progress_bar is not None:
         callback = choose_progress_callback(progress_bar)
         if callback is not None:
             _callbacks.append(callback)
-    elif progress_bar is not None and progress_bar != 'auto':
-        logger.warning(f"Since you have passed in ProgressBar callback, progress_bar will be ignored.")
+            has_no_progress = False
+    elif has_no_progress is False and progress_bar not in ('auto', None):
+        logger.rank_zero_warning(f"Since you have passed in ProgressCallback, progress_bar={progress_bar} will be ignored.")
 
-    if has_no_progress and progress_bar is None:
-        rank_zero_call(logger.warning)("No progress bar is provided, there will have no information output "
-                                       "during training.")
+    if has_no_progress:
+        logger.rank_zero_warning("No progress bar is provided, there will have no progress output during training.")
 
     return _callbacks
 

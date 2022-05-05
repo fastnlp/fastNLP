@@ -87,17 +87,20 @@ class LoadBestModelCallback(HasMonitorCallback):
                     trainer.save_model(folder=self.buffer, only_state_dict=self.only_state_dict)
 
     def on_train_end(self, trainer):
-        logger.info(f"Loading best model with {self.monitor_name}: {self.monitor_value}...")
-        if self.real_save_folder:
-            trainer.load_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,
-                               model_load_fn=self.model_load_fn)
-        else:
-            self.buffer.seek(0)
-            trainer.load_model(folder=self.buffer, only_state_dict=self.only_state_dict)
-        if self.delete_after_after:
-            trainer.driver.barrier()
-            self._delete_folder()
-            trainer.driver.barrier()
+        if abs(self.monitor_value) != float('inf'):  # 如果是 inf 说明从来没有运行过。
+            if self.real_save_folder:
+                logger.info(f"Loading best model from {self.real_save_folder} with {self.monitor_name}: {self.monitor_value}...")
+                trainer.load_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,
+                                   model_load_fn=self.model_load_fn)
+            else:
+                logger.info(
+                    f"Loading best model from buffer with {self.monitor_name}: {self.monitor_value}...")
+                self.buffer.seek(0)
+                trainer.load_model(folder=self.buffer, only_state_dict=self.only_state_dict)
+            if self.delete_after_after:
+                trainer.driver.barrier()
+                self._delete_folder()
+                trainer.driver.barrier()
 
     def _delete_folder(self):
         if self.real_save_folder:

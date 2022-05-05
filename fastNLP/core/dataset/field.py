@@ -8,6 +8,7 @@ __all__ = [
 
 from collections import Counter
 from typing import Any, Union, List, Callable
+from ..log import logger
 
 import numpy as np
 
@@ -21,7 +22,7 @@ class FieldArray:
         try:
             _content = list(_content)
         except BaseException as e:
-            print(f"Cannot convert content(of type:{type(content)}) into list.")
+            logger.error(f"Cannot convert content(of type:{type(content)}) into list.")
             raise e
         self.name = name
         self.content = _content
@@ -87,7 +88,7 @@ class FieldArray:
             try:
                 new_contents.append(cell.split(sep))
             except Exception as e:
-                print(f"Exception happens when process value in index {index}.")
+                logger.error(f"Exception happens when process value in index {index}.")
                 raise e
         return self._after_process(new_contents, inplace=inplace)
 

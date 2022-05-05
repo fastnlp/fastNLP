@@ -138,8 +138,6 @@ class PaddleTensorPadder(Padder):
 
         shapes = [field.shape for field in batch_field]
         max_shape = [len(batch_field)] + [max(*_) for _ in zip(*shapes)]
-        if isinstance(dtype, np.dtype):
-            print(dtype)
         tensor = paddle.full(max_shape, fill_value=pad_val, dtype=dtype)
         for i, field in enumerate(batch_field):
             slices = (i, ) + tuple(slice(0, s) for s in shapes[i])
