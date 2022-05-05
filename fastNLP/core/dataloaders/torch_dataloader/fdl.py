@@ -14,7 +14,6 @@ from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler,
 
 if _NEED_IMPORT_TORCH:
     from torch.utils.data import DataLoader, Sampler
-    from torch.utils.data._utils.collate import default_collate
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as DataLoader
 
@@ -73,12 +72,15 @@ class TorchDataLoader(DataLoader):
         :param prefetch_factor:
         :param persistent_workers:
         """
+        if isinstance(dataset, DataSet) and collate_fn is None:
+            raise ValueError("When use FastNLP DataSet, collate_fn must be not None")
+
         if not isinstance(dataset, _FDataSet):
             dataset = _FDataSet(dataset)
 
         if sampler is None and batch_sampler is None:
             sampler = RandomSampler(dataset, shuffle=shuffle)
-            shuffle=False
+            shuffle = False
         if isinstance(collate_fn, str):
             if collate_fn == 'auto':
                 if isinstance(dataset.dataset, DataSet):  # 使用了 fastnlp dataset
@@ -107,8 +109,8 @@ class TorchDataLoader(DataLoader):
             self.cur_batch_indices = indices
             yield data
 
-    def set_pad(self, field_name:Union[str, tuple], pad_val:Union[int, float, None]=0, dtype=None, backend=None,
-                pad_fn:Callable=None) -> Collator:
+    def set_pad(self, field_name: Union[str, tuple], pad_val: Union[int, float, None] = 0, dtype=None, backend=None,
+                pad_fn: Callable = None) -> Collator:
         """
         如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
@@ -174,12 +176,12 @@ class TorchDataLoader(DataLoader):
         return self.cur_batch_indices
 
 
-
 def prepare_torch_dataloader(ds_or_db: Union[DataSet, Sequence[DataSet], Mapping[str, DataSet]],
                              batch_size: int = 16,
-                             shuffle: bool = True, sampler: Union["Sampler[int]", ReproducibleSampler, UnrepeatedSampler] = None,
+                             shuffle: bool = True,
+                             sampler: Union["Sampler[int]", ReproducibleSampler, UnrepeatedSampler] = None,
                              batch_sampler: Union["Sampler[Sequence[int]]", ReproducibleBatchSampler] = None,
-                             num_workers: int = 0, collate_fn: Union[str, Callable, None] = None,
+                             num_workers: int = 0, collate_fn: Union[str, Callable, None] = 'auto',
                              pin_memory: bool = False, drop_last: bool = False,
                              timeout: float = 0, worker_init_fn: Optional[Callable] = None,
                              multiprocessing_context=None, generator=None, prefetch_factor: int = 2,
@@ -220,7 +222,7 @@ def prepare_torch_dataloader(ds_or_db: Union[DataSet, Sequence[DataSet], Mapping
                              )
         return dl
 
-    elif type(ds_or_db, DataBundle):
+    elif isinstance(ds_or_db, DataBundle):
         dl_bundle = {}
         for name, ds in ds_or_db.iter_datasets():
             if 'train' in name:
