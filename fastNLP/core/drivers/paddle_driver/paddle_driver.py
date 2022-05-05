@@ -72,7 +72,7 @@ class PaddleDriver(Driver):
         :param set_to_none: 用来判断是否需要将梯度直接置为 None；Paddle中这个参数无效。
         """
         if set_to_none:
-            logger.warning_once("Parameter `set_to_none` does nothing in paddle since grad cannot be set directly.")
+            logger.rank_zero_warning("Parameter `set_to_none` does nothing in paddle since grad cannot be set directly.")
         for optimizer in self.optimizers:
             optimizer.clear_grad()
 
@@ -233,7 +233,7 @@ class PaddleDriver(Driver):
                     if dataloader_args.batch_size is not None:
                         num_consumed_batches = num_consumed_batches * dataloader_args.batch_size
                     else:  # 有可能 batch_size 为 None，就只有损失精度了
-                        logger.warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
+                        logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
                                      "it may cause missing some samples when reload.")
                         num_consumed_batches = sampler_states['num_consumed_samples']
                 sampler_states['num_consumed_samples'] = num_consumed_samples_array[num_consumed_batches]
@@ -243,7 +243,7 @@ class PaddleDriver(Driver):
                     sampler_states['num_consumed_samples'] = sampler.num_replicas * dataloader_args.batch_size \
                                                              * num_consumed_batches
                 else:
-                    logger.warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
+                    logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
                                  "it may cause missing some samples when reload.")
         else:
             raise RuntimeError(
@@ -306,7 +306,7 @@ class PaddleDriver(Driver):
             self.grad_scaler.load_state_dict(grad_scaler_state_dict)
             logger.debug("Load grad_scaler state dict...")
         elif not isinstance(self.grad_scaler, DummyGradScaler):
-            logger.warning(f"Checkpoint {folder} is not trained with fp16=True, while resume to a fp16=True training, "
+            logger.rank_zero_warning(f"Checkpoint {folder} is not trained with fp16=True, while resume to a fp16=True training, "
                            f"the training process may be unstable.")
 
         # 4. 恢复 sampler 的状态；
