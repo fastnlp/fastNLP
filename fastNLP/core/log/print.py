@@ -21,5 +21,5 @@ def print(*args, sep=' ', end='\n', file=None, flush=False):
     :param flush: 该参数无意义。
     :return:
     """
-    line = sep.join(args)
+    line = sep.join(map(str, args))
     logger.info(line)

@@ -5,6 +5,7 @@ import pytest
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _NEED_IMPORT_PADDLE, _NEED_IMPORT_JITTOR
 
 from fastNLP.core.collators.collator import Collator
+from ...helpers.utils import Capturing
 
 
 def _assert_equal(d1, d2):
@@ -42,7 +43,6 @@ def findListDiff(d1, d2):
 
 
 class TestCollator:
-
     @pytest.mark.torch
     def test_run(self):
         dict_batch = [{
@@ -286,8 +286,83 @@ class TestCollator:
                                                                 'c': [1, 1]}}
         findDictDiff(raw_pad_batch, pad_batch)
 
+    def test_raise(self, capsys):
+        from fastNLP.core.log import logger
+        logger.set_stdout('raw')
+        # 对于 nested 的情况
+        collator = Collator(backend='numpy')
+        data = [[1, 2], [2, 3]]
+        collator.set_pad('_0')
+        collator.set_pad('_0')
+        print(collator(data))
+        with Capturing() as out:
+            collator.set_ignore('_0')
+        assert '_0' in out[0]
+
+        data = [{1: {2: 2, 3: 3}}]
+        collator = Collator()
+        collator.set_pad((1, 2))
+        collator.set_pad((1, 3))
+        with Capturing() as out:
+            collator.set_ignore(1)
+        assert '(1, 2)' in out[0] and '(1, 3)' in out[0]
+        assert len(collator(data))==0
+
+        collator = Collator()
+        collator.set_ignore((1, 2))
+        with pytest.raises(KeyError):
+            collator.set_pad(1)
+
+        collator = Collator()
+        collator.set_ignore(1)
+        with pytest.raises(KeyError):
+            collator.set_pad((1, 2))
 
 
+@pytest.mark.torch
+def test_torch_dl():
+    from fastNLP import TorchDataLoader
+    from fastNLP import DataSet
+    import numpy as np
+    import torch
+
+    ds = DataSet({
+        'x': [1, 2], 'y': [[1,2], [3]], 'z':[np.ones((1, 2)), np.ones((2, 3))],
+        'i': [{'j': [1, 2]}, {'j': [3]}], 'j': ['a', 'b']
+    })
+
+    dl = TorchDataLoader(ds, batch_size=2)
+    batch = next(iter(dl))
+    assert 'x' in batch and 'y' in batch and 'z' in batch and 'i' in batch and 'j' in batch
+    assert isinstance(batch['z'], torch.Tensor)
+    assert isinstance(batch['j'], list)
+    assert isinstance(batch['i']['j'], torch.Tensor)
+
+    dl.set_ignore('x')
+    batch = next(iter(dl))
+    assert 'x' not in batch and 'y' in batch and 'z' in batch
+
+    dl.set_pad('y', pad_val=None)
+    batch = next(iter(dl))
+    assert 'x' not in batch and 'y' in batch and 'z' in batch
+    assert isinstance(batch['y'], list)
+    assert len(batch['y'][0])!=len(batch['y'][1])  # 没有 pad
+
+    dl.set_pad(('i', 'j'), pad_val=None)
+    batch = next(iter(dl))
+    assert 'x' not in batch and 'y' in batch and 'z' in batch
+    assert isinstance(batch['y'], list)
+    assert len(batch['y'][0])!=len(batch['y'][1])  # 没有 pad
+    assert isinstance(batch['i']['j'], list)
+    assert len(batch['i']['j'][0])!=len(batch['i']['j'][1])  # 没有 pad
+
+    with pytest.raises(KeyError):
+        dl.set_pad('i', pad_val=None)
 
 
-
+def test_compare_tuple():
+    from fastNLP.core.collators.collator import _compare_tuple
+    for t1, t2, t in zip([(1,), (1, 2, 3), (1,), (1, 2)],
+                         [(1, 2, 3), (1,), (2,), (1, 3)],
+                         [-2, 2, None, None]):
+        assert _compare_tuple(t1, t2) == t
