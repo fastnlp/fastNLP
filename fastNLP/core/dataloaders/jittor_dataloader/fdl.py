@@ -12,7 +12,7 @@ if _NEED_IMPORT_JITTOR:
     from jittor.dataset import Dataset
 else:
     from fastNLP.core.dataset import DataSet as Dataset
-from fastNLP.core.utils.jittor_utils import jittor_collate_wraps
+
 from fastNLP.core.collators import Collator
 from fastNLP.core.dataloaders.utils import indice_collate_wrapper
 from fastNLP.core.dataset import DataSet as FDataSet

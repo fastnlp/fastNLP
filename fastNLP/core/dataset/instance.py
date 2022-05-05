@@ -8,10 +8,11 @@ __all__ = [
     "Instance"
 ]
 
+from typing import Mapping
 from fastNLP.core.utils.utils import pretty_table_printer
 
 
-class Instance:
+class Instance(Mapping):
     r"""
     Instance是fastNLP中对应一个sample的类。每个sample在fastNLP中是一个Instance对象。
     Instance一般与 :class:`~fastNLP.DataSet` 一起使用, Instance的初始化如下面的Example所示::
@@ -69,3 +70,9 @@ class Instance:
 
     def __repr__(self):
         return str(pretty_table_printer(self))
+
+    def __len__(self):
+        return len(self.fields)
+
+    def __iter__(self):
+        return iter(self.fields)

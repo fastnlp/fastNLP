@@ -1,3 +1,8 @@
+__all__ = [
+    "indice_collate_wrapper"
+]
+
+
 def indice_collate_wrapper(func):
     """
     其功能是封装一层collate_fn,将dataset取到的tuple数据分离开，将idx打包为indices。
@@ -5,7 +10,7 @@ def indice_collate_wrapper(func):
     :param func: 需要修饰的函数
     :return:
     """
-    if func.__name__ == '_indice_collate_wrapper':  # 如果已经被包裹过了
+    if hasattr(func, '__name__') and func.__name__ == '_indice_collate_wrapper':  # 如果已经被包裹过了
        return func
 
     def _indice_collate_wrapper(tuple_data):  # 这里不能使用 functools.wraps ，否则会检测不到
