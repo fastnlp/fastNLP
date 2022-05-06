@@ -26,7 +26,8 @@ class State(dict):
 
     为了实现断点重训，用户应当保证其保存的信息都是可序列化的；
 
-    推荐的使用方式：
+    推荐的使用方式::
+
         >>> state = State()
         >>> state["best_accuracy"] = 0.9
         >>> print(state["best_accuracy"])

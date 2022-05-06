@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastNLP.core.drivers.driver import Driver
 
-
+__all__ = []
 
 def choose_driver(model, driver: Union[str, Driver], device: Optional[Union[int, List[int], str]], **kwargs) -> Driver:
     r"""

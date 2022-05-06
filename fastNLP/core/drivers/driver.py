@@ -87,8 +87,8 @@ class Driver(ABC):
 
         :param batch: 当前的一个 batch 的数据；可以为字典或者其它类型；
         :param fn: 调用该函数进行一次计算。
-        :param signature_fn: 由 Trainer 传入的用于网络前向传播一次的签名函数，因为当 batch 是一个 Dict 的时候，我们会自动调用 auto_param_call
-        函数，而一些被包裹的模型需要暴露其真正的函数签名，例如 DistributedDataParallel 的调用函数是 forward，但是需要其函数签名为 model.module.forward；
+        :param signature_fn: 由 Trainer 传入的用于网络前向传播一次的签名函数，因为当 batch 是一个 Dict 的时候，我们会自动调用 auto_param_call 函
+            数，而一些被包裹的模型需要暴露其真正的函数签名，例如 DistributedDataParallel 的调用函数是 forward，但是需要其函数签名为 model.module.forward；
         :return: 返回由 `fn` 返回的结果（应当为一个 dict 或者 dataclass，但是不需要我们去检查）；
         """
         raise NotImplementedError("Each specific driver should implemented its own `model_call` function.")
@@ -106,9 +106,10 @@ class Driver(ABC):
         `evaluate step fn` 的确定却需要 Evaluator 的初始化），因此我们将这一逻辑抽象到这一函数当中；
 
         这一函数应当通过参数 `fn` 来判断应当返回的实际的调用的函数，具体逻辑如下所示：
-            1. 如果 fn == "train_step" or "evaluate_step"，那么对传入的模型进行检测，如果模型没有定义方法 `fn`，则默认调用模型的 `forward`
-             函数，然后给出 warning；
-            2. 如果 fn 是其他字符串，那么如果模型没有定义方法 `fn` 则直接报错；
+        1. 如果 fn == "train_step" or "evaluate_step"，那么对传入的模型进行检测，如果模型没有定义方法 `fn`，则默认调用模型的 `forward`
+        函数，然后给出 warning；
+        2. 如果 fn 是其他字符串，那么如果模型没有定义方法 `fn` 则直接报错；
+
         注意不同的 driver 需要做额外的检测处理，例如在 DDPDriver 中，当传入的模型本身就是 DistributedDataParallel 中，我们只能调用模型的
         forward 函数，因此需要额外的 warning；这一点特别需要注意的问题在于 driver 自己在 setup 时也会对模型进行改变（DDPDriver），因此
         可能需要额外标记最初传入 driver 的模型是哪种形式的；
@@ -376,7 +377,7 @@ class Driver(ABC):
         的 pid 记录下来，然后在出现错误后，由出现错误的进程手动地将其它进程 kill 掉；
 
         因此，每一个多进程 driver 如果想要该函数能够正确地执行，其需要在自己的 open_subprocess（开启多进程的函数）中正确地记录每一个进程的
-         pid 的信息；
+        pid 的信息；
         """
         # 单卡 driver 不需要这个函数；
         if self._pids is not None:

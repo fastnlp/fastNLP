@@ -10,13 +10,13 @@ class TorchGradClipCallback(Callback):
         在每次 optimizer update 之前将 parameter 进行 clip
 
         :param float clip_value: 将gradient 限制到[-clip_value, clip_value]。clip_value应该为正数
-        :param str clip_type: 支持'norm', 'value'两种::
+        :param str clip_type: 支持'norm', 'value'两种:
 
-                1 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
+                1. 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
+                2. 'value', 将gradient限制在[-clip_value, clip_value],
+                小于-clip_value的gradient被赋值为-clip_value;
+                大于clip_value的gradient被赋值为clip_value.
 
-                2 'value', 将gradient限制在[-clip_value, clip_value],
-                    小于-clip_value的gradient被赋值为-clip_value;
-                    大于clip_value的gradient被赋值为clip_value.
         :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。
             如果为None则默认对 Trainer 的 optimizers 中所有参数进行梯度裁剪。
         """

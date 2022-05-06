@@ -706,8 +706,8 @@ class DataSet:
     def concat(self, dataset: 'DataSet', inplace:bool=True, field_mapping:Dict=None) -> 'DataSet':
         """
         将当前dataset与输入的dataset结合成一个更大的dataset，需要保证两个dataset都包含了相同的field。结合后的dataset的input,target
-            以及collate_fn以当前dataset为准。当dataset中包含的field多于当前的dataset，则多余的field会被忽略；若dataset中未包含所有
-            当前dataset含有field，则会报错。
+        以及collate_fn以当前dataset为准。当dataset中包含的field多于当前的dataset，则多余的field会被忽略；若dataset中未包含所有
+        当前dataset含有field，则会报错。
 
         :param DataSet, dataset: 需要和当前dataset concat的dataset
         :param bool, inplace: 是否直接将dataset组合到当前dataset中

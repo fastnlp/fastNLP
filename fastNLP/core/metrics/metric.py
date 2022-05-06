@@ -38,7 +38,7 @@ class Metric:
     def register_element(self, name, value: float = 0, aggregate_method=None, backend='auto') -> Element:
         """
         注册一个 element 对象，注册之后便可以通过在 Metric 中直接通过 self.{name} 进行调用，可以认为该对象即为对应 backend 的
-            tensor 直接进行加减乘除计算即可。
+        tensor 直接进行加减乘除计算即可。
         注意：如果想使得该 metric 可自动扩展到多卡的情况，请一定申明 aggregate_method 。
 
         :param name: 当前 element 的名字，注册后，在 Metric 中可以通过 self.{name} 访问该变量。
@@ -48,7 +48,7 @@ class Metric:
             Torch.tensor ； 如果backend 为 paddle 则该对象为 paddle.tensor ；如果 backend 为 jittor , 则该对象为 jittor.Var 。
             一般情况下直接默认为 auto 就行了，fastNLP 会根据实际调用 Metric.update() 函数时传入的参数进行合理的初始化，例如当传入
             的参数中只包含 torch.Tensor 这一种 tensor 时（可以有其它非 tensor 类型的输入）则认为 backend 为 torch ；只包含
-             jittor.Var 则认为 backend 这一种 tensor 时（可以有其它非 tensor 类型的输入）则认为 backend 为 jittor 。如果没有检测
+            jittor.Var 则认为 backend 这一种 tensor 时（可以有其它非 tensor 类型的输入）则认为 backend 为 jittor 。如果没有检测
             到任何一种 tensor ，就默认使用 float 类型作为 element 。
         :return: 注册的 Element 对象
         """
