@@ -189,7 +189,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         dl_bundle = {}
         for name, ds in ds_or_db.iter_datasets():
             if 'train' in name:
-                dl_bundle[name] = PaddleDataLoader(ds_or_db, feed_list=feed_list, places=places,
+                dl_bundle[name] = PaddleDataLoader(ds, feed_list=feed_list, places=places,
                                                    return_list=return_list,
                                                    batch_sampler=batch_sampler, batch_size=train_batch_size,
                                                    shuffle=shuffle,
@@ -199,7 +199,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                                                    timeout=timeout, worker_init_fn=worker_init_fn,
                                                    persistent_workers=persistent_workers)
             else:
-                dl_bundle[name] = PaddleDataLoader(ds_or_db, feed_list=feed_list, places=places,
+                dl_bundle[name] = PaddleDataLoader(ds, feed_list=feed_list, places=places,
                                                    return_list=return_list,
                                                    batch_sampler=batch_sampler, batch_size=non_train_batch_size,
                                                    shuffle=shuffle,

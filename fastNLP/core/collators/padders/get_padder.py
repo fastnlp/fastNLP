@@ -9,6 +9,7 @@ from .numpy_padder import NumpyNumberPadder, NumpySequencePadder, NumpyTensorPad
 from .torch_padder import TorchNumberPadder, TorchSequencePadder, TorchTensorPadder
 from .raw_padder import RawNumberPadder, RawSequencePadder, RawTensorPadder
 from .paddle_padder import PaddleTensorPadder, PaddleSequencePadder, PaddleNumberPadder
+from .jittor_padder import JittorTensorPadder, JittorSequencePadder, JittorNumberPadder
 from .exceptions import *
 
 
@@ -91,6 +92,8 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
                 return TorchNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'paddle':
                 return PaddleNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+            elif backend == 'jittor':
+                return JittorNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             else:
                 raise ValueError(f"backend={backend} is not supported for list(Field:{field_name}).")
 
@@ -103,6 +106,8 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
                 return TorchSequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'paddle':
                 return PaddleSequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+            elif backend == 'jittor':
+                return JittorSequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             else:
                 raise ValueError(f"backend={backend} is not supported for nested list(Field:{field_name}).")
 
@@ -116,6 +121,8 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
                 return TorchTensorPadder(pad_val=pad_val, ele_dtype=None, dtype=dtype)
             elif backend == 'paddle':
                 return PaddleTensorPadder(pad_val=pad_val, ele_dtype=None, dtype=dtype)
+            elif backend == 'jittor':
+                return JittorTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             else:
                 raise ValueError(f"backend={backend} is not supported for tensors(Field:{field_name}).")
 
