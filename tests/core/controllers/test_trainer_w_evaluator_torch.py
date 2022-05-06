@@ -210,4 +210,43 @@ def test_trainer_validate_every(
         dist.destroy_process_group()
 
 
+@pytest.mark.torch
+@pytest.mark.parametrize("driver,device", [("torch", 'cpu')])  # ("torch", [0, 1]),("torch", 1)
+@magic_argv_env_context
+def test_trainer_on(
+        model_and_optimizers: TrainerParameters,
+        driver,
+        device,
+        n_epochs=2,
+):
+    from fastNLP import Event
+    @Trainer.on(Event.on_before_backward())
+    def before_backend(trainer, outputs):
+        pass
+
+    @Trainer.on(Event.on_before_backward())
+    def before_backend_2(*args):
+        pass
+
+    trainer = Trainer(
+        model=model_and_optimizers.model,
+        driver=driver,
+        device=device,
+        optimizers=model_and_optimizers.optimizers,
+        train_dataloader=model_and_optimizers.train_dataloader,
+        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+        input_mapping=model_and_optimizers.input_mapping,
+        output_mapping=model_and_optimizers.output_mapping,
+        metrics=model_and_optimizers.metrics,
+        n_epochs=n_epochs,
+        output_from_new_proc="all",
+        evaluate_every=-1
+    )
+
+
+
+    trainer.run()
+
+
+
 

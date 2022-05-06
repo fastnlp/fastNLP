@@ -60,7 +60,7 @@ def torch_seed_everything(seed: Optional[int] = None, workers: bool = False) -> 
         seed = int(seed)
 
     if not (min_seed_value <= seed <= max_seed_value):
-        logger.warning("Your seed value is two big or two small for numpy, we will choose a random seed for you.")
+        logger.rank_zero_warning("Your seed value is two big or two small for numpy, we will choose a random seed for you.")
 
         seed = _select_seed_randomly(min_seed_value, max_seed_value)
 
@@ -162,7 +162,7 @@ def _build_fp16_env(dummy=False):
         if not torch.cuda.is_available():
             raise RuntimeError("No cuda")
         if torch.cuda.get_device_capability(0)[0] < 7:
-            logger.warning(
+            logger.rank_zero_warning(
                 "NOTE: your device does NOT support faster training with fp16, "
                 "please switch to FP32 which is likely to be faster"
             )

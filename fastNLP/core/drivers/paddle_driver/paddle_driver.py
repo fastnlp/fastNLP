@@ -47,7 +47,7 @@ if _NEED_IMPORT_PADDLE:
 
 class PaddleDriver(Driver):
     r"""
-    Paddle框架的Driver，包括实现单卡训练的`PaddleSingleDriver`和分布式训练的`PaddleFleetDriver`。
+    Paddle框架的Driver，包括实现单卡训练的 `PaddleSingleDriver` 和分布式训练的 `PaddleFleetDriver`。
     """
     def __init__(self, model, fp16: Optional[bool] = False, **kwargs):
         if not isinstance(model, paddle.nn.Layer):
@@ -72,7 +72,7 @@ class PaddleDriver(Driver):
         :param set_to_none: 用来判断是否需要将梯度直接置为 None；Paddle中这个参数无效。
         """
         if set_to_none:
-            logger.warning_once("Parameter `set_to_none` does nothing in paddle since grad cannot be set directly.")
+            logger.rank_zero_warning("Parameter `set_to_none` does nothing in paddle since grad cannot be set directly.")
         for optimizer in self.optimizers:
             optimizer.clear_grad()
 
@@ -131,8 +131,7 @@ class PaddleDriver(Driver):
     @staticmethod
     def tensor_to_numeric(tensor, reduce=None):
         r"""
-        将一个 `tensor` 对象（类型为 `paddle.Tensor` ）转换为 python 的 `numeric` 对象；如果 tensor 只包含一个
-            元素则返回 float 或 int 。
+        将一个 `tensor` 对象（类型为 `paddle.Tensor` ）转换为 python 的 `numeric` 对象；如果 tensor 只包含一个元素则返回 float 或 int 。
 
         :param tensor: 需要被转换的 `tensor` 对象
         :param reduce: 可选 ['sum', 'max', 'mea', 'min']，如果不为 None 将使用该 reduce 方法来处理当前 tensor 再返回
@@ -158,11 +157,6 @@ class PaddleDriver(Driver):
         )
 
     def set_model_mode(self, mode: str):
-        r"""
-        设置模型为 `train` / `eval` 的模式；目的是为切换模型训练和推理（会关闭dropout等）模式；
-
-        :param mode: 应为二者之一：["train", "eval"]；
-        """
         assert mode in {"train", "eval"}
         getattr(self.model, mode)()
 
@@ -179,7 +173,6 @@ class PaddleDriver(Driver):
                             可以通过 InputSpec 或者示例 Tensor 进行描述。详细的可以参考 paddle 关于`paddle.jit.save`
                             的文档：
                             https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/jit/save_cn.html#save
-        :return:
         """
         model = self.unwrap_model()
         if isinstance(filepath, Path):
@@ -196,12 +189,12 @@ class PaddleDriver(Driver):
 
     def load_model(self, filepath: str, only_state_dict: bool = True, **kwargs):
         r"""
-        加载模型的函数；注意函数 `load` 是用来进行断点重训的函数；
+        加载模型的函数；将 filepath 中的模型加载并赋值给当前 model 。
 
         :param filepath: 需要被加载的对象的文件位置（需要包括文件名）；
-        :param only_state_dict: 是否加载state_dict，默认为True。
-        :param kwargs:
-        :return:
+        :param load_state_dict: 保存的文件是否只是模型的权重，还是完整的模型。即便是保存的完整的模型，此处也只能使用尝试加载filepath
+            模型中的权重到自身模型，而不会直接替代当前 Driver 中的模型。
+        :return: 返回加载指定文件后的结果；
         """
         model = self.unwrap_model()
         if isinstance(filepath, Path):
@@ -216,22 +209,6 @@ class PaddleDriver(Driver):
 
     @rank_zero_call
     def save(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
-        r"""
-        断点重训的保存函数，该函数会负责保存模型和 optimizers 的 state_dict；
-        需要注意 driver 应当是无状态的，即不管什么时候调用 driver 的接口函数，其返回的结果应该都是一样的；因此，断点重训不需要保存 driver
-         本身自己的任何状态；而每一个 driver 实例需要在该函数中实现保存模型和 optimizers 的 state_dict 的逻辑；同时妥善存储传入的
-         states 中的内容（主要用于恢复 Trainer ，Callback 等）
-        需要保证该函数只在 global rank 0 上运行
-
-        :param folder: 保存断点重训的状态的文件名；
-        :param states: 由 trainer 传入的一个字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态，Driver 应该只需要保存
-            该对象即可， Driver 应该不需要理解该对象，同时在 driver.load() 的时候，需要将 states 返回回去，load()返回的值与这里的
-            传入的值保持一致。
-        :param dataloader: 正在使用的 dataloader，需要保存里面的状态使得之后可以从当前迭代的位置恢复。
-        :param only_state_dict: 是否只保存模型的参数，当 should_save_model 为 False ，该参数无效。
-        :param should_save_model: 是否应该保存模型，如果为False，Driver 将不负责 model 的保存。
-        :return:
-        """
         # 传入的 dataloader 参数是 trainer 的 dataloader 属性，因为 driver 的所有 dataloader 我们是不会去改变它的，而是通过改变
         #  trainer.dataloader 来改变 dataloader 的状态，从而适配训练或者评测环境；
 
@@ -256,7 +233,7 @@ class PaddleDriver(Driver):
                     if dataloader_args.batch_size is not None:
                         num_consumed_batches = num_consumed_batches * dataloader_args.batch_size
                     else:  # 有可能 batch_size 为 None，就只有损失精度了
-                        logger.warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
+                        logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
                                      "it may cause missing some samples when reload.")
                         num_consumed_batches = sampler_states['num_consumed_samples']
                 sampler_states['num_consumed_samples'] = num_consumed_samples_array[num_consumed_batches]
@@ -266,7 +243,7 @@ class PaddleDriver(Driver):
                     sampler_states['num_consumed_samples'] = sampler.num_replicas * dataloader_args.batch_size \
                                                              * num_consumed_batches
                 else:
-                    logger.warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
+                    logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
                                  "it may cause missing some samples when reload.")
         else:
             raise RuntimeError(
@@ -329,7 +306,7 @@ class PaddleDriver(Driver):
             self.grad_scaler.load_state_dict(grad_scaler_state_dict)
             logger.debug("Load grad_scaler state dict...")
         elif not isinstance(self.grad_scaler, DummyGradScaler):
-            logger.warning(f"Checkpoint {folder} is not trained with fp16=True, while resume to a fp16=True training, "
+            logger.rank_zero_warning(f"Checkpoint {folder} is not trained with fp16=True, while resume to a fp16=True training, "
                            f"the training process may be unstable.")
 
         # 4. 恢复 sampler 的状态；
@@ -422,19 +399,10 @@ class PaddleDriver(Driver):
         random.seed(stdlib_seed)
 
     def set_deterministic_dataloader(self, dataloader):
-        r"""
-        为了确定性训练要对 dataloader 进行修改，保证在确定随机数种子后，每次重新训练得到的结果是一样的；
-        作用是替换 datalaoder 的 `worker_init_fn`。
-        """
         if int(os.environ.get(FASTNLP_SEED_WORKERS, 0)) and dataloader.worker_init_fn is None:
             dataloader.worker_init_fn = partial(self.worker_init_function, rank=self.global_rank)
 
     def set_sampler_epoch(self, dataloader: "DataLoader", cur_epoch_idx):
-        r"""
-        对于分布式的 sampler，dataloader 需要在每一个 epoch 前设置随机数种子，来保证每一个进程上的 shuffle 是一样的；
-
-        :param cur_epoch_idx: 当前是第几个 epoch；
-        """
         if callable(getattr(dataloader.batch_sampler, "set_epoch", None)):
             dataloader.batch_sampler.set_epoch(cur_epoch_idx)
 

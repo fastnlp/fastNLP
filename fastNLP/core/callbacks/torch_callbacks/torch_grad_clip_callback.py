@@ -10,8 +10,7 @@ class TorchGradClipCallback(Callback):
         在每次 optimizer update 之前将 parameter 进行 clip
 
         :param float clip_value: 将gradient 限制到[-clip_value, clip_value]。clip_value应该为正数
-        :param str clip_type: 支持'norm', 'value'
-            两种::
+        :param str clip_type: 支持'norm', 'value'两种::
 
                 1 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
 

@@ -19,15 +19,15 @@ class CheckpointCallback(Callback):
                  only_state_dict: bool = True, model_save_fn: Optional[Callable] = None, save_object: str = 'model',
                  save_evaluate_results=True, **kwargs):
         """
-        保存模型 checkpoint 的  callback ，其保存的文件目录以及文件名命名规则如下
+        保存模型 checkpoint 的  callback ，其保存的文件目录以及文件名命名规则如下::
 
-        - folder/
-            - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
-                - {save_object}-epoch_{epoch_idx}/  # 满足 every_n_epochs 条件保存的模型
-                - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}/  # 满足 every_n_batches 保存的模型
-                - {save_object}-last/  # 最后一个 epoch 的保存
-                - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}-exception_{exception_type}/  # exception时保存。
-                - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}-{monitor}_{monitor_value}/  # 满足topk条件存储文件名
+            - folder/
+                - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
+                    - {save_object}-epoch_{epoch_idx}/  # 满足 every_n_epochs 条件保存的模型
+                    - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}/  # 满足 every_n_batches 保存的模型
+                    - {save_object}-last/  # 最后一个 epoch 的保存
+                    - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}-exception_{exception_type}/  # exception时保存。
+                    - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}-{monitor}_{monitor_value}/  # 满足topk条件存储文件名
 
         model_save_fn 为 None ，则以上每个 folder 中，将生成 fastnlp_model.pkl.tar 文件。
         若 model_save_fn 不为 None，则 fastNLP 将 folder 绝对路径传递给该函数，fastNLP 在该 folder 下不进行模型保存。

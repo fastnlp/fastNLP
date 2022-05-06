@@ -20,14 +20,15 @@ class MoreEvaluateCallback(HasMonitorCallback):
                  **kwargs):
         """
         当评测时需要调用不同的 evaluate_fn （例如在大部分生成任务中，一般使用训练 loss 作为训练过程中的 evaluate ；但同时在训练到
-            一定 epoch 数量之后，会让 model 生成的完整的数据评测 bleu 等。此刻就可能需要两种不同的 evaluate_fn ），只使用 Trainer
-            无法满足需求，可以通过调用本 callback 进行。如果需要根据本 callback 中的评测结果进行模型保存，请传入 topk 以及
-             topk_monitor 等相关参数。可以通过 evaluate_every 或 watch_monitor 控制触发进行 evaluate 的条件。
+        一定 epoch 数量之后，会让 model 生成的完整的数据评测 bleu 等。此刻就可能需要两种不同的 evaluate_fn ），只使用 Trainer
+        无法满足需求，可以通过调用本 callback 进行。如果需要根据本 callback 中的评测结果进行模型保存，请传入 topk 以及
+        topk_monitor 等相关参数。可以通过 evaluate_every 或 watch_monitor 控制触发进行 evaluate 的条件。
 
-        如果设置了 evaluate 结果更好就保存的话，将按如下文件结构进行保存
-        - folder/
-            - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
-                 - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}-{topk_monitor}_{monitor_value}/  # 满足topk条件存储文件名
+        如果设置了 evaluate 结果更好就保存的话，将按如下文件结构进行保存::
+
+            - folder/
+                - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
+                    - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}-{topk_monitor}_{monitor_value}/  # 满足topk条件存储文件名
 
         :param dataloaders: 需要评估的数据
         :param metrics: 使用的 metrics 。

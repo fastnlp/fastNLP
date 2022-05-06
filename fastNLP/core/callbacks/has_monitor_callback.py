@@ -78,11 +78,11 @@ class MonitorUtility:
             return monitor_value
         # 第一次运行
         if isinstance(self.monitor, str) and self._real_monitor == self.monitor and use_monitor != self.monitor:
-            logger.warning(f"We can not find `{self.monitor}` in the evaluation result (with keys as {list(results.keys())}), "
-                           f"we use the `{use_monitor}` as the monitor for `{self.__class__.__name__}`.")
+            logger.rank_zero_warning(f"We can not find `{self.monitor}` in the evaluation result (with keys as "
+                                     f"{list(results.keys())}), we use the `{use_monitor}` as the monitor.", once=True)
         # 检测到此次和上次不同。
         elif isinstance(self.monitor, str) and self._real_monitor != self.monitor and use_monitor != self._real_monitor:
-            logger.warning(f"Change of monitor detected for `{self.__class__.__name__}`. "
+            logger.rank_zero_warning(f"Change of monitor detected for `{self.__class__.__name__}`. "
                            f"The expected monitor is:`{self.monitor}`, last used monitor is:"
                            f"`{self._real_monitor}` and current monitor is:`{use_monitor}`. Please consider using a "
                            f"customized monitor function when the evaluation results are varying between validation.")

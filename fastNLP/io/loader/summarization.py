@@ -1,4 +1,7 @@
-r"""undocumented"""
+r"""
+.. todo::
+    doc
+"""
 
 __all__ = [
     "ExtCNNDMLoader"
@@ -19,9 +22,9 @@ class ExtCNNDMLoader(JsonLoader):
     .. csv-table::
        :header: "text", "summary", "label", "publication"
 
-       ["I got new tires from them and... ","..."], ["The new tires...","..."], [0, 1], "cnndm"
-       ["Don't waste your time.  We had two...","..."], ["Time is precious","..."], [1], "cnndm"
-       ["..."], ["..."], [], "cnndm"
+       "['I got new tires from them and... ','...']", "['The new tires...','...']", "[0, 1]", "cnndm"
+       "['Don't waste your time.  We had two...','...']", "['Time is precious','...']", "[1]", "cnndm"
+       "["..."]", "["..."]", "[]", "cnndm"
 
     """
 

@@ -7,6 +7,7 @@ from dataclasses import is_dataclass
 import os
 from pathlib import Path
 import io
+import inspect
 
 __all__ = [
     'Trainer',
@@ -62,8 +63,8 @@ class Trainer(TrainerEventTrigger):
     ):
         r"""
         `Trainer` 是 fastNLP 用于训练模型的专门的训练器，其支持多种不同的驱动模式，不仅包括最为经常使用的 DDP，而且还支持 jittor 等国产
-         的训练框架；新版的 fastNLP 新加入了方便的 callback 函数修饰器，并且支持定制用户自己特定的训练循环过程；通过使用该训练器，用户只需
-         要自己实现模型部分，而将训练层面的逻辑完全地交给 fastNLP；
+        的训练框架；新版的 fastNLP 新加入了方便的 callback 函数修饰器，并且支持定制用户自己特定的训练循环过程；通过使用该训练器，用户只需
+        要自己实现模型部分，而将训练层面的逻辑完全地交给 fastNLP；
 
         :param model: 训练所需要的模型，目前支持 pytorch；
         :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：["torch", "torch_ddp", ]，之后我们会加入 jittor、paddle
@@ -305,7 +306,7 @@ class Trainer(TrainerEventTrigger):
         else:
             if self.driver.is_distributed():
                 if catch_KeyboardInterrupt:
-                    logger.warning("Parameter `catch_KeyboardInterrupt` can only be False when you are using multi-device "
+                    logger.rank_zero_warning("Parameter `catch_KeyboardInterrupt` can only be False when you are using multi-device "
                                    "driver. And we are gonna to set it to False.")
                 catch_KeyboardInterrupt = False
 
@@ -535,7 +536,7 @@ class Trainer(TrainerEventTrigger):
                     _not_called_callback_fns.append(each_callback_fn)
 
         if check_mode:
-            logger.warning("You have customized your 'batch_step_fn' in the 'train_batch_loop' and also use these "
+            logger.rank_zero_warning("You have customized your 'batch_step_fn' in the 'train_batch_loop' and also use these "
                            f"callback_fns: {_not_called_callback_fns}, but it seems that"
                            "you don't call the corresponding callback hook explicitly in your 'batch_step_fn'.")
             # 对于 'batch_step_fn' 来讲，其只需要在第一次的 step 后进行检测即可，因此在第一次检测后将 check_batch_step_fn 置为 pass

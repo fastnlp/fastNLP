@@ -3,7 +3,7 @@ from functools import reduce
 from typing import Sequence, Mapping, Dict
 
 
-class MappingPackerUnPacker:
+class MappingPackerUnpacker:
     @staticmethod
     def unpack_batch(batch:Sequence[Mapping], ignore_fields:set, input_fields:Dict)->Dict:
         """
@@ -53,8 +53,9 @@ class NestedMappingPackerUnpacker:
 
     @staticmethod
     def pack_batch(batch):
+        if len(batch) == 0:
+            return []
         dicts = []
-
         for key, value in batch.items():
             if not isinstance(key, tuple):
                 key = [key]
@@ -65,30 +66,38 @@ class NestedMappingPackerUnpacker:
         return reduce(_merge_dict, dicts)
 
 
-class 
+class SequencePackerUnpacker:
+    @staticmethod
+    def unpack_batch(batch:Sequence[Sequence], ignore_fields, input_fields)->Dict:
+        """
+        将 Sequence[Sequence] 转为 Mapping 。例如 [[[1, 2], 2], [[3], 2]] -> {'_0': [[1, 2], [3]], '_1': [1, 2]}
+
+        :param batch:
+        :param ignore_fields: 需要忽略的field
+        :return:
+        """
+        dict_batch = defaultdict(list)
+        for sample in batch:
+            for i, content in enumerate(sample):
+                field_name = f'_{i}'
+                if field_name in ignore_fields:
+                    continue
+                dict_batch[field_name].append(content)
+        return dict_batch
+
+    @staticmethod
+    def pack_batch(batch):
+        return list(batch.values())
 
 
-def unpack_batch_nested_mapping(batch:Sequence[Mapping], ignore_fields:set, stop_deep_fields:set)->Dict:
-    """
-    将 nested 的 dict 中的内容展开到一个 flat dict 中
+class SinglePackerUnpacker:
+    @staticmethod
+    def unpack_batch(batch:Sequence[Sequence], ignore_fields, input_fields):
+        return {'_single': batch}
 
-    :param batch:
-    :param ignore_fields: 需要忽略的 field 。
-    :param stop_deep_fields: 不需要继续往下衍射的
-    :return:
-    """
-    dict_batch = defaultdict(list)
-    for sample in batch:
-        for key, value in sample.items():
-            if key in ignore_fields:
-                continue
-            if isinstance(value, Mapping) and key not in stop_deep_fields:
-                _dict_batch = _unpack_batch_nested_mapping(value, ignore_fields, stop_deep_fields, _parent=(key,))
-                for key, value in _dict_batch.items():
-                    dict_batch[key].append(value)
-            else:
-                dict_batch[key].append(value)
-    return dict_batch
+    @staticmethod
+    def pack_batch(batch):
+        return batch['_single']
 
 
 def _unpack_batch_nested_mapping(value, ignore_fields, stop_deep_fields, _parent)->Dict:
@@ -136,25 +145,3 @@ def _merge_dict(a, b, path=None):
         else:
             a[key] = b[key]
     return a
-
-
-def unpack_batch_sequence(batch:Sequence[Sequence], ignore_fields)->Dict:
-    """
-    将 Sequence[Sequence] 转为 Mapping 。例如 [[[1, 2], 2], [[3], 2]] -> {'_0': [[1, 2], [3]], '_1': [1, 2]}
-
-    :param batch:
-    :param ignore_fields: 需要忽略的field
-    :return:
-    """
-    dict_batch = defaultdict(list)
-    for sample in batch:
-        for i, content in enumerate(sample):
-            field_name = f'_{i}'
-            if field_name in ignore_fields:
-                continue
-            dict_batch[field_name].append(content)
-    return dict_batch
-
-
-def pack_batch_sequence(batch:Mapping)->Sequence:
-    return list(batch.values())

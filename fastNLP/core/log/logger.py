@@ -124,21 +124,25 @@ class FastNLPLogger(logging.Logger, metaclass=LoggerSingleton):
                 self._log(WARNING, msg, args, **kwargs)
             self._warning_msgs.add(msg)
 
-    def rank_zero_warning(self, msg, *args, **kwargs):
+    def rank_zero_warning(self, msg, *args, once=False, **kwargs):
         """
         只在 rank 0 上 warning 。
 
         :param msg:
         :param args:
+        :param once: 是否只 warning 一次
         :param kwargs:
         :return:
         """
         if os.environ.get(FASTNLP_GLOBAL_RANK, '0') == '0':
-            if msg not in self._warning_msgs:
-                if self.isEnabledFor(WARNING):
-                    # kwargs = self._add_rank_info(kwargs)
-                    self._log(WARNING, msg, args, **kwargs)
+            if once:
+                if msg in self._warning_msgs:
+                    return
                 self._warning_msgs.add(msg)
+
+            if self.isEnabledFor(WARNING):
+                kwargs = self._add_rank_info(kwargs)
+                self._log(WARNING, msg, args, **kwargs)
 
     def warn(self, msg, *args, **kwargs):
         if self.isEnabledFor(WARNING):
@@ -304,6 +308,7 @@ def _set_stdout_handler(_logger, stdout='raw', level='INFO'):
             break
     if stream_handler is not None:
         _logger.removeHandler(stream_handler)
+        del stream_handler
 
     # Stream Handler
     if stdout == 'raw':

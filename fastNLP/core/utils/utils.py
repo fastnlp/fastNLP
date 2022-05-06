@@ -52,11 +52,11 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
                     mapping: Optional[Dict[AnyStr, AnyStr]] = None) -> Any:
     r"""
     该函数会根据输入函数的形参名从*args（因此都需要是dict类型）中找到匹配的值进行调用，如果传入的数据与fn的形参不匹配，可以通过mapping
-        参数进行转换。mapping参数中的一对（key，value）表示以这个key在*args中找到值，并将这个值传递给形参名为value的参数。
+    参数进行转换。mapping参数中的一对（key，value）表示以这个key在*args中找到值，并将这个值传递给形参名为value的参数。
 
     1.该函数用来提供给用户根据字符串匹配从而实现自动调用；
     2.注意 mapping 默认为 None，如果你希望指定输入和运行函数的参数的对应方式，那么你应当让 mapping 为一个这样的字典传入进来；
-     如果 mapping 不为 None，那么我们一定会先使用 mapping 将输入的字典的 keys 修改过来，因此请务必亲自检查 mapping 的正确性；
+    如果 mapping 不为 None，那么我们一定会先使用 mapping 将输入的字典的 keys 修改过来，因此请务必亲自检查 mapping 的正确性；
     3.如果输入的函数的参数有默认值，那么如果之后的输入中没有该参数对应的值，我们就会使用该参数对应的默认值，否则也会使用之后的输入的值；
     4.如果输入的函数是一个 `partial` 函数，情况同 '3.'，即和默认参数的情况相同；
 
@@ -68,7 +68,7 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
 
     :return: 返回 `fn` 运行的结果；
 
-    Examples:
+    Examples::
         >>> # 1
         >>> loss_fn = CrossEntropyLoss()  # 如果其需要的参数为 def CrossEntropyLoss(y, pred)；
         >>> batch = {"x": 20, "y": 1}
@@ -190,7 +190,7 @@ def _get_fun_msg(fn, with_fp=True)->str:
 def _check_valid_parameters_number(fn, expected_params:List[str], fn_name=None):
     """
     检查一个函数是否需要 expected_params 参数(检测数量是否匹配)。除掉 self （如果是method），给定默认值的参数等。如果匹配不上，就会
-        进行报错。
+    进行报错。
 
     :param fn: 需要检测的函数，可以是 method 或者 function 。
     :param expected_params: 期待应该支持的参数。
@@ -200,29 +200,25 @@ def _check_valid_parameters_number(fn, expected_params:List[str], fn_name=None):
     if fn_name is not None:
         assert callable(fn), f"`{fn_name}` should be callable, instead of `{type(fn)}`."
 
-    parameters = list(inspect.signature(fn).parameters.values())
-    if inspect.ismethod(fn):
-        if len(parameters)>0 and parameters[0].name == 'self':
-            parameters = parameters[1:]  # 去掉self
+    try:
+        args = []
+        kwargs = {}
+        name = ''
+        if isinstance(fn, functools.partial) and not hasattr(fn, '__name__'):
+            name = 'partial:'
+            f = fn.func
+            while isinstance(f, functools.partial):
+                name += 'partial:'
+                f = f.func
+            fn.__name__ = name + f.__name__
+        inspect.getcallargs(fn, *args, *expected_params, **kwargs)
+        if name:  # 如果一开始没有name的，需要给人家删除掉
+            delattr(fn, '__name__')
 
-    no_var_param = True  # 没有 * 这种参数
-    number_param_need_value = 0
-    for param in parameters:
-        if param.kind is param.VAR_POSITIONAL:
-            no_var_param = False
-        elif param.kind is param.VAR_KEYWORD:
-            no_var_param = False
-        else:
-            if param.default is param.empty:
-                number_param_need_value += 1
-
-    if len(parameters)<len(expected_params) and no_var_param:
-        raise RuntimeError(f"The function:{_get_fun_msg(fn)} accepts {len(parameters)} parameters, "
-                           f"but {len(expected_params)} parameters:{expected_params} will be provided.")
-
-    if number_param_need_value>len(expected_params):
-        raise RuntimeError(f"The function:{_get_fun_msg(fn)} expects {len(parameters)} parameters, but only"
-                           f" {len(expected_params)} parameters:{expected_params} will be provided.")
+    except TypeError as e:
+        logger.error(f"The function:{_get_fun_msg(fn)} will be provided with parameters:{expected_params}. "
+                     f"The following exception will happen.")
+        raise e
 
 
 def check_user_specific_params(user_params: Dict, fn: Callable):
@@ -239,7 +235,7 @@ def check_user_specific_params(user_params: Dict, fn: Callable):
     fn_arg_names = get_fn_arg_names(fn)
     for arg_name, arg_value in user_params.items():
         if arg_name not in fn_arg_names:
-            logger.warning(f"Notice your specific parameter `{arg_name}` is not used by function `{fn.__name__}`.")
+            logger.rank_zero_warning(f"Notice your specific parameter `{arg_name}` is not used by function `{fn.__name__}`.")
     return user_params
 
 

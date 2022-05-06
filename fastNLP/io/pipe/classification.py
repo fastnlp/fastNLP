@@ -87,7 +87,7 @@ class CLSBasePipe(Pipe):
 
     def process_from_file(self, paths) -> DataBundle:
         r"""
-        传入文件路径，生成处理好的DataBundle对象。paths支持的路径形式可以参考 ：:method:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的DataBundle对象。paths支持的路径形式可以参考 ：:meth:`fastNLP.io.Loader.load()`
 
         :param paths:
         :return: DataBundle

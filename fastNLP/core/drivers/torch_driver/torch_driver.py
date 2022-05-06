@@ -197,7 +197,7 @@ class TorchDriver(Driver):
                     if dataloader_args.batch_size is not None:
                         num_consumed_batches = num_consumed_batches * dataloader_args.batch_size
                     else:  # 有可能 batch_size 为 None，就只有损失精度了
-                        logger.warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
+                        logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
                                      "it may cause missing some samples when reload.")
                         num_consumed_batches = sampler_states['num_consumed_samples']
                 sampler_states['num_consumed_samples'] = num_consumed_samples_array[num_consumed_batches]
@@ -207,7 +207,7 @@ class TorchDriver(Driver):
                     sampler_states['num_consumed_samples'] = sampler.num_replicas * dataloader_args.batch_size \
                                                              * num_consumed_batches
                 else:
-                    logger.warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
+                    logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
                                  "it may cause missing some samples when reload.")
 
             states['sampler_states'] = sampler_states

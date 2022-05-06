@@ -19,10 +19,11 @@ class Saver:
     def __init__(self, folder:str=None, save_object:str='model', only_state_dict:bool=True,
                  model_save_fn:Callable=None, **kwargs):
         """
-        执行保存的对象。保存的文件组织结构为
-        - folder  # 当前初始化的参数
-            - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
-                - folder_name  # 由 save() 调用时传入。
+        执行保存的对象。保存的文件组织结构为::
+
+            - folder  # 当前初始化的参数
+                - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
+                    - folder_name  # 由 save() 调用时传入。
 
         :param folder: 保存在哪个文件夹下，默认为当前 folder 下。
         :param save_object: 可选 ['trainer', 'model']，表示在保存时的保存对象为 trainer+model 还是 只是model 。
@@ -32,7 +33,7 @@ class Saver:
         :param kwargs: 更多需要传递给 Trainer.save() 或者 Trainer.save_model() 接口的参数。
         """
         if folder is None:
-            logger.warning(
+            logger.rank_zero_warning(
                 "Parameter `folder` is None, and we will use the current work directory to find and load your model.")
             folder = Path.cwd()
         folder = Path(folder)
@@ -53,10 +54,11 @@ class Saver:
     @rank_zero_call
     def save(self, trainer, folder_name):
         """
-        执行保存的函数，将数据保存在
-        - folder/
-            - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
-                - folder_name  # 当前函数参数
+        执行保存的函数，将数据保存在::
+
+            - folder/
+                - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
+                    - folder_name  # 当前函数参数
 
         :param trainer: Trainer 对象
         :param folder_name: 保存的 folder 名称，将被创建。
@@ -129,8 +131,8 @@ class TopkQueue:
     def push(self, key, value) -> Optional[Tuple[Union[str, None], Union[float, None]]]:
         """
         将 key/value 推入 topk 的 queue 中，以 value 为标准，如果满足 topk 则保留此次推入的信息，同时如果新推入的数据将之前的数据给
-            挤出了 topk ，则会返回被挤出的 (key, value)；如果返回为 (None, None)，说明满足 topk 且没有数据被挤出。如果不满足 topk ，则返回
-            推入的 (key, value) 本身。这里排序只根据 value 是否更大了判断，因此如果有的情况是越小越好，请在输入前取负号。
+        挤出了 topk ，则会返回被挤出的 (key, value)；如果返回为 (None, None)，说明满足 topk 且没有数据被挤出。如果不满足 topk ，则返回
+        推入的 (key, value) 本身。这里排序只根据 value 是否更大了判断，因此如果有的情况是越小越好，请在输入前取负号。
 
         :param str key:
         :param float value: 如果为 None， 则不做任何操作。
@@ -173,10 +175,11 @@ class TopkSaver(MonitorUtility, Saver):
                  only_state_dict:bool=True, model_save_fn:Callable=None, save_evaluate_results:bool=True,
                  **kwargs):
         """
-        用来识别 topk 模型并保存，也可以仅当一个保存 Saver 使用。保存路径为
-        - folder/
-            - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
-                 - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}-{topk_monitor}_{monitor_value}/  # 满足topk条件存储文件名
+        用来识别 topk 模型并保存，也可以仅当一个保存 Saver 使用。保存路径为::
+
+            - folder/
+                - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
+                    - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}-{topk_monitor}_{monitor_value}/  # 满足topk条件存储文件名
 
         :param topk: 保存 topk 多少的模型，-1 为保存所有模型；0 为都不保存；大于 0 的数为保存 topk 个。
         :param monitor: 监控哪个指标判断是否是 topk 的。监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用
@@ -208,7 +211,7 @@ class TopkSaver(MonitorUtility, Saver):
     def save_topk(self, trainer, results: Dict) -> Optional[str]:
         """
         根据 results 是否满足 topk 的相关设定决定是否保存，如果发生了保存，将返回保存的文件夹。如果返回为 None ，则说明此次没有满足
-            topk 要求，没有发生保存。
+        topk 要求，没有发生保存。
 
         :param trainer:
         :param results: evaluate 的结果。
