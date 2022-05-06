@@ -57,7 +57,7 @@ def prepare_callbacks(callbacks, progress_bar):
     if has_no_progress and progress_bar is not None:
         callback = choose_progress_callback(progress_bar)
         if callback is not None:
-            _callbacks.append(callback)
+            _callbacks = [callback] + _callbacks  # 放在最前面，方便分割不同 epoch
             has_no_progress = False
     elif has_no_progress is False and progress_bar not in ('auto', None):
         logger.rank_zero_warning(f"Since you have passed in ProgressCallback, progress_bar={progress_bar} will be ignored.")
