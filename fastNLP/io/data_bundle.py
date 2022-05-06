@@ -231,8 +231,8 @@ class DataBundle:
             盖之前的field。如果为None则不创建新的field。
         :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
             如果为False，则报错
-        :param ignore_miss_dataset:
-        :param num_proc:
+        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
+        :param ignore_miss_dataset: 如果 dataset 没有 {field_name} ，就直接跳过这个 dataset 。
         :param progress_desc 当show_progress_barm为True时，可以显示当前tqdm正在处理的名称
         :param show_progress_bar 是否显示tqdm进度条
 
@@ -260,11 +260,11 @@ class DataBundle:
         :param callable func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param str field_name: 传入func的是哪个field。
         :param bool modify_fields: 是否用结果修改 `DataSet` 中的 `Field`， 默认为 True
+        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
             如果为False，则报错
         :param show_progress_bar: 是否显示tqdm进度条
         :param progress_desc: 当show_progress_barm为True时，可以显示当前tqdm正在处理的名称
-        :param num_proc:
 
         :return Dict[str:Dict[str:Field]]: 返回一个字典套字典，第一层的 key 是 dataset 的名字，第二层的 key 是 field 的名字
 
@@ -283,7 +283,7 @@ class DataBundle:
         return res
 
     def apply(self, func: Callable, new_field_name: str, num_proc: int = 0,
-              progress_desc: str = '', show_progress_bar: bool = True, _apply_field: str = None):
+              progress_desc: str = '', show_progress_bar: bool = True):
         r"""
         对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :method:`~fastNLP.DataSet.apply` 方法
 
@@ -292,18 +292,16 @@ class DataBundle:
         :param callable func: input是instance中名为 `field_name` 的field的内容。
         :param str new_field_name: 将func返回的内容放入到 `new_field_name` 这个field中，如果名称与已有的field相同，则覆
             盖之前的field。如果为None则不创建新的field。
-        :param _apply_field:
+        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param show_progress_bar: 是否显示tqd进度条
         :param progress_desc: 当show_progress_bar为True时，可以显示当前tqd正在处理的名称
-        :param num_proc
-
         """
         _progress_desc = progress_desc
         for name, dataset in self.datasets.items():
             if _progress_desc:
                 progress_desc = _progress_desc + f' for `{name}`'
             dataset.apply(func, new_field_name=new_field_name, num_proc=num_proc, show_progress_bar=show_progress_bar,
-                          progress_desc=progress_desc, _apply_field=_apply_field)
+                          progress_desc=progress_desc)
         return self
 
     def apply_more(self, func: Callable, modify_fields=True, num_proc: int = 0,
@@ -317,9 +315,9 @@ class DataBundle:
 
         :param callable func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param bool modify_fields: 是否用结果修改 ``DataSet`` 中的 ``Field`` ， 默认为 True
+        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param show_progress_bar: 是否显示tqd进度条
         :param progress_desc: 当show_progress_bar为True时，可以显示当前tqd正在处理的名称
-        :param num_proc
 
         :return Dict[str:Dict[str:Field]]: 返回一个字典套字典，第一层的 key 是 dataset 的名字，第二层的 key 是 field 的名字
         """

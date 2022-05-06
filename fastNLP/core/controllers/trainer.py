@@ -7,6 +7,7 @@ from dataclasses import is_dataclass
 import os
 from pathlib import Path
 import io
+import inspect
 
 __all__ = [
     'Trainer',

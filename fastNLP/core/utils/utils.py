@@ -200,29 +200,25 @@ def _check_valid_parameters_number(fn, expected_params:List[str], fn_name=None):
     if fn_name is not None:
         assert callable(fn), f"`{fn_name}` should be callable, instead of `{type(fn)}`."
 
-    parameters = list(inspect.signature(fn).parameters.values())
-    if inspect.ismethod(fn):
-        if len(parameters)>0 and parameters[0].name == 'self':
-            parameters = parameters[1:]  # 去掉self
+    try:
+        args = []
+        kwargs = {}
+        name = ''
+        if isinstance(fn, functools.partial) and not hasattr(fn, '__name__'):
+            name = 'partial:'
+            f = fn.func
+            while isinstance(f, functools.partial):
+                name += 'partial:'
+                f = f.func
+            fn.__name__ = name + f.__name__
+        inspect.getcallargs(fn, *args, *expected_params, **kwargs)
+        if name:  # 如果一开始没有name的，需要给人家删除掉
+            delattr(fn, '__name__')
 
-    no_var_param = True  # 没有 * 这种参数
-    number_param_need_value = 0
-    for param in parameters:
-        if param.kind is param.VAR_POSITIONAL:
-            no_var_param = False
-        elif param.kind is param.VAR_KEYWORD:
-            no_var_param = False
-        else:
-            if param.default is param.empty:
-                number_param_need_value += 1
-
-    if len(parameters)<len(expected_params) and no_var_param:
-        raise RuntimeError(f"The function:{_get_fun_msg(fn)} accepts {len(parameters)} parameters, "
-                           f"but {len(expected_params)} parameters:{expected_params} will be provided.")
-
-    if number_param_need_value>len(expected_params):
-        raise RuntimeError(f"The function:{_get_fun_msg(fn)} expects {len(parameters)} parameters, but only"
-                           f" {len(expected_params)} parameters:{expected_params} will be provided.")
+    except TypeError as e:
+        logger.error(f"The function:{_get_fun_msg(fn)} will be provided with parameters:{expected_params}. "
+                     f"The following exception will happen.")
+        raise e
 
 
 def check_user_specific_params(user_params: Dict, fn: Callable):

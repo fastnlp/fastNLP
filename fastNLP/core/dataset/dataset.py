@@ -402,11 +402,11 @@ class DataSet:
         r"""
         将 DataSet 中的每个 instance 中的名为 `field_name` 的 field 传给 func，并获取它的返回值。
 
-        :param num_proc: 进程的数量
         :param field_name: 传入 func 的是哪个 field。
         :param func: input是 instance 中名为 `field_name` 的 field 的内容。
         :param new_field_name: 将 func 返回的内容放入到 `new_field_name` 这个 field 中，如果名称与已有的 field 相同，则覆
             盖之前的 field。如果为 None 则不创建新的 field。
+        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param progress_desc: progress_desc 的值，默认为 Main
         :param show_progress_bar: 是否展示进度条，默认展示进度条
         """
@@ -435,10 +435,10 @@ class DataSet:
             ``apply_field_more`` 与 ``apply_field`` 的区别参考 :method:`~fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
             ``apply`` 区别的介绍。
 
-        :param num_proc: 进程的数量
         :param field_name: 传入func的是哪个field。
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param modify_fields: 是否用结果修改 `DataSet` 中的 `Field`， 默认为 True
+        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param show_progress_bar: 是否显示进度条，默认展示
         :param progress_desc: 当show_progress_bar为True时，可以显示当前正在处理的进度条描述字符
         :return Dict[str:Field]: 返回一个字典
@@ -479,7 +479,7 @@ class DataSet:
                        show_progress_bar: bool = True, _apply_field: str = None,
                        progress_desc: str = 'Main') -> list:
         """
-        :param num_proc: 进程的数量
+        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param func: 用户自定义处理函数，参数是 ``DataSet`` 中的 ``Instance``
         :param _apply_field: 需要传进去func的数据集的field_name
         :param show_progress_bar: 是否展示progress进度条，默认为展示
@@ -552,7 +552,7 @@ class DataSet:
         :param modify_fields: 是否用结果修改 ``DataSet`` 中的 ``Field`` ， 默认为 True
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param num_proc: 进程的数量
-        :param show_progress_bar:  是否使用tqd显示预处理进度
+        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param progress_desc: 当show_progress_bar为True时，可以显示当前正在处理的进度条名称
         :return Dict[str:Field]: 返回一个字典
         """
@@ -596,7 +596,7 @@ class DataSet:
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param new_field_name: 将func返回的内容放入到 `new_field_name` 这个field中，如果名称与已有的field相同，则覆
             盖之前的field。如果为None则不创建新的field。
-        :param num_proc: 进程的数量。
+        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param show_progress_bar: 是否显示进度条。
         :param progress_desc: progress bar 显示的值，默认为空。
         """

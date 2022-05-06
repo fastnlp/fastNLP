@@ -135,8 +135,11 @@ class FastNLPLogger(logging.Logger, metaclass=LoggerSingleton):
         :return:
         """
         if os.environ.get(FASTNLP_GLOBAL_RANK, '0') == '0':
-            if once and msg in self._warning_msgs:
-                return
+            if once:
+                if msg in self._warning_msgs:
+                    return
+                self._warning_msgs.add(msg)
+
             if self.isEnabledFor(WARNING):
                 kwargs = self._add_rank_info(kwargs)
                 self._log(WARNING, msg, args, **kwargs)
