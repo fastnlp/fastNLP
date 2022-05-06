@@ -64,38 +64,40 @@ class JittorDataLoader:
         :param collate_fn: 对取得到的数据进行打包的callable函数
         :param as_numpy: 返回数据是否设置为numpy类型，否则为torch.tensor类型
         """
-        # TODO 支持fastnlp dataset
         # TODO 验证支持replacesampler （以后完成）
-        # 是否为 jittor 类型的 dataset
+        # FastNLP Datset, collate_fn not None
+        if isinstance(dataset, FDataSet) and collate_fn is None:
+            raise ValueError("When use FastNLP DataSet, collate_fn must be not None")
+
+        if not isinstance(dataset, _JittorDataset):
+            self.dataset = _JittorDataset(dataset)
+
         if isinstance(collate_fn, str):
             if collate_fn == "auto":
-                if isinstance(dataset, FDataSet):
-                    self._collate_fn = dataset.collator
-                    self._collate_fn.set_backend(backend="jittor")
+                if isinstance(self.dataset.dataset, FDataSet):
+                    self.collate_fn = self.dataset.dataset.collator
+                    self.collate_fn.set_backend(backend="jittor")
                 else:
-                    self._collate_fn = Collator(backend="jittor")
+                    self.collate_fn = Collator(backend="jittor")
             else:
                 raise ValueError(f"collate_fn: {collate_fn} must be 'auto'")
         elif isinstance(collate_fn, Callable):
             if collate_fn is not collate_batch:
-                self._collate_fn = collate_fn
+                self.collate_fn = collate_fn
         else:
-            self._collate_fn = collate_batch
-
-        self.dataset = _JittorDataset(dataset)
+            self.collate_fn = collate_batch
 
         self.dataset.set_attrs(batch_size=batch_size, shuffle=shuffle, drop_last=drop_last,
                                num_workers=num_workers, buffer_size=buffer_size, stop_grad=stop_grad,
                                keep_numpy_array=keep_numpy_array, endless=endless)
+        # 将内部dataset批次设置为1
         if isinstance(self.dataset.dataset, Dataset):
             self.dataset.dataset.set_attrs(batch_size=1)
-        # 用户提供了 collate_fn，则会自动代替 jittor 提供 collate_batch 函数
-        # self._collate_fn = _collate_fn
+
         self.cur_batch_indices = None
 
     def __iter__(self):
         # TODO 第一次迭代后不能设置collate_fn，设置是无效的
-        self.collate_fn = self._collate_fn
         if self.cur_batch_indices is None:
             self.dataset.set_attrs(collate_batch=indice_collate_wrapper(self.collate_fn))
         for indices, data in self.dataset.__iter__():
@@ -107,8 +109,8 @@ class JittorDataLoader:
             return len(self.dataset) // self.dataset.batch_size
         return (len(self.dataset) - 1) // self.dataset.batch_size + 1
 
-    def set_pad(self, field_name:Union[str, tuple], pad_val:Union[int, float, None]=0, dtype=None, backend=None,
-                pad_fn:Callable=None) -> Collator:
+    def set_pad(self, field_name: Union[str, tuple], pad_val: Union[int, float, None] = 0, dtype=None, backend=None,
+                pad_fn: Callable = None) -> "JittorDataLoader":
         """
         如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
@@ -127,13 +129,14 @@ class JittorDataLoader:
             形式，输出将被直接作为结果输出。
         :return: 返回 Collator 自身
         """
-        if isinstance(self._collate_fn, Collator):
-            self._collate_fn.set_pad(field_name=field_name, pad_val=pad_val, dtype=dtype, pad_fn=pad_fn, backend=backend)
-            return self._collate_fn
+        if isinstance(self.collate_fn, Collator):
+            self.collate_fn.set_pad(field_name=field_name, pad_val=pad_val, dtype=dtype, pad_fn=pad_fn,
+                                    backend=backend)
+            return self
         else:
             raise ValueError(f"Only when the collate_fn is a fastNLP Collator, set_pad() is allowed.")
 
-    def set_ignore(self, *field_names) -> Collator:
+    def set_ignore(self, *field_names) -> "JittorDataLoader":
         """
         如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略。
         Example::
@@ -145,9 +148,9 @@ class JittorDataLoader:
             __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。
         :return: 返回 Collator 自身
         """
-        if isinstance(self._collate_fn, Collator):
-            self._collate_fn.set_ignore(*field_names)
-            return self._collate_fn
+        if isinstance(self.collate_fn, Collator):
+            self.collate_fn.set_ignore(*field_names)
+            return self
         else:
             raise ValueError(f"Only when the collate_fn is a fastNLP Collator, set_ignore() is allowed.")
 
@@ -158,6 +161,7 @@ class JittorDataLoader:
         :return:
         """
         return self.cur_batch_indices
+
 
 def prepare_jittor_dataloader():
     ...

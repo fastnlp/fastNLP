@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
 from datasets import Dataset as HfDataset
-from datasets import load_dataset
 
 from fastNLP.core.dataloaders.jittor_dataloader import JittorDataLoader
 from fastNLP.core.dataset import DataSet as Fdataset
@@ -23,16 +22,12 @@ class MyDataset(Dataset):
 
     def __getitem__(self, item):
         return self.data[item]
-        # return {'x': [[1, 0], [2, 0, 1]]}
-        # return np.random.randn(3, 10)
 
-    # def __len__(self):
-    #     return self.dataset_len
 
 @pytest.mark.jittor
 class TestJittor:
 
-    def test_v1(self):
+    def test_jittor_dataset(self):
         """
         测试jittor类型的dataset使用fdl
 
@@ -40,13 +35,13 @@ class TestJittor:
         """
         dataset = MyDataset()
         jtl = JittorDataLoader(dataset, keep_numpy_array=True, batch_size=4)
-        # jtl.set_pad_val('x', 'y')
-        # jtl.set_input('x')
         for batch in jtl:
-            print(batch)
-            print(jtl.get_batch_indices())
+            assert batch.size() == [4, 3, 4]
+        jtl1 = JittorDataLoader(dataset, keep_numpy_array=False, batch_size=4, num_workers=2)
+        for batch in jtl1:
+            assert batch.size() == [4, 3, 4]
 
-    def test_v2(self):
+    def test_fastnlp_Dataset(self):
         """
         测试fastnlp的dataset
 
@@ -56,26 +51,27 @@ class TestJittor:
         jtl = JittorDataLoader(dataset, batch_size=16, drop_last=True)
         jtl.set_pad("x", -1)
         jtl.set_ignore("y")
-        # jtl.set_pad_val('x', val=-1)
-        # jtl.set_input('x', 'y')
         for batch in jtl:
             assert batch['x'].size() == (16, 4)
+        jtl = JittorDataLoader(dataset, batch_size=16, drop_last=True, num_workers=2)
 
-    def test_v3(self):
+
+
+
+    def test_huggingface_datasets(self):
         dataset = HfDataset.from_dict({'x': [[1, 2], [0], [2, 3, 4, 5]] * 100, 'y': [0, 1, 2] * 100})
         jtl = JittorDataLoader(dataset, batch_size=4, drop_last=True)
-        # jtl.set_input('x', 'y')
         for batch in jtl:
-            print(batch)
+            assert batch['x'].size() == [4, 4]
+            assert len(batch['y']) == 4
 
-    def test_v4(self):
+    def test_num_workers(self):
         dataset = MyDataset()
         dl = JittorDataLoader(dataset, batch_size=4, num_workers=2)
-        print(len(dl))
         for idx, batch in enumerate(dl):
-            print(batch.shape, idx)
+            assert batch.shape == [4, 3, 4]
         for idx, batch in enumerate(dl):
-            print(batch.shape, idx)
+            assert batch.shape == [4, 3, 4]
 
     def test_v5(self):
         dataset = MyDataset()
