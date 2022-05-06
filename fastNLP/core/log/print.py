@@ -9,9 +9,8 @@ def print(*args, sep=' ', end='\n', file=None, flush=False):
     """
     用来重定向 print 函数至 logger.info 的函数。
 
-    Example:
+    Example::
         from fastNLP import print
-
         print("This is a test")  # 等价于调用了 logger.info("This is a test")
 
     :param args: 需要打印的内容

@@ -52,11 +52,11 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
                     mapping: Optional[Dict[AnyStr, AnyStr]] = None) -> Any:
     r"""
     该函数会根据输入函数的形参名从*args（因此都需要是dict类型）中找到匹配的值进行调用，如果传入的数据与fn的形参不匹配，可以通过mapping
-        参数进行转换。mapping参数中的一对（key，value）表示以这个key在*args中找到值，并将这个值传递给形参名为value的参数。
+    参数进行转换。mapping参数中的一对（key，value）表示以这个key在*args中找到值，并将这个值传递给形参名为value的参数。
 
     1.该函数用来提供给用户根据字符串匹配从而实现自动调用；
     2.注意 mapping 默认为 None，如果你希望指定输入和运行函数的参数的对应方式，那么你应当让 mapping 为一个这样的字典传入进来；
-     如果 mapping 不为 None，那么我们一定会先使用 mapping 将输入的字典的 keys 修改过来，因此请务必亲自检查 mapping 的正确性；
+    如果 mapping 不为 None，那么我们一定会先使用 mapping 将输入的字典的 keys 修改过来，因此请务必亲自检查 mapping 的正确性；
     3.如果输入的函数的参数有默认值，那么如果之后的输入中没有该参数对应的值，我们就会使用该参数对应的默认值，否则也会使用之后的输入的值；
     4.如果输入的函数是一个 `partial` 函数，情况同 '3.'，即和默认参数的情况相同；
 
@@ -68,7 +68,7 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
 
     :return: 返回 `fn` 运行的结果；
 
-    Examples:
+    Examples::
         >>> # 1
         >>> loss_fn = CrossEntropyLoss()  # 如果其需要的参数为 def CrossEntropyLoss(y, pred)；
         >>> batch = {"x": 20, "y": 1}
@@ -190,7 +190,7 @@ def _get_fun_msg(fn, with_fp=True)->str:
 def _check_valid_parameters_number(fn, expected_params:List[str], fn_name=None):
     """
     检查一个函数是否需要 expected_params 参数(检测数量是否匹配)。除掉 self （如果是method），给定默认值的参数等。如果匹配不上，就会
-        进行报错。
+    进行报错。
 
     :param fn: 需要检测的函数，可以是 method 或者 function 。
     :param expected_params: 期待应该支持的参数。

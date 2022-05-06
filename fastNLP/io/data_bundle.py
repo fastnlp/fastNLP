@@ -223,7 +223,7 @@ class DataBundle:
     def apply_field(self, func: Callable, field_name: str, new_field_name: str, num_proc: int = 0,
                     ignore_miss_dataset: bool = True, progress_desc: str = '', show_progress_bar: bool = True):
         r"""
-        对 :class:`~fastNLP.io.DataBundle` 中所有的dataset使用 :method:`~fastNLP.DataSet.apply_field` 方法
+        对 :class:`~fastNLP.io.DataBundle` 中所有的dataset使用 :meth:`~fastNLP.DataSet.apply_field` 方法
 
         :param callable func: input是instance中名为 `field_name` 的field的内容。
         :param str field_name: 传入func的是哪个field。
@@ -251,10 +251,10 @@ class DataBundle:
     def apply_field_more(self, func: Callable, field_name: str, num_proc: int = 0, modify_fields=True,
                          ignore_miss_dataset=True, progress_desc: str = '', show_progress_bar: bool = True):
         r"""
-        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :method:`~fastNLP.DataSet.apply_field_more` 方法
+        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.DataSet.apply_field_more` 方法
 
         .. note::
-            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :method:`fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
+            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :meth:`fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
             ``apply`` 区别的介绍。
 
         :param callable func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
@@ -285,7 +285,7 @@ class DataBundle:
     def apply(self, func: Callable, new_field_name: str, num_proc: int = 0,
               progress_desc: str = '', show_progress_bar: bool = True):
         r"""
-        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :method:`~fastNLP.DataSet.apply` 方法
+        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.DataSet.apply` 方法
 
         对DataBundle中所有的dataset使用apply方法
 
@@ -295,6 +295,7 @@ class DataBundle:
         :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param show_progress_bar: 是否显示tqd进度条
         :param progress_desc: 当show_progress_bar为True时，可以显示当前tqd正在处理的名称
+
         """
         _progress_desc = progress_desc
         for name, dataset in self.datasets.items():
@@ -307,10 +308,10 @@ class DataBundle:
     def apply_more(self, func: Callable, modify_fields=True, num_proc: int = 0,
                    progress_desc: str = '', show_progress_bar: bool = True):
         r"""
-        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :method:`~fastNLP.DataSet.apply_more` 方法
+        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.DataSet.apply_more` 方法
 
         .. note::
-            ``apply_more`` 与 ``apply`` 的区别参考 :method:`fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
+            ``apply_more`` 与 ``apply`` 的区别参考 :meth:`fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
             ``apply`` 区别的介绍。
 
         :param callable func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
@@ -357,7 +358,8 @@ class DataBundle:
     def set_ignore(self, *field_names) -> "DataBundle":
         """
         如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略。
-        Ex::
+        Example::
+
             collator.set_ignore('field1', 'field2')
 
         :param field_names: 需要忽略的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的

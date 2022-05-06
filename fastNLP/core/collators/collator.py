@@ -84,8 +84,8 @@ class Collator:
     def __init__(self, backend='auto'):
         """
         用于 pad 数据的对象。会自动将所有能够 pad （由 fastNLP 根据数据判定能否 pad ）的数据都进行 pad 操作，默认 pad 的值为 0。
-            可使用 set_pad() 函数调整。如果有些 field 不想输出，可以使用 set_ignore() 函数进行设置。Collator 在第一次进行 pad 的
-            时候自动根据设置以及数据情况，为每个 field 获取一个 padder ，在之后的每次调用中，都将使用对应的 Padder 给对应的 field 。
+        可使用 set_pad() 函数调整。如果有些 field 不想输出，可以使用 set_ignore() 函数进行设置。Collator 在第一次进行 pad 的
+        时候自动根据设置以及数据情况，为每个 field 获取一个 padder ，在之后的每次调用中，都将使用对应的 Padder 给对应的 field 。
 
         :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ['torch','jittor','paddle','numpy','raw', auto, None]。
             若为 'auto' ，则在进行 pad 的时候会根据调用的环境决定其 backend 。该参数对不能进行 pad 的数据没用影响，不能 pad
@@ -101,8 +101,7 @@ class Collator:
 
     def __call__(self, batch)->Union[List, Dict]:
         """
-        batch可能存在三种可能性
-            List[Dict], List[List], List[Sample]
+        batch可能存在三种可能性：List[Dict], List[List], List[Sample]
 
         第一步：使用 unpack_batch_func 将相同 field 的内容打包到一个 list 中。
         第二步：使用每个 field 各自的 padder 进行 pad 。
@@ -264,7 +263,8 @@ class Collator:
     def set_ignore(self, *field_names) -> "Collator":
         """
         如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略。
-        Ex::
+        Example::
+
             collator.set_ignore('field1', 'field2')
 
         :param field_names: 需要忽略的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的

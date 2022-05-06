@@ -40,6 +40,7 @@ class MixModule:
     def named_parameters(self, prefix='', recurse: bool=True, backend=None):
         """
         返回模型的名字和参数
+
         :param prefix: 输出时在参数名前加上的前缀
         :param recurse: 是否递归地输出参数
         :param backend: `backend`=`None`时，将所有模型和张量的参数返回；
@@ -68,6 +69,7 @@ class MixModule:
     def parameters(self, recurse: bool = True, backend: str = None):
         """
         返回模型的参数
+
         :param recurse:
         :param backend: `backend`=`None`时，将所有模型和张量的参数返回；
                         `backend`=`torch`时，返回`torch`的参数；
@@ -129,7 +131,9 @@ class MixModule:
     def state_dict(self, backend: str = None) -> Dict:
         """
         返回模型的state_dict。
-        NOTE: torch的destination参数会在将来删除，因此不提供destination参数
+
+        .. note:: torch的destination参数会在将来删除，因此不提供destination参数
+
         :param backend: `backend`=`None`时，将所有模型和张量的state dict返回；
                         `backend`=`torch`时，返回`torch`的state dict；
                         `backend`=`paddle`时，返回`paddle`的state dict。

@@ -396,7 +396,7 @@ class DataSet:
             raise KeyError("DataSet has no field named {}.".format(field_name))
         return self
 
-    def apply_field(self, func: Union[Callable], field_name: str = None,
+    def apply_field(self, func: Callable, field_name: str = None,
                     new_field_name: str = None, num_proc: int = 0,
                     progress_desc: str = None, show_progress_bar: bool = True):
         r"""
@@ -432,7 +432,7 @@ class DataSet:
         func 可以返回一个或多个 field 上的结果。
 
         .. note::
-            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :method:`~fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
+            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :meth:`~fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
             ``apply`` 区别的介绍。
 
         :param field_name: 传入func的是哪个field。

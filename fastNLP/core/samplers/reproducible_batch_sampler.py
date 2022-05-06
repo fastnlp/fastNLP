@@ -299,7 +299,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
     def total_size(self):
         """
         这个变量代表的含义是当前这个sampler会最终产生出的index数量（包括了其它rank的），因为replica和pad的原因，这个值可能等于、
-            大于或者小于len(dataset)
+        大于或者小于len(dataset)
 
         :return:
         """
@@ -367,7 +367,7 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
                  shuffle: bool = True, drop_last: bool = False, seed: int = 0, **kwargs):
         """
         首先按照 sample 的长度排序，然后按照 batch_size*num_batch_per_bucket 为一个桶的大小，sample 只会在这个桶内进行组合，这样
-            每个 batch 中的 padding 数量会比较少 （因为桶内的数据的长度都接近）。
+        每个 batch 中的 padding 数量会比较少 （因为桶内的数据的长度都接近）。
 
         :param dataset: 实现了 __len__ 方法的数据容器。
         :param length: 如果为 List，应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；仅当传入的 dataset 为 fastNLP 的
@@ -440,7 +440,7 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
     def total_size(self):
         """
         这个变量代表的含义是当前这个sampler会最终产生出的index数量（包括了其它rank的），因为replica和pad的原因，这个值可能等于、
-            大于或者小于len(dataset)
+        大于或者小于len(dataset)
 
         :return:
         """

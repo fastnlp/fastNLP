@@ -42,7 +42,7 @@ class Event:
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
-            filter.num_executed 两个变了分别获取当前被调用了多少次，真正执行了多少次。trainer 对象即为当前正在运行的 Trainer 。
+            filter.num_executed 两个变量分别获取当前被调用了多少次，真正执行了多少次。trainer 对象即为当前正在运行的 Trainer 。
         """
         self.every = every
         self.once = once
@@ -59,6 +59,7 @@ class Event:
         当 Trainer 运行到 on_after_trainer_initialized 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。默认为
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -74,6 +75,7 @@ class Event:
         当 Trainer 运行到 on_sanity_check_begin 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -89,6 +91,7 @@ class Event:
         当 Trainer 运行到 on_sanity_check_end 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -104,6 +107,7 @@ class Event:
         当 Trainer 运行到 on_train_begin 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -119,6 +123,7 @@ class Event:
         当 Trainer 运行到 on_train_end 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -134,6 +139,7 @@ class Event:
         当 Trainer 运行到 on_train_epoch_begin 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -149,6 +155,7 @@ class Event:
         当 Trainer 运行到 on_train_epoch_end 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -164,6 +171,7 @@ class Event:
         当 Trainer 运行到 on_fetch_data_begin 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -179,6 +187,7 @@ class Event:
         当 Trainer 运行到 on_fetch_data_end 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -194,6 +203,7 @@ class Event:
         当 Trainer 运行到 on_train_batch_begin 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -209,6 +219,7 @@ class Event:
         当 Trainer 运行到 on_train_batch_end 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -224,6 +235,7 @@ class Event:
         当 Trainer 运行到 on_exception 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -239,6 +251,7 @@ class Event:
         当 Trainer 运行到 on_save_model 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -254,6 +267,7 @@ class Event:
         当 Trainer 运行到 on_load_model 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -269,6 +283,7 @@ class Event:
         当 Trainer 运行到 on_save_checkpoint 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -284,6 +299,7 @@ class Event:
         当 Trainer 运行到 on_load_checkpoint 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -299,6 +315,7 @@ class Event:
         当 Trainer 运行到 on_load_checkpoint 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -314,6 +331,7 @@ class Event:
         当 Trainer 运行到 on_before_backward 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -329,6 +347,7 @@ class Event:
         当 Trainer 运行到 on_after_backward 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -344,6 +363,7 @@ class Event:
         当 Trainer 运行到 on_before_optimizers_step 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -359,6 +379,7 @@ class Event:
         当 Trainer 运行到 on_after_optimizers_step 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -374,6 +395,7 @@ class Event:
         当 Trainer 运行到 on_before_zero_grad 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -389,6 +411,7 @@ class Event:
         当 Trainer 运行到 on_after_zero_grad 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -404,6 +427,7 @@ class Event:
         当 Trainer 运行到 on_evaluate_begin 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
@@ -419,6 +443,7 @@ class Event:
         当 Trainer 运行到 on_evaluate_end 时
 
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 every=1 。
+
         :param int every: 触发了多少次，才真正运行一次。
         :param bool once: 是否只在第一次运行后就不再执行了。
         :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和

@@ -156,6 +156,7 @@ def _torch2jittor(torch_tensor: 'torch.Tensor', no_gradient: bool = None) -> 'ji
 def torch2paddle(torch_in: Any, target_device: str = None, no_gradient: bool = None) -> Any:
     """
     递归地将输入中包含的torch张量转换为paddle张量
+
     :param torch_in: 要转换的包含torch.Tensor类型的变量
     :param target_device: 是否将转换后的张量迁移到特定设备上，
                           输入为`None`时，和输入的张量相同，
@@ -176,6 +177,7 @@ def torch2paddle(torch_in: Any, target_device: str = None, no_gradient: bool = N
 def paddle2torch(paddle_in: Any, target_device: str = None, no_gradient: bool = None) -> Any:
     """
     递归地将输入中包含的paddle张量转换为torch张量
+
     :param torch_in: 要转换的包含paddle.Tensor类型的变量
     :param target_device: 是否将转换后的张量迁移到特定设备上，
                           输入为`None`时，和输入的张量相同，
@@ -196,6 +198,7 @@ def paddle2torch(paddle_in: Any, target_device: str = None, no_gradient: bool = 
 def jittor2torch(jittor_in: Any, target_device: str = None, no_gradient: bool = None) -> Any:
     """
     递归地将输入中包含的jittor变量转换为torch张量
+
     :param jittor_in: 要转换的jittor变量
     :param target_device: 是否将转换后的张量迁移到特定设备上，输入为`None`时，默认为cuda:0。
     :param no_gradient: 是否保留原张量的梯度。为`None`时，新的张量与输入张量保持一致；
@@ -215,6 +218,7 @@ def jittor2torch(jittor_in: Any, target_device: str = None, no_gradient: bool = 
 def torch2jittor(torch_in: Any, no_gradient: bool = None) -> Any:
     """
     递归地将输入中包含的torch张量转换为jittor变量
+
     :param torch_tensor: 要转换的torch张量
     :param no_gradient: 是否保留原张量的梯度。为`None`时，新的张量与输入张量保持一致；
                         为`True`时，全部不保留梯度；为`False`时，全部保留梯度。

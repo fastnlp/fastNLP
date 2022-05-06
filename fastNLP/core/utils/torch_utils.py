@@ -17,7 +17,8 @@ from .utils import apply_to_collection
 class TorchTransferableDataType(ABC):
     """
     A custom type for data that can be moved to a torch device via `.to(...)`.
-    Example:
+    Example::
+
         >>> isinstance(dict, TorchTransferableDataType)
         False
         >>> isinstance(torch.rand(2, 3), TorchTransferableDataType)
