@@ -58,7 +58,7 @@ class Evaluator:
             是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的
             dropout 与 batch normalization 将会关闭。默认为True。如果为 False，fastNLP 不会对 model 的 evaluate 状态做任何设置。无论
             该值是什么，fastNLP 都会在 evaluate 接受后将 model 的状态设置为 train 。
-        TODO 还没完成。
+            TODO 还没完成。
         * *auto_tensor_conversion_for_metric* (``Union[bool]``) -- 
             是否自动将输出中的 tensor 适配到 metrics 支持的。例如 model 输出是
             paddlepaddle 的 tensor ，但是想利用 torchmetrics 的metric对象，当 auto_tensor_conversion_for_metric 为True时，fastNLP 将

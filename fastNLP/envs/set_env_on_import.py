@@ -9,7 +9,7 @@ import datetime
 def remove_local_rank_in_argv():
     """
     通过 torch.distributed.launch 启动的时候，如果没有加入参数 --use_env ，pytorch 会默认通过 rank 注入 rank，这就
-        要求代码中必须有能够 parse rank 的parser，这里将 rank 删除掉，防止后续报错。
+    要求代码中必须有能够 parse rank 的parser，这里将 rank 删除掉，防止后续报错。
 
     :return:
     """
