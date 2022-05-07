@@ -132,6 +132,9 @@ class PaddleTensorPadder(Padder):
         try:
             if not isinstance(batch_field[0], paddle.Tensor):
                 batch_field = [paddle.to_tensor(field.tolist(), dtype=dtype) for field in batch_field]
+            else:
+                if dtype is None:
+                    dtype = batch_field[0].dtype
         except AttributeError:
             raise RuntimeError(f"If the field is not a paddle.Tensor (it is {type(batch_field[0])}), "
                                f"it must have tolist() method.")

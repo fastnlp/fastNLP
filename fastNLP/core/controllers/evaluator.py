@@ -169,14 +169,14 @@ class Evaluator:
                 raise e
             finally:
                 self.finally_progress_bar()
-
-        metric_results = flat_nest_dict(metric_results, separator=self.separator, compress_none_key=True, top_down=False)
+        if len(metric_results) > 0:  # 如果 metric 不为 None 需要 print 。
+            metric_results = flat_nest_dict(metric_results, separator=self.separator, compress_none_key=True, top_down=False)
+            if self.verbose:
+                if self.progress_bar == 'rich':
+                    f_rich_progress.print(metric_results)
+                else:
+                    logger.info(metric_results)
         self.driver.set_model_mode(mode='train')
-        if self.verbose:
-            if self.progress_bar == 'rich':
-                f_rich_progress.print(metric_results)
-            else:
-                logger.info(metric_results)
 
         return metric_results
 
