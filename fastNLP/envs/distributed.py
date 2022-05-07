@@ -47,7 +47,7 @@ def rank_zero_call(fn: Callable):
         rank_zero_call(add)(1, 2)
 
     同时，该函数还会设置 FASTNLP_NO_SYNC 为 2，在这个环境下，所有的 fastNLP 内置的 barrier 接口，gather/broadcast 操作都没有任何
-        意义。
+    意义。
 
     :param fn: 需要包裹的可执行的函数。
     :return:
@@ -65,7 +65,7 @@ def rank_zero_call(fn: Callable):
 def fastnlp_no_sync_context(level=2):
     """
     用于让 fastNLP 的 barrier 以及 gather/broadcast等操作等同于只有1卡的多卡程序。如果为 1 表示 fastNLP 里的barrier 操作失效；
-        如果为 2 表示 barrier 与 gather/broadcast 都失效。
+    如果为 2 表示 barrier 与 gather/broadcast 都失效。
 
     :param int level: 可选 [0, 1, 2]
     :return:
@@ -84,9 +84,10 @@ def all_rank_call_context():
     """
     在多卡模式下，该环境内，会暂时地将 FASTNLP_GLOBAL_RANK 设置为 "0"，使得 rank_zero_call 函数失效，使得每个进程都会运行该函数。
 
-    # 使用方式
-    with all_rank_call_context():
-        do_something  # all rank will do
+    使用方式::
+
+        with all_rank_call_context():
+            do_something  # all rank will do
 
     :param fn:
     :return:

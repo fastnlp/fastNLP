@@ -222,7 +222,7 @@ def cache_results(_cache_fp, _hash_param=True, _refresh=False, _verbose=1, _chec
 
     可以看到第二次运行的时候，只用了0.0001s左右，是由于第二次运行将直接从cache.pkl这个文件读取数据，而不会经过再次预处理。
     如果在函数加上了装饰器@cache_results()，则函数会增加五个参数[_cache_fp, _hash_param, _refresh, _verbose,
-    _check_hash]。上面的例子即为使用_cache_fp的情况，这五个参数不会传入到被装饰函数中，当然被装饰函数参数名也不能包含这五个名称::
+    _check_hash]。上面的例子即为使用_cache_fp的情况，这五个参数不会传入到被装饰函数中，当然被装饰函数参数名也不能包含这五个名称。
 
     :param str _cache_fp: 将返回结果缓存到什么位置;或从什么位置读取缓存。如果为None，cache_results没有任何效用，除非在
         函数调用的时候传入 _cache_fp 这个参数。保存文件的名称会受到

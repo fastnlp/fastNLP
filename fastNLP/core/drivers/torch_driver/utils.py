@@ -175,16 +175,18 @@ def _build_fp16_env(dummy=False):
 
 def replace_sampler(dataloader: "DataLoader", sampler):
     """
-     替换 sampler （初始化一个新的 dataloader 的逻辑在于）：
+    替换 sampler （初始化一个新的 dataloader 的逻辑在于）：
 
-     用户可能继承了 dataloader，定制了自己的 dataloader 类，这也是我们为什么先 `inspect.signature(dataloader)` 而不是直接
-      `inspect.signature(DataLoader)` 的原因，因此同时注意到我们在外层重新初始化一个 dataloader 时也是使用的用户传进来的 dataloader
-      的类，而不是直接的 DataLoader；
+    用户可能继承了 dataloader，定制了自己的 dataloader 类，这也是我们为什么先 `inspect.signature(dataloader)` 而不是直接
+    `inspect.signature(DataLoader)` 的原因，因此同时注意到我们在外层重新初始化一个 dataloader 时也是使用的用户传进来的 dataloader
+    的类，而不是直接的 DataLoader；
 
-     如果需要定制自己的 dataloader，保证以下两点：
-         1. 在 __init__ 方法中加入 **kwargs，这是为了方便我们将 sampler 插入到具体的 DataLoader 的构造中；
-         2. 在 __init__ 方法中出现的参数，请务必挂为同样名字的实例属性，例如 self.one_arg_name = one_arg_name，这是因为我们只能通过属性
-         来获取实际的参数的值；
+    如果需要定制自己的 dataloader，保证以下两点：
+
+        1. 在 __init__ 方法中加入 **kwargs，这是为了方便我们将 sampler 插入到具体的 DataLoader 的构造中；
+        2. 在 __init__ 方法中出现的参数，请务必挂为同样名字的实例属性，例如 self.one_arg_name = one_arg_name，这是因为我们只能通过属性
+        来获取实际的参数的值；
+
      """
 
     # 拿到实例属性；

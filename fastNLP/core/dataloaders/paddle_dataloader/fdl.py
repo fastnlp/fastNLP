@@ -9,7 +9,6 @@ from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 
 if _NEED_IMPORT_PADDLE:
     from paddle.io import DataLoader, Dataset, Sampler
-    from paddle.fluid.dataloader.collate import default_collate_fn
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Dataset
     from fastNLP.core.utils.dummy_class import DummyClass as DataLoader
@@ -52,6 +51,9 @@ class PaddleDataLoader(DataLoader):
                  num_workers: int = 0, use_buffer_reader: bool = True,
                  use_shared_memory: bool = True, timeout: int = 0,
                  worker_init_fn: Callable = None, persistent_workers=False) -> None:
+        # FastNLP Datset, collate_fn not None
+        if isinstance(dataset, FDataSet) and collate_fn is None:
+            raise ValueError("When use FastNLP DataSet, collate_fn must be not None")
 
         if not isinstance(dataset, _PaddleDataset):
             dataset = _PaddleDataset(dataset)
@@ -66,10 +68,10 @@ class PaddleDataLoader(DataLoader):
         if isinstance(collate_fn, str):
             if collate_fn == 'auto':
                 if isinstance(dataset.dataset, FDataSet):
-                    self._collate_fn = dataset.dataset.collator
-                    self._collate_fn.set_backend(backend="paddle")
+                    collate_fn = dataset.dataset.collator
+                    collate_fn.set_backend(backend="paddle")
                 else:
-                    self._collate_fn = Collator(backend="paddle")
+                    collate_fn = Collator(backend="paddle")
 
             else:
                 raise ValueError(f"collate_fn: {collate_fn} must be 'auto'")
@@ -142,6 +144,7 @@ class PaddleDataLoader(DataLoader):
         """
         如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略。
         Example::
+
             collator.set_ignore('field1', 'field2')
 
         :param field_names: 需要忽略的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
@@ -187,7 +190,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         dl_bundle = {}
         for name, ds in ds_or_db.iter_datasets():
             if 'train' in name:
-                dl_bundle[name] = PaddleDataLoader(ds_or_db, feed_list=feed_list, places=places,
+                dl_bundle[name] = PaddleDataLoader(ds, feed_list=feed_list, places=places,
                                                    return_list=return_list,
                                                    batch_sampler=batch_sampler, batch_size=train_batch_size,
                                                    shuffle=shuffle,
@@ -197,7 +200,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                                                    timeout=timeout, worker_init_fn=worker_init_fn,
                                                    persistent_workers=persistent_workers)
             else:
-                dl_bundle[name] = PaddleDataLoader(ds_or_db, feed_list=feed_list, places=places,
+                dl_bundle[name] = PaddleDataLoader(ds, feed_list=feed_list, places=places,
                                                    return_list=return_list,
                                                    batch_sampler=batch_sampler, batch_size=non_train_batch_size,
                                                    shuffle=shuffle,

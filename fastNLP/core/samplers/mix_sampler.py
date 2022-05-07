@@ -496,7 +496,7 @@ class PollingSampler(MixSampler):
         :param sampler: 实例化好的sampler，每个dataset对应一个sampler对象
         :param drop_last: 是否去掉最后一个batch的数据，其长度小于batch_size
         :param ds_ratio: 当ds_ratio=None时候， 轮流采样dataset列表直至所有的数据集采样完；当ds_ratio='truncate_to_least'时，
-        以dataset列表最短的ds为基准，长的数据集会被截断；当ds_ratio='pad_to_most'时，以dataset列表最长ds为基准，短的数据集会被重采样
+            以dataset列表最短的ds为基准，长的数据集会被截断；当ds_ratio='pad_to_most'时，以dataset列表最长ds为基准，短的数据集会被重采样
        """
         super(PollingSampler, self).__init__(dataset=dataset, batch_size=batch_size,
                                              sampler=sampler, ds_ratio=ds_ratio,

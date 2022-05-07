@@ -233,8 +233,8 @@ class DataBundle:
             如果为False，则报错
         :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param ignore_miss_dataset: 如果 dataset 没有 {field_name} ，就直接跳过这个 dataset 。
-        :param progress_desc 当show_progress_barm为True时，可以显示当前tqdm正在处理的名称
-        :param show_progress_bar 是否显示tqdm进度条
+        :param progress_desc: 当show_progress_barm为True时，可以显示当前tqdm正在处理的名称
+        :param show_progress_bar: 是否显示tqdm进度条
 
         """
         _progress_desc = progress_desc

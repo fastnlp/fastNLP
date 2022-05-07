@@ -146,11 +146,13 @@ class CallbackManager:
         r"""
         用于断点重训的 callback 的保存函数；
         该函数主要涉及两个方面：
-            1. callback 的状态的保存；我们会调用每一个 callback 的 `on_save_checkpoint` 方法，该方法应当返回一个字典，其中包含着
-             断点重训应当保存的状态；
-            2. 每一个具体的 callback 函数的 filter 的状态；
 
-        :return: 一个包含上述内容的字典::
+        1. callback 的状态的保存；我们会调用每一个 callback 的 `on_save_checkpoint` 方法，该方法应当返回一个字典，其中包含着
+        断点重训应当保存的状态；
+        2. 每一个具体的 callback 函数的 filter 的状态；
+
+        :return: 一个包含上述内容的字典:
+        .. code-block::
 
             {
                 "callback_name_1": {
@@ -158,6 +160,7 @@ class CallbackManager:
                     "filter_states": {"on_train_begin": filter1.state_dict(), ...}
                 }
             }
+
         """
 
         states = {}

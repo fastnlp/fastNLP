@@ -257,12 +257,13 @@ def match_and_substitute_params(mapping: Optional[Union[Callable, Dict]] = None,
     对于 `output_mapping`，该函数会在 `Trainer.train_step` 以及 `Evaluator.train_step` 中得到结果后立刻被调用；
 
     转换的逻辑按优先级依次为：
-     1. 如果 `mapping` 是一个函数，那么会直接返回 `mapping(data)`；
-     2. 如果 `mapping` 是一个 `Dict`，那么 `data` 的类型只能为以下三种： [`Dict`, `dataclass`, `Sequence`]；
-      如果 `data` 是 `Dict`，那么该函数会将 `data` 的 key 替换为 mapping[key]；
-      如果 `data` 是 `dataclass`，那么该函数会先使用 `dataclasses.asdict` 函数将其转换为 `Dict`，然后进行转换；
-      如果 `data` 是 `Sequence`，那么该函数会先将其转换成一个对应的 `Dict`：{"_0": list[0], "_1": list[1], ...}，然后使用
-        mapping对这个 `Dict` 进行转换，如果没有匹配上mapping中的key则保持"_number"这个形式。
+
+    1. 如果 `mapping` 是一个函数，那么会直接返回 `mapping(data)`；
+    2. 如果 `mapping` 是一个 `Dict`，那么 `data` 的类型只能为以下三种： [`Dict`, `dataclass`, `Sequence`]；
+    如果 `data` 是 `Dict`，那么该函数会将 `data` 的 key 替换为 mapping[key]；
+    如果 `data` 是 `dataclass`，那么该函数会先使用 `dataclasses.asdict` 函数将其转换为 `Dict`，然后进行转换；
+    如果 `data` 是 `Sequence`，那么该函数会先将其转换成一个对应的 `Dict`：{"_0": list[0], "_1": list[1], ...}，然后使用
+    mapping对这个 `Dict` 进行转换，如果没有匹配上mapping中的key则保持"_number"这个形式。
 
     :param mapping: 用于转换的字典或者函数；mapping是函数时，返回值必须为字典类型。
     :param data: 需要被转换的对象；
@@ -440,12 +441,16 @@ def _is_iterable(value):
 def pretty_table_printer(dataset_or_ins) -> PrettyTable:
     r"""
     :param dataset_or_ins: 传入一个dataSet或者instance
-    ins = Instance(field_1=[1, 1, 1], field_2=[2, 2, 2], field_3=["a", "b", "c"])
-    +-----------+-----------+-----------------+
-    |  field_1  |  field_2  |     field_3     |
-    +-----------+-----------+-----------------+
-    | [1, 1, 1] | [2, 2, 2] | ['a', 'b', 'c'] |
-    +-----------+-----------+-----------------+
+
+    .. code-block::
+
+        ins = Instance(field_1=[1, 1, 1], field_2=[2, 2, 2], field_3=["a", "b", "c"])
+        +-----------+-----------+-----------------+
+        |  field_1  |  field_2  |     field_3     |
+        +-----------+-----------+-----------------+
+        | [1, 1, 1] | [2, 2, 2] | ['a', 'b', 'c'] |
+        +-----------+-----------+-----------------+
+
     :return: 以 pretty table的形式返回根据terminal大小进行自动截断
     """
     x = PrettyTable()

@@ -534,7 +534,7 @@ class TorchDDPDriver(TorchDriver):
     def broadcast_object(self, obj, src:int=0, group=None, **kwargs):
         """
         从 src 端将 obj 对象（可能是 tensor ，可能是 object ）发送到 dst 处。如果是非 tensor 的对象会尝试使用 pickle 进行打包进行
-            传输，然后再 dst 处再加载回来。仅在分布式的 driver 中有实际意义。
+        传输，然后再 dst 处再加载回来。仅在分布式的 driver 中有实际意义。
 
         :param obj: obj，可能是 Tensor 或 嵌套类型的数据
         :param int src: source 的 global rank 。
@@ -551,9 +551,10 @@ class TorchDDPDriver(TorchDriver):
     def all_gather(self, obj, group) -> List:
         """
         将 obj 互相传送到其它所有的 rank 上，其中 obj 可能是 Tensor，也可能是嵌套结构的 object 。如果不是基础类型的数据，尝试通过
-            pickle 进行序列化，接收到之后再反序列化。
+        pickle 进行序列化，接收到之后再反序列化。
 
-        example:
+        example::
+
             obj = {
                 'a': [1, 1],
                 'b': [[1, 2], [1, 2]],
