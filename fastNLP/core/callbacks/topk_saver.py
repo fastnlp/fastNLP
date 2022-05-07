@@ -12,7 +12,7 @@ from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_LAUNCH_TIME
 from fastNLP.envs import rank_zero_call
 from fastNLP.envs.env import FASTNLP_EVALUATE_RESULT_FILENAME
-from .has_monitor_callback import MonitorUtility
+from .has_monitor_callback import ResultsMonitor
 
 
 class Saver:
@@ -170,7 +170,7 @@ class TopkQueue:
         return self.topk != 0
 
 
-class TopkSaver(MonitorUtility, Saver):
+class TopkSaver(ResultsMonitor, Saver):
     def __init__(self, topk:int=0, monitor:str=None, larger_better:bool=True, folder:str=None, save_object:str='model',
                  only_state_dict:bool=True, model_save_fn:Callable=None, save_evaluate_results:bool=True,
                  **kwargs):
@@ -196,7 +196,7 @@ class TopkSaver(MonitorUtility, Saver):
                 fastnlp_evaluate_results.json 文件，记录当前的 results。仅在设置了 topk 的场景下有用，默认为 True 。
         :param kwargs: 更多需要传递给 Trainer.save() 或者 Trainer.save_model() 接口的参数。
         """
-        MonitorUtility.__init__(self, monitor, larger_better)
+        ResultsMonitor.__init__(self, monitor, larger_better)
         Saver.__init__(self, folder, save_object, only_state_dict, model_save_fn, **kwargs)
 
         if monitor is not None and topk == 0:

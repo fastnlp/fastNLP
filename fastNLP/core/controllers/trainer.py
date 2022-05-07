@@ -23,7 +23,7 @@ from fastNLP.core.callbacks.callback import _CallbackWrapper
 from fastNLP.core.callbacks.callback_manager import prepare_callbacks
 from fastNLP.core.callbacks.callback_event import Event
 from fastNLP.core.drivers import Driver
-from fastNLP.core.drivers.utils import choose_driver
+from ..drivers.choose_driver import choose_driver
 from fastNLP.core.utils import get_fn_arg_names, match_and_substitute_params, nullcontext
 from fastNLP.core.utils.utils import _check_valid_parameters_number
 from fastNLP.envs import rank_zero_call

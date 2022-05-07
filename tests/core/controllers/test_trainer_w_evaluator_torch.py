@@ -174,7 +174,7 @@ def test_trainer_torch_with_evaluator_fp16_accumulation_steps(
         dist.destroy_process_group()
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", 1)])  # ("torch", [0, 1]),("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", 'cpu')])  # ("torch", [0, 1]),("torch", 1)
 @magic_argv_env_context
 def test_trainer_validate_every(
         model_and_optimizers: TrainerParameters,
@@ -234,7 +234,7 @@ def test_trainer_on(
         device=device,
         optimizers=model_and_optimizers.optimizers,
         train_dataloader=model_and_optimizers.train_dataloader,
-        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+        evaluate_dataloaders={"dl":model_and_optimizers.evaluate_dataloaders},
         input_mapping=model_and_optimizers.input_mapping,
         output_mapping=model_and_optimizers.output_mapping,
         metrics=model_and_optimizers.metrics,

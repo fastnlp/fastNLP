@@ -35,6 +35,7 @@ __all__ = [
     'Option',
     'deprecated',
     'seq_len_to_mask',
+    "flat_nest_dict"
 ]
 
 
@@ -641,3 +642,54 @@ def is_notebook():
         return False
     else:  # pragma: no cover
         return True
+
+
+def flat_nest_dict(d:Dict, separator:str='#', compress_none_key:bool=True, top_down:bool=False) -> Dict:
+    """
+    讲一个 nested 的 dict 转成 flat 的 dict，例如
+    ex::
+        d = {'test': {'f1': {'f': 0.2, 'rec': 0.1}}} -> {'f#f1#test':0.2, 'rec#f1#test':0.1}
+
+    :param d: 需要展平的 dict 对象。
+    :param separator: 不同层级之间的 key 之间的连接符号。
+    :param compress_none_key: 如果有 key 为 None ，则忽略这一层连接。
+    :param top_down: 新的 key 的是否按照从最底层往最底层的顺序连接。
+    :return:
+    """
+    assert isinstance(d, Dict)
+    assert isinstance(separator, str)
+    flat_d = {}
+    for key, value in d.items():
+        if key is None:
+            key = ()
+        else:
+            key = (key, )
+        if isinstance(value, Mapping):
+            flat_d.update(_flat_nest_dict(value, parent_key=key, compress_none_key=compress_none_key))
+        else:
+            flat_d[key] = value
+
+    str_flat_d = {}
+    for key, value in flat_d.items():
+        if top_down:
+            key = map(str, key)
+        else:
+            key = map(str, key[::-1])
+        key = separator.join(key)
+        str_flat_d[key] = value
+    return str_flat_d
+
+
+def _flat_nest_dict(d:Mapping, parent_key:Tuple, compress_none_key:bool):
+    flat_d = {}
+    for k, v in d.items():
+        _key = parent_key
+        if k is not None:
+            _key = _key + (k,)
+        if isinstance(v, Mapping):
+            _d = _flat_nest_dict(v, parent_key=_key, compress_none_key=compress_none_key)
+            flat_d.update(_d)
+        else:
+            flat_d[_key] = v
+
+    return flat_d

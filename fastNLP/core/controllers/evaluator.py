@@ -8,10 +8,10 @@ __all__ = [
 ]
 
 from fastNLP.core.drivers import Driver
-from fastNLP.core.drivers.utils import choose_driver
+from ..drivers.choose_driver import choose_driver
 from .loops import Loop, EvaluateBatchLoop
 from fastNLP.core.utils import auto_param_call, dataclass_to_dict, \
-    match_and_substitute_params, f_rich_progress
+    match_and_substitute_params, f_rich_progress, flat_nest_dict
 from fastNLP.core.metrics import Metric
 from fastNLP.core.metrics.utils import _is_torchmetrics_metric, _is_paddle_metric, _is_allennlp_metric
 from fastNLP.core.controllers.utils.utils import _TruncatedDataLoader
@@ -155,13 +155,15 @@ class Evaluator:
                     self.cur_dataloader_name = dataloader_name
                     results = self.evaluate_batch_loop.run(self, dataloader)
                     self.remove_progress_bar(dataloader_name)
-                    metric_results.update(results)
+                    metric_results[dataloader_name] = results
                     self.reset()
                     self.driver.barrier()
             except BaseException as e:
                 raise e
             finally:
                 self.finally_progress_bar()
+
+        metric_results = flat_nest_dict(metric_results, separator=self.separator, compress_none_key=True, top_down=False)
         self.driver.set_model_mode(mode='train')
         if self.verbose:
             if self.progress_bar == 'rich':
@@ -244,14 +246,13 @@ class Evaluator:
         """
         self.metrics_wrapper.update(batch, outputs)
 
-    def get_dataloader_metric(self, dataloader_name: Optional[str] = '') -> Dict:
+    def get_metric(self) -> Dict:
         """
-        获取当前dataloader的metric结果
+        调用所有 metric 的 get_metric 方法，并返回结果。其中 key 为 metric 的名称，value 是各个 metric 的结果。
 
-        :param str dataloader_name: 当前dataloader的名字
         :return:
         """
-        return self.metrics_wrapper.get_metric(dataloader_name=dataloader_name, separator=self.separator)
+        return self.metrics_wrapper.get_metric()
 
     @property
     def metrics_wrapper(self):
@@ -359,15 +360,12 @@ class _MetricsWrapper:
             elif _is_torchmetrics_metric(metric) or _is_paddle_metric(metric) or isinstance(metric, Metric):
                 metric.reset()
 
-    def get_metric(self, dataloader_name: str, separator: str) -> Dict:
+    def get_metric(self) -> Dict:
         """
-        将所有 metric 结果展平到一个一级的字典中，这个字典中 key 的命名规则是
-            indicator_name{separator}metric_name{separator}dataloader_name
-        例如: f1#F1PreRec#dev
+        调用各个 metric 得到 metric 的结果。并使用 {'metric_name1': metric_results, 'metric_name2': metric_results} 的形式
+            返回。
 
-        :param dataloader_name: 当前metric对应的dataloader的名字。若为空，则不显示在最终的key上面。
-        :param separator: 用于间隔不同称呼。
-        :return: 返回一个一级结构的字典，其中 key 为区别一个 metric 的名字，value 为该 metric 的值；
+        :return:
         """
         results = {}
         for metric_name, metric in zip(self._metric_names, self._metrics):
@@ -377,37 +375,9 @@ class _MetricsWrapper:
                 _results = metric.get_metric(reset=False)
             elif _is_torchmetrics_metric(metric):
                 _results = metric.compute()
-                # 我们规定了 evaluator 中的 metrics 的输入只能是一个 dict，这样如果 metric 是一个 torchmetrics 时，如果 evaluator
-                #  没有传入 func_post_proc，那么我们就自动使用该 metric 的 metric name 当做其的 indicator name 将其自动转换成一个字典；
             elif _is_paddle_metric(metric):
                 _results = metric.accumulate()
-            if not isinstance(_results, Dict):
-                name = _get_metric_res_name(dataloader_name, metric_name, '', separator)
-                results[name] = _results
             else:
-                for indicator_name, value in _results.items():
-                    name = _get_metric_res_name(dataloader_name, metric_name, indicator_name, separator)
-                    results[name] = value
-
+                raise RuntimeError(f"Not support `{type(metric)}` for now.")
+            results[metric_name] = _results
         return results
-
-
-def _get_metric_res_name(dataloader_name: Optional[str], metric_name: str, indicator_name: str, separator='#') -> str:
-    """
-
-    :param dataloader_name: dataloder的名字
-    :param metric_name: metric的名字
-    :param indicator_name: metric中的各项metric名称，例如f, precision, recall
-    :param separator: 用以间隔不同对象的间隔符
-    :return:
-    """
-    names = []
-    if indicator_name:
-        names.append(indicator_name)
-    if metric_name:
-        names.append(metric_name)
-    if dataloader_name:
-        names.append(dataloader_name)
-    if len(names) == 0:
-        raise RuntimeError("You cannot use empty `dataloader_name`, `metric_name`, and `monitor` simultaneously.")
-    return separator.join(names)
