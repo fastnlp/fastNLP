@@ -4,11 +4,12 @@ import numpy as np
 from fastNLP.core.dataloaders.paddle_dataloader.fdl import PaddleDataLoader
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.log import logger
+from fastNLP.core.collators import Collator
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 
 if _NEED_IMPORT_PADDLE:
-    from paddle.io import Dataset
+    from paddle.io import Dataset, DataLoader
     import paddle
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Dataset
@@ -61,3 +62,10 @@ class TestPaddle:
         fdl1.set_ignore('label')
         for batch in fdl1:
             assert batch['image'].shape == [4, 10, 5]
+
+    def test_get_backend(self):
+        ds = RandomDataset()
+        collate_fn = Collator(backend='auto')
+        paddle_dl = DataLoader(ds, collate_fn=collate_fn)
+        for batch in paddle_dl:
+            print(batch)

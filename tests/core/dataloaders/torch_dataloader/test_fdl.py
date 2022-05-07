@@ -112,3 +112,19 @@ class TestFdl:
         seq_ds = prepare_torch_dataloader(sequence)
         assert isinstance(seq_ds[0], TorchDataLoader)
         assert isinstance(seq_ds[1], TorchDataLoader)
+
+    def test_get_backend(self):
+        from fastNLP.core.collators import Collator
+        from torch.utils.data import DataLoader, Dataset
+
+        class MyDatset(DataSet):
+            def __len__(self):
+                return 1000
+
+            def __getitem__(self, item):
+                return [[1, 0], [1], [1, 2, 4]], [1, 0]
+
+        collate_batch = Collator(backend='auto')
+        dl = DataLoader(MyDatset(), collate_fn=collate_batch)
+        for batch in dl:
+            print(batch)

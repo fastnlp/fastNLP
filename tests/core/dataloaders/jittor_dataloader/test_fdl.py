@@ -4,6 +4,7 @@ from datasets import Dataset as HfDataset
 
 from fastNLP.core.dataloaders.jittor_dataloader import JittorDataLoader
 from fastNLP.core.dataset import DataSet as Fdataset
+from fastNLP.core.collators import Collator
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
 if _NEED_IMPORT_JITTOR:
     from jittor.dataset import Dataset
@@ -53,9 +54,9 @@ class TestJittor:
         jtl.set_ignore("y")
         for batch in jtl:
             assert batch['x'].size() == (16, 4)
-        jtl = JittorDataLoader(dataset, batch_size=16, drop_last=True, num_workers=2)
-
-
+        jtl1 = JittorDataLoader(dataset, batch_size=16, drop_last=True, num_workers=2)
+        for batch in jtl1:
+            print(batch)
 
 
     def test_huggingface_datasets(self):
@@ -80,3 +81,10 @@ class TestJittor:
             print(idx, batch.shape)
         for idx, batch in enumerate(dataset):
             print(idx, batch.shape)
+
+    def test_jittor_get_backend(self):
+        collate_bacth = Collator(backend='auto')
+        dl = MyDataset()
+        dl = dl.set_attrs(collate_batch=collate_bacth, batch_size=256)
+        for batch in dl:
+            print(batch)
