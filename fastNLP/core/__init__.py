@@ -14,7 +14,7 @@ __all__ = [
     'MoreEvaluateCallback',
     "TorchWarmupCallback",
     "TorchGradClipCallback",
-    "MonitorUtility",
+    "ResultsMonitor",
     'HasMonitorCallback',
 
     # collators

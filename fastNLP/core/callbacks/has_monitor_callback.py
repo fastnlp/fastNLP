@@ -1,7 +1,7 @@
 __all__ = [
     'HasMonitorCallback',
     'ExecuteOnceBetterMonitor',
-    'MonitorUtility'
+    'ResultsMonitor'
 ]
 
 from typing import Dict, Union, Any
@@ -29,12 +29,16 @@ class CanItemDataType(ABC):
         return NotImplemented
 
 
-class MonitorUtility:
-    """
-    计算 monitor 的相关函数
+class ResultsMonitor:
+    def __init__(self, monitor:Union[Callback, str], larger_better:bool=True):
+        """
+        可用于监控某个数值，并通过 is_better_results() 等接口实现检测结果是否变得更好了。
 
-    """
-    def __init__(self, monitor, larger_better):
+        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+                的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
+                果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有相关的 monitor 值请返回 None 。
+        :param larger_better: monitor 是否时越大越好
+        """
         self.set_monitor(monitor, larger_better)
 
     def set_monitor(self, monitor, larger_better):
@@ -53,7 +57,7 @@ class MonitorUtility:
 
     def itemize_results(self, results):
         """
-        将结果中有 .item() 方法的都调用一下，使得可以结果可以保存
+        将结果中有 .item() 方法的都调用一下，使得 tensor 类型的数据转为 python 内置类型。
 
         :param results:
         :return:
@@ -161,7 +165,7 @@ class MonitorUtility:
         return monitor_name
 
 
-class HasMonitorCallback(MonitorUtility, Callback):
+class HasMonitorCallback(ResultsMonitor, Callback):
     def __init__(self, monitor, larger_better, must_have_monitor=False):
         """
         该 callback 不直接进行使用，作为其它相关 callback 的父类使用，如果 callback 有使用 monitor 可以继承该函数里面实现了

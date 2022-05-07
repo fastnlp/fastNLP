@@ -40,8 +40,8 @@ class EvaluateBatchLoop(Loop):
             self.batch_step_fn(evaluator, batch)
             batch_idx += 1
             evaluator.update_progress_bar(batch_idx, evaluator.cur_dataloader_name)
-        # 获取metric结果。返回的dict内容示例为{'f1#F1Metric#dl1': 0.93, 'pre#F1Metric#dl1': 0.95, ...}
-        results = evaluator.get_dataloader_metric(dataloader_name=evaluator.cur_dataloader_name)
+        # 获取metric结果。返回的dict内容示例为{'metric_name1': metric_results, 'metric_name2': metric_results, ...}
+        results = evaluator.get_metric()
         return results
 
     @staticmethod

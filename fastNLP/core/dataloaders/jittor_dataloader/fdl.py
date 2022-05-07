@@ -142,6 +142,7 @@ class JittorDataLoader:
         """
         如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略。
         Example::
+
             collator.set_ignore('field1', 'field2')
 
         :param field_names: 需要忽略的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的

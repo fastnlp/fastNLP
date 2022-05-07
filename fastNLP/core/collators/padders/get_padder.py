@@ -118,6 +118,7 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
             elif backend == 'numpy':
                 return NumpyTensorPadder(pad_val=pad_val, ele_dtype=None, dtype=dtype)
             elif backend == 'torch':
+                # 这里 ele_dtype 传入为 None 的原因是防止出现 paddle tensor 转换为 torch tensor
                 return TorchTensorPadder(pad_val=pad_val, ele_dtype=None, dtype=dtype)
             elif backend == 'paddle':
                 return PaddleTensorPadder(pad_val=pad_val, ele_dtype=None, dtype=dtype)

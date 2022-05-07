@@ -8,10 +8,10 @@ __all__ = [
 ]
 
 from fastNLP.core.drivers import Driver
-from fastNLP.core.drivers.utils import choose_driver
+from ..drivers.choose_driver import choose_driver
 from .loops import Loop, EvaluateBatchLoop
 from fastNLP.core.utils import auto_param_call, dataclass_to_dict, \
-    match_and_substitute_params, f_rich_progress
+    match_and_substitute_params, f_rich_progress, flat_nest_dict
 from fastNLP.core.metrics import Metric
 from fastNLP.core.metrics.utils import _is_torchmetrics_metric, _is_paddle_metric, _is_allennlp_metric
 from fastNLP.core.controllers.utils.utils import _TruncatedDataLoader
@@ -51,23 +51,30 @@ class Evaluator:
          为 False，那么我们会将 batch 直接透传给 forward 函数。注意上述逻辑同样应用于 `train_step`, `evaluate_step` 和 `test_step`；
         :param fp16: 是否使用 fp16 。
         :param verbose: 是否打印 evaluate 的结果。
-        :param kwargs:
-            bool model_use_eval_mode: 是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的dropout
-             与 batch normalization 将会关闭。默认为True。如果为 False，fastNLP 不会对 model 的 evaluate 状态做任何设置。无论
-             该值是什么，fastNLP 都会在 evaluate 接受后将 model 的状态设置为 train 。
-            TODO 还没完成。
-            Union[bool] auto_tensor_conversion_for_metric: 是否自动将输出中的
-             tensor 适配到 metrics 支持的。例如 model 输出是 paddlepaddle 的 tensor ，但是想利用 torchmetrics 的metric对象，
-             当 auto_tensor_conversion_for_metric 为True时，fastNLP 将自动将输出中 paddle 的 tensor （其它非 tensor 的参数
-             不做任何处理）转换为 pytorch 的 tensor 再输入到 metrics 中进行评测。 model 的输出 tensor 类型通过 driver 来决定，
-             metrics 支持的输入类型由 metrics 决定。如果需要更复杂的转换，请使用 input_mapping、output_mapping 参数进行。
-            use_dist_sampler: 是否使用分布式evaluate的方式。仅当 driver 为分布式类型时，该参数才有效。默认为根据 driver 是否支持
-                分布式进行设置。如果为True，将使得每个进程上的 dataloader 自动使用不同数据，所有进程的数据并集是整个数据集。
-            output_from_new_proc: 应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
-             ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
-             log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
-            progress_bar: evaluate 的时候显示的 progress bar 。目前支持三种 [None, 'raw', 'rich', 'auto'], auto 表示如果检测
-                到当前terminal为交互型则使用 rich，否则使用 raw。
+        :param \**kwargs:
+            See below
+        :kwargs:
+        * *model_use_eval_mode* (``bool``) -- 
+            是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的
+            dropout 与 batch normalization 将会关闭。默认为True。如果为 False，fastNLP 不会对 model 的 evaluate 状态做任何设置。无论
+            该值是什么，fastNLP 都会在 evaluate 接受后将 model 的状态设置为 train 。
+        TODO 还没完成。
+        * *auto_tensor_conversion_for_metric* (``Union[bool]``) -- 
+            是否自动将输出中的 tensor 适配到 metrics 支持的。例如 model 输出是
+            paddlepaddle 的 tensor ，但是想利用 torchmetrics 的metric对象，当 auto_tensor_conversion_for_metric 为True时，fastNLP 将
+            自动将输出中 paddle 的 tensor （其它非 tensor 的参数不做任何处理）转换为 pytorch 的 tensor 再输入到 metrics 中进行评测。 model 的
+            输出 tensor 类型通过 driver 来决定，metrics 支持的输入类型由 metrics 决定。如果需要更复杂的转换，
+            请使用 input_mapping、output_mapping 参数进行。
+        * *use_dist_sampler* -- 
+            是否使用分布式evaluate的方式。仅当 driver 为分布式类型时，该参数才有效。默认为根据 driver 是否支持
+            分布式进行设置。如果为True，将使得每个进程上的 dataloader 自动使用不同数据，所有进程的数据并集是整个数据集。
+        * *output_from_new_proc* -- 
+            应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
+            ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
+            log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
+        * *progress_bar* -- 
+            evaluate 的时候显示的 progress bar 。目前支持三种 [None, 'raw', 'rich', 'auto'], auto 表示如果检测
+            到当前terminal为交互型则使用 rich，否则使用 raw。
         """
 
         self.model = model
@@ -155,19 +162,21 @@ class Evaluator:
                     self.cur_dataloader_name = dataloader_name
                     results = self.evaluate_batch_loop.run(self, dataloader)
                     self.remove_progress_bar(dataloader_name)
-                    metric_results.update(results)
+                    metric_results[dataloader_name] = results
                     self.reset()
                     self.driver.barrier()
             except BaseException as e:
                 raise e
             finally:
                 self.finally_progress_bar()
+        if len(metric_results) > 0:  # 如果 metric 不为 None 需要 print 。
+            metric_results = flat_nest_dict(metric_results, separator=self.separator, compress_none_key=True, top_down=False)
+            if self.verbose:
+                if self.progress_bar == 'rich':
+                    f_rich_progress.print(metric_results)
+                else:
+                    logger.info(metric_results)
         self.driver.set_model_mode(mode='train')
-        if self.verbose:
-            if self.progress_bar == 'rich':
-                f_rich_progress.print(metric_results)
-            else:
-                logger.info(metric_results)
 
         return metric_results
 
@@ -244,14 +253,13 @@ class Evaluator:
         """
         self.metrics_wrapper.update(batch, outputs)
 
-    def get_dataloader_metric(self, dataloader_name: Optional[str] = '') -> Dict:
+    def get_metric(self) -> Dict:
         """
-        获取当前dataloader的metric结果
+        调用所有 metric 的 get_metric 方法，并返回结果。其中 key 为 metric 的名称，value 是各个 metric 的结果。
 
-        :param str dataloader_name: 当前dataloader的名字
         :return:
         """
-        return self.metrics_wrapper.get_metric(dataloader_name=dataloader_name, separator=self.separator)
+        return self.metrics_wrapper.get_metric()
 
     @property
     def metrics_wrapper(self):
@@ -359,15 +367,12 @@ class _MetricsWrapper:
             elif _is_torchmetrics_metric(metric) or _is_paddle_metric(metric) or isinstance(metric, Metric):
                 metric.reset()
 
-    def get_metric(self, dataloader_name: str, separator: str) -> Dict:
+    def get_metric(self) -> Dict:
         """
-        将所有 metric 结果展平到一个一级的字典中，这个字典中 key 的命名规则是
-            indicator_name{separator}metric_name{separator}dataloader_name
-        例如: f1#F1PreRec#dev
+        调用各个 metric 得到 metric 的结果。并使用 {'metric_name1': metric_results, 'metric_name2': metric_results} 的形式
+            返回。
 
-        :param dataloader_name: 当前metric对应的dataloader的名字。若为空，则不显示在最终的key上面。
-        :param separator: 用于间隔不同称呼。
-        :return: 返回一个一级结构的字典，其中 key 为区别一个 metric 的名字，value 为该 metric 的值；
+        :return:
         """
         results = {}
         for metric_name, metric in zip(self._metric_names, self._metrics):
@@ -377,37 +382,9 @@ class _MetricsWrapper:
                 _results = metric.get_metric(reset=False)
             elif _is_torchmetrics_metric(metric):
                 _results = metric.compute()
-                # 我们规定了 evaluator 中的 metrics 的输入只能是一个 dict，这样如果 metric 是一个 torchmetrics 时，如果 evaluator
-                #  没有传入 func_post_proc，那么我们就自动使用该 metric 的 metric name 当做其的 indicator name 将其自动转换成一个字典；
             elif _is_paddle_metric(metric):
                 _results = metric.accumulate()
-            if not isinstance(_results, Dict):
-                name = _get_metric_res_name(dataloader_name, metric_name, '', separator)
-                results[name] = _results
             else:
-                for indicator_name, value in _results.items():
-                    name = _get_metric_res_name(dataloader_name, metric_name, indicator_name, separator)
-                    results[name] = value
-
+                raise RuntimeError(f"Not support `{type(metric)}` for now.")
+            results[metric_name] = _results
         return results
-
-
-def _get_metric_res_name(dataloader_name: Optional[str], metric_name: str, indicator_name: str, separator='#') -> str:
-    """
-
-    :param dataloader_name: dataloder的名字
-    :param metric_name: metric的名字
-    :param indicator_name: metric中的各项metric名称，例如f, precision, recall
-    :param separator: 用以间隔不同对象的间隔符
-    :return:
-    """
-    names = []
-    if indicator_name:
-        names.append(indicator_name)
-    if metric_name:
-        names.append(metric_name)
-    if dataloader_name:
-        names.append(dataloader_name)
-    if len(names) == 0:
-        raise RuntimeError("You cannot use empty `dataloader_name`, `metric_name`, and `monitor` simultaneously.")
-    return separator.join(names)

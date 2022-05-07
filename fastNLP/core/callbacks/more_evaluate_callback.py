@@ -39,7 +39,7 @@ class MoreEvaluateCallback(HasMonitorCallback):
             意义是，当检测到 Trainer 中 evaluate results 的 {watch_monitor} 的结果更好时，则进行一次 evaluate 。该参数有两种
             取值: (1) str 类型，监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最
             匹配的那个作为 monitor ; (2) 也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，返回一个 float 值作为 monitor
-             的结果，如果当前结果中没有相关的monitor 值请返回 None 。
+            的结果，如果当前结果中没有相关的monitor 值请返回 None 。
         :param watch_monitor_larger_better: watch_monitor 是否越大越好。
         :param evaluate_fn: 用来控制 `Evaluator` 在评测的前向传播过程中是调用哪一个函数，例如是 `model.evaluate_step` 还是
             `model.forward`；(1) 如果该值是 None，那么我们会默认使用 `evaluate_step` 当做前向传播的函数，如果在模型中没有

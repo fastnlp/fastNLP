@@ -172,6 +172,7 @@ def fastnlp_paddle_all_gather(obj: Any, device=None, group=None) ->List:
     实现任何类型的数据都使用该接口可以进行 all_gather 操作。对于非 tensor 类型的数据，通过 pickle 序列化再反序列化的方式进行传输。
 
     example::
+
         obj = {
             'a': [1, 1],
             'b': [[1, 2], [1, 2]],

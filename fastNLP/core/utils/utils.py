@@ -35,6 +35,7 @@ __all__ = [
     'Option',
     'deprecated',
     'seq_len_to_mask',
+    "flat_nest_dict"
 ]
 
 
@@ -256,12 +257,13 @@ def match_and_substitute_params(mapping: Optional[Union[Callable, Dict]] = None,
     对于 `output_mapping`，该函数会在 `Trainer.train_step` 以及 `Evaluator.train_step` 中得到结果后立刻被调用；
 
     转换的逻辑按优先级依次为：
-     1. 如果 `mapping` 是一个函数，那么会直接返回 `mapping(data)`；
-     2. 如果 `mapping` 是一个 `Dict`，那么 `data` 的类型只能为以下三种： [`Dict`, `dataclass`, `Sequence`]；
-      如果 `data` 是 `Dict`，那么该函数会将 `data` 的 key 替换为 mapping[key]；
-      如果 `data` 是 `dataclass`，那么该函数会先使用 `dataclasses.asdict` 函数将其转换为 `Dict`，然后进行转换；
-      如果 `data` 是 `Sequence`，那么该函数会先将其转换成一个对应的 `Dict`：{"_0": list[0], "_1": list[1], ...}，然后使用
-        mapping对这个 `Dict` 进行转换，如果没有匹配上mapping中的key则保持"_number"这个形式。
+
+    1. 如果 `mapping` 是一个函数，那么会直接返回 `mapping(data)`；
+    2. 如果 `mapping` 是一个 `Dict`，那么 `data` 的类型只能为以下三种： [`Dict`, `dataclass`, `Sequence`]；
+    如果 `data` 是 `Dict`，那么该函数会将 `data` 的 key 替换为 mapping[key]；
+    如果 `data` 是 `dataclass`，那么该函数会先使用 `dataclasses.asdict` 函数将其转换为 `Dict`，然后进行转换；
+    如果 `data` 是 `Sequence`，那么该函数会先将其转换成一个对应的 `Dict`：{"_0": list[0], "_1": list[1], ...}，然后使用
+    mapping对这个 `Dict` 进行转换，如果没有匹配上mapping中的key则保持"_number"这个形式。
 
     :param mapping: 用于转换的字典或者函数；mapping是函数时，返回值必须为字典类型。
     :param data: 需要被转换的对象；
@@ -439,12 +441,16 @@ def _is_iterable(value):
 def pretty_table_printer(dataset_or_ins) -> PrettyTable:
     r"""
     :param dataset_or_ins: 传入一个dataSet或者instance
-    ins = Instance(field_1=[1, 1, 1], field_2=[2, 2, 2], field_3=["a", "b", "c"])
-    +-----------+-----------+-----------------+
-    |  field_1  |  field_2  |     field_3     |
-    +-----------+-----------+-----------------+
-    | [1, 1, 1] | [2, 2, 2] | ['a', 'b', 'c'] |
-    +-----------+-----------+-----------------+
+
+    .. code-block::
+
+        ins = Instance(field_1=[1, 1, 1], field_2=[2, 2, 2], field_3=["a", "b", "c"])
+        +-----------+-----------+-----------------+
+        |  field_1  |  field_2  |     field_3     |
+        +-----------+-----------+-----------------+
+        | [1, 1, 1] | [2, 2, 2] | ['a', 'b', 'c'] |
+        +-----------+-----------+-----------------+
+
     :return: 以 pretty table的形式返回根据terminal大小进行自动截断
     """
     x = PrettyTable()
@@ -641,3 +647,54 @@ def is_notebook():
         return False
     else:  # pragma: no cover
         return True
+
+
+def flat_nest_dict(d:Dict, separator:str='#', compress_none_key:bool=True, top_down:bool=False) -> Dict:
+    """
+    讲一个 nested 的 dict 转成 flat 的 dict，例如
+    ex::
+        d = {'test': {'f1': {'f': 0.2, 'rec': 0.1}}} -> {'f#f1#test':0.2, 'rec#f1#test':0.1}
+
+    :param d: 需要展平的 dict 对象。
+    :param separator: 不同层级之间的 key 之间的连接符号。
+    :param compress_none_key: 如果有 key 为 None ，则忽略这一层连接。
+    :param top_down: 新的 key 的是否按照从最底层往最底层的顺序连接。
+    :return:
+    """
+    assert isinstance(d, Dict)
+    assert isinstance(separator, str)
+    flat_d = {}
+    for key, value in d.items():
+        if key is None:
+            key = ()
+        else:
+            key = (key, )
+        if isinstance(value, Mapping):
+            flat_d.update(_flat_nest_dict(value, parent_key=key, compress_none_key=compress_none_key))
+        else:
+            flat_d[key] = value
+
+    str_flat_d = {}
+    for key, value in flat_d.items():
+        if top_down:
+            key = map(str, key)
+        else:
+            key = map(str, key[::-1])
+        key = separator.join(key)
+        str_flat_d[key] = value
+    return str_flat_d
+
+
+def _flat_nest_dict(d:Mapping, parent_key:Tuple, compress_none_key:bool):
+    flat_d = {}
+    for k, v in d.items():
+        _key = parent_key
+        if k is not None:
+            _key = _key + (k,)
+        if isinstance(v, Mapping):
+            _d = _flat_nest_dict(v, parent_key=_key, compress_none_key=compress_none_key)
+            flat_d.update(_d)
+        else:
+            flat_d[_key] = v
+
+    return flat_d
