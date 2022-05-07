@@ -60,8 +60,8 @@ class JittorSingleDriver(JittorDriver):
             logger.debug(f'Use {_get_fun_msg(fn, with_fp=False)}...')
             return fn, None
         elif fn in {"train_step", "evaluate_step"}:
-            logger.debug(f'Use {_get_fun_msg(self.model.forward, with_fp=False)}...')
-            return self.model, self.model.forward
+            logger.debug(f'Use {_get_fun_msg(self.model.execute, with_fp=False)}...')
+            return self.model, self.model.execute
         else:
             raise RuntimeError(f"There is no `{fn}` method in your {type(self.model)}.")
 
@@ -98,3 +98,9 @@ class JittorSingleDriver(JittorDriver):
                 return dataloader
         else:
             return dataloader
+
+    def setup(self):
+        """
+        使用单个 GPU 时，jittor 底层自动实现调配，无需额外操作
+        """
+        pass

@@ -33,10 +33,11 @@ class JittorDriver(Driver):
                              f"`jittor.Module` type.")
         super(JittorDriver, self).__init__(model)
 
-        self.model = model
-
         self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not fp16)
         self.grad_scaler = _grad_scaler()
+
+        # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
+        self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
 
     @staticmethod
     def check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
