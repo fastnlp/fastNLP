@@ -58,13 +58,6 @@ class Evaluator:
             是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的
             dropout 与 batch normalization 将会关闭。默认为True。如果为 False，fastNLP 不会对 model 的 evaluate 状态做任何设置。无论
             该值是什么，fastNLP 都会在 evaluate 接受后将 model 的状态设置为 train 。
-        TODO 还没完成。
-        * *auto_tensor_conversion_for_metric* (``Union[bool]``) -- 
-            是否自动将输出中的 tensor 适配到 metrics 支持的。例如 model 输出是
-            paddlepaddle 的 tensor ，但是想利用 torchmetrics 的metric对象，当 auto_tensor_conversion_for_metric 为True时，fastNLP 将
-            自动将输出中 paddle 的 tensor （其它非 tensor 的参数不做任何处理）转换为 pytorch 的 tensor 再输入到 metrics 中进行评测。 model 的
-            输出 tensor 类型通过 driver 来决定，metrics 支持的输入类型由 metrics 决定。如果需要更复杂的转换，
-            请使用 input_mapping、output_mapping 参数进行。
         * *use_dist_sampler* -- 
             是否使用分布式evaluate的方式。仅当 driver 为分布式类型时，该参数才有效。默认为根据 driver 是否支持
             分布式进行设置。如果为True，将使得每个进程上的 dataloader 自动使用不同数据，所有进程的数据并集是整个数据集。

@@ -95,7 +95,7 @@ def _set_backend():
 def set_env(global_seed=None):
     """
     set_env 用于显式告知 fastNLP 将要使用的相关环境变量是什么，必须在代码最开端运行。以下的环境变量设置，优先级分别为：（1）在代码开始
-        的位置显式调用设置；（2）通过环境变量注入的；（3）通过读取配置文件（如果有）。
+    的位置显式调用设置；（2）通过环境变量注入的；（3）通过读取配置文件（如果有）。
 
     :param backend: 目前支持的 backend 有 torch, jittor, paddle 。设置特定的 backend 后，fastNLP 将不再加载其它 backend ，可以
         提高加载速度。该值对应环境变量中的 FASTNLP_BACKEND 。

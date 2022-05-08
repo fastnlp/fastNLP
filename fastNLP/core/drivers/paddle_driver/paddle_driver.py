@@ -71,8 +71,6 @@ class PaddleDriver(Driver):
 
         :param set_to_none: 用来判断是否需要将梯度直接置为 None；Paddle中这个参数无效。
         """
-        if set_to_none:
-            logger.rank_zero_warning("Parameter `set_to_none` does nothing in paddle since grad cannot be set directly.")
         for optimizer in self.optimizers:
             optimizer.clear_grad()
 
