@@ -30,7 +30,8 @@ if _NEED_IMPORT_PADDLE:
     }
 
 from .padder import Padder
-from .utils import is_number_or_numpy_number, is_number, is_numpy_number_dtype, get_shape, is_numpy_generic_class
+from .utils import is_number_or_numpy_number, is_number, is_numpy_number_dtype, is_numpy_generic_class, \
+    get_padded_numpy_array
 from .exceptions import *
 
 
@@ -52,7 +53,6 @@ def is_paddle_dtype_str(dtype):
     except:
         pass
     return False
-
 
 
 def _get_dtype(ele_dtype, dtype, class_name):
@@ -131,7 +131,7 @@ class PaddleTensorPadder(Padder):
     def pad(batch_field, pad_val, dtype):
         try:
             if not isinstance(batch_field[0], paddle.Tensor):
-                batch_field = [paddle.to_tensor(field.tolist(), dtype=dtype) for field in batch_field]
+                batch_field = [np.array(field.tolist()) for field in batch_field]
             else:
                 if dtype is None:
                     dtype = batch_field[0].dtype
@@ -141,44 +141,12 @@ class PaddleTensorPadder(Padder):
 
         shapes = [field.shape for field in batch_field]
         max_shape = [len(batch_field)] + [max(*_) for _ in zip(*shapes)]
-        tensor = paddle.full(max_shape, fill_value=pad_val, dtype=dtype)
+        array = np.full(max_shape, fill_value=pad_val)
         for i, field in enumerate(batch_field):
             slices = (i, ) + tuple(slice(0, s) for s in shapes[i])
-            tensor[slices] = field
+            array[slices] = field
+        tensor = paddle.to_tensor(array, dtype=dtype)
         return tensor
-
-
-def fill_tensor(batch_field, padded_batch, dtype):
-    """
-    将 batch_field 中的值填入到 tensor 中。
-
-    :param batch_field: 需要填充进入 array 中的内容
-    :param padded_batch: 待填充的 tensor
-    :param dtype: 数据的类别
-
-    :return:
-    """
-    if padded_batch.ndim == 2:
-        for i, content_i in enumerate(batch_field):
-            padded_batch[i, :len(content_i)] = paddle.to_tensor(content_i, dtype=dtype)
-    elif padded_batch.ndim == 3:
-        for i, content_i in enumerate(batch_field):
-            for j, content_ii in enumerate(content_i):
-                padded_batch[i, j, :len(content_ii)] = paddle.to_tensor(content_ii, dtype=dtype)
-    elif padded_batch.ndim == 4:
-        try:  # 应该是图像，所以直接应该就 ok 了。
-            padded_batch = np.array(batch_field)
-        except:
-            for i, content_i in enumerate(batch_field):
-                for j, content_ii in enumerate(content_i):
-                    for k, content_iii in enumerate(content_ii):
-                        padded_batch[i, j, k, :len(content_iii)] = paddle.to_tensor(content_iii, dtype=dtype)
-    elif padded_batch.ndim == 1:
-        padded_batch[:] = paddle.to_tensor(batch_field, dtype=dtype)
-    else:
-        raise RuntimeError("fastNLP does not support padding for more than 3 dimensions. If you need this, please "
-                           "report.")
-    return padded_batch
 
 
 def get_padded_paddle_tensor(batch_field, dtype=None, pad_val=0):
@@ -192,7 +160,6 @@ def get_padded_paddle_tensor(batch_field, dtype=None, pad_val=0):
     :param pad_val: pad 的 value
     :return:
     """
-    shapes = get_shape(batch_field)
-    tensor = paddle.to_tensor(np.full(shape=shapes, fill_value=pad_val), dtype=dtype)
-    tensor = fill_tensor(batch_field, tensor, dtype=dtype)
+    array = get_padded_numpy_array(batch_field=batch_field, dtype=None, pad_val=pad_val)
+    tensor = paddle.to_tensor(array, dtype=dtype)
     return tensor

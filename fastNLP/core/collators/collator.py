@@ -6,19 +6,20 @@ from typing import List, Union, Dict, Callable, Sequence, Mapping
 import os
 import sys
 import inspect
+import re
 
 from fastNLP.core.log import logger
 from .padders.get_padder import get_padder
+from ...envs import SUPPORT_BACKENDS
 
-import re
 
 from .packer_unpacker import SequencePackerUnpacker, SinglePackerUnpacker, MappingPackerUnpacker, \
     NestedMappingPackerUnpacker
 
 sequence_idx_str = re.compile(r'^_\d+$')  # 形如_0, _1
 SUPPORTED_BACKENDS = ['torch', 'jittor', 'paddle', 'numpy', 'raw', 'auto', None]
-CHECK_BACKEND = ['torch', 'jittor', 'paddle']  # backend 为 auto 时 检查是否是这些 backend
-
+# 由于 jittor DataLoader 存在自动的 to_jittor 的转换，所以只需要 collate 成为 numpy 就行
+AUTO_BACKEND_MAPPING = {'jittor': 'numpy'}
 
 def _get_backend() -> str:
     """
@@ -40,7 +41,7 @@ def _get_backend() -> str:
         catch_backend = []
         try:
             file = module.__file__
-            for backend in CHECK_BACKEND:
+            for backend in SUPPORT_BACKENDS:
                 if f'{os.sep}site-packages{os.sep}{backend}' in file:
                     catch_backend = [backend, file]
         except:
@@ -62,10 +63,10 @@ def _get_backend() -> str:
             break
     if len(catch_backend):
         logger.debug(f"Find a file named:{catch_backend[1]} from stack contains backend:{catch_backend[0]}.")
-        return catch_backend[0]
+        return AUTO_BACKEND_MAPPING.get(catch_backend[0], catch_backend[0])
 
     # 方式 (2)
-    for backend in CHECK_BACKEND:
+    for backend in SUPPORT_BACKENDS:
         if backend in sys.modules:
             logger.debug(f"sys.modules contains backend:{backend}.")
             return backend

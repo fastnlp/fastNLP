@@ -61,7 +61,7 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
     elif device is not None and not isinstance(device, torch.device):
         raise ValueError("Parameter `device` is wrong type, please check our documentation for the right use.")
 
-    if driver == "torch":
+    if driver == "torch":  # single, ddp, 直接启动。
         if not isinstance(device, List):
             return TorchSingleDriver(model, device, **kwargs)
         else:

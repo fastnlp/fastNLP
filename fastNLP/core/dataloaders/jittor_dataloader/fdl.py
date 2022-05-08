@@ -4,6 +4,7 @@ __all__ = [
 ]
 
 from typing import Callable, Optional, List, Union
+from copy import deepcopy
 
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
 
@@ -75,10 +76,12 @@ class JittorDataLoader:
         if isinstance(collate_fn, str):
             if collate_fn == "auto":
                 if isinstance(self.dataset.dataset, FDataSet):
-                    self.collate_fn = self.dataset.dataset.collator
-                    self.collate_fn.set_backend(backend="jittor")
+                    self.collate_fn = deepcopy(self.dataset.dataset.collator)
+                    # jittor 比较特殊，只需要保证返回 numpy.array, 其Dataloader会转为jt.var
+                    self.collate_fn.set_backend(backend="numpy")
                 else:
-                    self.collate_fn = Collator(backend="jittor")
+                    # jittor 比较特殊，只需要保证返回 numpy.array, 其Dataloader会转为jt.var
+                    self.collate_fn = Collator(backend="numpy")
             else:
                 raise ValueError(f"collate_fn: {collate_fn} must be 'auto'")
         elif isinstance(collate_fn, Callable):

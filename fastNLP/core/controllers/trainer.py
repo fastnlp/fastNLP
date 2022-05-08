@@ -117,18 +117,20 @@ class Trainer(TrainerEventTrigger):
         :param accumulation_steps: 梯度累积的步数，表示每隔几个 batch 优化器迭代一次；默认为 1；
         :param fp16: 是否开启混合精度训练；默认为 False；
         :param monitor: 当存在 evaluate_dataloaders 时，默认的 monitor metric 的名字。传入的 callback 如果有 monitor 参数且没有
-            在 callback 初始化设定的，将采取这个值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+            在 callback 初始化设定的，将采取这个值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最长公共字符串算法 找到最匹配
             的那个作为 monitor 。也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果。
             如果 evaluate_dataloaders 与 metrics 没有提供，该参数无意义。
         :param larger_better: monitor 的值是否是越大越好。
         :param marker: 用于标记一个 Trainer 实例，从而在用户调用 `Trainer.on` 函数时，标记该 callback 函数属于哪一个具体的 'trainer' 实例；默认为 None；
         :param kwargs: 一些其它的可能需要的参数，见下方的说明
         :kwargs:
+            * *torch_kwargs* --
             * *torch_non_blocking* -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
             * *data_device* -- 表示如果用户的模型 device （在 Driver 中对应为参数 model_device）为 None 时，我们会将数据迁移到 data_device 上；
             注意如果 model_device 为 None，那么 data_device 不会起作用；
             * *torch_ddp_kwargs* -- 用于配置 pytorch 的 DistributedDataParallel 初始化时的参数；仅用于 pytorch ddp 训练。例如传入
             {'find_unused_parameters': True} 来解决有有参数不参与前向运算导致的报错等。
+            * *torch_single_kwargs* --
             * *set_grad_to_none* -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
             * *use_dist_sampler* -- 表示是否使用分布式的 sampler 。在多卡时，分布式 sampler 将自动决定每张卡上读取的 sample ，使得一个epoch
                 内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
@@ -360,6 +362,14 @@ class Trainer(TrainerEventTrigger):
             self.on_exception(e)
             if not catch_KeyboardInterrupt:
                 raise e
+        except RuntimeError as e:
+            if 'torch' in self.driver_name.lower():  # 如果是 torch ，需要检测一下 find_unused_parameters
+                if 'find_unused_parameters' in e.args[0]:
+                    logger.error("You may need to pass `torch_ddp_kwargs={'find_unused_parameters': True}` in the "
+                                 "Trainer initialization to avoid this error.")
+            self.driver.on_exception()
+            self.on_exception(e)
+            raise e
         except BaseException as e:
             self.driver.on_exception()
             self.on_exception(e)
