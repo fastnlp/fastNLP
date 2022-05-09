@@ -285,7 +285,7 @@ class PaddleFleetDriver(PaddleDriver):
                 self.world_size = int(os.environ.get("PADDLE_TRAINERS_NUM"))
                 self.global_rank = int(os.environ.get("PADDLE_TRAINER_ID"))
                 reset_seed()
-                logger.info(f"\nworld size, global rank: {self.world_size}, {self.global_rank}\n")
+                logger.info(f"World size: {self.world_size}, Global rank: {self.global_rank}")
                 if not parallel_helper._is_parallel_ctx_initialized():
                     fleet.init(self.role_maker, self.is_collective, self.strategy)
 

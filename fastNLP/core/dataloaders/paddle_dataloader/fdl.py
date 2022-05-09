@@ -4,6 +4,7 @@ __all__ = [
 ]
 
 from typing import Callable, List, Optional, Union, Dict, Sequence
+from copy import deepcopy
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 
@@ -68,7 +69,7 @@ class PaddleDataLoader(DataLoader):
         if isinstance(collate_fn, str):
             if collate_fn == 'auto':
                 if isinstance(dataset.dataset, FDataSet):
-                    collate_fn = dataset.dataset.collator
+                    collate_fn = deepcopy(dataset.dataset.collator)
                     collate_fn.set_backend(backend="paddle")
                 else:
                     collate_fn = Collator(backend="paddle")

@@ -125,7 +125,7 @@ class Trainer(TrainerEventTrigger):
         :param accumulation_steps: 梯度累积的步数，表示每隔几个 batch 优化器迭代一次；默认为 1；
         :param fp16: 是否开启混合精度训练；默认为 False；
         :param monitor: 当存在 evaluate_dataloaders 时，默认的 monitor metric 的名字。传入的 callback 如果有 monitor 参数且没有
-            在 callback 初始化设定的，将采取这个值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+            在 callback 初始化设定的，将采取这个值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最长公共字符串算法 找到最匹配
             的那个作为 monitor 。也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果。
             如果 evaluate_dataloaders 与 metrics 没有提供，该参数无意义。
         :param larger_better: monitor 的值是否是越大越好。
@@ -372,6 +372,14 @@ class Trainer(TrainerEventTrigger):
             self.on_exception(e)
             if not catch_KeyboardInterrupt:
                 raise e
+        except RuntimeError as e:
+            if 'torch' in self.driver_name.lower():  # 如果是 torch ，需要检测一下 find_unused_parameters
+                if 'find_unused_parameters' in e.args[0]:
+                    logger.error("You may need to pass `torch_ddp_kwargs={'find_unused_parameters': True}` in the "
+                                 "Trainer initialization to avoid this error.")
+            self.driver.on_exception()
+            self.on_exception(e)
+            raise e
         except BaseException as e:
             self.driver.on_exception()
             self.on_exception(e)

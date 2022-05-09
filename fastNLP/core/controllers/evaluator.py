@@ -161,6 +161,7 @@ class Evaluator:
                     self.reset()
                     self.driver.barrier()
             except BaseException as e:
+                self.driver.on_exception()
                 raise e
             finally:
                 self.finally_progress_bar()

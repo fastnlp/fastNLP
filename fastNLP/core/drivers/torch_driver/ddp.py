@@ -251,7 +251,7 @@ class TorchDDPDriver(TorchDriver):
                 self.world_size = int(os.environ.get("WORLD_SIZE"))
                 self.global_rank = int(os.environ.get("RANK"))
                 reset_seed()
-                logger.info(f"World size:{self.world_size}, Global rank:{self.global_rank}")
+                logger.info(f"World size: {self.world_size}, Global rank: {self.global_rank}")
 
                 if not dist.is_initialized():
                     dist.init_process_group(
