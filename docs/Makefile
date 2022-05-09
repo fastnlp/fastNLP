@@ -6,7 +6,7 @@ SPHINXOPTS    =
 SPHINXAPIDOC  = sphinx-apidoc
 SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = fastNLP
-SPHINXEXCLUDE = ../fastNLP/transformers/* ../fastNLP/modules/* ../fastNLP/core/drivers/torch_paddle_driver/* ../fastNLP/core/utils/torch_paddle_utils.py
+SPHINXEXCLUDE = ../fastNLP/transformers/*
 SOURCEDIR     = source
 BUILDDIR      = build
 PORT          = 9000
@@ -16,13 +16,16 @@ help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS)
 
 apidoc:
-	$(SPHINXAPIDOC) -efM -d 6 -o source ../$(SPHINXPROJ) $(SPHINXEXCLUDE)
+	$(SPHINXAPIDOC) -efM -o source ../$(SPHINXPROJ) $(SPHINXEXCLUDE)
 
 server:
 	cd build/html && python -m http.server $(PORT)
 
 delete:
 	rm -f source/$(SPHINXPROJ).* source/modules.rst && rm -rf build
+
+web:
+	make html && make server
 
 dev:
 	make delete && make apidoc  && make html && make server

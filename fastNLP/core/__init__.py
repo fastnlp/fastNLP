@@ -63,7 +63,6 @@ __all__ = [
     "PaddleFleetDriver",
     "JittorSingleDriver",
     "JittorMPIDriver",
-    "TorchPaddleDriver",
 
     # log
     "logger",

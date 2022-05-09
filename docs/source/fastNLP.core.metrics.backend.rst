@@ -10,7 +10,7 @@ Subpackages
 -----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.metrics.backend.jittor_backend
    fastNLP.core.metrics.backend.paddle_backend
@@ -20,7 +20,7 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.metrics.backend.auto_backend
    fastNLP.core.metrics.backend.backend

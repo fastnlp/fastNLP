@@ -56,6 +56,8 @@ class Evaluator:
                 * ddp_kwargs -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
                  {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
                 * torch_non_blocking -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
+            * *data_device* -- 表示如果用户的模型 device （在 Driver 中对应为参数 model_device）为 None 时，我们会将数据迁移到 data_device 上；
+                注意如果 model_device 为 None，那么 data_device 不会起作用；
             * *model_use_eval_mode* (``bool``) --
                 是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的
                 dropout 与 batch normalization 将会关闭。默认为True。如果为 False，fastNLP 不会对 model 的 evaluate 状态做任何设置。无论
@@ -234,8 +236,7 @@ class Evaluator:
         """
         调用所有 metric 的 reset() 方法，清除累积的状态。
 
-        Returns:
-
+        :return:
         """
         self.metrics_wrapper.reset()
 
@@ -357,6 +358,11 @@ class _MetricsWrapper:
                 metric.update(res)
 
     def reset(self):
+        """
+        将 Metric 中的状态重新设置。
+
+        :return:
+        """
         for metric in self._metrics:
             if _is_allennlp_metric(metric):
                 metric.get_metric(reset=True)

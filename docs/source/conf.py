@@ -42,7 +42,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.autosummary',
     'sphinx.ext.mathjax',
-    'sphinx.ext.todo'
+    'sphinx.ext.todo',
+    'sphinx_autodoc_typehints'
 ]
 
 autodoc_default_options = {
@@ -53,8 +54,10 @@ autodoc_default_options = {
 
 add_module_names = False
 autosummary_ignore_module_all = False
-autodoc_typehints = "description"
+# autodoc_typehints = "description"
 autoclass_content = "class"
+typehints_fully_qualified = False
+typehints_defaults = "comma"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -168,8 +171,8 @@ texinfo_documents = [
 
 # -- Extension configuration -------------------------------------------------
 def maybe_skip_member(app, what, name, obj, skip, options):
-    # if obj.__doc__ is None:
-    #     return True
+    if obj.__doc__ is None:
+        return True
     if name == "__init__":
         return False
     if name.startswith("_"):

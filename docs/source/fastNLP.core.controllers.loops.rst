@@ -10,7 +10,7 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.controllers.loops.evaluate_batch_loop
    fastNLP.core.controllers.loops.loop

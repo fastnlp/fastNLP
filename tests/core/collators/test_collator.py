@@ -334,9 +334,9 @@ def test_torch_dl():
     dl = TorchDataLoader(ds, batch_size=2)
     batch = next(iter(dl))
     assert 'x' in batch and 'y' in batch and 'z' in batch and 'i' in batch and 'j' in batch
-    assert isinstance(batch['z'], torch.Tensor)
+    assert isinstance(batch['z'], torch.FloatTensor)
     assert isinstance(batch['j'], list)
-    assert isinstance(batch['i']['j'], torch.Tensor)
+    assert isinstance(batch['i']['j'], torch.LongTensor)
 
     dl.set_ignore('x')
     batch = next(iter(dl))

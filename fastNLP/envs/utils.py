@@ -6,6 +6,7 @@ from packaging.version import Version
 import subprocess
 import pkg_resources
 
+__all__ = []
 
 def _module_available(module_path: str) -> bool:
     """Check if a path is available in your environment.
@@ -48,10 +49,11 @@ def _compare_version(package: str, op: Callable, version: str, use_base_version:
         pkg_version = Version(pkg_version.base_version)
     return op(pkg_version, Version(version))
 
-def get_gpu_count():
+def get_gpu_count() -> int:
     """
-    利用命令行获取gpu数目的函数
-    :return: gpu数目，如果没有显卡设备则为-1
+    利用命令行获取 ``gpu`` 数目的函数
+
+    :return: 显卡数目，如果没有显卡设备则为-1
     """
     try:
         lines = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used', '--format=csv'])

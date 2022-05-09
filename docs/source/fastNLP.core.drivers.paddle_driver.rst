@@ -10,7 +10,7 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.drivers.paddle_driver.dist_utils
    fastNLP.core.drivers.paddle_driver.fleet

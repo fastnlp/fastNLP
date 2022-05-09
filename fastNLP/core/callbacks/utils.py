@@ -8,8 +8,8 @@ from fastNLP.core.utils.utils import _get_fun_msg
 
 def _get_monitor_value(monitor: Union[callable, str], real_monitor: Optional[str], res: dict) ->Tuple[str, float]:
     """
-    从res中寻找 monitor 并返回。如果 monitor 没找到则尝试用 _real_monitor ,若 _real_monitor 为 None 则尝试使用 monitor 的值进行
-    匹配。
+    从 ``res`` 中寻找 ``monitor`` 并返回。如果 ``monitor`` 没找到则尝试用 ``_real_monitor`` ,若 ``_real_monitor`` 为 ``None``
+    则尝试使用 ``monitor`` 的值进行匹配。
 
     :param monitor:
     :param real_monitor:

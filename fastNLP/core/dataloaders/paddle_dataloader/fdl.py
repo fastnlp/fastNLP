@@ -162,9 +162,9 @@ class PaddleDataLoader(DataLoader):
 
     def get_batch_indices(self) -> List[int]:
         """
-        获取当前 batch 的 idx
+        获取当前 ``batch`` 中每条数据对应的索引。
 
-        :return:
+        :return: 当前 ``batch`` 数据的索引
         """
         return self.cur_batch_indices
 

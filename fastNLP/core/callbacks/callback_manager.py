@@ -10,8 +10,8 @@ from .callback_event import Event
 from .callback import Callback
 from fastNLP.core.log import logger
 from .progress_callback import ProgressCallback, choose_progress_callback
-from fastNLP.envs import rank_zero_call
-from fastNLP.core.utils.utils import _get_fun_msg
+from ..utils.exceptions import EarlyStopException
+from ..utils.utils import _get_fun_msg
 
 
 def _transfer(func):
@@ -25,6 +25,8 @@ def _transfer(func):
         for callback_fn in manager.callback_fns[func.__name__]:
             try:
                 callback_fn(*arg, **kwargs)
+            except EarlyStopException as e:
+                raise e
             except BaseException as e:
                 logger.error(f"The following callback_fn raise exception:{_get_fun_msg(callback_fn)}.")
                 raise e
@@ -186,6 +188,8 @@ class CallbackManager:
         for each_callback_filters in self._callback_filters:
             if each_callback_filters[0] not in _record_duplicated_callback_names:
                 _record_duplicated_callback_names.add(each_callback_filters[0])
+                if 'filter_states' not in states[each_callback_filters[0]]:
+                    states[each_callback_filters[0]]["filter_states"] = {}
                 states[each_callback_filters[0]]["filter_states"][each_callback_filters[1]] = each_callback_filters[2].state_dict()
 
         # 3. 保存 callback_counter；
@@ -212,7 +216,9 @@ class CallbackManager:
             if each_callback_filters[0] in states:
                 if each_callback_filters[0] not in _already_loaded_callback_names:
                     _already_loaded_callback_names.add(each_callback_filters[0])
-                    each_callback_filters[2].load_state_dict(states[each_callback_filters[0]]["filter_states"][each_callback_filters[1]])
+                    if 'filter_states' in states[each_callback_filters[0]] and \
+                            each_callback_filters[1] in states[each_callback_filters[0]]['filter_states']:
+                        each_callback_filters[2].load_state_dict(states[each_callback_filters[0]]['filter_states'][each_callback_filters[1]])
                 else:
                     _duplicated_callback_names.add(each_callback_filters[0])
 

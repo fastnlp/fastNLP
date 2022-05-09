@@ -167,6 +167,12 @@ class TorchDriver(Driver):
         """
         model = self.unwrap_model()
         res = torch.load(filepath, map_location='cpu')
+        if isinstance(res, dict) and only_state_dict is False:
+            logger.rank_zero_warning(f"It seems like that {filepath} only contains state, you may need to use "
+                                     f"`only_state_dict=True`")
+        elif not isinstance(res, dict) and only_state_dict is True:
+            logger.rank_zero_warning(f"It seems like that {filepath} is not state, you may need to use "
+                                     f"`only_state_dict=False`")
         if only_state_dict:
             model.load_state_dict(res)
         else:
