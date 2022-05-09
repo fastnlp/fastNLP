@@ -452,8 +452,8 @@ class DataSet:
         apply_out = self._apply_process(num_proc, func, progress_desc=progress_desc,
                                         show_progress_bar=show_progress_bar, _apply_field=field_name)
         #   只检测第一个数据是否为dict类型，若是则默认所有返回值为dict；否则报错。
-        if not isinstance(apply_out[0], dict):
-            raise Exception("The result of func is not a dict")
+        if not isinstance(apply_out[0], Mapping):
+            raise Exception(f"The result of func is not a Mapping, but a {type(apply_out[0])}")
 
         for key, value in apply_out[0].items():
             results[key] = [value]

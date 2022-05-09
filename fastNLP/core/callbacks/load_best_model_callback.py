@@ -19,7 +19,8 @@ class LoadBestModelCallback(HasMonitorCallback):
                  model_load_fn:Optional[Callable] = None,
                  delete_after_train:bool = True):
         """
-        保存最佳的 monitor 值最佳的模型，并在训练结束的时候重新加载模型。仅在训练正常结束的时候才能加载最好的模型。
+        保存最佳的 monitor 值最佳的模型，并在训练结束的时候重新加载模型，默认会在加载之后删除权重文件。仅在训练正常结束的时候才能加载
+        最好的模型。
 
         :param str monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最长公共字符串算法 找到最匹配
             的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结

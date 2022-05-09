@@ -141,7 +141,10 @@ class PaddleTensorPadder(Padder):
 
         shapes = [field.shape for field in batch_field]
         max_shape = [len(batch_field)] + [max(*_) for _ in zip(*shapes)]
-        array = np.full(max_shape, fill_value=pad_val)
+        if isinstance(batch_field[0], paddle.Tensor):
+            array = paddle.full(max_shape, fill_value=pad_val, dtype=dtype)
+        else:
+            array = np.full(max_shape, fill_value=pad_val, dtype=batch_field[0].dtype)
         for i, field in enumerate(batch_field):
             slices = (i, ) + tuple(slice(0, s) for s in shapes[i])
             array[slices] = field
