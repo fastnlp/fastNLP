@@ -11,6 +11,9 @@ if _NEED_IMPORT_JITTOR:
     import jittor as jt
     from jittor import nn, Module
     from jittor.dataset import Dataset
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as Module
+    from fastNLP.core.utils.dummy_class import DummyClass as Dataset
 
 
 class JittorNormalModel_Classification(Module):
@@ -68,6 +71,7 @@ class TrainJittorConfig:
 
 @pytest.mark.parametrize("driver,device", [("jittor", None)])
 @pytest.mark.parametrize("callbacks", [[RichCallback(100)]])
+@pytest.mark.jittor
 def test_trainer_jittor(
         driver,
         device,
