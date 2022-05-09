@@ -10,7 +10,7 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.io.loader.classification
    fastNLP.io.loader.conll

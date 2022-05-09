@@ -10,7 +10,7 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.drivers.jittor_driver.initialize_jittor_driver
    fastNLP.core.drivers.jittor_driver.jittor_driver
