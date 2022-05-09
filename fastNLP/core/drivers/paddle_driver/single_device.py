@@ -1,4 +1,5 @@
 import os
+import contextlib
 from typing import Optional, Dict, Union, Callable, Tuple
 
 from .paddle_driver import PaddleDriver
@@ -70,7 +71,8 @@ class PaddleSingleDriver(PaddleDriver):
         """
         device = get_device_from_visible(self.model_device, output_type=str)
         paddle.device.set_device(device)
-        self.model.to(device)
+        with contextlib.redirect_stdout(None):
+            self.model.to(device)
 
     def model_call(self, batch, fn: Callable, signature_fn: Optional[Callable]) -> Dict:
         if isinstance(batch, Dict) and not self.wo_auto_param_call:
