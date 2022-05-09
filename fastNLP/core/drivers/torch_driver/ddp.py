@@ -220,7 +220,7 @@ class TorchDDPDriver(TorchDriver):
         self.world_size = None  # int(os.environ.get("WORLD_SIZE"))  len(self.parallel_device)
         self.global_rank = 0
 
-        self._ddp_kwargs = kwargs.get("torch_ddp_kwargs", {})
+        self._ddp_kwargs = self._torch_kwargs.get("ddp_kwargs", {})
         check_user_specific_params(self._ddp_kwargs, DistributedDataParallel.__init__)
         if len(self.model._buffers) != 0 and self._ddp_kwargs.get("broadcast_buffers", None) is None:
             logger.info("Notice your model has buffers and you are using `TorchDDPDriver`, but you do not set "
