@@ -54,7 +54,7 @@ class JittorDataLoader:
         :param endless:
         :param collate_fn: 对取得到的数据进行打包的callable函数
         """
-        # TODO 验证支持replacesampler （以后完成）
+        # TODO 验证支持replacesampler （以后完成） 增加Sampler
         # 将内部dataset批次设置为1
         if isinstance(dataset, Dataset):
             dataset.set_attrs(batch_size=1)
