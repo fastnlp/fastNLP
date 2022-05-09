@@ -234,8 +234,7 @@ class Evaluator:
         """
         调用所有 metric 的 reset() 方法，清除累积的状态。
 
-        Returns:
-
+        :return:
         """
         self.metrics_wrapper.reset()
 
@@ -357,6 +356,11 @@ class _MetricsWrapper:
                 metric.update(res)
 
     def reset(self):
+        """
+        将 Metric 中的状态重新设置。
+
+        :return:
+        """
         for metric in self._metrics:
             if _is_allennlp_metric(metric):
                 metric.get_metric(reset=True)

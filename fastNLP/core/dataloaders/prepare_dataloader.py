@@ -10,7 +10,7 @@ from ..samplers import RandomBatchSampler, RandomSampler
 from .torch_dataloader import prepare_torch_dataloader
 from .paddle_dataloader import prepare_paddle_dataloader
 from .jittor_dataloader import prepare_jittor_dataloader
-from ...envs import FASTNLP_BACKEND, SUPPORT_BACKENDS, _module_available
+from ...envs import FASTNLP_BACKEND, SUPPORT_BACKENDS
 from ..log import logger
 
 

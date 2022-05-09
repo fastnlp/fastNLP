@@ -118,8 +118,8 @@ class TorchTensorPadder(Padder):
                 batch_field = [torch.tensor(field.tolist(), dtype=dtype) for field in batch_field]
             else:
                 device = batch_field[0].device
-                if dtype is None:
-                    dtype = batch_field[0].dtype
+            if dtype is None:
+                dtype = batch_field[0].dtype
         except AttributeError:
             raise RuntimeError(f"If the field is not a torch.Tensor (it is {type(batch_field[0])}), "
                                f"it must have tolist() method.")

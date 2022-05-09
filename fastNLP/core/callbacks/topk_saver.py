@@ -33,9 +33,8 @@ class Saver:
         :param kwargs: 更多需要传递给 Trainer.save() 或者 Trainer.save_model() 接口的参数。
         """
         if folder is None:
-            logger.rank_zero_warning(
-                "Parameter `folder` is None, and we will use the current work directory to find and load your model.")
-            folder = Path.cwd()
+            folder = Path.cwd().absolute()
+            logger.info(f"Parameter `folder` is None, and we will use {folder} to save and load your model.")
         folder = Path(folder)
         if not folder.exists():
             folder.mkdir(parents=True, exist_ok=True)

@@ -10,8 +10,8 @@ from .callback_event import Event
 from .callback import Callback
 from fastNLP.core.log import logger
 from .progress_callback import ProgressCallback, choose_progress_callback
-from fastNLP.envs import rank_zero_call
-from fastNLP.core.utils.utils import _get_fun_msg
+from ..utils.exceptions import EarlyStopException
+from ..utils.utils import _get_fun_msg
 
 
 def _transfer(func):
@@ -25,6 +25,8 @@ def _transfer(func):
         for callback_fn in manager.callback_fns[func.__name__]:
             try:
                 callback_fn(*arg, **kwargs)
+            except EarlyStopException as e:
+                raise e
             except BaseException as e:
                 logger.error(f"The following callback_fn raise exception:{_get_fun_msg(callback_fn)}.")
                 raise e

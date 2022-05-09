@@ -646,7 +646,7 @@ class Trainer(TrainerEventTrigger):
             self.driver.save_model(folder, only_state_dict, **kwargs)
         self.driver.barrier()
 
-    def load_model(self, folder: Union[str, Path, BinaryIO, io.BytesIO], only_state_dict: bool = False,
+    def load_model(self, folder: Union[str, Path, BinaryIO, io.BytesIO], only_state_dict: bool = True,
                    model_load_fn: Optional[Callable] = None, **kwargs):
         """
         加载模型

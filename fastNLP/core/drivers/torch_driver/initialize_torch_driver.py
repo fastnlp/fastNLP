@@ -55,8 +55,8 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
             elif each < 0:
                 raise ValueError("When parameter `device` is 'Sequence' type, the value in it should be bigger than 0.")
             elif each >= _could_use_device_num:
-                raise ValueError("When parameter `device` is 'Sequence' type, the value in it should not be bigger than"
-                                 " the available gpu number.")
+                raise ValueError(f"When parameter `device` is 'Sequence' type, the value in it should not be bigger than"
+                                 f" the available gpu number:{_could_use_device_num}.")
         device = [torch.device(f"cuda:{w}") for w in device]
     elif device is not None and not isinstance(device, torch.device):
         raise ValueError("Parameter `device` is wrong type, please check our documentation for the right use.")
