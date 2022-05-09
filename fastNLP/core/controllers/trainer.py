@@ -1,3 +1,13 @@
+"""
+todo 写一下这里的开头文档
+``Trainer`` 是 fastNLP 用于训练模型的专门的训练器，其支持多种不同的驱动模式 ``Driver``，不仅包括最为经常使用的 DDP，而且还支持 jittor 等国产
+的训练框架；新版的 fastNLP 新加入了方便的 callback 函数修饰器，并且支持定制用户自己特定的训练循环过程；通过使用该训练器，用户只需要自己实现
+模型部分，而将训练层面的逻辑完全地交给 fastNLP；
+
+
+
+"""
+
 from typing import Union, Optional, List, Callable, Dict, Sequence, BinaryIO, IO
 from functools import partial
 from collections import defaultdict
@@ -7,7 +17,6 @@ from dataclasses import is_dataclass
 import os
 from pathlib import Path
 import io
-import inspect
 
 __all__ = [
     'Trainer',
@@ -62,12 +71,22 @@ class Trainer(TrainerEventTrigger):
             **kwargs
     ):
         r"""
-        `Trainer` 是 fastNLP 用于训练模型的专门的训练器，其支持多种不同的驱动模式，不仅包括最为经常使用的 DDP，而且还支持 jittor 等国产
-        的训练框架；新版的 fastNLP 新加入了方便的 callback 函数修饰器，并且支持定制用户自己特定的训练循环过程；通过使用该训练器，用户只需
-        要自己实现模型部分，而将训练层面的逻辑完全地交给 fastNLP；
 
-        :param model: 训练所需要的模型，目前支持 pytorch；
-        :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：["torch",]，之后我们会加入 jittor、paddle 等
+
+        :param model: 训练所需要的模型，例如 ``torch.nn.Module``；
+
+        .. note::
+
+            当使用 pytorch 时，注意参数 ``model`` 在大多数情况下为 ``nn.Module``。但是您仍能够通过使用一些特定的组合来使用情况，如下所示：
+
+            1. 当希望使用 ``DataParallel`` 时，您应当使用 ``TorchSingleDriver``，意味着您在初始化 ``Trainer`` 时参数 ``device`` 不应当为
+            一个 ``List``；
+
+            2. 当您选择自己初始化 ``init_process_group`` 时（这种情况要求您传入的 ``model`` 参数一定为 ``DistributedDataParallel``），
+            您应当使用 ``TorchDDPDriver``，意味着您需要通过 ``python -m torch.distributed.launch`` 的方式来启动训练，此时参数 ``device``
+            应当设置为 None（此时我们会忽略该参数），具体见下面对于参数 ``device`` 的更详细的解释。
+
+        :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：["torch"]，之后我们会加入 jittor、paddle 等
             国产框架的训练模式；其中 "torch" 表示使用 ``TorchSingleDriver`` 或者 ``TorchDDPDriver``，具体使用哪一种取决于参数 ``device``
             的设置；
         :param train_dataloader: 训练数据集，注意其必须是单独的一个数据集，不能是 List 或者 Dict；
@@ -80,31 +99,70 @@ class Trainer(TrainerEventTrigger):
             device 的可选输入如下所示：
 
             * *str*: 例如 'cpu', 'cuda', 'cuda:0', 'cuda:1' 等；
-            * *torch.device*: 将模型装载到 ``torch.device`` 上；
+            * *torch.device*: 例如 'torch.device("cuda:0")'；
             * *int*: 将使用 ``device_id`` 为该值的 ``gpu`` 进行训练；如果值为 -1，那么默认使用全部的显卡，此时使用的 driver 实例是 `TorchDDPDriver`；
             * *list(int)*: 如果多于 1 个device，应当通过该种方式进行设定；注意此时我们一定会使用 ``TorchDDPDriver``，不管您传入的列表的长度是 1 还是其它值；
-            * *None*: 为None则不对模型进行任何处理；
+            * *None*: 仅当用户自己通过训练框架提供的并行训练启动脚本开启 ddp 进程时为 None；
 
-            .. node::
+            .. note::
 
-                如果希望使用 ``TorchDDPDriver``
+                如果希望使用 ``TorchDDPDriver``，在初始化 ``Trainer`` 时您应当使用::
 
+                    Trainer(driver="torch", device=[0, 1])
+
+                注意如果这时 ``device=[0]``，我们仍旧会使用 ``TorchDDPDriver``。
+
+                如果希望使用 ``TorchSingleDriver``，则在初始化 ``Trainer`` 时您应当使用::
+
+                    Trainer(driver="torch", device=0)
+
+            .. warning::
+
+                注意参数 ``device`` 仅当您通过 pytorch 或者其它训练框架自身的并行训练启动脚本启动 ddp 训练时才允许为 ``None``！
+
+                例如，当您使用::
+
+                    python -m torch.distributed.launch --nproc_per_node 2 train.py
+
+                来使用 ``TorchDDPDriver`` 时，此时参数 ``device`` 不再有效（不管您是否自己初始化 ``init_process_group``），我们将直接
+                通过 ``torch.device(f"cuda:{local_rank}")`` 来获取当前进程所使用的的具体的 gpu 设备。因此此时您需要使用 ``os.environ["CUDA_VISIBLE_DEVICES"]``
+                来指定要使用的具体的 gpu 设备。
+
+                另一点需要注意的是，当您没有选择自己初始化 ``init_process_group`` 时，我们仍旧会帮助您把模型和数据迁移到当前进程所使用的
+                具体的 gpu 设备上。但是如果您选择自己在 ``Trainer`` 初始化前（意味着在 ``driver`` 的 ``setup`` 前）初始化 ``init_process_group``，
+                那么对于模型的迁移应当完全由您自己来完成。此时对于数据的迁移，如果您在 ``Trainer`` 初始化时指定了参数 ``data_device``，那么
+                我们会将数据迁移到 ``data_device`` 上；如果其为 None，那么将数据迁移到正确的设备上应当由您自己来完成。
+
+                对于使用 ``TorchDDPDriver`` 的更多细节，请见 :class:`fastNLP.core.drivers.torch_driver.TorchDDPDriver`。
 
         :param n_epochs: 训练总共的 epoch 的数量，默认为 20；
         :param evaluate_dataloaders: 验证数据集，其可以是单独的一个数据集，也可以是多个数据集；当为多个数据集时，注意其必须是 Dict；默认
-         为 None；
-        :param batch_step_fn: 定制每次 train batch 执行的函数。该函数应接受两个参数为 `trainer` 和`batch`，不需要要返回值；可以
-            参考 fastNLP.core.controllers.loops.train_batch_loop.TrainBatchLoop中的batch_step_fn函数。
-        :param evaluate_batch_step_fn: 定制每次 evaluate batch 执行的函数。该函数应接受的两个参数为 `evaluator` 和 `batch`，
-            不需要有返回值；可以参考 fastNLP.core.controllers.loops.evaluate_batch_loop.EvaluateBatchLoop中的batch_step_fn函数。
-        :param train_fn: 用来控制 `Trainer` 在训练的前向传播过程中是调用模型的哪一个函数，例如是 `train_step` 还是 `forward`；
-         默认为 None，如果该值是 None，那么我们会默认使用 `train_step` 当做前向传播的函数，如果在模型中没有找到该方法，
-         则使用模型默认的前向传播函数。
-        :param evaluate_fn: 用来控制 `Trainer` 中内置的 `Evaluator` 的模式，应当为 None 或者一个字符串；其使用方式和 train_fn 类似；
-         注意该参数我们会直接传给 Trainer 中内置的 Evaluator（如果不为 None）；如果该值为 None ，将首先尝试寻找模型中是否有
-         evaluate_step 这个函数，如果没有则使用 forward 函数。
-        :param callbacks: 训练当中触发的 callback 类，该参数应当为一个列表，其中的每一个元素都应当继承 `Callback` 类；
-        :param metrics: 应当为一个字典，其中 key 表示 monitor，例如 {"acc1": AccMetric(), "acc2": AccMetric()}；
+            为 None；
+        :param batch_step_fn: 定制每次训练时前向运行一个 batch 的数据所执行的函数。该函数应接受两个参数为 ``trainer`` 和 ``batch``，
+            不需要要返回值；更详细的使用位置和说明请见 :meth:`fastNLP.core.controllers.TrainBatchLoop.batch_step_fn`；
+        :param evaluate_batch_step_fn: 定制每次验证时前向运行一个 batch 的数据所执行的函数。该函数应接受的两个参数为 ``evaluator`` 和 ``batch``，
+            不需要有返回值；可以参考 :meth:`fastNLP.core.controllers.EvaluateBatchLoop.batch_step_fn`；
+        :param train_fn: 用来控制 ``Trainer`` 在训练的前向传播过程中是调用模型的哪一个函数，例如是 ``train_step`` 还是 ``forward``；
+            默认为 ``None``，如果该值是 ``None``，那么我们会默认使用 ``train_step`` 当做前向传播的函数，如果在模型的定义类中没有找到该方法，
+            则使用模型默认的前向传播函数，例如对于 pytorch 来说就是 ``forward``。
+
+            .. note::
+                在 fastNLP 中，对于训练时使用的前向传播函数的查找逻辑如下所示：
+
+                    1. 如果 ``train_fn`` 为 None，那么在 model 的类 Model 中寻找方法 ``Model.train_step``;如果没有找到，那么默认使用 ``Model.forward``；
+                    2. 如果 ``train_fn`` 为一个字符串，例如 'my_step_fn'，那么我们首先会在 model 的类 Model 中寻找方法 ``Model.my_step_fn``，
+                    如果没有找到，那么会直接报错；
+
+        :param evaluate_fn: 用来控制 ``Trainer`` 中内置的 ``Evaluator`` 在验证的前向传播过程中是调用模型的哪一个函数，应当为 ``None``
+            或者一个字符串；其使用方式和 train_fn 类似；具体可见 :class:`fastNLP.core.controllers.Evaluator`；
+        :param callbacks: 训练当中触发的 callback 类，该参数应当为一个列表，其中的每一个元素都应当继承 ``Callback`` 类；具体可见
+            :class:`fastNLP.core.callbacks.Callback`；
+        :param metrics: 用于传给 ``Trainer`` 内部的 ``Evaluator`` 实例来进行训练过程中的验证。其应当为一个字典，其中 key 表示 monitor，
+            例如 {"acc1": AccMetric(), "acc2": AccMetric()}；
+
+
+
+
         :param evaluate_every: 可以为负数、正数或者函数；为负数时表示每隔几个 epoch evaluate 一次；为正数则表示每隔几个 batch evaluate 一次；
          为函数时表示用户自己传入的用于控制 Trainer 中的 evaluate 的频率的函数，该函数的应该接受当前 trainer 对象作为参数，并
          返回一个 bool 值，返回为 True 说明需要进行 evaluate ；将在每个 batch 结束后调用该函数判断是否需要 evaluate 。
@@ -154,6 +212,27 @@ class Trainer(TrainerEventTrigger):
             * *evaluate_output_mapping* -- 与 output_mapping 一致，但是只用于 evaluate 中。与 output_mapping 互斥。
 
 
+        .. note::
+
+            ``Trainer`` 内部的 ``Evaluator`` 默认是 None，如果您需要在训练过程中进行验证，你需要保证这几个参数得到正确的传入：
+
+            必须的参数：1. ``metrics``；2. ``evaluate_dataloaders``；
+
+            可选的其它参数：1. ``evaluate_batch_step_fn；2. ``evaluate_fn``；3. ``evaluate_every``；4. ``input_mapping``；
+            5. ``output_mapping``； 6. ``model_wo_auto_param_call``；7. ``fp16``；8. ``monitor``；9. ``larger_better``；
+
+        .. warning::
+
+            如果 ``Trainer`` 中的 ``Evaluator`` 实例不为 ``None``，那么需要注意 ``Trainer`` 中的一些参数是与 ``Evaluator`` 一致的，它们分别为：
+
+            1. ``Evaluator`` 在初始化时的 ``driver`` 参数是 ``Trainer`` 中已经实例化过的 driver；这一点使得一些参数对于 ``Trainer`` 内部的
+            ``Evaluator`` 没有用处，例如 ``device``，``torch_kwargs``，``data_device`` 和 ``output_from_new_proc`` 等；
+            2.  ``input_mapping``，``output_mapping``，``model_wo_auto_param_call`` 和 ``fp16`` 是 ``Trainer`` 和其内部默认的
+            ``Evaluator`` 是一致的；
+
+            当然，对于某些参数，您可以通过修改
+
+
         """
         self.model = model
         self.marker = marker
@@ -174,7 +253,7 @@ class Trainer(TrainerEventTrigger):
         evaluate_input_mapping = kwargs.get('evaluate_input_mapping', None)
         evaluate_output_mapping = kwargs.get('evaluate_output_mapping', None)
 
-        train_input_mapping, train_output_mapping, evaluate_input_mapping, evaluate_output_mapping  = \
+        train_input_mapping, train_output_mapping, evaluate_input_mapping, evaluate_output_mapping = \
             _get_input_output_mapping(input_mapping, output_mapping, train_input_mapping, train_output_mapping,
                                       evaluate_input_mapping, evaluate_output_mapping)
 
@@ -273,7 +352,7 @@ class Trainer(TrainerEventTrigger):
             if not (isinstance(progress_bar, str) or progress_bar is None): # 应该是ProgressCallback，获取其名称。
                 progress_bar = progress_bar.name
             self.evaluator = Evaluator(model=model, dataloaders=evaluate_dataloaders, metrics=metrics,
-                                       driver=self.driver, device=device, evaluate_batch_step_fn=evaluate_batch_step_fn,
+                                       driver=self.driver, evaluate_batch_step_fn=evaluate_batch_step_fn,
                                        evaluate_fn=evaluate_fn, input_mapping=input_mapping,
                                        output_mapping=output_mapping, fp16=fp16, verbose=0,
                                        use_dist_sampler=kwargs.get("evaluate_use_dist_sampler", None),
