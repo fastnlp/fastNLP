@@ -12,7 +12,7 @@ class EarlyStopCallback(HasMonitorCallback):
     def __init__(self, monitor:Union[str, Callable]=None, larger_better:bool=True, patience:int=10):
         """
 
-        :param str monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+        :param str monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最长公共字符串算法 找到最匹配
             的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
             果(字典类型)，返回一个 float 值作为 monitor 的结果。
         :param larger_better: monitor 的值是否是越大越好。

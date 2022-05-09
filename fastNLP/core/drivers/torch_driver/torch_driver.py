@@ -49,8 +49,9 @@ class TorchDriver(Driver):
         self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not fp16)
         self.grad_scaler = _grad_scaler()
 
+        self._torch_kwargs = kwargs.get("torch_kwargs", {})
         # 用来设置 `torch_move_data_to_device` 中的 `non_blocking` 参数；
-        self.non_blocking = kwargs.get("torch_non_blocking", True)
+        self.non_blocking = self._torch_kwargs.get("torch_non_blocking", True)
 
         # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
         self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)

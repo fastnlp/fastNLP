@@ -22,6 +22,8 @@ import numpy as np
 from pathlib import Path
 
 from fastNLP.core.log import logger
+from ...envs import SUPPORT_BACKENDS
+
 
 __all__ = [
     'get_fn_arg_names',

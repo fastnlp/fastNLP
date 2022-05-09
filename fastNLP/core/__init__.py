@@ -48,6 +48,7 @@ __all__ = [
     'prepare_jittor_dataloader',
     'prepare_paddle_dataloader',
     'prepare_torch_dataloader',
+    "prepare_dataloader",
 
     # dataset
     'DataSet',

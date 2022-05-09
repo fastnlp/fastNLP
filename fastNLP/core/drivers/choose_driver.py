@@ -17,7 +17,7 @@ def choose_driver(model, driver: Union[str, Driver], device: Optional[Union[int,
     if isinstance(driver, Driver):
         return driver
 
-    if driver in {"torch", "torch_ddp", "fairscale"}:
+    if driver in {"torch", "fairscale"}:
         from fastNLP.core.drivers.torch_driver.initialize_torch_driver import initialize_torch_driver
         return initialize_torch_driver(driver, device, model, **kwargs)
     elif driver in {"jittor"}:
@@ -27,5 +27,5 @@ def choose_driver(model, driver: Union[str, Driver], device: Optional[Union[int,
         from fastNLP.core.drivers.paddle_driver.initialize_paddle_driver import initialize_paddle_driver
         return initialize_paddle_driver(driver, device, model, **kwargs)
     else:
-        raise ValueError("Parameter `driver` can only be one of these values: ['torch', 'torch_ddp', 'fairscale', "
+        raise ValueError("Parameter `driver` can only be one of these values: ['torch', 'fairscale', "
                          "'jittor', 'paddle', 'fleet'].")

@@ -34,7 +34,7 @@ class ResultsMonitor:
         """
         可用于监控某个数值，并通过 is_better_results() 等接口实现检测结果是否变得更好了。
 
-        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最长公共字符串算法 找到最匹配
                 的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
                 果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有相关的 monitor 值请返回 None 。
         :param larger_better: monitor 是否时越大越好
@@ -171,7 +171,7 @@ class HasMonitorCallback(ResultsMonitor, Callback):
         该 callback 不直接进行使用，作为其它相关 callback 的父类使用，如果 callback 有使用 monitor 可以继承该函数里面实现了
         （1）判断monitor合法性；（2）在需要时， 根据trainer的monitor设置自己的monitor名称。
 
-        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最长公共字符串算法 找到最匹配
                 的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
                 果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有相关的 monitor 值请返回 None 。
         :param larger_better: monitor 是否时越大越好
@@ -209,7 +209,7 @@ class ExecuteOnceBetterMonitor(HasMonitorCallback):
         """
         当监控的 monitor 结果更好的时候，调用 execute_fn 函数。
 
-        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最匹配
+        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最长公共字符串算法 找到最匹配
                 的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
                 果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有相关的 monitor 值请返回 None 。
         :param larger_better: monitor 是否时越大越好
