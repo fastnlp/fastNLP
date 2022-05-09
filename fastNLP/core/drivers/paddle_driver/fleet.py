@@ -191,8 +191,8 @@ class PaddleFleetDriver(PaddleDriver):
             不管是什么情况，`PaddleFleetDriver` 在 `setup` 函数的最后，都会将所有进程的 pid 主动记录下来，这样当一个进程出现 exception 后，
              driver 的 on_exception 函数就会被 trainer 调用，其会调用 os.kill 指令将其它进程 kill 掉；
         """
-        # if USER_CUDA_VISIBLE_DEVICES not in os.environ:
-        #     raise RuntimeError("To run paddle distributed training, please set `FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
+        if USER_CUDA_VISIBLE_DEVICES not in os.environ:
+            raise RuntimeError("To run paddle distributed training, please set `FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
         super(PaddleFleetDriver, self).__init__(model, fp16=fp16, **kwargs)
 
         # 如果不是通过 launch 启动，要求用户必须传入 parallel_device
