@@ -238,14 +238,16 @@ class PaddleFleetDriver(PaddleDriver):
         self.gloo_rendezvous_dir = None
 
         # 分布式环境的其它参数设置
-        self._fleet_kwargs = kwargs.get("paddle_fleet_kwargs", {})
+        paddle_kwargs = kwargs.get("paddle_kwargs", {})
+        
+        self._fleet_kwargs = paddle_kwargs.get("fleet_kwargs", {})
         check_user_specific_params(self._fleet_kwargs, DataParallel.__init__)
         # fleet.init 中对于分布式策略的设置，详情可以参考 PaddlePaddle 的官方文档
         self.strategy = self._fleet_kwargs.get("strategy", fleet.DistributedStrategy())
-        self.is_collective = self._fleet_kwargs.get("is_collective", True)
+        self.is_collective = self._fleet_kwargs.pop("is_collective", True)
         if not self.is_collective:
             raise NotImplementedError("FastNLP only support `collective` for distributed training now.")
-        self.role_maker = self._fleet_kwargs.get("role_maker", None)
+        self.role_maker = self._fleet_kwargs.pop("role_maker", None)
 
         if self.local_rank == 0 and not is_in_paddle_dist():
             # 由于使用driver时模型一定会被初始化，因此在一开始程序一定会占用一部分显存来存放模型，然而这部分显存没有

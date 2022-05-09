@@ -76,7 +76,7 @@ def test_trainer_fleet(
     trainer.run()
 
 if __name__ == "__main__":
-    driver = "fleet"
+    driver = "paddle"
     device = [0,2,3]
     # driver = "paddle"
     # device = 2

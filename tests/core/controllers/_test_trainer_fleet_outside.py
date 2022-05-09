@@ -83,7 +83,7 @@ def test_trainer_fleet(
     trainer.run()
 
 if __name__ == "__main__":
-    driver = "fleet"
+    driver = "paddle"
     device = [0,2,3]
     callbacks = [
         # RecordMetricCallback(monitor="acc#acc", metric_threshold=0.0, larger_better=True), 
