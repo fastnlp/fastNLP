@@ -295,8 +295,8 @@ class Trainer(TrainerEventTrigger):
             callbacks=callbacks,
             metrics=metrics,
             evaluate_every=evaluate_every,
-            input_mapping=evaluate_input_mapping,
-            output_mapping=evaluate_output_mapping,
+            input_mapping=train_input_mapping,
+            output_mapping=train_output_mapping,
             model_wo_auto_param_call=model_wo_auto_param_call,
             accumulation_steps=accumulation_steps,
             fp16=fp16,
@@ -352,9 +352,9 @@ class Trainer(TrainerEventTrigger):
             if not (isinstance(progress_bar, str) or progress_bar is None): # 应该是ProgressCallback，获取其名称。
                 progress_bar = progress_bar.name
             self.evaluator = Evaluator(model=model, dataloaders=evaluate_dataloaders, metrics=metrics,
-                                       driver=self.driver, evaluate_batch_step_fn=evaluate_batch_step_fn,
-                                       evaluate_fn=evaluate_fn, input_mapping=input_mapping,
-                                       output_mapping=output_mapping, fp16=fp16, verbose=0,
+                                       driver=self.driver, device=device, evaluate_batch_step_fn=evaluate_batch_step_fn,
+                                       evaluate_fn=evaluate_fn, input_mapping=evaluate_input_mapping,
+                                       output_mapping=evaluate_output_mapping, fp16=fp16, verbose=0,
                                        use_dist_sampler=kwargs.get("evaluate_use_dist_sampler", None),
                                        progress_bar=progress_bar)
 
