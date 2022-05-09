@@ -37,7 +37,7 @@ class MoreEvaluateCallback(HasMonitorCallback):
             一个 bool 值，返回为 True 说明需要进行 evaluate ；将在每个 batch 结束后调用该函数判断是否需要 evaluate 。
         :param watch_monitor: 这个值用来表示监控的 Trainer 中的 evaluate 结果的，当该值不为 None ，evaluate_every 失效。本参数的
             意义是，当检测到 Trainer 中 evaluate results 的 {watch_monitor} 的结果更好时，则进行一次 evaluate 。该参数有两种
-            取值: (1) str 类型，监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最短公共字符串算法 找到最
+            取值: (1) str 类型，监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最长公共字符串算法 找到最
             匹配的那个作为 monitor ; (2) 也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，返回一个 float 值作为 monitor
             的结果，如果当前结果中没有相关的monitor 值请返回 None 。
         :param watch_monitor_larger_better: watch_monitor 是否越大越好。

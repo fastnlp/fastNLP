@@ -4,7 +4,7 @@ __all__ = [
 ]
 
 from typing import Optional, Callable, Sequence, Union, Tuple, Dict, Mapping, List
-import inspect
+from copy import deepcopy
 
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.collators import Collator
@@ -84,7 +84,7 @@ class TorchDataLoader(DataLoader):
         if isinstance(collate_fn, str):
             if collate_fn == 'auto':
                 if isinstance(dataset.dataset, DataSet):  # 使用了 fastnlp dataset
-                    collate_fn = dataset.dataset.collator
+                    collate_fn = deepcopy(dataset.dataset.collator)
                     collate_fn.set_backend(backend="torch")
                 else:
                     collate_fn = Collator(backend="torch")
@@ -250,26 +250,15 @@ def prepare_torch_dataloader(ds_or_db,
     elif isinstance(ds_or_db, Sequence):
         dl_bundle = []
         for idx, ds in enumerate(ds_or_db):
-            if idx == 0:
-                dl_bundle.append(
-                    TorchDataLoader(dataset=ds, batch_size=batch_size,
-                                    shuffle=shuffle, sampler=sampler, batch_sampler=batch_sampler,
-                                    num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
-                                    drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
-                                    multiprocessing_context=multiprocessing_context, generator=generator,
-                                    prefetch_factor=prefetch_factor, persistent_workers=persistent_workers,
-                                    )
-                )
-            else:
-                dl_bundle.append(
-                    TorchDataLoader(dataset=ds, batch_size=batch_size,
-                                    shuffle=shuffle, sampler=sampler, batch_sampler=batch_sampler,
-                                    num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
-                                    drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
-                                    multiprocessing_context=multiprocessing_context, generator=generator,
-                                    prefetch_factor=prefetch_factor, persistent_workers=persistent_workers,
-                                    )
-                )
+            dl_bundle.append(
+                TorchDataLoader(dataset=ds, batch_size=batch_size,
+                                shuffle=shuffle, sampler=sampler, batch_sampler=batch_sampler,
+                                num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
+                                drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
+                                multiprocessing_context=multiprocessing_context, generator=generator,
+                                prefetch_factor=prefetch_factor, persistent_workers=persistent_workers,
+                                )
+            )
         return dl_bundle
 
     elif isinstance(ds_or_db, Mapping):
