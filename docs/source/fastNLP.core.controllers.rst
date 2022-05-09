@@ -10,7 +10,7 @@ Subpackages
 -----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.controllers.loops
    fastNLP.core.controllers.utils
@@ -19,7 +19,7 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.controllers.evaluator
    fastNLP.core.controllers.trainer

@@ -10,7 +10,7 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.callbacks.torch_callbacks.torch_grad_clip_callback
    fastNLP.core.callbacks.torch_callbacks.torch_lr_sched_callback

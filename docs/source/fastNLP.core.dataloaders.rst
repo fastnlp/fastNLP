@@ -10,7 +10,7 @@ Subpackages
 -----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.dataloaders.jittor_dataloader
    fastNLP.core.dataloaders.paddle_dataloader
@@ -20,7 +20,8 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.dataloaders.mix_dataloader
+   fastNLP.core.dataloaders.prepare_dataloader
    fastNLP.core.dataloaders.utils

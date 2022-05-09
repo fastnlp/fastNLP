@@ -10,7 +10,7 @@ Subpackages
 -----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.drivers.jittor_driver
    fastNLP.core.drivers.paddle_driver
@@ -20,7 +20,7 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.drivers.choose_driver
    fastNLP.core.drivers.driver

@@ -10,7 +10,7 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.samplers.conversion_utils
    fastNLP.core.samplers.mix_sampler
