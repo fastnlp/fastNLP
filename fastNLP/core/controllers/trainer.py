@@ -67,20 +67,28 @@ class Trainer(TrainerEventTrigger):
         要自己实现模型部分，而将训练层面的逻辑完全地交给 fastNLP；
 
         :param model: 训练所需要的模型，目前支持 pytorch；
-        :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：["torch", "torch_ddp", ]，之后我们会加入 jittor、paddle 等
-            国产框架的训练模式；其中 "torch" 表示使用 cpu 或者单张 gpu 进行训练
+        :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：["torch",]，之后我们会加入 jittor、paddle 等
+            国产框架的训练模式；其中 "torch" 表示使用 ``TorchSingleDriver`` 或者 ``TorchDDPDriver``，具体使用哪一种取决于参数 ``device``
+            的设置；
         :param train_dataloader: 训练数据集，注意其必须是单独的一个数据集，不能是 List 或者 Dict；
         :param optimizers: 训练所需要的优化器；可以是单独的一个优化器实例，也可以是多个优化器组成的 List；
-        :param device: 该参数用来指定具体训练时使用的机器；注意当该参数为 None 时，fastNLP 不会将模型和数据进行设备之间的移动处理，但是你
-            可以通过参数 `input_mapping` 和 `output_mapping` 来实现设备之间数据迁移的工作（通过这两个参数传入两个处理数据的函数）；同时你也
-            可以通过在 kwargs 添加参数 "data_device" 来让我们帮助您将数据迁移到指定的机器上（注意这种情况理应只出现在用户在 Trainer 实例化前
-            自己构造 DDP 的多进程场景）；
-        device 的可选输入如下所示：
-            1. 可选输入：str: ['cpu', 'cuda', 'cuda:0', 'cuda:1', ...] 依次为'cpu'中, 可见的第一个GPU中, 可见的第一个GPU中, 可见的第二个GPU中；
-            2. torch.device：将模型装载到torch.device上；
-            3. int： 将使用device_id为该值的gpu进行训练；如果值为 -1，那么默认使用全部的显卡，此时是 `TorchDDPDriver`；
-            4. list(int)：如果多于1个device，应当通过该种方式进行设定；当 `device` 为一个 list 时，我们默认使用 `TorchDDPDriver`；
-            5. None： 为None则不对模型进行任何处理；
+        :param device: 该参数用来指定具体训练时使用的机器；注意当该参数仅当您通过 `torch.distributed.launch/run` 启动时可以为 None，
+            此时 fastNLP 不会对模型和数据进行设备之间的移动处理，但是你可以通过参数 `input_mapping` 和 `output_mapping` 来实现设备之间
+            数据迁移的工作（通过这两个参数传入两个处理数据的函数）；同时你也可以通过在 kwargs 添加参数 "data_device" 来让我们帮助您将数据
+            迁移到指定的机器上（注意这种情况理应只出现在用户在 Trainer 实例化前自己构造 DDP 的场景）；
+
+            device 的可选输入如下所示：
+
+            * *str*: 例如 'cpu', 'cuda', 'cuda:0', 'cuda:1' 等；
+            * *torch.device*: 将模型装载到 ``torch.device`` 上；
+            * *int*: 将使用 ``device_id`` 为该值的 ``gpu`` 进行训练；如果值为 -1，那么默认使用全部的显卡，此时使用的 driver 实例是 `TorchDDPDriver`；
+            * *list(int)*: 如果多于 1 个device，应当通过该种方式进行设定；注意此时我们一定会使用 ``TorchDDPDriver``，不管您传入的列表的长度是 1 还是其它值；
+            * *None*: 为None则不对模型进行任何处理；
+
+            .. node::
+
+                如果希望使用 ``TorchDDPDriver``
+
 
         :param n_epochs: 训练总共的 epoch 的数量，默认为 20；
         :param evaluate_dataloaders: 验证数据集，其可以是单独的一个数据集，也可以是多个数据集；当为多个数据集时，注意其必须是 Dict；默认
@@ -124,14 +132,13 @@ class Trainer(TrainerEventTrigger):
         :param marker: 用于标记一个 Trainer 实例，从而在用户调用 `Trainer.on` 函数时，标记该 callback 函数属于哪一个具体的 'trainer' 实例；默认为 None；
         :param kwargs: 一些其它的可能需要的参数，见下方的说明
         :kwargs:
-            * *torch_kwargs* --
-            * *torch_non_blocking* -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
+            * *torch_kwargs* -- 用于在指定 ``driver`` 为 'torch' 时设定具体 driver 实例的一些参数：
+                * ddp_kwargs -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
+                 {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
+                * set_grad_to_none -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
+                * torch_non_blocking -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
             * *data_device* -- 表示如果用户的模型 device （在 Driver 中对应为参数 model_device）为 None 时，我们会将数据迁移到 data_device 上；
-            注意如果 model_device 为 None，那么 data_device 不会起作用；
-            * *torch_ddp_kwargs* -- 用于配置 pytorch 的 DistributedDataParallel 初始化时的参数；仅用于 pytorch ddp 训练。例如传入
-            {'find_unused_parameters': True} 来解决有有参数不参与前向运算导致的报错等。
-            * *torch_single_kwargs* --
-            * *set_grad_to_none* -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
+             注意如果 model_device 为 None，那么 data_device 不会起作用；
             * *use_dist_sampler* -- 表示是否使用分布式的 sampler 。在多卡时，分布式 sampler 将自动决定每张卡上读取的 sample ，使得一个epoch
                 内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
             * *evaluate_use_dist_sampler* -- 表示在 Evaluator 中在使用 分布式 的时候是否将 dataloader 的 sampler 替换为分布式的 sampler；默认为 True；
@@ -145,6 +152,8 @@ class Trainer(TrainerEventTrigger):
             * *train_output_mapping* -- 与 output_mapping 一致，但是只用于 train 中。与 output_mapping 互斥。
             * *evaluate_input_mapping* -- 与 input_mapping 一致，但是只用于 evaluate 中。与 input_mapping 互斥。
             * *evaluate_output_mapping* -- 与 output_mapping 一致，但是只用于 evaluate 中。与 output_mapping 互斥。
+
+
         """
         self.model = model
         self.marker = marker
@@ -281,7 +290,8 @@ class Trainer(TrainerEventTrigger):
         self.dataloader = self.driver.set_dist_repro_dataloader(dataloader=self.train_dataloader, dist=_dist_sampler,
                                                                 reproducible=self.callback_manager._need_reproducible_sampler)
 
-        self.set_grad_to_none = kwargs.get("set_grad_to_none", True)
+        _torch_kwargs = kwargs.get("torch_kwargs", {})
+        self.set_grad_to_none = _torch_kwargs.get("set_grad_to_none", True)
 
         self.evaluate_batch_step_fn = evaluate_batch_step_fn
         self.kwargs = kwargs

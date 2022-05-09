@@ -51,23 +51,25 @@ class Evaluator:
          为 False，那么我们会将 batch 直接透传给 forward 函数。注意上述逻辑同样应用于 `train_step`, `evaluate_step` 和 `test_step`；
         :param fp16: 是否使用 fp16 。
         :param verbose: 是否打印 evaluate 的结果。
-        :param \**kwargs:
-            See below
         :kwargs:
-        * *model_use_eval_mode* (``bool``) -- 
-            是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的
-            dropout 与 batch normalization 将会关闭。默认为True。如果为 False，fastNLP 不会对 model 的 evaluate 状态做任何设置。无论
-            该值是什么，fastNLP 都会在 evaluate 接受后将 model 的状态设置为 train 。
-        * *use_dist_sampler* -- 
-            是否使用分布式evaluate的方式。仅当 driver 为分布式类型时，该参数才有效。默认为根据 driver 是否支持
-            分布式进行设置。如果为True，将使得每个进程上的 dataloader 自动使用不同数据，所有进程的数据并集是整个数据集。
-        * *output_from_new_proc* -- 
-            应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
-            ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
-            log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
-        * *progress_bar* -- 
-            evaluate 的时候显示的 progress bar 。目前支持三种 [None, 'raw', 'rich', 'auto'], auto 表示如果检测
-            到当前terminal为交互型则使用 rich，否则使用 raw。
+            * *torch_kwargs* -- 用于在指定 ``driver`` 为 'torch' 时设定具体 driver 实例的一些参数：
+                * ddp_kwargs -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
+                 {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
+                * torch_non_blocking -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
+            * *model_use_eval_mode* (``bool``) --
+                是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的
+                dropout 与 batch normalization 将会关闭。默认为True。如果为 False，fastNLP 不会对 model 的 evaluate 状态做任何设置。无论
+                该值是什么，fastNLP 都会在 evaluate 接受后将 model 的状态设置为 train 。
+            * *use_dist_sampler* --
+                是否使用分布式evaluate的方式。仅当 driver 为分布式类型时，该参数才有效。默认为根据 driver 是否支持
+                分布式进行设置。如果为True，将使得每个进程上的 dataloader 自动使用不同数据，所有进程的数据并集是整个数据集。
+            * *output_from_new_proc* --
+                应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
+                ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
+                log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
+            * *progress_bar* --
+                evaluate 的时候显示的 progress bar 。目前支持三种 [None, 'raw', 'rich', 'auto'], auto 表示如果检测
+                到当前terminal为交互型则使用 rich，否则使用 raw。
         """
 
         self.model = model

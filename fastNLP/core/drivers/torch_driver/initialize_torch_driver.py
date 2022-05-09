@@ -32,7 +32,7 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
                            "`os.environ['LOCAL_RANK']`.")
         return TorchDDPDriver(model, torch.device(f"cuda:{os.environ['LOCAL_RANK']}"), True, **kwargs)
 
-    if driver not in {"torch", "torch_ddp", "fairscale"}:
+    if driver not in {"torch", "fairscale"}:
         raise ValueError("Parameter `driver` can only be one of these values: ['torch', 'torch_ddp', 'fairscale'].")
 
     _could_use_device_num = torch.cuda.device_count()
@@ -64,19 +64,6 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
     if driver == "torch":  # single, ddp, 直接启动。
         if not isinstance(device, List):
             return TorchSingleDriver(model, device, **kwargs)
-        else:
-            logger.info("Notice you are using `torch` driver but your chosen `device` are multi gpus, we will use "
-                           "`TorchDDPDriver` by default. But if you mean using `TorchDDPDriver`, you should choose parameter"
-                           "`driver` as `TorchDDPDriver`.")
-            return TorchDDPDriver(model, device, **kwargs)
-    elif driver == "torch_ddp":
-        if device is not None and not isinstance(device, List):
-            if device.type == 'cpu':
-                raise ValueError("You are using `torch_ddp` driver, but your chosen `device` is 'cpu'.")
-            logger.info("Notice you are using `torch_ddp` driver, but your chosen `device` is only one gpu, we will "
-                        "still use `TorchDDPDriver` for you, but if you mean using `torch_ddp`, you should "
-                        "choose `torch` driver.")
-            return TorchDDPDriver(model, [device], **kwargs)
         else:
             return TorchDDPDriver(model, device, **kwargs)
     elif driver == "fairscale":
