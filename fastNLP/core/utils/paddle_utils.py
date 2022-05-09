@@ -21,38 +21,32 @@ if _NEED_IMPORT_PADDLE:
 
 from .utils import apply_to_collection
 
-def get_device_from_visible(device: Union[str, int], output_type=int):
+def get_device_from_visible(device: Union[str, int]) -> str:
     """
-    在有 CUDA_VISIBLE_DEVICES 的情况下，获取对应的设备。
+    在有 ``CUDA_VISIBLE_DEVICES`` 的情况下，获取对应的设备。
     如 CUDA_VISIBLE_DEVICES=2,3 ，device=3 ，则返回1。
 
     :param device: 未转化的设备名
-    :param output_type: 返回值的类型
-    :return: 转化后的设备id
+    :return: 转化后的设备，格式为 ``gpu:x``
     """
-    if output_type not in [int, str]:
-        raise ValueError("Parameter `output_type` should be one of these types: [int, str]")
     if device == "cpu":
         return device
     cuda_visible_devices = os.getenv("CUDA_VISIBLE_DEVICES")
     user_visible_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
-    if user_visible_devices is None:
-        raise RuntimeError("`USER_CUDA_VISIBLE_DEVICES` cannot be None, please check if you have set "
-                            "`FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
-    idx = get_paddle_device_id(device)
-    # 利用 USER_CUDA_VISIBLDE_DEVICES 获取用户期望的设备
-    if user_visible_devices is None:
-        raise RuntimeError("This situation cannot happen, please report a bug to us.")
-    idx = user_visible_devices.split(",")[idx]
+    if cuda_visible_devices is not None:
+        idx = get_paddle_device_id(device)
+        if user_visible_devices is not None:
+            # 此时一定发生在分布式的情况下，利用 USER_CUDA_VISIBLDE_DEVICES 获取用户期望的设备
+            idx = user_visible_devices.split(",")[idx]
+        else:
+            idx = str(idx)
 
-    cuda_visible_devices_list = cuda_visible_devices.split(',')
-    if idx not in cuda_visible_devices_list:
-        raise ValueError(f"Can't find your devices {idx} in CUDA_VISIBLE_DEVICES[{cuda_visible_devices}]. ")
-    res = cuda_visible_devices_list.index(idx)
-    if output_type == int:
-        return res
+        cuda_visible_devices_list = cuda_visible_devices.split(',')
+        if idx not in cuda_visible_devices_list:
+            raise ValueError(f"Can't find your devices {idx} in CUDA_VISIBLE_DEVICES[{cuda_visible_devices}]. ")
+        return f"gpu:{cuda_visible_devices_list.index(idx)}"
     else:
-        return f"gpu:{res}"
+        return get_paddle_gpu_str(device)
 
 def paddle_to(data, device: Union[str, int]):
     """
@@ -70,7 +64,7 @@ def paddle_to(data, device: Union[str, int]):
         return data.cuda(get_paddle_device_id(device))
 
 
-def get_paddle_gpu_str(device: Union[str, int]):
+def get_paddle_gpu_str(device: Union[str, int]) -> str:
     """
     获得 `gpu:x` 类型的设备名
 
@@ -82,7 +76,7 @@ def get_paddle_gpu_str(device: Union[str, int]):
     return f"gpu:{device}"
 
 
-def get_paddle_device_id(device: Union[str, int]):
+def get_paddle_device_id(device: Union[str, int]) -> int:
     """
     获得 gpu 的设备id
 

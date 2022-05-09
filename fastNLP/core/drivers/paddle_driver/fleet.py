@@ -19,6 +19,7 @@ from fastNLP.core.utils import (
     check_user_specific_params,
     is_in_paddle_dist,
     is_in_paddle_dist,
+    get_paddle_device_id,
 )
 from fastNLP.envs.distributed import rank_zero_rm
 from fastNLP.core.samplers import (
@@ -31,7 +32,12 @@ from fastNLP.core.samplers import (
     re_instantiate_sampler,
     conversion_between_reproducible_and_unrepeated_sampler,
 )
-from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_SEED, FASTNLP_NO_SYNC
+from fastNLP.envs.env import (
+    FASTNLP_DISTRIBUTED_CHECK,
+    FASTNLP_GLOBAL_SEED,
+    FASTNLP_NO_SYNC,
+    USER_CUDA_VISIBLE_DEVICES,
+)
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -51,7 +57,7 @@ class PaddleFleetDriver(PaddleDriver):
     def __init__(
             self, 
             model, 
-            parallel_device: Optional[Union[List[int], int]],
+            parallel_device: Optional[Union[List[str], str]],
             is_pull_by_paddle_run: bool = False,
             fp16: bool = False,
             **kwargs
@@ -185,6 +191,8 @@ class PaddleFleetDriver(PaddleDriver):
             不管是什么情况，`PaddleFleetDriver` 在 `setup` 函数的最后，都会将所有进程的 pid 主动记录下来，这样当一个进程出现 exception 后，
              driver 的 on_exception 函数就会被 trainer 调用，其会调用 os.kill 指令将其它进程 kill 掉；
         """
+        # if USER_CUDA_VISIBLE_DEVICES not in os.environ:
+        #     raise RuntimeError("To run paddle distributed training, please set `FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
         super(PaddleFleetDriver, self).__init__(model, fp16=fp16, **kwargs)
 
         # 如果不是通过 launch 启动，要求用户必须传入 parallel_device
@@ -229,9 +237,9 @@ class PaddleFleetDriver(PaddleDriver):
                 self._data_device = f"gpu:{self._data_device}"
             elif not isinstance(self._data_device, str):
                 raise ValueError("Parameter `device` is wrong type, please check our documentation for the right use.")
-            if self.outside_fleet and paddle.device.get_device() != self._data_device:
-                logger.warning("`Parameter data_device` is not equal to paddle.deivce.get_device(), "
-                                "please keep them equal to avoid some potential bugs.")
+            # if self.outside_fleet and paddle.device.get_device() != self._data_device:
+            #     logger.warning("`Parameter data_device` is not equal to paddle.deivce.get_device(), "
+            #                     "please keep them equal to avoid some potential bugs.")
 
         self.world_size = None
         self.global_rank = 0
@@ -304,7 +312,8 @@ class PaddleFleetDriver(PaddleDriver):
             else:
                 # 已经设置过一次，保证参数必须是一样的
                 pre_gpus = os.environ[FASTNLP_DISTRIBUTED_CHECK]
-                pre_gpus = [int (x) for x in pre_gpus.split(",")]
+                pre_gpus = [int(x) for x in pre_gpus.split(",")]
+                cur_gpus = [get_paddle_device_id(g) for g in self.parallel_device]
                 if sorted(pre_gpus) != sorted(self.parallel_device):
                     raise RuntimeError("Notice you are using `PaddleFleetDriver` after one instantiated `PaddleFleetDriver`, it is not"
                                     "allowed that your second `PaddleFleetDriver` has a new setting of parameters `parallel_device`.")

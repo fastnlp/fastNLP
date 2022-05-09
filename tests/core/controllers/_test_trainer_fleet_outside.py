@@ -1,7 +1,11 @@
 """
-这个文件测试用户以python -m paddle.distributed.launch 启动的情况
-并且自己初始化了 fleet
-FASTNLP_BACKEND=paddle python -m paddle.distributed.launch --gpus=0,2,3 _test_trainer_fleet_outside.py
+这个文件测试用户自己初始化分布式环境后使用 paddle 的情况:
+
+    >>> # 测试用 python -m paddle.distributed.launch 启动
+    >>> FASTNLP_BACKEND=paddle python -m paddle.distributed.launch --gpus=0,2,3 _test_trainer_fleet_outside.py
+    >>> # 测试在限制 GPU 的情况下用 python -m paddle.distributed.launch 启动
+    >>> CUDA_VISIBLE_DEVICES=0,2,3 FASTNLP_BACKEND=paddle python -m paddle.distributed.launch --gpus=0,2,3 _test_trainer_fleet_outside.py
+
 """
 import os
 import sys
@@ -63,6 +67,7 @@ def test_trainer_fleet(
     validate_dataloaders = val_dataloader
     validate_every = MNISTTrainFleetConfig.validate_every
     metrics = {"acc": Accuracy()}
+    data_device = f'gpu:{os.environ["USER_CUDA_VISIBLE_DEVICES"].split(",").index(os.environ["CUDA_VISIBLE_DEVICES"])}'
     trainer = Trainer(
         model=model,
         driver=driver,
@@ -77,14 +82,14 @@ def test_trainer_fleet(
 
         n_epochs=n_epochs,
         callbacks=callbacks,
-        output_from_new_proc="logs",
-        data_device=f"gpu:{os.environ['CUDA_VISIBLE_DEVICES']}"
+        # output_from_new_proc="logs",
+        data_device=data_device
     )
     trainer.run()
 
 if __name__ == "__main__":
     driver = "paddle"
-    device = [0,2,3]
+    device = [0,1,3]
     callbacks = [
         # RecordMetricCallback(monitor="acc#acc", metric_threshold=0.0, larger_better=True), 
         RichCallback(5),

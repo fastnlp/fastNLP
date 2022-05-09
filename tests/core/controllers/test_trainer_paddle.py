@@ -1,3 +1,5 @@
+import os
+from typing import List
 import pytest
 from dataclasses import dataclass
 
@@ -5,6 +7,7 @@ from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.core.metrics.accuracy import Accuracy
 from fastNLP.core.callbacks.progress_callback import RichCallback
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+from fastNLP.envs.env import USER_CUDA_VISIBLE_DEVICES
 
 if _NEED_IMPORT_PADDLE:
     from paddle.optimizer import Adam
@@ -34,6 +37,8 @@ def test_trainer_paddle(
         callbacks,
         n_epochs=2,
 ):
+    if isinstance(device, List) and USER_CUDA_VISIBLE_DEVICES not in os.environ:
+        pytest.skip("Skip test fleet if FASTNLP_BACKEND is not set to paddle.")
     model = PaddleNormalModel_Classification_1(
         num_labels=TrainPaddleConfig.num_labels,
         feature_dimension=TrainPaddleConfig.feature_dimension

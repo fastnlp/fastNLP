@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from fastNLP.envs.env import USER_CUDA_VISIBLE_DEVICES
+
 from .utils import _build_fp16_env, optimizer_state_to_device, DummyGradScaler
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.core.drivers.driver import Driver
@@ -369,7 +371,10 @@ class PaddleDriver(Driver):
 
         :return: 将移动到指定机器上的 batch 对象返回；
         """
-        device = get_device_from_visible(self.data_device)
+        if USER_CUDA_VISIBLE_DEVICES in os.environ:
+            device = get_device_from_visible(self.data_device)
+        else:
+            device = self.data_device
         return paddle_move_data_to_device(batch, device)
 
     @staticmethod

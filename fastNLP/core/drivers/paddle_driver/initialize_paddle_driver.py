@@ -7,7 +7,7 @@ from .single_device import PaddleSingleDriver
 from .fleet import PaddleFleetDriver
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
-from fastNLP.core.utils import is_in_paddle_launch_dist
+from fastNLP.core.utils import is_in_paddle_launch_dist, get_paddle_gpu_str
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_PADDLE:
@@ -30,27 +30,28 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
     """
     if driver != "paddle":
         raise ValueError("When initialize PaddleDriver, parameter `driver` must be 'paddle'.")
+    user_visible_devices = os.getenv("USER_CUDA_VISIBLE_DEVICES")
     if is_in_paddle_launch_dist():
         if device is not None:
             logger.warning_once("Parameter `device` would be ignored when you are using `paddle.distributed.launch` to pull "
-                           "up your script. And we will directly get the local device via "
-                           "and `os.environ['CUDA_VISIBLE_DEVICES']``.")
-        device = [int(g) for g in os.environ["CUDA_VISIBLE_DEVICES"].split(",")]
-        # TODO 目前一个进程仅对应一个卡，所以暂时传入一个 int
+                           "up your script. And we will directly get the local device via environment variables.")
+        _visible_list = user_visible_devices.split(",")
+        device = [ f"gpu:{_visible_list.index(g) }" for g in os.environ["CUDA_VISIBLE_DEVICES"].split(",")]
+        # TODO 目前一个进程仅对应一个卡，所以暂时传入单个
         return PaddleFleetDriver(model, device[0], True, **kwargs)
 
-    user_visible_devices = os.getenv("USER_CUDA_VISIBLE_DEVICES")
     if user_visible_devices is None:
-        raise RuntimeError("`USER_CUDA_VISIBLE_DEVICES` cannot be None, please check if you have set "
-                            "`FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
-    _could_use_device_num = len(user_visible_devices.split(","))
+        _could_use_device_num = paddle.device.cuda.device_count()
+    else:
+        _could_use_device_num = len(user_visible_devices.split(","))
+
     if isinstance(device, int):
         if device < 0 and device != -1:
             raise ValueError("Parameter `device` can only be '-1' when it is smaller than 0.")
         if device >= _could_use_device_num:
             raise ValueError("The gpu device that parameter `device` specifies is not existed.")
         if device == -1:
-            device = list(range(_could_use_device_num))
+            device = [ get_paddle_gpu_str(g) for g in range(_could_use_device_num)]
     elif isinstance(device, Sequence) and not isinstance(device, str):
         device = list(set(device))
         for each in device:
@@ -61,6 +62,7 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
             elif each >= _could_use_device_num:
                 raise ValueError("When parameter `device` is 'Sequence' type, the value in it should not be bigger than"
                                  " the available gpu number.")
+        device = [get_paddle_gpu_str(g) for g in device]
     elif device is not None and not isinstance(device, str):
         raise ValueError("Parameter `device` is wrong type, please check our documentation for the right use.")
     if isinstance(device, List):

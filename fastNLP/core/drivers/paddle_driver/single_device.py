@@ -40,9 +40,6 @@ class PaddleSingleDriver(PaddleDriver):
             raise ValueError("`paddle.DataParallel` is not supported in `PaddleSingleDriver`")
 
         cuda_visible_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
-        if cuda_visible_devices is None:
-            raise RuntimeError("`USER_CUDA_VISIBLE_DEVICES` cannot be None, please check if you have set "
-                            "`FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
         if cuda_visible_devices == "":
             device = "cpu"
             logger.info("You have set `CUDA_VISIBLE_DEVICES` to '' in system environment variable, and we are gonna to"
@@ -54,11 +51,9 @@ class PaddleSingleDriver(PaddleDriver):
             raise ValueError("Parameter `device` can not be None in `PaddleSingleDriver`.")
 
         if device != "cpu":
-            if isinstance(device, int):
-                device_id = device
-            else:
-                device_id = get_paddle_device_id(device)
-            os.environ["CUDA_VISIBLE_DEVICES"] = cuda_visible_devices.split(",")[device_id]
+            device_id = get_paddle_device_id(device)
+            if cuda_visible_devices is not None:
+                os.environ["CUDA_VISIBLE_DEVICES"] = cuda_visible_devices.split(",")[device_id]
         self.model_device = get_paddle_gpu_str(device)
 
         self.local_rank = 0
@@ -69,7 +64,11 @@ class PaddleSingleDriver(PaddleDriver):
         r"""
         该函数用来初始化训练环境，用于设置当前训练的设备，并将模型迁移到对应设备上。
         """
-        device = get_device_from_visible(self.model_device, output_type=str)
+        if USER_CUDA_VISIBLE_DEVICES in os.environ:
+            device = get_device_from_visible(self.data_device)
+        else:
+            device = self.data_device
+
         paddle.device.set_device(device)
         with contextlib.redirect_stdout(None):
             self.model.to(device)
