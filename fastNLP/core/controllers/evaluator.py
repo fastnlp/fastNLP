@@ -54,7 +54,7 @@ class Evaluator:
         :kwargs:
             * *torch_kwargs* -- 用于在指定 ``driver`` 为 'torch' 时设定具体 driver 实例的一些参数：
                 * ddp_kwargs -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
-                 {'find_unused_parameters': True} 来解决有有参数不参与前向运算导致的报错等；
+                 {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
                 * torch_non_blocking -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
             * *model_use_eval_mode* (``bool``) --
                 是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的
