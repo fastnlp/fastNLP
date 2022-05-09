@@ -22,12 +22,14 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
     2、如果检测到输入的 `driver` 是 `paddle` 但 `device` 包含了多个设备，那么我们会给出警告并且自动返回多卡的 Driver
     3、如果检测到输入的 `driver` 是 `fleet` 但 `device` 仅有一个设备，那么我们会给出警告但仍旧返回多卡的 Driver
 
-    :param driver: 该参数的值应为以下之一：["paddle", "fleet"]；
+    :param driver: 使用的 ``driver`` 类型，在这个函数中仅支持 ``paddle``
     :param device: 该参数的格式与 `Trainer` 对参数 `device` 的要求一致；
     :param model: 训练或者评测的具体的模型；
 
     :return: 返回构造的 `Driver` 实例。
     """
+    if driver != "paddle":
+        raise ValueError("When initialize PaddleDriver, parameter `driver` must be 'paddle'.")
     if is_in_paddle_launch_dist():
         if device is not None:
             logger.warning_once("Parameter `device` would be ignored when you are using `paddle.distributed.launch` to pull "
@@ -36,9 +38,6 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
         device = [int(g) for g in os.environ["CUDA_VISIBLE_DEVICES"].split(",")]
         # TODO 目前一个进程仅对应一个卡，所以暂时传入一个 int
         return PaddleFleetDriver(model, device[0], True, **kwargs)
-
-    if driver not in {"paddle", "fleet"}:
-        raise ValueError("Parameter `driver` can only be one of these values: ['paddle', 'fleet'].")
 
     user_visible_devices = os.getenv("USER_CUDA_VISIBLE_DEVICES")
     if user_visible_devices is None:
@@ -64,22 +63,8 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
                                  " the available gpu number.")
     elif device is not None and not isinstance(device, str):
         raise ValueError("Parameter `device` is wrong type, please check our documentation for the right use.")
+    if isinstance(device, List):
+        return PaddleFleetDriver(model, device, **kwargs)
+    else:
+        return PaddleSingleDriver(model, device, **kwargs)
 
-    if driver == "paddle":
-        if not isinstance(device, List):
-            return PaddleSingleDriver(model, device, **kwargs)
-        else:
-            logger.rank_zero_warning("Notice you are using `paddle` driver but your chosen `device` are multi gpus, we will use"
-                            "`Fleetriver` by default. But if you mean using `PaddleFleetDriver`, you should choose parameter"
-                            "`driver` as `PaddleFleetDriver`.")
-            return PaddleFleetDriver(model, device, **kwargs)
-    elif driver == "fleet":
-        if not isinstance(device, List):
-            if device == "cpu":
-                raise ValueError("You are using `fleet` driver, but your chosen `device` is 'cpu'.")
-            logger.rank_zero_warning("Notice you are using `fleet` driver, but your chosen `device` is only one gpu, we will"
-                            "still use `PaddleFleetDriver` for you, but if you mean using `PaddleSingleDriver`, you should "
-                            "choose `paddle` driver.")
-            return PaddleFleetDriver(model, [device], **kwargs)
-        else:
-            return PaddleFleetDriver(model, device, **kwargs)
