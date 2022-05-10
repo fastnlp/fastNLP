@@ -1,8 +1,6 @@
 import os
 from typing import List, Union, Optional, Dict, Tuple, Callable
 
-from fastNLP.core.utils.paddle_utils import get_device_from_visible
-
 from .paddle_driver import PaddleDriver
 from .fleet_launcher import FleetLauncher
 from .utils import (
@@ -21,6 +19,7 @@ from fastNLP.core.utils import (
     is_in_paddle_dist,
     get_paddle_device_id,
 )
+from fastNLP.core.utils.paddle_utils import _convert_data_device
 from fastNLP.envs.distributed import rank_zero_rm
 from fastNLP.core.samplers import (
     ReproduceBatchSampler,
@@ -221,25 +220,6 @@ class PaddleFleetDriver(PaddleDriver):
                     "you initialize the paddle distribued process out of our control.")
 
             self.outside_fleet = True
-            # 用户只有将模型上传到对应机器上后才能用 DataParallel 包裹，因此如果用户在外面初始化了 Fleet，那么在 PaddleFleetDriver 中
-            # 我们就直接将 model_device 置为 None；
-            self._model_device = None
-
-        # 当参数 `device` 为 None 时并且该参数不为 None，表示将对应的数据移到指定的机器上；
-        self._data_device = kwargs.get("data_device", None)
-        if self._data_device is not None:
-            if isinstance(self._data_device, int):
-                if self._data_device < 0:
-                    raise ValueError("Parameter `data_device` can not be smaller than 0.")
-                _could_use_device_num = paddle.device.cuda.device_count()
-                if self._data_device >= _could_use_device_num:
-                    raise ValueError("The gpu device that parameter `device` specifies is not existed.")
-                self._data_device = f"gpu:{self._data_device}"
-            elif not isinstance(self._data_device, str):
-                raise ValueError("Parameter `device` is wrong type, please check our documentation for the right use.")
-            # if self.outside_fleet and paddle.device.get_device() != self._data_device:
-            #     logger.warning("`Parameter data_device` is not equal to paddle.deivce.get_device(), "
-            #                     "please keep them equal to avoid some potential bugs.")
 
         self.world_size = None
         self.global_rank = 0
@@ -419,8 +399,6 @@ class PaddleFleetDriver(PaddleDriver):
 
     @property
     def data_device(self):
-        if self.outside_fleet:
-            return self._data_device
         return self.model_device
 
     def model_call(self, batch, fn: Callable, signature_fn: Optional[Callable]) -> Dict:
@@ -574,7 +552,7 @@ class PaddleFleetDriver(PaddleDriver):
 
     def broadcast_object(self, obj, src:int=0, group=None, **kwargs):
         # 因为设置了CUDA_VISIBLE_DEVICES，可能会引起错误
-        device = get_device_from_visible(self.data_device)
+        device = _convert_data_device(self.data_device)
         return fastnlp_paddle_broadcast_object(obj, src, device=device, group=group)
 
     def all_gather(self, obj, group=None) -> List:

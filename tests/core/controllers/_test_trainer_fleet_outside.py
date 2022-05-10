@@ -67,7 +67,6 @@ def test_trainer_fleet(
     validate_dataloaders = val_dataloader
     validate_every = MNISTTrainFleetConfig.validate_every
     metrics = {"acc": Accuracy()}
-    data_device = f'gpu:{os.environ["USER_CUDA_VISIBLE_DEVICES"].split(",").index(os.environ["CUDA_VISIBLE_DEVICES"])}'
     trainer = Trainer(
         model=model,
         driver=driver,
@@ -83,7 +82,6 @@ def test_trainer_fleet(
         n_epochs=n_epochs,
         callbacks=callbacks,
         # output_from_new_proc="logs",
-        data_device=data_device
     )
     trainer.run()
 

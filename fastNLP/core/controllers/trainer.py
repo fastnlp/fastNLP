@@ -304,8 +304,7 @@ class Trainer(TrainerEventTrigger):
                 1. 当 driver 实例的 ``model_device`` 不为 None 时，该参数无效；
                 2. 对于 pytorch，仅当用户自己通过 ``python -m torch.distributed.launch`` 并且自己初始化 ``init_process_group`` 时，
                 driver 实例的 ``model_device`` 才会为 None；
-                3. 对于 paddle，仅当用户自己通过 ``python -m paddle.distributed.launch`` 并且自己初始化 :func:`~init_parallel_env` 或
-                :meth:`fleet.init` 时，driver 实例的 ``model_device`` 才会为 None；
+                3. 对于 paddle，该参数无效；
 
             * *use_dist_sampler* -- 表示是否使用分布式的 ``sampler``。在多卡时，分布式 ``sampler`` 将自动决定每张卡上读取的 sample ，使得一个 epoch
             内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。

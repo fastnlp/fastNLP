@@ -15,6 +15,12 @@ from fastNLP.core.dataset import Instance
 
 
 def is_jittor_dataset(dataset) -> bool:
+    """
+    判断传入的 ``dataset`` 是否是 :class:`jittor.dataset.Dataset` 类型
+
+    :param dataset: 数据集；
+    :return: 当前 ``dataset`` 是否为 ``jittor`` 的数据集类型；
+    """
     try:
         if isinstance(dataset, jt.dataset.Dataset):
             return True
@@ -26,7 +32,8 @@ def is_jittor_dataset(dataset) -> bool:
 
 def jittor_collate_wraps(func, auto_collator: Callable):
     """
-    对jittor的collate_fn进行wrap封装, 如果数据集为mapping类型，那么采用auto_collator，否则还是采用jittor自带的collate_batch
+    对 ``jittor`` 的 ``collate_fn`` 进行 ``wrap`` 封装,。如果数据集为 ``mapping`` 类型，那么采用 ``auto_collator`` ，否则
+    还是采用 ``jittor`` 的 ``collate_batch``。
 
     :param func:
     :param auto_collator:

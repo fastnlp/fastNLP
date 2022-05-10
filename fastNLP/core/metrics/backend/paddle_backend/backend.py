@@ -4,7 +4,7 @@ from typing import List, Any
 import numpy as np
 
 from fastNLP.core.metrics.backend import Backend
-from fastNLP.core.utils.paddle_utils import paddle_to, get_device_from_visible
+from fastNLP.core.utils.paddle_utils import paddle_to, _convert_data_device
 from fastNLP.core.metrics.utils import AggregateMethodError
 from fastNLP.core.drivers.paddle_driver.dist_utils import fastnlp_paddle_all_gather
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
@@ -81,8 +81,7 @@ class PaddleBackend(Backend):
             raise ValueError(f"tensor: {tensor} can not convert to ndarray!")
 
     def move_tensor_to_device(self, tensor, device):
-        if USER_CUDA_VISIBLE_DEVICES in os.environ:
-            device = get_device_from_visible(device)
+        device = _convert_data_device(device)
         return paddle_to(tensor, device)
 
     def all_gather_object(self, obj, group=None) -> List:

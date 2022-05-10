@@ -172,7 +172,7 @@ class TorchDataLoader(DataLoader):
         """
         获取当前 ``batch`` 中每条数据对应的索引。
 
-        :return: 当前 ``batch`` 数据的索引
+        :return: 当前 ``batch`` 数据的索引；
         """
         return self.cur_batch_indices
 

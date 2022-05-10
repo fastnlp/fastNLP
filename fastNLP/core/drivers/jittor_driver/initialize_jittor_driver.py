@@ -7,18 +7,22 @@ from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
 if _NEED_IMPORT_JITTOR:
     import jittor
 
+__all__ = []
+
 def initialize_jittor_driver(driver: str, device: Union[str, int, List[int]], model: jittor.Module, **kwargs) -> JittorDriver:
     r"""
-    用来根据参数 `driver` 和 `device` 来确定并且初始化一个具体的 `Driver` 实例然后返回回去；
-    在这个函数中，我们会根据用户设置的device来确定JittorDriver的mode。
+    用来根据参数 ``device`` 来确定并且初始化一个具体的 ``Driver`` 实例然后返回回去。
 
-    :param driver: 该参数的值应为以下之一：["jittor"]；
-    :param device: jittor运行的设备
+    .. todo::
+
+        创建多卡的 driver
+
+    :param driver: 该参数的值应为以下之一：``["jittor"]``；
+    :param device: ``jittor`` 运行的设备；
     :param model: 训练或者评测的具体的模型；
     :param kwargs: 
 
-    :return: 返回一个元组，元组的第一个值是具体的基于 jittor 的 `Driver` 实例，元组的第二个值是该 driver 的名字（用于检测一个脚本中
-     先后 driver 的次序的正确问题）；
+    :return: :class:`~fastNLP.core.JittorSingleDriver` 或 :class:`~fastNLP.core.JittorMPIDriver` 实例；
     """
 
     if driver not in {"jittor"}:

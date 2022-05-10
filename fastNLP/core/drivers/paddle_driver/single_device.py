@@ -8,10 +8,10 @@ from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.envs.env import USER_CUDA_VISIBLE_DEVICES
 from fastNLP.core.utils import (
     auto_param_call,
-    get_device_from_visible,
     get_paddle_gpu_str,
     get_paddle_device_id,
 )
+from fastNLP.core.utils.paddle_utils import _convert_data_device
 from fastNLP.core.utils.utils import _get_fun_msg
 from fastNLP.core.samplers import (
     ReproducibleBatchSampler,
@@ -64,10 +64,7 @@ class PaddleSingleDriver(PaddleDriver):
         r"""
         该函数用来初始化训练环境，用于设置当前训练的设备，并将模型迁移到对应设备上。
         """
-        if USER_CUDA_VISIBLE_DEVICES in os.environ:
-            device = get_device_from_visible(self.data_device)
-        else:
-            device = self.data_device
+        device = _convert_data_device(self.data_device)
 
         paddle.device.set_device(device)
         with contextlib.redirect_stdout(None):
