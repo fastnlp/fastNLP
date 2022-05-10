@@ -11,10 +11,13 @@ from fastNLP.envs.env import (
     FASTNLP_LOG_LEVEL,
     FASTNLP_GLOBAL_SEED,
 )
+from fastNLP.core.utils import get_paddle_device_id
 from .utils import (
     find_free_ports,
     reset_seed,
 )
+
+__all__ = []
 
 # 记录各个进程信息
 class SubTrainer(object):
@@ -34,11 +37,11 @@ class FleetLauncher:
     """
     def __init__(
         self,
-        devices: List[int],
+        devices: List[str],
         output_from_new_proc: str = "only_error"
     ):
 
-        self.devices = devices
+        self.devices = [ get_paddle_device_id(g) for g in devices]
         self.output_from_new_proc = output_from_new_proc
 
         self.setup()

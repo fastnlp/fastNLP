@@ -1,7 +1,7 @@
 __all__ = [
     'print'
 ]
-
+from logging import INFO
 from .logger import logger
 
 
@@ -22,4 +22,6 @@ def print(*args, sep=' ', end='\n', file=None, flush=False):
     :return:
     """
     line = sep.join(map(str, args))
-    logger.info(line)
+    if logger.isEnabledFor(INFO):
+        kwargs = logger._add_rank_info({})
+        logger._log(INFO, line, args, **kwargs)

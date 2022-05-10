@@ -84,7 +84,7 @@ class Metric:
     def _sync_get_metric(self, get_metric):
         @functools.wraps(get_metric)
         def _wrap_get_metric(*args, **kwargs):
-            assert self._updated, f"You have to call `{self.__class__.__name__}` update() function before calling " \
+            assert self._updated, f"You have to call `{self.__class__.__name__}'s update() function before calling " \
                                   f"get_metric()."
             with self.sync(recover=True, aggregate=self.aggregate_when_get_metric):
                 results = get_metric(*args, **kwargs)

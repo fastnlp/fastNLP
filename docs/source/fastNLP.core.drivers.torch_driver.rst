@@ -10,7 +10,7 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.drivers.torch_driver.ddp
    fastNLP.core.drivers.torch_driver.dist_utils

@@ -10,7 +10,7 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.io.pipe.classification
    fastNLP.io.pipe.conll

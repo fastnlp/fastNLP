@@ -1,11 +1,6 @@
-import unittest
-import os
+import pytest
 
-os.environ["log_silent"] = "1"
-import torch
-import paddle
-import jittor
-
+from fastNLP.envs.imports import _NEED_IMPORT_JITTOR, _NEED_IMPORT_PADDLE, _NEED_IMPORT_TORCH
 from fastNLP.modules.mix_modules.utils import (
     paddle2torch,
     torch2paddle,
@@ -13,13 +8,24 @@ from fastNLP.modules.mix_modules.utils import (
     torch2jittor,
 )
 
+if _NEED_IMPORT_TORCH:
+    import torch
+
+if _NEED_IMPORT_PADDLE:
+    import paddle
+
+if _NEED_IMPORT_JITTOR:
+    import jittor
+
+
 ############################################################################
 #
 # 测试paddle到torch的转换
 #
 ############################################################################
 
-class Paddle2TorchTestCase(unittest.TestCase):
+@pytest.mark.torchpaddle
+class TestPaddle2Torch:
 
     def check_torch_tensor(self, tensor, device, requires_grad):
         """
@@ -123,7 +129,8 @@ class Paddle2TorchTestCase(unittest.TestCase):
 #
 ############################################################################
 
-class Torch2PaddleTestCase(unittest.TestCase):
+@pytest.mark.torchpaddle
+class TestTorch2Paddle:
 
     def check_paddle_tensor(self, tensor, device, stop_gradient):
         """
@@ -242,7 +249,7 @@ class Torch2PaddleTestCase(unittest.TestCase):
 #
 ############################################################################
 
-class Jittor2TorchTestCase(unittest.TestCase):
+class TestJittor2Torch:
 
     def check_torch_tensor(self, tensor, device, requires_grad):
         """
@@ -338,7 +345,7 @@ class Jittor2TorchTestCase(unittest.TestCase):
 #
 ############################################################################
 
-class Torch2JittorTestCase(unittest.TestCase):
+class TestTorch2Jittor:
 
     def check_jittor_var(self, var, requires_grad):
         """

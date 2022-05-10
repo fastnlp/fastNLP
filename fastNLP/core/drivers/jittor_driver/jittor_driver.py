@@ -24,7 +24,17 @@ if _NEED_IMPORT_JITTOR:
 
 class JittorDriver(Driver):
     r"""
-    Jittor 框架的 Driver
+    ``Jittor`` 框架的 ``Driver``
+
+    .. note::
+
+        这是一个正在开发中的功能，敬请期待。
+
+    .. todo::
+
+        实现 fp16 的设置，且支持 cpu 和 gpu 的切换；
+        实现用于断点重训的 save 和 load 函数；
+
     """
 
     def __init__(self, model, fp16: bool = False, **kwargs):

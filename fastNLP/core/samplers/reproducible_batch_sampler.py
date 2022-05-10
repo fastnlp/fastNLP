@@ -366,17 +366,22 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
     def __init__(self, dataset, length: Union[List[int], str], batch_size:int = 32, num_batch_per_bucket:int = 10,
                  shuffle: bool = True, drop_last: bool = False, seed: int = 0, **kwargs):
         """
-        首先按照 sample 的长度排序，然后按照 batch_size*num_batch_per_bucket 为一个桶的大小，sample 只会在这个桶内进行组合，这样
-        每个 batch 中的 padding 数量会比较少 （因为桶内的数据的长度都接近）。
+        首先按照 ``sample`` 的长度排序，然后按照 batch_size*num_batch_per_bucket 为一个桶的大小，``sample`` 只会在这个桶内进行组
+        合，这样每个 ``batch`` 中的 ``padding`` 数量会比较少 （因为桶内的数据的长度都接近）。
 
         :param dataset: 实现了 __len__ 方法的数据容器。
-        :param length: 如果为 List，应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；仅当传入的 dataset 为 fastNLP 的
-            DataSet 时支持传入 str，会将该str理解为 dataset 的 field 名称，若 field 中的元素为 int，则认为该值是 sample 的长度。
-            如果否则使用 len() 函数得到每个 sample 中这个 field 的长度。
+        :param length: 每条数据的长度。
+
+            * 为 ``List[int]`` 时
+             应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
+            * 为 ``str`` 时
+             仅当传入的 ``dataset`` 是 :class:`fastNLP.DataSet` 时，允许传入 `str` ，该 `str` 将被认为是 ``dataset`` 中的
+              ``field`` 。若 field 中的元素为 ``int``，则认为该值是 sample 的长度；若不为 ``int`` ，则尝试使用 ``len`` 方法
+              获取该 ``field`` 中每个元素的长度。
         :param batch_size: 每个 batch 的大小
-        :param num_batch_per_bucket: 多少个 batch 组成一个桶，数据只会在一个桶内进行 shuffle 。
-        :param shuffle: 如果为 True，将不进行 shuffle，实际上数据会以从长到短的方式输出。
-        :param drop_last: 如果最后一个 batch 的 sample 数量无法凑齐 batch_size 这么多，是否需要丢掉。
+        :param num_batch_per_bucket: 多少个 ``batch`` 组成一个桶，数据只会在一个桶内进行 ``shuffle`` 。
+        :param shuffle: 如果为 True，将不进行 ``shuffle``，实际上数据会以从长到短的方式输出。
+        :param drop_last: 如果最后一个 `batch` 的 ``sample`` 数量无法凑齐 ``batch_size`` 这么多，是否需要丢掉。
         :param seed: 设置的随机数种子
         :param kwargs: fastNLP 保留使用
         """
@@ -386,10 +391,12 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
             if not isinstance(length[0], int):
                 length = list(map(len, length))
         else:
-            assert len(length) == len(dataset), "When the dataset is not fastNLP.DataSet, " \
-                                              "the length parameter can only be List[int]"
+            types = set(map(type, length))
+            assert isinstance(length, list) and len(types)==1 and types.pop()==int, \
+                "When the dataset is not fastNLP.DataSet, the length parameter can only be List[int]"
 
-        assert len(length) == len(dataset), "The length of `data` and `length` should be equal."
+        assert len(length) == len(dataset), f"The length of `dataset`({len(dataset)}) and " \
+                                            f"`length`({len(length)}) should be equal."
 
         self.dataset = dataset
         self.length = np.array(length, dtype=int)  # 按照长到短排列的序号。

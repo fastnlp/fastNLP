@@ -400,15 +400,22 @@ class DataSet:
                     new_field_name: str = None, num_proc: int = 0,
                     progress_desc: str = None, show_progress_bar: bool = True):
         r"""
-        将 DataSet 中的每个 instance 中的名为 `field_name` 的 field 传给 func，并获取它的返回值。
+        将 :class:`~DataSet` 每个 ``instance`` 中为 ``field_name`` 的 ``field`` 传给函数 ``func``，并写入到 ``new_field_name``
+        中。
 
-        :param field_name: 传入 func 的是哪个 field。
-        :param func: input是 instance 中名为 `field_name` 的 field 的内容。
-        :param new_field_name: 将 func 返回的内容放入到 `new_field_name` 这个 field 中，如果名称与已有的 field 相同，则覆
-            盖之前的 field。如果为 None 则不创建新的 field。
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
-        :param progress_desc: progress_desc 的值，默认为 Main
-        :param show_progress_bar: 是否展示进度条，默认展示进度条
+        :param field_name: 传入 ``func`` 的 ``field`` 名称；
+        :param func: 对指定 ``field`` 进行处理的函数，注意其输入应为 ``instance`` 中名为 ``field_name`` 的 ``field`` 的内容；
+        :param new_field_name: 函数执行结果写入的 ``field`` 名称。该函数会将 ``func`` 返回的内容放入到 ``new_field_name`` 对
+            应的 ``field`` 中，注意如果名称与已有的 ``field`` 相同则会进行覆盖。如果为 ``None`` 则不会覆盖和创建 ``field`` ；
+        :param num_proc: 使用进程的数量。
+        
+            .. note::
+            
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。
+
+        :param progress_desc: 进度条的描述字符，默认为 ``Main``；
+        :param show_progress_bar: 是否在处理过程中展示进度条；
+        :return: 从函数 ``func`` 中得到的返回值；
         """
         assert len(self) != 0, "Null DataSet cannot use apply_field()."
         if not self.has_field(field_name=field_name):
@@ -451,8 +458,8 @@ class DataSet:
         apply_out = self._apply_process(num_proc, func, progress_desc=progress_desc,
                                         show_progress_bar=show_progress_bar, _apply_field=field_name)
         #   只检测第一个数据是否为dict类型，若是则默认所有返回值为dict；否则报错。
-        if not isinstance(apply_out[0], dict):
-            raise Exception("The result of func is not a dict")
+        if not isinstance(apply_out[0], Mapping):
+            raise Exception(f"The result of func is not a Mapping, but a {type(apply_out[0])}")
 
         for key, value in apply_out[0].items():
             results[key] = [value]

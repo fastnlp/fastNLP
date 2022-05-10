@@ -10,7 +10,7 @@ Subpackages
 -----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.callbacks
    fastNLP.core.collators
@@ -27,6 +27,6 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.vocabulary

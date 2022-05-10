@@ -10,7 +10,7 @@ Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
 
    fastNLP.core.utils.cache_results
    fastNLP.core.utils.dummy_class

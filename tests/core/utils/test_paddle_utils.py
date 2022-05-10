@@ -2,37 +2,42 @@ import os
 
 import pytest
 
-from fastNLP.core.utils.paddle_utils import get_device_from_visible, paddle_to, paddle_move_data_to_device
+from fastNLP.core.utils.paddle_utils import _convert_data_device, paddle_to, paddle_move_data_to_device
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 if _NEED_IMPORT_PADDLE:
     import paddle
+
 @pytest.mark.parametrize(
-    ("user_visible_devices, cuda_visible_devices, device, output_type, correct"),
+    ("user_visible_devices, cuda_visible_devices, device, correct"),
     (
-        ("0,1,2,3,4,5,6,7", "0", "cpu", str, "cpu"),
-        ("0,1,2,3,4,5,6,7", "0", "cpu", int, "cpu"),
-        ("0,1,2,3,4,5,6,7", "3,4,5", "gpu:4", int, 1),
-        ("0,1,2,3,4,5,6,7", "3,4,5", "gpu:5", str, "gpu:2"),
-        ("3,4,5,6", "3,5", 0, int, 0),
-        ("3,6,7,8", "6,7,8", "gpu:2", str, "gpu:1"),
+        (None, None, 1, "gpu:1"),
+        (None, "2,4,5,6", 2, "gpu:2"),
+        (None, "3,4,5", 1, "gpu:1"),
+        ("0,1,2,3,4,5,6,7", "0", "cpu", "cpu"),
+        ("3,4,5,6,7", "0", "cpu", "cpu"),
+        ("0,1,2,3,4,5,6,7", "3,4,5", "gpu:4", "gpu:1"),
+        ("0,1,2,3,4,5,6,7", "3,4,5", "gpu:5", "gpu:2"),
+        ("3,4,5,6", "3,5", 0, "gpu:0"),
+        ("3,6,7,8", "6,7,8", "gpu:2", "gpu:1"),
     )
 )
-@pytest.mark.paddle
-def test_get_device_from_visible(user_visible_devices, cuda_visible_devices, device, output_type, correct):
+def test_convert_data_device(user_visible_devices, cuda_visible_devices, device, correct):
     _cuda_visible_devices = os.getenv("CUDA_VISIBLE_DEVICES")
     _user_visible_devices = os.getenv("USER_CUDA_VISIBLE_DEVICES")
-    os.environ["CUDA_VISIBLE_DEVICES"] = cuda_visible_devices
-    os.environ["USER_CUDA_VISIBLE_DEVICES"] = user_visible_devices
-    res = get_device_from_visible(device, output_type)
+    if cuda_visible_devices is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = cuda_visible_devices
+    if user_visible_devices is not None:
+        os.environ["USER_CUDA_VISIBLE_DEVICES"] = user_visible_devices
+    res = _convert_data_device(device)
     assert res == correct
 
     # 还原环境变量
     if _cuda_visible_devices is None:
-        del os.environ["CUDA_VISIBLE_DEVICES"]
+        os.environ.pop("CUDA_VISIBLE_DEVICES", None)
     else:
         os.environ["CUDA_VISIBLE_DEVICES"] = _cuda_visible_devices
     if _user_visible_devices is None:
-        del os.environ["USER_CUDA_VISIBLE_DEVICES"]
+        os.environ.pop("USER_CUDA_VISIBLE_DEVICES", None)
     else:
         os.environ["USER_CUDA_VISIBLE_DEVICES"] = _user_visible_devices
 
