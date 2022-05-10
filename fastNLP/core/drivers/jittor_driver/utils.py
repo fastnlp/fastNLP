@@ -5,10 +5,11 @@ from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
 if _NEED_IMPORT_JITTOR:
     import jittor
 
+__all__ = []
+
 class DummyGradScaler:
     """
     用于仿造的GradScaler对象，防止重复写大量的if判断
-
     """
     def __init__(self, *args, **kwargs):
         pass

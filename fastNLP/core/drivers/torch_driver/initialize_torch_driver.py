@@ -10,19 +10,18 @@ from .ddp import TorchDDPDriver
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_BACKEND_LAUNCH
 
+__all__ = []
 
 def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.device", int, List[int]]],
                             model: "torch.nn.Module", **kwargs) -> TorchDriver:
     r"""
-    用来根据参数 `driver` 和 `device` 来确定并且初始化一个具体的 `Driver` 实例然后返回回去；
-    注意如果输入的 `device` 如果和 `driver` 对应不上就直接报错；
+    用来根据参数 ``driver` 和 ``device`` 来确定并且初始化一个具体的 ``Driver`` 实例然后返回回去；
 
-    :param driver: 该参数的值应为以下之一：["torch", "torch_ddp", "fairscale"]；
-    :param device: 该参数的格式与 `Trainer` 对参数 `device` 的要求一致；
+    :param driver: 该参数的值应为以下之一：``["torch", "fairscale"]``；
+    :param device: 该参数的格式与 ``Trainer`` 对参数 ``device`` 的要求一致；
     :param model: 训练或者评测的具体的模型；
 
-    :return: 返回一个元组，元组的第一个值是具体的基于 pytorch 的 `Driver` 实例，元组的第二个值是该 driver 的名字（用于检测一个脚本中
-     先后 driver 的次序的正确问题）；
+    :return: 返回一个 :class:`~fastNLP.core.TorchSingleDriver` 或 :class:`~fastNLP.core.TorchDDPDriver` 实例；
     """
     # world_size 和 rank
     if FASTNLP_BACKEND_LAUNCH in os.environ:

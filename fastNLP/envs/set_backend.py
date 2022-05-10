@@ -51,23 +51,33 @@ def _set_backend():
         assert _module_available(backend), f"You must have {backend} available to use {backend} backend."
         assert 'paddle' not in sys.modules, "You have to use `set_backend()` before `import paddle`."
         user_visible_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
+        cuda_visible_devices = os.getenv("CUDA_VISIBLE_DEVICES")
         if 'PADDLE_RANK_IN_NODE' in os.environ and 'FLAGS_selected_gpus' in os.environ:
             # 在分布式子进程下，根据 USER_VISIBLE_DEVICES 得到进程真正占有的设备
             selected_gpus = os.environ['FLAGS_selected_gpus'].split(',')
             if user_visible_devices is not None:
-                # 用户通过 CUDA_VISIBLE_DEVICES 启动了分布式训练
+                # 用户使用 fastNLP 启动了分布式训练
                 # 此时经过 set_backend，用户的设置会保存在 USER_CUDA_VISIBLE_DEVICES 中
-                # 我们需要从中找到真正使用的设备编号
+                # 我们需要从中转换为用户找到真正使用的设备编号
                 user_visible_devices = user_visible_devices.split(",")
-                selected_gpus = ",".join([user_visible_devices[int(i)] for i in selected_gpus])
+                selected_gpus = [user_visible_devices[int(i)] for i in selected_gpus]
+            # 没有找到 USER_CUDA_VISIBLE_DEVICES，说明用户是直接用 launch 启动的
+            elif cuda_visible_devices:
+                # 用户设置了可见设备，需要进行转换
+                # 如 CUDA_VISIBLE_DEVICES = 0,2,3 --gpus=0,2,3
+                # 在 rank1 中此时 selected_gpus = ['1']，需要转换为设备 2
+                os.environ[USER_CUDA_VISIBLE_DEVICES] = cuda_visible_devices
+                cuda_visible_devices = cuda_visible_devices.split(",")
+                selected_gpus = [cuda_visible_devices[int(i)] for i in selected_gpus]
             else:
-                # 没有找到 USER_CUDA_VISIBLE_DEVICES，则将之设置为所有的设备
+                # 用户没有设置可见设备，则赋值成所有的设备
                 os.environ[USER_CUDA_VISIBLE_DEVICES] = ",".join(map(str, list(
                     range(get_gpu_count())
                 )))
             os.environ['CUDA_VISIBLE_DEVICES'] = ",".join(selected_gpus)
             os.environ['FLAGS_selected_gpus'] = ",".join([str(g) for g in range(len(selected_gpus))])
             os.environ['FLAGS_selected_accelerators'] = ",".join([str(g) for g in range(len(selected_gpus))])
+        
         elif 'CUDA_VISIBLE_DEVICES' in os.environ:
             # 主进程中，用户设置了 CUDA_VISIBLE_DEVICES
             # 将用户设置的 CUDA_VISIBLE_DEVICES hack 掉
@@ -90,6 +100,11 @@ def _set_backend():
 
     elif backend == 'torch':
         assert _module_available(backend), f"You must have {backend} available to use {backend} backend."
+
+    if 'PADDLE_RANK_IN_NODE' in os.environ and 'FLAGS_selected_gpus' in os.environ \
+        and "USER_CUDA_VISIBLE_DEVICES" not in os.environ:
+        # 当用户没有设置 backend 并且使用 launch 启动了多卡，应该提醒用户进行设置
+        raise RuntimeError("To run paddle distributed training, please set `FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
 
 
 def set_env(global_seed=None):
