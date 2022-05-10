@@ -24,4 +24,4 @@ def print(*args, sep=' ', end='\n', file=None, flush=False):
     line = sep.join(map(str, args))
     if logger.isEnabledFor(INFO):
         kwargs = logger._add_rank_info({})
-        logger._log(INFO, line, args, **kwargs)
+        logger._log(INFO, line, **kwargs)
