@@ -229,27 +229,19 @@ class Trainer(TrainerEventTrigger):
         :param accumulation_steps: 梯度累积的步数，表示每隔几个 batch 才让优化器迭代一次，默认为 1；
         :param fp16: 是否开启混合精度训练，默认为 False；
         :param monitor: 对于一些特殊的 ``Callback``，例如 :class:`fastNLP.core.callbacks.CheckpointCallback`，它们需要参数 ``monitor``
-            来从 ``Evaluator`` 的验证结果中获取当前评测的值，从而来判断是否执行一些特殊的操作。例如，对于 ``CheckpointCallback`` 而言，如果我们
-            想要每隔一个 epoch 让 ``Evaluator`` 进行一次验证，然后保存训练以来的最好的结果；那么我们需要这样设置：
+            来从 ``Evaluator`` 的验证结果中获取当前评测的值，从而来判断是否执行一些特殊的操作。这里设置了 ``monitor`` 则所有的需要
+            ``monitor`` 但是没有自己设置的 ``Callback`` 都会使用这个值
 
-            .. code-block::
+            * 为 ``None``
+             没有 monitor ，默认。
+            * 为 ``str``
+             尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+             使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+            * 为 ``Callable``
+             接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+             的 ``monitor`` 值请返回 ``None`` 。
 
-                trainer = Trainer(
-                    ...,
-                    metrics={'acc': accMetric()},
-                    callbacks=[CheckpointCallback(
-                        ...,
-                        monitor='acc',
-                        topk=1
-                    )]
-                )
-
-            这意味着对于 ``CheckpointCallback`` 来说，*'acc'* 就是一个监测的指标，用于在 ``Evaluator`` 验证后取出其需要监测的那个指标的值。
-
-            ``Trainer`` 中的参数 ``monitor`` 的作用在于为没有设置 ``monitor`` 参数但是需要该参数的 *callback* 实例设置该值。关于 ``monitor``
-            参数更详细的说明，请见 :class:`fastNLP.core.callbacks.CheckpointCallback`；
-
-            注意该参数仅当 ``Trainer`` 内置的 ``Evaluator`` 不为 None 时且有需要该参数但是没有设置该参数的 *callback* 实例才有效；
+            注意该参数仅当传入了 ``evaluate_dataloaders`` 不为 ``None`` 时且有需要该参数但是没有设置该参数的 *Callback* 实例才有意义；
 
         :param larger_better: 对于需要参数 ``monitor`` 的 *callback* 来说，``monitor`` 的值是否是越大越好；类似于 ``monitor``，其作用
             在于为没有设置 ``larger_better`` 参数但是需要该参数的 *callback* 实例设置该值；

@@ -33,9 +33,16 @@ class CheckpointCallback(Callback):
         则 fastNLP 将 folder 绝对路径传递给该函数，fastNLP 在该 folder 下不进行模型保存。默认情况下，本 checkpoint 只保存了 model
         的状态；如还需保存 Trainer 的状态以断点重训的话，请使用 ``save_object='trainer'`` 。
 
-        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最长公共字符串算法 找到最匹配
-                的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
-                果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有相关的 monitor 值请返回 None 。
+        :param monitor: 监控的 metric 值。
+
+            * 为 ``None``
+             将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+            * 为 ``str``
+             尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+             使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+            * 为 ``Callable``
+             接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+             的 ``monitor`` 值请返回 ``None`` 。
         :param folder: 保存的文件夹，fastNLP 将在该文件下以时间戳创建子文件夹，并在里面保存。因此不同次运行可以将被保存到不同的
             时间戳文件夹中。如果为 None ，默认使用当前文件夹。
         :param every_n_epochs: 多少个 epoch 保存一次。
