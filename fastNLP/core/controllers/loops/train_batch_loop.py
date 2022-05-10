@@ -32,7 +32,7 @@ class TrainBatchLoop(Loop):
                 break
             except BaseException as e:
                 if indices and not isinstance(e, EarlyStopException):
-                    logger.debug(f"The following exception happens when running on samples: {indices}")
+                    logger.error(f"Exception happens when running on samples: {indices}")
                 raise e
 
             trainer.on_train_batch_begin(batch, indices)

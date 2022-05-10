@@ -34,7 +34,7 @@ class EvaluateBatchLoop(Loop):
             except BaseException as e:
                 if callable(getattr(dataloader, 'get_batch_indices', None)):
                     indices = dataloader.get_batch_indices()
-                    logger.debug(f"The following exception happens when running on samples: {indices}")
+                    logger.error(f"Exception happens when evaluating on samples: {indices}")
                 raise e
 
             self.batch_step_fn(evaluator, batch)
