@@ -55,7 +55,7 @@ def get_fn_arg_names(fn: Callable) -> List[str]:
 def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None,
                     mapping: Optional[Dict[AnyStr, AnyStr]] = None) -> Any:
     r"""
-    该函数会根据输入函数的形参名从 ``*args`` （均为 ``dict`` 类型）中找到匹配的值进行调用，如果传入的数据与 ``fn`` 的形参不匹配，可以通过
+    该函数会根据输入函数的形参名从 ``*args`` （均为 **dict** 类型）中找到匹配的值进行调用，如果传入的数据与 ``fn`` 的形参不匹配，可以通过
     ``mapping`` 参数进行转换。``mapping`` 参数中的一对 ``(key, value)`` 表示在 ``*args`` 中找到 ``key`` 对应的值，并将这个值传递给形参中名为
     ``value`` 的参数。
 
@@ -259,21 +259,21 @@ def dataclass_to_dict(data: "dataclasses.dataclass") -> Dict:
 
 def match_and_substitute_params(mapping: Optional[Union[Callable, Dict]] = None, data: Optional[Any] = None) -> Any:
     r"""
-    用来实现将输入的 ``batch`` 或者输出的 ``outputs`` 通过 ``mapping`` 将键值进行更换的功能；
+    用来实现将输入的 **batch** 或者输出的 **outputs** 通过 ``mapping`` 将键值进行更换的功能；
     该函数应用于 ``input_mapping`` 和 ``output_mapping``；
 
     * 对于 ``input_mapping``，该函数会在 :class:`~fastNLP.core.controllers.TrainBatchLoop` 中取完数据后立刻被调用；
     * 对于 ``output_mapping``，该函数会在 :class:`~fastNLP.core.Trainer` 的 :meth:`~fastNLP.core.Trainer.train_step`
-     以及 :class:`~fastNLP.core.Evaluator` 的 :meth:`~fastNLP.core.Evaluator.train_step` 中得到结果后立刻被调用；
+      以及 :class:`~fastNLP.core.Evaluator` 的 :meth:`~fastNLP.core.Evaluator.train_step` 中得到结果后立刻被调用；
 
     转换的逻辑按优先级依次为：
 
-    1. 如果 ``mapping`` 是一个函数，那么会直接返回 ``mapping(data)``；
-    2. 如果 ``mapping`` 是一个 ``Dict``，那么 ``data`` 的类型只能为以下三种： ``[Dict, dataclass, Sequence]``；
+    1. 如果 ``mapping`` 是一个函数，那么会直接返回 **mapping(data)**；
+    2. 如果 ``mapping`` 是一个 **Dict**，那么 ``data`` 的类型只能为以下三种： ``[Dict, dataclass, Sequence]``；
         
-        * 如果 ``data`` 是 ``Dict``，那么该函数会将 ``data`` 的 ``key`` 替换为 ``mapping[key]``；
-        * 如果 ``data`` 是 ``dataclass``，那么该函数会先使用 :func:`dataclasses.asdict` 函数将其转换为 ``Dict``，然后进行转换；
-        * 如果 ``data`` 是 ``Sequence``，那么该函数会先将其转换成一个对应的字典::
+        * 如果 ``data`` 是 **Dict**，那么该函数会将 ``data`` 的 ``key`` 替换为 **mapping[key]**；
+        * 如果 ``data`` 是 **dataclass**，那么该函数会先使用 :func:`dataclasses.asdict` 函数将其转换为 **Dict**，然后进行转换；
+        * 如果 ``data`` 是 **Sequence**，那么该函数会先将其转换成一个对应的字典::
         
             {
                 "_0": list[0],
@@ -281,7 +281,7 @@ def match_and_substitute_params(mapping: Optional[Union[Callable, Dict]] = None,
                 ...
             }
 
-          然后使用 ``mapping`` 对这个 ``Dict`` 进行转换，如果没有匹配上 ``mapping`` 中的 ``key`` 则保持 ``\'\_number\'`` 这个形式。
+          然后使用 ``mapping`` 对这个字典进行转换，如果没有匹配上 ``mapping`` 中的 ``key`` 则保持 ``'_number'`` 这个形式。
 
     :param mapping: 用于转换的字典或者函数；当 ``mapping`` 是函数时，返回值必须为字典类型；
     :param data: 需要被转换的对象；
@@ -459,7 +459,7 @@ def _is_iterable(value):
 
 def pretty_table_printer(dataset_or_ins) -> PrettyTable:
     r"""
-    用于在 ``fastNLP`` 中展示数据的函数::
+    用于在 **fastNLP** 中展示数据的函数::
 
         >>> ins = Instance(field_1=[1, 1, 1], field_2=[2, 2, 2], field_3=["a", "b", "c"])
         +-----------+-----------+-----------------+
