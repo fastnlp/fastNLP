@@ -16,8 +16,17 @@ __all__ = [
 
 class JittorSingleDriver(JittorDriver):
     r"""
-    用于 cpu 和 单卡 gpu 运算
-    TODO: jittor 的 fp16
+    ``Jittor`` 框架下用于 ``cpu`` 和单卡 ``gpu`` 运算的 ``Driver``。
+
+    .. note::
+
+        这是一个正在开发中的功能，敬请期待。
+
+    .. todo::
+
+        支持 cpu 和 gpu 的切换；
+        实现断点重训中替换 dataloader 的 set_dist_repro_dataloader 函数
+
     """
 
     def __init__(self, model, device=None, fp16: bool = False, **kwargs):
@@ -30,11 +39,6 @@ class JittorSingleDriver(JittorDriver):
         self.world_size = 1
 
     def step(self):
-        """
-        jittor optimizers 的step函数可以传入参数loss
-        此时会同时进行 zero_grad 和 backward
-        为了统一，这里暂不使用这样的方式
-        """
         for optimizer in self.optimizers:
             optimizer.step()
 

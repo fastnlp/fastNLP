@@ -13,6 +13,14 @@ __all__ = [
 ]
 
 class JittorMPIDriver(JittorDriver):
+    """
+    执行 ``Jittor`` 框架下分布式训练的 ``Driver``。
+
+    .. note::
+
+        这是一个正在开发中的功能，敬请期待。
+
+    """
     def __init__(
         self,
         model,

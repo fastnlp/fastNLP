@@ -3,9 +3,7 @@ __all__ = [
     'Callback',
     'Event',
     'Filter',
-    'CallbackManager',
     'CheckpointCallback',
-    'choose_progress_callback',
     'ProgressCallback',
     'RichCallback',
     "LRSchedCallback",
@@ -16,6 +14,7 @@ __all__ = [
     "TorchGradClipCallback",
     "ResultsMonitor",
     'HasMonitorCallback',
+    "FitlogCallback",
 
     # collators
     'Collator',
@@ -54,7 +53,6 @@ __all__ = [
     'DataSet',
     'FieldArray',
     'Instance',
-    'ApplyResultException',
 
     # drivers
     "TorchSingleDriver",

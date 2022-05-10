@@ -180,8 +180,8 @@ class CallbackManager:
                 states[each_callback.callback_name]["states"] = each_callback.on_save_checkpoint(trainer)
 
         if len(_duplicated_callbacks) > 0:
-            logger.warning(f"Notice these callbacks' `callback_name` are duplicated: {_duplicated_callbacks}, "
-                           f"and we will only save the first callback's state we meet.")
+            logger.warning(f"Notice these callback_name: {_duplicated_callbacks} are duplicated, "
+                           f"fastNLP will only save the first callback's state.")
 
         # 2. 每一个具体的 callback 函数的 filter 的状态；
         _record_duplicated_callback_names = set()
@@ -223,8 +223,8 @@ class CallbackManager:
                     _duplicated_callback_names.add(each_callback_filters[0])
 
         if len(_duplicated_callback_names) > 0:
-            logger.warning(f"Notice these callbacks' `callback_name` are duplicated: {_duplicated_callback_names}, "
-                           f"and we will only load the first callback's state we meet.")
+            logger.rank_zero_warning(f"Notice these callback_name: {_duplicated_callback_names} are duplicated, "
+                                     f"fastNLP will only load the first callback's state.")
 
         # 2. 再恢复每一个 callback 的单独的状态；
         # 每一个我们自己提供的类 callback，都需要重写其特定的 `callback_name` 方法，保证如果两个 callback 的 callback_name 一样，
@@ -235,8 +235,6 @@ class CallbackManager:
                 _already_loaded_callback_names.add(each_callback.callback_name)
                 # 这里要注意，我们已经确保每一个 callback 的 `on_load_checkpoint` 函数拿到的就是其自己的状态；
                 each_callback.on_load_checkpoint(trainer, states[each_callback.callback_name]["states"])
-            else:
-                each_callback.on_load_checkpoint(trainer, None)
 
     @property
     def has_trainer_checkpoint(self) -> bool:

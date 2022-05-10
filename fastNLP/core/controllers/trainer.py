@@ -229,27 +229,19 @@ class Trainer(TrainerEventTrigger):
         :param accumulation_steps: 梯度累积的步数，表示每隔几个 batch 才让优化器迭代一次，默认为 1；
         :param fp16: 是否开启混合精度训练，默认为 False；
         :param monitor: 对于一些特殊的 ``Callback``，例如 :class:`fastNLP.core.callbacks.CheckpointCallback`，它们需要参数 ``monitor``
-            来从 ``Evaluator`` 的验证结果中获取当前评测的值，从而来判断是否执行一些特殊的操作。例如，对于 ``CheckpointCallback`` 而言，如果我们
-            想要每隔一个 epoch 让 ``Evaluator`` 进行一次验证，然后保存训练以来的最好的结果；那么我们需要这样设置：
+            来从 ``Evaluator`` 的验证结果中获取当前评测的值，从而来判断是否执行一些特殊的操作。这里设置了 ``monitor`` 则所有的需要
+            ``monitor`` 但是没有自己设置的 ``Callback`` 都会使用这个值
 
-            .. code-block::
+            * 为 ``None``
+             没有 monitor ，默认。
+            * 为 ``str``
+             尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+             使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+            * 为 ``Callable``
+             接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+             的 ``monitor`` 值请返回 ``None`` 。
 
-                trainer = Trainer(
-                    ...,
-                    metrics={'acc': accMetric()},
-                    callbacks=[CheckpointCallback(
-                        ...,
-                        monitor='acc',
-                        topk=1
-                    )]
-                )
-
-            这意味着对于 ``CheckpointCallback`` 来说，*'acc'* 就是一个监测的指标，用于在 ``Evaluator`` 验证后取出其需要监测的那个指标的值。
-
-            ``Trainer`` 中的参数 ``monitor`` 的作用在于为没有设置 ``monitor`` 参数但是需要该参数的 *callback* 实例设置该值。关于 ``monitor``
-            参数更详细的说明，请见 :class:`fastNLP.core.callbacks.CheckpointCallback`；
-
-            注意该参数仅当 ``Trainer`` 内置的 ``Evaluator`` 不为 None 时且有需要该参数但是没有设置该参数的 *callback* 实例才有效；
+            注意该参数仅当传入了 ``evaluate_dataloaders`` 不为 ``None`` 时且有需要该参数但是没有设置该参数的 *Callback* 实例才有意义；
 
         :param larger_better: 对于需要参数 ``monitor`` 的 *callback* 来说，``monitor`` 的值是否是越大越好；类似于 ``monitor``，其作用
             在于为没有设置 ``larger_better`` 参数但是需要该参数的 *callback* 实例设置该值；
@@ -282,32 +274,41 @@ class Trainer(TrainerEventTrigger):
 
         :kwargs:
             * *torch_kwargs* -- 用于在指定 ``driver`` 为 'torch' 时设定具体 driver 实例的一些参数：
+                
                 * ddp_kwargs -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
-                 {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
+                {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
                 * set_grad_to_none -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
                 * torch_non_blocking -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
+            * *paddle_kwargs* -- 用于在指定 ``driver`` 为 'paddle' 时设定具体 driver 实例的一些参数：
+                
+                * fleet_kwargs -- 用于在使用 ``PaddleFleetDriver`` 时指定 ``DataParallel`` 和 ``fleet`` 初始化时的参数，包括：
+                    
+                    * is_collective -- 是否使用 paddle 集群式的分布式训练方法，目前仅支持为 True 的情况；
+                    * role_maker -- 初始化 ``fleet`` 分布式训练 API 时使用的 ``RoleMaker``
+                    * 其它用于初始化 ``DataParallel`` 的参数；
             * *data_device* -- 一个具体的 driver 实例中，有 ``model_device`` 和 ``data_device``，前者表示模型所在的设备，后者表示
-             当 ``model_device`` 为 None 时应当将数据迁移到哪个设备；
+            当 ``model_device`` 为 None 时应当将数据迁移到哪个设备；
 
-             .. note::
+                .. note::
 
                 注意您在绝大部分情况下不会用到该参数！
 
                 1. 当 driver 实例的 ``model_device`` 不为 None 时，该参数无效；
                 2. 对于 pytorch，仅当用户自己通过 ``python -m torch.distributed.launch`` 并且自己初始化 ``init_process_group`` 时，
                 driver 实例的 ``model_device`` 才会为 None；
+                3. 对于 paddle，该参数无效；
 
             * *use_dist_sampler* -- 表示是否使用分布式的 ``sampler``。在多卡时，分布式 ``sampler`` 将自动决定每张卡上读取的 sample ，使得一个 epoch
-             内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
+            内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
             * *evaluate_use_dist_sampler* -- 表示在 ``Evaluator`` 中在使用分布式的时候是否将 dataloader 的 ``sampler`` 替换为分布式的 ``sampler``；默认为 ``True``；
             * *output_from_new_proc* -- 应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
-             ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
-             log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
+            ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
+            log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
 
-             注意该参数仅当使用分布式的 ``driver`` 时才有效，例如 ``TorchDDPDriver``；
+                注意该参数仅当使用分布式的 ``driver`` 时才有效，例如 ``TorchDDPDriver``；
             * *progress_bar* -- 以哪种方式显示 progress ，目前支持[None, 'raw', 'rich', 'auto'] 或者 RichCallback, RawTextCallback对象，
-             默认为 auto , auto 表示如果检测到当前 terminal 为交互型则使用 RichCallback，否则使用 RawTextCallback对象。如果
-             需要定制 progress bar 的参数，例如打印频率等，可以传入 RichCallback, RawTextCallback 对象。
+            默认为 auto , auto 表示如果检测到当前 terminal 为交互型则使用 RichCallback，否则使用 RawTextCallback对象。如果
+            需要定制 progress bar 的参数，例如打印频率等，可以传入 RichCallback, RawTextCallback 对象。
             * *train_input_mapping* -- 与 input_mapping 一致，但是只用于 ``Trainer`` 中。与 input_mapping 互斥。
             * *train_output_mapping* -- 与 output_mapping 一致，但是只用于 ``Trainer`` 中。与 output_mapping 互斥。
             * *evaluate_input_mapping* -- 与 input_mapping 一致，但是只用于 ``Evaluator`` 中。与 input_mapping 互斥。
@@ -483,18 +484,62 @@ class Trainer(TrainerEventTrigger):
 
     def run(self, num_train_batch_per_epoch: int = -1, num_eval_batch_per_dl: int = -1,
             num_eval_sanity_batch: int = 2, resume_from: str = None, resume_training: bool = True,
-            catch_KeyboardInterrupt=None):
+            catch_KeyboardInterrupt = None):
         r"""
-        注意如果是断点重训的第一次训练，即还没有保存任何用于断点重训的文件，那么其应当置 resume_from 为 None，并且使用 ModelCheckpoint
+        该函数是在 ``Trainer`` 初始化后用于真正开始训练的函数；
+
+        注意如果是断点重训的第一次训练，即还没有保存任何用于断点重训的文件，那么其应当置 resume_from 为 None，并且使用 ``CheckpointCallback``
         去保存断点重训的文件；
-        :param num_train_batch_per_epoch: 每个 epoch 运行多少个 batch 即停止，-1 为根据 dataloader 有多少个 batch 决定。
-        :param num_eval_batch_per_dl: 每个 evaluate dataloader 运行多少个 batch 停止，-1 为根据 dataloader 有多少个 batch 决定。
-        :param num_eval_sanity_batch: 在训练之前运行多少个 evaluation batch 来检测一下 evaluation 是否有错误。为 0 表示不检测。
-        :param resume_from: 从哪个路径下恢复 trainer 的状态
-        :param resume_training: 是否按照 checkpoint 中训练状态恢复。如果为 False，则只恢复 model 和 optimizers 的状态。
-        :param catch_KeyboardInterrupt: 是否捕获KeyboardInterrupt, 如果捕获的话，不会抛出一场，trainer.run()之后的代码会继续运
-        行。默认如果非 distributed 的 driver 会 catch ，distributed 不会 catch （无法 catch ）
-        :return:
+
+        :param num_train_batch_per_epoch: 每个 epoch 训练多少个 batch 后停止，*-1* 表示使用 train_dataloader 本身的长度；
+        :param num_eval_batch_per_dl: 每个 evaluate_dataloader 验证多少个 batch 停止，*-1* 表示使用 evaluate_dataloader 本身的长度；
+        :param num_eval_sanity_batch: 在训练之前运行多少个 evaluation batch 来检测一下 evaluation 的过程是否有错误。为 0 表示不检测；
+        :param resume_from: 从哪个路径下恢复 trainer 的状态，注意该值需要为一个文件夹，例如使用 ``CheckpointCallback`` 时帮助您创建的保存的子文件夹；
+        :param resume_training: 是否按照 checkpoint 中训练状态恢复。如果为 False，则只恢复 model 和 optimizers 的状态；该参数如果为 ``True``，
+            在下一次断点重训的时候我们会精确到上次训练截止的具体的 sample 进行训练；否则我们只会恢复 model 和 optimizers 的状态，而 ``Trainer`` 中的
+            其余状态都是保持初始化时的状态不会改变；
+        :param catch_KeyboardInterrupt: 是否捕获 KeyboardInterrupt；如果该参数为 ``True``，在训练时如果您使用 ``ctrl+c`` 来终止程序，
+            ``Trainer`` 不会抛出异常，但是会提前退出，然后 ``trainer.run()`` 之后的代码会继续运行。注意该参数在您使用分布式训练的 ``Driver``
+            时无效，例如 ``TorchDDPDriver``；非分布式训练的 ``Driver`` 下该参数默认为 True；
+
+        .. warning::
+
+            注意初始化的 ``Trainer`` 只能调用一次 ``run`` 函数，即之后的调用 ``run`` 函数实际不会运行，因为此时
+                ``trainer.cur_epoch_idx == trainer.n_epochs``；
+
+            这意味着如果您需要再次调用 ``run`` 函数，您需要重新再初始化一个 ``Trainer``；
+
+        .. note::
+
+            您可以使用 ``num_train_batch_per_epoch`` 来简单地对您的训练过程进行验证，例如，当您指定 ``num_train_batch_per_epoch=10`` 后，
+            每一个 epoch 下实际训练的 batch 的数量则会被修改为 10。您可以先使用该值来设定一个较小的训练长度，在验证整体的训练流程没有错误后，再将
+            该值设定为 **-1** 开始真正的训练；
+
+            ``num_eval_batch_per_dl`` 的意思和 ``num_train_batch_per_epoch`` 类似，即您可以通过设定 ``num_eval_batch_per_dl`` 来验证
+            整体的验证流程是否正确；
+
+            ``num_eval_sanity_batch`` 的作用可能会让人产生迷惑，其本质和 ``num_eval_batch_per_dl`` 作用一致，但是其只被 ``Trainer`` 使用；
+            并且其只会在训练的一开始使用，意思为：我们在训练的开始时会先使用 ``Evaluator``（如果其不为 ``None``） 进行验证，此时验证的 batch 的
+            数量只有 ``num_eval_sanity_batch`` 个；但是对于 ``num_eval_batch_per_dl`` 而言，其表示在实际的整体的训练过程中，每次 ``Evaluator``
+            进行验证时会验证的 batch 的数量。
+
+            并且，在实际真正的训练中，``num_train_batch_per_epoch`` 和 ``num_eval_batch_per_dl`` 应当都被设置为 **-1**，但是 ``num_eval_sanity_batch``
+            应当为一个很小的正整数，例如 2；
+
+        .. note::
+
+            参数 ``resume_from`` 和 ``resume_training`` 的设立是为了支持断点重训功能；仅当 ``resume_from`` 不为 ``None`` 时，``resume_training`` 才有效；
+
+            断点重训的意思为将上一次训练过程中的 ``Trainer`` 的状态保存下来，包括模型和优化器的状态、当前训练过的 epoch 的数量、对于当前的 epoch
+            已经训练过的 batch 的数量、callbacks 的状态等等；然后在下一次训练时直接加载这些状态，从而直接恢复到上一次训练过程的某一个具体时间点的状态开始训练；
+
+            fastNLP 将断点重训分为了 **保存状态** 和 **恢复断点重训** 两部分：
+
+                1. 您需要使用 ``CheckpointCallback`` 来保存训练过程中的 ``Trainer`` 的状态；具体详见 :class:`~fastNLP.core.callbacks.CheckpointCallback`；
+                ``CheckpointCallback`` 会帮助您把 ``Trainer`` 的状态保存到一个具体的文件夹下，这个文件夹的名字由 ``CheckpointCallback`` 自己生成；
+                2. 在第二次训练开始时，您需要找到您想要加载的 ``Trainer`` 状态所存放的文件夹，然后传入给参数 ``resume_from``；
+
+            需要注意的是 **保存状态** 和 **恢复断点重训** 是互不影响的。
         """
 
         if catch_KeyboardInterrupt is None:
@@ -514,7 +559,7 @@ class Trainer(TrainerEventTrigger):
             else:
                 raise FileNotFoundError("You are using `resume_from`, but we can not find your specific file.")
 
-        if self.evaluator is not None and num_eval_sanity_batch > 0:
+        if self.evaluator is not None and num_eval_sanity_batch != 0:
             logger.info(f"Running evaluator sanity check for {num_eval_sanity_batch} batches.")
             self.on_sanity_check_begin()
             sanity_check_res = self.evaluator.run(num_eval_batch_per_dl=num_eval_sanity_batch)
@@ -569,7 +614,12 @@ class Trainer(TrainerEventTrigger):
         finally:
             self.on_train_end()
 
-    def _set_num_eval_batch_per_dl(self, num_eval_batch_per_dl):
+    def _set_num_eval_batch_per_dl(self, num_eval_batch_per_dl: int):
+        r"""
+        用于设定训练过程中 ``Evaluator`` 进行验证时所实际验证的 batch 的数量；
+
+        :param num_eval_batch_per_dl: 等价于 :meth:`~fastNLP.core.controllers.Trainer.run` 中的参数 ``num_eval_batch_per_dl``；
+        """
         def _evaluate_fn(trainer: Trainer, evaluate_fn: Callable) -> None:
             trainer.on_evaluate_begin()
             _evaluate_res: dict = evaluate_fn()
@@ -579,10 +629,8 @@ class Trainer(TrainerEventTrigger):
             self.run_evaluate = partial(_evaluate_fn, self, partial(self.evaluator.run, num_eval_batch_per_dl))
 
     def step_evaluate(self):
-        """
-        在每个 batch 结束后调用，根据设置执行 evaluate 。
-
-        :return:
+        r"""
+        在训练过程中的每个 batch 结束后被调用，注意实际的 ``Evaluator.run`` 函数是否在此时被调用取决于用户设置的 **"验证频率"**；
         """
         if self.evaluator is not None:
             if callable(self.evaluate_every):
@@ -592,10 +640,8 @@ class Trainer(TrainerEventTrigger):
                 self.run_evaluate()
 
     def epoch_evaluate(self):
-        """
-        在每个 epoch 结束后调用，根据设置执行 evaluate 。
-
-        :return:
+        r"""
+        在训练过程中的每个 epoch 结束后被调用，注意实际的 ``Evaluator.run`` 函数是否在此时被调用取决于用户设置的 **"验证频率"**；
         """
         if self.evaluator is not None:
             if isinstance(self.evaluate_every, int) and self.evaluate_every < 0:
@@ -605,11 +651,52 @@ class Trainer(TrainerEventTrigger):
 
     def add_callback_fn(self, event: Event, fn: Callable):
         r"""
-        在初始化一个 trainer 实例后，用户可以使用这一函数来方便地添加 callback 函数；
-        这一函数应当交给具体的 trainer 实例去做，因此不需要 `mark` 参数；
+        在初始化一个 trainer 实例后，您可以使用这一函数来方便地添加 ``callback`` 函数；
 
-        :param event: 特定的 callback 时机，用户需要为该 callback 函数指定其属于哪一个 callback 时机；
+        注意这一函数应当交给具体的 trainer 实例去做，因此不需要 `mark` 参数；
+
+        :param event: 特定的 callback 时机，用户需要为该 callback 函数指定其属于哪一个 callback 时机；具体有哪些时机详见 :class:`fastNLP.core.callbacks.Event`；
         :param fn: 具体的 callback 函数；
+
+        .. note::
+
+            对于训练一个神经网络的整体的流程来说，其可以分为很多个时间点，例如 **"整体的训练前"**，**"训练具体的一个 epoch 前"**，
+            **"反向传播前"**，**"整体的训练结束后"**等；一个 ``callback`` 时机指的就是这些一个个具体的时间点；
+
+            该函数的参数 ``event`` 需要是一个 ``Event`` 实例，其使用方式见下方的例子；
+
+            一个十分需要注意的事情在于您需要保证您添加的 callback 函数 ``fn`` 的参数与对应的 callback 时机所需要的参数保持一致，更准确地说，
+            是与 :class:`fastNLP.core.callbacks.Callback` 中的对应的 callback 函数的参数保持一致；例如如果
+            您想要在 ``on_after_trainer_initialized`` 这个时机添加一个您自己的 callback 函数，您需要保证其参数为 ``trainer, driver``；
+
+            最后用一句话总结：对于您想要加入的一个 callback 函数，您首先需要确定您想要将该函数加入的 callback 时机，然后通过 ``Event.on_***()``
+            拿到具体的 event 实例；再去 :class:`fastNLP.core.callbacks.Callback` 中确定该 callback 时机的 callback 函数的参数应当是怎样的；
+
+        例如：
+
+        .. code-block::
+
+            from fastNLP import Trainer, Event
+
+            # Trainer 初始化
+            trainer = Trainer(...)
+
+            # 定义您自己的 callback 函数，需要注意的是该函数的参数需要与您要添加的 callback 时机所需要的参数保持一致；因为我们要将该函数加入到
+            # on_after_trainer_initialized 这个 callback 时机，因此我们这里的
+            def my_callback_fn(trainer, driver):
+                # do something
+                # 您可以在函数内部使用 trainer 和 driver，我们会将这两个实例注入进去；
+
+            # 添加到 trainer 中；
+            trainer.add_callback_fn(Event.on_after_trainer_initialized(), my_callback_fn)
+
+        .. note::
+
+            该函数与 ``Trainer.on`` 函数提供的作用相同，它们所需要的参数也基本相同，区别在于 ``Trainer.on`` 用于 ``Trainer`` 初始化前，而
+            ``Trainer.add_callback_fn`` 用于 ``Trainer`` 初始化之后；
+
+            更为具体的解释见 :meth:`~fastNLP.core.controllers.Trainer.on`；
+
         """
         if not isinstance(event, Event):
             raise ValueError("parameter event should only be `Event` type.")
@@ -621,6 +708,7 @@ class Trainer(TrainerEventTrigger):
     def on(cls, event: Event, marker: Optional[str] = None):
         r"""
         函数修饰器，用户可以使用该函数来方便地将一个函数转变为 callback 函数，从而进行训练流程中的控制；
+
         支持的 event 时机有以下这些，其执行的时机顺序也如下所示。每个时机装饰的函数应该接受的参数列表也如下所示，例如::
 
             Trainer.__init__():
@@ -655,7 +743,15 @@ class Trainer(TrainerEventTrigger):
             on_load_model(trainer)/on_save_checkpoint(trainer)/on_load_checkpoint(trainer)将根据需要在Trainer.run()中
             特定的时间调用。
 
-        Example::
+        .. note::
+
+            对于 event 的解释，建议先阅读 :meth:`~fastNLP.core.controllers.Trainer.add_callback_fn` 的文档；
+
+            当生成一个具体的 ``Event`` 实例时，可以指定 ``every、once、filter_fn`` 这三个参数来控制您的 callback 函数的调用频率，例如当您
+            指定 ``Event.on_train_epoch_begin(every=3)`` 时，其表示每隔三个 epoch 运行一次您的 callback 函数；对于这三个参数的更具体的解释，
+            请见 :class:`fastNLP.core.callbacks.Event`；
+
+        Example1::
 
             from fastNLP import Event
             @Trainer.on(Event.on_save_model())
@@ -673,42 +769,40 @@ class Trainer(TrainerEventTrigger):
                 # do something
             # 以上函数会在 Trainer 每个新的 batch 开始的时候执行，但是是两个 batch 才执行一次。
 
-        .. note::
+        Example2::
 
+            @Trainer.on(Event.on_train_begin())
+            def fn1(trainer):
+                ...
 
-            例如：
+            @Trainer.on(Event.on_train_epoch_begin())
+            def fn2(trainer):
+                ...
 
-            .. code-block::
+            trainer1 = Trainer(
+                ...,
+                marker='trainer1'
+            )
 
-                @Trainer.on(Event.on_train_begin())
-                def fn1(trainer):
-                    ...
+            @Trainer.on(Event.on_fetch_data_begin())
+            def fn3(trainer):
+                ...
 
-                @Trainer.on(Event.on_train_epoch_begin())
-                def fn2(trainer):
-                    ...
+            trainer2 = Trainer(
+                ...,
+                marker='trainer2'
+            )
 
-                trainer1 = Trainer(
-                    ...,
-                    marker='trainer1'
-                )
-
-                @Trainer.on(Event.on_fetch_data_begin())
-                def fn3(trainer):
-                    ...
-
-                trainer2 = Trainer(
-                    ...,
-                    marker='trainer2'
-                )
-
+        这段代码意味着 ``fn1`` 和 ``fn2`` 会被加入到 ``trainer1``，``fn3`` 会被加入到 ``trainer2``；
 
         注意如果你使用该函数修饰器来为你的训练添加 callback，请务必保证你加入 callback 函数的代码在实例化 `Trainer` 之前；
 
+        补充性的解释见 :meth:`~fastNLP.core.controllers.Trainer.add_callback_fn`；
+
         :param event: 特定的 callback 时机，用户需要为该 callback 函数指定其属于哪一个 callback 时机。每个时机运行的函数应该包含
             特定的参数，可以通过上述说明查阅。
-        :param marker: 用来标记该 callback 函数属于哪几个具体的 trainer 实例；两个特殊情况：1.当 `marker` 为 None（默认情况）时，
-         表示该 callback 函数只属于代码下方最近的一个 trainer 实例；2.当 `marker` 为 'all' 时，该 callback 函数会被所有的 trainer
+        :param marker: 用来标记该 callback 函数属于哪几个具体的 trainer 实例；两个特殊情况：1.当 ``marker`` 为 None（默认情况）时，
+         表示该 callback 函数只属于代码下方最近的一个 trainer 实例；2.当 ``marker`` 为 'all' 时，该 callback 函数会被所有的 trainer
          实例使用；
         :return: 返回原函数；
         """
@@ -722,7 +816,7 @@ class Trainer(TrainerEventTrigger):
         return wrapper
 
     def _fetch_matched_fn_callbacks(self):
-        """
+        r"""
         因为对于使用装饰器加入的函数 callback，我们是加在类属性中，因此在初始化一个具体的 trainer 实例后，我们需要从 Trainer 的
         callback 类属性中将属于其的 callback 函数拿到，然后加入到 callback_manager 中；
         """
