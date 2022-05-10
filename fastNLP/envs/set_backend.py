@@ -101,6 +101,11 @@ def _set_backend():
     elif backend == 'torch':
         assert _module_available(backend), f"You must have {backend} available to use {backend} backend."
 
+    if 'PADDLE_RANK_IN_NODE' in os.environ and 'FLAGS_selected_gpus' in os.environ \
+        and "USER_CUDA_VISIBLE_DEVICES" not in os.environ:
+        # 当用户没有设置 backend 并且使用 launch 启动了多卡，应该提醒用户进行设置
+        raise RuntimeError("To run paddle distributed training, please set `FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
+
 
 def set_env(global_seed=None):
     """
