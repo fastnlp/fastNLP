@@ -14,6 +14,7 @@ __all__ = [
     "TorchGradClipCallback",
     "ResultsMonitor",
     'HasMonitorCallback',
+    "FitlogCallback",
 
     # collators
     'Collator',

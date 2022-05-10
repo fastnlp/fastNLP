@@ -17,7 +17,9 @@ __all__ = [
     "TorchGradClipCallback",
 
     "ResultsMonitor",
-    'HasMonitorCallback'
+    'HasMonitorCallback',
+
+    "FitlogCallback"
 ]
 
 
@@ -32,4 +34,5 @@ from .early_stop_callback import EarlyStopCallback
 from .torch_callbacks import *
 from .more_evaluate_callback import MoreEvaluateCallback
 from .has_monitor_callback import ResultsMonitor, HasMonitorCallback
+from .fitlog_callback import FitlogCallback
 

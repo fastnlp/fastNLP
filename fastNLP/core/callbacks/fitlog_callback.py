@@ -1,3 +1,6 @@
+__all__ = [
+    'FitlogCallback'
+]
 from fastNLP import HasMonitorCallback
 import fitlog
 
