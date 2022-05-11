@@ -44,11 +44,11 @@ class TorchTransferableDataType(ABC):
 def torch_move_data_to_device(batch: Any, device: Optional[Union[str, "torch.device"]] = None,
                               non_blocking: Optional[bool] = True) -> Any:
     r"""
-    在 ``pytorch`` 中将数据集合 ``batch`` 传输到给定设备。任何定义方法 ``to(device)`` 的对象都将被移动并且集合中的所有其他对象将保持不变；
+    在 **pytorch** 中将数据集合 ``batch`` 传输到给定设备。任何定义方法 ``to(device)`` 的对象都将被移动并且集合中的所有其他对象将保持不变；
 
     :param batch: 需要迁移的数据；
     :param device: 数据应当迁移到的设备；当该参数的值为 ``None`` 时则不执行任何操作；
-    :param non_blocking: ``pytorch`` 的数据迁移方法 ``to`` 的参数；
+    :param non_blocking: **pytorch** 的数据迁移方法 ``to`` 的参数；
     :return: 迁移到新设备上的数据集合；
     """
     if device is None:
