@@ -17,7 +17,7 @@ from enum import Enum
 from functools import partial
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, Optional, Tuple, Union
+from typing import Any, BinaryIO, Dict, Optional, Tuple, Union, List
 from urllib.parse import urlparse
 from uuid import uuid4
 from zipfile import ZipFile, is_zipfile
@@ -749,6 +749,78 @@ def get_from_cache(
             json.dump(meta, meta_file)
 
     return cache_path
+
+def get_list_of_files(
+    path_or_repo: Union[str, os.PathLike],
+    revision: Optional[str] = None,
+    use_auth_token: Optional[Union[bool, str]] = None,
+    local_files_only: bool = False,
+) -> List[str]:
+    """
+    Gets the list of files inside :obj:`path_or_repo`.
+
+    Args:
+        path_or_repo (:obj:`str` or :obj:`os.PathLike`):
+            Can be either the id of a repo on huggingface.co or a path to a `directory`.
+        revision (:obj:`str`, `optional`, defaults to :obj:`"main"`):
+            The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
+            git-based system for storing models and other artifacts on huggingface.co, so ``revision`` can be any
+            identifier allowed by git.
+        use_auth_token (:obj:`str` or `bool`, `optional`):
+            The token to use as HTTP bearer authorization for remote files. If :obj:`True`, will use the token
+            generated when running :obj:`transformers-cli login` (stored in :obj:`~/.huggingface`).
+        local_files_only (:obj:`bool`, `optional`, defaults to :obj:`False`):
+            Whether or not to only rely on local files and not to attempt to download any files.
+
+    Returns:
+        :obj:`List[str]`: The list of files available in :obj:`path_or_repo`.
+    """
+    path_or_repo = str(path_or_repo)
+    # If path_or_repo is a folder, we just return what is inside (subdirectories included).
+    if os.path.isdir(path_or_repo):
+        list_of_files = []
+        for path, dir_names, file_names in os.walk(path_or_repo):
+            list_of_files.extend([os.path.join(path, f) for f in file_names])
+        return list_of_files
+
+    # Can't grab the files if we are on offline mode.
+    if is_offline_mode() or local_files_only:
+        return []
+
+    # Otherwise we grab the token and use the model_info method.
+    if isinstance(use_auth_token, str):
+        token = use_auth_token
+    elif use_auth_token is True:
+        # token = HfFolder.get_token()
+        path_token = os.path.expanduser("~/.huggingface/token")
+        try:
+            with open(path_token, "r") as f:
+                token = f.read()
+        except FileNotFoundError:
+            token = None
+    else:
+        token = None
+    # model_info = HfApi(endpoint=HUGGINGFACE_CO_RESOLVE_ENDPOINT).model_info(
+    #     path_or_repo, revision=revision, token=token
+    # )
+    endpoint=HUGGINGFACE_CO_RESOLVE_ENDPOINT
+    path = (
+        f"{HUGGINGFACE_CO_RESOLVE_ENDPOINT}/api/models/{path_or_repo}"
+        if revision is None
+        else f"{HUGGINGFACE_CO_RESOLVE_ENDPOINT}/api/models/{path_or_repo}/revision/{revision}"
+    )
+    headers = {"authorization": f"Bearer {token}"} if token is not None else None
+    status_query_param = None
+    r = requests.get(
+        path, headers=headers, timeout=None, params=status_query_param
+    )
+    r.raise_for_status()
+    d = r.json()
+    siblings = d.get("siblings", None)
+    rfilenames = (
+        [x["rfilename"] for x in siblings] if siblings is not None else None
+    )
+    return rfilenames
 
 def is_torch_fx_available():
     return _TORCH_GREATER_EQUAL_1_8 and _compare_version("torch", operator.lt, "1.9.0")
