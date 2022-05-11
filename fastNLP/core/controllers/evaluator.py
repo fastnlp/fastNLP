@@ -77,9 +77,17 @@ class Evaluator:
     :param evaluate_batch_step_fn: 定制每次 evaluate batch 执行的函数。该函数应接受的两个参数为 `evaluator` 和 `batch`，
         不需要有返回值；可以参考 :meth:`~fastNLP.core.controllers.loops.EvaluateBatchLoop.batch_step_fn`
         函数。
-    :param evaluate_fn: 用来控制 `Evaluator` 在评测的前向传播过程中是调用哪一个函数，例如是 `model.evaluate_step` 还是
-        `model.forward`；(1) 如果该值是 None，那么我们会默认使用 `evaluate_step` 函数，如果在模型中没有
-        找到该方法，则使用 `model.forward` 函数；(2) 如果为 str 类型，则尝试从 model 中寻找该方法，找不到则报错。
+    :param evaluate_fn: 用来控制 ``Evaluator`` 在评测时调用模型的哪一个函数，例如是 ``evaluate_step`` 还是框架默认的前向接口；
+        默认为 ``None``，如果该值是 ``None``，那么我们会默认使用 ``evaluate_step`` , 如果在模型的定义类中没有找到该方法，
+        则使用模型默认的前向传播函数，例如对于 pytorch 来说就是 ``forward``。
+
+        .. note::
+            查找逻辑如下所示：
+
+                1. 如果 ``evaluate_fn`` 为 None，那么在 model 的类 Model 中寻找方法 ``Model.evaluate_step``;如果没有找到，那么默认使用 ``Model.forward``；
+                2. 如果 ``evaluate_fn`` 为一个字符串，例如 'my_step_fn'，那么我们首先会在 model 的类 Model 中寻找方法 ``Model.my_step_fn``，
+                如果没有找到，那么会直接报错；
+
     :param input_mapping: 应当为一个字典或者一个函数，表示在当前 step 拿到一个 batch 的数据后，应当做怎样的映射处理：
 
             1. 如果 ``input_mapping`` 是一个字典:

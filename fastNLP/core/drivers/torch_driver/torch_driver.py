@@ -297,7 +297,7 @@ class TorchDriver(Driver):
             sampler = RandomSampler(dataloader_args.sampler.data_source)
             logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
         elif self.is_distributed():
-            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or "
+            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our"
                                "`ReproducibleSampler`.")
         else:
             sampler = ReproduceBatchSampler(

@@ -15,7 +15,7 @@
 """ Auto Tokenizer class. """
 
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from ...file_utils import (
     is_sentencepiece_available,
