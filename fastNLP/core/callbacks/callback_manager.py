@@ -25,7 +25,7 @@ def _transfer(func):
         for callback_fn in manager.callback_fns[func.__name__]:
             try:
                 callback_fn(*arg, **kwargs)
-            except EarlyStopException as e:
+            except (EarlyStopException, KeyboardInterrupt) as e:
                 raise e
             except BaseException as e:
                 logger.error(f"The following callback_fn raise exception:{_get_fun_msg(callback_fn)}.")

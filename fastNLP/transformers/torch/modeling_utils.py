@@ -352,7 +352,7 @@ class ModuleUtilsMixin:
         if token_inputs:
             return sum([token_input.numel() for token_input in token_inputs])
         else:
-            logger.warn(
+            logger.rank_zero_warning(
                 "Could not estimate the number of tokens of the input, floating-point operations will not be computed"
             )
             return 0
@@ -646,7 +646,7 @@ class PreTrainedModel(Module, ModuleUtilsMixin, GenerationMixin):
         # tie weights recursively
         tie_encoder_to_decoder_recursively(decoder, encoder, base_model_prefix, uninitialized_encoder_weights)
         if len(uninitialized_encoder_weights) > 0:
-            logger.warning(
+            logger.rank_zero_warning(
                 f"The following encoder weights were not tied to the decoder {uninitialized_encoder_weights}"
             )
 
@@ -1486,7 +1486,7 @@ class PreTrainedModel(Module, ModuleUtilsMixin, GenerationMixin):
             raise RuntimeError(f"Error(s) in loading state_dict for {model.__class__.__name__}:\n\t{error_msg}")
 
         if len(unexpected_keys) > 0:
-            logger.warning(
+            logger.rank_zero_warning(
                 f"Some weights of the model checkpoint at {pretrained_model_name_or_path} were not used when "
                 f"initializing {model.__class__.__name__}: {unexpected_keys}\n"
                 f"- This IS expected if you are initializing {model.__class__.__name__} from the checkpoint of a model trained on another task "
