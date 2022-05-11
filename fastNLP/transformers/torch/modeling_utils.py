@@ -1260,9 +1260,9 @@ class PreTrainedModel(Module, ModuleUtilsMixin, GenerationMixin):
                 raise EnvironmentError(msg)
 
             if resolved_archive_file == archive_file:
-                logger.info(f"loading weights file {archive_file}")
+                logger.debug(f"loading weights file {archive_file}")
             else:
-                logger.info(f"loading weights file {archive_file} from cache at {resolved_archive_file}")
+                logger.debug(f"loading weights file {archive_file} from cache at {resolved_archive_file}")
         else:
             resolved_archive_file = None
 

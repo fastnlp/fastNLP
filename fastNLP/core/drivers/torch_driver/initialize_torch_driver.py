@@ -26,9 +26,9 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
     # world_size 和 rank
     if FASTNLP_BACKEND_LAUNCH in os.environ:
         if device is not None:
-            logger.warning_once("Parameter `device` would be ignored when you are using `torch.distributed.run` to pull "
+            logger.rank_zero_warning("Parameter `device` would be ignored when you are using `torch.distributed.run` to pull "
                            "up your script. And we will directly get the local device via "
-                           "`os.environ['LOCAL_RANK']`.")
+                           "`os.environ['LOCAL_RANK']`.", once=True)
         return TorchDDPDriver(model, torch.device(f"cuda:{os.environ['LOCAL_RANK']}"), True, **kwargs)
 
     if driver not in {"torch", "fairscale"}:

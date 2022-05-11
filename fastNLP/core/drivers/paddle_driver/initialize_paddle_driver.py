@@ -40,8 +40,8 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
         if user_visible_devices is None:
             raise RuntimeError("To run paddle distributed training, please set `FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
         if device is not None:
-            logger.warning_once("Parameter `device` would be ignored when you are using `paddle.distributed.launch` to pull "
-                           "up your script. And we will directly get the local device via environment variables.")
+            logger.rank_zero_warning("Parameter `device` would be ignored when you are using `paddle.distributed.launch` to pull "
+                           "up your script. And we will directly get the local device via environment variables.", once=True)
         _visible_list = user_visible_devices.split(",")
         device = [ f"gpu:{_visible_list.index(g) }" for g in os.environ["CUDA_VISIBLE_DEVICES"].split(",")]
         # TODO 目前一个进程仅对应一个卡，所以暂时传入单个

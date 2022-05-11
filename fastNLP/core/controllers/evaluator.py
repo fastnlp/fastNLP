@@ -23,7 +23,7 @@ class Evaluator:
     driver: Driver
     _evaluate_batch_loop: Loop
 
-    def __init__(self, model, dataloaders, metrics: Optional[Union[Dict, Metric]] = None,
+    def __init__(self, model, dataloaders, metrics: Optional[Dict] = None,
                  driver: Union[str, Driver] = 'torch', device: Optional[Union[int, List[int], str]] = None,
                  evaluate_batch_step_fn: Optional[callable] = None, evaluate_fn: Optional[str] = None,
                  input_mapping: Optional[Union[Callable, Dict]] = None,
@@ -388,5 +388,8 @@ class _MetricsWrapper:
                 _results = metric.accumulate()
             else:
                 raise RuntimeError(f"Not support `{type(metric)}` for now.")
-            results[metric_name] = _results
+            if _results is not None:
+                results[metric_name] = _results
+            else:
+                logger.warning_once(f"Metric:{metric_name} returns None when getting metric results.")
         return results

@@ -564,9 +564,9 @@ class PretrainedConfig:
             raise EnvironmentError(msg)
 
         if resolved_config_file == config_file:
-            logger.info(f"loading configuration file {config_file}")
+            logger.debug(f"loading configuration file {config_file}")
         else:
-            logger.info(f"loading configuration file {config_file} from cache at {resolved_config_file}")
+            logger.debug(f"loading configuration file {config_file} from cache at {resolved_config_file}")
 
         return config_dict, kwargs
 
@@ -603,7 +603,7 @@ class PretrainedConfig:
         for key in to_remove:
             kwargs.pop(key, None)
 
-        logger.info(f"Model config {config}")
+        logger.debug(f"Model config {config}")
         if return_unused_kwargs:
             return config, kwargs
         else:
