@@ -25,6 +25,7 @@ Submodules
    fastNLP.core.callbacks.callback_manager
    fastNLP.core.callbacks.checkpoint_callback
    fastNLP.core.callbacks.early_stop_callback
+   fastNLP.core.callbacks.fitlog_callback
    fastNLP.core.callbacks.has_monitor_callback
    fastNLP.core.callbacks.load_best_model_callback
    fastNLP.core.callbacks.lr_scheduler_callback

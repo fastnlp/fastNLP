@@ -15,3 +15,4 @@ Subpackages
    fastNLP.core
    fastNLP.envs
    fastNLP.io
+   fastNLP.modules

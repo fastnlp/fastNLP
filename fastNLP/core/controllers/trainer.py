@@ -256,7 +256,6 @@ class Trainer(TrainerEventTrigger):
 
     :kwargs:
         * *torch_kwargs* -- 用于在指定 ``driver`` 为 'torch' 时设定具体 driver 实例的一些参数：
-
             * ddp_kwargs -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
             {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
             * set_grad_to_none -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；

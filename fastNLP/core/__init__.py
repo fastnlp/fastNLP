@@ -14,6 +14,7 @@ __all__ = [
     "TorchGradClipCallback",
     "ResultsMonitor",
     'HasMonitorCallback',
+    "FitlogCallback",
 
     # collators
     'Collator',
@@ -68,6 +69,7 @@ __all__ = [
     # metrics
     "Metric",
     "Accuracy",
+    "TransformersAccuracy",
     'SpanFPreRecMetric',
     'ClassifyFPreRecMetric',
 

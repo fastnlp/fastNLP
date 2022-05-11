@@ -45,10 +45,16 @@ class RichCallback(ProgressCallback):
 
         :param print_every: 多少个 batch 更新一次显示。
         :param loss_round_ndigit: 显示的 loss 保留多少位有效数字
-        :param monitor: 当检测到这个key的结果更好时，会打印出不同的颜色进行提示。监控的 metric 值。如果在 evaluation 结果中没有找到
-            完全一致的名称，将使用 最长公共字符串算法 找到最匹配的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor
-            。也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有
-            相关的 monitor 值请返回 None 。
+        :param monitor: 监控的 metric 值。当检测到这个key的结果更好时，会打印出不同的颜色进行提示。
+
+            * 为 ``None``
+             将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+            * 为 ``str``
+             尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+             使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+            * 为 ``Callable``
+             接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+             的 ``monitor`` 值请返回 ``None`` 。
         :param larger_better: 是否是 monitor 的结果越大越好。
         :param format_json: 是否格式化 json 再打印
         """
@@ -140,10 +146,16 @@ class RawTextCallback(ProgressCallback):
 
         :param print_every: 多少个 batch 更新一次显示。
         :param loss_round_ndigit: 显示的 loss 保留多少位有效数字
-        :param monitor: 当检测到这个key的结果更好时，会打印出不同的颜色进行提示。监控的 metric 值。如果在 evaluation 结果中没有找到
-            完全一致的名称，将使用 最长公共字符串算法 找到最匹配的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor
-            。也可以传入一个函数，接受参数为 evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有
-            相关的 monitor 值请返回 None 。
+        :param monitor: 监控的 metric 值。当检测到这个key的结果更好时，会打印出不同的颜色进行提示。
+
+            * 为 ``None``
+             将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+            * 为 ``str``
+             尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+             使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+            * 为 ``Callable``
+             接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+             的 ``monitor`` 值请返回 ``None`` 。
         :param larger_better: 是否是monitor的结果越大越好。
         :param format_json: 是否format json再打印
         """

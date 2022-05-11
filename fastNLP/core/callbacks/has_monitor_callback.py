@@ -171,9 +171,16 @@ class HasMonitorCallback(ResultsMonitor, Callback):
         该 callback 不直接进行使用，作为其它相关 callback 的父类使用，如果 callback 有使用 monitor 可以继承该函数里面实现了
         （1）判断monitor合法性；（2）在需要时， 根据trainer的monitor设置自己的monitor名称。
 
-        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最长公共字符串算法 找到最匹配
-                的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
-                果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有相关的 monitor 值请返回 None 。
+        :param monitor: 监控的 metric 值。
+
+            * 为 ``None``
+             将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+            * 为 ``str``
+             尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+             使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+            * 为 ``Callable``
+             接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+             的 ``monitor`` 值请返回 ``None`` 。
         :param larger_better: monitor 是否时越大越好
         :param must_have_monitor: 这个 callback 是否必须有 monitor 设置。如果设置为 True ，且没检测到设置 monitor 会报错。
         """

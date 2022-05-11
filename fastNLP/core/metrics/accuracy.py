@@ -1,5 +1,6 @@
 __all__ = [
-    'Accuracy'
+    'Accuracy',
+    "TransformersAccuracy"
 ]
 
 from typing import Union
@@ -17,9 +18,9 @@ class Accuracy(Metric):
         """
         计算 准确率 的 metric 。
 
-        :param str backend: 目前支持四种类型的backend, ['auto', 'torch', 'paddle', 'jittor']。其中 auto 表示根据实际调用 Metric.update()
+        :param backend: 目前支持四种类型的backend, ['auto', 'torch', 'paddle', 'jittor']。其中 auto 表示根据实际调用 Metric.update()
             函数时传入的参数决定具体的 backend ，一般情况下直接使用 'auto' 即可。
-        :param bool aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到 metric，
+        :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到 metric，
             当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 Evaluator 中根据 sampler 是否使用分布式进行自动设置。
         """
         super(Accuracy, self).__init__(backend=backend, aggregate_when_get_metric=aggregate_when_get_metric)
@@ -39,11 +40,11 @@ class Accuracy(Metric):
         r"""
         update 函数将针对一个批次的预测结果做评价指标的累计
 
-        :param torch.Tensor pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
+        :param pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
                 torch.Size([B, max_len]), 或者torch.Size([B, max_len, n_classes])
-        :param torch.Tensor target: 真实值的tensor, tensor的形状可以是Element's can be: torch.Size([B,]),
+        :param target: 真实值的tensor, tensor的形状可以是Element's can be: torch.Size([B,]),
                 torch.Size([B,]), torch.Size([B, max_len]), 或者torch.Size([B, max_len])
-        :param torch.Tensor seq_len: 序列长度标记, 标记的形状可以是None, None, torch.Size([B]), 或者torch.Size([B]).
+        :param seq_len: 序列长度标记, 标记的形状可以是None, None, torch.Size([B]), 或者torch.Size([B]).
                 如果mask也被传进来的话seq_len会被忽略.
         """
         # 为了兼容不同框架，我们将输入变量全部转为numpy类型来进行计算。
@@ -79,3 +80,20 @@ class Accuracy(Metric):
         else:
             self.total += np.prod(list(pred.shape)).item()
             self.correct += (target == pred).sum().item()
+
+
+class TransformersAccuracy(Accuracy):
+    """
+    适配 transformers 中相关模型的 Accuracy metric 。
+
+    """
+    def update(self, logits, labels, attention_mask=None):
+        r"""
+        update 函数将针对一个批次的预测结果做评价指标的累计
+
+        :param logits: 形状为 ``[B, n_classes]`` 或 ``[B, max_len, n_classes]`` 。
+        :param labels: 形状为 ``[B, ]`` 或 ``[B, max_len]``
+        :param attention_mask: 序列长度标记。
+        """
+        seq_len = attention_mask.sum(dim=-1)
+        super().update(pred=logits, target=labels, seq_len=seq_len)

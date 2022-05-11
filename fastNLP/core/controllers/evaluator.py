@@ -7,7 +7,7 @@ __all__ = [
     'Evaluator'
 ]
 
-from fastNLP.core.drivers import Driver
+from fastNLP.core.drivers import Driver, TorchDriver
 from ..drivers.choose_driver import choose_driver
 from .loops import Loop, EvaluateBatchLoop
 from fastNLP.core.utils import auto_param_call, dataclass_to_dict, \
@@ -23,7 +23,7 @@ class Evaluator:
     driver: Driver
     _evaluate_batch_loop: Loop
 
-    def __init__(self, model, dataloaders, metrics: Optional[Union[Dict, Metric]] = None,
+    def __init__(self, model, dataloaders, metrics: Optional[Dict] = None,
                  driver: Union[str, Driver] = 'torch', device: Optional[Union[int, List[int], str]] = None,
                  evaluate_batch_step_fn: Optional[callable] = None, evaluate_fn: Optional[str] = None,
                  input_mapping: Optional[Union[Callable, Dict]] = None,
@@ -316,15 +316,15 @@ class _MetricsWrapper:
                 raise TypeError("Parameter `metrics` can only be `Dict` type.")
             for metric_name, metric in metrics.items():
                 # 因为 torchmetrics 是一个 nn.Module，因此我们需要先将其移到对应的机器上；
-                if _is_torchmetrics_metric(metric):
+                if _is_torchmetrics_metric(metric) and isinstance(evaluator.driver, TorchDriver):
                     # torchmetrics 是默认自动开启了多卡的
                     evaluator.driver.move_model_to_device(metric, evaluator.driver.data_device)
                 elif isinstance(metric, Metric):
                     # 如果数据是分布式的，但是不aggregate的话可能有问题
                     if evaluator._dist_sampler is not None and metric.aggregate_when_get_metric is False:
-                        logger.warning_once(
-                            "You have replace the sampler as distributed sampler when evaluation, but your "
-                            f"metric {metric_name}:{metric.__class__.__name__}' `aggregate_when_get_metric` is False.")
+                        logger.rank_zero_warning(
+                        "You have replace the sampler as distributed sampler when evaluation, but your metric "
+                        f"{metric_name}:{metric.__class__.__name__}'s `aggregate_when_get_metric` is False.", once=True)
                     if metric.aggregate_when_get_metric is None:
                         metric.aggregate_when_get_metric = evaluator._dist_sampler is not None
 
@@ -388,5 +388,8 @@ class _MetricsWrapper:
                 _results = metric.accumulate()
             else:
                 raise RuntimeError(f"Not support `{type(metric)}` for now.")
-            results[metric_name] = _results
+            if _results is not None:
+                results[metric_name] = _results
+            else:
+                logger.warning_once(f"Metric:{metric_name} returns None when getting metric results.")
         return results

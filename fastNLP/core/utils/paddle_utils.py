@@ -22,9 +22,9 @@ from .utils import apply_to_collection
 
 def _convert_data_device(device: Union[str, int]) -> str:
     """
-    用于转换 ``driver`` 的 ``data_device`` 的函数。如果用户设置了 ``FASTNLP_BACKEND=paddle``，那么 ``fastNLP`` 会将
+    用于转换 ``driver`` 的 ``data_device`` 的函数。如果用户设置了 ``FASTNLP_BACKEND=paddle``，那么 **fastNLP** 会将
     可见的设备保存在 ``USER_CUDA_VISIBLE_DEVICES`` 中，并且将 ``CUDA_VISIBLE_DEVICES`` 设置为可见的第一张显卡；这是为
-    了顺利执行 ``paddle`` 的分布式训练而设置的。
+    了顺利执行 **paddle** 的分布式训练而设置的。
     
     在这种情况下，单纯使用 ``driver.data_device`` 是无效的。比如在分布式训练中将设备设置为 ``[0,2,3]`` ，且用户设置了
     ``CUDA_VISIBLE_DEVICES=3,4,5,6`` ，那么在 ``rank1``的进程中有::
@@ -127,7 +127,7 @@ def get_paddle_device_id(device: Union[str, int]) -> int:
 
 def paddle_move_data_to_device(batch: Any, device: Optional[Union[str, int]]) -> Any:
     r"""
-    将 ``paddle`` 的数据集合传输到给定设备。只有 :class:`paddle.Tensor` 对象会被传输到设备中，其余保持不变。
+    将 **paddle** 的数据集合传输到给定设备。只有 :class:`paddle.Tensor` 对象会被传输到设备中，其余保持不变。
 
     :param batch: 需要进行迁移的数据集合；
     :param device: 目标设备。可以是显卡设备的编号，或是``cpu``, ``gpu`` 或 ``gpu:x`` 格式的字符串；当这个参数
@@ -145,20 +145,20 @@ def paddle_move_data_to_device(batch: Any, device: Optional[Union[str, int]]) ->
 
 def is_in_paddle_dist() -> bool:
     """
-    判断是否处于 ``paddle`` 分布式的进程下，使用 ``PADDLE_RANK_IN_NODE`` 和 ``FLAGS_selected_gpus`` 判断。
+    判断是否处于 **paddle** 分布式的进程下，使用 ``PADDLE_RANK_IN_NODE`` 和 ``FLAGS_selected_gpus`` 判断。
     """
     return ('PADDLE_RANK_IN_NODE' in os.environ and 'FLAGS_selected_gpus' in os.environ)
 
 
 def is_in_fnlp_paddle_dist() -> bool:
     """
-    判断是否处于 ``fastNLP`` 拉起的 ``paddle`` 分布式进程中
+    判断是否处于 **fastNLP** 拉起的 **paddle** 分布式进程中
     """
     return FASTNLP_DISTRIBUTED_CHECK in os.environ
 
 
 def is_in_paddle_launch_dist() -> bool:
     """
-    判断是否处于 ``python -m paddle.distributed.launch`` 方法启动的 ``paddle`` 分布式进程中
+    判断是否处于 ``python -m paddle.distributed.launch`` 方法启动的 **paddle** 分布式进程中
     """
     return FASTNLP_BACKEND_LAUNCH in os.environ

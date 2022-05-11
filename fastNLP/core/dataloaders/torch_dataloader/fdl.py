@@ -179,7 +179,7 @@ class TorchDataLoader(DataLoader):
 
 def prepare_torch_dataloader(ds_or_db: Union[DataSet, Sequence[DataSet], Mapping[str, DataSet]],
                              batch_size: int = 1,
-                             shuffle: bool = False,
+                             shuffle: bool = True,
                              sampler: Union["Sampler[int]", ReproducibleSampler, UnrepeatedSampler] = None,
                              batch_sampler: Union["Sampler[Sequence[int]]", ReproducibleBatchSampler] = None,
                              num_workers: int = 0, collate_fn: Union[str, Callable, None] = 'auto',
@@ -236,8 +236,8 @@ def prepare_torch_dataloader(ds_or_db: Union[DataSet, Sequence[DataSet], Mapping
                                                   persistent_workers=persistent_workers,
                                                   )
             else:
-                dl_bundle[name] = TorchDataLoader(dataset=ds, batch_size=non_train_batch_size,
-                                                  shuffle=shuffle, sampler=non_train_sampler,
+                dl_bundle[name] = TorchDataLoader(dataset=ds, batch_size=non_train_batch_size if non_train_batch_size else batch_size,
+                                                  shuffle=shuffle, sampler=non_train_sampler if non_train_sampler else sampler,
                                                   batch_sampler=batch_sampler,
                                                   num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
                                                   drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
