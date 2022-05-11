@@ -21,6 +21,8 @@ if _NEED_IMPORT_PADDLE:
         _parse_load_result,
     )
 
+__all__ = []
+
 def _validate_output_list_for_rank(my_rank, dst, gather_list):
     if dst == my_rank:
         if not gather_list:

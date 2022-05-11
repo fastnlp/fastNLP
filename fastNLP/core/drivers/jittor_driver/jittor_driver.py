@@ -21,6 +21,9 @@ if _NEED_IMPORT_JITTOR:
         'sum': jt.sum
     }
 
+__all__ = [
+    "JittorDriver",
+]
 
 class JittorDriver(Driver):
     r"""
@@ -90,9 +93,6 @@ class JittorDriver(Driver):
                                    "'test_step'.")
 
     def save_model(self, filepath: str, only_state_dict: bool = False, model_save_fn: Optional[Callable]=None):
-        """
-        保存模型
-        """
         if model_save_fn is not None:
             outputs = model_save_fn(filepath)
             if outputs is not None:
@@ -105,12 +105,6 @@ class JittorDriver(Driver):
             jt.save(states, filepath)
 
     def load_model(self, filepath: str):
-        """
-        加载模型的加载函数；
-
-        :param file_path: 保存文件的文件位置（需要包括文件名）；
-        :return: 加载后的state_dict
-        """
         if not os.path.exists(filepath):
             raise FileNotFoundError("Checkpoint at {} not found.".format(filepath))
         return jt.load(filepath)
@@ -156,7 +150,7 @@ class JittorDriver(Driver):
 
     def move_data_to_device(self, batch: 'jt.Var'):
         """
-        jittor暂时没有提供数据迁移的函数，因此这个函数只是简单地返回batch
+        **jittor** 暂时没有提供数据迁移的函数，因此这个函数只是简单地返回 **batch**
         """
         return batch
 
