@@ -9,9 +9,9 @@ class MappingPackerUnpacker:
         """
         将 Sequence[Mapping] 转为 Dict 。例如 [{'a': [1, 2], 'b': 1}, {'a': [3], 'b': 2}] -> {'a': [[1, 2], [3]], 'b': [1, 2]}
 
-        :param batch:
-        :param ignore_fields:
-        :param input_fields:
+        :param batch: 需要 unpack 的 batch 数据。
+        :param ignore_fields: 需要忽略的 field 。
+        :param input_fields: 需要设置为 input 的 field 。
         :return:
         """
         dict_batch = defaultdict(list)
@@ -29,13 +29,13 @@ class MappingPackerUnpacker:
 
 class NestedMappingPackerUnpacker:
     @staticmethod
-    def unpack_batch(batch:Sequence[Mapping], ignore_fields:set, input_fields:Dict):
+    def unpack_batch(batch:Sequence[Mapping], ignore_fields:set, input_fields:Dict)->Dict:
         """
         将 nested 的 dict 中的内容展开到一个 flat dict 中
 
-        :param batch:
+        :param batch: 需要 unpack 的 batch 数据。
         :param ignore_fields: 需要忽略的 field 。
-        :param input_fields: 不需要继续往下衍射的
+        :param input_fields: 需要设置为 input 的 field 。
         :return:
         """
         dict_batch = defaultdict(list)
@@ -72,8 +72,9 @@ class SequencePackerUnpacker:
         """
         将 Sequence[Sequence] 转为 Mapping 。例如 [[[1, 2], 2], [[3], 2]] -> {'_0': [[1, 2], [3]], '_1': [1, 2]}
 
-        :param batch:
-        :param ignore_fields: 需要忽略的field
+        :param batch: 需要 unpack 的 batch 数据。
+        :param ignore_fields: 需要忽略的 field 。
+        :param input_fields: 需要设置为 input 的 field 。
         :return:
         """
         dict_batch = defaultdict(list)

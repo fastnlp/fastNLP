@@ -20,13 +20,17 @@ def is_cur_env_distributed() -> bool:
     """
     单卡模式该函数一定返回 False；
     注意进程 0 在多卡的训练模式下前后的值是不一样的，例如在开启多卡的 driver 之前，在进程 0 上的该函数返回 False；但是在开启后，在进程 0 上
-    的该函数返回的值是 True；
-    多卡模式下除了进程 0 外的其它进程返回的值一定是 True；
+    的该函数返回的值是 True；多卡模式下除了进程 0 外的其它进程返回的值一定是 True；
     """
     return FASTNLP_GLOBAL_RANK in os.environ
 
 
-def get_global_rank():
+def get_global_rank()->int:
+    """
+    获取当前进程的 global_rank 。
+
+    :return:
+    """
     return int(os.environ.get(FASTNLP_GLOBAL_RANK, 0))
 
 
@@ -64,7 +68,7 @@ def rank_zero_call(fn: Callable):
 @contextmanager
 def fastnlp_no_sync_context(level=2):
     """
-    用于让 fastNLP 的 barrier 以及 gather/broadcast等操作等同于只有1卡的多卡程序。如果为 1 表示 fastNLP 里的barrier 操作失效；
+    用于让 fastNLP 的 barrier 以及 gather/broadcast等操作等同于只有 1 卡的多卡程序。如果为 1 表示 fastNLP 里的barrier 操作失效；
     如果为 2 表示 barrier 与 gather/broadcast 都失效。
 
     :param int level: 可选 [0, 1, 2]

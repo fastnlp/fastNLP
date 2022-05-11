@@ -55,16 +55,16 @@ class ReproducibleBatchSampler:
 
 
 class ReproduceBatchSampler(ReproducibleBatchSampler):
-    def __init__(self, batch_sampler, batch_size: int, drop_last: bool, **kwargs):
-        """
-        可以使得 batch_sampler 对象状态恢复的 wrapper 。
+    """
+    可以使得 batch_sampler 对象状态恢复的 wrapper 。
 
-        :param batch_sampler: 可迭代出 数字 或 数字列表 的可迭代对象。ReproduceBatchSampler 将首先遍历一边该对象，然后将迭代
-            出来的序号暂存起来，使用时按照 batch_size 的 batch 大小吐出序号列表。
-        :param batch_size: 每个 batch 的大小是多少。
-        :param drop_last: 如果最后一个 batch 无法构成 batch_size 那么多个 sample ，是否丢掉。
-        :param kwargs: fastNLP 内部使用。
-        """
+    :param batch_sampler: 可迭代出 数字 或 数字列表 的可迭代对象。ReproduceBatchSampler 将首先遍历一边该对象，然后将迭代
+        出来的序号暂存起来，使用时按照 batch_size 的 batch 大小吐出序号列表。
+    :param batch_size: 每个 batch 的大小是多少。
+    :param drop_last: 如果最后一个 batch 无法构成 batch_size 那么多个 sample ，是否丢掉。
+    :param kwargs: fastNLP 内部使用。
+    """
+    def __init__(self, batch_sampler, batch_size: int, drop_last: bool, **kwargs):
         super().__init__()
 
         self.batch_sampler = batch_sampler
@@ -158,18 +158,18 @@ class ReproduceBatchSampler(ReproducibleBatchSampler):
 
 
 class RandomBatchSampler(ReproducibleBatchSampler):
+    """
+    随机分 batch 的 batch_sampler 。
+
+    :param dataset: 实现了 __len__ 方法的数据容器。
+    :param batch_size: 每个 batch 的大小
+    :param shuffle: 如果为 True，将不进行 shuffle，实际上数据会以从长到短的方式输出。
+    :param drop_last: 如果最后一个 batch 的 sample 数量无法凑齐 batch_size 这么多，是否需要丢掉。
+    :param seed: 设置的随机数种子
+    :param kwargs: fastNLP 保留使用
+    """
     def __init__(self, dataset, batch_size:int = 32, shuffle: bool = True,
                  drop_last: bool = False, seed: int = 0, **kwargs):
-        """
-        随机分 batch 的 batch_sampler 。
-
-        :param dataset: 实现了 __len__ 方法的数据容器。
-        :param batch_size: 每个 batch 的大小
-        :param shuffle: 如果为 True，将不进行 shuffle，实际上数据会以从长到短的方式输出。
-        :param drop_last: 如果最后一个 batch 的 sample 数量无法凑齐 batch_size 这么多，是否需要丢掉。
-        :param seed: 设置的随机数种子
-        :param kwargs: fastNLP 保留使用
-        """
         super().__init__()
 
         self.dataset = dataset
@@ -363,28 +363,28 @@ class RandomBatchSampler(ReproducibleBatchSampler):
 
 
 class BucketedBatchSampler(ReproducibleBatchSampler):
+    """
+    首先按照 ``sample`` 的长度排序，然后按照 batch_size*num_batch_per_bucket 为一个桶的大小，``sample`` 只会在这个桶内进行组
+    合，这样每个 ``batch`` 中的 ``padding`` 数量会比较少 （因为桶内的数据的长度都接近）。
+
+    :param dataset: 实现了 __len__ 方法的数据容器。
+    :param length: 每条数据的长度。
+
+        * 为 ``List[int]`` 时
+         应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
+        * 为 ``str`` 时
+         仅当传入的 ``dataset`` 是 :class:`fastNLP.DataSet` 时，允许传入 `str` ，该 `str` 将被认为是 ``dataset`` 中的
+          ``field`` 。若 field 中的元素为 ``int``，则认为该值是 sample 的长度；若不为 ``int`` ，则尝试使用 ``len`` 方法
+          获取该 ``field`` 中每个元素的长度。
+    :param batch_size: 每个 batch 的大小
+    :param num_batch_per_bucket: 多少个 ``batch`` 组成一个桶，数据只会在一个桶内进行 ``shuffle`` 。
+    :param shuffle: 如果为 True，将不进行 ``shuffle``，实际上数据会以从长到短的方式输出。
+    :param drop_last: 如果最后一个 `batch` 的 ``sample`` 数量无法凑齐 ``batch_size`` 这么多，是否需要丢掉。
+    :param seed: 设置的随机数种子
+    :param kwargs: fastNLP 保留使用
+    """
     def __init__(self, dataset, length: Union[List[int], str], batch_size:int = 32, num_batch_per_bucket:int = 10,
                  shuffle: bool = True, drop_last: bool = False, seed: int = 0, **kwargs):
-        """
-        首先按照 ``sample`` 的长度排序，然后按照 batch_size*num_batch_per_bucket 为一个桶的大小，``sample`` 只会在这个桶内进行组
-        合，这样每个 ``batch`` 中的 ``padding`` 数量会比较少 （因为桶内的数据的长度都接近）。
-
-        :param dataset: 实现了 __len__ 方法的数据容器。
-        :param length: 每条数据的长度。
-
-            * 为 ``List[int]`` 时
-             应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
-            * 为 ``str`` 时
-             仅当传入的 ``dataset`` 是 :class:`fastNLP.DataSet` 时，允许传入 `str` ，该 `str` 将被认为是 ``dataset`` 中的
-              ``field`` 。若 field 中的元素为 ``int``，则认为该值是 sample 的长度；若不为 ``int`` ，则尝试使用 ``len`` 方法
-              获取该 ``field`` 中每个元素的长度。
-        :param batch_size: 每个 batch 的大小
-        :param num_batch_per_bucket: 多少个 ``batch`` 组成一个桶，数据只会在一个桶内进行 ``shuffle`` 。
-        :param shuffle: 如果为 True，将不进行 ``shuffle``，实际上数据会以从长到短的方式输出。
-        :param drop_last: 如果最后一个 `batch` 的 ``sample`` 数量无法凑齐 ``batch_size`` 这么多，是否需要丢掉。
-        :param seed: 设置的随机数种子
-        :param kwargs: fastNLP 保留使用
-        """
         super().__init__()
         if isinstance(dataset, DataSet) and isinstance(length, str):
             length = dataset.get_field(length).content

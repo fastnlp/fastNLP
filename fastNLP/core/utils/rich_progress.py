@@ -44,11 +44,6 @@ class DummyFRichProgress:
         return True
 
 class FRichProgress(Progress, metaclass=Singleton):
-    """
-    fastNLP 使用的 progress bar ，新增了 new_progress 函数，通过此函数即可定制 fastNLP 中所有 progress 的样式。
-
-    """
-
     def new_progess(self, *columns: Union[str, ProgressColumn],
                     console: Optional[Console] = None,
                     auto_refresh: bool = True,

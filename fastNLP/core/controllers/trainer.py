@@ -80,9 +80,9 @@ class Trainer(TrainerEventTrigger):
             您应当使用 ``TorchDDPDriver``，意味着您需要通过 ``python -m torch.distributed.launch`` 的方式来启动训练，此时参数 ``device``
             应当设置为 None（此时我们会忽略该参数），具体见下面对于参数 ``device`` 的更详细的解释。
 
-        :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：["torch"]，之后我们会加入 jittor、paddle 等
-            国产框架的训练模式；其中 "torch" 表示使用 ``TorchSingleDriver`` 或者 ``TorchDDPDriver``，具体使用哪一种取决于参数 ``device``
-            的设置；
+        :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：``["torch", "jittor", "paddle"]``
+            其中 "torch" 表示使用 ``TorchSingleDriver`` 或者 ``TorchDDPDriver``，具体使用哪一种取决于参数 ``device``
+            的设置。
         :param train_dataloader: 训练数据集，注意其必须是单独的一个数据集，不能是 List 或者 Dict；
         :param optimizers: 训练所需要的优化器；可以是单独的一个优化器实例，也可以是多个优化器组成的 List；
         :param device: 该参数用来指定具体训练时使用的机器；注意当该参数仅当您通过 `torch.distributed.launch/run` 启动时可以为 None，
@@ -135,7 +135,7 @@ class Trainer(TrainerEventTrigger):
         :param batch_step_fn: 定制每次训练时前向运行一个 batch 的数据所执行的函数。该函数应接受两个参数为 ``trainer`` 和 ``batch``，
             不需要要返回值；更详细的使用位置和说明请见 :meth:`fastNLP.core.controllers.TrainBatchLoop.batch_step_fn`；
         :param evaluate_batch_step_fn: 定制每次验证时前向运行一个 batch 的数据所执行的函数。该函数应接受的两个参数为 ``evaluator`` 和 ``batch``，
-            不需要有返回值；可以参考 :meth:`fastNLP.core.controllers.EvaluateBatchLoop.batch_step_fn`；
+            不需要有返回值；可以参考 :meth:`fastNLP.core.controllers.TrainBatchLoop.batch_step_fn`；
         :param train_fn: 用来控制 ``Trainer`` 在训练的前向传播过程中是调用模型的哪一个函数，例如是 ``train_step`` 还是 ``forward``；
             默认为 ``None``，如果该值是 ``None``，那么我们会默认使用 ``train_step`` 当做前向传播的函数，如果在模型的定义类中没有找到该方法，
             则使用模型默认的前向传播函数，例如对于 pytorch 来说就是 ``forward``。

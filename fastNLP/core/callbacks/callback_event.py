@@ -30,20 +30,20 @@ def check_legality(fn):
 
 
 class Event:
+    """
+    与 Trainer.on 函数配合使用，达到控制 callback 函数运行时机的目的。
+
+    :param value: Trainer 的 callback 时机。
+    :param int every: 触发了多少次，才真正运行一次。
+    :param bool once: 是否只在第一次运行后就不再执行了。
+    :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
+        filter.num_executed 两个变量分别获取当前被调用了多少次，真正执行了多少次。trainer 对象即为当前正在运行的 Trainer 。
+    """
     every: Optional[int]
     once: Optional[int]
 
     def __init__(self, value: str, every: Optional[int] = None, once: Optional[int] = None,
                  filter_fn: Optional[Callable] = None):
-        """
-        请勿直接使用本对象，而是通过调用 Event.on_after_trainer_initialized() 等方式调用。
-
-        :param value: Trainer 的 callback 时机。
-        :param int every: 触发了多少次，才真正运行一次。
-        :param bool once: 是否只在第一次运行后就不再执行了。
-        :param Callable filter_fn: 输入参数的应该为 (filter, trainer)，其中 filter 对象中包含了 filter.num_called 和
-            filter.num_executed 两个变量分别获取当前被调用了多少次，真正执行了多少次。trainer 对象即为当前正在运行的 Trainer 。
-        """
         self.every = every
         self.once = once
         self.filter_fn = filter_fn
@@ -456,7 +456,7 @@ class Event:
 class Filter:
     def __init__(self, every: Optional[int] = None, once: Optional[bool] = None, filter_fn: Optional[Callable] = None):
         r"""
-        通过该 `Filter` 作为函数修饰器来控制一个函数的实际的运行频率；
+        通过该 `Filter` 作为函数修饰器来控制一个函数的实际的运行频率。
 
         :param every: 表示一个函数隔多少次运行一次；
         :param once: 表示一个函数只运行一次；

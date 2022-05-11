@@ -20,6 +20,114 @@ from fastNLP.core.log import logger
 
 
 class Evaluator:
+    """
+    用于对数据进行评测。
+
+    :param model: 待测试的模型，如果传入的 driver 为 Driver 实例，该参数将被忽略。
+    :param dataloaders: 待评测的数据集。如果为多个，请使用 dict 传入。
+    :param metrics: 使用的 metric 。必须为 dict 类型，其中 key 为 metric 的名称，value 为一个 Metric 对象。支持 fastNLP 的
+        metric ，torchmetrics，allennlpmetrics 等。
+    :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：``["torch", "jittor", "paddle"]``
+        其中 "torch" 表示使用 ``TorchSingleDriver`` 或者 ``TorchDDPDriver``，具体使用哪一种取决于参数 ``device``
+        的设置。
+    :param device: 该参数用来指定具体训练时使用的机器；注意当该参数仅当您通过 `torch.distributed.launch/run` 启动时可以为 None，
+        此时 fastNLP 不会对模型和数据进行设备之间的移动处理，但是你可以通过参数 `input_mapping` 和 `output_mapping` 来实现设备之间
+        数据迁移的工作（通过这两个参数传入两个处理数据的函数）；同时你也可以通过在 kwargs 添加参数 "data_device" 来让我们帮助您将数据
+        迁移到指定的机器上（注意这种情况理应只出现在用户在 Trainer 实例化前自己构造 DDP 的场景）；
+
+        device 的可选输入如下所示：
+
+        * *str*: 例如 'cpu', 'cuda', 'cuda:0', 'cuda:1' 等；
+        * *torch.device*: 例如 'torch.device("cuda:0")'；
+        * *int*: 将使用 ``device_id`` 为该值的 ``gpu`` 进行训练；如果值为 -1，那么默认使用全部的显卡，此时使用的 driver 实例是 `TorchDDPDriver`；
+        * *list(int)*: 如果多于 1 个device，应当通过该种方式进行设定；注意此时我们一定会使用 ``TorchDDPDriver``，不管您传入的列表的长度是 1 还是其它值；
+        * *None*: 仅当用户自己通过训练框架提供的并行训练启动脚本开启 ddp 进程时为 None；
+
+        .. note::
+
+            如果希望使用 ``TorchDDPDriver``，在初始化 ``Trainer`` 时您应当使用::
+
+                Trainer(driver="torch", device=[0, 1])
+
+            注意如果这时 ``device=[0]``，我们仍旧会使用 ``TorchDDPDriver``。
+
+            如果希望使用 ``TorchSingleDriver``，则在初始化 ``Trainer`` 时您应当使用::
+
+                Trainer(driver="torch", device=0)
+
+        .. warning::
+
+            注意参数 ``device`` 仅当您通过 pytorch 或者其它训练框架自身的并行训练启动脚本启动 ddp 训练时才允许为 ``None``！
+
+            例如，当您使用::
+
+                python -m torch.distributed.launch --nproc_per_node 2 train.py
+
+            来使用 ``TorchDDPDriver`` 时，此时参数 ``device`` 不再有效（不管您是否自己初始化 ``init_process_group``），我们将直接
+            通过 ``torch.device(f"cuda:{local_rank}")`` 来获取当前进程所使用的的具体的 gpu 设备。因此此时您需要使用 ``os.environ["CUDA_VISIBLE_DEVICES"]``
+            来指定要使用的具体的 gpu 设备。
+
+            另一点需要注意的是，当您没有选择自己初始化 ``init_process_group`` 时，我们仍旧会帮助您把模型和数据迁移到当前进程所使用的
+            具体的 gpu 设备上。但是如果您选择自己在 ``Trainer`` 初始化前（意味着在 ``driver`` 的 ``setup`` 前）初始化 ``init_process_group``，
+            那么对于模型的迁移应当完全由您自己来完成。此时对于数据的迁移，如果您在 ``Trainer`` 初始化时指定了参数 ``data_device``，那么
+            我们会将数据迁移到 ``data_device`` 上；如果其为 None，那么将数据迁移到正确的设备上应当由您自己来完成。
+
+            对于使用 ``TorchDDPDriver`` 的更多细节，请见 :class:`fastNLP.core.drivers.torch_driver.TorchDDPDriver`。
+
+    :param evaluate_batch_step_fn: 定制每次 evaluate batch 执行的函数。该函数应接受的两个参数为 `evaluator` 和 `batch`，
+        不需要有返回值；可以参考 :meth:`~fastNLP.core.controllers.loops.EvaluateBatchLoop.batch_step_fn`
+        函数。
+    :param evaluate_fn: 用来控制 `Evaluator` 在评测的前向传播过程中是调用哪一个函数，例如是 `model.evaluate_step` 还是
+        `model.forward`；(1) 如果该值是 None，那么我们会默认使用 `evaluate_step` 函数，如果在模型中没有
+        找到该方法，则使用 `model.forward` 函数；(2) 如果为 str 类型，则尝试从 model 中寻找该方法，找不到则报错。
+    :param input_mapping: 应当为一个字典或者一个函数，表示在当前 step 拿到一个 batch 的数据后，应当做怎样的映射处理：
+
+            1. 如果 ``input_mapping`` 是一个字典:
+
+                1. 如果此时 batch 也是一个 ``Dict``，那么我们会把 batch 中同样在 ``input_mapping`` 中的 key 修改为 ``input_mapping`` 的对应 ``key`` 的 ``value``；
+                2. 如果此时 batch 是一个 ``dataclass``，那么我们会先将其转换为一个 ``Dict``，然后再进行上述转换；
+                3. 如果此时 batch 此时是其它类型，那么我们将会直接报错；
+            2. 如果 ``input_mapping`` 是一个函数，那么对于取出的 batch，我们将不会做任何处理，而是直接将其传入该函数里，并将其返回值
+             送入模型中；
+
+    :param output_mapping: 应当为一个字典或者一个函数，表示在当前 step 拿到一个 model 的返回值后，应当做怎样的映射处理：
+
+            1. 如果 ``output_mapping`` 是一个字典:
+
+                1. 如果此时 batch 也是一个 ``Dict``，那么我们会把输出中同样在 ``output_mapping`` 中的 key 修改为 ``output_mapping`` 的对应 ``key`` 的 ``value``；
+                 例如输出结果为 {'a': 1}，而 output_mapping={'a':'b'} ，那么结果就是 {'b': 1}
+                2. 如果此时 batch 是一个 ``dataclass``，那么我们会先将其转换为一个 ``Dict``，然后再进行上述转换；
+                3. 如果此时 batch 此时是其它类型，那么我们将会直接报错；
+            2. 如果 ``output_mapping`` 是一个函数，我们将会把结果传入该函数里，并将其返回值送入到 metric 中。
+
+    :param model_wo_auto_param_call: 是否关闭在训练时调用我们的 auto_param_call 来自动匹配 batch 和 evaluate_fn 函数的参数的行为；
+        如果该值为 True，并且当 batch 为字典时，我们会根据 evaluate_fn 所需要的参数从 batch 中提取对应的对象，传入到 evaluate_fn 函数中；如果该值
+        为 False，那么我们会将 batch 直接透传给 evaluate_fn 函数。
+    :param fp16: 是否使用 fp16 。
+    :param verbose: 是否打印 evaluate 的结果。
+    :kwargs:
+        * *torch_kwargs* -- 用于在指定 ``driver`` 为 'torch' 时设定具体 driver 实例的一些参数：
+            * ddp_kwargs -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
+             {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
+            * torch_non_blocking -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
+        * *data_device* -- 表示如果用户的模型 device （在 Driver 中对应为参数 model_device）为 None 时，我们会将数据迁移到 data_device 上；
+            注意如果 model_device 为 None，那么 data_device 不会起作用；
+        * *model_use_eval_mode* (``bool``) --
+            是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的
+            dropout 与 batch normalization 将会关闭。默认为True。如果为 False，fastNLP 不会对 model 的 evaluate 状态做任何设置。无论
+            该值是什么，fastNLP 都会在 evaluate 接受后将 model 的状态设置为 train 。
+        * *use_dist_sampler* --
+            是否使用分布式evaluate的方式。仅当 driver 为分布式类型时，该参数才有效。默认为根据 driver 是否支持
+            分布式进行设置。如果为True，将使得每个进程上的 dataloader 自动使用不同数据，所有进程的数据并集是整个数据集。
+        * *output_from_new_proc* --
+            应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
+            ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
+            log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
+        * *progress_bar* --
+            evaluate 的时候显示的 progress bar 。目前支持三种 [None, 'raw', 'rich', 'auto'], auto 表示如果检测
+            到当前terminal为交互型则使用 rich，否则使用 raw。
+    """
+
     driver: Driver
     _evaluate_batch_loop: Loop
 
@@ -29,51 +137,6 @@ class Evaluator:
                  input_mapping: Optional[Union[Callable, Dict]] = None,
                  output_mapping: Optional[Union[Callable, Dict]] = None, model_wo_auto_param_call: bool = False,
                  fp16: bool = False, verbose: int = 1, **kwargs):
-        """
-        用于对数据进行评测。
-
-        :param model: 待测试的模型，如果传入的 driver 为 Driver 实例，该参数将被忽略。
-        :param dataloaders: 待评测的数据集。如果为多个，请使用 dict 传入。
-        :param metrics: 使用的 metric 。必须为 dict 类型，其中 key 为 metric 的名称，value 为一个 Metric 对象。支持 fastNLP 的
-            metric ，torchmetrics，allennlpmetrics 等。
-        :param driver: 使用 driver 。
-        :param device: 使用的设备。
-        :param evaluate_batch_step_fn: 定制每次 evaluate batch 执行的函数。该函数应接受的两个参数为 `evaluator` 和 `batch`，
-            不需要有返回值；可以参考 fastNLP.core.controllers.loops.evaluate_batch_loop.EvaluateBatchLoop中的batch_step_fn函数。
-        :param evaluate_fn: 用来控制 `Evaluator` 在评测的前向传播过程中是调用哪一个函数，例如是 `model.evaluate_step` 还是
-            `model.forward`；(1) 如果该值是 None，那么我们会默认使用 `evaluate_step` 当做前向传播的函数，如果在模型中没有
-            找到该方法，则使用 `model.forward` 函数；(2) 如果为 str 类型，则尝试从 model 中寻找该方法，找不到则报错。
-        :param input_mapping: 对 dataloader 中输出的内容将通过 input_mapping 处理之后再输入到 model 以及 metric 中。如果针对
-            model 和 metric 需要不同的 mapping，请考虑使用 evaluate_batch_step_fn 参数定制。
-        :param output_mapping: 对 model 输出的内容，将通过 output_mapping 处理之后再输入到 metric 中。
-        :param model_wo_auto_param_call: 是否关闭在训练时调用我们的 auto_param_call 来自动匹配 batch 和 forward 函数的参数的行为；
-         如果该值为 True，并且当 batch 为字典时，我们会根据 forward 所需要的参数从 batch 中提取对应的对象，传入到 forward 函数中；如果该值
-         为 False，那么我们会将 batch 直接透传给 forward 函数。注意上述逻辑同样应用于 `train_step`, `evaluate_step` 和 `test_step`；
-        :param fp16: 是否使用 fp16 。
-        :param verbose: 是否打印 evaluate 的结果。
-        :kwargs:
-            * *torch_kwargs* -- 用于在指定 ``driver`` 为 'torch' 时设定具体 driver 实例的一些参数：
-                * ddp_kwargs -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
-                 {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
-                * torch_non_blocking -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
-            * *data_device* -- 表示如果用户的模型 device （在 Driver 中对应为参数 model_device）为 None 时，我们会将数据迁移到 data_device 上；
-                注意如果 model_device 为 None，那么 data_device 不会起作用；
-            * *model_use_eval_mode* (``bool``) --
-                是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的
-                dropout 与 batch normalization 将会关闭。默认为True。如果为 False，fastNLP 不会对 model 的 evaluate 状态做任何设置。无论
-                该值是什么，fastNLP 都会在 evaluate 接受后将 model 的状态设置为 train 。
-            * *use_dist_sampler* --
-                是否使用分布式evaluate的方式。仅当 driver 为分布式类型时，该参数才有效。默认为根据 driver 是否支持
-                分布式进行设置。如果为True，将使得每个进程上的 dataloader 自动使用不同数据，所有进程的数据并集是整个数据集。
-            * *output_from_new_proc* --
-                应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
-                ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
-                log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
-            * *progress_bar* --
-                evaluate 的时候显示的 progress bar 。目前支持三种 [None, 'raw', 'rich', 'auto'], auto 表示如果检测
-                到当前terminal为交互型则使用 rich，否则使用 raw。
-        """
-
         self.model = model
         self.metrics = metrics
         self.driver = choose_driver(model, driver, device, fp16=fp16, model_wo_auto_param_call=model_wo_auto_param_call,
@@ -129,16 +192,13 @@ class Evaluator:
 
     def run(self, num_eval_batch_per_dl: int = -1, **kwargs) -> Dict:
         """
-        返回一个字典类型的数据，其中key为metric的名字，value为对应metric的结果。
-            如果存在多个metric，一个dataloader的情况，key的命名规则是
-                metric_indicator_name#metric_name
-            如果存在多个数据集，一个metric的情况，key的命名规则是
-                metric_indicator_name#metric_name#dataloader_name (其中 # 是默认的 separator ，可以通过 Evaluator 初始化参数修改)。
-            如果存在多个metric，多个dataloader的情况，key的命名规则是
-                metric_indicator_name#metric_name#dataloader_name
-            其中 metric_indicator_name 可能不存在。
+        返回一个字典类型的数据，其中 key 为 metric 的名字，value 为对应结果。返回的字典中，key 的命名规则如下
+        ``metric_indicator_name#metric_name#dataloader_name`` ，其中 ``metric_indicator_name`` 是由使用的 metric 返回的结果
+        决定的，仅当 metric 的结果返回是 dict 类型是才有该值；``metric_name`` 则由 ``Evaluator`` 初始化时传入的 ``metrics`` 参数
+        决定；``dataloader_name``仅在传入的 ``dataloaders`` 为 dict 时会有。此外其中的 ``#`` 符号通过 ``Evaluator`` 初始化
+        参数 ``separator`` 进行设置。
 
-        :param num_eval_batch_per_dl: 每个 dataloader 测试多少个 batch 的数据，-1 为测试所有数据。
+        :param num_eval_batch_per_dl: 每个 dataloader 测试前多少个 batch 的数据，-1 为测试所有数据。
         :return:
         """
         assert isinstance(num_eval_batch_per_dl, int), "num_eval_batch_per_dl must be of int type."
