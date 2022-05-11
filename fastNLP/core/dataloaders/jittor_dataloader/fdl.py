@@ -47,7 +47,7 @@ class JittorDataLoader:
     提供给使用jittor框架的DataLoader函数，提供了auto_collate的功能， 支持实现了__getitem__和__len__的dataset
     """
 
-    def __init__(self, dataset, batch_size: int = 16, shuffle: bool = False,
+    def __init__(self, dataset, batch_size: int = 16, shuffle: bool = True,
                  drop_last: bool = False, num_workers: int = 0, buffer_size: int = 512 * 1024 * 1024,
                  stop_grad: bool = True, keep_numpy_array: bool = False, endless: bool = False,
                  collate_fn: Union[None, str, Callable] = "auto") -> None:

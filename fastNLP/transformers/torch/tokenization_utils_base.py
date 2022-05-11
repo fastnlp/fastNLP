@@ -1700,9 +1700,9 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                 continue
 
             if file_path == resolved_vocab_files[file_id]:
-                logger.info(f"loading file {file_path}")
+                logger.debug(f"loading file {file_path}")
             else:
-                logger.info(f"loading file {file_path} from cache at {resolved_vocab_files[file_id]}")
+                logger.debug(f"loading file {file_path} from cache at {resolved_vocab_files[file_id]}")
 
         return cls._from_pretrained(
             resolved_vocab_files,
