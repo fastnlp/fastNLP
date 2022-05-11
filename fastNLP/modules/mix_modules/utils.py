@@ -202,12 +202,12 @@ def jittor2torch(batch: Any, device: str = None, no_gradient: bool = None) -> An
 
     .. note::
 
-        注意，由于 **pytorch** 和 **jittor** 之间的差异，从 :class:`jittor.Var` 转换
-        至 :class:`torch.Tensor` 的过程中无法保留原张量的梯度。
+        注意，由于 **pytorch** 和 **jittor** 之间的差异，从 :class:`jittor.Var` 转换至
+        :class:`torch.Tensor` 的过程中无法保留原张量的梯度。
 
     :param batch: 包含 :class:`jittor.Var` 类型的数据集合；
     :param device: 是否将转换后的张量迁移到特定设备上。为 ``None``时，和输入保持一致；
-    :param no_gradient: 是否保留原张量的梯度，在这个函数中该参数无效。
+    :param no_gradient: 是否保留原张量的梯度，在这个函数中该参数无效;
     :return: 转换后的数据；
     """
 

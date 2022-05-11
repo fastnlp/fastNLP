@@ -61,8 +61,8 @@ def _convert_data_device(device: Union[str, int]) -> str:
 
 def paddle_to(data: "paddle.Tensor", device: Union[str, int]) -> "paddle.Tensor":
     """
-    将 ``data`` 迁移到指定的 ``device`` 上。``paddle.Tensor`` 没有类似 ``torch.Tensor`` 的 ``to`` 函数，该函数
-    只是集成了 :func:`paddle.Tensor.cpu` 和 :func:`paddle.Tensor.cuda` 两个函数。
+    将 ``data`` 迁移到指定的 ``device`` 上。``paddle.Tensor`` 没有类似 ``torch.Tensor`` 的 ``to`` 函数，
+    该函数只是集成了 :func:`paddle.Tensor.cpu` 和 :func:`paddle.Tensor.cuda` 两个函数。
 
     :param data: 要迁移的张量；
     :param device: 目标设备，可以是 ``str`` 或 ``int`` 类型；
@@ -130,8 +130,8 @@ def paddle_move_data_to_device(batch: Any, device: Optional[Union[str, int]]) ->
     将 **paddle** 的数据集合传输到给定设备。只有 :class:`paddle.Tensor` 对象会被传输到设备中，其余保持不变。
 
     :param batch: 需要进行迁移的数据集合；
-    :param device: 目标设备。可以是显卡设备的编号，或是``cpu``, ``gpu`` 或 ``gpu:x`` 格式的字符串；当这个参数
-        为 `None`` 时，不会执行任何操作。
+    :param device: 目标设备。可以是显卡设备的编号，或是``cpu``, ``gpu`` 或 ``gpu:x`` 格式的字符串；
+        当这个参数为 `None`` 时，不会执行任何操作。
     :return: 迁移到新设备上的数据集合；
     """
     if device is None:

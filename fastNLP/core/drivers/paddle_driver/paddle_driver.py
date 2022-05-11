@@ -55,7 +55,7 @@ class PaddleDriver(Driver):
     这个类被以下子类继承：
 
     1. :class:`~fastNLP.core.drivers.PaddleSingleDriver`：实现了使用单卡和 ``cpu`` 训练的具体功能；
-    2. :class:`~fastNLP.core.drivers.PaddleFleetDriver`：实现了使用 ``fleet`` 分布式训练 API 进行分布式训练的具体功能；
+    2. :class:`~fastNLP.core.drivers.PaddleFleetDriver`：实现了使用 ``fleet`` 分布式训练 API 进行集群式分布式训练的具体功能；
 
     :param model: 训练时使用的 **PaddlePaddle** 模型；
     :param fp16: 是否开启混合精度训练；
@@ -174,8 +174,8 @@ class PaddleDriver(Driver):
         将模型保存到 ``filepath`` 中。
 
         :param filepath: 保存文件的文件位置（需要包括文件名）；
-        :param only_state_dict: 是否只保存模型的 ``state_dict``；如果为 ``False``，则会调用 ``paddle.jit.save`` 函数
-            保存整个模型的参数，此时需要传入 ``input_spec`` 参数；
+        :param only_state_dict: 是否只保存模型的 ``state_dict``；如果为 ``False``，则会调用 ``paddle.jit.save`` 
+            函数保存整个模型的参数，此时需要传入 ``input_spec`` 参数；
         :kwargs:
             * input_spec -- 描述存储模型 ``forward`` 方法的输入；
             当 ``only_state_dict`` 为 ``False`` 时必须传入，否则加载时会报错。您可以通过 ``InputSpec`` 或者示例 ``Tensor``
@@ -212,11 +212,10 @@ class PaddleDriver(Driver):
         断点重训的保存函数，该函数会负责保存模型和 optimizers, fp16 的 state_dict；以及模型的保存（若 should_save_model 为 True）
 
         :param folder: 保存断点重训的状态的文件夹；save 函数应该在下面新增两（一）个文件 的 FASTNLP_CHECKPOINT_FILENAME 文件与
-            FASTNLP_MODEL_FILENAME （如果 should_save_model 为 True ）。把 model 相关的内容放入到 FASTNLP_MODEL_FILENAME 文件
-            中，将传入的 states 以及自身产生其它状态一并保存在 FASTNLP_CHECKPOINT_FILENAME 里面。
-        :param states: 由 trainer 传入的一个字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态，Driver 应该只需要保存
-            该对象即可， Driver 应该不需要理解该对象，同时在 driver.load() 的时候，需要将 states 返回回去，load() 返回的值与这里的
-            传入的值保持一致。
+            FASTNLP_MODEL_FILENAME （如果 should_save_model 为 True ）。把 model 相关的内容放入到 FASTNLP_MODEL_FILENAME 文件中，
+            将传入的 states 以及自身产生其它状态一并保存在 FASTNLP_CHECKPOINT_FILENAME 里面。
+        :param states: 由 trainer 传入的一个字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态，Driver 应该只需要保存该对象即可，
+            Driver 应该不需要理解该对象，同时在 driver.load() 的时候，需要将 states 返回回去，load() 返回的值与这里的传入的值保持一致。
         :param dataloader: 正在使用的 dataloader，需要保存里面的状态使得之后可以从当前迭代的位置恢复。
         :param only_state_dict: 是否只保存模型的参数，当 should_save_model 为 False ，该参数无效。
         :param should_save_model: 是否应该保存模型，如果为False，Driver 将不负责 model 的保存。

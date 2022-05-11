@@ -152,6 +152,6 @@ class PaddleSingleDriver(PaddleDriver):
 
     def is_distributed(self) -> bool:
         """
-        判断是否为分布式的 **Driver** ，在 ``PaddleSingleDriver`` 中，返回 ``False``
+        判断是否为分布式的 **Driver** ，在 ``PaddleSingleDriver`` 中，返回 ``False``。
         """
         return False

@@ -264,7 +264,7 @@ class Trainer(TrainerEventTrigger):
 
             * fleet_kwargs -- 用于在使用 ``PaddleFleetDriver`` 时指定 ``DataParallel`` 和 ``fleet`` 初始化时的参数，包括：
 
-                * is_collective -- 是否使用 paddle 集群式的分布式训练方法，目前仅支持为 True 的情况；
+                * is_collective -- 是否使用 paddle 集群式的分布式训练方法，目前仅支持为 ``True`` 的情况；
                 * role_maker -- 初始化 ``fleet`` 分布式训练 API 时使用的 ``RoleMaker``
                 * 其它用于初始化 ``DataParallel`` 的参数；
         * *data_device* -- 一个具体的 driver 实例中，有 ``model_device`` 和 ``data_device``，前者表示模型所在的设备，后者表示
