@@ -145,6 +145,27 @@ def _tensor_to_object(tensor, tensor_size):
 
 
 def send_recv_object(obj, src, cur_rank, device, group=None, tag=0):
+    r"""
+    pytorch 中的单点对多点的分发函数；
+
+    例如将进程 0 上的对象 object 分发到其它进程上；
+
+    Example::
+
+        cur_rank = int(os.environ.get('LOCAL_RANK', 0))
+
+        # 拿到 local_device
+
+        send_recv_object(object, 0, cur_rank, local_device)
+
+    :param obj: 一个可以序列化的 python 对象；
+    :param src: 从哪一个 rank 上发送到其它 rank；
+    :param cur_rank: 当前的进程的 rank 序号；
+    :param device: 当前的进程所在的设备；
+    :param group: 通信组，默认为 None；
+    :param tag: 将发送与远程接收匹配的标记；
+    :return:
+    """
     # src rank send to all other ranks
     size = torch.LongTensor([0]).to(device)
 
