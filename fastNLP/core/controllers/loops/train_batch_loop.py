@@ -11,11 +11,27 @@ from fastNLP.core.utils.exceptions import EarlyStopException
 
 
 class TrainBatchLoop(Loop):
+    r"""
+    ``TrainBatchLoop`` 针对一个 dataloader 的数据完成一个 epoch 的训练迭代过程；
+
+    :param batch_step_fn: 您可以传入该参数来替换默认的 bath_step_fn；
+    """
+
     def __init__(self, batch_step_fn: Optional[Callable] = None):
         if batch_step_fn is not None:
             self.batch_step_fn = batch_step_fn
 
     def run(self, trainer, dataloader):
+        r"""
+        对传入的 dataloader 进行一个 epoch 的主要的训练的循环过程；
+
+        .. note::
+
+            您不需要自己主动地调用该方法，``Trainer`` 会负责调用该方法来完成训练过程；
+
+        :param trainer: ``Trainer`` 实例；
+        :param dataloader: 当前训练所使用的 dataloader；
+        """
         get_batch_indices = dataloader.get_batch_indices if callable(getattr(dataloader, 'get_batch_indices', None))\
             else lambda *args, **kwargs: None
         dataloader = iter(dataloader)
@@ -49,6 +65,12 @@ class TrainBatchLoop(Loop):
 
     @staticmethod
     def batch_step_fn(trainer, batch):
+        r"""
+        针对一个 batch 的数据的训练过程；
+
+        :param trainer: ``Trainer`` 实例；
+        :param batch: 一个 batch 的数据；
+        """
         outputs = trainer.train_step(batch)
         trainer.backward(outputs)
         trainer.step()
