@@ -142,7 +142,7 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
         if _name not in _has_params:
             _has_params[_name] = _value
 
-    if len(_has_params)<len(_need_params):
+    if len(_has_params) < len(_need_params):
         miss_params = list(set(_need_params.keys()) - set(_has_params.keys()))
         fn_msg = _get_fun_msg(fn if signature_fn is None else signature_fn)
         _provided_keys = _get_keys(args)

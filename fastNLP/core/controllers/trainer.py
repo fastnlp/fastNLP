@@ -43,20 +43,27 @@ class Trainer(TrainerEventTrigger):
 
     :param model: 训练所需要的模型，例如 ``torch.nn.Module``；
 
-    .. note::
+        .. note::
 
-        当使用 pytorch 时，注意参数 ``model`` 在大多数情况下为 ``nn.Module``。但是您仍能够通过使用一些特定的组合来使用情况，如下所示：
+            当使用 pytorch 时，注意参数 ``model`` 在大多数情况下为 ``nn.Module``。但是您仍能够通过使用一些特定的组合来使用情况，如下所示：
 
-        1. 当希望使用 ``DataParallel`` 时，您应当使用 ``TorchSingleDriver``，意味着您在初始化 ``Trainer`` 时参数 ``device`` 不应当为
-        一个 ``List``；
+            1. 当希望使用 ``DataParallel`` 时，您应当使用 ``TorchSingleDriver``，意味着您在初始化 ``Trainer`` 时参数 ``device`` 不应当为
+            一个 ``List``；
 
-        2. 当您选择自己初始化 ``init_process_group`` 时（这种情况要求您传入的 ``model`` 参数一定为 ``DistributedDataParallel``），
-        您应当使用 ``TorchDDPDriver``，意味着您需要通过 ``python -m torch.distributed.launch`` 的方式来启动训练，此时参数 ``device``
-        应当设置为 None（此时我们会忽略该参数），具体见下面对于参数 ``device`` 的更详细的解释。
+            2. 当您选择自己初始化 ``init_process_group`` 时（这种情况要求您传入的 ``model`` 参数一定为 ``DistributedDataParallel``），
+            您应当使用 ``TorchDDPDriver``，意味着您需要通过 ``python -m torch.distributed.launch`` 的方式来启动训练，此时参数 ``device``
+            应当设置为 None（此时我们会忽略该参数），具体见下面对于参数 ``device`` 的更详细的解释。
 
     :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：["torch"]，之后我们会加入 jittor、paddle 等
         国产框架的训练模式；其中 "torch" 表示使用 ``TorchSingleDriver`` 或者 ``TorchDDPDriver``，具体使用哪一种取决于参数 ``device``
         的设置；
+
+        .. warning::
+
+            因为设计上的原因，您可以直接传入一个初始化好的 ``driver`` 实例，但是需要注意的是一个 ``Driver`` 在初始化时需要 ``model`` 这一参数，
+            这意味着当您传入一个 ``Driver`` 实例时，您传入给 ``Trainer`` 的 ``model`` 参数将会被忽略；也就是说模型在训练时使用的真正的模型是
+            您传入的 ``Driver`` 实例中的模型；
+
     :param train_dataloader: 训练数据集，注意其必须是单独的一个数据集，不能是 List 或者 Dict；
     :param optimizers: 训练所需要的优化器；可以是单独的一个优化器实例，也可以是多个优化器组成的 List；
     :param device: 该参数用来指定具体训练时使用的机器；注意当该参数仅当您通过 `torch.distributed.launch/run` 启动时可以为 None，
@@ -268,28 +275,28 @@ class Trainer(TrainerEventTrigger):
                 * role_maker -- 初始化 ``fleet`` 分布式训练 API 时使用的 ``RoleMaker``
                 * 其它用于初始化 ``DataParallel`` 的参数；
         * *data_device* -- 一个具体的 driver 实例中，有 ``model_device`` 和 ``data_device``，前者表示模型所在的设备，后者表示
-        当 ``model_device`` 为 None 时应当将数据迁移到哪个设备；
+         当 ``model_device`` 为 None 时应当将数据迁移到哪个设备；
 
             .. note::
 
-            注意您在绝大部分情况下不会用到该参数！
+                注意您在绝大部分情况下不会用到该参数！
 
-            1. 当 driver 实例的 ``model_device`` 不为 None 时，该参数无效；
-            2. 对于 pytorch，仅当用户自己通过 ``python -m torch.distributed.launch`` 并且自己初始化 ``init_process_group`` 时，
-            driver 实例的 ``model_device`` 才会为 None；
-            3. 对于 paddle，该参数无效；
+                1. 当 driver 实例的 ``model_device`` 不为 None 时，该参数无效；
+                2. 对于 pytorch，仅当用户自己通过 ``python -m torch.distributed.launch`` 并且自己初始化 ``init_process_group`` 时，
+                driver 实例的 ``model_device`` 才会为 None；
+                3. 对于 paddle，该参数无效；
 
         * *use_dist_sampler* -- 表示是否使用分布式的 ``sampler``。在多卡时，分布式 ``sampler`` 将自动决定每张卡上读取的 sample ，使得一个 epoch
-        内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
+         内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
         * *evaluate_use_dist_sampler* -- 表示在 ``Evaluator`` 中在使用分布式的时候是否将 dataloader 的 ``sampler`` 替换为分布式的 ``sampler``；默认为 ``True``；
         * *output_from_new_proc* -- 应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
-        ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
-        log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
+         ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
+         log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
 
             注意该参数仅当使用分布式的 ``driver`` 时才有效，例如 ``TorchDDPDriver``；
         * *progress_bar* -- 以哪种方式显示 progress ，目前支持[None, 'raw', 'rich', 'auto'] 或者 RichCallback, RawTextCallback对象，
-        默认为 auto , auto 表示如果检测到当前 terminal 为交互型则使用 RichCallback，否则使用 RawTextCallback对象。如果
-        需要定制 progress bar 的参数，例如打印频率等，可以传入 RichCallback, RawTextCallback 对象。
+         默认为 auto , auto 表示如果检测到当前 terminal 为交互型则使用 RichCallback，否则使用 RawTextCallback对象。如果
+         需要定制 progress bar 的参数，例如打印频率等，可以传入 RichCallback, RawTextCallback 对象。
         * *train_input_mapping* -- 与 input_mapping 一致，但是只用于 ``Trainer`` 中。与 input_mapping 互斥。
         * *train_output_mapping* -- 与 output_mapping 一致，但是只用于 ``Trainer`` 中。与 output_mapping 互斥。
         * *evaluate_input_mapping* -- 与 input_mapping 一致，但是只用于 ``Evaluator`` 中。与 input_mapping 互斥。
