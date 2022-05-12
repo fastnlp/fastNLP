@@ -1,25 +1,26 @@
 __all__ = [
     'TorchGradClipCallback'
 ]
+from typing import Union, List
 from ..callback import Callback
 
 
 class TorchGradClipCallback(Callback):
-    def __init__(self, clip_value=1, clip_type='norm', parameters=None):
-        r"""
-        在每次 optimizer update 之前将 parameter 进行 clip
+    r"""
+    在每次 optimizer update 之前将 parameter 进行 clip 。
 
-        :param float clip_value: 将gradient 限制到[-clip_value, clip_value]。clip_value应该为正数
-        :param str clip_type: 支持'norm', 'value'两种:
+    :param clip_value: 将gradient 限制到[-clip_value, clip_value]。clip_value应该为正数
+    :param clip_type: 支持'norm', 'value'两种:
 
-                1. 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
-                2. 'value', 将gradient限制在[-clip_value, clip_value],
-                小于-clip_value的gradient被赋值为-clip_value;
-                大于clip_value的gradient被赋值为clip_value.
+        1. 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
+        2. 'value', 将gradient限制在[-clip_value, clip_value],
+         小于-clip_value的gradient被赋值为-clip_value;大于clip_value的gradient被赋值为clip_value.
 
-        :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。
-            如果为None则默认对 Trainer 的 optimizers 中所有参数进行梯度裁剪。
-        """
+    :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。
+        如果为None则默认对 Trainer 的 optimizers 中所有参数进行梯度裁剪。
+    """
+    def __init__(self, clip_value:int=1, clip_type:str='norm',
+                 parameters:Union["torch.Tensor", List["torch.Tensor"]]=None):
         super().__init__()
 
         from torch import nn

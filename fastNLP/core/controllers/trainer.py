@@ -117,7 +117,7 @@ class Trainer(TrainerEventTrigger):
         不需要要返回值；更详细的使用位置和说明请见 :meth:`fastNLP.core.controllers.TrainBatchLoop.batch_step_fn`；
     :param evaluate_batch_step_fn: 定制每次验证时前向运行一个 batch 的数据所执行的函数。该函数应接受的两个参数为 ``evaluator`` 和 ``batch``，
         不需要有返回值；可以参考 :meth:`fastNLP.core.controllers.EvaluateBatchLoop.batch_step_fn`；
-    :param train_fn: 用来控制 ``Trainer`` 在训练的前向传播过程中是调用模型的哪一个函数，例如是 ``train_step`` 还是 ``forward``；
+    :param train_fn: 用来控制 ``Trainer`` 在训练的前向传播过程中是调用模型的哪一个函数，例如是 ``train_step`` 还是框架默认的前向接口；
         默认为 ``None``，如果该值是 ``None``，那么我们会默认使用 ``train_step`` 当做前向传播的函数，如果在模型的定义类中没有找到该方法，
         则使用模型默认的前向传播函数，例如对于 pytorch 来说就是 ``forward``。
 
@@ -271,7 +271,7 @@ class Trainer(TrainerEventTrigger):
 
             * fleet_kwargs -- 用于在使用 ``PaddleFleetDriver`` 时指定 ``DataParallel`` 和 ``fleet`` 初始化时的参数，包括：
 
-                * is_collective -- 是否使用 paddle 集群式的分布式训练方法，目前仅支持为 True 的情况；
+                * is_collective -- 是否使用 paddle 集群式的分布式训练方法，目前仅支持为 ``True`` 的情况；
                 * role_maker -- 初始化 ``fleet`` 分布式训练 API 时使用的 ``RoleMaker``
                 * 其它用于初始化 ``DataParallel`` 的参数；
         * *data_device* -- 一个具体的 driver 实例中，有 ``model_device`` 和 ``data_device``，前者表示模型所在的设备，后者表示

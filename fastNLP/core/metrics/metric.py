@@ -14,14 +14,16 @@ from fastNLP.core.metrics.element import Element
 
 
 class Metric:
-    def __init__(self, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = None):
-        """
+    """
+    fastNLP 中 Metric 的基类，自定义 Metric 时，请继承该对象。使用该对象，将有助于减少在分布式状态下的 Metric 计算。
 
-        :param str backend: 目前支持四种类型的backend, [torch, paddle, jittor, auto]。其中 auto 表示根据实际调用 Metric.update()
-            函数时传入的参数决定具体的 backend ，大部分情况下直接使用 auto 即可。
-        :param bool aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到metric，
-            当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 Evaluator 中根据 sampler 是否使用分布式进行自动设置。
-        """
+    :param backend: 目前支持四种类型的 backend, ``[torch, paddle, jittor, auto]``。其中 ``auto`` 表示根据实际调用
+        Metric.update() 函数时传入的参数决定具体的 ``backend`` ，大部分情况下直接使用 ``auto`` 即可。
+    :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到metric，
+        当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 :class:`fastNLP.Evaluator` 中根据 sampler 是否使用分布式
+        进行自动设置。
+    """
+    def __init__(self, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = None):
         self.backend = AutoBackend(backend)
         self._updated = False
         self.get_metric = self._sync_get_metric(self.get_metric)
@@ -39,7 +41,10 @@ class Metric:
         """
         注册一个 element 对象，注册之后便可以通过在 Metric 中直接通过 self.{name} 进行调用，可以认为该对象即为对应 backend 的
         tensor 直接进行加减乘除计算即可。
-        注意：如果想使得该 metric 可自动扩展到多卡的情况，请一定申明 aggregate_method 。
+
+        ..warning::
+
+            如果想使得该 metric 可自动扩展到多卡的情况，请一定申明 aggregate_method 。
 
         :param name: 当前 element 的名字，注册后，在 Metric 中可以通过 self.{name} 访问该变量。
         :param value: 初始化的值。在调用 Metric.reset() 方法时也将自动设置为该值

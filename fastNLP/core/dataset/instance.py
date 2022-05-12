@@ -1,6 +1,6 @@
 r"""
 instance 模块实现了Instance 类在fastNLP中对应sample。一个sample可以认为是一个Instance类型的对象。
-便于理解的例子可以参考文档 :mod:`fastNLP.core.dataset` 中的表格
+便于理解的例子可以参考文档 :mod:`fastNLP.core.dataset` 。
 
 """
 
@@ -14,10 +14,10 @@ from fastNLP.core.utils.utils import pretty_table_printer
 
 class Instance(Mapping):
     r"""
-    Instance是fastNLP中对应一个sample的类。每个sample在fastNLP中是一个Instance对象。
-    Instance一般与 :class:`~fastNLP.DataSet` 一起使用, Instance的初始化如下面的Example所示::
+    Instance 是 fastNLP 中对应一个 sample 的类。每个 sample 在 fastNLP 中是一个 Instance 对象。
+    Instance 一般与 :class:`~fastNLP.DataSet` 一起使用, Instance 的初始化如下面的 Example 所示::
 
-        instance = Instance() # 请补充完整
+        >>> instance = Instance(input="this is a demo sentence", label='good') # 请补充完整
 
     """
 
@@ -44,17 +44,17 @@ class Instance(Mapping):
 
     def keys(self):
         r"""
-            返回一个迭代器，内容是field_name
+        返回一个迭代器，内容是 field_name
 
-            :return: 一个迭代器
+        :return: 一个迭代器
         """
         return self.fields.keys()
 
     def values(self):
         r"""
-            返回一个迭代器，内容是field_value
+        返回一个迭代器，内容是 field_value
 
-            :return: 一个迭代器
+        :return: 一个迭代器
         """
         return self.fields.values()
 

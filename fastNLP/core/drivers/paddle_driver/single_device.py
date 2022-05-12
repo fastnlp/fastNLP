@@ -33,9 +33,20 @@ __all__ = [
 
 class PaddleSingleDriver(PaddleDriver):
     """
-    支持 paddle cpu 或单卡 gpu 训练的 driver
+    实现了 **PaddlePaddle** 框架下在单卡或 ``cpu`` 环境下训练功能的 **Driver**。
+
+    :param model: 训练时使用的 **PaddlePaddle** 模型；
+    :param device: 训练使用的设备；
+    :param fp16: 是否开启混合精度训练；
+    :kwargs:
+        * wo_auto_param_call (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为；
+
+        .. note::
+
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
+
     """
-    def __init__(self, model, device: Union[str, int], fp16: Optional[bool] = False, **kwargs):
+    def __init__(self, model: "paddle.nn.Layer", device: Union[str, int], fp16: Optional[bool] = False, **kwargs):
         if isinstance(model, DataParallel):
             raise ValueError("`paddle.DataParallel` is not supported in `PaddleSingleDriver`")
 
@@ -62,7 +73,7 @@ class PaddleSingleDriver(PaddleDriver):
 
     def setup(self):
         r"""
-        该函数用来初始化训练环境，用于设置当前训练的设备，并将模型迁移到对应设备上。
+        初始化训练环境；设置当前训练的设备，并将模型迁移到对应设备上。
         """
         device = _convert_data_device(self.data_device)
 
@@ -127,17 +138,20 @@ class PaddleSingleDriver(PaddleDriver):
             return dataloader
 
     def unwrap_model(self):
-        if isinstance(self.model, paddle.DataParallel):
-            return self.model._layers
-        else:
-            return self.model
+        """
+        返回训练使用的模型。
+        """
+        return self.model
 
     @property
-    def data_device(self):
+    def data_device(self) -> str:
         """
-        返回数据所在的设备。由于单卡模式不支持 data_device，因此返回的是 model_device
+        :return: 数据和模型所在的设备；
         """
         return self.model_device
 
-    def is_distributed(self):
+    def is_distributed(self) -> bool:
+        """
+        判断是否为分布式的 **Driver** ，在 ``PaddleSingleDriver`` 中，返回 ``False``。
+        """
         return False

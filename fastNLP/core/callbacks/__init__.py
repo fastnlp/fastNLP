@@ -2,7 +2,6 @@ __all__ = [
     'Callback',
     'Event',
     'Filter',
-    'CallbackManager',
     'CheckpointCallback',
     'choose_progress_callback',
     'ProgressCallback',

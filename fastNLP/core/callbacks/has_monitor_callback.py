@@ -16,11 +16,6 @@ from fastNLP.core.utils.utils import _check_valid_parameters_number
 
 
 class CanItemDataType(ABC):
-    """
-    检测可以进行传输的对象。
-
-    """
-
     @classmethod
     def __subclasshook__(cls, subclass: Any) -> Union[bool, Any]:
         if cls is CanItemDataType:
@@ -30,15 +25,22 @@ class CanItemDataType(ABC):
 
 
 class ResultsMonitor:
-    def __init__(self, monitor:Union[Callback, str], larger_better:bool=True):
-        """
-        可用于监控某个数值，并通过 is_better_results() 等接口实现检测结果是否变得更好了。
+    """
+    可用于监控某个数值，并通过 is_better_results() 等接口实现检测结果是否变得更好了。
 
-        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最长公共字符串算法 找到最匹配
-                的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
-                果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有相关的 monitor 值请返回 None 。
-        :param larger_better: monitor 是否时越大越好
-        """
+    :param monitor: 监控的 metric 值。
+
+        * 为 ``None``
+         将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+        * 为 ``str``
+         尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+         使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+        * 为 ``Callable``
+         接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+         的 ``monitor`` 值请返回 ``None`` 。
+    :param larger_better: monitor 是否时越大越好
+    """
+    def __init__(self, monitor:Union[Callback, str], larger_better:bool=True):
         self.set_monitor(monitor, larger_better)
 
     def set_monitor(self, monitor, larger_better):
@@ -66,9 +68,9 @@ class ResultsMonitor:
 
     def get_monitor_value(self, results:Dict)->Union[float, None]:
         """
-        获取 monitor 的值，如果 monitor 没有直接找到，会尝试使用匹配的方式寻找，并把匹配到的设置到 self._real_monitor 属性上。
+        获取 monitor 的值，如果 monitor 没有直接找到，会尝试使用 最长公共字符串算法 匹配的方式寻找。
 
-        :param results:
+        :param results: 评测结果。
         :return: 如果为 None ，表明此次没有找到合适的monitor
         """
         if len(results) == 0 or self.monitor is None:
@@ -113,7 +115,7 @@ class ResultsMonitor:
         """
         检测给定的 results 是否比上一次更好，如果本次 results 中没有找到相关的monitor 返回 False。
 
-        :param results: on_valid_ends() 接口中传入的 evaluation 结果。
+        :param results: evaluation 结果。
         :param keep_if_better: 当返回为 True 时，是否保存到 self.monitor_value 中。
         :return:
         """
@@ -166,24 +168,24 @@ class ResultsMonitor:
 
 
 class HasMonitorCallback(ResultsMonitor, Callback):
+    """
+    该 callback 不直接进行使用，作为其它相关 callback 的父类使用，如果 callback 有使用 monitor 可以继承该函数里面实现了
+    （1）判断monitor合法性；（2）在需要时， 根据trainer的monitor设置自己的monitor名称。
+
+    :param monitor: 监控的 metric 值。
+
+        * 为 ``None``
+         将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+        * 为 ``str``
+         尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+         使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+        * 为 ``Callable``
+         接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+         的 ``monitor`` 值请返回 ``None`` 。
+    :param larger_better: monitor 是否时越大越好
+    :param must_have_monitor: 这个 callback 是否必须有 monitor 设置。如果设置为 True ，且没检测到设置 monitor 会报错。
+    """
     def __init__(self, monitor, larger_better, must_have_monitor=False):
-        """
-        该 callback 不直接进行使用，作为其它相关 callback 的父类使用，如果 callback 有使用 monitor 可以继承该函数里面实现了
-        （1）判断monitor合法性；（2）在需要时， 根据trainer的monitor设置自己的monitor名称。
-
-        :param monitor: 监控的 metric 值。
-
-            * 为 ``None``
-             将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
-            * 为 ``str``
-             尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
-             使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
-            * 为 ``Callable``
-             接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
-             的 ``monitor`` 值请返回 ``None`` 。
-        :param larger_better: monitor 是否时越大越好
-        :param must_have_monitor: 这个 callback 是否必须有 monitor 设置。如果设置为 True ，且没检测到设置 monitor 会报错。
-        """
         super().__init__(monitor, larger_better)
         self.must_have_monitor = must_have_monitor
 
@@ -212,16 +214,23 @@ class HasMonitorCallback(ResultsMonitor, Callback):
 
 
 class ExecuteOnceBetterMonitor(HasMonitorCallback):
-    def __init__(self, monitor, larger_better, execute_fn):
-        """
-        当监控的 monitor 结果更好的时候，调用 execute_fn 函数。
+    """
+    当监控的 monitor 结果更好的时候，调用 execute_fn 函数。
 
-        :param monitor: 监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用 最长公共字符串算法 找到最匹配
-                的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，接受参数为 evaluation 的结
-                果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有相关的 monitor 值请返回 None 。
-        :param larger_better: monitor 是否时越大越好
-        :param execute_fn: 一个可执行的函数，不接受任何参数，不反回值。在 monitor 取得更好结果的时候会调用。
-        """
+    :param monitor: 监控的 metric 值。
+
+        * 为 ``None``
+         将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+        * 为 ``str``
+         尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+         使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+        * 为 ``Callable``
+         接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+         的 ``monitor`` 值请返回 ``None`` 。
+    :param larger_better: monitor 是否时越大越好
+    :param execute_fn: 一个可执行的函数，不接受任何参数，不反回值。在 monitor 取得更好结果的时候会调用。
+    """
+    def __init__(self, monitor, larger_better, execute_fn):
         super().__init__(monitor, larger_better, must_have_monitor=True)
         _check_valid_parameters_number(execute_fn, expected_params=[], fn_name='execute_fn')
         self.execute_fn = execute_fn

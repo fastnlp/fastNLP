@@ -1,13 +1,11 @@
 import os
 import random
-from typing import Union, Optional, Dict
+from typing import Union, Optional, Dict, Any
 from pathlib import Path
 from functools import partial
 from dataclasses import dataclass
 
 import numpy as np
-
-from fastNLP.envs.env import USER_CUDA_VISIBLE_DEVICES
 
 from .utils import _build_fp16_env, optimizer_state_to_device, DummyGradScaler
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
@@ -50,9 +48,26 @@ if _NEED_IMPORT_PADDLE:
 
 class PaddleDriver(Driver):
     r"""
-    Paddle框架的Driver，包括实现单卡训练的 `PaddleSingleDriver` 和分布式训练的 `PaddleFleetDriver`。
+    实现了 **PaddlePaddle** 框架训练功能的基本 Driver，实现了单卡和多卡情景下均需要实现的功能，以和 **fastNLP** 的
+    :class:`~fastNLP.core.Trainer` 兼容；通过这个 Driver，可以在 **fastNLP** 中实现从 **Pytorch** 框架到
+    **PaddlePaddle** 深度学习框架的切换。
+
+    这个类被以下子类继承：
+
+    1. :class:`~fastNLP.core.drivers.PaddleSingleDriver`：实现了使用单卡和 ``cpu`` 训练的具体功能；
+    2. :class:`~fastNLP.core.drivers.PaddleFleetDriver`：实现了使用 ``fleet`` 分布式训练 API 进行集群式分布式训练的具体功能；
+
+    :param model: 训练时使用的 **PaddlePaddle** 模型；
+    :param fp16: 是否开启混合精度训练；
+    :kwargs:
+        * wo_auto_param_call (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为；
+
+        .. note::
+
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
+
     """
-    def __init__(self, model, fp16: Optional[bool] = False, **kwargs):
+    def __init__(self, model: "paddle.nn.Layer", fp16: Optional[bool] = False, **kwargs):
         if not isinstance(model, paddle.nn.Layer):
             raise ValueError(f"Parameter `model` can not be `{type(model)}` in `PaddleDriver`, it should be exactly "
                             f"`paddle.nn.Layer` type.")
@@ -69,10 +84,10 @@ class PaddleDriver(Driver):
 
     def zero_grad(self, set_to_none: bool = False):
         r"""
-        实现深度学习中的梯度的置零操作，应当直接通过优化器 optimizers 来将梯度置零；
-        注意梯度累积不需要在这里实现，trainer 已经在内部实现了梯度累积；
+        实现深度学习中的梯度的置零操作，应当直接通过优化器 ``optimizers`` 来将梯度置零；
+        注意梯度累积不需要在这里实现，:class:`~fastNLP.core.Trainer` 已经在内部实现了梯度累积；
 
-        :param set_to_none: 用来判断是否需要将梯度直接置为 None；Paddle中这个参数无效。
+        :param set_to_none: 用来判断是否需要将梯度直接置为 ``None``；在 **PaddlePaddle** 中这个参数无效。
         """
         for optimizer in self.optimizers:
             optimizer.clear_grad()
@@ -87,14 +102,6 @@ class PaddleDriver(Driver):
 
     @staticmethod
     def check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
-        r"""
-        该函数会在 trainer 或者 evaluator 设置 dataloader 后检测 dataloader 的合法性。
-        要求传入的 dataloader 必须为 `paddle.io.DataLoader` 或包含该类型的字典。
-
-        :param dataloader: 需要检测的输入的 `dataloader`；
-        :param dataloader_name: 
-        :param is_train:
-        """
         if is_train:
             if not isinstance(dataloader, DataLoader):
                 raise ValueError(f"Parameter `{dataloader_name}` should be 'paddle.io.DataLoader' type, not {type(dataloader)}.")
@@ -164,16 +171,15 @@ class PaddleDriver(Driver):
     @rank_zero_call
     def save_model(self, filepath: str, only_state_dict: bool = True, **kwargs):
         r"""
-        保存模型的函数；注意函数 `save` 是用来进行断点重训的函数；
+        将模型保存到 ``filepath`` 中。
 
         :param filepath: 保存文件的文件位置（需要包括文件名）；
-        :param only_state_dict: 是否只保存模型的 `state_dict`；如果为 False，则会调用 `paddle.jit.save` 函数
-                                保存整个模型的参数，此时需要传入 `input_spec` 参数，否则在 load 时会报错。
-        :param kwargs:
-                input_spec: 描述存储模型 forward 方法的输入，当 `only_state_dict` 为 False时必须传入，否则加载时会报错。
-                            可以通过 InputSpec 或者示例 Tensor 进行描述。详细的可以参考 paddle 关于`paddle.jit.save`
-                            的文档：
-                            https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/jit/save_cn.html#save
+        :param only_state_dict: 是否只保存模型的 ``state_dict``；如果为 ``False``，则会调用 ``paddle.jit.save`` 
+            函数保存整个模型的参数，此时需要传入 ``input_spec`` 参数；
+        :kwargs:
+            * input_spec -- 描述存储模型 ``forward`` 方法的输入；
+            当 ``only_state_dict`` 为 ``False`` 时必须传入，否则加载时会报错。您可以通过 ``InputSpec`` 或者示例 ``Tensor``
+            进行描述。详细的使用方法可以参考 **PaddlePaddle** `关于 paddle.jit.save 函数的文档 <https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/jit/save_cn.html#save>`_；
         """
         model = self.unwrap_model()
         if isinstance(filepath, Path):
@@ -189,14 +195,6 @@ class PaddleDriver(Driver):
             paddle.jit.save(model, filepath, input_spec)
 
     def load_model(self, filepath: str, only_state_dict: bool = True, **kwargs):
-        r"""
-        加载模型的函数；将 filepath 中的模型加载并赋值给当前 model 。
-
-        :param filepath: 需要被加载的对象的文件位置（需要包括文件名）；
-        :param load_state_dict: 保存的文件是否只是模型的权重，还是完整的模型。即便是保存的完整的模型，此处也只能使用尝试加载filepath
-            模型中的权重到自身模型，而不会直接替代当前 Driver 中的模型。
-        :return: 返回加载指定文件后的结果；
-        """
         model = self.unwrap_model()
         if isinstance(filepath, Path):
             filepath = str(filepath)
@@ -210,6 +208,27 @@ class PaddleDriver(Driver):
 
     @rank_zero_call
     def save(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
+        r"""
+        断点重训的保存函数，该函数会负责保存模型和 optimizers, fp16 的 state_dict；以及模型的保存（若 should_save_model 为 True）
+
+        :param folder: 保存断点重训的状态的文件夹；save 函数应该在下面新增两（一）个文件 的 FASTNLP_CHECKPOINT_FILENAME 文件与
+            FASTNLP_MODEL_FILENAME （如果 should_save_model 为 True ）。把 model 相关的内容放入到 FASTNLP_MODEL_FILENAME 文件中，
+            将传入的 states 以及自身产生其它状态一并保存在 FASTNLP_CHECKPOINT_FILENAME 里面。
+        :param states: 由 trainer 传入的一个字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态，Driver 应该只需要保存该对象即可，
+            Driver 应该不需要理解该对象，同时在 driver.load() 的时候，需要将 states 返回回去，load() 返回的值与这里的传入的值保持一致。
+        :param dataloader: 正在使用的 dataloader，需要保存里面的状态使得之后可以从当前迭代的位置恢复。
+        :param only_state_dict: 是否只保存模型的参数，当 should_save_model 为 False ，该参数无效。
+        :param should_save_model: 是否应该保存模型，如果为False，Driver 将不负责 model 的保存。
+        :kwargs:
+            * input_spec -- 描述存储模型 ``forward`` 方法的输入；
+            当 ``only_state_dict`` 为 ``False`` 时必须传入，否则加载时会报错。您可以通过 ``InputSpec`` 或者示例 ``Tensor``
+            进行描述。详细的使用方法可以参考 **PaddlePaddle** `关于 paddle.jit.save 函数的文档 <https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/jit/save_cn.html#save>`_；
+        
+        .. todo:
+
+            等 Driver 的文档写完
+
+        """
         # 传入的 dataloader 参数是 trainer 的 dataloader 属性，因为 driver 的所有 dataloader 我们是不会去改变它的，而是通过改变
         #  trainer.dataloader 来改变 dataloader 的状态，从而适配训练或者评测环境；
 
@@ -352,37 +371,41 @@ class PaddleDriver(Driver):
         r"""
         返回一个不计算梯度的环境用来对模型进行评测；
 
-        :return: context 上下文对象 `paddle.no_grad`;
+        :return: 上下文对象 ``paddle.no_grad``;
         """
         return paddle.no_grad
 
     @staticmethod
     def move_model_to_device(model: "paddle.nn.Layer", device: Union[str, int, "paddle.CUDAPlace", "paddle.CPUPlace"]):
         r"""
-        用来将模型转移到指定的 device 上；
-        在 Paddle 中使用可能会引起因与设置的设备不一致而产生的问题，请注意。
+        用来将模型 ``model`` 转移到指定的设备上；
+
+        .. note::
+
+            在 **Paddle** 中使用可能会引起因与设置的设备不一致而产生的问题，请注意。
+
+        :param model: 需要进行转移的模型；
+        :param device: 目标设备；
         """
         if device is not None:
             model.to(device)
 
-    def move_data_to_device(self, batch: "paddle.Tensor"):
+    def move_data_to_device(self, batch: Any) -> Any:
         r"""
-        将数据迁移到指定的机器上；batch 可能是 list 也可能 dict ，或其嵌套结构。
-        在 Paddle 中使用可能会引起因与设置的设备不一致而产生的问题，请注意。
+        将数据集合 ``batch`` 迁移到指定的机器上。
+        
+        .. note::
 
-        :return: 将移动到指定机器上的 batch 对象返回；
+            在 **Paddle** 中使用可能会引起因与设置的设备不一致而产生的问题，请注意。
+
+        :param batch: 包含 :class:`paddle.Tensor` 的数据集合，可以是 **List**、**Dict** 等嵌套类型；
+        :return: 移动到指定机器后的 `batch``；
         """
         device = _convert_data_device(self.data_device)
         return paddle_move_data_to_device(batch, device)
 
     @staticmethod
     def worker_init_function(worker_id: int, rank: Optional[int] = None) -> None:  # pragma: no cover
-        """The worker_init_fn that Lightning automatically adds to your dataloader if you previously set set the seed
-        with ``seed_everything(seed, workers=True)``.
-
-        See also the PyTorch documentation on
-        `randomness in DataLoaders <https://pytorch.org/docs/stable/notes/randomness.html#dataloader>`_.
-        """
         # implementation notes: https://github.com/pytorch/pytorch/issues/5059#issuecomment-817392562
         global_rank = rank if rank is not None else int(os.environ.get(FASTNLP_GLOBAL_RANK, 0))
         # TODO gpu
@@ -409,9 +432,6 @@ class PaddleDriver(Driver):
 
     @staticmethod
     def get_dataloader_args(dataloader: "DataLoader"):
-        """
-        获取 dataloader 的 shuffle 和 drop_last 属性；
-        """
 
         @dataclass
         class Res:

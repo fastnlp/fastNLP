@@ -46,6 +46,27 @@ class Evaluator:
         4. paddle.metric；
 
     :param driver: 等价于 ``Trainer`` 中的 ``driver`` 参数；
+
+        .. note::
+
+            如果在您的脚本中在初始化 ``Evaluator`` 前也初始化了 ``Trainer`` 进行训练，那么强烈建议您直接将 ``trainer.driver`` 传入 ``Evaluator`` 当做该参数的值；
+
+            .. code-block::
+
+                # 初始化 Trainer
+                trainer = Trainer(
+                    ...
+                    driver='torch',
+                    device=[0,1]
+                )
+                trainer.run()
+
+                # 此时再初始化 Evaluator 时应当直接使用 trainer.driver；
+                evaluator = Evaluator(
+                    ...
+                    driver=trainer.driver
+                )
+
     :param device: 等价于 ``Trainer`` 中的 ``device`` 参数；
     :param evaluate_batch_step_fn: 您可以传入该参数来定制每次评测一个 batch 的数据时所执行的函数。该函数应接受的两个参数为 ``evaluator`` 和 ``batch``，
         不需要有返回值；可以参考 :meth:`~fastNLP.core.controllers.loops.evaluate_batch_loop.EvaluateBatchLoop.batch_step_fn`；
@@ -85,6 +106,7 @@ class Evaluator:
          分布式进行设置。如果为 ``True``，将使得每个进程上的 ``dataloader`` 自动使用不同数据，所有进程的数据并集是整个数据集；
         * *output_from_new_proc* -- 等价于 ``Trainer`` 中的 ``output_from_new_proc`` 参数；
         * *progress_bar* -- 等价于 ``Trainer`` 中的 ``progress_bar`` 参数；
+
     """
 
     driver: Driver
@@ -154,16 +176,17 @@ class Evaluator:
         该函数是在 ``Evaluator`` 初始化后用于真正开始评测的函数；
 
         返回一个字典类型的数据，其中key为metric的名字，value为对应metric的结果。
-            如果存在多个metric，一个dataloader的情况，key的命名规则是
-                metric_indicator_name#metric_name
-            如果存在多个数据集，一个metric的情况，key的命名规则是
-                metric_indicator_name#metric_name#dataloader_name (其中 # 是默认的 separator ，可以通过 Evaluator 初始化参数修改)。
-            如果存在多个metric，多个dataloader的情况，key的命名规则是
-                metric_indicator_name#metric_name#dataloader_name
-            其中 metric_indicator_name 可能不存在。
 
-        :param num_eval_batch_per_dl: 每个 dataloader 测试多少个 batch 的数据，-1 为测试所有数据。
-        :return:
+            1. 如果存在多个metric，一个dataloader的情况，key的命名规则是
+            ``metric_indicator_name#metric_name``
+            2. 如果存在多个数据集，一个metric的情况，key的命名规则是
+            ``metric_indicator_name#metric_name#dataloader_name`` (其中 # 是默认的 separator ，可以通过 Evaluator 初始化参数修改)。
+            如果存在多个metric，多个dataloader的情况，key的命名规则是
+            ``metric_indicator_name#metric_name#dataloader_name``
+            其中 metric_indicator_name 可能不存在；
+
+        :param num_eval_batch_per_dl: 每个 dataloader 测试前多少个 batch 的数据，-1 为测试所有数据。
+        :return: 返回评测得到的结果，是一个没有嵌套的字典；
         """
         assert isinstance(num_eval_batch_per_dl, int), "num_eval_batch_per_dl must be of int type."
         assert num_eval_batch_per_dl > 0 or num_eval_batch_per_dl == -1, "num_eval_batch_per_dl must be -1 or larger than 0."

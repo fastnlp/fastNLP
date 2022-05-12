@@ -16,22 +16,24 @@ from .has_monitor_callback import ResultsMonitor
 
 
 class Saver:
+    """
+    执行保存的对象。保存的文件组织结构为::
+
+        - folder  # 当前初始化的参数
+            - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
+                - folder_name  # 由 save() 调用时传入。
+
+    :param folder: 保存在哪个文件夹下，默认为当前 folder 下。
+    :param save_object: 可选 ['trainer', 'model']，表示在保存时的保存对象为 ``trainer+model`` 还是 只是 ``model`` 。如果
+        保存 ``trainer`` 对象的话，将会保存 :class:~fastNLP.Trainer 的相关状态，可以通过 :meth:`Trainer.load` 加载该断
+        点继续训练。如果保存的是 ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
+    :param only_state_dict: 保存时是否仅保存权重，在 model_save_fn 不为 None 时无意义。
+    :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函数应当接受一个文件夹作为参数，不返回任何东西。
+        如果传入了 model_save_fn 函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运行该函数。
+    :param kwargs: 更多需要传递给 Trainer.save() 或者 Trainer.save_model() 接口的参数。
+    """
     def __init__(self, folder:str=None, save_object:str='model', only_state_dict:bool=True,
                  model_save_fn:Callable=None, **kwargs):
-        """
-        执行保存的对象。保存的文件组织结构为::
-
-            - folder  # 当前初始化的参数
-                - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
-                    - folder_name  # 由 save() 调用时传入。
-
-        :param folder: 保存在哪个文件夹下，默认为当前 folder 下。
-        :param save_object: 可选 ['trainer', 'model']，表示在保存时的保存对象为 trainer+model 还是 只是model 。
-        :param only_state_dict: 保存时是否仅保存权重，在 model_save_fn 不为 None 时无意义。
-        :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函数应当接受一个文件夹作为参数，不返回任何东西。
-            如果传入了 model_save_fn 函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运行该函数。
-        :param kwargs: 更多需要传递给 Trainer.save() 或者 Trainer.save_model() 接口的参数。
-        """
         if folder is None:
             folder = Path.cwd().absolute()
             logger.info(f"Parameter `folder` is None, and we will use {folder} to save and load your model.")
@@ -79,8 +81,8 @@ class Saver:
         """
         以 json 格式保存 results 到 path 中
 
-        :param results:
-        :param path:
+        :param results: 一般是评测后的结果。
+        :param path: 保存的文件名
         :return:
         """
         with open(path, 'w', encoding='utf8') as f:
@@ -117,12 +119,12 @@ class Saver:
 
 
 class TopkQueue:
-    def __init__(self, topk):
-        """
-        用于维护处于 topk 的 key, value 对。
+    """
+    用于维护处于 topk 的 key, value 对。
 
-        :param int topk: 整数，-1 表示所有数据都是 topk 的; 如果是 0, 表示没有任何数据是满足 topk 的。
-        """
+    :param int topk: 整数，-1 表示所有数据都是 topk 的; 如果是 0, 表示没有任何数据是满足 topk 的。
+    """
+    def __init__(self, topk):
         assert isinstance(topk, int)
         self.topk = topk
         self.topk_dict = {}  # 其中 key 为保存的内容， value 是对应的性能。
@@ -170,31 +172,39 @@ class TopkQueue:
 
 
 class TopkSaver(ResultsMonitor, Saver):
+    """
+    用来识别 topk 模型并保存，也可以仅当一个保存 Saver 使用。保存路径为::
+
+        - folder/
+            - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
+                - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}-{topk_monitor}_{monitor_value}/  # 满足topk条件存储文件名
+
+    :param topk: 保存 topk 多少的模型，-1 为保存所有模型；0 为都不保存；大于 0 的数为保存 topk 个。
+    :param monitor: 监控的 metric 值。
+
+        * 为 ``None``
+         将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+        * 为 ``str``
+         尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+         使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+        * 为 ``Callable``
+         接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+         的 ``monitor`` 值请返回 ``None`` 。
+    :param larger_better: 该 monitor 是否越大越好。
+    :param folder: 保存在哪个文件夹下，默认为当前 folder 下。
+    :param save_object: 可选 ['trainer', 'model']，表示在保存时的保存对象为 ``trainer+model`` 还是 只是 ``model`` 。如果
+        保存 ``trainer`` 对象的话，将会保存 :class:~fastNLP.Trainer 的相关状态，可以通过 :meth:`Trainer.load` 加载该断
+        点继续训练。如果保存的是 ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
+    :param only_state_dict: 保存时是否仅保存权重，在 model_save_fn 不为 None 时无意义。
+    :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函数应当接受一个文件夹作为参数，不返回任何东西。
+        如果传入了 model_save_fn 函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运行该函数。
+    :param save_evaluate_results: 是否保存 evaluate 的结果。如果为 True ，在保存 topk 模型的 folder 中还将额外保存一个
+        ``fastnlp_evaluate_results.json`` 文件，记录当前的 metric results 。仅在设置了 topk 的场景下有用，默认为 True 。
+    :param kwargs: 更多需要传递给 Trainer.save() 或者 Trainer.save_model() 接口的参数。
+    """
     def __init__(self, topk:int=0, monitor:str=None, larger_better:bool=True, folder:str=None, save_object:str='model',
                  only_state_dict:bool=True, model_save_fn:Callable=None, save_evaluate_results:bool=True,
                  **kwargs):
-        """
-        用来识别 topk 模型并保存，也可以仅当一个保存 Saver 使用。保存路径为::
-
-            - folder/
-                - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
-                    - {save_object}-epoch_{epoch_idx}-batch_{global_batch_idx}-{topk_monitor}_{monitor_value}/  # 满足topk条件存储文件名
-
-        :param topk: 保存 topk 多少的模型，-1 为保存所有模型；0 为都不保存；大于 0 的数为保存 topk 个。
-        :param monitor: 监控哪个指标判断是否是 topk 的。监控的 metric 值。如果在 evaluation 结果中没有找到完全一致的名称，将使用
-            最长公共字符串算法 找到最匹配的那个作为 monitor 。如果为 None，将尝试使用 Trainer 设置的 monitor 。也可以传入一个函数，
-            接受参数为 evaluation 的结果(字典类型)，返回一个 float 值作为 monitor 的结果，如果当前结果中没有相关的 monitor 值请
-            返回 None 。
-        :param larger_better: 该 monitor 是否越大越好。
-        :param folder: 保存在哪个文件夹下，默认为当前 folder 下。
-        :param save_object: 可选 ['trainer', 'model']，表示在保存时的保存对象为 trainer+model 还是 只是model 。
-        :param only_state_dict: 保存时是否仅保存权重，在 model_save_fn 不为 None 时无意义。
-        :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函数应当接受一个文件夹作为参数，不返回任何东西。
-            如果传入了 model_save_fn 函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运行该函数。
-        :param save_evaluate_results: 是否保存 evaluate 的结果。如果为 True ，在保存 topk 模型的 folder 中还将额外保存一个
-                fastnlp_evaluate_results.json 文件，记录当前的 results。仅在设置了 topk 的场景下有用，默认为 True 。
-        :param kwargs: 更多需要传递给 Trainer.save() 或者 Trainer.save_model() 接口的参数。
-        """
         ResultsMonitor.__init__(self, monitor, larger_better)
         Saver.__init__(self, folder, save_object, only_state_dict, model_save_fn, **kwargs)
 

@@ -32,8 +32,8 @@ def is_jittor_dataset(dataset) -> bool:
 
 def jittor_collate_wraps(func, auto_collator: Callable):
     """
-    对 ``jittor`` 的 ``collate_fn`` 进行 ``wrap`` 封装,。如果数据集为 ``mapping`` 类型，那么采用 ``auto_collator`` ，否则
-    还是采用 ``jittor`` 的 ``collate_batch``。
+    对 ``jittor`` 的 ``collate_fn`` 进行 ``wrap`` 封装,。如果数据集为 ``mapping`` 类型，那么采用 ``auto_collator`` ，
+    否则还是采用 ``jittor`` 的 ``collate_batch``。
 
     :param func:
     :param auto_collator:

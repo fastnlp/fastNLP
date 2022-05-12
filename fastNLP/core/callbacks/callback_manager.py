@@ -2,10 +2,6 @@ import inspect
 from typing import List, Optional, Dict, Sequence
 from collections import defaultdict
 
-__all__ = [
-    'CallbackManager'
-]
-
 from .callback_event import Event
 from .callback import Callback
 from fastNLP.core.log import logger

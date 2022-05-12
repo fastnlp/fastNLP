@@ -20,6 +20,10 @@ class JittorMPIDriver(JittorDriver):
 
         这是一个正在开发中的功能，敬请期待。
 
+    .. todo:
+
+        实现断点重训中替换 dataloader 的 set_dist_repro_dataloader 函数
+
     """
     def __init__(
         self,

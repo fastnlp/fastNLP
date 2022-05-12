@@ -31,7 +31,15 @@ __all__ = [
 def _select_seed_randomly(min_seed_value: int = 0, max_seed_value: int = 255) -> int:
     return random.randint(min_seed_value, max_seed_value)
 
-def paddle_seed_everything(seed: Optional[int] = None, workers: bool = False) -> int:
+def paddle_seed_everything(seed: Optional[int], workers: bool = False) -> int:
+    r"""
+    为 **paddle**、**numpy**、**python.random** 伪随机数生成器设置种子。
+
+    :param seed: 全局随机状态的整数值种子。如果为 ``None``，将从环境变量 ``FASTNLP_GLOBAL_SEED`` 中读取种子或随机选择;
+    :param workers: 如果为 ``True`` ，则会设置环境变量 ``FASTNLP_SEED_WORKERS`` 。该环境变量会在 :class:`~fastNLP.core.Trainer`
+        中配置 ``dataloader`` 时用于设置 ``worker_init_fn`` 。如果用户已经为 ``dataloader`` 提供了 ``worker_init_fn`` ，则设置
+        此参数将没有影响;
+    """
 
     max_seed_value = np.iinfo(np.uint32).max
     min_seed_value = np.iinfo(np.uint32).min
@@ -70,7 +78,7 @@ def paddle_seed_everything(seed: Optional[int] = None, workers: bool = False) ->
 
 def reset_seed() -> None:
     """
-    fleet 会开启多个进程，因此当用户在脚本中指定 seed_everything 时，在开启多个脚本后，会在每个脚本内重新
+    ``fleet`` 会开启多个进程，因此当用户在脚本中指定 ``seed_everything`` 时，在开启多个脚本后，会在每个脚本内重新
     进行随机数的设置；
     """
     seed = os.environ.get(FASTNLP_GLOBAL_SEED, None)
@@ -80,8 +88,8 @@ def reset_seed() -> None:
 
 class _FleetWrappingModel(Layer):
     """
-    参考 _DDPWrappingModel ， paddle 的分布式训练也需要用 paddle.nn.DataParallel 进行包装，采用和
-    pytorch 相似的处理方式
+    参考 :class:`fastNLP.core.drivers.torch_driver.utils._DDPWrappingModel` ， **PaddlePaddle** 的分布式训练也需要用 :class:`paddle.nn.DataParallel` 进行包装，采用和
+    **pytorch** 相似的处理方式
     """
     def __init__(self, model: 'nn.Layer'):
         super(_FleetWrappingModel, self).__init__()
@@ -100,7 +108,7 @@ class _FleetWrappingModel(Layer):
 
 class DummyGradScaler:
     """
-    用于仿造的GradScaler对象，防止重复写大量的if判断
+    用于仿造的 **GradScaler** 对象，防止重复写大量的if判断
     """
     def __init__(self, *args, **kwargs):
         pass
@@ -144,7 +152,7 @@ def _build_fp16_env(dummy=False):
 
 def find_free_ports(num):
     """
-    在空闲的端口中找到 num 个端口
+    在空闲的端口中找到 ``num`` 个端口
     """
     def __free_port():
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
@@ -174,8 +182,8 @@ def find_free_ports(num):
 
 def replace_batch_sampler(dataloader: "DataLoader", batch_sampler: "BatchSampler"):
     """
-    利用 `batch_sampler` 重新构建一个 DataLoader，起到替换 `batch_sampler` 又不影响原 `dataloader` 的作用。
-    考虑了用户自己定制了 DataLoader 的情形。
+    利用 ``batch_sampler`` 重新构建一个 ``DataLoader``，起到替换 ``batch_sampler`` 又不影响原 ``dataloader`` 的作用。
+    考虑了用户自己定制了 ``DataLoader`` 的情形。
     """
     # 拿到非下划线开头的实例属性；
     instance_attrs = {k: v for k, v in vars(dataloader).items() if not k.startswith('_')}
@@ -246,7 +254,7 @@ def replace_batch_sampler(dataloader: "DataLoader", batch_sampler: "BatchSampler
 
 def replace_sampler(dataloader, new_sampler):
     """
-    使用 `new_sampler` 重新构建一个 BatchSampler，并替换到 `dataloader` 中
+    使用 ``new_sampler`` 重新构建一个 ``BatchSampler``，并替换到 ``dataloader`` 中
     """
     new_batch_sampler = deepcopy(dataloader.batch_sampler)
     new_batch_sampler.sampler = new_sampler

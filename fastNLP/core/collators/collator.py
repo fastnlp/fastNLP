@@ -82,16 +82,26 @@ def _get_backend() -> str:
 
 
 class Collator:
-    def __init__(self, backend='auto'):
-        """
-        用于 pad 数据的对象。会自动将所有能够 pad （由 fastNLP 根据数据判定能否 pad ）的数据都进行 pad 操作，默认 pad 的值为 0。
-        可使用 set_pad() 函数调整。如果有些 field 不想输出，可以使用 set_ignore() 函数进行设置。Collator 在第一次进行 pad 的
-        时候自动根据设置以及数据情况，为每个 field 获取一个 padder ，在之后的每次调用中，都将使用对应的 Padder 给对应的 field 。
+    """
+    用于 pad 数据的对象。会自动将所有能够 pad （由 fastNLP 根据数据判定能否 pad ）的数据都进行 pad 操作，默认 pad 的值为 0。
+    哦安定一个 field 是否可以 pad 的方式为：（1）当前这个 field 是否所有对象都是一样的数据类型；（因此，如果某 field 的数据有些是float
+    有些是 int 将知道该 field 被判定为不可 pad 类型。）（2）当前这个 field 是否每个 sample 都具有一样的深度；（因此，例如有个 field 的
+    数据转为 batch 类型后为 [1, [1,2]], 会被判定为不可 pad ，因为第一个 sample 与 第二个 sample 深度不同）（3）当前这个 field 的类
+    型是否是可以 pad （例如 str 类型的数据）。可以通过设置 logger.setLevel('debug') 来打印是判定不可 pad 的原因。
 
-        :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ['torch','jittor','paddle','numpy','raw', auto, None]。
-            若为 'auto' ，则在进行 pad 的时候会根据调用的环境决定其 backend 。该参数对不能进行 pad 的数据没用影响，不能 pad
-            的数据返回一定是 list 。
-        """
+    todo 补充 code example 。
+
+    如果需要将某个本可以 pad 的 field 设置为不可 pad ，则可以通过 :meth:`~fastNLP.Collator.set_pad` 的 pad_val 设置为 None 实现。
+    如果需要某些 field 不要包含在 pad 之后的结果中，可以使用 :meth:`~fastNLP.Collator.set_ignore` 进行设置。
+
+    Collator 在第一次进行 pad 的时候自动根据设置以及数据情况，为每个 field 获取一个 padder ，在之后的每次调用中，都将使用对应
+    的 Padder 给对应的 field 。
+
+    :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ['torch','jittor','paddle','numpy','raw', auto, None]。
+        若为 'auto' ，则在进行 pad 的时候会根据调用的环境决定其 backend 。该参数对不能进行 pad 的数据没用影响，不能 pad
+        的数据返回一定是 list 。
+    """
+    def __init__(self, backend='auto'):
         self.unpack_batch_func = None
         self.pack_batch_func = None
         self.ignore_fields = set()
@@ -264,9 +274,8 @@ class Collator:
     def set_ignore(self, *field_names) -> "Collator":
         """
         如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略。
-        Example::
 
-            collator.set_ignore('field1', 'field2')
+            >>> collator = Collator().set_ignore('field1', 'field2')
 
         :param field_names: 需要忽略的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
             field 的 key 来表示，如果是 nested 的 dict，可以使用元组来表示，例如 {'a': {'b': 1}} 中的使用 ('a', 'b'); 如果
