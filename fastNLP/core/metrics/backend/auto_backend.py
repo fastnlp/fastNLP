@@ -1,4 +1,8 @@
 from typing import Union
+import sys
+
+from ....envs.imports import SUPPORT_BACKENDS
+from ...log import logger
 
 from .backend import Backend
 from .torch_backend.backend import TorchBackend
@@ -64,8 +68,17 @@ class AutoBackend(Backend):
         elif len(torch_types) == 0 and len(jittor_types) == 0 and len(paddle_types) > 0:
             backend = 'paddle'
         elif len(torch_types) == 0 and len(jittor_types) == 0 and len(paddle_types) == 0:
-            # 直接使用default的backend就好了
             backend = None
+            # 尝试通过 modules 的方式自动寻找
+            find_backends = []
+            for backend in SUPPORT_BACKENDS:
+                if backend in sys.modules:
+                    find_backends.append(backend)
+            if len(find_backends) == 1:
+                backend = find_backends[0]
+                logger.debug(f'Find backend:{backend} through sys.modules.')
+            else:
+                logger.debug(f'Cannot find backend through sys.modules, since find:{find_backends}.')
         else:
             types = list(set(torch_types + jittor_types + paddle_types))
             raise RuntimeError(

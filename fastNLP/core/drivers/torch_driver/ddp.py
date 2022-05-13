@@ -685,6 +685,10 @@ class TorchDDPDriver(TorchDriver):
             return [obj]
         return fastnlp_torch_all_gather(obj, group=group)
 
+    def on_exception(self):
+        super().on_exception()
+        dist.destroy_process_group()  # 防止在之后的 barrier 出现卡死的问题。
+
 
 def find_free_network_port() -> str:
     """

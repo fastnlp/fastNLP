@@ -42,7 +42,7 @@ class CheckpointCallback(Callback):
         时间戳文件夹中。如果为 None ，默认使用当前文件夹。
     :param every_n_epochs: 多少个 epoch 保存一次。
     :param every_n_batches: 多少个 batch 保存一次。
-    :param last: 如果为 True ，将在每次 epoch 运行结束都保存一次，会覆盖之前的保存。
+    :param last: 如果为 True ，将在每次 epoch 运行结束都保存一次，会覆盖之前的保存。如果为 False 则不会保存 {save_object}-last 文件
     :param topk: 保存 monitor 结果 topK 个。
     :param on_exceptions: 在出异常信息时，是否保存。传入需要捕获的异常的类。默认将捕获 EarlyStopException 。
     :param larger_better: monitor 的值是否时越大越好。

@@ -43,10 +43,12 @@ class DummyFRichProgress:
         """
         return True
 
+
 class FRichProgress(Progress, metaclass=Singleton):
     def new_progess(self, *columns: Union[str, ProgressColumn],
                     console: Optional[Console] = None,
-                    auto_refresh: bool = True,
+                    # 这里将 auto_refresh 关掉是想要避免单独开启线程，同时也是为了避免pdb的时候会持续刷新
+                    auto_refresh: bool = False,
                     refresh_per_second: float = 10,
                     speed_estimate_period: float = 30.0,
                     transient: bool = True,
@@ -55,12 +57,6 @@ class FRichProgress(Progress, metaclass=Singleton):
                     get_time: Optional[GetTimeCallable] = None,
                     disable: bool = False,
                     expand: bool = False):
-        """
-        重新初始化一个rich bar。如果columns不传入，则继续使用之前的column内容。
-
-        :param progress:
-        :return:
-        """
         for task_id in self.task_ids:  # 首先移除已有的
             self.remove_task(task_id)
 
@@ -167,7 +163,7 @@ class FRichProgress(Progress, metaclass=Singleton):
             advance: Optional[float] = None,
             description: Optional[str] = None,
             visible: Optional[bool] = None,
-            refresh: bool = False,
+            refresh: bool = True,
             **fields: Any,
     ) -> None:
         """Update information associated with a task.
@@ -243,6 +239,7 @@ class SpeedColumn(ProgressColumn):
 
 if ((sys.stdin and sys.stdin.isatty()) or is_notebook()) and \
         get_global_rank() == 0:
+    # TODO 是不是应该可以手动关掉，防止一些 debug 问题
     f_rich_progress = FRichProgress().new_progess(
         "[progress.description]{task.description}",
         "[progress.percentage]{task.percentage:>3.0f}%",

@@ -71,6 +71,7 @@ class LoadBestModelCallback(HasMonitorCallback):
         self.model_save_fn = model_save_fn
         self.model_load_fn = model_load_fn
         self.delete_after_after = delete_after_train
+        self.encounter_exception = False
 
     def on_after_trainer_initialized(self, trainer, driver):
         if self.save_folder is not None and driver.is_distributed() and int(os.environ.get(FASTNLP_BACKEND_LAUNCH, 0))==1:
@@ -106,9 +107,14 @@ class LoadBestModelCallback(HasMonitorCallback):
                 self.buffer.seek(0)
                 trainer.load_model(folder=self.buffer, only_state_dict=self.only_state_dict)
             if self.delete_after_after:
-                trainer.driver.barrier()
+                if not self.encounter_exception:  # 防止出现死锁。
+                    trainer.driver.barrier()
                 self._delete_folder()
-                trainer.driver.barrier()
+                if not self.encounter_exception:
+                    trainer.driver.barrier()
+
+    def on_exception(self, trainer, exception):
+        self.encounter_exception = True
 
     def _delete_folder(self):
         if self.real_save_folder:

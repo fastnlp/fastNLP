@@ -71,5 +71,9 @@ class Backend:
         :param group:
         :return:
         """
+        if self.__class__.__name__ == 'AutoBackend':
+            raise RuntimeError("fastNLP cannot determine the backend automatically, please pass in the backend through "
+                               "initialization.")
+
         raise NotImplementedError(f"all_gather_object() function is not implemented for {self.__class__.__name__}.")
 
