@@ -21,30 +21,24 @@ from fastNLP.core.dataset import DataSet as FDataSet
 
 class _JittorDataset(Dataset):
     """
-    对用户传的dataset进行封装，以便JittorDataLoader能够支持使用自定义的dataset使用jittor的dataset
+    对用户传的dataset进行封装，以便JittorDataLoader能够支持使用自定义的dataset
     """
 
     def __init__(self, dataset) -> None:
         super(_JittorDataset, self).__init__()
         self.dataset = dataset
+        self.total_len = len(dataset)
 
     def __getitem__(self, item):
         return (item, self.dataset[item])
 
-    def __len__(self) -> int:
-        return len(self.dataset)
-
-    # def __getattr__(self, item):
-    #     # jittor的Dataset没有的方法而用户的dataset存在且实现了getattribute方法，此时用户可以调用
-    #     try:
-    #         self.dataset.__getattribute__(item)
-    #     except Exception as e:
-    #         raise e
-
 
 class JittorDataLoader:
     """
-    提供给使用jittor框架的DataLoader函数，提供了auto_collate的功能， 支持实现了__getitem__和__len__的dataset
+    提供给使用jittor框架的DataLoader函数，其能够自动检测数据的类型并判断是否能够pad，若能会自动pad数据，默认pad_val=0;
+    用户可以调用set_pad方法来更改pad_val的值，也可以自定义针对某个field的callate_fn传入到set_field；若用户不想自动pad某个field,
+    则可以调用set_ignore来忽略对某个field的检测和pad。值得注意的是JittorDataLoader输入dataset只要是实现了__getitem__和__len__方法即可。
+
     """
 
     def __init__(self, dataset, batch_size: int = 16, shuffle: bool = True,
@@ -53,23 +47,36 @@ class JittorDataLoader:
                  collate_fn: Union[None, str, Callable] = "auto") -> None:
         """
 
-        :param dataset: 实现__getitem__和__len__的dataset
+        :param dataset: 实现``__getitem__``和``__len__``的dataset
         :param batch_size: 批次大小
         :param shuffle: 是否打乱数据集
-        :param drop_last: 是否去掉最后一个不符合batch_size的数据
-        :param num_workers: 进程的数量，当num_workers=0时不开启多进程
-        :param buffer_size:
+        :param drop_last: 是否去掉最后一个不符合``batch_size``的数据
+        :param num_workers: 进程的数量，当``num_workers=0``时不开启多进程
+        :param buffer_size: 每个进程占用的内存空间，默认为512M。主要是配合num_workers使用，用户可以自定义每个进程的内存大小。
         :param stop_grad:
-        :param keep_numpy_array:
-        :param endless:
-        :param collate_fn: 对取得到的数据进行打包的callable函数
-        :param as_numpy: 返回数据是否设置为numpy类型，否则为torch.tensor类型
+        :param keep_numpy_array: 返回的数据是``np.array`类`型而不是``jittor.array``类型，默认为``False``
+        :param endless: 是否让``JittorDataLoader``无限返回数据，也就是将dataset循环使用使得返回数据是没有限制的。默认为``False``.
+        :param collate_fn: 用来对从dataset取到的数据进行打包处理成batch的callable函数，其值应该为一下三个:``[None, "auto", callable]``.
+
+            * ``callate_fn=None``时，第一点值得注意的是此时传进来的datset不能为``fastNLP``的dataset,采用fastNLP的dataset时，``collate_fn``不能为``None``;
+            第二点注意的是此时``JittorDataLoader``会调用默认的`callate_batch`函数对sampler到的数据进行简单打包，组成一个batch返回。`
+            * ``callate_fn="auto"``时，``JittorDataLoader``会自动调用``fastNLP``自带的``Collator``，其会自动检测dataset的每个``field``,
+            并判断是否能够pad处理，若能则会自动进行pad操作，默认``pad_val=0``。若想要更改其值，可调用``set_pad``方法;若不想自动pad某个field，
+            可以调用``set_ignore``方法忽略某个field。
+            * ``callate_fn=callable``时，callable函数是用户自定义的callate_fn函数，此时``JittorDataLoader``会调用传进来的callable函数对
+            数据进行打包处理并返回。值得注意的是用户自定义的callable函数的输入为batch,batch为list类型数据，其中batch的每一条数据都为dataset的一条数据。
+
         """
-        # TODO 验证支持replacesampler （以后完成）
+        # TODO 验证支持replacesampler （以后完成） 增加Sampler
+        # 将内部dataset批次设置为1
+        if isinstance(dataset, Dataset):
+            dataset.set_attrs(batch_size=1)
+
         # FastNLP Datset, collate_fn not None
         if isinstance(dataset, FDataSet) and collate_fn is None:
             raise ValueError("When use FastNLP DataSet, collate_fn must be not None")
 
+        # 将所有dataset转为jittor类型的dataset
         if not isinstance(dataset, _JittorDataset):
             self.dataset = _JittorDataset(dataset)
 
@@ -85,17 +92,13 @@ class JittorDataLoader:
             else:
                 raise ValueError(f"collate_fn: {collate_fn} must be 'auto'")
         elif isinstance(collate_fn, Callable):
-            if collate_fn is not collate_batch:
-                self.collate_fn = collate_fn
+            self.collate_fn = collate_fn
         else:
             self.collate_fn = collate_batch
 
         self.dataset.set_attrs(batch_size=batch_size, shuffle=shuffle, drop_last=drop_last,
                                num_workers=num_workers, buffer_size=buffer_size, stop_grad=stop_grad,
                                keep_numpy_array=keep_numpy_array, endless=endless)
-        # 将内部dataset批次设置为1
-        if isinstance(self.dataset.dataset, Dataset):
-            self.dataset.dataset.set_attrs(batch_size=1)
 
         self.cur_batch_indices = None
 
@@ -108,12 +111,10 @@ class JittorDataLoader:
             yield data
 
     def __len__(self):
-        if self.dataset.drop_last:
-            return len(self.dataset) // self.dataset.batch_size
-        return (len(self.dataset) - 1) // self.dataset.batch_size + 1
+        return len(self.dataset)
 
     def set_pad(self, field_name: Union[str, tuple], pad_val: Union[int, float, None] = 0, dtype=None, backend=None,
-                pad_fn: Callable = None) -> "JittorDataLoader":
+                pad_fn: Callable = None) -> Collator:
         """
         如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
@@ -132,14 +133,27 @@ class JittorDataLoader:
             形式，输出将被直接作为结果输出。
         :return: 返回 Collator 自身
         """
-        if isinstance(self.collate_fn, Collator):
-            self.collate_fn.set_pad(field_name=field_name, pad_val=pad_val, dtype=dtype, pad_fn=pad_fn,
-                                    backend=backend)
-            return self
+        collator = self._get_collator()
+        if isinstance(collator, Collator):
+            collator.set_pad(field_name=field_name, pad_val=pad_val, dtype=dtype, pad_fn=pad_fn, backend=backend)
+            return collator
         else:
             raise ValueError(f"Only when the collate_fn is a fastNLP Collator, set_pad() is allowed.")
 
-    def set_ignore(self, *field_names) -> "JittorDataLoader":
+    def _get_collator(self):
+        """
+        如果 collate_fn 是 Collator 对象，得到该对象。如果没有的话，返回 None
+
+        :return:
+        """
+        collator = None
+        if hasattr(self.collate_fn, '__wrapped__') and isinstance(self.collate_fn.__wrapped__, Collator):
+            collator = self.collate_fn.__wrapped__
+        elif isinstance(self.collate_fn, Collator):
+            collator = self.collate_fn
+        return collator
+
+    def set_ignore(self, *field_names) -> Collator:
         """
         如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略。
         Example::
@@ -151,9 +165,10 @@ class JittorDataLoader:
             __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。
         :return: 返回 Collator 自身
         """
-        if isinstance(self.collate_fn, Collator):
-            self.collate_fn.set_ignore(*field_names)
-            return self
+        collator = self._get_collator()
+        if isinstance(collator, Collator):
+            collator.set_ignore(*field_names)
+            return collator
         else:
             raise ValueError(f"Only when the collate_fn is a fastNLP Collator, set_ignore() is allowed.")
 

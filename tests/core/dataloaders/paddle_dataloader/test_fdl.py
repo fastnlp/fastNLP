@@ -4,11 +4,12 @@ import numpy as np
 from fastNLP.core.dataloaders.paddle_dataloader.fdl import PaddleDataLoader
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.log import logger
+from fastNLP.core.collators import Collator
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 
 if _NEED_IMPORT_PADDLE:
-    from paddle.io import Dataset
+    from paddle.io import Dataset, DataLoader
     import paddle
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Dataset
@@ -61,3 +62,32 @@ class TestPaddle:
         fdl1.set_ignore('label')
         for batch in fdl1:
             assert batch['image'].shape == [4, 10, 5]
+
+    def test_get_backend(self):
+        ds = RandomDataset()
+        collate_fn = Collator(backend='auto')
+        paddle_dl = DataLoader(ds, collate_fn=collate_fn)
+        for batch in paddle_dl:
+            print(batch)
+
+    def test_v4(self):
+        from paddle.io import DataLoader
+        from fastNLP import Collator
+        from paddle.io import Dataset
+        import paddle
+
+        class PaddleRandomMaxDataset(Dataset):
+            def __init__(self, num_samples, num_features):
+                self.x = paddle.randn((num_samples, num_features))
+                self.y = self.x.argmax(axis=-1)
+
+            def __len__(self):
+                return len(self.x)
+
+            def __getitem__(self, item):
+                return {"x": self.x[item], "y": self.y[item]}
+
+        ds = PaddleRandomMaxDataset(100, 2)
+        dl = DataLoader(ds, places=None, collate_fn=Collator(), batch_size=4)
+        for batch in dl:
+            print(batch)

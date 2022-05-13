@@ -7,8 +7,9 @@ from fastNLP import Vocabulary, DataSet, Instance
 from fastNLP.embeddings.torch.char_embedding import LSTMCharEmbedding, CNNCharEmbedding
 
 
+@pytest.mark.torch
 class TestCharEmbed:
-    @pytest.mark.test
+    # @pytest.mark.test
     def test_case_1(self):
         ds = DataSet([Instance(words=['hello', 'world']), Instance(words=['Jack'])])
         vocab = Vocabulary().from_dataset(ds, field_name='words')
@@ -18,7 +19,7 @@ class TestCharEmbed:
         y = embed(x)
         assert tuple(y.size()) == (2, 3, 3)
 
-    @pytest.mark.test
+    # @pytest.mark.test
     def test_case_2(self):
         ds = DataSet([Instance(words=['hello', 'world']), Instance(words=['Jack'])])
         vocab = Vocabulary().from_dataset(ds, field_name='words')

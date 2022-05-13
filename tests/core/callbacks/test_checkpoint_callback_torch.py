@@ -74,7 +74,7 @@ def model_and_optimizers(request):
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @pytest.mark.parametrize("only_state_dict", [True, False])
 @magic_argv_env_context(timeout=100)
@@ -121,7 +121,7 @@ def test_model_checkpoint_callback_1(
         # 检查生成保存模型文件的数量是不是正确的；
         if version == 0:
 
-            if driver == "torch":
+            if not isinstance(device, list):
                 assert "model-epoch_10" in all_saved_model_paths
                 assert "model-epoch_4-batch_123" in all_saved_model_paths
 
@@ -144,7 +144,7 @@ def test_model_checkpoint_callback_1(
 
             pattern = re.compile("model-epoch_[0-9]+-batch_[0-9]+-[a-zA-Z#]+_[0-9]*.?[0-9]*")
 
-            if driver == "torch":
+            if not isinstance(device, list):
                 assert "model-epoch_9" in all_saved_model_paths
                 assert "model-last" in all_saved_model_paths
                 aLL_topk_folders = []
@@ -206,7 +206,7 @@ def test_model_checkpoint_callback_1(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("only_state_dict", [True])
 @magic_argv_env_context(timeout=100)
 def test_model_checkpoint_callback_2(
@@ -259,7 +259,7 @@ def test_model_checkpoint_callback_2(
         # 检查生成保存模型文件的数量是不是正确的；
         all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
 
-        if driver == "torch":
+        if not isinstance(device, list):
             assert "model-epoch_4-batch_100-exception_NotImplementedError" in all_saved_model_paths
             exception_model_path = all_saved_model_paths["model-epoch_4-batch_100-exception_NotImplementedError"]
         # ddp 下的文件名不同，因为同样的数据，ddp 用了更少的步数跑完；
@@ -299,7 +299,7 @@ def test_model_checkpoint_callback_2(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 0)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1]), ("torch", 0)])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @pytest.mark.parametrize("only_state_dict", [True, False])
 @magic_argv_env_context(timeout=100)
@@ -347,7 +347,7 @@ def test_trainer_checkpoint_callback_1(
         # 检查生成保存模型文件的数量是不是正确的；
         if version == 0:
 
-            if driver == "torch":
+            if not isinstance(device, list):
                 assert "trainer-epoch_7" in all_saved_model_paths
                 assert "trainer-epoch_4-batch_123" in all_saved_model_paths
 
@@ -371,7 +371,7 @@ def test_trainer_checkpoint_callback_1(
             pattern = re.compile("trainer-epoch_[0-9]+-batch_[0-9]+-[a-zA-Z#]+_[0-9]*.?[0-9]*")
 
             # all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
-            if driver == "torch":
+            if not isinstance(device, list):
                 assert "trainer-last" in all_saved_model_paths
                 aLL_topk_folders = []
                 for each_folder_name in all_saved_model_paths:
@@ -417,7 +417,7 @@ def test_trainer_checkpoint_callback_1(
                 n_epochs=13,
                 output_from_new_proc="all"
             )
-            trainer.load(folder, only_state_dict=only_state_dict)
+            trainer.load_checkpoint(folder, only_state_dict=only_state_dict)
 
             trainer.run()
             trainer.driver.barrier()
@@ -489,7 +489,7 @@ def test_load_state(model_and_optimizers):
             callbacks=callbacks,
             output_from_new_proc="all"
         )
-        trainer.load(folder=epoch_2_path)
+        trainer.load_checkpoint(folder=epoch_2_path)
         with Capturing() as output:
             trainer.run(num_eval_sanity_batch=0, num_train_batch_per_epoch=2)
 
@@ -503,7 +503,7 @@ def test_load_state(model_and_optimizers):
 
 @pytest.mark.torch
 # 通过自己编写 model_save_fn 和 model_load_fn 来测试 huggingface 的 transformers 的模型的保存和加载；
-@pytest.mark.parametrize("driver,device", [("torch_ddp", [6, 7]), ("torch", 7)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", [6, 7]), ("torch", 7)])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @magic_argv_env_context
 @pytest.mark.skip("Skip transformers test for now.")
@@ -675,7 +675,7 @@ def test_trainer_checkpoint_callback_2(
         # 检查生成保存模型文件的数量是不是正确的；
         if version == 0:
 
-            if driver == "torch":
+            if not isinstance(device, list):
                 assert "trainer-epoch_1-batch_200" in all_saved_model_paths
 
                 epoch_save_path = all_saved_model_paths["trainer-epoch_1-batch_200"]
@@ -695,7 +695,7 @@ def test_trainer_checkpoint_callback_2(
             pattern = re.compile("trainer-epoch_[0-9]+-batch_[0-9]+-[a-zA-Z#]+_[0-9]*.?[0-9]*")
 
             # all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
-            if driver == "torch":
+            if not isinstance(device, list):
                 assert "trainer-last" in all_saved_model_paths
                 aLL_topk_folders = []
                 for each_folder_name in all_saved_model_paths:
@@ -740,7 +740,7 @@ def test_trainer_checkpoint_callback_2(
                 output_mapping=bert_output_mapping,
                 metrics={"acc": acc},
             )
-            trainer.load(folder, model_load_fn=model_load_fn)
+            trainer.load_checkpoint(folder, model_load_fn=model_load_fn)
 
             trainer.run()
             trainer.driver.barrier()

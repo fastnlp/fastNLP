@@ -318,7 +318,7 @@ def test_torch_distributed_launch_2(version):
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", 0), ("torch_ddp", [0, 1])])
+@pytest.mark.parametrize("driver,device", [("torch", 0), ("torch", [0, 1])])
 @magic_argv_env_context
 def test_torch_wo_auto_param_call(
     driver,

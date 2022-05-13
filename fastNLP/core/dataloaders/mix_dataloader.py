@@ -23,7 +23,6 @@ class _MixDataset:
     """
     def __init__(self, datasets: list = None) -> None:
         """
-
         :param datasets: 数据集的列表
         """
         self.datasets = datasets
@@ -36,8 +35,9 @@ class _MixDataset:
 
     def __getitem__(self, idx: Union[int, List[int]]) -> Union[Tuple[Instance, int], Tuple[DataSet, int]]:
         """
+        根据index索引获取数据
 
-        :param idx:
+        :param idx: 整数类型的index或者列表
         :return:
         """
         if isinstance(idx, int):

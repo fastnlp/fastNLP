@@ -1,3 +1,31 @@
+"""
+``PaddleDataLoader``是专门提供给``paddle``框架的``DataLoader``,其集成了``fastNLP``的``Collator``并对``paddle``的``DataLoader``进行了
+封装，使得其具备以下功能：1.``PaddleDataLoader``支持输入的dataset是无框架的，只要实现了``__getitem__``和``__len__``方法即可，当不使用``fastNLP``的
+``DataSet``时候也能够自动检测数据的类型并进行padding，只需要将``collate_fn="auto"``即可，例如::
+
+    from fastNLP import PaddleDataLoader
+    class MyDataset:
+        def __init(self, data_lens=100):
+            self.data_lens = 100
+        def __getitem__(self, item):
+            if item % 2 == 0:
+                return {'x':[101, 256, 453], 'y': 0}
+            else:
+                return {'x': [101, 200], 'y': 1}
+        def __len__(self):
+            return self.data_lens
+    dataset = MyDataset()
+    paddle_dl = PaddleDataLoader(dataset, collate_fn="auto")
+    for batch in paddle_dl:
+        ...
+
+2.当设置``collate_fn="auto"``时，``PaddleDataLoader``会调用fastNLP的Collator对数据进行自动pad处理，此时可以调用``set_pad``和``set_ignore``方法
+来设置field的pad_val或者忽略某个field的pad操作。
+.. note::
+    当传入的dataset为fastNLP的DataSet时，collate_fn不能为None。默认可以是"auto"或者自定义callable函数。
+
+"""
+
 __all__ = [
     'PaddleDataLoader',
     'prepare_paddle_dataloader'
@@ -23,7 +51,7 @@ from fastNLP.core.samplers import ReproducibleBatchSampler, RandomBatchSampler
 
 class _PaddleDataset(Dataset):
     """
-    对用户传的dataset进行封装，以便Fdataloader能够支持使用自定义的dataset使用paddle的dataloader
+    对用户传的dataset进行封装，以便PaddleDataLoader能够支持使用自定义的dataset
     """
 
     def __init__(self, dataset) -> None:
@@ -44,6 +72,10 @@ class _PaddleDataset(Dataset):
 
 
 class PaddleDataLoader(DataLoader):
+    """
+    提供给``paddle``框架使用的``DataLoader``函数，``PaddleDataLoader``提供了``Collator``的功能，用户可以通过设置``collate_fn="auto"``来
+    使用，并可以配套使用``set_pad``和``set_ignore``方法设置p``ad_val``和忽略某个field的pad操作。
+    """
 
     def __init__(self, dataset, feed_list=None, places=None,
                  return_list: bool = True, batch_sampler=None,
@@ -52,6 +84,51 @@ class PaddleDataLoader(DataLoader):
                  num_workers: int = 0, use_buffer_reader: bool = True,
                  use_shared_memory: bool = True, timeout: int = 0,
                  worker_init_fn: Callable = None, persistent_workers=False) -> None:
+        """
+
+        :param dataset: 实现了__getitem__和__len__的数据容器
+        :param feed_list: (list(Tensor)|tuple(Tensor)): feed Tensor list.
+            The Tensors should be created by :code:`paddle.static.data()`.
+            :attr:`feed_list` must be set if :attr:`return_list` is
+            False. Default None.
+        :param places: (list(Place)|tuple(Place)|list(str)|optional): a list of Place,
+            to put data onto, :attr:`places` can be None, if
+            :attr:`places` is None, default place(CPUPlace or CUDAPlace(0))
+            will be used. Default None. If ``places`` is list of string,
+            the string in the list can be ``cpu``, ``gpu:x`` and ``gpu_pinned``,
+            where ``x`` is the index of the GPUs.
+        :param return_list: whether the return value on each device is
+            presented as a list. If :attr:`return_list=False`, the return
+            value on each device would be a dict of str -> Tensor, where
+            the key of the dict is the name of each fed Tensors. If
+            :attr:`return_list=True`, the return value on each device would
+            be a list(Tensor). :attr:`return_list` can only be True
+            in dynamic graph mode. Default True.
+        :param batch_sampler: 实现了``__iter__``和``__len__``方法的实例化对象，它的功能是根据dataset生成数据indices并组成一个batch数据。
+        :param batch_size: dataloader每次获得数据的批次大小
+        :param shuffle: 是否将数据打乱，若``shuffle=True``则会将dataset打乱；若否则什么也不做。
+        :param drop_last: 当``drop_last=True``时，``PaddleDataLoader``会扔掉最后一个不能组成``batch_size``大小的batch数据;
+        若``drop_last=False``, 则什么也不做。
+        :param collate_fn:用来对从dataset取到的数据进行打包处理成batch的callable函数，其值应该为一下三个:``[None, "auto", callable]``.
+
+            * ``callate_fn=None``时，第一点值得注意的是此时传进来的datset不能为``fastNLP``的dataset,采用fastNLP的dataset时，``collate_fn``不能为``None``;
+            第二点注意的是此时``PaddleDataLoader``会调用默认的`default_collate_fn`函数对sampler到的数据进行简单打包，组成一个batch返回。`
+            * ``callate_fn="auto"``时，``PaddleDataLoader``会自动调用``fastNLP``自带的``Collator``，其会自动检测dataset的每个``field``,
+            并判断是否能够pad处理，若能则会自动进行pad操作，默认``pad_val=0``。若想要更改其值，可调用``set_pad``方法;若不想自动pad某个field，
+            可以调用``set_ignore``方法忽略某个field。
+            * ``callate_fn=callable``时，callable函数是用户自定义的callate_fn函数，此时``PaddleDataLoader``会调用传进来的callable函数对
+            数据进行打包处理并返回。值得注意的是用户自定义的callable函数的输入为batch,batch为list类型数据，其中batch的每一条数据都为dataset的一条数据。
+
+        :param num_workers: 开启多进程的数量，当``num_workers=0``时不开启多进程
+        :param use_buffer_reader: 是否开启buffer_reader。如果``use_buffer_reader=True``，那么``PaddleDataLoader``将会异步的预取下一个batch的
+            数据，因此它将会加快数据传输的速度，但是将会占用更多的内存或者显存。默认值是``True``。如果``use_buffer_reader=False``,那么什么也不错
+        :param use_shared_memory: 是否使用共享内存。当``use_shared_memory=True``时，将采用共享内存来加快将数据放进进程队列。建议仅当计算机上的
+            共享空间足够大时。（例如Linux上的/dev/shm/空间足够大）共享内存仅在多进程模式（num_workers>0）下生效。
+        :param timeout: 从子进程的输出队列获取数据的超时值
+        :param worker_init_fn: init函数，如果不设置为None,则将会在每个子进程初始化时调用该函数。
+        :param persistent_workers:
+
+        """
         # FastNLP Datset, collate_fn not None
         if isinstance(dataset, FDataSet) and collate_fn is None:
             raise ValueError("When use FastNLP DataSet, collate_fn must be not None")
@@ -173,7 +250,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                               return_list: bool = True,
                               batch_sampler: Union["Sampler[Sequence[int]]", ReproducibleBatchSampler] = None,
                               train_batch_size: int = 1, shuffle: bool = False,
-                              drop_last: bool = False, collate_fn: Union[Callable, str, None] = None,
+                              drop_last: bool = False, collate_fn: Union[Callable, str, None] = 'auto',
                               num_workers: int = 0, use_buffer_reader: bool = True,
                               use_shared_memory: bool = True, timeout: int = 0,
                               worker_init_fn: Callable = None, persistent_workers=False,
