@@ -615,16 +615,16 @@ def test_save_and_load_with_randombatchsampler(only_state_dict, fp16):
         sampler_states = dataloader.batch_sampler.state_dict()
         save_states = {"num_consumed_batches": num_consumed_batches}
         if only_state_dict:
-            driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
+            driver1.save_checkpoint(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
         else:
-            driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True, input_spec=[paddle.ones((16, 10))])
+            driver1.save_checkpoint(Path(path), save_states, dataloader, only_state_dict, should_save_model=True, input_spec=[paddle.ones((16, 10))])
         # 加载
         # 更改 batch_size
         dataloader = DataLoader(
             dataset=dataset,
             batch_sampler=ReproduceBatchSampler(BatchSampler(dataset, batch_size=2, shuffle=True), 2, False)
         )
-        load_states = driver2.load(Path(path), dataloader, only_state_dict, should_load_model=True)
+        load_states = driver2.load_checkpoint(Path(path), dataloader, only_state_dict, should_load_model=True)
         replaced_loader = load_states.pop("dataloader")
         # 1. 检查 optimizer 的状态
         # TODO optimizer 的 state_dict 总是为空
@@ -697,9 +697,9 @@ def test_save_and_load_with_randomsampler(only_state_dict, fp16):
         sampler_states = dataloader.batch_sampler.sampler.state_dict()
         save_states = {"num_consumed_batches": num_consumed_batches}
         if only_state_dict:
-            driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
+            driver1.save_checkpoint(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
         else:
-            driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True, input_spec=[paddle.ones((16, 10))])
+            driver1.save_checkpoint(Path(path), save_states, dataloader, only_state_dict, should_save_model=True, input_spec=[paddle.ones((16, 10))])
         
         # 加载
         # 更改 batch_size
@@ -709,7 +709,7 @@ def test_save_and_load_with_randomsampler(only_state_dict, fp16):
             dataset,
             batch_sampler=batch_sampler
         )
-        load_states = driver2.load(Path(path), dataloader, only_state_dict, should_load_model=True)
+        load_states = driver2.load_checkpoint(Path(path), dataloader, only_state_dict, should_load_model=True)
         replaced_loader = load_states.pop("dataloader")
 
         # 1. 检查 optimizer 的状态

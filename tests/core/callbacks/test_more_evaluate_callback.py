@@ -98,7 +98,7 @@ def model_and_optimizers(request):
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @pytest.mark.parametrize("only_state_dict", [True, False])
 @magic_argv_env_context
@@ -183,7 +183,7 @@ def test_model_more_evaluate_callback_1(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 0)])  # ("torch", "cpu"), ("torch_ddp", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1]), ("torch", 0)])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @pytest.mark.parametrize("version", [0, 1])
 @pytest.mark.parametrize("only_state_dict", [True, False])
 @magic_argv_env_context
@@ -256,7 +256,7 @@ def test_trainer_checkpoint_callback_1(
                 evaluate_fn='train_step'
             )
             folder = path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).joinpath(folder)
-            trainer.load(folder, only_state_dict=only_state_dict)
+            trainer.load_checkpoint(folder, only_state_dict=only_state_dict)
 
             trainer.run()
             trainer.driver.barrier()
