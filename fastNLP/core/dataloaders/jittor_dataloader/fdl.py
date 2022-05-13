@@ -21,7 +21,7 @@ from fastNLP.core.dataset import DataSet as FDataSet
 
 class _JittorDataset(Dataset):
     """
-    对用户传的dataset进行封装，以便JittorDataLoader能够支持使用自定义的dataset使用jittor的dataset
+    对用户传的dataset进行封装，以便JittorDataLoader能够支持使用自定义的dataset
     """
 
     def __init__(self, dataset) -> None:
@@ -35,7 +35,10 @@ class _JittorDataset(Dataset):
 
 class JittorDataLoader:
     """
-    提供给使用jittor框架的DataLoader函数，提供了auto_collate的功能， 支持实现了__getitem__和__len__的dataset
+    提供给使用jittor框架的DataLoader函数，其能够自动检测数据的类型并判断是否能够pad，若能会自动pad数据，默认pad_val=0;
+    用户可以调用set_pad方法来更改pad_val的值，也可以自定义针对某个field的callate_fn传入到set_field；若用户不想自动pad某个field,
+    则可以调用set_ignore来忽略对某个field的检测和pad。值得注意的是JittorDataLoader输入dataset只要是实现了__getitem__和__len__方法即可。
+
     """
 
     def __init__(self, dataset, batch_size: int = 16, shuffle: bool = False,
@@ -44,16 +47,25 @@ class JittorDataLoader:
                  collate_fn: Union[None, str, Callable] = "auto") -> None:
         """
 
-        :param dataset: 实现__getitem__和__len__的dataset
+        :param dataset: 实现``__getitem__``和``__len__``的dataset
         :param batch_size: 批次大小
         :param shuffle: 是否打乱数据集
-        :param drop_last: 是否去掉最后一个不符合batch_size的数据
-        :param num_workers: 进程的数量，当num_workers=0时不开启多进程
-        :param buffer_size:
+        :param drop_last: 是否去掉最后一个不符合``batch_size``的数据
+        :param num_workers: 进程的数量，当``num_workers=0``时不开启多进程
+        :param buffer_size: 每个进程占用的内存空间，默认为512M。主要是配合num_workers使用，用户可以自定义每个进程的内存大小。
         :param stop_grad:
-        :param keep_numpy_array:
-        :param endless:
-        :param collate_fn: 对取得到的数据进行打包的callable函数
+        :param keep_numpy_array: 返回的数据是``np.array`类`型而不是``jittor.array``类型，默认为``False``
+        :param endless: 是否让``JittorDataLoader``无限返回数据，也就是将dataset循环使用使得返回数据是没有限制的。默认为``False``.
+        :param collate_fn: 用来对从dataset取到的数据进行打包处理成batch的callable函数，其值应该为一下三个:``[None, "auto", callable]``.
+
+            * ``callate_fn=None``时，第一点值得注意的是此时传进来的datset不能为``fastNLP``的dataset,采用fastNLP的dataset时，``collate_fn``不能为``None``;
+            第二点注意的是此时``JittorDataLoader``会调用默认的`callate_batch`函数对sampler到的数据进行简单打包，组成一个batch返回。`
+            * ``callate_fn="auto"``时，``JittorDataLoader``会自动调用``fastNLP``自带的``Collator``，其会自动检测dataset的每个``field``,
+            并判断是否能够pad处理，若能则会自动进行pad操作，默认``pad_val=0``。若想要更改其值，可调用``set_pad``方法;若不想自动pad某个field，
+            可以调用``set_ignore``方法忽略某个field。
+            * ``callate_fn=callable``时，callable函数是用户自定义的callate_fn函数，此时``JittorDataLoader``会调用传进来的callable函数对
+            数据进行打包处理并返回。值得注意的是用户自定义的callable函数的输入为batch,batch为list类型数据，其中batch的每一条数据都为dataset的一条数据。
+
         """
         # TODO 验证支持replacesampler （以后完成） 增加Sampler
         # 将内部dataset批次设置为1
