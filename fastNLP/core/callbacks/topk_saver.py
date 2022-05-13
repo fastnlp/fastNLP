@@ -25,12 +25,12 @@ class Saver:
 
     :param folder: 保存在哪个文件夹下，默认为当前 folder 下。
     :param save_object: 可选 ['trainer', 'model']，表示在保存时的保存对象为 ``trainer+model`` 还是 只是 ``model`` 。如果
-        保存 ``trainer`` 对象的话，将会保存 :class:~fastNLP.Trainer 的相关状态，可以通过 :meth:`Trainer.load` 加载该断
+        保存 ``trainer`` 对象的话，将会保存 :class:~fastNLP.Trainer 的相关状态，可以通过 :meth:`Trainer.load_checkpoint` 加载该断
         点继续训练。如果保存的是 ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
     :param only_state_dict: 保存时是否仅保存权重，在 model_save_fn 不为 None 时无意义。
     :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函数应当接受一个文件夹作为参数，不返回任何东西。
         如果传入了 model_save_fn 函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运行该函数。
-    :param kwargs: 更多需要传递给 Trainer.save() 或者 Trainer.save_model() 接口的参数。
+    :param kwargs: 更多需要传递给 Trainer.save_checkpoint() 或者 Trainer.save_model() 接口的参数。
     """
     def __init__(self, folder:str=None, save_object:str='model', only_state_dict:bool=True,
                  model_save_fn:Callable=None, **kwargs):
@@ -48,7 +48,7 @@ class Saver:
         self.model_save_fn = model_save_fn
         self.kwargs = kwargs
         self.save_object = save_object
-        self.save_fn_name = 'save' if save_object == 'trainer' else 'save_model'
+        self.save_fn_name = 'save_checkpoint' if save_object == 'trainer' else 'save_model'
 
         self.timestamp_path = self.folder.joinpath(os.environ[FASTNLP_LAUNCH_TIME])
 
@@ -193,14 +193,14 @@ class TopkSaver(ResultsMonitor, Saver):
     :param larger_better: 该 monitor 是否越大越好。
     :param folder: 保存在哪个文件夹下，默认为当前 folder 下。
     :param save_object: 可选 ['trainer', 'model']，表示在保存时的保存对象为 ``trainer+model`` 还是 只是 ``model`` 。如果
-        保存 ``trainer`` 对象的话，将会保存 :class:~fastNLP.Trainer 的相关状态，可以通过 :meth:`Trainer.load` 加载该断
+        保存 ``trainer`` 对象的话，将会保存 :class:~fastNLP.Trainer 的相关状态，可以通过 :meth:`Trainer.load_checkpoint` 加载该断
         点继续训练。如果保存的是 ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
     :param only_state_dict: 保存时是否仅保存权重，在 model_save_fn 不为 None 时无意义。
     :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函数应当接受一个文件夹作为参数，不返回任何东西。
         如果传入了 model_save_fn 函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运行该函数。
     :param save_evaluate_results: 是否保存 evaluate 的结果。如果为 True ，在保存 topk 模型的 folder 中还将额外保存一个
         ``fastnlp_evaluate_results.json`` 文件，记录当前的 metric results 。仅在设置了 topk 的场景下有用，默认为 True 。
-    :param kwargs: 更多需要传递给 Trainer.save() 或者 Trainer.save_model() 接口的参数。
+    :param kwargs: 更多需要传递给 Trainer.save_checkpoint() 或者 Trainer.save_model() 接口的参数。
     """
     def __init__(self, topk:int=0, monitor:str=None, larger_better:bool=True, folder:str=None, save_object:str='model',
                  only_state_dict:bool=True, model_save_fn:Callable=None, save_evaluate_results:bool=True,

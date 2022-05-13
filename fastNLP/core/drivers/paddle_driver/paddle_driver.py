@@ -207,7 +207,7 @@ class PaddleDriver(Driver):
         model.load_dict(paddle.load(filepath))
 
     @rank_zero_call
-    def save(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
+    def save_checkpoint(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
         r"""
         断点重训的保存函数，该函数会负责保存模型和 optimizers, fp16 的 state_dict；以及模型的保存（若 should_save_model 为 True）
 
@@ -215,7 +215,7 @@ class PaddleDriver(Driver):
             FASTNLP_MODEL_FILENAME （如果 should_save_model 为 True ）。把 model 相关的内容放入到 FASTNLP_MODEL_FILENAME 文件中，
             将传入的 states 以及自身产生其它状态一并保存在 FASTNLP_CHECKPOINT_FILENAME 里面。
         :param states: 由 trainer 传入的一个字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态，Driver 应该只需要保存该对象即可，
-            Driver 应该不需要理解该对象，同时在 driver.load() 的时候，需要将 states 返回回去，load() 返回的值与这里的传入的值保持一致。
+            Driver 应该不需要理解该对象，同时在 driver.load_checkpoint() 的时候，需要将 states 返回回去，load() 返回的值与这里的传入的值保持一致。
         :param dataloader: 正在使用的 dataloader，需要保存里面的状态使得之后可以从当前迭代的位置恢复。
         :param only_state_dict: 是否只保存模型的参数，当 should_save_model 为 False ，该参数无效。
         :param should_save_model: 是否应该保存模型，如果为False，Driver 将不负责 model 的保存。
@@ -297,7 +297,7 @@ class PaddleDriver(Driver):
 
         paddle.save(states, str(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME)))
 
-    def load(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
+    def load_checkpoint(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
         
         states = paddle.load(str(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME)))
 

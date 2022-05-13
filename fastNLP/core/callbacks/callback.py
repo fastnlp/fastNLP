@@ -158,7 +158,7 @@ class Callback:
 
     def on_save_model(self, trainer):
         """
-        当将要保存模型时调用，此刻模型还未保存。
+        当调用 Trainer.save_model() 时调用，此刻模型还未保存。
 
         :param trainer:
         :return:
@@ -167,7 +167,7 @@ class Callback:
 
     def on_load_model(self, trainer):
         """
-        当将要加载模型时调用，此刻模型还未加载。
+        当调用 Trainer.load_model() 加载模型时调用，此刻模型还未加载。
 
         :param trainer:
         :return:
@@ -176,7 +176,7 @@ class Callback:
 
     def on_save_checkpoint(self, trainer) -> Dict:
         """
-        当 Trainer 将要保存 checkpoint 的时候触发，该函数用于保存当前 callback 在恢复需要的相关数据。
+        当 Trainer 将要保存 checkpoint 的时候触发 (即调用 Trainer.save_checkpoint() 函数时)，该函数用于保存当前 callback 在恢复需要的相关数据。
 
         :param trainer:
         :return:
@@ -185,7 +185,8 @@ class Callback:
 
     def on_load_checkpoint(self, trainer, states: Optional[Dict]):
         r"""
-        当 Trainer 要恢复 checkpoint 的时候触发（ Trainer 与 Driver 已经加载好自身的状态），参数 states 为 on_save_checkpoint()
+        当 Trainer 要恢复 checkpoint 的时候触发（即调用 Trainer.load_checkpoint() 函数时 Trainer 与 Driver 已经加载好自身的状态），
+        参数 states 为 on_save_checkpoint()
         的返回值。
 
         :param trainer:

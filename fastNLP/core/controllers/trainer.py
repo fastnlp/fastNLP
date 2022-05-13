@@ -595,7 +595,7 @@ class Trainer(TrainerEventTrigger):
             self.driver.barrier()
             self.driver.zero_grad(self.set_grad_to_none)
             while self.cur_epoch_idx < self.n_epochs:
-                # 这个是防止在 Trainer.load 之后还没结束当前 epoch 又继续 save
+                # 这个是防止在 Trainer.load_checkpoint 之后还没结束当前 epoch 又继续 save
                 self.start_batch_idx_in_epoch = self.trainer_state.batch_idx_in_epoch
                 self.driver.set_model_mode("train")
                 self.on_train_epoch_begin()
@@ -1018,7 +1018,7 @@ class Trainer(TrainerEventTrigger):
             注意您需要在初始化 ``Trainer`` 后再通过 ``trainer`` 实例来调用该函数；这意味着您需要保证在保存和加载时使用的 ``driver`` 是属于同一个
             训练框架的，例如都是 ``pytorch`` 或者 ``paddle``；
 
-            注意在大多数情况下您不需要使用该函数，如果您需要断点重训功能，您可以直接使用 ``trainer.load`` 函数；
+            注意在大多数情况下您不需要使用该函数，如果您需要断点重训功能，您可以直接使用 ``trainer.load_checkpoint`` 函数；
 
             该函数在通常情况下和 ``save_model`` 函数配套使用；其参数均与 ``save_model`` 函数成对应关系；
         """
@@ -1045,9 +1045,10 @@ class Trainer(TrainerEventTrigger):
             self.driver.load_model(folder, only_state_dict, **kwargs)
         self.driver.barrier()
 
-    def save(self, folder: Union[str, Path], only_state_dict: bool = True, model_save_fn: Optional[Callable] = None, **kwargs):
+    def save_checkpoint(self, folder: Union[str, Path], only_state_dict: bool = True, model_save_fn: Optional[Callable] = None, **kwargs):
         r"""
-        用于帮助您实现断点重训功能的保存函数；
+        用于帮助您实现断点重训功能的保存函数；保存内容包括：callback 状态、Trainer 的状态、Sampler 的状态【在恢复的时候才能恢复到特定 batch 】、
+        模型参数、optimizer的状态、fp16 Scaler的状态【如果有】。
 
         :param folder: 保存在哪个文件夹下，会在该文件下声称两个文件：fastnlp_checkpoint.pkl.tar 与 fastnlp_model.pkl.tar 。
             如果 model_save_fn 不为空，则没有 fastnlp_model.pkl.tar 文件；
@@ -1061,12 +1062,12 @@ class Trainer(TrainerEventTrigger):
             注意如果您需要在训练的过程中使用断点重训功能，您可以直接使用 **``CheckpointCallback``**；
             ``CheckpointCallback`` 的使用具体见 :class:`fastNLP.core.callbacks.checkpoint_callback.CheckpointCallback`；
 
-            这意味着在大多数时刻您并不需要自己主动地调用该函数来保存 ``Trainer`` 的状态；当然您可以在自己定制的 callback 类中通过直接调用 ``trainer.save`` 来保存 ``Trainer`` 的状态；
+            这意味着在大多数时刻您并不需要自己主动地调用该函数来保存 ``Trainer`` 的状态；当然您可以在自己定制的 callback 类中通过直接调用 ``trainer.save_checkpoint`` 来保存 ``Trainer`` 的状态；
 
             具体实际的保存状态的操作由具体的 driver 实现，这意味着对于不同的 ``Driver`` 来说，保存的操作可能是不尽相同的，
             您如果想要了解保存 ``Trainer`` 状态的更多细节，请直接查看各个 ``Driver`` 的 ``save`` 函数；
 
-            ``save`` 函数和 ``load`` 函数是配套使用的；
+            ``save_checkpoint`` 函数和 ``load_checkpoint`` 函数是配套使用的；
 
         .. note::
 
@@ -1111,14 +1112,14 @@ class Trainer(TrainerEventTrigger):
             if not callable(model_save_fn):
                 raise ValueError("Parameter `model_save_fn` should be `Callable` type when it is not None.")
             rank_zero_call(model_save_fn)(folder)
-            self.driver.save(folder=folder, dataloader=self.dataloader, states=states, should_save_model=False, **kwargs)
+            self.driver.save_checkpoint(folder=folder, dataloader=self.dataloader, states=states, should_save_model=False, **kwargs)
         else:
-            self.driver.save(folder=folder, dataloader=self.dataloader, states=states,
+            self.driver.save_checkpoint(folder=folder, dataloader=self.dataloader, states=states,
                              only_state_dict=only_state_dict, should_save_model=True, **kwargs)
 
         self.driver.barrier()
 
-    def load(self, folder: str, resume_training: bool = True, only_state_dict: bool = True,
+    def load_checkpoint(self, folder: str, resume_training: bool = True, only_state_dict: bool = True,
              model_load_fn: Optional[Callable] = None, **kwargs):
         r"""
         用于帮助您实现断点重训功能的加载函数；
@@ -1128,22 +1129,22 @@ class Trainer(TrainerEventTrigger):
             只会加载 ``model`` 和 ``optimizers`` 的状态；而其余对象的值则根据用户的 ``Trainer`` 的初始化直接重置；
         :param only_state_dict: 保存的 ``model`` 是否只保存了权重；
         :param model_load_fn: 使用的模型加载函数，参数应为一个文件夹，注意该函数不需要返回任何内容；您可以传入该参数来定制自己的加载模型的操作，
-            当该参数不为 None 时，我们默认加载模型由该函数完成，``trainer.load`` 函数则会把 ``trainer`` 的其余状态加载好；
+            当该参数不为 None 时，我们默认加载模型由该函数完成，``trainer.load_checkpoint`` 函数则会把 ``trainer`` 的其余状态加载好；
 
         .. note::
 
             在 fastNLP 中，断点重训的保存和加载的逻辑是完全分离的，这意味着您在第二次训练时可以将 ``CheckpointCallback`` 从 ``trainer`` 中
-            去除，而直接使用 ``trainer.load`` 函数加载 ``trainer`` 的状态来进行断点重训；
+            去除，而直接使用 ``trainer.load_checkpoint`` 函数加载 ``trainer`` 的状态来进行断点重训；
 
-            该函数在通常情况下和 ``save`` 函数配套使用；其参数与 ``save`` 函数成对应关系；
+            该函数在通常情况下和 ``save_checkpoint`` 函数配套使用；其参数与 ``save_checkpoint`` 函数成对应关系；
 
-            对于在前后两次训练 ``Driver`` 不同的情况时使用断点重训，请参考 :meth:`fastNLP.core.controllers.trainer.Trainer.load` 函数的 ``warning``；
+            对于在前后两次训练 ``Driver`` 不同的情况时使用断点重训，请参考 :meth:`fastNLP.core.controllers.trainer.Trainer.load_checkpoint` 函数的 ``warning``；
 
         Example::
 
             trainer = Trainer(...)
 
-            trainer.load(folder='/path-to-your-saved_checkpoint_folder/', ...)
+            trainer.load_checkpoint(folder='/path-to-your-saved_checkpoint_folder/', ...)
 
             trainer.run()
 
@@ -1161,9 +1162,9 @@ class Trainer(TrainerEventTrigger):
                 if not callable(model_load_fn):
                     raise ValueError("Parameter `model_save_fn` should be `Callable`.")
                 model_load_fn(folder)
-                states = self.driver.load(folder=folder, dataloader=dataloader, should_load_model=False, **kwargs)
+                states = self.driver.load_checkpoint(folder=folder, dataloader=dataloader, should_load_model=False, **kwargs)
             else:
-                states = self.driver.load(folder=folder, dataloader=dataloader, only_state_dict=only_state_dict, should_load_model=True, **kwargs)
+                states = self.driver.load_checkpoint(folder=folder, dataloader=dataloader, only_state_dict=only_state_dict, should_load_model=True, **kwargs)
         except FileNotFoundError as e:
             if FASTNLP_CHECKPOINT_FILENAME not in os.listdir(folder) and FASTNLP_MODEL_FILENAME in os.listdir(folder):
                 logger.error("It seems that you are trying to load the trainer checkpoint from a model checkpoint folder.")
@@ -1184,7 +1185,7 @@ class Trainer(TrainerEventTrigger):
         # 这里的原则就是应当使得    '还会产生的batch数量' + 'batch_idx_in_epoch' = '原来不断点训练的batch的总数'。其中由于
         #    '还会产生的batch数量' 是由还剩多少 sample 决定的，因此只能通过调整 'batch_idx_in_epoch' 使得等式成立
         self.trainer_state.batch_idx_in_epoch = states.pop('batch_idx_in_epoch')
-        # 这个是防止用户在 Trainer.load 之后还没结束当前 epoch 又继续 save
+        # 这个是防止用户在 Trainer.load_checkpoint 之后还没结束当前 epoch 又继续 save_checkpoint
         self.start_batch_idx_in_epoch = self.trainer_state.batch_idx_in_epoch
 
         # 5. 恢复所有 callback 的状态；

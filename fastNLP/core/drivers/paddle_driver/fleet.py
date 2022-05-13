@@ -409,7 +409,7 @@ class PaddleFleetDriver(PaddleDriver):
         # 暂时不支持iterableDataset
         assert dataloader.dataset_kind != _DatasetKind.ITER, \
                     "FastNLP does not support `IteratorDataset` now."
-        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleSampler 说明是在断点重训时 driver.load 函数调用；
+        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleSampler 说明是在断点重训时 driver.load_checkpoint 函数调用；
         if isinstance(dist, ReproducibleBatchSampler):
             dist.set_distributed(
                 num_replicas=self.world_size,

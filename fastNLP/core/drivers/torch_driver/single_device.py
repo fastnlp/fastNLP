@@ -96,7 +96,7 @@ class TorchSingleDriver(TorchDriver):
                                   dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler] = None,
                                   reproducible: bool = False):
 
-        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleIterator 说明是在断点重训时 driver.load 函数调用；
+        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleIterator 说明是在断点重训时 driver.load_checkpoint 函数调用；
         if isinstance(dist, ReproducibleBatchSampler):
             return replace_batch_sampler(dataloader, dist)
         elif isinstance(dist, ReproducibleSampler):

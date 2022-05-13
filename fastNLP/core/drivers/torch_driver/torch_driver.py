@@ -179,7 +179,7 @@ class TorchDriver(Driver):
             model.load_state_dict(res.state_dict())
 
     @rank_zero_call
-    def save(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
+    def save_checkpoint(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
         # 传入的 dataloader 参数是 trainer 的 dataloader 属性，因为 driver 的所有 dataloader 我们是不会去改变它的，而是通过改变
         #  trainer.dataloader 来改变 dataloader 的状态，从而适配训练或者评测环境；
 
@@ -253,7 +253,7 @@ class TorchDriver(Driver):
         states["optimizers_state_dict"] = optimizers_state_dict
         torch.save(states, Path(folder).joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
-    def load(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
+    def load_checkpoint(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
         states = torch.load(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
         # 1. 加载 optimizers 的状态；

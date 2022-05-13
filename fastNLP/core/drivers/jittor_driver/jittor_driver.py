@@ -109,10 +109,10 @@ class JittorDriver(Driver):
             raise FileNotFoundError("Checkpoint at {} not found.".format(filepath))
         return jt.load(filepath)
 
-    def save(self):
+    def save_checkpoint(self):
         ...
 
-    def load(self):
+    def load_checkpoint(self):
         ...
 
     def get_evaluate_context(self):

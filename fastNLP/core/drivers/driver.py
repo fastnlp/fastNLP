@@ -49,7 +49,7 @@ class Driver(ABC):
             不同 gpu 上出现重复；为 'unrepeatdist' 时，表示该 dataloader 应该保证所有 gpu 上迭代出来的数据合并起来应该刚好等于原始的
             数据，允许不同 gpu 上 batch 的数量不一致。其中 trainer 中 kwargs 的参数 `use_dist_sampler` 为 True 时，该值为 "dist"；
             否则为 None ，evaluator 中的 kwargs 的参数 `use_dist_sampler` 为 True 时，该值为 "unrepeatdist"，否则为 None；
-            注意当 dist 为 ReproducibleSampler, ReproducibleBatchSampler 时，是断点重训加载时 driver.load 函数在调用；
+            注意当 dist 为 ReproducibleSampler, ReproducibleBatchSampler 时，是断点重训加载时 driver.load_checkpoint 函数在调用；
             当 dist 为 str 或者 None 时，是 trainer 在初始化时调用该函数；
 
         :param reproducible: 如果为 False ，不要做任何考虑；如果为 True ，需要保证返回的 dataloader 可以保存当前的迭代状态，使得
@@ -254,39 +254,39 @@ class Driver(ABC):
         raise NotImplementedError("Each specific driver should implemented its own `load_model` function.")
 
     @abstractmethod
-    def save(self, folder, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
+    def save_checkpoint(self, folder, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
         r"""
         断点重训的保存函数，该函数会负责保存模型和 optimizers, fp16 的 state_dict；以及模型的保存（若 should_save_model 为 True）
 
-        :param folder: 保存断点重训的状态的文件夹；save 函数应该在下面新增两（一）个文件 的 FASTNLP_CHECKPOINT_FILENAME 文件与
+        :param folder: 保存断点重训的状态的文件夹；save_checkpoint 函数应该在下面新增两（一）个文件 的 FASTNLP_CHECKPOINT_FILENAME 文件与
             FASTNLP_MODEL_FILENAME （如果 should_save_model 为 True ）。把 model 相关的内容放入到 FASTNLP_MODEL_FILENAME 文件
             中，将传入的 states 以及自身产生其它状态一并保存在 FASTNLP_CHECKPOINT_FILENAME 里面。
         :param states: 由 trainer 传入的一个字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态，Driver 应该只需要保存
-            该对象即可， Driver 应该不需要理解该对象，同时在 driver.load() 的时候，需要将 states 返回回去，load() 返回的值与这里的
+            该对象即可， Driver 应该不需要理解该对象，同时在 driver.load_checkpoint() 的时候，需要将 states 返回回去，load_checkpoint() 返回的值与这里的
             传入的值保持一致。
         :param dataloader: 正在使用的 dataloader，需要保存里面的状态使得之后可以从当前迭代的位置恢复。
         :param only_state_dict: 是否只保存模型的参数，当 should_save_model 为 False ，该参数无效。
         :param should_save_model: 是否应该保存模型，如果为False，Driver 将不负责 model 的保存。
         """
-        raise NotImplementedError("Each specific driver should implemented its own `save` function.")
+        raise NotImplementedError("Each specific driver should implemented its own `save_checkpoint` function.")
 
     @abstractmethod
-    def load(self, folder: Union[str, Path], dataloader, only_state_dict: bool =True, should_load_model: bool = True,  **kwargs) -> Dict:
+    def load_checkpoint(self, folder: Union[str, Path], dataloader, only_state_dict: bool =True, should_load_model: bool = True,  **kwargs) -> Dict:
         r"""
         断点重训的加载函数，注意该函数会负责读取数据，并且恢复 optimizers , fp16 的 state_dict 和 模型（根据 should_load_model ）和；
-        其它在 Driver.save() 函数中执行的保存操作，然后将一个 state 字典返回给 trainer （ 内容为Driver.save() 接受到的 states ）。
+        其它在 Driver.save_checkpoint() 函数中执行的保存操作，然后将一个 state 字典返回给 trainer （ 内容为Driver.save_checkpoint() 接受到的 states ）。
 
         该函数应该在所有 rank 上执行。
 
         :param folder: 读取该 folder 下的 FASTNLP_CHECKPOINT_FILENAME 文件与 FASTNLP_MODEL_FILENAME
             （如果 should_load_model 为True）。
-        :param dataloader: 当前给定 dataloader，需要根据 save 的 dataloader 状态合理设置。若该值为 None ，是不需要返回 'dataloader'
+        :param dataloader: 当前给定 dataloader，需要根据保存的 dataloader 状态合理设置。若该值为 None ，是不需要返回 'dataloader'
             以及 'batch_idx_in_epoch' 这两个值。
         :param only_state_dict: 读取的，当 should_save_model 为 False ，该参数无效。如果为 True ，说明保存的内容为权重；如果为
             False 说明保存的是模型，但也是通过当前 Driver 的模型去加载保存的模型的权重，而不是使用保存的模型替换当前模型。
         :param should_load_model: 是否应该加载模型，如果为False，Driver 将不负责加载模型。若该参数为 True ，但在保存的状态中没有
             找到对应的模型状态，则报错。
-        :return: 需要返回 save 函数输入的 states 内容
+        :return: 需要返回 save_checkpoint 函数输入的 states 内容
             'dataloader'，返回的是根据传入的 dataloader 与 保存的状态一起设置为合理的状态，可以返回的对象与传入的dataloader是同一个。
                 在保存与当前传入 data sample 数目不一致时报错。
             'batch_idx_in_epoch': int 类型的数据，表明当前 epoch 进行到了进行到了第几个 batch 了。 请注意，该值不能是只能通过保存的
@@ -297,7 +297,7 @@ class Driver(ABC):
                 当drop_last为True，等同于 floor(sample_in_this_rank/batch_size) - floor(num_left_samples/batch_size);
                 当drop_last为False，等同于 ceil(sample_in_this_rank/batch_size) - ceil(num_left_samples/batch_size)。
         """
-        raise NotImplementedError("Each specific driver should implemented its own `load` function.")
+        raise NotImplementedError("Each specific driver should implemented its own `load_checkpoint` function.")
 
     @staticmethod
     def tensor_to_numeric(tensor, reduce: Optional[str]=None):

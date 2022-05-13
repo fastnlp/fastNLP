@@ -1,9 +1,12 @@
 __all__ = [
     'FitlogCallback'
 ]
+import os
+
 from .has_monitor_callback import HasMonitorCallback
 from ...envs import _module_available
 from ...envs import get_global_rank
+from ..log import logger
 if _module_available('fitlog'):
     import fitlog
 
@@ -11,7 +14,9 @@ if _module_available('fitlog'):
 class FitlogCallback(HasMonitorCallback):
     """
     自动记录 ``evaluation`` 结果到 ``fitlog`` 中。会自动记录每一次 ``evaluate`` 后的结果；同时会根据
-     ``monitor`` 记录最好的结果。另外，会自动将非 ``rank 0`` 上的 ``fitlog`` 设置为 ``debug`` 状态。
+     ``monitor`` 记录最好的结果。另外，会自动将非 ``rank 0`` 上的 ``fitlog`` 设置为 ``debug`` 状态。同时还会在 ``fitlog`` 的
+     ``other`` 列中记录一个 ``launch_time`` ，可以通过这个数值找到当前这个脚本的在 save_folder （如果有使用其它需要保存模型的
+     ``Callback`` ，例如 :class:`~fastNLP.CheckpointCallback` ）下的文件夹名称。
 
     :param monitor: 监控的 metric 值。
 
@@ -38,6 +43,14 @@ class FitlogCallback(HasMonitorCallback):
     def on_after_trainer_initialized(self, trainer, driver):
         if get_global_rank() != 0:  # 如果不是 global rank 为 0 ，需要关闭 fitlog
             fitlog.debug()
+        super().on_after_trainer_initialized(trainer, driver)
+        fitlog.add_other('launch_time', os.environ['FASTNLP_LAUNCH_TIME'])
+
+    def on_sanity_check_end(self, trainer, sanity_check_res):
+        super(FitlogCallback, self).on_sanity_check_end(trainer, sanity_check_res)
+        if self.monitor is None:
+            logger.rank_zero_warning(f"No monitor set for {self.__class__.__name__}. Therefore, no best metric will "
+                                     f"be logged.")
 
     def on_evaluate_end(self, trainer, results):
         results = self.itemize_results(results)

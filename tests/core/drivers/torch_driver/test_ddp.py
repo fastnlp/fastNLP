@@ -186,7 +186,7 @@ class TestSetDistReproDataloader:
 
     """
     传入的 `dist` 参数为具体的 ReproducibleSampler 或 ReproducibleBatchSampler 的情况
-    此时对应 driver.load 中的情况
+    此时对应 driver.load_checkpoint 中的情况
     """
 
     @magic_argv_env_context
