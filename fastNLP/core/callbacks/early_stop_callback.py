@@ -9,22 +9,23 @@ from fastNLP.core.utils.exceptions import EarlyStopException
 
 
 class EarlyStopCallback(HasMonitorCallback):
+    """
+    用于 early stop 的 callback 。当监控的结果连续多少次没有变好边 raise 一个 EarlyStopException 。
+
+    :param monitor: 监控的 metric 值。
+
+        * 为 ``None``
+         将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+        * 为 ``str``
+         尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+         使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+        * 为 ``Callable``
+         接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+         的 ``monitor`` 值请返回 ``None`` 。
+    :param larger_better: monitor 的值是否是越大越好。
+    :param patience: 多少次 evaluate 不没有提升就停止。
+    """
     def __init__(self, monitor:Union[str, Callable]=None, larger_better:bool=True, patience:int=10):
-        """
-
-        :param monitor: 监控的 metric 值。
-
-            * 为 ``None``
-             将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
-            * 为 ``str``
-             尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
-             使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
-            * 为 ``Callable``
-             接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
-             的 ``monitor`` 值请返回 ``None`` 。
-        :param larger_better: monitor 的值是否是越大越好。
-        :param patience: 多少次 evaluate 不没有提升就停止。
-        """
         super(EarlyStopCallback, self).__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=True)
         self.wait = 0
         self.patience = patience
@@ -42,7 +43,7 @@ class EarlyStopCallback(HasMonitorCallback):
         # 当是 step evaluate 的时候，下一步执行的就是这个， 所以在这里检查。
         if self.wait >= self.patience:
             raise EarlyStopException(f"After {self.wait} validations, no improvement for "
-                                 f"metric `{self._real_monitor}`")
+                                     f"metric `{self._real_monitor}`(best value: {self.monitor_value})")
 
     def on_train_epoch_begin(self, trainer):
         # 当是 epoch evaluate 的时候，下一步执行的就是这个， 所以在这里检查。

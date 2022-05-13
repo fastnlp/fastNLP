@@ -9,7 +9,7 @@ __all__ = []
 
 class DummyGradScaler:
     """
-    用于仿造的GradScaler对象，防止重复写大量的if判断
+    用于仿造的 **GradScaler** 对象，防止重复写大量的if判断
     """
     def __init__(self, *args, **kwargs):
         pass

@@ -26,13 +26,13 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
     # world_size 和 rank
     if FASTNLP_BACKEND_LAUNCH in os.environ:
         if device is not None:
-            logger.warning_once("Parameter `device` would be ignored when you are using `torch.distributed.run` to pull "
+            logger.rank_zero_warning("Parameter `device` would be ignored when you are using `torch.distributed.run` to pull "
                            "up your script. And we will directly get the local device via "
-                           "`os.environ['LOCAL_RANK']`.")
+                           "`os.environ['LOCAL_RANK']`.", once=True)
         return TorchDDPDriver(model, torch.device(f"cuda:{os.environ['LOCAL_RANK']}"), True, **kwargs)
 
     if driver not in {"torch", "fairscale"}:
-        raise ValueError("Parameter `driver` can only be one of these values: ['torch', 'torch_ddp', 'fairscale'].")
+        raise ValueError("Parameter `driver` can only be one of these values: ['torch', 'fairscale'].")
 
     _could_use_device_num = torch.cuda.device_count()
     if isinstance(device, str):
@@ -43,6 +43,7 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
                 raise ValueError("Parameter `device` can only be '-1' when it is smaller than 0.")
             device = [torch.device(f"cuda:{w}") for w in range(_could_use_device_num)]
         elif device >= _could_use_device_num:
+            print(device, _could_use_device_num)
             raise ValueError("The gpu device that parameter `device` specifies is not existed.")
         else:
             device = torch.device(f"cuda:{device}")

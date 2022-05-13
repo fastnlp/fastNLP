@@ -249,7 +249,7 @@ class DataBundle:
         return self
 
     def apply_field_more(self, func: Callable, field_name: str, num_proc: int = 0, modify_fields=True,
-                         ignore_miss_dataset=True, progress_desc: str = '', show_progress_bar: bool = True):
+                         ignore_miss_dataset=True, show_progress_bar: bool = True, progress_desc: str = ''):
         r"""
         对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.DataSet.apply_field_more` 方法
 
@@ -263,8 +263,8 @@ class DataBundle:
         :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
             如果为False，则报错
-        :param show_progress_bar: 是否显示tqdm进度条
-        :param progress_desc: 当show_progress_barm为True时，可以显示当前tqdm正在处理的名称
+        :param show_progress_bar: 是否显示进度条
+        :param progress_desc: 当 ``show_progress_bar`` 为 ``True`` 时，可以显示 ``progress`` 的名称。
 
         :return Dict[str:Dict[str:Field]]: 返回一个字典套字典，第一层的 key 是 dataset 的名字，第二层的 key 是 field 的名字
 

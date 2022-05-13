@@ -64,54 +64,61 @@ def _get_dtype(ele_dtype, dtype, class_name):
 
 
 class TorchNumberPadder(Padder):
-    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
-        """
-        可以将形如 [1, 2, 3] 这类的数据转为 torch.Tensor([1, 2, 3])
+    """
+    可以将形如 [1, 2, 3] 这类的数据转为 torch.Tensor([1, 2, 3])
 
-        :param pad_val: 该值无意义
-        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
-        :param dtype: 输出的数据的 dtype 是什么。如 torch.long, torch.float32, int, float 等
-        """
+    :param pad_val: 该值无意义
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
+    :param dtype: 输出的数据的 dtype 是什么。如 torch.long, torch.float32, int, float 等
+    """
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
 
     @staticmethod
-    def pad(batch_field, pad_val, dtype):
+    def pad(batch_field, pad_val=0, dtype=None):
         return torch.tensor(batch_field, dtype=dtype)
 
 
 class TorchSequencePadder(Padder):
-    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
-        """
-        将类似于 [[1], [1, 2]] 的内容 pad 为 torch.Tensor([[1, 0], [1, 2]]) 可以 pad 多重嵌套的数据。
+    """
+    将类似于 [[1], [1, 2]] 的内容 pad 为 torch.Tensor([[1, 0], [1, 2]]) 可以 pad 多重嵌套的数据。
 
-        :param pad_val: 需要 pad 的值。
-        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
-        :param dtype: 输出的数据的 dtype 是什么。如 torch.long, torch.float32, int, float 等
-        """
+    :param pad_val: 需要 pad 的值。
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
+    :param dtype: 输出的数据的 dtype 是什么。如 torch.long, torch.float32, int, float 等
+    """
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
 
     @staticmethod
-    def pad(batch_field, pad_val, dtype):
+    def pad(batch_field, pad_val=0, dtype=None):
         tensor = get_padded_torch_tensor(batch_field, dtype=dtype, pad_val=pad_val)
         return tensor
 
 
 class TorchTensorPadder(Padder):
-    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
-        """
-        目前支持 [torch.tensor([3, 2], torch.tensor([1])] 类似的。若内部元素不为 torch.tensor ，则必须含有 tolist() 方法。
+    """
+    目前支持 [torch.tensor([3, 2], torch.tensor([1])] 类似的。若内部元素不为 torch.tensor ，则必须含有 tolist() 方法。
 
-        :param pad_val: 需要 pad 的值。
-        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
-        :param dtype: 输出的数据的 dtype 是什么。如 torch.long, torch.float32, int, float 等
-        """
+        >>> TorchTensorPadder.pad([np.array([3, 4]), np.array([1])], pad_val=-100)
+        [[   3.    4.]
+         [   1. -100.]]
+        >>> TorchTensorPadder.pad([torch.LongTensor([3, 4]), torch.LongTensor([1])], pad_val=-100)
+        tensor([[   3,    4],
+                [   1, -100]])
+
+    :param pad_val: 需要 pad 的值。
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
+    :param dtype: 输出的数据的 dtype 是什么。如 torch.long, torch.float32, int, float 等
+    """
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
 
     @staticmethod
-    def pad(batch_field, pad_val, dtype):
+    def pad(batch_field, pad_val=0, dtype=None):
         device = None
         try:
             if not isinstance(batch_field[0], torch.Tensor):

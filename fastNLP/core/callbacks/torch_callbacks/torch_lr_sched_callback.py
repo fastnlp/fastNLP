@@ -2,21 +2,23 @@ __all__ = [
     'TorchWarmupCallback'
 ]
 import math
+from typing import Union
 
 from ..callback import Callback
 
 
 class TorchWarmupCallback(Callback):
-    def __init__(self, warmup=0.1, schedule='constant'):
-        r"""
-        调整 learning rate 的 callback 。仅在实际发生参数更新的情况下
+    r"""
+    调整 learning rate 的 callback 。
 
-        :param int,float warmup: 如果warmup为int，则在该step之前，learning rate根据schedule的策略变化; 如果warmup为float，
-            如0.1, 则前10%的step是按照schedule策略调整learning rate。
-        :param str schedule: 以哪种方式调整。
-            linear: 前warmup的step上升到指定的learning rate(从Trainer中的optimizer处获取的), 后warmup的step下降到0；
-            constant前warmup的step上升到指定learning rate，后面的step保持learning rate.
-        """
+    :param warmup: 如果warmup为int，则在该step之前，learning rate根据schedule的策略变化; 如果warmup为float，
+        如0.1, 则前10%的step是按照schedule策略调整learning rate。
+    :param schedule: 以哪种方式调整。
+
+        1. linear: 前warmup的step上升到指定的learning rate(从Trainer中的optimizer处获取的), 后warmup的step下降到0；
+        2. constant前warmup的step上升到指定learning rate，后面的step保持learning rate.
+    """
+    def __init__(self, warmup:Union[int, float]=0.1, schedule:str='constant'):
         super().__init__()
         self.warmup = max(warmup, 0.)
 

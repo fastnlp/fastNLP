@@ -1,11 +1,13 @@
 import os
 from typing import Dict, Union, Callable, Tuple, Optional
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+
 if _NEED_IMPORT_TORCH:
     import torch
     from torch.nn import DataParallel
     from torch.nn.parallel import DistributedDataParallel
     from torch.utils.data import RandomSampler as TorchRandomSampler
+    from torch.utils.data import SequentialSampler as TorchSequentialSampler
 
 __all__ = [
     'TorchSingleDriver'
@@ -15,15 +17,25 @@ from .torch_driver import TorchDriver
 from fastNLP.core.drivers.torch_driver.utils import replace_sampler, replace_batch_sampler
 from fastNLP.core.utils import auto_param_call
 from fastNLP.core.utils.utils import _get_fun_msg
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, re_instantiate_sampler, ReproduceBatchSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, re_instantiate_sampler, \
+    ReproduceBatchSampler
 from fastNLP.core.samplers import RandomSampler
 from fastNLP.core.log import logger
 
 
 class TorchSingleDriver(TorchDriver):
     r"""
-    用于 cpu 和 单卡 gpu 运算；
+    ``TorchSingleDriver`` 是用于 cpu 和 单卡 gpu 运算的 ``driver``；
+
+    .. note::
+
+        如果您希望使用 ``DataParallel`` 来训练您的模型，您应当自己在 ``Trainer`` 初始化之前初始化好 ``DataParallel``，然后将其传入 ``Trainer`` 中；
+
+    :param model: 传入给 ``Trainer`` 的 ``model`` 参数；
+    :param device: torch.device，当前进程所使用的设备；
+    :param fp16: 是否开启 fp16；
     """
+
     def __init__(self, model, device: "torch.device", fp16: bool = False, **kwargs):
         if isinstance(model, DistributedDataParallel):
             raise ValueError("`DistributedDataParallel` is not supported in `TorchSingleDriver`")
@@ -51,6 +63,9 @@ class TorchSingleDriver(TorchDriver):
         self.world_size = 1
 
     def setup(self):
+        r"""
+        将模型迁移到相应的设备上；
+        """
         if self.model_device is not None:
             self.model.to(self.model_device)
 
@@ -88,10 +103,11 @@ class TorchSingleDriver(TorchDriver):
             else:
                 raise RuntimeError(f"There is no `{fn}` method in your {type(self.model)}.")
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler]=None,
+    def set_dist_repro_dataloader(self, dataloader,
+                                  dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler] = None,
                                   reproducible: bool = False):
 
-        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleIterator 说明是在断点重训时 driver.load 函数调用；
+        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleIterator 说明是在断点重训时 driver.load_checkpoint 函数调用；
         if isinstance(dist, ReproducibleBatchSampler):
             return replace_batch_sampler(dataloader, dist)
         elif isinstance(dist, ReproducibleSampler):
@@ -108,21 +124,31 @@ class TorchSingleDriver(TorchDriver):
 
         if reproducible:
             if isinstance(args.sampler, TorchRandomSampler):
-                # 如果本来就是随机的，直接替换掉吧。
-                sampler = RandomSampler(args.sampler.data_source)
-                logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
+                if getattr(args.sampler, '_num_samples', None) is None \
+                        and getattr(args.sampler, 'replacements', False) is False \
+                        and getattr(args.sampler, 'generator', None) is None:
+                    # 如果本来就是随机的，并且没有定制，直接替换掉吧。
+                    sampler = RandomSampler(args.sampler.data_source, shuffle=True)
+                    logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
+                    return replace_sampler(dataloader, sampler)
+            elif isinstance(args.sampler, TorchSequentialSampler):
+                # 需要替换为不要 shuffle 的。
+                sampler = RandomSampler(args.sampler.data_source, shuffle=False)
+                logger.debug("Replace torch SequentialSampler into fastNLP RandomSampler.")
                 return replace_sampler(dataloader, sampler)
-            else:
-                batch_sampler = ReproduceBatchSampler(
-                    batch_sampler=args.batch_sampler,
-                    batch_size=args.batch_size,
-                    drop_last=args.drop_last
-                )
-                return replace_batch_sampler(dataloader, batch_sampler)
+            batch_sampler = ReproduceBatchSampler(
+                batch_sampler=args.batch_sampler,
+                batch_size=args.batch_size,
+                drop_last=args.drop_last
+            )
+            return replace_batch_sampler(dataloader, batch_sampler)
         else:
             return dataloader
 
     def unwrap_model(self):
+        r"""
+        :return: 返回原本的模型，例如没有被 ``DataParallel`` 包裹；
+        """
         if isinstance(self.model, torch.nn.DataParallel) or \
                 isinstance(self.model, torch.nn.parallel.DistributedDataParallel):
             return self.model.module
@@ -131,16 +157,13 @@ class TorchSingleDriver(TorchDriver):
 
     @property
     def data_device(self):
-        """
-        单卡模式不支持 data_device；
+        r"""
+        注意单卡模式下使用 ``driver.data_device`` 等价于使用 ``driver.model_device``；
         """
         return self.model_device
 
     def is_distributed(self):
+        r"""
+        :return: 返回当前使用的 driver 是否是分布式的 driver，对于 ``TorchSingleDriver`` 来说直接返回 ``False``；
+        """
         return False
-
-
-
-
-
-

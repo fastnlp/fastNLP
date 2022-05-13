@@ -1,18 +1,5 @@
-"""
-
-该 Module 用来实现一个用于记载用户 callback 实时数据的 state，该 state 实际上是一个 字典，我们通过复用 __getattr__ 方法来实现类似
-类属性的字典调用方式；
-
-提供该类的主要目的在于与 Filter 中的特殊的 filter_fn 合作，方便用户能够使用到自己想要的一切特殊的定制方式；
-
-这一特殊的 Filter 实现需要用户记录一些特殊的状态值，例如 accuracy 等，但是我们不希望用户将这些状态值直接挂在 trainer 实例上，因为这样会
-污染 trainer 自己的类属性，从而可能导致一些莫名其妙的 bug；
-
-我们开放 state 用于用户这一特殊的定制选择；
-"""
 from dataclasses import dataclass
 from typing import Optional, Dict
-
 
 __all__ = [
     'State',
@@ -22,7 +9,8 @@ __all__ = [
 
 class State(dict):
     r"""
-    提供给用户使用的 state；
+    提供给用户使用的 ``state``，用来记载您的 ``callback`` 实时数据，该 ``state`` 实际上是一个字典，我们通过复用 ``__getattr__`` 方法来实现类似
+    类属性的字典调用方式；
 
     为了实现断点重训，用户应当保证其保存的信息都是可序列化的；
 

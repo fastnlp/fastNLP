@@ -53,15 +53,15 @@ class ReproducibleSampler:
 
 
 class RandomSampler(ReproducibleSampler):
-    def __init__(self, dataset, shuffle: bool = True, seed: int = 0, **kwargs):
-        """
-        随机顺序的 Sampler 。
+    """
+    随机顺序的 Sampler 。
 
-        :param dataset: 实现了 __len__ 方法的数据容器
-        :param shuffle: 是否在每次 iterate 的时候打乱顺序。
-        :param seed: 随机数种子。
-        :param kwargs: 用户不需要使用，fastNLP 内部使用
-        """
+    :param dataset: 实现了 __len__ 方法的数据容器
+    :param shuffle: 是否在每次 iterate 的时候打乱顺序。
+    :param seed: 随机数种子。
+    :param kwargs: 用户不需要使用，fastNLP 内部使用
+    """
+    def __init__(self, dataset, shuffle: bool = True, seed: int = 0, **kwargs):
         super(RandomSampler, self).__init__()
         self.dataset = dataset
         self.shuffle = shuffle
@@ -213,13 +213,13 @@ class RandomSampler(ReproducibleSampler):
 
 
 class SequentialSampler(RandomSampler):
-    def __init__(self, dataset, **kwargs):
-        """
-        按照顺序读取 ``dataset`` 。在多卡情况下，间隔读取，例如，在两卡情况下，卡 0 取 ``[0,2,4,..]``, 卡1取 ``[1,3,5...]`` 。
+    """
+    按照顺序读取 ``dataset`` 。在多卡情况下，间隔读取，例如，在两卡情况下，卡 0 取 ``[0,2,4,..]``, 卡1取 ``[1,3,5...]`` 。
 
-        :param dataset: 实现了 __len__ 方法的数据容器。
-        :param kwargs:
-        """
+    :param dataset: 实现了 __len__ 方法的数据容器。
+    :param kwargs:
+    """
+    def __init__(self, dataset, **kwargs):
         super().__init__(dataset=dataset, **kwargs)
 
     def __iter__(self):
@@ -283,23 +283,23 @@ class SequentialSampler(RandomSampler):
 
 
 class SortedSampler(SequentialSampler):
+    """
+    将 ``dataset`` 中的数据根据 ``length`` 从长到短进行迭代。在多卡情况下，由于 ``padding`` , 最后一个 ``sample`` 可能是最长
+    的那个 ``sample`` 。
+
+    :param dataset: 实现了 __len__ 方法的数据容器。
+    :param length: 每条数据的长度。
+
+        * 为 ``List[int]`` 时
+         应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
+        * 为 ``str`` 时
+         仅当传入的 ``dataset`` 是 :class:`fastNLP.DataSet` 时，允许传入 `str` ，该 `str` 将被认为是 ``dataset`` 中的
+          ``field`` 。若 field 中的元素为 ``int``，则认为该值是 sample 的长度；若不为 ``int`` ，则尝试使用 ``len`` 方法
+          获取该 ``field`` 中每个元素的长度。
+    :param seed: 设置的随机数种子。
+    :param kwargs: fastNLP 保留使用。
+    """
     def __init__(self, dataset, length:Union[str, List], **kwargs):
-        """
-        将 ``dataset`` 中的数据根据 ``length`` 从长到短进行迭代。在多卡情况下，由于 ``padding`` , 最后一个 ``sample`` 可能是最长
-        的那个 ``sample`` 。
-
-        :param dataset: 实现了 __len__ 方法的数据容器。
-        :param length: 每条数据的长度。
-
-            * 为 ``List[int]`` 时
-             应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
-            * 为 ``str`` 时
-             仅当传入的 ``dataset`` 是 :class:`fastNLP.DataSet` 时，允许传入 `str` ，该 `str` 将被认为是 ``dataset`` 中的
-              ``field`` 。若 field 中的元素为 ``int``，则认为该值是 sample 的长度；若不为 ``int`` ，则尝试使用 ``len`` 方法
-              获取该 ``field`` 中每个元素的长度。
-        :param seed: 设置的随机数种子。
-        :param kwargs: fastNLP 保留使用。
-        """
         super().__init__(dataset=dataset, **kwargs)
         if isinstance(dataset, DataSet) and isinstance(length, str):
             length = dataset.get_field(length).content

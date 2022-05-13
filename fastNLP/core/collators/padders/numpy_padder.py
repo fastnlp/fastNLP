@@ -30,53 +30,65 @@ def _get_dtype(ele_dtype, dtype, class_name):
 
 
 class NumpyNumberPadder(Padder):
-    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
-        """
-        可以将形如 [1, 2, 3] 这类的数据转为 np.array([1, 2, 3])
+    """
+    可以将形如 [1, 2, 3] 这类的数据转为 np.array([1, 2, 3]) 。可以通过:
 
-        :param pad_val: 该值无意义
-        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 np.array 类型。
-        :param dtype: 输出的数据的 dtype 是什么
-        """
+        >>> NumpyNumberPadder.pad([1, 2, 3])
+
+    使用。
+
+    :param pad_val: 该值无意义
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 np.array 类型。
+    :param dtype: 输出的数据的 dtype 是什么
+    """
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
 
     @staticmethod
-    def pad(batch_field, pad_val, dtype):
+    def pad(batch_field, pad_val=0, dtype=None):
         return np.array(batch_field, dtype=dtype)
 
 
 class NumpySequencePadder(Padder):
-    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
-        """
-        将类似于 [[1], [1, 2]] 的内容 pad 为 np.array([[1, 0], [1, 2]]) 可以 pad 多重嵌套的数据。
+    """
+    将类似于 [[1], [1, 2]] 的内容 pad 为 np.array([[1, 0], [1, 2]]) 可以 pad 多重嵌套的数据。
+    可以通过以下的方式直接使用:
 
-        :param pad_val: pad 的值是多少。
-        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 np.array 类型。
-        :param dtype: 输出的数据的 dtype 是什么
-        """
+        >>> NumpySequencePadder.pad([[1], [1, 2]], pad_val=-100, dtype=float)
+        [[   1. -100.]
+         [   1.    2.]]
+
+    :param pad_val: pad 的值是多少。
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 np.array 类型。
+    :param dtype: 输出的数据的 dtype 是什么
+    """
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
 
     @staticmethod
-    def pad(batch_field, pad_val, dtype):
+    def pad(batch_field, pad_val=0, dtype=None):
         return get_padded_numpy_array(batch_field, dtype=dtype, pad_val=pad_val)
 
 
 class NumpyTensorPadder(Padder):
-    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
-        """
-        pad 类似于 [np.array([3, 4], np.array([1])] 的 field 。若内部元素不为 np.ndarray ，则必须含有 tolist() 方法。
+    """
+    pad 类似于 [np.array([3, 4]), np.array([1])] 的 field 。若内部元素不为 np.ndarray ，则必须含有 tolist() 方法。
 
-        :param pad_val: pad 的值是多少。
-        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 np.array 类型。
-        :param dtype: 输出的数据的 dtype 是什么
-        """
+        >>> NumpyTensorPadder.pad([np.array([3, 4]), np.array([1])], pad_val=-100)
+        [[   3.    4.]
+         [   1. -100.]]
+    :param pad_val: pad 的值是多少。
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 np.array 类型。
+    :param dtype: 输出的数据的 dtype 是什么
+    """
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
 
     @staticmethod
-    def pad(batch_field, pad_val, dtype):
+    def pad(batch_field, pad_val=0, dtype=None):
         try:
             if not isinstance(batch_field[0], np.ndarray):
                 batch_field = [np.array(field.tolist(), dtype=dtype) for field in batch_field]

@@ -79,7 +79,7 @@ class PaddleDataLoader(DataLoader):
 
     def __init__(self, dataset, feed_list=None, places=None,
                  return_list: bool = True, batch_sampler=None,
-                 batch_size: int = 1, shuffle: bool = False,
+                 batch_size: int = 1, shuffle: bool = True,
                  drop_last: bool = False, collate_fn: Union[str, Callable, None] = 'auto',
                  num_workers: int = 0, use_buffer_reader: bool = True,
                  use_shared_memory: bool = True, timeout: int = 0,

@@ -109,13 +109,9 @@ __all__ = [
 
     "CMRC2018BertPipe",
 
-    'ModelLoader',
-    'ModelSaver',
-
 ]
 
 from .data_bundle import DataBundle
 from .embed_loader import EmbedLoader
 from .loader import *
-from .model_io import ModelLoader, ModelSaver
 from .pipe import *

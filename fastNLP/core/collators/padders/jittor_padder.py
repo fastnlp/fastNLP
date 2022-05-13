@@ -90,7 +90,7 @@ class JittorNumberPadder(Padder):
         super().__init__(pad_val=pad_val, dtype=dtype)
 
     @staticmethod
-    def pad(batch_field, pad_val, dtype):
+    def pad(batch_field, pad_val=0, dtype=None):
         return jittor.Var(np.array(batch_field, dtype=dtype))
 
 
@@ -107,7 +107,7 @@ class JittorSequencePadder(Padder):
         super().__init__(pad_val=pad_val, dtype=dtype)
 
     @staticmethod
-    def pad(batch_field, pad_val, dtype):
+    def pad(batch_field, pad_val=0, dtype=None):
         tensor = get_padded_jittor_tensor(batch_field, dtype=dtype, pad_val=pad_val)
         return tensor
 
@@ -125,7 +125,7 @@ class JittorTensorPadder(Padder):
         super().__init__(pad_val=pad_val, dtype=dtype)
 
     @staticmethod
-    def pad(batch_field, pad_val, dtype):
+    def pad(batch_field, pad_val=0, dtype=None):
         try:
             if not isinstance(batch_field[0], jittor.Var):
                 batch_field = [jittor.Var(np.array(field.tolist(), dtype=dtype)) for field in batch_field]

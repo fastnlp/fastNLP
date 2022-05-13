@@ -60,7 +60,7 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
     ``value`` 的参数。
 
     1. 该函数用来提供给用户根据字符串匹配从而实现自动调用；
-    2. 注意 ``mapping`` 默认为 ``None``，如果你希望指定输入和运行函数的参数的对应方式，那么你应当让 ``mapping`` 为一个字典传入进来；
+    2. 注意 ``mapping`` 默认为 ``None``，如果您希望指定输入和运行函数的参数的对应方式，那么您应当让 ``mapping`` 为一个字典传入进来；
        如果 ``mapping`` 不为 ``None``，那么我们一定会先使用 ``mapping`` 将输入的字典的 ``keys`` 修改过来，因此请务必亲自检查 ``mapping`` 的正确性；
     3. 如果输入的函数的参数有默认值，那么如果之后的输入中没有该参数对应的值，我们就会使用该参数对应的默认值，否则也会使用之后的输入的值；
     4. 如果输入的函数是一个 ``partial`` 函数，情况同第三点，即和默认参数的情况相同；
@@ -82,8 +82,8 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
 
     :param fn: 用来进行实际计算的函数，其参数可以包含有默认值；
     :param args: 一系列的位置参数，应当为一系列的字典，我们需要从这些输入中提取 ``fn`` 计算所需要的实际参数；
-    :param signature_fn: 函数，用来替换 ``fn`` 的函数签名，如果该参数不为 ``None``，那么我们首先会从该函数中提取函数签名，然后通过该函数签名提取
-        参数值后，再传给 ``fn`` 进行实际的运算；
+    :param signature_fn: 函数，用来替换 ``fn`` 的函数签名，如果该参数不为 ``None``，那么我们首先会从该函数中提取函数签名，
+        然后通过该函数签名提取参数值后，再传给 ``fn`` 进行实际的运算；
     :param mapping: 一个字典，用来更改其前面的字典的键值；
 
     :return: 返回 ``fn`` 运行的结果；
@@ -142,7 +142,7 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
         if _name not in _has_params:
             _has_params[_name] = _value
 
-    if len(_has_params)<len(_need_params):
+    if len(_has_params) < len(_need_params):
         miss_params = list(set(_need_params.keys()) - set(_has_params.keys()))
         fn_msg = _get_fun_msg(fn if signature_fn is None else signature_fn)
         _provided_keys = _get_keys(args)
@@ -195,8 +195,8 @@ def _get_fun_msg(fn, with_fp=True)->str:
 
 def _check_valid_parameters_number(fn, expected_params:List[str], fn_name=None):
     """
-    检查一个函数是否需要 expected_params 参数(检测数量是否匹配)。除掉 self （如果是method），给定默认值的参数等。如果匹配不上，就会
-    进行报错。
+    检查一个函数是否需要 expected_params 参数(检测数量是否匹配)。除掉 self （如果是method），给定默认值的参数等。
+    如果匹配不上，就会进行报错。
 
     :param fn: 需要检测的函数，可以是 method 或者 function 。
     :param expected_params: 期待应该支持的参数。
@@ -345,8 +345,8 @@ def apply_to_collection(
     :param dtype: 数据的类型，函数 ``function`` 只会被应用于 ``data`` 中类型为 ``dtype`` 的数据；
     :param function: 对数据进行处理的函数；
     :param args: ``function`` 所需要的其它参数；
-    :param wrong_dtype: ``function`` 一定不会生效的数据类型。如果数据既是 ``wrong_dtype`` 类型又是 ``dtype`` 类型
-        那么也不会生效；
+    :param wrong_dtype: ``function`` 一定不会生效的数据类型。
+        如果数据既是 ``wrong_dtype`` 类型又是 ``dtype`` 类型那么也不会生效；
     :param include_none: 是否包含执行结果为 ``None`` 的数据，默认为 ``True``；
     :param kwargs: ``function`` 所需要的其它参数；
     :return: 经过 ``function`` 处理后的数据集合；
@@ -587,7 +587,7 @@ def seq_len_to_mask(seq_len, max_len: Optional[int]):
     :param seq_len: 大小为 ``(B,)`` 的长度序列；
     :param int max_len: 将长度补齐或截断到 ``max_len``。默认情况（为 ``None``）使用的是 ``seq_len`` 中最长的长度；
         但在 :class:`torch.nn.DataParallel` 等分布式的场景下可能不同卡的 ``seq_len`` 会有区别，所以需要传入
-        一个 ``max_len`` 使得 ``mask`` 的补齐或截断到该长度。
+        ``max_len`` 使得 ``mask`` 的补齐或截断到该长度。
     :return: 大小为 ``(B, max_len)`` 的 ``mask``， 元素类型为 ``bool`` 或 ``uint8``
     """
     if isinstance(seq_len, np.ndarray):

@@ -19,15 +19,15 @@ class UnrepeatedSampler:
 
 
 class UnrepeatedRandomSampler(UnrepeatedSampler):
-    def __init__(self, dataset, shuffle: bool = False, seed: int = 0, **kwargs):
-        """
-        考虑在多卡evaluate的场景下，不能重复sample。
+    """
+    考虑在多卡 evaluate 的场景下，不能重复 sample。
 
-        :param dataset: 实现了 __len__ 方法的数据容器。
-        :param shuffle: 如果为 True，将不进行 shuffle，实际上数据会以从长到短的方式输出。
-        :param seed: 设置的随机数种子
-        :param kwargs: fastNLP 保留使用
-        """
+    :param dataset: 实现了 __len__ 方法的数据容器。
+    :param shuffle: 如果为 True，将不进行 shuffle，实际上数据会以从长到短的方式输出。
+    :param seed: 设置的随机数种子
+    :param kwargs: fastNLP 保留使用
+    """
+    def __init__(self, dataset, shuffle: bool = False, seed: int = 0, **kwargs):
         self.dataset = dataset
         self.shuffle = shuffle
         self.seed = seed
@@ -96,16 +96,22 @@ class UnrepeatedRandomSampler(UnrepeatedSampler):
 
 
 class UnrepeatedSortedSampler(UnrepeatedRandomSampler):
-    def __init__(self, dataset, length:Union[str, List], **kwargs):
-        """
-        将 dataset 中的数据根据 length 从长到短进行迭代，并且保证在多卡场景下数据不重复。本 sampler 可能导致各个机器上的
-        batch 数量不完全一致。
+    """
+    将 dataset 中的数据根据 length 从长到短进行迭代，并且保证在多卡场景下数据不重复。本 sampler 可能导致各个机器上的
+    batch 数量不完全一致。
 
-        :param dataset: 实现了 __len__ 方法的数据容器。
-        :param length: 如果为 List，应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；仅当传入的 dataset 为 fastNLP 的
-            DataSet 时支持传入 str，会将该str理解为 dataset 的 field 名称，若 field 中的元素为 int，则认为该值是 sample 的长度。
-        :param kwargs: fastNLP 保留使用
-        """
+    :param dataset: 实现了 __len__ 方法的数据容器。
+    :param length: 每条数据的长度。
+
+        * 为 ``List[int]`` 时
+         应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
+        * 为 ``str`` 时
+         仅当传入的 ``dataset`` 是 :class:`fastNLP.DataSet` 时，允许传入 `str` ，该 `str` 将被认为是 ``dataset`` 中的
+          ``field`` 。若 field 中的元素为 ``int``，则认为该值是 sample 的长度；若不为 ``int`` ，则尝试使用 ``len`` 方法
+          获取该 ``field`` 中每个元素的长度。
+    :param kwargs: fastNLP 保留使用
+    """
+    def __init__(self, dataset, length:Union[str, List], **kwargs):
         super().__init__(dataset=dataset, shuffle=False, seed=0, **kwargs)
         if isinstance(dataset, DataSet) and isinstance(length, str):
             length = dataset.get_field(length).content
@@ -125,13 +131,13 @@ class UnrepeatedSortedSampler(UnrepeatedRandomSampler):
 
 
 class UnrepeatedSequentialSampler(UnrepeatedRandomSampler):
-    def __init__(self, dataset, **kwargs):
-        """
-        按照顺序读取 dataset。在多卡情况下，间隔读取，例如，在两卡情况下，卡0取 [0,2,4,..], 卡1取 [1,3,5...]。
+    """
+    按照顺序读取 dataset。在多卡情况下，间隔读取，例如，在两卡情况下，卡0取 [0,2,4,..], 卡1取 [1,3,5...]。
 
-        :param dataset: 实现了 __len__ 方法的数据容器。
-        :param kwargs:
-        """
+    :param dataset: 实现了 __len__ 方法的数据容器。
+    :param kwargs:
+    """
+    def __init__(self, dataset, **kwargs):
         super(UnrepeatedSequentialSampler, self).__init__(dataset, shuffle=False, seed=0, **kwargs)
 
     def __iter__(self):

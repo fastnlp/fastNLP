@@ -82,6 +82,52 @@ def filelock(path):
     except:
         pass
 
+class HfFolder:
+    """
+    hugging_face.HfFolder
+    version = 0.5.1
+    """
+    path_token = os.path.expanduser("~/.huggingface/token")
+
+    @classmethod
+    def save_token(cls, token):
+        """
+        Save token, creating folder as needed.
+
+        Args:
+            token (`str`):
+                The token to save to the [`HfFolder`]
+        """
+        os.makedirs(os.path.dirname(cls.path_token), exist_ok=True)
+        with open(cls.path_token, "w+") as f:
+            f.write(token)
+
+    @classmethod
+    def get_token(cls):
+        """
+        Retrieves the token
+
+        Returns:
+            `str` or `None`: The token, `None` if it doesn't exist.
+
+        """
+        try:
+            with open(cls.path_token, "r") as f:
+                return f.read()
+        except FileNotFoundError:
+            pass
+
+    @classmethod
+    def delete_token(cls):
+        """
+        Deletes the token from storage. Does not fail if token does not exist.
+        """
+        try:
+            os.remove(cls.path_token)
+        except FileNotFoundError:
+            pass
+
+
 def is_offline_mode():
     return _is_offline_mode
 
@@ -629,11 +675,10 @@ def get_from_cache(
     if isinstance(use_auth_token, str):
         headers["authorization"] = f"Bearer {use_auth_token}"
     elif use_auth_token:
-        raise RuntimeError("`use_auth_token=True` is not supported in FastNLP now")
-        # token = HfFolder.get_token()
-        # if token is None:
-        #     raise EnvironmentError("You specified use_auth_token=True, but a huggingface token was not found.")
-        # headers["authorization"] = f"Bearer {token}"
+        token = HfFolder.get_token()
+        if token is None:
+            raise EnvironmentError("You specified use_auth_token=True, but a huggingface token was not found.")
+        headers["authorization"] = f"Bearer {token}"
 
     url_to_download = url
     etag = None
@@ -791,13 +836,7 @@ def get_list_of_files(
     if isinstance(use_auth_token, str):
         token = use_auth_token
     elif use_auth_token is True:
-        # token = HfFolder.get_token()
-        path_token = os.path.expanduser("~/.huggingface/token")
-        try:
-            with open(path_token, "r") as f:
-                token = f.read()
-        except FileNotFoundError:
-            token = None
+        token = HfFolder.get_token()
     else:
         token = None
     # model_info = HfApi(endpoint=HUGGINGFACE_CO_RESOLVE_ENDPOINT).model_info(

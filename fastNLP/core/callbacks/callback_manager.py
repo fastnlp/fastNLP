@@ -2,10 +2,6 @@ import inspect
 from typing import List, Optional, Dict, Sequence
 from collections import defaultdict
 
-__all__ = [
-    'CallbackManager'
-]
-
 from .callback_event import Event
 from .callback import Callback
 from fastNLP.core.log import logger
@@ -25,7 +21,7 @@ def _transfer(func):
         for callback_fn in manager.callback_fns[func.__name__]:
             try:
                 callback_fn(*arg, **kwargs)
-            except EarlyStopException as e:
+            except (EarlyStopException, KeyboardInterrupt) as e:
                 raise e
             except BaseException as e:
                 logger.error(f"The following callback_fn raise exception:{_get_fun_msg(callback_fn)}.")
@@ -33,11 +29,10 @@ def _transfer(func):
     return wrapper
 
 
-def prepare_callbacks(callbacks, progress_bar):
+def prepare_callbacks(callbacks, progress_bar: str):
     """
-
-    :param callbacks:
-    :param progress_bar:
+    :param callbacks: 对用户传入的类 ``callback`` 进行检查，查看是否是否继承了我们的 ``Callback`` 类；
+    :param progress_bar: 选择怎样的 ``progress_bar`` 给 ``Trainer`` 使用；
     :return:
     """
     _callbacks = []
@@ -85,7 +80,7 @@ class CallbackManager:
             2. 通过 `Trainer` 的参数 `callbacks` 添加的 callback 类；
             3. 通过 `Trainer.add_callback_fn` 添加的 callback 函数；
 
-        :param callbacks: 初始化时可以传入的一系列 callback 类，通常为用户在初始化 'Trainer' 时直接传入的 callback 类；
+        :param callbacks: 初始化时可以传入的一系列 callback 类，通常为用户在初始化 ``Trainer`` 时直接传入的 callback 类；
         """
         self._need_reproducible_sampler = False
 
@@ -162,7 +157,6 @@ class CallbackManager:
                     "filter_states": {"on_train_begin": filter1.state_dict(), ...}
                 }
             }
-
         """
 
         states = {}

@@ -1,6 +1,6 @@
 """
-该文件用于为 **fastNLP** 提供一个统一的 ``progress bar`` 管理，通过共用一个``Task`` 对象， :class:`~fastNLP.core.Trainer` 中
-的 ``progress bar`` 和 :class:`~fastNLP.core.Evaluator` 中的 ``progress bar`` 才能不冲突
+该文件用于为 **fastNLP** 提供一个统一的 ``progress bar`` 管理，通过共用一个``Task`` 对象， :class:`~fastNLP.core.Trainer`
+中的 ``progress bar`` 和 :class:`~fastNLP.core.Evaluator` 中的 ``progress bar`` 才能不冲突
 """
 import sys
 from typing import Any, Union, Optional
@@ -44,11 +44,6 @@ class DummyFRichProgress:
         return True
 
 class FRichProgress(Progress, metaclass=Singleton):
-    """
-    fastNLP 使用的 progress bar ，新增了 new_progress 函数，通过此函数即可定制 fastNLP 中所有 progress 的样式。
-
-    """
-
     def new_progess(self, *columns: Union[str, ProgressColumn],
                     console: Optional[Console] = None,
                     auto_refresh: bool = True,

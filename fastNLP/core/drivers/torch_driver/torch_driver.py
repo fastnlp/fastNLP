@@ -36,7 +36,17 @@ from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler,
 
 class TorchDriver(Driver):
     r"""
-    专属于 pytorch 的 driver；因为我们会在同一个 Trainer 框架下提供 jittor、paddle 等训练框架的支持；
+    专属于 ``pytorch`` 的 ``driver``，是 ``TorchSingleDriver`` 和 ``TorchDDPDriver`` 的父类；
+
+    .. warning::
+
+        您不应当直接初始化该类，然后传入给 ``Trainer``，换句话说，您应当使用该类的子类 ``TorchSingleDriver`` 和 ``TorchDDPDriver``，而不是
+        该类本身；
+
+    .. note::
+
+        您可以在使用 ``TorchSingleDriver`` 和 ``TorchDDPDriver`` 时使用 ``TorchDriver`` 提供的接口；
+
     """
     def __init__(self, model, fp16: Optional[bool] = False, **kwargs):
         super(TorchDriver, self).__init__(model)
@@ -111,7 +121,15 @@ class TorchDriver(Driver):
                                  f"not {type(each_optimizer)}.")
 
     @staticmethod
-    def tensor_to_numeric(tensor, reduce=None):
+    def tensor_to_numeric(tensor, reduce: str = None):
+        r"""
+        将 ``torch.Tensor`` 转换成 python 中的数值类型；
+
+        :param tensor: ``torch.Tensor``；
+        :param reduce: 当 tensor 是一个多数值的张量时，应当使用何种归一化操作来转换成单一数值，应当为以下类型之一：``['max', 'min', 'sum', 'mean']``；
+        :return: 返回一个单一数值，其数值类型是 python 中的基本的数值类型，例如 ``int，float`` 等；
+        """
+
         if tensor is None:
             return None
 
@@ -129,6 +147,10 @@ class TorchDriver(Driver):
         )
 
     def set_model_mode(self, mode: str):
+        r"""
+        设置模型的状态是 ``train`` 还是 ``eval``；
+        :param mode: ``train`` 或者 ``eval``；
+        """
         assert mode in {"train", "eval"}
         getattr(self.model, mode)()
 
@@ -179,7 +201,7 @@ class TorchDriver(Driver):
             model.load_state_dict(res.state_dict())
 
     @rank_zero_call
-    def save(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
+    def save_checkpoint(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
         # 传入的 dataloader 参数是 trainer 的 dataloader 属性，因为 driver 的所有 dataloader 我们是不会去改变它的，而是通过改变
         #  trainer.dataloader 来改变 dataloader 的状态，从而适配训练或者评测环境；
 
@@ -253,7 +275,7 @@ class TorchDriver(Driver):
         states["optimizers_state_dict"] = optimizers_state_dict
         torch.save(states, Path(folder).joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
-    def load(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
+    def load_checkpoint(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
         states = torch.load(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
         # 1. 加载 optimizers 的状态；
@@ -297,7 +319,7 @@ class TorchDriver(Driver):
             sampler = RandomSampler(dataloader_args.sampler.data_source)
             logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
         elif self.is_distributed():
-            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our or "
+            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our"
                                "`ReproducibleSampler`.")
         else:
             sampler = ReproduceBatchSampler(
@@ -326,14 +348,26 @@ class TorchDriver(Driver):
         return states
 
     def get_evaluate_context(self):
+        r"""
+        :return: 返回 ``torch.no_grad`` 这个 context；
+        """
         return torch.no_grad
 
     @staticmethod
     def move_model_to_device(model: "torch.nn.Module", device: "torch.device"):
+        r"""
+        将模型迁移到对应的设备上；
+        """
         if device is not None:
             model.to(device)
 
-    def move_data_to_device(self, batch: "torch.Tensor"):
+    def move_data_to_device(self, batch):
+        """
+        将一个 batch 的数据迁移到对应的设备上；
+
+        :param batch: 一个 batch 的数据，可以是 ``list、dict`` 等；
+        :return:
+        """
         return torch_move_data_to_device(batch, self.data_device, self.non_blocking)
 
     @staticmethod

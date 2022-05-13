@@ -1,7 +1,15 @@
+r"""
+``Evaluator`` 是新版 fastNLP 中用来进行评测模型的评测器，其与 ``Trainer`` 相对应，二者共同构建起了 fastNLP 中**训练**和**评测**的框架。
+``Evaluator`` 的整体架构与 ``Trainer`` 类似，也是利用 ``Driver`` 来负责底层的评测逻辑。通过使用 ``Evaluator``，您可以快速、方便、准确地
+对您的模型进行全方位地评测。
+
+.. note::
+
+    ``Trainer`` 通过来自己内部内置一个 ``Evaluator`` 实例来支持在训练过程中进行验证的功能；
+"""
+
 from typing import Union, List, Optional, Dict, Callable
-from functools import partial
 from dataclasses import is_dataclass
-import sys
 
 __all__ = [
     'Evaluator'
@@ -20,60 +28,96 @@ from fastNLP.core.log import logger
 
 
 class Evaluator:
+    """
+    用于评测模型性能好坏的评测器；
+
+    .. note::
+
+        ``Evaluator`` 与 ``Trainer`` 类似，都是使用 ``Driver`` 作为底层来实现评测或者训练，因此大多数与 ``Trainer`` 同名的参数的意义和使用都与
+        ``Trainer`` 中的参数相同，对于这些参数，您可以参考 ``Trainer`` 的文档来获取更详细的信息；详见 :class:`~fastNLP.core.controllers.trainer.Trainer`；
+
+    :param model: 训练所需要的模型，例如 ``torch.nn.Module``，等价于 ``Trainer`` 中的 ``model`` 参数；
+    :param dataloaders: 用于评测的数据集。如果为多个，您需要使用 ``dict`` 传入，即对每一个数据集标上用于标识它们的标签；
+    :param metrics: 评测时使用的指标。注意该参数必须为 ``dict`` 类型，其中 ``key`` 为一个 ``metric`` 的名称，``value`` 为具体的 ``Metric`` 对象。目前支持以下 metrics：
+
+        1. fastNLP 自己的 ``metric``：详见 :class:`fastNLP.core.metrics.Metric`；
+        2. torchmetrics；
+        3. allennlp.training.metrics；
+        4. paddle.metric；
+
+    :param driver: 等价于 ``Trainer`` 中的 ``driver`` 参数；
+
+        .. note::
+
+            如果在您的脚本中在初始化 ``Evaluator`` 前也初始化了 ``Trainer`` 进行训练，那么强烈建议您直接将 ``trainer.driver`` 传入 ``Evaluator`` 当做该参数的值；
+
+            .. code-block::
+
+                # 初始化 Trainer
+                trainer = Trainer(
+                    ...
+                    driver='torch',
+                    device=[0,1]
+                )
+                trainer.run()
+
+                # 此时再初始化 Evaluator 时应当直接使用 trainer.driver；
+                evaluator = Evaluator(
+                    ...
+                    driver=trainer.driver
+                )
+
+    :param device: 等价于 ``Trainer`` 中的 ``device`` 参数；
+    :param evaluate_batch_step_fn: 您可以传入该参数来定制每次评测一个 batch 的数据时所执行的函数。该函数应接受的两个参数为 ``evaluator`` 和 ``batch``，
+        不需要有返回值；可以参考 :meth:`~fastNLP.core.controllers.loops.evaluate_batch_loop.EvaluateBatchLoop.batch_step_fn`；
+    :param evaluate_fn: 用来控制 ``Evaluator`` 在评测的前向传播过程中调用的是哪一个函数，例如对于 pytorch 而言，通过该参数确定使用的是 ``model.evaluate_step`` 还是
+        ``model.forward``（不同训练框架所使用的的前向传播函数的方法名称不同）；
+
+        1. 如果该值是 ``None``，那么我们会默认使用 ``evaluate_step`` 当做前向传播的函数，如果在模型中没有找到该方法，则使用训练框架默认的前向传播函数；
+        2. 如果为 ``str`` 类型，例如为 ``my_evaluate_step_fn``，则尝试寻找 ``model.my_evaluate_step_fn``，如果找不到则直接报错；
+
+    :param input_mapping: 等价于 ``Trainer`` 中的 ``input_mapping`` 参数；对具体的用于评测一个 batch 的数据使用 ``input_mapping`` 处理之后再输入到 ``model`` 以及 ``metric`` 中。如果针对
+        ``model`` 和 ``metric`` 需要不同的 ``mapping``，请考虑使用 ``evaluate_batch_step_fn`` 参数定制；
+
+        .. todo::
+
+            之后链接上 参数匹配 的文档；
+
+    :param output_mapping: 等价于 ``Trainer`` 中的 ``output_mapping`` 参数；对 ``model`` 输出的内容，将通过 ``output_mapping`` 处理之后再输入到 ``metric`` 中；
+    :param model_wo_auto_param_call: 等价于 ``Trainer`` 中的 ``model_wo_auto_param_call`` 参数；
+
+        .. note::
+
+            一个十分需要注意的问题在于 ``model_wo_auto_param_call`` 只会关闭部分的参数匹配，即指挥关闭前向传播时的参数匹配，但是由于 ``Evaluator`` 中
+            ``metric`` 的计算都是自动化的，因此其一定需要参数匹配：根据 ``metric.update`` 的函数签名直接从字典数据中抽取其需要的参数传入进去；
+
+
+    :param fp16: 是否在评测时使用 fp16；
+    :param verbose: 是否打印 evaluate 的结果；
+    :kwargs:
+        * *torch_kwargs* -- 等价于 ``Trainer`` 中的 ``torch_kwargs`` 参数；
+        * *data_device* -- 等价于 ``Trainer`` 中的 ``data_device`` 参数；
+        * *model_use_eval_mode* (``bool``) --
+         是否在评测的时候将 ``model`` 的状态设置成 ``eval`` 状态。在 ``eval`` 状态下，``model`` 的
+         ``dropout`` 与 ``batch normalization`` 将会关闭。默认为 ``True``。如果为 ``False``，``fastNLP`` 不会对 ``model`` 的 ``evaluate`` 状态做任何设置。无论
+         该值是什么，``fastNLP`` 都会在评测后将 ``model`` 的状态设置为 ``train``；
+        * *use_dist_sampler* --
+         是否使用分布式评测的方式。仅当 ``driver`` 为分布式类型时，该参数才有效。默认为根据 ``driver`` 是否支持
+         分布式进行设置。如果为 ``True``，将使得每个进程上的 ``dataloader`` 自动使用不同数据，所有进程的数据并集是整个数据集；
+        * *output_from_new_proc* -- 等价于 ``Trainer`` 中的 ``output_from_new_proc`` 参数；
+        * *progress_bar* -- 等价于 ``Trainer`` 中的 ``progress_bar`` 参数；
+
+    """
+
     driver: Driver
     _evaluate_batch_loop: Loop
 
-    def __init__(self, model, dataloaders, metrics: Optional[Union[Dict, Metric]] = None,
+    def __init__(self, model, dataloaders, metrics: Optional[Dict] = None,
                  driver: Union[str, Driver] = 'torch', device: Optional[Union[int, List[int], str]] = None,
                  evaluate_batch_step_fn: Optional[callable] = None, evaluate_fn: Optional[str] = None,
                  input_mapping: Optional[Union[Callable, Dict]] = None,
                  output_mapping: Optional[Union[Callable, Dict]] = None, model_wo_auto_param_call: bool = False,
                  fp16: bool = False, verbose: int = 1, **kwargs):
-        """
-        用于对数据进行评测。
-
-        :param model: 待测试的模型，如果传入的 driver 为 Driver 实例，该参数将被忽略。
-        :param dataloaders: 待评测的数据集。如果为多个，请使用 dict 传入。
-        :param metrics: 使用的 metric 。必须为 dict 类型，其中 key 为 metric 的名称，value 为一个 Metric 对象。支持 fastNLP 的
-            metric ，torchmetrics，allennlpmetrics 等。
-        :param driver: 使用 driver 。
-        :param device: 使用的设备。
-        :param evaluate_batch_step_fn: 定制每次 evaluate batch 执行的函数。该函数应接受的两个参数为 `evaluator` 和 `batch`，
-            不需要有返回值；可以参考 fastNLP.core.controllers.loops.evaluate_batch_loop.EvaluateBatchLoop中的batch_step_fn函数。
-        :param evaluate_fn: 用来控制 `Evaluator` 在评测的前向传播过程中是调用哪一个函数，例如是 `model.evaluate_step` 还是
-            `model.forward`；(1) 如果该值是 None，那么我们会默认使用 `evaluate_step` 当做前向传播的函数，如果在模型中没有
-            找到该方法，则使用 `model.forward` 函数；(2) 如果为 str 类型，则尝试从 model 中寻找该方法，找不到则报错。
-        :param input_mapping: 对 dataloader 中输出的内容将通过 input_mapping 处理之后再输入到 model 以及 metric 中。如果针对
-            model 和 metric 需要不同的 mapping，请考虑使用 evaluate_batch_step_fn 参数定制。
-        :param output_mapping: 对 model 输出的内容，将通过 output_mapping 处理之后再输入到 metric 中。
-        :param model_wo_auto_param_call: 是否关闭在训练时调用我们的 auto_param_call 来自动匹配 batch 和 forward 函数的参数的行为；
-         如果该值为 True，并且当 batch 为字典时，我们会根据 forward 所需要的参数从 batch 中提取对应的对象，传入到 forward 函数中；如果该值
-         为 False，那么我们会将 batch 直接透传给 forward 函数。注意上述逻辑同样应用于 `train_step`, `evaluate_step` 和 `test_step`；
-        :param fp16: 是否使用 fp16 。
-        :param verbose: 是否打印 evaluate 的结果。
-        :kwargs:
-            * *torch_kwargs* -- 用于在指定 ``driver`` 为 'torch' 时设定具体 driver 实例的一些参数：
-                * ddp_kwargs -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
-                 {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
-                * torch_non_blocking -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
-            * *data_device* -- 表示如果用户的模型 device （在 Driver 中对应为参数 model_device）为 None 时，我们会将数据迁移到 data_device 上；
-                注意如果 model_device 为 None，那么 data_device 不会起作用；
-            * *model_use_eval_mode* (``bool``) --
-                是否在 evaluate 的时候将 model 的状态设置成 eval 状态。在 eval 状态下，model 的
-                dropout 与 batch normalization 将会关闭。默认为True。如果为 False，fastNLP 不会对 model 的 evaluate 状态做任何设置。无论
-                该值是什么，fastNLP 都会在 evaluate 接受后将 model 的状态设置为 train 。
-            * *use_dist_sampler* --
-                是否使用分布式evaluate的方式。仅当 driver 为分布式类型时，该参数才有效。默认为根据 driver 是否支持
-                分布式进行设置。如果为True，将使得每个进程上的 dataloader 自动使用不同数据，所有进程的数据并集是整个数据集。
-            * *output_from_new_proc* --
-                应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
-                ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
-                log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
-            * *progress_bar* --
-                evaluate 的时候显示的 progress bar 。目前支持三种 [None, 'raw', 'rich', 'auto'], auto 表示如果检测
-                到当前terminal为交互型则使用 rich，否则使用 raw。
-        """
-
         self.model = model
         self.metrics = metrics
         self.driver = choose_driver(model, driver, device, fp16=fp16, model_wo_auto_param_call=model_wo_auto_param_call,
@@ -127,19 +171,22 @@ class Evaluator:
 
         self.driver.barrier()
 
-    def run(self, num_eval_batch_per_dl: int = -1, **kwargs) -> Dict:
+    def run(self, num_eval_batch_per_dl: int = -1) -> Dict:
         """
-        返回一个字典类型的数据，其中key为metric的名字，value为对应metric的结果。
-            如果存在多个metric，一个dataloader的情况，key的命名规则是
-                metric_indicator_name#metric_name
-            如果存在多个数据集，一个metric的情况，key的命名规则是
-                metric_indicator_name#metric_name#dataloader_name (其中 # 是默认的 separator ，可以通过 Evaluator 初始化参数修改)。
-            如果存在多个metric，多个dataloader的情况，key的命名规则是
-                metric_indicator_name#metric_name#dataloader_name
-            其中 metric_indicator_name 可能不存在。
+        该函数是在 ``Evaluator`` 初始化后用于真正开始评测的函数；
 
-        :param num_eval_batch_per_dl: 每个 dataloader 测试多少个 batch 的数据，-1 为测试所有数据。
-        :return:
+        返回一个字典类型的数据，其中key为metric的名字，value为对应metric的结果。
+
+            1. 如果存在多个metric，一个dataloader的情况，key的命名规则是
+            ``metric_indicator_name#metric_name``
+            2. 如果存在多个数据集，一个metric的情况，key的命名规则是
+            ``metric_indicator_name#metric_name#dataloader_name`` (其中 # 是默认的 separator ，可以通过 Evaluator 初始化参数修改)。
+            如果存在多个metric，多个dataloader的情况，key的命名规则是
+            ``metric_indicator_name#metric_name#dataloader_name``
+            其中 metric_indicator_name 可能不存在；
+
+        :param num_eval_batch_per_dl: 每个 dataloader 测试前多少个 batch 的数据，-1 为测试所有数据。
+        :return: 返回评测得到的结果，是一个没有嵌套的字典；
         """
         assert isinstance(num_eval_batch_per_dl, int), "num_eval_batch_per_dl must be of int type."
         assert num_eval_batch_per_dl > 0 or num_eval_batch_per_dl == -1, "num_eval_batch_per_dl must be -1 or larger than 0."
@@ -388,5 +435,8 @@ class _MetricsWrapper:
                 _results = metric.accumulate()
             else:
                 raise RuntimeError(f"Not support `{type(metric)}` for now.")
-            results[metric_name] = _results
+            if _results is not None:
+                results[metric_name] = _results
+            else:
+                logger.warning_once(f"Metric:{metric_name} returns None when getting metric results.")
         return results

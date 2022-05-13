@@ -41,7 +41,7 @@ class JittorDataLoader:
 
     """
 
-    def __init__(self, dataset, batch_size: int = 16, shuffle: bool = False,
+    def __init__(self, dataset, batch_size: int = 16, shuffle: bool = True,
                  drop_last: bool = False, num_workers: int = 0, buffer_size: int = 512 * 1024 * 1024,
                  stop_grad: bool = True, keep_numpy_array: bool = False, endless: bool = False,
                  collate_fn: Union[None, str, Callable] = "auto") -> None:

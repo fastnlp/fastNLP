@@ -73,7 +73,7 @@ def _test_trainer_torch_with_evaluator_fp16_accumulation_steps(
 ):
     trainer = Trainer(
         model=model,
-        driver="torch_ddp",
+        driver="torch",
         device=None,
         optimizers=optimizers,
         train_dataloader=train_dataloader,

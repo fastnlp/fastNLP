@@ -186,7 +186,7 @@ class TestSetDistReproDataloader:
 
     """
     传入的 `dist` 参数为具体的 ReproducibleSampler 或 ReproducibleBatchSampler 的情况
-    此时对应 driver.load 中的情况
+    此时对应 driver.load_checkpoint 中的情况
     """
 
     @magic_argv_env_context
@@ -648,7 +648,7 @@ class TestSaveLoad:
             # 保存状态
             sampler_states = dataloader.batch_sampler.state_dict()
             save_states = {"num_consumed_batches": num_consumed_batches}
-            driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
+            driver1.save_checkpoint(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
             # 加载
             # 更改 batch_size
             dataloader = dataloader_with_bucketedbatchsampler(
@@ -663,7 +663,7 @@ class TestSaveLoad:
                 rank=driver2.global_rank,
                 pad=True
             )
-            load_states = driver2.load(Path(path), dataloader, only_state_dict, should_load_model=True)
+            load_states = driver2.load_checkpoint(Path(path), dataloader, only_state_dict, should_load_model=True)
             replaced_loader = load_states.pop("dataloader")
             # 1. 检查 optimizer 的状态
             # TODO optimizer 的 state_dict 总是为空
@@ -754,9 +754,9 @@ class TestSaveLoad:
             sampler_states = dataloader.batch_sampler.sampler.state_dict()
             save_states = {"num_consumed_batches": num_consumed_batches}
             if only_state_dict:
-                driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
+                driver1.save_checkpoint(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
             else:
-                driver1.save(Path(path), save_states, dataloader, only_state_dict, should_save_model=True, input_spec=[torch.ones((16, 10))])
+                driver1.save_checkpoint(Path(path), save_states, dataloader, only_state_dict, should_save_model=True, input_spec=[torch.ones((16, 10))])
             # 加载
             # 更改 batch_size
             dataloader = dataloader_with_randomsampler(self.dataset, 2, True, False, unrepeated=False)
@@ -765,7 +765,7 @@ class TestSaveLoad:
                 rank=driver2.global_rank,
                 pad=True
             )
-            load_states = driver2.load(Path(path), dataloader, only_state_dict, should_load_model=True)
+            load_states = driver2.load_checkpoint(Path(path), dataloader, only_state_dict, should_load_model=True)
             replaced_loader = load_states.pop("dataloader")
 
             # 1. 检查 optimizer 的状态
