@@ -174,7 +174,7 @@ def _build_fp16_env(dummy=False):
 
 
 def replace_sampler(dataloader: "DataLoader", sampler):
-    """
+    r"""
     替换 sampler （初始化一个新的 dataloader 的逻辑在于）：
 
     用户可能继承了 dataloader，定制了自己的 dataloader 类，这也是我们为什么先 `inspect.signature(dataloader)` 而不是直接
@@ -259,7 +259,7 @@ def replace_sampler(dataloader: "DataLoader", sampler):
 def _dataloader_init_kwargs_resolve_sampler(
         dataloader: "DataLoader", sampler: Optional["Sampler"]
 ) -> Dict[str, Any]:
-    """
+    r"""
     此函数用于处理与 DataLoader 关联的采样器、batch_sampler 参数重新实例化；
     """
     batch_sampler = getattr(dataloader, "batch_sampler")
@@ -279,15 +279,8 @@ def _dataloader_init_kwargs_resolve_sampler(
 
 
 def replace_batch_sampler(dataloader, new_batch_sampler):
-    """Helper function to replace current batch sampler of the dataloader by a new batch sampler. Function returns new
-    dataloader with new batch sampler.
-
-    Args:
-        dataloader: input dataloader
-        new_batch_sampler: new batch sampler to use
-
-    Returns:
-        DataLoader
+    r"""
+    替换一个 dataloader 的 batch_sampler；
     """
     params_keys = [k for k in dataloader.__dict__.keys() if not k.startswith("_")]
     for k in ["batch_size", "sampler", "drop_last", "batch_sampler", "dataset_kind"]:
@@ -296,12 +289,16 @@ def replace_batch_sampler(dataloader, new_batch_sampler):
     params = {k: getattr(dataloader, k) for k in params_keys}
     params["batch_sampler"] = new_batch_sampler
     return type(dataloader)(**params)
-    # TODO 这里是否可以auto_param_call一下
-    # return auto_param_call(type(dataloader), params, {'self': type(dataloader).__new__()},
-    #                        signature_fn=type(dataloader).__init__)
 
 
 def optimizer_state_to_device(state, device):
+    r"""
+    将一个 ``optimizer`` 的 ``state_dict`` 迁移到对应的设备；
+
+    :param state: ``optimzier.state_dict()``；
+    :param device: 要迁移到的目的设备；
+    :return: 返回迁移后的新的 state_dict；
+    """
     new_state = {}
     for name, param in state.items():
         if isinstance(param, dict):

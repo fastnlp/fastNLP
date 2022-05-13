@@ -25,7 +25,15 @@ from fastNLP.core.log import logger
 
 class TorchSingleDriver(TorchDriver):
     r"""
-    用于 cpu 和 单卡 gpu 运算；
+    ``TorchSingleDriver`` 是用于 cpu 和 单卡 gpu 运算的 ``driver``；
+
+    .. note::
+
+        如果您希望使用 ``DataParallel`` 来训练您的模型，您应当自己在 ``Trainer`` 初始化之前初始化好 ``DataParallel``，然后将其传入 ``Trainer`` 中；
+
+    :param model: 传入给 ``Trainer`` 的 ``model`` 参数；
+    :param device: torch.device，当前进程所使用的设备；
+    :param fp16: 是否开启 fp16；
     """
 
     def __init__(self, model, device: "torch.device", fp16: bool = False, **kwargs):
@@ -55,6 +63,9 @@ class TorchSingleDriver(TorchDriver):
         self.world_size = 1
 
     def setup(self):
+        r"""
+        将模型迁移到相应的设备上；
+        """
         if self.model_device is not None:
             self.model.to(self.model_device)
 
@@ -135,6 +146,9 @@ class TorchSingleDriver(TorchDriver):
             return dataloader
 
     def unwrap_model(self):
+        r"""
+        :return: 返回原本的模型，例如没有被 ``DataParallel`` 包裹；
+        """
         if isinstance(self.model, torch.nn.DataParallel) or \
                 isinstance(self.model, torch.nn.parallel.DistributedDataParallel):
             return self.model.module
@@ -143,10 +157,13 @@ class TorchSingleDriver(TorchDriver):
 
     @property
     def data_device(self):
-        """
-        单卡模式不支持 data_device；
+        r"""
+        注意单卡模式下使用 ``driver.data_device`` 等价于使用 ``driver.model_device``；
         """
         return self.model_device
 
     def is_distributed(self):
+        r"""
+        :return: 返回当前使用的 driver 是否是分布式的 driver，对于 ``TorchSingleDriver`` 来说直接返回 ``False``；
+        """
         return False
