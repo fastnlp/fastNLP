@@ -250,7 +250,7 @@ def test_trainer_output_from_new_proc(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", [1, 2])])
+@pytest.mark.parametrize("driver,device", [("torch", [0, 1])])
 @pytest.mark.parametrize("cur_rank", [0])  # 依次测试如果是当前进程出现错误，是否能够正确地 kill 掉其他进程；  , 1, 2, 3
 @magic_argv_env_context
 def test_trainer_on_exception(

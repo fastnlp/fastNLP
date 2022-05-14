@@ -386,22 +386,16 @@ class TestSetDistReproDataloader:
     def test_with_reproducible_true(self, shuffle):
         """
         测试 set_dist_repro_dataloader 参数 `reproducible` 为 True 时的表现
-        当dist为字符串时，此时应该返回新的 dataloader，且如果原 sampler 为 paddle.io.RandomSampler（shuffle=True），
-        只会替换 Sampler 为 RandomSampler；否则会替换 batch_sampler 为 ReproduceBatchSampler
+        当dist为字符串时，此时应该返回新的 dataloader，会替换 sampler 为 RandomSampler
         """
         dataloader = DataLoader(self.dataset, batch_size=2, shuffle=shuffle)
         replaced_loader = self.driver.set_dist_repro_dataloader(dataloader, dist="dist", reproducible=True)
 
         assert not (replaced_loader is dataloader)
-        if shuffle:
-            # 此时会替换 sampler
-            assert isinstance(replaced_loader.batch_sampler, paddle.io.BatchSampler)
-            assert not (replaced_loader.batch_sampler is dataloader.batch_sampler)
-            assert isinstance(replaced_loader.batch_sampler.sampler, RandomSampler)
-        else:
-            # 此时会替换 batch_sampler
-            assert isinstance(replaced_loader.batch_sampler, ReproduceBatchSampler)
-            assert isinstance(replaced_loader.batch_sampler.batch_sampler, BatchSampler)
+        assert isinstance(replaced_loader.batch_sampler, paddle.io.BatchSampler)
+        assert not (replaced_loader.batch_sampler is dataloader.batch_sampler)
+        assert isinstance(replaced_loader.batch_sampler.sampler, RandomSampler)
+        assert replaced_loader.batch_sampler.sampler.shuffle == shuffle
         assert replaced_loader.batch_sampler.batch_size == dataloader.batch_sampler.batch_size
         assert replaced_loader.drop_last == dataloader.drop_last
 
