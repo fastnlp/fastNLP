@@ -221,7 +221,7 @@ class DataBundle:
             yield field_name, vocab
 
     def apply_field(self, func: Callable, field_name: str, new_field_name: str, num_proc: int = 0,
-                    ignore_miss_dataset: bool = True, progress_desc: str = '', show_progress_bar: bool = True):
+                    ignore_miss_dataset: bool = True, progress_desc: str = '', progress_bar: str = 'rich'):
         r"""
         对 :class:`~fastNLP.io.DataBundle` 中所有的dataset使用 :meth:`~fastNLP.DataSet.apply_field` 方法
 
@@ -233,8 +233,8 @@ class DataBundle:
             如果为False，则报错
         :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param ignore_miss_dataset: 如果 dataset 没有 {field_name} ，就直接跳过这个 dataset 。
-        :param progress_desc: 当show_progress_barm为True时，可以显示当前tqdm正在处理的名称
-        :param show_progress_bar: 是否显示tqdm进度条
+        :param progress_desc: 当显示 progress 时，可以显示当前正在处理的名称
+    	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
 
         """
         _progress_desc = progress_desc
@@ -243,13 +243,13 @@ class DataBundle:
                 progress_desc = _progress_desc + f' for `{name}`'
             if dataset.has_field(field_name=field_name):
                 dataset.apply_field(func=func, field_name=field_name, new_field_name=new_field_name, num_proc=num_proc,
-                                    progress_desc=progress_desc, show_progress_bar=show_progress_bar)
+                                    progress_desc=progress_desc, progress_bar=progress_bar)
             elif not ignore_miss_dataset:
                 raise KeyError(f"{field_name} not found DataSet:{name}.")
         return self
 
     def apply_field_more(self, func: Callable, field_name: str, num_proc: int = 0, modify_fields=True,
-                         ignore_miss_dataset=True, show_progress_bar: bool = True, progress_desc: str = ''):
+                         ignore_miss_dataset=True, progress_bar: str = 'rich', progress_desc: str = ''):
         r"""
         对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.DataSet.apply_field_more` 方法
 
@@ -263,8 +263,8 @@ class DataBundle:
         :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
             如果为False，则报错
-        :param show_progress_bar: 是否显示进度条
-        :param progress_desc: 当 ``show_progress_bar`` 为 ``True`` 时，可以显示 ``progress`` 的名称。
+    	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
+        :param progress_desc: 当显示 progress_bar 时，可以显示 ``progress`` 的名称。
 
         :return Dict[str:Dict[str:Field]]: 返回一个字典套字典，第一层的 key 是 dataset 的名字，第二层的 key 是 field 的名字
 
@@ -277,13 +277,13 @@ class DataBundle:
             if dataset.has_field(field_name=field_name):
                 res[name] = dataset.apply_field_more(func=func, field_name=field_name, num_proc=num_proc,
                                                      modify_fields=modify_fields,
-                                                     show_progress_bar=show_progress_bar, progress_desc=progress_desc)
+                                                     progress_bar=progress_bar, progress_desc=progress_desc)
             elif not ignore_miss_dataset:
                 raise KeyError(f"{field_name} not found DataSet:{name} .")
         return res
 
     def apply(self, func: Callable, new_field_name: str, num_proc: int = 0,
-              progress_desc: str = '', show_progress_bar: bool = True):
+              progress_desc: str = '', progress_bar: bool = True):
         r"""
         对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.DataSet.apply` 方法
 
@@ -293,20 +293,20 @@ class DataBundle:
         :param str new_field_name: 将func返回的内容放入到 `new_field_name` 这个field中，如果名称与已有的field相同，则覆
             盖之前的field。如果为None则不创建新的field。
         :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
-        :param show_progress_bar: 是否显示tqd进度条
-        :param progress_desc: 当show_progress_bar为True时，可以显示当前tqd正在处理的名称
+    	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
+        :param progress_desc: 当显示 progress bar 时，可以显示当前正在处理的名称
 
         """
         _progress_desc = progress_desc
         for name, dataset in self.datasets.items():
             if _progress_desc:
                 progress_desc = _progress_desc + f' for `{name}`'
-            dataset.apply(func, new_field_name=new_field_name, num_proc=num_proc, show_progress_bar=show_progress_bar,
+            dataset.apply(func, new_field_name=new_field_name, num_proc=num_proc, progress_bar=progress_bar,
                           progress_desc=progress_desc)
         return self
 
     def apply_more(self, func: Callable, modify_fields=True, num_proc: int = 0,
-                   progress_desc: str = '', show_progress_bar: bool = True):
+                   progress_desc: str = '', progress_bar: str = 'rich'):
         r"""
         对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.DataSet.apply_more` 方法
 
@@ -317,8 +317,8 @@ class DataBundle:
         :param callable func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param bool modify_fields: 是否用结果修改 ``DataSet`` 中的 ``Field`` ， 默认为 True
         :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
-        :param show_progress_bar: 是否显示tqd进度条
-        :param progress_desc: 当show_progress_bar为True时，可以显示当前tqd正在处理的名称
+    	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
+        :param progress_desc: 当显示 progress_bar 时，可以显示当前正在处理的名称
 
         :return Dict[str:Dict[str:Field]]: 返回一个字典套字典，第一层的 key 是 dataset 的名字，第二层的 key 是 field 的名字
         """
@@ -328,7 +328,7 @@ class DataBundle:
             if _progress_desc:
                 progress_desc = _progress_desc + f' for `{name}`'
             res[name] = dataset.apply_more(func, modify_fields=modify_fields, num_proc=num_proc,
-                                           show_progress_bar=show_progress_bar, progress_desc=progress_desc)
+                                           progress_bar=progress_bar, progress_desc=progress_desc)
         return res
 
     def set_pad(self, field_name, pad_val=0, dtype=None, backend=None, pad_fn=None) -> "DataBundle":

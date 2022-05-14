@@ -6,6 +6,7 @@ __all__ = [
     'CheckpointCallback',
     'ProgressCallback',
     'RichCallback',
+    'TqdmCallback',
     "LRSchedCallback",
     'LoadBestModelCallback',
     "EarlyStopCallback",

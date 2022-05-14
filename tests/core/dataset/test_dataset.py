@@ -181,7 +181,7 @@ class TestDataSetMethods:
         assert ("rx" in ds.field_arrays) == True
         assert ds.field_arrays["rx"].content[0] == [4, 3, 2, 1]
 
-        ds.apply(lambda ins: len(ins["y"]), new_field_name="y", show_progress_bar=False)
+        ds.apply(lambda ins: len(ins["y"]), new_field_name="y", progress_bar=None)
         assert ds.field_arrays["y"].content[0] == 2
 
         res = ds.apply(lambda ins: len(ins["x"]), num_proc=2, progress_desc="len")
@@ -198,8 +198,8 @@ class TestDataSetMethods:
         def do_nothing(ins):
             time.sleep(0.01)
 
-        ds.apply(do_nothing, show_progress_bar=True, num_proc=0)
-        ds.apply_field(do_nothing, field_name='x', show_progress_bar=True)
+        ds.apply(do_nothing, progress_bar='rich', num_proc=0)
+        ds.apply_field(do_nothing, field_name='x', progress_bar='rich')
 
     def test_apply_cannot_modify_instance(self):
         ds = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 40})

@@ -19,7 +19,7 @@ from fastNLP.core.drivers import Driver, TorchDriver
 from ..drivers.choose_driver import choose_driver
 from .loops import Loop, EvaluateBatchLoop
 from fastNLP.core.utils import auto_param_call, dataclass_to_dict, \
-    match_and_substitute_params, f_rich_progress, flat_nest_dict
+    match_and_substitute_params, f_rich_progress, flat_nest_dict, f_tqdm_progress
 from fastNLP.core.metrics import Metric
 from fastNLP.core.metrics.utils import _is_torchmetrics_metric, _is_paddle_metric, _is_allennlp_metric
 from fastNLP.core.controllers.utils.utils import _TruncatedDataLoader
@@ -166,8 +166,9 @@ class Evaluator:
             self.dataloaders[name] = dl
 
         self.progress_bar = kwargs.get('progress_bar', 'auto')
+        assert self.progress_bar in [None, 'rich', 'auto', 'tqdm', 'raw']
         if self.progress_bar == 'auto':
-            self.progress_bar = 'raw' if f_rich_progress.dummy_rich else 'rich'
+            self.progress_bar = 'raw' if f_rich_progress.dummy else 'rich'
 
         self.driver.barrier()
 
@@ -226,12 +227,15 @@ class Evaluator:
         return metric_results
 
     def start_progress_bar(self, total: int, dataloader_name):
-        if self.progress_bar == 'rich':
+        if self.progress_bar in ('rich', 'tqdm'):
             if dataloader_name is None:
-                desc = f'Eval. Batch:0'
+                desc = f'Eval. Batch'
             else:
-                desc = f'Eval. on {dataloader_name} Batch:0'
-            self._rich_task_id = f_rich_progress.add_task(description=desc, total=total)
+                desc = f'Eval. on {dataloader_name} Batch'
+            if self.progress_bar == 'rich':
+                self._task_id = f_rich_progress.add_task(description=desc, total=total)
+            else:
+                self._task_id = f_tqdm_progress.add_task(description=desc, total=total)
         elif self.progress_bar == 'raw':
             desc = 'Evaluation starts'
             if dataloader_name is not None:
@@ -244,19 +248,26 @@ class Evaluator:
         else:
             desc = f'Eval. on {dataloader_name} Batch:{batch_idx}'
         if self.progress_bar == 'rich':
-            assert hasattr(self, '_rich_task_id'), "You must first call `start_progress_bar()` before calling " \
+            assert hasattr(self, '_task_id'), "You must first call `start_progress_bar()` before calling " \
                                                    "update_progress_bar()"
-            f_rich_progress.update(self._rich_task_id, description=desc, post_desc=kwargs.get('post_desc', ''),
+            f_rich_progress.update(self._task_id, description=desc, post_desc=kwargs.get('post_desc', ''),
                                    advance=kwargs.get('advance', 1), refresh=kwargs.get('refresh', True),
                                    visible=kwargs.get('visible', True))
         elif self.progress_bar == 'raw':
             if self.verbose > 1:
                 logger.info(desc)
+        elif self.progress_bar == 'tqdm':
+            f_tqdm_progress.update(self._task_id, advance=1)
 
     def remove_progress_bar(self, dataloader_name):
-        if self.progress_bar == 'rich' and hasattr(self, '_rich_task_id'):
-            f_rich_progress.destroy_task(self._rich_task_id)
-            delattr(self, '_rich_task_id')
+        if self.progress_bar == 'rich' and hasattr(self, '_task_id'):
+            f_rich_progress.destroy_task(self._task_id)
+            delattr(self, '_task_id')
+
+        elif self.progress_bar == 'tqdm' and hasattr(self, '_task_id'):
+            f_tqdm_progress.destroy_task(self._task_id)
+            delattr(self, '_task_id')
+
         elif self.progress_bar == 'raw':
             desc = 'Evaluation ends'
             if dataloader_name is not None:
@@ -264,9 +275,12 @@ class Evaluator:
             logger.info("*" * 10 + desc + '*' * 10 + '\n')
 
     def finally_progress_bar(self):
-        if self.progress_bar == 'rich' and hasattr(self, '_rich_task_id'):
-            f_rich_progress.destroy_task(self._rich_task_id)
-            delattr(self, '_rich_task_id')
+        if self.progress_bar == 'rich' and hasattr(self, '_task_id'):
+            f_rich_progress.destroy_task(self._task_id)
+            delattr(self, '_task_id')
+        elif self.progress_bar == 'tqdm' and hasattr(self, '_task_id'):
+            f_tqdm_progress.destroy_task(self._task_id)
+            delattr(self, '_task_id')
 
     @property
     def evaluate_batch_loop(self):

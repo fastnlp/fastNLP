@@ -19,8 +19,15 @@ from .field import FieldArray
 from .instance import Instance
 from fastNLP.core.utils.utils import pretty_table_printer, deprecated
 from fastNLP.core.collators import Collator
-from fastNLP.core.utils.rich_progress import f_rich_progress
+from fastNLP.core.utils.rich_progress import f_rich_progress, DummyFRichProgress
+from fastNLP.core.utils.tqdm_progress import f_tqdm_progress
 from ..log import logger
+
+
+progress_bars = {
+    'rich': f_rich_progress,
+    'tqdm': f_tqdm_progress
+}
 
 
 class ApplyResultException(Exception):
@@ -30,7 +37,7 @@ class ApplyResultException(Exception):
         self.index = index  # 标示在哪个数据遭遇到问题了
 
 
-def _apply_single(ds=None, _apply_field=None, func: Optional[Callable] = None, show_progress_bar: bool = True,
+def _apply_single(ds=None, _apply_field=None, func: Optional[Callable] = None, progress_bar: str = 'rich',
                   desc: str = None) -> list:
     """
     对数据集进行处理封装函数，以便多进程使用
@@ -39,32 +46,29 @@ def _apply_single(ds=None, _apply_field=None, func: Optional[Callable] = None, s
     :param _apply_field: 需要处理数据集的field_name
     :param func: 用户自定义的func
     :param desc: 进度条的描述字符
-    :param show_progress_bar: 是否展示子进程进度条
+    :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
     :return:
     """
-    if show_progress_bar:
-        desc = desc if desc else f"Main"
-        pg_main = f_rich_progress.add_task(description=desc, total=len(ds), visible=show_progress_bar)
+    progress_bar = progress_bars.get(progress_bar, DummyFRichProgress())
+    desc = desc if desc else "Processing"
+    task_id = progress_bar.add_task(description=desc, total=len(ds))
     results = []
     idx = -1
 
     try:
-        # for idx, ins in tqdm(enumerate(ds), total=len(ds), position=0, desc=desc, disable=not show_progress_bar):
         for idx, ins in enumerate(ds):
             if _apply_field is not None:
                 results.append(func(ins[_apply_field]))
             else:
                 results.append(func(ins))
-            if show_progress_bar:
-                f_rich_progress.update(pg_main, advance=1)
+            progress_bar.update(task_id, advance=1)
 
     except BaseException as e:
         if idx != -1:
             logger.error("Exception happens at the `{}`th instance.".format(idx))
         raise e
     finally:
-        if show_progress_bar:
-            f_rich_progress.destroy_task(pg_main)
+        progress_bar.destroy_task(task_id)
     return results
 
 
@@ -398,7 +402,7 @@ class DataSet:
 
     def apply_field(self, func: Callable, field_name: str = None,
                     new_field_name: str = None, num_proc: int = 0,
-                    progress_desc: str = None, show_progress_bar: bool = True):
+                    progress_desc: str = None, progress_bar: str = 'rich'):
         r"""
         将 :class:`~DataSet` 每个 ``instance`` 中为 ``field_name`` 的 ``field`` 传给函数 ``func``，并写入到 ``new_field_name``
         中。
@@ -413,8 +417,8 @@ class DataSet:
             
                 由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。
 
-        :param progress_desc: 进度条的描述字符，默认为 ``Main``；
-        :param show_progress_bar: 是否在处理过程中展示进度条；
+        :param progress_desc: 进度条的描述字符，默认为 ``Processing``；
+        :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :return: 从函数 ``func`` 中得到的返回值；
         """
         assert len(self) != 0, "Null DataSet cannot use apply_field()."
@@ -422,7 +426,7 @@ class DataSet:
             raise KeyError("DataSet has no field named `{}`.".format(field_name))
 
         try:
-            results = self._apply_process(num_proc=num_proc, func=func, show_progress_bar=show_progress_bar,
+            results = self._apply_process(num_proc=num_proc, func=func, progress_bar=progress_bar,
                                           progress_desc=progress_desc, _apply_field=field_name)
         except BaseException as e:
             raise e
@@ -433,7 +437,7 @@ class DataSet:
 
     def apply_field_more(self, func: Callable = None, field_name: str = None,
                          modify_fields: bool = True, num_proc: int = 0,
-                         progress_desc: str = None, show_progress_bar: bool = True):
+                         progress_desc: str = None, progress_bar: str = 'rich'):
         r"""
         将 ``DataSet`` 中的每个 ``Instance`` 中的名为 `field_name` 的field 传给 func，并获取它的返回值。
         func 可以返回一个或多个 field 上的结果。
@@ -446,8 +450,8 @@ class DataSet:
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param modify_fields: 是否用结果修改 `DataSet` 中的 `Field`， 默认为 True
         :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
-        :param show_progress_bar: 是否显示进度条，默认展示
-        :param progress_desc: 当show_progress_bar为True时，可以显示当前正在处理的进度条描述字符
+    	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
+        :param progress_desc: 当显示 progress_bar 时，显示当前正在处理的进度条描述字符
         :return Dict[str:Field]: 返回一个字典
         """
         assert len(self) != 0, "Null DataSet cannot use apply_field()."
@@ -456,7 +460,7 @@ class DataSet:
         idx = -1
         results = {}
         apply_out = self._apply_process(num_proc, func, progress_desc=progress_desc,
-                                        show_progress_bar=show_progress_bar, _apply_field=field_name)
+                                        progress_bar=progress_bar, _apply_field=field_name)
         #   只检测第一个数据是否为dict类型，若是则默认所有返回值为dict；否则报错。
         if not isinstance(apply_out[0], Mapping):
             raise Exception(f"The result of func is not a Mapping, but a {type(apply_out[0])}")
@@ -483,13 +487,13 @@ class DataSet:
         return results
 
     def _apply_process(self, num_proc: int = 0, func: Callable = None,
-                       show_progress_bar: bool = True, _apply_field: str = None,
+                       progress_bar: str = 'rich', _apply_field: str = None,
                        progress_desc: str = 'Main') -> list:
         """
         :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
         :param func: 用户自定义处理函数，参数是 ``DataSet`` 中的 ``Instance``
         :param _apply_field: 需要传进去func的数据集的field_name
-        :param show_progress_bar: 是否展示progress进度条，默认为展示
+        :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :param progress_desc: 进度条的描述字符，默认为'Main
         """
         if isinstance(func, LambdaType) and num_proc>1 and func.__name__ == "<lambda>":
@@ -499,7 +503,7 @@ class DataSet:
 
         if num_proc < 2:
             results = _apply_single(ds=self, _apply_field=_apply_field, func=func,
-                                    desc=progress_desc, show_progress_bar=show_progress_bar)
+                                    desc=progress_desc, progress_bar=progress_bar)
         else:
             # TODO 1. desc这个需要修改一下，应该把 subprocess 的 desc 修改一下。修改成Process 1 / Process 2
             import multiprocessing as mp
@@ -525,25 +529,25 @@ class DataSet:
                 proc.start()
                 pool.append(proc)
                 queues.append(queue)
-
+            progress_bar = progress_bars.get(progress_bar, DummyFRichProgress())
             total_len = len(self)
-            task_id = f_rich_progress.add_task(description=progress_desc, total=total_len, visible=show_progress_bar)
+            task_id = progress_bar.add_task(description=progress_desc, total=total_len)
             last_count = -1
             while counter.value < total_len or last_count == -1:
                 while counter.value == last_count:
                     time.sleep(0.1)
                 advance = counter.value - last_count
                 last_count = counter.value
-                f_rich_progress.update(task_id, advance=advance, refresh=True)
+                progress_bar.update(task_id, advance=advance, refresh=True)
 
             for idx, proc in enumerate(pool):
                 results.extend(pickle.loads(queues[idx].get()))
                 proc.join()
-            f_rich_progress.destroy_task(task_id)
+            progress_bar.destroy_task(task_id)
         return results
 
     def apply_more(self, func: Callable = None, modify_fields: bool = True,
-                   num_proc: int = 0, progress_desc: str = '', show_progress_bar: bool = True):
+                   num_proc: int = 0, progress_desc: str = '', progress_bar: str = 'rich'):
         r"""
         将 ``DataSet`` 中每个 ``Instance`` 传入到func中，并获取它的返回值。func可以返回一个或多个 field 上的结果。
 
@@ -558,9 +562,9 @@ class DataSet:
 
         :param modify_fields: 是否用结果修改 ``DataSet`` 中的 ``Field`` ， 默认为 True
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
-        :param num_proc: 进程的数量
         :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
-        :param progress_desc: 当show_progress_bar为True时，可以显示当前正在处理的进度条名称
+        :param progress_desc: 当 progress_bar 不为 None 时，可以显示当前正在处理的进度条名称
+        :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :return Dict[str:Field]: 返回一个字典
         """
         assert callable(func), "The func is not callable."
@@ -570,7 +574,7 @@ class DataSet:
 
         results = {}
         apply_out = self._apply_process(num_proc, func, progress_desc=progress_desc,
-                                        show_progress_bar=show_progress_bar)
+                                        progress_bar=progress_bar)
         #   只检测第一个数据是否为dict类型，若是则默认所有返回值为dict；否则报错。
         if not isinstance(apply_out[0], dict):
             raise Exception("The result of func is not a dict")
@@ -597,21 +601,21 @@ class DataSet:
         return results
 
     def apply(self, func: Callable = None, new_field_name: str = None,
-              num_proc: int = 0, show_progress_bar: bool = True, progress_desc: str = ''):
+              num_proc: int = 0, progress_bar: str = 'rich', progress_desc: str = ''):
         """
 
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param new_field_name: 将func返回的内容放入到 `new_field_name` 这个field中，如果名称与已有的field相同，则覆
             盖之前的field。如果为None则不创建新的field。
         :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
-        :param show_progress_bar: 是否显示进度条。
+        :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :param progress_desc: progress bar 显示的值，默认为空。
         """
         assert callable(func), "The func you provide is not callable."
         assert len(self) != 0, "Null DataSet cannot use apply()."
         assert num_proc >= 0, "num_proc must be an integer >= 0."
         try:
-            results = self._apply_process(num_proc=num_proc, func=func, show_progress_bar=show_progress_bar,
+            results = self._apply_process(num_proc=num_proc, func=func, progress_bar=progress_bar,
                                           progress_desc=progress_desc)
         except BaseException as e:
             raise e

@@ -35,7 +35,7 @@ class DummyFRichProgress:
         return None
 
     @property
-    def dummy_rich(self)->bool:
+    def dummy(self)->bool:
         """
         当前对象是否是 dummy 的 rich 对象。
 
@@ -122,6 +122,9 @@ class FRichProgress(Progress, metaclass=Singleton):
             visible: bool = True,
             **fields: Any,
     ) -> TaskID:
+        from .tqdm_progress import f_tqdm_progress
+        assert not f_tqdm_progress.not_empty(), "Cannot use rich before tqdm finish loop."
+
         if self.live._started is False:
             self.start()
         post_desc = fields.pop('post_desc', '')
@@ -213,13 +216,16 @@ class FRichProgress(Progress, metaclass=Singleton):
             self.refresh()
 
     @property
-    def dummy_rich(self) -> bool:
+    def dummy(self) -> bool:
         """
         当前对象是否是 dummy 的 rich 对象。
 
         :return:
         """
         return False
+
+    def not_empty(self):
+        return len(self._tasks) != 0
 
 
 class SpeedColumn(ProgressColumn):

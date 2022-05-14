@@ -340,7 +340,7 @@ class Vocabulary(object):
                 try:
                     for f_n, n_f_n in zip(field_name, new_field_name):
                         dataset.apply_field(index_instance, field_name=f_n, new_field_name=n_f_n,
-                                            show_progress_bar=False)
+                                            progress_bar=None)
                 except Exception as e:
                     logger.error("When processing the `{}` dataset, the following error occurred.".format(idx))
                     raise e
@@ -396,7 +396,7 @@ class Vocabulary(object):
         for idx, dataset in enumerate(datasets):
             if isinstance(dataset, DataSet):
                 try:
-                    dataset.apply(construct_vocab, show_progress_bar=False)
+                    dataset.apply(construct_vocab, progress_bar=None)
                 except BaseException as e:
                     logger.error("When processing the `{}` dataset, the following error occurred:".format(idx))
                     raise e
@@ -406,12 +406,12 @@ class Vocabulary(object):
         if no_create_entry_dataset is not None:
             partial_construct_vocab = partial(construct_vocab, no_create_entry=True)
             if isinstance(no_create_entry_dataset, DataSet):
-                no_create_entry_dataset.apply(partial_construct_vocab, show_progress_bar=False)
+                no_create_entry_dataset.apply(partial_construct_vocab, progress_bar=None)
             elif isinstance(no_create_entry_dataset, list):
                 for dataset in no_create_entry_dataset:
                     if not isinstance(dataset, DataSet):
                         raise TypeError("Only DataSet type is allowed.")
-                    dataset.apply(partial_construct_vocab, show_progress_bar=False)
+                    dataset.apply(partial_construct_vocab, progress_bar=None)
         return self
     
     def _is_word_no_create_entry(self, word:str):

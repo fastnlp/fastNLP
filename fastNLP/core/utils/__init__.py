@@ -22,7 +22,8 @@ __all__ = [
     'Option',
     'deprecated',
     'seq_len_to_mask',
-    "flat_nest_dict"
+    "flat_nest_dict",
+    "f_tqdm_progress"
 ]
 
 from .cache_results import cache_results
@@ -32,5 +33,6 @@ from .paddle_utils import paddle_to, paddle_move_data_to_device, get_paddle_devi
 from .rich_progress import f_rich_progress
 from .torch_utils import torch_move_data_to_device
 from .utils import *
+from .tqdm_progress import f_tqdm_progress
 
 

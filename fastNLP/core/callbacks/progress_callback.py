@@ -5,11 +5,14 @@ from typing import Union
 __all__ = [
     'choose_progress_callback',
     'ProgressCallback',
-    'RichCallback'
+    'RichCallback',
+    'TqdmCallback'
 ]
 
+from ...envs.imports import _module_available, _compare_version
+
 from .has_monitor_callback import HasMonitorCallback
-from fastNLP.core.utils import f_rich_progress
+from fastNLP.core.utils import f_rich_progress, f_tqdm_progress
 from fastNLP.core.log import logger
 
 
@@ -24,7 +27,7 @@ class ProgressCallback(HasMonitorCallback):
 
 def choose_progress_callback(progress_bar: Union[str, ProgressCallback]) -> ProgressCallback:
     if progress_bar == 'auto':
-        if not f_rich_progress.dummy_rich:
+        if not f_rich_progress.dummy:
             progress_bar = 'rich'
         else:
             progress_bar = 'raw'
@@ -32,6 +35,8 @@ def choose_progress_callback(progress_bar: Union[str, ProgressCallback]) -> Prog
         return RichCallback()
     elif progress_bar == 'raw':
         return RawTextCallback()
+    elif progress_bar == 'tqdm':
+        return TqdmCallback()
     elif isinstance(progress_bar, ProgressCallback):
         return progress_bar
     else:
@@ -82,7 +87,9 @@ class RichCallback(ProgressCallback):
         if 'batch' in self.task2id:
             self.progress_bar.reset(self.task2id['batch'], completed=trainer.batch_idx_in_epoch)
         else:
-            self.task2id['batch'] = self.progress_bar.add_task(description='Batch:0', total=trainer.num_batches_per_epoch)
+            self.task2id['batch'] = self.progress_bar.add_task(description='Batch:0',
+                                                               total=trainer.num_batches_per_epoch,
+                                                               completed=trainer.batch_idx_in_epoch)
 
     def on_train_epoch_end(self, trainer):
         self.progress_bar.update(self.task2id['epoch'], description=f'Epoch:{trainer.cur_epoch_idx}',
@@ -209,3 +216,94 @@ class RawTextCallback(ProgressCallback):
     @property
     def name(self):  # progress bar的名称
         return 'raw'
+
+
+class TqdmCallback(ProgressCallback):
+    """
+    在训练过程中打印 tqdm progress bar 的 callback 。在 Trainer 中，默认就会使用这个 callback 来显示进度。如果需要定制这个 Callback 的
+    参数，请通过实例化本 Callback 并传入到 Trainer 中实现。
+
+    :param print_every: 多少个 batch 更新一次显示。
+    :param loss_round_ndigit: 显示的 loss 保留多少位有效数字
+    :param monitor: 监控的 metric 值。当检测到这个key的结果更好时，会打印出不同的颜色进行提示。
+
+        * 为 ``None``
+         将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+        * 为 ``str``
+         尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+         使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+        * 为 ``Callable``
+         接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+         的 ``monitor`` 值请返回 ``None`` 。
+    :param larger_better: 是否是 monitor 的结果越大越好。
+    :param format_json: 是否格式化 json 再打印
+    """
+    def __init__(self, print_every:int = 1, loss_round_ndigit:int = 6, monitor:str=None, larger_better:bool=True,
+                 format_json=True):
+        super().__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=False)
+        self.print_every = print_every
+        self.progress_bar = f_tqdm_progress
+        self.task2id = {}
+        self.loss = 0
+        self.loss_round_ndigit = loss_round_ndigit
+        self.format_json = format_json
+        self.num_signs = 10
+
+    def on_train_begin(self, trainer):
+        self.task2id['epoch'] = self.progress_bar.add_task(description='Epoch:0', total=trainer.n_epochs,
+            bar_format='{desc}: {percentage:3.0f}%|{bar}| [{elapsed}<{remaining}, {rate_fmt}, {postfix}]',
+            initial=trainer.global_forward_batches/(trainer.total_batches+1e-6))
+
+    def on_train_epoch_begin(self, trainer):
+        self.epoch_bar_update_advance = self.print_every/(trainer.num_batches_per_epoch + 1e-6)
+        if 'batch' in self.task2id:
+            self.progress_bar.reset(self.task2id['batch'])
+        else:
+            self.task2id['batch'] = self.progress_bar.add_task(description='Batch', total=trainer.num_batches_per_epoch,
+                                                               initial=trainer.batch_idx_in_epoch)
+        self.progress_bar.set_description_str(self.task2id['epoch'], f'Epoch:{trainer.cur_epoch_idx}', refresh=True)
+
+    def on_train_end(self, trainer):
+        self.clear_tasks()
+
+    def on_before_backward(self, trainer, outputs):
+        loss = trainer.extract_loss_from_outputs(outputs)
+        loss = trainer.driver.tensor_to_numeric(loss, reduce='sum')
+        self.loss += loss
+
+    def on_train_batch_end(self, trainer):
+        if trainer.global_forward_batches % self.print_every == 0:
+            loss = self.loss/self.print_every
+            self.loss = 0
+            self.progress_bar.update(self.task2id['batch'], advance=self.print_every, refresh=True)
+            self.progress_bar.set_postfix_str(self.task2id['batch'], f'Loss:{round(loss, self.loss_round_ndigit)}')
+            self.progress_bar.update(self.task2id['epoch'], advance=self.epoch_bar_update_advance, refresh=True)
+
+    def on_evaluate_end(self, trainer, results):
+        if len(results)==0:
+            return
+        base_text = f'Eval. results on Epoch:{trainer.cur_epoch_idx}, Batch:{trainer.batch_idx_in_epoch}'
+        text = ''
+        if self.monitor is not None:
+            monitor_value = self.get_monitor_value(results)
+            if self.is_better_monitor_value(monitor_value, keep_if_better=True):
+                if abs(self.monitor_value) != float('inf'):
+                    text = '+'*self.num_signs + base_text + '+'*self.num_signs
+        if len(text) == 0:
+            text = '-'*self.num_signs + base_text + '-'*self.num_signs
+
+        logger.info(text)
+        if self.format_json:
+            logger.info(json.dumps(trainer.driver.tensor_to_numeric(results)))
+        else:
+            logger.info(results)
+
+    def clear_tasks(self):
+        for key, taskid in self.task2id.items():
+            self.progress_bar.destroy_task(taskid)
+        self.task2id = {}
+        self.loss = 0
+
+    @property
+    def name(self):  # progress bar的名称
+        return 'tqdm'

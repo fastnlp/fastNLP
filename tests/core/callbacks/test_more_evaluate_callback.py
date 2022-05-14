@@ -4,17 +4,12 @@
  (2) 能不能保存 topk 并load进来进行训练
 
 """
-import pytest
-
-
-
 import os
 import pytest
 from typing import Any
 from dataclasses import dataclass
 
 from pathlib import Path
-import re
 
 from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.envs import FASTNLP_LAUNCH_TIME, FASTNLP_DISTRIBUTED_CHECK
@@ -25,7 +20,6 @@ from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchArgMaxDataset
 from torchmetrics import Accuracy
 from fastNLP.core.metrics import Metric
-from fastNLP.core.log import logger
 from fastNLP.core.callbacks import MoreEvaluateCallback
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 if _NEED_IMPORT_TORCH:
