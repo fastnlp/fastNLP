@@ -6,6 +6,8 @@ __all__ = [
 from typing import Callable, Optional, List, Union
 from copy import deepcopy
 
+import numpy as np
+
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
 
 if _NEED_IMPORT_JITTOR:
@@ -30,6 +32,8 @@ class _JittorDataset(Dataset):
         self.total_len = len(dataset)
 
     def __getitem__(self, item):
+        if isinstance(item, np.integer):
+            item = item.tolist()
         return (item, self.dataset[item])
 
 
