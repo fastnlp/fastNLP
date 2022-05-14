@@ -109,6 +109,9 @@ def _get_backend():
         if len(available_backends) == 1:
             backend = available_backends.pop()
             logger.debug(f"Get Dataloader backend:{backend} from sys.modules.")
+        elif len(available_backends) > 1:
+            raise RuntimeError("Fail to detect dataloader backend automatically, because multiple backends:"
+                                f"{available_backends} has been imported.")
         else:
             raise RuntimeError("Fail to detect dataloader backend automatically, please set it manually.")
     return backend

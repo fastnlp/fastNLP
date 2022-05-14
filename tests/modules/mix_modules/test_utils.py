@@ -56,13 +56,13 @@ class TestPaddle2Torch:
         res = paddle2torch(paddle_tensor)
         self.check_torch_tensor(res, "cpu", not paddle_tensor.stop_gradient)
 
-        res = paddle2torch(paddle_tensor, target_device="cuda:2", no_gradient=None)
+        res = paddle2torch(paddle_tensor, device="cuda:2", no_gradient=None)
         self.check_torch_tensor(res, "cuda:2", not paddle_tensor.stop_gradient)
 
-        res = paddle2torch(paddle_tensor, target_device="cuda:1", no_gradient=True)
+        res = paddle2torch(paddle_tensor, device="cuda:1", no_gradient=True)
         self.check_torch_tensor(res, "cuda:1", False)
 
-        res = paddle2torch(paddle_tensor, target_device="cuda:1", no_gradient=False)
+        res = paddle2torch(paddle_tensor, device="cuda:1", no_gradient=False)
         self.check_torch_tensor(res, "cuda:1", True)
 
     def test_list_transfer(self):
@@ -76,7 +76,7 @@ class TestPaddle2Torch:
         for t in res:
             self.check_torch_tensor(t, "cuda:1", False)
 
-        res = paddle2torch(paddle_list, target_device="cpu", no_gradient=False)
+        res = paddle2torch(paddle_list, device="cpu", no_gradient=False)
         assert isinstance(res, list)
         for t in res:
             self.check_torch_tensor(t, "cpu", True)
@@ -176,13 +176,13 @@ class TestTorch2Paddle:
         res = torch2paddle(torch_tensor)
         self.check_paddle_tensor(res, "cpu", True)
 
-        res = torch2paddle(torch_tensor, target_device="gpu:2", no_gradient=None)
+        res = torch2paddle(torch_tensor, device="gpu:2", no_gradient=None)
         self.check_paddle_tensor(res, "gpu:2", True)
 
-        res = torch2paddle(torch_tensor, target_device="gpu:2", no_gradient=True)
+        res = torch2paddle(torch_tensor, device="gpu:2", no_gradient=True)
         self.check_paddle_tensor(res, "gpu:2", True)
 
-        res = torch2paddle(torch_tensor, target_device="gpu:2", no_gradient=False)
+        res = torch2paddle(torch_tensor, device="gpu:2", no_gradient=False)
         self.check_paddle_tensor(res, "gpu:2", False)
 
     def test_tensor_list_transfer(self):
@@ -196,7 +196,7 @@ class TestTorch2Paddle:
         for t in res:
             self.check_paddle_tensor(t, "cpu", True)
 
-        res = torch2paddle(torch_list, target_device="gpu:1", no_gradient=False)
+        res = torch2paddle(torch_list, device="gpu:1", no_gradient=False)
         assert isinstance(res, list)
         for t in res:
             self.check_paddle_tensor(t, "gpu:1", False)
@@ -208,7 +208,7 @@ class TestTorch2Paddle:
         
         torch_list = [torch.rand(6, 4, 2) for i in range(10)]
         torch_tuple = tuple(torch_list)
-        res = torch2paddle(torch_tuple, target_device="cpu")
+        res = torch2paddle(torch_tuple, device="cpu")
         assert isinstance(res, tuple)
         for t in res:
             self.check_paddle_tensor(t, "cpu", True)
@@ -249,6 +249,7 @@ class TestTorch2Paddle:
 #
 ############################################################################
 
+@pytest.mark.torchjittor
 class TestJittor2Torch:
 
     def check_torch_tensor(self, tensor, device, requires_grad):
@@ -272,13 +273,13 @@ class TestJittor2Torch:
         res = jittor2torch(jittor_var)
         self.check_torch_tensor(res, "cpu", True)
 
-        res = jittor2torch(jittor_var, target_device="cuda:2", no_gradient=None)
+        res = jittor2torch(jittor_var, device="cuda:2", no_gradient=None)
         self.check_torch_tensor(res, "cuda:2", True)
 
-        res = jittor2torch(jittor_var, target_device="cuda:2", no_gradient=True)
+        res = jittor2torch(jittor_var, device="cuda:2", no_gradient=True)
         self.check_torch_tensor(res, "cuda:2", False)
 
-        res = jittor2torch(jittor_var, target_device="cuda:2", no_gradient=False)
+        res = jittor2torch(jittor_var, device="cuda:2", no_gradient=False)
         self.check_torch_tensor(res, "cuda:2", True)
 
     def test_var_list_transfer(self):
@@ -292,7 +293,7 @@ class TestJittor2Torch:
         for t in res:
             self.check_torch_tensor(t, "cpu", True)
 
-        res = jittor2torch(jittor_list, target_device="cuda:1", no_gradient=False)
+        res = jittor2torch(jittor_list, device="cuda:1", no_gradient=False)
         assert isinstance(res, list)
         for t in res:
             self.check_torch_tensor(t, "cuda:1", True)
@@ -304,7 +305,7 @@ class TestJittor2Torch:
 
         jittor_list = [jittor.rand((6, 4, 2)) for i in range(10)]
         jittor_tuple = tuple(jittor_list)
-        res = jittor2torch(jittor_tuple, target_device="cpu")
+        res = jittor2torch(jittor_tuple, device="cpu")
         assert isinstance(res, tuple)
         for t in res:
             self.check_torch_tensor(t, "cpu", True)
@@ -345,6 +346,7 @@ class TestJittor2Torch:
 #
 ############################################################################
 
+@pytest.mark.torchjittor
 class TestTorch2Jittor:
 
     def check_jittor_var(self, var, requires_grad):

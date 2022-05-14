@@ -497,7 +497,7 @@ class DataSet:
         :param progress_desc: 进度条的描述字符，默认为'Main
         """
         if isinstance(func, LambdaType) and num_proc>1 and func.__name__ == "<lambda>":
-            raise ("Lambda function does not support multiple processes, please set `num_proc=0`.")
+            raise TypeError("Lambda function does not support multiple processes, please set `num_proc=0`.")
         if num_proc>1 and sys.platform in ('win32', 'msys', 'cygwin'):
             raise RuntimeError("Your platform does not support multiprocessing with fork, please set `num_proc=0`")
 

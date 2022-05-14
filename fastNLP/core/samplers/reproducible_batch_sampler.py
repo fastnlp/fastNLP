@@ -6,7 +6,7 @@ __all__ = [
 
 import math
 from copy import deepcopy
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Sequence
 from itertools import chain
 
 import numpy as np
@@ -390,17 +390,20 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
             length = dataset.get_field(length).content
             if not isinstance(length[0], int):
                 length = list(map(len, length))
+            self.length = np.array(length, dtype=int)
+            self.sorted_indices = np.argsort(self.length)[::-1]  # 按长度从高到低排序的
         else:
-            types = set(map(type, length))
-            assert isinstance(length, list) and len(types)==1 and types.pop()==int, \
-                "When the dataset is not fastNLP.DataSet, the length parameter can only be List[int]"
+            try:
+                self.length = np.array(length, dtype=int)
+                self.sorted_indices = np.argsort(length)[::-1]
+            except BaseException as e:
+                logger.error(f"Cannot use {self.__class__.__name__} as length, since it is not sortable.")
 
         assert len(length) == len(dataset), f"The length of `dataset`({len(dataset)}) and " \
                                             f"`length`({len(length)}) should be equal."
+        assert len(self.sorted_indices) == len(dataset), "The indices and dataset should have equal length."
 
         self.dataset = dataset
-        self.length = np.array(length, dtype=int)  # 按照长到短排列的序号。
-        self.sorted_indices = np.argsort(self.length)[::-1]  # 按长度从高到低排序的
 
         self.batch_size = batch_size
         self.num_batch_per_bucket = num_batch_per_bucket

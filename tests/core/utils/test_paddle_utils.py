@@ -87,16 +87,10 @@ class TestPaddleMoveDataToDevice:
         """
 
         paddle_tensor = paddle.rand((3, 4, 5)).cpu()
-        res = paddle_move_data_to_device(paddle_tensor, device=None, data_device=None)
+        res = paddle_move_data_to_device(paddle_tensor, device=None)
         self.check_cpu(res)
 
-        res = paddle_move_data_to_device(paddle_tensor, device="gpu:0", data_device=None)
-        self.check_gpu(res, 0)
-
-        res = paddle_move_data_to_device(paddle_tensor, device="gpu:0", data_device="cpu")
-        self.check_gpu(res, 0)
-
-        res = paddle_move_data_to_device(paddle_tensor, device=None, data_device="gpu:0")
+        res = paddle_move_data_to_device(paddle_tensor, device="gpu:0")
         self.check_gpu(res, 0)
 
     def test_list_transfer(self):
@@ -106,12 +100,12 @@ class TestPaddleMoveDataToDevice:
 
         paddle_list = [paddle.rand((6, 4, 2)) for i in range(10)]
 
-        res = paddle_move_data_to_device(paddle_list, device="cpu", data_device="gpu:1")
+        res = paddle_move_data_to_device(paddle_list, device="cpu")
         assert isinstance(res, list)
         for r in res:
             self.check_cpu(r)
 
-        res = paddle_move_data_to_device(paddle_list, device="gpu:0", data_device=None)
+        res = paddle_move_data_to_device(paddle_list, device="gpu:0")
         assert isinstance(res, list)
         for r in res:
             self.check_gpu(r, 0)
@@ -124,12 +118,12 @@ class TestPaddleMoveDataToDevice:
         paddle_list = [paddle.rand((6, 4, 2)) for i in range(10)]
         paddle_tuple = tuple(paddle_list)
 
-        res = paddle_move_data_to_device(paddle_tuple, device="cpu", data_device="gpu:1")
+        res = paddle_move_data_to_device(paddle_tuple, device="cpu")
         assert isinstance(res, tuple)
         for r in res:
             self.check_cpu(r)
 
-        res = paddle_move_data_to_device(paddle_tuple, device="gpu:0", data_device=None)
+        res = paddle_move_data_to_device(paddle_tuple, device="gpu:0")
         assert isinstance(res, tuple)
         for r in res:
             self.check_gpu(r, 0)
@@ -150,7 +144,7 @@ class TestPaddleMoveDataToDevice:
             "string": "test string"
         }
 
-        res = paddle_move_data_to_device(paddle_dict, device="gpu:0", data_device=None)
+        res = paddle_move_data_to_device(paddle_dict, device="gpu:0")
         assert isinstance(res, dict)
         self.check_gpu(res["tensor"], 0)
         assert isinstance(res["list"], list)
@@ -164,7 +158,7 @@ class TestPaddleMoveDataToDevice:
             self.check_gpu(t, 0)
         self.check_gpu(res["dict"]["tensor"], 0)
 
-        res = paddle_move_data_to_device(paddle_dict, device="gpu:0", data_device="cpu")
+        res = paddle_move_data_to_device(paddle_dict, device="gpu:0")
         assert isinstance(res, dict)
         self.check_gpu(res["tensor"], 0)
         assert isinstance(res["list"], list)
@@ -178,7 +172,7 @@ class TestPaddleMoveDataToDevice:
             self.check_gpu(t, 0)
         self.check_gpu(res["dict"]["tensor"], 0)
 
-        res = paddle_move_data_to_device(paddle_dict, device="cpu", data_device="gpu:0")
+        res = paddle_move_data_to_device(paddle_dict, device="cpu")
         assert isinstance(res, dict)
         self.check_cpu(res["tensor"])
         assert isinstance(res["list"], list)

@@ -618,9 +618,9 @@ class Trainer(TrainerEventTrigger):
             if not catch_KeyboardInterrupt:
                 raise e
         except RuntimeError as e:
-            if 'torch' in self.driver_name.lower():  # 如果是 torch ，需要检测一下 find_unused_parameters
+            if 'torch' in self.driver_name.lower() and len(e.args) > 0:  # 如果是 torch ，需要检测一下 find_unused_parameters
                 if 'find_unused_parameters' in e.args[0]:
-                    logger.error("You may need to pass `torch_ddp_kwargs={'find_unused_parameters': True}` in the "
+                    logger.error("You may need to pass `torch_kwargs={'ddp_kwargs':{'find_unused_parameters': True}}` in the "
                                  "Trainer initialization to avoid this error.")
             self.driver.on_exception()
             self.on_exception(e)

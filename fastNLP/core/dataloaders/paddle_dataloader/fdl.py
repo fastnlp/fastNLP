@@ -249,7 +249,7 @@ class PaddleDataLoader(DataLoader):
 def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                               return_list: bool = True,
                               batch_sampler: Union["Sampler[Sequence[int]]", ReproducibleBatchSampler] = None,
-                              train_batch_size: int = 1, shuffle: bool = False,
+                              batch_size: int = 1, shuffle: bool = False,
                               drop_last: bool = False, collate_fn: Union[Callable, str, None] = 'auto',
                               num_workers: int = 0, use_buffer_reader: bool = True,
                               use_shared_memory: bool = True, timeout: int = 0,
@@ -259,7 +259,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
     from fastNLP.io.data_bundle import DataBundle
     if isinstance(ds_or_db, Dataset):
         dl = PaddleDataLoader(ds_or_db, feed_list=feed_list, places=places, return_list=return_list,
-                              batch_sampler=batch_sampler, batch_size=train_batch_size, shuffle=shuffle,
+                              batch_sampler=batch_sampler, batch_size=batch_size, shuffle=shuffle,
                               drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                               use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
                               timeout=timeout, worker_init_fn=worker_init_fn, persistent_workers=persistent_workers)
@@ -270,7 +270,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
             if 'train' in name:
                 dl_bundle[name] = PaddleDataLoader(ds, feed_list=feed_list, places=places,
                                                    return_list=return_list,
-                                                   batch_sampler=batch_sampler, batch_size=train_batch_size,
+                                                   batch_sampler=batch_sampler, batch_size=batch_size,
                                                    shuffle=shuffle,
                                                    drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                                    use_shared_memory=use_shared_memory,
@@ -292,7 +292,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         ds_seq = []
         for ds in ds_or_db:
             dl = PaddleDataLoader(ds, feed_list=feed_list, places=places, return_list=return_list,
-                                  batch_sampler=batch_sampler, batch_size=train_batch_size, shuffle=shuffle,
+                                  batch_sampler=batch_sampler, batch_size=batch_size, shuffle=shuffle,
                                   drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                   use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
                                   timeout=timeout, worker_init_fn=worker_init_fn, persistent_workers=persistent_workers)
@@ -304,7 +304,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         for name, ds in ds_or_db.items():
             if 'train' in name:
                 dl = PaddleDataLoader(ds, feed_list=feed_list, places=places, return_list=return_list,
-                                      batch_sampler=batch_sampler, batch_size=train_batch_size, shuffle=shuffle,
+                                      batch_sampler=batch_sampler, batch_size=batch_size, shuffle=shuffle,
                                       drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                       use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
                                       timeout=timeout, worker_init_fn=worker_init_fn,

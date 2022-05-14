@@ -205,6 +205,8 @@ class TopkSaver(ResultsMonitor, Saver):
     def __init__(self, topk:int=0, monitor:str=None, larger_better:bool=True, folder:str=None, save_object:str='model',
                  only_state_dict:bool=True, model_save_fn:Callable=None, save_evaluate_results:bool=True,
                  **kwargs):
+        if topk is None:
+            topk = 0
         ResultsMonitor.__init__(self, monitor, larger_better)
         Saver.__init__(self, folder, save_object, only_state_dict, model_save_fn, **kwargs)
 

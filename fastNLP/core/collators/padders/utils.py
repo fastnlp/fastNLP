@@ -32,7 +32,11 @@ def get_shape(batch_field:List, shape=None):
             if isinstance(batch_field[0], Sequence):
                 for _field in batch_field:
                     shapes.append(get_shape(_field, _shape))
-                max_shape = [max(_) for _ in zip(*shapes)]
+                if len(shapes) == 1:
+                    max_shape = shapes[0]
+                else:
+                    max_shape = [max(_) for _ in zip(*shapes)]
+
                 return max_shape
         except IndexError:  # 空的shape
             pass

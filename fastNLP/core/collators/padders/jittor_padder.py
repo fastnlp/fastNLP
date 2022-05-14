@@ -134,7 +134,11 @@ class JittorTensorPadder(Padder):
                                f"it must have tolist() method.")
 
         shapes = [field.shape for field in batch_field]
-        max_shape = [len(batch_field)] + [max(*_) for _ in zip(*shapes)]
+        if len(batch_field) < 2:
+            max_shape = [len(batch_field)] + list(shapes[0])
+        else:
+            max_shape = [len(batch_field)] + [max(*_) for _ in zip(*shapes)]
+
         # if dtype is not None:
         #     tensor = jittor.full(max_shape, pad_val, dtype=dtype)
         # else:
