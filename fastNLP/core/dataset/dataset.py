@@ -404,7 +404,7 @@ class DataSet:
                     new_field_name: str = None, num_proc: int = 0,
                     progress_desc: str = None, progress_bar: str = 'rich'):
         r"""
-        将 :class:`~DataSet` 每个 ``instance`` 中为 ``field_name`` 的 ``field`` 传给函数 ``func``，并写入到 ``new_field_name``
+        将 :class:`DataSet` 每个 ``instance`` 中为 ``field_name`` 的 ``field`` 传给函数 ``func``，并写入到 ``new_field_name``
         中。
 
         :param field_name: 传入 ``func`` 的 ``field`` 名称；

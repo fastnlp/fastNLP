@@ -428,7 +428,7 @@ def sub_column(string: str, c: int, c_size: int, title: str) -> str:
 
     :param string: 要被截断的字符串；
     :param c: 命令行列数；
-    :param c_size: :class:`~fastNLP.core.Instance` 或 :class:`fastNLP.core.DataSet` 的 ``field`` 数目；
+    :param c_size: :class:`~fastNLP.core.Instance` 或 :class:`~fastNLP.core.DataSet` 的 ``field`` 数目；
     :param title: 列名；
     :return: 对一个过长的列进行截断的结果；
     """

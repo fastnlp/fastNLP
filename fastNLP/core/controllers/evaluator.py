@@ -40,7 +40,7 @@ class Evaluator:
     :param dataloaders: 用于评测的数据集。如果为多个，您需要使用 ``dict`` 传入，即对每一个数据集标上用于标识它们的标签；
     :param metrics: 评测时使用的指标。注意该参数必须为 ``dict`` 类型，其中 ``key`` 为一个 ``metric`` 的名称，``value`` 为具体的 ``Metric`` 对象。目前支持以下 metrics：
 
-        1. fastNLP 自己的 ``metric``：详见 :class:`fastNLP.core.metrics.Metric`；
+        1. fastNLP 自己的 ``metric``：详见 :class:`~fastNLP.core.metrics.Metric`；
         2. torchmetrics；
         3. allennlp.training.metrics；
         4. paddle.metric；
