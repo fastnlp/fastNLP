@@ -28,10 +28,10 @@ if _NEED_IMPORT_TORCH:
 class ArgMaxDatasetConfig:
     num_labels: int = 10
     feature_dimension: int = 10
-    data_num: int = 100
+    data_num: int = 50
     seed: int = 0
 
-    batch_size: int = 4
+    batch_size: int = 2
     shuffle: bool = True
 
 
@@ -204,99 +204,100 @@ def test_model_checkpoint_callback_1(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("only_state_dict", [True, False])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @magic_argv_env_context(timeout=100)
 def test_model_checkpoint_callback_2(
         model_and_optimizers: TrainerParameters,
         driver,
-        device
+        device,
+        only_state_dict
 ):
-    for only_state_dict in [True, False]:
-        try:
-            path = Path.cwd().joinpath("test_model_checkpoint")
-            path.mkdir(exist_ok=True, parents=True)
+    try:
+        path = Path.cwd().joinpath("test_model_checkpoint")
+        path.mkdir(exist_ok=True, parents=True)
 
-            from fastNLP.core.callbacks.callback_event import Event
+        from fastNLP.core.callbacks.callback_event import Event
 
-            @Trainer.on(Event.on_train_epoch_end())
-            def raise_exception(trainer):
-                if trainer.driver.get_local_rank() == 0 and trainer.cur_epoch_idx == 4:
-                    raise NotImplementedError
+        @Trainer.on(Event.on_train_epoch_end())
+        def raise_exception(trainer):
+            if trainer.driver.get_local_rank() == 0 and trainer.cur_epoch_idx == 4:
+                raise NotImplementedError
 
-            callbacks = [
-                CheckpointCallback(folder=path, every_n_epochs=None, every_n_batches=None, last=False,
-                                   on_exceptions=NotImplementedError, topk=None, monitor=None, only_state_dict=only_state_dict,
-                                   save_object='model'),
-            ]
+        callbacks = [
+            CheckpointCallback(folder=path, every_n_epochs=None, every_n_batches=None, last=False,
+                               on_exceptions=NotImplementedError, topk=None, monitor=None, only_state_dict=only_state_dict,
+                               save_object='model'),
+        ]
 
-            with pytest.raises(NotImplementedError):
-                trainer = Trainer(
-                    model=model_and_optimizers.model,
-                    driver=driver,
-                    device=device,
-                    optimizers=model_and_optimizers.optimizers,
-                    train_dataloader=model_and_optimizers.train_dataloader,
-                    evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
-                    input_mapping=model_and_optimizers.input_mapping,
-                    output_mapping=model_and_optimizers.output_mapping,
-                    metrics=model_and_optimizers.metrics,
+        with pytest.raises(NotImplementedError):
+            trainer = Trainer(
+                model=model_and_optimizers.model,
+                driver=driver,
+                device=device,
+                optimizers=model_and_optimizers.optimizers,
+                train_dataloader=model_and_optimizers.train_dataloader,
+                evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+                input_mapping=model_and_optimizers.input_mapping,
+                output_mapping=model_and_optimizers.output_mapping,
+                metrics=model_and_optimizers.metrics,
 
-                    n_epochs=10,
-                    callbacks=callbacks,
-                    output_from_new_proc="all"
-                )
+                n_epochs=10,
+                callbacks=callbacks,
+                output_from_new_proc="all"
+            )
 
-                trainer.run()
+            trainer.run()
 
-            if dist.is_initialized():
-                dist.destroy_process_group()
-                if FASTNLP_DISTRIBUTED_CHECK in os.environ:
-                    os.environ.pop(FASTNLP_DISTRIBUTED_CHECK)
+        if dist.is_initialized():
+            dist.destroy_process_group()
+            if FASTNLP_DISTRIBUTED_CHECK in os.environ:
+                os.environ.pop(FASTNLP_DISTRIBUTED_CHECK)
 
-            # 检查生成保存模型文件的数量是不是正确的；
-            all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
+        # 检查生成保存模型文件的数量是不是正确的；
+        all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
 
-            if not isinstance(device, list):
-                assert "model-epoch_4-batch_100-exception_NotImplementedError" in all_saved_model_paths
-                exception_model_path = all_saved_model_paths["model-epoch_4-batch_100-exception_NotImplementedError"]
-            # ddp 下的文件名不同，因为同样的数据，ddp 用了更少的步数跑完；
-            else:
-                assert "model-epoch_4-batch_52-exception_NotImplementedError" in all_saved_model_paths
-                exception_model_path = all_saved_model_paths["model-epoch_4-batch_52-exception_NotImplementedError"]
+        if not isinstance(device, list):
+            assert "model-epoch_4-batch_100-exception_NotImplementedError" in all_saved_model_paths
+            exception_model_path = all_saved_model_paths["model-epoch_4-batch_100-exception_NotImplementedError"]
+        # ddp 下的文件名不同，因为同样的数据，ddp 用了更少的步数跑完；
+        else:
+            assert "model-epoch_4-batch_52-exception_NotImplementedError" in all_saved_model_paths
+            exception_model_path = all_saved_model_paths["model-epoch_4-batch_52-exception_NotImplementedError"]
 
-            assert len(all_saved_model_paths) == 1
-            all_state_dicts = [exception_model_path]
+        assert len(all_saved_model_paths) == 1
+        all_state_dicts = [exception_model_path]
 
-            for folder in all_state_dicts:
-                trainer = Trainer(
-                    model=model_and_optimizers.model,
-                    driver="torch",
-                    device=4,
-                    optimizers=model_and_optimizers.optimizers,
-                    train_dataloader=model_and_optimizers.train_dataloader,
-                    evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
-                    input_mapping=model_and_optimizers.input_mapping,
-                    output_mapping=model_and_optimizers.output_mapping,
-                    metrics=model_and_optimizers.metrics,
+        for folder in all_state_dicts:
+            trainer = Trainer(
+                model=model_and_optimizers.model,
+                driver="torch",
+                device=4,
+                optimizers=model_and_optimizers.optimizers,
+                train_dataloader=model_and_optimizers.train_dataloader,
+                evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+                input_mapping=model_and_optimizers.input_mapping,
+                output_mapping=model_and_optimizers.output_mapping,
+                metrics=model_and_optimizers.metrics,
 
-                    n_epochs=2,
-                    output_from_new_proc="all"
-                )
+                n_epochs=2,
+                output_from_new_proc="all"
+            )
 
-                trainer.load_model(folder, only_state_dict=only_state_dict)
-                trainer.run()
-                trainer.driver.barrier()
+            trainer.load_model(folder, only_state_dict=only_state_dict)
+            trainer.run()
+            trainer.driver.barrier()
 
-        finally:
-            rank_zero_rm(path)
-            # pass
+    finally:
+        rank_zero_rm(path)
+        # pass
 
     if dist.is_initialized():
         dist.destroy_process_group()
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1]), ("torch", 0)])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @magic_argv_env_context(timeout=100)
 def test_trainer_checkpoint_callback_1(
     model_and_optimizers: TrainerParameters,

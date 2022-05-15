@@ -425,6 +425,7 @@ class TorchDDPDriver(TorchDriver):
 
             os.environ[FASTNLP_DISTRIBUTED_CHECK] = f"{len(self.parallel_device)}"
             os.environ[FASTNLP_GLOBAL_RANK] = "0"
+            logger._set_distributed()
 
             interactive_ddp_procs = []
 

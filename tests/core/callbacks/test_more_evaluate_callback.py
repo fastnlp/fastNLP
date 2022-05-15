@@ -31,7 +31,7 @@ if _NEED_IMPORT_TORCH:
 class ArgMaxDatasetConfig:
     num_labels: int = 10
     feature_dimension: int = 10
-    data_num: int = 100
+    data_num: int = 20
     seed: int = 0
 
     batch_size: int = 4
@@ -92,7 +92,7 @@ def model_and_optimizers(request):
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @magic_argv_env_context
 def test_model_more_evaluate_callback_1(
         model_and_optimizers: TrainerParameters,
@@ -121,7 +121,7 @@ def test_model_more_evaluate_callback_1(
                                              folder=path, topk=1, topk_monitor='acc', only_state_dict=only_state_dict,
                                              save_object='model')
                     ]
-                n_epochs = 5
+                n_epochs = 3
                 trainer = Trainer(
                     model=model_and_optimizers.model,
                     driver=driver,
@@ -175,7 +175,7 @@ def test_model_more_evaluate_callback_1(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1]), ("torch", 0)])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @magic_argv_env_context
 def test_trainer_checkpoint_callback_1(
         model_and_optimizers: TrainerParameters,
@@ -204,7 +204,7 @@ def test_trainer_checkpoint_callback_1(
                                              folder=path, topk=1, topk_monitor='acc', only_state_dict=only_state_dict,
                                              save_object='trainer')
                     ]
-                n_epochs = 5
+                n_epochs = 2
                 trainer = Trainer(
                     model=model_and_optimizers.model,
                     driver=driver,
@@ -241,7 +241,7 @@ def test_trainer_checkpoint_callback_1(
                         input_mapping=model_and_optimizers.input_mapping,
                         output_mapping=model_and_optimizers.output_mapping,
                         metrics=model_and_optimizers.metrics,
-                        n_epochs=7,
+                        n_epochs=5,
                         output_from_new_proc="all",
                         evaluate_fn='train_step'
                     )

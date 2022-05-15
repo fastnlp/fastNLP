@@ -295,9 +295,9 @@ class Trainer(TrainerEventTrigger):
          log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
 
             注意该参数仅当使用分布式的 ``driver`` 时才有效，例如 ``TorchDDPDriver``；
-        * *progress_bar* -- 以哪种方式显示 progress ，目前支持[None, 'raw', 'rich', 'auto', 'tqdm'] 或者 RichCallback, RawTextCallback等对象，
-         默认为 auto , auto 表示如果检测到当前 terminal 为交互型则使用 RichCallback，否则使用 RawTextCallback 对象。如果
-         需要定制 progress bar 的参数，例如打印频率等，可以传入 RichCallback, RawTextCallback 等对象。
+        * *progress_bar* -- 以哪种方式显示 progress ，目前支持[None, 'raw', 'rich', 'auto', 'tqdm'] 或者 :class:`~.fastNLP.RichCallback`, :class:`~fastNLP.RawTextCallback`等对象，
+         默认为 auto , auto 表示如果检测到当前 terminal 为交互型则使用 :class:`~fastNLP.RichCallback`，否则使用 :class:`~fastNLP.RawTextCallback` 对象。如果
+         需要定制 progress bar 的参数，例如打印频率等，可以传入 :class:`~fastNLP.RichCallback`, :class:`~fastNLP.RawTextCallback` 等对象。
         * *train_input_mapping* -- 与 input_mapping 一致，但是只用于 ``Trainer`` 中。与 input_mapping 互斥。
         * *train_output_mapping* -- 与 output_mapping 一致，但是只用于 ``Trainer`` 中。与 output_mapping 互斥。
         * *evaluate_input_mapping* -- 与 input_mapping 一致，但是只用于 ``Evaluator`` 中。与 input_mapping 互斥。

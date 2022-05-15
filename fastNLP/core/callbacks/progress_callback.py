@@ -9,7 +9,6 @@ __all__ = [
     'TqdmCallback'
 ]
 
-from ...envs.imports import _module_available, _compare_version
 
 from .has_monitor_callback import HasMonitorCallback
 from fastNLP.core.utils import f_rich_progress, f_tqdm_progress

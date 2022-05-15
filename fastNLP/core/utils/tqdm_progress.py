@@ -83,7 +83,7 @@ class TqdmProgress(metaclass=Singleton):
         :return:
         """
         assert _module_available('tqdm') and _compare_version('tqdm', operator.ge, '4.57'), \
-            f"To use {self.__class__.__name__}, tqdm>=4.57 is needed."
+            f"To use tqdm, tqdm>=4.57 is needed."
 
         from .rich_progress import f_rich_progress
         assert not f_rich_progress.not_empty(), "Cannot use tqdm before rich finish loop."

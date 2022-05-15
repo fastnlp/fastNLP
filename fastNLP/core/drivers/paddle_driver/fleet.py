@@ -296,6 +296,7 @@ class PaddleFleetDriver(PaddleDriver):
         使用 FleetLauncher 拉起子进程
         """
         if self.local_rank == 0:
+            logger._set_distributed()
             # 是 rank0 的话，则拉起其它子进程
             launcher = FleetLauncher(self.parallel_device, self.output_from_new_proc)
             launcher.launch()
