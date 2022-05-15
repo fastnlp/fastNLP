@@ -289,7 +289,8 @@ class Trainer(TrainerEventTrigger):
 
         * *use_dist_sampler* -- 表示是否使用分布式的 ``sampler``。在多卡时，分布式 ``sampler`` 将自动决定每张卡上读取的 sample ，使得一个 epoch
          内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
-        * *evaluate_use_dist_sampler* -- 表示在 ``Evaluator`` 中在使用分布式的时候是否将 dataloader 的 ``sampler`` 替换为分布式的 ``sampler``；默认为 ``True``；
+        * *evaluate_use_dist_sampler* -- 表示在 ``Evaluator`` 中在使用分布式的时候是否将 dataloader 的 ``sampler`` 替换为分布式的 ``sampler``；
+         不传入该值时，该值与 ``use_dist_sampler`` 参数保持一致；
         * *output_from_new_proc* -- 应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
          ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
          log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
@@ -478,7 +479,7 @@ class Trainer(TrainerEventTrigger):
                                        driver=self.driver, evaluate_batch_step_fn=evaluate_batch_step_fn,
                                        evaluate_fn=evaluate_fn, input_mapping=evaluate_input_mapping,
                                        output_mapping=evaluate_output_mapping, fp16=fp16, verbose=0,
-                                       use_dist_sampler=kwargs.get("evaluate_use_dist_sampler", None),
+                                       use_dist_sampler=kwargs.get("evaluate_use_dist_sampler", use_dist_sampler),
                                        progress_bar=progress_bar)
 
         if train_fn is not None and not isinstance(train_fn, str):

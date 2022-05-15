@@ -146,7 +146,9 @@ class Evaluator:
 
         self.separator = kwargs.get('separator', '#')
         self.model_use_eval_mode = kwargs.get('model_use_eval_mode', True)
-        use_dist_sampler = kwargs.get("use_dist_sampler", self.driver.is_distributed())
+        use_dist_sampler = kwargs.get("use_dist_sampler", None)
+        if use_dist_sampler is None:
+            use_dist_sampler = self.driver.is_distributed()
         if use_dist_sampler:
             self._dist_sampler = "unrepeatdist"
         else:
@@ -384,7 +386,7 @@ class _MetricsWrapper:
                     # 如果数据是分布式的，但是不aggregate的话可能有问题
                     if evaluator._dist_sampler is not None and metric.aggregate_when_get_metric is False:
                         logger.rank_zero_warning(
-                        "You have replace the sampler as distributed sampler when evaluation, but your metric "
+                        "You have replaced the sampler as distributed sampler when evaluation, but your metric "
                         f"{metric_name}:{metric.__class__.__name__}'s `aggregate_when_get_metric` is False.", once=True)
                     if metric.aggregate_when_get_metric is None:
                         metric.aggregate_when_get_metric = evaluator._dist_sampler is not None
