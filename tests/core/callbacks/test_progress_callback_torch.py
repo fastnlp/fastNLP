@@ -21,7 +21,7 @@ from tests.helpers.datasets.torch_data import TorchArgMaxDataset
 class ArgMaxDatasetConfig:
     num_labels: int = 10
     feature_dimension: int = 10
-    data_num: int = 100
+    data_num: int = 20
     seed: int = 0
 
     batch_size: int = 4
@@ -87,7 +87,7 @@ def test_run( model_and_optimizers: TrainerParameters, device):
 
     if device != 'cpu' and not torch.cuda.is_available():
         pytest.skip(f"No cuda for device:{device}")
-    n_epochs = 5
+    n_epochs = 2
     for progress_bar in ['rich', 'auto', None, 'raw', 'tqdm']:
         trainer = Trainer(
             model=model_and_optimizers.model,

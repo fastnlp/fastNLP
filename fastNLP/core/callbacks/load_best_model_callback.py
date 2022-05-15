@@ -11,6 +11,7 @@ import shutil
 from fastNLP.envs.env import FASTNLP_LAUNCH_TIME, FASTNLP_GLOBAL_RANK, FASTNLP_BACKEND_LAUNCH
 from fastNLP.core.log import logger
 from fastNLP.envs import all_rank_call_context
+from fastNLP.core.utils.exceptions import EarlyStopException
 
 
 class LoadBestModelCallback(HasMonitorCallback):
@@ -61,7 +62,7 @@ class LoadBestModelCallback(HasMonitorCallback):
             save_folder = os.path.join(save_folder, os.environ.get(FASTNLP_LAUNCH_TIME))
             self.real_save_folder = os.path.join(save_folder, 'best_so_far')
             if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
-                os.makedirs(self.real_save_folder)
+                os.makedirs(self.real_save_folder, exist_ok=True)
         else:  # 创建出一个 stringio
             self.real_save_folder = None
             self.buffer = BytesIO()
@@ -114,7 +115,8 @@ class LoadBestModelCallback(HasMonitorCallback):
                     trainer.driver.barrier()
 
     def on_exception(self, trainer, exception):
-        self.encounter_exception = True
+        if not isinstance(exception, EarlyStopException):
+            self.encounter_exception = True
 
     def _delete_folder(self):
         if self.real_save_folder:

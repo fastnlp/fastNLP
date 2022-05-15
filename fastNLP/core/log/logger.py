@@ -208,6 +208,20 @@ class FastNLPLogger(logging.Logger, metaclass=LoggerSingleton):
         for handler in self.handlers:
             handler.setLevel(level)
 
+    def _set_distributed(self):
+        """
+        在 fastNLP 拉起进程的时候，调用一下这个方法，使得能够输出 rank 信息
+
+        :return:
+        """
+        for handler in self.handlers:
+            if isinstance(handler, logging.FileHandler):
+                formatter = logging.Formatter(fmt='Rank: %(rank)s - %(asctime)s - %(module)s - [%(levelname)s] - %(message)s',
+                                           datefmt='%Y/%m/%d %H:%M:%S')
+            else:
+                formatter = logging.Formatter('Rank: %(rank)s - %(message)s')
+            handler.setFormatter(formatter)
+
 
 def _get_level(level):
     if not isinstance(level, int):
@@ -349,6 +363,8 @@ def _init_logger(path=None, stdout='rich', level='INFO'):
     # File Handler
     if path is not None:
         _add_file_handler(logger, path, level)
+
+    logger.setLevel(level)
 
     return logger
 

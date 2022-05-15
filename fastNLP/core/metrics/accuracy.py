@@ -31,9 +31,10 @@ class Accuracy(Metric):
         r"""
         get_metric 函数将根据 update 函数累计的评价指标统计量来计算最终的评价结果.
 
-        :return dict evaluate_result: {"acc": float}
+        :return dict evaluate_result: {"acc": float, 'total': float, 'correct': float}
         """
-        evaluate_result = {'acc': round(self.correct.get_scalar() / (self.total.get_scalar() + 1e-12), 6)}
+        evaluate_result = {'acc': round(self.correct.get_scalar() / (self.total.get_scalar() + 1e-12), 6),
+                           'total': self.total.item(), 'correct': self.correct.item()}
         return evaluate_result
 
     def update(self, pred, target, seq_len=None):

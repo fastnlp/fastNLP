@@ -20,13 +20,14 @@ from fastNLP.core.drivers.torch_driver import TorchSingleDriver
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchArgMaxDataset
 from tests.helpers.utils import magic_argv_env_context
+from fastNLP import logger
 
 
 @dataclass
 class ArgMaxDatasetConfig:
     num_labels: int = 10
     feature_dimension: int = 10
-    data_num: int = 100
+    data_num: int = 20
     seed: int = 0
 
     batch_size: int = 4
@@ -71,18 +72,31 @@ def model_and_optimizers(request):
     return trainer_params
 
 
+from fastNLP import Metric
+class CountMetrc(Metric):
+    def __init__(self):
+        super().__init__()
+        self.register_element('count', 0, aggregate_method='sum')
+
+    def update(self, pred):
+        self.count += len(pred)
+
+    def get_metric(self) -> dict:
+        return {'cnt': self.count.item()}
+
+
 @pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", [0, 1]), ("torch", 1), ("torch", "cpu")])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @magic_argv_env_context
 def test_load_best_model_callback(
         model_and_optimizers: TrainerParameters,
         driver,
-        device
+        device,
 ):
     for save_folder in ['save_models', None]:
         for only_state_dict in [True, False]:
-            callbacks = [LoadBestModelCallback(monitor='acc')]
-
+            callbacks = [LoadBestModelCallback(monitor='acc', only_state_dict=only_state_dict,
+                                               save_folder=save_folder)]
             trainer = Trainer(
                 model=model_and_optimizers.model,
                 driver=driver,
@@ -92,16 +106,16 @@ def test_load_best_model_callback(
                 evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
                 input_mapping=model_and_optimizers.input_mapping,
                 output_mapping=lambda output: output if ('loss' in output) else {'pred':output['preds'], 'target': output['target']},
-                metrics=model_and_optimizers.metrics,
-                n_epochs=3,
+                metrics={'acc': Accuracy()},
+                n_epochs=2,
                 callbacks=callbacks,
                 output_from_new_proc="all"
             )
 
             trainer.run(num_eval_sanity_batch=0)
 
-            driver = TorchSingleDriver(model_and_optimizers.model, device=torch.device('cuda'))
-            evaluator = Evaluator(model_and_optimizers.model, driver=driver, device=device,
+            _driver = TorchSingleDriver(model_and_optimizers.model, device=torch.device('cuda'))
+            evaluator = Evaluator(model_and_optimizers.model, driver=_driver, device=device,
                                   dataloaders={'dl1': model_and_optimizers.evaluate_dataloaders},
                                   metrics={'acc': Accuracy(aggregate_when_get_metric=False)},
                                   output_mapping=lambda output: output if ('loss' in output) else {'pred':output['preds'], 'target': output['target']},
@@ -113,5 +127,3 @@ def test_load_best_model_callback(
                 shutil.rmtree(save_folder, ignore_errors=True)
     if dist.is_initialized():
         dist.destroy_process_group()
-
-

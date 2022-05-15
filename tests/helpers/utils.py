@@ -70,12 +70,23 @@ def magic_argv_env_context(fn=None, timeout=300):
         def _handle_timeout(signum, frame):
             raise TimeoutError(f"\nYour test fn: {fn.__name__} has timed out.\n")
 
+        # 恢复 logger
+        handlers = [handler for handler in logger.handlers]
+        formatters = [handler.formatter for handler in handlers]
+        level = logger.level
+
         signal.signal(signal.SIGALRM, _handle_timeout)
         signal.alarm(timeout)
         res = fn(*args, **kwargs)
         signal.alarm(0)
         sys.argv = deepcopy(command)
         os.environ = env
+
+        for formatter, handler in zip(formatters, handlers):
+            handler.setFormatter(formatter)
+        logger.handlers = handlers
+        logger.setLevel(level)
+
         return res
 
     return wrapper
