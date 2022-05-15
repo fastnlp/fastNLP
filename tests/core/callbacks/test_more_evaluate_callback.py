@@ -92,7 +92,8 @@ def model_and_optimizers(request):
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
+# @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu")])
 @magic_argv_env_context
 def test_model_more_evaluate_callback_1(
         model_and_optimizers: TrainerParameters,
@@ -175,7 +176,8 @@ def test_model_more_evaluate_callback_1(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
+# @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu")])
 @magic_argv_env_context
 def test_trainer_checkpoint_callback_1(
         model_and_optimizers: TrainerParameters,

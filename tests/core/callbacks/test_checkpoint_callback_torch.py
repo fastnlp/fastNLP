@@ -272,7 +272,7 @@ def test_model_checkpoint_callback_2(
             trainer = Trainer(
                 model=model_and_optimizers.model,
                 driver="torch",
-                device=4,
+                device=0,
                 optimizers=model_and_optimizers.optimizers,
                 train_dataloader=model_and_optimizers.train_dataloader,
                 evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
@@ -495,6 +495,7 @@ def test_load_state(model_and_optimizers):
 
     finally:
         rank_zero_rm(path)
+        Trainer._custom_callbacks.clear()
 
 
 @pytest.mark.torch

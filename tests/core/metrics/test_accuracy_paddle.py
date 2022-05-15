@@ -41,9 +41,8 @@ def test_accuracy_single():
     tg = paddle.to_tensor([1, 2, 1, 3, 5, 4, 4, 2, 1, 5])
     acc_metric = Accuracy()
     acc_metric.update(pred, tg)
-    result = acc_metric.get_metric()
-    true_result = {'acc': 0.3}
-    assert true_result == result
+    result = acc_metric.get_metric()['acc']
+    assert result == 0.3
 
 
 ############################################################################

@@ -21,7 +21,7 @@ if _NEED_IMPORT_TORCH:
 class NormalClassificationTrainTorchConfig:
     num_labels: int = 2
     feature_dimension: int = 3
-    each_label_data: int = 100
+    each_label_data: int = 10
     seed: int = 0
 
     batch_size: int = 4

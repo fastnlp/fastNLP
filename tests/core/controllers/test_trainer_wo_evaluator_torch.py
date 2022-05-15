@@ -25,15 +25,15 @@ if _NEED_IMPORT_TORCH:
 class NormalClassificationTrainTorchConfig:
     num_labels: int = 2
     feature_dimension: int = 3
-    each_label_data: int = 100
+    each_label_data: int = 10
     seed: int = 0
 
-    n_epochs: int = 10
+    n_epochs: int = 3
     batch_size: int = 4
     shuffle: bool = True
 
     driver: str = "torch"
-    device: int = 7
+    device: int = 1
 
 
 @dataclass
@@ -86,9 +86,9 @@ def test_trainer_torch_without_evaluator(
         model_and_optimizers: TrainerParameters,
         driver,
         device,
-        n_epochs=10,
+        n_epochs=3,
 ):
-    callbacks = [RecordLossCallback(loss_threshold=0.1)]
+    callbacks = [RecordLossCallback(loss_threshold=0.5)]
     trainer = Trainer(
         model=model_and_optimizers.model,
         driver=driver,
@@ -122,9 +122,9 @@ def test_trainer_torch_without_evaluator_fp16_accumulation_steps(
         device,
         fp16,
         accumulation_steps,
-        n_epochs=10,
+        n_epochs=3,
 ):
-    callbacks = [RecordLossCallback(loss_threshold=0.1)]
+    callbacks = [RecordLossCallback(loss_threshold=0.5)]
     trainer = Trainer(
         model=model_and_optimizers.model,
         driver=driver,
@@ -300,7 +300,7 @@ def test_torch_distributed_launch_1(version):
     path = Path(os.path.abspath(__file__)).parent
     command = ["python", "-m", "torch.distributed.launch", "--nproc_per_node", "2", "--master_port", find_free_network_port(),
                f"{path.joinpath('_test_distributed_launch_torch_1.py')}", "-v", f"{version}"]
-    subprocess.check_call(command)
+    subprocess.check_call(command, env=os.environ)
 
 
 @pytest.mark.torch
@@ -314,7 +314,7 @@ def test_torch_distributed_launch_2(version):
     path = Path(os.path.abspath(__file__)).parent
     command = ["python", "-m", "torch.distributed.launch", "--nproc_per_node", "2", "--master_port", find_free_network_port(),
                f"{path.joinpath('_test_distributed_launch_torch_2.py')}", "-v", f"{version}"]
-    subprocess.check_call(command)
+    subprocess.check_call(command, env=os.environ)
 
 
 @pytest.mark.torch
@@ -323,7 +323,7 @@ def test_torch_distributed_launch_2(version):
 def test_torch_wo_auto_param_call(
     driver,
     device,
-    n_epochs=10,
+    n_epochs=2,
 ):
 
     model = TorchNormalModel_Classification_3(

@@ -29,10 +29,10 @@ from tests.helpers.callbacks.helper_callbacks import RecordMetricCallback
 
 @dataclass
 class MNISTTrainFleetConfig:
-    num_labels: int = 10
-    feature_dimension: int = 10
+    num_labels: int = 3
+    feature_dimension: int = 5
 
-    batch_size: int = 32
+    batch_size: int = 4
     shuffle: bool = True
     validate_every = -1
 
@@ -54,12 +54,12 @@ def test_trainer_fleet(
     optimizers = fleet.distributed_optimizer(optimizers)
 
     train_dataloader = DataLoader(
-        dataset=PaddleRandomMaxDataset(6400, MNISTTrainFleetConfig.feature_dimension),
+        dataset=PaddleRandomMaxDataset(20, MNISTTrainFleetConfig.feature_dimension),
         batch_size=MNISTTrainFleetConfig.batch_size,
         shuffle=True
     )
     val_dataloader = DataLoader(
-        dataset=PaddleRandomMaxDataset(1280, MNISTTrainFleetConfig.feature_dimension),
+        dataset=PaddleRandomMaxDataset(12, MNISTTrainFleetConfig.feature_dimension),
         batch_size=MNISTTrainFleetConfig.batch_size,
         shuffle=True
     )

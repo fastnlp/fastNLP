@@ -20,15 +20,14 @@ from tests.helpers.utils import magic_argv_env_context
 
 @dataclass
 class TrainPaddleConfig:
-    num_labels: int = 10
-    feature_dimension: int = 10
+    num_labels: int = 3
+    feature_dimension: int = 3
 
     batch_size: int = 2
     shuffle: bool = True
     evaluate_every = 2
 
 @pytest.mark.parametrize("device", ["cpu", 1, [0, 1]])
-# @pytest.mark.parametrize("driver,device", [("fleet", [0, 1])])
 @pytest.mark.parametrize("callbacks", [[RichCallback(5)]])
 @pytest.mark.paddledist
 @magic_argv_env_context
@@ -45,12 +44,12 @@ def test_trainer_paddle(
     )
     optimizers = Adam(parameters=model.parameters(), learning_rate=0.0001)
     train_dataloader = DataLoader(
-        dataset=PaddleRandomMaxDataset(20, 10),
+        dataset=PaddleRandomMaxDataset(20, TrainPaddleConfig.feature_dimension),
         batch_size=TrainPaddleConfig.batch_size,
         shuffle=True
     )
     val_dataloader = DataLoader(
-        dataset=PaddleRandomMaxDataset(20, 10),
+        dataset=PaddleRandomMaxDataset(12, TrainPaddleConfig.feature_dimension),
         batch_size=TrainPaddleConfig.batch_size,
         shuffle=True
     )
