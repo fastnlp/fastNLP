@@ -72,47 +72,45 @@ def model_and_optimizers(request):
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", [4, 5]), ("torch", 1), ("torch", "cpu")])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
-@pytest.mark.parametrize("save_folder", ['save_models', None])
-@pytest.mark.parametrize("only_state_dict", [True, False])
+@pytest.mark.parametrize("driver,device", [("torch", [0, 1]), ("torch", 1), ("torch", "cpu")])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @magic_argv_env_context
 def test_load_best_model_callback(
         model_and_optimizers: TrainerParameters,
         driver,
-        device,
-        save_folder,
-        only_state_dict
+        device
 ):
-    callbacks = [LoadBestModelCallback(monitor='acc')]
+    for save_folder in ['save_models', None]:
+        for only_state_dict in [True, False]:
+            callbacks = [LoadBestModelCallback(monitor='acc')]
 
-    trainer = Trainer(
-        model=model_and_optimizers.model,
-        driver=driver,
-        device=device,
-        optimizers=model_and_optimizers.optimizers,
-        train_dataloader=model_and_optimizers.train_dataloader,
-        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
-        input_mapping=model_and_optimizers.input_mapping,
-        output_mapping=lambda output: output if ('loss' in output) else {'pred':output['preds'], 'target': output['target']},
-        metrics=model_and_optimizers.metrics,
-        n_epochs=3,
-        callbacks=callbacks,
-        output_from_new_proc="all"
-    )
+            trainer = Trainer(
+                model=model_and_optimizers.model,
+                driver=driver,
+                device=device,
+                optimizers=model_and_optimizers.optimizers,
+                train_dataloader=model_and_optimizers.train_dataloader,
+                evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+                input_mapping=model_and_optimizers.input_mapping,
+                output_mapping=lambda output: output if ('loss' in output) else {'pred':output['preds'], 'target': output['target']},
+                metrics=model_and_optimizers.metrics,
+                n_epochs=3,
+                callbacks=callbacks,
+                output_from_new_proc="all"
+            )
 
-    trainer.run(num_eval_sanity_batch=0)
+            trainer.run(num_eval_sanity_batch=0)
 
-    driver = TorchSingleDriver(model_and_optimizers.model, device=torch.device('cuda'))
-    evaluator = Evaluator(model_and_optimizers.model, driver=driver, device=device,
-                          dataloaders={'dl1': model_and_optimizers.evaluate_dataloaders},
-                          metrics={'acc': Accuracy(aggregate_when_get_metric=False)},
-                          output_mapping=lambda output: output if ('loss' in output) else {'pred':output['preds'], 'target': output['target']},
-                          progress_bar='rich', use_dist_sampler=False)
-    results = evaluator.run()
-    assert np.allclose(callbacks[0].monitor_value, results['acc#acc#dl1'])
-    if save_folder:
-        import shutil
-        shutil.rmtree(save_folder, ignore_errors=True)
+            driver = TorchSingleDriver(model_and_optimizers.model, device=torch.device('cuda'))
+            evaluator = Evaluator(model_and_optimizers.model, driver=driver, device=device,
+                                  dataloaders={'dl1': model_and_optimizers.evaluate_dataloaders},
+                                  metrics={'acc': Accuracy(aggregate_when_get_metric=False)},
+                                  output_mapping=lambda output: output if ('loss' in output) else {'pred':output['preds'], 'target': output['target']},
+                                  progress_bar='rich', use_dist_sampler=False)
+            results = evaluator.run()
+            assert np.allclose(callbacks[0].monitor_value, results['acc#acc#dl1'])
+            if save_folder:
+                import shutil
+                shutil.rmtree(save_folder, ignore_errors=True)
     if dist.is_initialized():
         dist.destroy_process_group()
 

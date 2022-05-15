@@ -93,84 +93,82 @@ def model_and_optimizers(request):
 
 @pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
-@pytest.mark.parametrize("version", [0, 1])
-@pytest.mark.parametrize("only_state_dict", [True, False])
 @magic_argv_env_context
 def test_model_more_evaluate_callback_1(
         model_and_optimizers: TrainerParameters,
         driver,
         device,
-        version,
-        only_state_dict
 ):
-    try:
-        path = Path.cwd().joinpath(f"test_model_checkpoint")
-        path.mkdir(exist_ok=True, parents=True)
+    for only_state_dict in [True, False]:
+        for version in [0, 1]:
+            try:
+                path = Path.cwd().joinpath(f"test_model_checkpoint")
+                path.mkdir(exist_ok=True, parents=True)
 
-        if version == 0:
-            callbacks = [
-                MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
-                                     metrics=model_and_optimizers.more_metrics,
-                                     evaluate_every=-1,
-                                     folder=path, topk=-1,
-                                     topk_monitor='acc', only_state_dict=only_state_dict, save_object='model')
-            ]
-        elif version == 1:
-            callbacks = [
-                MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
-                                     metrics=model_and_optimizers.more_metrics,
-                                     evaluate_every=None, watch_monitor='loss', watch_monitor_larger_better=False,
-                                     folder=path, topk=1, topk_monitor='acc', only_state_dict=only_state_dict,
-                                     save_object='model')
-            ]
-        n_epochs = 5
-        trainer = Trainer(
-            model=model_and_optimizers.model,
-            driver=driver,
-            device=device,
-            optimizers=model_and_optimizers.optimizers,
-            train_dataloader=model_and_optimizers.train_dataloader,
-            evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
-            input_mapping=model_and_optimizers.input_mapping,
-            output_mapping=model_and_optimizers.output_mapping,
-            metrics=model_and_optimizers.metrics,
-            n_epochs=n_epochs,
-            callbacks=callbacks,
-            output_from_new_proc="all",
-            evaluate_fn='train_step'
-        )
+                if version == 0:
+                    callbacks = [
+                        MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
+                                             metrics=model_and_optimizers.more_metrics,
+                                             evaluate_every=-1,
+                                             folder=path, topk=-1,
+                                             topk_monitor='acc', only_state_dict=only_state_dict, save_object='model')
+                    ]
+                elif version == 1:
+                    callbacks = [
+                        MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
+                                             metrics=model_and_optimizers.more_metrics,
+                                             evaluate_every=None, watch_monitor='loss', watch_monitor_larger_better=False,
+                                             folder=path, topk=1, topk_monitor='acc', only_state_dict=only_state_dict,
+                                             save_object='model')
+                    ]
+                n_epochs = 5
+                trainer = Trainer(
+                    model=model_and_optimizers.model,
+                    driver=driver,
+                    device=device,
+                    optimizers=model_and_optimizers.optimizers,
+                    train_dataloader=model_and_optimizers.train_dataloader,
+                    evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+                    input_mapping=model_and_optimizers.input_mapping,
+                    output_mapping=model_and_optimizers.output_mapping,
+                    metrics=model_and_optimizers.metrics,
+                    n_epochs=n_epochs,
+                    callbacks=callbacks,
+                    output_from_new_proc="all",
+                    evaluate_fn='train_step'
+                )
 
-        trainer.run()
+                trainer.run()
 
-        all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
-        # 检查生成保存模型文件的数量是不是正确的；
-        if version == 0:
-            assert len(all_saved_model_paths) == n_epochs
-        elif version == 1:
-            assert len(all_saved_model_paths) == 1
+                all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
+                # 检查生成保存模型文件的数量是不是正确的；
+                if version == 0:
+                    assert len(all_saved_model_paths) == n_epochs
+                elif version == 1:
+                    assert len(all_saved_model_paths) == 1
 
-        for folder in all_saved_model_paths:
-            trainer = Trainer(
-                model=model_and_optimizers.model,
-                driver=driver,
-                device=device,
-                optimizers=model_and_optimizers.optimizers,
-                train_dataloader=model_and_optimizers.train_dataloader,
-                evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
-                input_mapping=model_and_optimizers.input_mapping,
-                output_mapping=model_and_optimizers.output_mapping,
-                metrics=model_and_optimizers.metrics,
-                n_epochs=2,
-                output_from_new_proc="all",
-                evaluate_fn='train_step'
-            )
-            folder = path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).joinpath(folder)
-            trainer.load_model(folder, only_state_dict=only_state_dict)
+                for folder in all_saved_model_paths:
+                    trainer = Trainer(
+                        model=model_and_optimizers.model,
+                        driver=driver,
+                        device=device,
+                        optimizers=model_and_optimizers.optimizers,
+                        train_dataloader=model_and_optimizers.train_dataloader,
+                        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+                        input_mapping=model_and_optimizers.input_mapping,
+                        output_mapping=model_and_optimizers.output_mapping,
+                        metrics=model_and_optimizers.metrics,
+                        n_epochs=2,
+                        output_from_new_proc="all",
+                        evaluate_fn='train_step'
+                    )
+                    folder = path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).joinpath(folder)
+                    trainer.load_model(folder, only_state_dict=only_state_dict)
 
-            trainer.run()
-            trainer.driver.barrier()
-    finally:
-        rank_zero_rm(path)
+                    trainer.run()
+                    trainer.driver.barrier()
+            finally:
+                rank_zero_rm(path)
 
     if dist.is_initialized():
         dist.destroy_process_group()
@@ -178,85 +176,83 @@ def test_model_more_evaluate_callback_1(
 
 @pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1]), ("torch", 0)])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
-@pytest.mark.parametrize("version", [0, 1])
-@pytest.mark.parametrize("only_state_dict", [True, False])
 @magic_argv_env_context
 def test_trainer_checkpoint_callback_1(
         model_and_optimizers: TrainerParameters,
         driver,
-        device,
-        version,
-        only_state_dict
+        device
 ):
-    try:
-        path = Path.cwd().joinpath(f"test_model_checkpoint")
-        path.mkdir(exist_ok=True, parents=True)
+    for version in [0, 1]:
+        for only_state_dict in [True, False]:
+            try:
+                path = Path.cwd().joinpath(f"test_model_checkpoint")
+                path.mkdir(exist_ok=True, parents=True)
 
-        if version == 0:
-            callbacks = [
-                MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
-                                     metrics=model_and_optimizers.more_metrics,
-                                     evaluate_every=-1,
-                                     folder=path, topk=-1,
-                                     topk_monitor='acc', only_state_dict=only_state_dict, save_object='trainer')
-            ]
-        elif version == 1:
-            callbacks = [
-                MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
-                                     metrics=model_and_optimizers.more_metrics,
-                                     evaluate_every=None, watch_monitor='loss', watch_monitor_larger_better=False,
-                                     folder=path, topk=1, topk_monitor='acc', only_state_dict=only_state_dict,
-                                     save_object='trainer')
-            ]
-        n_epochs = 5
-        trainer = Trainer(
-            model=model_and_optimizers.model,
-            driver=driver,
-            device=device,
-            optimizers=model_and_optimizers.optimizers,
-            train_dataloader=model_and_optimizers.train_dataloader,
-            evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
-            input_mapping=model_and_optimizers.input_mapping,
-            output_mapping=model_and_optimizers.output_mapping,
-            metrics=model_and_optimizers.metrics,
-            n_epochs=n_epochs,
-            callbacks=callbacks,
-            output_from_new_proc="all",
-            evaluate_fn='train_step'
-        )
+                if version == 0:
+                    callbacks = [
+                        MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
+                                             metrics=model_and_optimizers.more_metrics,
+                                             evaluate_every=-1,
+                                             folder=path, topk=-1,
+                                             topk_monitor='acc', only_state_dict=only_state_dict, save_object='trainer')
+                    ]
+                elif version == 1:
+                    callbacks = [
+                        MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
+                                             metrics=model_and_optimizers.more_metrics,
+                                             evaluate_every=None, watch_monitor='loss', watch_monitor_larger_better=False,
+                                             folder=path, topk=1, topk_monitor='acc', only_state_dict=only_state_dict,
+                                             save_object='trainer')
+                    ]
+                n_epochs = 5
+                trainer = Trainer(
+                    model=model_and_optimizers.model,
+                    driver=driver,
+                    device=device,
+                    optimizers=model_and_optimizers.optimizers,
+                    train_dataloader=model_and_optimizers.train_dataloader,
+                    evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+                    input_mapping=model_and_optimizers.input_mapping,
+                    output_mapping=model_and_optimizers.output_mapping,
+                    metrics=model_and_optimizers.metrics,
+                    n_epochs=n_epochs,
+                    callbacks=callbacks,
+                    output_from_new_proc="all",
+                    evaluate_fn='train_step'
+                )
 
-        trainer.run()
+                trainer.run()
 
-        all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
-        # 检查生成保存模型文件的数量是不是正确的；
-        if version == 0:
-            assert len(all_saved_model_paths) == n_epochs
-        elif version == 1:
-            assert len(all_saved_model_paths) == 1
+                all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
+                # 检查生成保存模型文件的数量是不是正确的；
+                if version == 0:
+                    assert len(all_saved_model_paths) == n_epochs
+                elif version == 1:
+                    assert len(all_saved_model_paths) == 1
 
-        for folder in all_saved_model_paths:
-            trainer = Trainer(
-                model=model_and_optimizers.model,
-                driver=driver,
-                device=device,
-                optimizers=model_and_optimizers.optimizers,
-                train_dataloader=model_and_optimizers.train_dataloader,
-                evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
-                input_mapping=model_and_optimizers.input_mapping,
-                output_mapping=model_and_optimizers.output_mapping,
-                metrics=model_and_optimizers.metrics,
-                n_epochs=7,
-                output_from_new_proc="all",
-                evaluate_fn='train_step'
-            )
-            folder = path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).joinpath(folder)
-            trainer.load_checkpoint(folder, only_state_dict=only_state_dict)
+                for folder in all_saved_model_paths:
+                    trainer = Trainer(
+                        model=model_and_optimizers.model,
+                        driver=driver,
+                        device=device,
+                        optimizers=model_and_optimizers.optimizers,
+                        train_dataloader=model_and_optimizers.train_dataloader,
+                        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+                        input_mapping=model_and_optimizers.input_mapping,
+                        output_mapping=model_and_optimizers.output_mapping,
+                        metrics=model_and_optimizers.metrics,
+                        n_epochs=7,
+                        output_from_new_proc="all",
+                        evaluate_fn='train_step'
+                    )
+                    folder = path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).joinpath(folder)
+                    trainer.load_checkpoint(folder, only_state_dict=only_state_dict)
 
-            trainer.run()
-            trainer.driver.barrier()
+                    trainer.run()
+                    trainer.driver.barrier()
 
-    finally:
-        rank_zero_rm(path)
+            finally:
+                rank_zero_rm(path)
 
     if dist.is_initialized():
         dist.destroy_process_group()

@@ -82,37 +82,37 @@ def model_and_optimizers(request):
 
 @pytest.mark.torch
 @pytest.mark.parametrize('device', ['cpu', [0, 1]])
-@pytest.mark.parametrize('progress_bar', ['rich', 'auto', None, 'raw', 'tqdm'])
 @magic_argv_env_context
-def test_run( model_and_optimizers: TrainerParameters, device, progress_bar):
+def test_run( model_and_optimizers: TrainerParameters, device):
 
     if device != 'cpu' and not torch.cuda.is_available():
         pytest.skip(f"No cuda for device:{device}")
     n_epochs = 5
-    trainer = Trainer(
-        model=model_and_optimizers.model,
-        driver='torch',
-        device=device,
-        optimizers=model_and_optimizers.optimizers,
-        train_dataloader=model_and_optimizers.train_dataloader,
-        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
-        input_mapping=model_and_optimizers.input_mapping,
-        output_mapping=model_and_optimizers.output_mapping,
-        metrics=model_and_optimizers.metrics,
-        n_epochs=n_epochs,
-        callbacks=None,
-        progress_bar=progress_bar,
-        output_from_new_proc="all",
-        evaluate_fn='train_step',
-        larger_better=False
-    )
+    for progress_bar in ['rich', 'auto', None, 'raw', 'tqdm']:
+        trainer = Trainer(
+            model=model_and_optimizers.model,
+            driver='torch',
+            device=device,
+            optimizers=model_and_optimizers.optimizers,
+            train_dataloader=model_and_optimizers.train_dataloader,
+            evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+            input_mapping=model_and_optimizers.input_mapping,
+            output_mapping=model_and_optimizers.output_mapping,
+            metrics=model_and_optimizers.metrics,
+            n_epochs=n_epochs,
+            callbacks=None,
+            progress_bar=progress_bar,
+            output_from_new_proc="all",
+            evaluate_fn='train_step',
+            larger_better=False
+        )
 
-    trainer.run()
+        trainer.run()
 
-    evaluator = Evaluator(model=model_and_optimizers.model, dataloaders=model_and_optimizers.train_dataloader,
-                          driver=trainer.driver, metrics=model_and_optimizers.metrics,
-                          progress_bar=progress_bar, evaluate_fn='train_step')
-    evaluator.run()
+        evaluator = Evaluator(model=model_and_optimizers.model, dataloaders=model_and_optimizers.train_dataloader,
+                              driver=trainer.driver, metrics=model_and_optimizers.metrics,
+                              progress_bar=progress_bar, evaluate_fn='train_step')
+        evaluator.run()
 
     if dist.is_initialized():
         dist.destroy_process_group()
