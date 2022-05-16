@@ -10,6 +10,7 @@ from fastNLP.envs.env import (
     FASTNLP_DISTRIBUTED_CHECK,
     FASTNLP_LOG_LEVEL,
     FASTNLP_GLOBAL_SEED,
+    FASTNLP_GLOBAL_RANK
 )
 from fastNLP.core.utils import get_paddle_device_id
 from .utils import (
@@ -130,6 +131,8 @@ class FleetLauncher:
         """
 
         global_envs = copy.copy(os.environ.copy())
+        os.environ[FASTNLP_GLOBAL_RANK] = "0"
+
         self.gloo_rendezvous_dir = tempfile.mkdtemp()
         # launch中涉及的gloo环境
         global_envs["PADDLE_WITH_GLOO"] = str(os.getenv("PADDLE_WITH_GLOO", "0"))

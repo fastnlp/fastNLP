@@ -6,6 +6,7 @@ from fastNLP.core.metrics.backend import Backend
 if _NEED_IMPORT_JITTOR:
     import jittor
 
+__all__ = []
 
 class JittorBackend(Backend):
 
