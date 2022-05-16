@@ -72,19 +72,6 @@ def model_and_optimizers(request):
     return trainer_params
 
 
-from fastNLP import Metric
-class CountMetrc(Metric):
-    def __init__(self):
-        super().__init__()
-        self.register_element('count', 0, aggregate_method='sum')
-
-    def update(self, pred):
-        self.count += len(pred)
-
-    def get_metric(self) -> dict:
-        return {'cnt': self.count.item()}
-
-
 @pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", [0, 1]), ("torch", 1), ("torch", "cpu")])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @magic_argv_env_context
@@ -122,6 +109,7 @@ def test_load_best_model_callback(
                                   progress_bar='rich', use_dist_sampler=False)
             results = evaluator.run()
             assert np.allclose(callbacks[0].monitor_value, results['acc#acc#dl1'])
+            trainer.driver.barrier()
             if save_folder:
                 import shutil
                 shutil.rmtree(save_folder, ignore_errors=True)

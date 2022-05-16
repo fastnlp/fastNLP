@@ -429,7 +429,8 @@ class Trainer(TrainerEventTrigger):
         self.driver.set_optimizers(optimizers=optimizers)
 
         # 根据 progress_bar 参数选择 ProgressBarCallback
-        callbacks = prepare_callbacks(callbacks, kwargs.get('progress_bar', 'auto'))
+        self.progress_bar = kwargs.get('progress_bar', 'auto')
+        callbacks = prepare_callbacks(callbacks, self.progress_bar)
         # 初始化 callback manager；
         self.callback_manager = CallbackManager(callbacks)
         # 添加所有的函数式 callbacks；

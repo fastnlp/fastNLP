@@ -92,12 +92,12 @@ def model_and_optimizers(request):
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu")])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @magic_argv_env_context
 def test_model_more_evaluate_callback_1(
         model_and_optimizers: TrainerParameters,
         driver,
-        device,
+        device
 ):
     for only_state_dict in [True, False]:
         for version in [0, 1]:
@@ -110,7 +110,7 @@ def test_model_more_evaluate_callback_1(
                         MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
                                              metrics=model_and_optimizers.more_metrics,
                                              evaluate_every=-1,
-                                             folder=path, topk=-1,
+                                             folder=path, topk=-1, progress_bar=None,
                                              topk_monitor='acc', only_state_dict=only_state_dict, save_object='model')
                     ]
                 elif version == 1:
@@ -119,7 +119,7 @@ def test_model_more_evaluate_callback_1(
                                              metrics=model_and_optimizers.more_metrics,
                                              evaluate_every=None, watch_monitor='loss', watch_monitor_larger_better=False,
                                              folder=path, topk=1, topk_monitor='acc', only_state_dict=only_state_dict,
-                                             save_object='model')
+                                             save_object='model', progress_bar=None)
                     ]
                 n_epochs = 3
                 trainer = Trainer(
@@ -167,6 +167,7 @@ def test_model_more_evaluate_callback_1(
 
                     trainer.run()
                     trainer.driver.barrier()
+                    break
             finally:
                 rank_zero_rm(path)
 
@@ -175,7 +176,7 @@ def test_model_more_evaluate_callback_1(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", "cpu")])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @magic_argv_env_context
 def test_trainer_checkpoint_callback_1(
         model_and_optimizers: TrainerParameters,
@@ -241,7 +242,7 @@ def test_trainer_checkpoint_callback_1(
                         input_mapping=model_and_optimizers.input_mapping,
                         output_mapping=model_and_optimizers.output_mapping,
                         metrics=model_and_optimizers.metrics,
-                        n_epochs=5,
+                        n_epochs=2,
                         output_from_new_proc="all",
                         evaluate_fn='train_step'
                     )
@@ -250,7 +251,7 @@ def test_trainer_checkpoint_callback_1(
 
                     trainer.run()
                     trainer.driver.barrier()
-
+                    break
             finally:
                 rank_zero_rm(path)
 

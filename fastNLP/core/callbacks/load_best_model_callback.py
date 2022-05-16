@@ -72,7 +72,6 @@ class LoadBestModelCallback(HasMonitorCallback):
         self.model_save_fn = model_save_fn
         self.model_load_fn = model_load_fn
         self.delete_after_after = delete_after_train
-        self.encounter_exception = False
 
     def on_after_trainer_initialized(self, trainer, driver):
         if self.save_folder is not None and driver.is_distributed() and int(os.environ.get(FASTNLP_BACKEND_LAUNCH, 0))==1:
@@ -85,6 +84,7 @@ class LoadBestModelCallback(HasMonitorCallback):
                                    f"save best model when launch using module.")
 
         super().on_after_trainer_initialized(trainer, driver)
+        self.encounter_exception = False
 
     def on_evaluate_end(self, trainer, results):
         if self.is_better_results(results, keep_if_better=True):
