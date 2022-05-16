@@ -12,12 +12,7 @@ if _NEED_IMPORT_TORCH:
     import torch
     import torch.distributed as dist
 
-
-def _simple_gather_all_tensors(result, group: Any, world_size: int) -> List:
-    gathered_result = [torch.zeros_like(result) for _ in range(world_size)]
-    dist.all_gather(gathered_result, result, group)
-    return gathered_result
-
+__all__ = []
 
 class TorchBackend(Backend):
     def __init__(self):

@@ -207,12 +207,6 @@ class PaddleFleetDriver(PaddleDriver):
             raise NotImplementedError("FastNLP only support `collective` for distributed training now.")
         self.role_maker = self._fleet_kwargs.pop("role_maker", None)
 
-        if self.local_rank == 0 and not is_in_paddle_dist():
-            # 由于使用driver时模型一定会被初始化，因此在一开始程序一定会占用一部分显存来存放模型，然而这部分显存没有
-            # 发挥任何作用。
-            logger.warning(f"The program will use some extra space on {paddle.device.get_device()} to place your model since the model "
-                            "has already been initialized.")
-
         self.output_from_new_proc = kwargs.get("output_from_new_proc", "only_error")
         assert isinstance(self.output_from_new_proc, str), "Parameter `output_from_new_proc` can only be `str` type."
         if self.output_from_new_proc not in {"all", "ignore", "only_error"}:

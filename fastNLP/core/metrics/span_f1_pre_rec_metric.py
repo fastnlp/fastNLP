@@ -215,7 +215,7 @@ class SpanFPreRecMetric(Metric):
     :param backend: 目前支持四种类型的 backend, ``[torch, paddle, jittor, auto]``。其中 ``auto`` 表示根据实际调用
         Metric.update() 函数时传入的参数决定具体的 ``backend`` ，大部分情况下直接使用 ``auto`` 即可。
     :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到metric，
-        当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 :class:`fastNLP.Evaluator` 中根据 sampler 是否使用分布式
+        当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 :class:`~fastNLP.Evaluator` 中根据 sampler 是否使用分布式
         进行自动设置。
     """
     def __init__(self, tag_vocab: Vocabulary, encoding_type: str = None, ignore_labels: List[str] = None,

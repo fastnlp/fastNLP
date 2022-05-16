@@ -24,7 +24,7 @@ if _NEED_IMPORT_TORCH:
 class NormalClassificationTrainTorchConfig:
     num_labels: int = 2
     feature_dimension: int = 3
-    each_label_data: int = 100
+    each_label_data: int = 10
     seed: int = 0
 
     batch_size: int = 4
@@ -33,9 +33,9 @@ class NormalClassificationTrainTorchConfig:
 
 @dataclass
 class ArgMaxDatasetConfig:
-    num_labels: int = 10
-    feature_dimension: int = 10
-    data_num: int = 100
+    num_labels: int = 4
+    feature_dimension: int = 4
+    data_num: int = 20
     seed: int = 0
 
     batch_size: int = 4
@@ -105,14 +105,14 @@ def model_and_optimizers(request):
 @pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", 1),
                                            ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", 1), ("torch", [0, 1])
-@pytest.mark.parametrize("evaluate_every", [-3, -1, 100])
+@pytest.mark.parametrize("evaluate_every", [-3, -1, 2])
 @magic_argv_env_context
 def test_trainer_torch_with_evaluator(
         model_and_optimizers: TrainerParameters,
         driver,
         device,
         evaluate_every,
-        n_epochs=10,
+        n_epochs=4,
 ):
     callbacks = [RecordMetricCallback(monitor="acc", metric_threshold=0.2, larger_better=True)]
     trainer = Trainer(

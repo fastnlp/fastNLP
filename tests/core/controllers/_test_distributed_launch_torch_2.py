@@ -35,15 +35,15 @@ from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 class NormalClassificationTrainTorchConfig:
     num_labels: int = 2
     feature_dimension: int = 3
-    each_label_data: int = 100
+    each_label_data: int = 10
     seed: int = 0
 
-    n_epochs: int = 10
+    n_epochs: int = 2
     batch_size: int = 4
     shuffle: bool = True
 
     driver: str = "torch"
-    device: int = 7
+    device: int = 1
 
 
 model = TorchNormalModel_Classification_1(

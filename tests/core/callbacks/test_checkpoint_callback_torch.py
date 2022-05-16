@@ -495,6 +495,7 @@ def test_load_state(model_and_optimizers):
 
     finally:
         rank_zero_rm(path)
+        Trainer._custom_callbacks.clear()
 
 
 @pytest.mark.torch
