@@ -55,7 +55,7 @@ class TorchDriver(Driver):
         # 因为 ddp 和 single_device 的混合精度训练的设置是一样的，因此可以统一抽象到这里；
         self.fp16 = fp16
         if parse_version(torch.__version__) < parse_version('1.6'):
-            raise RuntimeError("Pytorch supports float16 after version 1.6, please upgrade your pytorch version.")
+            raise RuntimeError(f"Pytorch({torch.__version__}) need to be older than 1.6.")
         self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not fp16)
         self.grad_scaler = _grad_scaler()
 
