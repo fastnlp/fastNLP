@@ -160,7 +160,7 @@ def _build_fp16_env(dummy=False):
         GradScaler = DummyGradScaler
     else:
         if not torch.cuda.is_available():
-            raise RuntimeError("No cuda")
+            raise RuntimeError("Pytorch is not installed in gpu version, please use device='cpu'.")
         if torch.cuda.get_device_capability(0)[0] < 7:
             logger.rank_zero_warning(
                 "NOTE: your device does NOT support faster training with fp16, "
