@@ -1,16 +1,18 @@
 import os
 import pytest
 
-import torch
-import torch.distributed as dist
 import numpy as np
 
 # print(isinstance((1,), tuple))
 # exit()
 
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from fastNLP.core.drivers.torch_driver.dist_utils import fastnlp_torch_all_gather, fastnlp_torch_broadcast_object
 from tests.helpers.utils import re_run_current_cmd_for_torch, magic_argv_env_context
 
+if _NEED_IMPORT_TORCH:
+    import torch
+    import torch.distributed as dist
 
 @pytest.mark.torch
 @magic_argv_env_context

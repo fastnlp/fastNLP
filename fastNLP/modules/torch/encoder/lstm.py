@@ -7,12 +7,18 @@ __all__ = [
     "LSTM"
 ]
 
-import torch
-import torch.nn as nn
-import torch.nn.utils.rnn as rnn
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+
+if _NEED_IMPORT_TORCH:
+    import torch
+    import torch.nn as nn
+    import torch.nn.utils.rnn as rnn
+    from torch.nn import Module
+else:
+    from fastNLP.core.utils.dummy_class import DummyClass as Module
 
 
-class LSTM(nn.Module):
+class LSTM(Module):
     r"""
     LSTM 模块, 轻量封装的Pytorch LSTM. 在提供seq_len的情况下，将自动使用pack_padded_sequence; 同时默认将forget gate的bias初始化
     为1; 且可以应对DataParallel中LSTM的使用问题。

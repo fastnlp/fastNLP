@@ -5,10 +5,11 @@ from fastNLP.core.drivers.torch_driver.utils import (
     replace_sampler,
 )
 from fastNLP.core.samplers import ReproduceBatchSampler, RandomSampler
-from torch.utils.data import DataLoader, BatchSampler
-
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from tests.helpers.datasets.torch_data import TorchNormalDataset
 
+if _NEED_IMPORT_TORCH:
+    from torch.utils.data import DataLoader, BatchSampler
 
 @pytest.mark.torch
 def test_replace_batch_sampler():

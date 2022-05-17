@@ -14,14 +14,17 @@ import json
 from typing import Union
 
 import numpy as np
-import torch
-import torch.nn as nn
 
 from .embedding import TokenEmbedding
 from ...core import logger
 from ...core.vocabulary import Vocabulary
 from ...io.file_utils import PRETRAIN_STATIC_FILES, _get_embedding_url, cached_path
 from ...io.file_utils import _get_file_name_base_on_postfix
+from ...envs.imports import _NEED_IMPORT_TORCH
+
+if _NEED_IMPORT_TORCH:
+    import torch
+    import torch.nn as nn
 
 
 VOCAB_FILENAME = 'vocab.txt'

@@ -18,14 +18,15 @@ from tests.helpers.utils import magic_argv_env_context
 from fastNLP.envs.distributed import rank_zero_rm
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchArgMaxDataset
-from torchmetrics import Accuracy
 from fastNLP.core.metrics import Metric
 from fastNLP.core.callbacks import MoreEvaluateCallback
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+
 if _NEED_IMPORT_TORCH:
     from torch.utils.data import DataLoader
     from torch.optim import SGD
     import torch.distributed as dist
+    from torchmetrics import Accuracy
 
 @dataclass
 class ArgMaxDatasetConfig:

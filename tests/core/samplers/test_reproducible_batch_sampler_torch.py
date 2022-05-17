@@ -1,12 +1,15 @@
 from array import array
-import torch
-from torch.utils.data import DataLoader
 
 import pytest
 
 from fastNLP.core.samplers import ReproduceBatchSampler
 from fastNLP.core.drivers.torch_driver.utils import replace_batch_sampler
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from tests.helpers.datasets.torch_data import TorchNormalDataset
+
+if _NEED_IMPORT_TORCH:
+    import torch
+    from torch.utils.data import DataLoader
 
 
 @pytest.mark.torch

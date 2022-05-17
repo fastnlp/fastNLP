@@ -5,7 +5,6 @@ import pytest
 
 from dataclasses import dataclass
 from typing import Any
-from torchmetrics import Accuracy
 
 from fastNLP.core.controllers.trainer import Trainer
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
@@ -18,6 +17,7 @@ if _NEED_IMPORT_TORCH:
     from torch.optim import SGD
     from torch.utils.data import DataLoader
     import torch.distributed as dist
+    from torchmetrics import Accuracy
 
 
 @dataclass
