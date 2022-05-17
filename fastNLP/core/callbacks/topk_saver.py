@@ -36,7 +36,7 @@ class Saver:
                  model_save_fn:Callable=None, **kwargs):
         if folder is None:
             folder = Path.cwd().absolute()
-            logger.info(f"Parameter `folder` is None, and we will use {folder} to save and load your model.")
+            logger.info(f"Parameter `folder` is None, and fastNLP will use {folder} to save and load your model.")
         folder = Path(folder)
         if not folder.exists():
             folder.mkdir(parents=True, exist_ok=True)

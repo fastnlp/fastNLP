@@ -177,6 +177,6 @@ class TestClassfiyFPreRecMetric:
                              metric_class=ClassifyFPreRecMetric,
                              metric_kwargs=metric_kwargs,
                              metric_result=ground_truth),
-                     [(rank, NUM_PROCESSES, torch.device(f'cuda:{rank+4}')) for rank in range(NUM_PROCESSES)])
+                     [(rank, NUM_PROCESSES, torch.device(f'cuda:{rank}')) for rank in range(NUM_PROCESSES)])
         pool.close()
         pool.join()

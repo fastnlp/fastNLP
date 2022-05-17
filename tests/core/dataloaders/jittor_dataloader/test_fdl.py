@@ -1,6 +1,9 @@
 import pytest
 import numpy as np
-from datasets import Dataset as HfDataset
+from fastNLP.envs import _module_available
+
+if _module_available('datasets'):
+    from datasets import Dataset as HfDataset
 
 from fastNLP.core.dataloaders.jittor_dataloader import JittorDataLoader
 from fastNLP.core.dataset import DataSet as Fdataset

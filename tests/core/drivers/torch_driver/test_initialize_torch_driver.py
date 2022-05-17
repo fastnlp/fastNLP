@@ -40,7 +40,7 @@ def test_get_single_device(driver, device):
 @pytest.mark.torch
 @pytest.mark.parametrize(
     "device", 
-    [[0, 2, 3], -1]
+    [[0, 1], -1]
 )
 @pytest.mark.parametrize(
     "driver", 

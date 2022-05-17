@@ -224,7 +224,7 @@ def test_trainer_event_trigger_2(
                 assert k in output[0]
 
 
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", 6)])
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", 0)])
 @pytest.mark.torch
 @magic_argv_env_context
 def test_trainer_event_trigger_3(
