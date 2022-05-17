@@ -26,7 +26,7 @@ pipeline {
                         }
                     }
                     steps {
-                        sh 'pytest ./tests/core/drivers/torch_driver --durations=0 -m torch'
+                        sh 'pytest ./tests/ --durations=0 -m torch'
                     }
                 }
                 stage('Test Torch-1.6') {
@@ -37,7 +37,7 @@ pipeline {
                         }
                     }
                     steps {
-                        sh 'pytest ./tests/core/drivers/torch_driver --durations=0 -m torch'
+                        sh 'pytest ./tests/ --durations=0 -m torch'
                     }
                 }
                 stage('Test Paddle') {
