@@ -87,6 +87,7 @@ class PaddleDataLoader(DataLoader):
                  use_shared_memory: bool = True, timeout: int = 0,
                  worker_init_fn: Callable = None, persistent_workers=False) -> None:
         """
+
         :param dataset: 实现了 __getitem__() 和 __len__() 的对象。
         :param feed_list: (list(Tensor)|tuple(Tensor)): feed Tensor list.
         这个张量能被 :code:`paddle.static.data()` 创建。 如果:attr:`return_list` 是 ``False``, 那么 :attr:`feed_list`
@@ -107,7 +108,7 @@ class PaddleDataLoader(DataLoader):
         :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的 Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``.
 
             *  callate_fn 为 ``None`` 时，需要注意的是此时传进来的 datset 类型不能为 :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None`` 时，
-             ``PaddleDataLoader`` 调用默认的 Paddle 框架的 ``DataLoader`` 自带的 `default_collate_fn` 作为 callate_fn 的默认值， 其无法处理
+             ``PaddleDataLoader`` 调用默认的 Paddle 框架的 ``DataLoader`` 自带的 ``default_collate_fn`` 作为 callate_fn 的默认值， 其无法处理
              :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
             * callate_fn 为 ``'auto'`` 时，``PaddleDataLoader`` 使用 :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。
             此时可以配套使用 ``PaddleDataLoader`` 的 ``set_pad`` 和 ``set_ignore`` 方法来设置 pad_val 或 忽略某个 field 的检测。

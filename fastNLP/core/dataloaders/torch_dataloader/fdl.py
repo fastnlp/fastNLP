@@ -48,7 +48,7 @@ class _FDataSet:
 
 class TorchDataLoader(DataLoader):
     """
-    提供给 ``torch`` 框架使用的 ``DataLoader`` 函数，``TorchDataLoader`` 提供了 ``Collator`` 来自动检测dataset的每个field是否可pad，
+    提供给 ``torch`` 框架使用的 ``DataLoader`` 函数，``TorchDataLoader`` 提供了 ``Collator`` 来自动检测 dataset 的每个 field 是否可 pad，
     若是可 pad 的 field 则自动 pad 到相同长度，否则只会将相同 field 的数据收集组成一个 batch 返回。
     具体详见 :class:`~fastNLP.core.collators.Collator`；用户通过 callte_fn 来控制是否使用该功能， collate_fn 只能为 ``['auto', None, Callable]``三种取值。
 
@@ -57,7 +57,6 @@ class TorchDataLoader(DataLoader):
         * callate_fn 为 ``None`` 时， ``TorchDataLoadr`` 默认使用 torch DataLoader 自带的 collate_fn
         * collate_fn 为 ``Callable`` 时， 该 Callable 函数应当接受一个 batch 参数作为输入， batch 是一个 List 对象且 List 中的每一条数据都是
          dataset 的一条数据；该 Callable 函数还应当返回一个对象。
-
 
     """
 
@@ -83,7 +82,7 @@ class TorchDataLoader(DataLoader):
         :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的 Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``.
 
             *  callate_fn 为 ``None`` 时，需要注意的是此时传进来的 datset 类型不能为 :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None`` 时，
-             ``TorchDataLoader`` 调用默认的 torch 框架的 ``DataLoader`` 自带的 `default_collate_fn` 作为 callate_fn 的默认值， 其无法处理
+             ``TorchDataLoader`` 调用默认的 torch 框架的 ``DataLoader`` 自带的 ``default_collate_fn`` 作为 callate_fn 的默认值， 其无法处理
              :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
             * callate_fn 为 ``'auto'`` 时，``TorchDataLoader`` 使用 :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。
             此时可以配套使用 ``TorchDataLoader`` 的 ``set_pad`` 和 ``set_ignore`` 方法来设置 pad_val 或 忽略某个 field 的检测。
