@@ -48,11 +48,11 @@ pipeline {
                         }
                     }
                     steps {
-                        sh 'pytest ./tests --durations=0 -m paddle'
-                        sh 'FASTNLP_BACKEND=paddle pytest ./tests --durations=0 -m paddle'
-                        sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/drivers/paddle_driver/test_dist_utils.py --durations=0'
-                        sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/drivers/paddle_driver/test_fleet.py" --durations=0'
-                        sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/core/controllers/test_trainer_paddle.py --durations=0'
+                        sh 'pytest ./tests --durations=0 -m paddle --co'
+                        sh 'FASTNLP_BACKEND=paddle pytest ./tests --durations=0 -m paddle --co'
+                        sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/drivers/paddle_driver/test_dist_utils.py --durations=0 --co'
+                        sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/drivers/paddle_driver/test_fleet.py --durations=0 --co'
+                        sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/controllers/test_trainer_paddle.py --durations=0 --co'
                     }
                 }
                 stage('Test Jittor') {
@@ -65,7 +65,7 @@ pipeline {
                     steps {
                         // sh 'pip install fitlog'
                         // sh 'pytest ./tests --html=test_results.html --self-contained-html'
-                        sh 'pytest ./tests --durations=0 -m jittor'
+                        sh 'pytest ./tests --durations=0 -m jittor --co'
                     }
                 }
             }
