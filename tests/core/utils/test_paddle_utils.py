@@ -64,6 +64,7 @@ class TestPaddleToDevice:
 #
 ############################################################################
 
+@pytest.mark.paddle
 class TestPaddleMoveDataToDevice:
 
     def check_gpu(self, tensor, idx):
