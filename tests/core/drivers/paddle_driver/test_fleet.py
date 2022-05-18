@@ -629,6 +629,7 @@ class TestSaveLoad:
                 self.driver1.save_checkpoint(Path(path), save_states, dataloader, only_state_dict, should_save_model=True)
             else:
                 self.driver1.save_checkpoint(Path(path), save_states, dataloader, only_state_dict, should_save_model=True, input_spec=[paddle.ones((16, 10))])
+            dist.barrier()
             # 加载
             # 更改 batch_size
             dataloader = DataLoader(
@@ -644,8 +645,10 @@ class TestSaveLoad:
                 rank=self.driver2.global_rank,
                 pad=True
             )
+            dist.barrier()
             load_states = self.driver2.load_checkpoint(Path(path), dataloader, only_state_dict, should_load_model=True)
             replaced_loader = load_states.pop("dataloader")
+            dist.barrier()
             # 1. 检查 optimizer 的状态
             # TODO optimizer 的 state_dict 总是为空
 
