@@ -15,7 +15,7 @@ pipeline {
                         }
                     }
                     steps {
-                        sh 'pytest ./tests --durations=0 -m "not torch and not paddle and not jittor and not torchpaddle and not torchjittor"'
+                        sh 'pytest ./tests --durations=0 -m "not torch and not paddle and not paddledist and not jittor and not torchpaddle and not torchjittor"'
                     }
                 }
                 stage('Test Torch-1.11') {
