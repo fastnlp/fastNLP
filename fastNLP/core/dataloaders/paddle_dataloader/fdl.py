@@ -47,6 +47,7 @@ from fastNLP.core.collators.collator import Collator
 from fastNLP.core.dataloaders.utils import indice_collate_wrapper
 from fastNLP.core.dataset import DataSet as FDataSet
 from fastNLP.core.samplers import ReproducibleBatchSampler, RandomBatchSampler
+from ..utils import _match_param
 
 
 class _PaddleDataset(Dataset):
@@ -154,14 +155,17 @@ class PaddleDataLoader(DataLoader):
             else:
                 raise ValueError(f"collate_fn: {collate_fn} must be 'auto'")
 
-        super(PaddleDataLoader, self).__init__(dataset=dataset, feed_list=feed_list, places=places,
-                                               return_list=return_list, batch_sampler=batch_sampler,
-                                               batch_size=batch_size, shuffle=shuffle, drop_last=drop_last,
-                                               collate_fn=collate_fn, num_workers=num_workers,
-                                               use_buffer_reader=use_buffer_reader, use_shared_memory=use_shared_memory,
-                                               timeout=timeout, worker_init_fn=worker_init_fn,
-                                               persistent_workers=persistent_workers)
-
+        dl_kwargs = _match_param(PaddleDataLoader.__init__, DataLoader.__init__, DataLoader.__name__)
+        if dl_kwargs is None:
+            super(PaddleDataLoader, self).__init__(dataset=dataset, feed_list=feed_list, places=places,
+                                                   return_list=return_list, batch_sampler=batch_sampler,
+                                                   batch_size=batch_size, shuffle=shuffle, drop_last=drop_last,
+                                                   collate_fn=collate_fn, num_workers=num_workers,
+                                                   use_buffer_reader=use_buffer_reader, use_shared_memory=use_shared_memory,
+                                                   timeout=timeout, worker_init_fn=worker_init_fn,
+                                                   persistent_workers=persistent_workers)
+        else:
+            super().__init__(**dl_kwargs)
         # _collate_fn = _MultiCollator(AutoCollator(as_numpy=True))
         # if collate_fn is not None:
         #     _collate_fn.add_collator(collate_fn)

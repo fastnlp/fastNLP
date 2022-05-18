@@ -11,6 +11,7 @@ from fastNLP.core.collators import Collator
 from fastNLP.core.dataloaders.utils import indice_collate_wrapper
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, UnrepeatedSampler, RandomSampler
+from ..utils import _match_param
 
 if _NEED_IMPORT_TORCH:
     from torch.utils.data import DataLoader, Sampler
@@ -96,12 +97,16 @@ class TorchDataLoader(DataLoader):
             else:
                 raise ValueError(f"collate_fn: {collate_fn} must be 'auto'")
 
-        super().__init__(dataset=dataset, batch_size=batch_size, shuffle=shuffle, sampler=sampler,
-                         batch_sampler=batch_sampler, num_workers=num_workers, collate_fn=collate_fn,
-                         pin_memory=pin_memory, drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
-                         multiprocessing_context=multiprocessing_context, generator=generator,
-                         prefetch_factor=prefetch_factor,
-                         persistent_workers=persistent_workers)
+        dl_kwargs = _match_param(TorchDataLoader.__init__, DataLoader.__init__, fn_name=DataLoader.__name__)
+        if dl_kwargs is None:
+            super().__init__(dataset=dataset, batch_size=batch_size, shuffle=shuffle, sampler=sampler,
+                             batch_sampler=batch_sampler, num_workers=num_workers, collate_fn=collate_fn,
+                             pin_memory=pin_memory, drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
+                             multiprocessing_context=multiprocessing_context, generator=generator,
+                             prefetch_factor=prefetch_factor,
+                             persistent_workers=persistent_workers)
+        else:
+            super().__init__(**dl_kwargs)
 
         self.cur_batch_indices = None
 

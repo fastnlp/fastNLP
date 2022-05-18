@@ -5,6 +5,9 @@ from fastNLP.core.dataset import DataSet
 from fastNLP.io.data_bundle import DataBundle
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from fastNLP.core import Trainer
+from pkg_resources import parse_version
+from tests.helpers.utils import Capturing, recover_logger
+from fastNLP import logger
 
 if _NEED_IMPORT_TORCH:
     import torch
@@ -128,3 +131,33 @@ class TestFdl:
         dl = DataLoader(MyDatset(), collate_fn=collate_batch)
         for batch in dl:
             print(batch)
+
+    @recover_logger
+    def test_version_16(self):
+        if parse_version(torch.__version__) >= parse_version('1.7'):
+            pytest.skip("Torch version larger than 1.7")
+        logger.set_stdout()
+        ds = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
+        with Capturing() as out:
+            dl = TorchDataLoader(ds, prefetch_factor=3, shuffle=False)
+            for idx, batch in enumerate(dl):
+                assert len(batch['x'])==1
+                assert batch['x'][0].tolist() == ds[idx]['x']
+
+        assert 'Parameter:prefetch_factor' in out[0]
+
+    @recover_logger
+    def test_version_111(self):
+        if parse_version(torch.__version__) <= parse_version('1.7'):
+            pytest.skip("Torch version smaller than 1.7")
+        logger.set_stdout()
+        ds = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
+        with Capturing() as out:
+            dl = TorchDataLoader(ds, num_workers=2, prefetch_factor=3, shuffle=False)
+            for idx, batch in enumerate(dl):
+                assert len(batch['x'])==1
+                assert batch['x'][0].tolist() == ds[idx]['x']
+
+        assert 'Parameter:prefetch_factor' not in out[0]
+
+
