@@ -3,7 +3,7 @@ __all__ = [
     'prepare_jittor_dataloader'
 ]
 
-from typing import Callable, Optional, List, Union
+from typing import Callable, Optional, List, Union, Dict, Sequence
 from copy import deepcopy
 
 import numpy as np
@@ -185,5 +185,111 @@ class JittorDataLoader:
         return self.cur_batch_indices
 
 
-def prepare_jittor_dataloader():
-    ...
+def prepare_jittor_dataloader(ds_or_db, batch_size: int = 16, shuffle: bool = True,
+                              drop_last: bool = False, num_workers: int = 0, buffer_size: int = 512 * 1024 * 1024,
+                              stop_grad: bool = True, keep_numpy_array: bool = False, endless: bool = False,
+                              collate_fn: Union[None, str, Callable] = "auto",
+                              non_train_batch_size: int = 16) \
+        -> Union[Sequence[JittorDataLoader], Dict[str, JittorDataLoader], JittorDataLoader]:
+    """
+    prepare_jittor_dataloader的功能是将多个dataset同时转为dataloader返回。ds_or_db的类型只能为``[Dataset, DataBundle,
+     Sequence[Dataset], Dict[name, Dataset]]``,具体如下:
+
+        * 当ds_or_db为Dataset时，prepare_jittor_dataloader会将所有的参数除了non_train_batch_size以外来帮你实例化一个
+        JittorDataLoader并返回。
+        * 当ds_or_db为FastNLP的DataBundle时，prepare_jittor_dataloader会遍历所有的dataset并根据其name实例化不同的JittorDataLoader，
+        当name中包含'train'字符串时，prepare_jittor_dataloader默认其为train数据，并将train_batch_size传为其中，其他不包含'train'字符串
+        的dataset均使用non_train_batch_size作为batch_size来实例化JittorDataLoader。最终根据name:JittorDataLoader组成一个Dict[name, JittorDataLoader]
+        的数据返回。
+        * 当ds_or_db为Dict[name, Dataset]数据类型时，prepare_jittor_dataloader会遍历所有的dataset并根据其name实例化不同的JittorDataLoader，
+        当name中包含'train'字符串时，prepare_jittor_dataloader默认其为train数据，并将train_batch_size传为其中，其他不包含'train'字符串
+        的dataset均使用non_train_batch_size作为batch_size来实例化JittorDataLoader。最终根据name:JittorDataLoader组成一个Dict[name, JittorDataLoader]
+        的数据返回。
+        * 当ds_or_db为Sequence[Dataset]数据类型时， prepare_jittor_dataloader会将Sequence[0]作为默认的train数据集对待，并使用train_batch_size作为
+        其batch_size使用;而Sequence[1:]均视为非train数据集对待，使用non_train_batch_size作为batch_size来实例化JittorDataLoader。最终
+        将所有JittorDataLoader组成Sequence[JittorDataLoader]返回。
+
+    :param ds_or_db: 传进来的dataset集合或字典或为dataset或DataBundle。其取值只能为``[Dataset, DataBundle,
+     Sequence[Dataset], Dict[name, Dataset]]``.
+    :param batch_size: batch 的大小。
+    :param non_train_batch_size: 如果传入的 ``ds_or_db`` 为 ``Dict`` 或 :class:`~fastNLP.io.DataBundle` 对象，可以通过改参数
+        设置名称不为 `train` 的其他 ``dataset`` 的 ``batch_size``。
+    :param shuffle: 是否打乱数据集
+    :param drop_last: 是否去掉最后一个不符合``batch_size``的数据
+    :param num_workers: 进程的数量，当``num_workers=0``时不开启多进程
+    :param buffer_size: 每个进程占用的内存空间，默认为512M。主要是配合num_workers使用，用户可以自定义每个进程的内存大小。
+    :param stop_grad:
+    :param keep_numpy_array: 返回的数据是``np.array`类`型而不是``jittor.array``类型，默认为``False``
+    :param endless: 是否让``JittorDataLoader``无限返回数据，也就是将dataset循环使用使得返回数据是没有限制的。默认为``False``.
+    :param collate_fn: 用来对从dataset取到的数据进行打包处理成batch的callable函数，其值应该为一下三个:``[None, "auto", callable]``.
+
+        * ``callate_fn=None``时，第一点值得注意的是此时传进来的datset不能为``fastNLP``的dataset,采用fastNLP的dataset时，``collate_fn``不能为``None``;
+        第二点注意的是此时``JittorDataLoader``会调用默认的`callate_batch`函数对sampler到的数据进行简单打包，组成一个batch返回。`
+        * ``callate_fn="auto"``时，``JittorDataLoader``会自动调用``fastNLP``自带的``Collator``，其会自动检测dataset的每个``field``,
+        并判断是否能够pad处理，若能则会自动进行pad操作，默认``pad_val=0``。若想要更改其值，可调用``set_pad``方法;若不想自动pad某个field，
+        可以调用``set_ignore``方法忽略某个field。
+        * ``callate_fn=callable``时，callable函数是用户自定义的callate_fn函数，此时``JittorDataLoader``会调用传进来的callable函数对
+        数据进行打包处理并返回。值得注意的是用户自定义的callable函数的输入为batch,batch为list类型数据，其中batch的每一条数据都为dataset的一条数据。
+
+    :return: 返回数据类型为Sequence[JittorDataLoader], Dict[str, JittorDataLoader], JittorDataLoader其中之一，根据输入ds_or_db变化而变化。
+    """
+    from fastNLP.io.data_bundle import DataBundle
+    if isinstance(ds_or_db, Dataset):
+        dl = JittorDataLoader(ds_or_db, batch_size=batch_size, shuffle=shuffle,
+                              drop_last=drop_last, num_workers=num_workers, buffer_size=buffer_size,
+                              stop_grad=stop_grad, keep_numpy_array=keep_numpy_array, endless=endless,
+                              collate_fn=collate_fn)
+        return dl
+    elif isinstance(ds_or_db, DataBundle):
+        dl_bundle = {}
+        for name, ds in ds_or_db.iter_datasets():
+            if 'train' in name:
+                dl_bundle[name] = JittorDataLoader(ds_or_db, batch_size=batch_size, shuffle=shuffle,
+                                                   drop_last=drop_last, num_workers=num_workers,
+                                                   buffer_size=buffer_size,
+                                                   stop_grad=stop_grad, keep_numpy_array=keep_numpy_array,
+                                                   endless=endless,
+                                                   collate_fn=collate_fn)
+            else:
+                dl_bundle[name] = JittorDataLoader(ds_or_db,
+                                                   batch_size=non_train_batch_size if non_train_batch_size else batch_size,
+                                                   shuffle=shuffle,
+                                                   drop_last=drop_last, num_workers=num_workers,
+                                                   buffer_size=buffer_size,
+                                                   stop_grad=stop_grad, keep_numpy_array=keep_numpy_array,
+                                                   endless=endless,
+                                                   collate_fn=collate_fn)
+        return dl_bundle
+    elif isinstance(ds_or_db, Sequence):
+        ds_seq = []
+        for idx, ds in enumerate(ds_or_db):
+            if idx > 0:
+                batch_size = non_train_batch_size if non_train_batch_size else batch_size
+            dl = JittorDataLoader(ds, batch_size=batch_size, shuffle=shuffle,
+                                  drop_last=drop_last, num_workers=num_workers, buffer_size=buffer_size,
+                                  stop_grad=stop_grad, keep_numpy_array=keep_numpy_array, endless=endless,
+                                  collate_fn=collate_fn)
+            ds_seq.append(dl)
+        return ds_seq
+
+    elif isinstance(ds_or_db, Dict):
+        ds_dict = {}
+        for name, ds in ds_or_db.items():
+            if 'train' in name:
+                dl = JittorDataLoader(ds, batch_size=batch_size, shuffle=shuffle,
+                                      drop_last=drop_last, num_workers=num_workers, buffer_size=buffer_size,
+                                      stop_grad=stop_grad, keep_numpy_array=keep_numpy_array, endless=endless,
+                                      collate_fn=collate_fn)
+            else:
+                dl = JittorDataLoader(ds_or_db,
+                                      batch_size=non_train_batch_size if non_train_batch_size else batch_size,
+                                      shuffle=shuffle,
+                                      drop_last=drop_last, num_workers=num_workers,
+                                      buffer_size=buffer_size,
+                                      stop_grad=stop_grad, keep_numpy_array=keep_numpy_array,
+                                      endless=endless,
+                                      collate_fn=collate_fn)
+            ds_dict[name] = dl
+        return ds_dict
+    else:
+        raise ValueError(f"ds_or_db: {ds_or_db} must be fastnlp dataset or data_bundle or sequence or mapping!")

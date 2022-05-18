@@ -195,8 +195,8 @@ class PaddleDataLoader(DataLoader):
             field 进行 pad，所以如果对应 field 本身就不是可以 pad 的形式，可以不需要主动设置为 None 。如果 backend 为 None ，该值
             无意义。
         :param dtype: 对于需要 pad 的 field ，该 field 的数据 dtype 应该是什么。
-        :param backend: 可选['raw', 'numpy', 'torch', 'paddle', 'jittor', 'auto']，分别代表，输出为 list, numpy.ndarray,
-            torch.Tensor, paddle.Tensor, jittor.Var 类型。若 pad_val 为 None ，该值无意义 。
+        :param backend: 可选['raw', 'numpy', 'torch', 'paddle', 'paddle', 'auto']，分别代表，输出为 list, numpy.ndarray,
+            torch.Tensor, paddle.Tensor, paddle.Var 类型。若 pad_val 为 None ，该值无意义 。
         :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 pad_val, dtype, backend 等参数失效。pad_fn 的输入为当前 field 的
             batch 形式。 Collator 将自动 unbatch 数据，然后将各个 field 组成各自的 batch 。pad_func 的输入即为 field 的 batch
             形式，输出将被直接作为结果输出。
@@ -253,13 +253,78 @@ class PaddleDataLoader(DataLoader):
 def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                               return_list: bool = True,
                               batch_sampler: Union["Sampler[Sequence[int]]", ReproducibleBatchSampler] = None,
-                              batch_size: int = 1, shuffle: bool = False,
+                              batch_size: int = 16, shuffle: bool = False,
                               drop_last: bool = False, collate_fn: Union[Callable, str, None] = 'auto',
                               num_workers: int = 0, use_buffer_reader: bool = True,
                               use_shared_memory: bool = True, timeout: int = 0,
                               worker_init_fn: Callable = None, persistent_workers=False,
                               non_train_batch_size: int = 16) \
         -> Union[Sequence[PaddleDataLoader], Dict[str, PaddleDataLoader], PaddleDataLoader]:
+    """
+    prepare_paddle_dataloader的功能是将多个dataset同时转为dataloader返回。ds_or_db的类型只能为``[Dataset, DataBundle,
+     Sequence[Dataset], Dict[name, Dataset]]``,具体如下:
+
+        * 当ds_or_db为Dataset时，prepare_paddle_dataloader会将所有的参数除了non_train_batch_size以外来帮你实例化一个
+        paddleDataLoader并返回。
+        * 当ds_or_db为FastNLP的DataBundle时，prepare_paddle_dataloader会遍历所有的dataset并根据其name实例化不同的paddleDataLoader，
+        当name中包含'train'字符串时，prepare_paddle_dataloader默认其为train数据，并将train_batch_size传为其中，其他不包含'train'字符串
+        的dataset均使用non_train_batch_size作为batch_size来实例化paddleDataLoader。最终根据name:paddleDataLoader组成一个Dict[name, paddleDataLoader]
+        的数据返回。
+        * 当ds_or_db为Dict[name, Dataset]数据类型时，prepare_paddle_dataloader会遍历所有的dataset并根据其name实例化不同的paddleDataLoader，
+        当name中包含'train'字符串时，prepare_paddle_dataloader默认其为train数据，并将train_batch_size传为其中，其他不包含'train'字符串
+        的dataset均使用non_train_batch_size作为batch_size来实例化paddleDataLoader。最终根据name:paddleDataLoader组成一个Dict[name, paddleDataLoader]
+        的数据返回。
+        * 当ds_or_db为Sequence[Dataset]数据类型时， prepare_paddle_dataloader会将Sequence[0]作为默认的train数据集对待，并使用train_batch_size作为
+        其batch_size使用;而Sequence[1:]均视为非train数据集对待，使用non_train_batch_size作为batch_size来实例化paddleDataLoader。最终
+        将所有paddleDataLoader组成Sequence[paddleDataLoader]返回。
+    
+    :param ds_or_db: 传进来的dataset集合或字典或为dataset或DataBundle。其取值只能为``[Dataset, DataBundle,
+     Sequence[Dataset], Dict[name, Dataset]]``.
+    :param batch_size: batch 的大小。
+    :param non_train_batch_size: 如果传入的 ``ds_or_db`` 为 ``Dict`` 或 :class:`~fastNLP.io.DataBundle` 对象，可以通过改参数
+        设置名称不为 `train` 的其他 ``dataset`` 的 ``batch_size``。
+    :param feed_list: (list(Tensor)|tuple(Tensor)): feed Tensor list.
+        The Tensors should be created by :code:`paddle.static.data()`.
+        :attr:`feed_list` must be set if :attr:`return_list` is
+        False. Default None.
+    :param places: (list(Place)|tuple(Place)|list(str)|optional): a list of Place,
+        to put data onto, :attr:`places` can be None, if
+        :attr:`places` is None, default place(CPUPlace or CUDAPlace(0))
+        will be used. Default None. If ``places`` is list of string,
+        the string in the list can be ``cpu``, ``gpu:x`` and ``gpu_pinned``,
+        where ``x`` is the index of the GPUs.
+    :param return_list: whether the return value on each device is
+        presented as a list. If :attr:`return_list=False`, the return
+        value on each device would be a dict of str -> Tensor, where
+        the key of the dict is the name of each fed Tensors. If
+        :attr:`return_list=True`, the return value on each device would
+        be a list(Tensor). :attr:`return_list` can only be True
+        in dynamic graph mode. Default True.
+    :param batch_sampler: 实现了``__iter__``和``__len__``方法的实例化对象，它的功能是根据dataset生成数据indices并组成一个batch数据。
+    :param shuffle: 是否将数据打乱，若``shuffle=True``则会将dataset打乱；若否则什么也不做。
+    :param drop_last: 当``drop_last=True``时，``PaddleDataLoader``会扔掉最后一个不能组成``batch_size``大小的batch数据;
+    若``drop_last=False``, 则什么也不做。
+    :param collate_fn:用来对从dataset取到的数据进行打包处理成batch的callable函数，其值应该为一下三个:``[None, "auto", callable]``.
+
+        * ``callate_fn=None``时，第一点值得注意的是此时传进来的datset不能为``fastNLP``的dataset,采用fastNLP的dataset时，``collate_fn``不能为``None``;
+        第二点注意的是此时``PaddleDataLoader``会调用默认的`default_collate_fn`函数对sampler到的数据进行简单打包，组成一个batch返回。`
+        * ``callate_fn="auto"``时，``PaddleDataLoader``会自动调用``fastNLP``自带的``Collator``，其会自动检测dataset的每个``field``,
+        并判断是否能够pad处理，若能则会自动进行pad操作，默认``pad_val=0``。若想要更改其值，可调用``set_pad``方法;若不想自动pad某个field，
+        可以调用``set_ignore``方法忽略某个field。
+        * ``callate_fn=callable``时，callable函数是用户自定义的callate_fn函数，此时``PaddleDataLoader``会调用传进来的callable函数对
+        数据进行打包处理并返回。值得注意的是用户自定义的callable函数的输入为batch,batch为list类型数据，其中batch的每一条数据都为dataset的一条数据。
+
+    :param num_workers: 开启多进程的数量，当``num_workers=0``时不开启多进程
+    :param use_buffer_reader: 是否开启buffer_reader。如果``use_buffer_reader=True``，那么``PaddleDataLoader``将会异步的预取下一个batch的
+        数据，因此它将会加快数据传输的速度，但是将会占用更多的内存或者显存。默认值是``True``。如果``use_buffer_reader=False``,那么什么也不错
+    :param use_shared_memory: 是否使用共享内存。当``use_shared_memory=True``时，将采用共享内存来加快将数据放进进程队列。建议仅当计算机上的
+        共享空间足够大时。（例如Linux上的/dev/shm/空间足够大）共享内存仅在多进程模式（num_workers>0）下生效。
+    :param timeout: 从子进程的输出队列获取数据的超时值
+    :param worker_init_fn: init函数，如果不设置为None,则将会在每个子进程初始化时调用该函数。
+    :param persistent_workers:
+
+    :return:
+    """
     from fastNLP.io.data_bundle import DataBundle
     if isinstance(ds_or_db, Dataset):
         dl = PaddleDataLoader(ds_or_db, feed_list=feed_list, places=places, return_list=return_list,
@@ -284,7 +349,8 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
             else:
                 dl_bundle[name] = PaddleDataLoader(ds, feed_list=feed_list, places=places,
                                                    return_list=return_list,
-                                                   batch_sampler=batch_sampler, batch_size=non_train_batch_size,
+                                                   batch_sampler=batch_sampler,
+                                                   batch_size=non_train_batch_size if non_train_batch_size else batch_size,
                                                    shuffle=shuffle,
                                                    drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                                    use_shared_memory=use_shared_memory,
@@ -294,7 +360,9 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         return dl_bundle
     elif isinstance(ds_or_db, Sequence):
         ds_seq = []
-        for ds in ds_or_db:
+        for idx, ds in enumerate(ds_or_db):
+            if idx > 0:
+                batch_size = non_train_batch_size if non_train_batch_size else batch_size
             dl = PaddleDataLoader(ds, feed_list=feed_list, places=places, return_list=return_list,
                                   batch_sampler=batch_sampler, batch_size=batch_size, shuffle=shuffle,
                                   drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
@@ -315,7 +383,9 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                                       persistent_workers=persistent_workers)
             else:
                 dl = PaddleDataLoader(ds, feed_list=feed_list, places=places, return_list=return_list,
-                                      batch_sampler=batch_sampler, batch_size=non_train_batch_size, shuffle=shuffle,
+                                      batch_sampler=batch_sampler,
+                                      batch_size=non_train_batch_size if non_train_batch_size else batch_size,
+                                      shuffle=shuffle,
                                       drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                       use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
                                       timeout=timeout, worker_init_fn=worker_init_fn,
