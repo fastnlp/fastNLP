@@ -253,7 +253,7 @@ class PaddleDataLoader(DataLoader):
 def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                               return_list: bool = True,
                               batch_sampler: Union["Sampler[Sequence[int]]", ReproducibleBatchSampler] = None,
-                              train_batch_size: int = 16, shuffle: bool = False,
+                              batch_size: int = 16, shuffle: bool = False,
                               drop_last: bool = False, collate_fn: Union[Callable, str, None] = 'auto',
                               num_workers: int = 0, use_buffer_reader: bool = True,
                               use_shared_memory: bool = True, timeout: int = 0,
@@ -280,8 +280,9 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
     
     :param ds_or_db: 传进来的dataset集合或字典或为dataset或DataBundle。其取值只能为``[Dataset, DataBundle,
      Sequence[Dataset], Dict[name, Dataset]]``.
-    :param train_batch_size: 'train'数据集使用的batch_size，跟non_train_batch_size是互斥的。
-    :param non_train_batch_size: 非'train'数据使用batch_size，跟train_batch_size是互斥的。
+    :param batch_size: batch 的大小。
+    :param non_train_batch_size: 如果传入的 ``ds_or_db`` 为 ``Dict`` 或 :class:`~fastNLP.io.DataBundle` 对象，可以通过改参数
+        设置名称不为 `train` 的其他 ``dataset`` 的 ``batch_size``。
     :param feed_list: (list(Tensor)|tuple(Tensor)): feed Tensor list.
         The Tensors should be created by :code:`paddle.static.data()`.
         :attr:`feed_list` must be set if :attr:`return_list` is
@@ -327,7 +328,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
     from fastNLP.io.data_bundle import DataBundle
     if isinstance(ds_or_db, Dataset):
         dl = PaddleDataLoader(ds_or_db, feed_list=feed_list, places=places, return_list=return_list,
-                              batch_sampler=batch_sampler, batch_size=train_batch_size, shuffle=shuffle,
+                              batch_sampler=batch_sampler, batch_size=batch_size, shuffle=shuffle,
                               drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                               use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
                               timeout=timeout, worker_init_fn=worker_init_fn, persistent_workers=persistent_workers)
@@ -338,7 +339,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
             if 'train' in name:
                 dl_bundle[name] = PaddleDataLoader(ds, feed_list=feed_list, places=places,
                                                    return_list=return_list,
-                                                   batch_sampler=batch_sampler, batch_size=train_batch_size,
+                                                   batch_sampler=batch_sampler, batch_size=batch_size,
                                                    shuffle=shuffle,
                                                    drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                                    use_shared_memory=use_shared_memory,
@@ -349,7 +350,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                 dl_bundle[name] = PaddleDataLoader(ds, feed_list=feed_list, places=places,
                                                    return_list=return_list,
                                                    batch_sampler=batch_sampler,
-                                                   batch_size=non_train_batch_size if non_train_batch_size else train_batch_size,
+                                                   batch_size=non_train_batch_size if non_train_batch_size else batch_size,
                                                    shuffle=shuffle,
                                                    drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                                    use_shared_memory=use_shared_memory,
@@ -361,9 +362,9 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         ds_seq = []
         for idx, ds in enumerate(ds_or_db):
             if idx > 0:
-                train_batch_size = non_train_batch_size if non_train_batch_size else train_batch_size
+                batch_size = non_train_batch_size if non_train_batch_size else batch_size
             dl = PaddleDataLoader(ds, feed_list=feed_list, places=places, return_list=return_list,
-                                  batch_sampler=batch_sampler, batch_size=train_batch_size, shuffle=shuffle,
+                                  batch_sampler=batch_sampler, batch_size=batch_size, shuffle=shuffle,
                                   drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                   use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
                                   timeout=timeout, worker_init_fn=worker_init_fn, persistent_workers=persistent_workers)
@@ -375,7 +376,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         for name, ds in ds_or_db.items():
             if 'train' in name:
                 dl = PaddleDataLoader(ds, feed_list=feed_list, places=places, return_list=return_list,
-                                      batch_sampler=batch_sampler, batch_size=train_batch_size, shuffle=shuffle,
+                                      batch_sampler=batch_sampler, batch_size=batch_size, shuffle=shuffle,
                                       drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                       use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
                                       timeout=timeout, worker_init_fn=worker_init_fn,
@@ -383,7 +384,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
             else:
                 dl = PaddleDataLoader(ds, feed_list=feed_list, places=places, return_list=return_list,
                                       batch_sampler=batch_sampler,
-                                      batch_size=non_train_batch_size if non_train_batch_size else train_batch_size,
+                                      batch_size=non_train_batch_size if non_train_batch_size else batch_size,
                                       shuffle=shuffle,
                                       drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                       use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,

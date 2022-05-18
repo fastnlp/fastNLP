@@ -185,7 +185,7 @@ class JittorDataLoader:
         return self.cur_batch_indices
 
 
-def prepare_jittor_dataloader(ds_or_db, train_batch_size: int = 16, shuffle: bool = True,
+def prepare_jittor_dataloader(ds_or_db, batch_size: int = 16, shuffle: bool = True,
                               drop_last: bool = False, num_workers: int = 0, buffer_size: int = 512 * 1024 * 1024,
                               stop_grad: bool = True, keep_numpy_array: bool = False, endless: bool = False,
                               collate_fn: Union[None, str, Callable] = "auto",
@@ -211,8 +211,9 @@ def prepare_jittor_dataloader(ds_or_db, train_batch_size: int = 16, shuffle: boo
 
     :param ds_or_db: 传进来的dataset集合或字典或为dataset或DataBundle。其取值只能为``[Dataset, DataBundle,
      Sequence[Dataset], Dict[name, Dataset]]``.
-    :param train_batch_size: 'train'数据集使用的batch_size，跟non_train_batch_size是互斥的。
-    :param non_train_batch_size: 非'train'数据使用batch_size，跟train_batch_size是互斥的。
+    :param batch_size: batch 的大小。
+    :param non_train_batch_size: 如果传入的 ``ds_or_db`` 为 ``Dict`` 或 :class:`~fastNLP.io.DataBundle` 对象，可以通过改参数
+        设置名称不为 `train` 的其他 ``dataset`` 的 ``batch_size``。
     :param shuffle: 是否打乱数据集
     :param drop_last: 是否去掉最后一个不符合``batch_size``的数据
     :param num_workers: 进程的数量，当``num_workers=0``时不开启多进程
@@ -234,7 +235,7 @@ def prepare_jittor_dataloader(ds_or_db, train_batch_size: int = 16, shuffle: boo
     """
     from fastNLP.io.data_bundle import DataBundle
     if isinstance(ds_or_db, Dataset):
-        dl = JittorDataLoader(ds_or_db, batch_size=train_batch_size, shuffle=shuffle,
+        dl = JittorDataLoader(ds_or_db, batch_size=batch_size, shuffle=shuffle,
                               drop_last=drop_last, num_workers=num_workers, buffer_size=buffer_size,
                               stop_grad=stop_grad, keep_numpy_array=keep_numpy_array, endless=endless,
                               collate_fn=collate_fn)
@@ -243,7 +244,7 @@ def prepare_jittor_dataloader(ds_or_db, train_batch_size: int = 16, shuffle: boo
         dl_bundle = {}
         for name, ds in ds_or_db.iter_datasets():
             if 'train' in name:
-                dl_bundle[name] = JittorDataLoader(ds_or_db, batch_size=train_batch_size, shuffle=shuffle,
+                dl_bundle[name] = JittorDataLoader(ds_or_db, batch_size=batch_size, shuffle=shuffle,
                                                    drop_last=drop_last, num_workers=num_workers,
                                                    buffer_size=buffer_size,
                                                    stop_grad=stop_grad, keep_numpy_array=keep_numpy_array,
@@ -251,7 +252,7 @@ def prepare_jittor_dataloader(ds_or_db, train_batch_size: int = 16, shuffle: boo
                                                    collate_fn=collate_fn)
             else:
                 dl_bundle[name] = JittorDataLoader(ds_or_db,
-                                                   batch_size=non_train_batch_size if non_train_batch_size else train_batch_size,
+                                                   batch_size=non_train_batch_size if non_train_batch_size else batch_size,
                                                    shuffle=shuffle,
                                                    drop_last=drop_last, num_workers=num_workers,
                                                    buffer_size=buffer_size,
@@ -263,8 +264,8 @@ def prepare_jittor_dataloader(ds_or_db, train_batch_size: int = 16, shuffle: boo
         ds_seq = []
         for idx, ds in enumerate(ds_or_db):
             if idx > 0:
-                train_batch_size = non_train_batch_size if non_train_batch_size else train_batch_size
-            dl = JittorDataLoader(ds, batch_size=train_batch_size, shuffle=shuffle,
+                batch_size = non_train_batch_size if non_train_batch_size else batch_size
+            dl = JittorDataLoader(ds, batch_size=batch_size, shuffle=shuffle,
                                   drop_last=drop_last, num_workers=num_workers, buffer_size=buffer_size,
                                   stop_grad=stop_grad, keep_numpy_array=keep_numpy_array, endless=endless,
                                   collate_fn=collate_fn)
@@ -275,13 +276,13 @@ def prepare_jittor_dataloader(ds_or_db, train_batch_size: int = 16, shuffle: boo
         ds_dict = {}
         for name, ds in ds_or_db.items():
             if 'train' in name:
-                dl = JittorDataLoader(ds, batch_size=train_batch_size, shuffle=shuffle,
+                dl = JittorDataLoader(ds, batch_size=batch_size, shuffle=shuffle,
                                       drop_last=drop_last, num_workers=num_workers, buffer_size=buffer_size,
                                       stop_grad=stop_grad, keep_numpy_array=keep_numpy_array, endless=endless,
                                       collate_fn=collate_fn)
             else:
                 dl = JittorDataLoader(ds_or_db,
-                                      batch_size=non_train_batch_size if non_train_batch_size else train_batch_size,
+                                      batch_size=non_train_batch_size if non_train_batch_size else batch_size,
                                       shuffle=shuffle,
                                       drop_last=drop_last, num_workers=num_workers,
                                       buffer_size=buffer_size,
