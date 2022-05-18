@@ -91,6 +91,8 @@ def _check_module(module):
         for backend in SUPPORT_BACKENDS:
             if f'{os.sep}site-packages{os.sep}{backend}' in file:
                 return backend
+            if f'{os.sep}dist-packages{os.sep}{backend}' in file:
+                return backend
     except:
         pass
     return None

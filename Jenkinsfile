@@ -22,11 +22,11 @@ pipeline {
                     agent {
                         docker {
                             image 'fnlp:torch-1.11'
-                            args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci --gpus all'
+                            args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci --gpus all --shm-size 256M'
                         }
                     }
                     steps {
-                        sh 'pytest ./tests/ --durations=0 -m torch'
+                        sh 'pytest ./tests --durations=0 -m torch'
                     }
                 }
                 stage('Test Torch-1.6') {
