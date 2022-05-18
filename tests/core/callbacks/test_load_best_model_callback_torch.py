@@ -83,7 +83,6 @@ def test_load_best_model_callback(
 ):
     for save_folder in ['save_models', None]:
         for only_state_dict in [True, False]:
-            logger.error(f"{save_folder}, {only_state_dict}")
             callbacks = [LoadBestModelCallback(monitor='acc', only_state_dict=only_state_dict,
                                                save_folder=save_folder)]
             trainer = Trainer(
