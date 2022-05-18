@@ -82,10 +82,10 @@ class TorchDataLoader(DataLoader):
         数据处理速度，但同时也消耗大量内存。 当 ``num_workers=0`` 时， 不开启子进程。 默认为 ``0``。
         :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的 Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``.
 
-            *  callate_fn 为 'None' 时，需要注意的是此时传进来的 datset 类型不能为 :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None`` 时，
+            *  callate_fn 为 ``None`` 时，需要注意的是此时传进来的 datset 类型不能为 :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None`` 时，
              ``TorchDataLoader`` 调用默认的 torch 框架的 ``DataLoader`` 自带的 `default_collate_fn` 作为 callate_fn 的默认值， 其无法处理
              :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
-            * callate_fn 为 ``'auto'`` 时，`TorchDataLoader`` 使用 :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。
+            * callate_fn 为 ``'auto'`` 时，``TorchDataLoader`` 使用 :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。
             此时可以配套使用 ``TorchDataLoader`` 的 ``set_pad`` 和 ``set_ignore`` 方法来设置 pad_val 或 忽略某个 field 的检测。
             * `collate_fn 为 ``Callable`` 时， 该 Callable 函数应当接受一个 batch 参数作为输入， batch 是一个 List 对象且 List 中的每一条数据都是
             dataset 的一条数据；该 Callable 函数还应当返回一个对象。
@@ -250,36 +250,36 @@ def prepare_torch_dataloader(ds_or_db,
         * ds_or_db 为 ``Sequence[DataSet]`` 序列， 返回值为 ``Sequence[TorchDataLoader]`` 的序列
         * ds_or_db 为 ``Dict[str, DataSet]`` 字典， 返回值也为 ``Dict[str, TorchDataLoader]`` 的字典
 
-        :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
-        :param non_train_batch_size: 非 'train' 数据集的 ``TorchDataLoader`` 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
-        :param shuffle: 是否打乱数据集， 默认为 ``False``。
-        :param sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
-        默认为None， 当其不为 None 时， shuffle 参数无效。
-        :param non_train_sampler: 非 'train' 数据集的的实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
-        默认为None， 当其不为 None 时， shuffle 参数无效。
-        :param batch_sampler: 实现了 __len__() 和 __iter__() 的实例化对象，，其__iter__() 方法每次都会返回一个 List 对象， List中的值为
-        dataset 的下标 index ；默认为 None，当其不为 None 时，bacth_size, sampler, shuffle 参数均失效。
-        :param num_workers: 当 ``num_workers > 0`` 时, ``TorchDataLoader`` 会开启 num_workers 个子进程来处理数据， 可以加快
-        数据处理速度，但同时也消耗大量内存。 当 ``num_workers=0`` 时， 不开启子进程。 默认为 ``0``。
-        :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的 Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``.
+    :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
+    :param non_train_batch_size: 非 'train' 数据集的 ``TorchDataLoader`` 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
+    :param shuffle: 是否打乱数据集， 默认为 ``False``。
+    :param sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
+    默认为None， 当其不为 None 时， shuffle 参数无效。
+    :param non_train_sampler: 非 'train' 数据集的的实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
+    默认为None， 当其不为 None 时， shuffle 参数无效。
+    :param batch_sampler: 实现了 __len__() 和 __iter__() 的实例化对象，，其__iter__() 方法每次都会返回一个 List 对象， List中的值为
+    dataset 的下标 index ；默认为 None，当其不为 None 时，bacth_size, sampler, shuffle 参数均失效。
+    :param num_workers: 当 ``num_workers > 0`` 时, ``TorchDataLoader`` 会开启 num_workers 个子进程来处理数据， 可以加快
+    数据处理速度，但同时也消耗大量内存。 当 ``num_workers=0`` 时， 不开启子进程。 默认为 ``0``。
+    :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的 Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``.
 
-            *  callate_fn 为 'None' 时，需要注意的是此时传进来的 datset 类型不能为 :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None`` 时，
-             ``TorchDataLoader`` 调用默认的 torch 框架的 ``DataLoader`` 自带的 `default_collate_fn` 作为 callate_fn 的默认值， 其无法处理
-             :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
-            * callate_fn 为 ``'auto'`` 时，`TorchDataLoader`` 使用 :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。
-            此时可以配套使用 ``TorchDataLoader`` 的 ``set_pad`` 和 ``set_ignore`` 方法来设置 pad_val 或 忽略某个 field 的检测。
-            * `collate_fn 为 ``Callable`` 时， 该 Callable 函数应当接受一个 batch 参数作为输入， batch 是一个 List 对象且 List 中的每一条数据都是
-            dataset 的一条数据；该 Callable 函数还应当返回一个对象。
+        *  callate_fn 为 'None' 时，需要注意的是此时传进来的 datset 类型不能为 :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None`` 时，
+         ``TorchDataLoader`` 调用默认的 torch 框架的 ``DataLoader`` 自带的 `default_collate_fn` 作为 callate_fn 的默认值， 其无法处理
+         :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
+        * callate_fn 为 ``'auto'`` 时，`TorchDataLoader`` 使用 :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。
+        此时可以配套使用 ``TorchDataLoader`` 的 ``set_pad`` 和 ``set_ignore`` 方法来设置 pad_val 或 忽略某个 field 的检测。
+        * `collate_fn 为 ``Callable`` 时， 该 Callable 函数应当接受一个 batch 参数作为输入， batch 是一个 List 对象且 List 中的每一条数据都是
+        dataset 的一条数据；该 Callable 函数还应当返回一个对象。
 
-        :param pin_memory: 如果其为 ``True``, 那么 ``TorchDataLoader`` 会在返回数据张量之前将其 copy 到 cud a的 pin memory 中。
-        :param drop_last: 当 ``drop_last=True`` 时，``TorchDataLoader`` 会扔掉最后一个长度小于 ``batch_size`` 的 batch 数据;
-        若 ``drop_last=False`` , 则会返回该 batch 数据。 默认为 ``False`` 。
-        :param timeout: 子进程的输出队列获取数据的超时值
-        :param worker_init_fn: init 函数，如果不设置为 None ,则将会在每个子进程初始化时调用该函数。
-        :param multiprocessing_context: 多进程的上下文环境
-        :param generator: 如果其不为 ``None``, 将会使用 RandomSampler 去生成随机的 index 且会为每个子进程生成一个``base_seed``
-        :param prefetch_factor: 每个 worker 提前装载的 samples 数量。``2``意味着在所有的进程中会有 2*num_workers 的数据被预取。默认值为 ``2`` .
-        :param persistent_workers: 如果其为 ``True``, ``TorchDataLoader`` 在迭代完一次 dataset 后不会关闭所有进程。默认为 ``False``
+    :param pin_memory: 如果其为 ``True``, 那么 ``TorchDataLoader`` 会在返回数据张量之前将其 copy 到 cud a的 pin memory 中。
+    :param drop_last: 当 ``drop_last=True`` 时，``TorchDataLoader`` 会扔掉最后一个长度小于 ``batch_size`` 的 batch 数据;
+    若 ``drop_last=False`` , 则会返回该 batch 数据。 默认为 ``False`` 。
+    :param timeout: 子进程的输出队列获取数据的超时值
+    :param worker_init_fn: init 函数，如果不设置为 None ,则将会在每个子进程初始化时调用该函数。
+    :param multiprocessing_context: 多进程的上下文环境
+    :param generator: 如果其不为 ``None``, 将会使用 RandomSampler 去生成随机的 index 且会为每个子进程生成一个``base_seed``
+    :param prefetch_factor: 每个 worker 提前装载的 samples 数量。``2``意味着在所有的进程中会有 2*num_workers 的数据被预取。默认值为 ``2`` .
+    :param persistent_workers: 如果其为 ``True``, ``TorchDataLoader`` 在迭代完一次 dataset 后不会关闭所有进程。默认为 ``False``
 
     """
 
