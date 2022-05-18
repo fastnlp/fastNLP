@@ -12,14 +12,12 @@ def test_no_args():
     def f(*args, a, b, **kwarg):
         c = 100
         call_kwargs = _match_param(f, demo)
-    with pytest.raises(RuntimeError):
-        f(a=1, b=2)
+    f(a=1, b=2)
 
     def f(a, *args, b, **kwarg):
         c = 100
         call_kwargs = _match_param(f, demo)
-    with pytest.raises(RuntimeError):
-        f(a=1, b=2)
+    f(a=1, b=2)
 
 
 @recover_logger

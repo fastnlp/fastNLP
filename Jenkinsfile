@@ -22,7 +22,7 @@ pipeline {
                     agent {
                         docker {
                             image 'fnlp:torch-1.11'
-                            args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci --gpus all --shm-size 256M'
+                            args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci --gpus all --shm-size 1G'
                         }
                     }
                     steps {
@@ -55,19 +55,19 @@ pipeline {
                         sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/controllers/test_trainer_paddle.py --durations=0 --co'
                     }
                 }
-                stage('Test Jittor') {
-                    agent {
-                        docker {
-                            image 'fnlp:jittor'
-                            args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci --gpus all'
-                        }
-                    }
-                    steps {
-                        // sh 'pip install fitlog'
-                        // sh 'pytest ./tests --html=test_results.html --self-contained-html'
-                        sh 'pytest ./tests --durations=0 -m jittor --co'
-                    }
-                }
+                // stage('Test Jittor') {
+                //     agent {
+                //         docker {
+                //             image 'fnlp:jittor'
+                //             args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci --gpus all'
+                //         }
+                //     }
+                //     steps {
+                //         // sh 'pip install fitlog'
+                //         // sh 'pytest ./tests --html=test_results.html --self-contained-html'
+                //         sh 'pytest ./tests --durations=0 -m jittor --co'
+                //     }
+                // }
             }
         }
     }
