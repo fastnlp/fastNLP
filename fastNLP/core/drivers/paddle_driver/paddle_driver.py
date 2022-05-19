@@ -82,12 +82,11 @@ class PaddleDriver(Driver):
         # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
         self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
 
-    def zero_grad(self, set_to_none: bool = False):
+    def zero_grad(self):
         r"""
         实现深度学习中的梯度的置零操作，应当直接通过优化器 ``optimizers`` 来将梯度置零；
         注意梯度累积不需要在这里实现，:class:`~fastNLP.core.Trainer` 已经在内部实现了梯度累积；
 
-        :param set_to_none: 用来判断是否需要将梯度直接置为 ``None``；在 **PaddlePaddle** 中这个参数无效。
         """
         for optimizer in self.optimizers:
             optimizer.clear_grad()

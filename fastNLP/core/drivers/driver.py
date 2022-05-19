@@ -198,12 +198,11 @@ class Driver(ABC):
         raise NotImplementedError("Each specific driver should implemented its own `step` function.")
 
     @abstractmethod
-    def zero_grad(self, set_to_none: bool = False):
+    def zero_grad(self):
         r"""
         实现深度学习中的梯度的置零操作，应当直接通过优化器 optimizers 来将梯度置零；
         注意梯度累积不需要在这里实现，trainer 已经在内部实现了梯度累积；
 
-        :param set_to_none: 用来判断是否需要将梯度直接置为 None；
         """
         raise NotImplementedError("Each specific driver should implemented its own `zero_grad` function.")
 

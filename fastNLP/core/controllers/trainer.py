@@ -267,7 +267,8 @@ class Trainer(TrainerEventTrigger):
             * ddp_kwargs -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
              {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
             * set_grad_to_none -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
-            * torch_non_blocking -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
+            * non_blocking -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
+            * gradscaler_kwargs -- 用于 fp16=True 时，提供给 ``torch.amp.cuda.GradScaler`` 的参数。
         * *paddle_kwargs* -- 用于在指定 ``driver`` 为 'paddle' 时设定具体 driver 实例的一些参数：
 
             * fleet_kwargs -- 用于在使用 ``PaddleFleetDriver`` 时指定 ``DataParallel`` 和 ``fleet`` 初始化时的参数，包括：
@@ -494,9 +495,6 @@ class Trainer(TrainerEventTrigger):
         self.dataloader = self.driver.set_dist_repro_dataloader(dataloader=self.train_dataloader, dist=_dist_sampler,
                                                                 reproducible=self.callback_manager._need_reproducible_sampler)
 
-        _torch_kwargs = kwargs.get("torch_kwargs", {})
-        self.set_grad_to_none = _torch_kwargs.get("set_grad_to_none", True)
-
         self.evaluate_batch_step_fn = evaluate_batch_step_fn
         self.kwargs = kwargs
 
@@ -596,7 +594,7 @@ class Trainer(TrainerEventTrigger):
         try:
             self.on_train_begin()
             self.driver.barrier()
-            self.driver.zero_grad(self.set_grad_to_none)
+            self.driver.zero_grad()
             while self.cur_epoch_idx < self.n_epochs:
                 # 这个是防止在 Trainer.load_checkpoint 之后还没结束当前 epoch 又继续 save
                 self.start_batch_idx_in_epoch = self.trainer_state.batch_idx_in_epoch
@@ -1236,7 +1234,7 @@ class Trainer(TrainerEventTrigger):
         """
         if (self.global_forward_batches + 1) % self.accumulation_steps == 0:
             self.on_before_zero_grad(self.optimizers)
-            self.driver.zero_grad(self.set_grad_to_none)
+            self.driver.zero_grad()
             self.on_after_zero_grad(self.optimizers)
 
     def step(self):

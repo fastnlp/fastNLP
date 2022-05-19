@@ -18,7 +18,7 @@ else:
 
 
 _IS_WINDOWS = platform.system() == "Windows"
-_NEED_IMPORT_FAIRSCALE = not _IS_WINDOWS and _module_available("fairscale.nn") and 'torch' in need_import
+_NEED_IMPORT_FAIRSCALE = not _IS_WINDOWS and _module_available("fairscale") and 'torch' in need_import
 _NEED_IMPORT_TORCH = _module_available("torch") and 'torch' in need_import
 _NEED_IMPORT_JITTOR = _module_available("jittor") and 'jittor' in need_import
 _NEED_IMPORT_PADDLE = _module_available("paddle") and 'paddle' in need_import

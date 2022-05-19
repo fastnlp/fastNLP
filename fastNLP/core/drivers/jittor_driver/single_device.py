@@ -46,7 +46,7 @@ class JittorSingleDriver(JittorDriver):
         for optimizer in self.optimizers:
             optimizer.backward(loss)
 
-    def zero_grad(self, set_to_none=False):
+    def zero_grad(self):
         for optimizer in self.optimizers:
             optimizer.zero_grad()
 
