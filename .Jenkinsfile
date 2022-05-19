@@ -17,6 +17,11 @@ pipeline {
                     steps {
                         sh 'pytest ./tests --durations=0 --html=other.html --self-contained-html -m "not (torch or paddle or paddledist or jittor or torchpaddle or torchjittor)"'
                     }
+                    post {
+                        always {
+                            sh 'html_path=/ci/${PJ_NAME}/report-${BUILD_NUMBER}-${GIT_BRANCH#*/}-${GIT_COMMIT} && mkdir -p ${html_path} && mv other.html ${html_path}'
+                        }
+                    }
                 }
                 stage('Test Torch-1.11') {
                     agent {
@@ -26,7 +31,12 @@ pipeline {
                         }
                     }
                     steps {
-                        sh 'pytest ./tests --durations=0 --html=torch-1.11.html --self-contained-html -m torch'
+                        sh 'pytest ./tests/ --durations=0 --html=torch-1.11.html --self-contained-html -m torch'
+                    }
+                    post {
+                        always {
+                            sh 'html_path=/ci/${PJ_NAME}/report-${BUILD_NUMBER}-${GIT_BRANCH#*/}-${GIT_COMMIT} && mkdir -p ${html_path} && mv torch-1.11.html ${html_path}'
+                        }
                     }
                 }
                 stage('Test Torch-1.6') {
@@ -38,6 +48,11 @@ pipeline {
                     }
                     steps {
                         sh 'pytest ./tests/ --durations=0 --html=torch-1.6.html --self-contained-html -m torch'
+                    }
+                    post {
+                        always {
+                            sh 'html_path=/ci/${PJ_NAME}/report-${BUILD_NUMBER}-${GIT_BRANCH#*/}-${GIT_COMMIT} && mkdir -p ${html_path} && mv torch-1.6.html ${html_path}'
+                        }
                     }
                 }
                 stage('Test Paddle') {
@@ -54,6 +69,11 @@ pipeline {
                         sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/drivers/paddle_driver/test_fleet.py --durations=0 --html=paddle_fleet.html --self-contained-html --co'
                         sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/controllers/test_trainer_paddle.py --durations=0 --html=paddle_trainer.html --self-contained-html --co'
                     }
+                    post {
+                        always {
+                            sh 'html_path=/ci/${PJ_NAME}/report-${BUILD_NUMBER}-${GIT_BRANCH#*/}-${GIT_COMMIT} && mkdir -p ${html_path} && mv paddle*.html ${html_path}'
+                        }
+                    }
                 }
                 // stage('Test Jittor') {
                 //     agent {
@@ -68,12 +88,6 @@ pipeline {
                 //         sh 'pytest ./tests --durations=0 --html=jittor.html --self-contained-html -m jittor --co'
                 //     }
                 // }
-            }
-        }
-        stage('Moving Test Results') {
-            agent any
-            steps {
-                sh 'post mv'
             }
         }
     }
