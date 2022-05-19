@@ -73,7 +73,6 @@ def model_and_optimizers(request):
 
 
 @pytest.mark.torch
-@pytest.mark.temp
 @pytest.mark.parametrize("driver,device", [("torch", [0, 1]), ("torch", 1), ("torch", "cpu")])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
 @magic_argv_env_context
 def test_load_best_model_callback(
@@ -83,7 +82,6 @@ def test_load_best_model_callback(
 ):
     for save_folder in ['save_models', None]:
         for only_state_dict in [True, False]:
-            logger.error(f"{save_folder}, {only_state_dict}")
             callbacks = [LoadBestModelCallback(monitor='acc', only_state_dict=only_state_dict,
                                                save_folder=save_folder)]
             trainer = Trainer(
