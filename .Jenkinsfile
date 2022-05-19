@@ -1,8 +1,8 @@
 pipeline {
-    agent none
+    agent any
     environment {
         PJ_NAME = 'fastNLP'
-        POST_URL = 'https://open.feishu.cn/open-apis/bot/v2/hook/14719364-818d-4f88-9057-7c9f0eaaf6ae'
+        POST_URL = 'https://open.feishu.cn/open-apis/bot/v2/hook/2f7122e3-3459-43d2-a9e4-ddd77bfc4282'
     }
     stages {
         stage('Parallel Stages') {
@@ -15,7 +15,7 @@ pipeline {
                         }
                     }
                     steps {
-                        sh 'pytest ./tests --durations=0 -m "not (torch or paddle or paddledist or jittor or torchpaddle or torchjittor)"'
+                        sh 'pytest ./tests --durations=0 --html=other.html --self-contained-html -m "not (torch or paddle or paddledist or jittor or torchpaddle or torchjittor)"'
                     }
                 }
                 stage('Test Torch-1.11') {
@@ -26,7 +26,7 @@ pipeline {
                         }
                     }
                     steps {
-                        sh 'pytest ./tests --durations=0 -m torch'
+                        sh 'pytest ./tests --durations=0 --html=torch-1.11.html --self-contained-html -m torch'
                     }
                 }
                 stage('Test Torch-1.6') {
@@ -37,7 +37,7 @@ pipeline {
                         }
                     }
                     steps {
-                        sh 'pytest ./tests/ --durations=0 -m torch'
+                        sh 'pytest ./tests/ --durations=0 --html=torch-1.6.html --self-contained-html -m torch'
                     }
                 }
                 stage('Test Paddle') {
@@ -48,11 +48,11 @@ pipeline {
                         }
                     }
                     steps {
-                        sh 'pytest ./tests --durations=0 -m paddle --co'
-                        sh 'FASTNLP_BACKEND=paddle pytest ./tests --durations=0 -m paddle --co'
-                        sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/drivers/paddle_driver/test_dist_utils.py --durations=0 --co'
-                        sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/drivers/paddle_driver/test_fleet.py --durations=0 --co'
-                        sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/controllers/test_trainer_paddle.py --durations=0 --co'
+                        sh 'pytest ./tests --durations=0 --html=paddle.html --self-contained-html -m paddle --co'
+                        sh 'FASTNLP_BACKEND=paddle pytest ./tests --durations=0 --html=paddle_with_backend.html --self-contained-html -m paddle --co'
+                        sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/drivers/paddle_driver/test_dist_utils.py --durations=0 --html=paddle_dist_utils.html --self-contained-html --co'
+                        sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/drivers/paddle_driver/test_fleet.py --durations=0 --html=paddle_fleet.html --self-contained-html --co'
+                        sh 'FASTNLP_BACKEND=paddle pytest ./tests/core/controllers/test_trainer_paddle.py --durations=0 --html=paddle_trainer.html --self-contained-html --co'
                     }
                 }
                 // stage('Test Jittor') {
@@ -65,9 +65,15 @@ pipeline {
                 //     steps {
                 //         // sh 'pip install fitlog'
                 //         // sh 'pytest ./tests --html=test_results.html --self-contained-html'
-                //         sh 'pytest ./tests --durations=0 -m jittor --co'
+                //         sh 'pytest ./tests --durations=0 --html=jittor.html --self-contained-html -m jittor --co'
                 //     }
                 // }
+            }
+        }
+        stage('Moving Test Results') {
+            agent any
+            steps {
+                sh 'post mv'
             }
         }
     }
@@ -77,7 +83,7 @@ pipeline {
         }
         success {
             sh 'post 0'
-            sh 'post github'
+            // sh 'post github'
         }
     }
 }
