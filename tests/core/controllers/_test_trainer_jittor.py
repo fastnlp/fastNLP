@@ -225,7 +225,7 @@ if __name__ == "__main__":
         device=[0,1,2,3,4],
         optimizers=optimizer,
         train_dataloader=train_dataloader,
-        validate_dataloaders=val_dataloader,
+        evaluate_dataloaders=val_dataloader,
         validate_every=-1,
         input_mapping=None,
         output_mapping=None,
