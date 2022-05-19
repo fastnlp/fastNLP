@@ -226,7 +226,7 @@ class TestSpanFPreRecMetric:
         # print(expected_metric)
         metric_value = metric.get_metric()
         for key, value in expected_metric.items():
-            np.allclose(value, metric_value[key])
+            assert np.allclose(value, metric_value[key])
 
     def test_auto_encoding_type_infer(self):
         #  检查是否可以自动check encode的类型
