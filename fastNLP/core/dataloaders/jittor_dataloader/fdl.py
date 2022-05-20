@@ -24,7 +24,7 @@ from fastNLP.core.dataset import DataSet as FDataSet
 class _JittorDataset(Dataset):
     """
     对用户传的dataset进行封装，以便JittorDataLoader能够支持使用自定义的dataset
-    
+
     """
 
     def __init__(self, dataset) -> None:
@@ -37,7 +37,7 @@ class _JittorDataset(Dataset):
             item = item.tolist()
         return (item, self.dataset[item])
 
-
+          
 class JittorDataLoader:
     """
     提供给 ``jittor`` 框架使用的 ``DataLoader`` 函数，``JittorDataLoader`` 提供了 ``Collator`` 来自动检测 dataset 的每个 field 是否可 pad，
