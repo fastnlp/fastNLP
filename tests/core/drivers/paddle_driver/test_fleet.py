@@ -661,7 +661,7 @@ class TestSaveLoad:
 
             # 3. 检查 fp16 是否被加载
             if fp16:
-                assert isinstance(self.driver2.grad_scaler, paddle.amp.GradScaler)
+                assert not isinstance(self.driver2.grad_scaler, paddle.amp.GradScaler)
 
             # 4. 检查 model 的参数是否正确
             # 5. 检查 batch_idx
@@ -771,7 +771,7 @@ class TestSaveLoad:
             assert replaced_loader.batch_sampler.sampler.shuffle == sampler_states["shuffle"]
             # 3. 检查 fp16 是否被加载
             if fp16:
-                assert isinstance(self.driver2.grad_scaler, paddle.amp.GradScaler)
+                assert not isinstance(self.driver2.grad_scaler, paddle.amp.GradScaler)
 
             # 4. 检查 model 的参数是否正确
             # 5. 检查 batch_idx
