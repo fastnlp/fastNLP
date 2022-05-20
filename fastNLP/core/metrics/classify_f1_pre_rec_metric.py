@@ -153,7 +153,7 @@ class ClassifyFPreRecMetric(Metric):
                                f"size:{pred.shape}, target should have size: {pred.shape} or "
                                f"{pred.shape[:-1]}, got {target.shape}.")
 
-        target_idxes = set(target.reshape(-1).tolist())
+        target_idxes = set(target.reshape(-1).tolist()+pred.reshape(-1).tolist())
         for target_idx in target_idxes:
             self._tp[target_idx] += ((pred == target_idx) * (target == target_idx) * masks).sum().item()
             self._fp[target_idx] += ((pred == target_idx) * (target != target_idx) * masks).sum().item()

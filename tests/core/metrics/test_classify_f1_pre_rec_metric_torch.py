@@ -195,3 +195,21 @@ class TestClassfiyFPreRecMetric:
         pool.close()
         pool.join()
 
+    def test_binary(self):
+        pred = torch.randn(10, 2)
+        target = torch.randint(1, size=(10,))
+        metric = ClassifyFPreRecMetric()
+        metric.update(pred, target)
+        results = metric.get_metric()
+        print(target)
+        print(metric._tp, metric._fp, metric._fn)
+        assert results['f']==results['rec']==results['pre']
+
+        pred = torch.randn(10, 2)
+        target = torch.randint(2, size=(10,))
+        metric = ClassifyFPreRecMetric()
+        metric.update(pred, target)
+        results = metric.get_metric()
+        print(target)
+        print(metric._tp, metric._fp, metric._fn)
+        assert results['f']==results['rec']==results['pre']

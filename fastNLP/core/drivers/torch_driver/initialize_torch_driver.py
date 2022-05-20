@@ -7,10 +7,13 @@ if _NEED_IMPORT_TORCH:
 from .torch_driver import TorchDriver
 from .single_device import TorchSingleDriver
 from .ddp import TorchDDPDriver
+from .fairscale import FairScaleDriver
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_BACKEND_LAUNCH
+from pkg_resources import parse_version
 
 __all__ = []
+
 
 def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.device", int, List[int]]],
                             model: "torch.nn.Module", **kwargs) -> TorchDriver:
@@ -23,13 +26,20 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
 
     :return: 返回一个 :class:`~fastNLP.core.TorchSingleDriver` 或 :class:`~fastNLP.core.TorchDDPDriver` 实例；
     """
+    if parse_version(torch.__version__) < parse_version('1.6'):
+        raise RuntimeError(f"Pytorch(current version:{torch.__version__}) need to be older than 1.6.")
     # world_size 和 rank
     if FASTNLP_BACKEND_LAUNCH in os.environ:
         if device is not None:
             logger.rank_zero_warning("Parameter `device` would be ignored when you are using `torch.distributed.run` to pull "
                            "up your script. And we will directly get the local device via "
                            "`os.environ['LOCAL_RANK']`.", once=True)
-        return TorchDDPDriver(model, torch.device(f"cuda:{os.environ['LOCAL_RANK']}"), True, **kwargs)
+        if driver == 'fairscale':
+            return FairScaleDriver(model, torch.device(f"cuda:{os.environ['LOCAL_RANK']}"),
+                                   is_pull_by_torch_run=True, **kwargs)
+        else:
+            return TorchDDPDriver(model, torch.device(f"cuda:{os.environ['LOCAL_RANK']}"),
+                                  is_pull_by_torch_run=True, **kwargs)
 
     if driver not in {"torch", "fairscale"}:
         raise ValueError("Parameter `driver` can only be one of these values: ['torch', 'fairscale'].")
@@ -67,13 +77,10 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
         else:
             return TorchDDPDriver(model, device, **kwargs)
     elif driver == "fairscale":
-        raise NotImplementedError("`fairscale` is not support right now.")
-        # if not isinstance(device, List):
-        #     if device.type == 'cpu':
-        #         raise ValueError("You are using `fairscale` driver, but your chosen `device` is 'cpu'.")
-        #     log.info("Notice you are using `fairscale` driver, but your chosen `device` is only one gpu, we will"
-        #                 "still use `fairscale` for you, but if you mean using `TorchSingleDriver`, you should "
-        #                 "choose `torch` driver.")
-        #     return ShardedDriver(model, [device], **kwargs)
-        # else:
-        #     return ShardedDriver(model, device, **kwargs)
+        if not isinstance(device, List):
+            if device.type == 'cpu':
+                raise ValueError("You are using `fairscale` driver, but your chosen `device` is 'cpu'.")
+            logger.warning_once("Notice you are using `fairscale`, but the `device` is only one gpu.")
+            return FairScaleDriver(model, [device], **kwargs)
+        else:
+            return FairScaleDriver(model, device, **kwargs)

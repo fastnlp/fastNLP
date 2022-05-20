@@ -3,7 +3,11 @@ __all__ = [
 ]
 from typing import Union, List
 from ..callback import Callback
-
+from ...drivers.torch_driver.fairscale import FairScaleDriver
+from ...drivers.torch_driver import TorchDriver
+from fastNLP.envs.imports import _NEED_IMPORT_FAIRSCALE
+if _NEED_IMPORT_FAIRSCALE:
+    from fairscale.nn import FullyShardedDataParallel
 
 class TorchGradClipCallback(Callback):
     r"""
@@ -35,15 +39,20 @@ class TorchGradClipCallback(Callback):
         else:
             self.parameters = None
         self.clip_value = clip_value
+        self.clip_type = clip_type
 
     def on_after_trainer_initialized(self, trainer, driver):
-        assert 'torch' in driver.__class__.__name__.lower(), f"Callback:{self.__class__.__name__} only supports torch " \
+        assert isinstance(driver, TorchDriver), f"Callback:{self.__class__.__name__} only supports torch " \
                                                              f"related drivers for now."
         parameters = []
         for optimizer in trainer.driver.optimizers:
             for param_group in optimizer.param_groups:
                 parameters.extend(param_group['params'])
         self.parameters = parameters
+        if isinstance(trainer.driver, FairScaleDriver):
+            if isinstance(trainer.driver.model, FullyShardedDataParallel) and self.clip_type == 'norm':
+                self.clip_fun = trainer.driver.model.clip_grad_norm_
+
         assert len(self.parameters), "There is no parameters need to be clipped."
 
     def on_before_optimizers_step(self, trainer, optimizers):

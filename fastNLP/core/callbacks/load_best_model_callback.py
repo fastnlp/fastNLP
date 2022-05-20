@@ -54,18 +54,9 @@ class LoadBestModelCallback(HasMonitorCallback):
         if model_save_fn is not None:
             assert save_folder is not None, "When passing `model_save_fn`, `save_folder` must be provided."
 
-        if save_folder is not None:
+        if save_folder:
             if os.path.exists(save_folder):
-                assert os.path.isdir(save_folder), f"`save_folder` must be a directory."
-            else:
-                os.makedirs(save_folder, exist_ok=True)
-            save_folder = os.path.join(save_folder, os.environ.get(FASTNLP_LAUNCH_TIME))
-            self.real_save_folder = os.path.join(save_folder, 'best_so_far')
-            if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
-                os.makedirs(self.real_save_folder, exist_ok=True)
-        else:  # 创建出一个 stringio
-            self.real_save_folder = None
-            self.buffer = BytesIO()
+                assert os.path.isdir(save_folder), f"`save_folder={save_folder}` must be a directory."
 
         self.save_folder = save_folder
         self.only_state_dict = only_state_dict
@@ -73,21 +64,37 @@ class LoadBestModelCallback(HasMonitorCallback):
         self.model_load_fn = model_load_fn
         self.delete_after_after = delete_after_train
 
-    def on_after_trainer_initialized(self, trainer, driver):
-        if self.save_folder is not None and driver.is_distributed() and int(os.environ.get(FASTNLP_BACKEND_LAUNCH, 0))==1:
-            # 如果需要保存，但是又是不是 fastNLP 拉起的, 需要同步一下 folder
-            try:
-                self.real_save_folder = driver.broadcast_object(self.real_save_folder, src=0, group=None)
-                logger.debug(f"Synchronize best model save folder: {self.real_save_folder} for LoadBestModelCallback.")
-            except NotImplementedError:
-                raise RuntimeError(f"Currently {driver.__class__.__name__} does not support using `save_folder` to "
-                                   f"save best model when launch using module.")
+    def prepare_save_folder(self, trainer):
+        if not hasattr(self, 'real_save_folder'):
+            if self.save_folder is not None:
+                if not os.path.exists(self.save_folder):
+                    os.makedirs(self.save_folder, exist_ok=True)
+                self.save_folder = os.path.join(self.save_folder, os.environ.get(FASTNLP_LAUNCH_TIME))
+                self.real_save_folder = os.path.join(self.save_folder, 'best_so_far')
+                if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
+                    os.makedirs(self.real_save_folder, exist_ok=True)
+                if self.save_folder is not None and trainer.driver.is_distributed() and int(
+                    os.environ.get(FASTNLP_BACKEND_LAUNCH, 0)) == 1:
+                    trainer.driver.barrier()
+                    try:
+                        self.real_save_folder = trainer.driver.broadcast_object(self.real_save_folder, src=0, group=None)
+                        logger.debug(
+                            f"Synchronize best model save folder: {self.real_save_folder} for LoadBestModelCallback.")
+                    except NotImplementedError:
+                        raise RuntimeError(
+                            f"Currently {trainer.driver.__class__.__name__} does not support using `save_folder` to "
+                            f"save best model when launch using module.")
+            else:  # 创建出一个 stringio
+                self.real_save_folder = None
+                self.buffer = BytesIO()
 
+    def on_after_trainer_initialized(self, trainer, driver):
         super().on_after_trainer_initialized(trainer, driver)
         self.encounter_exception = False
 
     def on_evaluate_end(self, trainer, results):
         if self.is_better_results(results, keep_if_better=True):
+            self.prepare_save_folder(trainer)
             if self.real_save_folder:
                 trainer.save_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,
                                    model_save_fn=self.model_save_fn)
@@ -103,8 +110,7 @@ class LoadBestModelCallback(HasMonitorCallback):
                 trainer.load_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,
                                    model_load_fn=self.model_load_fn)
             else:
-                logger.info(
-                    f"Loading best model from buffer with {self.monitor_name}: {self.monitor_value}...")
+                logger.info(f"Loading best model from buffer with {self.monitor_name}: {self.monitor_value}...")
                 self.buffer.seek(0)
                 trainer.load_model(folder=self.buffer, only_state_dict=self.only_state_dict)
             if self.delete_after_after:
@@ -119,7 +125,7 @@ class LoadBestModelCallback(HasMonitorCallback):
             self.encounter_exception = True
 
     def _delete_folder(self):
-        if self.real_save_folder:
+        if getattr(self, 'real_save_folder', None):
             logger.info(f"Deleting {self.real_save_folder}...")
             shutil.rmtree(self.real_save_folder, ignore_errors=True)
             try:

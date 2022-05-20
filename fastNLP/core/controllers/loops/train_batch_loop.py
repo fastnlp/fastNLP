@@ -58,7 +58,7 @@ class TrainBatchLoop(Loop):
                 trainer.on_train_batch_end()
             except BaseException as e:
                 if indices is not None and not isinstance(e, (EarlyStopException, KeyboardInterrupt)):
-                    logger.error(f"Exception happens when running on samples: {indices}")
+                    logger.error(f"Exception happens when training on samples: {indices}")
                 raise e
             trainer.step_evaluate()
         trainer.batch_idx_in_epoch = 0

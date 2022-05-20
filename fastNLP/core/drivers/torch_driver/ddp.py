@@ -304,11 +304,11 @@ class TorchDDPDriver(TorchDriver):
         self.global_rank = 0
 
         self._ddp_kwargs = self._torch_kwargs.get("ddp_kwargs", {})
-        check_user_specific_params(self._ddp_kwargs, DistributedDataParallel.__init__)
+        check_user_specific_params(self._ddp_kwargs, DistributedDataParallel.__init__, DistributedDataParallel.__name__)
         if len(self.model._buffers) != 0 and self._ddp_kwargs.get("broadcast_buffers", None) is None:
             logger.info("Notice your model has buffers and you are using `TorchDDPDriver`, but you do not set "
                         "'broadcast_buffers' in your trainer. Cause in most situations, this parameter can be set"
-                        " to 'False' to avoid redundant data translation between different processes.")
+                        " to 'False' to avoid redundant data communication between different processes.")
 
         self.output_from_new_proc = kwargs.get("output_from_new_proc", "only_error")
         assert isinstance(self.output_from_new_proc, str), "Parameter `output_from_new_proc` can only be `str` type."
@@ -471,7 +471,7 @@ class TorchDDPDriver(TorchDriver):
         self._global_rank = rank
 
     @property
-    def local_rank(self) -> int:
+    def local_rank(self) -> int:  # 这个不会受到 all_rank_call_context 的影响
         return int(os.environ.get("LOCAL_RANK", 0))
 
     @property

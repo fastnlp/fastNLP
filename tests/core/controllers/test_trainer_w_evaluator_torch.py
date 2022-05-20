@@ -277,13 +277,12 @@ def test_trainer_specific_params_1(
 
         model_wo_auto_param_call=True,
         torch_kwargs={
-            "torch_non_blocking": False,
+            "non_blocking": False,
             "set_grad_to_none": True
         }
 
     )
 
-    assert trainer.set_grad_to_none is True
     assert trainer.driver.non_blocking is False
     assert trainer.driver.wo_auto_param_call is True
 
@@ -320,13 +319,11 @@ def test_trainer_specific_params_2(
                 "broadcast_buffers": True,
                 "find_unused_parameters": True
             },
-            "torch_non_blocking": False,
-            "set_grad_to_none": True
+            "non_blocking": False,
         }
 
     )
 
-    assert trainer.set_grad_to_none is True
     assert trainer.driver.non_blocking is False
     assert trainer.driver.wo_auto_param_call is True
     assert trainer.driver.output_from_new_proc == "all"
