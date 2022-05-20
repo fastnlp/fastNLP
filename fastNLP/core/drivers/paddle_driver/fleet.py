@@ -199,7 +199,7 @@ class PaddleFleetDriver(PaddleDriver):
         paddle_kwargs = kwargs.get("paddle_kwargs", {})
         
         self._fleet_kwargs = paddle_kwargs.get("fleet_kwargs", {})
-        check_user_specific_params(self._fleet_kwargs, DataParallel.__init__)
+        check_user_specific_params(self._fleet_kwargs, DataParallel.__init__, DataParallel.__name__)
         # fleet.init 中对于分布式策略的设置，详情可以参考 PaddlePaddle 的官方文档
         self.strategy = self._fleet_kwargs.get("strategy", fleet.DistributedStrategy())
         self.is_collective = self._fleet_kwargs.pop("is_collective", True)

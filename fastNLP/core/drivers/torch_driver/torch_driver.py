@@ -1,7 +1,6 @@
 import os
 from typing import Union, Dict, Optional, Callable
 from functools import partial
-from pkg_resources import parse_version
 import numpy as np
 import random
 from dataclasses import dataclass
@@ -52,23 +51,23 @@ class TorchDriver(Driver):
         super(TorchDriver, self).__init__(model)
 
         """ 进行 fp16 的设置 """
+        self._torch_kwargs = kwargs.get("torch_kwargs", {})
+
         # 因为 ddp 和 single_device 的混合精度训练的设置是一样的，因此可以统一抽象到这里；
         self.fp16 = fp16
-        if parse_version(torch.__version__) < parse_version('1.6'):
-            raise RuntimeError(f"Pytorch({torch.__version__}) need to be older than 1.6.")
-        self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not fp16)
-        self.grad_scaler = _grad_scaler()
+        self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not self.fp16)
+        self.grad_scaler = _grad_scaler(**self._torch_kwargs.get('gradscaler_kwargs', {}))
+        self.set_grad_to_none = self._torch_kwargs.get('set_grad_to_none')
 
-        self._torch_kwargs = kwargs.get("torch_kwargs", {})
         # 用来设置 `torch_move_data_to_device` 中的 `non_blocking` 参数；
-        self.non_blocking = self._torch_kwargs.get("torch_non_blocking", True)
+        self.non_blocking = self._torch_kwargs.get("non_blocking", True)
 
         # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
         self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
 
-    def zero_grad(self, set_to_none: bool = False):
+    def zero_grad(self):
         for optimizer in self.optimizers:
-            self._clear_grad(optimizer, set_to_none)
+            self._clear_grad(optimizer, self.set_grad_to_none)
 
     def _clear_grad(self, optimizer, set_to_none):
         param_groups = optimizer.param_groups
@@ -178,7 +177,7 @@ class TorchDriver(Driver):
             else:
                 torch.save(model, filepath)
 
-    def load_model(self, filepath: str, only_state_dict: bool = True, **kwargs):
+    def load_model(self, filepath: Union[Path, str], only_state_dict: bool = True, **kwargs):
         """
         从 folder 中加载权重并赋值到当前 driver 的模型上。
 
@@ -195,10 +194,9 @@ class TorchDriver(Driver):
         elif not isinstance(res, dict) and only_state_dict is True:
             logger.rank_zero_warning(f"It seems like that {filepath} is not state, you may need to use "
                                      f"`only_state_dict=False`")
-        if only_state_dict:
-            model.load_state_dict(res)
-        else:
-            model.load_state_dict(res.state_dict())
+        if not isinstance(res, dict):
+            res = res.state_dict()
+        model.load_state_dict(res)
 
     @rank_zero_call
     def save_checkpoint(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
@@ -246,25 +244,13 @@ class TorchDriver(Driver):
 
         # 2. 保存模型的状态；
         if should_save_model:
-            model = self.unwrap_model()
             if not os.path.exists(folder):
                 os.mkdir(folder)
-            if only_state_dict:
-                model_state_dict = {name: param.cpu().detach().clone() for name, param in model.state_dict().items()}
-                # 对于单卡的 driver 来讲，我们实际上（现在）不应该考虑用户在DDP环境下使用单卡模式，从而造成效率损失；
-                torch.save(model_state_dict, folder.joinpath(FASTNLP_MODEL_FILENAME))
-                logger.debug("Save model state dict")
-            else:
-                torch.save(model, folder.joinpath(FASTNLP_MODEL_FILENAME))
-                logger.debug("Save model")
+            model_path = folder.joinpath(FASTNLP_MODEL_FILENAME)
+            self.save_model(model_path, only_state_dict=only_state_dict)
 
         # 3. 保存 optimizers 的状态；
-        optimizers_state_dict = {}
-        for i in range(len(self.optimizers)):
-            optimizer: torch.optim.Optimizer = self.optimizers[i]
-            optimizer_state = optimizer.state_dict()
-            optimizer_state["state"] = optimizer_state_to_device(optimizer_state["state"], torch.device("cpu"))
-            optimizers_state_dict[f"optimizer{i}"] = optimizer_state  # 注意这里没有使用 deepcopy，测试是不需要的；
+        optimizers_state_dict = self.get_optimizer_state()
 
         # 4. 保存fp16的状态
         if not isinstance(self.grad_scaler, DummyGradScaler):
@@ -275,38 +261,42 @@ class TorchDriver(Driver):
         states["optimizers_state_dict"] = optimizers_state_dict
         torch.save(states, Path(folder).joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
+    def get_optimizer_state(self):
+        optimizers_state_dict = {}
+        for i in range(len(self.optimizers)):
+            optimizer: torch.optim.Optimizer = self.optimizers[i]
+            optimizer_state = optimizer.state_dict()
+            optimizer_state["state"] = optimizer_state_to_device(optimizer_state["state"], torch.device("cpu"))
+            optimizers_state_dict[f"optimizer{i}"] = optimizer_state  # 注意这里没有使用 deepcopy，测试是不需要的；
+        return optimizers_state_dict
+
+    def load_optimizer_state(self, states):
+        assert len(states) == len(self.optimizers), f"The number of optimizers is:{len(self.optimizers)}, while in " \
+                                                    f"checkpoint it is:{len(states)}"
+        for i in range(len(self.optimizers)):
+            optimizer: torch.optim.Optimizer = self.optimizers[i]
+            optimizer.load_state_dict(states[f"optimizer{i}"])
+        logger.debug("Load optimizer state dict.")
+
     def load_checkpoint(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
         states = torch.load(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
         # 1. 加载 optimizers 的状态；
         optimizers_state_dict = states.pop("optimizers_state_dict")
-        for i in range(len(self.optimizers)):
-            optimizer: torch.optim.Optimizer = self.optimizers[i]
-            optimizer.load_state_dict(optimizers_state_dict[f"optimizer{i}"])
-        logger.debug("Load optimizer state dict.")
+        self.load_optimizer_state(optimizers_state_dict)
 
         # 2. 加载模型状态；
         if should_load_model:
-            model = self.unwrap_model()
-            res = torch.load(folder.joinpath(FASTNLP_MODEL_FILENAME), map_location='cpu')
-            if only_state_dict:
-                model.load_state_dict(res)
-                logger.debug("Load model state dict...")
-            else:
-                model.load_state_dict(res.state_dict())
-                logger.debug("Load model...")
+            self.load_model(filepath=folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict=only_state_dict)
 
         # 3. 加载fp16的状态
         if "grad_scaler_state_dict" in states:
             grad_scaler_state_dict = states.pop("grad_scaler_state_dict")
-            if isinstance(self.grad_scaler, DummyGradScaler):
-                self.auto_cast, _grad_scaler = _build_fp16_env(dummy=False)
-                self.grad_scaler = _grad_scaler()
-                self.fp16 = True
-            self.grad_scaler.load_state_dict(grad_scaler_state_dict)
-            logger.debug("Load grad_scaler state dict...")
+            if not isinstance(self.grad_scaler, DummyGradScaler):
+                self.grad_scaler.load_state_dict(grad_scaler_state_dict)
+                logger.debug("Load grad_scaler state dict...")
         elif not isinstance(self.grad_scaler, DummyGradScaler):
-            logger.warning(f"Checkpoint {folder} is not trained with fp16=True, while resume to a fp16=True training, "
+            logger.rank_zero_warning(f"Checkpoint {folder} is not trained with fp16=True, while resume to a fp16=True training, "
                            f"the training process may be unstable.")
 
         # 4. 恢复 sampler 的状态；

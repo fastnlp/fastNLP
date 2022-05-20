@@ -43,7 +43,8 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.mathjax',
     'sphinx.ext.todo',
-    'sphinx_autodoc_typehints'
+    'sphinx_autodoc_typehints',
+    'sphinx_multiversion',
 ]
 
 autodoc_default_options = {
@@ -116,7 +117,11 @@ html_static_path = ['_static']
 # 'searchbox.html']``.
 #
 # html_sidebars = {}
-
+html_sidebars = {
+    '**': [
+        'versions.html',
+    ],
+}
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
@@ -168,6 +173,8 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
+# -- Options for Multiversions ----------------------------------------------
+smv_latest_version = 'dev0.8.0'
 
 # -- Extension configuration -------------------------------------------------
 def maybe_skip_member(app, what, name, obj, skip, options):

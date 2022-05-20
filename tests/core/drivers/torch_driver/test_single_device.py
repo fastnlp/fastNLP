@@ -1,6 +1,8 @@
 import pytest
 from pathlib import Path
 
+from pkg_resources import parse_version
+
 from fastNLP.core.drivers.torch_driver.single_device import TorchSingleDriver
 from fastNLP.core.samplers import ReproduceBatchSampler, RandomSampler
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
@@ -9,6 +11,7 @@ from tests.helpers.datasets.paddle_data import PaddleNormalDataset
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from fastNLP.envs.distributed import rank_zero_rm
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE, _NEED_IMPORT_TORCH
+
 if _NEED_IMPORT_TORCH:
     import torch
     from torch.utils.data import DataLoader, BatchSampler
@@ -245,6 +248,9 @@ class TestTorchDriverFunctions:
         """
         # 先确保不影响运行
         # TODO：正确性
+        if parse_version(torch.__version__) < parse_version('1.7'):
+            pytest.skip("Skip if torch version smaller than 1.6 since torch.manual_seed my cause bug:"
+                        "Overflow when unpacking long")
         TorchSingleDriver.worker_init_function(0)
 
     @pytest.mark.torch
@@ -611,7 +617,7 @@ def test_save_and_load_with_randombatchsampler(only_state_dict, fp16):
 
         # 3. 检查 fp16 是否被加载
         if fp16:
-            assert isinstance(driver2.grad_scaler, torch.cuda.amp.GradScaler)
+            assert not isinstance(driver2.grad_scaler, torch.cuda.amp.GradScaler)
 
         # 4. 检查 model 的参数是否正确
         # 5. 检查 batch_idx
@@ -683,7 +689,7 @@ def test_save_and_load_with_randomsampler(only_state_dict, fp16):
 
         # 3. 检查 fp16 是否被加载
         if fp16:
-            assert isinstance(driver2.grad_scaler, torch.cuda.amp.GradScaler)
+            assert not isinstance(driver2.grad_scaler, torch.cuda.amp.GradScaler)
 
         # 4. 检查 model 的参数是否正确
         # 5. 检查 batch_idx

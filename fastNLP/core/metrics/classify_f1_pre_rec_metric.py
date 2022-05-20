@@ -5,6 +5,7 @@ __all__ = [
 from typing import Union, List
 from collections import Counter
 import warnings
+import numpy as np
 
 from .metric import Metric
 from .backend import Backend
@@ -132,10 +133,10 @@ class ClassifyFPreRecMetric(Metric):
             seq_len = self.tensor2numpy(seq_len)
 
         if seq_len is not None and target.ndim > 1:
-            max_len = target.ndim[-1]
+            max_len = target.shape[-1]
             masks = seq_len_to_mask(seq_len=seq_len, max_len=max_len)
         else:
-            masks = None
+            masks = np.ones_like(target)
 
         if pred.ndim == target.ndim:
             if len(pred.flatten()) != len(target.flatten()):
@@ -143,7 +144,6 @@ class ClassifyFPreRecMetric(Metric):
                                    f" while target have element numbers:{len(pred.flatten())}, "
                                    f"pred have element numbers: {len(target.flatten())}")
 
-            pass
         elif pred.ndim == target.ndim + 1:
             pred = pred.argmax(axis=-1)
             if seq_len is None and target.ndim > 1:
@@ -152,11 +152,9 @@ class ClassifyFPreRecMetric(Metric):
             raise RuntimeError(f"when pred have "
                                f"size:{pred.shape}, target should have size: {pred.shape} or "
                                f"{pred.shape[:-1]}, got {target.shape}.")
-        if masks is not None:
-            target = target * masks
-            pred = pred * masks
-        target_idxes = set(target.reshape(-1).tolist())
+
+        target_idxes = set(target.reshape(-1).tolist()+pred.reshape(-1).tolist())
         for target_idx in target_idxes:
-            self._tp[target_idx] += ((pred == target_idx) * (target != target_idx)).sum().item()
-            self._fp[target_idx] += ((pred == target_idx) * (target == target_idx)).sum().item()
-            self._fn[target_idx] += ((pred != target_idx) * (target != target_idx)).sum().item()
+            self._tp[target_idx] += ((pred == target_idx) * (target == target_idx) * masks).sum().item()
+            self._fp[target_idx] += ((pred == target_idx) * (target != target_idx) * masks).sum().item()
+            self._fn[target_idx] += ((pred != target_idx) * (target == target_idx) * masks).sum().item()

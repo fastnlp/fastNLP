@@ -139,7 +139,7 @@ class TestFdl:
         logger.set_stdout()
         ds = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
         with Capturing() as out:
-            dl = TorchDataLoader(ds, prefetch_factor=3, shuffle=False)
+            dl = TorchDataLoader(ds, batch_size=1, prefetch_factor=3, shuffle=False)
             for idx, batch in enumerate(dl):
                 assert len(batch['x'])==1
                 assert batch['x'][0].tolist() == ds[idx]['x']
@@ -154,7 +154,7 @@ class TestFdl:
         logger.set_stdout()
         ds = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
         with Capturing() as out:
-            dl = TorchDataLoader(ds, num_workers=0, prefetch_factor=2, generator=torch.Generator(), shuffle=False)
+            dl = TorchDataLoader(ds, batch_size=1, num_workers=0, prefetch_factor=2, generator=torch.Generator(), shuffle=False)
             for idx, batch in enumerate(dl):
                 assert len(batch['x'])==1
                 assert batch['x'][0].tolist() == ds[idx]['x']

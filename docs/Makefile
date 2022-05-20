@@ -9,7 +9,7 @@ SPHINXPROJ    = fastNLP
 SPHINXEXCLUDE = ../fastNLP/transformers/*
 SOURCEDIR     = source
 BUILDDIR      = build
-PORT          = 9000
+PORT          = 8000
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -29,6 +29,9 @@ web:
 
 dev:
 	make delete && make apidoc  && make html && make server
+
+versions:
+	sphinx-multiversion "$(SOURCEDIR)" "$(BUILDDIR)" && cd build && python -m http.server $(PORT)
 
 prod:
 	make apidoc && make html 

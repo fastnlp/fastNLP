@@ -227,7 +227,7 @@ def _check_valid_parameters_number(fn, expected_params:List[str], fn_name=None):
         raise e
 
 
-def check_user_specific_params(user_params: Dict, fn: Callable):
+def check_user_specific_params(user_params: Dict, fn: Callable, fn_name=None):
     """
     该函数使用用户的输入来对指定函数的参数进行赋值，主要用于一些用户无法直接调用函数的情况；
     主要作用在于帮助检查用户对使用函数 ``fn`` 的参数输入是否有误；
@@ -235,13 +235,16 @@ def check_user_specific_params(user_params: Dict, fn: Callable):
     :param user_params: 用户指定的参数的值，应当是一个字典，其中 ``key`` 表示每一个参数的名字，
         ``value`` 为每一个参数的值；
     :param fn: 将要被调用的函数；
+    :param fn_name: 在打印提示信息是如何显示函数名
     :return: 返回一个字典，其中为在之后调用函数 ``fn`` 时真正会被传进去的参数的值；
     """
+    if fn_name is None:
+        fn_name = fn.__name__
 
     fn_arg_names = get_fn_arg_names(fn)
     for arg_name, arg_value in user_params.items():
         if arg_name not in fn_arg_names:
-            logger.rank_zero_warning(f"Notice your specific parameter `{arg_name}` is not used by function `{fn.__name__}`.")
+            logger.rank_zero_warning(f"Notice parameter `{arg_name}` may not be used by `{fn_name}`.")
     return user_params
 
 
