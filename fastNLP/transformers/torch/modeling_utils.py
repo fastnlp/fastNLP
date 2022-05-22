@@ -1497,7 +1497,7 @@ class PreTrainedModel(Module, ModuleUtilsMixin, GenerationMixin):
         else:
             logger.info(f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n")
         if len(missing_keys) > 0:
-            logger.warning(
+            logger.rank_zero_warning(
                 f"Some weights of {model.__class__.__name__} were not initialized from the model checkpoint at {pretrained_model_name_or_path} "
                 f"and are newly initialized: {missing_keys}\n"
                 f"You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference."
@@ -1515,7 +1515,7 @@ class PreTrainedModel(Module, ModuleUtilsMixin, GenerationMixin):
                     for key, shape1, shape2 in mismatched_keys
                 ]
             )
-            logger.warning(
+            logger.rank_zero_warning(
                 f"Some weights of {model.__class__.__name__} were not initialized from the model checkpoint at {pretrained_model_name_or_path} "
                 f"and are newly initialized because the shapes did not match:\n{mismatched_warning}\n"
                 f"You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference."

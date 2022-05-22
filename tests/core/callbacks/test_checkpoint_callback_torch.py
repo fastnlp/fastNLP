@@ -8,6 +8,7 @@ import time
 
 from fastNLP.core.callbacks.checkpoint_callback import CheckpointCallback
 from fastNLP.core.controllers.trainer import Trainer
+from fastNLP import Evaluator
 from fastNLP.envs import FASTNLP_LAUNCH_TIME, FASTNLP_DISTRIBUTED_CHECK
 
 from tests.helpers.utils import magic_argv_env_context
@@ -286,6 +287,13 @@ def test_model_checkpoint_callback_2(
 
             trainer.load_model(folder, only_state_dict=only_state_dict)
             trainer.run()
+            evaluator = Evaluator(model=model_and_optimizers.model, driver='torch', device=0,
+                                  dataloaders=model_and_optimizers.evaluate_dataloaders,
+                                  input_mapping=model_and_optimizers.input_mapping,
+                                  output_mapping=model_and_optimizers.output_mapping,
+                                  metrics=model_and_optimizers.metrics)
+            evaluator.load_model(folder, only_state_dict=only_state_dict)
+            evaluator.run()
             trainer.driver.barrier()
 
     finally:
