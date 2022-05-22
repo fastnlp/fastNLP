@@ -974,9 +974,10 @@ class DataSet:
     def set_pad(self, field_name: Union[str, tuple], pad_val: Union[int, float, None] = 0, dtype=None, backend=None,
                 pad_fn: Callable = None) -> Collator:
         """
-        如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
+        ``DataSet`` 中想要对绑定的 collator 进行调整可以调用此函数。 ``collator`` 为 :class: `~fastNLP.core.collators.Collator`
+        时该函数才有效。调用该函数可以对 field 内容的 pad_val, dtype, backend 等进行调整。
 
-        :param field_name: 需要调整的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
+        :param field_name: 需要调整的 field 的名称。如果 DataSet 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
             field 的 key 来表示，如果是 nested 的 dict，可以使用元组表示多层次的 key，例如 {'a': {'b': 1}} 中的使用 ('a', 'b');
             如果 __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。如果该 field 在数据中没
             有找到，则报错；如果 __getitem__ 返回的是就是整体内容，请使用 "_single" 。
@@ -999,12 +1000,14 @@ class DataSet:
 
     def set_ignore(self, *field_names) -> Collator:
         """
-        如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略。
+        ``DataSet`` 中想要对绑定的 collator 进行调整可以调用此函数。 ``collator`` 为 :class: `~fastNLP.core.collators.Collator`
+        时该函数才有效。调用该函数可以设置忽略输出某些 field 的内容，被设置的 field 将在 batch 的输出中被忽略。
+
         Example::
 
             collator.set_ignore('field1', 'field2')
 
-        :param field_names: 需要忽略的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
+        :param field_names: 需要忽略的 field 的名称。如果 DataSet 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
             field 的 key 来表示，如果是 nested 的 dict，可以使用元组来表示，例如 {'a': {'b': 1}} 中的使用 ('a', 'b'); 如果
             __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。
         :return: 返回 Collator 自身

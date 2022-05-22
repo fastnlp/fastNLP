@@ -10,6 +10,8 @@ import sys
 import tarfile
 import tempfile
 import operator
+import types
+import functools
 from collections import OrderedDict, UserDict
 from contextlib import contextmanager
 from dataclasses import fields
@@ -37,6 +39,8 @@ if _NEED_IMPORT_TORCH:
     import torch
     _torch_version = importlib_metadata.version("torch")
 
+ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
+
 hf_cache_home = os.path.expanduser(
     os.getenv("HF_HOME", os.path.join(os.getenv("XDG_CACHE_HOME", "~/.cache"), "huggingface"))
 )
@@ -45,10 +49,9 @@ default_cache_path = os.path.join(hf_cache_home, "transformers")
 PYTORCH_PRETRAINED_BERT_CACHE = os.getenv("PYTORCH_PRETRAINED_BERT_CACHE", default_cache_path)
 PYTORCH_TRANSFORMERS_CACHE = os.getenv("PYTORCH_TRANSFORMERS_CACHE", PYTORCH_PRETRAINED_BERT_CACHE)
 TRANSFORMERS_CACHE = os.getenv("TRANSFORMERS_CACHE", PYTORCH_TRANSFORMERS_CACHE)
+HF_MODULES_CACHE = os.getenv("HF_MODULES_CACHE", os.path.join(hf_cache_home, "modules"))
+TRANSFORMERS_DYNAMIC_MODULE_NAME = "transformers_modules"
 SESSION_ID = uuid4().hex
-
-ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
-
 DISABLE_TELEMETRY = os.getenv("DISABLE_TELEMETRY", False) in ENV_VARS_TRUE_VALUES
 
 WEIGHTS_NAME = "pytorch_model.bin"
@@ -1043,3 +1046,11 @@ class TensorType(ExplicitEnum):
 
     PYTORCH = "pt"
     NUMPY = "np"
+
+def copy_func(f):
+    """Returns a copy of a function f."""
+    # Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)
+    g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__, argdefs=f.__defaults__, closure=f.__closure__)
+    g = functools.update_wrapper(g, f)
+    g.__kwdefaults__ = f.__kwdefaults__
+    return g
