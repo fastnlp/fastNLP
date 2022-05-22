@@ -45,7 +45,11 @@ class EvaluateBatchLoop(Loop):
             except BaseException as e:
                 if callable(getattr(dataloader, 'get_batch_indices', None)):
                     indices = dataloader.get_batch_indices()
-                    logger.error(f"Exception happens when evaluating on samples: {indices}")
+                    if evaluator.cur_dataloader_name is not None:
+                        logger.error(f"Exception happens when evaluating on samples in dataloader:"
+                                     f"{evaluator.cur_dataloader_name}: {indices}")
+                    else:
+                        logger.error(f"Exception happens when evaluating on samples: {indices}")
                 raise e
         # 获取metric结果。返回的dict内容示例为{'metric_name1': metric_results, 'metric_name2': metric_results, ...}
         results = evaluator.get_metric()

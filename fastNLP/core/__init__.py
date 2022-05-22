@@ -93,6 +93,7 @@ __all__ = [
     "f_rich_progress",
     "auto_param_call",
     "seq_len_to_mask",
+    "f_tqdm_progress",
 
     # vocabulary.py
     'Vocabulary'

@@ -119,10 +119,10 @@ class DataSet:
         self._collator = Collator()
         if data is not None:
             if isinstance(data, Dict):
-                length_set = set()
+                length_set = {}
                 for key, value in data.items():
-                    length_set.add(len(value))
-                assert len(length_set) == 1, "Arrays must all be same length."
+                    length_set[key] = len(value)
+                assert len(set(length_set.values())) == 1, f"Fields must all be of same length, instead of {length_set}."
                 for key, value in data.items():
                     self.add_field(field_name=key, fields=value)
             elif isinstance(data, List):
