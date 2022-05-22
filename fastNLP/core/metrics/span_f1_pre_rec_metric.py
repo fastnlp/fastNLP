@@ -45,9 +45,9 @@ def _check_tag_vocab_and_encoding_type(tag_vocab: Union[Vocabulary, dict], encod
 
 def _get_encoding_type_from_tag_vocab(tag_vocab: Union[Vocabulary, dict]) -> str:
     r"""
-    给定Vocabulary自动判断是哪种类型的encoding, 支持判断bmes, bioes, bmeso, bio
+    给定 Vocabular y自动判断是哪种类型的 encoding, 支持判断 bmes, bioes, bmeso, bio
 
-    :param tag_vocab: 支持传入tag Vocabulary; 或者传入形如{0:"O", 1:"B-tag1"}，即index在前，tag在后的dict。
+    :param tag_vocab: 支持传入 tag Vocabulary; 或者传入形如 {0:"O", 1:"B-tag1"}，即 index 在前，tag 在后的 dict。
     :return:
     """
     tag_set = set()
@@ -81,9 +81,9 @@ def _get_encoding_type_from_tag_vocab(tag_vocab: Union[Vocabulary, dict]) -> str
 
 def _bmes_tag_to_spans(tags, ignore_labels=None):
     r"""
-    给定一个tags的lis，比如['S-song', 'B-singer', 'M-singer', 'E-singer', 'S-moive', 'S-actor']。
-    返回[('song', (0, 1)), ('singer', (1, 4)), ('moive', (4, 5)), ('actor', (5, 6))] (左闭右开区间)
-    也可以是单纯的['S', 'B', 'M', 'E', 'B', 'M', 'M',...]序列
+    给定一个 tags 的 lis，比如 ['S-song', 'B-singer', 'M-singer', 'E-singer', 'S-moive', 'S-actor']。
+    返回 [('song', (0, 1)), ('singer', (1, 4)), ('moive', (4, 5)), ('actor', (5, 6))] (左闭右开区间)
+    也可以是单纯的 ['S', 'B', 'M', 'E', 'B', 'M', 'M',...]序列
 
     :param tags: List[str],
     :param ignore_labels: List[str], 在该list中的label将被忽略
@@ -111,8 +111,8 @@ def _bmes_tag_to_spans(tags, ignore_labels=None):
 
 def _bmeso_tag_to_spans(tags, ignore_labels=None):
     r"""
-    给定一个tags的lis，比如['O', 'B-singer', 'M-singer', 'E-singer', 'O', 'O']。
-    返回[('singer', (1, 4))] (左闭右开区间)
+    给定一个 tag s的 lis，比如 ['O', 'B-singer', 'M-singer', 'E-singer', 'O', 'O']。
+    返回 [('singer', (1, 4))] (左闭右开区间)
 
     :param tags: List[str],
     :param ignore_labels: List[str], 在该list中的label将被忽略
@@ -142,8 +142,8 @@ def _bmeso_tag_to_spans(tags, ignore_labels=None):
 
 def _bioes_tag_to_spans(tags, ignore_labels=None):
     r"""
-    给定一个tags的lis，比如['O', 'B-singer', 'I-singer', 'E-singer', 'O', 'O']。
-    返回[('singer', (1, 4))] (左闭右开区间)
+    给定一个 tags 的 lis，比如 ['O', 'B-singer', 'I-singer', 'E-singer', 'O', 'O']。
+    返回 [('singer', (1, 4))] (左闭右开区间)
 
     :param tags: List[str],
     :param ignore_labels: List[str], 在该list中的label将被忽略
@@ -173,8 +173,8 @@ def _bioes_tag_to_spans(tags, ignore_labels=None):
 
 def _bio_tag_to_spans(tags, ignore_labels=None):
     r"""
-    给定一个tags的lis，比如['O', 'B-singer', 'I-singer', 'I-singer', 'O', 'O']。
-        返回[('singer', (1, 4))] (左闭右开区间)
+    给定一个 tags 的 lis，比如 ['O', 'B-singer', 'I-singer', 'I-singer', 'O', 'O']。
+        返回 [('singer', (1, 4))] (左闭右开区间)
 
     :param tags: List[str],
     :param ignore_labels: List[str], 在该list中的label将被忽略
@@ -204,9 +204,6 @@ class SpanFPreRecMetric(Metric):
 
     :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` 。支持的标签为"B"(没有label)；或"B-xxx"(xxx为某种label，比如POS中的NN)，
         在解码时，会将相同xxx的认为是同一个label，比如['B-NN', 'E-NN']会被合并为一个'NN'.
-    :param pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用 `pred` 取数据
-    :param target: 用该key在evaluate()时从传入dict中取出target数据。 为None，则使用 `target` 取数据
-    :param seq_len: 用该key在evaluate()时从传入dict中取出sequence length数据。为None，则使用 `seq_len` 取数据。
     :param encoding_type: 目前支持bio, bmes, bmeso, bioes。默认为None，通过tag_vocab自动判断.
     :param ignore_labels: str 组成的list. 这个list中的class不会被用于计算。例如在POS tagging时传入['NN']，则不会计算'NN'个label
     :param only_gross: 是否只计算总的f1, precision, recall的值；如果为False，不仅返回总的f1, pre, rec, 还会返回每个label的f1, pre, rec
@@ -256,11 +253,17 @@ class SpanFPreRecMetric(Metric):
         self._fn = Counter()
 
     def reset(self):
+        """
+        重置所有元素
+        """
         self._tp.clear()
         self._fp.clear()
         self._fn.clear()
 
     def get_metric(self) -> dict:
+        """
+        get_metric 函数将根据 update 函数累计的评价指标统计量来计算最终的评价结果.
+        """
         evaluate_result = {}
 
         # 通过 all_gather_object 将各个卡上的结果收集过来，并加和。
@@ -314,7 +317,8 @@ class SpanFPreRecMetric(Metric):
         return evaluate_result
 
     def update(self, pred, target, seq_len: Optional[List] = None) -> None:
-        r"""update函数将针对一个批次的预测结果做评价指标的累计
+        r"""u
+        pdate函数将针对一个批次的预测结果做评价指标的累计
 
         :param pred: [batch, seq_len] 或者 [batch, seq_len, len(tag_vocab)], 预测的结果
         :param target: [batch, seq_len], 真实值

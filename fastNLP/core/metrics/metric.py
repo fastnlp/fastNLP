@@ -114,6 +114,9 @@ class Metric:
         return _wrap_update
 
     def check_backend(self, *args, **kwargs):
+        """
+        根据传入的参数的类型选择当前需要的 backend
+        """
         if not self.backend.is_specified():
             _args = []
             for arg in args:

@@ -1,5 +1,5 @@
 r"""
-instance 模块实现了Instance 类在fastNLP中对应sample。一个sample可以认为是一个Instance类型的对象。
+instance 模块实现了 Instance 类在 fastNLP 中对应 sample。一个 sample 可以认为是一个 Instance 类型的对象。
 便于理解的例子可以参考文档 :mod:`fastNLP.core.dataset` 。
 
 """
@@ -27,16 +27,16 @@ class Instance(Mapping):
 
     def add_field(self, field_name: str, field: any):
         r"""
-        向Instance中增加一个field
+        向 Instance 中增加一个 field
 
-        :param str field_name: 新增field的名称
-        :param Any field: 新增field的内容
+        :param field_name: 新增 field 的名称
+        :param field: 新增 field 的内容
         """
         self.fields[field_name] = field
 
     def items(self):
         r"""
-        返回一个迭代器，迭代器返回两个内容，第一个内容是field_name, 第二个内容是field_value
+        返回一个迭代器，迭代器返回两个内容，第一个内容是 field_name, 第二个内容是 field_value
 
         :return: 一个迭代器
         """

@@ -16,6 +16,13 @@ import numpy as np
 class FieldArray:
 
     def __init__(self, name: str, content):
+        """
+        初始化 FieldArray
+
+        :param name: 字符串的名称
+        :param content: 任意类型的数据
+
+        """
         if len(content) == 0:
             raise RuntimeError("Empty fieldarray is not allowed.")
         _content = content
@@ -29,15 +36,17 @@ class FieldArray:
 
     def append(self, val: Any) -> None:
         r"""
-        :param val: 把该val append到fieldarray。
+        :param val: 把该 val append 到 fieldarray。
         :return:
+
         """
         self.content.append(val)
 
     def pop(self, index: int) -> None:
         r"""
-        删除该field中index处的元素
-        :param int index: 从0开始的数据下标。
+        删除该 field 中 index 处的元素
+
+        :param index: 从 ``0`` 开始的数据下标。
         :return:
         """
         self.content.pop(index)
@@ -51,10 +60,10 @@ class FieldArray:
 
     def get(self, indices: Union[int, List[int]]):
         r"""
-        根据给定的indices返回内容。
+        根据给定的 indices 返回内容。
 
-        :param int,List[int] indices: 获取indices对应的内容。
-        :return: 根据给定的indices返回的内容，可能是单个值或ndarray
+        :param indices: 获取 indices 对应的内容。
+        :return: 根据给定的 indices 返回的内容，可能是单个值 或 ``ndarray``
         """
         if isinstance(indices, int):
             if indices == -1:
@@ -69,18 +78,18 @@ class FieldArray:
 
     def __len__(self):
         r"""
-        Returns the size of FieldArray.
+        返回长度
 
-        :return int length:
+        :return length:
         """
         return len(self.content)
 
     def split(self, sep: str = None, inplace: bool = True):
         r"""
-        依次对自身的元素使用.split()方法，应该只有当本field的元素为str时，该方法才有用。
+        依次对自身的元素使用 ``.split()`` 方法，应该只有当本 field 的元素为 ``str`` 时，该方法才有用。
 
-        :param sep: 分割符，如果为None则直接调用str.split()。
-        :param inplace: 如果为True，则将新生成值替换本field。否则返回list。
+        :param sep: 分割符，如果为 ``None`` 则直接调用 ``str.split()``。
+        :param inplace: 如果为 ``True``，则将新生成值替换本 field。否则返回 ``list``。
         :return: List[List[str]] or self
         """
         new_contents = []
@@ -94,10 +103,11 @@ class FieldArray:
 
     def int(self, inplace: bool = True):
         r"""
-        将本field中的值调用int(cell). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
-            (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
+        将本 field 中的值调用 ``int(cell)``. 支持 field 中内容为以下两种情况:
+            * ['1', '2', ...](即 field 中每个值为 ``str`` 的)，
+            * [['1', '2', ..], ['3', ..], ...](即 field 中每个值为一个 ``list`` ，``list`` 中的值会被依次转换。)
 
-        :param inplace: 如果为True，则将新生成值替换本field。否则返回list。
+        :param inplace: 如果为 ``True``，则将新生成值替换本 field。否则返回 ``list``。
         :return: List[int], List[List[int]], self
         """
         new_contents = []
@@ -114,10 +124,12 @@ class FieldArray:
 
     def float(self, inplace=True):
         r"""
-        将本field中的值调用float(cell). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
-            (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
+        将本 field 中的值调用 ``float(cell)``. 支持 field 中内容为以下两种情况:
 
-        :param inplace: 如果为True，则将新生成值替换本field。否则返回list。
+            *  ['1', '2', ...](即 field 中每个值为 ``str`` 的)，
+            * [['1', '2', ..], ['3', ..], ...](即 field 中每个值为一个 ``list``，``list`` 中的值会被依次转换。)
+
+        :param inplace: 如果为 ``True``，则将新生成值替换本 ``field``。否则返回 ``list``。
         :return:
         """
         new_contents = []
@@ -134,10 +146,12 @@ class FieldArray:
 
     def bool(self, inplace=True):
         r"""
-        将本field中的值调用bool(cell). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
-            (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
+        将本field中的值调用 ``bool(cell)``. 支持 field 中内容为以下两种情况
 
-        :param inplace: 如果为True，则将新生成值替换本field。否则返回list。
+            * ['1', '2', ...](即 field 中每个值为 ``str`` 的)，
+            * [['1', '2', ..], ['3', ..], ...](即 field 中每个值为一个 ``list``，``list`` 中的值会被依次转换。)
+
+        :param inplace: 如果为 ``True``，则将新生成值替换本 ``field``。否则返回 ``list``。
         :return:
         """
         new_contents = []
@@ -155,10 +169,12 @@ class FieldArray:
 
     def lower(self, inplace=True):
         r"""
-        将本field中的值调用cell.lower(). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
-            (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
+        将本 field 中的值调用 ``cell.lower()``. 支持 field 中内容为以下两种情况
 
-        :param inplace: 如果为True，则将新生成值替换本field。否则返回list。
+            * ['1', '2', ...](即 ``field`` 中每个值为 ``str`` 的)，
+            * [['1', '2', ..], ['3', ..], ...](即 field 中每个值为一个 ``list``，``list``中的值会被依次转换。)
+
+        :param inplace: 如果为 ``True``，则将新生成值替换本 field。否则返回 ``list``。
         :return: List[int], List[List[int]], self
         """
         new_contents = []
@@ -175,10 +191,12 @@ class FieldArray:
 
     def upper(self, inplace=True):
         r"""
-        将本field中的值调用cell.lower(). 支持field中内容为以下两种情况(1)['1', '2', ...](即field中每个值为str的)，
-            (2) [['1', '2', ..], ['3', ..], ...](即field中每个值为一个list，list中的值会被依次转换。)
+        将本 field 中的值调用 ``cell.lower()``. 支持 field 中内容为以下两种情况
 
-        :param inplace: 如果为True，则将新生成值替换本field。否则返回list。
+            * ['1', '2', ...](即 field 中每个值为 ``str`` 的)，
+            * [['1', '2', ..], ['3', ..], ...](即 field 中每个值为一个 ``list``，``list`` 中的值会被依次转换。)
+
+        :param inplace: 如果为 ``True``，则将新生成值替换本 field。否则返回 ``list``。
         :return: List[int], List[List[int]], self
         """
         new_contents = []
@@ -195,9 +213,9 @@ class FieldArray:
 
     def value_count(self):
         r"""
-        返回该field下不同value的数量。多用于统计label数量
+        返回该 field 下不同 value的 数量。多用于统计 label 数量
 
-        :return: Counter, key是label，value是出现次数
+        :return: Counter, key 是 label，value 是出现次数
         """
         count = Counter()
 
@@ -214,7 +232,7 @@ class FieldArray:
 
     def _after_process(self, new_contents: list, inplace: bool):
         r"""
-        当调用处理函数之后，决定是否要替换field。
+        当调用处理函数之后，决定是否要替换 field。
 
         :param new_contents:
         :param inplace:

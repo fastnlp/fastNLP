@@ -36,6 +36,11 @@ from .exceptions import *
 
 
 def is_paddle_tensor(dtype):
+    """
+    判断 dtype 是否为 paddle 的 tensor
+
+    :param dtype 数据的 dtype 类型
+    """
     if not isclass(dtype) and isinstance(dtype, paddle.dtype):
         return True
 
@@ -43,6 +48,12 @@ def is_paddle_tensor(dtype):
 
 
 def is_paddle_dtype_str(dtype):
+    """
+    判断 dtype 是 str 类型 且属于 paddle 支持的 str 类型
+
+    :param dtype 数据的 dtype 类型
+    """
+
     try:
         if isinstance(dtype, str) and dtype in {'bool', 'float16', 'uint16', 'float32', 'float64', 'int8',
                     'int16', 'int32', 'int64', 'uint8', 'complex64', 'complex128',
@@ -56,6 +67,13 @@ def is_paddle_dtype_str(dtype):
 
 
 def _get_dtype(ele_dtype, dtype, class_name):
+    """
+    用于检测数据的 dtype 类型， 根据内部和外部数据判断。
+
+    :param ele_dtype 内部数据的类型
+    :param dtype  数据外部类型
+    :param class_name 类的名称
+    """
     if not (ele_dtype is None or is_number_or_numpy_number(ele_dtype) or is_paddle_tensor(ele_dtype) or is_paddle_dtype_str(ele_dtype)):
         raise EleDtypeUnsupportedError(f"`{class_name}` only supports padding python numbers "
                                        f"or numpy numbers or paddle.Tensor but get `{ele_dtype}`.")

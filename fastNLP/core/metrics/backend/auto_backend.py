@@ -12,18 +12,35 @@ from .jittor_backend.backend import JittorBackend
 
 class AutoBackend(Backend):
     """
-    不需要初始化backend的AutoBackend,能够根据get_metric时候判断输入数据类型来选择backend是什么类型的
+    不需要初始化 backend 的 AutoBackend,能够根据 get_metric 时候判断输入数据类型来选择 backend 是什么类型的
 
     """
 
     def __init__(self, backend: Union[str, Backend, None]):
+        """
+        初始化 backend.
+
+        :param backend: 目前支持三种值，为 ``[str, Backend, None]``。
+
+            * 当 backend 为 `str` 时， 其只能为 'auto'
+            * 当 backend 为 ``Backend`` 对象时， 其直接使用该对象方法覆盖 AutoBackend
+            * 当 backend 为 ``None`` 时， 根据 get_metric 时候判断输入数据类型来选择 backend 是什么类型的
+
+        """
         super(AutoBackend, self).__init__()
         if backend != 'auto':
             self._convert_backend(backend)
 
     def _convert_backend(self, backend):
         """
-        将AutoBackend转换为合适的Backend对象
+        将 AutoBackend 转换为合适的 Backend 对象
+
+        :param backend: 传入的 backend 值。
+
+            * 当 backend 为 `torch` 时， 选择 :class: `~fastNLP.core.metric.TorchBackend`
+            * 当 backend 为 `paddle` 时， 选择 :class: `~fastNLP.core.metric.PaddleBackend`
+            * 当 backend 为 `jittor` 时， 选择 :class: `~fastNLP.core.metric.JittorBackend`
+            * 当 backend 为 ``None`` 时， 直接初始化
 
         """
         if isinstance(backend, Backend):
@@ -43,6 +60,12 @@ class AutoBackend(Backend):
         self._specified = True
 
     def choose_real_backend(self, args):
+        """
+        根据 args 参数类型来选择需要真正初始化的 backend
+
+        :param args: args 参数， 可能为 ``jittor``, ``torch``, ``paddle``, ``numpy`` 类型， 能够检测并选择真正的 backend。
+
+        """
         assert not self.is_specified(), "This method should not be called after backend has been specified. " \
                                         "This must be a bug, please report."
         types = []
