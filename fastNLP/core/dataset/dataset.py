@@ -156,6 +156,7 @@ import _pickle as pickle
 from copy import deepcopy
 from typing import Optional, List, Callable, Union, Dict, Any, Mapping
 from types import LambdaType
+from subprocess import DEVNULL
 import sys
 import time
 
@@ -231,7 +232,7 @@ def _multi_proc(ds, _apply_field, func, counter, queue):
     """
     idx = -1
     import contextlib
-    with contextlib.redirect_stdout(None):  # 避免打印触发 rich 的锁
+    with contextlib.redirect_stdout(DEVNULL):  # 避免打印触发 rich 的锁
         logger.set_stdout(stdout='raw')
         results = []
         try:

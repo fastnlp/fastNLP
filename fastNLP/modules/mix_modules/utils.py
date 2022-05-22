@@ -86,12 +86,12 @@ def _torch2paddle(torch_tensor: 'torch.Tensor', device: str = None, no_gradient:
     if not no_gradient:
         # 保持梯度并保持反向传播
         # paddle的stop_gradient和torch的requires_grad表现是相反的
-        paddle_tensor = paddle.to_tensor(torch_tensor.detach().numpy(), stop_gradient=False)
+        paddle_tensor = paddle.to_tensor(torch_tensor.detach().cpu().numpy(), stop_gradient=False)
         hook = paddle_tensor.register_hook(
             lambda grad: torch.autograd.backward(torch_tensor, torch.tensor(grad.numpy()))
         )
     else:
-        paddle_tensor = paddle.to_tensor(torch_tensor.detach().numpy(), stop_gradient=True)
+        paddle_tensor = paddle.to_tensor(torch_tensor.detach().cpu().numpy(), stop_gradient=True)
 
     paddle_tensor = paddle_to(paddle_tensor, device)
 

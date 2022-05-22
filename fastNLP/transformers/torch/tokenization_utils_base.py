@@ -2179,7 +2179,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             if padding is True:
                 if verbose:
                     if max_length is not None and (truncation is False or truncation == "do_not_truncate"):
-                        logger.warn(
+                        logger.warning_once(
                             "`max_length` is ignored when `padding`=`True` and there is no truncation strategy. "
                             "To pad to max length, use `padding='max_length'`."
                         )
