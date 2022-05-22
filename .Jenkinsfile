@@ -1,5 +1,8 @@
 pipeline {
     agent any
+    options {
+        timeout(time:30, unit: 'MINUTES')
+    }
     environment {
         PJ_NAME = 'fastNLP'
         POST_URL = 'https://open.feishu.cn/open-apis/bot/v2/hook/2f7122e3-3459-43d2-a9e4-ddd77bfc4282'

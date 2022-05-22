@@ -21,9 +21,9 @@ class MixSampler:
     mix_sampler的基类
     """
 
-    def __init__(self, dataset: Union[List, Dict], batch_size: int = None,
-                 sampler: Union[List["Sampler"], Dict[str, "Sampler"], None, str] = None,
-                 ds_ratio: Union[str, List[float], Dict[str, float]] = None,
+    def __init__(self, dataset: Dict, batch_size: int = None,
+                 sampler: Union[Dict[str, "Sampler"], None, str] = None,
+                 ds_ratio: Union[str, Dict[str, float]] = None,
                  drop_last: bool = False, rank: int = -1, word_size: int = -1) -> None:
         """
 
@@ -32,9 +32,12 @@ class MixSampler:
         :param sampler: 实例化好的sampler，每个dataset对应一个sampler对象
         :param drop_last: 是否去掉最后一个batch的数据，其长度小于batch_size
         """
-        # 如果dataset为Dict，则其他参数如collate_fn必须为Dict或者Callable,
-        if isinstance(dataset, Dict) and isinstance(sampler, List):
-            raise ValueError(f"{sampler} must be dict")
+        # sampler 为 dict，则判断是否与 datasets 的 key 相同
+        if isinstance(sampler, Dict):
+            for key in dataset.keys():
+                if not sampler[key]:
+                    raise ValueError(f"the key:{key} of datasets is not in sampler, where sampler is a dict!")
+
         if batch_size <= 0:
             raise ValueError("batch_size should be a positive integer value, "
                              "but got batch_size={}".format(batch_size))
@@ -46,15 +49,7 @@ class MixSampler:
             raise ValueError("if rank>=0 and word_size>=0, sampler must be str")
 
         if sampler is None and (word_size < 0 or rank < 0):
-            if isinstance(dataset, List):
-                self.sampler = [SequentialSampler(ds) for ds in dataset]
-            elif isinstance(dataset, Dict):
-                self.sampler = {name: SequentialSampler(ds) for name, ds in dataset.items()}
-
-        elif isinstance(sampler, List):
-            if len(sampler) != len(dataset):
-                raise ValueError("the length of sampler != the length of sampler")
-            self.sampler = sampler
+            self.sampler = {name: SequentialSampler(ds) for name, ds in dataset.items()}
 
         elif isinstance(sampler, Dict):
             self.sampler = sampler
@@ -68,26 +63,7 @@ class MixSampler:
 
         # 计算扩展后的大数据集长度total_len和扩展后的单个数据集长度sampler_len
         sampler_lens, total_lens, sampler_index = [], 0, []
-        if isinstance(self.sampler, List):
-            if ds_ratio is None:
-                sampler_lens = [len(spl) for spl in self.sampler]
-
-            elif ds_ratio == 'pad_to_most':
-                sampler_lens = [max(len(spl) for spl in self.sampler)] * len(self.sampler)
-
-            elif ds_ratio == 'truncate_to_least':
-                sampler_lens = [min(len(spl) for spl in self.sampler)] * len(self.sampler)
-
-            elif isinstance(ds_ratio, List):
-                if not all(item >= 0 for item in ds_ratio):
-                    raise ValueError("batch_size should be a positive integer value, "
-                                     "but got ds_ratio={}".format(ds_ratio))
-                sampler_lens = [int(len(spl) * ratio) for spl, ratio in zip(self.sampler, ds_ratio)]
-            else:
-                raise ValueError(f"{ds_ratio} must be pad_to_least or truncate_to_least or None or List")
-            total_lens = sum(sampler_lens)
-
-        elif isinstance(self.sampler, Dict):
+        if isinstance(self.sampler, Dict):
             if ds_ratio is None:
                 sampler_lens = [len(spl) for _, spl in self.sampler.items()]
 
@@ -100,7 +76,7 @@ class MixSampler:
                 sampler_lens = [min(len(spl) for _, spl in self.sampler.items())] * sampler_len
 
             elif isinstance(ds_ratio, Dict):
-                if not all(item >= 0 for item in ds_ratio):
+                if not all([item >= 0 for item in ds_ratio.values()]):
                     raise ValueError("batch_size should be a positive integer value, "
                                      "but got ds_ratio={}".format(ds_ratio))
                 sampler_lens = [int(len(spl) * ds_ratio[name]) for name, spl in self.sampler.items()]
@@ -108,7 +84,7 @@ class MixSampler:
                 raise ValueError(f"{ds_ratio} must be pad_to_least or truncate_to_least or None or List")
             total_lens = sum(sampler_lens)
 
-        # sampler为str时候，初始化下移到iter方法中
+        # sampler 为 str 时候，初始化下移到 iter 方法中
         if len(sampler_lens) > 0:
             sampler_index = [sampler_lens[0]]
             for idx in sampler_lens[1:]:
@@ -160,75 +136,37 @@ class DopedSampler(MixSampler):
     """
     定制给MixDataLoader的BatchSampler，其功能是将传入的datasets的list列表混合采样组成一个个batch返回。
     """
-    def __init__(self, dataset: Union[List, Dict], batch_size: int = None,
-                 sampler: Union[List["Sampler"], Dict[str, "Sampler"], str] = None,
-                 ds_ratio: Union[str, None, List[float], Dict[str, float]] = None,
+    def __init__(self, dataset: Dict, batch_size: int = None,
+                 sampler: Union[Dict[str, "Sampler"], str] = None,
+                 ds_ratio: Union[str, None, Dict[str, float]] = None,
                  drop_last: bool = False, rank: int = -1, word_size: int = -1) -> None:
         super(DopedSampler, self).__init__(dataset=dataset, batch_size=batch_size,
                                            sampler=sampler, ds_ratio=ds_ratio,
                                            drop_last=drop_last, rank=rank, word_size=word_size)
 
     def __iter__(self) -> List[int]:
-        # sampler为str， 此时为单机多卡或者单机，可以实现rand随机化
+        # sampler 为 str， 此时为单机多卡或者单机，可以实现 rand 随机化
         if isinstance(self.sampler, str):
             if self.sampler == 'seq':
-                if isinstance(self.datasets, List):
-                    self.sampler = []
-                    for per_ds in self.datasets:
-                        if self.word_size >= 0 and self.rank >= 0:
-                            self.sampler.append(InnerSampler(list(range(len(per_ds)))[self.rank::self.word_size]))
-                        else:
-                            self.sampler.append(InnerSampler(list(range(len(per_ds)))))
-                elif isinstance(self.datasets, Dict):
-                    self.sampler = {}
-                    for name, per_ds in self.datasets.items():
-                        if self.word_size >= 0 and self.rank >= 0:
-                            self.sampler[name] = InnerSampler(list(range(len(per_ds)))[self.rank::self.word_size])
-                        else:
-                            self.sampler[name] = InnerSampler(list(range(len(per_ds))))
+                self.sampler = {}
+                for name, per_ds in self.datasets.items():
+                    if self.word_size >= 0 and self.rank >= 0:
+                        self.sampler[name] = InnerSampler(list(range(len(per_ds)))[self.rank::self.word_size])
+                    else:
+                        self.sampler[name] = InnerSampler(list(range(len(per_ds))))
             elif self.sampler == 'rand':
-                if isinstance(self.datasets, List):
-                    self.sampler = []
-                    for per_ds in self.datasets:
-                        g = torch.Generator()
-                        g.manual_seed(self.epoch)
-                        indices = torch.randperm(len(per_ds), generator=g).tolist()
-                        if self.word_size >= 0 and self.rank >= 0:
-                            self.sampler.append(InnerSampler(indices[self.rank::self.word_size]))
-                        else:
-                            self.sampler.append(InnerSampler(indices))
-                elif isinstance(self.datasets, Dict):
-                    self.sampler = {}
-                    for name, per_ds in self.datasets.items():
-                        g = torch.Generator()
-                        g.manual_seed(self.epoch)
-                        indices = torch.randperm(len(per_ds), generator=g).tolist()
-                        if self.word_size >= 0 and self.rank >= 0:
-                            self.sampler[name] = InnerSampler(indices[self.rank::self.word_size])
-                        else:
-                            self.sampler[name] = InnerSampler(indices)
+                self.sampler = {}
+                for name, per_ds in self.datasets.items():
+                    g = torch.Generator()
+                    g.manual_seed(self.epoch)
+                    indices = torch.randperm(len(per_ds), generator=g).tolist()
+                    if self.word_size >= 0 and self.rank >= 0:
+                        self.sampler[name] = InnerSampler(indices[self.rank::self.word_size])
+                    else:
+                        self.sampler[name] = InnerSampler(indices)
 
             # 根据给定的ds_ratio计算真正需要处理数据集
-            if isinstance(self.sampler, List):
-                if self.ds_ratio is None:
-                    sampler_lens = [len(spl) for spl in self.sampler]
-
-                elif self.ds_ratio == 'pad_to_most':
-                    sampler_lens = [max(len(spl) for spl in self.sampler)] * len(self.sampler)
-
-                elif self.ds_ratio == 'truncate_to_least':
-                    sampler_lens = [min(len(spl) for spl in self.sampler)] * len(self.sampler)
-
-                elif isinstance(self.ds_ratio, List):
-                    if not all(item >= 0 for item in self.ds_ratio):
-                        raise ValueError("batch_size should be a positive integer value, "
-                                         "but got ds_ratio={}".format(self.ds_ratio))
-                    sampler_lens = [int(len(spl) * ratio) for spl, ratio in zip(self.sampler, self.ds_ratio)]
-                else:
-                    raise ValueError(f"{self.ds_ratio} must be pad_to_least or truncate_to_least or None or List")
-                total_lens = sum(sampler_lens)
-
-            elif isinstance(self.sampler, Dict):
+            if isinstance(self.sampler, Dict):
                 if self.ds_ratio is None:
                     sampler_lens = [len(spl) for _, spl in self.sampler.items()]
 
@@ -257,11 +195,11 @@ class DopedSampler(MixSampler):
                 sampler_index.append(temp + idx)
             self.num_samplers = sampler_index
             self.len_samplers = total_lens
-        # 每个batch的数据, 总的数据量total_index, 每个数据集的samplers
+        # 每个 batch 的数据, 总的数据量 total_index , 每个数据集的 samplers
         batch_idx, samplers = [], []
         # 如果单机则用所有数据，否则采用多卡
         if self.rank < 0 or self.word_size < 0:
-            # 根据sampler长度判断是否使用unsigned int 或者unsigned long
+            # 根据 sampler 长度判断是否使用 unsigned int 或者 unsigned long
             if self.len_samplers > 42e8:
                 total_index = array.array('L', list(range(self.len_samplers)))
             else:
@@ -274,15 +212,17 @@ class DopedSampler(MixSampler):
             else:
                 total_index = array.array('I', list(range(self.len_samplers))[self.rank::self.word_size])
 
+        start_idx = 0
+
+        # （特定数据集需要长度，特定数据集sampler, 特定数据集的基址， 特定sampler的下标）
+        for idx, (name, spl) in enumerate(self.sampler.items()):
+            end_idx = len(spl)
+            samplers.append((iter(spl), name, start_idx))
+            start_idx += end_idx
         # 根据sampler的类型取出每个数据集的sampler
-        if isinstance(self.sampler, List):
-            sampler_base_index = [0] + [len(spl) for spl in self.sampler][:-1]
-            samplers = [(iter(spl), idx, base_index)
-                        for idx, (spl, base_index) in enumerate(zip(self.sampler, sampler_base_index))]
-        else:
-            sampler_base_index = [0] + [len(spl) for _, spl in self.sampler.items()][:-1]
-            samplers = [(iter(spl), name, sampler_base_index[idx])
-                        for idx, (name, spl) in enumerate(self.sampler.items())]
+        # sampler_base_index = [0] + [len(spl) for _, spl in self.sampler.items()][:-1]
+        # samplers = [(iter(spl), name, sampler_base_index[idx])
+        #             for idx, (name, spl) in enumerate(self.sampler.items())]
         # 生成随机数
         np.random.seed(self.epoch)
         np.random.shuffle(total_index)
@@ -295,7 +235,7 @@ class DopedSampler(MixSampler):
                 # 重新初始化一个新的sampler，因为不可能为空，故一定不会出现stopIteration
                 spl = iter(self.sampler[name])
                 batch_idx.append(next(spl) + base_index)
-                samplers[name] = (spl, name, base_index)
+                samplers[ds_index] = (spl, name, base_index)
             if len(batch_idx) == self.batch_size:
                 yield batch_idx
                 batch_idx = []
@@ -343,63 +283,26 @@ class MixSequentialSampler(MixSampler):
         # sampler为str， 此时为单机多卡或者单机，可以实现rand随机化
         if isinstance(self.sampler, str):
             if self.sampler == 'seq':
-                if isinstance(self.datasets, List):
-                    self.sampler = []
-                    for per_ds in self.datasets:
-                        if self.word_size >= 0 and self.rank >= 0:
-                            self.sampler.append(InnerSampler(list(range(len(per_ds)))[self.rank::self.word_size]))
-                        else:
-                            self.sampler.append(InnerSampler(list(range(len(per_ds)))))
-                elif isinstance(self.datasets, Dict):
-                    self.sampler = {}
-                    for name, per_ds in self.datasets.items():
-                        if self.word_size >= 0 and self.rank >= 0:
-                            self.sampler[name] = InnerSampler(list(range(len(per_ds)))[self.rank::self.word_size])
-                        else:
-                            self.sampler[name] = InnerSampler(list(range(len(per_ds))))
+                self.sampler = {}
+                for name, per_ds in self.datasets.items():
+                    if self.word_size >= 0 and self.rank >= 0:
+                        self.sampler[name] = InnerSampler(list(range(len(per_ds)))[self.rank::self.word_size])
+                    else:
+                        self.sampler[name] = InnerSampler(list(range(len(per_ds))))
             elif self.sampler == 'rand':
-                if isinstance(self.datasets, List):
-                    self.sampler = []
-                    for per_ds in self.datasets:
-                        g = torch.Generator()
-                        g.manual_seed(self.epoch)
-                        indices = torch.randperm(len(per_ds), generator=g).tolist()
-                        if self.word_size >= 0 and self.rank >= 0:
-                            self.sampler.append(InnerSampler(indices[self.rank::self.word_size]))
-                        else:
-                            self.sampler.append(InnerSampler(indices))
-                elif isinstance(self.datasets, Dict):
-                    self.sampler = {}
-                    for name, per_ds in self.datasets.items():
-                        g = torch.Generator()
-                        g.manual_seed(self.epoch)
-                        indices = torch.randperm(len(per_ds), generator=g).tolist()
-                        if self.word_size >= 0 and self.rank >= 0:
-                            self.sampler[name] = InnerSampler(indices[self.rank::self.word_size])
-                        else:
-                            self.sampler[name] = InnerSampler(indices)
 
-            # 根据给定的ds_ratio计算真正需要处理数据集
-            if isinstance(self.sampler, List):
-                if self.ds_ratio is None:
-                    sampler_lens = [len(spl) for spl in self.sampler]
+                self.sampler = {}
+                for name, per_ds in self.datasets.items():
+                    g = torch.Generator()
+                    g.manual_seed(self.epoch)
+                    indices = torch.randperm(len(per_ds), generator=g).tolist()
+                    if self.word_size >= 0 and self.rank >= 0:
+                        self.sampler[name] = InnerSampler(indices[self.rank::self.word_size])
+                    else:
+                        self.sampler[name] = InnerSampler(indices)
 
-                elif self.ds_ratio == 'pad_to_most':
-                    sampler_lens = [max(len(spl) for spl in self.sampler)] * len(self.sampler)
-
-                elif self.ds_ratio == 'truncate_to_least':
-                    sampler_lens = [min(len(spl) for spl in self.sampler)] * len(self.sampler)
-
-                elif isinstance(self.ds_ratio, List):
-                    if not all(item >= 0 for item in self.ds_ratio):
-                        raise ValueError("batch_size should be a positive integer value, "
-                                         "but got ds_ratio={}".format(self.ds_ratio))
-                    sampler_lens = [int(len(spl) * ratio) for spl, ratio in zip(self.sampler, self.ds_ratio)]
-                else:
-                    raise ValueError(f"{self.ds_ratio} must be pad_to_least or truncate_to_least or None or List")
-                total_lens = sum(sampler_lens)
-
-            elif isinstance(self.sampler, Dict):
+            # 根据给定的 ds_ratio 算真正需要处理数据集
+            if isinstance(self.sampler, Dict):
                 if self.ds_ratio is None:
                     sampler_lens = [len(spl) for _, spl in self.sampler.items()]
 
@@ -430,21 +333,20 @@ class MixSequentialSampler(MixSampler):
             self.len_samplers = total_lens
 
         batch_idx, total_index, samplers = [], list(range(self.len_samplers)), []
-        if isinstance(self.sampler, List):
-            if self.word_size > 0 and self.rank >= 0:
-                sampler_base_index = [0] + [len(spl) * self.word_size for spl in self.sampler][:-1]
-            else:
-                sampler_base_index = [0] + [len(spl) for spl in self.sampler][:-1]
-            samplers = [(iter(spl), idx, base_index) for idx, (spl, base_index) in
-                        enumerate(zip(self.sampler, sampler_base_index))]
-        else:
-            if self.word_size > 0 and self.rank >= 0:
-                sampler_base_index = [0] + [len(spl) * self.word_size for _, spl in self.sampler.items()][:-1]
-            else:
-                sampler_base_index = [0] + [len(spl) for _, spl in self.sampler.items()][:-1]
+        start_idx = 0
 
-            samplers = [(iter(spl), name, sampler_base_index[idx])
-                        for idx, (name, spl) in enumerate(self.sampler.items())]
+        # （特定数据集需要长度，特定数据集sampler, 特定数据集的基址， 特定sampler的下标）
+        for idx, (name, spl) in enumerate(self.sampler.items()):
+            end_idx = len(spl)
+            samplers.append((iter(spl), name, start_idx))
+            start_idx += end_idx
+        # if self.word_size > 0 and self.rank >= 0:
+        #     sampler_base_index = [0] + [len(spl) * self.word_size for _, spl in self.sampler.items()][:-1]
+        # else:
+        #     sampler_base_index = [0] + [len(spl) for _, spl in self.sampler.items()][:-1]
+        #
+        # samplers = [(iter(spl), name, sampler_base_index[idx])
+        #             for idx, (name, spl) in enumerate(self.sampler.items())]
         for idx in total_index:
             ds_index = np.searchsorted(self.num_samplers, idx, side='right')
 
@@ -455,7 +357,7 @@ class MixSequentialSampler(MixSampler):
                 # 重新初始化一个新的sampler，因为不可能为空，故一定不会出现stopIteration
                 spl = iter(self.sampler[name])
                 batch_idx.append(next(spl) + base_index)
-                samplers[name] = (spl, name, base_index)
+                samplers[ds_index] = (spl, name, base_index)
             if len(batch_idx) == self.batch_size:
                 yield batch_idx
                 batch_idx = []
@@ -506,63 +408,26 @@ class PollingSampler(MixSampler):
         # sampler为str， 此时为单机多卡或者单机，可以实现rand随机化
         if isinstance(self.sampler, str):
             if self.sampler == 'seq':
-                if isinstance(self.datasets, List):
-                    self.sampler = []
-                    for per_ds in self.datasets:
-                        if self.word_size >= 0 and self.rank >= 0:
-                            self.sampler.append(InnerSampler(list(range(len(per_ds)))[self.rank::self.word_size]))
-                        else:
-                            self.sampler.append(InnerSampler(list(range(len(per_ds)))))
-                elif isinstance(self.datasets, Dict):
-                    self.sampler = {}
-                    for name, per_ds in self.datasets.items():
-                        if self.word_size >= 0 and self.rank >= 0:
-                            self.sampler[name] = InnerSampler(list(range(len(per_ds)))[self.rank::self.word_size])
-                        else:
-                            self.sampler[name] = InnerSampler(list(range(len(per_ds))))
+                self.sampler = {}
+                for name, per_ds in self.datasets.items():
+                    if self.word_size >= 0 and self.rank >= 0:
+                        self.sampler[name] = InnerSampler(list(range(len(per_ds)))[self.rank::self.word_size])
+                    else:
+                        self.sampler[name] = InnerSampler(list(range(len(per_ds))))
             elif self.sampler == 'rand':
-                if isinstance(self.datasets, List):
-                    self.sampler = []
-                    for per_ds in self.datasets:
-                        g = torch.Generator()
-                        g.manual_seed(self.epoch)
-                        indices = torch.randperm(len(per_ds), generator=g).tolist()
-                        if self.word_size >= 0 and self.rank >= 0:
-                            self.sampler.append(InnerSampler(indices[self.rank::self.word_size]))
-                        else:
-                            self.sampler.append(InnerSampler(indices))
-                elif isinstance(self.datasets, Dict):
-                    self.sampler = {}
-                    for name, per_ds in self.datasets.items():
-                        g = torch.Generator()
-                        g.manual_seed(self.epoch)
-                        indices = torch.randperm(len(per_ds), generator=g).tolist()
-                        if self.word_size >= 0 and self.rank >= 0:
-                            self.sampler[name] = InnerSampler(indices[self.rank::self.word_size])
-                        else:
-                            self.sampler[name] = InnerSampler(indices)
+
+                self.sampler = {}
+                for name, per_ds in self.datasets.items():
+                    g = torch.Generator()
+                    g.manual_seed(self.epoch)
+                    indices = torch.randperm(len(per_ds), generator=g).tolist()
+                    if self.word_size >= 0 and self.rank >= 0:
+                        self.sampler[name] = InnerSampler(indices[self.rank::self.word_size])
+                    else:
+                        self.sampler[name] = InnerSampler(indices)
 
             # 根据给定的ds_ratio计算真正需要处理数据集
-            if isinstance(self.sampler, List):
-                if self.ds_ratio is None:
-                    sampler_lens = [len(spl) for spl in self.sampler]
-
-                elif self.ds_ratio == 'pad_to_most':
-                    sampler_lens = [max(len(spl) for spl in self.sampler)] * len(self.sampler)
-
-                elif self.ds_ratio == 'truncate_to_least':
-                    sampler_lens = [min(len(spl) for spl in self.sampler)] * len(self.sampler)
-
-                elif isinstance(self.ds_ratio, List):
-                    if not all(item >= 0 for item in self.ds_ratio):
-                        raise ValueError("batch_size should be a positive integer value, "
-                                         "but got ds_ratio={}".format(self.ds_ratio))
-                    sampler_lens = [int(len(spl) * ratio) for spl, ratio in zip(self.sampler, self.ds_ratio)]
-                else:
-                    raise ValueError(f"{self.ds_ratio} must be pad_to_least or truncate_to_least or None or List")
-                total_lens = sum(sampler_lens)
-
-            elif isinstance(self.sampler, Dict):
+            if isinstance(self.sampler, Dict):
                 if self.ds_ratio is None:
                     sampler_lens = [len(spl) for _, spl in self.sampler.items()]
 
@@ -592,17 +457,15 @@ class PollingSampler(MixSampler):
             self.num_samplers = sampler_index
             self.len_samplers = total_lens
 
-        start_idx, samplers = 0, []
-        if isinstance(self.sampler, List):
-            # （特定数据集需要长度，特定数据集sampler, 特定数据集的基址， 特定sampler的下标）
-            for sampler_idx, (end_idx, spl) in enumerate(zip(self.num_samplers, self.sampler)):
-                samplers.append((iter(range(start_idx, end_idx)), iter(spl), start_idx, sampler_idx))
-                start_idx = end_idx
-        else:
-            for idx, (name, spl) in enumerate(self.sampler.items()):
-                end_idx = self.num_samplers[idx]
-                samplers.append((iter(range(start_idx, end_idx)), iter(spl), start_idx, name))
-                start_idx = end_idx
+        start_idx, samplers, true_start_idx, true_end_idx = 0, [], 0, 0
+
+        # （特定数据集需要长度，特定数据集sampler, 特定数据集的基址， 特定sampler的下标）
+        for idx, (name, spl) in enumerate(self.sampler.items()):
+            end_idx = len(spl)
+            true_end_idx = self.num_samplers[idx]
+            samplers.append((iter(range(true_start_idx, true_end_idx)), iter(spl), start_idx, name))
+            start_idx += end_idx
+            true_start_idx = true_end_idx
 
         while True:
             # 退出循环

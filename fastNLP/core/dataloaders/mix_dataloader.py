@@ -2,13 +2,14 @@ __all__ = [
     'MixDataLoader'
 ]
 
-from typing import Optional, Callable, List, Union, Tuple, Dict, Sequence
+from typing import Optional, Callable, List, Union, Tuple, Dict, Sequence, Mapping
 
 import numpy as np
 
 from fastNLP.core.dataset import DataSet, Instance
 from fastNLP.core.samplers import PollingSampler, MixSequentialSampler, DopedSampler
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from fastNLP.core.collators import Collator
 
 if _NEED_IMPORT_TORCH:
     from torch.utils.data import DataLoader, Sampler
@@ -18,12 +19,13 @@ else:
 
 class _MixDataset:
     """
-    将所有数据集当成一个混合大数据集来对待，实现的__getitem__能区别每个数据idx
+    将所有数据集当成一个混合大数据集来对待， 在 __getitem__() 能根据输入的 idx 来判断属于哪个小数据并返回其 ds_index
 
     """
+
     def __init__(self, datasets: list = None) -> None:
         """
-        :param datasets: 数据集的列表
+        :param datasets: 实现了 __getitem__() 和 __len__() 的对象的序列
         """
         self.datasets = datasets
         # 记录每个数据集的长度索引， 以便根据idx定位数据集的位置
@@ -35,7 +37,7 @@ class _MixDataset:
 
     def __getitem__(self, idx: Union[int, List[int]]) -> Union[Tuple[Instance, int], Tuple[DataSet, int]]:
         """
-        根据index索引获取数据
+        根据index索引获取数据， 能够跟 idx 的范围定位属于哪个小数据并返回
 
         :param idx: 整数类型的index或者列表
         :return:
@@ -69,8 +71,9 @@ class _MixCollateFn:
     存在多个auto_collate和多个collate_fn时候，对一个批次数据集应用哪个auto_collate和collate_fn的问题
 
     """
-    def __init__(self, collate_fns: Optional[Union[List[Callable], Callable]] = None,
-                 auto_collators: Optional[List[Callable]] = None) -> None:
+
+    def __init__(self, collate_fns: Union[List[Callable], Callable]) -> None:
+
         if isinstance(collate_fns, Sequence):
             self.collate_fns = lambda idx, lst: collate_fns[idx](lst)
         elif callable(collate_fns):
@@ -78,96 +81,124 @@ class _MixCollateFn:
         else:
             self.collate_fns = lambda idx, lst: lst
 
-        self.collate_fns = collate_fns
-        self.auto_collators = auto_collators
-
     def __call__(self, ins_list: List) -> Dict:
         """
         调用一次该方法，我们将ins_list视为同一个数据集采样出来的，故ds_index只能为一种
+
         :param ins_list:
         :return:
         """
         _ins_list, _ds_index = [], 0
         for ins, _ds_index in ins_list:
             _ins_list.append(ins)
-        # auto_collate先处理
-        if self.auto_collators is not None:
-            _ins_list = self.auto_collators[_ds_index](_ins_list)
         _ins_list = self.collate_fns(_ds_index, _ins_list)
         return _ins_list
 
 
 class MixDataLoader(DataLoader):
     """
-    针对一下三种情况提供的MixDataLoader:
-        1. 给定datasets集合或者列表，顺序采样datasets，处理采样完首个dataset后取出第二个dataset，重复上面过程直至datasets取完。
-        2. 给定datasets集合或者列表，随机采样这个datasets的任意一个数据集组合成一个混合的batch返回给用户，直至datasets所有数据集采样完。
-        3. 给定datasets集合或者列表，轮流采样datasets：即是循环遍历datasets，每取出一个dataset采样一个batch的数据，然后取出下一个dataset
-           采样一个batch数据，重复上述过程直至某个dataset采样结束或者所有dataset采样结束。
+    针对一下四种情况提供的 ``MixDataLoader``， 目前只支持 ``torch`` 框架的版本， 其中 mode 的取值范围为 ``['sequential', 'mix', 'polling', "Sampler"]``:
+
+        * 当 mode 为 ``'sequential'`` 时，``MixDataLoader``  将 datasets 的序列或者字典视为一个混合大数据集， 按照 datasets 数据集序列或者字典的顺序一个
+        接一个的 sample 完所有数据。
+        * 当 mode 为 ``'mix'`` 时， ``MixDataLoader``  将 datasets 的序列或者字典视为一个混合大数据集， 然后根据用户输入的 idx 序列随机sample
+        混合数据集 datasets 的数据组成一个 batch 序列返回。
+        * 当 mode 为 ``'polling'`` 时， ``MixDataLoader`` 按照 datasets 数据集的顺序， 先从第一个数据集采样一个 batch 的数据返回，
+        再从第二数据集采样一个 batch 数据返回， 直至最后一个数据集采样一个 batch 数据返回后再从第一个数据采样第二个 batch 数据返回，直至所有的数据集都被轮询的采样完。
+        * 当 mode 为 ``"Sampler"`` 时， 该 Sampler 是实现 __iter__() 的实例化对象， 其功能是每次 iter 时返回一个 batch 序列， 其类型为 List[int];
+        且 Sampler 必须将输入的 datasets 视为一个混合大数据集， 其 index 范围为 ``0<idx<len(datasets[0])+...+len(datasets[x])``, 然后参数
+        sampler, drop_last, ds_ratio 均无效。
+
     """
-    def __init__(self, datasets: Union[List, Dict] = None, mode: Union[str, "Sampler"] = 'sequential',
-                 collate_fn: Union[List[Callable], Callable, Dict[str, Callable]] = None,
-                 sampler: Union[List["Sampler"], Dict[str, "Sampler"]] = None,
+
+    def __init__(self, datasets: Dict = None, mode: Union[str, "Sampler"] = 'sequential',
+                 collate_fn: Union[str, Callable, Dict[str, Callable]] = 'auto',
+                 sampler: Union[Dict[str, "Sampler"], str, None] = None,
                  num_workers: int = 0, batch_size: int = 16, drop_last=False,
-                 ds_ratio: Union[str, List[float], None, Dict[str, float]] = None,
-                 pin_memory: bool = True) -> None:
+                 ds_ratio: Union[None, str, Dict[str, float]] = None,
+                 pin_memory: bool = False) -> None:
         """
 
-        :param datasets: dataset的列表
-        :param mode: mode包括四种类型，前三种分别为"sequential", "mix", "polling"分别代表上述三种情况，
-                    当mode为Sampler时为用户定制，此时sampler，ds_ratio，batch_size，drop_last失效，此时Sampler应该是一个可迭代
-                    对象，每次迭代返回的是List[int]
-        :param collate_fn: 对取得到的数据进行打包的callable函数，
-                         当其为callable类型时候，所有数据集采样的数据都会经过这个函数；
-                         当其为List[Callable]类型时，datasets也应该为List；会根据每个数据集__getitem__返回的idx判断当前数据对应的Callable函数，
-                         其对应关系与datasets位置匹配；
-                         当其为Dict[str, Callable]类型时， datasets也是Dict类型且一一对应。
-        :param sampler: sampler是datasets每个数据集内部采样的实例化sampler对象
-                        sampler为None时候，datasets包含的每个dataset都会初始化一个sequentialSampler用于采样;
-                        sampler为List[Sampler]，则datasets也为List，且一一对应
-                        sampler为Dict[str, Sampler], datasets也是Dict类型且一一对应。
-        :param num_workers: 进程的数量，当num_workers=0时不开启多进程
-        :param batch_size: 批次大小, datasets的所有数据集batch_size一致
-        :param drop_last: 是否去掉最后一个不符合batch_size的数据
-        :param ds_ratio: 当ds_ratio为None，原有数据集不进行扩充
-                        当ds_ratio为'truncate_to_least'时，以datasets的最短数据集为基准，将其他数据集截断到一样长度
-                        当ds_ratio为'pad_to_most'时，以datasets的最长数据集为基准，将最短数据集重采样到最长数据集长度一致为止
-                        当ds_ratio为List[float]时，datasets也为List，ds_ratio的每一个参数都是datasets每个数据集应该采样的倍数，
-                        其大于0，可以超过1，将数据集重采样翻倍即可
-                        当ds_ratio为Dict[str, float]时，datasets也为Dict，参数相互对应。
+        :param datasets: 实现了 __getitem__() 和 __len__() 对象的序列或者字典。
+        :param mode: mode 控制 ``MixDataLoader`` 运行模式。 mode 的取值范围为 ``['sequential', 'mix', 'polling', "Sampler"]``:
+
+            * 当 mode 为 ``'sequential'`` 时，``MixDataLoader``  将 datasets 的序列或者字典视为一个混合大数据集， 按照 datasets 数据集序列或者字典的顺序一个
+            接一个的 sample 完所有数据。
+            * 当 mode 为 ``'mix'`` 时， ``MixDataLoader``  将 datasets 的序列或者字典视为一个混合大数据集， 然后根据用户输入的 idx 序列随机sample
+            混合数据集 datasets 的数据组成一个 batch 序列返回。
+            * 当 mode 为 ``'polling'`` 时， ``MixDataLoader`` 按照 datasets 数据集的顺序， 先从第一个数据集采样一个 batch 的数据返回，
+            再从第二数据集采样一个 batch 数据返回， 直至最后一个数据集采样一个 batch 数据返回后再从第一个数据采样第二个 batch 数据返回，直至所有的数据集都被轮询的采样完。
+            * 当 mode 为 ``"Sampler"`` 时， 该 Sampler 是实现 __iter__() 的实例化对象， 其功能是每次 iter 时返回一个 batch 序列， 其类型为 List[int];
+            且 Sampler 必须将输入的 datasets 视为一个混合大数据集， 其 index 范围为 ``0<idx<len(datasets[0])+...+len(datasets[x])``, 然后参数
+            sampler, drop_last, ds_ratio 均无效。
+
+        :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的 Callable 函数。 其取值可以为 ``['auto', Callable, List[Callable], Dict[str, Callable]]``:
+
+            * collate_fn 为 ``'auto'`` 时, ``MixDataLoader``  datasets 序列或者dict 初始化一个 :class: `~fastNLP.core.collators.Collator`  作为其默认值，
+            需要注意的是只有当 datasets 包含的所以 dataset 的数据都为 ``List`` 或者 ``Dict`` 类型时才能使用。否则只能用户自己定义 collate_fn .
+            * collate_fn 为  ``Callable`` 时， 该 collate_fn 会被 datasets 序列或者dict 的所有数据所共享。该 Callable 函数应当接受一个 batch 参数作为输入，
+            batch 是一个 List 对象且 List 中的每一条数据都是 dataset 的一条数据；该 Callable 函数还应当返回一个对象。
+            * collate_fn 为 ``Dict[str, Callable]`` 时， datasets 的 key 必须和 callable_fn 的 key 一致。 ``MixDataLoader`` 会将 ``collate_fn[key]``
+            用到 ``datasets[key]`` 的数据集上。 ``collate_fn[key]`` 是一个 Callable 对象。
+
+
+        :param sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，其取值范围为
+        ``[None, str, Dict[str, "Sampler"]]``:
+
+            * sampler 为 ``None`` 时， ``MixDataLoader`` 默认初始化 ``torch`` 的 ``SequentialSampler`` 作为默认值。其功能时顺序返回 dataset 的下标。
+            * sampler 为 ``str`` 时， sampler 选择范围为 ``[rand, seq]``。当 sampler 为 ``rand`` 时，``MixDataLoader`` 默认初始化 ``torch`` 的  ``RandomSampler``
+            作为默认值， 其功能时随机采样 dataset 的下标并返回。 当 sampler 为 ``seq`` 时， ``MixDataLoader`` 默认初始化 ``torch`` 的 ``SequentialSampler`` 作为默认值。其功能时顺序返回 dataset 的下标。
+            * sampler 为 ``Dict[str, "Sampler"]`` 时， ``Sampler`` 为用户定义的实现了 __len__() 和 __iter__() 的实例化对象。 其每次 iter 必须返回一个 int 下标。
+            Dict 的 str 必须和 datasets 的 key 一致。 也即是 ``Dict[str, Sampler] `` 为 datasets 字典的每个 dataset 初始化勒一个 Sampler。
+
+        :param num_workers: 当 ``num_workers > 0`` 时, ``MixDataLoader`` 会开启 num_workers 个子进程来处理数据， 可以加快数据处理速度，但同时
+        也消耗大量内存。 当 ``num_workers=0`` 时， 不开启子进程。 默认为 ``0``。
+        :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。 且 datasets 上所有 dataset 的 batch_size 一致。
+        :param drop_last: 当 ``drop_last=True`` 时，``MixDataLoader`` 会扔掉 datasets 中 每个 dataset 最后一个长度小于 ``batch_size`` 的 batch 数据;
+        若 ``drop_last=False`` , 则会返回该 batch 数据。 默认为 ``False`` 。
+        :param ds_ratio: ``ds_ratio`` 是控制 datasets 怎么组成一个混合大数据集的重要参数， 其取值为 ``[None, 'truncate_to_least', 'pad_to_most', List[float], Dict[str, float]]``:
+
+            * ds_ratio 为 ``None``, datasets 数据集序列或字典不进行数据扩充处理。
+            * ds_ratio 为 ``'truncate_to_least'``, datasets 数据集序列或字典会计算得到 datasets序列中 dataset 最断长度 ``mix_len``， 其他数据集会被切断
+            到最短长度``mix_len``。这种切断不是物理上切断，``MixDataLoader`` 会根据 sampler 不同来采样数据集到指定的最短长度``mix_len``。
+            * ds_ratio 为 ``'pad_to_most'``, datasets 数据集序列或字典会计算得到 datasets序列中 dataset 最大长度 ``max_len``, 其他其他数据集会扩充
+            到最大长度``mix_len``。这种扩充不是物理上扩充， ``MixDataLoader`` 会根据 sampler 不同来重采样 dataset 到指定的最大长度``max_len``。
+            * ds_ratio 为 ``Dict[str, float]`` 时， datasets 类型也必须为 ``Dict[str, DataSet]``, 其 key 一一对应。 ds_ratio 的 value 是任意大于 0 的浮点数，
+            代表着 datasets 的 value 数据进行扩充或者缩减的倍数。
         """
-        # 如果dataset为Dict，则其他参数如collate_fn必须为Dict或者Callable,
-        if not isinstance(datasets, Dict) and (isinstance(collate_fn, Callable) or isinstance(collate_fn, Dict)) and \
-                isinstance(sampler, Dict):
-            raise ValueError(f"")
+        # sampler 为 dict，则判断是否与 datasets 的 key 相同
+        if isinstance(sampler, Dict):
+            for key in datasets.keys():
+                if not sampler[key]:
+                    raise ValueError(f"the key:{key} of datasets is not in sampler, where sampler is a dict!")
+        # collate_fn 为 dict，则判断是否与 datasets 的 key 相同
+        if isinstance(collate_fn, Dict):
+            if mode == 'mix':
+                raise ValueError(f"mode: {mode} do not support collate_fn is Dict, please use callate_fn=Callable or 'auto'")
+            for key in datasets.keys():
+                if not collate_fn[key]:
+                    raise ValueError(f"the key:{key} of datasets is not in collate_fn, where collate_fn is a dict!")
 
-        if isinstance(collate_fn, list):
-            if len(collate_fn) != len(datasets):
-                raise ValueError("the length of collate_fn != datasets!!")
+        if isinstance(collate_fn, str) and collate_fn == 'auto':
+            date_type = None
+            for idx, ds in enumerate(datasets.values()):
+                if idx == 0:
+                    date_type = type(ds[0])
+                if type(ds[0]) != date_type or not (isinstance(ds[0], List) or isinstance(ds[0], Mapping)):
+                    raise ValueError(f"when you use callate_fn={collate_fn}, all dataset must be list or dict。"
+                                     f"But dataset {idx - 1} data type is {date_type}, dataset {idx} data type is {type(ds[0])}")
 
-        if isinstance(sampler, list):
-            if len(sampler) != len(datasets):
-                raise ValueError("the length of sampler != datasets!!")
+            collate_fn = Collator(backend='torch')
 
-        # Dict类型转化为List，以便于_MixCollateFn处理
+        # Dict 类型的 collate_fn 转化为 List，以便于 _MixCollateFn 里面根据 idx 定位 dataset
         if isinstance(collate_fn, Dict):
             collate_fn = [fn for _, fn in collate_fn.items()]
 
-        # 由于datasets可能是FastNLP类型的dataset或者是交杂的, 故需要检测
-        if isinstance(datasets, Dict):
-            dataset = [ds for _, ds in datasets.items()]
-        else:
-            dataset = datasets
-        auto_collators = []
-        for per_ds in dataset:
-            if isinstance(per_ds, DataSet):
-                auto_collators.append(per_ds.get_collator())
-            else:
-                # 如果没有对应的collator就设置一个不做任何操作的collator
-                auto_collators.append(lambda x: x)
+        dataset = [ds for _, ds in datasets.items()]
 
-        # List类型的collate_fn只有两种情况，需要对其进行包裹
-        collate_fn = _MixCollateFn(collate_fn, auto_collators)
+        # 对 collate_fn 进行包裹， 统一处理 collate_fn 不同情况下使用的问题
+        collate_fn = _MixCollateFn(collate_fn)
+
         if mode == 'sequential':
             batch_sampler = MixSequentialSampler(datasets, batch_size=batch_size, sampler=sampler,
                                                  drop_last=drop_last, ds_ratio=ds_ratio)
