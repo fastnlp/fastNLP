@@ -41,6 +41,11 @@ def is_jittor_tensor(dtype):
 
 
 def is_jittor_dtype_str(dtype):
+    """
+    判断数据类型是否为 jittor 使用的字符串类型
+
+    :param: dtype 数据类型
+    """
     try:
         if isinstance(dtype, str) and dtype in {'bool', 'float16', 'uint16', 'float32', 'float64', 'int8',
                                                 'int16', 'int32', 'int64', 'uint8', 'complex64', 'complex128',
@@ -53,6 +58,13 @@ def is_jittor_dtype_str(dtype):
 
 
 def _get_dtype(ele_dtype, dtype, class_name):
+    """
+    用于检测数据的 dtype 类型， 根据内部和外部数据判断。
+
+    :param ele_dtype 内部数据的类型
+    :param dtype  数据外部类型
+    :param class_name 类的名称
+    """
     if not (ele_dtype is None or (
             is_number_or_numpy_number(ele_dtype) or is_jittor_tensor(ele_dtype) or is_jittor_dtype_str(dtype))):
         raise EleDtypeUnsupportedError(f"`{class_name}` only supports padding python numbers "
@@ -62,13 +74,7 @@ def _get_dtype(ele_dtype, dtype, class_name):
         if not (is_jittor_tensor(dtype) or is_number(dtype) or is_jittor_dtype_str(dtype)):
             raise DtypeUnsupportedError(f"The dtype of `{class_name}` only supports python numbers "
                                         f"or jittor.dtype but get `{dtype}`.")
-        # dtype = number_to_jittor_dtype_dict.get(dtype, dtype)
     else:
-        # if (is_number(ele_dtype) or is_jittor_tensor(ele_dtype)):
-        #     # ele_dtype = number_to_jittor_dtype_dict.get(ele_dtype, ele_dtype)
-        #     dtype = ele_dtype
-        # elif is_numpy_number_dtype(ele_dtype):  # 存在一个转换的问题了
-        #     dtype = numpy_to_jittor_dtype_dict.get(ele_dtype.type)
         if is_numpy_generic_class(ele_dtype):
             dtype = numpy_to_jittor_dtype_dict.get(ele_dtype)
         else:
@@ -91,6 +97,11 @@ class JittorNumberPadder(Padder):
 
     @staticmethod
     def pad(batch_field, pad_val=0, dtype=None):
+        """
+        :param batch_field 输入的某个 field 的 batch 数据。
+        :param pad_val 需要填充的值
+        :dtype 数据的类型
+        """
         return jittor.Var(np.array(batch_field, dtype=dtype))
 
 
@@ -108,6 +119,11 @@ class JittorSequencePadder(Padder):
 
     @staticmethod
     def pad(batch_field, pad_val=0, dtype=None):
+        """
+        :param batch_field 输入的某个 field 的 batch 数据。
+        :param pad_val 需要填充的值
+        :dtype 数据的类型
+        """
         tensor = get_padded_jittor_tensor(batch_field, dtype=dtype, pad_val=pad_val)
         return tensor
 
@@ -126,6 +142,13 @@ class JittorTensorPadder(Padder):
 
     @staticmethod
     def pad(batch_field, pad_val=0, dtype=None):
+        """
+        将 batch_field 数据 转为 jittor.Var 并 pad 到相同长度。
+
+        :param batch_field 输入的某个 field 的 batch 数据。
+        :param pad_val 需要填充的值
+        :dtype 数据的类型
+        """
         try:
             if not isinstance(batch_field[0], jittor.Var):
                 batch_field = [jittor.Var(np.array(field.tolist(), dtype=dtype)) for field in batch_field]
@@ -139,9 +162,6 @@ class JittorTensorPadder(Padder):
         else:
             max_shape = [len(batch_field)] + [max(*_) for _ in zip(*shapes)]
 
-        # if dtype is not None:
-        #     tensor = jittor.full(max_shape, pad_val, dtype=dtype)
-        # else:
         tensor = jittor.full(max_shape, pad_val, dtype=dtype)
         for i, field in enumerate(batch_field):
             slices = (i,) + tuple(slice(0, s) for s in shapes[i])

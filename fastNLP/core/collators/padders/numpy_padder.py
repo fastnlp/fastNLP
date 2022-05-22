@@ -15,6 +15,13 @@ from .exceptions import *
 
 
 def _get_dtype(ele_dtype, dtype, class_name):
+    """
+    用于检测数据的 dtype 类型， 根据内部和外部数据判断。
+
+    :param ele_dtype 内部数据的类型
+    :param dtype  数据外部类型
+    :param class_name 类的名称
+    """
     if ele_dtype is not None and not is_number_or_numpy_number(ele_dtype):
         raise EleDtypeUnsupportedError(f"`{class_name}` only supports padding python numbers "
                                        f"or numpy numbers but get `{ele_dtype}`.")
