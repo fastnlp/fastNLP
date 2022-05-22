@@ -1,5 +1,6 @@
 __all__ = [
     "CPT_PRETRAINED_MODEL_ARCHIVE_LIST",
+    "CPTConfig",
     "CPTForConditionalGeneration",
     "CPTForSequenceClassification",
     "CPTForMaskedLM",
@@ -9,4 +10,4 @@ __all__ = [
 ]
 
 from .modeling_cpt import CPT_PRETRAINED_MODEL_ARCHIVE_LIST, CPTForConditionalGeneration, CPTForSequenceClassification, \
-    CPTForMaskedLM, CPTForQuestionAnswering, CPTModel, CPTPretrainedModel
+    CPTForMaskedLM, CPTForQuestionAnswering, CPTModel, CPTPretrainedModel, CPTConfig

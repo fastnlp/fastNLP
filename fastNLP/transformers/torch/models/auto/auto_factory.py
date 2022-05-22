@@ -516,7 +516,10 @@ class _LazyAutoMapping(OrderedDict):
     def _load_attr_from_module(self, model_type, attr):
         module_name = model_type_to_module_name(model_type)
         if module_name not in self._modules:
-            self._modules[module_name] = importlib.import_module(f".{module_name}", "transformers.models")
+            try:
+                self._modules[module_name] = importlib.import_module(f".{module_name}", "fastNLP.transformers.torch.models")
+            except ImportError:
+                raise ImportError(f"fastNLP transformers does not support {module_name} now, please install and import `transformers` to use it.")
         return getattribute_from_module(self._modules[module_name], attr)
 
     def keys(self):
