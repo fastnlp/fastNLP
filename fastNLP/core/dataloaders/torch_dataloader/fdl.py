@@ -220,7 +220,8 @@ def prepare_torch_dataloader(ds_or_db,
                              pin_memory: bool = False, drop_last: bool = False,
                              timeout: float = 0, worker_init_fn: Optional[Callable] = None,
                              multiprocessing_context=None, generator=None, prefetch_factor: int = 2,
-                             persistent_workers: bool = False, non_train_sampler: Optional["Sampler[int]"] = None,
+                             persistent_workers: bool = False,
+                             non_train_sampler: Union["Sampler[int]", ReproducibleSampler, UnrepeatedSampler] = None,
                              non_train_batch_size: int = 16) \
         -> Union[TorchDataLoader, Dict[str, TorchDataLoader], Sequence[TorchDataLoader]]:
     """
