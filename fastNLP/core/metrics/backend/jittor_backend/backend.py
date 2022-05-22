@@ -16,20 +16,20 @@ class JittorBackend(Backend):
 
     def aggregate(self, tensor, method: str):
         """
-        聚集结果，并根据method计算后，返回结果
+        聚集结果，并根据 method 计算后，返回结果
         """
         return tensor
 
     def create_tensor(self, value: float):
         """
-        创建tensor，并且填入value作为值
+        创建 tensor，并且填入 value 作为值
         """
         value = jittor.Var(value)
         return value
 
     def fill_value(self, tensor, value: float):
         """
-        将tensor的值设置为value
+        将 tensor 的值设置为 value
 
         """
         value = jittor.full_like(tensor, value)
@@ -37,7 +37,7 @@ class JittorBackend(Backend):
 
     def get_scalar(self, tensor) -> float:
         """
-        tensor的saclar值
+        tensor 的 saclar 值
 
         :param tensor:
         :return:
@@ -46,7 +46,7 @@ class JittorBackend(Backend):
 
     def is_specified(self) -> bool:
         """
-        判断是否是某种框架的backend
+        判断是否是某种框架的 backend
 
         :return:
         """
@@ -54,7 +54,7 @@ class JittorBackend(Backend):
 
     def tensor2numpy(self, tensor):
         """
-        将tensor转为numpy
+        将 tensor 转为 numpy
 
         :param tensor:
         :return:
@@ -68,6 +68,6 @@ class JittorBackend(Backend):
 
     def move_tensor_to_device(self, tensor, device):
         """
-        jittor的没有转移设备的函数，因此该函数实际上无效
+        jittor 的没有转移设备的函数，因此该函数实际上无效
         """
         return tensor

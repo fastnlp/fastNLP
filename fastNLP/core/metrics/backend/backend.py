@@ -12,7 +12,9 @@ class Backend:
 
     def aggregate(self, tensor, method: str):
         """
-        聚集结果，并根据method计算后，返回结果
+        聚集结果，并根据 method 计算后，返回结果
+        :param tensor: 传入的张量
+        :param method: 聚合的方法
         """
         if method is not None:
             return AggregateMethodError(should_have_aggregate_method=False, only_warn=True)
@@ -22,6 +24,8 @@ class Backend:
     def create_tensor(self, value: float):
         """
         创建tensor，并且填入value作为值
+
+        :param value: 需要初始化的 value 值
         """
         return value
 
@@ -29,6 +33,8 @@ class Backend:
         """
         将tensor的值设置为value
 
+        :param tensor: 传进来的张量
+        :param value: 需要填充的值
         """
         return value
 
@@ -36,14 +42,14 @@ class Backend:
         """
         tensor的saclar值
 
-        :param tensor:
+        :param tensor: 传入的张量
         :return:
         """
         return tensor
 
     def is_specified(self) -> bool:
         """
-        判断是否是某种框架的backend
+        判断是否是某种框架的 backend
 
         :return:
         """
@@ -51,15 +57,19 @@ class Backend:
 
     def tensor2numpy(self, tensor):
         """
-        将tensor转为numpy
+        将 tensor 转为 numpy
 
-        :param tensor:
+        :param tensor: 传入的张量
         :return:
         """
         return tensor
 
     def move_tensor_to_device(self, tensor, device):
         """
+        将张量移动到某个设备上
+
+        :param tensor: 传入的张量
+        :param device: 设备号， 一般为 ``'cpu'``, ``'cuda:0'`` 等。
         """
         return tensor
 

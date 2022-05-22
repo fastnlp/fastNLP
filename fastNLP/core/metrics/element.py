@@ -12,6 +12,26 @@ from fastNLP.envs.env import FASTNLP_GLOBAL_RANK
 
 class Element:
     def __init__(self, name, value: float, aggregate_method, backend: Backend):
+        """
+        保存 Metric 中计算的元素值的对象
+
+        :param name: 名称
+        :param value: 元素的值
+        :param aggregate_method: 聚合的方法， 目前支持 ``['sum', 'mean', 'max', 'mix']``:
+
+            * method 为 ``'sum'`` 时， 会将多张卡上聚合结果在维度为 `0` 上 累加起来。
+            * method 为 ``'mean'`` 时，会将多张卡上聚合结果在维度为 `0` 上取平均值。
+            * method 为 ``'max'`` 时，会将多张卡上聚合结果在维度为 `0` 上取最大值。
+            * method 为 ``'mix'`` 时，会将多张卡上聚合结果在维度为 `0` 上取最小值。
+
+        :param backend: 使用的 backend 。Element 的类型会根据 backend 进行实际的初始化。例如 backend 为 torch 则该对象为
+            Torch.tensor ； 如果backend 为 paddle 则该对象为 paddle.tensor ；如果 backend 为 jittor , 则该对象为 jittor.Var 。
+            一般情况下直接默认为 auto 就行了，fastNLP 会根据实际调用 Metric.update() 函数时传入的参数进行合理的初始化，例如当传入
+            的参数中只包含 torch.Tensor 这一种 tensor 时（可以有其它非 tensor 类型的输入）则认为 backend 为 torch ；只包含
+            jittor.Var 则认为 backend 这一种 tensor 时（可以有其它非 tensor 类型的输入）则认为 backend 为 jittor 。如果没有检测
+            到任何一种 tensor ，就默认使用 float 类型作为 element 。
+
+        """
         self.name = name
         self.init_value = value
         self.aggregate_method = aggregate_method
@@ -31,7 +51,7 @@ class Element:
 
     def aggregate(self):
         """
-        自动aggregate对应的元素
+        自动 aggregate 对应的元素
 
         """
         self._check_value_initialized()
@@ -54,6 +74,9 @@ class Element:
                 raise RuntimeError(msg)
 
     def reset(self):
+        """
+        重置 value
+        """
         if self.backend.is_specified():
             self._value = self.backend.fill_value(self._value, self.init_value)
 
@@ -72,19 +95,36 @@ class Element:
         return self._value
 
     def get_scalar(self) -> float:
+        """
+        获取元素的 scalar 值
+
+        """
         self._check_value_initialized()
         return self.backend.get_scalar(self._value)
 
     def fill_value(self, value):
+        """
+        对元素进行 fill_value， 会执行队友 backend 的 fill_value 方法
+
+        """
         self._value = self.backend.fill_value(self._value, value)
 
     def to(self, device):
+        """
+        将元素移到某个设备上
+
+        :param device: 设备名， 一般为 ``"cpu"``, ``"cuda:0"`` 等
+        """
         # device这里如何处理呢？
         if self._value is not None:
             self._value = self.backend.move_tensor_to_device(self._value, device)
         self.device = device
 
     def _check_value_initialized(self):
+        """
+        检查 Element 的 value 是否初始化了
+
+        """
         if self._value is None:
             assert self.backend.is_specified(), f"Backend is not specified, please specify backend in the Metric " \
                                                 f"initialization."
