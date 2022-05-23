@@ -13,6 +13,7 @@ if _NEED_IMPORT_JITTOR:
     import jittor as jt
     from jittor import Module
     from jittor.optim import Optimizer
+    from jittor.dataset import Dataset
 
     _reduces = {
         'max': jt.max,
@@ -52,21 +53,11 @@ class JittorDriver(Driver):
         # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
         self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
 
-    @staticmethod
-    def check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
+    def check_dataloader_legality(self, dataloader):
         # 在fastnlp中实现了JittorDataLoader
-        # TODO: 是否允许传入Dataset？
-        if is_train:
-            if not isinstance(dataloader, JittorDataLoader):
-                raise ValueError(f"Parameter `{dataloader_name}` should be 'JittorDataLoader' type, not {type(dataloader)}.")
-        else:
-            if not isinstance(dataloader, Dict):
-                raise ValueError(f"Parameter `{dataloader_name}` should be 'Dict' type, not {type(dataloader)}.")
-            else:
-                for each_dataloader in dataloader.values():
-                    if not isinstance(each_dataloader, JittorDataLoader):
-                        raise ValueError(f"Each dataloader of parameter `{dataloader_name}` should be 'JittorDataLoader' "
-                                         f"type, not {type(each_dataloader)}.")
+        if not isinstance(dataloader, Dataset):
+            raise TypeError(f"{Dataset} is expected, instead of `{type(dataloader)}`")
+
 
     @staticmethod
     def _check_optimizer_legality(optimizers):

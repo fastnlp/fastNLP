@@ -175,6 +175,14 @@ class Driver(ABC):
         raise NotImplementedError(
             "Each specific driver should implemented its own `_check_optimizer_legality` function.")
 
+    def check_dataloader_legality(self, dataloader):
+        """
+        检测 DataLoader 是否合法，如果不合法，会 raise TypeError 。
+
+        :param dataloder:
+        :return:
+        """
+
     def set_optimizers(self, optimizers=None):
         r"""
         trainer 会调用该函数将用户传入的 optimizers 挂载到 driver 实例上；

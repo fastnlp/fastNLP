@@ -4,7 +4,8 @@ __all__ = [
 
 import uuid
 import sys
-from ...envs.imports import _module_available, _compare_version
+from ...envs.utils import _module_available, _compare_version, _get_version
+
 from ...envs import get_global_rank
 from .utils import is_notebook
 from ..log import logger
@@ -82,8 +83,10 @@ class TqdmProgress(metaclass=Singleton):
         :param kwargs:
         :return:
         """
-        assert _module_available('tqdm') and _compare_version('tqdm', operator.ge, '4.57'), \
-            f"To use tqdm, tqdm>=4.57 is needed."
+        if not _module_available('tqdm'):
+            raise ModuleNotFoundError("Package tqdm is not installed.")
+        elif not _compare_version('tqdm', operator.ge, '4.57'):
+            raise RuntimeError(f"Package tqdm>=4.57 is needed, instead of {_get_version('tqdm')}.")
 
         from .rich_progress import f_rich_progress
         assert not f_rich_progress.not_empty(), "Cannot use tqdm before rich finish loop."

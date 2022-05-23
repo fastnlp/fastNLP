@@ -169,6 +169,7 @@ from fastNLP.core.collators import Collator
 from fastNLP.core.utils.rich_progress import f_rich_progress, DummyFRichProgress
 from fastNLP.core.utils.tqdm_progress import f_tqdm_progress
 from ..log import logger
+from fastNLP.core.utils.dummy_class import DummyClass
 
 
 progress_bars = {
@@ -232,7 +233,8 @@ def _multi_proc(ds, _apply_field, func, counter, queue):
     """
     idx = -1
     import contextlib
-    with contextlib.redirect_stdout(DEVNULL):  # 避免打印触发 rich 的锁
+    null = DummyClass()
+    with contextlib.redirect_stdout(null):  # 避免打印触发 rich 的锁
         logger.set_stdout(stdout='raw')
         results = []
         try:
@@ -598,7 +600,8 @@ class DataSet:
         
             .. note::
             
-                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
 
         :param progress_desc: 进度条的描述字符，默认为 ``Processing``；
         :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
@@ -632,8 +635,14 @@ class DataSet:
         :param field_name: 传入func的是哪个field。
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param modify_fields: 是否用结果修改 `DataSet` 中的 `Field`， 默认为 True
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
-    	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
+        :param num_proc: 使用进程的数量。
+
+            .. note::
+
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
+
+     	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :param progress_desc: 当显示 progress_bar 时，显示当前正在处理的进度条描述字符
         :return Dict[str:Field]: 返回一个字典
         """
@@ -673,7 +682,13 @@ class DataSet:
                        progress_bar: str = 'rich', _apply_field: str = None,
                        progress_desc: str = 'Main') -> list:
         """
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
+        :param num_proc: 使用进程的数量。
+
+            .. note::
+
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
+
         :param func: 用户自定义处理函数，参数是 ``DataSet`` 中的 ``Instance``
         :param _apply_field: 需要传进去func的数据集的field_name
         :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
@@ -745,7 +760,13 @@ class DataSet:
 
         :param modify_fields: 是否用结果修改 ``DataSet`` 中的 ``Field`` ， 默认为 True
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
+        :param num_proc: 使用进程的数量。
+
+            .. note::
+
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
+
         :param progress_desc: 当 progress_bar 不为 None 时，可以显示当前正在处理的进度条名称
         :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :return Dict[str:Field]: 返回一个字典
@@ -790,7 +811,13 @@ class DataSet:
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param new_field_name: 将func返回的内容放入到 `new_field_name` 这个field中，如果名称与已有的field相同，则覆
             盖之前的field。如果为None则不创建新的field。
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
+        :param num_proc: 使用进程的数量。
+
+            .. note::
+
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
+
         :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :param progress_desc: progress bar 显示的值，默认为空。
         """
@@ -971,3 +998,50 @@ class DataSet:
         if self._collator is None:
             self._collator = Collator()
         return self._collator
+
+    def set_pad(self, field_name: Union[str, tuple], pad_val: Union[int, float, None] = 0, dtype=None, backend=None,
+                pad_fn: Callable = None) -> Collator:
+        """
+        ``DataSet`` 中想要对绑定的 collator 进行调整可以调用此函数。 ``collator`` 为 :class: `~fastNLP.core.collators.Collator`
+        时该函数才有效。调用该函数可以对 field 内容的 pad_val, dtype, backend 等进行调整。
+
+        :param field_name: 需要调整的 field 的名称。如果 DataSet 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
+            field 的 key 来表示，如果是 nested 的 dict，可以使用元组表示多层次的 key，例如 {'a': {'b': 1}} 中的使用 ('a', 'b');
+            如果 __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。如果该 field 在数据中没
+            有找到，则报错；如果 __getitem__ 返回的是就是整体内容，请使用 "_single" 。
+        :param pad_val: 这个 field 的默认 pad 值。如果设置为 None，则表示该 field 不需要 pad , fastNLP 默认只会对可以 pad 的
+            field 进行 pad，所以如果对应 field 本身就不是可以 pad 的形式，可以不需要主动设置为 None 。如果 backend 为 None ，该值
+            无意义。
+        :param dtype: 对于需要 pad 的 field ，该 field 的数据 dtype 应该是什么。
+        :param backend: 可选['raw', 'numpy', 'torch', 'torch', 'jittor', 'auto']，分别代表，输出为 list, numpy.ndarray,
+            torch.Tensor, torch.Tensor, jittor.Var 类型。若 pad_val 为 None ，该值无意义 。
+        :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 pad_val, dtype, backend 等参数失效。pad_fn 的输入为当前 field 的
+            batch 形式。 Collator 将自动 unbatch 数据，然后将各个 field 组成各自的 batch 。pad_func 的输入即为 field 的 batch
+            形式，输出将被直接作为结果输出。
+        :return: 返回 Collator
+        """
+        if isinstance(self.collator, Collator):
+            self.collator.set_pad(field_name=field_name, pad_val=pad_val, dtype=dtype, pad_fn=pad_fn, backend=backend)
+            return self.collator
+        else:
+            raise ValueError(f"Only when the collate_fn is a fastNLP Collator, set_pad() is allowed.")
+
+    def set_ignore(self, *field_names) -> Collator:
+        """
+        ``DataSet`` 中想要对绑定的 collator 进行调整可以调用此函数。 ``collator`` 为 :class: `~fastNLP.core.collators.Collator`
+        时该函数才有效。调用该函数可以设置忽略输出某些 field 的内容，被设置的 field 将在 batch 的输出中被忽略。
+
+        Example::
+
+            collator.set_ignore('field1', 'field2')
+
+        :param field_names: 需要忽略的 field 的名称。如果 DataSet 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
+            field 的 key 来表示，如果是 nested 的 dict，可以使用元组来表示，例如 {'a': {'b': 1}} 中的使用 ('a', 'b'); 如果
+            __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。
+        :return: 返回 Collator 自身
+        """
+        if isinstance(self.collator, Collator):
+            self.collator.set_ignore(*field_names)
+            return self.collator
+        else:
+            raise ValueError(f"Only when the collate_fn is a fastNLP Collator, set_ignore() is allowed.")
