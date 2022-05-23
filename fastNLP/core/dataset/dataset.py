@@ -168,6 +168,7 @@ from fastNLP.core.collators import Collator
 from fastNLP.core.utils.rich_progress import f_rich_progress, DummyFRichProgress
 from fastNLP.core.utils.tqdm_progress import f_tqdm_progress
 from ..log import logger
+from fastNLP.core.utils.dummy_class import DummyClass
 
 
 progress_bars = {
@@ -231,7 +232,8 @@ def _multi_proc(ds, _apply_field, func, counter, queue):
     """
     idx = -1
     import contextlib
-    with contextlib.redirect_stdout(None):  # 避免打印触发 rich 的锁
+    null = DummyClass()
+    with contextlib.redirect_stdout(null):  # 避免打印触发 rich 的锁
         logger.set_stdout(stdout='raw')
         results = []
         try:
@@ -597,7 +599,8 @@ class DataSet:
         
             .. note::
             
-                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
 
         :param progress_desc: 进度条的描述字符，默认为 ``Processing``；
         :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
@@ -631,8 +634,14 @@ class DataSet:
         :param field_name: 传入func的是哪个field。
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param modify_fields: 是否用结果修改 `DataSet` 中的 `Field`， 默认为 True
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
-    	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
+        :param num_proc: 使用进程的数量。
+
+            .. note::
+
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
+
+     	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :param progress_desc: 当显示 progress_bar 时，显示当前正在处理的进度条描述字符
         :return Dict[str:Field]: 返回一个字典
         """
@@ -672,7 +681,13 @@ class DataSet:
                        progress_bar: str = 'rich', _apply_field: str = None,
                        progress_desc: str = 'Main') -> list:
         """
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
+        :param num_proc: 使用进程的数量。
+
+            .. note::
+
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
+
         :param func: 用户自定义处理函数，参数是 ``DataSet`` 中的 ``Instance``
         :param _apply_field: 需要传进去func的数据集的field_name
         :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
@@ -744,7 +759,13 @@ class DataSet:
 
         :param modify_fields: 是否用结果修改 ``DataSet`` 中的 ``Field`` ， 默认为 True
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
+        :param num_proc: 使用进程的数量。
+
+            .. note::
+
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
+
         :param progress_desc: 当 progress_bar 不为 None 时，可以显示当前正在处理的进度条名称
         :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :return Dict[str:Field]: 返回一个字典
@@ -789,7 +810,13 @@ class DataSet:
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param new_field_name: 将func返回的内容放入到 `new_field_name` 这个field中，如果名称与已有的field相同，则覆
             盖之前的field。如果为None则不创建新的field。
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
+        :param num_proc: 使用进程的数量。
+
+            .. note::
+
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
+
         :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :param progress_desc: progress bar 显示的值，默认为空。
         """

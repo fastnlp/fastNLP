@@ -304,6 +304,7 @@ class Trainer(TrainerEventTrigger):
         * *train_output_mapping* -- 与 output_mapping 一致，但是只用于 ``Trainer`` 中。与 output_mapping 互斥。
         * *evaluate_input_mapping* -- 与 input_mapping 一致，但是只用于 ``Evaluator`` 中。与 input_mapping 互斥。
         * *evaluate_output_mapping* -- 与 output_mapping 一致，但是只用于 ``Evaluator`` 中。与 output_mapping 互斥。
+        * *check_dataloader_legality* -- 是否检查 ``DataLoader`` 是否合法，默认为 ``True`` 。
 
     .. note::
         ``Trainer`` 是通过在内部直接初始化一个 ``Evaluator`` 来进行验证；
@@ -463,6 +464,14 @@ class Trainer(TrainerEventTrigger):
         self.driver.setup()
         self.driver.barrier()
 
+        # check train_dataloader
+        if kwargs.get('check_dataloader_legality', True):
+            try:
+                self.driver.check_dataloader_legality(dataloader=train_dataloader)
+            except TypeError as e:
+                logger.error("`train_dataloader` is invalid.")
+                raise e
+
         use_dist_sampler = kwargs.get("use_dist_sampler", self.driver.is_distributed())
         if use_dist_sampler:
             _dist_sampler = "dist"
@@ -482,7 +491,8 @@ class Trainer(TrainerEventTrigger):
                                        evaluate_fn=evaluate_fn, input_mapping=evaluate_input_mapping,
                                        output_mapping=evaluate_output_mapping, fp16=fp16, verbose=0,
                                        use_dist_sampler=kwargs.get("evaluate_use_dist_sampler", use_dist_sampler),
-                                       progress_bar=progress_bar)
+                                       progress_bar=progress_bar,
+                                       check_dataloader_legality=kwargs.get('check_dataloader_legality', True))
 
         if train_fn is not None and not isinstance(train_fn, str):
             raise TypeError("Parameter `train_fn` can only be `str` type when it is not None.")

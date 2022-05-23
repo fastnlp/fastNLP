@@ -26,6 +26,25 @@ def _module_available(module_path: str) -> bool:
         return False
 
 
+def _get_version(package, use_base_version: bool = False):
+    try:
+        pkg = importlib.import_module(package)
+    except (ModuleNotFoundError, DistributionNotFound):
+        return False
+    try:
+        if hasattr(pkg, "__version__"):
+            pkg_version = Version(pkg.__version__)
+        else:
+            # try pkg_resources to infer version
+            pkg_version = Version(pkg_resources.get_distribution(package).version)
+    except TypeError:
+        # this is mocked by Sphinx, so it should return True to generate all summaries
+        return True
+    if use_base_version:
+        pkg_version = Version(pkg_version.base_version)
+    return pkg_version
+
+
 def _compare_version(package: str, op: Callable, version: str, use_base_version: bool = False) -> bool:
     """Compare package version with some requirements.
 

@@ -91,26 +91,9 @@ class TorchDriver(Driver):
             self.grad_scaler.step(optimizer)
             self.grad_scaler.update()
 
-    @staticmethod
-    def check_dataloader_legality(dataloader, dataloader_name, is_train: bool = False):
-        if is_train:
-            if not isinstance(dataloader, DataLoader):
-                raise ValueError(f"Parameter `{dataloader_name}` should be 'DataLoader' type, not {type(dataloader)}.")
-
-            # todo 我们先禁止 dataloader 的 dataset 是 IterableDataset 种类；
-            if isinstance(dataloader.dataset, IterableDataset):
-                raise TypeError("`IterableDataset` is not allowed.")
-
-        else:
-            if not isinstance(dataloader, Dict):
-                raise ValueError(f"Parameter `{dataloader_name}` should be 'Dict' type, not {type(dataloader)}.")
-            else:
-                for each_dataloader in dataloader.values():
-                    if not isinstance(each_dataloader, DataLoader):
-                        raise ValueError(f"Each dataloader of parameter `{dataloader_name}` should be 'DataLoader' "
-                                         f"type, not {type(each_dataloader)}.")
-                    if isinstance(each_dataloader.dataset, IterableDataset):
-                        raise TypeError("`IterableDataset` is not allowed.")
+    def check_dataloader_legality(self, dataloader):
+        if not isinstance(dataloader, DataLoader):
+            raise TypeError(f"{DataLoader} is expected, instead of `{type(dataloader)}`")
 
     @staticmethod
     def _check_optimizer_legality(optimizers):

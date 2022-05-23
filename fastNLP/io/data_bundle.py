@@ -231,7 +231,13 @@ class DataBundle:
             盖之前的field。如果为None则不创建新的field。
         :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
             如果为False，则报错
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
+        :param num_proc: 使用进程的数量。
+
+            .. note::
+
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
+
         :param ignore_miss_dataset: 如果 dataset 没有 {field_name} ，就直接跳过这个 dataset 。
         :param progress_desc: 当显示 progress 时，可以显示当前正在处理的名称
     	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
@@ -260,10 +266,16 @@ class DataBundle:
         :param callable func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param str field_name: 传入func的是哪个field。
         :param bool modify_fields: 是否用结果修改 `DataSet` 中的 `Field`， 默认为 True
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
+        :param num_proc: 使用进程的数量。
+
+            .. note::
+
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
+
         :param bool ignore_miss_dataset: 当某个field名称在某个dataset不存在时，如果为True，则直接忽略该DataSet;
             如果为False，则报错
-    	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
+        :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :param progress_desc: 当显示 progress_bar 时，可以显示 ``progress`` 的名称。
 
         :return Dict[str:Dict[str:Field]]: 返回一个字典套字典，第一层的 key 是 dataset 的名字，第二层的 key 是 field 的名字
@@ -292,8 +304,14 @@ class DataBundle:
         :param callable func: input是instance中名为 `field_name` 的field的内容。
         :param str new_field_name: 将func返回的内容放入到 `new_field_name` 这个field中，如果名称与已有的field相同，则覆
             盖之前的field。如果为None则不创建新的field。
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
-    	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
+        :param num_proc: 使用进程的数量。
+
+            .. note::
+
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
+
+        :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :param progress_desc: 当显示 progress bar 时，可以显示当前正在处理的名称
 
         """
@@ -316,8 +334,14 @@ class DataBundle:
 
         :param callable func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
         :param bool modify_fields: 是否用结果修改 ``DataSet`` 中的 ``Field`` ， 默认为 True
-        :param num_proc: 进程的数量。请注意，由于python语言的特性，多少进程就会导致多少倍内存的增长。
-    	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
+        :param num_proc: 使用进程的数量。
+
+            .. note::
+
+                由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
+                ``func`` 函数中的打印将不会输出。
+
+        :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
         :param progress_desc: 当显示 progress_bar 时，可以显示当前正在处理的名称
 
         :return Dict[str:Dict[str:Field]]: 返回一个字典套字典，第一层的 key 是 dataset 的名字，第二层的 key 是 field 的名字
@@ -382,4 +406,3 @@ class DataBundle:
             for name, vocab in self.vocabs.items():
                 _str += '\t{} has {} entries.\n'.format(name, len(vocab))
         return _str
-

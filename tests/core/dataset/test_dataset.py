@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 
 from fastNLP.core.dataset import DataSet, FieldArray, Instance, ApplyResultException
+from fastNLP import logger
 
 
 class TestDataSetInit:
@@ -378,6 +379,14 @@ class TestDataSetMethods:
     def test_apply_proc(self):
         data = DataSet({'x': ['xxxxas1w xw zxw xz', 'xxxxas1w xw zxw xz'] * 100, 'y': [0, 1] * 100})
         data.apply_field(lambda x: len(x), field_name='x', new_field_name='len_x', num_proc=0)
+
+    def test_apply_more_proc(self):
+        def func(x):
+            print("x")
+            logger.info("demo")
+            return len(x)
+        data = DataSet({'x': ['xxxxas1w xw zxw xz', 'xxxxas1w xw zxw xz'] * 100, 'y': [0, 1] * 100})
+        data.apply_field(func, field_name='x', new_field_name='len_x', num_proc=2)
 
 
 class TestFieldArrayInit:

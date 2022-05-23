@@ -111,6 +111,7 @@ class Evaluator:
          分布式进行设置。如果为 ``True``，将使得每个进程上的 ``dataloader`` 自动使用不同数据，所有进程的数据并集是整个数据集；
         * *output_from_new_proc* -- 等价于 ``Trainer`` 中的 ``output_from_new_proc`` 参数；
         * *progress_bar* -- 等价于 ``Trainer`` 中的 ``progress_bar`` 参数；
+        * *check_dataloader_legality* -- 是否检查 ``DataLoader`` 是否合法，默认为 ``True`` 。
 
     """
 
@@ -134,6 +135,8 @@ class Evaluator:
         self.device = device
         self.verbose = verbose
 
+        self.evaluate_batch_loop = EvaluateBatchLoop(batch_step_fn=evaluate_batch_step_fn)
+
         if evaluate_batch_step_fn is not None:
             _check_valid_parameters_number(evaluate_batch_step_fn, ['evaluator', 'batch'], fn_name='evaluate_batch_step_fn')
         self.evaluate_batch_step_fn = evaluate_batch_step_fn
@@ -141,10 +144,23 @@ class Evaluator:
         self.input_mapping = input_mapping
         self.output_mapping = output_mapping
 
+        # check dataloader
         if not isinstance(dataloaders, dict):
+            if kwargs.get('check_dataloader_legality', True):
+                try:
+                    self.driver.check_dataloader_legality(dataloader=dataloaders)
+                except TypeError as e:
+                    logger.error("`dataloaders` is invalid.")
+                    raise e
             dataloaders = {None: dataloaders}
-
-        self.evaluate_batch_loop = EvaluateBatchLoop(batch_step_fn=evaluate_batch_step_fn)
+        else:
+            if kwargs.get('check_dataloader_legality', True):
+                for key, dataloader in dataloaders.items():
+                    try:
+                        self.driver.check_dataloader_legality(dataloader=dataloader)
+                    except TypeError as e:
+                        logger.error(f"The dataloader named:{key} is invalid.")
+                        raise e
 
         self.driver.setup()
         self.driver.barrier()
@@ -333,7 +349,7 @@ class Evaluator:
 
     @evaluate_batch_loop.setter
     def evaluate_batch_loop(self, loop: Loop):
-        if self.evaluate_batch_step_fn is not None:
+        if getattr(self, 'evaluate_step_fn', None) is not None:
             logger.rank_zero_warning("`evaluate_batch_step_fn` was customized in the Evaluator initialization, it will be ignored "
                            "when the `evaluate_batch_loop` is also customized.")
         self._evaluate_batch_loop = loop
