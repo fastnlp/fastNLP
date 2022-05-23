@@ -147,7 +147,6 @@ class TestFdl:
         assert 'Parameter:prefetch_factor' in out[0]
 
     @recover_logger
-    @pytest.mark.temp
     def test_version_111(self):
         if parse_version(torch.__version__) <= parse_version('1.7'):
             pytest.skip("Torch version smaller than 1.7")

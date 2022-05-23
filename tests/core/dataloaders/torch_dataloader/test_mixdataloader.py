@@ -8,7 +8,7 @@ from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 
 if _NEED_IMPORT_TORCH:
     import torch
-    from torch.utils.data import default_collate, SequentialSampler, RandomSampler
+    from torch.utils.data import SequentialSampler, RandomSampler
 
 d1 = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
 
@@ -28,6 +28,7 @@ def test_pad_val(tensor, val=0):
     return True
 
 
+@pytest.mark.torch
 class TestMixDataLoader:
 
     def test_sequential_init(self):
