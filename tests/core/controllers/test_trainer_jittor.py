@@ -70,7 +70,7 @@ class TrainJittorConfig:
 
 
 @pytest.mark.parametrize("driver", ["jittor"])
-@pytest.mark.parametrize("device", ["cpu", 1])
+@pytest.mark.parametrize("device", ["cpu", "gpu", "cuda:0"])
 @pytest.mark.parametrize("callbacks", [[RichCallback(100)]])
 @pytest.mark.jittor
 def test_trainer_jittor(
@@ -134,6 +134,8 @@ def test_trainer_jittor(
 
 
 if __name__ == "__main__":
-    # test_trainer_jittor("jittor", None, [RichCallback(100)])
-    # test_trainer_jittor("jittor", 1, [RichCallback(100)])
+    # test_trainer_jittor("jittor", "cpu", [RichCallback(100)])         # 测试 CPU
+    # test_trainer_jittor("jittor", "cuda:0", [RichCallback(100)])      # 测试 单卡 GPU
+    # test_trainer_jittor("jittor", 1, [RichCallback(100)])             # 测试 指定 GPU
+    # test_trainer_jittor("jittor", [0, 1], [RichCallback(100)])        # 测试 多卡 GPU
     pytest.main(['test_trainer_jittor.py'])  # 只运行此模块
