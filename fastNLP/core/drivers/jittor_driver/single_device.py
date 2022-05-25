@@ -8,7 +8,7 @@ from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_JITTOR:
-    import jittor
+    import jittor as jt
 
 __all__ = [
     "JittorSingleDriver",
@@ -105,6 +105,9 @@ class JittorSingleDriver(JittorDriver):
 
     def setup(self):
         """
-        使用单个 GPU 时，jittor 底层自动实现调配，无需额外操作
+        支持 cpu 和 gpu 的切换
         """
-        pass
+        if self.model_device in ["cpu", None]:
+            jt.flags.use_cuda = 0   # 使用 cpu
+        else:
+            jt.flags.use_cuda = 1   # 使用 cuda
