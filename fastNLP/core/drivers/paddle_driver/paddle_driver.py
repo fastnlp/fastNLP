@@ -113,12 +113,11 @@ class PaddleDriver(Driver):
     @staticmethod
     def tensor_to_numeric(tensor, reduce=None):
         r"""
-        将一个 `tensor` 对象（类型为 `paddle.Tensor` ）转换为 python 的 `numeric` 对象；如果 tensor 只包含一个元素则返回 float 或 int 。
+        将一个 :class:`paddle.Tensor` 对象转换为 转换成 python 中的数值类型；
 
-        :param tensor: 需要被转换的 `tensor` 对象
-        :param reduce: 可选 ['sum', 'max', 'mea', 'min']，如果不为 None 将使用该 reduce 方法来处理当前 tensor 再返回
-            float 或 int 对象。
-        :return: 转换后返回的结果
+        :param tensor: :class:`paddle.Tensor` 类型的对象；
+        :param reduce: 当 tensor 是一个多数值的张量时，应当使用何种归一化操作来转换成单一数值，应当为以下类型之一：``['max', 'min', 'sum', 'mean']``；
+        :return: 返回一个单一数值，其数值类型是 python 中的基本的数值类型，例如 ``int，float`` 等；
         """
         if tensor is None:
             return None

@@ -27,28 +27,36 @@ class JittorSingleDriver(JittorDriver):
         支持 cpu 和 gpu 的切换；
         实现断点重训中替换 dataloader 的 set_dist_repro_dataloader 函数
 
+    :param model: 传入给 ``Trainer`` 的 ``model`` 参数；
+    :param device: 训练和模型所在的设备，在 **Jittor** 中，应当为以下值之一：``[None, 'cpu', 'gpu', 'cuda']``；
+        
+        * 为 ``None`` 或 ``cpu`` 时
+         表示在 ``cpu`` 上进行训练；
+        * 为 ``gpu`` 或 ``cuda`` 时
+         表示在显卡设备上进行训练；
+
+    :param fp16: 是否开启 fp16；
     """
 
     def __init__(self, model, device=None, fp16: bool = False, **kwargs):
+        if device not in [None, "cpu", "gpu", "cuda"]:
+            raise RuntimeError("Parameter `device` should be one of [None, 'cpu', 'gpu', 'cuda'] .")
         super(JittorSingleDriver, self).__init__(model, fp16)
 
-        self.model_device = device
+        self.model_device = device if device is not None else "cpu"
 
         self.local_rank = 0
         self.global_rank = 0
         self.world_size = 1
 
-    def step(self):
-        for optimizer in self.optimizers:
-            optimizer.step()
-
-    def backward(self, loss):
-        for optimizer in self.optimizers:
-            optimizer.backward(loss)
-
-    def zero_grad(self):
-        for optimizer in self.optimizers:
-            optimizer.zero_grad()
+    def setup(self):
+        r"""
+        初始化训练环境；根据传入的 ``device`` 值设置模型的训练场景为 ``cpu`` 或 ``gpu``；
+        """
+        if self.model_device in ["cpu", None]:
+            jt.flags.use_cuda = 0   # 使用 cpu
+        else:
+            jt.flags.use_cuda = 1   # 使用 cuda
 
     def model_call(self, batch, fn: Callable, signature_fn: Optional[Callable]) -> Dict:
         if isinstance(batch, Dict) and not self.wo_auto_param_call:
@@ -70,9 +78,15 @@ class JittorSingleDriver(JittorDriver):
             raise RuntimeError(f"There is no `{fn}` method in your {type(self.model)}.")
 
     def unwrap_model(self):
+        """
+        返回训练使用的模型。
+        """
         return self.model
 
     def is_distributed(self):
+        """
+        判断是否为分布式的 **Driver** ，在 ``JittorSingleDriver`` 中，返回 ``False``。
+        """
         return False
 
     def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler],
@@ -103,11 +117,15 @@ class JittorSingleDriver(JittorDriver):
         else:
             return dataloader
 
-    def setup(self):
+    def unwrap_model(self):
         """
-        支持 cpu 和 gpu 的切换
+        返回训练使用的模型。
         """
-        if self.model_device in ["cpu", None]:
-            jt.flags.use_cuda = 0   # 使用 cpu
-        else:
-            jt.flags.use_cuda = 1   # 使用 cuda
+        return self.model
+
+    @property
+    def data_device(self) -> str:
+        """
+        :return: 数据和模型所在的设备；
+        """
+        return self.model_device

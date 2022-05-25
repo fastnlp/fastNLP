@@ -41,7 +41,7 @@ class Driver(ABC):
         r"""
         根据输入的 ``dataloader`` 得到一个 支持分布式 （``distributed``） 与 可复现的 (``reproducible``) 的 dataloader。
 
-        :param dataloader: 根据 ``dataloade``r 设置其对应的分布式版本以及可复现版本；
+        :param dataloader: 根据 ``dataloader`` 设置其对应的分布式版本以及可复现版本；
         :param dist: 应当为一个字符串，其值应当为以下之一：``[None, "dist", "unrepeatdist"]``；为 ``None`` 时，表示不需要考虑当前 dataloader
             切换为分布式状态；为 ``dist`` 时，表示该 dataloader 应该保证每个 gpu 上返回的 batch 的数量是一样多的，允许出现少量 sample ，在
             不同 gpu 上出现重复；为 ``unrepeatdist`` 时，表示该 dataloader 应该保证所有 gpu 上迭代出来的数据合并起来应该刚好等于原始的
@@ -263,7 +263,6 @@ class Driver(ABC):
         :param filepath: 需要被加载的对象的文件位置（需要包括文件名）或一个 ``BytesIO`` 对象；
         :param load_state_dict: 保存的文件是否只是模型的权重，还是完整的模型。即便是保存的完整的模型，此处也只能使用尝试加载filepath
             模型中的权重到自身模型，而不会直接替代当前 Driver 中的模型。
-        :return: 返回加载指定文件后的结果；
         """
         raise NotImplementedError("Each specific driver should implemented its own `load_model` function.")
 
