@@ -62,13 +62,16 @@ __all__ = [
     "R8PmiGraphPipe",
     "OhsumedPmiGraphPipe",
     "NG20PmiGraphPipe",
-    "MRPmiGraphPipe"
+    "MRPmiGraphPipe",
+
+    "iob2",
+    "iob2bioes"
 ]
 
 from .classification import CLSBasePipe, YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe, ChnSentiCorpPipe, THUCNewsPipe, \
     WeiboSenti100kPipe, AGsNewsPipe, DBPediaPipe, MRPipe, R8Pipe, R52Pipe, OhsumedPipe, NG20Pipe
 from .conll import Conll2003NERPipe, OntoNotesNERPipe, MsraNERPipe, WeiboNERPipe, PeopleDailyPipe
-from .conll import Conll2003Pipe
+from .conll import Conll2003Pipe, iob2, iob2bioes
 from .coreference import CoReferencePipe
 from .cws import CWSPipe
 from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe, QNLIBertPipe, MNLIBertPipe, \

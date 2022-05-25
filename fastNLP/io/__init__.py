@@ -109,6 +109,9 @@ __all__ = [
 
     "CMRC2018BertPipe",
 
+    "iob2",
+    "iob2bioes"
+
 ]
 
 from .data_bundle import DataBundle

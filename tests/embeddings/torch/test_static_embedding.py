@@ -193,3 +193,17 @@ class TestRandomSameEntry:
         embed_0 = words[0, 3]
         for i in range(3, 5):
             assert torch.sum(embed_0 == words[0, i]).eq(len(embed_0))
+
+    def test_dropout_close(self):
+        vocab = Vocabulary().add_word_lst(["The", "the", "THE", 'a', "A"])
+        embed = StaticEmbedding(vocab, model_dir_or_name=None, embedding_dim=5, lower=True,
+                                dropout=0.5, word_dropout=0.9)
+        words = torch.LongTensor([[vocab.to_index(word) for word in ["The", "the", "THE", 'a', 'A']]])
+        embed.eval()
+        words = embed(words)
+        embed_0 = words[0, 0]
+        for i in range(1, 3):
+            assert torch.sum(embed_0 == words[0, i]).eq(len(embed_0))
+        embed_0 = words[0, 3]
+        for i in range(3, 5):
+            assert torch.sum(embed_0 == words[0, i]).eq(len(embed_0))

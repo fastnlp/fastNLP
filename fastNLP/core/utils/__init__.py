@@ -21,9 +21,10 @@ __all__ = [
     'pretty_table_printer',
     'Option',
     'deprecated',
-    'seq_len_to_mask',
     "flat_nest_dict",
-    "f_tqdm_progress"
+    "f_tqdm_progress",
+
+    "seq_len_to_mask"
 ]
 
 from .cache_results import cache_results
@@ -34,5 +35,6 @@ from .rich_progress import f_rich_progress
 from .torch_utils import torch_move_data_to_device
 from .utils import *
 from .tqdm_progress import f_tqdm_progress
+from .seq_len_to_mask import seq_len_to_mask
 
 

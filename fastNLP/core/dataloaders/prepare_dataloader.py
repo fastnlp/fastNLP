@@ -14,7 +14,7 @@ from ...envs import FASTNLP_BACKEND, SUPPORT_BACKENDS
 from ..log import logger
 
 
-def prepare_dataloader(dataset, batch_size: int = 16, shuffle: bool = True, drop_last: bool = False,
+def prepare_dataloader(dataset, batch_size: int = 16, shuffle: bool = False, drop_last: bool = False,
              collate_fn: Union[Callable, str, None] = 'auto', num_workers: int = 0,
              seed: int = 0, backend: str = 'auto'):
     """
