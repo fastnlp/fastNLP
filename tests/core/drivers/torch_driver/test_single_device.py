@@ -117,7 +117,7 @@ class TestTorchDriverFunctions:
         测试 `is_train` 参数为 True 时，_check_dataloader_legality 函数的表现
         """
         dataloader = DataLoader(TorchNormalDataset())
-        TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader", True)
+        TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader")
 
         # 创建 paddle 的 dataloader
         dataloader = paddle.io.DataLoader(
@@ -125,7 +125,7 @@ class TestTorchDriverFunctions:
             batch_size=32, shuffle=True
         )
         with pytest.raises(ValueError):
-            TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader", True)
+            TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader")
 
     @pytest.mark.torchpaddle
     def test_check_dataloader_legality_in_test(self):
@@ -137,12 +137,12 @@ class TestTorchDriverFunctions:
             "train": DataLoader(TorchNormalDataset()),
             "test": DataLoader(TorchNormalDataset())
         }
-        TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader", False)
+        TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader")
 
         # 传入的不是 dict，应该报错
         dataloader = DataLoader(TorchNormalDataset())
         with pytest.raises(ValueError):
-            TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader", False)
+            TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader")
 
         # 创建 paddle 的 dataloader
         train_loader = paddle.io.DataLoader(
@@ -155,7 +155,7 @@ class TestTorchDriverFunctions:
         )
         dataloader = {"train": train_loader, "test": test_loader}
         with pytest.raises(ValueError):
-            TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader", False)
+            TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader")
 
     @pytest.mark.torch
     def test_tensor_to_numeric(self):
@@ -210,6 +210,20 @@ class TestTorchDriverFunctions:
         for r, d in zip(res["dict"]["list"], tensor_dict["dict"]["list"]):
             assert r == d.tolist()
         assert res["dict"]["tensor"] == tensor_dict["dict"]["tensor"].tolist()
+
+    @pytest.mark.torch
+    def test_tensor_to_numeric_reduce(self):
+        tensor = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+
+        res_max = TorchSingleDriver.tensor_to_numeric(tensor, reduce="max")
+        res_min = TorchSingleDriver.tensor_to_numeric(tensor, reduce="min")
+        res_sum = TorchSingleDriver.tensor_to_numeric(tensor, reduce="sum")
+        res_mean = TorchSingleDriver.tensor_to_numeric(tensor, reduce="mean")
+
+        assert res_max == 6
+        assert res_min == 1
+        assert res_sum == 21
+        assert res_mean == 3.5
 
     @pytest.mark.torch
     def test_set_model_mode(self):

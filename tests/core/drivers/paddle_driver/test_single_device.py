@@ -75,12 +75,12 @@ class TestPaddleDriverFunctions:
         测试 `is_train` 参数为 True 时，_check_dataloader_legality 函数的表现
         """
         dataloader = DataLoader(PaddleNormalDataset())
-        PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader", True)
+        PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader")
 
         # batch_size 和 batch_sampler 均为 None 的情形
         dataloader = DataLoader(PaddleNormalDataset(), batch_size=None)
         with pytest.raises(ValueError):
-            PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader", True)
+            PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader")
 
         # 创建torch的dataloader
         dataloader = torch.utils.data.DataLoader(
@@ -88,7 +88,7 @@ class TestPaddleDriverFunctions:
             batch_size=32, shuffle=True
         )
         with pytest.raises(ValueError):
-            PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader", True)
+            PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader")
 
     @pytest.mark.torchpaddle
     def test_check_dataloader_legality_in_test(self):
@@ -100,7 +100,7 @@ class TestPaddleDriverFunctions:
             "train": DataLoader(PaddleNormalDataset()),
             "test":DataLoader(PaddleNormalDataset())
         }
-        PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader", False)
+        PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader")
 
         # batch_size 和 batch_sampler 均为 None 的情形
         dataloader = {
@@ -108,12 +108,12 @@ class TestPaddleDriverFunctions:
             "test":DataLoader(PaddleNormalDataset(), batch_size=None)
         }
         with pytest.raises(ValueError):
-            PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader", False)
+            PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader")
 
         # 传入的不是 dict ，应该报错
         dataloader = DataLoader(PaddleNormalDataset())
         with pytest.raises(ValueError):
-            PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader", False)
+            PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader")
 
         # 创建 torch 的 dataloader
         train_loader = torch.utils.data.DataLoader(
@@ -126,7 +126,7 @@ class TestPaddleDriverFunctions:
         )
         dataloader = {"train": train_loader, "test": test_loader}
         with pytest.raises(ValueError):
-            PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader", False)
+            PaddleSingleDriver.check_dataloader_legality(dataloader, "dataloader")
 
     @pytest.mark.paddle
     def test_tensor_to_numeric(self):
@@ -181,6 +181,21 @@ class TestPaddleDriverFunctions:
         for r, d in zip(res["dict"]["list"], tensor_dict["dict"]["list"]):
             assert r == d.tolist()
         assert res["dict"]["tensor"] == tensor_dict["dict"]["tensor"].tolist()
+
+    @pytest.mark.paddle
+    def test_tensor_to_numeric_reduce(self):
+        tensor = paddle.to_tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+
+        res_max = PaddleSingleDriver.tensor_to_numeric(tensor, reduce="max")
+        res_min = PaddleSingleDriver.tensor_to_numeric(tensor, reduce="min")
+        res_sum = PaddleSingleDriver.tensor_to_numeric(tensor, reduce="sum")
+        res_mean = PaddleSingleDriver.tensor_to_numeric(tensor, reduce="mean")
+
+        assert res_max == 6
+        assert res_min == 1
+        assert res_sum == 21
+        assert res_mean == 3.5
+
 
     @pytest.mark.paddle
     def test_set_model_mode(self):
