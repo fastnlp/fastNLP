@@ -92,8 +92,8 @@ __all__ = [
     "cache_results",
     "f_rich_progress",
     "auto_param_call",
-    "seq_len_to_mask",
     "f_tqdm_progress",
+    "seq_len_to_mask",
 
     # vocabulary.py
     'Vocabulary'

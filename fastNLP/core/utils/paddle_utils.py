@@ -20,6 +20,7 @@ if _NEED_IMPORT_PADDLE:
 
 from .utils import apply_to_collection
 
+
 def _convert_data_device(device: Union[str, int]) -> str:
     """
     用于转换 ``driver`` 的 ``data_device`` 的函数。如果用户设置了 ``FASTNLP_BACKEND=paddle``，那么 **fastNLP** 会将
@@ -59,7 +60,9 @@ def _convert_data_device(device: Union[str, int]) -> str:
         raise ValueError(f"Can't convert device {device} when USER_CUDA_VISIBLE_DEVICES={user_visible_devices} "
                         "and CUDA_VISIBLE_DEVICES={cuda_visible_devices}. If this situation happens, please report this bug to us.")
 
-def paddle_to(data: "paddle.Tensor", device: Union[str, int]) -> "paddle.Tensor":
+
+def paddle_to(data: "paddle.Tensor", device: Union[str, int, 'paddle.fluid.core_avx.Place',
+                                                   'paddle.CPUPlace', 'paddle.CUDAPlace']) -> "paddle.Tensor":
     """
     将 ``data`` 迁移到指定的 ``device`` 上。``paddle.Tensor`` 没有类似 ``torch.Tensor`` 的 ``to`` 函数，
     该函数只是集成了 :func:`paddle.Tensor.cpu` 和 :func:`paddle.Tensor.cuda` 两个函数。
@@ -68,11 +71,20 @@ def paddle_to(data: "paddle.Tensor", device: Union[str, int]) -> "paddle.Tensor"
     :param device: 目标设备，可以是 ``str`` 或 ``int`` 类型；
     :return: 迁移后的张量；
     """
-
-    if device == "cpu":
+    if isinstance(device, paddle.fluid.core_avx.Place):
+        if device.is_cpu_place():
+            return data.cpu()
+        else:
+            return data.cuda(device.gpu_device_id())
+    elif isinstance(device, paddle.CPUPlace):
+        return data.cpu()
+    elif isinstance(device, paddle.CUDAPlace):
+        return data.gpu(device.get_device_id())
+    elif device == "cpu":
         return data.cpu()
     else:
         return data.cuda(get_paddle_device_id(device))
+
 
 def get_paddle_gpu_str(device: Union[str, int]) -> str:
     """

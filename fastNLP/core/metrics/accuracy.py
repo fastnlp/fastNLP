@@ -10,7 +10,7 @@ import numpy as np
 
 from fastNLP.core.metrics.metric import Metric
 from fastNLP.core.metrics.backend import Backend
-from fastNLP.core.utils.utils import seq_len_to_mask
+from fastNLP.core.utils.seq_len_to_mask import seq_len_to_mask
 
 
 class Accuracy(Metric):

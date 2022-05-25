@@ -14,7 +14,6 @@ import os
 from contextlib import contextmanager
 from functools import wraps
 from prettytable import PrettyTable
-import numpy as np
 from pathlib import Path
 
 from fastNLP.core.log import logger
@@ -31,7 +30,6 @@ __all__ = [
     'pretty_table_printer',
     'Option',
     'deprecated',
-    'seq_len_to_mask',
     "flat_nest_dict"
 ]
 
@@ -565,44 +563,6 @@ def deprecated(help_message: Optional[str] = None):
         return wrapper
 
     return decorator
-
-
-def seq_len_to_mask(seq_len, max_len: Optional[int]):
-    r"""
-
-    将一个表示 ``sequence length`` 的一维数组转换为二维的 ``mask`` ，不包含的位置为 **0**。
-
-    .. code-block::
-
-        >>> seq_len = torch.arange(2, 16)
-        >>> mask = seq_len_to_mask(seq_len)
-        >>> print(mask.size())
-        torch.Size([14, 15])
-        >>> seq_len = np.arange(2, 16)
-        >>> mask = seq_len_to_mask(seq_len)
-        >>> print(mask.shape)
-        (14, 15)
-        >>> seq_len = torch.arange(2, 16)
-        >>> mask = seq_len_to_mask(seq_len, max_len=100)
-        >>>print(mask.size())
-        torch.Size([14, 100])
-
-    :param seq_len: 大小为 ``(B,)`` 的长度序列；
-    :param int max_len: 将长度补齐或截断到 ``max_len``。默认情况（为 ``None``）使用的是 ``seq_len`` 中最长的长度；
-        但在 :class:`torch.nn.DataParallel` 等分布式的场景下可能不同卡的 ``seq_len`` 会有区别，所以需要传入
-        ``max_len`` 使得 ``mask`` 的补齐或截断到该长度。
-    :return: 大小为 ``(B, max_len)`` 的 ``mask``， 元素类型为 ``bool`` 或 ``uint8``
-    """
-    if isinstance(seq_len, np.ndarray):
-        assert len(np.shape(seq_len)) == 1, f"seq_len can only have one dimension, got {len(np.shape(seq_len))}."
-        max_len = int(max_len) if max_len else int(seq_len.max())
-        broad_cast_seq_len = np.tile(np.arange(max_len), (len(seq_len), 1))
-        mask = broad_cast_seq_len < seq_len.reshape(-1, 1)
-
-    else:
-        raise TypeError("Only support 1-d numpy.ndarray.")
-
-    return mask
 
 
 def wait_filepath(path, exist=True):

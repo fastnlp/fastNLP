@@ -10,7 +10,7 @@ import numpy as np
 from .metric import Metric
 from .backend import Backend
 from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.core.utils.utils import seq_len_to_mask
+from fastNLP.core.utils.seq_len_to_mask import seq_len_to_mask
 from .utils import _compute_f_pre_rec
 
 
