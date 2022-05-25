@@ -1,5 +1,6 @@
 from typing import Union, List
 
+from fastNLP.core.drivers.jittor_driver.mpi import JittorMPIDriver
 from fastNLP.core.drivers.jittor_driver.jittor_driver import JittorDriver
 from fastNLP.core.drivers.jittor_driver.single_device import JittorSingleDriver
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
@@ -29,7 +30,11 @@ def initialize_jittor_driver(driver: str, device: Union[str, int, List[int]], mo
         raise ValueError("Parameter `driver` can only be one of these values: ['jittor'].")
 
     # TODO 实现更详细的判断
-    if driver == "jittor":
+    if device in ["cpu", "gpu", "cuda", "cuda:0", 0, None]:
         return JittorSingleDriver(model, device, **kwargs)
+    elif type(device) is int:
+        return JittorMPIDriver(model, device, **kwargs)
+    elif type(device) is list:
+        return JittorMPIDriver(model, device, **kwargs)
     else:
-        raise NotImplementedError
+        raise NotImplementedError(f"Device={device}")
