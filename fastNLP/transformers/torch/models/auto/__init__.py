@@ -3,7 +3,8 @@ __all__ = [
     "CONFIG_MAPPING",
     "MODEL_NAMES_MAPPING",
     "AutoConfig",
-    "TOKENIZER_MAPPING_NAMES",
+    "TOKENIZER_MAPPING",
+    "AutoTokenizer",
     "get_values",
     "MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING",
     "MODEL_FOR_CAUSAL_LM_MAPPING",
@@ -43,7 +44,7 @@ __all__ = [
 
 from .configuration_auto import ALL_PRETRAINED_CONFIG_ARCHIVE_MAP, CONFIG_MAPPING, MODEL_NAMES_MAPPING, \
     AutoConfig
-from .tokenization_auto import TOKENIZER_MAPPING_NAMES
+from .tokenization_auto import TOKENIZER_MAPPING, AutoTokenizer
 from .auto_factory import get_values
 from .modeling_auto import (
     MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING,
