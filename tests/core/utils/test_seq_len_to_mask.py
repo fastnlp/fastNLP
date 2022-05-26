@@ -78,7 +78,7 @@ class TestSeqLenToMask:
             mask = seq_len_to_mask(seq_len)
 
         # 3. pad到指定长度
-        seq_len = paddle.randint(1, 10, size=(10,))
+        seq_len = paddle.randint(1, 10, shape=(10,))
         mask = seq_len_to_mask(seq_len, 100)
         assert 100 == mask.shape[1]
 

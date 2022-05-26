@@ -146,7 +146,10 @@ class JittorMPIDriver(JittorDriver):
         return self.model.no_sync
 
     def unwrap_model(self):
-        pass
+        """
+        返回训练使用的模型。
+        """
+        return self.model
 
     def get_local_rank(self) -> int:
         return self.local_rank
@@ -155,4 +158,14 @@ class JittorMPIDriver(JittorDriver):
         pass
 
     def is_distributed(self):
+        """
+        判断是否为分布式的 **Driver** ，在 ``JittorSingleDriver`` 中，返回 ``True``。
+        """
         return True
+
+    @property
+    def data_device(self) -> str:
+        """
+        :return: 数据所在的设备；
+        """
+        return self.model_device

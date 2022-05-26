@@ -68,7 +68,8 @@ def paddle_to(data: "paddle.Tensor", device: Union[str, int, 'paddle.fluid.core_
     该函数只是集成了 :func:`paddle.Tensor.cpu` 和 :func:`paddle.Tensor.cuda` 两个函数。
 
     :param data: 要迁移的张量；
-    :param device: 目标设备，可以是 ``str`` 或 ``int`` 类型；
+    :param device: 目标设备，可以是 ``str`` 或 ``int`` 及 **paddle** 自己的 :class:`paddle.fluid.core_avx.Place`、
+        :class:`paddle.CPUPlace` 和 :class:`paddle.CUDAPlace` 类型；
     :return: 迁移后的张量；
     """
     if isinstance(device, paddle.fluid.core_avx.Place):

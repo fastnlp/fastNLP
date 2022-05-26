@@ -12,7 +12,7 @@ if _NEED_IMPORT_TORCH:
     from torch.optim import Optimizer
     from torch.utils.data import RandomSampler as TorchRandomSampler
     _reduces = {
-        'sum': torch.max,
+        'sum': torch.sum,
         'min': torch.min,
         'max': torch.max,
         'mean': torch.mean
