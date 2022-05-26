@@ -11,6 +11,7 @@ import re
 from fastNLP.core.log import logger
 from .padders.get_padder import get_padder
 from ...envs import SUPPORT_BACKENDS
+from .padders import Padder
 
 
 from .packer_unpacker import SequencePackerUnpacker, SinglePackerUnpacker, MappingPackerUnpacker, \
@@ -88,6 +89,11 @@ class Collator:
     有些是 int 将知道该 field 被判定为不可 pad 类型。）（2）当前这个 field 是否每个 sample 都具有一样的深度；（因此，例如有个 field 的
     数据转为 batch 类型后为 [1, [1,2]], 会被判定为不可 pad ，因为第一个 sample 与 第二个 sample 深度不同）（3）当前这个 field 的类
     型是否是可以 pad （例如 str 类型的数据）。可以通过设置 logger.setLevel('debug') 来打印是判定不可 pad 的原因。
+
+    .. note::
+
+        ``Collator`` 的原理是使用第一个 ``batch`` 的数据尝试推断每个``field``应该使用哪种类型的 ``Padder``，如果第一个 ``batch``
+        的数据刚好比较特殊，可能导致在之后的 pad 中遭遇失败，这种情况请通过 ``set_pad()`` 函数手动设置一下。
 
     todo 补充 code example 。
 
@@ -168,10 +174,16 @@ class Collator:
 
             if self.batch_data_type == 'l':
                 self.padders = dict(sorted(self.padders.items(), key=lambda x:int(x[0][1:])))  # sort, 这样 _0, _1 能够保持顺序
-
-        for key, padder in self.padders.items():
-            batch = unpack_batch.get(key)
-            pad_batch[key] = padder(batch)
+        try:
+            for key, padder in self.padders.items():
+                    batch = unpack_batch.get(key)
+                    pad_batch[key] = padder(batch)
+        except BaseException as e:
+            try:
+                logger.error(f"The following exception happens when try to pad the `{key}` field with padder:{padder}:")
+            except:
+                pass
+            raise e
 
         return self.packer_unpacker.pack_batch(pad_batch)  # 根据情况恢复成与输入一致的类型
 

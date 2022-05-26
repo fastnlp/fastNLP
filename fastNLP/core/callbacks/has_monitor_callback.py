@@ -42,6 +42,7 @@ class ResultsMonitor:
     """
     def __init__(self, monitor:Union[Callback, str], larger_better:bool=True):
         self.set_monitor(monitor, larger_better)
+        self._log_name = self.__class__.__name__
 
     def set_monitor(self, monitor, larger_better):
         if callable(monitor):  # 检查是否能够接受一个参数
@@ -84,11 +85,12 @@ class ResultsMonitor:
             return monitor_value
         # 第一次运行
         if isinstance(self.monitor, str) and self._real_monitor == self.monitor and use_monitor != self.monitor:
-            logger.rank_zero_warning(f"We can not find `{self.monitor}` in the evaluation result (with keys as "
+            logger.rank_zero_warning(f"We can not find monitor:`{self.monitor}` for `{self.log_name}` in the "
+                                     f"evaluation result (with keys as "
                                      f"{list(results.keys())}), we use the `{use_monitor}` as the monitor.", once=True)
         # 检测到此次和上次不同。
         elif isinstance(self.monitor, str) and self._real_monitor != self.monitor and use_monitor != self._real_monitor:
-            logger.rank_zero_warning(f"Change of monitor detected for `{self.__class__.__name__}`. "
+            logger.rank_zero_warning(f"Change of monitor detected for `{self.log_name}`. "
                            f"The expected monitor is:`{self.monitor}`, last used monitor is:"
                            f"`{self._real_monitor}` and current monitor is:`{use_monitor}`. Please consider using a "
                            f"customized monitor function when the evaluation results are varying between validation.")
@@ -166,6 +168,19 @@ class ResultsMonitor:
             monitor_name = str(self.monitor)
         return monitor_name
 
+    @property
+    def log_name(self) -> str:
+        """
+        内部用于打印信息使用
+
+        :return:
+        """
+        return self._log_name
+
+    @log_name.setter
+    def log_name(self, value):
+        self._log_name = value
+
 
 class HasMonitorCallback(ResultsMonitor, Callback):
     """
@@ -201,10 +216,10 @@ class HasMonitorCallback(ResultsMonitor, Callback):
         if self.monitor is None and trainer.monitor is not None:
             self.set_monitor(monitor=trainer.monitor, larger_better=trainer.larger_better)
         if self.must_have_monitor and self.monitor is None:
-            raise RuntimeError(f"No `monitor` is set for {self.__class__.__name__}. "
+            raise RuntimeError(f"No `monitor` is set for {self.log_name}. "
                                f"You can set it in the initialization or through Trainer.")
         if self.must_have_monitor and self.monitor is not None and trainer.evaluator is None:
-            raise RuntimeError(f"No `evaluate_dataloaders` is set for Trainer. But Callback: {self.__class__.__name__}"
+            raise RuntimeError(f"No `evaluate_dataloaders` is set for Trainer. But Callback: {self.log_name}"
                                f" need to watch the monitor:`{self.monitor_name}`.")
 
     def on_sanity_check_end(self, trainer, sanity_check_res):

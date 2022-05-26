@@ -49,7 +49,7 @@ class FitlogCallback(HasMonitorCallback):
     def on_sanity_check_end(self, trainer, sanity_check_res):
         super(FitlogCallback, self).on_sanity_check_end(trainer, sanity_check_res)
         if self.monitor is None:
-            logger.rank_zero_warning(f"No monitor set for {self.__class__.__name__}. Therefore, no best metric will "
+            logger.rank_zero_warning(f"No monitor set for {self.log_name}. Therefore, no best metric will "
                                      f"be logged.")
 
     def on_evaluate_end(self, trainer, results):

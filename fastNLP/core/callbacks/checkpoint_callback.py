@@ -89,6 +89,7 @@ class CheckpointCallback(Callback):
         self.topk_saver = TopkSaver(topk=topk, monitor=monitor, larger_better=larger_better, folder=folder,
                                     save_object=save_object, only_state_dict=only_state_dict, model_save_fn=model_save_fn,
                                     save_evaluate_results=save_evaluate_results, **kwargs)
+        self.topk_saver.log_name = self.__class__.__name__
 
         self.topk = topk
         self.save_object = save_object
