@@ -131,14 +131,14 @@ class RandomSampler(ReproducibleSampler):
         :return:
         """
         if self.shuffle:
-            indices = list(range(len(self.dataset)))
+            indices = list(range(getattr(self.dataset, 'total_len', len(self.dataset))))
             seed = self.seed + self.epoch
             rng = np.random.default_rng(abs(seed))
             rng.shuffle(indices)
             if self.epoch < 0:  # 防止用户忘记调用 set_epoch，至少这样可以保证每次epoch出来的index顺序不同。
                 self.epoch -= 1
         else:
-            indices = list(range(len(self.dataset)))
+            indices = list(range(getattr(self.dataset, 'total_len', len(self.dataset))))
         return indices
 
     def state_dict(self) -> Dict:
@@ -155,8 +155,8 @@ class RandomSampler(ReproducibleSampler):
                                                                   f"we cannot use {self.__class__.__name__} to load it."
 
         length = states['length']
-        assert length == len(self.dataset), f"The number of samples is different between the checkpoint record({length}) " \
-                                            f"and current dataset({len(self.dataset)})."
+        assert length == getattr(self.dataset, 'total_len', len(self.dataset)), f"The number of samples is different between the checkpoint record({length}) " \
+                                            f"and current dataset({getattr(self.dataset, 'total_len', len(self.dataset))})."
         self.seed = states['seed']
         self.epoch = states['epoch']
         self.num_consumed_samples = states['num_consumed_samples']
@@ -208,8 +208,8 @@ class RandomSampler(ReproducibleSampler):
         :return:
         """
         num_consumed_samples = self.num_consumed_samples
-        return math.ceil((len(self.dataset) - num_consumed_samples) / self.num_replicas) if \
-            self.pad else math.floor(((len(self.dataset) - num_consumed_samples) / self.num_replicas))
+        return math.ceil((getattr(self.dataset, 'total_len', len(self.dataset)) - num_consumed_samples) / self.num_replicas) if \
+            self.pad else math.floor(((getattr(self.dataset, 'total_len', len(self.dataset)) - num_consumed_samples) / self.num_replicas))
 
 
 class SequentialSampler(RandomSampler):
@@ -258,11 +258,11 @@ class SequentialSampler(RandomSampler):
 
         :return:
         """
-        return list(range(len(self.dataset)))
+        return list(range(getattr(self.dataset, 'total_len', len(self.dataset))))
 
     def state_dict(self) -> Dict:
         states = {'num_consumed_samples': self.num_consumed_samples, 'sampler_type': self.__class__.__name__,
-                  'length': len(self.dataset)
+                  'length': getattr(self.dataset, 'total_len', len(self.dataset))
                   }
         return states
 
@@ -275,8 +275,8 @@ class SequentialSampler(RandomSampler):
                                                                   f"we cannot use {self.__class__.__name__} to load it."
 
         length = states['length']
-        assert length == len(self.dataset), f"The number of samples is different between the checkpoint record({length}) " \
-                                            f"and current dataset({len(self.dataset)})."
+        assert length == getattr(self.dataset, 'total_len', len(self.dataset)), f"The number of samples is different between the checkpoint record({length}) " \
+                                            f"and current dataset({getattr(self.dataset, 'total_len', len(self.dataset))})."
         self.num_consumed_samples = states['num_consumed_samples']
         if self.num_consumed_samples >= length:  # 如果保存的时候已经到达了最后一个sample了，则直接将结果重置为0
             self.num_consumed_samples = 0
@@ -314,9 +314,9 @@ class SortedSampler(SequentialSampler):
             except BaseException as e:
                 logger.error(f"Cannot use {self.__class__.__name__} as length, since it is not sortable.")
 
-        assert len(length) == len(dataset), f"The length of `dataset`({len(dataset)}) and " \
-                                            f"`length`({len(length)}) should be equal."
-        assert len(self.sorted_indices) == len(dataset), "The indices and dataset should have equal length."
+        assert len(length) == getattr(self.dataset, 'total_len', len(self.dataset)), f"The length of `dataset`({len(dataset)}) and " \
+                                            f"`length`({getattr(self.dataset, 'total_len', len(self.dataset))}) should be equal."
+        assert len(self.sorted_indices) == getattr(self.dataset, 'total_len', len(self.dataset)), "The indices and dataset should have equal length."
 
         self.length = np.array(length, dtype=int)  # 按照长到短排列的序号。
         self.sorted_indices = np.argsort(self.length)[::-1].tolist()  # 按长度从高到低排序的

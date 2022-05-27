@@ -85,7 +85,8 @@ class MoreEvaluateCallback(HasMonitorCallback):
         if watch_monitor is None and evaluate_every is None:
             raise RuntimeError("`evaluate_every` and `watch_monitor` cannot be None at the same time.")
         if watch_monitor is not None and evaluate_every is not None:
-            raise RuntimeError("`evaluate_every` and `watch_monitor` cannot be set at the same time.")
+            raise RuntimeError(f"`evaluate_every`({evaluate_every}) and `watch_monitor`({watch_monitor}) "
+                               f"cannot be set at the same time.")
 
         if topk_monitor is not None and topk == 0:
             raise RuntimeError("`topk_monitor` is set, but `topk` is 0.")

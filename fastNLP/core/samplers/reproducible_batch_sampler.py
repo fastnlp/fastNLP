@@ -210,7 +210,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
             self.num_consumed_samples = 0
         self.during_iter = True
 
-        indices = list(range(len(self.dataset)))
+        indices = list(range(getattr(self.dataset, 'total_len', len(self.dataset))))
 
         if self.shuffle:
             if self.num_consumed_samples > 0:  # 需要先按照原来的排序，删掉多余的
@@ -237,7 +237,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
                 if len(indices)%self.batch_size!=0:
                     batches.append(indices[_num_batches*self.batch_size:])
 
-        need_pad_num = (len(self.dataset)-self.num_consumed_samples) % self.num_replicas
+        need_pad_num = (getattr(self.dataset, 'total_len', len(self.dataset))-self.num_consumed_samples) % self.num_replicas
         if self.pad and need_pad_num !=0 and need_pad_num<=self.rank:
             if len(batches) > 0:
                 if len(batches[-1])<self.batch_size:
@@ -290,9 +290,9 @@ class RandomBatchSampler(ReproducibleBatchSampler):
     @property
     def batch_idx_in_epoch(self):
         if self.drop_last:
-            return len(self.dataset) // self.num_replicas // self.batch_size - self.num_left_samples // self.batch_size
+            return getattr(self.dataset, 'total_len', len(self.dataset)) // self.num_replicas // self.batch_size - self.num_left_samples // self.batch_size
         else:
-            return (len(self.dataset) // self.num_replicas + self.batch_size - 1) // self.batch_size - \
+            return (getattr(self.dataset, 'total_len', len(self.dataset)) // self.num_replicas + self.batch_size - 1) // self.batch_size - \
                    (self.num_left_samples + self.batch_size - 1) // self.batch_size
 
     @property
@@ -313,8 +313,8 @@ class RandomBatchSampler(ReproducibleBatchSampler):
         :return:
         """
         num_consumed_samples = self.num_consumed_samples
-        return math.ceil((len(self.dataset) - num_consumed_samples) / self.num_replicas) if \
-            self.pad else math.floor(((len(self.dataset) - num_consumed_samples) / self.num_replicas))
+        return math.ceil((getattr(self.dataset, 'total_len', len(self.dataset)) - num_consumed_samples) / self.num_replicas) if \
+            self.pad else math.floor(((getattr(self.dataset, 'total_len', len(self.dataset)) - num_consumed_samples) / self.num_replicas))
 
     def __len__(self)->int:
         """
@@ -332,7 +332,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
             raise RuntimeError("BucketedBatchSampler does not support saving before last checkpoint states have been"
                                " consumed. ")
         states = {'seed': self.seed, 'epoch': self.epoch, 'num_consumed_samples': self.num_consumed_samples,
-                  'sampler_type': self.__class__.__name__, 'length': len(self.dataset), 'shuffle': self.shuffle,
+                  'sampler_type': self.__class__.__name__, 'length': getattr(self.dataset, 'total_len', len(self.dataset)), 'shuffle': self.shuffle,
                   'batch_size': self.batch_size,
                   'num_replicas': self.num_replicas}
 
@@ -347,7 +347,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
                                                                   f"we cannot use {self.__class__.__name__} to load it."
 
         length = states['length']
-        assert length == len(self.dataset), "The number of samples is different between the checkpoint record " \
+        assert length == getattr(self.dataset, 'total_len', len(self.dataset)), "The number of samples is different between the checkpoint record " \
                                             "and current dataset."
         self.seed = states['seed']
         self.epoch = states['epoch']
@@ -464,8 +464,8 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
         :return:
         """
         num_consumed_samples = self.num_consumed_samples
-        return math.ceil((len(self.dataset) - num_consumed_samples) / self.num_replicas) if \
-            self.pad else math.floor(((len(self.dataset) - num_consumed_samples) / self.num_replicas))
+        return math.ceil((getattr(self.dataset, 'total_len', len(self.dataset)) - num_consumed_samples) / self.num_replicas) if \
+            self.pad else math.floor(((getattr(self.dataset, 'total_len', len(self.dataset)) - num_consumed_samples) / self.num_replicas))
 
     def __len__(self)->int:
         """
@@ -515,7 +515,7 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
                 if len(sorted_indices)%self.batch_size!=0:
                     batches.append(sorted_indices[_num_batches*self.batch_size:])
 
-        need_pad_num = (len(self.dataset)-self.num_consumed_samples) % self.num_replicas
+        need_pad_num = (getattr(self.dataset, 'total_len', len(self.dataset))-self.num_consumed_samples) % self.num_replicas
         if self.pad and need_pad_num !=0 and need_pad_num<=self.rank:
             if len(batches) > 0:
                 if len(batches[-1])<self.batch_size:
@@ -593,7 +593,7 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
             raise RuntimeError("BucketedBatchSampler does not support saving before last checkpoint states have been"
                                " consumed. ")
         states = {'seed': self.seed, 'epoch': self.epoch, 'num_consumed_samples': self.num_consumed_samples,
-                  'sampler_type': self.__class__.__name__, 'length': len(self.dataset), 'shuffle': self.shuffle,
+                  'sampler_type': self.__class__.__name__, 'length': getattr(self.dataset, 'total_len', len(self.dataset)), 'shuffle': self.shuffle,
                   'batch_size': self.batch_size, 'num_batch_per_bucket': self.num_batch_per_bucket,
                   'num_replicas': self.num_replicas
                   }
@@ -609,7 +609,7 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
                                                                   f"we cannot use {self.__class__.__name__} to load it."
 
         length = states['length']
-        assert length == len(self.dataset), "The number of samples is different between the checkpoint record " \
+        assert length == getattr(self.dataset, 'total_len', len(self.dataset)), "The number of samples is different between the checkpoint record " \
                                             "and current dataset."
         self.seed = states['seed']
         self.epoch = states['epoch']
@@ -630,7 +630,7 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
     @property
     def batch_idx_in_epoch(self):
         if self.drop_last:
-            return len(self.dataset) // self.num_replicas // self.batch_size - self.num_left_samples // self.batch_size
+            return getattr(self.dataset, 'total_len', len(self.dataset)) // self.num_replicas // self.batch_size - self.num_left_samples // self.batch_size
         else:
-            return (len(self.dataset) // self.num_replicas + self.batch_size - 1) // self.batch_size - \
+            return (getattr(self.dataset, 'total_len', len(self.dataset)) // self.num_replicas + self.batch_size - 1) // self.batch_size - \
                    (self.num_left_samples + self.batch_size - 1) // self.batch_size
