@@ -84,7 +84,7 @@ class TestAllGatherAndBroadCast:
 
     @classmethod
     def setup_class(cls):
-        devices = [0,1,2]
+        devices = [0,1]
         output_from_new_proc = "all"
 
         launcher = FleetLauncher(devices=devices, output_from_new_proc=output_from_new_proc)
@@ -150,7 +150,7 @@ class TestAllGatherAndBroadCast:
         dist.barrier()
 
     @magic_argv_env_context
-    @pytest.mark.parametrize("src_rank", ([0, 1, 2]))
+    @pytest.mark.parametrize("src_rank", ([0, 1]))
     def test_fastnlp_paddle_broadcast_object(self, src_rank):
         if self.local_rank == src_rank:
             obj = {

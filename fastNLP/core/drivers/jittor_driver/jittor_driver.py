@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 from typing import Union, Optional, Dict
-from contextlib import nullcontext
 from dataclasses import dataclass
 
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
@@ -9,7 +8,7 @@ from fastNLP.core.drivers.driver import Driver
 from fastNLP.core.dataloaders import JittorDataLoader
 from fastNLP.core.samplers import ReproducibleSampler, RandomSampler
 from fastNLP.core.log import logger
-from fastNLP.core.utils import apply_to_collection
+from fastNLP.core.utils import apply_to_collection, nullcontext
 from fastNLP.envs import (
     FASTNLP_MODEL_FILENAME,
     FASTNLP_CHECKPOINT_FILENAME,
