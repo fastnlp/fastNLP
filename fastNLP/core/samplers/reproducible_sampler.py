@@ -222,7 +222,10 @@ class RandomSampler(ReproducibleSampler):
 
         :return:
         """
-        return getattr(self.dataset, 'total_len', len(self.dataset))
+        total_len = getattr(self.dataset, 'total_len', None)
+        if not isinstance(total_len, int):
+            total_len = len(self.dataset)
+        return total_len
 
 class SequentialSampler(RandomSampler):
     """
