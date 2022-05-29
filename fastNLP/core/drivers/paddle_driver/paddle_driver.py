@@ -31,7 +31,6 @@ if _NEED_IMPORT_PADDLE:
     import paddle
     from paddle.io import (
         DataLoader,
-        IterableDataset,
         Dataset,
         Sampler,
         BatchSampler,
@@ -97,6 +96,9 @@ class PaddleDriver(Driver):
     def check_dataloader_legality(self, dataloader):
         if not isinstance(dataloader, DataLoader):
             raise TypeError(f"{DataLoader} is expected, instead of `{type(dataloader)}`")
+        if dataloader.batch_size is None and dataloader.batch_sampler is None:
+            raise ValueError("Please ensure at least one of your dataloader's batch_size and batch_sampler"
+                            "is not None")
 
     @staticmethod
     def _check_optimizer_legality(optimizers):
@@ -107,7 +109,7 @@ class PaddleDriver(Driver):
         """
         for each_optimizer in optimizers:
             if not isinstance(each_optimizer, Optimizer):
-                raise ValueError(f"Each optimizer of parameter `optimizers` should be 'paddle.optimizer.Optimizer' type, "
+                raise TypeError(f"Each optimizer of parameter `optimizers` should be 'paddle.optimizer.Optimizer' type, "
                                  f"not {type(each_optimizer)}.")
 
     @staticmethod
@@ -263,9 +265,7 @@ class PaddleDriver(Driver):
         optimizers_state_dict = {}
         for i in range(len(self.optimizers)):
             optimizer: Optimizer = self.optimizers[i]
-            optimizer_state = optimizer.state_dict()
-            optimizer_state["state"] = optimizer_state_to_device(optimizer_state, "cpu")
-            optimizers_state_dict[f"optimizer{i}"] = optimizer_state  # 注意这里没有使用 deepcopy，测试是不需要的；
+            optimizers_state_dict[f"optimizer{i}"] = optimizer_state_to_device(optimizer.state_dict(), "cpu")
         
         return optimizers_state_dict
 
@@ -399,6 +399,8 @@ class PaddleDriver(Driver):
     def set_sampler_epoch(self, dataloader: "DataLoader", cur_epoch_idx):
         if callable(getattr(dataloader.batch_sampler, "set_epoch", None)):
             dataloader.batch_sampler.set_epoch(cur_epoch_idx)
+        elif callable(getattr(dataloader.batch_sampler.sampler, "set_epoch", None)):
+            dataloader.batch_sampler.sampler.set_epoch(cur_epoch_idx)
 
     @staticmethod
     def get_dataloader_args(dataloader: "DataLoader"):

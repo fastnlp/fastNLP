@@ -10,7 +10,7 @@ from fastNLP.core.samplers import (
     UnrepeatedSequentialSampler,
 )
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
-from tests.helpers.datasets.paddle_data import PaddleNormalDataset, PaddleRandomMaxDataset
+from tests.helpers.datasets.paddle_data import PaddleNormalDataset, PaddleNormalXYDataset
 from tests.helpers.utils import magic_argv_env_context
 from fastNLP.envs.distributed import rank_zero_rm
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
@@ -19,8 +19,8 @@ if _NEED_IMPORT_PADDLE:
     import paddle.distributed as dist
     from paddle.io import DataLoader, BatchSampler
 
-def generate_driver(num_labels, feature_dimension, device=[0,1], fp16=False, output_from_new_proc="only_error"):
-    paddle_model = PaddleNormalModel_Classification_1(num_labels, feature_dimension)
+def generate_driver(labels, features, device=[0,1], fp16=False, output_from_new_proc="only_error"):
+    paddle_model = PaddleNormalModel_Classification_1(labels, features)
     paddle_opt = paddle.optimizer.Adam(parameters=paddle_model.parameters(), learning_rate=0.01)
     driver = PaddleFleetDriver(
         model=paddle_model,
@@ -465,10 +465,14 @@ class TestSetDistReproDataloader:
         num_replicas = len(self.device)
         num_consumed_batches = 2
         already_seen_idx = set()
+        if isinstance(replaced_loader.batch_sampler, BucketedBatchSampler):
+            sampler_states = replaced_loader.batch_sampler.set_epoch(10)
+        else:
+            sampler_states = replaced_loader.batch_sampler.sampler.set_epoch(10)
         for idx, batch in enumerate(replaced_loader):
             if idx >= num_consumed_batches:
                 break
-            already_seen_idx.update(batch)
+            already_seen_idx.update(batch.tolist())
         dist.barrier()
         if isinstance(replaced_loader.batch_sampler, BucketedBatchSampler):
             sampler_states = replaced_loader.batch_sampler.state_dict()
@@ -496,6 +500,7 @@ class TestSetDistReproDataloader:
                 pad=True
             )
             new_loader.batch_sampler.load_state_dict(sampler_states)
+            new_loader.batch_sampler.set_epoch(10)
         else:
             batch_size = replaced_loader.batch_sampler.batch_size
             sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size * num_replicas
@@ -508,8 +513,9 @@ class TestSetDistReproDataloader:
             )
             new_loader = DataLoader(replaced_loader.dataset, batch_sampler=batch_sampler)
             new_loader.batch_sampler.sampler.load_state_dict(sampler_states)
+            new_loader.batch_sampler.sampler.set_epoch(10)
         for idx, batch in enumerate(new_loader):
-            left_idxes.update(batch)
+            left_idxes.update(batch.tolist())
 
         assert len(left_idxes) + len(already_seen_idx) == len(self.dataset) / num_replicas
         assert len(left_idxes | already_seen_idx) == len(self.dataset) / num_replicas
@@ -533,7 +539,7 @@ class TestSaveLoad:
         cls.driver = generate_driver(10, 10, device=[0,1])
 
     def setup_method(self):
-        self.dataset = PaddleRandomMaxDataset(20, 10)
+        self.dataset = PaddleNormalXYDataset(40)
 
     @magic_argv_env_context
     @pytest.mark.parametrize("only_state_dict", ([True, False]))
@@ -545,12 +551,12 @@ class TestSaveLoad:
             path = "model"
 
             dataloader = DataLoader(self.dataset, batch_size=2)
-            self.driver1, self.driver2 = generate_driver(10, 10), generate_driver(10, 10)
+            self.driver1, self.driver2 = generate_driver(40, 1), generate_driver(40, 1)
 
             if only_state_dict:
                 self.driver1.save_model(path, only_state_dict)
             else:
-                self.driver1.save_model(path, only_state_dict, input_spec=[paddle.ones((4, 10))])
+                self.driver1.save_model(path, only_state_dict, input_spec=[paddle.ones((4, 1))])
 
             # 同步
             dist.barrier()
@@ -594,8 +600,8 @@ class TestSaveLoad:
             path = "model.ckp"
             num_replicas = len(device)
 
-            self.driver1, self.driver2 = generate_driver(10, 10, device=device, fp16=fp16), \
-                                            generate_driver(10, 10, device=device, fp16=False)
+            self.driver1, self.driver2 = generate_driver(40, 1, device=device, fp16=fp16), \
+                                            generate_driver(40, 1, device=device, fp16=False)
             dataloader = DataLoader(
                 dataset=self.dataset,
                 batch_sampler=BucketedBatchSampler(
@@ -613,11 +619,12 @@ class TestSaveLoad:
 
             already_seen_x_set = set()
             already_seen_y_set = set()
+            self.driver1.set_sampler_epoch(dataloader, 2)
             for idx, batch in enumerate(dataloader):
                 if idx >= num_consumed_batches:
                     break
-                already_seen_x_set.update(batch["x"])
-                already_seen_y_set.update(batch["y"])
+                already_seen_x_set.update(batch["x"].reshape((-1, )).tolist())
+                already_seen_y_set.update(batch["y"].reshape((-1, )).tolist())
 
             # 同步
             dist.barrier()
@@ -669,10 +676,11 @@ class TestSaveLoad:
             assert start_batch == 2 * num_consumed_batches
             left_x_batches = set()
             left_y_batches = set()
+            self.driver2.set_sampler_epoch(replaced_loader, 2)
             for idx, batch in enumerate(replaced_loader):
 
-                left_x_batches.update(batch["x"])
-                left_y_batches.update(batch["y"])
+                left_x_batches.update(batch["x"].reshape((-1, )).tolist())
+                left_y_batches.update(batch["y"].reshape((-1, )).tolist())
                 res1 = self.driver1.model(
                     batch,
                     fastnlp_fn=self.driver1.model._layers.model.evaluate_step,
@@ -709,8 +717,8 @@ class TestSaveLoad:
 
             num_replicas = len(device)
 
-            self.driver1 = generate_driver(10, 10, device=device, fp16=fp16)
-            self.driver2 = generate_driver(10, 10, device=device, fp16=False)
+            self.driver1 = generate_driver(40, 1, device=device, fp16=fp16)
+            self.driver2 = generate_driver(40, 1, device=device, fp16=False)
             batch_sampler = BatchSampler(dataset=self.dataset, batch_size=4)
             batch_sampler.sampler = RandomSampler(self.dataset, True)
             batch_sampler.sampler.set_distributed(
@@ -726,11 +734,12 @@ class TestSaveLoad:
 
             already_seen_x_set = set()
             already_seen_y_set = set()
+            self.driver1.set_sampler_epoch(dataloader, 2)
             for idx, batch in enumerate(dataloader):
                 if idx >= num_consumed_batches:
                     break
-                already_seen_x_set.update(batch["x"])
-                already_seen_y_set.update(batch["y"])
+                already_seen_x_set.update(batch["x"].reshape((-1, )).tolist())
+                already_seen_y_set.update(batch["y"].reshape((-1, )).tolist())
 
             # 同步
             dist.barrier()
@@ -779,10 +788,11 @@ class TestSaveLoad:
             assert start_batch == 2 * num_consumed_batches
             left_x_batches = set()
             left_y_batches = set()
+            self.driver2.set_sampler_epoch(replaced_loader, 2)
             for idx, batch in enumerate(replaced_loader):
 
-                left_x_batches.update(batch["x"])
-                left_y_batches.update(batch["y"])
+                left_x_batches.update(batch["x"].reshape((-1, )).tolist())
+                left_y_batches.update(batch["y"].reshape((-1, )).tolist())
                 res1 = self.driver1.model(
                     batch,
                     fastnlp_fn=self.driver1.model._layers.model.evaluate_step,

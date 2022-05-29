@@ -99,7 +99,7 @@ class TorchDriver(Driver):
     def _check_optimizer_legality(optimizers):
         for each_optimizer in optimizers:
             if not isinstance(each_optimizer, Optimizer):
-                raise ValueError(f"Each optimizer of parameter `optimizers` should be 'Optimizer' type, "
+                raise TypeError(f"Each optimizer of parameter `optimizers` should be 'Optimizer' type, "
                                  f"not {type(each_optimizer)}.")
 
     @staticmethod

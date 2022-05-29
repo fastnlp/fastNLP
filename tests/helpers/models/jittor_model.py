@@ -1,17 +1,15 @@
-from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
-if _NEED_IMPORT_PADDLE:
-    import paddle
-    import paddle.nn as nn
-    from paddle.nn import Layer
+from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
+if _NEED_IMPORT_JITTOR:
+    from jittor import Module, nn
 else:
-    from fastNLP.core.utils.dummy_class import DummyClass as Layer
+    from fastNLP.core.utils.dummy_class import DummyClass as Module
 
-class PaddleNormalModel_Classification_1(Layer):
+class JittorNormalModel_Classification_1(Module):
     """
-    基础的 paddle 分类模型
+    基础的 jittor 分类模型
     """
     def __init__(self, num_labels, feature_dimension):
-        super(PaddleNormalModel_Classification_1, self).__init__()
+        super(JittorNormalModel_Classification_1, self).__init__()
         self.num_labels = num_labels
 
         self.linear1 = nn.Linear(in_features=feature_dimension, out_features=64)
@@ -21,7 +19,7 @@ class PaddleNormalModel_Classification_1(Layer):
         self.output = nn.Linear(in_features=32, out_features=num_labels)
         self.loss_fn = nn.CrossEntropyLoss()
 
-    def forward(self, x):
+    def execute(self, x):
         x = self.ac1(self.linear1(x))
         x = self.ac2(self.linear2(x))
         x = self.output(x)
@@ -37,12 +35,12 @@ class PaddleNormalModel_Classification_1(Layer):
         return {"pred": x, "target": y.reshape((-1,))}
 
 
-class PaddleNormalModel_Classification_2(Layer):
+class JittorNormalModel_Classification_2(Module):
     """
-    基础的 paddle 分类模型，只实现 forward 函数测试用户自己初始化了分布式的场景
+    基础的 jittor 分类模型，只实现 execute 函数测试用户自己初始化了分布式的场景
     """
     def __init__(self, num_labels, feature_dimension):
-        super(PaddleNormalModel_Classification_2, self).__init__()
+        super(JittorNormalModel_Classification_2, self).__init__()
         self.num_labels = num_labels
 
         self.linear1 = nn.Linear(in_features=feature_dimension, out_features=64)
@@ -52,7 +50,7 @@ class PaddleNormalModel_Classification_2(Layer):
         self.output = nn.Linear(in_features=32, out_features=num_labels)
         self.loss_fn = nn.CrossEntropyLoss()
 
-    def forward(self, x, y):
+    def execute(self, x, y):
         x = self.ac1(self.linear1(x))
         x = self.ac2(self.linear2(x))
         x = self.output(x)

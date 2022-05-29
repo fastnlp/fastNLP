@@ -12,7 +12,7 @@ if _NEED_IMPORT_PADDLE:
 @pytest.mark.paddle
 def test_incorrect_driver():
 
-    model = PaddleNormalModel_Classification_1(2, 100)
+    model = PaddleNormalModel_Classification_1(20, 10)
     with pytest.raises(ValueError):
         driver = initialize_paddle_driver("torch", 0, model)
 
@@ -26,7 +26,7 @@ def test_get_single_device(device):
     测试正常情况下初始化 PaddleSingleDriver 的情况
     """
 
-    model = PaddleNormalModel_Classification_1(2, 100)
+    model = PaddleNormalModel_Classification_1(20, 10)
     driver = initialize_paddle_driver("paddle", device, model)
     assert isinstance(driver, PaddleSingleDriver)
 
@@ -41,7 +41,7 @@ def test_get_fleet(device):
     测试 fleet 多卡的初始化情况
     """
 
-    model = PaddleNormalModel_Classification_1(64, 10)
+    model = PaddleNormalModel_Classification_1(20, 10)
     driver = initialize_paddle_driver("paddle", device, model)
 
     assert isinstance(driver, PaddleFleetDriver)
@@ -56,6 +56,6 @@ def test_device_out_of_range(device):
     """
     测试传入的device超过范围的情况
     """
-    model = PaddleNormalModel_Classification_1(2, 100)
+    model = PaddleNormalModel_Classification_1(20, 10)
     with pytest.raises(ValueError):
         driver = initialize_paddle_driver("paddle", device, model)

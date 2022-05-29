@@ -1,4 +1,6 @@
 from functools import reduce
+
+from numpy import dtype
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 
 if _NEED_IMPORT_TORCH:
@@ -18,6 +20,23 @@ class TorchNormalDataset(Dataset):
 
     def __getitem__(self, item):
         return self._data[item]
+
+class TorchNormalXYDataset(Dataset):
+    """
+    可以被输入到分类模型中的普通数据集
+    """
+    def __init__(self, num_of_data=1000):
+        self.num_of_data = num_of_data
+        self._data = list(range(num_of_data))
+
+    def __len__(self):
+        return self.num_of_data
+
+    def __getitem__(self, item):
+        return {
+            "x": torch.tensor([self._data[item]], dtype=torch.float),
+            "y": torch.tensor([self._data[item]], dtype=torch.float)
+        }
 
 
 # 该类专门用于为 tests.helpers.models.torch_model.py/ TorchNormalModel_Classification_1 创建数据；

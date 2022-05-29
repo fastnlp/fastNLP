@@ -76,7 +76,7 @@ class TestPaddle:
         from paddle.io import Dataset
         import paddle
 
-        class PaddleRandomMaxDataset(Dataset):
+        class PaddleArgMaxDataset(Dataset):
             def __init__(self, num_samples, num_features):
                 self.x = paddle.randn((num_samples, num_features))
                 self.y = self.x.argmax(axis=-1)
@@ -87,7 +87,7 @@ class TestPaddle:
             def __getitem__(self, item):
                 return {"x": self.x[item], "y": self.y[item]}
 
-        ds = PaddleRandomMaxDataset(100, 2)
+        ds = PaddleArgMaxDataset(100, 2)
         dl = DataLoader(ds, places=None, collate_fn=Collator(), batch_size=4)
         for batch in dl:
             print(batch)

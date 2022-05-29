@@ -1,4 +1,5 @@
 import pytest
+from fastNLP.core.callbacks import callback
 
 from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.core.controllers.trainer import Evaluator
@@ -14,6 +15,7 @@ if _NEED_IMPORT_JITTOR:
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Module
     from fastNLP.core.utils.dummy_class import DummyClass as Dataset
+jt.flags.use_cuda=1
 
 
 class JittorNormalModel_Classification(Module):
@@ -68,11 +70,9 @@ class TrainJittorConfig:
     batch_size: int = 4
     shuffle: bool = True
 
-
 @pytest.mark.parametrize("driver", ["jittor"])
-@pytest.mark.parametrize("device", ["cpu", "gpu", "cuda:0"])
+@pytest.mark.parametrize("device", ["cpu", "gpu", "cuda", None])
 @pytest.mark.parametrize("callbacks", [[RichCallback(100)]])
-@pytest.mark.jittor
 def test_trainer_jittor(
         driver,
         device,

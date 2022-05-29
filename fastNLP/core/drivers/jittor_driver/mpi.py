@@ -38,6 +38,7 @@ class JittorMPIDriver(JittorDriver):
     ):
 
         super(JittorMPIDriver, self).__init__(model, fp16=fp16, **kwargs)
+        raise NotImplementedError("MPI for Jittor is not supported right now.")
 
         self.is_pull_by_jittor_run = is_pull_by_jittor_run
         self.parallel_device = parallel_device
@@ -99,22 +100,6 @@ class JittorMPIDriver(JittorDriver):
         if self.outside_mpi:
             return self._data_device
         return self.parallel_device
-
-    def step(self):
-        # for optimizer in self.optimizers:
-        #     self.grad_scaler.step(optimizer)
-        #     self.grad_scaler.update()
-        for optimizer in self.optimizers:
-            optimizer.step()
-
-    def backward(self, loss):
-        # self.grad_scaler.scale(loss).backward()
-        for optimizer in self.optimizers:
-            optimizer.backward(loss)
-
-    def zero_grad(self):
-        for optimizer in self.optimizers:
-            optimizer.zero_grad()
 
     def model_call(self, batch, fn: Callable, signature_fn: Optional[Callable]) -> Dict:
         if isinstance(batch, Dict) and not self.wo_auto_param_call:

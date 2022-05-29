@@ -1,14 +1,21 @@
 from typing import Dict, Union, Tuple, Callable, Optional
 
 from .jittor_driver import JittorDriver
+from .utils import replace_batch_sampler, replace_sampler
 from fastNLP.core.utils import auto_param_call
 from fastNLP.core.utils.utils import _get_fun_msg
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
-from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler
+from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, re_instantiate_sampler, \
+    ReproduceBatchSampler
+from fastNLP.core.samplers import RandomSampler
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_JITTOR:
     import jittor as jt
+    from jittor.dataset import (
+        RandomSampler as JittorRandomSampler,
+        SequentialSampler as JittorSequentialSampler,
+    )
 
 __all__ = [
     "JittorSingleDriver",
@@ -89,31 +96,46 @@ class JittorSingleDriver(JittorDriver):
         """
         return False
 
-    def set_dist_repro_dataloader(self, dataloader, dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler],
-                                  reproducible: bool = False, sampler_or_batch_sampler=None):
-        # reproducible 的相关功能暂时没有实现
+    def set_dist_repro_dataloader(self, dataloader,
+                                  dist: Union[str, ReproducibleBatchSampler, ReproducibleSampler] = None,
+                                  reproducible: bool = False):
+        # 如果 dist 为 ReproducibleBatchSampler, ReproducibleIterator 说明是在断点重训时 driver.load_checkpoint 函数调用；
         if isinstance(dist, ReproducibleBatchSampler):
-            raise NotImplementedError
-            dataloader.batch_sampler = dist_sample
-        if isinstance(dist, ReproducibleSampler):
-            raise NotImplementedError  
-            dataloader.batch_sampler.sampler = dist
+            return replace_batch_sampler(dataloader, dist)
+        elif isinstance(dist, ReproducibleSampler):
+            return replace_sampler(dataloader, dist)
+
+        # 如果 dist 为 str 或者 None，说明是在 trainer 初试化时调用；
+        args = self.get_dataloader_args(dataloader)
+        if isinstance(args.batch_sampler, ReproducibleBatchSampler):
+            batch_sampler = re_instantiate_sampler(args.batch_sampler)
+            return replace_batch_sampler(dataloader, batch_sampler)
+        elif isinstance(args.sampler, ReproducibleSampler):
+            sampler = re_instantiate_sampler(args.sampler)
+            return replace_sampler(dataloader, sampler)
 
         if reproducible:
-            raise NotImplementedError
-            if isinstance(dataloader.batch_sampler.sampler, ReproducibleSampler):
-                return dataloader
-            elif isinstance(dataloader.batch_sampler, RandomBatchSampler):
-                return dataloader
-            else:
-                # TODO
-                batch_sampler = RandomBatchSampler(
-                    batch_sampler=dataloader.batch_sampler,
-                    batch_size=dataloader.batch_sampler.batch_size,
-                    drop_last=dataloader.drop_last
-                )
-                dataloader.batch_sampler = batch_sampler
-                return dataloader
+            if args.sampler is None:
+                sampler = RandomSampler(args.dataset, args.shuffle)
+                return replace_sampler(dataloader, sampler)
+            elif isinstance(args.sampler, JittorRandomSampler):
+                if getattr(args.sampler, '_num_samples', None) is None \
+                        and getattr(args.sampler, 'rep', False) is False:
+                    # 如果本来就是随机的，并且没有定制，直接替换掉吧。
+                    sampler = RandomSampler(args.sampler.dataset, shuffle=True)
+                    logger.debug("Replace jittor RandomSampler into fastNLP RandomSampler.")
+                    return replace_sampler(dataloader, sampler)
+            elif isinstance(args.sampler, JittorSequentialSampler):
+                # 需要替换为不要 shuffle 的。
+                sampler = RandomSampler(args.sampler.dataset, shuffle=False)
+                logger.debug("Replace jittor SequentialSampler into fastNLP RandomSampler.")
+                return replace_sampler(dataloader, sampler)
+            batch_sampler = ReproduceBatchSampler(
+                batch_sampler=args.batch_sampler,
+                batch_size=args.batch_size,
+                drop_last=args.drop_last
+            )
+            return replace_batch_sampler(dataloader, batch_sampler)
         else:
             return dataloader
 

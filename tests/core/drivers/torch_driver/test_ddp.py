@@ -10,7 +10,7 @@ from fastNLP.core.samplers import (
     UnrepeatedSequentialSampler,
 )
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
-from tests.helpers.datasets.torch_data import TorchNormalDataset, TorchArgMaxDataset
+from tests.helpers.datasets.torch_data import TorchNormalDataset, TorchNormalXYDataset
 from tests.helpers.utils import magic_argv_env_context
 from fastNLP.envs.distributed import rank_zero_rm
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
@@ -19,8 +19,8 @@ if _NEED_IMPORT_TORCH:
     import torch.distributed as dist
     from torch.utils.data import DataLoader, BatchSampler
 
-def generate_driver(num_labels, feature_dimension, device=[0,1], fp16=False, output_from_new_proc="all"):
-    torch_model = TorchNormalModel_Classification_1(num_labels, feature_dimension)
+def generate_driver(labels, features, device=[0,1], fp16=False, output_from_new_proc="all"):
+    torch_model = TorchNormalModel_Classification_1(labels, features)
     torch_opt = torch.optim.Adam(params=torch_model.parameters(), lr=0.01)
     device = [torch.device(i) for i in device]
     driver = TorchDDPDriver(
@@ -504,10 +504,14 @@ class TestSetDistReproDataloader:
         num_replicas = len(self.device)
         num_consumed_batches = 2
         already_seen_idx = set()
+        if isinstance(replaced_loader.batch_sampler, BucketedBatchSampler):
+            sampler_states = replaced_loader.batch_sampler.set_epoch(4)
+        else:
+            sampler_states = replaced_loader.batch_sampler.sampler.set_epoch(4)
         for idx, batch in enumerate(replaced_loader):
             if idx >= num_consumed_batches:
                 break
-            already_seen_idx.update(batch)
+            already_seen_idx.update(batch.tolist())
         dist.barrier()
         if isinstance(replaced_loader.batch_sampler, BucketedBatchSampler):
             sampler_states = replaced_loader.batch_sampler.state_dict()
@@ -533,6 +537,7 @@ class TestSetDistReproDataloader:
                 pad=True
             )
             new_loader.batch_sampler.load_state_dict(sampler_states)
+            new_loader.batch_sampler.set_epoch(4)
         else:
             batch_size = replaced_loader.batch_sampler.batch_size
             sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size * num_replicas
@@ -543,8 +548,9 @@ class TestSetDistReproDataloader:
                 rank=driver.global_rank
             )
             new_loader.batch_sampler.sampler.load_state_dict(sampler_states)
+            new_loader.batch_sampler.sampler.set_epoch(4)
         for idx, batch in enumerate(new_loader):
-            left_idxes.update(batch)
+            left_idxes.update(batch.tolist())
 
         assert len(left_idxes) + len(already_seen_idx) == len(self.dataset) / num_replicas
         assert len(left_idxes | already_seen_idx) == len(self.dataset) / num_replicas
@@ -562,7 +568,7 @@ class TestSaveLoad:
     """
 
     def setup_method(self):
-        self.dataset = TorchArgMaxDataset(10, 20)
+        self.dataset = TorchNormalXYDataset(20)
 
     @magic_argv_env_context
     @pytest.mark.parametrize("only_state_dict", ([True, False]))
@@ -574,7 +580,7 @@ class TestSaveLoad:
             path = "model"
 
             dataloader = DataLoader(self.dataset, batch_size=2)
-            driver1, driver2 = generate_driver(10, 10), generate_driver(10, 10)
+            driver1, driver2 = generate_driver(20, 1), generate_driver(20, 1)
 
             driver1.save_model(path, only_state_dict)
 
@@ -618,8 +624,8 @@ class TestSaveLoad:
             path = "model.ckp"
             num_replicas = len(device)
 
-            driver1, driver2 = generate_driver(10, 10, device=device, fp16=fp16), \
-                                            generate_driver(10, 10, device=device, fp16=False)
+            driver1, driver2 = generate_driver(20, 1, device=device, fp16=fp16), \
+                                            generate_driver(20, 1, device=device, fp16=False)
             dataloader = dataloader_with_bucketedbatchsampler(
                 self.dataset,
                 length=[10 for i in range(len(self.dataset))],
@@ -636,11 +642,12 @@ class TestSaveLoad:
 
             already_seen_x_set = set()
             already_seen_y_set = set()
+            driver1.set_sampler_epoch(dataloader, 4)
             for idx, batch in enumerate(dataloader):
                 if idx >= num_consumed_batches:
                     break
-                already_seen_x_set.update(batch["x"])
-                already_seen_y_set.update(batch["y"])
+                already_seen_x_set.update(batch["x"].reshape(-1, ).tolist())
+                already_seen_y_set.update(batch["y"].reshape(-1, ).tolist())
 
             # 同步
             dist.barrier()
@@ -665,7 +672,6 @@ class TestSaveLoad:
                 pad=True
             )
             dist.barrier()
-            print("========load=======", driver1.global_rank, driver2.global_rank)
             load_states = driver2.load_checkpoint(Path(path), dataloader, only_state_dict, should_load_model=True)
             dist.barrier()
             replaced_loader = load_states.pop("dataloader")
@@ -690,10 +696,11 @@ class TestSaveLoad:
             assert start_batch == 2 * num_consumed_batches
             left_x_batches = set()
             left_y_batches = set()
+            driver2.set_sampler_epoch(replaced_loader, 4)
             for idx, batch in enumerate(replaced_loader):
 
-                left_x_batches.update(batch["x"])
-                left_y_batches.update(batch["y"])
+                left_x_batches.update(batch["x"].reshape(-1, ).tolist())
+                left_y_batches.update(batch["y"].reshape(-1, ).tolist())
                 res1 = driver1.model(
                     batch,
                     fastnlp_fn=driver1.model.module.model.evaluate_step,
@@ -716,7 +723,6 @@ class TestSaveLoad:
             dist.barrier()
         finally:
             rank_zero_rm(path)
-            print("=======delete======")
 
         if dist.is_initialized():
             dist.destroy_process_group()
@@ -735,8 +741,8 @@ class TestSaveLoad:
 
             num_replicas = len(device)
 
-            driver1 = generate_driver(10, 10, device=device, fp16=fp16)
-            driver2 = generate_driver(10, 10, device=device, fp16=False)
+            driver1 = generate_driver(20, 1, device=device, fp16=fp16)
+            driver2 = generate_driver(20, 1, device=device, fp16=False)
 
             dataloader = dataloader_with_randomsampler(self.dataset, 4, True, False, unrepeated=False)
             dataloader.batch_sampler.sampler.set_distributed(
@@ -748,11 +754,12 @@ class TestSaveLoad:
 
             already_seen_x_set = set()
             already_seen_y_set = set()
+            driver1.set_sampler_epoch(dataloader, 4)
             for idx, batch in enumerate(dataloader):
                 if idx >= num_consumed_batches:
                     break
-                already_seen_x_set.update(batch["x"])
-                already_seen_y_set.update(batch["y"])
+                already_seen_x_set.update(batch["x"].reshape(-1, ).tolist())
+                already_seen_y_set.update(batch["y"].reshape(-1, ).tolist())
 
             # 同步
             dist.barrier()
@@ -797,10 +804,11 @@ class TestSaveLoad:
             assert start_batch == 2 * num_consumed_batches
             left_x_batches = set()
             left_y_batches = set()
+            driver2.set_sampler_epoch(replaced_loader, 4)
             for idx, batch in enumerate(replaced_loader):
 
-                left_x_batches.update(batch["x"])
-                left_y_batches.update(batch["y"])
+                left_x_batches.update(batch["x"].reshape(-1, ).tolist())
+                left_y_batches.update(batch["y"].reshape(-1, ).tolist())
                 res1 = driver1.model(
                     batch,
                     fastnlp_fn=driver1.model.module.model.evaluate_step,

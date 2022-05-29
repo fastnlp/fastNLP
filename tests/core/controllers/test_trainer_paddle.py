@@ -15,7 +15,7 @@ if _NEED_IMPORT_PADDLE:
 
 
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
-from tests.helpers.datasets.paddle_data import PaddleRandomMaxDataset
+from tests.helpers.datasets.paddle_data import PaddleArgMaxDataset
 from tests.helpers.utils import magic_argv_env_context
 
 @dataclass
@@ -44,12 +44,12 @@ def test_trainer_paddle(
     )
     optimizers = Adam(parameters=model.parameters(), learning_rate=0.0001)
     train_dataloader = DataLoader(
-        dataset=PaddleRandomMaxDataset(20, TrainPaddleConfig.feature_dimension),
+        dataset=PaddleArgMaxDataset(20, TrainPaddleConfig.feature_dimension),
         batch_size=TrainPaddleConfig.batch_size,
         shuffle=True
     )
     val_dataloader = DataLoader(
-        dataset=PaddleRandomMaxDataset(12, TrainPaddleConfig.feature_dimension),
+        dataset=PaddleArgMaxDataset(12, TrainPaddleConfig.feature_dimension),
         batch_size=TrainPaddleConfig.batch_size,
         shuffle=True
     )

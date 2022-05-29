@@ -6,7 +6,7 @@ from pkg_resources import parse_version
 from fastNLP.core.drivers.torch_driver.single_device import TorchSingleDriver
 from fastNLP.core.samplers import ReproduceBatchSampler, RandomSampler
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
-from tests.helpers.datasets.torch_data import TorchNormalDataset, TorchArgMaxDataset
+from tests.helpers.datasets.torch_data import TorchNormalDataset, TorchNormalXYDataset
 from tests.helpers.datasets.paddle_data import PaddleNormalDataset
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from fastNLP.envs.distributed import rank_zero_rm
@@ -15,6 +15,7 @@ from fastNLP.envs.imports import _NEED_IMPORT_PADDLE, _NEED_IMPORT_TORCH
 if _NEED_IMPORT_TORCH:
     import torch
     from torch.utils.data import DataLoader, BatchSampler
+
 if _NEED_IMPORT_PADDLE:
     import paddle
 
@@ -67,95 +68,67 @@ class TestTorchDriverFunctions:
         model = TorchNormalModel_Classification_1(10, 32)
         self.driver = TorchSingleDriver(model, device="cpu")
 
-    @pytest.mark.torchpaddle
-    def test_check_single_optimizer_legality(self):
+    @pytest.mark.torch
+    def test_check_optimizers_legality(self):
         """
-        测试传入单个 optimizer 时的表现
+        测试对合法 optimizers 的检查
         """
+        # 单个 optimizer
         optimizer = torch.optim.Adam(
             params=self.driver.model.parameters(),
             lr=0.01
         )
-
         self.driver.set_optimizers(optimizer)
-
-        optimizer = paddle.optimizer.Adam(
-            parameters=PaddleNormalModel_Classification_1(10, 32).parameters(),
-            learning_rate=0.01,
-        )
-        # 传入 torch 的 optimize r时，应该报错 ValueError
-        with pytest.raises(ValueError):
-            self.driver.set_optimizers(optimizer)
-
-    @pytest.mark.torchpaddle
-    def test_check_optimizers_legality(self):
-        """
-        测试传入 optimizer list 的表现
-        """
+        # 列表
         optimizers = [
             torch.optim.Adam(
                 params=self.driver.model.parameters(),
                 lr=0.01
             ) for i in range(10)
         ]
-
         self.driver.set_optimizers(optimizers)
 
-        optimizers += [
+    @pytest.mark.torchpaddle
+    def test_invalid_optimizers(self):
+        """
+        测试传入非法的 optimizers
+        """
+        optimizer = paddle.optimizer.Adam(
+            parameters=PaddleNormalModel_Classification_1(10, 32).parameters(),
+            learning_rate=0.01,
+        )
+        with pytest.raises(TypeError):
+            self.driver.set_optimizers(optimizer)
+
+        optimizers = [
             paddle.optimizer.Adam(
                 parameters=PaddleNormalModel_Classification_1(10, 32).parameters(),
                 learning_rate=0.01,
             )
         ]
-
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             self.driver.set_optimizers(optimizers)
 
-    @pytest.mark.torchpaddle
-    def test_check_dataloader_legality_in_train(self):
+    @pytest.mark.torch
+    def test_check_dataloader_legality(self):
         """
-        测试 `is_train` 参数为 True 时，_check_dataloader_legality 函数的表现
+        测试 check_dataloader_legality 函数的表现
         """
         dataloader = DataLoader(TorchNormalDataset())
-        TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader")
+        self.driver.check_dataloader_legality(dataloader)
 
+    @pytest.mark.torchpaddle
+    def test_check_dataloader_legality_invalid(self):
+        """
+        测试 check_dataloader_legality 函数传入其他类型的表现
+        """
         # 创建 paddle 的 dataloader
         dataloader = paddle.io.DataLoader(
             PaddleNormalDataset(),
             batch_size=32, shuffle=True
         )
-        with pytest.raises(ValueError):
-            TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader")
-
-    @pytest.mark.torchpaddle
-    def test_check_dataloader_legality_in_test(self):
-        """
-        测试 `is_train` 参数为 False 时，_check_dataloader_legality 函数的表现
-        """
-        # 此时传入的应该是dict
-        dataloader = {
-            "train": DataLoader(TorchNormalDataset()),
-            "test": DataLoader(TorchNormalDataset())
-        }
-        TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader")
-
-        # 传入的不是 dict，应该报错
-        dataloader = DataLoader(TorchNormalDataset())
-        with pytest.raises(ValueError):
-            TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader")
-
-        # 创建 paddle 的 dataloader
-        train_loader = paddle.io.DataLoader(
-            PaddleNormalDataset(),
-            batch_size=32, shuffle=True
-        )
-        test_loader = paddle.io.DataLoader(
-            PaddleNormalDataset(),
-            batch_size=32, shuffle=True
-        )
-        dataloader = {"train": train_loader, "test": test_loader}
-        with pytest.raises(ValueError):
-            TorchSingleDriver.check_dataloader_legality(dataloader, "dataloader")
+        with pytest.raises(TypeError):
+            self.driver.check_dataloader_legality(dataloader)
 
     @pytest.mark.torch
     def test_tensor_to_numeric(self):
@@ -515,10 +488,14 @@ class TestSetDistReproDataloader:
         # 迭代两个 batch
         num_consumed_batches = 2
         already_seen_idx = set()
+        if isinstance(replaced_loader.batch_sampler, ReproduceBatchSampler):
+            replaced_loader.batch_sampler.set_epoch(3)
+        else:
+            replaced_loader.batch_sampler.sampler.set_epoch(3)
         for idx, batch in enumerate(replaced_loader):
             if idx >= num_consumed_batches:
                 break
-            already_seen_idx.update(batch)
+            already_seen_idx.update(batch.tolist())
         if isinstance(replaced_loader.batch_sampler, ReproduceBatchSampler):
             sampler_states = replaced_loader.batch_sampler.state_dict()
         else:
@@ -532,14 +509,16 @@ class TestSetDistReproDataloader:
             # 重新改造 dataloader
             new_loader = dataloader_with_randombatchsampler(replaced_loader.dataset, batch_size, shuffle, False)
             new_loader.batch_sampler.load_state_dict(sampler_states)
+            new_loader.batch_sampler.set_epoch(3)
         else:
             batch_size = replaced_loader.batch_sampler.batch_size
             sampler_states["num_consumed_samples"] = num_consumed_batches * batch_size
             # 重新构造 dataloader
             new_loader = dataloader_with_randomsampler(replaced_loader.dataset, batch_size, shuffle, False)
             new_loader.batch_sampler.sampler.load_state_dict(sampler_states)
+            new_loader.batch_sampler.sampler.set_epoch(3)
         for idx, batch in enumerate(new_loader):
-            left_idxes.update(batch)
+            left_idxes.update(batch.tolist())
 
         assert len(left_idxes) + len(already_seen_idx) == len(self.dataset)
         assert len(left_idxes | already_seen_idx) == len(self.dataset)
@@ -550,7 +529,7 @@ class TestSetDistReproDataloader:
 #
 ############################################################################
 
-def generate_random_driver(features, labels, fp16=False, device="cpu"):
+def generate_random_driver(labels, features, fp16=False, device="cpu"):
     """
     生成driver
     """
@@ -570,9 +549,9 @@ def test_save_and_load_model(only_state_dict):
     """
     try:
         path = "model"
-        dataset = TorchArgMaxDataset(10, 40)
+        dataset = TorchNormalXYDataset(20)
         dataloader = DataLoader(dataset, batch_size=4)
-        driver1, driver2 = generate_random_driver(10, 10), generate_random_driver(10, 10)
+        driver1, driver2 = generate_random_driver(20, 1), generate_random_driver(20, 1)
 
         driver1.save_model(path, only_state_dict)
         driver2.load_model(path, only_state_dict)
@@ -596,19 +575,20 @@ def test_save_and_load_with_randombatchsampler(only_state_dict, fp16):
 
     try:
         path = "model.ckp"
-        dataset = TorchArgMaxDataset(10, 40)
+        dataset = TorchNormalXYDataset(20)
         dataloader = dataloader_with_randombatchsampler(dataset, 4, True, False)
-        driver1, driver2 = generate_random_driver(10, 10, fp16, "cuda"), generate_random_driver(10, 10, False, "cuda")
+        driver1, driver2 = generate_random_driver(20, 1, fp16, "cuda"), generate_random_driver(20, 1, False, "cuda")
 
         num_consumed_batches = 2
 
         already_seen_x_set = set()
         already_seen_y_set = set()
+        driver1.set_sampler_epoch(dataloader, 3)
         for idx, batch in enumerate(dataloader):
             if idx >= num_consumed_batches:
                 break
-            already_seen_x_set.update(batch["x"])
-            already_seen_y_set.update(batch["y"])
+            already_seen_x_set.update(batch["x"].reshape(-1, ).tolist())
+            already_seen_y_set.update(batch["y"].reshape(-1, ).tolist())
 
         sampler_states = dataloader.batch_sampler.state_dict()
         save_states = {"num_consumed_batches": num_consumed_batches}
@@ -639,11 +619,12 @@ def test_save_and_load_with_randombatchsampler(only_state_dict, fp16):
         assert start_batch == 2 * num_consumed_batches
         left_x_batches = set()
         left_y_batches = set()
+        driver1.set_sampler_epoch(replaced_loader, 3)
         for idx, batch in enumerate(replaced_loader):
 
             batch = driver2.move_data_to_device(batch)
-            left_x_batches.update(batch["x"])
-            left_y_batches.update(batch["y"])
+            left_x_batches.update(batch["x"].reshape(-1, ).tolist())
+            left_y_batches.update(batch["y"].reshape(-1, ).tolist())
             res1 = driver1.model.evaluate_step(**batch)
             res2 = driver2.model.evaluate_step(**batch)
             assert torch.equal(res1["preds"], res2["preds"])
@@ -660,24 +641,25 @@ def test_save_and_load_with_randombatchsampler(only_state_dict, fp16):
 @pytest.mark.parametrize("fp16", ([True, False]))
 def test_save_and_load_with_randomsampler(only_state_dict, fp16):
     """
-    测试save和load函数，主要测试 dataloader 被替换了 batch_sampler 的情况
+    测试save和load函数，主要测试 dataloader 被替换了 sampler 的情况
     """
 
     try:
         path = "model.ckp"
 
-        driver1, driver2 = generate_random_driver(10, 10, fp16, "cuda"), generate_random_driver(10, 10, False, "cuda")
-        dataset = TorchArgMaxDataset(10, 40)
+        driver1, driver2 = generate_random_driver(40, 1, fp16, "cuda"), generate_random_driver(40, 1, False, "cuda")
+        dataset = TorchNormalXYDataset(40)
         dataloader = dataloader_with_randomsampler(dataset, 4, True, False)
         num_consumed_batches = 2
 
         already_seen_x_set = set()
         already_seen_y_set = set()
+        driver1.set_sampler_epoch(dataloader, 3)
         for idx, batch in enumerate(dataloader):
             if idx >= num_consumed_batches:
                 break
-            already_seen_x_set.update(batch["x"])
-            already_seen_y_set.update(batch["y"])
+            already_seen_x_set.update(batch["x"].reshape(-1, ).tolist())
+            already_seen_y_set.update(batch["y"].reshape(-1, ).tolist())
 
         sampler_states = dataloader.batch_sampler.sampler.state_dict()
         save_states = {"num_consumed_batches": num_consumed_batches}
@@ -711,11 +693,13 @@ def test_save_and_load_with_randomsampler(only_state_dict, fp16):
         assert start_batch == 2 * num_consumed_batches
         left_x_batches = set()
         left_y_batches = set()
+        # set epoch
+        driver2.set_sampler_epoch(replaced_loader, 3)
         for idx, batch in enumerate(replaced_loader):
 
             batch = driver2.move_data_to_device(batch)
-            left_x_batches.update(batch["x"])
-            left_y_batches.update(batch["y"])
+            left_x_batches.update(batch["x"].reshape(-1, ).tolist())
+            left_y_batches.update(batch["y"].reshape(-1, ).tolist())
             res1 = driver1.model.evaluate_step(**batch)
             res2 = driver2.model.evaluate_step(**batch)
             assert torch.equal(res1["preds"], res2["preds"])

@@ -24,7 +24,6 @@ from fastNLP.core.dataset import DataSet as FDataSet
 class _JittorDataset(Dataset):
     """
     对用户传的dataset进行封装，以便JittorDataLoader能够支持使用自定义的dataset
-
     """
 
     def __init__(self, dataset) -> None:
@@ -83,7 +82,7 @@ class JittorDataLoader:
         # TODO 验证支持replacesampler （以后完成） 增加Sampler
         # 将内部dataset批次设置为1
         if isinstance(dataset, Dataset):
-            dataset.set_attrs(batch_size=1)
+            dataset.set_attrs(batch_size=1, shuffle=False, endless=False)
 
         # FastNLP Datset, collate_fn not None
         if isinstance(dataset, FDataSet) and collate_fn is None:
@@ -114,6 +113,12 @@ class JittorDataLoader:
                                keep_numpy_array=keep_numpy_array, endless=endless)
 
         self.cur_batch_indices = None
+
+    def __getattr__(self, attr):
+        if attr in ["batch_size", "shuffle", "drop_last", "num_workers", "buffer_size", "stop_grad",
+                    "keep_numpy_array", "endless", "sampler"]:
+            return getattr(self.dataset, attr)
+        raise AttributeError(f"{self} has not attribute '{attr}'")
 
     def __iter__(self):
         # TODO 第一次迭代后不能设置collate_fn，设置是无效的

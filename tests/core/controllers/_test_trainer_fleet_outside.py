@@ -24,7 +24,7 @@ from paddle.io import DataLoader
 import paddle.distributed.fleet as fleet
 
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_2
-from tests.helpers.datasets.paddle_data import PaddleRandomMaxDataset
+from tests.helpers.datasets.paddle_data import PaddleArgMaxDataset
 from tests.helpers.callbacks.helper_callbacks import RecordMetricCallback
 
 @dataclass
@@ -54,12 +54,12 @@ def test_trainer_fleet(
     optimizers = fleet.distributed_optimizer(optimizers)
 
     train_dataloader = DataLoader(
-        dataset=PaddleRandomMaxDataset(20, MNISTTrainFleetConfig.feature_dimension),
+        dataset=PaddleArgMaxDataset(20, MNISTTrainFleetConfig.feature_dimension),
         batch_size=MNISTTrainFleetConfig.batch_size,
         shuffle=True
     )
     val_dataloader = DataLoader(
-        dataset=PaddleRandomMaxDataset(12, MNISTTrainFleetConfig.feature_dimension),
+        dataset=PaddleArgMaxDataset(12, MNISTTrainFleetConfig.feature_dimension),
         batch_size=MNISTTrainFleetConfig.batch_size,
         shuffle=True
     )

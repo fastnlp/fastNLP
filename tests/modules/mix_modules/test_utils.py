@@ -33,7 +33,11 @@ class TestPaddle2Torch:
         """
 
         assert isinstance(tensor, torch.Tensor)
-        assert tensor.device == torch.device(device)
+        if device == "cpu":
+            assert not tensor.is_cuda
+        else:
+            assert tensor.is_cuda
+            assert tensor.device.index == torch.device(device).index
         assert tensor.requires_grad == requires_grad
 
     def test_gradient(self):
@@ -261,7 +265,8 @@ class TestJittor2Torch:
         if device == "cpu":
             assert not tensor.is_cuda
         else:
-            assert tensor.device == torch.device(device)
+            assert tensor.is_cuda
+            assert tensor.device.index == torch.device(device).index
         assert tensor.requires_grad == requires_grad
 
     def test_var_transfer(self):
@@ -271,7 +276,10 @@ class TestJittor2Torch:
 
         jittor_var = jittor.rand((3, 4, 5))
         res = jittor2torch(jittor_var)
-        self.check_torch_tensor(res, "cpu", True)
+        if jittor.flags.use_cuda:
+            self.check_torch_tensor(res, "cuda:0", True)
+        else:
+            self.check_torch_tensor(res, "cpu", True)
 
         res = jittor2torch(jittor_var, device="cuda:2", no_gradient=None)
         self.check_torch_tensor(res, "cuda:2", True)
@@ -291,7 +299,10 @@ class TestJittor2Torch:
         res = jittor2torch(jittor_list)
         assert isinstance(res, list)
         for t in res:
-            self.check_torch_tensor(t, "cpu", True)
+            if jittor.flags.use_cuda:
+                self.check_torch_tensor(t, "cuda:0", True)
+            else:
+                self.check_torch_tensor(t, "cpu", True)
 
         res = jittor2torch(jittor_list, device="cuda:1", no_gradient=False)
         assert isinstance(res, list)
@@ -327,17 +338,29 @@ class TestJittor2Torch:
         }
         res = jittor2torch(jittor_dict)
         assert isinstance(res, dict)
-        self.check_torch_tensor(res["tensor"], "cpu", True)
+        if jittor.flags.use_cuda:
+            self.check_torch_tensor(res["tensor"], "cuda:0", True)
+        else:
+            self.check_torch_tensor(res["tensor"], "cpu", True)
         assert isinstance(res["list"], list)
         for t in res["list"]:
-            self.check_torch_tensor(t, "cpu", True)
+            if jittor.flags.use_cuda:
+                self.check_torch_tensor(t, "cuda:0", True)
+            else:
+                self.check_torch_tensor(t, "cpu", True)
         assert isinstance(res["int"], int)
         assert isinstance(res["string"], str)
         assert isinstance(res["dict"], dict)
         assert isinstance(res["dict"]["list"], list)
         for t in res["dict"]["list"]:
-            self.check_torch_tensor(t, "cpu", True)
-        self.check_torch_tensor(res["dict"]["tensor"], "cpu", True)
+            if jittor.flags.use_cuda:
+                self.check_torch_tensor(t, "cuda:0", True)
+            else:
+                self.check_torch_tensor(t, "cpu", True)
+        if jittor.flags.use_cuda:
+            self.check_torch_tensor(res["dict"]["tensor"], "cuda:0", True)
+        else:
+            self.check_torch_tensor(res["dict"]["tensor"], "cpu", True)
 
 
 ############################################################################

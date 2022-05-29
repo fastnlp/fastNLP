@@ -42,8 +42,8 @@ class UnrepeatedRandomSampler(UnrepeatedSampler):
         返回 sampler 一次完整的迭代过程会产生多少个index。多卡的情况下，只考虑当前rank；
         :return:
         """
-        num_common = getattr(self.dataset, 'total_len', len(self.dataset))//self.num_replicas
-        num_samples = num_common + int(self.rank < (getattr(self.dataset, 'total_len', len(self.dataset))-num_common*self.num_replicas))
+        num_common = self.num_samples//self.num_replicas
+        num_samples = num_common + int(self.rank < (self.num_samples-num_common*self.num_replicas))
         return num_samples
 
     def __iter__(self):
@@ -63,14 +63,14 @@ class UnrepeatedRandomSampler(UnrepeatedSampler):
         :return:
         """
         if self.shuffle:
-            indices = list(range(getattr(self.dataset, 'total_len', len(self.dataset))))
+            indices = list(range(self.num_samples))
             seed = self.seed + self.epoch
             rng = np.random.default_rng(abs(seed))
             rng.shuffle(indices)
             if self.epoch < 0:  # 防止用户忘记调用 set_epoch，至少这样可以保证每次epoch出来的index顺序不同。
                 self.epoch -= 1
         else:
-            indices = list(range(getattr(self.dataset, 'total_len', len(self.dataset))))
+            indices = list(range(self.num_samples))
         return indices
 
     def set_epoch(self, epoch: int) -> None:
@@ -84,8 +84,8 @@ class UnrepeatedRandomSampler(UnrepeatedSampler):
         :param rank:
         :return:
         """
-        assert num_replicas<=getattr(self.dataset, 'total_len', len(self.dataset)), f"The number of replicas({num_replicas}) should be lesser than the " \
-                                                f"number of samples({getattr(self.dataset, 'total_len', len(self.dataset))})."
+        assert num_replicas<=self.num_samples, f"The number of replicas({num_replicas}) should be lesser than the " \
+                                                f"number of samples({self.num_samples})."
         assert num_replicas>0 and isinstance(num_replicas, int)
         assert isinstance(rank, int) and 0<=rank<num_replicas
         # 注意初始化该函数时，所有的状态都应当默认是一个 epoch 刚开始训练的状态；
@@ -93,6 +93,15 @@ class UnrepeatedRandomSampler(UnrepeatedSampler):
         self.rank = rank
 
         return self
+
+    @property
+    def num_samples(self):
+        """
+        返回样本的总数
+
+        :return:
+        """
+        return getattr(self.dataset, 'total_len', len(self.dataset))
 
 
 class UnrepeatedSortedSampler(UnrepeatedRandomSampler):
@@ -147,5 +156,5 @@ class UnrepeatedSequentialSampler(UnrepeatedRandomSampler):
             yield index
 
     def generate_indices(self) -> List[int]:
-        return list(range(getattr(self.dataset, 'total_len', len(self.dataset))))
+        return list(range(self.num_samples))
 

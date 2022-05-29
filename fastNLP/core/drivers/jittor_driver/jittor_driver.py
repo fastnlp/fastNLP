@@ -1,23 +1,31 @@
 import os
-import random
 from pathlib import Path
-from typing import Union, Optional
-from functools import partial
-
-import numpy as np
+from typing import Union, Optional, Dict
+from contextlib import nullcontext
+from dataclasses import dataclass
 
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
 from fastNLP.core.drivers.driver import Driver
 from fastNLP.core.dataloaders import JittorDataLoader
+from fastNLP.core.samplers import ReproducibleSampler, RandomSampler
 from fastNLP.core.log import logger
 from fastNLP.core.utils import apply_to_collection
-from fastNLP.envs import FASTNLP_GLOBAL_RANK, FASTNLP_SEED_WORKERS
+from fastNLP.envs import (
+    FASTNLP_MODEL_FILENAME,
+    FASTNLP_CHECKPOINT_FILENAME,
+)
 
 if _NEED_IMPORT_JITTOR:
     import jittor as jt
     from jittor import Module
     from jittor.optim import Optimizer
     from jittor.dataset import Dataset
+    from jittor.dataset import (
+        BatchSampler as JittorBatchSampler,
+        Sampler as JittorSampler,
+        RandomSampler as JittorRandomSampler,
+        SequentialSampler as JittorSequentialSampler
+    )
 
     _reduces = {
         'max': jt.max,
@@ -56,6 +64,7 @@ class JittorDriver(Driver):
         else:
             jt.flags.auto_mixed_precision_level = 0
         self.fp16 = fp16
+        self._auto_cast = nullcontext
 
         # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
         self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
@@ -68,7 +77,7 @@ class JittorDriver(Driver):
     def _check_optimizer_legality(optimizers):
         for each_optimizer in optimizers:
             if not isinstance(each_optimizer, Optimizer):
-                raise ValueError(f"Each optimizer of parameter `optimizers` should be 'jittor.optim.Optimizer' type, "
+                raise TypeError(f"Each optimizer of parameter `optimizers` should be 'jittor.optim.Optimizer' type, "
                                  f"not {type(each_optimizer)}.")
 
     def step(self):
@@ -117,30 +126,118 @@ class JittorDriver(Driver):
         model = self.unwrap_model()
         model.load(filepath)
 
-    def save_checkpoint(self):
-        ...
+    def save_checkpoint(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
+        dataloader_args = self.get_dataloader_args(dataloader)
+        if dataloader_args.sampler:
+            sampler = dataloader_args.sampler
+        else:
+            raise RuntimeError("This condition is not supposed to appear. Please report a bug to us.")
+        
+        num_consumed_batches = states.pop('num_consumed_batches')
+        if hasattr(sampler, 'state_dict') and callable(sampler.state_dict):
+            sampler_states = sampler.state_dict()
+            # 需要针对 num_consumed_samples 做特殊的处理。因为DataLoader存在预取行为，直接使用sampler中的num_consumed_samples
+            #   会造成多余实际消耗的问题。因为
+            num_consumed_samples_array = sampler_states.pop('num_consumed_samples_array', None)
+            if num_consumed_samples_array is not None:
+                if isinstance(sampler, ReproducibleSampler):  # 如果是 sampler 的话，需要考虑 batch_size 。
+                    if dataloader_args.batch_size is not None:
+                        num_consumed_batches = num_consumed_batches * dataloader_args.batch_size
+                    else:  # 有可能 batch_size 为 None，就只有损失精度了
+                        logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
+                                     "it may cause missing some samples when reload.")
+                        num_consumed_batches = sampler_states['num_consumed_samples']
+                sampler_states['num_consumed_samples'] = num_consumed_samples_array[num_consumed_batches]
+                assert sampler_states['num_consumed_samples'] != -1, "This is a bug, please report."
+            else:
+                if dataloader_args.batch_size is not None:
+                    sampler_states['num_consumed_samples'] = sampler.num_replicas * dataloader_args.batch_size \
+                                                             * num_consumed_batches
+                else:
+                    logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
+                                 "it may cause missing some samples when reload.")
+
+            states['sampler_states'] = sampler_states
+        else:
+            raise RuntimeError('The sampler has no `state_dict()` method, fastNLP cannot save the training '
+                               'state.')
+
+        # 2. 保存模型的状态；
+        if should_save_model:
+            if not os.path.exists(folder):
+                os.mkdir(folder)
+            model_path = folder.joinpath(FASTNLP_MODEL_FILENAME)
+            self.save_model(model_path, only_state_dict=only_state_dict)
+
+        # 3. 保存 optimizers 的状态；
+        states["optimizers_state_dict"] = self.get_optimizer_state()
+
+        # 4. 保存fp16的状态
+
+        logger.debug("Save optimizer state dict")
+        jt.save(states, Path(folder).joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
     def get_optimizer_state(self):
-        # optimizers_state_dict = {}
-        # for i in range(len(self.optimizers)):
-        #     optimizer: torch.optim.Optimizer = self.optimizers[i]
-        #     optimizer_state = optimizer.state_dict()
-        #     optimizer_state["state"] = optimizer_state_to_device(optimizer_state["state"], torch.device("cpu"))
-        #     optimizers_state_dict[f"optimizer{i}"] = optimizer_state  # 注意这里没有使用 deepcopy，测试是不需要的；
-        # return optimizers_state_dict
-        ...
+        optimizers_state_dict = {}
+        for i in range(len(self.optimizers)):
+            optimizer: Optimizer = self.optimizers[i]
+            optimizers_state_dict[f"optimizer{i}"] = optimizer.state_dict()  # 注意这里没有使用 deepcopy，测试是不需要的；
+        return optimizers_state_dict
 
     def load_optimizer_state(self, states):
-        # assert len(states) == len(self.optimizers), f"The number of optimizers is:{len(self.optimizers)}, while in " \
-        #                                             f"checkpoint it is:{len(states)}"
-        # for i in range(len(self.optimizers)):
-        #     optimizer: torch.optim.Optimizer = self.optimizers[i]
-        #     optimizer.load_state_dict(states[f"optimizer{i}"])
-        # logger.debug("Load optimizer state dict.")
-        ...
+        assert len(states) == len(self.optimizers), f"The number of optimizers is:{len(self.optimizers)}, while in " \
+                                                    f"checkpoint it is:{len(states)}"
+        for i in range(len(self.optimizers)):
+            optimizer: Optimizer = self.optimizers[i]
+            optimizer.load_state_dict(states[f"optimizer{i}"])
+        logger.debug("Load optimizer state dict.")
 
-    def load_checkpoint(self):
-        ...
+    def load_checkpoint(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
+        
+        states = jt.load(str(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME)))
+
+        # 1. 加载 optimizers 的状态；
+        optimizers_state_dict = states.pop("optimizers_state_dict")
+        self.load_optimizer_state(optimizers_state_dict)
+
+        # 2. 加载模型状态；
+        if should_load_model:
+            self.load_model(filepath=folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict=only_state_dict)
+
+        # 3. 加载fp16的状态
+
+        # 4. 恢复 sampler 的状态；
+        dataloader_args = self.get_dataloader_args(dataloader)
+        if dataloader_args.sampler is None:
+            sampler = RandomSampler(dataloader_args.sampler.dataset, shuffle=dataloader_args.shuffle)
+        elif isinstance(dataloader_args.sampler, ReproducibleSampler):
+            sampler = dataloader_args.sampler
+        elif isinstance(dataloader_args.sampler, JittorRandomSampler):
+            sampler = RandomSampler(dataloader_args.sampler.dataset)
+            logger.debug("Replace jittor RandomSampler into fastNLP RandomSampler.")
+        elif isinstance(dataloader_args.sampler, JittorSequentialSampler):
+            sampler = RandomSampler(dataloader_args.sampler.dataset, shuffle=False)
+            logger.debug("Replace jittor Sampler into fastNLP RandomSampler without shuffle.")
+        elif self.is_distributed():
+            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our"
+                               "`ReproducibleSampler`.")
+        else:
+            raise RuntimeError(f"Jittor sampler {type(dataloader_args.sampler)} is not supported now.")
+        sampler.load_state_dict(states.pop('sampler_states'))
+        states["dataloader"] = self.set_dist_repro_dataloader(dataloader, sampler)
+
+        # 4. 修改 trainer_state.batch_idx_in_epoch
+        # sampler 是类似 RandomSampler 的sampler，不是 batch_sampler；
+        if dataloader_args.drop_last:
+            batch_idx_in_epoch = len(
+                sampler) // dataloader_args.batch_size - sampler.num_left_samples // dataloader_args.batch_size
+        else:
+            batch_idx_in_epoch = (len(sampler) + dataloader_args.batch_size - 1) // dataloader_args.batch_size - \
+                (sampler.num_left_samples + dataloader_args.batch_size - 1) // dataloader_args.batch_size
+
+        states["batch_idx_in_epoch"] = batch_idx_in_epoch
+
+        return states
 
     def get_evaluate_context(self):
         return jt.no_grad
@@ -198,26 +295,8 @@ class JittorDriver(Driver):
         """
         return batch
 
-    @staticmethod
-    def worker_init_function(worker_id: int, rank: Optional[int] = None) -> None:  # pragma: no cover
-        global_rank = rank if rank is not None else int(os.environ.get(FASTNLP_GLOBAL_RANK, 0))
-        process_seed = jt.get_seed()
-        # back out the base seed so we can use all the bits
-        base_seed = process_seed - worker_id
-        ss = np.random.SeedSequence([base_seed, worker_id, global_rank])
-        # use 128 bits (4 x 32-bit words)
-        np.random.seed(ss.generate_state(4))
-        # Spawn distinct SeedSequences for the PyTorch PRNG and the stdlib random module
-        jittor_ss, stdlib_ss = ss.spawn(2)
-        jt.set_global_seed(jittor_ss.generate_state(1, dtype=np.uint64)[0])
-        # use 128 bits expressed as an integer
-        stdlib_seed = (stdlib_ss.generate_state(2, dtype=np.uint64).astype(object) * [1 << 64, 1]).sum()
-        random.seed(stdlib_seed)
-
     def set_deterministic_dataloader(self, dataloader: Union["JittorDataLoader", "Dataset"]):
-        if int(os.environ.get(FASTNLP_SEED_WORKERS, 0)) and dataloader.worker_init_fn is None:
-            dataloader.worker_init_fn = partial(self.worker_init_function,
-                                                rank=int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)))
+        ...
 
     def set_sampler_epoch(self, dataloader: Union["JittorDataLoader", "Dataset"], cur_epoch_idx: int):
         # 保证 ddp 训练时的 shuffle=True 时的正确性，因为需要保证每一个进程上的 sampler 的shuffle 的随机数种子是一样的；
@@ -226,4 +305,45 @@ class JittorDriver(Driver):
 
     @staticmethod
     def get_dataloader_args(dataloader: Union["JittorDataLoader", "Dataset"]):
-        pass
+        @dataclass
+        class Res:
+            dataset: Optional[Dataset] = None
+            batch_sampler: Optional[JittorBatchSampler] = None
+            sampler: Optional[JittorSampler] = None
+            batch_size: Optional[int] = None
+            shuffle: Optional[bool] = None
+            drop_last: Optional[bool] = None
+
+        res = Res()
+        from fastNLP.core.dataloaders.jittor_dataloader.fdl import _JittorDataset
+        if isinstance(dataloader, JittorDataLoader):
+            # JittorDataLoader 实际上是迭代 dataset 成员的
+            dataloader = dataloader.dataset
+        if isinstance(dataloader, _JittorDataset):
+            # 获取最原始的 dataset
+            res.dataset = dataloader.dataset
+        else:
+            res.dataset = dataloader
+
+        # jittor 现在不支持 batch_sampler，所以除了 shuffle 都可以直接获取
+        res.batch_size = dataloader.batch_size
+        res.drop_last = dataloader.drop_last
+        if dataloader.sampler is None:
+            # sampler 是 None，那么就从 Dataset 的属性中获取
+            res.shuffle = dataloader.shuffle
+        elif isinstance(list(dataloader.sampler.__iter__())[0], (list,tuple)):
+            # jittor 目前不支持 batch_sampler
+            raise NotImplementedError("Jittor does not support using batch_sampler in `Dataset` now, "
+                                    "please check if you have set `Dataset.sampler` as `BatchSampler`")
+        else:
+            # sampler 不为 None
+            res.sampler = dataloader.sampler
+            if hasattr(dataloader.sampler, "shuffle"):
+                # 这种情况一般出现在 fastNLP 的 ReproduceSampler 中
+                res.shuffle = dataloader.sampler.shuffle
+            elif isinstance(dataloader.sampler, JittorRandomSampler):
+                res.shuffle = True
+            else:
+                res.shuffle = False
+
+        return res

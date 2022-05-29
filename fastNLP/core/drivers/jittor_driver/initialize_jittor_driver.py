@@ -10,7 +10,7 @@ if _NEED_IMPORT_JITTOR:
 
 __all__ = []
 
-def initialize_jittor_driver(driver: str, device: Union[str, int, List[int]], model: jittor.Module, **kwargs) -> JittorDriver:
+def initialize_jittor_driver(driver: str, device: Union[str, int, List[int]], model: "jittor.Module", **kwargs) -> JittorDriver:
     r"""
     用来根据参数 ``device`` 来确定并且初始化一个具体的 ``Driver`` 实例然后返回回去。
 
@@ -30,7 +30,7 @@ def initialize_jittor_driver(driver: str, device: Union[str, int, List[int]], mo
         raise ValueError("Parameter `driver` can only be one of these values: ['jittor'].")
 
     # TODO 实现更详细的判断
-    if device in ["cpu", "gpu", "cuda", "cuda:0", 0, None]:
+    if device in ["cpu", "gpu", "cuda", None]:
         return JittorSingleDriver(model, device, **kwargs)
     elif type(device) is int:
         return JittorMPIDriver(model, device, **kwargs)

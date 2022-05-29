@@ -46,8 +46,8 @@ class LSTM(Module):
     def init_hidden(self, x):
         # batch_first
         batch_size = x.shape[0]
-        h0 = jt.randn(1, batch_size, hidden_size)
-        c0 = jt.randn(1, batch_size, hidden_size)
+        h0 = jt.randn(1, batch_size, self.hidden_size)
+        c0 = jt.randn(1, batch_size, self.hidden_size)
 
         return h0, c0
 

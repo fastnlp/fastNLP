@@ -14,7 +14,7 @@ else:
 @pytest.mark.torch
 def test_incorrect_driver():
 
-    model = TorchNormalModel_Classification_1(2, 100)
+    model = TorchNormalModel_Classification_1(20, 10)
     with pytest.raises(ValueError):
         driver = initialize_torch_driver("paddle", 0, model)
 
@@ -33,7 +33,7 @@ def test_get_single_device(driver, device):
     测试正常情况下初始化TorchSingleDriver的情况
     """
 
-    model = TorchNormalModel_Classification_1(2, 100)
+    model = TorchNormalModel_Classification_1(20, 10)
     driver = initialize_torch_driver(driver, device, model)
     assert isinstance(driver, TorchSingleDriver)
 
@@ -52,7 +52,7 @@ def test_get_ddp(driver, device):
     测试 ddp 多卡的初始化情况
     """
 
-    model = TorchNormalModel_Classification_1(64, 10)
+    model = TorchNormalModel_Classification_1(20, 10)
     driver = initialize_torch_driver(driver, device, model)
 
     assert isinstance(driver, TorchDDPDriver)
@@ -70,6 +70,6 @@ def test_device_out_of_range(driver, device):
     """
     测试传入的device超过范围的情况
     """
-    model = TorchNormalModel_Classification_1(2, 100)
+    model = TorchNormalModel_Classification_1(20, 10)
     with pytest.raises(ValueError):
         driver = initialize_torch_driver(driver, device, model) 
