@@ -16,6 +16,7 @@ if _NEED_IMPORT_TORCH:
     import torch
     import torch.nn as nn
     import torch.nn.functional as F
+    from torch.nn import LSTM
 
 from .embedding import TokenEmbedding
 from .static_embedding import StaticEmbedding
@@ -23,7 +24,6 @@ from .utils import _construct_char_vocab_from_vocab
 from .utils import get_embeddings
 from ...core import logger
 from ...core.vocabulary import Vocabulary
-from ...modules.torch.encoder.lstm import LSTM
 
 
 class CNNCharEmbedding(TokenEmbedding):

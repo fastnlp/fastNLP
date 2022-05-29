@@ -138,6 +138,7 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
         msg = f"Fail to get padder for field:{field_name}. " + e.msg + " To view more " \
               "information please set logger's level to DEBUG."
         if must_pad:
+            logger.error(msg)
             raise type(e)(msg=msg)
         logger.debug(msg)
         return NullPadder()
