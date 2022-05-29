@@ -36,8 +36,6 @@ class Saver:
                  model_save_fn:Callable=None, **kwargs):
         if folder is None:
             folder = Path.cwd().absolute()
-            if save_object is not None:
-                logger.info(f"Parameter `folder` is None, and fastNLP will use {folder} to save and load your model.")
         folder = Path(folder)
         if not folder.exists():
             folder.mkdir(parents=True, exist_ok=True)
@@ -209,7 +207,7 @@ class TopkSaver(ResultsMonitor, Saver):
         if topk is None:
             topk = 0
         ResultsMonitor.__init__(self, monitor, larger_better)
-        Saver.__init__(self, folder, save_object if topk!=0 else None, only_state_dict, model_save_fn, **kwargs)
+        Saver.__init__(self, folder, save_object, only_state_dict, model_save_fn, **kwargs)
 
         if monitor is not None and topk == 0:
             raise RuntimeError("`monitor` is set, but `topk` is 0.")
