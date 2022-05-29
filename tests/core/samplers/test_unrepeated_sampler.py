@@ -87,13 +87,14 @@ class TestUnrepeatedSequentialSampler:
 
     @pytest.mark.parametrize('num_replicas', [2, 3])
     @pytest.mark.parametrize('num_of_data', [2, 3, 4, 100])
-    def test_multi(self, num_replicas, num_of_data):
+    @pytest.mark.parametrize('chunk_dist', [True, False])
+    def test_multi(self, num_replicas, num_of_data, chunk_dist):
         if num_replicas > num_of_data:
             pytest.skip("num_replicas > num_of_data")
         data = DatasetWithVaryLength(num_of_data=num_of_data)
         samplers = []
         for i in range(num_replicas):
-            sampler = UnrepeatedSequentialSampler(dataset=data, length=data.data)
+            sampler = UnrepeatedSequentialSampler(dataset=data, chunk_dist=chunk_dist)
             sampler.set_distributed(num_replicas, rank=i)
             samplers.append(sampler)
 

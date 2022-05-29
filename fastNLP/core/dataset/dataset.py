@@ -402,10 +402,10 @@ class DataSet:
 
     def __getattr__(self, item):
         # Not tested. Don't use !!
-        if item == "field_arrays":
-            raise AttributeError
         if isinstance(item, str) and item in self.field_arrays:
             return self.field_arrays[item]
+        else:
+            raise AttributeError
 
     def __setstate__(self, state):
         self.__dict__ = state

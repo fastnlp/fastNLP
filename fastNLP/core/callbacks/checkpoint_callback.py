@@ -58,7 +58,7 @@ class CheckpointCallback(Callback):
     """
     def __init__(self, folder: Optional[Union[str, Path]] = None, every_n_epochs: Optional[int] = None,
                  every_n_batches: Optional[int] = None, last: bool = False, topk: int = 0,
-                 on_exceptions: Optional[Union[BaseException, Sequence[BaseException]]] = [EarlyStopException],
+                 on_exceptions: Optional[Union[BaseException, Sequence[BaseException]]] = (EarlyStopException),
                  monitor: Optional[Union[str, Callable]] = None, larger_better: bool = True,
                  only_state_dict: bool = True, model_save_fn: Optional[Callable] = None, save_object: str = 'model',
                  save_evaluate_results=True, **kwargs):
