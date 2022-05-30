@@ -25,11 +25,10 @@ import os
 import random
 import shutil
 import time
-import warnings
 
 from .loader import Loader
 from fastNLP.core.dataset import Instance, DataSet
-from ...core import logger
+from fastNLP.core.log import logger
 
 
 # from ...core._logger import log
@@ -346,7 +345,7 @@ class SST2Loader(Loader):
         with open(path, 'r', encoding='utf-8') as f:
             f.readline()  # 跳过header
             if 'test' in os.path.split(path)[1]:
-                warnings.warn("SST2's test file has no target.")
+                logger.warn("SST2's test file has no target.")
                 for line in f:
                     line = line.strip()
                     if line:

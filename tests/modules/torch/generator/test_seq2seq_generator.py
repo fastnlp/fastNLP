@@ -43,7 +43,7 @@ class DummyState(State):
         super().__init__()
         self.decoder = decoder
 
-    def reorder_state(self, indices: torch.LongTensor):
+    def reorder_state(self, indices: "torch.LongTensor"):
         self.decoder.decoder_output = self._reorder_state(self.decoder.decoder_output, indices, dim=0)
 
 

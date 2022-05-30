@@ -7,11 +7,11 @@ __all__ = [
 ]
 
 from typing import List
-import warnings
 
 # from ...core.const import Const
 from ...core.vocabulary import Vocabulary
 # from ...core._logger import log
+from fastNLP.core.log import logger
 from pkg_resources import parse_version
 
 
@@ -138,7 +138,7 @@ def _indexize(data_bundle, input_field_names='words', target_field_names='target
                        f" in {[name for name in data_bundle.datasets.keys() if 'train' not in name]} " \
                        f"data set but not in train data set!.\n" \
                        f"These label(s) are {tgt_vocab._no_create_word}"
-            warnings.warn(warn_msg)
+            logger.warn(warn_msg)
             # log.warning(warn_msg)
         tgt_vocab.index_dataset(*[ds for ds in data_bundle.datasets.values() if ds.has_field(target_field_name)], field_name=target_field_name)
         data_bundle.set_vocab(tgt_vocab, target_field_name)

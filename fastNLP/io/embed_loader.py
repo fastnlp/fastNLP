@@ -9,12 +9,12 @@ __all__ = [
 
 import logging
 import os
-import warnings
 
 import numpy as np
 
 from fastNLP.core.utils.utils import Option
 from fastNLP.core.vocabulary import Vocabulary
+from fastNLP.core.log import logger
 
 
 class EmbeddingOption(Option):
@@ -91,7 +91,7 @@ class EmbedLoader:
                         hit_flags[index] = True
                 except Exception as e:
                     if error == 'ignore':
-                        warnings.warn("Error occurred at the {} line.".format(idx))
+                        logger.warn("Error occurred at the {} line.".format(idx))
                     else:
                         logging.error("Error occurred at the {} line.".format(idx))
                         raise e
@@ -156,7 +156,7 @@ class EmbedLoader:
                         found_pad = True
                 except Exception as e:
                     if error == 'ignore':
-                        warnings.warn("Error occurred at the {} line.".format(idx))
+                        logger.warn("Error occurred at the {} line.".format(idx))
                         pass
                     else:
                         logging.error("Error occurred at the {} line.".format(idx))

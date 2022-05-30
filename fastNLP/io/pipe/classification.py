@@ -16,7 +16,6 @@ __all__ = [
 ]
 
 import re
-import warnings
 
 try:
     from nltk import Tree
@@ -33,6 +32,7 @@ from ..loader.classification import IMDBLoader, YelpFullLoader, SSTLoader, SST2L
 # from ...core._logger import log
 # from ...core.const import Const
 from fastNLP.core.dataset import DataSet, Instance
+from fastNLP.core.log import logger
 
 
 class CLSBasePipe(Pipe):

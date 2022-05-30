@@ -4,13 +4,13 @@ __all__ = [
 ]
 
 from typing import Union
-import warnings
 
 import numpy as np
 
 from fastNLP.core.metrics.metric import Metric
 from fastNLP.core.metrics.backend import Backend
 from fastNLP.core.utils.seq_len_to_mask import seq_len_to_mask
+from fastNLP.core.log import logger
 
 
 class Accuracy(Metric):
@@ -69,7 +69,7 @@ class Accuracy(Metric):
         elif pred.ndim == target.ndim + 1:
             pred = pred.argmax(axis=-1)
             if seq_len is None and target.ndim > 1:
-                warnings.warn("You are not passing `seq_len` to exclude pad when calculate accuracy.")
+                logger.warn("You are not passing `seq_len` to exclude pad when calculate accuracy.")
 
         else:
             raise RuntimeError(f"when pred have size:{pred.shape}, target should have size: {pred.shape} or "

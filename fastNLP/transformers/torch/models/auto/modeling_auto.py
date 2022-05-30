@@ -14,7 +14,6 @@
 # limitations under the License.
 """ Auto Model class. """
 
-import warnings
 from collections import OrderedDict
 
 from .auto_factory import _BaseAutoModelClass, _LazyAutoMapping, auto_class_update
@@ -307,7 +306,7 @@ AutoModelForSpeechSeq2Seq = auto_class_update(
 class AutoModelWithLMHead(_AutoModelWithLMHead):
     @classmethod
     def from_config(cls, config):
-        warnings.warn(
+        logger.warn(
             "The class `AutoModelWithLMHead` is deprecated and will be removed in a future version. Please use "
             "`AutoModelForCausalLM` for causal language models, `AutoModelForMaskedLM` for masked language models and "
             "`AutoModelForSeq2SeqLM` for encoder-decoder models.",
@@ -317,7 +316,7 @@ class AutoModelWithLMHead(_AutoModelWithLMHead):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
-        warnings.warn(
+        logger.warn(
             "The class `AutoModelWithLMHead` is deprecated and will be removed in a future version. Please use "
             "`AutoModelForCausalLM` for causal language models, `AutoModelForMaskedLM` for masked language models and "
             "`AutoModelForSeq2SeqLM` for encoder-decoder models.",

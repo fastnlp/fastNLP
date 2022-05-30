@@ -2,7 +2,6 @@ import functools
 import inspect
 from inspect import Parameter
 import dataclasses
-import warnings
 from dataclasses import is_dataclass
 from copy import deepcopy
 from collections import defaultdict, OrderedDict
@@ -555,7 +554,7 @@ def deprecated(help_message: Optional[str] = None):
         def wrapper(*args, **kwargs):
             func_hash = hash(deprecated_function)
             if func_hash not in _emitted_deprecation_warnings:
-                warnings.warn(warning_msg, category=FutureWarning, stacklevel=2)
+                logger.warn(warning_msg, category=FutureWarning, stacklevel=2)
                 _emitted_deprecation_warnings.add(func_hash)
             return deprecated_function(*args, **kwargs)
 

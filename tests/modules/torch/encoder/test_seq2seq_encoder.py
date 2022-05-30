@@ -10,6 +10,7 @@ if _NEED_IMPORT_TORCH:
     from fastNLP.embeddings.torch import StaticEmbedding
 
 
+@pytest.mark.torch
 class TestTransformerSeq2SeqEncoder:
     def test_case(self):
         vocab = Vocabulary().add_word_lst("This is a test .".split())

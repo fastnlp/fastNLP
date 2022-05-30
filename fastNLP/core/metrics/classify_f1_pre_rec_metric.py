@@ -4,7 +4,6 @@ __all__ = [
 
 from typing import Union, List
 from collections import Counter
-import warnings
 import numpy as np
 
 from .metric import Metric
@@ -12,7 +11,7 @@ from .backend import Backend
 from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.core.utils.seq_len_to_mask import seq_len_to_mask
 from .utils import _compute_f_pre_rec
-
+from fastNLP.core.log import logger
 
 class ClassifyFPreRecMetric(Metric):
     def __init__(self, tag_vocab: Vocabulary = None, ignore_labels: List[str] = None,
@@ -157,7 +156,7 @@ class ClassifyFPreRecMetric(Metric):
         elif pred.ndim == target.ndim + 1:
             pred = pred.argmax(axis=-1)
             if seq_len is None and target.ndim > 1:
-                warnings.warn("You are not passing `seq_len` to exclude pad when calculate accuracy.")
+                logger.warn("You are not passing `seq_len` to exclude pad when calculate accuracy.")
         else:
             raise RuntimeError(f"when pred have "
                                f"size:{pred.shape}, target should have size: {pred.shape} or "

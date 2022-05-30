@@ -3,12 +3,12 @@ __all__ = [
 ]
 
 from typing import Union, List, Optional
-import warnings
 from collections import Counter
 
 from fastNLP.core.metrics.backend import Backend
 from fastNLP.core.metrics.metric import Metric
 from fastNLP.core.vocabulary import Vocabulary
+from fastNLP.core.log import logger
 from .utils import _compute_f_pre_rec
 
 
@@ -39,7 +39,7 @@ def _check_tag_vocab_and_encoding_type(tag_vocab: Union[Vocabulary, dict], encod
                             f"encoding_type."
         tags = tags.replace(tag, '')  # 删除该值
     if tags:  # 如果不为空，说明出现了未使用的tag
-        warnings.warn(f"Tag:{tags} in encoding type:{encoding_type} is not presented in your Vocabulary. Check your "
+        logger.warn(f"Tag:{tags} in encoding type:{encoding_type} is not presented in your Vocabulary. Check your "
                       "encoding_type.")
 
 
