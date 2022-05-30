@@ -17,6 +17,8 @@ if _NEED_IMPORT_TORCH:
     import torch.nn as nn
     import torch.nn.functional as F
     from torch.nn import LSTM
+    import torch.nn.utils.rnn as rnn
+
 
 from .embedding import TokenEmbedding
 from .static_embedding import StaticEmbedding
@@ -270,8 +272,7 @@ class LSTMCharEmbedding(TokenEmbedding):
         chars = self.char_embedding(chars)  # batch_size x max_len x max_word_len x embed_size
         chars = self.dropout(chars)
         reshaped_chars = chars.reshape(batch_size * max_len, max_word_len, -1)
-        char_seq_len = chars_masks.eq(False).sum(dim=-1).reshape(batch_size * max_len)
-        lstm_chars = self.lstm(reshaped_chars, char_seq_len)[0].reshape(batch_size, max_len, max_word_len, -1)
+        lstm_chars = self.lstm(reshaped_chars, None)[0].reshape(batch_size, max_len, max_word_len, -1)
         # B x M x M x H
         
         lstm_chars = self.activation(lstm_chars)

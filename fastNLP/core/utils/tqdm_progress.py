@@ -47,7 +47,7 @@ class TqdmProgress(metaclass=Singleton):
     def __init__(self):
         self.bars = {}
 
-    def add_task(self, iterable=None, description=None, total=None, leave=False,
+    def add_task(self, description=None, total=None, leave=False,
                  ncols=None, mininterval=0.1, maxinterval=10.0, miniters=None,
                  ascii=None, visible=True, unit='it', unit_scale=False,
                  dynamic_ncols=False, smoothing=0.3, bar_format=None, initial=0,
@@ -57,7 +57,6 @@ class TqdmProgress(metaclass=Singleton):
         主要就模仿了 tqdm bar 的创建，为了和 FRichProgress 的接口尽量统一，将 desc 重名为了 description，以及 disable 专为了
         visible 。
 
-        :param iterable:
         :param description:
         :param total:
         :param leave:
@@ -96,7 +95,7 @@ class TqdmProgress(metaclass=Singleton):
         else:
             file = sys.stdout
 
-        bar = tqdm(iterable=iterable, desc=description, total=total, leave=leave, file=file,
+        bar = tqdm(iterable=None, desc=description, total=total, leave=leave, file=file,
                  ncols=ncols, mininterval=mininterval, maxinterval=maxinterval, miniters=miniters,
                  ascii=ascii, disable=not visible, unit=unit, unit_scale=unit_scale,
                  dynamic_ncols=dynamic_ncols, smoothing=smoothing, bar_format=bar_format, initial=initial,
