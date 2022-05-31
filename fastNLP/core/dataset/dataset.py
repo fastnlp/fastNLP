@@ -95,7 +95,7 @@ r"""
         data = {'sentence':["This is the first instance .", "Second instance .", "Third instance ."]}
         dataset = DataSet(data)
         # 将句子分成单词形式, 详见DataSet.apply()方法, 可以开启多进程来加快处理， 也可以更改展示的bar，目前支持 ``['rich', 'tqdm', None]``,
-        # 详细内容可以见 :class: `~fastNLP.core.dataset.DataSet`, 需要注意的时匿名函数不支持多进程
+        # 详细内容可以见 :class:`~fastNLP.core.dataset.DataSet`, 需要注意的时匿名函数不支持多进程
         dataset.apply(lambda ins: ins['sentence'].split(), new_field_name='words',
          progress_des='Main',progress_bar='rich')
         # 或使用DataSet.apply_field()
@@ -260,18 +260,18 @@ class DataSet:
 
     def __init__(self, data: Union[List[Instance], Dict[str, List[Any]], None] = None):
         r"""
-        初始化 ``DataSet``, fastNLP的 DataSet 是 key-value 存储形式， 目前支持两种初始化方式，输入 data 分别为 ``List[:class: `~fastNLP.core.dataset.Instance`]`` 和
+        初始化 ``DataSet``, fastNLP的 DataSet 是 key-value 存储形式， 目前支持两种初始化方式，输入 data 分别为 ``List[:class:`~fastNLP.core.dataset.Instance`]`` 和
           ``Dict[str, List[Any]]``。
 
-            * 当 data 为 ``List[:class: `~fastNLP.core.dataset.Instance`]`` 时,  每个 ``Instance`` 的 field_name 需要保持一致。
-            Instance 详见 :class: `~fastNLP.core.dataset.Instance` 。
+            * 当 data 为 ``List[:class:`~fastNLP.core.dataset.Instance`]`` 时,  每个 ``Instance`` 的 field_name 需要保持一致。
+            Instance 详见 :class:`~fastNLP.core.dataset.Instance` 。
             * 当 data 为 ``Dict[str, List[Any]] 时， 则每个 key 的 value 应该为等长的 list， 否则不同 field 的长度不一致。
 
-        :param data:  初始化的内容， 其只能为两种类型，分别为 ``List[:class: `~fastNLP.core.dataset.Instance`]`` 和
+        :param data:  初始化的内容， 其只能为两种类型，分别为 ``List[:class:`~fastNLP.core.dataset.Instance`]`` 和
           ``Dict[str, List[Any]]``。
 
-         * 当 data 为 ``List[:class: `~fastNLP.core.dataset.Instance`]`` 时,  每个 ``Instance`` 的 field_name 需要保持一致。
-            Instance 详见 :class: `~fastNLP.core.dataset.Instance` 。
+         * 当 data 为 ``List[:class:`~fastNLP.core.dataset.Instance`]`` 时,  每个 ``Instance`` 的 field_name 需要保持一致。
+            Instance 详见 :class:`~fastNLP.core.dataset.Instance` 。
         * 当 data 为 ``Dict[str, List[Any]] 时， 则每个 key 的 value 应该为等长的 list， 否则不同 field 的长度不一致。
 
         Example::
@@ -340,7 +340,7 @@ class DataSet:
         去 DataSet 的内容， 根据 idx 类型不同有不同的返回值。 包括四种类型 ``[int, slice, str, list]``
 
             * 当 idx 为 ``int`` 时， idx 的值不能超过 ``DataSet`` 的长度, 会返回一个 ``Instance``, 详见
-            :class: `~fastNLP.core.dataset.Instance`
+            :class:`~fastNLP.core.dataset.Instance`
             * 当 idx 为 ``slice`` 时， 会根据 slice 的内容创建一个新的 DataSet，其包含 slice 所有内容并返回。
             * 当 idx 为 ``str`` 时， 该 idx 为 DataSet 的 field_name, 其会返回该 field_name 的所有内容， 为 list 类型。
             * 当 idx 为 ``list`` 时， 该 idx 的 list 内全为 int 数字， 其会取出所有内容组成一个新的 DataSet 返回。
@@ -429,7 +429,7 @@ class DataSet:
 
     def append(self, instance: Instance) -> None:
         r"""
-        将一个 instance 对象 append 到 DataSet 后面。详见 :class: `~fastNLP.Instance`
+        将一个 instance 对象 append 到 DataSet 后面。详见 :class:`~fastNLP.Instance`
 
         :param  instance: 若 DataSet 不为空，则 instance 应该拥有和 DataSet 完全一样的 field。
 
@@ -457,7 +457,7 @@ class DataSet:
         将 fieldarray 添加到 DataSet 中.
 
         :param field_name: 新加入的 field 的名称
-        :param fieldarray: 需要加入 DataSet 的 field 的内容, 详见 :class: `~fastNLP.core.dataset.FieldArray`
+        :param fieldarray: 需要加入 DataSet 的 field 的内容, 详见 :class:`~fastNLP.core.dataset.FieldArray`
         :return:
         """
         if not isinstance(fieldarray, FieldArray):
@@ -936,7 +936,7 @@ class DataSet:
         :param field_mapping: 当传入的 dataset 中的 field 名称和当前 dataset 不一致时，需要通过 field_mapping 把输入的 dataset 中的
             field 名称映射到当前 field. field_mapping 为 dict 类型，key 为 dataset 中的 field 名称，value 是需要映射成的名称
 
-        :return: :class: `~fastNLP.core.dataset.DataSet``
+        :return: :class:`~fastNLP.core.dataset.DataSet``
         """
         assert isinstance(dataset, DataSet), "Can only concat two datasets."
 
@@ -1002,7 +1002,7 @@ class DataSet:
     def set_pad(self, field_name: Union[str, tuple], pad_val: Union[int, float, None] = 0, dtype=None, backend=None,
                 pad_fn: Callable = None) -> Collator:
         """
-        ``DataSet`` 中想要对绑定的 collator 进行调整可以调用此函数。 ``collator`` 为 :class: `~fastNLP.core.collators.Collator`
+        ``DataSet`` 中想要对绑定的 collator 进行调整可以调用此函数。 ``collator`` 为 :class:`~fastNLP.core.collators.Collator`
         时该函数才有效。调用该函数可以对 field 内容的 pad_val, dtype, backend 等进行调整。
 
         :param field_name: 需要调整的 field 的名称。如果 DataSet 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
@@ -1028,7 +1028,7 @@ class DataSet:
 
     def set_ignore(self, *field_names) -> Collator:
         """
-        ``DataSet`` 中想要对绑定的 collator 进行调整可以调用此函数。 ``collator`` 为 :class: `~fastNLP.core.collators.Collator`
+        ``DataSet`` 中想要对绑定的 collator 进行调整可以调用此函数。 ``collator`` 为 :class:`~fastNLP.core.collators.Collator`
         时该函数才有效。调用该函数可以设置忽略输出某些 field 的内容，被设置的 field 将在 batch 的输出中被忽略。
 
         Example::

@@ -37,9 +37,9 @@ class AutoBackend(Backend):
 
         :param backend: 传入的 backend 值。
 
-            * 当 backend 为 `torch` 时， 选择 :class: `~fastNLP.core.metric.TorchBackend`
-            * 当 backend 为 `paddle` 时， 选择 :class: `~fastNLP.core.metric.PaddleBackend`
-            * 当 backend 为 `jittor` 时， 选择 :class: `~fastNLP.core.metric.JittorBackend`
+            * 当 backend 为 `torch` 时， 选择 :class:`~fastNLP.core.metric.TorchBackend`
+            * 当 backend 为 `paddle` 时， 选择 :class:`~fastNLP.core.metric.PaddleBackend`
+            * 当 backend 为 `jittor` 时， 选择 :class:`~fastNLP.core.metric.JittorBackend`
             * 当 backend 为 ``None`` 时， 直接初始化
 
         """
