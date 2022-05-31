@@ -175,7 +175,7 @@ def fill_tensor(batch_field, padded_batch, dtype):
                 padded_batch[i, j, :len(content_ii)] = torch.tensor(content_ii, dtype=dtype)
     elif padded_batch.ndim == 4:
         try:  # 应该是图像，所以直接应该就 ok 了。
-            padded_batch = np.array(batch_field)
+            padded_batch = torch.tensor(batch_field)
         except:
             for i, content_i in enumerate(batch_field):
                 for j, content_ii in enumerate(content_i):

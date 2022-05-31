@@ -222,7 +222,7 @@ def prepare_torch_dataloader(ds_or_db,
                              multiprocessing_context=None, generator=None, prefetch_factor: int = 2,
                              persistent_workers: bool = False,
                              non_train_sampler: Union["Sampler[int]", ReproducibleSampler, UnrepeatedSampler] = None,
-                             non_train_batch_size: int = 16) \
+                             non_train_batch_size: int = None) \
         -> Union[TorchDataLoader, Dict[str, TorchDataLoader], Sequence[TorchDataLoader]]:
     """
     ``prepare_torch_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为 ``TorchDataloader``对象， 详见 :class: `~fastNLP.core.dataloaders.TorchDataLoader`。
@@ -254,13 +254,13 @@ def prepare_torch_dataloader(ds_or_db,
     :param non_train_batch_size: 非 'train' 数据集的 ``TorchDataLoader`` 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
     :param shuffle: 是否打乱数据集， 默认为 ``False``。
     :param sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
-    默认为None， 当其不为 None 时， shuffle 参数无效。
+        默认为None， 当其不为 None 时， shuffle 参数无效。
     :param non_train_sampler: 非 'train' 数据集的的实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
-    默认为None， 当其不为 None 时， shuffle 参数无效。
+        默认为None， 当其不为 None 时， shuffle 参数无效。
     :param batch_sampler: 实现了 __len__() 和 __iter__() 的实例化对象，，其__iter__() 方法每次都会返回一个 List 对象， List中的值为
-    dataset 的下标 index ；默认为 None，当其不为 None 时，bacth_size, sampler, shuffle 参数均失效。
+        dataset 的下标 index ；默认为 None，当其不为 None 时，bacth_size, sampler, shuffle 参数均失效。
     :param num_workers: 当 ``num_workers > 0`` 时, ``TorchDataLoader`` 会开启 num_workers 个子进程来处理数据， 可以加快
-    数据处理速度，但同时也消耗大量内存。 当 ``num_workers=0`` 时， 不开启子进程。 默认为 ``0``。
+        数据处理速度，但同时也消耗大量内存。 当 ``num_workers=0`` 时， 不开启子进程。 默认为 ``0``。
     :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的 Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``.
 
         *  callate_fn 为 'None' 时，需要注意的是此时传进来的 datset 类型不能为 :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None`` 时，
@@ -273,7 +273,7 @@ def prepare_torch_dataloader(ds_or_db,
 
     :param pin_memory: 如果其为 ``True``, 那么 ``TorchDataLoader`` 会在返回数据张量之前将其 copy 到 cud a的 pin memory 中。
     :param drop_last: 当 ``drop_last=True`` 时，``TorchDataLoader`` 会扔掉最后一个长度小于 ``batch_size`` 的 batch 数据;
-    若 ``drop_last=False`` , 则会返回该 batch 数据。 默认为 ``False`` 。
+        若 ``drop_last=False`` , 则会返回该 batch 数据。 默认为 ``False`` 。
     :param timeout: 子进程的输出队列获取数据的超时值
     :param worker_init_fn: init 函数，如果不设置为 None ,则将会在每个子进程初始化时调用该函数。
     :param multiprocessing_context: 多进程的上下文环境

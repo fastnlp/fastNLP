@@ -176,8 +176,8 @@ class Collator:
                 self.padders = dict(sorted(self.padders.items(), key=lambda x:int(x[0][1:])))  # sort, 这样 _0, _1 能够保持顺序
         try:
             for key, padder in self.padders.items():
-                    batch = unpack_batch.get(key)
-                    pad_batch[key] = padder(batch)
+                batch = unpack_batch.get(key)
+                pad_batch[key] = padder(batch)
         except BaseException as e:
             try:
                 logger.error(f"The following exception happens when try to pad the `{key}` field with padder:{padder}:")
