@@ -59,7 +59,7 @@ class Seq2SeqModel(nn.Module):
         if tgt_seq_len is not None:
             mask = seq_len_to_mask(tgt_seq_len, max_len=tgt_tokens.size(1))
             tgt_tokens = tgt_tokens.masked_fill(mask.eq(0), -100)
-        loss = F.cross_entropy(pred.transpose(1, 2), tgt_tokens)
+        loss = F.cross_entropy(pred[:, :-1].transpose(1, 2), tgt_tokens[:, 1:])
         return {'loss': loss}
 
     def prepare_state(self, src_tokens, src_seq_len=None):

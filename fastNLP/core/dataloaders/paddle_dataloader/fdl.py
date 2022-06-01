@@ -255,7 +255,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                               num_workers: int = 0, use_buffer_reader: bool = True,
                               use_shared_memory: bool = True, timeout: int = 0,
                               worker_init_fn: Callable = None, persistent_workers=False,
-                              non_train_batch_size: int = 16) \
+                              non_train_batch_size: int = None) \
         -> Union[Sequence[PaddleDataLoader], Dict[str, PaddleDataLoader], PaddleDataLoader]:
     """
     ``prepare_paddle_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为 ``PaddleDataloader``对象， 详见 :class:`~fastNLP.core.dataloaders.PaddleDataLoader`。

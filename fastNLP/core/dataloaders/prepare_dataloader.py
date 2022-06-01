@@ -6,7 +6,6 @@ from typing import Union, Callable
 import os
 import sys
 
-from ..samplers import RandomBatchSampler, RandomSampler
 from .torch_dataloader import prepare_torch_dataloader
 from .paddle_dataloader import prepare_paddle_dataloader
 from .jittor_dataloader import prepare_jittor_dataloader
@@ -16,7 +15,7 @@ from ..log import logger
 
 def prepare_dataloader(dataset, batch_size: int = 16, shuffle: bool = False, drop_last: bool = False,
              collate_fn: Union[Callable, str, None] = 'auto', num_workers: int = 0,
-             seed: int = 0, backend: str = 'auto'):
+             backend: str = 'auto'):
     """
     自动创建合适的 ``DataLoader`` 对象。例如，检测当当前环境是 ``torch`` 的，则返回 ``TorchDataLoader`` , 是 ``paddle`` 的则
     返回 ``PaddleDataLoader`` 。如果有更多需要定制的参数，请直接使用对应的 ``prepare`` 函数，例如
@@ -37,7 +36,6 @@ def prepare_dataloader(dataset, batch_size: int = 16, shuffle: bool = False, dro
         * 为 ``Callable`` 时，应当接受一个 ``batch`` 的数据作为参数，同时输出一个对象 。
         * 为 ``None`` 时，使用各个框架的 DataLoader 的默认 ``collate_fn`` 。
     :param num_workers: 使用多少进程进行数据的 fetch 。
-    :param seed: 使用的随机数种子。
     :param backend: 当前支持 ``["auto", "torch", "paddle", "jittor"]`` 四种类型。
 
         * 为 ``auto`` 时，首先(1) 根据环境变量 "FASTNLP_BACKEND" 进行判断；如果没有设置则，(2）通过当前
@@ -52,18 +50,14 @@ def prepare_dataloader(dataset, batch_size: int = 16, shuffle: bool = False, dro
     if backend == 'auto':
         backend = _get_backend()
     if backend == 'torch':
-        batch_sampler = RandomBatchSampler(dataset=dataset, batch_size=batch_size, shuffle=shuffle,
-                                           drop_last=drop_last, seed=seed)
-        return prepare_torch_dataloader(ds_or_db=dataset, batch_sampler=batch_sampler, collate_fn=collate_fn,
-                                        num_workers=num_workers, shuffle=False, sampler=None)
+        return prepare_torch_dataloader(ds_or_db=dataset, batch_sampler=None, collate_fn=collate_fn,
+                                        num_workers=num_workers, shuffle=shuffle, sampler=None,
+                                        batch_size=batch_size)
     elif backend == 'paddle':
-        batch_sampler = RandomBatchSampler(dataset=dataset, batch_size=batch_size, shuffle=shuffle,
-                                           drop_last=drop_last, seed=seed)
-        return prepare_paddle_dataloader(ds_or_db=dataset, batch_sampler=batch_sampler, collate_fn=collate_fn,
-                                        num_workers=num_workers)
+        return prepare_paddle_dataloader(ds_or_db=dataset, batch_sampler=None, collate_fn=collate_fn,
+                                        num_workers=num_workers, batch_size=batch_size, shuffle=shuffle)
     elif backend == 'jittor':
-        sampler = RandomSampler(dataset=dataset, shuffle=shuffle, seed=seed)
-        prepare_jittor_dataloader(ds_or_db=dataset, sampler=sampler, collate_fn=collate_fn,
+        prepare_jittor_dataloader(ds_or_db=dataset, sampler=None, collate_fn=collate_fn,
                                   num_workers=num_workers, batch_size=batch_size, shuffle=shuffle,
                                   drop_last=drop_last)
     else:

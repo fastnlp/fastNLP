@@ -203,7 +203,7 @@ def prepare_jittor_dataloader(ds_or_db, batch_size: int = 16, shuffle: bool = Fa
                               drop_last: bool = False, num_workers: int = 0, buffer_size: int = 512 * 1024 * 1024,
                               stop_grad: bool = True, keep_numpy_array: bool = False, endless: bool = False,
                               collate_fn: Union[None, str, Callable] = "auto",
-                              non_train_batch_size: int = 16) \
+                              non_train_batch_size: int = None) \
         -> Union[Sequence[JittorDataLoader], Dict[str, JittorDataLoader], JittorDataLoader]:
     """
     ``prepare_jittor_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为 :class:`JittorDataLoader` 对象， 详见 :class:`~fastNLP.core.dataloaders.JittorDataLoader`。

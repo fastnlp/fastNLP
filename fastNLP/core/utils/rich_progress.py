@@ -46,7 +46,6 @@ class DummyFRichProgress:
 
 class FRichProgress(Progress, metaclass=Singleton):
     def new_progess(self, *columns: Union[str, ProgressColumn],
-                    console: Optional[Console] = None,
                     # 这里将 auto_refresh 关掉是想要避免单独开启线程，同时也是为了避免pdb的时候会持续刷新
                     auto_refresh: bool = False,
                     refresh_per_second: float = 10,
@@ -81,7 +80,7 @@ class FRichProgress(Progress, metaclass=Singleton):
         self.expand = expand
 
         self.live = Live(
-            console=console or get_console(),
+            console=get_console(),
             auto_refresh=auto_refresh,
             refresh_per_second=refresh_per_second,
             transient=transient,
@@ -92,6 +91,12 @@ class FRichProgress(Progress, metaclass=Singleton):
         self.get_time = get_time or self.console.get_time
         self.print = self.console.print
         self.log = self.console.log
+        self.auto_refresh = auto_refresh
+        self.transient = transient
+        self.redirect_stdout = redirect_stdout
+        self.redirect_stderr = redirect_stderr
+        self.refresh_per_second = refresh_per_second
+        self._need_renew_live = False
 
         return self
 
@@ -125,7 +130,19 @@ class FRichProgress(Progress, metaclass=Singleton):
         from .tqdm_progress import f_tqdm_progress
         assert not f_tqdm_progress.not_empty(), "Cannot use rich before tqdm finish loop."
 
-        if self.live._started is False:
+        # 如果需要替换，应该是由于destroy的时候给换掉了
+        if self._need_renew_live:
+            self.live = Live(
+                console=get_console(),
+                auto_refresh=self.auto_refresh,
+                refresh_per_second=self.refresh_per_second,
+                transient=self.transient,
+                redirect_stdout=self.redirect_stdout,
+                redirect_stderr=self.redirect_stderr,
+                get_renderable=self.get_renderable,
+            )
+            self._need_renew_live = False
+        if not self.live.is_started:
             self.start()
         post_desc = fields.pop('post_desc', '')
         return super().add_task(description=description,
@@ -155,6 +172,8 @@ class FRichProgress(Progress, metaclass=Singleton):
             setattr(self.live.console, 'line', lambda *args,**kwargs:...)
             self.live.stop()
             setattr(self.live.console, 'line', old_line)
+            # 在 jupyter 的情况下需要替换一下，不然会出不打印的问题。
+            self._need_renew_live = True if is_notebook() else False
 
     def start(self) -> None:
         super().start()

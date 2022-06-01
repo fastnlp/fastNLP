@@ -49,8 +49,7 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
               f"information please set logger's level to DEBUG."
         if must_pad:
             raise InconsistencyError(msg)
-        logger.debug(msg)
-        return NullPadder()
+        raise NoProperPadderError(msg)
 
     # 再检查所有的元素 shape 是否一致？
     shape_lens = set([len(v[0]) for v in catalog.values()])
@@ -60,8 +59,7 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
               f"information please set logger's level to DEBUG."
         if must_pad:
             raise InconsistencyError(msg)
-        logger.debug(msg)
-        return NullPadder()
+        raise NoProperPadderError(msg)
 
     # 再检查所有的元素 type 是否一致
     try:
@@ -74,8 +72,7 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
               f"information please set logger's level to DEBUG."
         if must_pad:
             raise InconsistencyError(msg)
-        logger.debug(msg)
-        return NullPadder()
+        raise NoProperPadderError(msg)
 
     depth = depths.pop()
     shape_len = shape_lens.pop()
@@ -131,8 +128,7 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
             msg = "Does not support pad tensor under nested list. If you need this, please report."
             if must_pad:
                 raise RuntimeError(msg)
-            logger.debug(msg)
-            return NullPadder()
+            raise NoProperPadderError(msg)
 
     except DtypeError as e:
         msg = f"Fail to get padder for field:{field_name}. " + e.msg + " To view more " \
@@ -140,8 +136,9 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
         if must_pad:
             logger.error(msg)
             raise type(e)(msg=msg)
-        logger.debug(msg)
-        return NullPadder()
+
+    except NoProperPadderError as e:
+        logger.debug(f"{e.msg}")
 
     except BaseException as e:
         raise e

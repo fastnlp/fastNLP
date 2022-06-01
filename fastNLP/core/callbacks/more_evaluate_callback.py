@@ -81,7 +81,8 @@ class MoreEvaluateCallback(HasMonitorCallback):
                  **kwargs):
         super(MoreEvaluateCallback, self).__init__(watch_monitor, watch_monitor_larger_better,
                                                must_have_monitor=False)
-
+        if watch_monitor is not None and evaluate_every == -1:  # 将evaluate_every 弄掉。
+            evaluate_every = None
         if watch_monitor is None and evaluate_every is None:
             raise RuntimeError("`evaluate_every` and `watch_monitor` cannot be None at the same time.")
         if watch_monitor is not None and evaluate_every is not None:

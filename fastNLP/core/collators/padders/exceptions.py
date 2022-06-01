@@ -3,7 +3,8 @@ __all__ = [
     'EleDtypeUnsupportedError',
     'EleDtypeDtypeConversionError',
     'DtypeUnsupportedError',
-    "DtypeError"
+    "DtypeError",
+    "NoProperPadderError"
 ]
 
 
@@ -19,6 +20,12 @@ class InconsistencyError(BaseException):
 class DtypeError(BaseException):
     def __init__(self, msg, *args):
         super(DtypeError, self).__init__(msg, *args)
+        self.msg = msg
+
+
+class NoProperPadderError(BaseException):
+    def __init__(self, msg, *args):
+        super(NoProperPadderError, self).__init__(msg, *args)
         self.msg = msg
 
 

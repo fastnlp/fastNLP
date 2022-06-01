@@ -318,6 +318,13 @@ class TestCollator:
         with pytest.raises(KeyError):
             collator.set_pad((1, 2))
 
+    @pytest.mark.torch
+    def test_torch_4d(self):
+        collator = Collator(backend='torch')
+        data = [{'x': [[[0,1], [2,3]]]}, {'x': [[[0,1]]]}]
+        output = collator(data)
+        assert output['x'].size() == (2, 1, 2, 2)
+
 
 @pytest.mark.torch
 def test_torch_dl():
