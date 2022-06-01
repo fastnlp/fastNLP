@@ -99,6 +99,9 @@ class PaddleDriver(Driver):
         if dataloader.batch_size is None and dataloader.batch_sampler is None:
             raise ValueError("Please ensure at least one of your dataloader's batch_size and batch_sampler"
                             "is not None")
+        if len(dataloader) == 0:
+            logger.rank_zero_warning("Your dataloader is empty, which is not recommended because it "
+                                        "may cause some unexpected exceptions.", once=True)
 
     @staticmethod
     def _check_optimizer_legality(optimizers):

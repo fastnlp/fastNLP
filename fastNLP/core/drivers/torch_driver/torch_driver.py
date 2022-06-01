@@ -94,6 +94,9 @@ class TorchDriver(Driver):
     def check_dataloader_legality(self, dataloader):
         if not isinstance(dataloader, DataLoader):
             raise TypeError(f"{DataLoader} is expected, instead of `{type(dataloader)}`")
+        if len(dataloader) == 0:
+            logger.rank_zero_warning("Your dataloader is empty, which is not recommended because it "
+                                        "may cause some unexpected exceptions.", once=True)
 
     @staticmethod
     def _check_optimizer_legality(optimizers):

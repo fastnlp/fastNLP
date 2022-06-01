@@ -71,6 +71,9 @@ class JittorDriver(Driver):
     def check_dataloader_legality(self, dataloader):
         if not isinstance(dataloader, (Dataset, JittorDataLoader)):
             raise TypeError(f"{Dataset} or {JittorDataLoader} is expected, instead of `{type(dataloader)}`")
+        if len(dataloader) == 0:
+            logger.rank_zero_warning("Your dataloader is empty, which is not recommended because it "
+                                        "may cause some unexpected exceptions.", once=True)
 
     @staticmethod
     def _check_optimizer_legality(optimizers):
