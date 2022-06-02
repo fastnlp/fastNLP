@@ -460,14 +460,15 @@ class _MetricsWrapper:
         for metric in self._metrics:
             args = []
             if not isinstance(batch, dict):
-                logger.warning_once(
+                logger.rank_zero_warning(
                     f"The output of the DataLoader is of type:`{type(batch)}`, fastNLP will only depend on "
-                    f"the output of model to update metric.")
+                    f"the output of model to update metric.", once=True)
             else:
                 args.append(batch)
             if not isinstance(outputs, dict):
                 raise RuntimeError(f"The output of your model is of type:`{type(outputs)}`, please either directly"
-                                   f" return a dict from your model or use `output_mapping` to convert it into dict type.")
+                                   f" return a dict from your model or use `output_mapping` to convert it into dict "
+                                   f"type.")
             if isinstance(metric, Metric):
                 # 这样在 auto_param_call 报错的时候才清晰。
                 auto_param_call(metric.update, outputs, *args, signature_fn=metric.update.__wrapped__)

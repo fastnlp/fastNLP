@@ -169,7 +169,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
     :param kwargs: fastNLP 保留使用
     """
     def __init__(self, dataset, batch_size:int = 32, shuffle: bool = True,
-                 drop_last: bool = False, seed: int = 0, **kwargs):
+                 drop_last: bool = False, seed: int = None, **kwargs):
         super().__init__()
 
         self.dataset = dataset

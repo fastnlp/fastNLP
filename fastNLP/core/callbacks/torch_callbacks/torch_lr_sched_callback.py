@@ -41,7 +41,7 @@ class TorchWarmupCallback(Callback):
         return max((progress - 1.) / (self.warmup - 1.), 0.)
 
     def on_train_begin(self, trainer):
-        self.t_steps = trainer.total_batches
+        self.t_steps = trainer.n_batches
         if self.warmup >1:
             self.warmup = self.warmup / self.t_steps
         self.t_steps = max(2, self.t_steps)  # 不能小于2

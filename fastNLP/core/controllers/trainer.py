@@ -110,7 +110,7 @@ class Trainer(TrainerEventTrigger):
 
             对于使用 ``TorchDDPDriver`` 的更多细节，请见 :class:`~fastNLP.core.drivers.torch_driver.TorchDDPDriver`。
 
-    :param n_epochs: 训练总共的 epoch 的数量，默认为 20；
+    :param n_epochs: 训练总共的 epoch 的数量，默认为 20；也可以通过 ``n_batches`` 参数设置总共迭代多少个 ``batch`` 。
     :param evaluate_dataloaders: 验证数据集，其可以是单独的一个数据集，也可以是多个数据集；当为多个数据集时，注意其必须是 Dict；默认
         为 None；
     :param batch_step_fn: 定制每次训练时前向运行一个 batch 的数据所执行的函数。该函数应接受两个参数为 ``trainer`` 和 ``batch``，
@@ -237,6 +237,8 @@ class Trainer(TrainerEventTrigger):
 
         注意该参数仅当 ``Trainer`` 内置的 ``Evaluator`` 不为 None 时且有需要该参数但是没有设置该参数的 *callback* 实例才有效；
 
+    :param n_batches: 迭代多少个 ``batch`` 的训练结束。当该值不为 -1 时，将直接忽略 ``n_epochs`` 的值。
+
     :param marker: 用于标记一个 ``Trainer`` 实例，从而在用户调用 ``Trainer.on`` 函数时，标记该函数属于哪一个具体的 ``Trainer`` 实例；默认为 None；
 
         .. note::
@@ -356,6 +358,7 @@ class Trainer(TrainerEventTrigger):
             fp16: bool = False,
             monitor: Union[str, Callable] = None,
             larger_better: bool = True,
+            n_batches: int = -1,
             marker: Optional[str] = None,
             **kwargs
     ):
@@ -426,6 +429,7 @@ class Trainer(TrainerEventTrigger):
             model_wo_auto_param_call=model_wo_auto_param_call,
             accumulation_steps=accumulation_steps,
             fp16=fp16,
+            n_batches=n_batches,
             marker=marker,
             **kwargs
         )
@@ -444,12 +448,12 @@ class Trainer(TrainerEventTrigger):
         # 初始化 state，包括提供给用户的接口和我们自己使用的接口；
         self.state = State()
         self.trainer_state = TrainerState(
-            n_epochs=n_epochs,
+            n_epochs=n_epochs if n_batches!=-1 else None,
             cur_epoch_idx=0,
             global_forward_batches=0,
             batch_idx_in_epoch=0,
             num_batches_per_epoch=None,  # 会在具体的 train_batch_loop 中进行初始化；
-            total_batches=None
+            n_batches=n_batches
         )
 
         if metrics is None and evaluate_dataloaders is not None:
@@ -598,14 +602,18 @@ class Trainer(TrainerEventTrigger):
             self.dataloader = _TruncatedDataLoader(self.dataloader, num_train_batch_per_epoch)
 
         self.num_batches_per_epoch = len(self.dataloader)
-        self.total_batches = self.num_batches_per_epoch * self.n_epochs
+        if self.n_batches == -1:
+            self.n_batches = self.num_batches_per_epoch * self.n_epochs
+        else:
+            self.n_epochs = (self.n_batches+self.num_batches_per_epoch-1)//self.num_batches_per_epoch
+
         self.global_forward_batches = self.num_batches_per_epoch * self.cur_epoch_idx + self.batch_idx_in_epoch
 
         try:
             self.on_train_begin()
             self.driver.barrier()
             self.driver.zero_grad()
-            while self.cur_epoch_idx < self.n_epochs:
+            while self.cur_epoch_idx < self.n_epochs and self.global_forward_batches < self.n_batches:
                 # 这个是防止在 Trainer.load_checkpoint 之后还没结束当前 epoch 又继续 save
                 self.start_batch_idx_in_epoch = self.trainer_state.batch_idx_in_epoch
                 self.driver.set_model_mode("train")
@@ -1367,15 +1375,15 @@ class Trainer(TrainerEventTrigger):
         self.trainer_state.num_batches_per_epoch = num_batches_per_epoch
 
     @property
-    def total_batches(self) -> int:
+    def n_batches(self) -> int:
         r"""
         :return: 返回整体的训练中实际会训练多少个 batch 的数据；
         """
-        return self.trainer_state.total_batches
+        return self.trainer_state.n_batches
 
-    @total_batches.setter
-    def total_batches(self, total_batches: int):
-        self.trainer_state.total_batches = total_batches
+    @n_batches.setter
+    def n_batches(self, n_batches: int):
+        self.trainer_state.n_batches = n_batches
 
     """ driver property """
 

@@ -79,7 +79,7 @@ class RichCallback(ProgressCallback):
 
     def on_train_begin(self, trainer):
         self.task2id['epoch'] = self.progress_bar.add_task(description='Epoch:0', total=trainer.n_epochs,
-                                                    completed=trainer.global_forward_batches/(trainer.total_batches+1e-6))
+                                                    completed=trainer.global_forward_batches/(trainer.n_batches+1e-6))
 
     def on_train_epoch_begin(self, trainer):
         self.epoch_bar_update_advance = self.print_every/(trainer.num_batches_per_epoch + 1e-6)
@@ -190,7 +190,7 @@ class RawTextCallback(ProgressCallback):
             self.loss = 0
             text = f'Epoch:{trainer.cur_epoch_idx}/{trainer.n_epochs}, Batch:{trainer.batch_idx_in_epoch}, ' \
                    f'loss:{round(loss, self.loss_round_ndigit)}, ' \
-                   f'finished {round(trainer.global_forward_batches/trainer.total_batches*100, 2)}%.'
+                   f'finished {round(trainer.global_forward_batches/trainer.n_batches*100, 2)}%.'
             logger.info(text)
 
     def on_evaluate_end(self, trainer, results):
@@ -251,7 +251,7 @@ class TqdmCallback(ProgressCallback):
     def on_train_begin(self, trainer):
         self.task2id['epoch'] = self.progress_bar.add_task(description='Epoch:0', total=trainer.n_epochs,
             bar_format='{desc}: {percentage:3.0f}%|{bar}| [{elapsed}<{remaining}, {rate_fmt}, {postfix}]',
-            initial=trainer.global_forward_batches/(trainer.total_batches+1e-6))
+            initial=trainer.global_forward_batches/(trainer.n_batches+1e-6))
 
     def on_train_epoch_begin(self, trainer):
         self.epoch_bar_update_advance = self.print_every/(trainer.num_batches_per_epoch + 1e-6)

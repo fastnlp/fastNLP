@@ -55,4 +55,4 @@ class RecordAccumulationStepsCallback_Torch(Callback):
 
     def on_train_end(self, trainer):
         print(f"\n equal num: {self.equal}.\n")
-        print(f"\ntotal_batch_num: {trainer.total_batches}.\n")
+        print(f"\ntotal_batch_num: {trainer.n_batches}.\n")
