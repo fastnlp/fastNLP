@@ -448,7 +448,7 @@ class Trainer(TrainerEventTrigger):
         # 初始化 state，包括提供给用户的接口和我们自己使用的接口；
         self.state = State()
         self.trainer_state = TrainerState(
-            n_epochs=n_epochs if n_batches!=-1 else None,
+            n_epochs=n_epochs if n_batches==-1 else None,
             cur_epoch_idx=0,
             global_forward_batches=0,
             batch_idx_in_epoch=0,
