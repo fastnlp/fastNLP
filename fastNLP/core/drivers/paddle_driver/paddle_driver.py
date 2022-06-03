@@ -13,7 +13,6 @@ from fastNLP.core.drivers.driver import Driver
 from fastNLP.core.utils import apply_to_collection, paddle_move_data_to_device
 from fastNLP.core.utils.paddle_utils import _convert_data_device
 from fastNLP.envs import (
-    FASTNLP_SEED_WORKERS,
     FASTNLP_MODEL_FILENAME,
     FASTNLP_CHECKPOINT_FILENAME,
     FASTNLP_GLOBAL_RANK,
@@ -396,7 +395,7 @@ class PaddleDriver(Driver):
         random.seed(stdlib_seed)
 
     def set_deterministic_dataloader(self, dataloader):
-        if int(os.environ.get(FASTNLP_SEED_WORKERS, 0)) and dataloader.worker_init_fn is None:
+        if dataloader.worker_init_fn is None:
             dataloader.worker_init_fn = partial(self.worker_init_function, rank=self.global_rank)
 
     def set_sampler_epoch(self, dataloader: "DataLoader", cur_epoch_idx):

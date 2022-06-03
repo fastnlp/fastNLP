@@ -7,6 +7,7 @@ __all__ = [
 
 from typing import List, Union
 from fastNLP.core.dataset import DataSet
+from fastNLP.envs.utils import get_global_seed
 
 import numpy as np
 
@@ -27,10 +28,10 @@ class UnrepeatedRandomSampler(UnrepeatedSampler):
     :param seed: 设置的随机数种子
     :param kwargs: fastNLP 保留使用
     """
-    def __init__(self, dataset, shuffle: bool = False, seed: int = 0, **kwargs):
+    def __init__(self, dataset, shuffle: bool = False, seed: int = None, **kwargs):
         self.dataset = dataset
         self.shuffle = shuffle
-        self.seed = seed
+        self.seed = get_global_seed() if seed is None else seed
 
         # 多卡的相关的参数
         self.num_replicas = kwargs.get('num_replicas', 1)

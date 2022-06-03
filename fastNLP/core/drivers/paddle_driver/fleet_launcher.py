@@ -15,7 +15,6 @@ from fastNLP.envs.env import (
 from fastNLP.core.utils import get_paddle_device_id
 from .utils import (
     find_free_ports,
-    reset_seed,
 )
 
 __all__ = []
@@ -62,7 +61,6 @@ class FleetLauncher:
         # 设置环境变量
         self.global_envs = self.get_global_env()
         self.open_subprocess()
-        reset_seed()
 
     def open_subprocess(self):
         """

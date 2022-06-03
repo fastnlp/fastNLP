@@ -1,3 +1,6 @@
+import os
+import math
+import time
 from importlib.util import find_spec
 from typing import Callable
 import importlib
@@ -80,3 +83,12 @@ def get_gpu_count() -> int:
         return len(lines.split(b"\n")) - 2
     except:
         return -1
+
+def get_global_seed():
+    seed = os.getenv("FASTNLP_GLOBAL_SEED", None)
+    if seed is not None:
+        return int(seed)
+    seed = int(math.modf(time.time())[0] * 1000000)
+    os.environ["FASTNLP_GLOBAL_SEED"] = f"{seed}"
+
+    return seed

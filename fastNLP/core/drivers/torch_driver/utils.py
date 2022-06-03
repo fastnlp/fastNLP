@@ -8,7 +8,15 @@ import numpy as np
 import inspect
 
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from fastNLP.envs.utils import get_global_seed
+from fastNLP.envs import (
+    get_global_rank,
+    FASTNLP_BACKEND_LAUNCH,
+    FASTNLP_GLOBAL_SEED,
+)
 from fastNLP.core.samplers import re_instantiate_sampler
+from fastNLP.core.utils import auto_param_call
+from fastNLP.core.log import logger
 
 if _NEED_IMPORT_TORCH:
     import torch
@@ -25,62 +33,39 @@ __all__ = [
     'optimizer_state_to_device'
 ]
 
-from fastNLP.core.utils import auto_param_call
-from fastNLP.envs import FASTNLP_GLOBAL_SEED, FASTNLP_SEED_WORKERS
-from fastNLP.core.log import logger
-
-
-def _select_seed_randomly(min_seed_value: int = 0, max_seed_value: int = 255) -> int:
-    return random.randint(min_seed_value, max_seed_value)
-
-
-def torch_seed_everything(seed: Optional[int] = None, workers: bool = False) -> int:
+def torch_seed_everything(seed: int = None, add_global_rank_to_seed: bool = True) -> int:
     r"""
-    为伪随机数生成器设置种子的函数：pytorch、numpy、python.random 另外，
-    设置以下环境变量：
+    为 **torch**、**numpy**、**python.random** 伪随机数生成器设置种子。
 
-    :param seed: 全局随机状态的整数值种子。如果为“无”，将从 "FASTNLP_GLOBAL_SEED" 环境变量中读取种子或随机选择。
-    :param workers: 如果设置为“True”，将正确配置所有传递给带有“worker_init_fn”的培训师。如果用户已经提供了这样的功能对于他们的数据加载器，
-     设置此参数将没有影响;
+    :param seed: 全局随机状态的整数值种子。如果为 ``None`` 则会根据时间戳生成一个种子。
+    :param add_global_rank_to_seed: 在分布式训练中，是否在不同 **rank** 中使用不同的随机数。
+        当设置为 ``True`` 时，**FastNLP** 会将种子加上当前的 ``global_rank``。
     """
     max_seed_value = np.iinfo(np.uint32).max
     min_seed_value = np.iinfo(np.uint32).min
 
     if seed is None:
-        env_seed = os.environ.get(FASTNLP_GLOBAL_SEED)
-        if env_seed is None:
-            seed = _select_seed_randomly(min_seed_value, max_seed_value)
+        if os.getenv(FASTNLP_BACKEND_LAUNCH) == "1":
+            seed = 42
         else:
-            try:
-                seed = int(env_seed)
-            except ValueError:
-                seed = _select_seed_randomly(min_seed_value, max_seed_value)
-                # rank_zero_warn(f"Invalid seed found: {repr(env_seed)}, seed set to {seed}")
-    elif not isinstance(seed, int):
+            seed = get_global_seed()
+        logger.info(f"'FASTNLP_GLOBAL_SEED' is set to {seed} automatically.")
+    if not isinstance(seed, int):
         seed = int(seed)
 
     if not (min_seed_value <= seed <= max_seed_value):
-        logger.rank_zero_warning("Your seed value is two big or two small for numpy, we will choose a random seed for you.")
+        logger.rank_zero_warning("Your seed value is too big or too small for numpy, we will choose a random seed for you.")
+        seed %= max_seed_value
 
-        seed = _select_seed_randomly(min_seed_value, max_seed_value)
+    os.environ[FASTNLP_GLOBAL_SEED] = f"{seed}"
+    if add_global_rank_to_seed:
+        seed += get_global_rank()
 
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    os.environ[FASTNLP_SEED_WORKERS] = f"{int(workers)}"
     return seed
-
-
-def reset_seed() -> None:
-    r"""
-    这个函数主要是给 ddp 用的，因为 ddp 会开启多个进程，因此当用户在脚本中指定 seed_everything 时，在开启多个脚本后，会在每个脚本内重新
-    进行随机数的设置；
-    """
-    seed = os.environ.get(FASTNLP_GLOBAL_SEED, None)
-    workers = os.environ.get(FASTNLP_SEED_WORKERS, "0")
-    if seed is not None:
-        torch_seed_everything(int(seed), workers=bool(int(workers)))
 
 
 class ForwardState(IntEnum):

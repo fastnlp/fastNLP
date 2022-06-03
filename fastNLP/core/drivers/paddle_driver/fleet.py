@@ -71,7 +71,6 @@ from .paddle_driver import PaddleDriver
 from .fleet_launcher import FleetLauncher
 from .utils import (
     _FleetWrappingModel, 
-    reset_seed,
     replace_sampler,
     replace_batch_sampler,
 )
@@ -238,7 +237,6 @@ class PaddleFleetDriver(PaddleDriver):
                 # dist.get_world_size() 只能在初始化之后进行调用；
                 self.world_size = int(os.environ.get("PADDLE_TRAINERS_NUM"))
                 self.global_rank = int(os.environ.get("PADDLE_TRAINER_ID"))
-                reset_seed()
                 logger.info(f"World size: {self.world_size}, Global rank: {self.global_rank}")
                 if not parallel_helper._is_parallel_ctx_initialized():
                     fleet.init(self.role_maker, self.is_collective, self.strategy)

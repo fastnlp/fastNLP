@@ -18,7 +18,7 @@ if _NEED_IMPORT_FAIRSCALE:
     from fairscale.nn.wrap import auto_wrap, enable_wrap, default_auto_wrap_policy
 
 from ...log import logger
-from .utils import reset_seed, _DDPWrappingModel
+from .utils import _DDPWrappingModel
 
 from .ddp import TorchDDPDriver
 from .torch_driver import TorchDriver
@@ -114,7 +114,6 @@ class FairScaleDriver(TorchDDPDriver):
             # dist.get_world_size() 只能在 dist.init_process_group 初始化之后进行调用；
             self.world_size = int(os.environ.get("WORLD_SIZE"))
             self.global_rank = int(os.environ.get("RANK"))
-            reset_seed()
             logger.info(f"World size: {self.world_size}, Global rank: {self.global_rank}")
 
             if not dist.is_initialized():
@@ -129,7 +128,6 @@ class FairScaleDriver(TorchDDPDriver):
                 self.world_size = len(self.parallel_device)
                 self.open_subprocess()
                 self.global_rank = self.local_rank  # rank 一定是通过环境变量去获取的；
-                reset_seed()
                 dist.init_process_group(
                     backend="nccl", rank=self.global_rank, world_size=self.world_size
                 )

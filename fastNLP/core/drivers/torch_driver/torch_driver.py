@@ -4,6 +4,8 @@ from functools import partial
 import numpy as np
 import random
 from dataclasses import dataclass
+
+from py import process
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from pathlib import Path
 if _NEED_IMPORT_TORCH:
@@ -28,7 +30,7 @@ from fastNLP.core.drivers.driver import Driver
 from fastNLP.core.drivers.torch_driver.utils import _build_fp16_env, DummyGradScaler
 from fastNLP.core.utils import apply_to_collection, torch_move_data_to_device
 from fastNLP.envs import  rank_zero_call
-from fastNLP.envs import FASTNLP_SEED_WORKERS, FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
+from fastNLP.envs import FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.log import logger
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, ReproduceBatchSampler, RandomSampler
 
@@ -370,7 +372,7 @@ class TorchDriver(Driver):
         random.seed(stdlib_seed)
 
     def set_deterministic_dataloader(self, dataloader: "DataLoader"):
-        if int(os.environ.get(FASTNLP_SEED_WORKERS, 0)) and dataloader.worker_init_fn is None:
+        if dataloader.worker_init_fn is None:
             dataloader.worker_init_fn = partial(self.worker_init_function,
                                                 rank=int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)))
 

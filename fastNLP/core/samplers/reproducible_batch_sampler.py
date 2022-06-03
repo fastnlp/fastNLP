@@ -4,14 +4,16 @@ __all__ = [
     "RandomBatchSampler"
 ]
 
+import os
 import math
 from copy import deepcopy
-from typing import Dict, Union, List, Sequence
+from typing import Dict, Union, List
 from itertools import chain
 
 import numpy as np
 
 from fastNLP.core.dataset import DataSet
+from fastNLP.envs.utils import get_global_seed
 from fastNLP.core.log import logger
 from .utils import create_array
 from abc import abstractmethod
@@ -169,7 +171,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
     :param kwargs: fastNLP 保留使用
     """
     def __init__(self, dataset, batch_size:int = 32, shuffle: bool = True,
-                 drop_last: bool = False, seed: int = 0, **kwargs):
+                 drop_last: bool = False, seed: int = None, **kwargs):
         super().__init__()
 
         self.dataset = dataset
@@ -177,7 +179,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.drop_last = drop_last
-        self.seed = seed
+        self.seed = get_global_seed() if seed is None else seed
 
         self.num_consumed_samples = kwargs.get("num_consumed_samples", 0)  # 总共迭代了多少数据了，包括多卡情况下的其它卡上的输出的数量
 
@@ -396,7 +398,7 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
     :param kwargs: fastNLP 保留使用
     """
     def __init__(self, dataset, length: Union[List[int], str], batch_size:int = 32, num_batch_per_bucket:int = 10,
-                 shuffle: bool = True, drop_last: bool = False, seed: int = 0, **kwargs):
+                 shuffle: bool = True, drop_last: bool = False, seed: int = None, **kwargs):
         super().__init__()
         if isinstance(dataset, DataSet) and isinstance(length, str):
             length = dataset.get_field(length).content
@@ -421,7 +423,7 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
         self.num_batch_per_bucket = num_batch_per_bucket
         self.shuffle = shuffle
         self.drop_last = drop_last
-        self.seed = seed
+        self.seed = get_global_seed() if seed is None else seed
 
         self.num_consumed_samples = kwargs.get("num_consumed_samples", 0)  # 总共迭代了多少数据了，包括多卡情况下的其它卡上的输出的数量
 

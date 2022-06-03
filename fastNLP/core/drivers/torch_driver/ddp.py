@@ -148,7 +148,6 @@ __all__ = [
 from .torch_driver import TorchDriver
 from fastNLP.core.drivers.torch_driver.utils import (
     _DDPWrappingModel,
-    reset_seed,
     replace_sampler,
     replace_batch_sampler
 )
@@ -339,7 +338,6 @@ class TorchDDPDriver(TorchDriver):
                 # dist.get_world_size() 只能在 dist.init_process_group 初始化之后进行调用；
                 self.world_size = int(os.environ.get("WORLD_SIZE"))
                 self.global_rank = int(os.environ.get("RANK"))
-                reset_seed()
                 logger.info(f"World size: {self.world_size}, Global rank: {self.global_rank}")
 
                 if not dist.is_initialized():
@@ -359,7 +357,6 @@ class TorchDDPDriver(TorchDriver):
                 self.world_size = len(self.parallel_device)
                 self.open_subprocess()
                 self.global_rank = self.local_rank  # rank 一定是通过环境变量去获取的；
-                reset_seed()
                 dist.init_process_group(
                     backend="nccl", rank=self.global_rank, world_size=self.world_size
                 )

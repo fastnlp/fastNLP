@@ -9,8 +9,13 @@ from contextlib import ExitStack, closing
 from typing import Dict, Optional
 
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+from fastNLP.envs.utils import get_global_seed
+from fastNLP.envs import (
+    get_global_rank,
+    FASTNLP_BACKEND_LAUNCH,
+    FASTNLP_GLOBAL_SEED,
+)
 from fastNLP.core.utils import auto_param_call, paddle_to
-from fastNLP.envs.env import FASTNLP_GLOBAL_SEED, FASTNLP_SEED_WORKERS
 from fastNLP.core.log import logger
 
 
@@ -28,63 +33,39 @@ __all__ = [
     "paddle_seed_everything",
 ]
 
-def _select_seed_randomly(min_seed_value: int = 0, max_seed_value: int = 255) -> int:
-    return random.randint(min_seed_value, max_seed_value)
-
-def paddle_seed_everything(seed: Optional[int], workers: bool = False) -> int:
+def paddle_seed_everything(seed: int = None, add_global_rank_to_seed: bool = True) -> int:
     r"""
     为 **paddle**、**numpy**、**python.random** 伪随机数生成器设置种子。
 
-    :param seed: 全局随机状态的整数值种子。如果为 ``None``，将从环境变量 ``FASTNLP_GLOBAL_SEED`` 中读取种子或随机选择;
-    :param workers: 如果为 ``True`` ，则会设置环境变量 ``FASTNLP_SEED_WORKERS`` 。该环境变量会在 :class:`~fastNLP.core.Trainer`
-        中配置 ``dataloader`` 时用于设置 ``worker_init_fn`` 。如果用户已经为 ``dataloader`` 提供了 ``worker_init_fn`` ，则设置
-        此参数将没有影响;
+    :param seed: 全局随机状态的整数值种子。如果为 ``None`` 则会根据时间戳生成一个种子。
+    :param add_global_rank_to_seed: 在分布式训练中，是否在不同 **rank** 中使用不同的随机数。
+        当设置为 ``True`` 时，**FastNLP** 会将种子加上当前的 ``global_rank``。
     """
-
     max_seed_value = np.iinfo(np.uint32).max
     min_seed_value = np.iinfo(np.uint32).min
 
     if seed is None:
-        env_seed = os.environ.get("GLOBAL_SEED")
-        if env_seed is None:
-            seed = _select_seed_randomly(min_seed_value, max_seed_value)
-            # rank_zero_warn(f"No seed found, seed set to {seed}")
+        if os.getenv(FASTNLP_BACKEND_LAUNCH) == "1":
+            seed = 42
         else:
-            try:
-                seed = int(env_seed)
-            except ValueError:
-                seed = _select_seed_randomly(min_seed_value, max_seed_value)
-                # rank_zero_warn(f"Invalid seed found: {repr(env_seed)}, seed set to {seed}")
-    elif not isinstance(seed, int):
+            seed = get_global_seed()
+        logger.info(f"'FASTNLP_GLOBAL_SEED' is set to {seed} automatically.")
+    if not isinstance(seed, int):
         seed = int(seed)
 
     if not (min_seed_value <= seed <= max_seed_value):
-        logger.rank_zero_warning("Your seed value is two big or two small for numpy, we will choose a random seed for "
-                        "you.")
+        logger.rank_zero_warning("Your seed value is too big or too small for numpy, we will choose a random seed for you.")
+        seed %= max_seed_value
 
-        # rank_zero_warn(f"{seed} is not in bounds, numpy accepts from {min_seed_value} to {max_seed_value}")
-        seed = _select_seed_randomly(min_seed_value, max_seed_value)
+    os.environ[FASTNLP_GLOBAL_SEED] = f"{seed}"
+    if add_global_rank_to_seed:
+        seed += get_global_rank()
 
-    # using `log.info` instead of `rank_zero_info`,
-    # so users can verify the seed is properly set in distributed training.
-    # log.info(f"Global seed set to {seed}")
-    os.environ[FASTNLP_GLOBAL_SEED] = str(seed)
     random.seed(seed)
     np.random.seed(seed)
     # paddle的seed函数会自行判断是否在gpu环境，如果在的话会设置gpu的种子
     paddle.seed(seed)
-    os.environ[FASTNLP_SEED_WORKERS] = f"{int(workers)}"
     return seed
-
-def reset_seed() -> None:
-    """
-    ``fleet`` 会开启多个进程，因此当用户在脚本中指定 ``seed_everything`` 时，在开启多个脚本后，会在每个脚本内重新
-    进行随机数的设置；
-    """
-    seed = os.environ.get(FASTNLP_GLOBAL_SEED, None)
-    workers = os.environ.get(FASTNLP_SEED_WORKERS, "0")
-    if seed is not None:
-        paddle_seed_everything(int(seed), workers=bool(int(workers)))
 
 class _FleetWrappingModel(Layer):
     """
