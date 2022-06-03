@@ -50,7 +50,7 @@ class TrainerState:
     :param global_forward_batches: 当前模型总共 forward 了多少个 step；
     :param batch_idx_in_epoch: 训练中在当前 epoch 的第几个 step；
     :param num_batches_per_epoch: 每一个 epoch 会 forward 多少个 step；
-    :param total_batches: 完整训练过程会 forward 的 step 数量，注意 total_batches = total_batches * n_epochs；
+    :param n_batches: 完整训练过程会 forward 的 step 数量，注意 n_batches = n_batches * n_epochs；
     """
     n_epochs: Optional[int] = None  # 无论如何重新算
 
@@ -61,7 +61,7 @@ class TrainerState:
 
     num_batches_per_epoch: Optional[int] = None  # 无论如何重新算
 
-    total_batches: Optional[int] = None  # 无论如何重新算
+    n_batches: Optional[int] = None  # 无论如何重新算
 
     def state_dict(self) -> Dict:
         r"""

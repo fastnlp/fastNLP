@@ -32,4 +32,4 @@ def test_torch_warmup_callback(warmup, schedule, accumulation_steps):
     elif schedule == 'constant':
         assert np.allclose(0.1, kwargs['optimizers'].param_groups[0]['lr'])
 
-    assert len(r_callback.lrs)<=trainer.total_batches//accumulation_steps+1
+    assert len(r_callback.lrs)<=trainer.n_batches//accumulation_steps+1

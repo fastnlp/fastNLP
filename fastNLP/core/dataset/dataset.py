@@ -156,7 +156,6 @@ import _pickle as pickle
 from copy import deepcopy
 from typing import Optional, List, Callable, Union, Dict, Any, Mapping
 from types import LambdaType
-from subprocess import DEVNULL
 import sys
 import time
 
@@ -170,6 +169,7 @@ from fastNLP.core.utils.rich_progress import f_rich_progress, DummyFRichProgress
 from fastNLP.core.utils.tqdm_progress import f_tqdm_progress
 from ..log import logger
 from fastNLP.core.utils.dummy_class import DummyClass
+from ..utils.utils import _get_fun_msg
 
 
 progress_bars = {
@@ -780,8 +780,8 @@ class DataSet:
         apply_out = self._apply_process(num_proc, func, progress_desc=progress_desc,
                                         progress_bar=progress_bar)
         #   只检测第一个数据是否为dict类型，若是则默认所有返回值为dict；否则报错。
-        if not isinstance(apply_out[0], dict):
-            raise Exception("The result of func is not a dict")
+        if not isinstance(apply_out[0], Mapping):
+            raise Exception(f"The result of func:{_get_fun_msg(func)} is not a dict, but of type {type(apply_out[0])}")
 
         for key, value in apply_out[0].items():
             results[key] = [value]
@@ -789,7 +789,8 @@ class DataSet:
         try:
             for idx, per_out in enumerate(apply_out[1:]):
                 if len(set(results.keys()) - set(per_out.keys())):
-                    raise ApplyResultException("apply results have different fields", idx + 1)
+                    raise ApplyResultException(f"Apply results have different fields:{set(results.keys())} and "
+                                               f"{set(per_out.keys())}", idx + 1)
                 for key, value in per_out.items():
                     results[key].append(value)
 

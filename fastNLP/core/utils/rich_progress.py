@@ -120,7 +120,7 @@ class FRichProgress(Progress, metaclass=Singleton):
 
     def add_task(
             self,
-            description: str,
+            description: str = 'Progress',
             start: bool = True,
             total: float = 100.0,
             completed: int = 0,

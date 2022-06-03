@@ -7,7 +7,7 @@ __all__ = []
 import json
 import csv
 
-# from ..core import log
+from ..core import logger
 
 
 def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
@@ -81,7 +81,7 @@ def _read_json(path, encoding='utf-8', fields=None, dropna=True):
             yield line_idx, _res
 
 
-def _read_conll(path, encoding='utf-8',sep=None, indexes=None, dropna=True):
+def _read_conll(path, encoding='utf-8',sep=None, indexes=None, dropna=True, drophash=True):
     r"""
     Construct a generator to read conll items.
 
@@ -91,6 +91,7 @@ def _read_conll(path, encoding='utf-8',sep=None, indexes=None, dropna=True):
     :param indexes: conll object's column indexes that needed, if None, all columns are needed. default: None
     :param dropna: weather to ignore and drop invalid data,
             :if False, raise ValueError when reading invalid data. default: True
+    :param drophash: 是否丢掉以 # 开头的 line 。
     :return: generator, every time yield (line number, conll item)
     """
 
@@ -121,7 +122,7 @@ def _read_conll(path, encoding='utf-8',sep=None, indexes=None, dropna=True):
                             sample = []
                             continue
                         raise ValueError('Invalid instance which ends at line: {}'.format(line_idx))
-            elif line.startswith('#'):
+            elif line.startswith('#') and drophash:
                 continue
             else:
                 sample.append(line.split(sep)) if sep else sample.append(line.split())

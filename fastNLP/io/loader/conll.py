@@ -52,13 +52,14 @@ class ConllLoader(Loader):
 
     """
     
-    def __init__(self, headers, sep=None, indexes=None, dropna=True):
+    def __init__(self, headers, sep=None, indexes=None, dropna=True, drophash=True):
         r"""
         
         :param list headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
         :param list sep: 指定分隔符，默认为制表符
         :param list indexes: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
         :param bool dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
+        :param bool drophashtag: 是否忽略以 ``#`` 开头的句子。
         """
         super(ConllLoader, self).__init__()
         if not isinstance(headers, (list, tuple)):
@@ -66,6 +67,7 @@ class ConllLoader(Loader):
                 'invalid headers: {}, should be list of strings'.format(headers))
         self.headers = headers
         self.dropna = dropna
+        self.drophash = drophash
         self.sep=sep
         if indexes is None:
             self.indexes = list(range(len(self.headers)))
@@ -82,7 +84,8 @@ class ConllLoader(Loader):
         :return: DataSet
         """
         ds = DataSet()
-        for idx, data in _read_conll(path,sep=self.sep, indexes=self.indexes, dropna=self.dropna):
+        for idx, data in _read_conll(path,sep=self.sep, indexes=self.indexes, dropna=self.dropna,
+                                     drophash=self.drophash):
             ins = {h: data[i] for i, h in enumerate(self.headers)}
             ds.append(Instance(**ins))
         return ds
