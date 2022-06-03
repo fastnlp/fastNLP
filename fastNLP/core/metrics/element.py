@@ -136,15 +136,13 @@ class Element:
         if self.value is None:
             prefix = f'Element:`{self.name}`'
             raise RuntimeError(prefix + " is not initialized. Please either specify backend when creating this "
-                                        "element, or use it after it being used by the `Metric.compute()` method.")
+                                        "element, or use it after it being used by the `Metric.update()` method.")
 
     def __add__(self, other):
         self._check_value_when_call()
         if isinstance(other, Element):
-            self.value += other.value
-        else:
-            self.value += other
-        return self
+            other = other.value
+        return self.value + other
 
     def __radd__(self, other):
         self._check_value_when_call()
@@ -314,7 +312,7 @@ class Element:
             if self._value is None:
                 prefix = f'Element:`{self.name}`'
                 raise RuntimeError(prefix + " is not initialized. Please either specify backend when creating this "
-                                            "element, or use it after it being used by the `Metric.compute()` method.")
+                                            "element, or use it after it being used by the `Metric.update()` method.")
             return getattr(self._value, item)
         except AttributeError as e:
             logger.error(f"Element:{self.name} has no `{item}` attribute.")

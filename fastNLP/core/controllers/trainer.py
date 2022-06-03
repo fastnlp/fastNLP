@@ -919,16 +919,19 @@ class Trainer(TrainerEventTrigger):
                     _not_called_callback_fns.append(each_callback_fn)
 
         if check_mode:
-            logger.rank_zero_warning("You have customized your 'batch_step_fn' in the 'train_batch_loop' and also use these "
+            if len(_not_called_callback_fns) != 0:
+                logger.rank_zero_warning("You have customized your 'batch_step_fn' in the 'train_batch_loop' and also use these "
                            f"callback_fns: {_not_called_callback_fns}, but it seems that"
-                           "you don't call the corresponding callback hook explicitly in your 'batch_step_fn'.")
+                           "you don't call the corresponding callback hook explicitly in your 'batch_step_fn'.",
+                                         once=True)
             # 对于 'batch_step_fn' 来讲，其只需要在第一次的 step 后进行检测即可，因此在第一次检测后将 check_batch_step_fn 置为 pass
             #  函数；
             self.check_batch_step_fn = lambda *args, **kwargs: ...
-        else:
-            logger.warning("You have customized your 'TrainBatchLoop' and also use these callback_fns: "
+        elif len(_not_called_callback_fns)!=0:
+            logger.rank_zero_warning("You have customized your 'TrainBatchLoop' and also use these callback_fns: "
                            f"{_not_called_callback_fns}, but it seems that"
-                           "you don't call the corresponding callback hook explicitly in your 'batch_step_fn'.")
+                           "you don't call the corresponding callback hook explicitly in your 'batch_step_fn'.",
+                                     once=True)
 
     def _check_train_batch_loop_legality(self):
         r"""

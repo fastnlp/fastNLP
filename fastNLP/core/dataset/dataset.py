@@ -405,7 +405,7 @@ class DataSet:
         if isinstance(item, str) and item in self.field_arrays:
             return self.field_arrays[item]
         else:
-            raise AttributeError
+            raise AttributeError(f"Dataset has no attribute named:{item}.")
 
     def __setstate__(self, state):
         self.__dict__ = state
