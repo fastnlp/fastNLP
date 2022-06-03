@@ -4,8 +4,6 @@ from functools import partial
 import numpy as np
 import random
 from dataclasses import dataclass
-
-from py import process
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from pathlib import Path
 if _NEED_IMPORT_TORCH:

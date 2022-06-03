@@ -178,8 +178,8 @@ class Callback:
 
     def on_load_checkpoint(self, trainer, states: Optional[Dict]):
         r"""
-        当 Trainer 要恢复 checkpoint 的时候触发（即调用 Trainer.load_checkpoint() 函数时 Trainer 与 Driver 已经加载好自身的状态），
-        参数 states 为 on_save_checkpoint() 的返回值。
+        当 Trainer 要恢复 checkpoint 的时候触发（即调用 Trainer.load_checkpoint() 函数时, 此刻 Trainer 与 Driver 已经加载好自身
+        的状态）， 参数 states 为 Callback 在调用 on_save_checkpoint() 的返回值。
 
         :param trainer: ``Trainer`` 实例；
         :param states:
