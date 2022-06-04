@@ -84,8 +84,6 @@ __all__ = [
     "BQCorpusLoader",
     "LCQMCLoader",
 
-    "CoReferenceLoader",
-
     "CMRC2018Loader"
 ]
 
@@ -95,7 +93,6 @@ from .classification import CLSBaseLoader, YelpFullLoader, YelpPolarityLoader, A
     MRLoader, R8Loader, R52Loader, OhsumedLoader, NG20Loader
 from .conll import ConllLoader, Conll2003Loader, Conll2003NERLoader, OntoNotesNERLoader, CTBLoader
 from .conll import MsraNERLoader, PeopleDailyNERLoader, WeiboNERLoader
-from .coreference import CoReferenceLoader
 from .csv import CSVLoader
 from .cws import CWSLoader
 from .json import JsonLoader
@@ -103,5 +100,3 @@ from .loader import Loader
 from .matching import MNLILoader, QuoraLoader, SNLILoader, QNLILoader, RTELoader, CNXNLILoader, BQCorpusLoader, \
     LCQMCLoader
 from .qa import CMRC2018Loader
-
-

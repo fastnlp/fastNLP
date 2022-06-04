@@ -37,7 +37,7 @@ from fastNLP.core.log import logger
 
 class CLSBasePipe(Pipe):
     
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', lang='en'):
+    def __init__(self, lower: bool = False, tokenizer: str = 'raw', lang='en'):
         super().__init__()
         self.lower = lower
         self.tokenizer = get_tokenizer(tokenizer, lang=lang)
@@ -80,8 +80,6 @@ class CLSBasePipe(Pipe):
 
         for name, dataset in data_bundle.datasets.items():
             dataset.add_seq_len('words')
-
-        data_bundle.set_input('words', 'seq_len', 'target')
 
         return data_bundle
 
@@ -409,11 +407,11 @@ class SST2Pipe(CLSBasePipe):
 
     """
 
-    def __init__(self, lower=False, tokenizer='spacy'):
+    def __init__(self, lower=False, tokenizer='raw'):
         r"""
 
         :param bool lower: 是否对输入进行小写化。
-        :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
+        :param str tokenizer: 使用哪种tokenize方式将数据切成单词。
         """
         super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
 
@@ -594,8 +592,6 @@ class ChnSentiCorpPipe(Pipe):
         for name, dataset in data_bundle.datasets.items():
             dataset.add_seq_len('chars')
 
-        data_bundle.set_input(*input_fields, *target_fields)
-
         return data_bundle
 
     def process_from_file(self, paths=None):
@@ -707,8 +703,6 @@ class THUCNewsPipe(CLSBasePipe):
         input_fields = ['target', 'seq_len'] + input_field_names
         target_fields = ['target']
 
-        data_bundle.set_input(*input_fields, *target_fields)
-
         return data_bundle
 
     def process_from_file(self, paths=None):
@@ -809,8 +803,6 @@ class WeiboSenti100kPipe(CLSBasePipe):
 
         input_fields = ['target', 'seq_len'] + input_field_names
         target_fields = ['target']
-        
-        data_bundle.set_input(*input_fields, *target_fields)
 
         return data_bundle
     

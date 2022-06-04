@@ -135,8 +135,6 @@ class CMRC2018BertPipe(Pipe):
         src_vocab.index_dataset(*data_bundle.datasets.values(), field_name='raw_chars', new_field_name='chars')
         data_bundle.set_vocab(src_vocab, 'chars')
 
-        data_bundle.set_input('chars', 'raw_chars', 'answers', 'target_start', 'target_end', 'context_len')
-
         return data_bundle
 
     def process_from_file(self, paths=None) -> DataBundle:

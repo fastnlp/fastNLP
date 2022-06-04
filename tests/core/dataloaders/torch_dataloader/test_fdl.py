@@ -4,10 +4,10 @@ from fastNLP.core.dataloaders.torch_dataloader import TorchDataLoader, prepare_t
 from fastNLP.core.dataset import DataSet
 from fastNLP.io.data_bundle import DataBundle
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
-from fastNLP.core import Trainer
 from pkg_resources import parse_version
 from tests.helpers.utils import Capturing, recover_logger
 from fastNLP import logger
+import numpy as np
 
 if _NEED_IMPORT_TORCH:
     import torch
@@ -141,6 +141,13 @@ class TestFdl:
         dl_dict1 = prepare_torch_dataloader(ds_dict1)
         assert isinstance(dl_dict1['train_1'], TorchDataLoader)
         assert isinstance(dl_dict1['val'], TorchDataLoader)
+
+        ds = [[1, [1]], [2, [2, 2]]]
+        dl = prepare_torch_dataloader(ds, batch_size=2)
+        for batch in dl:
+            assert (batch[0] == torch.LongTensor([1, 2])).sum()==2
+            assert (batch[1] == torch.LongTensor([[1, 0], [2, 2]])).sum()==4
+
         # sequence = [ds, ds1]
         # seq_ds = prepare_torch_dataloader(sequence)
         # assert isinstance(seq_ds[0], TorchDataLoader)

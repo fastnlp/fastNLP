@@ -258,7 +258,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                               non_train_batch_size: int = None) \
         -> Union[Dict[str, PaddleDataLoader], PaddleDataLoader]:
     """
-    ``prepare_paddle_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为 ``PaddleDataloader``对象， 详见 :class:`~fastNLP.core.dataloaders.PaddleDataLoader`。
+    ``prepare_paddle_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为 ``PaddleDataloader``对象， 详见 :class:`~fastNLP.PaddleDataLoader`。
     根据 ds_or_db 的类型 ``[DataSet, DataBundle, Dict[name, Dataset]]`` 不同而有不同返回结果, 具体如下:
 
         * 当 ds_or_db 为 ``DataSet``时，``prepare_paddle_dataloader`` 会将使用的除了 non_train_batch_size 和 non_train_sampler 以外的参数来
@@ -272,12 +272,11 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         其他 key 不包含 'train' 字符串的数据集则使用 non_train_size 和 non_train_sampler 作为参数。最终根据  ``key: PaddleDataLoader`` 组成
          ``Dict[key, PaddleDataLoader]`` 的字典返回。
 
-    ::param ds_or_db: 实现 __getitem__() 和 __len__() 的对象；或这种对象的序列；或字典。其取值只能为 ``[DataSet, DataBundle,
-     Dict[str, DataSet]]``.
+    :param ds_or_db: 可以有以下三种取值，
 
-        * ds_or_db 为  :class:`~fastNLP.core.dataset.DataSet`，返回值为:class:`~fastNLP.core.dataloaders.PaddleDataLoader`
-        * ds_or_db 为 :class:`~fastNLP.io.DataBundle`, 返回值为 ``Dict[str, PaddleDataLoader]`` 的字典
-        * ds_or_db 为 ``Dict[str, DataSet]`` 字典， 返回值也为 ``Dict[str, PaddleDataLoader]`` 的字典
+        * ds_or_db 为 :class:`~fastNLP.io.DataBundle`, 返回值为 ``Dict[str, TorchDataLoader]`` 的字典
+        * ds_or_db 为 ``Dict[str, DataSet]`` 字典， 返回值为 ``Dict[str, TorchDataLoader]`` 的字典
+        * ds_or_db 为实现了 __getitem__() 和 __len__() 的对象 ，返回值为:class:`~fastNLP.TorchDataLoader`
 
     :param feed_list: (list(Tensor)|tuple(Tensor)): feed Tensor list.
     这个张量能被 :code:`paddle.static.data()` 创建。 如果:attr:`return_list` 是 ``False``, 那么 :attr:`feed_list`

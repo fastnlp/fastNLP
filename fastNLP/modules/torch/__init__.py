@@ -5,6 +5,7 @@ __all__ = [
     "Seq2SeqDecoder",
     "LSTMSeq2SeqDecoder",
     "TransformerSeq2SeqDecoder",
+    "MLP",
 
     "LSTM",
     "Seq2SeqEncoder",

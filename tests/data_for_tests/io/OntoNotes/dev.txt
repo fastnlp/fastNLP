@@ -1,0 +1,10 @@
+
+bc/msnbc/00/msnbc_0000   0   0          Hi   UH   (TOP(FRAG(INTJ*)  -   -   -    Dan_Abrams  *   -
+bc/msnbc/00/msnbc_0000   0   1    everyone   NN              (NP*)  -   -   -    Dan_Abrams  *   -
+bc/msnbc/00/msnbc_0000   0   2          /.    .                *))  -   -   -    Dan_Abrams  *   -
+
+bc/msnbc/00/msnbc_0000   0    0            first    RB  (TOP(S(ADVP*           -    -   -    Dan_Abrams   *  (ARGM-TMP*        *            *        *          -
+bc/msnbc/00/msnbc_0000   0    1               up    RB             *           -    -   -    Dan_Abrams          *            *        *            *        *          -
+bc/msnbc/00/msnbc_0000   0    2               on    IN          (PP*           -    -   -    Dan_Abrams          *            *        *            *        *          -
+bc/msnbc/00/msnbc_0000   0    3              the    DT          (NP*           -    -   -    Dan_Abrams          *            *        *            *        *          -
+bc/msnbc/00/msnbc_0000   0    4           docket    NN            *))      docket   -   -    Dan_Abrams          *            *        *            *        *          -
