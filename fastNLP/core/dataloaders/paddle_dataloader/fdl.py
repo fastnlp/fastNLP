@@ -19,7 +19,7 @@ from fastNLP.core.collators.collator import Collator
 from fastNLP.core.dataloaders.utils import indice_collate_wrapper
 from fastNLP.core.dataset import DataSet as FDataSet
 from fastNLP.core.samplers import ReproducibleBatchSampler, RandomBatchSampler
-from ..utils import _match_param
+from ..utils import _match_param, HasLenGetitemType
 
 
 class _PaddleDataset(Dataset):
@@ -256,10 +256,10 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                               use_shared_memory: bool = True, timeout: int = 0,
                               worker_init_fn: Callable = None, persistent_workers=False,
                               non_train_batch_size: int = None) \
-        -> Union[Sequence[PaddleDataLoader], Dict[str, PaddleDataLoader], PaddleDataLoader]:
+        -> Union[Dict[str, PaddleDataLoader], PaddleDataLoader]:
     """
     ``prepare_paddle_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为 ``PaddleDataloader``对象， 详见 :class:`~fastNLP.core.dataloaders.PaddleDataLoader`。
-    根据 ds_or_db 的类型 ``[DataSet, DataBundle,Sequence[Dataset], Dict[name, Dataset]]`` 不同而有不同返回结果, 具体如下:
+    根据 ds_or_db 的类型 ``[DataSet, DataBundle, Dict[name, Dataset]]`` 不同而有不同返回结果, 具体如下:
 
         * 当 ds_or_db 为 ``DataSet``时，``prepare_paddle_dataloader`` 会将使用的除了 non_train_batch_size 和 non_train_sampler 以外的参数来
         帮你实例化一个 ``PaddleDataLoader`` 对象并返回该对象。 详见:class:`~fastNLP.core.dataloaders.PaddleDataLoader`。
@@ -271,16 +271,12 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         ``PaddleDataLoader`` 对象；当 key 中包含'train'字符串时，``prepare_paddle_dataloader`` 默认该 value 为 train 数据集，会将 batch_size 和 sampler 作为参数，
         其他 key 不包含 'train' 字符串的数据集则使用 non_train_size 和 non_train_sampler 作为参数。最终根据  ``key: PaddleDataLoader`` 组成
          ``Dict[key, PaddleDataLoader]`` 的字典返回。
-        * 当 ds_or_db 为 ``Sequence[Dataset]`` 数据类型时， prepare_paddle_dataloader 会将 Sequence[0] 的数据集默认为 train 数据集对待，
-        会将 batch_size 和 sampler 作为参数， 而 Sequence[1:] 数据集均视为非 train 数据集对待，使用 non_train_size 和 non_train_sampler 作为参数。
-        最终将所有实例化好的 ``PaddleDataLoader`` 组成 ``Sequence[PaddleDataLoader]`` 返回。
 
     ::param ds_or_db: 实现 __getitem__() 和 __len__() 的对象；或这种对象的序列；或字典。其取值只能为 ``[DataSet, DataBundle,
-     Sequence[DataSet], Dict[str, DataSet]]``.
+     Dict[str, DataSet]]``.
 
         * ds_or_db 为  :class:`~fastNLP.core.dataset.DataSet`，返回值为:class:`~fastNLP.core.dataloaders.PaddleDataLoader`
         * ds_or_db 为 :class:`~fastNLP.io.DataBundle`, 返回值为 ``Dict[str, PaddleDataLoader]`` 的字典
-        * ds_or_db 为 ``Sequence[DataSet]`` 序列， 返回值为 ``Sequence[PaddleDataLoader]`` 的序列
         * ds_or_db 为 ``Dict[str, DataSet]`` 字典， 返回值也为 ``Dict[str, PaddleDataLoader]`` 的字典
 
     :param feed_list: (list(Tensor)|tuple(Tensor)): feed Tensor list.
@@ -321,14 +317,8 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
 
     """
     from fastNLP.io.data_bundle import DataBundle
-    if isinstance(ds_or_db, Dataset):
-        dl = PaddleDataLoader(ds_or_db, feed_list=feed_list, places=places, return_list=return_list,
-                              batch_sampler=batch_sampler, batch_size=batch_size, shuffle=shuffle,
-                              drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
-                              use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
-                              timeout=timeout, worker_init_fn=worker_init_fn, persistent_workers=persistent_workers)
-        return dl
-    elif isinstance(ds_or_db, DataBundle):
+
+    if isinstance(ds_or_db, DataBundle):
         dl_bundle = {}
         for name, ds in ds_or_db.iter_datasets():
             if 'train' in name:
@@ -353,18 +343,6 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                                                    timeout=timeout, worker_init_fn=worker_init_fn,
                                                    persistent_workers=persistent_workers)
         return dl_bundle
-    elif isinstance(ds_or_db, Sequence):
-        ds_seq = []
-        for idx, ds in enumerate(ds_or_db):
-            if idx > 0:
-                batch_size = non_train_batch_size if non_train_batch_size else batch_size
-            dl = PaddleDataLoader(ds, feed_list=feed_list, places=places, return_list=return_list,
-                                  batch_sampler=batch_sampler, batch_size=batch_size, shuffle=shuffle,
-                                  drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
-                                  use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
-                                  timeout=timeout, worker_init_fn=worker_init_fn, persistent_workers=persistent_workers)
-            ds_seq.append(dl)
-        return ds_seq
 
     elif isinstance(ds_or_db, Dict):
         ds_dict = {}
@@ -387,5 +365,13 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                                       persistent_workers=persistent_workers)
             ds_dict[name] = dl
         return ds_dict
+
+    elif isinstance(ds_or_db, HasLenGetitemType):
+        dl = PaddleDataLoader(ds_or_db, feed_list=feed_list, places=places, return_list=return_list,
+                              batch_sampler=batch_sampler, batch_size=batch_size, shuffle=shuffle,
+                              drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
+                              use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
+                              timeout=timeout, worker_init_fn=worker_init_fn, persistent_workers=persistent_workers)
+        return dl
     else:
-        raise ValueError(f"ds_or_db: {ds_or_db} must be fastnlp dataset or data_bundle or sequence or mapping!")
+        raise ValueError(f"ds_or_db: {ds_or_db} must be fastnlp dataset or data_bundle or mapping!")

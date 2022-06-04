@@ -1,4 +1,5 @@
-from typing import Callable
+from typing import Callable, Any, Union
+from abc import ABC
 import inspect
 import ast
 
@@ -95,6 +96,20 @@ def _match_param(fun, call_fn:Callable, fn_name:str=None):
     except BaseException as e:
         logger.debug(f"Exception happens when match parameters for {fn_name}: {e}")
         return None
+
+
+class HasLenGetitemType(ABC):
+    """
+    判断是否实现了 __len__ 和 __getitem__ 方法的类
+
+    """
+    @classmethod
+    def __subclasshook__(cls, subclass: Any) -> Union[bool, Any]:
+        if cls is HasLenGetitemType:
+            flag = callable(getattr(subclass, '__getitem__', None)) and callable(getattr(subclass, '__len__', None))
+            return flag
+        return NotImplemented
+
 
 if __name__ == '__main__':
     def demo(*args, **kwargs):

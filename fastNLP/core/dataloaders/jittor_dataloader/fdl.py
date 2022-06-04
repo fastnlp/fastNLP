@@ -19,6 +19,7 @@ else:
 from fastNLP.core.collators import Collator
 from fastNLP.core.dataloaders.utils import indice_collate_wrapper
 from fastNLP.core.dataset import DataSet as FDataSet
+from ..utils import HasLenGetitemType
 
 
 class _JittorDataset(Dataset):
@@ -204,10 +205,10 @@ def prepare_jittor_dataloader(ds_or_db, batch_size: int = 16, shuffle: bool = Fa
                               stop_grad: bool = True, keep_numpy_array: bool = False, endless: bool = False,
                               collate_fn: Union[None, str, Callable] = "auto",
                               non_train_batch_size: int = None) \
-        -> Union[Sequence[JittorDataLoader], Dict[str, JittorDataLoader], JittorDataLoader]:
+        -> Union[Dict[str, JittorDataLoader], JittorDataLoader]:
     """
     ``prepare_jittor_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为 :class:`JittorDataLoader` 对象， 详见 :class:`~fastNLP.core.dataloaders.JittorDataLoader`。
-    根据 ds_or_db 的类型 ``[DataSet, DataBundle,Sequence[Dataset], Dict[name, Dataset]]`` 不同而有不同返回结果, 具体如下:
+    根据 ds_or_db 的类型 ``[DataSet, DataBundle, Dict[name, Dataset]]`` 不同而有不同返回结果, 具体如下:
 
         * 当 ds_or_db 为 ``DataSet`` 时，``prepare_jittor_dataloader`` 会将使用的除了 non_train_batch_size 和 non_train_sampler 以外的参数来
           帮你实例化一个 :class:`JittorDataLoader` 对象并返回该对象。 详见 :class:`~fastNLP.core.dataloaders.JittorDataLoader`。
@@ -219,19 +220,15 @@ def prepare_jittor_dataloader(ds_or_db, batch_size: int = 16, shuffle: bool = Fa
           :class:`JittorDataLoader` 对象；当 key 中包含'train'字符串时，``prepare_Jittor_dataloader`` 默认该 value 为 train 数据集，会将 batch_size 和 sampler 作为参数，
            其他 key 不包含 'train' 字符串的数据集则使用 non_train_size 和 non_train_sampler 作为参数。最终根据  ``key: JittorDataLoader`` 组成
          ``Dict[key, JittorDataLoader]`` 的字典返回。
-        * 当 ds_or_db 为 ``Sequence[Dataset]`` 数据类型时， prepare_jittor_dataloader 会将 Sequence[0] 的数据集默认为 train 数据集对待，
-          会将 batch_size 和 sampler 作为参数， 而 Sequence[1:] 数据集均视为非 train 数据集对待，使用 non_train_size 和 non_train_sampler 作为参数。
-          最终将所有实例化好的 :class:`JittorDataLoader` 组成 ``Sequence[JittorDataLoader]`` 返回。
 
     :param ds_or_db: 实现 __getitem__() 和 __len__() 的对象；或这种对象的序列；或字典。其取值只能为 ``[DataSet, DataBundle,
-        Sequence[DataSet], Dict[str, DataSet]]``.
+     Dict[str, DataSet]]``.
 
         * ds_or_db 为 :class:`~fastNLP.core.dataset.DataSet`，返回值为 :class:`~fastNLP.core.dataloaders.JittorDataLoader`
         * ds_or_db 为 :class:`~fastNLP.io.DataBundle`, 返回值为 :class:`Dict[str, JittorDataLoader]` 的字典
-        * ds_or_db 为 :class:`Sequence[DataSet]` 序列， 返回值为 :class:`Sequence[JittorDataLoader]` 的序列
         * ds_or_db 为 :class:`Dict[str, DataSet]` 字典， 返回值也为 :class:`Dict[str, JittorDataLoader]` 的字典
         
-    :param non_train_batch_size: 如果传入的 ``ds_or_db`` 为 :class:`Dict`, :class:`Sequence` 或 :class:`~fastNLP.io.DataBundle` 对象，可以通过改参数
+    :param non_train_batch_size: 如果传入的 ``ds_or_db`` 为 :class:`Dict` 或 :class:`~fastNLP.io.DataBundle` 对象，可以通过改参数
         设置名称不为 `train` 的其他 ``dataset`` 的 ``batch_size``。 默认为 ``16``。
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
     :param shuffle: 是否打乱数据集， 默认为 ``False``。
@@ -253,28 +250,23 @@ def prepare_jittor_dataloader(ds_or_db, batch_size: int = 16, shuffle: bool = Fa
         * collate_fn 为 ``Callable`` 时， 该 Callable 函数应当接受一个 batch 参数作为输入， batch 是一个 List 对象且 List 中的每一条数据都是
           dataset 的一条数据；该 Callable 函数还应当返回一个对象。
     
-    :return: 返回数据类型为 :class:`Sequence[JittorDataLoader]` , :class:`Dict[str, JittorDataLoader]`, :class:`JittorDataLoader` 其中之一，根据输入 
+    :return: 返回数据类型为 :class:`Dict[str, JittorDataLoader]`, :class:`JittorDataLoader` 其中之一，根据输入
         ``ds_or_db`` 变化而变化。
     """
     from fastNLP.io.data_bundle import DataBundle
-    if isinstance(ds_or_db, Dataset):
-        dl = JittorDataLoader(ds_or_db, batch_size=batch_size, shuffle=shuffle,
-                              drop_last=drop_last, num_workers=num_workers, buffer_size=buffer_size,
-                              stop_grad=stop_grad, keep_numpy_array=keep_numpy_array, endless=endless,
-                              collate_fn=collate_fn)
-        return dl
-    elif isinstance(ds_or_db, DataBundle):
+
+    if isinstance(ds_or_db, DataBundle):
         dl_bundle = {}
         for name, ds in ds_or_db.iter_datasets():
             if 'train' in name:
-                dl_bundle[name] = JittorDataLoader(ds_or_db, batch_size=batch_size, shuffle=shuffle,
+                dl_bundle[name] = JittorDataLoader(ds, batch_size=batch_size, shuffle=shuffle,
                                                    drop_last=drop_last, num_workers=num_workers,
                                                    buffer_size=buffer_size,
                                                    stop_grad=stop_grad, keep_numpy_array=keep_numpy_array,
                                                    endless=endless,
                                                    collate_fn=collate_fn)
             else:
-                dl_bundle[name] = JittorDataLoader(ds_or_db,
+                dl_bundle[name] = JittorDataLoader(ds,
                                                    batch_size=non_train_batch_size if non_train_batch_size else batch_size,
                                                    shuffle=shuffle,
                                                    drop_last=drop_last, num_workers=num_workers,
@@ -283,17 +275,6 @@ def prepare_jittor_dataloader(ds_or_db, batch_size: int = 16, shuffle: bool = Fa
                                                    endless=endless,
                                                    collate_fn=collate_fn)
         return dl_bundle
-    elif isinstance(ds_or_db, Sequence):
-        ds_seq = []
-        for idx, ds in enumerate(ds_or_db):
-            if idx > 0:
-                batch_size = non_train_batch_size if non_train_batch_size else batch_size
-            dl = JittorDataLoader(ds, batch_size=batch_size, shuffle=shuffle,
-                                  drop_last=drop_last, num_workers=num_workers, buffer_size=buffer_size,
-                                  stop_grad=stop_grad, keep_numpy_array=keep_numpy_array, endless=endless,
-                                  collate_fn=collate_fn)
-            ds_seq.append(dl)
-        return ds_seq
 
     elif isinstance(ds_or_db, Dict):
         ds_dict = {}
@@ -304,7 +285,7 @@ def prepare_jittor_dataloader(ds_or_db, batch_size: int = 16, shuffle: bool = Fa
                                       stop_grad=stop_grad, keep_numpy_array=keep_numpy_array, endless=endless,
                                       collate_fn=collate_fn)
             else:
-                dl = JittorDataLoader(ds_or_db,
+                dl = JittorDataLoader(ds,
                                       batch_size=non_train_batch_size if non_train_batch_size else batch_size,
                                       shuffle=shuffle,
                                       drop_last=drop_last, num_workers=num_workers,
@@ -314,5 +295,13 @@ def prepare_jittor_dataloader(ds_or_db, batch_size: int = 16, shuffle: bool = Fa
                                       collate_fn=collate_fn)
             ds_dict[name] = dl
         return ds_dict
+
+    elif isinstance(ds_or_db, HasLenGetitemType):
+        dl = JittorDataLoader(ds_or_db, batch_size=batch_size, shuffle=shuffle,
+                              drop_last=drop_last, num_workers=num_workers, buffer_size=buffer_size,
+                              stop_grad=stop_grad, keep_numpy_array=keep_numpy_array, endless=endless,
+                              collate_fn=collate_fn)
+        return dl
+
     else:
-        raise ValueError(f"ds_or_db: {ds_or_db} must be fastnlp dataset or data_bundle or sequence or mapping!")
+        raise ValueError(f"ds_or_db: {ds_or_db} must be fastnlp dataset or data_bundle or mapping!")

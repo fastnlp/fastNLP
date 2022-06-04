@@ -1,8 +1,9 @@
 import pytest
 import numpy as np
 
-from fastNLP.core.dataloaders.paddle_dataloader.fdl import PaddleDataLoader
+from fastNLP.core.dataloaders.paddle_dataloader.fdl import PaddleDataLoader, prepare_paddle_dataloader
 from fastNLP.core.dataset import DataSet
+from fastNLP.io.data_bundle import DataBundle
 from fastNLP.core.log import logger
 from fastNLP.core.collators import Collator
 
@@ -91,3 +92,35 @@ class TestPaddle:
         dl = DataLoader(ds, places=None, collate_fn=Collator(), batch_size=4)
         for batch in dl:
             print(batch)
+
+    def test_prepare_paddle_dataloader(self):
+        # 测试 fastNLP 的 dataset
+        ds = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
+        dl = prepare_paddle_dataloader(ds, batch_size=8, shuffle=True, num_workers=2)
+        assert isinstance(dl, PaddleDataLoader)
+
+        ds1 = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
+        dbl = DataBundle(datasets={'train': ds, 'val': ds1})
+        dl_bundle = prepare_paddle_dataloader(dbl)
+        assert isinstance(dl_bundle['train'], PaddleDataLoader)
+        assert isinstance(dl_bundle['val'], PaddleDataLoader)
+
+        ds_dict = {'train_1': ds, 'val': ds1}
+        dl_dict = prepare_paddle_dataloader(ds_dict)
+        assert isinstance(dl_dict['train_1'], PaddleDataLoader)
+        assert isinstance(dl_dict['val'], PaddleDataLoader)
+
+        ds2 = RandomDataset()
+        dl1 = prepare_paddle_dataloader(ds2, batch_size=8, shuffle=True, num_workers=2)
+        assert isinstance(dl1, PaddleDataLoader)
+
+        ds3 = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
+        dbl1 = DataBundle(datasets={'train': ds2, 'val': ds3})
+        dl_bundle1 = prepare_paddle_dataloader(dbl1)
+        assert isinstance(dl_bundle1['train'], PaddleDataLoader)
+        assert isinstance(dl_bundle1['val'], PaddleDataLoader)
+
+        ds_dict1 = {'train_1': ds2, 'val': ds3}
+        dl_dict1 = prepare_paddle_dataloader(ds_dict1)
+        assert isinstance(dl_dict1['train_1'], PaddleDataLoader)
+        assert isinstance(dl_dict1['val'], PaddleDataLoader)

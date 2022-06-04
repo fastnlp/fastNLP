@@ -3,7 +3,8 @@ __all__ = [
     'prepare_torch_dataloader'
 ]
 
-from typing import Optional, Callable, Sequence, Union, Tuple, Dict, Mapping, List
+from typing import Optional, Callable, Sequence, Union, Tuple, Dict, Mapping, List, Any
+from abc import ABC
 from copy import deepcopy
 
 from fastNLP.core.dataset import DataSet
@@ -12,9 +13,10 @@ from fastNLP.core.dataloaders.utils import indice_collate_wrapper
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, UnrepeatedSampler, RandomSampler
 from ..utils import _match_param
+from ..utils import HasLenGetitemType
 
 if _NEED_IMPORT_TORCH:
-    from torch.utils.data import DataLoader, Sampler
+    from torch.utils.data import DataLoader, Sampler, Dataset
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as DataLoader
 
@@ -223,10 +225,10 @@ def prepare_torch_dataloader(ds_or_db,
                              persistent_workers: bool = False,
                              non_train_sampler: Union["Sampler[int]", ReproducibleSampler, UnrepeatedSampler] = None,
                              non_train_batch_size: int = None) \
-        -> Union[TorchDataLoader, Dict[str, TorchDataLoader], Sequence[TorchDataLoader]]:
+        -> Union[TorchDataLoader, Dict[str, TorchDataLoader]]:
     """
     ``prepare_torch_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为 ``TorchDataloader``对象， 详见 :class:`~fastNLP.core.dataloaders.TorchDataLoader`。
-    根据 ds_or_db 的类型 ``[DataSet, DataBundle,Sequence[Dataset], Dict[name, Dataset]]`` 不同而有不同返回结果, 具体如下:
+    根据 ds_or_db 的类型 ``[DataSet, DataBundle, Dict[name, Dataset]]`` 不同而有不同返回结果, 具体如下:
 
         * 当 ds_or_db 为 ``DataSet``时，``prepare_torch_dataloader`` 会将使用的除了 non_train_batch_size 和 non_train_sampler 以外的参数来
         帮你实例化一个 ``TorchDataLoader`` 对象并返回该对象。 详见:class:`~fastNLP.core.dataloaders.TorchDataLoader`。
@@ -238,16 +240,12 @@ def prepare_torch_dataloader(ds_or_db,
         ``TorchDataLoader`` 对象；当 key 中包含'train'字符串时，``prepare_torch_dataloader`` 默认该 value 为 train 数据集，会将 batch_size 和 sampler 作为参数，
         其他 key 不包含 'train' 字符串的数据集则使用 non_train_size 和 non_train_sampler 作为参数。最终根据  ``key: TorchDataLoader`` 组成
          ``Dict[key, TorchDataLoader]`` 的字典返回。
-        * 当 ds_or_db 为 ``Sequence[Dataset]`` 数据类型时， prepare_torch_dataloader 会将 Sequence[0] 的数据集默认为 train 数据集对待，
-        会将 batch_size 和 sampler 作为参数， 而 Sequence[1:] 数据集均视为非 train 数据集对待，使用 non_train_size 和 non_train_sampler 作为参数。
-        最终将所有实例化好的 ``TorchDataLoader`` 组成 ``Sequence[TorchDataLoader]`` 返回。
 
     :param ds_or_db: 实现 __getitem__() 和 __len__() 的对象；或这种对象的序列；或字典。其取值只能为 ``[DataSet, DataBundle,
-     Sequence[DataSet], Dict[str, DataSet]]``.
+    Dict[str, DataSet]]``.
 
         * ds_or_db 为  :class:`~fastNLP.core.dataset.DataSet`，返回值为:class:`~fastNLP.core.dataloaders.TorchDataLoader`
         * ds_or_db 为 :class:`~fastNLP.io.DataBundle`, 返回值为 ``Dict[str, TorchDataLoader]`` 的字典
-        * ds_or_db 为 ``Sequence[DataSet]`` 序列， 返回值为 ``Sequence[TorchDataLoader]`` 的序列
         * ds_or_db 为 ``Dict[str, DataSet]`` 字典， 返回值也为 ``Dict[str, TorchDataLoader]`` 的字典
 
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
@@ -284,17 +282,8 @@ def prepare_torch_dataloader(ds_or_db,
     """
 
     from fastNLP.io import DataBundle
-    if isinstance(ds_or_db, DataSet):
-        dl = TorchDataLoader(dataset=ds_or_db, batch_size=batch_size,
-                             shuffle=shuffle, sampler=sampler, batch_sampler=batch_sampler,
-                             num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
-                             drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
-                             multiprocessing_context=multiprocessing_context, generator=generator,
-                             prefetch_factor=prefetch_factor, persistent_workers=persistent_workers,
-                             )
-        return dl
 
-    elif isinstance(ds_or_db, DataBundle):
+    if isinstance(ds_or_db, DataBundle):
         dl_bundle = {}
         for name, ds in ds_or_db.iter_datasets():
             if 'train' in name:
@@ -318,23 +307,6 @@ def prepare_torch_dataloader(ds_or_db,
                                                   prefetch_factor=prefetch_factor,
                                                   persistent_workers=persistent_workers,
                                                   )
-        return dl_bundle
-
-    elif isinstance(ds_or_db, Sequence):
-        dl_bundle = []
-        for idx, ds in enumerate(ds_or_db):
-            if idx > 0:
-                batch_size = non_train_batch_size if non_train_batch_size else batch_size
-                sampler = non_train_sampler if non_train_sampler else sampler
-            dl_bundle.append(
-                TorchDataLoader(dataset=ds, batch_size=batch_size,
-                                shuffle=shuffle, sampler=sampler, batch_sampler=batch_sampler,
-                                num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
-                                drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
-                                multiprocessing_context=multiprocessing_context, generator=generator,
-                                prefetch_factor=prefetch_factor, persistent_workers=persistent_workers,
-                                )
-            )
         return dl_bundle
 
     elif isinstance(ds_or_db, Mapping):
@@ -363,5 +335,16 @@ def prepare_torch_dataloader(ds_or_db,
                                                   )
 
         return dl_bundle
+
+    elif isinstance(ds_or_db, HasLenGetitemType):
+        dl = TorchDataLoader(dataset=ds_or_db, batch_size=batch_size,
+                             shuffle=shuffle, sampler=sampler, batch_sampler=batch_sampler,
+                             num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
+                             drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
+                             multiprocessing_context=multiprocessing_context, generator=generator,
+                             prefetch_factor=prefetch_factor, persistent_workers=persistent_workers,
+                             )
+        return dl
+
     else:
-        raise ValueError(f"ds_or_db: {ds_or_db} must be fastnlp dataset or data_bundle or sequence or mapping!")
+        raise ValueError(f"ds_or_db: {ds_or_db} must be fastnlp dataset or data_bundle  or mapping!")

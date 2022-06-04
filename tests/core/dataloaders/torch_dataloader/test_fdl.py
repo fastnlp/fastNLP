@@ -96,6 +96,7 @@ class TestFdl:
             assert batch['y'] == [1, 0, 1]
 
     def test_prepare_torch_dataloader(self):
+        # 测试 fastNLP 的 dataset
         ds = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
         dl = prepare_torch_dataloader(ds, batch_size=8, shuffle=True, num_workers=2)
         assert isinstance(dl, TorchDataLoader)
@@ -111,10 +112,39 @@ class TestFdl:
         assert isinstance(dl_dict['train_1'], TorchDataLoader)
         assert isinstance(dl_dict['val'], TorchDataLoader)
 
-        sequence = [ds, ds1]
-        seq_ds = prepare_torch_dataloader(sequence)
-        assert isinstance(seq_ds[0], TorchDataLoader)
-        assert isinstance(seq_ds[1], TorchDataLoader)
+        # 测试其他 dataset
+        class _DataSet:
+
+            def __init__(self):
+                pass
+
+            def __getitem__(self, item):
+                return np.random.randn(5), [[1, 2], [2, 3, 4]]
+
+            def __len__(self):
+                return 10
+
+            def __getattribute__(self, item):
+                return object.__getattribute__(self, item)
+
+        ds2 = _DataSet()
+        dl1 = prepare_torch_dataloader(ds2, batch_size=8, shuffle=True, num_workers=2)
+        assert isinstance(dl1, TorchDataLoader)
+
+        ds3 = _DataSet()
+        dbl1 = DataBundle(datasets={'train': ds2, 'val': ds3})
+        dl_bundle1 = prepare_torch_dataloader(dbl1)
+        assert isinstance(dl_bundle1['train'], TorchDataLoader)
+        assert isinstance(dl_bundle1['val'], TorchDataLoader)
+
+        ds_dict1 = {'train_1': ds2, 'val': ds3}
+        dl_dict1 = prepare_torch_dataloader(ds_dict1)
+        assert isinstance(dl_dict1['train_1'], TorchDataLoader)
+        assert isinstance(dl_dict1['val'], TorchDataLoader)
+        # sequence = [ds, ds1]
+        # seq_ds = prepare_torch_dataloader(sequence)
+        # assert isinstance(seq_ds[0], TorchDataLoader)
+        # assert isinstance(seq_ds[1], TorchDataLoader)
 
     def test_get_backend(self):
         from fastNLP.core.collators import Collator
