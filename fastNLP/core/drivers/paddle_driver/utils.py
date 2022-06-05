@@ -182,7 +182,13 @@ def replace_batch_sampler(dataloader: "DataLoader", batch_sampler: "BatchSampler
             if key not in init_params and key != 'self':
                 init_params[key] = value
 
-    reconstruct_args = {k: v for k, v in instance_attrs.items() if k in init_params}
+    # 如果初始化dataloader所使用的参数不是默认值，那么我们需要将其记录下来用于重新初始化时设置；
+    non_default_params = {name for name, p in init_params.items() if
+                          name in instance_attrs and p.default != instance_attrs[name]}
+    # add `dataset` as it might have been replaced with `*args`
+    non_default_params.add("dataset")
+
+    reconstruct_args = {k: v for k, v in instance_attrs.items() if k in non_default_params}
     reconstruct_args.update({
         "batch_sampler": batch_sampler, "shuffle": False, "drop_last": False, "batch_size": 1,
         "persistent_workers": dataloader._persistent_workers,

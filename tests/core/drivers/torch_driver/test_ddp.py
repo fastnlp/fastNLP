@@ -2,6 +2,7 @@ import pytest
 from pathlib import Path
 
 from fastNLP.core.drivers.torch_driver.ddp import TorchDDPDriver
+from fastNLP import prepare_torch_dataloader
 from fastNLP.core.samplers import (
     RandomSampler,
     UnrepeatedSampler,
@@ -13,6 +14,7 @@ from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchNormalDataset, TorchNormalXYDataset
 from tests.helpers.utils import magic_argv_env_context
 from fastNLP.envs.distributed import rank_zero_rm
+from fastNLP.core.drivers.torch_driver.dist_utils import fastnlp_torch_all_gather
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 if _NEED_IMPORT_TORCH:
     import torch
@@ -833,4 +835,113 @@ class TestSaveLoad:
             rank_zero_rm(path)
 
         if dist.is_initialized():
+            dist.destroy_process_group()
+
+
+@pytest.mark.torch
+@magic_argv_env_context
+@pytest.mark.parametrize("shuffle", ([True, False]))
+@pytest.mark.parametrize("batch_size", ([1, 3, 16, 17]))
+@pytest.mark.parametrize("drop_last", ([True, False]))
+def test_shuffle_dataloader(shuffle, batch_size, drop_last, reproducible=True):
+    try:
+        # 需要检验一下 set_dist_repro_dataloader 没有修改参数
+        num_samples = 200
+        dataset = TorchNormalXYDataset(num_samples)
+        dl = prepare_torch_dataloader(dataset, shuffle=shuffle, batch_size=batch_size, drop_last=drop_last)
+        model = TorchNormalModel_Classification_1(10, 32)
+        device = [torch.device(i) for i in [0, 1]]
+
+        driver = TorchDDPDriver(model, parallel_device=device)
+        driver.setup()
+        dl = driver.set_dist_repro_dataloader(dataloader=dl, dist='dist', reproducible=reproducible)
+
+        data = []
+        flags = []
+        for batch in dl:
+            flags.append(batch['x'].size(0) == batch_size)
+            data.extend(batch['x'].reshape(-1).tolist())
+
+        _num_samples = num_samples//2
+
+        if drop_last and _num_samples%batch_size != 0:
+            assert len(data)!=_num_samples
+            assert all(flags) == True
+        elif _num_samples%batch_size!=0:
+            assert flags[-1] is False
+        else:
+            assert len(data) == _num_samples
+
+        if not shuffle:
+            for i in range(1, len(data)-1):
+                assert data[i]>data[i-1]
+        else:
+            flags = []
+            for i in range(1, len(data)-1):
+                flags.append(data[i]>data[i-1])
+            assert all(flags) is False
+        datas = fastnlp_torch_all_gather(data)
+        if drop_last:
+            assert len(set(datas[0] + datas[1])) == num_samples-_num_samples%batch_size*2
+        else:
+            assert len(set(datas[0] + datas[1])) == num_samples
+    finally:
+        if dist.is_initialized():
+            dist.barrier()
+            dist.destroy_process_group()
+
+
+@pytest.mark.torch
+@magic_argv_env_context
+@pytest.mark.parametrize("shuffle", ([True, False]))
+@pytest.mark.parametrize("batch_size", ([1, 3, 16, 17]))
+@pytest.mark.parametrize("drop_last", ([True, False]))
+def test_batch_sampler_dataloader(shuffle, batch_size, drop_last, reproducible=True):
+    try:
+        # 需要检验一下 set_dist_repro_dataloader 没有修改参数
+        num_samples = 200
+        num_device = 2
+        dataset = TorchNormalXYDataset(num_samples)
+        sampler = BucketedBatchSampler(dataset, length=dataset._data, batch_size=batch_size, drop_last=drop_last,
+                                       shuffle=shuffle, num_batch_per_bucket=2)
+        dl = prepare_torch_dataloader(dataset, batch_sampler=sampler)
+        model = TorchNormalModel_Classification_1(10, 32)
+        device = [torch.device(i) for i in [0, 1]]
+        driver = TorchDDPDriver(model, parallel_device=device)
+        driver.setup()
+        dl = driver.set_dist_repro_dataloader(dataloader=dl, dist='dist', reproducible=reproducible)
+
+        data = []
+        flags = []
+        for batch in dl:
+            d = batch['x'].reshape(-1).tolist()
+            diff = max(d) - min(d)
+            assert diff<batch_size*2*2*2
+            data.extend(d)
+            flags.append(len(d)==batch_size)
+        _num_samples = num_samples//num_device
+        if drop_last and _num_samples%batch_size != 0:
+            assert len(data)!=num_samples
+            assert all(flags) == True
+        elif _num_samples%batch_size!=0:
+            assert flags[-1] is False
+        else:
+            assert len(data) == _num_samples
+
+        if not shuffle:
+            for i in range(1, len(data)-1):
+                assert data[i]<data[i-1]
+        else:
+            flags = []
+            for i in range(1, len(data)-1):
+                flags.append(data[i]<data[i-1])
+            assert all(flags) is False
+        datas = fastnlp_torch_all_gather(data)
+        if drop_last:
+            assert len(set(datas[0] + datas[1])) == num_samples-_num_samples%batch_size*2
+        else:
+            assert len(set(datas[0] + datas[1])) == num_samples
+    finally:
+        if dist.is_initialized():
+            dist.barrier()
             dist.destroy_process_group()
