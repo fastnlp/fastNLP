@@ -519,6 +519,84 @@ class TestSetDistReproDataloader:
 
         assert len(left_idxes) + len(already_seen_idx) == len(self.dataset)
         assert len(left_idxes | already_seen_idx) == len(self.dataset)
+    
+    @pytest.mark.paddle
+    @pytest.mark.parametrize("shuffle", ([True, False]))
+    @pytest.mark.parametrize("batch_size", ([1, 3, 16, 17]))
+    @pytest.mark.parametrize("drop_last", ([True, False]))
+    @pytest.mark.parametrize("reproducible", ([True, False]))
+    def test_shuffle_dataloader(self, shuffle, batch_size, drop_last, reproducible):
+        # 需要检验一下 set_dist_repro_dataloader 没有修改参数
+        num_samples = 200
+        dataset = PaddleNormalXYDataset(num_samples)
+        dl = prepare_paddle_dataloader(dataset, shuffle=shuffle, batch_size=batch_size, drop_last=drop_last)
+        model = PaddleNormalModel_Classification_1(1, 2)
+        dl = self.driver.set_dist_repro_dataloader(dataloader=dl, reproducible=reproducible)
+
+        data = []
+        flags = []
+        for batch in dl:
+            flags.append(batch['x'].shape[0] == batch_size)
+            data.extend(batch['x'].reshape((-1, )).tolist())
+
+        if drop_last and num_samples%batch_size != 0:
+            assert len(data)!=num_samples
+            assert all(flags) == True
+        elif num_samples%batch_size!=0:
+            assert flags[-1] is False
+        else:
+            assert len(data) == num_samples
+
+        if not shuffle:
+            for i in range(1, len(data)):
+                assert data[i]>data[i-1]
+        else:
+            flags = []
+            for i in range(1, len(data)):
+                flags.append(data[i]>data[i-1])
+            assert all(flags) is False
+
+
+    @pytest.mark.paddle
+    @pytest.mark.parametrize("shuffle", ([True, False]))
+    @pytest.mark.parametrize("batch_size", ([1, 3, 16, 17]))
+    @pytest.mark.parametrize("drop_last", ([True, False]))
+    @pytest.mark.parametrize("reproducible", ([True, False]))
+    def test_batch_sampler_dataloader(self, shuffle, batch_size, drop_last, reproducible):
+        # 需要检验一下 set_dist_repro_dataloader 没有修改参数
+        num_samples = 200
+        dataset = PaddleNormalXYDataset(num_samples)
+        sampler = BucketedBatchSampler(dataset, length=dataset._data, batch_size=batch_size, drop_last=drop_last,
+                                    shuffle=shuffle, num_batch_per_bucket=2)
+        dl = prepare_paddle_dataloader(dataset, batch_sampler=sampler)
+        model = PaddleNormalModel_Classification_1(1, 2)
+        dl = self.driver.set_dist_repro_dataloader(dataloader=dl, reproducible=reproducible)
+
+        data = []
+        flags = []
+        for batch in dl:
+            d = batch['x'].reshape((-1, )).tolist()
+            diff = max(d) - min(d)
+            assert diff<batch_size*2
+            data.extend(d)
+            flags.append(len(d)==batch_size)
+
+        if drop_last and num_samples%batch_size != 0:
+            assert len(data)!=num_samples
+            assert all(flags) == True
+        elif num_samples%batch_size!=0:
+            assert flags[-1] is False
+        else:
+            assert len(data) == num_samples
+
+        if not shuffle:
+            for i in range(1, len(data)):
+                assert data[i]<data[i-1]
+        else:
+            flags = []
+            for i in range(1, len(data)):
+                flags.append(data[i]<data[i-1])
+            assert all(flags) is False
 
 ############################################################################
 #
@@ -739,85 +817,3 @@ def test_save_and_load_with_randomsampler(only_state_dict, fp16):
         assert len(left_y_batches | already_seen_y_set) == len(dataset)
     finally:
         rank_zero_rm(path)
-
-
-@pytest.mark.torch
-@pytest.mark.parametrize("shuffle", ([True, False]))
-@pytest.mark.parametrize("batch_size", ([1, 3, 16, 17]))
-@pytest.mark.parametrize("drop_last", ([True, False]))
-@pytest.mark.parametrize("reproducible", ([True, False]))
-def test_shuffle_dataloader(shuffle, batch_size, drop_last, reproducible):
-    # 需要检验一下 set_dist_repro_dataloader 没有修改参数
-    num_samples = 200
-    dataset = PaddleNormalXYDataset(num_samples)
-    dl = prepare_paddle_dataloader(dataset, shuffle=shuffle, batch_size=batch_size, drop_last=drop_last)
-    model = PaddleNormalModel_Classification_1(1, 2)
-    driver = PaddleSingleDriver(model, device="cpu")
-    dl = driver.set_dist_repro_dataloader(dataloader=dl, reproducible=reproducible)
-
-    data = []
-    flags = []
-    for batch in dl:
-        flags.append(batch['x'].shape[0] == batch_size)
-        data.extend(batch['x'].reshape(-1).tolist())
-
-    if drop_last and num_samples%batch_size != 0:
-        assert len(data)!=num_samples
-        assert all(flags) == True
-    elif num_samples%batch_size!=0:
-        assert flags[-1] is False
-    else:
-        assert len(data) == num_samples
-
-    if not shuffle:
-        for i in range(1, len(data)):
-            assert data[i]>data[i-1]
-    else:
-        flags = []
-        for i in range(1, len(data)):
-            flags.append(data[i]>data[i-1])
-        assert all(flags) is False
-
-
-@pytest.mark.torch
-@pytest.mark.parametrize("shuffle", ([True, False]))
-@pytest.mark.parametrize("batch_size", ([1, 3, 16, 17]))
-@pytest.mark.parametrize("drop_last", ([True, False]))
-@pytest.mark.parametrize("reproducible", ([True, False]))
-def test_batch_sampler_dataloader(shuffle, batch_size, drop_last, reproducible):
-    # 需要检验一下 set_dist_repro_dataloader 没有修改参数
-    num_samples = 200
-    dataset = PaddleNormalXYDataset(num_samples)
-    sampler = BucketedBatchSampler(dataset, length=dataset._data, batch_size=batch_size, drop_last=drop_last,
-                                   shuffle=shuffle, num_batch_per_bucket=2)
-    dl = prepare_paddle_dataloader(dataset, batch_sampler=sampler)
-    model = PaddleNormalModel_Classification_1(1, 2)
-    driver = PaddleSingleDriver(model, device="cpu")
-    dl = driver.set_dist_repro_dataloader(dataloader=dl, reproducible=reproducible)
-
-    data = []
-    flags = []
-    for batch in dl:
-        d = batch['x'].reshape(-1).tolist()
-        diff = max(d) - min(d)
-        assert diff<batch_size*2
-        data.extend(d)
-        flags.append(len(d)==batch_size)
-
-    if drop_last and num_samples%batch_size != 0:
-        assert len(data)!=num_samples
-        assert all(flags) == True
-    elif num_samples%batch_size!=0:
-        assert flags[-1] is False
-    else:
-        assert len(data) == num_samples
-
-    if not shuffle:
-        for i in range(1, len(data)):
-            assert data[i]<data[i-1]
-    else:
-        flags = []
-        for i in range(1, len(data)):
-            flags.append(data[i]<data[i-1])
-        assert all(flags) is False
-

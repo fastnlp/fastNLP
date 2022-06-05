@@ -137,9 +137,11 @@ class PaddleDataLoader(DataLoader):
         if batch_sampler is None:
             batch_sampler = RandomBatchSampler(dataset, batch_size=batch_size, shuffle=shuffle,
                                                drop_last=drop_last)
-            batch_size = 1
-            shuffle = False
-            drop_last = False
+        # 因为无论如何传给 DataLoader 的 batch_sampler 都不是 None
+        # 所以要恢复默认值防止报错
+        batch_size = 1
+        shuffle = False
+        drop_last = False
 
         if isinstance(collate_fn, str):
             if collate_fn == 'auto':
