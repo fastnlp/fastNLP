@@ -19,7 +19,7 @@ class LRSchedCallback(Callback):
         self.scheduler = scheduler
         self.step_on = 0 if step_on == 'batch' else 1
 
-    def on_before_optimizers_step(self, trainer, optimizers):
+    def on_after_optimizers_step(self, trainer, optimizers):
         if self.step_on == 0:
             self.scheduler.step()
 

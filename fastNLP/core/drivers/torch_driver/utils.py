@@ -189,16 +189,11 @@ def replace_sampler(dataloader: "DataLoader", sampler):
     # 中寻找；
     has_variadic_kwargs = any(v.kind is v.VAR_KEYWORD for k, v in init_params.items())
     if has_variadic_kwargs:
-        init_params.update(dict(inspect.signature(DataLoader.__init__).parameters))
-        del init_params["self"]
+        for key, value in dict(inspect.signature(DataLoader.__init__).parameters).items():
+            if key not in init_params and key != 'self':
+                init_params[key] = value
 
-    # 因为我们刚才可能用 DataLoader 的默认参数将用户定制的 dataloader 的参数覆盖掉了，因此需要重新弄一遍；
-    non_default_params = {name for name, p in init_params.items() if
-                          name in instance_attrs and p.default != instance_attrs[name]}
-    # add `dataset` as it might have been replaced with `*args`
-    non_default_params.add("dataset")
-
-    reconstruct_args = {k: v for k, v in instance_attrs.items() if k in non_default_params}
+    reconstruct_args = {k: v for k, v in instance_attrs.items() if k in init_params}
     reconstruct_args.update(_dataloader_init_kwargs_resolve_sampler(dataloader, sampler))
 
     required_args = {
