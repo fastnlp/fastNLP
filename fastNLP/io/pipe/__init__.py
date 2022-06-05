@@ -54,7 +54,6 @@ __all__ = [
     "GranularizePipe",
     "MachingTruncatePipe",
 
-    "CoReferencePipe",
 
     "CMRC2018BertPipe",
 
@@ -72,7 +71,6 @@ from .classification import CLSBasePipe, YelpFullPipe, YelpPolarityPipe, SSTPipe
     WeiboSenti100kPipe, AGsNewsPipe, DBPediaPipe, MRPipe, R8Pipe, R52Pipe, OhsumedPipe, NG20Pipe
 from .conll import Conll2003NERPipe, OntoNotesNERPipe, MsraNERPipe, WeiboNERPipe, PeopleDailyPipe
 from .conll import Conll2003Pipe, iob2, iob2bioes
-from .coreference import CoReferencePipe
 from .cws import CWSPipe
 from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe, QNLIBertPipe, MNLIBertPipe, \
     MatchingPipe, RTEPipe, SNLIPipe, QuoraPipe, QNLIPipe, MNLIPipe, CNXNLIBertPipe, CNXNLIPipe, BQCorpusBertPipe, \

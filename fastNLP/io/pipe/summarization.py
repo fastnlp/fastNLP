@@ -80,9 +80,6 @@ class ExtCNNDMPipe(Pipe):
 
         data_bundle = _drop_empty_instance(data_bundle, "label")
 
-        # set input and target
-        data_bundle.set_input('words', 'seq_len', 'target', 'seq_len')
-
         # print("[INFO] Load existing vocab from %s!" % self.vocab_path)
         word_list = []
         with open(self.vocab_path, 'r', encoding='utf8') as vocab_f:

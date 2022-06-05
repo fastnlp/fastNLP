@@ -56,7 +56,7 @@ class ConllLoader(Loader):
         r"""
         
         :param list headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
-        :param list sep: 指定分隔符，默认为制表符
+        :param str sep: 指定分隔符，默认为制表符
         :param list indexes: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
         :param bool dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
         :param bool drophashtag: 是否忽略以 ``#`` 开头的句子。

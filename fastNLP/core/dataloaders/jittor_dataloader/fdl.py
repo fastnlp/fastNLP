@@ -221,13 +221,12 @@ def prepare_jittor_dataloader(ds_or_db, batch_size: int = 16, shuffle: bool = Fa
            其他 key 不包含 'train' 字符串的数据集则使用 non_train_size 和 non_train_sampler 作为参数。最终根据  ``key: JittorDataLoader`` 组成
          ``Dict[key, JittorDataLoader]`` 的字典返回。
 
-    :param ds_or_db: 实现 __getitem__() 和 __len__() 的对象；或这种对象的序列；或字典。其取值只能为 ``[DataSet, DataBundle,
-     Dict[str, DataSet]]``.
+    :param ds_or_db: 可以有以下三种取值，
 
-        * ds_or_db 为 :class:`~fastNLP.core.dataset.DataSet`，返回值为 :class:`~fastNLP.core.dataloaders.JittorDataLoader`
-        * ds_or_db 为 :class:`~fastNLP.io.DataBundle`, 返回值为 :class:`Dict[str, JittorDataLoader]` 的字典
-        * ds_or_db 为 :class:`Dict[str, DataSet]` 字典， 返回值也为 :class:`Dict[str, JittorDataLoader]` 的字典
-        
+        * ds_or_db 为 :class:`~fastNLP.io.DataBundle`, 返回值为 ``Dict[str, TorchDataLoader]`` 的字典
+        * ds_or_db 为 ``Dict[str, DataSet]`` 字典， 返回值为 ``Dict[str, TorchDataLoader]`` 的字典
+        * ds_or_db 为实现了 __getitem__() 和 __len__() 的对象 ，返回值为:class:`~fastNLP.TorchDataLoader`
+
     :param non_train_batch_size: 如果传入的 ``ds_or_db`` 为 :class:`Dict` 或 :class:`~fastNLP.io.DataBundle` 对象，可以通过改参数
         设置名称不为 `train` 的其他 ``dataset`` 的 ``batch_size``。 默认为 ``16``。
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。

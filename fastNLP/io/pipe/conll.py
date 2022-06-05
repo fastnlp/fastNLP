@@ -72,8 +72,6 @@ class _NERPipe(Pipe):
         
         for name, dataset in data_bundle.iter_datasets():
             dataset.add_seq_len('words')
-        
-        data_bundle.set_input(*input_fields, *target_fields)
 
         return data_bundle
 
@@ -202,8 +200,6 @@ class Conll2003Pipe(Pipe):
         
         for name, dataset in data_bundle.iter_datasets():
             dataset.add_seq_len('words')
-        
-        data_bundle.set_input(*input_fields, *target_fields)
 
         return data_bundle
     
@@ -325,8 +321,6 @@ class _CNNERPipe(Pipe):
         
         for name, dataset in data_bundle.iter_datasets():
             dataset.add_seq_len('chars')
-        
-        data_bundle.set_input(*input_fields, *target_fields)
 
         return data_bundle
 

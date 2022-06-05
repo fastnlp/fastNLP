@@ -27,6 +27,7 @@ class MyMetric(Metric):
 
 class TestElemnt:
 
+    @pytest.mark.torch
     def test_case_v1(self):
         pred = torch.tensor([1, 1, 1, 1])
         metric = MyMetric()

@@ -161,11 +161,7 @@ class MatchingBertPipe(Pipe):
         
         for name, dataset in data_bundle.iter_datasets():
             dataset.add_seq_len('words')
-            dataset.set_input(*input_fields)
-            for fields in target_fields:
-                if dataset.has_field(fields):
-                    dataset.set_input(fields)
-        
+
         return data_bundle
 
 
@@ -311,11 +307,7 @@ class MatchingPipe(Pipe):
         for name, dataset in data_bundle.datasets.items():
             dataset.add_seq_len('words1', 'seq_len1')
             dataset.add_seq_len('words2', 'seq_len2')
-            dataset.set_input(*input_fields)
-            for fields in target_fields:
-                if dataset.has_field(fields):
-                    dataset.set_input(fields)
-        
+
         return data_bundle
 
 

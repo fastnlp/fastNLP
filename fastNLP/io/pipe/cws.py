@@ -262,8 +262,6 @@ class CWSPipe(Pipe):
         target_fields = ['target', 'seq_len']
         for name, dataset in data_bundle.iter_datasets():
             dataset.add_seq_len('chars')
-        
-        data_bundle.set_input(*input_fields, *target_fields)
 
         return data_bundle
     

@@ -227,7 +227,7 @@ def prepare_torch_dataloader(ds_or_db,
                              non_train_batch_size: int = None) \
         -> Union[TorchDataLoader, Dict[str, TorchDataLoader]]:
     """
-    ``prepare_torch_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为 ``TorchDataloader``对象， 详见 :class:`~fastNLP.core.dataloaders.TorchDataLoader`。
+    ``prepare_torch_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为 ``TorchDataloader``对象， 详见 :class:`~fastNLP.TorchDataLoader`。
     根据 ds_or_db 的类型 ``[DataSet, DataBundle, Dict[name, Dataset]]`` 不同而有不同返回结果, 具体如下:
 
         * 当 ds_or_db 为 ``DataSet``时，``prepare_torch_dataloader`` 会将使用的除了 non_train_batch_size 和 non_train_sampler 以外的参数来
@@ -241,12 +241,11 @@ def prepare_torch_dataloader(ds_or_db,
         其他 key 不包含 'train' 字符串的数据集则使用 non_train_size 和 non_train_sampler 作为参数。最终根据  ``key: TorchDataLoader`` 组成
          ``Dict[key, TorchDataLoader]`` 的字典返回。
 
-    :param ds_or_db: 实现 __getitem__() 和 __len__() 的对象；或这种对象的序列；或字典。其取值只能为 ``[DataSet, DataBundle,
-    Dict[str, DataSet]]``.
+    :param ds_or_db: 可以有以下三种取值，
 
-        * ds_or_db 为  :class:`~fastNLP.core.dataset.DataSet`，返回值为:class:`~fastNLP.core.dataloaders.TorchDataLoader`
         * ds_or_db 为 :class:`~fastNLP.io.DataBundle`, 返回值为 ``Dict[str, TorchDataLoader]`` 的字典
-        * ds_or_db 为 ``Dict[str, DataSet]`` 字典， 返回值也为 ``Dict[str, TorchDataLoader]`` 的字典
+        * ds_or_db 为 ``Dict[str, DataSet]`` 字典， 返回值为 ``Dict[str, TorchDataLoader]`` 的字典
+        * ds_or_db 为实现了 __getitem__() 和 __len__() 的对象 ，返回值为:class:`~fastNLP.TorchDataLoader`
 
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
     :param non_train_batch_size: 非 'train' 数据集的 ``TorchDataLoader`` 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。

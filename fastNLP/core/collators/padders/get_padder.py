@@ -24,62 +24,62 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
     :param field_name: 方便报错的。
     :return:
     """
-    assert len(batch_field)!=0, "Empty batch encountered."
-    logger.debug(f"The content in the field:`{field_name}` is:\n" + str(batch_field))
-    if pad_val is None:
-        logger.debug(f"The pad_val for field:{field_name} is None, not padding this field.")
-        return NullPadder()
-    if backend is None:
-        logger.debug(f"The backend for field:{field_name} is None, not padding this field.")
-        return NullPadder()
-
-    # 首先判断当前 field 是否是必须要 pad ，根据用户设置的 pad_val、dtype 等判断。
-    must_pad = False
-    if pad_val != 0 or dtype is not None:
-        must_pad = True
-
-    catalog = _get_element_shape_dtype(batch_field)  # 首先获取数据的基本信息。
-
-    # 根据 catalog 来判定当前是否可以进行 pad 。
-    # 首先检查是否所有的 key 是一样长的，表明深度是一致的
-    depths = set(map(len, catalog.keys()))
-    num_depth = len(depths)
-    if num_depth != 1:
-        msg = f'Field:`{field_name}` cannot pad, since it has various depths({depths}) of data. To view more ' \
-              f"information please set logger's level to DEBUG."
-        if must_pad:
-            raise InconsistencyError(msg)
-        raise NoProperPadderError(msg)
-
-    # 再检查所有的元素 shape 是否一致？
-    shape_lens = set([len(v[0]) for v in catalog.values()])
-    num_shape = len(shape_lens)
-    if num_shape != 1:
-        msg = f'Field:`{field_name}` cannot pad, since it has various shape length({shape_lens}) of data. To view more ' \
-              f"information please set logger's level to DEBUG."
-        if must_pad:
-            raise InconsistencyError(msg)
-        raise NoProperPadderError(msg)
-
-    # 再检查所有的元素 type 是否一致
     try:
-        ele_dtypes = set([v[1] for v in catalog.values()])
-    except TypeError:
-        ele_dtypes = set([str(v[1]) for v in catalog.values()])
-    num_eletypes = len(ele_dtypes)
-    if num_eletypes != 1:
-        msg = f'Field:`{field_name}` cannot pad, since it has various types({ele_dtypes}) of data. To view more ' \
-              f"information please set logger's level to DEBUG."
-        if must_pad:
-            raise InconsistencyError(msg)
-        raise NoProperPadderError(msg)
+        assert len(batch_field)!=0, "Empty batch encountered."
+        logger.debug(f"The content in the field:`{field_name}` is:\n" + str(batch_field))
+        if pad_val is None:
+            logger.debug(f"The pad_val for field:{field_name} is None, not padding this field.")
+            return NullPadder()
+        if backend is None:
+            logger.debug(f"The backend for field:{field_name} is None, not padding this field.")
+            return NullPadder()
 
-    depth = depths.pop()
-    shape_len = shape_lens.pop()
-    ele_dtype = list(catalog.values())[0][1]  # 因为上面有except的情况，所以这样处理了
+        # 首先判断当前 field 是否是必须要 pad ，根据用户设置的 pad_val、dtype 等判断。
+        must_pad = False
+        if pad_val != 0 or dtype is not None:
+            must_pad = True
 
-    # 需要由 padder 自己决定是否能够 pad 。
-    try:
+        catalog = _get_element_shape_dtype(batch_field)  # 首先获取数据的基本信息。
+
+        # 根据 catalog 来判定当前是否可以进行 pad 。
+        # 首先检查是否所有的 key 是一样长的，表明深度是一致的
+        depths = set(map(len, catalog.keys()))
+        num_depth = len(depths)
+        if num_depth != 1:
+            msg = f'Field:`{field_name}` cannot pad, since it has various depths({depths}) of data. To view more ' \
+                  f"information please set logger's level to DEBUG."
+            if must_pad:
+                raise InconsistencyError(msg)
+            raise NoProperPadderError(msg)
+
+        # 再检查所有的元素 shape 是否一致？
+        shape_lens = set([len(v[0]) for v in catalog.values()])
+        num_shape = len(shape_lens)
+        if num_shape != 1:
+            msg = f'Field:`{field_name}` cannot pad, since it has various shape length({shape_lens}) of data. To view more ' \
+                  f"information please set logger's level to DEBUG."
+            if must_pad:
+                raise InconsistencyError(msg)
+            raise NoProperPadderError(msg)
+
+        # 再检查所有的元素 type 是否一致
+        try:
+            ele_dtypes = set([v[1] for v in catalog.values()])
+        except TypeError:
+            ele_dtypes = set([str(v[1]) for v in catalog.values()])
+        num_eletypes = len(ele_dtypes)
+        if num_eletypes != 1:
+            msg = f'Field:`{field_name}` cannot pad, since it has various types({ele_dtypes}) of data. To view more ' \
+                  f"information please set logger's level to DEBUG."
+            if must_pad:
+                raise InconsistencyError(msg)
+            raise NoProperPadderError(msg)
+
+        depth = depths.pop()
+        shape_len = shape_lens.pop()
+        ele_dtype = list(catalog.values())[0][1]  # 因为上面有except的情况，所以这样处理了
+
+        # 需要由 padder 自己决定是否能够 pad 。
         if depth == 1 and shape_len == 0:  # 形如 [0, 1, 2] 或 [True, False, True]
             if backend == 'raw':
                 return RawNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
