@@ -171,7 +171,7 @@ class ResultsMonitor:
     @property
     def log_name(self) -> str:
         """
-        内部用于打印信息使用
+        内部用于打印当前类别信息使用
 
         :return:
         """

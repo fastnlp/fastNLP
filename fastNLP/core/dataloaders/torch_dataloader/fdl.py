@@ -108,6 +108,9 @@ class TorchDataLoader(DataLoader):
         if not isinstance(dataset, _FDataSet):
             dataset = _FDataSet(dataset)
 
+        if num_workers>0 and multiprocessing_context is None:
+            multiprocessing_context = 'fork'  # 这里默认使用fork的方式来启动多进程
+
         if batch_sampler is not None:
             batch_size = 1
             shuffle = False

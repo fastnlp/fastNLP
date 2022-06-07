@@ -16,6 +16,7 @@ __all__ = [
     "ResultsMonitor",
     'HasMonitorCallback',
     "FitlogCallback",
+    "TimerCallback",
 
     # collators
     'Collator',

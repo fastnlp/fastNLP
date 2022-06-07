@@ -41,10 +41,12 @@ class TrainBatchLoop(Loop):
                 batch = next(dataloader)
                 indices = get_batch_indices()
             except StopIteration:
+                trainer.on_fetch_data_end()
                 break
 
+            trainer.on_fetch_data_end()
+
             try:
-                trainer.on_fetch_data_end()
                 batch = match_and_substitute_params(trainer.input_mapping, batch)
                 batch = trainer.move_data_to_device(batch)
 

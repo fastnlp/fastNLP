@@ -1,5 +1,4 @@
 import json
-import sys
 from typing import Union
 
 __all__ = [
@@ -16,8 +15,21 @@ from fastNLP.core.log import logger
 
 
 class ProgressCallback(HasMonitorCallback):
+    def __init__(self, monitor, larger_better, must_have_monitor=False):
+        super(ProgressCallback, self).__init__(monitor=monitor, larger_better=larger_better,
+                                               must_have_monitor=must_have_monitor)
+        self.best_monitor_epoch = -1
+        self.best_monitor_step = -1
+
+    def record_better_monitor(self, trainer):
+        self.best_monitor_step = trainer.global_forward_batches
+        self.best_monitor_epoch = trainer.cur_epoch_idx
+
     def on_train_end(self, trainer):
-        f_rich_progress.stop()
+        if self.best_monitor_epoch != -1:
+            msg = f"The best performance for monitor {self._real_monitor}:{self.monitor_value} was achieved in" \
+                  f" Epoch:{self.best_monitor_epoch}, Global Batch:{self.best_monitor_step}."
+            logger.info(msg)
 
     @property
     def name(self):  # progress bar的名称
@@ -97,6 +109,7 @@ class RichCallback(ProgressCallback):
                                  advance=None, completed=trainer.cur_epoch_idx, refresh=True)
 
     def on_train_end(self, trainer):
+        super(RichCallback, self).on_train_end(trainer)
         self.clear_tasks()
 
     def on_before_backward(self, trainer, outputs):
@@ -121,8 +134,8 @@ class RichCallback(ProgressCallback):
         text_style = ''
         characters = '-'
         if self.monitor is not None:
-            monitor_value = self.get_monitor_value(results)
-            if self.is_better_monitor_value(monitor_value, keep_if_better=True):
+            if self.is_better_results(results, keep_if_better=True):
+                self.record_better_monitor(trainer)
                 if abs(self.monitor_value) != float('inf'):
                     rule_style = 'spring_green3'
                     text_style = '[bold]'
@@ -201,8 +214,8 @@ class RawTextCallback(ProgressCallback):
         base_text = f'Eval. results on Epoch:{trainer.cur_epoch_idx}, Batch:{trainer.batch_idx_in_epoch}'
         text = ''
         if self.monitor is not None:
-            monitor_value = self.get_monitor_value(results)
-            if self.is_better_monitor_value(monitor_value, keep_if_better=True):
+            if self.is_better_results(results, keep_if_better=True):
+                self.record_better_monitor(trainer)
                 if abs(self.monitor_value) != float('inf'):
                     text = '+'*self.num_signs + base_text + '+'*self.num_signs
         if len(text) == 0:
@@ -266,6 +279,7 @@ class TqdmCallback(ProgressCallback):
         self.progress_bar.set_description_str(self.task2id['epoch'], f'Epoch:{trainer.cur_epoch_idx}', refresh=True)
 
     def on_train_end(self, trainer):
+        super(TqdmCallback, self).on_train_end(trainer)
         self.clear_tasks()
 
     def on_before_backward(self, trainer, outputs):
@@ -287,8 +301,8 @@ class TqdmCallback(ProgressCallback):
         base_text = f'Eval. results on Epoch:{trainer.cur_epoch_idx}, Batch:{trainer.batch_idx_in_epoch}'
         text = ''
         if self.monitor is not None:
-            monitor_value = self.get_monitor_value(results)
-            if self.is_better_monitor_value(monitor_value, keep_if_better=True):
+            if self.is_better_results(results, keep_if_better=True):
+                self.record_better_monitor(trainer)
                 if abs(self.monitor_value) != float('inf'):
                     text = '+'*self.num_signs + base_text + '+'*self.num_signs
         if len(text) == 0:

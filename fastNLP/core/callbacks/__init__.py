@@ -21,7 +21,9 @@ __all__ = [
     "ResultsMonitor",
     'HasMonitorCallback',
 
-    "FitlogCallback"
+    "FitlogCallback",
+
+    "TimerCallback"
 ]
 
 
@@ -37,4 +39,4 @@ from .torch_callbacks import *
 from .more_evaluate_callback import MoreEvaluateCallback
 from .has_monitor_callback import ResultsMonitor, HasMonitorCallback
 from .fitlog_callback import FitlogCallback
-
+from .timer_callback import TimerCallback
