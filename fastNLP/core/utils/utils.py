@@ -630,7 +630,7 @@ def is_notebook():
 
 def flat_nest_dict(d:Dict, separator:str='#', compress_none_key:bool=True, top_down:bool=False) -> Dict:
     """
-    讲一个 nested 的 dict 转成 flat 的 dict，例如
+    将一个 nested 的 dict 转成 flat 的 dict，例如
     ex::
         d = {'test': {'f1': {'f': 0.2, 'rec': 0.1}}} -> {'f#f1#test':0.2, 'rec#f1#test':0.1}
 
