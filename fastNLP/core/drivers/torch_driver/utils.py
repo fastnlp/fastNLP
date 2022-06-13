@@ -283,7 +283,7 @@ def optimizer_state_to_device(state, device):
 
 
 def _check_dataloader_args_for_distributed(args, controller='Trainer'):
-    if type(args.batch_sampler) is not TorchBatchSampler and (type(args.sampler) not in {TorchRandomSampler,
+    if type(args.batch_sampler) is not TorchBatchSampler or (type(args.sampler) not in {TorchRandomSampler,
                                                               TorchSequentialSampler}):
         mode = 'training' if controller == 'Trainer' else 'evaluation'
         substitution = 'fastNLP.RandomSampler' if controller == 'Trainer' else 'fastNLP.UnrepeatedSequentialSampler'

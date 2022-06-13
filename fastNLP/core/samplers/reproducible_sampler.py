@@ -12,7 +12,6 @@ import numpy as np
 
 from fastNLP.core.log import logger
 from fastNLP.core.dataset import DataSet
-from fastNLP.envs.utils import get_global_seed
 
 
 class ReproducibleSampler:
@@ -66,11 +65,11 @@ class RandomSampler(ReproducibleSampler):
     :param seed: 随机数种子。
     :param kwargs: 用户不需要使用，fastNLP 内部使用
     """
-    def __init__(self, dataset, shuffle: bool = True, seed: int = None, **kwargs):
+    def __init__(self, dataset, shuffle: bool = True, seed: int = 0, **kwargs):
         super(RandomSampler, self).__init__()
         self.dataset = dataset
         self.shuffle = shuffle
-        self.seed = get_global_seed() if seed is None else seed
+        self.seed = int(seed)
         
         self.num_consumed_samples = kwargs.get("num_consumed_samples", 0)  # 总共迭代了多少数据了，包括多卡情况下的其它卡上的输出的数量
 

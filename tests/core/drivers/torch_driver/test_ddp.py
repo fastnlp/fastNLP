@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from pathlib import Path
 
@@ -185,7 +187,7 @@ class TestSetDistReproDataloader:
         cls.device = [0, 1]
 
     def setup_method(self):
-        self.dataset = TorchNormalDataset(40)
+        self.dataset = TorchNormalDataset(100)
 
     """
     传入的 `dist` 参数为具体的 ReproducibleSampler 或 ReproducibleBatchSampler 的情况
@@ -571,7 +573,7 @@ class TestSaveLoad:
     """
 
     def setup_method(self):
-        self.dataset = TorchNormalXYDataset(20)
+        self.dataset = TorchNormalXYDataset(100)
 
     @magic_argv_env_context
     @pytest.mark.parametrize("only_state_dict", ([True, False]))
@@ -641,7 +643,7 @@ class TestSaveLoad:
                 rank=driver1.global_rank,
                 pad=True
             )
-            num_consumed_batches = 2
+            num_consumed_batches = 4
 
             already_seen_x_set = set()
             already_seen_y_set = set()
@@ -686,7 +688,8 @@ class TestSaveLoad:
             assert not (replaced_loader is dataloader)
             assert replaced_loader.batch_sampler is dataloader.batch_sampler
             assert isinstance(replaced_loader.batch_sampler, BucketedBatchSampler)
-            assert replaced_loader.batch_sampler.seed == sampler_states["seed"]
+            if os.environ['FASTNLP_GLOBAL_RANK'] == '0':
+                assert replaced_loader.batch_sampler.seed == sampler_states["seed"]
             assert replaced_loader.batch_sampler.num_consumed_samples == num_consumed_batches * 4 * num_replicas
 
             # 3. 检查 fp16 是否被加载
@@ -753,7 +756,7 @@ class TestSaveLoad:
                 rank=driver1.global_rank,
                 pad=True
             )
-            num_consumed_batches = 2
+            num_consumed_batches = 4
 
             already_seen_x_set = set()
             already_seen_y_set = set()
@@ -792,11 +795,13 @@ class TestSaveLoad:
             # 2. 检查 sampler 是否被正确地加载和替换
             assert not (replaced_loader is dataloader)
             assert isinstance(replaced_loader.batch_sampler.sampler, RandomSampler)
-            assert replaced_loader.batch_sampler.sampler.seed == sampler_states["seed"]
-            assert replaced_loader.batch_sampler.sampler.epoch == sampler_states["epoch"]
+            if os.environ['FASTNLP_GLOBAL_RANK'] == '0':
+                assert replaced_loader.batch_sampler.sampler.seed == sampler_states["seed"]
+                assert replaced_loader.batch_sampler.sampler.epoch == sampler_states["epoch"]
+                assert len(replaced_loader.batch_sampler.sampler.dataset) == sampler_states["length"]
+                assert replaced_loader.batch_sampler.sampler.shuffle == sampler_states["shuffle"]
             assert replaced_loader.batch_sampler.sampler.num_consumed_samples == 4 * num_consumed_batches * num_replicas
-            assert len(replaced_loader.batch_sampler.sampler.dataset) == sampler_states["length"]
-            assert replaced_loader.batch_sampler.sampler.shuffle == sampler_states["shuffle"]
+
             # 3. 检查 fp16 是否被加载
             if fp16:
                 assert not isinstance(driver2.grad_scaler, torch.cuda.amp.GradScaler)
