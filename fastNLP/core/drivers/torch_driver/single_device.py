@@ -8,6 +8,7 @@ if _NEED_IMPORT_TORCH:
     from torch.nn.parallel import DistributedDataParallel
     from torch.utils.data import RandomSampler as TorchRandomSampler
     from torch.utils.data import SequentialSampler as TorchSequentialSampler
+    from torch.utils.data import BatchSampler as TorchBatchSampler
 
 __all__ = [
     'TorchSingleDriver'
@@ -123,19 +124,20 @@ class TorchSingleDriver(TorchDriver):
             return replace_sampler(dataloader, sampler)
 
         if reproducible:
-            if isinstance(args.sampler, TorchRandomSampler):
-                if getattr(args.sampler, '_num_samples', None) is None \
-                        and getattr(args.sampler, 'replacements', False) is False \
-                        and getattr(args.sampler, 'generator', None) is None:
-                    # 如果本来就是随机的，并且没有定制，直接替换掉吧。
-                    sampler = RandomSampler(args.sampler.data_source, shuffle=True)
-                    logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
+            if type(args.batch_sampler) is TorchBatchSampler:
+                if type(args.sampler) is TorchRandomSampler:
+                    if getattr(args.sampler, '_num_samples', None) is None \
+                            and getattr(args.sampler, 'replacements', False) is False \
+                            and getattr(args.sampler, 'generator', None) is None:
+                        # 如果本来就是随机的，并且没有定制，直接替换掉吧。
+                        sampler = RandomSampler(args.sampler.data_source, shuffle=True)
+                        logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
+                        return replace_sampler(dataloader, sampler)
+                elif type(args.sampler) is TorchSequentialSampler:
+                    # 需要替换为不要 shuffle 的。
+                    sampler = RandomSampler(args.sampler.data_source, shuffle=False)
+                    logger.debug("Replace torch SequentialSampler into fastNLP RandomSampler.")
                     return replace_sampler(dataloader, sampler)
-            elif isinstance(args.sampler, TorchSequentialSampler):
-                # 需要替换为不要 shuffle 的。
-                sampler = RandomSampler(args.sampler.data_source, shuffle=False)
-                logger.debug("Replace torch SequentialSampler into fastNLP RandomSampler.")
-                return replace_sampler(dataloader, sampler)
             batch_sampler = ReproduceBatchSampler(
                 batch_sampler=args.batch_sampler,
                 batch_size=args.batch_size,

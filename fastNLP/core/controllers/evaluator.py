@@ -107,8 +107,11 @@ class Evaluator:
          ``dropout`` 与 ``batch normalization`` 将会关闭。默认为 ``True``。如果为 ``False``，``fastNLP`` 不会对 ``model`` 的 ``evaluate`` 状态做任何设置。无论
          该值是什么，``fastNLP`` 都会在评测后将 ``model`` 的状态设置为 ``train``；
         * *use_dist_sampler* --
-         True / False, 是否使用分布式评测的方式。仅当 ``driver`` 为分布式类型时，该参数才有效。默认为根据 ``driver`` 是否支持
-         分布式进行设置。如果为 ``True``，将使得每个进程上的 ``dataloader`` 自动使用不同数据，所有进程的数据并集是整个数据集；
+         表示在 ``Evaluator`` 中在使用分布式的时候是否将保证 dataloader 的 ``sampler`` 替换为
+         分布式的 ``sampler``，其特点是每个卡上的数据之间不重叠，所有卡上数据的加起来是整个数据集。若传入的 dataloader
+         的 sampler 为 (a) 深度学习框架自带的默认 sampler ; (b) fastNLP 的 Sampler 等，则将替换为
+          :class:`~fastNLP.UnrepeatedSequentialSampler`，如果这个行为不是期待的，请本参数设置为 ``False``，并针对每个卡控制其可以
+          用到的数据。如果不是以上两类 sampler ，fastNLP 将报错。
         * *output_from_new_proc* -- 等价于 ``Trainer`` 中的 ``output_from_new_proc`` 参数；
         * *progress_bar* -- 等价于 ``Trainer`` 中的 ``progress_bar`` 参数；
         * *check_dataloader_legality* -- 是否检查 ``DataLoader`` 是否合法，默认为 ``True`` 。

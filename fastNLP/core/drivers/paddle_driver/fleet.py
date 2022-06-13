@@ -422,8 +422,7 @@ class PaddleFleetDriver(PaddleDriver):
         # trainer, evaluator
         if dist is None:
             if reproducible:
-                raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize fleet out of our "
-                                   "control.")
+                raise RuntimeError("It is not allowed to save checkpoint if the sampler is not allowed to be replaced.")
             else:
                 args = self.get_dataloader_args(dataloader)
                 if isinstance(args.batch_sampler, ReproducibleBatchSampler):

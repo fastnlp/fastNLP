@@ -140,6 +140,9 @@ if _NEED_IMPORT_TORCH:
     import torch.distributed as dist
     from torch.nn.parallel import DistributedDataParallel
     from torch.utils.data import BatchSampler
+    from torch.utils.data import RandomSampler as TorchRandomSampler
+    from torch.utils.data import SequentialSampler as TorchSequentialSampler
+    from torch.utils.data import BatchSampler as TorchBatchSampler
 
 __all__ = [
     'TorchDDPDriver'
@@ -159,6 +162,7 @@ from fastNLP.core.samplers import ReproducibleSampler, RandomSampler, Unrepeated
 from fastNLP.envs import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_RANK, FASTNLP_GLOBAL_SEED, FASTNLP_NO_SYNC
 from fastNLP.core.log import logger
 from fastNLP.core.drivers.torch_driver.dist_utils import fastnlp_torch_all_gather, fastnlp_torch_broadcast_object
+from .utils import _check_dataloader_args_for_distributed
 
 
 class TorchDDPDriver(TorchDriver):
@@ -535,8 +539,7 @@ class TorchDDPDriver(TorchDriver):
         # trainer, evaluator
         if dist is None:
             if reproducible:
-                raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize ddp out of our "
-                                   "control.")
+                raise RuntimeError("It is not allowed to save checkpoint if the sampler is not allowed to be replaced.")
             else:
                 args = self.get_dataloader_args(dataloader)
                 if isinstance(args.batch_sampler, ReproducibleBatchSampler):
@@ -565,13 +568,7 @@ class TorchDDPDriver(TorchDriver):
                 )
                 return replace_sampler(dataloader, sampler)
             else:
-                if type(args.batch_sampler) is not BatchSampler or (type(args.sampler) not in {torch.utils.data.RandomSampler,
-                                                                    torch.utils.data.SequentialSampler}):
-                    raise TypeError("Using customized ``batch_sampler`` or ``sampler`` with 'DDP' may cause unseen problems, cause"
-                                    "we will substitute your dataloader's sampler into our ``fastNLP.RandomSampler``. You should make"
-                                    "your customized sampler being able to be used in distributed setting before you initialize ``Trainer`` by yourself,"
-                                    "and then set the parameter ``use_dist_sampler`` of ``Trainer`` to ``False``.")
-
+                _check_dataloader_args_for_distributed(args, controller='Trainer')
                 sampler = RandomSampler(
                     dataset=args.dataset,
                     shuffle=args.shuffle,
@@ -589,7 +586,7 @@ class TorchDDPDriver(TorchDriver):
             if isinstance(args.sampler, ReproducibleSampler):
                 sampler = conversion_between_reproducible_and_unrepeated_sampler(args.sampler)
             elif not isinstance(args.sampler, UnrepeatedSampler):
-                # todo same as dist
+                _check_dataloader_args_for_distributed(args, controller='Evaluator')
                 sampler = UnrepeatedSequentialSampler(
                     dataset=args.dataset
                 )

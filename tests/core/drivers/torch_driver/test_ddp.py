@@ -12,8 +12,9 @@ from fastNLP.core.samplers import (
 )
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchNormalDataset, TorchNormalXYDataset
-from tests.helpers.utils import magic_argv_env_context
+from tests.helpers.utils import magic_argv_env_context, recover_logger, Capturing
 from fastNLP.envs.distributed import rank_zero_rm
+from fastNLP import logger
 from fastNLP.core.drivers.torch_driver.dist_utils import fastnlp_torch_all_gather
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 if _NEED_IMPORT_TORCH:
@@ -936,11 +937,117 @@ def test_batch_sampler_dataloader(shuffle, batch_size, drop_last, reproducible=T
             for i in range(1, len(data)-1):
                 flags.append(data[i]<data[i-1])
             assert all(flags) is False
-        datas = fastnlp_torch_all_gather(data)
-        if drop_last:
-            assert len(set(datas[0] + datas[1])) == num_samples-_num_samples%batch_size*2
+        if dist.is_initialized():
+            datas = fastnlp_torch_all_gather(data)
+            if drop_last:
+                assert len(set(datas[0] + datas[1])) == num_samples-_num_samples%batch_size*2
+            else:
+                assert len(set(datas[0] + datas[1])) == num_samples
+    finally:
+        if dist.is_initialized():
+            dist.barrier()
+            dist.destroy_process_group()
+
+
+
+@pytest.mark.torch
+@magic_argv_env_context
+@recover_logger
+@pytest.mark.parametrize("inherit", ([True, False]))
+def test_customized_batch_sampler_dataloader(inherit):
+    try:
+        logger.set_stdout('raw', level='info')
+        # 需要检验一下 set_dist_repro_dataloader 是否可以在定制 batch_sampler 的情况下正确运行
+        num_samples = 10
+        dataset = TorchNormalXYDataset(num_samples)
+        if inherit:
+            class BatchSampler(torch.utils.data.BatchSampler):
+                def __init__(self, dataset, batch_size):
+                    self.dataset = dataset
+                    self.batch_size = batch_size
+
+                def __iter__(self):
+                    indices = list(range(len(dataset)))
+                    for i in range(len(self)):
+                        start = i * self.batch_size
+                        end = (i + 1) * self.batch_size
+                        return indices[start:end]
+
+                def __len__(self):
+                    return (len(self.dataset)+self.batch_size-1)//self.batch_size
         else:
-            assert len(set(datas[0] + datas[1])) == num_samples
+            class BatchSampler:
+                def __init__(self, dataset, batch_size):
+                    self.dataset = dataset
+                    self.batch_size = batch_size
+
+                def __iter__(self):
+                    indices = list(range(len(dataset)))
+                    for i in range(len(self)):
+                        start = i * self.batch_size
+                        end = (i + 1) * self.batch_size
+                        return indices[start:end]
+
+                def __len__(self):
+                    return (len(self.dataset)+self.batch_size-1)//self.batch_size
+
+        dl = prepare_torch_dataloader(dataset, batch_sampler=BatchSampler(dataset, batch_size=4))
+        model = TorchNormalModel_Classification_1(10, 32)
+        device = [torch.device(i) for i in [0, 1]]
+        driver = TorchDDPDriver(model, parallel_device=device)
+        driver.setup()
+        # TODO 这里需要raise
+        with pytest.raises(TypeError):
+            dl = driver.set_dist_repro_dataloader(dataloader=dl, dist='dist', reproducible=False)
+    finally:
+        if dist.is_initialized():
+            dist.barrier()
+            dist.destroy_process_group()
+
+
+@pytest.mark.torch
+@magic_argv_env_context
+@recover_logger
+@pytest.mark.parametrize("inherit", ([True, False]))
+def test_customized_sampler_dataloader(inherit):
+    try:
+        logger.set_stdout('raw', level='info')
+        # 需要检验一下 set_dist_repro_dataloader 是否可以在定制 batch_sampler 的情况下正确运行
+        num_samples = 10
+        dataset = TorchNormalXYDataset(num_samples)
+        if inherit:
+            class Sampler(torch.utils.data.RandomSampler):
+                def __init__(self, dataset, batch_size):
+                    self.dataset = dataset
+                    self.batch_size = batch_size
+
+                def __iter__(self):
+                    indices = list(range(len(dataset)))
+                    return iter(indices)
+
+                def __len__(self):
+                    return len(self.dataset)
+        else:
+            class Sampler:
+                def __init__(self, dataset, batch_size):
+                    self.dataset = dataset
+                    self.batch_size = batch_size
+
+                def __iter__(self):
+                    indices = list(range(len(dataset)))
+                    return iter(indices)
+
+                def __len__(self):
+                    return len(self.dataset)
+
+        dl = prepare_torch_dataloader(dataset, sampler=Sampler(dataset, batch_size=4))
+        model = TorchNormalModel_Classification_1(10, 32)
+        device = [torch.device(i) for i in [0, 1]]
+        driver = TorchDDPDriver(model, parallel_device=device)
+        driver.setup()
+        # TODO 这里需要raise
+        with pytest.raises(TypeError):
+            dl = driver.set_dist_repro_dataloader(dataloader=dl, dist='dist', reproducible=False)
     finally:
         if dist.is_initialized():
             dist.barrier()

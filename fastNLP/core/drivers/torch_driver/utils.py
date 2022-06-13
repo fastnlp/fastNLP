@@ -22,7 +22,11 @@ if _NEED_IMPORT_TORCH:
     import torch
     # import torch.nn as nn
     from torch.nn import Module
-    from torch.utils.data import DataLoader, BatchSampler
+    from torch.utils.data import DataLoader
+    from torch.utils.data import RandomSampler as TorchRandomSampler
+    from torch.utils.data import SequentialSampler as TorchSequentialSampler
+    from torch.utils.data import BatchSampler as TorchBatchSampler
+
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Module
 
@@ -200,6 +204,7 @@ def replace_sampler(dataloader: "DataLoader", sampler):
     non_default_params.add("dataset")
 
     reconstruct_args = {k: v for k, v in instance_attrs.items() if k in non_default_params}
+    reconstruct_args.update({"sampler": sampler, "shuffle": False, "batch_sampler": None})
 
     batch_sampler = getattr(dataloader, "batch_sampler")
     if batch_sampler is not None and isinstance(batch_sampler, ReproducibleBatchSampler):
@@ -277,5 +282,13 @@ def optimizer_state_to_device(state, device):
     return new_state
 
 
-
-
+def _check_dataloader_args_for_distributed(args, controller='Trainer'):
+    if type(args.batch_sampler) is not TorchBatchSampler and (type(args.sampler) not in {TorchRandomSampler,
+                                                              TorchSequentialSampler}):
+        mode = 'training' if controller == 'Trainer' else 'evaluation'
+        substitution = 'fastNLP.RandomSampler' if controller == 'Trainer' else 'fastNLP.UnrepeatedSequentialSampler'
+        raise TypeError(f"Using customized ``batch_sampler`` or ``sampler`` for distributed {mode} may cause "
+                        f"unpredictable problems, because fastNLP will substitute the dataloader's sampler into "
+                        f"``{substitution}``. The customized sampler should set for distributed running  "
+                        f"before initializing ``{controller}`` , and then set the "
+                        f"parameter ``use_dist_sampler`` of ``{controller}`` to ``False``.")

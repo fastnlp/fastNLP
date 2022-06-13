@@ -65,6 +65,13 @@ class Trainer(TrainerEventTrigger):
             您传入的 ``Driver`` 实例中的模型；
 
     :param train_dataloader: 训练数据集，注意其必须是单独的一个数据集，不能是 List 或者 Dict；
+
+        .. warning::
+
+            当使用分布式训练时， ``fastNLP`` 会默认将 ``dataloader`` 中的 ``Sampler`` 进行处理，以使得在一个 ``epcoh`` 中，不同卡
+            用以训练的数据是不重叠的。如果你对 sampler 有特殊处理，那么请将 ``use_dist_sampler`` 参数设置为 ``False`` ，此刻需要由
+            你自身保证每张卡上所使用的数据是不同的。
+
     :param optimizers: 训练所需要的优化器；可以是单独的一个优化器实例，也可以是多个优化器组成的 List；
     :param device: 该参数用来指定具体训练时使用的机器；注意当该参数仅当您通过 `torch.distributed.launch/run` 启动时可以为 None，
         此时 fastNLP 不会对模型和数据进行设备之间的移动处理，但是你可以通过参数 `input_mapping` 和 `output_mapping` 来实现设备之间
@@ -93,9 +100,9 @@ class Trainer(TrainerEventTrigger):
 
         .. warning::
 
-            注意参数 ``device`` 仅当您通过 pytorch 或者其它训练框架自身的并行训练启动脚本启动 ddp 训练时才允许为 ``None``！
+            注意参数 ``device`` 仅当您通过训练框架自身的并行训练启动脚本启动 ddp 训练时才允许为 ``None``！
 
-            例如，当您使用::
+            例如，在 pytorch 中，当您使用::
 
                 python -m torch.distributed.launch --nproc_per_node 2 train.py
 
@@ -290,16 +297,22 @@ class Trainer(TrainerEventTrigger):
                 driver 实例的 ``model_device`` 才会为 None；
                 3. 对于 paddle，该参数无效；
 
-        * *use_dist_sampler* -- True / False, 表示是否使用分布式的 ``sampler``。在多卡时，分布式 ``sampler`` 将自动决定每张卡上读取的 sample ，使得一个 epoch
-         内所有卡的 sample 加起来为一整个数据集的 sample。默认会根据 driver 是否为分布式进行设置。
-        * *evaluate_use_dist_sampler* -- True / False, 表示在 ``Evaluator`` 中在使用分布式的时候是否将 dataloader 的 ``sampler`` 替换为分布式的 ``sampler``；
-         不传入该值时，该值与 ``use_dist_sampler`` 参数保持一致；
+        * *use_dist_sampler* -- 表示是否使用分布式的 ``sampler``。在多卡时，分布式 ``sampler`` 将自动决定每张卡上读取的 sample ，使得一个 epoch
+         内所有卡的 sample 加起来为一整个数据集的 sample，同时为了保证所有卡上拥有相同数量的 sample ，有的卡上可能会有重复的 sample ，例如
+         8卡训练，只有9个sample，如果batch_size为1，那么第二个batch时，有7张卡将没有 sample 可用，因此只有重复使用 sample 来 pad 到第二个
+         batch 中。如果不希望 fastNLP 对 dataloader 的sampler 做特殊设置，请将该值设置为 False ，若确实需要分布式的训练，请在 Trainer 外
+         对 train_dataloader 做的数据做特殊处理使得其在不同的卡之间 sample 是
+        * *evaluate_use_dist_sampler* -- 表示在 ``Evaluator`` 中在使用分布式的时候是否将保证 dataloader 的 ``sampler`` 替换为
+         evaluate 时使用的分布式的 ``sampler``，其特点是每个卡上的数据之间不重叠，所有卡上数据的加起来是整个数据集。若传入的 dataloader
+         的 sampler 为 (a) 深度学习框架自带的默认 sampler ; (b) fastNLP 的 Sampler 等，则将替换为
+          :class:`~fastNLP.UnrepeatedSequentialSampler`，如果这个行为不是期待的，请本参数设置为 ``False``，并针对每个卡控制其可以
+          用到的数据。
         * *output_from_new_proc* -- 应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
          ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
          log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
 
             注意该参数仅当使用分布式的 ``driver`` 时才有效，例如 ``TorchDDPDriver``；
-        * *progress_bar* -- 以哪种方式显示 progress ，目前支持[None, 'raw', 'rich', 'auto', 'tqdm'] 或者 :class:`~.fastNLP.RichCallback`, :class:`~fastNLP.RawTextCallback`等对象，
+        * *progress_bar* -- 以哪种方式显示 progress ，目前支持[None, 'raw', 'rich', 'auto', 'tqdm'] 或者 :class:`~fastNLP.RichCallback`, :class:`~fastNLP.RawTextCallback`等对象，
          默认为 auto , auto 表示如果检测到当前 terminal 为交互型则使用 :class:`~fastNLP.RichCallback`，否则使用 :class:`~fastNLP.RawTextCallback` 对象。如果
          需要定制 progress bar 的参数，例如打印频率等，可以传入 :class:`~fastNLP.RichCallback`, :class:`~fastNLP.RawTextCallback` 等对象。
         * *train_input_mapping* -- 与 input_mapping 一致，但是只用于 ``Trainer`` 中。与 input_mapping 互斥。
