@@ -14,7 +14,7 @@ from fastNLP.envs import (
     FASTNLP_BACKEND_LAUNCH,
     FASTNLP_GLOBAL_SEED,
 )
-from fastNLP.core.samplers import re_instantiate_sampler
+from fastNLP.core.samplers import re_instantiate_sampler, ReproducibleBatchSampler
 from fastNLP.core.utils import auto_param_call
 from fastNLP.core.log import logger
 
@@ -23,7 +23,6 @@ if _NEED_IMPORT_TORCH:
     # import torch.nn as nn
     from torch.nn import Module
     from torch.utils.data import DataLoader, BatchSampler
-    from torch.utils.data.sampler import Sampler
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Module
 
@@ -201,7 +200,10 @@ def replace_sampler(dataloader: "DataLoader", sampler):
     non_default_params.add("dataset")
 
     reconstruct_args = {k: v for k, v in instance_attrs.items() if k in non_default_params}
-    reconstruct_args.update(_dataloader_init_kwargs_resolve_sampler(dataloader, sampler))
+
+    batch_sampler = getattr(dataloader, "batch_sampler")
+    if batch_sampler is not None and isinstance(batch_sampler, ReproducibleBatchSampler):
+        raise RuntimeError("It should not be running here, please report a bug to us.")
 
     required_args = {
         p.name
@@ -241,28 +243,6 @@ def replace_sampler(dataloader: "DataLoader", sampler):
                 f"`{dataloader_self_name}(dataset, sampler=DistributedSampler(dataset))`."
             )
     return type(dataloader)(**reconstruct_args)
-
-
-def _dataloader_init_kwargs_resolve_sampler(
-        dataloader: "DataLoader", sampler: Optional["Sampler"]
-) -> Dict[str, Any]:
-    r"""
-    此函数用于处理与 DataLoader 关联的采样器、batch_sampler 参数重新实例化；
-    """
-    batch_sampler = getattr(dataloader, "batch_sampler")
-    # checking the batch sampler type is different than PyTorch default.
-    if batch_sampler is not None and not isinstance(batch_sampler, BatchSampler):
-        batch_sampler = re_instantiate_sampler(batch_sampler)
-
-        return {
-            "sampler": None,
-            "shuffle": False,
-            "batch_sampler": batch_sampler,
-            "batch_size": 1,
-            "drop_last": False,
-        }
-
-    return {"sampler": sampler, "shuffle": False, "batch_sampler": None}
 
 
 def replace_batch_sampler(dataloader, new_batch_sampler):

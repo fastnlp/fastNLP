@@ -565,6 +565,13 @@ class TorchDDPDriver(TorchDriver):
                 )
                 return replace_sampler(dataloader, sampler)
             else:
+                if type(args.batch_sampler) is not BatchSampler or (type(args.sampler) not in {torch.utils.data.RandomSampler,
+                                                                    torch.utils.data.SequentialSampler}):
+                    raise TypeError("Using customized ``batch_sampler`` or ``sampler`` with 'DDP' may cause unseen problems, cause"
+                                    "we will substitute your dataloader's sampler into our ``fastNLP.RandomSampler``. You should make"
+                                    "your customized sampler being able to be used in distributed setting before you initialize ``Trainer`` by yourself,"
+                                    "and then set the parameter ``use_dist_sampler`` of ``Trainer`` to ``False``.")
+
                 sampler = RandomSampler(
                     dataset=args.dataset,
                     shuffle=args.shuffle,
@@ -582,6 +589,7 @@ class TorchDDPDriver(TorchDriver):
             if isinstance(args.sampler, ReproducibleSampler):
                 sampler = conversion_between_reproducible_and_unrepeated_sampler(args.sampler)
             elif not isinstance(args.sampler, UnrepeatedSampler):
+                # todo same as dist
                 sampler = UnrepeatedSequentialSampler(
                     dataset=args.dataset
                 )
