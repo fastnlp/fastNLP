@@ -1,6 +1,6 @@
 import os
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 from enum import IntEnum
 import contextlib
 import random
@@ -292,3 +292,88 @@ def _check_dataloader_args_for_distributed(args, controller='Trainer'):
                         f"``{substitution}``. The customized sampler should set for distributed running  "
                         f"before initializing ``{controller}`` , and then set the "
                         f"parameter ``use_dist_sampler`` of ``{controller}`` to ``False``.")
+
+def _create_default_config(
+    zero_optimization: bool = True,
+    zero_allow_untested_optimizer: bool = True,
+    logging_batch_size_per_gpu: Union[str, int] = "auto",
+    partition_activations: bool = False,
+    cpu_checkpointing: bool = False,
+    contiguous_memory_optimization: bool = False,
+    synchronize_checkpoint_boundary: bool = False,
+    offload_optimizer: bool = False,
+    offload_parameters: bool = False,
+    offload_params_device: str = "cpu",
+    nvme_path: str = "/local_nvme",
+    params_buffer_count: int = 5,
+    params_buffer_size: int = 100_000_000,
+    max_in_cpu: int = 1_000_000_000,
+    offload_optimizer_device: str = "cpu",
+    optimizer_buffer_count: int = 4,
+    pin_memory: bool = False,
+    block_size: int = 1048576,
+    queue_depth: int = 8,
+    single_submit: bool = False,
+    overlap_events: bool = True,
+    thread_count: int = 1,
+    stage: int = 2,
+    contiguous_gradients: bool = True,
+    overlap_comm: bool = True,
+    allgather_partitions: bool = True,
+    reduce_scatter: bool = True,
+    allgather_bucket_size: int = 200_000_000,
+    reduce_bucket_size: int = 200_000_000,
+    sub_group_size: int = 1_000_000_000_000,
+) -> Dict:
+    cfg = {
+        "activation_checkpointing": {
+            "partition_activations": partition_activations,
+            "cpu_checkpointing": cpu_checkpointing,
+            "contiguous_memory_optimization": contiguous_memory_optimization,
+            "synchronize_checkpoint_boundary": synchronize_checkpoint_boundary,
+        },
+        "aio": {
+            "block_size": block_size,
+            "queue_depth": queue_depth,
+            "single_submit": single_submit,
+            "overlap_events": overlap_events,
+            "thread_count": thread_count,
+        },
+    }
+    zero_kwargs = {
+        "stage": stage,
+        "contiguous_gradients": contiguous_gradients,
+        "overlap_comm": overlap_comm,
+        "allgather_partitions": allgather_partitions,
+        "reduce_scatter": reduce_scatter,
+        "allgather_bucket_size": allgather_bucket_size,
+        "reduce_bucket_size": reduce_bucket_size,
+        "sub_group_size": sub_group_size,
+    }
+    if zero_optimization:
+        zero_config = zero_kwargs
+
+        if offload_optimizer:
+            zero_config["offload_optimizer"] = {
+                "device": offload_optimizer_device,
+                "nvme_path": nvme_path,
+                "buffer_count": optimizer_buffer_count,
+                "pin_memory": pin_memory,
+            }
+        if offload_parameters:
+            zero_config["offload_param"] = {
+                "device": offload_params_device,
+                "nvme_path": nvme_path,
+                "buffer_count": params_buffer_count,
+                "buffer_size": params_buffer_size,
+                "max_in_cpu": max_in_cpu,
+                "pin_memory": pin_memory,
+            }
+        cfg = {
+            "zero_allow_untested_optimizer": zero_allow_untested_optimizer,
+            "zero_optimization": zero_config,
+            **cfg,
+        }
+    if logging_batch_size_per_gpu != "auto":
+        cfg = {"train_micro_batch_size_per_gpu": logging_batch_size_per_gpu, **cfg}
+    return cfg
