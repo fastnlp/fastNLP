@@ -118,14 +118,14 @@ class JittorSingleDriver(JittorDriver):
             if args.sampler is None:
                 sampler = RandomSampler(args.dataset, args.shuffle)
                 return replace_sampler(dataloader, sampler)
-            elif isinstance(args.sampler, JittorRandomSampler):
+            elif type(args.sampler) is JittorRandomSampler:
                 if getattr(args.sampler, '_num_samples', None) is None \
                         and getattr(args.sampler, 'rep', False) is False:
                     # 如果本来就是随机的，并且没有定制，直接替换掉吧。
                     sampler = RandomSampler(args.sampler.dataset, shuffle=True)
                     logger.debug("Replace jittor RandomSampler into fastNLP RandomSampler.")
                     return replace_sampler(dataloader, sampler)
-            elif isinstance(args.sampler, JittorSequentialSampler):
+            elif type(args.sampler) is JittorSequentialSampler:
                 # 需要替换为不要 shuffle 的。
                 sampler = RandomSampler(args.sampler.dataset, shuffle=False)
                 logger.debug("Replace jittor SequentialSampler into fastNLP RandomSampler.")

@@ -23,7 +23,7 @@ if _NEED_IMPORT_PADDLE:
     import paddle
     from paddle import nn
     from paddle.nn import Layer
-    from paddle.io import DataLoader, BatchSampler
+    from paddle.io import DataLoader, BatchSampler, RandomSampler, SequenceSampler
     from paddle.amp import auto_cast, GradScaler
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Layer
@@ -249,3 +249,14 @@ def optimizer_state_to_device(state, device):
         else:
             new_state[name] = param
     return new_state
+
+def _check_dataloader_args_for_distributed(args, controller='Trainer'):
+    if type(args.batch_sampler) is not BatchSampler or (type(args.sampler) not in {RandomSampler,
+                                                              SequenceSampler}):
+        mode = 'training' if controller == 'Trainer' else 'evaluation'
+        substitution = 'fastNLP.RandomSampler' if controller == 'Trainer' else 'fastNLP.UnrepeatedSequentialSampler'
+        raise TypeError(f"Using customized ``batch_sampler`` or ``sampler`` for distributed {mode} may cause "
+                        f"unpredictable problems, because fastNLP will substitute the dataloader's sampler into "
+                        f"``{substitution}``. The customized sampler should set for distributed running  "
+                        f"before initializing ``{controller}`` , and then set the "
+                        f"parameter ``use_dist_sampler`` of ``{controller}`` to ``False``.")

@@ -26,6 +26,11 @@ if _NEED_IMPORT_PADDLE:
     import paddle
     from paddle import DataParallel
     from paddle.fluid.reader import _DatasetKind
+    from paddle.io import (
+        RandomSampler as PaddleRandomSampler,
+        SequenceSampler as PaddleSequenialSampler,
+        BatchSampler as PaddleBatchSampler,
+    )
 
 __all__ = [
     "PaddleSingleDriver",
@@ -122,19 +127,21 @@ class PaddleSingleDriver(PaddleDriver):
             return replace_sampler(dataloader, sampler)
 
         if reproducible:
-            if isinstance(args.sampler, paddle.io.RandomSampler):
-                if getattr(args.sampler, '_num_samples', None) is None \
-                        and getattr(args.sampler, 'replacements', False) is False \
-                        and getattr(args.sampler, 'generator', None) is None:
-                    # 如果本来就是随机的，并且没有定制，直接替换掉。
-                    sampler = RandomSampler(args.sampler.data_source, shuffle=True)
-                    logger.debug("Replace paddle RandomSampler into fastNLP RandomSampler.")
+            if type(args.batch_sampler) is PaddleBatchSampler:
+                if type(args.sampler) is PaddleRandomSampler:
+                    if isinstance(args.sampler, PaddleRandomSampler):
+                        if getattr(args.sampler, '_num_samples', None) is None \
+                                and getattr(args.sampler, 'replacements', False) is False \
+                                and getattr(args.sampler, 'generator', None) is None:
+                            # 如果本来就是随机的，并且没有定制，直接替换掉。
+                            sampler = RandomSampler(args.sampler.data_source, shuffle=True)
+                            logger.debug("Replace paddle RandomSampler into fastNLP RandomSampler.")
+                            return replace_sampler(dataloader, sampler)
+                elif type(args.sampler) is PaddleSequenialSampler:
+                    # 需要替换为不要 shuffle 的。
+                    sampler = RandomSampler(args.sampler.data_source, shuffle=False)
+                    logger.debug("Replace paddle SequentialSampler into fastNLP RandomSampler.")
                     return replace_sampler(dataloader, sampler)
-            elif isinstance(args.sampler, paddle.io.SequenceSampler):
-                # 需要替换为不要 shuffle 的。
-                sampler = RandomSampler(args.sampler.data_source, shuffle=False)
-                logger.debug("Replace paddle SequentialSampler into fastNLP RandomSampler.")
-                return replace_sampler(dataloader, sampler)
             batch_sampler = ReproduceBatchSampler(
                 batch_sampler=args.batch_sampler,
                 batch_size=args.batch_size,

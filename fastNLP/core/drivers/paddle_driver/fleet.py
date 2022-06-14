@@ -73,6 +73,7 @@ from .utils import (
     _FleetWrappingModel, 
     replace_sampler,
     replace_batch_sampler,
+    _check_dataloader_args_for_distributed
 )
 from .dist_utils import fastnlp_paddle_all_gather, fastnlp_paddle_broadcast_object
 
@@ -453,6 +454,7 @@ class PaddleFleetDriver(PaddleDriver):
                 )
                 return replace_sampler(dataloader, sampler)
             else:
+                _check_dataloader_args_for_distributed(args, controller='Trainer')
                 sampler = RandomSampler(
                     dataset=args.dataset,
                     shuffle=args.shuffle,
