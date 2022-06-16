@@ -1,3 +1,4 @@
+import os
 from typing import Callable, Any, Union, Sequence
 from abc import ABC
 import inspect
@@ -126,7 +127,7 @@ class OverfitDataLoader:
             logger.warning("Parameter 'overfit_batches' is bigger than the length of 'train_dataloader'.")
 
         for idx, batch in enumerate(dataloader):
-            if idx < self.overfit_batches or self.overfit_batches < -1:
+            if idx < self.overfit_batches or self.overfit_batches <= -1:
                 self.batches.append(batch)
 
     def __len__(self):
