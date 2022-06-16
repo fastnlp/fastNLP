@@ -1,4 +1,4 @@
-from typing import Callable, Any, Union
+from typing import Callable, Any, Union, Sequence
 from abc import ABC
 import inspect
 import ast
@@ -6,7 +6,8 @@ import ast
 from ..log import logger
 from ..utils.cache_results import get_func_calls, truncate_start_blanks
 __all__ = [
-    "indice_collate_wrapper"
+    "indice_collate_wrapper",
+    "OverfitDataLoader"
 ]
 
 
@@ -109,6 +110,42 @@ class HasLenGetitemType(ABC):
             flag = callable(getattr(subclass, '__getitem__', None)) and callable(getattr(subclass, '__len__', None))
             return flag
         return NotImplemented
+
+
+class OverfitDataLoader:
+    """
+    实现一个简单的迭代器来模拟实际的 dataloader，从给定的 dataloader 中取出部分数据，来让 Trainer 实现 overfit 的功能；
+    """
+
+    def __init__(self, dataloader, overfit_batches: int):
+        self.dataloader = dataloader  # 需要将实际的 dataloader 挂载到该对象上，从而应付一些对于实际的 dataloader 的操作；
+        self.batches = []
+
+        if isinstance(overfit_batches, int):
+            if overfit_batches < 0 and overfit_batches != -1:
+                raise ValueError("Parameter 'overfit_batches' can only be '-1' when it is smaller than 0, and it means"
+                                 "that you use all the data to check whether it could be overfitted.")
+        else:
+            raise TypeError("Parameter 'overfit_batches' can only be 'int' type, check the parameter you input into 'Trainer'.")
+
+        if overfit_batches > len(dataloader):
+            logger.warning("Parameter 'overfit_batches' is bigger than the real length of 'train dataloader'.")
+
+        for idx, batch in enumerate(dataloader):
+
+            if idx < overfit_batches or overfit_batches == -1:
+                self.batches.append(batch)
+
+    def __len__(self):
+        return len(self.batches)
+
+    def __iter__(self):
+        for batch in self.batches:
+            yield batch
+
+    def __getattr__(self, item):
+        return getattr(self.dataloader, item)
+
 
 
 if __name__ == '__main__':

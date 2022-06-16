@@ -361,5 +361,32 @@ def test_torch_wo_auto_param_call(
         dist.destroy_process_group()
 
 
+# 测试 accumulation_steps；
+@pytest.mark.torch
+@pytest.mark.parametrize("overfit_batches,num_train_batch_per_epoch", [(-1, -1), (0, -1), (3, 10), (6, -1)])
+@magic_argv_env_context
+def test_trainer_overfit_torch(
+        model_and_optimizers: TrainerParameters,
+        overfit_batches,
+        num_train_batch_per_epoch
+):
+    trainer = Trainer(
+        model=model_and_optimizers.model,
+        driver="torch",
+        device=0,
+        overfit_batches=overfit_batches,
+        optimizers=model_and_optimizers.optimizers,
+        train_dataloader=model_and_optimizers.train_dataloader,
+        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+        input_mapping=model_and_optimizers.input_mapping,
+        output_mapping=model_and_optimizers.output_mapping,
+        metrics=model_and_optimizers.metrics,
+        output_from_new_proc="all",
+        n_epochs=2,
+    )
 
+    trainer.run(num_train_batch_per_epoch=num_train_batch_per_epoch)
+
+    if dist.is_initialized():
+        dist.destroy_process_group()
 
