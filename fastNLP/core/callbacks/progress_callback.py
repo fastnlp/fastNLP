@@ -20,6 +20,7 @@ class ProgressCallback(HasMonitorCallback):
                                                must_have_monitor=must_have_monitor)
         self.best_monitor_epoch = -1
         self.best_monitor_step = -1
+        self.best_results = None
 
     def record_better_monitor(self, trainer):
         self.best_monitor_step = trainer.global_forward_batches
@@ -29,6 +30,8 @@ class ProgressCallback(HasMonitorCallback):
         if self.best_monitor_epoch != -1:
             msg = f"The best performance for monitor {self._real_monitor}:{self.monitor_value} was achieved in" \
                   f" Epoch:{self.best_monitor_epoch}, Global Batch:{self.best_monitor_step}."
+            if self.best_results is not None:
+                msg = msg + ' The evaluation result: \n' + str(self.best_results)
             logger.info(msg)
 
     @property
@@ -147,9 +150,11 @@ class RichCallback(ProgressCallback):
         results = {key:trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
                    not key.startswith('_')}
         if self.format_json:
-            self.progress_bar.console.print_json(json.dumps(results))
+            results = json.dumps(results)
+            self.progress_bar.console.print_json(results)
         else:
             self.progress_bar.print(results)
+        self.best_results = results
 
     def clear_tasks(self):
         for key, taskid in self.task2id.items():
@@ -227,9 +232,9 @@ class RawTextCallback(ProgressCallback):
         results = {key:trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
                    not key.startswith('_')}
         if self.format_json:
-            logger.info(json.dumps(results))
-        else:
-            logger.info(results)
+            results = json.dumps(results)
+        logger.info(results)
+        self.best_results = results
 
     @property
     def name(self):  # progress bar的名称
@@ -316,9 +321,9 @@ class TqdmCallback(ProgressCallback):
         results = {key:trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
                    not key.startswith('_')}
         if self.format_json:
-            logger.info(json.dumps(results))
-        else:
-            logger.info(results)
+            results = json.dumps(results)
+        logger.info(results)
+        self.best_results = results
 
     def clear_tasks(self):
         for key, taskid in self.task2id.items():

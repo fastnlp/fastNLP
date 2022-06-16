@@ -120,20 +120,13 @@ class OverfitDataLoader:
     def __init__(self, dataloader, overfit_batches: int):
         self.dataloader = dataloader  # 需要将实际的 dataloader 挂载到该对象上，从而应付一些对于实际的 dataloader 的操作；
         self.batches = []
+        self.overfit_batches = int(overfit_batches)
 
-        if isinstance(overfit_batches, int):
-            if overfit_batches < 0 and overfit_batches != -1:
-                raise ValueError("Parameter 'overfit_batches' can only be '-1' when it is smaller than 0, and it means"
-                                 "that you use all the data to check whether it could be overfitted.")
-        else:
-            raise TypeError("Parameter 'overfit_batches' can only be 'int' type, check the parameter you input into 'Trainer'.")
-
-        if overfit_batches > len(dataloader):
-            logger.warning("Parameter 'overfit_batches' is bigger than the real length of 'train dataloader'.")
+        if self.overfit_batches > len(dataloader):
+            logger.warning("Parameter 'overfit_batches' is bigger than the length of 'train_dataloader'.")
 
         for idx, batch in enumerate(dataloader):
-
-            if idx < overfit_batches or overfit_batches == -1:
+            if idx < self.overfit_batches or self.overfit_batches < -1:
                 self.batches.append(batch)
 
     def __len__(self):

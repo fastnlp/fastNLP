@@ -119,19 +119,6 @@ class Trainer(TrainerEventTrigger):
             对于使用 ``TorchDDPDriver`` 的更多细节，请见 :class:`~fastNLP.core.drivers.torch_driver.TorchDDPDriver`。
 
     :param n_epochs: 训练总共的 epoch 的数量，默认为 20；也可以通过 ``n_batches`` 参数设置总共迭代多少个 ``batch`` 。
-    :param overfit_batches: 使用该参数来支持 '过拟合' 的功能；支持的值为 ``-1``、``0`` 或者 大于 0 的整数，表示使用多少 batch 的数据
-        来进行过拟合训练；其中 0 为 默认值表示不进行过拟合；-1 表示使用所有的数据进行训练；
-
-        .. note::
-
-            您可以使用该参数来简单地查看您的模型是否是 '正确的'，即您的模型是否能够在少量的数据上快速进行收敛，从而说明损失函数以及优化器等
-            没有问题。当使用该参数时，我们会直接从 ``train_dataloader`` 中提取固定大小的 batch，然后在之后的所有 epoch 中都是用这些数据来进行过拟合训练；
-
-        .. warning::
-
-            在使用该参数时，您同样可以指定 ``metrics`` 参数来进行简单的验证，当该参数和 ``metrics`` 同时出现时，我们会将 evaluate_dataloaders
-            直接替换为在过拟合中所使用的训练数据；因此您需要保证您的 ``metrics`` 是能够在 ``train_dataloader`` 上使用的；
-
     :param evaluate_dataloaders: 验证数据集，其可以是单独的一个数据集，也可以是多个数据集；当为多个数据集时，注意其必须是 Dict；默认
         为 None；
     :param batch_step_fn: 定制每次训练时前向运行一个 batch 的数据所执行的函数。该函数应接受两个参数为 ``trainer`` 和 ``batch``，
@@ -258,7 +245,20 @@ class Trainer(TrainerEventTrigger):
 
         注意该参数仅当 ``Trainer`` 内置的 ``Evaluator`` 不为 None 时且有需要该参数但是没有设置该参数的 *callback* 实例才有效；
 
-    :param n_batches: 迭代多少个 ``batch`` 的训练结束。当该值不为 -1 时，将直接忽略 ``n_epochs`` 的值。
+    :param n_batches: 总共迭代多少个 ``batch`` 的训练结束。当该值不为 -1 时，将直接忽略 ``n_epochs`` 的值。
+    :param overfit_batches: 使用该参数来支持 '过拟合' 的功能；支持的值为 ``-1``、``0`` 或者 大于 0 的整数，表示使用多少个 batch 的数据
+        来进行过拟合训练；其中 0 为表示不进行任何操作；-1 表示使用所有的数据进行训练；
+
+        .. note::
+
+            您可以使用该参数来简单地查看您的模型是否是 '正确的'，即您的模型是否能够在少量的数据上快速进行收敛，从而说明损失函数以及优化器等
+            没有问题。当使用该参数时，我们会直接从 ``train_dataloader`` 中提取固定数量的 batch，然后在所有 epoch 中都是用这些数据
+            来进行训练；
+
+        .. warning::
+
+            在使用该参数时，您同样可以指定 ``metrics`` 参数来进行简单的验证，当该参数和 ``metrics`` 同时出现时，我们会将 evaluate_dataloaders
+            直接替换为在过拟合中所使用的训练数据；因此您需要保证您的 ``metrics`` 是能够在 ``train_dataloader`` 上使用的；
 
     :param marker: 用于标记一个 ``Trainer`` 实例，从而在用户调用 ``Trainer.on`` 函数时，标记该函数属于哪一个具体的 ``Trainer`` 实例；默认为 None；
 
@@ -370,7 +370,6 @@ class Trainer(TrainerEventTrigger):
             optimizers,
             device: Optional[Union[int, List[int], str]] = "cpu",
             n_epochs: int = 20,
-            overfit_batches: int = 0,
             evaluate_dataloaders=None,
             batch_step_fn: Optional[Callable] = None,
             evaluate_batch_step_fn: Optional[Callable] = None,
@@ -387,6 +386,7 @@ class Trainer(TrainerEventTrigger):
             monitor: Union[str, Callable] = None,
             larger_better: bool = True,
             n_batches: int = -1,
+            overfit_batches: int = 0,
             marker: Optional[str] = None,
             **kwargs
     ):
@@ -522,8 +522,6 @@ class Trainer(TrainerEventTrigger):
         self.larger_better = larger_better
         if metrics is not None:
             if overfit_batches != 0:
-                logger.warning("Notice you are trying to 'overfit' the model and also using 'metrics', it may cause error "
-                               "because 'metrics' are prepared for 'evaluate_dataloaders', but now 'train_dataloader'.")
                 evaluate_dataloaders = self.dataloader
             if evaluate_dataloaders is not None:
                 check_evaluate_every(evaluate_every)
