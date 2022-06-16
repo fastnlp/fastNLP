@@ -119,6 +119,19 @@ class Trainer(TrainerEventTrigger):
             对于使用 ``TorchDDPDriver`` 的更多细节，请见 :class:`~fastNLP.core.drivers.torch_driver.TorchDDPDriver`。
 
     :param n_epochs: 训练总共的 epoch 的数量，默认为 20；也可以通过 ``n_batches`` 参数设置总共迭代多少个 ``batch`` 。
+    :param overfit_batches: 使用该参数来支持 '过拟合' 的功能；支持的值为 ``-1``、``0`` 或者 大于 0 的整数，表示使用多少 batch 的数据
+        来进行过拟合训练；其中 0 为 默认值表示不进行过拟合；-1 表示使用所有的数据进行训练；
+
+        .. note::
+
+            您可以使用该参数来简单地查看您的模型是否是 '正确的'，即您的模型是否能够在少量的数据上快速进行收敛，从而说明损失函数以及优化器等
+            没有问题。当使用该参数时，我们会直接从 ``train_dataloader`` 中提取固定大小的 batch，然后在之后的所有 epoch 中都是用这些数据来进行过拟合训练；
+
+        .. warning::
+
+            在使用该参数时，您同样可以指定 ``metrics`` 参数来进行简单的验证，当该参数和 ``metrics`` 同时出现时，我们会将 evaluate_dataloaders
+            直接替换为在过拟合中所使用的训练数据；因此您需要保证您的 ``metrics`` 是能够在 ``train_dataloader`` 上使用的；
+
     :param evaluate_dataloaders: 验证数据集，其可以是单独的一个数据集，也可以是多个数据集；当为多个数据集时，注意其必须是 Dict；默认
         为 None；
     :param batch_step_fn: 定制每次训练时前向运行一个 batch 的数据所执行的函数。该函数应接受两个参数为 ``trainer`` 和 ``batch``，
