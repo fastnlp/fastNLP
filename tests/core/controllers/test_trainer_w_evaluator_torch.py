@@ -286,6 +286,9 @@ def test_trainer_specific_params_1(
     assert trainer.driver.non_blocking is False
     assert trainer.driver.wo_auto_param_call is True
 
+    if dist.is_initialized():
+        dist.destroy_process_group()
+
 
 @pytest.mark.torch
 @pytest.mark.parametrize("driver,device", [("torch", [0, 1])])  # ("torch", [0, 1]),("torch", 1)
@@ -332,5 +335,47 @@ def test_trainer_specific_params_2(
     assert _ddp_kwargs.get("broadcast_buffers") is True
     assert _ddp_kwargs.get("find_unused_parameters") is True
 
+    if dist.is_initialized():
+        dist.destroy_process_group()
 
 
+@pytest.mark.torch
+@pytest.mark.parametrize("driver,device", [("torch", 1), ("torch", [0, 1])])  # ("torch", [0, 1]),("torch", 1)
+@pytest.mark.parametrize("overfit_batches,num_train_batch_per_epoch", [(-1, -1), (0, -1), (3, 10), (6, -1)])
+@magic_argv_env_context
+def test_trainer_w_evaluator_overfit_torch(
+        model_and_optimizers: TrainerParameters,
+        driver,
+        device,
+        overfit_batches,
+        num_train_batch_per_epoch
+):
+    """
+    测试一些特殊的参数是否能够正确地传递；
+    """
+    trainer = Trainer(
+        model=model_and_optimizers.model,
+        driver=driver,
+        device=device,
+        overfit_batches=overfit_batches,
+        optimizers=model_and_optimizers.optimizers,
+        train_dataloader=model_and_optimizers.train_dataloader,
+        evaluate_dataloaders={"dl": model_and_optimizers.evaluate_dataloaders},
+        input_mapping=model_and_optimizers.input_mapping,
+        output_mapping=model_and_optimizers.output_mapping,
+        metrics=model_and_optimizers.metrics,
+        n_epochs=2,
+        output_from_new_proc="all",
+        evaluate_every=-1,
+
+        torch_kwargs={
+            "non_blocking": False,
+            "set_grad_to_none": True
+        }
+
+    )
+
+    trainer.run(num_train_batch_per_epoch=num_train_batch_per_epoch)
+
+    if dist.is_initialized():
+        dist.destroy_process_group()

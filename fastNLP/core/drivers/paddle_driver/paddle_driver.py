@@ -19,6 +19,7 @@ from fastNLP.envs import (
     rank_zero_call,
 )
 from fastNLP.core.log import logger
+from fastNLP.core.dataloaders import OverfitDataLoader
 from fastNLP.core.samplers import (
     ReproducibleBatchSampler,
     ReproducibleSampler,
@@ -93,7 +94,7 @@ class PaddleDriver(Driver):
             self.grad_scaler.update()
 
     def check_dataloader_legality(self, dataloader):
-        if not isinstance(dataloader, DataLoader):
+        if not isinstance(dataloader, DataLoader) and not isinstance(dataloader, OverfitDataLoader):
             raise TypeError(f"{DataLoader} is expected, instead of `{type(dataloader)}`")
         if dataloader.batch_size is None and dataloader.batch_sampler is None:
             raise ValueError("Please ensure at least one of your dataloader's batch_size and batch_sampler"

@@ -35,6 +35,7 @@ from fastNLP.envs import rank_zero_call
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.utils.exceptions import EarlyStopException
+from fastNLP.core.dataloaders import OverfitDataLoader
 
 
 class Trainer(TrainerEventTrigger):
@@ -244,7 +245,20 @@ class Trainer(TrainerEventTrigger):
 
         注意该参数仅当 ``Trainer`` 内置的 ``Evaluator`` 不为 None 时且有需要该参数但是没有设置该参数的 *callback* 实例才有效；
 
-    :param n_batches: 迭代多少个 ``batch`` 的训练结束。当该值不为 -1 时，将直接忽略 ``n_epochs`` 的值。
+    :param n_batches: 总共迭代多少个 ``batch`` 的训练结束。当该值不为 -1 时，将直接忽略 ``n_epochs`` 的值。
+    :param overfit_batches: 使用该参数来支持 '过拟合' 的功能；支持的值为 ``-1``、``0`` 或者 大于 0 的整数，表示使用多少个 batch 的数据
+        来进行过拟合训练；其中 0 为表示不进行任何操作；-1 表示使用所有的数据进行训练；
+
+        .. note::
+
+            您可以使用该参数来简单地查看您的模型是否是 '正确的'，即您的模型是否能够在少量的数据上快速进行收敛，从而说明损失函数以及优化器等
+            没有问题。当使用该参数时，我们会直接从 ``train_dataloader`` 中提取固定数量的 batch，然后在所有 epoch 中都是用这些数据
+            来进行训练；
+
+        .. warning::
+
+            在使用该参数时，您同样可以指定 ``metrics`` 参数来进行简单的验证，当该参数和 ``metrics`` 同时出现时，我们会将 evaluate_dataloaders
+            直接替换为在过拟合中所使用的训练数据；因此您需要保证您的 ``metrics`` 是能够在 ``train_dataloader`` 上使用的；
 
     :param marker: 用于标记一个 ``Trainer`` 实例，从而在用户调用 ``Trainer.on`` 函数时，标记该函数属于哪一个具体的 ``Trainer`` 实例；默认为 None；
 
@@ -372,6 +386,7 @@ class Trainer(TrainerEventTrigger):
             monitor: Union[str, Callable] = None,
             larger_better: bool = True,
             n_batches: int = -1,
+            overfit_batches: int = 0,
             marker: Optional[str] = None,
             **kwargs
     ):
@@ -469,9 +484,6 @@ class Trainer(TrainerEventTrigger):
             n_batches=n_batches
         )
 
-        if metrics is None and evaluate_dataloaders is not None:
-            raise ValueError("You have set 'evaluate_dataloaders' but forget to set 'metrics'.")
-
         if metrics is not None and evaluate_dataloaders is None:
             raise ValueError("You have set 'metrics' but forget to set 'evaluate_dataloaders'.")
 
@@ -495,32 +507,41 @@ class Trainer(TrainerEventTrigger):
         else:
             _dist_sampler = None
 
-        self.evaluator = None
-        self.monitor = monitor
-        self.larger_better = larger_better
-        if metrics is not None and evaluate_dataloaders is not None:
-            check_evaluate_every(evaluate_every)
-            progress_bar = kwargs.get('progress_bar', 'auto')  # 如果不为
-            if not (isinstance(progress_bar, str) or progress_bar is None): # 应该是ProgressCallback，获取其名称。
-                progress_bar = progress_bar.name
-            self.evaluator = Evaluator(model=model, dataloaders=evaluate_dataloaders, metrics=metrics,
-                                       driver=self.driver, evaluate_batch_step_fn=evaluate_batch_step_fn,
-                                       evaluate_fn=evaluate_fn, input_mapping=evaluate_input_mapping,
-                                       output_mapping=evaluate_output_mapping, fp16=fp16, verbose=0,
-                                       use_dist_sampler=kwargs.get("evaluate_use_dist_sampler", use_dist_sampler),
-                                       progress_bar=progress_bar,
-                                       check_dataloader_legality=kwargs.get('check_dataloader_legality', True))
-
-        if train_fn is not None and not isinstance(train_fn, str):
-            raise TypeError("Parameter `train_fn` can only be `str` type when it is not None.")
-        self._train_step, self._train_step_signature_fn = self.driver.get_model_call_fn("train_step" if train_fn is None else train_fn)
-        self.train_fn = train_fn
-
         self.dataloader = self.train_dataloader
         self.driver.set_deterministic_dataloader(self.dataloader)
 
         self.dataloader = self.driver.set_dist_repro_dataloader(dataloader=self.train_dataloader, dist=_dist_sampler,
                                                                 reproducible=self.callback_manager._need_reproducible_sampler)
+        # 进行 overfit 相关的设置；
+        if overfit_batches != 0:
+            self.dataloader = OverfitDataLoader(self.dataloader, overfit_batches)
+        self.overfit_batches = overfit_batches
+
+        self.evaluator = None
+        self.monitor = monitor
+        self.larger_better = larger_better
+        if metrics is not None:
+            if overfit_batches != 0:
+                evaluate_dataloaders = self.dataloader
+            if evaluate_dataloaders is not None:
+                check_evaluate_every(evaluate_every)
+                progress_bar = kwargs.get('progress_bar', 'auto')  # 如果不为
+                if not (isinstance(progress_bar, str) or progress_bar is None): # 应该是ProgressCallback，获取其名称。
+                    progress_bar = progress_bar.name
+                self.evaluator = Evaluator(model=model, dataloaders=evaluate_dataloaders, metrics=metrics,
+                                           driver=self.driver, evaluate_batch_step_fn=evaluate_batch_step_fn,
+                                           evaluate_fn=evaluate_fn, input_mapping=evaluate_input_mapping,
+                                           output_mapping=evaluate_output_mapping, fp16=fp16, verbose=0,
+                                           use_dist_sampler=kwargs.get("evaluate_use_dist_sampler", use_dist_sampler),
+                                           progress_bar=progress_bar,
+                                           check_dataloader_legality=kwargs.get('check_dataloader_legality', True))
+            else:
+                raise ValueError("You have set 'evaluate_dataloaders' but forget to set 'metrics'.")
+
+        if train_fn is not None and not isinstance(train_fn, str):
+            raise TypeError("Parameter `train_fn` can only be `str` type when it is not None.")
+        self._train_step, self._train_step_signature_fn = self.driver.get_model_call_fn("train_step" if train_fn is None else train_fn)
+        self.train_fn = train_fn
 
         self.evaluate_batch_step_fn = evaluate_batch_step_fn
         self.kwargs = kwargs

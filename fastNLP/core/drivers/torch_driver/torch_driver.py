@@ -31,6 +31,7 @@ from fastNLP.envs import  rank_zero_call
 from fastNLP.envs import FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.log import logger
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, ReproduceBatchSampler, RandomSampler
+from fastNLP.core.dataloaders import OverfitDataLoader
 
 
 class TorchDriver(Driver):
@@ -92,7 +93,7 @@ class TorchDriver(Driver):
             self.grad_scaler.update()
 
     def check_dataloader_legality(self, dataloader):
-        if not isinstance(dataloader, DataLoader):
+        if not isinstance(dataloader, DataLoader) and not isinstance(dataloader, OverfitDataLoader):
             raise TypeError(f"{DataLoader} is expected, instead of `{type(dataloader)}`")
         if len(dataloader) == 0:
             logger.rank_zero_warning("Your dataloader is empty, which is not recommended because it "

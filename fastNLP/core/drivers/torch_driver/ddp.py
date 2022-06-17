@@ -140,9 +140,6 @@ if _NEED_IMPORT_TORCH:
     import torch.distributed as dist
     from torch.nn.parallel import DistributedDataParallel
     from torch.utils.data import BatchSampler
-    from torch.utils.data import RandomSampler as TorchRandomSampler
-    from torch.utils.data import SequentialSampler as TorchSequentialSampler
-    from torch.utils.data import BatchSampler as TorchBatchSampler
 
 __all__ = [
     'TorchDDPDriver'
@@ -421,6 +418,7 @@ class TorchDDPDriver(TorchDriver):
             os.environ['MASTER_ADDR'] = self.master_address
             os.environ['MASTER_PORT'] = self.master_port
 
+            os.environ["RANK"] = "0"
             os.environ["LOCAL_RANK"] = str(self.local_rank)
             os.environ["WORLD_SIZE"] = f"{self.world_size}"
 
@@ -433,6 +431,7 @@ class TorchDDPDriver(TorchDriver):
             for rank in range(1, len(self.parallel_device)):
                 env_copy = os.environ.copy()
                 env_copy["LOCAL_RANK"] = f"{rank}"
+                env_copy["RANK"] = f"{rank}"
 
                 # 如果是多机，一定需要用户自己拉起，因此我们自己使用 open_subprocesses 开启的进程的 FASTNLP_GLOBAL_RANK 一定是 LOCAL_RANK；
                 env_copy[FASTNLP_GLOBAL_RANK] = str(rank)

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
 from fastNLP.core.drivers.driver import Driver
 from fastNLP.core.dataloaders import JittorDataLoader
+from fastNLP.core.dataloaders import OverfitDataLoader
 from fastNLP.core.samplers import ReproducibleSampler, RandomSampler
 from fastNLP.core.log import logger
 from fastNLP.core.utils import apply_to_collection, nullcontext
@@ -69,7 +70,7 @@ class JittorDriver(Driver):
         self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
 
     def check_dataloader_legality(self, dataloader):
-        if not isinstance(dataloader, (Dataset, JittorDataLoader)):
+        if not isinstance(dataloader, (Dataset, JittorDataLoader, OverfitDataLoader)):
             raise TypeError(f"{Dataset} or {JittorDataLoader} is expected, instead of `{type(dataloader)}`")
         if len(dataloader) == 0:
             logger.rank_zero_warning("Your dataloader is empty, which is not recommended because it "
