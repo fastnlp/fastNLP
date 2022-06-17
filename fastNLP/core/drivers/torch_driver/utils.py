@@ -181,18 +181,16 @@ def replace_sampler(dataloader: "DataLoader", sampler):
     instance_attrs = {k: v for k, v in vars(dataloader).items() if not k.startswith('_')}
 
     # 'multiprocessing_context' 是 user-defined function;
-    instance_attrs["multiprocessing_context"] = dataloader.multiprocessing_context
+    if getattr(dataloader, 'multiprocessing_context', None) is not None:
+        instance_attrs["multiprocessing_context"] = dataloader.multiprocessing_context
 
     # 拿到 dataloader '__init__' 函数的默认函数签名；
     init_params = dict(inspect.signature(dataloader.__init__).parameters)
 
-    # 这里为什么要单独弄的原因在于，用户在定制自己的 dataloader 的同时可能为了方便只设定一些参数，而后面直接使用 **kwargs 的方式，这时如果
-    # 其在初始化自己的 dataloader 实例的时候加入了一些其它的新的参数（首先这一步是必要的，因为我们只能通过这样加 sampler；另一方面，用户
-    # 可能确实通过 **kwargs 加入了一些新的参数），如果假设用户是这样使用的： "super().__init__(**kwargs)"，那么我们就只能去 DataLoader
-    # 中寻找；
+    # 防止用户的 DataLoader 是继承了 pytorch 的 DataLoader，然后还是使用了 **kwargs 的方式对父类传参数
     has_variadic_kwargs = any(v.kind is v.VAR_KEYWORD for k, v in init_params.items())
-    if has_variadic_kwargs:
-        # 这里之所以这样写是因为用户自己定制的 Dataloader 中名字一样的参数所设置的默认值可能不同；因此不能直接使用 update 覆盖掉了；
+    if has_variadic_kwargs and isinstance(dataloader, DataLoader):
+        # 防止用户写入了 super().__init__(**kwargs)
         for key, value in dict(inspect.signature(DataLoader.__init__).parameters).items():
             if key not in init_params and key != 'self':
                 init_params[key] = value
@@ -204,7 +202,8 @@ def replace_sampler(dataloader: "DataLoader", sampler):
     non_default_params.add("dataset")
 
     reconstruct_args = {k: v for k, v in instance_attrs.items() if k in non_default_params}
-    reconstruct_args.update({"sampler": sampler, "shuffle": False, "batch_sampler": None})
+    if isinstance(dataloader, DataLoader):
+        reconstruct_args.update({"sampler": sampler, "shuffle": False, "batch_sampler": None})
 
     batch_sampler = getattr(dataloader, "batch_sampler")
     if batch_sampler is not None and isinstance(batch_sampler, ReproducibleBatchSampler):
@@ -218,35 +217,31 @@ def replace_sampler(dataloader: "DataLoader", sampler):
            and p.name not in reconstruct_args
     }
 
-    # 这种错误针对的是 __init__ 中的参数没有用同样名字的 self 挂上；
+    # 在 attribute 中没有找到这些参数，导致了没有办法重新初始化
     if required_args:
         required_args = sorted(required_args)
         dataloader_self_name = dataloader.__class__.__name__
         raise Exception(
-            f"Trying to inject `DistributedSampler` into the `{dataloader_self_name}` instance. "
-            "This would fail as some of the `__init__` arguments are not available as instance attributes. "
-            f"The missing attributes are {required_args}. "
-            f"HINT: If you wrote the `{dataloader_self_name}` class, define `self.missing_arg_name` or "
-            "manually add the `DistributedSampler` as: "
-            f"`{dataloader_self_name}(dataset, sampler=DistributedSampler(dataset))`."
+            f"Need to inject arguments {required_args} into the __init__ of `{dataloader_self_name}`. "
+            f"But they are not found in the attribute of `{dataloader_self_name}`, fastNLP cannot determine its "
+            f"value when try to reinitialize `{dataloader_self_name}`, please add `{required_args}` to be "
+            f"`{dataloader_self_name}`'s attribute."
         )
 
     # 这种错误针对的是传入的 dataloader 不是直接的 DataLoader，而是定制了 DataLoader，但是 __init__ 中没有 **kwargs；
     if not has_variadic_kwargs:
-
         # the dataloader signature does not allow keyword arguments that need to be passed
         missing_kwargs = reconstruct_args.keys() - init_params.keys()
         if missing_kwargs:
             missing_kwargs = sorted(missing_kwargs)
             dataloader_self_name = dataloader.__class__.__name__
             raise Exception(
-                f"Trying to inject `DistributedSampler` into the `{dataloader_self_name}` instance. "
-                "This would fail as it doesn't expose all its attributes in the `__init__` signature. "
-                f"The missing arguments are {missing_kwargs}. "
-                f"HINT: If you wrote the `{dataloader_self_name}` class, add the `__init__` arguments or "
-                "manually add the `DistributedSampler` as: "
-                f"`{dataloader_self_name}(dataset, sampler=DistributedSampler(dataset))`."
+                f"The parameter:{missing_kwargs} needed to reinitialize `{dataloader_self_name}` is not found."
             )
+        # 如果没有kwargs，则保证一下只传入需要的参数
+        if not isinstance(dataloader, DataLoader):
+            reconstruct_args = {key:value for key,value in reconstruct_args.items() if key in init_params}
+
     return type(dataloader)(**reconstruct_args)
 
 
@@ -260,6 +255,13 @@ def replace_batch_sampler(dataloader, new_batch_sampler):
             params_keys.remove(k)
     params = {k: getattr(dataloader, k) for k in params_keys}
     params["batch_sampler"] = new_batch_sampler
+
+    if not isinstance(dataloader, DataLoader):
+        init_params = dict(inspect.signature(dataloader.__init__).parameters)
+        has_variadic_kwargs = any(v.kind is v.VAR_KEYWORD for k, v in init_params.items())
+        if not has_variadic_kwargs:
+            params = {key:value for key,value in params.items() if key in init_params}
+
     return type(dataloader)(**params)
 
 

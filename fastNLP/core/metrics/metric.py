@@ -98,7 +98,7 @@ class Metric:
         return _wrap_get_metric
 
     def __setattr__(self, key, value):
-        if hasattr(self, '_cannot_change_element') and self._cannot_change_element is True:
+        if getattr(self, '_cannot_change_element', False):
             if key in self.elements and isinstance(value, (float, int, bool)):
                 self.elements[key].fill_value(value)
                 return
@@ -108,6 +108,14 @@ class Metric:
         if isinstance(value, Element) and key not in self.elements:
             raise RuntimeError("Please use register_element() function to add Element.")
         object.__setattr__(self, key, value)
+
+    # 当调用 __getattribute__ 没有找到时才会触发这个, 保留这个的目的只是为了防止 ide 的 warning
+    def __getattr__(self, name: str) -> Element:
+        if 'elements' in self.__dict__:
+            elements = self.__dict__['elements']
+            if name in elements:
+                return elements[name]
+        raise AttributeError("`{}` object has no attribute `{}`.".format(type(self).__name__, name))
 
     def _wrap_update(self, update):
         @functools.wraps(update)

@@ -140,9 +140,6 @@ if _NEED_IMPORT_TORCH:
     import torch.distributed as dist
     from torch.nn.parallel import DistributedDataParallel
     from torch.utils.data import BatchSampler
-    from torch.utils.data import RandomSampler as TorchRandomSampler
-    from torch.utils.data import SequentialSampler as TorchSequentialSampler
-    from torch.utils.data import BatchSampler as TorchBatchSampler
 
 __all__ = [
     'TorchDDPDriver'
