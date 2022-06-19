@@ -59,6 +59,7 @@ __all__ = [
     # drivers
     "TorchSingleDriver",
     "TorchDDPDriver",
+    "DeepSpeedDriver",
     "PaddleSingleDriver",
     "PaddleFleetDriver",
     "JittorSingleDriver",
