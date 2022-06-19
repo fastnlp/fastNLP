@@ -15,7 +15,7 @@ from fastNLP.envs import (
     FASTNLP_GLOBAL_SEED,
 )
 from fastNLP.core.samplers import re_instantiate_sampler, ReproducibleBatchSampler
-from fastNLP.core.utils import auto_param_call
+from fastNLP.core.utils import auto_param_call, apply_to_collection
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_TORCH:
@@ -106,6 +106,29 @@ class _DDPWrappingModel(Module):
             return auto_param_call(fn, batch, signature_fn=signature_fn)
         else:
             return fn(batch)
+
+class _DeepSpeedWrappingModel(_DDPWrappingModel):
+    """
+    继承 ``_DDPWrappingModel``，区别在于进行 forward 之前先将 float 数据转换为 float16
+    """
+
+    def __init__(self, model: Module, fp16):
+        super(_DeepSpeedWrappingModel, self).__init__(model)
+        self.fp16 = fp16
+
+    def forward(self, batch, **kwargs):
+        if self.fp16:
+            batch = self._move_float_tensors_to_half(batch)
+
+        return super().forward(batch, **kwargs)
+
+    @staticmethod
+    def batch_to(data):
+        return data.half()
+
+    def _move_float_tensors_to_half(self, batch: Any):
+        batch = apply_to_collection(batch, (torch.FloatTensor, torch.cuda.FloatTensor), function=self.batch_to)
+        return batch
 
 
 class DummyGradScaler:

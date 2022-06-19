@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Union, Dict, List
 from .torch_driver import TorchDriver
 from .ddp import TorchDDPDriver
-from .utils import _create_default_config, _DDPWrappingModel
+from .utils import _create_default_config, _DeepSpeedWrappingModel
 from fastNLP.core.utils import nullcontext
 from fastNLP.core.log import logger
 from fastNLP.envs import(
@@ -14,6 +14,7 @@ from fastNLP.envs import(
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _NEED_IMPORT_DEEPSPEED
 
 if _NEED_IMPORT_TORCH:
+    import pytorch_lightning
     import torch
     import torch.distributed as dist
     
@@ -35,8 +36,8 @@ class DeepSpeedDriver(TorchDDPDriver):
         strategy= "deepspeed",
         **kwargs
     ):
-        assert _NEED_IMPORT_DEEPSPEED, "deepspeed is not imported."
-        assert not dist.is_initialized(), "DeepSpeedDriver does not support initialize distributed by user."
+        assert _NEED_IMPORT_DEEPSPEED, "Deepspeed is not imported."
+        # assert not dist.is_initialized(), "DeepSpeedDriver does not support initialize distributed by user."
         TorchDriver.__init__(self, model=model, fp16=False, **kwargs)
         self.fp16 = fp16
 
@@ -88,7 +89,7 @@ class DeepSpeedDriver(TorchDDPDriver):
         # 获取 batch_size 以设置 train_micro_batch_size_per_gpu 参数
         train_dl = kwargs.get("train_dataloader", None)
         if train_dl is not None:
-            self.train_micro_batch_size = self.get_dataloader_args(train_dl)
+            self.train_micro_batch_size = self.get_dataloader_args(train_dl).batch_size
         else:
             logger.warn("No `train_dataloader` found, and we will set `train_micro_batch_size_per_gpu`"
                         "to 1 for deepspeed configuration.")
@@ -166,7 +167,7 @@ class DeepSpeedDriver(TorchDDPDriver):
         
         # 设置 deepspeed
         if not isinstance(self.model, deepspeed.DeepSpeedEngine):
-            model=_DDPWrappingModel(self.model)
+            model=_DeepSpeedWrappingModel(self.model, self.fp16)
             model_parameters = filter(lambda p: p.requires_grad, model.parameters())
             self.model, ds_optimizer, _, _ = deepspeed.initialize(
                 model=model,
@@ -279,7 +280,7 @@ class DeepSpeedDriver(TorchDDPDriver):
         :return:
         """
         # deepspeed engine 要求在每个 rank 都调用 save_checkpoint，故去掉了 rank_zero_call 装饰器
-        if self.zero_stage_3:
+        if self.stage_3:
             logger.rank_zero_warning(
                 "When saving the DeepSpeed Stage 3 checkpoint, "
                 "each worker will save a shard of the checkpoint within a directory. "
@@ -310,7 +311,8 @@ class DeepSpeedDriver(TorchDDPDriver):
     def save_checkpoint(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
         # deepspeed engine 要求在每个 rank 都调用 save_checkpoint，故去掉了 rank_zero_call 装饰器
         # 1. 保存 sampler 的状态
-        sampler_state_dict = self.get_sampler_state_dict()
+        num_consumed_batches = states.pop('num_consumed_batches')
+        states['sampler_states'] = self.get_sampler_state(dataloader, num_consumed_batches)
 
         # 2. 保存模型的状态；
         if not should_save_model:
@@ -318,7 +320,7 @@ class DeepSpeedDriver(TorchDDPDriver):
                                     "so we will still save the model for you.")
 
         self.model.save_checkpoint(Path(folder).joinpath(FASTNLP_CHECKPOINT_FILENAME),
-                                    client_state=sampler_state_dict)
+                                    client_state=states)
 
     def load_checkpoint(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
         # 1. 加载模型状态；
@@ -330,7 +332,9 @@ class DeepSpeedDriver(TorchDDPDriver):
             raise RuntimeError(f"Failed to load checkpoint from path: {str(folder)}")
 
         # 2.恢复 sampler 的状态
-        states = self.load_sampler_state_dict(states)
+        sampler_states = states.pop('sampler_states')
+        states_ret = self.load_sampler_state(dataloader, sampler_states)
+        states.update(states_ret)
 
         return states
 
