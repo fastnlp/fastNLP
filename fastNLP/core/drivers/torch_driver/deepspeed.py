@@ -14,12 +14,13 @@ from fastNLP.envs import(
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _NEED_IMPORT_DEEPSPEED
 
 if _NEED_IMPORT_TORCH:
-    import pytorch_lightning
     import torch
     import torch.distributed as dist
+    from torch.optim import Optimizer
     
 if _NEED_IMPORT_DEEPSPEED:
     import deepspeed
+    from deepspeed import DeepSpeedEngine, DeepSpeedOptimizer
 
 __all__ = [
     "DeepSpeedDriver",
@@ -33,7 +34,6 @@ class DeepSpeedDriver(TorchDDPDriver):
         parallel_device: Union[List["torch.device"], "torch.device"],
         is_pull_by_torch_run = False,
         fp16: bool = False,
-        strategy= "deepspeed",
         **kwargs
     ):
         assert _NEED_IMPORT_DEEPSPEED, "Deepspeed is not imported."
@@ -56,8 +56,22 @@ class DeepSpeedDriver(TorchDDPDriver):
             # 我们的 model_device 一定是 torch.device，而不是一个 list；
             self.model_device = parallel_device[self.local_rank]
 
-        # 暂时不允许在外面初始化
+        # 如果用户自己在外面初始化了 deepspeed；
         self.outside_ddp = False
+        if dist.is_initialized() and FASTNLP_DISTRIBUTED_CHECK not in os.environ and \
+                "fastnlp_torch_launch_not_ddp" not in os.environ:
+            # 如果用户自己在外面初始化了 deepspeed，那么我们要求用户传入的模型一定是已经由 DeepSpeedEngine 包裹后的模型；
+            if not isinstance(model, DeepSpeedEngine):
+                raise RuntimeError(
+                    "It is not allowed to input a normal model instead of `DeepSpeedEngine` when"
+                    "you initialize the ddp process out of our control.")
+
+            self.outside_ddp = True
+            self.config = model.config
+            # 用户只有将模型上传到对应机器上后才能用 DistributedDataParallel 包裹，因此如果用户在外面初始化了 DDP，那么在 TorchDDPDriver 中
+            #  我们就直接将 model_device 置为 None；
+            self.model_device = None
+
         self._data_device = kwargs.get("data_device", None)
         if isinstance(self._data_device, int):
             if self._data_device < 0:
@@ -84,7 +98,6 @@ class DeepSpeedDriver(TorchDDPDriver):
 
         self._has_setup = False  # 设置这一参数是因为 evaluator 中也会进行 setup 操作，但是显然是不需要的也不应该的；
         self._has_ddpwrapped = False  # 判断传入的模型是否经过 _has_ddpwrapped 包裹；
-        self.strategy = strategy
         self.accumulation_steps = kwargs.get("accumulation_steps", 1)
         # 获取 batch_size 以设置 train_micro_batch_size_per_gpu 参数
         train_dl = kwargs.get("train_dataloader", None)
@@ -96,6 +109,14 @@ class DeepSpeedDriver(TorchDDPDriver):
             self.train_micro_batch_size = 1
 
         self._ds_kwargs = kwargs.get("deepspeed_kwargs", {})
+        self.strategy = self._ds_kwargs.get("strategy", "deepspeed")
+
+    @staticmethod
+    def _check_optimizer_legality(optimizers):
+        for each_optimizer in optimizers:
+            if not isinstance(each_optimizer, (Optimizer, DeepSpeedOptimizer)):
+                raise TypeError(f"Each optimizer of parameter `optimizers` should be 'Optimizer' or "
+                                f"'DeepSpeedOptimizer'type, not {type(each_optimizer)}.")
 
     def setup(self):
         r"""
@@ -112,15 +133,19 @@ class DeepSpeedDriver(TorchDDPDriver):
         self.setup_config()
         # 如果用户需要使用多机模式，那么一定进入到这里；
         if self.is_pull_by_torch_run:
-            # dist.get_world_size() 只能在 dist.init_process_group 初始化之后进行调用；
-            self.world_size = int(os.environ.get("WORLD_SIZE"))
-            self.global_rank = int(os.environ.get("RANK"))
-            logger.info(f"World size: {self.world_size}, Global rank: {self.global_rank}")
+            if self.outside_ddp:
+                self.world_size = dist.get_world_size()
+                self.global_rank = dist.get_rank()
+            else:
+                # dist.get_world_size() 只能在 dist.init_process_group 初始化之后进行调用；
+                self.world_size = int(os.environ.get("WORLD_SIZE"))
+                self.global_rank = int(os.environ.get("RANK"))
+                logger.info(f"World size: {self.world_size}, Global rank: {self.global_rank}")
 
-            if not dist.is_initialized():
-                deepspeed.init_distributed("nccl", distributed_port=self.master_port)
+                if not dist.is_initialized():
+                    deepspeed.init_distributed("nccl", distributed_port=self.master_port)
 
-            os.environ["fastnlp_torch_launch_not_ddp"] = "yes"
+                os.environ["fastnlp_torch_launch_not_ddp"] = "yes"
 
         # 进入到这里的情况时：
         # dist.is_initialized 一定为 False；
@@ -146,8 +171,9 @@ class DeepSpeedDriver(TorchDDPDriver):
                 self.world_size = dist.get_world_size()
                 self.global_rank = dist.get_rank()
 
-        torch.cuda.set_device(self.model_device)
-        self.configure_ddp()
+        if not self.outside_ddp:
+            torch.cuda.set_device(self.model_device)
+            self.configure_ddp()
 
         self.barrier()
         # 初始化 self._pids，从而使得每一个进程都能接受到 rank0 的 send 操作；
@@ -166,7 +192,7 @@ class DeepSpeedDriver(TorchDDPDriver):
     def configure_ddp(self):
         
         # 设置 deepspeed
-        if not isinstance(self.model, deepspeed.DeepSpeedEngine):
+        if not isinstance(self.model, DeepSpeedEngine):
             model=_DeepSpeedWrappingModel(self.model, self.fp16)
             model_parameters = filter(lambda p: p.requires_grad, model.parameters())
             self.model, ds_optimizer, _, _ = deepspeed.initialize(
@@ -193,7 +219,6 @@ class DeepSpeedDriver(TorchDDPDriver):
 
         self.config = self._ds_kwargs.get("config")
         if self.config is not None:
-            # TODO 究竟哪些参数按照config，哪些按照trainer参数
             logger.warn("Notice that you have defined a configuration for deepspeed and parameters like"
                         "`optimizers`, `strategy` and `fp16` may not take effects.")
             return
@@ -257,12 +282,6 @@ class DeepSpeedDriver(TorchDDPDriver):
 
     def step(self):
         self.model.step()
-
-    def unwrap_model(self):
-        r"""
-        :return: 返回原本的模型；
-        """
-        return self.model.module.model
 
     def get_model_no_sync_context(self):
         r"""

@@ -38,6 +38,9 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
         if driver == 'fairscale':
             return FairScaleDriver(model, torch.device(f"cuda:{os.environ['LOCAL_RANK']}"),
                                    is_pull_by_torch_run=True, **kwargs)
+        elif kwargs.get("deepspeed_kwargs") is not None:
+            return DeepSpeedDriver(model, torch.device(f"cuda:{os.environ['LOCAL_RANK']}"),
+                                   is_pull_by_torch_run=True, **kwargs)
         else:
             return TorchDDPDriver(model, torch.device(f"cuda:{os.environ['LOCAL_RANK']}"),
                                   is_pull_by_torch_run=True, **kwargs)
@@ -73,6 +76,14 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
         raise ValueError("Parameter `device` is wrong type, please check our documentation for the right use.")
 
     if driver == "torch":  # single, ddp, 直接启动。
+        if kwargs.get("deepspeed_kwargs") is not None:
+            # 选择的是 deepspeed
+            if not isinstance(device, List):
+                if device.type == 'cpu':
+                    raise ValueError("You are using `deepspeed` driver, but your chosen `device` is 'cpu'.")
+                logger.warning_once("Notice you are using `deepspeed`, but the `device` is only one gpu.")
+                return DeepSpeedDriver(model, [device], **kwargs)
+            return DeepSpeedDriver(model, device, **kwargs)
         if not isinstance(device, List):
             return TorchSingleDriver(model, device, **kwargs)
         else:
@@ -85,10 +96,3 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
             return FairScaleDriver(model, [device], **kwargs)
         else:
             return FairScaleDriver(model, device, **kwargs)
-    elif driver == "deepspeed":
-        if not isinstance(device, List):
-            if device.type == 'cpu':
-                raise ValueError("You are using `deepspeed` driver, but your chosen `device` is 'cpu'.")
-            logger.warning_once("Notice you are using `deepspeed`, but the `device` is only one gpu.")
-            return DeepSpeedDriver(model, [device], **kwargs)
-        return DeepSpeedDriver(model, device, **kwargs)
