@@ -13,7 +13,7 @@ from ...envs import FASTNLP_BACKEND, SUPPORT_BACKENDS
 from ..log import logger
 
 
-def prepare_dataloader(dataset, batch_size: int = 16, shuffle: bool = False, drop_last: bool = False,
+def prepare_dataloader(dataset, batch_size: int = 16, shuffle: bool = None, drop_last: bool = False,
              collate_fn: Union[Callable, str, None] = 'auto', num_workers: int = 0,
              backend: str = 'auto'):
     """
@@ -28,7 +28,8 @@ def prepare_dataloader(dataset, batch_size: int = 16, shuffle: bool = False, dro
         * 为字典型 或 :class:`~fastNLP.io.DataBundle` 数据时，返回 `Dict` 类型的数据。
 
     :param batch_size: 批次大小。
-    :param shuffle: 是否打乱数据集。
+    :param shuffle: 是否打乱数据集， 默认为 ``None``, 如果传入的 ``ds_or_db`` 可以判断出哪个是 'train' 则设置其 shuffle 为 True ，
+        其它的为 False 。
     :param drop_last: 当最后一个 batch 不足 batch_size 数量的是否，是否丢弃。
     :param collate_fn: 用于处理一个 batch 的函数，一般包括 padding 和转为 tensor。有以下三种取值：
 

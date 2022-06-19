@@ -293,7 +293,8 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
     :param batch_sampler: 实现了 __len__() 和 __iter__() 的实例化对象，，其__iter__() 方法每次都会返回一个 List 对象， List中的值为
      dataset 的下标 index ；默认为 None，当其不为 None 时，bacth_size, shuffle 参数均失效。
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
-    :param shuffle: 是否将数据打乱，若``shuffle=True``则会将dataset打乱；若否则什么也不做。
+    :param shuffle: 是否打乱数据集， 默认为 ``None``, 如果传入的 ``ds_or_db`` 可以判断出哪个是 'train' 则设置其 shuffle 为 True ，
+        其它的为 False 。
     :param drop_last: 当 ``drop_last=True`` 时，``PaddleDataLoader`` 会扔掉最后一个长度小于 ``batch_size`` 的 batch 数据;
     若 ``drop_last=False`` , 则会返回该 batch 数据。 默认为 ``False`` 。
     :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的 Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``.
@@ -326,7 +327,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                 dl_bundle[name] = PaddleDataLoader(ds, feed_list=feed_list, places=places,
                                                    return_list=return_list,
                                                    batch_sampler=batch_sampler, batch_size=batch_size,
-                                                   shuffle=shuffle,
+                                                   shuffle=True if shuffle is None else shuffle,
                                                    drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                                    use_shared_memory=use_shared_memory,
                                                    use_buffer_reader=use_buffer_reader,
@@ -337,7 +338,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                                                    return_list=return_list,
                                                    batch_sampler=batch_sampler,
                                                    batch_size=non_train_batch_size if non_train_batch_size else batch_size,
-                                                   shuffle=shuffle,
+                                                   shuffle=False if shuffle is None else shuffle,
                                                    drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                                    use_shared_memory=use_shared_memory,
                                                    use_buffer_reader=use_buffer_reader,
@@ -350,7 +351,8 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         for name, ds in ds_or_db.items():
             if 'train' in name:
                 dl = PaddleDataLoader(ds, feed_list=feed_list, places=places, return_list=return_list,
-                                      batch_sampler=batch_sampler, batch_size=batch_size, shuffle=shuffle,
+                                      batch_sampler=batch_sampler, batch_size=batch_size,
+                                      shuffle=False if shuffle is None else shuffle,
                                       drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                       use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
                                       timeout=timeout, worker_init_fn=worker_init_fn,
@@ -359,7 +361,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                 dl = PaddleDataLoader(ds, feed_list=feed_list, places=places, return_list=return_list,
                                       batch_sampler=batch_sampler,
                                       batch_size=non_train_batch_size if non_train_batch_size else batch_size,
-                                      shuffle=shuffle,
+                                      shuffle=False if shuffle is None else shuffle,
                                       drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                                       use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
                                       timeout=timeout, worker_init_fn=worker_init_fn,
@@ -369,7 +371,8 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
 
     elif isinstance(ds_or_db, HasLenGetitemType):
         dl = PaddleDataLoader(ds_or_db, feed_list=feed_list, places=places, return_list=return_list,
-                              batch_sampler=batch_sampler, batch_size=batch_size, shuffle=shuffle,
+                              batch_sampler=batch_sampler, batch_size=batch_size,
+                              shuffle=False if shuffle is None else shuffle,
                               drop_last=drop_last, collate_fn=collate_fn, num_workers=num_workers,
                               use_shared_memory=use_shared_memory, use_buffer_reader=use_buffer_reader,
                               timeout=timeout, worker_init_fn=worker_init_fn, persistent_workers=persistent_workers)

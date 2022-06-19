@@ -105,14 +105,16 @@ class LoadBestModelCallback(HasMonitorCallback):
 
     def on_train_end(self, trainer):
         if abs(self.monitor_value) != float('inf'):  # 如果是 inf 说明从来没有运行过。
-            if self.real_save_folder:
-                logger.info(f"Loading best model from {self.real_save_folder} with {self._real_monitor}: {self.monitor_value}...")
-                trainer.load_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,
-                                   model_load_fn=self.model_load_fn)
-            else:
-                logger.info(f"Loading best model from buffer with {self._real_monitor}: {self.monitor_value}...")
-                self.buffer.seek(0)
-                trainer.load_model(folder=self.buffer, only_state_dict=self.only_state_dict)
+            # 如果是分布式且报错了，就不要加载了，防止barrier的问题
+            if not (trainer.driver.is_distributed() and self.encounter_exception):
+                if self.real_save_folder:
+                    logger.info(f"Loading best model from {self.real_save_folder} with {self._real_monitor}: {self.monitor_value}...")
+                    trainer.load_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,
+                                       model_load_fn=self.model_load_fn)
+                else:
+                    logger.info(f"Loading best model from buffer with {self._real_monitor}: {self.monitor_value}...")
+                    self.buffer.seek(0)
+                    trainer.load_model(folder=self.buffer, only_state_dict=self.only_state_dict)
             if self.delete_after_after:
                 if not self.encounter_exception:  # 防止出现死锁。
                     trainer.driver.barrier()
