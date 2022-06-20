@@ -104,7 +104,7 @@ class DeepSpeedDriver(TorchDDPDriver):
         if train_dl is not None:
             self.train_micro_batch_size = self.get_dataloader_args(train_dl).batch_size
         else:
-            logger.warn("No `train_dataloader` found, and we will set `train_micro_batch_size_per_gpu`"
+            logger.warning("No `train_dataloader` found, and we will set `train_micro_batch_size_per_gpu`"
                         "to 1 for deepspeed configuration.")
             self.train_micro_batch_size = 1
 
@@ -226,7 +226,7 @@ class DeepSpeedDriver(TorchDDPDriver):
 
         self.config = self._ds_kwargs.get("config")
         if self.config is not None:
-            logger.warn("Notice that you have defined a configuration for deepspeed and parameters like"
+            logger.warning("Notice that you have defined a configuration for deepspeed and parameters like"
                         "`optimizers`, `strategy` and `fp16` may not take effects.")
             return
 
@@ -330,7 +330,7 @@ class DeepSpeedDriver(TorchDDPDriver):
         :return:
         """
         if not only_state_dict:
-            logger.warn("Only loading state dict is not allowed for `DeepSpeedDriver`. We will load its "
+            logger.warning("Only loading state dict is not allowed for `DeepSpeedDriver`. We will load its "
                         "checkpoint for you instead.")
         self.model.load_checkpoint(filepath, **kwargs)
 
