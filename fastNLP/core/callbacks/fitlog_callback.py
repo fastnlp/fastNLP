@@ -44,7 +44,7 @@ class FitlogCallback(HasMonitorCallback):
         if get_global_rank() != 0:  # 如果不是 global rank 为 0 ，需要关闭 fitlog
             fitlog.debug()
         super().on_after_trainer_initialized(trainer, driver)
-        fitlog.add_other('launch_time', os.environ['FASTNLP_LAUNCH_TIME'])
+        fitlog.add_other(name='launch_time', value=os.environ['FASTNLP_LAUNCH_TIME'])
 
     def on_sanity_check_end(self, trainer, sanity_check_res):
         super(FitlogCallback, self).on_sanity_check_end(trainer, sanity_check_res)

@@ -25,7 +25,7 @@ class ProgressCallback(HasMonitorCallback):
     def record_better_monitor(self, trainer, results):
         self.best_monitor_step = trainer.global_forward_batches
         self.best_monitor_epoch = trainer.cur_epoch_idx
-        self.best_results = results
+        self.best_results = self.itemize_results(results)
 
     def on_train_end(self, trainer):
         if self.best_monitor_epoch != -1:
