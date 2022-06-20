@@ -286,7 +286,7 @@ class StaticEmbedding(TokenEmbedding):
                     if word in vocab:
                         index = vocab.to_index(word)
                         if index in matrix:
-                            logger.warn(f"Word has more than one vector in embedding file. Set logger level to "
+                            logger.warning(f"Word has more than one vector in embedding file. Set logger level to "
                                           f"DEBUG for detail.")
                             logger.debug(f"Word:{word} occurs again in line:{idx}(starts from 0)")
                         matrix[index] = torch.from_numpy(np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim))
@@ -295,7 +295,7 @@ class StaticEmbedding(TokenEmbedding):
                         found_count += 1
                 except Exception as e:
                     if error == 'ignore':
-                        logger.warn("Error occurred at the {} line.".format(idx))
+                        logger.warning("Error occurred at the {} line.".format(idx))
                     else:
                         logger.error("Error occurred at the {} line.".format(idx))
                         raise e

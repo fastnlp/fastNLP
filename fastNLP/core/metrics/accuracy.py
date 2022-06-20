@@ -69,7 +69,7 @@ class Accuracy(Metric):
         elif pred.ndim == target.ndim + 1:
             pred = pred.argmax(axis=-1)
             if seq_len is None and target.ndim > 1:
-                logger.warn("You are not passing `seq_len` to exclude pad when calculate accuracy.")
+                logger.warning("You are not passing `seq_len` to exclude pad when calculate accuracy.")
 
         else:
             raise RuntimeError(f"when pred have size:{pred.shape}, target should have size: {pred.shape} or "
