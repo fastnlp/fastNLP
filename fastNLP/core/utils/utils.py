@@ -554,7 +554,7 @@ def deprecated(help_message: Optional[str] = None):
         def wrapper(*args, **kwargs):
             func_hash = hash(deprecated_function)
             if func_hash not in _emitted_deprecation_warnings:
-                logger.warn(warning_msg, category=FutureWarning, stacklevel=2)
+                logger.warning(warning_msg, category=FutureWarning, stacklevel=2)
                 _emitted_deprecation_warnings.add(func_hash)
             return deprecated_function(*args, **kwargs)
 

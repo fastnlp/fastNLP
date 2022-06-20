@@ -39,7 +39,7 @@ def _check_tag_vocab_and_encoding_type(tag_vocab: Union[Vocabulary, dict], encod
                             f"encoding_type."
         tags = tags.replace(tag, '')  # 删除该值
     if tags:  # 如果不为空，说明出现了未使用的tag
-        logger.warn(f"Tag:{tags} in encoding type:{encoding_type} is not presented in your Vocabulary. Check your "
+        logger.warning(f"Tag:{tags} in encoding type:{encoding_type} is not presented in your Vocabulary. Check your "
                       "encoding_type.")
 
 

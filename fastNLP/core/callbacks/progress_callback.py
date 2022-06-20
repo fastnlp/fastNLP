@@ -22,9 +22,10 @@ class ProgressCallback(HasMonitorCallback):
         self.best_monitor_step = -1
         self.best_results = None
 
-    def record_better_monitor(self, trainer):
+    def record_better_monitor(self, trainer, results):
         self.best_monitor_step = trainer.global_forward_batches
         self.best_monitor_epoch = trainer.cur_epoch_idx
+        self.best_results = self.itemize_results(results)
 
     def on_train_end(self, trainer):
         if self.best_monitor_epoch != -1:
@@ -138,7 +139,7 @@ class RichCallback(ProgressCallback):
         characters = '-'
         if self.monitor is not None:
             if self.is_better_results(results, keep_if_better=True):
-                self.record_better_monitor(trainer)
+                self.record_better_monitor(trainer, results)
                 if abs(self.monitor_value) != float('inf'):
                     rule_style = 'spring_green3'
                     text_style = '[bold]'
@@ -154,7 +155,6 @@ class RichCallback(ProgressCallback):
             self.progress_bar.console.print_json(results)
         else:
             self.progress_bar.print(results)
-        self.best_results = results
 
     def clear_tasks(self):
         for key, taskid in self.task2id.items():
@@ -222,7 +222,7 @@ class RawTextCallback(ProgressCallback):
         text = ''
         if self.monitor is not None:
             if self.is_better_results(results, keep_if_better=True):
-                self.record_better_monitor(trainer)
+                self.record_better_monitor(trainer, results)
                 if abs(self.monitor_value) != float('inf'):
                     text = '+'*self.num_signs + base_text + '+'*self.num_signs
         if len(text) == 0:
@@ -234,7 +234,6 @@ class RawTextCallback(ProgressCallback):
         if self.format_json:
             results = json.dumps(results)
         logger.info(results)
-        self.best_results = results
 
     @property
     def name(self):  # progress bar的名称
@@ -311,7 +310,7 @@ class TqdmCallback(ProgressCallback):
         text = ''
         if self.monitor is not None:
             if self.is_better_results(results, keep_if_better=True):
-                self.record_better_monitor(trainer)
+                self.record_better_monitor(trainer, results)
                 if abs(self.monitor_value) != float('inf'):
                     text = '+'*self.num_signs + base_text + '+'*self.num_signs
         if len(text) == 0:
@@ -323,7 +322,6 @@ class TqdmCallback(ProgressCallback):
         if self.format_json:
             results = json.dumps(results)
         logger.info(results)
-        self.best_results = results
 
     def clear_tasks(self):
         for key, taskid in self.task2id.items():

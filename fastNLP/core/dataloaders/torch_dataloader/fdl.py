@@ -218,7 +218,7 @@ class TorchDataLoader(DataLoader):
 
 def prepare_torch_dataloader(ds_or_db,
                              batch_size: int = 16,
-                             shuffle: bool = False,
+                             shuffle: bool = None,
                              sampler: Union["Sampler[int]", ReproducibleSampler, UnrepeatedSampler] = None,
                              batch_sampler: Union["Sampler[Sequence[int]]", ReproducibleBatchSampler] = None,
                              num_workers: int = 0, collate_fn: Union[Callable, str, None] = 'auto',
@@ -252,7 +252,8 @@ def prepare_torch_dataloader(ds_or_db,
 
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
     :param non_train_batch_size: 非 'train' 数据集的 ``TorchDataLoader`` 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
-    :param shuffle: 是否打乱数据集， 默认为 ``False``。
+    :param shuffle: 是否打乱数据集， 默认为 ``None``, 如果传入的 ``ds_or_db`` 可以判断出哪个是 'train' 则设置其 shuffle 为 True ，
+        其它的为 False 。
     :param sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
         默认为None， 当其不为 None 时， shuffle 参数无效。
     :param non_train_sampler: 非 'train' 数据集的的实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
@@ -290,7 +291,7 @@ def prepare_torch_dataloader(ds_or_db,
         for name, ds in ds_or_db.iter_datasets():
             if 'train' in name:
                 dl_bundle[name] = TorchDataLoader(dataset=ds, batch_size=batch_size,
-                                                  shuffle=shuffle, sampler=sampler, batch_sampler=batch_sampler,
+                                                  shuffle=True if shuffle is None else shuffle, sampler=sampler, batch_sampler=batch_sampler,
                                                   num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
                                                   drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
                                                   multiprocessing_context=multiprocessing_context, generator=generator,
@@ -300,7 +301,7 @@ def prepare_torch_dataloader(ds_or_db,
             else:
                 dl_bundle[name] = TorchDataLoader(dataset=ds,
                                                   batch_size=non_train_batch_size if non_train_batch_size else batch_size,
-                                                  shuffle=shuffle,
+                                                  shuffle=False if shuffle is None else shuffle,
                                                   sampler=non_train_sampler if non_train_sampler else sampler,
                                                   batch_sampler=batch_sampler,
                                                   num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
@@ -316,7 +317,7 @@ def prepare_torch_dataloader(ds_or_db,
         for name, ds in ds_or_db.items():
             if 'train' in name:
                 dl_bundle[name] = TorchDataLoader(dataset=ds, batch_size=batch_size,
-                                                  shuffle=shuffle, sampler=sampler, batch_sampler=batch_sampler,
+                                                  shuffle=True if shuffle is None else shuffle, sampler=sampler, batch_sampler=batch_sampler,
                                                   num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
                                                   drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
                                                   multiprocessing_context=multiprocessing_context, generator=generator,
@@ -326,7 +327,7 @@ def prepare_torch_dataloader(ds_or_db,
             else:
                 dl_bundle[name] = TorchDataLoader(dataset=ds,
                                                   batch_size=non_train_batch_size if non_train_batch_size else batch_size,
-                                                  shuffle=shuffle,
+                                                  shuffle=False if shuffle is None else shuffle,
                                                   sampler=non_train_sampler if non_train_sampler else sampler,
                                                   batch_sampler=batch_sampler,
                                                   num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
@@ -340,7 +341,7 @@ def prepare_torch_dataloader(ds_or_db,
 
     elif isinstance(ds_or_db, HasLenGetitemType):
         dl = TorchDataLoader(dataset=ds_or_db, batch_size=batch_size,
-                             shuffle=shuffle, sampler=sampler, batch_sampler=batch_sampler,
+                             shuffle=False if shuffle is None else shuffle, sampler=sampler, batch_sampler=batch_sampler,
                              num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
                              drop_last=drop_last, timeout=timeout, worker_init_fn=worker_init_fn,
                              multiprocessing_context=multiprocessing_context, generator=generator,

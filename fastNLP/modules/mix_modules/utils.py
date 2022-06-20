@@ -112,7 +112,7 @@ def _jittor2torch(jittor_var: 'jittor.Var', device: Optional[Union[str, int]] = 
     # 如果outputs有_grad键，可以实现求导
     no_gradient = not jittor_var.requires_grad if no_gradient is None else no_gradient
     if no_gradient == False:
-        logger.warn("The result tensor will not keep gradients due to differences between jittor and pytorch.")
+        logger.warning("The result tensor will not keep gradients due to differences between jittor and pytorch.")
     jittor_numpy = jittor_var.numpy()
     if not np.issubdtype(jittor_numpy.dtype, np.inexact):
         no_gradient = True

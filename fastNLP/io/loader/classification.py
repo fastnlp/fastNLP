@@ -345,7 +345,7 @@ class SST2Loader(Loader):
         with open(path, 'r', encoding='utf-8') as f:
             f.readline()  # 跳过header
             if 'test' in os.path.split(path)[1]:
-                logger.warn("SST2's test file has no target.")
+                logger.warning("SST2's test file has no target.")
                 for line in f:
                     line = line.strip()
                     if line:

@@ -146,7 +146,7 @@ class MatchingBertPipe(Pipe):
             warn_msg = f"There are {len(target_vocab._no_create_word)} target labels" \
                        f" in {[name for name in data_bundle.datasets.keys() if 'train' not in name]} " \
                        f"data set but not in train data set!."
-            logger.warn(warn_msg)
+            logger.warning(warn_msg)
             print(warn_msg)
         
         has_target_datasets = [dataset for name, dataset in data_bundle.datasets.items() if
@@ -291,7 +291,7 @@ class MatchingPipe(Pipe):
             warn_msg = f"There are {len(target_vocab._no_create_word)} target labels" \
                        f" in {[name for name in data_bundle.datasets.keys() if 'train' not in name]} " \
                        f"data set but not in train data set!."
-            logger.warn(warn_msg)
+            logger.warning(warn_msg)
             print(warn_msg)
         
         has_target_datasets = [dataset for name, dataset in data_bundle.datasets.items() if
