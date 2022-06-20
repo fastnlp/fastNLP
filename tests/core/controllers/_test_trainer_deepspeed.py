@@ -60,7 +60,7 @@ def test_trainer_deepspeed(
         config["train_micro_batch_size_per_gpu"] = TrainDeepSpeedConfig.batch_size
     trainer = Trainer(
         model=model,
-        driver="torch",
+        driver="deepspeed",
         device=device,
         optimizers=optimizers,
         train_dataloader=train_dataloader,
@@ -79,7 +79,7 @@ def test_trainer_deepspeed(
     trainer.run()
 
 if __name__ == "__main__":
-    device = [0,1]
+    device = [4, 5]
     # device = [0,1,3]
     callbacks = [
         # RecordMetricCallback(monitor="acc#acc", metric_threshold=0.0, larger_better=True), 

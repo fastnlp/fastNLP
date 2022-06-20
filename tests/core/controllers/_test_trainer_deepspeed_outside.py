@@ -69,7 +69,7 @@ def test_trainer_deepspeed(
     )
     trainer = Trainer(
         model=model,
-        driver="torch",
+        driver="deepspeed",
         device=device,
         data_device=torch.device(f"cuda:{local_rank}"),
         optimizers=optimizers,
