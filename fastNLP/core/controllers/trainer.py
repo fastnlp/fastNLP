@@ -55,9 +55,10 @@ class Trainer(TrainerEventTrigger):
             您应当使用 ``TorchDDPDriver``，意味着您需要通过 ``python -m torch.distributed.launch`` 的方式来启动训练，此时参数 ``device``
             应当设置为 None（此时我们会忽略该参数），具体见下面对于参数 ``device`` 的更详细的解释。
 
-    :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：["torch"]，之后我们会加入 jittor、paddle 等
-        国产框架的训练模式；其中 "torch" 表示使用 ``TorchSingleDriver`` 或者 ``TorchDDPDriver``，具体使用哪一种取决于参数 ``device``
-        的设置；
+    :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：["auto", "torch", "paddle", "jittor", "fairscale"]。其值为 ``"auto"`` 时，
+        **FastNLP** 会根据传入模型的类型自行判断使用哪一种模式；其值为 "torch" 时，表示使用 ``TorchSingleDriver`` 或者 ``TorchDDPDriver``；
+        其值为 "paddle" 时，表示使用 ``PaddleSingleDriver`` 或者 ``PaddleFleetDriver``；其值为 "jittor" 时，表示使用 ``JittorSingleDriver``
+        或者 ``JittorMPIDriver``；其值为 "fairscale" 时，表示使用 ``FairScaleDriver``。在指定了框架的情况下，具体使用哪一种取决于参数 ``device`` 的设置；
 
         .. warning::
 
@@ -81,7 +82,7 @@ class Trainer(TrainerEventTrigger):
 
         device 的可选输入如下所示：
 
-        * *str*: 例如 'cpu', 'cuda', 'cuda:0', 'cuda:1' 等；
+        * *str*: 例如 'cpu', 'cuda', 'cuda:0', 'cuda:1', 'gpu:0' 等；
         * *torch.device*: 例如 'torch.device("cuda:0")'；
         * *int*: 将使用 ``device_id`` 为该值的 ``gpu`` 进行训练；如果值为 -1，那么默认使用全部的显卡，此时使用的 driver 实例是 `TorchDDPDriver`；
         * *list(int)*: 如果多于 1 个device，应当通过该种方式进行设定；注意此时我们一定会使用 ``TorchDDPDriver``，不管您传入的列表的长度是 1 还是其它值；
@@ -365,9 +366,9 @@ class Trainer(TrainerEventTrigger):
     def __init__(
             self,
             model,
-            driver,
             train_dataloader,
             optimizers,
+            driver: str = "auto",
             device: Optional[Union[int, List[int], str]] = "cpu",
             n_epochs: int = 20,
             evaluate_dataloaders=None,

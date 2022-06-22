@@ -1,6 +1,7 @@
 from typing import Union, Optional, List
 
 from .driver import Driver
+from ..utils import is_torch_module, is_paddle_module, is_jittor_module
 
 
 def choose_driver(model, driver: Union[str, Driver], device: Optional[Union[int, List[int], str]], **kwargs) -> Driver:
@@ -16,6 +17,16 @@ def choose_driver(model, driver: Union[str, Driver], device: Optional[Union[int,
     # 如果用户直接传进来一个 driver 实例，我们就直接返回回去，目前用户需要自己保证传进来的 driver 的正确性；
     if isinstance(driver, Driver):
         return driver
+
+    if driver == "auto":
+        if is_torch_module(model):
+            driver = "torch"
+        elif is_paddle_module(model):
+            driver = "paddle"
+        elif is_jittor_module(model):
+            driver = "jittor"
+        else:
+            raise ValueError(f"Cannot choose driver automatically based on model, please set `driver` specifically.")
 
     if driver in {"torch", "fairscale"}:
         from fastNLP.core.drivers.torch_driver.initialize_torch_driver import initialize_torch_driver

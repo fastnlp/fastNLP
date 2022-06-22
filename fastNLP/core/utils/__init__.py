@@ -1,5 +1,6 @@
 __all__ = [
     'cache_results',
+    'is_jittor_module',
     'is_jittor_dataset',
     'jittor_collate_wraps',
     'paddle_to',
@@ -9,8 +10,10 @@ __all__ = [
     'is_in_paddle_dist',
     'is_in_fnlp_paddle_dist',
     'is_in_paddle_launch_dist',
+    'is_paddle_module',
     'f_rich_progress',
     'torch_move_data_to_device',
+    'is_torch_module',
     'get_fn_arg_names',
     'auto_param_call',
     'check_user_specific_params',
@@ -28,11 +31,11 @@ __all__ = [
 ]
 
 from .cache_results import cache_results
-from .jittor_utils import is_jittor_dataset, jittor_collate_wraps
+from .jittor_utils import is_jittor_dataset, jittor_collate_wraps, is_jittor_module
 from .paddle_utils import paddle_to, paddle_move_data_to_device, get_paddle_device_id, get_paddle_gpu_str, is_in_paddle_dist, \
-    is_in_fnlp_paddle_dist, is_in_paddle_launch_dist
+    is_in_fnlp_paddle_dist, is_in_paddle_launch_dist, is_paddle_module
 from .rich_progress import f_rich_progress
-from .torch_utils import torch_move_data_to_device
+from .torch_utils import torch_move_data_to_device, is_torch_module
 from .utils import *
 from .tqdm_progress import f_tqdm_progress
 from .seq_len_to_mask import seq_len_to_mask
