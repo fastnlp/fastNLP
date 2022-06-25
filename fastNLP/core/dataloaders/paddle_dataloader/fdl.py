@@ -39,7 +39,7 @@ class _PaddleDataset(Dataset):
 
     def __getattr__(self, item):
         try:
-            self.dataset.__getattribute__(item)
+            return self.dataset.__getattribute__(item)
         except Exception as e:
             raise e
 
