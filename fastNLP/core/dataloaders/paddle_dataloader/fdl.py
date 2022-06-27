@@ -194,8 +194,8 @@ class PaddleDataLoader(DataLoader):
             field 进行 pad，所以如果对应 field 本身就不是可以 pad 的形式，可以不需要主动设置为 None 。如果 backend 为 None ，该值
             无意义。
         :param dtype: 对于需要 pad 的 field ，该 field 的数据 dtype 应该是什么。
-        :param backend: 可选['raw', 'numpy', 'Paddle', 'paddle', 'paddle', 'auto']，分别代表，输出为 list, numpy.ndarray,
-            Paddle.Tensor, paddle.Tensor, paddle.Var 类型。若 pad_val 为 None ，该值无意义 。
+        :param backend: 可选['raw', 'numpy', 'torch', 'paddle', 'jittor', 'oneflow', 'auto']，分别代表，输出为 list, numpy.ndarray,
+            torch.Tensor, paddle.Tensor, jittor.Var, oneflow.Tensor 类型。若 pad_val 为 None ，该值无意义 。
         :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 pad_val, dtype, backend 等参数失效。pad_fn 的输入为当前 field 的
             batch 形式。 Collator 将自动 unbatch 数据，然后将各个 field 组成各自的 batch 。pad_func 的输入即为 field 的 batch
             形式，输出将被直接作为结果输出。
