@@ -286,20 +286,11 @@ class Trainer(TrainerEventTrigger):
             第一个 ``Trainer`` 实例，即使该 ``Trainer`` 实例的 marker 不为 None；这一点详见 :meth:`~fastNLP.core.controllers.Trainer.on`
 
     :kwargs:
-        * *torch_kwargs* -- 用于在指定 ``driver`` 为 'torch' 时设定具体 driver 实例的一些参数：
-            
-            * ddp_kwargs -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
-             {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
-            * set_grad_to_none -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
-            * non_blocking -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
-            * gradscaler_kwargs -- 用于 fp16=True 时，提供给 ``torch.amp.cuda.GradScaler`` 的参数。
-        * *paddle_kwargs* -- 用于在指定 ``driver`` 为 'paddle' 时设定具体 driver 实例的一些参数：
-
-            * fleet_kwargs -- 用于在使用 ``PaddleFleetDriver`` 时指定 ``DataParallel`` 和 ``fleet`` 初始化时的参数，包括：
-
-                * is_collective -- 是否使用 paddle 集群式的分布式训练方法，目前仅支持为 ``True`` 的情况；
-                * role_maker -- 初始化 ``fleet`` 分布式训练 API 时使用的 ``RoleMaker``
-                * 其它用于初始化 ``DataParallel`` 的参数；
+        * *torch_kwargs* -- ``TorchDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.torch_driver.TorchSingleDriver` 和
+          :class:`~fastNLP.core.drivers.torch_driver.TorchDDPDriver`；
+        * *paddle_kwargs* -- ``PaddleDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.paddle_driver.PaddleSingleDriver` 和
+          :class:`~fastNLP.core.drivers.paddle_driver.PaddleSingleDriver`；
+        * *fairscale_kwargs* -- ``FairScaleDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.torch_driver.FairScaleDriver`；
         * *data_device* -- 一个具体的 driver 实例中，有 ``model_device`` 和 ``data_device``，前者表示模型所在的设备，后者表示
          当 ``model_device`` 为 None 时应当将数据迁移到哪个设备；
 
@@ -313,23 +304,23 @@ class Trainer(TrainerEventTrigger):
                 3. 对于 paddle，该参数无效；
 
         * *use_dist_sampler* -- 表示是否使用分布式的 ``sampler``。在多卡时，分布式 ``sampler`` 将自动决定每张卡上读取的 sample ，使得一个 epoch
-         内所有卡的 sample 加起来为一整个数据集的 sample，同时为了保证所有卡上拥有相同数量的 sample ，有的卡上可能会有重复的 sample ，例如
-         8卡训练，只有9个sample，如果batch_size为1，那么第二个batch时，有7张卡将没有 sample 可用，因此只有重复使用 sample 来 pad 到第二个
-         batch 中。如果不希望 fastNLP 对 dataloader 的sampler 做特殊设置，请将该值设置为 False ，若确实需要分布式的训练，请在 Trainer 外
-         对 train_dataloader 做的数据做特殊处理使得其在不同的卡之间 sample 是
+          内所有卡的 sample 加起来为一整个数据集的 sample，同时为了保证所有卡上拥有相同数量的 sample ，有的卡上可能会有重复的 sample ，例如
+          8卡训练，只有9个sample，如果batch_size为1，那么第二个batch时，有7张卡将没有 sample 可用，因此只有重复使用 sample 来 pad 到第二个
+          batch 中。如果不希望 fastNLP 对 dataloader 的sampler 做特殊设置，请将该值设置为 False ，若确实需要分布式的训练，请在 Trainer 外
+          对 train_dataloader 做的数据做特殊处理使得其在不同的卡之间 sample 是
         * *evaluate_use_dist_sampler* -- 表示在 ``Evaluator`` 中在使用分布式的时候是否将保证 dataloader 的 ``sampler`` 替换为
-         evaluate 时使用的分布式的 ``sampler``，其特点是每个卡上的数据之间不重叠，所有卡上数据的加起来是整个数据集。若传入的 dataloader
-         的 sampler 为 (a) 深度学习框架自带的默认 sampler ; (b) fastNLP 的 Sampler 等，则将替换为
+          evaluate 时使用的分布式的 ``sampler``，其特点是每个卡上的数据之间不重叠，所有卡上数据的加起来是整个数据集。若传入的 dataloader
+          的 sampler 为 (a) 深度学习框架自带的默认 sampler ; (b) fastNLP 的 Sampler 等，则将替换为
           :class:`~fastNLP.UnrepeatedSequentialSampler`，如果这个行为不是期待的，请本参数设置为 ``False``，并针对每个卡控制其可以
           用到的数据。
         * *output_from_new_proc* -- 应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
-         ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
-         log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
+          ["all", "ignore", "only_error"]；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
+          log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 "only_error"；
 
             注意该参数仅当使用分布式的 ``driver`` 时才有效，例如 ``TorchDDPDriver``；
         * *progress_bar* -- 以哪种方式显示 progress ，目前支持[None, 'raw', 'rich', 'auto', 'tqdm'] 或者 :class:`~fastNLP.RichCallback`, :class:`~fastNLP.RawTextCallback`等对象，
-         默认为 auto , auto 表示如果检测到当前 terminal 为交互型则使用 :class:`~fastNLP.RichCallback`，否则使用 :class:`~fastNLP.RawTextCallback` 对象。如果
-         需要定制 progress bar 的参数，例如打印频率等，可以传入 :class:`~fastNLP.RichCallback`, :class:`~fastNLP.RawTextCallback` 等对象。
+          默认为 auto , auto 表示如果检测到当前 terminal 为交互型则使用 :class:`~fastNLP.RichCallback`，否则使用 :class:`~fastNLP.RawTextCallback` 对象。如果
+          需要定制 progress bar 的参数，例如打印频率等，可以传入 :class:`~fastNLP.RichCallback`, :class:`~fastNLP.RawTextCallback` 等对象。
         * *train_input_mapping* -- 与 input_mapping 一致，但是只用于 ``Trainer`` 中。与 input_mapping 互斥。
         * *train_output_mapping* -- 与 output_mapping 一致，但是只用于 ``Trainer`` 中。与 output_mapping 互斥。
         * *evaluate_input_mapping* -- 与 input_mapping 一致，但是只用于 ``Evaluator`` 中。与 input_mapping 互斥。

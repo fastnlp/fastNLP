@@ -130,15 +130,15 @@ class PaddleFleetDriver(PaddleDriver):
     :param is_pull_by_paddle_run: 标记当前进程是否为通过 ``python -m paddle.distributed.launch`` 启动的。
         这个参数仅在 :class:`~fastNLP.core.Trainer` 中初始化 driver 时使用
     :param fp16: 是否开启混合精度训练；
+    :param paddle_kwargs:
+        * *fleet_kwargs* -- 用于在使用 ``PaddleFleetDriver`` 时指定 ``DataParallel`` 和 ``fleet`` 初始化时的参数，包括：
+            
+            * *is_collective* -- 是否使用 paddle 集群式的分布式训练方法，目前仅支持为 ``True`` 的情况；
+            * *role_maker* -- 初始化 ``fleet`` 分布式训练 API 时使用的 ``RoleMaker``；
+            * 其它用于初始化 ``DataParallel`` 的参数；
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`paddle.amp.GradScaler` 的参数;
+    
     :kwargs:
-        * *paddle_kwargs* -- 用于在指定 ``driver`` 为 'paddle' 时设定具体 driver 实例的一些参数：
-
-            * fleet_kwargs -- 用于在使用 ``PaddleFleetDriver`` 时指定 ``DataParallel`` 和 ``fleet`` 初始化时的参数，包括：
-
-                * is_collective -- 是否使用 paddle 集群式的分布式训练方法，目前仅支持为 ``True`` 的情况；
-                * role_maker -- 初始化 ``fleet`` 分布式训练 API 时使用的 ``RoleMaker``
-                * 其它用于初始化 ``DataParallel`` 的参数；
-
         * wo_auto_param_call (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为；
 
         .. note::
@@ -152,6 +152,7 @@ class PaddleFleetDriver(PaddleDriver):
             parallel_device: Optional[Union[List[str], str]],
             is_pull_by_paddle_run: bool = False,
             fp16: bool = False,
+            paddle_kwrags: Dict = {},
             **kwargs
     ):
         if USER_CUDA_VISIBLE_DEVICES not in os.environ:
