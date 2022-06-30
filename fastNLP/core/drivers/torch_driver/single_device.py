@@ -35,9 +35,13 @@ class TorchSingleDriver(TorchDriver):
     :param model: 传入给 ``Trainer`` 的 ``model`` 参数；
     :param device: torch.device，当前进程所使用的设备；
     :param fp16: 是否开启 fp16；
+    :param torch_kwargs:
+        * *set_grad_to_none* -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
+        * *non_blocking* -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
+        * *gradscaler_kwargs* -- 用于 fp16=True 时，提供给 ``torch.amp.cuda.GradScaler`` 的参数;
     """
 
-    def __init__(self, model, device: "torch.device", fp16: bool = False, **kwargs):
+    def __init__(self, model, device: "torch.device", fp16: bool = False, torch_kwargs: Dict = {}, **kwargs):
         if isinstance(model, DistributedDataParallel):
             raise ValueError("`DistributedDataParallel` is not supported in `TorchSingleDriver`")
 
@@ -47,7 +51,7 @@ class TorchSingleDriver(TorchDriver):
             logger.info("You have set `CUDA_VISIBLE_DEVICES` to '' in system environment variable, and we are gonna to"
                         "use `cpu` instead of `gpu` device.")
 
-        super(TorchSingleDriver, self).__init__(model, fp16=fp16, **kwargs)
+        super(TorchSingleDriver, self).__init__(model, fp16=fp16, torch_kwargs=torch_kwargs, **kwargs)
 
         if device is None:
             logger.debug("device is not set, fastNLP will try to automatically get it.")

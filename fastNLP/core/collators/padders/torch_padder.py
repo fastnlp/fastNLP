@@ -38,7 +38,7 @@ def is_torch_tensor(dtype):
     """
     判断是否为 torch 的 tensor
 
-    :param dtype 数据的 dtype 类型
+    :param dtype: 数据的 dtype 类型
     """
     if not isclass(dtype) and isinstance(dtype, torch.dtype):
         return True
@@ -49,9 +49,9 @@ def _get_dtype(ele_dtype, dtype, class_name):
     """
     用于检测数据的 dtype 类型， 根据内部和外部数据判断。
 
-    :param ele_dtype 内部数据的类型
-    :param dtype  数据外部类型
-    :param class_name 类的名称
+    :param ele_dtype: 内部数据的类型
+    :param dtype:  数据外部类型
+    :param class_name: 类的名称
     """
     if not (ele_dtype is None or (is_number_or_numpy_number(ele_dtype) or is_torch_tensor(ele_dtype))):
         raise EleDtypeUnsupportedError(f"`{class_name}` only supports padding python numbers "

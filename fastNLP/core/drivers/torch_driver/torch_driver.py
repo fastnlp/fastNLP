@@ -47,12 +47,15 @@ class TorchDriver(Driver):
 
         您可以在使用 ``TorchSingleDriver`` 和 ``TorchDDPDriver`` 时使用 ``TorchDriver`` 提供的接口；
 
+    :param model: 训练时使用的 **pytorch** 模型；
+    :param fp16: 是否开启混合精度训练;
+    :param torch_kwargs:
     """
-    def __init__(self, model, fp16: Optional[bool] = False, **kwargs):
+    def __init__(self, model, fp16: Optional[bool] = False, torch_kwargs: Dict = {}, **kwargs):
         super(TorchDriver, self).__init__(model)
 
         """ 进行 fp16 的设置 """
-        self._torch_kwargs = kwargs.get("torch_kwargs", {})
+        self._torch_kwargs = torch_kwargs
 
         # 因为 ddp 和 single_device 的混合精度训练的设置是一样的，因此可以统一抽象到这里；
         self.fp16 = fp16

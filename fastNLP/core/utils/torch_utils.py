@@ -8,7 +8,8 @@ if _NEED_IMPORT_TORCH:
         DEFAULT_TORCH_GROUP = torch.distributed.distributed_c10d.group.WORLD
 
 __all__ = [
-    'torch_move_data_to_device'
+    'torch_move_data_to_device',
+    'is_torch_module',
 ]
 
 from .utils import apply_to_collection
@@ -64,3 +65,15 @@ def torch_move_data_to_device(batch: Any, device: Optional[Union[str, "torch.dev
 
     dtype = TorchTransferableDataType
     return apply_to_collection(batch, dtype=dtype, function=batch_to)
+
+def is_torch_module(model) -> bool:
+    """
+    判断传入的 ``model`` 是否是 :class:`torch.nn.Module` 类型
+
+    :param model: 模型；
+    :return: 当前模型是否为 ``torch`` 的模型；
+    """
+    try:
+        return isinstance(model, torch.nn.Module)
+    except BaseException:
+        return False

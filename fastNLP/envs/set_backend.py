@@ -8,7 +8,7 @@ from fastNLP.envs.env import FASTNLP_BACKEND, FASTNLP_GLOBAL_RANK, USER_CUDA_VIS
 from fastNLP.envs.utils import _module_available, get_gpu_count
 
 
-SUPPORT_BACKENDS = ['torch', 'paddle', 'jittor']
+SUPPORT_BACKENDS = ['torch', 'paddle', 'jittor', 'oneflow']
 
 
 def _set_backend():
@@ -143,6 +143,9 @@ def set_env(global_seed=None):
         assert _module_available(backend), f"You must have {backend} available to use {backend} backend."
 
     if backend == 'torch':
+        assert _module_available(backend), f"You must have {backend} available to use {backend} backend."
+
+    if backend == 'oneflow':
         assert _module_available(backend), f"You must have {backend} available to use {backend} backend."
 
 

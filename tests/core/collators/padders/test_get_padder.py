@@ -3,7 +3,7 @@ import numpy as np
 
 from fastNLP.core.collators.padders.get_padder import get_padder, InconsistencyError, DtypeError, \
     _get_element_shape_dtype
-from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _NEED_IMPORT_PADDLE, _NEED_IMPORT_JITTOR
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _NEED_IMPORT_PADDLE, _NEED_IMPORT_JITTOR, _NEED_IMPORT_ONEFLOW
 
 
 def test_get_element_shape_dtype():
@@ -14,10 +14,11 @@ def test_get_element_shape_dtype():
     catalog = _get_element_shape_dtype([np.zeros(3), np.zeros((2, 1))])
 
 
-# @pytest.mark.parametrize('backend', ['raw', None, 'numpy', 'torch', 'jittor', 'paddle'])
-@pytest.mark.parametrize('backend', ['raw', None, 'numpy', 'torch', 'paddle'])
+@pytest.mark.parametrize('backend', ['raw', None, 'numpy', 'torch', 'paddle', 'jittor', 'oneflow'])
 @pytest.mark.torch
 @pytest.mark.paddle
+@pytest.mark.jittor
+@pytest.mark.oneflow
 def test_get_padder_run(backend):
     if not _NEED_IMPORT_TORCH and backend == 'torch':
         pytest.skip("No torch")
@@ -25,6 +26,8 @@ def test_get_padder_run(backend):
         pytest.skip("No paddle")
     if not _NEED_IMPORT_JITTOR and backend == 'jittor':
         pytest.skip("No jittor")
+    if not _NEED_IMPORT_ONEFLOW and backend == 'oneflow':
+        pytest.skip("No oneflow")
     batch_field = [1, 2, 3]
     padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
 
@@ -158,6 +161,60 @@ def test_torch_padder():
 
     # 测试 to numpy
     batch_field = [torch.ones((3,3)), torch.ones((2,3)), torch.ones((1,0))]
+    padder = get_padder(batch_field, pad_val=0, backend='numpy', dtype=int, field_name='test')
+    pad_batch = padder(batch_field)
+    assert isinstance(pad_batch, np.ndarray)
+    assert np.shape(pad_batch) == (3, 3, 3)
+    assert (pad_batch == np.zeros(np.shape(pad_batch))).sum()==12
+
+@pytest.mark.oneflow
+def test_oneflow_padder():
+    if not _NEED_IMPORT_ONEFLOW:
+        pytest.skip("No oneflow.")
+    import oneflow
+    backend = 'oneflow'
+    target_type = oneflow.Tensor
+    batch_field = [1, 2, 3]
+    padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
+    pad_batch = padder(batch_field)
+    assert isinstance(pad_batch, target_type)
+    assert (pad_batch == oneflow.LongTensor(batch_field)).sum()==len(batch_field)
+
+    batch_field = [[1], [2, 2], [3, 3, 3]]
+    padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
+    pad_batch = padder(batch_field)
+    assert isinstance(pad_batch, target_type)
+    assert pad_batch.shape == (3, 3)
+    assert (pad_batch == oneflow.zeros(pad_batch.shape)).sum()==3
+
+    batch_field = [oneflow.ones((3,3)), oneflow.ones((2,3)), oneflow.ones((1,3))]
+    padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
+    pad_batch = padder(batch_field)
+    assert isinstance(pad_batch, target_type)
+    assert pad_batch.shape == (3, 3, 3)
+    assert (pad_batch == oneflow.zeros(pad_batch.shape)).sum()==9
+
+    batch_field = [oneflow.ones((3,3)), oneflow.ones((2,3)), oneflow.ones((1,0))]
+    padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
+    pad_batch = padder(batch_field)
+    assert isinstance(pad_batch, target_type)
+    assert pad_batch.shape == (3, 3, 3)
+    assert (pad_batch == oneflow.zeros(pad_batch.shape)).sum()==12
+
+    batch_field = [oneflow.ones((3,3)), oneflow.ones((2,3)), oneflow.ones((1,))]
+    with pytest.raises(InconsistencyError):
+        padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
+
+    # 可以是 numpy.ndarray
+    batch_field = [np.ones((3,3)), np.ones((2,3)), np.ones((1,0))]
+    padder = get_padder(batch_field, pad_val=0, backend=backend, dtype=int, field_name='test')
+    pad_batch = padder(batch_field)
+    assert isinstance(pad_batch, target_type)
+    assert pad_batch.shape == (3, 3, 3)
+    assert (pad_batch == oneflow.zeros(pad_batch.shape)).sum()==12
+
+    # 测试 to numpy
+    batch_field = [oneflow.ones((3,3)), oneflow.ones((2,3)), oneflow.ones((1,0))]
     padder = get_padder(batch_field, pad_val=0, backend='numpy', dtype=int, field_name='test')
     pad_batch = padder(batch_field)
     assert isinstance(pad_batch, np.ndarray)

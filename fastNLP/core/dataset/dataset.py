@@ -445,7 +445,7 @@ class DataSet:
                     "DataSet object has {} fields, but attempt to append an Instance object with {} fields."
                         .format(len(self.field_arrays), len(instance.fields)))
             for name, field in instance.items():
-                assert name in self.field_arrays
+                assert name in self.field_arrays, f'Field:`{name}` is not found in {self.field_arrays.keys()}'
                 try:
                     self.field_arrays[name].append(field)
                 except Exception as e:

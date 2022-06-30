@@ -18,7 +18,7 @@ from .packer_unpacker import SequencePackerUnpacker, SinglePackerUnpacker, Mappi
     NestedMappingPackerUnpacker
 
 sequence_idx_str = re.compile(r'^_\d+$')  # 形如_0, _1
-SUPPORTED_BACKENDS = ['torch', 'jittor', 'paddle', 'numpy', 'raw', 'auto', None]
+SUPPORTED_BACKENDS = ['torch', 'jittor', 'paddle', 'oneflow', 'numpy', 'raw', 'auto', None]
 # 由于 jittor DataLoader 存在自动的 to_jittor 的转换，所以只需要 collate 成为 numpy 就行
 AUTO_BACKEND_MAPPING = {'jittor': 'numpy'}
 
@@ -103,7 +103,7 @@ class Collator:
     Collator 在第一次进行 pad 的时候自动根据设置以及数据情况，为每个 field 获取一个 padder ，在之后的每次调用中，都将使用对应
     的 Padder 给对应的 field 。
 
-    :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ['torch','jittor','paddle','numpy','raw', auto, None]。
+    :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ['torch','jittor','paddle','oneflow','numpy','raw', auto, None]。
         若为 'auto' ，则在进行 pad 的时候会根据调用的环境决定其 backend 。该参数对不能进行 pad 的数据没用影响，不能 pad
         的数据返回一定是 list 。
     """
@@ -200,8 +200,8 @@ class Collator:
             field 进行 pad，所以如果对应 field 本身就不是可以 pad 的形式，可以不需要主动设置为 None 。如果 backend 为 None ，该值
             无意义。
         :param dtype: 对于需要 pad 的 field ，该 field 的数据 dtype 应该是什么。
-        :param backend: 可选['raw', 'numpy', 'torch', 'paddle', 'jittor', 'auto']，分别代表，输出为 list, numpy.ndarray,
-            torch.Tensor, paddle.Tensor, jittor.Var 类型。若 pad_val 为 None ，该值无意义 。
+        :param backend: 可选['raw', 'numpy', 'torch', 'paddle', 'jittor', 'oneflow', 'auto']，分别代表，输出为 list, numpy.ndarray,
+            torch.Tensor, paddle.Tensor, jittor.Var oneflow.Tensor 类型。若 pad_val 为 None ，该值无意义 。
         :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 pad_val, dtype, backend 等参数失效。pad_fn 的输入为当前 field 的
             batch 形式。 Collator 将自动 unbatch 数据，然后将各个 field 组成各自的 batch 。pad_func 的输入即为 field 的 batch
             形式，输出将被直接作为结果输出。
@@ -275,7 +275,7 @@ class Collator:
         """
         设置可以 pad 的 field 默认 pad 为什么类型的 tensor
 
-        :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ['torch','jittor','paddle','numpy','raw', 'auto', None]，
+        :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ['torch','jittor','paddle','oneflow','numpy','raw', 'auto', None]，
             若为 auto ，则在进行 pad 的时候会自动根据调用的环境决定其 backend 。
         :return:
         """

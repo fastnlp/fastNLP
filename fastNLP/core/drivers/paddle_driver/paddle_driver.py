@@ -56,17 +56,21 @@ class PaddleDriver(Driver):
     1. :class:`~fastNLP.core.drivers.PaddleSingleDriver`：实现了使用单卡和 ``cpu`` 训练的具体功能；
     2. :class:`~fastNLP.core.drivers.PaddleFleetDriver`：实现了使用 ``fleet`` 分布式训练 API 进行集群式分布式训练的具体功能；
 
+    .. warning::
+
+        您不应当直接初始化该类，然后传入给 ``Trainer``，换句话说，您应当使用该类的子类 ``PaddleSingleDriver`` 和 ``PaddleDDPDriver``，而不是
+        该类本身；
+
+    .. note::
+
+        您可以在使用 ``PaddleSingleDriver`` 和 ``PaddleFleetDriver`` 时使用 ``PaddleDriver`` 提供的接口；
+
     :param model: 训练时使用的 **PaddlePaddle** 模型；
     :param fp16: 是否开启混合精度训练；
-    :kwargs:
-        * wo_auto_param_call (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为；
-
-        .. note::
-
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
+    :param paddle_kwargs:
 
     """
-    def __init__(self, model: "paddle.nn.Layer", fp16: Optional[bool] = False, **kwargs):
+    def __init__(self, model: "paddle.nn.Layer", fp16: Optional[bool] = False, paddle_kwrags: Dict = {}, **kwargs):
         if not isinstance(model, paddle.nn.Layer):
             raise ValueError(f"Parameter `model` can not be `{type(model)}` in `PaddleDriver`, it should be exactly "
                             f"`paddle.nn.Layer` type.")
@@ -76,7 +80,7 @@ class PaddleDriver(Driver):
 
         # scaler的参数
         self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not fp16)
-        self.grad_scaler = _grad_scaler()
+        self.grad_scaler = _grad_scaler(**self._paddle_kwargs.get("gradscaler_kwargs", {}))
 
         # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
         self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)

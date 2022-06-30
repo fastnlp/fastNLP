@@ -235,7 +235,12 @@ class TorchDDPDriver(TorchDriver):
     :param parallel_device: 用于分布式训练的 ``gpu`` 设备；
     :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``python -m torch.distributed.launch`` 启动的；
     :param fp16: 是否开启 fp16 训练；
-    :param kwargs: 其余的一些用于设定 ddp 训练的参数；
+    :param torch_kwargs: 
+        * *ddp_kwargs* -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
+            {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
+        * *set_grad_to_none* -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
+        * *non_blocking* -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
+        * *gradscaler_kwargs* -- 用于 fp16=True 时，提供给 ``torch.amp.cuda.GradScaler`` 的参数;
     """
 
     def __init__(
@@ -244,11 +249,12 @@ class TorchDDPDriver(TorchDriver):
             parallel_device: Optional[Union[List["torch.device"], "torch.device"]],
             is_pull_by_torch_run: bool = False,
             fp16: bool = False,
+            torch_kwargs: Dict = {},
             **kwargs
     ):
 
         # 在加入很多东西后，需要注意这里调用 super 函数的位置；
-        super(TorchDDPDriver, self).__init__(model, fp16=fp16, **kwargs)
+        super(TorchDDPDriver, self).__init__(model, fp16=fp16, torch_kwargs=torch_kwargs, **kwargs)
 
         if isinstance(model, torch.nn.DataParallel):
             raise ValueError(f"Parameter `model` can not be `DataParallel` in `TorchDDPDriver`, it should be "
