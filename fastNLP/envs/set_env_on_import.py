@@ -50,6 +50,15 @@ def set_env_on_import_jittor():
     if 'log_silent' not in os.environ:
         os.environ['log_silent'] = '1'
 
+def set_env_on_import_oneflow():
+    if 'GLOG_log_dir' in os.environ:
+        os.environ[FASTNLP_GLOBAL_RANK] = os.environ['RANK']
+        if int(os.environ.get(FASTNLP_REMOVE_LOCAL_RANK, 1)):
+            remove_local_rank_in_argv()
+
+    if 'GLOG_log_dir' in os.environ and FASTNLP_DISTRIBUTED_CHECK not in os.environ:
+        os.environ[FASTNLP_BACKEND_LAUNCH] = '1'
+
 
 def set_env_on_import():
     """
@@ -61,6 +70,7 @@ def set_env_on_import():
     set_env_on_import_torch()
     set_env_on_import_paddle()
     set_env_on_import_jittor()
+    set_env_on_import_oneflow()
 
     # fastNLP 内部使用的一些变量
     if FASTNLP_LAUNCH_TIME not in os.environ:

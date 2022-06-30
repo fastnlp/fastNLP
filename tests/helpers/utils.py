@@ -8,6 +8,7 @@ from io import StringIO
 import time
 import signal
 
+import pytest
 import numpy as np
 
 from fastNLP.core.utils.utils import get_class_that_defined_method
@@ -147,3 +148,42 @@ def re_run_current_cmd_for_torch(num_procs, output_from_new_proc='ignore'):
 
             delay = np.random.uniform(1, 5, 1)[0]
             time.sleep(delay)
+
+def re_run_current_cmd_for_oneflow(num_procs, output_from_new_proc='ignore'):
+    # 实际上逻辑和 torch 一样，只是为了区分不同框架所以独立出来
+    # Script called as `python a/b/c.py`
+    if int(os.environ.get('LOCAL_RANK', '0')) == 0:
+        if __main__.__spec__ is None:  # pragma: no-cover
+            # pull out the commands used to run the script and resolve the abs file path
+            command = sys.argv
+            command[0] = os.path.abspath(command[0])
+            # use the same python interpreter and actually running
+            command = [sys.executable] + command
+        # Script called as `python -m a.b.c`
+        else:
+            command = [sys.executable, "-m", __main__.__spec__._name] + sys.argv[1:]
+
+        for rank in range(1, num_procs+1):
+
+            env_copy = os.environ.copy()
+            env_copy["LOCAL_RANK"] = f"{rank}"
+            env_copy['WOLRD_SIZE'] = f'{num_procs+1}'
+            env_copy['RANK'] = f'{rank}'
+            env_copy["GLOG_log_dir"] = os.path.join(
+                os.getcwd(), f"oneflow_rank_{rank}"
+            )
+            os.makedirs(env_copy["GLOG_log_dir"], exist_ok=True)
+
+            # 如果是多机，一定需要用户自己拉起，因此我们自己使用 open_subprocesses 开启的进程的 FASTNLP_GLOBAL_RANK 一定是 LOCAL_RANK；
+            env_copy[FASTNLP_GLOBAL_RANK] = str(rank)
+
+            proc = distributed_open_proc(output_from_new_proc, command, env_copy, rank)
+
+            delay = np.random.uniform(1, 5, 1)[0]
+            time.sleep(delay)
+
+def run_pytest(argv):
+    cmd = argv[0]
+    for i in range(1, len(argv)):
+        cmd += "::" + argv[i]
+    pytest.main([cmd])

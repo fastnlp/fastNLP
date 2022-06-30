@@ -1,7 +1,7 @@
 from typing import Union, Optional, List
 
 from .driver import Driver
-from ..utils import is_torch_module, is_paddle_module, is_jittor_module
+from ..utils import is_torch_module, is_paddle_module, is_jittor_module, is_oneflow_module
 
 
 def choose_driver(model, driver: Union[str, Driver], device: Optional[Union[int, List[int], str]], **kwargs) -> Driver:
@@ -25,6 +25,8 @@ def choose_driver(model, driver: Union[str, Driver], device: Optional[Union[int,
             driver = "paddle"
         elif is_jittor_module(model):
             driver = "jittor"
+        elif is_oneflow_module(model):
+            driver = "oneflow"
         else:
             raise ValueError(f"Cannot choose driver automatically based on model, please set `driver` specifically.")
 
@@ -37,6 +39,9 @@ def choose_driver(model, driver: Union[str, Driver], device: Optional[Union[int,
     elif driver in {"paddle"}:
         from fastNLP.core.drivers.paddle_driver.initialize_paddle_driver import initialize_paddle_driver
         return initialize_paddle_driver(driver, device, model, **kwargs)
+    elif driver in {"oneflow"}:
+        from fastNLP.core.drivers.oneflow_driver.initialize_oneflow_driver import initialize_oneflow_driver
+        return initialize_oneflow_driver(driver, device, model, **kwargs)
     else:
         raise ValueError("Parameter `driver` can only be one of these values: ['torch', 'fairscale', "
-                         "'jittor', 'paddle'].")
+                         "'jittor', 'paddle', 'oneflow'].")

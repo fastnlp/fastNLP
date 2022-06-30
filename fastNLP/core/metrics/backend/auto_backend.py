@@ -8,6 +8,7 @@ from .backend import Backend
 from .torch_backend.backend import TorchBackend
 from .paddle_backend.backend import PaddleBackend
 from .jittor_backend.backend import JittorBackend
+from .oneflow_backend.backend import OneflowBackend
 
 
 class AutoBackend(Backend):
@@ -52,6 +53,8 @@ class AutoBackend(Backend):
             self.__class__ = PaddleBackend
         elif backend == 'jittor':
             self.__class__ = JittorBackend
+        elif backend == 'oneflow':
+            self.__class__ = OneflowBackend
         elif backend is None:
             # 不用做任何事情就可以初始化了
             pass

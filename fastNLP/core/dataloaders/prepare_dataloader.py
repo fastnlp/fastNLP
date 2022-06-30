@@ -9,6 +9,7 @@ import sys
 from .torch_dataloader import prepare_torch_dataloader
 from .paddle_dataloader import prepare_paddle_dataloader
 from .jittor_dataloader import prepare_jittor_dataloader
+from .oneflow_dataloader import prepare_oneflow_dataloader
 from ...envs import FASTNLP_BACKEND, SUPPORT_BACKENDS
 from ..log import logger
 
@@ -37,7 +38,7 @@ def prepare_dataloader(dataset, batch_size: int = 16, shuffle: bool = None, drop
         * 为 ``Callable`` 时，应当接受一个 ``batch`` 的数据作为参数，同时输出一个对象 。
         * 为 ``None`` 时，使用各个框架的 DataLoader 的默认 ``collate_fn`` 。
     :param num_workers: 使用多少进程进行数据的 fetch 。
-    :param backend: 当前支持 ``["auto", "torch", "paddle", "jittor"]`` 四种类型。
+    :param backend: 当前支持 ``["auto", "torch", "paddle", "jittor", "oneflow"]`` 四种类型。
 
         * 为 ``auto`` 时，首先(1) 根据环境变量 "FASTNLP_BACKEND" 进行判断；如果没有设置则，(2）通过当前
           ``sys.modules`` 中已经 import 的 ``backend`` 进行判定。如果以上均无法判定，则报错。如果找到了
@@ -45,6 +46,7 @@ def prepare_dataloader(dataset, batch_size: int = 16, shuffle: bool = None, drop
         * 为 ``torch`` 时，使用 :func:`~fastNLP.prepare_torch_dataloader` 。
         * 为 ``paddle`` 时，使用 :func:`~fastNLP.prepare_paddle_dataloader` 。
         * 为 ``jittor`` 时，使用 :func:`~fastNLP.prepare_jittor_dataloader` 。
+        * 为 ``oneflow`` 时，使用 :func:`~fastNLP.prepare_oneflow_dataloader` 。
 
     :return
     """
@@ -61,6 +63,10 @@ def prepare_dataloader(dataset, batch_size: int = 16, shuffle: bool = None, drop
         prepare_jittor_dataloader(ds_or_db=dataset, sampler=None, collate_fn=collate_fn,
                                   num_workers=num_workers, batch_size=batch_size, shuffle=shuffle,
                                   drop_last=drop_last)
+    elif backend == 'oneflow':
+        return prepare_oneflow_dataloader(ds_or_db=dataset, batch_sampler=None, collate_fn=collate_fn,
+                                        num_workers=num_workers, shuffle=shuffle, sampler=None,
+                                        batch_size=batch_size)
     else:
         raise ValueError(f"Currently we do not support backend:{backend}.")
 

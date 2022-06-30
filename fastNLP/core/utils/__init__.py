@@ -14,6 +14,10 @@ __all__ = [
     'f_rich_progress',
     'torch_move_data_to_device',
     'is_torch_module',
+    'get_oneflow_device',
+    'oneflow_move_data_to_device',
+    'is_oneflow_module',
+    'is_in_oneflow_dist',
     'get_fn_arg_names',
     'auto_param_call',
     'check_user_specific_params',
@@ -36,6 +40,7 @@ from .paddle_utils import paddle_to, paddle_move_data_to_device, get_paddle_devi
     is_in_fnlp_paddle_dist, is_in_paddle_launch_dist, is_paddle_module
 from .rich_progress import f_rich_progress
 from .torch_utils import torch_move_data_to_device, is_torch_module
+from .oneflow_utils import oneflow_move_data_to_device, is_oneflow_module, is_in_oneflow_dist, get_oneflow_device
 from .utils import *
 from .tqdm_progress import f_tqdm_progress
 from .seq_len_to_mask import seq_len_to_mask
