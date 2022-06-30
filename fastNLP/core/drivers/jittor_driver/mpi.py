@@ -34,10 +34,11 @@ class JittorMPIDriver(JittorDriver):
         parallel_device: None,
         is_pull_by_jittor_run: bool = False,
         fp16: bool = False,
+        jittor_kwargs: Dict = {},
         **kwargs
     ):
 
-        super(JittorMPIDriver, self).__init__(model, fp16=fp16, **kwargs)
+        super(JittorMPIDriver, self).__init__(model, fp16=fp16, jittor_kwargs=jittor_kwargs, **kwargs)
         raise NotImplementedError("MPI for Jittor is not supported right now.")
 
         self.is_pull_by_jittor_run = is_pull_by_jittor_run

@@ -157,7 +157,7 @@ class PaddleFleetDriver(PaddleDriver):
     ):
         if USER_CUDA_VISIBLE_DEVICES not in os.environ:
             raise RuntimeError("To run paddle distributed training, please set `FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
-        super(PaddleFleetDriver, self).__init__(model, fp16=fp16, **kwargs)
+        super(PaddleFleetDriver, self).__init__(model, fp16=fp16, paddle_kwrags=paddle_kwargs, **kwargs)
 
         # 如果不是通过 launch 启动，要求用户必须传入 parallel_device
         if not is_pull_by_paddle_run:

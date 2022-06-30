@@ -68,12 +68,6 @@ class PaddleDriver(Driver):
     :param model: 训练时使用的 **PaddlePaddle** 模型；
     :param fp16: 是否开启混合精度训练；
     :param paddle_kwargs:
-    :kwargs:
-        * wo_auto_param_call (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为；
-
-        .. note::
-
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
 
     """
     def __init__(self, model: "paddle.nn.Layer", fp16: Optional[bool] = False, paddle_kwrags: Dict = {}, **kwargs):
