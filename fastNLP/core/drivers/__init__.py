@@ -1,7 +1,6 @@
 __all__ = [
     'Driver',
     'TorchDriver',
-<<<<<<< HEAD
     "TorchSingleDriver",
     "TorchDDPDriver",
     "DeepSpeedDriver",
@@ -11,7 +10,6 @@ __all__ = [
     "JittorDriver",
     "JittorSingleDriver",
     "JittorMPIDriver",
-=======
     'TorchSingleDriver',
     'TorchDDPDriver',
     'PaddleDriver',
@@ -23,7 +21,6 @@ __all__ = [
     'OneflowDriver',
     'OneflowSingleDriver',
     'OneflowDDPDriver',
->>>>>>> dev0.8.0
     'torch_seed_everything',
     'paddle_seed_everything',
     'oneflow_seed_everything',
