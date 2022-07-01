@@ -24,7 +24,7 @@ class Saver:
                 - folder_name  # 由 save() 调用时传入。
 
     :param folder: 保存在哪个文件夹下，默认为当前 folder 下。
-    :param save_object: 可选 ['trainer', 'model']，表示在保存时的保存对象为 ``trainer+model`` 还是 只是 ``model`` 。如果
+    :param save_object: 可选 ``['trainer', 'model']`` ，表示在保存时的保存对象为 ``trainer+model`` 还是 只是 ``model`` 。如果
         保存 ``trainer`` 对象的话，将会保存 :class:~fastNLP.Trainer 的相关状态，可以通过 :meth:`Trainer.load_checkpoint` 加载该断
         点继续训练。如果保存的是 ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
     :param only_state_dict: 保存时是否仅保存权重，在 model_save_fn 不为 None 时无意义。
@@ -191,7 +191,7 @@ class TopkSaver(ResultsMonitor, Saver):
          的 ``monitor`` 值请返回 ``None`` 。
     :param larger_better: 该 monitor 是否越大越好。
     :param folder: 保存在哪个文件夹下，默认为当前 folder 下。
-    :param save_object: 可选 ['trainer', 'model']，表示在保存时的保存对象为 ``trainer+model`` 还是 只是 ``model`` 。如果
+    :param save_object: 可选 ``['trainer', 'model']`` ，表示在保存时的保存对象为 ``trainer+model`` 还是 只是 ``model`` 。如果
         保存 ``trainer`` 对象的话，将会保存 :class:`~fastNLP.Trainer` 的相关状态，可以通过 :meth:`Trainer.load_checkpoint` 加载该断
         点继续训练。如果保存的是 ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
     :param only_state_dict: 保存时是否仅保存权重，在 ``model_save_fn`` 不为 None 时无意义。

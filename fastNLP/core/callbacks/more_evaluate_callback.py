@@ -69,9 +69,9 @@ class MoreEvaluateCallback(HasMonitorCallback):
     :param topk_monitor: 如果需要根据当前 callback 中的 evaluate 结果保存。这个参数是指在当前 callback 中的 evaluate 结果寻找
     :param topk_larger_better: ``topk_monitor`` 的值是否是越大越好。
     :param folder: 保存的文件夹，fastNLP 将在该文件下以时间戳创建子文件夹，并在里面保存。因此不同次运行可以将被保存到不同的
-        时间戳文件夹中。如果为 ``··``None`` ，默认使用当前文件夹。
+        时间戳文件夹中。如果为 ``None`` ，默认使用当前文件夹。
     :param only_state_dict: 保存模型时是否只保存 state_dict 。当 ``model_save_fn`` 不为 ``None`` 时，该参数无效。
-    :param save_object: 可选 ['trainer', 'model']，表示在保存时的保存对象为 ``trainer+model`` 还是 只是 ``model`` 。如果
+    :param save_object: 可选 ``['trainer', 'model']`` ，表示在保存时的保存对象为 ``trainer+model`` 还是 只是 ``model`` 。如果
         保存 ``trainer`` 对象的话，将会保存 :class:`~fastNLP.Trainer` 的相关状态，可以通过 :meth:`Trainer.load_checkpoint` 加载该断
         点继续训练。如果保存的是 ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
     :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函数应当接受一个文件夹作为参数，不返回任何东西。

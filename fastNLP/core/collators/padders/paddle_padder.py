@@ -99,11 +99,11 @@ def _get_dtype(ele_dtype, dtype, class_name):
 
 class PaddleNumberPadder(Padder):
     """
-    可以将形如 [1, 2, 3] 这类的数据转为 paddle.Tensor([1, 2, 3])
+    可以将形如 ``[1, 2, 3]`` 这类的数据转为 ``paddle.Tensor([1, 2, 3])``
 
-    :param pad_val: 该值无意义
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 paddle.tensor 类型。
-    :param dtype: 输出的数据的 dtype 是什么。如 int, float, 'int32' 等
+    :param pad_val: 该值无意义；
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`paddle.Tensor` 类型；
+    :param dtype: 输出的数据的 dtype 是什么。如 :class:`int`, :class:`float`, :class:`int32` 等；
     """
     def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         # 仅当 ele_dtype 是 python number/ numpy number 或者 tensor
@@ -112,16 +112,23 @@ class PaddleNumberPadder(Padder):
 
     @staticmethod
     def pad(batch_field, pad_val=0, dtype=None):
+        """
+        将 ``batch_field`` 数据 转为 :class:`paddle.Tensor` 并 pad 到相同长度。
+
+        :param batch_field: 输入的某个 field 的 batch 数据。
+        :param pad_val: 需要填充的值
+        :param dtype: 数据的类型
+        """
         return paddle.to_tensor(batch_field, dtype=dtype)
 
 
 class PaddleSequencePadder(Padder):
     """
-    将类似于 [[1], [1, 2]] 的内容 pad 为 paddle.Tensor([[1, 0], [1, 2]]) 可以 pad 多重嵌套的数据。
+    将类似于 ``[[1], [1, 2]]`` 的内容 pad 为 ``paddle.Tensor([[1, 0], [1, 2]])`` 可以 pad 多重嵌套的数据。
 
     :param pad_val: pad 的值。
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 paddle.tensor 类型。
-    :param dtype: 输出的数据的 dtype 是什么。如 int, float, 'int32' 等
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`paddle.Tensor` 类型；
+    :param dtype: 输出的数据的 dtype 是什么。如 :class:`int`, :class:`float`, :class:`int32` 等；
     """
     def __init__(self, ele_dtype=None, pad_val=0, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
@@ -129,17 +136,30 @@ class PaddleSequencePadder(Padder):
 
     @staticmethod
     def pad(batch_field, pad_val=0, dtype=None):
+        """
+        将 ``batch_field`` 数据 转为 :class:`paddle.Tensor` 并 pad 到相同长度。
+
+        :param batch_field: 输入的某个 field 的 batch 数据。
+        :param pad_val: 需要填充的值
+        :param dtype: 数据的类型
+        """
         tensor = get_padded_paddle_tensor(batch_field, dtype=dtype, pad_val=pad_val)
         return tensor
 
 
 class PaddleTensorPadder(Padder):
     """
-    目前支持 [paddle.tensor([3, 2], paddle.tensor([2, 1])] 类似的，若内部元素不为 paddle.tensor ，则必须含有 tolist() 方法。
+    目前支持 ``[paddle.tensor([3, 2], paddle.tensor([2, 1])]`` 类似的输入，若内部元素不为 :class:`paddle.Tensor` ，则必须含有 :meth:`tolist` 方法。
 
+        >>> PaddleTensorPadder.pad([np.array([3, 4]), np.array([1])], pad_val=-100)
+        [[   3.    4.]
+         [   1. -100.]]
+        >>> PaddleTensorPadder.pad([paddle.to_tensor([3, 4]), paddle.to_tensor([1])], pad_val=-100)
+        tensor([[   3,    4],
+                [   1, -100]])
     :param pad_val: pad 的值。
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 paddle.tensor 类型。
-    :param dtype: 输出的数据的 dtype 是什么。如 int, float, 'int32' 等
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`paddle.Tensor` 类型；
+    :param dtype: 输出的数据的 dtype 是什么。如 :class:`int`, :class:`float`, :class:`int32` 等；
     """
     def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
@@ -147,6 +167,13 @@ class PaddleTensorPadder(Padder):
 
     @staticmethod
     def pad(batch_field, pad_val=0, dtype=None):
+        """
+        将 ``batch_field`` 数据 转为 :class:`paddle.Tensor` 并 pad 到相同长度。
+
+        :param batch_field: 输入的某个 field 的 batch 数据。
+        :param pad_val: 需要填充的值
+        :param dtype: 数据的类型
+        """
         try:
             if not isinstance(batch_field[0], paddle.Tensor):
                 batch_field = [np.array(field.tolist()) for field in batch_field]

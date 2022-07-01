@@ -16,13 +16,13 @@ from .exceptions import *
 
 def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->Padder:
     """
-    根据 参数 与 batch_field ，返回适合于当前 batch_field 的 padder 。
+    根据 参数 与 ``batch_field`` ，返回适合于当前 ``batch_field`` 的 *padder* 。
 
-    :param batch_field: 将某 field 的内容组合成一个 batch 传入。
-    :param pad_val:
+    :param batch_field: 将某 field 的内容组合成一个 batch 传入；
+    :param pad_val: 
     :param backend:
     :param dtype:
-    :param field_name: 方便报错的。
+    :param field_name: field 名称，方便在报错时显示；
     :return:
     """
     try:

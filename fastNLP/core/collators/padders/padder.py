@@ -1,7 +1,7 @@
 
 class Padder:
     """
-    所有 Padder 对象父类，所有的 Padder 对象都会实现 pad(batch_field, pad_val=0, dtype=None) 的静态函数。
+    所有 **Padder** 对象的父类，所有的 Padder 对象都会实现静态函数 *pad(batch_field, pad_val=0, dtype=None)* 。
 
     """
     def __init__(self, pad_val, dtype):

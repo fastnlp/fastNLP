@@ -10,7 +10,7 @@ from fastNLP.core.utils.exceptions import EarlyStopException
 
 class EarlyStopCallback(HasMonitorCallback):
     """
-    用于 early stop 的 callback 。当监控的结果连续多少次没有变好边 raise 一个 EarlyStopException 。
+    用于 early stop 的 callback 。当监控的结果连续多少次没有变好便 raise 一个 EarlyStopException 。
 
     :param monitor: 监控的 metric 值。
 
