@@ -60,7 +60,7 @@ def choose_progress_callback(progress_bar: Union[str, ProgressCallback]) -> Prog
 
 class RichCallback(ProgressCallback):
     """
-    在训练过程中打印 rich progress bar 的 callback 。在 Trainer 中，默认就会使用这个 callback 来显示进度。如果需要定制这个 Callback 的
+    在训练过程中打印 *rich* progress bar 的 callback 。在 Trainer 中，默认就会使用这个 callback 来显示进度。如果需要定制这个 Callback 的
     参数，请通过实例化本 Callback 并传入到 Trainer 中实现。在打印 evaluate 的结果时，不会打印名称以 "_" 开头的内容。
 
     :param print_every: 多少个 batch 更新一次显示。
@@ -169,26 +169,26 @@ class RichCallback(ProgressCallback):
 
 
 class RawTextCallback(ProgressCallback):
+    """
+    通过向命令行打印进度的方式显示。在打印 evaluate 的结果时，不会打印名称以 "_" 开头的内容。
+
+    :param print_every: 多少个 batch 更新一次显示。
+    :param loss_round_ndigit: 显示的 loss 保留多少位有效数字
+    :param monitor: 监控的 metric 值。当检测到这个key的结果更好时，会打印出不同的颜色进行提示。
+
+        * 为 ``None``
+            将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+        * 为 ``str``
+            尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+            使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+        * 为 ``Callable``
+            接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+            的 ``monitor`` 值请返回 ``None`` 。
+    :param larger_better: 是否是monitor的结果越大越好。
+    :param format_json: 是否format json再打印
+    """
     def __init__(self, print_every:int = 1, loss_round_ndigit:int = 6, monitor:str=None, larger_better:bool=True,
                  format_json=True):
-        """
-        通过向命令行打印进度的方式显示。在打印 evaluate 的结果时，不会打印名称以 "_" 开头的内容。
-
-        :param print_every: 多少个 batch 更新一次显示。
-        :param loss_round_ndigit: 显示的 loss 保留多少位有效数字
-        :param monitor: 监控的 metric 值。当检测到这个key的结果更好时，会打印出不同的颜色进行提示。
-
-            * 为 ``None``
-             将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
-            * 为 ``str``
-             尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
-             使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
-            * 为 ``Callable``
-             接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
-             的 ``monitor`` 值请返回 ``None`` 。
-        :param larger_better: 是否是monitor的结果越大越好。
-        :param format_json: 是否format json再打印
-        """
         super().__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=False)
         self.print_every = print_every
         self.task2id = {}
@@ -242,8 +242,9 @@ class RawTextCallback(ProgressCallback):
 
 class TqdmCallback(ProgressCallback):
     """
-    在训练过程中打印 tqdm progress bar 的 callback 。在 Trainer 中，默认就会使用这个 callback 来显示进度。如果需要定制这个 Callback 的
-    参数，请通过实例化本 Callback 并传入到 Trainer 中实现。在打印 evaluate 的结果时，不会打印名称以 "_" 开头的内容。
+    在训练过程中打印 *tqdm* progress bar 的 callback 。在 Trainer 中，如果设置了 ``progress_bar='tqdm'`` 就会使用
+    这个 callback 来显示进度。如果需要定制这个 Callback 的参数，请通过实例化本 Callback 并传入到 Trainer 中实现。在
+    打印 evaluate 的结果时，不会打印名称以 "_" 开头的内容。
 
     :param print_every: 多少个 batch 更新一次显示。
     :param loss_round_ndigit: 显示的 loss 保留多少位有效数字

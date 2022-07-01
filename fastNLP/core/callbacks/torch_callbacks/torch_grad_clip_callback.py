@@ -11,17 +11,17 @@ if _NEED_IMPORT_FAIRSCALE:
 
 class TorchGradClipCallback(Callback):
     r"""
-    在每次 optimizer update 之前将 parameter 进行 clip 。
+    在每次 :func:`optimizer.step` 之前对参数的梯度进行截断。
 
-    :param clip_value: 将gradient 限制到[-clip_value, clip_value]。clip_value应该为正数
-    :param clip_type: 支持'norm', 'value'两种:
+    :param clip_value: 将梯度限制到 [-clip_value, clip_value] 之间。``clip_value`` 应该为正数；
+    :param clip_type: 应为 ``'norm'``, ``'value'`` 中的一个:
 
-        1. 'norm', 将gradient的norm rescale到[-clip_value, clip_value]
-        2. 'value', 将gradient限制在[-clip_value, clip_value],
-         小于-clip_value的gradient被赋值为-clip_value;大于clip_value的gradient被赋值为clip_value.
+        1. 为 ``'norm'`` 时, 将梯度的范数限制在 [-clip_value, clip_value] 之间；
+        2. 为 ``'value'`` 时，, 将梯度限制在 [-clip_value, clip_value] 之间，小于 ``-clip_value``
+           的梯度被赋值为 ``-clip_value``，大于 ``clip_value`` 的梯度被赋值为 ``clip_value``；
 
-    :param None,torch.Tensor,List[torch.Tensor] parameters: 一般通过model.parameters()获得。
-        如果为None则默认对 Trainer 的 optimizers 中所有参数进行梯度裁剪。
+    :param parameters: 参数，一般通过 :func:`model.parameters` 获得。
+        如果为 ``None`` 则默认对 Trainer 的 optimizers 中所有参数进行梯度裁剪。
     """
     def __init__(self, clip_value:int=1, clip_type:str='norm',
                  parameters:Union["torch.Tensor", List["torch.Tensor"]]=None):

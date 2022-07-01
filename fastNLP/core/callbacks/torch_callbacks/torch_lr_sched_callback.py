@@ -9,14 +9,14 @@ from ..callback import Callback
 
 class TorchWarmupCallback(Callback):
     r"""
-    调整 learning rate 的 callback 。
+    调整学习率的 **callback** 。
 
-    :param warmup: 如果warmup为int，则在该step之前，learning rate根据schedule的策略变化; 如果warmup为float，
-        如0.1, 则前10%的step是按照schedule策略调整learning rate。
-    :param schedule: 以哪种方式调整。
+    :param warmup: 如果 ``warmup`` 为整数，则在该 step 之前，学习率根据 ``schedule`` 的策略变化; 如果 ``warmup`` 为 ``float``，
+        如 0.1, 则前 10% 的 step 是按照 ``schedule`` 策略调整。
+    :param schedule: 对学习率进行调整的策略：
 
-        1. linear: 前warmup的step上升到指定的learning rate(从Trainer中的optimizer处获取的), 后warmup的step下降到0；
-        2. constant前warmup的step上升到指定learning rate，后面的step保持learning rate.
+        1. *linear* -- 前 ``warmup`` 的 step 上升到指定的学习率（从 Trainer 中 optimizer 处获取）, 在剩下的 step 中下降到 0；
+        2. *constant* -- 前 ``warmup`` 的 step 上升到指定的学习率，余下的 step 保持不变。
     """
     def __init__(self, warmup:Union[int, float]=0.1, schedule:str='constant'):
         super().__init__()
