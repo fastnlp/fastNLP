@@ -57,10 +57,42 @@ class OneflowDataLoader(DataLoader):
 
         * callate_fn 为 ``'auto'`` 时，``OneflowDataLoader`` 使用 :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的取值。
           此时可以配套使用 ``OneflowDataLoader`` 的 ``set_pad`` 和 ``set_ignore`` 方法来设置 pad_val 或 忽略某个 field 的检测。
-        * callate_fn 为 ``None`` 时， ``OneflowDataLoadr`` 默认使用 oneflow DataLoader 自带的 collate_fn
-        * collate_fn 为 ``Callable`` 时， 该 Callable 函数应当接受一个 batch 参数作为输入， batch 是一个 List 对象且 List 中的每一条数据都是
+        * callate_fn 为 ``None`` 时， ``OneflowDataLoadr`` 默认使用 :class:`oneflow.utils.data.DataLoader` 自带的 collate_fn
+        * collate_fn 为 :class:`Callable` 时， 该 Callable 函数应当接受一个 batch 参数作为输入， batch 是一个 List 对象且 List 中的每一条数据都是
           dataset 的一条数据；该 Callable 函数还应当返回一个对象。
 
+    :param dataset: 实现了 __getitem__() 和 __len__() 的对象。
+    :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
+    :param non_train_batch_size: 非训练数据集的 ``OneflowDataLoader`` 批次大小，默认为 ``16`` 且当 ``batch_sampler`` 为 ``None`` 有效。
+    :param shuffle: 是否打乱数据集， 默认为 ``None``, 如果传入的 ``ds_or_db`` 可以判断出哪个是 ``'train'`` 则设置其 shuffle 为 ``True`` ，
+        其它的为 False 。
+    :param sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
+        默认为 ``None``， 当其不为 ``None`` 时， shuffle 参数无效。
+    :param non_train_sampler: 非训练数据集的的实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
+        默认为None， 当其不为 None 时， shuffle 参数无效。
+    :param batch_sampler: 实现了 __len__() 和 __iter__() 的实例化对象，，其__iter__() 方法每次都会返回一个 List 对象， List中的值为
+        dataset 的下标 index ；默认为 ``None``，当其不为 ``None`` 时，``bacth_size``, ``sampler``, ``shuffle`` 参数均失效。
+    :param num_workers: 当 ``num_workers > 0`` 时, ``OneflowDataLoader`` 会开启 ``num_workers`` 个子进程来处理数据， 可以加快
+        数据处理速度，但同时也消耗大量内存。 当 ``num_workers=0`` 时， 不开启子进程。 默认为 ``0``。
+    :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的 Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``.
+
+        * callate_fn 为 ``None`` 时，需要注意的是此时传进来的 datset 类型不能为 :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None`` 时，
+          ``OneflowDataLoader`` 调用默认的 oneflow 框架的 ``DataLoader`` 自带的 `default_collate_fn` 作为 callate_fn 的默认值， 其无法处理
+          :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
+        * callate_fn 为 ``'auto'`` 时，``OneflowDataLoader`` 使用 :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。
+          此时可以配套使用 ``OneflowDataLoader`` 的 ``set_pad`` 和 ``set_ignore`` 方法来设置 pad_val 或 忽略某个 field 的检测。
+        * collate_fn 为 :class:`Callable` 时， 该 Callable 函数应当接受一个 batch 参数作为输入， batch 是一个 List 对象且 List 中的每一条数据都是
+          dataset 的一条数据；该 Callable 函数还应当返回一个对象。
+
+    :param pin_memory: 如果其为 ``True``, 那么 ``OneflowDataLoader`` 会在返回数据张量之前将其 copy 到 cuda 的 pin memory 中。
+    :param drop_last: 当 ``drop_last=True`` 时，``OneflowDataLoader`` 会扔掉最后一个长度小于 ``batch_size`` 的 batch 数据;
+        若 ``drop_last=False`` , 则会返回该 batch 数据。 默认为 ``False`` 。
+    :param timeout: 子进程的输出队列获取数据的超时值
+    :param worker_init_fn: init 函数，如果不设置为 ``None``，则将会在每个子进程初始化时调用该函数。
+    :param multiprocessing_context: 多进程的上下文环境
+    :param generator: 如果其不为 ``None``, 将会使用 RandomSampler 去生成随机的 index 且会为每个子进程生成一个 ``base_seed``
+    :param prefetch_factor: 每个 worker 提前装载的 samples 数量。``2`` 意味着在所有的进程中会有 2*num_workers 的数据被预取。默认值为 ``2`` .
+    :param persistent_workers: 如果其为 ``True``, ``OneflowDataLoader`` 在迭代完一次 dataset 后不会关闭所有进程。默认为 ``False``
     """
 
     def __init__(self, dataset, batch_size: int = 16,
@@ -70,38 +102,7 @@ class OneflowDataLoader(DataLoader):
                  timeout: float = 0, worker_init_fn: Optional[Callable] = None,
                  multiprocessing_context=None, generator=None, prefetch_factor: int = 2,
                  persistent_workers: bool = False, **kwargs) -> None:
-        """
 
-        :param dataset: 实现了 __getitem__() 和 __len__() 的对象。
-        :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
-        :param shuffle: 是否打乱数据集， 默认为 ``False``。
-        :param sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
-            默认为None， 当其不为 None 时， shuffle 参数无效。
-        :param batch_sampler: 实现了 __len__() 和 __iter__() 的实例化对象，，其__iter__() 方法每次都会返回一个 List 对象， List中的值为
-            dataset 的下标 index ；默认为 None，当其不为 None 时，bacth_size, sampler, shuffle 参数均失效。
-        :param num_workers: 当 ``num_workers > 0`` 时, ``OneflowDataLoader`` 会开启 num_workers 个子进程来处理数据， 可以加快
-            数据处理速度，但同时也消耗大量内存。 当 ``num_workers=0`` 时， 不开启子进程。 默认为 ``0``。
-        :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的 Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``.
-
-            * callate_fn 为 ``None`` 时，需要注意的是此时传进来的 datset 类型不能为 :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None`` 时，
-             ``OneflowDataLoader`` 调用默认的 oneflow 框架的 ``DataLoader`` 自带的 ``default_collate_fn`` 作为 callate_fn 的默认值， 其无法处理
-             :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
-            * callate_fn 为 ``'auto'`` 时，``OneflowDataLoader`` 使用 :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。
-              此时可以配套使用 ``OneflowDataLoader`` 的 ``set_pad`` 和 ``set_ignore`` 方法来设置 pad_val 或 忽略某个 field 的检测。
-            * collate_fn 为 ``Callable`` 时， 该 Callable 函数应当接受一个 batch 参数作为输入， batch 是一个 List 对象且 List 中的每一条数据都是
-              dataset 的一条数据；该 Callable 函数还应当返回一个对象。
-
-        :param pin_memory: 如果其为 ``True``, 那么 ``OneflowDataLoader`` 会在返回数据张量之前将其 copy 到 cud a的 pin memory 中。
-        :param drop_last: 当 ``drop_last=True`` 时，``OneflowDataLoader`` 会扔掉最后一个长度小于 ``batch_size`` 的 batch 数据;
-            若 ``drop_last=False`` , 则会返回该 batch 数据。 默认为 ``False`` 。
-        :param timeout: 子进程的输出队列获取数据的超时值
-        :param worker_init_fn: init 函数，如果不设置为 None ,则将会在每个子进程初始化时调用该函数。
-        :param multiprocessing_context: 多进程的上下文环境
-        :param generator: 如果其不为 ``None``, 将会使用 RandomSampler 去生成随机的 index 且会为每个子进程生成一个 ``base_seed``
-        :param prefetch_factor: 每个 worker 提前装载的 samples 数量。``2``意味着在所有的进程中会有 2*num_workers 的数据被预取。默认值为 ``2`` .
-        :param persistent_workers: 如果其为 ``True``, ``OneflowDataLoader`` 在迭代完一次 dataset 后不会关闭所有进程。默认为 ``False``
-
-        """
         if isinstance(dataset, DataSet) and collate_fn is None:
             raise ValueError("When use FastNLP DataSet, collate_fn must be not None")
 
@@ -153,20 +154,20 @@ class OneflowDataLoader(DataLoader):
         """
         如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
-        :param field_name: 需要调整的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
-            field 的 key 来表示，如果是 nested 的 dict，可以使用元组表示多层次的 key，例如 {'a': {'b': 1}} 中的使用 ('a', 'b');
-            如果 __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。如果该 field 在数据中没
-            有找到，则报错；如果 __getitem__ 返回的是就是整体内容，请使用 "_single" 。
-        :param pad_val: 这个 field 的默认 pad 值。如果设置为 None，则表示该 field 不需要 pad , fastNLP 默认只会对可以 pad 的
-            field 进行 pad，所以如果对应 field 本身就不是可以 pad 的形式，可以不需要主动设置为 None 。如果 backend 为 None ，该值
-            无意义。
-        :param dtype: 对于需要 pad 的 field ，该 field 的数据 dtype 应该是什么。
-        :param backend: 可选['raw', 'numpy', 'torch', 'paddle', 'jittor', 'oneflow', 'auto']，分别代表，输出为 list, numpy.ndarray,
-            torch.Tensor, paddle.Tensor, jittor.Var, oneflow.Tensor 类型。若 pad_val 为 None ，该值无意义 。
-        :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 pad_val, dtype, backend 等参数失效。pad_fn 的输入为当前 field 的
-            batch 形式。 Collator 将自动 unbatch 数据，然后将各个 field 组成各自的 batch 。pad_func 的输入即为 field 的 batch
-            形式，输出将被直接作为结果输出。
-        :return: 返回 Collator
+        :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
+            field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``;
+            如果 :meth:`Dataset.__getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表示序列中第 **0** 或 **1** 个元素。
+            如果该 field 在数据中没有找到，则报错；如果 :meth:`Dataset.__getitem__` 返回的是就是整体内容，请使用 "_single" 。
+        :param pad_val: 这个 field 的默认 pad 值。如果设置为 ``None``，则表示该 field 不需要 pad , fastNLP 默认只会对可以 pad 的
+            field 进行 pad，所以如果对应 field 本身就不是可以 pad 的形式，可以不需要主动设置为 ``None`` 。如果 ``backend`` 为 ``None``，
+            该值无意义。
+        :param dtype: 对于需要 pad 的 field ，该 field 数据的 ``dtype`` 。
+        :param backend: 可选 ``['raw', 'numpy', 'torch', 'paddle', 'jittor', 'oneflow', 'auto']`` ，分别代表，输出为 :class:`list`, 
+            :class:`numpy.ndarray`, :class:`torch.Tensor`, :class:`paddle.Tensor`, :class:`jittor.Var`, :class:`oneflow.Tensor` 类型。
+            若 ``pad_val`` 为 ``None`` ，该值无意义 。
+        :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 ``pad_val``, ``dtype``, ``backend`` 等参数失效。``pad_fn`` 的输入为当前 field 的
+            batch 形式。 collator 将自动 unbatch 数据，然后将各个 field 组成各自的 batch 。
+        :return: 返回使用的 collator
         """
         collator = self._get_collator()
         if isinstance(collator, Collator):
@@ -190,15 +191,14 @@ class OneflowDataLoader(DataLoader):
 
     def set_ignore(self, *field_names) -> Collator:
         """
-        如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略。
-        Example::
+        如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略::
 
-            collator.set_ignore('field1', 'field2')
+            dataloader.set_ignore('field1', 'field2')
 
-        :param field_names: 需要忽略的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
-            field 的 key 来表示，如果是 nested 的 dict，可以使用元组来表示，例如 {'a': {'b': 1}} 中的使用 ('a', 'b'); 如果
-            __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。
-        :return: 返回 Collator 自身
+        :param field_names: field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
+            field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``;
+            如果 :meth:`Dataset.__getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表示序列中第 **0** 或 **1** 个元素。
+        :return: 返回使用的 collator
         """
         collator = self._get_collator()
         if isinstance(collator, Collator):
@@ -230,56 +230,56 @@ def prepare_oneflow_dataloader(ds_or_db,
                              non_train_batch_size: int = None) \
         -> Union[OneflowDataLoader, Dict[str, OneflowDataLoader]]:
     """
-    ``prepare_oneflow_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为 ``OneflowDataloader``对象， 详见 :class:`~fastNLP.OneflowDataLoader`。
+    ``prepare_oneflow_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为 ``OneflowDataloader`` 对象， 详见 :class:`~fastNLP.OneflowDataLoader`。
     根据 ds_or_db 的类型 ``[DataSet, DataBundle, Dict[name, Dataset]]`` 不同而有不同返回结果, 具体如下:
 
-        * 当 ds_or_db 为 ``DataSet``时，``prepare_oneflow_dataloader`` 会将使用的除了 non_train_batch_size 和 non_train_sampler 以外的参数来
-        帮你实例化一个 ``OneflowDataLoader`` 对象并返回该对象。 详见:class:`~fastNLP.core.dataloaders.OneflowDataLoader`。
+        * 当 ds_or_db 为 ``DataSet`` 时，``prepare_oneflow_dataloader`` 会将使用的除了 ``non_train_batch_size`` 和 ``non_train_sampler`` 以外的参数来
+          帮你实例化一个 ``OneflowDataLoader`` 对象并返回该对象。 详见 :class:`~fastNLP.core.dataloaders.OneflowDataLoader`。
         * 当 ds_or_db 为 :class:`~fastNLP.io.DataBundle` 时，``prepare_oneflow_dataloader`` 会遍历 ``DataBundle`` 的数据集的 key-value
-        来创建不同的 ``OneflowDataLoader`` 对象；当 key 中包含'train'字符串时，``prepare_oneflow_dataloader`` 默认该 value 为 train 数据集，
-        会将 batch_size 和 sampler 作为参数，其他 key 不包含 'train' 字符串的数据集则使用 non_train_size 和 non_train_sampler 作为参数。
-        最终根据 ``key: OneflowDataLoader`` 组成 ``Dict[key, OneflowDataLoader]`` 的字典返回。
+          来创建不同的 ``OneflowDataLoader`` 对象；当 key 中包含 ``'train'`` 字符串时，``prepare_oneflow_dataloader`` 默认该 value 为训练数据集，
+          会将 ``batch_size`` 和 ``sampler`` 作为参数，其他 key 不包含 ``'train'`` 字符串的数据集则使用 ``non_train_size`` 和 ``non_train_sampler`` 作为参数。
+          最终根据 ``key: OneflowDataLoader`` 组成 ``Dict[key, OneflowDataLoader]`` 的字典返回。
         * 当 ds_or_db 为 ``Dict[str, DataSet]`` 字典类型时， ``prepare_oneflow_dataloader`` 会遍历 该 dict 的的 key-value 来创建不同的
-        ``OneflowDataLoader`` 对象；当 key 中包含'train'字符串时，``prepare_oneflow_dataloader`` 默认该 value 为 train 数据集，会将 batch_size 和 sampler 作为参数，
-        其他 key 不包含 'train' 字符串的数据集则使用 non_train_size 和 non_train_sampler 作为参数。最终根据  ``key: OneflowDataLoader`` 组成
-         ``Dict[key, OneflowDataLoader]`` 的字典返回。
+          ``OneflowDataLoader`` 对象；当 key 中包含 ``'train'`` 字符串时，``prepare_oneflow_dataloader`` 默认该 value 为训练数据集，会将 ``batch_size`` 和 ``sampler`` 作为参数，
+          其他 key 不包含 ``'train'`` 字符串的数据集则使用 ``non_train_size`` 和 ``non_train_sampler`` 作为参数。最终根据  ``key: OneflowDataLoader`` 组成
+          ``Dict[key, OneflowDataLoader]`` 的字典返回。
 
     :param ds_or_db: 可以有以下三种取值，
 
-        * ds_or_db 为 :class:`~fastNLP.io.DataBundle`, 返回值为 ``Dict[str, OneflowDataLoader]`` 的字典
-        * ds_or_db 为 ``Dict[str, DataSet]`` 字典， 返回值为 ``Dict[str, OneflowDataLoader]`` 的字典
-        * ds_or_db 为实现了 __getitem__() 和 __len__() 的对象 ，返回值为:class:`~fastNLP.OneflowDataLoader`
+        * ds_or_db 为 :class:`~fastNLP.io.DataBundle`, 返回值为 ``Dict[str, OneflowDataLoader]`` 的字典；
+        * ds_or_db 为 ``Dict[str, DataSet]`` 字典， 返回值为 ``Dict[str, OneflowDataLoader]`` 的字典；
+        * ds_or_db 为实现了 __getitem__() 和 __len__() 的对象 ，返回值为 :class:`~fastNLP.core.dataloaders.OneflowDataLoader`；
 
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
-    :param non_train_batch_size: 非 'train' 数据集的 ``OneflowDataLoader`` 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
-    :param shuffle: 是否打乱数据集， 默认为 ``None``, 如果传入的 ``ds_or_db`` 可以判断出哪个是 'train' 则设置其 shuffle 为 True ，
+    :param non_train_batch_size: 非训练数据集的 ``OneflowDataLoader`` 批次大小，默认为 ``16`` 且当 ``batch_sampler`` 为 ``None`` 有效。
+    :param shuffle: 是否打乱数据集， 默认为 ``None``, 如果传入的 ``ds_or_db`` 可以判断出哪个是 ``'train'`` 则设置其 shuffle 为 ``True`` ，
         其它的为 False 。
     :param sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
+        默认为 ``None``， 当其不为 ``None`` 时， shuffle 参数无效。
+    :param non_train_sampler: 非训练数据集的的实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
         默认为None， 当其不为 None 时， shuffle 参数无效。
-    :param non_train_sampler: 非 'train' 数据集的的实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，
-        默认为None， 当其不为 None 时， shuffle 参数无效。
-    :param batch_sampler: 实现了 __len__() 和 __iter__() 的实例化对象，，其__iter__() 方法每次都会返回一个 List 对象， List中的值为
-        dataset 的下标 index ；默认为 None，当其不为 None 时，bacth_size, sampler, shuffle 参数均失效。
-    :param num_workers: 当 ``num_workers > 0`` 时, ``OneflowDataLoader`` 会开启 num_workers 个子进程来处理数据， 可以加快
+    :param batch_sampler: 实现了 __len__() 和 __iter__() 的实例化对象，，其__iter__() 方法每次都会返回一个 List 对象， List 中的值为
+        dataset 的下标 index ；默认为 ``None``，当其不为 ``None`` 时，``bacth_size``, ``sampler``, ``shuffle`` 参数均失效。
+    :param num_workers: 当 ``num_workers > 0`` 时, ``OneflowDataLoader`` 会开启 ``num_workers`` 个子进程来处理数据， 可以加快
         数据处理速度，但同时也消耗大量内存。 当 ``num_workers=0`` 时， 不开启子进程。 默认为 ``0``。
     :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的 Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``.
 
-        *  callate_fn 为 'None' 时，需要注意的是此时传进来的 datset 类型不能为 :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None`` 时，
-         ``OneflowDataLoader`` 调用默认的 oneflow 框架的 ``DataLoader`` 自带的 `default_collate_fn` 作为 callate_fn 的默认值， 其无法处理
-         :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
-        * callate_fn 为 ``'auto'`` 时，`OneflowDataLoader`` 使用 :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。
-        此时可以配套使用 ``OneflowDataLoader`` 的 ``set_pad`` 和 ``set_ignore`` 方法来设置 pad_val 或 忽略某个 field 的检测。
-        * `collate_fn 为 ``Callable`` 时， 该 Callable 函数应当接受一个 batch 参数作为输入， batch 是一个 List 对象且 List 中的每一条数据都是
-        dataset 的一条数据；该 Callable 函数还应当返回一个对象。
+        * callate_fn 为 ``None`` 时，需要注意的是此时传进来的 datset 类型不能为 :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None`` 时，
+          ``OneflowDataLoader`` 调用默认的 oneflow 框架的 ``DataLoader`` 自带的 `default_collate_fn` 作为 callate_fn 的默认值， 其无法处理
+          :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
+        * callate_fn 为 ``'auto'`` 时，``OneflowDataLoader`` 使用 :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。
+          此时可以配套使用 ``OneflowDataLoader`` 的 ``set_pad`` 和 ``set_ignore`` 方法来设置 pad_val 或 忽略某个 field 的检测。
+        * collate_fn 为 :class:`Callable` 时， 该 Callable 函数应当接受一个 batch 参数作为输入， batch 是一个 List 对象且 List 中的每一条数据都是
+          dataset 的一条数据；该 Callable 函数还应当返回一个对象。
 
-    :param pin_memory: 如果其为 ``True``, 那么 ``OneflowDataLoader`` 会在返回数据张量之前将其 copy 到 cud a的 pin memory 中。
+    :param pin_memory: 如果其为 ``True``, 那么 ``OneflowDataLoader`` 会在返回数据张量之前将其 copy 到 cuda 的 pin memory 中。
     :param drop_last: 当 ``drop_last=True`` 时，``OneflowDataLoader`` 会扔掉最后一个长度小于 ``batch_size`` 的 batch 数据;
         若 ``drop_last=False`` , 则会返回该 batch 数据。 默认为 ``False`` 。
     :param timeout: 子进程的输出队列获取数据的超时值
-    :param worker_init_fn: init 函数，如果不设置为 None ,则将会在每个子进程初始化时调用该函数。
+    :param worker_init_fn: init 函数，如果不设置为 ``None``，则将会在每个子进程初始化时调用该函数。
     :param multiprocessing_context: 多进程的上下文环境
-    :param generator: 如果其不为 ``None``, 将会使用 RandomSampler 去生成随机的 index 且会为每个子进程生成一个``base_seed``
-    :param prefetch_factor: 每个 worker 提前装载的 samples 数量。``2``意味着在所有的进程中会有 2*num_workers 的数据被预取。默认值为 ``2`` .
+    :param generator: 如果其不为 ``None``, 将会使用 RandomSampler 去生成随机的 index 且会为每个子进程生成一个 ``base_seed``
+    :param prefetch_factor: 每个 worker 提前装载的 samples 数量。 ``2`` 意味着在所有的进程中会有 2*num_workers 的数据被预取。默认值为 ``2`` 。
     :param persistent_workers: 如果其为 ``True``, ``OneflowDataLoader`` 在迭代完一次 dataset 后不会关闭所有进程。默认为 ``False``
 
     """

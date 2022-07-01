@@ -205,7 +205,7 @@ class Collator:
         :param pad_val: 这个 field 的默认 pad 值。如果设置为 ``None``，则表示该 field 不需要 pad , fastNLP 默认只会对可以 pad 的
             field 进行 pad，所以如果对应 field 本身就不是可以 pad 的形式，可以不需要主动设置为 ``None`` 。如果 ``backend`` 为 ``None``，
             该值无意义。
-        :param dtype: 对于需要 pad 的 field ，该 field 的数据 ``dtype`` 应该是什么。
+        :param dtype: 对于需要 pad 的 field ，该 field 数据的 ``dtype`` 。
         :param backend: 可选 ``['raw', 'numpy', 'torch', 'paddle', 'jittor', 'oneflow', 'auto']`` ，分别代表，输出为 :class:`list`, 
             :class:`numpy.ndarray`, :class:`torch.Tensor`, :class:`paddle.Tensor`, :class:`jittor.Var`, :class:`oneflow.Tensor` 类型。
             若 ``pad_val`` 为 ``None`` ，该值无意义 。
@@ -291,7 +291,7 @@ class Collator:
 
     def set_ignore(self, *field_names) -> "Collator":
         """
-        如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略。
+        如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略::
 
             >>> collator = Collator().set_ignore('field1', 'field2')
 

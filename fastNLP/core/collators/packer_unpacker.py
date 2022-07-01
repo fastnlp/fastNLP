@@ -2,6 +2,7 @@ from collections import defaultdict
 from functools import reduce
 from typing import Sequence, Mapping, Dict
 
+__all__ = []
 
 class MappingPackerUnpacker:
     @staticmethod

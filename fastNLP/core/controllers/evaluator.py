@@ -1,5 +1,5 @@
 r"""
-``Evaluator`` 是新版 fastNLP 中用来进行评测模型的评测器，其与 ``Trainer`` 相对应，二者共同构建起了 fastNLP 中**训练**和**评测**的框架。
+``Evaluator`` 是新版 **fastNLP** 中用来进行评测模型的评测器，其与 ``Trainer`` 相对应，二者共同构建起了 **fastNLP** 中 **训练** 和 **评测** 的框架。
 ``Evaluator`` 的整体架构与 ``Trainer`` 类似，也是利用 ``Driver`` 来负责底层的评测逻辑。通过使用 ``Evaluator``，您可以快速、方便、准确地
 对您的模型进行全方位地评测。
 
@@ -75,11 +75,11 @@ class Evaluator:
     :param device: 等价于 ``Trainer`` 中的 ``device`` 参数；
     :param evaluate_batch_step_fn: 您可以传入该参数来定制每次评测一个 batch 的数据时所执行的函数。该函数应接受的两个参数为 ``evaluator`` 和 ``batch``，
         不需要有返回值；可以参考 :meth:`~fastNLP.core.controllers.loops.evaluate_batch_loop.EvaluateBatchLoop.batch_step_fn`；
-    :param evaluate_fn: 用来控制 ``Evaluator`` 在评测的前向传播过程中调用的是哪一个函数，例如对于 pytorch 而言，通过该参数确定使用的是 ``model.evaluate_step`` 还是
-        ``model.forward``（不同训练框架所使用的的前向传播函数的方法名称不同）；
+    :param evaluate_fn: 用来控制 ``Evaluator`` 在评测的前向传播过程中调用的是哪一个函数，例如对于 pytorch 而言，通过该参数确定使用的是 :meth:`model.evaluate_step` 还是
+        :meth:`model.forward` （不同训练框架所使用的的前向传播函数的方法名称不同）；
 
         1. 如果该值是 ``None``，那么我们会默认使用 ``evaluate_step`` 当做前向传播的函数，如果在模型中没有找到该方法，则使用训练框架默认的前向传播函数；
-        2. 如果为 ``str`` 类型，例如为 ``my_evaluate_step_fn``，则尝试寻找 ``model.my_evaluate_step_fn``，如果找不到则直接报错；
+        2. 如果为 ``str`` 类型，例如为 ``'my_evaluate_step_fn'``，则尝试寻找 :meth:`model.my_evaluate_step_fn`，如果找不到则直接报错；
 
     :param input_mapping: 等价于 ``Trainer`` 中的 ``input_mapping`` 参数；对具体的用于评测一个 batch 的数据使用 ``input_mapping`` 处理之后再输入到 ``model`` 以及 ``metric`` 中。如果针对
         ``model`` 和 ``metric`` 需要不同的 ``mapping``，请考虑使用 ``evaluate_batch_step_fn`` 参数定制；
@@ -97,20 +97,27 @@ class Evaluator:
             ``metric`` 的计算都是自动化的，因此其一定需要参数匹配：根据 ``metric.update`` 的函数签名直接从字典数据中抽取其需要的参数传入进去；
 
 
-    :param fp16: 是否在评测时使用 fp16；
+    :param fp16: 是否在评测时使用 fp16 混合精度；
     :param verbose: 是否打印 evaluate 的结果；
     :kwargs:
         * *torch_kwargs* -- 等价于 ``Trainer`` 中的 ``torch_kwargs`` 参数；
+        * *paddle_kwargs* -- 等价于 ``Trainer`` 中的 ``paddle_kwargs`` 参数；
+        * *fairscale_kwargs* -- 等价于 ``Trainer`` 中的 ``fairscale_kwargs`` 参数；
+        * *deepspeed_kwargs* -- 等价于 ``Trainer`` 中的 ``deepspeed_kwargs`` 参数；
+        * *oneflow_kwargs* -- 等价于 ``Trainer`` 中的 ``oneflow_kwargs`` 参数；
         * *data_device* -- 等价于 ``Trainer`` 中的 ``data_device`` 参数；
         * *model_use_eval_mode* (``bool``) --
-         是否在评测的时候将 ``model`` 的状态设置成 ``eval`` 状态。在 ``eval`` 状态下，``model`` 的
-         ``dropout`` 与 ``batch normalization`` 将会关闭。默认为 ``True``。如果为 ``False``，``fastNLP`` 不会对 ``model`` 的 ``evaluate`` 状态做任何设置。无论
-         该值是什么，``fastNLP`` 都会在评测后将 ``model`` 的状态设置为 ``train``；
+          是否在评测的时候将 ``model`` 的状态设置成 ``eval`` 状态。在 ``eval`` 状态下，``model`` 的
+          ``dropout`` 与 ``batch normalization`` 将会关闭。默认为 ``True``。如果为 ``False``，``fastNLP`` 不会对 ``model`` 的 ``evaluate`` 状态做任何设置。无论
+          该值是什么，``fastNLP`` 都会在评测后将 ``model`` 的状态设置为 ``train``；
         * *use_dist_sampler* --
-         表示在 ``Evaluator`` 中在使用分布式的时候是否将保证 dataloader 的 ``sampler`` 替换为
-         分布式的 ``sampler``，其特点是每个卡上的数据之间不重叠，所有卡上数据的加起来是整个数据集。若传入的 dataloader
-         的 sampler 为 (a) 深度学习框架自带的默认 sampler ; (b) fastNLP 的 Sampler 等，则将替换为
-          :class:`~fastNLP.UnrepeatedSequentialSampler`，如果这个行为不是期待的，请本参数设置为 ``False``，并针对每个卡控制其可以
+          表示在 ``Evaluator`` 中在使用分布式的时候是否将保证 dataloader 的 ``sampler`` 替换为
+          分布式的 ``sampler``，其特点是每个卡上的数据之间不重叠，所有卡上数据的加起来是整个数据集。若传入的 dataloader
+          的 sampler 为：
+          
+            - 深度学习框架自带的默认 sampler ;
+            - fastNLP 的 Sampler ；
+          则将替换为 :class:`~fastNLP.UnrepeatedSequentialSampler`，如果这个行为不是期待的，请本参数设置为 ``False``，并针对每个卡控制其可以
           用到的数据。如果不是以上两类 sampler ，fastNLP 将报错。
         * *output_from_new_proc* -- 等价于 ``Trainer`` 中的 ``output_from_new_proc`` 参数；
         * *progress_bar* -- 等价于 ``Trainer`` 中的 ``progress_bar`` 参数；
@@ -123,7 +130,7 @@ class Evaluator:
 
     def __init__(self, model, dataloaders, metrics: Optional[Dict] = None,
                  driver: Union[str, Driver] = 'auto', device: Optional[Union[int, List[int], str]] = None,
-                 evaluate_batch_step_fn: Optional[callable] = None, evaluate_fn: Optional[str] = None,
+                 evaluate_batch_step_fn: Optional[Callable] = None, evaluate_fn: Optional[str] = None,
                  input_mapping: Optional[Union[Callable, Dict]] = None,
                  output_mapping: Optional[Union[Callable, Dict]] = None, model_wo_auto_param_call: bool = False,
                  fp16: bool = False, verbose: int = 1, **kwargs):
@@ -203,16 +210,16 @@ class Evaluator:
         """
         用于帮助您加载模型的辅助函数；
 
-        :param folder: 存放着您需要加载的 model 的文件夹，默认会尝试读取该文件夹下的 fastnlp_model.pkl.tar 文件。在 model_load_fn 不为空时，
-            直接将该 folder 传递到 model_load_fn 中；
-        :param only_state_dict: 要读取的文件中是否仅包含模型权重。在 ``model_load_fn 不为 None`` 时，该参数无意义；
-        :param model_load_fn: ``callable`` 的函数，接受一个 folder 作为参数，需要注意该函数不需要返回任何内容；
+        :param folder: 存放着您需要加载的 model 的文件夹，默认会尝试读取该文件夹下的 ``fastnlp_model.pkl.tar`` 文件。在 ``model_load_fn`` 不为空时，
+            直接将该 folder 传递到 ``model_load_fn`` 中；
+        :param only_state_dict: 要读取的文件中是否仅包含模型权重。在 ``model_load_fn`` 不为 ``None`` 时，该参数无意义；
+        :param model_load_fn: :class:`Callable` 的函数，接受一个 folder 作为参数，需要注意该函数不需要返回任何内容；
         :param kwargs: 理论上您不需要使用到该参数；
 
         .. note::
 
             注意您需要在初始化 ``Evaluator`` 后再通过 ``evaluator`` 实例来调用该函数；这意味着您需要保证在保存和加载时使用的 ``driver`` 是属于同一个
-            训练框架的，例如都是 ``pytorch`` 或者 ``paddle``；
+            训练框架的，例如都是 **pytorch** 或者 **PaddlePaddle** ；
         """
         self.driver.barrier()
         if not isinstance(folder, (io.BytesIO, BinaryIO)):
@@ -240,15 +247,14 @@ class Evaluator:
         """
         该函数是在 ``Evaluator`` 初始化后用于真正开始评测的函数；
 
-        返回一个字典类型的数据，其中key为metric的名字，value为对应metric的结果。
+        返回一个字典类型的数据，其中 key 为 metric 的名字，value 为对应 metric 的结果。
 
-            1. 如果存在多个metric，一个dataloader的情况，key的命名规则是
-            ``metric_indicator_name#metric_name``
+            1. 如果存在多个 metric ，一个 dataloader 的情况，key 的命名规则是
+               ``metric_indicator_name#metric_name``；
             2. 如果存在多个数据集，一个metric的情况，key的命名规则是
-            ``metric_indicator_name#metric_name#dataloader_name`` (其中 # 是默认的 separator ，可以通过 Evaluator 初始化参数修改)。
-            如果存在多个metric，多个dataloader的情况，key的命名规则是
-            ``metric_indicator_name#metric_name#dataloader_name``
-            其中 metric_indicator_name 可能不存在；
+               ``metric_indicator_name#metric_name#dataloader_name`` （其中 **#** 是默认的 separator ，可以通过 Evaluator 初始化参数修改）；
+            3. 如果存在多个metric，多个dataloader的情况，key的命名规则是
+               ``metric_indicator_name#metric_name#dataloader_name``，其中 metric_indicator_name 可能不存在；
 
         :param num_eval_batch_per_dl: 每个 dataloader 测试前多少个 batch 的数据，-1 为测试所有数据。
         :return: 返回评测得到的结果，是一个没有嵌套的字典；
@@ -360,7 +366,7 @@ class Evaluator:
 
     def reset(self):
         """
-        调用所有 metric 的 reset() 方法，清除累积的状态。
+        调用所有 metric 的 :meth:`reset` 方法，清除累积的状态。
 
         :return:
         """
@@ -368,7 +374,7 @@ class Evaluator:
 
     def update(self, batch, outputs):
         """
-        自动调用所有 metric 的 update 方法，会根据不同 metric 的参数列表进行匹配传参。
+        自动调用所有 metric 的 :meth:`update` 方法，会根据不同 metric 的参数列表进行匹配传参。
 
         :param batch: 一般是来自于 DataLoader 的输出，如果不为 dict 类型的话，该值将被忽略。
         :param outputs: 一般是来自于模型的输出。类别应为 dict 或者 dataclass 类型。
@@ -378,7 +384,7 @@ class Evaluator:
 
     def get_metric(self) -> Dict:
         """
-        调用所有 metric 的 get_metric 方法，并返回结果。其中 key 为 metric 的名称，value 是各个 metric 的结果。
+        调用所有 metric 的 :meth:`get_metric` 方法，并返回结果。其中 key 为 metric 的名称，value 是各个 metric 的结果。
 
         :return:
         """
@@ -387,11 +393,9 @@ class Evaluator:
     @property
     def metrics_wrapper(self):
         """
-        由于需要保持 Evaluator 中 metrics 对象与用户传入的 metrics 保持完全一致（方便他在 evaluate_batch_step_fn ）中使用，同时也为了支持
+        由于需要保持 Evaluator 中 ``metrics`` 对象与用户传入的 ``metrics`` 保持完全一致（方便在 ``evaluate_batch_step_fn`` ）中使用，同时也为了支持
         不同形式的 metric（ fastNLP 的 metric/torchmetrics 等），所以 Evaluator 在进行 metric 操作的时候都调用 metrics_wrapper
         进行操作。
-
-        Returns:
         """
         if self._metric_wrapper is None:
             self._metric_wrapper = _MetricsWrapper(self.metrics, evaluator=self)
@@ -399,11 +403,12 @@ class Evaluator:
 
     def evaluate_step(self, batch):
         """
-        将 batch 传递到model中进行处理，根据当前 evaluate_fn 选择进行 evaluate 。会将返回结果经过 output_mapping 处理后再
-            返回。
+        将 ``batch`` 传递到 model 中进行处理，根据当前 ``evaluate_fn`` 选择进行 evaluate 。会将返回结果经过 ``output_mapping``
+        处理后再
+返回。
 
-        :param batch: {evaluate_fn} 函数支持的输入类型
-        :return: {evaluate_fn} 函数的输出结果，如果有设置 output_mapping ，将是 output_mapping 之后的结果。
+        :param batch: ``evaluate_fn`` 函数支持的输入类型
+        :return: ``evaluate_fn`` 函数的输出结果，如果有设置 ``output_mapping`` ，将是 ``output_mapping`` 之后的结果。
         """
         outputs = self.driver.model_call(batch, self._evaluate_step, self._evaluate_step_signature_fn)
         outputs = match_and_substitute_params(self.output_mapping, outputs)
@@ -412,7 +417,7 @@ class Evaluator:
     @property
     def metrics(self):
         """
-        返回用户传入的 metrics 对象。
+        返回用户传入的 ``metrics`` 对象。
 
         :return:
         """

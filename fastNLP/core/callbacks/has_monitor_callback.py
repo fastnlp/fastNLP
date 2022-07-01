@@ -31,11 +31,11 @@ class ResultsMonitor:
     :param monitor: 监控的 metric 值：
 
         * 为 ``None``
-         将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）；
+         将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置 `monitor` 值（如果有设置）；
         * 为 ``str``
          尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
          使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` ；
-        * 为 ``Callable``
+        * 为 :class:`Callable`
          接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
          的 ``monitor`` 值请返回 ``None`` ；
     :param larger_better: monitor 是否为越大越好；
@@ -190,11 +190,11 @@ class HasMonitorCallback(ResultsMonitor, Callback):
     :param monitor: 监控的 metric 值：
 
         * 为 ``None``
-         将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）；
+         将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置 `monitor` 值（如果有设置）；
         * 为 ``str``
          尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
          使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` ；
-        * 为 ``Callable``
+        * 为 :class:`Callable`
          接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
          的 ``monitor`` 值请返回 ``None`` ；
     :param larger_better: monitor 是否为越大越好；
@@ -235,11 +235,11 @@ class ExecuteOnceBetterMonitor(HasMonitorCallback):
     :param monitor: 监控的 metric 值：
 
         * 为 ``None``
-         将尝试使用 :class:`~fastNLP.Trainer` 中设置 ``monitor`` 值（如果有设置）；
+         将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置 ``monitor`` 值（如果有设置）；
         * 为 ``str``
          尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
          使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` ；
-        * 为 ``Callable``
+        * 为 :class:`Callable`
          接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
          的 ``monitor`` 值请返回 ``None`` ；
     :param larger_better: monitor 是否是越大越好；

@@ -1,7 +1,7 @@
 r"""
 :class:`~fastNLP.core.dataset.DataSet` 是 fastNLP 中用于承载数据的容器。可以将 DataSet 看做是一个表格，
-每一行是一个 sample (在 fastNLP 中被称为 :mod:`~fastNLP.core.instance` )，
-每一列是一个 feature (在 fastNLP 中称为 :mod:`~fastNLP.core.field` )。
+每一行是一个 sample (在 fastNLP 中被称为 :mod:`~fastNLP.core.dataset.instance` )，
+每一列是一个 feature (在 fastNLP 中称为 :mod:`~fastNLP.core.dataset.field` )。
 
 .. csv-table:: Following is a demo layout of DataSet
    :header: "sentence", "words", "seq_len"
@@ -11,7 +11,7 @@ r"""
    "Third instance .", "[Third, instance, .]", 3
    "...", "[...]", "..."
 
-在 fastNLP 内部每一行是一个 :class:`~fastNLP.Instance` 对象； 每一列是一个 :class:`~fastNLP.FieldArray` 对象。
+在 fastNLP 内部每一行是一个 :class:`~fastNLP.core.dataset.Instance` 对象； 每一列是一个 :class:`~fastNLP.core.dataset.FieldArray` 对象。
 
 ----------------------------
 1.DataSet的创建
@@ -65,7 +65,7 @@ r"""
 2.DataSet 与预处理
 --------------------------------------
 
-常见的预处理有如下几种
+常见的预处理有如下几种：
 
 2.1 从某个文本文件读取内容
 --------------------------------------
@@ -97,10 +97,10 @@ r"""
         # 将句子分成单词形式, 详见DataSet.apply()方法, 可以开启多进程来加快处理， 也可以更改展示的bar，目前支持 ``['rich', 'tqdm', None]``,
         # 详细内容可以见 :class:`~fastNLP.core.dataset.DataSet`, 需要注意的时匿名函数不支持多进程
         dataset.apply(lambda ins: ins['sentence'].split(), new_field_name='words',
-         progress_des='Main',progress_bar='rich')
+            progress_des='Main',progress_bar='rich')
         # 或使用DataSet.apply_field()
         dataset.apply_field(lambda sent:sent.split(), field_name='sentence', new_field_name='words',
-         progress_des='Main',progress_bar='rich')
+            progress_des='Main',progress_bar='rich')
         # 除了匿名函数，也可以定义函数传递进去
         def get_words(instance):
             sentence = instance['sentence']
@@ -145,8 +145,8 @@ r"""
         #  DataSet 的长度
         len(dataset)
 
-
 """
+
 __all__ = [
     "DataSet",
     "ApplyResultException"
@@ -255,34 +255,31 @@ def _multi_proc(ds, _apply_field, func, counter, queue):
 
 class DataSet:
     r"""
-    fastNLP的数据容器，详细的使用方法见文档  :mod:`fastNLP.core.dataset`
-    """
+    fastNLP的数据容器。
 
-    def __init__(self, data: Union[List[Instance], Dict[str, List[Any]], None] = None):
-        r"""
-        初始化 ``DataSet``, fastNLP的 DataSet 是 key-value 存储形式， 目前支持两种初始化方式，输入 data 分别为 ``List[:class:`~fastNLP.core.dataset.Instance`]`` 和
-          ``Dict[str, List[Any]]``。
+    Example::
 
-            * 当 data 为 ``List[:class:`~fastNLP.core.dataset.Instance`]`` 时,  每个 ``Instance`` 的 field_name 需要保持一致。
-            Instance 详见 :class:`~fastNLP.core.dataset.Instance` 。
-            * 当 data 为 ``Dict[str, List[Any]] 时， 则每个 key 的 value 应该为等长的 list， 否则不同 field 的长度不一致。
+        from fastNLP.core.dataset import DataSet, Instance
+        data = {'x': [[1, 0, 1], [0, 1, 1], 'y': [0, 1]}
+        data1 = [Instance(x=[1,0,1],y=0), Instance(x=[0,1,1],y=1)]
+        ds = DataSet(data)
+        ds = DataSet(data1)
 
-        :param data:  初始化的内容， 其只能为两种类型，分别为 ``List[:class:`~fastNLP.core.dataset.Instance`]`` 和
-          ``Dict[str, List[Any]]``。
+    fastNLP的 DataSet 是 key-value 存储形式， 目前支持两种初始化方式，输入 data 分别为 ``List[:class:`~fastNLP.core.dataset.Instance`]`` 和
+    ``Dict[str, List[Any]]``。
 
-         * 当 data 为 ``List[:class:`~fastNLP.core.dataset.Instance`]`` 时,  每个 ``Instance`` 的 field_name 需要保持一致。
-            Instance 详见 :class:`~fastNLP.core.dataset.Instance` 。
+        * 当 data 为 ``List[:class:`~fastNLP.core.dataset.Instance`]`` 时,  每个 ``Instance`` 的 field_name 需要保持一致。
+          Instance 详见 :class:`~fastNLP.core.dataset.Instance` 。
+        * 当 data 为 ``Dict[str, List[Any]]`` 时， 则每个 key 的 value 应该为等长的 list， 否则不同 field 的长度不一致。
+
+    :param data: 初始化的内容，其只能为两种类型，分别为 ``List[:class:`~fastNLP.core.dataset.Instance`]`` 和
+        ``Dict[str, List[Any]]``。
+
+        * 当 data 为 ``List[:class:`~fastNLP.core.dataset.Instance`]`` 时,  每个 ``Instance`` 的 field_name 需要保持一致。
+          Instance 详见 :class:`~fastNLP.core.dataset.Instance` 。
         * 当 data 为 ``Dict[str, List[Any]] 时， 则每个 key 的 value 应该为等长的 list， 否则不同 field 的长度不一致。
-
-        Example::
-
-            from fastNLP.core.dataset import DataSet, Instance
-            data = {'x': [[1, 0, 1], [0, 1, 1], 'y': [0, 1]}
-            data1 = [Instance(x=[1,0,1],y=0), Instance(x=[0,1,1],y=1)]
-            ds = DataSet(data)
-            ds = DataSet(data1)
-
-        """
+    """
+    def __init__(self, data: Union[List[Instance], Dict[str, List[Any]], None] = None):
         self.field_arrays = {}
         self._collator = Collator()
         if data is not None:
@@ -429,10 +426,9 @@ class DataSet:
 
     def append(self, instance: Instance) -> None:
         r"""
-        将一个 instance 对象 append 到 DataSet 后面。详见 :class:`~fastNLP.Instance`
+        将一个 ``instance`` 对象 append 到 DataSet 后面。详见 :class:`~fastNLP.core.dataset.Instance`
 
-        :param  instance: 若 DataSet 不为空，则 instance 应该拥有和 DataSet 完全一样的 field。
-
+        :param instance: 若 DataSet 不为空，则 instance 应该拥有和 DataSet 完全一样的 field；
         """
         if len(self.field_arrays) == 0:
             # DataSet has no field yet
@@ -454,10 +450,10 @@ class DataSet:
 
     def add_fieldarray(self, field_name: str, fieldarray: FieldArray) -> None:
         r"""
-        将 fieldarray 添加到 DataSet 中.
+        将 ``fieldarray`` 添加到 DataSet 中.
 
-        :param field_name: 新加入的 field 的名称
-        :param fieldarray: 需要加入 DataSet 的 field 的内容, 详见 :class:`~fastNLP.core.dataset.FieldArray`
+        :param field_name: 新加入的 field 的名称；
+        :param fieldarray: 需要加入 DataSet 的 field 的内容, 详见 :class:`~fastNLP.core.dataset.FieldArray` ；
         :return:
         """
         if not isinstance(fieldarray, FieldArray):
@@ -472,8 +468,8 @@ class DataSet:
         r"""
         新增一个 field， 需要注意的是 fields 的长度跟 DataSet 长度一致
 
-        :param field_name: 新增的 field 的名称
-        :param fields: 需要新增的 field 的内容
+        :param field_name: 新增的 field 的名称；
+        :param fields: 需要新增的 field 的内容；
         """
 
         if len(self.field_arrays) != 0:
@@ -484,9 +480,9 @@ class DataSet:
 
     def delete_instance(self, index: int):
         r"""
-        删除第 ``index `` 个 Instance
+        删除第 ``index`` 个 Instance
 
-        :param index: 需要删除的 instanc e的 index，序号从 `0` 开始。
+        :param index: 需要删除的 instance 的 index，序号从 `0` 开始。
         """
         assert isinstance(index, int), "Only integer supported."
         if len(self) <= index:
@@ -500,9 +496,9 @@ class DataSet:
 
     def delete_field(self, field_name: str):
         r"""
-        删除名为 field_name 的 field
+        删除名为 ``field_name`` 的 field
 
-        :param field_name: 需要删除的 field 的名称.
+        :param field_name: 需要删除的 field 的名称；
         """
         if self.has_field(field_name):
             self.field_arrays.pop(field_name)
@@ -512,11 +508,11 @@ class DataSet:
 
     def copy_field(self, field_name: str, new_field_name: str):
         r"""
-        深度 copy 名为 field_name 的 field 到 new_field_name
+        深度 copy 名为 ``field_name`` 的 field 到 ``new_field_name``
 
-        :param field_name: 需要 copy 的 field。
-        :param new_field_name: copy 生成的 field 名称
-        :return: self
+        :param field_name: 需要 copy 的 field；
+        :param new_field_name: copy 生成的 field 名称；
+        :return: 数据集自身；
         """
         if not self.has_field(field_name):
             raise KeyError(f"Field:{field_name} not found in DataSet.")
@@ -527,10 +523,10 @@ class DataSet:
 
     def has_field(self, field_name: str) -> bool:
         r"""
-        判断 DataSet 中是否有名为 field_name 这个 field
+        判断 DataSet 中是否有名为 ``field_name`` 这个 field
 
-        :param field_name: field 的名称
-        :return: 表示是否有名为 field_name 这个 field
+        :param field_name: field 的名称；
+        :return: 表示是否有名为 ``field_name`` 这个 field；
         """
         if isinstance(field_name, str):
             return field_name in self.field_arrays
@@ -538,10 +534,10 @@ class DataSet:
 
     def get_field(self, field_name: str) -> FieldArray:
         r"""
-        获取 field_name 这个 field
+        获取名为 ``field_name`` 的 field
 
-        :param field_name: field 的名称
-        :return: :class:`~fastNLP.FieldArray`
+        :param field_name: field 的名称；
+        :return: 一个 :class:`~fastNLP.core.dataset.FieldArray` 对象；
         """
         if field_name not in self.field_arrays:
             raise KeyError("Field name {} not found in DataSet".format(field_name))
@@ -549,17 +545,13 @@ class DataSet:
 
     def get_all_fields(self) -> dict:
         r"""
-        返回一个 dict，key 为 field_name, value为对应的 :class:`~fastNLP.FieldArray`
-
-        :return: 返回如上所述的字典
+        :return: 一个 dict，key 为 field_name, value为对应的 :class:`~fastNLP.core.dataset.FieldArray` 对象。
         """
         return self.field_arrays
 
     def get_field_names(self) -> list:
         r"""
-        返回一个 list，包含所有 field 的名字
-
-        :return: 返回如上所述的列表
+        :return: 一个 list，包含所有 field 的名字
         """
         return sorted(self.field_arrays.keys())
 
@@ -575,8 +567,8 @@ class DataSet:
         r"""
         将某个 field 重新命名.
 
-        :param field_name: 原来的 field 名称。
-        :param new_field_name: 修改为 new_name。
+        :param field_name: 原来的 field 名称；
+        :param new_field_name: 修改为 new_name；
         """
         if field_name in self.field_arrays:
             self.field_arrays[new_field_name] = self.field_arrays.pop(field_name)
@@ -589,13 +581,13 @@ class DataSet:
                     new_field_name: str = None, num_proc: int = 0,
                     progress_desc: str = None, progress_bar: str = 'rich'):
         r"""
-        将 :class:`DataSet` 每个 ``instance`` 中为 ``field_name`` 的 ``field`` 传给函数 ``func``，并写入到 ``new_field_name``
+        将 :class:`DataSet` 每个 ``instance`` 中为 ``field_name`` 的 field 传给函数 ``func``，并写入到 ``new_field_name``
         中。
 
-        :param field_name: 传入 ``func`` 的 ``field`` 名称；
-        :param func: 对指定 ``field`` 进行处理的函数，注意其输入应为 ``instance`` 中名为 ``field_name`` 的 ``field`` 的内容；
+        :param func: 对指定 fiel` 进行处理的函数，注意其输入应为 ``instance`` 中名为 ``field_name`` 的 field 的内容；
+        :param field_name: 传入 ``func`` 的 field 名称；
         :param new_field_name: 函数执行结果写入的 ``field`` 名称。该函数会将 ``func`` 返回的内容放入到 ``new_field_name`` 对
-            应的 ``field`` 中，注意如果名称与已有的 ``field`` 相同则会进行覆盖。如果为 ``None`` 则不会覆盖和创建 ``field`` ；
+            应的 ``field`` 中，注意如果名称与已有的 field 相同则会进行覆盖。如果为 ``None`` 则不会覆盖和创建 field ；
         :param num_proc: 使用进程的数量。
         
             .. note::
@@ -603,8 +595,8 @@ class DataSet:
                 由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
                 ``func`` 函数中的打印将不会输出。
 
-        :param progress_desc: 进度条的描述字符，默认为 ``Processing``；
-        :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
+        :param progress_desc: 如果不为 ``None``，则会显示当前正在处理的进度条的名称；
+        :param progress_bar: 显示进度条的方式，支持 ``["rich", "tqdm", None]``。
         :return: 从函数 ``func`` 中得到的返回值；
         """
         assert len(self) != 0, "Null DataSet cannot use apply_field()."
@@ -625,26 +617,27 @@ class DataSet:
                          modify_fields: bool = True, num_proc: int = 0,
                          progress_desc: str = None, progress_bar: str = 'rich'):
         r"""
-        将 ``DataSet`` 中的每个 ``Instance`` 中的名为 `field_name` 的field 传给 func，并获取它的返回值。
-        func 可以返回一个或多个 field 上的结果。
+        将 ``DataSet`` 中的每个 ``Instance`` 中的名为 `field_name` 的 field 传给 ``func``，并获取它的返回值。
+        ``func`` 可以返回一个或多个 field 上的结果。
 
         .. note::
-            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :meth:`~fastNLP.DataSet.apply_more` 中关于 ``apply_more`` 与
+            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :meth:`~fastNLP.core.dataset.DataSet.apply_more` 中关于 ``apply_more`` 与
             ``apply`` 区别的介绍。
 
-        :param field_name: 传入func的是哪个field。
-        :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
-        :param modify_fields: 是否用结果修改 `DataSet` 中的 `Field`， 默认为 True
+        :param func: 对指定 fiel` 进行处理的函数，注意其输入应为 ``instance`` 中名为 ``field_name`` 的 field 的内容；
+        :param field_name: 传入 ``func`` 的 fiel` 名称；
+        :param new_field_name: 函数执行结果写入的 ``field`` 名称。该函数会将 ``func`` 返回的内容放入到 ``new_field_name`` 对
+            应的 ``field`` 中，注意如果名称与已有的 field 相同则会进行覆盖。如果为 ``None`` 则不会覆盖和创建 field ；
         :param num_proc: 使用进程的数量。
-
+        
             .. note::
-
+            
                 由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
                 ``func`` 函数中的打印将不会输出。
 
-     	:param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
-        :param progress_desc: 当显示 progress_bar 时，显示当前正在处理的进度条描述字符
-        :return Dict[str:Field]: 返回一个字典
+        :param progress_desc: 如果不为 ``None``，则会显示当前正在处理的进度条的名称；
+        :param progress_bar: 显示进度条的方式，支持 ``["rich", "tqdm", None]``。
+        :return: 返回一个字典
         """
         assert len(self) != 0, "Null DataSet cannot use apply_field()."
         if not self.has_field(field_name=field_name):
@@ -747,7 +740,7 @@ class DataSet:
     def apply_more(self, func: Callable = None, modify_fields: bool = True,
                    num_proc: int = 0, progress_desc: str = '', progress_bar: str = 'rich'):
         r"""
-        将 ``DataSet`` 中每个 ``Instance`` 传入到func中，并获取它的返回值。func可以返回一个或多个 field 上的结果。
+        将 ``DataSet`` 中每个 ``Instance`` 传入到 ``func`` 中，并获取它的返回值。``func``可以返回一个或多个 field 上的结果。
 
         .. note::
             ``apply_more`` 与 ``apply`` 的区别：
@@ -767,9 +760,9 @@ class DataSet:
                 由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
                 ``func`` 函数中的打印将不会输出。
 
-        :param progress_desc: 当 progress_bar 不为 None 时，可以显示当前正在处理的进度条名称
-        :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
-        :return Dict[str:Field]: 返回一个字典
+        :param progress_desc: 当 progress_bar 不为 ``None`` 时，可以显示当前正在处理的进度条名称
+        :param progress_bar: 显示进度条的方式，支持 ``["rich", "tqdm", None]``。
+        :return: 返回一个字典
         """
         assert callable(func), "The func is not callable."
         assert len(self) != 0, "Null DataSet cannot use apply()."
@@ -808,10 +801,11 @@ class DataSet:
     def apply(self, func: Callable = None, new_field_name: str = None,
               num_proc: int = 0, progress_bar: str = 'rich', progress_desc: str = ''):
         """
+        将 ``DataSet`` 中每个 ``Instance`` 传入到 ``func`` 中，并获取它的返回值。``func`` 仅能返回一个结果。
 
         :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
-        :param new_field_name: 将func返回的内容放入到 `new_field_name` 这个field中，如果名称与已有的field相同，则覆
-            盖之前的field。如果为None则不创建新的field。
+        :param new_field_name: 将 ``func`` 返回的内容放入到 ``new_field_name`` 这个 field中 ，如果名称与已有的 field 相同，则覆
+            盖之前的 field。如果为 ``None`` 则不创建新的 field。
         :param num_proc: 使用进程的数量。
 
             .. note::
@@ -819,8 +813,8 @@ class DataSet:
                 由于 ``python`` 语言的特性，设置该参数后会导致相应倍数的内存增长，这可能会对您程序的执行带来一定的影响。另外，使用多进程时，
                 ``func`` 函数中的打印将不会输出。
 
-        :param progress_bar: 显示 progress_bar 的方式，支持 `["rich", "tqdm", None]`。
-        :param progress_desc: progress bar 显示的值，默认为空。
+        :param progress_bar: 显示进度条的方式，支持 ``["rich", "tqdm", None]``。
+        :param progress_desc: 如果不为 ``None``，则会显示当前正在处理的进度条的名称。
         """
         assert callable(func), "The func you provide is not callable."
         assert len(self) != 0, "Null DataSet cannot use apply()."
@@ -838,10 +832,10 @@ class DataSet:
 
     def add_seq_len(self, field_name: str, new_field_name='seq_len'):
         r"""
-        将使用 len() 直接对 field_name 中每个元素作用，将其结果作为 sequence length, 并放入 seq_len 这个 field。
+        将使用 :func:`len` 直接对 ``field_name`` 中每个元素作用，将其结果作为 sequence length, 并放入 ``new_field_name`` 这个 field。
 
         :param field_name: 需要处理的 field_name
-        :param new_field_name: str. 新的 field_name
+        :param new_field_name: 新的 field_name
         :return:
         """
         if self.has_field(field_name=field_name):
@@ -852,10 +846,10 @@ class DataSet:
 
     def drop(self, func: Callable, inplace=True):
         r"""
-        删除某些 Instance。 需要注意的时func 接受一个 Instance ，返回 bool 值。返回值为 True 时，
+        删除某些 Instance。 需要注意的是 ``func`` 接受一个 Instance ，返回 bool 值。返回值为 ``True`` 时，
         该 Instance 会被移除或者不会包含在返回的 DataSet 中。
 
-        :param func: 接受一个 Instance 作为参数，返回 bool 值。为 True 时删除该 instance
+        :param func: 接受一个 Instance 作为参数，返回 bool 值。为 ``True`` 时删除该 instance
         :param inplace: 是否在当前 DataSet 中直接删除 instance；如果为 False，将返回一个新的 DataSet。
 
         :return: DataSet
@@ -875,11 +869,11 @@ class DataSet:
 
     def split(self, ratio: float, shuffle=True):
         r"""
-        将 DataSet 按照 ratio 的比例拆分，返回两个 DataSet
+        将 DataSet 按照 ``ratio`` 的比例拆分，返回两个 DataSet
 
-        :param ratio: 0<ratio<1, 返回的第一个 DataSet 拥有 `ratio` 这么多数据，第二个 DataSet 拥有 `(1-ratio)` 这么多数据
-        :param shuffle: 在 split 前是否 shuffle 一下。为 False，返回的第一个 dataset 就是当前 dataset 中前 `ratio` 比例的数据，
-        :return: [ :class:`~fastNLP.读取后的DataSet` , :class:`~fastNLP.读取后的DataSet` ]
+        :param ratio: 0<ratio<1, 返回的第一个 DataSet 拥有 ``ratio`` 比例的数据，第二个 DataSet 拥有 ``1-ratio`` 的数据；
+        :param shuffle: 在拆分前是否进行排序。为 False，返回的第一个 dataset 就是当前 dataset 中前 ``ratio`` 比例的数据；
+        :return: 拆分后的两个 DataSet；
         """
         assert len(self) > 1, f'DataSet with {len(self)} instance cannot be split.'
         assert isinstance(ratio, float)
@@ -906,9 +900,9 @@ class DataSet:
 
     def save(self, path: str) -> None:
         r"""
-        保存DataSet.
+        保存 DataSet。
 
-        :param path: 将DataSet存在哪个路径
+        :param path: 保存路径；
         """
         with open(path, 'wb') as f:
             pickle.dump(self, f)
@@ -916,10 +910,10 @@ class DataSet:
     @staticmethod
     def load(path: str):
         r"""
-        从保存的 DataSet pickle文件的路径中读取DataSet
+        从保存的 DataSet pickle 文件的路径中读取 DataSet
 
-        :param path: 从哪里读取 DataSet
-        :return: 读取后的 :class:`~fastNLP.读取后的DataSet`。
+        :param path: 读取路径；
+        :return: 读取出的 DataSet
         """
         with open(path, 'rb') as f:
             d = pickle.load(f)
@@ -928,16 +922,16 @@ class DataSet:
 
     def concat(self, dataset: 'DataSet', inplace:bool=True, field_mapping:Dict=None) -> 'DataSet':
         """
-        将当前 dataset 与输入的 dataset 结合成一个更大的 dataset，需要保证两个 dataset 都包含了相同的 field。结合后的 dataset
-        的 field_name 和 _collator 以当前 dataset 为准。当 dataset 中包含的 field 多于当前的 dataset，则多余的 field 会被忽略；
-        若 dataset 中未包含所有当前 dataset 含有 field，则会报错。
+        将当前 DataSet 与输入的 ``dataset`` 结合成一个更大的 dataset，需要保证两个 dataset 都包含了相同的 field。结合后的 dataset
+        的 field_name 和 _collator 以当前 dataset 为准。若 ``dataset`` 中包含的 field 多于当前的 DataSet，则多余的 field 会被忽略；
+        若 ``dataset`` 中未包含所有当前 DataSet 含有 field，则会报错。
 
-        :param dataset: 需要和当前 dataset concat的 dataset
-        :param inplace: 是否直接将 dataset 组合到当前 dataset 中
-        :param field_mapping: 当传入的 dataset 中的 field 名称和当前 dataset 不一致时，需要通过 field_mapping 把输入的 dataset 中的
-            field 名称映射到当前 field. field_mapping 为 dict 类型，key 为 dataset 中的 field 名称，value 是需要映射成的名称
+        :param dataset: 需要和当前 DataSet 拼接的 ``dataset``；
+        :param inplace: 是否直接将 ``dataset`` 组合到当前 DataSet 中；
+        :param field_mapping: 当传入的 ``dataset`` 中的 field 名称和当前 dataset 不一致时，需要通过 ``field_mapping`` 把输入的 ``dataset``
+            中的 field 名称映射到当前 field。``field_mapping`` 为 dict 类型，key 为 11dataset`` 中的 field 名称，value 是需要映射成的名称
 
-        :return: :class:`~fastNLP.core.dataset.DataSet``
+        :return: :class:`~fastNLP.core.dataset.DataSet`
         """
         assert isinstance(dataset, DataSet), "Can only concat two datasets."
 
@@ -966,7 +960,8 @@ class DataSet:
     @classmethod
     def from_pandas(cls, df):
         """
-        从 ``pandas.DataFrame`` 中读取数据转为 DataSet
+        从 :class:`pandas.DataFrame` 中读取并数据转化为 DataSet
+
         :param df: 使用 pandas 读取的数据
         :return:
         """
@@ -975,7 +970,7 @@ class DataSet:
 
     def to_pandas(self):
         """
-        将 DataSet 数据转为 ``pandas.DataFrame`` 类型的数据
+        将 DataSet 数据转为 :class:`pandas.DataFrame` 类型的数据
 
         :return:
         """
@@ -1003,23 +998,22 @@ class DataSet:
     def set_pad(self, field_name: Union[str, tuple], pad_val: Union[int, float, None] = 0, dtype=None, backend=None,
                 pad_fn: Callable = None) -> Collator:
         """
-        ``DataSet`` 中想要对绑定的 collator 进行调整可以调用此函数。 ``collator`` 为 :class:`~fastNLP.core.collators.Collator`
-        时该函数才有效。调用该函数可以对 field 内容的 pad_val, dtype, backend 等进行调整。
+        如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
-        :param field_name: 需要调整的 field 的名称。如果 DataSet 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
-            field 的 key 来表示，如果是 nested 的 dict，可以使用元组表示多层次的 key，例如 {'a': {'b': 1}} 中的使用 ('a', 'b');
-            如果 __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。如果该 field 在数据中没
-            有找到，则报错；如果 __getitem__ 返回的是就是整体内容，请使用 "_single" 。
-        :param pad_val: 这个 field 的默认 pad 值。如果设置为 None，则表示该 field 不需要 pad , fastNLP 默认只会对可以 pad 的
-            field 进行 pad，所以如果对应 field 本身就不是可以 pad 的形式，可以不需要主动设置为 None 。如果 backend 为 None ，该值
-            无意义。
-        :param dtype: 对于需要 pad 的 field ，该 field 的数据 dtype 应该是什么。
-        :param backend: 可选['raw', 'numpy', 'torch', 'torch', 'jittor', 'auto']，分别代表，输出为 list, numpy.ndarray,
-            torch.Tensor, torch.Tensor, jittor.Var 类型。若 pad_val 为 None ，该值无意义 。
-        :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 pad_val, dtype, backend 等参数失效。pad_fn 的输入为当前 field 的
-            batch 形式。 Collator 将自动 unbatch 数据，然后将各个 field 组成各自的 batch 。pad_func 的输入即为 field 的 batch
-            形式，输出将被直接作为结果输出。
-        :return: 返回 Collator
+        :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
+            field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``;
+            如果 :meth:`Dataset.__getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表示序列中第 **0** 或 **1** 个元素。
+            如果该 field 在数据中没有找到，则报错；如果 :meth:`Dataset.__getitem__` 返回的是就是整体内容，请使用 "_single" 。
+        :param pad_val: 这个 field 的默认 pad 值。如果设置为 ``None``，则表示该 field 不需要 pad , fastNLP 默认只会对可以 pad 的
+            field 进行 pad，所以如果对应 field 本身就不是可以 pad 的形式，可以不需要主动设置为 ``None`` 。如果 ``backend`` 为 ``None``，
+            该值无意义。
+        :param dtype: 对于需要 pad 的 field ，该 field 数据的 ``dtype`` 。
+        :param backend: 可选 ``['raw', 'numpy', 'torch', 'paddle', 'jittor', 'oneflow', 'auto']`` ，分别代表，输出为 :class:`list`, 
+            :class:`numpy.ndarray`, :class:`torch.Tensor`, :class:`paddle.Tensor`, :class:`jittor.Var`, :class:`oneflow.Tensor` 类型。
+            若 ``pad_val`` 为 ``None`` ，该值无意义 。
+        :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 ``pad_val``, ``dtype``, ``backend`` 等参数失效。``pad_fn`` 的输入为当前 field 的
+            batch 形式。 Collator 将自动 unbatch 数据，然后将各个 field 组成各自的 batch 。
+        :return: 返回自身的 collator；
         """
         if isinstance(self.collator, Collator):
             self.collator.set_pad(field_name=field_name, pad_val=pad_val, dtype=dtype, pad_fn=pad_fn, backend=backend)
@@ -1030,16 +1024,14 @@ class DataSet:
     def set_ignore(self, *field_names) -> Collator:
         """
         ``DataSet`` 中想要对绑定的 collator 进行调整可以调用此函数。 ``collator`` 为 :class:`~fastNLP.core.collators.Collator`
-        时该函数才有效。调用该函数可以设置忽略输出某些 field 的内容，被设置的 field 将在 batch 的输出中被忽略。
+        时该函数才有效。调用该函数可以设置忽略输出某些 field 的内容，被设置的 field 将在 batch 的输出中被忽略::
 
-        Example::
+            dataset.set_ignore('field1', 'field2')
 
-            collator.set_ignore('field1', 'field2')
-
-        :param field_names: 需要忽略的 field 的名称。如果 DataSet 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
-            field 的 key 来表示，如果是 nested 的 dict，可以使用元组来表示，例如 {'a': {'b': 1}} 中的使用 ('a', 'b'); 如果
-            __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。
-        :return: 返回 Collator 自身
+        :param field_names: field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
+            field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``;
+            如果 :meth:`Dataset.__getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表示序列中第 **0** 或 **1** 个元素。
+        :return: 返回自身的 collator；
         """
         if isinstance(self.collator, Collator):
             self.collator.set_ignore(*field_names)

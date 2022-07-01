@@ -72,14 +72,14 @@ class MoreEvaluateCallback(HasMonitorCallback):
         时间戳文件夹中。如果为 ``None`` ，默认使用当前文件夹。
     :param only_state_dict: 保存模型时是否只保存 state_dict 。当 ``model_save_fn`` 不为 ``None`` 时，该参数无效。
     :param save_object: 可选 ``['trainer', 'model']`` ，表示在保存时的保存对象为 ``trainer+model`` 还是 只是 ``model`` 。如果
-        保存 ``trainer`` 对象的话，将会保存 :class:`~fastNLP.Trainer` 的相关状态，可以通过 :meth:`Trainer.load_checkpoint` 加载该断
+        保存 ``trainer`` 对象的话，将会保存 :class:`~fastNLP.core.controllers.Trainer` 的相关状态，可以通过 :meth:`Trainer.load_checkpoint` 加载该断
         点继续训练。如果保存的是 ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
     :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函数应当接受一个文件夹作为参数，不返回任何东西。
         如果传入了 ``model_save_fn`` 函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运行该函数。
     :param save_evaluate_results: 是否保存 evaluate 的结果。如果为 ``True`` ，在保存 topk 模型的 folder 中还将额外保存一个
          ``fastnlp_evaluate_results.json`` 文件，记录当前的 results。仅在设置了 ``topk`` 的场景下有效，默认为 True 。
     :param save_kwargs: 一个字典，表示更多的保存相关的参数。
-    :param kwargs: 其它与 :class:`~fastNLP.Evaluator` 相关的初始化参数，如果不传入，将从 :class:`~fastNLP.Trainer` 中获取。
+    :param kwargs: 其它与 :class:`~fastNLP.core.controllers.Evaluator` 相关的初始化参数，如果不传入，将从 :class:`~fastNLP.core.controllers.Trainer` 中获取。
     """
     def __init__(self, dataloaders, metrics:Dict, evaluate_every:Optional[Union[int, Callable]]=-1,
                  watch_monitor:Union[str, Callable]=None, watch_monitor_larger_better:bool=True,

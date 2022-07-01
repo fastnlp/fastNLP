@@ -159,7 +159,7 @@ class PaddleDriver(Driver):
         :param only_state_dict: 是否只保存模型的 ``state_dict``；如果为 ``False``，则会调用 ``paddle.jit.save`` 
             函数保存整个模型的参数，此时需要传入 ``input_spec`` 参数；
         :kwargs:
-            * input_spec -- 描述存储模型 ``forward`` 方法的输入；
+            * *input_spec* -- 描述存储模型 ``forward`` 方法的输入；
             当 ``only_state_dict`` 为 ``False`` 时必须传入，否则加载时会报错。您可以通过 ``InputSpec`` 或者示例 ``Tensor``
             进行描述。详细的使用方法可以参考 **PaddlePaddle** `关于 paddle.jit.save 函数的文档 <https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/jit/save_cn.html#save>`_；
         """

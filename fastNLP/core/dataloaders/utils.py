@@ -14,7 +14,7 @@ __all__ = [
 
 def indice_collate_wrapper(func:Callable):
     """
-    其功能是封装一层collate_fn,将dataset取到的tuple数据分离开，将idx打包为indices。
+    其功能是封装一层 collate_fn，将 dataset 取到的 tuple 数据分离开，将 idx 打包为 indices。
 
     :param func: 需要修饰的函数
     :return:
@@ -115,7 +115,7 @@ class HasLenGetitemType(ABC):
 
 class OverfitDataLoader:
     """
-    实现一个简单的迭代器来模拟实际的 dataloader，从给定的 dataloader 中取出部分数据，来让 Trainer 实现 overfit 的功能；
+    实现一个简单的迭代器来模拟实际的 dataloader，从给定的 ``dataloader`` 中取出部分数据，来让 Trainer 实现 overfit 的功能；
     """
 
     def __init__(self, dataloader, overfit_batches: int, batches=None):

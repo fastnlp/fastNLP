@@ -146,7 +146,7 @@ class CallbackManager:
            断点重训应当保存的状态；
         2. 每一个具体的 callback 函数的 filter 的状态；
 
-        :param trainer: :class:`~fastNLP.Trainer` 实例；
+        :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
         :return: 一个包含上述内容的字典，格式如下:
         .. code-block::
 
@@ -196,7 +196,7 @@ class CallbackManager:
         r"""
         用于断点重训的加载函数，对应于断点重训的保存函数；
 
-        :param trainer: :class:`~fastNLP.Trainer` 实例；
+        :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
         :param states: 同 :func:`on_save_checkpoint` 函数的返回值；
         """
 
