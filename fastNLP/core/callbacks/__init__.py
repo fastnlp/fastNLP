@@ -8,6 +8,7 @@ __all__ = [
     'ProgressCallback',
     'RichCallback',
     'TqdmCallback',
+    'RawTextCallback',
 
     "LRSchedCallback",
     'LoadBestModelCallback',
@@ -31,7 +32,7 @@ from .callback import Callback
 from .callback_event import Event, Filter
 from .callback_manager import CallbackManager
 from .checkpoint_callback import CheckpointCallback
-from .progress_callback import choose_progress_callback, ProgressCallback, RichCallback, TqdmCallback
+from .progress_callback import choose_progress_callback, ProgressCallback, RichCallback, TqdmCallback, RawTextCallback
 from .lr_scheduler_callback import LRSchedCallback
 from .load_best_model_callback import LoadBestModelCallback
 from .early_stop_callback import EarlyStopCallback

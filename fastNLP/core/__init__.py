@@ -7,6 +7,7 @@ __all__ = [
     'ProgressCallback',
     'RichCallback',
     'TqdmCallback',
+    'RawTextCallback',
     "LRSchedCallback",
     'LoadBestModelCallback',
     "EarlyStopCallback",
