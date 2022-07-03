@@ -5,7 +5,8 @@ __all__ = [
     'choose_progress_callback',
     'ProgressCallback',
     'RichCallback',
-    'TqdmCallback'
+    'TqdmCallback',
+    'RawTextCallback'
 ]
 
 
