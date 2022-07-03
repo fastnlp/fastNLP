@@ -249,7 +249,7 @@ class TorchDDPDriver(TorchDriver):
             parallel_device: Optional[Union[List["torch.device"], "torch.device"]],
             is_pull_by_torch_run: bool = False,
             fp16: bool = False,
-            torch_kwargs: Dict = {},
+            torch_kwargs: Dict = None,
             **kwargs
     ):
 

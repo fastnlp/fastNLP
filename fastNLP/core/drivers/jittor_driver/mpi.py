@@ -34,7 +34,7 @@ class JittorMPIDriver(JittorDriver):
         parallel_device: None,
         is_pull_by_jittor_run: bool = False,
         fp16: bool = False,
-        jittor_kwargs: Dict = {},
+        jittor_kwargs: Dict = None,
         **kwargs
     ):
 

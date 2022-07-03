@@ -53,7 +53,7 @@ class PaddleSingleDriver(PaddleDriver):
             关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
 
     """
-    def __init__(self, model: "paddle.nn.Layer", device: Union[str, int], fp16: Optional[bool] = False, paddle_kwrags: Dict = {}, **kwargs):
+    def __init__(self, model: "paddle.nn.Layer", device: Union[str, int], fp16: Optional[bool] = False, paddle_kwargs: Dict = None, **kwargs):
         if isinstance(model, DataParallel):
             raise ValueError("`paddle.DataParallel` is not supported in `PaddleSingleDriver`")
 
@@ -63,7 +63,7 @@ class PaddleSingleDriver(PaddleDriver):
             logger.info("You have set `CUDA_VISIBLE_DEVICES` to '' in system environment variable, and we are gonna to"
                         "use `cpu` instead of `gpu` device.")
 
-        super(PaddleSingleDriver, self).__init__(model, fp16=fp16, paddle_kwrags=paddle_kwrags, **kwargs)
+        super(PaddleSingleDriver, self).__init__(model, fp16=fp16, paddle_kwargs=paddle_kwargs, **kwargs)
 
         if device is None:
             raise ValueError("Parameter `device` can not be None in `PaddleSingleDriver`.")

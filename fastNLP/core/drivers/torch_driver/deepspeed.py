@@ -111,7 +111,7 @@ class DeepSpeedDriver(TorchDDPDriver):
         parallel_device: Union[List["torch.device"], "torch.device"],
         is_pull_by_torch_run = False,
         fp16: bool = False,
-        deepspeed_kwargs: Dict = {},
+        deepspeed_kwargs: Dict = None,
         **kwargs
     ):
         assert _NEED_IMPORT_DEEPSPEED, "Deepspeed is not imported."
@@ -251,9 +251,9 @@ class DeepSpeedDriver(TorchDDPDriver):
 
         if not self.outside_ddp:
             torch.cuda.set_device(self.model_device)
-            # TODO 模型过大的话应该会导致显存溢出，但是不加的话显存会占用rank对应的设备
-            # lightning里在之前通过broadcast_list广播了log_dir所以没有这种情况
-            self.model.to(self.model_device)
+            # 不加 dist.broadcast_object_list 会发生设备在 4,5 但是模型会同步到 0,1 的情况
+            # 原因未知
+            dist.broadcast_object_list(["test"], 0, None)
             self.configure_ddp()
 
         self.barrier()

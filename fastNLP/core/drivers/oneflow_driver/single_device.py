@@ -29,14 +29,14 @@ class OneflowSingleDriver(OneflowDriver):
     :param oneflow_kwargs:
     """
 
-    def __init__(self, model, device: "oneflow.device", fp16: bool = False, oneflow_kwargs: Dict = {}, **kwargs):
+    def __init__(self, model, device: "oneflow.device", fp16: bool = False, oneflow_kwargs: Dict = None, **kwargs):
         cuda_visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", None)
         if cuda_visible_devices == "":
             device = oneflow.device("cpu")
             logger.info("You have set `CUDA_VISIBLE_DEVICES` to '' in system environment variable, and we are gonna to"
                         "use `cpu` instead of `gpu` device.")
 
-        super(OneflowSingleDriver, self).__init__(model, fp16=fp16, **kwargs)
+        super(OneflowSingleDriver, self).__init__(model, fp16=fp16, oneflow_kwargs=oneflow_kwargs, **kwargs)
 
         if device is None:
             logger.debug("device is not set, fastNLP will try to automatically get it.")

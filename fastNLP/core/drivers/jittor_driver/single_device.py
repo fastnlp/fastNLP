@@ -37,7 +37,7 @@ class JittorSingleDriver(JittorDriver):
     :param jittor_kwargs:
     """
 
-    def __init__(self, model, device=None, fp16: bool = False, jittor_kwargs: Dict = {}, **kwargs):
+    def __init__(self, model, device=None, fp16: bool = False, jittor_kwargs: Dict = None, **kwargs):
         if device not in [None, "cpu", "gpu", "cuda"]:
             raise RuntimeError("Parameter `device` should be one of [None, 'cpu', 'gpu', 'cuda'] .")
         super(JittorSingleDriver, self).__init__(model, fp16, jittor_kwargs=jittor_kwargs)

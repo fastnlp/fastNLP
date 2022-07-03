@@ -38,7 +38,7 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
     user_visible_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
     if is_in_paddle_launch_dist():
         if user_visible_devices is None:
-            raise RuntimeError("To run paddle distributed training, please set `FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
+            raise RuntimeError("To run paddle distributed training, please set `FASTNLP_BACKEND` to 'paddle' before using fastNLP.")
         if device is not None:
             logger.rank_zero_warning("Parameter `device` would be ignored when you are using `paddle.distributed.launch` to pull "
                            "up your script. And we will directly get the local device via environment variables.", once=True)

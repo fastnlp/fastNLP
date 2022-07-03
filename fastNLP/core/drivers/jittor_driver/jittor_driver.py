@@ -55,7 +55,7 @@ class JittorDriver(Driver):
     :param fp16: 是否开启混合精度训练;
     :param jittor_kwargs:
     """
-    def __init__(self, model, fp16: bool = False, jittor_kwargs: Dict = {}, **kwargs):
+    def __init__(self, model, fp16: bool = False, jittor_kwargs: Dict = None, **kwargs):
         if not isinstance(model, Module):
             raise ValueError(f"Parameter `model` can not be `{type(model)}` in `JittorDriver`, it should be exactly "
                              f"`jittor.Module` type.")
@@ -67,7 +67,7 @@ class JittorDriver(Driver):
             jt.flags.auto_mixed_precision_level = 0
         self.fp16 = fp16
         self._auto_cast = nullcontext
-        self._jittor_kwargs = jittor_kwargs
+        self._jittor_kwargs = jittor_kwargs if jittor_kwargs is not None else {}
 
         # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
         self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)

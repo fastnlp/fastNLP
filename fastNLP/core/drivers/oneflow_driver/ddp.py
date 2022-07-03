@@ -46,7 +46,7 @@ class OneflowDDPDriver(OneflowDriver):
         任何当前有多少台机器的信息；
 
     :param model: 传入给 ``Trainer`` 的 ``model`` 参数；
-    :param parallel_device: 该参数无效，**FastNLP** 会自动获取当前进程的设备；
+    :param parallel_device: 该参数无效，**fastNLP** 会自动获取当前进程的设备；
     :param fp16: 是否开启 fp16 训练；目前该参数无效；
     :param oneflow_kwargs: 
         * *ddp_kwargs* -- 用于 ``DistributedDataParallel`` 的其它参数，详情可查阅 **oneflow** 的官方文档；
@@ -57,7 +57,7 @@ class OneflowDDPDriver(OneflowDriver):
             model,
             parallel_device: Optional["oneflow.device"],
             fp16: bool = False,
-            oneflow_kwargs: Dict = {},
+            oneflow_kwargs: Dict = None,
             **kwargs
     ):
 

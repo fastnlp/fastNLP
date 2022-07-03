@@ -51,11 +51,11 @@ class TorchDriver(Driver):
     :param fp16: 是否开启混合精度训练;
     :param torch_kwargs:
     """
-    def __init__(self, model, fp16: Optional[bool] = False, torch_kwargs: Dict = {}, **kwargs):
+    def __init__(self, model, fp16: Optional[bool] = False, torch_kwargs: Dict = None, **kwargs):
         super(TorchDriver, self).__init__(model)
 
         """ 进行 fp16 的设置 """
-        self._torch_kwargs = torch_kwargs
+        self._torch_kwargs = torch_kwargs if torch_kwargs is not None else {}
 
         # 因为 ddp 和 single_device 的混合精度训练的设置是一样的，因此可以统一抽象到这里；
         self.fp16 = fp16

@@ -70,13 +70,14 @@ class PaddleDriver(Driver):
     :param paddle_kwargs:
 
     """
-    def __init__(self, model: "paddle.nn.Layer", fp16: Optional[bool] = False, paddle_kwrags: Dict = {}, **kwargs):
+    def __init__(self, model: "paddle.nn.Layer", fp16: Optional[bool] = False, paddle_kwargs: Dict = None, **kwargs):
         if not isinstance(model, paddle.nn.Layer):
             raise ValueError(f"Parameter `model` can not be `{type(model)}` in `PaddleDriver`, it should be exactly "
                             f"`paddle.nn.Layer` type.")
 
         super(PaddleDriver, self).__init__(model)
         self.fp16 = fp16
+        self._paddle_kwargs = paddle_kwargs if paddle_kwargs is not None else {}
 
         # scaler的参数
         self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not fp16)

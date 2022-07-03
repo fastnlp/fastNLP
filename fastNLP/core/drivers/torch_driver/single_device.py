@@ -41,7 +41,7 @@ class TorchSingleDriver(TorchDriver):
         * *gradscaler_kwargs* -- 用于 fp16=True 时，提供给 ``torch.amp.cuda.GradScaler`` 的参数;
     """
 
-    def __init__(self, model, device: "torch.device", fp16: bool = False, torch_kwargs: Dict = {}, **kwargs):
+    def __init__(self, model, device: "torch.device", fp16: bool = False, torch_kwargs: Dict = None, **kwargs):
         if isinstance(model, DistributedDataParallel):
             raise ValueError("`DistributedDataParallel` is not supported in `TorchSingleDriver`")
 

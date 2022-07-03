@@ -48,11 +48,11 @@ class OneflowDriver(Driver):
         您可以在使用 ``OneflowSingleDriver`` 和 ``OneflowDDPDriver`` 时使用 ``OneflowDriver`` 提供的接口；
 
     """
-    def __init__(self, model, fp16: Optional[bool] = False, oneflow_kwargs: Dict = {}, **kwargs):
+    def __init__(self, model, fp16: Optional[bool] = False, oneflow_kwargs: Dict = None, **kwargs):
         super(OneflowDriver, self).__init__(model)
 
         """ 进行 fp16 的设置 """
-        self._oneflow_kwargs = oneflow_kwargs
+        self._oneflow_kwargs = oneflow_kwargs if oneflow_kwargs is not None else {}
 
         self.fp16 = fp16
         if fp16:
