@@ -16,10 +16,10 @@ from fastNLP.core.dataset import Instance
 
 def is_jittor_module(model) -> bool:
     """
-    判断传入的 ``model`` 是否是 :class:`jittor.Module` 类型
+    判断传入的 ``model`` 是否是 :class:`jittor.Module` 类型。
 
-    :param model: 模型；
-    :return: 当前模型是否为 ``jittor`` 的模型；
+    :param model:
+    :return: 当前模型是否为 ``jittor`` 的模型
     """
     try:
         return isinstance(model, jt.Module)
@@ -28,10 +28,10 @@ def is_jittor_module(model) -> bool:
 
 def is_jittor_dataset(dataset) -> bool:
     """
-    判断传入的 ``dataset`` 是否是 :class:`jittor.dataset.Dataset` 类型
+    判断传入的 ``dataset`` 是否是 :class:`jittor.dataset.Dataset` 类型。
 
-    :param dataset: 数据集；
-    :return: 当前 ``dataset`` 是否为 ``jittor`` 的数据集类型；
+    :param dataset:
+    :return: 当前 ``dataset`` 是否为 ``jittor`` 的数据集类型
     """
     try:
         if isinstance(dataset, jt.dataset.Dataset):
@@ -44,7 +44,7 @@ def is_jittor_dataset(dataset) -> bool:
 
 def jittor_collate_wraps(func, auto_collator: Callable):
     """
-    对 ``jittor`` 的 ``collate_fn`` 进行 ``wrap`` 封装,。如果数据集为 ``mapping`` 类型，那么采用 ``auto_collator`` ，
+    对 ``jittor`` 的 ``collate_fn`` 进行 wrap 封装,。如果数据集为 :class:`Mapping` 类型，那么采用 ``auto_collator`` ，
     否则还是采用 ``jittor`` 的 ``collate_batch``。
 
     :param func:

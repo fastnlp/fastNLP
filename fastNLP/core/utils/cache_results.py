@@ -183,9 +183,9 @@ def cal_fn_hash_code(fn: Optional[Callable] = None, fn_kwargs: Optional[dict] = 
     return hasher.hexdigest()
 
 
-def cache_results(_cache_fp, _hash_param=True, _refresh=False, _verbose=1, _check_hash=True):
+def cache_results(_cache_fp: str, _hash_param: bool = True, _refresh: bool = False, _verbose: int = 1, _check_hash: bool = True):
     r"""
-    cache_results是fastNLP中用于cache数据的装饰器。通过下面的例子看一下如何使用::
+    :func:`cache_results` 是 **fastNLP** 中用于缓存数据的装饰器。通过下面的例子看一下如何使用::
 
         import time
         import numpy as np
@@ -220,19 +220,20 @@ def cache_results(_cache_fp, _hash_param=True, _refresh=False, _verbose=1, _chec
         # res = [1 8 2 5 1]
         # 2.0086121559143066
 
-    可以看到第二次运行的时候，只用了0.0001s左右，是由于第二次运行将直接从cache.pkl这个文件读取数据，而不会经过再次预处理。
-    如果在函数加上了装饰器@cache_results()，则函数会增加五个参数[_cache_fp, _hash_param, _refresh, _verbose,
-    _check_hash]。上面的例子即为使用_cache_fp的情况，这五个参数不会传入到被装饰函数中，当然被装饰函数参数名也不能包含这五个名称。
+    可以看到第二次运行的时候，只用了 0.0001s 左右，这是由于第二次运行将直接从cache.pkl这个文件读取数据，而不会经过再次预处理。
+    如果在函数加上了装饰器 ``@cache_results()``，则函数会增加五个参数 ``[_cache_fp, _hash_param, _refresh, _verbose,
+    _check_hash]``。上面的例子即为使用_cache_fp的情况，这五个参数不会传入到被装饰函数中，当然被装饰函数参数名也不能包含这五个名称。
 
-    :param str _cache_fp: 将返回结果缓存到什么位置;或从什么位置读取缓存。如果为None，cache_results没有任何效用，除非在
-        函数调用的时候传入 _cache_fp 这个参数。保存文件的名称会受到
-    :param bool _hash_param: 是否将传入给被装饰函数的 parameter 进行 str 之后的 hash 结果加入到 _cache_fp 中，这样每次函数的
+    :param _cache_fp: 将返回结果缓存到什么位置;或从什么位置读取缓存。如果为 ``None`` ，cache_results 没有任何效用，除非在
+        函数调用的时候传入 _cache_fp 这个参数。实际保存的文件名会受到 ``_hash_param`` 参数的影响，例如传入的名称是 **"caches/cache.pkl"**，
+        实际保存的文件名会是 **"caches/{hash_param_result}_cache.pkl"**。
+    :param _hash_param: 是否将传入给被装饰函数的 parameter 进行 :func:`str` 之后的 hash 结果加入到 ``_cache_fp`` 中，这样每次函数的
         parameter 改变的时候，cache 文件就自动改变了。
-    :param bool _refresh: 强制重新生成新的 cache 。
-    :param int _verbose: 是否打印cache的信息。
-    :param bool _check_hash: 如果为 True 将尝试对比修饰的函数的源码以及该函数内部调用的函数的源码的hash值。如果发现保存时的hash值
-        与当前的hash值有差异，会报warning。但该warning可能出现实质上并不影响结果的误报（例如增删空白行）；且在修改不涉及源码时，虽然
-        该修改对结果有影响，但无法做出warning。
+    :param _refresh: 强制重新生成新的 cache 。
+    :param _verbose: 是否打印 cache 的信息。
+    :param _check_hash: 如果为 ``True`` 将尝试对比修饰的函数的源码以及该函数内部调用的函数的源码的 hash 值。如果发现保存时的 hash 值
+        与当前的 hash 值有差异，会报 warning 。但该 warning 可能出现实质上并不影响结果的误报（例如增删空白行）；且在修改不涉及源码时，虽然
+        该修改对结果有影响，但无法做出 warning。
     :return:
     """
 

@@ -42,8 +42,8 @@ def _convert_data_device(device: Union[str, int]) -> str:
 
         在分布式单进程仅支持单卡的情况下中，这个函数实际等同于直接转换为 ``gpu:0`` 返回。
 
-    :param device: 未转化的设备；
-    :return: 转化后的设备，格式为 ``gpu:x``；
+    :param device: 未转化的设备
+    :return: 转化后的设备，格式为 ``gpu:x``
     """
     try:
         user_visible_devices = os.getenv(USER_CUDA_VISIBLE_DEVICES)
@@ -65,8 +65,8 @@ def _convert_data_device(device: Union[str, int]) -> str:
 def paddle_to(data: "paddle.Tensor", device: Union[str, int, 'paddle.fluid.core_avx.Place',
                                                    'paddle.CPUPlace', 'paddle.CUDAPlace']) -> "paddle.Tensor":
     """
-    将 ``data`` 迁移到指定的 ``device`` 上。``paddle.Tensor`` 没有类似 ``torch.Tensor`` 的 ``to`` 函数，
-    该函数只是集成了 :func:`paddle.Tensor.cpu` 和 :func:`paddle.Tensor.cuda` 两个函数。
+    将 ``data`` 迁移到指定的 ``device`` 上。:class:`paddle.Tensor` 没有类似 :meth:`torch.Tensor.to` 的函数来迁移张量，
+    因此该函数只是集成了 :func:`paddle.Tensor.cpu` 和 :func:`paddle.Tensor.cuda` 两个函数。
 
     :param data: 要迁移的张量；
     :param device: 目标设备，可以是 ``str`` 或 ``int`` 及 **paddle** 自己的 :class:`paddle.fluid.core_avx.Place`、

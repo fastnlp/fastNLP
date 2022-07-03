@@ -7,7 +7,7 @@ if _NEED_IMPORT_ONEFLOW:
     import oneflow
 
 __all__ = [
-    'get_oneflow_device'
+    'get_oneflow_device',
     'oneflow_move_data_to_device',
     'is_oneflow_module',
     'is_in_oneflow_dist',
@@ -32,11 +32,11 @@ def get_oneflow_device(device):
 
 def oneflow_move_data_to_device(batch: Any, device: Optional[Union[str, "oneflow.device"]] = None) -> Any:
     r"""
-    在 **oneflow** 中将数据集合 ``batch`` 传输到给定设备。任何定义方法 ``to(device)`` 的对象都将被移动并且集合中的所有其他对象将保持不变；
+    在 **oneflow** 中将数据集合 ``batch`` 传输到给定设备。
 
-    :param batch: 需要迁移的数据；
-    :param device: 数据应当迁移到的设备；当该参数的值为 ``None`` 时则不执行任何操作；
-    :return: 迁移到新设备上的数据集合；
+    :param batch: 需要迁移的数据
+    :param device: 数据应当迁移到的设备；当该参数的值为 ``None`` 时则不执行任何操作
+    :return: 迁移到新设备上的数据集合
     """
     if device is None:
         return batch
@@ -52,10 +52,10 @@ def oneflow_move_data_to_device(batch: Any, device: Optional[Union[str, "oneflow
 
 def is_oneflow_module(model) -> bool:
     """
-    判断传入的 ``model`` 是否是 :class:`oneflow.nn.Module` 类型
+    判断传入的 ``model`` 是否是 :class:`oneflow.nn.Module` 类型。
 
-    :param model: 模型；
-    :return: 当前模型是否为 ``oneflow`` 的模型；
+    :param model:
+    :return: 当前模型是否为 ``oneflow`` 的模型
     """
     try:
         return isinstance(model, oneflow.nn.Module)

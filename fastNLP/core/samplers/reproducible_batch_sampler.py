@@ -1,3 +1,14 @@
+"""
+:class:`ReproducibleBatchSampler` 是 **fastNLP** 提供的一种特殊 BatchSampler，它可以记录采样过程中每一次采样和 epoch 的信息，
+方便在保存-加载后能够从上一次采样结束的地方继续进行采样，实现 **断点重训** 。
+
+.. note::
+
+    DataLoader 中只要存在 :class:`~fastNLP.core.samplers.reproducible_sampler.ReproducibleSampler` 或 :class:`ReproducibleBatchSampler`
+    中的一个便可以实现断点重训复现的功能。
+
+"""
+
 __all__ = [
     'BucketedBatchSampler',
     "ReproduceBatchSampler",
@@ -19,6 +30,12 @@ from abc import abstractmethod
 
 
 class ReproducibleBatchSampler:
+    """
+    **可复现**的 BatchSampler 对象。
+
+    注意所有继承 :class:`ReproducibleBatchSampler` 的类的 :meth:`__init__` 方法中都需要加入参数 `**kwargs`，用来使我们再断点重训时重新实例化这个 BatchSampler
+    注意，所有 :meth:`__init__` 中初始化的变量，都不能含有 ``_`` 下横线作为开头；所有不在 :meth:`__init__` 中设置的变量都必须以下横线开头。
+    """
     def __init__(self, **kwargs):
         self.num_replicas = 1
 
@@ -57,13 +74,13 @@ class ReproducibleBatchSampler:
 
 class ReproduceBatchSampler(ReproducibleBatchSampler):
     """
-    可以使得 batch_sampler 对象状态恢复的 wrapper 。
+    可以使得 ``batch_sampler`` 对象状态恢复的 wrapper 。
 
-    :param batch_sampler: 可迭代出 数字 或 数字列表 的可迭代对象。ReproduceBatchSampler 将首先遍历一边该对象，然后将迭代
-        出来的序号暂存起来，使用时按照 batch_size 的 batch 大小吐出序号列表。
-    :param batch_size: 每个 batch 的大小是多少。
-    :param drop_last: 如果最后一个 batch 无法构成 batch_size 那么多个 sample ，是否丢掉。
-    :param kwargs: fastNLP 内部使用。
+    :param batch_sampler: 可迭代出 **数字** 或 **数字列表** 的可迭代对象。:class:`ReproduceBatchSampler` 将首先遍历一边该对象，然后将迭代
+        出来的序号暂存起来，使用时按照 ``batch_size`` 的 batch 大小吐出序号列表。
+    :param batch_size: 每个 batch 的大小是多少
+    :param drop_last: 如果最后一个 batch 无法构成 ``batch_size`` 个 sample ，是否丢掉
+    :param kwargs: fastNLP 内部使用的参数
     """
     def __init__(self, batch_sampler, batch_size: int, drop_last: bool, **kwargs):
         super().__init__()
@@ -162,12 +179,12 @@ class RandomBatchSampler(ReproducibleBatchSampler):
     """
     随机分 batch 的 batch_sampler 。
 
-    :param dataset: 实现了 __len__ 方法的数据容器。
+    :param dataset: 实现了 __len__ 方法的数据容器
     :param batch_size: 每个 batch 的大小
-    :param shuffle: 如果为 True，将不进行 shuffle，实际上数据会以从长到短的方式输出。
-    :param drop_last: 如果最后一个 batch 的 sample 数量无法凑齐 batch_size 这么多，是否需要丢掉。
+    :param shuffle: 如果为 ``True``，将不进行打乱操作，实际上数据会以从长到短的方式输出
+    :param drop_last: 如果最后一个 batch 无法构成 batch_size 个 sample ，是否丢掉
     :param seed: 设置的随机数种子
-    :param kwargs: fastNLP 保留使用
+    :param kwargs: fastNLP 内部使用的参数
     """
     def __init__(self, dataset, batch_size:int = 32, shuffle: bool = True,
                  drop_last: bool = False, seed: int = 0, **kwargs):
@@ -195,6 +212,15 @@ class RandomBatchSampler(ReproducibleBatchSampler):
         self.old_batch_size = kwargs.get('old_batch_size', self.batch_size)
 
     def set_distributed(self, num_replicas, rank, pad=True):
+        """
+        进行分布式的相关设置，应当在初始化该 BatchSampler 本身后立即被调用。
+
+        :param num_replicas: 分布式训练中的进程总数
+        :param rank: 当前进程的 ``global_rank``
+        :param pad: 如果 sample 数量不整除 ``num_replicas`` 的时候，要不要 pad 一下，使得最终使得每个进程上
+            的 sample 数量是完全一致的
+        :return: 自身
+        """
         assert self.during_iter is False, "Cannot set the sampler to be distributed when it is " \
                                           "during an unfinished iteration."
         assert num_replicas > 0 and isinstance(num_replicas, int)
@@ -266,14 +292,14 @@ class RandomBatchSampler(ReproducibleBatchSampler):
         if self.epoch < 0:  # 防止用户没有修改epoch，导致每个epoch都一样了
             self.epoch -= 1
 
-    def batchify(self, indices, batch_size, seed):
+    def batchify(self, indices, batch_size, seed) -> List[List[int]]:
         """
-        将 indices 分为 batches
+        将 ``indices`` 分为 batches
 
-        :param sorted_indices: List[int]
+        :param indices: List[int]
         :param batch_size: int
         :param seed: int
-        :return:  List[List[int]]
+        :return:
         """
         # 实际的 bucket 大小
         rng = np.random.default_rng(abs(seed))
@@ -299,19 +325,15 @@ class RandomBatchSampler(ReproducibleBatchSampler):
     @property
     def total_size(self):
         """
-        这个变量代表的含义是当前这个sampler会最终产生出的index数量（包括了其它rank的），因为replica和pad的原因，这个值可能等于、
-        大于或者小于len(dataset)
-
-        :return:
+        当前 BatchSampler 会最终产生出的 index 数量（包括了其它 rank 的），因为 ``replica`` 和 ``pad`` 的原因，这个值可能等于、
+        大于或者小于 ``len(dataset)``。
         """
         return self.num_consumed_samples + self.num_replicas*self.num_left_samples
 
     @property
     def num_left_samples(self):
         """
-        返回当前 iteration 还有多少个 sample 结束，表示的是当前 rank 的还剩多少。
-
-        :return:
+        当前迭代还有多少个 sample 结束，表示的是 **当前 rank** 的还剩多少。
         """
         num_consumed_samples = self.num_consumed_samples
         return math.ceil((self.num_samples - num_consumed_samples) / self.num_replicas) if \
@@ -320,9 +342,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
     @property
     def num_samples(self):
         """
-        返回样本的总数
-
-        :return:
+        样本的总数
         """
         total_len = getattr(self.dataset, 'total_len', None)
         if not isinstance(total_len, int):
@@ -377,18 +397,19 @@ class RandomBatchSampler(ReproducibleBatchSampler):
 
 class BucketedBatchSampler(ReproducibleBatchSampler):
     """
-    首先按照 ``sample`` 的长度排序，然后按照 batch_size*num_batch_per_bucket 为一个桶的大小，``sample`` 只会在这个桶内进行组
+    首先按照 ``sample`` 的长度排序，然后按照 *batch_size*num_batch_per_bucket* 为一个桶的大小，``sample`` 只会在这个桶内进行组
     合，这样每个 ``batch`` 中的 ``padding`` 数量会比较少 （因为桶内的数据的长度都接近）。
 
     :param dataset: 实现了 __len__ 方法的数据容器。
     :param length: 每条数据的长度。
 
         * 为 ``List[int]`` 时
-         应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
+          应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
         * 为 ``str`` 时
-         仅当传入的 ``dataset`` 是 :class:`~fastNLP.DataSet` 时，允许传入 `str` ，该 `str` 将被认为是 ``dataset`` 中的
+          仅当传入的 ``dataset`` 是 :class:`~fastNLP.DataSet` 时，允许传入 `str` ，该 `str` 将被认为是 ``dataset`` 中的
           ``field`` 。若 field 中的元素为 ``int``，则认为该值是 sample 的长度；若不为 ``int`` ，则尝试使用 ``len`` 方法
           获取该 ``field`` 中每个元素的长度。
+
     :param batch_size: 每个 batch 的大小
     :param num_batch_per_bucket: 多少个 ``batch`` 组成一个桶，数据只会在一个桶内进行 ``shuffle`` 。
     :param shuffle: 如果为 True，将不进行 ``shuffle``，实际上数据会以从长到短的方式输出。
@@ -440,6 +461,15 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
         self.old_num_batch_per_bucket = kwargs.get('old_num_batch_per_bucket', self.num_batch_per_bucket)
 
     def set_distributed(self, num_replicas, rank, pad=True):
+        """
+        进行分布式的相关设置，应当在初始化该 BatchSampler 本身后立即被调用。
+
+        :param num_replicas: 分布式训练中的进程总数
+        :param rank: 当前进程的 ``global_rank``
+        :param pad: 如果 sample 数量不整除 ``num_replicas`` 的时候，要不要 pad 一下，使得最终使得每个进程上
+            的 sample 数量是完全一致的
+        :return:
+        """
         assert self.during_iter is False, "Cannot set the sampler to be distributed when it is " \
                                            "during an unfinished iteration."
         assert num_replicas > 0 and isinstance(num_replicas, int)
@@ -462,19 +492,15 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
     @property
     def total_size(self):
         """
-        这个变量代表的含义是当前这个sampler会最终产生出的index数量（包括了其它rank的），因为replica和pad的原因，这个值可能等于、
-        大于或者小于len(dataset)
-
-        :return:
+        当前 BatchSampler 会最终产生出的 index 数量（包括了其它 rank 的），因为 ``replica`` 和 ``pad`` 的原因，这个值可能等于、
+        大于或者小于 ``len(dataset)``。
         """
         return self.num_consumed_samples + self.num_replicas*self.num_left_samples
 
     @property
     def num_left_samples(self):
         """
-        返回当前 iteration 还有多少个 sample 结束，表示的是当前 rank 的还剩多少。
-
-        :return:
+        当前迭代还有多少个 sample 结束，表示的是 **当前 rank** 的还剩多少。
         """
         num_consumed_samples = self.num_consumed_samples
         return math.ceil((self.num_samples - num_consumed_samples) / self.num_replicas) if \
@@ -483,9 +509,7 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
     @property
     def num_samples(self):
         """
-        返回样本的总数
-
-        :return:
+        样本的总数
         """
         total_len = getattr(self.dataset, 'total_len', None)
         if not isinstance(total_len, int):
@@ -572,15 +596,15 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
         if self.epoch < 0:  # 防止用户没有修改epoch，导致每个epoch都一样了
             self.epoch -= 1
 
-    def bucketerize(self, sorted_indices, batch_size, num_batch_per_bucket, seed):
+    def bucketerize(self, sorted_indices, batch_size, num_batch_per_bucket, seed) -> List[List[int]]:
         """
-        将 indices 分桶
+        将 ``indices`` 分桶
 
         :param sorted_indices: List[int]
         :param batch_size: int
         :param num_batch_per_bucket: int
         :param seed: int
-        :return:  List[List[int]]
+        :return:
         """
         # 实际的 bucket 大小
         bucket_size = min(len(sorted_indices), batch_size * num_batch_per_bucket)

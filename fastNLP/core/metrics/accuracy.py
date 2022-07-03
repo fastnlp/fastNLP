@@ -14,24 +14,25 @@ from fastNLP.core.log import logger
 
 
 class Accuracy(Metric):
-    def __init__(self, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = None):
-        """
-        计算 准确率 的 metric 。
+    """
+    计算 准确率 的 metric 。
 
-        :param backend: 目前支持四种类型的backend, ['auto', 'torch', 'paddle', 'jittor']。其中 auto 表示根据实际调用 Metric.update()
-            函数时传入的参数决定具体的 backend ，一般情况下直接使用 'auto' 即可。
-        :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到 metric，
-            当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 Evaluator 中根据 sampler 是否使用分布式进行自动设置。
-        """
+    :param backend: 目前支持五种类型的backend, ``['auto', 'torch', 'paddle', 'jittor', 'oneflow']``。其中 ``'auto'`` 表示根据实际调用
+        :meth:`update` 函数时传入的参数决定具体的 backend ，一般情况下直接使用 ``'auto'`` 即可。
+    :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到 metric，
+        当 ``backend`` 不支持分布式时，该参数无意义。如果为 ``None`` ，将在 :class:`~fastNLP.core.controllers.Evaluator` 
+        中根据 ``sampler`` 是否使用分布式进行自动设置。
+    """
+    def __init__(self, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = None):
         super(Accuracy, self).__init__(backend=backend, aggregate_when_get_metric=aggregate_when_get_metric)
         self.register_element(name='correct', value=0, aggregate_method='sum', backend=backend)
         self.register_element(name='total', value=0, aggregate_method="sum", backend=backend)
 
     def get_metric(self) -> dict:
         r"""
-        get_metric 函数将根据 update 函数累计的评价指标统计量来计算最终的评价结果.
+        :meth:`get_metric` 函数将根据 :meth:`update` 函数累计的评价指标统计量来计算最终的评价结果。
 
-        :return dict evaluate_result: {"acc": float, 'total': float, 'correct': float}
+        :return: 包含以下内容的字典：``{"acc": float, 'total': float, 'correct': float}``；
         """
         evaluate_result = {'acc': round(self.correct.get_scalar() / (self.total.get_scalar() + 1e-12), 6),
                            'total': self.total.item(), 'correct': self.correct.item()}
@@ -39,14 +40,14 @@ class Accuracy(Metric):
 
     def update(self, pred, target, seq_len=None):
         r"""
-        update 函数将针对一个批次的预测结果做评价指标的累计
+        :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
 
-        :param pred: 预测的tensor, tensor的形状可以是torch.Size([B,]), torch.Size([B, n_classes]),
-                torch.Size([B, max_len]), 或者torch.Size([B, max_len, n_classes])
-        :param target: 真实值的tensor, tensor的形状可以是Element's can be: torch.Size([B,]),
-                torch.Size([B,]), torch.Size([B, max_len]), 或者torch.Size([B, max_len])
-        :param seq_len: 序列长度标记, 标记的形状可以是None, None, torch.Size([B]), 或者torch.Size([B]).
-                如果mask也被传进来的话seq_len会被忽略.
+        :param pred: 预测的 tensor, tensor 的形状可以是 ``[B,]`` 、``[B, n_classes]`` 、
+                ``[B, max_len]`` 或 ``[B, max_len, n_classes]``
+        :param target: 真实值的 tensor, tensor 的形状可以是 ``[B,]`` 、``[B,]`` 、``[B, max_len]``
+            或 ``[B, max_len]``
+        :param seq_len: 序列长度标记, 标记的形状可以是 ``None``,  或者 ``[B]`` 。
+                如果 mask 也被传进来的话 ``seq_len`` 会被忽略
         """
         # 为了兼容不同框架，我们将输入变量全部转为numpy类型来进行计算。
         pred = self.tensor2numpy(pred)
@@ -85,12 +86,11 @@ class Accuracy(Metric):
 
 class TransformersAccuracy(Accuracy):
     """
-    适配 transformers 中相关模型的 Accuracy metric 。
-
+    适配 :mod:`transformers` 中相关模型的 Accuracy metric 。
     """
     def update(self, logits, labels, attention_mask=None):
         r"""
-        update 函数将针对一个批次的预测结果做评价指标的累计
+        :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
 
         :param logits: 形状为 ``[B, n_classes]`` 或 ``[B, max_len, n_classes]`` 。
         :param labels: 形状为 ``[B, ]`` 或 ``[B, max_len]``

@@ -57,7 +57,7 @@ class Trainer(TrainerEventTrigger):
 
     :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：``["auto", "torch", "paddle", "jittor", "fairscale", "deepspeed", "oneflow"]``：
         
-        1. 值为 ``"auto"`` 时，**FastNLP** 会根据传入模型的类型自行判断使用哪一种模式；
+        1. 值为 ``"auto"`` 时，**fastNLP** 会根据传入模型的类型自行判断使用哪一种模式；
         2. 其值为 ``"torch"`` 时，表示使用 :class:`~fastNLP.core.drivers.TorchSingleDriver` 或者 :class:`~fastNLP.core.drivers.TorchDDPDriver`；
         3. 其值为 ``"paddle"`` 时，表示使用 :class:`~fastNLP.core.drivers.PaddleSingleDriver` 或者 :class:`~fastNLP.core.drivers.PaddleFleetDriver`；
         4. 其值为 ``"jittor"`` 时，表示使用 :class:`~fastNLP.core.drivers.JittorSingleDriver` 或者 :class:`~fastNLP.core.drivers.JittorMPIDriver`；

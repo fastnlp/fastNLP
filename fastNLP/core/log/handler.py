@@ -7,6 +7,7 @@ try:
 except ImportError:
     tqdm = None
 
+__all__ = []
 
 if tqdm is not None:
     class TqdmLoggingHandler(logging.Handler):

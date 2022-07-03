@@ -87,23 +87,18 @@ class Vocabulary(object):
         vocab["word"] # str to int
         vocab.to_word(5) # int to str
 
+    :param max_size: `Vocabulary` 的最大大小, 即能存储词的最大数量
+        若为 ``None`` , 则不限制大小。
+    :param min_freq: 能被记录下的词在文本中的最小出现频率, 应大于或等于 1。
+        若小于该频率, 词语将被视为 `unknown`. 若为 ``None`` , 所有文本中的词都被记录。
+    :param padding: padding的字符. 如果设置为 ``None`` ,
+        则vocabulary中不考虑padding, 也不计入词表大小，为 ``None`` 的情况多在为 label 建立 Vocabulary 的情况。
+    :param unknown: unknown的字符，所有未被记录的词在转为 :class:`int` 时将被视为 `unknown` 。
+        如果设置为 ``None`` ,则 vocabulary 中不考虑 `unknown`, 也不计入词表大小。
+        为 ``None`` 的情况多在为 labe l建立 Vocabulary 的情况
     """
-    
-    def __init__(self, max_size:int=None, min_freq:int=None, padding:str='<pad>', unknown:str='<unk>'):
-        r"""
-        :param max_size: `Vocabulary` 的最大大小, 即能存储词的最大数量
-            若为 ``None`` , 则不限制大小. Default: ``None``
-        :param min_freq: 能被记录下的词在文本中的最小出现频率, 应大于或等于 1.
-            若小于该频率, 词语将被视为 `unknown`. 若为 ``None`` , 所有文本中的词都被记录. Default: ``None``
-        :param padding: padding的字符. 如果设置为 ``None`` ,
-            则vocabulary中不考虑padding, 也不计入词表大小，为 ``None`` 的情况多在为label建立Vocabulary的情况.
-            Default: '<pad>'
-        :param unknown: unknown的字符，所有未被记录的词在转为 `int` 时将被视为unknown.
-            如果设置为 ``None`` ,则vocabulary中不考虑unknow, 也不计入词表大小.
-            为 ``None`` 的情况多在为label建立Vocabulary的情况.
-            Default: '<unk>'
 
-        """
+    def __init__(self, max_size:int=None, min_freq:int=None, padding:str='<pad>', unknown:str='<unk>'):
         self.max_size = max_size
         self.min_freq = min_freq
         self.word_count = Counter()
@@ -138,13 +133,16 @@ class Vocabulary(object):
         r"""
         依次增加序列中词在词典中的出现频率
 
-        :param word_lst: 列表形式的词语，如word_list=['I', 'am', 'a', 'Chinese']，列表中的每个词会计算出现频率并加入到词典中。
-        :param no_create_entry: 如果词语来自于非训练集建议设置为True。
-            如果为True，则不会有这个词语创建一个单独的entry，它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独
-            的entry。如果这个word来自于dev或者test，一般设置为True，如果来自与train一般设置为False。以下两种情况: 如果新
-            加入一个word，且no_create_entry为True，但这个词之前已经在Vocabulary中且并不是no_create_entry的，则还是会为这
-            个词创建一个单独的vector; 如果no_create_entry为False，但这个词之前已经在Vocabulary中且并不是no_create_entry的，
-            则这个词将认为是需要创建单独的vector的。
+        :param word_lst: 列表形式的词语，如 word_list=['I', 'am', 'a', 'Chinese']，列表中的每个词会计算出现频率并加入到词典中。
+        :param no_create_entry: 如果词语来自于非训练集建议设置为 ``True`` 。
+            
+            * 如果为 ``True`` -- 则不会有这个词语创建一个单独的 entry ，它将一直被指向 ``<UNK>`` 的表示；
+            * 如果为 ``False`` -- 为这个词创建一个单独的 entry。如果这个词来自于验证集或训练集，一般设置为True，如果来自于训练集一
+              般设置为``False``；
+              
+            有以下两种情况: 如果新加入一个 word ，且 ``no_create_entry`` 为 ``True``，但这个词之前已经在 Vocabulary 中且并不是 
+            ``no_create_entry`` 的，则还是会为这个词创建一个单独的 vector ; 如果 ``no_create_entry`` 为 ``False`` ，但这个词之
+            前已经在 Vocabulary 中且并不是 ``no_create_entry的`` ，则这个词将认为是需要创建单独的 vector 的。
 
         """
         self._add_no_create_entry(word_lst, no_create_entry)
@@ -156,13 +154,16 @@ class Vocabulary(object):
         r"""
         增加一个新词在词典中的出现频率
 
-        :param word: 要添加进字典的新词, word为一个字符串
-        :param no_create_entry: 如果词语来自于非训练集建议设置为True。
-            如果为True，则不会有这个词语创建一个单独的entry，它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独
-            的entry。如果这个word来自于dev或者test，一般设置为True，如果来自与train一般设置为False。以下两种情况: 如果新
-            加入一个word，且no_create_entry为True，但这个词之前已经在Vocabulary中且并不是no_create_entry的，则还是会为这
-            个词创建一个单独的vector; 如果no_create_entry为False，但这个词之前已经在Vocabulary中且并不是no_create_entry的，
-            则这个词将认为是需要创建单独的vector的。
+        :param word: 要添加进字典的新词， ``word`` 为一个字符串
+        :param no_create_entry: 如果词语来自于非训练集建议设置为 ``True`` 。
+            
+            * 如果为 ``True`` -- 则不会有这个词语创建一个单独的 entry ，它将一直被指向 ``<UNK>`` 的表示；
+            * 如果为 ``False`` -- 为这个词创建一个单独的 entry。如果这个词来自于验证集或训练集，一般设置为 ``True`` ，如果来自于训练集一
+              般设置为 ``False``；
+              
+            有以下两种情况: 如果新加入一个 word ，且 ``no_create_entry`` 为 ``True``，但这个词之前已经在 Vocabulary 中且并不是 
+            ``no_create_entry`` 的，则还是会为这个词创建一个单独的 vector ; 如果 ``no_create_entry`` 为 ``False`` ，但这个词之
+            前已经在 Vocabulary 中且并不是 ``no_create_entry的`` ，则这个词将认为是需要创建单独的 vector 的。
 
         """
         self._add_no_create_entry(word, no_create_entry)
@@ -173,9 +174,13 @@ class Vocabulary(object):
         r"""
         在新加入word时，检查_no_create_word的设置。
 
-        :param word: 要添加的新词或者是List类型的新词，如word='I'或者word=['I', 'am', 'a', 'Chinese']均可
-        :param no_create_entry: 如果词语来自于非训练集建议设置为True。如果为True，则不会有这个词语创建一个单独的entry，
-            它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独的entry
+        :param word: 要添加的新词或者是 :class:`List`类型的新词，如 word='I' 或者 word=['I', 'am', 'a', 'Chinese'] 均可
+        :param no_create_entry: 如果词语来自于非训练集建议设置为 ``True`` 。
+            
+            * 如果为 ``True`` -- 则不会有这个词语创建一个单独的 entry ，它将一直被指向 ``<UNK>`` 的表示；
+            * 如果为 ``False`` -- 为这个词创建一个单独的 entry。如果这个词来自于验证集或训练集，一般设置为 ``True`` ，如果来自于训练集一
+              般设置为 ``False``；
+    
         :return:
 
         """
@@ -192,12 +197,16 @@ class Vocabulary(object):
         r"""
         增加一个新词在词典中的出现频率
 
-        :param word: 要添加进字典的新词, word为一个字符串
-        :param no_create_entry: 如果词语来自于非训练集建议设置为True。如果为True，则不会有这个词语创建一个单独的entry，
-            它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独的entry。如果这个word来自于dev或者test，一般设置为True，
-            如果来自与train一般设置为False。以下两种情况: 如果新加入一个word，且no_create_entry为True，但这个词之前已经在Vocabulary
-            中且并不是no_create_entry的，则还是会为这词创建一个单独的vector; 如果no_create_entry为False，但这个词之前已经在Vocabulary
-            中且并不是no_create_entry的，则这个词将认为是需要创建单独的vector的。
+        :param word: 要添加进字典的新词， ``word`` 为一个字符串
+        :param no_create_entry: 如果词语来自于非训练集建议设置为 ``True`` 。
+            
+            * 如果为 ``True`` -- 则不会有这个词语创建一个单独的 entry ，它将一直被指向 ``<UNK>`` 的表示；
+            * 如果为 ``False`` -- 为这个词创建一个单独的 entry。如果这个词来自于验证集或训练集，一般设置为 ``True`` ，如果来自于训练集一
+              般设置为 ``False``；
+              
+            有以下两种情况: 如果新加入一个 word ，且 ``no_create_entry`` 为 ``True``，但这个词之前已经在 Vocabulary 中且并不是 
+            ``no_create_entry`` 的，则还是会为这个词创建一个单独的 vector ; 如果 ``no_create_entry`` 为 ``False`` ，但这个词之
+            前已经在 Vocabulary 中且并不是 ``no_create_entry的`` ，则这个词将认为是需要创建单独的 vector 的。
 
         """
         self.add(word, no_create_entry=no_create_entry)
@@ -207,12 +216,16 @@ class Vocabulary(object):
         r"""
         依次增加序列中词在词典中的出现频率
 
-        :param word_lst: 需要添加的新词的list序列，如word_lst=['I', 'am', 'a', 'Chinese']
-        :param no_create_entry: 如果词语来自于非训练集建议设置为True。如果为True，则不会有这个词语创建一个单独的entry，
-            它将一直被指向unk的表示; 如果为False，则为这个词创建一个单独的entry。如果这个word来自于dev或者test，一般设置为True，
-            如果来自与train一般设置为False。以下两种情况: 如果新加入一个word，且no_create_entry为True，但这个词之前已经在Vocabulary
-            中且并不是no_create_entry的，则还是会为这词创建一个单独的vector; 如果no_create_entry为False，但这个词之前已经在Vocabulary
-            中且并不是no_create_entry的，则这个词将认为是需要创建单独的vector的。
+        :param word_lst: 需要添加的新词的 list 序列，如 word_lst=['I', 'am', 'a', 'Chinese'] 。
+        :param no_create_entry: 如果词语来自于非训练集建议设置为 ``True`` 。
+            
+            * 如果为 ``True`` -- 则不会有这个词语创建一个单独的 entry ，它将一直被指向 ``<UNK>`` 的表示；
+            * 如果为 ``False`` -- 为这个词创建一个单独的 entry。如果这个词来自于验证集或训练集，一般设置为 ``True`` ，如果来自于训练集一
+              般设置为 ``False``；
+              
+            有以下两种情况: 如果新加入一个 word ，且 ``no_create_entry`` 为 ``True``，但这个词之前已经在 Vocabulary 中且并不是 
+            ``no_create_entry`` 的，则还是会为这个词创建一个单独的 vector ; 如果 ``no_create_entry`` 为 ``False`` ，但这个词之
+            前已经在 Vocabulary 中且并不是 ``no_create_entry的`` ，则这个词将认为是需要创建单独的 vector 的。
 
         """
         self.update(word_lst, no_create_entry=no_create_entry)
@@ -220,9 +233,8 @@ class Vocabulary(object):
     
     def build_vocab(self):
         r"""
-        根据已经出现的词和出现频率构建词典. 注意: 重复构建可能会改变词典的大小,
-        但已经记录在词典中的词, 不会改变对应的 `int`
-
+        根据已经出现的词和出现频率构建词典。注意：重复构建可能会改变词典的大小，
+        但已经记录在词典中的词，不会改变对应的 :class:`int`
         """
         if self._word2idx is None:
             self._word2idx = {}
@@ -295,16 +307,16 @@ class Vocabulary(object):
     @_check_build_vocab
     def index_dataset(self, *datasets, field_name:Union[List, str], new_field_name:Union[List, str, None]=None):
         r"""
-        将DataSet中对应field的词转为数字，Example::
+        将 ``DataSet`` 中对应 field 的词转为数字，例如::
 
             # remember to use `field_name`
             vocab.index_dataset(train_data, dev_data, test_data, field_name='words')
 
-        :param datasets: 其类型为:~fastNLP.core.Dataset或者List[~fastNLP.core.Dataset] 需要转index的一个或多个数据集
-        :param field_name: 需要转index的field, 若有多个 DataSet, 每个DataSet都必须有此 field.
-            目前支持 ``str`` , ``List[str]``
-        :param list,str new_field_name: 保存结果的field_name. 若为 ``None`` , 将覆盖原field.
-            Default: ``None``.
+        :param datasets: 其类型为 :class:`~fastNLP.core.dataset.DataSet` 或者 :class:`List` [ :class:`~fastNLP.core.dataset.DataSet` ]，
+            即需要处理的一个或多个数据集
+        :param field_name: 需要转为 index 的 field, 若有多个 DataSet, 每个 DataSet 都必须有此 field.
+            目前支持 :class:`str` , :class:`List` [ :class:`str` ]
+        :param new_field_name: 保存结果的 field_name。 若为 ``None`` , 将覆盖原 field。
         """
         
         def index_instance(field):
@@ -359,17 +371,18 @@ class Vocabulary(object):
             # remember to use `field_name`
             vocab.from_dataset(train_data1, train_data2, field_name='words', no_create_entry_dataset=[test_data1, test_data2])
 
-        :param 其类型为:~fastNLP.core.Dataset或者List[~fastNLP.core.Dataset] 需要转index的一个或多个数据集
-        :param field_name: 构建词典所使用的 field(s), 支持一个或多个field，若有多个 DataSet, 每个DataSet都必须有这些field.
+        :param datasets: 其类型为 :class:`~fastNLP.core.dataset.DataSet` 或者 List[:class:`~fastNLP.core.dataset.DataSet`]。
+        :param field_name: 构建词典所使用的 field(s), 支持一个或多个 field，若有多个 DataSet, 每个 DataSet 都必须有这些 field.
             目前支持的field结构: ``str`` , ``List[str]``
-        :param no_create_entry_dataset: 可以传入DataSet, List[DataSet]或者None(默认), 建议直接将非训练数据都传入到这个参数。该选项用在接下来的模型会使用pretrain
-            的embedding(包括glove, word2vec, elmo与bert)且会finetune的情况。如果仅使用来自于train的数据建立vocabulary，会导致test与dev
-            中的数据无法充分利用到来自于预训练embedding的信息，所以在建立词表的时候将test与dev考虑进来会使得最终的结果更好。
-            如果一个词出现在了train中，但是没在预训练模型中，embedding会为它用unk初始化，但它是单独的一个vector，如果
-            finetune embedding的话，这个词在更新之后可能会有更好的表示; 而如果这个词仅出现在了dev或test中，那么就不能为它们单独建立vector，
-            而应该让它指向unk这个vector的值。所以只位于no_create_entry_dataset中的token，将首先从预训练的词表中寻找它的表示，
-            如果找到了，就使用该表示; 如果没有找到，则认为该词的表示应该为unk的表示。
-        :return Vocabulary自身
+        :param no_create_entry_dataset: 可以传入 :class:`~fastNLP.core.dataset.DataSet`, :class:`List` [ :class:`~fastNLP.core.dataset.DataSet` ] 或者 
+            ``None`` （默认），建议直接将非训练数据都传入到这个参数。该选项用于接下来的模型会使用预训练的 embedding （包括 ``glove``, ``word2vec`` ,
+            ``elmo`` 与 ``bert`` ）且会 finetune 的情况。如果仅使用来自于训练集的数据建立词表，会导致测试集与验证集中的数据无法充分利用到来自于预训练
+            embedding 的信息，所以在建立词表的时候将测试集与验证集考虑进来会使得最终的结果更好。
+            如果一个词出现在了训练集中，但是没在预训练模型中， embedding 会为它用 ``<UNK>`` 初始化；但如果它是单独的一个 vector ，并且 finetune embedding
+            的话，这个词在更新之后可能会有更好的表示；而如果这个词仅出现在了验证集或者测试集中，那么就不能为它们单独建立 vector，而应该让它指向 ``<UNK>`` 这个
+            vector 的值。所以只位于 ``no_create_entry_dataset`` 中的 token 将首先从预训练的词表中寻找它的表示，如果找到了，就使用该表示; 如果没有找到，则认
+            为该词的表示应该为 ``<UNK>`` 的表示。
+        :return: Vocabulary 自身
 
         """
         if isinstance(field_name, str):
@@ -425,14 +438,14 @@ class Vocabulary(object):
     
     def to_index(self, w:str):
         r"""
-        将词转为数字. 若词不再词典中被记录, 将视为 unknown, 若 ``unknown=None`` , 将抛出 ``ValueError`` ::
+        将词转为数字。 若词不在词典中被记录, 将视为 `unknown`, 若 ``unknown=None`` , 将抛出 ``ValueError`` ::
 
             index = vocab.to_index('abc')
             # equals to
             index = vocab['abc']
 
         :param w: 需要输入的词语
-        :return 词语w对应的int类型的index
+        :return: 词语 ``w`` 对应的 :class:`int`类型的 index
         """
         return self.__getitem__(w)
     
@@ -440,7 +453,7 @@ class Vocabulary(object):
     @_check_build_vocab
     def unknown_idx(self):
         r"""
-        获得unknown 对应的数字.
+        获得 ``unknown`` 对应的数字.
         """
         if self.unknown is None:
             return None
@@ -450,7 +463,7 @@ class Vocabulary(object):
     @_check_build_vocab
     def padding_idx(self):
         r"""
-        获得padding 对应的数字
+        获得 ``padding`` 对应的数字
         """
         if self.padding is None:
             return None
@@ -461,16 +474,16 @@ class Vocabulary(object):
         r"""
         给定一个数字, 将其转为对应的词.
 
-        :param int idx: the index
-        :return str word: the word
+        :param idx:
+        :return: ``idx`` 对应的词
         """
         return self._idx2word[idx]
     
     def clear(self):
         r"""
-        删除Vocabulary中的词表数据。相当于重新初始化一下。
+        删除 :class:Vocabulary`` 中的词表数据。相当于重新初始化一下。
 
-        :return:
+        :return: 自身
         """
         self.word_count.clear()
         self._word2idx = None
@@ -481,7 +494,7 @@ class Vocabulary(object):
     
     def __getstate__(self):
         r"""
-        用来从pickle中加载data
+        用来从 pickle 中加载 data
 
         """
         len(self)  # make sure vocab has been built
@@ -492,7 +505,7 @@ class Vocabulary(object):
     
     def __setstate__(self, state):
         r"""
-        支持pickle的保存，保存到pickle的data state
+        支持 pickle 的保存，保存到 pickle 的 data state
 
         """
         self.__dict__.update(state)
@@ -507,11 +520,11 @@ class Vocabulary(object):
         for index in range(len(self._word2idx)):
             yield self.to_word(index), index
 
-    def save(self, filepath: [str, io.StringIO]):
+    def save(self, filepath: Union[str, io.StringIO]):
         r"""
-        :param filepath: Vocabulary的储存路径
-        :return:
+        保存当前词表。
 
+        :param filepath: 词表储存路径
         """
         if isinstance(filepath, io.IOBase):
             assert filepath.writable()
@@ -547,8 +560,8 @@ class Vocabulary(object):
         r"""
         从文件路径中加载数据
 
-        :param  filepath: Vocabulary的读取路径
-        :return: Vocabulary
+        :param filepath: 词表的读取路径
+        :return: 读取的 :class:`Vocabulary`
         """
         if isinstance(filepath, io.IOBase):
             assert filepath.writable()
