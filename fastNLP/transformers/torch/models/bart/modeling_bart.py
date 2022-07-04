@@ -513,7 +513,7 @@ class BartPretrainedModel(PreTrainedModel):
 
 class PretrainedBartModel(BartPretrainedModel):
     def __init_subclass__(self):
-        logger.warn(
+        logger.warning(
             "The class `PretrainedBartModel` has been depreciated, please use `BartPretrainedModel` instead.",
             FutureWarning,
         )

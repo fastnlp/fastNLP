@@ -4,11 +4,12 @@ from fastNLP.core.callbacks import CallbackManager
 from .state import TrainerState
 from fastNLP.core.utils.utils import _check_valid_parameters_number
 
+__all__ = []
 
 class TrainerEventTrigger:
     r"""
-    为了避免在训练流程中调用 callback 函数中写成类似 'trainer.callback_manager.on_train_begin' 的形式，我们选择单独抽象为 'Trainer'
-    抽象一层，然后一些特殊的操作可以在这里进行，例如我们通过 `on_validate_end` 来通知所有的 'CheckpointCallback' 实例在当前的 step 后保存
+    为了避免在训练流程中调用 callback 函数中写成类似 `'trainer.callback_manager.on_train_begin'` 的形式，我们选择单独为 ``Trainer``
+    抽象一层，然后一些特殊的操作可以在这里进行，例如我们通过 :meth:`on_validate_end` 来通知所有的 ``CheckpointCallback`` 实例在当前的 step 后保存
     模型。
     """
     callback_manager: CallbackManager
@@ -138,7 +139,7 @@ def check_evaluate_every(evaluate_every):
 
     ``evaluate_every`` 的使用详见 ``Trainer`` 的 ``evaluate_every`` 参数；
 
-    主要在于当参数 ``evaluate_every`` 是一个 callable 的函数时，需要保证其参数的正确性；
+    主要在于当参数 ``evaluate_every`` 是一个 Callable 的函数时，需要保证其参数的正确性；
     """
     if not callable(evaluate_every) and (not isinstance(evaluate_every, int) or evaluate_every == 0):
         raise ValueError("Parameter 'evaluate_every' should be set to 'int' type and either < 0 or > 0.")

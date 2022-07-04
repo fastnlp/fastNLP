@@ -78,13 +78,12 @@ def fill_array(batch_field:List, padded_batch:np.ndarray):
 
 def get_padded_numpy_array(batch_field: List, dtype=None, pad_val=0) -> np.ndarray:
     """
-    例如:
-        [[1,2], [3]] -> np.array([[1, 2], [3, 0]])
+    将输入 pad 为 :class:`numpy.arraay` 类型，如：``[[1,2], [3]] -> np.array([[1, 2], [3, 0]])``
 
-    :param batch_field: 需要 pad 的对象。需要保证应该是可以进行 pad 的。支持 1d（多为句子长度）/2d（多为文本序列）/3d（多为字符序列）
-        /4d（多为图片）。
-    :param dtype: 目标类别是什么
-    :param pad_val: pad 的 value
+    :param batch_field: 需要 pad 的对象。需要保证应该是可以进行 pad 的。支持 **1d** （多为句子长度）/ **2d** （多为文本序列）/ **3d** （多为字符序列）
+        /4d（多为图片）；
+    :param dtype: 输出数据的 dtype 类型；
+    :param pad_val: 填充值；
     :return:
     """
     shapes = get_shape(batch_field)

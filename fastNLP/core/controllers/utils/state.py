@@ -42,7 +42,7 @@ class State(dict):
 class TrainerState:
     r"""
     该类用于我们 fastNLP 自己内部为了训练流程所记录的一些状态，当然是要暴露给用户给用户使用的；
-    我们保存的state大部分上是 trainer 断点重训 需要重新加载的；
+    我们保存的 state 大部分上是 trainer 断点重训 需要重新加载的；
     专属于 `Trainer` 的状态记载的类；
 
     :param n_epochs: 训练过程中总共的 epoch 的数量；
@@ -50,7 +50,7 @@ class TrainerState:
     :param global_forward_batches: 当前模型总共 forward 了多少个 step；
     :param batch_idx_in_epoch: 训练中在当前 epoch 的第几个 step；
     :param num_batches_per_epoch: 每一个 epoch 会 forward 多少个 step；
-    :param n_batches: 完整训练过程会 forward 的 step 数量，注意 n_batches = n_batches * n_epochs；
+    :param n_batches: 完整训练过程会 forward 的 step 数量，注意 ``n_batches = num_batches_per_epoch * n_epochs`` ；
     """
     n_epochs: Optional[int] = None  # 无论如何重新算
 
@@ -73,6 +73,7 @@ class TrainerState:
     def load_state_dict(self, state_dict: Dict):
         r"""
         用于断点重训来重新加载保存的状态字典；
+
         :param state_dict: 用于加载的状态字典；
         """
         for key in state_dict:

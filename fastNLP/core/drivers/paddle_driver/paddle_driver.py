@@ -19,6 +19,7 @@ from fastNLP.envs import (
     rank_zero_call,
 )
 from fastNLP.core.log import logger
+from fastNLP.core.dataloaders import OverfitDataLoader
 from fastNLP.core.samplers import (
     ReproducibleBatchSampler,
     ReproducibleSampler,
@@ -55,27 +56,32 @@ class PaddleDriver(Driver):
     1. :class:`~fastNLP.core.drivers.PaddleSingleDriver`：实现了使用单卡和 ``cpu`` 训练的具体功能；
     2. :class:`~fastNLP.core.drivers.PaddleFleetDriver`：实现了使用 ``fleet`` 分布式训练 API 进行集群式分布式训练的具体功能；
 
+    .. warning::
+
+        您不应当直接初始化该类，然后传入给 ``Trainer``，换句话说，您应当使用该类的子类 ``PaddleSingleDriver`` 和 ``PaddleDDPDriver``，而不是
+        该类本身；
+
+    .. note::
+
+        您可以在使用 ``PaddleSingleDriver`` 和 ``PaddleFleetDriver`` 时使用 ``PaddleDriver`` 提供的接口；
+
     :param model: 训练时使用的 **PaddlePaddle** 模型；
     :param fp16: 是否开启混合精度训练；
-    :kwargs:
-        * wo_auto_param_call (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为；
-
-        .. note::
-
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
+    :param paddle_kwargs:
 
     """
-    def __init__(self, model: "paddle.nn.Layer", fp16: Optional[bool] = False, **kwargs):
+    def __init__(self, model: "paddle.nn.Layer", fp16: Optional[bool] = False, paddle_kwargs: Dict = None, **kwargs):
         if not isinstance(model, paddle.nn.Layer):
             raise ValueError(f"Parameter `model` can not be `{type(model)}` in `PaddleDriver`, it should be exactly "
                             f"`paddle.nn.Layer` type.")
 
         super(PaddleDriver, self).__init__(model)
         self.fp16 = fp16
+        self._paddle_kwargs = paddle_kwargs if paddle_kwargs is not None else {}
 
         # scaler的参数
         self.auto_cast, _grad_scaler = _build_fp16_env(dummy=not fp16)
-        self.grad_scaler = _grad_scaler()
+        self.grad_scaler = _grad_scaler(**self._paddle_kwargs.get("gradscaler_kwargs", {}))
 
         # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
         self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
@@ -93,7 +99,7 @@ class PaddleDriver(Driver):
             self.grad_scaler.update()
 
     def check_dataloader_legality(self, dataloader):
-        if not isinstance(dataloader, DataLoader):
+        if not isinstance(dataloader, DataLoader) and not isinstance(dataloader, OverfitDataLoader):
             raise TypeError(f"{DataLoader} is expected, instead of `{type(dataloader)}`")
         if dataloader.batch_size is None and dataloader.batch_sampler is None:
             raise ValueError("Please ensure at least one of your dataloader's batch_size and batch_sampler"
@@ -154,7 +160,7 @@ class PaddleDriver(Driver):
         :param only_state_dict: 是否只保存模型的 ``state_dict``；如果为 ``False``，则会调用 ``paddle.jit.save`` 
             函数保存整个模型的参数，此时需要传入 ``input_spec`` 参数；
         :kwargs:
-            * input_spec -- 描述存储模型 ``forward`` 方法的输入；
+            * *input_spec* -- 描述存储模型 ``forward`` 方法的输入；
             当 ``only_state_dict`` 为 ``False`` 时必须传入，否则加载时会报错。您可以通过 ``InputSpec`` 或者示例 ``Tensor``
             进行描述。详细的使用方法可以参考 **PaddlePaddle** `关于 paddle.jit.save 函数的文档 <https://www.paddlepaddle.org.cn/documentation/docs/zh/api/paddle/jit/save_cn.html#save>`_；
         """
@@ -222,26 +228,12 @@ class PaddleDriver(Driver):
         num_consumed_batches = states.pop("num_consumed_batches")
         if hasattr(sampler, "state_dict") and callable(sampler.state_dict):
             sampler_states = sampler.state_dict()
-            # 如果有，需要针对 num_consumed_samples 做特殊的处理。因为DataLoader存在预取行为，直接使用sampler中的num_consumed_samples
-            #  会造成多余实际消耗的问题。
-            num_consumed_samples_array = sampler_states.pop('num_consumed_samples_array', None)
-            if num_consumed_samples_array is not None:
-                if isinstance(sampler, ReproducibleSampler):  # 如果是 sampler 的话，需要考虑 batch_size 。
-                    if dataloader_args.batch_size is not None:
-                        num_consumed_batches = num_consumed_batches * dataloader_args.batch_size
-                    else:  # 有可能 batch_size 为 None，就只有损失精度了
-                        logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
-                                     "it may cause missing some samples when reload.")
-                        num_consumed_batches = sampler_states['num_consumed_samples']
-                sampler_states['num_consumed_samples'] = num_consumed_samples_array[num_consumed_batches]
-                assert sampler_states['num_consumed_samples'] != -1, "This is a bug, please report."
+            if dataloader_args.batch_size is not None:
+                sampler_states['num_consumed_samples'] = sampler.num_replicas * dataloader_args.batch_size \
+                                                            * num_consumed_batches
             else:
-                if dataloader_args.batch_size is not None:
-                    sampler_states['num_consumed_samples'] = sampler.num_replicas * dataloader_args.batch_size \
-                                                             * num_consumed_batches
-                else:
-                    logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
-                                 "it may cause missing some samples when reload.")
+                logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
+                                "it may cause missing some samples when reload.")
         else:
             raise RuntimeError(
                 "The sampler has no `state_dict()` method, it will fail to recover to the specific batch.")

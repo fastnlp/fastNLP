@@ -8,6 +8,7 @@ if _NEED_IMPORT_TORCH:
     from torch.nn.parallel import DistributedDataParallel
     from torch.utils.data import RandomSampler as TorchRandomSampler
     from torch.utils.data import SequentialSampler as TorchSequentialSampler
+    from torch.utils.data import BatchSampler as TorchBatchSampler
 
 __all__ = [
     'TorchSingleDriver'
@@ -34,9 +35,13 @@ class TorchSingleDriver(TorchDriver):
     :param model: 传入给 ``Trainer`` 的 ``model`` 参数；
     :param device: torch.device，当前进程所使用的设备；
     :param fp16: 是否开启 fp16；
+    :param torch_kwargs:
+        * *set_grad_to_none* -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
+        * *non_blocking* -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
+        * *gradscaler_kwargs* -- 用于 fp16=True 时，提供给 ``torch.amp.cuda.GradScaler`` 的参数;
     """
 
-    def __init__(self, model, device: "torch.device", fp16: bool = False, **kwargs):
+    def __init__(self, model, device: "torch.device", fp16: bool = False, torch_kwargs: Dict = None, **kwargs):
         if isinstance(model, DistributedDataParallel):
             raise ValueError("`DistributedDataParallel` is not supported in `TorchSingleDriver`")
 
@@ -46,7 +51,7 @@ class TorchSingleDriver(TorchDriver):
             logger.info("You have set `CUDA_VISIBLE_DEVICES` to '' in system environment variable, and we are gonna to"
                         "use `cpu` instead of `gpu` device.")
 
-        super(TorchSingleDriver, self).__init__(model, fp16=fp16, **kwargs)
+        super(TorchSingleDriver, self).__init__(model, fp16=fp16, torch_kwargs=torch_kwargs, **kwargs)
 
         if device is None:
             logger.debug("device is not set, fastNLP will try to automatically get it.")
@@ -123,19 +128,20 @@ class TorchSingleDriver(TorchDriver):
             return replace_sampler(dataloader, sampler)
 
         if reproducible:
-            if isinstance(args.sampler, TorchRandomSampler):
-                if getattr(args.sampler, '_num_samples', None) is None \
-                        and getattr(args.sampler, 'replacements', False) is False \
-                        and getattr(args.sampler, 'generator', None) is None:
-                    # 如果本来就是随机的，并且没有定制，直接替换掉吧。
-                    sampler = RandomSampler(args.sampler.data_source, shuffle=True)
-                    logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
+            if type(args.batch_sampler) is TorchBatchSampler:
+                if type(args.sampler) is TorchRandomSampler:
+                    if getattr(args.sampler, '_num_samples', None) is None \
+                            and getattr(args.sampler, 'replacements', False) is False \
+                            and getattr(args.sampler, 'generator', None) is None:
+                        # 如果本来就是随机的，并且没有定制，直接替换掉吧。
+                        sampler = RandomSampler(args.sampler.data_source, shuffle=True)
+                        logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
+                        return replace_sampler(dataloader, sampler)
+                elif type(args.sampler) is TorchSequentialSampler:
+                    # 需要替换为不要 shuffle 的。
+                    sampler = RandomSampler(args.sampler.data_source, shuffle=False)
+                    logger.debug("Replace torch SequentialSampler into fastNLP RandomSampler.")
                     return replace_sampler(dataloader, sampler)
-            elif isinstance(args.sampler, TorchSequentialSampler):
-                # 需要替换为不要 shuffle 的。
-                sampler = RandomSampler(args.sampler.data_source, shuffle=False)
-                logger.debug("Replace torch SequentialSampler into fastNLP RandomSampler.")
-                return replace_sampler(dataloader, sampler)
             batch_sampler = ReproduceBatchSampler(
                 batch_sampler=args.batch_sampler,
                 batch_size=args.batch_size,

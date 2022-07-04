@@ -10,18 +10,19 @@ from .torch_padder import TorchNumberPadder, TorchSequencePadder, TorchTensorPad
 from .raw_padder import RawNumberPadder, RawSequencePadder, RawTensorPadder
 from .paddle_padder import PaddleTensorPadder, PaddleSequencePadder, PaddleNumberPadder
 from .jittor_padder import JittorTensorPadder, JittorSequencePadder, JittorNumberPadder
+from .oneflow_padder import OneflowTensorPadder, OneflowSequencePadder, OneflowNumberPadder
 from .exceptions import *
 
 
 def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->Padder:
     """
-    根据 参数 与 batch_field ，返回适合于当前 batch_field 的 padder 。
+    根据 参数 与 ``batch_field`` ，返回适合于当前 ``batch_field`` 的 *padder* 。
 
-    :param batch_field: 将某 field 的内容组合成一个 batch 传入。
-    :param pad_val:
+    :param batch_field: 将某 field 的内容组合成一个 batch 传入；
+    :param pad_val: 
     :param backend:
     :param dtype:
-    :param field_name: 方便报错的。
+    :param field_name: field 名称，方便在报错时显示；
     :return:
     """
     try:
@@ -91,6 +92,8 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
                 return PaddleNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'jittor':
                 return JittorNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+            elif backend == 'oneflow':
+                return OneflowNumberPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             else:
                 raise ValueError(f"backend={backend} is not supported for list(Field:{field_name}).")
 
@@ -105,6 +108,8 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
                 return PaddleSequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'jittor':
                 return JittorSequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+            elif backend == 'oneflow':
+                return OneflowSequencePadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             else:
                 raise ValueError(f"backend={backend} is not supported for nested list(Field:{field_name}).")
 
@@ -121,6 +126,8 @@ def get_padder(batch_field:Sequence[Any], pad_val, dtype, backend, field_name)->
                 return PaddleTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             elif backend == 'jittor':
                 return JittorTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
+            elif backend == 'oneflow':
+                return OneflowTensorPadder(pad_val=pad_val, ele_dtype=ele_dtype, dtype=dtype)
             else:
                 raise ValueError(f"backend={backend} is not supported for tensors(Field:{field_name}).")
 

@@ -14,20 +14,21 @@ if _module_available('fitlog'):
 class FitlogCallback(HasMonitorCallback):
     """
     自动记录 ``evaluation`` 结果到 ``fitlog`` 中。会自动记录每一次 ``evaluate`` 后的结果；同时会根据
-     ``monitor`` 记录最好的结果。另外，会自动将非 ``rank 0`` 上的 ``fitlog`` 设置为 ``debug`` 状态。同时还会在 ``fitlog`` 的
-     ``other`` 列中记录一个 ``launch_time`` ，可以通过这个数值找到当前这个脚本的在 save_folder （如果有使用其它需要保存模型的
-     ``Callback`` ，例如 :class:`~fastNLP.CheckpointCallback` ）下的文件夹名称。
+    ``monitor`` 记录最好的结果。另外，会自动将非 ``rank 0`` 上的 ``fitlog`` 设置为 ``debug`` 状态。同时还会在 ``fitlog`` 的
+    ``other`` 列中记录一个 ``launch_time`` ，可以通过这个数值找到当前这个脚本的在 save_folder （如果有使用其它需要保存模型的
+    ``Callback`` ，例如 :class:`~fastNLP.core.callbacks.CheckpointCallback` ）下的文件夹名称。
 
     :param monitor: 监控的 metric 值。
 
         * 为 ``None``
-         将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+          将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置 `monitor` 值（如果有设置）。
         * 为 ``str``
-         尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
-         使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
-        * 为 ``Callable``
-         接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
-         的 ``monitor`` 值请返回 ``None`` 。
+          尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
+          使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
+        * 为 :class:`Callable`
+          接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
+          的 ``monitor`` 值请返回 ``None`` 。
+
     :param larger_better: 是否是越大越好。
     :param log_exception: 是否记录 ``exception`` 。
     :param log_loss_every: 多少个 ``batch`` 记录一次 loss 到 ``fitlog`` 中。
@@ -44,7 +45,7 @@ class FitlogCallback(HasMonitorCallback):
         if get_global_rank() != 0:  # 如果不是 global rank 为 0 ，需要关闭 fitlog
             fitlog.debug()
         super().on_after_trainer_initialized(trainer, driver)
-        fitlog.add_other('launch_time', os.environ['FASTNLP_LAUNCH_TIME'])
+        fitlog.add_other(name='launch_time', value=os.environ['FASTNLP_LAUNCH_TIME'])
 
     def on_sanity_check_end(self, trainer, sanity_check_res):
         super(FitlogCallback, self).on_sanity_check_end(trainer, sanity_check_res)

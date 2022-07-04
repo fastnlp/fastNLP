@@ -5,6 +5,7 @@ from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 if _NEED_IMPORT_TORCH:
     import torch
 
+__all__ = []
 
 def is_torch_tensor_dtype(dtype) -> bool:
     """

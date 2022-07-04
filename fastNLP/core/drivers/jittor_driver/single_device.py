@@ -25,15 +25,6 @@ class JittorSingleDriver(JittorDriver):
     r"""
     ``Jittor`` 框架下用于 ``cpu`` 和单卡 ``gpu`` 运算的 ``Driver``。
 
-    .. note::
-
-        这是一个正在开发中的功能，敬请期待。
-
-    .. todo::
-
-        支持 cpu 和 gpu 的切换；
-        实现断点重训中替换 dataloader 的 set_dist_repro_dataloader 函数
-
     :param model: 传入给 ``Trainer`` 的 ``model`` 参数；
     :param device: 训练和模型所在的设备，在 **Jittor** 中，应当为以下值之一：``[None, 'cpu', 'gpu', 'cuda']``；
         
@@ -43,12 +34,13 @@ class JittorSingleDriver(JittorDriver):
          表示在显卡设备上进行训练；
 
     :param fp16: 是否开启 fp16；
+    :param jittor_kwargs:
     """
 
-    def __init__(self, model, device=None, fp16: bool = False, **kwargs):
+    def __init__(self, model, device=None, fp16: bool = False, jittor_kwargs: Dict = None, **kwargs):
         if device not in [None, "cpu", "gpu", "cuda"]:
             raise RuntimeError("Parameter `device` should be one of [None, 'cpu', 'gpu', 'cuda'] .")
-        super(JittorSingleDriver, self).__init__(model, fp16)
+        super(JittorSingleDriver, self).__init__(model, fp16, jittor_kwargs=jittor_kwargs)
 
         self.model_device = device if device is not None else "cpu"
 
@@ -118,14 +110,14 @@ class JittorSingleDriver(JittorDriver):
             if args.sampler is None:
                 sampler = RandomSampler(args.dataset, args.shuffle)
                 return replace_sampler(dataloader, sampler)
-            elif isinstance(args.sampler, JittorRandomSampler):
+            elif type(args.sampler) is JittorRandomSampler:
                 if getattr(args.sampler, '_num_samples', None) is None \
                         and getattr(args.sampler, 'rep', False) is False:
                     # 如果本来就是随机的，并且没有定制，直接替换掉吧。
                     sampler = RandomSampler(args.sampler.dataset, shuffle=True)
                     logger.debug("Replace jittor RandomSampler into fastNLP RandomSampler.")
                     return replace_sampler(dataloader, sampler)
-            elif isinstance(args.sampler, JittorSequentialSampler):
+            elif type(args.sampler) is JittorSequentialSampler:
                 # 需要替换为不要 shuffle 的。
                 sampler = RandomSampler(args.sampler.dataset, shuffle=False)
                 logger.debug("Replace jittor SequentialSampler into fastNLP RandomSampler.")

@@ -872,7 +872,7 @@ class GenerationMixin:
             max_length = self.config.max_length
         elif max_length is not None and max_new_tokens is not None:
             # Both are set, this is odd, raise a warning
-            logger.warn(
+            logger.warning(
                 "Both `max_length` and `max_new_tokens` have been set but they serve the same purpose.", UserWarning
             )
 
@@ -1239,7 +1239,7 @@ class GenerationMixin:
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
         if max_length is not None:
-            logger.warn(
+            logger.warning(
                 "`max_length` is deprecated in this function, use `stopping_criteria=StoppingCriteriaList(MaxLengthCriteria(max_length=max_length))` instead.",
                 UserWarning,
             )
@@ -1475,7 +1475,7 @@ class GenerationMixin:
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
         if max_length is not None:
-            logger.warn(
+            logger.warning(
                 "`max_length` is deprecated in this function, use `stopping_criteria=StoppingCriteriaList(MaxLengthCriteria(max_length=max_length))` instead.",
                 UserWarning,
             )
@@ -1726,13 +1726,13 @@ class GenerationMixin:
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
         if max_length is not None:
-            logger.warn(
+            logger.warning(
                 "`max_length` is deprecated in this function, use `stopping_criteria=StoppingCriteriaList(MaxLengthCriteria(max_length=max_length))` instead.",
                 UserWarning,
             )
             stopping_criteria = validate_stopping_criteria(stopping_criteria, max_length)
         if len(stopping_criteria) == 0:
-            logger.warn("You don't have defined any stopping_criteria, this will likely loop forever", UserWarning)
+            logger.warning("You don't have defined any stopping_criteria, this will likely loop forever", UserWarning)
         pad_token_id = pad_token_id if pad_token_id is not None else self.config.pad_token_id
         eos_token_id = eos_token_id if eos_token_id is not None else self.config.eos_token_id
         output_scores = output_scores if output_scores is not None else self.config.output_scores
@@ -2030,7 +2030,7 @@ class GenerationMixin:
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
         if max_length is not None:
-            logger.warn(
+            logger.warning(
                 "`max_length` is deprecated in this function, use `stopping_criteria=StoppingCriteriaList(MaxLengthCriteria(max_length=max_length))` instead.",
                 UserWarning,
             )
@@ -2325,7 +2325,7 @@ class GenerationMixin:
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
         if max_length is not None:
-            logger.warn(
+            logger.warning(
                 "`max_length` is deprecated in this function, use `stopping_criteria=StoppingCriteriaList(MaxLengthCriteria(max_length=max_length))` instead.",
                 UserWarning,
             )

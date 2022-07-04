@@ -26,6 +26,11 @@ if _NEED_IMPORT_PADDLE:
     import paddle
     from paddle import DataParallel
     from paddle.fluid.reader import _DatasetKind
+    from paddle.io import (
+        RandomSampler as PaddleRandomSampler,
+        SequenceSampler as PaddleSequenialSampler,
+        BatchSampler as PaddleBatchSampler,
+    )
 
 __all__ = [
     "PaddleSingleDriver",
@@ -38,6 +43,8 @@ class PaddleSingleDriver(PaddleDriver):
     :param model: 训练时使用的 **PaddlePaddle** 模型；
     :param device: 训练使用的设备；
     :param fp16: 是否开启混合精度训练；
+    :param paddle_kwargs:
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`paddle.amp.GradScaler` 的参数;
     :kwargs:
         * wo_auto_param_call (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为；
 
@@ -46,7 +53,7 @@ class PaddleSingleDriver(PaddleDriver):
             关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
 
     """
-    def __init__(self, model: "paddle.nn.Layer", device: Union[str, int], fp16: Optional[bool] = False, **kwargs):
+    def __init__(self, model: "paddle.nn.Layer", device: Union[str, int], fp16: Optional[bool] = False, paddle_kwargs: Dict = None, **kwargs):
         if isinstance(model, DataParallel):
             raise ValueError("`paddle.DataParallel` is not supported in `PaddleSingleDriver`")
 
@@ -56,7 +63,7 @@ class PaddleSingleDriver(PaddleDriver):
             logger.info("You have set `CUDA_VISIBLE_DEVICES` to '' in system environment variable, and we are gonna to"
                         "use `cpu` instead of `gpu` device.")
 
-        super(PaddleSingleDriver, self).__init__(model, fp16=fp16, **kwargs)
+        super(PaddleSingleDriver, self).__init__(model, fp16=fp16, paddle_kwargs=paddle_kwargs, **kwargs)
 
         if device is None:
             raise ValueError("Parameter `device` can not be None in `PaddleSingleDriver`.")
@@ -122,19 +129,21 @@ class PaddleSingleDriver(PaddleDriver):
             return replace_sampler(dataloader, sampler)
 
         if reproducible:
-            if isinstance(args.sampler, paddle.io.RandomSampler):
-                if getattr(args.sampler, '_num_samples', None) is None \
-                        and getattr(args.sampler, 'replacements', False) is False \
-                        and getattr(args.sampler, 'generator', None) is None:
-                    # 如果本来就是随机的，并且没有定制，直接替换掉。
-                    sampler = RandomSampler(args.sampler.data_source, shuffle=True)
-                    logger.debug("Replace paddle RandomSampler into fastNLP RandomSampler.")
+            if type(args.batch_sampler) is PaddleBatchSampler:
+                if type(args.sampler) is PaddleRandomSampler:
+                    if isinstance(args.sampler, PaddleRandomSampler):
+                        if getattr(args.sampler, '_num_samples', None) is None \
+                                and getattr(args.sampler, 'replacements', False) is False \
+                                and getattr(args.sampler, 'generator', None) is None:
+                            # 如果本来就是随机的，并且没有定制，直接替换掉。
+                            sampler = RandomSampler(args.sampler.data_source, shuffle=True)
+                            logger.debug("Replace paddle RandomSampler into fastNLP RandomSampler.")
+                            return replace_sampler(dataloader, sampler)
+                elif type(args.sampler) is PaddleSequenialSampler:
+                    # 需要替换为不要 shuffle 的。
+                    sampler = RandomSampler(args.sampler.data_source, shuffle=False)
+                    logger.debug("Replace paddle SequentialSampler into fastNLP RandomSampler.")
                     return replace_sampler(dataloader, sampler)
-            elif isinstance(args.sampler, paddle.io.SequenceSampler):
-                # 需要替换为不要 shuffle 的。
-                sampler = RandomSampler(args.sampler.data_source, shuffle=False)
-                logger.debug("Replace paddle SequentialSampler into fastNLP RandomSampler.")
-                return replace_sampler(dataloader, sampler)
             batch_sampler = ReproduceBatchSampler(
                 batch_sampler=args.batch_sampler,
                 batch_size=args.batch_size,

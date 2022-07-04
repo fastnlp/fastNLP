@@ -159,6 +159,7 @@ from fastNLP.core.samplers import ReproducibleSampler, RandomSampler, Unrepeated
 from fastNLP.envs import FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_RANK, FASTNLP_GLOBAL_SEED, FASTNLP_NO_SYNC
 from fastNLP.core.log import logger
 from fastNLP.core.drivers.torch_driver.dist_utils import fastnlp_torch_all_gather, fastnlp_torch_broadcast_object
+from .utils import _check_dataloader_args_for_distributed
 
 
 class TorchDDPDriver(TorchDriver):
@@ -234,7 +235,12 @@ class TorchDDPDriver(TorchDriver):
     :param parallel_device: 用于分布式训练的 ``gpu`` 设备；
     :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``python -m torch.distributed.launch`` 启动的；
     :param fp16: 是否开启 fp16 训练；
-    :param kwargs: 其余的一些用于设定 ddp 训练的参数；
+    :param torch_kwargs: 
+        * *ddp_kwargs* -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
+            {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
+        * *set_grad_to_none* -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
+        * *non_blocking* -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
+        * *gradscaler_kwargs* -- 用于 fp16=True 时，提供给 ``torch.amp.cuda.GradScaler`` 的参数;
     """
 
     def __init__(
@@ -243,11 +249,12 @@ class TorchDDPDriver(TorchDriver):
             parallel_device: Optional[Union[List["torch.device"], "torch.device"]],
             is_pull_by_torch_run: bool = False,
             fp16: bool = False,
+            torch_kwargs: Dict = None,
             **kwargs
     ):
 
         # 在加入很多东西后，需要注意这里调用 super 函数的位置；
-        super(TorchDDPDriver, self).__init__(model, fp16=fp16, **kwargs)
+        super(TorchDDPDriver, self).__init__(model, fp16=fp16, torch_kwargs=torch_kwargs, **kwargs)
 
         if isinstance(model, torch.nn.DataParallel):
             raise ValueError(f"Parameter `model` can not be `DataParallel` in `TorchDDPDriver`, it should be "
@@ -417,6 +424,7 @@ class TorchDDPDriver(TorchDriver):
             os.environ['MASTER_ADDR'] = self.master_address
             os.environ['MASTER_PORT'] = self.master_port
 
+            os.environ["RANK"] = "0"
             os.environ["LOCAL_RANK"] = str(self.local_rank)
             os.environ["WORLD_SIZE"] = f"{self.world_size}"
 
@@ -429,6 +437,7 @@ class TorchDDPDriver(TorchDriver):
             for rank in range(1, len(self.parallel_device)):
                 env_copy = os.environ.copy()
                 env_copy["LOCAL_RANK"] = f"{rank}"
+                env_copy["RANK"] = f"{rank}"
 
                 # 如果是多机，一定需要用户自己拉起，因此我们自己使用 open_subprocesses 开启的进程的 FASTNLP_GLOBAL_RANK 一定是 LOCAL_RANK；
                 env_copy[FASTNLP_GLOBAL_RANK] = str(rank)
@@ -535,8 +544,7 @@ class TorchDDPDriver(TorchDriver):
         # trainer, evaluator
         if dist is None:
             if reproducible:
-                raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize ddp out of our "
-                                   "control.")
+                raise RuntimeError("It is not allowed to save checkpoint if the sampler is not allowed to be replaced.")
             else:
                 args = self.get_dataloader_args(dataloader)
                 if isinstance(args.batch_sampler, ReproducibleBatchSampler):
@@ -565,6 +573,7 @@ class TorchDDPDriver(TorchDriver):
                 )
                 return replace_sampler(dataloader, sampler)
             else:
+                _check_dataloader_args_for_distributed(args, controller='Trainer')
                 sampler = RandomSampler(
                     dataset=args.dataset,
                     shuffle=args.shuffle,
@@ -582,6 +591,7 @@ class TorchDDPDriver(TorchDriver):
             if isinstance(args.sampler, ReproducibleSampler):
                 sampler = conversion_between_reproducible_and_unrepeated_sampler(args.sampler)
             elif not isinstance(args.sampler, UnrepeatedSampler):
+                _check_dataloader_args_for_distributed(args, controller='Evaluator')
                 sampler = UnrepeatedSequentialSampler(
                     dataset=args.dataset
                 )

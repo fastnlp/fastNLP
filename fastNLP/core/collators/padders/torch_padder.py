@@ -38,7 +38,7 @@ def is_torch_tensor(dtype):
     """
     判断是否为 torch 的 tensor
 
-    :param dtype 数据的 dtype 类型
+    :param dtype: 数据的 dtype 类型
     """
     if not isclass(dtype) and isinstance(dtype, torch.dtype):
         return True
@@ -49,9 +49,9 @@ def _get_dtype(ele_dtype, dtype, class_name):
     """
     用于检测数据的 dtype 类型， 根据内部和外部数据判断。
 
-    :param ele_dtype 内部数据的类型
-    :param dtype  数据外部类型
-    :param class_name 类的名称
+    :param ele_dtype: 内部数据的类型
+    :param dtype:  数据外部类型
+    :param class_name: 类的名称
     """
     if not (ele_dtype is None or (is_number_or_numpy_number(ele_dtype) or is_torch_tensor(ele_dtype))):
         raise EleDtypeUnsupportedError(f"`{class_name}` only supports padding python numbers "
@@ -77,11 +77,11 @@ def _get_dtype(ele_dtype, dtype, class_name):
 
 class TorchNumberPadder(Padder):
     """
-    可以将形如 [1, 2, 3] 这类的数据转为 torch.Tensor([1, 2, 3])
+    可以将形如 ``[1, 2, 3]`` 这类的数据转为 ``torch.Tensor([1, 2, 3])``
 
-    :param pad_val: 该值无意义
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
-    :param dtype: 输出的数据的 dtype 是什么。如 torch.long, torch.float32, int, float 等
+    :param pad_val: 该值无意义；
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`torch.Tensor` 类型；
+    :param dtype: 输出的数据的 dtype 是什么。如 :class:`torch.long`, :class:`torch.float32`, :class:`int`, :class:`float` 等；
     """
     def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
@@ -94,11 +94,11 @@ class TorchNumberPadder(Padder):
 
 class TorchSequencePadder(Padder):
     """
-    将类似于 [[1], [1, 2]] 的内容 pad 为 torch.Tensor([[1, 0], [1, 2]]) 可以 pad 多重嵌套的数据。
+    将类似于 ``[[1], [1, 2]]`` 的内容 pad 为 ``torch.Tensor([[1, 0], [1, 2]])`` 可以 pad 多重嵌套的数据。
 
-    :param pad_val: 需要 pad 的值。
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
-    :param dtype: 输出的数据的 dtype 是什么。如 torch.long, torch.float32, int, float 等
+    :param pad_val: 需要 pad 的值；
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`torch.Tensor` 类型；
+    :param dtype: 输出的数据的 dtype 是什么。如 :class:`torch.long`, :class:`torch.float32`, :class:`int`, :class:`float` 等；
     """
     def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
@@ -112,7 +112,7 @@ class TorchSequencePadder(Padder):
 
 class TorchTensorPadder(Padder):
     """
-    目前支持 [torch.tensor([3, 2], torch.tensor([1])] 类似的。若内部元素不为 torch.tensor ，则必须含有 tolist() 方法。
+    目前支持 ``[torch.tensor([3, 2], torch.tensor([1])]`` 类似的输入。若内部元素不为 :class:`torch.Tensor` ，则必须含有 :meth:`tolist` 方法。
 
         >>> TorchTensorPadder.pad([np.array([3, 4]), np.array([1])], pad_val=-100)
         [[   3.    4.]
@@ -121,9 +121,9 @@ class TorchTensorPadder(Padder):
         tensor([[   3,    4],
                 [   1, -100]])
 
-    :param pad_val: 需要 pad 的值。
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 torch.tensor 类型。
-    :param dtype: 输出的数据的 dtype 是什么。如 torch.long, torch.float32, int, float 等
+    :param pad_val: 需要 pad 的值；
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`torch.Tensor` 类型；
+    :param dtype: 输出的数据的 dtype 是什么。如 :class:`torch.long`, :class:`torch.float32`, :class:`int`, :class:`float` 等；
     """
     def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)

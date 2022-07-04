@@ -84,14 +84,14 @@ def _get_dtype(ele_dtype, dtype, class_name):
 
 
 class JittorNumberPadder(Padder):
-    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
-        """
-        可以将形如 [1, 2, 3] 这类的数据转为 jittor.Var([1, 2, 3])
+    """
+    可以将形如 ``[1, 2, 3]`` 这类的数据转为 ``jittor.Var([1, 2, 3])``
 
-        :param pad_val: 该值无意义
-        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 jittor.Var 类型。
-        :param dtype: 输出的数据的 dtype 是什么。如 jittor.long, jittor.float32, int, float 等
-        """
+    :param pad_val: 该值无意义
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`jittor.Var` 类型；
+    :param dtype: 输出的数据的 dtype 是什么。如 :class:`jittor.long`, :class:`jittor.float32`, :class:`int`, :class:`float` 等；
+    """
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
 
@@ -106,23 +106,23 @@ class JittorNumberPadder(Padder):
 
 
 class JittorSequencePadder(Padder):
-    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
-        """
-        将类似于 [[1], [1, 2]] 的内容 pad 为 jittor.Var([[1, 0], [1, 2]]) 可以 pad 多重嵌套的数据。
+    """
+    可以将形如 ``[[1], [1, 2]]`` 这类的数据转为 ``jittor.Var([[1], [1, 2]])``
 
-        :param pad_val: 需要 pad 的值。
-        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 jittor.Var 类型。
-        :param dtype: 输出的数据的 dtype 是什么。如 jittor.long, jittor.float32, int, float 等
-        """
+    :param pad_val: 该值无意义
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`jittor.Var` 类型；
+    :param dtype: 输出的数据的 dtype 是什么。如 :class:`jittor.long`, :class:`jittor.float32`, :class:`int`, :class:`float` 等；
+    """
+    def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
 
     @staticmethod
     def pad(batch_field, pad_val=0, dtype=None):
         """
-        :param batch_field 输入的某个 field 的 batch 数据。
-        :param pad_val 需要填充的值
-        :dtype 数据的类型
+        :param batch_field: 输入的某个 field 的 batch 数据。
+        :param pad_val: 需要填充的值
+        :param dtype: 数据的类型
         """
         tensor = get_padded_jittor_tensor(batch_field, dtype=dtype, pad_val=pad_val)
         return tensor
@@ -131,11 +131,11 @@ class JittorSequencePadder(Padder):
 class JittorTensorPadder(Padder):
     def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
         """
-        目前支持 [jittor.Var([3, 2], jittor.Var([1])] 类似的。若内部元素不为 jittor.Var ，则必须含有 tolist() 方法。
+        目前支持 ``[jittor.Var([3, 2], jittor.Var([1])]`` 类似的输入。若内部元素不为 :class:`jittor.Var` ，则必须含有 :meth:`tolist` 方法。
 
-        :param pad_val: 需要 pad 的值。
-        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 jittor.Var 类型。
-        :param dtype: 输出的数据的 dtype 是什么。如 jittor.long, jittor.float32, int, float 等
+        :param pad_val: 需要 pad 的值；
+        :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`jittor.Var` 类型；
+        :param dtype: 输出的数据的 dtype 是什么。如 :class:`jittor.long`, :class:`jittor.float32`, :class:`int`, :class:`float` 等
         """
         dtype = _get_dtype(ele_dtype, dtype, class_name=self.__class__.__name__)
         super().__init__(pad_val=pad_val, dtype=dtype)
@@ -143,11 +143,11 @@ class JittorTensorPadder(Padder):
     @staticmethod
     def pad(batch_field, pad_val=0, dtype=None):
         """
-        将 batch_field 数据 转为 jittor.Var 并 pad 到相同长度。
+        将 ``batch_field`` 数据 转为 :class:`jittor.Var` 并 pad 到相同长度。
 
-        :param batch_field 输入的某个 field 的 batch 数据。
-        :param pad_val 需要填充的值
-        :dtype 数据的类型
+        :param batch_field: 输入的某个 field 的 batch 数据。
+        :param pad_val: 需要填充的值
+        :param dtype: 数据的类型
         """
         try:
             if not isinstance(batch_field[0], jittor.Var):

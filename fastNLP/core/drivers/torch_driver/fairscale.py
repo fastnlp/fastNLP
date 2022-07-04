@@ -35,11 +35,12 @@ class FairScaleDriver(TorchDDPDriver):
             parallel_device: Union[List["torch.device"], "torch.device"],
             is_pull_by_torch_run = False,
             fp16: bool = False,
+            fairscale_kwargs: Dict = None,
             **kwargs
     ):
         assert _NEED_IMPORT_FAIRSCALE, "fairscale is not imported."
         assert not dist.is_initialized(), "FairScaleDriver does not support initialize distributed by user."
-        self._fairscale_kwargs = kwargs.get('fairscale_kwargs', {})
+        self._fairscale_kwargs = fairscale_kwargs
         self.fs_type = self._fairscale_kwargs.get('fs_type', 'sdp')  # ddp, sdp, fsdp
         if self.fs_type == 'fsdp':
             self._fairscale_kwargs['set_grad_to_none'] = self._fairscale_kwargs.get('set_grad_to_none', True)

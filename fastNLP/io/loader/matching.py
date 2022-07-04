@@ -55,7 +55,7 @@ class MNLILoader(Loader):
         with open(path, 'r', encoding='utf-8') as f:
             f.readline()  # 跳过header
             if path.endswith("test_matched.tsv") or path.endswith('test_mismatched.tsv'):
-                logger.warn("MNLI's test file has no target.")
+                logger.warning("MNLI's test file has no target.")
                 for line in f:
                     line = line.strip()
                     if line:
@@ -227,7 +227,7 @@ class QNLILoader(JsonLoader):
         with open(path, 'r', encoding='utf-8') as f:
             f.readline()  # 跳过header
             if path.endswith("test.tsv"):
-                logger.warn("QNLI's test file has no target.")
+                logger.warning("QNLI's test file has no target.")
                 for line in f:
                     line = line.strip()
                     if line:
@@ -289,7 +289,7 @@ class RTELoader(Loader):
         with open(path, 'r', encoding='utf-8') as f:
             f.readline()  # 跳过header
             if path.endswith("test.tsv"):
-                logger.warn("RTE's test file has no target.")
+                logger.warning("RTE's test file has no target.")
                 for line in f:
                     line = line.strip()
                     if line:

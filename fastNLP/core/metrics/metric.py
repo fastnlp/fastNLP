@@ -20,7 +20,7 @@ class Metric:
     :param backend: 目前支持四种类型的 backend, ``[torch, paddle, jittor, auto]``。其中 ``auto`` 表示根据实际调用
         Metric.update() 函数时传入的参数决定具体的 ``backend`` ，大部分情况下直接使用 ``auto`` 即可。
     :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到metric，
-        当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 :class:`~fastNLP.Evaluator` 中根据 sampler 是否使用分布式
+        当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 :class:`~fastNLP.core.controllers.Evaluator` 中根据 sampler 是否使用分布式
         进行自动设置。
     """
     def __init__(self, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = None):
@@ -98,7 +98,7 @@ class Metric:
         return _wrap_get_metric
 
     def __setattr__(self, key, value):
-        if hasattr(self, '_cannot_change_element') and self._cannot_change_element is True:
+        if getattr(self, '_cannot_change_element', False):
             if key in self.elements and isinstance(value, (float, int, bool)):
                 self.elements[key].fill_value(value)
                 return
@@ -108,6 +108,14 @@ class Metric:
         if isinstance(value, Element) and key not in self.elements:
             raise RuntimeError("Please use register_element() function to add Element.")
         object.__setattr__(self, key, value)
+
+    # 当调用 __getattribute__ 没有找到时才会触发这个, 保留这个的目的只是为了防止 ide 的 warning
+    def __getattr__(self, name: str) -> Element:
+        if 'elements' in self.__dict__:
+            elements = self.__dict__['elements']
+            if name in elements:
+                return elements[name]
+        raise AttributeError("`{}` object has no attribute `{}`.".format(type(self).__name__, name))
 
     def _wrap_update(self, update):
         @functools.wraps(update)

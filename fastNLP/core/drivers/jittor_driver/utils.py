@@ -14,6 +14,7 @@ from fastNLP.envs import (
     FASTNLP_BACKEND_LAUNCH,
     FASTNLP_GLOBAL_SEED,
 )
+from fastNLP.core.samplers import ReproducibleBatchSampler
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_JITTOR:
@@ -63,6 +64,9 @@ def replace_batch_sampler(dataloader, batch_sampler):
                             "or report this bug to us.")
 
 def replace_sampler(dataloader: Union["Dataset", "JittorDataLoader"], sampler):
+    batch_sampler = getattr(dataloader, "sampler")
+    if batch_sampler is not None and isinstance(batch_sampler, ReproducibleBatchSampler):
+        raise RuntimeError("It should not be running here, please report a bug to us.")
     if isinstance(dataloader, JittorDataLoader):
         init_params = dict(inspect.signature(dataloader.__init__).parameters)
         reconstruct_args = {name: getattr(dataloader, name, p.default) for name, p in init_params.items()}

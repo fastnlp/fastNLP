@@ -18,7 +18,7 @@ from .packer_unpacker import SequencePackerUnpacker, SinglePackerUnpacker, Mappi
     NestedMappingPackerUnpacker
 
 sequence_idx_str = re.compile(r'^_\d+$')  # 形如_0, _1
-SUPPORTED_BACKENDS = ['torch', 'jittor', 'paddle', 'numpy', 'raw', 'auto', None]
+SUPPORTED_BACKENDS = ['torch', 'jittor', 'paddle', 'oneflow', 'numpy', 'raw', 'auto', None]
 # 由于 jittor DataLoader 存在自动的 to_jittor 的转换，所以只需要 collate 成为 numpy 就行
 AUTO_BACKEND_MAPPING = {'jittor': 'numpy'}
 
@@ -85,27 +85,33 @@ def _get_backend() -> str:
 class Collator:
     """
     用于 pad 数据的对象。会自动将所有能够 pad （由 fastNLP 根据数据判定能否 pad ）的数据都进行 pad 操作，默认 pad 的值为 0。
-    哦安定一个 field 是否可以 pad 的方式为：（1）当前这个 field 是否所有对象都是一样的数据类型；（因此，如果某 field 的数据有些是float
-    有些是 int 将知道该 field 被判定为不可 pad 类型。）（2）当前这个 field 是否每个 sample 都具有一样的深度；（因此，例如有个 field 的
-    数据转为 batch 类型后为 [1, [1,2]], 会被判定为不可 pad ，因为第一个 sample 与 第二个 sample 深度不同）（3）当前这个 field 的类
-    型是否是可以 pad （例如 str 类型的数据）。可以通过设置 logger.setLevel('debug') 来打印是判定不可 pad 的原因。
+    判定一个 field 是否可以 pad 的方式为：
+    
+        1. 当前这个 field 是否所有对象都是一样的数据类型；比如，如果某 field 的数据有些是 float ，有些是 int ，则该 field 将被
+           判定为不可 pad 类型；
+        2. 当前这个 field 是否每个 sample 都具有一样的深度；比如，如果某 field 的数据转为 batch 类型后为 ``[1, [1,2]]``, 则会
+           被判定为不可 pad ，因为第一个 sample 与 第二个 sample 深度不同；
+        3. 当前这个 field 的类型是否是可以 pad （例如 str 类型的数据）。可以通过设置 ``logger.setLevel('debug')`` 来打印是判定不可
+           pad 的原因。
 
     .. note::
 
-        ``Collator`` 的原理是使用第一个 ``batch`` 的数据尝试推断每个``field``应该使用哪种类型的 ``Padder``，如果第一个 ``batch``
-        的数据刚好比较特殊，可能导致在之后的 pad 中遭遇失败，这种情况请通过 ``set_pad()`` 函数手动设置一下。
+        ``Collator`` 的原理是使用第一个 ``batch`` 的数据尝试推断每个 ``field`` 应该使用哪种类型的 ``Padder``，如果第一个 ``batch``
+        的数据刚好比较特殊，可能导致在之后的 pad 中遭遇失败，这种情况请通过 :meth:`set_pad` 函数手动设置一下。
 
-    todo 补充 code example 。
+    .. todo:: 
+    
+        补充 code example 。
 
-    如果需要将某个本可以 pad 的 field 设置为不可 pad ，则可以通过 :meth:`~fastNLP.Collator.set_pad` 的 pad_val 设置为 None 实现。
+    如果需要将某个本可以 pad 的 field 设置为不可 pad ，则可以通过 :meth:`~fastNLP.Collator.set_pad` 的 ``pad_val`` 设置为 ``None`` 实现。
     如果需要某些 field 不要包含在 pad 之后的结果中，可以使用 :meth:`~fastNLP.Collator.set_ignore` 进行设置。
 
     Collator 在第一次进行 pad 的时候自动根据设置以及数据情况，为每个 field 获取一个 padder ，在之后的每次调用中，都将使用对应
     的 Padder 给对应的 field 。
 
-    :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ['torch','jittor','paddle','numpy','raw', auto, None]。
-        若为 'auto' ，则在进行 pad 的时候会根据调用的环境决定其 backend 。该参数对不能进行 pad 的数据没用影响，不能 pad
-        的数据返回一定是 list 。
+    :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ``['torch','jittor','paddle','oneflow','numpy','raw', 'auto', None]``。
+        若为 ``'auto'`` ，则在进行 pad 的时候会根据调用的环境决定其 ``backend`` 。该参数对不能进行 pad 的数据没有影响，无法 pad 的数据返回一定
+        是 :class:`list` 。
     """
     def __init__(self, backend='auto'):
         self.unpack_batch_func = None
@@ -192,20 +198,20 @@ class Collator:
         """
         如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
-        :param field_name: 需要调整的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
-            field 的 key 来表示，如果是 nested 的 dict，可以使用元组表示多层次的 key，例如 {'a': {'b': 1}} 中的使用 ('a', 'b');
-            如果 __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。如果该 field 在数据中没
-            有找到，则报错；如果 __getitem__ 返回的是就是整体内容，请使用 "_single" 。
-        :param pad_val: 这个 field 的默认 pad 值。如果设置为 None，则表示该 field 不需要 pad , fastNLP 默认只会对可以 pad 的
-            field 进行 pad，所以如果对应 field 本身就不是可以 pad 的形式，可以不需要主动设置为 None 。如果 backend 为 None ，该值
-            无意义。
-        :param dtype: 对于需要 pad 的 field ，该 field 的数据 dtype 应该是什么。
-        :param backend: 可选['raw', 'numpy', 'torch', 'paddle', 'jittor', 'auto']，分别代表，输出为 list, numpy.ndarray,
-            torch.Tensor, paddle.Tensor, jittor.Var 类型。若 pad_val 为 None ，该值无意义 。
-        :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 pad_val, dtype, backend 等参数失效。pad_fn 的输入为当前 field 的
-            batch 形式。 Collator 将自动 unbatch 数据，然后将各个 field 组成各自的 batch 。pad_func 的输入即为 field 的 batch
-            形式，输出将被直接作为结果输出。
-        :return: 返回 Collator 自身
+        :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
+            field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``;
+            如果 :meth:`Dataset.__getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表示序列中第 **0** 或 **1** 个元素。
+            如果该 field 在数据中没有找到，则报错；如果 :meth:`Dataset.__getitem__` 返回的是就是整体内容，请使用 "_single" 。
+        :param pad_val: 这个 field 的默认 pad 值。如果设置为 ``None``，则表示该 field 不需要 pad , fastNLP 默认只会对可以 pad 的
+            field 进行 pad，所以如果对应 field 本身就不是可以 pad 的形式，可以不需要主动设置为 ``None`` 。如果 ``backend`` 为 ``None``，
+            该值无意义。
+        :param dtype: 对于需要 pad 的 field ，该 field 数据的 ``dtype`` 。
+        :param backend: 可选 ``['raw', 'numpy', 'torch', 'paddle', 'jittor', 'oneflow', 'auto']`` ，分别代表，输出为 :class:`list`, 
+            :class:`numpy.ndarray`, :class:`torch.Tensor`, :class:`paddle.Tensor`, :class:`jittor.Var`, :class:`oneflow.Tensor` 类型。
+            若 ``pad_val`` 为 ``None`` ，该值无意义 。
+        :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 ``pad_val``, ``dtype``, ``backend`` 等参数失效。``pad_fn`` 的输入为当前 field 的
+            batch 形式。 Collator 将自动 unbatch 数据，然后将各个 field 组成各自的 batch 。
+        :return: 返回 Collator 自身；
         """
         self._renew()
 
@@ -275,8 +281,8 @@ class Collator:
         """
         设置可以 pad 的 field 默认 pad 为什么类型的 tensor
 
-        :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ['torch','jittor','paddle','numpy','raw', 'auto', None]，
-            若为 auto ，则在进行 pad 的时候会自动根据调用的环境决定其 backend 。
+        :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ``['torch','jittor','paddle','oneflow','numpy','raw', 'auto', None]``，
+            若为 ``'auto'`` ，则在进行 pad 的时候会自动根据调用的环境决定其 ``backend`` ；
         :return:
         """
         assert backend in SUPPORTED_BACKENDS
@@ -285,14 +291,14 @@ class Collator:
 
     def set_ignore(self, *field_names) -> "Collator":
         """
-        如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略。
+        如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的输出中被忽略::
 
             >>> collator = Collator().set_ignore('field1', 'field2')
 
-        :param field_names: 需要忽略的 field 的名称。如果 Dataset 的 __getitem__ 方法返回的是 dict 类型的，则可以直接使用对应的
-            field 的 key 来表示，如果是 nested 的 dict，可以使用元组来表示，例如 {'a': {'b': 1}} 中的使用 ('a', 'b'); 如果
-            __getitem__ 返回的是 Sequence 类型的，则可以使用 '_0', '_1' 表示序列中第 0 或 1 个元素。
-        :return: 返回 Collator 自身
+        :param field_names: field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
+            field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``;
+            如果 :meth:`Dataset.__getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表示序列中第 **0** 或 **1** 个元素。
+        :return: 返回 Collator 自身；
         """
         self._renew()
         input_field_names = [(field, field) if isinstance(field, tuple) else ((field,), field)

@@ -31,6 +31,7 @@ from fastNLP.envs import  rank_zero_call
 from fastNLP.envs import FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.log import logger
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, ReproduceBatchSampler, RandomSampler
+from fastNLP.core.dataloaders import OverfitDataLoader
 
 
 class TorchDriver(Driver):
@@ -46,12 +47,15 @@ class TorchDriver(Driver):
 
         您可以在使用 ``TorchSingleDriver`` 和 ``TorchDDPDriver`` 时使用 ``TorchDriver`` 提供的接口；
 
+    :param model: 训练时使用的 **pytorch** 模型；
+    :param fp16: 是否开启混合精度训练;
+    :param torch_kwargs:
     """
-    def __init__(self, model, fp16: Optional[bool] = False, **kwargs):
+    def __init__(self, model, fp16: Optional[bool] = False, torch_kwargs: Dict = None, **kwargs):
         super(TorchDriver, self).__init__(model)
 
         """ 进行 fp16 的设置 """
-        self._torch_kwargs = kwargs.get("torch_kwargs", {})
+        self._torch_kwargs = torch_kwargs if torch_kwargs is not None else {}
 
         # 因为 ddp 和 single_device 的混合精度训练的设置是一样的，因此可以统一抽象到这里；
         self.fp16 = fp16
@@ -92,7 +96,7 @@ class TorchDriver(Driver):
             self.grad_scaler.update()
 
     def check_dataloader_legality(self, dataloader):
-        if not isinstance(dataloader, DataLoader):
+        if not isinstance(dataloader, DataLoader) and not isinstance(dataloader, OverfitDataLoader):
             raise TypeError(f"{DataLoader} is expected, instead of `{type(dataloader)}`")
         if len(dataloader) == 0:
             logger.rank_zero_warning("Your dataloader is empty, which is not recommended because it "
@@ -189,44 +193,9 @@ class TorchDriver(Driver):
         # 传入的 dataloader 参数是 trainer 的 dataloader 属性，因为 driver 的所有 dataloader 我们是不会去改变它的，而是通过改变
         #  trainer.dataloader 来改变 dataloader 的状态，从而适配训练或者评测环境；
 
-        # 1. sampler 的状态，因为我们支持 resume training，即精确恢复到具体的一个 batch；
-        # 首先 pytorch 的 DataLoader 一定会有 sampler；另一方面，我们在断点重训的时候一定会在 `set_` 中将 dataloader 的
-        #  sampler 替换为 `ReproducibleSampler`；否则就是在单卡情况下将 batch_sampler 替换为 `ReproducibleBatchSampler`；
-        dataloader_args = self.get_dataloader_args(dataloader)
-        if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
-            sampler = dataloader_args.batch_sampler
-        elif dataloader_args.sampler:
-            sampler = dataloader_args.sampler
-        else:
-            raise RuntimeError("This condition is not supposed to appear. Please report a bug to us.")
+        # 1. sampler 的状态；
         num_consumed_batches = states.pop('num_consumed_batches')
-        if hasattr(sampler, 'state_dict') and callable(sampler.state_dict):
-            sampler_states = sampler.state_dict()
-            # 需要针对 num_consumed_samples 做特殊的处理。因为DataLoader存在预取行为，直接使用sampler中的num_consumed_samples
-            #   会造成多余实际消耗的问题。因为
-            num_consumed_samples_array = sampler_states.pop('num_consumed_samples_array', None)
-            if num_consumed_samples_array is not None:
-                if isinstance(sampler, ReproducibleSampler):  # 如果是 sampler 的话，需要考虑 batch_size 。
-                    if dataloader_args.batch_size is not None:
-                        num_consumed_batches = num_consumed_batches * dataloader_args.batch_size
-                    else:  # 有可能 batch_size 为 None，就只有损失精度了
-                        logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
-                                     "it may cause missing some samples when reload.")
-                        num_consumed_batches = sampler_states['num_consumed_samples']
-                sampler_states['num_consumed_samples'] = num_consumed_samples_array[num_consumed_batches]
-                assert sampler_states['num_consumed_samples'] != -1, "This is a bug, please report."
-            else:
-                if dataloader_args.batch_size is not None:
-                    sampler_states['num_consumed_samples'] = sampler.num_replicas * dataloader_args.batch_size \
-                                                             * num_consumed_batches
-                else:
-                    logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
-                                 "it may cause missing some samples when reload.")
-
-            states['sampler_states'] = sampler_states
-        else:
-            raise RuntimeError('The sampler has no `state_dict()` method, fastNLP cannot save the training '
-                               'state.')
+        states['sampler_states'] = self.get_sampler_state(dataloader, num_consumed_batches)
 
         # 2. 保存模型的状态；
         if should_save_model:
@@ -236,16 +205,79 @@ class TorchDriver(Driver):
             self.save_model(model_path, only_state_dict=only_state_dict)
 
         # 3. 保存 optimizers 的状态；
-        optimizers_state_dict = self.get_optimizer_state()
+        states["optimizers_state_dict"] = self.get_optimizer_state()
+        logger.debug("Save optimizer state dict.")
 
         # 4. 保存fp16的状态
         if not isinstance(self.grad_scaler, DummyGradScaler):
             grad_scaler_state_dict = self.grad_scaler.state_dict()
             states['grad_scaler_state_dict'] = grad_scaler_state_dict
 
-        logger.debug("Save optimizer state dict")
-        states["optimizers_state_dict"] = optimizers_state_dict
         torch.save(states, Path(folder).joinpath(FASTNLP_CHECKPOINT_FILENAME))
+
+    def get_sampler_state(self, dataloader, num_consumed_batches):
+        # 因为我们支持 resume training，即精确恢复到具体的一个 batch；
+        # 首先 pytorch 的 DataLoader 一定会有 sampler；另一方面，我们在断点重训的时候一定会在 `set_` 中将 dataloader 的
+        #  sampler 替换为 `ReproducibleSampler`；否则就是在单卡情况下将 batch_sampler 替换为 `ReproducibleBatchSampler`；
+        dataloader_args = self.get_dataloader_args(dataloader)
+        if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
+            sampler = dataloader_args.batch_sampler
+        elif dataloader_args.sampler:
+            sampler = dataloader_args.sampler
+        else:
+            raise RuntimeError("This condition is not supposed to appear. Please report a bug to us.")
+
+        if hasattr(sampler, 'state_dict') and callable(sampler.state_dict):
+            sampler_states = sampler.state_dict()
+            if dataloader_args.batch_size is not None:
+                sampler_states['num_consumed_samples'] = sampler.num_replicas * dataloader_args.batch_size \
+                                                         * num_consumed_batches
+            else:
+                logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on sampler's "
+                                         "`num_consumed_samples`, it may cause missing some samples when reload.")
+        else:
+            raise RuntimeError('The sampler has no `state_dict()` method, fastNLP cannot save the training '
+                               'state.')
+
+        return sampler_states
+
+    def load_sampler_state(self, dataloader, sampler_states):
+        states = {}
+        dataloader_args = self.get_dataloader_args(dataloader)
+        if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
+            sampler = dataloader_args.batch_sampler
+        elif isinstance(dataloader_args.sampler, ReproducibleSampler):
+            sampler = dataloader_args.sampler
+        elif isinstance(dataloader_args.sampler, TorchRandomSampler):
+            sampler = RandomSampler(dataloader_args.sampler.data_source)
+            logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
+        elif self.is_distributed():
+            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our"
+                               "`ReproducibleSampler`.")
+        else:
+            sampler = ReproduceBatchSampler(
+                batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
+                batch_size=dataloader_args.batch_size,
+                drop_last=dataloader_args.drop_last
+            )
+        sampler.load_state_dict(sampler_states)
+        states["dataloader"] = self.set_dist_repro_dataloader(dataloader, sampler)
+
+        # 修改 trainer_state.batch_idx_in_epoch
+        # sampler 是类似 RandomSampler 的sampler，不是 batch_sampler；
+        if not isinstance(sampler, ReproducibleBatchSampler):
+            if dataloader_args.drop_last:
+                batch_idx_in_epoch = len(
+                    sampler) // dataloader_args.batch_size - sampler.num_left_samples // dataloader_args.batch_size
+            else:
+                batch_idx_in_epoch = (len(sampler) + dataloader_args.batch_size - 1) // dataloader_args.batch_size - \
+                    (sampler.num_left_samples + dataloader_args.batch_size - 1) // dataloader_args.batch_size
+        # sampler 是 batch_sampler；
+        else:
+            batch_idx_in_epoch = sampler.batch_idx_in_epoch
+
+        states["batch_idx_in_epoch"] = batch_idx_in_epoch
+        return states
 
     def get_optimizer_state(self):
         optimizers_state_dict = {}
@@ -275,7 +307,7 @@ class TorchDriver(Driver):
         if should_load_model:
             self.load_model(filepath=folder.joinpath(FASTNLP_MODEL_FILENAME), only_state_dict=only_state_dict)
 
-        # 3. 加载fp16的状态
+        # 3. 加载 fp16 的状态
         if "grad_scaler_state_dict" in states:
             grad_scaler_state_dict = states.pop("grad_scaler_state_dict")
             if not isinstance(self.grad_scaler, DummyGradScaler):
@@ -286,40 +318,9 @@ class TorchDriver(Driver):
                            f"the training process may be unstable.")
 
         # 4. 恢复 sampler 的状态；
-        dataloader_args = self.get_dataloader_args(dataloader)
-        if isinstance(dataloader_args.batch_sampler, ReproducibleBatchSampler):
-            sampler = dataloader_args.batch_sampler
-        elif isinstance(dataloader_args.sampler, ReproducibleSampler):
-            sampler = dataloader_args.sampler
-        elif isinstance(dataloader_args.sampler, TorchRandomSampler):
-            sampler = RandomSampler(dataloader_args.sampler.data_source)
-            logger.debug("Replace torch RandomSampler into fastNLP RandomSampler.")
-        elif self.is_distributed():
-            raise RuntimeError("It is not allowed to use checkpoint retraining when you do not use our"
-                               "`ReproducibleSampler`.")
-        else:
-            sampler = ReproduceBatchSampler(
-                batch_sampler=dataloader_args.batch_sampler if dataloader_args.batch_sampler is not None else dataloader_args.sampler,
-                batch_size=dataloader_args.batch_size,
-                drop_last=dataloader_args.drop_last
-            )
-        sampler.load_state_dict(states.pop('sampler_states'))
-        states["dataloader"] = self.set_dist_repro_dataloader(dataloader, sampler)
-
-        # 4. 修改 trainer_state.batch_idx_in_epoch
-        # sampler 是类似 RandomSampler 的sampler，不是 batch_sampler；
-        if not isinstance(sampler, ReproducibleBatchSampler):
-            if dataloader_args.drop_last:
-                batch_idx_in_epoch = len(
-                    sampler) // dataloader_args.batch_size - sampler.num_left_samples // dataloader_args.batch_size
-            else:
-                batch_idx_in_epoch = (len(sampler) + dataloader_args.batch_size - 1) // dataloader_args.batch_size - \
-                    (sampler.num_left_samples + dataloader_args.batch_size - 1) // dataloader_args.batch_size
-        # sampler 是 batch_sampler；
-        else:
-            batch_idx_in_epoch = sampler.batch_idx_in_epoch
-
-        states["batch_idx_in_epoch"] = batch_idx_in_epoch
+        sampler_states = states.pop('sampler_states')
+        states_ret = self.load_sampler_state(dataloader, sampler_states)
+        states.update(states_ret)
 
         return states
 

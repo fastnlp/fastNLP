@@ -73,6 +73,7 @@ from .utils import (
     _FleetWrappingModel, 
     replace_sampler,
     replace_batch_sampler,
+    _check_dataloader_args_for_distributed
 )
 from .dist_utils import fastnlp_paddle_all_gather, fastnlp_paddle_broadcast_object
 
@@ -129,15 +130,15 @@ class PaddleFleetDriver(PaddleDriver):
     :param is_pull_by_paddle_run: 标记当前进程是否为通过 ``python -m paddle.distributed.launch`` 启动的。
         这个参数仅在 :class:`~fastNLP.core.Trainer` 中初始化 driver 时使用
     :param fp16: 是否开启混合精度训练；
+    :param paddle_kwargs:
+        * *fleet_kwargs* -- 用于在使用 ``PaddleFleetDriver`` 时指定 ``DataParallel`` 和 ``fleet`` 初始化时的参数，包括：
+            
+            * *is_collective* -- 是否使用 paddle 集群式的分布式训练方法，目前仅支持为 ``True`` 的情况；
+            * *role_maker* -- 初始化 ``fleet`` 分布式训练 API 时使用的 ``RoleMaker``；
+            * 其它用于初始化 ``DataParallel`` 的参数；
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`paddle.amp.GradScaler` 的参数;
+    
     :kwargs:
-        * *paddle_kwargs* -- 用于在指定 ``driver`` 为 'paddle' 时设定具体 driver 实例的一些参数：
-
-            * fleet_kwargs -- 用于在使用 ``PaddleFleetDriver`` 时指定 ``DataParallel`` 和 ``fleet`` 初始化时的参数，包括：
-
-                * is_collective -- 是否使用 paddle 集群式的分布式训练方法，目前仅支持为 ``True`` 的情况；
-                * role_maker -- 初始化 ``fleet`` 分布式训练 API 时使用的 ``RoleMaker``
-                * 其它用于初始化 ``DataParallel`` 的参数；
-
         * wo_auto_param_call (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为；
 
         .. note::
@@ -151,11 +152,12 @@ class PaddleFleetDriver(PaddleDriver):
             parallel_device: Optional[Union[List[str], str]],
             is_pull_by_paddle_run: bool = False,
             fp16: bool = False,
+            paddle_kwargs: Dict = None,
             **kwargs
     ):
         if USER_CUDA_VISIBLE_DEVICES not in os.environ:
-            raise RuntimeError("To run paddle distributed training, please set `FASTNLP_BACKEND` to 'paddle' before using FastNLP.")
-        super(PaddleFleetDriver, self).__init__(model, fp16=fp16, **kwargs)
+            raise RuntimeError("To run paddle distributed training, please set `FASTNLP_BACKEND` to 'paddle' before using fastNLP.")
+        super(PaddleFleetDriver, self).__init__(model, fp16=fp16, paddle_kwargs=paddle_kwargs, **kwargs)
 
         # 如果不是通过 launch 启动，要求用户必须传入 parallel_device
         if not is_pull_by_paddle_run:
@@ -193,17 +195,14 @@ class PaddleFleetDriver(PaddleDriver):
         self.world_size = None
         self.global_rank = 0
         self.gloo_rendezvous_dir = None
-
-        # 分布式环境的其它参数设置
-        paddle_kwargs = kwargs.get("paddle_kwargs", {})
         
-        self._fleet_kwargs = paddle_kwargs.get("fleet_kwargs", {})
+        self._fleet_kwargs = self._paddle_kwargs.get("fleet_kwargs", {})
         check_user_specific_params(self._fleet_kwargs, DataParallel.__init__, DataParallel.__name__)
         # fleet.init 中对于分布式策略的设置，详情可以参考 PaddlePaddle 的官方文档
         self.strategy = self._fleet_kwargs.get("strategy", fleet.DistributedStrategy())
         self.is_collective = self._fleet_kwargs.pop("is_collective", True)
         if not self.is_collective:
-            raise NotImplementedError("FastNLP only support `collective` for distributed training now.")
+            raise NotImplementedError("fastNLP only support `collective` for distributed training now.")
         self.role_maker = self._fleet_kwargs.pop("role_maker", None)
 
         self.output_from_new_proc = kwargs.get("output_from_new_proc", "only_error")
@@ -422,8 +421,7 @@ class PaddleFleetDriver(PaddleDriver):
         # trainer, evaluator
         if dist is None:
             if reproducible:
-                raise RuntimeError("It is not allowed to use checkpoint retraining when you initialize fleet out of our "
-                                   "control.")
+                raise RuntimeError("It is not allowed to save checkpoint if the sampler is not allowed to be replaced.")
             else:
                 args = self.get_dataloader_args(dataloader)
                 if isinstance(args.batch_sampler, ReproducibleBatchSampler):
@@ -454,6 +452,7 @@ class PaddleFleetDriver(PaddleDriver):
                 )
                 return replace_sampler(dataloader, sampler)
             else:
+                _check_dataloader_args_for_distributed(args, controller='Trainer')
                 sampler = RandomSampler(
                     dataset=args.dataset,
                     shuffle=args.shuffle,

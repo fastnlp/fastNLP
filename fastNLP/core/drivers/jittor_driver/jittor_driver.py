@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
 from fastNLP.core.drivers.driver import Driver
 from fastNLP.core.dataloaders import JittorDataLoader
+from fastNLP.core.dataloaders import OverfitDataLoader
 from fastNLP.core.samplers import ReproducibleSampler, RandomSampler
 from fastNLP.core.log import logger
 from fastNLP.core.utils import apply_to_collection, nullcontext
@@ -39,20 +40,22 @@ __all__ = [
 
 class JittorDriver(Driver):
     r"""
-    ``Jittor`` 框架的 ``Driver``
+    ``Jittor`` 框架的 ``Driver``，是 ``JittorSingleDevice`` 和 ``JittorMPIDriver`` 的父类。
+
+    .. warning::
+
+        您不应当直接初始化该类，然后传入给 ``Trainer``，换句话说，您应当使用该类的子类 ``JittorSingleDriver`` 和 ``TorchDDPDriver``，而不是
+        该类本身；
 
     .. note::
 
-        这是一个正在开发中的功能，敬请期待。
+        您可以在使用 ``JittorSingleDevice`` 和 ``JittorMPIDriver`` 时使用 ``JittorDriver`` 提供的接口；
 
-    .. todo::
-
-        实现 fp16 的设置，且支持 cpu 和 gpu 的切换；
-        实现用于断点重训的 save 和 load 函数；
-
+    :param model: 训练时使用的 **jittor** 模型；
+    :param fp16: 是否开启混合精度训练;
+    :param jittor_kwargs:
     """
-
-    def __init__(self, model, fp16: bool = False, **kwargs):
+    def __init__(self, model, fp16: bool = False, jittor_kwargs: Dict = None, **kwargs):
         if not isinstance(model, Module):
             raise ValueError(f"Parameter `model` can not be `{type(model)}` in `JittorDriver`, it should be exactly "
                              f"`jittor.Module` type.")
@@ -64,12 +67,13 @@ class JittorDriver(Driver):
             jt.flags.auto_mixed_precision_level = 0
         self.fp16 = fp16
         self._auto_cast = nullcontext
+        self._jittor_kwargs = jittor_kwargs if jittor_kwargs is not None else {}
 
         # 用来设置是否关闭 auto_param_call 中的参数匹配问题；
         self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
 
     def check_dataloader_legality(self, dataloader):
-        if not isinstance(dataloader, (Dataset, JittorDataLoader)):
+        if not isinstance(dataloader, (Dataset, JittorDataLoader, OverfitDataLoader)):
             raise TypeError(f"{Dataset} or {JittorDataLoader} is expected, instead of `{type(dataloader)}`")
         if len(dataloader) == 0:
             logger.rank_zero_warning("Your dataloader is empty, which is not recommended because it "
@@ -138,26 +142,12 @@ class JittorDriver(Driver):
         num_consumed_batches = states.pop('num_consumed_batches')
         if hasattr(sampler, 'state_dict') and callable(sampler.state_dict):
             sampler_states = sampler.state_dict()
-            # 需要针对 num_consumed_samples 做特殊的处理。因为DataLoader存在预取行为，直接使用sampler中的num_consumed_samples
-            #   会造成多余实际消耗的问题。因为
-            num_consumed_samples_array = sampler_states.pop('num_consumed_samples_array', None)
-            if num_consumed_samples_array is not None:
-                if isinstance(sampler, ReproducibleSampler):  # 如果是 sampler 的话，需要考虑 batch_size 。
-                    if dataloader_args.batch_size is not None:
-                        num_consumed_batches = num_consumed_batches * dataloader_args.batch_size
-                    else:  # 有可能 batch_size 为 None，就只有损失精度了
-                        logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
-                                     "it may cause missing some samples when reload.")
-                        num_consumed_batches = sampler_states['num_consumed_samples']
-                sampler_states['num_consumed_samples'] = num_consumed_samples_array[num_consumed_batches]
-                assert sampler_states['num_consumed_samples'] != -1, "This is a bug, please report."
+            if dataloader_args.batch_size is not None:
+                sampler_states['num_consumed_samples'] = sampler.num_replicas * dataloader_args.batch_size \
+                                                            * num_consumed_batches
             else:
-                if dataloader_args.batch_size is not None:
-                    sampler_states['num_consumed_samples'] = sampler.num_replicas * dataloader_args.batch_size \
-                                                             * num_consumed_batches
-                else:
-                    logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
-                                 "it may cause missing some samples when reload.")
+                logger.rank_zero_warning("fastNLP cannot get batch_size, we have to save based on `num_consumed_samples`, "
+                                "it may cause missing some samples when reload.")
 
             states['sampler_states'] = sampler_states
         else:

@@ -11,9 +11,12 @@ from fastNLP.core.samplers import (
 )
 from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_1
 from tests.helpers.datasets.paddle_data import PaddleNormalDataset, PaddleNormalXYDataset
-from tests.helpers.utils import magic_argv_env_context
+from tests.helpers.utils import magic_argv_env_context, recover_logger
 from fastNLP.envs.distributed import rank_zero_rm
+from fastNLP import prepare_paddle_dataloader
+from fastNLP.core.drivers.paddle_driver.dist_utils import fastnlp_paddle_all_gather
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+from fastNLP import logger
 if _NEED_IMPORT_PADDLE:
     import paddle
     import paddle.distributed as dist
@@ -519,6 +522,189 @@ class TestSetDistReproDataloader:
 
         assert len(left_idxes) + len(already_seen_idx) == len(self.dataset) / num_replicas
         assert len(left_idxes | already_seen_idx) == len(self.dataset) / num_replicas
+
+    @magic_argv_env_context
+    @pytest.mark.parametrize("shuffle", ([True, False]))
+    @pytest.mark.parametrize("batch_size", ([1, 3, 16, 17]))
+    @pytest.mark.parametrize("drop_last", ([True, False]))
+    def test_shuffle_dataloader(self, shuffle, batch_size, drop_last, reproducible=True):
+        try:
+            # 需要检验一下 set_dist_repro_dataloader 没有修改参数
+            num_samples = 200
+            dataset = PaddleNormalXYDataset(num_samples)
+            dl = prepare_paddle_dataloader(dataset, shuffle=shuffle, batch_size=batch_size, drop_last=drop_last)
+            self.driver.setup()
+            dl = self.driver.set_dist_repro_dataloader(dataloader=dl, dist='dist', reproducible=reproducible)
+
+            data = []
+            flags = []
+            for batch in dl:
+                flags.append(batch['x'].shape[0] == batch_size)
+                data.extend(batch['x'].reshape((-1, )).tolist())
+
+            _num_samples = num_samples//2
+
+            if drop_last and _num_samples%batch_size != 0:
+                assert len(data)!=_num_samples
+                assert all(flags) == True
+            elif _num_samples%batch_size!=0:
+                assert flags[-1] is False
+            else:
+                assert len(data) == _num_samples
+
+            if not shuffle:
+                for i in range(1, len(data)-1):
+                    assert data[i]>data[i-1]
+            else:
+                flags = []
+                for i in range(1, len(data)-1):
+                    flags.append(data[i]>data[i-1])
+                assert all(flags) is False
+            datas = fastnlp_paddle_all_gather(data)
+            if drop_last:
+                assert len(set(datas[0] + datas[1])) == num_samples-_num_samples%batch_size*2
+            else:
+                assert len(set(datas[0] + datas[1])) == num_samples
+        finally:
+            dist.barrier()
+
+    @magic_argv_env_context
+    @pytest.mark.parametrize("shuffle", ([True, False]))
+    @pytest.mark.parametrize("batch_size", ([1, 3, 16, 17]))
+    @pytest.mark.parametrize("drop_last", ([True, False]))
+    def test_batch_sampler_dataloader(self, shuffle, batch_size, drop_last, reproducible=True):
+        try:
+            # 需要检验一下 set_dist_repro_dataloader 没有修改参数
+            num_samples = 200
+            num_device = 2
+            dataset = PaddleNormalXYDataset(num_samples)
+            sampler = BucketedBatchSampler(dataset, length=dataset._data, batch_size=batch_size, drop_last=drop_last,
+                                        shuffle=shuffle, num_batch_per_bucket=2)
+            dl = prepare_paddle_dataloader(dataset, batch_sampler=sampler)
+            self.driver.setup()
+            dl = self.driver.set_dist_repro_dataloader(dataloader=dl, dist='dist', reproducible=reproducible)
+
+            data = []
+            flags = []
+            for batch in dl:
+                d = batch['x'].reshape((-1, )).tolist()
+                diff = max(d) - min(d)
+                assert diff<batch_size*2*2*2
+                data.extend(d)
+                flags.append(len(d)==batch_size)
+            _num_samples = num_samples//num_device
+            if drop_last and _num_samples%batch_size != 0:
+                assert len(data)!=_num_samples
+                assert all(flags) == True
+            elif _num_samples%batch_size!=0:
+                assert flags[-1] is False
+            else:
+                assert len(data) == _num_samples
+
+            if not shuffle:
+                for i in range(1, len(data)-1):
+                    assert data[i]<data[i-1]
+            else:
+                flags = []
+                for i in range(1, len(data)-1):
+                    flags.append(data[i]<data[i-1])
+                assert all(flags) is False
+            datas = fastnlp_paddle_all_gather(data)
+            if drop_last:
+                assert len(set(datas[0] + datas[1])) == num_samples-_num_samples%batch_size*2
+            else:
+                assert len(set(datas[0] + datas[1])) == num_samples
+        finally:
+            dist.barrier()
+
+    @magic_argv_env_context
+    @recover_logger
+    @pytest.mark.parametrize("inherit", ([True, False]))
+    def test_customized_batch_sampler_dataloader(self, inherit):
+        try:
+            logger.set_stdout('raw', level='info')
+            # 需要检验一下 set_dist_repro_dataloader 是否可以在定制 batch_sampler 的情况下正确运行
+            num_samples = 10
+            dataset = PaddleNormalXYDataset(num_samples)
+            if inherit:
+                class BatchSampler(paddle.io.BatchSampler):
+                    def __init__(self, dataset, batch_size):
+                        self.dataset = dataset
+                        self.batch_size = batch_size
+
+                    def __iter__(self):
+                        indices = list(range(len(dataset)))
+                        for i in range(len(self)):
+                            start = i * self.batch_size
+                            end = (i + 1) * self.batch_size
+                            return indices[start:end]
+
+                    def __len__(self):
+                        return (len(self.dataset)+self.batch_size-1)//self.batch_size
+            else:
+                class BatchSampler:
+                    def __init__(self, dataset, batch_size):
+                        self.dataset = dataset
+                        self.batch_size = batch_size
+
+                    def __iter__(self):
+                        indices = list(range(len(dataset)))
+                        for i in range(len(self)):
+                            start = i * self.batch_size
+                            end = (i + 1) * self.batch_size
+                            return indices[start:end]
+
+                    def __len__(self):
+                        return (len(self.dataset)+self.batch_size-1)//self.batch_size
+
+            dl = prepare_paddle_dataloader(dataset, batch_sampler=BatchSampler(dataset, batch_size=4))
+            self.driver.setup()
+            with pytest.raises(TypeError):
+                dl = self.driver.set_dist_repro_dataloader(dataloader=dl, dist='dist', reproducible=False)
+        finally:
+            pass
+
+    @magic_argv_env_context
+    @recover_logger
+    @pytest.mark.parametrize("inherit", ([True, False]))
+    def test_customized_sampler_dataloader(self, inherit):
+        try:
+            logger.set_stdout('raw', level='info')
+            # 需要检验一下 set_dist_repro_dataloader 是否可以在定制 batch_sampler 的情况下正确运行
+            num_samples = 10
+            dataset = PaddleNormalXYDataset(num_samples)
+            if inherit:
+                class Sampler(paddle.io.RandomSampler):
+                    def __init__(self, dataset, batch_size):
+                        self.dataset = dataset
+                        self.batch_size = batch_size
+
+                    def __iter__(self):
+                        indices = list(range(len(dataset)))
+                        return iter(indices)
+
+                    def __len__(self):
+                        return len(self.dataset)
+            else:
+                class Sampler:
+                    def __init__(self, dataset, batch_size):
+                        self.dataset = dataset
+                        self.batch_size = batch_size
+
+                    def __iter__(self):
+                        indices = list(range(len(dataset)))
+                        return iter(indices)
+
+                    def __len__(self):
+                        return len(self.dataset)
+
+            dl = prepare_paddle_dataloader(dataset, sampler=Sampler(dataset, batch_size=4))
+            self.driver.setup()
+            # TODO 这里需要raise
+            with pytest.raises(TypeError):
+                dl = self.driver.set_dist_repro_dataloader(dataloader=dl, dist='dist', reproducible=False)
+        finally:
+            pass
 
 
 ############################################################################

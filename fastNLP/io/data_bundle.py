@@ -245,8 +245,9 @@ class DataBundle:
         """
         _progress_desc = progress_desc
         for name, dataset in self.datasets.items():
-            if _progress_desc:
-                progress_desc = _progress_desc + f' for `{name}`'
+            if len(_progress_desc) == 0:
+                _progress_desc = 'Processing'
+            progress_desc = _progress_desc + f' for `{name}`'
             if dataset.has_field(field_name=field_name):
                 dataset.apply_field(func=func, field_name=field_name, new_field_name=new_field_name, num_proc=num_proc,
                                     progress_desc=progress_desc, progress_bar=progress_bar)
@@ -284,8 +285,9 @@ class DataBundle:
         res = {}
         _progress_desc = progress_desc
         for name, dataset in self.datasets.items():
-            if _progress_desc:
-                progress_desc = _progress_desc + f' for `{name}`'
+            if len(_progress_desc) == 0:
+                _progress_desc = 'Processing'
+            progress_desc = _progress_desc + f' for `{name}`'
             if dataset.has_field(field_name=field_name):
                 res[name] = dataset.apply_field_more(func=func, field_name=field_name, num_proc=num_proc,
                                                      modify_fields=modify_fields,
@@ -317,8 +319,9 @@ class DataBundle:
         """
         _progress_desc = progress_desc
         for name, dataset in self.datasets.items():
-            if _progress_desc:
-                progress_desc = _progress_desc + f' for `{name}`'
+            if len(_progress_desc) == 0:
+                _progress_desc = 'Processing'
+            progress_desc = _progress_desc + f' for `{name}`'
             dataset.apply(func, new_field_name=new_field_name, num_proc=num_proc, progress_bar=progress_bar,
                           progress_desc=progress_desc)
         return self
@@ -349,8 +352,9 @@ class DataBundle:
         res = {}
         _progress_desc = progress_desc
         for name, dataset in self.datasets.items():
-            if _progress_desc:
-                progress_desc = _progress_desc + f' for `{name}`'
+            if len(_progress_desc) == 0:
+                _progress_desc = 'Processing'
+            progress_desc = _progress_desc + f' for `{name}`'
             res[name] = dataset.apply_more(func, modify_fields=modify_fields, num_proc=num_proc,
                                            progress_bar=progress_bar, progress_desc=progress_desc)
         return res

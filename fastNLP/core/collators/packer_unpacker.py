@@ -2,6 +2,7 @@ from collections import defaultdict
 from functools import reduce
 from typing import Sequence, Mapping, Dict
 
+__all__ = []
 
 class MappingPackerUnpacker:
     @staticmethod
@@ -70,7 +71,7 @@ class SequencePackerUnpacker:
     @staticmethod
     def unpack_batch(batch:Sequence[Sequence], ignore_fields, input_fields)->Dict:
         """
-        将 Sequence[Sequence] 转为 Mapping 。例如 [[[1, 2], 2], [[3], 2]] -> {'_0': [[1, 2], [3]], '_1': [1, 2]}
+        将 Sequence[Sequence] 转为 Mapping 。例如 [[[1, 2], 2], [[3], 2]] -> {'_0': [[1, 2], [3]], '_1': [2, 2]}
 
         :param batch: 需要 unpack 的 batch 数据。
         :param ignore_fields: 需要忽略的 field 。

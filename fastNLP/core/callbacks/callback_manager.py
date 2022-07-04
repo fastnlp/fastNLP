@@ -75,12 +75,13 @@ class CallbackManager:
 
     def __init__(self, callbacks: Optional[List[Callback]]):
         r"""
-        注意 callback 的调用顺序：
+        注意 callback 的调用顺序为：
+
             1. 通过函数修饰器 `Trainer.on` 添加的 callback 函数；
             2. 通过 `Trainer` 的参数 `callbacks` 添加的 callback 类；
             3. 通过 `Trainer.add_callback_fn` 添加的 callback 函数；
 
-        :param callbacks: 初始化时可以传入的一系列 callback 类，通常为用户在初始化 ``Trainer`` 时直接传入的 callback 类；
+        :param callbacks: 初始化时可以传入的一系列 :class:`~fastNLP.Callback` 类，通常为用户在初始化 ``Trainer`` 时直接传入的 callback 列表；
         """
         self._need_reproducible_sampler = False
 
@@ -106,12 +107,9 @@ class CallbackManager:
 
     def initialize_class_callbacks(self):
         r"""
-        在实际的运行过程中，我们是将具体的一个 callback 实例拆分为单独的一个个 callback 函数，然后将它们加在一个字典里，该字典的键值就是
+        在实际的运行过程中，我们会将具体的一个 callback 实例拆分为单独的一个个 callback 函数，然后将它们加在一个字典里，该字典的键值就是
         一个个 callback 时机，也就是 `Event` 的类别；
         如果一个 callback 类的 callback 函数并不具备任何作用，我们实际并不会将其加在字典当中；
-
-        :param callbacks:
-        :return:
         """
         for each_callback in self.class_callbacks:
             self._need_reproducible_sampler |= each_callback.need_reproducible_sampler
@@ -144,11 +142,12 @@ class CallbackManager:
         用于断点重训的 callback 的保存函数；
         该函数主要涉及两个方面：
 
-        1. callback 的状态的保存；我们会调用每一个 callback 的 `on_save_checkpoint` 方法，该方法应当返回一个字典，其中包含着
-        断点重训应当保存的状态；
+        1. callback 的状态的保存；我们会调用每一个 callback 的 :func:`on_save_checkpoint` 方法，该方法应当返回一个字典，其中包含着
+           断点重训应当保存的状态；
         2. 每一个具体的 callback 函数的 filter 的状态；
 
-        :return: 一个包含上述内容的字典:
+        :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
+        :return: 一个包含上述内容的字典，格式如下:
         .. code-block::
 
             {
@@ -195,11 +194,10 @@ class CallbackManager:
 
     def on_load_checkpoint(self, trainer, states: Dict):
         r"""
-        用于断点重训的加载函数；
-        对应于断点重训的保存函数；
+        用于断点重训的加载函数，对应于断点重训的保存函数；
 
-        :param trainer: `Trainer`
-        :param states: 见 `on_save_checkpoint` 函数的返回值；
+        :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
+        :param states: 同 :func:`on_save_checkpoint` 函数的返回值；
         """
 
         # 1. 先恢复每一个具体的 callback 函数的 filter 的状态；

@@ -19,25 +19,25 @@ class LoadBestModelCallback(HasMonitorCallback):
     保存最佳的 monitor 值最佳的模型，并在训练结束的时候重新加载模型，默认会在加载之后删除权重文件。仅在训练正常结束的时候才能加载
     最好的模型。
 
-    :param monitor: 监控的 metric 值。
+    :param monitor: 监控的 metric 值：
 
         * 为 ``None``
-         将尝试使用 :class:`~fastNLP.Trainer` 中设置 `monitor` 值（如果有设置）。
+         将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置 `monitor` 值（如果有设置）；
         * 为 ``str``
          尝试直接使用该名称从 ``evaluation`` 结果中寻找，如果在 ``evaluation`` 结果中没有找到完全一致的名称，将
-         使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` 。
-        * 为 ``Callable``
+         使用 最长公共字符串算法 从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor`` ；
+        * 为 :class:`Callable`
          接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
-         的 ``monitor`` 值请返回 ``None`` 。
-    :param larger_better: 该 metric 值是否是越大越好。
+         的 ``monitor`` 值请返回 ``None`` ；
+    :param larger_better: 该 metric 值是否是越大越好；
     :param save_folder: 保存的文件夹，如果为空，则保存在内存中。不为空，则保存一份权重到文件中，当为多机训练，且本值不为空时，请确保
-        不同的机器均可访问当该路径。当 model_save_fn 不为 None 时该值一定不能为空。
-    :param only_state_dict: 是否只保存模型的参数。当 model_save_fn 不为空时，该值无效。
-    :param model_save_fn: 保存 model 的函数，与 model_load_fn 必须同时不为空。本函数的输入为一个已经创建好的文件夹，没有输出，
-        请在函数内完成对模型的保存。
-    :param model_load_fn: 加载 model 的函数，与 model_save_fn 必须同时不为空。本函数的输入为一个已经创建好的文件夹，没有输出，
-        请在函数内完成对模型的加载。
-    :param delete_after_train: 在训练结束后是否删掉模型。
+        不同的机器均可访问当该路径。当 ``model_save_fn`` 不为 None 时该值一定不能为空；
+    :param only_state_dict: 是否只保存模型的参数。当 ``model_save_fn`` 不为空时，该值无效；
+    :param model_save_fn: 保存 model 的函数，与 ``model_load_fn`` 必须同时不为空。本函数的输入为一个已经创建好的文件夹，没有输出，
+        请在函数内完成对模型的保存；
+    :param model_load_fn: 加载 model 的函数，与 ``model_save_fn`` 必须同时不为空。本函数的输入为一个已经创建好的文件夹，没有输出，
+        请在函数内完成对模型的加载；
+    :param delete_after_train: 在训练结束后是否删掉模型；
     """
     def __init__(self, monitor:Union[str, Callable]=None, larger_better:bool = True, only_state_dict:bool = True,
                  save_folder:Optional[str] = None, model_save_fn:Optional[Callable] = None,
@@ -105,14 +105,16 @@ class LoadBestModelCallback(HasMonitorCallback):
 
     def on_train_end(self, trainer):
         if abs(self.monitor_value) != float('inf'):  # 如果是 inf 说明从来没有运行过。
-            if self.real_save_folder:
-                logger.info(f"Loading best model from {self.real_save_folder} with {self.monitor_name}: {self.monitor_value}...")
-                trainer.load_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,
-                                   model_load_fn=self.model_load_fn)
-            else:
-                logger.info(f"Loading best model from buffer with {self.monitor_name}: {self.monitor_value}...")
-                self.buffer.seek(0)
-                trainer.load_model(folder=self.buffer, only_state_dict=self.only_state_dict)
+            # 如果是分布式且报错了，就不要加载了，防止barrier的问题
+            if not (trainer.driver.is_distributed() and self.encounter_exception):
+                if self.real_save_folder:
+                    logger.info(f"Loading best model from {self.real_save_folder} with {self._real_monitor}: {self.monitor_value}...")
+                    trainer.load_model(folder=self.real_save_folder, only_state_dict=self.only_state_dict,
+                                       model_load_fn=self.model_load_fn)
+                else:
+                    logger.info(f"Loading best model from buffer with {self._real_monitor}: {self.monitor_value}...")
+                    self.buffer.seek(0)
+                    trainer.load_model(folder=self.buffer, only_state_dict=self.only_state_dict)
             if self.delete_after_after:
                 if not self.encounter_exception:  # 防止出现死锁。
                     trainer.driver.barrier()

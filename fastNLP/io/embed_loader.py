@@ -91,7 +91,7 @@ class EmbedLoader:
                         hit_flags[index] = True
                 except Exception as e:
                     if error == 'ignore':
-                        logger.warn("Error occurred at the {} line.".format(idx))
+                        logger.warning("Error occurred at the {} line.".format(idx))
                     else:
                         logging.error("Error occurred at the {} line.".format(idx))
                         raise e
@@ -156,7 +156,7 @@ class EmbedLoader:
                         found_pad = True
                 except Exception as e:
                     if error == 'ignore':
-                        logger.warn("Error occurred at the {} line.".format(idx))
+                        logger.warning("Error occurred at the {} line.".format(idx))
                         pass
                     else:
                         logging.error("Error occurred at the {} line.".format(idx))

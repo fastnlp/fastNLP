@@ -1,6 +1,6 @@
 import os
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 from enum import IntEnum
 import contextlib
 import random
@@ -14,16 +14,19 @@ from fastNLP.envs import (
     FASTNLP_BACKEND_LAUNCH,
     FASTNLP_GLOBAL_SEED,
 )
-from fastNLP.core.samplers import re_instantiate_sampler
-from fastNLP.core.utils import auto_param_call
+from fastNLP.core.samplers import re_instantiate_sampler, ReproducibleBatchSampler
+from fastNLP.core.utils import auto_param_call, apply_to_collection
 from fastNLP.core.log import logger
 
 if _NEED_IMPORT_TORCH:
     import torch
     # import torch.nn as nn
     from torch.nn import Module
-    from torch.utils.data import DataLoader, BatchSampler
-    from torch.utils.data.sampler import Sampler
+    from torch.utils.data import DataLoader
+    from torch.utils.data import RandomSampler as TorchRandomSampler
+    from torch.utils.data import SequentialSampler as TorchSequentialSampler
+    from torch.utils.data import BatchSampler as TorchBatchSampler
+
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Module
 
@@ -104,6 +107,29 @@ class _DDPWrappingModel(Module):
         else:
             return fn(batch)
 
+class _DeepSpeedWrappingModel(_DDPWrappingModel):
+    """
+    继承 ``_DDPWrappingModel``，区别在于进行 forward 之前先将 float 数据转换为 float16
+    """
+
+    def __init__(self, model: Module, fp16):
+        super(_DeepSpeedWrappingModel, self).__init__(model)
+        self.fp16 = fp16
+
+    def forward(self, batch, **kwargs):
+        if self.fp16:
+            batch = self._move_float_tensors_to_half(batch)
+
+        return super().forward(batch, **kwargs)
+
+    @staticmethod
+    def batch_to(data):
+        return data.half()
+
+    def _move_float_tensors_to_half(self, batch: Any):
+        batch = apply_to_collection(batch, (torch.FloatTensor, torch.cuda.FloatTensor), function=self.batch_to)
+        return batch
+
 
 class DummyGradScaler:
     """
@@ -178,28 +204,33 @@ def replace_sampler(dataloader: "DataLoader", sampler):
     instance_attrs = {k: v for k, v in vars(dataloader).items() if not k.startswith('_')}
 
     # 'multiprocessing_context' 是 user-defined function;
-    instance_attrs["multiprocessing_context"] = dataloader.multiprocessing_context
+    if getattr(dataloader, 'multiprocessing_context', None) is not None:
+        instance_attrs["multiprocessing_context"] = dataloader.multiprocessing_context
 
     # 拿到 dataloader '__init__' 函数的默认函数签名；
     init_params = dict(inspect.signature(dataloader.__init__).parameters)
 
-    # 这里为什么要单独弄的原因在于，用户在定制自己的 dataloader 的同时可能为了方便只设定一些参数，而后面直接使用 **kwargs 的方式，这时如果
-    # 其在初始化自己的 dataloader 实例的时候加入了一些其它的新的参数（首先这一步是必要的，因为我们只能通过这样加 sampler；另一方面，用户
-    # 可能确实通过 **kwargs 加入了一些新的参数），如果假设用户是这样使用的： "super().__init__(**kwargs)"，那么我们就只能去 DataLoader
-    # 中寻找；
+    # 防止用户的 DataLoader 是继承了 pytorch 的 DataLoader，然后还是使用了 **kwargs 的方式对父类传参数
     has_variadic_kwargs = any(v.kind is v.VAR_KEYWORD for k, v in init_params.items())
-    if has_variadic_kwargs:
-        init_params.update(dict(inspect.signature(DataLoader.__init__).parameters))
-        del init_params["self"]
+    if has_variadic_kwargs and isinstance(dataloader, DataLoader):
+        # 防止用户写入了 super().__init__(**kwargs)
+        for key, value in dict(inspect.signature(DataLoader.__init__).parameters).items():
+            if key not in init_params and key != 'self':
+                init_params[key] = value
 
-    # 因为我们刚才可能用 DataLoader 的默认参数将用户定制的 dataloader 的参数覆盖掉了，因此需要重新弄一遍；
+    # 如果初始化dataloader所使用的参数不是默认值，那么我们需要将其记录下来用于重新初始化时设置；
     non_default_params = {name for name, p in init_params.items() if
                           name in instance_attrs and p.default != instance_attrs[name]}
     # add `dataset` as it might have been replaced with `*args`
     non_default_params.add("dataset")
 
     reconstruct_args = {k: v for k, v in instance_attrs.items() if k in non_default_params}
-    reconstruct_args.update(_dataloader_init_kwargs_resolve_sampler(dataloader, sampler))
+    if isinstance(dataloader, DataLoader):
+        reconstruct_args.update({"sampler": sampler, "shuffle": False, "batch_sampler": None})
+
+    batch_sampler = getattr(dataloader, "batch_sampler")
+    if batch_sampler is not None and isinstance(batch_sampler, ReproducibleBatchSampler):
+        raise RuntimeError("It should not be running here, please report a bug to us.")
 
     required_args = {
         p.name
@@ -209,58 +240,32 @@ def replace_sampler(dataloader: "DataLoader", sampler):
            and p.name not in reconstruct_args
     }
 
-    # 这种错误针对的是 __init__ 中的参数没有用同样名字的 self 挂上；
+    # 在 attribute 中没有找到这些参数，导致了没有办法重新初始化
     if required_args:
         required_args = sorted(required_args)
         dataloader_self_name = dataloader.__class__.__name__
         raise Exception(
-            f"Trying to inject `DistributedSampler` into the `{dataloader_self_name}` instance. "
-            "This would fail as some of the `__init__` arguments are not available as instance attributes. "
-            f"The missing attributes are {required_args}. "
-            f"HINT: If you wrote the `{dataloader_self_name}` class, define `self.missing_arg_name` or "
-            "manually add the `DistributedSampler` as: "
-            f"`{dataloader_self_name}(dataset, sampler=DistributedSampler(dataset))`."
+            f"Need to inject arguments {required_args} into the __init__ of `{dataloader_self_name}`. "
+            f"But they are not found in the attribute of `{dataloader_self_name}`, fastNLP cannot determine its "
+            f"value when try to reinitialize `{dataloader_self_name}`, please add `{required_args}` to be "
+            f"`{dataloader_self_name}`'s attribute."
         )
 
     # 这种错误针对的是传入的 dataloader 不是直接的 DataLoader，而是定制了 DataLoader，但是 __init__ 中没有 **kwargs；
     if not has_variadic_kwargs:
-
         # the dataloader signature does not allow keyword arguments that need to be passed
         missing_kwargs = reconstruct_args.keys() - init_params.keys()
         if missing_kwargs:
             missing_kwargs = sorted(missing_kwargs)
             dataloader_self_name = dataloader.__class__.__name__
             raise Exception(
-                f"Trying to inject `DistributedSampler` into the `{dataloader_self_name}` instance. "
-                "This would fail as it doesn't expose all its attributes in the `__init__` signature. "
-                f"The missing arguments are {missing_kwargs}. "
-                f"HINT: If you wrote the `{dataloader_self_name}` class, add the `__init__` arguments or "
-                "manually add the `DistributedSampler` as: "
-                f"`{dataloader_self_name}(dataset, sampler=DistributedSampler(dataset))`."
+                f"The parameter:{missing_kwargs} needed to reinitialize `{dataloader_self_name}` is not found."
             )
+        # 如果没有kwargs，则保证一下只传入需要的参数
+        if not isinstance(dataloader, DataLoader):
+            reconstruct_args = {key:value for key,value in reconstruct_args.items() if key in init_params}
+
     return type(dataloader)(**reconstruct_args)
-
-
-def _dataloader_init_kwargs_resolve_sampler(
-        dataloader: "DataLoader", sampler: Optional["Sampler"]
-) -> Dict[str, Any]:
-    r"""
-    此函数用于处理与 DataLoader 关联的采样器、batch_sampler 参数重新实例化；
-    """
-    batch_sampler = getattr(dataloader, "batch_sampler")
-    # checking the batch sampler type is different than PyTorch default.
-    if batch_sampler is not None and not isinstance(batch_sampler, BatchSampler):
-        batch_sampler = re_instantiate_sampler(batch_sampler)
-
-        return {
-            "sampler": None,
-            "shuffle": False,
-            "batch_sampler": batch_sampler,
-            "batch_size": 1,
-            "drop_last": False,
-        }
-
-    return {"sampler": sampler, "shuffle": False, "batch_sampler": None}
 
 
 def replace_batch_sampler(dataloader, new_batch_sampler):
@@ -273,6 +278,13 @@ def replace_batch_sampler(dataloader, new_batch_sampler):
             params_keys.remove(k)
     params = {k: getattr(dataloader, k) for k in params_keys}
     params["batch_sampler"] = new_batch_sampler
+
+    if not isinstance(dataloader, DataLoader):
+        init_params = dict(inspect.signature(dataloader.__init__).parameters)
+        has_variadic_kwargs = any(v.kind is v.VAR_KEYWORD for k, v in init_params.items())
+        if not has_variadic_kwargs:
+            params = {key:value for key,value in params.items() if key in init_params}
+
     return type(dataloader)(**params)
 
 
@@ -295,5 +307,98 @@ def optimizer_state_to_device(state, device):
     return new_state
 
 
+def _check_dataloader_args_for_distributed(args, controller='Trainer'):
+    if type(args.batch_sampler) is not TorchBatchSampler or (type(args.sampler) not in {TorchRandomSampler,
+                                                              TorchSequentialSampler}):
+        mode = 'training' if controller == 'Trainer' else 'evaluation'
+        substitution = 'fastNLP.RandomSampler' if controller == 'Trainer' else 'fastNLP.UnrepeatedSequentialSampler'
+        raise TypeError(f"Using customized ``batch_sampler`` or ``sampler`` for distributed {mode} may cause "
+                        f"unpredictable problems, because fastNLP will substitute the dataloader's sampler into "
+                        f"``{substitution}``. The customized sampler should set for distributed running  "
+                        f"before initializing ``{controller}`` , and then set the "
+                        f"parameter ``use_dist_sampler`` of ``{controller}`` to ``False``.")
 
+def _create_default_config(
+    zero_optimization: bool = True,
+    zero_allow_untested_optimizer: bool = True,
+    logging_batch_size_per_gpu: Union[str, int] = "auto",
+    partition_activations: bool = False,
+    cpu_checkpointing: bool = False,
+    contiguous_memory_optimization: bool = False,
+    synchronize_checkpoint_boundary: bool = False,
+    offload_optimizer: bool = False,
+    offload_parameters: bool = False,
+    offload_params_device: str = "cpu",
+    nvme_path: str = "/local_nvme",
+    params_buffer_count: int = 5,
+    params_buffer_size: int = 100_000_000,
+    max_in_cpu: int = 1_000_000_000,
+    offload_optimizer_device: str = "cpu",
+    optimizer_buffer_count: int = 4,
+    pin_memory: bool = False,
+    block_size: int = 1048576,
+    queue_depth: int = 8,
+    single_submit: bool = False,
+    overlap_events: bool = True,
+    thread_count: int = 1,
+    stage: int = 2,
+    contiguous_gradients: bool = True,
+    overlap_comm: bool = True,
+    allgather_partitions: bool = True,
+    reduce_scatter: bool = True,
+    allgather_bucket_size: int = 200_000_000,
+    reduce_bucket_size: int = 200_000_000,
+    sub_group_size: int = 1_000_000_000_000,
+) -> Dict:
+    cfg = {
+        "activation_checkpointing": {
+            "partition_activations": partition_activations,
+            "cpu_checkpointing": cpu_checkpointing,
+            "contiguous_memory_optimization": contiguous_memory_optimization,
+            "synchronize_checkpoint_boundary": synchronize_checkpoint_boundary,
+        },
+        "aio": {
+            "block_size": block_size,
+            "queue_depth": queue_depth,
+            "single_submit": single_submit,
+            "overlap_events": overlap_events,
+            "thread_count": thread_count,
+        },
+    }
+    zero_kwargs = {
+        "stage": stage,
+        "contiguous_gradients": contiguous_gradients,
+        "overlap_comm": overlap_comm,
+        "allgather_partitions": allgather_partitions,
+        "reduce_scatter": reduce_scatter,
+        "allgather_bucket_size": allgather_bucket_size,
+        "reduce_bucket_size": reduce_bucket_size,
+        "sub_group_size": sub_group_size,
+    }
+    if zero_optimization:
+        zero_config = zero_kwargs
 
+        if offload_optimizer:
+            zero_config["offload_optimizer"] = {
+                "device": offload_optimizer_device,
+                "nvme_path": nvme_path,
+                "buffer_count": optimizer_buffer_count,
+                "pin_memory": pin_memory,
+            }
+        if offload_parameters:
+            zero_config["offload_param"] = {
+                "device": offload_params_device,
+                "nvme_path": nvme_path,
+                "buffer_count": params_buffer_count,
+                "buffer_size": params_buffer_size,
+                "max_in_cpu": max_in_cpu,
+                "pin_memory": pin_memory,
+            }
+        cfg = {
+            "zero_allow_untested_optimizer": zero_allow_untested_optimizer,
+            "zero_optimization": zero_config,
+            **cfg,
+        }
+    if logging_batch_size_per_gpu != "auto":
+        cfg = {"train_micro_batch_size_per_gpu": logging_batch_size_per_gpu, **cfg}
+    return cfg

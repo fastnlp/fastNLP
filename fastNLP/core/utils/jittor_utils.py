@@ -1,6 +1,7 @@
 __all__ = [
+    'is_jittor_module',
     'is_jittor_dataset',
-    'jittor_collate_wraps'
+    'jittor_collate_wraps',
 ]
 
 from collections.abc import Mapping, Callable
@@ -13,6 +14,17 @@ if _NEED_IMPORT_JITTOR:
 
 from fastNLP.core.dataset import Instance
 
+def is_jittor_module(model) -> bool:
+    """
+    判断传入的 ``model`` 是否是 :class:`jittor.Module` 类型
+
+    :param model: 模型；
+    :return: 当前模型是否为 ``jittor`` 的模型；
+    """
+    try:
+        return isinstance(model, jt.Module)
+    except BaseException:
+        return False
 
 def is_jittor_dataset(dataset) -> bool:
     """
