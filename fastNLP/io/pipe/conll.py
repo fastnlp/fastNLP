@@ -30,7 +30,7 @@ class _NERPipe(Pipe):
     target。返回的DataSet中被设置为input有words, target, seq_len; 设置为target有target, seq_len。
     """
     
-    def __init__(self, encoding_type: str = 'bio', lower: bool = False):
+    def __init__(self, encoding_type: str = 'bio', lower: bool = False, num_proc=0):
         r"""
 
         :param: str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
@@ -39,10 +39,14 @@ class _NERPipe(Pipe):
         if encoding_type == 'bio':
             self.convert_tag = iob2
         elif encoding_type == 'bioes':
-            self.convert_tag = lambda words: iob2bioes(iob2(words))
+            def func(words):
+                return iob2bioes(iob2(words))
+            # self.convert_tag = lambda words: iob2bioes(iob2(words))
+            self.convert_tag = func
         else:
             raise ValueError("encoding_type only supports `bio` and `bioes`.")
         self.lower = lower
+        self.num_proc = num_proc
     
     def process(self, data_bundle: DataBundle) -> DataBundle:
         r"""
@@ -60,15 +64,12 @@ class _NERPipe(Pipe):
         """
         # 转换tag
         for name, dataset in data_bundle.iter_datasets():
-            dataset.apply_field(self.convert_tag, field_name='target', new_field_name='target')
+            dataset.apply_field(self.convert_tag, field_name='target', new_field_name='target', num_proc=self.num_proc)
         
         _add_words_field(data_bundle, lower=self.lower)
         
         # index
         _indexize(data_bundle)
-        
-        input_fields = ['target', 'words', 'seq_len']
-        target_fields = ['target', 'seq_len']
         
         for name, dataset in data_bundle.iter_datasets():
             dataset.add_seq_len('words')
@@ -144,7 +145,7 @@ class Conll2003Pipe(Pipe):
 
 
     """
-    def __init__(self, chunk_encoding_type='bioes', ner_encoding_type='bioes', lower: bool = False):
+    def __init__(self, chunk_encoding_type='bioes', ner_encoding_type='bioes', lower: bool = False, num_proc: int = 0):
         r"""
 
         :param str chunk_encoding_type: 支持bioes, bio。
@@ -154,16 +155,23 @@ class Conll2003Pipe(Pipe):
         if chunk_encoding_type == 'bio':
             self.chunk_convert_tag = iob2
         elif chunk_encoding_type == 'bioes':
-            self.chunk_convert_tag = lambda tags: iob2bioes(iob2(tags))
+            def func1(tags):
+                return iob2bioes(iob2(tags))
+            # self.chunk_convert_tag = lambda tags: iob2bioes(iob2(tags))
+            self.chunk_convert_tag = func1
         else:
             raise ValueError("chunk_encoding_type only supports `bio` and `bioes`.")
         if ner_encoding_type == 'bio':
             self.ner_convert_tag = iob2
         elif ner_encoding_type == 'bioes':
-            self.ner_convert_tag = lambda tags: iob2bioes(iob2(tags))
+            def func2(tags):
+                return iob2bioes(iob2(tags))
+            # self.ner_convert_tag = lambda tags: iob2bioes(iob2(tags))
+            self.ner_convert_tag = func2
         else:
             raise ValueError("ner_encoding_type only supports `bio` and `bioes`.")
         self.lower = lower
+        self.num_proc = num_proc
     
     def process(self, data_bundle) -> DataBundle:
         r"""
@@ -182,8 +190,8 @@ class Conll2003Pipe(Pipe):
         # 转换tag
         for name, dataset in data_bundle.datasets.items():
             dataset.drop(lambda x: "-DOCSTART-" in x['raw_words'])
-            dataset.apply_field(self.chunk_convert_tag, field_name='chunk', new_field_name='chunk')
-            dataset.apply_field(self.ner_convert_tag, field_name='ner', new_field_name='ner')
+            dataset.apply_field(self.chunk_convert_tag, field_name='chunk', new_field_name='chunk', num_proc=self.num_proc)
+            dataset.apply_field(self.ner_convert_tag, field_name='ner', new_field_name='ner', num_proc=self.num_proc)
         
         _add_words_field(data_bundle, lower=self.lower)
         
@@ -194,10 +202,7 @@ class Conll2003Pipe(Pipe):
         tgt_vocab.from_dataset(*data_bundle.datasets.values(), field_name='chunk')
         tgt_vocab.index_dataset(*data_bundle.datasets.values(), field_name='chunk')
         data_bundle.set_vocab(tgt_vocab, 'chunk')
-        
-        input_fields = ['words', 'seq_len']
-        target_fields = ['pos', 'ner', 'chunk', 'seq_len']
-        
+
         for name, dataset in data_bundle.iter_datasets():
             dataset.add_seq_len('words')
 
@@ -256,7 +261,7 @@ class _CNNERPipe(Pipe):
 
     """
     
-    def __init__(self, encoding_type: str = 'bio', bigrams=False, trigrams=False):
+    def __init__(self, encoding_type: str = 'bio', bigrams=False, trigrams=False, num_proc: int = 0):
         r"""
         
         :param str encoding_type: target列使用什么类型的encoding方式，支持bioes, bio两种。
@@ -270,12 +275,16 @@ class _CNNERPipe(Pipe):
         if encoding_type == 'bio':
             self.convert_tag = iob2
         elif encoding_type == 'bioes':
-            self.convert_tag = lambda words: iob2bioes(iob2(words))
+            def func(words):
+                return iob2bioes(iob2(words))
+            # self.convert_tag = lambda words: iob2bioes(iob2(words))
+            self.convert_tag = func
         else:
             raise ValueError("encoding_type only supports `bio` and `bioes`.")
 
         self.bigrams = bigrams
         self.trigrams = trigrams
+        self.num_proc = num_proc
 
     def process(self, data_bundle: DataBundle) -> DataBundle:
         r"""
@@ -296,28 +305,30 @@ class _CNNERPipe(Pipe):
         """
         # 转换tag
         for name, dataset in data_bundle.datasets.items():
-            dataset.apply_field(self.convert_tag, field_name='target', new_field_name='target')
+            dataset.apply_field(self.convert_tag, field_name='target', new_field_name='target', num_proc=self.num_proc)
         
         _add_chars_field(data_bundle, lower=False)
 
         input_field_names = ['chars']
+
+        def bigrams(chars):
+            return [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])]
+
+        def trigrams(chars):
+            return [c1 + c2 + c3 for c1, c2, c3 in
+                    zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)]
+
         if self.bigrams:
             for name, dataset in data_bundle.iter_datasets():
-                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
-                                    field_name='chars', new_field_name='bigrams')
+                dataset.apply_field(bigrams, field_name='chars', new_field_name='bigrams', num_proc=self.num_proc)
             input_field_names.append('bigrams')
         if self.trigrams:
             for name, dataset in data_bundle.datasets.items():
-                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
-                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
-                                    field_name='chars', new_field_name='trigrams')
+                dataset.apply_field(trigrams, field_name='chars', new_field_name='trigrams', num_proc=self.num_proc)
             input_field_names.append('trigrams')
 
         # index
         _indexize(data_bundle, input_field_names, 'target')
-        
-        input_fields = ['target', 'seq_len'] + input_field_names
-        target_fields = ['target', 'seq_len']
         
         for name, dataset in data_bundle.iter_datasets():
             dataset.add_seq_len('chars')

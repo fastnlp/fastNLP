@@ -23,6 +23,7 @@ __all__ = [
     "GranularizePipe",
     "MachingTruncatePipe",
 ]
+from functools import partial
 
 from fastNLP.core.log import logger
 from .pipe import Pipe
@@ -63,7 +64,7 @@ class MatchingBertPipe(Pipe):
 
     """
     
-    def __init__(self, lower=False, tokenizer: str = 'raw'):
+    def __init__(self, lower=False, tokenizer: str = 'raw', num_proc: int = 0):
         r"""
         
         :param bool lower: 是否将word小写化。
@@ -73,6 +74,7 @@ class MatchingBertPipe(Pipe):
         
         self.lower = bool(lower)
         self.tokenizer = get_tokenizer(tokenize_method=tokenizer)
+        self.num_proc = num_proc
     
     def _tokenize(self, data_bundle, field_names, new_field_names):
         r"""
@@ -84,8 +86,7 @@ class MatchingBertPipe(Pipe):
         """
         for name, dataset in data_bundle.iter_datasets():
             for field_name, new_field_name in zip(field_names, new_field_names):
-                dataset.apply_field(lambda words: self.tokenizer(words), field_name=field_name,
-                                    new_field_name=new_field_name)
+                dataset.apply_field(self.tokenizer, field_name=field_name, new_field_name=new_field_name, num_proc=self.num_proc)
         return data_bundle
     
     def process(self, data_bundle):
@@ -124,8 +125,8 @@ class MatchingBertPipe(Pipe):
             words = words0 + ['[SEP]'] + words1
             return words
         
-        for name, dataset in data_bundle.datasets.items():
-            dataset.apply(concat, new_field_name='words')
+        for name, dataset in data_bundle.iter_datasets():
+            dataset.apply(concat, new_field_name='words', num_proc=self.num_proc)
             dataset.delete_field('words1')
             dataset.delete_field('words2')
         
@@ -155,10 +156,7 @@ class MatchingBertPipe(Pipe):
         
         data_bundle.set_vocab(word_vocab, 'words')
         data_bundle.set_vocab(target_vocab, 'target')
-        
-        input_fields = ['words', 'seq_len']
-        target_fields = ['target']
-        
+
         for name, dataset in data_bundle.iter_datasets():
             dataset.add_seq_len('words')
 
@@ -223,7 +221,7 @@ class MatchingPipe(Pipe):
 
     """
     
-    def __init__(self, lower=False, tokenizer: str = 'raw'):
+    def __init__(self, lower=False, tokenizer: str = 'raw', num_proc: int = 0):
         r"""
         
         :param bool lower: 是否将所有raw_words转为小写。
@@ -233,6 +231,7 @@ class MatchingPipe(Pipe):
         
         self.lower = bool(lower)
         self.tokenizer = get_tokenizer(tokenize_method=tokenizer)
+        self.num_proc = num_proc
     
     def _tokenize(self, data_bundle, field_names, new_field_names):
         r"""
@@ -244,8 +243,7 @@ class MatchingPipe(Pipe):
         """
         for name, dataset in data_bundle.iter_datasets():
             for field_name, new_field_name in zip(field_names, new_field_names):
-                dataset.apply_field(lambda words: self.tokenizer(words), field_name=field_name,
-                                    new_field_name=new_field_name)
+                dataset.apply_field(self.tokenizer, field_name=field_name, new_field_name=new_field_name, num_proc=self.num_proc)
         return data_bundle
     
     def process(self, data_bundle):
@@ -300,10 +298,7 @@ class MatchingPipe(Pipe):
         
         data_bundle.set_vocab(word_vocab, 'words1')
         data_bundle.set_vocab(target_vocab, 'target')
-        
-        input_fields = ['words1', 'words2', 'seq_len1', 'seq_len2']
-        target_fields = ['target']
-        
+
         for name, dataset in data_bundle.datasets.items():
             dataset.add_seq_len('words1', 'seq_len1')
             dataset.add_seq_len('words2', 'seq_len2')
@@ -342,8 +337,8 @@ class MNLIPipe(MatchingPipe):
 
 
 class LCQMCPipe(MatchingPipe):
-    def __init__(self, tokenizer='cn=char'):
-        super().__init__(tokenizer=tokenizer)
+    def __init__(self, tokenizer='cn=char', num_proc=0):
+        super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         data_bundle = LCQMCLoader().load(paths)
@@ -354,8 +349,8 @@ class LCQMCPipe(MatchingPipe):
 
 
 class CNXNLIPipe(MatchingPipe):
-    def __init__(self, tokenizer='cn-char'):
-        super().__init__(tokenizer=tokenizer)
+    def __init__(self, tokenizer='cn-char', num_proc=0):
+        super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         data_bundle = CNXNLILoader().load(paths)
@@ -367,8 +362,8 @@ class CNXNLIPipe(MatchingPipe):
 
 
 class BQCorpusPipe(MatchingPipe):
-    def __init__(self, tokenizer='cn-char'):
-        super().__init__(tokenizer=tokenizer)
+    def __init__(self, tokenizer='cn-char', num_proc=0):
+        super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         data_bundle = BQCorpusLoader().load(paths)
@@ -379,9 +374,10 @@ class BQCorpusPipe(MatchingPipe):
 
 
 class RenamePipe(Pipe):
-    def __init__(self, task='cn-nli'):
+    def __init__(self, task='cn-nli', num_proc=0):
         super().__init__()
         self.task = task
+        self.num_proc = num_proc
     
     def process(self, data_bundle: DataBundle):  # rename field name for Chinese Matching dataset
         if (self.task == 'cn-nli'):
@@ -419,9 +415,10 @@ class RenamePipe(Pipe):
 
 
 class GranularizePipe(Pipe):
-    def __init__(self, task=None):
+    def __init__(self, task=None, num_proc=0):
         super().__init__()
         self.task = task
+        self.num_proc = num_proc
     
     def _granularize(self, data_bundle, tag_map):
         r"""
@@ -434,8 +431,7 @@ class GranularizePipe(Pipe):
         """
         for name in list(data_bundle.datasets.keys()):
             dataset = data_bundle.get_dataset(name)
-            dataset.apply_field(lambda target: tag_map.get(target, -100), field_name='target',
-                                new_field_name='target')
+            dataset.apply_field(lambda target: tag_map.get(target, -100), field_name='target', new_field_name='target')
             dataset.drop(lambda ins: ins['target'] == -100)
             data_bundle.set_dataset(dataset, name)
         return data_bundle
@@ -462,8 +458,8 @@ class MachingTruncatePipe(Pipe):  # truncate sentence for bert, modify seq_len
 
 
 class LCQMCBertPipe(MatchingBertPipe):
-    def __init__(self, tokenizer='cn=char'):
-        super().__init__(tokenizer=tokenizer)
+    def __init__(self, tokenizer='cn=char', num_proc=0):
+        super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         data_bundle = LCQMCLoader().load(paths)
@@ -475,8 +471,8 @@ class LCQMCBertPipe(MatchingBertPipe):
 
 
 class BQCorpusBertPipe(MatchingBertPipe):
-    def __init__(self, tokenizer='cn-char'):
-        super().__init__(tokenizer=tokenizer)
+    def __init__(self, tokenizer='cn-char', num_proc=0):
+        super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         data_bundle = BQCorpusLoader().load(paths)
@@ -488,8 +484,8 @@ class BQCorpusBertPipe(MatchingBertPipe):
 
 
 class CNXNLIBertPipe(MatchingBertPipe):
-    def __init__(self, tokenizer='cn-char'):
-        super().__init__(tokenizer=tokenizer)
+    def __init__(self, tokenizer='cn-char', num_proc=0):
+        super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         data_bundle = CNXNLILoader().load(paths)
@@ -502,9 +498,10 @@ class CNXNLIBertPipe(MatchingBertPipe):
 
 
 class TruncateBertPipe(Pipe):
-    def __init__(self, task='cn'):
+    def __init__(self, task='cn', num_proc=0):
         super().__init__()
         self.task = task
+        self.num_proc = num_proc
 
     def _truncate(self, sentence_index:list, sep_index_vocab):
         # 根据[SEP]在vocab中的index，找到[SEP]在dataset的field['words']中的index
@@ -528,7 +525,8 @@ class TruncateBertPipe(Pipe):
         for name in data_bundle.datasets.keys():
             dataset = data_bundle.get_dataset(name)
             sep_index_vocab = data_bundle.get_vocab('words').to_index('[SEP]')
-            dataset.apply_field(lambda sent_index: self._truncate(sentence_index=sent_index, sep_index_vocab=sep_index_vocab), field_name='words', new_field_name='words')
+            dataset.apply_field(partial(self._truncate, sep_index_vocab=sep_index_vocab), field_name='words',
+                                new_field_name='words', num_proc=self.num_proc)
 
             # truncate之后需要更新seq_len
             dataset.add_seq_len(field_name='words')
