@@ -1,5 +1,3 @@
-r"""undocumented"""
-
 __all__ = [
     "MultiHeadAttention",
     "BiAttention",
@@ -17,7 +15,11 @@ from .decoder.seq2seq_state import TransformerState
 
 class DotAttention(nn.Module):
     r"""
-    Transformer当中的DotAttention
+    **Transformer** 当中的 **DotAttention**
+
+    :param key_size:
+    :param value_size:
+    :param dropout:
     """
 
     def __init__(self, key_size, value_size, dropout=0.0):
@@ -31,10 +33,10 @@ class DotAttention(nn.Module):
     def forward(self, Q, K, V, mask_out=None):
         r"""
 
-        :param Q: [..., seq_len_q, key_size]
-        :param K: [..., seq_len_k, key_size]
-        :param V: [..., seq_len_k, value_size]
-        :param mask_out: [..., 1, seq_len] or [..., seq_len_q, seq_len_k]
+        :param Q: ``[..., seq_len_q, key_size]``
+        :param K: ``[..., seq_len_k, key_size]``
+        :param V: ``[..., seq_len_k, value_size]``
+        :param mask_out: ``[..., 1, seq_len]`` or ``[..., seq_len_q, seq_len_k]``
         """
         output = torch.matmul(Q, K.transpose(-1, -2)) / self.scale
         if mask_out is not None:
@@ -46,8 +48,12 @@ class DotAttention(nn.Module):
 
 class MultiHeadAttention(nn.Module):
     """
-    Attention is all you need中提到的多头注意力
+    `Attention is all you need <https://arxiv.org/abs/1706.03762>`_ 中提到的多头注意力
 
+    :param d_model:
+    :param n_head:
+    :param dropout:
+    :param layer_idx:
     """
     def __init__(self, d_model: int = 512, n_head: int = 8, dropout: float = 0.0, layer_idx: int = None):
         super(MultiHeadAttention, self).__init__()
@@ -69,12 +75,13 @@ class MultiHeadAttention(nn.Module):
     def forward(self, query, key, value, key_mask=None, attn_mask=None, state=None):
         """
 
-        :param query: batch x seq x dim
-        :param key: batch x seq x dim
-        :param value: batch x seq x dim
-        :param key_mask: batch x seq 用于指示哪些key不要attend到；注意到mask为1的地方是要attend到的
-        :param attn_mask: seq x seq, 用于mask掉attention map。 主要是用在训练时decoder端的self attention，下三角为1
-        :param state: 过去的信息，在inference的时候会用到，比如encoder output、decoder的prev kv。这样可以减少计算。
+        :param query: ``[batch, seq, dim]``
+        :param key: ``[batch, seq, dim]``
+        :param value: ``[batch, seq, dim]``
+        :param key_mask: ``[batch, seq]`` 用于指示哪些 ``key`` 不要 attend 到；注意到 mask 为 **1** 的地方是要attend到的
+        :param attn_mask: ``[seq, seq]``, 用于 mask 掉 attention map。 主要是用在训练时 decoder 端的 :class:`SelfAttention` ，
+            下三角为 1。
+        :param state: 过去的信息，在 inference 的时候会用到，比如 encoder output、decoder 的 prev kv。这样可以减少计算。
         :return:
         """
         assert key.size() == value.size()
@@ -149,15 +156,15 @@ class MultiHeadAttention(nn.Module):
 
 
 class AttentionLayer(nn.Module):
-    def __init__(selfu, input_size, key_dim, value_dim, bias=False):
-        """
-        可用于LSTM2LSTM的序列到序列模型的decode过程中，该attention是在decode过程中根据上一个step的hidden计算对encoder结果的attention
+    """
+    可用于 LSTM2LSTM 的序列到序列模型的 decode 过程中，该 attention 是在 decode 过程中根据上一个 step 的 hidden 计算对 encoder 结果的 attention
 
-        :param int input_size: 输入的大小
-        :param int key_dim: 一般就是encoder_output输出的维度
-        :param int value_dim: 输出的大小维度, 一般就是decoder hidden的大小
-        :param bias:
-        """
+    :param int input_size: 输入的大小
+    :param int key_dim: 一般就是 encoder_output 输出的维度
+    :param int value_dim: 输出的大小维度, 一般就是 decoder hidden 的大小
+    :param bias:
+    """
+    def __init__(selfu, input_size, key_dim, value_dim, bias=False):
         super().__init__()
 
         selfu.input_proj = nn.Linear(input_size, key_dim, bias=bias)
@@ -166,10 +173,10 @@ class AttentionLayer(nn.Module):
     def forward(self, input, encode_outputs, encode_mask):
         """
 
-        :param input: batch_size x input_size
-        :param encode_outputs: batch_size x max_len x key_dim
-        :param encode_mask: batch_size x max_len, 为0的地方为padding
-        :return: hidden: batch_size x value_dim, scores: batch_size x max_len, normalized过的
+        :param input: ``[batch_size, input_size]``
+        :param encode_outputs: ``[batch_size, max_len, key_dim]``
+        :param encode_mask: ``[batch_size, max_len]``, 为0的地方为padding
+        :return: hidden: ``[batch_size, value_dim]``, scores: ``[batch_size, max_len]``, normalized 过的
         """
 
         # x: bsz x encode_hidden_size
@@ -221,9 +228,9 @@ def _weighted_sum(tensor, weights, mask):
 
 class BiAttention(nn.Module):
     r"""
-    Bi Attention module
+    **Bi Attention module**
 
-    对于给定的两个向量序列 :math:`a_i` 和 :math:`b_j` , BiAttention模块将通过以下的公式来计算attention结果
+    对于给定的两个向量序列 :math:`a_i` 和 :math:`b_j` , :class:`BiAttention` 模块将通过以下的公式来计算 attention 结果
 
     .. math::
 
@@ -237,11 +244,14 @@ class BiAttention(nn.Module):
 
     def forward(self, premise_batch, premise_mask, hypothesis_batch, hypothesis_mask):
         r"""
-        :param torch.Tensor premise_batch: [batch_size, a_seq_len, hidden_size]
-        :param torch.Tensor premise_mask: [batch_size, a_seq_len]
-        :param torch.Tensor hypothesis_batch: [batch_size, b_seq_len, hidden_size]
-        :param torch.Tensor hypothesis_mask: [batch_size, b_seq_len]
-        :return: torch.Tensor attended_premises: [batch_size, a_seq_len, hidden_size] torch.Tensor attended_hypotheses: [batch_size, b_seq_len, hidden_size]
+        :param premise_batch: ``[batch_size, a_seq_len, hidden_size]``
+        :param premise_mask: ``[batch_size, a_seq_len]``
+        :param hypothesis_batch: ``[batch_size, b_seq_len, hidden_size]``
+        :param hypothesis_mask: ``[batch_size, b_seq_len]``
+        :return: 一个包含两个张量的元组，分别为：
+
+                - ``attended_premises`` : ``[batch_size, a_seq_len, hidden_size]``
+                - ``attended_hypotheses`` : ``[batch_size, b_seq_len, hidden_size]``
         """
         similarity_matrix = premise_batch.bmm(hypothesis_batch.transpose(2, 1)
                                               .contiguous())
@@ -264,17 +274,15 @@ class BiAttention(nn.Module):
 class SelfAttention(nn.Module):
     r"""
     这是一个基于论文 `A structured self-attentive sentence embedding <https://arxiv.org/pdf/1703.03130.pdf>`_
-    的Self Attention Module.
+    的 **Self Attention Module** 。
+
+    :param  input_size: 输入 tensor 的 hidden 维度
+    :param attention_unit: 输出 tensor 的 hidden 维度
+    :param attention_hops:
+    :param drop: dropout 概率
     """
 
     def __init__(self, input_size, attention_unit=300, attention_hops=10, drop=0.5):
-        r"""
-        
-        :param int input_size: 输入tensor的hidden维度
-        :param int attention_unit: 输出tensor的hidden维度
-        :param int attention_hops:
-        :param float drop: dropout概率，默认值为0.5
-        """
         super(SelfAttention, self).__init__()
 
         self.attention_hops = attention_hops
@@ -301,10 +309,12 @@ class SelfAttention(nn.Module):
 
     def forward(self, input, input_origin):
         r"""
-        :param torch.Tensor input: [batch_size, seq_len, hidden_size] 要做attention的矩阵
-        :param torch.Tensor input_origin: [batch_size, seq_len] 原始token的index组成的矩阵，含有pad部分内容
-        :return torch.Tensor output1: [batch_size, multi-head, hidden_size] 经过attention操作后输入矩阵的结果
-        :return torch.Tensor output2: [1] attention惩罚项，是一个标量
+        :param input: 要做 **attention** 的矩阵，形状为 ``[batch_size, seq_len, hidden_size]``
+        :param input_origin: 原始 token 的 index 组成的矩阵，含有 pad 部分内容，形状为 ``[batch_size, seq_len]`` 
+        :return: 一个元组，分别是：
+
+                - 经过 **attention** 操作后输入矩阵的结果，形状为 ``[batch_size, multi-head, hidden_size]``
+                - **attention** 惩罚项，是一个标量
         """
         input = input.contiguous()
         size = input.size()  # [bsz, len, nhid]

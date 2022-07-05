@@ -1,23 +1,15 @@
-r"""undocumented"""
-
 __all__ = [
     "MLP"
 ]
 
+from typing import List, Callable, Union
 import torch
 import torch.nn as nn
 
 
 class MLP(nn.Module):
     r"""
-    多层感知器
-
-    
-    .. note::
-        隐藏层的激活函数通过activation定义。一个str/function或者一个str/function的list可以被传入activation。
-        如果只传入了一个str/function，那么所有隐藏层的激活函数都由这个str/function定义；
-        如果传入了一个str/function的list，那么每一个隐藏层的激活函数由这个list中对应的元素定义，其中list的长度为隐藏层数。
-        输出层的激活函数由output_activation定义，默认值为None，此时输出层没有激活函数。
+    多层感知器。
         
     Examples::
 
@@ -31,18 +23,20 @@ class MLP(nn.Module):
         >>>     y = net(x)
         >>>     print(x)
         >>>     print(y)
+
+    :param size_layer: 一个 int 的列表，用来定义 :class:`MLP` 的层数，列表中的数字为每一层是 hidden 数目。 :class:`MLP` 的层数为 ``len(size_layer) - 1``
+    :param activation: 隐藏层的激活函数，可以支持多种类型：
+    
+            - 一个 :class:`str` 或函数 -- 所有隐藏层的激活函数都为 ``activation`` 代表的函数；
+            - :class:`str` 或函数的列表 -- 每一个隐藏层的激活函数都为列表中对应的函数，其中列表长度为隐藏层数；
+
+        对于字符串类型的输入，支持 ``['relu', 'tanh', 'sigmoid']`` 三种激活函数。
+    :param output_activation: 输出层的激活函数。默认值为 ``None``，表示输出层没有激活函数
+    :param dropout: dropout 概率
     """
 
-    def __init__(self, size_layer, activation='relu', output_activation=None, initial_method=None, dropout=0.0):
-        r"""
-        
-        :param List[int] size_layer: 一个int的列表，用来定义MLP的层数，列表中的数字为每一层是hidden数目。MLP的层数为 len(size_layer) - 1
-        :param Union[str,func,List[str]] activation: 一个字符串或者函数的列表，用来定义每一个隐层的激活函数，字符串包括relu，tanh和
-            sigmoid，默认值为relu
-        :param Union[str,func] output_activation:  字符串或者函数，用来定义输出层的激活函数，默认值为None，表示输出层没有激活函数
-        :param str initial_method: 参数初始化方式
-        :param float dropout: dropout概率，默认值为0
-        """
+    def __init__(self, size_layer: List[int], activation: Union[str, Callable, List[str]]='relu',
+                output_activation: Union[str, Callable]=None, dropout: float=0.0):
         super(MLP, self).__init__()
         self.hiddens = nn.ModuleList()
         self.output = None
@@ -85,8 +79,8 @@ class MLP(nn.Module):
 
     def forward(self, x):
         r"""
-        :param torch.Tensor x: MLP接受的输入
-        :return: torch.Tensor : MLP的输出结果
+        :param x:
+        :return:
         """
         for layer, func in zip(self.hiddens, self.hidden_active):
             x = self.dropout(func(layer(x)))

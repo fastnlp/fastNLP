@@ -32,29 +32,26 @@ def _get_model_device(model):
 
 class SequenceGenerator:
     """
-    给定一个Seq2SeqDecoder，decode出句子。输入的decoder对象需要有decode()函数, 接受的第一个参数为decode的到目前位置的所有输出，
-        第二个参数为state。SequenceGenerator不会对state进行任何操作。
+    给定一个 :class:`~fastNLP.modules.torch.decoder.Seq2SeqDecoder` ，decode出句子。输入的 decoder 对象需要有 :meth:`decode` 函数，接受的第一个参数为 decode 的到目前位置的所有输出，
+    第二个参数为 state 。:class:`SequenceGenerator` 不会对 state 进行任何操作。
 
+    :param decoder: Decoder对象
+    :param max_length: 生成句子的最大长度, 每句话的 decode 长度为 ``max_length + max_len_a * src_len``
+    :param max_len_a: 每句话的 decode 长度为 ``max_length + max_len_a*src_len``。如果不为 0，需要保证 State 中包含 encoder_mask
+    :param num_beams: **beam search** 的大小
+    :param do_sample: 是否通过采样的方式生成
+    :param temperature: 只有在 do_sample 为 ``True`` 才有意义
+    :param top_k: 只从 ``top_k`` 中采样
+    :param top_p: 只从 ``top_p`` 的 token 中采样（ **nucleus sampling** ）
+    :param bos_token_id: 句子开头的 token id
+    :param eos_token_id: 句子结束的 token id
+    :param repetition_penalty: 多大程度上惩罚重复的 token
+    :param length_penalty: 对长度的惩罚，**小于 1** 鼓励长句，**大于 1** 鼓励短句
+    :param pad_token_id: 当某句话生成结束之后，之后生成的内容用 ``pad_token_id`` 补充
     """
-    def __init__(self, decoder: Seq2SeqDecoder, max_length=20, max_len_a=0.0, num_beams=1,
-                 do_sample=True, temperature=1.0, top_k=50, top_p=1.0, bos_token_id=None, eos_token_id=None,
-                 repetition_penalty=1, length_penalty=1.0, pad_token_id=0):
-        """
-
-        :param Seq2SeqDecoder decoder: Decoder对象
-        :param int max_length: 生成句子的最大长度, 每句话的decode长度为max_length + max_len_a*src_len
-        :param float max_len_a: 每句话的decode长度为max_length + max_len_a*src_len。 如果不为0，需要保证State中包含encoder_mask
-        :param int num_beams: beam search的大小
-        :param bool do_sample: 是否通过采样的方式生成
-        :param float temperature: 只有在do_sample为True才有意义
-        :param int top_k: 只从top_k中采样
-        :param float top_p: 只从top_p的token中采样，nucles sample
-        :param int,None bos_token_id: 句子开头的token id
-        :param int,None eos_token_id: 句子结束的token id
-        :param float repetition_penalty: 多大程度上惩罚重复的token
-        :param float length_penalty: 对长度的惩罚，小于1鼓励长句，大于1鼓励短剧
-        :param int pad_token_id: 当某句话生成结束之后，之后生成的内容用pad_token_id补充
-        """
+    def __init__(self, decoder: Seq2SeqDecoder, max_length: int=20, max_len_a: float=0.0, num_beams: int=1,
+                 do_sample: bool=True, temperature: float=1.0, top_k: int=50, top_p: float=1.0, bos_token_id: int=None, eos_token_id: int=None,
+                 repetition_penalty: float=1, length_penalty: float=1.0, pad_token_id: int=0):
         if do_sample:
             self.generate_func = partial(sample_generate, decoder=decoder, max_length=max_length, max_len_a=max_len_a,
                                          num_beams=num_beams,
@@ -80,13 +77,13 @@ class SequenceGenerator:
         self.decoder = decoder
 
     @torch.no_grad()
-    def generate(self, state, tokens=None):
+    def generate(self, state: State, tokens: "torch.LongTensor"=None):
         """
 
-        :param State state: encoder结果的State, 是与Decoder配套是用的
-        :param torch.LongTensor,None tokens: batch_size x length, 开始的token。如果为None，则默认添加bos_token作为开头的token
+        :param state: ``encoder`` 结果的 :class:`~fastNLP.modules.torch.decoder.State` ，是与 ``Decoder`` 配套使用的
+        :param tokens: 开始的 token，形状为 ``[batch_size, length]``。如果为 ``None`` ，则默认添加 ``bos_token`` 作为开头的 token
             进行生成。
-        :return: bsz x max_length' 生成的token序列。如果eos_token_id不为None, 每个sequence的结尾一定是eos_token_id
+        :return: 生成的 token 序列，形状为 ``[bsz, max_length]`` 。如果 ``eos_token_id`` 不为 ``None`` ,，每个 sequence 的结尾一定是 ``eos_token_id``
         """
 
         return self.generate_func(tokens=tokens, state=state)
@@ -100,7 +97,7 @@ def greedy_generate(decoder, tokens=None, state=None, max_length=20, max_len_a=0
     贪婪地搜索句子
 
     :param Decoder decoder: Decoder对象
-    :param torch.LongTensor tokens: batch_size x len, decode的输入值，如果为None，则自动从bos_token_id开始生成
+    :param torch.LongTensor tokens: batch_size, len, decode的输入值，如果为None，则自动从bos_token_id开始生成
     :param State state: 应该包含encoder的一些输出。
     :param int max_length: 生成句子的最大长度, 每句话的decode长度为max_length + max_len_a*src_len
     :param float max_len_a: 每句话的decode长度为max_length + max_len_a*src_len。 如果不为0，需要保证State中包含encoder_mask
@@ -136,7 +133,7 @@ def sample_generate(decoder, tokens=None, state=None, max_length=20, max_len_a=0
     使用采样的方法生成句子
 
     :param Decoder decoder: Decoder对象
-    :param torch.LongTensor tokens: batch_size x len, decode的输入值，如果为None，则自动从bos_token_id开始生成
+    :param torch.LongTensor tokens: batch_size, len, decode的输入值，如果为None，则自动从bos_token_id开始生成
     :param State state: 应该包含encoder的一些输出。
     :param int max_length: 生成句子的最大长度, 每句话的decode长度为max_length + max_len_a*src_len
     :param float max_len_a: 每句话的decode长度为max_length + max_len_a*src_len。 如果不为0，需要保证State中包含encoder_mask
@@ -504,7 +501,7 @@ def top_k_top_p_filtering(logits, top_k=0, top_p=1.0, filter_value=-float("Inf")
     """
     根据top_k, top_p的值，将不满足的值置为filter_value的值
 
-    :param torch.Tensor logits: bsz x vocab_size
+    :param torch.Tensor logits: bsz, vocab_size
     :param int top_k: 如果大于0，则只保留最top_k的词汇的概率，剩下的位置被置为filter_value
     :param int top_p: 根据(http://arxiv.org/abs/1904.09751)设置的筛选方式
     :param float filter_value:

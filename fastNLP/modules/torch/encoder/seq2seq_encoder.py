@@ -1,4 +1,3 @@
-r"""undocumented"""
 import torch.nn as nn
 import torch
 from torch.nn import LayerNorm
@@ -17,17 +16,17 @@ __all__ = ['Seq2SeqEncoder', 'TransformerSeq2SeqEncoder', 'LSTMSeq2SeqEncoder']
 
 class Seq2SeqEncoder(nn.Module):
     """
-    所有Sequence2Sequence Encoder的基类。需要实现forward函数
+    所有 **Sequence2Sequence Encoder** 的基类。需要实现 :meth:`forward` 函数
 
     """
     def __init__(self):
         super().__init__()
 
-    def forward(self, tokens, seq_len):
+    def forward(self, tokens: torch.LongTensor, seq_len: torch.LongTensor):
         """
 
-        :param torch.LongTensor tokens: bsz x max_len, encoder的输入
-        :param torch.LongTensor seq_len: bsz
+        :param tokens: ``[batch_size, max_len]]``，encoder 的输入
+        :param seq_len: ``[batch_size,]``
         :return:
         """
         raise NotImplementedError
@@ -35,7 +34,7 @@ class Seq2SeqEncoder(nn.Module):
 
 class TransformerSeq2SeqEncoderLayer(nn.Module):
     """
-    Self-Attention的Layer，
+    **Self-Attention** 的 Layer，
 
     :param int d_model: input和output的输出维度
     :param int n_head: 多少个head，每个head的维度为d_model/n_head
@@ -63,8 +62,8 @@ class TransformerSeq2SeqEncoderLayer(nn.Module):
     def forward(self, x, mask):
         """
 
-        :param x: batch x src_seq x d_model
-        :param mask: batch x src_seq，为0的地方为padding
+        :param x: batch_size, src_seq, d_model
+        :param mask: batch_size, src_seq，为0的地方为padding
         :return:
         """
         # attention
@@ -88,18 +87,23 @@ class TransformerSeq2SeqEncoderLayer(nn.Module):
 
 class TransformerSeq2SeqEncoder(Seq2SeqEncoder):
     """
-    基于Transformer的Encoder
+    基于 **Transformer** 的 :class:`Encoder`
 
-    :param embed: encoder输入token的embedding
-    :param nn.Module pos_embed: position embedding
-    :param int num_layers: 多少层的encoder
-    :param int d_model: 输入输出的维度
-    :param int n_head: 多少个head
-    :param int dim_ff: FFN中间的维度大小
-    :param float dropout: Attention和FFN的dropout大小
+    :param embed: ``decoder`` 输入的 embedding，支持以下几种输入类型：
+
+            - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+            - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+            - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+            - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+    :param pos_embed: 位置 embedding
+    :param d_model: 输入、输出的维度
+    :param num_layers: :class:`TransformerSeq2SeqDecoderLayer` 的层数
+    :param n_head: **多头注意力** head 的数目，需要能被 ``d_model`` 整除
+    :param dim_ff: FFN 中间映射的维度
+    :param dropout: :class:`~fastNLP.modules.torch.decoder.SelfAttention` 和 FFN 中的 dropout 的大小
     """
-    def __init__(self, embed: Union[nn.Module, StaticEmbedding, Tuple[int, int]], pos_embed = None,
-                 num_layers = 6, d_model = 512, n_head = 8, dim_ff = 2048, dropout = 0.1):
+    def __init__(self, embed: Union[nn.Module, StaticEmbedding, Tuple[int, int]], pos_embed: nn.Module = None,
+                 d_model: int = 512, num_layers: int = 6, n_head: int = 8, dim_ff: int = 2048, dropout: float = 0.1):
         super(TransformerSeq2SeqEncoder, self).__init__()
         self.embed = get_embeddings(embed)
         self.embed_scale = math.sqrt(d_model)
@@ -118,9 +122,10 @@ class TransformerSeq2SeqEncoder(Seq2SeqEncoder):
     def forward(self, tokens, seq_len):
         """
 
-        :param tokens: batch x max_len
-        :param seq_len: [batch]
-        :return: bsz x max_len x d_model, bsz x max_len(为0的地方为padding)
+        :param tokens: 输入序列，形状为 ``[batch_size, max_len]``
+        :param seq_len: 序列长度，形状为 ``[batch_size, ]``，若为 ``None``，表示所有输入看做一样长
+        :return: 一个元组，第一个元素形状为 ``[batch_size, max_len, d_model]`` 表示前向传播的结果，第二个元素形状为
+            ``[batch_size, max_len]``， 表示产生的掩码 ``encoder_mask``，为 **0** 的地方为 padding
         """
         x = self.embed(tokens) * self.embed_scale  # batch, seq, dim
         batch_size, max_src_len, _ = x.size()
@@ -145,16 +150,21 @@ class TransformerSeq2SeqEncoder(Seq2SeqEncoder):
 
 class LSTMSeq2SeqEncoder(Seq2SeqEncoder):
     """
-    LSTM的Encoder
+    **LSTM** 的 Encoder
 
-    :param embed: encoder的token embed
-    :param int num_layers: 多少层
-    :param int hidden_size: LSTM隐藏层、输出的大小
-    :param float dropout: LSTM层之间的Dropout是多少
-    :param bool bidirectional: 是否使用双向
+    :param embed: ``decoder`` 输入的 embedding，支持以下几种输入类型：
+
+            - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+            - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+            - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+            - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+    :param num_layers: LSTM 的层数
+    :param hidden_size: 隐藏层大小, 该值也被认为是 ``encoder`` 的输出维度大小
+    :param dropout: Dropout 的大小
+    :param bidirectional: 是否使用双向
     """
-    def __init__(self, embed: Union[nn.Module, StaticEmbedding, Tuple[int, int]], num_layers = 3,
-                 hidden_size = 400, dropout = 0.3, bidirectional=True):
+    def __init__(self, embed: Union[nn.Module, StaticEmbedding, Tuple[int, int]], num_layers: int = 3,
+                 hidden_size: int = 400, dropout: float = 0.3, bidirectional: bool=True):
         super().__init__()
         self.embed = get_embeddings(embed)
         self.num_layers = num_layers
@@ -165,15 +175,17 @@ class LSTMSeq2SeqEncoder(Seq2SeqEncoder):
         self.lstm = LSTM(input_size=embed.embedding_dim, hidden_size=hidden_size, bidirectional=bidirectional,
                          batch_first=True, dropout=dropout if num_layers>1 else 0, num_layers=num_layers)
 
-    def forward(self, tokens, seq_len):
+    def forward(self, tokens: torch.LongTensor, seq_len: torch.LongTensor):
         """
 
-        :param torch.LongTensor tokens: bsz x max_len
-        :param torch.LongTensor seq_len: bsz
-        :return: (output, (hidden, cell)), encoder_mask
-            output: bsz x max_len x hidden_size,
-            hidden,cell: batch_size x hidden_size, 最后一层的隐藏状态或cell状态
-            encoder_mask: bsz x max_len, 为0的地方是padding
+        :param tokens: 输入序列，形状为 ``[batch_size, max_len]``
+        :param seq_len: 序列长度，形状为 ``[batch_size, ]``，若为 ``None``，表示所有输入看做一样长
+        :return: 返回 ``((output, (ht, ct)), encoder_mask)`` 格式的结果。
+        
+                - ``output`` 形状为 ``[batch_size, seq_len, hidden_size*num_direction]``，表示输出序列；
+                - ``ht`` 和 ``ct`` 形状为 ``[num_layers*num_direction, batch_size, hidden_size]``，表示最后时刻隐状态；
+                - ``encoder_mask`` 形状为 ``[batch_size, max_len]``， 表示产生的掩码 ``encoder_mask``，为 **0** 的地方为 padding
+
         """
         x = self.embed(tokens)
         device = x.device

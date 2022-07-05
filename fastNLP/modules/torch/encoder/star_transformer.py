@@ -1,5 +1,5 @@
-r"""undocumented
-Star-Transformer 的encoder部分的 Pytorch 实现
+r"""
+**Star-Transformer** 的 encoder 部分的 Pytorch 实现
 """
 
 __all__ = [
@@ -14,24 +14,19 @@ from torch.nn import functional as F
 
 class StarTransformer(nn.Module):
     r"""
-    Star-Transformer 的encoder部分。 输入3d的文本输入, 返回相同长度的文本编码
+    **Star-Transformer** 的 encoder 部分。输入 3d 的文本输入，返回相同长度的文本编码。
+    基于论文 `Star-Transformer <https://arxiv.org/abs/1902.09113>`_
 
-    paper: https://arxiv.org/abs/1902.09113
-
+    :param hidden_size: 输入维度的大小，同时也是输出维度的大小。
+    :param num_layers: **Star-Transformer** 的层数
+    :param num_head: **多头注意力** head 的数目，需要能被 ``d_model`` 整除
+    :param head_dim: 每个 ``head`` 的维度大小。
+    :param dropout: dropout 概率
+    :param max_len: 如果为 :class:`int` 表示输入序列的最大长度，模型会为输入序列加上 ``position embedding``；
+        若为 ``None`` 则会跳过此步骤。
     """
 
-    def __init__(self, hidden_size, num_layers, num_head, head_dim, dropout=0.1, max_len=None):
-        r"""
-        
-        :param int hidden_size: 输入维度的大小。同时也是输出维度的大小。
-        :param int num_layers: star-transformer的层数
-        :param int num_head: head的数量。
-        :param int head_dim: 每个head的维度大小。
-        :param float dropout: dropout 概率. Default: 0.1
-        :param int max_len: int or None, 如果为int，输入序列的最大长度，
-            模型会为输入序列加上position embedding。
-            若为`None`，忽略加上position embedding的步骤. Default: `None`
-        """
+    def __init__(self, hidden_size: int, num_layers: int, num_head: int, head_dim: int, dropout: float=0.1, max_len: int=None):
         super(StarTransformer, self).__init__()
         self.iters = num_layers
 
@@ -50,14 +45,12 @@ class StarTransformer(nn.Module):
         else:
             self.pos_emb = None
 
-    def forward(self, data, mask):
+    def forward(self, data: torch.FloatTensor, mask: torch.ByteTensor):
         r"""
-        :param FloatTensor data: [batch, length, hidden] 输入的序列
-        :param ByteTensor mask: [batch, length] 输入序列的padding mask, 在没有内容(padding 部分) 为 0,
-            否则为 1
-        :return: [batch, length, hidden] 编码后的输出序列
-
-                [batch, hidden] 全局 relay 节点, 详见论文
+        :param data: 输入序列，形状为 ``[batch_size, length, hidden]``
+        :param mask: 输入序列的 padding mask， 形状为 ``[batch_size, length]`` , 为 **0** 的地方为 padding
+        :return: 返回一个元组，第一个元素形状为 ``[batch_size, length, hidden]`` ，代表编码后的输出序列；
+            第二个元素形状为 ``[batch_size, hidden]``，表示全局 relay 节点, 详见论文。
         """
 
         def norm_func(f, x):
