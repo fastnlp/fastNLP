@@ -71,7 +71,7 @@ def get_tokenizer(tokenize_method: str, lang='en'):
 
     :param str tokenize_method: 获取tokenzier方法
     :param str lang: 语言，当前仅支持en
-    :return: 返回tokenize函数
+    :return: tokenize函数
     """
     tokenizer_dict = {
         'spacy': None,

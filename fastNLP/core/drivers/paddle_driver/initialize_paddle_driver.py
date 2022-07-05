@@ -27,8 +27,8 @@ def initialize_paddle_driver(driver: str, device: Optional[Union[str, int, List[
     2. 如果 ``device`` 包含了多个设备，则返回一个 :class:`~fastNLP.core.PaddleFleetDriver` 实例，否则返回
     单卡的 :class:`~fastNLP.core.PaddleSingleDriver` 实例
 
-    :param driver: 使用的 ``driver`` 类型，在这个函数中仅支持 ``paddle``；
-    :param device: 该参数的格式与 ``Trainer`` 对参数 ``device`` 的要求一致；
+    :param driver: 使用的 ``driver`` 类型，在这个函数中仅支持 ``paddle``
+    :param device: 该参数的格式与 ``Trainer`` 对参数 ``device`` 的要求一致
     :param model: 训练或者评测的具体的模型；
 
     :return: 一个 :class:`~fastNLP.core.PaddleSingleDriver` 或 :class:`~fastNLP.core.PaddleFleetDriver` 实例；

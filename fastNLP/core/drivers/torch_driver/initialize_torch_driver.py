@@ -22,11 +22,15 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
     r"""
     用来根据参数 ``driver` 和 ``device`` 来确定并且初始化一个具体的 ``Driver`` 实例然后返回回去；
 
-    :param driver: 该参数的值应为以下之一：``["torch", "fairscale", "deepspeed"]``；
-    :param device: 该参数的格式与 ``Trainer`` 对参数 ``device`` 的要求一致；
-    :param model: 训练或者评测的具体的模型；
+    :param driver: 该参数的值应为以下之一：``["torch", "fairscale", "deepspeed"]``
+    :param device: 该参数的格式与 ``Trainer`` 对参数 ``device`` 的要求一致
+    :param model: 训练或者评测的具体的模型
 
-    :return: 返回一个 :class:`~fastNLP.core.TorchSingleDriver` 或 :class:`~fastNLP.core.TorchDDPDriver` 实例；
+    :return: 下列类型之一的实例：
+        * :class:`~fastNLP.core.drivers.torch_driver.TorchSingleDriver` 
+        * :class:`~fastNLP.core.drivers.torch_driver.TorchDDPDriver` 
+        * :class:`~fastNLP.core.drivers.torch_driver.DeepSpeedDriver`
+        * :class:`~fastNLP.core.drivers.torch_driver.FairScaleDriver`
     """
     if parse_version(torch.__version__) < parse_version('1.6'):
         raise RuntimeError(f"Pytorch(current version:{torch.__version__}) need to be older than 1.6.")

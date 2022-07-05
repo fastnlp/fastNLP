@@ -42,7 +42,7 @@ class ExtCNNDMLoader(JsonLoader):
             test.label.jsonl三个文件(该目录还应该需要有一个名字为vocab的文件，在 :class:`~fastNLP.io.ExtCNNDMPipe`
             当中需要用到)。
 
-        :return: 返回 :class:`~fastNLP.io.DataBundle`
+        :return:  :class:`~fastNLP.io.DataBundle`
         """
         if paths is None:
             paths = self.download()

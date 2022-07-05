@@ -22,6 +22,7 @@ if _NEED_IMPORT_TORCH:
 
 from fastNLP.core.utils import apply_to_collection
 
+__all__ = []
 
 def _validate_output_list_for_rank(my_rank, dst, gather_list):
     if dst == my_rank:
@@ -148,7 +149,7 @@ def send_recv_object(obj, src, cur_rank, device, group=None, tag=0):
     r"""
     pytorch 中的单点对多点的分发函数；
 
-    例如将进程 0 上的对象 object 分发到其它进程上；
+    例如将进程 0 上的对象 object 分发到其它进程上。
 
     Example::
 
@@ -158,11 +159,11 @@ def send_recv_object(obj, src, cur_rank, device, group=None, tag=0):
 
         send_recv_object(object, 0, cur_rank, local_device)
 
-    :param obj: 一个可以序列化的 python 对象；
-    :param src: 从哪一个 rank 上发送到其它 rank；
-    :param cur_rank: 当前的进程的 rank 序号；
-    :param device: 当前的进程所在的设备；
-    :param group: 通信组，默认为 None；
+    :param obj: 一个可以序列化的 python 对象。
+    :param src: 从哪一个 rank 上发送到其它 rank。
+    :param cur_rank: 当前的进程的 rank 序号。
+    :param device: 当前的进程所在的设备。
+    :param group: 通信组，默认为 None。
     :param tag: 将发送与远程接收匹配的标记；
     :return:
     """
@@ -198,18 +199,15 @@ def fastnlp_torch_all_gather(obj: Any, device=None, group=DEFAULT_TORCH_GROUP) -
 
     example::
 
-        obj = {
-            'a': [1, 1],
-            'b': [[1, 2], [1, 2]],
-            'c': {
-                'd': [1, 2]
-            }
-        }
-        ->
-        [
-            {'a': 1, 'b':[1, 2], 'c':{'d': 1}},
-            {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
-        ]
+        >>> # rank 0
+        >>> obj = {'a': 1, 'b':[1, 2], 'c':{'d': 1}}
+        >>> # rank 1
+        >>> obj = {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
+        >>> # after all_gather():
+        >>> result = [
+                {'a': 1, 'b':[1, 2], 'c':{'d': 1}},
+                {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
+            ]
 
     :param obj: 任意结构的数据，如果为 tensor ，需要保证每个显卡上的 tensor 的形状是一样的。如果传入的是非 tensor 对象都将直接进行
         序列化之后进行传输。

@@ -15,13 +15,13 @@ from fastNLP.core.metrics.element import Element
 
 class Metric:
     """
-    fastNLP 中 Metric 的基类，自定义 Metric 时，请继承该对象。使用该对象，将有助于减少在分布式状态下的 Metric 计算。
+    **fastNLP** 中 :class:`Metric` 的基类，自定义 :class:`Metric` 时，请继承该对象。使用该对象，将有助于减少在分布式状态下的 Metric 计算。
 
-    :param backend: 目前支持四种类型的 backend, ``[torch, paddle, jittor, auto]``。其中 ``auto`` 表示根据实际调用
-        Metric.update() 函数时传入的参数决定具体的 ``backend`` ，大部分情况下直接使用 ``auto`` 即可。
-    :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到metric，
-        当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 :class:`~fastNLP.core.controllers.Evaluator` 中根据 sampler 是否使用分布式
-        进行自动设置。
+    :param backend: 目前支持五种类型的 backend, ``['torch', 'paddle', 'jittor', 'oneflow', 'auto']``。其中 ``'auto'`` 表示根据实际调用 :meth:`update`
+        函数时传入的参数决定具体的 backend ，大部分情况下直接使用 ``'auto'`` 即可。
+    :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到 metric，
+        当 backend 不支持分布式时，该参数无意义。如果为 ``None`` ，将在 :class:`~fastNLP.core.controllers.Evaluator` 中根据
+        sampler 是否使用分布式进行自动设置。
     """
     def __init__(self, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = None):
         self.backend = AutoBackend(backend)
@@ -39,22 +39,22 @@ class Metric:
 
     def register_element(self, name, value: float = 0, aggregate_method=None, backend='auto') -> Element:
         """
-        注册一个 element 对象，注册之后便可以通过在 Metric 中直接通过 self.{name} 进行调用，可以认为该对象即为对应 backend 的
+        注册一个 element 对象，注册之后便可以通过在 Metric 中直接通过 ``self.{name}`` 进行调用，可以认为该对象即为对应 backend 的
         tensor 直接进行加减乘除计算即可。
 
-        ..warning::
+        .. warning::
 
-            如果想使得该 metric 可自动扩展到多卡的情况，请一定申明 aggregate_method 。
+            如果想使得该 metric 可自动扩展到多卡的情况，请一定申明 ``aggregate_method`` 。
 
-        :param name: 当前 element 的名字，注册后，在 Metric 中可以通过 self.{name} 访问该变量。
-        :param value: 初始化的值。在调用 Metric.reset() 方法时也将自动设置为该值
+        :param name: 当前 element 的名字，注册后，在 Metric 中可以通过 ``self.{name}`` 访问该变量。
+        :param value: 初始化的值。在调用 :meth:`Metric.reset` 方法时也将自动设置为该值
         :param aggregate_method: 如何聚合多卡上的结果，如果为单卡执行，该值无意义。如果设置为 None 则表示该 element 不进行聚合。
-        :param backend: 使用的 backend 。Element 的类型会根据 backend 进行实际的初始化。例如 backend 为 torch 则该对象为
-            Torch.tensor ； 如果backend 为 paddle 则该对象为 paddle.tensor ；如果 backend 为 jittor , 则该对象为 jittor.Var 。
-            一般情况下直接默认为 auto 就行了，fastNLP 会根据实际调用 Metric.update() 函数时传入的参数进行合理的初始化，例如当传入
-            的参数中只包含 torch.Tensor 这一种 tensor 时（可以有其它非 tensor 类型的输入）则认为 backend 为 torch ；只包含
-            jittor.Var 则认为 backend 这一种 tensor 时（可以有其它非 tensor 类型的输入）则认为 backend 为 jittor 。如果没有检测
-            到任何一种 tensor ，就默认使用 float 类型作为 element 。
+        :param backend: 使用的 backend 。Element 的类型会根据 ``backend`` 进行实际的初始化。例如 ``backend`` 为 ``'torch'`` 则该对象为
+            :class:`torch.Tensor` ； 如果 ``'backend'`` 为 ``'paddle'`` 则该对象为 :class:`paddle.Tensor` ；如果 ``backend`` 为
+            ``'jittor'`` , 则该对象为 :class:`jittor.Var` 。一般情况下直接默认为 ``'auto'`` 就行了， **fastNLP** 会根据实际调用 :meth`Metric.update`
+            函数时传入的参数进行合理的初始化，例如当传入的参数中只包含 :class:`torch.Tensor` 这一种 tensor 时（可以有其它非 tensor 类型的输入）
+            则认为 ``backend`` 为 ``'torch'`` ；只包含 :class:`jittor.Var` 这一种 tensor 时（可以有其它非 tensor 类型的输入）则认为 ``backend``
+            为 ``'jittor'`` 。如果没有检测到任何一种 tensor ，就默认使用 :class:`float` 类型作为 element 。
         :return: 注册的 Element 对象
         """
         if backend == 'auto':
@@ -71,8 +71,8 @@ class Metric:
 
     def reset(self):
         """
-        如果有非 element 的对象需要 reset 的时候，在本方法中写下非 element 的reset 方式。注册的 element 对象会自动 reset 为初始值。
-
+        在对每个 ``evaluate_dataloaders`` 遍历进行验证之前，:meth:`reset` 函数会被调用来重置每个非 element 对象；
+        如果有非 element 的对象需要重置的时候，在本方法中写下非 element 的重置方式。注册的 element 对象则会自动 reset 为初始值。
         """
         pass
 
@@ -142,9 +142,8 @@ class Metric:
     @contextmanager
     def sync(self, recover=True, aggregate=False):
         """
-        在这个上下文下， metric 会自动先同步需要同步操作的 element 。当 recover 为 True 时，在退出环境的时候，会重新将 element 的
-            值恢复到计算前的值。
-
+        在这个上下文下， :meth:`Metric` 会自动先同步需要同步操作的 element 。当 ``recover`` 为 ``True`` 时，在退出环境的时候，会重新将 element 的
+        值恢复到计算前的值。
         """
         keep_value = {}
         if aggregate:
@@ -172,14 +171,14 @@ class Metric:
 
     def set_auto_aggregate_when_get_metric(self, flag: bool):
         """
-        设置是否在 get_metric 的时候自动 aggregate
+        设置是否在 :meth:`get_metric` 的时候自动 aggregate
 
         """
         self.aggregate_when_get_metric = flag
 
     def tensor2numpy(self, tensor) -> np.array:
         """
-        将tensor向量转为numpy类型变量
+        将 ``tensor`` 向量转为 :class:`numpy.array` 类型变量。
 
         :param tensor:
         :return:
@@ -188,7 +187,7 @@ class Metric:
 
     def to(self, device):
         """
-        将所有的 element 变量移动到 device 设备上
+        将所有的 element 变量移动到 ``device`` 设备上
 
         :param device:
         :return:
@@ -198,7 +197,7 @@ class Metric:
 
     def all_gather_object(self, obj, group=None)->List:
         """
-        给定 obj 将各个 rank 上的 obj 汇总到每个 obj 上。返回一个 list 对象，里面依次为各个 rank 对应的 obj 。
+        给定 ``obj`` 将各个 rank 上的 ``obj`` 汇总到每个 ``obj`` 上。返回一个 list 对象，里面依次为各个 rank 对应的 ``obj`` 。
 
         :param obj: 需要汇总的对象，必须是个 pickable 的对象。
         :param group:

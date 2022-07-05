@@ -25,16 +25,21 @@ class JittorSingleDriver(JittorDriver):
     r"""
     ``Jittor`` 框架下用于 ``cpu`` 和单卡 ``gpu`` 运算的 ``Driver``。
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数；
-    :param device: 训练和模型所在的设备，在 **Jittor** 中，应当为以下值之一：``[None, 'cpu', 'gpu', 'cuda']``；
+    :param model: 传入给 ``Trainer`` 的 ``model`` 参数。
+    :param device: 训练和模型所在的设备，在 **Jittor** 中，应当为以下值之一：``[None, 'cpu', 'gpu', 'cuda']``：
         
-        * 为 ``None`` 或 ``cpu`` 时
-         表示在 ``cpu`` 上进行训练；
-        * 为 ``gpu`` 或 ``cuda`` 时
-         表示在显卡设备上进行训练；
+        * 为 ``None`` 或 ``cpu`` 时，表示在 ``cpu`` 上进行训练；
+        * 为 ``gpu`` 或 ``cuda`` 时，表示在显卡设备上进行训练；
 
-    :param fp16: 是否开启 fp16；
+    :param fp16: 是否开启 fp16 混合精度训练。
     :param jittor_kwargs:
+    :kwargs:
+        * *model_wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
+
+        .. note::
+
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
+
     """
 
     def __init__(self, model, device=None, fp16: bool = False, jittor_kwargs: Dict = None, **kwargs):
@@ -50,7 +55,7 @@ class JittorSingleDriver(JittorDriver):
 
     def setup(self):
         r"""
-        初始化训练环境；根据传入的 ``device`` 值设置模型的训练场景为 ``cpu`` 或 ``gpu``；
+        初始化训练环境；根据传入的 ``device`` 值设置模型的训练场景为 ``cpu`` 或 ``gpu``。
         """
         if self.model_device in ["cpu", None]:
             jt.flags.use_cuda = 0   # 使用 cpu
@@ -130,16 +135,3 @@ class JittorSingleDriver(JittorDriver):
             return replace_batch_sampler(dataloader, batch_sampler)
         else:
             return dataloader
-
-    def unwrap_model(self):
-        """
-        返回训练使用的模型。
-        """
-        return self.model
-
-    @property
-    def data_device(self) -> str:
-        """
-        :return: 数据和模型所在的设备；
-        """
-        return self.model_device

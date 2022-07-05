@@ -10,6 +10,7 @@ from fastNLP.envs.utils import _module_available, get_gpu_count
 
 SUPPORT_BACKENDS = ['torch', 'paddle', 'jittor', 'oneflow']
 
+__all__ = []
 
 def _set_backend():
     """
@@ -152,11 +153,13 @@ def set_env(global_seed=None):
 def dump_fastnlp_backend(default:bool = False, backend=None):
     """
     将 fastNLP 的设置写入到 ~/.fastNLP/envs/ 文件夹下，
-        若 default 为 True，则保存的文件为 ~/.fastNLP/envs/default.json 。
-        如 default 为 False，则保存的文件为 ~/.fastNLP/envs/{CONDA_DEFAULT_ENV}.json ，当CONDA_DEFAULT_ENV这个环境变量不存在时
+
+        - 若 default 为 True，则保存的文件为 ~/.fastNLP/envs/default.json 。
+        - 如 default 为 False，则保存的文件为 ~/.fastNLP/envs/{CONDA_DEFAULT_ENV}.json ，当CONDA_DEFAULT_ENV这个环境变量不存在时
         ，报错。
+
     当 fastNLP 被 import 时，会默认尝试从 ~/.fastNLP/envs/{CONDA_DEFAULT_ENV}.json 读取配置文件，如果文件不存在，则尝试从
-     ~/.fastNLP/envs/default.json （如果有）读取环境变量。不过这些变量的优先级低于代码运行时的环境变量注入。
+    ~/.fastNLP/envs/default.json （如果有）读取环境变量。不过这些变量的优先级低于代码运行时的环境变量注入。
 
     会保存的环境变量为 FASTNLP_BACKEND 。
 

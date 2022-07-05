@@ -14,7 +14,7 @@ def _get_monitor_value(monitor: Union[callable, str], real_monitor: Optional[str
     :param monitor:
     :param real_monitor:
     :param res:
-    :return: 返回两个值（str, value)，其中str就是最终要到的key，value就是这个key对应的value。如果value为None说明当前results中没有
+    :return: 两个值（str, value)，其中str就是最终要到的key，value就是这个key对应的value。如果value为None说明当前results中没有
         找到对应的 monitor
     """
     if len(res) == 0 or monitor is None:

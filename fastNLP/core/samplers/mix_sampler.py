@@ -18,20 +18,30 @@ if _NEED_IMPORT_TORCH:
 
 class MixSampler:
     """
-    mix_sampler的基类
+    所有 mix_sampler 的基类。
+
+    :param dataset: 一个字典，每个元素都是一个实现了 __getitem__ 和 __len__ 的数据容器
+    :param batch_size: ``dataset`` 的批次大小，所有 ``dataset`` 均采用该 ``batch_size`` 作为批次大小
+    :param sampler: 实例化好的 ``sampler`` ，每个 ``dataset`` 对应一个 ``sampler`` 对象
+    :param ds_ratio: ``ds_ratio`` 是控制 datasets 怎么组成一个混合大数据集的重要参数， 其取值为 ``[None, 'truncate_to_least', 'pad_to_most', List[float], Dict[str, float]]``:
+
+        * ds_ratio 为 ``None``, datasets 数据集序列或字典不进行数据扩充处理；
+        * ds_ratio 为 ``'truncate_to_least'``, datasets 数据集序列或字典会计算得到 datasets序列中 dataset 最断长度 ``mix_len``， 其他数据集会被切断
+          到最短长度 ``mix_len``。这种切断不是物理上切断，``MixDataLoader`` 会根据 sampler 不同来采样数据集到指定的最短长度 ``mix_len``；
+        * ds_ratio 为 ``'pad_to_most'``, datasets 数据集序列或字典会计算得到 datasets序列中 dataset 最大长度 ``max_len``, 其他其他数据集会扩充
+          到最大长度 ``mix_len``。这种扩充不是物理上扩充， ``MixDataLoader`` 会根据 sampler 不同来重采样 dataset 到指定的最大长度 ``max_len``；
+        * ds_ratio 为 ``Dict[str, float]`` 时， datasets 类型也必须为 ``Dict[str, DataSet]``, 其 key 一一对应。 ``ds_ratio`` 的 value 是任意大于 0 的浮点数，
+          代表着 datasets 的 value 数据进行扩充或者缩减的倍数；
+
+    :param drop_last: 当最后一个 batch 长度小于 ``batch_size`` 时是否丢弃
+    :param rank: 分布式训练中当前进程的 ``global_rank``
+    :param world_size: 分布式训练中进程的总数 **world_size**
     """
 
     def __init__(self, dataset: Dict, batch_size: int = None,
                  sampler: Union[Dict[str, "Sampler"], None, str] = None,
                  ds_ratio: Union[str, Dict[str, float]] = None,
                  drop_last: bool = False, rank: int = -1, word_size: int = -1) -> None:
-        """
-
-        :param dataset: 实现了__getitem__和__len__的数据容器列表
-        :param batch_size: 对应dataset的批次大小，可以为list或者为int，当为int时默认所有dataset
-        :param sampler: 实例化好的sampler，每个dataset对应一个sampler对象
-        :param drop_last: 是否去掉最后一个batch的数据，其长度小于batch_size
-        """
         # sampler 为 dict，则判断是否与 datasets 的 key 相同
         if isinstance(sampler, Dict):
             for key in dataset.keys():
@@ -119,7 +129,7 @@ class MixSampler:
 
 class InnerSampler:
     """
-    提供多卡情况下使用的内部sampler
+    提供多卡情况下使用的内部 sampler
     """
     def __init__(self, ds_ind_list: List) -> None:
         self.ds_ind_list = ds_ind_list
@@ -134,7 +144,8 @@ class InnerSampler:
 
 class DopedSampler(MixSampler):
     """
-    定制给MixDataLoader的BatchSampler，其功能是将传入的datasets的list列表混合采样组成一个个batch返回。
+    定制给 :class:`~fastNLP.core.dataloaders.MixDataLoader` 的 ``BatchSampler``，其功能是将传入的 ``datasets`` 
+    字典混合采样组成一个个 batch 返回。
     """
     def __init__(self, dataset: Dict, batch_size: int = None,
                  sampler: Union[Dict[str, "Sampler"], str] = None,
@@ -256,27 +267,21 @@ class DopedSampler(MixSampler):
 
 class MixSequentialSampler(MixSampler):
     """
-    定制给MixDataLoader的BatchSampler，其功能是将传入的datasets的list列表顺序采样并返回index，只有处理了上一个dataset才会处理下一个。
+    定制给 :class:`~fastNLP.core.dataloaders.MixDataLoader` 的 ``BatchSampler``，其功能是将传入的 ``datasets`` 按顺序采样并返回 index，
+    只有上一个 dataset 处理结束后才会处理下一个。
     """
 
-    def __init__(self, dataset: Union[List, Dict], batch_size: int = None,
+    def __init__(self, dataset: Dict, batch_size: int = None,
                  sampler: Union[List["Sampler"], Dict[str, "Sampler"], None, str] = None,
                  ds_ratio: Union[str, List[float], Dict[str, float]] = None,
                  drop_last: bool = False, rank: int = -1, word_size: int = -1) -> None:
-        """
-
-        :param dataset: 实现了__getitem__和__len__的数据容器列表
-        :param batch_size: 对应dataset的批次大小，可以为list或者为int，当为int时默认所有dataset
-        :param sampler: 实例化好的sampler，每个dataset对应一个sampler对象
-        :param drop_last: 是否去掉最后一个batch的数据，其长度小于batch_size
-        """
         super(MixSequentialSampler, self).__init__(dataset=dataset, batch_size=batch_size,
                                                    sampler=sampler, ds_ratio=ds_ratio,
                                                    drop_last=drop_last, rank=rank, word_size=word_size)
 
     def __iter__(self) -> Iterable[List[int]]:
         """
-        按照dataset的顺序采样，打包成一个batch后返回
+        按照 ``dataset`` 的顺序采样，打包成一个 batch 后返回。
 
         :return:
         """
@@ -384,22 +389,14 @@ class MixSequentialSampler(MixSampler):
 
 class PollingSampler(MixSampler):
     """
-    定制给MixDataLoader的BatchSampler，其功能是将传入的datasets的list列表轮流采样并返回index，处理了上个dataset的一个batch后会处理下一个。
+    定制给 :class:`~fastNLP.core.dataloaders.MixDataLoader` 的 ``BatchSampler``，其功能是将传入的 ``datasets`` 轮流采样并返回 index，
+    处理结束上个 dataset 的一个 batch 后会处理下一个。
     """
 
     def __init__(self, dataset: Union[List, Dict], batch_size: int = 16,
                  sampler: Union[List["Sampler"], Dict[str, "Sampler"], str] = None,
                  drop_last: bool = False, ds_ratio="pad_to_most", rank: int = -1,
                  word_size: int = -1) -> None:
-        """
-
-        :param dataset: 实现了__getitem__和__len__的数据容器列表
-        :param batch_size: 对应dataset的批次大小，可以为list或者为int，当为int时默认所有dataset
-        :param sampler: 实例化好的sampler，每个dataset对应一个sampler对象
-        :param drop_last: 是否去掉最后一个batch的数据，其长度小于batch_size
-        :param ds_ratio: 当ds_ratio=None时候， 轮流采样dataset列表直至所有的数据集采样完；当ds_ratio='truncate_to_least'时，
-            以dataset列表最短的ds为基准，长的数据集会被截断；当ds_ratio='pad_to_most'时，以dataset列表最长ds为基准，短的数据集会被重采样
-       """
         super(PollingSampler, self).__init__(dataset=dataset, batch_size=batch_size,
                                              sampler=sampler, ds_ratio=ds_ratio,
                                              drop_last=drop_last, rank=rank, word_size=word_size)

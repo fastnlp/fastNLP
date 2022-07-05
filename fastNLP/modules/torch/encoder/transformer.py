@@ -1,5 +1,3 @@
-r"""undocumented"""
-
 __all__ = [
     "TransformerEncoder"
 ]
@@ -11,18 +9,15 @@ from .seq2seq_encoder import TransformerSeq2SeqEncoderLayer
 
 class TransformerEncoder(nn.Module):
     r"""
-    transformer的encoder模块，不包含embedding层
+    **Transformer** 的 encoder 模块，不包含 embedding 层。
 
+    :param num_layers: **TransformerEncoder** 的层数。
+    :param d_model: 输入维度的大小，同时也是输出维度的大小。
+    :param n_head: **多头注意力** head 的数目，需要能被 ``d_model`` 整除
+    :param dim_ff: FFN 中间映射的维度
+    :param dropout: :class:`~fastNLP.modules.torch.decoder.SelfAttention` 和 FFN 中的 dropout 的大小
     """
-    def __init__(self, num_layers, d_model=512, n_head=8, dim_ff=2048, dropout=0.1):
-        """
-
-        :param int num_layers: 多少层Transformer
-        :param int d_model: input和output的大小
-        :param int n_head: 多少个head
-        :param int dim_ff: FFN中间hidden大小
-        :param float dropout: 多大概率drop attention和ffn中间的表示
-        """
+    def __init__(self, num_layers: int, d_model: int=512, n_head: int=8, dim_ff: int=2048, dropout: float=0.1):
         super(TransformerEncoder, self).__init__()
         self.layers = nn.ModuleList([TransformerSeq2SeqEncoderLayer(d_model = d_model, n_head = n_head, dim_ff = dim_ff,
                  dropout = dropout) for _ in range(num_layers)])
@@ -30,10 +25,10 @@ class TransformerEncoder(nn.Module):
 
     def forward(self, x, seq_mask=None):
         r"""
-        :param x: [batch, seq_len, model_size] 输入序列
-        :param seq_mask: [batch, seq_len] 输入序列的padding mask, 若为 ``None`` , 生成全1向量. 为1的地方需要attend
-            Default: ``None``
-        :return: [batch, seq_len, model_size] 输出序列
+        :param x: 输入序列，形状为 ``[batch_size, seq_len, d_model]``
+        :param seq_mask: 输入序列的 padding mask ，形状为 ``[batch, seq_len]``，若为 ``None``，则生成全 **1** 向量；为 **1**
+            的地方表示需要 attend 。
+        :return: 输出序列，形状为 ``[batch, seq_len, d_model]``
         """
         output = x
         if seq_mask is None:

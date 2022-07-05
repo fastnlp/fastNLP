@@ -57,7 +57,7 @@ class Trainer(TrainerEventTrigger):
 
     :param driver: 训练模型所使用的具体的驱动模式，应当为以下选择中的一个：``["auto", "torch", "paddle", "jittor", "fairscale", "deepspeed", "oneflow"]``：
         
-        1. 值为 ``"auto"`` 时，**FastNLP** 会根据传入模型的类型自行判断使用哪一种模式；
+        1. 值为 ``"auto"`` 时，**fastNLP** 会根据传入模型的类型自行判断使用哪一种模式；
         2. 其值为 ``"torch"`` 时，表示使用 :class:`~fastNLP.core.drivers.TorchSingleDriver` 或者 :class:`~fastNLP.core.drivers.TorchDDPDriver`；
         3. 其值为 ``"paddle"`` 时，表示使用 :class:`~fastNLP.core.drivers.PaddleSingleDriver` 或者 :class:`~fastNLP.core.drivers.PaddleFleetDriver`；
         4. 其值为 ``"jittor"`` 时，表示使用 :class:`~fastNLP.core.drivers.JittorSingleDriver` 或者 :class:`~fastNLP.core.drivers.JittorMPIDriver`；
@@ -72,6 +72,10 @@ class Trainer(TrainerEventTrigger):
             因为设计上的原因，您可以直接传入一个初始化好的 ``driver`` 实例，但是需要注意的是一个 ``Driver`` 在初始化时需要 ``model`` 这一参数，
             这意味着当您传入一个 ``Driver`` 实例时，您传入给 ``Trainer`` 的 ``model`` 参数将会被忽略；也就是说模型在训练时使用的真正的模型是
             您传入的 ``Driver`` 实例中的模型；
+
+        .. note::
+
+            如果您选择使用 :mod:`deepspeed` 或 :mod:`fairscale` 进行训练，请不要将 ``driver`` 的值设为 ``'auto'`` 。
 
     :param train_dataloader: 训练数据集，注意其必须是单独的一个数据集，不能是 :class:`List` 或者 :class:`Dict`；
 
@@ -301,7 +305,7 @@ class Trainer(TrainerEventTrigger):
           :class:`~fastNLP.core.drivers.paddle_driver.PaddleSingleDriver`；
         * *fairscale_kwargs* -- ``FairScaleDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.torch_driver.FairScaleDriver`；
         * *deepspeed_kwargs* -- ``DeepSpeedDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.torch_driver.DeepSpeedDriver`；
-        * *torch_kwargs* -- ``OneflowDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.oneflow_driver.OneflowSingleDriver` 和
+        * *oneflow_kwargs* -- ``OneflowDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.oneflow_driver.OneflowSingleDriver` 和
           :class:`~fastNLP.core.drivers.oneflow_driver.OneflowDDPDriver`；
         * *data_device* -- 一个具体的 driver 实例中，有 ``model_device`` 和 ``data_device``，前者表示模型所在的设备，后者表示
          当 ``model_device`` 为 None 时应当将数据迁移到哪个设备；
@@ -885,7 +889,7 @@ class Trainer(TrainerEventTrigger):
         :param marker: 用来标记该 callback 函数属于哪几个具体的 trainer 实例；两个特殊情况：1.当 ``marker`` 为 None（默认情况）时，
          表示该 callback 函数只属于代码下方最近的一个 trainer 实例；2.当 ``marker`` 为 'all' 时，该 callback 函数会被所有的 trainer
          实例使用；
-        :return: 返回原函数；
+        :return: 原函数；
         """
 
         def wrapper(fn: Callable) -> Callable:
@@ -1001,7 +1005,7 @@ class Trainer(TrainerEventTrigger):
     @property
     def driver(self):
         """
-        :return: 返回 ``trainer`` 中的 ``driver`` 实例；
+        :return:  ``trainer`` 中的 ``driver`` 实例；
         """
         return self._driver
 
@@ -1012,7 +1016,7 @@ class Trainer(TrainerEventTrigger):
     @property
     def train_batch_loop(self):
         """
-        :return: 返回 ``trainer`` 中的 ``train_batch_loop`` 实例；
+        :return:  ``trainer`` 中的 ``train_batch_loop`` 实例；
         """
         return self._train_batch_loop
 
@@ -1275,7 +1279,7 @@ class Trainer(TrainerEventTrigger):
             ``trainer.backward / zero_grad / step`` 函数的作用类似；
 
         :param batch: 一个 batch 的数据；
-        :return: 返回模型的前向传播函数所返回的结果；
+        :return: 模型的前向传播函数所返回的结果；
         """
         with self.driver.auto_cast():
             outputs = self.driver.model_call(batch, self._train_step, self._train_step_signature_fn)
@@ -1328,7 +1332,7 @@ class Trainer(TrainerEventTrigger):
         用来从用户模型的输出对象中抽取 ``loss`` 对象；
         目前支持 `outputs` 对象为 ``dict`` 或者 ``dataclass``；
 
-        :return: 返回被抽取出来的 ``loss`` 对象，例如如果是 ``pytorch``，那么返回的就是一个 tensor；
+        :return: 被抽取出来的 ``loss`` 对象，例如如果是 ``pytorch``，那么返回的就是一个 tensor；
         """
         if isinstance(outputs, Dict):
             try:
@@ -1375,7 +1379,7 @@ class Trainer(TrainerEventTrigger):
     @property
     def n_epochs(self) -> int:
         r"""
-        :return: 返回当前训练的总体的 epoch 的数量；
+        :return: 当前训练的总体的 epoch 的数量；
         """
         return self.trainer_state.n_epochs
 
@@ -1386,7 +1390,7 @@ class Trainer(TrainerEventTrigger):
     @property
     def cur_epoch_idx(self) -> int:
         r"""
-        :return: 返回当前正在第几个 epoch；
+        :return: 当前正在第几个 epoch；
         """
         return self.trainer_state.cur_epoch_idx
 
@@ -1397,7 +1401,7 @@ class Trainer(TrainerEventTrigger):
     @property
     def global_forward_batches(self) -> int:
         """
-        :return: 返回从训练开始到当前总共训练了多少 batch 的数据；
+        :return: 从训练开始到当前总共训练了多少 batch 的数据；
         """
         return self.trainer_state.global_forward_batches
 
@@ -1408,7 +1412,7 @@ class Trainer(TrainerEventTrigger):
     @property
     def batch_idx_in_epoch(self) -> int:
         r"""
-        :return: 返回在从当前的这个 epoch 开始，到现在共训练了多少 batch 的数据；
+        :return: 在从当前的这个 epoch 开始，到现在共训练了多少 batch 的数据；
         """
         return self.trainer_state.batch_idx_in_epoch
 
@@ -1419,7 +1423,7 @@ class Trainer(TrainerEventTrigger):
     @property
     def num_batches_per_epoch(self) -> int:
         r"""
-        :return: 返回每一个 epoch 实际会训练多少个 batch 的数据；
+        :return: 每一个 epoch 实际会训练多少个 batch 的数据；
         """
         return self.trainer_state.num_batches_per_epoch
 
@@ -1430,7 +1434,7 @@ class Trainer(TrainerEventTrigger):
     @property
     def n_batches(self) -> int:
         r"""
-        :return: 返回整体的训练中实际会训练多少个 batch 的数据；
+        :return: 整体的训练中实际会训练多少个 batch 的数据；
         """
         return self.trainer_state.n_batches
 
@@ -1443,7 +1447,7 @@ class Trainer(TrainerEventTrigger):
     @property
     def model_device(self):
         r"""
-        :return: 返回当前模型所在的设备；注意该值在当且仅当在少数情况下为 ``None``，例如当使用 ``pytorch`` 时，仅当用户自己初始化 ``init_progress_group`` 时
+        :return: 当前模型所在的设备；注意该值在当且仅当在少数情况下为 ``None``，例如当使用 ``pytorch`` 时，仅当用户自己初始化 ``init_progress_group`` 时
             ``model_device`` 才为 None；
         """
         return self.driver.model_device
@@ -1451,7 +1455,7 @@ class Trainer(TrainerEventTrigger):
     @property
     def data_device(self):
         r"""
-        :return: 返回数据会被迁移到的目的设备；
+        :return: 数据会被迁移到的目的设备；
         """
         return self.driver.data_device
 
@@ -1460,7 +1464,7 @@ class Trainer(TrainerEventTrigger):
     @property
     def train_dataloader(self):
         """
-        :return: 返回用户传入的 ``train_dataloader``，注意该 ``dataloader`` 与用户传入给 ``Trainer`` 的 ``dataloader`` 对象是同一个对象，而我们在
+        :return: 用户传入的 ``train_dataloader``，注意该 ``dataloader`` 与用户传入给 ``Trainer`` 的 ``dataloader`` 对象是同一个对象，而我们在
         实际训练过程中使用的 ``dataloader`` 的状态可能有所更改；
         """
         return self._train_dataloader
@@ -1472,7 +1476,7 @@ class Trainer(TrainerEventTrigger):
     @property
     def evaluate_dataloaders(self):
         """
-        :return: 返回用户传入的 ``evaluate_dataloaders``；
+        :return: 用户传入的 ``evaluate_dataloaders``；
         """
         return self._evaluate_dataloaders
 

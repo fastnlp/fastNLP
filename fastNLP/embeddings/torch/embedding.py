@@ -1,5 +1,5 @@
 r"""
-该模块中的Embedding主要用于随机初始化的embedding(更推荐使用 :class:`fastNLP.embeddings.StaticEmbedding` )，或按照预训练权重初始化Embedding。
+该模块中的 :class:`Embedding` 主要用于随机初始化的 embedding （更推荐使用 :class:`fastNLP.embeddings.torch.StaticEmbedding` ），或按照预训练权重初始化 Embedding。
 
 """
 
@@ -36,19 +36,20 @@ class Embedding(Module):
         >>> init_embed = np.zeros((2000, 100))
         >>> embed = Embedding(init_embed)  # 使用numpy.ndarray的值作为初始化值初始化一个Embedding
 
+    :param init_embed: 支持传入 Embedding 的大小。支持以下类型：
+
+            1. 传入 tuple(int, int)，第一个 int 为 ``vocab_size``, 第二个 int  ``为embed_dim``；
+            2. 传入 :class:`Tensor`, :class:`Embedding`, :class:`numpy.ndarray` 等则直接使用该值初始化 Embedding；
+    
+    :param word_dropout: 按照一定概率随机将 word 设置为 ``unk_index`` ，这样可以使得 ``<UNK>`` 这个 token 得到足够的训练，
+        且会对网络有一定的 regularize 作用。设置该值时，必须同时设置 ``unk_index``。
+    :param dropout: 对 Embedding 的输出的 dropout。
+    :param unk_index: drop word 时替换为的 index。**fastNLP** 的 :class:`fastNLP.Vocabulary`` 的 ``unk_index`` 默认为 1。
     """
     
     def __init__(self, init_embed:Union[Tuple[int,int],'torch.FloatTensor','nn.Embedding',np.ndarray],
                  word_dropout:float=0, dropout:float=0.0, unk_index:int=None):
-        r"""
-        
-        :param init_embed: 支持传入Embedding的大小(传入tuple(int, int),
-            第一个int为vocab_zie, 第二个int为embed_dim); 或传入Tensor, Embedding, numpy.ndarray等则直接使用该值初始化Embedding;
-        :param word_dropout: 按照一定概率随机将word设置为unk_index，这样可以使得unk这个token得到足够的训练, 且会对网络有
-            一定的regularize的作用。设置该值时，必须同时设置unk_index
-        :param dropout: 对Embedding的输出的dropout。
-        :param unk_index: drop word时替换为的index。fastNLP的Vocabulary的unk_index默认为1。
-        """
+
         super(Embedding, self).__init__()
         
         self.embed = get_embeddings(init_embed)
@@ -69,10 +70,10 @@ class Embedding(Module):
         self.unk_index = unk_index
         self.word_dropout = word_dropout
     
-    def forward(self, words):
+    def forward(self, words: "torch.LongTensor") -> "torch.Tensor":
         r"""
-        :param torch.LongTensor words: [batch, seq_len]
-        :return: torch.Tensor : [batch, seq_len, embed_dim]
+        :param words: 形状为 ``[batch, seq_len]``
+        :return: 形状为 ``[batch, seq_len, embed_dim]`` 的张量
         """
         if self.word_dropout > 0 and self.training:
             mask = torch.ones_like(words).float() * self.word_dropout
@@ -102,7 +103,11 @@ class Embedding(Module):
     @property
     def requires_grad(self):
         r"""
-        Embedding的参数是否允许优化。True: 所有参数运行优化; False: 所有参数不允许优化; None: 部分允许优化、部分不允许
+        Embedding 的参数是否允许优化：
+        
+            - ``True`` -- 所有参数运行优化
+            - ``False`` -- 所有参数不允许优化
+            - ``None`` -- 部分允许优化、部分不允许
         :return:
         """
         if not isinstance(self.embed, TokenEmbedding):

@@ -26,19 +26,25 @@ from fastNLP.core.log import logger
 
 class TorchSingleDriver(TorchDriver):
     r"""
-    ``TorchSingleDriver`` 是用于 cpu 和 单卡 gpu 运算的 ``driver``；
+    ``TorchSingleDriver`` 是用于 cpu 和 单卡 gpu 运算的 ``driver``。
 
     .. note::
 
-        如果您希望使用 ``DataParallel`` 来训练您的模型，您应当自己在 ``Trainer`` 初始化之前初始化好 ``DataParallel``，然后将其传入 ``Trainer`` 中；
+        如果您希望使用 ``DataParallel`` 来训练您的模型，您应当自己在 ``Trainer`` 初始化之前初始化好 ``DataParallel``，然后将其传入 ``Trainer`` 中。
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数；
-    :param device: torch.device，当前进程所使用的设备；
-    :param fp16: 是否开启 fp16；
+    :param model: 传入给 ``Trainer`` 的 ``model`` 参数
+    :param device: torch.device，当前进程所使用的设备
+    :param fp16: 是否开启 fp16
     :param torch_kwargs:
-        * *set_grad_to_none* -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
-        * *non_blocking* -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
-        * *gradscaler_kwargs* -- 用于 fp16=True 时，提供给 ``torch.amp.cuda.GradScaler`` 的参数;
+        * *set_grad_to_none* -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 ``None``
+        * *non_blocking* -- 表示用于 :meth:`torch.Tensor.to` 方法的参数 non_blocking
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.amp.cuda.GradScaler` 的参数
+    :kwargs:
+        * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
+
+        .. note::
+
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
     """
 
     def __init__(self, model, device: "torch.device", fp16: bool = False, torch_kwargs: Dict = None, **kwargs):
@@ -69,7 +75,7 @@ class TorchSingleDriver(TorchDriver):
 
     def setup(self):
         r"""
-        将模型迁移到相应的设备上；
+        将模型迁移到相应的设备上。
         """
         if self.model_device is not None:
             self.model.to(self.model_device)
@@ -153,7 +159,7 @@ class TorchSingleDriver(TorchDriver):
 
     def unwrap_model(self):
         r"""
-        :return: 返回原本的模型，例如没有被 ``DataParallel`` 包裹；
+        :return: 原本的模型，该函数可以取出被 ``DataParallel`` 包裹的模型
         """
         if isinstance(self.model, torch.nn.DataParallel) or \
                 isinstance(self.model, torch.nn.parallel.DistributedDataParallel):
@@ -164,12 +170,12 @@ class TorchSingleDriver(TorchDriver):
     @property
     def data_device(self):
         r"""
-        注意单卡模式下使用 ``driver.data_device`` 等价于使用 ``driver.model_device``；
+        数据和模型所在的设备
         """
         return self.model_device
 
     def is_distributed(self):
         r"""
-        :return: 返回当前使用的 driver 是否是分布式的 driver，对于 ``TorchSingleDriver`` 来说直接返回 ``False``；
+        :return: 当前使用的 driver 是否是分布式的 driver，对于 ``TorchSingleDriver`` 来说直接返回 ``False``
         """
         return False

@@ -1,6 +1,7 @@
 r"""undocumented"""
 import os
 import numpy as np
+from functools import partial
 
 from .pipe import Pipe
 from .utils import _drop_empty_instance
@@ -25,7 +26,7 @@ class ExtCNNDMPipe(Pipe):
        :header: "text", "summary", "label", "publication", "text_wd", "words", "seq_len", "target"
     
     """
-    def __init__(self, vocab_size, sent_max_len, doc_max_timesteps, vocab_path=None, domain=False):
+    def __init__(self, vocab_size, sent_max_len, doc_max_timesteps, vocab_path=None, domain=False, num_proc=0):
         r"""
         
         :param vocab_size: int, 词表大小
@@ -39,6 +40,7 @@ class ExtCNNDMPipe(Pipe):
         self.sent_max_len = sent_max_len
         self.doc_max_timesteps = doc_max_timesteps
         self.domain = domain
+        self.num_proc = num_proc
 
     def process(self, data_bundle: DataBundle):
         r"""
@@ -65,18 +67,29 @@ class ExtCNNDMPipe(Pipe):
             error_msg = 'vocab file is not defined!'
             print(error_msg)
             raise RuntimeError(error_msg)
-        data_bundle.apply(lambda x: _lower_text(x['text']), new_field_name='text')
-        data_bundle.apply(lambda x: _lower_text(x['summary']), new_field_name='summary')
-        data_bundle.apply(lambda x: _split_list(x['text']), new_field_name='text_wd')
+        data_bundle.apply_field(_lower_text, field_name='text', new_field_name='text', num_proc=self.num_proc)
+        data_bundle.apply_field(_lower_text, field_name='summary', new_field_name='summary', num_proc=self.num_proc)
+        data_bundle.apply_field(_split_list, field_name='text', new_field_name='text_wd', num_proc=self.num_proc)
+        # data_bundle.apply(lambda x: _lower_text(x['text']), new_field_name='text')
+        # data_bundle.apply(lambda x: _lower_text(x['summary']), new_field_name='summary')
+        # data_bundle.apply(lambda x: _split_list(x['text']), new_field_name='text_wd')
         data_bundle.apply(lambda x: _convert_label(x["label"], len(x["text"])), new_field_name='target')
 
-        data_bundle.apply(lambda x: _pad_sent(x["text_wd"], self.sent_max_len), new_field_name='words')
+        data_bundle.apply_field(partial(_pad_sent, sent_max_len=self.sent_max_len), field_name="text_wd",
+                                new_field_name="words", num_proc=self.num_proc)
+        # data_bundle.apply(lambda x: _pad_sent(x["text_wd"], self.sent_max_len), new_field_name='words')
         # db.apply(lambda x: _token_mask(x["text_wd"], self.sent_max_len), new_field_name="pad_token_mask")
 
         # pad document
-        data_bundle.apply(lambda x: _pad_doc(x['words'], self.sent_max_len, self.doc_max_timesteps), new_field_name='words')
-        data_bundle.apply(lambda x: _sent_mask(x['words'], self.doc_max_timesteps), new_field_name='seq_len')
-        data_bundle.apply(lambda x: _pad_label(x['target'], self.doc_max_timesteps), new_field_name='target')
+        data_bundle.apply_field(partial(_pad_doc, sent_max_len=self.sent_max_len, doc_max_timesteps=self.doc_max_timesteps),
+                                field_name="words", new_field_name="words", num_proc=self.num_proc)
+        data_bundle.apply_field(partial(_sent_mask, doc_max_timesteps=self.doc_max_timesteps), field_name="words",
+                                new_field_name="seq_len", num_proc=self.num_proc)
+        data_bundle.apply_field(partial(_pad_label, doc_max_timesteps=self.doc_max_timesteps), field_name="target",
+                                new_field_name="target", num_proc=self.num_proc)
+        # data_bundle.apply(lambda x: _pad_doc(x['words'], self.sent_max_len, self.doc_max_timesteps), new_field_name='words')
+        # data_bundle.apply(lambda x: _sent_mask(x['words'], self.doc_max_timesteps), new_field_name='seq_len')
+        # data_bundle.apply(lambda x: _pad_label(x['target'], self.doc_max_timesteps), new_field_name='target')
 
         data_bundle = _drop_empty_instance(data_bundle, "label")
 

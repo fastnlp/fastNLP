@@ -1,5 +1,5 @@
 r"""
-本模块实现了几种序列标注模型
+本模块实现了几种序列标注模型。
 """
 __all__ = [
     "SeqLabeling",
@@ -21,20 +21,24 @@ from ...modules.torch.decoder.crf import allowed_transitions
 
 class BiLSTMCRF(nn.Module):
     r"""
-    结构为embedding + BiLSTM + FC + Dropout + CRF.
+    结构为 ``Embedding`` + :class:`BiLSTM <fastNLP.modules.torch.encoder.LSTM>` + ``FC`` + ``Dropout`` +
+    :class:`CRF <fastNLP.modules.torch.decoder.ConditionalRandomField>` 。
 
+    :param embed: 支持以下几种输入类型：
+
+        - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+        - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+        - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+        - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+
+    :param num_classes: 一共多少个类
+    :param num_layers: **BiLSTM** 的层数
+    :param hidden_size: **BiLSTM** 的 ``hidden_size``，实际 hidden size 为该值的 **两倍** （前向、后向）
+    :param dropout: dropout 的概率，0 为不 dropout
+    :param target_vocab: :class:`~fastNLP.core.Vocabulary` 对象，target 与 index 的对应关系。如果传入该值，将自动避免非法的解码序列。
     """
     def __init__(self, embed, num_classes, num_layers=1, hidden_size=100, dropout=0.5,
                   target_vocab=None):
-        r"""
-        
-        :param embed: 支持(1)fastNLP的各种Embedding, (2) tuple, 指明num_embedding, dimension, 如(1000, 100)
-        :param num_classes: 一共多少个类
-        :param num_layers: BiLSTM的层数
-        :param hidden_size: BiLSTM的hidden_size，实际hidden size为该值的两倍(前向、后向)
-        :param dropout: dropout的概率，0为不dropout
-        :param target_vocab: Vocabulary对象，target与index的对应关系。如果传入该值，将自动避免非法的解码序列。
-        """
         super().__init__()
         self.embed = get_embeddings(embed)
 
@@ -55,7 +59,13 @@ class BiLSTMCRF(nn.Module):
 
         self.crf = ConditionalRandomField(num_classes, include_start_end_trans=True, allowed_transitions=trans)
 
-    def forward(self, words, seq_len=None, target=None):
+    def forward(self, words: "torch.LongTensor", target: "torch.LongTensor"=None, seq_len: "torch.LongTensor"=None):
+        """
+        :param words: 句子中 word 的 index，形状为 ``[batch_size, seq_len]``
+        :param target: 每个 sample 的目标值
+        :param seq_len: 每个句子的长度，形状为 ``[batch,]``
+        :return: 如果 ``target`` 为 ``None``，则返回预测结果 ``{'pred': torch.Tensor}``，否则返回 loss ``{'loss': torch.Tensor}``
+        """
         words = self.embed(words)
         feats, _ = self.lstm(words, seq_len=seq_len)
         feats = self.fc(feats)
@@ -69,28 +79,40 @@ class BiLSTMCRF(nn.Module):
             loss = self.crf(logits, target, mask).mean()
             return {'loss':loss}
 
-    def train_step(self, words, seq_len, target):
+    def train_step(self, words: "torch.LongTensor", target: "torch.LongTensor", seq_len: "torch.LongTensor"):
+        """
+        :param words: 句子中 word 的 index，形状为 ``[batch_size, seq_len]``
+        :param target: 每个 sample 的目标值
+        :param seq_len: 每个句子的长度，形状为 ``[batch,]``
+        :return: 如果 ``target`` 为 ``None``，则返回预测结果 ``{'pred': torch.Tensor}``，否则返回 loss ``{'loss': torch.Tensor}``
+        """
         return self(words, seq_len, target)
 
-    def evaluate_step(self, words, seq_len):
+    def evaluate_step(self, words: "torch.LongTensor", seq_len: "torch.LongTensor"):
+        """
+        :param words: 句子中 word 的 index，形状为 ``[batch_size, seq_len]``
+        :param seq_len: 每个句子的长度，形状为 ``[batch,]``
+        :return: 预测结果 ``{'pred': torch.Tensor}``
+        """
         return self(words, seq_len)
 
 
 class SeqLabeling(nn.Module):
     r"""
-    一个基础的Sequence labeling的模型。
-    用于做sequence labeling的基础类。结构包含一层Embedding，一层LSTM(单向，一层)，一层FC，以及一层CRF。
-    
+    一个基础的 Sequence labeling 的模型。
+    用于做 sequence labeling 的基础类。结构包含一层 ``Embedding`` ，一层 :class:`~fastNLP.modules.torch.encoder.LSTM` (单向，一层)，
+    一层全连接层，以及一层 :class:`CRF <fastNLP.modules.torch.decoder.ConditionalRandomField>` 。
+
+    :param embed: 支持以下几种输入类型：
+
+            - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+            - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+            - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+            - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+    :param hidden_size: :class:`fastNLP.modules.torch.encoder.LSTM` 隐藏层的大小
+    :param num_classes: 一共有多少类
     """
-    
-    def __init__(self, embed, hidden_size, num_classes):
-        r"""
-        
-        :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray embed: Embedding的大小(传入tuple(int, int),
-            第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, embedding, ndarray等则直接使用该值初始化Embedding
-        :param int hidden_size: LSTM隐藏层的大小
-        :param int num_classes: 一共有多少类
-        """
+    def __init__(self, embed, hidden_size: int, num_classes: int):
         super(SeqLabeling, self).__init__()
         
         self.embedding = get_embeddings(embed)
@@ -98,11 +120,11 @@ class SeqLabeling(nn.Module):
         self.fc = nn.Linear(hidden_size, num_classes)
         self.crf = decoder.ConditionalRandomField(num_classes)
 
-    def forward(self, words, seq_len):
+    def forward(self, words: "torch.LongTensor", seq_len: "torch.LongTensor"):
         r"""
-        :param torch.LongTensor words: [batch_size, max_len]，序列的index
-        :param torch.LongTensor seq_len: [batch_size,], 这个序列的长度
-        :return
+        :param words: 句子中 word 的 index，形状为 ``[batch_size, seq_len]``
+        :param seq_len: 每个句子的长度，形状为 ``[batch,]``
+        :return: 预测结果 ``{'pred': torch.Tensor}``
         """
         x = self.embedding(words)
         # [batch_size, max_len, word_emb_dim]
@@ -112,19 +134,23 @@ class SeqLabeling(nn.Module):
         return {'pred': x}
         # [batch_size, max_len, num_classes]
 
-    def train_step(self, words, seq_len, target):
+    def train_step(self, words, target, seq_len):
+        """
+        :param words: 句子中 word 的 index，形状为 ``[batch_size, seq_len]``
+        :param target: 每个 sample 的目标值
+        :param seq_len: 每个句子的长度，形状为 ``[batch,]``
+        :return: 如果 ``target`` 为 ``None``，则返回预测结果 ``{'pred': torch.Tensor}``，否则返回 loss ``{'loss': torch.Tensor}``
+        """
         res = self(words, seq_len)
         pred = res['pred']
         mask = seq_len_to_mask(seq_len, max_len=target.size(1))
         return {'loss': self._internal_loss(pred, target, mask)}
 
     def evaluate_step(self, words, seq_len):
-        r"""
-        用于在预测时使用
-
-        :param torch.LongTensor words: [batch_size, max_len]
-        :param torch.LongTensor seq_len: [batch_size,]
-        :return: {'pred': xx}, [batch_size, max_len]
+        """
+        :param words: 句子中 word 的 index，形状为 ``[batch_size, seq_len]``
+        :param seq_len: 每个句子的长度，形状为 ``[batch,]``
+        :return: 预测结果 ``{'pred': torch.Tensor}``
         """
         mask = seq_len_to_mask(seq_len, max_len=words.size(1))
 
@@ -158,22 +184,25 @@ class SeqLabeling(nn.Module):
 
 class AdvSeqLabel(nn.Module):
     r"""
-    更复杂的Sequence Labelling模型。结构为Embedding, LayerNorm, 双向LSTM(两层)，FC，LayerNorm，DropOut，FC，CRF。
+    更复杂的 Sequence Labelling 模型。结构为 ``Embedding``, ``LayerNorm``, :class:`BiLSTM <fastNLP.modules.torch.encoder.LSTM>` （两层），
+    ``FC``，``LayerNorm``，``Dropout``，``FC``，:class:`CRF <fastNLP.modules.torch.decoder.ConditionalRandomField>`。
+
+    :param embed: 支持以下几种输入类型：
+
+        - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+        - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+        - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+        - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+    :param hidden_size: :class:`~fastNLP.modules.torch.LSTM` 的隐藏层大小
+    :param num_classes: 有多少个类
+    :param dropout: :class:`~fastNLP.modules.torch.LSTM` 中以及 DropOut 层的 drop 概率
+    :param id2words: tag id 转为其 tag word 的表。用于在 CRF 解码时防止解出非法的顺序，比如 **'BMES'** 这个标签规范中，``'S'``
+        不能出现在 ``'B'`` 之后。这里也支持类似于 ``'B-NN'``，即 ``'-'`` 前为标签类型的指示，后面为具体的 tag 的情况。这里不但会保证
+        ``'B-NN'`` 后面不为 ``'S-NN'`` 还会保证 ``'B-NN'`` 后面不会出现 ``'M-xx'`` （任何非 ``'M-NN'`` 和 ``'E-NN'`` 的情况）。
+    :param encoding_type: 支持 ``["BIO", "BMES", "BEMSO"]`` ，只有在 ``id2words`` 不为 ``None`` 的情况有用。
     """
     
-    def __init__(self, embed, hidden_size, num_classes, dropout=0.3, id2words=None, encoding_type='bmes'):
-        r"""
-        
-        :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray embed: Embedding的大小(传入tuple(int, int),
-            第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, Embedding, ndarray等则直接使用该值初始化Embedding
-        :param int hidden_size: LSTM的隐层大小
-        :param int num_classes: 有多少个类
-        :param float dropout: LSTM中以及DropOut层的drop概率
-        :param dict id2words: tag id转为其tag word的表。用于在CRF解码时防止解出非法的顺序，比如'BMES'这个标签规范中，'S'
-            不能出现在'B'之后。这里也支持类似与'B-NN'，即'-'前为标签类型的指示，后面为具体的tag的情况。这里不但会保证
-            'B-NN'后面不为'S-NN'还会保证'B-NN'后面不会出现'M-xx'(任何非'M-NN'和'E-NN'的情况。)
-        :param str encoding_type: 支持"BIO", "BMES", "BEMSO", 只有在id2words不为None的情况有用。
-        """
+    def __init__(self, embed, hidden_size: int, num_classes: int, dropout: float=0.3, id2words: dict=None, encoding_type: str='bmes'):
         super().__init__()
         
         self.Embedding = get_embeddings(embed)
@@ -217,13 +246,12 @@ class AdvSeqLabel(nn.Module):
         total_loss = self.Crf(x, y, mask)
         return torch.mean(total_loss)
     
-    def forward(self, words, seq_len, target=None):
-        r"""
-        :param torch.LongTensor words: [batch_size, mex_len]
-        :param torch.LongTensor seq_len:[batch_size, ]
-        :param torch.LongTensor target: [batch_size, max_len]
-        :return y: If truth is None, return list of [decode path(list)]. Used in testing and predicting.
-                   If truth is not None, return loss, a scalar. Used in training.
+    def forward(self, words: "torch.LongTensor", target: "torch.LongTensor"=None, seq_len: "torch.LongTensor"=None):
+        """
+        :param words: 句子中 word 的 index，形状为 ``[batch_size, seq_len]``
+        :param target: 每个 sample 的目标值
+        :param seq_len: 每个句子的长度，形状为 ``[batch,]``
+        :return: 如果 ``target`` 为 ``None``，则返回预测结果 ``{'pred': torch.Tensor}``，否则返回 loss ``{'loss': torch.Tensor}``
         """
         
         words = words.long()
@@ -251,21 +279,19 @@ class AdvSeqLabel(nn.Module):
         else:
             return {"pred": self._decode(x, mask)}
     
-    def train_step(self, words, seq_len, target):
-        r"""
-        
-        :param torch.LongTensor words: [batch_size, mex_len]
-        :param torch.LongTensor seq_len: [batch_size, ]
-        :param torch.LongTensor target: [batch_size, max_len], 目标
-        :return torch.Tensor: a scalar loss
+    def train_step(self, words: "torch.LongTensor", target: "torch.LongTensor", seq_len: "torch.LongTensor"):
+        """
+        :param words: 句子中 word 的 index，形状为 ``[batch_size, seq_len]``
+        :param target: 每个 sample 的目标值
+        :param seq_len: 每个句子的长度，形状为 ``[batch,]``
+        :return: 如果 ``target`` 为 ``None``，则返回预测结果 ``{'pred': torch.Tensor}``，否则返回 loss ``{'loss': torch.Tensor}``
         """
         return self(words, seq_len, target)
     
-    def evaluate_step(self, words, seq_len):
-        r"""
-        
-        :param torch.LongTensor words: [batch_size, mex_len]
-        :param torch.LongTensor seq_len: [batch_size, ]
-        :return torch.LongTensor: [batch_size, max_len]
+    def evaluate_step(self, words: "torch.LongTensor", seq_len: "torch.LongTensor"):
+        """
+        :param words: 句子中 word 的 index，形状为 ``[batch_size, seq_len]``
+        :param seq_len: 每个句子的长度，形状为 ``[batch,]``
+        :return: 预测结果 ``{'pred': torch.Tensor}``
         """
         return self(words, seq_len)

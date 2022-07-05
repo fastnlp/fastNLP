@@ -40,13 +40,13 @@ class PaddleSingleDriver(PaddleDriver):
     """
     实现了 **PaddlePaddle** 框架下在单卡或 ``cpu`` 环境下训练功能的 **Driver**。
 
-    :param model: 训练时使用的 **PaddlePaddle** 模型；
-    :param device: 训练使用的设备；
-    :param fp16: 是否开启混合精度训练；
+    :param model: 训练时使用的 **PaddlePaddle** 模型
+    :param device: 训练使用的设备
+    :param fp16: 是否开启混合精度训练
     :param paddle_kwargs:
-        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`paddle.amp.GradScaler` 的参数;
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`paddle.amp.GradScaler` 的参数。
     :kwargs:
-        * wo_auto_param_call (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为；
+        * *model_wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为。
 
         .. note::
 
@@ -155,19 +155,19 @@ class PaddleSingleDriver(PaddleDriver):
 
     def unwrap_model(self):
         """
-        返回训练使用的模型。
+        :return: 训练使用的模型。
         """
         return self.model
 
     @property
     def data_device(self) -> str:
         """
-        :return: 数据和模型所在的设备；
+        :return: 数据和模型所在的设备。
         """
         return self.model_device
 
     def is_distributed(self) -> bool:
         """
-        判断是否为分布式的 **Driver** ，在 ``PaddleSingleDriver`` 中，返回 ``False``。
+        :return 是否为分布式的 **Driver** ，在 ``PaddleSingleDriver`` 中，返回 ``False``。
         """
         return False

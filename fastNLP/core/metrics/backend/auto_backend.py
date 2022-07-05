@@ -10,11 +10,11 @@ from .paddle_backend.backend import PaddleBackend
 from .jittor_backend.backend import JittorBackend
 from .oneflow_backend.backend import OneflowBackend
 
+__all__ = []
 
 class AutoBackend(Backend):
     """
-    不需要初始化 backend 的 AutoBackend,能够根据 get_metric 时候判断输入数据类型来选择 backend 是什么类型的
-
+    不需要初始化 ``backend`` 的 :class:`AutoBackend`，能够根据 :meth:`get_metric` 时候判断输入数据类型来选择 ``backend``。
     """
 
     def __init__(self, backend: Union[str, Backend, None]):
@@ -23,9 +23,9 @@ class AutoBackend(Backend):
 
         :param backend: 目前支持三种值，为 ``[str, Backend, None]``。
 
-            * 当 backend 为 `str` 时， 其只能为 'auto'
-            * 当 backend 为 ``Backend`` 对象时， 其直接使用该对象方法覆盖 AutoBackend
-            * 当 backend 为 ``None`` 时， 根据 get_metric 时候判断输入数据类型来选择 backend 是什么类型的
+            * 当 backend 为 :class:`str` 时， 其只能为 ``'auto'``；
+            * 当 backend 为 ``Backend`` 对象时， 其直接使用该对象方法覆盖 :class:`AutoBackend`；
+            * 当 backend 为 ``None`` 时， 根据 :meth:`get_metric` 时候判断输入数据类型来选择 ``backend``；
 
         """
         super(AutoBackend, self).__init__()
@@ -38,9 +38,10 @@ class AutoBackend(Backend):
 
         :param backend: 传入的 backend 值。
 
-            * 当 backend 为 `torch` 时， 选择 :class:`~fastNLP.core.metric.TorchBackend`
-            * 当 backend 为 `paddle` 时， 选择 :class:`~fastNLP.core.metric.PaddleBackend`
-            * 当 backend 为 `jittor` 时， 选择 :class:`~fastNLP.core.metric.JittorBackend`
+            * 当 backend 为 ``'torch'`` 时， 选择 :class:`~fastNLP.core.metric.TorchBackend`
+            * 当 backend 为 ``'paddle'` 时， 选择 :class:`~fastNLP.core.metric.PaddleBackend`
+            * 当 backend 为 ``'jittor'`` 时， 选择 :class:`~fastNLP.core.metric.JittorBackend`
+            * 当 backend 为 ``'oneflow'`` 时， 选择 :class:`~fastNLP.core.metric.OneflowBackend`
             * 当 backend 为 ``None`` 时， 直接初始化
 
         """
@@ -66,7 +67,7 @@ class AutoBackend(Backend):
         """
         根据 args 参数类型来选择需要真正初始化的 backend
 
-        :param args: args 参数， 可能为 ``jittor``, ``torch``, ``paddle``, ``numpy`` 类型， 能够检测并选择真正的 backend。
+        :param args: args 参数， 可能为 ``'jittor'``, ``'torch'``, ``'paddle'``, ``'oneflow'``, ``'numpy'`` 类型， 能够检测并选择真正的 backend。
 
         """
         assert not self.is_specified(), "This method should not be called after backend has been specified. " \

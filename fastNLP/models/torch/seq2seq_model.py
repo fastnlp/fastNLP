@@ -18,31 +18,33 @@ __all__ = ['Seq2SeqModel', 'TransformerSeq2SeqModel', 'LSTMSeq2SeqModel']
 
 
 class Seq2SeqModel(nn.Module):
-    def __init__(self, encoder: Seq2SeqEncoder, decoder: Seq2SeqDecoder):
-        """
-        可以用于在Trainer中训练的Seq2Seq模型。正常情况下，继承了该函数之后，只需要实现classmethod build_model即可。如果需要使用该模型
-            进行生成，需要把该模型输入到 :class:`~fastNLP.models.SequenceGeneratorModel` 中。在本模型中，forward()会把encoder后的
-            结果传入到decoder中，并将decoder的输出output出来。
+    """
+    可以用于在 :class:`~fastNLP.core.controllers.Trainer` 中训练的 **Seq2Seq模型** 。正常情况下，继承了该函数之后，只需要
+    实现 classmethod ``build_model`` 即可。如果需要使用该模型进行生成，需要把该模型输入到 :class:`~fastNLP.models.torch.SequenceGeneratorModel`
+    中。在本模型中， :meth:`forward` 会把 encoder 后的结果传入到 decoder 中，并将 decoder 的输出 output 出来。
 
-        :param encoder: Seq2SeqEncoder 对象，需要实现对应的forward()函数，接受两个参数，第一个为bsz x max_len的source tokens, 第二个为
-            bsz的source的长度；需要返回两个tensor: encoder_outputs: bsz x max_len x hidden_size, encoder_mask: bsz x max_len
-            为1的地方需要被attend。如果encoder的输出或者输入有变化，可以重载本模型的prepare_state()函数或者forward()函数
-        :param decoder: Seq2SeqDecoder 对象，需要实现init_state()函数，输出为两个参数，第一个为bsz x max_len x hidden_size是
-            encoder的输出; 第二个为bsz x max_len，为encoder输出的mask，为0的地方为pad。若decoder需要更多输入，请重载当前模型的
-            prepare_state()或forward()函数
-        """
+    :param encoder: :class:`~fastNLP.modules.torch.encoder.Seq2SeqEncoder` 对象，需要实现对应的 :meth:`forward` 函数，接受两个参数，第一个为
+        ``[batch_size, max_len]`` 的 source tokens, 第二个为 ``[batch_size,]`` 的 source 的长度；需要返回两个 tensor： 
+        
+            - ``encoder_outputs`` : ``[batch_size, max_len, hidden_size]``
+            - ``encoder_mask`` :  ``[batch_size, max_len]``，为 **0** 的地方为 pad。
+        如果encoder的输出或者输入有变化，可以重载本模型的 :meth:`prepare_state` 函数或者 :meth:`forward` 函数。
+    :param decoder: :class:`~fastNLP.modules.torch.decoder.Seq2SeqEncoder` 对象，需要实现 :meth:`init_state` 函数，需要接受两个参数，分别为
+        上述的 ``encoder_outputs`` 和 ``encoder_mask``。若decoder需要更多输入，请重载当前模型的 :meth:`prepare_state` 或 :meth:`forward` 函数。
+    """
+    def __init__(self, encoder: Seq2SeqEncoder, decoder: Seq2SeqDecoder):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
 
-    def forward(self, src_tokens, tgt_tokens, src_seq_len=None, tgt_seq_len=None):
+    def forward(self, src_tokens: "torch.LongTensor", tgt_tokens: "torch.LongTensor",
+                src_seq_len: "torch.LongTensor"=None, tgt_seq_len: "torch.LongTensor"=None):
         """
-
-        :param torch.LongTensor src_tokens: source的token
-        :param torch.LongTensor tgt_tokens: target的token
-        :param torch.LongTensor src_seq_len: src的长度
-        :param torch.LongTensor tgt_seq_len: target的长度，默认用不上
-        :return: {'pred': torch.Tensor}, 其中pred的shape为bsz x max_len x vocab_size
+        :param src_tokens: source 的 token，形状为 ``[batch_size, max_len]``
+        :param tgt_tokens: target 的 token，形状为 ``[batch_size, max_len]``
+        :param src_seq_len: source的长度，形状为 ``[batch_size,]``
+        :param tgt_seq_len: target的长度，形状为 ``[batch_size,]``
+        :return: 字典 ``{'pred': torch.Tensor}``, 其中 ``pred`` 的形状为 ``[batch_size, max_len, vocab_size]``
         """
         state = self.prepare_state(src_tokens, src_seq_len)
         decoder_output = self.decoder(tgt_tokens, state)
@@ -53,7 +55,15 @@ class Seq2SeqModel(nn.Module):
         else:
             raise TypeError(f"Unsupported return type from Decoder:{type(self.decoder)}")
 
-    def train_step(self, src_tokens, tgt_tokens, src_seq_len=None, tgt_seq_len=None):
+    def train_step(self, src_tokens: "torch.LongTensor", tgt_tokens: "torch.LongTensor",
+                    src_seq_len: "torch.LongTensor"=None, tgt_seq_len: "torch.LongTensor"=None):
+        """
+        :param src_tokens: source 的 token，形状为 ``[batch_size, max_len]``
+        :param tgt_tokens: target 的 token，形状为 ``[batch_size, max_len]``
+        :param src_seq_len: source的长度，形状为 ``[batch_size,]``
+        :param tgt_seq_len: target的长度，形状为 ``[batch_size,]``
+        :return: 字典 ``{'loss': torch.Tensor}``
+        """
         res = self(src_tokens, tgt_tokens, src_seq_len, tgt_seq_len)
         pred = res['pred']
         if tgt_seq_len is not None:
@@ -62,13 +72,13 @@ class Seq2SeqModel(nn.Module):
         loss = F.cross_entropy(pred[:, :-1].transpose(1, 2), tgt_tokens[:, 1:])
         return {'loss': loss}
 
-    def prepare_state(self, src_tokens, src_seq_len=None):
+    def prepare_state(self, src_tokens: "torch.LongTensor", src_seq_len: "torch.LongTensor"=None):
         """
-        调用encoder获取state，会把encoder的encoder_output, encoder_mask直接传入到decoder.init_state中初始化一个state
+        调用 encoder 获取 state，会把 encoder 的 ``encoder_output``, ``encoder_mask`` 直接传入到 :meth:`decoder.init_state` 中初始化一个 state
 
-        :param src_tokens:
-        :param src_seq_len:
-        :return:
+        :param src_tokens: source 的 token，形状为 ``[batch_size, max_len]``
+        :param src_seq_len: source的长度，形状为 ``[batch_size,]``
+        :return: decode 初始化的 state
         """
         encoder_output, encoder_mask = self.encoder(src_tokens, src_seq_len)
         state = self.decoder.init_state(encoder_output, encoder_mask)
@@ -77,43 +87,54 @@ class Seq2SeqModel(nn.Module):
     @classmethod
     def build_model(cls, *args, **kwargs):
         """
-        需要实现本方法来进行Seq2SeqModel的初始化
+        需要实现本方法来进行 :class:`Seq2SeqModel` 的初始化
 
         :return:
         """
-        raise NotImplemented
+        raise NotImplementedError("A `Seq2SeqModel` must implement its own classmethod `build_model()`.")
 
 
 class TransformerSeq2SeqModel(Seq2SeqModel):
     """
-    Encoder为TransformerSeq2SeqEncoder, decoder为TransformerSeq2SeqDecoder，通过build_model方法初始化
-
+    Encoder 为 :class:`~fastNLP.modules.torch.encoder.TransformerSeq2SeqEncoder` ，decoder 为 
+    :class:`~fastNLP.modules.torch.decoder.TransformerSeq2SeqDecoder` 的 :class:`Seq2SeqModel` ，
+    通过 :meth:`build_model` 方法初始化。
     """
-
     def __init__(self, encoder, decoder):
         super().__init__(encoder, decoder)
 
     @classmethod
     def build_model(cls, src_embed, tgt_embed=None,
-                    pos_embed='sin', max_position=1024, num_layers=6, d_model=512, n_head=8, dim_ff=2048, dropout=0.1,
-                    bind_encoder_decoder_embed=False,
-                    bind_decoder_input_output_embed=True):
+                    pos_embed: str='sin', max_position: int=1024, num_layers: int=6, d_model: int=512,
+                    n_head: int=8, dim_ff: int=2048, dropout: float=0.1,
+                    bind_encoder_decoder_embed: bool=False,
+                    bind_decoder_input_output_embed: bool=True):
         """
-        初始化一个TransformerSeq2SeqModel
+        初始化一个 :class:`TransformerSeq2SeqModel` 。
 
-        :param nn.Module, StaticEmbedding, Tuple[int, int] src_embed: source的embedding
-        :param nn.Module, StaticEmbedding, Tuple[int, int] tgt_embed: target的embedding，如果bind_encoder_decoder_embed为
-            True，则不要输入该值
-        :param str pos_embed: 支持sin, learned两种
-        :param int max_position: 最大支持长度
-        :param int num_layers: encoder和decoder的层数
-        :param int d_model: encoder和decoder输入输出的大小
-        :param int n_head: encoder和decoder的head的数量
-        :param int dim_ff: encoder和decoder中FFN中间映射的维度
-        :param float dropout: Attention和FFN dropout的大小
-        :param bool bind_encoder_decoder_embed: 是否对encoder和decoder使用相同的embedding
-        :param bool bind_decoder_input_output_embed: decoder的输出embedding是否与其输入embedding是一样的权重
-        :return: TransformerSeq2SeqModel
+        :param src_embed: source 的 embedding，支持以下几种输入类型：
+
+                - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+                - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+                - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+                - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+        :param tgt_embed: target 的 embedding，如果 ``bind_encoder_decoder_embed``
+            为 ``True`` ，则不要输入该值。支持以下几种输入类型：
+
+                - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+                - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+                - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+                - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+        :param pos_embed: 支持 ``['sin', 'learned']`` 两种
+        :param max_position: 最大支持长度
+        :param num_layers: ``encoder`` 和 ``decoder`` 的层数
+        :param d_model: ``encoder`` 和 ``decoder`` 输入输出的大小
+        :param n_head: ``encoder`` 和 ``decoder`` 的 head 的数量
+        :param dim_ff: ``encoder`` 和 ``decoder`` 中 FFN 中间映射的维度
+        :param dropout: Attention 和 FFN dropout的大小
+        :param bind_encoder_decoder_embed: 是否对 ``encoder`` 和 ``decoder`` 使用相同的 embedding
+        :param bind_decoder_input_output_embed: ``decoder`` 的输出 embedding 是否与其输入 embedding 是一样的权重
+        :return: :class:`TransformerSeq2SeqModel` 模型
         """
         if bind_encoder_decoder_embed and tgt_embed is not None:
             raise RuntimeError("If you set `bind_encoder_decoder_embed=True`, please do not provide `tgt_embed`.")
@@ -152,7 +173,8 @@ class TransformerSeq2SeqModel(Seq2SeqModel):
 
 class LSTMSeq2SeqModel(Seq2SeqModel):
     """
-    使用LSTMSeq2SeqEncoder和LSTMSeq2SeqDecoder的model
+    使用 :class:`~fastNLP.modules.torch.encoder.LSTMSeq2SeqEncoder` 和 :class:`~fastNLP.modules.torch.decoder.LSTMSeq2SeqDecoder` 的
+    :class:`Seq2SeqModel`，通过 :meth:`build_model` 方法初始化。
 
     """
     def __init__(self, encoder, decoder):
@@ -160,22 +182,32 @@ class LSTMSeq2SeqModel(Seq2SeqModel):
 
     @classmethod
     def build_model(cls, src_embed, tgt_embed=None,
-                    num_layers = 3, hidden_size = 400, dropout = 0.3, bidirectional=True,
-                    attention=True, bind_encoder_decoder_embed=False,
-                    bind_decoder_input_output_embed=True):
+                    num_layers: int = 3, hidden_size: int = 400, dropout: float = 0.3, bidirectional: bool=True,
+                    attention: bool=True, bind_encoder_decoder_embed: bool=False,
+                    bind_decoder_input_output_embed: bool=True):
         """
 
-        :param nn.Module, StaticEmbedding, Tuple[int, int] src_embed: source的embedding
-        :param nn.Module, StaticEmbedding, Tuple[int, int] tgt_embed: target的embedding，如果bind_encoder_decoder_embed为
-            True，则不要输入该值
-        :param int num_layers: Encoder和Decoder的层数
-        :param int hidden_size: encoder和decoder的隐藏层大小
-        :param float dropout: 每层之间的Dropout的大小
-        :param bool bidirectional: encoder是否使用双向LSTM
-        :param bool attention: decoder是否使用attention attend encoder在所有时刻的状态
-        :param bool bind_encoder_decoder_embed: 是否对encoder和decoder使用相同的embedding
-        :param bool bind_decoder_input_output_embed: decoder的输出embedding是否与其输入embedding是一样的权重
-        :return: LSTMSeq2SeqModel
+        :param src_embed: source 的 embedding，支持以下几种输入类型：
+
+                - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+                - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+                - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+                - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+        :param tgt_embed: target 的 embedding，如果 ``bind_encoder_decoder_embed``
+            为 ``True`` ，则不要输入该值，支持以下几种输入类型：
+
+                - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+                - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+                - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+                - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+        :param num_layers: ``encoder`` 和 ``decoder`` 的层数
+        :param hidden_size: ``encoder`` 和 ``decoder`` 的隐藏层大小
+        :param dropout: 每层之间的 Dropout 的大小
+        :param bidirectional: ``encoder`` 是否使用 **双向LSTM**
+        :param attention: 是否在 ``decoder`` 中使用 attention 来添加 ``encoder`` 在所有时刻的状态
+        :param bind_encoder_decoder_embed: 是否对 ``encoder`` 和 ``decoder`` 使用相同的 embedding
+        :param bind_decoder_input_output_embed: ``decoder`` 的输出 embedding 是否与其输入 embedding 是一样的权重
+        :return: :class:`LSTMSeq2SeqModel` 模型
         """
         if bind_encoder_decoder_embed and tgt_embed is not None:
             raise RuntimeError("If you set `bind_encoder_decoder_embed=True`, please do not provide `tgt_embed`.")

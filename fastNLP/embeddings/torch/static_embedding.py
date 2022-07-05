@@ -10,7 +10,7 @@ import os
 from collections import defaultdict
 from copy import deepcopy
 import json
-from typing import Union
+from typing import Callable, Union
 
 import numpy as np
 
@@ -34,29 +34,27 @@ STATIC_EMBED_FILENAME = 'static.txt'
 
 class StaticEmbedding(TokenEmbedding):
     r"""
-    StaticEmbedding组件. 给定预训练embedding的名称或路径，根据vocab从embedding中抽取相应的数据(只会将出现在vocab中的词抽取出来，
-    如果没有找到，则会随机初始化一个值(但如果该word是被标记为no_create_entry的话，则不会单独创建一个值，而是会被指向unk的index))。
-    当前支持自动下载的预训练vector有:
-    
-    .. code::
-    
-        en: 实际为en-glove-840b-300d(常用)
-        en-glove-6b-50d: glove官方的50d向量
-        en-glove-6b-100d: glove官方的100d向量
-        en-glove-6b-200d: glove官方的200d向量
-        en-glove-6b-300d: glove官方的300d向量
-        en-glove-42b-300d: glove官方使用42B数据训练版本
-        en-glove-840b-300d:
-        en-glove-twitter-27b-25d:
-        en-glove-twitter-27b-50d:
-        en-glove-twitter-27b-100d:
-        en-glove-twitter-27b-200d:
-        en-word2vec-300d: word2vec官方发布的300d向量
-        en-fasttext-crawl: fasttext官方发布的300d英文预训练
-        cn-char-fastnlp-100d: fastNLP训练的100d的character embedding
-        cn-bi-fastnlp-100d: fastNLP训练的100d的bigram embedding
-        cn-tri-fastnlp-100d: fastNLP训练的100d的trigram embedding
-        cn-fasttext: fasttext官方发布的300d中文预训练embedding
+    ``StaticEmbedding`` 组件。给定预训练 embedding 的名称或路径，根据 ``vocab`` 从 embedding 中抽取相应的数据（只会将出现在 ``vocab`` 中的词抽取出来，
+    如果没有找到，则会随机初始化一个值；但如果该 word 是被标记为 ``no_create_entry`` 的话，则不会单独创建一个值，而是被指向 ``<UNK>`` 的 index）。
+    当前支持自动下载的预训练 vector 有:
+
+        - ``en`` -- 实际为 ``en-glove-840b-300d`` （常用）
+        - ``en-glove-6b-50d`` -- **glove** 官方的 50d 向量
+        - ``en-glove-6b-100d`` -- **glove** 官方的 100d 向量
+        - ``en-glove-6b-200d`` -- **glove** 官方的 200d 向量
+        - ``en-glove-6b-300d`` -- **glove** 官方的 300d 向量
+        - ``en-glove-42b-300d`` -- **glove** 官方使用 42B 数据训练版本
+        - ``en-glove-840b-300d``
+        - ``en-glove-twitter-27b-25d``
+        - ``en-glove-twitter-27b-50d``
+        - ``en-glove-twitter-27b-100d``
+        - ``en-glove-twitter-27b-200d``
+        - ``en-word2vec-300d`` -- **word2vec** 官方发布的 300d 向量
+        - ``en-fasttext-crawl`` -- **fasttext** 官方发布的 300d 英文预训练
+        - ``cn-char-fastnlp-100d`` -- **fastNLP** 训练的 100d 的 character embedding
+        - ``cn-bi-fastnlp-100d`` -- **fastNLP** 训练的 100d 的 bigram embedding
+        - ``cn-tri-fastnlp-100d`` -- **fastNLP** 训练的 100d 的 trigram embedding
+        - ``cn-fasttext`` -- **fasttext** 官方发布的 300d 中文预训练 embedding
 
     Example::
         
@@ -77,34 +75,34 @@ class StaticEmbedding(TokenEmbedding):
                      [ 0.5773,  0.7251, -0.3104,  0.0777,  0.4849],
                      [ 0.5773,  0.7251, -0.3104,  0.0777,  0.4849]]],
                    grad_fn=<EmbeddingBackward>)  # 每种word的输出是一致的。
+        
+    :param vocab: 词表。``StaticEmbedding`` 只会加载包含在词表中的词的词向量，在预训练向量中没找到的使用随机初始化
+    :param model_dir_or_name: 可以有两种方式调用预训练好的 :class:`StaticEmbedding` ：
+    
+            1. 传入 embedding 文件夹（文件夹下应该只有一个以 **.txt** 作为后缀的文件）或文件路径；
+            2. 传入 embedding 的名称，第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载;
+            3. 如果输入为 ``None`` 则使用 ``embedding_dim`` 的维度随机初始化一个 embedding；
+    :param embedding_dim: 随机初始化的 embedding 的维度，当该值为大于 0 的值时，将忽略 ``model_dir_or_name`` 。
+    :param requires_grad: 是否需要梯度。
+    :param init_method: 如何初始化没有找到的值。可以使用 :mod:`torch.nn.init` 中的各种方法，传入的方法应该接受一个 tensor，并
+        inplace 地修改其值。
+    :param lower: 是否将 ``vocab`` 中的词语小写后再和预训练的词表进行匹配。如果你的词表中包含大写的词语，或者就是需要单独
+        为大写的词语开辟一个 vector 表示，则将 ``lower`` 设置为 ``False``。
+    :param dropout: 以多大的概率对 embedding 的表示进行 Dropout。0.1 即随机将 10% 的值置为 0。
+    :param word_dropout: 按照一定概率随机将 word 设置为 ``unk_index`` ，这样可以使得 ``<UNK>`` 这个 token 得到足够的训练，
+        且会对网络有一定的 regularize 作用。
+    :param normalize: 是否对 vector 进行 ``normalize`` ，使得每个 vector 的 norm 为 1。
+    :param min_freq: Vocabulary 词频数小于这个数量的 word 将被指向 ``<UNK>``。
+    :kwargs:
+        * *only_train_min_freq* (*bool*) -- 仅对 train 中的词语使用 ``min_freq`` 筛选
+        * *only_norm_found_vector* (*bool*) -- 默认为 ``False``，是否仅对在预训练中找到的词语使用 ``normalize``
+        * *only_use_pretrain_word* (*bool*) -- 默认为 ``False``，仅使用出现在 pretrain 词表中的词，如果该词没有在预训练的词表中出现
+          则为 ``<UNK>`` 。如果 embedding 不需要更新建议设置为 ``True`` 。
 
     """
     
     def __init__(self, vocab: Vocabulary, model_dir_or_name: Union[str, None] = 'en', embedding_dim=-1, requires_grad: bool = True,
-                 init_method=None, lower=False, dropout=0, word_dropout=0, normalize=False, min_freq=1, **kwargs):
-        r"""
-        
-        :param Vocabulary vocab: 词表. StaticEmbedding只会加载包含在词表中的词的词向量，在预训练向量中没找到的使用随机初始化
-        :param model_dir_or_name: 可以有两种方式调用预训练好的static embedding：第一种是传入embedding文件夹(文件夹下应该只有一个
-            以.txt作为后缀的文件)或文件路径；第二种是传入embedding的名称，第二种情况将自动查看缓存中是否存在该模型，没有的话将自动下载。
-            如果输入为None则使用embedding_dim的维度随机初始化一个embedding。
-        :param embedding_dim: 随机初始化的embedding的维度，当该值为大于0的值时，将忽略model_dir_or_name。
-        :param requires_grad: 是否需要gradient. 默认为True
-        :param callable init_method: 如何初始化没有找到的值。可以使用torch.nn.init.*中各种方法, 传入的方法应该接受一个tensor，并
-            inplace地修改其值。
-        :param lower: 是否将vocab中的词语小写后再和预训练的词表进行匹配。如果你的词表中包含大写的词语，或者就是需要单独
-            为大写的词语开辟一个vector表示，则将lower设置为False。
-        :param dropout: 以多大的概率对embedding的表示进行Dropout。0.1即随机将10%的值置为0。
-        :param word_dropout: 以多大的概率将一个词替换为unk。这样既可以训练unk也是一定的regularize。
-        :param normalize: 是否对vector进行normalize，使得每个vector的norm为1。
-        :param min_freq: Vocabulary词频数小于这个数量的word将被指向unk。
-        :param kwargs:
-            * only_train_min_freq * (*bool*) -- 仅对 train 中的词语使用 ``min_freq`` 筛选;
-            * only_norm_found_vector * (*bool*) -- 默认为False, 是否仅对在预训练中找到的词语使用normalize;
-            * only_use_pretrain_word * (*bool*) -- 默认为False, 仅使用出现在pretrain词表中的词，如果该词没有在预训练的词表中出现
-             则为unk。如果embedding不需要更新建议设置为True。
-
-        """
+                 init_method: Callable = None, lower=False, dropout=0, word_dropout=0, normalize=False, min_freq=1, **kwargs):
         super(StaticEmbedding, self).__init__(vocab, word_dropout=word_dropout, dropout=dropout)
         if embedding_dim > 0:
             if model_dir_or_name:
@@ -327,12 +325,12 @@ class StaticEmbedding(TokenEmbedding):
 
             return vectors
     
-    def forward(self, words):
+    def forward(self, words: "torch.LongTensor") -> "torch.FloatTensor":
         r"""
-        传入words的index
+        传入 ``words`` 的 index
 
-        :param words: torch.LongTensor, [batch_size, max_len]
-        :return: torch.FloatTensor, [batch_size, max_len, embed_size]
+        :param words: 形状为 ``[batch, seq_len]``
+        :return: 形状为 ``[batch, seq_len, embed_dim]`` 的张量
         """
         if hasattr(self, 'words_to_words'):
             words = self.words_to_words[words]
@@ -341,14 +339,16 @@ class StaticEmbedding(TokenEmbedding):
         words = self.dropout(words)
         return words
 
-    def save(self, folder):
+    def save(self, folder: str):
         """
-        将embedding存储到folder下，之后可以通过使用load方法读取
+        将 embedding 存储到 ``folder`` 下，之后可以通过使用 :meth:`load` 方法读取
 
-        :param str folder: 会在该folder下生成三个文件, vocab.txt, static_embed_hyper.txt, static_embed_hyper.json.
-            其中vocab.txt可以用Vocabulary通过load读取; embedding.txt按照word2vec的方式存储，以空格的方式隔开元素,
-            第一行只有两个元素，剩下的行首先是word然后是各个维度的值; static_embed_hyper.json是StaticEmbedding的超参数
-        :return:
+        :param folder: 会在该 ``folder`` 下生成三个文件：
+
+                - ``vocab.txt``，可以通过 :meth:`fastNLP.core.Vocabulary.load` 读取；
+                - ``embedding.txt`` 按照 *word2vec* 的方式存储，以空格的方式隔开元素，第一行只有两个元素，剩下的行首先是
+                  word 然后是各个维度的值；
+                - ``static_embed_hyper.json``，:class:`StaticEmbedding` 的超参数；
         """
         os.makedirs(folder, exist_ok=True)
 
@@ -391,11 +391,11 @@ class StaticEmbedding(TokenEmbedding):
         logger.debug(f"StaticEmbedding has been saved to {folder}.")
 
     @classmethod
-    def load(cls, folder):
+    def load(cls, folder: str):
         """
 
-        :param str folder: 该folder下应该有以下三个文件vocab.txt, static_embed.txt, static_hyper.json
-        :return:
+        :param folder: 该 ``folder`` 下应该有以下三个文件 ``vocab.txt``, ``static_embed.txt``, ``static_hyper.json``
+        :return: 加载后的 embedding
         """
         for name in [VOCAB_FILENAME, STATIC_EMBED_FILENAME, STATIC_HYPER_FILENAME]:
             assert os.path.exists(os.path.join(folder, name)), f"{name} not found in {folder}."
