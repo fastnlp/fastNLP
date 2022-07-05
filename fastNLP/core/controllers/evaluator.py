@@ -257,7 +257,7 @@ class Evaluator:
                ``metric_indicator_name#metric_name#dataloader_name``，其中 metric_indicator_name 可能不存在；
 
         :param num_eval_batch_per_dl: 每个 dataloader 测试前多少个 batch 的数据，-1 为测试所有数据。
-        :return: 返回评测得到的结果，是一个没有嵌套的字典；
+        :return: 评测得到的结果，是一个没有嵌套的字典；
         """
         assert isinstance(num_eval_batch_per_dl, int), "num_eval_batch_per_dl must be of int type."
         assert num_eval_batch_per_dl > 0 or num_eval_batch_per_dl == -1, "num_eval_batch_per_dl must be -1 or larger than 0."

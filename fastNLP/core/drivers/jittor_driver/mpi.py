@@ -145,13 +145,13 @@ class JittorMPIDriver(JittorDriver):
 
     def is_distributed(self):
         """
-        判断是否为分布式的 **Driver** ，在 ``JittorSingleDriver`` 中，返回 ``True``。
+        判断是否为分布式的 **Driver** ，在 ``JittorMPIDriver`` 中，返回 ``True``。
         """
         return True
 
     @property
     def data_device(self) -> str:
         """
-        :return: 数据所在的设备；
+        :return: 数据所在的设备。
         """
         return self.model_device

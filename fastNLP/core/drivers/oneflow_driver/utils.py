@@ -31,7 +31,6 @@ else:
 
 __all__ = [
     'oneflow_seed_everything',
-    'optimizer_state_to_device'
 ]
 
 def oneflow_seed_everything(seed: int = None, add_global_rank_to_seed: bool = True) -> int:
@@ -40,7 +39,7 @@ def oneflow_seed_everything(seed: int = None, add_global_rank_to_seed: bool = Tr
 
     :param seed: 全局随机状态的整数值种子。如果为 ``None`` 则会根据时间戳生成一个种子。
     :param add_global_rank_to_seed: 在分布式训练中，是否在不同 **rank** 中使用不同的随机数。
-        当设置为 ``True`` 时，**FastNLP** 会将种子加上当前的 ``global_rank``。
+        当设置为 ``True`` 时，**fastNLP** 会将种子加上当前的 ``global_rank``。
     """
     max_seed_value = np.iinfo(np.uint32).max
     min_seed_value = np.iinfo(np.uint32).min
@@ -263,11 +262,11 @@ def replace_batch_sampler(dataloader, new_batch_sampler):
 
 def optimizer_state_to_device(state, device):
     r"""
-    将一个 ``optimizer`` 的 ``state_dict`` 迁移到对应的设备；
+    将一个 ``optimizer`` 的 ``state_dict`` 迁移到对应的设备。
 
-    :param state: ``optimzier.state_dict()``；
-    :param device: 要迁移到的目的设备；
-    :return: 返回迁移后的新的 state_dict；
+    :param state: :func:`optimzier.state_dict` 获取的 state_dictt
+    :param device: 要迁移到的目的设备。
+    :return: 迁移后的新的 state_dict。
     """
     new_state = {}
     for name, param in state.items():

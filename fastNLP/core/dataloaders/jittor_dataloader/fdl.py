@@ -146,7 +146,7 @@ class JittorDataLoader:
             若 ``pad_val`` 为 ``None`` ，该值无意义 。
         :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 ``pad_val``, ``dtype``, ``backend`` 等参数失效。``pad_fn`` 的输入为当前 field 的
             batch 形式。 collator 将自动 unbatch 数据，然后将各个 field 组成各自的 batch 。
-        :return: 返回使用的 collator
+        :return: 使用的 collator
         """
         collator = self._get_collator()
         if isinstance(collator, Collator):
@@ -177,7 +177,7 @@ class JittorDataLoader:
         :param field_names: field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
             field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``;
             如果 :meth:`Dataset.__getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表示序列中第 **0** 或 **1** 个元素。
-        :return: 返回使用的 collator
+        :return: 使用的 collator
         """
         collator = self._get_collator()
         if isinstance(collator, Collator):

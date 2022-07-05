@@ -290,7 +290,7 @@ class ConditionalRandomField(nn.Module):
         :param bool unpad: 是否将结果删去padding。False, 返回的是batch_size x max_len的tensor; True，返回的是
             List[List[int]], 内部的List[int]为每个sequence的label，已经除去pad部分，即每个List[int]的长度是这
             个sample的有效长度。
-        :return: 返回 (paths, scores)。
+        :return:  (paths, scores)。
                     paths: 是解码后的路径, 其值参照unpad参数.
                     scores: torch.FloatTensor, size为(batch_size,), 对应每个最优路径的分数。
 

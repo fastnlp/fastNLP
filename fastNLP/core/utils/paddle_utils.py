@@ -98,7 +98,7 @@ def get_paddle_gpu_str(device: Union[str, int]) -> str:
         'gpu:1'
 
     :param device: 设备编号或设备名；
-    :return: 返回对应的 ``gpu:x`` 格式的设备名；
+    :return: 对应的 ``gpu:x`` 格式的设备名；
     """
     if isinstance(device, str):
         return device.replace("cuda", "gpu")

@@ -301,6 +301,6 @@ class FairScaleDriver(TorchDDPDriver):
 
     def unwrap_model(self):
         r"""
-        :return: 返回原本的模型，例如没有被 ``DataParallel`` 包裹；
+        :return: 原本的模型，例如没有被 ``DataParallel`` 包裹；
         """
         return self.model.module.model

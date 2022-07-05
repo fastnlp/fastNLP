@@ -83,7 +83,7 @@ def auto_param_call(fn: Callable, *args, signature_fn: Optional[Callable] = None
         然后通过该函数签名提取参数值后，再传给 ``fn`` 进行实际的运算；
     :param mapping: 一个字典，用来更改其前面的字典的键值；
 
-    :return: 返回 ``fn`` 运行的结果；
+    :return:  ``fn`` 运行的结果；
     """
 
     if signature_fn is not None:
@@ -233,7 +233,7 @@ def check_user_specific_params(user_params: Dict, fn: Callable, fn_name=None):
         ``value`` 为每一个参数的值；
     :param fn: 将要被调用的函数；
     :param fn_name: 在打印提示信息是如何显示函数名
-    :return: 返回一个字典，其中为在之后调用函数 ``fn`` 时真正会被传进去的参数的值；
+    :return: 一个字典，其中为在之后调用函数 ``fn`` 时真正会被传进去的参数的值；
     """
     if fn_name is None:
         fn_name = fn.__name__
@@ -285,7 +285,7 @@ def match_and_substitute_params(mapping: Optional[Union[Callable, Dict]] = None,
 
     :param mapping: 用于转换的字典或者函数；当 ``mapping`` 是函数时，返回值必须为字典类型；
     :param data: 需要被转换的对象；
-    :return: 返回转换后的结果；
+    :return: 转换后的结果；
     """
     if mapping is None:
         return data

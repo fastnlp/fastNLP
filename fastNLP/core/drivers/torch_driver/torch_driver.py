@@ -36,18 +36,18 @@ from fastNLP.core.dataloaders import OverfitDataLoader
 
 class TorchDriver(Driver):
     r"""
-    专属于 ``pytorch`` 的 ``driver``，是 ``TorchSingleDriver`` 和 ``TorchDDPDriver`` 的父类；
+    专属于 ``pytorch`` 的 ``driver``，是 ``TorchSingleDriver`` 和 ``TorchDDPDriver`` 的父类。
 
     .. warning::
 
         您不应当直接初始化该类，然后传入给 ``Trainer``，换句话说，您应当使用该类的子类 ``TorchSingleDriver`` 和 ``TorchDDPDriver``，而不是
-        该类本身；
+        该类本身。
 
     .. note::
 
-        您可以在使用 ``TorchSingleDriver`` 和 ``TorchDDPDriver`` 时使用 ``TorchDriver`` 提供的接口；
+        您可以在使用 ``TorchSingleDriver`` 和 ``TorchDDPDriver`` 时使用 ``TorchDriver`` 提供的接口。
 
-    :param model: 训练时使用的 **pytorch** 模型；
+    :param model: 训练时使用的 **pytorch** 模型。
     :param fp16: 是否开启混合精度训练;
     :param torch_kwargs:
     """
@@ -70,6 +70,9 @@ class TorchDriver(Driver):
         self.wo_auto_param_call = kwargs.get("model_wo_auto_param_call", False)
 
     def zero_grad(self):
+        """
+        实现梯度置零的过程
+        """
         for optimizer in self.optimizers:
             self._clear_grad(optimizer, self.set_grad_to_none)
 
@@ -88,14 +91,25 @@ class TorchDriver(Driver):
                         p.grad.zero_()
 
     def backward(self, loss):
+        """
+        对 ``loss`` 进行反向传播
+        """
         self.grad_scaler.scale(loss).backward()
 
     def step(self):
+        r"""
+        实现参数的优化更新过程
+        """
         for optimizer in self.optimizers:
             self.grad_scaler.step(optimizer)
             self.grad_scaler.update()
 
     def check_dataloader_legality(self, dataloader):
+        """
+        检测 DataLoader 是否合法。支持的类型包括 :class:`~fastNLP.core.dataloaders.TorchDataLoader`、 :class:`torch.utils.data.DataLoader` 。
+
+        :param dataloder:
+        """
         if not isinstance(dataloader, DataLoader) and not isinstance(dataloader, OverfitDataLoader):
             raise TypeError(f"{DataLoader} is expected, instead of `{type(dataloader)}`")
         if len(dataloader) == 0:
@@ -112,11 +126,11 @@ class TorchDriver(Driver):
     @staticmethod
     def tensor_to_numeric(tensor, reduce: str = None):
         r"""
-        将 ``torch.Tensor`` 转换成 python 中的数值类型；
+        将 ``torch.Tensor`` 转换成 python 中的数值类型。
 
-        :param tensor: ``torch.Tensor``；
-        :param reduce: 当 tensor 是一个多数值的张量时，应当使用何种归一化操作来转换成单一数值，应当为以下类型之一：``['max', 'min', 'sum', 'mean']``；
-        :return: 返回一个单一数值，其数值类型是 python 中的基本的数值类型，例如 ``int，float`` 等；
+        :param tensor: ``torch.Tensor``。
+        :param reduce: 当 tensor 是一个多数值的张量时，应当使用何种归一化操作来转换成单一数值，应当为以下类型之一：``['max', 'min', 'sum', 'mean']``。
+        :return: 一个单一数值，其数值类型是 python 中的基本的数值类型，例如 ``int，float`` 等。
         """
 
         if tensor is None:
@@ -137,8 +151,9 @@ class TorchDriver(Driver):
 
     def set_model_mode(self, mode: str):
         r"""
-        设置模型的状态是 ``train`` 还是 ``eval``；
-        :param mode: ``train`` 或者 ``eval``；
+        设置模型为 ``train`` 或 ``eval`` 的模式；目的是为切换模型的训练和推理（会关闭 dropout 等）模式。
+
+        :param mode: 应为二者之一：``["train", "eval"]``
         """
         assert mode in {"train", "eval"}
         getattr(self.model, mode)()
@@ -146,10 +161,10 @@ class TorchDriver(Driver):
     @rank_zero_call
     def save_model(self, filepath: Union[str, Path], only_state_dict: bool = True, **kwargs):
         """
-        保存当前 driver 的模型到 folder 下。
+        保存当前 driver 的模型到 ``filepath``。
 
-        :param filepath: 保存到哪个文件夹；
-        :param only_state_dict: 是否只保存权重；
+        :param filepath: 保存文件的文件位置
+        :param only_state_dict: 是否只保存权重
         :return:
         """
         model = self.unwrap_model()
@@ -169,12 +184,10 @@ class TorchDriver(Driver):
 
     def load_model(self, filepath: Union[Path, str], only_state_dict: bool = True, **kwargs):
         """
-        从 folder 中加载权重并赋值到当前 driver 的模型上。
+        加载模型的函数；将 ``filepath`` 中的模型加载并赋值给当前 ``model`` 。
 
-        :param filepath: 加载权重或模型的路径
-        :param load_state_dict: 保存的内容是否只是权重。
-        :param kwargs:
-        :return:
+        :param filepath: 保存文件的文件位置
+        :param load_state_dict: 保存的内容是否只是权重
         """
         model = self.unwrap_model()
         res = torch.load(filepath, map_location='cpu')
@@ -190,6 +203,17 @@ class TorchDriver(Driver):
 
     @rank_zero_call
     def save_checkpoint(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
+        r"""
+        断点重训的保存函数，该函数会负责保存 **优化器** 、 **sampler** 和 **fp16** 的状态，以及 **模型** （若 ``should_save_model`` 为 ``True``）
+
+        :param folder: 保存断点重训的状态的文件夹；:meth:`save_checkpoint` 函数应该在该路径下面下面新增名为 ``FASTNLP_CHECKPOINT_FILENAME`` 与
+            ``FASTNLP_MODEL_FILENAME`` （如果 ``should_save_model`` 为 ``True`` ）的文件。把 model 相关的内容放入到 ``FASTNLP_MODEL_FILENAME`` 文件
+            中，将传入的 ``states`` 以及自身产生的其它状态一并保存在 ``FASTNLP_CHECKPOINT_FILENAME`` 里面。
+        :param states: 由 :class:`~fastNLP.core.controllers.Trainer` 传入的一个字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态。
+        :param dataloader: 正在使用的 dataloader。
+        :param only_state_dict: 是否只保存模型的参数，当 ``should_save_model`` 为 ``False`` ，该参数无效。
+        :param should_save_model: 是否应该保存模型，如果为 ``False`` ，Driver 将不负责 model 的保存。
+        """
         # 传入的 dataloader 参数是 trainer 的 dataloader 属性，因为 driver 的所有 dataloader 我们是不会去改变它的，而是通过改变
         #  trainer.dataloader 来改变 dataloader 的状态，从而适配训练或者评测环境；
 
@@ -297,6 +321,36 @@ class TorchDriver(Driver):
         logger.debug("Load optimizer state dict.")
 
     def load_checkpoint(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
+        r"""
+        断点重训的加载函数，该函数会负责读取数据，并且恢复 **优化器** 、**sampler** 、 **fp16** 的状态和 **模型** （如果 ``should_load_model`` 为 True）以及其它
+        在 :meth:`save_checkpoint` 函数中执行的保存操作，然后将一个 state 字典返回给 :class:`~fastNLP.core.controllers.Trainer` （ 内容为 :meth:`save_checkpoint` 
+        接受到的 ``states`` ）。
+
+        该函数应该在所有 rank 上执行。
+
+        :param folder: 读取该 folder 下的 ``FASTNLP_CHECKPOINT_FILENAME`` 文件与 ``FASTNLP_MODEL_FILENAME``
+            （如果 should_load_model 为True）。
+        :param dataloader: 当前给定 dataloader，需要根据保存的 dataloader 状态合理设置。若该值为 ``None`` ，则不需要返回 ``'dataloader'``
+            以及 ``'batch_idx_in_epoch'`` 这两个值。
+        :param only_state_dict: 是否仅读取模型的 state_dict ，当 ``should_save_model`` 为 ``False`` ，该参数无效。如果为 ``True`` ，说明保存的内容为权重；如果为
+            False 说明保存的是模型，但也是通过当前 Driver 的模型去加载保存的模型的权重，而不是使用保存的模型替换当前模型。
+        :param should_load_model: 是否应该加载模型，如果为 ``False`` ，Driver 将不负责加载模型。若该参数为 ``True`` ，但在保存的状态中没有
+            找到对应的模型状态，则报错。
+        :return: :meth:`save_checkpoint` 函数输入的 ``states`` 内容。除此之外，还返回的内容有：
+
+            * *dataloader* -- 根据传入的 ``dataloader`` 与读取出的状态设置为合理状态的 dataloader。在当前 ``dataloader`` 样本数与读取出的 sampler 样本数
+              不一致时报错。
+            * *batch_idx_in_epoch* -- :class:`int` 类型的数据，表明当前 epoch 进行到了第几个 batch 。请注意，该值不能仅通过保存的数据中读取的，因为前后两次运行的
+              ``batch_size`` 可能有变化，而应该符合以下等式::
+
+                返回的 dataloader 还会产生的 batch 数量 + batch_idx_in_epoch = 原来不断点训练时的 batch 的总数
+              
+              由于 ``返回的 dataloader 还会产生的batch数`` 在 ``batch_size`` 与 ``drop_last`` 参数给定的情况下，无法改变，因此只能通过调整 ``batch_idx_in_epoch``
+              这个值来使等式成立。一个简单的计算原则如下：
+
+                * drop_last 为 ``True`` 时，等同于 floor(sample_in_this_rank/batch_size) - floor(num_left_samples/batch_size)；
+                * drop_last 为 ``False`` 时，等同于 ceil(sample_in_this_rank/batch_size) - ceil(num_left_samples/batch_size)。
+        """
         states = torch.load(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
         # 1. 加载 optimizers 的状态；
@@ -326,29 +380,33 @@ class TorchDriver(Driver):
 
     def get_evaluate_context(self):
         r"""
-        :return: 返回 ``torch.no_grad`` 这个 context；
+        返回一个不计算梯度的上下文环境用来对模型进行评测。
+
+        :return: 上下文环境 ``torch.no_grad`` 
         """
         return torch.no_grad
 
     @staticmethod
     def move_model_to_device(model: "torch.nn.Module", device: "torch.device"):
         r"""
-        将模型迁移到对应的设备上；
+        将模型迁移到对应的设备上
         """
         if device is not None:
             model.to(device)
 
     def move_data_to_device(self, batch):
         """
-        将一个 batch 的数据迁移到对应的设备上；
+        将一个 ``batch`` 的数据迁移到对应的设备上
 
-        :param batch: 一个 batch 的数据，可以是 ``list、dict`` 等；
-        :return:
+        :param batch: 包含 :class:`torch.Tensor` 的数据集合，可以是 **List**、**Dict** 等嵌套类型
+        :return: 移动到指定机器后的 ``batch``
         """
         return torch_move_data_to_device(batch, self.data_device, self.non_blocking)
 
     @staticmethod
     def worker_init_function(worker_id: int, rank: Optional[int] = None) -> None:  # pragma: no cover
+        """
+        """
         """The worker_init_fn that Lightning automatically adds to your dataloader if you previously set the seed
         with ``seed_everything(seed, workers=True)``.
 
@@ -371,11 +429,20 @@ class TorchDriver(Driver):
         random.seed(stdlib_seed)
 
     def set_deterministic_dataloader(self, dataloader: "DataLoader"):
+        """
+        为了确定性训练要对 ``dataloader`` 进行修改，保证在确定随机数种子后，每次重新训练得到的结果是一样的。 
+        """
         if dataloader.worker_init_fn is None:
             dataloader.worker_init_fn = partial(self.worker_init_function,
                                                 rank=int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)))
 
     def set_sampler_epoch(self, dataloader: "DataLoader", cur_epoch_idx: int):
+        r"""
+        对于分布式的 ``sampler``，需要在每一个 ``epoch`` 前设置随机数种子，来保证每一个进程上的 ``shuffle`` 是一样的。
+
+        :param dataloader: 需要设置 ``epoch`` 的 ``dataloader``
+        :param cur_epoch_idx: 当前是第几个 ``epoch``
+        """
         # 保证 ddp 训练时的 shuffle=True 时的正确性，因为需要保证每一个进程上的 sampler 的shuffle 的随机数种子是一样的；
         if callable(getattr(dataloader.sampler, "set_epoch", None)):
             dataloader.sampler.set_epoch(cur_epoch_idx)
@@ -383,9 +450,9 @@ class TorchDriver(Driver):
     @staticmethod
     def get_dataloader_args(dataloader: "DataLoader"):
         """
-        获取 dataloader 的 shuffle 和 drop_last 属性；
+        从 ``dataloader`` 中获取参数 ``dataset``, ``batch_sampler``, ``sampler``, ``batch_size``, ``shuffle`` 
+        和 ``drop_last`` 。
         """
-
         @dataclass
         class Res:
             dataset: Optional[Dataset] = None

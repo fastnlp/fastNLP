@@ -65,7 +65,7 @@ class TrainerState:
 
     def state_dict(self) -> Dict:
         r"""
-        :return: 返回用于断点重训来保存的状态字典；
+        :return: 用于断点重训来保存的状态字典；
         """
         return {"cur_epoch_idx": self.cur_epoch_idx, "global_forward_batches": self.global_forward_batches,
                 "batch_idx_in_epoch": self.batch_idx_in_epoch}

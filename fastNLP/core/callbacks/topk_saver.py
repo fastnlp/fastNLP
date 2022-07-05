@@ -62,7 +62,7 @@ class Saver:
 
         :param trainer: Trainer 对象
         :param folder_name: 保存的 folder 名称，将被创建。
-        :return: 返回实际发生保存的 folder 绝对路径。如果为 None 则没有创建。
+        :return: 实际发生保存的 folder 绝对路径。如果为 None 则没有创建。
         """
         folder = self.timestamp_path.joinpath(folder_name)
         folder.mkdir(parents=True, exist_ok=True)

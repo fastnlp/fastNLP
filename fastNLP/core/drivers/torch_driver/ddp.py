@@ -164,11 +164,11 @@ from .utils import _check_dataloader_args_for_distributed
 
 class TorchDDPDriver(TorchDriver):
     r"""
-    ``TorchDDPDriver`` 通过开启多个进程，让每个进程单独使用一个 gpu 设备来实现分布式训练；
+    ``TorchDDPDriver`` 通过开启多个进程，让每个进程单独使用一个 gpu 设备来实现分布式训练。
 
     .. note::
 
-        您在绝大多数情况下不需要自己使用到该类，通过向 ``Trainer`` 传入正确的参数，您可以方便快速地部署您的分布式训练；
+        您在绝大多数情况下不需要自己使用到该类，通过向 ``Trainer`` 传入正确的参数，您可以方便快速地部署您的分布式训练。
 
         ``TorchDDPDriver`` 目前支持的三种启动方式：
 
@@ -229,18 +229,24 @@ class TorchDDPDriver(TorchDriver):
             通过运行 ``python -m torch.distributed.launch --nproc_per_node 2 train.py`` 启动；
 
         注意多机的启动强制要求用户在每一台机器上使用 ``python -m torch.distributed.launch`` 启动；因此我们不会在 ``TorchDDPDriver`` 中保存
-        任何当前有多少台机器的信息；
+        任何当前有多少台机器的信息。
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数；
-    :param parallel_device: 用于分布式训练的 ``gpu`` 设备；
-    :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``python -m torch.distributed.launch`` 启动的；
-    :param fp16: 是否开启 fp16 训练；
+    :param model: 传入给 ``Trainer`` 的 ``model`` 参数
+    :param parallel_device: 用于分布式训练的 ``gpu`` 设备
+    :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``python -m torch.distributed.launch`` 启动的
+    :param fp16: 是否开启 fp16 训练
     :param torch_kwargs: 
         * *ddp_kwargs* -- 用于在使用 ``TorchDDPDriver`` 时指定 ``DistributedDataParallel`` 初始化时的参数；例如传入
-            {'find_unused_parameters': True} 来解决有参数不参与前向运算导致的报错等；
-        * *set_grad_to_none* -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 None；
-        * *non_blocking* -- 表示用于 pytorch 的 tensor 的 to 方法的参数 non_blocking；
-        * *gradscaler_kwargs* -- 用于 fp16=True 时，提供给 ``torch.amp.cuda.GradScaler`` 的参数;
+          ``{'find_unused_parameters': True}`` 来解决有参数不参与前向运算导致的报错等
+        * *set_grad_to_none* -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 ``None``
+        * *non_blocking* -- 表示用于 :meth:`torch.Tensor.to` 方法的参数 non_blocking
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.amp.cuda.GradScaler` 的参数
+    :kwargs:
+        * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
+
+        .. note::
+
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
     """
 
     def __init__(
@@ -329,7 +335,7 @@ class TorchDDPDriver(TorchDriver):
         r"""
         准备分布式环境，该函数主要做以下两件事情：
 
-            1. 开启多进程，每个 gpu 设备对应单独的一个进程；
+            1. 开启多进程，每个 ``gpu`` 设备对应单独的一个进程；
             2. 每个进程将模型迁移到自己对应的 ``gpu`` 设备上；然后使用 ``DistributedDataParallel`` 包裹模型；
         """
         if self._has_setup:
@@ -450,10 +456,16 @@ class TorchDDPDriver(TorchDriver):
 
     @property
     def master_address(self) -> str:
+        """
+        分布式训练中的地址 ``MASTER_ADDR``
+        """
         return os.environ.get("MASTER_ADDR", "127.0.0.1")
 
     @property
     def master_port(self) -> str:
+        """
+        分布式训练使用的端口 ``MASTER_PORT``
+        """
         if self.outside_ddp:
             return os.environ.get("MASTER_PORT")
         if self._master_port is None:
@@ -462,6 +474,9 @@ class TorchDDPDriver(TorchDriver):
 
     @property
     def world_size(self) -> int:
+        """
+        分布式训练的进程总数 ``WORLD_SIZE``
+        """
         return self._world_size
 
     @world_size.setter
@@ -470,6 +485,9 @@ class TorchDDPDriver(TorchDriver):
 
     @property
     def global_rank(self) -> int:
+        """
+        当前进程的全局编号 ``global_rank``
+        """
         return self._global_rank
 
     @global_rank.setter
@@ -478,6 +496,9 @@ class TorchDDPDriver(TorchDriver):
 
     @property
     def local_rank(self) -> int:  # 这个不会受到 all_rank_call_context 的影响
+        """
+        当前进程的局部编号 ``local_rank``
+        """
         return int(os.environ.get("LOCAL_RANK", 0))
 
     @property
@@ -609,20 +630,20 @@ class TorchDDPDriver(TorchDriver):
 
     def is_global_zero(self):
         r"""
-        :return: 返回当前的进程是否在全局上是进程 0 ；
+        :return: 当前的进程是否在全局上是进程 0 。
         """
         return self.global_rank == 0
 
     def get_model_no_sync_context(self):
         r"""
-        :return: 返回一个 ``context`` 上下文环境，用于关闭各个进程之间的同步；
+        :return: 一个 ``context`` 上下文环境，用于关闭各个进程之间的同步。
         """
         # 注意此时的 model 是 "DistributedDataParallel" 对象；
         return self.model.no_sync
 
     def unwrap_model(self):
         r"""
-        :return: 返回没有经过 ``DistributedDataParallel`` 包裹的原始模型；
+        :return: 没有经过 ``DistributedDataParallel`` 包裹的原始模型。
         """
         _module = self.model.module
         if isinstance(_module, _DDPWrappingModel):
@@ -632,34 +653,33 @@ class TorchDDPDriver(TorchDriver):
 
     def get_local_rank(self) -> int:
         r"""
-        :return: 返回当前进程局部的进程编号；
+        :return: 当前进程局部的进程编号。
         """
         return self.local_rank
 
     def barrier(self):
         r"""
-        通过使用该函数来使得各个进程之间同步操作；
+        通过使用该函数来使得各个进程之间同步操作。
         """
         if int(os.environ.get(FASTNLP_NO_SYNC, 0)) < 1:  # 当 FASTNLP_NO_SYNC 小于 1 时实际执行
             torch.distributed.barrier(async_op=False)
 
     def is_distributed(self):
         r"""
-        :return: 返回当前使用的 driver 是否是分布式的 driver，对于 ``TorchDDPDriver`` 来说，该函数一定返回 ``True``；
+        :return: 当前使用的 driver 是否是分布式的 driver，对于 ``TorchDDPDriver`` 来说，该函数一定返回 ``True``。
         """
         return True
 
     def broadcast_object(self, obj, src: int = 0, group=None, **kwargs):
         r"""
-        从 src 端将 obj 对象（可能是 tensor ，可能是 object ）发送到 dst 处。如果是非 tensor 的对象会尝试使用 pickle 进行打包进行
-        传输，然后再 dst 处再加载回来。仅在分布式的 driver 中有实际意义。
+        从 ``src`` 端将 ``obj`` 对象（可能是 tensor ，可能是 object ）广播到其它进程。如果是非 tensor 的对象会尝试使用 pickle 进行打包进行
+        传输，然后在接收处处再加载回来。仅在分布式的 driver 中有实际意义。
 
         :param obj: obj，可能是 Tensor 或 嵌套类型的数据
-        :param int src: source 的 global rank 。
-        :param int dst: target 的 global rank，可以是多个目标 rank
-        :param group: 所属的 group
-        :return: 如果当前不是分布式 driver 直接返回输入的 obj 。如果当前 rank 是接收端（其 global rank 包含在了 dst 中），则返回
-            接收到的参数；如果是 source 端则返回发射的内容；既不是发送端、又不是接收端，则返回 None 。
+        :param src: 发送方的 ``global_rank``
+        :param group: 进程所在的通信组
+        :return: 如果当前 rank 是接收端，则返回接收到的参数；如果是 source 端则返回发送的内容。如果环境变量 ``FASTNLP_NO_SYNC`` 为 **2** 则
+            返回 ``None``
         """
         if int(os.environ.get(FASTNLP_NO_SYNC, 0)) == 2:  # 如果 FASTNLP_NO_SYNC == 2 直接返回。
             return
@@ -667,27 +687,24 @@ class TorchDDPDriver(TorchDriver):
 
     def all_gather(self, obj, group) -> List:
         r"""
-        将 obj 互相传送到其它所有的 rank 上，其中 obj 可能是 Tensor，也可能是嵌套结构的 object 。如果不是基础类型的数据，尝试通过
+        将 ``obj`` 互相传送到其它所有的 rank 上，其中 ``obj`` 可能是 Tensor，也可能是嵌套结构的 object 。如果不是基础类型的数据，将会尝试通过
         pickle 进行序列化，接收到之后再反序列化。
 
         example::
 
-            obj = {
-                'a': [1, 1],
-                'b': [[1, 2], [1, 2]],
-                'c': {
-                    'd': [1, 2]
-                }
-            }
-            ->
-            [
-                {'a': 1, 'b':[1, 2], 'c':{'d': 1}},
-                {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
-            ]
+            >>> # rank 0
+            >>> obj = {'a': 1, 'b':[1, 2], 'c':{'d': 1}}
+            >>> # rank 1
+            >>> obj = {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
+            >>> # after all_gather():
+            >>> result = [
+                    {'a': 1, 'b':[1, 2], 'c':{'d': 1}},
+                    {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
+                ]
 
-        :param obj: 需要传输的对象，在每个rank上都应该保持相同的结构。
-        :param group:
-        :return:
+        :param obj: 需要传输的对象，在每个 rank 上都应该保持相同的结构。
+        :param group: 进程所在的通信组。
+        :return: 所有 rank 发送的 ``obj`` 聚合在一起的内容；如果环境变量 ``FASTNLP_NO_SYNC`` 为 **2** 则不会执行，直接返回 ``[obj]`` 。
         """
         if int(os.environ.get(FASTNLP_NO_SYNC, 0)) == 2:  # 如果 FASTNLP_NO_SYNC 表示不执行
             return [obj]
@@ -701,7 +718,7 @@ class TorchDDPDriver(TorchDriver):
 def find_free_network_port() -> str:
     """
     在 localhost 上找到一个空闲端口；
-    当我们不想连接到真正的主节点但必须设置“MASTER_PORT”环境变量时在单节点训练中很有用；
+    当我们不想连接到真正的主节点但必须设置“MASTER_PORT”环境变量时在单节点训练中很有用。
     """
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("", 0))
