@@ -51,7 +51,6 @@ class Saver:
 
         self.timestamp_path = self.folder.joinpath(os.environ[FASTNLP_LAUNCH_TIME])
 
-    @rank_zero_call
     def save(self, trainer, folder_name):
         """
         执行保存的函数，将数据保存在::
@@ -66,6 +65,7 @@ class Saver:
         """
         folder = self.timestamp_path.joinpath(folder_name)
         folder.mkdir(parents=True, exist_ok=True)
+
         save_fn = getattr(trainer, self.save_fn_name)
         save_fn(
             folder=folder,
@@ -217,7 +217,7 @@ class TopkSaver(ResultsMonitor, Saver):
         self.topk_queue = TopkQueue(topk)
         self.save_evaluate_results = save_evaluate_results
 
-    @rank_zero_call
+    # 注意这里我们为了支持 torch_fsdp 去除了 ''@rank_zero_call''；
     def save_topk(self, trainer, results: Dict) -> Optional[str]:
         """
         根据 ``results`` 是否满足 topk 的相关设定决定是否保存，如果发生了保存，将返回保存的文件夹。如果返回为 ``None`` ，则说明此次没有满足

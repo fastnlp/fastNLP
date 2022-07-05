@@ -27,7 +27,7 @@ from .utils import optimizer_state_to_device
 from fastNLP.core.drivers.driver import Driver
 from fastNLP.core.drivers.torch_driver.utils import _build_fp16_env, DummyGradScaler
 from fastNLP.core.utils import apply_to_collection, torch_move_data_to_device
-from fastNLP.envs import  rank_zero_call
+from fastNLP.envs import rank_zero_call
 from fastNLP.envs import FASTNLP_GLOBAL_RANK, FASTNLP_MODEL_FILENAME, FASTNLP_CHECKPOINT_FILENAME
 from fastNLP.core.log import logger
 from fastNLP.core.samplers import ReproducibleBatchSampler, ReproducibleSampler, ReproduceBatchSampler, RandomSampler

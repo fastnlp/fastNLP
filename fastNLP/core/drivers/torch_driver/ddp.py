@@ -309,9 +309,9 @@ class TorchDDPDriver(TorchDriver):
         self.world_size = None  # int(os.environ.get("WORLD_SIZE"))  len(self.parallel_device)
         self.global_rank = 0
 
-        self._ddp_kwargs = self._torch_kwargs.get("ddp_kwargs", {})
-        check_user_specific_params(self._ddp_kwargs, DistributedDataParallel.__init__, DistributedDataParallel.__name__)
-        if len(self.model._buffers) != 0 and self._ddp_kwargs.get("broadcast_buffers", None) is None:
+        self._fsdp_kwargs = self._torch_kwargs.get("ddp_kwargs", {})
+        check_user_specific_params(self._fsdp_kwargs, DistributedDataParallel.__init__, DistributedDataParallel.__name__)
+        if len(self.model._buffers) != 0 and self._fsdp_kwargs.get("broadcast_buffers", None) is None:
             logger.info("Notice your model has buffers and you are using `TorchDDPDriver`, but you do not set "
                         "'broadcast_buffers' in your trainer. Cause in most situations, this parameter can be set"
                         " to 'False' to avoid redundant data communication between different processes.")
@@ -381,8 +381,6 @@ class TorchDDPDriver(TorchDriver):
                 self.global_rank = dist.get_rank()
 
         if not self.outside_ddp:
-            torch.cuda.set_device(self.model_device)
-            self.model.to(self.model_device)
             self.configure_ddp()
 
         self.barrier()
@@ -400,11 +398,13 @@ class TorchDDPDriver(TorchDriver):
         self._pids = self.tensor_to_numeric(self._pids)
 
     def configure_ddp(self):
+        torch.cuda.set_device(self.model_device)
+        self.model.to(self.model_device)
         if not isinstance(self.model, DistributedDataParallel):
             self.model = DistributedDataParallel(
                 # 注意这里的 self.model_device 是 `torch.device` type，因此 self.model_device.index；
                 _DDPWrappingModel(self.model), device_ids=[self.model_device.index],
-                **self._ddp_kwargs
+                **self._fsdp_kwargs
             )
             self._has_ddpwrapped = True
 
@@ -505,6 +505,12 @@ class TorchDDPDriver(TorchDriver):
                     raise RuntimeError(f"The `{fn}` attribute of model is not `Callable`.")
                 return fn, None
             elif fn in {"train_step", "evaluate_step"}:
+
+                logger.warning("\n\nfucking hei\n\n")
+                print(model)
+                print("\n\n")
+                print(type(model))
+                print("\n\n")
                 return model, model.forward
             else:
                 raise RuntimeError(f"There is no `{fn}` method in your model.")

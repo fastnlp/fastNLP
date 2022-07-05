@@ -30,7 +30,7 @@ def choose_driver(model, driver: Union[str, Driver], device: Optional[Union[int,
         else:
             raise ValueError(f"Cannot choose driver automatically based on model, please set `driver` specifically.")
 
-    if driver in {"torch", "fairscale", "deepspeed"}:
+    if driver in {"torch", "fairscale", "deepspeed", "torch_fsdp"}:
         from fastNLP.core.drivers.torch_driver.initialize_torch_driver import initialize_torch_driver
         return initialize_torch_driver(driver, device, model, **kwargs)
     elif driver in {"jittor"}:
