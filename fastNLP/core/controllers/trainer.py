@@ -305,7 +305,7 @@ class Trainer(TrainerEventTrigger):
           :class:`~fastNLP.core.drivers.paddle_driver.PaddleSingleDriver`；
         * *fairscale_kwargs* -- ``FairScaleDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.torch_driver.FairScaleDriver`；
         * *deepspeed_kwargs* -- ``DeepSpeedDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.torch_driver.DeepSpeedDriver`；
-        * *torch_kwargs* -- ``OneflowDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.oneflow_driver.OneflowSingleDriver` 和
+        * *oneflow_kwargs* -- ``OneflowDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.oneflow_driver.OneflowSingleDriver` 和
           :class:`~fastNLP.core.drivers.oneflow_driver.OneflowDDPDriver`；
         * *data_device* -- 一个具体的 driver 实例中，有 ``model_device`` 和 ``data_device``，前者表示模型所在的设备，后者表示
          当 ``model_device`` 为 None 时应当将数据迁移到哪个设备；

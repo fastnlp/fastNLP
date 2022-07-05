@@ -1,5 +1,5 @@
 r"""
-Biaffine Dependency Parser 的 Pytorch 实现.
+**Biaffine Dependency Parser** 的 Pytorch 实现.
 """
 __all__ = [
     "BiaffineParser",
@@ -125,7 +125,7 @@ def _find_cycle(vertices, edges):
 
 class GraphParser(nn.Module):
     r"""
-    基于图的parser base class, 支持贪婪解码和最大生成树解码
+    基于图的 parser base class，支持 **贪婪解码** 和 **最大生成树解码**
     """
     
     def __init__(self):
@@ -134,12 +134,12 @@ class GraphParser(nn.Module):
     @staticmethod
     def greedy_decoder(arc_matrix, mask=None):
         r"""
-        贪心解码方式, 输入图, 输出贪心解码的parsing结果, 不保证合法的构成树
+        贪心解码方式，输入图，输出贪心解码的 parsing 结果，不保证合法地构成树。
 
-        :param arc_matrix: [batch, seq_len, seq_len] 输入图矩阵
-        :param mask: [batch, seq_len] 输入图的padding mask, 有内容的部分为 1, 否则为 0.
-            若为 ``None`` 时, 默认为全1向量. Default: ``None``
-        :return heads: [batch, seq_len] 每个元素在树中对应的head(parent)预测结果
+        :param arc_matrix: 输入图矩阵，形状为 ``[batch, seq_len, seq_len]``。
+        :param mask: 输入图的padding mask，形状为 ``[batch, seq_len]`` ， 有内容的部分为 **1** ， 否则为 **0** 。
+            若为 ``None`` ，则默认为全1向量。
+        :return: 每个元素在树中对应的 ``head(parent)`` 预测结果，形状为 ``[batch, seq_len]``。
         """
         _, seq_len, _ = arc_matrix.shape
         matrix = arc_matrix + torch.diag(arc_matrix.new(seq_len).fill_(-np.inf))
@@ -153,12 +153,12 @@ class GraphParser(nn.Module):
     @staticmethod
     def mst_decoder(arc_matrix, mask=None):
         r"""
-        用最大生成树算法, 计算parsing结果, 保证输出合法的树结构
+        用最大生成树算法，计算 parsing 结果，保证输出合法的树结构
 
-        :param arc_matrix: [batch, seq_len, seq_len] 输入图矩阵
-        :param mask: [batch, seq_len] 输入图的padding mask, 有内容的部分为 1, 否则为 0.
-            若为 ``None`` 时, 默认为全1向量. Default: ``None``
-        :return heads: [batch, seq_len] 每个元素在树中对应的head(parent)预测结果
+        :param arc_matrix: 输入图矩阵，形状为 ``[batch, seq_len, seq_len]``。
+        :param mask: 输入图的padding mask，形状为 ``[batch, seq_len]`` ， 有内容的部分为 **1** ， 否则为 **0** 。
+            若为 ``None`` ，则默认为全1向量。
+        :return: 每个元素在树中对应的 ``head(parent)`` 预测结果，形状为 ``[batch, seq_len]``。
         """
         batch_size, seq_len, _ = arc_matrix.shape
         matrix = arc_matrix.clone()
@@ -238,9 +238,27 @@ class LabelBilinear(nn.Module):
 
 class BiaffineParser(GraphParser):
     r"""
-    Biaffine Dependency Parser 实现.
-    论文参考 `Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016) <https://arxiv.org/abs/1611.01734>`_ .
+    **Biaffine Dependency Parser** 实现。
+    论文参考 `Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016) <https://arxiv.org/abs/1611.01734>`_ 。
 
+    :param embed: 单词词典，支持以下几种输入类型：
+
+            - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+            - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+            - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+            - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+
+    :param pos_vocab_size: part-of-speech 词典大小
+    :param pos_emb_dim: part-of-speech 向量维度
+    :param num_label: 边的类别个数
+    :param rnn_layers: rnn encoder 的层数
+    :param rnn_hidden_size: rnn encoder 的隐状态维度
+    :param arc_mlp_size: 边预测的 MLP 维度
+    :param label_mlp_size: 类别预测的 MLP 维度
+    :param dropout: dropout 概率
+    :param encoder: encoder 类别，可选 ``['lstm', 'var-lstm', 'transformer']``。
+    :param use_greedy_infer: 是否在 inference 时使用 :meth:`贪心算法 <GraphParser.greedy_decoder>` ，若为 ``False`` ，
+        将使用更加精确但相对缓慢的 :meth:`MST算法 <GraphParser.mst_decoder>` 。
     """
     
     def __init__(self,
@@ -255,23 +273,6 @@ class BiaffineParser(GraphParser):
                  dropout=0.3,
                  encoder='lstm',
                  use_greedy_infer=False):
-        r"""
-        
-        :param embed: 单词词典, 可以是 tuple, 包括(num_embedings, embedding_dim), 即
-            embedding的大小和每个词的维度. 也可以传入 nn.Embedding 对象,
-            此时就以传入的对象作为embedding
-        :param pos_vocab_size: part-of-speech 词典大小
-        :param pos_emb_dim: part-of-speech 向量维度
-        :param num_label: 边的类别个数
-        :param rnn_layers: rnn encoder的层数
-        :param rnn_hidden_size: rnn encoder 的隐状态维度
-        :param arc_mlp_size: 边预测的MLP维度
-        :param label_mlp_size: 类别预测的MLP维度
-        :param dropout: dropout概率.
-        :param encoder: encoder类别, 可选 ('lstm', 'var-lstm', 'transformer'). Default: lstm
-        :param use_greedy_infer: 是否在inference时使用贪心算法.
-            若 ``False`` , 使用更加精确但相对缓慢的MST算法. Default: ``False``
-        """
         super(BiaffineParser, self).__init__()
         rnn_out_size = 2 * rnn_hidden_size
         word_hid_dim = pos_hid_dim = rnn_hidden_size
@@ -336,20 +337,19 @@ class BiaffineParser(GraphParser):
                     nn.init.normal_(p, 0, 0.1)
     
     def forward(self, words1, words2, seq_len, target1=None):
-        r"""模型forward阶段
+        r"""
+        模型 forward 阶段
 
-        :param words1: [batch_size, seq_len] 输入word序列
-        :param words2: [batch_size, seq_len] 输入pos序列
-        :param seq_len: [batch_size, seq_len] 输入序列长度
-        :param target1: [batch_size, seq_len] 输入真实标注的heads, 仅在训练阶段有效,
-            用于训练label分类器. 若为 ``None`` , 使用预测的heads输入到label分类器
-            Default: ``None``
-        :return dict: parsing
-                结果::
+        :param words1: 输入 word 序列，形状为 ``[batch_size, seq_len]``
+        :param words2: 输入 pos 序列，形状为 ``[batch_size, seq_len]`` 
+        :param seq_len: 输入序列长度，形状为 ``[batch_size, seq_len]`` 
+        :param target1: 输入真实标注的 heads ，形状为 ``[batch_size, seq_len]`` ，仅在训练阶段有效，
+            用于训练 label 分类器. 若为 ``None`` ，则使用预测的 heads 输入到 label 分类器。
+        :return: 类型为字典的 parsing 结果，各个键的含义为：
 
-                    pred1: [batch_size, seq_len, seq_len] 边预测logits
-                    pred2: [batch_size, seq_len, num_label] label预测logits
-                    pred3: [batch_size, seq_len] heads的预测结果, 在 ``target1=None`` 时预测
+                * ``pred1`` -- **边** 预测 logits，形状为 ``[batch_size, seq_len, seq_len]``；
+                * ``pred2`` -- **label** 预测 logits，形状为 ``[batch_size, seq_len, num_label]`` ；
+                * ``pred3`` -- **heads** 的预测结果，形状为 ``[batch_size, seq_len]`` ，在 ``target1=None`` 时预测；
 
         """
         # prepare embeddings
@@ -416,6 +416,17 @@ class BiaffineParser(GraphParser):
         return res_dict
 
     def train_step(self, words1, words2, seq_len, target1, target2):
+        """
+        模型的训练接口。
+
+        :param words1: 输入 word 序列，形状为 ``[batch_size, seq_len]``
+        :param words2: 输入 pos 序列，形状为 ``[batch_size, seq_len]`` 
+        :param target1: 输入真实标注的 heads ，形状为 ``[batch_size, seq_len]`` ，仅在训练阶段有效，
+            用于训练 label 分类器. 若为 ``None`` ，则使用预测的 heads 输入到 label 分类器。
+        :param target2: 真实类别的标注，形状为 ``[batch_size, seq_len]``
+        :param seq_len: 输入序列长度，形状为 ``[batch_size, seq_len]``
+        :return: 类型为字典的结果，仅包含一个键 ``loss``，表示当次训练的 loss
+        """
         res = self(words1, words2, seq_len, target1)
         arc_pred = res['pred1']
         label_pred = res['pred2']
@@ -425,14 +436,14 @@ class BiaffineParser(GraphParser):
     @staticmethod
     def loss(pred1, pred2, target1, target2, seq_len):
         r"""
-        计算parser的loss
+        计算 parser 的 loss
 
-        :param pred1: [batch_size, seq_len, seq_len] 边预测logits
-        :param pred2: [batch_size, seq_len, num_label] label预测logits
-        :param target1: [batch_size, seq_len] 真实边的标注
-        :param target2: [batch_size, seq_len] 真实类别的标注
-        :param seq_len: [batch_size, seq_len] 真实目标的长度
-        :return loss: scalar
+        :param pred1: 边预测 logits，形状为 ``[batch_size, seq_len, seq_len]``
+        :param pred2: **label** 预测 logits，形状为 ``[batch_size, seq_len, num_label]``
+        :param target1: 真实边的标注，形状为 ``[batch_size, seq_len]``
+        :param target2: 真实类别的标注，形状为 ``[batch_size, seq_len]``
+        :param seq_len: 真实目标的长度，形状为 ``[batch_size, seq_len]``
+        :return: 计算出的 loss。
         """
         
         batch_size, length, _ = pred1.shape
@@ -456,14 +467,13 @@ class BiaffineParser(GraphParser):
     def evaluate_step(self, words1, words2, seq_len):
         r"""模型预测API
 
-        :param words1: [batch_size, seq_len] 输入word序列
-        :param words2: [batch_size, seq_len] 输入pos序列
-        :param seq_len: [batch_size, seq_len] 输入序列长度
-        :return dict: parsing
-                结果::
+        :param words1: 输入 word 序列，形状为 ``[batch_size, seq_len]``
+        :param words2: 输入 pos 序列，形状为 ``[batch_size, seq_len]`` 
+        :param seq_len: 输入序列长度，形状为 ``[batch_size, seq_len]``
+        :return: 字典类型的 parsing 结果，各个键的含义为：
 
-                    pred1: [batch_size, seq_len] heads的预测结果
-                    pred2: [batch_size, seq_len, num_label] label预测logits
+                * ``pred1`` -- **heads** 的预测结果，形状为 ``[batch_size, seq_len]``；
+                * ``pred2`` -- **label** 预测 logits，形状为 ``[batch_size, seq_len, num_label]`` ；
 
         """
         res = self(words1, words2, seq_len)
