@@ -157,7 +157,8 @@ class CWSPipe(Pipe):
 
     """
     
-    def __init__(self, dataset_name=None, encoding_type='bmes', replace_num_alpha=True, bigrams=False, trigrams=False):
+    def __init__(self, dataset_name=None, encoding_type='bmes', replace_num_alpha=True,
+                 bigrams=False, trigrams=False, num_proc: int = 0):
         r"""
         
         :param str,None dataset_name: 支持'pku', 'msra', 'cityu', 'as', None
@@ -176,6 +177,7 @@ class CWSPipe(Pipe):
         self.bigrams = bigrams
         self.trigrams = trigrams
         self.replace_num_alpha = replace_num_alpha
+        self.num_proc = num_proc
     
     def _tokenize(self, data_bundle):
         r"""
@@ -213,7 +215,7 @@ class CWSPipe(Pipe):
         
         for name, dataset in data_bundle.iter_datasets():
             dataset.apply_field(split_word_into_chars, field_name='chars',
-                                new_field_name='chars')
+                                new_field_name='chars', num_proc=self.num_proc)
         return data_bundle
     
     def process(self, data_bundle: DataBundle) -> DataBundle:
@@ -233,33 +235,40 @@ class CWSPipe(Pipe):
         data_bundle.copy_field('raw_words', 'chars')
         
         if self.replace_num_alpha:
-            data_bundle.apply_field(_find_and_replace_alpha_spans, 'chars', 'chars')
-            data_bundle.apply_field(_find_and_replace_digit_spans, 'chars', 'chars')
+            data_bundle.apply_field(_find_and_replace_alpha_spans, 'chars', 'chars', num_proc=self.num_proc)
+            data_bundle.apply_field(_find_and_replace_digit_spans, 'chars', 'chars', num_proc=self.num_proc)
         
         self._tokenize(data_bundle)
+
+        def func1(chars):
+            return self.word_lens_to_tags(map(len, chars))
+
+        def func2(chars):
+            return list(chain(*chars))
         
         for name, dataset in data_bundle.iter_datasets():
-            dataset.apply_field(lambda chars: self.word_lens_to_tags(map(len, chars)), field_name='chars',
-                                new_field_name='target')
-            dataset.apply_field(lambda chars: list(chain(*chars)), field_name='chars',
-                                new_field_name='chars')
+            dataset.apply_field(func1, field_name='chars', new_field_name='target', num_proc=self.num_proc)
+            dataset.apply_field(func2, field_name='chars', new_field_name='chars', num_proc=self.num_proc)
         input_field_names = ['chars']
+
+        def bigram(chars):
+            return [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])]
+
+        def trigrams(chars):
+            return [c1 + c2 + c3 for c1, c2, c3 in
+                    zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)]
+
         if self.bigrams:
             for name, dataset in data_bundle.iter_datasets():
-                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
-                                    field_name='chars', new_field_name='bigrams')
+                dataset.apply_field(bigram, field_name='chars', new_field_name='bigrams', num_proc=self.num_proc)
             input_field_names.append('bigrams')
         if self.trigrams:
             for name, dataset in data_bundle.iter_datasets():
-                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
-                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
-                                    field_name='chars', new_field_name='trigrams')
+                dataset.apply_field(trigrams, field_name='chars', new_field_name='trigrams', num_proc=self.num_proc)
             input_field_names.append('trigrams')
         
         _indexize(data_bundle, input_field_names, 'target')
-        
-        input_fields = ['target', 'seq_len'] + input_field_names
-        target_fields = ['target', 'seq_len']
+
         for name, dataset in data_bundle.iter_datasets():
             dataset.add_seq_len('chars')
 

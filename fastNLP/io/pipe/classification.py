@@ -37,10 +37,11 @@ from fastNLP.core.log import logger
 
 class CLSBasePipe(Pipe):
     
-    def __init__(self, lower: bool = False, tokenizer: str = 'raw', lang='en'):
+    def __init__(self, lower: bool = False, tokenizer: str = 'raw', lang='en', num_proc=0):
         super().__init__()
         self.lower = lower
         self.tokenizer = get_tokenizer(tokenizer, lang=lang)
+        self.num_proc = num_proc
     
     def _tokenize(self, data_bundle, field_name='words', new_field_name=None):
         r"""
@@ -53,7 +54,8 @@ class CLSBasePipe(Pipe):
         """
         new_field_name = new_field_name or field_name
         for name, dataset in data_bundle.iter_datasets():
-            dataset.apply_field(self.tokenizer, field_name=field_name, new_field_name=new_field_name)
+            dataset.apply_field(self.tokenizer, field_name=field_name, new_field_name=new_field_name,
+                                num_proc=self.num_proc)
 
         return data_bundle
 
@@ -117,7 +119,7 @@ class YelpFullPipe(CLSBasePipe):
 
     """
 
-    def __init__(self, lower: bool = False, granularity=5, tokenizer: str = 'spacy'):
+    def __init__(self, lower: bool = False, granularity=5, tokenizer: str = 'spacy', num_proc=0):
         r"""
 
         :param bool lower: 是否对输入进行小写化。
@@ -125,7 +127,7 @@ class YelpFullPipe(CLSBasePipe):
             1、2归为1类，3归为1类，4、5归为1类；若为5, 则有5分类问题。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
         """
-        super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
+        super().__init__(lower=lower, tokenizer=tokenizer, lang='en', num_proc=num_proc)
         assert granularity in (2, 3, 5), "granularity can only be 2,3,5."
         self.granularity = granularity
 
@@ -191,13 +193,13 @@ class YelpPolarityPipe(CLSBasePipe):
 
     """
 
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc=0):
         r"""
 
         :param bool lower: 是否对输入进行小写化。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
         """
-        super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
+        super().__init__(lower=lower, tokenizer=tokenizer, lang='en', num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
@@ -233,13 +235,13 @@ class AGsNewsPipe(CLSBasePipe):
 
     """
 
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc=0):
         r"""
 
         :param bool lower: 是否对输入进行小写化。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
         """
-        super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
+        super().__init__(lower=lower, tokenizer=tokenizer, lang='en', num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
@@ -274,13 +276,13 @@ class DBPediaPipe(CLSBasePipe):
 
     """
 
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc=0):
         r"""
 
         :param bool lower: 是否对输入进行小写化。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
         """
-        super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
+        super().__init__(lower=lower, tokenizer=tokenizer, lang='en', num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
@@ -315,7 +317,7 @@ class SSTPipe(CLSBasePipe):
 
     """
 
-    def __init__(self, subtree=False, train_subtree=True, lower=False, granularity=5, tokenizer='spacy'):
+    def __init__(self, subtree=False, train_subtree=True, lower=False, granularity=5, tokenizer='spacy', num_proc=0):
         r"""
 
         :param bool subtree: 是否将train, test, dev数据展开为子树，扩充数据量。 Default: ``False``
@@ -325,7 +327,7 @@ class SSTPipe(CLSBasePipe):
             0、1归为1类，2归为1类，3、4归为1类；若为5, 则有5分类问题。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
         """
-        super().__init__(tokenizer=tokenizer, lang='en')
+        super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.subtree = subtree
         self.train_tree = train_subtree
         self.lower = lower
@@ -407,13 +409,13 @@ class SST2Pipe(CLSBasePipe):
 
     """
 
-    def __init__(self, lower=False, tokenizer='raw'):
+    def __init__(self, lower=False, tokenizer='raw', num_proc=0):
         r"""
 
         :param bool lower: 是否对输入进行小写化。
         :param str tokenizer: 使用哪种tokenize方式将数据切成单词。
         """
-        super().__init__(lower=lower, tokenizer=tokenizer, lang='en')
+        super().__init__(lower=lower, tokenizer=tokenizer, lang='en', num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
@@ -452,13 +454,13 @@ class IMDBPipe(CLSBasePipe):
 
     """
 
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc=0):
         r"""
 
         :param bool lower: 是否将words列的数据小写。
         :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
         """
-        super().__init__(tokenizer=tokenizer, lang='en')
+        super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.lower = lower
 
     def process(self, data_bundle: DataBundle):
@@ -483,7 +485,7 @@ class IMDBPipe(CLSBasePipe):
             return raw_words
 
         for name, dataset in data_bundle.datasets.items():
-            dataset.apply_field(replace_br, field_name='raw_words', new_field_name='raw_words')
+            dataset.apply_field(replace_br, field_name='raw_words', new_field_name='raw_words', num_proc=self.num_proc)
 
         data_bundle = super().process(data_bundle)
 
@@ -527,7 +529,7 @@ class ChnSentiCorpPipe(Pipe):
 
     """
 
-    def __init__(self, bigrams=False, trigrams=False):
+    def __init__(self, bigrams=False, trigrams=False, num_proc: int = 0):
         r"""
 
         :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
@@ -541,10 +543,11 @@ class ChnSentiCorpPipe(Pipe):
 
         self.bigrams = bigrams
         self.trigrams = trigrams
+        self.num_proc = num_proc
 
     def _tokenize(self, data_bundle):
         r"""
-        将DataSet中的"复旦大学"拆分为["复", "旦", "大", "学"]. 未来可以通过扩展这个函数实现分词。
+        将 DataSet 中的"复旦大学"拆分为 ["复", "旦", "大", "学"] . 未来可以通过扩展这个函数实现分词。
 
         :param data_bundle:
         :return:
@@ -571,23 +574,25 @@ class ChnSentiCorpPipe(Pipe):
         data_bundle = self._tokenize(data_bundle)
 
         input_field_names = ['chars']
+
+        def bigrams(chars):
+            return [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])]
+
+        def trigrams(chars):
+            return [c1 + c2 + c3 for c1, c2, c3 in
+                    zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)]
+
         if self.bigrams:
             for name, dataset in data_bundle.iter_datasets():
-                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
-                                    field_name='chars', new_field_name='bigrams')
+                dataset.apply_field(bigrams,field_name='chars', new_field_name='bigrams', num_proc=self.num_proc)
             input_field_names.append('bigrams')
         if self.trigrams:
             for name, dataset in data_bundle.iter_datasets():
-                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
-                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
-                                    field_name='chars', new_field_name='trigrams')
+                dataset.apply_field(trigrams, field_name='chars', new_field_name='trigrams', num_proc=self.num_proc)
             input_field_names.append('trigrams')
 
         # index
         _indexize(data_bundle, input_field_names, 'target')
-
-        input_fields = ['target', 'seq_len'] + input_field_names
-        target_fields = ['target']
 
         for name, dataset in data_bundle.datasets.items():
             dataset.add_seq_len('chars')
@@ -637,8 +642,8 @@ class THUCNewsPipe(CLSBasePipe):
         data_bundle.get_vocab('trigrams')获取.
     """
 
-    def __init__(self, bigrams=False, trigrams=False):
-        super().__init__()
+    def __init__(self, bigrams=False, trigrams=False, num_proc=0):
+        super().__init__(num_proc=num_proc)
 
         self.bigrams = bigrams
         self.trigrams = trigrams
@@ -653,7 +658,7 @@ class THUCNewsPipe(CLSBasePipe):
     def _tokenize(self, data_bundle, field_name='words', new_field_name=None):
         new_field_name = new_field_name or field_name
         for name, dataset in data_bundle.datasets.items():
-            dataset.apply_field(self._chracter_split, field_name=field_name, new_field_name=new_field_name)
+            dataset.apply_field(self._chracter_split, field_name=field_name, new_field_name=new_field_name, num_proc=self.num_proc)
         return data_bundle
 
     def process(self, data_bundle: DataBundle):
@@ -680,17 +685,21 @@ class THUCNewsPipe(CLSBasePipe):
 
         input_field_names = ['chars']
 
+        def bigrams(chars):
+            return [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])]
+
+        def trigrams(chars):
+            return [c1 + c2 + c3 for c1, c2, c3 in
+                    zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)]
+
         # n-grams
         if self.bigrams:
             for name, dataset in data_bundle.iter_datasets():
-                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
-                                    field_name='chars', new_field_name='bigrams')
+                dataset.apply_field(bigrams, field_name='chars', new_field_name='bigrams', num_proc=self.num_proc)
             input_field_names.append('bigrams')
         if self.trigrams:
             for name, dataset in data_bundle.iter_datasets():
-                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
-                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
-                                    field_name='chars', new_field_name='trigrams')
+                dataset.apply_field(trigrams, field_name='chars', new_field_name='trigrams', num_proc=self.num_proc)
             input_field_names.append('trigrams')
 
         # index
@@ -699,9 +708,6 @@ class THUCNewsPipe(CLSBasePipe):
         # add length
         for name, dataset in data_bundle.datasets.items():
             dataset.add_seq_len(field_name='chars', new_field_name='seq_len')
-
-        input_fields = ['target', 'seq_len'] + input_field_names
-        target_fields = ['target']
 
         return data_bundle
 
@@ -746,8 +752,8 @@ class WeiboSenti100kPipe(CLSBasePipe):
         data_bundle.get_vocab('trigrams')获取.
     """
 
-    def __init__(self, bigrams=False, trigrams=False):
-        super().__init__()
+    def __init__(self, bigrams=False, trigrams=False, num_proc=0):
+        super().__init__(num_proc=num_proc)
 
         self.bigrams = bigrams
         self.trigrams = trigrams
@@ -758,7 +764,8 @@ class WeiboSenti100kPipe(CLSBasePipe):
     def _tokenize(self, data_bundle, field_name='words', new_field_name=None):
         new_field_name = new_field_name or field_name
         for name, dataset in data_bundle.datasets.items():
-            dataset.apply_field(self._chracter_split, field_name=field_name, new_field_name=new_field_name)
+            dataset.apply_field(self._chracter_split, field_name=field_name,
+                                new_field_name=new_field_name, num_proc=self.num_proc)
         return data_bundle
 
     def process(self, data_bundle: DataBundle):
@@ -779,20 +786,19 @@ class WeiboSenti100kPipe(CLSBasePipe):
         # CWS(tokenize)
         data_bundle = self._tokenize(data_bundle=data_bundle, field_name='raw_chars', new_field_name='chars')
 
-        input_field_names = ['chars']
+        def bigrams(chars):
+            return [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])]
 
+        def trigrams(chars):
+            return [c1 + c2 + c3 for c1, c2, c3 in
+                    zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)]
         # n-grams
         if self.bigrams:
             for name, dataset in data_bundle.iter_datasets():
-                dataset.apply_field(lambda chars: [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])],
-                                    field_name='chars', new_field_name='bigrams')
-            input_field_names.append('bigrams')
+                dataset.apply_field(bigrams, field_name='chars', new_field_name='bigrams', num_proc=self.num_proc)
         if self.trigrams:
             for name, dataset in data_bundle.iter_datasets():
-                dataset.apply_field(lambda chars: [c1 + c2 + c3 for c1, c2, c3 in
-                                                   zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)],
-                                    field_name='chars', new_field_name='trigrams')
-            input_field_names.append('trigrams')
+                dataset.apply_field(trigrams, field_name='chars', new_field_name='trigrams', num_proc=self.num_proc)
 
         # index
         data_bundle = _indexize(data_bundle=data_bundle, input_field_names='chars')
@@ -800,9 +806,6 @@ class WeiboSenti100kPipe(CLSBasePipe):
         # add length
         for name, dataset in data_bundle.datasets.items():
             dataset.add_seq_len(field_name='chars', new_field_name='seq_len')
-
-        input_fields = ['target', 'seq_len'] + input_field_names
-        target_fields = ['target']
 
         return data_bundle
     
@@ -817,13 +820,13 @@ class WeiboSenti100kPipe(CLSBasePipe):
         return data_bundle
 
 class MRPipe(CLSBasePipe):
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc=0):
         r"""
 
         :param bool lower: 是否将words列的数据小写。
         :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
         """
-        super().__init__(tokenizer=tokenizer, lang='en')
+        super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.lower = lower
 
     def process_from_file(self, paths=None):
@@ -840,13 +843,13 @@ class MRPipe(CLSBasePipe):
 
 
 class R8Pipe(CLSBasePipe):
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc = 0):
         r"""
 
         :param bool lower: 是否将words列的数据小写。
         :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
         """
-        super().__init__(tokenizer=tokenizer, lang='en')
+        super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.lower = lower
 
     def process_from_file(self, paths=None):
@@ -863,13 +866,13 @@ class R8Pipe(CLSBasePipe):
 
 
 class R52Pipe(CLSBasePipe):
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc: int = 0):
         r"""
 
         :param bool lower: 是否将words列的数据小写。
         :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
         """
-        super().__init__(tokenizer=tokenizer, lang='en')
+        super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.lower = lower
 
     def process_from_file(self, paths=None):
@@ -886,13 +889,13 @@ class R52Pipe(CLSBasePipe):
 
 
 class OhsumedPipe(CLSBasePipe):
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc: int = 0):
         r"""
 
         :param bool lower: 是否将words列的数据小写。
         :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
         """
-        super().__init__(tokenizer=tokenizer, lang='en')
+        super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.lower = lower
 
     def process_from_file(self, paths=None):
@@ -909,13 +912,13 @@ class OhsumedPipe(CLSBasePipe):
 
 
 class NG20Pipe(CLSBasePipe):
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy'):
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc: int = 0):
         r"""
 
         :param bool lower: 是否将words列的数据小写。
         :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
         """
-        super().__init__(tokenizer=tokenizer, lang='en')
+        super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.lower = lower
 
     def process_from_file(self, paths=None):
