@@ -71,7 +71,6 @@ def model_and_optimizers(request):
 @magic_argv_env_context
 def test_trainer_torch_without_evaluator(
         model_and_optimizers: TrainerParameters,
-        n_epochs=3,
 ):
     callbacks = [RecordLossCallback(loss_threshold=0.5)]
     trainer = Trainer(
@@ -98,14 +97,14 @@ def test_trainer_torch_without_evaluator(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch_fsdp", [4, 5])])
+@pytest.mark.parametrize("save_on_rank0", [True, False])
 @magic_argv_env_context(timeout=100)
 def test_model_checkpoint_callback_1(
     model_and_optimizers: TrainerParameters,
-    driver,
-    device
+    save_on_rank0
 ):
-    for version in [0]:
+    device = [6, 7]
+    for version in [0, 1]:
         # 需要在每一个循环开始重新初始化 model，是因为 fsdp 会将当前卡上的 model 删除，从而导致这个引用实际上引用到的是一个空模型；
         model_and_optimizers.model = TorchNormalModel_Classification_1(
             num_labels=ArgMaxDatasetConfig.num_labels,
@@ -128,7 +127,7 @@ def test_model_checkpoint_callback_1(
 
             trainer = Trainer(
                 model=model_and_optimizers.model,
-                driver=driver,
+                driver="torch_fsdp",
                 device=device,
                 optimizers=model_and_optimizers.optimizers,
                 train_dataloader=model_and_optimizers.train_dataloader,
@@ -139,7 +138,7 @@ def test_model_checkpoint_callback_1(
                 n_epochs=10,
                 callbacks=callbacks,
                 output_from_new_proc="all",
-                # torch_kwargs={"fsdp_kwargs": {'save_on_rank0': True}}
+                torch_kwargs={"fsdp_kwargs": {'save_on_rank0': True, 'load_on_rank0': True}} if save_on_rank0 else None
             )
 
             trainer.run()
@@ -165,7 +164,7 @@ def test_model_checkpoint_callback_1(
                     step_save_path = all_saved_model_paths["model-epoch_9-batch_123"]
 
                     assert len(all_saved_model_paths) == 11
-                all_state_dicts = [epoch_save_path]#, step_save_path]
+                all_state_dicts = [epoch_save_path, step_save_path]
 
             elif version == 1:
 
@@ -214,7 +213,7 @@ def test_model_checkpoint_callback_1(
 
                 trainer = Trainer(
                     model=model_and_optimizers.model,
-                    driver=driver,
+                    driver="torch_fsdp",
                     device=device,
                     optimizers=model_and_optimizers.optimizers,
                     train_dataloader=model_and_optimizers.train_dataloader,
@@ -223,9 +222,10 @@ def test_model_checkpoint_callback_1(
                     output_mapping=model_and_optimizers.output_mapping,
                     metrics=model_and_optimizers.metrics,
 
-                    n_epochs=20,
+                    n_epochs=2,
                     output_from_new_proc="all",
-
+                    torch_kwargs={
+                        "fsdp_kwargs": {'save_on_rank0': True, 'load_on_rank0': True}} if save_on_rank0 else None
                 )
                 trainer.load_model(folder, only_state_dict=True)
 
@@ -236,9 +236,6 @@ def test_model_checkpoint_callback_1(
 
     if dist.is_initialized():
         dist.destroy_process_group()
-
-
-
 
 
 @pytest.mark.skip("现在 fsdp 还不支持断点重训；")

@@ -59,11 +59,12 @@ class Trainer(TrainerEventTrigger):
         
         1. 值为 ``"auto"`` 时，**fastNLP** 会根据传入模型的类型自行判断使用哪一种模式；
         2. 其值为 ``"torch"`` 时，表示使用 :class:`~fastNLP.core.drivers.TorchSingleDriver` 或者 :class:`~fastNLP.core.drivers.TorchDDPDriver`；
-        3. 其值为 ``"paddle"`` 时，表示使用 :class:`~fastNLP.core.drivers.PaddleSingleDriver` 或者 :class:`~fastNLP.core.drivers.PaddleFleetDriver`；
-        4. 其值为 ``"jittor"`` 时，表示使用 :class:`~fastNLP.core.drivers.JittorSingleDriver` 或者 :class:`~fastNLP.core.drivers.JittorMPIDriver`；
-        5. 其值为 ``"fairscale"`` 时，表示使用 :class:`~fastNLP.core.drivers.FairScaleDriver`；
-        6. 其值为 ``"deepspeed"`` 时，表示使用 :class:`~fastNLP.core.drivers.DeepSpeedDriver`；
-        7. 其值为 ``"oneflow"`` 时，表示使用 :class:`~fastNLP.core.drivers.OneflowSingleDriver` 或者 :class:`~fastNLP.core.drivers.OneflowDDPDriver`；
+        3. 其值为 ``"torch_fsdp"`` 时，表示使用 :class:`~fastNLP.core.drivers.TorchFSDPDriver`；
+        4. 其值为 ``"paddle"`` 时，表示使用 :class:`~fastNLP.core.drivers.PaddleSingleDriver` 或者 :class:`~fastNLP.core.drivers.PaddleFleetDriver`；
+        5. 其值为 ``"jittor"`` 时，表示使用 :class:`~fastNLP.core.drivers.JittorSingleDriver` 或者 :class:`~fastNLP.core.drivers.JittorMPIDriver`；
+        6. 其值为 ``"fairscale"`` 时，表示使用 :class:`~fastNLP.core.drivers.FairScaleDriver`；
+        7. 其值为 ``"deepspeed"`` 时，表示使用 :class:`~fastNLP.core.drivers.DeepSpeedDriver`；
+        8. 其值为 ``"oneflow"`` 时，表示使用 :class:`~fastNLP.core.drivers.OneflowSingleDriver` 或者 :class:`~fastNLP.core.drivers.OneflowDDPDriver`；
         
         在指定了框架的情况下，具体使用哪一种取决于参数 ``device`` 的设置；
 
@@ -301,6 +302,21 @@ class Trainer(TrainerEventTrigger):
     :kwargs:
         * *torch_kwargs* -- ``TorchDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.torch_driver.TorchSingleDriver` 和
           :class:`~fastNLP.core.drivers.torch_driver.TorchDDPDriver`；
+
+            .. note::
+
+                注意如果对于 ``TorchDDPDriver`` 中初始化 ``DistributedDataParallel`` 时有特别的参数，您可以通过在 ``torch_kwargs`` 中传入
+                ``ddp_kwargs`` 来实现，例如：
+
+                .. code-block::
+
+                    trainer = Trainer(
+                        ...,
+                        torch_kwargs = {'ddp_kwargs': {'find_unused_parameters': True, ...}}
+                    )
+
+                对于 ``TorchFSDPDriver`` 也是类似，只是对应的 ``**_kwargs`` 修改为 ``fsdp_kwargs``；
+
         * *paddle_kwargs* -- ``PaddleDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.paddle_driver.PaddleSingleDriver` 和
           :class:`~fastNLP.core.drivers.paddle_driver.PaddleSingleDriver`；
         * *fairscale_kwargs* -- ``FairScaleDriver`` 所需的其它参数，详见 :class:`~fastNLP.core.drivers.torch_driver.FairScaleDriver`；

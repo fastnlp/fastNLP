@@ -48,6 +48,12 @@ class TorchFSDPDriver(TorchDDPDriver):
 
         ``TorchFSDPDriver`` 现在还不支持断点重训功能，但是支持保存模型和加载模型；
 
+        注意当您在加载和保存模型的 checkpointcallback 的时候，您可以通过在初始化 ``Trainer`` 时传入
+        ``torch_kwargs={"fsdp_kwargs": {'save_on_rank0': True/False, 'load_on_rank0': True/False}}`` 来指定保存模型的行为：
+
+            1. save/load_on_rank0 = True：表示在加载和保存模型时将所有 rank 上的模型参数全部聚合到 rank0 上，注意这样可能会造成 OOM；
+            2. save/load_on_rank0 = False：表示每个 rank 分别保存加载自己独有的模型参数；
+
     """
 
     def __init__(
