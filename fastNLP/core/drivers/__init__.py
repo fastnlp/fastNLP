@@ -3,6 +3,8 @@ __all__ = [
     'TorchDriver',
     "TorchSingleDriver",
     "TorchDDPDriver",
+    "FairScaleDriver",
+    "TorchFSDPDriver",
     "DeepSpeedDriver",
     "PaddleDriver",
     "PaddleSingleDriver",
@@ -10,8 +12,6 @@ __all__ = [
     "JittorDriver",
     "JittorSingleDriver",
     "JittorMPIDriver",
-    'TorchSingleDriver',
-    'TorchDDPDriver',
     'PaddleDriver',
     'PaddleSingleDriver',
     'PaddleFleetDriver',
@@ -27,7 +27,8 @@ __all__ = [
     'optimizer_state_to_device'
 ]
 
-from .torch_driver import TorchDriver, TorchSingleDriver, TorchDDPDriver, DeepSpeedDriver, torch_seed_everything, optimizer_state_to_device
+from .torch_driver import TorchDriver, TorchSingleDriver, TorchDDPDriver, DeepSpeedDriver, FairScaleDriver, \
+    TorchFSDPDriver, torch_seed_everything, optimizer_state_to_device
 from .jittor_driver import JittorDriver, JittorMPIDriver, JittorSingleDriver
 from .paddle_driver import PaddleDriver, PaddleFleetDriver, PaddleSingleDriver, paddle_seed_everything
 from .oneflow_driver import OneflowDriver, OneflowSingleDriver, OneflowDDPDriver, oneflow_seed_everything

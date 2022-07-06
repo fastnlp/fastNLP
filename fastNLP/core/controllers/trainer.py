@@ -76,7 +76,7 @@ class Trainer(TrainerEventTrigger):
 
         .. note::
 
-            如果您选择使用 :mod:`deepspeed` 或 :mod:`fairscale` 进行训练，请不要将 ``driver`` 的值设为 ``'auto'`` 。
+            如果您选择使用 :mod:`deepspeed` 、:mod:`fairscale` 或 :mod:`torch.distributed.fsdp` 进行训练，请不要将 ``driver`` 的值设为 ``'auto'`` 。
 
     :param train_dataloader: 训练数据集，注意其必须是单独的一个数据集，不能是 :class:`List` 或者 :class:`Dict`；
 

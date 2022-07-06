@@ -29,6 +29,29 @@ from .utils import optimizer_state_to_device
 
 
 class FairScaleDriver(TorchDDPDriver):
+    """
+    实现 ``fairscale`` 功能的 ``Driver`` 。
+
+    :param model: 传入给 ``Trainer`` 的 ``model`` 参数。
+    :param parallel_device: 用于分布式训练的 ``gpu`` 设备。
+    :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``python -m torch.distributed.launch`` 启动的。
+    :param fp16: 是否开启 fp16 训练。
+    :param fairscale_kwargs:
+
+        * *oss_kwargs* --
+        * *sdp_kwargs* --
+        * *fsdp_kwargs* --
+        * *ddp_kwargs* --
+        * *set_grad_to_none* -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 ``None``
+        * *non_blocking* -- 表示用于 :meth:`torch.Tensor.to` 方法的参数 non_blocking
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.amp.cuda.GradScaler` 的参数
+    :kwargs:
+        * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
+
+        .. note::
+
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
+    """
     def __init__(
             self,
             model,

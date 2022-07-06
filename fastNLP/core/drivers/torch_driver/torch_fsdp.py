@@ -36,15 +36,16 @@ from .utils import optimizer_state_to_device
 
 class TorchFSDPDriver(TorchDDPDriver):
     r"""
-    实现对于 pytorch 自己实现的 fully sharded data parallel；请阅读该文档了解更多：
-    https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.full_optim_state_dict；
+    实现对于 pytorch 自己实现的 fully sharded data parallel；请阅读
+    `该文档 <https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.full_optim_state_dict>`_
+    了解更多：
 
-    ..note::
+    .. note::
 
         ``TorchFSDPDriver`` 大部分行为与 ``TorchDDPDriver`` 相同，如果您不了解 ``TorchDDPDriver``，
         您可以先阅读 :class:`~fastNLP.core.drivers.TorchDDPDriver`；
 
-    ..warning::
+    .. warning::
 
         ``TorchFSDPDriver`` 现在还不支持断点重训功能，但是支持保存模型和加载模型；
 
@@ -53,6 +54,23 @@ class TorchFSDPDriver(TorchDDPDriver):
 
             1. save/load_on_rank0 = True：表示在加载和保存模型时将所有 rank 上的模型参数全部聚合到 rank0 上，注意这样可能会造成 OOM；
             2. save/load_on_rank0 = False：表示每个 rank 分别保存加载自己独有的模型参数；
+
+    :param model: 传入给 ``Trainer`` 的 ``model`` 参数
+    :param parallel_device: 用于分布式训练的 ``gpu`` 设备
+    :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``python -m torch.distributed.launch`` 启动的
+    :param fp16: 是否开启 fp16 训练
+    :param torch_kwargs: 
+
+        * *fsdp_kwargs* --
+        * *set_grad_to_none* -- 是否在训练过程中在每一次 optimizer 更新后将 grad 置为 ``None``
+        * *non_blocking* -- 表示用于 :meth:`torch.Tensor.to` 方法的参数 non_blocking
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.amp.cuda.GradScaler` 的参数
+    :kwargs:
+        * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
+
+        .. note::
+
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
 
     """
 
@@ -182,6 +200,14 @@ class TorchFSDPDriver(TorchDDPDriver):
             return _module
 
     def save_model(self, filepath: Union[str, Path], only_state_dict: bool = True, **kwargs):
+        """
+        保存的模型到 ``filepath`` 中。
+
+        :param filepath: 文件路径
+        :param only_state_dict: 是否只保存权重；在 ``TorchFSDPDriver`` 中只能为 ``True`` 。
+        :param kwargs:
+        :return:
+        """
         filepath = Path(filepath)
         prefix = filepath.parent
         filename = filepath.name
@@ -205,6 +231,14 @@ class TorchFSDPDriver(TorchDDPDriver):
             raise RuntimeError("When using `TorchFSDPDriver`, only `only_state_dict=True` is allowed.")
 
     def load_model(self, filepath: Union[Path, str], only_state_dict: bool = True, **kwargs):
+        """
+        从 ``filepath`` 中加载权重并赋值到当前 driver 的模型上。
+
+        :param filepath: 加载权重或模型的路径
+        :param load_state_dict: 保存的内容是否只是权重；在 ``TorchFSDPDriver`` 中只能为 ``True`` 。
+        :param kwargs:
+        :return:
+        """
         if only_state_dict is False:
             raise RuntimeError("When using `TorchFSDPDriver`, only `only_state_dict=True` is allowed.")
         filepath = Path(filepath)
