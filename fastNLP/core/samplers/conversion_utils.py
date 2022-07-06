@@ -7,10 +7,10 @@ from fastNLP.core.samplers.unrepeated_sampler import UnrepeatedSampler, Unrepeat
 
 def conversion_between_reproducible_and_unrepeated_sampler(sampler):
     """
-    将 sampler 替换成其对应的 reproducible 版本或 unrepeated 版本。如果输入是 UnrepeatedSampler 但是没找到对应的
-    ReproducibleSampler，
+    将 ``sampler`` 替换成其对应的 reproducible 版本或 unrepeated 版本。如果输入是 :class:`~fastNLP.core.samplers.unrepeated_sampler.UnrepeatedSampler`
+    但是没找到对应的 :class:`~fastNLP.core.samplers.reproducible_sampler.ReproducibleSampler` 则会报错。
 
-    :param sampler: 需要转换的 sampler 。
+    :param sampler: 需要转换的 ``sampler`` ；
     :return:
     """
     assert isinstance(sampler, UnrepeatedSampler) or isinstance(sampler, ReproducibleSampler), \

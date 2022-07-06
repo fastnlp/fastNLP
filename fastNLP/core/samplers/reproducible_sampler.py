@@ -1,3 +1,14 @@
+"""
+:class:`ReproducibleSampler` 是 **fastNLP** 提供的一种特殊 Sampler，它可以记录采样过程中每一次采样和 epoch 的信息，
+方便在保存-加载后能够从上一次采样结束的地方继续进行采样，实现 **断点重训** 。
+
+.. note::
+
+    DataLoader 中只要存在 :class:`ReproducibleSampler` 或 :class:`~fastNLP.core.samplers.reproducible_batch_sampler.ReproducibleBatchSampler`
+    中的一个便可以实现断点重训复现的功能。
+
+"""
+
 __all__ = [
     'ReproducibleSampler',
     'RandomSampler',
@@ -16,10 +27,10 @@ from fastNLP.core.dataset import DataSet
 
 class ReproducibleSampler:
     """
-    可复现的 Sampler 对象。
+    **可复现** 的 Sampler 对象。
 
-    注意所有继承 `ReproducibleSampler` 的类的  `__init__` 方法中都需要加入参数 `**kwargs`，用来使我们再断点重训时重新实例化这个 sampler
-    或者 batch_sampler；注意，所有在 init 中初始化的变量，都不能含有 _ 下横线作为开头；所有不在 init 中设置的变量都必须以下横线开头。
+    注意所有继承 :class:`ReproducibleSampler` 的类的 :meth:`__init__` 方法中都需要加入参数 `**kwargs`，用来使我们再断点重训时重新实例化这个 Sampler
+    注意，所有 :meth:`__init__` 中初始化的变量，都不能含有 ``_`` 下横线作为开头；所有不在 :meth:`__init__` 中设置的变量都必须以下横线开头。
 
     """
     def __init__(self, **kwargs):
@@ -61,9 +72,9 @@ class RandomSampler(ReproducibleSampler):
     随机顺序的 Sampler 。
 
     :param dataset: 实现了 __len__ 方法的数据容器
-    :param shuffle: 是否在每次 iterate 的时候打乱顺序。
-    :param seed: 随机数种子。
-    :param kwargs: 用户不需要使用，fastNLP 内部使用
+    :param shuffle: 是否在每次 iterate 的时候打乱顺序
+    :param seed: 随机数种子
+    :param kwargs: fastNLP 内部使用的参数
     """
     def __init__(self, dataset, shuffle: bool = True, seed: int = 0, **kwargs):
         super(RandomSampler, self).__init__()
@@ -84,15 +95,16 @@ class RandomSampler(ReproducibleSampler):
 
     def __len__(self):
         """
-        返回 sampler 一次完整的迭代过程会产生多少个index。多卡的情况下，只考虑当前rank；
-        :return:
+        返回 sampler 一次完整的迭代过程会产生多少个index。多卡的情况下，只考虑当前rank。
         """
         return self.total_size//self.num_replicas
 
     def __iter__(self):
         r"""
-        当前使用num_consumed_samples做法会在交替使用的时候遇到问题；
+        当前使用 num_consumed_samples 做法会在交替使用的时候遇到问题。
+
         Example::
+
             >>> sampler = RandomSampler()
             >>> iter1 = iter(sampler)
             >>> iter2 = iter(sampler)
@@ -131,8 +143,6 @@ class RandomSampler(ReproducibleSampler):
     def generate_indices(self) -> List[int]:
         """
         生成随机序列
-
-        :return:
         """
         if self.shuffle:
             indices = list(range(self.num_samples))
@@ -176,12 +186,13 @@ class RandomSampler(ReproducibleSampler):
 
     def set_distributed(self, num_replicas:int, rank:int, pad:bool=True):
         """
+        进行分布式的相关设置，应当在初始化该 Sampler 本身后立即被调用。
 
-        :param num_replicas:
-        :param rank:
-        :param pad: 这个 pad 的意思是指如果 sample 数量不整除 num_replicas 的时候，要不要 pad 一下，使得最终使得 replica 上
-            的 sample 数量是完全一致的。
-        :return:
+        :param num_replicas: 分布式训练中的进程总数
+        :param rank: 当前进程的 ``global_rank``。
+        :param pad: 如果 sample 数量不整除 ``num_replicas`` 的时候，要不要 pad 一下，使得最终使得每个进程上
+            的 sample 数量是完全一致的
+        :return: 自身
         """
 
         assert self.during_iter is False, "Cannot set the sampler to be distributed when it is " \
@@ -198,18 +209,15 @@ class RandomSampler(ReproducibleSampler):
     @property
     def total_size(self):
         """
-        这个变量代表的含义是当前这个sampler会最终产生出的index数量，因为replica和pad的原因，这个值可能等于、大于或者小于len(dataset)
-
-        :return:
+        当前 sampler 会最终产生出的 index 数量（包括了其它 rank 的），因为 ``replica`` 和 ``pad`` 的原因，这个值可能等于、
+        大于或者小于 ``len(dataset)``。
         """
         return self.num_consumed_samples + self.num_replicas*self.num_left_samples
 
     @property
     def num_left_samples(self):
         """
-        返回当前 iteration 还有多少个 sample 结束。表示的是当前 rank 的还剩多少
-
-        :return:
+        当前迭代还有多少个 sample 结束。表示的是 **当前 rank** 的还剩多少
         """
         num_consumed_samples = self.num_consumed_samples
         return math.ceil((self.num_samples - num_consumed_samples) / self.num_replicas) if \
@@ -218,9 +226,7 @@ class RandomSampler(ReproducibleSampler):
     @property
     def num_samples(self):
         """
-        返回样本的总数
-
-        :return:
+        样本的总数
         """
         total_len = getattr(self.dataset, 'total_len', None)
         if not isinstance(total_len, int):
@@ -229,7 +235,7 @@ class RandomSampler(ReproducibleSampler):
 
 class SequentialSampler(RandomSampler):
     """
-    按照顺序读取 ``dataset`` 。在多卡情况下，间隔读取，例如，在两卡情况下，卡 0 取 ``[0,2,4,..]``, 卡1取 ``[1,3,5...]`` 。
+    按照顺序读取 ``dataset`` 。在多卡情况下，间隔读取，例如，在两卡情况下，卡 0 取 ``[0,2,4,..]``, 卡 1 取 ``[1,3,5...]`` 。
 
     :param dataset: 实现了 __len__ 方法的数据容器。
     :param kwargs:
@@ -300,17 +306,18 @@ class SortedSampler(SequentialSampler):
     将 ``dataset`` 中的数据根据 ``length`` 从长到短进行迭代。在多卡情况下，由于 ``padding`` , 最后一个 ``sample`` 可能是最长
     的那个 ``sample`` 。
 
-    :param dataset: 实现了 __len__ 方法的数据容器。
-    :param length: 每条数据的长度。
+    :param dataset: 实现了 __len__ 方法的数据容器
+    :param length: 每条数据的长度：
 
         * 为 ``List[int]`` 时
-         应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
+          应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
         * 为 ``str`` 时
-         仅当传入的 ``dataset`` 是 :class:`~fastNLP.DataSet` 时，允许传入 `str` ，该 `str` 将被认为是 ``dataset`` 中的
+          仅当传入的 ``dataset`` 是 :class:`~fastNLP.DataSet` 时，允许传入 `str` ，该 `str` 将被认为是 ``dataset`` 中的
           ``field`` 。若 field 中的元素为 ``int``，则认为该值是 sample 的长度；若不为 ``int`` ，则尝试使用 ``len`` 方法
-          获取该 ``field`` 中每个元素的长度。
-    :param seed: 设置的随机数种子。
-    :param kwargs: fastNLP 保留使用。
+          获取该 ``field`` 中每个元素的长度；
+
+    :param seed: 设置的随机数种子
+    :param kwargs: fastNLP 内部使用的参数
     """
     def __init__(self, dataset, length:Union[str, List], **kwargs):
         super().__init__(dataset=dataset, **kwargs)

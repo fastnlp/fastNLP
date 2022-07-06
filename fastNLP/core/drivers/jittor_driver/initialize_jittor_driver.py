@@ -18,9 +18,9 @@ def initialize_jittor_driver(driver: str, device: Union[str, int, List[int]], mo
 
         创建多卡的 driver
 
-    :param driver: 该参数的值应为以下之一：``["jittor"]``；
-    :param device: ``jittor`` 运行的设备；
-    :param model: 训练或者评测的具体的模型；
+    :param driver: 该参数的值应为以下之一：``["jittor"]``
+    :param device: ``jittor`` 运行的设备
+    :param model: 训练或者评测的具体的模型
     :param kwargs: 
 
     :return: :class:`~fastNLP.core.JittorSingleDriver` 或 :class:`~fastNLP.core.JittorMPIDriver` 实例；

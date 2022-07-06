@@ -21,12 +21,19 @@ from fastNLP.core.log import logger
 
 class OneflowSingleDriver(OneflowDriver):
     r"""
-    用于执行 ``oneflow`` 动态图 cpu 和 单卡 gpu 运算的 ``driver``；
+    用于执行 ``oneflow`` 动态图 cpu 和 单卡 gpu 运算的 ``driver``。
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数；
-    :param device: oneflow.device，当前进程所使用的设备；
-    :param fp16: 是否开启 fp16；目前动态图的单卡下该参数无效；
+    :param model: 传入给 ``Trainer`` 的 ``model`` 参数
+    :param device: oneflow.device，当前进程所使用的设备
+    :param fp16: 是否开启 fp16；目前动态图的单卡下该参数无效。
     :param oneflow_kwargs:
+    :kwargs:
+        * *model_wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为。
+
+        .. note::
+
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
+
     """
 
     def __init__(self, model, device: "oneflow.device", fp16: bool = False, oneflow_kwargs: Dict = None, **kwargs):
@@ -54,7 +61,7 @@ class OneflowSingleDriver(OneflowDriver):
 
     def setup(self):
         r"""
-        将模型迁移到相应的设备上；
+        将模型迁移到相应的设备上。
         """
         if self.model_device is not None:
             self.model.to(self.model_device)
@@ -96,19 +103,19 @@ class OneflowSingleDriver(OneflowDriver):
 
     def unwrap_model(self):
         r"""
-        :return: 返回模型
+        :return: 训练使用的模型
         """
         return self.model
 
     @property
     def data_device(self):
         r"""
-        :return: 数据和模型所在的设备；
+        :return: 数据和模型所在的设备。
         """
         return self.model_device
 
     def is_distributed(self):
         r"""
-        :return: 返回当前使用的 driver 是否是分布式的 driver，在 ``OneflowSingleDriver`` 中返回 ``False``；
+        :return: 当前使用的 driver 是否是分布式的 driver，在 ``OneflowSingleDriver`` 中返回 ``False``。
         """
         return False

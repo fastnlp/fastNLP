@@ -318,7 +318,7 @@ def test_torch_distributed_launch_2(version):
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", 0), ("torch", [0, 1])])
+@pytest.mark.parametrize("driver,device", [("torch", 0), ("torch", [0, 1]), ("torch_fsdp", [0, 1])])
 @magic_argv_env_context
 def test_torch_wo_auto_param_call(
     driver,
@@ -363,7 +363,7 @@ def test_torch_wo_auto_param_call(
 
 # 测试 accumulation_steps；
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", 1), ("torch", [0, 1])])
+@pytest.mark.parametrize("driver,device", [("torch", 1), ("torch", [0, 1]), ("torch_fsdp", [0, 1])])
 @pytest.mark.parametrize("overfit_batches,num_train_batch_per_epoch", [(-1, -1), (0, -1), (3, 10), (6, -1)])
 @magic_argv_env_context
 def test_trainer_overfit_torch(

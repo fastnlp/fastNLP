@@ -99,35 +99,24 @@ class _MixCollateFn:
 
 class MixDataLoader(DataLoader):
     """
-    针对以下四种情况提供的 ``MixDataLoader``， 目前只支持 ``torch`` 框架的版本， 其中 mode 的取值范围为 ``['sequential', 'mix', 'polling', "Sampler"]``:
+    针对以下四种情况提供的 ``MixDataLoader``， 目前只支持 **pytorch** 框架的版本， 其中 mode 的取值范围为 ``['sequential', 'mix', 'polling', 'Sampler']``:
 
         * 当 mode 为 ``'sequential'`` 时，``MixDataLoader``  将 ``datasets`` 的序列或者字典视为一个混合大数据集， 按照 datasets 数据集序列或者字典的顺序一个
           接一个的 sample 完所有数据。
         * 当 mode 为 ``'mix'`` 时， ``MixDataLoader``  将 ``datasets`` 的序列或者字典视为一个混合大数据集， 然后根据用户输入的 idx 序列随机 sample
           混合数据集 datasets 的数据组成一个 batch 序列返回。
         * 当 mode 为 ``'polling'`` 时， ``MixDataLoader`` 按照 ``datasets`` 数据集的顺序， 先从第一个数据集采样一个 batch 的数据返回，
-          再从第二数据集采样一个 batch 数据返回， 直至最后一个数据集采样一个 batch 数据返回后再从第一个数据采样第二个 batch 数据返回，直至所有的数据集都被轮询的采样完。
-        * 当 mode 为 ``"Sampler"`` 时， 该 Sampler 是实现 __iter__() 的实例化对象， 其功能是每次 iter 时返回一个 batch 序列， 其类型为 List[int];
+          再从第二数据集采样一个 batch 数据返回， 直至最后一个数据集采样一个 batch 数据返回后再从第一个数据采样第二个 batch 数据返回，直至所有的数据集都被轮询地的采样完。
+        * 当 mode 为 ``'Sampler'`` 时， 该 Sampler 是实现 __iter__() 的实例化对象， 其功能是每次 iter 时返回一个 batch 序列， 其类型为 List[int];
           且 Sampler 必须将输入的 datasets 视为一个混合大数据集， 其 index 范围为 ``0<idx<len(datasets[0])+...+len(datasets[x])``, 然后参数
           ``sampler``, ``drop_last``, ``ds_ratio`` 均无效。
 
     :param datasets: 实现了 __getitem__() 和 __len__() 对象的序列或者字典。
-    :param mode: mode 控制 ``MixDataLoader`` 运行模式。 mode 的取值范围为 ``['sequential', 'mix', 'polling', "Sampler"]``:
-
-        * 当 mode 为 ``'sequential'`` 时，``MixDataLoader``  将 datasets 的序列或者字典视为一个混合大数据集， 按照 datasets 数据集序列或者字典的顺序一个
-          接一个的 sample 完所有数据。
-        * 当 mode 为 ``'mix'`` 时， ``MixDataLoader``  将 datasets 的序列或者字典视为一个混合大数据集， 然后根据用户输入的 idx 序列随机sample
-          混合数据集 datasets 的数据组成一个 batch 序列返回。
-        * 当 mode 为 ``'polling'`` 时， ``MixDataLoader`` 按照 datasets 数据集的顺序， 先从第一个数据集采样一个 batch 的数据返回，
-          再从第二数据集采样一个 batch 数据返回， 直至最后一个数据集采样一个 batch 数据返回后再从第一个数据采样第二个 batch 数据返回，直至所有的数据集都被轮询的采样完。
-        * 当 mode 为 ``"Sampler"`` 时， 该 Sampler 是实现 __iter__() 的实例化对象， 其功能是每次 iter 时返回一个 batch 序列， 其类型为 List[int];
-          且 Sampler 必须将输入的 datasets 视为一个混合大数据集， 其 index 范围为 ``0<idx<len(datasets[0])+...+len(datasets[x])``, 然后参数
-          sampler, drop_last, ds_ratio 均无效。
-
+    :param mode: ``mode`` 控制 ``MixDataLoader`` 运行模式。 ``mode`` 的取值范围为 ``['sequential', 'mix', 'polling', 'Sampler']``，每种模式的详细功能见上文。
     :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的 Callable 函数。 其取值可以为 ``['auto', Callable, List[Callable], Dict[str, Callable]]``:
 
         * collate_fn 为 ``'auto'`` 时, ``MixDataLoader``  datasets 序列或者dict 初始化一个 :class:`~fastNLP.core.collators.Collator`  作为其默认值，
-          需要注意的是只有当 datasets 包含的所以 dataset 的数据都为 ``List`` 或者 ``Dict`` 类型时才能使用。否则只能用户自己定义 collate_fn .
+          需要注意的是只有当 datasets 包含的所以 dataset 的数据都为 ``List`` 或者 ``Dict`` 类型时才能使用。否则只能用户自己定义 collate_fn 。
         * collate_fn 为  :class:`Callable` 时， 该 collate_fn 会被 datasets 序列或者dict 的所有数据所共享。该 Callable 函数应当接受一个 batch 参数作为输入，
           batch 是一个 List 对象且 List 中的每一条数据都是 dataset 的一条数据；该 Callable 函数还应当返回一个对象。
         * collate_fn 为 ``Dict[str, Callable]`` 时， datasets 的 key 必须和 callable_fn 的 key 一致。 ``MixDataLoader`` 会将 ``collate_fn[key]``
@@ -135,12 +124,12 @@ class MixDataLoader(DataLoader):
 
 
     :param sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，其取值范围为
-        ``[None, str, Dict[str, "Sampler"]]``:
+        ``[None, str, Dict[str, Sampler]]``:
 
-        * sampler 为 ``None`` 时， ``MixDataLoader`` 默认初始化 ``torch`` 的 ``SequentialSampler`` 作为默认值。其功能时顺序返回 dataset 的下标。
-        * sampler 为 ``str`` 时， sampler 选择范围为 ``[rand, seq]``。当 sampler 为 ``rand`` 时，``MixDataLoader`` 默认初始化 ``torch`` 的  ``RandomSampler``
-          作为默认值， 其功能时随机采样 dataset 的下标并返回。 当 sampler 为 ``seq`` 时， ``MixDataLoader`` 默认初始化 ``torch`` 的 ``SequentialSampler`` 作为默认值。其功能时顺序返回 dataset 的下标。
-        * sampler 为 ``Dict[str, "Sampler"]`` 时， ``Sampler`` 为用户定义的实现了 __len__() 和 __iter__() 的实例化对象。 其每次 iter 必须返回一个 int 下标。
+        * sampler 为 ``None`` 时， ``MixDataLoader`` 默认初始化 **pytorch** 的 ``SequentialSampler`` 作为默认值。其功能时顺序返回 dataset 的下标。
+        * sampler 为 ``str`` 时， sampler 选择范围为 ``[rand, seq]``。当 sampler 为 ``rand`` 时，``MixDataLoader`` 默认初始化 **pytorch** 的  ``RandomSampler``
+          作为默认值， 其功能时随机采样 dataset 的下标并返回。 当 sampler 为 ``seq`` 时， ``MixDataLoader`` 默认初始化 **pytorch** 的 ``SequentialSampler`` 作为默认值。其功能时顺序返回 dataset 的下标。
+        * sampler 为 ``Dict[str, Sampler]`` 时， ``Sampler`` 为用户定义的实现了 __len__() 和 __iter__() 的实例化对象。 其每次 iter 必须返回一个 int 下标。
           Dict 的 str 必须和 datasets 的 key 一致。 也即是 ``Dict[str, Sampler]`` 为 datasets 字典的每个 dataset 初始化了一个 Sampler。
 
     :param num_workers: 当 ``num_workers > 0`` 时, ``MixDataLoader`` 会开启 ``num_workers`` 个子进程来处理数据， 可以加快数据处理速度，但同时

@@ -164,7 +164,7 @@ class SNLILoader(JsonLoader):
         :param str paths: 传入一个目录, 将在该目录下寻找snli_1.0_train.jsonl, snli_1.0_dev.jsonl
             和snli_1.0_test.jsonl三个文件。
 
-        :return: 返回的 :class:`~fastNLP.io.DataBundle`
+        :return: :class:`~fastNLP.io.DataBundle`
         """
         _paths = {}
         if paths is None:

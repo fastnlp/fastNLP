@@ -83,26 +83,36 @@ class DeepSpeedDriver(TorchDDPDriver):
                 )
                 trainer.run()
 
-            通过运行 ``deepspeed train.py`` 启动；
+            通过运行 ``deepspeed train.py`` 启动。
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数；
-    :param parallel_device: 用于分布式训练的 ``gpu`` 设备；
-    :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``python -m torch.distributed.launch`` 启动的；
-    :param fp16: 是否开启 fp16 训练；
+    :param model: 传入给 ``Trainer`` 的 ``model`` 参数。
+    :param parallel_device: 用于分布式训练的 ``gpu`` 设备。
+    :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``python -m torch.distributed.launch`` 启动的。
+    :param fp16: 是否开启 fp16 训练。
     :param deepspeed_kwargs: 
         * *strategy* -- 使用 ZeRO 优化的策略，默认为 ``deepspeed``；目前仅支持以下值：
 
             * ``deepspeed`` -- 使用 ZeRO 的第二阶段，等同于 ``deepspeed_stage_2``；
             * ``deepspeed_stage_1`` -- 使用 ZeRO 的第一阶段，仅将 ``optimizer`` 的状态分散到不同设备上；
-            * ``deepspeed_stage_2`` -- 使用 ZeRO 的第二阶段，将 ``optimizer`` 和**梯度**分散到不同设备上；
+            * ``deepspeed_stage_2`` -- 使用 ZeRO 的第二阶段，将 ``optimizer`` 和 **梯度** 分散到不同设备上；
             * ``deepspeed_stage_2_offload`` -- 使用 ZeRO 的第二阶段，并且借助 cpu 的内存来进一步节约显存；
-            * ``deepspeed_stage_3`` -- 使用 ZeRO 的第三阶段，将 ``optimizer`` 、**梯度**和**模型**分散到不同设备上；
+            * ``deepspeed_stage_3`` -- 使用 ZeRO 的第三阶段，将 ``optimizer`` 、**梯度** 和 **模型** 分散到不同设备上；
             * ``deepspeed_stage_3_offload`` -- 使用 ZeRO 的第三阶段，并且借助 cpu 的内存来进一步节约显存；
             * ``deepspeed_stage_3_offload_nvme`` -- 使用 ZeRO 的第三阶段，并且借助 NVMe 硬盘来进一步节约显存；
-        * *logging_level* -- ``deepspeed`` 库的日志等级，默认为 **logging.ERROR**；
+        * *logging_level* -- ``deepspeed`` 库的日志等级，默认为 **logging.ERROR**。
         * *config* -- ``deepspeed`` 的各项设置；**FastNLP** 允许用户传入自己的设置以增强灵活性，但这会使参数
           中的 ``optimizer`` 、``strategy`` 、 ``fp16`` 等失效，即当这个参数存在时，**FastNLP** 会用该参数覆盖
-          其它的设置；
+          其它的设置。
+    :kwargs:
+        * *accumulation_steps* -- 即在 :class:`~fastNLP.core.controllers.Trainer` 传入的 ``accumulation_steps`` 。 deepspeed 会将 ``config`` 的
+          ``gradient_accumulation_steps`` 设置为该值。
+        * *train_dataloader* -- 即在 :class:`~fastNLP.core.controllers.Trainer` 传入的 ``train_dataloader`` 。 ``deepspeed`` 需要通过它来获取
+          数据的 ``batch_size`` 用于设置 ``train_micro_batch_size_per_gpu`` 。如果没有传入的话，则会设置为 **1** 。
+        * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
+
+        .. note::
+
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.auto_param_call`。
     """
     # TODO fp16 load_config
     def __init__(
@@ -357,28 +367,38 @@ class DeepSpeedDriver(TorchDDPDriver):
                 self.config["amp"] = {"enabled": True, "opt_level": "O1"}
 
     def zero_grad(self):
+        """
+        进行梯度置零操作；由于 :meth:`DeepSpeedEngine.step` 包含了 :meth:`zero_step` 的功能，因此该接口实际无意义。
+        """
         # DeepSpeedEngine.step 包含了 zero_grad 功能
         pass
 
     def backward(self, loss):
+        """
+        对 ``loss`` 进行反向传播
+        """
         self.model.backward(loss)
 
     def step(self):
+        """
+        更新模型的参数
+        """
         self.model.step()
 
     def get_model_no_sync_context(self):
         r"""
-        :return: 返回一个 ``context`` 上下文环境，用于关闭各个进程之间的同步；在 ``deepspeed`` 中，返回一个空的上下文
+        :return: 一个 ``context`` 上下文环境，用于关闭各个进程之间的同步；在 ``deepspeed`` 中，返回一个空的上下文
         """
         # 注意此时的 model 是 "DistributedDataParallel" 对象；
         return nullcontext
 
     def save_model(self, filepath: Union[str, Path], only_state_dict: bool = False, **kwargs):
         """
-        保存当前 driver 的模型到 folder 下。
+        保存的模型到 ``filepath`` 中。
 
-        :param filepath: 保存到哪个文件夹；
-        :param only_state_dict: 是否只保存权重；在 ``DeepSpeedDriver`` 中该参数无效；
+        :param filepath: 文件路径
+        :param only_state_dict: 是否只保存权重；在 ``DeepSpeedDriver`` 中该参数无效。
+        :param kwargs: 需要传入 **deepspeed** 模型 :meth:`save_checkpoint` 的其它参数。
         :return:
         """
         # deepspeed engine 要求在每个 rank 都调用 save_checkpoint，故去掉了 rank_zero_call 装饰器
@@ -398,11 +418,11 @@ class DeepSpeedDriver(TorchDDPDriver):
 
     def load_model(self, filepath: Union[Path, str], only_state_dict: bool = False, **kwargs):
         """
-        从 folder 中加载权重并赋值到当前 driver 的模型上。
+        从 ``filepath`` 中加载权重并赋值到当前 driver 的模型上。
 
         :param filepath: 加载权重或模型的路径
-        :param load_state_dict: 保存的内容是否只是权重；在 ``DeepSpeedDriver`` 中该参数无效；
-        :param kwargs:
+        :param load_state_dict: 保存的内容是否只是权重；在 ``DeepSpeedDriver`` 中该参数无效。
+        :param kwargs: 需要传入 **deepspeed** 模型 :meth:`load_checkpoint` 的其它参数。
         :return:
         """
         if not only_state_dict:
@@ -411,6 +431,17 @@ class DeepSpeedDriver(TorchDDPDriver):
         self.model.load_checkpoint(filepath, **kwargs)
 
     def save_checkpoint(self, folder: Path, states: Dict, dataloader, only_state_dict: bool = True, should_save_model: bool = True, **kwargs):
+        r"""
+        断点重训的保存函数，该函数会负责保存 **优化器** 、 **sampler** 和 **fp16** 的状态，以及 **模型** （若 ``should_save_model`` 为 ``True``）
+
+        :param folder: 保存断点重训的状态的文件夹；:meth:`save_checkpoint` 函数应该在该路径下面下面新增名为 ``FASTNLP_CHECKPOINT_FILENAME`` 与
+            ``FASTNLP_MODEL_FILENAME`` （如果 ``should_save_model`` 为 ``True`` ）的文件。把 model 相关的内容放入到 ``FASTNLP_MODEL_FILENAME`` 文件
+            中，将传入的 ``states`` 以及自身产生其它状态一并保存在 ``FASTNLP_CHECKPOINT_FILENAME`` 里面。
+        :param states: 由 :class:`~fastNLP.core.controllers.Trainer` 传入的一个字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态。
+        :param dataloader: 正在使用的 dataloader。
+        :param only_state_dict: 是否只保存模型的参数，当 ``should_save_model`` 为 ``False`` ，该参数无效。
+        :param should_save_model: 是否应该保存模型，如果为 ``False`` ，Driver 将不负责 model 的保存。
+        """
         # deepspeed engine 要求在每个 rank 都调用 save_checkpoint，故去掉了 rank_zero_call 装饰器
         # 1. 保存 sampler 的状态
         num_consumed_batches = states.pop('num_consumed_batches')
@@ -425,6 +456,36 @@ class DeepSpeedDriver(TorchDDPDriver):
                                     client_state=states)
 
     def load_checkpoint(self, folder: Path, dataloader, only_state_dict: bool = True, should_load_model: bool = True, **kwargs) -> Dict:
+        r"""
+        断点重训的加载函数，该函数会负责读取数据，并且恢复 **优化器** 、**sampler** 、 **fp16** 的状态和 **模型** （如果 ``should_load_model`` 为 True）以及其它
+        在 :meth:`save_checkpoint` 函数中执行的保存操作，然后将一个 state 字典返回给 :class:`~fastNLP.core.controllers.Trainer` （ 内容为 :meth:`save_checkpoint` 
+        接受到的 ``states`` ）。
+
+        该函数应该在所有 rank 上执行。
+
+        :param folder: 读取该 folder 下的 ``FASTNLP_CHECKPOINT_FILENAME`` 文件与 ``FASTNLP_MODEL_FILENAME``
+            （如果 should_load_model 为True）。
+        :param dataloader: 当前给定 dataloader，需要根据保存的 dataloader 状态合理设置。若该值为 ``None`` ，则不需要返回 ``'dataloader'``
+            以及 ``'batch_idx_in_epoch'`` 这两个值。
+        :param only_state_dict: 是否仅读取模型的 state_dict ，当 ``should_save_model`` 为 ``False`` ，该参数无效。如果为 ``True`` ，说明保存的内容为权重；如果为
+            False 说明保存的是模型，但也是通过当前 Driver 的模型去加载保存的模型的权重，而不是使用保存的模型替换当前模型。
+        :param should_load_model: 是否应该加载模型，如果为 ``False`` ，Driver 将不负责加载模型。若该参数为 ``True`` ，但在保存的状态中没有
+            找到对应的模型状态，则报错。
+        :return: :meth:`save_checkpoint` 函数输入的 ``states`` 内容。除此之外，还返回的内容有：
+
+            * *dataloader* -- 根据传入的 ``dataloader`` 与读取出的状态设置为合理状态的 dataloader。在当前 ``dataloader`` 样本数与读取出的 sampler 样本数
+              不一致时报错。
+            * *batch_idx_in_epoch* -- :class:`int` 类型的数据，表明当前 epoch 进行到了第几个 batch 。请注意，该值不能仅通过保存的数据中读取的，因为前后两次运行的
+              ``batch_size`` 可能有变化，而应该符合以下等式::
+
+                返回的 dataloader 还会产生的 batch 数量 + batch_idx_in_epoch = 原来不断点训练时的 batch 的总数
+              
+              由于 ``返回的 dataloader 还会产生的batch数`` 在 ``batch_size`` 与 ``drop_last`` 参数给定的情况下，无法改变，因此只能通过调整 ``batch_idx_in_epoch``
+              这个值来使等式成立。一个简单的计算原则如下：
+
+                * drop_last 为 ``True`` 时，等同于 floor(sample_in_this_rank/batch_size) - floor(num_left_samples/batch_size)；
+                * drop_last 为 ``False`` 时，等同于 ceil(sample_in_this_rank/batch_size) - ceil(num_left_samples/batch_size)。
+        """
         # 1. 加载模型状态；
         if not should_load_model:
             logger.rank_zero_warning("Loading checkpoint without model is not allowed for `DeepSpeedDriver`, "
@@ -442,4 +503,7 @@ class DeepSpeedDriver(TorchDDPDriver):
 
     @property
     def stage_3(self) -> bool:
+        """
+        判断是否为第三阶段的 ZeRO 优化
+        """
         return self.config.get("zero_optimization") and self.config.get("zero_optimization").get("stage") == 3

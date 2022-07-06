@@ -264,7 +264,7 @@ class Callback:
         r"""
         ``callback`` 的名称，我们会使用该名称从 ``checkpoint`` 中读取的相应的 ``state`` 并传递给 :meth:`on_load_checkpoint` 函数。
 
-        :return: 返回用于区分该 ``callback`` 实例的名称；
+        :return: 用于区分该 ``callback`` 实例的名称；
         """
         return self.__class__.__name__
 

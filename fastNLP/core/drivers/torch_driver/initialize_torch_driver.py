@@ -9,6 +9,7 @@ from .single_device import TorchSingleDriver
 from .ddp import TorchDDPDriver
 from .fairscale import FairScaleDriver
 from .deepspeed import DeepSpeedDriver
+from .torch_fsdp import TorchFSDPDriver
 from fastNLP.core.log import logger
 from fastNLP.envs import FASTNLP_BACKEND_LAUNCH
 from pkg_resources import parse_version
@@ -21,11 +22,16 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
     r"""
     用来根据参数 ``driver` 和 ``device`` 来确定并且初始化一个具体的 ``Driver`` 实例然后返回回去；
 
-    :param driver: 该参数的值应为以下之一：``["torch", "fairscale", "deepspeed"]``；
-    :param device: 该参数的格式与 ``Trainer`` 对参数 ``device`` 的要求一致；
-    :param model: 训练或者评测的具体的模型；
+    :param driver: 该参数的值应为以下之一：``["torch", "fairscale", "deepspeed", "torch_fsdp"]``
+    :param device: 该参数的格式与 ``Trainer`` 对参数 ``device`` 的要求一致
+    :param model: 训练或者评测的具体的模型
 
-    :return: 返回一个 :class:`~fastNLP.core.TorchSingleDriver` 或 :class:`~fastNLP.core.TorchDDPDriver` 实例；
+    :return: 下列类型之一的实例：
+        * :class:`~fastNLP.core.drivers.torch_driver.TorchSingleDriver` 
+        * :class:`~fastNLP.core.drivers.torch_driver.TorchDDPDriver` 
+        * :class:`~fastNLP.core.drivers.torch_driver.DeepSpeedDriver`
+        * :class:`~fastNLP.core.drivers.torch_driver.FairScaleDriver`
+        * :class:`~fastNLP.core.drivers.torch_driver.TorchFSDPDriver`
     """
     if parse_version(torch.__version__) < parse_version('1.6'):
         raise RuntimeError(f"Pytorch(current version:{torch.__version__}) need to be older than 1.6.")
@@ -45,7 +51,7 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
             return TorchDDPDriver(model, torch.device(f"cuda:{os.environ['LOCAL_RANK']}"),
                                   is_pull_by_torch_run=True, **kwargs)
 
-    if driver not in {"torch", "fairscale", "deepspeed"}:
+    if driver not in {"torch", "fairscale", "deepspeed", "torch_fsdp"}:
         raise ValueError("Parameter `driver` can only be one of these values: ['torch', 'fairscale'].")
 
     _could_use_device_num = torch.cuda.device_count()
@@ -96,3 +102,11 @@ def initialize_torch_driver(driver: str, device: Optional[Union[str, "torch.devi
             return DeepSpeedDriver(model, [device], **kwargs)
         else:
             return DeepSpeedDriver(model, device, **kwargs)
+    elif driver == "torch_fsdp":
+        if not isinstance(device, List):
+            if device.type == 'cpu':
+                raise ValueError("You are using `torch_fsdp` driver, but your chosen `device` is 'cpu'.")
+            logger.warning_once("Notice you are using `torch_fsdp`, but the `device` is only one gpu.")
+            return TorchFSDPDriver(model, [device], **kwargs)
+        else:
+            return TorchFSDPDriver(model, device, **kwargs)

@@ -36,15 +36,17 @@ def _construct_char_vocab_from_vocab(vocab: Vocabulary, min_freq: int = 1, inclu
 
 def get_embeddings(init_embed, padding_idx=None):
     r"""
-    根据输入的init_embed返回Embedding对象。如果输入是tuple, 则随机初始化一个nn.Embedding; 如果输入是numpy.ndarray, 则按照ndarray
-    的值将nn.Embedding初始化; 如果输入是torch.Tensor, 则按该值初始化nn.Embedding; 如果输入是fastNLP中的embedding将不做处理
-    返回原对象。
+    根据输入的 ``init_embed`` 返回 ``Embedding`` 对象。
 
-    :param init_embed: 可以是 tuple:(num_embedings, embedding_dim), 即embedding的大小和每个词的维度;也可以传入
-        nn.Embedding 对象, 此时就以传入的对象作为embedding; 传入np.ndarray也行，将使用传入的ndarray作为作为Embedding初始化;
-        传入torch.Tensor, 将使用传入的值作为Embedding初始化。
-    :param padding_idx: 当传入tuple时，padding_idx有效
-    :return nn.Embedding:  embeddings
+    :param init_embed: 支持以下几种输入类型：
+
+            - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+            - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+            - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+            - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+
+    :param padding_idx: 当传入 :class:`tuple` 时，``padding_idx`` 有效
+    :return:
     """
     if isinstance(init_embed, tuple):
         res = nn.Embedding(
@@ -64,14 +66,14 @@ def get_embeddings(init_embed, padding_idx=None):
     return res
 
 
-def get_sinusoid_encoding_table(n_position, d_hid, padding_idx=None):
+def get_sinusoid_encoding_table(n_position: int, d_hid: int, padding_idx=None) -> "torch.FloatTensor":
     """
-    sinusoid的embedding，其中position的表示中，偶数维(0,2,4,...)是sin, 奇数(1,3,5...)是cos
+    sinusoid 的 embedding，其中 ``position`` 的表示中，偶数维 ``(0,2,4,...)`` 是 sin，奇数 ``(1,3,5...)`` 是 cos。
 
-    :param int n_position: 一共多少个position
+    :param int n_position: 一共多少个 position
     :param int d_hid: 多少维度，需要为偶数
     :param padding_idx:
-    :return: torch.FloatTensor, shape为n_position x d_hid
+    :return: 形状为 ``[n_position, d_hid]`` 的张量
     """
 
     def cal_angle(position, hid_idx):

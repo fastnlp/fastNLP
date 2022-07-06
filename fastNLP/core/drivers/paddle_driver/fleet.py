@@ -61,7 +61,7 @@ r"""
 .. note::
 
     多机的启动强制要求用户在每一台机器上使用 ``python -m paddle.distributed.launch`` 启动；因此我们不会在 ``PaddleFleetDriver``
-    中保存任何当前有多少台机器的信息；
+    中保存任何当前有多少台机器的信息。
 
 """
 import os
@@ -81,7 +81,6 @@ from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.core.utils import (
     auto_param_call,
     check_user_specific_params,
-    is_in_paddle_dist,
     is_in_paddle_dist,
     get_paddle_device_id,
 )
@@ -120,26 +119,26 @@ __all__ = [
 
 class PaddleFleetDriver(PaddleDriver):
     """
-    :param model: 训练使用的模型；
+    :param model: 训练使用的模型。
 
         * 如果不想自己初始化分布式环境，类型应为 :class:`paddle.nn.Layer`；
         * 如果已经在外面初始化了分布式环境，类型应为 :class:`paddle.DataParallel`；
 
     :param parallel_device: 多卡训练时使用的设备，必须是一个列表。
-        当使用 ``python -m paddle.distributed.launch`` 启动时，该参数无效；
+        当使用 ``python -m paddle.distributed.launch`` 启动时，该参数无效。
     :param is_pull_by_paddle_run: 标记当前进程是否为通过 ``python -m paddle.distributed.launch`` 启动的。
         这个参数仅在 :class:`~fastNLP.core.Trainer` 中初始化 driver 时使用
-    :param fp16: 是否开启混合精度训练；
+    :param fp16: 是否开启混合精度训练
     :param paddle_kwargs:
         * *fleet_kwargs* -- 用于在使用 ``PaddleFleetDriver`` 时指定 ``DataParallel`` 和 ``fleet`` 初始化时的参数，包括：
             
-            * *is_collective* -- 是否使用 paddle 集群式的分布式训练方法，目前仅支持为 ``True`` 的情况；
-            * *role_maker* -- 初始化 ``fleet`` 分布式训练 API 时使用的 ``RoleMaker``；
-            * 其它用于初始化 ``DataParallel`` 的参数；
-        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`paddle.amp.GradScaler` 的参数;
+            * *is_collective* -- 是否使用 paddle 集群式的分布式训练方法，目前仅支持为 ``True`` 的情况。
+            * *role_maker* -- 初始化 ``fleet`` 分布式训练 API 时使用的 ``RoleMaker``。
+            * 其它用于初始化 ``DataParallel`` 的参数。
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`paddle.amp.GradScaler` 的参数
     
     :kwargs:
-        * wo_auto_param_call (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为；
+        * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
 
         .. note::
 
@@ -176,9 +175,9 @@ class PaddleFleetDriver(PaddleDriver):
         self.parallel_device = parallel_device
         # 在初始化时，如果发现 is_pull_by_paddle_run ，则将 parallel_device 设置成当前进程的gpu
         if is_pull_by_paddle_run:
-            self._model_device = parallel_device
+            self.model_device = parallel_device
         else:
-            self._model_device = parallel_device[self.local_rank]
+            self.model_device = parallel_device[self.local_rank]
 
         # 如果用户自己在外面初始化了并行模型；
         self.outside_fleet = False
@@ -311,6 +310,9 @@ class PaddleFleetDriver(PaddleDriver):
         self.global_rank = paddledist.get_rank()
 
     def barrier(self):
+        """
+        同步进程之间的操作
+        """
         if int(os.environ.get(FASTNLP_NO_SYNC, 0)) < 1:  # 当 FASTNLP_NO_SYNC 小于 1 时实际执行
             paddledist.barrier()
 
@@ -329,6 +331,9 @@ class PaddleFleetDriver(PaddleDriver):
 
     @property
     def world_size(self) -> int:
+        """
+        分布式训练的进程总数 ``WOLRD_SIZE``
+        """
         return self._world_size
 
     @world_size.setter
@@ -337,6 +342,9 @@ class PaddleFleetDriver(PaddleDriver):
 
     @property
     def global_rank(self) -> int:
+        """
+        当前进程的全局编号 ``global_rank``
+        """
         return self._global_rank
 
     @global_rank.setter
@@ -345,20 +353,16 @@ class PaddleFleetDriver(PaddleDriver):
 
     @property
     def local_rank(self) -> int:
+        """
+        当前进程的局部编号 ``local_rank``
+        """
         return int(os.getenv("PADDLE_RANK_IN_NODE", "0"))
-
-    @property
-    def model_device(self):
-        """
-        :return: 模型所在的设备；
-        """
-        return self._model_device
 
     @property
     def data_device(self):
         """
-        :return: 数据所在的设备；由于 **PaddlePaddle** 可以通过环境变量获取当前进程的设备，因此该属性
-            和 ``model_device`` 表现相同；
+        数据所在的设备；由于 **PaddlePaddle** 可以通过环境变量获取当前进程的设备，因此该属性
+        和 ``model_device`` 表现相同。
         """
         return self.model_device
 
@@ -484,9 +488,15 @@ class PaddleFleetDriver(PaddleDriver):
             raise ValueError("Parameter `dist_sampler` can only be one of three values: ('dist', 'unrepeatdist', None).")
 
     def is_global_zero(self) -> bool:
+        r"""
+        :return: 当前的进程是否在全局上是进程 0
+        """
         return self.global_rank == 0
 
     def get_model_no_sync_context(self):
+        r"""
+        :return: 一个 ``context`` 上下文环境，用于关闭各个进程之间的同步。
+        """
         return self.model.no_sync
 
     def unwrap_model(self) -> "paddle.nn.Layer":
@@ -500,11 +510,14 @@ class PaddleFleetDriver(PaddleDriver):
             return _layers
 
     def get_local_rank(self) -> int:
+        r"""
+        :return: 当前进程局部的进程编号。
+        """
         return self.local_rank
 
     def is_distributed(self) -> bool:
         """
-        判断是否为分布式的 **Driver** ，在 ``PaddleFleetDriver`` 中，返回 ``True``。
+        :return: 当前使用的 driver 是否是分布式的 driver，在 ``PaddleFleetDriver`` 中，返回 ``True``。
         """
         return True
 
@@ -518,9 +531,39 @@ class PaddleFleetDriver(PaddleDriver):
                                 f"not {type(each_optimizer)}.")
 
     def broadcast_object(self, obj, src:int=0, group=None, **kwargs):
+        r"""
+        从 ``src`` 端将 ``obj`` 对象（可能是 tensor ，可能是 object ）广播到其它进程。如果是非 tensor 的对象会尝试使用 pickle 进行打包进行
+        传输，然后在接收处处再加载回来。仅在分布式的 driver 中有实际意义。
+
+        :param obj: obj，可能是 Tensor 或 嵌套类型的数据
+        :param src: 发送方的 ``global_rank``
+        :param group: 进程所在的通信组
+        :return: 如果当前 rank 是接收端，则返回接收到的参数；如果是 source 端则返回发送的内容。如果环境变量 ``FASTNLP_NO_SYNC`` 为 **2** 则
+            返回 ``None``
+        """
         # 因为设置了CUDA_VISIBLE_DEVICES，可能会引起错误
         device = _convert_data_device(self.data_device)
         return fastnlp_paddle_broadcast_object(obj, src, device=device, group=group)
 
     def all_gather(self, obj, group=None) -> List:
+        r"""
+        将 ``obj`` 互相传送到其它所有的 rank 上，其中 ``obj`` 可能是 Tensor，也可能是嵌套结构的 object 。如果不是基础类型的数据，将会尝试通过
+        pickle 进行序列化，接收到之后再反序列化。
+
+        example::
+
+            >>> # rank 0
+            >>> obj = {'a': 1, 'b':[1, 2], 'c':{'d': 1}}
+            >>> # rank 1
+            >>> obj = {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
+            >>> # after all_gather():
+            >>> result = [
+                    {'a': 1, 'b':[1, 2], 'c':{'d': 1}},
+                    {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
+                ]
+
+        :param obj: 需要传输的对象，在每个 rank 上都应该保持相同的结构。
+        :param group: 进程所在的通信组。
+        :return: 所有 rank 发送的 ``obj`` 聚合在一起的内容；如果环境变量 ``FASTNLP_NO_SYNC`` 为 **2** 则不会执行，直接返回 ``[obj]`` 。
+        """
         return fastnlp_paddle_all_gather(obj, group=group)

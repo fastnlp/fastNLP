@@ -201,19 +201,31 @@ def _bio_tag_to_spans(tags, ignore_labels=None):
 
 class SpanFPreRecMetric(Metric):
     r"""
+    在 **序列标注** 任务中评估抽取结果匹配度的 **Metric** 。
 
-    :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` 。支持的标签为"B"(没有label)；或"B-xxx"(xxx为某种label，比如POS中的NN)，
-        在解码时，会将相同xxx的认为是同一个label，比如['B-NN', 'E-NN']会被合并为一个'NN'.
-    :param encoding_type: 目前支持bio, bmes, bmeso, bioes。默认为None，通过tag_vocab自动判断.
-    :param ignore_labels: str 组成的list. 这个list中的class不会被用于计算。例如在POS tagging时传入['NN']，则不会计算'NN'个label
-    :param only_gross: 是否只计算总的f1, precision, recall的值；如果为False，不仅返回总的f1, pre, rec, 还会返回每个label的f1, pre, rec
-    :param f_type: `micro` 或 `macro` . `micro` :通过先计算总体的TP，FN和FP的数量，再计算f, precision, recall; `macro` : 分布计算每个类别的f, precision, recall，然后做平均（各类别f的权重相同）
-    :param beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` . 常用为 `beta=0.5, 1, 2` 若为0.5则精确率的权重高于召回率；若为1，则两者平等；若为2，则召回率权重高于精确率。
-    :param backend: 目前支持四种类型的 backend, ``[torch, paddle, jittor, auto]``。其中 ``auto`` 表示根据实际调用
-        Metric.update() 函数时传入的参数决定具体的 ``backend`` ，大部分情况下直接使用 ``auto`` 即可。
-    :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到metric，
-        当 backend 不支持分布式时，该参数无意义。如果为 None ，将在 :class:`~fastNLP.core.controllers.Evaluator` 中根据 sampler 是否使用分布式
-        进行自动设置。
+    :param tag_vocab: 标签的 :class:`~fastNLP.core.Vocabulary` 。支持的标签有 ``"B"`` (没有label)；或 ``"B-xxx"`` ( ``xxx`` 为某种 label ，比如 POS 中的 NN)，
+        在解码时，会将相同 ``xxx`` 的认为是同一个 label ，比如 ['B-NN', 'E-NN'] 会被合并为一个 'NN' 。
+    :param encoding_type: 目前支持 ``['bio', 'bmes', 'bmeso', 'bioes', None]`` 。默认为 ``None`` ，通过 ``tag_vocab`` 自动判断
+    :param ignore_labels: 字符串组成的列表，这个列表中包含的内容不会被用于计算。例如在 *POS tagging* 时传入 ``['NN']`` ，则不会计算 ``'NN'`` 这个 ``label``
+    :param only_gross: 是否只计算总的 ``f1``, ``precision`` , ``recall`` 的值。如果为 ``False`` ，不仅返回总的 ``f1`` , ``pre`` , ``rec`` , 还会返回每个 label 
+        ``f1`` , ``pre`` , ``rec`` 
+    :param f_type: ``'micro'`` 或 ``'macro'``。
+    
+        - *micro* -- 通过先计算总体的 ``TP``， ``FN`` 和 ``FP`` 的数量，再计算 ``f``, ``precision``, ``recall`` ；
+        - *macro* -- 分别计算每个类别的 ``f`` , ``precision`` , ``recall`` ，然后做平均（各类别 ``f`` 的权重相同）；
+    
+    :param beta: **f_beta** 分数中的 ``beta`` 值。 常用为 ``beta=0.5, 1, 2`` 若为 0.5 则 **精确率** 的权重高于 **召回率** ；若为1，则两者平等；若为2，则
+        **召回率** 权重高于 **精确率** 。**f_beta** 分数的计算公式为：
+        
+        .. math::
+
+            f_{beta} = \\frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}
+
+    :param backend: 目前支持五种类型的 backend, ``['torch', 'paddle', 'jittor', 'oneflow', 'auto']``。其中 ``'auto'`` 表示根据实际调用 :meth:`update`
+        函数时传入的参数决定具体的 backend ，大部分情况下直接使用 ``'auto'`` 即可。
+    :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到 metric，
+        当 backend 不支持分布式时，该参数无意义。如果为 ``None`` ，将在 :class:`~fastNLP.core.controllers.Evaluator` 中根据
+        sampler 是否使用分布式进行自动设置。
     """
     def __init__(self, tag_vocab: Vocabulary, encoding_type: str = None, ignore_labels: List[str] = None,
                  only_gross: bool = True, f_type='micro',
@@ -262,7 +274,7 @@ class SpanFPreRecMetric(Metric):
 
     def get_metric(self) -> dict:
         """
-        get_metric 函数将根据 update 函数累计的评价指标统计量来计算最终的评价结果.
+        :meth:`get_metric` 函数将根据 :meth:`update` 函数累计的评价指标统计量来计算最终的评价结果。
         """
         evaluate_result = {}
 
@@ -317,12 +329,12 @@ class SpanFPreRecMetric(Metric):
         return evaluate_result
 
     def update(self, pred, target, seq_len: Optional[List] = None) -> None:
-        r"""u
-        pdate函数将针对一个批次的预测结果做评价指标的累计
+        r"""
+        :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
 
-        :param pred: [batch, seq_len] 或者 [batch, seq_len, len(tag_vocab)], 预测的结果
-        :param target: [batch, seq_len], 真实值
-        :param seq_len: [batch] 文本长度标记
+        :param pred: 预测的结果，大小为 ``[batch, seq_len]`` 或者 ``[batch, seq_len, len(tag_vocab)]``
+        :param target: 真实值，大小为 ``[batch, seq_len]``
+        :param seq_len: 文本长度标记，大小为 ``[batch]``
         :return:
         """
         pred = self.tensor2numpy(pred)

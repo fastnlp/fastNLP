@@ -9,21 +9,22 @@ __all__ = [
     "TransformerState"
 ]
 
-from typing import Union
+from typing import Union, List, Tuple
 import torch
 
 
 class State:
-    def __init__(self, encoder_output=None, encoder_mask=None, **kwargs):
-        """
-        每个Decoder都有对应的State对象用来承载encoder的输出以及当前时刻之前的decode状态。
+    """
+    每个 ``Decoder`` 都有对应的 :class:`State` 对象用来承载 ``encoder`` 的输出以及当前时刻之前的 ``decode`` 状态。
 
-        :param Union[torch.Tensor, list, tuple] encoder_output: 如果不为None，内部元素需要为torch.Tensor, 默认其中第一维是batch
-            维度
-        :param Union[torch.Tensor, list, tuple] encoder_mask: 如果部位None，内部元素需要torch.Tensor, 默认其中第一维是batch
-            维度
-        :param kwargs:
-        """
+    :param encoder_output: 如果不为 ``None`` ，内部元素需要为 :class:`torch.Tensor`，默认其中第一维是 ``batch_size``
+        维度
+    :param encoder_mask: 如果部位 ``None``，内部元素需要为 :class:`torch.Tensor`，默认其中第一维是 ``batch_size``
+        维度
+    :param kwargs:
+    """
+    def __init__(self, encoder_output: Union[torch.Tensor, List, Tuple]=None, 
+                encoder_mask: Union[torch.Tensor, List, Tuple]=None, **kwargs):
         self.encoder_output = encoder_output
         self.encoder_mask = encoder_mask
         self._decode_length = 0
@@ -31,9 +32,7 @@ class State:
     @property
     def num_samples(self):
         """
-        返回的State中包含的是多少个sample的encoder状态，主要用于Generate的时候确定batch的大小。
-
-        :return:
+        返回的 State 中包含的是多少个 sample 的 encoder 状态，主要用于 Generate 的时候确定 batch_size 的大小。
         """
         if self.encoder_output is not None:
             return self.encoder_output.size(0)
@@ -43,9 +42,7 @@ class State:
     @property
     def decode_length(self):
         """
-        当前Decode到哪个token了，decoder只会从decode_length之后的token开始decode, 为0说明还没开始decode。
-
-        :return:
+        当前 Decode 到哪个 token 了，decoder 只会从 decode_length 之后的 token 开始 decode, 为 **0** 说明还没开始 decode。
         """
         return self._decode_length
 
@@ -79,26 +76,27 @@ class State:
 
 
 class LSTMState(State):
-    def __init__(self, encoder_output, encoder_mask, hidden, cell):
-        """
-        LSTMDecoder对应的State，保存encoder的输出以及LSTM解码过程中的一些中间状态
+    """
+    :class:`~fastNLP.modules.torch.decoder.LSTMSeq2SeqDecoder` 对应的 :class:`State`，保存 ``encoder`` 的输出以及 ``LSTM`` 解码过程中的一些中间状态
 
-        :param torch.FloatTensor encoder_output: bsz x src_seq_len x encode_output_size，encoder的输出
-        :param torch.BoolTensor encoder_mask: bsz x src_seq_len, 为0的地方是padding
-        :param torch.FloatTensor hidden: num_layers x bsz x hidden_size, 上个时刻的hidden状态
-        :param torch.FloatTensor cell: num_layers x bsz x hidden_size, 上个时刻的cell状态
-        """
+    :param encoder_output: ``encoder`` 的输出，形状为 ``[batch_size, src_seq_len, encode_output_size]``
+    :param encoder_mask: 掩码，形状为 ``[batch_size, src_seq_len]``，为 **1** 的地方表示需要 attend
+    :param hidden: 上个时刻的 ``hidden`` 状态，形状为 ``[num_layers, batch_size, hidden_size]``
+    :param cell: 上个时刻的 ``cell`` 状态，形状为 ``[num_layers, batch_size, hidden_size]``
+    """
+    def __init__(self, encoder_output: torch.FloatTensor, encoder_mask: torch.BoolTensor, hidden: torch.FloatTensor, cell: torch.FloatTensor):
         super().__init__(encoder_output, encoder_mask)
         self.hidden = hidden
         self.cell = cell
         self._input_feed = hidden[0]  # 默认是上一个时刻的输出
 
     @property
-    def input_feed(self):
+    def input_feed(self) -> torch.FloatTensor:
         """
-        LSTMDecoder中每个时刻的输入会把上个token的embedding和input_feed拼接起来输入到下个时刻，在LSTMDecoder不使用attention时，
-            input_feed即上个时刻的hidden state, 否则是attention layer的输出。
-        :return: torch.FloatTensor, bsz x hidden_size
+        :class:`~fastNLP.modules.torch.decoder.LSTMSeq2SeqDecoder` 中每个时刻的输入会把上个 token 的 embedding 和 ``input_feed`` 拼接起来输入到下个时刻，在
+        :class:`~fastNLP.modules.torch.decoder.LSTMSeq2SeqDecoder` 不使用 ``attention`` 时，``input_feed`` 即上个时刻的 ``hidden state``，否则是 ``attention layer`` 的输出。
+        
+        :return: ``[batch_size, hidden_size]``
         """
         return self._input_feed
 
@@ -115,14 +113,14 @@ class LSTMState(State):
 
 
 class TransformerState(State):
-    def __init__(self, encoder_output, encoder_mask, num_decoder_layer):
-        """
-        与TransformerSeq2SeqDecoder对应的State，
+    """
+    与 :class:`~fastNLP.modules.torch.decoder.TransformerSeq2SeqDecoder` 对应的 :class:`State`。
 
-        :param torch.FloatTensor encoder_output: bsz x encode_max_len x encoder_output_size, encoder的输出
-        :param torch.ByteTensor encoder_mask: bsz x encode_max_len 为1的地方需要attend
-        :param int num_decoder_layer: decode有多少层
-        """
+    :param encoder_output: ``encoder`` 的输出，形状为 ``[batch_size, encode_max_len, encode_output_size]``，
+    :param encoder_mask: 掩码，形状为 ``[batch_size, encode_max_len]``，为 **1** 的地方表示需要 attend
+    :param num_decoder_layer: decoder 层数
+    """
+    def __init__(self, encoder_output: torch.FloatTensor, encoder_mask: torch.FloatTensor, num_decoder_layer: int):
         super().__init__(encoder_output, encoder_mask)
         self.encoder_key = [None] * num_decoder_layer  # 每一个元素 bsz x encoder_max_len x key_dim
         self.encoder_value = [None] * num_decoder_layer  # 每一个元素 bsz x encoder_max_len x value_dim

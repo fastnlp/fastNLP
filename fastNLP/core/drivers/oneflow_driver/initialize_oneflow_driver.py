@@ -18,11 +18,11 @@ def initialize_oneflow_driver(driver: str, device: Optional[Union[str, "oneflow.
     r"""
     用来根据参数 ``driver` 和 ``device`` 来确定并且初始化一个具体的 ``Driver`` 实例然后返回回去；
 
-    :param driver: 该参数的值应为以下之一：``["oneflow"]``；
-    :param device: 该参数的格式与 ``Trainer`` 对参数 ``device`` 的要求一致；
+    :param driver: 该参数的值应为以下之一：``["oneflow"]``
+    :param device: 该参数的格式与 ``Trainer`` 对参数 ``device`` 的要求一致
     :param model: 训练或者评测的具体的模型；
 
-    :return: 返回一个 :class:`~fastNLP.core.OneflowSingleDriver` 或 :class:`~fastNLP.core.OneflowDDPDriver` 实例；
+    :return: 一个 :class:`~fastNLP.core.OneflowSingleDriver` 或 :class:`~fastNLP.core.OneflowDDPDriver` 实例；
     """
     # world_size 和 rank
     if FASTNLP_BACKEND_LAUNCH in os.environ:

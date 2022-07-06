@@ -1,4 +1,3 @@
-r"""undocumented"""
 from typing import Union, Tuple
 import math
 
@@ -16,54 +15,52 @@ __all__ = ['Seq2SeqDecoder', 'TransformerSeq2SeqDecoder', 'LSTMSeq2SeqDecoder']
 
 class Seq2SeqDecoder(nn.Module):
     """
-    Sequence-to-Sequence Decoder的基类。一定需要实现forward、decode函数，剩下的函数根据需要实现。每个Seq2SeqDecoder都应该有相应的State对象
-        用来承载该Decoder所需要的Encoder输出、Decoder需要记录的历史信息(例如LSTM的hidden信息)。
-
+    **Sequence-to-Sequence Decoder** 的基类。一定需要实现 :meth:`forward` 和 :meth:`decode` 函数，剩下的函数根据需要实现。每个 ``Seq2SeqDecoder`` 都应该有相应的
+    :class:`~fastNLP.modules.torch.decoder.State` 对象用来承载该 ``Decoder`` 所需要的 ``Encoder`` 输出、``Decoder`` 需要记录的历史信（例如 :class:`~fastNLP.modules.torch.encoder.LSTM`
+    的 hidden 信息）。
     """
     def __init__(self):
         super().__init__()
 
-    def forward(self, tokens, state, **kwargs):
+    def forward(self, tokens: "torch.LongTensor", state: State, **kwargs):
         """
 
-        :param torch.LongTensor tokens: bsz x max_len
-        :param State state: state包含了encoder的输出以及decode之前的内容
-        :return: 返回值可以为bsz x max_len x vocab_size的Tensor，也可以是一个list，但是第一个元素必须是词的预测分布
+        :param tokens: ``[batch_size, max_len]``
+        :param state: ``state`` 包含了 ``encoder`` 的输出以及 ``decode`` 之前的内容
+        :return: 返回值可以为 ``[batch_size, max_len, vocab_size]`` 的张量，也可以是一个 :class:`list`，但是第一个元素必须是词的预测分布
         """
         raise NotImplemented
 
-    def reorder_states(self, indices, states):
+    def reorder_states(self, indices: torch.LongTensor, states):
         """
-        根据indices重新排列states中的状态，在beam search进行生成时，会用到该函数。
+        根据 ``indices`` 重新排列 ``states`` 中的状态，在 ``beam search`` 进行生成时，会用到该函数。
 
-        :param torch.LongTensor indices:
-        :param State states:
-        :return:
+        :param indices:
+        :param states:
         """
         assert isinstance(states, State), f"`states` should be of type State instead of {type(states)}"
         states.reorder_state(indices)
 
-    def init_state(self, encoder_output, encoder_mask):
+    def init_state(self, encoder_output: Union[torch.Tensor, list, tuple], encoder_mask: Union[torch.Tensor, list, tuple]):
         """
-        初始化一个state对象，用来记录了encoder的输出以及decode已经完成的部分。
+        初始化一个 :class:`~fastNLP.modules.torch.decoder.State` 对象，用来记录 ``encoder`` 的输出以及 ``decode`` 已经完成的部分。
 
-        :param Union[torch.Tensor, list, tuple] encoder_output: 如果不为None，内部元素需要为torch.Tensor, 默认其中第一维是batch
+        :param encoder_output: 如果不为 ``None`` ，内部元素需要为 :class:`torch.Tensor`，默认其中第一维是 batch_size
             维度
-        :param Union[torch.Tensor, list, tuple] encoder_mask: 如果部位None，内部元素需要torch.Tensor, 默认其中第一维是batch
+        :param encoder_mask: 如果不为 ``None``，内部元素需要为 :class:`torch.Tensor`，默认其中第一维是 batch_size
             维度
-        :param kwargs:
-        :return: State, 返回一个State对象，记录了encoder的输出
+        :return: 一个 :class:`~fastNLP.modules.torch.decoder.State` 对象，记录了 ``encoder`` 的输出
         """
         state = State(encoder_output, encoder_mask)
         return state
 
-    def decode(self, tokens, state):
+    def decode(self, tokens: torch.LongTensor, state) -> torch.FloatTensor:
         """
-        根据states中的内容，以及tokens中的内容进行之后的生成。
+        根据 ``states`` 中的内容，以及 ``tokens`` 中的内容进行之后的生成。
 
-        :param torch.LongTensor tokens: bsz x max_len, 截止到上一个时刻所有的token输出。
-        :param State state: 记录了encoder输出与decoder过去状态
-        :return: torch.FloatTensor: bsz x vocab_size, 输出的是下一个时刻的分布
+        :param tokens: ``[batch_size, max_len]``，截止到上一个时刻所有的 token 输出。
+        :param state: 记录了 ``encoder`` 输出与 ``decoder`` 过去状态
+        :return: `下一个时刻的分布，形状为 ``[batch_size, vocab_size]``
         """
         outputs = self(state=state, tokens=tokens)
         if isinstance(outputs, torch.Tensor):
@@ -84,8 +81,8 @@ class TiedEmbedding(nn.Module):
     def forward(self, x):
         """
 
-        :param torch.FloatTensor x: bsz x * x embed_size
-        :return: torch.FloatTensor bsz x * x vocab_size
+        :param torch.FloatTensor x: batch_size x * x embed_size
+        :return: torch.FloatTensor batch_size x * x vocab_size
         """
         return torch.matmul(x, self.weight.t())
 
@@ -110,18 +107,24 @@ def get_bind_decoder_output_embed(embed):
 
 class LSTMSeq2SeqDecoder(Seq2SeqDecoder):
     """
-    LSTM的Decoder
+    **LSTM** 的 Decoder
 
-    :param nn.Module,tuple embed: decoder输入的embedding.
-    :param int num_layers: 多少层LSTM
-    :param int hidden_size: 隐藏层大小, 该值也被认为是encoder的输出维度大小
-    :param dropout: Dropout的大小
-    :param bool bind_decoder_input_output_embed: 是否将输出层和输入层的词向量绑定在一起（即为同一个），若embed为StaticEmbedding，
-        则StaticEmbedding的vocab不能包含no_create_entry的token，同时StaticEmbedding初始化时lower为False, min_freq=1.
-    :param bool attention: 是否使用attention
+    :param embed: ``decoder`` 输入的 embedding，支持以下几种输入类型：
+
+            - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+            - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+            - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+            - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+    :param num_layers: LSTM 的层数
+    :param hidden_size: 隐藏层大小, 该值也被认为是 ``encoder`` 的输出维度大小
+    :param dropout: Dropout 的大小
+    :param bind_decoder_input_output_embed: ``decoder`` 的输出 embedding 是否与其输入 embedding 是一样的权重（即为同一个），若 ``embed`` 为 
+        :class:`~fastNLP.embeddings.StaticEmbedding`，则 ``StaticEmbedding`` 的 ``vocab`` 不能包含 ``no_create_entry`` 的 token ，同时
+        ``StaticEmbedding`` 初始化时 ``lower`` 为 ``False``，``min_freq=1``。
+    :param attention: 是否使用attention
     """
-    def __init__(self, embed: Union[nn.Module, Tuple[int, int]], num_layers = 3, hidden_size = 300,
-                 dropout = 0.3, bind_decoder_input_output_embed = True, attention=True):
+    def __init__(self, embed: Union[nn.Module, Tuple[int, int]], num_layers: int = 3, hidden_size: int = 300,
+                 dropout: float = 0.3, bind_decoder_input_output_embed: bool = True, attention: bool = True):
         super().__init__()
         self.embed = get_embeddings(init_embed=embed)
         self.embed_dim = embed.embedding_dim
@@ -141,13 +144,14 @@ class LSTMSeq2SeqDecoder(Seq2SeqDecoder):
         self.output_proj = nn.Linear(hidden_size, self.embed_dim)
         self.dropout_layer = nn.Dropout(dropout)
 
-    def forward(self, tokens, state, return_attention=False):
+    def forward(self, tokens: torch.LongTensor, state: LSTMState, return_attention: bool=False):
         """
 
-        :param torch.LongTensor tokens: batch x max_len
-        :param LSTMState state: 保存encoder输出和decode状态的State对象
-        :param bool return_attention: 是否返回attention的的score
-        :return: bsz x max_len x vocab_size; 如果return_attention=True, 还会返回bsz x max_len x encode_length
+        :param tokens: ``[batch_size, max_len]``
+        :param state: 保存 ``encoder`` 输出和 ``decode`` 状态的 :class:`~fastNLP.modules.torch.decoder.LSTMState` 对象
+        :param return_attention: 是否返回 attention 的 score
+        :return: 形状为 ``[batch_size, max_len, vocab_size]`` 的结果。如果 ``return_attention=True`` 则返回一个元组，一个元素为结果，第二个结果为
+            注意力权重，形状为 ``[batch_size, max_len, encode_length]``
         """
         src_output = state.encoder_output
         encoder_mask = state.encoder_mask
@@ -196,14 +200,18 @@ class LSTMSeq2SeqDecoder(Seq2SeqDecoder):
             return feats, attn_weights
         return feats
 
-    def init_state(self, encoder_output, encoder_mask) -> LSTMState:
+    def init_state(self, encoder_output, encoder_mask: torch.ByteTensor) -> LSTMState:
         """
 
-        :param encoder_output: 输入可以有两种情况(1) 输入为一个tuple，包含三个内容(encoder_output, (hidden, cell))，其中encoder_output:
-            bsz x max_len x hidden_size, hidden: bsz x hidden_size, cell:bsz x hidden_size,一般使用LSTMEncoder的最后一层的
-            hidden state和cell state来赋值这两个值
-            (2) 只有encoder_output: bsz x max_len x hidden_size, 这种情况下hidden和cell使用0初始化
-        :param torch.ByteTensor encoder_mask: bsz x max_len, 为0的位置是padding, 用来指示source中哪些不需要attend
+        :param encoder_output: ``encoder`` 的输出，可以有两种情况：
+                
+                - 输入一个 :class:`tuple`，包含三个内容 ``(encoder_output, (hidden, cell))``，其中 ``encoder_output`` 形状为
+                  ``[batch_size, max_len, hidden_size]``， ``hidden`` 形状为 ``[batch_size, hidden_size]``， ``cell`` 形状为
+                  ``[batch_size, hidden_size]`` ，一般使用 :class:`~fastNLP.modules.torch.encoder.LSTMSeq2SeqEncoder` 最后一层的
+                  ``hidden state`` 和 ``cell state`` 来赋值这两个值。
+                - 只有形状为 ``[batch_size, max_len, hidden_size]`` 的 ``encoder_output``, 这种情况下 ``hidden`` 和 ``cell``
+                  使用 **0** 初始化。
+        :param encoder_mask: ``[batch_size, max_len]]``，为 **0** 的位置是 padding, 用来指示输入中哪些不需要 attend 。
         :return:
         """
         if not isinstance(encoder_output, torch.Tensor):
@@ -233,14 +241,15 @@ class LSTMSeq2SeqDecoder(Seq2SeqDecoder):
 
 class TransformerSeq2SeqDecoderLayer(nn.Module):
     """
+    **Transformer** 的 Decoder 层
 
-    :param int d_model: 输入、输出的维度
-    :param int n_head: 多少个head，需要能被d_model整除
-    :param int dim_ff:
-    :param float dropout:
-    :param int layer_idx: layer的编号
+    :param d_model: 输入、输出的维度
+    :param n_head: **多头注意力** head 的数目，需要能被 ``d_model`` 整除
+    :param dim_ff:  FFN 中间映射的维度
+    :param dropout: Dropout 的大小
+    :param layer_idx: layer的编号
     """
-    def __init__(self, d_model = 512, n_head = 8, dim_ff = 2048, dropout = 0.1, layer_idx = None):
+    def __init__(self, d_model: int = 512, n_head: int = 8, dim_ff: int = 2048, dropout: float = 0.1, layer_idx: int = None):
         super().__init__()
         self.d_model = d_model
         self.n_head = n_head
@@ -262,14 +271,14 @@ class TransformerSeq2SeqDecoderLayer(nn.Module):
 
         self.final_layer_norm = nn.LayerNorm(self.d_model)
 
-    def forward(self, x, encoder_output, encoder_mask=None, self_attn_mask=None, state=None):
+    def forward(self, x, encoder_output, encoder_mask=None, self_attn_mask=None, state: TransformerState=None):
         """
 
-        :param x: (batch, seq_len, dim), decoder端的输入
-        :param encoder_output: (batch,src_seq_len,dim), encoder的输出
-        :param encoder_mask: batch,src_seq_len, 为1的地方需要attend
-        :param self_attn_mask: seq_len, seq_len，下三角的mask矩阵，只在训练时传入
-        :param TransformerState state: 只在inference阶段传入
+        :param x: ``decoder`` 端的输入，形状为 ``[batch_size, seq_len, dim]`` 
+        :param encoder_output: ``encoder`` 的输出，形状为 ``[batch_size, src_seq_len, dim]``
+        :param encoder_mask: 掩码，形状为 ``[batch_size, src_seq_len]``，为 **1** 的地方表示需要 attend
+        :param self_attn_mask: 下三角的mask矩阵，只在训练时传入。形状为 ``[seq_len, seq_len]``
+        :param state: 只在 inference 阶段传入，记录了 ``encoder`` 和 ``decoder`` 的状态
         :return:
         """
 
@@ -307,16 +316,23 @@ class TransformerSeq2SeqDecoderLayer(nn.Module):
 
 class TransformerSeq2SeqDecoder(Seq2SeqDecoder):
     """
+    **Transformer** 的 Decoder
 
-    :param embed: 输入token的embedding
-    :param nn.Module pos_embed: 位置embedding
-    :param int d_model: 输出、输出的大小
-    :param int num_layers: 多少层
-    :param int n_head: 多少个head
-    :param int dim_ff: FFN 的中间大小
-    :param float dropout: Self-Attention和FFN中的dropout的大小
-    :param bool bind_decoder_input_output_embed: 是否将输出层和输入层的词向量绑定在一起（即为同一个），若embed为StaticEmbedding，
-        则StaticEmbedding的vocab不能包含no_create_entry的token，同时StaticEmbedding初始化时lower为False, min_freq=1.
+    :param embed: ``decoder`` 输入的 embedding，支持以下几种输入类型：
+
+            - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+            - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时就以传入的对象作为 embedding；
+            - :class:`numpy.ndarray` ，将使用传入的 ndarray 作为 Embedding 初始化；
+            - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+    :param pos_embed: 位置 embedding
+    :param d_model: 输入、输出的维度
+    :param num_layers: :class:`TransformerSeq2SeqDecoderLayer` 的层数
+    :param n_head: **多头注意力** head 的数目，需要能被 ``d_model`` 整除
+    :param dim_ff: FFN 中间映射的维度
+    :param dropout: :class:`~fastNLP.modules.torch.decoder.SelfAttention` 和 FFN 中的 dropout 的大小
+    :param bind_decoder_input_output_embed: ``decoder`` 的输出 embedding 是否与其输入 embedding 是一样的权重（即为同一个），若 ``embed`` 为 
+        :class:`~fastNLP.embeddings.StaticEmbedding`，则 ``StaticEmbedding`` 的 ``vocab`` 不能包含 ``no_create_entry`` 的 token ，同时
+        ``StaticEmbedding`` 初始化时 ``lower`` 为 ``False``，``min_freq=1``。
     """
     def __init__(self, embed: Union[nn.Module, StaticEmbedding, Tuple[int, int]], pos_embed: nn.Module = None,
                  d_model = 512, num_layers=6, n_head = 8, dim_ff = 2048, dropout = 0.1,
@@ -346,13 +362,14 @@ class TransformerSeq2SeqDecoder(Seq2SeqDecoder):
         self.layer_norm = nn.LayerNorm(d_model)
         self.output_fc = nn.Linear(self.d_model, self.embed.embedding_dim)
 
-    def forward(self, tokens, state, return_attention=False):
+    def forward(self, tokens: torch.LongTensor, state: TransformerState, return_attention: bool=False):
         """
 
-        :param torch.LongTensor tokens: batch x tgt_len，decode的词
-        :param TransformerState state: 用于记录encoder的输出以及decode状态的对象，可以通过init_state()获取
-        :param bool return_attention: 是否返回对encoder结果的attention score
-        :return: bsz x max_len x vocab_size; 如果return_attention=True, 还会返回bsz x max_len x encode_length
+        :param tokens: 用于解码的词，形状为 ``[batch_size, tgt_len]``
+        :param state: 用于记录 ``encoder`` 的输出以及 ``decode`` 状态的对象，可以通过 :meth:`init_state` 获取
+        :param return_attention: 是否返回对 ``encoder`` 结果的 attention score
+        :return: 形状为 ``[batch_size, max_len, vocab_size]`` 的结果。如果 ``return_attention=True`` 则返回一个元组，一个元素为结果，第二个结果为
+            注意力权重，形状为 ``[batch_size, max_len, encode_length]``
         """
 
         encoder_output = state.encoder_output
@@ -391,13 +408,13 @@ class TransformerSeq2SeqDecoder(Seq2SeqDecoder):
             return feats, attn_weight
         return feats
 
-    def init_state(self, encoder_output, encoder_mask):
+    def init_state(self, encoder_output: torch.FloatTensor, encoder_mask: torch.ByteTensor) -> TransformerState:
         """
-        初始化一个TransformerState用于forward
+        初始化一个 :class:`~fastNLP.modules.torch.decoder.TransformerState`` 用于 :meth:`forward`
 
-        :param torch.FloatTensor encoder_output: bsz x max_len x d_model, encoder的输出
-        :param torch.ByteTensor encoder_mask: bsz x max_len, 为1的位置需要attend。
-        :return: TransformerState
+        :param encoder_output: ``encoder`` 的输出，形状为 ``[batch_size, max_len, d_model]``
+        :param encoder_mask: ``[batch_size, max_len]]``，为 **0** 的位置是 padding, 用来指示输入中哪些不需要 attend 。
+        :return:
         """
         if isinstance(encoder_output, torch.Tensor):
             encoder_output = encoder_output

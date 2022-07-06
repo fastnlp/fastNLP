@@ -26,3 +26,4 @@ _NEED_IMPORT_DEEPSPEED = _module_available("deepspeed") and 'torch' in need_impo
 _NEED_IMPORT_ONEFLOW = _module_available("oneflow") and 'oneflow' in need_import
 
 _TORCH_GREATER_EQUAL_1_8 = _NEED_IMPORT_TORCH and _compare_version("torch", operator.ge, "1.8.0")
+_TORCH_GREATER_EQUAL_1_12 = _NEED_IMPORT_TORCH and _compare_version("torch", operator.ge, "1.12.0")

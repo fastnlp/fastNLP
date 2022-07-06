@@ -32,7 +32,7 @@ from tests.helpers.callbacks.helper_callbacks import RecordMetricCallback
 
 @dataclass
 class MNISTTrainFleetConfig:
-    num_labels: int = 3
+    num_labels: int = 5
     feature_dimension: int = 5
 
     batch_size: int = 4
@@ -79,7 +79,7 @@ def test_trainer_fleet(
 
         n_epochs=n_epochs,
         callbacks=callbacks,
-        # output_from_new_proc="logs",
+        output_from_new_proc="logs",
     )
     trainer.run()
 

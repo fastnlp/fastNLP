@@ -1,8 +1,7 @@
-r"""undocumented"""
-
 __all__ = [
     "ConvMaxpool"
 ]
+from typing import Union, List
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,20 +9,17 @@ import torch.nn.functional as F
 
 class ConvMaxpool(nn.Module):
     r"""
-    集合了Convolution和Max-Pooling于一体的层。给定一个batch_size x max_len x input_size的输入，返回batch_size x
-    sum(output_channels) 大小的matrix。在内部，是先使用CNN给输入做卷积，然后经过activation激活层，在通过在长度(max_len)
-    这一维进行max_pooling。最后得到每个sample的一个向量表示。
+    集合了 **Convolution** 和 **Max-Pooling** 于一体的层。给定一个 ``[batch_size, max_len, input_size]`` 的输入，返回
+    ``[batch_size, sum(output_channels)]`` 大小的 matrix。在内部，是先使用 ``CNN`` 给输入做卷积，然后经过 activation 
+    激活层，在通过在长度(max_len)这一维进行 ``max_pooling`` 。最后得到每个 sample 的一个向量表示。
 
+    :param in_channels: 输入 channel 的大小，一般是 embedding 的维度，或 ``encoder``的 output 维度
+    :param out_channels: 输出 channel 的数量。如果为 :class:`list`，则需要与 ``kernel_sizes`` 的数量保持一致
+    :param kernel_sizes: 输出 channel 的 kernel 大小。
+    :param activation: **卷积** 后的结果将通过该 ``activation`` 后再经过 ``max-pooling``。支持 ``['relu', 'sigmoid', 'tanh']``。
     """
 
-    def __init__(self, in_channels, out_channels, kernel_sizes, activation="relu"):
-        r"""
-        
-        :param int in_channels: 输入channel的大小，一般是embedding的维度; 或encoder的output维度
-        :param int,tuple(int) out_channels: 输出channel的数量。如果为list，则需要与kernel_sizes的数量保持一致
-        :param int,tuple(int) kernel_sizes: 输出channel的kernel大小。
-        :param str activation: Convolution后的结果将通过该activation后再经过max-pooling。支持relu, sigmoid, tanh
-        """
+    def __init__(self, in_channels: int, out_channels: Union[int, List[int]], kernel_sizes: Union[int, List[int]], activation: str="relu"):
         super(ConvMaxpool, self).__init__()
 
         for kernel_size in kernel_sizes:
@@ -67,11 +63,11 @@ class ConvMaxpool(nn.Module):
             raise Exception(
                 "Undefined activation function: choose from: relu, tanh, sigmoid")
 
-    def forward(self, x, mask=None):
+    def forward(self, x: torch.FloatTensor, mask=None):
         r"""
 
-        :param torch.FloatTensor x: batch_size x max_len x input_size, 一般是经过embedding后的值
-        :param mask: batch_size x max_len, pad的地方为0。不影响卷积运算，max-pool一定不会pool到pad为0的位置
+        :param x: ``[batch_size, max_len, input_size]``，一般是经过 ``embedding`` 后的值
+        :param mask: ``[batch_size, max_len]``，**0** 的位置表示 padding，不影响卷积运算，``max-pooling`` 一定不会 pool 到 padding 为 0 的位置
         :return:
         """
         # [N,L,C] -> [N,C,L]

@@ -1,20 +1,24 @@
 r"""
-Logger 是fastNLP中记录日志的模块，logger封装了logging模块的Logger，
-具体使用方式与直接使用logging.Logger相同，同时也新增一些简单好用的API
+:class:`Logger` 是 **fastNLP** 中记录日志的模块，**logger** 封装了 logging 模块的 Logger，
+具体使用方式与直接使用 :class:`logging.Logger` 相同，同时也新增一些简单好用的API
 
 使用方式::
 
-    from fastNLP import _logger
-    #
-    # _logger 可以和 logging.Logger 一样使用
-    _logger.info('your msg')
-    _logger.error('your msg')
+    from fastNLP import logger
 
-    # _logger 新增的API
+    # logger 可以和 logging.Logger 一样使用
+    logger.info('your msg')
+    logger.error('your msg')
+
+    # logger 新增的API
     # 将日志输出到文件，以及输出的日志等级
-    _logger.add_file('/path/to/log', level='INFO')
+    logger.add_file('/path/to/log', level='INFO')
     # 定义在命令行中的显示格式和日志等级
-    _logger.set_stdout('tqdm', level='WARN')
+    logger.set_stdout('tqdm', level='WARN')
+    # 仅警告一次
+    logger.warning_once('your msg')
+    # 分布式训练下，仅在 rank 0 输出警告
+    logger.rank_zero_warning('your msg')
 
 """
 

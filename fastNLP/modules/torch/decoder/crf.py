@@ -1,11 +1,9 @@
-r"""undocumented"""
-
 __all__ = [
     "ConditionalRandomField",
     "allowed_transitions"
 ]
 
-from typing import Union, List
+from typing import Union, List, Tuple
 
 import torch
 from torch import nn
@@ -14,17 +12,19 @@ from ....core.metrics.span_f1_pre_rec_metric import _get_encoding_type_from_tag_
 from ....core.vocabulary import Vocabulary
 
 
-def allowed_transitions(tag_vocab:Union[Vocabulary, dict], encoding_type:str=None, include_start_end:bool=False):
+def allowed_transitions(tag_vocab:Union[Vocabulary, dict], encoding_type:str=None, include_start_end:bool=False) -> List[Tuple[int, int]]:
     r"""
-    给定一个id到label的映射表，返回所有可以跳转的(from_tag_id, to_tag_id)列表。
+    给定一个 ``id`` 到 ``label`` 的映射表，返回所有可以跳转的 ``(from_tag_id, to_tag_id)`` 列表。
 
-    :param tag_vocab: 支持类型为tag或tag-label。只有tag的,比如"B", "M"; 也可以是"B-NN", "M-NN",
-        tag和label之间一定要用"-"隔开。如果传入dict，格式需要形如{0:"O", 1:"B-tag1"}，即index在前，tag在后。
-    :param encoding_type: 支持``["bio", "bmes", "bmeso", "bioes"]``。默认为None，通过vocab自动推断
-    :param include_start_end: 是否包含开始与结尾的转换。比如在bio中，b/o可以在开头，但是i不能在开头；
-        为True，返回的结果中会包含(start_idx, b_idx), (start_idx, o_idx), 但是不包含(start_idx, i_idx);
-        start_idx=len(id2label), end_idx=len(id2label)+1。为False, 返回的结果中不含与开始结尾相关的内容
-    :return: List[Tuple(int, int)]], 内部的Tuple是可以进行跳转的(from_tag_id, to_tag_id)。
+    :param tag_vocab: 支持类型为 tag 或 tag-label 。只有 tag 的,比如 ``"B"`` 、 ``"M"``，也可以是 ``"B-NN"`` 、 ``"M-NN"``，
+        tag 和 label之间一定要用 ``"-"`` 隔开。如果传入 :class:`dict` ，格式需要形如 ``{0:"O", 1:"B-tag1"}`` ，即 **index 在前，tag 在后** 。
+    :param encoding_type: 支持 ``["bio", "bmes", "bmeso", "bioes", None]``。默认为 ``None``，通过 ``tag_vocab`` 自动推断
+    :param include_start_end: 是否包含开始与结尾的转换。比如在 ``bio`` 中， ``b/o`` 可以在开头，但是 ``i`` 不能在开头；
+        
+            - 为 ``True`` -- 返回的结果中会包含 ``(start_idx, b_idx), (start_idx, o_idx)`` ，但是不包含 ``(start_idx, i_idx)`` ；
+              其中 ``start_idx=len(id2label)``，``end_idx=len(id2label)+1`` ；
+            - 为 ``False`` , 返回的结果中不含与开始结尾相关的内容；
+    :return: 一系列元组构成的列表，内部的 :class:`Tuple` 是可以进行跳转的 ``(from_tag_id, to_tag_id)``。
     """
     if encoding_type is None:
         encoding_type = _get_encoding_type_from_tag_vocab(tag_vocab)
@@ -167,19 +167,15 @@ def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label
 
 class ConditionalRandomField(nn.Module):
     r"""
-    条件随机场。提供 forward() 以及 viterbi_decode() 两个方法，分别用于训练与inference。
+    条件随机场。提供 :meth:`forward` 以及 :meth:`viterbi_decode` 两个方法，分别用于 **训练** 与 **inference** 。
 
+    :param num_tags: 标签的数量
+    :param include_start_end_trans: 是否考虑各个 tag 作为开始以及结尾的分数。
+    :param allowed_transitions: 内部的 ``Tuple[from_tag_id(int), to_tag_id(int)]`` 视为允许发生的跃迁，其他没
+        有包含的跃迁认为是禁止跃迁，可以通过 :func:`allowed_transitions` 函数得到；如果为 ``None`` ，则所有跃迁均为合法。
     """
 
     def __init__(self, num_tags:int, include_start_end_trans:bool=False, allowed_transitions:List=None):
-        r"""
-        
-        :param num_tags: 标签的数量
-        :param include_start_end_trans: 是否考虑各个tag作为开始以及结尾的分数。
-        :param allowed_transitions: 内部的Tuple[from_tag_id(int),
-                                   to_tag_id(int)]视为允许发生的跃迁，其他没有包含的跃迁认为是禁止跃迁，可以通过
-                                   allowed_transitions()函数得到；如果为None，则所有跃迁均为合法
-        """
         super(ConditionalRandomField, self).__init__()
 
         self.include_start_end_trans = include_start_end_trans
@@ -213,9 +209,9 @@ class ConditionalRandomField(nn.Module):
         r"""Computes the (batch_size,) denominator term for the log-likelihood, which is the
         sum of the likelihoods across all possible state sequences.
 
-        :param logits:FloatTensor, max_len x batch_size x num_tags
-        :param mask:ByteTensor, max_len x batch_size
-        :return:FloatTensor, batch_size
+        :param logits:FloatTensor, ``[max_len, batch_size, num_tags]``
+        :param mask:ByteTensor, ``[max_len, batch_size]``
+        :return:FloatTensor, ``[batch_size,]``
         """
         seq_len, batch_size, n_tags = logits.size()
         alpha = logits[0]
@@ -239,10 +235,10 @@ class ConditionalRandomField(nn.Module):
     def _gold_score(self, logits, tags, mask):
         r"""
         Compute the score for the gold path.
-        :param logits: FloatTensor, max_len x batch_size x num_tags
-        :param tags: LongTensor, max_len x batch_size
-        :param mask: ByteTensor, max_len x batch_size
-        :return:FloatTensor, batch_size
+        :param logits: FloatTensor, ``[max_len, batch_size, num_tags]``
+        :param tags: LongTensor, ``[max_len, batch_size]``
+        :param mask: ByteTensor, ``[max_len, batch_size]``
+        :return:FloatTensor, ``[batch_size.]``
         """
         seq_len, batch_size, _ = logits.size()
         batch_idx = torch.arange(batch_size, dtype=torch.long, device=logits.device)
@@ -265,14 +261,14 @@ class ConditionalRandomField(nn.Module):
         # return [B,]
         return score
 
-    def forward(self, feats, tags, mask):
+    def forward(self, feats: "torch.FloatTensor", tags: "torch.LongTensor", mask: "torch.ByteTensor") -> "torch.FloatTensor":
         r"""
-        用于计算CRF的前向loss，返回值为一个batch_size的FloatTensor，可能需要mean()求得loss。
+        用于计算 ``CRF`` 的前向 loss，返回值为一个形状为 ``[batch_size,]`` 的 :class:`torch.FloatTensor` ，可能需要 :func:`mean` 求得 loss 。
 
-        :param torch.FloatTensor feats: batch_size x max_len x num_tags，特征矩阵。
-        :param torch.LongTensor tags: batch_size x max_len，标签矩阵。
-        :param torch.ByteTensor mask: batch_size x max_len，为0的位置认为是padding。
-        :return: torch.FloatTensor, (batch_size,)
+        :param feats: 特征矩阵，形状为 ``[batch_size, max_len, num_tags]``
+        :param tags: 标签矩阵，形状为 ``[batch_size, max_len]``
+        :param mask: 形状为 ``[batch_size, max_len]`` ，为 **0** 的位置认为是 padding。
+        :return: ``[batch_size,]``
         """
         feats = feats.transpose(0, 1)
         tags = tags.transpose(0, 1).long()
@@ -282,17 +278,20 @@ class ConditionalRandomField(nn.Module):
 
         return all_path_score - gold_path_score
 
-    def viterbi_decode(self, logits, mask, unpad=False):
-        r"""给定一个特征矩阵以及转移分数矩阵，计算出最佳的路径以及对应的分数
+    def viterbi_decode(self, logits: "torch.FloatTensor", mask: "torch.ByteTensor", unpad=False):
+        r"""给定一个 **特征矩阵** 以及 **转移分数矩阵** ，计算出最佳的路径以及对应的分数
 
-        :param torch.FloatTensor logits: batch_size x max_len x num_tags，特征矩阵。
-        :param torch.ByteTensor mask: batch_size x max_len, 为0的位置认为是pad；如果为None，则认为没有padding。
-        :param bool unpad: 是否将结果删去padding。False, 返回的是batch_size x max_len的tensor; True，返回的是
-            List[List[int]], 内部的List[int]为每个sequence的label，已经除去pad部分，即每个List[int]的长度是这
-            个sample的有效长度。
-        :return: 返回 (paths, scores)。
-                    paths: 是解码后的路径, 其值参照unpad参数.
-                    scores: torch.FloatTensor, size为(batch_size,), 对应每个最优路径的分数。
+        :param logits: 特征矩阵，形状为 ``[batch_size, max_len, num_tags]``
+        :param mask: 标签矩阵，形状为 ``[batch_size, max_len]`` ，为 **0** 的位置认为是 padding。如果为 ``None`` ，则认为没有 padding。
+        :param unpad: 是否将结果删去 padding：
+
+                - 为 ``False`` 时，返回的是 ``[batch_size, max_len]`` 的张量
+                - 为 ``True`` 时，返回的是 :class:`List` [:class:`List` [ :class:`int` ]], 内部的 :class:`List` [:class:`int` ] 为每个 
+                  sequence 的 label ，已经除去 pad 部分，即每个 :class:`List` [ :class:`int` ] 的长度是这个 sample 的有效长度。
+        :return:  (paths, scores)。
+
+                - ``paths`` -- 解码后的路径, 其值参照 ``unpad`` 参数.
+                - ``scores`` -- :class:`torch.FloatTensor` ，形状为 ``[batch_size,]`` ，对应每个最优路径的分数。
 
         """
         batch_size, max_len, n_tags = logits.size()

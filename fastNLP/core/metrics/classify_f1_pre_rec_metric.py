@@ -14,27 +14,36 @@ from .utils import _compute_f_pre_rec
 from fastNLP.core.log import logger
 
 class ClassifyFPreRecMetric(Metric):
+    """
+    计算分类结果 **F值** 的 **Metric** 。
+
+    :param tag_vocab: 标签的 :class:`~fastNLP.core.Vocabulary` 。 默认值为 ``None``。若为 ``None`` 则使用数字来作为标签内容，
+        否则使用 vocab 来作为标签内容
+    :param ignore_labels: :class:`str` 组成的 :class:`list`. 这个 :class:`list` 中的 class 不会被用于计算。例如在 POS tagging 时传入 ``['NN']``，
+        则不会计算 'NN' 个 label
+    :param only_gross: 是否只计算总的 ``f1``, ``precision``, ``recall``的值；如果为 ``False``，不仅返回总的 ``f1``, ``pre``,
+        ``rec``, 还会返回每个 label 的 ``f1``, ``pre``, ``rec``
+    :param f_type: `micro` 或 `macro` 。
+
+        * `micro` : 通过先计算总体的 TP，FN 和 FP 的数量，再计算 f, precision, recall;
+        * `macro` : 分布计算每个类别的 f, precision, recall，然后做平均（各类别 f 的权重相同）
+
+    :param beta: **f_beta** 分数中的 ``beta`` 值。 常用为 ``beta=0.5, 1, 2`` 若为 0.5 则 **精确率** 的权重高于 **召回率** ；若为1，则两者平等；若为2，则
+        **召回率** 权重高于 **精确率** 。**f_beta** 分数的计算公式为：
+        
+        .. math::
+
+            f_{beta} = \\frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}
+
+    :param backend: 目前支持五种类型的 backend, ``['torch', 'paddle', 'jittor', 'oneflow', 'auto']``。其中 ``'auto'`` 表示根据实际调用 :meth:`update`
+        函数时传入的参数决定具体的 backend ，大部分情况下直接使用 ``'auto'`` 即可。
+    :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到 metric，
+        当 backend 不支持分布式时，该参数无意义。如果为 ``None`` ，将在 :class:`~fastNLP.core.controllers.Evaluator` 中根据
+        sampler 是否使用分布式进行自动设置。
+    """
     def __init__(self, tag_vocab: Vocabulary = None, ignore_labels: List[str] = None,
                  only_gross: bool = True, f_type='micro', beta=1, backend: Union[str, Backend, None] = 'auto',
                  aggregate_when_get_metric: bool = None) -> None:
-        """
-
-        :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` . 默认值为 ``None``。若为 ``None`` 则使用数字来作为标签内容，
-        否则使用 vocab 来作为标签内容。
-        :param ignore_labels: ``str`` 组成的 ``list``. 这个 ``list``中的 class 不会被用于计算。例如在 POS tagging 时传入 ``['NN']``，
-        则不会计算 'NN' 个 label
-        :param only_gross: 是否只计算总的 ``f1``, ``precision``, ``recall``的值；如果为 ``False``，不仅返回总的 ``f1``, ``pre``,
-        ``rec``, 还会返回每个 label 的 ``f1``, ``pre``, ``rec``
-        :param f_type: `micro` 或 `macro` .
-            * `micro` : 通过先计算总体的 TP，FN 和 FP 的数量，再计算 f, precision, recall;
-            * `macro` : 分布计算每个类别的 f, precision, recall，然后做平均（各类别 f 的权重相同）
-        :param beta: f_beta分数， :math:`f_{beta} = \frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}` .
-        :param backend: 目前支持四种类型的 backend, ``[torch, paddle, jittor, 'auto']``。其中 ``'auto'`` 表示根据实际调用 Metric.update()
-        函数时传入的参数决定具体的 backend ，大部分情况下直接使用 ``'auto'`` 即可。
-        :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到metric，
-            当 backend 不支持分布式时，该参数无意义。如果为 ``None`` ，将在 Evaluator 中根据 sampler 是否使用分布式进行自动设置。
-
-        """
         super(ClassifyFPreRecMetric, self).__init__(backend=backend,
                                                     aggregate_when_get_metric=aggregate_when_get_metric)
         if f_type not in ('micro', 'macro'):
@@ -56,8 +65,7 @@ class ClassifyFPreRecMetric(Metric):
 
     def reset(self):
         """
-        重置 tp, fp, fn 的值
-
+        重置 ``tp``, ``fp``, ``fn`` 的值
         """
         # 由于不是 element 了，需要自己手动清零一下
         self._tp.clear()
@@ -66,9 +74,9 @@ class ClassifyFPreRecMetric(Metric):
 
     def get_metric(self) -> dict:
         r"""
-        get_metric 函数将根据 update 函数累计的评价指标统计量来计算最终的评价结果.
+        :meth:`get_metric` 函数将根据 :meth:`update` 函数累计的评价指标统计量来计算最终的评价结果。
 
-        :return evaluate_result: {"acc": float}
+        :return: 包含以下内容的字典：``{"acc": float}``
         """
         evaluate_result = {}
 
@@ -127,13 +135,13 @@ class ClassifyFPreRecMetric(Metric):
 
     def update(self, pred, target, seq_len=None):
         r"""
-        update 函数将针对一个批次的预测结果做评价指标的累计
+        :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
 
-        :param pred: 预测的 tensor, tensor 的形状可以是 [B,], [B, n_classes])
-                [B, max_len], 或者 [B, max_len, n_classes]
-        :param target: 真实值的 tensor, tensor 的形状可以是 [B,],
-                [B,], [B, max_len], 或者 [B, max_len]
-        :param seq_len: 序列长度标记, 标记的形状可以是 None, [B].
+        :param pred: 预测的 tensor, tensor 的形状可以是 ``[B,]`` 、``[B, n_classes]`` 、
+                ``[B, max_len]`` 或 ``[B, max_len, n_classes]``
+        :param target: 真实值的 tensor, tensor 的形状可以是 ``[B,]`` 、``[B,]`` 、``[B, max_len]``
+            或 ``[B, max_len]``
+        :param seq_len: 序列长度标记, 标记的形状可以是 ``None``,  或者 ``[B]``
 
         """
         pred = self.tensor2numpy(pred)

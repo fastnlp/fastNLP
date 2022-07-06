@@ -3,4 +3,4 @@ __all__ = [
 ]
 
 
-from .backend import Backend as TorchBackend
+from .backend import TorchBackend

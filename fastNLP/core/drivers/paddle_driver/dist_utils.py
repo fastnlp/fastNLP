@@ -175,18 +175,15 @@ def fastnlp_paddle_all_gather(obj: Any, device=None, group=None) ->List:
 
     example::
 
-        obj = {
-            'a': [1, 1],
-            'b': [[1, 2], [1, 2]],
-            'c': {
-                'd': [1, 2]
-            }
-        }
-        ->
-        [
-            {'a': 1, 'b':[1, 2], 'c':{'d': 1}},
-            {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
-        ]
+        >>> # rank 0
+        >>> obj = {'a': 1, 'b':[1, 2], 'c':{'d': 1}}
+        >>> # rank 1
+        >>> obj = {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
+        >>> # after all_gather():
+        >>> result = [
+                {'a': 1, 'b':[1, 2], 'c':{'d': 1}},
+                {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
+            ]
 
     :param obj: 任意结构的数据，如果为 tensor ，需要保证每个显卡上的 tensor 的形状是一样的。如果传入的是非 tensor 对象都将直接进行
         序列化之后进行传输。

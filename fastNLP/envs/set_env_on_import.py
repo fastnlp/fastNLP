@@ -5,6 +5,7 @@ import sys
 from .env import *
 import datetime
 
+__all__ = []
 
 def remove_local_rank_in_argv():
     """

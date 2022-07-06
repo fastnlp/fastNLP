@@ -26,12 +26,12 @@ class PaddleBackend(Backend):
         聚集结果，并根据 method 计算后，返回结果
 
         :param tensor: 需要聚合的张量
-        :param method: 聚合的方法， 目前支持 ``['sum', 'mean', 'max', 'mix']``:
+        :param method: 聚合的方法， 目前支持 ``['sum', 'mean', 'max', 'min']``:
 
             * method 为 ``'sum'`` 时， 会将多张卡上聚合结果在维度为 `0` 上 累加起来。
             * method 为 ``'mean'`` 时，会将多张卡上聚合结果在维度为 `0` 上取平均值。
             * method 为 ``'max'`` 时，会将多张卡上聚合结果在维度为 `0` 上取最大值。
-            * method 为 ``'mix'`` 时，会将多张卡上聚合结果在维度为 `0` 上取最小值。
+            * method 为 ``'min'`` 时，会将多张卡上聚合结果在维度为 `0` 上取最小值。
 
         """
         if isinstance(tensor, paddle.Tensor):

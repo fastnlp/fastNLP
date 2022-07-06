@@ -23,27 +23,27 @@ def _wrap_cal_value(func):
 
 
 class Element:
+    """
+    保存 :class:`~fastNLP.core.metrics.Metric` 中计算的元素值的对象
+
+    :param name: 名称
+    :param value: 元素的值
+    :param aggregate_method: 聚合的方法， 目前支持 ``['sum', 'mean', 'max', 'min']``:
+
+        * method 为 ``'sum'`` 时， 会将多张卡上聚合结果在维度为 `0` 上 累加起来。
+        * method 为 ``'mean'`` 时，会将多张卡上聚合结果在维度为 `0` 上取平均值。
+        * method 为 ``'max'`` 时，会将多张卡上聚合结果在维度为 `0` 上取最大值。
+        * method 为 ``'min'`` 时，会将多张卡上聚合结果在维度为 `0` 上取最小值。
+
+    :param backend: 使用的 backend 。Element 的类型会根据 ``backend`` 进行实际的初始化。例如 ``backend`` 为 ``'torch'`` 则该对象为
+        :class:`torch.Tensor` ； 如果 ``'backend'`` 为 ``'paddle'`` 则该对象为 :class:`paddle.Tensor` ；如果 ``backend`` 为
+        ``'jittor'`` , 则该对象为 :class:`jittor.Var` 。一般情况下直接默认为 ``'auto'`` 就行了， **fastNLP** 会根据实际调用 :meth`Metric.update`
+        函数时传入的参数进行合理的初始化，例如当传入的参数中只包含 :class:`torch.Tensor` 这一种 tensor 时（可以有其它非 tensor 类型的输入）
+        则认为 ``backend`` 为 ``'torch'`` ；只包含 :class:`jittor.Var` 这一种 tensor 时（可以有其它非 tensor 类型的输入）则认为 ``backend``
+        为 ``'jittor'`` 。如果没有检测到任何一种 tensor ，就默认使用 :class:`float` 类型作为 element 。
+
+    """
     def __init__(self, name, value: float, aggregate_method, backend: Backend):
-        """
-        保存 Metric 中计算的元素值的对象
-
-        :param name: 名称
-        :param value: 元素的值
-        :param aggregate_method: 聚合的方法， 目前支持 ``['sum', 'mean', 'max', 'mix']``:
-
-            * method 为 ``'sum'`` 时， 会将多张卡上聚合结果在维度为 `0` 上 累加起来。
-            * method 为 ``'mean'`` 时，会将多张卡上聚合结果在维度为 `0` 上取平均值。
-            * method 为 ``'max'`` 时，会将多张卡上聚合结果在维度为 `0` 上取最大值。
-            * method 为 ``'mix'`` 时，会将多张卡上聚合结果在维度为 `0` 上取最小值。
-
-        :param backend: 使用的 backend 。Element 的类型会根据 backend 进行实际的初始化。例如 backend 为 torch 则该对象为
-            Torch.tensor ； 如果backend 为 paddle 则该对象为 paddle.tensor ；如果 backend 为 jittor , 则该对象为 jittor.Var 。
-            一般情况下直接默认为 auto 就行了，fastNLP 会根据实际调用 Metric.update() 函数时传入的参数进行合理的初始化，例如当传入
-            的参数中只包含 torch.Tensor 这一种 tensor 时（可以有其它非 tensor 类型的输入）则认为 backend 为 torch ；只包含
-            jittor.Var 则认为 backend 这一种 tensor 时（可以有其它非 tensor 类型的输入）则认为 backend 为 jittor 。如果没有检测
-            到任何一种 tensor ，就默认使用 float 类型作为 element 。
-
-        """
         self.name = name
         self.init_value = value
         self.aggregate_method = aggregate_method
@@ -64,7 +64,6 @@ class Element:
     def aggregate(self):
         """
         自动 aggregate 对应的元素
-
         """
         self._check_value_initialized()
         if self.aggregate_method is None:  # 如果没有 aggregate 则不进行聚合。
@@ -116,7 +115,7 @@ class Element:
 
     def fill_value(self, value):
         """
-        对元素进行 fill_value， 会执行队友 backend 的 fill_value 方法
+        对元素进行 :meth:`fill_value` ， 会执行对应 backend 的 :meth:`fill_value` 方法
 
         """
         self._check_value_initialized()
@@ -136,7 +135,6 @@ class Element:
     def _check_value_initialized(self):
         """
         检查 Element 的 value 是否初始化了
-
         """
         if self._value is None:
             assert self.backend.is_specified(), f"Backend is not specified, please specify backend in the Metric " \
@@ -302,7 +300,7 @@ class Element:
 
     def __getattr__(self, item):
         """
-        为FDataLoader提供dataset的方法和属性，实现该方法后，用户可以在FDataLoader实例化后使用apply等dataset的方法
+        为 FDataLoader 提供 dataset 的方法和属性，实现该方法后，用户可以在 FDataLoader 实例化后使用 apply 等 dataset 的方法
         :param item:
         :return:
         """
