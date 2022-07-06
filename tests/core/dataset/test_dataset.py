@@ -522,3 +522,10 @@ class TestCase:
         ins = Instance(**fields)
         # simple print, that is enough.
         print(ins)
+
+    def test_dataset(self):
+        from datasets import Dataset as HuggingfaceDataset
+        # ds = DataSet({"x": ["11sxa", "1sasz"]*100, "y": [0, 1]*100})
+        ds = HuggingfaceDataset.from_dict({"x": ["11sxa", "1sasz"]*100, "y": [0, 1]*100})
+        print(DataSet.from_datasets(ds))
+        # print(ds.from_datasets())
