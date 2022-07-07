@@ -83,13 +83,13 @@ class Trainer(TrainerEventTrigger):
         .. warning::
 
             当使用分布式训练时， **fastNLP** 会默认将 ``dataloader`` 中的 ``Sampler`` 进行处理，以使得在一个 epoch 中，不同卡
-            用以训练的数据是不重叠的。如果你对 sampler 有特殊处理，那么请将 ``use_dist_sampler`` 参数设置为 ``False`` ，此刻需要由
-            你自身保证每张卡上所使用的数据是不同的。
+            用以训练的数据是不重叠的。如果您对 sampler 有特殊处理，那么请将 ``use_dist_sampler`` 参数设置为 ``False`` ，此刻需要由
+            您自身保证每张卡上所使用的数据是不同的。
 
     :param optimizers: 训练所需要的优化器；可以是单独的一个优化器实例，也可以是多个优化器组成的 List；
     :param device: 该参数用来指定具体训练时使用的机器；注意当该参数仅当您通过 ``torch.distributed.launch/run`` 启动时可以为 ``None``，
-        此时 fastNLP 不会对模型和数据进行设备之间的移动处理，但是你可以通过参数 ``input_mapping`` 和 ``output_mapping`` 来实现设备之间
-        数据迁移的工作（通过这两个参数传入两个处理数据的函数）；同时你也可以通过在 kwargs 添加参数 ``data_device`` 来让我们帮助您将数据
+        此时 fastNLP 不会对模型和数据进行设备之间的移动处理，但是您可以通过参数 ``input_mapping`` 和 ``output_mapping`` 来实现设备之间
+        数据迁移的工作（通过这两个参数传入两个处理数据的函数）；同时您也可以通过在 kwargs 添加参数 ``data_device`` 来让我们帮助您将数据
         迁移到指定的机器上（注意这种情况理应只出现在用户在 Trainer 实例化前自己构造 DDP 的场景）；
 
         device 的可选输入如下所示：
@@ -195,7 +195,7 @@ class Trainer(TrainerEventTrigger):
             3. 如果此时 batch 此时是其它类型，那么我们将会直接报错；
         2. 如果 ``input_mapping`` 是一个函数，那么对于取出的 batch，我们将不会做任何处理，而是直接将其传入该函数里；
 
-        注意该参数会被传进 ``Evaluator`` 中；因此你可以通过该参数来实现将训练数据 batch 移到对应机器上的工作（例如当参数 ``device`` 为 ``None`` 时）；
+        注意该参数会被传进 ``Evaluator`` 中；因此您可以通过该参数来实现将训练数据 batch 移到对应机器上的工作（例如当参数 ``device`` 为 ``None`` 时）；
         如果 ``Trainer`` 和 ``Evaluator`` 需要使用不同的 ``input_mapping``, 请使用 ``train_input_mapping`` 与 ``evaluate_input_mapping`` 分别进行设置。
 
     :param output_mapping: 应当为一个字典或者函数。作用和 ``input_mapping`` 类似，区别在于其用于转换输出：
@@ -366,7 +366,7 @@ class Trainer(TrainerEventTrigger):
 
     .. note::
         ``Trainer`` 是通过在内部直接初始化一个 ``Evaluator`` 来进行验证；
-        ``Trainer`` 内部的 ``Evaluator`` 默认是 None，如果您需要在训练过程中进行验证，你需要保证这几个参数得到正确的传入：
+        ``Trainer`` 内部的 ``Evaluator`` 默认是 None，如果您需要在训练过程中进行验证，您需要保证这几个参数得到正确的传入：
 
         必须的参数：``metrics`` 与 ``evaluate_dataloaders``；
 
@@ -896,7 +896,7 @@ class Trainer(TrainerEventTrigger):
 
         这段代码意味着 ``fn1`` 和 ``fn2`` 会被加入到 ``trainer1``，``fn3`` 会被加入到 ``trainer2``；
 
-        注意如果你使用该函数修饰器来为你的训练添加 callback，请务必保证你加入 callback 函数的代码在实例化 `Trainer` 之前；
+        注意如果您使用该函数修饰器来为您的训练添加 callback，请务必保证您加入 callback 函数的代码在实例化 `Trainer` 之前；
 
         补充性的解释见 :meth:`~fastNLP.core.controllers.Trainer.add_callback_fn`；
 

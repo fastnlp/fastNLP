@@ -7,6 +7,7 @@ from inspect import isclass
 import numpy as np
 
 from fastNLP.envs.imports import _NEED_IMPORT_ONEFLOW
+from fastNLP.envs.utils import _module_available
 
 if _NEED_IMPORT_ONEFLOW:
     import oneflow
