@@ -23,6 +23,9 @@ fastNLP具有如下的特性：
 > :warning: **为了实现对不同深度学习架构的兼容，fastNLP 1.0.0之后的版本重新设计了架构，因此与过去的fastNLP版本不完全兼容，
 > 基于更早的fastNLP代码需要做一定的调整**: 
 
+## fastNLP文档
+[中文文档](https://fastnlp.readthedocs.io/)
+
 ## 安装指南
 fastNLP可以通过以下的命令进行安装
 ```shell
@@ -98,6 +101,24 @@ evaluator = Evaluator(model=model, dataloaders=dls['test'], metrics={'acc': Accu
                       input_mapping={'labels': 'target'})
 evaluator.run()
 ```
+
+更多内容可以参考如下的链接
+### 快速入门
+
+- [0. 10 分钟快速上手 fastNLP torch](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_torch_tutorial.html)
+
+### 详细使用教程
+
+- [1. Trainer 和 Evaluator 的基本使用](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_tutorial_0.html)
+- [2. DataSet 和 Vocabulary 的基本使用](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_tutorial_1.html)
+- [3. DataBundle 和 Tokenizer 的基本使用](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_tutorial_2.html)
+- [4. TorchDataloader 的内部结构和基本使用](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_tutorial_3.html)
+- [5. fastNLP 中的预定义模型](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_tutorial_4.html)
+- [6. Trainer 和 Evaluator 的深入介绍](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_tutorial_4.html)
+- [7. fastNLP 与 paddle 或 jittor 的结合](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_tutorial_5.html)
+- [8. 使用 Bert + fine-tuning 完成 SST-2 分类](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_tutorial_e1.html)
+- [9. 使用 Bert + prompt 完成 SST-2 分类](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_tutorial_e2.html)
+
 
 </details>
 
@@ -186,6 +207,16 @@ evaluator = Evaluator(model=model, dataloaders=dls['test'], metrics={'acc': Accu
                       input_mapping={'labels': 'target'})
 evaluator.run()
 ```
+
+更多内容可以参考如下的链接
+### 快速入门
+
+- [0. 10 分钟快速上手 fastNLP paddle](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_torch_tutorial.html)
+
+### 详细使用教程
+
+- [1. 使用 paddlenlp 和 fastNLP 实现中文文本情感分析](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_tutorial_paddle_e1.html)
+- [2. 使用 paddlenlp 和 fastNLP 训练中文阅读理解任务](http://www.fastnlp.top/docs/fastNLP/master/tutorials/fastnlp_tutorial_paddle_e2.html)
 
 </details>
 
