@@ -11,7 +11,7 @@ with open('LICENSE', encoding='utf-8') as f:
 with open('requirements.txt', encoding='utf-8') as f:
     reqs = f.read()
 
-pkgs = [p for p in find_packages() if p.startswith('fastNLP')]
+pkgs = [p for p in find_packages(exclude=['docs', 'tests', 'tutorials']) if p.startswith('fastNLP')]
 print(pkgs)
 
 setup(
