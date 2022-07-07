@@ -1,6 +1,5 @@
 fastNLP.transformers package
-=======================
-
+============================
 .. automodule:: fastNLP.transformers
    :members:
    :undoc-members:

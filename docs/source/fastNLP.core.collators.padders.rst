@@ -16,6 +16,7 @@ Submodules
    fastNLP.core.collators.padders.get_padder
    fastNLP.core.collators.padders.jittor_padder
    fastNLP.core.collators.padders.numpy_padder
+   fastNLP.core.collators.padders.oneflow_padder
    fastNLP.core.collators.padders.padder
    fastNLP.core.collators.padders.paddle_padder
    fastNLP.core.collators.padders.raw_padder

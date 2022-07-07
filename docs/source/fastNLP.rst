@@ -13,6 +13,10 @@ Subpackages
    :maxdepth: 4
 
    fastNLP.core
+   fastNLP.embeddings
    fastNLP.envs
    fastNLP.io
+   fastNLP.models
    fastNLP.modules
+   .. 以下为手动添加
+   fastNLP.transformers

@@ -14,7 +14,6 @@ Submodules
 
    fastNLP.io.loader.classification
    fastNLP.io.loader.conll
-   fastNLP.io.loader.coreference
    fastNLP.io.loader.csv
    fastNLP.io.loader.cws
    fastNLP.io.loader.json

@@ -25,5 +25,4 @@ Submodules
    fastNLP.io.embed_loader
    fastNLP.io.file_reader
    fastNLP.io.file_utils
-   fastNLP.io.model_io
    fastNLP.io.utils
