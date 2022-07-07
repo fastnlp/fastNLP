@@ -57,16 +57,16 @@ def check_loader_paths(paths: Union[str, Dict[str, str]]) -> Dict[str, str]:
                         raise FileExistsError(f"Two files contain `{path_pair[0]}` were found, please specify the "
                                               f"filepath for `{path_pair[0]}`.")
                     files[path_pair[0]] = os.path.join(paths, path_pair[1])
-            if 'train' not in files:
-                raise KeyError(f"There is no train file in {paths}.")
+            # if 'train' not in files:
+            #     raise KeyError(f"There is no train file in {paths}.")
             return files
         else:
             raise FileNotFoundError(f"{paths} is not a valid file path.")
     
     elif isinstance(paths, dict):
         if paths:
-            if 'train' not in paths:
-                raise KeyError("You have to include `train` in your dict.")
+            # if 'train' not in paths:
+            #     raise KeyError("You have to include `train` in your dict.")
             for key, value in paths.items():
                 if isinstance(key, str) and isinstance(value, str):
                     value = os.path.abspath(os.path.expanduser(value))

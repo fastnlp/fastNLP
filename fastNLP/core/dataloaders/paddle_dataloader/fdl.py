@@ -320,6 +320,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
     from fastNLP.io.data_bundle import DataBundle
 
     if isinstance(ds_or_db, DataBundle):
+        assert batch_sampler is None, "batch_sampler can only be None when multiple datasets are presented."
         dl_bundle = {}
         for name, ds in ds_or_db.iter_datasets():
             if 'train' in name:
@@ -346,6 +347,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         return dl_bundle
 
     elif isinstance(ds_or_db, Dict):
+        assert batch_sampler is None, "batch_sampler can only be None when multiple datasets are presented."
         ds_dict = {}
         for name, ds in ds_or_db.items():
             if 'train' in name:

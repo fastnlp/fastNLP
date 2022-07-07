@@ -6,7 +6,7 @@ __all__ = [
     'DataBundle',
 ]
 
-from typing import Union, List, Callable
+from typing import Union, List, Callable, Dict
 
 from ..core.dataset import DataSet
 from fastNLP.core.vocabulary import Vocabulary
@@ -34,8 +34,16 @@ class DataBundle:
         :param datasets: 从名称(字符串)到 :class:`~fastNLP.DataSet` 类型的dict。建议不要将相同的DataSet对象重复传入，可能会在
             使用Pipe处理数据的时候遇到问题，若多个数据集确需一致，请手动deepcopy后传入。
         """
-        self.vocabs = vocabs or {}
-        self.datasets = datasets or {}
+        self._vocabs = vocabs or {}
+        self._datasets = datasets or {}
+
+    @property
+    def datasets(self)->Dict:
+        return self._datasets
+
+    @property
+    def vocabs(self) -> Dict:
+        return self._vocabs
 
     def set_vocab(self, vocab: Vocabulary, field_name: str):
         r"""

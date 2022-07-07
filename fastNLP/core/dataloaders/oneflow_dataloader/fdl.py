@@ -287,6 +287,8 @@ def prepare_oneflow_dataloader(ds_or_db,
     from fastNLP.io import DataBundle
 
     if isinstance(ds_or_db, DataBundle):
+        assert sampler is None, "sampler can only be None when multiple datasets are presented."
+        assert batch_sampler is None, "batch_sampler can only be None when multiple datasets are presented."
         dl_bundle = {}
         for name, ds in ds_or_db.iter_datasets():
             if 'train' in name:
@@ -313,6 +315,8 @@ def prepare_oneflow_dataloader(ds_or_db,
         return dl_bundle
 
     elif isinstance(ds_or_db, Mapping):
+        assert sampler is None, "sampler can only be None when multiple datasets are presented."
+        assert batch_sampler is None, "batch_sampler can only be None when multiple datasets are presented."
         dl_bundle = {}
         for name, ds in ds_or_db.items():
             if 'train' in name:

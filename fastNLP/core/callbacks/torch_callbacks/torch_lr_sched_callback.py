@@ -18,7 +18,7 @@ class TorchWarmupCallback(Callback):
         1. *linear* -- 前 ``warmup`` 的 step 上升到指定的学习率（从 Trainer 中 optimizer 处获取）, 在剩下的 step 中下降到 0；
         2. *constant* -- 前 ``warmup`` 的 step 上升到指定的学习率，余下的 step 保持不变。
     """
-    def __init__(self, warmup:Union[int, float]=0.1, schedule:str='constant'):
+    def __init__(self, warmup:Union[int, float]=0.1, schedule:str='linear'):
         super().__init__()
         self.warmup = max(warmup, 0.)
 

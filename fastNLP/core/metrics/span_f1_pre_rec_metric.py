@@ -328,7 +328,7 @@ class SpanFPreRecMetric(Metric):
 
         return evaluate_result
 
-    def update(self, pred, target, seq_len: Optional[List] = None) -> None:
+    def update(self, pred, target, seq_len) -> None:
         r"""
         :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
 
