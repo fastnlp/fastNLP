@@ -349,15 +349,18 @@ class Vocabulary(object):
         
         for idx, dataset in enumerate(datasets):
             if isinstance(dataset, DataSet):
-                try:
-                    for f_n, n_f_n in zip(field_name, new_field_name):
-                        dataset.apply_field(index_instance, field_name=f_n, new_field_name=n_f_n,
-                                            progress_bar=None)
-                except Exception as e:
-                    logger.error("When processing the `{}` dataset, the following error occurred.".format(idx))
-                    raise e
+                ds_lst = [dataset]
+            elif _is_iterable(dataset):
+                ds_lst = list(dataset)
             else:
-                raise RuntimeError("Only DataSet type is allowed.")
+                raise TypeError(f"Only DataSet type is allowed, instead of {type(dataset)}.")
+            try:
+                for ds in ds_lst:
+                    for f_n, n_f_n in zip(field_name, new_field_name):
+                        ds.apply_field(index_instance, field_name=f_n, new_field_name=n_f_n, progress_bar=None)
+            except Exception as e:
+                logger.error("When processing the `{}` dataset, the following error occurred.".format(idx))
+                raise e
         return self
     
     @property
@@ -408,13 +411,18 @@ class Vocabulary(object):
         
         for idx, dataset in enumerate(datasets):
             if isinstance(dataset, DataSet):
-                try:
-                    dataset.apply(construct_vocab, progress_bar=None)
-                except BaseException as e:
-                    logger.error("When processing the `{}` dataset, the following error occurred:".format(idx))
-                    raise e
+                ds_lst = [dataset]
+            elif _is_iterable(dataset):
+                ds_lst = list(dataset)
             else:
-                raise TypeError("Only DataSet type is allowed.")
+                raise TypeError(f"Only DataSet type is allowed, instead of {type(dataset)}.")
+
+            try:
+                for ds in ds_lst:
+                    ds.apply(construct_vocab, progress_bar=None)
+            except BaseException as e:
+                logger.error("When processing the `{}` dataset, the following error occurred:".format(idx))
+                raise e
         
         if no_create_entry_dataset is not None:
             partial_construct_vocab = partial(construct_vocab, no_create_entry=True)

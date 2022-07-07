@@ -34,8 +34,7 @@ class Accuracy(Metric):
 
         :return: 包含以下内容的字典：``{"acc": float, 'total': float, 'correct': float}``；
         """
-        evaluate_result = {'acc': round(self.correct.get_scalar() / (self.total.get_scalar() + 1e-12), 6),
-                           'total': self.total.item(), 'correct': self.correct.item()}
+        evaluate_result = {'acc': round(self.correct.get_scalar() / (self.total.get_scalar() + 1e-12), 6)}
         return evaluate_result
 
     def update(self, pred, target, seq_len=None):

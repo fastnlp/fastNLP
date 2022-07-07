@@ -595,7 +595,7 @@ class Trainer(TrainerEventTrigger):
         :param resume_from: 从哪个路径下恢复 trainer 的状态，注意该值需要为一个文件夹，例如使用 ``CheckpointCallback`` 时帮助您创建的保存的子文件夹；
         :param resume_training: 是否按照 checkpoint 中训练状态恢复。如果为 False，则只恢复 model 和 optimizers 的状态；该参数如果为 ``True``，
             在下一次断点重训的时候我们会精确到上次训练截止的具体的 sample 进行训练；否则我们只会恢复 model 和 optimizers 的状态，而 ``Trainer`` 中的
-            其余状态都是保持初始化时的状态不会改变；
+            其余状态都是保持初始化时的状态不会改变。仅当传入了 resume_from 参数时有意义。
         :param catch_KeyboardInterrupt: 是否捕获 :class:`KeyboardInterrupt`；如果该参数为 ``True``，在训练时如果您使用 ``ctrl+c`` 来终止程序，
             ``Trainer`` 不会抛出异常，但是会提前退出，然后 ``trainer.run()`` 之后的代码会继续运行。注意该参数在您使用分布式训练的 ``Driver``
             时无效，例如 ``TorchDDPDriver``；非分布式训练的 ``Driver`` 下该参数默认为 True；

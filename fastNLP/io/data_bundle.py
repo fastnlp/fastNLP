@@ -6,7 +6,7 @@ __all__ = [
     'DataBundle',
 ]
 
-from typing import Union, List, Callable
+from typing import Union, List, Callable, Dict
 
 from ..core.dataset import DataSet
 from fastNLP.core.vocabulary import Vocabulary
@@ -29,8 +29,16 @@ class DataBundle:
     """
 
     def __init__(self, vocabs=None, datasets=None):
-        self.vocabs = vocabs or {}
-        self.datasets = datasets or {}
+        self._vocabs = vocabs or {}
+        self._datasets = datasets or {}
+
+    @property
+    def datasets(self)->Dict:
+        return self._datasets
+
+    @property
+    def vocabs(self) -> Dict:
+        return self._vocabs
 
     def set_vocab(self, vocab: Vocabulary, field_name: str):
         r"""

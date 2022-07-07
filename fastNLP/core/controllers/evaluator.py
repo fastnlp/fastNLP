@@ -42,7 +42,8 @@ class Evaluator:
         ``Trainer`` 中的参数相同，对于这些参数，您可以参考 ``Trainer`` 的文档来获取更详细的信息；详见 :class:`~fastNLP.core.controllers.trainer.Trainer`；
 
     :param model: 训练所需要的模型，例如 ``torch.nn.Module``，等价于 ``Trainer`` 中的 ``model`` 参数；
-    :param dataloaders: 用于评测的数据集。如果为多个，您需要使用 ``dict`` 传入，即对每一个数据集标上用于标识它们的标签；
+    :param dataloaders: 用于评测的数据集。如果为多个，您需要使用 ``dict`` 传入，即对每一个数据集标上用于标识它们的标签；也可以使用 evaluate_dataloaders
+        作为参数的名称。
     :param metrics: 评测时使用的指标。注意该参数必须为 ``dict`` 类型，其中 ``key`` 为一个 ``metric`` 的名称，``value`` 为具体的 ``Metric`` 对象。目前支持以下 metrics：
 
         1. fastNLP 自己的 ``metric``：详见 :class:`~fastNLP.core.metrics.Metric`；
@@ -82,13 +83,14 @@ class Evaluator:
         2. 如果为 ``str`` 类型，例如为 ``'my_evaluate_step_fn'``，则尝试寻找 :meth:`model.my_evaluate_step_fn`，如果找不到则直接报错；
 
     :param input_mapping: 等价于 ``Trainer`` 中的 ``input_mapping`` 参数；对具体的用于评测一个 batch 的数据使用 ``input_mapping`` 处理之后再输入到 ``model`` 以及 ``metric`` 中。如果针对
-        ``model`` 和 ``metric`` 需要不同的 ``mapping``，请考虑使用 ``evaluate_batch_step_fn`` 参数定制；
+        ``model`` 和 ``metric`` 需要不同的 ``mapping``，请考虑使用 ``evaluate_batch_step_fn`` 参数定制；也可以使用 evaluate_input_mapping 参数名传入。
 
         .. todo::
 
             之后链接上 参数匹配 的文档；
 
     :param output_mapping: 等价于 ``Trainer`` 中的 ``output_mapping`` 参数；对 ``model`` 输出的内容，将通过 ``output_mapping`` 处理之后再输入到 ``metric`` 中；
+        也可以使用 evaluate_output_mapping 参数名传入。
     :param model_wo_auto_param_call: 等价于 ``Trainer`` 中的 ``model_wo_auto_param_call`` 参数；
 
         .. note::
@@ -128,7 +130,7 @@ class Evaluator:
     driver: Driver
     _evaluate_batch_loop: Loop
 
-    def __init__(self, model, dataloaders, metrics: Optional[Dict] = None,
+    def __init__(self, model, dataloaders=None, metrics: Optional[Dict] = None,
                  driver: Union[str, Driver] = 'auto', device: Optional[Union[int, List[int], str]] = None,
                  evaluate_batch_step_fn: Optional[Callable] = None, evaluate_fn: Optional[str] = None,
                  input_mapping: Optional[Union[Callable, Dict]] = None,
@@ -139,6 +141,7 @@ class Evaluator:
         self.driver = choose_driver(model, driver, device, fp16=fp16, model_wo_auto_param_call=model_wo_auto_param_call,
                                     **kwargs)
 
+        dataloaders = dataloaders if dataloaders is not None else kwargs.get('evaluate_dataloaders')
         if dataloaders is None:
             raise ValueError("Parameter `dataloaders` can not be None.")
         self.dataloaders = dataloaders
@@ -151,8 +154,8 @@ class Evaluator:
             _check_valid_parameters_number(evaluate_batch_step_fn, ['evaluator', 'batch'], fn_name='evaluate_batch_step_fn')
         self.evaluate_batch_step_fn = evaluate_batch_step_fn
 
-        self.input_mapping = input_mapping
-        self.output_mapping = output_mapping
+        self.input_mapping = input_mapping if input_mapping is not None else kwargs.get('evaluate_input_mapping')
+        self.output_mapping = output_mapping if output_mapping is not None else kwargs.get('evaluate_output_mapping')
 
         # check dataloader
         if not isinstance(dataloaders, dict):

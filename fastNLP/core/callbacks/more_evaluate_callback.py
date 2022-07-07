@@ -127,10 +127,6 @@ class MoreEvaluateCallback(HasMonitorCallback):
             assert trainer.evaluator is not None, f"You set `watch_monitor={self.monitor}`, but no " \
                                                   f"evaluate_dataloaders is provided in Trainer."
 
-        if trainer.evaluate_fn is self.evaluate_fn:
-            logger.warning_once("The `evaluate_fn` is the same as in Trainer, there seems no need to use "
-                                "`MoreEvaluateCallback`.")
-
         # 初始化 evaluator , 同时避免调用 super 对 monitor 赋值
         kwargs = {
             'model': self.kwargs.get('model', trainer.model),
