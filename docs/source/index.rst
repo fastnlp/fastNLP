@@ -2,18 +2,18 @@ fastNLP 中文文档
 =====================
 
 
-用户手册
+快速上手
 ----------------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-    语法样例 </user/example>
+   tutorials
 
 API 文档
 -------------
 
-除了用户手册之外，你还可以通过查阅 API 文档来找到你所需要的工具。
+您可以通过查阅 API 文档来找到你所需要的工具。
 
 .. toctree::
    :titlesonly:

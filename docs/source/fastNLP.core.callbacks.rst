@@ -31,5 +31,6 @@ Submodules
    fastNLP.core.callbacks.lr_scheduler_callback
    fastNLP.core.callbacks.more_evaluate_callback
    fastNLP.core.callbacks.progress_callback
+   fastNLP.core.callbacks.timer_callback
    fastNLP.core.callbacks.topk_saver
    fastNLP.core.callbacks.utils

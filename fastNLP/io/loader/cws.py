@@ -1,5 +1,3 @@
-r"""undocumented"""
-
 __all__ = [
     "CWSLoader"
 ]
@@ -16,15 +14,16 @@ from fastNLP.core.dataset import DataSet, Instance
 
 class CWSLoader(Loader):
     r"""
-    CWSLoader支持的数据格式为，一行一句话，不同词之间用空格隔开, 例如：
+    **Chinese word segmentor** 的 **Loader** 。如果您使用了该数据集，请引用以下的文章：Thomas Emerson, The Second International Chinese Word Segmentation Bakeoff,
+    2005. 更多信息可以在 http://sighan.cs.uchicago.edu/bakeoff2005/ 查看。
 
-    Example::
+    :class:`CWSLoader` 支持的数据格式为：一行一句话，不同词之间用空格隔开，例如::
 
         上海 浦东 开发 与 法制 建设 同步
         新华社 上海 二月 十日 电 （ 记者 谢金虎 、 张持坚 ）
         ...
 
-    该Loader读取后的DataSet具有如下的结构
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
     .. csv-table::
        :header: "raw_words"
@@ -32,14 +31,11 @@ class CWSLoader(Loader):
        "上海 浦东 开发 与 法制 建设 同步"
        "新华社 上海 二月 十日 电 （ 记者 谢金虎 、 张持坚 ）"
        "..."
-       
+
+    :param dataset_name: data 的名称，支持 ``['pku', 'msra', 'cityu'(繁体), 'as'(繁体), None]``
     """
 
     def __init__(self, dataset_name: str = None):
-        r"""
-        
-        :param str dataset_name: data的名称，支持pku, msra, cityu(繁体), as(繁体), None
-        """
         super().__init__()
         datanames = {'pku': 'cws-pku', 'msra': 'cws-msra', 'as': 'cws-as', 'cityu': 'cws-cityu'}
         if dataset_name in datanames:
@@ -58,12 +54,11 @@ class CWSLoader(Loader):
 
     def download(self, dev_ratio=0.1, re_download=False) -> str:
         r"""
-        如果你使用了该数据集，请引用以下的文章:Thomas Emerson, The Second International Chinese Word Segmentation Bakeoff,
-        2005. 更多信息可以在http://sighan.cs.uchicago.edu/bakeoff2005/查看
+        自动下载数据集。
 
-        :param float dev_ratio: 如果路径中没有dev集，从train划分多少作为dev的数据. 如果为0，则不划分dev。
-        :param bool re_download: 是否重新下载数据，以重新切分数据。
-        :return: str
+        :param dev_ratio: 如果路径中没有验证集，从 train 划分多少作为 dev 的数据。 如果为 **0** ，则不划分 dev
+        :param re_download: 是否重新下载数据，以重新切分数据。
+        :return: 数据集的目录地址
         """
         if self.dataset_name is None:
             return ''

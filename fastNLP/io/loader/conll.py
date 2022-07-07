@@ -1,5 +1,3 @@
-r"""undocumented"""
-
 __all__ = [
     "ConllLoader",
     "Conll2003Loader",
@@ -17,6 +15,7 @@ import os
 import random
 import shutil
 import time
+from typing import List
 
 from .loader import Loader
 from ..file_reader import _read_conll
@@ -26,9 +25,7 @@ from fastNLP.core.dataset import DataSet, Instance
 
 class ConllLoader(Loader):
     r"""
-    ConllLoader支持读取的数据格式: 以空行隔开两个sample，除了分割行，每一行用空格或者制表符隔开不同的元素。如下例所示:
-
-    Example::
+    :class:`ConllLoader` 支持读取的数据格式：以空行隔开两个 sample，除了分割行之外的每一行用空格或者制表符隔开不同的元素。如下例所示::
 
         # 文件中的内容
         Nadim NNP B-NP B-PER
@@ -48,19 +45,16 @@ class ConllLoader(Loader):
         # 如果用以下的参数读取，返回的DataSet将包含raw_words, pos和ner三个field
         dataset = ConllLoader(headers=['raw_words', 'pos', 'ner'], indexes=[0, 1, 3])._load('/path/to/train.conll')
 
-    ConllLoader返回的DataSet的field由传入的headers确定。
+    :class:`ConllLoader` 返回的 :class:`~fastNLP.core.DataSet` 的 `field` 由传入的 ``headers`` 确定。
 
+    :param headers: 每一列数据的名称， ``header`` 与 ``indexes`` 一一对应
+    :param sep: 指定分隔符，默认为制表符
+    :param indexes: 需要保留的数据列下标，从 **0** 开始。若为 ``None`` ，则所有列都保留。
+    :param dropna: 是否忽略非法数据，若为 ``False`` ，则遇到非法数据时抛出 :class:`ValueError` 。
+    :param drophashtag: 是否忽略以 ``#`` 开头的句子。
     """
     
-    def __init__(self, headers, sep=None, indexes=None, dropna=True, drophash=True):
-        r"""
-        
-        :param list headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
-        :param str sep: 指定分隔符，默认为制表符
-        :param list indexes: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
-        :param bool dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
-        :param bool drophashtag: 是否忽略以 ``#`` 开头的句子。
-        """
+    def __init__(self, headers: List[str], sep: str=None, indexes: List[int]=None, dropna: bool=True, drophash: bool=True):
         super(ConllLoader, self).__init__()
         if not isinstance(headers, (list, tuple)):
             raise TypeError(
@@ -93,8 +87,9 @@ class ConllLoader(Loader):
 
 class Conll2003Loader(ConllLoader):
     r"""
-    用于读取conll2003任务的数据。数据的内容应该类似与以下的内容, 第一列为raw_words, 第二列为pos, 第三列为chunking，第四列为ner。
-    数据中以"-DOCSTART-"开头的行将被忽略，因为该符号在conll 2003中被用为文档分割符。
+    用于读取 **conll2003** 任务的数据。数据的内容应该类似于以下的内容：第一列为 **raw_words** ，第二列为 **pos** ，
+    第三列为 **chunking** ，第四列为 **ner** 。
+    数据中以 ``"-DOCSTART-"`` 开头的行将被忽略，因为该符号在 **conll2003** 中被用为文档分割符。
 
     Example::
 
@@ -108,9 +103,9 @@ class Conll2003Loader(ConllLoader):
         1996-12-06 CD I-NP O
         ...
 
-    返回的DataSet的内容为
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
-    .. csv-table:: 下面是Conll2003Loader加载后数据具备的结构。
+    .. csv-table:: 下面是 Conll2003Loader 加载后数据具备的结构。
        :header: "raw_words", "pos", "chunk", "ner"
 
        "[Nadim, Ladki]", "[NNP, NNP]", "[B-NP, I-NP]", "[B-PER, I-PER]"
@@ -152,10 +147,9 @@ class Conll2003Loader(ConllLoader):
 
 class Conll2003NERLoader(ConllLoader):
     r"""
-    用于读取conll2003任务的NER数据。每一行有4列内容，空行意味着隔开两个句子
+    用于读取 **conll2003** 任务的 NER 数据。每一行有 4 列内容，空行意味着隔开两个句子。
 
-    支持读取的内容如下
-    Example::
+    支持读取的内容如下::
 
         Nadim NNP B-NP B-PER
         Ladki NNP I-NP I-PER
@@ -167,9 +161,9 @@ class Conll2003NERLoader(ConllLoader):
         1996-12-06 CD I-NP O
         ...
 
-    返回的DataSet的内容为
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
-    .. csv-table:: 下面是Conll2003Loader加载后数据具备的结构, target是BIO2编码
+    .. csv-table:: 下面是 Conll2003Loader 加载后数据具备的结构, target 是 BIO2 编码
        :header: "raw_words", "target"
 
        "[Nadim, Ladki]", "[B-PER, I-PER]"
@@ -213,18 +207,16 @@ class Conll2003NERLoader(ConllLoader):
 
 class OntoNotesNERLoader(ConllLoader):
     r"""
-    用以读取OntoNotes的NER数据，同时也是Conll2012的NER任务数据。将OntoNote数据处理为conll格式的过程可以参考
-    https://github.com/yhcc/OntoNotes-5.0-NER。OntoNoteNERLoader将取第4列和第11列的内容。
+    用以读取 **OntoNotes** 的 NER 数据，同时也是 **Conll2012** 的 NER 任务数据。将 **OntoNote** 数据处理为 conll 格式的过程可以参考
+    https://github.com/yhcc/OntoNotes-5.0-NER。:class:`OntoNotesNERLoader` 将取第 **4** 列和第 **11** 列的内容。
 
-    读取的数据格式为：
-
-    Example::
+    读取的数据格式为::
 
         bc/msnbc/00/msnbc_0000   0   0          Hi   UH   (TOP(FRAG(INTJ*)  -   -   -    Dan_Abrams  *   -
         bc/msnbc/00/msnbc_0000   0   1    everyone   NN              (NP*)  -   -   -    Dan_Abrams  *   -
         ...
 
-    返回的DataSet的内容为
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
     .. csv-table::
         :header: "raw_words", "target"
@@ -291,7 +283,8 @@ class OntoNotesNERLoader(ConllLoader):
 
 class CTBLoader(Loader):
     r"""
-    支持加载的数据应该具备以下格式, 其中第二列为词语，第四列为pos tag，第七列为依赖树的head，第八列为依赖树的label
+    **CTB** 数据集的 **Loader**。支持加载的数据应该具备以下格式, 其中第二列为 **词语** ，第四列为 **pos tag** ，第七列为 **依赖树的 head** ，
+    第八列为 **依赖树的 label** 。
 
     Example::
 
@@ -306,7 +299,7 @@ class CTBLoader(Loader):
         3       １２月  _       NT      NT      _       7       dep     _       _
         ...
 
-    读取之后DataSet具备的格式为
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
     .. csv-table::
         :header: "raw_words", "pos", "dep_head", "dep_label"
@@ -335,30 +328,30 @@ class CTBLoader(Loader):
         由于版权限制，不能提供自动下载功能。可参考
 
         https://catalog.ldc.upenn.edu/LDC2013T21
-
-        :return:
         """
         raise RuntimeError("CTB cannot be downloaded automatically.")
 
 
 class CNNERLoader(Loader):
+    r"""
+    支持加载形如以下格式的内容，一行两列，以空格隔开两个 sample
+
+    Example::
+
+        我 O
+        们 O
+        变 O
+        而 O
+        以 O
+        书 O
+        会 O
+        ...
+
+    """
     def _load(self, path: str):
-        r"""
-        支持加载形如以下格式的内容，一行两列，以空格隔开两个sample
-
-        Example::
-
-            我 O
-            们 O
-            变 O
-            而 O
-            以 O
-            书 O
-            会 O
-            ...
-
-        :param str path: 文件路径
-        :return: DataSet，包含raw_words列和target列
+        """
+        :param path: 文件路径
+        :return: :class:`~fastNLP.core.DataSet` ，包含 ``raw_words`` 列和 ``target`` 列
         """
         ds = DataSet()
         with open(path, 'r', encoding='utf-8') as f:
@@ -382,9 +375,11 @@ class CNNERLoader(Loader):
 
 class MsraNERLoader(CNNERLoader):
     r"""
-    读取MSRA-NER数据，数据中的格式应该类似与下列的内容
-
-    Example::
+    读取 **MSRA-NER** 数据，如果您要使用该数据，请引用以下的文章：
+    
+    Gina-Anne Levow, 2006, The Third International Chinese Language Processing Bakeoff: Word Segmentation and Named Entity Recognition.
+        
+    数据中的格式应该类似于下列的内容::
 
         把	O
         欧	B-LOC
@@ -404,7 +399,7 @@ class MsraNERLoader(CNNERLoader):
 
         ...
 
-    读取后的DataSet包含以下的field
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
     .. csv-table::
         :header: "raw_chars", "target"
@@ -420,15 +415,14 @@ class MsraNERLoader(CNNERLoader):
     
     def download(self, dev_ratio: float = 0.1, re_download: bool = False) -> str:
         r"""
-        自动下载MSAR-NER的数据，如果你使用该数据，请引用 Gina-Anne Levow, 2006, The Third International Chinese Language
-        Processing Bakeoff: Word Segmentation and Named Entity Recognition.
+        自动下载 **MSAR-NER** 的数据。
 
-        根据dev_ratio的值随机将train中的数据取出一部分作为dev数据。下载完成后在output_dir中有train.conll, test.conll,
-        dev.conll三个文件。
+        下载完成后在 ``output_dir`` 中有 ``train.conll`` , ``test.conll`` , ``dev.conll`` 三个文件。
+        如果 ``dev_ratio`` 为 0，则只有 ``train.conll`` 和 ``test.conll`` 。
 
-        :param float dev_ratio: 如果路径中没有dev集，从train划分多少作为dev的数据. 如果为0，则不划分dev。
-        :param bool re_download: 是否重新下载数据，以重新切分数据。
-        :return: str, 数据集的目录地址
+        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数据。如果为 **0** ，则不划分 dev
+        :param re_download: 是否重新下载数据，以重新切分数据。
+        :return: 数据集的目录地址
         :return:
         """
         dataset_name = 'msra-ner'
@@ -470,9 +464,11 @@ class MsraNERLoader(CNNERLoader):
 
 class WeiboNERLoader(CNNERLoader):
     r"""
-    读取WeiboNER数据，数据中的格式应该类似与下列的内容
-
-    Example::
+    读取 **WeiboNER** 数据，如果您要使用该数据，请引用以下的文章：
+    
+    Nanyun Peng and Mark Dredze, 2015, Named Entity Recognition for Chinese Social Media with Jointly Trained Embeddings.
+    
+    数据中的格式应该类似与下列的内容::
 
         老	B-PER.NOM
         百	I-PER.NOM
@@ -482,7 +478,7 @@ class WeiboNERLoader(CNNERLoader):
 
         ...
 
-        读取后的DataSet包含以下的field
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
         .. csv-table::
 
@@ -498,10 +494,9 @@ class WeiboNERLoader(CNNERLoader):
     
     def download(self) -> str:
         r"""
-        自动下载Weibo-NER的数据，如果你使用了该数据，请引用 Nanyun Peng and Mark Dredze, 2015, Named Entity Recognition for
-        Chinese Social Media with Jointly Trained Embeddings.
+        自动下载 **Weibo-NER** 的数据。
 
-        :return: str
+        :return: 数据集目录地址
         """
         dataset_name = 'weibo-ner'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
@@ -511,9 +506,7 @@ class WeiboNERLoader(CNNERLoader):
 
 class PeopleDailyNERLoader(CNNERLoader):
     r"""
-    支持加载的数据格式如下
-
-    Example::
+    加载 **People's Daily NER** 数据集的 **Loader** 。支持加载的数据格式如下::
 
         中 B-ORG
         共 I-ORG
@@ -524,9 +517,9 @@ class PeopleDailyNERLoader(CNNERLoader):
         中 B-ORG
         ...
 
-    读取后的DataSet包含以下的field
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
-    .. csv-table:: target列是基于BIO的编码方式
+    .. csv-table:: target 列是基于 BIO 的编码方式
         :header: "raw_chars", "target"
 
         "['中', '共', '中', '央']", "['B-ORG', 'I-ORG', 'I-ORG', 'I-ORG']"
@@ -538,6 +531,11 @@ class PeopleDailyNERLoader(CNNERLoader):
         super().__init__()
     
     def download(self) -> str:
+        """
+        自动下载数据集。
+
+        :return: 数据集目录地址
+        """
         dataset_name = 'peopledaily'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
         

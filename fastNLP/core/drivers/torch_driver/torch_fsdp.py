@@ -1,15 +1,17 @@
 
 
 
-from fastNLP.envs.imports import _TORCH_GREATER_EQUAL_1_12
+from fastNLP.envs.imports import _TORCH_GREATER_EQUAL_1_12, _NEED_IMPORT_TORCH
 
 if _TORCH_GREATER_EQUAL_1_12:
     from torch.distributed.fsdp import FullyShardedDataParallel, StateDictType, FullStateDictConfig, OptimStateKeyType
 
+if _NEED_IMPORT_TORCH:
+    import torch
+    import torch.distributed as dist
+    from torch.nn.parallel import DistributedDataParallel
+
 import os
-import torch
-import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel
 from typing import Optional, Union, List, Dict, Mapping
 from pathlib import Path
 

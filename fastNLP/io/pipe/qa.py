@@ -1,5 +1,5 @@
 r"""
-本文件中的Pipe主要用于处理问答任务的数据。
+本文件中的 **Pipe** 主要用于处理问答任务的数据。
 
 """
 
@@ -78,32 +78,20 @@ def _concat_clip(data_bundle, max_len, concat_field_name='raw_chars'):
 
 class CMRC2018BertPipe(Pipe):
     r"""
-    处理之后的DataSet将新增以下的field(传入的field仍然保留)
+    处理 **CMRC2018** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中新增的内容如下（原有的 field 仍然保留）：
 
     .. csv-table::
         :header: "context_len", "raw_chars",  "target_start", "target_end", "chars"
         
-        492, ['范', '廷', '颂... ], 30, 34, "[21, 25, ...]"
-        491, ['范', '廷', '颂... ], 41, 61, "[21, 25, ...]"
-
+        492, "['范', '廷', '颂... ]", 30, 34, "[21, 25, ...]"
+        491, "['范', '廷', '颂... ]", 41, 61, "[21, 25, ...]"
         ".", "...", "...","...", "..."
 
-    raw_words列是context与question拼起来的结果(连接的地方加入了[SEP])，words是转为index的值, target_start为答案start的index，target_end为答案end的index
-    （闭区间）；context_len指示的是words列中context的长度。
+    ``raw_chars`` 列是 ``context`` 与 ``question`` 拼起来的结果（连接的地方加入了 ``[SEP]`` ）， ``chars`` 是转为
+    index 的值， ``target_start`` 为答案开始的位置， ``target_end`` 为答案结束的位置（闭区间）； ``context_len``
+    指示的是 ``chars`` 列中 context 的长度。
 
-    其中各列的meta信息如下:
-    
-    .. code::
-    
-        +-------------+-------------+-----------+--------------+------------+-------+---------+
-        | field_names | context_len | raw_chars | target_start | target_end | chars | answers |
-        +-------------+-------------+-----------+--------------+------------+-------+---------|
-        |   is_input  |    False    |   False   |    False     |   False    |  True |  False  |
-        |  is_target  |     True    |    True   |     True     |    True    | False |  True   |
-        | ignore_type |    False    |    True   |    False     |   False    | False |  True   |
-        |  pad_value  |      0      |     0     |      0       |     0      |   0   |   0     |
-        +-------------+-------------+-----------+--------------+------------+-------+---------+
-    
+    :param max_len:
     """
 
     def __init__(self, max_len=510):
@@ -112,17 +100,17 @@ class CMRC2018BertPipe(Pipe):
 
     def process(self, data_bundle: DataBundle) -> DataBundle:
         r"""
-        传入的DataSet应该具备以下的field
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该包含 ``raw_words`` ：
 
         .. csv-table::
-           :header:"title", "context", "question", "answers", "answer_starts", "id"
+           :header: "title", "context", "question", "answers", "answer_starts", "id"
 
            "范廷颂", "范廷颂枢机（，），圣名保禄·若瑟（）...", "范廷颂是什么时候被任为主教的？", ["1963年"], ["30"], "TRAIN_186_QUERY_0"
            "范廷颂", "范廷颂枢机（，），圣名保禄·若瑟（）...", "1990年，范廷颂担任什么职务？", ["1990年被擢升为天..."], ["41"],"TRAIN_186_QUERY_1"
            "...", "...", "...","...", ".", "..."
 
         :param data_bundle:
-        :return:
+        :return: 处理后的 ``data_bundle``
         """
         data_bundle = _concat_clip(data_bundle, max_len=self.max_len, concat_field_name='raw_chars')
 
@@ -138,5 +126,11 @@ class CMRC2018BertPipe(Pipe):
         return data_bundle
 
     def process_from_file(self, paths=None) -> DataBundle:
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+
+        :param paths:
+        :return:
+        """
         data_bundle = CMRC2018Loader().load(paths)
         return self.process(data_bundle)

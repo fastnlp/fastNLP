@@ -86,7 +86,7 @@ class StaticEmbedding(TokenEmbedding):
     :param requires_grad: 是否需要梯度。
     :param init_method: 如何初始化没有找到的值。可以使用 :mod:`torch.nn.init` 中的各种方法，传入的方法应该接受一个 tensor，并
         inplace 地修改其值。
-    :param lower: 是否将 ``vocab`` 中的词语小写后再和预训练的词表进行匹配。如果你的词表中包含大写的词语，或者就是需要单独
+    :param lower: 是否将 ``vocab`` 中的词语小写后再和预训练的词表进行匹配。如果您的词表中包含大写的词语，或者就是需要单独
         为大写的词语开辟一个 vector 表示，则将 ``lower`` 设置为 ``False``。
     :param dropout: 以多大的概率对 embedding 的表示进行 Dropout。0.1 即随机将 10% 的值置为 0。
     :param word_dropout: 按照一定概率随机将 word 设置为 ``unk_index`` ，这样可以使得 ``<UNK>`` 这个 token 得到足够的训练，

@@ -13,3 +13,4 @@ Subpackages
    :maxdepth: 4
 
    fastNLP.modules.mix_modules
+   fastNLP.modules.torch

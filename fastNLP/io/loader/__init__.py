@@ -1,8 +1,8 @@
 r"""
-Loader用于读取数据，并将内容读取到 :class:`~fastNLP.DataSet` 或者 :class:`~fastNLP.io.DataBundle` 中。所有的Loader都支持以下的
-三个方法： ``__init__`` ， ``_load`` , ``loads`` . 其中 ``__init__(...)`` 用于申明读取参数，以及说明该Loader支持的数据格式，
-读取后 :class:`~fastNLP.DataSet` 中的 `field` ; ``_load(path)`` 方法传入文件路径读取单个文件，并返回 :class:`~fastNLP.DataSet` ;
-``load(paths)`` 用于读取文件夹下的文件，并返回 :class:`~fastNLP.io.DataBundle` 类型的对象 , load()方法支持以下几种类型的参数:
+**Loader** 用于读取数据，并将内容读取到 :class:`~fastNLP.core.DataSet` 或者 :class:`~fastNLP.io.DataBundle` 中。所有的 ``Loader`` 都支持以下的
+三个方法： ``__init__`` ， ``_load`` , ``loads`` . 其中 ``__init__(...)`` 用于申明读取参数，以及说明该 ``Loader`` 支持的数据格式，
+读取后 :class:`~fastNLP.core.DataSet` 中的 `field` ； ``_load(path)`` 方法传入文件路径读取单个文件，并返回 :class:`~fastNLP.core.DataSet` ；
+``load(paths)`` 用于读取文件夹下的文件，并返回 :class:`~fastNLP.io.DataBundle` 类型的对象 ， load()方法支持以下几种类型的参数:
 
 0.传入None
     将尝试自动下载数据集并缓存。但不是所有的数据都可以直接下载。
@@ -38,10 +38,7 @@ Loader用于读取数据，并将内容读取到 :class:`~fastNLP.DataSet` 或�
     在 Loader().load(paths)  返回的 `data_bundle` 中可以用 ``data_bundle.get_dataset('train')`` , ``data_bundle.get_dataset('dev')`` ,
     ``data_bundle.get_dataset('test')`` 来获取对应的 `dataset`
 
-fastNLP 目前提供了如下的 Loader
-
-
-
+**fastNLP** 目前提供了如下的 Loader：
 """
 
 __all__ = [

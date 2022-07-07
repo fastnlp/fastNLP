@@ -13,3 +13,4 @@ Submodules
    :maxdepth: 4
 
    fastNLP.core.dataloaders.torch_dataloader.fdl
+   fastNLP.core.dataloaders.torch_dataloader.mix_dataloader

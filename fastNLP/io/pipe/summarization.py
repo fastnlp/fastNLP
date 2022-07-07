@@ -1,4 +1,3 @@
-r"""undocumented"""
 import os
 import numpy as np
 from functools import partial
@@ -20,21 +19,23 @@ TAG_UNK = "X"
 
 class ExtCNNDMPipe(Pipe):
     r"""
-    对CNN/Daily Mail数据进行适用于extractive summarization task的预处理，预处理之后的数据，具备以下结构：
+    对 **CNN/Daily Mail** 数据进行适用于 ``extractive summarization task`` 的预处理，预处理之后的数据具备以下结构：
     
     .. csv-table::
        :header: "text", "summary", "label", "publication", "text_wd", "words", "seq_len", "target"
-    
+
+        "['I got new tires from them and... ','...']", "['The new tires...','...']", "[0, 1]", "cnndm", "[['I','got',...'.'],...,['...']]", "[[54,89,...,5],...,[9,43,..,0]]", "[1,1,...,0]", "[0,1,...,0]"
+        "['Don't waste your time.  We had two...','...']", "['Time is precious','...']", "[1]", "cnndm", "[['Don't','waste',...,'.'],...,['...']]", "[[5234,653,...,5],...,[87,234,..,0]]", "[1,1,...,0]", "[1,1,...,0]"
+        "['...']", "['...']", "[]", "cnndm", "[[''],...,['']]", "[[],...,[]]", "[]", "[]"
+
+    :param vocab_size: 词表大小
+    :param sent_max_len: 句子最大长度，不足的句子将 padding ，超出的将截断
+    :param doc_max_timesteps: 文章最多句子个数，不足的将 padding，超出的将截断
+    :param vocab_path: 外部词表路径
+    :param domain: 是否需要建立 domain 词表
+    :param num_proc: 处理数据时使用的进程数目。
     """
-    def __init__(self, vocab_size, sent_max_len, doc_max_timesteps, vocab_path=None, domain=False, num_proc=0):
-        r"""
-        
-        :param vocab_size: int, 词表大小
-        :param sent_max_len: int, 句子最大长度，不足的句子将padding，超出的将截断
-        :param doc_max_timesteps: int, 文章最多句子个数，不足的将padding，超出的将截断
-        :param vocab_path: str, 外部词表路径
-        :param domain:  bool, 是否需要建立domain词表
-        """
+    def __init__(self, vocab_size: int, sent_max_len: int, doc_max_timesteps: int, vocab_path=None, domain=False, num_proc=0):
         self.vocab_size = vocab_size
         self.vocab_path = vocab_path
         self.sent_max_len = sent_max_len
@@ -44,23 +45,24 @@ class ExtCNNDMPipe(Pipe):
 
     def process(self, data_bundle: DataBundle):
         r"""
-        传入的DataSet应该具备如下的结构
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该具备以下结构：
 
         .. csv-table::
            :header: "text", "summary", "label", "publication"
 
-           ["I got new tires from them and... ","..."], ["The new tires...","..."], [0, 1], "cnndm"
-           ["Don't waste your time.  We had two...","..."], ["Time is precious","..."], [1], "cnndm"
-           ["..."], ["..."], [], "cnndm"
+           "['I got new tires from them and... ','...']", "['The new tires...','...']", "[0, 1]", "cnndm"
+           "['Don't waste your time.  We had two...','...']", "['Time is precious','...']", "[1]", "cnndm"
+           "['...']", ['...']", "[]", "cnndm"
 
         :param data_bundle:
-        :return: 处理得到的数据包括
+        :return: 处理后的 ``data_bundle``，新增以下列：
+
         .. csv-table::
            :header: "text_wd", "words", "seq_len", "target"
 
-           [["I","got",..."."],...,["..."]], [[54,89,...,5],...,[9,43,..,0]], [1,1,...,0], [0,1,...,0]
-           [["Don't","waste",...,"."],...,["..."]], [[5234,653,...,5],...,[87,234,..,0]], [1,1,...,0], [1,1,...,0]
-           [[""],...,[""]], [[],...,[]], [], []
+           "[['I','got',...'.'],...,['...']]", "[[54,89,...,5],...,[9,43,..,0]]", "[1,1,...,0]", "[0,1,...,0]"
+           "[['Don't','waste',...,'.'],...,['...']]", "[[5234,653,...,5],...,[87,234,..,0]]", "[1,1,...,0]", "[1,1,...,0]"
+           "[[''],...,['']]", "[[],...,[]]", "[]", "[]"
         """
 
         if self.vocab_path is None:
@@ -117,8 +119,10 @@ class ExtCNNDMPipe(Pipe):
 
     def process_from_file(self, paths=None):
         r"""
-        :param paths: dict or string
-        :return: DataBundle
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+
+        :param paths:
+        :return:
         """
         loader = ExtCNNDMLoader()
         if self.vocab_path is None:

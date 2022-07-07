@@ -1,7 +1,7 @@
-fastNLP.io.pipe.coreference module
+fastNLP.transformers.torch package
 ==================================
 
-.. automodule:: fastNLP.io.pipe.coreference
+.. automodule:: fastNLP.transformers.torch
    :members:
    :undoc-members:
    :show-inheritance:

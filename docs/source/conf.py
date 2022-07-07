@@ -24,9 +24,9 @@ copyright = '2022, fastNLP'
 author = 'fastNLP'
 
 # The short X.Y version
-version = '0.8'
+version = '1.0'
 # The full version, including alpha/beta/rc tags
-release = '0.8.0'
+release = '1.0.0-alpha'
 
 # -- General configuration ---------------------------------------------------
 
@@ -45,6 +45,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx_autodoc_typehints',
     'sphinx_multiversion',
+    'nbsphinx',
 ]
 
 autodoc_default_options = {
@@ -169,7 +170,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'fastNLP', 'fastNLP Documentation',
-     author, 'fastNLP', 'One line description of project.',
+     author, 'fastNLP', 'A fast NLP tool for programming.',
      'Miscellaneous'),
 ]
 

@@ -1,7 +1,7 @@
-fastNLP.io.loader.coreference module
+fastNLP.modules.torch.dropout module
 ====================================
 
-.. automodule:: fastNLP.io.loader.coreference
+.. automodule:: fastNLP.modules.torch.dropout
    :members:
    :undoc-members:
    :show-inheritance:

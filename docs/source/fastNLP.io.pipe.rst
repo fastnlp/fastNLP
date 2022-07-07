@@ -15,7 +15,6 @@ Submodules
    fastNLP.io.pipe.classification
    fastNLP.io.pipe.conll
    fastNLP.io.pipe.construct_graph
-   fastNLP.io.pipe.coreference
    fastNLP.io.pipe.cws
    fastNLP.io.pipe.matching
    fastNLP.io.pipe.pipe

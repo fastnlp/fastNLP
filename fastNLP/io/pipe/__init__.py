@@ -52,7 +52,7 @@ __all__ = [
     "BQCorpusPipe",
     "RenamePipe",
     "GranularizePipe",
-    "MachingTruncatePipe",
+    "TruncateBertPipe",
 
 
     "CMRC2018BertPipe",
@@ -74,7 +74,7 @@ from .conll import Conll2003Pipe, iob2, iob2bioes
 from .cws import CWSPipe
 from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe, QNLIBertPipe, MNLIBertPipe, \
     MatchingPipe, RTEPipe, SNLIPipe, QuoraPipe, QNLIPipe, MNLIPipe, CNXNLIBertPipe, CNXNLIPipe, BQCorpusBertPipe, \
-    LCQMCPipe, BQCorpusPipe, LCQMCBertPipe, RenamePipe, GranularizePipe, MachingTruncatePipe
+    LCQMCPipe, BQCorpusPipe, LCQMCBertPipe, RenamePipe, GranularizePipe, TruncateBertPipe
 from .pipe import Pipe
 from .qa import CMRC2018BertPipe
 

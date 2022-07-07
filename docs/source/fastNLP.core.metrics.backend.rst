@@ -13,6 +13,7 @@ Subpackages
    :maxdepth: 4
 
    fastNLP.core.metrics.backend.jittor_backend
+   fastNLP.core.metrics.backend.oneflow_backend
    fastNLP.core.metrics.backend.paddle_backend
    fastNLP.core.metrics.backend.torch_backend
 

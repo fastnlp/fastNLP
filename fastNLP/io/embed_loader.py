@@ -1,7 +1,3 @@
-r"""
-.. todo::
-    doc
-"""
 __all__ = [
     "EmbedLoader",
     "EmbeddingOption",
@@ -9,6 +5,7 @@ __all__ = [
 
 import logging
 import os
+from typing import Callable
 
 import numpy as np
 
@@ -33,30 +30,30 @@ class EmbeddingOption(Option):
 
 class EmbedLoader:
     r"""
-    用于读取预训练的embedding, 读取结果可直接载入为模型参数。
+    用于读取预训练的 embedding, 读取结果可直接载入为模型参数。
     """
     
     def __init__(self):
         super(EmbedLoader, self).__init__()
 
     @staticmethod
-    def load_with_vocab(embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True,
-                        error='ignore', init_method=None):
+    def load_with_vocab(embed_filepath: str, vocab, dtype=np.float32, padding: str='<pad>', unknown: str='<unk>', normalize: bool=True,
+                        error: str='ignore', init_method: Callable=None):
         r"""
-        从embed_filepath这个预训练的词向量中抽取出vocab这个词表的词的embedding。EmbedLoader将自动判断embed_filepath是
-        word2vec(第一行只有两个元素)还是glove格式的数据。
+        从 ``embed_filepath`` 这个预训练的词向量中抽取出 ``vocab`` 这个词表的词的 embedding。 :class:`EmbedLoader` 将自动判断 ``embed_filepath``
+        是 **word2vec** （第一行只有两个元素） 还是 **glove** 格式的数据。
 
-        :param str embed_filepath: 预训练的embedding的路径。
-        :param vocab: 词表 :class:`~fastNLP.Vocabulary` 类型，读取出现在vocab中的词的embedding。
-            没有出现在vocab中的词的embedding将通过找到的词的embedding的正态分布采样出来，以使得整个Embedding是同分布的。
-        :param dtype: 读出的embedding的类型
-        :param str padding: 词表中padding的token
-        :param str unknown: 词表中unknown的token
-        :param bool normalize: 是否将每个vector归一化到norm为1
-        :param str error: `ignore` , `strict` ; 如果 `ignore` ，错误将自动跳过; 如果 `strict` , 错误将抛出。
+        :param embed_filepath: 预训练的 embedding 的路径。
+        :param vocab: 词表 :class:`~fastNLP.core.Vocabulary` 类型，读取出现在 ``vocab`` 中的词的 embedding。
+            没有出现在 ``vocab`` 中的词的 embedding 将通过找到的词的 embedding 的 *正态分布* 采样出来，以使得整个 Embedding 是同分布的。
+        :param dtype: 读出的 embedding 的类型
+        :param padding: 词表中 *padding* 的 token
+        :param unknown: 词表中 *unknown* 的 token
+        :param normalize: 是否将每个 vector 归一化到 norm 为 1
+        :param error: 可以为以下值之一： ``['ignore', 'strict']`` 。如果为  ``ignore`` ，错误将自动跳过；如果是 ``strict`` ，错误将抛出。
             这里主要可能出错的地方在于词表有空行或者词表出现了维度不一致。
-        :param callable init_method: 传入numpy.ndarray, 返回numpy.ndarray, 用以初始化embedding
-        :return numpy.ndarray:  shape为 [len(vocab), dimension], dimension由pretrain的embedding决定。
+        :param init_method: 用于初始化 embedding 的函数。该函数接受一个 :class:`numpy.ndarray` 类型，返回 :class:`numpy.ndarray`。
+        :return: 返回类型为 :class:`numpy.ndarray`，形状为 ``[len(vocab), dimension]``，其中 *dimension*由预训练的 embedding 决定。
         """
         assert isinstance(vocab, Vocabulary), "Only fastNLP.Vocabulary is supported."
         if not os.path.exists(embed_filepath):
@@ -112,20 +109,21 @@ class EmbedLoader:
             return matrix
     
     @staticmethod
-    def load_without_vocab(embed_filepath, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True,
-                           error='ignore'):
+    def load_without_vocab(embed_filepath: str, dtype=np.float32, padding: str='<pad>', unknown: str='<unk>', normalize: bool=True,
+                           error: str='ignore'):
         r"""
-        从embed_filepath中读取预训练的word vector。根据预训练的词表读取embedding并生成一个对应的Vocabulary。
+        从 ``embed_filepath`` 中读取预训练的 word vector。根据预训练的词表读取 embedding 并生成一个对应的 :class:`~fastNLP.core.Vocabulary` 。
 
-        :param str embed_filepath: 预训练的embedding的路径。
-        :param dtype: 读出的embedding的类型
-        :param str padding: 词表中的padding的token. 并以此用做vocab的padding。
-        :param str unknown: 词表中的unknown的token. 并以此用做vocab的unknown。
-        :param bool normalize: 是否将每个vector归一化到norm为1
-        :param str error: `ignore` , `strict` ; 如果 `ignore` ，错误将自动跳过; 如果 `strict` , 错误将抛出。这里主要可能出错的地
-            方在于词表有空行或者词表出现了维度不一致。
-        :return (numpy.ndarray, Vocabulary): Embedding的shape是[词表大小+x, 词表维度], "词表大小+x"是由于最终的大小还取决与
-            是否使用padding, 以及unknown有没有在词表中找到对应的词。 Vocabulary中的词的顺序与Embedding的顺序是一一对应的。
+        :param embed_filepath: 预训练的 embedding 的路径。
+        :param dtype: 读出的 embedding 的类型
+        :param padding: 词表中的 *padding* 的 token。
+        :param unknown: 词表中的 *unknown* 的 token。
+        :param normalize: 是否将每个 vector 归一化到 norm 为 1
+        :param error: 可以为以下值之一： ``['ignore', 'strict']`` 。如果为  ``ignore`` ，错误将自动跳过；如果是 ``strict`` ，错误将抛出。
+            这里主要可能出错的地方在于词表有空行或者词表出现了维度不一致。
+        :return: 返回两个结果，第一个返回值为 :class:`numpy.ndarray`，大小为 ``[词表大小+x, 词表维度]`` 。 ``词表大小+x`` 是由于最终的大小还取决于
+            是否使用 ``padding``，以及 ``unknown`` 有没有在词表中找到对应的词。 第二个返回值为 :class:`~fastNLP.core.Vocabulary` 类型的词表，其中
+            词的顺序与 embedding 的顺序是一一对应的。
 
         """
         vocab = Vocabulary(padding=padding, unknown=unknown)

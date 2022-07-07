@@ -13,6 +13,7 @@ Subpackages
    :maxdepth: 4
 
    fastNLP.core.drivers.jittor_driver
+   fastNLP.core.drivers.oneflow_driver
    fastNLP.core.drivers.paddle_driver
    fastNLP.core.drivers.torch_driver
 
