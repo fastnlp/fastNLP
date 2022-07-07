@@ -18,5 +18,4 @@ Subpackages
    fastNLP.io
    fastNLP.models
    fastNLP.modules
-   .. 以下为手动添加
    fastNLP.transformers
