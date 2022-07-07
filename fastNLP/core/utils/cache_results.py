@@ -1,3 +1,14 @@
+"""
+:func:`cache_results` 函数是 **fastNLP** 中用于缓存数据的装饰器，通过该函数您可以省去调试代码过程中一些耗时过长程序
+带来的时间开销。比如在加载并处理较大的数据时，每次修改训练参数都需要从头开始执行处理数据的过程，那么 :func:`cache_results`
+便可以跳过这部分漫长的时间。详细的使用方法和原理请参见下面的说明。
+
+.. warning::
+
+    如果您发现对代码进行修改之后程序执行的结果没有变化，很有可能是这个函数的原因；届时删除掉缓存数据即可。
+
+"""
+
 from datetime import datetime
 import hashlib
 import _pickle
