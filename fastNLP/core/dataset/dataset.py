@@ -1037,3 +1037,17 @@ class DataSet:
             return self.collator
         else:
             raise ValueError(f"Only when the collate_fn is a fastNLP Collator, set_ignore() is allowed.")
+
+    @classmethod
+    def from_datasets(cls, dataset):
+        """
+        将 Huggingface Dataset 转为 fastNLP 的 DataSet
+
+        :param dataset 为实例化好的 huggingface Dataset 对象
+        """
+        from datasets import Dataset
+        if not isinstance(dataset, DataSet):
+            raise ValueError(f"Support huggingface dataset, but is {type(dataset)}!")
+
+        data_dict = dataset.to_dict()
+        return DataSet(data_dict)
