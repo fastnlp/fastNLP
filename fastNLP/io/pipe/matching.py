@@ -1,5 +1,3 @@
-r"""undocumented"""
-
 __all__ = [
     "MatchingBertPipe",
     "RTEBertPipe",
@@ -21,7 +19,7 @@ __all__ = [
     "BQCorpusPipe",
     "RenamePipe",
     "GranularizePipe",
-    "MachingTruncatePipe",
+    "TruncateBertPipe",
 ]
 from functools import partial
 
@@ -31,14 +29,13 @@ from .utils import get_tokenizer
 from ..data_bundle import DataBundle
 from ..loader.matching import SNLILoader, MNLILoader, QNLILoader, RTELoader, QuoraLoader, BQCorpusLoader, CNXNLILoader, \
     LCQMCLoader
-# from ...core._logger import log
 # from ...core.const import Const
 from ...core.vocabulary import Vocabulary
 
 
 class MatchingBertPipe(Pipe):
     r"""
-    Matching任务的Bert pipe，输出的DataSet将包含以下的field
+    **Matching** 任务的 Bert pipe ，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table::
        :header: "raw_words1", "raw_words2", "target", "words", "seq_len"
@@ -47,29 +44,17 @@ class MatchingBertPipe(Pipe):
        "This site includes a...", "The Government Executive...", 0, "[11, 12, 13,...]", 5
        "...", "...", ., "[...]", .
 
-    words列是将raw_words1(即premise), raw_words2(即hypothesis)使用"[SEP]"链接起来转换为index的。
-    words列被设置为input，target列被设置为target和input(设置为input以方便在forward函数中计算loss，
-    如果不在forward函数中计算loss也不影响，fastNLP将根据forward函数的形参名进行传参).
+    ``words`` 列是将 ``raw_words1`` （即 ``premise`` ）， ``raw_words2`` （即 ``hypothesis`` ）使用 ``[SEP]``
+    链接起来转换为 index 的。``words`` 列被设置为 input， ``target`` 列被设置为 target 和 input （设置为 input 以
+    方便在 :func:`forward` 函数中计算 loss，如果不在也不影响， **fastNLP** 将根据 :func:`forward` 函数的形参名进行
+    传参）。
 
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
-
-        +-------------+------------+------------+--------+-------+---------+
-        | field_names | raw_words1 | raw_words2 | target | words | seq_len |
-        +-------------+------------+------------+--------+-------+---------+
-        |   is_input  |   False    |   False    | False  |  True |   True  |
-        |  is_target  |   False    |   False    |  True  | False |  False  |
-        | ignore_type |            |            | False  | False |  False  |
-        |  pad_value  |            |            |   0    |   0   |    0    |
-        +-------------+------------+------------+--------+-------+---------+
-
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
     """
     
     def __init__(self, lower=False, tokenizer: str = 'raw', num_proc: int = 0):
-        r"""
-        
-        :param bool lower: 是否将word小写化。
-        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
-        """
         super().__init__()
         
         self.lower = bool(lower)
@@ -89,9 +74,9 @@ class MatchingBertPipe(Pipe):
                 dataset.apply_field(self.tokenizer, field_name=field_name, new_field_name=new_field_name, num_proc=self.num_proc)
         return data_bundle
     
-    def process(self, data_bundle):
+    def process(self, data_bundle: DataBundle):
         r"""
-        输入的data_bundle中的dataset需要具有以下结构：
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该具备以下结构：
 
         .. csv-table::
             :header: "raw_words1", "raw_words2", "target"
@@ -100,7 +85,7 @@ class MatchingBertPipe(Pipe):
             "...","..."
 
         :param data_bundle:
-        :return:
+        :return: 处理后的 ``data_bundle``
         """
         for dataset in data_bundle.datasets.values():
             if dataset.has_field('target'):
@@ -164,9 +149,16 @@ class MatchingBertPipe(Pipe):
 
 
 class RTEBertPipe(MatchingBertPipe):
+    """
+    处理 **RTE** 数据。
+
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -176,9 +168,16 @@ class RTEBertPipe(MatchingBertPipe):
 
 
 class SNLIBertPipe(MatchingBertPipe):
+    """
+    处理 **SNLI** 数据。
+
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -188,9 +187,16 @@ class SNLIBertPipe(MatchingBertPipe):
 
 
 class QuoraBertPipe(MatchingBertPipe):
+    """
+    处理 **Quora** 数据。
+
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def process_from_file(self, paths):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -200,9 +206,16 @@ class QuoraBertPipe(MatchingBertPipe):
 
 
 class QNLIBertPipe(MatchingBertPipe):
+    """
+    处理 **QNNLI** 数据。
+
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -212,9 +225,16 @@ class QNLIBertPipe(MatchingBertPipe):
 
 
 class MNLIBertPipe(MatchingBertPipe):
+    """
+    处理 **MNLI** 数据。
+
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -225,7 +245,7 @@ class MNLIBertPipe(MatchingBertPipe):
 
 class MatchingPipe(Pipe):
     r"""
-    Matching任务的Pipe。输出的DataSet将包含以下的field
+    **Matching** 任务的 Pipe，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table::
        :header: "raw_words1", "raw_words2", "target", "words1", "words2", "seq_len1", "seq_len2"
@@ -234,21 +254,14 @@ class MatchingPipe(Pipe):
        "This site includes a...", "The Government Executive...", 0, "[11, 12, 13,...]", "[2, 7, ...]", 6, 7
        "...", "...", ., "[...]", "[...]", ., .
 
-    words1是premise，words2是hypothesis。其中words1,words2,seq_len1,seq_len2被设置为input；target被设置为target
-    和input(设置为input以方便在forward函数中计算loss，如果不在forward函数中计算loss也不影响，fastNLP将根据forward函数
-    的形参名进行传参)。
+    ``words1`` 是 ``premise`` ，``words2`` 是 ``hypothesis`` 。其中 ``words1`` , ``words2`` , ``seq_len1``, ``seq_len2``
+    被设置为 input； ``target`` 列被设置为 target 和 input （设置为 input 以
+    方便在 :func:`forward` 函数中计算 loss，如果不在也不影响， **fastNLP** 将根据 :func:`forward` 函数的形参名进行
+    传参）。
 
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
-
-        +-------------+------------+------------+--------+--------+--------+----------+----------+
-        | field_names | raw_words1 | raw_words2 | target | words1 | words2 | seq_len1 | seq_len2 |
-        +-------------+------------+------------+--------+--------+--------+----------+----------+
-        |   is_input  |   False    |   False    | False  |  True  |  True  |   True   |   True   |
-        |  is_target  |   False    |   False    |  True  | False  | False  |  False   |  False   |
-        | ignore_type |            |            | False  | False  | False  |  False   |  False   |
-        |  pad_value  |            |            |   0    |   0    |   0    |    0     |    0     |
-        +-------------+------------+------------+--------+--------+--------+----------+----------+
-
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
     """
     
     def __init__(self, lower=False, tokenizer: str = 'raw', num_proc: int = 0):
@@ -276,9 +289,9 @@ class MatchingPipe(Pipe):
                 dataset.apply_field(self.tokenizer, field_name=field_name, new_field_name=new_field_name, num_proc=self.num_proc)
         return data_bundle
     
-    def process(self, data_bundle):
+    def process(self, data_bundle: DataBundle):
         r"""
-        接受的DataBundle中的DataSet应该具有以下的field, target列可以没有
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该具备以下结构，可以没有 ``target`` 列：
 
         .. csv-table::
            :header: "raw_words1", "raw_words2", "target"
@@ -287,8 +300,8 @@ class MatchingPipe(Pipe):
            "This site includes a...", "The Government Executive...", "not_entailment"
            "...", "..."
 
-        :param ~fastNLP.DataBundle data_bundle: 通过loader读取得到的data_bundle，里面包含了数据集的原始数据内容
-        :return: data_bundle
+        :param data_bundle:
+        :return: 处理后的 ``data_bundle``
         """
         data_bundle = self._tokenize(data_bundle, ['raw_words1', 'raw_words2'],
                                      ['words1', 'words2'])
@@ -337,9 +350,16 @@ class MatchingPipe(Pipe):
 
 
 class RTEPipe(MatchingPipe):
+    """
+    处理 **RTE** 数据。
+
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -349,9 +369,16 @@ class RTEPipe(MatchingPipe):
 
 
 class SNLIPipe(MatchingPipe):
+    """
+    处理 **SNLI** 数据。
+
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -361,9 +388,16 @@ class SNLIPipe(MatchingPipe):
 
 
 class QuoraPipe(MatchingPipe):
+    """
+    处理 **Quora** 数据。
+
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def process_from_file(self, paths):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -373,9 +407,16 @@ class QuoraPipe(MatchingPipe):
 
 
 class QNLIPipe(MatchingPipe):
+    """
+    处理 **QNLI** 数据。
+
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -385,9 +426,16 @@ class QNLIPipe(MatchingPipe):
 
 
 class MNLIPipe(MatchingPipe):
+    """
+    处理 **MNLI** 数据。
+
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -397,12 +445,18 @@ class MNLIPipe(MatchingPipe):
 
 
 class LCQMCPipe(MatchingPipe):
-    def __init__(self, tokenizer='cn=char', num_proc=0):
+    """
+    处理 **LCQMC** 数据。
+
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['cn-char']`` ，按字分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
+    def __init__(self, tokenizer='cn-char', num_proc=0):
         super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -415,12 +469,18 @@ class LCQMCPipe(MatchingPipe):
 
 
 class CNXNLIPipe(MatchingPipe):
+    """
+    处理 **XNLI Chinese** 数据。
+
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['cn-char']`` ，按字分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def __init__(self, tokenizer='cn-char', num_proc=0):
         super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -434,12 +494,18 @@ class CNXNLIPipe(MatchingPipe):
 
 
 class BQCorpusPipe(MatchingPipe):
+    """
+    处理 **BQ Corpus** 数据。
+    
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['cn-char']`` ，按字分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def __init__(self, tokenizer='cn-char', num_proc=0):
         super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -452,6 +518,13 @@ class BQCorpusPipe(MatchingPipe):
 
 
 class RenamePipe(Pipe):
+    """
+    重命名数据集的 Pipe ，经过处理后会将数据集中的 ``chars``, ``raw_chars1`` 等列重命名为 ``words``, 
+    ``raw_words1``，反之亦然。
+
+    :param task: 任务类型，可选 ``['cn-nli', 'cn-nli-bert']`` 。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def __init__(self, task='cn-nli', num_proc=0):
         super().__init__()
         self.task = task
@@ -459,7 +532,7 @@ class RenamePipe(Pipe):
     
     def process(self, data_bundle: DataBundle):  # rename field name for Chinese Matching dataset
         """
-
+        :param data_bundle:
         :return: 处理后的 ``data_bundle``
         """
         if (self.task == 'cn-nli'):
@@ -497,6 +570,16 @@ class RenamePipe(Pipe):
 
 
 class GranularizePipe(Pipe):
+    """
+    将数据集中 ``target`` 列中的 tag 按照一定的映射进行重命名，并丢弃不在映射中的 tag。
+
+    :param task: 任务类型，目前仅支持 ``['XNLI']``。
+
+            - ``'XNLI'`` -- 将  ``neutral``, ``entailment``, ``contradictory``, ``contradiction`` 分别
+              映射为 0, 1, 2, 3；
+
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def __init__(self, task=None, num_proc=0):
         super().__init__()
         self.task = task
@@ -520,7 +603,7 @@ class GranularizePipe(Pipe):
     
     def process(self, data_bundle: DataBundle):
         """
-
+        :param data_bundle:
         :return: 处理后的 ``data_bundle``
         """
         task_tag_dict = {
@@ -532,28 +615,19 @@ class GranularizePipe(Pipe):
             raise RuntimeError(f"Only support {task_tag_dict.keys()} task_tag_map.")
         return data_bundle
 
-
-class MachingTruncatePipe(Pipe):  # truncate sentence for bert, modify seq_len
-    def __init__(self):
-        super().__init__()
-    
-    def process(self, data_bundle: DataBundle):
-        """
-
-        :return: None
-        """
-        for name, dataset in data_bundle.datasets.items():
-            pass
-        return None
-
-
 class LCQMCBertPipe(MatchingBertPipe):
-    def __init__(self, tokenizer='cn=char', num_proc=0):
+    """
+    处理 **LCQMC** 数据
+
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['cn-char']`` ，按字分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
+    def __init__(self, tokenizer='cn-char', num_proc=0):
         super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -567,12 +641,18 @@ class LCQMCBertPipe(MatchingBertPipe):
 
 
 class BQCorpusBertPipe(MatchingBertPipe):
+    """
+    处理 **BQ Corpus** 数据。
+
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['cn-char']`` ，按字分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def __init__(self, tokenizer='cn-char', num_proc=0):
         super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -586,12 +666,18 @@ class BQCorpusBertPipe(MatchingBertPipe):
 
 
 class CNXNLIBertPipe(MatchingBertPipe):
+    """
+    处理 **XNLI Chinese** 数据。
+
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['cn-char']`` ，按字分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def __init__(self, tokenizer='cn-char', num_proc=0):
         super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -606,6 +692,13 @@ class CNXNLIBertPipe(MatchingBertPipe):
 
 
 class TruncateBertPipe(Pipe):
+    """
+    对数据进行截断的 **Pipe** 。该 **Pipe** 将会寻找每条数据中的第一个分隔符 ``[SEP]`` ，对其前后的数据分别进行截断。
+    对于中文任务会将前后的文本分别截断至长度 **250** ，对于英文任务会分别截断至 **215** 。
+
+    :param task: 任务类型，可选 ``['cn', 'en']`` ，分别表示 **中文任务** 和 **英文任务** 。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     def __init__(self, task='cn', num_proc=0):
         super().__init__()
         self.task = task
@@ -631,7 +724,7 @@ class TruncateBertPipe(Pipe):
 
     def process(self, data_bundle: DataBundle) -> DataBundle:
         """
-
+        :param data_bundle:
         :return: 处理后的 ``data_bundle``
         """
         for name in data_bundle.datasets.keys():

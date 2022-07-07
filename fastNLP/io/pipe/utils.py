@@ -1,5 +1,3 @@
-r"""undocumented"""
-
 __all__ = [
     "iob2",
     "iob2bioes",
@@ -17,10 +15,10 @@ from pkg_resources import parse_version
 
 def iob2(tags: List[str]) -> List[str]:
     r"""
-    检查数据是否是合法的IOB数据，如果是IOB1会被自动转换为IOB2。两种格式的区别见
+    检查数据是否是合法的 ``IOB`` 数据，如果是 ``IOB1`` 会被自动转换为 ``IOB2`` 。两种格式的区别见
     https://datascience.stackexchange.com/questions/37824/difference-between-iob-and-iob2-format
 
-    :param tags: 需要转换的tags
+    :param tags: 需要转换的 tags
     """
     for i, tag in enumerate(tags):
         if tag == "O":
@@ -41,8 +39,9 @@ def iob2(tags: List[str]) -> List[str]:
 
 def iob2bioes(tags: List[str]) -> List[str]:
     r"""
-    将iob的tag转换为bioes编码
-    :param tags:
+    将 ``iob`` 的 tag 转换为 ``bioes`` 编码
+
+    :param tags: 需要转换的 tags
     :return:
     """
     new_tags = []
@@ -69,9 +68,10 @@ def iob2bioes(tags: List[str]) -> List[str]:
 def get_tokenizer(tokenize_method: str, lang='en'):
     r"""
 
-    :param str tokenize_method: 获取tokenzier方法
-    :param str lang: 语言，当前仅支持en
-    :return: tokenize函数
+    :param tokenize_method: 获取 tokenzier 方法，支持 ``['spacy', 'raw', 'cn-char']`` 。``'raw'`` 表示使用空格作为切分， ``'cn-char'`` 表示
+        按字符切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param lang: :mod:`spacy` 使用的语言，当前仅支持 ``'en'`` 。
+    :return: tokenize 函数
     """
     tokenizer_dict = {
         'spacy': None,

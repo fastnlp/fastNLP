@@ -35,14 +35,14 @@ class Event:
 
     :param value: Trainer 的 callback 时机；
     :param every: 每触发多少次才真正运行一次；
-    :param once: 在第一次运行后时候再次执行；
+    :param once: 是否仅运行一次；
     :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
         `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
     """
     every: Optional[int]
-    once: Optional[int]
+    once: Optional[bool]
 
-    def __init__(self, value: str, every: Optional[int] = None, once: Optional[int] = None,
+    def __init__(self, value: str, every: Optional[int] = None, once: Optional[bool] = None,
                  filter_fn: Optional[Callable] = None):
         self.every = every
         self.once = once
@@ -68,7 +68,6 @@ class Event:
         return Event(value='on_after_trainer_initialized', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_sanity_check_begin(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_sanity_check_begin` 时触发；
@@ -85,7 +84,6 @@ class Event:
         return Event(value='on_sanity_check_begin', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_sanity_check_end(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_sanity_check_end` 时触发；
@@ -101,7 +99,6 @@ class Event:
         return Event(value='on_sanity_check_end', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_train_begin(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_train_begin` 时触发；
@@ -117,7 +114,6 @@ class Event:
         return Event(value='on_train_begin', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_train_end(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_train_end` 时触发；
@@ -133,7 +129,6 @@ class Event:
         return Event(value='on_train_end', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_train_epoch_begin(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_train_epoch_begin` 时触发；
@@ -149,7 +144,6 @@ class Event:
         return Event(value='on_train_epoch_begin', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_train_epoch_end(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_train_epoch_end` 时触发；
@@ -165,7 +159,6 @@ class Event:
         return Event(value='on_train_epoch_end', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_fetch_data_begin(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_fetch_data_begin` 时触发；
@@ -181,7 +174,6 @@ class Event:
         return Event(value='on_fetch_data_begin', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_fetch_data_end(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_fetch_data_end` 时触发；
@@ -197,7 +189,6 @@ class Event:
         return Event(value='on_fetch_data_end', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_train_batch_begin(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_train_batch_begin` 时触发；
@@ -213,7 +204,6 @@ class Event:
         return Event(value='on_train_batch_begin', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_train_batch_end(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_train_batch_end` 时触发；
@@ -229,7 +219,6 @@ class Event:
         return Event(value='on_train_batch_end', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_exception(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_exception` 时触发；
@@ -245,7 +234,6 @@ class Event:
         return Event(value='on_exception', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_save_model(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_save_model` 时触发；
@@ -261,7 +249,6 @@ class Event:
         return Event(value='on_save_model', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_load_model(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_load_model` 时触发；
@@ -277,7 +264,6 @@ class Event:
         return Event(value='on_load_model', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_save_checkpoint(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_save_checkpoint` 时触发；
@@ -293,7 +279,6 @@ class Event:
         return Event(value='on_save_checkpoint', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_load_checkpoint(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_load_checkpoint` 时触发；
@@ -309,7 +294,6 @@ class Event:
         return Event(value='on_load_checkpoint', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_load_checkpoint(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_load_checkpoint` 时触发；
@@ -325,7 +309,6 @@ class Event:
         return Event(value='on_load_checkpoint', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_before_backward(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_before_backward` 时触发；
@@ -341,7 +324,6 @@ class Event:
         return Event(value='on_before_backward', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_after_backward(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_after_backward` 时触发；
@@ -357,7 +339,6 @@ class Event:
         return Event(value='on_after_backward', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_before_optimizers_step(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_before_optimizers_step` 时触发；
@@ -373,7 +354,6 @@ class Event:
         return Event(value='on_before_optimizers_step', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_after_optimizers_step(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_after_optimizers_step` 时触发；
@@ -389,7 +369,6 @@ class Event:
         return Event(value='on_after_optimizers_step', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_before_zero_grad(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_before_zero_grad` 时触发；
@@ -405,7 +384,6 @@ class Event:
         return Event(value='on_before_zero_grad', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_after_zero_grad(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_after_zero_grad` 时触发；
@@ -421,7 +399,6 @@ class Event:
         return Event(value='on_after_zero_grad', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_evaluate_begin(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_evaluate_begin` 时触发；
@@ -437,7 +414,6 @@ class Event:
         return Event(value='on_evaluate_begin', every=every, once=once, filter_fn=filter_fn)
 
     @staticmethod
-    
     def on_evaluate_end(every=None, once=None, filter_fn=None):
         """
         当 Trainer 运行到 :func:`on_evaluate_end` 时触发；

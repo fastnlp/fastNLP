@@ -164,7 +164,7 @@ class GraphBuilderBase:
 
     def build_graph_from_file(self, path: str):
         r"""
-            传入文件路径，生成处理好的scipy_sparse_matrix对象。paths支持的路径形式可以参考 ：:meth:`fastNLP.io.Loader.load()`
+            传入文件路径，生成处理好的scipy_sparse_matrix对象。paths支持的路径形式可以参考 ：:meth:`fastNLP.io.Loader.load`
 
             :param path:
             :return: scipy_sparse_matrix
@@ -185,7 +185,7 @@ class MRPmiGraphPipe(GraphBuilderBase):
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
-        :param data_bundle: 需要处理的 :class:`fastNLP.io.DataBundle` 对象。
+        :param data_bundle: 需要处理的 :class:`~fastNLP.io.DataBundle` 对象。
         :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
         """
         self._get_doc_edge(data_bundle)
@@ -219,7 +219,7 @@ class R8PmiGraphPipe(GraphBuilderBase):
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
-        :param data_bundle: 需要处理的 :class:`fastNLP.io.DataBundle` 对象。
+        :param data_bundle: 需要处理的 :class:`~fastNLP.io.DataBundle` 对象。
         :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
         """
         self._get_doc_edge(data_bundle)
@@ -253,7 +253,7 @@ class R52PmiGraphPipe(GraphBuilderBase):
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
-        :param data_bundle: 需要处理的 :class:`fastNLP.io.DataBundle` 对象。
+        :param data_bundle: 需要处理的 :class:`~fastNLP.io.DataBundle` 对象。
         :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
         """
         self._get_doc_edge(data_bundle)
@@ -287,7 +287,7 @@ class OhsumedPmiGraphPipe(GraphBuilderBase):
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
-        :param data_bundle: 需要处理的 :class:`fastNLP.io.DataBundle` 对象。
+        :param data_bundle: 需要处理的 :class:`~fastNLP.io.DataBundle` 对象。
         :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
         """
         self._get_doc_edge(data_bundle)
@@ -321,7 +321,7 @@ class NG20PmiGraphPipe(GraphBuilderBase):
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
-        :param data_bundle: 需要处理的 :class:`fastNLP.io.DataBundle` 对象。
+        :param data_bundle: 需要处理的 :class:`~fastNLP.io.DataBundle` 对象。
         :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
         """
         self._get_doc_edge(data_bundle)

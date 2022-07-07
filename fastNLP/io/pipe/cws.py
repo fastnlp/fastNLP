@@ -1,5 +1,3 @@
-r"""undocumented"""
-
 __all__ = [
     "CWSPipe"
 ]
@@ -135,7 +133,7 @@ def _find_and_replace_digit_spans(line):
 
 class CWSPipe(Pipe):
     r"""
-    对CWS数据进行预处理, 处理之后的数据，具备以下的结构
+    对 **CWS** 数据进行处理，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table::
        :header: "raw_words", "chars", "target", "seq_len"
@@ -144,30 +142,21 @@ class CWSPipe(Pipe):
        "2001年  新年  钟声...", "[8, 9, 9, 7, ...]", "[0, 1, 1, 1, 2...]", 20
        "...", "[...]","[...]", .
 
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
-
-        +-------------+-----------+-------+--------+---------+
-        | field_names | raw_words | chars | target | seq_len |
-        +-------------+-----------+-------+--------+---------+
-        |   is_input  |   False   |  True |  True  |   True  |
-        |  is_target  |   False   | False |  True  |   True  |
-        | ignore_type |           | False | False  |  False  |
-        |  pad_value  |           |   0   |   0    |    0    |
-        +-------------+-----------+-------+--------+---------+
-
+    :param dataset_name: data 的名称，支持 ``['pku', 'msra', 'cityu'(繁体), 'as'(繁体), None]``
+    :param encoding_type: ``target`` 列使用什么类型的 encoding 方式，支持 ``['bmes', 'segapp']`` 两种。``"我 来自 复旦大学..."`` 这句话 ``bmes``的 
+        tag为 ``[S, B, E, B, M, M, E...]`` ； ``segapp`` 的 tag 为 ``[seg, app, seg, app, app, app, seg, ...]`` 。
+    :param replace_num_alpha: 是否将数字和字母用特殊字符替换。
+    :param bigrams: 是否增加一列 ``bigrams`` 。 ``bigrams`` 会对原文进行如下转化： ``['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]`` 。如果
+        设置为 ``True`` ，返回的 :class:`~fastNLP.core.DataSet` 将有一列名为 ``bigrams`` ，且已经转换为了 index 并设置为 input，对应的词表可以通过
+        ``data_bundle.get_vocab('bigrams')`` 获取。
+    :param trigrams: 是否增加一列 ``trigrams`` 。 ``trigrams`` 会对原文进行如下转化 ``['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]`` 。
+        如果设置为 ``True`` ，返回的 :class:`~fastNLP.core.DataSet` 将有一列名为 ``trigrams`` ，且已经转换为了 index 并设置为 input，对应的词表可以通过
+        ``data_bundle.get_vocab('trigrams')`` 获取。
+    :param num_proc: 处理数据时使用的进程数目。
     """
     
-    def __init__(self, dataset_name=None, encoding_type='bmes', replace_num_alpha=True,
-                 bigrams=False, trigrams=False, num_proc: int = 0):
-        r"""
-        
-        :param str,None dataset_name: 支持'pku', 'msra', 'cityu', 'as', None
-        :param str encoding_type: 可以选择'bmes', 'segapp'两种。"我 来自 复旦大学...", bmes的tag为[S, B, E, B, M, M, E...]; segapp
-            的tag为[seg, app, seg, app, app, app, seg, ...]
-        :param bool replace_num_alpha: 是否将数字和字母用特殊字符替换。
-        :param bool bigrams: 是否增加一列bigram. bigram的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]
-        :param bool trigrams: 是否增加一列trigram. trigram的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
-        """
+    def __init__(self, dataset_name: str=None, encoding_type: str='bmes', replace_num_alpha: bool=True,
+                 bigrams: bool=False, trigrams: bool=False, num_proc: int = 0):
         if encoding_type == 'bmes':
             self.word_lens_to_tags = _word_lens_to_bmes
         else:
@@ -220,7 +209,7 @@ class CWSPipe(Pipe):
     
     def process(self, data_bundle: DataBundle) -> DataBundle:
         r"""
-        可以处理的DataSet需要包含raw_words列
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该包含 ``raw_words`` ：
 
         .. csv-table::
            :header: "raw_words"
@@ -276,7 +265,7 @@ class CWSPipe(Pipe):
     
     def process_from_file(self, paths=None) -> DataBundle:
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:

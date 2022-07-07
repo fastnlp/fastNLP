@@ -1,5 +1,5 @@
 fastNLP.transformers.torch package
-=============================
+==================================
 
 .. automodule:: fastNLP.transformers.torch
    :members:

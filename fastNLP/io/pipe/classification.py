@@ -94,7 +94,7 @@ class CLSBasePipe(Pipe):
 
     def process_from_file(self, paths) -> DataBundle:
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -154,7 +154,7 @@ class YelpFullPipe(CLSBasePipe):
 
     def process_from_file(self, paths=None) -> DataBundle:
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -184,7 +184,7 @@ class YelpPolarityPipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -214,7 +214,7 @@ class AGsNewsPipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -244,7 +244,7 @@ class DBPediaPipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -328,7 +328,7 @@ class SSTPipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -358,7 +358,7 @@ class SST2Pipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -421,7 +421,7 @@ class IMDBPipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -518,7 +518,7 @@ class ChnSentiCorpPipe(Pipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -622,7 +622,7 @@ class THUCNewsPipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -713,7 +713,7 @@ class WeiboSenti100kPipe(CLSBasePipe):
     
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -737,7 +737,7 @@ class MRPipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -763,7 +763,7 @@ class R8Pipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -789,7 +789,7 @@ class R52Pipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -815,7 +815,7 @@ class OhsumedPipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
@@ -841,7 +841,7 @@ class NG20Pipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:

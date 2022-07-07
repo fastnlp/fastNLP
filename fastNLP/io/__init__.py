@@ -105,7 +105,7 @@ __all__ = [
     "BQCorpusPipe",
     "RenamePipe",
     "GranularizePipe",
-    "MachingTruncatePipe",
+    "TruncateBertPipe",
 
     "CMRC2018BertPipe",
 
