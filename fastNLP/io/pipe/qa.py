@@ -122,7 +122,7 @@ class CMRC2018BertPipe(Pipe):
            "...", "...", "...","...", ".", "..."
 
         :param data_bundle:
-        :return:
+        :return: 处理后的 ``data_bundle``
         """
         data_bundle = _concat_clip(data_bundle, max_len=self.max_len, concat_field_name='raw_chars')
 
@@ -138,5 +138,11 @@ class CMRC2018BertPipe(Pipe):
         return data_bundle
 
     def process_from_file(self, paths=None) -> DataBundle:
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = CMRC2018Loader().load(paths)
         return self.process(data_bundle)

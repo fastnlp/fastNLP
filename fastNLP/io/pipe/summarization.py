@@ -54,7 +54,7 @@ class ExtCNNDMPipe(Pipe):
            ["..."], ["..."], [], "cnndm"
 
         :param data_bundle:
-        :return: 处理得到的数据包括
+        :return: 处理后的 ``data_bundle``
         .. csv-table::
            :header: "text_wd", "words", "seq_len", "target"
 
@@ -117,8 +117,10 @@ class ExtCNNDMPipe(Pipe):
 
     def process_from_file(self, paths=None):
         r"""
-        :param paths: dict or string
-        :return: DataBundle
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
         """
         loader = ExtCNNDMLoader()
         if self.vocab_path is None:

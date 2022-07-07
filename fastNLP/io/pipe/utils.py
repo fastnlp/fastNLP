@@ -82,7 +82,7 @@ def get_tokenizer(tokenize_method: str, lang='en'):
         import spacy
         spacy.prefer_gpu()
         if lang != 'en':
-            raise RuntimeError("Spacy only supports en right right.")
+            raise RuntimeError("Spacy only supports en right now.")
         if parse_version(spacy.__version__) >= parse_version('3.0'):
             en = spacy.load('en_core_web_sm')
         else:

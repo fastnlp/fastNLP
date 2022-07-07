@@ -1,8 +1,3 @@
-r"""
-.. todo::
-    doc
-"""
-
 __all__ = [
     "check_loader_paths"
 ]
@@ -16,7 +11,7 @@ from typing import Union, Dict
 
 def check_loader_paths(paths: Union[str, Dict[str, str]]) -> Dict[str, str]:
     r"""
-    检查传入dataloader的文件的合法性。如果为合法路径，将返回至少包含'train'这个key的dict。类似于下面的结果::
+    检查传入 ``dataloader`` 的文件的合法性。如果为合法路径，将返回至少包含 ``'train'`` 这个 key 的字典。类似于下面的结果::
 
         {
             'train': '/some/path/to/', # 一定包含，建词表应该在这上面建立，剩下的其它文件应该只需要处理并index。
@@ -24,10 +19,13 @@ def check_loader_paths(paths: Union[str, Dict[str, str]]) -> Dict[str, str]:
             ...
         }
 
-    如果paths为不合法的，将直接进行raise相应的错误. 如果paths内不包含train也会报错。
+    如果 ``paths`` 为不合法的，将直接进行 raise 相应的错误。如果 ``paths`` 内不包含 ``'train'`` 也会报错。
 
-    :param str paths: 路径. 可以为一个文件路径(则认为该文件就是train的文件); 可以为一个文件目录，将在该目录下寻找包含train(文件名
-        中包含train这个字段), test, dev这三个字段的文件或文件夹; 可以为一个dict, 则key是用户自定义的某个文件的名称，value是这个文件的路径。
+    :param str paths: 路径。可以为：
+    
+            - 一个文件路径，此时认为该文件就是 train 的文件；
+            - 一个文件目录，将在该目录下寻找包含 ``train`` （文件名中包含 train 这个字段）， ``test`` ，``dev`` 这三个字段的文件或文件夹；
+            - 一个 dict, 则 key 是用户自定义的某个文件的名称，value 是这个文件的路径。
     :return:
     """
     if isinstance(paths, (str, Path)):

@@ -1,13 +1,13 @@
 r"""
-用于IO的模块, 具体包括:
+用于 **IO** 的模块, 具体包括:
 
-1. 用于读入 embedding 的 :mod:`EmbedLoader <fastNLP.io.embed_loader>` 类,
+1. 用于读入 embedding 的 :mod:`EmbedLoader <fastNLP.io.embed_loader>` 类
 
 2. 用于读入不同格式数据的 :mod:`Loader <fastNLP.io.loader>` 类
 
 3. 用于处理读入数据的 :mod:`Pipe <fastNLP.io.pipe>` 类
 
-4. 用于保存和载入模型的类, 参考 :mod:`model_io模块 <fastNLP.io.model_io>`
+4. 用于管理数据集的类 :mod:`DataBundle <fastNLP.io.data_bundle>` 类
 
 这些类的使用方法如下:
 """

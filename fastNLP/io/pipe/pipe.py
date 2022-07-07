@@ -27,15 +27,15 @@ class Pipe:
         对输入的DataBundle进行处理，然后返回该DataBundle。
 
         :param ~fastNLP.DataBundle data_bundle: 需要处理的DataBundle对象
-        :return: DataBundle
+        :return: 处理后的 ``data_bundle``
         """
         raise NotImplementedError
 
     def process_from_file(self, paths: str) -> DataBundle:
         r"""
-        传入文件路径，生成处理好的DataBundle对象。paths支持的路径形式可以参考 ：:meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
 
-        :param str paths:
-        :return: DataBundle
+        :param paths:
+        :return:
         """
         raise NotImplementedError

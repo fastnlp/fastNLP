@@ -1,7 +1,3 @@
-r"""undocumented
-此模块用于给其它模块提供读取文件的函数，没有为用户提供 API
-"""
-
 __all__ = []
 
 import json

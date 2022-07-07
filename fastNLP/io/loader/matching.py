@@ -1,5 +1,3 @@
-r"""undocumented"""
-
 __all__ = [
     "MNLILoader",
     "SNLILoader",
@@ -26,17 +24,19 @@ from fastNLP.core.log import logger
 
 class MNLILoader(Loader):
     r"""
-    读取的数据格式为：
+    **MNLI** 数据集的 **Loader**，如果您使用了这个数据，请引用
 
-    Example::
+        https://www.nyu.edu/projects/bowman/multinli/paper.pdf
+    
+    读取的数据格式为::
 
         index	promptID	pairID	genre	sentence1_binary_parse	sentence2_binary_parse	sentence1_parse	sentence2_parse	sentence1	sentence2	label1	gold_label
         0	31193	31193n	government	( ( Conceptually ( cream skimming ) ) ...
         1	101457	101457e	telephone	( you ( ( know ( during ( ( ( the season ) and ) ( i guess ) ) )...
         ...
 
-    读取MNLI任务的数据，读取之后的DataSet中包含以下的内容，words0是sentence1, words1是sentence2, target是gold_label, 测试集中没
-    有target列。
+    读取之后的 :class:`~fastNLP.core.DataSet` 中包含以下的内容： ``raw_words`` 是 ``sentence1`` ， ``raw_words2`` 是 ``sentence2`` ，
+    ``target`` 是 ``gold_label``。测试集中没有 ``target`` 列。
 
     .. csv-table::
        :header: "raw_words1", "raw_words2", "target"
@@ -80,10 +80,9 @@ class MNLILoader(Loader):
     
     def load(self, paths: str = None):
         r"""
-
-        :param str paths: 传入数据所在目录，会在该目录下寻找dev_matched.tsv, dev_mismatched.tsv, test_matched.tsv,
-            test_mismatched.tsv, train.tsv文件夹
-        :return: DataBundle
+        :param paths: 传入数据所在目录，会在该目录下寻找 ``dev_matched.tsv``, ``dev_mismatched.tsv``, ``test_matched.tsv``,
+            ``test_mismatched.tsv``, ``train.tsv`` 文件。
+        :return: :class:`~fastNLP.io.DataBundle`
         """
         if paths:
             paths = os.path.abspath(os.path.expanduser(paths))
@@ -112,10 +111,9 @@ class MNLILoader(Loader):
     
     def download(self):
         r"""
-        如果你使用了这个数据，请引用
+        自动下载数据集。
 
-        https://www.nyu.edu/projects/bowman/multinli/paper.pdf
-        :return:
+        :return: 数据集目录地址
         """
         output_dir = self._get_dataset_path('mnli')
         return output_dir
@@ -123,9 +121,11 @@ class MNLILoader(Loader):
 
 class SNLILoader(JsonLoader):
     r"""
-    文件每一行是一个sample，每一行都为一个json对象，其数据格式为：
+    **SNLI** 数据集的 **Loader**，如果您的文章使用了这份数据，请引用
 
-    Example::
+        http://nlp.stanford.edu/pubs/snli_paper.pdf
+    
+    文件每一行是一个 sample，每一行都为一个 ``json`` 对象，其数据格式为::
 
         {"annotator_labels": ["neutral", "entailment", "neutral", "neutral", "neutral"], "captionID": "4705552913.jpg#2",
          "gold_label": "neutral", "pairID": "4705552913.jpg#2r1n",
@@ -137,7 +137,7 @@ class SNLILoader(JsonLoader):
          "sentence2_parse": "(ROOT (S (NP (DT The) (NNS sisters)) (VP (VBP are) (VP (VBG hugging) (NP (UH goodbye)) (PP (IN while) (S (VP (VBG holding) (S (VP (TO to) (VP (VB go) (NP (NNS packages)) (PP (IN after) (S (ADVP (RB just)) (VP (VBG eating) (NP (NN lunch))))))))))))) (. .)))"
          }
 
-    读取之后的DataSet中的field情况为
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
     .. csv-table:: 下面是使用SNLILoader加载的DataSet所具备的field
        :header: "target", "raw_words1", "raw_words2",
@@ -158,13 +158,11 @@ class SNLILoader(JsonLoader):
     def load(self, paths: Union[str, Dict[str, str]] = None) -> DataBundle:
         r"""
         从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.DataBundle` 。
+        读取的 field 根据 :class:`SNLILoader` 初始化时传入的 ``fields`` 决定。
 
-        读取的field根据Loader初始化时传入的field决定。
-
-        :param str paths: 传入一个目录, 将在该目录下寻找snli_1.0_train.jsonl, snli_1.0_dev.jsonl
-            和snli_1.0_test.jsonl三个文件。
-
-        :return: :class:`~fastNLP.io.DataBundle`
+        :param str paths: 传入一个目录, 将在该目录下寻找 ``snli_1.0_train.jsonl``, ``snli_1.0_dev.jsonl``
+            和 ``snli_1.0_test.jsonl`` 三个文件。
+        :return:
         """
         _paths = {}
         if paths is None:
@@ -187,34 +185,32 @@ class SNLILoader(JsonLoader):
     
     def download(self):
         r"""
-        如果您的文章使用了这份数据，请引用
+        自动下载数据集。
 
-        http://nlp.stanford.edu/pubs/snli_paper.pdf
-
-        :return: str
+        :return: 数据集目录地址
         """
         return self._get_dataset_path('snli')
 
 
 class QNLILoader(JsonLoader):
     r"""
-    第一行为标题(具体内容会被忽略)，之后每一行是一个sample，由index、问题、句子和标签构成（以制表符分割），数据结构如下：
+    **QNLI** 数据集的 **Loader** ，如果您的实验使用到了该数据，请引用
 
-    Example::
+        https://arxiv.org/pdf/1809.05053.pdf
+        
+    读取数据的格式为：第一行为标题（具体内容会被忽略），之后每一行是一个 sample，由 **index** 、**问题** 、**句子** 和 **标签** 构成（以制表符分割），数据结构如下::
 
         index	question	sentence	label
         0	What came into force after the new constitution was herald?	As of that day, the new constitution heralding the Second Republic came into force.	entailment
 
-    QNLI数据集的Loader,
-    加载的DataSet将具备以下的field, raw_words1是question, raw_words2是sentence, target是label
+    加载的 :class:`~fastNLP.core.DataSet` 将具备以下的内容： ``raw_words1`` 是 ``question`` ， ``raw_words2`` 是 ``sentence`` ， ``target`` 是 ``label`` 。
+    测试集中没有 ``target`` 列。
 
     .. csv-table::
         :header: "raw_words1", "raw_words2", "target"
 
         "What came into force after the new...", "As of that day...", "entailment"
         "...","."
-
-    test数据集没有target列
 
     """
     
@@ -250,26 +246,27 @@ class QNLILoader(JsonLoader):
     
     def download(self):
         r"""
-        如果您的实验使用到了该数据，请引用
+        自动下载数据集。
 
-        https://arxiv.org/pdf/1809.05053.pdf
-
-        :return:
+        :return: 数据集目录地址
         """
         return self._get_dataset_path('qnli')
 
 
 class RTELoader(Loader):
     r"""
-    第一行为标题(具体内容会被忽略)，之后每一行是一个sample，由index、句子1、句子2和标签构成（以制表符分割），数据结构如下：
+    **RTE** 数据集的 **Loader**，如果您使用了该数据，请引用 **GLUE Benchmark** ：
 
-    Example::
+        https://openreview.net/pdf?id=rJ4km2R5t7
+        
+    读取数据的格式为：第一行为标题（具体内容会被忽略），之后每一行是一个 sample，由 **index** 、**句子1** 、**句子2** 和 **标签** 
+    构成（以制表符分割），数据结构如下::
 
         index	sentence1	sentence2	label
         0	Dana Reeve, the widow of the actor Christopher Reeve, has died of lung cancer at age 44, according to the Christopher Reeve Foundation.	Christopher Reeve had an accident.	not_entailment
 
-    RTE数据的loader
-    加载的DataSet将具备以下的field, raw_words1是sentence0，raw_words2是sentence1, target是label
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的内容：``raw_words1`` 是 ``sentence1`` ， ``raw_words2`` 是 ``sentence2`` ， ``target`` 是 ``label`` 。
+    测试集中没有 ``target`` 列。
 
     .. csv-table::
         :header: "raw_words1", "raw_words2", "target"
@@ -277,7 +274,6 @@ class RTELoader(Loader):
         "Dana Reeve, the widow of the actor...", "Christopher Reeve had an...", "not_entailment"
         "...","..."
 
-    test数据集没有target列
     """
     
     def __init__(self):
@@ -312,20 +308,17 @@ class RTELoader(Loader):
     
     def download(self):
         r"""
-        如果您的实验使用到了该数据，请引用GLUE Benchmark
+        自动下载数据集。
 
-        https://openreview.net/pdf?id=rJ4km2R5t7
-
-        :return:
+        :return: 数据集目录地址
         """
         return self._get_dataset_path('rte')
 
 
 class QuoraLoader(Loader):
     r"""
-    Quora matching任务的数据集Loader
-
-    支持读取的文件中的内容，应该有以下的形式, 以制表符分隔，且前三列的内容必须是：第一列是label，第二列和第三列是句子
+    **Quora matching** 任务的数据集 **Loader**。
+    支持读取的文件中的内容应该有以下的形式：以制表符分隔，且前三列一定分别为 **label** ， **句子1** ， **句子2** 。
 
     Example::
 
@@ -333,7 +326,7 @@ class QuoraLoader(Loader):
         0	Is honey a viable alternative to sugar for diabetics ?	How would you compare the United States ' euthanasia laws to Denmark ?	90348
         ...
 
-    加载的DataSet将具备以下的field
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
     .. csv-table::
         :header: "raw_words1", "raw_words2", "target"
@@ -370,21 +363,27 @@ class QuoraLoader(Loader):
 
         :return:
         """
+        r"""
+        自动下载数据集。
+
+        :return: 数据集目录地址
+        """
         raise RuntimeError("Quora cannot be downloaded automatically.")
 
 
 class CNXNLILoader(Loader):
     r"""
-    数据集简介：中文句对NLI（本为multi-lingual的数据集，但是这里只取了中文的数据集）。原句子已被MOSES tokenizer处理，这里我们将其还原并重新按字tokenize
-    原始数据数据为：
-
-    Example::
+    **XNLI Chinese** 数据集的 **Loader** ，该数据取自 https://arxiv.org/abs/1809.05053 ，在 https://arxiv.org/pdf/1905.05526.pdf
+    、 https://arxiv.org/pdf/1901.10125.pdf 和 https://arxiv.org/pdf/1809.05053.pdf 有使用。
+    
+    该数据集为中文句对 NLI（本为 ``multi-lingual`` 的数据集，但是这里只取了中文的数据集）。原句子已被
+    ``MOSES tokenizer`` 处理，这里我们将其还原并重新按字 tokenize 。原始数据为::
 
         premise	hypo	label
         我们 家里 有 一个 但 我 没 找到 我 可以 用 的 时间	我们 家里 有 一个 但 我 从来 没有 时间 使用 它 .	entailment
 
-    dev和test中的数据为csv或json格式，包括十多个field，这里只取与以上三个field中的数据
-    读取后的Dataset将具有以下数据结构：
+    验证集和测试集中的数据为 csv 或 json 格式，这里只取以上三个 field 中的数据。
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
     .. csv-table::
        :header: "raw_chars1", "raw_chars2", "target"
@@ -444,6 +443,13 @@ class CNXNLILoader(Loader):
         return ds
 
     def load(self, paths: Union[str, Dict[str, str]] = None) -> DataBundle:
+        """
+        从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.DataBundle` 。
+        读取的 field 根据 :class:`SNLILoader` 初始化时传入的 ``fields`` 决定。
+
+        :param paths:
+        :return:
+        """
         if paths is None:
             paths = self.download()
         paths = check_loader_paths(paths)
@@ -459,10 +465,9 @@ class CNXNLILoader(Loader):
 
     def download(self) -> str:
         r"""
-        自动下载数据，该数据取自 https://arxiv.org/abs/1809.05053
-        在 https://arxiv.org/pdf/1905.05526.pdf https://arxiv.org/pdf/1901.10125.pdf
-        https://arxiv.org/pdf/1809.05053.pdf 有使用
-        :return:
+        自动下载数据集。
+
+        :return: 数据集目录地址
         """
         output_dir = self._get_dataset_path('cn-xnli')
         return output_dir
@@ -470,23 +475,19 @@ class CNXNLILoader(Loader):
 
 class BQCorpusLoader(Loader):
     r"""
-    别名：
-    数据集简介:句子对二分类任务（判断是否具有相同的语义）
-    原始数据结构为：
-
-    Example::
+    **BQ Corpus** 数据集的 **Loader** 。句子对二分类任务，判断是否具有相同的语义。原始数据结构为::
 
         sentence1,sentence2,label
         综合评分不足什么原因,综合评估的依据,0
-        什么时候我能使用微粒贷,你就赶快给我开通就行了,0
+        什么时候我能使用微粒贷,您就赶快给我开通就行了,0
 
-    读取后的Dataset将具有以下数据结构：
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
     .. csv-table::
        :header: "raw_chars1", "raw_chars2", "target"
        
        "综合评分不足什么原因", "综合评估的依据", "0"
-       "什么时候我能使用微粒贷", "你就赶快给我开通就行了", "0"
+       "什么时候我能使用微粒贷", "您就赶快给我开通就行了", "0"
        "...", "...", "..."
 
     """
@@ -514,31 +515,25 @@ class BQCorpusLoader(Loader):
         由于版权限制，不能提供自动下载功能。可参考
 
         https://github.com/ymcui/Chinese-BERT-wwm
-
-        :return:
         """
         raise RuntimeError("BQCorpus cannot be downloaded automatically.")
 
 
 class LCQMCLoader(Loader):
     r"""
-    数据集简介：句对匹配（question matching）
-    
-    原始数据为：
-
-    Example::
+    **LCQMC** 数据集的 **Loader**，该数据集用于句对匹配（question matching）。原始数据为::
 
         喜欢打篮球的男生喜欢什么样的女生	爱打篮球的男生喜欢什么样的女生	1
-        你帮我设计小说的封面吧	谁能帮我给小说设计个封面？	0
+        您帮我设计小说的封面吧	谁能帮我给小说设计个封面？	0
 
     
-    读取后的Dataset将具有以下的数据结构
+    读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
     
     .. csv-table::
        :header: "raw_chars1", "raw_chars2", "target"
        
        "喜欢打篮球的男生喜欢什么样的女生", "爱打篮球的男生喜欢什么样的女生", "1"
-       "你帮我设计小说的封面吧", "妇可以戴耳机听音乐吗?", "0"
+       "您帮我设计小说的封面吧", "妇可以戴耳机听音乐吗?", "0"
        "...", "...", "..."
     
     
@@ -569,8 +564,6 @@ class LCQMCLoader(Loader):
         由于版权限制，不能提供自动下载功能。可参考
 
         https://github.com/ymcui/Chinese-BERT-wwm
-
-        :return:
         """
         raise RuntimeError("LCQMC cannot be downloaded automatically.")
 

@@ -173,14 +173,20 @@ class GraphBuilderBase:
 
 
 class MRPmiGraphPipe(GraphBuilderBase):
+    """
+    构建 **MR** 数据集的 **Graph** 。
 
+    :param graph_type: 
+    :param widow_size:
+    :param threshold:
+    """
     def __init__(self, graph_type='pmi', widow_size=10, threshold=0.):
         super().__init__(graph_type=graph_type, widow_size=widow_size, threshold=threshold)
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
-            params: ~fastNLP.DataBundle data_bundle: 需要处理的DataBundle对象.
-            return 返回csr类型的稀疏矩阵图;训练集，验证集，测试集，在图中的index.
+        :param data_bundle: 需要处理的 :class:`fastNLP.io.DataBundle` 对象。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
         """
         self._get_doc_edge(data_bundle)
         self._get_word_edge()
@@ -190,19 +196,31 @@ class MRPmiGraphPipe(GraphBuilderBase):
                self.tr_doc_index, self.dev_doc_index, self.te_doc_index)
 
     def build_graph_from_file(self, path: str):
+        r"""
+        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+    
+        :param path: 数据集的路径。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        """
         data_bundle = MRLoader().load(path)
         return self.build_graph(data_bundle)
 
 
 class R8PmiGraphPipe(GraphBuilderBase):
+    """
+    构建 **R8** 数据集的 **Graph** 。
 
+    :param graph_type: 
+    :param widow_size:
+    :param threshold:
+    """
     def __init__(self, graph_type='pmi', widow_size=10, threshold=0.):
         super().__init__(graph_type=graph_type, widow_size=widow_size, threshold=threshold)
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
-            params: ~fastNLP.DataBundle data_bundle: 需要处理的DataBundle对象.
-            return 返回csr类型的稀疏矩阵图;训练集，验证集，测试集，在图中的index.
+        :param data_bundle: 需要处理的 :class:`fastNLP.io.DataBundle` 对象。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
         """
         self._get_doc_edge(data_bundle)
         self._get_word_edge()
@@ -212,19 +230,31 @@ class R8PmiGraphPipe(GraphBuilderBase):
                self.tr_doc_index, self.dev_doc_index, self.te_doc_index)
 
     def build_graph_from_file(self, path: str):
+        r"""
+        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+
+        :param path: 数据集的路径。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        """
         data_bundle = R8Loader().load(path)
         return self.build_graph(data_bundle)
 
 
 class R52PmiGraphPipe(GraphBuilderBase):
+    """
+    构建 **R52** 数据集的 **Graph** 。
 
+    :param graph_type: 
+    :param widow_size:
+    :param threshold:
+    """
     def __init__(self, graph_type='pmi', widow_size=10, threshold=0.):
         super().__init__(graph_type=graph_type, widow_size=widow_size, threshold=threshold)
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
-            params: ~fastNLP.DataBundle data_bundle: 需要处理的DataBundle对象.
-            return 返回csr类型的稀疏矩阵;训练集，验证集，测试集，在图中的index.
+        :param data_bundle: 需要处理的 :class:`fastNLP.io.DataBundle` 对象。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
         """
         self._get_doc_edge(data_bundle)
         self._get_word_edge()
@@ -234,19 +264,31 @@ class R52PmiGraphPipe(GraphBuilderBase):
                self.tr_doc_index, self.dev_doc_index, self.te_doc_index)
 
     def build_graph_from_file(self, path: str):
+        r"""
+        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+
+        :param path: 数据集的路径。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        """
         data_bundle = R52Loader().load(path)
         return self.build_graph(data_bundle)
 
 
 class OhsumedPmiGraphPipe(GraphBuilderBase):
+    """
+    构建 **Ohsuned** 数据集的 **Graph** 。
 
+    :param graph_type: 
+    :param widow_size:
+    :param threshold:
+    """
     def __init__(self, graph_type='pmi', widow_size=10, threshold=0.):
         super().__init__(graph_type=graph_type, widow_size=widow_size, threshold=threshold)
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
-            params: ~fastNLP.DataBundle data_bundle: 需要处理的DataBundle对象.
-            return 返回csr类型的稀疏矩阵图;训练集，验证集，测试集，在图中的index.
+        :param data_bundle: 需要处理的 :class:`fastNLP.io.DataBundle` 对象。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
         """
         self._get_doc_edge(data_bundle)
         self._get_word_edge()
@@ -256,19 +298,31 @@ class OhsumedPmiGraphPipe(GraphBuilderBase):
                self.tr_doc_index, self.dev_doc_index, self.te_doc_index)
 
     def build_graph_from_file(self, path: str):
+        r"""
+        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        
+        :param path: 数据集的路径。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        """
         data_bundle = OhsumedLoader().load(path)
         return self.build_graph(data_bundle)
 
 
 class NG20PmiGraphPipe(GraphBuilderBase):
+    """
+    构建 **NG20** 数据集的 **Graph** 。
 
+    :param graph_type: 
+    :param widow_size:
+    :param threshold:
+    """
     def __init__(self, graph_type='pmi', widow_size=10, threshold=0.):
         super().__init__(graph_type=graph_type, widow_size=widow_size, threshold=threshold)
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
-            params: ~fastNLP.DataBundle data_bundle: 需要处理的DataBundle对象.
-            return 返回csr类型的稀疏矩阵图;训练集，验证集，测试集，在图中的index.
+        :param data_bundle: 需要处理的 :class:`fastNLP.io.DataBundle` 对象。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
         """
         self._get_doc_edge(data_bundle)
         self._get_word_edge()
@@ -279,8 +333,10 @@ class NG20PmiGraphPipe(GraphBuilderBase):
 
     def build_graph_from_file(self, path: str):
         r"""
-            param: path->数据集的路径.
-            return: 返回csr类型的稀疏矩阵图;训练集，验证集，测试集，在图中的index.
+        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+
+        :param path: 数据集的路径。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
         """
         data_bundle = NG20Loader().load(path)
         return self.build_graph(data_bundle)

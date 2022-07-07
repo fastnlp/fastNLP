@@ -1,5 +1,3 @@
-r"""undocumented"""
-
 __all__ = [
     "CLSBasePipe",
     "AGsNewsPipe",
@@ -36,8 +34,17 @@ from fastNLP.core.log import logger
 
 
 class CLSBasePipe(Pipe):
+    """
+    处理分类数据集 **Pipe** 的基类。
+
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw', 'cn-char']`` 。``'raw'`` 表示使用空格作为切分， ``'cn-char'`` 表示
+        按字符切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param lang: :mod:`spacy` 使用的语言，当前仅支持 ``'en'`` 。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
     
-    def __init__(self, lower: bool = False, tokenizer: str = 'raw', lang='en', num_proc=0):
+    def __init__(self, lower: bool = False, tokenizer: str = 'raw', lang: str='en', num_proc: int=0):
         super().__init__()
         self.lower = lower
         self.tokenizer = get_tokenizer(tokenizer, lang=lang)
@@ -61,7 +68,7 @@ class CLSBasePipe(Pipe):
 
     def process(self, data_bundle: DataBundle):
         r"""
-        传入的DataSet应该具备如下的结构
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该具备如下的结构：
 
         .. csv-table::
             :header: "raw_words", "target"
@@ -71,7 +78,7 @@ class CLSBasePipe(Pipe):
             "...", "..."
 
         :param data_bundle:
-        :return:
+        :return: 处理后的 ``data_bundle``
         """
         # 复制一列words
         data_bundle = _add_words_field(data_bundle, lower=self.lower)
@@ -87,46 +94,32 @@ class CLSBasePipe(Pipe):
 
     def process_from_file(self, paths) -> DataBundle:
         r"""
-        传入文件路径，生成处理好的DataBundle对象。paths支持的路径形式可以参考 ：:meth:`fastNLP.io.Loader.load()`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
 
         :param paths:
-        :return: DataBundle
+        :return:
         """
         raise NotImplementedError
 
 
 class YelpFullPipe(CLSBasePipe):
     r"""
-    处理YelpFull的数据, 处理之后DataSet中的内容如下
+    处理 **Yelp Review Full** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
-    .. csv-table:: 下面是使用YelpFullPipe处理后的DataSet所具备的field
+    .. csv-table:: 下面是使用 YelpFullPipe 处理后的 DataSet 所具备的 field
         :header: "raw_words", "target", "words",  "seq_len"
 
         "I got 'new' tires from them and within...", 0 ,"[7, 110, 22, 107, 22, 499, 59, 140, 3,...]", 160
         " Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
         "...", ., "[...]", .
 
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
-
-        +-------------+-----------+--------+-------+---------+
-        | field_names | raw_words | target | words | seq_len |
-        +-------------+-----------+--------+-------+---------+
-        |   is_input  |   False   | False  |  True |   True  |
-        |  is_target  |   False   |  True  | False |  False  |
-        | ignore_type |           | False  | False |  False  |
-        |  pad_value  |           |   0    |   0   |    0    |
-        +-------------+-----------+--------+-------+---------+
-
+    :param lower: 是否对输入进行小写化。
+    :param granularity: 支持 ``[2, 3, 5]`` 。若为 ``2`` ，则认为是二分类问题，将 **1、2** 归为一类， **4、5** 归为一类，
+        丢掉 3；若为 ``3`` ，则认为是三分类问题，将 **1、2** 归为一类， **3** 归为一类， **4、5** 归为一类；若为 ``5`` ，则认为是五分类问题。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
     """
-
-    def __init__(self, lower: bool = False, granularity=5, tokenizer: str = 'spacy', num_proc=0):
-        r"""
-
-        :param bool lower: 是否对输入进行小写化。
-        :param int granularity: 支持2, 3, 5。若为2, 则认为是2分类问题，将1、2归为1类，4、5归为一类，丢掉2；若为3, 则有3分类问题，将
-            1、2归为1类，3归为1类，4、5归为1类；若为5, 则有5分类问题。
-        :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
-        """
+    def __init__(self, lower: bool = False, granularity: int=5, tokenizer: str = 'spacy', num_proc: int=0):
         super().__init__(lower=lower, tokenizer=tokenizer, lang='en', num_proc=num_proc)
         assert granularity in (2, 3, 5), "granularity can only be 2,3,5."
         self.granularity = granularity
@@ -140,7 +133,7 @@ class YelpFullPipe(CLSBasePipe):
 
     def process(self, data_bundle):
         r"""
-        传入的DataSet应该具备如下的结构
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该具备如下的结构：
 
         .. csv-table::
            :header: "raw_words", "target"
@@ -150,7 +143,7 @@ class YelpFullPipe(CLSBasePipe):
            "...", "..."
 
         :param data_bundle:
-        :return:
+        :return: 处理后的 ``data_bundle``
         """
         if self.tag_map is not None:
             data_bundle = _granularize(data_bundle, self.tag_map)
@@ -159,11 +152,12 @@ class YelpFullPipe(CLSBasePipe):
 
         return data_bundle
 
-    def process_from_file(self, paths=None):
+    def process_from_file(self, paths=None) -> DataBundle:
         r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
 
         :param paths:
-        :return: DataBundle
+        :return:
         """
         data_bundle = YelpFullLoader().load(paths)
         return self.process(data_bundle=data_bundle)
@@ -171,7 +165,7 @@ class YelpFullPipe(CLSBasePipe):
 
 class YelpPolarityPipe(CLSBasePipe):
     r"""
-    处理YelpPolarity的数据, 处理之后DataSet中的内容如下
+    处理 **Yelp Review Polarity** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table:: 下面是使用YelpFullPipe处理后的DataSet所具备的field
         :header: "raw_words", "target", "words", "seq_len"
@@ -180,32 +174,20 @@ class YelpPolarityPipe(CLSBasePipe):
         " Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
         "...", ., "[...]", .
 
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
-
-        +-------------+-----------+--------+-------+---------+
-        | field_names | raw_words | target | words | seq_len |
-        +-------------+-----------+--------+-------+---------+
-        |   is_input  |   False   | False  |  True |   True  |
-        |  is_target  |   False   |  True  | False |  False  |
-        | ignore_type |           | False  | False |  False  |
-        |  pad_value  |           |   0    |   0   |    0    |
-        +-------------+-----------+--------+-------+---------+
-
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
     """
 
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc=0):
-        r"""
-
-        :param bool lower: 是否对输入进行小写化。
-        :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
-        """
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc: int=0):
         super().__init__(lower=lower, tokenizer=tokenizer, lang='en', num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
 
-        :param str paths:
-        :return: DataBundle
+        :param paths:
+        :return:
         """
         data_bundle = YelpPolarityLoader().load(paths)
         return self.process(data_bundle=data_bundle)
@@ -213,7 +195,7 @@ class YelpPolarityPipe(CLSBasePipe):
 
 class AGsNewsPipe(CLSBasePipe):
     r"""
-    处理AG's News的数据, 处理之后DataSet中的内容如下
+    处理 **AG's News** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table:: 下面是使用AGsNewsPipe处理后的DataSet所具备的field
         :header: "raw_words", "target", "words", "seq_len"
@@ -222,31 +204,20 @@ class AGsNewsPipe(CLSBasePipe):
         " Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
         "...", ., "[...]", .
 
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
-
-        +-------------+-----------+--------+-------+---------+
-        | field_names | raw_words | target | words | seq_len |
-        +-------------+-----------+--------+-------+---------+
-        |   is_input  |   False   | False  |  True |   True  |
-        |  is_target  |   False   |  True  | False |  False  |
-        | ignore_type |           | False  | False |  False  |
-        |  pad_value  |           |   0    |   0   |    0    |
-        +-------------+-----------+--------+-------+---------+
-
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
     """
 
     def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc=0):
-        r"""
-
-        :param bool lower: 是否对输入进行小写化。
-        :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
-        """
         super().__init__(lower=lower, tokenizer=tokenizer, lang='en', num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
-        :param str paths:
-        :return: DataBundle
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
         """
         data_bundle = AGsNewsLoader().load(paths)
         return self.process(data_bundle=data_bundle)
@@ -254,7 +225,7 @@ class AGsNewsPipe(CLSBasePipe):
 
 class DBPediaPipe(CLSBasePipe):
     r"""
-    处理DBPedia的数据, 处理之后DataSet中的内容如下
+    处理 **DBPedia** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table:: 下面是使用DBPediaPipe处理后的DataSet所具备的field
         :header: "raw_words", "target", "words", "seq_len"
@@ -263,31 +234,20 @@ class DBPediaPipe(CLSBasePipe):
         " Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
         "...", ., "[...]", .
 
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
-
-        +-------------+-----------+--------+-------+---------+
-        | field_names | raw_words | target | words | seq_len |
-        +-------------+-----------+--------+-------+---------+
-        |   is_input  |   False   | False  |  True |   True  |
-        |  is_target  |   False   |  True  | False |  False  |
-        | ignore_type |           | False  | False |  False  |
-        |  pad_value  |           |   0    |   0   |    0    |
-        +-------------+-----------+--------+-------+---------+
-
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
     """
 
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc=0):
-        r"""
-
-        :param bool lower: 是否对输入进行小写化。
-        :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
-        """
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc: int=0):
         super().__init__(lower=lower, tokenizer=tokenizer, lang='en', num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
-        :param str paths:
-        :return: DataBundle
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
         """
         data_bundle = DBPediaLoader().load(paths)
         return self.process(data_bundle=data_bundle)
@@ -295,7 +255,7 @@ class DBPediaPipe(CLSBasePipe):
 
 class SSTPipe(CLSBasePipe):
     r"""
-    经过该Pipe之后，DataSet中具备的field如下所示
+    处理 **SST** 的数据，处理之后， :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table:: 下面是使用SSTPipe处理后的DataSet所具备的field
         :header: "raw_words", "words", "target", "seq_len"
@@ -304,29 +264,15 @@ class SSTPipe(CLSBasePipe):
         "No one goes unindicted here , which is...", 0, "[191, 126, 192, 193, 194, 4, 195, 17, ...", 13
         "...", ., "[...]", .
 
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
-
-        +-------------+-----------+--------+-------+---------+
-        | field_names | raw_words | target | words | seq_len |
-        +-------------+-----------+--------+-------+---------+
-        |   is_input  |   False   | False  |  True |   True  |
-        |  is_target  |   False   |  True  | False |  False  |
-        | ignore_type |           | False  | False |  False  |
-        |  pad_value  |           |   0    |   0   |    0    |
-        +-------------+-----------+--------+-------+---------+
-
+    :param subtree: 是否将训练集、测试集和验证集数据展开为子树，扩充数据量。
+    :param train_subtree: 是否将训练集通过子树扩展数据。
+    :param lower: 是否对输入进行小写化。
+    :param granularity: 支持 ``[2, 3, 5]`` 。若为 ``2`` ，则认为是二分类问题，将 **1、2** 归为一类， **4、5** 归为一类，
+        丢掉 3；若为 ``3`` ，则认为是三分类问题，将 **1、2** 归为一类， **3** 归为一类， **4、5** 归为一类；若为 ``5`` ，则认为是五分类问题。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
     """
-
-    def __init__(self, subtree=False, train_subtree=True, lower=False, granularity=5, tokenizer='spacy', num_proc=0):
-        r"""
-
-        :param bool subtree: 是否将train, test, dev数据展开为子树，扩充数据量。 Default: ``False``
-        :param bool train_subtree: 是否将train集通过子树扩展数据。
-        :param bool lower: 是否对输入进行小写化。
-        :param int granularity: 支持2, 3, 5。若为2, 则认为是2分类问题，将0、1归为1类，3、4归为一类，丢掉2；若为3, 则有3分类问题，将
-            0、1归为1类，2归为1类，3、4归为1类；若为5, 则有5分类问题。
-        :param str tokenizer: 使用哪种tokenize方式将数据切成单词。支持'spacy'和'raw'。raw使用空格作为切分。
-        """
+    def __init__(self, subtree: bool=False, train_subtree: bool=True, lower: bool=False, granularity: int=5, tokenizer: int='spacy', num_proc: int=0):
         super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.subtree = subtree
         self.train_tree = train_subtree
@@ -341,19 +287,19 @@ class SSTPipe(CLSBasePipe):
         else:
             self.tag_map = None
 
-    def process(self, data_bundle: DataBundle):
+    def process(self, data_bundle: DataBundle) -> DataBundle:
         r"""
-        对DataBundle中的数据进行预处理。输入的DataSet应该至少拥有raw_words这一列，且内容类似与
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` ` 应该至少拥有 ``raw_words`` 列，内容类似于：
 
-        .. csv-table:: 下面是使用SSTLoader读取的DataSet所具备的field
+        .. csv-table:: 下面是使用 SSTLoader 读取的 DataSet 所具备的 field
             :header: "raw_words"
 
             "(2 (3 (3 Effective) (2 but)) (1 (1 too-tepid)..."
             "(3 (3 (2 If) (3 (2 you) (3 (2 sometimes) ..."
             "..."
 
-        :param ~fastNLP.io.DataBundle data_bundle: 需要处理的DataBundle对象
-        :return:
+        :param data_bundle: 需要处理的 :class:`~fastNLP.io.DataBundle` 对象
+        :return: 处理后的 ``data_bundle``
         """
         #  先取出subtree
         for name in list(data_bundle.datasets.keys()):
@@ -381,13 +327,19 @@ class SSTPipe(CLSBasePipe):
         return data_bundle
 
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = SSTLoader().load(paths)
         return self.process(data_bundle=data_bundle)
 
 
 class SST2Pipe(CLSBasePipe):
     r"""
-    加载SST2的数据, 处理完成之后DataSet将拥有以下的field
+    处理 **SST-2** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table::
        :header: "raw_words", "target", "words", "seq_len"
@@ -396,32 +348,20 @@ class SST2Pipe(CLSBasePipe):
        "unflinchingly bleak and desperate", 0, "[115, 116, 5, 117]", 4
        "...", "...", ., .
 
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
-
-        +-------------+-----------+--------+-------+---------+
-        | field_names | raw_words | target | words | seq_len |
-        +-------------+-----------+--------+-------+---------+
-        |   is_input  |   False   | False  |  True |   True  |
-        |  is_target  |   False   |  True  | False |  False  |
-        | ignore_type |           | False  | False |  False  |
-        |  pad_value  |           |   0    |   0   |    0    |
-        +-------------+-----------+--------+-------+---------+
-
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
     """
 
     def __init__(self, lower=False, tokenizer='raw', num_proc=0):
-        r"""
-
-        :param bool lower: 是否对输入进行小写化。
-        :param str tokenizer: 使用哪种tokenize方式将数据切成单词。
-        """
         super().__init__(lower=lower, tokenizer=tokenizer, lang='en', num_proc=num_proc)
 
     def process_from_file(self, paths=None):
         r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
 
-        :param str paths: 如果为None，则自动下载并缓存到fastNLP的缓存地址。
-        :return: DataBundle
+        :param paths:
+        :return:
         """
         data_bundle = SST2Loader().load(paths)
         return self.process(data_bundle)
@@ -429,43 +369,31 @@ class SST2Pipe(CLSBasePipe):
 
 class IMDBPipe(CLSBasePipe):
     r"""
-    经过本Pipe处理后DataSet将如下
+    处理 **IMDb** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
-    .. csv-table:: 输出DataSet的field
+    .. csv-table:: 输出 DataSet 的 field
        :header: "raw_words", "target", "words", "seq_len"
 
        "Bromwell High is a cartoon ... ", 0, "[3, 5, 6, 9, ...]", 20
        "Story of a man who has ...", 1, "[20, 43, 9, 10, ...]", 31
        "...", ., "[...]", .
 
-    其中raw_words为str类型，是原文; words是转换为index的输入; target是转换为index的目标值;
-    words列被设置为input; target列被设置为target。
+    其中 ``raw_words`` 为 :class:`str` 类型，是原文； ``words`` 是转换为 index 的输入； ``target`` 是转换为 index 的目标值。
+    ``words`` 列被设置为 input， ``target`` 列被设置为 target。
 
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
-
-        +-------------+-----------+--------+-------+---------+
-        | field_names | raw_words | target | words | seq_len |
-        +-------------+-----------+--------+-------+---------+
-        |   is_input  |   False   | False  |  True |   True  |
-        |  is_target  |   False   |  True  | False |  False  |
-        | ignore_type |           | False  | False |  False  |
-        |  pad_value  |           |   0    |   0   |    0    |
-        +-------------+-----------+--------+-------+---------+
-
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
     """
 
     def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc=0):
-        r"""
-
-        :param bool lower: 是否将words列的数据小写。
-        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
-        """
         super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.lower = lower
 
     def process(self, data_bundle: DataBundle):
         r"""
-        期待的DataBunlde中输入的DataSet应该类似于如下，有两个field，raw_words和target，且均为str类型
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该具备如下的结构：有两个 field ， ``raw_words`` 和 ``target`` ，
+        且均为 :class:`str` 类型。
 
         .. csv-table:: 输入DataSet的field
            :header: "raw_words", "target"
@@ -476,7 +404,7 @@ class IMDBPipe(CLSBasePipe):
 
         :param DataBunlde data_bundle: 传入的DataBundle中的DataSet必须包含raw_words和target两个field，且raw_words列应该为str,
             target列应该为str。
-        :return: DataBundle
+        :return:  处理后的 ``data_bundle``
         """
 
         # 替换<br />
@@ -493,9 +421,10 @@ class IMDBPipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
 
-        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
-        :return: DataBundle
+        :param paths:
+        :return:
         """
         # 读取数据
         data_bundle = IMDBLoader().load(paths)
@@ -506,7 +435,7 @@ class IMDBPipe(CLSBasePipe):
 
 class ChnSentiCorpPipe(Pipe):
     r"""
-    处理之后的DataSet有以下的结构
+    处理 **ChnSentiCorp** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容为：
 
     .. csv-table::
         :header: "raw_chars", "target", "chars", "seq_len"
@@ -515,30 +444,18 @@ class ChnSentiCorpPipe(Pipe):
         "<荐书> 推荐所有喜欢<红楼>...", 1, "[10, 21, ....]", 25
         "..."
 
-    其中chars, seq_len是input，target是target
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+    其中 ``chars`` , ``seq_len`` 是 input， ``target`` 是 target。
 
-        +-------------+-----------+--------+-------+---------+
-        | field_names | raw_chars | target | chars | seq_len |
-        +-------------+-----------+--------+-------+---------+
-        |   is_input  |   False   |  True  |  True |   True  |
-        |  is_target  |   False   |  True  | False |  False  |
-        | ignore_type |           | False  | False |  False  |
-        |  pad_value  |           |   0    |   0   |    0    |
-        +-------------+-----------+--------+-------+---------+
-
+    :param bigrams: 是否增加一列 ``bigrams`` 。 ``bigrams`` 会对原文进行如下转化： ``['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]`` 。如果
+        设置为 ``True`` ，返回的 `~fastNLP.core.DataSet` 将有一列名为 ``bigrams`` ，且已经转换为了 index 并设置为 input，对应的词表可以通过
+        ``data_bundle.get_vocab('bigrams')`` 获取。
+    :param trigrams: 是否增加一列 ``trigrams`` 。 ``trigrams`` 会对原文进行如下转化 ``['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]`` 。
+        如果设置为 ``True`` ，返回的 `~fastNLP.core.DataSet` 将有一列名为 ``trigrams`` ，且已经转换为了 index 并设置为 input，对应的词表可以通过
+        ``data_bundle.get_vocab('trigrams')`` 获取。
+    :param num_proc: 处理数据时使用的进程数目。
     """
 
-    def __init__(self, bigrams=False, trigrams=False, num_proc: int = 0):
-        r"""
-
-        :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
-            设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
-            data_bundle.get_vocab('bigrams')获取.
-        :param bool trigrams: 是否增加一列trigrams. trigrams的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
-            。如果设置为True，返回的DataSet将有一列名为trigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
-            data_bundle.get_vocab('trigrams')获取.
-        """
+    def __init__(self, bigrams: bool=False, trigrams: bool=False, num_proc: int = 0):
         super().__init__()
 
         self.bigrams = bigrams
@@ -557,7 +474,7 @@ class ChnSentiCorpPipe(Pipe):
 
     def process(self, data_bundle: DataBundle):
         r"""
-        可以处理的DataSet应该具备以下的field
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该具备如下的结构：
 
         .. csv-table::
             :header: "raw_chars", "target"
@@ -567,7 +484,7 @@ class ChnSentiCorpPipe(Pipe):
             "..."
 
         :param data_bundle:
-        :return:
+        :return:  处理后的 ``data_bundle``
         """
         _add_chars_field(data_bundle, lower=False)
 
@@ -601,9 +518,10 @@ class ChnSentiCorpPipe(Pipe):
 
     def process_from_file(self, paths=None):
         r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
 
-        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
-        :return: DataBundle
+        :param paths:
+        :return:
         """
         # 读取数据
         data_bundle = ChnSentiCorpLoader().load(paths)
@@ -614,7 +532,7 @@ class ChnSentiCorpPipe(Pipe):
 
 class THUCNewsPipe(CLSBasePipe):
     r"""
-    处理之后的DataSet有以下的结构
+    处理 **THUCNews** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容为：
 
     .. csv-table::
         :header: "raw_chars", "target", "chars", "seq_len"
@@ -622,27 +540,18 @@ class THUCNewsPipe(CLSBasePipe):
         "马晓旭意外受伤让国奥警惕 无奈大雨格外青睐殷家军记者傅亚雨沈阳报道...", 0, "[409, 1197, 2146, 213, ...]", 746
         "..."
 
-    其中chars, seq_len是input，target是target
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+    其中 ``chars`` , ``seq_len`` 是 input， ``target`` 是target
 
-        +-------------+-----------+--------+-------+---------+
-        | field_names | raw_chars | target | chars | seq_len |
-        +-------------+-----------+--------+-------+---------+
-        |   is_input  |   False   |  True  |  True |   True  |
-        |  is_target  |   False   |  True  | False |  False  |
-        | ignore_type |           | False  | False |  False  |
-        |  pad_value  |           |   0    |   0   |    0    |
-        +-------------+-----------+--------+-------+---------+
-
-    :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
-        设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
-        data_bundle.get_vocab('bigrams')获取.
-    :param bool trigrams: 是否增加一列trigrams. trigrams的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
-        。如果设置为True，返回的DataSet将有一列名为trigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
-        data_bundle.get_vocab('trigrams')获取.
+    :param bigrams: 是否增加一列 ``bigrams`` 。 ``bigrams`` 会对原文进行如下转化： ``['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]`` 。如果
+        设置为 ``True`` ，返回的 `~fastNLP.core.DataSet` 将有一列名为 ``bigrams`` ，且已经转换为了 index 并设置为 input，对应的词表可以通过
+        ``data_bundle.get_vocab('bigrams')`` 获取。
+    :param trigrams: 是否增加一列 ``trigrams`` 。 ``trigrams`` 会对原文进行如下转化 ``['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]`` 。
+        如果设置为 ``True`` ，返回的 `~fastNLP.core.DataSet` 将有一列名为 ``trigrams`` ，且已经转换为了 index 并设置为 input，对应的词表可以通过
+        ``data_bundle.get_vocab('trigrams')`` 获取。
+    :param num_proc: 处理数据时使用的进程数目。
     """
 
-    def __init__(self, bigrams=False, trigrams=False, num_proc=0):
+    def __init__(self, bigrams: int=False, trigrams: int=False, num_proc: int=0):
         super().__init__(num_proc=num_proc)
 
         self.bigrams = bigrams
@@ -663,7 +572,7 @@ class THUCNewsPipe(CLSBasePipe):
 
     def process(self, data_bundle: DataBundle):
         r"""
-        可处理的DataSet应具备如下的field
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该具备如下的结构：
 
         .. csv-table::
             :header: "raw_words", "target"
@@ -672,7 +581,7 @@ class THUCNewsPipe(CLSBasePipe):
             "...", "..."
 
         :param data_bundle:
-        :return:
+        :return:  处理后的 ``data_bundle``
         """
         # 根据granularity设置tag
         tag_map = {'体育': 0, '财经': 1, '房产': 2, '家居': 3, '教育': 4, '科技': 5, '时尚': 6, '时政': 7, '游戏': 8, '娱乐': 9}
@@ -713,8 +622,10 @@ class THUCNewsPipe(CLSBasePipe):
 
     def process_from_file(self, paths=None):
         r"""
-        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
-        :return: DataBundle
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
         """
         data_loader = THUCNewsLoader()  # 此处需要实例化一个data_loader，否则传入load()的参数为None
         data_bundle = data_loader.load(paths)
@@ -724,32 +635,23 @@ class THUCNewsPipe(CLSBasePipe):
 
 class WeiboSenti100kPipe(CLSBasePipe):
     r"""
-    处理之后的DataSet有以下的结构
+    处理 **WeiboSenti100k** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容为：
 
     .. csv-table::
         :header: "raw_chars", "target", "chars", "seq_len"
 
-        "六一出生的？好讽刺…… //@祭春姬:他爸爸是外星人吧 //@面孔小高:现在的孩子都怎么了 [怒][怒][怒]", 0, "[0, 690, 18, ...]", 56
+        "马晓旭意外受伤让国奥警惕 无奈大雨格外青睐殷家军记者傅亚雨沈阳报道...", 0, "[409, 1197, 2146, 213, ...]", 746
         "..."
 
-    其中chars, seq_len是input，target是target
-    dataset的print_field_meta()函数输出的各个field的被设置成input和target的情况为::
+    其中 ``chars`` , ``seq_len`` 是 input， ``target`` 是target
 
-        +-------------+-----------+--------+-------+---------+
-        | field_names | raw_chars | target | chars | seq_len |
-        +-------------+-----------+--------+-------+---------+
-        |   is_input  |   False   |  True  |  True |   True  |
-        |  is_target  |   False   |  True  | False |  False  |
-        | ignore_type |           | False  | False |  False  |
-        |  pad_value  |           |   0    |   0   |    0    |
-        +-------------+-----------+--------+-------+---------+
-
-    :param bool bigrams: 是否增加一列bigrams. bigrams的构成是['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]。如果
-        设置为True，返回的DataSet将有一列名为bigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
-        data_bundle.get_vocab('bigrams')获取.
-    :param bool trigrams: 是否增加一列trigrams. trigrams的构成是 ['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]
-        。如果设置为True，返回的DataSet将有一列名为trigrams, 且已经转换为了index并设置为input，对应的vocab可以通过
-        data_bundle.get_vocab('trigrams')获取.
+    :param bigrams: 是否增加一列 ``bigrams`` 。 ``bigrams`` 会对原文进行如下转化： ``['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]`` 。如果
+        设置为 ``True`` ，返回的 `~fastNLP.core.DataSet` 将有一列名为 ``bigrams`` ，且已经转换为了 index 并设置为 input，对应的词表可以通过
+        ``data_bundle.get_vocab('bigrams')`` 获取。
+    :param trigrams: 是否增加一列 ``trigrams`` 。 ``trigrams`` 会对原文进行如下转化 ``['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]`` 。
+        如果设置为 ``True`` ，返回的 `~fastNLP.core.DataSet` 将有一列名为 ``trigrams`` ，且已经转换为了 index 并设置为 input，对应的词表可以通过
+        ``data_bundle.get_vocab('trigrams')`` 获取。
+    :param num_proc: 处理数据时使用的进程数目。
     """
 
     def __init__(self, bigrams=False, trigrams=False, num_proc=0):
@@ -770,7 +672,7 @@ class WeiboSenti100kPipe(CLSBasePipe):
 
     def process(self, data_bundle: DataBundle):
         r"""
-        可处理的DataSet应具备以下的field
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该具备如下的结构：
 
         .. csv-table::
             :header: "raw_chars", "target"
@@ -779,7 +681,7 @@ class WeiboSenti100kPipe(CLSBasePipe):
             "...", "..."
 
         :param data_bundle:
-        :return:
+        :return:  处理后的 ``data_bundle``
         """
         # clean,lower
 
@@ -811,8 +713,10 @@ class WeiboSenti100kPipe(CLSBasePipe):
     
     def process_from_file(self, paths=None):
         r"""
-        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
-        :return: DataBundle
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
         """
         data_loader = WeiboSenti100kLoader()  # 此处需要实例化一个data_loader，否则传入load()的参数为None
         data_bundle = data_loader.load(paths)
@@ -820,20 +724,23 @@ class WeiboSenti100kPipe(CLSBasePipe):
         return data_bundle
 
 class MRPipe(CLSBasePipe):
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc=0):
-        r"""
+    """
+    加载 **MR** 的数据。
 
-        :param bool lower: 是否将words列的数据小写。
-        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
-        """
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc=0):
         super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.lower = lower
 
     def process_from_file(self, paths=None):
         r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
 
-        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
-        :return: DataBundle
+        :param paths:
+        :return:
         """
         # 读取数据
         data_bundle = MRLoader().load(paths)
@@ -843,20 +750,23 @@ class MRPipe(CLSBasePipe):
 
 
 class R8Pipe(CLSBasePipe):
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc = 0):
-        r"""
+    """
+    加载 **R8** 的数据。
 
-        :param bool lower: 是否将words列的数据小写。
-        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
-        """
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc = 0):
         super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.lower = lower
 
     def process_from_file(self, paths=None):
         r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
 
-        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
-        :return: DataBundle
+        :param paths:
+        :return:
         """
         # 读取数据
         data_bundle = R8Loader().load(paths)
@@ -866,20 +776,23 @@ class R8Pipe(CLSBasePipe):
 
 
 class R52Pipe(CLSBasePipe):
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc: int = 0):
-        r"""
+    """
+    加载 **R52** 的数据。
 
-        :param bool lower: 是否将words列的数据小写。
-        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
-        """
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc: int = 0):
         super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.lower = lower
 
     def process_from_file(self, paths=None):
         r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
 
-        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
-        :return: DataBundle
+        :param paths:
+        :return:
         """
         # 读取数据
         data_bundle = R52Loader().load(paths)
@@ -889,20 +802,23 @@ class R52Pipe(CLSBasePipe):
 
 
 class OhsumedPipe(CLSBasePipe):
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc: int = 0):
-        r"""
+    """
+    加载 **Ohsumed** 的数据。
 
-        :param bool lower: 是否将words列的数据小写。
-        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
-        """
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc: int = 0):
         super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.lower = lower
 
     def process_from_file(self, paths=None):
         r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
 
-        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
-        :return: DataBundle
+        :param paths:
+        :return:
         """
         # 读取数据
         data_bundle = OhsumedLoader().load(paths)
@@ -912,20 +828,23 @@ class OhsumedPipe(CLSBasePipe):
 
 
 class NG20Pipe(CLSBasePipe):
-    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc: int = 0):
-        r"""
+    """
+    加载 **NG20** 的数据。
 
-        :param bool lower: 是否将words列的数据小写。
-        :param str tokenizer: 使用什么tokenizer来将句子切分为words. 支持spacy, raw两种。raw即使用空格拆分。
-        """
+    :param lower: 是否对输入进行小写化。
+    :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy', 'raw']`` 。``'raw'`` 表示使用空格作为切分，``'spacy'`` 则使用 :mod:`spacy` 库进行分词。
+    :param num_proc: 处理数据时使用的进程数目。
+    """
+    def __init__(self, lower: bool = False, tokenizer: str = 'spacy', num_proc: int = 0):
         super().__init__(tokenizer=tokenizer, lang='en', num_proc=num_proc)
         self.lower = lower
 
     def process_from_file(self, paths=None):
         r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
 
-        :param paths: 支持路径类型参见 :class:`fastNLP.io.loader.Loader` 的load函数。
-        :return: DataBundle
+        :param paths:
+        :return:
         """
         # 读取数据
         data_bundle = NG20Loader().load(paths)

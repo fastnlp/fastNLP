@@ -230,7 +230,7 @@ class CWSPipe(Pipe):
            "..."
 
         :param data_bundle:
-        :return:
+        :return: 处理后的 ``data_bundle``
         """
         data_bundle.copy_field('raw_words', 'chars')
         
@@ -276,8 +276,9 @@ class CWSPipe(Pipe):
     
     def process_from_file(self, paths=None) -> DataBundle:
         r"""
-        
-        :param str paths:
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
         :return:
         """
         if self.dataset_name is None and paths is None:

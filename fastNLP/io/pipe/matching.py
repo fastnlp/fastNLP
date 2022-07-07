@@ -165,30 +165,60 @@ class MatchingBertPipe(Pipe):
 
 class RTEBertPipe(MatchingBertPipe):
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = RTELoader().load(paths)
         return self.process(data_bundle)
 
 
 class SNLIBertPipe(MatchingBertPipe):
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = SNLILoader().load(paths)
         return self.process(data_bundle)
 
 
 class QuoraBertPipe(MatchingBertPipe):
     def process_from_file(self, paths):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = QuoraLoader().load(paths)
         return self.process(data_bundle)
 
 
 class QNLIBertPipe(MatchingBertPipe):
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = QNLILoader().load(paths)
         return self.process(data_bundle)
 
 
 class MNLIBertPipe(MatchingBertPipe):
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = MNLILoader().load(paths)
         return self.process(data_bundle)
 
@@ -308,30 +338,60 @@ class MatchingPipe(Pipe):
 
 class RTEPipe(MatchingPipe):
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = RTELoader().load(paths)
         return self.process(data_bundle)
 
 
 class SNLIPipe(MatchingPipe):
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = SNLILoader().load(paths)
         return self.process(data_bundle)
 
 
 class QuoraPipe(MatchingPipe):
     def process_from_file(self, paths):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = QuoraLoader().load(paths)
         return self.process(data_bundle)
 
 
 class QNLIPipe(MatchingPipe):
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = QNLILoader().load(paths)
         return self.process(data_bundle)
 
 
 class MNLIPipe(MatchingPipe):
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = MNLILoader().load(paths)
         return self.process(data_bundle)
 
@@ -341,6 +401,12 @@ class LCQMCPipe(MatchingPipe):
         super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = LCQMCLoader().load(paths)
         data_bundle = RenamePipe().process(data_bundle)
         data_bundle = self.process(data_bundle)
@@ -353,6 +419,12 @@ class CNXNLIPipe(MatchingPipe):
         super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = CNXNLILoader().load(paths)
         data_bundle = GranularizePipe(task='XNLI').process(data_bundle)
         data_bundle = RenamePipe().process(data_bundle)  # 使中文数据的field
@@ -366,6 +438,12 @@ class BQCorpusPipe(MatchingPipe):
         super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = BQCorpusLoader().load(paths)
         data_bundle = RenamePipe().process(data_bundle)
         data_bundle = self.process(data_bundle)
@@ -380,6 +458,10 @@ class RenamePipe(Pipe):
         self.num_proc = num_proc
     
     def process(self, data_bundle: DataBundle):  # rename field name for Chinese Matching dataset
+        """
+
+        :return: 处理后的 ``data_bundle``
+        """
         if (self.task == 'cn-nli'):
             for name, dataset in data_bundle.datasets.items():
                 if (dataset.has_field('raw_chars1')):
@@ -437,6 +519,10 @@ class GranularizePipe(Pipe):
         return data_bundle
     
     def process(self, data_bundle: DataBundle):
+        """
+
+        :return: 处理后的 ``data_bundle``
+        """
         task_tag_dict = {
             'XNLI': {'neutral': 0, 'entailment': 1, 'contradictory': 2, 'contradiction': 2}
         }
@@ -452,6 +538,10 @@ class MachingTruncatePipe(Pipe):  # truncate sentence for bert, modify seq_len
         super().__init__()
     
     def process(self, data_bundle: DataBundle):
+        """
+
+        :return: None
+        """
         for name, dataset in data_bundle.datasets.items():
             pass
         return None
@@ -462,6 +552,12 @@ class LCQMCBertPipe(MatchingBertPipe):
         super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = LCQMCLoader().load(paths)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
         data_bundle = self.process(data_bundle)
@@ -475,6 +571,12 @@ class BQCorpusBertPipe(MatchingBertPipe):
         super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = BQCorpusLoader().load(paths)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
         data_bundle = self.process(data_bundle)
@@ -488,6 +590,12 @@ class CNXNLIBertPipe(MatchingBertPipe):
         super().__init__(tokenizer=tokenizer, num_proc=num_proc)
 
     def process_from_file(self, paths=None):
+        r"""
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load()`
+
+        :param paths:
+        :return:
+        """
         data_bundle = CNXNLILoader().load(paths)
         data_bundle = GranularizePipe(task='XNLI').process(data_bundle)
         data_bundle = RenamePipe(task='cn-nli-bert').process(data_bundle)
@@ -522,6 +630,10 @@ class TruncateBertPipe(Pipe):
         return words_before_sep + words_after_sep
 
     def process(self, data_bundle: DataBundle) -> DataBundle:
+        """
+
+        :return: 处理后的 ``data_bundle``
+        """
         for name in data_bundle.datasets.keys():
             dataset = data_bundle.get_dataset(name)
             sep_index_vocab = data_bundle.get_vocab('words').to_index('[SEP]')

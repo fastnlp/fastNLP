@@ -1,1 +1,4 @@
-"""基于 transformers-4.11.3 版本迁移"""
+"""
+:mod:`transformers` 模块，包含了常用的预训练模型。
+"""
+import sphinx-multiversion
