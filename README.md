@@ -51,7 +51,7 @@ from fastNLP.transformers.torch import BertTokenizer
 #  该文件还存在，将自动读取缓存文件，而不再次运行预处理代码。
 @cache_results('caches/cache.pkl')
 def prepare_data():
-    # 会自动下载 SST2 数据，并且可以通过文档看到返回的 dataset 应该是包含"raw_words"和"target"两个field的
+    # 会自动下载数据，并且可以通过文档看到返回的 dataset 应该是包含"raw_words"和"target"两个field的
     data_bundle = ChnSentiCorpLoader().load()
     # 使用tokenizer对数据进行tokenize
     tokenizer = BertTokenizer.from_pretrained('hfl/chinese-bert-wwm')
@@ -130,7 +130,7 @@ evaluator.run()
 from fastNLP.io import ChnSentiCorpLoader
 from functools import partial
 
-# 会自动下载 SST2 数据，并且可以通过文档看到返回的 dataset 应该是包含"raw_words"和"target"两个field的
+# 会自动下载数据，并且可以通过文档看到返回的 dataset 应该是包含"raw_words"和"target"两个field的
 data_bundle = ChnSentiCorpLoader().load()
 
 # 使用tokenizer对数据进行tokenize

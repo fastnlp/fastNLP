@@ -50,6 +50,8 @@ class Saver:
         self.save_fn_name = 'save_checkpoint' if save_object == 'trainer' else 'save_model'
 
         self.timestamp_path = self.folder.joinpath(os.environ[FASTNLP_LAUNCH_TIME])
+        # 打印这次运行时 checkpoint 所保存在的文件夹，因为这个文件夹是根据时间实时生成的，因此需要打印出来防止用户混淆；
+        logger.info(f"The checkpoint will be saved in this folder for this time: {self.timestamp_path}.")
 
     def save(self, trainer, folder_name):
         """
