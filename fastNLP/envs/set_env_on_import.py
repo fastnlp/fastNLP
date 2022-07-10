@@ -68,7 +68,8 @@ def set_env_on_import():
     :return:
     """
     # 框架相关的变量设置
-    set_env_on_import_torch()
+    if "oneflow" not in sys.modules:
+        set_env_on_import_torch()
     set_env_on_import_paddle()
     set_env_on_import_jittor()
     set_env_on_import_oneflow()
