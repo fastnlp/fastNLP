@@ -94,4 +94,4 @@ def seq_len_to_mask(seq_len, max_len: Optional[int]=None):
         pass
 
     raise TypeError("seq_len_to_mask function only supports numpy.ndarray, torch.Tensor, paddle.Tensor, "
-                    f"and jittor.Var, but got {type(seq_len)}")
+                    f"jittor.Var and oneflow.Tensor, but got {type(seq_len)}")
