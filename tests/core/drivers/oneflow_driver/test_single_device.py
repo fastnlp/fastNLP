@@ -557,7 +557,7 @@ def test_save_and_load_model(only_state_dict):
             res1 = driver1.model.evaluate_step(**batch)
             res2 = driver2.model.evaluate_step(**batch)
 
-            assert oneflow.all(res1["preds"] == res2["preds"])
+            assert oneflow.all(res1["pred"] == res2["pred"])
     finally:
         rank_zero_rm(path)
 
@@ -623,7 +623,7 @@ def test_save_and_load_with_randombatchsampler(only_state_dict, fp16):
             left_y_batches.update(batch["y"].reshape(-1, ).tolist())
             res1 = driver1.model.evaluate_step(**batch)
             res2 = driver2.model.evaluate_step(**batch)
-            assert oneflow.all(res1["preds"] == res2["preds"])
+            assert oneflow.all(res1["pred"] == res2["pred"])
 
         assert len(left_x_batches) + len(already_seen_x_set) == len(dataset)
         assert len(left_x_batches | already_seen_x_set) == len(dataset)
@@ -698,7 +698,7 @@ def test_save_and_load_with_randomsampler(only_state_dict, fp16):
             left_y_batches.update(batch["y"].reshape(-1, ).tolist())
             res1 = driver1.model.evaluate_step(**batch)
             res2 = driver2.model.evaluate_step(**batch)
-            assert oneflow.all(res1["preds"] == res2["preds"])
+            assert oneflow.all(res1["pred"] == res2["pred"])
 
         assert len(left_x_batches) + len(already_seen_x_set) == len(dataset)
         assert len(left_x_batches | already_seen_x_set) == len(dataset)

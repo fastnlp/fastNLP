@@ -77,7 +77,7 @@ def test_tensor_object_transfer_tensor(device):
     assert res["int"] == oneflow_dict["int"]
     assert res["string"] == oneflow_dict["string"]
 
-@pytest.mark.oneflow
+@pytest.mark.oneflowdist
 def test_fastnlp_oneflow_all_gather():
     local_rank = int(os.environ["LOCAL_RANK"])
     obj = {
@@ -113,7 +113,7 @@ def test_fastnlp_oneflow_all_gather():
         assert len(data) == world_size
         assert data[0] == data[1]
 
-@pytest.mark.oneflow
+@pytest.mark.oneflowdist
 def test_fastnlp_oneflow_broadcast_object():
     local_rank = int(os.environ["LOCAL_RANK"])
     if os.environ["LOCAL_RANK"] == "0":

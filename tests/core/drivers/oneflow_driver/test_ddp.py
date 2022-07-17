@@ -80,7 +80,7 @@ def dataloader_with_randomsampler(dataset, batch_size, shuffle, drop_last, seed=
 #
 ############################################################################
 
-@pytest.mark.oneflow
+@pytest.mark.oneflowdist
 class TestDDPDriverFunction:
     """
     测试 OneflowDDPDriver 一些简单函数的测试类，基本都是测试能否运行、是否存在 import 错误等问题
@@ -159,7 +159,7 @@ class TestDDPDriverFunction:
 #
 ############################################################################
 
-@pytest.mark.oneflow
+@pytest.mark.oneflowdist
 class TestSetDistReproDataloader:
 
     @classmethod
@@ -510,7 +510,7 @@ class TestSetDistReproDataloader:
 # 测试 save 和 load 相关的功能
 #
 ############################################################################
-@pytest.mark.oneflow
+@pytest.mark.oneflowdist
 class TestSaveLoad:
     """
     测试多卡情况下 save 和 load 相关函数的表现
@@ -740,7 +740,7 @@ class TestSaveLoad:
             rank_zero_rm(path)
 
 
-@pytest.mark.oneflow
+@pytest.mark.oneflowdist
 @pytest.mark.parametrize("shuffle", ([True, False]))
 @pytest.mark.parametrize("batch_size", ([1, 3, 16, 17]))
 @pytest.mark.parametrize("drop_last", ([True, False]))
@@ -790,7 +790,7 @@ def test_shuffle_dataloader(shuffle, batch_size, drop_last, reproducible=True):
         pass
 
 
-@pytest.mark.oneflow
+@pytest.mark.oneflowdist
 @pytest.mark.parametrize("shuffle", ([True, False]))
 @pytest.mark.parametrize("batch_size", ([1, 3, 16, 17]))
 @pytest.mark.parametrize("drop_last", ([True, False]))
@@ -845,7 +845,7 @@ def test_batch_sampler_dataloader(shuffle, batch_size, drop_last, reproducible=T
 
 
 
-@pytest.mark.oneflow
+@pytest.mark.oneflowdist
 @recover_logger
 @pytest.mark.parametrize("inherit", ([True, False]))
 def test_customized_batch_sampler_dataloader(inherit):
@@ -897,7 +897,7 @@ def test_customized_batch_sampler_dataloader(inherit):
         pass
 
 
-@pytest.mark.oneflow
+@pytest.mark.oneflowdist
 @recover_logger
 @pytest.mark.parametrize("inherit", ([True, False]))
 def test_customized_sampler_dataloader(inherit):

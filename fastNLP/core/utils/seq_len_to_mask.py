@@ -1,7 +1,7 @@
 from typing import Optional
 
 import numpy as np
-from ...envs.imports import _NEED_IMPORT_JITTOR, _NEED_IMPORT_TORCH, _NEED_IMPORT_PADDLE
+from ...envs.imports import _NEED_IMPORT_JITTOR, _NEED_IMPORT_TORCH, _NEED_IMPORT_PADDLE, _NEED_IMPORT_ONEFLOW
 from .paddle_utils import paddle_to
 
 
@@ -13,6 +13,9 @@ if _NEED_IMPORT_PADDLE:
 
 if _NEED_IMPORT_JITTOR:
     import jittor
+
+if _NEED_IMPORT_ONEFLOW:
+    import oneflow
 
 
 def seq_len_to_mask(seq_len, max_len: Optional[int]=None):
@@ -75,6 +78,16 @@ def seq_len_to_mask(seq_len, max_len: Optional[int]=None):
             assert seq_len.ndim == 1, f"seq_len can only have one dimension, got {seq_len.ndim == 1}."
             batch_size = seq_len.shape[0]
             broad_cast_seq_len = jittor.arange(max_len).reshape(1, max_len).expand(batch_size, -1)
+            mask = broad_cast_seq_len < seq_len.unsqueeze(1)
+            return mask
+    except NameError as e:
+        pass
+
+    try:
+        if isinstance(seq_len, oneflow.Tensor):
+            assert seq_len.ndim == 1, f"seq_len can only have one dimension, got {seq_len.ndim == 1}."
+            batch_size = seq_len.shape[0]
+            broad_cast_seq_len = oneflow.arange(max_len).expand(batch_size, -1).to(seq_len)
             mask = broad_cast_seq_len < seq_len.unsqueeze(1)
             return mask
     except NameError as e:
