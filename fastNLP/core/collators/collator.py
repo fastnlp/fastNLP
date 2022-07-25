@@ -107,7 +107,7 @@ class Collator:
     如果需要某些 field 不要包含在 pad 之后的结果中，可以使用 :meth:`~fastNLP.Collator.set_ignore` 进行设置。
 
     Collator 在第一次进行 pad 的时候自动根据设置以及数据情况，为每个 field 获取一个 padder ，在之后的每次调用中，都将使用对应
-    的 Padder 给对应的 field 。
+    的 Padder 给对应的 field 。由于 Collator 只能在某个 field 内进行 pad ，如果 pad 操作需要同时操作多个 field ，请不要使用 Collator 。
 
     :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ``['torch','jittor','paddle','oneflow','numpy','raw', 'auto', None]``。
         若为 ``'auto'`` ，则在进行 pad 的时候会根据调用的环境决定其 ``backend`` 。该参数对不能进行 pad 的数据没有影响，无法 pad 的数据返回一定
