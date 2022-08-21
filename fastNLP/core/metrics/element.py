@@ -88,7 +88,7 @@ class Element:
         """
         重置 value
         """
-        if self.backend.is_specified():
+        if self.backend.is_specified() and self._value is not None:
             self._value = self.backend.fill_value(self._value, self.init_value)
 
     @property

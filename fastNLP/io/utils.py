@@ -52,8 +52,8 @@ def check_loader_paths(paths: Union[str, Dict[str, str]]) -> Dict[str, str]:
                     path_pair = ('test', filename)
                 if path_pair:
                     if path_pair[0] in files:
-                        raise FileExistsError(f"Two files contain `{path_pair[0]}` were found, please specify the "
-                                              f"filepath for `{path_pair[0]}`.")
+                        raise FileExistsError(f"Two files contain `{path_pair[0]}` were found in {paths}, please specify "
+                                              f"the filepath for `{path_pair[0]}`.")
                     files[path_pair[0]] = os.path.join(paths, path_pair[1])
             # if 'train' not in files:
             #     raise KeyError(f"There is no train file in {paths}.")
