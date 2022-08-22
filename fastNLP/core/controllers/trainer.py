@@ -352,8 +352,8 @@ class Trainer(TrainerEventTrigger):
           则将替换为 :class:`~fastNLP.UnrepeatedSequentialSampler`，如果这个行为不是期待的，请本参数设置为 ``False``，并针对每个卡控制其可以
           用到的数据。
         * *output_from_new_proc* -- 应当为一个字符串，表示在多进程的 driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一：
-          ``["all", "ignore", "only_error"]``；当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到
-          log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 ``"only_error"``；
+          ``["all", "ignore", "only_error"]`` ，分别代表 *全部输出*、 *全部忽略* 和 *仅输出错误* ，而 rank0 的 **所有信息** 都将被打印出来；
+          当该参数的值不是以上值时，该值应当表示一个文件夹的名字，我们会将其他 rank 的输出流重定向到 log 文件中，然后将 log 文件保存在通过该参数值设定的文件夹中；默认为 ``"only_error"``；
 
             注意该参数仅当使用分布式的 ``driver`` 时才有效，例如 ``TorchDDPDriver``；
         * *progress_bar* -- 显示进度条的方式，目前支持 ``[None, 'raw', 'rich', 'auto', 'tqdm']`` 或者 :class:`~fastNLP.RichCallback` 、 :class:`~fastNLP.RawTextCallback` 等对象，

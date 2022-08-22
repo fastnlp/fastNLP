@@ -39,7 +39,7 @@ class DeepSpeedDriver(TorchDDPDriver):
         ``DeepSpeedDriver`` 目前支持的三种启动方式：
 
             1. 用户自己不进行任何操作，直接使用我们的 ``Trainer``，这时是由我们自己使用 ``open_subprocesses`` 拉起多个进程，
-            然后 ``DeepSpeedDriver`` 自己通过调用 ``deepspeed.initialize`` 来初始化模型和同心组；（情况 A）
+            然后 ``DeepSpeedDriver`` 自己通过调用 ``deepspeed.initialize`` 来初始化模型和通信组；（情况 A）
 
             .. code-block::
 
@@ -60,7 +60,7 @@ class DeepSpeedDriver(TorchDDPDriver):
                 trainer = Trainer(
                     ...
                     driver='deepspeed',
-                    device=None
+                    device=None, # fastNLP 会忽略传入的 device，并根据 local_rank 自动分配
                 )
                 trainer.run()
 
@@ -79,7 +79,7 @@ class DeepSpeedDriver(TorchDDPDriver):
                 trainer = Trainer(
                     ...
                     driver='deepspeed',
-                    device=None
+                    device=None, # fastNLP 会忽略传入的 device，并根据 local_rank 自动分配
                 )
                 trainer.run()
 

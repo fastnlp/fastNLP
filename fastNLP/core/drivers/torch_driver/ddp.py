@@ -194,7 +194,7 @@ class TorchDDPDriver(TorchDriver):
                 trainer = Trainer(
                     ...
                     driver='torch',
-                    device=None
+                    device=None, # fastNLP 会忽略传入的 device，并根据 local_rank 自动分配
                 )
                 trainer.run()
 
@@ -222,7 +222,7 @@ class TorchDDPDriver(TorchDriver):
                 trainer = Trainer(
                     ...
                     driver='torch',
-                    device=None
+                    device=None, # fastNLP 会忽略传入的 device，并根据 local_rank 自动分配
                 )
                 trainer.run()
 
