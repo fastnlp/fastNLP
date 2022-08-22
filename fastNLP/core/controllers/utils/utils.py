@@ -132,6 +132,17 @@ class _TruncatedDataLoader:
     def __getattr__(self, item):
         return getattr(self.dataloader, item)
 
+    def __setattr__(self, key, value):
+        # 添加该函数使得在进行实验性训练或者评测时，用户对于 trainer.dataloader 的感觉和正常训练完全一样；
+        # 注意这里不能直接 ``setattr(self.dataloader, key, value)``，会导致死循环；
+        if "dataloader" in self.__dict__:
+            if hasattr(self.dataloader, key):
+                setattr(self.dataloader, key, value)
+            else:
+                self.__dict__[key] = value
+        else:
+            self.__dict__[key] = value
+
 
 def check_evaluate_every(evaluate_every):
     r"""
