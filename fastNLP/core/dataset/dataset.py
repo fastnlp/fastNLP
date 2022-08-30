@@ -741,7 +741,7 @@ class DataSet:
     def apply_more(self, func: Callable = None, modify_fields: bool = True,
                    num_proc: int = 0, progress_desc: str = '', progress_bar: str = 'rich'):
         r"""
-        将 ``DataSet`` 中每个 ``Instance`` 传入到 ``func`` 中，并获取它的返回值。``func``可以返回一个或多个 field 上的结果。
+        将 ``DataSet`` 中每个 ``Instance`` 传入到 ``func`` 中，并获取它的返回值。``func`` 可以返回一个或多个 field 上的结果。
 
         .. note::
             ``apply_more`` 与 ``apply`` 的区别：
