@@ -584,7 +584,8 @@ class DataSet:
         将 :class:`DataSet` 每个 ``instance`` 中为 ``field_name`` 的 field 传给函数 ``func``，并写入到 ``new_field_name``
         中。
 
-        :param func: 对指定 field 进行处理的函数，注意其输入应为 ``instance`` 中名为 ``field_name`` 的 field 的内容；
+        :param func: 对指定 field 进行处理的函数，注意其输入应为 ``instance`` 中名为 ``field_name`` 的 field 的内容，返回值将被
+            写入至 ``new_field_name`` 中。
         :param field_name: 传入 ``func`` 的 field 名称；
         :param new_field_name: 函数执行结果写入的 ``field`` 名称。该函数会将 ``func`` 返回的内容放入到 ``new_field_name`` 对
             应的 ``field`` 中，注意如果名称与已有的 field 相同则会进行覆盖。如果为 ``None`` 则不会覆盖和创建 field ；
@@ -624,7 +625,8 @@ class DataSet:
             ``apply_field_more`` 与 ``apply_field`` 的区别参考 :meth:`~fastNLP.core.dataset.DataSet.apply_more` 中关于 ``apply_more`` 与
             ``apply`` 区别的介绍。
 
-        :param func: 对指定 field 进行处理的函数，注意其输入应为 ``instance`` 中名为 ``field_name`` 的 field 的内容；
+        :param func: 对指定 field 进行处理的函数，注意其输入应为 ``instance`` 中名为 ``field_name`` 的 field 的内容；返回值为一个字典，
+            key 是field 的名字，value 是对应的结果
         :param field_name: 传入 ``func`` 的 field 名称；
         :param modify_fields: 是否用结果修改 ``DataSet`` 中的 ``Field`` ， 默认为 ``True``
         :param num_proc: 使用进程的数量。
@@ -802,7 +804,7 @@ class DataSet:
         """
         将 ``DataSet`` 中每个 ``Instance`` 传入到 ``func`` 中，并获取它的返回值。``func`` 仅能返回一个结果。
 
-        :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值是一个字典，key 是field 的名字，value 是对应的结果
+        :param func: 参数是 ``DataSet`` 中的 ``Instance`` ，返回值将被写入 ``new_field_name`` 中。
         :param new_field_name: 将 ``func`` 返回的内容放入到 ``new_field_name`` 这个 field中 ，如果名称与已有的 field 相同，则覆
             盖之前的 field。如果为 ``None`` 则不创建新的 field。
         :param num_proc: 使用进程的数量。
