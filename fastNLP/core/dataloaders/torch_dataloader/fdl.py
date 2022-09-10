@@ -47,6 +47,16 @@ class _FDataSet:
     def __len__(self) -> int:
         return len(self.dataset)
 
+    # 这里需要显示地带上这两个方法，因为可能会涉及到 pickle 的 dumps 和 loads；否则会导致 pickle 在 loads 时调用 __setstate__ 方法
+    #  进入到 __getattr__ 内部，引发死循环；
+    # https://docs.python.org/3/library/pickle.html#pickling-class-instances
+    # https://stackoverflow.com/questions/73662315/when-using-multiprocessing-and-spawn-in-python-use-self-a-in-getattr-cause?noredirect=1
+    def __getstate__(self):
+        return self.__dict__
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+
 
 class TorchDataLoader(DataLoader):
     """
