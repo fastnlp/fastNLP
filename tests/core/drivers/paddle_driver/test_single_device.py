@@ -635,7 +635,6 @@ def test_save_and_load_model(only_state_dict):
         driver2.load_model(path, only_state_dict)
 
         for batch in dataloader:
-            print("?")
             batch = driver1.move_data_to_device(batch)
             res1 = driver1.model.evaluate_step(**batch)
             res2 = driver2.model.evaluate_step(**batch)
