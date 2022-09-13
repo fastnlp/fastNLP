@@ -18,7 +18,7 @@ pipeline {
                         }
                     }
                     steps {
-                        sh 'pytest ./tests --durations=0 --html=other.html --self-contained-html -m "not (torch or paddle or paddledist or jittor or torchpaddle or torchjittor)"'
+                        sh 'pytest ./tests --durations=0 --html=other.html --self-contained-html -m "not (torch or paddle or paddledist or jittor or oneflow or oneflowdist or torchpaddle or torchjittor or torchoneflow)"'
                     }
                     post {
                         always {
