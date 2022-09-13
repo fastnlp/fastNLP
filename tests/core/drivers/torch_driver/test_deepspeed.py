@@ -97,6 +97,7 @@ def dataloader_with_randomsampler(dataset, batch_size, shuffle, drop_last, seed=
 #     if dist.is_initialized():
 #         dist.destroy_process_group()
 
+@pytest.mark.deepspeed
 @magic_argv_env_context
 def test_multi_optimizers():
     torch_model = TorchNormalModel_Classification_1(10, 10)

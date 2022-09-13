@@ -1048,7 +1048,7 @@ class DataSet:
         :param dataset 为实例化好的 huggingface Dataset 对象
         """
         from datasets import Dataset
-        if not isinstance(dataset, DataSet):
+        if not isinstance(dataset, Dataset):
             raise ValueError(f"Support huggingface dataset, but is {type(dataset)}!")
 
         data_dict = dataset.to_dict()

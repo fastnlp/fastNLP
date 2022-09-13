@@ -1,5 +1,5 @@
 
-from fastNLP.core.collators.packer_unpacker import *
+from fastNLP.core.collators.packer_unpacker import MappingPackerUnpacker, NestedMappingPackerUnpacker, SequencePackerUnpacker
 
 
 def test_unpack_batch_mapping():
