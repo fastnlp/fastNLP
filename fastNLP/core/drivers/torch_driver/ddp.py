@@ -526,12 +526,6 @@ class TorchDDPDriver(TorchDriver):
                     raise RuntimeError(f"The `{fn}` attribute of model is not `Callable`.")
                 return fn, None
             elif fn in {"train_step", "evaluate_step"}:
-
-                logger.warning("\n\nfucking hei\n\n")
-                print(model)
-                print("\n\n")
-                print(type(model))
-                print("\n\n")
                 return model, model.forward
             else:
                 raise RuntimeError(f"There is no `{fn}` method in your model.")
