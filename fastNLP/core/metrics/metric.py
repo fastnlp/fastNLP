@@ -107,6 +107,9 @@ class Metric:
                                 f"instead of {type(value)}.")
         if isinstance(value, Element) and key not in self.elements:
             raise RuntimeError("Please use register_element() function to add Element.")
+        attrs = self.__dict__
+        if key in attrs and isinstance(value, Element):
+            raise RuntimeError(f'`{key}` has been registered as an attribute, cannot be registered as an Element!')
         object.__setattr__(self, key, value)
 
     # 当调用 __getattribute__ 没有找到时才会触发这个, 保留这个的目的只是为了防止 ide 的 warning
