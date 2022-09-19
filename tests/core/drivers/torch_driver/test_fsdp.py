@@ -11,7 +11,7 @@ from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchNormalDataset_Classification, TorchArgMaxDataset
 from tests.helpers.callbacks.helper_callbacks import RecordLossCallback
 from tests.helpers.utils import magic_argv_env_context
-from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _TORCH_GREATER_EQUAL_1_12
 from fastNLP.envs import FASTNLP_LAUNCH_TIME, rank_zero_rm
 if _NEED_IMPORT_TORCH:
     import torch.distributed as dist
@@ -67,6 +67,7 @@ def model_and_optimizers(request):
 
     return trainer_params
 
+@pytest.mark.skipif(not _TORCH_GREATER_EQUAL_1_12, "fsdp 需要 torch 版本在 1.12 及以上")
 @pytest.mark.torch
 @magic_argv_env_context
 def test_trainer_torch_without_evaluator(
@@ -76,7 +77,7 @@ def test_trainer_torch_without_evaluator(
     trainer = Trainer(
         model=model_and_optimizers.model,
         driver="torch_fsdp",
-        device=[4, 5],
+        device=[0, 1],
         optimizers=model_and_optimizers.optimizers,
         train_dataloader=model_and_optimizers.train_dataloader,
         evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
@@ -96,6 +97,7 @@ def test_trainer_torch_without_evaluator(
         dist.destroy_process_group()
 
 
+@pytest.mark.skipif(not _TORCH_GREATER_EQUAL_1_12, "fsdp 需要 torch 版本在 1.12 及以上")
 @pytest.mark.torch
 @pytest.mark.parametrize("save_on_rank0", [True, False])
 @magic_argv_env_context(timeout=100)

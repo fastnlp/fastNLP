@@ -14,7 +14,7 @@ from tests.helpers.callbacks.helper_callbacks import RecordLossCallback
 from tests.helpers.callbacks.helper_callbacks_torch import RecordAccumulationStepsCallback_Torch
 from tests.helpers.utils import magic_argv_env_context, Capturing
 from fastNLP.envs.distributed import rank_zero_rm
-from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _TORCH_GREATER_EQUAL_1_12
 if _NEED_IMPORT_TORCH:
     import torch.distributed as dist
     from torch.optim import SGD
@@ -290,7 +290,7 @@ def test_trainer_on_exception(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("version", [0, 1, 2, 3])
+@pytest.mark.parametrize("version", [0, 1])
 @magic_argv_env_context
 def test_torch_distributed_launch_1(version):
     """
@@ -304,7 +304,7 @@ def test_torch_distributed_launch_1(version):
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("version", [0, 1, 2, 3])
+@pytest.mark.parametrize("version", [0, 1])
 @magic_argv_env_context
 def test_torch_distributed_launch_2(version):
     """
@@ -325,6 +325,8 @@ def test_torch_wo_auto_param_call(
     device,
     n_epochs=2,
 ):
+    if driver == "torch_fsdp" and not _TORCH_GREATER_EQUAL_1_12:
+        pytest.skip("fsdp 需要 torch 在 1.12 及以上")
 
     model = TorchNormalModel_Classification_3(
         num_labels=NormalClassificationTrainTorchConfig.num_labels,
@@ -373,6 +375,9 @@ def test_trainer_overfit_torch(
         overfit_batches,
         num_train_batch_per_epoch
 ):
+    if driver == "torch_fsdp" and not _TORCH_GREATER_EQUAL_1_12:
+        pytest.skip("fsdp 需要 torch 在 1.12 及以上")
+
     trainer = Trainer(
         model=model_and_optimizers.model,
         driver=driver,

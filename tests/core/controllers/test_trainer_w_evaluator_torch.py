@@ -103,8 +103,8 @@ def model_and_optimizers(request):
 
 # 测试一下普通的情况；
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", 4),
-                                           ("torch", [4, 5])])  # ("torch", "cpu"), ("torch", 1), ("torch", [0, 1])
+@pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", 1),
+                                           ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", 1), ("torch", [0, 1])
 @pytest.mark.parametrize("evaluate_every", [-3, -1, 2])
 @magic_argv_env_context
 def test_trainer_torch_with_evaluator(
@@ -139,7 +139,7 @@ def test_trainer_torch_with_evaluator(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", [4, 5]), ("torch", 4)])  # ("torch", [0, 1]),("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", [0, 1]), ("torch", 1)])  # ("torch", [0, 1]),("torch", 1)
 @pytest.mark.parametrize("fp16", [True, False])
 @pytest.mark.parametrize("accumulation_steps", [1, 3])
 @magic_argv_env_context
@@ -250,7 +250,7 @@ def test_trainer_on(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", 'cpu'), ("torch", 4)])  # ("torch", [0, 1]),("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", 'cpu'), ("torch", 1)])  # ("torch", [0, 1]),("torch", 1)
 @magic_argv_env_context
 def test_trainer_specific_params_1(
         model_and_optimizers: TrainerParameters,
@@ -291,7 +291,7 @@ def test_trainer_specific_params_1(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", [4, 5])])  # ("torch", [0, 1]),("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", [0, 1])])  # ("torch", [0, 1]),("torch", 1)
 @magic_argv_env_context
 def test_trainer_specific_params_2(
         model_and_optimizers: TrainerParameters,
@@ -340,7 +340,7 @@ def test_trainer_specific_params_2(
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize("driver,device", [("torch", 4), ("torch", [4, 5])])  # ("torch", [0, 1]),("torch", 1)
+@pytest.mark.parametrize("driver,device", [("torch", 1), ("torch", [0, 1])])  # ("torch", [0, 1]),("torch", 1)
 @pytest.mark.parametrize("overfit_batches,num_train_batch_per_epoch", [(-1, -1), (0, -1), (3, 10), (6, -1)])
 @magic_argv_env_context
 def test_trainer_w_evaluator_overfit_torch(

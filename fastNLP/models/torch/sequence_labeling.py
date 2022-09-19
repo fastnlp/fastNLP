@@ -86,7 +86,7 @@ class BiLSTMCRF(nn.Module):
         :param seq_len: 每个句子的长度，形状为 ``[batch,]``
         :return: 如果 ``target`` 为 ``None``，则返回预测结果 ``{'pred': torch.Tensor}``，否则返回 loss ``{'loss': torch.Tensor}``
         """
-        return self(words, seq_len, target)
+        return self(words, target, seq_len)
 
     def evaluate_step(self, words: "torch.LongTensor", seq_len: "torch.LongTensor"):
         """
@@ -94,7 +94,7 @@ class BiLSTMCRF(nn.Module):
         :param seq_len: 每个句子的长度，形状为 ``[batch,]``
         :return: 预测结果 ``{'pred': torch.Tensor}``
         """
-        return self(words, seq_len)
+        return self(words, seq_len=seq_len)
 
 
 class SeqLabeling(nn.Module):
@@ -286,7 +286,7 @@ class AdvSeqLabel(nn.Module):
         :param seq_len: 每个句子的长度，形状为 ``[batch,]``
         :return: 如果 ``target`` 为 ``None``，则返回预测结果 ``{'pred': torch.Tensor}``，否则返回 loss ``{'loss': torch.Tensor}``
         """
-        return self(words, seq_len, target)
+        return self(words, target, seq_len)
     
     def evaluate_step(self, words: "torch.LongTensor", seq_len: "torch.LongTensor"):
         """
@@ -294,4 +294,4 @@ class AdvSeqLabel(nn.Module):
         :param seq_len: 每个句子的长度，形状为 ``[batch,]``
         :return: 预测结果 ``{'pred': torch.Tensor}``
         """
-        return self(words, seq_len)
+        return self(words, seq_len=seq_len)
