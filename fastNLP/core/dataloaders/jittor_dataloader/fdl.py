@@ -37,6 +37,12 @@ class _JittorDataset(Dataset):
             item = item.tolist()
         return (item, self.dataset[item])
 
+    def __getstate__(self):
+        return self.__dict__
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+
           
 class JittorDataLoader:
     """

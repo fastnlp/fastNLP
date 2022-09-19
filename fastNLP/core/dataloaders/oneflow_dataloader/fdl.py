@@ -47,6 +47,12 @@ class _FDataSet:
     def __len__(self) -> int:
         return len(self.dataset)
 
+    def __getstate__(self):
+        return self.__dict__
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+
 
 class OneflowDataLoader(DataLoader):
     """
