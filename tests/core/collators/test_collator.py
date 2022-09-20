@@ -11,12 +11,8 @@ from ...helpers.utils import Capturing
 def _assert_equal(d1, d2):
     try:
         if 'torch' in str(type(d1)):
-            if 'float64' in str(d2.dtype):
-                print(d2.dtype)
             assert (d1 == d2).all().item()
-        if 'oneflow' in str(type(d1)):
-            if 'float64' in str(d2.dtype):
-                print(d2.dtype)
+        elif 'oneflow' in str(type(d1)):
             assert (d1 == d2).all().item()
         else:
             assert all(d1 == d2)

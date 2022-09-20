@@ -67,7 +67,7 @@ def model_and_optimizers(request):
 
     return trainer_params
 
-@pytest.mark.skipif(not _TORCH_GREATER_EQUAL_1_12, "fsdp 需要 torch 版本在 1.12 及以上")
+@pytest.mark.skipif(not _TORCH_GREATER_EQUAL_1_12, reason="fsdp 需要 torch 版本在 1.12 及以上")
 @pytest.mark.torch
 @magic_argv_env_context
 def test_trainer_torch_without_evaluator(
@@ -97,7 +97,7 @@ def test_trainer_torch_without_evaluator(
         dist.destroy_process_group()
 
 
-@pytest.mark.skipif(not _TORCH_GREATER_EQUAL_1_12, "fsdp 需要 torch 版本在 1.12 及以上")
+@pytest.mark.skipif(not _TORCH_GREATER_EQUAL_1_12, reason="fsdp 需要 torch 版本在 1.12 及以上")
 @pytest.mark.torch
 @pytest.mark.parametrize("save_on_rank0", [True, False])
 @magic_argv_env_context(timeout=100)
