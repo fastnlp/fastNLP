@@ -661,7 +661,7 @@ class TorchDDPDriver(TorchDriver):
         r"""
         通过使用该函数来使得各个进程之间同步操作。
         """
-        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) < 1:  # 当 FASTNLP_NO_SYNC 小于 1 时实际执行
+        if int(os.environ.get(FASTNLP_NO_SYNC, 0)) < 1 and dist.is_initialized():  # 当 FASTNLP_NO_SYNC 小于 1 时实际执行
             torch.distributed.barrier(async_op=False)
 
     def is_distributed(self):
