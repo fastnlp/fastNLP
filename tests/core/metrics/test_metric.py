@@ -26,6 +26,7 @@ class DemoMetric1(Metric):
         return self.count
 
 
+@pytest.mark.torch
 class TestMetric:
 
     def test_v1(self):
