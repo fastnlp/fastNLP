@@ -46,7 +46,7 @@ pipeline {
                     agent {
                         docker {
                             image 'fnlp:torch-1.6'
-                            args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci --gpus all'
+                            args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci --gpus all --shm-size 1G'
                         }
                     }
                     steps {
@@ -62,7 +62,7 @@ pipeline {
                     agent {
                         docker {
                             image 'fnlp:paddle'
-                            args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci --gpus all'
+                            args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci --gpus all --shm-size 1G'
                         }
                     }
                     steps {
@@ -82,7 +82,7 @@ pipeline {
                 //     agent {
                 //         docker {
                 //             image 'fnlp:jittor'
-                //             args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci --gpus all'
+                //             args '-u root:root -v ${JENKINS_HOME}/html/docs:/docs -v ${JENKINS_HOME}/html/_ci:/ci --gpus all --shm-size 1G'
                 //         }
                 //     }
                 //     steps {
