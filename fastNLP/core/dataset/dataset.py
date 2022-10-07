@@ -864,9 +864,13 @@ class DataSet:
             results = [ins for ins in self if not func(ins)]
             if len(results) != 0:
                 dataset = DataSet(results)
-                return dataset
             else:
-                return DataSet()
+                dataset = DataSet()
+                for name in self.field_arrays.keys():
+                    empty_field = FieldArray(name, [None])
+                    empty_field.content = []
+                    dataset.field_arrays[name] = empty_field
+            return dataset
 
     def split(self, ratio: float, shuffle=True):
         r"""

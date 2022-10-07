@@ -47,6 +47,10 @@ class FieldArray:
         """
         self.content.pop(index)
 
+    def __iter__(self):
+        for idx in range(len(self)):
+            yield self[idx]
+
     def __getitem__(self, indices: Union[int, List[int]]):
         return self.get(indices)
 

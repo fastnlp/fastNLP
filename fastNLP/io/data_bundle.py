@@ -354,6 +354,40 @@ class DataBundle:
                                            progress_bar=progress_bar, progress_desc=progress_desc)
         return res
 
+    def add_seq_len(self, field_name: str, new_field_name='seq_len', ignore_miss_dataset: bool = True):
+        r"""
+        将使用 :func:`len` 直接对每个 dataset 的 ``field_name`` 中每个元素作用，将其结果作为 sequence length, 并放入
+        ``new_field_name`` 这个 field。
+
+        :param field_name: 需要处理的 field_name
+        :param new_field_name: 新的 field_name
+        :param ignore_miss_dataset: 如果为 ``True`` ，则当 ``field_name`` 在某个 dataset 内不存在时，直接忽略该 dataset，
+            如果为 ``False`` 则会报错。
+        :return:
+        """
+        return self.apply_field(len, field_name, new_field_name=new_field_name, ignore_miss_dataset=ignore_miss_dataset)
+
+    def drop(self, func: Callable, inplace=True):
+        r"""
+        删除某些 Instance。 需要注意的是 ``func`` 接受一个 Instance ，返回 bool 值。返回值为 ``True`` 时，
+        该 Instance 会被移除或者不会包含在返回的 DataBundle 中。
+
+        :param func: 接受一个 Instance 作为参数，返回 bool 值。为 ``True`` 时删除该 instance
+        :param inplace: 是否在当前 DataBundle 中直接删除 instance；如果为 False，将返回一个新的 DataBundle。
+
+        :return: DataSet
+        """
+        if inplace:
+            for name, dataset in self.datasets.items():
+                dataset.drop(func, inplace)
+            return self
+        else:
+            data_bundle = DataBundle(vocabs=self.vocabs)
+            for name, dataset in self.datasets.items():
+                res = dataset.drop(func, inplace)
+                data_bundle.set_dataset(res, name)
+            return data_bundle
+
     def set_pad(self, field_name, pad_val=0, dtype=None, backend=None, pad_fn=None) -> "DataBundle":
         """
         如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
