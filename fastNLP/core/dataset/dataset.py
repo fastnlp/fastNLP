@@ -1049,7 +1049,7 @@ class DataSet:
         """
         将 Huggingface Dataset 转为 fastNLP 的 DataSet
 
-        :param dataset 为实例化好的 huggingface Dataset 对象
+        :param dataset: 实例化好的 huggingface Dataset 对象
         """
         from datasets import Dataset
         if not isinstance(dataset, Dataset):
