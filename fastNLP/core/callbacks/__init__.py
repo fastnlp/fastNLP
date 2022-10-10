@@ -24,7 +24,9 @@ __all__ = [
 
     "FitlogCallback",
 
-    "TimerCallback"
+    "TimerCallback",
+
+    "TopkSaver"
 ]
 
 
@@ -41,3 +43,4 @@ from .more_evaluate_callback import MoreEvaluateCallback
 from .has_monitor_callback import ResultsMonitor, HasMonitorCallback
 from .fitlog_callback import FitlogCallback
 from .timer_callback import TimerCallback
+from .topk_saver import TopkSaver
