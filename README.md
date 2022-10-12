@@ -29,7 +29,7 @@ fastNLP具有如下的特性：
 ## 安装指南
 fastNLP可以通过以下的命令进行安装
 ```shell
-pip install fastNLP
+pip install fastNLP>=1.0.0alpha
 ```
 如果需要安装更早版本的fastNLP请指定版本号，例如
 ```shell
