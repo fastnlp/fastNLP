@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from fastNLP.core.controllers.trainer import Trainer
+from fastNLP.core.samplers import BucketedBatchSampler, RandomSampler
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchNormalDataset_Classification, TorchArgMaxDataset
 from tests.helpers.callbacks.helper_callbacks import RecordLossCallback, RecordMetricCallback
@@ -379,3 +380,95 @@ def test_trainer_w_evaluator_overfit_torch(
 
     if dist.is_initialized():
         dist.destroy_process_group()
+
+@pytest.mark.torch
+@pytest.mark.parametrize("driver,device", [("torch", 1), ("torch", [0, 1])])  # ("torch", [0, 1]),("torch", 1)
+@pytest.mark.parametrize("train_sampler", ["batch_sampler", "sampler"])
+@pytest.mark.parametrize("eval_sampler", ["batch_sampler", "sampler"])
+@pytest.mark.parametrize("overfit_batches", [-1, 0])
+@magic_argv_env_context
+def test_trainer_w_evaluator_w_samplers(
+        driver,
+        device,
+        train_sampler,
+        eval_sampler,
+        overfit_batches,
+):
+    """
+    测试使用 dataloader 时使用了定制 batch_sampler 或 sampler 且合法的情况
+    """
+    model = TorchNormalModel_Classification_1(
+        num_labels=ArgMaxDatasetConfig.num_labels,
+        feature_dimension=ArgMaxDatasetConfig.feature_dimension
+    )
+    optimizers = SGD(model.parameters(), lr=0.001)
+    metrics = {"acc": Accuracy()}
+
+    dataset = TorchArgMaxDataset(
+        feature_dimension=ArgMaxDatasetConfig.feature_dimension,
+        data_num=ArgMaxDatasetConfig.data_num,
+        seed=ArgMaxDatasetConfig.seed
+    )
+    if train_sampler == "batch_sampler":
+        train_dataloader = DataLoader(
+            dataset=dataset,
+            batch_sampler=BucketedBatchSampler(
+                dataset,[3] * len(dataset), ArgMaxDatasetConfig.batch_size
+            )
+        )
+    elif train_sampler == "sampler":
+        train_dataloader = DataLoader(
+            dataset=dataset,
+            batch_size=ArgMaxDatasetConfig.batch_size,
+            sampler=RandomSampler(dataset)
+        )
+    else:
+        train_dataloader = DataLoader(
+            dataset=dataset,
+            batch_size=ArgMaxDatasetConfig.batch_size,
+            shuffle=True,
+        )
+    if eval_sampler == "batch_sampler":
+        eval_dataloader = DataLoader(
+            dataset=dataset,
+            batch_sampler=BucketedBatchSampler(
+                dataset,[3] * len(dataset), ArgMaxDatasetConfig.batch_size
+            )
+        )
+    elif eval_sampler == "sampler":
+        eval_dataloader = DataLoader(
+            dataset=dataset,
+            sampler=RandomSampler(dataset)
+        )
+    else:
+        DataLoader(
+            dataset=dataset,
+            batch_size=ArgMaxDatasetConfig.batch_size,
+            shuffle=True,
+        )
+
+    trainer = Trainer(
+        model=model,
+        driver=driver,
+        device=device,
+        overfit_batches=overfit_batches,
+        optimizers=optimizers,
+        train_dataloader=train_dataloader,
+        evaluate_dataloaders={"dl": eval_dataloader},
+        metrics=metrics,
+        n_epochs=2,
+        output_from_new_proc="all",
+        evaluate_every=-1,
+
+        torch_kwargs={
+            "non_blocking": False,
+            "set_grad_to_none": True
+        }
+
+    )
+
+    trainer.run()
+
+    if dist.is_initialized():
+        dist.destroy_process_group()
+
