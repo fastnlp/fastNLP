@@ -667,7 +667,9 @@ class TestSetDistReproDataloader:
     @magic_argv_env_context
     @recover_logger
     @pytest.mark.parametrize("inherit", ([True, False]))
+    @pytest.mark.skip
     def test_customized_sampler_dataloader(self, inherit):
+        # TODO 由于 paddle.io.DataLoader 没有 sampler 参数，因此 prepare_paddle_dataloader 没有 sampler，这里暂时跳过
         try:
             logger.set_stdout('raw', level='info')
             # 需要检验一下 set_dist_repro_dataloader 是否可以在定制 batch_sampler 的情况下正确运行
