@@ -617,7 +617,6 @@ class TorchDDPDriver(TorchDriver):
             if isinstance(args.sampler, ReproducibleSampler):
                 sampler = conversion_between_reproducible_and_unrepeated_sampler(args.sampler)
             elif not isinstance(args.sampler, UnrepeatedSampler):
-                # TODO 避开 batch_sampler 的情况
                 _check_dataloader_args_for_distributed(args, controller='Evaluator')
                 sampler = UnrepeatedSequentialSampler(
                     dataset=args.dataset

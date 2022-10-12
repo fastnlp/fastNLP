@@ -112,6 +112,7 @@ if _NEED_IMPORT_PADDLE:
     from paddle.optimizer import Optimizer
     from paddle.fluid.reader import _DatasetKind
     from paddle.fluid.dygraph import parallel_helper
+    from paddle.io import BatchSampler
 
 __all__ = [
     "PaddleFleetDriver",
@@ -471,9 +472,15 @@ class PaddleFleetDriver(PaddleDriver):
         # evaluator
         elif dist == "unrepeatdist":
             args = self.get_dataloader_args(dataloader)
+            if type(args.batch_sampler) != BatchSampler:
+                # TODO 这里的目的是判断用户的 batch_sampler 是定制的，可能需要完善
+                logger.warning("Note that you are using customized ``batch_sampler`` in evaluate dataloader or" \
+                                "train dataloader while testing ``overfit_batches``, which may cause that" \
+                                "the data for distributed evaluation is not unrepeated.")
             if isinstance(args.sampler, ReproducibleSampler):
                 sampler = conversion_between_reproducible_and_unrepeated_sampler(args.sampler)
             elif not isinstance(args.sampler, UnrepeatedSampler):
+                _check_dataloader_args_for_distributed(args, controller='Evaluator')
                 sampler = UnrepeatedSequentialSampler(
                     dataset=args.dataset
                 )
@@ -483,7 +490,9 @@ class PaddleFleetDriver(PaddleDriver):
                 num_replicas=self.world_size,
                 rank=self.global_rank
             )
-            return replace_sampler(dataloader, sampler)
+            # TODO 这里暂时统一替换为 BatchSampler
+            batch_sampler = BatchSampler(sampler, args.batch_size, drop_last=False)
+            return replace_batch_sampler(dataloader, batch_sampler)
         else:
             raise ValueError("Parameter `dist_sampler` can only be one of three values: ('dist', 'unrepeatdist', None).")
 

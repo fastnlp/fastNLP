@@ -280,12 +280,23 @@ def optimizer_state_to_device(state, device):
 
 
 def _check_dataloader_args_for_distributed(args, controller='Trainer'):
-    if type(args.batch_sampler) is not oneflowBatchSampler or (type(args.sampler) not in {oneflowRandomSampler,
-                                                              oneflowSequentialSampler}):
-        mode = 'training' if controller == 'Trainer' else 'evaluation'
-        substitution = 'fastNLP.RandomSampler' if controller == 'Trainer' else 'fastNLP.UnrepeatedSequentialSampler'
+    """
+    检查 dataloader 的 sampler 情况，如果用户替换了自己定制的 sampler ，为了防止
+    在分布式训练中出现错误会报错。
+    """
+    error_flag = (type(args.sampler) not in {oneflowRandomSampler, oneflowSequentialSampler})
+    if controller == 'Trainer':
+        mode = 'training'
+        substitution = 'fastNLP.RandomSampler'
+        error_flag = (type(args.batch_sampler) != oneflowBatchSampler) or error_flag
+    else: # Evaluator
+        mode = 'evaluation'
+        substitution = 'fastNLP.UnrepeatedSequentialSampler'
+    if error_flag:
         raise TypeError(f"Using customized ``batch_sampler`` or ``sampler`` for distributed {mode} may cause "
                         f"unpredictable problems, because fastNLP will substitute the dataloader's sampler into "
                         f"``{substitution}``. The customized sampler should set for distributed running  "
                         f"before initializing ``{controller}`` , and then set the "
-                        f"parameter ``use_dist_sampler`` of ``{controller}`` to ``False``.")
+                        f"parameter ``use_dist_sampler`` of ``{controller}`` to ``False``."
+                        f"\n Current batch_sampler: {type(args.batch_sampler)}"
+                        f"\n Current sampler: {type(args.sampler)}")

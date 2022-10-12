@@ -43,7 +43,6 @@ def initialize_oneflow_driver(driver: str, device: Optional[Union[str, "oneflow.
                 raise ValueError("Parameter `device` can only be '-1' when it is smaller than 0.")
             device = [oneflow.device(f"cuda:{w}") for w in range(_could_use_device_num)]
         elif device >= _could_use_device_num:
-            print(device, _could_use_device_num)
             raise ValueError("The gpu device that parameter `device` specifies is not existed.")
         else:
             device = oneflow.device(f"cuda:{device}")
