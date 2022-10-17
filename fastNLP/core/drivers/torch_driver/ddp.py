@@ -425,7 +425,7 @@ class TorchDDPDriver(TorchDriver):
                 command = [sys.executable] + command
             # Script called as `python -m a.b.c`
             else:
-                command = [sys.executable, "-m", __main__.__spec__._name] + sys.argv[1:]
+                command = [sys.executable, "-m", __main__.__spec__.name] + sys.argv[1:]
 
             os.environ['MASTER_ADDR'] = self.master_address
             os.environ['MASTER_PORT'] = self.master_port

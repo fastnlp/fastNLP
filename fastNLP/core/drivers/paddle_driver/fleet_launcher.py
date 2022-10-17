@@ -83,7 +83,7 @@ class FleetLauncher:
             # use the same python interpreter and actually running
             command = [sys.executable] + command
         else:  # Script called as `python -m a.b.c`
-            command = [sys.executable, "-m", __main__.__spec__._name] + sys.argv[1:]
+            command = [sys.executable, "-m", __main__.__spec__.name] + sys.argv[1:]
 
         current_env = copy.copy(self.global_envs)
         for idx, t in enumerate(self.sub_trainers):
