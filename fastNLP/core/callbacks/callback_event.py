@@ -35,7 +35,7 @@ class Event:
 
     :param value: Trainer 的 callback 时机；
     :param every: 每触发多少次才真正运行一次；
-    :param once: 是否仅运行一次；
+    :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
     :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
         `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
     """
@@ -60,7 +60,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -75,7 +75,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -91,7 +91,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -106,7 +106,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -121,7 +121,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -136,7 +136,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -151,7 +151,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -166,7 +166,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -181,7 +181,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -196,7 +196,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -211,7 +211,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -226,7 +226,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -241,7 +241,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -256,7 +256,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -271,7 +271,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -286,7 +286,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -301,7 +301,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -316,7 +316,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -331,7 +331,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -346,7 +346,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -361,7 +361,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -376,7 +376,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -391,7 +391,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -406,7 +406,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -421,7 +421,7 @@ class Event:
         以下三个参数互斥，只能设置其中一个。默认为行为等同于 ``every=1`` 。
 
         :param every: 每触发多少次才真正运行一次；
-        :param once: 在第一次运行后时候再次执行；
+        :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
         :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，其中 ``filter`` 对象中包含了 `filter.num_called` 和
             `filter.num_executed` 两个变量分别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在运行的 Trainer；
         :return:
@@ -434,11 +434,11 @@ class Filter:
     可以控制一个函数实际的运行频率的函数修饰器。
 
     :param every: 表示一个函数隔多少次运行一次；
-    :param once: 表示一个函数是否只运行一次；
+    :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相应的函数，无论之前还是之后均不会运行；
     :param filter_fn: 用户定制的频率控制函数；注意该函数内部的频率判断应当是无状态的，除了参数 `self.num_called` 和
         `self.num_executed` 外，因为我们会在预跑后重置这两个参数的状态；
     """
-    def __init__(self, every: Optional[int] = None, once: Optional[bool] = None, filter_fn: Optional[Callable] = None):
+    def __init__(self, every: Optional[int] = None, once: Optional[int] = None, filter_fn: Optional[Callable] = None):
         # check legality
         check_legality(lambda *args,**kwargs:...)(every, once, filter_fn)
         if (every is None) and (once is None) and (filter_fn is None):
