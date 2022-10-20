@@ -7,8 +7,8 @@ from fastNLP.io import EmbedLoader
 class TestEmbedLoader:
     def test_load_with_vocab(self):
         vocab = Vocabulary()
-        glove = "tests/data_for_tests/embedding/small_static_embedding/glove.6B.50d_test.txt"
-        word2vec = "tests/data_for_tests/embedding/small_static_embedding/word2vec_test.txt"
+        glove = "data_for_tests/embedding/small_static_embedding/glove.6B.50d_test.txt"
+        word2vec = "data_for_tests/embedding/small_static_embedding/word2vec_test.txt"
         vocab.add_word('the')
         vocab.add_word('none')
         g_m = EmbedLoader.load_with_vocab(glove, vocab)
@@ -19,8 +19,8 @@ class TestEmbedLoader:
     
     def test_load_without_vocab(self):
         words = ['the', 'of', 'in', 'a', 'to', 'and']
-        glove = "tests/data_for_tests/embedding/small_static_embedding/glove.6B.50d_test.txt"
-        word2vec = "tests/data_for_tests/embedding/small_static_embedding/word2vec_test.txt"
+        glove = "data_for_tests/embedding/small_static_embedding/glove.6B.50d_test.txt"
+        word2vec = "data_for_tests/embedding/small_static_embedding/word2vec_test.txt"
         g_m, vocab = EmbedLoader.load_without_vocab(glove)
         assert(g_m.shape == (8, 50))
         for word in words:

@@ -17,6 +17,6 @@ class TestRunCWSLoader:
         dataset_names = ['msra', 'cityu', 'as', 'msra']
         for dataset_name in dataset_names:
             data_bundle = CWSLoader(dataset_name=dataset_name).load(
-                f'tests/data_for_tests/io/cws_{dataset_name}'
+                f'data_for_tests/io/cws_{dataset_name}'
             )
             print(data_bundle)

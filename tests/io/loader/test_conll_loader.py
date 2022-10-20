@@ -27,17 +27,17 @@ class TestWeiboNER:
 
 class TestConll2003Loader:
     def test_load(self):
-        Conll2003Loader()._load('tests/data_for_tests/conll_2003_example.txt')
+        Conll2003Loader()._load('data_for_tests/conll_2003_example.txt')
 
 
 class TestConllLoader:
     def test_conll(self):
-        db = Conll2003Loader().load('tests/data_for_tests/io/conll2003')
+        db = Conll2003Loader().load('data_for_tests/io/conll2003')
         print(db)
 
     def test_sep(self):
         headers = [
             'raw_words',  'ner',
         ]
-        db = ConllLoader(headers = headers, sep="\n").load('tests/data_for_tests/io/MSRA_NER')
+        db = ConllLoader(headers = headers, sep="\n").load('data_for_tests/io/MSRA_NER')
         print(db)

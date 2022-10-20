@@ -24,12 +24,12 @@ class TestClassificationPipe:
 class TestRunPipe:
     def test_load(self):
         for pipe in [IMDBPipe]:
-            data_bundle = pipe(tokenizer='raw', num_proc=0).process_from_file('tests/data_for_tests/io/imdb')
+            data_bundle = pipe(tokenizer='raw', num_proc=0).process_from_file('data_for_tests/io/imdb')
             print(data_bundle)
 
     def test_load_proc(self):
         for pipe in [IMDBPipe]:
-            data_bundle = pipe(tokenizer='raw', num_proc=2).process_from_file('tests/data_for_tests/io/imdb')
+            data_bundle = pipe(tokenizer='raw', num_proc=2).process_from_file('data_for_tests/io/imdb')
             print(data_bundle)
 
 
@@ -45,35 +45,35 @@ class TestCNClassificationPipe:
 class TestRunClassificationPipe:
     def test_process_from_file(self):
         data_set_dict = {
-            'yelp.p': ('tests/data_for_tests/io/yelp_review_polarity', YelpPolarityPipe,
+            'yelp.p': ('data_for_tests/io/yelp_review_polarity', YelpPolarityPipe,
                        {'train': 6, 'dev': 6, 'test': 6}, {'words': 1176, 'target': 2},
                        False),
-            'yelp.f': ('tests/data_for_tests/io/yelp_review_full', YelpFullPipe,
+            'yelp.f': ('data_for_tests/io/yelp_review_full', YelpFullPipe,
                        {'train': 6, 'dev': 6, 'test': 6}, {'words': 1166, 'target': 5},
                        False),
-            'sst-2': ('tests/data_for_tests/io/SST-2', SST2Pipe,
+            'sst-2': ('data_for_tests/io/SST-2', SST2Pipe,
                       {'train': 5, 'dev': 5, 'test': 5}, {'words': 139, 'target': 2},
                       True),
-            'sst': ('tests/data_for_tests/io/SST', SSTPipe,
+            'sst': ('data_for_tests/io/SST', SSTPipe,
                     {'train': 354, 'dev': 6, 'test': 6}, {'words': 232, 'target': 5},
                     False),
-            'imdb': ('tests/data_for_tests/io/imdb', IMDBPipe,
+            'imdb': ('data_for_tests/io/imdb', IMDBPipe,
                      {'train': 6, 'dev': 6, 'test': 6}, {'words': 1670, 'target': 2},
                      False),
-            'ag': ('tests/data_for_tests/io/ag', AGsNewsPipe,
+            'ag': ('data_for_tests/io/ag', AGsNewsPipe,
                    {'train': 4, 'test': 5}, {'words': 257, 'target': 4},
                    False),
-            'dbpedia': ('tests/data_for_tests/io/dbpedia', DBPediaPipe,
+            'dbpedia': ('data_for_tests/io/dbpedia', DBPediaPipe,
                         {'train': 14, 'test': 5}, {'words': 496, 'target': 14},
                         False),
-            'ChnSentiCorp': ('tests/data_for_tests/io/ChnSentiCorp', ChnSentiCorpPipe,
+            'ChnSentiCorp': ('data_for_tests/io/ChnSentiCorp', ChnSentiCorpPipe,
                              {'train': 6, 'dev': 6, 'test': 6},
                              {'chars': 529, 'bigrams': 1296, 'trigrams': 1483, 'target': 2},
                              False),
-            'Chn-THUCNews': ('tests/data_for_tests/io/THUCNews', THUCNewsPipe,
+            'Chn-THUCNews': ('data_for_tests/io/THUCNews', THUCNewsPipe,
                              {'train': 9, 'dev': 9, 'test': 9}, {'chars': 1864, 'target': 9},
                              False),
-            'Chn-WeiboSenti100k': ('tests/data_for_tests/io/WeiboSenti100k', WeiboSenti100kPipe,
+            'Chn-WeiboSenti100k': ('data_for_tests/io/WeiboSenti100k', WeiboSenti100kPipe,
                                    {'train': 6, 'dev': 6, 'test': 7}, {'chars': 452, 'target': 2},
                                    False),
         }
@@ -100,35 +100,35 @@ class TestRunClassificationPipe:
 
     def test_process_from_file_proc(self):
         data_set_dict = {
-            'yelp.p': ('tests/data_for_tests/io/yelp_review_polarity', YelpPolarityPipe,
+            'yelp.p': ('data_for_tests/io/yelp_review_polarity', YelpPolarityPipe,
                        {'train': 6, 'dev': 6, 'test': 6}, {'words': 1176, 'target': 2},
                        False),
-            'yelp.f': ('tests/data_for_tests/io/yelp_review_full', YelpFullPipe,
+            'yelp.f': ('data_for_tests/io/yelp_review_full', YelpFullPipe,
                        {'train': 6, 'dev': 6, 'test': 6}, {'words': 1166, 'target': 5},
                        False),
-            'sst-2': ('tests/data_for_tests/io/SST-2', SST2Pipe,
+            'sst-2': ('data_for_tests/io/SST-2', SST2Pipe,
                       {'train': 5, 'dev': 5, 'test': 5}, {'words': 139, 'target': 2},
                       True),
-            'sst': ('tests/data_for_tests/io/SST', SSTPipe,
+            'sst': ('data_for_tests/io/SST', SSTPipe,
                     {'train': 354, 'dev': 6, 'test': 6}, {'words': 232, 'target': 5},
                     False),
-            'imdb': ('tests/data_for_tests/io/imdb', IMDBPipe,
+            'imdb': ('data_for_tests/io/imdb', IMDBPipe,
                      {'train': 6, 'dev': 6, 'test': 6}, {'words': 1670, 'target': 2},
                      False),
-            'ag': ('tests/data_for_tests/io/ag', AGsNewsPipe,
+            'ag': ('data_for_tests/io/ag', AGsNewsPipe,
                    {'train': 4, 'test': 5}, {'words': 257, 'target': 4},
                    False),
-            'dbpedia': ('tests/data_for_tests/io/dbpedia', DBPediaPipe,
+            'dbpedia': ('data_for_tests/io/dbpedia', DBPediaPipe,
                         {'train': 14, 'test': 5}, {'words': 496, 'target': 14},
                         False),
-            'ChnSentiCorp': ('tests/data_for_tests/io/ChnSentiCorp', ChnSentiCorpPipe,
+            'ChnSentiCorp': ('data_for_tests/io/ChnSentiCorp', ChnSentiCorpPipe,
                              {'train': 6, 'dev': 6, 'test': 6},
                              {'chars': 529, 'bigrams': 1296, 'trigrams': 1483, 'target': 2},
                              False),
-            'Chn-THUCNews': ('tests/data_for_tests/io/THUCNews', THUCNewsPipe,
+            'Chn-THUCNews': ('data_for_tests/io/THUCNews', THUCNewsPipe,
                              {'train': 9, 'dev': 9, 'test': 9}, {'chars': 1864, 'target': 9},
                              False),
-            'Chn-WeiboSenti100k': ('tests/data_for_tests/io/WeiboSenti100k', WeiboSenti100kPipe,
+            'Chn-WeiboSenti100k': ('data_for_tests/io/WeiboSenti100k', WeiboSenti100kPipe,
                                    {'train': 6, 'dev': 6, 'test': 7}, {'chars': 452, 'target': 2},
                                    False),
         }
