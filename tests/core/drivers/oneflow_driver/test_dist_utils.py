@@ -81,7 +81,7 @@ def test_tensor_object_transfer_tensor(device):
 def test_fastnlp_oneflow_all_gather():
     local_rank = int(os.environ["LOCAL_RANK"])
     obj = {
-        "tensor": oneflow.full(size=(2, ), value=local_rank, dtype=oneflow.int).cuda(),
+        "tensor": oneflow.full((2, ), local_rank, oneflow.int).cuda(),
         "numpy": np.full(shape=(2, ), fill_value=local_rank),
         "bool": local_rank % 2 == 0,
         "float": local_rank + 0.1,
@@ -91,8 +91,8 @@ def test_fastnlp_oneflow_all_gather():
         },
         "list": [local_rank]*2,
         "str": f"{local_rank}",
-        "tensors": [oneflow.full(size=(2, ), value=local_rank, dtype=oneflow.int).cuda(),
-                    oneflow.full(size=(2, ), value=local_rank, dtype=oneflow.int).cuda()]
+        "tensors": [oneflow.full((2, ), local_rank, oneflow.int).cuda(),
+                    oneflow.full((2, ), local_rank, oneflow.int).cuda()]
     }
     data = fastnlp_oneflow_all_gather(obj)
     world_size = int(os.environ["WORLD_SIZE"])
@@ -118,7 +118,7 @@ def test_fastnlp_oneflow_broadcast_object():
     local_rank = int(os.environ["LOCAL_RANK"])
     if os.environ["LOCAL_RANK"] == "0":
         obj = {
-            "tensor": oneflow.full(size=(2, ), value=local_rank, dtype=oneflow.int).cuda(),
+            "tensor": oneflow.full((2, ), local_rank, oneflow.int).cuda(),
             "numpy": np.full(shape=(2, ), fill_value=local_rank, dtype=int),
             "bool": local_rank % 2 == 0,
             "float": local_rank + 0.1,
@@ -128,8 +128,8 @@ def test_fastnlp_oneflow_broadcast_object():
             },
             "list": [local_rank] * 2,
             "str": f"{local_rank}",
-            "tensors": [oneflow.full(size=(2, ), value=local_rank, dtype=oneflow.int).cuda(),
-                        oneflow.full(size=(2, ), value=local_rank, dtype=oneflow.int).cuda()]
+            "tensors": [oneflow.full((2, ), local_rank, oneflow.int).cuda(),
+                        oneflow.full((2, ), local_rank, oneflow.int).cuda()]
         }
     else:
         obj = None

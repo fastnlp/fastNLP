@@ -121,7 +121,7 @@ class DeepSpeedDriver(TorchDDPDriver):
         parallel_device: Union[List["torch.device"], "torch.device"],
         is_pull_by_torch_run = False,
         fp16: bool = False,
-        deepspeed_kwargs: Dict = None,
+        deepspeed_kwargs: Dict = {},
         **kwargs
     ):
         assert _NEED_IMPORT_DEEPSPEED, "Deepspeed is not imported."

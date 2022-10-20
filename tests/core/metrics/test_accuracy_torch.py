@@ -8,8 +8,6 @@ import socket
 import pytest
 import numpy as np
 
-from sklearn.metrics import accuracy_score as sklearn_accuracy
-
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.metrics.accuracy import Accuracy
 from fastNLP.core.metrics.metric import Metric
@@ -21,6 +19,10 @@ if _NEED_IMPORT_TORCH:
     from torch.multiprocessing import Pool, set_start_method
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as set_start_method
+try:
+    from sklearn.metrics import accuracy_score as sklearn_accuracy
+except:
+    pass
 
 set_start_method("spawn", force=True)
 

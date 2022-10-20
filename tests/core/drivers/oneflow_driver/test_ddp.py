@@ -541,7 +541,7 @@ class TestSaveLoad:
                 res1 = driver1.model.evaluate_step(**batch)
                 res2 = driver2.model.evaluate_step(**batch)
 
-                assert oneflow.all(res1["preds"] == res2["preds"])
+                assert oneflow.all(res1["pred"] == res2["pred"])
         finally:
             rank_zero_rm(path)
 
@@ -635,9 +635,10 @@ class TestSaveLoad:
 
                 left_x_batches.update(batch["x"].reshape(-1, ).tolist())
                 left_y_batches.update(batch["y"].reshape(-1, ).tolist())
+                batch = driver1.move_data_to_device(batch)
                 res1 = driver1.model.evaluate_step(**batch)
                 res2 = driver2.model.evaluate_step(**batch)
-                assert oneflow.all(res1["preds"] == res2["preds"])
+                assert oneflow.all(res1["pred"] == res2["pred"])
 
             assert len(left_x_batches) + len(already_seen_x_set) == len(self.dataset) / num_replicas
             assert len(left_x_batches | already_seen_x_set) == len(self.dataset) / num_replicas
@@ -727,9 +728,10 @@ class TestSaveLoad:
 
                 left_x_batches.update(batch["x"].reshape(-1, ).tolist())
                 left_y_batches.update(batch["y"].reshape(-1, ).tolist())
+                batch = driver1.move_data_to_device(batch)
                 res1 = driver1.model.evaluate_step(**batch)
                 res2 = driver2.model.evaluate_step(**batch)
-                assert oneflow.all(res1["preds"] == res2["preds"])
+                assert oneflow.all(res1["pred"] == res2["pred"])
 
             assert len(left_x_batches) + len(already_seen_x_set) == len(self.dataset) / num_replicas
             assert len(left_x_batches | already_seen_x_set) == len(self.dataset) / num_replicas

@@ -325,7 +325,7 @@ class OneflowDDPDriver(OneflowDriver):
             return
         return fastnlp_oneflow_broadcast_object(obj, src, device=self.data_device)
 
-    def all_gather(self, obj, group) -> List:
+    def all_gather(self, obj) -> List:
         r"""
         将 ``obj`` 互相传送到其它所有的 rank 上，其中 ``obj`` 可能是 Tensor，也可能是嵌套结构的 object 。如果不是基础类型的数据，将会尝试通过
         pickle 进行序列化，接收到之后再反序列化。
