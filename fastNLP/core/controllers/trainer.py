@@ -1117,7 +1117,7 @@ class Trainer(TrainerEventTrigger):
             try:
                 if model_load_fn is not None:
                     if not callable(model_load_fn):
-                        raise ValueError("Parameter `model_save_fn` should be `Callable` type when it is not None.")
+                        raise ValueError("Parameter `model_load_fn` should be `Callable` type when it is not None.")
                     model_load_fn(folder)
                 else:
                     if isinstance(folder, str):

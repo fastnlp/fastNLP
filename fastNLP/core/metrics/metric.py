@@ -11,11 +11,24 @@ import numpy as np
 
 from fastNLP.core.metrics.backend import Backend, AutoBackend
 from fastNLP.core.metrics.element import Element
+from fastNLP.core.log import logger
 
 
 class Metric:
     """
     **fastNLP** 中 :class:`Metric` 的基类，自定义 :class:`Metric` 时，请继承该对象。使用该对象，将有助于减少在分布式状态下的 Metric 计算。
+
+    .. note::
+
+        在多卡情况下，所有 **fastNLP** 提供的 :class:`Metric` 默认情况下都会最终将所有设备上的评估结果集中到同一张卡上，并以此为基础输出最终的
+        评测分数。如果您不需要这一功能，请将 ``aggregate_when_get_metric`` 置为 ``False`` 。
+
+    .. note::
+
+        如果您需要自定义自己的 :class:`Metric` ，并且有分布式训练的需求，请确保：
+ 
+            1. 调用 :meth:`~Metric.register_element` 函数来注册需要 gather 的张量 
+            2. 或在 :meth:`~Metric.get_metric` 函数中调用 :meth:`~Metric.all_gather_object` 函数来手动收集不同设备上的数据。
 
     :param backend: 目前支持五种类型的 backend, ``['torch', 'paddle', 'jittor', 'oneflow', 'auto']``。其中 ``'auto'`` 表示根据实际调用 :meth:`update`
         函数时传入的参数决定具体的 backend ，大部分情况下直接使用 ``'auto'`` 即可。
@@ -29,8 +42,11 @@ class Metric:
         self.get_metric = self._sync_get_metric(self.get_metric)
         self.update = self._wrap_update(self.update)
         self.reset = self._wrap_auto_reset_elements(self.reset)
+        self.get_metric = self._wrap_check_get_metric(self.get_metric)
         self.aggregate_when_get_metric = aggregate_when_get_metric
         self._cannot_change_element = False
+        self._call_gather_object = False
+        self._check_get_metric = False
         self._elements = {}
 
     @property
@@ -130,6 +146,31 @@ class Metric:
 
         return _wrap_update
 
+    def _wrap_check_get_metric(self, get_metric):
+        """
+        统计 get_metric 函数中是否调用了 self.all_gather_object() 函数
+        """
+        @functools.wraps(get_metric)
+        def _wrapper(*args, **kwargs):
+            if self._check_get_metric or len(self._elements) != 0:
+                # 已经检查过，或有 Element 成员，不进行处理
+                return get_metric(*args, **kwargs)
+            # 否则包裹 self.all_gather_object，统计是否进行了调用
+            self._check_get_metric = True
+            self._call_gather_object = False
+            res = get_metric(*args, **kwargs)
+
+            if self.aggregate_when_get_metric and not self._call_gather_object:
+                # warning
+                logger.warning("There is no `<class 'Element'>` registered in metric `{}` and you didn't call "
+                                "`Metric.all_gather_object()` in method `get_metric()` either. This may cause "
+                                "some problems in distributed training since the results are not aggregated."
+                                .format(self.__class__))
+
+            return res
+
+        return _wrapper
+
     def check_backend(self, *args, **kwargs):
         """
         根据传入的参数的类型选择当前需要的 backend
@@ -206,6 +247,7 @@ class Metric:
         :param group:
         :return: -> List[obj0, obj1, ...] 其中 obj0 是rank 0 上的 obj；obj1 是 rank 1 上的 obj...
         """
+        self._call_gather_object = True
         if self.aggregate_when_get_metric:
             return self.backend.all_gather_object(obj, group=group)
         return [obj]
