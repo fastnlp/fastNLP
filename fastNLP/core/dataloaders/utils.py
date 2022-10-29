@@ -131,6 +131,8 @@ class OverfitDataLoader:
             for idx, batch in enumerate(dataloader):
                 if idx < self.overfit_batches or self.overfit_batches <= -1:
                     self.batches.append(batch)
+                else:
+                    break
         else:
             assert isinstance(batches, list)
             self.batches = batches
