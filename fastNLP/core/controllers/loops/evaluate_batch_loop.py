@@ -18,6 +18,8 @@ class EvaluateBatchLoop(Loop):
     def __init__(self, batch_step_fn:Optional[Callable]=None):
         if batch_step_fn is not None:
             self.batch_step_fn = batch_step_fn
+        else:
+            self.batch_step_fn = EvaluateBatchLoop.batch_step_fn
 
     def run(self, evaluator, dataloader) -> Dict:
         r"""
